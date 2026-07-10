@@ -1,20 +1,14 @@
-import { afterAll, afterEach, beforeAll, beforeEach, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeEach, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import path from "node:path";
-import { eq, inArray, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
-import { formFields, forms, formSubmissions, media, settings } from "../../../core/db/schema";
+import { formFields, forms, formSubmissions, media } from "../../../core/db/schema";
 import { handlePublicFormsApi } from "../../../core/server/publicFormsApi";
 import { createForm, setFormFields } from "../../../core/services/forms/formsService";
 import { createFormSubmissionNonce } from "../../../core/services/forms/submissionNonce";
-import {
-  resetStorageSettingsCache,
-  setStorageSettings,
-} from "../../../core/services/settings/storageSettings";
-import { resetMediaStorageAdapterCache } from "../../../core/services/media/storage";
+import { __setMediaServiceDepsForTests } from "../../../core/services/media/mediaService";
+import type { MediaStorageAdapter } from "../../../core/services/media/storage/adapter";
 import {
   SECURITY_SETTINGS_DEFAULTS,
   type SecuritySettings,
@@ -34,23 +28,34 @@ async function canConnect() {
 
 const originalNonceSecret = process.env.FORM_SUBMIT_NONCE_SECRET;
 const createdFormIds: string[] = [];
-const createdMediaIds: string[] = [];
-let tempDir: string | undefined;
+const createdMediaIds = new Set<string>();
 
 const pngOneByOne = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
   "base64"
 );
 
-const storageKeys = [
-  "storage.driver",
-  "storage.local.dir",
-  "storage.publicBaseUrl",
-  "storage.maxSizeBytes",
-  "storage.allowedMime",
-  "storage.delivery.accessMode",
-];
-let existingStorageRows: Array<{ key: string; value: unknown; updatedAt: Date }> = [];
+const fakeAdapter: MediaStorageAdapter = {
+  async put() {
+    throw new Error("generic_put_forbidden");
+  },
+  async putMedia(upload) {
+    const key = `forms-test/${randomUUID()}${upload.identity.extension}`;
+    return {
+      key,
+      get url(): string {
+        throw new Error("provider_url_read_forbidden");
+      },
+    };
+  },
+  async get() {
+    throw new Error("unused");
+  },
+  async delete() {},
+  getPublicUrl() {
+    throw new Error("get_public_url_forbidden");
+  },
+};
 
 const getSecurity = (): SecuritySettings => ({
   ...SECURITY_SETTINGS_DEFAULTS,
@@ -93,34 +98,32 @@ const makeForm = async (
   return form;
 };
 
-beforeAll(async () => {
-  if (!hasDb) return;
-  tempDir = await mkdtemp(path.join(tmpdir(), "coderso-form-upload-"));
-  existingStorageRows = await db.select().from(settings).where(inArray(settings.key, storageKeys));
-  await db.delete(settings).where(inArray(settings.key, storageKeys));
-  await setStorageSettings({
-    driver: "local",
-    local: { dir: tempDir },
-    publicBaseUrl: "http://localhost/media",
-    allowedMime: "image/*,application/pdf", // shipped-default-shaped wildcard global
-    maxSizeBytes: 10 * 1024 * 1024,
-  });
-  resetStorageSettingsCache();
-  resetMediaStorageAdapterCache();
-});
-
 beforeEach(() => {
   process.env.FORM_SUBMIT_NONCE_SECRET =
     originalNonceSecret && originalNonceSecret.trim().length > 0
       ? originalNonceSecret
       : "coderso_public_forms_nonce_test_secret_32";
+  __setMediaServiceDepsForTests({
+    loadConfig: async () => ({
+      maxSizeBytes: 10 * 1024 * 1024,
+      allowedMime: ["image/*", "application/pdf"],
+    }),
+    resolveAdapter: async () => fakeAdapter,
+    insertMedia: async (values) => {
+      const [row] = await db.insert(media).values(values).returning();
+      if (row) createdMediaIds.add(row.id);
+      return row ?? null;
+    },
+  });
 });
 
 afterEach(async () => {
+  __setMediaServiceDepsForTests(null);
   if (!hasDb) return;
-  for (const id of createdMediaIds.splice(0)) {
+  for (const id of createdMediaIds) {
     await db.delete(media).where(eq(media.id, id));
   }
+  createdMediaIds.clear();
   for (const id of createdFormIds.splice(0)) {
     await db.delete(formSubmissions).where(eq(formSubmissions.formId, id));
     await db.delete(formFields).where(eq(formFields.formId, id));
@@ -129,15 +132,7 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  if (hasDb) {
-    await db.delete(settings).where(inArray(settings.key, storageKeys));
-    for (const row of existingStorageRows) {
-      await db.insert(settings).values(row).onConflictDoNothing();
-    }
-    resetStorageSettingsCache();
-    resetMediaStorageAdapterCache();
-  }
-  if (tempDir) await rm(tempDir, { recursive: true, force: true });
+  __setMediaServiceDepsForTests(null);
   if (originalNonceSecret === undefined) {
     delete process.env.FORM_SUBMIT_NONCE_SECRET;
   } else {
@@ -163,7 +158,7 @@ testIfDb(
       mimeType: string;
       size: number;
     };
-    createdMediaIds.push(body.id);
+    createdMediaIds.add(body.id);
     expect(body.mimeType).toBe("image/png");
     expect(body.size).toBe(pngOneByOne.length);
     expect(typeof body.url).toBe("string");
@@ -182,8 +177,8 @@ testIfDb("public upload: missing nonce → form_nonce_required (400)", async () 
 });
 
 testIfDb("public upload: wrong mime → 400 media_mime_not_allowed (field tightens)", async () => {
-  const form = await makeForm({ accept: ["image/png"] });
-  const file = new File([Uint8Array.from(Buffer.from("x"))], "x.jpg", { type: "image/jpeg" });
+  const form = await makeForm({ accept: ["image/jpeg"] });
+  const file = new File([Uint8Array.from(pngOneByOne)], "x.jpg", { type: "image/jpeg" });
   const response = await runUpload(
     form.id,
     { fieldName: "attachment", formNonce: createFormSubmissionNonce(form.id) },
@@ -192,10 +187,11 @@ testIfDb("public upload: wrong mime → 400 media_mime_not_allowed (field tighte
   expect(response?.status).toBe(400);
   const body = (await response?.json()) as { error: { code: string } };
   expect(body.error.code).toBe("media_mime_not_allowed");
+  expect(createdMediaIds.size).toBe(0);
 });
 
 testIfDb(
-  "public upload: SVG declared image/svg+xml rejected under image/* accept (inline-XSS guard)",
+  "public upload: active SVG bytes are rejected under wildcard-only image policy",
   async () => {
     const form = await makeForm({ accept: ["image/*"] });
     const svg = new File(
@@ -219,7 +215,7 @@ testIfDb(
 );
 
 testIfDb(
-  "public upload: spoofed image/png with markup body rejected (content sniff, not declared type)",
+  "public upload: spoofed image/png declaration cannot override unsafe markup bytes",
   async () => {
     const form = await makeForm({ accept: ["image/*"] });
     const spoof = new File(

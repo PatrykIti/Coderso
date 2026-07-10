@@ -1,6 +1,7 @@
-export type SubmissionAccessMode = "public" | "internal";
+export const SUBMISSION_ACCESS_MODE_VALUES = ["public", "internal"] as const;
+export type SubmissionAccessMode = (typeof SUBMISSION_ACCESS_MODE_VALUES)[number];
 
-const allowedModes = new Set<SubmissionAccessMode>(["public", "internal"]);
+const allowedModes = new Set<SubmissionAccessMode>(SUBMISSION_ACCESS_MODE_VALUES);
 
 export const submissionAccessDefaults = {
   mode: "public" as SubmissionAccessMode,
@@ -18,38 +19,85 @@ export function normalizeSubmissionAccess(
   throw new Error("form_invalid");
 }
 
-export type SubmissionAccessEvaluation = {
-  allow: boolean;
-  requireCaptcha: boolean;
-  reason?: "auth_required" | "forbidden";
-};
+export type SubmissionAccessDecision =
+  | Readonly<{
+      allow: true;
+      mode: "public";
+      principal: "anonymous" | "session";
+      requireFormNonce: true;
+      requireCaptcha: boolean;
+      requireSessionCsrf: false;
+      rateBucket: "public_write";
+    }>
+  | Readonly<{
+      allow: true;
+      mode: "internal";
+      principal: "session";
+      requireFormNonce: false;
+      requireCaptcha: false;
+      requireSessionCsrf: true;
+      rateBucket: "admin_write";
+    }>
+  | Readonly<{
+      allow: true;
+      mode: "internal";
+      principal: "apiKey";
+      requireFormNonce: false;
+      requireCaptcha: false;
+      requireSessionCsrf: false;
+      rateBucket: "admin_write";
+    }>
+  | Readonly<{
+      allow: false;
+      reason: "auth_required" | "forbidden";
+    }>;
 
 export function evaluateSubmissionAccess(params: {
   mode: SubmissionAccessMode;
   isAuthenticated: boolean;
   apiKeyScopes?: string[] | null;
   requiredApiKeyScope?: string;
-}): SubmissionAccessEvaluation {
-  const requiredScope =
-    params.requiredApiKeyScope ?? submissionAccessDefaults.requiredApiKeyScope;
+}): SubmissionAccessDecision {
+  const requiredScope = params.requiredApiKeyScope ?? submissionAccessDefaults.requiredApiKeyScope;
 
   if (params.mode === "public") {
-    if (params.isAuthenticated) {
-      return { allow: true, requireCaptcha: false };
-    }
-    return { allow: true, requireCaptcha: true };
+    return Object.freeze({
+      allow: true,
+      mode: "public",
+      principal: params.isAuthenticated ? "session" : "anonymous",
+      requireFormNonce: true,
+      requireCaptcha: !params.isAuthenticated,
+      requireSessionCsrf: false,
+      rateBucket: "public_write",
+    });
   }
 
   if (params.isAuthenticated) {
-    return { allow: true, requireCaptcha: false };
+    return Object.freeze({
+      allow: true,
+      mode: "internal",
+      principal: "session",
+      requireFormNonce: false,
+      requireCaptcha: false,
+      requireSessionCsrf: true,
+      rateBucket: "admin_write",
+    });
   }
 
   if (Array.isArray(params.apiKeyScopes)) {
     if (params.apiKeyScopes.includes(requiredScope)) {
-      return { allow: true, requireCaptcha: false };
+      return Object.freeze({
+        allow: true,
+        mode: "internal",
+        principal: "apiKey",
+        requireFormNonce: false,
+        requireCaptcha: false,
+        requireSessionCsrf: false,
+        rateBucket: "admin_write",
+      });
     }
-    return { allow: false, requireCaptcha: false, reason: "forbidden" };
+    return Object.freeze({ allow: false, reason: "forbidden" });
   }
 
-  return { allow: false, requireCaptcha: false, reason: "auth_required" };
+  return Object.freeze({ allow: false, reason: "auth_required" });
 }

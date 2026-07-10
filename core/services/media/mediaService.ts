@@ -5,7 +5,16 @@ import { readImageDimensions } from "./imageDimensions";
 import { getMediaStorageAdapter } from "./storage";
 import { getStorageSettingsInternal } from "../settings/storageSettings";
 import { mimeMatchesAccept } from "../forms/mimeMatchesAccept";
-import type { StoredMedia, UploadFile } from "./storage/adapter";
+import {
+  CANONICAL_MEDIA_PROFILES,
+  canonicalizeMediaBytes,
+  isPassiveCanonicalMediaMime,
+  type CanonicalMediaExtension,
+  type CanonicalMediaIdentity,
+  type CanonicalMediaMime,
+} from "./mediaFileTrust";
+import { resolveMediaKeyProjection, tryBuildAddressableMediaPath } from "./mediaUrlProjection";
+import type { CanonicalStoredUpload, MediaStorageAdapter, UploadFile } from "./storage/adapter";
 
 export type MediaType = "image" | "file";
 
@@ -27,25 +36,75 @@ const MAX_DESC = 2000;
 const MAX_CREDIT = 300;
 
 type MediaConfig = {
-  maxSizeBytes: number;
+  maxSizeBytes: number | null | undefined;
   allowedMime: string[];
 };
 
+type MediaRecord = typeof media.$inferSelect;
+type MediaInsert = typeof media.$inferInsert;
+type MediaReplacePatch = Pick<
+  MediaInsert,
+  "key" | "url" | "originalName" | "type" | "mimeType" | "size" | "width" | "height" | "title"
+>;
+
+export type MediaServiceTestDeps = {
+  loadConfig: () => Promise<MediaConfig>;
+  resolveAdapter: () => Promise<MediaStorageAdapter>;
+  insertMedia: (values: MediaInsert) => Promise<MediaRecord | null>;
+  replaceMedia: (id: string, patch: MediaReplacePatch) => Promise<MediaRecord | null>;
+};
+
 const dimensionReadLimitBytes = 512 * 1024;
+const DEFAULT_MAX_SIZE_BYTES = 10 * 1024 * 1024;
+const DEFAULT_ALLOWED_MIME = ["image/*", "application/pdf"];
+const MAX_MEDIA_DISPLAY_NAME_BYTES = 255;
 
 const normalizeMimeType = (mimeType: unknown) => {
   if (typeof mimeType !== "string") return "";
   return mimeType.split(";")[0]?.trim().toLowerCase() ?? "";
 };
 
-async function getConfig(): Promise<MediaConfig> {
+async function loadMediaConfig(): Promise<MediaConfig> {
   const settings = await getStorageSettingsInternal();
-  const maxSizeBytes = settings.maxSizeBytes ?? 10 * 1024 * 1024;
-  const allowedMime = settings.allowedMime.length
-    ? settings.allowedMime
-    : ["image/*", "application/pdf"];
+  const allowedMime = settings.allowedMime.length ? settings.allowedMime : DEFAULT_ALLOWED_MIME;
 
-  return { maxSizeBytes, allowedMime };
+  return { maxSizeBytes: settings.maxSizeBytes, allowedMime };
+}
+
+async function insertMediaRecord(values: MediaInsert): Promise<MediaRecord | null> {
+  const [row] = await db.insert(media).values(values).returning();
+  return row ?? null;
+}
+
+async function replaceMediaRecord(
+  id: string,
+  patch: MediaReplacePatch
+): Promise<MediaRecord | null> {
+  const [row] = await db.update(media).set(patch).where(eq(media.id, id)).returning();
+  return row ?? null;
+}
+
+const defaultMediaServiceDeps: MediaServiceTestDeps = {
+  loadConfig: loadMediaConfig,
+  resolveAdapter: getMediaStorageAdapter,
+  insertMedia: insertMediaRecord,
+  replaceMedia: replaceMediaRecord,
+};
+
+let mediaServiceTestDeps: Partial<MediaServiceTestDeps> | null = null;
+
+const getMediaServiceDeps = (): MediaServiceTestDeps => ({
+  ...defaultMediaServiceDeps,
+  ...(process.env.NODE_ENV === "production" ? {} : (mediaServiceTestDeps ?? {})),
+});
+
+export function __setMediaServiceDepsForTests(
+  overrides: Partial<MediaServiceTestDeps> | null
+): void {
+  if (process.env.NODE_ENV === "production" && overrides !== null) {
+    throw new Error("media_service_test_override_forbidden_in_production");
+  }
+  mediaServiceTestDeps = overrides === null ? null : { ...overrides };
 }
 
 function isMimeAllowed(mimeType: string, allowed: string[]) {
@@ -62,19 +121,141 @@ function isMimeAllowed(mimeType: string, allowed: string[]) {
   });
 }
 
-function resolveMediaType(mimeType: string): MediaType {
-  return normalizeMimeType(mimeType).startsWith("image/") ? "image" : "file";
+function hasExactMimeRule(allowed: string[], mimeType: CanonicalMediaMime): boolean {
+  return allowed.some((rule) => normalizeMimeType(rule) === mimeType);
 }
 
-const toBuffer = async (file: UploadFile) => Buffer.from(await file.arrayBuffer());
+function normalizeGlobalMaxSize(value: number | null | undefined): number {
+  if (value === null || value === undefined) return DEFAULT_MAX_SIZE_BYTES;
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error("media_storage_unavailable");
+  }
+  return value;
+}
 
-const createBufferedUploadFile = (file: UploadFile, buffer: Buffer): UploadFile => ({
-  name: file.name,
-  type: normalizeMimeType(file.type),
-  size: buffer.byteLength,
-  arrayBuffer: async () =>
-    buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer,
-});
+function normalizeFieldMaxSize(value: number | undefined): number {
+  if (value === undefined) return Number.POSITIVE_INFINITY;
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new Error("media_file_invalid");
+  }
+  return value;
+}
+
+function isForbiddenDisplayCodePoint(codePoint: number): boolean {
+  return (
+    codePoint < 0x20 ||
+    (codePoint >= 0x7f && codePoint <= 0x9f) ||
+    (codePoint >= 0xd800 && codePoint <= 0xdfff) ||
+    codePoint === 0x061c ||
+    codePoint === 0x200e ||
+    codePoint === 0x200f ||
+    (codePoint >= 0x202a && codePoint <= 0x202e) ||
+    (codePoint >= 0x2066 && codePoint <= 0x2069)
+  );
+}
+
+function truncateUtf8ByCodePoint(value: string, maxBytes: number): string {
+  const encoder = new TextEncoder();
+  let result = "";
+  let size = 0;
+  for (const character of value) {
+    const characterSize = encoder.encode(character).byteLength;
+    if (size + characterSize > maxBytes) break;
+    result += character;
+    size += characterSize;
+  }
+  return result;
+}
+
+export function normalizeDisplayFileName(
+  value: unknown,
+  canonicalExtension: CanonicalMediaExtension
+): string {
+  const rawName = typeof value === "string" ? (value.split(/[\\/]/u).at(-1) ?? "") : "";
+  const withoutUnsafe = Array.from(rawName)
+    .filter((character) => !isForbiddenDisplayCodePoint(character.codePointAt(0)!))
+    .join("")
+    .normalize("NFC")
+    .trim()
+    .replace(/[.\s]+$/u, "");
+  const bounded = truncateUtf8ByCodePoint(withoutUnsafe, MAX_MEDIA_DISPLAY_NAME_BYTES).replace(
+    /[.\s]+$/u,
+    ""
+  );
+  return bounded || `upload${canonicalExtension}`;
+}
+
+type PreparedCanonicalUpload = {
+  buffer: Buffer;
+  identity: CanonicalMediaIdentity;
+  storageBytes: CanonicalStoredUpload["bytes"];
+};
+
+async function prepareCanonicalUpload(
+  file: UploadFile,
+  constraints: UploadConstraints | undefined,
+  config: MediaConfig
+): Promise<PreparedCanonicalUpload> {
+  const globalMax = normalizeGlobalMaxSize(config.maxSizeBytes);
+  const fieldMax = normalizeFieldMaxSize(constraints?.maxSizeBytes);
+  const maxBytes = Math.min(globalMax, fieldMax);
+
+  if (!Number.isSafeInteger(file.size) || file.size < 0) {
+    throw new Error("media_file_invalid");
+  }
+  if (file.size > maxBytes) {
+    throw new Error("media_file_too_large");
+  }
+
+  let materialized: unknown;
+  try {
+    materialized = await file.arrayBuffer();
+  } catch {
+    throw new Error("media_file_invalid");
+  }
+  if (!(materialized instanceof ArrayBuffer)) {
+    throw new Error("media_file_invalid");
+  }
+  if (materialized.byteLength > maxBytes) {
+    throw new Error("media_file_too_large");
+  }
+
+  const buffer = Buffer.from(materialized);
+  const identity = canonicalizeMediaBytes(buffer);
+  if (identity === null) {
+    throw new Error("media_mime_not_allowed");
+  }
+  if (!isMimeAllowed(identity.mimeType, config.allowedMime)) {
+    throw new Error("media_mime_not_allowed");
+  }
+  if (!mimeMatchesAccept(identity.mimeType, constraints?.allowedMime)) {
+    throw new Error("media_mime_not_allowed");
+  }
+  if (identity.mimeType === "image/svg+xml" || identity.mimeType === "application/octet-stream") {
+    if (!hasExactMimeRule(config.allowedMime, identity.mimeType)) {
+      throw new Error("media_mime_not_allowed");
+    }
+    if (
+      constraints !== undefined &&
+      !hasExactMimeRule(constraints.allowedMime ?? [], identity.mimeType)
+    ) {
+      throw new Error("media_mime_not_allowed");
+    }
+  }
+
+  return {
+    buffer,
+    identity,
+    storageBytes: {
+      size: buffer.byteLength,
+      arrayBuffer: async () =>
+        buffer.buffer.slice(
+          buffer.byteOffset,
+          buffer.byteOffset + buffer.byteLength
+        ) as ArrayBuffer,
+    },
+  };
+}
 
 const resolveUploadTitle = (fileName: string, title?: string | null) => {
   if (typeof title === "string" && title.trim().length > 0) return title;
@@ -203,127 +384,94 @@ const readStreamPrefix = async (
   return Buffer.concat(chunks, total);
 };
 
-const extractDimensionsForFile = (mimeType: string, buffer: Buffer) => {
-  if (!normalizeMimeType(mimeType).startsWith("image/")) return null;
+const extractDimensionsForCanonicalFile = (mimeType: CanonicalMediaMime, buffer: Buffer) => {
+  if (!isPassiveCanonicalMediaMime(mimeType)) return null;
   return readImageDimensions(buffer);
-};
-
-// Bounded scan for markup/script openers that turn an INLINE-served file into a
-// stored-XSS vector (SVG/HTML/XML). Skips a leading BOM + whitespace.
-const looksLikeMarkup = (buffer: Buffer): boolean => {
-  const head = buffer
-    .subarray(0, 1024)
-    .toString("utf8")
-    .replace(/^[\uFEFF\s]+/, "")
-    .toLowerCase();
-  return (
-    head.startsWith("<?xml") ||
-    head.startsWith("<svg") ||
-    head.startsWith("<!doctype") ||
-    head.startsWith("<html") ||
-    head.startsWith("<!--") ||
-    head.includes("<script")
-  );
-};
-
-type SniffedKind = "png" | "jpeg" | "gif" | "webp" | "bmp" | "pdf" | "unknown";
-
-// Magic-byte sniff of the ACTUAL uploaded bytes (never the declared Content-Type).
-const sniffBinaryKind = (buffer: Buffer): SniffedKind => {
-  if (
-    buffer.length >= 8 &&
-    buffer[0] === 0x89 &&
-    buffer[1] === 0x50 &&
-    buffer[2] === 0x4e &&
-    buffer[3] === 0x47 &&
-    buffer[4] === 0x0d &&
-    buffer[5] === 0x0a &&
-    buffer[6] === 0x1a &&
-    buffer[7] === 0x0a
-  ) {
-    return "png";
-  }
-  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
-    return "jpeg";
-  }
-  if (buffer.length >= 6) {
-    const sig = buffer.subarray(0, 6).toString("latin1");
-    if (sig === "GIF87a" || sig === "GIF89a") return "gif";
-  }
-  if (
-    buffer.length >= 12 &&
-    buffer.subarray(0, 4).toString("latin1") === "RIFF" &&
-    buffer.subarray(8, 12).toString("latin1") === "WEBP"
-  ) {
-    return "webp";
-  }
-  if (buffer.length >= 2 && buffer[0] === 0x42 && buffer[1] === 0x4d) return "bmp";
-  if (buffer.length >= 5 && buffer.subarray(0, 5).toString("latin1") === "%PDF-") return "pdf";
-  return "unknown";
-};
-
-const kindMatchesMime = (kind: SniffedKind, mime: string): boolean => {
-  switch (kind) {
-    case "png":
-      return mime === "image/png";
-    case "jpeg":
-      return mime === "image/jpeg" || mime === "image/jpg" || mime === "image/pjpeg";
-    case "gif":
-      return mime === "image/gif";
-    case "webp":
-      return mime === "image/webp";
-    case "bmp":
-      return mime === "image/bmp" || mime === "image/x-ms-bmp";
-    case "pdf":
-      return mime === "application/pdf";
-    default:
-      return false;
-  }
-};
-
-/**
- * Content sniffing for the UNTRUSTED public path (anonymous form uploads). The
- * declared Content-Type is caller-supplied and MUST NOT be trusted: a spoofed
- * `image/svg+xml`/`image/png` header on an SVG/HTML-with-script payload would pass
- * the declared-type allowlist and then be served inline (stored XSS). This:
- *   (1) rejects markup/script-bearing content outright,
- *   (2) rejects script-capable DECLARED types (svg/html/xml/text/*, `*+xml`),
- *   (3) requires a declared image/pdf to MATCH its magic bytes.
- * Non-sniffable declared types (e.g. zip-based office docs) are allowed only when
- * the content is not markup — the declared-type allowlist still bounds those.
- */
-const assertSafePublicContent = (buffer: Buffer, declaredMime: string) => {
-  if (looksLikeMarkup(buffer)) throw new Error("media_mime_not_allowed");
-  const mime = normalizeMimeType(declaredMime);
-  if (
-    mime === "image/svg+xml" ||
-    mime === "text/html" ||
-    mime === "text/xml" ||
-    mime === "application/xml" ||
-    mime === "application/xhtml+xml" ||
-    mime.startsWith("text/") ||
-    mime.endsWith("+xml")
-  ) {
-    throw new Error("media_mime_not_allowed");
-  }
-  const kind = sniffBinaryKind(buffer);
-  if (mime.startsWith("image/")) {
-    if (kind === "unknown" || !kindMatchesMime(kind, mime)) {
-      throw new Error("media_mime_not_allowed");
-    }
-  } else if (mime === "application/pdf") {
-    if (kind !== "pdf") throw new Error("media_mime_not_allowed");
-  }
 };
 
 export type UploadConstraints = {
   allowedMime?: string[];
   maxSizeBytes?: number;
-  // Set on the anonymous public form-upload path: sniff the ACTUAL bytes and reject
-  // markup/spoofed content (see assertSafePublicContent). Admin uploads leave this
-  // unset (they are already `media:write`-gated and may legitimately store SVGs).
+  /** @deprecated Byte canonicalization is unconditional; retained until TASK-536-04-L01. */
   sniffContent?: boolean;
 };
+
+function toMediaDomainRow<T extends { id: string; key: string; url: string }>(row: T): T {
+  return {
+    ...row,
+    url: resolveMediaKeyProjection(row).url,
+  };
+}
+
+function resolvePassiveCanonicalMime(mimeType: string): CanonicalMediaMime | null {
+  if (!Object.hasOwn(CANONICAL_MEDIA_PROFILES, mimeType)) return null;
+  const canonicalMime = mimeType as CanonicalMediaMime;
+  return isPassiveCanonicalMediaMime(canonicalMime) ? canonicalMime : null;
+}
+
+async function resolveMediaConfig(deps: MediaServiceTestDeps): Promise<MediaConfig> {
+  try {
+    return await deps.loadConfig();
+  } catch {
+    throw new Error("media_storage_unavailable");
+  }
+}
+
+async function bestEffortDelete(adapter: MediaStorageAdapter, key: string): Promise<void> {
+  try {
+    await adapter.delete(key);
+  } catch {
+    // The primary write outcome remains authoritative; maintenance can retry cleanup.
+  }
+}
+
+async function storeCanonicalUpload(
+  deps: MediaServiceTestDeps,
+  prepared: PreparedCanonicalUpload,
+  displayName: string
+): Promise<{ adapter: MediaStorageAdapter; key: string; url: string }> {
+  let adapter: MediaStorageAdapter;
+  let stored: Awaited<ReturnType<MediaStorageAdapter["putMedia"]>>;
+  try {
+    adapter = await deps.resolveAdapter();
+    stored = await adapter.putMedia({
+      bytes: prepared.storageBytes,
+      identity: prepared.identity,
+      downloadName: displayName,
+    });
+  } catch {
+    throw new Error("media_storage_unavailable");
+  }
+
+  const url = tryBuildAddressableMediaPath(stored.key);
+  if (url === null) {
+    throw new Error("media_storage_unavailable");
+  }
+  return { adapter, key: stored.key, url };
+}
+
+export type MediaDeliveryRecord = {
+  key: string;
+  mimeType: string;
+  originalName: string | null;
+  size: number;
+};
+
+export async function getMediaDeliveryRecordByKey(
+  key: string
+): Promise<MediaDeliveryRecord | null> {
+  const [row] = await db
+    .select({
+      key: media.key,
+      mimeType: media.mimeType,
+      originalName: media.originalName,
+      size: media.size,
+    })
+    .from(media)
+    .where(eq(media.key, key))
+    .limit(1);
+  return row ?? null;
+}
 
 export async function uploadMedia(
   file: UploadFile,
@@ -331,69 +479,52 @@ export async function uploadMedia(
   userId?: string,
   constraints?: UploadConstraints
 ) {
-  const config = await getConfig();
+  const deps = getMediaServiceDeps();
+  const config = await resolveMediaConfig(deps);
+  const prepared = await prepareCanonicalUpload(file, constraints, config);
+  const displayName = normalizeDisplayFileName(file.name, prepared.identity.extension);
+  const passive = isPassiveCanonicalMediaMime(prepared.identity.mimeType);
+  const dimensions = passive
+    ? extractDimensionsForCanonicalFile(prepared.identity.mimeType, prepared.buffer)
+    : null;
+  const { adapter, key, url } = await storeCanonicalUpload(deps, prepared, displayName);
 
-  const buffer = await toBuffer(file);
-  const bufferedFile = createBufferedUploadFile(file, buffer);
-
-  // Effective size cap = tighter of global and field (min); undefined field ⇒ global.
-  const maxSizeBytes = Math.min(config.maxSizeBytes, constraints?.maxSizeBytes ?? Infinity);
-  if (bufferedFile.size > maxSizeBytes) {
-    throw new Error("media_file_too_large");
-  }
-
-  // AND the two checks on the ACTUAL uploaded mime — never intersect the two allowlists
-  // (a wildcard-vs-concrete intersection collapses to allow-all/reject-all; see 516-07).
-  if (!isMimeAllowed(bufferedFile.type, config.allowedMime)) {
-    throw new Error("media_mime_not_allowed");
-  }
-  if (!mimeMatchesAccept(bufferedFile.type, constraints?.allowedMime)) {
-    throw new Error("media_mime_not_allowed");
-  }
-
-  // Untrusted anonymous path: the declared Content-Type is not trustworthy — sniff
-  // the actual bytes and reject spoofed/markup (SVG/HTML) payloads before storing.
-  if (constraints?.sniffContent) {
-    assertSafePublicContent(buffer, bufferedFile.type);
-  }
-
-  const dimensions = extractDimensionsForFile(bufferedFile.type, buffer);
-  const adapter = await getMediaStorageAdapter();
-  let stored: StoredMedia;
+  let row: MediaRecord | null;
   try {
-    stored = await adapter.put(bufferedFile);
-  } catch {
-    throw new Error("media_storage_unavailable");
-  }
-
-  const [row] = await db
-    .insert(media)
-    .values({
-      key: stored.key,
-      url: stored.url,
-      originalName: bufferedFile.name,
-      type: resolveMediaType(bufferedFile.type),
-      mimeType: bufferedFile.type,
-      size: bufferedFile.size,
+    row = await deps.insertMedia({
+      key,
+      url,
+      originalName: displayName,
+      type: passive ? "image" : "file",
+      mimeType: prepared.identity.mimeType,
+      size: prepared.buffer.byteLength,
       width: dimensions?.width ?? null,
       height: dimensions?.height ?? null,
       alt: meta.alt ?? null,
-      title: resolveUploadTitle(bufferedFile.name, meta.title),
+      title: resolveUploadTitle(displayName, meta.title),
       caption: meta.caption ?? null,
       createdBy: userId,
-    })
-    .returning();
+    });
+  } catch {
+    await bestEffortDelete(adapter, key);
+    throw new Error("media_storage_unavailable");
+  }
+  if (!row) {
+    await bestEffortDelete(adapter, key);
+    throw new Error("media_storage_unavailable");
+  }
 
-  return row;
+  return toMediaDomainRow(row);
 }
 
 export async function listMedia() {
-  return db.select().from(media).orderBy(desc(media.createdAt));
+  const rows = await db.select().from(media).orderBy(desc(media.createdAt));
+  return rows.map(toMediaDomainRow);
 }
 
 export async function getMediaById(id: string) {
   const [row] = await db.select().from(media).where(eq(media.id, id));
-  return row ?? null;
+  return row ? toMediaDomainRow(row) : null;
 }
 
 export async function updateMedia(id: string, meta: MediaMeta) {
@@ -418,27 +549,28 @@ export async function updateMedia(id: string, meta: MediaMeta) {
 
   const [row] = await db.update(media).set(patch).where(eq(media.id, id)).returning();
 
-  return row ?? null;
+  return row ? toMediaDomainRow(row) : null;
 }
 
 export async function recoverMediaDimensions(id: string) {
   const row = await getMediaById(id);
   if (!row) throw new Error("media_not_found");
-  if (row.type !== "image" && !row.mimeType.toLowerCase().startsWith("image/")) {
-    return row;
-  }
+  const passiveMime = resolvePassiveCanonicalMime(row.mimeType);
+  const projection = resolveMediaKeyProjection(row);
+  if (!passiveMime || !projection.addressable) return row;
   if (row.width && row.height) return row;
 
-  const adapter = await getMediaStorageAdapter();
+  const deps = getMediaServiceDeps();
   let buffer: Buffer;
   try {
+    const adapter = await deps.resolveAdapter();
     const stream = await adapter.get(row.key);
     buffer = await readStreamPrefix(stream);
   } catch {
     throw new Error("media_storage_unavailable");
   }
 
-  const dimensions = extractDimensionsForFile(row.mimeType, buffer);
+  const dimensions = extractDimensionsForCanonicalFile(passiveMime, buffer);
   if (!dimensions) return row;
 
   const [updated] = await db
@@ -450,73 +582,69 @@ export async function recoverMediaDimensions(id: string) {
     .where(eq(media.id, id))
     .returning();
 
-  return updated ?? row;
+  return toMediaDomainRow(updated ?? row);
 }
 
 export async function replaceMedia(id: string, file: UploadFile) {
   const existing = await getMediaById(id);
   if (!existing) throw new Error("media_not_found");
 
-  const config = await getConfig();
-  const buffer = await toBuffer(file);
-  const bufferedFile = createBufferedUploadFile(file, buffer);
+  const deps = getMediaServiceDeps();
+  const config = await resolveMediaConfig(deps);
+  const prepared = await prepareCanonicalUpload(file, undefined, config);
+  const displayName = normalizeDisplayFileName(file.name, prepared.identity.extension);
+  const passive = isPassiveCanonicalMediaMime(prepared.identity.mimeType);
+  const dimensions = passive
+    ? extractDimensionsForCanonicalFile(prepared.identity.mimeType, prepared.buffer)
+    : null;
+  const { adapter, key, url } = await storeCanonicalUpload(deps, prepared, displayName);
+  const patch: MediaReplacePatch = {
+    key,
+    url,
+    originalName: displayName,
+    type: passive ? "image" : "file",
+    mimeType: prepared.identity.mimeType,
+    size: prepared.buffer.byteLength,
+    width: dimensions?.width ?? null,
+    height: dimensions?.height ?? null,
+    title:
+      existing.title && existing.title.trim().length > 0
+        ? existing.title
+        : resolveUploadTitle(displayName, null),
+  };
 
-  if (bufferedFile.size > config.maxSizeBytes) {
-    throw new Error("media_file_too_large");
-  }
-
-  if (!isMimeAllowed(bufferedFile.type, config.allowedMime)) {
-    throw new Error("media_mime_not_allowed");
-  }
-
-  const dimensions = extractDimensionsForFile(bufferedFile.type, buffer);
-  const adapter = await getMediaStorageAdapter();
-  let stored: StoredMedia;
+  let updated: MediaRecord | null;
   try {
-    stored = await adapter.put(bufferedFile);
+    updated = await deps.replaceMedia(id, patch);
   } catch {
+    await bestEffortDelete(adapter, key);
     throw new Error("media_storage_unavailable");
   }
-
-  const [updated] = await db
-    .update(media)
-    .set({
-      key: stored.key,
-      url: stored.url,
-      originalName: bufferedFile.name,
-      type: resolveMediaType(bufferedFile.type),
-      mimeType: bufferedFile.type,
-      size: bufferedFile.size,
-      width: dimensions?.width ?? null,
-      height: dimensions?.height ?? null,
-      title:
-        existing.title && existing.title.trim().length > 0
-          ? existing.title
-          : resolveUploadTitle(bufferedFile.name, null),
-    })
-    .where(eq(media.id, id))
-    .returning();
-
-  if (!updated) throw new Error("media_not_found");
-
-  try {
-    await adapter.delete(existing.key);
-  } catch {
-    // Replacement already succeeded; stale object cleanup can be retried by storage maintenance.
+  if (!updated) {
+    await bestEffortDelete(adapter, key);
+    throw new Error("media_not_found");
   }
 
-  return updated;
+  const oldProjection = resolveMediaKeyProjection(existing);
+  if (oldProjection.addressable && existing.key !== key) {
+    await bestEffortDelete(adapter, existing.key);
+  }
+
+  return toMediaDomainRow(updated);
 }
 
 export async function deleteMedia(id: string) {
   const row = await getMediaById(id);
   if (!row) throw new Error("media_not_found");
 
-  const adapter = await getMediaStorageAdapter();
-  try {
-    await adapter.delete(row.key);
-  } catch {
-    throw new Error("media_storage_unavailable");
+  const projection = resolveMediaKeyProjection(row);
+  if (projection.addressable) {
+    try {
+      const adapter = await getMediaServiceDeps().resolveAdapter();
+      await adapter.delete(row.key);
+    } catch {
+      throw new Error("media_storage_unavailable");
+    }
   }
 
   await db.delete(media).where(eq(media.id, id));

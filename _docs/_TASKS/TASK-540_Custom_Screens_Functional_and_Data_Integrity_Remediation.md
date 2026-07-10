@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Custom Screens / Admin UI / Accessibility / Cache / Validation
 **Estimated Effort:** Large
-**Dependencies:** TASK-496, TASK-498, TASK-500, TASK-503, TASK-505, TASK-543
+**Dependencies:** TASK-496, TASK-498, TASK-500, TASK-503, TASK-505, TASK-539
 **Status:** ⏳ To Do
 **Changelog:** 1252 (pinned; create only at implementation closure)
 
@@ -97,7 +97,7 @@ persisted `disabled` enum. No endpoint or migration is added.
 
 ## Ownership, order, and collision guards
 
-Land `540-01 → 02 → 03 → 04 → 05 → 06`, after TASK-543 and before TASK-539.
+Land `540-01 → 02 → 03 → 04 → 05 → 06`, after TASK-539 and before TASK-541.
 Leaves have exclusive source ownership; any shared block data/action/DOM-id
 shape is defined by 540-01 and consumed verbatim. TASK-540-03 owns the pure renderer's
 optional UUID→URL map prop; TASK-540-04-L03 exclusively threads and populates it through

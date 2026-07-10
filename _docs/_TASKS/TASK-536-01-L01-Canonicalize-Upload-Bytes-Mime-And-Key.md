@@ -7,7 +7,7 @@
 **Priority:** Critical
 **Category:** Media Domain / Security
 **Estimated Effort:** Medium
-**Dependencies:** TASK-538
+**Dependencies:** TASK-536-01
 **Status:** ⏳ To Do
 **Changelog:** 1248 (pinned; create only at implementation closure)
 

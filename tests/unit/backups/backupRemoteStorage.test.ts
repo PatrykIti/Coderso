@@ -15,6 +15,7 @@ import {
   resetMediaStorageAdapterCache,
 } from "../../../core/services/media/storage";
 import type {
+  CanonicalStoredUpload,
   MediaStorageAdapter,
   StoredMedia,
   UploadFile,
@@ -35,18 +36,26 @@ async function canConnect() {
 
 // A hermetic fake adapter — no real S3/Azure network. Records every put/delete
 // so tests can assert the driver-routing + remote-cleanup contract.
-type AdapterCalls = { put: string[]; delete: string[] };
+type AdapterCalls = {
+  put: Array<{ name: string; type: string; size: number }>;
+  putMedia: number;
+  delete: string[];
+};
 
 const makeFakeAdapter = (
   calls: AdapterCalls,
   overrides: Partial<MediaStorageAdapter> = {}
 ): MediaStorageAdapter => ({
   put: async (file: UploadFile): Promise<StoredMedia> => {
-    calls.put.push(file.name);
+    calls.put.push({ name: file.name, type: file.type, size: file.size });
     return {
       key: `backups/2026/06/${file.name}`,
       url: `https://cdn.example.com/backups/2026/06/${file.name}`,
     };
+  },
+  putMedia: async (_upload: CanonicalStoredUpload): Promise<StoredMedia> => {
+    calls.putMedia += 1;
+    throw new Error("backup_put_media_forbidden");
   },
   delete: async (key: string) => {
     calls.delete.push(key);
@@ -131,7 +140,7 @@ testIfDb("local driver writes FS, no artifact_key", async () => {
 });
 
 testIfDb("s3 driver uploads via adapter and stores url + key", async () => {
-  const calls: AdapterCalls = { put: [], delete: [] };
+  const calls: AdapterCalls = { put: [], putMedia: 0, delete: [] };
   __setMediaStorageAdapterForTests(makeFakeAdapter(calls));
 
   const created = await withStorageDriver("s3", async () => {
@@ -141,16 +150,27 @@ testIfDb("s3 driver uploads via adapter and stores url + key", async () => {
   });
 
   expect(calls.put.length).toBe(1);
+  expect(calls.put[0]).toEqual({
+    name: `coderso-backup-${created.id}.json`,
+    type: "application/json",
+    size: expect.any(Number),
+  });
+  expect(calls.put[0]!.size).toBeGreaterThan(0);
+  expect(calls.putMedia).toBe(0);
   const row = await rawRow(created.id);
   expect(row?.storageDriver).toBe("s3");
   expect(row?.artifactPath).toBe(
     `https://cdn.example.com/backups/2026/06/coderso-backup-${created.id}.json`
   );
   expect(row?.artifactKey).toBe(`backups/2026/06/coderso-backup-${created.id}.json`);
+  await expect(resolveBackupDownload(created.id)).resolves.toEqual({
+    url: `https://cdn.example.com/backups/2026/06/coderso-backup-${created.id}.json`,
+    path: null,
+  });
 });
 
 testIfDb("artifact_key never leaks to the client-facing record", async () => {
-  const calls: AdapterCalls = { put: [], delete: [] };
+  const calls: AdapterCalls = { put: [], putMedia: 0, delete: [] };
   __setMediaStorageAdapterForTests(makeFakeAdapter(calls));
 
   const created = await withStorageDriver("s3", async () => {
@@ -176,7 +196,7 @@ testIfDb("artifact_key never leaks to the client-facing record", async () => {
 });
 
 testIfDb("deleteBackup removes the remote object for remote rows", async () => {
-  const calls: AdapterCalls = { put: [], delete: [] };
+  const calls: AdapterCalls = { put: [], putMedia: 0, delete: [] };
   __setMediaStorageAdapterForTests(makeFakeAdapter(calls));
 
   await withStorageDriver("s3", async () => {
@@ -188,6 +208,7 @@ testIfDb("deleteBackup removes the remote object for remote rows", async () => {
     await deleteBackup(created.id);
     createdIds.splice(createdIds.indexOf(created.id), 1);
     expect(calls.delete).toContain(storedKey);
+    expect(calls.putMedia).toBe(0);
 
     // Row is gone.
     const row = await rawRow(created.id);
@@ -198,7 +219,7 @@ testIfDb("deleteBackup removes the remote object for remote rows", async () => {
 testIfDb(
   "upload failure marks backup failed with a machine-readable, credential-free error",
   async () => {
-    const calls: AdapterCalls = { put: [], delete: [] };
+    const calls: AdapterCalls = { put: [], putMedia: 0, delete: [] };
     const sentinel = "topsecret";
     __setMediaStorageAdapterForTests(
       makeFakeAdapter(calls, {
@@ -218,6 +239,7 @@ testIfDb(
 
     expect(created.status).toBe("failed");
     expect(created.error).toBe("backup_upload_failed");
+    expect(calls.putMedia).toBe(0);
     // The sentinel secret and cwd never reach the client-visible field.
     expect(created.error).not.toContain(sentinel);
     expect(created.error).not.toContain(process.cwd());
@@ -231,7 +253,7 @@ testIfDb(
 testIfDb(
   "deleteBackup skips the remote delete on driver drift (no wrong-backend call)",
   async () => {
-    const calls: AdapterCalls = { put: [], delete: [] };
+    const calls: AdapterCalls = { put: [], putMedia: 0, delete: [] };
     __setMediaStorageAdapterForTests(makeFakeAdapter(calls));
 
     // Create a remote (s3) row.

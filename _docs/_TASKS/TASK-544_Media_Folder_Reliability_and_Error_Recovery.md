@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Media / Service Reliability / Admin Cache / Admin UI
 **Estimated Effort:** Medium
-**Dependencies:** Existing media folder service, routes, client, and rail
+**Dependencies:** Existing media folder service, routes, client, and rail; TASK-543 (program order)
 **Status:** ⏳ To Do
 **Changelog:** 1256 (pinned; create only at implementation closure)
 
@@ -64,7 +64,7 @@ adds no route, error code, endpoint, migration, or product feature.
 
 ## Ownership and land order
 
-Land `544-01 → 544-02 → 544-03 → 544-04`, after TASK-537 and before TASK-543.
+Land `544-01 → 544-02 → 544-03 → 544-04`, after TASK-543 and before TASK-545.
 Service plus its direct service/media-folder-route tests, client plus its direct promise
 tests, and UI plus its direct interaction tests each have one source leaf. Closure reruns
 those files read-only and owns only additive broad route-registration coverage, smoke,

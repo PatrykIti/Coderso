@@ -6,7 +6,7 @@
 **Priority:** Critical
 **Category:** Media / Storage / Security
 **Estimated Effort:** Large
-**Dependencies:** TASK-538
+**Dependencies:** TASK-536 parent prerequisites
 **Status:** ⏳ To Do
 **Changelog:** 1248 (pinned; create only at implementation closure)
 
@@ -40,7 +40,7 @@ it.
 |---|---|---|
 | TASK-536-01-L01 | Define byte identity, safe disposition, and delivery-path helpers | new mediaFileTrust.ts plus creation/pre-gate pure media-file-trust suite |
 | TASK-536-01-L02 | Carry canonical identity into local, S3, and Azure storage | storage/adapter.ts, local.ts, s3.ts, azure.ts |
-| TASK-536-01-L03 | Integrate upload/replace and provider-independent media URLs | mediaService.ts |
+| TASK-536-01-L03 | Integrate upload/replace and provider-independent media URLs | mediaService.ts, new mediaUrlProjection.ts, dashboard recent-media seam |
 
 ## Fixed identity policy
 
@@ -64,8 +64,9 @@ it.
 - Only passive verified raster images may be inline. PDF, SVG, text, octet-stream, and
   every other active/ambiguous type are attachment-only. Legacy rows are handled by
   TASK-536-02 and never cause the upload path to trust their suffix.
-- Original filename is retained only as bounded display metadata. A synthetic canonical
-  storage name supplies the extension to adapters.
+- Original filename is retained only as bounded display metadata. The adapter receives a
+  bytes-only transport; the validated canonical identity alone supplies MIME, extension,
+  key suffix, and delivery policy.
 - Global storage allowlists and Form field accept rules are evaluated against the
   canonical MIME, not the declared header.
 
@@ -74,9 +75,9 @@ it.
 This subtask changes the shared media write boundary used by existing admin and public
 Forms routes. It creates no endpoint. Existing session/API-key permissions, CSRF,
 nonce/captcha, and rate buckets remain owned by their routes, but no route may bypass
-byte canonicalization. Errors remain machine-readable: media_file_too_large,
-media_mime_not_allowed, and media_storage_unavailable. No rejected bytes reach storage
-or the database.
+byte canonicalization. Errors remain machine-readable: media_file_invalid,
+media_file_too_large, media_mime_not_allowed, and media_storage_unavailable. No rejected
+bytes reach storage or the database.
 
 ## Land order and compatibility
 
@@ -93,12 +94,18 @@ bun --cwd core lint:types
 bun --cwd core lint
 bunx vitest run --config vitest.config.ts \
   tests/vitest/services/mediaSchemas.test.ts \
-  tests/vitest/services/media-file-trust.test.ts
-set -a && source .env && set +a && bun test --timeout=15000 \
+  tests/vitest/services/media-file-trust.test.ts \
+  tests/vitest/services/mediaUrlProjection.test.ts
+set -a && source .env && set +a && bun test --parallel=1 --timeout=15000 \
   tests/unit/media/mediaService.test.ts \
+  tests/unit/media/mediaMeta.test.ts \
+  tests/unit/server/publicFormsUploadApi.test.ts \
+  tests/integration/routes/media.test.ts \
+  tests/unit/dashboard/dashboardService.test.ts \
   tests/unit/media/localAdapter.test.ts \
   tests/unit/media/s3Adapter.test.ts \
   tests/unit/media/azureAdapter.test.ts \
+  tests/unit/backups/backupRemoteStorage.test.ts \
   tests/unit/backups/backupService.test.ts
 ~~~
 

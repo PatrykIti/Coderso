@@ -7,7 +7,7 @@
 **Priority:** High
 **Category:** Taxonomy Domain / Transactions
 **Estimated Effort:** Medium
-**Dependencies:** TASK-514, TASK-541
+**Dependencies:** TASK-514, TASK-536 (program order)
 **Status:** ⏳ To Do
 **Changelog:** 1249 (pinned; create only at implementation closure)
 

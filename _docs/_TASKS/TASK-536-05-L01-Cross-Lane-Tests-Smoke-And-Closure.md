@@ -86,30 +86,54 @@ bunx vitest run --config vitest.config.ts \
   tests/vitest/forms/fileField.test.ts \
   tests/vitest/forms/validation.test.ts \
   tests/vitest/forms/formSettings.test.ts \
+  tests/vitest/forms/submissionAccess.test.ts \
+  tests/vitest/server/requestBody.test.ts \
   tests/vitest/widgets/formEmbed.test.tsx \
   tests/vitest/widgets/formRuntimeScript.test.ts \
   tests/vitest/services/mediaSchemas.test.ts \
-  tests/vitest/services/media-file-trust.test.ts
-set -a && source .env && set +a && bun test --timeout=15000 \
+  tests/vitest/services/media-file-trust.test.ts \
+  tests/vitest/services/mediaUrlProjection.test.ts
+set -a && source .env && set +a && bun test --parallel=1 --timeout=15000 \
   tests/unit/media/mediaService.test.ts \
+  tests/unit/media/mediaMeta.test.ts \
   tests/unit/media/localAdapter.test.ts \
   tests/unit/media/s3Adapter.test.ts \
   tests/unit/media/azureAdapter.test.ts \
+  tests/unit/backups/backupRemoteStorage.test.ts \
   tests/unit/backups/backupService.test.ts \
   tests/unit/server/publicFormsApi.test.ts \
   tests/unit/server/publicFormsUploadApi.test.ts \
+  tests/unit/dashboard/dashboardService.test.ts \
   tests/unit/forms/fileSubmission.test.ts \
   tests/integration/routes/forms.test.ts \
   tests/integration/routes/media.test.ts \
-  tests/integration/server/mediaDeliveryAccess.test.ts
+  tests/integration/server/mediaDeliveryAccess.test.ts \
+  tests/integration/server/formsWriteMounts.test.ts \
+  tests/security/codersoSecurityGate.test.ts
+./node_modules/.bin/eslint --max-warnings=0 \
+  core/widgets/core/formEmbed.tsx core/widgets/core/formRuntimeScript.ts
 semgrep --error --timeout 120 --timeout-threshold 0 \
   --config .semgrep.yml --config p/owasp-top-ten --config p/security-audit \
   --config p/nodejs --config p/typescript \
-  core/services/media core/server/publicFormsApi.ts core/server/routes/formsRoutes.ts \
-  core/widgets/core/formRuntimeScript.ts
+  core/services/media \
+  core/services/dashboard/dashboardService.ts \
+  core/services/forms/submissionAccess.ts core/services/forms/formSettings.ts \
+  core/services/forms/fieldSettings.ts core/services/forms/validation.ts \
+  core/server/mediaDelivery.ts core/server/httpServer.ts core/server/requestBody.ts \
+  core/server/publicFormsApi.ts core/server/routes/formsRoutes.ts \
+  core/server/validation/formSchemas.ts \
+  core/widgets/core/formEmbed.tsx core/widgets/core/formRuntimeScript.ts
 bun run gates:coderso
 bun run scan:security:strict
 ~~~
+
+The task-scoped Semgrep command must pass. Execute the full strict scan as shown; before
+TASK-538 lands, the one already-recorded Page `customSvg` source finding may be recorded
+as an external program blocker only when it remains outside TASK-536's changed files and
+the Forms/media scan is clean. Do not add a suppression, baseline, or allowlist.
+TASK-538 closure reruns the full scan and must remove its owned `customSvg` finding;
+unrelated findings remain program blockers. The final TASK-536–545 gate must make the
+full strict scan green.
 
 ## Runtime smoke
 
@@ -121,7 +145,12 @@ is a later workflow migration; its future manifest/path is not a prerequisite fo
 earlier task.
 Run at least these distinct real flows:
 
-1. required single image: empty submit blocked, upload progress visible, then submit;
+1. required single image: empty submit blocked; the empty status remains a present
+   `role=status` accessibility node but is computed absolute/sr-only and adds no field
+   gap; upload progress restores normal-flow visible geometry; error switches to the
+   visible alert state; clearing/reset returns the same node to neutral sr-only geometry;
+   assert this for both helper-bearing and helper-free file fields, including unchanged
+   wrapper height/gap while neutral; then a successful upload submits;
 2. ordered multiple files: every upload completes and submission preserves order;
 3. failed upload: submit remains blocked, alert visible, retry succeeds without reload;
 4. with an authenticated cookie, a public form remains nonce-bound and rejects a byte
@@ -142,6 +171,14 @@ trusts nor requires provider metadata), and legacy mismatch attachment policy. A
 upload-before-submit UX, strict schema boundary, and one-rate-owner rule without
 reproducing a weaponized payload. Explicitly retain or split the existing abandoned-
 upload orphan cleanup residual from TASK-516-07.
+Correct the stale `_docs/CMS_API.md` field example that currently places `inputStep` on a
+`text` field: the documented example must use `inputStep` only on its real
+number/range/time branches and stay byte-compatible with the strict L02 schema corpus.
+Correct the stale reject-unknown wording in `_docs/CMS_API.md` and
+`_docs/SECURITY_SPEC.md`: fixed unknown keys on write are rejected with
+`validation_error`, while only legacy/read normalization remains non-destructive and
+fail-soft for already persisted documents. Do not describe write-time unknown keys as
+silently dropped.
 
 After clean post-audits and gates, create changelog 1248, mark every physical descendant
 Done, then close the parent and synchronize board/index statistics. Do not close while

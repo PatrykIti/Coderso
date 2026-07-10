@@ -21,7 +21,9 @@ Own only:
 - `core/admin/ui/widgets/editors/SharedColorControl.tsx`
 
 Do not edit call sites/tests here. Do not run concurrently with TASK-481 if its active
-file set overlaps these controls.
+file set overlaps these controls. Read the post-TASK-539 Page control call sites before
+editing the shared control; their authoring profile, gallery UI, and narrow-canvas
+behavior are compatibility inputs, not TASK-541 rewrite scope.
 
 ## Implementation Pseudocode
 
@@ -81,8 +83,13 @@ TASK-541-03-L01 owns test edits.
 bun --cwd core lint:types
 bun --cwd core lint
 bun run test:vitest -- tests/vitest/ui/color-value.test.ts tests/vitest/ui/color-swatch-alpha.test.tsx tests/vitest/ui/shared-color-alpha.test.tsx tests/vitest/ui/shared-color-control.test.tsx
+bun run test:vitest -- tests/vitest/ui/page-editor-control-primitives.test.tsx tests/vitest/ui/page-editor-v2-flow.test.tsx tests/vitest/ui/page-editor-gallery-items-control.test.tsx
 bun --cwd core build:admin
 bun run check:admin-boundary
 bun run check:admin-bundle
 git diff --check
 ```
+
+The three Page suites are read-only post-TASK-539 compatibility gates. A failure caused
+by the shared color control must be fixed in TASK-541-owned source without weakening or
+re-baselining TASK-539 gallery/narrow-canvas assertions.

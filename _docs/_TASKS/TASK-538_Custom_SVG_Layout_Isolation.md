@@ -5,7 +5,7 @@
 **Priority:** Critical
 **Category:** Pages / SVG Sanitization / Security
 **Estimated Effort:** Large
-**Dependencies:** TASK-522, TASK-535
+**Dependencies:** TASK-522, TASK-535, TASK-537 (program order)
 **Status:** ⏳ To Do
 **Changelog:** 1250 (pinned; create only at implementation closure)
 
@@ -75,7 +75,8 @@ weakening the scanner.
 
 ## Ownership and land order
 
-Land `538-01 → 538-02 → 538-03`; TASK-538 is first in the remediation program.
+Land `538-01 → 538-02 → 538-03`; TASK-538 follows TASK-537 and precedes TASK-539
+in the remediation program.
 Only 538-01/L01 writes the sanitizer and immutable `svgSanitizerPolicy.ts`;
 538-01/L02 owns the safe tree and consumes that read-only policy;
 538-02/L01 alone integrates it in `pageRendererV2.tsx`. Each source leaf updates its

@@ -748,17 +748,55 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "");
 
-const resolveFieldIdPrefix = (widgetId: string, field: ResolvedFormField) => {
+type FieldDomIds = Readonly<{
+  inputId: string;
+  labelId: string;
+  helperId?: string;
+  uploadStatusId: string;
+}>;
+
+const resolveFieldIdPrefix = (field: ResolvedFormField) => {
   return slugify(field.id || field.name || field.label || "field") || "field";
 };
 
-const resolveFieldDomIds = (widgetId: string, field: ResolvedFormField) => {
-  const prefix = resolveFieldIdPrefix(widgetId, field);
-  return {
-    inputId: `${widgetId}-${prefix}`,
-    labelId: `${widgetId}-${prefix}-label`,
-    helperId: field.settings?.helper ? `${widgetId}-${prefix}-helper` : undefined,
-  };
+const allocateFieldDomIds = (
+  widgetId: string,
+  fields: readonly ResolvedFormField[],
+  outerIds: readonly string[]
+) => {
+  const reservedIds = new Set(outerIds);
+  const allocatedIds = new Map<ResolvedFormField, FieldDomIds>();
+
+  for (const field of fields) {
+    const basePrefix = resolveFieldIdPrefix(field);
+    let attempt = 1;
+
+    while (true) {
+      const prefix = attempt === 1 ? basePrefix : `${basePrefix}-${attempt}`;
+      const inputId = `${widgetId}-${prefix}`;
+      const family = [
+        inputId,
+        `${inputId}-label`,
+        `${inputId}-helper`,
+        `${inputId}-upload-status`,
+      ] as const;
+
+      if (family.every((id) => !reservedIds.has(id))) {
+        family.forEach((id) => reservedIds.add(id));
+        allocatedIds.set(field, {
+          inputId,
+          labelId: family[1],
+          helperId: field.settings?.helper ? family[2] : undefined,
+          uploadStatusId: family[3],
+        });
+        break;
+      }
+
+      attempt += 1;
+    }
+  }
+
+  return allocatedIds;
 };
 
 const supportedFieldTypes = new Set([
@@ -814,7 +852,7 @@ const resolveFieldGridSpanClass = (field: ResolvedFormField) => {
 function renderFieldControl(
   field: ResolvedFormField,
   options: {
-    widgetId: string;
+    ids: FieldDomIds;
     showLabels: boolean;
     showRequiredIndicator: boolean;
     inputClassName: string;
@@ -831,7 +869,7 @@ function renderFieldControl(
   }
 ) {
   const {
-    widgetId,
+    ids,
     showLabels,
     showRequiredIndicator,
     inputClassName,
@@ -843,7 +881,6 @@ function renderFieldControl(
     inputStyle,
   } = options;
   const controlStyle: CSSProperties = inputStyle ?? { borderColor };
-  const ids = resolveFieldDomIds(widgetId, field);
   const placeholder = field.settings?.placeholder ?? "";
   const helper = field.settings?.helper;
   const required = Boolean(field.required);
@@ -1117,6 +1154,7 @@ function renderFieldControl(
     const acceptTokens = Array.isArray(field.settings?.accept) ? field.settings.accept : [];
     const accept = acceptTokens.length > 0 ? acceptTokens.join(",") : undefined;
     const multiple = field.settings?.multiple === true;
+    const describedBy = [ids.helperId, ids.uploadStatusId].filter(Boolean).join(" ");
     return (
       <div className={wrapperClassName}>
         {renderLabel()}
@@ -1127,12 +1165,14 @@ function renderFieldControl(
           // must never be submitted. The upload runtime posts the file to the form's
           // /uploads endpoint and writes the returned owned-media id into the hidden
           // companion input below (which carries the field name that IS submitted).
+          required={required}
           accept={accept}
           multiple={multiple}
           aria-required={required ? "true" : undefined}
           aria-label={labelHidden ? field.label : undefined}
           aria-labelledby={labelHidden ? undefined : ids.labelId}
-          aria-describedby={ids.helperId}
+          aria-describedby={describedBy}
+          data-required-original={required ? "1" : "0"}
           data-form-file-input={field.name}
           data-form-file-multiple={multiple ? "1" : "0"}
           className={joinClasses(
@@ -1146,10 +1186,17 @@ function renderFieldControl(
         <input
           type="hidden"
           name={field.name}
-          required={required}
-          aria-required={required ? "true" : undefined}
-          data-required-original={required ? "1" : "0"}
+          defaultValue=""
           data-form-file-value={field.name}
+          data-form-file-multiple={multiple ? "1" : "0"}
+        />
+        <p
+          id={ids.uploadStatusId}
+          className="text-xs empty:sr-only"
+          style={{ color: helperColor }}
+          data-form-file-status={field.name}
+          role="status"
+          aria-live="polite"
         />
         {helper ? (
           <p id={ids.helperId} className="text-xs" style={{ color: helperColor }}>
@@ -1392,6 +1439,7 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
     titleWeightClassMap[style.titleWeight ?? "semibold"]
   );
   const sectionLabelId = title.trim().length > 0 ? `${widgetId}-title` : undefined;
+  const fieldDomIds = allocateFieldDomIds(widgetId, fields, sectionLabelId ? [sectionLabelId] : []);
   const resolvedHeadingLevel = layout.headingLevel ?? "2";
   const titleStyle = compactStyle({ color: style.titleColor }) ?? {};
   const descriptionStyle = compactStyle({ color: style.helperColor ?? "var(--color-text)" }) ?? {};
@@ -1537,7 +1585,7 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
                               data-logic-value={field.settings?.logic?.value}
                             >
                               {renderFieldControl(field, {
-                                widgetId,
+                                ids: fieldDomIds.get(field)!,
                                 showLabels: fieldsConfig.showLabels,
                                 showRequiredIndicator: fieldsConfig.showRequiredIndicator,
                                 inputClassName,
@@ -1566,7 +1614,7 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
                         data-logic-value={field.settings?.logic?.value}
                       >
                         {renderFieldControl(field, {
-                          widgetId,
+                          ids: fieldDomIds.get(field)!,
                           showLabels: fieldsConfig.showLabels,
                           showRequiredIndicator: fieldsConfig.showRequiredIndicator,
                           inputClassName,

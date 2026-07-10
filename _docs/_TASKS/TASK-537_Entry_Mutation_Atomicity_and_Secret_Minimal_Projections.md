@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Content Entries / Data Integrity / Security / Cache
 **Estimated Effort:** Large
-**Dependencies:** TASK-514, TASK-541; must land before TASK-517
+**Dependencies:** TASK-514, TASK-536 (program order); must land before TASK-517
 **Status:** ⏳ To Do
 **Changelog:** 1249 (pinned; create only at implementation closure)
 
@@ -74,7 +74,7 @@ public enforcement and must be freshly audited on the post-537 tree.
 
 ## Ownership and land order
 
-Land `537-01 → 537-02 → 537-03`, after TASK-541 and before TASK-544 in the
+Land `537-01 → 537-02 → 537-03`, after TASK-536 and before TASK-538 in the
 program. Separate 537-01 leaves own transaction-aware taxonomy and SEO helpers;
 537-02 is the sole `entryService.ts` writer and composes the outer transaction,
 pre-write preparation, cache-after-commit, and minimal projections. TASK-517 may

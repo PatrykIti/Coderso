@@ -2,7 +2,13 @@ import { createReadStream } from "node:fs";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import type { MediaStorageAdapter, UploadFile } from "./adapter";
+import {
+  assertCanonicalStoredUpload,
+  buildCanonicalStorageKey,
+  type CanonicalStoredUpload,
+  type MediaStorageAdapter,
+  type UploadFile,
+} from "./adapter";
 
 export type LocalStorageOptions = {
   dir?: string | null;
@@ -45,6 +51,18 @@ export function createLocalAdapter(options?: LocalStorageOptions): MediaStorageA
       await ensureDir(path.join(baseDir, dir));
 
       const buffer = Buffer.from(await file.arrayBuffer());
+      await writeFile(path.join(baseDir, key), buffer);
+
+      return { key, url: `${getBaseUrl(options)}/${key}` };
+    },
+    async putMedia(upload: CanonicalStoredUpload) {
+      assertCanonicalStoredUpload(upload);
+      const key = buildCanonicalStorageKey(upload.identity);
+      const dir = path.dirname(key);
+      const baseDir = getLocalMediaDir(options);
+      const buffer = Buffer.from(await upload.bytes.arrayBuffer());
+
+      await ensureDir(path.join(baseDir, dir));
       await writeFile(path.join(baseDir, key), buffer);
 
       return { key, url: `${getBaseUrl(options)}/${key}` };

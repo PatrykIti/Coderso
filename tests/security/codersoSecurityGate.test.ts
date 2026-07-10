@@ -61,10 +61,31 @@ test("security gate: public submissions require captcha for forms and booking", 
     isAuthenticated: false,
   });
 
-  expect(forms.allow).toBe(true);
-  expect(forms.requireCaptcha).toBe(true);
+  expect(forms).toMatchObject({
+    allow: true,
+    mode: "public",
+    requireFormNonce: true,
+    requireCaptcha: true,
+    rateBucket: "public_write",
+  });
   expect(booking.allow).toBe(true);
   expect(booking.requireCaptcha).toBe(true);
+});
+
+test("security gate: a public cookie session still requires the form nonce", () => {
+  const forms = evaluateSubmissionAccess({
+    mode: "public",
+    isAuthenticated: true,
+  });
+  expect(forms).toMatchObject({
+    allow: true,
+    mode: "public",
+    principal: "session",
+    requireFormNonce: true,
+    requireCaptcha: false,
+    requireSessionCsrf: false,
+    rateBucket: "public_write",
+  });
 });
 
 test("security gate: internal submissions require session or scoped API key", () => {
@@ -78,6 +99,7 @@ test("security gate: internal submissions require session or scoped API key", ()
   });
 
   expect(formWithoutAuth.allow).toBe(false);
+  if (formWithoutAuth.allow) throw new Error("expected internal form rejection");
   expect(formWithoutAuth.reason).toBe("auth_required");
   expect(bookingWithoutAuth.allow).toBe(false);
   expect(bookingWithoutAuth.reason).toBe("auth_required");
@@ -93,8 +115,13 @@ test("security gate: internal submissions require session or scoped API key", ()
     apiKeyScopes: [bookingAccessDefaults.requiredApiKeyScope],
   });
 
-  expect(formWithApiKey.allow).toBe(true);
-  expect(formWithApiKey.requireCaptcha).toBe(false);
+  expect(formWithApiKey).toMatchObject({
+    allow: true,
+    mode: "internal",
+    principal: "apiKey",
+    requireCaptcha: false,
+    rateBucket: "admin_write",
+  });
   expect(bookingWithApiKey.allow).toBe(true);
   expect(bookingWithApiKey.requireCaptcha).toBe(false);
 });

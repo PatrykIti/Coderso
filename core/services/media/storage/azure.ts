@@ -1,10 +1,14 @@
-import {
-  BlobServiceClient,
-  StorageSharedKeyCredential,
-} from "@azure/storage-blob";
+import { BlobServiceClient, StorageSharedKeyCredential } from "@azure/storage-blob";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import type { MediaStorageAdapter, UploadFile } from "./adapter";
+import { safeMediaDisposition } from "../mediaFileTrust";
+import {
+  assertCanonicalStoredUpload,
+  buildCanonicalStorageKey,
+  type CanonicalStoredUpload,
+  type MediaStorageAdapter,
+  type UploadFile,
+} from "./adapter";
 
 export type AzureStorageOptions = {
   account?: string | null;
@@ -12,6 +16,7 @@ export type AzureStorageOptions = {
   container?: string | null;
   connectionString?: string | null;
   baseUrl?: string | null;
+  serviceClient?: BlobServiceClient;
 };
 
 type AzureConfig = {
@@ -28,8 +33,7 @@ function parseAccountFromConnectionString(connectionString: string) {
 }
 
 function getAzureConfig(options?: AzureStorageOptions) {
-  const connectionString =
-    options?.connectionString ?? process.env.AZURE_STORAGE_CONNECTION_STRING;
+  const connectionString = options?.connectionString ?? process.env.AZURE_STORAGE_CONNECTION_STRING;
   const account =
     options?.account ??
     process.env.AZURE_ACCOUNT ??
@@ -46,7 +50,12 @@ function getAzureConfig(options?: AzureStorageOptions) {
     if (!account) {
       throw new Error("azure_config_missing");
     }
-    return { account, container, connectionString, baseUrl: baseUrl ?? undefined } satisfies AzureConfig;
+    return {
+      account,
+      container,
+      connectionString,
+      baseUrl: baseUrl ?? undefined,
+    } satisfies AzureConfig;
   }
 
   if (!account || !key) {
@@ -68,28 +77,27 @@ function buildKey(fileName: string) {
   return `${yyyy}/${mm}/${randomUUID()}${ext}`;
 }
 
-export function createAzureAdapter(
-  options?: AzureStorageOptions
-): MediaStorageAdapter {
-  const { account, key, container, connectionString, baseUrl } =
-    getAzureConfig(options);
-  const service = connectionString
-    ? BlobServiceClient.fromConnectionString(connectionString)
-    : (() => {
-        if (!key) {
-          throw new Error("azure_config_missing");
-        }
-        return new BlobServiceClient(
-          `https://${account}.blob.core.windows.net`,
-          new StorageSharedKeyCredential(account, key)
-        );
-      })();
-  const containerClient = service.getContainerClient(container);
+export function createAzureAdapter(options?: AzureStorageOptions): MediaStorageAdapter {
+  const { account, key, container, connectionString, baseUrl } = getAzureConfig(options);
+  const service =
+    options?.serviceClient ??
+    (connectionString
+      ? BlobServiceClient.fromConnectionString(connectionString)
+      : (() => {
+          if (!key) {
+            throw new Error("azure_config_missing");
+          }
+          return new BlobServiceClient(
+            `https://${account}.blob.core.windows.net`,
+            new StorageSharedKeyCredential(account, key)
+          );
+        })());
   const resolvedBaseUrl = getBaseUrl(account, container, baseUrl);
 
   return {
     async put(file: UploadFile) {
       const keyName = buildKey(file.name);
+      const containerClient = service.getContainerClient(container);
       const blockBlob = containerClient.getBlockBlobClient(keyName);
       const buffer = Buffer.from(await file.arrayBuffer());
 
@@ -99,7 +107,29 @@ export function createAzureAdapter(
 
       return { key: keyName, url: `${resolvedBaseUrl}/${keyName}` };
     },
+    async putMedia(upload: CanonicalStoredUpload) {
+      assertCanonicalStoredUpload(upload);
+      const keyName = buildCanonicalStorageKey(upload.identity);
+      const contentDisposition = safeMediaDisposition(
+        upload.identity.delivery,
+        upload.downloadName,
+        upload.identity.extension
+      );
+      const containerClient = service.getContainerClient(container);
+      const blockBlob = containerClient.getBlockBlobClient(keyName);
+      const buffer = Buffer.from(await upload.bytes.arrayBuffer());
+
+      await blockBlob.uploadData(buffer, {
+        blobHTTPHeaders: {
+          blobContentType: upload.identity.mimeType,
+          blobContentDisposition: contentDisposition,
+        },
+      });
+
+      return { key: keyName, url: `${resolvedBaseUrl}/${keyName}` };
+    },
     async get(keyName: string) {
+      const containerClient = service.getContainerClient(container);
       const blobClient = containerClient.getBlobClient(keyName);
       const response = await blobClient.download();
       if (!response.readableStreamBody) {
@@ -108,6 +138,7 @@ export function createAzureAdapter(
       return response.readableStreamBody;
     },
     async delete(keyName: string) {
+      const containerClient = service.getContainerClient(container);
       await containerClient.deleteBlob(keyName);
     },
     getPublicUrl(keyName: string) {

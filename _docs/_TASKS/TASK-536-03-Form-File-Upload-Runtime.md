@@ -4,7 +4,7 @@
 
 **Parent Task:** TASK-536
 **Priority:** Critical
-**Category:** Forms Widget / Public Runtime / Accessibility
+**Category:** Forms Block / Public Runtime / Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-536-02
 **Status:** ⏳ To Do
@@ -19,6 +19,12 @@ accessible upload control and a named media-ID companion. The runtime leaf uploa
 selected file to the existing endpoint before submission, writes only returned IDs,
 blocks navigation/submission during failure or pending work, and serializes single versus
 multiple values in the shape already required by Forms validation.
+
+`core/widgets` is a legacy implementation namespace here. `form-embed`, `contact`, and
+`newsletter` are existing public block/section renderers that consume this shared Forms
+runtime; this subtask changes only their compatible browser behavior. It adds no
+non-dashboard widget, editor control, authoring section, registry/module-pack entry, or
+new block type.
 
 ## Grounded anchors
 

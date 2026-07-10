@@ -46,11 +46,79 @@ const getAttributeValue = (tag: string, attribute: string) => {
 const countClassToken = (className: string | undefined, token: string) =>
   (className ?? "").split(/\s+/).filter((entry) => entry === token).length;
 
+const replaceRuntimeScriptPayload = (html: string) => {
+  const openingTag = "<script>";
+  const closingTag = "</script>";
+  const openingIndex = html.indexOf(openingTag);
+  const payloadStart = openingIndex + openingTag.length;
+  const closingIndex = html.indexOf(closingTag, payloadStart);
+
+  if (
+    openingIndex < 0 ||
+    closingIndex < 0 ||
+    html.indexOf(openingTag, payloadStart) >= 0 ||
+    html.indexOf(closingTag, closingIndex + closingTag.length) >= 0
+  ) {
+    throw new Error("Expected exactly one inline form runtime script");
+  }
+
+  return `${html.slice(0, payloadStart)}__FORM_RUNTIME_SCRIPT__${html.slice(closingIndex)}`;
+};
+
+const nonFileStructuralHtmlBaseline = `<section class="mx-auto flex w-full flex-col px-4 py-8" style="background-color:transparent" aria-labelledby="_R_0_-title" data-form-embed-variant="standard" data-form-embed-spacing="md"><div class="flex w-full flex-col max-w-lg items-start text-left" data-form-embed-width="md"><div class="w-full space-y-6 p-6 border rounded-lg" style="background-color:var(--color-bg);border-color:var(--color-border)" data-form-embed-radius="md" data-form-embed-input-size="md"><div class="space-y-2"><h2 id="_R_0_-title" class="text-xl font-semibold" style="color:var(--color-text)">Contact us</h2><p class="text-sm" style="color:var(--color-text)">Tell us what you need.</p></div><form class="space-y-4" data-form-id="baseline-form" data-nextless-form-runtime="1" data-form-layout-mode="single" data-form-save-progress="0" data-form-success-message="Thanks for your submission." data-form-success-behavior="show-message-hide-form" data-form-loading-label="Sending..." data-form-submit-label="Send message" data-form-progress-ttl-days="7" data-form-captcha-site-key="" data-form-captcha-action="" data-form-root="true" action="/forms/baseline-form/submissions" method="post"><input type="hidden" name="__nl_form_nonce" value="baseline-nonce"/><div data-form-embed-form-body="true" class="space-y-4"><div class="grid md:grid-cols-2 gap-6"><div class="md:col-span-2" data-form-field="name"><div class="space-y-2"><label id="_R_0_-name-field-label" for="_R_0_-name-field" class="text-xs font-semibold uppercase tracking-wide" style="color:var(--color-text)">Name<!-- --> *</label><input id="_R_0_-name-field" type="text" required="" aria-required="true" aria-labelledby="_R_0_-name-field-label" aria-describedby="_R_0_-name-field-helper" data-required-original="1" placeholder="Ada" class="w-full border bg-transparent px-3 py-2.5 text-sm border rounded-lg" style="border-color:var(--color-border)" name="name"/><p id="_R_0_-name-field-helper" class="text-xs" style="color:var(--color-text)">Your full name</p></div></div><div class="md:col-span-2" data-form-field="topic"><div class="space-y-2"><label id="_R_0_-topic-field-label" for="_R_0_-topic-field" class="text-xs font-semibold uppercase tracking-wide" style="color:var(--color-text)">Topic</label><select id="_R_0_-topic-field" name="topic" aria-labelledby="_R_0_-topic-field-label" data-required-original="0" class="w-full border bg-transparent px-3 py-2.5 text-sm border rounded-lg" style="border-color:var(--color-border)"><option value="">Select an option</option><option value="Support">Support</option><option value="Sales">Sales</option></select></div></div><div class="md:col-span-2" data-form-field="consent"><div class="space-y-2"><label id="_R_0_-consent-field-label" for="_R_0_-consent-field" class="text-xs font-semibold uppercase tracking-wide" style="color:var(--color-text)">I agree</label><div class="flex items-center gap-2 text-sm text-[var(--color-text)]"><input id="_R_0_-consent-field" type="checkbox" aria-labelledby="_R_0_-consent-field-label" data-required-original="0" class="h-4 w-4 border rounded-lg" style="border-color:var(--color-border)" name="consent" value="true"/></div></div></div></div><div class="flex justify-start"><button type="submit" data-form-submit="1" class="px-5 py-2 text-sm font-semibold rounded-lg" style="background-color:var(--color-primary);color:var(--color-bg)">Send message</button></div></div><p class="hidden text-xs text-[var(--color-text)]/65" data-form-embed-success="true" role="alert" aria-live="polite">Thanks for your submission.</p><p class="hidden text-xs text-rose-600" data-form-embed-error="true" role="alert" aria-live="assertive">Unable to submit the form. Please try again.</p></form><script>__FORM_RUNTIME_SCRIPT__</script></div></div></section>`;
+
 test("form embed renders defaults", () => {
   const html = renderToString(<FormEmbedBlock data={formEmbedDefaults} variant="standard" />);
 
   expect(html).toContain('data-form-embed-variant="standard"');
   expect(html).toContain("Form");
+});
+
+test("form embed preserves the exact non-file structural render contract", () => {
+  const html = renderToString(
+    <FormEmbedBlock
+      data={{
+        formId: "baseline-form",
+        title: "Contact us",
+        description: "Tell us what you need.",
+        resolved: {
+          formName: "Contact",
+          submissionNonce: "baseline-nonce",
+          fields: [
+            {
+              id: "name-field",
+              type: "text",
+              label: "Name",
+              name: "name",
+              required: true,
+              settings: {
+                placeholder: "Ada",
+                helper: "Your full name",
+              },
+            },
+            {
+              id: "topic-field",
+              type: "select",
+              label: "Topic",
+              name: "topic",
+              required: false,
+              settings: { options: ["Support", "Sales"] },
+            },
+            {
+              id: "consent-field",
+              type: "checkbox",
+              label: "I agree",
+              name: "consent",
+              required: false,
+            },
+          ],
+        },
+      }}
+      variant="standard"
+    />
+  );
+
+  expect(replaceRuntimeScriptPayload(html)).toBe(nonFileStructuralHtmlBaseline);
 });
 
 test("form embed normalization resolves layout defaults", () => {
@@ -156,6 +224,258 @@ test("516-07: file field renders a real file control (not 'Unsupported') + hidde
   expect(html).toContain('data-form-file-input="resume"');
   expect(html).toContain('data-form-file-value="resume"');
   expect(html).toContain('type="hidden"');
+});
+
+test("form embed gives native file controls validity and runtime companions stable identities", () => {
+  const html = renderToString(
+    <FormEmbedBlock
+      data={{
+        formId: "file-contract-form",
+        resolved: {
+          formName: "File contract",
+          fields: [
+            {
+              id: "resume-file",
+              type: "file",
+              label: "Resume",
+              name: "resume",
+              required: true,
+              settings: {
+                accept: ["application/pdf"],
+                helper: "PDF only",
+              },
+            },
+            {
+              id: "portfolio-files",
+              type: "file",
+              label: "Portfolio",
+              name: "portfolio",
+              required: false,
+              settings: {
+                accept: ["image/png", "image/jpeg"],
+                multiple: true,
+              },
+            },
+          ],
+        },
+      }}
+      variant="standard"
+    />
+  );
+
+  const requiredInput = getOpeningTagByAttribute(html, "input", "data-form-file-input", "resume");
+  const requiredValue = getOpeningTagByAttribute(html, "input", "data-form-file-value", "resume");
+  const requiredStatus = getOpeningTagByAttribute(html, "p", "data-form-file-status", "resume");
+  const multipleInput = getOpeningTagByAttribute(
+    html,
+    "input",
+    "data-form-file-input",
+    "portfolio"
+  );
+  const multipleValue = getOpeningTagByAttribute(
+    html,
+    "input",
+    "data-form-file-value",
+    "portfolio"
+  );
+  const multipleStatus = getOpeningTagByAttribute(html, "p", "data-form-file-status", "portfolio");
+
+  expect(requiredInput).toContain('required=""');
+  expect(requiredInput).toContain('aria-required="true"');
+  expect(requiredInput).toContain('data-required-original="1"');
+  expect(requiredInput).not.toMatch(/\sname=/);
+  expect(requiredInput).toContain('accept="application/pdf"');
+  expect(requiredInput).not.toContain('multiple=""');
+  expect(requiredInput).toContain('data-form-file-multiple="0"');
+
+  expect(requiredValue).toContain('name="resume"');
+  expect(requiredValue).toContain('value=""');
+  expect(requiredValue).toContain('data-form-file-multiple="0"');
+  expect(requiredValue).not.toContain(" required");
+  expect(requiredValue).not.toContain("aria-required");
+  expect(requiredValue).not.toContain("data-required-original");
+  expect(requiredValue).not.toContain("accept=");
+
+  expect(multipleInput).not.toContain(" required");
+  expect(multipleInput).not.toContain("aria-required");
+  expect(multipleInput).toContain('data-required-original="0"');
+  expect(multipleInput).not.toMatch(/\sname=/);
+  expect(multipleInput).toContain('accept="image/png,image/jpeg"');
+  expect(multipleInput).toContain('multiple=""');
+  expect(multipleInput).toContain('data-form-file-multiple="1"');
+
+  expect(multipleValue).toContain('name="portfolio"');
+  expect(multipleValue).toContain('value=""');
+  expect(multipleValue).toContain('data-form-file-multiple="1"');
+  expect(multipleValue).not.toContain(" required");
+  expect(multipleValue).not.toContain("aria-required");
+  expect(multipleValue).not.toContain("data-required-original");
+  expect(multipleValue).not.toContain("accept=");
+
+  const requiredInputId = getAttributeValue(requiredInput, "id");
+  const requiredStatusId = getAttributeValue(requiredStatus, "id");
+  const multipleInputId = getAttributeValue(multipleInput, "id");
+  const multipleStatusId = getAttributeValue(multipleStatus, "id");
+  expect(requiredInputId).toBeTruthy();
+  expect(requiredStatusId).toBe(`${requiredInputId}-upload-status`);
+  expect(multipleInputId).toBeTruthy();
+  expect(multipleStatusId).toBe(`${multipleInputId}-upload-status`);
+  expect(new Set([requiredInputId, requiredStatusId, multipleInputId, multipleStatusId]).size).toBe(
+    4
+  );
+
+  expect(getAttributeValue(requiredInput, "aria-describedby")).toBe(
+    `${requiredInputId}-helper ${requiredStatusId}`
+  );
+  expect(getAttributeValue(multipleInput, "aria-describedby")).toBe(multipleStatusId);
+  const requiredHelper = getOpeningTagByAttribute(html, "p", "id", `${requiredInputId}-helper`);
+  expect(html).toContain(`${requiredStatus}</p>${requiredHelper}PDF only</p>`);
+  expect(html).toContain(`${multipleValue}${multipleStatus}</p>`);
+  expect(html).not.toContain(`id="${multipleInputId}-helper"`);
+  for (const status of [requiredStatus, multipleStatus]) {
+    expect(getAttributeValue(status, "class")?.split(/\s+/)).toContain("empty:sr-only");
+    expect(status).toContain('role="status"');
+    expect(status).toContain('aria-live="polite"');
+  }
+  expect(html).toContain(`${requiredStatus}</p>`);
+  expect(html).toContain(`${multipleStatus}</p>`);
+
+  for (const identity of ["resume", "portfolio"]) {
+    for (const attribute of [
+      "data-form-file-input",
+      "data-form-file-value",
+      "data-form-file-status",
+    ]) {
+      expect(html.match(new RegExp(`${attribute}="${identity}"`, "g"))).toHaveLength(1);
+    }
+  }
+});
+
+test("form embed allocates the same collision-free field id families across layout modes", () => {
+  const fields = [
+    {
+      id: "a b",
+      type: "file",
+      label: "Slug space",
+      name: "slug_space",
+      required: false,
+      settings: { helper: "First helper", formStep: 2 },
+    },
+    {
+      id: "a-b",
+      type: "file",
+      label: "Slug dash",
+      name: "slug_dash",
+      required: false,
+      settings: { formStep: 1 },
+    },
+    {
+      id: "a",
+      type: "file",
+      label: "Role owner",
+      name: "role_owner",
+      required: false,
+      settings: { helper: "Role helper", formStep: 2 },
+    },
+    {
+      id: "a-upload-status",
+      type: "file",
+      label: "Role collision",
+      name: "role_collision",
+      required: false,
+      settings: { formStep: 1 },
+    },
+    {
+      id: "title",
+      type: "file",
+      label: "Heading collision",
+      name: "heading_collision",
+      required: false,
+      settings: { formStep: 2 },
+    },
+  ] satisfies NonNullable<NonNullable<FormEmbedData["resolved"]>["fields"]>;
+  const renderCollisionForm = (layoutMode: "single" | "multi_step") =>
+    renderToString(
+      <FormEmbedBlock
+        data={{
+          formId: "collision-form",
+          title: "Collision form",
+          resolved: {
+            formName: "Collision form",
+            settings: {
+              layoutMode,
+              stepTitles: ["First", "Second"],
+            },
+            fields,
+          },
+        }}
+        variant="standard"
+      />
+    );
+
+  const assertCollisionContract = (html: string, layoutMode: "single" | "multi_step") => {
+    const headingMatch = html.match(/<h2 id="([^"]+)"/);
+    if (!headingMatch) throw new Error("Missing form heading id");
+    const headingId = headingMatch[1];
+    const widgetId = headingId.slice(0, -"-title".length);
+    const expectedInputIds = new Map([
+      ["slug_space", `${widgetId}-a-b`],
+      ["slug_dash", `${widgetId}-a-b-2`],
+      ["role_owner", `${widgetId}-a`],
+      ["role_collision", `${widgetId}-a-upload-status-2`],
+      ["heading_collision", `${widgetId}-title-2`],
+    ]);
+    const helperByIdentity = new Map([
+      ["slug_space", "First helper"],
+      ["role_owner", "Role helper"],
+    ]);
+
+    expect(headingId).toBe(`${widgetId}-title`);
+    if (layoutMode === "multi_step") {
+      expect(html).toContain('data-step-index="1"');
+      expect(html).toContain('data-step-index="2"');
+    } else {
+      expect(html).not.toContain("data-step-index=");
+    }
+
+    for (const [identity, inputId] of expectedInputIds) {
+      const input = getOpeningTagByAttribute(html, "input", "data-form-file-input", identity);
+      const status = getOpeningTagByAttribute(html, "p", "data-form-file-status", identity);
+      const label = getOpeningTagByAttribute(html, "label", "for", inputId);
+      const statusId = `${inputId}-upload-status`;
+      const helperId = `${inputId}-helper`;
+      const helper = helperByIdentity.get(identity);
+
+      expect(getAttributeValue(input, "id")).toBe(inputId);
+      expect(getAttributeValue(input, "aria-labelledby")).toBe(`${inputId}-label`);
+      expect(getAttributeValue(label, "id")).toBe(`${inputId}-label`);
+      expect(getAttributeValue(status, "id")).toBe(statusId);
+      expect(getAttributeValue(status, "class")?.split(/\s+/)).toContain("empty:sr-only");
+      expect(getAttributeValue(input, "aria-describedby")).toBe(
+        helper ? `${helperId} ${statusId}` : statusId
+      );
+
+      for (const targetId of [inputId, `${inputId}-label`, statusId]) {
+        expect(html.match(new RegExp(`id="${targetId}"`, "g"))).toHaveLength(1);
+      }
+      if (helper) {
+        expect(html.match(new RegExp(`id="${helperId}"`, "g"))).toHaveLength(1);
+        expect(html).toContain(`id="${helperId}"`);
+        expect(html).toContain(`>${helper}</p>`);
+      } else {
+        expect(html).not.toContain(`id="${helperId}"`);
+        expect(getAttributeValue(input, "aria-describedby")).not.toContain(helperId);
+      }
+    }
+
+    const renderedIds = Array.from(html.matchAll(/\sid="([^"]+)"/g), (match) => match[1]);
+    expect(new Set(renderedIds).size).toBe(renderedIds.length);
+    return Array.from(expectedInputIds.values());
+  };
+
+  const singleIds = assertCollisionContract(renderCollisionForm("single"), "single");
+  const multiStepIds = assertCollisionContract(renderCollisionForm("multi_step"), "multi_step");
+  expect(multiStepIds).toEqual(singleIds);
 });
 
 test("form embed renders submission nonce when resolved", () => {

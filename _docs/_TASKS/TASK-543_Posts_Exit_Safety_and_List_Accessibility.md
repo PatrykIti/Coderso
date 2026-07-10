@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Posts / Autosave / Admin UI / Accessibility
 **Estimated Effort:** Small
-**Dependencies:** Existing Posts editor and PostsTable contracts
+**Dependencies:** Existing Posts editor and PostsTable contracts; TASK-542 (program order)
 **Status:** ⏳ To Do
 **Changelog:** 1255 (pinned; create only at implementation closure)
 
@@ -63,7 +63,7 @@ mutation boundary.
 
 ## Ownership and land order
 
-Land `543-01 → 543-02 → 543-03`, after TASK-544 and before TASK-540 in the
+Land `543-01 → 543-02 → 543-03`, after TASK-542 and before TASK-544 in the
 program. The autosave/editor-state/shell seam and its direct tests belong exclusively to
 543-01; PostsTable and its direct tests belong exclusively to 543-02. Closure reruns all
 six suites read-only and reopens neither source nor changed-behavior tests.

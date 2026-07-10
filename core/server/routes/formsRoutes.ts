@@ -11,18 +11,17 @@ import {
 import { uploadMedia } from "../../services/media/mediaService";
 import type { UploadFile } from "../../services/media/storage/adapter";
 import {
-  evaluateSubmissionAccess,
-  normalizeSubmissionAccess,
+  type SubmissionAccessDecision,
+  type SubmissionAccessMode,
 } from "../../services/forms/submissionAccess";
 import { assertFormSubmissionNonce } from "../../services/forms/submissionNonce";
 import { listSubmissions, submitForm } from "../../services/forms/submissionService";
 import { runFormAutomation } from "../../services/forms/formAutomationRunner";
 import { normalizeFormSettings } from "../../services/forms/formSettings";
 import { ApiError } from "../errorHandler";
-import { authenticateApiKey } from "../../services/security/apiKeyAuth";
 import { enforceBotProtection } from "../../services/security/botProtection";
-import { checkRateLimit } from "../middleware/rateLimit";
-import { getSecuritySettings } from "../../services/settings/securitySettings";
+import type { SecuritySettings } from "../../services/settings/securitySettings";
+import type { RouteContext as RouterRouteContext } from "../router";
 import {
   formAttachmentUploadSchema,
   formCreateSchema,
@@ -31,15 +30,283 @@ import {
   formUpdateSchema,
 } from "../validation/formSchemas";
 
-export type RouteContext = {
-  params: Record<string, string>;
-  query: Record<string, string | undefined>;
-  body: unknown;
-  headers?: Record<string, string | undefined>;
-  cookies?: Record<string, string | undefined>;
-  user?: { id: string; email?: string; name?: string | null };
-  ip?: string;
-  userAgent?: string;
+export type PreparedFormWriteKind = "upload" | "submission";
+export type PreparedFormWriteAccess = Extract<SubmissionAccessDecision, { allow: true }>;
+export type FormWriteAccessTarget = NonNullable<Awaited<ReturnType<typeof getForm>>>;
+export type PreparedFormWriteForm = Readonly<{
+  id: string;
+  submissionAccess: SubmissionAccessMode;
+  successMessage: string | null;
+  successRedirectUrl: string | null;
+  settings: unknown;
+}>;
+
+export type PreparedFormWriteDescriptor = Readonly<{
+  kind: PreparedFormWriteKind;
+  formId: string;
+  form: Readonly<PreparedFormWriteForm>;
+  access: PreparedFormWriteAccess;
+}>;
+
+const preparedFormWriteDescriptors = new WeakSet<PreparedFormWriteDescriptor>();
+
+const PREPARED_FORM_KEYS = [
+  "id",
+  "submissionAccess",
+  "successMessage",
+  "successRedirectUrl",
+  "settings",
+] as const;
+const PREPARED_ACCESS_KEYS = [
+  "allow",
+  "mode",
+  "principal",
+  "requireFormNonce",
+  "requireCaptcha",
+  "requireSessionCsrf",
+  "rateBucket",
+] as const;
+
+const isOrdinaryObject = (value: object) => {
+  return Object.getPrototypeOf(value) === Object.prototype;
+};
+
+const readOwnDataDescriptor = (input: object, key: PropertyKey): PropertyDescriptor => {
+  const descriptor = Object.getOwnPropertyDescriptor(input, key);
+  if (!descriptor || !("value" in descriptor) || descriptor.get || descriptor.set) {
+    throw new Error("form_write_descriptor_invalid");
+  }
+  return descriptor;
+};
+
+const readOwnDataValue = (input: object, key: PropertyKey): unknown =>
+  readOwnDataDescriptor(input, key).value;
+
+const assertDataOnlyOwnProperties = (input: object) => {
+  for (const key of Reflect.ownKeys(input)) {
+    if (typeof key !== "string") throw new Error("form_write_descriptor_invalid");
+    readOwnDataDescriptor(input, key);
+  }
+};
+
+const snapshotDataTree = (value: unknown, ancestors = new WeakSet<object>()): unknown => {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "boolean" ||
+    (typeof value === "number" && Number.isFinite(value))
+  ) {
+    return value;
+  }
+  if (typeof value !== "object") throw new Error("form_write_descriptor_invalid");
+  if (ancestors.has(value)) throw new Error("form_write_descriptor_invalid");
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) {
+      if (Object.getPrototypeOf(value) !== Array.prototype) {
+        throw new Error("form_write_descriptor_invalid");
+      }
+      const keys = Reflect.ownKeys(value);
+      const length = readOwnDataValue(value, "length");
+      if (
+        typeof length !== "number" ||
+        !Number.isSafeInteger(length) ||
+        keys.length !== length + 1 ||
+        keys.some(
+          (key) =>
+            typeof key === "symbol" || (key !== "length" && !/^(0|[1-9]\d*)$/.test(String(key)))
+        )
+      ) {
+        throw new Error("form_write_descriptor_invalid");
+      }
+      const snapshot: unknown[] = [];
+      for (let index = 0; index < length; index += 1) {
+        const descriptor = readOwnDataDescriptor(value, String(index));
+        if (!descriptor.enumerable) throw new Error("form_write_descriptor_invalid");
+        snapshot.push(snapshotDataTree(descriptor.value, ancestors));
+      }
+      return Object.freeze(snapshot);
+    }
+    if (!isOrdinaryObject(value)) throw new Error("form_write_descriptor_invalid");
+    const snapshot: Record<string, unknown> = {};
+    for (const key of Reflect.ownKeys(value)) {
+      if (typeof key !== "string") throw new Error("form_write_descriptor_invalid");
+      const descriptor = readOwnDataDescriptor(value, key);
+      if (!descriptor.enumerable) throw new Error("form_write_descriptor_invalid");
+      Object.defineProperty(snapshot, key, {
+        value: snapshotDataTree(descriptor.value, ancestors),
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
+    }
+    return Object.freeze(snapshot);
+  } finally {
+    ancestors.delete(value);
+  }
+};
+
+const hasExactOwnKeys = (input: object, expected: readonly string[]) => {
+  const actual = Reflect.ownKeys(input);
+  return (
+    actual.length === expected.length &&
+    actual.every((key) => typeof key === "string" && expected.includes(key))
+  );
+};
+
+export function createPreparedFormWriteForm(input: FormWriteAccessTarget): PreparedFormWriteForm {
+  if (!input || typeof input !== "object" || !isOrdinaryObject(input)) {
+    throw new Error("form_write_descriptor_invalid");
+  }
+  assertDataOnlyOwnProperties(input);
+  const id = readOwnDataValue(input, "id");
+  const submissionAccess = readOwnDataValue(input, "submissionAccess");
+  const successMessage = readOwnDataValue(input, "successMessage");
+  const successRedirectUrl = readOwnDataValue(input, "successRedirectUrl");
+  if (
+    typeof id !== "string" ||
+    (submissionAccess !== "public" && submissionAccess !== "internal") ||
+    (successMessage !== null && typeof successMessage !== "string") ||
+    (successRedirectUrl !== null && typeof successRedirectUrl !== "string")
+  ) {
+    throw new Error("form_write_descriptor_invalid");
+  }
+  return Object.freeze({
+    id,
+    submissionAccess,
+    successMessage,
+    successRedirectUrl,
+    settings: snapshotDataTree(readOwnDataValue(input, "settings")),
+  });
+}
+
+const snapshotPreparedAccess = (
+  input: PreparedFormWriteAccess,
+  formMode: SubmissionAccessMode
+): PreparedFormWriteAccess => {
+  if (!input || typeof input !== "object" || !isOrdinaryObject(input)) {
+    throw new Error("form_write_descriptor_invalid");
+  }
+  assertDataOnlyOwnProperties(input);
+  if (!hasExactOwnKeys(input, PREPARED_ACCESS_KEYS)) {
+    throw new Error("form_write_descriptor_invalid");
+  }
+  const allow = readOwnDataValue(input, "allow");
+  const mode = readOwnDataValue(input, "mode");
+  const principal = readOwnDataValue(input, "principal");
+  const requireFormNonce = readOwnDataValue(input, "requireFormNonce");
+  const requireCaptcha = readOwnDataValue(input, "requireCaptcha");
+  const requireSessionCsrf = readOwnDataValue(input, "requireSessionCsrf");
+  const rateBucket = readOwnDataValue(input, "rateBucket");
+  if (
+    allow !== true ||
+    mode !== formMode ||
+    (mode !== "public" && mode !== "internal") ||
+    (principal !== "anonymous" && principal !== "session" && principal !== "apiKey")
+  ) {
+    throw new Error("form_write_descriptor_invalid");
+  }
+  if (mode === "public") {
+    if (
+      (principal !== "anonymous" && principal !== "session") ||
+      requireFormNonce !== true ||
+      requireCaptcha !== (principal === "anonymous") ||
+      requireSessionCsrf !== false ||
+      rateBucket !== "public_write"
+    ) {
+      throw new Error("form_write_descriptor_invalid");
+    }
+    return Object.freeze({
+      allow: true,
+      mode,
+      principal,
+      requireFormNonce: true,
+      requireCaptcha,
+      requireSessionCsrf: false,
+      rateBucket: "public_write",
+    });
+  }
+  if (
+    (principal !== "session" && principal !== "apiKey") ||
+    requireFormNonce !== false ||
+    requireCaptcha !== false ||
+    requireSessionCsrf !== (principal === "session") ||
+    rateBucket !== "admin_write"
+  ) {
+    throw new Error("form_write_descriptor_invalid");
+  }
+  if (principal === "session") {
+    return Object.freeze({
+      allow: true,
+      mode,
+      principal,
+      requireFormNonce: false,
+      requireCaptcha: false,
+      requireSessionCsrf: true,
+      rateBucket: "admin_write",
+    });
+  }
+  return Object.freeze({
+    allow: true,
+    mode,
+    principal,
+    requireFormNonce: false,
+    requireCaptcha: false,
+    requireSessionCsrf: false,
+    rateBucket: "admin_write",
+  });
+};
+
+export function createPreparedFormWriteDescriptor(input: {
+  kind: PreparedFormWriteKind;
+  formId: string;
+  form: Readonly<PreparedFormWriteForm>;
+  access: PreparedFormWriteAccess;
+}): PreparedFormWriteDescriptor {
+  if (input.kind !== "upload" && input.kind !== "submission") {
+    throw new Error("form_write_descriptor_invalid");
+  }
+  if (!hasExactOwnKeys(input.form, PREPARED_FORM_KEYS)) {
+    throw new Error("form_write_descriptor_invalid");
+  }
+  const form = createPreparedFormWriteForm(input.form as FormWriteAccessTarget);
+  if (input.formId !== form.id) throw new Error("form_write_descriptor_invalid");
+  const access = snapshotPreparedAccess(input.access, form.submissionAccess);
+  const descriptor = Object.freeze({
+    kind: input.kind,
+    formId: input.formId,
+    form,
+    access,
+  });
+  preparedFormWriteDescriptors.add(descriptor);
+  return descriptor;
+}
+
+function requirePreparedFormWriteDescriptor(
+  ctx: RouteContext,
+  kind: PreparedFormWriteKind
+): PreparedFormWriteDescriptor {
+  const descriptor = ctx.preparedFormWrite;
+  if (
+    !descriptor ||
+    !preparedFormWriteDescriptors.has(descriptor) ||
+    !Object.isFrozen(descriptor) ||
+    !Object.isFrozen(descriptor.form) ||
+    !Object.isFrozen(descriptor.access) ||
+    !hasExactOwnKeys(descriptor.form, PREPARED_FORM_KEYS) ||
+    !hasExactOwnKeys(descriptor.access, PREPARED_ACCESS_KEYS) ||
+    descriptor.kind !== kind ||
+    descriptor.formId !== ctx.params.id ||
+    descriptor.form.id !== ctx.params.id ||
+    descriptor.access.mode !== descriptor.form.submissionAccess
+  ) {
+    throw new ApiError("form_invalid", "Invalid form write context.", 400);
+  }
+  return descriptor;
+}
+
+export type RouteContext = RouterRouteContext & {
+  preparedFormWrite?: PreparedFormWriteDescriptor;
 };
 
 export type RouteHandler = (ctx: RouteContext) => Promise<unknown> | unknown;
@@ -115,6 +382,10 @@ export const mapFormError = (error: unknown) => {
       return new ApiError("media_file_too_large", "File exceeds size limit", 413);
     case "media_mime_not_allowed":
       return new ApiError("media_mime_not_allowed", "File type not allowed", 400);
+    case "media_storage_unavailable":
+      return new ApiError("media_storage_unavailable", "Media storage is unavailable", 503);
+    case "form_payload_too_large":
+      return new ApiError("form_payload_too_large", "Form payload exceeds size limit", 413);
     default:
       return null;
   }
@@ -141,7 +412,12 @@ const normalizeSubmissionBody = (body: unknown): SubmissionBody => {
   const resolveToken = (value: unknown) =>
     typeof value === "string" && value.trim().length > 0 ? value : undefined;
 
-  if ("data" in payload && typeof payload.data === "object" && payload.data !== null) {
+  if (
+    "data" in payload &&
+    typeof payload.data === "object" &&
+    payload.data !== null &&
+    !Array.isArray(payload.data)
+  ) {
     const captchaToken = resolveToken(payload.captchaToken);
     const formNonce = resolveToken(payload.formNonce);
     return {
@@ -163,61 +439,52 @@ const normalizeSubmissionBody = (body: unknown): SubmissionBody => {
 };
 
 export type FormSubmissionRouteDeps = {
-  requirePermission: FormsRouteDeps["requirePermission"];
   validate: FormsRouteDeps["validate"];
+  botProtectionSettings?: SecuritySettings["botProtection"];
+  persistSubmission: typeof submitForm;
 };
 
 export async function handleFormSubmissionRoute(ctx: RouteContext, deps: FormSubmissionRouteDeps) {
-  const { requirePermission, validate } = deps;
+  const descriptor = requirePreparedFormWriteDescriptor(ctx, "submission");
+  const { validate } = deps;
+  if (
+    ctx.body &&
+    typeof ctx.body === "object" &&
+    !Array.isArray(ctx.body) &&
+    "data" in ctx.body &&
+    typeof (ctx.body as { data?: unknown }).data === "object" &&
+    (ctx.body as { data?: unknown }).data !== null &&
+    !Array.isArray((ctx.body as { data?: unknown }).data)
+  ) {
+    const allowedEnvelopeKeys = new Set(["data", "formNonce", "captchaToken"]);
+    if (Object.keys(ctx.body).some((key) => !allowedEnvelopeKeys.has(key))) {
+      throw new ApiError("form_invalid", "Invalid form payload.", 400);
+    }
+  }
   const normalized = normalizeSubmissionBody(ctx.body);
   validate(formSubmissionSchema, normalized);
   const body = normalized as SubmissionBody;
+  const resolvedForm = descriptor.form;
+  const access = descriptor.access;
 
-  let form: Awaited<ReturnType<typeof getForm>> | null = null;
-  try {
-    form = await getForm(ctx.params.id);
-  } catch (error) {
-    throwMappedFormError(error);
-  }
-  if (!form) {
-    throw new ApiError("form_not_found", "Form not found.", 404);
-  }
-  const resolvedForm = form;
-
-  const accessMode = normalizeSubmissionAccess(resolvedForm.submissionAccess, "public");
-  const apiKey =
-    accessMode === "internal" ? await authenticateApiKey(ctx.headers?.authorization ?? null) : null;
-  const access = evaluateSubmissionAccess({
-    mode: accessMode,
-    isAuthenticated: Boolean(ctx.user),
-    apiKeyScopes: apiKey?.scopes,
-  });
-
-  if (!access.allow) {
-    if (access.reason === "forbidden") {
-      throw new ApiError("forbidden", "Forbidden", 403);
-    }
-    throw new ApiError("auth_required", "Not authenticated", 401);
-  }
-
-  if (accessMode === "internal" && ctx.user) {
-    await requirePermission("forms:write")(ctx);
-  }
-
-  if (access.requireCaptcha) {
+  if (access.requireFormNonce) {
     assertFormSubmissionNonce(resolvedForm.id, body.formNonce);
-    const securitySettings = await getSecuritySettings();
+  }
+  if (access.requireCaptcha) {
+    if (!deps.botProtectionSettings) {
+      throw new Error("form_write_descriptor_invalid");
+    }
     await enforceBotProtection({
       token: body.captchaToken,
       action: "public_write",
       ip: ctx.ip,
-      settings: securitySettings.botProtection,
+      settings: deps.botProtectionSettings,
     });
   }
 
   let submission: Awaited<ReturnType<typeof submitForm>> | null = null;
   try {
-    submission = await submitForm(ctx.params.id, body.data, {
+    submission = await deps.persistSubmission(ctx.params.id, body.data, {
       ip: ctx.ip,
       userAgent: ctx.userAgent,
     });
@@ -266,8 +533,10 @@ function isUploadFile(input: unknown): input is UploadFile {
 }
 
 export type FormAttachmentUploadRouteDeps = {
-  requirePermission: FormsRouteDeps["requirePermission"];
   validate: FormsRouteDeps["validate"];
+  botProtectionSettings?: SecuritySettings["botProtection"];
+  loadFormFields: typeof listFormFields;
+  persistUpload: typeof uploadMedia;
 };
 
 type AttachmentUploadBody = {
@@ -287,7 +556,8 @@ export async function handleFormAttachmentUploadRoute(
   ctx: RouteContext,
   deps: FormAttachmentUploadRouteDeps
 ) {
-  const { requirePermission, validate } = deps;
+  const descriptor = requirePreparedFormWriteDescriptor(ctx, "upload");
+  const { validate } = deps;
   validate(formAttachmentUploadSchema, ctx.body);
   const body = ctx.body as AttachmentUploadBody;
 
@@ -297,53 +567,25 @@ export async function handleFormAttachmentUploadRoute(
     throw new ApiError("form_field_invalid", "Invalid upload payload", 400);
   }
 
-  const form = await getForm(ctx.params.id);
-  if (!form) {
-    throw new ApiError("form_not_found", "Form not found.", 404);
-  }
-
-  // SAME access gate as the submission route.
-  const accessMode = normalizeSubmissionAccess(form.submissionAccess, "public");
-  const apiKey =
-    accessMode === "internal" ? await authenticateApiKey(ctx.headers?.authorization ?? null) : null;
-  const access = evaluateSubmissionAccess({
-    mode: accessMode,
-    isAuthenticated: Boolean(ctx.user),
-    apiKeyScopes: apiKey?.scopes,
-  });
-  if (!access.allow) {
-    if (access.reason === "forbidden") {
-      throw new ApiError("forbidden", "Forbidden", 403);
-    }
-    throw new ApiError("auth_required", "Not authenticated", 401);
-  }
-  if (accessMode === "internal" && ctx.user) {
-    await requirePermission("forms:write")(ctx);
+  const form = descriptor.form;
+  const access = descriptor.access;
+  if (access.requireFormNonce) {
+    assertFormSubmissionNonce(form.id, body.formNonce);
   }
   if (access.requireCaptcha) {
-    // Anonymous public upload endpoint. Enforce its OWN per-IP flood guard: the
-    // global public-write rate limiter (httpServer.isPublicWritePath) only matches
-    // `/forms/:id/submissions`, and enforceBotProtection is a no-op when disabled —
-    // so without this a caller could flood media storage / the media library even
-    // with bot protection off. The nonce is a stateless, reusable HMAC and cannot
-    // bound volume on its own.
-    const securitySettings = await getSecuritySettings();
-    checkRateLimit(
-      "public_write",
-      { ip: ctx.ip, userAgent: ctx.userAgent, identifier: form.id },
-      securitySettings.rateLimit
-    );
-    assertFormSubmissionNonce(form.id, body.formNonce);
+    if (!deps.botProtectionSettings) {
+      throw new Error("form_write_descriptor_invalid");
+    }
     await enforceBotProtection({
       token: body.captchaToken,
       action: "public_write",
       ip: ctx.ip,
-      settings: securitySettings.botProtection,
+      settings: deps.botProtectionSettings,
     });
   }
 
   // Field-scoped constraint enforcement.
-  const normalizedFields = (await listFormFields(form.id)).map(toFieldRecord);
+  const normalizedFields = (await deps.loadFormFields(form.id)).map(toFieldRecord);
   const field = normalizedFields.find((entry) => entry.name === body.fieldName);
   if (!field || field.type !== "file") {
     throw new ApiError("form_field_invalid", "Invalid field", 400);
@@ -351,11 +593,9 @@ export async function handleFormAttachmentUploadRoute(
 
   let row: Awaited<ReturnType<typeof uploadMedia>> | null = null;
   try {
-    row = await uploadMedia(body.file, {}, ctx.user?.id, {
+    row = await deps.persistUpload(body.file, {}, ctx.user?.id, {
       allowedMime: field.settings.accept,
       maxSizeBytes: field.settings.maxSizeMb ? field.settings.maxSizeMb * 1024 * 1024 : undefined,
-      // Untrusted anonymous path: sniff actual bytes, reject spoofed/markup (SVG) content.
-      sniffContent: access.requireCaptcha,
     });
   } catch (error) {
     throwMappedFormError(error);
@@ -432,11 +672,15 @@ export function registerFormsRoutes(router: Router, deps: FormsRouteDeps) {
   });
 
   router.post("/forms/:id/submissions", async (ctx) => {
-    return handleFormSubmissionRoute(ctx, { requirePermission, validate });
+    return handleFormSubmissionRoute(ctx, { validate, persistSubmission: submitForm });
   });
 
   // PUBLIC — no requirePermission("media:write"); gated by the form's own access + nonce.
   router.post("/forms/:id/uploads", async (ctx) => {
-    return handleFormAttachmentUploadRoute(ctx, { requirePermission, validate });
+    return handleFormAttachmentUploadRoute(ctx, {
+      validate,
+      loadFormFields: listFormFields,
+      persistUpload: uploadMedia,
+    });
   });
 }

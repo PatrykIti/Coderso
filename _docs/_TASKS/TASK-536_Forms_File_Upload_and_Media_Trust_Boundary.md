@@ -5,7 +5,7 @@
 **Priority:** Critical
 **Category:** Forms / Media / Public Runtime / Security
 **Estimated Effort:** Large
-**Dependencies:** TASK-516, TASK-512, TASK-538 (program land order)
+**Dependencies:** TASK-516, TASK-512
 **Status:** ⏳ To Do
 **Changelog:** 1248 (pinned; create only at implementation closure)
 
@@ -25,6 +25,12 @@ schema migration, dependency, or weaker fallback. The existing URLs remain
 `POST /forms/:id/uploads`, `POST /forms/:id/submissions`, and `/media/*`.
 The private audit contains exploit reproduction material; this tracked contract
 intentionally records only the defensive invariants and test categories.
+
+The repository's historical `core/widgets` namespace does not change the product model:
+the touched Form renderers are existing public page blocks/sections, not dashboard
+widgets and not a new general widget-authoring surface. This task may repair their
+rendered DOM/runtime compatibility only. It must not add a non-dashboard widget type,
+editor/wizard/visual control, registry/module-pack entry, preset, or authoring workflow.
 
 ## Fixed decisions and invariants
 
@@ -51,7 +57,7 @@ intentionally records only the defensive invariants and test categories.
 ## Security Contract
 
 - **Visibility:** upload and submission are public only when the form's existing
-  `submissionAccess` is `public`; the static Form widget renders an internal-only
+  `submissionAccess` is `public`; the existing static Form block renderer renders an internal-only
   form as the existing noninteractive boundary and never attempts an internal write.
   Internal mode remains available to authenticated API/admin callers. Media delivery
   follows `storage.delivery.accessMode` (`public` or internal).
@@ -103,7 +109,7 @@ intentionally records only the defensive invariants and test categories.
 
 Land strictly `536-01 → 536-02 → 536-03 → 536-04 → 536-05`. Source ownership
 is declared in the leaves; no two leaves write the same source file. TASK-536
-lands after TASK-538 in the program and before TASK-541. TASK-544 later touches
+lands first in the remediation program and before TASK-537. TASK-544 later touches
 the media route family, so it must read the post-536 `mediaRoutes.ts` state and
 must not run in parallel.
 
@@ -121,7 +127,11 @@ silently claimed by this family.
   corpus.
 - Targeted Bun: media service/adapters, public Forms adapter/route, media delivery,
   Forms route registration, file submission, and the new security regression.
-- `bun run scan:security:strict` and the exact Forms/media security gate suites.
+- The exact Forms/media Semgrep and security-gate suites must pass. Also run
+  `bun run scan:security:strict`; until TASK-538 lands, only the already-recorded
+  Page `customSvg` finding owned by TASK-538 may be reported as an external program
+  blocker. Do not suppress or allowlist it, and rerun the full strict scan after
+  TASK-538 removes the source finding.
 - At least five real Playwright flows: required single file, multiple files,
   upload failure+retry, cookie-bearing public upload plus the noninteractive internal
   boundary, and publish/front delivery.

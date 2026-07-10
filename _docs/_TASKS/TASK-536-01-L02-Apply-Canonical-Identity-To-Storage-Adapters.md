@@ -31,8 +31,12 @@ This leaf is the only TASK-536 writer of:
 - core/services/media/storage/azure.ts.
 
 It consumes mediaFileTrust.ts read-only and owns compatibility/changed-behavior updates
-in the five adapter/media/backup test files named by its gate. It must not edit
-mediaService.ts, httpServer.ts, Forms code, other tests, docs, or task/changelog indexes.
+in the three adapter suites plus `tests/unit/backups/backupRemoteStorage.test.ts`. The
+remote-backup suite owns the typed fake adapter and proves that backup upload/download/
+lifecycle continues through generic `put` after the required interface extension while
+`putMedia` is never called. `tests/unit/backups/backupService.test.ts` is a read-only
+broad compatibility rerun. It must not edit mediaService.ts, httpServer.ts, Forms code,
+other tests, docs, or task/changelog indexes.
 
 ## Grounded anchors
 
@@ -45,7 +49,7 @@ mediaService.ts, httpServer.ts, Forms code, other tests, docs, or task/changelog
 
 ~~~ts
 export type CanonicalStoredUpload = {
-  bytes: UploadFile;             // synthetic canonical name/type from L01
+  bytes: Pick<UploadFile, "size" | "arrayBuffer">; // no name/type trust surface
   identity: CanonicalMediaIdentity;
   downloadName: string;          // bounded/sanitized display filename only
 };
@@ -57,19 +61,26 @@ interface MediaStorageAdapter {
   ...
 }
 
-function buildCanonicalKey(extension) {
-  assert extension belongs to the closed canonical extension set, including the
+function buildCanonicalKey(identity) {
+  assert identity's complete mimeType/extension/delivery tuple equals the own-property
+    entry in CANONICAL_MEDIA_PROFILES (never an inherited property), including
     attachment-only .pdf/.txt/.svg/.bin members;
-  return utcYear + "/" + utcMonth + "/" + randomUUID() + extension;
+  key = utcYear + "/" + utcMonth + "/" + randomUUID() + identity.extension;
+  validate the final local/Azure key through buildMediaDeliveryPath before I/O;
+  return key;
 }
 
 local.putMedia(upload) {
-  key = buildCanonicalKey(upload.identity.extension);
+  key = buildCanonicalKey(upload.identity);
   write upload.bytes to confined key;
 }
 
 s3.putMedia(upload) {
-  key = buildCanonicalKey(upload.identity.extension);
+  baseKey = buildCanonicalKey(upload.identity);
+  key = preserved S3_PREFIX + baseKey;
+  validate the assembled prefixed key through buildMediaDeliveryPath before reading
+    bytes or calling the provider; traversal, percent, backslash, empty/dot segments,
+    controls, or an overlong configured prefix fail media_identity_invalid;
   PutObject {
     Key: key,
     Body: bytes,
@@ -83,7 +94,7 @@ s3.putMedia(upload) {
 }
 
 azure.putMedia(upload) {
-  key = buildCanonicalKey(upload.identity.extension);
+  key = buildCanonicalKey(upload.identity);
   uploadData(bytes, {
     blobHTTPHeaders: {
       blobContentType: upload.identity.mimeType,
@@ -102,6 +113,16 @@ characters, quotes safely, provides a bounded ASCII fallback, and replaces any d
 suffix with the canonical extension so the filename cannot inject a header or contradict
 the byte identity. Adapters import it read-only and define no mirror.
 
+The central adapter assertion validates the complete identity tuple through
+`Object.hasOwn(CANONICAL_MEDIA_PROFILES, mimeType)` and the matching profile before
+`arrayBuffer`, filesystem setup, SDK calls, or blob-client lookup. `bytes.name` and
+`bytes.type` are deliberately ignored by `putMedia`: they are transport compatibility
+fields, not a second storage-key or MIME authority. Output key, MIME, and delivery come
+only from the validated identity. The existing optional `S3_PREFIX` remains supported,
+but the assembled media key must pass the L01 delivery-path validator before upload so a
+bad configuration cannot create an object that the provider-independent proxy cannot
+address. Generic backup `put` retains its historical prefix behavior unchanged.
+
 ## Error and compatibility contract
 
 Adapter errors remain mapped by mediaService.ts to media_storage_unavailable. Invalid
@@ -119,18 +140,24 @@ MIME.
 
 ## Regression-test shape
 
-This leaf updates the named adapter/media/backup suites before its source gate. They
-must assert:
+This leaf updates the named adapter/backup suites before its source gate. They must
+assert:
 
 - canonical extension wins over original filename, including mixed/multiple suffixes;
+- poisoned `bytes.name`/`bytes.type` cannot affect a canonical key, provider MIME, or
+  disposition;
 - S3 and Azure requests receive exact canonical Content-Type and Content-Disposition;
+- a valid `S3_PREFIX` is preserved, while traversal, percent, backslash, dot/empty,
+  control, and overlong prefixes fail before `arrayBuffer` or an SDK call;
 - local keys remain confined and contain only the canonical suffix;
 - header-control input is sanitized and bounded;
-- invalid canonical metadata makes no storage call;
-- unchanged get/delete behavior remains green; a regression proves public media code
-  does not call `getPublicUrl` or expose `StoredMedia.url`.
-- backup upload/download/lifecycle tests prove the generic `put` contract is unchanged
-  and cannot accidentally receive media-only disposition semantics.
+- inherited MIME keys or any mismatched canonical tuple make no byte-read, filesystem,
+  blob-client, or remote storage call;
+- unchanged adapter get/delete behavior remains green;
+- the typed fake in `backupRemoteStorage.test.ts` implements required `putMedia` as a
+  fail-if-called sentinel; remote backup upload/download/lifecycle proves generic `put`
+  is unchanged and never receives media-only disposition semantics;
+- `backupService.test.ts` remains green without re-baselining unrelated DB behavior.
 
 TASK-536-05-L01 may add cross-layer cases after this gate but cannot re-baseline these
 adapter compatibility assertions.
@@ -140,11 +167,12 @@ adapter compatibility assertions.
 ~~~bash
 bun --cwd core lint:types
 bun --cwd core lint
+./node_modules/.bin/tsc -p tsconfig.json --noEmit
 set -a && source .env && set +a && bun test --timeout=15000 \
   tests/unit/media/localAdapter.test.ts \
   tests/unit/media/s3Adapter.test.ts \
   tests/unit/media/azureAdapter.test.ts \
-  tests/unit/media/mediaService.test.ts \
+  tests/unit/backups/backupRemoteStorage.test.ts \
   tests/unit/backups/backupService.test.ts
 ~~~
 

@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Pages / Builder / Public Render / Responsive CSS / Runtime / Security
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-521–535, TASK-538, TASK-540; collision dependencies TASK-478/TASK-481
+**Dependencies:** TASK-521–535, TASK-538; collision dependencies TASK-478/TASK-481
 **Status:** ⏳ To Do
 **Changelog:** 1251 (pinned; create only at implementation closure)
 
@@ -90,13 +90,15 @@ its declared source files; 539-05 is the sole `pageRendererV2.tsx` writer and
 539-06 the sole `pageResponsiveCss.ts` writer. Consumer helper names must match
 the owning model/sanitizer/composition leaf exactly.
 
+TASK-539 follows TASK-538 and precedes TASK-540 in the numeric remediation order.
+
 TASK-539 does not run in-place while TASK-478 or TASK-481 is active. Forbidden
 foreign paths are copied exactly into every implementation dispatch from those
 tasks' current ownership lists. Use an isolated worktree or land after both,
 rebase/read the current files, and rerun the contract audit. TASK-539 fixes its
 narrow canvas locally in `PageEditor.tsx` and must not edit TASK-540's
 `CanvasEditor.tsx`, `ScreenAuthoringCanvas.tsx`, or Custom Screen paths.
-TASK-542 overlaps site-shell behavior/tests; 539 lands first and the streams never
+TASK-542 overlaps site-shell behavior/tests; TASK-539 lands first and the streams never
 run in parallel.
 
 ## Testing Requirements

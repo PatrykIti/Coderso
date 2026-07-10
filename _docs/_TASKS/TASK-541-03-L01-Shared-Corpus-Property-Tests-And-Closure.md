@@ -51,6 +51,10 @@ TASK-541 cases.
 The two TASK-541-01 owner suites and their fixture are read-only inputs here:
 `css-color-contract.test.ts`, `css-color-contract-corpus.test.ts`, and
 `cssColorCorpus.ts`. This closure leaf reruns them but never edits/rebaselines them.
+The landed TASK-539 suites `tests/vitest/ui/page-editor-control-primitives.test.tsx`,
+`tests/vitest/ui/page-editor-v2-flow.test.tsx`, and
+`tests/vitest/ui/page-editor-gallery-items-control.test.tsx` are likewise read-only
+compatibility gates, not TASK-541-owned files.
 
 ## Implementation Pseudocode
 
@@ -108,7 +112,7 @@ tables.
 ```bash
 bun --cwd core lint:types
 bun --cwd core lint
-bun run test:vitest -- tests/vitest/services/css-color-contract.test.ts tests/vitest/services/css-color-contract-corpus.test.ts tests/vitest/ui/color-value.test.ts tests/vitest/ui/color-swatch-alpha.test.tsx tests/vitest/ui/shared-color-alpha.test.tsx tests/vitest/ui/shared-color-control.test.tsx tests/vitest/ui/toggle-block-editor-wave.test.tsx tests/vitest/ui/divider-editor-wave.test.tsx tests/vitest/ui/navigation-editor-wave.test.tsx tests/vitest/ui/footer-editor-wave.test.tsx tests/vitest/ui/menu-color-alpha.test.tsx tests/vitest/services/normalize-menu-appearance.test.ts tests/vitest/services/menu-document-v2.test.ts tests/vitest/widgets/clearableStyle.test.ts tests/vitest/widgets/toggleBlock.test.tsx tests/vitest/widgets/divider.test.tsx tests/vitest/widgets/navigation.test.tsx tests/vitest/widgets/gridColumns.test.tsx tests/vitest/widgets/footer.test.tsx tests/vitest/widgets/newsletter.test.tsx
+bun run test:vitest -- tests/vitest/services/css-color-contract.test.ts tests/vitest/services/css-color-contract-corpus.test.ts tests/vitest/ui/color-value.test.ts tests/vitest/ui/color-swatch-alpha.test.tsx tests/vitest/ui/shared-color-alpha.test.tsx tests/vitest/ui/shared-color-control.test.tsx tests/vitest/ui/page-editor-control-primitives.test.tsx tests/vitest/ui/page-editor-v2-flow.test.tsx tests/vitest/ui/page-editor-gallery-items-control.test.tsx tests/vitest/ui/toggle-block-editor-wave.test.tsx tests/vitest/ui/divider-editor-wave.test.tsx tests/vitest/ui/navigation-editor-wave.test.tsx tests/vitest/ui/footer-editor-wave.test.tsx tests/vitest/ui/menu-color-alpha.test.tsx tests/vitest/services/normalize-menu-appearance.test.ts tests/vitest/services/menu-document-v2.test.ts tests/vitest/widgets/clearableStyle.test.ts tests/vitest/widgets/toggleBlock.test.tsx tests/vitest/widgets/divider.test.tsx tests/vitest/widgets/navigation.test.tsx tests/vitest/widgets/gridColumns.test.tsx tests/vitest/widgets/footer.test.tsx tests/vitest/widgets/newsletter.test.tsx
 bun --cwd core build:admin
 bun run check:admin-boundary
 bun run check:admin-bundle
@@ -132,6 +136,8 @@ flows, in light and dark admin themes where applicable:
    without mount mutation and visibly inherited only in an explicit widget context;
    picker replacement emits the canonical new value.
 6. Design token and transparent/clear → correct fallback/computed result.
+7. Post-TASK-539 Page ColorSwatch → authoring-profile save/reopen/front computed color
+   while the gallery control and narrow Page canvas remain visibly usable.
 
 Assert computed CSS values, persistence/reopen bytes, visible swatch state, zero
 console errors, and screenshots—not merely input/control presence.

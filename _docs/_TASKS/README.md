@@ -99,7 +99,9 @@ Task board for project work. Keep task files and this board in sync.
 > 43 technical children, and 74 executable leaves (127 physical To Do tasks).
 > The table lists the umbrellas; every descendant and its status is linked from
 > the corresponding parent/child file. Changelogs 1248–1257 are reserved for
-> implementation closure only.
+> implementation closure only. Implement the program strictly in numeric order:
+> TASK-536 → TASK-537 → TASK-538 → TASK-539 → TASK-540 → TASK-541 → TASK-542 →
+> TASK-543 → TASK-544 → TASK-545.
 
 ---
 

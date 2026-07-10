@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Shared Styling / Admin UI / Menus / Widgets / Validation
 **Estimated Effort:** Medium
-**Dependencies:** TASK-536 (program land order)
+**Dependencies:** TASK-540 (program land order)
 **Status:** ⏳ To Do
 **Changelog:** 1253 (pinned; create only at implementation closure)
 
@@ -24,8 +24,9 @@ dependency, or new color feature. The shared authoring profile is deliberately
 the end-to-end intersection; broader inherited values are available only through
 an explicit render profile.
 
-TASK-539 and TASK-542 are later consumers of this landed contract; they are not
-dependencies of TASK-541.
+Under the numeric program order, TASK-539 is already landed when this shared control
+rollout begins, so its Page editor/control behavior is a required compatibility consumer.
+TASK-542 remains the later technical menu consumer and must import this contract.
 
 ## Canonical contract
 
@@ -69,11 +70,13 @@ scanner exception is added.
 
 ## Ownership and land order
 
-Land `541-01 → 541-02 → 541-03`, immediately after TASK-536 and before TASK-537
-in the fixed program order (and therefore before TASK-539/TASK-542). The parser leaf
+Land `541-01 → 541-02 → 541-03`, immediately after TASK-540 and before TASK-542
+in the fixed program order. The parser leaf
 is the sole shared-contract writer. Separate rollout leaves exclusively own admin
 controls, menu normalization, and widget boundaries. TASK-542 rereads the landed
-menu contract and may not recreate a menu-local parser.
+menu contract and may not recreate a menu-local parser. TASK-541 must reread and rerun
+the landed TASK-539 Page control, gallery, and narrow-canvas flows without changing
+their Page contracts.
 
 ## Testing Requirements
 

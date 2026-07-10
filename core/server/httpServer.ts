@@ -14,29 +14,20 @@ import { enforceHostPolicy } from "./middleware/hostPolicy";
 import { createRouter, matchRoute, normalizePath, type RouteContext } from "./router";
 import { registerAllRoutes } from "./routes";
 import { validate } from "./validation/schemaValidator";
-import { getMediaStorageAdapter } from "../services/media/storage";
 import { getSecuritySettings } from "../services/settings/securitySettings";
-import { getStorageSettingsInternal } from "../services/settings/storageSettings";
-import { authenticateApiKey } from "../services/security/apiKeyAuth";
-import { evaluateMediaAccess } from "../services/media/mediaAccess";
 import { initializeDocsIndexOnBootIfEnabled } from "../services/assistant/docsIndexService";
 import { ensureThemesLoaded } from "../themes/registry";
 import { startBackupScheduler } from "./jobs/backupScheduler";
 import { handlePublicRequest } from "./publicSite";
 import { resolveAdminPath } from "./utils/adminPath";
+import { handleMediaDeliveryRequest } from "./mediaDelivery";
+import { executePreparedFormWrite } from "./publicFormsApi";
 
 const MEDIA_PREFIX = "/media";
 
 const READ_METHODS = new Set(["GET", "HEAD"]);
 
 const isReadMethod = (method: string) => READ_METHODS.has(method.toUpperCase());
-
-const isPublicWritePath = (pathname: string) => /^\/forms\/[^/]+\/submissions$/.test(pathname);
-
-const resolvePublicWriteIdentifier = (pathname: string) => {
-  const match = pathname.match(/^\/forms\/([^/]+)\/submissions$/);
-  return match ? match[1] : null;
-};
 
 /**
  * Select the rate-limit bucket for a request. Exported so security tests can
@@ -46,7 +37,6 @@ const resolvePublicWriteIdentifier = (pathname: string) => {
 export const resolveRateLimitBucket = (method: string, pathname: string): RateLimitBucket => {
   if (pathname.startsWith("/auth")) return "auth";
   if (pathname.startsWith("/assistant")) return "assistant";
-  if (method.toUpperCase() === "POST" && isPublicWritePath(pathname)) return "public_write";
   return isReadMethod(method) ? "admin_read" : "admin_write";
 };
 
@@ -61,9 +51,6 @@ export const resolveRateLimitIdentifier = (
   pathname: string,
   body: unknown
 ): string | undefined => {
-  if (method.toUpperCase() === "POST" && isPublicWritePath(pathname)) {
-    return resolvePublicWriteIdentifier(pathname) ?? undefined;
-  }
   if (
     pathname.startsWith("/auth") &&
     !pathname.startsWith("/auth/install") &&
@@ -322,6 +309,36 @@ const handleApi = async (req: Request, apiPrefix: string) => {
     return response;
   }
 
+  const formsWriteExecution = await executePreparedFormWrite(req, {
+    url,
+    pathname,
+    ip: resolveIp(req),
+    userAgent: req.headers.get("user-agent") ?? undefined,
+    security,
+    requestId: requestContext?.requestId,
+    requestStart: requestContext?.requestStart,
+  });
+  if (formsWriteExecution.matched) {
+    const response = formsWriteExecution.ok
+      ? jsonResponse(formsWriteExecution.result, { headers: responseHeaders })
+      : errorResponse(formsWriteExecution.error);
+    responseHeaders.forEach((value, key) => {
+      if (!response.headers.has(key)) response.headers.append(key, value);
+    });
+    const routeContext = formsWriteExecution.routeContext;
+    void recordAccessLog({
+      method: req.method,
+      path: url.pathname,
+      status: response.status,
+      ip: routeContext.ip ?? null,
+      userAgent: routeContext.userAgent ?? null,
+      userId: routeContext.user?.id ?? null,
+      sessionId: routeContext.sessionId ?? null,
+      durationMs: Date.now() - requestStart,
+    });
+    return response;
+  }
+
   for (const route of router.routes) {
     if (route.method !== req.method) continue;
     const match = matchRoute(route.path, pathname);
@@ -424,94 +441,6 @@ const handleApi = async (req: Request, apiPrefix: string) => {
   return response;
 };
 
-const handleMedia = async (req: Request) => {
-  const url = new URL(req.url);
-  if (!url.pathname.startsWith(MEDIA_PREFIX)) {
-    return new Response("Not Found", { status: 404 });
-  }
-
-  const key = url.pathname.slice(MEDIA_PREFIX.length).replace(/^\/+/, "");
-  if (!key) return new Response("Not Found", { status: 404 });
-
-  const security = await getSecuritySettings();
-  checkRateLimit(
-    "public_read",
-    {
-      ip: resolveIp(req),
-      userAgent: req.headers.get("user-agent") ?? undefined,
-    },
-    security.rateLimit
-  );
-
-  const config = await getStorageSettingsInternal();
-
-  if (config.delivery.accessMode === "internal") {
-    const headersObj: Record<string, string | undefined> = {};
-    req.headers.forEach((value, key) => {
-      headersObj[key] = value;
-    });
-
-    const authContext: {
-      user?: { id: string };
-      cookies?: Record<string, string | undefined>;
-      headers?: Record<string, string | undefined>;
-    } = {
-      headers: headersObj,
-      cookies: parseCookies(req.headers.get("cookie")),
-    };
-
-    await attachUserFromSession(authContext);
-    const apiKey = authContext.user
-      ? null
-      : await authenticateApiKey(req.headers.get("authorization"));
-    const access = evaluateMediaAccess({
-      mode: "internal",
-      isAuthenticated: Boolean(authContext.user),
-      apiKeyScopes: apiKey?.scopes,
-    });
-
-    if (!access.allow) {
-      if (access.reason === "forbidden") {
-        return new Response("Forbidden", { status: 403 });
-      }
-      return new Response("Unauthorized", { status: 401 });
-    }
-
-    if (authContext.user) {
-      try {
-        await requirePermission("media:read")({ user: authContext.user });
-      } catch {
-        return new Response("Forbidden", { status: 403 });
-      }
-    }
-  }
-
-  if (config.driver !== "local") {
-    const adapter = await getMediaStorageAdapter();
-    if (config.delivery.accessMode === "public") {
-      return Response.redirect(adapter.getPublicUrl(key), 302);
-    }
-    try {
-      const stream = await adapter.get(key);
-      return new Response(stream as unknown as BodyInit, {
-        headers: { "Content-Type": "application/octet-stream" },
-      });
-    } catch {
-      return new Response("Not Found", { status: 404 });
-    }
-  }
-
-  const baseDir = path.resolve(config.localDir ?? "/data/media");
-  const targetPath = path.resolve(baseDir, key);
-  if (targetPath !== baseDir && !targetPath.startsWith(`${baseDir}${path.sep}`)) {
-    return new Response("Forbidden", { status: 403 });
-  }
-
-  const file = Bun.file(targetPath);
-  if (!(await file.exists())) return new Response("Not Found", { status: 404 });
-  return new Response(file, { headers: { "Content-Type": file.type } });
-};
-
 export function startHttpServer(options: HttpServerOptions = {}) {
   const port = options.port ?? Number(process.env.PORT ?? 3000);
   const adminDevUrl = options.adminDevUrl ?? process.env.VITE_DEV_SERVER_URL;
@@ -538,7 +467,7 @@ export function startHttpServer(options: HttpServerOptions = {}) {
         return handleApi(req, apiPrefix);
       }
       if (url.pathname.startsWith(MEDIA_PREFIX)) {
-        return handleMedia(req);
+        return handleMediaDeliveryRequest(req);
       }
       if (url.pathname.startsWith(adminPath)) {
         return handleAdmin(req, adminPath, adminDevUrl);

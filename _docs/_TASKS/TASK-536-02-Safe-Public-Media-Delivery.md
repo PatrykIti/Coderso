@@ -29,9 +29,12 @@ passive images, while legacy mismatch/unknown/active rows download safely.
 
 ## Leaf
 
-TASK-536-02-L01 is the sole source writer and owns its pre-gate delivery compatibility/
-changed-behavior assertions. TASK-536-05-L01 owns only additive cross-contract delivery
-cases, browser smoke evidence, docs, and closure; it cannot re-baseline L01 assertions.
+TASK-536-02-L01 is the sole writer of the extracted media-delivery handler and owns its
+direct pre-gate delivery compatibility/changed-behavior assertions. TASK-536-04-L01 is
+the sole `httpServer.ts` writer and later wires that already-tested handler while it
+unifies the two Forms-write mounts. TASK-536-05-L01 owns only additive cross-contract
+delivery cases, browser smoke evidence, docs, and closure; it cannot re-baseline either
+source-owner assertion.
 
 ## Security Contract
 
@@ -66,7 +69,6 @@ even if a file happens to exist on disk.
 bun --cwd core lint:types
 bun --cwd core lint
 set -a && source .env && set +a && bun test --timeout=15000 \
-  tests/integration/routes/media.test.ts \
   tests/integration/server/mediaDeliveryAccess.test.ts
 bun run gates:coderso
 ~~~

@@ -36,7 +36,10 @@ const ids: {
   entryId?: string;
   entrySlug?: string;
   mediaId?: string;
+  mediaKey?: string;
   mediaUrl?: string;
+  unsafeMediaId?: string;
+  unsafeMediaKey?: string;
 } = {};
 
 const baselineSecuritySettings: SecuritySettings = {
@@ -173,10 +176,11 @@ beforeAll(async () => {
   ids.entryId = entry?.id;
 
   ids.mediaUrl = `https://example.com/dashboard-${suffix}.png`;
+  ids.mediaKey = `dashboard-media/${suffix} safe.png`;
   const [mediaRow] = await db
     .insert(media)
     .values({
-      key: `dashboard-media-${suffix}.png`,
+      key: ids.mediaKey,
       url: ids.mediaUrl,
       title: `Dashboard Media ${suffix}`,
       type: "image",
@@ -187,12 +191,31 @@ beforeAll(async () => {
     })
     .returning();
   ids.mediaId = mediaRow?.id;
+
+  ids.unsafeMediaKey = `../dashboard-unsafe-${suffix}.png`;
+  const [unsafeMediaRow] = await db
+    .insert(media)
+    .values({
+      key: ids.unsafeMediaKey,
+      url: `https://provider.invalid/dashboard-unsafe-${suffix}.png`,
+      title: `Dashboard Unsafe Media ${suffix}`,
+      type: "image",
+      mimeType: "image/png",
+      size: 1024,
+      createdBy: ids.userId,
+      createdAt: new Date("2098-12-31T00:00:00.000Z"),
+    })
+    .returning();
+  ids.unsafeMediaId = unsafeMediaRow?.id;
 });
 
 afterAll(async () => {
   if (!hasDb) return;
   if (ids.mediaId) {
     await db.delete(media).where(eq(media.id, ids.mediaId));
+  }
+  if (ids.unsafeMediaId) {
+    await db.delete(media).where(eq(media.id, ids.unsafeMediaId));
   }
   if (ids.entryId) {
     await db.delete(contentEntries).where(eq(contentEntries.id, ids.entryId));
@@ -256,17 +279,23 @@ testIfDb("getDashboardData returns merged recent edits and storage/security summ
   const pageEdit = payload.recentEdits.find((item) => item.id === ids.pageId);
   const entryEdit = payload.recentEdits.find((item) => item.id === ids.entryId);
   const mediaEdit = payload.recentEdits.find((item) => item.id === ids.mediaId);
+  const unsafeMediaEdit = payload.recentEdits.find((item) => item.id === ids.unsafeMediaId);
 
   expect(pageEdit).toBeTruthy();
   expect(entryEdit).toBeTruthy();
   expect(mediaEdit).toBeTruthy();
+  expect(unsafeMediaEdit).toBeTruthy();
 
   expect(pageEdit?.path).toBe(`/${ids.pageSlug}`);
   expect(entryEdit?.path).toBe(`/${ids.typeSlug}/${ids.entrySlug}`);
-  expect(mediaEdit?.path).toBe(ids.mediaUrl);
+  expect(mediaEdit?.path).toBe(
+    `/media/${ids.mediaKey?.split("/").map(encodeURIComponent).join("/")}`
+  );
+  expect(mediaEdit?.path).not.toBe(ids.mediaUrl);
   expect(mediaEdit?.status).toBe("active");
+  expect(unsafeMediaEdit?.path).toBe(`/media/%00unavailable/${ids.unsafeMediaId}`);
 
-  const seededIds = [ids.pageId, ids.entryId, ids.mediaId].filter(
+  const seededIds = [ids.pageId, ids.entryId, ids.mediaId, ids.unsafeMediaId].filter(
     (value): value is string => Boolean(value)
   );
   const seededOrder = payload.recentEdits
@@ -275,8 +304,6 @@ testIfDb("getDashboardData returns merged recent edits and storage/security summ
   expect(seededOrder).toEqual(seededIds);
 
   expect(payload.security.checks).toHaveLength(4);
-  const issuesCount = payload.security.checks.filter(
-    (check) => check.status !== "ok"
-  ).length;
+  const issuesCount = payload.security.checks.filter((check) => check.status !== "ok").length;
   expect(payload.security.issues).toBe(issuesCount);
 });

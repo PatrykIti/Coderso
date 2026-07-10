@@ -14,10 +14,10 @@
 
 ## Scope
 
-Separate access/anti-abuse decisions from media trust and make the public adapter the
-single public_write owner. Independently replace loose nested Form objects with strict,
-reusable schemas while preserving the deliberately dynamic submission data map and its
-field-name service validation.
+Separate access/anti-abuse decisions from media trust and make one prepared Forms-write
+executor the security owner for both public and stripped admin mounts. Independently
+replace loose nested Form objects with strict, reusable schemas while preserving the
+bounded dynamic submission data map and its field-name service validation.
 
 ## Grounded anchors
 
@@ -34,7 +34,7 @@ field-name service validation.
 
 | Leaf | Scope | Source ownership |
 |---|---|---|
-| TASK-536-04-L01 | Access result, CSRF/nonce/captcha orchestration, and exactly one public_write charge | submissionAccess.ts, formsRoutes.ts, publicFormsApi.ts |
+| TASK-536-04-L01 | Shared public/admin executor, bounded parsing, media-handler wiring, access/CSRF/nonce/captcha, and one selected rate charge | httpServer.ts, requestBody.ts, submissionAccess.ts, formsRoutes.ts, publicFormsApi.ts |
 | TASK-536-04-L02 | Strict schemas for fixed nested Form/field settings | formSchemas.ts and domain schema owners |
 
 ## Security Contract
@@ -50,9 +50,14 @@ field-name service validation.
 - **Nonce/captcha:** every public-mode write requires the existing form-bound TTL HMAC
   nonce, including requests carrying an authenticated cookie. Optional reCAPTCHA remains
   backend-owned according to the existing policy and is independent of byte validation.
-- **Rate limit:** publicFormsApi owns exactly one public_write charge for a public-mode
-  request. Internal session/API-key mode selects its existing internal/admin policy
-  exactly once. No downstream handler charges either bucket again.
+- **Rate limit:** the shared prepared executor owns exactly one selected charge on both
+  mounts: `public_write` for public-mode requests and `admin_write` for internal
+  session/API-key requests. No generic server branch or downstream handler charges a
+  matched Forms write again.
+- **Transport bounds:** the executor resolves access and charges before bounded parsing.
+  Submission JSON/form bodies are capped at 1 MiB. Multipart uploads are capped at the
+  smaller of the configured storage limit and 100 MiB, plus exactly 64 KiB envelope
+  overhead. Declared, absent, and deceptive `Content-Length` cases enforce the same cap.
 - **Validation:** transport envelopes and every fixed nested object reject unknown keys.
   Submission data remains a dynamic map but service validation accepts only declared
   field names and normalized field values.
@@ -71,10 +76,14 @@ bun --cwd core lint:types
 bun --cwd core lint
 bunx vitest run --config vitest.config.ts \
   tests/vitest/forms/validation.test.ts \
-  tests/vitest/forms/formSettings.test.ts
-set -a && source .env && set +a && bun test --timeout=15000 \
+  tests/vitest/forms/formSettings.test.ts \
+  tests/vitest/forms/submissionAccess.test.ts \
+  tests/vitest/server/requestBody.test.ts
+set -a && source .env && set +a && bun test --parallel=1 --timeout=15000 \
   tests/unit/server/publicFormsApi.test.ts \
   tests/unit/server/publicFormsUploadApi.test.ts \
-  tests/integration/routes/forms.test.ts
+  tests/integration/routes/forms.test.ts \
+  tests/integration/server/formsWriteMounts.test.ts \
+  tests/security/codersoSecurityGate.test.ts
 bun run gates:coderso
 ~~~
