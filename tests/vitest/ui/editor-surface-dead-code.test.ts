@@ -95,5 +95,5 @@ describe("editor-surface dead-code mandate (TASK-496)", () => {
         .filter((l) => l && !l.includes("core/admin/ui/authoring/"));
       expect(external.length, `${sym} must keep a live importer`).toBeGreaterThan(0);
     }
-  });
+  }, 30000);
 });

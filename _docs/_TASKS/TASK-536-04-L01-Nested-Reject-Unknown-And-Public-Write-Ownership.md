@@ -8,8 +8,9 @@
 **Category:** Public Forms API / Security
 **Estimated Effort:** Medium
 **Dependencies:** TASK-536-03-L02
-**Status:** ⏳ To Do
-**Changelog:** 1248 (pinned; create only at implementation closure)
+**Status:** ✅ Done
+**Completed:** 2026-07-11
+**Changelog:** 1248
 
 ---
 

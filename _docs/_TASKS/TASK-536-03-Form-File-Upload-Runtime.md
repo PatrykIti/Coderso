@@ -7,8 +7,9 @@
 **Category:** Forms Block / Public Runtime / Accessibility
 **Estimated Effort:** Large
 **Dependencies:** TASK-536-02
-**Status:** ⏳ To Do
-**Changelog:** 1248 (pinned; create only at implementation closure)
+**Status:** ✅ Done
+**Completed:** 2026-07-11
+**Changelog:** 1248
 
 ---
 

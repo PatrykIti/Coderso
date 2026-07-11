@@ -8,8 +8,9 @@
 **Category:** Forms Domain / API Validation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-536-04-L01
-**Status:** ⏳ To Do
-**Changelog:** 1248 (pinned; create only at implementation closure)
+**Status:** ✅ Done
+**Completed:** 2026-07-11
+**Changelog:** 1248
 
 ---
 

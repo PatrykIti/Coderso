@@ -37,6 +37,21 @@ test("buildProviderPolicyGuidance exposes provider-safe policy resources", () =>
     providerAllowed: false,
   });
   expect(settings?.secrets?.secretFields).toContain("apiKeys.secret");
+
+  const retiredWidgets = guidance.resources.find((resource) => resource.key === "widget-template");
+  expect(retiredWidgets).toMatchObject({
+    label: "Retired Widget Compatibility",
+    coverageState: "legacy-maintenance",
+    operations: ["inspect", "find", "update", "delete"],
+  });
+  expect(retiredWidgets?.actions).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ type: "widget-template.update", mode: "executable" }),
+      expect.objectContaining({ type: "widget-template.delete", mode: "executable" }),
+      expect.objectContaining({ type: "widget-template.block.patch", mode: "executable" }),
+    ])
+  );
+  expect(retiredWidgets?.operations).not.toContain("create");
 });
 
 test("buildProviderPolicyGuidance derives create contracts and safety from policy", () => {
@@ -56,6 +71,9 @@ test("buildProviderPolicyGuidance derives create contracts and safety from polic
       }),
     ])
   );
+  expect(guidance.createContracts.some((contract) => contract.key === "widget-template")).toBe(
+    false
+  );
   expect(guidance.safety.destructiveDefault).toMatchObject({
     requireReview: true,
     allowAllUnfiltered: false,
@@ -72,6 +90,8 @@ test("provider registry is grouped from operation policy", () => {
   expect(settings?.supportedOperations).toEqual(
     expect.arrayContaining(["inspect", "find", "configure", "update"])
   );
+  const retiredWidgets = registry.find((entry) => entry.kind === "widget-template");
+  expect(retiredWidgets?.supportedOperations).toEqual(["inspect", "find", "update", "delete"]);
 });
 
 test("operation draft guidance is generated from policy metadata", () => {

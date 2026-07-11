@@ -6,8 +6,9 @@
 **Category:** Forms / Media / Public Runtime / Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-516, TASK-512
-**Status:** ⏳ To Do
-**Changelog:** 1248 (pinned; create only at implementation closure)
+**Status:** ✅ Done
+**Completed:** 2026-07-11
+**Changelog:** 1248
 
 ---
 
@@ -107,11 +108,11 @@ authorize unrelated source changes.
 
 | ID | Title | Leaves | Status |
 |---|---|---|---|
-| TASK-536-01 | Canonical media byte identity and storage keys | TASK-536-01-L01..L03 | ⏳ To Do |
-| TASK-536-02 | Safe public media delivery | TASK-536-02-L01 | ⏳ To Do |
-| TASK-536-03 | Form file upload runtime | TASK-536-03-L01, L02 | ⏳ To Do |
-| TASK-536-04 | Strict Forms schemas and single rate limit | TASK-536-04-L01, L02 | ⏳ To Do |
-| TASK-536-05 | Tests, security smoke, and closure | TASK-536-05-L01 | ⏳ To Do |
+| TASK-536-01 | Canonical media byte identity and storage keys | TASK-536-01-L01..L03 | ✅ Done |
+| TASK-536-02 | Safe public media delivery | TASK-536-02-L01 | ✅ Done |
+| TASK-536-03 | Form file upload runtime | TASK-536-03-L01, L02 | ✅ Done |
+| TASK-536-04 | Strict Forms schemas and single rate limit | TASK-536-04-L01, L02 | ✅ Done |
+| TASK-536-05 | Tests, security smoke, and closure | TASK-536-05-L01 | ✅ Done |
 
 ## Finding coverage matrix
 
@@ -128,6 +129,7 @@ authorize unrelated source changes.
 | L-03 loose nested form/field settings | 536-04/L02 | nested unknown-key rejection plus supported round-trip corpus |
 | POST-M-05 stale nonce remains writable after unpublish/access drift | 536-04/L02 + L01 | unpublished runtime returns no nonce; public draft/archived and published→unpublished/access-mode race rejections charge once and perform no dispatch/storage/DB write |
 | POST-M-06 unknown executor failures leak development message/stack | 536-04/L01 | root and stripped-admin real-mount tests force an unmapped preparation failure and assert identical fixed `internal_error`/500 payloads with no raw marker, details, or stack |
+| POST-M-07 retired Widget compatibility is documented as maintenance-only but policy still advertises `create` and lacks the canonical coverage state | 536-05/L01 | shared coverage-state schema + policy/guidance/matrix parity tests prove `legacy-maintenance`, no advertised create/insert operation, and retained exact-row update/block-patch/delete only |
 
 ## Ownership, order, and compatibility
 
@@ -142,6 +144,10 @@ fix before the reopened L01 executor consumes that projection. This is a bounded
 post-audit dependency inside 536-04 and does not change the program-level land order.
 POST-M-06 then reopens only L01's existing shared response-boundary seam; it adds no new
 route, domain error, permission, or public payload field.
+POST-M-07 is a bounded full-gate repair inside the closure leaf. It changes only the
+assistant policy coverage vocabulary and the retired Widget compatibility policy metadata;
+it does not change the hidden route, action executor, target resolver, permissions, stored
+rows, or retained maintenance actions.
 
 Existing URLs and database columns remain unchanged. Existing media rows are
 served through a fail-safe legacy policy; new uploads receive canonical identity.
@@ -173,3 +179,72 @@ silently claimed by this family.
 Update `_docs/MEDIA_SPEC.md`, `_docs/SECURITY_SPEC.md`, `_docs/CMS_API.md`, the
 Forms/media developer and user docs, the cache docs only if the client cache
 contract changes, then create changelog 1248 and close every descendant.
+
+## Completion evidence
+
+Implemented and verified on 2026-07-11. The family now owns byte-authoritative media
+identity and storage metadata, provider-neutral `/media/*` delivery, upload-before-submit
+behavior for the existing Form block/section runtime, strict fixed-object Forms schemas,
+one Forms write-rate owner, late canonical status/access revalidation, and fixed
+redaction of unknown executor failures at both real mounts. The final gate also aligned
+the hidden Widget compatibility policy with the canonical `legacy-maintenance` state,
+removed provider-facing create/insert advertising, and retained only exact-row
+update/delete/block-patch maintenance. It adds no endpoint, DB
+migration, block/section type, editor, registry, preset, or non-dashboard widget surface.
+`core/widgets/core/formRuntimeScript.ts` remains only the historical compatibility
+namespace for the existing public Form block/section runtime.
+
+### Validation
+
+- `bun --cwd core lint:types`, `bun --cwd core lint`, and root
+  `tsc -p tsconfig.json --noEmit`: pass.
+- Targeted Vitest: 19 files, 748/748 tests pass. Targeted Bun/DB: 15 files,
+  210/210 tests and 1591 assertions pass. The no-DB live media-delivery lane passes
+  30/30 tests and 381 assertions.
+- Targeted runtime ESLint and task-scoped Semgrep pass with zero TASK-536 findings;
+  `bun run gates:coderso` passes all five release gates.
+- Final combined validation: Bun 1633 pass, 1 opt-in OpenAI live test skipped, 0 fail;
+  Vitest 832/832 files and 6552/6552 tests pass. `bun run precommit:check` passes
+  core/store lint plus core/root/SDK typechecks.
+- The first broad Vitest run exposed POST-M-07 plus two under-load local timeout flakes.
+  The policy contract was corrected before implementation; the two unchanged-assertion
+  tests passed in isolation and then in the full 6552-test lane after their local limits
+  were raised to 30 seconds. No global timeout or behavior assertion was weakened.
+- Five fresh post-implementation lenses (media, Forms/security, runtime/product,
+  schema/model, and task/test/workflow integrity) report zero High/Medium/Low drift.
+- Fresh post-POST-M-07 policy/product and test-integrity audits also report zero
+  High/Medium/Low findings; the final closure reconcile's sole evidence finding was
+  resolved by recording these combined gates.
+- The full strict scan remains non-zero only for two unchanged out-of-scope findings:
+  the Page `customSvg` sink owned by TASK-538 and the workflow prompt finding owned by
+  TASK-545-02-L01. TASK-536 adds no suppression, baseline, allowlist, or scanner change.
+
+### Runtime smoke
+
+The final real-browser run started the server with the literal
+`coderso-dev-core-host` helper, checked
+`http://coderso-a.localhost:5173/admin/` and
+`http://coderso-a.localhost:3000/`, and issued every browser operation as a complete
+`playwright-cli -s=wf536smoke ...` command. Credentials came only from `.env` and are
+not present in evidence. Result: 7/7 scenarios pass, 8 screenshots, zero raw or
+classified console errors, and no failure.
+
+| Scenario | Viewport/theme | Visible result | Screenshot |
+|---|---|---|---|
+| `admin-media-wide-light` | 1366x900, light | SVG is a document without `<img>`; canonical passive PNG visibly loads | `_docs/_workflows/_smoke/task-536-admin-media-wide-light.png` |
+| `required-single-status-lifecycle` | 1280x900, light | neutral/progress/error/recovery geometry and final owned media ID | `_docs/_workflows/_smoke/task-536-required-single-light-wide.png` |
+| `ordered-multiple-png-bmp` | 1280x900, light | PNG→BMP order is preserved through the submitted media-ID array | `_docs/_workflows/_smoke/task-536-ordered-multiple-light-wide.png` |
+| `failed-upload-retry-without-reload` | 1280x900, light | visible alert blocks submission; the same selection retries successfully | `_docs/_workflows/_smoke/task-536-retry-visible-error.png`, `_docs/_workflows/_smoke/task-536-retry-success-without-reload.png` |
+| `cookie-nonce-byte-and-internal-boundary` | 1280x900, light | cookie cannot bypass nonce/bytes; internal, draft, and archived forms stay noninteractive | `_docs/_workflows/_smoke/task-536-cookie-nonce-byte-internal-boundary.png` |
+| `published-front-delivery` | 1280x900, light | passive image is visible; PDF/SVG/text/bin use real canonical downloads and GET/HEAD headers | `_docs/_workflows/_smoke/task-536-published-front-delivery.png` |
+| `admin-form-builder-narrow-dark` | 390x844, dark | Fields UI has no widget surface and no horizontal overflow | `_docs/_workflows/_smoke/task-536-admin-form-builder-narrow-dark.png` |
+
+Scoped cleanup removed 6 pages, 3 submissions, 5 forms, and 10 media records, restored
+the affected storage setting, revoked the smoke session, and reported zero cleanup
+errors or media cleanup failures. The eight PNGs are intentionally task-scoped; because
+the repository globally ignores `*.png`, the owner must force-add these existing files
+when committing the closure. TASK-545 alone owns the future durable-manifest `.gitignore`
+exception.
+
+The abandoned pre-submit upload cleanup residual remains explicitly owned by
+TASK-516-07. There is no other open TASK-536 implementation residual.

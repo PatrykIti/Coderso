@@ -691,7 +691,7 @@ export const customScreenPolicy: AssistantResourcePolicy = {
 
 export const widgetTemplatePolicy: AssistantResourcePolicy = {
   kind: "widget-template",
-  label: "Widget Templates",
+  label: "Retired Widget Compatibility",
   aliases: [
     "widget template",
     "widget templates",
@@ -706,7 +706,7 @@ export const widgetTemplatePolicy: AssistantResourcePolicy = {
     "szablon",
   ],
   routes: ["/admin/advanced/widgets"],
-  operations: ["inspect", "find", "create", "update", "delete"],
+  operations: ["inspect", "find", "update", "delete"],
   readPermissions: ["widgets:read"],
   executePermissions: ["widgets:write"],
   filters: {
@@ -770,9 +770,11 @@ export const widgetTemplatePolicy: AssistantResourcePolicy = {
   destructive: filteredDestructivePolicy,
   secrets: { redacted: true, secretFields: ["settings.secret"], providerAllowed: false },
   coverage: {
-    state: "live-execute",
+    state: "legacy-maintenance",
     task: "TASK-184-07",
     routes: ["/admin/advanced/widgets"],
+    notes:
+      "Hidden compatibility maintenance for exact retained rows only; no create or insert authoring.",
   },
 };
 

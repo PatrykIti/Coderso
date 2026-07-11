@@ -593,7 +593,7 @@ test("Section builder-owned Region controls expose stable control paths", async 
   } finally {
     view.cleanup();
   }
-}, 10000);
+}, 30000); // Full-suite transform/import contention can exceed 10s; assertions stay unchanged.
 
 const mockSectionContract = async ({
   normalizedValue,

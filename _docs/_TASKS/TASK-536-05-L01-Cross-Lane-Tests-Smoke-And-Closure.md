@@ -8,14 +8,16 @@
 **Category:** Tests / Security / Documentation / Closure
 **Estimated Effort:** Large
 **Dependencies:** TASK-536-01 through TASK-536-04
-**Status:** ⏳ To Do
-**Changelog:** 1248 (pinned; create only at implementation closure)
+**Status:** ✅ Done
+**Completed:** 2026-07-11
+**Changelog:** 1248
 
 ---
 
 ## Scope and ownership
 
-Tests-and-docs-only closure leaf. It may edit the relevant files under tests/, task-
+Tests-and-docs-only closure leaf, with one bounded POST-M-07 policy-metadata exception.
+It may edit the relevant files under tests/, task-
 prefixed screenshots named `_docs/_workflows/_smoke/task-536-*`, _docs/MEDIA_SPEC.md, _docs/SECURITY_SPEC.md,
 _docs/CMS_API.md, relevant Forms/media user/developer docs, this family’s task statuses,
 the historical-boundary notices in `_docs/WIDGETS*.md`, `_docs/WIDGET_PACK_MATRIX.md`, and
@@ -26,8 +28,11 @@ the current product-boundary wording in `README.md`, `docs/README.md`,
 the relevant `docs/develop/*` handbook pages, and the `docs/guide/*`
 redirects/vocabulary corrections that
 keep active guidance on editor-owned sections/blocks and Dashboard-only widgets,
-_docs/_TASKS/README.md, changelog 1248, and _docs/_CHANGELOG/README.md. It must not edit
-core production source. Read task/changelog indexes fresh immediately before closure.
+_docs/_TASKS/README.md, changelog 1248, and _docs/_CHANGELOG/README.md. For POST-M-07 it
+is the sole TASK-536 writer of
+`core/services/assistant/operationPolicy/policyTypes.ts` and
+`core/services/assistant/operationPolicy/cmsResourcePolicies.ts`; no other core source
+is in scope. Read task/changelog indexes fresh immediately before closure.
 Source leaves create/update their changed-behavior and compatibility assertions before
 their own gates, including creation of
 `tests/vitest/services/media-file-trust.test.ts` in TASK-536-01-L01. This leaf owns only
@@ -44,6 +49,14 @@ Paths and test names under `core/widgets` / `tests/vitest/widgets` are historica
 implementation names only. Closeout language must describe the existing public Form
 block/section runtime and must not add or advertise a non-dashboard widget type,
 editor, registry entry, preset, or authoring workflow.
+
+The POST-M-07 full-gate correction adds `legacy-maintenance` to the canonical coverage
+state vocabulary, applies it to the retired Widget compatibility row, removes only the
+advertised `create` operation, and keeps the existing exact-row update/delete/block-patch
+maintenance actions. It must not edit the hidden route, executor, action registry,
+resolver, permissions, DB/service boundary, or Dashboard widget contracts. Tests must
+import the canonical state list rather than add another string mirror and must prove
+provider guidance contains no Widget-template create/insert capability.
 
 ## Implementation Pseudocode
 
@@ -259,3 +272,21 @@ any descendant is open or any required scan/smoke is missing.
 After the final metadata edit or drift fix, rerun
 `node --check _docs/_workflows/task-536-implement.mjs` and `git diff --check`.
 The pre-closure validation result does not cover later task/changelog/index edits.
+
+## Closure result
+
+Completed on 2026-07-11. The only closure-time production correction was the bounded
+POST-M-07 assistant policy metadata seam declared above: canonical
+`legacy-maintenance`, no advertised Widget create/insert operation, and unchanged
+exact-row update/delete/block-patch maintenance. All 15 physical TASK-536 files are
+terminal, changelog 1248 and both indexes are synchronized, and the parent records the
+full validation and smoke matrix. Final combined tests are Bun 1633 pass / 1 opt-in live
+skip / 0 fail and Vitest 832/832 files, 6552/6552 tests; `precommit:check` and all five
+release gates pass. Two reproduced load-only UI timeouts kept their assertions and
+received only local 30-second limits before the final full Vitest pass. The final smoke used
+`coderso-dev-core-host` plus complete `playwright-cli -s=wf536smoke ...` commands against
+the canonical admin/front hosts, with `.env`-only credentials: 7/7 scenarios and 8
+screenshots passed with zero console errors, followed by scoped fixture, storage, and
+session cleanup. The only full strict-scan findings remain the unchanged TASK-538 and
+TASK-545-owned program blockers; the task-scoped Forms/media scan is clean and no
+suppression was added.

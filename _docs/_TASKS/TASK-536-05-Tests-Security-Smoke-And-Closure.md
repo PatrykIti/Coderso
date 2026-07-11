@@ -7,8 +7,9 @@
 **Category:** Tests / Security Validation / Documentation
 **Estimated Effort:** Large
 **Dependencies:** TASK-536-01 through TASK-536-04
-**Status:** ⏳ To Do
-**Changelog:** 1248 (pinned; create only at implementation closure)
+**Status:** ✅ Done
+**Completed:** 2026-07-11
+**Changelog:** 1248
 
 ---
 
@@ -17,7 +18,8 @@
 Close TASK-536 with the cross-lane regression corpus, security validation, real browser
 flows, source-of-truth documentation, task graph updates, and changelog 1248. This
 subtask owns additive cross-leaf tests/docs only and must not reopen production source
-contracts or re-baseline source-owner assertions.
+contracts or re-baseline source-owner assertions, except for the bounded POST-M-07
+assistant coverage-policy metadata correction owned by its leaf.
 
 Paths and test names under `core/widgets` / `tests/vitest/widgets` are historical
 implementation names only. Closeout language must describe the existing public Form
@@ -39,6 +41,8 @@ documentation, task/index status updates, and changelog 1248.
 - Inspection applies to every access/captcha mode.
 - Exactly one public_write charge occurs.
 - Unknown keys fail at every fixed nested schema depth.
+- Retired Widget compatibility is `legacy-maintenance`: provider guidance advertises no
+  create/insert operation, while exact-row update/block-patch/delete maintenance remains.
 
 ## Closure gate
 
