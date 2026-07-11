@@ -1,5 +1,10 @@
 # Widgets Index (v1)
 
+> Historical compatibility index for renderers under `core/widgets/**`. Configurable
+> product widgets are limited to the Admin Dashboard and are documented in
+> `_docs/DASHBOARD_WIDGETS_SPEC.md`; Page/Menu/Form/Screen authoring uses sections and
+> blocks. Do not use this index to introduce a new non-dashboard widget/editor/registry.
+
 - `SECTION.md` - Section layout wrapper
 - `TEMPLATE_SECTION.md` - Template section (widget templates)
 - `GRID_COLUMNS.md` - Grid/columns layout primitive
@@ -23,7 +28,7 @@
 - `PRODUCT_GALLERY.md` - Commerce product gallery
 - `PRODUCT_COMPARE.md` - Commerce compare matrix
 - `PRODUCT_TABLE.md` - Commerce product table
-- `FORM_EMBED.md` - Form embed
+- `FORM_EMBED.md` - historical Form block/section compatibility renderer
 - `LOGO_CLOUD.md` - Logo cloud
 - `GALLERY_MOSAIC.md` - Gallery mosaic
 - `STATS_KPI.md` - Stats KPI

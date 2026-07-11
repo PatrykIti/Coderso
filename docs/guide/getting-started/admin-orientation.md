@@ -17,7 +17,9 @@ keywords:
 Admin Orientation explains how the Coderso admin is organized before you start
 changing content or configuration. The admin has two broad areas: core screens
 such as Dashboard, Pages, Media, and Settings, plus Advanced modules for content
-models, entries, widgets, forms, listings, booking, commerce, and solution kits.
+models, entries, forms, listings, booking, commerce, and solution kits. The
+Dashboard has its own configurable widgets; other editors use sections and
+blocks.
 
 # When To Use
 
@@ -31,8 +33,9 @@ site management or in Advanced workflows.
    status.
 2. Use Pages, Menus, Themes, and Settings for site-wide structure and behavior.
 3. Use Advanced > Engine to model structured content and Entries to manage records.
-4. Use Widgets, Forms, Listings, Booking, Commerce, Reviews, and Popups when
-   you are building customer-facing product workflows.
+4. Use Forms, Listings, Booking, Commerce, Reviews, and Popups when you are
+   building customer-facing product workflows. Compose their presentation with
+   the sections and blocks supplied by the owning editor.
 5. Use Settings > Assistant to decide whether the admin assistant stays in
    read-only Docs Assistant mode or uses LLM Guide with a configured provider.
 6. Use Solution Kits when you want a guided, package-based starting point

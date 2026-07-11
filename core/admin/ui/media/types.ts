@@ -38,7 +38,7 @@ export type MediaMetaUpdate = {
 
 export type MediaUsageItem = {
   id: string;
-  type: "page" | "entry" | "post" | "commerce";
+  type: "page" | "entry" | "post" | "commerce" | "submission";
   title: string;
   context: string;
   targetId: string;

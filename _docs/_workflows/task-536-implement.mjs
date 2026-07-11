@@ -16,6 +16,7 @@ export const meta = {
     { title: "Smoke" },
     { title: "536-05 close" },
     { title: "Final drift" },
+    { title: "Final metadata gate" },
   ],
 };
 
@@ -114,7 +115,7 @@ const LEAVES = [
   {
     id: "536-01-L03",
     file: "TASK-536-01-L03-Integrate-Canonical-Media-Service-And-Urls.md",
-    gate: `${ENV}bun --cwd core lint:types && bun --cwd core lint && ./node_modules/.bin/tsc -p tsconfig.json --noEmit && bun run test:vitest -- tests/vitest/services/mediaUrlProjection.test.ts && bun test --parallel=1 --timeout=15000 tests/unit/media/mediaService.test.ts tests/unit/media/mediaMeta.test.ts tests/unit/server/publicFormsUploadApi.test.ts tests/integration/routes/media.test.ts tests/unit/dashboard/dashboardService.test.ts tests/unit/backups/backupRemoteStorage.test.ts tests/unit/backups/backupService.test.ts`,
+    gate: `${ENV}bun --cwd core lint:types && bun --cwd core lint && ./node_modules/.bin/tsc -p tsconfig.json --noEmit && bun run test:vitest -- tests/vitest/services/mediaUrlProjection.test.ts tests/vitest/admin/mediaUtils.test.ts tests/vitest/ui/media-picker.test.tsx tests/vitest/ui/media-card.test.tsx tests/vitest/ui/media-details.test.tsx tests/vitest/ui/post-editor-canvas-wave.test.tsx && bun test --parallel=1 --timeout=15000 tests/unit/media/mediaService.test.ts tests/unit/media/mediaMeta.test.ts tests/unit/server/publicFormsUploadApi.test.ts tests/integration/routes/media.test.ts tests/unit/dashboard/dashboardService.test.ts tests/unit/backups/backupRemoteStorage.test.ts tests/unit/backups/backupService.test.ts`,
   },
   {
     id: "536-02-L01",
@@ -124,22 +125,22 @@ const LEAVES = [
   {
     id: "536-03-L01",
     file: "TASK-536-03-L01-Upload-Control-And-Hidden-Id-Contract.md",
-    gate: "bun --cwd core lint:types && bun --cwd core lint && ./node_modules/.bin/tsc -p tsconfig.json --noEmit && ./node_modules/.bin/eslint --max-warnings=0 core/widgets/core/formEmbed.tsx && bun run test:vitest -- tests/vitest/widgets/formEmbed.test.tsx",
+    gate: "bun --cwd core lint:types && bun --cwd core lint && ./node_modules/.bin/tsc -p tsconfig.json --noEmit && ./node_modules/.bin/eslint --max-warnings=0 core/widgets/core/formEmbed.tsx core/widgets/core/contact.tsx core/widgets/core/newsletter.tsx && bun run test:vitest -- tests/vitest/widgets/formEmbed.test.tsx tests/vitest/widgets/contact.test.tsx tests/vitest/widgets/newsletter.test.tsx",
   },
   {
     id: "536-03-L02",
     file: "TASK-536-03-L02-Upload-Before-Submit-State-Machine.md",
-    gate: "bun --cwd core lint:types && bun --cwd core lint && ./node_modules/.bin/tsc -p tsconfig.json --noEmit && ./node_modules/.bin/eslint --max-warnings=0 core/widgets/core/formRuntimeScript.ts core/widgets/core/formEmbed.tsx && bun run test:vitest -- tests/vitest/widgets/formRuntimeScript.test.ts tests/vitest/widgets/formEmbed.test.tsx",
+    gate: "bun --cwd core lint:types && bun --cwd core lint && ./node_modules/.bin/tsc -p tsconfig.json --noEmit && ./node_modules/.bin/eslint --max-warnings=0 core/widgets/core/formRuntimeScript.ts core/widgets/core/formEmbed.tsx && bun run test:vitest -- tests/vitest/widgets/formRuntimeScript.test.ts tests/vitest/widgets/formEmbed.test.tsx tests/vitest/widgets/contact.test.tsx tests/vitest/widgets/newsletter.test.tsx",
   },
   {
     id: "536-04-L01",
     file: "TASK-536-04-L01-Nested-Reject-Unknown-And-Public-Write-Ownership.md",
-    gate: `${ENV}bun --cwd core lint:types && bun --cwd core lint && bun run test:vitest -- tests/vitest/forms/submissionAccess.test.ts tests/vitest/server/requestBody.test.ts && bun test --parallel=1 --timeout=15000 tests/unit/server/publicFormsApi.test.ts tests/unit/server/publicFormsUploadApi.test.ts tests/integration/server/formsWriteMounts.test.ts tests/security/codersoSecurityGate.test.ts && bun run gates:coderso`,
+    gate: `${ENV}bun --cwd core lint:types && bun --cwd core lint && bun run test:vitest -- tests/vitest/forms/submissionAccess.test.ts tests/vitest/forms/submissionNonce.test.ts tests/vitest/server/requestBody.test.ts && bun test --parallel=1 --timeout=15000 tests/unit/server/publicFormsApi.test.ts tests/unit/server/publicFormsUploadApi.test.ts tests/integration/server/formsWriteMounts.test.ts tests/security/codersoSecurityGate.test.ts && bun run gates:coderso`,
   },
   {
     id: "536-04-L02",
     file: "TASK-536-04-L02-Strict-Nested-Forms-Schemas.md",
-    gate: `${ENV}bun --cwd core lint:types && bun --cwd core lint && bun run test:vitest -- tests/vitest/forms/validation.test.ts tests/vitest/forms/formSettings.test.ts tests/vitest/forms/fileField.test.ts && bun test --timeout=15000 tests/integration/routes/forms.test.ts`,
+    gate: `${ENV}bun --cwd core lint:types && bun --cwd core lint && bun run test:vitest -- tests/vitest/forms/validation.test.ts tests/vitest/forms/formSettings.test.ts tests/vitest/forms/fileField.test.ts tests/vitest/forms/formRuntimeResolver.test.ts && bun test --parallel=1 --timeout=15000 tests/integration/routes/forms.test.ts tests/unit/forms/fileSubmission.test.ts`,
   },
 ];
 
@@ -171,11 +172,15 @@ for (const leaf of LEAVES) {
 }
 
 phase("536-05 prepare");
-await agent(
+const prepareResult = await agent(
   `${COMMON}\n\nRead ${TASK_ROOT}/TASK-536-05-L01-Cross-Lane-Tests-Smoke-And-Closure.md in full. ` +
-    "Add only its cross-leaf tests and source-of-truth docs, run the full targeted matrix, task-scoped Semgrep, gates, and full strict scan. Record the already-owned TASK-538 Page finding separately if it remains; never suppress it. Do NOT create changelog 1248 or mark tasks Done yet: smoke and post-audit must pass first. Never edit production source.",
-  { label: "impl:536-05-prepare", phase: "536-05 prepare" }
+    "Add only its cross-leaf tests and source-of-truth docs, run the full targeted matrix, task-scoped Semgrep, gates, and full strict scan. Record the already-owned TASK-538 Page and TASK-545-02-L01 workflow findings separately if they remain; never suppress them. Do NOT create changelog 1248 or mark tasks Done yet: smoke and post-audit must pass first. Never edit production source. " +
+    "Historical core/widgets paths are the existing public Form block/section runtime only; do not add or document a non-dashboard widget/editor/registry/preset. Return pass=true only when every required TASK-536 gate and task-scoped scan passed; list external strict-scan blockers in summary/errors.",
+  { label: "impl:536-05-prepare", phase: "536-05 prepare", schema: RESULT_SCHEMA }
 );
+if (!prepareResult.pass) {
+  throw new Error(`TASK-536 prepare gate failed: ${prepareResult.errors.join("; ")}`);
+}
 
 const LENSES = [
   [
@@ -196,7 +201,7 @@ const LENSES = [
   ],
   [
     "test-integrity",
-    "Every source owner added behavior tests before gate; Bun/Vitest lanes correct; no assertion weakening; DB fixtures scoped; task-scoped scan clean and external TASK-538 finding honest.",
+    "Every source owner added behavior tests before gate; Bun/Vitest lanes correct; no assertion weakening; DB fixtures scoped; task-scoped scan clean and external TASK-538/TASK-545 findings honest.",
   ],
 ];
 
@@ -216,16 +221,12 @@ for (let round = 1; round <= 2; round += 1) {
     LENSES.map(([id]) => id),
     `TASK-536 post-audit round ${round}`
   );
-  const blocking = results.flatMap(({ result }) =>
-    result.findings.filter(
-      (finding) => finding.severity === "high" || finding.severity === "medium"
-    )
-  );
-  if (blocking.length === 0) break;
+  const findings = results.flatMap(({ result }) => result.findings);
+  if (findings.length === 0) break;
   if (round === 2) throw new Error("TASK-536 post-audit remained blocked");
   await agent(
-    `${COMMON}\n\nFix these verified TASK-536 post-audit HIGH/MEDIUM findings only through each finding's original declared leaf-owner seam; do not edit task/changelog metadata in this phase. Update only the owning behavior tests/docs and rerun affected targeted gates:\n` +
-      blocking
+    `${COMMON}\n\nFix these verified TASK-536 post-audit HIGH/MEDIUM/LOW findings only through each finding's original declared leaf-owner seam; do not edit task/changelog metadata in this phase. Update only the owning behavior tests/docs and rerun affected targeted gates:\n` +
+      findings
         .map((finding) => `- [${finding.severity}] ${finding.evidence}: ${finding.finding}`)
         .join("\n"),
     { label: "post-audit-fix:1", phase: "Post-audit" }
@@ -242,7 +243,7 @@ if (!smoke.pass) throw new Error(`TASK-536 smoke failed: ${smoke.failures.join("
 phase("536-05 close");
 await agent(
   `${COMMON}\n\nTASK-536 implementation, targeted gates, five-lens post-audit and Playwright smoke are green. ` +
-    `Read both indexes fresh. Record smoke scenarios/screenshots and exact validation (including any external TASK-538 strict-scan finding) in closeout. Create pinned changelog 1248, update its index, mark every physical TASK-536 descendant Done before the parent, and change only TASK-536 rows/statistics in the task board. Never edit production source, another task family, or commit.`,
+    `Read both indexes fresh. Record smoke scenarios/screenshots and exact validation (including the external TASK-538 and TASK-545-02-L01 strict-scan findings when they remain) in closeout. Describe the existing public Form block/section runtime, not a new non-dashboard widget surface. Create pinned changelog 1248, update its index, mark every physical TASK-536 descendant Done before the parent, and change only TASK-536 rows/statistics in the task board. Never edit production source, another task family, or commit.`,
   { label: "close:536", phase: "536-05 close" }
 );
 
@@ -253,7 +254,7 @@ const CLOSURE_LENSES = [
   ],
   [
     "changelog-evidence",
-    "Pinned changelog 1248 and index metadata agree; closeout truthfully records exact gates, external TASK-538 scan blocker, Playwright scenarios, zero-console result, and existing screenshot paths.",
+    "Pinned changelog 1248 and index metadata agree; closeout truthfully records exact gates, external TASK-538/TASK-545 scan blockers, Playwright scenarios, zero-console result, and existing screenshot paths.",
   ],
   [
     "final-diff",
@@ -287,4 +288,13 @@ for (let round = 1; round <= 2; round += 1) {
         .join("\n"),
     { label: "final-drift-fix:1", phase: "Final drift" }
   );
+}
+
+phase("Final metadata gate");
+const finalMetadataGate = await agent(
+  `Final read-only TASK-536 metadata gate at ${ROOT}. Run exactly: node --check _docs/_workflows/task-536-implement.mjs && git diff --check. Return pass=true only when both commands exit zero; do not edit, stage, or commit.`,
+  { label: "final-metadata-gate:536", phase: "Final metadata gate", schema: RESULT_SCHEMA }
+);
+if (!finalMetadataGate.pass) {
+  throw new Error(`TASK-536 final metadata gate failed: ${finalMetadataGate.errors.join("; ")}`);
 }

@@ -92,7 +92,8 @@ Every admin color control authors AND round-trips **alpha-capable** values, not
 just opaque hex. The two shared controls —
 `core/admin/ui/pages/editorControls/ColorSwatchControl.tsx` (menu/page) and
 `core/admin/ui/widgets/editors/SharedColorControl.tsx` +
-`core/admin/ui/widgets/editors/ClearableFields.tsx` (widget editors) — expose:
+`core/admin/ui/widgets/editors/ClearableFields.tsx` (retained compatibility
+renderer controls; not a new authoring registry) — expose:
 
 - a native **base-color picker** (`<input type="color">`, `#rrggbb`),
 - an **opacity/alpha slider** (`0`–`1`),
@@ -126,7 +127,7 @@ falls back to fully opaque). This is why the owner's legacy token
 `rgba(8,17,31,.84)` survives to front render as `rgba(8,17,31,0.84)`.
 
 **Storage:** color strings are existing `string` fields on the menu document
-(`jsonb`) and per-widget props (`jsonb` page regions). This upgrade is
+(`jsonb`) and per-block props (including retained legacy renderer rows). This upgrade is
 **present-only** — NO schema key, NO DDL, NO migration; legacy opaque values
 normalize byte-identically.
 
@@ -227,7 +228,7 @@ no-effect page renders byte-identically to post-521 output.
 
 - **Page canvas background** (`settings.background`) — a present-only per-page solid
   color OR CSS gradient emitted as inline `style.background` on the page `<Root>`,
-  overriding the default `bg-white` utility. The panel widget authors solid colors only
+  overriding the default `bg-white` utility. The Page settings panel authors solid colors only
   (shared color-only `ColorSwatchControl`, alpha-capable via TASK-519); gradients are
   model/import-only. The ONLY path a value reaches CSS is `sanitizeAuthoringCssBackground`
   (safe color/gradient, else the key is dropped), applied at write AND render.

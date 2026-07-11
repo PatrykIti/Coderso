@@ -49,6 +49,32 @@ const mediaState = vi.hoisted(() => ({
   },
 }));
 
+const createMediaRecord = (
+  id: string,
+  type: MediaRecord["type"],
+  mimeType: string,
+  filename: string
+): MediaRecord => ({
+  id,
+  key: `uploads/${filename}`,
+  url: `/media/uploads/${filename}`,
+  originalName: filename,
+  type,
+  mimeType,
+  size: 1024,
+  createdAt: "2026-07-11T00:00:00.000Z",
+});
+
+const createProjectedKindMediaRecords = (): MediaRecord[] => [
+  createMediaRecord("passive-png", "image", "image/png", "passive.png"),
+  createMediaRecord("active-svg", "file", "image/svg+xml", "active.svg"),
+  createMediaRecord("unsupported-avif", "image", "image/avif", "unsupported.avif"),
+  createMediaRecord("mismatched-png", "file", "image/png", "mismatched.png"),
+  createMediaRecord("video", "file", "video/mp4", "clip.mp4"),
+  createMediaRecord("audio", "file", "audio/mpeg", "sound.mp3"),
+  createMediaRecord("document", "file", "application/pdf", "report.pdf"),
+];
+
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 vi.mock("@/components/ui/button", () => ({
@@ -998,6 +1024,240 @@ test("PostEditorCanvas scopes media picker and patches video, gallery, audio, an
     });
   } finally {
     fileView.cleanup();
+  }
+});
+
+test("PostEditorCanvas admits picker assets by projected media kind instead of MIME prefix", async () => {
+  const { PostEditorCanvas } = await import("../../../core/admin/ui/posts/editor/PostEditorCanvas");
+
+  mediaState.records = createProjectedKindMediaRecords();
+
+  const renderPicker = (type: "image" | "video" | "gallery" | "audio" | "file") =>
+    mount(
+      <PostEditorCanvas
+        document={{
+          version: 1,
+          meta: {},
+          blocks: [{ id: `${type}-block`, type, attrs: {}, content: null }],
+        }}
+        title="Canvas"
+        onTitleChange={() => undefined}
+        selectedBlockId={`${type}-block`}
+        insertFocusToken={0}
+        onSelectBlock={() => undefined}
+        onUpdateBlockContent={() => undefined}
+        onUpdateBlockAttrs={() => undefined}
+        onInsertBlock={() => undefined}
+      />
+    );
+
+  const cases = [
+    {
+      type: "image" as const,
+      trigger: "Click to choose image from media library",
+      count: 1,
+      included: ["passive.png"],
+      excluded: ["active.svg", "unsupported.avif", "mismatched.png"],
+    },
+    {
+      type: "gallery" as const,
+      trigger: "Click to choose gallery images",
+      count: 1,
+      included: ["passive.png"],
+      excluded: ["active.svg", "unsupported.avif", "mismatched.png"],
+    },
+    {
+      type: "video" as const,
+      trigger: "Click to choose video from media library",
+      count: 1,
+      included: ["clip.mp4"],
+      excluded: ["report.pdf", "passive.png"],
+    },
+    {
+      type: "audio" as const,
+      trigger: "Click to choose audio from media library",
+      count: 1,
+      included: ["sound.mp3"],
+      excluded: ["report.pdf", "passive.png"],
+    },
+    {
+      type: "file" as const,
+      trigger: "Click to choose file from media library",
+      count: 4,
+      included: ["active.svg", "unsupported.avif", "mismatched.png", "report.pdf"],
+      excluded: ["passive.png", "clip.mp4", "sound.mp3"],
+    },
+  ];
+
+  for (const pickerCase of cases) {
+    const view = renderPicker(pickerCase.type);
+    try {
+      clickByText(view.container, pickerCase.trigger);
+      await flush();
+
+      expect(view.container.textContent).toContain(`media-grid:${pickerCase.count}`);
+      for (const filename of pickerCase.included) {
+        expect(view.container.textContent).toContain(`select-media:${filename}`);
+      }
+      for (const filename of pickerCase.excluded) {
+        expect(view.container.textContent).not.toContain(`select-media:${filename}`);
+      }
+    } finally {
+      view.cleanup();
+    }
+  }
+});
+
+test("PostEditorCanvas rechecks projected kind for persisted media while preserving URL overrides", async () => {
+  const { PostEditorCanvas } = await import("../../../core/admin/ui/posts/editor/PostEditorCanvas");
+
+  mediaState.records = createProjectedKindMediaRecords();
+
+  const view = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [
+          { id: "image-passive", type: "image", attrs: { mediaId: "passive-png" }, content: null },
+          { id: "image-svg", type: "image", attrs: { mediaId: "active-svg" }, content: null },
+          {
+            id: "image-avif",
+            type: "image",
+            attrs: { mediaId: "unsupported-avif" },
+            content: null,
+          },
+          {
+            id: "image-mismatch",
+            type: "image",
+            attrs: { mediaId: "mismatched-png" },
+            content: null,
+          },
+          {
+            id: "gallery-unsafe-only",
+            type: "gallery",
+            attrs: { mediaIds: ["active-svg", "unsupported-avif", "mismatched-png"] },
+            content: null,
+          },
+          {
+            id: "gallery-mixed",
+            type: "gallery",
+            attrs: {
+              mediaIds: ["active-svg", "passive-png", "unsupported-avif", "mismatched-png"],
+            },
+            content: null,
+          },
+          { id: "video-valid", type: "video", attrs: { mediaId: "video" }, content: null },
+          {
+            id: "video-mismatch",
+            type: "video",
+            attrs: { mediaId: "document" },
+            content: null,
+          },
+          { id: "audio-valid", type: "audio", attrs: { mediaId: "audio" }, content: null },
+          {
+            id: "audio-mismatch",
+            type: "audio",
+            attrs: { mediaId: "video" },
+            content: null,
+          },
+          { id: "file-valid", type: "file", attrs: { mediaId: "document" }, content: null },
+          {
+            id: "file-mismatch",
+            type: "file",
+            attrs: { mediaId: "passive-png" },
+            content: null,
+          },
+          {
+            id: "video-legacy-url",
+            type: "video",
+            attrs: { mediaId: "document", url: "/legacy/clip.mp4" },
+            content: null,
+          },
+          {
+            id: "audio-legacy-url",
+            type: "audio",
+            attrs: { mediaId: "video", url: "/legacy/sound.mp3" },
+            content: null,
+          },
+          {
+            id: "file-legacy-url",
+            type: "file",
+            attrs: { mediaId: "passive-png", url: "/legacy/report.pdf" },
+            content: null,
+          },
+        ],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId={null}
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+    />
+  );
+
+  const block = (id: string) =>
+    view.container.querySelector(`[data-post-editor-block-id="${id}"]`) as HTMLElement | null;
+
+  try {
+    await flush();
+
+    expect(block("image-passive")?.querySelector("img")?.getAttribute("src")).toBe(
+      "/media/uploads/passive.png"
+    );
+    for (const id of ["image-svg", "image-avif", "image-mismatch"]) {
+      expect(block(id)?.querySelector("img")).toBeNull();
+      expect(
+        block(id)?.querySelector('[data-post-editor-media-placeholder="image"]')
+      ).not.toBeNull();
+    }
+
+    expect(block("gallery-unsafe-only")?.querySelectorAll("img")).toHaveLength(0);
+    expect(
+      block("gallery-unsafe-only")?.querySelector('[data-post-editor-media-placeholder="gallery"]')
+    ).not.toBeNull();
+    expect(block("gallery-mixed")?.querySelectorAll("img")).toHaveLength(1);
+    expect(block("gallery-mixed")?.querySelector("img")?.getAttribute("src")).toBe(
+      "/media/uploads/passive.png"
+    );
+
+    expect(block("video-valid")?.querySelector("video")?.getAttribute("src")).toBe(
+      "/media/uploads/clip.mp4"
+    );
+    expect(block("video-mismatch")?.querySelector("video")).toBeNull();
+    expect(
+      block("video-mismatch")?.querySelector('[data-post-editor-media-placeholder="video"]')
+    ).not.toBeNull();
+
+    expect(block("audio-valid")?.querySelector("audio")?.getAttribute("src")).toBe(
+      "/media/uploads/sound.mp3"
+    );
+    expect(block("audio-mismatch")?.querySelector("audio")).toBeNull();
+    expect(
+      block("audio-mismatch")?.querySelector('[data-post-editor-media-placeholder="audio"]')
+    ).not.toBeNull();
+
+    expect(block("file-valid")?.querySelector("a")?.getAttribute("href")).toBe(
+      "/media/uploads/report.pdf"
+    );
+    expect(block("file-mismatch")?.querySelector("a")).toBeNull();
+    expect(
+      block("file-mismatch")?.querySelector('[data-post-editor-media-placeholder="file"]')
+    ).not.toBeNull();
+
+    expect(block("video-legacy-url")?.querySelector("video")?.getAttribute("src")).toBe(
+      "/legacy/clip.mp4"
+    );
+    expect(block("audio-legacy-url")?.querySelector("audio")?.getAttribute("src")).toBe(
+      "/legacy/sound.mp3"
+    );
+    expect(block("file-legacy-url")?.querySelector("a")?.getAttribute("href")).toBe(
+      "/legacy/report.pdf"
+    );
+  } finally {
+    view.cleanup();
   }
 });
 

@@ -208,6 +208,14 @@ type MediaPickerState = {
   kind: MediaPickerKind;
 };
 
+const mediaKindByPicker: Record<MediaPickerKind, MediaItem["type"]> = {
+  image: "image",
+  video: "video",
+  gallery: "image",
+  audio: "audio",
+  file: "document",
+};
+
 const mediaPickerCopy: Record<
   MediaPickerKind,
   {
@@ -219,30 +227,27 @@ const mediaPickerCopy: Record<
   image: {
     title: "Select Image",
     empty: "No image assets found for this query.",
-    accept: (item) => item.mimeType.toLowerCase().startsWith("image/"),
+    accept: (item) => item.type === mediaKindByPicker.image,
   },
   video: {
     title: "Select Video",
     empty: "No video assets found for this query.",
-    accept: (item) => item.mimeType.toLowerCase().startsWith("video/"),
+    accept: (item) => item.type === mediaKindByPicker.video,
   },
   gallery: {
     title: "Select Gallery Images",
     empty: "No image assets found for this query.",
-    accept: (item) => item.mimeType.toLowerCase().startsWith("image/"),
+    accept: (item) => item.type === mediaKindByPicker.gallery,
   },
   audio: {
     title: "Select Audio",
     empty: "No audio assets found for this query.",
-    accept: (item) => item.mimeType.toLowerCase().startsWith("audio/"),
+    accept: (item) => item.type === mediaKindByPicker.audio,
   },
   file: {
     title: "Select File",
     empty: "No file assets found for this query.",
-    accept: (item) =>
-      !item.mimeType.toLowerCase().startsWith("image/") &&
-      !item.mimeType.toLowerCase().startsWith("video/") &&
-      !item.mimeType.toLowerCase().startsWith("audio/"),
+    accept: (item) => item.type === mediaKindByPicker.file,
   },
 };
 
@@ -270,12 +275,17 @@ const readMediaIds = (attrs: Record<string, unknown>) =>
         .filter(Boolean)
     : [];
 
-const resolveMediaSource = (attrs: Record<string, unknown>, mediaById: Map<string, MediaItem>) => {
+const resolveMediaSource = (
+  attrs: Record<string, unknown>,
+  mediaById: Map<string, MediaItem>,
+  expectedType: MediaItem["type"]
+) => {
   const mediaId = readMediaId(attrs);
-  const selectedMedia = mediaId ? mediaById.get(mediaId) : undefined;
-  const url =
-    selectedMedia?.url ??
-    (typeof attrs.url === "string" && attrs.url.trim().length > 0 ? attrs.url.trim() : null);
+  const candidate = mediaId ? mediaById.get(mediaId) : undefined;
+  const selectedMedia = candidate?.type === expectedType ? candidate : undefined;
+  const legacyUrl =
+    typeof attrs.url === "string" && attrs.url.trim().length > 0 ? attrs.url.trim() : null;
+  const url = selectedMedia?.url ?? legacyUrl;
   return { mediaId, selectedMedia, url };
 };
 
@@ -834,7 +844,9 @@ function PostCanvasBlockItem({
               typeof attrs.mediaId === "string" && attrs.mediaId.trim().length > 0
                 ? attrs.mediaId.trim()
                 : null;
-            const selectedMedia = mediaId ? mediaById.get(mediaId) : undefined;
+            const candidate = mediaId ? mediaById.get(mediaId) : undefined;
+            const selectedMedia =
+              candidate?.type === mediaKindByPicker.image ? candidate : undefined;
             const src =
               selectedMedia?.url ??
               (mediaId && (mediaId.startsWith("/") || mediaId.startsWith("http")) ? mediaId : null);
@@ -884,7 +896,11 @@ function PostCanvasBlockItem({
 
       {block.type === "video"
         ? (() => {
-            const { selectedMedia, url } = resolveMediaSource(attrs, mediaById);
+            const { selectedMedia, url } = resolveMediaSource(
+              attrs,
+              mediaById,
+              mediaKindByPicker.video
+            );
             const caption =
               typeof attrs.caption === "string" && attrs.caption.trim().length > 0
                 ? attrs.caption.trim()
@@ -932,7 +948,10 @@ function PostCanvasBlockItem({
                 : 3;
             const images = mediaIds
               .map((id) => mediaById.get(id))
-              .filter((item): item is MediaItem => Boolean(item?.url));
+              .filter(
+                (item): item is MediaItem =>
+                  item?.type === mediaKindByPicker.gallery && Boolean(item.url)
+              );
             if (images.length === 0) {
               return (
                 <button
@@ -983,7 +1002,11 @@ function PostCanvasBlockItem({
 
       {block.type === "audio"
         ? (() => {
-            const { selectedMedia, url } = resolveMediaSource(attrs, mediaById);
+            const { selectedMedia, url } = resolveMediaSource(
+              attrs,
+              mediaById,
+              mediaKindByPicker.audio
+            );
             const caption =
               typeof attrs.caption === "string" && attrs.caption.trim().length > 0
                 ? attrs.caption.trim()
@@ -1019,7 +1042,11 @@ function PostCanvasBlockItem({
 
       {block.type === "file"
         ? (() => {
-            const { selectedMedia, url } = resolveMediaSource(attrs, mediaById);
+            const { selectedMedia, url } = resolveMediaSource(
+              attrs,
+              mediaById,
+              mediaKindByPicker.file
+            );
             const label =
               typeof attrs.label === "string" && attrs.label.trim().length > 0
                 ? attrs.label.trim()
@@ -1219,6 +1246,7 @@ export function PostEditorCanvas({
     (id: string) => {
       if (!mediaPicker || !onUpdateBlockAttrs) return;
       const media = mediaById.get(id);
+      if (!media || !mediaPickerCopy[mediaPicker.kind].accept(media)) return;
       if (mediaPicker.kind === "gallery") {
         const block = document.blocks.find((item) => item.id === mediaPicker.blockId);
         const attrs = (block?.attrs ?? {}) as Record<string, unknown>;

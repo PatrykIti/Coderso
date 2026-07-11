@@ -5,9 +5,9 @@ import { formActionRuns, formFields, forms, formSubmissions } from "../../db/sch
 import { invalidateLinkedDetailPageRouteCaches } from "../../site/cache/siteCache";
 import { normalizeSubmissionAccess, type SubmissionAccessMode } from "./submissionAccess";
 import {
-  assertFormFieldsWriteShape,
   deriveFormSlug,
   normalizeFormFields,
+  snapshotFormFieldsWriteShape,
   type FormFieldInput,
   type NormalizedFormField,
 } from "./validation";
@@ -197,11 +197,11 @@ export async function listFormFields(formId: string) {
 }
 
 export async function setFormFields(formId: string, fieldsInput: FormFieldInput[]) {
-  assertFormFieldsWriteShape(fieldsInput);
+  const fieldsSnapshot = snapshotFormFieldsWriteShape(fieldsInput);
   const form = await getForm(formId);
   if (!form) throw new Error("form_not_found");
 
-  const normalized = normalizeFormFields(fieldsInput);
+  const normalized = normalizeFormFields(fieldsSnapshot);
   const now = new Date();
 
   const inserted = await db.transaction(async (tx) => {

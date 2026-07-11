@@ -99,15 +99,25 @@ Rules:
 | `listing-template.card.patch` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write` | Patches `config.card` only |
 | `page.update` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write/publish` | Edits active page metadata/settings and preserves page data |
 | `page.delete` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write/publish` | Deletes active-context pages after review |
-| `widget-template.delete` | Vitest planner/schema | Bun executor | Bun executor | `widgets:read/write` | Deletes active-context reusable widget templates after review |
-| `widget-template.update` | Vitest planner/schema | Bun executor | Bun executor | `widgets:read/write` | Edits reusable template metadata/settings |
-| `widget-template.block.patch` | Vitest planner/schema | Bun executor | Bun executor | `widgets:read/write` | Patches selected reusable template block data paths |
 | `form.automation.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor | `forms:read/write` | Safe non-webhook actions only |
-| `site-kit.recommend/install/validate` | Vitest + Bun | Bun executor | Bun executor | plan/dry-run: `settings:read`, `content:read`, `solution-kits:read`; execute: `settings:write`, `content:write`, `content:publish`, `solution-kits:write`; LLM availability gate | Existing unified site-kit action flow; reviewed intake gates static page/menu/form/SEO preview coverage and may carry bounded Advanced runtime overrides for existing menu/Navigation, Hero, and section widget surfaces before execute |
+| `site-kit.recommend/install/validate` | Vitest + Bun | Bun executor | Bun executor | plan/dry-run: `settings:read`, `content:read`, `solution-kits:read`; execute: `settings:write`, `content:write`, `content:publish`, `solution-kits:write`; LLM availability gate | Existing unified site-kit action flow; reviewed intake gates static Page section/block, menu, form, and SEO preview coverage and may carry bounded overrides for existing Navigation/Hero/Page block contracts before execute |
 
 `page.widget.patch` is retired for Pages after TASK-417. Page mutations use
-`page.upsert` with `sections[]` or metadata-only `page.update`; widget-template
-and custom-screen patch actions remain the widget-owned mutation surfaces.
+`page.upsert` with `sections[]` or metadata-only `page.update`; Custom Screen V4
+uses its screen-owned section/block actions.
+
+## Retained Legacy Template Maintenance Actions
+
+These strict executor contracts remain only to maintain already stored hidden
+widget-template rows. They are not an active Admin route, reusable-template
+authoring surface, or permission to create/insert new non-dashboard widgets.
+Current reusable Page authoring uses Page Templates and Page-owned sections.
+
+| Action Type | Plan Schema | Dry Run | Execute | Route Permissions | Notes |
+|---|---|---|---|---|---|
+| `widget-template.delete` | Vitest planner/schema | Bun executor | Bun executor | `widgets:read/write` | Removes an exact retained legacy row after review |
+| `widget-template.update` | Vitest planner/schema | Bun executor | Bun executor | `widgets:read/write` | Maintenance-only metadata/settings edit for an existing legacy row |
+| `widget-template.block.patch` | Vitest planner/schema | Bun executor | Bun executor | `widgets:read/write` | Maintenance-only patch of an existing legacy row; no create/insert surface |
 
 ---
 

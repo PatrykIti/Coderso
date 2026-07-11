@@ -5,7 +5,7 @@
 This document defines the target testing architecture for Coderso.
 The system is intentionally WordPress-like at runtime:
 - Bun remains the runtime kernel,
-- plugin and widget bundles are loaded without rebuilding the whole CMS,
+- plugin bundles are loaded without rebuilding the whole CMS,
 - runtime behavior must stay valid even when the app surface grows through installed bundles.
 
 Because of that, the testing strategy must not force the whole codebase into one runner.
@@ -51,7 +51,10 @@ If a test proves behavior that should remain independent from the Bun kernel:
 - admin React components,
 - hooks,
 - SDK helpers,
-- widget normalization/render mapping without runtime adapters,
+- domain-owned section/block normalization and render mapping,
+- Admin Dashboard widget contracts,
+- retained `core/widgets` compatibility-renderer normalization and render mapping
+  without runtime adapters,
 
 then that test should move to Vitest.
 
@@ -63,7 +66,7 @@ then that test should move to Vitest.
 | Runtime integration | Prove real CMS flows without rebuild assumptions | Bun | route wiring, install/upgrade/rollback, plugin store/install fixtures, SSR/runtime rendering |
 | Performance and security gates | Validate release-blocking runtime budgets and hardening | Bun | `tests/perf/*`, `tests/security/*`, critical public/internal route contracts |
 | Pure domain | Validate business logic without runtime kernel dependency | Vitest | `core/services/*` without `Bun.*`, validators, selectors, mappers |
-| Admin/UI | Validate React/admin behavior with deterministic DOM tooling | Vitest | `core/admin/*`, `core/ui/*`, UI-facing widget editors, hooks, clients |
+| Admin/UI | Validate React/admin behavior with deterministic DOM tooling | Vitest | `core/admin/*`, `core/ui/*`, domain section/block editors, Admin Dashboard widget UI, retained compatibility-renderer UI tests, hooks, clients |
 | SDK / shared contracts | Validate plugin-facing contracts and manifest helpers | Vitest | `packages/sdk/src/*`, pure manifest/schema helpers |
 
 ## Runner Ownership Rules
@@ -92,7 +95,11 @@ then that test should move to Vitest.
 - Fast unit suites for domain/services.
 - Admin/UI component tests with `jsdom` or `happy-dom`.
 - SDK contract tests.
-- Pure widget logic that can run without Bun runtime primitives.
+- Pure domain-owned section/block logic that can run without Bun runtime
+  primitives.
+- Pure Admin Dashboard widget contracts.
+- Retained `core/widgets` compatibility-renderer logic that can run without Bun
+  runtime primitives.
 - Assistant operation policy coverage and route matrix validation, because it is
   pure metadata over admin navigation/configuration and must not import runtime
   services.
@@ -243,7 +250,7 @@ To make the hybrid strategy sustainable:
 1. Keep Bun runtime APIs behind narrow adapters.
 2. Make domain services depend on interfaces, not `Bun.*`.
 3. Keep admin/UI code independent from runtime kernel details.
-4. Test plugin/widget bundles with real built fixtures where runtime behavior matters.
+4. Test plugin bundles with real built fixtures where runtime behavior matters.
 5. Use DB-conditional tests only where DB behavior is part of the contract.
 6. Do not let Bun-free helpers import DB/settings/runtime modules at module load time. Prefer pure helper modules or lazy default deps so Vitest can import the code without env/runtime side effects.
 

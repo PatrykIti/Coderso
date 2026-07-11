@@ -109,9 +109,12 @@ const runtimeClientScript = String.raw`(() => {
     file_selection_changed: "Your file selection changed. Submit the form again.",
   });
   const DEFAULT_SUBMISSION_COPY = "Unable to submit the form. Please try again.";
+  const FORM_SECURITY_MARKER_SELECTOR =
+    "[data-form-security-nonce], [data-form-security-captcha]";
   const fileBindingRegistryByForm = new WeakMap();
   const fileFieldStateByInput = new WeakMap();
   const fileMarkerTombstones = new WeakSet();
+  const formSecurityMarkerTombstones = new WeakSet();
   const formFileUiStateByForm = new WeakMap();
 
   const getFormFileUiState = (form) => {
@@ -311,10 +314,73 @@ const runtimeClientScript = String.raw`(() => {
     return createSafeSubmissionError(code);
   };
 
-  const readPublicNonce = (form) => {
-    const nonceInputs = Array.from(form.querySelectorAll('input[name="__nl_form_nonce"]'));
-    if (nonceInputs.length !== 1 || !(nonceInputs[0] instanceof HTMLInputElement)) return "";
-    return nonceInputs[0].value;
+  const collectFormSecurityMarkerElements = (form) => {
+    const elements = [];
+    if (form.matches(FORM_SECURITY_MARKER_SELECTOR)) elements.push(form);
+    elements.push(...Array.from(form.querySelectorAll(FORM_SECURITY_MARKER_SELECTOR)));
+    elements.forEach((element) => formSecurityMarkerTombstones.add(element));
+    return elements;
+  };
+
+  const isExactFormSecurityControl = (form, element, role) => {
+    if (
+      !(element instanceof HTMLInputElement) ||
+      element.type !== "hidden" ||
+      element.form !== form ||
+      element.closest("form") !== form ||
+      !form.contains(element)
+    ) {
+      return false;
+    }
+    if (role === "nonce") {
+      return (
+        element.name === "__nl_form_nonce" &&
+        element.getAttribute("data-form-security-nonce") === "1" &&
+        !element.hasAttribute("data-form-security-captcha")
+      );
+    }
+    return (
+      element.name === "captchaToken" &&
+      element.getAttribute("data-form-security-captcha") === "1" &&
+      !element.hasAttribute("data-form-security-nonce")
+    );
+  };
+
+  const readExactNonceSecurityControl = (form) => {
+    const nonceElements = collectFormSecurityMarkerElements(form).filter((element) =>
+      element.hasAttribute("data-form-security-nonce")
+    );
+    if (
+      nonceElements.length !== 1 ||
+      !isExactFormSecurityControl(form, nonceElements[0], "nonce")
+    ) {
+      return null;
+    }
+    return nonceElements[0];
+  };
+
+  const readFormSecurityControls = (form, captchaSiteKey) => {
+    const markerElements = collectFormSecurityMarkerElements(form);
+    const nonceElements = markerElements.filter((element) =>
+      element.hasAttribute("data-form-security-nonce")
+    );
+    const captchaElements = markerElements.filter((element) =>
+      element.hasAttribute("data-form-security-captcha")
+    );
+    const captchaConfigured = captchaSiteKey.length > 0;
+    if (
+      nonceElements.length !== 1 ||
+      captchaElements.length !== (captchaConfigured ? 1 : 0) ||
+      markerElements.length !== nonceElements.length + captchaElements.length ||
+      !isExactFormSecurityControl(form, nonceElements[0], "nonce") ||
+      (captchaConfigured && !isExactFormSecurityControl(form, captchaElements[0], "captcha"))
+    ) {
+      return null;
+    }
+    return Object.freeze({
+      nonceInput: nonceElements[0],
+      captchaInput: captchaConfigured ? captchaElements[0] : null,
+    });
   };
 
   const normalizeCaptchaAction = (form) => {
@@ -362,16 +428,18 @@ const runtimeClientScript = String.raw`(() => {
 
   const capturePublicWriteContext = (form) => {
     const formId = form.dataset.formId || "";
-    const formNonce = readPublicNonce(form);
     const captchaSiteKey = form.dataset.formCaptchaSiteKey || "";
     const captchaAction = normalizeCaptchaAction(form);
+    const securityControls = readFormSecurityControls(form, captchaSiteKey);
+    const formNonce = securityControls ? securityControls.nonceInput.value : "";
     if (
       !isCanonicalNonEmptyText(formId) ||
       formId === "." ||
       formId === ".." ||
       !isCanonicalNonEmptyText(formNonce) ||
       !isCanonicalOptionalText(captchaSiteKey) ||
-      !captchaAction
+      !captchaAction ||
+      !securityControls
     ) {
       return null;
     }
@@ -393,13 +461,18 @@ const runtimeClientScript = String.raw`(() => {
       submissionUrl,
       captchaSiteKey,
       captchaAction,
+      securityControls,
     });
   };
 
   const assertPublicWriteContextStillCurrent = (form, context) => {
+    const securityControls = readFormSecurityControls(form, context.captchaSiteKey);
     if (
       (form.dataset.formId || "") !== context.formId ||
-      readPublicNonce(form) !== context.formNonce ||
+      !securityControls ||
+      securityControls.nonceInput !== context.securityControls.nonceInput ||
+      securityControls.captchaInput !== context.securityControls.captchaInput ||
+      securityControls.nonceInput.value !== context.formNonce ||
       normalizeFormAction(form) !== context.submissionUrl ||
       (form.dataset.formCaptchaSiteKey || "") !== context.captchaSiteKey ||
       normalizeCaptchaAction(form) !== context.captchaAction
@@ -856,8 +929,23 @@ const runtimeClientScript = String.raw`(() => {
     return null;
   };
 
-  const getFormFields = (form, registry) =>
-    Array.from(form.elements).filter((element) => {
+  const setOwnDynamicValue = (target, key, value) => {
+    Object.defineProperty(target, key, {
+      value,
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
+  };
+
+  const getFormFields = (form, registry, securityControls) => {
+    const validatedSecurityControls =
+      securityControls === undefined
+        ? readFormSecurityControls(form, form.dataset.formCaptchaSiteKey || "")
+        : securityControls;
+    const nonceInput = validatedSecurityControls?.nonceInput;
+    const captchaInput = validatedSecurityControls?.captchaInput;
+    return Array.from(form.elements).filter((element) => {
       if (!(element instanceof HTMLElement)) return false;
       if (
         !(element instanceof HTMLInputElement) &&
@@ -871,11 +959,19 @@ const runtimeClientScript = String.raw`(() => {
         return Boolean(element.name);
       }
       if (fileMarkerTombstones.has(element) || carriesFileMarker(element)) return false;
+      if (
+        element === nonceInput ||
+        element === captchaInput ||
+        formSecurityMarkerTombstones.has(element) ||
+        element.hasAttribute("data-form-security-nonce") ||
+        element.hasAttribute("data-form-security-captcha")
+      ) {
+        return false;
+      }
       if (!element.name) return false;
-      if (element.name === "__nl_form_nonce") return false;
-      if (element.name === "captchaToken") return false;
       return true;
     });
+  };
 
   const getFieldContainers = (form) =>
     Array.from(form.querySelectorAll("[data-form-field]")).filter(
@@ -887,7 +983,7 @@ const runtimeClientScript = String.raw`(() => {
     getFormFields(form, registry).forEach((field) => {
       const value = readNamedValue(field, registry);
       if (value === null || value === SKIP_VALUE) return;
-      values[field.name] = value;
+      setOwnDynamicValue(values, field.name, value);
     });
     return values;
   };
@@ -905,7 +1001,7 @@ const runtimeClientScript = String.raw`(() => {
     const fieldName = (container.dataset.logicField || "").trim();
     if (!fieldName) return true;
     const expected = (container.dataset.logicValue || "").trim().toLowerCase();
-    const actualRaw = values[fieldName];
+    const actualRaw = Object.hasOwn(values, fieldName) ? values[fieldName] : undefined;
     const actual = (toComparable(actualRaw) || "").toLowerCase();
     const exists = actual.length > 0;
 
@@ -1042,7 +1138,7 @@ const runtimeClientScript = String.raw`(() => {
       if (registry && registry.bindingByHidden.get(field)) return;
       const value = readNamedValue(field, registry);
       if (value === null || value === SKIP_VALUE) return;
-      values[field.name] = value;
+      setOwnDynamicValue(values, field.name, value);
     });
 
     const payload = {
@@ -1093,7 +1189,7 @@ const runtimeClientScript = String.raw`(() => {
 
     getFormFields(form, registry).forEach((field) => {
       if (registry && registry.bindingByHidden.get(field)) return;
-      if (!(field.name in values)) return;
+      if (!Object.hasOwn(values, field.name)) return;
       const incoming = values[field.name];
       if (incoming === null || incoming === undefined) return;
       if (field instanceof HTMLInputElement) {
@@ -1634,11 +1730,11 @@ const runtimeClientScript = String.raw`(() => {
   const toPayload = (form, registry, writeContext, finalCaptchaToken) => {
     const data = {};
 
-    getFormFields(form, registry).forEach((field) => {
+    getFormFields(form, registry, writeContext.securityControls).forEach((field) => {
       if (field.disabled) return;
       const value = readNamedValue(field, registry);
       if (value === null || value === SKIP_VALUE) return;
-      data[field.name] = value;
+      setOwnDynamicValue(data, field.name, value);
     });
 
     return {
@@ -1790,10 +1886,14 @@ const runtimeClientScript = String.raw`(() => {
 
       const writeContext = capturePublicWriteContext(form);
       if (!writeContext) {
+        const formId = form.dataset.formId || "";
+        const nonceInput = readExactNonceSecurityControl(form);
+        const nonceFailure =
+          isCanonicalNonEmptyText(formId) && (!nonceInput || nonceInput.value.length === 0);
         failWriteContextLocally(
           form,
           registry,
-          readPublicNonce(form) ? "submission_failed" : "form_nonce_required"
+          nonceFailure ? "form_nonce_required" : "submission_failed"
         );
         return;
       }
@@ -1805,7 +1905,7 @@ const runtimeClientScript = String.raw`(() => {
       hideNode(errorNode);
       hideNode(successNode);
       if (errorNode instanceof HTMLElement) delete errorNode.dataset.formErrorOwner;
-      const compatibilityCaptchaInput = form.querySelector('input[name="captchaToken"]');
+      const compatibilityCaptchaInput = writeContext.securityControls.captchaInput;
       if (compatibilityCaptchaInput instanceof HTMLInputElement) {
         compatibilityCaptchaInput.value = "";
       }

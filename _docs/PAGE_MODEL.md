@@ -1498,15 +1498,12 @@ runtime output by default. Admin preview may opt into hidden blocks through the
 renderer extension point and must render them as selectable ghost chrome instead
 of public content.
 
-Non-Page surfaces keep their widget contracts:
-- widget templates,
-- custom screens,
-- detail pages,
-- post/content block runtimes.
-
-Those surfaces remain on `documentContract: "legacy-widget-block-contract"` and
-own `WidgetBlock[]` data until a dedicated migration changes them. The Page
-Templates contract is frozen by TASK-420-02 in the
+Non-Page active editors keep domain-owned section/block contracts. Custom
+Screens V4 own `document.sections[].blocks[]`; Posts and content/detail editors
+own their bounded block documents. Retained widget-template/detail rows may
+still pass through `documentContract: "legacy-widget-block-contract"` and a
+`WidgetBlock[]` read/runtime adapter, but that compatibility label is not an
+authoring surface. The Page Templates contract is frozen by TASK-420-02 in the
 "Page Templates (Reusable Page v2 Templates)" section below and implemented by
 TASK-420-03, which also deleted the obsolete widget-template product surface
 (routes, preview target, admin UI, cached clients).
@@ -2166,9 +2163,11 @@ through the autosave delete route.
 ## Assistant Contract
 
 Assistant Page actions emit or update `sections[]`. `page.widget.patch` is
-retired for Pages and is rejected by the strict action plan schema. Reusable
-widget-template edits still use widget-template actions, and custom-screen
-widget edits still use custom-screen actions.
+retired for Pages and is rejected by the strict action plan schema. Custom
+Screen V4 mutations use screen-owned `section`/`block` actions. Retained
+widget-template actions are legacy data-maintenance compatibility only; they
+must not be advertised as reusable-template authoring. Current reusable Page
+layouts use Page Templates and Page-owned `sections[]`.
 
 `page.upsert.sections[]` normalizes through `pageDocumentV2` before action plan
 acceptance, then the assistant schema rejects Page section/block types outside

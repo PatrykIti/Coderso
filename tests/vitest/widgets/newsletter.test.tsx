@@ -193,6 +193,8 @@ test("newsletter reuses shared Forms runtime markup when the resolved form is co
   expect(html).toContain('name="__nl_form_nonce"');
   expect(html).toContain('value="signed-nonce"');
   expect(html).toContain('name="captchaToken"');
+  expect(html).toContain('data-form-security-nonce="1"');
+  expect(html).toContain('data-form-security-captcha="1"');
   expect(html).toContain('name="first_name"');
   expect(html).toContain('autoComplete="given-name"');
   expect(html).toContain('data-form-embed-success="true"');

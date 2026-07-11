@@ -1542,7 +1542,12 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
               data-form-root="true"
             >
               {resolved?.submissionNonce ? (
-                <input type="hidden" name="__nl_form_nonce" value={resolved.submissionNonce} />
+                <input
+                  type="hidden"
+                  name="__nl_form_nonce"
+                  value={resolved.submissionNonce}
+                  data-form-security-nonce="1"
+                />
               ) : null}
               {showProgress ? (
                 <div className="space-y-2" data-form-progress-root="true">
@@ -1673,7 +1678,7 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
                 </div>
               </div>
               {resolved?.botProtection?.siteKey ? (
-                <input type="hidden" name="captchaToken" value="" />
+                <input type="hidden" name="captchaToken" value="" data-form-security-captcha="1" />
               ) : null}
               <p
                 className="hidden text-xs text-[var(--color-text)]/65"

@@ -233,11 +233,11 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - UI: `core/admin/ui/pages/PageEditor.tsx` (command palette group)
   - Cached APIs: `listPageTemplatesCached`, `getPageTemplateCached`
 
-## Widgets
-- Widget insert dialog
+## Retired widget compatibility surfaces
+- Legacy widget insert dialog (support-only; no new consumers)
   - UI: `core/admin/ui/widgets/WidgetInsertDialog.tsx`
   - Cached APIs: `getPageCached`
-- Widget library
+- Hidden compatibility catalog
   - UI: `core/admin/ui/widgets/WidgetLibraryPage.tsx`
   - Cached APIs: `listWidgetCatalogCached`, `getCachedWidgetCatalog`, `listPagesCached`, `getCachedPages`, `getPageCached`
   - UI state: section dropdown, table/grid mode, pagination, and selected row ids
@@ -376,7 +376,11 @@ This file maps admin UI surfaces to their implementation files and the cached AP
     `settings:redacted`; credential-bearing Settings endpoints remain uncached
     in browser storage.
 
-## Widget Editors (data selectors)
+## Retained compatibility renderer controls (data selectors)
+
+These paths document existing support/read compatibility controls under the
+historical `core/admin/ui/widgets` namespace. They are not a generic editor
+extension point; current domain editors own their section/block controls.
 - Hero
   - UI: `core/admin/ui/widgets/editors/HeroEditors.tsx`
   - Cached APIs: `listMediaCached`
@@ -398,7 +402,9 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 
 ## Prefetch Routes
 - `/pages` -> `listPagesCached`
-- `/advanced/widgets` -> `listWidgetCatalogCached`, `listWidgetTemplateCategoriesCached`, `listWidgetTemplatesCached`
+- `/advanced/widgets` (hidden support-only route) -> `listWidgetCatalogCached`;
+  deleted widget-template/category clients are never prefetched
+- `/advanced/page-templates` -> `listPageTemplatesCached`
 - `/advanced/engine/:contentTypeId/collection/detail-template/:detailPageId` -> `getContentTypeCollectionWorkspaceCached`, `getDetailPageCached`, `listContentTypesCached`, optional `listEntriesCached`
 - `/advanced/engine/:contentTypeId/collection` -> `listContentTypesCached`, `getContentTypeCollectionWorkspaceCached`
 - `/advanced/engine` -> `listContentTypesCached`

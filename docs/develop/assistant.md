@@ -2,6 +2,12 @@
 
 Coderso ships with an in-product assistant that helps operators understand and configure their site. It matters to you as a contributor because it is grounded in our own documentation: the docs you write are the corpus the assistant answers from, and the actions it can take are strictly typed code paths you can extend.
 
+Authoring vocabulary follows the product boundary: Pages, Page Templates,
+Forms, Menus, Posts, and Custom Screens expose their owning sections and
+blocks. Configurable widgets belong only to the Admin Dashboard. Older service,
+registry, and task names containing `widget` describe retained compatibility
+contracts; they must not be exposed as a new non-dashboard authoring surface.
+
 The assistant lives behind a floating panel in the admin UI (`core/admin/ui/assistant/AssistantPanel.tsx`) and runs in two distinct modes.
 
 ## Two modes at a glance
@@ -108,7 +114,7 @@ validation rejects direct `siteKit` fields. Direct service calls that still carr
 `context.siteKit` are defensive-gated as `needs_input` plans with no executable
 actions. Supported registry-derived Advanced runtime choices may compile into
 optional internal `advancedRuntimeOverrides` for existing menu/Navigation,
-Hero, and section widget surfaces. Page roles, section roles, media policy,
+Hero, and Page section/block compatibility contracts. Page roles, section roles, media policy,
 content-engine candidates, raw design/reference facts, gates, arbitrary URLs,
 CSS, prompt text, and review metadata remain outside the executable siteKit
 input.
@@ -129,13 +135,14 @@ assistant state, then installs a different `beauty-salon` starter from a fresh
 beginner prompt. The final public runtime check covers `/`, `/offers`, and
 `/contact`, navigation/footer, the booking form, SEO basics, curated media
 registry URLs, desktop/mobile screenshots, and absence of previous-kit or
-generic widget-default copy bleed. This proves selected-kit starter reuse,
+generic compatibility-renderer default copy bleed. This proves selected-kit starter reuse,
 curated starter media, and scoped rollback safety; it does not imply arbitrary
 prompt-specific theme or media generation.
 
 TASK-407-07-L06 closes the guided site-builder family. The final drift pass
-resolved duplicated Advanced Navigation option literals by making the Navigation
-widget contract the single runtime owner for variant and mobile-mode ids, and
+resolved duplicated Advanced Navigation option literals by making the
+Navigation block compatibility contract the single runtime owner for variant
+and mobile-mode ids, and
 added validator coverage for produced navigation, hero, and Page sections.
 Curated media profile selection now requires an industry/vertical match
 before theme keywords can influence ranking, which keeps the adapter generic
@@ -172,9 +179,10 @@ answered. Custom labels are bounded display hints keyed by backend page roles
 and cannot influence paths, action ids, or route targets.
 
 Basic review facts live in `assistantSiteBuilderIntakeBasicReview.ts`. They map
-completed Basic facts to review-only pages, menus, supported widget candidates,
-content-engine candidates, media policy, contact path, and gates. Widget aliases
-must resolve through `modulePackMatrix` `assistantPageSections`; content-engine
+completed Basic facts to review-only pages, menus, supported Page
+section/block candidates, content-engine candidates, media policy, contact path,
+and gates. Historical alias ids must resolve through `modulePackMatrix`
+`assistantPageSections`; content-engine
 decisions resolve through `assistantSiteBuilderIntakeContentEngines.ts` and stay
 as review metadata until later custom-screen/action leaves. Supported engines
 cover services, products, portfolio/projects, case studies, posts/editorial,
@@ -238,11 +246,12 @@ after review.
 
 Advanced menu, hero, and section options live in
 `assistantSiteBuilderIntakeAdvancedOptions.ts`. They are controlled ids only:
-menu behavior maps to existing Navigation widget behavior fields such as
+menu behavior maps to existing Navigation block compatibility fields such as
 `sticky`, `collapseOnScroll`, `transparent`, and `mobileMode` plus trusted CTA
-page-role targets, hero variants map to current Hero widget variants, and section
-variants map to existing widget variants backed by
-`modulePackMatrix.assistantPageSections`. Unknown ids, raw CTA URLs, conflicting
+page-role targets, hero variants map to current Hero block variants, and section
+variants map to the authoritative Page section/block contract. The retained
+`modulePackMatrix.assistantPageSections` seam may translate already supported
+historical alias ids only and is not a capability owner. Unknown ids, raw CTA URLs, conflicting
 menu surface choices, missing section roles, and design-preset support gaps fail
 closed or become review gates; they never add `context.siteBuilderIntake`,
 provider-authored actions, CSS, or custom layout code to the planner request.
@@ -360,37 +369,41 @@ bytes.
 
 ## Keeping assistant capabilities in sync
 
-The assistant does not infer new CMS or widget behavior from prompt text. A new
+The assistant does not infer new CMS, editor-block, or Dashboard-widget behavior from prompt text. A new
 capability becomes assistant-safe only when it is exposed through the same typed
-contracts used by the runtime, admin UI, planner, and tests. When a widget,
-solution kit, content-engine capability, or admin workflow changes, use this
-checklist before claiming that the assistant can guide users through it.
+contracts used by the runtime, admin UI, planner, and tests. When an editor
+section/block, Dashboard widget, retained compatibility renderer, solution kit,
+content-engine capability, or admin workflow changes, use this checklist before
+claiming that the assistant can guide users through it.
 
 | Change type | Required assistant sync |
 | --- | --- |
-| Backward-compatible widget field/default | Update the widget schema, defaults, and `normalize<Name>Data`; if existing assistant output still normalizes through `normalizeWidgetBlock`, no assistant option change is required. |
-| New widget variant or mode | Add the id to the widget-owned contract (`variants`, schema enum, or a shared contract module when multiple layers consume it). If the assistant may offer it, add a backend-owned option/registry entry and regression tests proving strict action normalization rejects unknown ids. |
-| New layout behavior or CTA/media setting | Add a bounded assistant mapping from reviewed intake facts to existing widget fields. The mapping must use ids/page roles/media policy from registries, not arbitrary prompt text, CSS, raw URLs, or provider output. |
-| New widget type available to beginner site generation | Register the widget, metadata, docs, and module-pack coverage first. Then add assistant page-section aliases or solution-kit usage only when `normalizeWidgetBlock` accepts the produced block and the module pack remains valid. |
+| Backward-compatible legacy renderer field/default | Update the existing compatibility schema/default/normalizer and prove old saved rows still render. Do not expose it as a new authoring control. |
+| New editor section/block variant or mode | Add the id to the owning domain contract and editor, then add a backend-owned assistant option only when that domain supports it end to end. Strict action normalization must reject unknown ids. |
+| New layout behavior or CTA/media setting | Add a bounded assistant mapping from reviewed intake facts to existing section/block fields. Use trusted ids, page roles, and media policy rather than arbitrary prompt text, CSS, raw URLs, or provider output. |
+| New Page section/block type available to beginner site generation | Register it in the Page-owned schema, assistant capability map, editor, renderer, docs, and tests first. Do not add a `modulePackMatrix` entry; that seam translates historical aliases only. Never add a generic widget authoring surface. |
+| New Admin Dashboard widget | Update the Dashboard registry, schema, RBAC/cache contract, preferences, docs, and tests. Do not add it to Page or other editor authoring. |
 | New solution-kit starter or industry profile | Add starter content, menu/footer/form/SEO coverage, curated media profile entries when media is used, and installer/rollback regression coverage. Prompt-specific copy, uploads, video, and arbitrary remote media remain gated unless a typed adapter lands. |
 | New content engine or custom screen decision | Extend the service-owned decision registry and compiler tests before the UI exposes it. Unsupported engines must return `needs_input` or `gated` with no executable actions. |
 | User-facing admin workflow/docs change | Update `docs/guide` and reindex the assistant corpus after deployment or through `POST /assistant/reindex`; developer-only `_docs` and `docs/develop` changes are not retrieved by the product assistant. |
 
-Do not duplicate option ids in assistant code, admin editors, and widget runtime
-schemas. Create or reuse a single owner when more than one layer needs the same
-ids. `navigationContract.ts` is the current pattern: the Navigation widget,
-strict action schema, intake types/options, and admin Navigation editor all read
-the same variant and mobile-mode ids. Labels and descriptions can remain local
-to the UI, but key them by the shared id type so TypeScript catches drift.
+Do not duplicate option ids in assistant code, domain editors, and runtime
+section/block schemas. Create or reuse a single owner when more than one layer
+needs the same ids. `navigationContract.ts` is the retained compatibility owner:
+the Navigation block renderer, strict action schema, intake types/options, and
+admin Navigation editor all read the same variant and mobile-mode ids. Labels
+and descriptions can remain local to the UI, but key them by the shared id type
+so TypeScript catches drift.
 
-The assistant may automatically benefit from a widget change only when all of
-these are true:
+The assistant may automatically benefit from an editor block or compatibility
+renderer change only when all of these are true:
 
-1. Existing generated non-Page widget blocks still validate through `normalizeWidgetBlock`.
+1. Existing generated compatibility rows still validate through their retained
+   read normalizer, including `normalizeWidgetBlock` where legacy data uses it.
 2. Existing assistant mappings do not need new option ids or new action payload
    fields.
-3. The public renderer remains backward-compatible for saved non-Page widget
-   blocks and Page v2 starter sections.
+3. The public renderer remains backward-compatible for saved legacy rows and
+   Page v2 starter sections, without adding a new widget editor.
 4. The change is not something the assistant must explain to end users from the
    docs corpus.
 
@@ -405,7 +418,7 @@ If any condition is false, update the assistant contract deliberately:
 6. Update `docs/guide` and reindex when users should ask the assistant about the
    new behavior.
 7. Add targeted tests for the domain/service contract, strict action schema,
-   widget normalization/rendering, admin UI metadata when touched, and a live
+   section/block or compatibility rendering, admin UI metadata when touched, and a live
    Playwright lane when the user-facing assistant flow changes.
 
 If a changed CMS capability is not yet assistant-safe, document it as gated and

@@ -101,6 +101,7 @@ test("registerFormsRoutes wires endpoints", () => {
       "GET /forms/:id/fields",
       "PUT /forms/:id/fields",
       "GET /forms/:id/submissions",
+      "POST /forms/:id/uploads",
       "POST /forms/:id/submissions",
     ])
   );
@@ -250,6 +251,58 @@ test("direct setFormFields rejects structural bypasses before form lookup", asyn
       setFormFields(missingFormId, input as Parameters<typeof setFormFields>[1])
     ).rejects.toThrow("form_field_invalid");
   }
+  await expect(
+    setFormFields(missingFormId, [
+      { type: "range", label: "Cross invariant", settings: { min: 10, max: 5 } },
+    ])
+  ).rejects.toThrow("form_not_found");
+});
+
+test("setFormFields persists its synchronous detached snapshot across the first await", async () => {
+  const form = await createOwnedForm();
+  const fieldId = "11111111-2222-3333-4444-555555555555";
+  const input: Parameters<typeof setFormFields>[1] = [
+    {
+      id: fieldId,
+      type: "text",
+      label: "Original label",
+      name: "original_name",
+      required: true,
+      settings: { placeholder: " Original placeholder " },
+    },
+  ];
+
+  const pendingWrite = setFormFields(form.id, input);
+  Object.assign(input[0] as unknown as Record<string, unknown>, {
+    id: "schema-forbidden",
+    type: "schema-forbidden",
+    label: "Mutated label",
+    name: "mutated_name",
+    settings: { unknown: true },
+  });
+  input.push({ type: "text", label: "Late field", name: "late_field" });
+
+  const returned = await pendingWrite;
+  expect(returned).toHaveLength(1);
+  expect(returned[0]).toMatchObject({
+    id: fieldId,
+    type: "text",
+    label: "Original label",
+    name: "original_name",
+    required: true,
+    settings: { placeholder: "Original placeholder" },
+  });
+
+  const persisted = await listFormFields(form.id);
+  expect(persisted).toHaveLength(1);
+  expect(persisted[0]).toMatchObject({
+    id: fieldId,
+    type: "text",
+    label: "Original label",
+    name: "original_name",
+    required: true,
+    settings: { placeholder: "Original placeholder" },
+  });
 });
 
 test("real create/update routes accept empty/null strings and retain service canonicalization", async () => {

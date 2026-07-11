@@ -1,3 +1,5 @@
+import { deflateSync } from "node:zlib";
+
 import { describe, expect, test } from "vitest";
 
 import {
@@ -52,11 +54,12 @@ const removePngChunk = (bytes: Uint8Array, type: string) => {
 };
 
 const jpegSegment = (marker: number, payload: Uint8Array) =>
-  concat(Uint8Array.of(0xff, marker), Uint8Array.of(0, payload.length + 2), payload);
-const jpeg = () =>
+  concat(Uint8Array.of(0xff, marker), u16be(payload.length + 2), payload);
+const jpeg = (comment?: Uint8Array) =>
   concat(
     Uint8Array.of(0xff, 0xd8),
     jpegSegment(0xc0, concat(Uint8Array.of(8), u16be(1), u16be(1), Uint8Array.of(1, 1, 0x11, 0))),
+    ...(comment ? [jpegSegment(0xfe, comment)] : []),
     jpegSegment(0xda, Uint8Array.of(1, 1, 0, 0, 63, 0)),
     Uint8Array.of(1, 2, 3),
     Uint8Array.of(0xff, 0xd9)
@@ -96,10 +99,51 @@ const bmp = () =>
     u32le(0),
     new Uint8Array(4)
   );
-const pdf = () =>
-  ascii(
-    "%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\nxref\n0 2\ntrailer\n<< /Size 2 /Root 1 0 R >>\nstartxref\n45\n%%EOF\n"
+const pdfDocument = (objects: readonly Uint8Array[], trailerEntries = ""): Uint8Array => {
+  const header = ascii("%PDF-1.7\n");
+  const offsets: number[] = [];
+  const bodyParts: Uint8Array[] = [header];
+  let bodyLength = header.length;
+  for (const [index, object] of objects.entries()) {
+    offsets.push(bodyLength);
+    const framed = concat(ascii(`${index + 1} 0 obj\n`), object, ascii("\nendobj\n"));
+    bodyParts.push(framed);
+    bodyLength += framed.length;
+  }
+  const xrefEntries = [
+    "0000000000 65535 f \n",
+    ...offsets.map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`),
+  ].join("");
+  return concat(
+    ...bodyParts,
+    ascii(
+      `xref\n0 ${objects.length + 1}\n${xrefEntries}trailer\n<< /Size ${objects.length + 1} /Root 1 0 R${trailerEntries} >>\nstartxref\n${bodyLength}\n%%EOF\n`
+    )
   );
+};
+
+const pdf = (
+  options: Readonly<{ catalogEntries?: string; infoEntries?: string }> = {}
+): Uint8Array => {
+  const objects = [
+    ascii(`<< /Type /Catalog${options.catalogEntries ? ` ${options.catalogEntries}` : ""} >>`),
+  ];
+  if (options.infoEntries) objects.push(ascii(`<< ${options.infoEntries} >>`));
+  return pdfDocument(objects, options.infoEntries ? " /Info 2 0 R" : "");
+};
+
+const pdfStream = (payload: Uint8Array, dictionaryEntries = "") =>
+  concat(
+    ascii(
+      `<< /Length ${payload.length}${dictionaryEntries ? ` ${dictionaryEntries}` : ""} >>\nstream\n`
+    ),
+    payload,
+    ascii("\nendstream")
+  );
+
+const compressedPdfPayload = (value: string) => new Uint8Array(deflateSync(ascii(value)));
+const pdfHex = (value: string) =>
+  Array.from(ascii(value), (byte) => byte.toString(16).padStart(2, "0").toUpperCase()).join("");
 
 const identity = (bytes: Uint8Array) => canonicalizeMediaBytes(bytes);
 
@@ -184,6 +228,14 @@ describe("signature fail-closed behavior", () => {
   });
 
   test("rejects markup inside otherwise structured raster containers", () => {
+    expect(identity(jpeg(ascii('<img onerror="">')))).toBeNull();
+    expect(identity(jpeg(ascii('<img/data-kind="fixture">')))).toBeNull();
+    const lateMarkup = jpeg(
+      concat(new Uint8Array(1100).fill(0x61), ascii('<meta source="fixture">'))
+    );
+    expect(findBytes(lateMarkup, ascii("<meta"))).toBeGreaterThan(1024);
+    expect(identity(lateMarkup)).toBeNull();
+    expect(identity(jpeg(new Uint8Array(1200).fill(0x61)))?.mimeType).toBe("image/jpeg");
     expect(
       identity(
         concat(
@@ -210,22 +262,130 @@ describe("signature fail-closed behavior", () => {
   });
 
   test("rejects active or markup-bearing PDF bodies before EOF", () => {
-    const active = new TextDecoder()
-      .decode(pdf())
-      .replace(
-        "<< /Type /Catalog >>",
-        "<< /Type /Catalog /OpenAction << /S /JavaScript /JS (alert(1)) >> >>"
-      );
-    expect(identity(ascii(active))).toBeNull();
-    const markup = new TextDecoder().decode(pdf()).replace("xref", "<script>x</script>\nxref");
-    expect(identity(ascii(markup))).toBeNull();
-    const escaped = new TextDecoder()
-      .decode(pdf())
-      .replace(
-        "<< /Type /Catalog >>",
-        "<< /Type /Catalog /Open#41ction << /S /J#61vaScript /J#53 (alert) >> >>"
-      );
-    expect(identity(ascii(escaped))).toBeNull();
+    expect(
+      identity(pdf({ catalogEntries: "/OpenAction << /S /JavaScript /JS (alert(1)) >>" }))
+    ).toBeNull();
+    expect(identity(pdf({ infoEntries: "/Title (<script>x</script>)" }))).toBeNull();
+    expect(identity(pdf({ infoEntries: '/Title (<meta/source="fixture">)' }))).toBeNull();
+    expect(identity(pdf({ infoEntries: '/Title (<<meta/source="fixture">)' }))).toBeNull();
+    expect(identity(pdf({ infoEntries: "/Title <FEFG>" }))).toBeNull();
+    expect(
+      identity(pdf({ catalogEntries: "/Open#41ction << /S /J#61vaScript /J#53 (alert) >>" }))
+    ).toBeNull();
+  });
+
+  test("accepts well-formed PDF hexadecimal metadata as lexical data", () => {
+    const metadata = pdf({
+      infoEntries: "/Title <FEFF0054006500730074> /Subject <4F 64 6>",
+    });
+    expect(identity(metadata)).toEqual({
+      mimeType: "application/pdf",
+      extension: ".pdf",
+      delivery: "attachment",
+    });
+  });
+
+  test.each([
+    "JavaScript",
+    "JS",
+    "Launch",
+    "OpenAction",
+    "AA",
+    "RichMedia",
+    "EmbeddedFile",
+    "AcroForm",
+    "XFA",
+    "Encrypt",
+    "ObjStm",
+  ])("rejects direct and decoded /%s structural names", (name) => {
+    const encodedFirstCharacter = `#${name.charCodeAt(0).toString(16).toUpperCase()}${name.slice(1)}`;
+    expect(identity(pdf({ catalogEntries: `/${name} null` }))).toBeNull();
+    expect(identity(pdf({ catalogEntries: `/${encodedFirstCharacter} null` }))).toBeNull();
+  });
+
+  test("accepts forbidden-name spellings only when they are lexical data", () => {
+    const names = "/XFA /Encrypt /ObjStm /Open#41ction /J#53";
+    const contextualMetadata = pdf({
+      infoEntries:
+        `/Title (balanced \\(nested ${names}\\) value) ` +
+        `/Subject <${pdfHex(names)}> % ${names}\n/Producer (Coderso)`,
+    });
+    expect(identity(contextualMetadata)?.mimeType).toBe("application/pdf");
+
+    const compressedNames = compressedPdfPayload(names);
+    const contextualStream = pdfDocument([
+      ascii("<< /Type /Catalog /Contents 2 0 R >>"),
+      pdfStream(compressedNames, "/Filter /FlateDecode"),
+    ]);
+    expect(identity(contextualStream)?.mimeType).toBe("application/pdf");
+  });
+
+  test("accepts a benign compressed page stream", () => {
+    const compressedContent = compressedPdfPayload("q 1 0 0 1 0 0 cm 0 0 10 10 re f Q");
+    const document = pdfDocument([
+      ascii("<< /Type /Catalog /Pages 2 0 R >>"),
+      ascii("<< /Type /Pages /Kids [3 0 R] /Count 1 >>"),
+      ascii("<< /Type /Page /Parent 2 0 R /Contents 4 0 R >>"),
+      pdfStream(compressedContent, "/Filter /FlateDecode"),
+    ]);
+    expect(identity(document)).toEqual({
+      mimeType: "application/pdf",
+      extension: ".pdf",
+      delivery: "attachment",
+    });
+  });
+
+  test("rejects compressed XFA, encrypted, and object-stream documents", () => {
+    const opaqueForm = compressedPdfPayload("form packet without structural names");
+    const xfa = pdfDocument([
+      ascii("<< /Type /Catalog /AcroForm << /XFA 2 0 R >> >>"),
+      pdfStream(opaqueForm, "/Filter /FlateDecode"),
+    ]);
+    expect(identity(xfa)).toBeNull();
+
+    const encryptedContent = compressedPdfPayload("opaque encrypted fixture");
+    const encrypted = pdfDocument(
+      [
+        ascii("<< /Type /Catalog /Contents 2 0 R >>"),
+        pdfStream(encryptedContent, "/Filter /FlateDecode"),
+        ascii("<< /Filter /Standard /V 4 /Length 128 >>"),
+      ],
+      " /Encrypt 3 0 R"
+    );
+    expect(identity(encrypted)).toBeNull();
+
+    const packedObjects = compressedPdfPayload("4 0 << /Type /Example >>");
+    const objectStream = pdfDocument([
+      ascii("<< /Type /Catalog >>"),
+      pdfStream(packedObjects, "/Type /ObjStm /N 1 /First 4 /Filter /FlateDecode"),
+    ]);
+    expect(identity(objectStream)).toBeNull();
+  });
+
+  test("fails closed on malformed PDF lexical tokens and streams", () => {
+    expect(identity(pdf({ infoEntries: "/Title (unterminated" }))).toBeNull();
+    expect(identity(pdf({ infoEntries: "/Title <ABCZ>" }))).toBeNull();
+    expect(identity(pdf({ catalogEntries: "/Open#4Gction null" }))).toBeNull();
+
+    const missingEndStream = pdfDocument([
+      ascii("<< /Type /Catalog /Contents 2 0 R >>"),
+      ascii("<< /Length 7 >>\nstream\npayload"),
+    ]);
+    expect(identity(missingEndStream)).toBeNull();
+
+    const unboundedEndStream = pdfDocument([
+      ascii("<< /Type /Catalog /Contents 2 0 R >>"),
+      ascii("<< /Length 7 >>\nstream\npayload\nendstreamSuffix"),
+    ]);
+    expect(identity(unboundedEndStream)).toBeNull();
+
+    const crossedObjectBoundary = pdfDocument([
+      ascii("<< /Type /Catalog /Contents 2 0 R >>"),
+      ascii("<< /Length 7 >>\nstream\npayload"),
+      ascii("<< /OpenAction null >>"),
+      pdfStream(ascii("later valid stream")),
+    ]);
+    expect(identity(crossedObjectBoundary)).toBeNull();
   });
 
   test("prefix classification returns passive complete signatures only", () => {
@@ -281,6 +441,8 @@ describe("SVG and plain-text boundary", () => {
     expect(identity(ascii("The relation 2 < 3 is plain text."))?.mimeType).toBe("text/plain");
     expect(identity(Uint8Array.of(0x61, 0, 0x62))?.mimeType).toBe("application/octet-stream");
     expect(identity(Uint8Array.of(0xc3, 0x28))?.mimeType).toBe("application/octet-stream");
+    expect(identity(concat(Uint8Array.of(0), ascii('<img/data-kind="fixture">')))).toBeNull();
+    expect(identity(concat(Uint8Array.of(0xff), ascii('<meta source="fixture">')))).toBeNull();
   });
 
   test("preserves large configured plain text but rejects unbounded SVG", () => {

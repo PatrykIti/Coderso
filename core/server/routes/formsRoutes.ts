@@ -378,6 +378,8 @@ export const mapFormError = (error: unknown) => {
     // Reuse the existing media convention (mediaRoutes.ts) so the file-upload surface
     // stays consistent with /media. Without these, an unmapped media error rethrows
     // raw (default returns null) → a generic 500 instead of a client error.
+    case "media_file_invalid":
+      return new ApiError("media_file_invalid", "Invalid upload payload", 400);
     case "media_file_too_large":
       return new ApiError("media_file_too_large", "File exceeds size limit", 413);
     case "media_mime_not_allowed":

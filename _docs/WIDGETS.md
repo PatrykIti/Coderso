@@ -1,7 +1,16 @@
 # Widgets Spec (v1)
 
-Specyfikacja bazowych widgetow core i modelu konfiguracji, ktory musi byc
-stosowany rowniez przez widgety z pluginow i addonow.
+> **Current product boundary:** configurable widgets are an Admin Dashboard-only
+> surface owned by `_docs/DASHBOARD_WIDGETS_SPEC.md`. Page, menu, form, and custom-screen
+> editors author sections and blocks. The `core/widgets/**` namespace and the historical
+> catalog below document compatibility renderers retained for existing content; they do
+> not authorize new non-dashboard widget types, Wizard/Visual/Advanced editors, presets,
+> registry entries, or module-pack expansion. New work on those editors belongs to their
+> section/block contracts.
+
+The remainder of this document is the historical core-renderer configuration contract
+kept for maintenance and stored-content compatibility. Plugin/addon guidance applies only
+where a currently supported plugin contract explicitly references it.
 
 ## Cele
 
@@ -22,7 +31,7 @@ System widgetow zostal zaprojektowany, aby rozwiazac odwieczny konflikt miedzy "
 
 ---
 
-## Lista widgetow w core v1
+## Historical core renderer catalog (v1)
 
 Wymagane:
 - Section (layout wrapper z repeatable regions)
@@ -51,9 +60,10 @@ Wymagane:
 
 ---
 
-## Model konfiguracji (obowiazkowy)
+## Historical compatibility configuration model
 
-Kazdy widget musi wspierac 3 tryby konfiguracji:
+Pierwotny renderer contract wymagal trzech trybow konfiguracji. Te tryby nie
+sa wymaganiem dla nowych sekcji/blokow ani dla Admin Dashboard widgets:
 
 1) Wizard (kreator)
 - Pytania prowadza uzytkownika do wyboru wariantu (auto).
@@ -236,9 +246,9 @@ Zasady:
   summarized rather than edited as raw technical text. It also uses color
   swatches plus clear/saved-custom summaries instead of raw CSS/token text
   inputs.
-- Commerce widget authoring follows the same picker-first rule. Product Gallery
-  and Product Compare use collection/product/page pickers for normal
-  Wizard/Visual flows; raw product IDs, fallback collection IDs, route-prefix
+- Historical Commerce renderer controls followed the same picker-first rule.
+  Product Gallery and Product Compare used collection/product/page pickers in
+  the retired Wizard/Visual flows; raw product IDs, fallback collection IDs, route-prefix
   strings, minor-unit price wording, raw color token inputs, raw media-ID
   hints, and raw query JSON are not beginner-mode inputs. Existing saved
   technical values remain backward-compatible and are summarized in Advanced
@@ -493,8 +503,8 @@ Kazdy widget powinien zdefiniowac:
 
 Widget registry nie jest juz jedna plaska lista dla wszystkich surface'ow.
 
-Zasady:
-- public/page widgets domyslnie naleza do `page-builder` + `widget-library`,
+Historyczne zasady metadata (nie stosowac do nowego authoringu):
+- dawne public/page renderer ids nalezaly do `page-builder` + `widget-library`,
 - screen-only widgets are retired from active registration after TASK-468; old
   `custom-screen-builder`, `admin-list-view`, and `admin-editor-view` metadata
   may appear only in migration docs or stored legacy payloads,
@@ -505,11 +515,18 @@ Zasady:
   owner, not from a widget registry surface.
 
 Uwaga:
-- `Widget Library` nie sluzy do tworzenia nowych realnych widget types z admin UI.
-- nowe widget types nadal sa code/plugin-authored i musza byc zarejestrowane w widget registry,
-- z poziomu admina user moze tworzyc `widget templates` przez flow `New Template`.
+- `Widget Library` i flow `New Template` sa wycofane jako powierzchnie
+  authoringu.
+- Nie tworzy sie nowych non-dashboard widget types w kodzie ani pluginie.
+  Pages, Forms, Menus, Posts, Custom Screens i templates rozszerzaja swoje
+  sekcje/bloki; pluginowe configurable widgets dotycza tylko Admin Dashboard.
+- Istniejace registry/template rows sa utrzymywane jedynie dla
+  niedestrukcyjnego odczytu, runtime compatibility i migracji.
 
-## Widget Library Admin UX
+## Historical Widget Library Admin UX (retired record)
+
+Ponizsze punkty opisuja zamkniety etap implementacji i nie sa instrukcja
+authoringu ani kontraktem dla nowych funkcji.
 
 `/admin/advanced/widgets` is a hidden/direct compatibility route after
 TASK-461 and follows the shared Pages-style list contract when opened:
@@ -673,14 +690,18 @@ type WidgetEditorContext = {
 
 ---
 
-## Registry API (core/widgets/registry.ts)
+## Historical registry API (`core/widgets/registry.ts`)
+
+This API remains for stored-data/runtime compatibility and tests. Do not
+register a new non-dashboard type. Plugin content extensions use domain blocks;
+configurable plugin widgets use the Admin Dashboard contract.
 
 - `registerWidget(def)` – rejestruje widget
 - `getWidget(type)` – zwraca definicje
 - `listWidgets()` – lista wszystkich
 - `clearWidgets()` – tylko dla testow
 
-Naming rules:
+Retained naming rules:
 - Core: `hero`, `timeline`, `compare-timeline`, `newsletter`, `contact`, `navigation`, `footer`
 - Pluginy: `<plugin>.<widget>` (np. `seo-boost.hero`)
 
@@ -729,46 +750,14 @@ Flow:
 
 ---
 
-## UI Wiring (Page Builder)
+## Historical Page/Screen wiring (retired record)
 
-- Widget library czyta `listWidgets()` i pokazuje liste.
-- Dodanie widgetu tworzy blok z `defaults`.
-- Panel Wizard/Visual/Advanced renderuje `definition.editor.*`.
-- Zmiana wariantu aktualizuje `block.variant`.
-
-## Admin Widget Surfaces
-
-Widget availability is surface-scoped:
-
-- `page-builder` - public page builder canvas.
-- `widget-library` - reusable widget/template catalog.
-- `custom-screen-builder` - retired Custom Screens surface; may appear in
-  historical metadata or migration docs only.
-- `admin-list-view` - retired Custom Screens widget metadata surface; V4 list
-  view is owned by `definition.listView`.
-- `admin-editor-view` - retired screen-widget metadata surface; active V4 Custom
-  Screens authoring uses screen-owned blocks and field bindings instead of
-  widget registry insertion.
-
-Admin-only widgets may declare `dataAccess` metadata:
-
-- `source: "selected-content-type"` for widgets that need the assigned content
-  type schema.
-- `source: "selected-entry"` for widgets that read or write the active record.
-- `modes: ["read"]`, `["write"]`, or `["read", "write"]` describe the expected
-  data direction.
-- `bindingTargets` let a selected-entry widget own the prop paths surfaced in
-  Custom Screens `Data`; they define labels, descriptions, and per-prop read vs
-  write capability instead of leaving the panel to infer paths from defaults.
-- Existing `screen-record-header`, `screen-field-value`, `screen-field-group`,
-  and `screen-two-column` ids are TASK-468 compatibility/migration inputs only.
-  V4 screen documents persist screen-owned blocks and no longer project through
-  the legacy render bridge.
-
-`listWidgetsForSurfaceContext()` filters selected-entry and selected-content-type
-widgets until the current Custom Screen has a resolved content type. This keeps
-public widgets out of admin record editors and prevents schema-bound controls
-from rendering against missing context.
+The former Page Widget Library, Wizard/Visual/Advanced panels, surface-scoped
+registry insertion, and selected-entry widget binding metadata are not active
+authoring contracts. Pages use Page-owned sections/blocks. Custom Screens V4
+use `definition.listView`, screen-owned `sections[].blocks[]`, and explicit
+field bindings. Retained surface ids and `listWidgetsForSurfaceContext()` exist
+only to decode/support legacy records and must not gain new consumers.
 
 ### Retired Screen Widget Editor Parity
 
@@ -787,26 +776,18 @@ the widget registry.
 
 ---
 
-## Widget Catalog API
+## Retained catalog API (support/read compatibility)
 
-Admin UI pobiera katalog widgetow z API:
-
-- `GET /widgets` zwraca liste core widgetow + templatek (source: `core` / `template`).
-- Templateki sa zarzadzane przez `GET/POST/PATCH/DELETE /widgets/templates`
-  (alias: `/widget-templates`).
-- Templateki mozna duplikowac przez `POST /widgets/templates/:id/duplicate`
-  (alias: `/widget-templates/:id/duplicate`). Duplicate jest service-owned:
-  serwer laduje source template, klonuje dozwolone `blocks/settings`, tworzy
-  draft i nadaje jawna nazwe typu `Copy of ...`.
-- Create/update odrzucaja case-insensitive duplicate names kodem
-  `widget_template_name_conflict`.
-
-Katalog zawiera podstawowe metadata:
-`id`, `name`, `description`, `category`, `variants`, `status`.
+- `GET /widgets` may expose the historical core renderer catalog to hidden
+  support tooling; it is not a Page/Screen/Form/Menu/Post inserter.
+- Every `/widget-templates*`, `/widgets/templates*`, and template-category CRUD,
+  preview, revision, restore, and duplicate route is deleted. Current reusable
+  Page authoring uses `/page-templates` and Page v2 sections/blocks.
+- No new write path may persist a widget-template row through this catalog.
 
 ---
 
-## Widget Library (Preview konfiguracji)
+## Historical Widget Library preview (retired record)
 
 - Drawer szczegolow widgetu pokazuje ten sam zestaw paneli (Wizard/Visual/Advanced),
   ktory jest uzywany po wstawieniu widgetu.
@@ -882,12 +863,15 @@ Katalog zawiera podstawowe metadata:
 
 ---
 
-## Authoring Guide (plugin widgets)
+## Maintenance guide for retained compatibility renderers
 
-- Definiuj wlasne `schema` i `defaults`.
-- Trzymaj dane kompatybilne z JSON schema.
-- Uzywaj design tokens zamiast hardcode kolorow.
-- Stosuj Wizard/Visual/Advanced zgodnie ze standardem core.
+- Nie dodawaj nowych non-dashboard widget types, presets, module-pack entries
+  ani Wizard/Visual/Advanced editors.
+- Zmieniaj legacy schema/default/normalizer tylko dla istniejacych zapisanych
+  danych i zachowuj niedestrukcyjny odczyt oraz testy regresji.
+- Nowe editor-facing zachowanie dodawaj do section/block contract wlasciciela
+  domeny. Nowe Admin Dashboard widgets stosuja osobny kontrakt z
+  `_docs/DASHBOARD_WIDGETS_SPEC.md`.
 
 ---
 

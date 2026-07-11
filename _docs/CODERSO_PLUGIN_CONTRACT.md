@@ -17,10 +17,8 @@ Source of truth for plugin package manifest and runtime registration rules.
     "styles": "dist/style.css"
   },
   "provides": {
-    "modules": ["widgets", "plugin:seo-boost/custom-module"],
-    "widgets": ["plugin:seo-boost/hero-pro"],
-    "presets": ["plugin:seo-boost/landing-a"],
-    "templates": ["plugin:seo-boost/footer-a"],
+    "modules": ["plugin:seo-boost/custom-module"],
+    "widgets": ["plugin:seo-boost/seo-overview"],
     "routes": ["/sync", "/webhook"]
   },
   "permissions": ["content:read", "content:write"],
@@ -48,8 +46,18 @@ Guardrail:
 - dependency ids must exist in installed enabled plugins,
 - contribution ids are normalized and deduplicated,
 - `provides.modules` must be either:
-  - core module id (`engine`, `entries`, `widgets`, ...), or
+  - current core module id (`engine`, `entries`, ...); the accepted `widgets`
+    and `templates` module ids are deprecated manifest-read aliases only, or
   - plugin-scoped id: `plugin:<plugin-id>/<module>`.
+
+Contribution semantics:
+- `provides.widgets` declares configurable **Admin Dashboard** widgets only.
+- Content/editor extensions use SDK `blocks.registerBlock` and the owning
+  domain section/block contract; they are not declared as widgets.
+- `provides.presets` and `provides.templates` are retained normalized manifest
+  fields for installed-package compatibility. They do not create generic
+  widget presets/templates or an admin authoring surface; new use requires an
+  explicit typed Page/domain contract first.
 
 ## Route Registration Contract
 
@@ -66,6 +74,10 @@ Plugin server routes are registered through SDK and enforced by core:
 
 Core stores normalized contributions per plugin in memory at load time:
 - `modules`, `widgets`, `presets`, `templates`, `routes`.
+
+Here `widgets` is Dashboard-only. `presets`/`templates` remain passive legacy
+metadata unless a separate domain-owned block/Page Template adapter explicitly
+consumes them; normalization alone never enables authoring.
 
 Registry is reset on full plugin reload (`loadAllPlugins`) and per-plugin updates.
 

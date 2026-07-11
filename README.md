@@ -56,7 +56,7 @@ It is designed to **start simple**…
 …and **grow without limits**:
 
 - custom content models for real business data,
-- reusable widgets and templates,
+- reusable page sections, blocks, and page templates,
 - listings, search, booking, reviews, and commerce,
 - runtime plugins installed without rebuilding the app,
 - one-click **Solution Kits** for whole verticals,
@@ -81,7 +81,7 @@ server restart or a rebuild**. It's the fast, edit-and-refresh feel of classic P
 typed, validated runtime. You only rebuild when you change the core source itself.
 
 ### 🧱 Visual on top, structured underneath
-Compose pages from reusable **widgets** with a visual builder, while everything stays as clean,
+Compose pages from reusable **sections and blocks** with a visual builder, while everything stays as clean,
 validated, structured data. Non-technical users build comfortably; developers keep guarantees.
 
 ### 🔌 Extend without forking
@@ -102,7 +102,7 @@ afterthought.
 | Core language / runtime | PHP | **Bun + TypeScript**, end-to-end typed |
 | Admin UI | Server-rendered + jQuery legacy | **React 19 + Tailwind**, modern SPA admin |
 | Content modeling | Plugins (ACF, etc.) | **Built-in content engine** (custom types, entries, screens) |
-| Page building | Plugin-dependent (Elementor/Gutenberg) | **Native visual builder** with validated widget data |
+| Page building | Plugin-dependent (Elementor/Gutenberg) | **Native visual builder** with validated section/block data |
 | Data integrity | Loosely-typed meta tables | **Schema-first**, validated, normalized |
 | Extending | Plugins (often need rebuild/cache flush) | **Runtime plugins** — install/upgrade/rollback live |
 | AI | Third-party add-ons | **Native assistant** (docs-only or LLM-powered) |
@@ -126,8 +126,9 @@ afterthought.
 - **SEO manager**, redirects, and per-page metadata
 
 ### Build (compose anything)
-- **Visual page builder** with a categorized widget library
-- **Widgets & templates** — composite-first, beginner-friendly, fully validated
+- **Visual page builder** with a categorized section/block library
+- **Sections, blocks & Page Templates** — beginner-friendly, reusable, fully validated
+- **Dashboard widgets** — configurable admin-only panels with per-user layouts
 - **Content Engine** — define custom content types and collections (no table migrations)
 - **Custom Screens** — purpose-built admin screens bound to your data
 
@@ -252,7 +253,7 @@ Coderso keeps three clearly separated documentation homes:
 - [**Project Structure**](docs/develop/project-structure.md) — find your way around the repo
 - [**Architecture Overview**](docs/develop/architecture.md) — how the pieces fit
 - [**The No-Restart Runtime**](docs/develop/runtime-model.md) — the live-update model
-- [**Content Models & Widgets**](docs/develop/content-and-widgets.md) — model data, build blocks
+- [**Content Models, Sections & Blocks**](docs/develop/content-and-widgets.md) — model data and extend editor-owned blocks
 - [**Plugins, SDK & Store**](docs/develop/plugins-and-store.md) — extend without forking
 - [**The AI Assistant**](docs/develop/assistant.md) — how it works, how to extend it
 - [**Testing**](docs/develop/testing.md) — the Bun + Vitest lanes

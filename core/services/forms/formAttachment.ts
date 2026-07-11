@@ -21,6 +21,7 @@ export async function verifyFileReferences(
 ): Promise<void> {
   for (const field of fields) {
     if (field.type !== "file") continue;
+    if (!Object.hasOwn(payload, field.name)) continue;
     const value = payload[field.name];
     if (value === undefined) continue; // optional & absent (validation already skipped it)
 

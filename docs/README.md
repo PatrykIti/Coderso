@@ -35,7 +35,7 @@ Start with the [**developer handbook index**](./develop/README.md), or jump in:
 - [Project Structure](./develop/project-structure.md)
 - [Architecture Overview](./develop/architecture.md)
 - [The No-Restart Runtime](./develop/runtime-model.md)
-- [Content Models & Widgets](./develop/content-and-widgets.md)
+- [Content Models, Sections & Blocks](./develop/content-and-widgets.md)
 - [Plugins, SDK & Store](./develop/plugins-and-store.md)
 - [The AI Assistant](./develop/assistant.md)
 - [Testing](./develop/testing.md)

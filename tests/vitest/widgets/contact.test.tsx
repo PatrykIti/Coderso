@@ -265,6 +265,8 @@ test("contact reuses Forms runtime markup when a public binding exactly matches 
   expect(html).toContain('name="message_body"');
   expect(html).toContain('name="__nl_form_nonce"');
   expect(html).toContain('name="captchaToken"');
+  expect(html).toContain('data-form-security-nonce="1"');
+  expect(html).toContain('data-form-security-captcha="1"');
   expect(html).toContain('value="signed-nonce"');
   expect(html).toContain('data-form-embed-success="true"');
   expect(html).toContain('data-form-embed-error="true"');

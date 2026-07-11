@@ -19,6 +19,11 @@ flows, source-of-truth documentation, task graph updates, and changelog 1248. Th
 subtask owns additive cross-leaf tests/docs only and must not reopen production source
 contracts or re-baseline source-owner assertions.
 
+Paths and test names under `core/widgets` / `tests/vitest/widgets` are historical
+implementation names only. Closeout language must describe the existing public Form
+block/section runtime and must not add or advertise a non-dashboard widget type,
+editor, registry entry, preset, or authoring workflow.
+
 ## Leaf
 
 TASK-536-05-L01 is the only leaf. Source leaves already own their pre-gate behavior-test
@@ -41,9 +46,9 @@ documentation, task/index status updates, and changelog 1248.
 - bun --cwd core lint
 - targeted Vitest and Bun suites named in L01;
 - targeted Forms/media Semgrep must pass; run `bun run scan:security:strict` and record
-  the already-triaged TASK-538 Page `customSvg` source finding separately while it
-  remains. It is neither a TASK-536 failure nor suppressible, and the program must rerun
-  the full strict scan after TASK-538;
+  the already-triaged TASK-538 Page `customSvg` source finding and TASK-545-02-L01
+  `task-522-author.mjs` prompt finding separately while they remain. Neither is a
+  TASK-536 failure or suppressible, and the final program must rerun the full strict scan;
 - bun run gates:coderso;
 - dependency-shaped post-audit lenses for trust boundary, runtime state, route security,
   legacy delivery, and test integrity;
@@ -58,13 +63,21 @@ bunx vitest run --config vitest.config.ts \
   tests/vitest/forms/fileField.test.ts \
   tests/vitest/forms/validation.test.ts \
   tests/vitest/forms/formSettings.test.ts \
+  tests/vitest/forms/formRuntimeResolver.test.ts \
   tests/vitest/forms/submissionAccess.test.ts \
+  tests/vitest/forms/submissionNonce.test.ts \
   tests/vitest/server/requestBody.test.ts \
   tests/vitest/widgets/formEmbed.test.tsx \
   tests/vitest/widgets/formRuntimeScript.test.ts \
+  tests/vitest/widgets/contact.test.tsx \
+  tests/vitest/widgets/newsletter.test.tsx \
   tests/vitest/services/mediaSchemas.test.ts \
   tests/vitest/services/media-file-trust.test.ts \
-  tests/vitest/services/mediaUrlProjection.test.ts
+  tests/vitest/services/mediaUrlProjection.test.ts \
+  tests/vitest/admin/mediaUtils.test.ts \
+  tests/vitest/ui/media-picker.test.tsx \
+  tests/vitest/ui/media-card.test.tsx \
+  tests/vitest/ui/media-details.test.tsx
 set -a && source .env && set +a && bun test --parallel=1 --timeout=15000 \
   tests/unit/media/mediaService.test.ts \
   tests/unit/media/mediaMeta.test.ts \
@@ -79,24 +92,30 @@ set -a && source .env && set +a && bun test --parallel=1 --timeout=15000 \
   tests/unit/forms/fileSubmission.test.ts \
   tests/integration/routes/forms.test.ts \
   tests/integration/routes/media.test.ts \
-  tests/integration/server/mediaDeliveryAccess.test.ts \
   tests/integration/server/formsWriteMounts.test.ts \
   tests/security/codersoSecurityGate.test.ts
+env -u DATABASE_URL bun --no-env-file test --timeout=15000 \
+  tests/integration/server/mediaDeliveryAccess.test.ts
 ./node_modules/.bin/eslint --max-warnings=0 \
-  core/widgets/core/formEmbed.tsx core/widgets/core/formRuntimeScript.ts
+  core/widgets/core/formEmbed.tsx core/widgets/core/formRuntimeScript.ts \
+  core/widgets/core/contact.tsx core/widgets/core/newsletter.tsx
 bun run gates:coderso
 bun run scan:security:strict
+git diff --check
 ~~~
 
 TASK-536 may close when its task-scoped scan and security gates pass and the full strict
-scan has no finding in the TASK-536 changed-file/trust-boundary scope. Before TASK-538,
-record the existing `pageRendererV2.tsx` `customSvg` finding as the explicit external
-TASK-538 blocker without an allowlist, baseline, or scanner-config change. TASK-538
-closure reruns the full scan and must prove its owned `customSvg` finding absent; any
-unrelated finding remains an explicit program blocker. The final TASK-536–545 gate must
-make the full strict scan green.
+scan has no finding in the TASK-536 changed-file/trust-boundary scope. Record the current
+`pageRendererV2.tsx` `customSvg` finding as the explicit TASK-538 blocker and the current
+`task-522-author.mjs` prompt finding as the explicit TASK-545-02-L01 blocker, without an
+allowlist, baseline, or scanner-config change. Their owning closures rerun the relevant
+scans. The final TASK-536–545 gate must make the full strict scan green.
 
 Smoke screenshots belong under `_docs/_workflows/_smoke/` with the exact
 `task-536-` filename prefix. Record scenario/viewport/theme, visible assertions,
 console errors, and screenshot paths in TASK-536 closeout evidence; TASK-545's future
 manifest/path is not a TASK-536 closure dependency.
+
+After the final metadata edit or drift fix, rerun
+`node --check _docs/_workflows/task-536-implement.mjs` and `git diff --check`.
+The pre-closure validation result does not cover later task/changelog/index edits.

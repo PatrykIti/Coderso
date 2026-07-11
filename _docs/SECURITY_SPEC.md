@@ -19,9 +19,22 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
   - Token pobierany z `GET /admin/api/auth/csrf`.
   - UI dodaje `X-CSRF-Token` do mutacji.
 - Bot protection (reCAPTCHA v3):
-  - `POST /auth/login`, `POST /auth/reset`, `POST /forms/:id/submissions` (public forms only).
-  - Publiczny submit formularza wymaga dodatkowo HMAC nonce (`__nl_form_nonce`) z `FORM_SUBMIT_NONCE_SECRET` (TTL domyslnie 10 minut).
-  - Internal forms (`submission_access=internal`) require admin session or API key and skip captcha by default.
+  - `POST /auth/login` i `POST /auth/reset` uzywaja wlasnego auth/captcha flow.
+  - Publiczne `POST /forms/:id/uploads` i `POST /forms/:id/submissions` uzywaja
+    tego samego Forms access evaluatora, form-bound HMAC nonce
+    (`__nl_form_nonce`, `FORM_SUBMIT_NONCE_SECRET`, TTL domyslnie 10 minut) i
+    backend-owned captcha policy.
+  - Cookie zalogowanego admina nie zmienia publicznego URL-a w internal bypass:
+    public mode nadal wymaga nonce, dokladnie jednego naliczenia `public_write` i
+    bezwarunkowej inspekcji bajtow uploadu, ale aktualny evaluator ustawia dla tej
+    uwierzytelnionej publicznej sesji `requireCaptcha=false`. Anonimowe publiczne
+    requesty zachowuja skonfigurowana CAPTCHA policy; public mode nie pobiera admin
+    CSRF tokenu.
+  - Internal forms require an admin session with `forms:write` plus CSRF or an
+    API key with `forms.submit`; captcha is skipped by default.
+  - Kazdy public upload/submission request nalicza bucket `public_write`
+    dokladnie raz. Uploady wielu plikow sa osobnymi requestami; adapter publiczny
+    i route handler nie moga naliczac tego samego requestu ponownie.
   - Score thresholds per action (login/reset/public_write).
   - Moze byc wlaczone w dev (opcja `enforceOnLocalhost`).
   - Konfiguracja reCAPTCHA jest backend-owned i pochodzi z
@@ -50,7 +63,10 @@ Security gate automation is defined in:
 - `tests/security/codersoSecurityGate.test.ts`
 
 Mandatory baseline verified by gate suite:
-- public submission modes (`forms`, `booking`) require captcha path,
+- anonymous public submission modes (`forms`, `booking`) retain their configured
+  captcha path; authenticated public Forms requests retain nonce, exactly-one
+  `public_write`, and upload-byte inspection while the current evaluator sets
+  `requireCaptcha=false`,
 - internal submission modes require session or API key scope,
 - nonce contracts reject missing/tampered tokens,
 - default rate-limit and bot-protection thresholds remain hardened.
@@ -249,7 +265,8 @@ co pozwala egzekwowac TTL bez dodatkowych kolumn w DB.
 ## File uploads
 
 - Limit size per file.
-- Dozwolone MIME types.
+- Dozwolone MIME types sa porownywane z kanonicznym typem ustalonym z bajtow,
+  nie z nazwy pliku ani deklarowanego `Content-Type`.
 - Skanowanie antivirus (opcjonalnie; plugin).
 - Sekrety storage (S3/Azure) przechowywane sa zaszyfrowane w DB.
 - Master key do szyfrowania: `MEDIA_SECRET_MASTER_KEY` (ENV, poza DB).
@@ -259,13 +276,18 @@ co pozwala egzekwowac TTL bez dodatkowych kolumn w DB.
 The `file` form-field type accepts values on the PUBLIC submission path, so it is
 validated as an **owned media reference**, never as a free path/URL/bytes:
 
-- `POST /forms/:id/uploads` is public but reuses the form's OWN submission access
-  gate — same `submissionAccess` evaluator, the runtime-issued HMAC form nonce,
-  the `public_write` rate-limit bucket keyed by form id, and bot protection. It
-  does NOT grant `media:write`. Anonymous uploads content-sniff the actual bytes
-  (reject spoofed/markup SVG). Per-field `accept` (MIME allowlist, `image/*`
-  wildcards via the shared `mimeMatchesAccept` leaf) and `maxSizeMb` (clamped
-  `1..100`) are enforced in `mediaService.uploadMedia` via a `constraints` param.
+- `POST /forms/:id/uploads` is form-scoped and reuses the form's OWN submission
+  access gate. Public mode uses the runtime-issued HMAC form nonce and one
+  `public_write` rate-limit charge keyed by form id. Anonymous public requests
+  retain the configured CAPTCHA policy; for an authenticated public session the
+  current evaluator sets `requireCaptcha=false`. Internal mode uses its
+  session/CSRF or API-key contract. Neither grants `media:write`. Byte
+  canonicalization runs for anonymous, cookie-bearing, session, API-key,
+  captcha-on, and captcha-off requests alike; authentication state never disables
+  inspection. Per-field `accept` (MIME
+  allowlist, `image/*` wildcards via the shared `mimeMatchesAccept` leaf) and
+  write-valid `maxSizeMb` (`1..100`) are enforced against the canonical result in
+  `mediaService.uploadMedia` via a `constraints` param.
 - The submitted value is stored/accepted only as a media ROW id (or id array for
   `multiple`). `submissionService` normalizes the value to an id/array, then the
   DB-backed backstop `verifyFileReferences` re-resolves each id via `getMediaById`
@@ -273,19 +295,43 @@ validated as an **owned media reference**, never as a free path/URL/bytes:
   `form_payload_invalid` — defence-in-depth even if the upload path was bypassed.
 - Uploaded rows are tracked with a `"submission"` media-usage variant.
 
+The same byte-authoritative create/replace contract selects one of nine canonical
+profiles: PNG/JPEG/GIF/WebP/BMP are passive-inline candidates; PDF, strict UTF-8
+plain text, safe standalone SVG, and explicitly allowed octet-stream are
+attachment-only. Active/ambiguous markup, conflicting/truncated signatures, and
+policy mismatches fail before storage/DB. Original filename remains bounded
+display/download metadata only. Safe SVG and octet-stream each require an exact
+canonical allowlist entry; a wildcard alone cannot authorize them.
+
+Every local/S3/Azure media `GET`/`HEAD` is a final core-proxied response with
+server-owned `Content-Type`, safe `Content-Disposition`,
+`X-Content-Type-Options: nosniff`, and persisted length. Provider URLs and
+provider response metadata never bypass this boundary. A legacy persisted
+MIME/key mismatch, or a passive-inline byte-prefix mismatch, falls back to an
+octet-stream `.bin` attachment rather than inline. Canonical attachment
+MIME/key pairs remain attachments; delivery does not promote them to inline
+based on a prefix.
+
+Public Forms uploads create media before the final submission. A visitor who
+abandons the flow can therefore leave an unreferenced media row/object. TTL or
+pending-upload cleanup remains the explicit TASK-516-07 residual; TASK-536 does
+not claim it as implemented.
+
 ### Form theme colors on the public render path (TASK-516-01)
 
 `forms.settings.theme` color tokens flow through `PATCH /forms/:id` into the
-PUBLIC `form-embed` inline `style`, so they are policy-checked at BOTH boundaries
-with `core/widgets/core/clearableStyle.ts` `resolveClearableCssColorValue`
+PUBLIC Form block/section runtime inline `style`, so they are policy-checked at
+BOTH boundaries with `core/widgets/core/clearableStyle.ts`
+`resolveClearableCssColorValue`
 (allows hex / `var(--color-*)` / bounded `rgb[a]`/`hsl[a]` / `transparent`/
 `currentColor`/`inherit`; rejects `url(`/`expression(`/`javascript:`/`data:`/
 `;{}<>`): (1) at the normalize/write boundary in `normalizeFormTheme` (unsafe →
 key dropped, never persisted), and (2) at the render boundary in `resolveFormTheme`
 + the `formEmbed`/runtime-preview paths (defence-in-depth) before any color reaches
-an inline style. Enum tokens are validated against the fixed unions in
-`formTheme.ts`/`formSettings.ts`; unknown enum values and unknown keys are dropped
-(reject-unknown, present-only emission).
+an inline style. Fixed write objects are strict: unknown keys and out-of-enum
+values fail route validation with `validation_error` before service logic. The
+field-by-field fail-soft normalizers remain only as non-destructive legacy/read
+defense; present-only emission still omits unauthored keys.
 
 ### Master key (storage secrets)
 
@@ -713,7 +759,7 @@ fail-closed:
   - provider draft assumptions are redacted before they appear in action plan metadata/review UI,
   - `context.includeResourceCatalog=true` hydratuje tylko server-side bounded/redacted resource catalog,
   - client-supplied `context.resourceCatalog` i inne unknown context fields sa odrzucane,
-  - resource catalog includes bounded page, post, entry, media, commerce, solution-kit, menu, content type, custom screen, listing, form, SEO, and widget summaries, but never raw page/post/entry data payloads; custom screen summaries may include only the persisted canonical `collectionRole` / `compositionKey` metadata, not browser-authored aliases,
+  - resource catalog includes bounded page, post, entry, media, commerce, solution-kit, menu, content type, custom screen, listing, form, and SEO summaries plus optional read/support summaries for retained legacy template rows, but never raw page/post/entry data payloads; custom screen summaries may include only the persisted canonical `collectionRole` / `compositionKey` metadata, not browser-authored aliases,
   - resource catalog nie zawiera form submissions, entry values, post raw data, media signed URLs, commerce payment secrets, provider credentials, API key material ani secret-like config keys,
   - detail-page binding resolution is read-only and document-driven: it uses safe
     dot-path access against validated bindings, blocks secret-like entry field
@@ -721,21 +767,21 @@ fail-closed:
     instead of arbitrary object traversal or a parallel public-write contract,
   - generic CMS inspection plans are read-only: they can expose bounded candidate metadata, have `actions: []`, and are not executable through dry-run/execute,
   - `context.runtimeSnapshot` jest advisory-only i nie moze zastapic RBAC w route/domain services,
-  - active admin surface context is server-hydrated before planning; page/custom-screen hydration requires `content:read`, widget-template hydration requires `widgets:read`, and missing resources clear the active surface context,
+  - active admin surface context is server-hydrated before planning; page/custom-screen hydration requires `content:read`, retained legacy template support summaries require `widgets:read`, and missing resources clear the active surface context,
   - runtime snapshot nie zawiera user email/name, role names, raw permissions, session ids, cookies, CSRF tokens ani access logs,
   - contract-only future action families in `actionFamilyContracts.ts` are documentation/type contracts only; they are rejected by strict action plan schema/provider operation-draft mapping until preview/execute adapters and route/domain permission checks land,
   - `custom-screen.delete` is internal-only, requires server-side resource catalog planning context plus `content:write` for execute, and revalidates target id/name/prefix before deletion,
   - `page.delete` is internal-only, requires active page context plus `content:write` and `content:publish` for execute, and revalidates target id/title/slug/status before deletion,
-  - `widget-template.delete` is internal-only, requires active widget template context plus `widgets:write` for execute, and revalidates target id/name/status/category before deletion,
+  - maintenance-only `widget-template.delete` is internal-only, accepts only an exact already stored legacy row plus `widgets:write`, and revalidates target id/name/status/category; it exposes no create/insert authoring,
   - `entry.delete` is internal-only, requires active entry route context plus `content:write` and `content:publish` for execute, and revalidates optional content type/title/slug/status expectations before deletion,
   - `content-type.delete` is internal-only, requires exact server-side catalog target resolution and blocks when the catalog reports existing entries,
-  - `listing-query.delete` and `listing-template.delete` are internal-only, require active context or exact server-side catalog target resolution plus `content:write` for execute, and block when reviewed page/widget-template reference scans find surviving references,
+  - `listing-query.delete` and `listing-template.delete` are internal-only, require active context or exact server-side catalog target resolution plus `content:write` for execute, and block when reviewed Page or retained legacy-template reference scans find surviving references,
   - `form.delete` and `form.archive` are internal-only, require active context or exact server-side catalog target resolution plus `forms:write` for execute, count submissions before mutation, block hard delete when submissions exist, and never expose raw submission payloads,
   - `menu.item.delete` is internal-only, requires exact server-side catalog target resolution plus `menus:write` for execute, deletes through the menu tree service, and preserves unrelated menu items,
   - `seo.document.delete` is internal-only, requires exact server-side catalog target resolution plus `content:write` for execute, deletes only the SEO document, and never deletes the page or entry target,
   - `page.update` is internal-only, requires active page context plus `content:write` and `content:publish` for execute, revalidates page id/title/slug/status, and preserves unrelated Page v2 sections/settings,
   - active Page context is internal-only and read-only, revalidates page identity through `pageService`, and no longer hydrates widget-template references from Page data,
-  - `widget-template.update` and `widget-template.block.patch` are internal-only, require active widget template context plus `widgets:write` for execute, revalidate template id/name/status/category where applicable, and preserve unrelated reusable template blocks/settings,
+  - maintenance-only `widget-template.update` and `widget-template.block.patch` are internal-only, require an exact already stored legacy row plus `widgets:write`, revalidate identity, preserve unrelated data, and cannot create a resource or advertise reusable-template authoring,
   - `custom-screen.update` and V4 screen document actions (`custom-screen.section.add`, `custom-screen.block.add`, `custom-screen.block.patch`, `custom-screen.block.move`, `custom-screen.block.remove`, `custom-screen.binding.set`, `custom-screen.list-view.patch`) are internal-only, require active custom screen context plus `content:write` for execute, revalidate screen id/name/status/content type where applicable, preserve unrelated sections/blocks/bindings/list settings, persist canonical collection-link metadata only through `customScreenService`, and never expose raw entry values,
   - counted multi-target CMS plans are allowed only when trusted context resolves the exact expected target count and every target maps to a strict typed action; mismatched, broad, or partially invalid bulk prompts return `needs_input`,
   - explicit multi-create CMS plans require locally validated `mutation.patch.items[]` definitions and reject secret-like keys before mapping to typed upsert/create actions,

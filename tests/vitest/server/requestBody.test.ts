@@ -54,6 +54,25 @@ const expectApiError = async (promise: Promise<unknown>, code: string, status: n
   }
 };
 
+const expectOwnFormValues = (
+  body: unknown,
+  expected: Readonly<Record<string, string>>,
+  objectPrototype: object | null
+) => {
+  const payload = body as Record<string, unknown>;
+  expect(Object.getPrototypeOf(payload)).toBe(objectPrototype);
+  for (const [key, value] of Object.entries(expected)) {
+    expect(Object.hasOwn(payload, key)).toBe(true);
+    expect(payload[key]).toBe(value);
+    expect(Object.getOwnPropertyDescriptor(payload, key)).toEqual({
+      configurable: true,
+      enumerable: true,
+      value,
+      writable: true,
+    });
+  }
+};
+
 test("parseRequestBody parses JSON bodies", async () => {
   const req = new Request("http://localhost", {
     method: "POST",
@@ -92,6 +111,62 @@ test("parseRequestBody parses urlencoded bodies", async () => {
 
   const body = await parseRequestBody(req);
   expect(body).toEqual({ name: "Jane Doe", email: "jane@example.com" });
+});
+
+test("multipart magic names remain own data properties with last-value semantics", async () => {
+  const objectPrototype = Object.getPrototypeOf({}) as object;
+  const form = new FormData();
+  for (const key of ["__proto__", "constructor", "toString"] as const) {
+    form.append(key, `${key}-first`);
+    form.append(key, `${key}-last`);
+  }
+  form.append("ordinary", "ordinary-value");
+
+  const body = await parseRequestBody(
+    new Request("http://localhost", { method: "POST", body: form })
+  );
+
+  expectOwnFormValues(
+    body,
+    {
+      ["__proto__"]: "__proto__-last",
+      constructor: "constructor-last",
+      ordinary: "ordinary-value",
+      toString: "toString-last",
+    },
+    objectPrototype
+  );
+  expect(Object.getPrototypeOf({})).toBe(objectPrototype);
+});
+
+test("urlencoded magic names remain own data properties with last-value semantics", async () => {
+  const objectPrototype = Object.getPrototypeOf({}) as object;
+  const params = new URLSearchParams();
+  for (const key of ["__proto__", "constructor", "toString"] as const) {
+    params.append(key, `${key}-first`);
+    params.append(key, `${key}-last`);
+  }
+  params.append("ordinary", "ordinary-value");
+
+  const body = await parseRequestBody(
+    new Request("http://localhost", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+    })
+  );
+
+  expectOwnFormValues(
+    body,
+    {
+      ["__proto__"]: "__proto__-last",
+      constructor: "constructor-last",
+      ordinary: "ordinary-value",
+      toString: "toString-last",
+    },
+    objectPrototype
+  );
+  expect(Object.getPrototypeOf({})).toBe(objectPrototype);
 });
 
 test("parseRequestBody rejects invalid JSON", async () => {

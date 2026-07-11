@@ -697,7 +697,7 @@ const resolveNewsletterOptInMode = (value: string | undefined): NewsletterOptInM
 };
 
 const resolveNewsletterOptInEnforcement = (
-  value: string | undefined
+  _value: string | undefined
 ): NewsletterOptInEnforcement => {
   return "provider-owned";
 };
@@ -826,7 +826,6 @@ export function normalizeNewsletterData(data: NewsletterData): NormalizedNewslet
   const formDefaults = newsletterDefaults.form ?? {};
   const submitDefaults = newsletterDefaults.submit ?? {};
   const consentDefaults = newsletterDefaults.consent ?? {};
-  const submissionDefaults = newsletterDefaults.submission ?? {};
   const optInDefaults = newsletterDefaults.optIn ?? {};
   const hasStyleObject = data.style !== undefined;
   const usedFieldNames = new Set<string>();
@@ -1192,10 +1191,15 @@ export function NewsletterBlock({
         aria-label={titleId ? undefined : "Newsletter signup"}
       >
         {resolved?.submissionNonce && canUseFormsRuntime ? (
-          <input type="hidden" name="__nl_form_nonce" value={resolved.submissionNonce} />
+          <input
+            type="hidden"
+            name="__nl_form_nonce"
+            value={resolved.submissionNonce}
+            data-form-security-nonce="1"
+          />
         ) : null}
         {resolved?.botProtection?.siteKey && canUseFormsRuntime ? (
-          <input type="hidden" name="captchaToken" value="" />
+          <input type="hidden" name="captchaToken" value="" data-form-security-captcha="1" />
         ) : null}
 
         <div data-form-embed-form-body="true" className="space-y-3">

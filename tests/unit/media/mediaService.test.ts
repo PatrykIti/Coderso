@@ -42,6 +42,7 @@ const concat = (...parts: Uint8Array[]) => Buffer.concat(parts.map((part) => Buf
 const u32le = (value: number) =>
   Uint8Array.of(value & 0xff, (value >>> 8) & 0xff, (value >>> 16) & 0xff, (value >>> 24) & 0xff);
 const u16le = (value: number) => Uint8Array.of(value & 0xff, (value >>> 8) & 0xff);
+const u16be = (value: number) => Uint8Array.of((value >>> 8) & 0xff, value & 0xff);
 
 const pngOneByOne = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -65,6 +66,39 @@ const bmpOneByOne = concat(
   u32le(0),
   new Uint8Array(4)
 );
+const jpegSegment = (marker: number, payload: Uint8Array) =>
+  concat(Uint8Array.of(0xff, marker), Uint8Array.of(0, payload.length + 2), payload);
+const jpegOneByOne = concat(
+  Uint8Array.of(0xff, 0xd8),
+  jpegSegment(0xc0, concat(Uint8Array.of(8), u16be(1), u16be(1), Uint8Array.of(1, 1, 0x11, 0))),
+  jpegSegment(0xda, Uint8Array.of(1, 1, 0, 0, 63, 0)),
+  Uint8Array.of(1, 2, 3),
+  Uint8Array.of(0xff, 0xd9)
+);
+const gifOneByOne = concat(
+  ascii("GIF89a"),
+  u16le(1),
+  u16le(1),
+  Uint8Array.of(0x80, 0, 0),
+  Uint8Array.of(0, 0, 0, 0xff, 0xff, 0xff),
+  Uint8Array.of(0x2c),
+  u16le(0),
+  u16le(0),
+  u16le(1),
+  u16le(1),
+  Uint8Array.of(0, 2, 2, 0x44, 0x01, 0, 0x3b)
+);
+const webpOneByOne = concat(
+  ascii("RIFF"),
+  u32le(18),
+  ascii("WEBPVP8L"),
+  u32le(5),
+  Uint8Array.of(0x2f, 0, 0, 0, 0, 0)
+);
+const canonicalPdf = ascii(
+  "%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\nxref\n0 2\ntrailer\n<< /Size 2 /Root 1 0 R >>\nstartxref\n45\n%%EOF\n"
+);
+const canonicalText = ascii("Plain UTF-8 text\nwith 2 < 3.");
 const safeSvg = ascii(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><circle cx="0.5" cy="0.5" r="0.5" fill="red"/></svg>'
 );
@@ -596,22 +630,100 @@ testIfDb(
 );
 
 testIfDb(
-  "create and replace keep passive/active typing and delete old keys only after DB update",
+  "all nine canonical profiles keep byte-owned create/replace identity through DB and adapter",
   async () => {
     const cases = [
-      { bytes: pngOneByOne, mime: "image/png", extension: ".png", type: "image" },
-      { bytes: bmpOneByOne, mime: "image/bmp", extension: ".bmp", type: "image" },
-      { bytes: safeSvg, mime: "image/svg+xml", extension: ".svg", type: "file" },
+      {
+        bytes: pngOneByOne,
+        mime: "image/png",
+        extension: ".png",
+        delivery: "inline",
+        type: "image",
+      },
+      {
+        bytes: jpegOneByOne,
+        mime: "image/jpeg",
+        extension: ".jpg",
+        delivery: "inline",
+        type: "image",
+      },
+      {
+        bytes: gifOneByOne,
+        mime: "image/gif",
+        extension: ".gif",
+        delivery: "inline",
+        type: "image",
+      },
+      {
+        bytes: webpOneByOne,
+        mime: "image/webp",
+        extension: ".webp",
+        delivery: "inline",
+        type: "image",
+      },
+      {
+        bytes: bmpOneByOne,
+        mime: "image/bmp",
+        extension: ".bmp",
+        delivery: "inline",
+        type: "image",
+      },
+      {
+        bytes: canonicalPdf,
+        mime: "application/pdf",
+        extension: ".pdf",
+        delivery: "attachment",
+        type: "file",
+      },
+      {
+        bytes: canonicalText,
+        mime: "text/plain",
+        extension: ".txt",
+        delivery: "attachment",
+        type: "file",
+      },
+      {
+        bytes: safeSvg,
+        mime: "image/svg+xml",
+        extension: ".svg",
+        delivery: "attachment",
+        type: "file",
+      },
+      {
+        bytes: unknownBinary,
+        mime: "application/octet-stream",
+        extension: ".bin",
+        delivery: "attachment",
+        type: "file",
+      },
     ] as const;
 
-    for (const entry of cases) {
+    for (const [index, entry] of cases.entries()) {
       config = { maxSizeBytes: 1024 * 1024, allowedMime: [entry.mime] };
-      const created = await uploadMedia(
-        buildUploadFile(`create${entry.extension}.exe`, "bad/type", entry.bytes),
-        {}
-      );
+      const createName = `folder\\create-${index}${entry.extension}.exe`;
+      const created = await uploadMedia(buildUploadFile(createName, "text/html", entry.bytes), {});
       expect(created).toMatchObject({ mimeType: entry.mime, type: entry.type });
       expect(created.key.endsWith(entry.extension)).toBe(true);
+      expect(created.originalName).toBe(`create-${index}${entry.extension}.exe`);
+      expect(created.size).toBe(entry.bytes.byteLength);
+      const createPut = calls.putMedia.at(-1);
+      expect(createPut?.identity).toEqual({
+        mimeType: entry.mime,
+        extension: entry.extension,
+        delivery: entry.delivery,
+      });
+      expect(createPut?.downloadName).toBe(created.originalName);
+      expect(createPut?.bytes.size).toBe(entry.bytes.byteLength);
+      expect(Buffer.from(await createPut!.bytes.arrayBuffer())).toEqual(entry.bytes);
+      const [createdRow] = await db.select().from(media).where(eq(media.id, created.id));
+      expect(createdRow).toMatchObject({
+        key: created.key,
+        url: `/media/${created.key}`,
+        originalName: created.originalName,
+        type: entry.type,
+        mimeType: entry.mime,
+        size: entry.bytes.byteLength,
+      });
       if (entry.mime === "image/png") expect(created).toMatchObject({ width: 1, height: 1 });
       if (entry.mime === "image/bmp") expect(created).toMatchObject({ width: null, height: null });
       if (entry.type === "file") expect(created).toMatchObject({ width: null, height: null });
@@ -631,25 +743,44 @@ testIfDb(
         },
       }));
       installDeps();
+      const replaceName = `folder/replace-${index}${entry.extension}.html`;
       const replaced = await replaceMedia(
         created.id,
-        buildUploadFile(`replace${entry.extension}.html`, "text/html", entry.bytes)
+        buildUploadFile(replaceName, "image/x-client-declared", entry.bytes)
       );
       expect(replaced).toMatchObject({ mimeType: entry.mime, type: entry.type });
       expect(replaced.key.endsWith(entry.extension)).toBe(true);
       expect(replaced.url).toBe(`/media/${replaced.key}`);
-      expect((await db.select().from(media).where(eq(media.id, created.id)))[0]?.url).toBe(
-        `/media/${replaced.key}`
-      );
+      expect(replaced.originalName).toBe(`replace-${index}${entry.extension}.html`);
+      const replacePut = calls.putMedia.at(-1);
+      expect(replacePut?.identity).toEqual({
+        mimeType: entry.mime,
+        extension: entry.extension,
+        delivery: entry.delivery,
+      });
+      expect(replacePut?.downloadName).toBe(replaced.originalName);
+      expect(replacePut?.bytes.size).toBe(entry.bytes.byteLength);
+      expect(Buffer.from(await replacePut!.bytes.arrayBuffer())).toEqual(entry.bytes);
+      const [replacedRow] = await db.select().from(media).where(eq(media.id, created.id));
+      expect(replacedRow).toMatchObject({
+        key: replaced.key,
+        url: `/media/${replaced.key}`,
+        originalName: replaced.originalName,
+        type: entry.type,
+        mimeType: entry.mime,
+        size: entry.bytes.byteLength,
+      });
       if (entry.mime === "image/png") expect(replaced).toMatchObject({ width: 1, height: 1 });
       if (entry.mime === "image/bmp") expect(replaced).toMatchObject({ width: null, height: null });
-      if (entry.mime === "image/svg+xml") {
+      if (entry.type === "file") {
         expect(replaced).toMatchObject({ width: null, height: null });
       }
       expect(keyObservedDuringOldDelete).toBe(replaced.key);
       expect(calls.delete).toContain(oldKey);
       expect(calls.providerUrlReads).toBe(0);
     }
+    expect(calls.put).toBe(0);
+    expect(calls.getPublicUrl).toBe(0);
   }
 );
 

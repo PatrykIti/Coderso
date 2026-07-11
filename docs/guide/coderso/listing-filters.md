@@ -13,9 +13,9 @@ keywords:
 
 # Basic
 
-Listing Filters is the runtime-token preview surface for listing widgets. It
+Listing Filters is the runtime-token preview surface for listing blocks. It
 lets you pick a listing query, build a runtime query string, preview how tokens
-resolve, and inspect the rows snapshot before that logic is trusted in widgets
+resolve, and inspect the rows snapshot before that logic is trusted in blocks
 or public routes.
 
 In the current UI, the screen includes:
@@ -39,7 +39,7 @@ The current workflow is:
 - inspect totals, applied filters, rejected tokens, and rows.
 
 This is best used when:
-- a widget or route will depend on runtime filtering,
+- a listing block or route will depend on runtime filtering,
 - you want to validate token syntax before using it in production,
 - you need evidence that filters match the intended fields and operators.
 
@@ -81,7 +81,7 @@ Use this safe test order when you want fewer mistakes:
 
 # Advanced
 
-- Runtime tokens are part of the contract between listing widgets and query
+- Runtime tokens are part of the contract between listing blocks and query
   logic. Treat them as configuration, not just temporary debug strings.
 - Rejected tokens are valuable signal. They often show either syntax mistakes or
   an invalid assumption about supported fields/operators.
@@ -131,4 +131,4 @@ Use this safe test order when you want fewer mistakes:
 - Runtime token design can indirectly expose or hide draft/internal data if the
   underlying listing query is too permissive.
 - Treat token patterns as operational configuration that should be reviewed
-  before use in public-facing widgets.
+  before use in public-facing listing blocks.

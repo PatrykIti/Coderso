@@ -389,13 +389,7 @@ function validatePdf(bytes: Uint8Array): boolean {
   if (!/^%PDF-\d\.\d(?:\r?\n|\r)/.test(prefix)) return false;
   const body = new TextDecoder("latin1").decode(bytes);
   if (!/\b\d+\s+\d+\s+obj\b[\s\S]*\bendobj\b/.test(body)) return false;
-  if (!/\bstartxref\s+\d+\s+%%EOF[\t\r\n ]*$/.test(body)) return false;
-  const normalizedNames = body.replace(/#([0-9A-Fa-f]{2})/gu, (_match, hex: string) =>
-    String.fromCharCode(Number.parseInt(hex, 16))
-  );
-  return !/(?:\/JavaScript\b|\/JS\b|\/Launch\b|\/OpenAction\b|\/AA\b|\/RichMedia\b|\/EmbeddedFile\b|<\s*(?:script|html|svg|!doctype|\?xml)\b)/i.test(
-    normalizedNames
-  );
+  return /\bstartxref\s+\d+\s+%%EOF[\t\r\n ]*$/.test(body);
 }
 
 function resemblesTruncatedKnownFormat(bytes: Uint8Array): boolean {
@@ -425,9 +419,283 @@ function decodeStrictUtf8(bytes: Uint8Array): string | null {
   }
 }
 
-function containsForbiddenBinaryMarkup(bytes: Uint8Array): boolean {
-  const value = new TextDecoder("latin1").decode(bytes);
-  return /<\s*(?:script|html|svg|iframe|object|embed|!doctype|\?xml)\b/i.test(value);
+function containsBinaryMarkupGrammar(bytes: Uint8Array): boolean {
+  return containsMarkupGrammar(new TextDecoder("latin1").decode(bytes));
+}
+
+function isPdfWhitespace(value: string): boolean {
+  const codePoint = value.charCodeAt(0);
+  return (
+    codePoint === 0x00 ||
+    codePoint === 0x09 ||
+    codePoint === 0x0a ||
+    codePoint === 0x0c ||
+    codePoint === 0x0d ||
+    codePoint === 0x20
+  );
+}
+
+function isPdfDelimiter(value: string): boolean {
+  return (
+    value === "(" ||
+    value === ")" ||
+    value === "<" ||
+    value === ">" ||
+    value === "[" ||
+    value === "]" ||
+    value === "{" ||
+    value === "}" ||
+    value === "/" ||
+    value === "%"
+  );
+}
+
+function isPdfTokenBoundary(value: string, index: number): boolean {
+  if (index < 0 || index >= value.length) return true;
+  const character = value[index]!;
+  return isPdfWhitespace(character) || isPdfDelimiter(character);
+}
+
+function isPdfHexDigit(value: string): boolean {
+  const codePoint = value.charCodeAt(0);
+  return (
+    (codePoint >= 0x30 && codePoint <= 0x39) ||
+    (codePoint >= 0x41 && codePoint <= 0x46) ||
+    (codePoint >= 0x61 && codePoint <= 0x66)
+  );
+}
+
+function skipPdfWhitespaceAndComments(value: string, start: number): number {
+  let cursor = start;
+  while (cursor < value.length) {
+    if (isPdfWhitespace(value[cursor]!)) {
+      cursor += 1;
+      continue;
+    }
+    if (value[cursor] !== "%") break;
+    cursor += 1;
+    while (cursor < value.length && value[cursor] !== "\r" && value[cursor] !== "\n") {
+      cursor += 1;
+    }
+  }
+  return cursor;
+}
+
+function isPdfDictionaryOpener(value: string, start: number): boolean {
+  if (value[start] !== "<" || value[start + 1] !== "<") return false;
+  const firstEntry = skipPdfWhitespaceAndComments(value, start + 2);
+  return value[firstEntry] === "/" || value.startsWith(">>", firstEntry);
+}
+
+function findPdfHexStringEnd(value: string, start: number): number {
+  if (value[start] !== "<" || value[start + 1] === "<") return -1;
+  for (let cursor = start + 1; cursor < value.length; cursor += 1) {
+    const character = value[cursor]!;
+    if (character === ">") return cursor;
+    if (isPdfWhitespace(character) || isPdfHexDigit(character)) continue;
+    return -1;
+  }
+  return -1;
+}
+
+const FORBIDDEN_PDF_STRUCTURE_NAMES = new Set([
+  "JavaScript",
+  "JS",
+  "Launch",
+  "OpenAction",
+  "AA",
+  "RichMedia",
+  "EmbeddedFile",
+  "AcroForm",
+  "XFA",
+  "Encrypt",
+  "ObjStm",
+]);
+
+function findPdfLiteralStringEnd(value: string, start: number): number {
+  let depth = 1;
+  for (let cursor = start + 1; cursor < value.length; cursor += 1) {
+    const character = value[cursor]!;
+    if (character === "\\") {
+      if (cursor + 1 >= value.length) return -1;
+      cursor += 1;
+      if (value[cursor] === "\r" && value[cursor + 1] === "\n") cursor += 1;
+      continue;
+    }
+    if (character === "(") {
+      depth += 1;
+    } else if (character === ")") {
+      depth -= 1;
+      if (depth === 0) return cursor + 1;
+    }
+  }
+  return -1;
+}
+
+function readPdfNameToken(
+  value: string,
+  start: number
+): Readonly<{ decoded: string; end: number }> | null {
+  let end = start + 1;
+  while (end < value.length && !isPdfWhitespace(value[end]!) && !isPdfDelimiter(value[end]!)) {
+    end += 1;
+  }
+  if (end === start + 1) return null;
+
+  const decoded: string[] = [];
+  for (let cursor = start + 1; cursor < end; cursor += 1) {
+    const character = value[cursor]!;
+    if (character !== "#") {
+      decoded.push(character);
+      continue;
+    }
+    const high = value[cursor + 1];
+    const low = value[cursor + 2];
+    if (!high || !low || !isPdfHexDigit(high) || !isPdfHexDigit(low)) return null;
+    const codePoint = Number.parseInt(`${high}${low}`, 16);
+    if (codePoint === 0) return null;
+    decoded.push(String.fromCharCode(codePoint));
+    cursor += 2;
+  }
+  return { decoded: decoded.join(""), end };
+}
+
+function startsWithPdfKeyword(value: string, start: number, keyword: string): boolean {
+  return (
+    value.startsWith(keyword, start) &&
+    isPdfTokenBoundary(value, start - 1) &&
+    isPdfTokenBoundary(value, start + keyword.length)
+  );
+}
+
+function findPdfKeyword(value: string, keyword: string, start: number): number {
+  let cursor = value.indexOf(keyword, start);
+  while (cursor >= 0) {
+    if (startsWithPdfKeyword(value, cursor, keyword)) return cursor;
+    cursor = value.indexOf(keyword, cursor + 1);
+  }
+  return -1;
+}
+
+function findPdfStreamEnd(value: string, streamTokenEnd: number): number {
+  let payloadStart = streamTokenEnd;
+  if (value[payloadStart] === "\r") {
+    payloadStart += value[payloadStart + 1] === "\n" ? 2 : 1;
+  } else if (value[payloadStart] === "\n") {
+    payloadStart += 1;
+  } else {
+    return -1;
+  }
+
+  let searchFrom = payloadStart;
+  const nextEndObject = findPdfKeyword(value, "endobj", payloadStart);
+  while (searchFrom < value.length) {
+    const candidate = value.indexOf("endstream", searchFrom);
+    if (candidate < 0) return -1;
+    const candidateEnd = candidate + "endstream".length;
+    const hasPayloadLineEnding =
+      candidate === payloadStart || value[candidate - 1] === "\r" || value[candidate - 1] === "\n";
+    if (nextEndObject >= 0 && nextEndObject < candidate) return -1;
+    if (
+      hasPayloadLineEnding &&
+      isPdfTokenBoundary(value, candidateEnd) &&
+      startsWithPdfKeyword(value, skipPdfWhitespaceAndComments(value, candidateEnd), "endobj")
+    ) {
+      return candidateEnd;
+    }
+    searchFrom = candidate + 1;
+  }
+  return -1;
+}
+
+function hasInspectablePdfStructure(bytes: Uint8Array): boolean {
+  const body = new TextDecoder("latin1").decode(bytes);
+  let cursor = 0;
+  while (cursor < body.length) {
+    cursor = skipPdfWhitespaceAndComments(body, cursor);
+    if (cursor >= body.length) return true;
+
+    const character = body[cursor]!;
+    if (character === "(") {
+      const end = findPdfLiteralStringEnd(body, cursor);
+      if (end < 0) return false;
+      cursor = end;
+      continue;
+    }
+    if (character === "<") {
+      if (body[cursor + 1] === "<") {
+        cursor += 2;
+        continue;
+      }
+      const end = findPdfHexStringEnd(body, cursor);
+      if (end < 0) return false;
+      cursor = end + 1;
+      continue;
+    }
+    if (character === "/") {
+      const name = readPdfNameToken(body, cursor);
+      if (!name || FORBIDDEN_PDF_STRUCTURE_NAMES.has(name.decoded)) return false;
+      cursor = name.end;
+      continue;
+    }
+    if (character === ")" || (character === ">" && body[cursor + 1] !== ">")) return false;
+    if (character === ">" && body[cursor + 1] === ">") {
+      cursor += 2;
+      continue;
+    }
+    if (isPdfDelimiter(character)) {
+      cursor += 1;
+      continue;
+    }
+
+    let tokenEnd = cursor + 1;
+    while (
+      tokenEnd < body.length &&
+      !isPdfWhitespace(body[tokenEnd]!) &&
+      !isPdfDelimiter(body[tokenEnd]!)
+    ) {
+      tokenEnd += 1;
+    }
+    const token = body.slice(cursor, tokenEnd);
+    if (token === "stream") {
+      const streamEnd = findPdfStreamEnd(body, tokenEnd);
+      if (streamEnd < 0) return false;
+      cursor = streamEnd;
+      continue;
+    }
+    if (token === "endstream") return false;
+    cursor = tokenEnd;
+  }
+  return true;
+}
+
+function maskPdfLexicalTokensForMarkup(value: string): string {
+  const chunks: string[] = [];
+  let unchangedStart = 0;
+  for (let cursor = 0; cursor < value.length; cursor += 1) {
+    if (value[cursor] !== "<") continue;
+
+    let tokenEnd = -1;
+    if (isPdfDictionaryOpener(value, cursor)) {
+      tokenEnd = cursor + 2;
+    } else {
+      const hexEnd = findPdfHexStringEnd(value, cursor);
+      if (hexEnd >= 0) tokenEnd = hexEnd + 1;
+    }
+    if (tokenEnd < 0) continue;
+
+    chunks.push(value.slice(unchangedStart, cursor), " ".repeat(tokenEnd - cursor));
+    unchangedStart = tokenEnd;
+    cursor = tokenEnd - 1;
+  }
+  if (chunks.length === 0) return value;
+  chunks.push(value.slice(unchangedStart));
+  return chunks.join("");
+}
+
+function containsPdfMarkupGrammar(bytes: Uint8Array): boolean {
+  const body = new TextDecoder("latin1").decode(bytes);
+  return containsMarkupGrammar(maskPdfLexicalTokensForMarkup(body));
 }
 
 function containsDisallowedTextControl(value: string): boolean {
@@ -578,7 +846,7 @@ function isStandaloneSafeSvg(value: string): boolean {
 
 function containsMarkupGrammar(value: string): boolean {
   const normalized = value.replace(/^\uFEFF/, "");
-  return /<\s*(?:!doctype|!entity|!--|\?|\/?\s*[A-Za-z][A-Za-z0-9:._-]*(?:\s|\/?>))/i.test(
+  return /<\s*(?:!doctype|!entity|!--|\?|\/?\s*[A-Za-z][A-Za-z0-9:._-]*(?:\s|\/|>))/i.test(
     normalized
   );
 }
@@ -591,41 +859,50 @@ export function canonicalizeMediaBytes(bytes: Uint8Array): CanonicalMediaIdentit
   if (!(bytes instanceof Uint8Array) || bytes.length === 0) return null;
 
   if (startsWithBytes(bytes, PNG_SIGNATURE)) {
-    return !containsForbiddenBinaryMarkup(bytes) && validatePng(bytes)
+    return !containsBinaryMarkupGrammar(bytes) && validatePng(bytes)
       ? identityFor("image/png")
       : null;
   }
   if (startsWithBytes(bytes, JPEG_SIGNATURE) || (bytes[0] === 0xff && bytes[1] === 0xd8)) {
-    return !containsForbiddenBinaryMarkup(bytes) && validateJpeg(bytes)
+    return !containsBinaryMarkupGrammar(bytes) && validateJpeg(bytes)
       ? identityFor("image/jpeg")
       : null;
   }
   if (startsWithBytes(bytes, GIF87A_SIGNATURE) || startsWithBytes(bytes, GIF89A_SIGNATURE)) {
-    return !containsForbiddenBinaryMarkup(bytes) && validateGif(bytes)
+    return !containsBinaryMarkupGrammar(bytes) && validateGif(bytes)
       ? identityFor("image/gif")
       : null;
   }
   if (startsWithBytes(bytes, RIFF_SIGNATURE) && startsWithBytes(bytes, WEBP_SIGNATURE, 8)) {
-    return !containsForbiddenBinaryMarkup(bytes) && validateWebp(bytes)
+    return !containsBinaryMarkupGrammar(bytes) && validateWebp(bytes)
       ? identityFor("image/webp")
       : null;
   }
   if (startsWithBytes(bytes, BMP_SIGNATURE)) {
-    return !containsForbiddenBinaryMarkup(bytes) && validateBmp(bytes)
+    return !containsBinaryMarkupGrammar(bytes) && validateBmp(bytes)
       ? identityFor("image/bmp")
       : null;
   }
   if (startsWithBytes(bytes, PDF_SIGNATURE)) {
-    return validatePdf(bytes) ? identityFor("application/pdf") : null;
+    return !containsPdfMarkupGrammar(bytes) &&
+      validatePdf(bytes) &&
+      hasInspectablePdfStructure(bytes)
+      ? identityFor("application/pdf")
+      : null;
   }
   if (resemblesTruncatedKnownFormat(bytes)) return null;
 
   const text = decodeStrictUtf8(bytes);
-  if (text === null) return identityFor("application/octet-stream");
-  if (containsDisallowedTextControl(text)) return identityFor("application/octet-stream");
-  if (bytes.length > MAX_SVG_INSPECTION_BYTES && containsMarkupGrammar(text)) return null;
+  if (text === null) {
+    return containsBinaryMarkupGrammar(bytes) ? null : identityFor("application/octet-stream");
+  }
+  const hasMarkupGrammar = containsMarkupGrammar(text);
+  if (containsDisallowedTextControl(text)) {
+    return hasMarkupGrammar ? null : identityFor("application/octet-stream");
+  }
+  if (bytes.length > MAX_SVG_INSPECTION_BYTES && hasMarkupGrammar) return null;
   if (isStandaloneSafeSvg(text)) return identityFor("image/svg+xml");
-  if (containsMarkupGrammar(text)) return null;
+  if (hasMarkupGrammar) return null;
   return identityFor("text/plain");
 }
 

@@ -1,5 +1,10 @@
 import { afterAll, afterEach, beforeEach, expect, test } from "bun:test";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { Readable } from "node:stream";
+import type { S3Client } from "@aws-sdk/client-s3";
+import type { BlobServiceClient } from "@azure/storage-blob";
 
 import { ApiError } from "../../../core/server/errorHandler";
 import {
@@ -10,6 +15,9 @@ import {
 import type { AuthContext } from "../../../core/server/middleware/auth";
 import type { MediaDeliveryRecord } from "../../../core/services/media/mediaService";
 import type { MediaStorageAdapter } from "../../../core/services/media/storage/adapter";
+import { createAzureAdapter } from "../../../core/services/media/storage/azure";
+import { createLocalAdapter } from "../../../core/services/media/storage/local";
+import { createS3Adapter } from "../../../core/services/media/storage/s3";
 import type { SecuritySettings } from "../../../core/services/settings/securitySettings";
 
 const baseUrl = "http://coderso.test";
@@ -187,6 +195,101 @@ function recordFor(
 
 function request(path: string, init?: RequestInit): Request {
   return new Request(`${baseUrl}${path}`, init);
+}
+
+type RealDeliveryAdapterFixture = {
+  adapter: MediaStorageAdapter;
+  key: string;
+  readCount: () => number;
+  cleanup: () => Promise<void>;
+};
+
+async function createRealDeliveryAdapterFixture(
+  provider: "local" | "s3" | "azure",
+  bytes: Buffer
+): Promise<RealDeliveryAdapterFixture> {
+  const key = `2026/07/${provider}-composition.png`;
+
+  if (provider === "local") {
+    const directory = await mkdtemp(join(tmpdir(), "coderso-media-delivery-"));
+    const target = join(directory, key);
+    await mkdir(dirname(target), { recursive: true });
+    await writeFile(target, bytes);
+    const adapter = createLocalAdapter({
+      dir: directory,
+      baseUrl: "https://local-provider.invalid/media",
+    });
+    const realGet = adapter.get.bind(adapter);
+    let reads = 0;
+    adapter.get = async (requestedKey) => {
+      reads += 1;
+      return realGet(requestedKey);
+    };
+    return {
+      adapter,
+      key,
+      readCount: () => reads,
+      cleanup: () => rm(directory, { recursive: true, force: true }),
+    };
+  }
+
+  if (provider === "s3") {
+    let reads = 0;
+    const client = {
+      async send(command: { input?: { Bucket?: string; Key?: string } }) {
+        expect(command.input).toMatchObject({
+          Bucket: "delivery-bucket",
+          Key: key,
+        });
+        reads += 1;
+        return { Body: Readable.from([Buffer.from(bytes)]) };
+      },
+    } as unknown as S3Client;
+    return {
+      adapter: createS3Adapter({
+        bucket: "delivery-bucket",
+        region: "test-region-1",
+        accessKeyId: "test-access-key",
+        secretAccessKey: "test-secret-key",
+        endpoint: "https://s3-provider.invalid",
+        baseUrl: "https://s3-provider.invalid/delivery-bucket",
+        client,
+      }),
+      key,
+      readCount: () => reads,
+      cleanup: () => Promise.resolve(),
+    };
+  }
+
+  let reads = 0;
+  const serviceClient = {
+    getContainerClient(container: string) {
+      expect(container).toBe("delivery-container");
+      return {
+        getBlobClient(requestedKey: string) {
+          expect(requestedKey).toBe(key);
+          return {
+            async download() {
+              reads += 1;
+              return { readableStreamBody: Readable.from([Buffer.from(bytes)]) };
+            },
+          };
+        },
+      };
+    },
+  } as unknown as BlobServiceClient;
+  return {
+    adapter: createAzureAdapter({
+      account: "deliveryaccount",
+      container: "delivery-container",
+      connectionString: "AccountName=deliveryaccount;AccountKey=test-key",
+      baseUrl: "https://azure-provider.invalid/delivery-container",
+      serviceClient,
+    }),
+    key,
+    readCount: () => reads,
+    cleanup: () => Promise.resolve(),
+  };
 }
 
 function installHarness(overrides: Partial<MediaDeliveryDeps> = {}): void {
@@ -416,13 +519,17 @@ test("internal auth and RBAC complete before row lookup for missing and existing
   expect(calls.records).toEqual([]);
 
   permissionAllowed = true;
-  expect(
-    (
-      await handleMediaDeliveryRequest(
-        request("/media/existing.png", { headers: { cookie: "session=allowed" } })
-      )
-    ).status
-  ).toBe(200);
+  const allowedSession = await handleMediaDeliveryRequest(
+    request("/media/existing.png", { headers: { cookie: "session=allowed" } })
+  );
+  expect(allowedSession.status).toBe(200);
+  expect(allowedSession.headers.get("content-type")).toBe("image/png");
+  expect(allowedSession.headers.get("content-disposition")?.startsWith("inline;")).toBe(true);
+  expect(allowedSession.headers.get("x-content-type-options")).toBe("nosniff");
+  expect(allowedSession.headers.get("content-length")).toBe(
+    String(passiveFixtures[0].bytes.byteLength)
+  );
+  expect(Buffer.from(await allowedSession.arrayBuffer())).toEqual(passiveFixtures[0].bytes);
   expect(calls.records).toEqual(["existing.png"]);
   expect(calls.permissions).toBe(2);
 });
@@ -441,6 +548,10 @@ test("internal API key scope streams through the proxy and never asks for provid
     })
   );
   expect(result.status).toBe(200);
+  expect(result.headers.get("content-type")).toBe(fixture.mimeType);
+  expect(result.headers.get("content-disposition")?.startsWith("inline;")).toBe(true);
+  expect(result.headers.get("x-content-type-options")).toBe("nosniff");
+  expect(result.headers.get("content-length")).toBe(String(fixture.bytes.byteLength));
   expect(Buffer.from(await result.arrayBuffer())).toEqual(fixture.bytes);
   expect(calls.publicUrls).toBe(0);
   expect(calls.apiKeys).toBe(1);
@@ -451,6 +562,72 @@ test("internal API key scope streams through the proxy and never asks for provid
     },
   ]);
 });
+
+test.each(["local", "s3", "azure"] as const)(
+  "real %s adapter composes with public GET and HEAD without provider redirects",
+  async (provider) => {
+    const bytes = passiveFixtures[0].bytes;
+    const fixture = await createRealDeliveryAdapterFixture(provider, bytes);
+    let publicUrlCalls = 0;
+    fixture.adapter.getPublicUrl = () => {
+      publicUrlCalls += 1;
+      throw new Error("provider_url_forbidden");
+    };
+
+    try {
+      const record: MediaDeliveryRecord = {
+        key: fixture.key,
+        mimeType: "image/png",
+        originalName: "provider-image.old.exe",
+        size: bytes.byteLength,
+      };
+      installHarness({
+        async findRecord(requestedKey) {
+          calls.records.push(requestedKey);
+          return requestedKey === fixture.key ? record : null;
+        },
+        async resolveAdapter() {
+          calls.resolves += 1;
+          return fixture.adapter;
+        },
+      });
+
+      const expectedHeaders = {
+        "content-type": "image/png",
+        "content-disposition":
+          "inline; filename=\"provider-image.png\"; filename*=UTF-8''provider-image.png",
+        "x-content-type-options": "nosniff",
+        "content-length": String(bytes.byteLength),
+      } as const;
+
+      const get = await handleMediaDeliveryRequest(request(`/media/${fixture.key}`));
+      expect(get.status).toBe(200);
+      for (const [name, value] of Object.entries(expectedHeaders)) {
+        expect(get.headers.get(name)).toBe(value);
+      }
+      expect(get.headers.get("location")).toBeNull();
+      expect(Buffer.from(await get.arrayBuffer())).toEqual(bytes);
+
+      const head = await handleMediaDeliveryRequest(
+        request(`/media/${fixture.key}`, { method: "HEAD" })
+      );
+      expect(head.status).toBe(200);
+      for (const [name, value] of Object.entries(expectedHeaders)) {
+        expect(head.headers.get(name)).toBe(value);
+      }
+      expect(head.headers.get("location")).toBeNull();
+      expect((await head.arrayBuffer()).byteLength).toBe(0);
+
+      expect(fixture.readCount()).toBe(2);
+      expect(publicUrlCalls).toBe(0);
+      expect(calls.records).toEqual([fixture.key, fixture.key]);
+      expect(calls.resolves).toBe(2);
+      expect(calls.rate).toHaveLength(2);
+    } finally {
+      await fixture.cleanup();
+    }
+  }
+);
 
 test("all passive canonical profiles require matching bytes and emit inline safe headers", async () => {
   for (const [index, fixture] of passiveFixtures.entries()) {
@@ -473,15 +650,31 @@ test("canonical active profiles remain attachments based on persisted MIME and k
     const key = `2026/07/active-${index}${fixture.extension}`;
     const bytes = index === 1 ? passiveFixtures[0].bytes : fixture.bytes;
     recordFor(key, fixture.mimeType, bytes, `unsafe\r\nname${fixture.extension}.exe`);
-    const result = await handleMediaDeliveryRequest(request(`/media/${key}`));
-    expect(result.status).toBe(200);
-    expect(result.headers.get("content-type")).toBe(fixture.mimeType);
-    expect(result.headers.get("content-disposition")?.startsWith("attachment;")).toBe(true);
-    expect(result.headers.get("content-disposition")).toContain(fixture.extension);
-    expect(result.headers.get("content-disposition")).not.toContain("\r");
-    expect(result.headers.get("content-disposition")).not.toContain("\n");
-    expect(Buffer.from(await result.arrayBuffer())).toEqual(bytes);
+    const get = await handleMediaDeliveryRequest(request(`/media/${key}`));
+    expect(get.status).toBe(200);
+    expect(get.headers.get("content-type")).toBe(fixture.mimeType);
+    expect(get.headers.get("content-disposition")?.startsWith("attachment;")).toBe(true);
+    expect(get.headers.get("content-disposition")).toContain(fixture.extension);
+    expect(get.headers.get("content-disposition")).not.toContain("\r");
+    expect(get.headers.get("content-disposition")).not.toContain("\n");
+    expect(get.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(get.headers.get("content-length")).toBe(String(bytes.byteLength));
+    expect(Buffer.from(await get.arrayBuffer())).toEqual(bytes);
+
+    const head = await handleMediaDeliveryRequest(request(`/media/${key}`, { method: "HEAD" }));
+    expect(head.status).toBe(200);
+    for (const name of [
+      "content-type",
+      "content-disposition",
+      "content-length",
+      "x-content-type-options",
+    ]) {
+      expect(head.headers.get(name)).toBe(get.headers.get(name));
+    }
+    expect(await head.text()).toBe("");
   }
+  expect(calls.rate).toHaveLength(attachmentFixtures.length * 2);
+  expect(calls.publicUrls).toBe(0);
 });
 
 test("legacy MIME/key or passive byte mismatches fall back to octet-stream download.bin", async () => {

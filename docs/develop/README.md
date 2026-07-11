@@ -21,7 +21,7 @@ humans — concrete and practical. When you need the exhaustive contracts, they 
 
 | Page | What it covers |
 |---|---|
-| [Content Models & Widgets](./content-and-widgets.md) | The content engine, the page model, and how to build a widget |
+| [Content Models, Sections & Blocks](./content-and-widgets.md) | The content engine, editor-owned section/block models, and separate Dashboard widgets |
 | [Plugins, SDK & Store](./plugins-and-store.md) | The runtime plugin system, the SDK, and the store |
 | [The AI Assistant](./assistant.md) | Docs-only vs LLM Guide modes, and how to extend the corpus |
 

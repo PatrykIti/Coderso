@@ -1,5 +1,10 @@
 # Product Gallery Widget (v1)
 
+> **Historical compatibility boundary:** this file documents a retained renderer/read-
+> compatibility contract. Configurable widgets exist only on the Admin Dashboard;
+> active editors own their sections and blocks. Do not add or expand a non-Dashboard
+> editor, registry entry, preset, or module-pack surface from this file.
+
 ## Purpose
 
 Render a resolved commerce product gallery with bounded query fields, optional

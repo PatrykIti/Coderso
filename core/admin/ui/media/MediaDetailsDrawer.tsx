@@ -69,6 +69,7 @@ const usageIconMap = {
   entry: FileText,
   post: FileText,
   commerce: Link2,
+  submission: FileText,
 };
 
 export function MediaDetailsDrawer({

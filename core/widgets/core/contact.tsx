@@ -1638,10 +1638,15 @@ export function ContactBlock({
                 ))}
               </div>
               {resolved?.submissionNonce ? (
-                <input type="hidden" name="__nl_form_nonce" value={resolved.submissionNonce} />
+                <input
+                  type="hidden"
+                  name="__nl_form_nonce"
+                  value={resolved.submissionNonce}
+                  data-form-security-nonce="1"
+                />
               ) : null}
               {resolved?.botProtection?.siteKey ? (
-                <input type="hidden" name="captchaToken" value="" />
+                <input type="hidden" name="captchaToken" value="" data-form-security-captcha="1" />
               ) : null}
               <div className="space-y-2">
                 <button

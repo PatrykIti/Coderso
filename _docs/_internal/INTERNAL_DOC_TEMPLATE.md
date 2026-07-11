@@ -10,7 +10,9 @@ keywords:
 
 # What Is It
 
-Explain what this feature/widget/setting is in 2-4 short sentences.
+Explain what this feature, domain-owned section/block, Dashboard widget, or
+setting is in 2-4 short sentences. Do not describe a generic non-dashboard
+widget surface.
 
 # When To Use
 

@@ -40,7 +40,7 @@ into the post editor or a row-level operation.
 
 The key parts of the screen are:
 - page header:
-  `Posts` plus `Create and publish articles rendered by widgets and templates.`
+  `Posts` plus guidance for creating and publishing block-authored articles.
 - filters:
   title search, `Status`, `Author`
 - table columns:

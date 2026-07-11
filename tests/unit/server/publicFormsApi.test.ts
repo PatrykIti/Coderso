@@ -16,6 +16,7 @@ import {
   createPreparedFormWriteDescriptor,
   handleFormAttachmentUploadRoute,
   handleFormSubmissionRoute,
+  mapFormError,
   type FormWriteAccessTarget,
   type PreparedFormWriteAccess,
   type PreparedFormWriteForm,
@@ -221,6 +222,17 @@ test("public forms handler returns null for non-form submission paths", async ()
     userAgent: "test",
   });
   expect(response).toBeNull();
+});
+
+test("Forms upload mapper preserves media_file_invalid as a stable client error", () => {
+  const mapped = mapFormError(new Error("media_file_invalid"));
+
+  expect(mapped).toBeInstanceOf(ApiError);
+  expect(mapped).toMatchObject({
+    code: "media_file_invalid",
+    message: "Invalid upload payload",
+    status: 400,
+  });
 });
 
 test.each(["submissions", "uploads"] as const)(

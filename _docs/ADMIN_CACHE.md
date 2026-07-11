@@ -414,12 +414,15 @@ Clients update caches and broadcast events on:
   `widgetTemplates:detail:<id>`, `widgetTemplateCategories:list`, their cached
   clients, and the `/advanced/widgets/templates/:id` prefetch/route entries.
 
-### Widget library cache note
+### Retired widget-library compatibility cache note
 
-- Widget library list state is owned by
+- The hidden support-only compatibility catalog state is owned by
   `core/admin/ui/widgets/WidgetLibraryPage.tsx` and is backed by
   `widgetCatalog:list` and `pages:list` (the catalog is core-widget-only after
   the Page Templates rewrite).
+- This cache seam must not be reused to add a Page/Form/Menu/Post/Screen
+  authoring flow. Active editors cache their own section/block documents;
+  configurable Dashboard widgets use the Dashboard cache family.
 - The page hydrates catalog and pages from `getCachedWidgetCatalog()` and
   `getCachedPages()` on first render, then revalidates in the background when a
   cache entry exists.

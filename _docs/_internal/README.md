@@ -1,7 +1,8 @@
 # Internal Docs Knowledge Base
 
-This folder is the source of truth for Assistant documentation ingest.
-Only documents from `_docs/_internal` are loaded into Assistant DB knowledge base.
+This folder is a retired documentation-template archive. The current Assistant
+knowledge corpus and ingest source of truth is `docs/guide/`; files in
+`_docs/_internal` are not ingested.
 
 ## Goal
 
@@ -31,13 +32,13 @@ Use this frontmatter block at the top of every file:
 
 ```yaml
 ---
-title: "Hero widget basics"
+title: "Hero Page block basics"
 audience: "editor"
-productArea: "widgets"
+productArea: "pages"
 language: "pl"
 keywords:
   - hero
-  - widget
+  - block
   - layout
 ---
 ```
@@ -55,11 +56,12 @@ keywords:
 
 - Use lowercase kebab-case file names.
 - One topic per file.
-- Example: `widgets/hero-basics.md`
+- Current docs belong under `docs/guide/`, for example
+  `docs/guide/pages/hero-block-basics.md`; do not add a new file here.
 
 ## Validation intent
 
-Ingest pipeline validates:
+The active `docs/guide` ingest pipeline validates:
 - frontmatter presence,
 - required sections,
 - parseability of markdown + frontmatter.

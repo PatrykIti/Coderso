@@ -1,6 +1,12 @@
 # Widget Pack Matrix
 
-Advanced module-level pack coverage contract for composite-first delivery.
+> Historical compatibility matrix for retained `core/widgets` registry data.
+> Do not expand it for new Page/Form/Menu/Post/Screen authoring. Active editors
+> use their domain-owned sections/blocks; configurable widgets exist only on
+> Admin Dashboard under `_docs/DASHBOARD_WIDGETS_SPEC.md`.
+
+The remainder records the former module-level composite coverage contract used
+by legacy validation and assistant compatibility aliases.
 
 ## Minimum Rules
 

@@ -34,12 +34,28 @@ This leaf is the only TASK-536 writer of:
 
 Keep the reusable schema builders in those existing owners. Do not create the optional
 `core/services/forms/formDocumentSchemas.ts` or any other production helper file; the
-fixed file list above is exhaustive under YAGNI.
+fixed file list above is exhaustive under YAGNI except for the one post-audit seam below.
 
-It owns compatibility/changed-behavior updates in the five Vitest/Bun files named by its
-gate before validation. It must not edit routes, publicFormsApi.ts, `core/widgets/**`,
-`core/admin/**`, editor source, runtime client scripts, registries, presets, other tests,
-docs, task indexes, or changelog files. The narrow `formRuntimeResolver.ts` seam filters
+The TASK-536 post-audit adds exactly one existing service seam to this leaf's ownership:
+`core/services/forms/formAttachment.ts` may be changed only so optional magic-named File
+fields are read from normalized submission data with an own-property guard. The matching
+DB-backed absent/present regressions belong to
+`tests/unit/forms/fileSubmission.test.ts`. This exception does not authorize a new
+schema/helper/module, a media-service change, or any widget/editor work.
+
+The final schema-integrity audit keeps `core/services/forms/validation.ts` in this leaf
+for a second bounded correction: both domain AJV validators must evaluate only own
+properties; domain normalization accepts only ordinary or null-prototype records and
+must not consume values inherited from a custom prototype; and a media-reference object
+must have exactly one own data property, `id`. The shared route AJV and unrelated domain
+validators remain out of scope because this finding is the direct Forms
+service/orchestrator boundary.
+
+It owns compatibility/changed-behavior updates in the six Vitest/Bun files named by its
+gate before validation, including the post-audit DB suite. It must not edit routes,
+publicFormsApi.ts, `core/widgets/**`, `core/admin/**`, editor source, runtime client
+scripts, registries, presets, tests other than those six, docs, task indexes, or changelog
+files. The narrow `formRuntimeResolver.ts` seam filters
 legacy data before the existing renderer receives it; it does not add or expand a widget,
 section, block, editor, preset, or dashboard surface.
 
@@ -230,15 +246,63 @@ export const formFieldsWriteSchema = {
   type: "array", maxItems: 100, items: formFieldSchema,
 };
 
+isPlainFormDataRecord(value) {
+  if value is not a non-array object: return false;
+  read its prototype defensively; accept only Object.prototype or null;
+  inspect own property descriptors without invoking accessors;
+  reject symbol keys and accessor-backed values before any normalizer read;
+}
+
+clonePlainFormData(value, profile, state) {
+  FIELD_PROFILE = { maxDepth: 3, maxArrayItems: 100,
+    maxRecordProperties: 100, maxNodes: 501 };
+  SUBMISSION_PROFILE = { maxDepth: 2, maxArrayItems: 20,
+    maxRecordProperties: 100, maxNodes: 2101 };
+  // Root object/array depth is 0. Each nested object/array increments depth; primitives
+  // consume neither depth nor nodes. Charge one node only the first time an object/array
+  // is seen in this preflight. Active-path reuse is a cycle failure; completed WeakMap
+  // reuse consumes no additional node and returns the already-completed snapshot.
+  // 501 = root field array + 100 * (field + settings + logic + style + one options/accept
+  // array). 2101 = submission root + 100 * (one array + 20 media-id objects).
+  before Reflect.ownKeys or allocation, read/validate an array's own length descriptor and
+    reject values beyond profile.maxArrayItems; snapshot record keys once and reject more
+    than profile.maxRecordProperties;
+  decrement the total node budget and reject depth max+1 as the existing domain error;
+  keep an active-path WeakSet for cycles and a completed WeakMap so a shared subtree is
+    cloned once rather than amplified; return descriptor-safe ordinary/null-prototype
+    snapshots only;
+  // Arbitrary Proxy meta-traps cannot be made side-effect-free in JavaScript. Proxy input
+  // is not supported JSON; catch reflection failures and fail closed. The guaranteed
+  // invariant is that rejected own-property accessor getters are never invoked.
+}
+
+compileDomainValidator(schema) {
+  return new Ajv({ strict: true, allErrors: true, strictTypes: false,
+    allowUnionTypes: true, ownProperties: true }).compile(schema);
+}
+
 assertFormFieldsWriteShape(fields) {
-  lazily compile the domain-owned formFieldsWriteSchema with Bun-free Ajv;
-  reject every structural/type/bound/unknown-key violation as form_field_invalid;
+  snapshotFormFieldsWriteShape(fields); // compatibility assertion wrapper
+}
+
+snapshotFormFieldsWriteShape(fields) {
+  snapshot = clonePlainFormData(fields, FIELD_PROFILE, freshState);
+  if snapshot fails: throw form_field_invalid, including revoked record/array Proxies;
+  lazily compile the domain-owned formFieldsWriteSchema with Bun-free Ajv configured
+    with ownProperties:true;
+  run AJV only on snapshot and reject every structural/type/bound/unknown-key violation
+    as form_field_invalid;
+  return the validated, caller-detached snapshot;
   // Keep this pure and side-effect free; direct normalizer-only compatibility tests do
   // not become persistence authorization.
 }
 
 normalizeFormFields(fields) {
-  normalize each supplied UUID to lowercase before seenIds duplicate detection;
+  snapshot = clonePlainFormData(fields, FIELD_PROFILE, freshState);
+  if snapshot fails: throw form_field_invalid;
+  normalize only snapshot, including each field and authored settings/logic/style; never
+    read the caller object after preflight;
+  normalize each snapshot UUID to lowercase before seenIds duplicate detection;
   preserve existing direct-normalizer compatibility (including intended clamps and
     lowercase/dedupe behavior) plus existing named domain errors;
   compile every non-empty authored pattern through compileSafeFormFieldPattern with
@@ -246,14 +310,23 @@ normalizeFormFields(fields) {
 }
 
 setFormFields(formId, fields) {
-  assertFormFieldsWriteShape(fields) before getForm/delete/insert DB work;
-  normalized = normalizeFormFields(fields);
+  validatedSnapshot = snapshotFormFieldsWriteShape(fields) synchronously before getForm;
+  await getForm without retaining any later read from the caller-owned fields;
+  normalized = normalizeFormFields(validatedSnapshot);
   persist normalized fields transactionally as today;
   // Mandatory for direct writers such as assistant -> setFormFields that do not traverse
   // the HTTP route validator.
 }
 
 validateSubmissionPayload(data, resolvedFields) {
+  snapshot = clonePlainFormData(data, SUBMISSION_PROFILE, freshState);
+  if snapshot fails: throw form_payload_invalid;
+  run the own-properties-only submission AJV, every field lookup, conditional check, and
+    media-reference normalization only against snapshot;
+  for every single/array media-reference object in snapshot, require an ordinary or
+    null-prototype record, then use Reflect.ownKeys plus its property descriptor and
+    accept exactly one enumerable own data property named id; inherited/accessor/extra
+    keys or a custom prototype fail as form_payload_invalid without invoking accessors;
   before testing any stored/legacy pattern, pass it through the same
     compileSafeFormFieldPattern with form_payload_invalid; never call `new RegExp` directly
     on DB settings, so a legacy catastrophic pattern fails closed at runtime;
@@ -345,7 +418,7 @@ owns the strict normalized envelope and must not weaken that transport guard.
 
 ## Regression-test shape
 
-This leaf updates its five named suites before the source gate with a table-driven corpus
+This leaf updates its six named suites before the source gate with a table-driven corpus
 containing one unknown key at every
 nested depth, supported full-document round trips, field-type-specific invalid keys,
 dynamic submission keys accepted only when declared, and no-default/present-only
@@ -401,6 +474,29 @@ cover this only through a direct domain normalizer.
 The normalized submission-envelope corpus must reject a missing `data` member.
 The upload-envelope corpus must reject missing `fieldName` and missing `file` before the
 runtime File guard.
+Pass custom-prototype field records whose required or optional keys are inherited through
+both `assertFormFieldsWriteShape` and `normalizeFormFields`; each must fail closed rather
+than materialize inherited data. Pass single and multiple File values whose `{ id }` is
+inherited, accessor-backed, or accompanied by another own key; each must fail as
+`form_payload_invalid`. Preserve acceptance and round-trip identity for exact own `id`
+objects and the existing own `__proto__`, `toString`, and `constructor` field names.
+Count getter calls and prove zero for rejected field, settings, logic, style, top-level
+submission-data, and media-id accessors. Reject a custom-prototype media object even when
+it has an own valid `id`; positively prove ordinary and null-prototype field/settings,
+submission-data, and exact media-id records retain their supported normalized output.
+Pin each preflight profile at depth max and max+1, maximum and maximum+1 dense array/key
+counts, cyclic and noncyclic shared subtrees, and total-node budget exhaustion. Every
+over-budget case must return `form_field_invalid` or `form_payload_invalid`, never
+`RangeError`, and index/accessor getter counts remain zero. A sparse huge-length array
+must fail from its length descriptor before key enumeration/index work.
+Build and accept the exact worst-case valid 501-node field document and 2101-node
+submission document, then add the first unique node to each and require the matching
+domain error. Reusing an already completed shared subtree must count it once.
+Through real `setFormFields`, mutate the caller-owned array/field immediately after the
+function reaches its first await; persistence must use the earlier validated snapshot,
+not the mutated value. Pin existing missing-form/error precedence. Revoke record and
+array Proxies before direct assertion/normalization/media-reference calls and require
+`form_field_invalid`, `form_payload_invalid`, or `null` rather than raw `TypeError`.
 Pin representative response codes from both layers: schema-level unknown/type/bound/
 required failures return `validation_error`/400, while a value that passes schema shape
 but fails a domain cross-invariant retains the appropriate named form error.
@@ -419,6 +515,7 @@ bunx vitest run --config vitest.config.ts \
   tests/vitest/forms/fileField.test.ts \
   tests/vitest/forms/formRuntimeResolver.test.ts
 set -a && source .env && set +a && bun test --timeout=15000 tests/integration/routes/forms.test.ts
+set -a && source .env && set +a && bun test --timeout=15000 tests/unit/forms/fileSubmission.test.ts
 ~~~
 
 Re-run a named failure alone before classifying it.

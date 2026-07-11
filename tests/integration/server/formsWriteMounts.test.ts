@@ -266,6 +266,131 @@ testIfDb(
 );
 
 testIfDb(
+  "actual parser preserves flat magic field names through root and stripped-admin mounts",
+  async () => {
+    const formId = randomUUID();
+    const publicPath = `/forms/${formId}/submissions`;
+    const adminWritePath = `${adminPath}/api${publicPath}`;
+    createdAccessLogPaths.add(adminWritePath);
+    const objectPrototype = Object.getPrototypeOf({}) as object;
+    const dispatchedBodies: unknown[] = [];
+
+    __setFormWriteExecutorDepsForTests({
+      attachSession: async () => undefined,
+      loadAccessTarget: async (id) => fakeForm(id),
+      chargeRateLimit: () => undefined,
+      async authenticateApiKey() {
+        throw new Error("public_api_key_verification_forbidden");
+      },
+      async enforceSessionCsrf() {
+        throw new Error("public_csrf_forbidden");
+      },
+      async requireSessionFormsWrite() {
+        throw new Error("public_rbac_forbidden");
+      },
+      async loadUploadStorageMaxBytes() {
+        throw new Error("submission_storage_load_forbidden");
+      },
+      async dispatchSubmission(ctx) {
+        dispatchedBodies.push(ctx.body);
+        return { accepted: true };
+      },
+      async dispatchUpload() {
+        throw new Error("submission_dispatched_as_upload");
+      },
+    });
+
+    type BodyFixture = Readonly<{
+      label: string;
+      expected: Readonly<Record<string, string>>;
+      build: () => Readonly<{ body: BodyInit; headers?: Readonly<Record<string, string>> }>;
+    }>;
+    const expectedFor = (label: string): Readonly<Record<string, string>> => ({
+      ["__proto__"]: `${label}-proto-last`,
+      constructor: `${label}-constructor-last`,
+      ordinary: `${label}-ordinary`,
+      toString: `${label}-to-string-last`,
+    });
+    const fixtures: readonly BodyFixture[] = [
+      {
+        label: "json",
+        expected: expectedFor("json"),
+        build: () => ({
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            ["__proto__"]: "json-proto-last",
+            constructor: "json-constructor-last",
+            ordinary: "json-ordinary",
+            toString: "json-to-string-last",
+          }),
+        }),
+      },
+      {
+        label: "urlencoded",
+        expected: expectedFor("urlencoded"),
+        build: () => {
+          const params = new URLSearchParams();
+          params.append("__proto__", "urlencoded-proto-first");
+          params.append("__proto__", "urlencoded-proto-last");
+          params.append("constructor", "urlencoded-constructor-first");
+          params.append("constructor", "urlencoded-constructor-last");
+          params.append("toString", "urlencoded-to-string-first");
+          params.append("toString", "urlencoded-to-string-last");
+          params.append("ordinary", "urlencoded-ordinary");
+          return {
+            headers: { "content-type": "application/x-www-form-urlencoded" },
+            body: params.toString(),
+          };
+        },
+      },
+      {
+        label: "multipart",
+        expected: expectedFor("multipart"),
+        build: () => {
+          const form = new FormData();
+          form.append("__proto__", "multipart-proto-first");
+          form.append("__proto__", "multipart-proto-last");
+          form.append("constructor", "multipart-constructor-first");
+          form.append("constructor", "multipart-constructor-last");
+          form.append("toString", "multipart-to-string-first");
+          form.append("toString", "multipart-to-string-last");
+          form.append("ordinary", "multipart-ordinary");
+          return { body: form };
+        },
+      },
+    ];
+    const mounts = [
+      { host: publicHost, label: "root", path: publicPath },
+      { host: adminHost, label: "stripped-admin", path: adminWritePath },
+    ] as const;
+
+    for (const fixture of fixtures) {
+      for (const mount of mounts) {
+        const request = fixture.build();
+        const response = await fetch(`${baseUrl}${mount.path}`, {
+          method: "POST",
+          headers: { ...request.headers, host: mount.host },
+          body: request.body,
+        });
+        expect(response.status, `${fixture.label} ${mount.label}`).toBe(200);
+        expect(await response.json()).toEqual({ accepted: true });
+
+        const payload = dispatchedBodies.at(-1) as Record<string, unknown>;
+        expect(Object.getPrototypeOf(payload)).toBe(objectPrototype);
+        for (const [key, value] of Object.entries(fixture.expected)) {
+          expect(Object.hasOwn(payload, key), `${fixture.label} ${mount.label} ${key}`).toBe(true);
+          expect(payload[key]).toBe(value);
+        }
+        expect(Object.getPrototypeOf({})).toBe(objectPrototype);
+      }
+    }
+
+    expect(dispatchedBodies).toHaveLength(fixtures.length * mounts.length);
+  },
+  20_000
+);
+
+testIfDb(
   "upload on both real mounts consumes one access load and the exact minted descriptor",
   async () => {
     const formId = randomUUID();
@@ -340,6 +465,75 @@ testIfDb(
     const adminLogs = await waitForAccessLog(adminWritePath);
     expect(adminLogs).toHaveLength(1);
     expect(adminLogs[0]).toMatchObject({ method: "POST", path: adminWritePath, status: 200 });
+  },
+  20_000
+);
+
+testIfDb(
+  "media_file_invalid maps to the same 400 response on root and stripped-admin upload mounts",
+  async () => {
+    const formId = randomUUID();
+    const publicPath = `/forms/${formId}/uploads`;
+    const adminWritePath = `${adminPath}/api${publicPath}`;
+    createdAccessLogPaths.add(adminWritePath);
+    let dispatchCalls = 0;
+
+    __setFormWriteExecutorDepsForTests({
+      attachSession: async () => undefined,
+      loadAccessTarget: async (id) => fakeForm(id),
+      chargeRateLimit: () => undefined,
+      async authenticateApiKey() {
+        throw new Error("public_api_key_verification_forbidden");
+      },
+      async enforceSessionCsrf() {
+        throw new Error("public_csrf_forbidden");
+      },
+      async requireSessionFormsWrite() {
+        throw new Error("public_rbac_forbidden");
+      },
+      loadUploadStorageMaxBytes: async () => 5 * 1024 * 1024,
+      parseBody: async () => ({}),
+      async dispatchSubmission() {
+        throw new Error("upload_dispatched_as_submission");
+      },
+      async dispatchUpload() {
+        dispatchCalls += 1;
+        throw new Error("media_file_invalid");
+      },
+    });
+
+    const [publicResponse, adminResponse] = await Promise.all([
+      fetch(`${baseUrl}${publicPath}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", host: publicHost },
+        body: "{}",
+      }),
+      fetch(`${baseUrl}${adminWritePath}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", host: adminHost },
+        body: "{}",
+      }),
+    ]);
+
+    const expectedError = {
+      error: {
+        code: "media_file_invalid",
+        message: "Invalid upload payload",
+      },
+    };
+    expect(publicResponse.status).toBe(400);
+    expect(adminResponse.status).toBe(400);
+    expect(await publicResponse.json()).toEqual(expectedError);
+    expect(await adminResponse.json()).toEqual(expectedError);
+    expect(dispatchCalls).toBe(2);
+
+    const adminLogs = await waitForAccessLog(adminWritePath);
+    expect(adminLogs).toHaveLength(1);
+    expect(adminLogs[0]).toMatchObject({
+      method: "POST",
+      path: adminWritePath,
+      status: 400,
+    });
   },
   20_000
 );

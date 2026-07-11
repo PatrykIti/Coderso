@@ -18,6 +18,14 @@
 Tests-and-docs-only closure leaf. It may edit the relevant files under tests/, task-
 prefixed screenshots named `_docs/_workflows/_smoke/task-536-*`, _docs/MEDIA_SPEC.md, _docs/SECURITY_SPEC.md,
 _docs/CMS_API.md, relevant Forms/media user/developer docs, this family’s task statuses,
+the historical-boundary notices in `_docs/WIDGETS*.md`, `_docs/WIDGET_PACK_MATRIX.md`, and
+`_docs/_WIDGETS/*.md`, the contributor boundary in `AGENTS.md`,
+the current product-boundary wording in `README.md`, `docs/README.md`,
+`_docs/README.md`, `_docs/ARCHITECTURE.md`, `_docs/CMS_SPEC.md`, `_docs/ADMIN_CACHE*.md`,
+`_docs/CONTENT_EDITOR_UX.md`, `_docs/PAGE_MODEL.md`, `_docs/PREVIEW_SPEC.md`,
+the relevant `docs/develop/*` handbook pages, and the `docs/guide/*`
+redirects/vocabulary corrections that
+keep active guidance on editor-owned sections/blocks and Dashboard-only widgets,
 _docs/_TASKS/README.md, changelog 1248, and _docs/_CHANGELOG/README.md. It must not edit
 core production source. Read task/changelog indexes fresh immediately before closure.
 Source leaves create/update their changed-behavior and compatibility assertions before
@@ -25,6 +33,17 @@ their own gates, including creation of
 `tests/vitest/services/media-file-trust.test.ts` in TASK-536-01-L01. This leaf owns only
 additive cross-leaf/security cases, final read-only reruns of source-owner assertions,
 and closure evidence; it must not re-baseline a source leaf to make closure green.
+
+Post-audit source drift is remediated by reopening only the explicit source-owner seams
+recorded in TASK-536-01-L01, TASK-536-01-L03, TASK-536-04-L01, and
+TASK-536-04-L02. This closure leaf
+retains ownership of the additive local/S3/Azure handler-level GET/HEAD composition test
+and documentation corrections; it does not absorb those production writers.
+
+Paths and test names under `core/widgets` / `tests/vitest/widgets` are historical
+implementation names only. Closeout language must describe the existing public Form
+block/section runtime and must not add or advertise a non-dashboard widget type,
+editor, registry entry, preset, or authoring workflow.
 
 ## Implementation Pseudocode
 
@@ -86,13 +105,22 @@ bunx vitest run --config vitest.config.ts \
   tests/vitest/forms/fileField.test.ts \
   tests/vitest/forms/validation.test.ts \
   tests/vitest/forms/formSettings.test.ts \
+  tests/vitest/forms/formRuntimeResolver.test.ts \
   tests/vitest/forms/submissionAccess.test.ts \
+  tests/vitest/forms/submissionNonce.test.ts \
   tests/vitest/server/requestBody.test.ts \
   tests/vitest/widgets/formEmbed.test.tsx \
   tests/vitest/widgets/formRuntimeScript.test.ts \
+  tests/vitest/widgets/contact.test.tsx \
+  tests/vitest/widgets/newsletter.test.tsx \
   tests/vitest/services/mediaSchemas.test.ts \
   tests/vitest/services/media-file-trust.test.ts \
-  tests/vitest/services/mediaUrlProjection.test.ts
+  tests/vitest/services/mediaUrlProjection.test.ts \
+  tests/vitest/admin/mediaUtils.test.ts \
+  tests/vitest/ui/media-picker.test.tsx \
+  tests/vitest/ui/media-card.test.tsx \
+  tests/vitest/ui/media-details.test.tsx \
+  tests/vitest/ui/post-editor-canvas-wave.test.tsx
 set -a && source .env && set +a && bun test --parallel=1 --timeout=15000 \
   tests/unit/media/mediaService.test.ts \
   tests/unit/media/mediaMeta.test.ts \
@@ -107,33 +135,42 @@ set -a && source .env && set +a && bun test --parallel=1 --timeout=15000 \
   tests/unit/forms/fileSubmission.test.ts \
   tests/integration/routes/forms.test.ts \
   tests/integration/routes/media.test.ts \
-  tests/integration/server/mediaDeliveryAccess.test.ts \
   tests/integration/server/formsWriteMounts.test.ts \
   tests/security/codersoSecurityGate.test.ts
+env -u DATABASE_URL bun --no-env-file test --timeout=15000 \
+  tests/integration/server/mediaDeliveryAccess.test.ts
 ./node_modules/.bin/eslint --max-warnings=0 \
-  core/widgets/core/formEmbed.tsx core/widgets/core/formRuntimeScript.ts
+  core/widgets/core/formEmbed.tsx core/widgets/core/formRuntimeScript.ts \
+  core/widgets/core/contact.tsx core/widgets/core/newsletter.tsx
 semgrep --error --timeout 120 --timeout-threshold 0 \
   --config .semgrep.yml --config p/owasp-top-ten --config p/security-audit \
   --config p/nodejs --config p/typescript \
   core/services/media \
   core/services/dashboard/dashboardService.ts \
   core/services/forms/submissionAccess.ts core/services/forms/formSettings.ts \
+  core/services/forms/submissionNonce.ts \
   core/services/forms/fieldSettings.ts core/services/forms/validation.ts \
+  core/services/forms/formAttachment.ts core/services/forms/formsService.ts \
   core/server/mediaDelivery.ts core/server/httpServer.ts core/server/requestBody.ts \
   core/server/publicFormsApi.ts core/server/routes/formsRoutes.ts \
   core/server/validation/formSchemas.ts \
-  core/widgets/core/formEmbed.tsx core/widgets/core/formRuntimeScript.ts
+  core/admin/services/mediaClient.ts core/admin/ui/media/types.ts \
+  core/admin/ui/media/utils.ts core/admin/ui/media/MediaPicker.tsx \
+  core/admin/ui/media/MediaDetailsDrawer.tsx \
+  core/admin/ui/posts/editor/PostEditorCanvas.tsx \
+  core/widgets/core/formEmbed.tsx core/widgets/core/formRuntimeScript.ts \
+  core/widgets/core/contact.tsx core/widgets/core/newsletter.tsx
 bun run gates:coderso
 bun run scan:security:strict
+git diff --check
 ~~~
 
-The task-scoped Semgrep command must pass. Execute the full strict scan as shown; before
-TASK-538 lands, the one already-recorded Page `customSvg` source finding may be recorded
-as an external program blocker only when it remains outside TASK-536's changed files and
-the Forms/media scan is clean. Do not add a suppression, baseline, or allowlist.
-TASK-538 closure reruns the full scan and must remove its owned `customSvg` finding;
-unrelated findings remain program blockers. The final TASK-536–545 gate must make the
-full strict scan green.
+The task-scoped Semgrep command must pass. Execute the full strict scan as shown. The
+current external findings are the Page `customSvg` source sink owned by TASK-538 and the
+prompt-only `task-522-author.mjs` interpolation owned by TASK-545-02-L01; record both only
+when they remain outside TASK-536's changed trust boundary and the Forms/media scan is
+clean. Do not add a suppression, baseline, or allowlist. TASK-538 and TASK-545 rerun their
+owned scans, and the final TASK-536–545 gate must make the full strict scan green.
 
 ## Runtime smoke
 
@@ -152,7 +189,8 @@ Run at least these distinct real flows:
    assert this for both helper-bearing and helper-free file fields, including unchanged
    wrapper height/gap while neutral; then a successful upload submits;
 2. ordered multiple files: every upload completes and submission preserves order;
-3. failed upload: submit remains blocked, alert visible, retry succeeds without reload;
+3. failed upload: no final submission is sent, the alert is visible, pending action locks
+   are released, and retry succeeds without reload;
 4. with an authenticated cookie, a public form remains nonce-bound and rejects a byte
    mismatch; an internal-only form renders the existing noninteractive boundary and
    emits no upload/submission request (server integration tests separately prove CSRF);
@@ -166,11 +204,25 @@ effects, not only emitted strings. Record zero console errors.
 
 Document the canonical type/disposition matrix, including byte-validated text/plain,
 attachment-only SVG/active content, explicitly allowed octet-stream, forbidden markup,
+the conservative PDF subset (benign compressed page content allowed; active forms,
+encryption, and object streams rejected),
 write-time remote-provider metadata as defense-in-depth (the final proxy response neither
 trusts nor requires provider metadata), and legacy mismatch attachment policy. Also document the
+admin projection boundary: only a canonical passive MIME plus a compatible persisted
+server image type becomes an image; SVG stays document/attachment and is excluded from
+`image/*` selection unless an exact SVG file MIME is authored. Document persisted Form
+submission usage and that the pre-submit upload remains unreferenced until the final
+submission stores its media id. Also document the
 upload-before-submit UX, strict schema boundary, and one-rate-owner rule without
 reproducing a weaponized payload. Explicitly retain or split the existing abandoned-
 upload orphan cleanup residual from TASK-516-07.
+Reconcile active contributor, developer, and assistant-corpus wording with the
+owner-approved product boundary: configurable widgets exist only on Admin Dashboard;
+Pages, Page Templates, Forms, Menus, Posts, Custom Screens, and other domain editors
+use their own sections/blocks. Historical `core/widgets`, `WidgetBlock`, module-pack,
+Widget Library, Widget Template, and Wizard/Visual/Advanced names may remain only as
+explicit read/runtime compatibility or historical records. This documentation change
+must not create, register, preset, or otherwise expand a non-dashboard widget surface.
 Correct the stale `_docs/CMS_API.md` field example that currently places `inputStep` on a
 `text` field: the documented example must use `inputStep` only on its real
 number/range/time branches and stay byte-compatible with the strict L02 schema corpus.
@@ -179,7 +231,21 @@ Correct the stale reject-unknown wording in `_docs/CMS_API.md` and
 `validation_error`, while only legacy/read normalization remains non-destructive and
 fail-soft for already persisted documents. Do not describe write-time unknown keys as
 silently dropped.
+Correct the post-audit runtime wording in `_docs/CMS_API.md`: pending uploads disable
+submit/navigation, while an ordinary upload error renders an accessible alert and
+releases the action lock so retry is possible; the final submission remains unsent until
+every required upload succeeds. Correct `_docs/CMS_API.md`,
+`docs/guide/coderso/forms-list-and-builder.md`, and
+`docs/guide/screens/security-settings.md` to match the preserved public-session policy:
+an authenticated cookie never bypasses the form nonce, `public_write` charge, or byte
+inspection, but the current access evaluator sets `requireCaptcha=false` for that
+authenticated public principal. Do not imply that this exception changes internal
+session/CSRF or API-key behavior.
 
 After clean post-audits and gates, create changelog 1248, mark every physical descendant
 Done, then close the parent and synchronize board/index statistics. Do not close while
 any descendant is open or any required scan/smoke is missing.
+
+After the final metadata edit or drift fix, rerun
+`node --check _docs/_workflows/task-536-implement.mjs` and `git diff --check`.
+The pre-closure validation result does not cover later task/changelog/index edits.

@@ -1370,8 +1370,8 @@ Notes:
   `field-group`, `record-header`, `columns`, and `rich-text`; legacy widget
   blocks are compatibility migration inputs only.
 - builder insert library pokazuje screen-owned blocks oraz pola wybranego
-  content type; public page builder i widget library nadal uzywaja swoich
-  powierzchni.
+  content type; Page Builder uzywa wlasnego insertera sekcji/blokow, a
+  konfigurowalne widgety sa osobna powierzchnia Admin Dashboard.
 - `bindings` mapuja `blockId + propPath` do pola wybranego content type albo
   do dozwolonych system fields.
 - Dla V4 active surface binding targets sa screen-owned:
@@ -1711,20 +1711,25 @@ Products query payload (summary):
 ```
 
 Runtime behavior (v1):
-- public runtime widgets (`product-gallery`, `product-compare`, `product-table`) sa hydradowane SSR przez internal services.
+- public commerce blocks (historyczne runtime ids `product-gallery`,
+  `product-compare`, `product-table`) sa hydradowane SSR przez internal services.
 - v1 **nie dodaje** publicznych endpointow `/api/commerce/*`.
 - checkout/cart provider contract jest warstwa service + plugin hooks (`commerce:checkout:adapters`) i nie jest public API route.
 
 ---
 
-## Widgets
+## Retained Renderer Compatibility APIs
 
 Permissions: `widgets:read`, `widgets:write`
 
-- `GET /widgets` (catalog: core widgets only)
-- `POST /widgets/entry-teaser/preview` (internal admin preview hydration, permission: `content:read`)
-- `POST /widgets/product-compare/preview` (internal admin preview hydration, permission: `commerce:read`)
-- `POST /widgets/product-gallery/preview` (internal admin preview hydration, permission: `widgets:read`)
+- `GET /widgets` (hidden support/read catalog for historical renderer ids)
+- `POST /widgets/entry-teaser/preview` (legacy block preview hydration, permission: `content:read`)
+- `POST /widgets/product-compare/preview` (legacy commerce block preview hydration, permission: `commerce:read`)
+- `POST /widgets/product-gallery/preview` (legacy commerce block preview hydration, permission: `widgets:read`)
+
+These routes are retained compatibility seams. They are not a generic
+Page/Form/Menu/Post/Screen catalog or authoring surface and must not gain new
+types. Configurable product widgets belong only to Admin Dashboard.
 
 Retired route families (TASK-420-03): every `/widget-templates*` and
 `/widgets/templates*` route (CRUD, preview, revisions, restore, duplicate) and
@@ -1741,15 +1746,16 @@ now Page Templates (`/page-templates`, below).
   - `presets[]`: optional preset metadata
   - `requires[]`: optional module dependencies
 
-Core catalog includes utility widgets for engagement layouts:
+The retained catalog includes historical engagement block ids:
 - `tabs`
 - `accordion`
 - `toggle-block`
 
-Internal widget preview routes:
-- use the same admin session + CSRF contract as the editor surface that calls them
-- accept widget-owned payloads only (`additionalProperties: false`)
-- return transient preview data for the current builder canvas and do not persist resolved runtime payload into widget JSON
+Internal compatibility preview routes:
+- use the same admin session + CSRF contract as the owning editor/support surface
+- accept strict legacy block payloads only (`additionalProperties: false`)
+- return transient preview data and never persist resolved runtime payloads or
+  create a new widget document
 
 ---
 
@@ -2063,8 +2069,16 @@ rejects `folderId`/`tags`. Storage quota is written via `PATCH /settings/storage
 (`storage.quota.totalBytes`/`.planLabel`).
 
 Runtime asset delivery:
-- `GET /media/*` (public site runtime URL)
-- zachowanie zalezy od `settings.storage.delivery.accessMode`.
+- `GET /media/*` i `HEAD /media/*` sa finalnymi core-proxy responses; remote
+  adapters nie zwracaja klientowi redirectu ani provider URL.
+- Zachowanie auth zalezy od `settings.storage.delivery.accessMode`.
+- Kazda udana odpowiedz ma server-owned `Content-Type`, bezpieczny
+  `Content-Disposition`, `X-Content-Type-Options: nosniff` i persisted
+  `Content-Length`. Tylko byte-confirmed PNG/JPEG/GIF/WebP/BMP z pasujacym
+  canonical key moga byc `inline`; PDF/text/SVG/octet-stream sa attachment.
+- Legacy persisted MIME/key mismatch albo passive-inline byte-prefix mismatch
+  fail-safe degraduje do `application/octet-stream` attachment z bezpieczna
+  nazwa `.bin`; canonical attachment MIME/key pairs pozostaja attachment.
 
 Upload payload (multipart):
 
@@ -2073,15 +2087,35 @@ Upload payload (multipart):
 - `title`: string (optional)
 - `caption`: string (optional)
 
+Create i replace zawsze materializuja i inspektuja bajty przed storage/DB.
+Deklarowany multipart `Content-Type`, original filename i jego suffix nie wybieraja
+persisted MIME, storage-key extension ani delivery. Dokladna macierz canonical
+identity jest wspolna dla local/S3/Azure: PNG `.png`, JPEG `.jpg`, GIF `.gif`,
+WebP `.webp`, BMP `.bmp` sa passive-inline; PDF `.pdf`, strict UTF-8 text `.txt`,
+safe standalone SVG `.svg` i explicitly allowed octet-stream `.bin` sa
+attachment-only. Active/ambiguous markup, polyglot lub truncated/conflicting
+signatures fail before adapter/DB. PDF dopuszcza zwykle skompresowane page-content
+streams, ale odrzuca active forms/XFA, encryption i compressed object streams, ktore
+uniewidaczniaja struktury akcji dla bounded inspection. SVG i octet-stream wymagaja
+exact canonical allowlist entries; wildcard sam w sobie ich nie autoryzuje.
+
 Upload response:
 
 - `POST /media` returns the full persisted media record (`id`, `key`, `url`,
   `originalName`, `type`, `mimeType`, `size`, dimensions when available,
   metadata, `createdAt`, and `createdBy`). Admin clients use this row as the
   authoritative cache-upsert payload.
-- Admin media kind classification is MIME-driven: `image/*` -> `image`,
-  `audio/*` -> `audio`, `video/*` -> `video`, and remaining files ->
+- Admin media kind projection preserves the server-owned passive boundary. A
+  row is an `image` only when its persisted type is image-compatible and its
+  canonical byte-derived MIME belongs to the passive-inline image profile.
+  Attachment-only SVG and unsupported `image/*` rows project as `document`;
+  they do not receive image preview, focal controls, or `image/*` picker
+  eligibility. Active Post block pickers and persisted media-ID previews consume this
+  projected kind too, rather than reclassifying the row from its MIME prefix.
+  Audio/video keep their compatible media kinds and remaining files project as
   `document`.
+- Returned `url` is the stable `/media/<encoded-key>` proxy path. A provider URL
+  returned by an adapter is not exposed by media-domain responses.
 
 Update metadata payload:
 
@@ -2113,8 +2147,9 @@ Maintenance/action notes:
   service-side dimension recovery for existing images without stored
   dimensions.
 - `POST /media/:id/replace` accepts multipart `file`, validates the replacement
-  with the same upload settings, preserves the media ID, and updates storage
-  key/url, MIME, size, original file name, and dimensions.
+  with the same byte-authoritative create contract, preserves the media ID, and
+  updates canonical storage key/proxy URL, MIME, size, original file name, and
+  dimensions.
 - New media action payloads reject unknown fields and stay on the internal admin
   `media:read` / `media:write` permission model with CSRF for writes.
 
@@ -2310,6 +2345,11 @@ List/detail payload includes normalized `manifest`:
 - `includes` (`contentTypes|entries|widgets|templates|forms|menus`),
 - `requiredModules`, `optionalModules`, `postInstallTasks`.
 
+`includes.widgets/templates` are retained summary aliases for already shipped
+manifests and rollback evidence. They do not expose a Widgets module or permit
+new legacy template seeds; current composition uses Page/domain sections and
+blocks plus Page Templates.
+
 Plan request payload (summary):
 
 ```json
@@ -2331,13 +2371,17 @@ Plan response highlights:
 Admin UI note:
 - `selectedKitId` can also be persisted client-side as an admin preference to focus the `Advanced` sidebar on kit-relevant modules.
 - This preference is not a dedicated persisted API resource in v1; it is an admin UI concern layered on top of list/detail payloads and kit manifests.
-- Active kit focus expands module dependencies from the Advanced module registry and keeps `custom-screens` visible for content kits that include `engine`, `entries`, and `widgets`.
+- Active kit focus expands current module dependencies and keeps
+  `custom-screens` visible from content-domain dependencies; the legacy
+  `widgets` manifest alias is not an authoring dependency.
 
 Install engine:
 - `solution_kit_install_runs` stores one run per `dry_run` / `apply` / `rollback`,
 - `solution_kit_install_items` stores per-resource operation trace (`content_type|form|page|menu`),
 - idempotency keying uses resource keys (`slug` / `location`) and records rollback hints,
-- apply uses additional template phase (`templateInstaller`) that upserts widget templates with deterministic collision suffixing,
+- apply retains a transitional `templateInstaller` phase solely for frozen
+  legacy seeds in already shipped manifests; it must not accept new
+  `WidgetBlock[]` seed definitions or advertise an authoring surface,
 - template phase rollback metadata is stored in `run.options.kitInstaller.templateRollbackPlan`,
 - resource installers include nested pack sync:
   - content type taxonomy terms,
@@ -3992,8 +4036,8 @@ Przykładowe klucze:
 - `customScreens.openAfterCreate` (bool)
 - `forms.openAfterCreate` (bool)
 - `media.openAfterUpload` (bool)
-- `widgets.favorites` (string[])
-- `widgets.hero.presets` (preset[])
+- `widgets.favorites` (deprecated compatibility key for the retired catalog)
+- `widgets.hero.presets` (deprecated compatibility key for retained legacy rows)
 - `posts.editor.preferences` (object; `version=2`, `focusModeOnOpen`, `compactSidePanels`, `showOutlineHints`, `editorDensity`, `showKeyboardHints`, `defaultInspectorTab`, `restoreLastSidebarsState`)
 - `assistant.mode` (`docs-only` | `llm-guide` | null; legacy `llm-rag` input is normalized to `llm-guide`)
 - `assistant.ui.enabled` (bool; legacy compatibility)
@@ -4008,9 +4052,10 @@ Permissions:
 - `settings:read` dla `GET /assistant/status` i `POST /assistant/chat`
 - `settings:write` dla `POST /assistant/reindex`
 - `settings:read` + `content:read` dla `POST /assistant/actions/plan`
-- dodatkowo `widgets:read` dla `POST /assistant/actions/plan`, gdy
-  `context.activeSurface.kind` to `widget-template` albo `detail-page`; aktywne
-  Pages v2 uzywaja tylko sekcji/blokow atomowych i nie hydratuja template refs
+- dodatkowo `widgets:read` dla `POST /assistant/actions/plan`, gdy retained
+  support context ma `activeSurface.kind=widget-template` albo detail-page
+  zawiera legacy template reference summary; aktywne Pages v2 uzywaja tylko
+  sekcji/blokow atomowych i nie hydratuja template refs
 - `POST /assistant/actions/dry-run` i `POST /assistant/actions/execute`
   egzekwuja per-action permissions z registry kontraktow zamiast dokladac
   jeden szerszy wspolny bundle write/read dla wszystkich action families
@@ -4029,6 +4074,10 @@ Endpoints:
 
 Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execution idzie przez reviewed `LLM Guide` intake i `site-kit.*` actions w `/assistant/actions/*`.
 `site-kit.*` wymaga skonfigurowanego `LLM Guide` (`llmAvailable=true`); endpoint zwraca `assistant_llm_unavailable`, gdy provider/API key nie jest gotowy.
+Ponizsza lista TASK-170/174 jest historia landingu. W aktualnym produkcie
+`widget-template.*` oznacza tylko maintenance exact already-stored legacy rows,
+bez create/insert authoringu; Custom Screens uzywaja akcji V4 section/block, a
+reusable Page authoring uzywa Page Templates.
 `TASK-170-01` dodalo contract-only registry dla przyszlych rodzin akcji (`entry.*`, `menu.*`, `seo.*`, `media.*`, `form.automation.*`, `page.widget.*`, `listing-*.*`).
 `TASK-170-03-01` promuje `entry.upsert-draft` do executable typed action.
 `TASK-170-03-02-01` promuje `menu.item.upsert` do executable typed action dla bezpiecznych relatywnych linkow menu.
@@ -4041,14 +4090,14 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
 `TASK-170-03-04` domyka executor adapter wave: `/assistant/actions/dry-run` i `/assistant/actions/execute` egzekwuja action-specific permissions z registry kontraktow bez dokladania jednego szerszego endpoint-level write bundle ponad sam action family contract.
 `TASK-174-03-01` promuje `custom-screen.delete` do executable typed action dla custom screenow rozwiazanych z server-side resource catalog context; execute ponownie sprawdza id/name/prefix przed usunieciem.
 `TASK-174-03-02` promuje `page.delete` do executable typed action dla aktywnej strony; execute ponownie sprawdza id/title/slug/status przed usunieciem.
-`TASK-174-03-03` promuje `widget-template.delete` do executable typed action dla aktywnego reusable widget template; dry-run ostrzega o blast radius, a execute sprawdza id/name/status/category przed usunieciem.
+`TASK-174-03-03` historycznie dodal `widget-template.delete`; obecnie jest to maintenance-only usuniecie exact legacy row z identity recheck.
 `TASK-174-03-04` promuje `entry.delete` i `content-type.delete` do executable typed actions; content type delete jest blokowany, gdy server-side catalog raportuje istniejace entries.
 `TASK-174-03-05` promuje `listing-query.delete` i `listing-template.delete` do executable typed actions; dry-run/execute blokuje usuniecie, gdy page/widget-template reference scan nadal widzi zalezne referencje.
 `TASK-174-03-06` promuje `form.delete` i `form.archive` do executable typed actions; hard delete jest blokowany, gdy formularz ma submissions, a archiwizacja zachowuje historie submissions bez ujawniania payloadow.
 `TASK-174-03-07` promuje `menu.item.delete` i `seo.document.delete` do executable typed actions; menu item delete zachowuje niezalezne elementy drzewa menu, a SEO delete usuwa tylko dokument SEO bez usuwania target page/entry.
 `TASK-174-04-01` promuje `page.update` do executable typed action dla aktywnej strony; akcja edytuje title/slug/status/settings i zachowuje niepowiazane Page data.
 `TASK-174-04-02` historycznie rozszerzal `page.widget.patch`; po TASK-417 Page mutations ida przez `page.upsert` z `sections[]` albo metadata-only `page.update`.
-`TASK-174-04-03` promuje `widget-template.update` i `widget-template.block.patch` do executable typed actions dla aktywnego reusable widget template; page-instance vs reusable-template ambiguity zwraca `needs_input`.
+`TASK-174-04-03` historycznie dodal `widget-template.update` i `widget-template.block.patch`; obecnie utrzymuja tylko exact legacy row i nie sa authoring surface.
 `TASK-174-04-04` historycznie promowal `custom-screen.widget.patch`; po TASK-468 aktywne Custom Screen mutacje V4 ida przez `custom-screen.update` dla metadanych oraz `custom-screen.section.add`, `custom-screen.block.add`, `custom-screen.block.patch`, `custom-screen.block.move`, `custom-screen.block.remove`, `custom-screen.binding.set`, i `custom-screen.list-view.patch` dla ekranu. Binding target jest rozpoznawany po `blockId + propPath + field`, bez ujawniania entry payloadow.
 `TASK-190-06-01` po TASK-468 sklada katalogowe admin review screens jako V4 `ScreenDocumentV1` sections/blocks w `definition`; helper waliduje referencje do pol content schema, odrzuca secret-like field refs i nie emituje legacy `screen-*` widget blocks ani `blocks` / `bindings` write payload.
 `TASK-190-06-02` przenosi binding composition do `blueprintBindingComposer` i rozszerza obecny custom-screen owner seam o top-level `collectionRole` / `compositionKey`; `custom-screen.upsert` oraz `custom-screen.update` moga przenosic te pola przez strict action schema, executor i `customScreenService` bez assistant-only metadata store.
@@ -4056,10 +4105,10 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
 `TASK-190-05-03-05` promuje `detail-page.upsert` do executable typed action dla strict detail-page documents; execute przechodzi przez content-domain owner seam, odswieza `contentTypeSlug` z canonical content type, respektuje `DetailPageDocument.status` jako jedyny owner publish state, i nie przejmuje route-link ownership od `setting.content-route.upsert`.
 `TASK-190-07-02` dodaje catalog-backed no-duplicate matcher przed handoffem do strict executor path: bounded resource catalog zawiera bezpieczne detail-page summaries, page `collectionLink` metadata, custom-screen `collectionRole` / `compositionKey`, media summaries bez raw/signed payloadow, a matcher przepisuje wspierane create-like akcje na istniejace stable ids albo zwraca blocking conflict dla niejednoznacznych query/screen/media kandydatow. W executorze istnieje tylko compatibility fallback dla pojedynczego exact-name custom screena bez `collectionRole` i bez `compositionKey`; ekran o tej samej nazwie z innymi metadanymi pozostaje konfliktem zaleznosci zamiast silent reuse.
 `TASK-190-05-03-08` promuje `detail-page` do generic CMS operation vocabulary tylko jako bounded resource-context seam: provider guidance/package metadata moga opisywac `detail-page`, target resolver akceptuje zaufane id, stable `contentTypeId`, exact route/content-type linkage albo aktywny detail-template surface, a generic `detail-page` mutation pozostaje policy-gated bez nowej sciezki wykonawczej poza lokalnym `detail-page.upsert`.
-`TASK-174-05-01` historycznie dodawal read-only active page template-section inspection. Po TASK-417 Pages v2 nie hydratuja widget-template refs z Page data i nie wymagaja `widgets:read`; template reference summaries pozostaja przy aktywnych widget templates/detail-page surfaces.
-`TASK-174-05-02` historycznie obslugiwal template-backed page widget edits. Po TASK-417 Pages nie zawieraja `template-section`; reusable-template prompts nadal moga isc do `widget-template.block.patch`, a Page instance edits musza byc planowane jako `page.upsert`/`page.update`.
+`TASK-174-05-01` historycznie dodawal read-only page template-section inspection. Po TASK-417 Pages v2 nie hydratuja widget-template refs z Page data i nie wymagaja `widgets:read`; bounded summaries pozostaja tylko w legacy support/detail compatibility context.
+`TASK-174-05-02` historycznie obslugiwal template-backed Page edits. Po TASK-417 Pages nie zawieraja `template-section`; Page edits ida przez `page.upsert`/`page.update`, a `widget-template.block.patch` jest maintenance-only dla exact legacy row.
 `TASK-174-06-01` aktualizuje admin review/result UI dla resource operations: preview pokazuje operation badges, destructive/blocked states i warningi, execute pokazuje partial counts i redaguje secret-like dynamic text.
-`TASK-180` rozszerza generic CMS operation mapping o counted multi-target delete/archive/update oraz jawne multi-create z `mutation.patch.items[]`; kazda mutacja nadal mapuje sie do istniejacych strict typed actions i wymaga review/dry-run/execute. Assistant execute invaliduje znane admin cache keys dla successful non-noop CMS action results, w tym pages, entries, content types, custom screens, forms, listings, widget templates, menus i SEO.
+`TASK-180` rozszerza generic CMS operation mapping o counted multi-target delete/archive/update oraz jawne multi-create z `mutation.patch.items[]`; kazda mutacja nadal mapuje sie do istniejacych strict typed actions i wymaga review/dry-run/execute. Assistant execute invaliduje znane admin cache keys dla successful non-noop CMS action results, w tym pages, entries, content types, custom screens, forms, listings, menus, SEO i maintenance-only legacy template rows.
 `TASK-172-02` dodaje lead capture blueprint pack: prompt o stronie kontaktowej/leadowej moze zwrocic plan `form.upsert` + prosty `page.upsert` z embedem formularza.
 `TASK-172-03` dodaje gated booking blueprint pack: prompt bookingowy zwraca `needs_input`, dopoki nie powstana dedykowane booking action adapters.
 `TASK-172-04` dodaje product inquiry pack: produktowy katalog z formularzem zapytania jest executable, ale checkout/payment prompt zwraca `needs_input` do czasu dedykowanych adapterow commerce.
@@ -4100,12 +4149,12 @@ Declared capability limits:
 
 ```json
 {
-  "message": "where can I find hero visual settings?",
+  "message": "where should I build a reusable page layout?",
   "mode": "docs-only",
   "detailLevel": "instruction",
   "guideMode": "default",
   "context": {
-    "page": "widgets/templates",
+    "page": "pages/templates",
     "locale": "pl"
   }
 }
@@ -4119,15 +4168,15 @@ Declared capability limits:
   "template": "location_answer",
   "detailLevel": "instruction",
   "guideMode": "default",
-  "answer": "Use Hero visual settings in Block Settings > Visual tab [1].",
+  "answer": "Use Page Templates and edit the Page-owned sections and blocks [1].",
   "confidence": 0.76,
   "sources": [
     {
-      "path": "docs/coderso/widget-template-editor.md",
-      "heading": "Widget Template Editor > Instruction",
+      "path": "docs/guide/coderso/widget-template-editor.md",
+      "heading": "Widget Template Editor (retired) > Instruction",
       "lineStart": 20,
       "lineEnd": 38,
-      "snippet": "Use visual tab to change colors and spacing.",
+      "snippet": "Use Page Templates for reusable Page layouts.",
       "score": 2.4211
     }
   ],
@@ -4240,28 +4289,28 @@ corpus.
 {
   "prompt": "potrzebuje strony na ktore bede mogl prezentowac swoje produkty czyli projekty domow, caly katalog",
   "context": {
-    "page": "/admin/advanced/widgets",
+    "page": "/admin/pages",
     "locale": "pl-PL",
     "includeResourceCatalog": true,
     "runtimeSnapshot": {
       "schemaVersion": 2,
-      "route": "/admin/advanced/widgets",
-      "activeHref": "/admin/advanced/widgets",
-      "area": "advanced",
-      "advancedModule": "widgets",
+      "route": "/admin/pages",
+      "activeHref": "/admin/pages",
+      "area": "pages",
+      "advancedModule": null,
       "selectedResource": null,
       "visibleActions": [
         {
-          "id": "widget-template.create",
-          "label": "Create widget template",
+          "id": "page.create",
+          "label": "Create page",
           "kind": "create",
-          "href": "/admin/advanced/widgets",
-          "requiredPermission": "widgets:write"
+          "href": "/admin/pages/new",
+          "requiredPermission": "content:write"
         }
       ],
       "permissionHints": {
         "known": false,
-        "requiredForVisibleActions": ["widgets:write"],
+        "requiredForVisibleActions": ["content:write"],
         "reason": "frontend_user_has_no_permissions"
       }
     }
@@ -4270,7 +4319,10 @@ corpus.
 ```
 
 `includeResourceCatalog=true` enrichuje server-side planning context o bounded/redacted snapshot admin resources dla `LLM Guide`.
-Snapshot obejmuje pages, detail pages, content types, custom screens, listings, forms, menus, SEO documents, media, commerce, solution kits i widgets/templates.
+Snapshot obejmuje pages, detail pages, content types, custom screens, listings,
+forms, menus, SEO documents, media, commerce, solution kits i bounded legacy
+widget-template compatibility summaries. Te ostatnie nie sa powierzchnia
+tworzenia nowych zasobow.
 Nie jest przyjmowany jako client-supplied `resourceCatalog`; unknown context fields sa odrzucane.
 Generic provider planning package zawiera bounded `detailPages` obok istniejacych
 pages/posts/entries/media/commerce/solution-kit grup; dodanie `detail-page` nie
@@ -4335,7 +4387,12 @@ normalized current sections, nested block paths, and selected section/block/path
 context server-side and does not hydrate widget-template refs from Page data.
 Page mutations use `page.upsert` sections or `page.update`; `page.widget.patch`
 is rejected for Pages.
-When the active admin surface is `Advanced > Widgets > Templates > :id`, `activeSurface` may include a bounded widget template summary with template identity, selected block id, block id/type/path summaries, slot keys, template-section references, wrapper/section settings summary, and remote-update warnings.
+For a retained legacy widget-template context supplied by compatibility tooling,
+`activeSurface` may include a bounded read/support summary with template
+identity, selected block id, block id/type/path summaries, slot keys,
+template-section references, wrapper/section settings summary, and remote-update
+warnings. There is no active `Advanced > Widgets > Templates` authoring flow and
+this context must not advertise create/insert actions.
 When the active admin surface is `Advanced > Custom Screens`, `activeSurface` may include a bounded custom screen summary with screen identity, canonical `collectionRole` / `compositionKey` metadata, capabilities mode, selected entry id, selected block id, block summaries, bindings, writable field names, and unsaved/remote-update warnings.
 When the active admin surface is
 `Advanced > Engine > :contentTypeId > Collection > Detail Template`, the
@@ -4344,7 +4401,12 @@ the existing browser active-surface transport. The route keeps
 `runtimeSnapshot.selectedResource.kind = "content-type"` for the workspace
 shell, derives only the bounded `collectionWorkspaceHint`, then rehydrates
 `collectionWorkspace` and detail-page identity server-side before planning.
-Before planning, the route rehydrates active surface identity server-side. Active pages/custom screens require `content:read`; active Pages v2 do not require `widgets:read`; active widget templates require `widgets:read`; active detail pages require `content:read` plus `widgets:read` for retained template-reference summaries. If the server-side resource is missing, active surface context is dropped.
+Before planning, the route rehydrates active surface identity server-side.
+Active pages/custom screens require `content:read`; active Pages v2 do not
+require `widgets:read`; retained legacy template summaries require
+`widgets:read`; active detail pages require `content:read` plus `widgets:read`
+for retained template-reference summaries. If the server-side resource is
+missing, active surface context is dropped.
 
 Reviewed site-builder intake uzywa `context.siteBuilderIntakeState.activeSession`.
 Bezposrednie `context.siteKit` nie jest publicznym/admin payloadem dla
@@ -4619,9 +4681,10 @@ Permissions: `forms:read`, `forms:write`
 - `GET /forms/:id/fields`
 - `PUT /forms/:id/fields`
 - `GET /forms/:id/submissions`
-- `POST /forms/:id/submissions` (public submit; mounted both through the
-  admin API router and the public site request handler)
-- `POST /forms/:id/uploads` (public, nonce-gated file-field upload; TASK-516-07)
+- `POST /forms/:id/submissions` (form-scoped public/internal write; mounted both
+  through the admin API router and the public site request handler)
+- `POST /forms/:id/uploads` (form-scoped public/internal file-field upload;
+  TASK-516-07)
 - `GET /forms/:id/actions`
 - `PUT /forms/:id/actions`
 - `GET /forms/:id/action-runs`
@@ -4656,7 +4719,8 @@ Permissions: `forms:read`, `forms:write`
 Opcjonalne pola:
 - `status`: `draft`, `published` albo `archived`; inne wartosci sa odrzucane
   na granicy route schema.
-- `successMessage`: fallback dla sukcesu submission (uzywane, gdy widget nie ma override).
+- `successMessage`: fallback dla sukcesu submission (uzywane, gdy osadzony Form
+  block nie ma override).
 - `successRedirectUrl`: po sukcesie przekierowuje tylko na same-origin relative
   path (`/thank-you`, z opcjonalnym query/hash). Absolute, protocol-relative i
   `javascript:` URL sa odrzucane przed zapisem.
@@ -4667,11 +4731,13 @@ Opcjonalne pola:
 - `settings.preset`: `custom|contact|lead_capture|service_intake`.
 - `settings.automationRetry`: polityka auto-retry dla akcji automatyzacji.
 - `settings.theme` (TASK-516-01): whole-form style/theme model stored in the
-  existing `forms.settings` **jsonb** (NO DDL). Present-only + reject-unknown:
-  each sub-record (`layout`/`surface`/`typography`/`input`/`submit`) is rebuilt
-  field-by-field, unknown keys are dropped, out-of-enum values are omitted, and a
-  no-theme form emits **no** `theme` key (the four base keys stay present because
-  `normalizeFormSettings` is a fully-defaulted normalizer). Color tokens
+  existing `forms.settings` **jsonb** (NO DDL). Every fixed write object and
+  nested sub-record (`layout`/`surface`/`typography`/`input`/`submit`) is strict:
+  unknown keys and out-of-enum values return `validation_error` before service
+  logic. Field-by-field fail-soft normalization is retained only for persisted
+  legacy/read compatibility. A no-theme form emits **no** `theme` key (the four
+  base keys stay present because `normalizeFormSettings` is a fully-defaulted
+  normalizer). Color tokens
   (`surface.background`/`borderColor`, `typography.titleColor`/`labelColor`/
   `helperColor`, `input.background`/`borderColor`, `submit.background`/`textColor`)
   run through the `resolveClearableCssColorValue` CSS-value policy at BOTH the
@@ -4684,9 +4750,11 @@ Opcjonalne pola:
   `surface.borderWidth` `none|sm|md`, `typography.titleSize` `sm|md|lg|xl`,
   `typography.titleWeight` `normal|medium|semibold|bold`, `typography.fontFamily`
   `display|inherit|sans|serif|mono`, `input.size` `sm|md|lg`. The form theme is
-  the render BASE across the builder canvas, the runtime preview, and the public
-  `form-embed` widget; a per-embed `FormEmbedStyle` token OVERRIDES the theme per
-  explicit key (form theme = base, embed wins per-token).
+  the render BASE across the builder canvas, runtime preview, and existing public
+  Form block/section runtime; a per-embed `FormEmbedStyle` compatibility token
+  OVERRIDES the theme per explicit key (form theme = base, embed wins per-token).
+  `core/widgets` is a historical implementation path here, not a product widget
+  authoring surface; this contract adds no non-dashboard widget/editor/registry.
 
 `PUT /forms/:id/fields`
 
@@ -4694,13 +4762,13 @@ Opcjonalne pola:
 [
   {
     "id": "uuid",
-    "type": "text",
-    "label": "Full name",
-    "name": "full_name",
+    "type": "number",
+    "label": "Quantity",
+    "name": "quantity",
     "required": true,
     "orderIndex": 0,
     "settings": {
-      "placeholder": "John Doe",
+      "placeholder": "1",
       "formStep": 1,
       "inputStep": 1
     }
@@ -4709,16 +4777,24 @@ Opcjonalne pola:
 ```
 
 Top-level keys in each field input are strict (`id`, `type`, `label`, `name`,
-`required`, `orderIndex`, `settings`). Flexible per-field extension data must
-stay inside `settings`.
+`required`, `orderIndex`, `settings`). `settings` is also a strict per-type
+object; unsupported or unknown keys are rejected rather than used as an
+extension bag.
 
 Field settings use `formStep` for multi-step placement and `inputStep` for
 number/range/time input increments. Legacy `settings.step` is preserved as a
 non-destructive form-step adapter and is not interpreted as an input increment.
 
+Fixed Form objects, every field-type settings branch, conditional `logic`, and
+field `style` reject unknown write keys with `validation_error` before any DB
+work. The domain `setFormFields` boundary asserts the same shape before form
+lookup/delete/insert for trusted direct callers. Submission `data` remains a
+bounded dynamic map, but each key must resolve to a declared server-side field
+and each value must match that field's contract.
+
 The `file` field type (TASK-516-07) accepts per-field `settings.accept`
 (array of MIME tokens; `image/*` wildcards allowed), `settings.maxSizeMb`
-(clamped `1..100`), and `settings.multiple` (bool). It stores its submitted value
+(`1..100` integer on writes), and `settings.multiple` (bool). It stores its submitted value
 as an **owned media ROW id** (or an array of ids when `multiple`), NOT raw bytes
 and NOT a client path/URL — see `POST /forms/:id/uploads` and the submission
 validation below.
@@ -4746,19 +4822,34 @@ Known Forms errors are returned as machine-readable API errors:
     "full_name": "Patryk",
     "email": "patryk@example.com"
   },
-  "captchaToken": "optional",
-  "formNonce": "optional"
+  "captchaToken": "runtime-token",
+  "formNonce": "<timestamp>.<server-signature>"
 }
 ```
 
 Uwaga:
-- runtime widget `form-embed` wysyla JSON do `POST /forms/:id/submissions` i
-  obsluguje `runtime.successMessage` / `runtime.redirectUrl` inline.
-- public Form Embed submissions use the Forms access evaluator, strict
-  reject-unknown validation, the `public_write` rate-limit bucket keyed by form
-  id, and the signed form nonce (`formId.timestamp.HMAC`) projected only at
-  runtime. Optional bot protection remains backend-owned.
-- widget-level success copy has precedence over `runtime.successMessage` when
+- The static browser runtime for the existing public Form block/section uploads
+  every currently selected `File` before constructing the final JSON submission.
+  Pending uploads disable submit/navigation. An ordinary upload error releases
+  those action locks, renders an accessible alert, and can be retried without
+  reloading. The final submission remains blocked until every selected upload
+  succeeds and every required File field has a successful owned media ID.
+  Ordered `multiple` fields preserve ID order, and only returned owned media IDs
+  enter `data`.
+- Public upload and submission requests use the Forms access evaluator, strict
+  reject-unknown validation, and an opaque server-minted form nonce projected only at
+  runtime. Its wire value is `timestamp.signature`; the form ID is part of the signed
+  server payload, not a third wire segment. Clients must not construct the nonce.
+  Bot protection remains backend-owned. Each request is
+  charged to `public_write` exactly once. An authenticated cookie on the public
+  URL does not bypass the nonce or rate charge, and file uploads still undergo
+  byte inspection. The current evaluator does set `requireCaptcha=false` for
+  that authenticated public principal. Anonymous public requests retain the
+  configured CAPTCHA policy.
+- Internal mode does not emit an interactive public Form block. Direct internal
+  calls require a session with `forms:write` plus CSRF, or an API key with
+  `forms.submit`.
+- Per-embed success copy has precedence over `runtime.successMessage` when
   configured. `runtime.redirectUrl` is followed only when it is a same-origin
   relative URL.
 - bez JS endpoint nadal przyjmuje payload form-urlencoded (mapowany do `data`).
@@ -4784,12 +4875,15 @@ Przyklad odpowiedzi:
 
 `POST /forms/:id/uploads` (TASK-516-07)
 
-Public, nonce-gated upload endpoint for `file`-type fields. It does NOT require
-`media:write` — it reuses the form's OWN public submission access gate (same
-`submissionAccess` evaluator, the runtime-issued form nonce, `public_write`
-rate-limit bucket keyed by form id, and bot protection). Body is a multipart
-upload validated by `formAttachmentUploadSchema` (`additionalProperties:false`,
-required `fieldName` + `file`; optional `formNonce`/`captchaToken`):
+Form-scoped upload endpoint for `file`-type fields. Public mode is nonce-gated;
+internal mode requires its session/CSRF or API-key contract. Neither mode
+requires `media:write`. Public mode reuses the form's OWN `submissionAccess`
+evaluator, runtime-issued nonce, exactly one `public_write` charge keyed by form
+id, and CAPTCHA when that evaluator requires it. Internal mode keeps its
+session/CSRF or API-key access decision and `admin_write` policy. Body is a
+multipart upload validated by `formAttachmentUploadSchema`
+(`additionalProperties:false`, required `fieldName` + `file`; optional
+`formNonce`/`captchaToken`):
 
 ```
 POST /forms/:id/uploads  (multipart/form-data)
@@ -4799,10 +4893,13 @@ POST /forms/:id/uploads  (multipart/form-data)
 
 The handler resolves `fieldName` to a `file`-type field on the form and enforces
 the field's `accept` (MIME allowlist, `image/*` wildcards) + `maxSizeMb` via
-`mediaService.uploadMedia` `constraints` (`allowedMime`/`maxSizeBytes`); anonymous
-public uploads additionally content-sniff the actual bytes (rejects spoofed/markup
-SVG). The uploaded row is tracked as a `"submission"` media usage. Response is a
-reference only:
+`mediaService.uploadMedia` `constraints` (`allowedMime`/`maxSizeBytes`) against
+the canonical byte-derived MIME. Inspection runs for public anonymous/cookie,
+internal session/API-key, captcha-on, and captcha-off requests alike; auth state
+cannot disable it. The upload initially creates an unreferenced media row. It is
+tracked as a `"submission"` media usage only after the final submission that
+contains its media id has been persisted.
+Response is a reference only, with the canonical MIME and stable core proxy URL:
 
 ```json
 { "id": "media-id", "url": "/media/...", "mimeType": "application/pdf", "size": 12345 }
@@ -4815,6 +4912,11 @@ and rejects unknown/cross-origin ids, MIME outside `accept`, or size over
 `maxSizeMb` as `form_payload_invalid` (defence-in-depth even if the upload path was
 bypassed). Client-supplied filesystem paths or URLs are never trusted or
 dereferenced.
+
+The upload creates its media row before the final submission. If a visitor
+uploads and abandons the form, the row/object can remain unreferenced. Automatic
+TTL/pending-upload cleanup remains the explicit TASK-516-07 residual and is not
+claimed by TASK-536.
 
 `PUT /forms/:id/actions`
 
@@ -4888,6 +4990,10 @@ Permissions: `plugins:read`, `plugins:manage`
 
 Uwagi:
 - `GET /plugins` zwraca zainstalowane pluginy + snapshot contribution contract (`modules/widgets/presets/templates/routes`).
+- W tym snapshot `widgets` oznacza wylacznie Admin Dashboard widgets.
+  `presets/templates` sa pasywnymi polami kompatybilnosci manifestu i nie
+  tworza generic widget/template authoringu; content extensions rejestruja
+  bloki przez jawny domain owner contract.
 - `POST /plugins/manifest/validate` wykonuje dry-run walidacji manifestu i zwraca znormalizowany manifest.
 - Walidacja obejmuje:
   - compatibility (`targetApiVersion`/`targetCoreVersion`, z aliasami legacy),

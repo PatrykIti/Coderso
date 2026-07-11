@@ -1,13 +1,18 @@
 # Template Contracts
 
-Canonical reference for template resources used by Coderso solution kits.
+Compatibility reference for legacy hidden template rows still touched by
+already shipped Coderso solution kits. Current reusable authoring uses Page
+Templates and Page/domain sections/blocks.
 
 ## Scope
 
-This document covers:
-- widget templates (`widget_templates` table),
-- solution kit template seeds (`core/services/templates/templateInstaller.ts`),
-- deterministic install/rollback behavior.
+This document covers only:
+- retained `widget_templates` storage,
+- the frozen transitional writer in `core/services/templates/templateInstaller.ts`,
+- deterministic rollback for existing installed/shipped seeds.
+
+It must not be used to add a new `WidgetBlock[]` seed, widget-template authoring
+surface, or generic preset/template contract.
 
 ## Widget Template Persistence
 
@@ -30,7 +35,11 @@ editable through an admin surface; `widgetTemplateService` and the
 settings-backed `widgets.templateCategories` registry remain data-layer-only
 for the installer. The storage drop is an explicit follow-up task.
 
-## Solution Kit Template Seed Contract
+## Frozen Legacy Solution Kit Seed Shape
+
+This type documents payloads already present in shipped manifests. New kit
+authoring must emit Page Templates or domain-owned sections/blocks and must not
+add an explicit or derived seed to this path.
 
 ```ts
 type TemplateInstallSeed = {
@@ -44,11 +53,9 @@ type TemplateInstallSeed = {
 };
 ```
 
-Seed sources:
-- explicit `resourceBlueprint.templates[]` (if defined),
-- derived from `resourceBlueprint.pages[]` where `page.template` is set.
-
-Explicit blueprint seed overrides page-derived seed for the same key.
+Legacy source decoding (existing manifests only): explicit
+`resourceBlueprint.templates[]` overrides a row historically derived from
+`resourceBlueprint.pages[]`. Do not add either source in new manifests.
 
 ## Collision + Idempotency Rules
 
@@ -56,11 +63,11 @@ Ownership marker:
 - Installer appends marker to description:
   - `[nextless-kit-template:<kitId>:<templateKey>]`
 
-Install behavior:
+Compatibility behavior for a frozen shipped seed:
 - Existing managed template found by marker:
   - same payload -> `noop`
   - different payload -> `update`
-- No managed template:
+- No managed template for that already shipped ownership marker:
   - create with desired `name`
   - if name already used by unmanaged template, resolve deterministic suffix:
     - `Name`, `Name (2)`, `Name (3)`, ...

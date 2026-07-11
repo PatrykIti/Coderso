@@ -17,8 +17,10 @@
 Complete the browser contract for Form file fields. The render leaf provides a native,
 accessible upload control and a named media-ID companion. The runtime leaf uploads every
 selected file to the existing endpoint before submission, writes only returned IDs,
-blocks navigation/submission during failure or pending work, and serializes single versus
-multiple values in the shape already required by Forms validation.
+blocks navigation/submission while work is pending, releases action locks after an
+ordinary failure so the same selection can retry, and keeps the final request unsent
+until success. It serializes single versus multiple values in the shape already required
+by Forms validation.
 
 `core/widgets` is a legacy implementation namespace here. `form-embed`, `contact`, and
 `newsletter` are existing public block/section renderers that consume this shared Forms
@@ -53,7 +55,8 @@ new block type.
 - Changing a selection invalidates prior IDs. Hidden/conditionally-disabled fields do not
   upload or submit old IDs.
 - Each protected HTTP write gets its own captcha token when captcha is enabled.
-- Pending/failed uploads prevent submission and show a field-associated retryable error.
+- Pending uploads disable actions. Failed uploads prevent the final request, show a
+  field-associated retryable error, and release action locks for retry.
 - The native input, named hidden value, and status node share the exact non-empty field
   identity through `data-form-file-input`, `data-form-file-value`, and
   `data-form-file-status`; malformed or duplicate triples fail closed.

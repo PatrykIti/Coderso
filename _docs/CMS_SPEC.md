@@ -5,10 +5,10 @@ znajduja sie w osobnych plikach (linki ponizej).
 
 ## Zakres CMS v1
 
-- Pages + page builder (widgety/bloki).
+- Pages + Page builder (sekcje/bloki) oraz Page Templates.
 - Media library (upload, metadata).
 - Menus (nawigacja, stopka).
-- Settings (globalne i per widget).
+- Settings (globalne, per plugin oraz per-user Dashboard widget layout).
 - Users + roles.
 - Revisions i publish workflow (draft/published).
 - Plugin registry i settings.
@@ -43,17 +43,14 @@ Poza zakresem v1:
 ## Page builder (blokowy)
 
 Model:
-- Strona sklada sie z blokow (widgetow).
-- Kazdy blok ma `type` (np. `hero`, `timeline`, `compare-timeline`) i `data`.
-- `data` jest walidowane przez JSON schema danego widgetu.
-- Page builder posiada zakladki Widgets/Templates; template sections renderuja widget templates jako bloki.
-- Page builder widget library groups widgets by existing `WidgetCategory`
-  metadata instead of a flat ungrouped list.
-- Empty slots stay on the existing builder contract:
-  the canvas CTA routes into the same widget library surface with slot-aware
-  context, not a second Pages-only insert dialog.
-- Completing the widget wizard moves the operator into layout/styling refinement
-  with explicit transition copy.
+- Strona v2 sklada sie z top-level `sections[]`, a kazda sekcja z domenowo
+  walidowanych `blocks[]` i opcjonalnych bounded layout slots.
+- Sekcje i bloki maja jawne `type`, scisly reject-unknown schema, deterministyczna
+  normalizacje oraz wlasne kontrolki Page Editora.
+- Page builder korzysta z biblioteki sekcji/blokow. Reusable composition nalezy do
+  Page Templates i po wstawieniu otrzymuje swieze section/block IDs.
+- Puste sloty otwieraja ten sam Page-owned insert surface z zachowanym slot context;
+  nie istnieje drugi generic widget library ani Widget Wizard.
 - Pages v2 keep sections as top-level bands. Flexible composition inside a
   section uses bounded Page layout blocks (`container`, `columns`, `group`) with
   named `slots`, max depth 4, and max 24 children per slot. Other slot-owner
@@ -66,9 +63,10 @@ Model:
   Page vocabulary.
 - Page template inputs are explicitly Page v2 documents:
   `pageTemplateBoundary` resolves `kind: "page-v2"` with
-  `documentContract: "page-v2-section-block-contract"`. Widget-template,
-  custom-screen, and detail-page surfaces remain on the legacy
-  `WidgetBlock[]` contract and must not receive Page v2 `sections[]`.
+  `documentContract: "page-v2-section-block-contract"`. Custom Screens V4,
+  Posts, Forms, Menus, and detail-template surfaces use their own section/block
+  contracts and must not receive a generic widget-template payload. Historical
+  widget-shaped rows are read compatibility only.
 - Page block runtime parity is capability-gated. Current runtime-real editor
   blocks include the atomic content blocks plus `container`, `columns`, and
   `group`; `gallery` has a real static public renderer for emitted kit data but
@@ -87,7 +85,8 @@ Przechowywanie:
 
 - Public rendering i runtime preview korzystaja z tego samego pipeline.
 - `page.data.settings.template` wybiera page template przez resolver theme -> plugin -> core (fallback `landing`).
-- Navigation widget moze zrodlo `linksSource = "pages"` i filtruje po `settings.showInNav` (fallback do manual przy zbyt malej liczbie linkow).
+- Navigation block/runtime compatibility may source published Pages and filters by
+  `settings.showInNav` (fallback to manual links when required).
 - Pages v2 public/runtime preview output uses the shared renderer for sections,
   atomic blocks, nested layout slots, static galleries, and scoped data-bound
   `collection`/`form`/`embed` blocks. Public collection output is published-only,
@@ -99,9 +98,8 @@ Przechowywanie:
   `type=page-template` tokens, and inserted into pages by instantiating
   sections with fresh ids. TASK-460 keeps `/advanced/page-templates` as the
   technical admin route but exposes the visible entry point from the Pages list
-  header. The legacy Advanced Widgets widget-template editor, its routes,
-  preview target, and cache keys are deleted; the Widget Library is a
-  core-widget catalog only.
+  header. The legacy Advanced Widgets widget-template editor, routes, preview target,
+  cache keys, and non-dashboard Widget Library authoring surface are retired/deleted.
 
 ---
 
@@ -290,13 +288,15 @@ Storage:
 
 Typy:
 - global (site-wide)
-- widget (per widget instance)
+- dashboard widget layout/preferences (per admin user; Dashboard-only)
 - plugin (per plugin)
 
 Storage:
 - `settings` (global)
 - `plugin_settings` (plugin)
-- widget settings w `pages.current_data`
+- `dashboard_layouts` (Dashboard widget instances/preferences)
+- Page/Form/Menu/Post/Screen section/block settings in the owning domain document,
+  never a generic per-widget settings contract
 
 Global settings (v1):
 - `site.name`, `site.locale`, `site.timezone`
@@ -368,12 +368,11 @@ Widoki:
 - Settings
 - Plugins store
 
-UI ma byc spojne z modelem Wizard/Visual/Advanced dla widgetow:
-- Wizard: minimal onboarding i bezpieczne defaulty.
-- Visual: glowny tryb content + style editing, w tym block-level layout i
-  widocznosc na urzadzeniach.
-- Advanced: read-only diagnostyka/support summaries bez duplikacji writable
-  pol Visual.
+Page, Form, Menu, Post, Screen i template UI korzystaja z sekcji/blokow oraz
+kontrolek nalezacych do danej domeny. Historyczne komponenty
+Wizard/Visual/Advanced pod `core/widgets/**` sa maintenance/read compatibility i
+nie moga byc rozszerzane jako produktowy authoring. Konfigurowalne widgety
+Dashboardu maja osobny kontrakt w `DASHBOARD_WIDGETS_SPEC.md`.
 
 ## Dashboard runtime data
 

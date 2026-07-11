@@ -38,9 +38,9 @@ it.
 
 | Leaf | Scope | Source ownership |
 |---|---|---|
-| TASK-536-01-L01 | Define byte identity, safe disposition, and delivery-path helpers | new mediaFileTrust.ts plus creation/pre-gate pure media-file-trust suite |
+| TASK-536-01-L01 | Define byte identity, PDF safe subset, safe disposition, and delivery-path helpers | new mediaFileTrust.ts plus creation/pre-gate pure media-file-trust suite |
 | TASK-536-01-L02 | Carry canonical identity into local, S3, and Azure storage | storage/adapter.ts, local.ts, s3.ts, azure.ts |
-| TASK-536-01-L03 | Integrate upload/replace and provider-independent media URLs | mediaService.ts, new mediaUrlProjection.ts, dashboard recent-media seam |
+| TASK-536-01-L03 | Integrate upload/replace, provider-independent URLs, and post-audit admin projections | mediaService.ts, new mediaUrlProjection.ts, dashboard recent-media seam, mediaClient.ts, media UI types/utils/MediaPicker/MediaDetailsDrawer, PostEditorCanvas.tsx |
 
 ## Fixed identity policy
 
@@ -64,6 +64,9 @@ it.
 - Only passive verified raster images may be inline. PDF, SVG, text, octet-stream, and
   every other active/ambiguous type are attachment-only. Legacy rows are handled by
   TASK-536-02 and never cause the upload path to trust their suffix.
+- Canonical PDF is a conservative inspectable subset: decoded active-form names,
+  encryption, and compressed object streams fail closed, while benign compressed page
+  content remains an attachment-compatible PDF.
 - Original filename is retained only as bounded display metadata. The adapter receives a
   bytes-only transport; the validated canonical identity alone supplies MIME, extension,
   key suffix, and delivery policy.
@@ -95,7 +98,12 @@ bun --cwd core lint
 bunx vitest run --config vitest.config.ts \
   tests/vitest/services/mediaSchemas.test.ts \
   tests/vitest/services/media-file-trust.test.ts \
-  tests/vitest/services/mediaUrlProjection.test.ts
+  tests/vitest/services/mediaUrlProjection.test.ts \
+  tests/vitest/admin/mediaUtils.test.ts \
+  tests/vitest/ui/media-picker.test.tsx \
+  tests/vitest/ui/media-card.test.tsx \
+  tests/vitest/ui/media-details.test.tsx \
+  tests/vitest/ui/post-editor-canvas-wave.test.tsx
 set -a && source .env && set +a && bun test --parallel=1 --timeout=15000 \
   tests/unit/media/mediaService.test.ts \
   tests/unit/media/mediaMeta.test.ts \

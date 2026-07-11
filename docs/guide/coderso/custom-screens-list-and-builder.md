@@ -8,7 +8,7 @@ keywords:
   - screen builder
   - bindings
   - admin workflow
-  - screen widgets
+  - screen blocks
 ---
 
 # Basic
@@ -96,8 +96,8 @@ Use this safe builder order when you want fewer design mistakes:
 
 - Build the data model first in Engine. Custom Screens should focus the admin
   experience, not repair an unclear schema.
-- The dedicated screen block library is intentionally smaller than the general
-  page/widget system. That is a feature, not a limitation. It keeps the surface
+- The dedicated screen block library is intentionally smaller than the Page
+  section/block system. That is a feature, not a limitation. It keeps the surface
   workflow-specific.
 - `Sidebar shortcut` changes navigation exposure, so treat it as information
   architecture, not decoration.
@@ -114,7 +114,7 @@ Use this safe builder order when you want fewer design mistakes:
 - The screen feels empty:
   open the floating Insert panel and add screen blocks or content fields first.
 - Preview is not meaningful:
-  confirm the content type is selected and the screen has useful bound widgets.
+  confirm the content type is selected and the screen has useful bound blocks.
 - You are not sure what `Bindings` should do:
   think of bindings as the bridge from content type fields into the custom
   admin surface.
@@ -152,7 +152,7 @@ Use this safe builder order when you want fewer design mistakes:
 - Custom Screen Builder is an authenticated admin surface and should only be
   used by users with the right admin/workflow permissions.
 - A custom screen can reshape how teams interact with records, so a bad binding
-  or misleading widget can create operational errors even without changing raw
+  or misleading block can create operational errors even without changing raw
   data.
 - Do not use custom screens to expose fields or workflows that should remain
   hidden by RBAC or internal policy.

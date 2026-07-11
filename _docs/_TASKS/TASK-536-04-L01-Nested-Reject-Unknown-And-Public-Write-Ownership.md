@@ -29,6 +29,8 @@ This leaf is the only TASK-536 writer of:
 - core/server/httpServer.ts;
 - core/server/requestBody.ts;
 - core/services/forms/submissionAccess.ts;
+- core/services/forms/submissionNonce.ts (only canonical wire parsing in the shared
+  Forms/Booking nonce verifier);
 - core/server/routes/formsRoutes.ts;
 - core/server/publicFormsApi.ts.
 
@@ -37,6 +39,7 @@ updates in `tests/unit/server/publicFormsApi.test.ts`, the existing
 `tests/vitest/server/requestBody.test.ts`, the new
 `tests/integration/server/formsWriteMounts.test.ts`, the direct Bun-free
 `tests/vitest/forms/submissionAccess.test.ts` suite, and the affected
+`tests/vitest/forms/submissionNonce.test.ts` and
 `tests/security/codersoSecurityGate.test.ts` expectations before validation. It must not
 edit the L03-owned `tests/unit/server/publicFormsUploadApi.test.ts` (read-only gate),
 `publicSite.tsx`, `mediaDelivery.ts`, csrf.ts, mediaService.ts, formSchemas.ts,
@@ -44,6 +47,16 @@ edit the L03-owned `tests/unit/server/publicFormsUploadApi.test.ts` (read-only g
 files. It also owns a one-case full-server
 assertion that `/media/*` dispatches to the TASK-536-02 handler; it may not re-baseline
 that handler's direct suite.
+
+The TASK-536 post-audit adds one narrow error-parity remediation to this existing writer
+seam: `mapFormError` must map `media_file_invalid` to the canonical 400 response already
+used by the stripped-admin wrapper. Its direct map assertion belongs in the already-owned
+`tests/unit/server/publicFormsApi.test.ts`; root-versus-stripped HTTP parity belongs in
+the already-owned `tests/integration/server/formsWriteMounts.test.ts`. The L02-owned
+`tests/integration/routes/forms.test.ts` remains read-only. The existing media-service
+`arrayBuffer()` rejection corpus remains the source proof that this domain error is
+reachable; this fix must not duplicate or weaken byte inspection. Both changed suites
+are already mandatory in this leaf's validation gate below.
 
 ## Implementation Pseudocode
 
@@ -159,6 +172,23 @@ handlePublicFormsApi(req, ctx) {
   preserve the current publicSite compatibility wrapper around the same executor;
 }
 
+setParsedOwnValue(payload, key, value) {
+  Object.defineProperty(payload, key, {
+    value, enumerable: true, writable: true, configurable: true,
+  });
+  // Re-definition keeps legacy last-value-wins for unwatched duplicates while names
+  // such as __proto__ remain own data and never invoke Object.prototype setters.
+}
+
+assertFormSubmissionNonce(formId, nonce, now) {
+  split into exactly two segments;
+  require timestampRaw matches canonical unsigned decimal grammar, parses to a safe
+    integer, and String(timestamp) === timestampRaw;
+  require signature is exactly 64 lowercase hexadecimal characters;
+  preserve TTL/future-skew checks, form/scope binding, and timing-safe HMAC comparison;
+  inherited Booking wrapper receives the identical canonical rejection behavior;
+}
+
 handleFormAttachmentUploadRoute(ctx) {
   validate transport and consume prepared form/access/field;
   if requireFormNonce:
@@ -207,7 +237,10 @@ provided. With a cap it checks `Content-Length`, streams at most max+1 bytes, ca
 overflow, and reconstructs JSON/urlencoded/multipart parsing from those bounded bytes;
 missing/chunked/lying lengths cannot bypass it. Duplicate `fieldName`, `file`,
 `formNonce`, or `captchaToken` multipart entries reject as `invalid_form`/400 instead of
-last-value-wins.
+last-value-wins. Form-urlencoded and multipart parsers define dynamic keys as enumerable
+own data properties rather than bracket-assigning into an ordinary object. This preserves
+valid flat field names such as `__proto__`, `constructor`, and `toString` without changing
+the payload prototype; duplicate unwatched keys retain their existing last-value behavior.
 
 ## Security Contract
 
@@ -256,6 +289,13 @@ Required matrix:
   sentinel with zero form-loader/API-key/CSRF/RBAC/body/handler calls;
 - maxRequests=1 permits the first upload and rejects the second;
 - direct route-handler unit tests inject/acknowledge outer limiter ownership;
+- direct request-body plus root/stripped-mount regressions send flat JSON,
+  form-urlencoded, and multipart magic field names, asserting `Object.hasOwn`, exact
+  values, an unchanged ordinary prototype, and no loss before dispatch/persistence;
+- the nonce suite and security gate reject appended segments, leading-zero/noncanonical
+  timestamps, unsafe/out-of-range timestamps, wrong-length/non-hex/uppercase signatures,
+  and prove the Booking wrapper inherits the same failures; valid Forms and Booking tokens,
+  TTL, future skew, and signature tampering remain covered;
 - anonymous public requires nonce and configured captcha;
 - public-mode authenticated-cookie requests still require the form nonce;
 - public-mode authenticated-cookie requests pass no `userId` to the limiter and preserve
@@ -326,6 +366,7 @@ bun --cwd core lint:types
 bun --cwd core lint
 bunx vitest run --config vitest.config.ts \
   tests/vitest/forms/submissionAccess.test.ts \
+  tests/vitest/forms/submissionNonce.test.ts \
   tests/vitest/server/requestBody.test.ts
 set -a && source .env && set +a && bun test --parallel=1 --timeout=15000 \
   tests/unit/server/publicFormsApi.test.ts \

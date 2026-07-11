@@ -242,7 +242,7 @@ export const evaluateFormFieldLogic = (
   const dependentField = logic.field;
   if (!dependentField) return true;
 
-  const raw = values[dependentField];
+  const raw = Object.hasOwn(values, dependentField) ? values[dependentField] : undefined;
   const actual = toComparableValue(raw);
 
   switch (logic.operator) {

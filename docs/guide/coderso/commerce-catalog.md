@@ -84,7 +84,8 @@ Use this safe catalog flow when you want fewer mistakes:
 - Status filters and row actions are useful for launch discipline. Draft and
   archived products should not be treated as minor UI flags.
 - Search by slug is especially helpful when catalog content is referenced by
-  widgets, URLs, or integrations rather than by human-friendly title only.
+  page/commerce blocks, URLs, or integrations rather than by human-friendly
+  title only.
 - Bulk actions operate only on currently visible selected rows after filters
   and pagination are applied.
 - Delete uses the shared confirmation dialog and emits shared list feedback
@@ -133,7 +134,7 @@ Use this safe catalog flow when you want fewer mistakes:
 - Commerce Catalog is an authenticated admin surface and should only be used by
   users with the appropriate commerce permissions.
 - Product status and deletion decisions can affect public catalog behavior and
-  downstream widget output.
+  downstream section/block output.
 - Product lifecycle and delete writes use the internal admin Commerce API with
   existing CSRF handling and commerce permissions.
 - Bulk actions are scoped to visible selected rows and do not introduce a public

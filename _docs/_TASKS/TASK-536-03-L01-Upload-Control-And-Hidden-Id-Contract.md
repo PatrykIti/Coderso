@@ -25,11 +25,19 @@ authoring, editor controls, presets, registry/module-pack entries, or block type
 
 ## Source ownership
 
-This leaf is the sole writer of core/widgets/core/formEmbed.tsx for TASK-536 and owns
-compatibility/changed-behavior updates only in
-`tests/vitest/widgets/formEmbed.test.tsx` before its gate. The schema owner's
+This leaf is the sole general writer of core/widgets/core/formEmbed.tsx for TASK-536 and owns
+compatibility/changed-behavior updates in `tests/vitest/widgets/formEmbed.test.tsx` before
+its gate. The final runtime audit adds one narrow shared-renderer seam: this leaf may edit
+only the existing nonce/CAPTCHA hidden inputs in `core/widgets/core/contact.tsx` and
+`core/widgets/core/newsletter.tsx`, plus matching assertions in their existing suites, to
+add the same trusted security-role markers used by Form Embed. It may not change their
+data models, editor modes, controls, layout, copy, registry entries, or block types. The schema owner's
 `tests/vitest/forms/fileField.test.ts` is not edited here. It must not edit
 formRuntimeScript.ts, other tests, Forms services/routes, docs, tasks, or changelog files.
+Because this leaf newly brings all three touched renderer sources into a max-warnings-zero
+gate, it may also perform only the two mechanically verified no-behavior Newsletter lint
+cleanups already present at HEAD: rename the unused normalizer argument to `_value` and
+remove the unused `submissionDefaults` local. No other opportunistic cleanup is allowed.
 
 ## Implementation Pseudocode
 
@@ -138,7 +146,7 @@ the output, use a snapshot, or include the mutable runtime-script bytes in this 
 
 ## Regression-test shape
 
-This leaf updates its one named widget suite before its source gate. It must prove:
+This leaf updates its one named compatibility-renderer suite before its source gate. It must prove:
 
 - required is on the file input and absent from hidden;
 - data-required-original and aria-required are owned by the raw file control and absent
@@ -163,6 +171,14 @@ This leaf updates its one named widget suite before its source gate. It must pro
 - the pre-pinned exact non-script representative HTML literal remains unchanged, including
   wrappers/form/non-file controls and the fixed script sentinel.
 
+for each existing Form Embed, Contact, and Newsletter Forms-runtime security input:
+- nonce hidden input keeps name `__nl_form_nonce` and adds exact
+  `data-form-security-nonce="1"`;
+- configured CAPTCHA compatibility hidden input keeps name `captchaToken` and adds exact
+  `data-form-security-captcha="1"`;
+- ordinary authored fields may retain either name and receive no security marker; no field
+  name becomes newly reserved and no authoring surface changes;
+
 TASK-536-05-L01 may add cross-runtime cases later but cannot re-baseline these DOM and
 byte-identity assertions.
 
@@ -172,9 +188,13 @@ byte-identity assertions.
 bun --cwd core lint:types
 bun --cwd core lint
 ./node_modules/.bin/tsc -p tsconfig.json --noEmit
-./node_modules/.bin/eslint --max-warnings=0 core/widgets/core/formEmbed.tsx
+./node_modules/.bin/eslint --max-warnings=0 \
+  core/widgets/core/formEmbed.tsx core/widgets/core/contact.tsx \
+  core/widgets/core/newsletter.tsx
 bunx vitest run --config vitest.config.ts \
-  tests/vitest/widgets/formEmbed.test.tsx
+  tests/vitest/widgets/formEmbed.test.tsx \
+  tests/vitest/widgets/contact.test.tsx \
+  tests/vitest/widgets/newsletter.test.tsx
 ~~~
 
 Re-run a named file alone before declaring a failure.

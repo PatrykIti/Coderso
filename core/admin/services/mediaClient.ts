@@ -28,7 +28,7 @@ export type MediaRecord = {
 
 export type MediaUsageSummary = {
   id: string;
-  type: "page" | "entry" | "post" | "commerce";
+  type: "page" | "entry" | "post" | "commerce" | "submission";
   title: string;
   context: string;
   targetId: string;

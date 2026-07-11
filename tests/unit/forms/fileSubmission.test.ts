@@ -20,6 +20,7 @@ async function canConnect() {
 
 const createdFormIds: string[] = [];
 const createdMediaIds: string[] = [];
+const magicFileFieldNames = ["__proto__", "toString", "constructor"] as const;
 
 const insertMedia = async (mimeType: string, size: number) => {
   const [row] = await db
@@ -37,16 +38,40 @@ const insertMedia = async (mimeType: string, size: number) => {
   return row;
 };
 
-const makeFileForm = async (settings: Record<string, unknown>, required = false) => {
+const makeFileForm = async (
+  settings: Record<string, unknown>,
+  required = false,
+  fieldName = "attachment"
+) => {
   const form = await createForm({
     name: `File form ${crypto.randomUUID()}`,
     slug: `file-form-${crypto.randomUUID()}`,
   });
   createdFormIds.push(form.id);
   await setFormFields(form.id, [
-    { type: "file", label: "Attachment", name: "attachment", required, settings },
+    { type: "file", label: "Attachment", name: fieldName, required, settings },
   ]);
   return form;
+};
+
+const defineOwnSubmissionValue = (fieldName: string, value: unknown) => {
+  const payload: Record<string, unknown> = {};
+  Object.defineProperty(payload, fieldName, {
+    value,
+    enumerable: true,
+    writable: true,
+    configurable: true,
+  });
+  return payload;
+};
+
+const readStoredSubmissionPayload = async (submissionId: string) => {
+  const [row] = await db
+    .select({ payload: formSubmissions.payload })
+    .from(formSubmissions)
+    .where(eq(formSubmissions.id, submissionId));
+  if (!row) throw new Error("file_submission_fixture_missing");
+  return row.payload as Record<string, unknown>;
 };
 
 afterEach(async () => {
@@ -69,6 +94,42 @@ testIfDb("submitForm accepts a valid owned media id for a file field", async () 
   expect(submission?.formId).toBe(form.id);
   expect((submission?.payload as Record<string, unknown>).attachment).toBe(asset.id);
 });
+
+for (const fieldName of magicFileFieldNames) {
+  testIfDb(
+    `submitForm treats absent optional magic-named file field ${fieldName} as absent`,
+    async () => {
+      const form = await makeFileForm({ accept: ["image/png"] }, false, fieldName);
+
+      const submission = await submitForm(form.id, {});
+      if (!submission) throw new Error("file_submission_fixture_missing");
+      const returnedPayload = submission.payload as Record<string, unknown>;
+      const storedPayload = await readStoredSubmissionPayload(submission.id);
+
+      for (const payload of [returnedPayload, storedPayload]) {
+        expect(Object.hasOwn(payload, fieldName)).toBe(false);
+        expect(Object.keys(payload)).not.toContain(fieldName);
+      }
+    }
+  );
+
+  testIfDb(`submitForm stores present own magic-named file field ${fieldName}`, async () => {
+    const asset = await insertMedia("image/png", 1024);
+    const form = await makeFileForm({ accept: ["image/png"] }, false, fieldName);
+    const input = defineOwnSubmissionValue(fieldName, asset.id);
+
+    const submission = await submitForm(form.id, input);
+    if (!submission) throw new Error("file_submission_fixture_missing");
+    const returnedPayload = submission.payload as Record<string, unknown>;
+    const storedPayload = await readStoredSubmissionPayload(submission.id);
+
+    expect(Object.hasOwn(input, fieldName)).toBe(true);
+    for (const payload of [returnedPayload, storedPayload]) {
+      expect(Object.hasOwn(payload, fieldName)).toBe(true);
+      expect(payload[fieldName]).toBe(asset.id);
+    }
+  });
+}
 
 testIfDb("submitForm rejects an unknown/cross-origin media id (backstop)", async () => {
   const form = await makeFileForm({ accept: ["image/png"] });

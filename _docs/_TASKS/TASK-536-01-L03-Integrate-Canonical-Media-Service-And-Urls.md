@@ -19,7 +19,13 @@ This leaf is the only TASK-536 writer of:
 
 - `core/services/media/mediaService.ts`;
 - new `core/services/media/mediaUrlProjection.ts`;
-- the recent-media projection only in `core/services/dashboard/dashboardService.ts`.
+- the recent-media projection only in `core/services/dashboard/dashboardService.ts`;
+- post-audit active/passive and usage projections in
+  `core/admin/services/mediaClient.ts`, `core/admin/ui/media/types.ts`,
+  `core/admin/ui/media/utils.ts`, `core/admin/ui/media/MediaPicker.tsx`, and
+  `core/admin/ui/media/MediaDetailsDrawer.tsx`; and
+- the active Post block media consumer in
+  `core/admin/ui/posts/editor/PostEditorCanvas.tsx`.
 
 It integrates the pure byte identity and `putMedia` adapter path into upload/replace,
 removes caller-controlled sniffing, and ensures media-domain and dashboard results never
@@ -27,6 +33,11 @@ expose a persisted provider URL. It owns changed-behavior updates in:
 
 - `tests/unit/media/mediaService.test.ts`;
 - new `tests/vitest/services/mediaUrlProjection.test.ts`;
+- `tests/vitest/admin/mediaUtils.test.ts`;
+- `tests/vitest/ui/media-picker.test.tsx`, `tests/vitest/ui/media-card.test.tsx`,
+  and `tests/vitest/ui/media-details.test.tsx`;
+- `tests/vitest/ui/post-editor-canvas-wave.test.tsx` for projected-kind admission and
+  legacy selected-record rendering;
 - `tests/unit/server/publicFormsUploadApi.test.ts` (canonical-byte fixtures plus removal
   of shared storage-settings mutation); and
 - `tests/unit/dashboard/dashboardService.test.ts`.
@@ -177,6 +188,36 @@ delete:
 dashboard recent media:
   select id/key (not media.url) and set path=resolveMediaKeyProjection(row).url;
 
+admin media projection:
+  derive passive image MIME membership from CANONICAL_MEDIA_PROFILES, never a
+    second regex/list owner;
+  function resolveAdminMediaKind(record: Pick<MediaRecord, "type" | "mimeType">): MediaKind:
+    `image` requires both a canonical profile with delivery=inline and
+      record.type="image";
+    SVG and every attachment/unsupported image profile resolve to `document`, even
+      though their MIME may start with image/;
+    audio/video legacy MIME may retain their non-image icon kind, otherwise document;
+  function toMediaItem(record: MediaRecord): MediaItem:
+    pass both persisted type and MIME to resolveAdminMediaKind;
+  function matchesAccept(item: Pick<MediaItem, "type" | "mimeType">, accept?): boolean:
+    empty or */* accepts any projected item;
+    exact MIME match wins, including an explicitly authored exact SVG file MIME;
+    image/* requires both image/ MIME prefix and item.type="image";
+    other family wildcards require their matching projected family kind;
+  card/details image preview, focal point, and alt warnings consume projected kind
+    and therefore cannot render SVG through an img element;
+  Post image/gallery/video/audio/file pickers consume only the shared projected
+    MediaItem.type, never a second MIME-prefix classifier;
+  Post image/gallery rendering rechecks the projected kind for already persisted media
+    IDs, so legacy SVG, unsupported image MIME, and persisted-type mismatches fall back
+    to the editor placeholder instead of an img element; explicit legacy URL overrides
+    retain their existing separate compatibility path;
+
+admin usage projection:
+  include `submission` in the server-client/UI usage discriminant;
+  map it to a stable non-image icon before rendering AdminLink;
+  keep the server-provided bounded href/title/context unchanged;
+
 test-only dependencies:
   production defaults own config loading, adapter resolution, insert and replace update;
   __setMediaServiceDepsForTests(partial|null) is forbidden when NODE_ENV=production,
@@ -219,6 +260,10 @@ maps byte or allowlist rejection to `media_mime_not_allowed`.
   key cleanup, and delete removes only the metadata row. This intentionally orphans an
   unaddressable legacy object rather than risking filesystem/provider traversal.
 - No endpoint, migration, schema version, permission, or backup contract changes.
+- Admin code does not reinterpret an attachment-only `image/*` MIME as inline image.
+  The server-owned passive boundary reaches cards, details, and image-only pickers.
+- Persisted Form submission usage round-trips through the admin client and renders a
+  stable usage row; the pre-submit upload remains unreferenced until final submission.
 - The HTTP seam receives only the minimal delivery projection; provider URL and unrelated
   metadata never cross that boundary.
 
@@ -271,6 +316,13 @@ adapter, including compensation paths.
 
 The direct Bun-free `mediaUrlProjection.test.ts` pins encoded safe keys and the
 `/media/%00unavailable/<id>` invalid-key sentinel without importing DB/settings/runtime.
+Admin Vitest regressions pin SVG/file -> document projection, passive MIME plus
+server-type agreement, no SVG img/focal UI, exclusion from `image/*` selection,
+and a rendered `submission` usage row with a defined icon. Post canvas regressions pin
+the same projected kind for picker admission and for already persisted image/gallery
+IDs, so SVG, unsupported images, and persisted-type mismatches cannot reach an img
+element. Exact SVG acceptance may remain available only when a caller explicitly
+authors that exact file MIME policy.
 The Bun media-service suite also proves non-null test dependency overrides are rejected
 under `NODE_ENV=production`, a null reset remains allowed, and the prior environment plus
 default dependencies are restored in `finally`.
@@ -290,7 +342,13 @@ singleton storage driver.
 bun --cwd core lint:types
 bun --cwd core lint
 ./node_modules/.bin/tsc -p tsconfig.json --noEmit
-bun run test:vitest -- tests/vitest/services/mediaUrlProjection.test.ts
+bun run test:vitest -- \
+  tests/vitest/services/mediaUrlProjection.test.ts \
+  tests/vitest/admin/mediaUtils.test.ts \
+  tests/vitest/ui/media-picker.test.tsx \
+  tests/vitest/ui/media-card.test.tsx \
+  tests/vitest/ui/media-details.test.tsx \
+  tests/vitest/ui/post-editor-canvas-wave.test.tsx
 set -a && source .env && set +a && bun test --parallel=1 --timeout=15000 \
   tests/unit/media/mediaService.test.ts \
   tests/unit/media/mediaMeta.test.ts \

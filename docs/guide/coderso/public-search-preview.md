@@ -7,13 +7,13 @@ keywords:
   - search
   - public search
   - search preview
-  - search-box widgets
+  - search blocks
 ---
 
 # Basic
 
 Public Search Preview is the admin testing surface for global public search used
-by search-box widgets. It lets you define a query, set a limit, choose which
+by search blocks. It lets you define a query, set a limit, choose which
 sources are searchable, and inspect the returned result items before using the
 behavior in production.
 
@@ -36,7 +36,7 @@ The current helper copy makes two things explicit:
 - what is not indexed yet.
 
 This screen is best used when:
-- a search-box widget is being configured,
+- a search block is being configured in its owning editor,
 - teams need to confirm which sources are currently searchable,
 - the preview result quality needs to be checked before rollout.
 
@@ -75,7 +75,7 @@ Use this safe preview order when you want clearer signal:
 - Source toggles are part of search strategy, not just a testing convenience.
   They define the kind of discovery experience users can have.
 - The helper section matters because the current product intentionally does not
-  search all rendered widget/page body content yet.
+  search all rendered section/block body content yet.
 - If search quality feels weak, the issue may be the indexed field set rather
   than the query term itself.
 - Preview should be used to validate practical discovery expectations, not only
@@ -111,7 +111,7 @@ Use this safe preview order when you want clearer signal:
 3. Confirm the right sources are enabled.
 4. Run preview.
 5. Review returned items and hrefs.
-6. Confirm the search behavior is acceptable before using it in widgets.
+6. Confirm the search behavior is acceptable before using it in search blocks.
 
 # Security
 

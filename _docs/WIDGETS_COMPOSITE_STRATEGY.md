@@ -1,6 +1,13 @@
 # Widgets Composite Strategy
 
-Composite-first strategy for Coderso widget delivery.
+> Historical compatibility record for the retired non-dashboard registry and
+> catalog. It does not authorize new widget types, presets, module-pack work, or
+> Wizard/Visual/Advanced editors. Active domain editors own sections/blocks;
+> configurable product widgets belong only to Admin Dashboard and follow
+> `_docs/DASHBOARD_WIDGETS_SPEC.md`.
+
+The remainder records the former composite-first delivery contract for retained
+runtime/read compatibility.
 
 ## Goal
 

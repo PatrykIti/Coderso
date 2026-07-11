@@ -9,6 +9,7 @@ keywords:
   - submissions
   - automation
   - runtime preview
+  - file upload
 ---
 
 # Basic
@@ -38,6 +39,10 @@ The builder route includes:
 - `Action logs`,
 - `Runtime preview`,
 - `Save form`.
+
+When a saved form is placed on a site, it runs through the existing Form block
+inside a page section. It is not a Dashboard widget or a separate widget
+authoring workflow.
 
 # Medium
 
@@ -83,6 +88,10 @@ submission access, success behavior, and retries also matter.
 12. Add fields into the form canvas.
    The builder explicitly shows an empty drop target when the form has no fields
    yet.
+   For a `File` field, the current field panel lets you edit whether the field is
+   required. Persisted or API-provided `accept`, `maxSizeMb`, and `multiple` rules are
+   still enforced by the public runtime, but this builder does not currently expose
+   controls for authoring those three values. Do not infer them from the preview.
 13. Move to the `Settings` tab after basic field structure exists.
 14. In `Form Settings`, work top to bottom:
     - basics:
@@ -95,18 +104,33 @@ submission access, success behavior, and retries also matter.
       success message and redirect URL
     - automation reliability:
       retry settings
-15. Use `Runtime preview` before considering the form ready.
-16. Use `Save form` to persist structure and settings.
-17. Open `Action logs` when you need operational visibility after submission
+15. Use `Save form` to persist structure and settings. Runtime preview deliberately
+    rejects an unsaved draft.
+16. After the save succeeds, use `Runtime preview` to verify structure and ordinary
+    field behavior. It is not a real file-upload/retry surface.
+17. Publish/place the existing public Form block/section, then verify the real upload,
+    visible error, and retry flow before rollout.
+18. Open `Action logs` when you need operational visibility after submission
     activity starts.
+
+On a public form, selected files upload before the final submission is sent.
+While an upload is pending, the form keeps submit/navigation disabled. The final
+submission remains blocked until each required upload returns an owned Media
+Library ID; multiple files preserve their selection order. If an upload fails,
+the visitor sees an accessible error, the action controls are released, and the
+upload can be retried without reloading. The final submission is not sent until
+every selected upload succeeds. It stores owned Media Library IDs, not browser
+paths, remote URLs, or raw bytes.
 
 Use this safe authoring order when you want fewer mistakes:
 1. Create the form shell.
 2. Add fields.
 3. Configure settings.
 4. Configure automation/reliability.
-5. Run runtime preview.
-6. Save form.
+5. Save the form.
+6. Run runtime preview against that saved state.
+7. Publish/place the Form block or section.
+8. Test a real upload and retry before rollout.
 
 # Advanced
 
@@ -127,6 +151,13 @@ Use this safe authoring order when you want fewer mistakes:
 - The list create drawer passes only name, slug, status, and description to the
   create client. Builder-owned fields such as submission access, success
   behavior, and settings remain in the builder/client contract.
+- File type and size checks are based on the uploaded bytes. Renaming a file or
+  changing its browser-declared type cannot turn unsupported content into an
+  accepted image or document.
+- A public file upload creates its Media Library record before the final
+  submission. If a visitor uploads and then abandons the form, that unreferenced
+  asset can remain; automatic orphan cleanup is a documented follow-up, not a
+  completed part of this workflow.
 
 # Troubleshooting
 
@@ -143,6 +174,12 @@ Use this safe authoring order when you want fewer mistakes:
 - Delete is blocked:
   if the API returns `form_delete_restricted`, the form has retained
   submissions or action diagnostics. Archive it to preserve history.
+- A required file form will not submit:
+  wait for the upload status to finish; if it shows an error, retry or select a
+  supported file within the configured size limit.
+- A selected file is rejected even though its filename looks correct:
+  the server validates the actual file content, not only the extension or type
+  reported by the browser.
 
 # Decision Guide
 
@@ -166,8 +203,13 @@ Use this safe authoring order when you want fewer mistakes:
 4. Confirm submission access mode is intentional.
 5. Confirm success message or redirect behavior is correct.
 6. Confirm retry settings are acceptable.
-7. Run runtime preview.
-8. Save form before rollout.
+7. For every File field, confirm `Required` in the current builder. If the form was
+   imported or managed through the API, separately verify its persisted `accept`,
+   `maxSizeMb`, and `multiple` contract; these are not builder controls today.
+8. Save the form.
+9. Run runtime preview against the saved state.
+10. Publish/place the Form block or section.
+11. Test a real upload and retry before rollout.
 
 # Security
 
@@ -175,6 +217,15 @@ Use this safe authoring order when you want fewer mistakes:
   with the appropriate form-management permissions.
 - Public forms should be reviewed for anti-abuse posture; internal forms should
   remain behind authenticated/session or API-key constraints.
+- A public upload or submission remains bound to the form nonce and one
+  `public_write` charge even when the browser carries an authenticated cookie;
+  every file upload still undergoes byte inspection. Under the current policy
+  that authenticated public session is exempt from CAPTCHA, while anonymous
+  public requests still follow the configured bot policy. Internal-only forms
+  keep their session/CSRF or API-key contract and render a noninteractive public
+  boundary.
+- File fields accept only the owned media references returned by the upload
+  flow. Do not place filesystem paths, arbitrary URLs, or secrets in them.
 - Do not put secrets, provider keys, or privileged operational values into form
   definitions or visible success messages.
 - Hard delete is deletion-safe only. Retained submission payloads and action-run

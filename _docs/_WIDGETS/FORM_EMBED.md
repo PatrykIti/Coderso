@@ -1,15 +1,21 @@
-# Form Embed Widget (v1)
+# Form Embed Compatibility Renderer (v1)
+
+> **Product boundary:** this is legacy implementation documentation for the existing
+> public Form block/section renderer in the historical `core/widgets` namespace. It is not
+> a configurable Dashboard widget and is not a surface for adding a non-dashboard widget,
+> editor, preset, registry entry, or block type. New authoring work belongs to the Forms
+> builder and the owning section/block contracts.
 
 ## Purpose
 
 Embed a CMS form on a public page through the existing Forms runtime contract.
 
-The widget resolves the selected form at runtime, renders the current supported
+The compatibility renderer resolves the selected form at runtime, renders the current supported
 field model, runs conditional logic and multi-step navigation on the frontend,
 and submits through `POST /forms/:id/submissions` with backend-owned
 nonce/CAPTCHA enforcement.
 
-## Widget ID
+## Historical implementation ID
 
 `form-embed`
 
@@ -20,7 +26,7 @@ nonce/CAPTCHA enforcement.
 `card` and `inline` were historical doc drift, not shipped runtime variants in
 the current product contract.
 
-## Editor Modes
+## Legacy compatibility editor modes (do not extend)
 
 ### Wizard
 
@@ -107,6 +113,14 @@ diagnostic instead of silently coercing to a different control.
   posting.
 - Checkbox controls submit backend-compatible boolean values, not the browser
   default `on` string.
+- A public File field uploads each selected file through
+  `POST /forms/:id/uploads` before the final submission. Pending uploads disable
+  Submit/Back/Next; required fields cannot submit without owned Media IDs, and a
+  `multiple` field preserves selection order.
+- Upload progress uses the field's accessible status node. A failed upload changes it to
+  an alert, releases action locks, keeps the final submission unsent, and permits retry
+  without reloading. Clearing/resetting returns the same node to its neutral screen-reader
+  state and invalidates stale upload work.
 - Runtime binding is idempotent. Additional Form Embed instances inserted after
   the first runtime script call the shared binder and bind independently.
 - Success behavior is configurable:
@@ -139,22 +153,25 @@ diagnostic instead of silently coercing to a different control.
 
 ## Security Notes
 
-The public Form Embed runtime submits to `POST /forms/:id/submissions`.
+The existing public Form block/section runtime writes only to
+`POST /forms/:id/uploads` and `POST /forms/:id/submissions`.
 
-- Public route visibility is limited to the widget submit path.
+- Public route visibility is limited to those upload/submission paths; there is no new
+  endpoint or non-dashboard widget route.
 - Public submissions use the Forms access evaluator, the `public_write`
-  rate-limit bucket keyed by form id, strict request schema validation, and the
-  signed form submission nonce (`formId.timestamp.HMAC`).
+  rate-limit bucket keyed by form id, strict request schema validation, and an opaque
+  server-minted form submission nonce. Its wire value is `timestamp.signature`; the
+  form ID is bound inside the signed server payload and clients must not construct it.
 - Nonce enforcement remains backend-owned and runtime-only.
 - Public CAPTCHA policy remains backend-owned.
 - Internal forms require an authenticated session or API key with the existing
   Forms submit scope; public pages fail closed to a noninteractive boundary.
-- The widget may project only safe public bot-protection metadata:
+- The compatibility renderer may project only safe public bot-protection metadata:
   - provider
   - public site key
   - action
 - Provider secrets, nonce secrets, thresholds, privileged security settings, and
-  runtime nonce strings must never be persisted in widget JSON. Runtime-rendered
+  runtime nonce strings must never be persisted in authored block/section JSON. Runtime-rendered
   nonce inputs are injected only by server-side form resolution for the current
   request.
 

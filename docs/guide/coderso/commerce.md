@@ -24,13 +24,13 @@ generic entries when catalog behavior is required.
 Use this surface when:
 - products need structured catalog metadata,
 - collections and product grouping drive navigation,
-- product data must be connected to pages/widgets consistently.
+- product data must be connected to Page/commerce blocks consistently.
 
 # Instruction
 
 1. Create or review product records with required product metadata.
 2. Build collections and category/grouping structure.
-3. Attach products to pages, templates, and relevant widgets.
+3. Attach products to pages, templates, and relevant commerce blocks.
 4. Validate media, forms, and presentation flow before launch.
 5. Recheck catalog filters/sorting after major product updates.
 
@@ -44,7 +44,7 @@ Use this surface when:
 # Troubleshooting
 
 - If products do not appear where expected, verify collection assignment and
-  downstream widget/page binding.
+  downstream section/block binding.
 - If filters behave inconsistently, review product attribute normalization and
   category taxonomy.
 - If catalog updates cause regressions, compare recent collection edits and

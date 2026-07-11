@@ -85,6 +85,19 @@ async function parseJson(req: Request) {
   }
 }
 
+const setOwnEnumerableDataProperty = (
+  target: Record<string, unknown>,
+  key: string,
+  value: unknown
+): void => {
+  Object.defineProperty(target, key, {
+    configurable: true,
+    enumerable: true,
+    value,
+    writable: true,
+  });
+};
+
 async function parseForm(req: Request, rejectDuplicateKeys: readonly string[] = []) {
   try {
     const form = await req.formData();
@@ -98,7 +111,7 @@ async function parseForm(req: Request, rejectDuplicateKeys: readonly string[] = 
         }
         seen.add(key);
       }
-      payload[key] = value;
+      setOwnEnumerableDataProperty(payload, key, value);
     }
     return payload;
   } catch (error) {
@@ -113,7 +126,7 @@ async function parseUrlEncoded(req: Request) {
     const params = new URLSearchParams(text);
     const payload: Record<string, unknown> = {};
     for (const [key, value] of params.entries()) {
-      payload[key] = value;
+      setOwnEnumerableDataProperty(payload, key, value);
     }
     return payload;
   } catch {

@@ -27,6 +27,19 @@ creator/changed-behavior owner of
 gate. It must not edit mediaService, storage adapters, delivery, Forms routes, other
 tests, task files outside this leaf, or changelog files.
 
+The TASK-536 post-audit keeps that ownership in this leaf for one bounded remediation:
+replace the selected raster-markup tag list with the shared generic markup-grammar
+predicate, then add a non-weaponized regression for a structurally valid raster carrying
+an otherwise omitted HTML element/event-attribute shape. No upload policy, renderer,
+adapter, route, or scanner configuration changes belong to this fix.
+
+A later final post-audit also reopens this owner for the PDF safe-subset boundary. The
+lexical pass must fail closed when an otherwise accepted PDF declares an opaque active
+form (`/AcroForm` or `/XFA`), encryption, or compressed object stream that can conceal
+action dictionaries. Ordinary compressed page-content streams remain accepted; this is
+not a blanket `/Filter` or `stream` ban. Add non-weaponized compressed-XFA, encrypted,
+and object-stream regressions plus a benign compressed-content control.
+
 ## Grounded anchors
 
 - mediaService.ts:41-48 supplies the default global allowlist.
@@ -34,6 +47,11 @@ tests, task files outside this leaf, or changelog files.
 - mediaService.ts:295-317 conditionally validates only public uploads.
 - mediaService.ts:328-388 handles upload; :456-508 handles replacement without sniffing.
 - core/services/forms/mimeMatchesAccept.ts owns the existing Form accept-rule matcher.
+- `core/services/media/mediaFileTrust.ts:386-399` currently combines PDF envelope
+  validation with raw Latin-1/global name matching; the remediation keeps only the
+  header/object/EOF envelope checks there and moves all forbidden-name decisions into
+  the token-aware structural helper. `:432-503` owns the lexical whitespace/comment/hex
+  machinery used by the additive generic markup check.
 
 ## Implementation Pseudocode
 
@@ -63,10 +81,44 @@ export type CanonicalMediaIdentity = {
   }>;
 }[CanonicalMediaMime];
 
+function validatePdf(bytes: Uint8Array): boolean {
+  validate only the PDF header/version, at least one object/endobj envelope, and bounded
+    startxref/%%EOF trailer shape;
+  do not decode or match forbidden PDF names here;
+}
+
+const FORBIDDEN_PDF_STRUCTURE_NAMES = new Set([
+  "JavaScript", "JS", "Launch", "OpenAction", "AA", "RichMedia",
+  "EmbeddedFile", "AcroForm", "XFA", "Encrypt", "ObjStm",
+]);
+
+function hasInspectablePdfStructure(bytes: Uint8Array): boolean {
+  body = Latin-1 decode complete bytes;
+  scan PDF lexical tokens with one bounded forward cursor;
+  skip whitespace and `%` comments;
+  skip balanced literal strings, honoring backslash escapes; fail false if unclosed;
+  distinguish `<<` dictionary delimiters from `<...>` hexadecimal strings, skip only a
+    well-formed hex token, and fail false when such a token is unclosed/malformed;
+  when `/` starts a PDF name token:
+    read only until the next PDF whitespace/delimiter;
+    decode valid `#HH` escapes inside that name token only;
+    return false when the decoded exact structural name is in
+      FORBIDDEN_PDF_STRUCTURE_NAMES;
+  when the bare `stream` keyword is reached:
+    require its PDF line ending and a bounded token-delimited `endstream`;
+    skip the opaque payload without interpreting compressed page bytes as names;
+    return false when the stream is unclosed/ambiguous;
+  do not decode names found inside comments, literal strings, hex data, or stream bytes;
+  return true;
+}
+
 export function canonicalizeMediaBytes(bytes: Uint8Array): CanonicalMediaIdentity | null {
   assert bytes are non-empty and within the caller-enforced cap;
   return null for conflicting/polyglot/truncated signatures;
   match the complete ordered binary-signature corpus;
+  for a PDF signature, require validatePdf(bytes), hasInspectablePdfStructure(bytes),
+    and the existing token-aware generic markup check before returning PDF identity;
+    any false result returns null and L03 later maps it to media_mime_not_allowed;
   else classify a bounded standalone SVG root as image/svg+xml/.svg attachment only
     after rejecting script/event/DOCTYPE/entity/foreign-content and ambiguous extra-root
     markup according to the explicit active-SVG byte policy;
@@ -110,6 +162,21 @@ format. Text/SVG classification is byte-owned: the declared type can neither pro
 unknown binary to text nor turn text/markup into a passive image. Markup inspection is
 bounded and active content never receives inline delivery.
 
+The recognized PDF profile is a deliberately conservative attachment-safe subset. It
+rejects decoded-name variants of active forms (`/AcroForm`, `/XFA`), `/Encrypt`, and
+`/ObjStm` before canonical identity is returned. `/ObjStm` is rejected because it can
+hide the very action dictionaries the lexical scanner must inspect; encryption is
+rejected because those dictionaries are not inspectable. A normal `/FlateDecode`
+content stream without those structural carriers remains compatible. Structural names
+inside literal strings, hexadecimal metadata, comments, or ordinary stream payloads are
+data rather than PDF name tokens and do not trigger this check; malformed/unclosed
+tokens or streams fail closed instead of being guessed through.
+
+`hasInspectablePdfStructure` is the exclusive owner of forbidden PDF name matching.
+`validatePdf` must not retain the former global `#HH` replacement or forbidden-name
+regex, because that would reinterpret data inside strings/comments/streams as
+structure and contradict the lexical contract.
+
 `classifyCanonicalMediaPrefix` shares the same ordered binary-signature table; it is not
 a second grammar and cannot admit an upload. TASK-536-02 may use it only to confirm that
 a proxied object is the passive raster identity claimed by its DB row and canonical key.
@@ -125,7 +192,9 @@ The declared MIME/name are never inputs to this helper's identity decision.
   neither reads upload policy nor creates a domain error. L03 alone maps that rejected
   identity and effective-policy rejection to `media_mime_not_allowed`.
 - Unknown binary returns the canonical octet-stream identity without deciding whether a
-  caller may upload it.
+  caller may upload it, but only after the complete byte sequence is proven free of the
+  shared ambiguous-markup grammar. Invalid UTF-8 and control-bearing binary data do not
+  bypass that check.
 - Invalid delivery keys/names fail closed without embedding untrusted text in errors.
 
 ## Compatibility
@@ -144,11 +213,30 @@ This leaf owns the shared pure corpus in
 - the profile map has exactly the nine pinned keys/pairs above, aliases are absent, and
   every returned identity is a valid discriminated map member;
 - byte-safe standalone SVG maps to attachment-only image/svg+xml, while
-  HTML/XML/script-bearing or ambiguous markup fails closed;
+  HTML/XML/script-bearing or ambiguous markup fails closed; the shared grammar treats a
+  solidus immediately after a tag name as a tag separator and applies to valid raster,
+  PDF, invalid-UTF-8, control-bearing, and unknown-binary branches before any identity
+  return; PDF-specific active-action checks remain additive rather than replacing the
+  generic complete-byte grammar. The PDF pass is lexical-token-aware: dictionary openers
+  and well-formed PDF hexadecimal strings (including UTF-16BE metadata beginning with a
+  BOM) are not reclassified as markup, while generic tag grammar outside those tokens
+  still fails closed;
 - unknown binary maps to octet-stream/.bin attachment without consulting upload policy;
 - declared type/name cannot change the result;
 - mismatched, truncated, forbidden markup, and polyglot bytes return `null` without
-  importing an adapter, service, route, DB, settings, or policy/error mapper;
+  importing an adapter, service, route, DB, settings, or policy/error mapper; a benign
+  structured raster fixture places its markup-shaped metadata beyond the former
+  1024-byte inspection window so complete-byte inspection cannot regress to a prefix;
+- a valid PDF fixture with a well-formed UTF-16BE hexadecimal metadata string remains the
+  canonical PDF attachment, while the same structured PDF with generic markup outside a
+  PDF lexical token is rejected;
+- a benign compressed page-content stream remains canonical PDF, while compressed XFA,
+  encrypted documents, and object streams fail closed even when their opaque bytes do
+  not expose the forbidden marker lexically;
+- positive controls place `/XFA`, `/Encrypt`, `/ObjStm`, and `#HH`-shaped spellings
+  inside a balanced literal string, hexadecimal metadata, a comment, and a benign
+  compressed stream and remain canonical PDF; the same decoded spellings as real PDF
+  name tokens are rejected;
 - buildMediaDeliveryPath rejects traversal/ambiguous keys and encodes canonical segments;
 - delivery prefix classification confirms complete passive signatures, rejects truncated
   prefixes, and never promotes text/SVG/unknown data to inline;

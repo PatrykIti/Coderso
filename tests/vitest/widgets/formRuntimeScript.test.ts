@@ -5,10 +5,20 @@ import { afterEach, expect, test, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 
 import {
+  ContactBlock,
+  contactDefaults,
+  type ContactData,
+} from "../../../core/widgets/core/contact";
+import {
   FormEmbedBlock,
   formEmbedDefaults,
   type FormEmbedData,
 } from "../../../core/widgets/core/formEmbed";
+import {
+  NewsletterBlock,
+  newsletterDefaults,
+  type NewsletterData,
+} from "../../../core/widgets/core/newsletter";
 
 const originalFetch = globalThis.fetch;
 
@@ -30,24 +40,32 @@ const resetRuntimeFlag = () => {
   delete (window as Window & { grecaptcha?: unknown }).grecaptcha;
 };
 
-const installFormRuntime = (data: FormEmbedData) => {
+const installRenderedFormRuntime = (
+  element: React.ReactElement,
+  beforeRuntimeEval?: () => void
+) => {
   resetRuntimeFlag();
-  document.body.innerHTML = renderToString(
-    React.createElement(FormEmbedBlock, {
-      data,
-      variant: "standard",
-    })
-  );
+  document.body.innerHTML = renderToString(element);
+  beforeRuntimeEval?.();
   const script = document.querySelector("script");
   if (script?.textContent) {
     eval(script.textContent);
   }
   const form = document.querySelector('form[data-nextless-form-runtime="1"]');
   if (!(form instanceof HTMLFormElement)) {
-    throw new Error("Missing Form Embed runtime form");
+    throw new Error("Missing shared Forms runtime form");
   }
   return form;
 };
+
+const installFormRuntime = (data: FormEmbedData, beforeRuntimeEval?: () => void) =>
+  installRenderedFormRuntime(
+    React.createElement(FormEmbedBlock, {
+      data,
+      variant: "standard",
+    }),
+    beforeRuntimeEval
+  );
 
 const setInputValue = (selector: string, value: string) => {
   const input = document.querySelector(selector);
@@ -79,6 +97,19 @@ const flushMicrotasks = async () => {
 const getFileInput = (form: HTMLFormElement, identity = "attachment") => {
   const input = form.querySelector(`[data-form-file-input="${identity}"]`);
   if (!(input instanceof HTMLInputElement)) throw new Error(`Missing file input ${identity}`);
+  return input;
+};
+
+const getOrdinaryNamedInput = (form: HTMLFormElement, name: string) => {
+  const input = Array.from(form.querySelectorAll("input")).find(
+    (candidate) =>
+      candidate.name === name &&
+      !candidate.hasAttribute("data-form-security-nonce") &&
+      !candidate.hasAttribute("data-form-security-captcha")
+  );
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error(`Missing ordinary input ${name}`);
+  }
   return input;
 };
 
@@ -148,9 +179,114 @@ const createFileFormData = ({
   },
 });
 
+const createContactRuntimeData = (): ContactData => ({
+  ...contactDefaults,
+  form: {
+    ...contactDefaults.form,
+    fields: ["name", "email", "message"],
+    submission: {
+      ...contactDefaults.form?.submission,
+      mode: "forms-runtime",
+      formId: "contact-runtime-form",
+      fieldMap: {
+        name: "full_name",
+        email: "reply_email",
+        phone: "",
+        message: "message_body",
+      },
+      successMessage: "Contact sent.",
+      errorMessage: "Contact failed.",
+    },
+  },
+  resolved: {
+    formId: "contact-runtime-form",
+    formName: "Contact runtime form",
+    status: "published",
+    submissionAccess: "public",
+    submissionNonce: "nonce-contact-runtime",
+    fields: [
+      {
+        id: "contact-name-field",
+        type: "text",
+        label: "Full name",
+        name: "full_name",
+        required: false,
+        orderIndex: 0,
+        settings: {},
+      },
+      {
+        id: "contact-email-field",
+        type: "email",
+        label: "Reply email",
+        name: "reply_email",
+        required: true,
+        orderIndex: 1,
+        settings: {},
+      },
+      {
+        id: "contact-message-field",
+        type: "textarea",
+        label: "Message",
+        name: "message_body",
+        required: true,
+        orderIndex: 2,
+        settings: {},
+      },
+    ],
+  },
+});
+
+const createNewsletterRuntimeData = (): NewsletterData => ({
+  ...newsletterDefaults,
+  submission: {
+    ...newsletterDefaults.submission,
+    mode: "forms-runtime",
+    formId: "newsletter-runtime-form",
+    successBehavior: "show-message-keep-form",
+  },
+  stateCopy: {
+    ...newsletterDefaults.stateCopy,
+    successMessage: "Newsletter joined.",
+    errorMessage: "Newsletter failed.",
+  },
+  resolved: {
+    formId: "newsletter-runtime-form",
+    formName: "Newsletter runtime form",
+    status: "published",
+    submissionAccess: "public",
+    submissionNonce: "nonce-newsletter-runtime",
+    fields: [
+      {
+        id: "newsletter-email-field",
+        type: "email",
+        label: "Email",
+        name: "email",
+        required: true,
+        orderIndex: 0,
+        settings: {},
+      },
+      {
+        id: "newsletter-consent-field",
+        type: "checkbox",
+        label: "Consent",
+        name: "consent",
+        required: false,
+        orderIndex: 1,
+        settings: {},
+      },
+    ],
+  },
+});
+
 const uploadIdA = "11111111-1111-4111-8111-111111111111";
 const uploadIdB = "22222222-2222-4222-8222-222222222222";
 const uploadIdC = "33333333-3333-4333-8333-333333333333";
+const canonicalPngBytes = Uint8Array.from(
+  atob(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+  ),
+  (character) => character.charCodeAt(0)
+);
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -427,12 +563,13 @@ test("form runtime binds duplicate instances that load after the first script", 
   });
 
   resetRuntimeFlag();
-  document.body.innerHTML = renderToString(
+  const firstHtml = renderToString(
     React.createElement(FormEmbedBlock, {
       data: createData("form-duplicate-1"),
       variant: "standard",
     })
   );
+  document.body.innerHTML = firstHtml;
   const firstScript = document.querySelector("script");
   if (!firstScript?.textContent) throw new Error("Missing first runtime script");
   eval(firstScript.textContent);
@@ -440,14 +577,14 @@ test("form runtime binds duplicate instances that load after the first script", 
     window as Window & { happyDOM?: { waitUntilComplete?: () => Promise<void> } }
   ).happyDOM?.waitUntilComplete?.();
 
-  const second = document.createElement("div");
-  second.innerHTML = renderToString(
-    React.createElement(FormEmbedBlock, {
-      data: createData("form-duplicate-2"),
-      variant: "standard",
-    })
-  );
-  document.body.append(...Array.from(second.childNodes));
+  document.body.innerHTML =
+    firstHtml +
+    renderToString(
+      React.createElement(FormEmbedBlock, {
+        data: createData("form-duplicate-2"),
+        variant: "standard",
+      })
+    );
   const secondScript = Array.from(document.querySelectorAll("script")).at(-1);
   if (!secondScript?.textContent) throw new Error("Missing second runtime script");
   eval(secondScript.textContent);
@@ -455,10 +592,22 @@ test("form runtime binds duplicate instances that load after the first script", 
   setInputValue('form[data-form-id="form-duplicate-2"] input[name="name"]', "Alice");
   const secondForm = document.querySelector('form[data-form-id="form-duplicate-2"]');
   if (!(secondForm instanceof HTMLFormElement)) throw new Error("Missing second form");
+  const secondNonce = secondForm.querySelector('[data-form-security-nonce="1"]');
+  expect(secondForm.dataset.formRuntimeBound).toBe("1");
+  expect(secondNonce).toBeInstanceOf(HTMLInputElement);
+  expect(secondNonce?.closest("form")).toBe(secondForm);
+  expect(secondForm.contains(secondNonce)).toBe(true);
+  expect(secondNonce).toMatchObject({
+    type: "hidden",
+    name: "__nl_form_nonce",
+    value: "nonce-form-duplicate-2",
+    form: secondForm,
+  });
   secondForm.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true }));
   await (
     window as Window & { happyDOM?: { waitUntilComplete?: () => Promise<void> } }
   ).happyDOM?.waitUntilComplete?.();
+  await settleRuntime();
 
   expect(fetchMock).toHaveBeenCalledTimes(1);
   const fetchCalls = fetchMock.mock.calls;
@@ -796,6 +945,593 @@ test("form runtime emits a bounded analytics event after successful submit", asy
   window.removeEventListener("newsletter_submit", analyticsSpy as EventListener);
 });
 
+test("536-03: existing Contact block executes the shared non-file Forms runtime", async () => {
+  const requests: Array<{ url: string; init?: RequestInit }> = [];
+  globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    requests.push({ url: String(input), init });
+    return new Response(JSON.stringify({ runtime: { successMessage: "Server fallback" } }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }) as typeof globalThis.fetch;
+
+  const form = installRenderedFormRuntime(
+    React.createElement(ContactBlock, {
+      data: createContactRuntimeData(),
+      variant: "form-left",
+      blockId: "contact-runtime-compatibility",
+    })
+  );
+  expect(form.querySelector("[data-form-file-input]")).toBeNull();
+  setInputValue('input[name="full_name"]', "Ada Lovelace");
+  setInputValue('input[name="reply_email"]', "ada@example.com");
+  setInputValue('textarea[name="message_body"]', "Compatibility check");
+
+  dispatchSubmit(form);
+  await settleRuntime();
+
+  expect(requests).toHaveLength(1);
+  expect(requests[0]?.url).toBe("http://localhost:3000/forms/contact-runtime-form/submissions");
+  expect(JSON.parse(String(requests[0]?.init?.body))).toEqual({
+    data: {
+      full_name: "Ada Lovelace",
+      reply_email: "ada@example.com",
+      message_body: "Compatibility check",
+    },
+    formNonce: "nonce-contact-runtime",
+  });
+  const success = form.querySelector('[data-form-embed-success="true"]');
+  const error = form.querySelector('[data-form-embed-error="true"]');
+  const submit = form.querySelector('[data-form-submit="1"]');
+  expect(success?.textContent).toBe("Contact sent.");
+  expect((success as HTMLElement | null)?.classList.contains("hidden")).toBe(false);
+  expect((error as HTMLElement | null)?.classList.contains("hidden")).toBe(true);
+  expect(submit).toMatchObject({ disabled: false });
+  expect(submit?.getAttribute("aria-busy")).toBe("false");
+});
+
+test("536-03: existing Newsletter block recovers from a failed shared-runtime request", async () => {
+  const requests: Array<{ url: string; init?: RequestInit }> = [];
+  globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    requests.push({ url: String(input), init });
+    if (requests.length === 1) {
+      return new Response(
+        JSON.stringify({
+          error: { code: "rate_limited", message: "provider detail must stay hidden" },
+        }),
+        { status: 429, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    return new Response(JSON.stringify({ runtime: { successMessage: "Server fallback" } }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }) as typeof globalThis.fetch;
+
+  const form = installRenderedFormRuntime(
+    React.createElement(NewsletterBlock, {
+      data: createNewsletterRuntimeData(),
+      variant: "inline",
+      blockId: "newsletter-runtime-compatibility",
+    })
+  );
+  expect(form.querySelector("[data-form-file-input]")).toBeNull();
+  setInputValue('input[name="email"]', "reader@example.com");
+
+  dispatchSubmit(form);
+  await settleRuntime();
+
+  const error = form.querySelector('[data-form-embed-error="true"]');
+  const submit = form.querySelector('[data-form-submit="1"]');
+  expect(requests).toHaveLength(1);
+  expect(error?.textContent).toBe("Too many submissions. Please try again later.");
+  expect(document.body.textContent).not.toContain("provider detail");
+  expect((error as HTMLElement | null)?.classList.contains("hidden")).toBe(false);
+  expect(submit).toMatchObject({ disabled: false });
+  expect(submit?.getAttribute("aria-busy")).toBe("false");
+  expect(form.dataset.submitting).toBe("0");
+
+  dispatchSubmit(form);
+  await settleRuntime();
+
+  expect(requests).toHaveLength(2);
+  expect(requests.map(({ url }) => url)).toEqual([
+    "http://localhost:3000/forms/newsletter-runtime-form/submissions",
+    "http://localhost:3000/forms/newsletter-runtime-form/submissions",
+  ]);
+  expect(requests.map(({ init }) => JSON.parse(String(init?.body)))).toEqual([
+    {
+      data: { email: "reader@example.com" },
+      formNonce: "nonce-newsletter-runtime",
+    },
+    {
+      data: { email: "reader@example.com" },
+      formNonce: "nonce-newsletter-runtime",
+    },
+  ]);
+  const success = form.querySelector('[data-form-embed-success="true"]');
+  expect(success?.textContent).toBe("Newsletter joined.");
+  expect((success as HTMLElement | null)?.classList.contains("hidden")).toBe(false);
+  expect((error as HTMLElement | null)?.classList.contains("hidden")).toBe(true);
+  expect(submit).toMatchObject({ disabled: false });
+  expect(form.dataset.submitting).toBe("0");
+});
+
+test("536-03: Form Embed keeps reserved-name fields separate from marked security controls", async () => {
+  const execute = vi.fn(async () => "form-embed-final-token");
+  const requests: Array<{ url: string; init?: RequestInit }> = [];
+  globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    requests.push({ url: String(input), init });
+    return new Response(JSON.stringify({ runtime: { successMessage: "Done" } }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }) as typeof globalThis.fetch;
+
+  const form = installFormRuntime(
+    createFileFormData({
+      formId: "reserved-form-embed",
+      botProtection: true,
+      fields: [
+        {
+          id: "ordinary-nonce-field",
+          type: "text",
+          label: "Ordinary nonce name",
+          name: "__nl_form_nonce",
+          required: true,
+          settings: {},
+        },
+        {
+          id: "ordinary-captcha-field",
+          type: "text",
+          label: "Ordinary captcha name",
+          name: "captchaToken",
+          required: true,
+          settings: {},
+        },
+      ],
+    }),
+    () => {
+      (window as Window & { grecaptcha?: { execute: typeof execute } }).grecaptcha = { execute };
+    }
+  );
+  const ordinaryNonce = getOrdinaryNamedInput(form, "__nl_form_nonce");
+  const ordinaryCaptcha = getOrdinaryNamedInput(form, "captchaToken");
+  ordinaryNonce.value = "ordinary-nonce-value";
+  ordinaryNonce.dispatchEvent(new Event("input", { bubbles: true }));
+  ordinaryCaptcha.value = "ordinary-captcha-value";
+  ordinaryCaptcha.dispatchEvent(new Event("input", { bubbles: true }));
+
+  const securityNonce = form.querySelector('[data-form-security-nonce="1"]');
+  const securityCaptcha = form.querySelector('[data-form-security-captcha="1"]');
+  expect(securityNonce).toMatchObject({
+    type: "hidden",
+    name: "__nl_form_nonce",
+    value: "nonce-reserved-form-embed",
+  });
+  expect(securityCaptcha).toMatchObject({ type: "hidden", name: "captchaToken", value: "" });
+
+  dispatchSubmit(form);
+  await settleRuntime();
+
+  expect(execute).toHaveBeenCalledTimes(1);
+  expect(requests).toHaveLength(1);
+  expect(ordinaryCaptcha.value).toBe("ordinary-captcha-value");
+  expect(securityCaptcha).toMatchObject({ value: "form-embed-final-token" });
+  expect(JSON.parse(String(requests[0]?.init?.body))).toEqual({
+    data: {
+      __nl_form_nonce: "ordinary-nonce-value",
+      captchaToken: "ordinary-captcha-value",
+    },
+    formNonce: "nonce-reserved-form-embed",
+    captchaToken: "form-embed-final-token",
+  });
+});
+
+test("536-03: Contact keeps reserved-name fields separate from marked security controls", async () => {
+  const execute = vi.fn(async () => "contact-final-token");
+  const requests: Array<{ url: string; init?: RequestInit }> = [];
+  globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    requests.push({ url: String(input), init });
+    return new Response(JSON.stringify({ runtime: { successMessage: "Done" } }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }) as typeof globalThis.fetch;
+  const base = createContactRuntimeData();
+  const form = installRenderedFormRuntime(
+    React.createElement(ContactBlock, {
+      data: {
+        ...base,
+        form: {
+          ...base.form,
+          fields: ["name", "email"],
+          submission: {
+            ...base.form?.submission,
+            fieldMap: {
+              name: "__nl_form_nonce",
+              email: "captchaToken",
+              phone: "",
+              message: "",
+            },
+          },
+        },
+        resolved: {
+          ...base.resolved,
+          botProtection: {
+            provider: "recaptcha_v3",
+            siteKey: "site-key-contact-reserved",
+            action: "public_write",
+          },
+          fields: [
+            {
+              id: "contact-ordinary-nonce",
+              type: "text",
+              label: "Name",
+              name: "__nl_form_nonce",
+              required: false,
+              orderIndex: 0,
+              settings: {},
+            },
+            {
+              id: "contact-ordinary-captcha",
+              type: "email",
+              label: "Email",
+              name: "captchaToken",
+              required: true,
+              orderIndex: 1,
+              settings: {},
+            },
+          ],
+        },
+      },
+      variant: "form-left",
+      blockId: "contact-reserved-fields",
+    }),
+    () => {
+      (window as Window & { grecaptcha?: { execute: typeof execute } }).grecaptcha = { execute };
+    }
+  );
+  const ordinaryNonce = getOrdinaryNamedInput(form, "__nl_form_nonce");
+  const ordinaryCaptcha = getOrdinaryNamedInput(form, "captchaToken");
+  ordinaryNonce.value = "Contact Person";
+  ordinaryNonce.dispatchEvent(new Event("input", { bubbles: true }));
+  ordinaryCaptcha.value = "contact@example.com";
+  ordinaryCaptcha.dispatchEvent(new Event("input", { bubbles: true }));
+
+  dispatchSubmit(form);
+  await settleRuntime();
+
+  expect(execute).toHaveBeenCalledTimes(1);
+  expect(requests).toHaveLength(1);
+  expect(ordinaryCaptcha.value).toBe("contact@example.com");
+  expect(form.querySelector('[data-form-security-captcha="1"]')).toMatchObject({
+    value: "contact-final-token",
+  });
+  expect(JSON.parse(String(requests[0]?.init?.body))).toEqual({
+    data: {
+      __nl_form_nonce: "Contact Person",
+      captchaToken: "contact@example.com",
+    },
+    formNonce: "nonce-contact-runtime",
+    captchaToken: "contact-final-token",
+  });
+});
+
+test("536-03: Newsletter keeps a captchaToken field separate from marked security controls", async () => {
+  const execute = vi.fn(async () => "newsletter-final-token");
+  const requests: Array<{ url: string; init?: RequestInit }> = [];
+  globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    requests.push({ url: String(input), init });
+    return new Response(JSON.stringify({ runtime: { successMessage: "Done" } }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }) as typeof globalThis.fetch;
+  const base = createNewsletterRuntimeData();
+  const form = installRenderedFormRuntime(
+    React.createElement(NewsletterBlock, {
+      data: {
+        ...base,
+        form: {
+          ...newsletterDefaults.form,
+          emailFieldName: "captchaToken",
+          firstName: {
+            ...newsletterDefaults.form?.firstName,
+            enabled: false,
+          },
+        },
+        consent: {
+          ...newsletterDefaults.consent,
+          enabled: false,
+        },
+        resolved: {
+          ...base.resolved,
+          botProtection: {
+            provider: "recaptcha_v3",
+            siteKey: "site-key-newsletter-reserved",
+            action: "public_write",
+          },
+          fields: [
+            {
+              id: "newsletter-ordinary-captcha",
+              type: "email",
+              label: "Email",
+              name: "captchaToken",
+              required: true,
+              orderIndex: 0,
+              settings: {},
+            },
+          ],
+        },
+      },
+      variant: "inline",
+      blockId: "newsletter-reserved-field",
+    }),
+    () => {
+      (window as Window & { grecaptcha?: { execute: typeof execute } }).grecaptcha = { execute };
+    }
+  );
+  const ordinaryCaptcha = getOrdinaryNamedInput(form, "captchaToken");
+  ordinaryCaptcha.value = "reader@example.com";
+  ordinaryCaptcha.dispatchEvent(new Event("input", { bubbles: true }));
+
+  dispatchSubmit(form);
+  await settleRuntime();
+
+  expect(execute).toHaveBeenCalledTimes(1);
+  expect(requests).toHaveLength(1);
+  expect(ordinaryCaptcha.value).toBe("reader@example.com");
+  expect(form.querySelector('[data-form-security-captcha="1"]')).toMatchObject({
+    value: "newsletter-final-token",
+  });
+  expect(JSON.parse(String(requests[0]?.init?.body))).toEqual({
+    data: { captchaToken: "reader@example.com" },
+    formNonce: "nonce-newsletter-runtime",
+    captchaToken: "newsletter-final-token",
+  });
+});
+
+test("536-03: final JSON preserves magic field names as own data properties", async () => {
+  const requests: Array<{ url: string; init?: RequestInit }> = [];
+  const uploadIds = [uploadIdA, uploadIdB];
+  globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    requests.push({ url, init });
+    if (url.endsWith("/uploads")) {
+      return new Response(JSON.stringify({ id: uploadIds.shift() }), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return new Response(JSON.stringify({ runtime: { successMessage: "Done" } }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }) as typeof globalThis.fetch;
+
+  let capturedPayload: unknown = null;
+  const originalStringify = JSON.stringify;
+  vi.spyOn(JSON, "stringify").mockImplementation(((value: unknown) => {
+    if (
+      value !== null &&
+      typeof value === "object" &&
+      Object.hasOwn(value, "data") &&
+      Object.hasOwn(value, "formNonce")
+    ) {
+      capturedPayload = value;
+    }
+    return originalStringify(value);
+  }) as typeof JSON.stringify);
+
+  const form = installFormRuntime(
+    createFileFormData({
+      formId: "magic-fields",
+      fields: [
+        {
+          id: "ordinary-field",
+          type: "text",
+          label: "Ordinary",
+          name: "ordinary",
+          required: false,
+          settings: {},
+        },
+        {
+          id: "prototype-file-field",
+          type: "file",
+          label: "Prototype files",
+          name: "__proto__",
+          required: true,
+          settings: { multiple: true },
+        },
+        {
+          id: "constructor-field",
+          type: "text",
+          label: "Constructor",
+          name: "constructor",
+          required: false,
+          settings: {},
+        },
+        {
+          id: "to-string-field",
+          type: "text",
+          label: "To string",
+          name: "toString",
+          required: false,
+          settings: {},
+        },
+      ],
+    })
+  );
+  setInputValue('input[name="ordinary"]', "plain");
+  setSelectedFiles(getFileInput(form, "__proto__"), [
+    new File([canonicalPngBytes], "first.png", { type: "image/png" }),
+    new File([canonicalPngBytes], "second.png", { type: "image/png" }),
+  ]);
+  setInputValue('input[name="constructor"]', "ctor");
+  setInputValue('input[name="toString"]', "stringifier");
+
+  dispatchSubmit(form);
+  await settleRuntime();
+
+  expect(requests.map(({ url }) => url)).toEqual([
+    "http://localhost:3000/forms/magic-fields/uploads",
+    "http://localhost:3000/forms/magic-fields/uploads",
+    "http://localhost:3000/forms/magic-fields/submissions",
+  ]);
+  expect(capturedPayload).not.toBeNull();
+  if (capturedPayload === null || typeof capturedPayload !== "object") {
+    throw new Error("Missing captured submission payload");
+  }
+  const data = Reflect.get(capturedPayload, "data");
+  if (data === null || typeof data !== "object") {
+    throw new Error("Missing captured dynamic data payload");
+  }
+  expect(Object.getPrototypeOf(data)).toBe(Object.prototype);
+  const expectedEntries: Array<readonly [string, unknown]> = [
+    ["ordinary", "plain"],
+    ["__proto__", [uploadIdA, uploadIdB]],
+    ["constructor", "ctor"],
+    ["toString", "stringifier"],
+  ];
+  for (const [name, value] of expectedEntries) {
+    expect(Object.hasOwn(data, name)).toBe(true);
+    expect(Object.getOwnPropertyDescriptor(data, name)).toEqual({
+      value,
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
+  }
+  expect(String(requests[2]?.init?.body)).toBe(
+    `{"data":{"ordinary":"plain","__proto__":["${uploadIdA}","${uploadIdB}"],"constructor":"ctor","toString":"stringifier"},"formNonce":"nonce-magic-fields"}`
+  );
+});
+
+test("536-03: conditional logic and progress use own properties for magic field names", () => {
+  const progressKey = "nextless:form-progress:magic-progress:/";
+  window.localStorage.setItem(
+    progressKey,
+    `{"values":{"__proto__":"restored-prototype"},"currentStep":1,"savedAt":${Date.now()}}`
+  );
+
+  let capturedProgress: unknown = null;
+  const originalStringify = JSON.stringify;
+  vi.spyOn(JSON, "stringify").mockImplementation(((value: unknown) => {
+    if (
+      value !== null &&
+      typeof value === "object" &&
+      Object.hasOwn(value, "values") &&
+      Object.hasOwn(value, "savedAt")
+    ) {
+      capturedProgress = value;
+    }
+    return originalStringify(value);
+  }) as typeof JSON.stringify);
+
+  const form = installFormRuntime(
+    createFileFormData({
+      formId: "magic-progress",
+      saveProgress: true,
+      fields: [
+        {
+          id: "prototype-field",
+          type: "text",
+          label: "Prototype",
+          name: "__proto__",
+          required: false,
+          settings: {},
+        },
+        {
+          id: "constructor-field",
+          type: "text",
+          label: "Constructor",
+          name: "constructor",
+          required: false,
+          settings: {},
+        },
+        {
+          id: "to-string-field",
+          type: "text",
+          label: "To string",
+          name: "toString",
+          required: false,
+          settings: {},
+        },
+        {
+          id: "prototype-target",
+          type: "text",
+          label: "Prototype target",
+          name: "prototype_target",
+          required: false,
+          settings: {
+            logic: { operator: "equals", field: "__proto__", value: "restored-prototype" },
+          },
+        },
+        {
+          id: "constructor-target",
+          type: "text",
+          label: "Constructor target",
+          name: "constructor_target",
+          required: false,
+          settings: { logic: { operator: "exists", field: "constructor" } },
+        },
+        {
+          id: "to-string-target",
+          type: "text",
+          label: "To string target",
+          name: "to_string_target",
+          required: false,
+          settings: { logic: { operator: "exists", field: "toString" } },
+        },
+      ],
+    })
+  );
+
+  const prototypeInput = getOrdinaryNamedInput(form, "__proto__");
+  const constructorInput = getOrdinaryNamedInput(form, "constructor");
+  const toStringInput = getOrdinaryNamedInput(form, "toString");
+  const prototypeTarget = form.querySelector('[data-form-field="prototype_target"]');
+  const constructorTarget = form.querySelector('[data-form-field="constructor_target"]');
+  const toStringTarget = form.querySelector('[data-form-field="to_string_target"]');
+  expect(prototypeInput.value).toBe("restored-prototype");
+  expect(constructorInput.value).toBe("");
+  expect(toStringInput.value).toBe("");
+  expect(prototypeTarget).toMatchObject({ hidden: false });
+  expect(constructorTarget).toMatchObject({ hidden: true });
+  expect(toStringTarget).toMatchObject({ hidden: true });
+
+  setInputValue('input[name="constructor"]', "ctor");
+  setInputValue('input[name="toString"]', "stringifier");
+  expect(constructorTarget).toMatchObject({ hidden: false });
+  expect(toStringTarget).toMatchObject({ hidden: false });
+
+  if (capturedProgress === null || typeof capturedProgress !== "object") {
+    throw new Error("Missing captured magic-name progress payload");
+  }
+  const values = Reflect.get(capturedProgress, "values");
+  if (values === null || typeof values !== "object") {
+    throw new Error("Missing captured progress values");
+  }
+  expect(Object.getPrototypeOf(values)).toBe(Object.prototype);
+  expect(Object.hasOwn(values, "__proto__")).toBe(true);
+  expect(Object.hasOwn(values, "constructor")).toBe(true);
+  expect(Object.hasOwn(values, "toString")).toBe(true);
+  expect(Reflect.get(values, "__proto__")).toBe("restored-prototype");
+  expect(Reflect.get(values, "constructor")).toBe("ctor");
+  expect(Reflect.get(values, "toString")).toBe("stringifier");
+
+  const storedRaw = window.localStorage.getItem(progressKey);
+  expect(storedRaw).not.toBeNull();
+  const stored = JSON.parse(storedRaw ?? "{}") as { values?: Record<string, unknown> };
+  expect(Object.hasOwn(stored.values ?? {}, "__proto__")).toBe(true);
+  expect(Object.hasOwn(stored.values ?? {}, "constructor")).toBe(true);
+  expect(Object.hasOwn(stored.values ?? {}, "toString")).toBe(true);
+  expect(stored.values?.__proto__).toBe("restored-prototype");
+  expect(stored.values?.constructor).toBe("ctor");
+  expect(stored.values?.toString).toBe("stringifier");
+});
+
 test("536-03: required single file uploads before the final JSON submission", async () => {
   const requests: Array<{ url: string; init?: RequestInit }> = [];
   globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -817,7 +1553,7 @@ test("536-03: required single file uploads before the final JSON submission", as
   }) as typeof globalThis.fetch;
 
   const form = installFormRuntime(createFileFormData());
-  const file = new File(["hello"], "resume.txt", { type: "text/plain" });
+  const file = new File([canonicalPngBytes], "resume.png", { type: "image/png" });
   setSelectedFiles(getFileInput(form), [file]);
 
   dispatchSubmit(form);
@@ -838,7 +1574,10 @@ test("536-03: required single file uploads before the final JSON submission", as
   const uploadEntries = Array.from((upload?.body as FormData).entries());
   expect(uploadEntries.map(([key]) => key)).toEqual(["fieldName", "file", "formNonce"]);
   expect(uploadEntries[0]).toEqual(["fieldName", "attachment"]);
-  expect(uploadEntries[1]?.[1]).toMatchObject({ name: "resume.txt", type: "text/plain" });
+  expect(uploadEntries[1]?.[1]).toMatchObject({ name: "resume.png", type: "image/png" });
+  const uploadedFile = uploadEntries[1]?.[1];
+  if (!(uploadedFile instanceof File)) throw new Error("Missing uploaded PNG fixture");
+  expect(new Uint8Array(await uploadedFile.arrayBuffer())).toEqual(canonicalPngBytes);
   expect(uploadEntries[2]).toEqual(["formNonce", "nonce-file-form"]);
 
   const hidden = form.querySelector('[data-form-file-value="attachment"]');
@@ -856,7 +1595,7 @@ test("536-03: required single file uploads before the final JSON submission", as
     data: { attachment: uploadIdA },
     formNonce: "nonce-file-form",
   });
-  expect(JSON.stringify(submissionPayload)).not.toContain("resume.txt");
+  expect(JSON.stringify(submissionPayload)).not.toContain("resume.png");
   expect(JSON.stringify(submissionPayload)).not.toContain("provider.invalid");
 });
 
@@ -894,8 +1633,8 @@ test("536-03: ordered multiple uploads get fresh captcha tokens for every public
   (window as Window & { grecaptcha?: { execute: typeof execute } }).grecaptcha = { execute };
   appendedScripts[0]?.dispatchEvent(new Event("load"));
 
-  const first = new File(["a"], "a.png", { type: "image/png" });
-  const second = new File(["b"], "b.png", { type: "image/png" });
+  const first = new File([canonicalPngBytes], "a.png", { type: "image/png" });
+  const second = new File([canonicalPngBytes], "b.png", { type: "image/png" });
   setSelectedFiles(getFileInput(form), [first, second]);
   dispatchSubmit(form);
   await settleRuntime();
@@ -915,6 +1654,13 @@ test("536-03: ordered multiple uploads get fresh captcha tokens for every public
   const secondBody = requests[1]?.init?.body as FormData;
   expect(Array.from(firstBody.keys())).toEqual(["fieldName", "file", "formNonce", "captchaToken"]);
   expect(firstBody.get("file")).toMatchObject({ name: "a.png", type: "image/png" });
+  const firstUploadFile = firstBody.get("file");
+  const secondUploadFile = secondBody.get("file");
+  if (!(firstUploadFile instanceof File) || !(secondUploadFile instanceof File)) {
+    throw new Error("Missing ordered PNG upload fixtures");
+  }
+  expect(new Uint8Array(await firstUploadFile.arrayBuffer())).toEqual(canonicalPngBytes);
+  expect(new Uint8Array(await secondUploadFile.arrayBuffer())).toEqual(canonicalPngBytes);
   expect(firstBody.get("captchaToken")).toBe("upload-token-a");
   expect(secondBody.get("file")).toMatchObject({ name: "b.png", type: "image/png" });
   expect(secondBody.get("captchaToken")).toBe("upload-token-b");
@@ -4632,7 +5378,180 @@ test("536-03: unsafe-status and generic-catch source shapes are owner-sensitive"
   );
 });
 
-test("536-03: duplicate public nonce fails locally before captcha or transport", async () => {
+const securityControlMutationCases: Array<readonly [string, (form: HTMLFormElement) => void]> = [
+  [
+    "malformed nonce marker",
+    (form) => {
+      form
+        .querySelector('[data-form-security-nonce="1"]')
+        ?.setAttribute("data-form-security-nonce", "0");
+    },
+  ],
+  [
+    "stripped nonce marker",
+    (form) => {
+      form
+        .querySelector('[data-form-security-nonce="1"]')
+        ?.removeAttribute("data-form-security-nonce");
+    },
+  ],
+  [
+    "wrong nonce input type",
+    (form) => {
+      const input = form.querySelector('[data-form-security-nonce="1"]');
+      if (input instanceof HTMLInputElement) input.type = "text";
+    },
+  ],
+  [
+    "wrong nonce name",
+    (form) => {
+      const input = form.querySelector('[data-form-security-nonce="1"]');
+      if (input instanceof HTMLInputElement) input.name = "ordinary";
+    },
+  ],
+  [
+    "cross-role nonce marker",
+    (form) => {
+      form
+        .querySelector('[data-form-security-nonce="1"]')
+        ?.setAttribute("data-form-security-captcha", "1");
+    },
+  ],
+  [
+    "moved nonce control",
+    (form) => {
+      const otherForm = document.createElement("form");
+      document.body.appendChild(otherForm);
+      const input = form.querySelector('[data-form-security-nonce="1"]');
+      if (input) otherForm.appendChild(input);
+    },
+  ],
+  [
+    "malformed captcha marker",
+    (form) => {
+      form
+        .querySelector('[data-form-security-captcha="1"]')
+        ?.setAttribute("data-form-security-captcha", "0");
+    },
+  ],
+  [
+    "stripped captcha marker",
+    (form) => {
+      form
+        .querySelector('[data-form-security-captcha="1"]')
+        ?.removeAttribute("data-form-security-captcha");
+    },
+  ],
+  [
+    "wrong captcha name",
+    (form) => {
+      const input = form.querySelector('[data-form-security-captcha="1"]');
+      if (input instanceof HTMLInputElement) input.name = "ordinary";
+    },
+  ],
+  [
+    "duplicate marked captcha",
+    (form) => {
+      const input = form.querySelector('[data-form-security-captcha="1"]');
+      if (input) form.appendChild(input.cloneNode(true));
+    },
+  ],
+];
+
+test.each(securityControlMutationCases)(
+  "536-03: %s fails locally before captcha or transport",
+  async (_label, mutate) => {
+    const execute = vi.fn(async () => "must-not-execute");
+    globalThis.fetch = vi.fn(async () => {
+      throw new Error("transport must not run");
+    }) as typeof globalThis.fetch;
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const formId = `security-marker-${_label.replaceAll(" ", "-")}`;
+    const form = installFormRuntime(
+      createFileFormData({
+        formId,
+        required: false,
+        saveProgress: true,
+        botProtection: true,
+        fields: [{ id: "note", type: "text", label: "Note", name: "note", required: false }],
+      }),
+      () => {
+        (window as Window & { grecaptcha?: { execute: typeof execute } }).grecaptcha = { execute };
+      }
+    );
+    mutate(form);
+    setInputValue('input[name="note"]', "progress-without-security-controls");
+
+    expect(() => dispatchSubmit(form)).not.toThrow();
+    await settleRuntime();
+
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+    expect(execute).not.toHaveBeenCalled();
+    expect(form.dataset.submitting).toBe("0");
+    expect(form.dataset.fileUploadPending).toBe("0");
+    expect(window.localStorage.getItem(`nextless:form-progress:${formId}:/`)).not.toContain(
+      `nonce-${formId}`
+    );
+    expect(form.querySelector('[data-form-embed-error="true"]')).toMatchObject({
+      textContent: _label.includes("captcha")
+        ? "Unable to submit the form. Please try again."
+        : "This form has expired. Refresh the page and try again.",
+    });
+    expect(consoleError).not.toHaveBeenCalled();
+  }
+);
+
+test.each(["nonce", "captcha"] as const)(
+  "536-03: replacing the captured marked %s reference during final captcha blocks the write",
+  async (role) => {
+    let resolveToken: ((token: string) => void) | undefined;
+    const execute = vi.fn(
+      () =>
+        new Promise<string>((resolve) => {
+          resolveToken = resolve;
+        })
+    );
+    const requests: string[] = [];
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      requests.push(String(input));
+      return new Response(JSON.stringify({ runtime: { successMessage: "Done" } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof globalThis.fetch;
+    const form = installFormRuntime(
+      createFileFormData({
+        formId: `security-reference-${role}`,
+        required: false,
+        botProtection: true,
+        fields: [{ id: "note", type: "text", label: "Note", name: "note", required: false }],
+      }),
+      () => {
+        (window as Window & { grecaptcha?: { execute: typeof execute } }).grecaptcha = { execute };
+      }
+    );
+
+    dispatchSubmit(form);
+    await vi.waitFor(() => expect(execute).toHaveBeenCalledTimes(1));
+    const selector = `[data-form-security-${role}="1"]`;
+    const captured = form.querySelector(selector);
+    if (!(captured instanceof HTMLInputElement)) throw new Error(`Missing marked ${role}`);
+    const replacement = captured.cloneNode(true);
+    captured.replaceWith(replacement);
+    resolveToken?.("late-token");
+    await settleRuntime();
+
+    expect(requests).toHaveLength(0);
+    expect(form.querySelector(selector)).toBe(replacement);
+    expect(form.querySelector('[data-form-embed-error="true"]')).toMatchObject({
+      textContent: "Your file selection changed. Submit the form again.",
+    });
+    expect(form.dataset.submitting).toBe("0");
+    expect(form.getAttribute("aria-busy")).toBe("false");
+  }
+);
+
+test("536-03: duplicate marked security nonce fails locally before captcha or transport", async () => {
   const scripts: HTMLScriptElement[] = [];
   vi.spyOn(document.head, "appendChild").mockImplementation((node) => {
     scripts.push(node as HTMLScriptElement);
@@ -4653,6 +5572,7 @@ test("536-03: duplicate public nonce fails locally before captcha or transport",
   duplicateNonce.type = "hidden";
   duplicateNonce.name = "__nl_form_nonce";
   duplicateNonce.value = "attacker-selected-nonce";
+  duplicateNonce.dataset.formSecurityNonce = "1";
   form.appendChild(duplicateNonce);
   const hidden = form.querySelector('[data-form-file-value="attachment"]');
   const status = form.querySelector('[data-form-file-status="attachment"]');

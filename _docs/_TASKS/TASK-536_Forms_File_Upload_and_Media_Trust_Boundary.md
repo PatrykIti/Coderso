@@ -31,6 +31,10 @@ the touched Form renderers are existing public page blocks/sections, not dashboa
 widgets and not a new general widget-authoring surface. This task may repair their
 rendered DOM/runtime compatibility only. It must not add a non-dashboard widget type,
 editor/wizard/visual control, registry/module-pack entry, preset, or authoring workflow.
+Closure also reconciles active contributor/product documentation that contradicted
+this owner-confirmed boundary. Historical implementation records remain readable but
+must be explicitly labeled compatibility-only; this documentation cleanup does not
+authorize unrelated source changes.
 
 ## Fixed decisions and invariants
 
@@ -48,8 +52,9 @@ editor/wizard/visual control, registry/module-pack entry, preset, or authoring w
 - Every core and remote delivery path emits/retains the canonical MIME policy,
   `X-Content-Type-Options: nosniff`, and the correct `Content-Disposition`.
 - The runtime uploads before submission, writes only returned owned media IDs to
-  the named hidden input, honors `required` and `multiple`, and cannot submit
-  while uploads are pending or failed.
+  the named hidden input, honors `required` and `multiple`, and cannot send the
+  final submission while uploads are pending. An ordinary upload failure releases
+  action locks for retry while the final request remains unsent until retry succeeds.
 - Exactly one layer owns the `public_write` charge per public request.
 - Nested request objects are reject-unknown. No normalizer silently launders
   unknown field/settings keys through a looser route schema.
@@ -101,6 +106,10 @@ editor/wizard/visual control, registry/module-pack entry, preset, or authoring w
 |---|---|---|
 | H-01 file input never uploads; required/multiple are inert | 536-03/L01 + L02 | browser/runtime test: select → upload → owned id(s) → submit; pending/error blocks submit |
 | H-02 stored media identity/delivery trust mismatch | 536-01/L01..L03 + 536-02/L01 | byte/MIME/key/URL corpus and final Bun delivery-header regression, with the private payload redacted |
+| POST-M-01 admin reclassifies attachment-only SVG as inline image | 536-01/L03 | media utils/card/picker/details Vitest: canonical passive + persisted type agreement, no SVG img/focal UI, no `image/*` admission |
+| POST-M-02 admin usage projection omits Form submissions | 536-01/L03 | media details Vitest renders a `submission` usage row with a defined icon; docs pin pre-submit unreferenced state |
+| POST-M-03 opaque PDF structures bypass lexical active-content inspection | 536-01/L01 | pure corpus accepts benign compressed page content but rejects compressed XFA, encryption, and object streams |
+| POST-M-04 Post media blocks bypass shared projected kind with raw MIME prefixes | 536-01/L03 | Post canvas Vitest excludes SVG/unsupported/mismatched records from image/gallery and never renders persisted document-kind IDs through img |
 | H-03 inspection coupled to captcha/auth state | 536-01/L03 + 536-04/L01 | session, API-key, captcha-on/off matrix proves inspection always runs |
 | M-03 double `public_write` charge | 536-04/L01 | public adapter-through-handler integration asserts one limiter call |
 | L-03 loose nested form/field settings | 536-04/L02 | nested unknown-key rejection plus supported round-trip corpus |
@@ -123,15 +132,15 @@ silently claimed by this family.
 
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
-- Targeted Vitest: Forms runtime/widget/schema suites and new pure media-identity
+- Targeted Vitest: Forms runtime/compatibility-renderer/schema suites and new pure media-identity
   corpus.
 - Targeted Bun: media service/adapters, public Forms adapter/route, media delivery,
   Forms route registration, file submission, and the new security regression.
 - The exact Forms/media Semgrep and security-gate suites must pass. Also run
-  `bun run scan:security:strict`; until TASK-538 lands, only the already-recorded
-  Page `customSvg` finding owned by TASK-538 may be reported as an external program
-  blocker. Do not suppress or allowlist it, and rerun the full strict scan after
-  TASK-538 removes the source finding.
+  `bun run scan:security:strict`. The current external program blockers are the Page
+  `customSvg` source finding owned by TASK-538 and the prompt-only
+  `task-522-author.mjs` finding owned by TASK-545-02-L01. Do not suppress or allowlist
+  either; the final TASK-536–545 program gate must prove both absent.
 - At least five real Playwright flows: required single file, multiple files,
   upload failure+retry, cookie-bearing public upload plus the noninteractive internal
   boundary, and publish/front delivery.

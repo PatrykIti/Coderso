@@ -575,6 +575,23 @@ function readNamedValue(input, registry) {
   preserve existing behavior for every other input;
 }
 
+function readFormSecurityControls(form, captchaSiteKey) {
+  collect all elements carrying data-form-security-nonce or data-form-security-captcha;
+  require exactly one nonce marker on a native hidden input owned by this form, with
+    marker value "1" and name "__nl_form_nonce";
+  require exactly one equally strict CAPTCHA marker named "captchaToken" when a site key
+    is configured, otherwise require zero CAPTCHA markers;
+  reject duplicate, cross-role, malformed, wrong-owner, wrong-type, or moved markers;
+  return the exact input references; ordinary fields with either name but no security
+    marker remain ordinary dynamic fields;
+}
+
+function setOwnDynamicValue(target, key, value) {
+  Object.defineProperty(target, key, {
+    value, enumerable: true, writable: true, configurable: true,
+  });
+}
+
 function getFormFields(form, registry) {
   exclude every native input[type=file] regardless of name or marker state;
   before tombstone/marker exclusion, admit an exact current validated hidden companion
@@ -583,6 +600,8 @@ function getFormFields(form, registry) {
   for every element that is not that exact current companion, exclude every
     fileMarkerTombstones element even after all markers/name are mutated and exclude every
     currently marker-bearing element;
+  exclude only exact validated security-role inputs by their marker/reference, never all
+    controls merely because their names are `__nl_form_nonce` or `captchaToken`;
   preserve ordinary named-control filtering;
 }
 
@@ -590,6 +609,8 @@ function collectValues(form, registry) {
   iterate getFormFields(form, registry);
   pass this same registry to every readNamedValue call;
   skip SKIP_VALUE rather than treating it as an ordinary hidden value;
+  write every dynamic name through setOwnDynamicValue and use Object.hasOwn when reading
+    conditional values so inherited built-ins are never data;
 }
 
 function refreshConditionalFields(form, registry) {
@@ -603,7 +624,13 @@ function persistProgress(form, registry) {
   iterate getFormFields(form, registry);
   omit native File values and every input present in registry.bindingByHidden;
   pass registry to every other readNamedValue call;
+  write dynamic names through setOwnDynamicValue;
   persist only the existing safe progress shape;
+}
+
+function hydrateProgress(form, registry) {
+  accept a saved dynamic value only when Object.hasOwn(values, field.name);
+  never hydrate Object.prototype members for absent magic-named fields;
 }
 
 function validateCurrentStep(form, registry) {
@@ -617,6 +644,7 @@ function validateStepsThroughCurrent(form, registry) {
 function toPayload(form, registry, writeContext, finalCaptchaToken) {
   iterate getFormFields(form, registry);
   readNamedValue(field, registry);
+  setOwnDynamicValue(data, field.name, value);
   set formNonce only from writeContext.formNonce and captchaToken only from the local
     finalCaptchaToken (when non-empty), never reread mutable hidden controls here;
 }
@@ -685,6 +713,10 @@ on submit:
   assertPublicWriteContextStillCurrent(form, writeContext);
   assertPreparedFilesStillCurrent(form, registry, preparedFiles);
   payload = toPayload(form, registry, writeContext, finalCaptchaToken);
+  toPayload defines every dynamic field name as an enumerable own data property instead
+    of bracket-assigning into an ordinary object; valid magic names such as `__proto__`,
+    `constructor`, and `toString` survive JSON serialization without changing the
+    payload prototype, including ordered multiple-file ID arrays;
   POST writeContext.submissionUrl with credentials:"same-origin" synchronously after the
     assertions, with no await/event
     boundary between the assertion, payload construction, and fetch initiation;
@@ -719,7 +751,7 @@ browser has a session cookie, and request a fresh configured captcha token per w
 It never fetches `/admin/api/auth/csrf`, accepts an API key, or attempts the internal
 session/API-key path: the existing renderer does not emit an interactive form for
 `submissionAccess:"internal"`. TASK-536-04 preserves and tests internal session
-forms:write plus CSRF and API-key forms.submit for non-widget callers. The server owns
+forms:write plus CSRF and API-key forms.submit for direct internal API callers. The server owns
 strict validation, the one selected rate bucket, field/media ownership, and byte checks;
 hidden IDs and client state are untrusted.
 
@@ -739,6 +771,11 @@ same-origin `/forms/${encodeURIComponent(formId)}/submissions` with
 `credentials:"same-origin"`; it never fetches a mutable `form.action`. After the final
 captcha and immediately before serialization, require the live form id, nonce, action,
 captcha site key/action, and normalized form action still match the captured context.
+The context also captures the exact trusted nonce/CAPTCHA input references returned by
+`readFormSecurityControls`; live validation requires the same marker bytes, input
+type/name, form owner, cardinality, and references. Names alone never identify a security
+control, so legacy/API-authored ordinary fields called `__nl_form_nonce` or `captchaToken`
+remain serializable without weakening nonce/CAPTCHA ownership.
 
 ## Progress and conditional behavior
 
@@ -969,6 +1006,21 @@ and issue zero fetch.
 A neutral multiple companion `""` must collect as `[]` without an error; canonical nonempty
 JSON decodes, while malformed/noncanonical JSON blocks with zero uncaught exception and
 zero `console.error`.
+Serialize valid dynamic names through enumerable own data properties, not prototype-aware
+bracket assignment. Cover ordinary names plus `__proto__`, `constructor`, and `toString`,
+including an ordered multiple-file ID array; assert `Object.hasOwn`, exact JSON, and the
+unchanged ordinary payload prototype. Exercise the same three names through conditional
+logic and save/hydrate progress: values are own data, missing values never resolve inherited
+built-ins, and hydration requires `Object.hasOwn`. Render the real Form Embed, Contact, and
+Newsletter public Forms bindings with every collision name each renderer can represent:
+Form Embed and Contact cover both `__nl_form_nonce` and `captchaToken`, while Newsletter's
+existing leading-letter field-name grammar makes only `captchaToken` reachable. Place the
+ordinary fields alongside the marked security controls; execute their injected shared
+runtime and prove both ordinary values reach `data`, while the exact marked nonce and
+CAPTCHA control remain security-owned. Also prove legacy non-file success plus a failed
+request followed by action recovery/retry. Duplicate/malformed/moved/cross-role security
+markers fail locally before any write. These are compatibility cases for existing
+block/section consumers, not new authoring surfaces.
 Mutate a valid triple to malformed during upload and prove the centralized action state
 stays disabled after the stale operation settles until the binding is truly repaired.
 A hide→show conditional cycle must restore `required` only on the native input,
@@ -988,7 +1040,9 @@ bun --cwd core lint
   core/widgets/core/formRuntimeScript.ts core/widgets/core/formEmbed.tsx
 bunx vitest run --config vitest.config.ts \
   tests/vitest/widgets/formRuntimeScript.test.ts \
-  tests/vitest/widgets/formEmbed.test.tsx
+  tests/vitest/widgets/formEmbed.test.tsx \
+  tests/vitest/widgets/contact.test.tsx \
+  tests/vitest/widgets/newsletter.test.tsx
 ~~~
 
 Re-run the named failing file alone before classification.

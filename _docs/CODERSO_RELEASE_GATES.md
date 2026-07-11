@@ -37,7 +37,7 @@ Do not import `core/db/client` in pure gate tests just to read defaults.
 | Gate | Goal | Execution Source |
 |------|------|------------------|
 | `functional` | Core module flows are runnable | lint + selected Bun runtime flows + selected Vitest UI/domain flows |
-| `ux` | Beginner/composite-first paths remain stable | wizard/library/editor UX suites |
+| `ux` | Domain section/block editors and Admin Dashboard widgets remain stable; retained `core/widgets` renderers keep compatibility | section/block editor UX + Dashboard widget UX + compatibility-renderer regression suites |
 | `performance` | p95 budgets for critical interactions | `tests/perf/codersoPerformanceGate.test.ts` |
 | `security` | Public-write hardening and baseline controls | `tests/security/*` + security unit suites |
 | `reliability` | Install/upgrade/rollback path resiliency | kits/store reliability suites |

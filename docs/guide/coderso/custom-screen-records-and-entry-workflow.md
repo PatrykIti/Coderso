@@ -86,7 +86,8 @@ Use this safe records workflow when a screen is still maturing:
 # Advanced
 
 - A custom screen route should not be assumed to be fully editable just because
-  it has a records URL. Capability depends on bindings and widget composition.
+  it has a records URL. Capability depends on bindings and the screen-owned
+  section/block composition.
 - The collection-only mode is a valid product state. It means the screen helps
   navigation and narrowing, but not full record editing yet.
 - The read-only dashboard mode is also a legitimate intermediate state. It can
@@ -131,8 +132,8 @@ Use this safe records workflow when a screen is still maturing:
   use builder to improve the screen; use records route to operate the workflow
   the screen already supports.
 - Choose custom record screen vs classic editor:
-  use the custom screen only when bindings and widgets make the task safer or
-  faster; otherwise use the classic editor.
+  use the custom screen only when bindings and its sections/blocks make the
+  task safer or faster; otherwise use the classic editor.
 
 # Checklist
 

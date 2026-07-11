@@ -64,6 +64,10 @@ It is the right place when you need to answer questions such as:
    - admin usage
    - public site usage
    - assistant usage
+   For public forms, each file upload request and the final submission are
+   separate `public_write` requests. Each request is counted once, so test
+   multi-file forms against the selected limit rather than treating the whole
+   visitor flow as one request.
 6. In `CSRF`, review whether admin actions are protected with the expected
    header name and token TTL.
 7. In `CORS`, review:
@@ -121,6 +125,12 @@ Use this safe hardening order when you want fewer lockout mistakes:
 - High-impact saves, including rate limits, CSRF/CORS, security headers,
   session policy, bot protection, plugin policy, and allowlist-related changes,
   require an explicit review instead of silent auto-save.
+- Public Form uploads and submissions still require the form nonce and one
+  `public_write` charge when the browser has an authenticated admin cookie;
+  every file upload still undergoes byte inspection. The current evaluator
+  exempts that authenticated public session from CAPTCHA; anonymous public
+  requests continue to follow the configured bot policy. Internal Form writes
+  keep their session/CSRF or scoped API-key contract.
 
 # Troubleshooting
 
@@ -133,6 +143,10 @@ Use this safe hardening order when you want fewer lockout mistakes:
 - The environment feels locked down too hard:
   check rate-limit presets and IP allowlist before changing multiple unrelated
   security values.
+- A multi-file public form reaches its write limit sooner than expected:
+  remember that each file upload and the final submission are separate requests;
+  verify that no individual request is being counted more than once before
+  raising the limit.
 - IP allowlist changes do not seem instant:
   the current UI notes that propagation can take up to 2 minutes globally.
 
@@ -153,9 +167,10 @@ Use this safe hardening order when you want fewer lockout mistakes:
 1. Confirm the active security section you are editing.
 2. Confirm related controls are reviewed together.
 3. Confirm rate limits and auth protection do not conflict with real workflow.
-4. Confirm session and alert settings are intentional.
-5. Confirm access restrictions such as IP allowlist are deliberate.
-6. Save only after checking the whole policy set.
+4. Test both a normal public submission and a public file-upload flow.
+5. Confirm session and alert settings are intentional.
+6. Confirm access restrictions such as IP allowlist are deliberate.
+7. Save only after checking the whole policy set.
 
 # Navigation And Drafts
 
@@ -175,3 +190,5 @@ Use this safe hardening order when you want fewer lockout mistakes:
 - These controls affect authentication, public write protection, assistant
   runtime, and admin reachability, so they should be treated as operationally
   sensitive configuration.
+- Disabling or relaxing bot protection never disables server-side file-content
+  inspection; security settings control anti-abuse policy, not media identity.

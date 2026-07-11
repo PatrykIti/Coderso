@@ -32,7 +32,8 @@ Human-facing documentation lives in `docs/`:
 - `docs/guide/` - end-user product docs; also the AI assistant knowledge corpus
   (ingested from `docs/guide/` via `POST /assistant/reindex`)
 - `docs/develop/` - developer/contributor handbook (setup, architecture, runtime
-  model, content/widgets, plugins, assistant, testing, security, contributing)
+  model, content sections/blocks, Dashboard widgets, plugins, assistant,
+  testing, security, contributing)
 
 Primary internal/agent docs live in `_docs/`:
 
@@ -58,9 +59,11 @@ Primary internal/agent docs live in `_docs/`:
 - `_docs/SDK_SPEC.md` - plugin SDK contract
 - `_docs/STORE_SPEC.md` - store + security pipeline
 - `_docs/TESTING_STRATEGY.md` - target hybrid testing model for Bun runtime and Vitest coverage lanes
-- `_docs/WIDGETS.md` - core widgets and configuration model
-- `_docs/_WIDGETS/README.md` - widgets index and per-widget docs
-- `_docs/DASHBOARD_WIDGETS_SPEC.md` - admin dashboard widgets & configurable panels (distinct from `core/widgets/*`: admin-only registry, RBAC, cache family, and render host)
+- `_docs/WIDGETS.md` - historical `core/widgets/*` runtime/read-compatibility
+  model; not a new authoring surface
+- `_docs/_WIDGETS/README.md` - historical renderer compatibility index
+- `_docs/DASHBOARD_WIDGETS_SPEC.md` - the only configurable product-widget
+  surface: admin-only registry, RBAC, cache family, preferences, and render host
 - `_docs/_TASKS/README.md` - tasks index
 - `_docs/_CHANGELOG/README.md` - changelog index
 - `_docs/_workflows/` - multi-agent workflow scripts (`task-###-author-audit.mjs`,
@@ -308,8 +311,20 @@ Implementation pipeline:
 
 ## Product Contract Rules
 
-- Widgets, presets, and templates are product surfaces, not loose primitives. New module-facing work should stay composite-first and beginner-friendly by default; widget changes should ship `schema`, `defaults`, `normalize*`, render contract, `wizard/visual/advanced` editors, and tests.
-- If a widget or module change affects pack completeness/readiness, update the pack contract in code and docs (`core/widgets/modulePackMatrix.ts`, `_docs/WIDGET_PACK_MATRIX.md`, relevant `_docs/_WIDGETS/*` files).
+- Configurable product widgets belong only to the Admin Dashboard. Dashboard
+  widget changes must follow `_docs/DASHBOARD_WIDGETS_SPEC.md` and ship the
+  Dashboard-owned schema/defaults/normalizer, render host integration, RBAC,
+  cache/preferences behavior, editor controls, and tests.
+- Pages, Page Templates, Forms, Menus, Posts, Custom Screens, and other domain
+  editors own their sections and blocks. Extend that domain's strict schema,
+  normalizer, editor controls, renderer, and tests; do not add a generic widget
+  type, preset, module-pack entry, Widget Template surface, or
+  Wizard/Visual/Advanced editor.
+- `core/widgets/*`, `core/widgets/modulePackMatrix.ts`, `_docs/WIDGETS.md`,
+  `_docs/WIDGET_PACK_MATRIX.md`, and `_docs/_WIDGETS/*` are retained
+  runtime/read-compatibility seams. Change them only when an existing contract
+  requires maintenance, preserve non-destructive legacy reads, and do not widen
+  them into a selectable non-dashboard product surface.
 - Plugin/runtime extensions must obey manifest normalization and safe route contracts: declared contributions, safe relative routes, explicit permissions for write methods, and internal admin scoping unless architecture explicitly requires otherwise.
 - Assistant and automation flows must stay typed and explainable: prefer `plan -> actions -> execute -> validate`, support dry-run/review before mutation where the contract expects it, and keep actions auditable and idempotent.
 
@@ -329,7 +344,8 @@ Implementation pipeline:
   - pure TypeScript domain/services,
   - admin/UI,
   - SDK/shared contracts,
-  - widget/content logic that does not depend on runtime Bun APIs.
+  - editor section/block, Dashboard-widget, or retained compatibility-renderer
+    logic that does not depend on runtime Bun APIs.
 - A suite is not Bun-free if importing its production module immediately triggers DB/settings/runtime coupling. Refactor the production module first instead of forcing the test into Vitest with brittle mocks.
 - DB-backed tests must create uniquely scoped fixtures and clean up only the rows they created or explicitly own. Do not truncate or delete whole domain tables from shared test databases; each suite must remain independent and only exercise its own contract.
 - Introduce new lane changes additively first and keep the existing command surface green while migrating ownership.
@@ -382,4 +398,9 @@ Implementation pipeline:
   drift finding caused an additional fix.
 - Update relevant documentation for any API/architecture/UX contract changes.
 - If you add or change admin cached resources, update `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md`.
-- If you change plugin/runtime contracts, widget pack coverage, assistant workflow contracts, or release-gate contracts, update the corresponding source-of-truth docs (`_docs/CODERSO_PLUGIN_CONTRACT.md`, `_docs/WIDGET_PACK_MATRIX.md`, `_docs/ASSISTANT_SITE_BUILDER.md`, `_docs/CODERSO_RELEASE_GATES.md`).
+- If you change plugin/runtime contracts, Dashboard widget contracts, retained
+  compatibility coverage, assistant workflow contracts, or release-gate
+  contracts, update the corresponding source-of-truth docs
+  (`_docs/CODERSO_PLUGIN_CONTRACT.md`, `_docs/DASHBOARD_WIDGETS_SPEC.md`,
+  `_docs/WIDGET_PACK_MATRIX.md` when legacy compatibility is actually touched,
+  `_docs/ASSISTANT_SITE_BUILDER.md`, `_docs/CODERSO_RELEASE_GATES.md`).

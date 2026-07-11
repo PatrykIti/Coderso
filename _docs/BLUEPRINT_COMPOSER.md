@@ -83,10 +83,12 @@ Relation fields are content-schema metadata on a content type. Do not model
 ### Page Sections
 
 Page section contributions must use `blueprintPageSectionLibrary.ts` and the
-current widget registry. Unsupported aliases such as missing step/timeline/media
-capabilities must become gated conflicts until their widget or preset owner
-lands. Raw media URLs and uploads are not valid section data; use trusted media
-library ids or return `needs_input`.
+Page-owned section/block capability contract. The historical widget registry or
+`modulePackMatrix` may translate already supported alias ids only; it is not an
+authoring owner and must not receive new entries. Unsupported aliases such as
+missing step/timeline/media capabilities become gated conflicts until the Page
+section/block owner lands. Raw media URLs and uploads are not valid section
+data; use trusted media library ids or return `needs_input`.
 
 ### Admin Surfaces
 

@@ -3,12 +3,14 @@ import { expect, test } from "vitest";
 import type { MediaItem } from "../../../core/admin/ui/media/types";
 import type { MediaRecord } from "../../../core/admin/services/mediaClient";
 import type { MediaFolder } from "../../../core/admin/services/mediaFoldersClient";
+import { CANONICAL_MEDIA_PROFILES } from "../../../core/services/media/mediaFileTrust";
 import {
   buildFolderTree,
   countMediaByFolder,
   filterByTag,
   formatDimensions,
   hasMissingImageAlt,
+  resolveAdminMediaKind,
   resolveFocalPosition,
   resolveMediaDisplayName,
   toMediaItem,
@@ -47,6 +49,37 @@ const baseRecord: MediaRecord = {
   size: 2048,
   createdAt: "2026-04-23T00:00:00.000Z",
 };
+
+test("resolveAdminMediaKind requires canonical inline MIME and persisted image type", () => {
+  for (const [mimeType, profile] of Object.entries(CANONICAL_MEDIA_PROFILES)) {
+    expect(resolveAdminMediaKind({ type: "image", mimeType })).toBe(
+      profile.delivery === "inline" ? "image" : "document"
+    );
+    expect(resolveAdminMediaKind({ type: "file", mimeType })).toBe("document");
+  }
+
+  expect(resolveAdminMediaKind({ type: "image", mimeType: "image/avif" })).toBe("document");
+  expect(resolveAdminMediaKind({ type: "image", mimeType: "image/jpg" })).toBe("document");
+  expect(resolveAdminMediaKind({ type: "image", mimeType: "image/png; charset=binary" })).toBe(
+    "document"
+  );
+  expect(resolveAdminMediaKind({ type: "file", mimeType: "audio/mpeg" })).toBe("audio");
+  expect(resolveAdminMediaKind({ type: "file", mimeType: "video/mp4" })).toBe("video");
+});
+
+test("toMediaItem projects kind from both persisted type and canonical MIME", () => {
+  expect(toMediaItem(baseRecord).type).toBe("image");
+  expect(toMediaItem({ ...baseRecord, type: "file" }).type).toBe("document");
+  expect(
+    toMediaItem({
+      ...baseRecord,
+      type: "image",
+      mimeType: "image/svg+xml",
+      key: "uploads/icon.svg",
+      url: "/media/uploads/icon.svg",
+    }).type
+  ).toBe("document");
+});
 
 test("toMediaItem maps new fields and defaults tags/focal/meta", () => {
   const mapped = toMediaItem({

@@ -16,6 +16,8 @@ Coverage states:
 - `live-read-only`: live provider tests inspect/search without mutation controls.
 - `live-gated`: live provider tests verify unsupported or sensitive prompts stay non-executable.
 - `not-applicable`: route is planned/disabled or has no runtime surface yet.
+- `legacy-maintenance`: retained test evidence for hidden compatibility data;
+  not a current navigation or authoring surface.
 
 ## Blueprint Composition Live Fixtures
 
@@ -50,7 +52,7 @@ report provider gating without trusting provider-authored executable actions.
 | /admin/advanced/engine | Engine | live-execute | TASK-184-03 | Content type inspect/delete safety live matrix. |
 | /admin/advanced/entries | Entries | live-execute | TASK-184-03 | Active entry update/delete live matrix. |
 | /admin/advanced/custom-screens | Screens | live-execute | TASK-184-04 | Custom screen search/update/delete live matrix. |
-| /admin/advanced/widgets | Widgets | live-execute | TASK-184-07 | Widget template inspect/update/block patch/delete live matrix. |
+| /admin/advanced/widgets | Retired Widget Compatibility | legacy-maintenance | TASK-184-07 | Historical inspect/update/block-patch/delete evidence for retained rows only; the route is hidden and must not advertise create/insert authoring. |
 | /admin/advanced/page-templates | Page Templates | live-gated | TASK-420-03 | Page Templates editor advertises no assistant active surface in v1; prompts stay manual-UI gated. |
 | /admin/advanced/forms | Forms | live-execute | TASK-184-05 | Form create/search/update/archive/delete/safety live matrix. |
 | /admin/advanced/listings | Listings | live-execute | TASK-184-06 | Listing query/template inspect/update/delete live matrix. |
