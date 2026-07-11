@@ -164,10 +164,13 @@ export async function handleMediaDeliveryRequest(req) {
       "Content-Type": decision.contentType,
       "Content-Disposition": decision.disposition,
       "X-Content-Type-Options": "nosniff",
-      "Content-Length": String(row.size),
     };
 
-    if HEAD: await inspected.destroy(); return new Response(null, { headers });
+    if HEAD:
+      await inspected.destroy();
+      return new Response(null, {
+        headers: { ...headers, "Content-Length": String(row.size) },
+      });
     webBody = Readable.toWeb(inspected.replayStream);
     response = new Response(webBody, { headers });
     // Response now owns webBody/replay; cancel/close reaches closeOnce.
@@ -201,6 +204,14 @@ in depth; the final response always overwrites MIME/disposition from the DB/key/
 decision above (with bytes participating only in passive inline promotion). Local, S3,
 and Azure all use the same existing
 `Promise<NodeJS.ReadableStream>` adapter contract.
+
+The application does not author `Content-Length` on an asynchronous GET stream. Bun may
+remove a declared length when the size is not known at transport time and owns the final
+transfer framing; forcing parity would require whole-object memory materialization or
+provider-specific/temp-file branches. HEAD always emits the exact persisted length. If
+Bun can synthesize a GET length for an already-known body, it must equal `row.size`;
+callers must otherwise use the byte-exact body or HEAD rather than assuming that streamed
+GET has a length header.
 
 ## Security Contract
 
@@ -237,22 +248,30 @@ and Azure all use the same existing
   short/excess byte count aborts/errors the body and destroys the source; it cannot
   retroactively change the status. Tail rejection is generic and never carries the raw
   provider error. HEAD performs the prefix decision, trusts persisted length for the
-  unread tail, destroys the source, and returns no body.
+  unread tail, destroys the source, and returns no body with exact persisted
+  `Content-Length`. GET transfer framing remains runtime-owned.
 - Legacy mismatch: successful attachment with octet-stream; no destructive rewrite.
 
 ## Regression-test shape
 
-This leaf updates its one named direct-handler Bun integration suite before the source
-gate. The suite installs typed in-memory deps and fake Node streams, resets the seam to
+This leaf updates its one named Bun integration suite before the source gate. Most cases
+call the extracted handler directly; an additive transport case wraps that same handler
+in an ephemeral real `Bun.serve` instance without starting the full Coderso server. The
+suite installs typed in-memory deps and fake Node streams, resets the seam to
 `null` in both `afterEach` and `afterAll`, proves non-null production overrides reject,
+proves an override installed before switching to production is not invoked, and does
+not pin that invocation's response status because the production defaults legitimately
+depend on current access mode, rate state, settings availability, and record state,
 and never imports `httpServer`, mutates settings, creates shared DB rows, or calls
 provider URLs. Its named command unsets `DATABASE_URL` and passes Bun
 `--no-env-file`, so a static import of any DB-coupled default fails the test instead of
 being silently restored from repository `.env`.
 Required cases:
 
-- canonical passive raster gets exact inline MIME, safe disposition, nosniff, and length;
-- canonical PDF/SVG/text/octet-stream get exact attachment-safe MIME/name/length headers;
+- canonical passive raster GET gets exact inline MIME, safe disposition, nosniff, and
+  byte-exact body; HEAD additionally gets exact persisted length;
+- canonical PDF/SVG/text/octet-stream GET gets exact attachment-safe MIME/name and
+  byte-exact body; HEAD additionally gets exact persisted length;
 - legacy persisted MIME/key mismatch or passive inline byte mismatch gets octet-stream
   plus canonical `.bin` attachment;
 - canonical attachment MIME/key pairs remain attachments regardless object prefix; the
@@ -263,8 +282,9 @@ Required cases:
   auth; missing/existing internal keys have identical pre-lookup 401/403 behavior;
 - local/S3/Azure-shaped missing errors map 404; other pre-header failures map 503;
   provider URL/getPublicUrl is a throwing sentinel that is never consulted;
-- GET/HEAD headers agree, HEAD has no body and destroys its stream, and non-read methods
-  return exact 405/Allow with zero downstream work;
+- GET/HEAD policy headers agree, HEAD alone has application-authored persisted length,
+  has no body, and destroys its stream; non-read methods return exact 405/Allow with
+  zero downstream work;
 - exactly one `public_read` charge uses IP/user-agent in public/internal modes, and an
   injected rate-limit error maps to 429;
 - the L03 unsafe-legacy sentinel request `/media/%00unavailable/<media-id>` decodes to
@@ -281,7 +301,12 @@ Required cases:
   body error, while a secret-bearing tail source error rejects exactly with
   `media_stream_failed` and no raw message/cause;
 - valid GET body length equals persisted size; short/excess GET bodies reject after the
-  already-created 200 response, while HEAD remains bodyless with the persisted length.
+  already-created 200 response, while HEAD remains bodyless with the persisted length;
+- real ephemeral `Bun.serve` transport over the real local/S3/Azure adapter fixtures
+  returns byte-exact GET bodies and canonical policy headers without redirects; a GET
+  `Content-Length`, when synthesized by Bun, equals persisted size, while HEAD always
+  exposes the exact persisted length. No test requires or forbids runtime-owned
+  `Transfer-Encoding`.
 
 TASK-536-04-L01 owns one full-server dispatch/wiring assertion in a different test file;
 TASK-536-05-L01 may add cross-provider/security combinations after that gate but cannot
@@ -309,6 +334,17 @@ Re-run either named file alone before classifying a failure.
 - Legacy content remains reachable only through the fail-safe attachment policy.
 - Internal auth cannot be used as a media-row existence oracle; stream ownership closes
   on success, HEAD, failure, or cancellation without losing or duplicating bytes.
+
+## Runtime-smoke correction
+
+The first real browser smoke found that the direct `Response` test observed the authored
+GET length while Bun's live async stream selected chunked framing and removed it.
+Reproduction on the pinned and workspace Bun runtimes found no provider-neutral API
+that guarantees a length for an asynchronous stream. Already-known/materialized bodies
+may let Bun synthesize it, while true streaming may use chunked framing. The contract
+therefore keeps provider-neutral bounded streaming, makes exact length a HEAD guarantee,
+and adds a real `Bun.serve` regression instead of replacing the media boundary with
+unbounded buffering.
 
 ## Pre-implementation audit correction
 

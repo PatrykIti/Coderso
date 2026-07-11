@@ -35,7 +35,7 @@ additive cross-leaf/security cases, final read-only reruns of source-owner asser
 and closure evidence; it must not re-baseline a source leaf to make closure green.
 
 Post-audit source drift is remediated by reopening only the explicit source-owner seams
-recorded in TASK-536-01-L01, TASK-536-01-L03, TASK-536-04-L01, and
+recorded in TASK-536-01-L01, TASK-536-01-L03, TASK-536-02-L01, TASK-536-04-L01, and
 TASK-536-04-L02. This closure leaf
 retains ownership of the additive local/S3/Azure handler-level GET/HEAD composition test
 and documentation corrections; it does not absorb those production writers.
@@ -63,6 +63,8 @@ describe delivery:
   seed uniquely owned media rows and objects;
   request GET/HEAD in public/internal modes;
   assert status, auth, Content-Type, Content-Disposition, nosniff, and replayed body;
+  assert HEAD has exact persisted Content-Length; for streamed GET, accept an absent
+    runtime-owned length or require that a synthesized value equals persisted size;
   assert local/S3/Azure public delivery returns the final 200/HEAD response and never
     a provider redirect or client-visible provider URL;
   assert suffix spoof, absent row, traversal, and legacy mismatch fail safe.
@@ -86,6 +88,10 @@ describe public security:
   maxRequests=1 allows first request and rejects second;
   exercise anonymous/session/API-key and captcha on/off;
   assert byte canonicalization always executes and CSRF/nonce rules remain.
+  force one unmapped executor dependency error with a private marker through the root
+  and stripped-admin mounts in non-production mode;
+  assert fixed internal_error/500, no details/stack/marker, one fail-safe rate charge,
+  and preserved stripped-admin request headers/access-log status.
 
 describe strict schemas:
   inject one unknown key at every fixed nested path;
@@ -194,8 +200,12 @@ Run at least these distinct real flows:
 4. with an authenticated cookie, a public form remains nonce-bound and rejects a byte
    mismatch; an internal-only form renders the existing noninteractive boundary and
    emits no upload/submission request (server integration tests separately prove CSRF);
+   a draft/archived public form also renders the unpublished noninteractive boundary,
+   contains no nonce or interactive form, and emits no upload/submission request;
 5. publish/front delivery: passive image renders; PDF, SVG, text, and unknown-policy
-   fixtures download; headers are canonical/nosniff and no control is intercepted.
+   fixtures download; headers are canonical/nosniff, each GET body has the persisted
+   byte length, HEAD exposes exact persisted `Content-Length`, any Bun-synthesized GET
+   length is exact, and no control is intercepted.
 
 Cover narrow/wide viewports and light/dark admin surfaces. Assert computed/DOM visible
 effects, not only emitted strings. Record zero console errors.

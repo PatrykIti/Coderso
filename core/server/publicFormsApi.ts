@@ -17,7 +17,7 @@ import {
   type RouteContext,
 } from "./routes/formsRoutes";
 import { validate } from "./validation/schemaValidator";
-import { getForm, listFormFields } from "../services/forms/formsService";
+import { getForm, getFormWriteState, listFormFields } from "../services/forms/formsService";
 import { submitForm } from "../services/forms/submissionService";
 import { uploadMedia } from "../services/media/mediaService";
 import {
@@ -94,6 +94,7 @@ export type FormWriteExecutorContext = PublicFormsApiContext & {
 export type FormWriteExecutorDeps = {
   attachSession: (ctx: RouteContext) => Promise<void>;
   loadAccessTarget: (formId: string) => Promise<FormWriteAccessTarget | null>;
+  loadCurrentFormWriteState: typeof getFormWriteState;
   chargeRateLimit: typeof checkRateLimit;
   authenticateApiKey: typeof authenticateApiKey;
   enforceSessionCsrf: typeof enforceCsrf;
@@ -115,6 +116,7 @@ const defaultFormWriteExecutorDeps: FormWriteExecutorDeps = {
     await attachUserFromSession(ctx);
   },
   loadAccessTarget: getForm,
+  loadCurrentFormWriteState: getFormWriteState,
   chargeRateLimit: checkRateLimit,
   authenticateApiKey,
   enforceSessionCsrf: enforceCsrf,
@@ -164,15 +166,14 @@ const jsonResponse = (payload: unknown, status = 200) =>
     headers: { "Content-Type": "application/json" },
   });
 
+export const mapFormWriteBoundaryError = (error: unknown): ApiError => {
+  if (error instanceof ApiError) return error;
+  return mapFormError(error) ?? new ApiError("internal_error", "Unexpected error", 500);
+};
+
 const errorResponse = (error: unknown) => {
-  if (error instanceof ApiError) {
-    return jsonResponse(toErrorResponse(error), error.status);
-  }
-  const mapped = mapFormError(error);
-  if (mapped) {
-    return jsonResponse(toErrorResponse(mapped), mapped.status);
-  }
-  return jsonResponse(toErrorResponse(error), 500);
+  const mapped = mapFormWriteBoundaryError(error);
+  return jsonResponse(toErrorResponse(mapped), mapped.status);
 };
 
 const parseCookies = (header: string | null) => {
@@ -344,6 +345,33 @@ const chargeRatePlan = (
   });
 };
 
+const isPublishedPublicFormWriteState = (value: unknown): boolean => {
+  if (
+    value === null ||
+    typeof value !== "object" ||
+    Object.getPrototypeOf(value) !== Object.prototype
+  ) {
+    return false;
+  }
+  const keys = Reflect.ownKeys(value);
+  if (keys.length !== 2 || !keys.every((key) => key === "status" || key === "submissionAccess")) {
+    return false;
+  }
+  const status = Object.getOwnPropertyDescriptor(value, "status");
+  const submissionAccess = Object.getOwnPropertyDescriptor(value, "submissionAccess");
+  return (
+    Boolean(status && "value" in status && !status.get && !status.set) &&
+    status?.value === "published" &&
+    Boolean(
+      submissionAccess &&
+      "value" in submissionAccess &&
+      !submissionAccess.get &&
+      !submissionAccess.set
+    ) &&
+    submissionAccess?.value === "public"
+  );
+};
+
 const mapSessionAuthorizationError = (error: unknown): never => {
   if (error instanceof ApiError) throw error;
   if (error instanceof Error && error.message === "auth_required") {
@@ -460,6 +488,9 @@ export async function executePreparedFormWrite(
 
   try {
     chargeRatePlan(resolveFormWriteRatePlan(routeContext, target), ctx.security, deps);
+    if (target.mode === "public" && target.form.status !== "published") {
+      throw new Error("form_unpublished");
+    }
     const access = await authorizePreparedFormWrite(req, routeContext, target, ctx.security, deps);
 
     let bodyOptions: ParseRequestBodyOptions;
@@ -481,6 +512,17 @@ export async function executePreparedFormWrite(
     }
 
     routeContext.body = await deps.parseBody(req, bodyOptions);
+    if (target.mode === "public") {
+      let currentState: unknown;
+      try {
+        currentState = await deps.loadCurrentFormWriteState(target.form.id);
+      } catch {
+        throw new Error("form_write_state_unavailable");
+      }
+      if (!isPublishedPublicFormWriteState(currentState)) {
+        throw new Error("form_unpublished");
+      }
+    }
     routeContext.preparedFormWrite = createPreparedFormWriteDescriptor({
       kind: match.kind,
       formId: target.form.id,

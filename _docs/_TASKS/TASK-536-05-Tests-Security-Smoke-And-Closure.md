@@ -77,7 +77,8 @@ bunx vitest run --config vitest.config.ts \
   tests/vitest/admin/mediaUtils.test.ts \
   tests/vitest/ui/media-picker.test.tsx \
   tests/vitest/ui/media-card.test.tsx \
-  tests/vitest/ui/media-details.test.tsx
+  tests/vitest/ui/media-details.test.tsx \
+  tests/vitest/ui/post-editor-canvas-wave.test.tsx
 set -a && source .env && set +a && bun test --parallel=1 --timeout=15000 \
   tests/unit/media/mediaService.test.ts \
   tests/unit/media/mediaMeta.test.ts \

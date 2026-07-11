@@ -18,7 +18,9 @@
 Define reusable Bun-free schemas for every fixed Form and field settings object, then
 compose them into route schemas so unknown nested keys are rejected before normalization
 or persistence. Keep submission data dynamic at JSON-schema level and enforce its keys
-against the resolved form fields in the service.
+against the resolved form fields in the service. The post-audit correction also owns the
+narrow current form-write-state projection and prevents unpublished runtime data from
+minting a public nonce.
 
 ## Source ownership
 
@@ -28,9 +30,10 @@ This leaf is the only TASK-536 writer of:
 - core/services/forms/formSettings.ts;
 - core/services/forms/fieldSettings.ts;
 - core/services/forms/validation.ts;
-- core/services/forms/formRuntimeResolver.ts (only the legacy-pattern public-projection
-  filter); and
-- core/services/forms/formsService.ts (only the `setFormFields` pre-write assertion call).
+- core/services/forms/formRuntimeResolver.ts (the legacy-pattern public-projection filter
+  plus the post-audit unpublished nonce/bot-projection correction); and
+- core/services/forms/formsService.ts (the `setFormFields` pre-write assertion call plus
+  the post-audit `getFormWriteState` narrow projection).
 
 Keep the reusable schema builders in those existing owners. Do not create the optional
 `core/services/forms/formDocumentSchemas.ts` or any other production helper file; the
@@ -42,6 +45,14 @@ fields are read from normalized submission data with an own-property guard. The 
 DB-backed absent/present regressions belong to
 `tests/unit/forms/fileSubmission.test.ts`. This exception does not authorize a new
 schema/helper/module, a media-service change, or any widget/editor work.
+
+The final security audit adds a second bounded post-audit seam in the two already-owned
+Forms files above. `formsService.ts` exports only a minimal `{ status,
+submissionAccess }` state projection for L01's late server-side revalidation;
+`formRuntimeResolver.ts` returns neither nonce nor bot-protection projection whenever a
+form is draft/archived, including preview (preview may still project fields). No endpoint,
+DB column, editor behavior, or new
+module is added. This L02 correction lands before the reopened L01 executor patch.
 
 The final schema-integrity audit keeps `core/services/forms/validation.ts` in this leaf
 for a second bounded correction: both domain AJV validators must evaluate only own
@@ -334,9 +345,21 @@ validateSubmissionPayload(data, resolvedFields) {
 
 resolveFormRuntimeData(formId, options) {
   resolve the existing form and fields as today;
+  if status is not published:
+    force submissionNonce=null and botProtection=null;
+    if !options.preview:
+      return the existing form_unpublished noninteractive resolution with no fields;
+    // Preview may still project fields for visual authoring, but never write capability.
   before returning the public/preview field projection, preserve a pattern only when
     isSafeFormFieldPattern(pattern) is true; omit an unsafe legacy stored pattern;
   never mutate or rewrite the stored field and never add renderer/editor behavior;
+}
+
+getFormWriteState(formId) {
+  select only forms.status and forms.submissionAccess for the exact id;
+  return null for missing or non-canonical persisted values;
+  otherwise return an immutable exact FormStatus + SubmissionAccessMode projection;
+  // This is not an access/auth decision and never falls back an invalid stored mode.
 }
 
 formCreateSchema = strictObject({ name, slug, status, description, successMessage,
@@ -392,6 +415,11 @@ captcha, and rate buckets do not change in this leaf. Every fixed request object
 reject-unknown before persistence. The intentionally dynamic submission data map is
 bounded and then checked against server-resolved field names/types; unknown fields never
 become persisted data. No normalizer is a substitute for route rejection.
+An unpublished public runtime returns no nonce or captcha projection, including preview.
+Preview may still receive fields for visual authoring but has no public-write capability. The
+narrow state projection is backend-only and contains no settings, fields, secrets, or
+principal data; L01 uses it after its single full access-target load to fail closed on
+unpublish/access-mode drift.
 The domain-owned `formFieldsWriteSchema` is additionally enforced by
 `setFormFields` before DB access so direct trusted orchestrators such as the assistant cannot bypass
 the same fixed field/settings shape; this defense-in-depth does not turn the normalizer
@@ -471,6 +499,12 @@ legacy pattern remains unchanged; no widget or editor source may change. Add a r
 schema/PUT case where uppercase MIME input such as `IMAGE/PNG`
 passes the pre-normalized write boundary and returns lowercase normalized MIME; do not
 cover this only through a direct domain normalizer.
+Table-drive public draft and archived non-preview runtime resolutions: both retain the
+existing `form_unpublished` boundary but return `submissionNonce=null` and
+`botProtection=null`. Explicit preview for both statuses still projects fields without an
+error but also returns no nonce/bot projection; published public behavior remains
+unchanged. Pin `getFormWriteState` to the exact two-key immutable projection and
+fail-closed null for missing/invalid stored status or submission access.
 The normalized submission-envelope corpus must reject a missing `data` member.
 The upload-envelope corpus must reject missing `fieldName` and missing `file` before the
 runtime File guard.
@@ -527,5 +561,7 @@ Re-run a named failure alone before classifying it.
 - Dynamic submission data is still usable but cannot bypass field ownership.
 - Valid legacy/no-override documents retain their intended normalized output; unsafe
   legacy patterns are omitted only from runtime projection and never rewritten in storage.
+- Draft/archived forms, including preview, mint no public write nonce; the server can revalidate
+  only the current canonical status/access projection without loading settings or fields.
 - No widget, section, block, editor, registry, preset, or dashboard surface is added or
   expanded.

@@ -269,8 +269,8 @@ maps byte or allowlist rejection to `media_mime_not_allowed`.
 
 ## Regression-test shape
 
-This leaf updates all four owned suites before the source gate and reruns the four named
-consumer/backup suites read-only and sequentially. Tests prove upload/replace parity,
+This leaf updates every owned suite listed above before the source gate and reruns the four
+named consumer/backup suites read-only and sequentially. Tests prove upload/replace parity,
 unconditional canonicalization for every service call with deprecated `sniffContent`
 true/false/omitted parity, exact SVG/octet-stream allowlisting,
 global/field effective canonical-MIME allowlists, rejected input/no adapter or DB write,

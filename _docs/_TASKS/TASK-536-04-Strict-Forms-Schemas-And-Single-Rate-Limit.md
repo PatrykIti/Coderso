@@ -34,13 +34,13 @@ bounded dynamic submission data map and its field-name service validation.
 
 | Leaf | Scope | Source ownership |
 |---|---|---|
-| TASK-536-04-L01 | Shared public/admin executor, bounded parsing, media-handler wiring, access/CSRF/nonce/captcha, and one selected rate charge | httpServer.ts, requestBody.ts, submissionAccess.ts, formsRoutes.ts, publicFormsApi.ts |
-| TASK-536-04-L02 | Strict schemas for fixed nested Form/field settings | formSchemas.ts and domain schema owners |
+| TASK-536-04-L01 | Shared public/admin executor, bounded parsing, media-handler wiring, access/CSRF/nonce/captcha, one selected rate charge, and post-audit current-state authorization | httpServer.ts, requestBody.ts, submissionAccess.ts, formsRoutes.ts, publicFormsApi.ts |
+| TASK-536-04-L02 | Strict schemas plus the post-audit narrow Form write-state/runtime nonce projection | formSchemas.ts and domain schema owners, including the bounded formsService/formRuntimeResolver seams |
 
 ## Security Contract
 
-- **Visibility:** existing public upload/submission URLs only for public forms; internal
-  forms require current session/API-key access.
+- **Visibility:** existing public upload/submission URLs only for currently published
+  public forms; internal forms require current session/API-key access.
 - **Auth/RBAC:** internal session requires forms:write; internal API key requires
   forms.submit. Public mode never grants media:write.
 - **CSRF:** an internal-mode session write executes the shared CSRF check. A public-mode
@@ -61,13 +61,23 @@ bounded dynamic submission data map and its field-name service validation.
 - **Validation:** transport envelopes and every fixed nested object reject unknown keys.
   Submission data remains a dynamic map but service validation accepts only declared
   field names and normalized field values.
+- **Error redaction:** known Forms/media errors keep their stable mappings. An unmapped
+  executor failure is converted to fixed `internal_error`/500 before either public root
+  or stripped-admin serialization; non-production mode never returns its raw message,
+  details, or stack.
 
 ## Land order and compatibility
 
-Land L01 before L02. Existing URLs, status/error codes, API-key scopes, session
-permissions, and stored document shapes remain. Strict writes reject formerly ignored
-unknown keys; deterministic read normalizers preserve valid legacy documents. No
-production schema becomes permissive to keep stale test fixtures green.
+The completed base implementation landed L01 before L02. The POST-M-05 correction is
+strictly sequential as `L01 base → reopened L02 state/runtime projection → reopened L01
+executor consumption`; do not run those correction writers in parallel. Existing URLs,
+API-key scopes, session permissions, and stored document shapes remain. The additive
+`form_unpublished`/409 and `form_write_state_unavailable`/503 errors describe the new
+fail-closed state boundary. Strict writes reject formerly ignored unknown keys;
+deterministic read normalizers preserve valid legacy documents. No production schema
+becomes permissive to keep stale test fixtures green.
+The later POST-M-06 correction reopens only L01 after both state-projection passes and
+shares one response redaction helper across the two existing mounts.
 
 ## Validation
 

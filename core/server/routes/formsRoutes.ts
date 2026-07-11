@@ -18,6 +18,7 @@ import { assertFormSubmissionNonce } from "../../services/forms/submissionNonce"
 import { listSubmissions, submitForm } from "../../services/forms/submissionService";
 import { runFormAutomation } from "../../services/forms/formAutomationRunner";
 import { normalizeFormSettings } from "../../services/forms/formSettings";
+import { isFormStatus, type FormStatus } from "../../services/forms/formStatus";
 import { ApiError } from "../errorHandler";
 import { enforceBotProtection } from "../../services/security/botProtection";
 import type { SecuritySettings } from "../../services/settings/securitySettings";
@@ -35,6 +36,7 @@ export type PreparedFormWriteAccess = Extract<SubmissionAccessDecision, { allow:
 export type FormWriteAccessTarget = NonNullable<Awaited<ReturnType<typeof getForm>>>;
 export type PreparedFormWriteForm = Readonly<{
   id: string;
+  status: FormStatus;
   submissionAccess: SubmissionAccessMode;
   successMessage: string | null;
   successRedirectUrl: string | null;
@@ -52,6 +54,7 @@ const preparedFormWriteDescriptors = new WeakSet<PreparedFormWriteDescriptor>();
 
 const PREPARED_FORM_KEYS = [
   "id",
+  "status",
   "submissionAccess",
   "successMessage",
   "successRedirectUrl",
@@ -160,11 +163,13 @@ export function createPreparedFormWriteForm(input: FormWriteAccessTarget): Prepa
   }
   assertDataOnlyOwnProperties(input);
   const id = readOwnDataValue(input, "id");
+  const status = readOwnDataValue(input, "status");
   const submissionAccess = readOwnDataValue(input, "submissionAccess");
   const successMessage = readOwnDataValue(input, "successMessage");
   const successRedirectUrl = readOwnDataValue(input, "successRedirectUrl");
   if (
     typeof id !== "string" ||
+    !isFormStatus(status) ||
     (submissionAccess !== "public" && submissionAccess !== "internal") ||
     (successMessage !== null && typeof successMessage !== "string") ||
     (successRedirectUrl !== null && typeof successRedirectUrl !== "string")
@@ -173,6 +178,7 @@ export function createPreparedFormWriteForm(input: FormWriteAccessTarget): Prepa
   }
   return Object.freeze({
     id,
+    status,
     submissionAccess,
     successMessage,
     successRedirectUrl,
@@ -339,6 +345,14 @@ export const mapFormError = (error: unknown) => {
       return new ApiError("form_slug_exists", "Form slug already exists.", 409);
     case "form_not_found":
       return new ApiError("form_not_found", "Form not found.", 404);
+    case "form_unpublished":
+      return new ApiError("form_unpublished", "Form is not published.", 409);
+    case "form_write_state_unavailable":
+      return new ApiError(
+        "form_write_state_unavailable",
+        "Form write state is temporarily unavailable.",
+        503
+      );
     case "form_delete_restricted":
       return new ApiError(
         "form_delete_restricted",

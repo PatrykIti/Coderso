@@ -24,6 +24,11 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
     tego samego Forms access evaluatora, form-bound HMAC nonce
     (`__nl_form_nonce`, `FORM_SUBMIT_NONCE_SECRET`, TTL domyslnie 10 minut) i
     backend-owned captcha policy.
+  - Wspolny verifier nonce dla Forms i publicznego zapisu rezerwacji akceptuje
+    tylko dodatni, skonczony TTL, ktorego przeliczenie na milisekundy nie
+    przekracza `Number.MAX_SAFE_INTEGER`; brak, invalid albo arithmetic-overflow
+    konfiguracji wraca do stalego TTL 10 minut zamiast wylaczac wygasanie nonce.
+    Osobny token odczytu slotow zachowuje wlasny kontrakt.
   - Cookie zalogowanego admina nie zmienia publicznego URL-a w internal bypass:
     public mode nadal wymaga nonce, dokladnie jednego naliczenia `public_write` i
     bezwarunkowej inspekcji bajtow uploadu, ale aktualny evaluator ustawia dla tej
@@ -277,17 +282,25 @@ The `file` form-field type accepts values on the PUBLIC submission path, so it i
 validated as an **owned media reference**, never as a free path/URL/bytes:
 
 - `POST /forms/:id/uploads` is form-scoped and reuses the form's OWN submission
-  access gate. Public mode uses the runtime-issued HMAC form nonce and one
+  access gate. Public mode requires the current server-owned form to remain published,
+  uses the runtime-issued HMAC form nonce and one
   `public_write` rate-limit charge keyed by form id. Anonymous public requests
   retain the configured CAPTCHA policy; for an authenticated public session the
   current evaluator sets `requireCaptcha=false`. Internal mode uses its
   session/CSRF or API-key contract. Neither grants `media:write`. Byte
   canonicalization runs for anonymous, cookie-bearing, session, API-key,
   captcha-on, and captcha-off requests alike; authentication state never disables
-  inspection. Per-field `accept` (MIME
+  inspection. Draft/archived runtime projection mints no nonce, including preview. A
+  narrow current status/access read immediately before dispatch is the authorization
+  linearization point: state drift observed there rejects the request; later drift does
+  not retroactively cancel an already authorized in-flight request. Per-field `accept` (MIME
   allowlist, `image/*` wildcards via the shared `mimeMatchesAccept` leaf) and
   write-valid `maxSizeMb` (`1..100`) are enforced against the canonical result in
   `mediaService.uploadMedia` via a `constraints` param.
+- Root and stripped-admin Forms writes share one response boundary. Stable domain errors
+  keep their named code/status; every unmapped executor failure becomes fixed
+  `internal_error`/500 before serialization, so non-production responses cannot expose a
+  dependency message, stack, cause, connection string, or arbitrary details.
 - The submitted value is stored/accepted only as a media ROW id (or id array for
   `multiple`). `submissionService` normalizes the value to an id/array, then the
   DB-backed backstop `verifyFileReferences` re-resolves each id via `getMediaById`
@@ -305,8 +318,10 @@ canonical allowlist entry; a wildcard alone cannot authorize them.
 
 Every local/S3/Azure media `GET`/`HEAD` is a final core-proxied response with
 server-owned `Content-Type`, safe `Content-Disposition`,
-`X-Content-Type-Options: nosniff`, and persisted length. Provider URLs and
-provider response metadata never bypass this boundary. A legacy persisted
+`X-Content-Type-Options: nosniff`, and an exact persisted length on `HEAD`.
+Asynchronous GET bodies stay provider-neutral and streamed; Bun may use chunked
+framing, and any runtime-synthesized GET length must equal persisted size. Provider
+URLs and provider response metadata never bypass this boundary. A legacy persisted
 MIME/key mismatch, or a passive-inline byte-prefix mismatch, falls back to an
 octet-stream `.bin` attachment rather than inline. Canonical attachment
 MIME/key pairs remain attachments; delivery does not promote them to inline

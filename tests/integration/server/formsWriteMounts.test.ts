@@ -44,11 +44,15 @@ const createdAccessLogPaths = new Set<string>();
 const createdSessionIds = new Set<string>();
 const createdUserIds = new Set<string>();
 
-const fakeForm = (id: string, mode: string = "public"): FormWriteAccessTarget => ({
+const fakeForm = (
+  id: string,
+  mode: string = "public",
+  status: FormWriteAccessTarget["status"] = "published"
+): FormWriteAccessTarget => ({
   id,
   name: "Mount form",
   slug: `mount-${id}`,
-  status: "published",
+  status,
   description: null,
   successMessage: null,
   successRedirectUrl: null,
@@ -129,6 +133,7 @@ testIfDb(
     const calls: string[] = [];
     const descriptors: unknown[] = [];
     let accessLoaderCalls = 0;
+    let stateLoaderCalls = 0;
     let executorBodyCalls = 0;
     let rateCalls = 0;
 
@@ -141,6 +146,12 @@ testIfDb(
         accessLoaderCalls += 1;
         expect(id).toBe(formId);
         return fakeForm(id);
+      },
+      async loadCurrentFormWriteState(id) {
+        calls.push("state");
+        stateLoaderCalls += 1;
+        expect(id).toBe(formId);
+        return Object.freeze({ status: "published", submissionAccess: "public" });
       },
       chargeRateLimit(bucket, identity) {
         calls.push("rate");
@@ -220,6 +231,7 @@ testIfDb(
     expect(await publicResponse.json()).toEqual({ accepted: true, formId });
     expect(await adminResponse.json()).toEqual({ accepted: true, formId });
     expect(accessLoaderCalls).toBe(2);
+    expect(stateLoaderCalls).toBe(2);
     expect(executorBodyCalls).toBe(2);
     expect(rateCalls).toBe(2);
     expect(descriptors).toHaveLength(2);
@@ -229,11 +241,13 @@ testIfDb(
       "load",
       "rate",
       "body",
+      "state",
       "handler",
       "attach",
       "load",
       "rate",
       "body",
+      "state",
       "handler",
     ]);
 
@@ -278,6 +292,8 @@ testIfDb(
     __setFormWriteExecutorDepsForTests({
       attachSession: async () => undefined,
       loadAccessTarget: async (id) => fakeForm(id),
+      loadCurrentFormWriteState: async () =>
+        Object.freeze({ status: "published", submissionAccess: "public" }),
       chargeRateLimit: () => undefined,
       async authenticateApiKey() {
         throw new Error("public_api_key_verification_forbidden");
@@ -400,12 +416,18 @@ testIfDb(
     let loaderCalls = 0;
     let rateCalls = 0;
     let bodyCalls = 0;
+    let stateCalls = 0;
     const descriptors: unknown[] = [];
     __setFormWriteExecutorDepsForTests({
       attachSession: async () => undefined,
       async loadAccessTarget(id) {
         loaderCalls += 1;
         return fakeForm(id);
+      },
+      async loadCurrentFormWriteState(id) {
+        stateCalls += 1;
+        expect(id).toBe(formId);
+        return Object.freeze({ status: "published", submissionAccess: "public" });
       },
       chargeRateLimit(bucket, identity) {
         rateCalls += 1;
@@ -460,6 +482,7 @@ testIfDb(
     expect(loaderCalls).toBe(2);
     expect(rateCalls).toBe(2);
     expect(bodyCalls).toBe(2);
+    expect(stateCalls).toBe(2);
     expect(descriptors).toHaveLength(2);
     expect(descriptors[0]).not.toBe(descriptors[1]);
     const adminLogs = await waitForAccessLog(adminWritePath);
@@ -481,6 +504,8 @@ testIfDb(
     __setFormWriteExecutorDepsForTests({
       attachSession: async () => undefined,
       loadAccessTarget: async (id) => fakeForm(id),
+      loadCurrentFormWriteState: async () =>
+        Object.freeze({ status: "published", submissionAccess: "public" }),
       chargeRateLimit: () => undefined,
       async authenticateApiKey() {
         throw new Error("public_api_key_verification_forbidden");
@@ -534,6 +559,254 @@ testIfDb(
       path: adminWritePath,
       status: 400,
     });
+  },
+  20_000
+);
+
+testIfDb(
+  "publication-state failures preserve 409/503 parity and stripped-admin wrapper evidence",
+  async () => {
+    const security = await getSecuritySettings();
+    const rawFailure = "postgres://private-user:private-password@private-host/forms";
+    const cases = [
+      {
+        label: "initial-unpublished",
+        initialStatus: "draft" as const,
+        expectedStatus: 409,
+        expectedCode: "form_unpublished",
+        expectedMessage: "Form is not published.",
+        expectedBodyCalls: 0,
+        expectedStateCalls: 0,
+      },
+      {
+        label: "late-state-unavailable",
+        initialStatus: "published" as const,
+        expectedStatus: 503,
+        expectedCode: "form_write_state_unavailable",
+        expectedMessage: "Form write state is temporarily unavailable.",
+        expectedBodyCalls: 2,
+        expectedStateCalls: 2,
+      },
+    ];
+
+    for (const entry of cases) {
+      const formId = randomUUID();
+      const publicPath = `/forms/${formId}/submissions`;
+      const adminWritePath = `${adminPath}/api${publicPath}`;
+      createdAccessLogPaths.add(publicPath);
+      createdAccessLogPaths.add(adminWritePath);
+      const calls = { rate: 0, body: 0, state: 0, handler: 0 };
+
+      __setFormWriteExecutorDepsForTests({
+        attachSession: async () => undefined,
+        loadAccessTarget: async (id) => fakeForm(id, "public", entry.initialStatus),
+        chargeRateLimit(bucket, identity) {
+          calls.rate += 1;
+          expect(bucket).toBe("public_write");
+          expect(identity.identifier).toBe(formId);
+        },
+        async authenticateApiKey() {
+          throw new Error("public_api_key_verification_forbidden");
+        },
+        async enforceSessionCsrf() {
+          throw new Error("public_csrf_forbidden");
+        },
+        async requireSessionFormsWrite() {
+          throw new Error("public_rbac_forbidden");
+        },
+        async loadUploadStorageMaxBytes() {
+          throw new Error("submission_storage_load_forbidden");
+        },
+        async parseBody() {
+          calls.body += 1;
+          return { data: {} };
+        },
+        async loadCurrentFormWriteState() {
+          calls.state += 1;
+          if (entry.label === "late-state-unavailable") throw new Error(rawFailure);
+          return Object.freeze({ status: "published", submissionAccess: "public" });
+        },
+        async dispatchSubmission() {
+          calls.handler += 1;
+          return {};
+        },
+        async dispatchUpload() {
+          throw new Error("submission_dispatched_as_upload");
+        },
+      });
+
+      const publicResponse = await fetch(`${baseUrl}${publicPath}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", host: publicHost },
+        body: "{}",
+      });
+      const adminResponse = await fetch(`${baseUrl}${adminWritePath}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", host: adminHost },
+        body: "{}",
+      });
+      const publicText = await publicResponse.text();
+      const adminText = await adminResponse.text();
+      const expectedPayload = {
+        error: { code: entry.expectedCode, message: entry.expectedMessage },
+      };
+
+      expect(publicResponse.status, `${entry.label} root`).toBe(entry.expectedStatus);
+      expect(adminResponse.status, `${entry.label} stripped-admin`).toBe(entry.expectedStatus);
+      expect(JSON.parse(publicText)).toEqual(expectedPayload);
+      expect(JSON.parse(adminText)).toEqual(expectedPayload);
+      expect(publicText).not.toContain(rawFailure);
+      expect(adminText).not.toContain(rawFailure);
+      expect(publicResponse.headers.get(security.requestId.headerName)).toBeNull();
+      expect(adminResponse.headers.get(security.requestId.headerName)).toBeTruthy();
+      if (security.headers.enabled && security.headers.contentTypeOptions) {
+        expect(publicResponse.headers.get("x-content-type-options")).toBeNull();
+        expect(adminResponse.headers.get("x-content-type-options")).toBe("nosniff");
+      }
+      expect(calls).toEqual({
+        rate: 2,
+        body: entry.expectedBodyCalls,
+        state: entry.expectedStateCalls,
+        handler: 0,
+      });
+
+      const adminLogs = await waitForAccessLog(adminWritePath);
+      expect(adminLogs).toHaveLength(1);
+      expect(adminLogs[0]).toMatchObject({
+        method: "POST",
+        path: adminWritePath,
+        status: entry.expectedStatus,
+      });
+      const publicLogs = await db.select().from(accessLogs).where(eq(accessLogs.path, publicPath));
+      expect(publicLogs).toHaveLength(0);
+    }
+  },
+  20_000
+);
+
+testIfDb(
+  "unknown preparation failures are fixed 500s on both mounts in test mode",
+  async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "test";
+    try {
+      const formId = randomUUID();
+      const publicPath = `/forms/${formId}/submissions`;
+      const adminWritePath = `${adminPath}/api${publicPath}`;
+      createdAccessLogPaths.add(publicPath);
+      createdAccessLogPaths.add(adminWritePath);
+      const privateMessage = "postgres://private-user:private-password@private-host/forms";
+      const privateCause = "private_forms_dependency_cause";
+      const calls = { attach: 0, load: 0, rate: 0, body: 0, state: 0, handler: 0 };
+      const rateIdentities: Array<Record<string, unknown>> = [];
+
+      __setFormWriteExecutorDepsForTests({
+        async attachSession() {
+          calls.attach += 1;
+        },
+        async loadAccessTarget() {
+          calls.load += 1;
+          throw new Error(privateMessage, { cause: new Error(privateCause) });
+        },
+        chargeRateLimit(bucket, identity) {
+          calls.rate += 1;
+          expect(bucket).toBe("public_write");
+          rateIdentities.push({ ...identity });
+        },
+        async authenticateApiKey() {
+          throw new Error("preparation_authentication_forbidden");
+        },
+        async enforceSessionCsrf() {
+          throw new Error("preparation_csrf_forbidden");
+        },
+        async requireSessionFormsWrite() {
+          throw new Error("preparation_rbac_forbidden");
+        },
+        async loadUploadStorageMaxBytes() {
+          throw new Error("preparation_storage_forbidden");
+        },
+        async parseBody() {
+          calls.body += 1;
+          return {};
+        },
+        async loadCurrentFormWriteState() {
+          calls.state += 1;
+          return Object.freeze({ status: "published", submissionAccess: "public" });
+        },
+        async dispatchSubmission() {
+          calls.handler += 1;
+          return {};
+        },
+        async dispatchUpload() {
+          calls.handler += 1;
+          return {};
+        },
+      });
+
+      const publicResponse = await fetch(`${baseUrl}${publicPath}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", host: publicHost },
+        body: "{}",
+      });
+      const adminResponse = await fetch(`${baseUrl}${adminWritePath}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", host: adminHost },
+        body: "{}",
+      });
+      const publicText = await publicResponse.text();
+      const adminText = await adminResponse.text();
+      const expectedPayload = {
+        error: { code: "internal_error", message: "Unexpected error" },
+      };
+
+      expect(publicResponse.status).toBe(500);
+      expect(adminResponse.status).toBe(500);
+      expect(JSON.parse(publicText)).toEqual(expectedPayload);
+      expect(JSON.parse(adminText)).toEqual(expectedPayload);
+      for (const text of [publicText, adminText]) {
+        expect(text).not.toContain(privateMessage);
+        expect(text).not.toContain(privateCause);
+        expect(text).not.toContain("stack");
+        expect(text).not.toContain("details");
+        expect(text).not.toContain("cause");
+      }
+      expect(calls).toEqual({
+        attach: 2,
+        load: 2,
+        rate: 2,
+        body: 0,
+        state: 0,
+        handler: 0,
+      });
+      expect(rateIdentities).toHaveLength(2);
+      for (const identity of rateIdentities) {
+        expect(identity.identifier).toBe(UNRESOLVED_FORM_WRITE_RATE_IDENTIFIER);
+        expect(Object.hasOwn(identity, "userId")).toBe(false);
+      }
+
+      const security = await getSecuritySettings();
+      expect(publicResponse.headers.get(security.requestId.headerName)).toBeNull();
+      expect(adminResponse.headers.get(security.requestId.headerName)).toBeTruthy();
+      if (security.headers.enabled && security.headers.contentTypeOptions) {
+        expect(publicResponse.headers.get("x-content-type-options")).toBeNull();
+        expect(adminResponse.headers.get("x-content-type-options")).toBe("nosniff");
+      }
+      const adminLogs = await waitForAccessLog(adminWritePath);
+      expect(adminLogs).toHaveLength(1);
+      expect(adminLogs[0]).toMatchObject({
+        method: "POST",
+        path: adminWritePath,
+        status: 500,
+      });
+      const publicLogs = await db.select().from(accessLogs).where(eq(accessLogs.path, publicPath));
+      expect(publicLogs).toHaveLength(0);
+    } finally {
+      if (originalNodeEnv === undefined) {
+        delete process.env.NODE_ENV;
+      } else {
+        process.env.NODE_ENV = originalNodeEnv;
+      }
+    }
   },
   20_000
 );

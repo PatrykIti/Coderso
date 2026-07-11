@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, expect, test } from "bun:test";
+import { eq } from "drizzle-orm";
 
+import { db } from "../../../core/db/client";
+import { forms } from "../../../core/db/schema";
 import { mapFormError, registerFormsRoutes } from "../../../core/server/routes/formsRoutes";
 import {
   formAttachmentUploadSchema,
@@ -14,6 +17,7 @@ import { validate as validateSchema } from "../../../core/server/validation/sche
 import {
   createForm,
   deleteForm,
+  getFormWriteState,
   listFormFields,
   setFormFields,
 } from "../../../core/services/forms/formsService";
@@ -148,6 +152,32 @@ test("forms schemas strictly own status enums and full field discriminants", () 
     expect(branch.additionalProperties).toBe(false);
     expect(branch.properties.settings.additionalProperties).toBe(false);
   }
+});
+
+test("getFormWriteState returns only an immutable canonical status/access projection", async () => {
+  const form = await createOwnedForm();
+  await db
+    .update(forms)
+    .set({ status: "published", submissionAccess: "internal" })
+    .where(eq(forms.id, form.id));
+
+  const state = await getFormWriteState(form.id);
+  expect(state).toEqual({ status: "published", submissionAccess: "internal" });
+  expect(Object.keys(state ?? {})).toEqual(["status", "submissionAccess"]);
+  expect(Object.isFrozen(state)).toBe(true);
+  expect(await getFormWriteState(randomUUID())).toBeNull();
+
+  await db
+    .update(forms)
+    .set({ status: "PUBLISHED", submissionAccess: "public" })
+    .where(eq(forms.id, form.id));
+  expect(await getFormWriteState(form.id)).toBeNull();
+
+  await db
+    .update(forms)
+    .set({ status: "published", submissionAccess: "private" })
+    .where(eq(forms.id, form.id));
+  expect(await getFormWriteState(form.id)).toBeNull();
 });
 
 test("PUT /forms/:id/fields rejects mismatched, unknown, and malformed-id writes without replacing rows", async () => {

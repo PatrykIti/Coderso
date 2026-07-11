@@ -84,6 +84,7 @@ test("resolveFormRuntimeData projects nonce and safe captcha metadata for public
     await import("../../../core/services/forms/formRuntimeResolver");
 
   const result = await resolveFormRuntimeData("form-1", { preview: false });
+  const preview = await resolveFormRuntimeData("form-1", { preview: true });
 
   expect(result.submissionAccess).toBe("public");
   expect(result.submissionNonce).toBeTypeOf("string");
@@ -93,6 +94,77 @@ test("resolveFormRuntimeData projects nonce and safe captcha metadata for public
     action: "public_write",
   });
   expect(result.successRedirectUrl).toBe("/done");
+  expect(preview.fields.map((field) => field.name)).toEqual(["name"]);
+  expect(preview.submissionNonce).toBeTypeOf("string");
+  expect(preview.botProtection).toEqual({
+    provider: "recaptcha_v3",
+    siteKey: "site-key-1",
+    action: "public_write",
+  });
+  expect(preview.error).toBeUndefined();
+});
+
+test("resolveFormRuntimeData keeps unpublished previews visual but strips write capability", async () => {
+  process.env.FORM_SUBMIT_NONCE_SECRET = NONCE_SECRET;
+  let status: "draft" | "archived" = "draft";
+  const listFormFields = vi.fn(async () => [
+    {
+      id: "field-1",
+      type: "text",
+      label: "Name",
+      name: "name",
+      required: true,
+      orderIndex: 0,
+      settings: {},
+    },
+  ]);
+  const getSecuritySettingsPublic = vi.fn(async () => {
+    throw new Error("should_not_be_called");
+  });
+
+  vi.doMock("../../../core/services/forms/formsService", () => ({
+    getForm: async () => ({
+      id: "form-unpublished",
+      name: "Unpublished",
+      description: null,
+      status,
+      successMessage: null,
+      successRedirectUrl: null,
+      submissionAccess: "public",
+      settings: {},
+    }),
+    listFormFields,
+    toFieldRecord: (field: Record<string, unknown>) => field,
+  }));
+  vi.doMock("../../../core/services/settings/securitySettings", () => ({
+    getSecuritySettingsPublic,
+  }));
+
+  const { resolveFormRuntimeData } =
+    await import("../../../core/services/forms/formRuntimeResolver");
+
+  for (const currentStatus of ["draft", "archived"] as const) {
+    status = currentStatus;
+
+    const publicRuntime = await resolveFormRuntimeData("form-unpublished", {
+      preview: false,
+    });
+    expect(publicRuntime.status).toBe(currentStatus);
+    expect(publicRuntime.submissionNonce).toBeNull();
+    expect(publicRuntime.botProtection).toBeNull();
+    expect(publicRuntime.fields).toEqual([]);
+    expect(publicRuntime.error).toBe("form_unpublished");
+
+    const preview = await resolveFormRuntimeData("form-unpublished", { preview: true });
+    expect(preview.status).toBe(currentStatus);
+    expect(preview.submissionNonce).toBeNull();
+    expect(preview.botProtection).toBeNull();
+    expect(preview.fields.map((field) => field.name)).toEqual(["name"]);
+    expect(preview.error).toBeUndefined();
+  }
+
+  expect(listFormFields).toHaveBeenCalledTimes(2);
+  expect(getSecuritySettingsPublic).not.toHaveBeenCalled();
 });
 
 test("resolveFormRuntimeData omits captcha projection for internal forms", async () => {

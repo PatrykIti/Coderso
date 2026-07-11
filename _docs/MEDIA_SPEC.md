@@ -118,9 +118,11 @@ delivery:
   upload policy explicitly allows `application/octet-stream`; a wildcard or
   filename cannot authorize them.
 - Every successful local/S3/Azure `GET` and `HEAD` returns the final core response
-  with server-owned `Content-Type`, safe `Content-Disposition`,
-  `X-Content-Type-Options: nosniff`, and persisted `Content-Length`. Remote
-  delivery never redirects the client to a provider URL.
+  with server-owned `Content-Type`, safe `Content-Disposition`, and
+  `X-Content-Type-Options: nosniff`. `HEAD` includes exact persisted
+  `Content-Length`; asynchronous `GET` remains provider-neutral and streamed, so Bun
+  may use chunked framing. If Bun synthesizes a GET length, it must equal the persisted
+  size. Remote delivery never redirects the client to a provider URL.
 - A legacy persisted MIME/key mismatch, or a passive-inline row whose byte prefix
   does not confirm the claimed raster type, is served as
   `application/octet-stream` attachment with a safe `.bin` filename. Canonical
@@ -301,6 +303,10 @@ raw file bytes/text into provider prompts or action execution.
 - Active Post image/gallery/video/audio/file consumers use the shared projected media
   kind. An attachment/document row cannot regain image rendering or picker eligibility
   through a raw `image/*` MIME-prefix check.
+- A generic admin `MediaPicker` may deliberately admit an attachment-only SVG only when
+  its caller supplies the exact `image/svg+xml` rule. The row remains a document and
+  renders/downloads as an attachment; `image/*` alone and the Post image/gallery pickers
+  continue to exclude it.
 
 ## Admin maintenance actions
 

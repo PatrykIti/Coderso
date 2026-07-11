@@ -2073,8 +2073,10 @@ Runtime asset delivery:
   adapters nie zwracaja klientowi redirectu ani provider URL.
 - Zachowanie auth zalezy od `settings.storage.delivery.accessMode`.
 - Kazda udana odpowiedz ma server-owned `Content-Type`, bezpieczny
-  `Content-Disposition`, `X-Content-Type-Options: nosniff` i persisted
-  `Content-Length`. Tylko byte-confirmed PNG/JPEG/GIF/WebP/BMP z pasujacym
+  `Content-Disposition` i `X-Content-Type-Options: nosniff`. `HEAD` zwraca dokladny
+  persisted `Content-Length`; asynchroniczny `GET` pozostaje strumieniowany i Bun moze
+  uzyc chunked framing. Jesli runtime syntetyzuje GET length, musi on odpowiadac
+  persisted size. Tylko byte-confirmed PNG/JPEG/GIF/WebP/BMP z pasujacym
   canonical key moga byc `inline`; PDF/text/SVG/octet-stream sa attachment.
 - Legacy persisted MIME/key mismatch albo passive-inline byte-prefix mismatch
   fail-safe degraduje do `application/octet-stream` attachment z bezpieczna
@@ -2110,8 +2112,10 @@ Upload response:
   canonical byte-derived MIME belongs to the passive-inline image profile.
   Attachment-only SVG and unsupported `image/*` rows project as `document`;
   they do not receive image preview, focal controls, or `image/*` picker
-  eligibility. Active Post block pickers and persisted media-ID previews consume this
-  projected kind too, rather than reclassifying the row from its MIME prefix.
+  eligibility. A generic admin `MediaPicker` caller may explicitly admit SVG with an exact
+  `image/svg+xml` accept rule, but the row remains document/attachment-rendered; the
+  wildcard alone never admits it. Active Post block pickers and persisted media-ID previews
+  consume the projected kind too, rather than reclassifying the row from its MIME prefix.
   Audio/video keep their compatible media kinds and remaining files project as
   `document`.
 - Returned `url` is the stable `/media/<encoded-key>` proxy path. A provider URL
@@ -4690,6 +4694,18 @@ Permissions: `forms:read`, `forms:write`
 - `GET /forms/:id/action-runs`
 - `POST /forms/action-runs/:runId/retry`
 
+Public upload/submission may cross authorization only when the server-owned form is
+observed as both `status=published` and `submissionAccess=public`. Draft/archived runtime projection does
+not mint a nonce, including preview projection. The shared executor charges
+`public_write` once, rejects an initially unpublished target before body parsing, and
+uses a narrow current status/access read immediately before dispatch as the authorization
+linearization point. A change observed by that read rejects the stale request; a later
+change does not retroactively cancel an already authorized in-flight request. Internal
+session/API-key mode retains its existing authenticated contract.
+Both existing write mounts preserve named Forms/media errors, but an unmapped executor
+failure is always serialized as fixed `internal_error`/500 with no dependency message,
+stack, cause, or details, including in development and test modes.
+
 `POST /forms`
 
 ```json
@@ -4879,7 +4895,7 @@ Form-scoped upload endpoint for `file`-type fields. Public mode is nonce-gated;
 internal mode requires its session/CSRF or API-key contract. Neither mode
 requires `media:write`. Public mode reuses the form's OWN `submissionAccess`
 evaluator, runtime-issued nonce, exactly one `public_write` charge keyed by form
-id, and CAPTCHA when that evaluator requires it. Internal mode keeps its
+id, current `published` status, and CAPTCHA when that evaluator requires it. Internal mode keeps its
 session/CSRF or API-key access decision and `admin_write` policy. Body is a
 multipart upload validated by `formAttachmentUploadSchema`
 (`additionalProperties:false`, required `fieldName` + `file`; optional

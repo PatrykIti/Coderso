@@ -506,11 +506,12 @@ export async function handleMediaDeliveryRequest(req: Request): Promise<Response
         "Content-Type": decision.contentType,
         "Content-Disposition": decision.disposition,
         "X-Content-Type-Options": "nosniff",
-        "Content-Length": String(row.size),
       };
       if (method === "HEAD") {
         await inspected.destroy();
-        return new Response(null, { headers: responseHeaders });
+        return new Response(null, {
+          headers: { ...responseHeaders, "Content-Length": String(row.size) },
+        });
       }
       const webBody = Readable.toWeb(inspected.replayStream) as unknown as BodyInit;
       return new Response(webBody, { headers: responseHeaders });

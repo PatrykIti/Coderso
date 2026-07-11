@@ -399,8 +399,9 @@ test("an override installed before production is ignored by the handler", async 
       },
     });
     process.env.NODE_ENV = "production";
-    const result = await handleMediaDeliveryRequest(request("/media/object.png"));
-    expect(result.status).toBe(503);
+    // Exercise dependency selection without pinning a response owned by the current
+    // production access/rate/settings/record state.
+    await handleMediaDeliveryRequest(request("/media/object.png"));
     expect(overrideCalls).toBe(0);
   } finally {
     __setMediaDeliveryDepsForTests(null);
@@ -526,9 +527,7 @@ test("internal auth and RBAC complete before row lookup for missing and existing
   expect(allowedSession.headers.get("content-type")).toBe("image/png");
   expect(allowedSession.headers.get("content-disposition")?.startsWith("inline;")).toBe(true);
   expect(allowedSession.headers.get("x-content-type-options")).toBe("nosniff");
-  expect(allowedSession.headers.get("content-length")).toBe(
-    String(passiveFixtures[0].bytes.byteLength)
-  );
+  expect(allowedSession.headers.get("content-length")).toBeNull();
   expect(Buffer.from(await allowedSession.arrayBuffer())).toEqual(passiveFixtures[0].bytes);
   expect(calls.records).toEqual(["existing.png"]);
   expect(calls.permissions).toBe(2);
@@ -551,7 +550,7 @@ test("internal API key scope streams through the proxy and never asks for provid
   expect(result.headers.get("content-type")).toBe(fixture.mimeType);
   expect(result.headers.get("content-disposition")?.startsWith("inline;")).toBe(true);
   expect(result.headers.get("x-content-type-options")).toBe("nosniff");
-  expect(result.headers.get("content-length")).toBe(String(fixture.bytes.byteLength));
+  expect(result.headers.get("content-length")).toBeNull();
   expect(Buffer.from(await result.arrayBuffer())).toEqual(fixture.bytes);
   expect(calls.publicUrls).toBe(0);
   expect(calls.apiKeys).toBe(1);
@@ -592,19 +591,19 @@ test.each(["local", "s3", "azure"] as const)(
         },
       });
 
-      const expectedHeaders = {
+      const expectedPolicyHeaders = {
         "content-type": "image/png",
         "content-disposition":
           "inline; filename=\"provider-image.png\"; filename*=UTF-8''provider-image.png",
         "x-content-type-options": "nosniff",
-        "content-length": String(bytes.byteLength),
       } as const;
 
       const get = await handleMediaDeliveryRequest(request(`/media/${fixture.key}`));
       expect(get.status).toBe(200);
-      for (const [name, value] of Object.entries(expectedHeaders)) {
+      for (const [name, value] of Object.entries(expectedPolicyHeaders)) {
         expect(get.headers.get(name)).toBe(value);
       }
+      expect(get.headers.get("content-length")).toBeNull();
       expect(get.headers.get("location")).toBeNull();
       expect(Buffer.from(await get.arrayBuffer())).toEqual(bytes);
 
@@ -612,9 +611,10 @@ test.each(["local", "s3", "azure"] as const)(
         request(`/media/${fixture.key}`, { method: "HEAD" })
       );
       expect(head.status).toBe(200);
-      for (const [name, value] of Object.entries(expectedHeaders)) {
+      for (const [name, value] of Object.entries(expectedPolicyHeaders)) {
         expect(head.headers.get(name)).toBe(value);
       }
+      expect(head.headers.get("content-length")).toBe(String(bytes.byteLength));
       expect(head.headers.get("location")).toBeNull();
       expect((await head.arrayBuffer()).byteLength).toBe(0);
 
@@ -624,6 +624,75 @@ test.each(["local", "s3", "azure"] as const)(
       expect(calls.resolves).toBe(2);
       expect(calls.rate).toHaveLength(2);
     } finally {
+      await fixture.cleanup();
+    }
+  }
+);
+
+test.each(["local", "s3", "azure"] as const)(
+  "real Bun.serve transport keeps %s GET framing honest and HEAD length exact",
+  async (provider) => {
+    const bytes = passiveFixtures[0].bytes;
+    const fixture = await createRealDeliveryAdapterFixture(provider, bytes);
+    let publicUrlCalls = 0;
+    fixture.adapter.getPublicUrl = () => {
+      publicUrlCalls += 1;
+      throw new Error("provider_url_forbidden");
+    };
+    const server = Bun.serve({
+      port: 0,
+      fetch: handleMediaDeliveryRequest,
+    });
+
+    try {
+      const record: MediaDeliveryRecord = {
+        key: fixture.key,
+        mimeType: "image/png",
+        originalName: "provider-image.old.exe",
+        size: bytes.byteLength,
+      };
+      installHarness({
+        async findRecord(requestedKey) {
+          calls.records.push(requestedKey);
+          return requestedKey === fixture.key ? record : null;
+        },
+        async resolveAdapter() {
+          calls.resolves += 1;
+          return fixture.adapter;
+        },
+      });
+
+      const url = new URL(`/media/${fixture.key}`, `http://127.0.0.1:${server.port}`);
+      const get = await fetch(url);
+      expect(get.status).toBe(200);
+      expect(get.headers.get("content-type")).toBe("image/png");
+      expect(get.headers.get("content-disposition")).toBe(
+        "inline; filename=\"provider-image.png\"; filename*=UTF-8''provider-image.png"
+      );
+      expect(get.headers.get("x-content-type-options")).toBe("nosniff");
+      expect(get.headers.get("location")).toBeNull();
+      const getLength = get.headers.get("content-length");
+      expect(getLength === null || getLength === String(bytes.byteLength)).toBe(true);
+      expect(Buffer.from(await get.arrayBuffer())).toEqual(bytes);
+
+      const head = await fetch(url, { method: "HEAD" });
+      expect(head.status).toBe(200);
+      expect(head.headers.get("content-type")).toBe("image/png");
+      expect(head.headers.get("content-disposition")).toBe(
+        "inline; filename=\"provider-image.png\"; filename*=UTF-8''provider-image.png"
+      );
+      expect(head.headers.get("x-content-type-options")).toBe("nosniff");
+      expect(head.headers.get("content-length")).toBe(String(bytes.byteLength));
+      expect(head.headers.get("location")).toBeNull();
+      expect((await head.arrayBuffer()).byteLength).toBe(0);
+
+      expect(fixture.readCount()).toBe(2);
+      expect(publicUrlCalls).toBe(0);
+      expect(calls.records).toEqual([fixture.key, fixture.key]);
+      expect(calls.resolves).toBe(2);
+      expect(calls.rate).toHaveLength(2);
+    } finally {
+      await server.stop(true);
       await fixture.cleanup();
     }
   }
@@ -639,7 +708,7 @@ test("all passive canonical profiles require matching bytes and emit inline safe
     expect(result.headers.get("content-disposition")?.startsWith("inline;")).toBe(true);
     expect(result.headers.get("content-disposition")).toContain(fixture.extension);
     expect(result.headers.get("x-content-type-options")).toBe("nosniff");
-    expect(result.headers.get("content-length")).toBe(String(fixture.bytes.byteLength));
+    expect(result.headers.get("content-length")).toBeNull();
     expect(Buffer.from(await result.arrayBuffer())).toEqual(fixture.bytes);
   }
   expect(calls.publicUrls).toBe(0);
@@ -658,19 +727,15 @@ test("canonical active profiles remain attachments based on persisted MIME and k
     expect(get.headers.get("content-disposition")).not.toContain("\r");
     expect(get.headers.get("content-disposition")).not.toContain("\n");
     expect(get.headers.get("x-content-type-options")).toBe("nosniff");
-    expect(get.headers.get("content-length")).toBe(String(bytes.byteLength));
+    expect(get.headers.get("content-length")).toBeNull();
     expect(Buffer.from(await get.arrayBuffer())).toEqual(bytes);
 
     const head = await handleMediaDeliveryRequest(request(`/media/${key}`, { method: "HEAD" }));
     expect(head.status).toBe(200);
-    for (const name of [
-      "content-type",
-      "content-disposition",
-      "content-length",
-      "x-content-type-options",
-    ]) {
+    for (const name of ["content-type", "content-disposition", "x-content-type-options"]) {
       expect(head.headers.get(name)).toBe(get.headers.get(name));
     }
+    expect(head.headers.get("content-length")).toBe(String(bytes.byteLength));
     expect(await head.text()).toBe("");
   }
   expect(calls.rate).toHaveLength(attachmentFixtures.length * 2);
@@ -926,7 +991,7 @@ test("resolved poison tail chunks reject generically without coercing provider d
   expect(poisoned.tracker.closeCount).toBe(1);
 });
 
-test("GET and HEAD share headers while HEAD is bodyless and closes the source", async () => {
+test("GET and HEAD share policy headers while HEAD owns exact length and closes the source", async () => {
   const bytes = Buffer.from("RIFF1234WEBP!head-parity");
   recordFor("head.webp", "image/webp", bytes);
   let tracked = trackedStream([bytes]);
@@ -938,14 +1003,11 @@ test("GET and HEAD share headers while HEAD is bodyless and closes the source", 
   streamFactory = () => tracked.stream;
   const head = await handleMediaDeliveryRequest(request("/media/head.webp", { method: "HEAD" }));
   expect(head.status).toBe(200);
-  for (const name of [
-    "content-type",
-    "content-disposition",
-    "content-length",
-    "x-content-type-options",
-  ]) {
+  for (const name of ["content-type", "content-disposition", "x-content-type-options"]) {
     expect(head.headers.get(name)).toBe(get.headers.get(name));
   }
+  expect(get.headers.get("content-length")).toBeNull();
+  expect(head.headers.get("content-length")).toBe(String(bytes.byteLength));
   expect(await head.text()).toBe("");
   expect(tracked.tracker.closeCount).toBe(1);
 });

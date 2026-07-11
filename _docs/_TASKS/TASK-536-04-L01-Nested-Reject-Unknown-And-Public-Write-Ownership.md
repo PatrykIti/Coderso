@@ -20,7 +20,8 @@ mounts, wire the already-tested media-delivery handler into the production serve
 remove the duplicate upload limiter call. Replace the overloaded requireCaptcha result
 with an explicit discriminated decision; media byte validation is no longer represented
 here. This leaf does not implement nested JSON schemas despite the historical filename;
-that single-writer work is isolated in L02.
+that single-writer work is isolated in L02. The post-audit correction consumes L02's
+narrow current form-state projection so public writes fail after unpublish/access drift.
 
 ## Source ownership
 
@@ -29,8 +30,8 @@ This leaf is the only TASK-536 writer of:
 - core/server/httpServer.ts;
 - core/server/requestBody.ts;
 - core/services/forms/submissionAccess.ts;
-- core/services/forms/submissionNonce.ts (only canonical wire parsing in the shared
-  Forms/Booking nonce verifier);
+- core/services/forms/submissionNonce.ts (canonical wire parsing and bounded TTL
+  normalization in the shared Forms/Booking submission-nonce verifier);
 - core/server/routes/formsRoutes.ts;
 - core/server/publicFormsApi.ts.
 
@@ -47,6 +48,20 @@ edit the L03-owned `tests/unit/server/publicFormsUploadApi.test.ts` (read-only g
 files. It also owns a one-case full-server
 assertion that `/media/*` dispatches to the TASK-536-02 handler; it may not re-baseline
 that handler's direct suite.
+
+The final security audit reopens only this existing executor writer seam after L02 lands
+`getFormWriteState`. L01 may add status to the immutable prepared projection, import the
+L02 helper, and update its already-owned public API/full-mount/security tests. It must not
+edit `formsService.ts` or `formRuntimeResolver.ts`; those remain L02's single-writer files.
+The existing `mapFormError` owner in this file adds the centralized
+`form_unpublished`/409 and `form_write_state_unavailable`/503 mappings.
+
+The final Forms-security post-audit reopens this same response-boundary writer seam for
+POST-M-06. L01 owns one `mapFormWriteBoundaryError` helper consumed by both the root and
+stripped-admin Forms-write wrappers. Known `ApiError`/`mapFormError` results remain
+unchanged; every unmapped value becomes fixed `internal_error`/500 before
+`toErrorResponse`, even outside production. The helper must not publish raw messages,
+stacks, causes, connection strings, or dependency details.
 
 The TASK-536 post-audit adds one narrow error-parity remediation to this existing writer
 seam: `mapFormError` must map `media_file_invalid` to the canonical 400 response already
@@ -79,6 +94,22 @@ type FormWriteRatePlan = Readonly<{
   isAuthenticated: boolean;
 }>;
 
+type PreparedFormWriteForm = Readonly<{
+  id: string;
+  status: "draft" | "published" | "archived";
+  submissionAccess: "public" | "internal";
+  successMessage: string | null;
+  successRedirectUrl: string | null;
+  settings: unknown;
+}>;
+
+type FormWriteExecutorDeps = {
+  // existing dependencies plus this exact injectable late projection seam:
+  loadCurrentFormWriteState: typeof getFormWriteState;
+};
+
+defaultFormWriteExecutorDeps.loadCurrentFormWriteState = getFormWriteState;
+
 const UNRESOLVED_FORM_WRITE_RATE_IDENTIFIER = "forms_write_invalid_target";
 
 export const SUBMISSION_ACCESS_MODE_VALUES = ["public", "internal"] as const;
@@ -98,8 +129,9 @@ prepareFormWriteTarget(routeContext, serverDerivedMatch) {
   attach the session and invoke the access-target form loader exactly once;
   return a discriminated found/missing/invalid-mode target; normalize a valid
     submissionAccess only inside the found branch rather than throwing before rate charge;
-  return immutable form + mode target without authenticating an API key, checking scope,
-    enforcing CSRF/RBAC, or dispatching a handler;
+  snapshot canonical status as well as access mode and return immutable form + mode
+    target without authenticating an API key, checking scope, enforcing CSRF/RBAC, or
+    dispatching a handler;
 }
 
 resolveFormWriteRatePlan(routeContext, targetResult) {
@@ -143,6 +175,8 @@ executePreparedFormWrite(req, ctx) {
   ratePlan = resolveFormWriteRatePlan(routeContext, target);
   invoke checkRateLimit exactly once before API-key verification, scope checks, CSRF,
     RBAC, body parsing, nonce/captcha, or handler work;
+  if target mode is public and prepared status is not published:
+    return form_unpublished/409 now, after the one rate charge and before auth/body/handler;
   prepared = await authorizePreparedFormWrite(req, routeContext, target);
   // Internal session ordering intentionally preserves current middleware:
   // limiter -> CSRF -> RBAC. Internal API keys are limiter -> verification -> scope.
@@ -158,6 +192,11 @@ executePreparedFormWrite(req, ctx) {
       ? "media_file_too_large"
       : "form_payload_too_large",
   });
+  if prepared mode is public:
+    try current = await deps.loadCurrentFormWriteState(prepared.form.id);
+    catch: throw form_write_state_unavailable;
+    require current is exactly { status:"published", submissionAccess:"public" };
+    otherwise return form_unpublished/409 before descriptor creation or handler dispatch;
   attach body + immutable prepared descriptor;
   dispatch to upload/submission handler with prepared access so it cannot drift/reload;
 }
@@ -170,6 +209,18 @@ handleApi(req, apiPrefix) {
 
 handlePublicFormsApi(req, ctx) {
   preserve the current publicSite compatibility wrapper around the same executor;
+}
+
+mapFormWriteBoundaryError(error) {
+  if error is ApiError: return error;
+  if mapFormError(error) returns a known domain error: return it;
+  return ApiError("internal_error", "Unexpected error", 500);
+}
+
+serialize either Forms-write mount failure {
+  mapped = mapFormWriteBoundaryError(execution.error);
+  pass only mapped to toErrorResponse/errorResponse;
+  never pass the original unknown error into the environment-sensitive generic mapper;
 }
 
 setParsedOwnValue(payload, key, value) {
@@ -185,8 +236,12 @@ assertFormSubmissionNonce(formId, nonce, now) {
   require timestampRaw matches canonical unsigned decimal grammar, parses to a safe
     integer, and String(timestamp) === timestampRaw;
   require signature is exactly 64 lowercase hexadecimal characters;
+  parse FORM_SUBMIT_NONCE_TTL_MINUTES as a finite positive number, then require its
+    millisecond conversion to remain finite and no greater than Number.MAX_SAFE_INTEGER;
+    absent or invalid/overflowing configuration falls back to the fixed 10-minute TTL;
   preserve TTL/future-skew checks, form/scope binding, and timing-safe HMAC comparison;
-  inherited Booking wrapper receives the identical canonical rejection behavior;
+  inherited Booking submission wrapper receives the identical canonical rejection and
+    TTL-fallback behavior; bookingSlotsToken.ts remains a separate, unchanged contract;
 }
 
 handleFormAttachmentUploadRoute(ctx) {
@@ -214,10 +269,16 @@ handleFormSubmissionRoute(ctx) {
 ~~~
 
 The prepared descriptor is request-local, immutable, and bound to the exact form ID.
-"Load exactly once" in this leaf means the executor's access-target loader: route
-handlers must not reload/re-evaluate access. The existing `submissionService.submitForm`
+"Load exactly once" in this leaf means the executor's full access-target loader: route
+handlers must not reload/re-evaluate access. Public mode additionally performs one late,
+narrow `{ status, submissionAccess }` projection through L02's domain helper immediately
+before dispatch. That projection is not a second form/settings/fields access load and
+cannot mint or change an access decision. The existing `submissionService.submitForm`
 may retain its separate existence/field/media DB backstop; that defense-in-depth service
 and its tests are outside L01 ownership and are not counted as a second access load.
+The late read is the request's authorization linearization point. State drift observed by
+that read rejects dispatch; a later state change does not retroactively cancel a request
+that has already crossed the authorization point.
 Do not accept a caller-supplied access mode or browser access flag. Direct handler tests
 construct preparation through the same helper rather than inventing a bypass. No
 downstream helper can charge a bucket a second time.
@@ -245,7 +306,8 @@ the payload prototype; duplicate unwatched keys retain their existing last-value
 ## Security Contract
 
 - **Visibility:** current POST /forms/:id/uploads and /submissions only; public mode is
-  nonce-protected, internal mode remains authenticated/scoped.
+  available only for a currently published public form and remains nonce-protected;
+  internal mode remains authenticated/scoped regardless of public publication state.
 - **Auth/RBAC:** internal session requires forms:write; internal API key requires
   forms.submit; public mode never grants media:write.
 - **CSRF:** internal session writes enforce shared CSRF. Public-mode requests, including
@@ -260,6 +322,8 @@ the payload prototype; duplicate unwatched keys retain their existing last-value
   allowlist never reach this executor and therefore remain owned by those outer policies.
 - **Validation:** strict transport/nested schemas and service field/media ownership
   remain authoritative; prepared access is server-created and form-ID-bound.
+  Public status/access is checked from the initial immutable target and once more through
+  the narrow current-state projection immediately before dispatch.
 
 ## Errors and compatibility
 
@@ -269,6 +333,16 @@ oversized uploads retain `media_file_too_large`/413. Invalid upload storage maxi
 before body consumption with `media_storage_unavailable`/503. One valid request with a
 maxRequests=1 public_write bucket succeeds; the next equivalent request gets 429.
 Handlers fail closed without the server-created prepared descriptor.
+Public draft/archived forms, or public forms that become unpublished/internal before
+dispatch, return machine-readable `form_unpublished`/409 after exactly one
+`public_write` charge and before any handler/storage/submission write.
+A rejected late state query maps to `form_write_state_unavailable`/503 with no raw DB
+detail. `mapFormError` centrally owns both new mappings and their direct/HTTP parity.
+Any other unmapped executor exception is converted by `mapFormWriteBoundaryError` to
+fixed `internal_error`/500 before root or stripped-admin serialization, independent of
+`NODE_ENV`; the original error remains request-local and is never a response payload.
+An initially noncanonical persisted status remains an invalid prepared target and retains
+`form_invalid`/400 through the unresolved sentinel plan; it is not laundered into 409.
 
 ## Regression-test shape
 
@@ -277,6 +351,22 @@ security-gate suites before its source gate.
 Required matrix:
 
 - upload and submission each invoke public_write once through the real public adapter;
+- public draft and archived targets each receive exactly one `public_write` charge then
+  `form_unpublished`/409 with zero API-key/CSRF/RBAC/body/handler/storage/DB work;
+- for upload and submission, begin with a published public target and a stale valid nonce,
+  then make the late state projection return draft, archived, internal, missing, or
+  invalid data; each returns `form_unpublished`/409 after one charge and body parse but
+  before descriptor/dispatch/storage/DB work. A stable published/public projection
+  dispatches once. Internal mode does not call the public-state projection;
+- a rejected `loadCurrentFormWriteState` call returns
+  `form_write_state_unavailable`/503 after one charge and body parse, with zero descriptor,
+  dispatch, storage, or DB write; its raw error is never exposed;
+- an unmapped attach-session/access-load failure containing a private marker receives the
+  unresolved sentinel charge once and returns the exact generic `internal_error`/500 on
+  both real mounts; response JSON contains no marker, stack, `details`, or `cause`, while
+  stripped-admin request/security headers and access-log status remain intact;
+- noncanonical initial status remains `form_invalid`/400 with the unresolved sentinel,
+  one full loader call, and zero auth/body/state-projection/handler work;
 - malformed/decode-invalid/oversized IDs, missing forms, access-load failures, and invalid
   persisted modes invoke fail-safe public_write once with exact identifier
   `forms_write_invalid_target` before returning; invalid internal API keys, missing scopes, missing auth, CSRF
@@ -295,7 +385,11 @@ Required matrix:
 - the nonce suite and security gate reject appended segments, leading-zero/noncanonical
   timestamps, unsafe/out-of-range timestamps, wrong-length/non-hex/uppercase signatures,
   and prove the Booking wrapper inherits the same failures; valid Forms and Booking tokens,
-  TTL, future skew, and signature tampering remain covered;
+  TTL, future skew, and signature tampering remain covered. Shared Forms and Booking
+  submission-verifier boundary cases prove the maximum arithmetic-safe configured TTL is
+  accepted, while both a finite just-over-ceiling millisecond result and a finite minutes
+  value whose multiplication becomes non-finite fall back to the fixed 10-minute TTL rather
+  than disabling expiry;
 - anonymous public requires nonce and configured captcha;
 - public-mode authenticated-cookie requests still require the form nonce;
 - public-mode authenticated-cookie requests pass no `userId` to the limiter and preserve
@@ -313,8 +407,9 @@ Required matrix:
 - both public and stripped admin mounts traverse the same executor; matched admin writes
   never traverse generic parse/rate/CSRF, yet retain request-id/CORS/security headers and
   access logging;
-- through upload and submission on both mounts, assert the injected access-target loader
-  runs exactly once and the handler consumes the identical immutable descriptor; do not
+- through upload and submission on both mounts, assert the injected full access-target
+  loader runs exactly once, the public state projection runs exactly once immediately
+  before dispatch, and the handler consumes the identical immutable descriptor; do not
   count the submission service's documented DB backstop as an access reload. Direct handlers given an
   absent descriptor, a fabricated caller descriptor, a wrong kind, or a mismatched form
   ID must fail before field lookup, nonce/captcha, submit/upload, or any second load;
@@ -355,6 +450,12 @@ Required matrix:
   route-local enum mirror;
 - every access mode still reaches unconditional byte canonicalization;
 - stable error response codes remain mapped.
+- `mapFormError` directly pins `form_unpublished`/409 and
+  `form_write_state_unavailable`/503; root and stripped-admin HTTP paths assert identical
+  codes/statuses plus their existing wrapper-header/log differences.
+- `mapFormWriteBoundaryError` pins known mappings unchanged and redacts unknown Error and
+  non-Error values to the same fixed 500 payload; tests must run in non-production mode so
+  a generic environment-sensitive serializer would visibly fail the assertion.
 
 TASK-536-05-L01 may add cross-contract security cases later but cannot re-baseline this
 access/rate-ownership matrix.

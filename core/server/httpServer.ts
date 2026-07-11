@@ -21,7 +21,7 @@ import { startBackupScheduler } from "./jobs/backupScheduler";
 import { handlePublicRequest } from "./publicSite";
 import { resolveAdminPath } from "./utils/adminPath";
 import { handleMediaDeliveryRequest } from "./mediaDelivery";
-import { executePreparedFormWrite } from "./publicFormsApi";
+import { executePreparedFormWrite, mapFormWriteBoundaryError } from "./publicFormsApi";
 
 const MEDIA_PREFIX = "/media";
 
@@ -321,7 +321,7 @@ const handleApi = async (req: Request, apiPrefix: string) => {
   if (formsWriteExecution.matched) {
     const response = formsWriteExecution.ok
       ? jsonResponse(formsWriteExecution.result, { headers: responseHeaders })
-      : errorResponse(formsWriteExecution.error);
+      : errorResponse(mapFormWriteBoundaryError(formsWriteExecution.error));
     responseHeaders.forEach((value, key) => {
       if (!response.headers.has(key)) response.headers.append(key, value);
     });

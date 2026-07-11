@@ -8,6 +8,7 @@ import {
   __setFormWriteExecutorDepsForTests,
   executePreparedFormWrite,
   handlePublicFormsApi,
+  mapFormWriteBoundaryError,
   UNRESOLVED_FORM_WRITE_RATE_IDENTIFIER,
   type FormWriteExecutorDeps,
 } from "../../../core/server/publicFormsApi";
@@ -98,11 +99,15 @@ const getCaptchaSecurity = (): SecuritySettings => ({
   },
 });
 
-const fakeForm = (id = FORM_ID, submissionAccess: string = "public"): FormWriteAccessTarget => ({
+const fakeForm = (
+  id = FORM_ID,
+  submissionAccess: string = "public",
+  status: FormWriteAccessTarget["status"] = "published"
+): FormWriteAccessTarget => ({
   id,
   name: "Executor form",
   slug: `executor-${id}`,
-  status: "published",
+  status,
   description: null,
   successMessage: "Thanks",
   successRedirectUrl: null,
@@ -156,6 +161,8 @@ const installSuccessfulExecutor = (
   __setFormWriteExecutorDepsForTests({
     attachSession: async () => undefined,
     loadAccessTarget: async (formId) => fakeForm(formId, mode),
+    loadCurrentFormWriteState: async () =>
+      Object.freeze({ status: "published", submissionAccess: "public" }),
     chargeRateLimit: () => undefined,
     authenticateApiKey: async () => null,
     enforceSessionCsrf: async () => undefined,
@@ -235,18 +242,87 @@ test("Forms upload mapper preserves media_file_invalid as a stable client error"
   });
 });
 
+test.each([
+  {
+    source: "form_unpublished",
+    code: "form_unpublished",
+    message: "Form is not published.",
+    status: 409,
+  },
+  {
+    source: "form_write_state_unavailable",
+    code: "form_write_state_unavailable",
+    message: "Form write state is temporarily unavailable.",
+    status: 503,
+  },
+] as const)("Forms mapper preserves $source as a stable domain error", (entry) => {
+  const mapped = mapFormError(new Error(entry.source));
+
+  expect(mapped).toBeInstanceOf(ApiError);
+  expect(mapped).toMatchObject({
+    code: entry.code,
+    message: entry.message,
+    status: entry.status,
+  });
+});
+
+test("Forms-write boundary preserves known errors and redacts every unknown value", () => {
+  const apiError = new ApiError("known_error", "Known failure", 418);
+  expect(mapFormWriteBoundaryError(apiError)).toBe(apiError);
+
+  const domainError = mapFormWriteBoundaryError(new Error("form_unpublished"));
+  expect(domainError).toMatchObject({
+    code: "form_unpublished",
+    message: "Form is not published.",
+    status: 409,
+  });
+
+  const privateMessage = "postgres://private-user:private-password@private-host/forms";
+  const privateCause = "private_dependency_cause";
+  const unknownError = new Error(privateMessage, { cause: new Error(privateCause) });
+  const unknownValue = { message: privateMessage, cause: privateCause };
+
+  for (const value of [unknownError, unknownValue]) {
+    const mapped = mapFormWriteBoundaryError(value);
+    expect({
+      code: mapped.code,
+      message: mapped.message,
+      status: mapped.status,
+      details: mapped.details,
+    }).toEqual({
+      code: "internal_error",
+      message: "Unexpected error",
+      status: 500,
+      details: undefined,
+    });
+    expect(Object.hasOwn(mapped, "cause")).toBe(false);
+    expect(mapped.stack).not.toContain(privateMessage);
+    expect(mapped.stack).not.toContain(privateCause);
+  }
+});
+
 test.each(["submissions", "uploads"] as const)(
   "shared executor prepares %s with one public_write charge and one immutable descriptor",
   async (kind) => {
+    const order: string[] = [];
     const rates: Array<{
       bucket: string;
       identity: Record<string, unknown>;
       authenticated: boolean;
     }> = [];
     let authenticateCalls = 0;
+    let stateCalls = 0;
     let dispatchedContext: RouteContext | null = null;
     installSuccessfulExecutor({
+      async attachSession() {
+        order.push("attach");
+      },
+      async loadAccessTarget(formId) {
+        order.push("load");
+        return fakeForm(formId);
+      },
       chargeRateLimit(bucket, identity, _config, options) {
+        order.push("rate");
         rates.push({
           bucket,
           identity: { ...identity },
@@ -257,11 +333,22 @@ test.each(["submissions", "uploads"] as const)(
         authenticateCalls += 1;
         return null;
       },
+      async parseBody() {
+        order.push("body");
+        return { data: {} };
+      },
+      async loadCurrentFormWriteState() {
+        order.push("state");
+        stateCalls += 1;
+        return Object.freeze({ status: "published", submissionAccess: "public" });
+      },
       async dispatchSubmission(ctx) {
+        order.push("handler");
         dispatchedContext = ctx;
         return { kind: "submission" };
       },
       async dispatchUpload(ctx) {
+        order.push("handler");
         dispatchedContext = ctx;
         return { kind: "upload" };
       },
@@ -281,6 +368,8 @@ test.each(["submissions", "uploads"] as const)(
       },
     ]);
     expect(authenticateCalls).toBe(0);
+    expect(stateCalls).toBe(1);
+    expect(order).toEqual(["attach", "load", "rate", "body", "state", "handler"]);
     expect(dispatchedContext).not.toBeNull();
     if (!execution.matched || !execution.ok) throw new Error("expected executor success");
     const descriptor = (dispatchedContext as RouteContext | null)?.preparedFormWrite;
@@ -298,6 +387,248 @@ test.each(["submissions", "uploads"] as const)(
     expect(Object.isFrozen(descriptor)).toBe(true);
     expect(Object.isFrozen(descriptor?.form)).toBe(true);
     expect(Object.isFrozen(descriptor?.access)).toBe(true);
+  }
+);
+
+test.each([
+  { status: "draft", kind: "submissions" },
+  { status: "draft", kind: "uploads" },
+  { status: "archived", kind: "submissions" },
+  { status: "archived", kind: "uploads" },
+] as const)(
+  "initial public $status form rejects $kind after one charge and before downstream work",
+  async ({ status, kind }) => {
+    const calls = {
+      rate: 0,
+      authenticate: 0,
+      csrf: 0,
+      rbac: 0,
+      storage: 0,
+      body: 0,
+      state: 0,
+      handler: 0,
+    };
+    installSuccessfulExecutor({
+      loadAccessTarget: async (formId) => fakeForm(formId, "public", status),
+      chargeRateLimit(bucket, identity) {
+        calls.rate += 1;
+        expect(bucket).toBe("public_write");
+        expect(identity.identifier).toBe(FORM_ID);
+      },
+      async authenticateApiKey() {
+        calls.authenticate += 1;
+        return null;
+      },
+      async enforceSessionCsrf() {
+        calls.csrf += 1;
+      },
+      async requireSessionFormsWrite() {
+        calls.rbac += 1;
+      },
+      async loadUploadStorageMaxBytes() {
+        calls.storage += 1;
+        return 1024;
+      },
+      async parseBody() {
+        calls.body += 1;
+        return {};
+      },
+      async loadCurrentFormWriteState() {
+        calls.state += 1;
+        return Object.freeze({ status: "published", submissionAccess: "public" });
+      },
+      async dispatchSubmission() {
+        calls.handler += 1;
+        return {};
+      },
+      async dispatchUpload() {
+        calls.handler += 1;
+        return {};
+      },
+    });
+
+    const execution = await runExecutor(FORM_ID, kind);
+    expect(execution).toMatchObject({
+      matched: true,
+      ok: false,
+      error: { message: "form_unpublished" },
+    });
+    if (!execution.matched) throw new Error("expected matched Forms write");
+    expect(execution.routeContext.preparedFormWrite).toBeUndefined();
+    expect(calls).toEqual({
+      rate: 1,
+      authenticate: 0,
+      csrf: 0,
+      rbac: 0,
+      storage: 0,
+      body: 0,
+      state: 0,
+      handler: 0,
+    });
+  }
+);
+
+test("noncanonical initial form status uses the unresolved sentinel and stops before body/state", async () => {
+  const invalidTarget = fakeForm();
+  invalidTarget.status = "PUBLISHED" as never;
+  const calls = { rate: 0, body: 0, state: 0, handler: 0 };
+  let rateIdentity: Record<string, unknown> | null = null;
+  installSuccessfulExecutor({
+    loadAccessTarget: async () => invalidTarget,
+    chargeRateLimit(_bucket, identity) {
+      calls.rate += 1;
+      rateIdentity = { ...identity };
+    },
+    async parseBody() {
+      calls.body += 1;
+      return {};
+    },
+    async loadCurrentFormWriteState() {
+      calls.state += 1;
+      return Object.freeze({ status: "published", submissionAccess: "public" });
+    },
+    async dispatchSubmission() {
+      calls.handler += 1;
+      return {};
+    },
+  });
+
+  const execution = await runExecutor();
+  expect(execution).toMatchObject({
+    matched: true,
+    ok: false,
+    error: { code: "form_invalid", status: 400 },
+  });
+  expect(rateIdentity).toEqual({
+    ip: "192.0.2.1",
+    userAgent: "forms-executor-test",
+    identifier: UNRESOLVED_FORM_WRITE_RATE_IDENTIFIER,
+  });
+  expect(calls).toEqual({ rate: 1, body: 0, state: 0, handler: 0 });
+});
+
+test("late public state rejects every noncanonical or non-public projection before dispatch", async () => {
+  let accessorReads = 0;
+  const accessorState = {} as Record<string, unknown>;
+  Object.defineProperties(accessorState, {
+    status: {
+      enumerable: true,
+      get() {
+        accessorReads += 1;
+        return "published";
+      },
+    },
+    submissionAccess: {
+      enumerable: true,
+      value: "public",
+    },
+  });
+  const invalidStates: ReadonlyArray<Readonly<{ label: string; value: unknown }>> = [
+    { label: "draft", value: { status: "draft", submissionAccess: "public" } },
+    { label: "archived", value: { status: "archived", submissionAccess: "public" } },
+    { label: "internal", value: { status: "published", submissionAccess: "internal" } },
+    { label: "missing", value: null },
+    { label: "noncanonical", value: { status: "PUBLISHED", submissionAccess: "public" } },
+    {
+      label: "extra-key",
+      value: { status: "published", submissionAccess: "public", extra: true },
+    },
+    { label: "accessor", value: accessorState },
+  ];
+
+  for (const kind of ["submissions", "uploads"] as const) {
+    for (const entry of invalidStates) {
+      const calls = { rate: 0, storage: 0, body: 0, state: 0, handler: 0 };
+      installSuccessfulExecutor({
+        chargeRateLimit() {
+          calls.rate += 1;
+        },
+        async loadUploadStorageMaxBytes() {
+          calls.storage += 1;
+          return 1024;
+        },
+        async parseBody() {
+          calls.body += 1;
+          return {};
+        },
+        async loadCurrentFormWriteState() {
+          calls.state += 1;
+          return entry.value as never;
+        },
+        async dispatchSubmission() {
+          calls.handler += 1;
+          return {};
+        },
+        async dispatchUpload() {
+          calls.handler += 1;
+          return {};
+        },
+      });
+
+      const execution = await runExecutor(FORM_ID, kind);
+      expect(execution, `${kind} ${entry.label}`).toMatchObject({
+        matched: true,
+        ok: false,
+        error: { message: "form_unpublished" },
+      });
+      if (!execution.matched) throw new Error("expected matched Forms write");
+      expect(execution.routeContext.preparedFormWrite).toBeUndefined();
+      expect(calls).toEqual({
+        rate: 1,
+        storage: kind === "uploads" ? 1 : 0,
+        body: 1,
+        state: 1,
+        handler: 0,
+      });
+    }
+  }
+  expect(accessorReads).toBe(0);
+});
+
+test.each(["submissions", "uploads"] as const)(
+  "late public-state failure maps %s to 503 without leaking its raw error",
+  async (kind) => {
+    const secret = "database://user:password@private-host/forms";
+    const calls = { rate: 0, body: 0, state: 0, handler: 0 };
+    installSuccessfulExecutor({
+      chargeRateLimit() {
+        calls.rate += 1;
+      },
+      async parseBody() {
+        calls.body += 1;
+        return {};
+      },
+      async loadCurrentFormWriteState() {
+        calls.state += 1;
+        throw new Error(secret);
+      },
+      async dispatchSubmission() {
+        calls.handler += 1;
+        return {};
+      },
+      async dispatchUpload() {
+        calls.handler += 1;
+        return {};
+      },
+    });
+    const { url, request } = jsonWriteRequest(FORM_ID, kind);
+    const response = await handlePublicFormsApi(request, {
+      url,
+      security: getSecurity(),
+      ip: "192.0.2.1",
+      userAgent: "state-failure-test",
+    });
+
+    expect(response?.status).toBe(503);
+    const responseText = await response?.text();
+    expect(responseText).not.toContain(secret);
+    expect(JSON.parse(responseText ?? "{}")).toEqual({
+      error: {
+        code: "form_write_state_unavailable",
+        message: "Form write state is temporarily unavailable.",
+      },
+    });
+    expect(calls).toEqual({ rate: 1, body: 1, state: 1, handler: 0 });
   }
 );
 
@@ -491,6 +822,92 @@ test.each(["attach", "load", "invalid-mode"] as const)(
   }
 );
 
+test.each(["attachSession", "loadAccessTarget"] as const)(
+  "root Forms-write wrapper redacts an unknown %s preparation failure after one sentinel charge",
+  async (failurePoint) => {
+    const privateMessage = `private_${failurePoint}_database_marker`;
+    const privateCause = `private_${failurePoint}_cause`;
+    const calls = {
+      attach: 0,
+      load: 0,
+      rate: 0,
+      body: 0,
+      state: 0,
+      handler: 0,
+    };
+    let rateBucket = "";
+    let rateIdentifier = "";
+    const fail = (): never => {
+      throw new Error(privateMessage, { cause: new Error(privateCause) });
+    };
+
+    installSuccessfulExecutor({
+      async attachSession() {
+        calls.attach += 1;
+        if (failurePoint === "attachSession") fail();
+      },
+      async loadAccessTarget(formId) {
+        calls.load += 1;
+        if (failurePoint === "loadAccessTarget") fail();
+        return fakeForm(formId);
+      },
+      chargeRateLimit(bucket, identity) {
+        calls.rate += 1;
+        rateBucket = bucket;
+        rateIdentifier = identity.identifier ?? "";
+      },
+      async parseBody() {
+        calls.body += 1;
+        return {};
+      },
+      async loadCurrentFormWriteState() {
+        calls.state += 1;
+        return Object.freeze({ status: "published", submissionAccess: "public" });
+      },
+      async dispatchSubmission() {
+        calls.handler += 1;
+        return {};
+      },
+    });
+
+    const url = new URL(`http://localhost/forms/${FORM_ID}/submissions`);
+    const response = await handlePublicFormsApi(
+      new Request(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      }),
+      {
+        url,
+        security: getSecurity(),
+        ip: "192.0.2.1",
+        userAgent: "forms-boundary-test",
+      }
+    );
+    const text = await response?.text();
+
+    expect(response?.status).toBe(500);
+    expect(JSON.parse(text ?? "{}")).toEqual({
+      error: { code: "internal_error", message: "Unexpected error" },
+    });
+    expect(text).not.toContain(privateMessage);
+    expect(text).not.toContain(privateCause);
+    expect(text).not.toContain("stack");
+    expect(text).not.toContain("details");
+    expect(text).not.toContain("cause");
+    expect(rateBucket).toBe("public_write");
+    expect(rateIdentifier).toBe(UNRESOLVED_FORM_WRITE_RATE_IDENTIFIER);
+    expect(calls).toEqual({
+      attach: 1,
+      load: failurePoint === "attachSession" ? 0 : 1,
+      rate: 1,
+      body: 0,
+      state: 0,
+      handler: 0,
+    });
+  }
+);
+
 test("an incoherent partial session is sentinel-charged and never propagates userId", async () => {
   let loaderCalls = 0;
   let rateIdentity: Record<string, unknown> | null = null;
@@ -640,6 +1057,7 @@ test("public cookie sessions omit userId from rate identity, still require nonce
 
 test("internal session ordering is limiter then CSRF then RBAC then body and handler", async () => {
   const order: string[] = [];
+  let stateCalls = 0;
   let rateIdentity: Record<string, unknown> | null = null;
   installSuccessfulExecutor(
     {
@@ -668,6 +1086,10 @@ test("internal session ordering is limiter then CSRF then RBAC then body and han
         order.push("body");
         return { data: {} };
       },
+      async loadCurrentFormWriteState() {
+        stateCalls += 1;
+        return Object.freeze({ status: "published", submissionAccess: "public" });
+      },
       async dispatchSubmission() {
         order.push("handler");
         return { ok: true };
@@ -679,6 +1101,7 @@ test("internal session ordering is limiter then CSRF then RBAC then body and han
   const execution = await runExecutor();
   expect(execution).toMatchObject({ matched: true, ok: true });
   expect(order).toEqual(["attach", "load", "rate", "csrf", "rbac", "body", "handler"]);
+  expect(stateCalls).toBe(0);
   expect(rateIdentity).toEqual({
     ip: "192.0.2.1",
     userAgent: "forms-executor-test",
@@ -1008,6 +1431,8 @@ test("real executor rejects duplicate watched multipart keys before dispatch", a
   __setFormWriteExecutorDepsForTests({
     attachSession: async () => undefined,
     loadAccessTarget: async (formId) => fakeForm(formId),
+    loadCurrentFormWriteState: async () =>
+      Object.freeze({ status: "published", submissionAccess: "public" }),
     chargeRateLimit: () => undefined,
     loadUploadStorageMaxBytes: async () => 5 * 1024 * 1024,
     async dispatchUpload() {
@@ -1050,6 +1475,8 @@ test.each(["submissions", "uploads"] as const)(
     __setFormWriteExecutorDepsForTests({
       attachSession: async () => undefined,
       loadAccessTarget: async (formId) => fakeForm(formId),
+      loadCurrentFormWriteState: async () =>
+        Object.freeze({ status: "published", submissionAccess: "public" }),
       chargeRateLimit: () => undefined,
       loadUploadStorageMaxBytes: async () => 5 * 1024 * 1024,
       parseBody: async () => body,
@@ -1193,7 +1620,7 @@ test("prepared form and access are fresh snapshots unaffected by source mutation
   });
   expect(descriptor.access).not.toBe(accessSource);
   expect(Reflect.ownKeys(descriptor.form).sort()).toEqual(
-    ["id", "settings", "submissionAccess", "successMessage", "successRedirectUrl"].sort()
+    ["id", "settings", "status", "submissionAccess", "successMessage", "successRedirectUrl"].sort()
   );
   expect(Object.hasOwn(descriptor.form, "createdAt")).toBe(false);
   expect(Object.hasOwn(descriptor.form, "updatedAt")).toBe(false);

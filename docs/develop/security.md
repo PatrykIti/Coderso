@@ -23,6 +23,11 @@ protections selected by the shared evaluator:
 Public form file uploads and submissions use an HMAC nonce (`__nl_form_nonce`,
 signed with `FORM_SUBMIT_NONCE_SECRET`, default 10-minute TTL via
 `FORM_SUBMIT_NONCE_TTL_MINUTES`) plus the backend-owned reCAPTCHA policy. The
+shared verifier used by Forms and public booking submissions accepts only a
+positive finite TTL whose millisecond conversion does not exceed
+`Number.MAX_SAFE_INTEGER`; absent, invalid, or overflowing configuration falls
+back to 10 minutes rather than disabling nonce expiry. The separate booking-slots
+read token retains its own contract. The
 protected Forms paths are `POST /forms/:id/uploads` and
 `POST /forms/:id/submissions`; login/reset use their separate auth/captcha flow.
 Each public upload or submission request is charged to `public_write` exactly
@@ -59,8 +64,10 @@ exact canonical allowlist entry; wildcard-only policy is insufficient.
 
 Every local, S3, or Azure runtime media response is proxied by core. Successful
 `GET`/`HEAD` responses set server-owned `Content-Type`, safe
-`Content-Disposition`, `X-Content-Type-Options: nosniff`, and persisted length;
-the browser is never redirected to a provider URL. A legacy persisted MIME/key
+`Content-Disposition`, and `X-Content-Type-Options: nosniff`; `HEAD` also exposes
+the exact persisted `Content-Length`. Asynchronous GET delivery remains streamed, so
+Bun may use chunked framing; a runtime-synthesized GET length must be exact. The browser
+is never redirected to a provider URL. A legacy persisted MIME/key
 mismatch, or a passive-inline byte-prefix mismatch, degrades to an octet-stream
 `.bin` attachment instead of inline. Canonical attachment MIME/key pairs remain
 attachments; the prefix check never promotes them to inline.
@@ -71,6 +78,16 @@ The public Forms upload route does not grant `media:write`. It resolves the form
 and file field, applies field size/accept limits to the canonical byte identity,
 and returns only an owned media-row reference. Byte inspection runs in public,
 session, API-key, captcha-on, and captcha-off modes alike.
+Public upload/submission may cross authorization only when the current server-owned form
+is observed as both published and public. Draft/archived runtime projection, including preview, returns
+no nonce. After the
+single `public_write` charge, the executor rejects an initially unpublished form before
+body parsing. Its narrow current status/access read immediately before dispatch is the
+authorization linearization point: drift observed there rejects the stale request, while
+later drift does not retroactively cancel an already authorized in-flight request.
+Both Forms-write mounts retain stable named domain errors and redact every unknown
+executor failure to a fixed `internal_error` response without message, stack, cause, or
+dependency details, regardless of runtime mode.
 
 ## Secrets and provider keys
 

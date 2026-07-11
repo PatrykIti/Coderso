@@ -10,6 +10,7 @@ import {
 } from "../../../core/services/booking/bookingSubmissionNonce";
 
 const FORM_ID = "form-123";
+const MINUTE_MS = 60 * 1000;
 
 const tamperNonce = (nonce: string) => {
   const [timestamp, signature] = nonce.split(".");
@@ -162,6 +163,71 @@ test("assertFormSubmissionNonce rejects expired nonce", () => {
     });
   });
 });
+
+test("Forms and Booking submission nonces accept the maximum arithmetic-safe TTL", () => {
+  const maxTtlMinutes = String(Number.MAX_SAFE_INTEGER / MINUTE_MS);
+  withEnv(
+    {
+      FORM_SUBMIT_NONCE_SECRET: "test-secret",
+      FORM_SUBMIT_NONCE_TTL_MINUTES: maxTtlMinutes,
+    },
+    () => {
+      const formNonce = createFormSubmissionNonce(FORM_ID, 0);
+      const bookingNonce = createBookingSubmissionNonce(0);
+
+      expect(() =>
+        assertFormSubmissionNonce(FORM_ID, formNonce, Number.MAX_SAFE_INTEGER)
+      ).not.toThrow();
+      expect(() =>
+        assertBookingSubmissionNonce(bookingNonce, Number.MAX_SAFE_INTEGER)
+      ).not.toThrow();
+    }
+  );
+});
+
+test.each([
+  {
+    label: "finite millisecond value above the safe ceiling",
+    ttlMinutes: String((Number.MAX_SAFE_INTEGER + 1) / MINUTE_MS),
+    conversionIsFinite: true,
+  },
+  {
+    label: "non-finite millisecond conversion",
+    ttlMinutes: "1e308",
+    conversionIsFinite: false,
+  },
+])(
+  "Forms and Booking submission nonces fall back for $label",
+  ({ ttlMinutes, conversionIsFinite }) => {
+    const convertedTtlMs = Number(ttlMinutes) * MINUTE_MS;
+    expect(Number.isFinite(convertedTtlMs)).toBe(conversionIsFinite);
+    if (conversionIsFinite) expect(convertedTtlMs).toBeGreaterThan(Number.MAX_SAFE_INTEGER);
+
+    withEnv(
+      {
+        FORM_SUBMIT_NONCE_SECRET: "test-secret",
+        FORM_SUBMIT_NONCE_TTL_MINUTES: ttlMinutes,
+      },
+      () => {
+        const now = 1_700_000_000_000;
+        const formNonce = createFormSubmissionNonce(FORM_ID, now);
+        const bookingNonce = createBookingSubmissionNonce(now);
+        const afterDefaultTtl = now + 10 * MINUTE_MS + 1;
+
+        for (const error of [
+          captureError(() => assertFormSubmissionNonce(FORM_ID, formNonce, afterDefaultTtl)),
+          captureError(() => assertBookingSubmissionNonce(bookingNonce, afterDefaultTtl)),
+        ]) {
+          expect(error).toMatchObject({
+            code: "form_nonce_expired",
+            message: "Form submission nonce expired",
+            status: 403,
+          });
+        }
+      }
+    );
+  }
+);
 
 test("assertFormSubmissionNonce rejects future nonce", () => {
   withEnv({ FORM_SUBMIT_NONCE_SECRET: "test-secret" }, () => {

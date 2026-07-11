@@ -137,7 +137,9 @@ Use this safe working order when you want the fewest mistakes:
 - The admin keeps attachment-only formats such as SVG in the `Documents`
   category. They do not receive image previews, image-only editing controls, or
   eligibility in pickers restricted to passive images, including the image and gallery
-  pickers used by the Posts editor.
+  pickers used by the Posts editor. A specialized picker can offer SVG only when it
+  explicitly requests the exact `image/svg+xml` type; even then, the asset stays a
+  downloadable document rather than becoming an inline image.
 - `Internal` delivery mode is a security boundary, not a cosmetic toggle. It
   changes how runtime `/media/*` URLs can be accessed.
 - Usage information in asset details helps you think in terms of shared assets.

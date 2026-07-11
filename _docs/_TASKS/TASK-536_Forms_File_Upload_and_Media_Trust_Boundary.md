@@ -56,14 +56,24 @@ authorize unrelated source changes.
   final submission while uploads are pending. An ordinary upload failure releases
   action locks for retry while the final request remains unsent until retry succeeds.
 - Exactly one layer owns the `public_write` charge per public request.
+- A new public upload/submission may cross authorization only when the server-owned form
+  is observed as both `published` and `submissionAccess=public`. Draft/archived runtime projection mints no
+  nonce, including preview projection. The executor's narrow current-state read is the
+  authorization linearization point immediately before dispatch: a state change observed
+  there rejects a stale nonce, while a later change does not retroactively cancel an
+  already authorized in-flight request.
 - Nested request objects are reject-unknown. No normalizer silently launders
   unknown field/settings keys through a looser route schema.
+- Both public Forms-write mounts convert every unmapped executor failure to the same
+  fixed `internal_error`/500 response. Development mode may not expose an upstream,
+  database, parser, authorization, storage, or handler message/stack to the client.
 
 ## Security Contract
 
-- **Visibility:** upload and submission are public only when the form's existing
-  `submissionAccess` is `public`; the existing static Form block renderer renders an internal-only
-  form as the existing noninteractive boundary and never attempts an internal write.
+- **Visibility:** upload and submission are public only when the form's current status is
+  `published` and its existing `submissionAccess` is `public`; the existing static Form
+  block renderer renders unpublished/internal-only forms as the existing noninteractive
+  boundary and never attempts an internal write.
   Internal mode remains available to authenticated API/admin callers. Media delivery
   follows `storage.delivery.accessMode` (`public` or internal).
 - **Auth/RBAC:** public mode does not require `media:write`; it uses the form
@@ -86,6 +96,9 @@ authorize unrelated source changes.
 - **Validation:** multipart and JSON envelopes plus every nested settings object
   use strict schemas; the service re-resolves field ownership, size, MIME, and
   media usage before accepting a submission reference.
+- **Errors:** known domain failures retain their stable codes/statuses. Every unknown
+  executor failure is redacted at the shared Forms-write response boundary before either
+  the root or stripped-admin wrapper serializes it, independent of `NODE_ENV`.
 - **Delivery:** canonical types and attachment policy are server-owned. No
   filename-derived MIME, content sniffing by the browser, open redirect, or
   direct remote-object response may bypass the same header contract.
@@ -113,6 +126,8 @@ authorize unrelated source changes.
 | H-03 inspection coupled to captcha/auth state | 536-01/L03 + 536-04/L01 | session, API-key, captcha-on/off matrix proves inspection always runs |
 | M-03 double `public_write` charge | 536-04/L01 | public adapter-through-handler integration asserts one limiter call |
 | L-03 loose nested form/field settings | 536-04/L02 | nested unknown-key rejection plus supported round-trip corpus |
+| POST-M-05 stale nonce remains writable after unpublish/access drift | 536-04/L02 + L01 | unpublished runtime returns no nonce; public draft/archived and published→unpublished/access-mode race rejections charge once and perform no dispatch/storage/DB write |
+| POST-M-06 unknown executor failures leak development message/stack | 536-04/L01 | root and stripped-admin real-mount tests force an unmapped preparation failure and assert identical fixed `internal_error`/500 payloads with no raw marker, details, or stack |
 
 ## Ownership, order, and compatibility
 
@@ -121,6 +136,12 @@ is declared in the leaves; no two leaves write the same source file. TASK-536
 lands first in the remediation program and before TASK-537. TASK-544 later touches
 the media route family, so it must read the post-536 `mediaRoutes.ts` state and
 must not run in parallel.
+
+The POST-M-05 correction lands the L02-owned narrow form-state projection/runtime nonce
+fix before the reopened L01 executor consumes that projection. This is a bounded
+post-audit dependency inside 536-04 and does not change the program-level land order.
+POST-M-06 then reopens only L01's existing shared response-boundary seam; it adds no new
+route, domain error, permission, or public payload field.
 
 Existing URLs and database columns remain unchanged. Existing media rows are
 served through a fail-safe legacy policy; new uploads receive canonical identity.
@@ -143,7 +164,7 @@ silently claimed by this family.
   either; the final TASK-536–545 program gate must prove both absent.
 - At least five real Playwright flows: required single file, multiple files,
   upload failure+retry, cookie-bearing public upload plus the noninteractive internal
-  boundary, and publish/front delivery.
+  boundary, an unpublished public boundary with no nonce/write, and publish/front delivery.
   Assert visible progress/error/button state, delivered headers/download behavior,
   light/dark admin surfaces, and zero console errors.
 
