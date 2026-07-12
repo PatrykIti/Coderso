@@ -248,10 +248,26 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 
 ## Media
 - Media library
-  - UI: `core/admin/ui/media/MediaLibraryPage.tsx`
-  - Cached APIs: `listMediaCached`, `getCachedMedia`, `getCachedMediaForEvent`
-  - Mutating cached APIs: `uploadMedia`, `updateMedia`, `recoverMediaDimensions`, `replaceMedia`, `deleteMedia`
-  - Cache bus: `media:list` update events hydrate from patched cache; explicit refresh/true invalidation may reload the list
+  - UI: `core/admin/ui/media/MediaLibraryPage.tsx`,
+    `core/admin/ui/media/MediaFolderRail.tsx`
+  - Cached APIs: `listMediaCached`, `getCachedMedia`,
+    `getCachedMediaForEvent`, `listMediaFoldersCached`,
+    `getCachedMediaFolders`, `getCachedMediaFoldersForEvent`
+  - Mutating cached APIs: `uploadMedia`, `updateMedia`,
+    `recoverMediaDimensions`, `replaceMedia`, `deleteMedia`,
+    `createMediaFolder`, `updateMediaFolder`, `reorderMediaFolders`,
+    `deleteMediaFolder`
+  - Folder cache shape: `media:folders` stores only validated six-field folder
+    projections; malformed persisted rows evict and malformed network responses
+    reject with `media_folders_response_invalid` without priming cache.
+  - Cache bus: `media:list` update events hydrate from patched cache; explicit
+    refresh/true invalidation may reload the list. Successful folder mutations
+    clear/broadcast `media:folders`; folder delete also broadcasts `media:list`.
+    Rejected mutations preserve cache and emit nothing.
+  - Folder event hydration: every same-tab/cross-tab `media:folders` event forces
+    a fresh GET. Events overlapping manual Retry are queued; load/operation
+    generations preserve the last good tree, retained form/selection/order, and
+    visible retry state until successful reconciliation.
   - Read-only uncached API: `getMediaUsage`
 - Media picker
   - UI: `core/admin/ui/media/MediaPicker.tsx`

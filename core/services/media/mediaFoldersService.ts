@@ -19,6 +19,57 @@ export type MediaFolderOrder = { id: string; orderIndex: number; parentId?: stri
 
 export const MAX_DEPTH = 5;
 
+const MEDIA_FOLDER_SLUG_CONSTRAINT = "media_folders_slug_idx";
+const MAX_POSTGRES_ERROR_CANDIDATES = 3;
+
+type OwnDataValue = Readonly<{ value: unknown }>;
+
+const readOwnDataValue = (candidate: unknown, key: PropertyKey): OwnDataValue | null => {
+  if (typeof candidate !== "object" || candidate === null) return null;
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(candidate, key);
+    if (!descriptor || !("value" in descriptor)) return null;
+    return { value: descriptor.value };
+  } catch {
+    return null;
+  }
+};
+
+const getPostgresErrorCandidates = (error: unknown): unknown[] => {
+  const candidates: unknown[] = [];
+  const seen = new Set<object>();
+  let current = error;
+
+  while (
+    candidates.length < MAX_POSTGRES_ERROR_CANDIDATES &&
+    typeof current === "object" &&
+    current !== null &&
+    !seen.has(current)
+  ) {
+    seen.add(current);
+    candidates.push(current);
+    const cause = readOwnDataValue(current, "cause");
+    if (!cause) break;
+    current = cause.value;
+  }
+
+  return candidates;
+};
+
+export const isMediaFolderSlugConflict = (error: unknown): boolean =>
+  getPostgresErrorCandidates(error).some((candidate) => {
+    const code = readOwnDataValue(candidate, "code");
+    const constraintName = readOwnDataValue(candidate, "constraint_name");
+    return code?.value === "23505" && constraintName?.value === MEDIA_FOLDER_SLUG_CONSTRAINT;
+  });
+
+export const mapOwnedFolderConstraint = (error: unknown): never => {
+  if (isMediaFolderSlugConflict(error)) {
+    throw new Error("media_folder_slug_conflict");
+  }
+  throw error;
+};
+
 const slugify = (value: string) =>
   value
     .trim()
@@ -153,11 +204,7 @@ export async function createMediaFolder(
       .returning();
     return row;
   } catch (error) {
-    // DB unique index is the backstop for a race on slug uniqueness.
-    if (String((error as { message?: string })?.message ?? "").includes("media_folders_slug_idx")) {
-      throw new Error("media_folder_slug_conflict");
-    }
-    throw error;
+    return mapOwnedFolderConstraint(error);
   }
 }
 
@@ -207,8 +254,12 @@ export async function updateMediaFolder(
     return current;
   }
 
-  const [row] = await db.update(mediaFolders).set(set).where(eq(mediaFolders.id, id)).returning();
-  return row ?? null;
+  try {
+    const [row] = await db.update(mediaFolders).set(set).where(eq(mediaFolders.id, id)).returning();
+    return row ?? null;
+  } catch (error) {
+    return mapOwnedFolderConstraint(error);
+  }
 }
 
 export async function deleteMediaFolder(id: string): Promise<{ ok: true }> {

@@ -88,6 +88,7 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `pageTemplates:list`
 - `pageTemplates:detail:<id>`
 - `media:list`
+- `media:folders`
 - `adminThemeTemplates:list`
 - `adminThemeProfiles:list`
 - `settings:redacted`
@@ -434,6 +435,32 @@ Clients update caches and broadcast events on:
 
 - Media list cache (`media:list`) is owned by
   `core/admin/services/mediaClient.ts`.
+- Media folder list cache (`media:folders`) is owned by
+  `core/admin/services/mediaFoldersClient.ts`. Network rows are projected to
+  exactly `id`, `name`, `slug`, `parentId`, `orderIndex`, and `createdAt` before
+  return or persistence; backend-only `createdBy` and every unknown key are
+  stripped without invoking unknown accessors.
+- Persisted folder rows must already contain exactly those six validated keys.
+  A malformed envelope is evicted and falls through to the normal network path.
+  A malformed successful response rejects with the fixed, payload-free
+  `media_folders_response_invalid` client error and writes no cache.
+- `listMediaFoldersCached()` shares the current non-forced request. Resolve and
+  reject clear only that exact promise in `finally`; forced reads and explicit
+  clears advance a request generation. An older completion may still resolve to
+  its original caller, but it cannot prime cache rows or clear a newer request.
+- Folder create/update/reorder/delete clear `media:folders` and broadcast its
+  `update` event only after the API mutation succeeds. A rejected mutation
+  preserves the original error and cache and emits no event. Successful delete
+  additionally broadcasts `media:list`, because deleting a folder un-files its
+  assets.
+- `MediaLibraryPage` uses the folder cache on mount, but every same-tab or
+  cross-tab `media:folders` event performs a forced server GET rather than
+  trusting storage-first fallback. An event overlapping manual load Retry is
+  queued and forced after Retry settles. Load generation and operation identity
+  guards preserve the last good tree and prevent stale/unmounted completions
+  from replacing newer visible state; a same-tab event emitted before its
+  successful mutation call returns is associated with that mutation so a
+  reconciliation failure is surfaced separately instead of replaying the write.
 - `MediaLibraryPage` hydrates from `getCachedMedia()` on first render. If
   cache exists, route entry uses a background cached read; if cache is missing,
   it performs the foreground list load.

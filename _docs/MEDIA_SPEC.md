@@ -143,6 +143,12 @@ The media model is organized + enriched beyond the base `alt/title/caption`:
 - **Slug uniqueness:** enforced at the DB (unique index `media_folders_slug_idx`)
   AND service-side; a duplicate slug is rejected `media_folder_slug_conflict`
   (409).
+  The normal service precheck provides deterministic feedback, while the DB
+  constraint remains authoritative for concurrent create and update writes.
+  Only PostgreSQL `23505` paired with the exact owned constraint name (directly
+  or in the supported bounded `cause` shape) maps to that domain error. Other
+  constraints/errors retain their original failure path, and the fixed 409
+  response exposes no PostgreSQL code, constraint, SQL, stack, or raw details.
 - **Ordering:** `order_index` (default 0) orders siblings; reorder is a
   `media:write` operation.
 - **Membership:** `media.folder_id` (nullable, `onDelete: set null`). **Deleting
@@ -265,6 +271,17 @@ raw file bytes/text into provider prompts or action execution.
   (`absolute left-2 top-2 bg-card/80 backdrop-blur`) + a static in-flow tone chip
   in the footer row, aspect-square previews, and a real user **folder rail**
   alongside the type-based rail.
+- Folder list failures preserve the last good nested tree and expose a visible,
+  accessible alert with a retry action. Create/rename failure keeps the exact
+  form generation, target, draft, and input focus; reorder keeps the visible
+  order; delete keeps selection and both folder-filter owners. Controls expose
+  disabled/`aria-busy` pending state, and a form closes only after the matching
+  still-current operation succeeds. A failed retry remains retryable with a new
+  error token instead of dismissing user state.
+- Every `media:folders` cache event reconciles through a forced server GET.
+  An event overlapping manual load Retry is queued and forced after that Retry
+  settles; stale/unmounted loads cannot overwrite a newer mutation result or
+  replace the last good tree.
 - Upload dropzone + manual browse.
 - Wyszukiwarka po nazwie i tytule.
 - Filtry: all, images, documents, audio; plus folder + tag facet filters

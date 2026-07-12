@@ -106,6 +106,11 @@ test("registerMediaRoutes wires endpoints", () => {
     expect.arrayContaining([
       "GET /media",
       "POST /media",
+      "GET /media/folders",
+      "POST /media/folders",
+      "POST /media/folders/reorder",
+      "PATCH /media/folders/:id",
+      "DELETE /media/folders/:id",
       "GET /media/:id",
       "GET /media/:id/usage",
       "PATCH /media/:id",
@@ -127,7 +132,11 @@ test("mapMediaError maps service errors at route boundary", () => {
 
 test("mapMediaError maps folder + metadata service errors to closed-set codes", () => {
   expect(mapMediaError(new Error("media_folder_not_found"))?.status).toBe(404);
-  expect(mapMediaError(new Error("media_folder_slug_conflict"))?.status).toBe(409);
+  const slugConflict = mapMediaError(new Error("media_folder_slug_conflict"));
+  expect(slugConflict).toBeInstanceOf(ApiError);
+  expect(slugConflict?.status).toBe(409);
+  expect(slugConflict?.code).toBe("media_folder_slug_conflict");
+  expect(slugConflict?.message).toBe("Folder slug already in use");
   expect(mapMediaError(new Error("media_folder_slug_invalid"))?.status).toBe(400);
   expect(mapMediaError(new Error("media_folder_name_required"))?.status).toBe(400);
   expect(mapMediaError(new Error("media_folder_cycle"))?.status).toBe(400);

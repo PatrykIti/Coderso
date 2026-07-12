@@ -23,7 +23,6 @@ import {
   createMediaFolder,
   deleteMediaFolder,
   getCachedMediaFolders,
-  getCachedMediaFoldersForEvent,
   listMediaFoldersCached,
   reorderMediaFolders,
   updateMediaFolder,
@@ -38,7 +37,16 @@ import {
   countActiveFilters,
   type MediaFilterState,
 } from "@/ui/media/MediaFilterPanel";
-import { MediaFolderRail, type MediaFolderReorder } from "@/ui/media/MediaFolderRail";
+import {
+  MediaFolderRail,
+  sameFolderOperationTarget,
+  type FolderOperation,
+  type FolderOperationFeedback,
+  type FolderOperationKind,
+  type FolderOperationTarget,
+  type FolderRetryResult,
+  type MediaFolderReorder,
+} from "@/ui/media/MediaFolderRail";
 import { MediaGrid } from "@/ui/media/MediaGrid";
 import { MediaSettingsDrawer } from "@/ui/media/MediaSettingsDrawer";
 import { StorageQuotaCard } from "@/ui/media/StorageQuotaCard";
@@ -81,6 +89,145 @@ const defaultUsageState: UsageLoadState = {
 const defaultDimensionState: DimensionRecoveryState = {
   state: "idle",
   message: null,
+};
+
+export const FOLDER_OPERATION_MESSAGES = Object.freeze({
+  load: "Folders could not be loaded. Retry the request.",
+  create: "Folder could not be created. Retry when ready.",
+  createConflict: "A folder with this slug already exists. Change the name or retry.",
+  rename: "Folder could not be renamed. Retry when ready.",
+  reorder: "Folder order could not be saved. Retry the same order.",
+  delete: "Folder could not be deleted. Retry when ready.",
+});
+
+type FolderOperationState = {
+  pending: Readonly<{ attempt: number; kind: FolderOperationKind }> | null;
+  loadPendingGeneration: number | null;
+  error: FolderOperationFeedback | null;
+};
+
+type FolderLoadOrigin =
+  | Readonly<{ kind: "mount" }>
+  | Readonly<{ kind: "cache"; triggeringAttempt: number | null }>
+  | Readonly<{ kind: "retry"; attempt: number; retriedToken: number }>;
+
+const hasOwn = (value: object, key: PropertyKey) =>
+  Object.prototype.hasOwnProperty.call(value, key);
+
+export const cloneFolderOperation = (input: FolderOperation): FolderOperation => {
+  switch (input.kind) {
+    case "load":
+      return Object.freeze({ kind: "load" });
+    case "create":
+      return Object.freeze({
+        kind: "create",
+        name: input.name.trim(),
+        parentId: input.parentId === null ? null : input.parentId.trim(),
+        formGeneration: input.formGeneration,
+      });
+    case "rename":
+      return Object.freeze({
+        kind: "rename",
+        id: input.id.trim(),
+        name: input.name.trim(),
+        formGeneration: input.formGeneration,
+      });
+    case "delete":
+      return Object.freeze({ kind: "delete", id: input.id.trim(), name: input.name.trim() });
+    case "reorder": {
+      const orders = input.orders.map((order) =>
+        Object.freeze({
+          id: order.id.trim(),
+          orderIndex: order.orderIndex,
+          ...(hasOwn(order, "parentId") && order.parentId !== undefined
+            ? { parentId: order.parentId === null ? null : order.parentId.trim() }
+            : {}),
+        })
+      );
+      return Object.freeze({ kind: "reorder", orders: Object.freeze(orders) });
+    }
+  }
+};
+
+export const targetForFolderOperation = (operation: FolderOperation): FolderOperationTarget => {
+  switch (operation.kind) {
+    case "load":
+      return Object.freeze({ kind: "load" });
+    case "create":
+      return Object.freeze({
+        kind: "create",
+        name: operation.name,
+        parentId: operation.parentId,
+        formGeneration: operation.formGeneration,
+      });
+    case "rename":
+      return Object.freeze({
+        kind: "rename",
+        folderId: operation.id,
+        name: operation.name,
+        formGeneration: operation.formGeneration,
+      });
+    case "delete":
+      return Object.freeze({ kind: "delete", folderId: operation.id });
+    case "reorder": {
+      const orders = operation.orders.map((order) =>
+        Object.freeze({
+          id: order.id,
+          orderIndex: order.orderIndex,
+          ...(hasOwn(order, "parentId") ? { parentId: order.parentId } : {}),
+        })
+      );
+      return Object.freeze({ kind: "reorder", orders: Object.freeze(orders) });
+    }
+  }
+};
+
+const sameFolderOperation = (left: FolderOperation, right: FolderOperation) =>
+  sameFolderOperationTarget(targetForFolderOperation(left), targetForFolderOperation(right));
+
+export const isCurrentFolderRetry = (
+  feedback: FolderOperationFeedback | null,
+  token: number,
+  operation: FolderOperation
+): boolean =>
+  feedback !== null &&
+  feedback.token === token &&
+  sameFolderOperation(feedback.retry, cloneFolderOperation(operation));
+
+export const commitCurrentFolderAttempt = async <T,>({
+  request,
+  isCurrent,
+  commit,
+}: Readonly<{
+  request: Promise<T>;
+  isCurrent: () => boolean;
+  commit: (value: T) => void;
+}>): Promise<boolean> => {
+  const value = await request;
+  if (!isCurrent()) return false;
+  commit(value);
+  return true;
+};
+
+export const boundedFolderDisplayName = (name: string): string => {
+  const normalized = Array.from(name, (character) => {
+    const codePoint = character.codePointAt(0) ?? 0;
+    const isControl = codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f);
+    return isControl || /\s/u.test(character) ? " " : character;
+  })
+    .join("")
+    .replace(/ +/gu, " ")
+    .trim();
+  const points = Array.from(normalized);
+  if (points.length <= 48) return normalized;
+  return `${points.slice(0, 47).join("")}…`;
+};
+
+export const formatFolderOperationError = (kind: FolderOperationKind, error: unknown): string => {
+  if (kind === "create" && isApiClientError(error) && error.code === "media_folder_slug_conflict") {
+    return FOLDER_OPERATION_MESSAGES.createConflict;
+  }
+  return FOLDER_OPERATION_MESSAGES[kind];
 };
 
 // TASK-512-06: descendant-aware folder membership set. Walks the built folder
@@ -140,6 +287,24 @@ export function MediaLibraryPage() {
   // TASK-512-06: real user folders + storage quota + Filters panel state.
   const [folders, setFolders] = useState<MediaFolder[]>(() => getCachedMediaFolders() ?? []);
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
+  const [folderOperationState, setFolderOperationState] = useState<FolderOperationState>({
+    pending: null,
+    loadPendingGeneration: null,
+    error: null,
+  });
+  const mountedRef = useRef(false);
+  const folderAttemptRef = useRef(0);
+  const folderPendingRef = useRef<number | null>(null);
+  const folderPendingKindRef = useRef<FolderOperationKind | null>(null);
+  const folderErrorTokenRef = useRef(0);
+  const folderLoadGenerationRef = useRef(0);
+  const lastSuccessfulMutationAttemptRef = useRef<number | null>(null);
+  const folderFeedbackRef = useRef<FolderOperationFeedback | null>(null);
+  const deferredLoadFailureRef = useRef<{
+    loadGeneration: number;
+    triggeringAttempt: number;
+  } | null>(null);
+  const queuedFolderCacheEventRef = useRef(false);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [mediaFilterState, setMediaFilterState] = useState<MediaFilterState>(EMPTY_MEDIA_FILTER);
   const [quotaTotalBytes, setQuotaTotalBytes] = useState<number | null>(null);
@@ -200,31 +365,180 @@ export function MediaLibraryPage() {
     });
   }, [applyCachedMediaRows, refresh]);
 
-  // TASK-512-06: user folders — cached fetch on mount + cross-tab cache sync.
-  const refreshFolders = useCallback(async (options?: { force?: boolean }) => {
-    try {
-      const result = await listMediaFoldersCached({ force: options?.force ?? false });
-      if (Array.isArray(result)) setFolders(result);
-    } catch {
-      // Ignore folder load failures; the rail degrades to type-only filters.
-    }
+  const isCurrentFolderAttempt = useCallback(
+    (attempt: number) =>
+      mountedRef.current &&
+      folderAttemptRef.current === attempt &&
+      folderPendingRef.current === attempt,
+    []
+  );
+
+  const isCurrentFolderLoad = useCallback(
+    (loadGeneration: number) =>
+      mountedRef.current && folderLoadGenerationRef.current === loadGeneration,
+    []
+  );
+
+  const publishFolderFailure = useCallback(
+    (rawOperation: FolderOperation, operationError: unknown): FolderOperationFeedback => {
+      const operation = cloneFolderOperation(rawOperation);
+      const common = {
+        token: ++folderErrorTokenRef.current,
+        kind: operation.kind,
+        target: targetForFolderOperation(operation),
+        message: formatFolderOperationError(operation.kind, operationError),
+        retry: operation,
+      };
+      const feedback: FolderOperationFeedback = Object.freeze(
+        operation.kind === "delete"
+          ? { ...common, displayFolderName: boundedFolderDisplayName(operation.name) }
+          : common
+      );
+      folderFeedbackRef.current = feedback;
+      setFolderOperationState((current) => ({ ...current, error: feedback }));
+      return feedback;
+    },
+    []
+  );
+
+  const clearFolderFeedback = useCallback((token: number) => {
+    if (folderFeedbackRef.current?.token !== token) return;
+    folderFeedbackRef.current = null;
+    if (!mountedRef.current) return;
+    setFolderOperationState((current) =>
+      current.error?.token === token ? { ...current, error: null } : current
+    );
+  }, []);
+
+  const guardedLoadFolders = useCallback(
+    async ({
+      force,
+      origin,
+    }: {
+      force: boolean;
+      origin: FolderLoadOrigin;
+    }): Promise<"applied" | "failed" | "stale"> => {
+      const loadGeneration = ++folderLoadGenerationRef.current;
+      setFolderOperationState((current) => ({
+        ...current,
+        loadPendingGeneration: loadGeneration,
+      }));
+      const errorTokenAtStart = folderFeedbackRef.current?.token ?? null;
+      try {
+        const rows = await listMediaFoldersCached({ force });
+        if (!isCurrentFolderLoad(loadGeneration)) return "stale";
+        setFolders(rows);
+        const currentFeedback = folderFeedbackRef.current;
+        if (currentFeedback?.kind === "load" && currentFeedback.token === errorTokenAtStart) {
+          clearFolderFeedback(currentFeedback.token);
+        }
+        return "applied";
+      } catch (loadError) {
+        if (!isCurrentFolderLoad(loadGeneration)) return "stale";
+        if (origin.kind === "retry" && isCurrentFolderAttempt(origin.attempt)) {
+          publishFolderFailure({ kind: "load" }, loadError);
+          return "failed";
+        }
+        if (origin.kind === "cache" && origin.triggeringAttempt !== null) {
+          if (folderPendingRef.current === origin.triggeringAttempt) {
+            deferredLoadFailureRef.current = {
+              loadGeneration,
+              triggeringAttempt: origin.triggeringAttempt,
+            };
+          } else if (
+            folderAttemptRef.current === origin.triggeringAttempt &&
+            lastSuccessfulMutationAttemptRef.current === origin.triggeringAttempt &&
+            (folderFeedbackRef.current?.token ?? null) === errorTokenAtStart
+          ) {
+            publishFolderFailure({ kind: "load" }, loadError);
+          }
+          return "failed";
+        }
+        const currentFeedback = folderFeedbackRef.current;
+        if (
+          folderPendingRef.current === null &&
+          (currentFeedback?.token ?? null) === errorTokenAtStart &&
+          (currentFeedback === null || currentFeedback.kind === "load")
+        ) {
+          publishFolderFailure({ kind: "load" }, loadError);
+        }
+        return "failed";
+      } finally {
+        if (isCurrentFolderLoad(loadGeneration)) {
+          setFolderOperationState((current) =>
+            current.loadPendingGeneration === loadGeneration
+              ? { ...current, loadPendingGeneration: null }
+              : current
+          );
+        }
+      }
+    },
+    [clearFolderFeedback, isCurrentFolderAttempt, isCurrentFolderLoad, publishFolderFailure]
+  );
+
+  const flushDeferredLoadFailureAfterSuccess = useCallback(
+    (attempt: number) => {
+      const deferred = deferredLoadFailureRef.current;
+      if (!deferred || deferred.triggeringAttempt !== attempt) return;
+      deferredLoadFailureRef.current = null;
+      if (isCurrentFolderAttempt(attempt) && isCurrentFolderLoad(deferred.loadGeneration)) {
+        publishFolderFailure({ kind: "load" }, new Error("media_folders_reconcile_failed"));
+      }
+    },
+    [isCurrentFolderAttempt, isCurrentFolderLoad, publishFolderFailure]
+  );
+
+  const discardDeferredLoadFailure = useCallback((attempt: number) => {
+    const deferred = deferredLoadFailureRef.current;
+    if (deferred?.triggeringAttempt === attempt) deferredLoadFailureRef.current = null;
+  }, []);
+
+  const reconcileFolderCacheEvent = useCallback(
+    (triggeringAttempt: number | null) => {
+      if (!mountedRef.current) return;
+      // Cache events can originate in another tab after that tab cleared storage.
+      // `readStorageFirst()` may then fall back to this tab's stale memory entry, so
+      // every event receives a fresh monotonic server generation instead.
+      void guardedLoadFolders({
+        force: true,
+        origin: { kind: "cache", triggeringAttempt },
+      });
+    },
+    [guardedLoadFolders]
+  );
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      folderAttemptRef.current += 1;
+      folderLoadGenerationRef.current += 1;
+      folderPendingRef.current = null;
+      folderPendingKindRef.current = null;
+      lastSuccessfulMutationAttemptRef.current = null;
+      deferredLoadFailureRef.current = null;
+      queuedFolderCacheEventRef.current = false;
+    };
   }, []);
 
   useEffect(() => {
-    refreshFolders().catch(() => undefined);
-  }, [refreshFolders]);
+    void guardedLoadFolders({ force: false, origin: { kind: "mount" } });
+  }, [guardedLoadFolders]);
 
   useEffect(() => {
     return subscribeCacheEvents((event) => {
-      if (event.key !== cacheKeys.mediaFolders) return;
-      const cached = getCachedMediaFoldersForEvent();
-      if (cached) {
-        setFolders(cached);
+      if (event.key !== cacheKeys.mediaFolders || !mountedRef.current) return;
+      // A manual load Retry already owns the current load generation. Preserve an
+      // overlapping durable event and reconcile it as soon as that Retry settles.
+      if (folderPendingKindRef.current === "load") {
+        queuedFolderCacheEventRef.current = true;
         return;
       }
-      refreshFolders({ force: true }).catch(() => undefined);
+      const triggeringAttempt =
+        folderPendingKindRef.current === null ? null : folderPendingRef.current;
+      reconcileFolderCacheEvent(triggeringAttempt);
     });
-  }, [refreshFolders]);
+  }, [reconcileFolderCacheEvent]);
 
   // TASK-512-06: quota fetch on mount (explicit) so the storage card is
   // data-backed BEFORE the settings drawer is ever opened. `loadMediaSettings`
@@ -431,31 +745,208 @@ export function MediaLibraryPage() {
     setMediaFilterState((prev) => ({ ...prev, folderId: null }));
   };
 
-  const handleCreateFolder = (name: string, parentId: string | null) => {
-    createMediaFolder({ name, parentId }).catch(() => undefined);
-  };
-
-  const handleRenameFolder = (id: string, name: string) => {
-    updateMediaFolder(id, { name }).catch(() => undefined);
-  };
-
-  const handleDeleteFolder = (id: string) => {
-    void (async () => {
-      try {
-        await deleteMediaFolder(id);
-        if (activeFolderId === id) {
-          setActiveFolderId(null);
-          setMediaFilterState((prev) => ({ ...prev, folderId: null }));
+  const runFolderOperation = useCallback(
+    async (rawOperation: FolderOperation, retryToken?: number): Promise<boolean> => {
+      const operation = cloneFolderOperation(rawOperation);
+      if (retryToken !== undefined) {
+        const capturedFeedback = folderFeedbackRef.current;
+        if (!isCurrentFolderRetry(capturedFeedback, retryToken, operation)) {
+          return false;
         }
-      } catch {
-        // Ignore delete failures; the rail reconciles on the next cache event.
       }
-    })();
-  };
+      if (!mountedRef.current || folderPendingRef.current !== null) return false;
 
-  const handleReorderFolders = (orders: MediaFolderReorder[]) => {
-    reorderMediaFolders(orders).catch(() => undefined);
-  };
+      const attempt = ++folderAttemptRef.current;
+      folderPendingRef.current = attempt;
+      folderPendingKindRef.current = operation.kind;
+      deferredLoadFailureRef.current = null;
+      setFolderOperationState((current) => ({
+        ...current,
+        pending: { attempt, kind: operation.kind },
+      }));
+
+      const capturedVisibleFeedback = folderFeedbackRef.current;
+      if (capturedVisibleFeedback) {
+        folderFeedbackRef.current = null;
+        setFolderOperationState((current) =>
+          current.error?.token === capturedVisibleFeedback.token
+            ? { ...current, error: null }
+            : current
+        );
+      }
+
+      let succeeded = false;
+      try {
+        switch (operation.kind) {
+          case "load": {
+            const result = await guardedLoadFolders({
+              force: true,
+              origin: {
+                kind: "retry",
+                attempt,
+                retriedToken: retryToken ?? 0,
+              },
+            });
+            succeeded = result === "applied" && isCurrentFolderAttempt(attempt);
+            break;
+          }
+          case "create": {
+            const committed = await commitCurrentFolderAttempt({
+              request: createMediaFolder({
+                name: operation.name,
+                parentId: operation.parentId,
+              }),
+              isCurrent: () => isCurrentFolderAttempt(attempt),
+              commit: (created) => {
+                setFolders((current) => {
+                  const existing = current.findIndex((folder) => folder.id === created.id);
+                  if (existing < 0) return [...current, created];
+                  const next = [...current];
+                  next[existing] = created;
+                  return next;
+                });
+              },
+            });
+            if (!committed) return false;
+            succeeded = true;
+            break;
+          }
+          case "rename": {
+            const committed = await commitCurrentFolderAttempt({
+              request: updateMediaFolder(operation.id, { name: operation.name }),
+              isCurrent: () => isCurrentFolderAttempt(attempt),
+              commit: (updated) => {
+                setFolders((current) =>
+                  current.map((folder) => (folder.id === operation.id ? updated : folder))
+                );
+              },
+            });
+            if (!committed) return false;
+            succeeded = true;
+            break;
+          }
+          case "reorder": {
+            const orders = new Map(operation.orders.map((order) => [order.id, order]));
+            const committed = await commitCurrentFolderAttempt({
+              request: reorderMediaFolders(operation.orders.map((order) => ({ ...order }))),
+              isCurrent: () => isCurrentFolderAttempt(attempt),
+              commit: () => {
+                setFolders((current) =>
+                  current.map((folder) => {
+                    const order = orders.get(folder.id);
+                    if (!order) return folder;
+                    return {
+                      ...folder,
+                      orderIndex: order.orderIndex,
+                      ...(hasOwn(order, "parentId") ? { parentId: order.parentId ?? null } : {}),
+                    };
+                  })
+                );
+              },
+            });
+            if (!committed) return false;
+            succeeded = true;
+            break;
+          }
+          case "delete": {
+            const committed = await commitCurrentFolderAttempt({
+              request: deleteMediaFolder(operation.id),
+              isCurrent: () => isCurrentFolderAttempt(attempt),
+              commit: () => {
+                setFolders((current) =>
+                  current
+                    .filter((folder) => folder.id !== operation.id)
+                    .map((folder) =>
+                      folder.parentId === operation.id ? { ...folder, parentId: null } : folder
+                    )
+                );
+                setActiveFolderId((current) => (current === operation.id ? null : current));
+                setMediaFilterState((current) =>
+                  current.folderId === operation.id ? { ...current, folderId: null } : current
+                );
+              },
+            });
+            if (!committed) return false;
+            succeeded = true;
+            break;
+          }
+        }
+
+        if (succeeded && operation.kind !== "load") {
+          lastSuccessfulMutationAttemptRef.current = attempt;
+          flushDeferredLoadFailureAfterSuccess(attempt);
+        }
+      } catch (operationError) {
+        if (isCurrentFolderAttempt(attempt)) {
+          discardDeferredLoadFailure(attempt);
+          publishFolderFailure(operation, operationError);
+        }
+      } finally {
+        const stillCurrent = isCurrentFolderAttempt(attempt);
+        if (stillCurrent) {
+          setFolderOperationState((current) =>
+            current.pending?.attempt === attempt ? { ...current, pending: null } : current
+          );
+        }
+        if (folderPendingRef.current === attempt) {
+          folderPendingRef.current = null;
+          folderPendingKindRef.current = null;
+        }
+        if (!succeeded) discardDeferredLoadFailure(attempt);
+        if (operation.kind === "load" && queuedFolderCacheEventRef.current && mountedRef.current) {
+          queuedFolderCacheEventRef.current = false;
+          reconcileFolderCacheEvent(null);
+        }
+      }
+
+      return succeeded && mountedRef.current && folderAttemptRef.current === attempt;
+    },
+    [
+      discardDeferredLoadFailure,
+      flushDeferredLoadFailureAfterSuccess,
+      guardedLoadFolders,
+      isCurrentFolderAttempt,
+      publishFolderFailure,
+      reconcileFolderCacheEvent,
+    ]
+  );
+
+  const handleRetryFolderOperation = useCallback(
+    async (errorToken: number): Promise<FolderRetryResult | null> => {
+      const captured = folderFeedbackRef.current;
+      if (!captured || captured.token !== errorToken) return null;
+      const ok = await runFolderOperation(captured.retry, captured.token);
+      return Object.freeze({
+        ok,
+        token: captured.token,
+        kind: captured.kind,
+        target: captured.target,
+      });
+    },
+    [runFolderOperation]
+  );
+
+  const handleCreateFolder = useCallback(
+    (name: string, parentId: string | null, formGeneration: number) =>
+      runFolderOperation({ kind: "create", name, parentId, formGeneration }),
+    [runFolderOperation]
+  );
+
+  const handleRenameFolder = useCallback(
+    (id: string, name: string, formGeneration: number) =>
+      runFolderOperation({ kind: "rename", id, name, formGeneration }),
+    [runFolderOperation]
+  );
+
+  const handleDeleteFolder = useCallback(
+    (id: string, name: string) => runFolderOperation({ kind: "delete", id, name }),
+    [runFolderOperation]
+  );
+
+  const handleReorderFolders = useCallback(
+    (orders: readonly MediaFolderReorder[]) => runFolderOperation({ kind: "reorder", orders }),
+    [runFolderOperation]
+  );
 
   const handleFilterChange = (next: MediaFilterState) => {
     setMediaFilterState(next);
@@ -718,7 +1209,10 @@ export function MediaLibraryPage() {
 
   return (
     <AdminShell activeHref="/admin/media" breadcrumbs={["Home", "Media Library"]}>
-      <div className="mx-auto flex max-w-6xl flex-col gap-6">
+      <div
+        className="mx-auto flex max-w-6xl flex-col gap-6"
+        data-media-filter-folder-id={activeFolderId ?? ""}
+      >
         <PageHeader
           title="Media Library"
           description="Manage your images and assets."
@@ -770,6 +1264,12 @@ export function MediaLibraryPage() {
             onRenameFolder={handleRenameFolder}
             onDeleteFolder={handleDeleteFolder}
             onReorder={handleReorderFolders}
+            folderError={folderOperationState.error}
+            pendingKind={
+              folderOperationState.pending?.kind ??
+              (folderOperationState.loadPendingGeneration !== null ? "load" : null)
+            }
+            onRetry={handleRetryFolderOperation}
           />
           <div className="flex min-w-0 flex-col gap-4">
             <MediaToolbar
