@@ -1,5 +1,9 @@
 import type { ComponentType, CSSProperties, ReactNode } from "react";
 
+import {
+  CSS_COLOR_SCHEMA_PATTERNS,
+  CSS_COLOR_VALUE_MAX_LENGTH,
+} from "../../services/theme/cssColorContract";
 import { renderEditorPlaceholder } from "../renderContext";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import type {
@@ -89,21 +93,15 @@ const togglePaneSurfaceTokens = ["default", "soft", "contrast"] as const;
 const togglePanePaddingTokens = ["compact", "comfortable", "spacious"] as const;
 const togglePaneRadiusTokens = ["sm", "md", "lg"] as const;
 const togglePaneBorderTokens = ["subtle", "strong"] as const;
-const transparentKeywordPattern = "[tT][rR][aA][nN][sS][pP][aA][rR][eE][nN][tT]";
-const currentColorKeywordPattern = "[cC][uU][rR][rR][eE][nN][tT][cC][oO][lL][oO][rR]";
-const inheritKeywordPattern = "[iI][nN][hH][eE][rR][iI][tT]";
-const toggleBlockColorValueSchemaPattern = [
-  "^\\s*(?:",
-  "#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})",
-  "|var\\(\\s*--color-[a-zA-Z0-9_-]+\\s*\\)",
-  "|[rR][gG][bB][aA]?\\(\\s*\\d{1,3}(?:\\.\\d+)?%?\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%?\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%?(?:\\s*,\\s*(?:0(?:\\.\\d+)?|1(?:\\.0+)?|\\d{1,3}(?:\\.\\d+)?%))?\\s*\\)",
-  "|[hH][sS][lL][aA]?\\(\\s*\\d{1,3}(?:\\.\\d+)?(?:deg)?\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%(?:\\s*,\\s*(?:0(?:\\.\\d+)?|1(?:\\.0+)?|\\d{1,3}(?:\\.\\d+)?%))?\\s*\\)",
-  `|${transparentKeywordPattern}|${currentColorKeywordPattern}|${inheritKeywordPattern}`,
-  ")?\\s*$",
-].join("");
 const toggleBlockColorValueSchema = {
-  type: "string",
-  pattern: toggleBlockColorValueSchemaPattern,
+  anyOf: [
+    { const: "" },
+    {
+      type: "string",
+      maxLength: CSS_COLOR_VALUE_MAX_LENGTH,
+      pattern: CSS_COLOR_SCHEMA_PATTERNS["inherited-render"],
+    },
+  ],
 } as const;
 export const toggleBlockSchema = {
   type: "object",
@@ -356,7 +354,7 @@ const toTrimmedString = (value: unknown) => {
 };
 
 export function normalizeToggleBlockColorValue(value: unknown): string | undefined {
-  return resolveClearableCssColorValue(value);
+  return resolveClearableCssColorValue(value, "inherited-render");
 }
 
 const resolveVariant = (variant: string): ToggleBlockVariantId => {

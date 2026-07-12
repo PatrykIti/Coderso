@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Pages / Builder / Public Render / Responsive CSS / Runtime / Security
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-521–535, TASK-538; collision dependencies TASK-478/TASK-481
+**Dependencies:** TASK-521–535, TASK-538, TASK-541, TASK-540 (program order); collision dependencies TASK-478/TASK-481
 **Status:** ⏳ To Do
 **Changelog:** 1251 (pinned; create only at implementation closure)
 
@@ -21,9 +21,11 @@ that misses a later footer document.
 
 All model additions/corrections are JSONB-only and schema version 2 remains
 unchanged. No endpoint, DDL, dependency, or new product primitive is introduced.
-Optional fields remain present-only; no-effect and no-override documents keep
-their normalized JSON and rendered bytes unchanged unless the task explicitly
-repairs an already-authored broken value.
+Optional fields remain present-only. Absent values and already-canonical no-effect/
+no-override documents keep their normalized JSON and rendered bytes unchanged.
+Authored colors that TASK-541 accepts in a noncanonical spelling are deliberately
+reconstructed to canonical bytes; this is not a byte-identity promise for arbitrary
+legacy color input.
 
 ## Shared contracts fixed by this family
 
@@ -32,7 +34,22 @@ repairs an already-authored broken value.
 - Gallery writes accept only the canonical strict item shape; stored legacy
   aliases use a deterministic read adapter.
 - `parseAuthoringCssBackgroundPaint` returns separate gradient image layers and
-  an optional final color. Every consumer uses the same parse result.
+  an optional canonical final color. After validation, its `image` member preserves
+  the exact trimmed source substring/spelling of the image-layer stack (including
+  internal comma whitespace); only the final color is canonicalized. Consumers emit
+  the image stack only to `background-image` and the final color only to
+  `background-color`. When a combined representation is needed it is reconstructed
+  from that validated image substring plus canonical color, never from an unparsed
+  whole author string.
+- TASK-541's `parseCssColorValue(..., "authoring")` is the semantic owner for
+  single colors. Page applies its existing second allowlist afterward: only
+  `var(--color-primary|secondary|accent|bg|surface|text|border)` tokens are
+  accepted. The exported Page adapters `sanitizeAuthoringCssColor` and
+  `isSafeAuthoringCssColor`, plus the final-color branch of the background-paint
+  parser, all delegate the untouched raw color input through that same owner and
+  Page filter. TASK-539 may not recreate a color grammar or widen token names.
+  Color canonicalization never reconstructs a validated image-layer stack: its
+  exact outer-trimmed source substring remains byte-identical.
 - Unitless grid lengths accept only zero; nonzero values require an allowlisted
   CSS unit.
 - The renderer uses one present-only transform host with independently owned
@@ -90,7 +107,9 @@ its declared source files; 539-05 is the sole `pageRendererV2.tsx` writer and
 539-06 the sole `pageResponsiveCss.ts` writer. Consumer helper names must match
 the owning model/sanitizer/composition leaf exactly.
 
-TASK-539 follows TASK-538 and precedes TASK-540 in the numeric remediation order.
+TASK-539 lands after TASK-540 and before TASK-542 in the audited remediation dependency
+map. It consumes the completed TASK-538 renderer seam and landed TASK-541 color
+contract directly.
 
 TASK-539 does not run in-place while TASK-478 or TASK-481 is active. Forbidden
 foreign paths are copied exactly into every implementation dispatch from those

@@ -86,50 +86,76 @@ resolved site token in the admin canvas. Arbitrary `var()` expressions are not
 accepted by the Page authoring color sanitizer; only the names above are valid
 for Page block/section colors and inline text marks.
 
-## Admin color-value authoring (alpha-capable) (TASK-519)
+## Canonical CSS color values (TASK-519, TASK-541)
 
-Every admin color control authors AND round-trips **alpha-capable** values, not
-just opaque hex. The two shared controls —
-`core/admin/ui/pages/editorControls/ColorSwatchControl.tsx` (menu/page) and
-`core/admin/ui/widgets/editors/SharedColorControl.tsx` +
-`core/admin/ui/widgets/editors/ClearableFields.tsx` (retained compatibility
-renderer controls; not a new authoring registry) — expose:
+`core/services/theme/cssColorContract.ts` is the one Bun-free semantic owner for
+simple authored CSS colors. Admin adapters, Menu writes, Form theme values, and
+the finite retained compatibility sinks delegate to this owner; they must not
+copy its hex/RGB/HSL ranges or keyword grammar.
 
-- a native **base-color picker** (`<input type="color">`, `#rrggbb`),
-- an **opacity/alpha slider** (`0`–`1`),
-- a **free-text field** that accepts the full alpha-capable set, and
-- the existing **transparent**, **palette-swatch**, and **`var(--color-*)`
-  token** UX unchanged.
+The parser receives the original `unknown` value before trimming or case
+folding. It rejects non-strings, control/non-ASCII characters, and values longer
+than `CSS_COLOR_VALUE_MAX_LENGTH` (128 JavaScript UTF-16 code units) **before**
+removing surrounding ASCII U+0020 spaces. The accepted simple-color grammar is:
 
-**Accepted value set** (8-digit hex `#rrggbbaa` e.g. `#0812209e`, `rgb()/rgba()`
-incl. leading-dot alpha `.84`, `hsl()/hsla()`, `#rgb/#rgba/#rrggbb`,
-`var(--color-*)`, `transparent`) is the **authoritative whitelist** enforced at
-the server-write boundary `normalizeMenuColorValue`
-(`core/services/menus/normalizeMenuAppearance.ts`) and the render boundary
-`resolveClearableCssColorValue` (`core/widgets/core/clearableStyle.ts`). Those
-boundaries are unchanged and remain the security surface (they reject
-`url()`/`expression()`/`javascript:`/`data:`/`;{}<>`).
+- hex `#rgb`, `#rgba`, `#rrggbb`, or `#rrggbbaa`;
+- comma-form `rgb()`/`rgba()` with three channels and an optional fourth alpha;
+  either function alias may carry either valid arity. Channels are unsigned
+  decimals in `0..255` or percentages in `0..100%`;
+- comma-form `hsl()`/`hsla()` with unsigned hue `0..360` (optional `deg`),
+  saturation/lightness `0..100%`, and optional alpha; either alias may carry
+  either valid arity;
+- alpha as an unsigned decimal in `0..1` (including a leading-dot spelling) or
+  a percentage in `0..100%`;
+- `var(--color-<lowercase-token>)` and `transparent`.
 
-**Shared admin helper — `core/admin/ui/shared/colorValue.ts` (TASK-519-01).**
-A pure, framework-free parse/compose helper that is a **read-only subset** of the
-authoritative whitelist (its accepted-set patterns MIRROR the boundaries; a
-parity test asserts every value it emits via `normalizeAdminColorValue` is
-accepted by `resolveClearableCssColorValue`). It never constructs an unsafe
-token. Both controls route their committed value through it.
+Signed numbers, exponent notation, modern space/slash function syntax, named
+colors, arbitrary CSS functions/variables, URLs, declarations, and malformed or
+out-of-range channels fail closed. The parser never clamps an invalid authored
+value.
 
-**Canonicalization note (the ONLY normalization).** The render boundary's
-`rgb()/hsl()` alpha group REQUIRES a leading `0` (`0.84`) and REJECTS a bare
-leading-dot (`.84`), whereas the menu write boundary also accepts `.84`. To keep
-BOTH boundaries happy, `normalizeAdminColorValue` accepts a leading-dot alpha as
-INPUT but canonicalizes it on emit (`rgba(8,17,31,.84)` → `rgba(8,17,31,0.84)`).
-Hex round-trips **byte-identically**; alpha is clamped to `[0,1]` (NaN/out-of-range
-falls back to fully opaque). This is why the owner's legacy token
-`rgba(8,17,31,.84)` survives to front render as `rgba(8,17,31,0.84)`.
+Two explicit profiles control keywords:
 
-**Storage:** color strings are existing `string` fields on the menu document
-(`jsonb`) and per-block props (including retained legacy renderer rows). This upgrade is
-**present-only** — NO schema key, NO DDL, NO migration; legacy opaque values
-normalize byte-identically.
+- `authoring` is the default write profile and accepts only the grammar above;
+  it rejects `currentColor` and `inherit`.
+- `inherited-render` is an intentional compatibility superset that additionally
+  canonicalizes `currentColor` and accepts `inherit`. Only the Form TASK-516
+  theme path and enumerated retained direct-color fields opt in. A nested color
+  stop may narrow this profile with `allowInheritKeyword=false`, retaining
+  `currentColor` while rejecting `inherit`.
+
+Canonical output lowercases hex, removes only permitted surrounding/internal
+formatting, emits comma-space function separators, removes `deg` from HSL hue,
+normalizes aliases from arity (`rgb`/`hsl` without alpha, `rgba`/`hsla` with
+alpha), and expands a leading-dot alpha (`.84` -> `0.84`). Numeric percentages
+remain percentages; short and alpha hex widths remain their accepted widths.
+Parsing canonical output is idempotent.
+
+`CSS_COLOR_SCHEMA_PATTERNS[profile]` is only a JSON-Schema structural prefilter.
+It carries the printable-ASCII and accepted-shape guard but does **not** encode a
+length cap or numeric ranges. Schema consumers pair the imported pattern with a
+separately imported `CSS_COLOR_VALUE_MAX_LENGTH` in `maxLength`; the semantic
+parser independently enforces that same original-input cap before trimming.
+Every consumer that has joined the canonical contract must still call
+`parseCssColorValue`/`normalizeCssColorValue`; matching the pattern and cap alone
+never authorizes persistence or rendering.
+
+The shared admin controls use parser metadata for the base picker and alpha
+slider, preserve tokens/keywords as explicit states, and commit only canonical
+bytes. The landed Page admin control uses `authoring`, but the Page backend still
+uses its independent legacy sanitizer: it enforces the exact site-token list
+`primary`, `secondary`, `accent`, `bg`, `surface`, `text`, and `border` while
+retaining its historical named-value behavior. TASK-539-02-L01 owns importing
+the shared parser into that Page sanitizer without removing the seven-token
+filter. Menu writes use `authoring`. Form theme
+write/read/control/preview/public render uses `inherited-render` end to end as
+the explicit TASK-516 exception.
+
+Color strings remain existing JSON fields. TASK-541 introduces no schema key,
+default emission, DDL, or migration. Existing sparse optional values remain
+present-only and clear by omission; retained legacy fields that already use an
+empty or explicit default sentinel keep those normalized bytes. In both cases an
+unauthored document keeps its previous bytes and fallback behavior.
 
 ## Pages v2 motion & interaction effect tokens (TASK-521)
 

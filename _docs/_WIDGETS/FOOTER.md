@@ -156,6 +156,14 @@ belong to Visual.
   implementation.
 - Clearing `style.surfaceColor` removes the forced footer background color from
   runtime output.
+- The retained direct fields `style.surfaceColor`, `style.borderColor`,
+  `style.textColor`, `style.headingColor`, `style.linkColor`,
+  `style.linkHoverColor`, `style.linkActiveColor`, `style.socialColor`, and
+  `style.legalTextColor` use the shared `inherited-render` profile at
+  normalization and render boundaries. Canonical `currentColor` and `inherit`
+  are valid; malformed/range-invalid input is omitted rather than emitted raw.
+- Schema patterns are structural guards only. Optional Footer colors remain
+  present-only when omitted or cleared.
 
 ## Data model (summary)
 

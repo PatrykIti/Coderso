@@ -2487,7 +2487,8 @@ test("520-03-L01: Custom shadow writes/clears `shadowCustom`; the write normaliz
   const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
   await flush();
 
-  // A valid value persists and survives the write normalizer verbatim.
+  // The unsaved/editor payload keeps the author's free text; the authoritative
+  // write normalizer canonicalizes only the embedded color token.
   setInputValue(container, "Custom shadow", "0 18px 50px rgba(0,0,0,.24)");
   clickButton(container, "Save");
   await flush();
@@ -2495,7 +2496,7 @@ test("520-03-L01: Custom shadow writes/clears `shadowCustom`; the write normaliz
   expect(withValue?.sections[0]?.layout.shadowCustom).toBe("0 18px 50px rgba(0,0,0,.24)");
   const normalized = normalizeMenuDocumentV2ForWrite(withValue as unknown as MenuDocumentV2);
   expect(normalized.sections[0]?.layout).toMatchObject({
-    shadowCustom: "0 18px 50px rgba(0,0,0,.24)",
+    shadowCustom: "0 18px 50px rgba(0, 0, 0, 0.24)",
   });
 
   // Clearing removes the present-only key.

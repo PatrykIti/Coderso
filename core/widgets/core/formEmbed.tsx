@@ -1,10 +1,10 @@
 import { useId, type CSSProperties, type ComponentType } from "react";
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import {
-  compactStyle,
-  resolveClearableCssColorValue,
-  resolveClearableStyleValue,
-} from "./clearableStyle";
+  CSS_COLOR_SCHEMA_PATTERNS,
+  CSS_COLOR_VALUE_MAX_LENGTH,
+} from "../../services/theme/cssColorContract";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import { compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
 import { getFormRuntimeClientScript } from "./formRuntimeScript";
 import {
   resolveFormFieldStyle,
@@ -189,9 +189,11 @@ export function isFormEmbedThemeDefaultStyleValue(
   value: unknown
 ): key is FormEmbedColorStyleKey {
   if (!formEmbedColorStyleKeySet.has(key)) return false;
-  if (typeof value !== "string") return false;
   const colorKey = key as FormEmbedColorStyleKey;
-  return value.trim() === formEmbedThemeDefaultColorValues[colorKey];
+  return (
+    resolveClearableCssColorValue(value, "inherited-render") ===
+    formEmbedThemeDefaultColorValues[colorKey]
+  );
 }
 
 const widthClassMap: Record<NonNullable<FormEmbedLayout["width"]>, string> = {
@@ -290,7 +292,7 @@ function mapFormThemeToEmbedStyle(theme?: FormFormTheme): Partial<FormEmbedStyle
   // must NOT be widened to unchecked theme input). Idempotent for values already
   // policy-checked at write (normalizeFormTheme); drops anything that bypassed it.
   const safeColor = (value: string | undefined): string | undefined =>
-    value === undefined ? undefined : resolveClearableCssColorValue(value);
+    value === undefined ? undefined : resolveClearableCssColorValue(value, "inherited-render");
   if (surface) {
     const bg = safeColor(surface.background);
     if (bg !== undefined) out.surface = bg;
@@ -483,6 +485,17 @@ const isTitleSize = (value: string): value is NonNullable<FormEmbedStyle["titleS
 const isTitleWeight = (value: string): value is NonNullable<FormEmbedStyle["titleWeight"]> =>
   value === "medium" || value === "semibold" || value === "bold";
 
+const formEmbedColorValueSchema = {
+  anyOf: [
+    { const: "" },
+    {
+      type: "string",
+      maxLength: CSS_COLOR_VALUE_MAX_LENGTH,
+      pattern: CSS_COLOR_SCHEMA_PATTERNS["inherited-render"],
+    },
+  ],
+} as const;
+
 export const formEmbedSchema = {
   type: "object",
   additionalProperties: false,
@@ -510,19 +523,19 @@ export const formEmbedSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
-        background: { type: "string" },
-        surface: { type: "string" },
-        borderColor: { type: "string" },
+        background: formEmbedColorValueSchema,
+        surface: formEmbedColorValueSchema,
+        borderColor: formEmbedColorValueSchema,
         borderWidth: { enum: ["0", "1", "2"] },
         radius: { enum: ["none", "sm", "md", "lg"] },
         inputSize: { enum: ["none", "sm", "md", "lg"] },
-        titleColor: { type: "string" },
+        titleColor: formEmbedColorValueSchema,
         titleSize: { enum: ["sm", "md", "lg"] },
         titleWeight: { enum: ["medium", "semibold", "bold"] },
-        labelColor: { type: "string" },
-        helperColor: { type: "string" },
-        submitBackground: { type: "string" },
-        submitTextColor: { type: "string" },
+        labelColor: formEmbedColorValueSchema,
+        helperColor: formEmbedColorValueSchema,
+        submitBackground: formEmbedColorValueSchema,
+        submitTextColor: formEmbedColorValueSchema,
       },
     },
     fields: {
@@ -663,6 +676,8 @@ export function normalizeFormEmbedData(data: FormEmbedData): FormEmbedData {
   const navigation = resolveNavigation(data.navigation);
   const submitBehavior = resolveSubmitBehavior(data.submitBehavior);
   const hasStyleObject = data.style !== undefined;
+  const normalizeColor = (value: unknown) =>
+    resolveClearableCssColorValue(value, "inherited-render");
 
   const normalizedLayout: Required<FormEmbedLayout> = {
     alignment: isAlignment(layout.alignment) ? layout.alignment : "start",
@@ -677,33 +692,33 @@ export function normalizeFormEmbedData(data: FormEmbedData): FormEmbedData {
 
   const normalizedStyle: FormEmbedStyle = {
     background: hasStyleObject
-      ? resolveClearableStyleValue(data.style?.background)
+      ? normalizeColor(data.style?.background)
       : resolveNonEmptyString(style.background, formEmbedThemeDefaultColorValues.background),
     surface: hasStyleObject
-      ? resolveClearableStyleValue(data.style?.surface)
+      ? normalizeColor(data.style?.surface)
       : resolveNonEmptyString(style.surface, formEmbedThemeDefaultColorValues.surface),
     borderColor: hasStyleObject
-      ? resolveClearableStyleValue(data.style?.borderColor)
+      ? normalizeColor(data.style?.borderColor)
       : resolveNonEmptyString(style.borderColor, formEmbedThemeDefaultColorValues.borderColor),
     borderWidth: isBorderWidthValue(style.borderWidth) ? style.borderWidth : "1",
     radius: isRadius(style.radius) ? style.radius : "md",
     inputSize: isInputSize(style.inputSize) ? style.inputSize : "md",
     titleColor: hasStyleObject
-      ? resolveClearableStyleValue(data.style?.titleColor)
+      ? normalizeColor(data.style?.titleColor)
       : resolveOptionalString(style.titleColor),
     titleSize: isTitleSize(style.titleSize) ? style.titleSize : "md",
     titleWeight: isTitleWeight(style.titleWeight) ? style.titleWeight : "semibold",
     labelColor: hasStyleObject
-      ? resolveClearableStyleValue(data.style?.labelColor)
+      ? normalizeColor(data.style?.labelColor)
       : resolveOptionalString(style.labelColor),
     helperColor: hasStyleObject
-      ? resolveClearableStyleValue(data.style?.helperColor)
+      ? normalizeColor(data.style?.helperColor)
       : resolveOptionalString(style.helperColor),
     submitBackground: hasStyleObject
-      ? resolveClearableStyleValue(data.style?.submitBackground)
+      ? normalizeColor(data.style?.submitBackground)
       : resolveOptionalString(style.submitBackground),
     submitTextColor: hasStyleObject
-      ? resolveClearableStyleValue(data.style?.submitTextColor)
+      ? normalizeColor(data.style?.submitTextColor)
       : resolveOptionalString(style.submitTextColor),
   };
 
@@ -1297,14 +1312,16 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
     : [];
   const saveProgressEnabled = resolved?.settings?.saveProgress === true;
 
+  const resolvedBorderColor =
+    resolveClearableCssColorValue(style.borderColor, "inherited-render") ?? "var(--color-border)";
   const sectionStyle: CSSProperties =
     compactStyle({
-      backgroundColor: resolveClearableStyleValue(style.background),
+      backgroundColor: resolveClearableCssColorValue(style.background, "inherited-render"),
     }) ?? {};
   const surfaceStyle: CSSProperties =
     compactStyle({
-      backgroundColor: resolveClearableStyleValue(style.surface),
-      borderColor: style.borderColor,
+      backgroundColor: resolveClearableCssColorValue(style.surface, "inherited-render"),
+      borderColor: resolvedBorderColor,
     }) ?? {};
 
   const borderClassName = borderWidthClassMap[style.borderWidth];
@@ -1408,18 +1425,18 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
   // input color, `themeInputStyle` is undefined and renderFieldControl keeps its
   // pre-516 `{ borderColor }` inline style (byte-identity).
   const themeInputBorderColor = formTheme?.input?.borderColor
-    ? resolveClearableCssColorValue(formTheme.input.borderColor)
+    ? resolveClearableCssColorValue(formTheme.input.borderColor, "inherited-render")
     : undefined;
   const themeInputBackground = formTheme?.input?.background
-    ? resolveClearableCssColorValue(formTheme.input.background)
+    ? resolveClearableCssColorValue(formTheme.input.background, "inherited-render")
     : undefined;
   const themeInputTextColor = formTheme?.input?.textColor
-    ? resolveClearableCssColorValue(formTheme.input.textColor)
+    ? resolveClearableCssColorValue(formTheme.input.textColor, "inherited-render")
     : undefined;
   const themeInputStyle: CSSProperties | undefined =
     themeInputBorderColor || themeInputBackground || themeInputTextColor
       ? (compactStyle({
-          borderColor: themeInputBorderColor ?? style.borderColor,
+          borderColor: themeInputBorderColor ?? resolvedBorderColor,
           backgroundColor: themeInputBackground,
           color: themeInputTextColor,
         }) ?? {})
@@ -1441,14 +1458,23 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
   const sectionLabelId = title.trim().length > 0 ? `${widgetId}-title` : undefined;
   const fieldDomIds = allocateFieldDomIds(widgetId, fields, sectionLabelId ? [sectionLabelId] : []);
   const resolvedHeadingLevel = layout.headingLevel ?? "2";
-  const titleStyle = compactStyle({ color: style.titleColor }) ?? {};
-  const descriptionStyle = compactStyle({ color: style.helperColor ?? "var(--color-text)" }) ?? {};
-  const labelColor = style.labelColor ?? "var(--color-text)";
-  const helperColor = style.helperColor ?? "var(--color-text)";
+  const titleStyle =
+    compactStyle({
+      color: resolveClearableCssColorValue(style.titleColor, "inherited-render"),
+    }) ?? {};
+  const descriptionStyle =
+    compactStyle({
+      color:
+        resolveClearableCssColorValue(style.helperColor, "inherited-render") ?? "var(--color-text)",
+    }) ?? {};
+  const labelColor =
+    resolveClearableCssColorValue(style.labelColor, "inherited-render") ?? "var(--color-text)";
+  const helperColor =
+    resolveClearableCssColorValue(style.helperColor, "inherited-render") ?? "var(--color-text)";
   const submitButtonStyle =
     compactStyle({
-      backgroundColor: style.submitBackground,
-      color: style.submitTextColor,
+      backgroundColor: resolveClearableCssColorValue(style.submitBackground, "inherited-render"),
+      color: resolveClearableCssColorValue(style.submitTextColor, "inherited-render"),
     }) ?? {};
 
   const showDescription = description.trim().length > 0;
@@ -1596,7 +1622,7 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
                                 inputClassName,
                                 borderClassName,
                                 radiusClassName: inputRadiusClassName,
-                                borderColor: style.borderColor,
+                                borderColor: resolvedBorderColor,
                                 labelColor,
                                 helperColor,
                                 inputStyle: themeInputStyle,
@@ -1625,7 +1651,7 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
                           inputClassName,
                           borderClassName,
                           radiusClassName: inputRadiusClassName,
-                          borderColor: style.borderColor,
+                          borderColor: resolvedBorderColor,
                           labelColor,
                           helperColor,
                           inputStyle: themeInputStyle,

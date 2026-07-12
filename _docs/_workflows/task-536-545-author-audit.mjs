@@ -717,8 +717,9 @@ Contract when routes are touched. Schema changes are reject-unknown with explici
 normalizers and round-trip tests. Optional style/config stays present-only and
 legacy/no-override output byte-identical. No endpoint, DB migration, dependency,
 or broad feature may be invented beyond the confirmed remediation. Parent files
-carry an audit-finding -> child/leaf/test matrix. Program land order is fixed:
-536 -> 537 -> 538 -> 539 -> 540 -> 541 -> 542 -> 543 -> 544 -> 545. TASK-539 and
+carry an audit-finding -> child/leaf/test matrix. Program implementation land order is
+fixed by dependencies, not numeric ID:
+538 -> 536 -> 541 -> 537 -> 544 -> 543 -> 540 -> 539 -> 542 -> 545. TASK-539 and
 TASK-542 never run in parallel because both touch siteShell; TASK-539/TASK-540
 carry explicit collision guards for open TASK-478/TASK-481. Completed TASK-495
 through TASK-535 statuses are not reopened. Changelog pins are fixed, never

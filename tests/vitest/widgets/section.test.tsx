@@ -35,6 +35,32 @@ const StubSectionEditor: ComponentType<WidgetEditorProps<SectionData>> = () => n
 const StubHeroEditor: ComponentType<WidgetEditorProps<HeroData>> = () => null;
 const StubNavigationEditor: ComponentType<WidgetEditorProps<NavigationData>> = () => null;
 
+test("section editor classifies direct inheritance and nested inherit without mount writes", () => {
+  let writes = 0;
+  const html = renderToString(
+    <SectionVisualEditor
+      value={{
+        ...sectionDefaults,
+        heading: { ...sectionDefaults.heading, labelColor: "currentColor", titleColor: "inherit" },
+        style: {
+          ...sectionDefaults.style,
+          gradientFrom: "inherit",
+          gradientTo: "currentColor",
+        },
+      }}
+      onChange={() => {
+        writes += 1;
+      }}
+      variant="default"
+      onVariantChange={() => undefined}
+    />
+  );
+  expect(html).toContain('data-shared-color-state="inherited"');
+  expect(html).toContain('data-shared-color-state="saved_custom"');
+  expect(html).toContain("Inherited color");
+  expect(writes).toBe(0);
+});
+
 test("section renders defaults", () => {
   const html = renderToString(<SectionBlock data={sectionDefaults} variant="default" />);
 
@@ -176,6 +202,42 @@ test("section renders only allowlisted color grammar in public inline styles", (
   expect(html).toContain("color:rgba(12, 24, 36, 0.8)");
   expect(html).toContain("color:hsl(210, 50%, 40%)");
   expect(html).toContain("color:currentColor");
+});
+
+test("section splits direct inherited colors from nested gradient stops", () => {
+  const normalized = normalizeSectionData({
+    ...sectionDefaults,
+    heading: {
+      ...sectionDefaults.heading,
+      labelColor: " CURRENTCOLOR ",
+      titleColor: " INHERIT ",
+      descriptionColor: " currentcolor ",
+    },
+    style: {
+      ...sectionDefaults.style,
+      backgroundColor: " inherit ",
+      borderColor: " currentcolor ",
+      overlayColor: " inherit ",
+      gradientFrom: " currentcolor ",
+      gradientTo: " inherit ",
+    },
+  });
+
+  expect(normalized.heading).toMatchObject({
+    labelColor: "currentColor",
+    titleColor: "inherit",
+    descriptionColor: "currentColor",
+  });
+  expect(normalized.style).toMatchObject({
+    backgroundColor: "inherit",
+    borderColor: "currentColor",
+    overlayColor: "inherit",
+    gradientFrom: "currentColor",
+    gradientTo: undefined,
+  });
+  const html = renderToString(<SectionBlock data={normalized} variant="contained" />);
+  expect(html).not.toContain("linear-gradient");
+  expect(html).toContain("background-color:inherit");
 });
 
 test("section renders empty-region placeholders only in editor preview", () => {

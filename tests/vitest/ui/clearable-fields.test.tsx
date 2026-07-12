@@ -83,33 +83,62 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
+const dispatchInputValue = (input: HTMLInputElement, value: string) => {
+  const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+  React.act(() => {
+    setValue?.call(input, value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+};
+
 afterEach(() => {
   document.body.innerHTML = "";
   vi.restoreAllMocks();
   toastInfo.mockReset();
 });
 
-test("clearable field helper detects real values without treating empty text as set", () => {
-  expect(hasClearableFieldValue(undefined)).toBe(false);
-  expect(hasClearableFieldValue("   ")).toBe(false);
-  expect(hasClearableFieldValue("transparent")).toBe(true);
-  expect(hasClearableFieldValue("#ffffff")).toBe(true);
+test("clearable field helper treats every non-empty raw string as present", () => {
+  const matrix: ReadonlyArray<readonly [label: string, value: unknown, expected: boolean]> = [
+    ["undefined", undefined, false],
+    ["null", null, false],
+    ["empty string", "", false],
+    ["ASCII spaces", "   ", true],
+    ["NBSP", "\u00a0", true],
+    ["EM SPACE", "\u2003", true],
+    ["C0 control", "\u0000", true],
+    ["C1 control", "\u0085", true],
+    ["transparent", "transparent", true],
+    ["hex color", "#ffffff", true],
+  ];
+
+  for (const [label, value, expected] of matrix) {
+    expect(hasClearableFieldValue(value), label).toBe(expected);
+  }
 });
 
-test("shared color picker resolves hex and rgb(a) to a base color, falling back only for tokens", () => {
+test("shared color picker uses metadata for literals and fallback for every nonliteral kind", () => {
   expect(resolveColorPickerValue("#112233", "#ffffff")).toBe("#112233");
   expect(resolveColorPickerValue("rgb(17, 34, 51)", "#ffffff")).toBe("#112233");
-  // Alpha is now handled by the opacity slider; the picker shows the extracted base color.
   expect(resolveColorPickerValue("rgba(17, 34, 51, 0.4)", "#ffffff")).toBe("#112233");
+  expect(resolveColorPickerValue("hsl(210, 50%, 40%)", "#ffffff")).toBe("#336699");
   expect(resolveColorPickerValue("var(--color-border)", "#ffffff")).toBe("#ffffff");
+  expect(resolveColorPickerValue("transparent", "#ffffff")).toBe("#ffffff");
+  expect(resolveColorPickerValue("currentColor", "#ffffff", "inherited-render")).toBe("#ffffff");
+  expect(resolveColorPickerValue("inherit", "#ffffff", "inherited-render")).toBe("#ffffff");
+  expect(resolveColorPickerValue("unknown", "#ffffff")).toBe("#ffffff");
+  expect(resolveColorPickerValue("unknown", "invalid-fallback")).toBe("#000000");
 });
 
-test("shared color picker representable-value detection covers hex and rgb(a) incl. alpha", () => {
+test("shared color picker representability is true exactly for hex, RGB, and HSL", () => {
   expect(isPickerRepresentableColorValue("#112233")).toBe(true);
   expect(isPickerRepresentableColorValue("rgb(17, 34, 51)")).toBe(true);
-  // Alpha rgba is representable now (base via picker + alpha via slider).
   expect(isPickerRepresentableColorValue("rgba(17, 34, 51, 0.4)")).toBe(true);
+  expect(isPickerRepresentableColorValue("hsla(210, 50%, 40%, 0.4)")).toBe(true);
   expect(isPickerRepresentableColorValue("var(--color-border)")).toBe(false);
+  expect(isPickerRepresentableColorValue("transparent")).toBe(false);
+  expect(isPickerRepresentableColorValue("currentColor", "inherited-render")).toBe(false);
+  expect(isPickerRepresentableColorValue("inherit", "inherited-render")).toBe(false);
+  expect(isPickerRepresentableColorValue("unknown")).toBe(false);
 });
 
 test("clearable input disables empty clear and delegates configured clear behavior", () => {
@@ -246,12 +275,9 @@ test("shared color field inputs preserve text tokens while showing a token hint"
     expect(view.container.textContent).toContain("Theme token active");
 
     if (!colorInput) throw new Error("Missing color input");
-    React.act(() => {
-      colorInput.value = "#123456";
-      colorInput.dispatchEvent(new Event("input", { bubbles: true }));
-      colorInput.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-    expect(onChange).not.toHaveBeenCalled();
+    dispatchInputValue(colorInput, "#123456");
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith("#123456");
   } finally {
     view.cleanup();
   }
@@ -265,6 +291,7 @@ test("shared color field inputs keep picker writes for hex and rgb values", () =
     onChange: onHexChange,
   });
   expect(onHexChange).toHaveBeenCalledWith("#445566");
+  expect(onHexChange).toHaveBeenCalledTimes(1);
 
   const onRgbChange = vi.fn();
   applySharedColorPickerChange({
@@ -273,6 +300,16 @@ test("shared color field inputs keep picker writes for hex and rgb values", () =
     onChange: onRgbChange,
   });
   expect(onRgbChange).toHaveBeenCalledWith("#778899");
+  expect(onRgbChange).toHaveBeenCalledTimes(1);
+
+  const onHslChange = vi.fn();
+  applySharedColorPickerChange({
+    currentValue: "hsl(210, 50%, 40%)",
+    nextValue: "#aabbcc",
+    onChange: onHslChange,
+  });
+  expect(onHslChange).toHaveBeenCalledTimes(1);
+  expect(onHslChange).toHaveBeenCalledWith("#aabbcc");
 });
 
 test("shared color field inputs allow explicit picker override callbacks for token values", () => {
@@ -287,10 +324,11 @@ test("shared color field inputs allow explicit picker override callbacks for tok
   });
 
   expect(onPickerChange).toHaveBeenCalledWith("#abcdef");
+  expect(onPickerChange).toHaveBeenCalledTimes(1);
   expect(onChange).not.toHaveBeenCalled();
 });
 
-test("color token hint stays hidden for empty and hex values", () => {
+test("color token hint appears only for canonical tokens, never HSL or unknown values", () => {
   const empty = mount(<ColorTokenHint value={undefined} />);
   try {
     expect(empty.container.textContent).toBe("");
@@ -304,9 +342,30 @@ test("color token hint stays hidden for empty and hex values", () => {
   } finally {
     hex.cleanup();
   }
+
+  const hsl = mount(<ColorTokenHint value="hsl(210, 50%, 40%)" />);
+  try {
+    expect(hsl.container.textContent).toBe("");
+  } finally {
+    hsl.cleanup();
+  }
+
+  const unknown = mount(<ColorTokenHint value="color-mix(in srgb, red, blue)" />);
+  try {
+    expect(unknown.container.textContent).toBe("");
+  } finally {
+    unknown.cleanup();
+  }
+
+  const token = mount(<ColorTokenHint value="var(--color-border)" />);
+  try {
+    expect(token.container.textContent).toContain("Theme token active");
+  } finally {
+    token.cleanup();
+  }
 });
 
-test("shared contrast advisory warns for low-contrast colors and stays unknown for tokens", () => {
+test("shared contrast advisory derives RGB metadata for every literal kind", () => {
   expect(
     resolveColorContrastAdvisory({
       foreground: "#ffffff",
@@ -320,15 +379,61 @@ test("shared contrast advisory warns for low-contrast colors and stays unknown f
 
   expect(
     resolveColorContrastAdvisory({
-      foreground: "var(--color-text)",
+      foreground: "hsl(0, 0%, 0%)",
+      background: "rgb(255, 255, 255)",
+    })
+  ).toEqual(expect.objectContaining({ status: "ok" }));
+
+  expect(
+    resolveColorContrastAdvisory({
+      foreground: "hsl(0, 100%, 50%)",
       background: "#ffffff",
+    })
+  ).toEqual(expect.objectContaining({ status: "warning" }));
+
+  expect(
+    resolveColorContrastAdvisory({
+      foreground: "#00000080",
+      background: "hsl(0, 0%, 100%)",
+    })
+  ).toEqual(expect.objectContaining({ status: "ok" }));
+});
+
+test("shared contrast advisory is unknown for alpha zero and every nonliteral kind", () => {
+  for (const foreground of [
+    "#0000",
+    "rgba(0,0,0,0)",
+    "hsla(0,0%,0%,0)",
+    "var(--color-text)",
+    "transparent",
+    "currentColor",
+    "inherit",
+    "unknown",
+  ]) {
+    expect(
+      resolveColorContrastAdvisory({
+        foreground,
+        background: "#ffffff",
+        colorProfile: "inherited-render",
+      }),
+      foreground
+    ).toEqual(expect.objectContaining({ status: "unknown" }));
+  }
+
+  expect(
+    resolveColorContrastAdvisory({
+      foreground: "#000000",
+      background: "var(--color-surface)",
+      fallbackBackground: "#ffffff",
     })
   ).toEqual(
     expect.objectContaining({
       status: "unknown",
     })
   );
+});
 
+test("color contrast notice renders warnings but hides successful advisories", () => {
   const advisory = resolveColorContrastAdvisory({
     foreground: "#ffffff",
     background: "#ffffff",

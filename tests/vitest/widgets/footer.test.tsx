@@ -25,6 +25,25 @@ import { resolveEditableFooterColumns } from "../../../core/admin/ui/widgets/edi
 const StubEditor: ComponentType<WidgetEditorProps<FooterData>> = () => null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
+test("footer editor mounts inherited colors without mutation", () => {
+  let writes = 0;
+  const html = renderToString(
+    <FooterVisualEditor
+      value={{
+        ...footerDefaults,
+        style: { ...footerDefaults.style, surfaceColor: "currentColor", borderColor: "inherit" },
+      }}
+      onChange={() => {
+        writes += 1;
+      }}
+      variant="columns-2"
+      onVariantChange={() => undefined}
+    />
+  );
+  expect(html.match(/data-shared-color-state="inherited"/g)).toHaveLength(2);
+  expect(writes).toBe(0);
+});
+
 test("footer renders defaults", () => {
   const html = renderToString(<FooterBlock data={footerDefaults} variant="columns-2" />);
 
@@ -32,6 +51,41 @@ test("footer renders defaults", () => {
   expect(html).toContain("Resources");
   expect(html).toContain("Privacy");
   expect(html).toContain('aria-label="Site footer"');
+});
+
+test("footer canonicalizes every inherited-compatible style color and rejects named colors", () => {
+  const fields = [
+    "surfaceColor",
+    "borderColor",
+    "textColor",
+    "headingColor",
+    "linkColor",
+    "legalTextColor",
+    "socialColor",
+    "linkHoverColor",
+    "linkActiveColor",
+  ] as const;
+  const data: FooterData = {
+    ...footerDefaults,
+    style: Object.fromEntries(
+      fields.map((field, index) => [field, index % 2 === 0 ? " CURRENTCOLOR " : " INHERIT "])
+    ),
+  };
+  const html = renderToString(<FooterBlock data={data} variant="columns-2" />);
+  expect(html).toContain("currentColor");
+  expect(html).toContain("inherit");
+  expect(html).not.toContain(" CURRENTCOLOR ");
+
+  const rejectedHtml = renderToString(
+    <FooterBlock
+      data={{
+        ...footerDefaults,
+        style: Object.fromEntries(fields.map((field) => [field, "rebeccapurple"])),
+      }}
+      variant="columns-2"
+    />
+  );
+  expect(rejectedHtml).not.toContain("rebeccapurple");
 });
 
 test("footer resolves columns deterministically by variant", () => {

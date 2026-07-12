@@ -4,12 +4,22 @@ import {
   SVG_SANITIZER_DEFAULT_MAX_BYTES,
   sanitizeSvg,
 } from "../../../core/services/pages/svgSanitizer";
+import {
+  SAFE_SVG_NAMESPACES,
+  SAFE_SVG_SOURCE_ATTRS,
+  SAFE_SVG_TAGS,
+  canonicalizeSafeSvgTag,
+  isSafeLocalSvgReference,
+  isSafeSvgNamespace,
+  isSafeSvgSourceAttr,
+  isSafeSvgTag,
+} from "../../../core/services/pages/svgSanitizerPolicy";
 
 // TASK-522-01-L06 — dependency-free SVG allowlist sanitizer. Asserts the
-// reference-style house-line passes intact, every straightforward XSS vector +
+// reference-style house-line keeps safe structure, every straightforward XSS vector +
 // the mXSS / parser-differential corpus fails CLOSED (→ ""), the local-# ref
-// enforcement covers quoted AND unquoted values, `style` is stripped, the byte
-// cap is isomorphic (no Buffer), and the function is idempotent.
+// enforcement covers quoted AND unquoted values, `class`/`style` are stripped,
+// the byte cap is isomorphic (no Buffer), and the function is idempotent.
 
 // A representative reference-style line-drawing SVG (matches the wow-site
 // house-line shape: viewBox + <defs> + <linearGradient>/<stop> + a <path> whose
@@ -26,14 +36,42 @@ const HOUSE_LINE = [
   "</svg>",
 ].join("");
 
+describe("SVG sanitizer policy — immutable, closed, and canonical", () => {
+  test("exports frozen collections without class/style authority", () => {
+    expect(Object.isFrozen(SAFE_SVG_TAGS)).toBe(true);
+    expect(Object.isFrozen(SAFE_SVG_SOURCE_ATTRS)).toBe(true);
+    expect(Object.isFrozen(SAFE_SVG_NAMESPACES)).toBe(true);
+    expect(SAFE_SVG_SOURCE_ATTRS).not.toContain("class");
+    expect(SAFE_SVG_SOURCE_ATTRS).not.toContain("style");
+    expect(isSafeSvgSourceAttr("fill")).toBe(true);
+    expect(isSafeSvgSourceAttr("class")).toBe(false);
+    expect(isSafeSvgSourceAttr("style")).toBe(false);
+  });
+
+  test("canonicalizes only closed tags and preserves local-reference/namespace rules", () => {
+    expect(canonicalizeSafeSvgTag("SVG")).toBe("svg");
+    expect(canonicalizeSafeSvgTag("LINEARGRADIENT")).toBe("linearGradient");
+    expect(canonicalizeSafeSvgTag("FEGAUSSIANBLUR")).toBe("feGaussianBlur");
+    expect(canonicalizeSafeSvgTag("foreignObject")).toBeNull();
+    expect(isSafeSvgTag("linearGradient")).toBe(true);
+    expect(isSafeSvgTag("LINEARGRADIENT")).toBe(false);
+    expect(isSafeLocalSvgReference(" #glyph")).toBe(true);
+    expect(isSafeLocalSvgReference("https://example.test/#glyph")).toBe(false);
+    expect(isSafeSvgNamespace(SAFE_SVG_NAMESPACES.svg)).toBe(true);
+    expect(isSafeSvgNamespace(SAFE_SVG_NAMESPACES.xlink)).toBe(true);
+    expect(isSafeSvgNamespace("http://www.w3.org/1999/xhtml")).toBe(false);
+  });
+});
+
 describe("sanitizeSvg — reference + benign shapes pass", () => {
-  test("the reference house-line passes intact (structure preserved)", () => {
+  test("the reference house-line preserves safe structure and presentation", () => {
     const out = sanitizeSvg(HOUSE_LINE);
     expect(out).not.toBe("");
     expect(out).toContain("<path");
     expect(out).toContain('stroke="url(#lineGlow)"');
     expect(out).toContain("<linearGradient");
     expect(out).toContain("<stop");
+    expect(out).not.toContain("class=");
   });
 
   test("a plain <svg><circle/></svg> passes", () => {
@@ -57,6 +95,51 @@ describe("sanitizeSvg — reference + benign shapes pass", () => {
   test("idempotent: sanitizeSvg(sanitizeSvg(x)) === sanitizeSvg(x)", () => {
     const once = sanitizeSvg(HOUSE_LINE);
     expect(sanitizeSvg(once)).toBe(once);
+  });
+
+  test("a no-class SVG remains byte-idempotent", () => {
+    const source =
+      '<svg viewBox="0 0 20 10"><g transform="translate(2 1)"><path d="M0 0 L2 2" fill="none" stroke="#123456"/></g></svg>';
+    expect(sanitizeSvg(source)).toBe(source);
+    expect(sanitizeSvg(sanitizeSvg(source))).toBe(source);
+  });
+});
+
+describe("sanitizeSvg — author class is never retained", () => {
+  test("strips class from the root, nested group, and shape on every pass", () => {
+    const source = [
+      '<svg class="root" viewBox="0 0 10 10">',
+      '<g class="group" transform="translate(1 1)">',
+      '<path class="shape" d="M0 0 L8 8" fill="none" stroke="url(#line)"/>',
+      "</g>",
+      "</svg>",
+    ].join("");
+
+    const once = sanitizeSvg(source);
+    const twice = sanitizeSvg(once);
+
+    expect(once).toBe(
+      '<svg viewBox="0 0 10 10"><g transform="translate(1 1)"><path d="M0 0 L8 8" fill="none" stroke="url(#line)"/></g></svg>'
+    );
+    expect(once).not.toMatch(/\bclass\s*=/i);
+    expect(twice).toBe(once);
+  });
+
+  test("strips mixed-case and duplicate class attributes without dropping safe attrs", () => {
+    const out = sanitizeSvg(
+      '<svg CLASS="root"><g class="first" cLaSs="second" class=third fill="#fff"/></svg>'
+    );
+
+    expect(out).toBe('<svg><g fill="#fff"/></svg>');
+    expect(out).not.toMatch(/\bclass\s*=/i);
+  });
+
+  test("does not special-case class values that resemble public utilities", () => {
+    const out = sanitizeSvg(
+      '<svg><path class="flex gap-4 text-center" d="M0 0 L1 1" stroke="#000"/></svg>'
+    );
+
+    expect(out).toBe('<svg><path d="M0 0 L1 1" stroke="#000"/></svg>');
   });
 });
 
@@ -105,6 +188,15 @@ describe("sanitizeSvg — mXSS / parser-differential corpus fails closed", () =>
   test("legitimate xmlns='...svg' and a no-xmlns inline SVG both PASS", () => {
     expect(sanitizeSvg('<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>')).not.toBe("");
     expect(sanitizeSvg("<svg><rect/></svg>")).not.toBe("");
+  });
+
+  test("legitimate xmlns:xlink passes while an unknown namespace fails closed", () => {
+    expect(
+      sanitizeSvg(
+        '<svg xmlns:xlink="http://www.w3.org/1999/xlink"><use xlink:href="#glyph"/></svg>'
+      )
+    ).toContain('xmlns:xlink="http://www.w3.org/1999/xlink"');
+    expect(sanitizeSvg('<svg xmlns:xlink="https://example.test/ns"><rect/></svg>')).toBe("");
   });
 });
 
@@ -170,9 +262,9 @@ describe("sanitizeSvg — style attribute is NOT allowlisted (layout-escape clas
         '<svg><path <x><rect style="position:fixed;inset:0;z-index:2147483647;background:red" "/></svg>'
       )
     ).toBe("");
-    expect(
-      sanitizeSvg('<svg><g <y><rect style="opacity:0;position:fixed;inset:0" "/></svg>')
-    ).toBe("");
+    expect(sanitizeSvg('<svg><g <y><rect style="opacity:0;position:fixed;inset:0" "/></svg>')).toBe(
+      ""
+    );
   });
   test("unbalanced-quote style desync → '' (single-tag latent variant)", () => {
     expect(sanitizeSvg('<svg><rect style="x" "/></svg>')).toBe("");
@@ -221,9 +313,7 @@ describe("sanitizeSvg — tag case normalized to canonical (TASK-535 no fragment
   });
 
   test("an UPPERCASE camelCase tag maps to its canonical spelling", () => {
-    const out = sanitizeSvg(
-      '<svg><FILTER><FEGAUSSIANBLUR stdDeviation="2"/></FILTER></svg>'
-    );
+    const out = sanitizeSvg('<svg><FILTER><FEGAUSSIANBLUR stdDeviation="2"/></FILTER></svg>');
     expect(out).toContain("<filter>");
     expect(out).toContain("<feGaussianBlur");
   });

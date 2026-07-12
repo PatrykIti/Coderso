@@ -22,8 +22,40 @@ import { validateWidgetEditorContract } from "../../../core/widgets/editorContra
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
+import { buildFormColorTheme } from "../forms/formColorConsumerTable";
 
 const StubEditor: ComponentType<WidgetEditorProps<FormEmbedData>> = () => null;
+
+test("form embed rechecks every inherited Form color before direct CSS output", () => {
+  const fields = [
+    "background",
+    "surface",
+    "borderColor",
+    "titleColor",
+    "labelColor",
+    "helperColor",
+    "submitBackground",
+    "submitTextColor",
+  ] as const;
+  const normalized = normalizeFormEmbedData({
+    ...formEmbedDefaults,
+    style: Object.fromEntries(
+      fields.map((field, index) => [field, index % 2 === 0 ? " CURRENTCOLOR " : " INHERIT "])
+    ),
+  });
+  for (const [index, field] of fields.entries()) {
+    expect(normalized.style?.[field]).toBe(index % 2 === 0 ? "currentColor" : "inherit");
+  }
+  const html = renderToString(<FormEmbedBlock data={normalized} variant="standard" />);
+  expect(html).toContain("currentColor");
+  expect(html).toContain("inherit");
+
+  const rejected = normalizeFormEmbedData({
+    ...formEmbedDefaults,
+    style: Object.fromEntries(fields.map((field) => [field, "\u00a0#fff"])),
+  });
+  expect(Object.values(rejected.style ?? {})).not.toContain("\u00a0#fff");
+});
 
 const getOpeningTagByAttribute = (
   html: string,
@@ -45,6 +77,64 @@ const getAttributeValue = (tag: string, attribute: string) => {
 
 const countClassToken = (className: string | undefined, token: string) =>
   (className ?? "").split(/\s+/).filter((entry) => entry === token).length;
+
+test("resolved Form theme table reaches every concrete FormEmbed color sink", () => {
+  const html = renderToString(
+    <FormEmbedBlock
+      variant="standard"
+      data={{
+        formId: "form-color-table",
+        title: "Color table",
+        description: "Description color",
+        resolved: {
+          formName: "Color table",
+          submissionAccess: "public",
+          settings: {
+            layoutMode: "single",
+            saveProgress: false,
+            stepTitles: [],
+            theme: buildFormColorTheme("raw"),
+          },
+          fields: [
+            {
+              id: "name-field",
+              type: "text",
+              label: "Name",
+              name: "name",
+              required: false,
+              settings: { helper: "Helper copy" },
+            },
+          ],
+        },
+      }}
+    />
+  );
+
+  const cardTag = getOpeningTagByAttribute(html, "div", "data-form-embed-radius", "md");
+  expect(cardTag).toContain("background-color:currentColor");
+  expect(cardTag).toContain("border-color:inherit");
+
+  const titleTag = html.match(/<h2\b[^>]*>/)?.[0] ?? "";
+  expect(titleTag).toContain("color:rgba(1, 2, 3, 0.5)");
+  const descriptionTag = html.match(/<p\b[^>]*>Description color<\/p>/)?.[0] ?? "";
+  expect(descriptionTag).toContain("color:#abc");
+
+  const labelTag = html.match(/<label\b[^>]*>Name/)?.[0] ?? "";
+  expect(labelTag).toContain("color:hsla(210, 50%, 40%, 0.25)");
+  const helperTag = html.match(/<p\b[^>]*>Helper copy<\/p>/)?.[0] ?? "";
+  expect(helperTag).toContain("color:#abc");
+
+  const inputTag = getOpeningTagByAttribute(html, "input", "name", "name");
+  expect(inputTag).toContain("border-color:rgb(4, 5, 6)");
+  expect(inputTag).toContain("background-color:inherit");
+  expect(inputTag).toContain("color:currentColor");
+
+  const submitTag = getOpeningTagByAttribute(html, "button", "data-form-submit", "1");
+  expect(submitTag).toContain("background-color:rgba(7, 8, 9, 50%)");
+  expect(submitTag).toContain("color:hsl(120, 100%, 50%)");
+  expect(html).not.toContain(" CURRENTCOLOR ");
+  expect(html).not.toContain(" HSLA(");
+});
 
 const replaceRuntimeScriptPayload = (html: string) => {
   const openingTag = "<script>";

@@ -48,17 +48,17 @@ vi.mock("@/components/ui/input", () => ({
 import {
   applySharedColorAlphaChange,
   applySharedColorPickerChange,
-  isHexColorValue,
   isPickerRepresentableColorValue,
   resolveColorPickerValue,
   resolveColorSwatchValue,
 } from "../../../core/admin/ui/widgets/editors/ClearableFields";
 
-test("resolveColorPickerValue extracts the base color for hex8 / rgba, keeping fallback for tokens", () => {
+test("resolveColorPickerValue extracts parser metadata for every literal kind", () => {
   // 8-digit hex -> base #rrggbb (alpha owned by the slider).
   expect(resolveColorPickerValue("#0812209e", "#000000")).toBe("#081220");
   // Leading-dot rgba alpha -> base color extracted from the channels.
   expect(resolveColorPickerValue("rgba(8,17,31,.84)", "#000000")).toBe("#08111f");
+  expect(resolveColorPickerValue("hsla(210,50%,40%,.5)", "#000000")).toBe("#336699");
   // Tokens are not picker-representable -> fallback.
   expect(resolveColorPickerValue("var(--color-brand)", "#ffffff")).toBe("#ffffff");
 });
@@ -68,17 +68,12 @@ test("resolveColorSwatchValue delegates to resolveColorPickerValue with a defaul
   expect(resolveColorSwatchValue("var(--color-brand)")).toBe("#000000");
 });
 
-test("isHexColorValue accepts alpha-capable 4/8-digit hex", () => {
-  expect(isHexColorValue("#0812209e")).toBe(true);
-  expect(isHexColorValue("#abcd")).toBe(true);
-  expect(isHexColorValue("#112233")).toBe(true);
-  expect(isHexColorValue("var(--color-x)")).toBe(false);
-});
-
-test("isPickerRepresentableColorValue is true for hex/rgb(a), false for tokens", () => {
+test("isPickerRepresentableColorValue is true for hex/rgb/hsl and false for nonliterals", () => {
   expect(isPickerRepresentableColorValue("rgba(8,17,31,.84)")).toBe(true);
+  expect(isPickerRepresentableColorValue("hsla(210,50%,40%,.5)")).toBe(true);
   expect(isPickerRepresentableColorValue("#0812209e")).toBe(true);
   expect(isPickerRepresentableColorValue("var(--color-x)")).toBe(false);
+  expect(isPickerRepresentableColorValue("transparent")).toBe(false);
 });
 
 test("applySharedColorPickerChange preserves the current alpha when the base color changes", () => {
@@ -92,6 +87,18 @@ test("applySharedColorPickerChange passes opaque values through unchanged", () =
   const onChange = vi.fn();
   applySharedColorPickerChange({ currentValue: "#0d6efd", nextValue: "#112233", onChange });
   expect(onChange).toHaveBeenCalledWith("#112233");
+  expect(onChange).toHaveBeenCalledTimes(1);
+});
+
+test("applySharedColorPickerChange preserves HSL alpha through parser metadata", () => {
+  const onChange = vi.fn();
+  applySharedColorPickerChange({
+    currentValue: "hsla(210,50%,40%,.5)",
+    nextValue: "#112233",
+    onChange,
+  });
+  expect(onChange).toHaveBeenCalledTimes(1);
+  expect(onChange).toHaveBeenCalledWith("#11223380");
 });
 
 test("applySharedColorPickerChange short-circuits to onPickerChange when provided", () => {
@@ -104,6 +111,7 @@ test("applySharedColorPickerChange short-circuits to onPickerChange when provide
     onPickerChange,
   });
   expect(onPickerChange).toHaveBeenCalledWith("#112233");
+  expect(onPickerChange).toHaveBeenCalledTimes(1);
   expect(onChange).not.toHaveBeenCalled();
 });
 
@@ -111,4 +119,39 @@ test("applySharedColorAlphaChange recomposes the base color with the new alpha",
   const onChange = vi.fn();
   applySharedColorAlphaChange({ currentValue: "#081220", alphaPct: 50, onChange });
   expect(onChange).toHaveBeenCalledWith("#08122080");
+  expect(onChange).toHaveBeenCalledTimes(1);
+});
+
+test("applySharedColorAlphaChange recomposes an HSL base without changing its metadata source", () => {
+  const onChange = vi.fn();
+  applySharedColorAlphaChange({
+    currentValue: "hsl(210,50%,40%)",
+    alphaPct: 25,
+    onChange,
+  });
+  expect(onChange).toHaveBeenCalledTimes(1);
+  expect(onChange).toHaveBeenCalledWith("#33669940");
+});
+
+test("picker and alpha helpers reject invalid composition without callbacks", () => {
+  const onChange = vi.fn();
+  const onPickerChange = vi.fn();
+
+  for (const nextValue of ["bad", "#abcd", "#11223344"]) {
+    applySharedColorPickerChange({
+      currentValue: "#081220",
+      nextValue,
+      onChange,
+      onPickerChange,
+    });
+  }
+  for (const alphaPct of [-1, 101, Number.NaN, Number.POSITIVE_INFINITY]) {
+    applySharedColorAlphaChange({ currentValue: "#081220", alphaPct, onChange });
+  }
+  for (const currentValue of ["var(--color-brand)", "transparent", "unknown"]) {
+    applySharedColorAlphaChange({ currentValue, alphaPct: 50, onChange });
+  }
+
+  expect(onPickerChange).not.toHaveBeenCalled();
+  expect(onChange).not.toHaveBeenCalled();
 });

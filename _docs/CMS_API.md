@@ -2247,6 +2247,17 @@ uses Page v2 block objects but only accepts the menu nav allowlist
 appearance or extras payloads map to `menu_appearance_invalid` or
 `menu_nav_extras_invalid` with a field path in `details.field`.
 
+Menu color writes use the Bun-free canonical contract from
+`core/services/theme/cssColorContract.ts` with the `authoring` profile. The
+route schema is a shallow top-level reject-unknown envelope and contains no
+nested color pattern or cap. Deep domain normalizers own nested reject-unknown
+checks and pass color leaves directly to the semantic parser for range, arity,
+raw-length, and canonical-byte validation. Accepted values are canonicalized
+(including HSL alias/angle normalization), while `currentColor`, `inherit`,
+invalid numeric ranges, and over-cap values reject or omit according to the
+owning Menu leaf contract. Optional color fields remain present-only: omitting a
+field emits no default and clearing it removes the stored override.
+
 Update menu items payload:
 
 ```json
@@ -4753,12 +4764,21 @@ Opcjonalne pola:
   logic. Field-by-field fail-soft normalization is retained only for persisted
   legacy/read compatibility. A no-theme form emits **no** `theme` key (the four
   base keys stay present because `normalizeFormSettings` is a fully-defaulted
-  normalizer). Color tokens
+  normalizer). All ten color tokens
   (`surface.background`/`borderColor`, `typography.titleColor`/`labelColor`/
-  `helperColor`, `input.background`/`borderColor`, `submit.background`/`textColor`)
-  run through the `resolveClearableCssColorValue` CSS-value policy at BOTH the
-  normalize (write) boundary and the render boundary; unsafe values
-  (`url(`/`expression(`/`javascript:`/`data:`/`;{}<>`) are dropped. Enum axes:
+  `helperColor`, `input.background`/`borderColor`/`textColor`,
+  `submit.background`/`textColor`) use the shared `inherited-render` profile at
+  the write normalizer, persisted-read resolver, builder canvas, runtime
+  preview, and public renderer boundaries. This explicit TASK-516 compatibility
+  exception accepts canonical `currentColor` and `inherit`; ordinary authoring
+  fields use the narrower `authoring` profile. The strict route pattern and
+  128-code-unit cap are structural guards only: the shared semantic parser still
+  enforces channel ranges, function arity, ASCII/control rejection, and
+  canonical output. Structurally invalid writes fail route validation;
+  semantic-invalid values that pass the structural pattern are omitted by the
+  write normalizer, as are invalid legacy-read values, and are never passed
+  through raw. The retained Form Embed bridge uses the same profile for
+  per-token overrides. Enum axes:
   `layout.width` `sm|md|lg|xl|full`, `layout.align`/`buttonAlignment`
   `left|center|right(|full)`, `layout.fieldGap` `sm|md|lg`, `layout.columns` `1|2`,
   `surface.radius`/`input.radius`/`submit.radius` `none|sm|md|lg|xl`,

@@ -31,6 +31,10 @@ import {
 import { MediaPicker } from "@/ui/media/MediaPicker";
 import { PostRichTextAdapter } from "@/ui/posts/editor/richtext/PostRichTextAdapter";
 
+import {
+  normalizeCssColorValue,
+  parseCssColorValue,
+} from "../../../../services/theme/cssColorContract";
 import type {
   HeroBadgePlacement,
   HeroBadgeTone,
@@ -39,7 +43,12 @@ import type {
   HeroMedia,
   HeroSocialProofAvatar,
 } from "../../../../widgets/core/hero";
-import { heroDefaults, normalizeHeroData, normalizeHeroHref } from "../../../../widgets/core/hero";
+import {
+  heroDefaults,
+  normalizeHeroBackgroundGradient,
+  normalizeHeroData,
+  normalizeHeroHref,
+} from "../../../../widgets/core/hero";
 import {
   richTextHtmlToPlainText,
   sanitizeRichTextHtmlWithDiagnostics,
@@ -54,11 +63,10 @@ import {
   ColorContrastNotice,
   ClearableFieldHeader,
   hasClearableFieldValue,
-  isPickerRepresentableColorValue,
   resolveColorContrastAdvisory,
-  resolveColorPickerValue,
 } from "./ClearableFields";
 import { LinkDestinationField } from "./LinkDestinationField";
+import { SharedColorControl } from "./SharedColorControl";
 import {
   ReadonlyWidgetSummaryRow,
   WidgetControlRow as BaseWidgetControlRow,
@@ -185,16 +193,12 @@ const motionOptions = ["none", "fade-in", "slide-up"] as const;
 const tiltOptions = ["none", "subtle", "strong"] as const;
 const formatTokenOptionLabel = (option: string) => (option === "none" ? "None" : option);
 const heroPresetLimit = 24;
-const linearGradientPattern =
-  /^linear-gradient\(\s*(-?\d+(?:\.\d+)?)deg\s*,\s*(#[0-9a-fA-F]{3,8})\s*,\s*(#[0-9a-fA-F]{3,8})\s*\)$/;
 const defaultGradientStart = "#0f172a";
 const defaultGradientEnd = "#475569";
 const defaultGradientAngle = 135;
 const defaultInlineOverlayColor = "#000000";
 const defaultInlineOverlayOpacity = 0.2;
 const defaultBackgroundOverlayOpacity = 0.25;
-const rgbaPattern =
-  /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*((?:0|1|0?\.\d+)))?\s*\)$/i;
 const heroSocialProofAvatarLimit = 5;
 const imageUrlPattern = /\.(?:avif|gif|jpe?g|png|svg|webp)(?:[?#].*)?$/i;
 const videoUrlPattern = /\.(?:m4v|mov|mp4|ogg|webm)(?:[?#].*)?$/i;
@@ -950,12 +954,10 @@ const resolveHeroSolidBackgroundForContrast = (
   background: HeroData["background"] | undefined
 ): string | undefined => {
   const media = resolveBackgroundMedia(background);
-  if (hasClearableFieldValue(background?.gradient) || media.type !== "none") {
+  if (normalizeHeroBackgroundGradient(background?.gradient) || media.type !== "none") {
     return undefined;
   }
-  return typeof background?.color === "string" && background.color.trim().length > 0
-    ? background.color
-    : undefined;
+  return normalizeCssColorValue(background?.color, "inherited-render");
 };
 
 const resolveHeroContrastSurfaceBackground = ({
@@ -967,7 +969,7 @@ const resolveHeroContrastSurfaceBackground = ({
   defaultBackground?: string;
   heroBackground?: string;
 }) => {
-  const normalized = typeof authoredBackground === "string" ? authoredBackground.trim() : undefined;
+  const normalized = normalizeCssColorValue(authoredBackground, "inherited-render");
   if (normalized && normalized !== "transparent") {
     return normalized;
   }
@@ -1016,78 +1018,55 @@ function HeroColorField({
   allowTransparent?: boolean;
   onClear?: () => void;
 }) {
-  const normalizedValue = value?.trim();
-  const isTransparent = normalizedValue === "transparent";
-  const hasCustomValue =
-    hasClearableFieldValue(value) && !isTransparent && !isPickerRepresentableColorValue(value);
-  const pickerValue = resolveColorPickerValue(value, pickerFallback);
-  const canSetTransparent = allowTransparent;
-
   return (
-    <WidgetControlRow
-      id={id}
-      label={label}
-      actions={
-        onClear ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onClear}
-            disabled={!hasClearableFieldValue(value)}
-          >
-            Clear
-          </Button>
-        ) : null
-      }
-    >
-      {(fieldProps) => (
-        <div className="space-y-3">
-          <div className="grid grid-cols-[2.75rem_1fr] gap-3">
-            <Input
-              id={fieldProps.id}
-              type="color"
-              value={pickerValue}
-              onChange={(event) => onChange(event.target.value)}
-              className="h-10 w-11 p-1"
-              aria-labelledby={fieldProps["aria-labelledby"]}
-              aria-describedby={fieldProps["aria-describedby"]}
-            />
-            <div className="flex min-h-10 flex-wrap items-center gap-2">
-              <span className="rounded-md border border-border/70 px-2 py-1 text-xs text-muted-foreground">
-                {hasCustomValue
-                  ? "Saved custom color"
-                  : isTransparent
-                    ? "Transparent"
-                    : hasClearableFieldValue(value)
-                      ? "Selected color"
-                      : "Theme default"}
-              </span>
-              {canSetTransparent ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onChange("transparent")}
-                >
-                  Use transparent
-                </Button>
-              ) : null}
-            </div>
-          </div>
-          {hasCustomValue ? (
-            <p className="rounded-md border border-dashed border-border/70 bg-muted/40 p-2 text-xs text-muted-foreground">
-              A saved custom color is configured.{" "}
-              {onClear
-                ? "Pick a swatch to replace it, or clear the field."
-                : "Pick a swatch to replace it."}
-            </p>
-          ) : null}
-        </div>
+    <WidgetControlRow id={id} label={label}>
+      {() => (
+        <SharedColorControl
+          label={label}
+          value={value}
+          onChange={onChange}
+          onSwatchChange={onChange}
+          onClear={onClear}
+          pickerFallback={pickerFallback}
+          showValueInput={false}
+          allowTransparent={allowTransparent}
+          colorProfile="inherited-render"
+        />
       )}
     </WidgetControlRow>
   );
 }
+
+const readHeroGradientEditorState = (value: string | undefined) => {
+  const normalized = normalizeHeroBackgroundGradient(value);
+  if (!normalized) {
+    return {
+      angle: defaultGradientAngle,
+      start: defaultGradientStart,
+      end: defaultGradientEnd,
+      preview: undefined,
+    };
+  }
+  const content = normalized.slice("linear-gradient(".length, -1);
+  const components: string[] = [];
+  let depth = 0;
+  let startIndex = 0;
+  for (let index = 0; index < content.length; index += 1) {
+    if (content[index] === "(") depth += 1;
+    if (content[index] === ")") depth -= 1;
+    if (content[index] === "," && depth === 0) {
+      components.push(content.slice(startIndex, index).trim());
+      startIndex = index + 1;
+    }
+  }
+  components.push(content.slice(startIndex).trim());
+  return {
+    angle: Number.parseInt(components[0]?.replace(/deg$/i, "") ?? "", 10),
+    start: components[1] ?? defaultGradientStart,
+    end: components[2] ?? defaultGradientEnd,
+    preview: normalized,
+  };
+};
 
 function GradientField({
   id,
@@ -1102,14 +1081,14 @@ function GradientField({
   onChange: (next: string) => void;
   onClear?: () => void;
 }) {
-  const parsed = value?.match(linearGradientPattern);
-  const angle =
-    parsed && Number.isFinite(Number(parsed[1])) ? Number(parsed[1]) : defaultGradientAngle;
-  const start = parsed ? parsed[2] : defaultGradientStart;
-  const end = parsed ? parsed[3] : defaultGradientEnd;
+  const state = readHeroGradientEditorState(value);
+  const { angle, start, end } = state;
 
   const emit = (nextAngle: number, nextStart: string, nextEnd: string) => {
-    onChange(`linear-gradient(${nextAngle}deg, ${nextStart}, ${nextEnd})`);
+    const normalized = normalizeHeroBackgroundGradient(
+      `linear-gradient(${nextAngle}deg, ${nextStart}, ${nextEnd})`
+    );
+    if (normalized) onChange(normalized);
   };
 
   return (
@@ -1134,33 +1113,31 @@ function GradientField({
         <div className="space-y-2">
           <div
             className="h-10 rounded-md border border-border/70"
-            style={{ backgroundImage: `linear-gradient(${angle}deg, ${start}, ${end})` }}
+            style={{ backgroundImage: state.preview }}
           />
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">Start color</p>
-              <Input
-                type="color"
-                value={resolveColorPickerValue(start, defaultGradientStart)}
-                onChange={(event) => {
-                  emit(angle, event.target.value, end);
-                }}
-                className="h-9 w-full p-1"
-                aria-labelledby={fieldProps["aria-labelledby"]}
-                aria-describedby={fieldProps["aria-describedby"]}
+              <SharedColorControl
+                label="Gradient start"
+                value={start}
+                onChange={(next) => emit(angle, next, end)}
+                onSwatchChange={(next) => emit(angle, next, end)}
+                pickerFallback={defaultGradientStart}
+                colorProfile="inherited-render"
+                allowInheritKeyword={false}
               />
             </div>
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">End color</p>
-              <Input
-                type="color"
-                value={resolveColorPickerValue(end, defaultGradientEnd)}
-                onChange={(event) => {
-                  emit(angle, start, event.target.value);
-                }}
-                className="h-9 w-full p-1"
-                aria-labelledby={fieldProps["aria-labelledby"]}
-                aria-describedby={fieldProps["aria-describedby"]}
+              <SharedColorControl
+                label="Gradient end"
+                value={end}
+                onChange={(next) => emit(angle, start, next)}
+                onSwatchChange={(next) => emit(angle, start, next)}
+                pickerFallback={defaultGradientEnd}
+                colorProfile="inherited-render"
+                allowInheritKeyword={false}
               />
             </div>
           </div>
@@ -1187,47 +1164,16 @@ function GradientField({
   );
 }
 
-const clampOverlayOpacity = (value: number, fallback: number) => {
-  if (!Number.isFinite(value)) return fallback;
-  return Math.min(0.9, Math.max(0, value));
-};
-
-const parseOverlayOpacity = (value: string | undefined, fallback: number) => {
-  const match = value?.trim().match(rgbaPattern);
-  if (!match) return fallback;
-  const alpha = match[4];
-  if (typeof alpha !== "string" || alpha.length === 0) return 1;
-  return clampOverlayOpacity(Number.parseFloat(alpha), fallback);
-};
-
-const clampRgbChannel = (value: number) => Math.min(255, Math.max(0, value));
-
-const resolveOverlayPickerColor = (value: string | undefined) => {
-  const normalized = value?.trim();
-  const match = normalized?.match(rgbaPattern);
-  if (!match) return resolveColorPickerValue(value, defaultInlineOverlayColor);
-  const [, red, green, blue] = match;
-  const toHex = (channel: string | undefined) =>
-    clampRgbChannel(Number.parseInt(channel ?? "0", 10))
-      .toString(16)
-      .padStart(2, "0");
-  return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
-};
-
 const formatOverlayColor = (color: string, opacity: number) => {
-  const hex = resolveOverlayPickerColor(color).replace("#", "");
-  const expanded =
-    hex.length === 3
-      ? hex
-          .split("")
-          .map((part) => part + part)
-          .join("")
-      : hex.padEnd(6, "0").slice(0, 6);
-  const red = Number.parseInt(expanded.slice(0, 2), 16);
-  const green = Number.parseInt(expanded.slice(2, 4), 16);
-  const blue = Number.parseInt(expanded.slice(4, 6), 16);
-  const alpha = clampOverlayOpacity(opacity, defaultInlineOverlayOpacity).toFixed(2);
-  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+  const parsed = parseCssColorValue(color, "inherited-render");
+  if (!parsed || (parsed.kind !== "hex" && parsed.kind !== "rgb" && parsed.kind !== "hsl")) {
+    return undefined;
+  }
+  const alpha = Number.isFinite(opacity) ? Math.min(0.9, Math.max(0, opacity)) : 0;
+  return normalizeCssColorValue(
+    `rgba(${parsed.rgb.red}, ${parsed.rgb.green}, ${parsed.rgb.blue}, ${alpha.toFixed(2)})`,
+    "inherited-render"
+  );
 };
 
 function HeroOverlayField({
@@ -1245,12 +1191,50 @@ function HeroOverlayField({
   onClear: () => void;
   defaultOpacity: number;
 }) {
-  const color = resolveOverlayPickerColor(value);
-  const opacity = parseOverlayOpacity(value, defaultOpacity);
-  const strength = Math.round(opacity * 100);
-  const updateColor = (nextColor: string) => onChange(formatOverlayColor(nextColor, opacity));
-  const updateOpacity = (nextOpacity: string) =>
-    onChange(formatOverlayColor(color, Number(nextOpacity) / 100));
+  const parsed = parseCssColorValue(value, "inherited-render");
+  const literal =
+    parsed && (parsed.kind === "hex" || parsed.kind === "rgb" || parsed.kind === "hsl")
+      ? parsed
+      : undefined;
+  const isCurrentOrToken =
+    parsed?.kind === "token" ||
+    (parsed?.kind === "keyword" && parsed.normalized === "currentColor");
+  const isTransparent = parsed?.kind === "keyword" && parsed.normalized === "transparent";
+  const isUnset = value === undefined || value === "";
+  const isInvalid = !isUnset && !literal && !isCurrentOrToken && !isTransparent;
+  const pickerColor = literal?.baseHex ?? defaultInlineOverlayColor;
+  const literalAlpha = literal ? Math.min(0.9, literal.alpha) : undefined;
+  const strength = isUnset
+    ? Math.round(defaultOpacity * 100)
+    : literal
+      ? Math.round(literalAlpha! * 100)
+      : isCurrentOrToken
+        ? 100
+        : 0;
+  const previewColor = isUnset
+    ? (formatOverlayColor(defaultInlineOverlayColor, defaultOpacity) ?? "transparent")
+    : literal
+      ? (formatOverlayColor(literal.normalized, literalAlpha!) ?? "transparent")
+      : isCurrentOrToken
+        ? (parsed?.normalized ?? "transparent")
+        : "transparent";
+  const updateColor = (nextColor: string) => {
+    const next = formatOverlayColor(nextColor, literalAlpha ?? defaultOpacity);
+    if (next) onChange(next);
+  };
+  const updateOpacity = (nextOpacity: string) => {
+    const color = literal?.baseHex ?? (isUnset ? defaultInlineOverlayColor : undefined);
+    if (!color) return;
+    const next = formatOverlayColor(color, Number(nextOpacity) / 100);
+    if (next) onChange(next);
+  };
+  const hint = isCurrentOrToken
+    ? "Choose a picker color before editing overlay strength."
+    : isTransparent
+      ? "Choose a picker color before editing overlay strength."
+      : isInvalid
+        ? "This saved overlay is unsupported. Choose a picker color to replace it."
+        : undefined;
 
   return (
     <WidgetControlRow
@@ -1272,7 +1256,7 @@ function HeroOverlayField({
         <div className="space-y-3">
           <div
             className="h-10 rounded-md border border-border/70"
-            style={{ backgroundColor: formatOverlayColor(color, opacity) }}
+            style={{ backgroundColor: previewColor }}
           />
           <div className="grid gap-3 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
             <div className="space-y-1">
@@ -1280,7 +1264,7 @@ function HeroOverlayField({
               <Input
                 id={fieldProps.id}
                 type="color"
-                value={color}
+                value={pickerColor}
                 onChange={(event) => updateColor(event.target.value)}
                 aria-labelledby={fieldProps["aria-labelledby"]}
                 aria-describedby={fieldProps["aria-describedby"]}
@@ -1296,12 +1280,14 @@ function HeroOverlayField({
                 min={0}
                 max={90}
                 step={5}
-                value={strength}
+                value={Math.min(90, strength)}
+                disabled={!literal && !isUnset}
                 onChange={(event) => updateOpacity(event.target.value)}
                 aria-label={`${label} strength`}
               />
             </div>
           </div>
+          {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
         </div>
       )}
     </WidgetControlRow>
@@ -1373,10 +1359,12 @@ export function HeroVisualEditor({
   const headlineContrast = resolveColorContrastAdvisory({
     foreground: style.textColor,
     background: heroSolidBackground,
+    colorProfile: "inherited-render",
   });
   const bodyContrast = resolveColorContrastAdvisory({
     foreground: style.bodyColor,
     background: heroSolidBackground,
+    colorProfile: "inherited-render",
   });
   const primaryButtonContrast = resolveColorContrastAdvisory({
     foreground: style.primaryButtonText,
@@ -1385,6 +1373,7 @@ export function HeroVisualEditor({
       defaultBackground: hasStyleObject ? undefined : "var(--color-primary)",
       heroBackground: heroSolidBackground,
     }),
+    colorProfile: "inherited-render",
   });
   const secondaryButtonContrast = resolveColorContrastAdvisory({
     foreground: style.secondaryButtonText,
@@ -1392,6 +1381,7 @@ export function HeroVisualEditor({
       authoredBackground: style.secondaryButtonBg,
       heroBackground: heroSolidBackground,
     }),
+    colorProfile: "inherited-render",
   });
   const updateLayout = (patch: Partial<HeroData["layout"]>) =>
     update({ layout: { ...value.layout, ...patch } });

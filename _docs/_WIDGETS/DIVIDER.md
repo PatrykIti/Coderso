@@ -78,15 +78,20 @@ Notes:
   - `dashed` with bounded dash patterns
   - `dotted`
 - Transparency is controlled through bounded opacity tokens.
-- `color` and `labelColor` are normalized before rendering. Imported/admin/API
-  payloads may only use bounded clearable CSS colors:
-  - hex colors (`#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`)
-  - bounded `rgb/rgba` and `hsl/hsla` values
-  - `var(--color-*)` theme tokens
-  - `transparent`, `currentColor`, and `inherit`
+- `labelColor` is a direct CSS property normalized with the shared
+  `inherited-render` profile, so canonical `currentColor` and `inherit` are
+  valid alongside bounded literals, `transparent`, and `var(--color-*)`.
+- `color` is classified as a nested/composite stop for every variant because
+  dashed and dotted variants interpolate it into gradients. It uses
+  `inherited-render` with `allowInheritKeyword=false`: `currentColor` is valid,
+  but `inherit` is rejected regardless of the currently selected line style.
 - Unsafe CSS strings such as `url(...)`, `expression(...)`, `javascript:`,
   `data:`, delimiter injection, unknown functions, and malformed colors are
   rejected before they can reach inline styles or dashed/dotted gradients.
+- TASK-541 seeds no color bytes. Clearing the raw override removes it, while the
+  normalized/runtime Divider retains its historical `color` default and
+  `labelColor`-to-line-color fallback; those existing fallbacks are not rewritten
+  into a new sentinel.
 
 ## Runtime Marker Contract
 

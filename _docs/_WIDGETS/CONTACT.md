@@ -247,11 +247,17 @@ Public DOM rozdziela stan skonfigurowany od efektywnego:
   `style.buttonBackgroundColor`, `style.buttonTextColor`, i
   `style.buttonBorderColor` sa clearable z disabled-state gdy Contact jest w
   stanie theme-default, zgodnie z hero-like daily authoring.
-- Public inline colors przechodza przez bounded CSS color normalizer
-  (`hex`, bounded `rgb/hsl`, `transparent/currentColor/inherit`, albo
-  `var(--color-*)`). Unsafe fragments typu `url(...)`, `data:`,
-  `javascript:`, `expression(...)`, braces i semicolons sa ignorowane przed
-  renderem.
+- Osiem bezposrednich pol (`style.background`, `style.surfaceColor`,
+  `style.borderColor`, `style.textColor`, `style.mutedTextColor`,
+  `style.buttonBackgroundColor`, `style.buttonTextColor`,
+  `style.buttonBorderColor`) przechodzi przez wspolny profil
+  `inherited-render` przy normalizacji i renderze. Akceptowane
+  `currentColor`/`inherit` oraz bezpieczne literalne kolory i tokeny sa
+  kanonizowane; semantycznie niepoprawne lub niebezpieczne wartosci sa pomijane,
+  nigdy emitowane raw. TASK-541 nie dodaje defaultow: siedem pol poza
+  `borderColor` pozostaje sparse na authored `style`, natomiast pusty/usuniety
+  `borderColor` nadal materializuje historyczny fallback `var(--color-border)`.
+  Clear nie zapisuje nowego sentinela.
 
 ## Normalization Rules
 

@@ -4,8 +4,9 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import { tabsDefaults, type TabsData } from "../../../core/widgets/core/tabs";
+import { normalizeTabsData, tabsDefaults, type TabsData } from "../../../core/widgets/core/tabs";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
+import { RETAINED_COLOR_FIELDS } from "../widgets/retainedColorConsumerTable";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -107,6 +108,12 @@ vi.mock("@/components/ui/select", () => {
 
 vi.mock("@/lib/utils", () => ({
   cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    info: vi.fn(),
+  },
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -306,6 +313,77 @@ const renderEditor = async ({
 afterEach(() => {
   document.body.innerHTML = "";
   vi.restoreAllMocks();
+});
+
+test("Tabs mounted retained colors stay inherited until explicit picker replacement or clear", async () => {
+  const fields = RETAINED_COLOR_FIELDS.tabs;
+  type ColorKey = keyof NonNullable<TabsData["style"]>;
+  const keyFor = (path: (typeof fields)[number]["path"]) => path.slice("style.".length) as ColorKey;
+  const initialStyle = Object.fromEntries(
+    fields.map((field, index) => [keyFor(field.path), index % 2 === 0 ? "currentColor" : "inherit"])
+  ) as NonNullable<TabsData["style"]>;
+  const expectedColors = Object.fromEntries(
+    fields.map((field) => [keyFor(field.path), initialStyle[keyFor(field.path)]])
+  ) as Record<ColorKey, string | undefined>;
+  const view = await renderEditor({
+    editor: "visual",
+    initialValue: {
+      ...tabsDefaults,
+      style: initialStyle,
+    },
+  });
+
+  try {
+    for (const field of fields) {
+      const control = view.container.querySelector(`[data-widget-control="${field.control}"]`);
+      expect(control, field.control).toBeInstanceOf(HTMLElement);
+      expect(
+        control?.querySelector('[data-shared-color-state="inherited"]'),
+        field.control
+      ).toBeInstanceOf(HTMLElement);
+      expect(control?.textContent, field.control).toContain("Inherited color");
+    }
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
+
+    for (const [index, field] of fields.entries()) {
+      const key = keyFor(field.path);
+      const control = view.container.querySelector(`[data-widget-control="${field.control}"]`);
+      const picker = control?.querySelector('input[type="color"]');
+      setInputValue(picker, "#102030");
+      expectedColors[key] = "#102030";
+      const expectedPickerValue = normalizeTabsData({
+        ...tabsDefaults,
+        style: { ...expectedColors },
+      });
+
+      expect(view.onChangeSpy, `${field.control}:picker`).toHaveBeenCalledTimes(index * 2 + 1);
+      expect(view.getValue(), `${field.control}:picker`).toEqual(expectedPickerValue);
+      expect(view.onChangeSpy, `${field.control}:picker-call`).toHaveBeenLastCalledWith(
+        expectedPickerValue
+      );
+
+      const updatedControl = view.container.querySelector(
+        `[data-widget-control="${field.control}"]`
+      );
+      const clearButton = Array.from(updatedControl?.querySelectorAll("button") ?? []).find(
+        (button) => button.textContent === "Clear"
+      );
+      clickButton(clearButton);
+      expectedColors[key] = undefined;
+      const expectedClearValue = normalizeTabsData({
+        ...tabsDefaults,
+        style: { ...expectedColors },
+      });
+
+      expect(view.onChangeSpy, `${field.control}:clear`).toHaveBeenCalledTimes(index * 2 + 2);
+      expect(view.getValue(), `${field.control}:clear`).toEqual(expectedClearValue);
+      expect(view.onChangeSpy, `${field.control}:clear-call`).toHaveBeenLastCalledWith(
+        expectedClearValue
+      );
+    }
+  } finally {
+    view.cleanup();
+  }
 });
 
 test("Tabs editors expose non-overlapping writable ownership metadata", async () => {

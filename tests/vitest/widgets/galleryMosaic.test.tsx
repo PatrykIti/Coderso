@@ -40,6 +40,28 @@ test("gallery mosaic renders defaults", () => {
   expect(html).toContain('id="gallery-mosaic-gallery-1-title"');
 });
 
+test("gallery mosaic canonicalizes inherited overlays and rejects hidden whitespace", () => {
+  for (const [raw, expected] of [
+    [" CURRENTCOLOR ", "currentColor"],
+    [" INHERIT ", "inherit"],
+  ] as const) {
+    const normalized = normalizeGalleryMosaicData({
+      ...galleryMosaicDefaults,
+      style: { ...galleryMosaicDefaults.style, overlay: raw },
+    });
+    expect(normalized.style?.overlay).toBe(expected);
+    expect(renderToString(<GalleryMosaicBlock data={normalized} variant="mosaic" />)).toContain(
+      `background:${expected}`
+    );
+  }
+
+  const rejected = normalizeGalleryMosaicData({
+    ...galleryMosaicDefaults,
+    style: { ...galleryMosaicDefaults.style, overlay: "\u00a0inherit" },
+  });
+  expect(rejected.style?.overlay).toBeUndefined();
+});
+
 test("gallery mosaic normalization keeps deterministic ids and item bounds", () => {
   const items = normalizeGalleryMosaicItems(
     [

@@ -52,6 +52,36 @@ Kolejnosc merge:
 2. Global overrides (`design.tokens`)
 3. Profile overrides (`theme_profiles.tokens`)
 
+## Authored color references (TASK-541)
+
+Theme token definitions continue to use their own strict token schemas. Menu,
+Form, retained compatibility consumers, and shared admin controls reference
+those tokens through the canonical Bun-free CSS color contract documented in
+`DESIGN_TOKENS.md`:
+
+- ordinary consumers already enrolled in the canonical contract, including
+  Menu writes, use the `authoring` profile (`hex`, bounded comma-form RGB/HSL
+  with optional alpha, `transparent`, and `var(--color-*)`);
+- Form theme values use `inherited-render` end to end and may additionally store
+  canonical `currentColor`/`inherit` as the explicit TASK-516 compatibility
+  exception;
+- retained direct-color reads opt into `inherited-render` only where their
+  individual compatibility document says so; nested gradient/overlay stops
+  reject `inherit` even when they retain `currentColor`;
+- the landed Page admin control uses `authoring`, but Page persistence/rendering
+  still use the legacy Page sanitizer until TASK-539-02-L01 imports the shared
+  parser. That sanitizer retains its named-value behavior while independently
+  enforcing the exact site-token list `primary`, `secondary`, `accent`, `bg`,
+  `surface`, `text`, and `border`.
+
+For consumers already enrolled in the canonical contract, JSON-Schema color
+patterns are structural prefilters. Numeric ranges and canonical bytes are
+decided by the semantic parser again at write and render boundaries. Optional
+color overrides whose owner contract is sparse remain present-only. TASK-541
+does not materialize a new theme default into stored content; retained owners
+that already normalize empty/explicit default sentinels keep those prior bytes
+and fallback semantics.
+
 ## Page routing per profile
 
 - `/` moze wskazywac na inna strone w kazdym profilu.

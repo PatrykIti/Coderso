@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 
 import React from "react";
+import { createHash } from "node:crypto";
 import { afterEach, expect, test, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 
@@ -19,6 +20,7 @@ import {
   newsletterDefaults,
   type NewsletterData,
 } from "../../../core/widgets/core/newsletter";
+import { buildFormColorTheme } from "../forms/formColorConsumerTable";
 
 const originalFetch = globalThis.fetch;
 
@@ -5716,6 +5718,18 @@ const themedResolvedFields = [
   { id: "f1", type: "text", label: "Name", name: "name", required: true, settings: {} },
 ];
 
+const colorResolvedFields = [
+  {
+    ...themedResolvedFields[0],
+    settings: { helper: "Helper copy" },
+  },
+];
+
+const PRE_TASK_NO_THEME_EMBED_BASELINE = Object.freeze({
+  length: 77_762,
+  sha256: "88080c410b91998a67ba638660d0ad3609f85cca2296f4fdf9766ce71c8c0e5e",
+});
+
 test("516-06: a themed form renders the mapped container width, submit color/label and typography", () => {
   const html = renderEmbedHtml({
     formId: "form-themed",
@@ -5760,6 +5774,43 @@ test("516-06: a themed form renders the mapped container width, submit color/lab
   expect(html).toContain("w-full");
 });
 
+test("Form runtime embed consumes the shared ten-field color table at concrete elements", () => {
+  const html = renderEmbedHtml({
+    formId: "form-inherited-theme",
+    resolved: {
+      formName: "Inherited theme",
+      submissionAccess: "public",
+      settings: {
+        layoutMode: "single",
+        saveProgress: false,
+        stepTitles: [],
+        theme: buildFormColorTheme("raw"),
+      },
+      fields: colorResolvedFields,
+    },
+  });
+
+  const host = document.createElement("div");
+  host.innerHTML = html;
+  const card = host.querySelector('[data-form-embed-radius="md"]') as HTMLElement | null;
+  expect(card?.getAttribute("style")).toContain("background-color:currentColor");
+  expect(card?.getAttribute("style")).toContain("border-color:inherit");
+  expect(host.querySelector("h2")?.getAttribute("style")).toContain("color:rgba(1, 2, 3, 0.5)");
+  expect(host.querySelector("label")?.getAttribute("style")).toContain(
+    "color:hsla(210, 50%, 40%, 0.25)"
+  );
+  expect(host.querySelector('p[id$="-helper"]')?.getAttribute("style")).toContain("color:#abc");
+  const input = host.querySelector('input[name="name"]') as HTMLInputElement | null;
+  expect(input?.getAttribute("style")).toContain("border-color:rgb(4, 5, 6)");
+  expect(input?.getAttribute("style")).toContain("background-color:inherit");
+  expect(input?.getAttribute("style")).toContain("color:currentColor");
+  const submit = host.querySelector('[data-form-submit="1"]') as HTMLButtonElement | null;
+  expect(submit?.getAttribute("style")).toContain("background-color:rgba(7, 8, 9, 50%)");
+  expect(submit?.getAttribute("style")).toContain("color:hsl(120, 100%, 50%)");
+  expect(html).not.toContain(" CURRENTCOLOR ");
+  expect(html).not.toContain(" HSLA(");
+});
+
 test("516-06: a form with NO theme and no per-instance style is byte-identical to the pre-516 markup", () => {
   const noThemeData: FormEmbedData = {
     formId: "form-plain",
@@ -5783,7 +5834,12 @@ test("516-06: a form with NO theme and no per-instance style is byte-identical t
   expect(html).not.toContain("max-w-none");
   expect(html).not.toContain("grid-cols-1");
 
-  // Rendering identical data twice yields identical markup (deterministic useId).
+  // This literal was captured from the pre-TASK-541 HEAD with the unchanged
+  // no-theme fixture, so this proves compatibility rather than only determinism.
+  expect(html).toHaveLength(PRE_TASK_NO_THEME_EMBED_BASELINE.length);
+  expect(createHash("sha256").update(html).digest("hex")).toBe(
+    PRE_TASK_NO_THEME_EMBED_BASELINE.sha256
+  );
   expect(html).toBe(renderEmbedHtml(noThemeData));
 });
 

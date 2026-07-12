@@ -17,10 +17,17 @@ import { validate as validateSchema } from "../../../core/server/validation/sche
 import {
   createForm,
   deleteForm,
+  getForm,
   getFormWriteState,
   listFormFields,
   setFormFields,
 } from "../../../core/services/forms/formsService";
+import { formSettingsSchema, FORM_SCHEMA_LIMITS } from "../../../core/services/forms/formSettings";
+import { CSS_COLOR_SCHEMA_PATTERNS } from "../../../core/services/theme/cssColorContract";
+import {
+  FORM_COLOR_CONSUMER_CASES,
+  buildFormColorTheme,
+} from "../../vitest/forms/formColorConsumerTable";
 
 type RouteContext = {
   params: Record<string, string>;
@@ -31,6 +38,22 @@ type RouteContext = {
 type RouteHandler = (ctx: RouteContext) => Promise<unknown> | unknown;
 
 type Route = { method: string; path: string; handlers: RouteHandler[] };
+
+const isUnknownRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const readSchemaAnyOf = (groups: unknown, group: string, key: string): readonly unknown[] => {
+  if (!isUnknownRecord(groups)) throw new Error("form_theme_groups_schema_missing");
+  const groupSchema = groups[group];
+  if (!isUnknownRecord(groupSchema) || !isUnknownRecord(groupSchema.properties)) {
+    throw new Error(`form_theme_group_schema_missing:${group}`);
+  }
+  const colorSchema = groupSchema.properties[key];
+  if (!isUnknownRecord(colorSchema) || !Array.isArray(colorSchema.anyOf)) {
+    throw new Error(`form_theme_color_schema_missing:${group}.${key}`);
+  }
+  return colorSchema.anyOf;
+};
 
 const makeRouter = () => {
   const routes: Route[] = [];
@@ -109,6 +132,58 @@ test("registerFormsRoutes wires endpoints", () => {
       "POST /forms/:id/submissions",
     ])
   );
+});
+
+test("Form create/update routes retain forms:write and the shared nested theme schema", () => {
+  const { router, routes } = makeRouter();
+  const permissionByHandler = new Map<RouteHandler, string>();
+  registerFormsRoutes(router, {
+    requirePermission: (permission) => {
+      const handler: RouteHandler = async () => undefined;
+      permissionByHandler.set(handler, permission);
+      return handler;
+    },
+    validate: () => undefined,
+  });
+
+  for (const [method, path] of [
+    ["POST", "/forms"],
+    ["PATCH", "/forms/:id"],
+  ] as const) {
+    const route = routes.find((entry) => entry.method === method && entry.path === path);
+    expect(route).toBeDefined();
+    expect(permissionByHandler.get(route!.handlers[0]!)).toBe("forms:write");
+  }
+
+  for (const schema of [formCreateSchema, formUpdateSchema]) {
+    expect(schema.properties.settings).toBe(formSettingsSchema);
+    const settings = schema.properties.settings as typeof formSettingsSchema;
+    expect(settings.additionalProperties).toBe(false);
+    expect(settings.properties.theme.additionalProperties).toBe(false);
+    for (const group of ["layout", "surface", "typography", "input", "submit"] as const) {
+      expect(settings.properties.theme.properties[group].additionalProperties).toBe(false);
+    }
+    const groups: unknown = settings.properties.theme.properties;
+    for (const entry of FORM_COLOR_CONSUMER_CASES) {
+      expect(readSchemaAnyOf(groups, entry.group, entry.key)).toEqual([
+        { const: "" },
+        {
+          type: "string",
+          maxLength: FORM_SCHEMA_LIMITS.themeColor,
+          pattern: CSS_COLOR_SCHEMA_PATTERNS["inherited-render"],
+        },
+      ]);
+    }
+  }
+  expect(() =>
+    validateSchema(formCreateSchema, {
+      name: "Color schema table",
+      settings: { theme: buildFormColorTheme("raw") },
+    })
+  ).not.toThrow();
+  expect(() =>
+    validateSchema(formUpdateSchema, { settings: { theme: buildFormColorTheme("raw") } })
+  ).not.toThrow();
 });
 
 test("mapFormError returns stable API errors for known form domain failures", () => {
@@ -378,6 +453,82 @@ test("real create/update routes accept empty/null strings and retain service can
   expect(updated.description).toBeNull();
   expect(updated.successMessage).toBeNull();
   expect(updated.successRedirectUrl).toBeNull();
+});
+
+test("real create/update routes persist canonical inherited Form theme colors", async () => {
+  const routes = registerExecutableFormsRouter();
+  const unique = randomUUID();
+  const created = (await executeRoute(routes, "POST", "/forms", {
+    params: {},
+    query: {},
+    body: {
+      name: `Color contract ${unique}`,
+      slug: `color-contract-${unique}`,
+      settings: { theme: buildFormColorTheme("raw") },
+    },
+  })) as { id: string; settings: Record<string, unknown> };
+  ownedFormIds.push(created.id);
+  expect(created.settings).toMatchObject({ theme: buildFormColorTheme("canonical") });
+  expect((await getForm(created.id))?.settings).toMatchObject({
+    theme: buildFormColorTheme("canonical"),
+  });
+  const createdRead = (await executeRoute(routes, "GET", "/forms/:id", {
+    params: { id: created.id },
+    query: {},
+    body: undefined,
+  })) as { settings: Record<string, unknown> };
+  expect(createdRead.settings).toMatchObject({ theme: buildFormColorTheme("canonical") });
+
+  const updated = (await executeRoute(routes, "PATCH", "/forms/:id", {
+    params: { id: created.id },
+    query: {},
+    body: {
+      settings: { theme: buildFormColorTheme("updateRaw") },
+    },
+  })) as { settings: Record<string, unknown> };
+  expect(updated.settings).toMatchObject({ theme: buildFormColorTheme("updateCanonical") });
+  expect((await getForm(created.id))?.settings).toMatchObject({
+    theme: buildFormColorTheme("updateCanonical"),
+  });
+  const updatedRead = (await executeRoute(routes, "GET", "/forms/:id", {
+    params: { id: created.id },
+    query: {},
+    body: undefined,
+  })) as { settings: Record<string, unknown> };
+  expect(updatedRead.settings).toMatchObject({ theme: buildFormColorTheme("updateCanonical") });
+});
+
+test("Form theme route validation rejects structure before mutation and omits semantic range failures", async () => {
+  const routes = registerExecutableFormsRouter();
+  const form = await createOwnedForm();
+  const sentinelSettings = form.settings;
+  const exactCap = `${" ".repeat(FORM_SCHEMA_LIMITS.themeColor - 4)}#abc`;
+
+  for (const settings of [
+    { theme: { surface: { unknownColor: "#fff" } } },
+    { theme: { surface: { background: ` ${exactCap}` } } },
+  ]) {
+    await expect(
+      executeRoute(routes, "PATCH", "/forms/:id", {
+        params: { id: form.id },
+        query: {},
+        body: { settings },
+      })
+    ).rejects.toMatchObject({ code: "validation_error", status: 400 });
+    expect((await getForm(form.id))?.settings).toEqual(sentinelSettings);
+  }
+
+  const rangeInvalid = (await executeRoute(routes, "PATCH", "/forms/:id", {
+    params: { id: form.id },
+    query: {},
+    body: {
+      settings: {
+        theme: { surface: { background: "rgb(256, 0, 0)" } },
+      },
+    },
+  })) as { settings: { theme?: unknown } };
+  expect(rangeInvalid.settings.theme).toBeUndefined();
+  expect(JSON.stringify(rangeInvalid.settings)).not.toContain("rgb(256, 0, 0)");
 });
 
 test("real create/update routes pin every slug form and form-string maximum", async () => {

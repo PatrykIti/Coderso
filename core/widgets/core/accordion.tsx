@@ -1,5 +1,9 @@
 import { useId, type ComponentType, type CSSProperties, type ReactNode } from "react";
 
+import {
+  CSS_COLOR_SCHEMA_PATTERNS,
+  CSS_COLOR_VALUE_MAX_LENGTH,
+} from "../../services/theme/cssColorContract";
 import { renderEditorPlaceholder } from "../renderContext";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import { parseRepeatableSlotId, resolveWidgetSlotTargets } from "../slots";
@@ -21,6 +25,22 @@ export const accordionRadiusTokens = ["sm", "md", "lg", "xl"] as const;
 export const accordionSummaryFontSizeTokens = ["sm", "base", "lg"] as const;
 export const accordionSummaryFontWeightTokens = ["medium", "semibold", "bold"] as const;
 export const accordionMaxWidthTokens = ["sm", "md", "lg", "full"] as const;
+const accordionColorValueSchema = {
+  anyOf: [
+    { const: "" },
+    {
+      type: "string",
+      maxLength: CSS_COLOR_VALUE_MAX_LENGTH,
+      pattern: CSS_COLOR_SCHEMA_PATTERNS["inherited-render"],
+    },
+    {
+      type: "string",
+      maxLength: CSS_COLOR_VALUE_MAX_LENGTH,
+      pattern:
+        "^(?![\\u0000-\\uffff]*[^\\u0020-\\u007e]) *[a-zA-Z][a-zA-Z0-9_-]*-[a-zA-Z0-9_-]+ *$",
+    },
+  ],
+} as const;
 
 export type AccordionMotion = (typeof accordionMotionTokens)[number];
 export type AccordionPadding = (typeof accordionPaddingTokens)[number];
@@ -112,10 +132,10 @@ export const accordionSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
-        surfaceColor: { type: "string" },
-        borderColor: { type: "string" },
-        summaryTextColor: { type: "string" },
-        descriptionTextColor: { type: "string" },
+        surfaceColor: accordionColorValueSchema,
+        borderColor: accordionColorValueSchema,
+        summaryTextColor: accordionColorValueSchema,
+        descriptionTextColor: accordionColorValueSchema,
         summaryPadding: { enum: accordionPaddingTokens },
         contentPadding: { enum: accordionPaddingTokens },
         radius: { enum: accordionRadiusTokens },
@@ -318,11 +338,21 @@ const resolveToken = <T extends string>(value: unknown, fallback: T, allowed: re
 const legacyAccordionColorTokenPattern = /^[a-zA-Z][a-zA-Z0-9_-]*-[a-zA-Z0-9_-]+$/;
 const unsafeAccordionColorFragments = /(?:url\s*\(|expression\s*\(|javascript:|data:|[;{}<>])/i;
 
+const trimAccordionLegacyAsciiSpace = (value: string): string => {
+  let start = 0;
+  let end = value.length;
+  while (start < end && value.charCodeAt(start) === 0x20) start += 1;
+  while (end > start && value.charCodeAt(end - 1) === 0x20) end -= 1;
+  return value.slice(start, end);
+};
+
 const resolveAccordionColorValue = (value: unknown, fallback?: string) => {
-  const safeColor = resolveClearableCssColorValue(value);
+  const safeColor = resolveClearableCssColorValue(value, "inherited-render");
   if (safeColor) return safeColor;
 
-  const trimmed = toTrimmedString(value);
+  if (typeof value !== "string" || value.length > CSS_COLOR_VALUE_MAX_LENGTH) return fallback;
+
+  const trimmed = trimAccordionLegacyAsciiSpace(value);
   if (trimmed && !unsafeAccordionColorFragments.test(trimmed)) {
     return legacyAccordionColorTokenPattern.test(trimmed) ? trimmed : fallback;
   }

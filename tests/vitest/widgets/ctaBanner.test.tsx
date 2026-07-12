@@ -9,10 +9,14 @@ import {
   CtaBannerWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/CtaBannerEditors";
 import {
+  CTA_BANNER_BACKGROUND_GRADIENT_MAX_LENGTH,
+  CTA_BANNER_BACKGROUND_GRADIENT_SCHEMA_PATTERN,
   createCtaBannerWidget,
   ctaBannerDefaults,
+  ctaBannerSchema,
   CtaBannerBlock,
   normalizeCtaBannerData,
+  parseCtaBannerBackgroundGradient,
   resolveCtaBannerActionRenderState,
   resolveCtaBannerVariant,
   resolveCtaBannerVariantPresentation,
@@ -21,8 +25,119 @@ import {
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
+import {
+  CTA_BANNER_GRADIENT_CONSUMER_CASES,
+  CTA_BANNER_GRADIENT_EXACT_CAP,
+  CTA_BANNER_SIMPLE_COLOR_FIELDS,
+} from "./ctaBannerColorConsumerTable";
 
 const StubEditor: ComponentType<WidgetEditorProps<CtaBannerData>> = () => null;
+
+test("CTA consumer tables are deeply runtime-frozen and pin the independent cap", () => {
+  expect(CTA_BANNER_BACKGROUND_GRADIENT_MAX_LENGTH).toBe(96);
+  expect(Object.isFrozen(CTA_BANNER_SIMPLE_COLOR_FIELDS)).toBe(true);
+  for (const field of CTA_BANNER_SIMPLE_COLOR_FIELDS) {
+    expect(Object.isFrozen(field), field).toBe(true);
+  }
+  expect(Object.isFrozen(CTA_BANNER_GRADIENT_CONSUMER_CASES)).toBe(true);
+  for (const entry of CTA_BANNER_GRADIENT_CONSUMER_CASES) {
+    expect(Object.isFrozen(entry), entry.id).toBe(true);
+  }
+});
+
+test("CTA gradient owner preserves its bounded legacy grammar byte-for-byte", () => {
+  for (const entry of CTA_BANNER_GRADIENT_CONSUMER_CASES) {
+    const parsed = parseCtaBannerBackgroundGradient(entry.raw);
+    expect(parsed?.normalized, entry.id).toBe(entry.normalized);
+    if (entry.normalized !== undefined) {
+      expect(parsed?.start).toMatch(/^#[0-9a-fA-F]{3,8}$/);
+      expect(parsed?.end).toMatch(/^#[0-9a-fA-F]{3,8}$/);
+    }
+  }
+
+  expect(CTA_BANNER_GRADIENT_EXACT_CAP).toHaveLength(CTA_BANNER_BACKGROUND_GRADIENT_MAX_LENGTH);
+  expect(
+    new RegExp(CTA_BANNER_BACKGROUND_GRADIENT_SCHEMA_PATTERN).test(
+      CTA_BANNER_GRADIENT_CONSUMER_CASES[1]!.raw as string
+    )
+  ).toBe(true);
+  expect(ctaBannerSchema.properties.background.properties.gradient.anyOf).toHaveLength(2);
+});
+
+test("CTA gradient table is reused by schema, normalizer, and final renderer", () => {
+  clearWidgets();
+  registerWidget(
+    createCtaBannerWidget({ wizard: StubEditor, visual: StubEditor, advanced: StubEditor })
+  );
+
+  for (const entry of CTA_BANNER_GRADIENT_CONSUMER_CASES) {
+    const data = {
+      ...ctaBannerDefaults,
+      background: {
+        ...ctaBannerDefaults.background,
+        gradient: entry.raw as string,
+      },
+    };
+    const validate = () =>
+      normalizeWidgetBlock({
+        id: `cta-gradient-${entry.id}`,
+        type: "cta-banner",
+        variant: "centered",
+        data,
+      });
+    if (entry.schemaAccepted) {
+      expect(validate, `schema:${entry.id}`).not.toThrow();
+    } else {
+      expect(validate, `schema:${entry.id}`).toThrow("widget_schema_invalid");
+    }
+
+    expect(normalizeCtaBannerData(data).background?.gradient, `normalize:${entry.id}`).toBe(
+      entry.normalized
+    );
+    const html = renderToString(<CtaBannerBlock data={data} variant="centered" />);
+    if (entry.normalized !== undefined) {
+      expect(html, `render:${entry.id}`).toContain(entry.normalized);
+    } else if (typeof entry.raw === "string" && entry.raw.length > 0) {
+      expect(html, `render-reject:${entry.id}`).not.toContain(entry.raw);
+    }
+  }
+});
+
+test("CTA simple color fields share inherited canonical normalization and render defense", () => {
+  const style = Object.fromEntries(
+    CTA_BANNER_SIMPLE_COLOR_FIELDS.map((field, index) => [
+      field,
+      index % 2 === 0 ? " CURRENTCOLOR " : " INHERIT ",
+    ])
+  ) as NonNullable<CtaBannerData["style"]>;
+  const normalized = normalizeCtaBannerData({
+    ...ctaBannerDefaults,
+    style,
+    background: { color: " CURRENTCOLOR ", gradient: "linear-gradient(-1.5deg, #abcde, #ABCDEF7)" },
+  });
+
+  for (const [index, field] of CTA_BANNER_SIMPLE_COLOR_FIELDS.entries()) {
+    expect(normalized.style?.[field]).toBe(index % 2 === 0 ? "currentColor" : "inherit");
+  }
+  expect(normalized.background).toMatchObject({
+    color: "currentColor",
+    gradient: "linear-gradient(-1.5deg, #abcde, #ABCDEF7)",
+  });
+
+  const html = renderToString(<CtaBannerBlock data={normalized} variant="centered" />);
+  expect(html).toContain("currentColor");
+  expect(html).toContain("inherit");
+  expect(html).toContain("linear-gradient(-1.5deg, #abcde, #ABCDEF7)");
+
+  const rejected = normalizeCtaBannerData({
+    style: Object.fromEntries(
+      CTA_BANNER_SIMPLE_COLOR_FIELDS.map((field) => [field, "\u00a0#fff"])
+    ) as NonNullable<CtaBannerData["style"]>,
+    background: { color: "rgb(256, 0, 0)", gradient: "linear-gradient(1deg, #abc, url(x))" },
+  });
+  expect(Object.values(rejected.style ?? {})).not.toContain("\u00a0#fff");
+  expect(rejected.background?.gradient).toBeUndefined();
+});
 
 test("cta banner renders defaults with accessible ids and runtime markers", () => {
   const html = renderToString(
@@ -188,7 +303,7 @@ test("cta banner validator accepts expanded model", () => {
         },
         background: {
           color: "#f8fafc",
-          gradient: "linear-gradient(135deg, #0f172a, #475569)",
+          gradient: "linear-gradient(-1.5deg, #0f172, #475569a)",
           media: {
             type: "image",
             source: "external",

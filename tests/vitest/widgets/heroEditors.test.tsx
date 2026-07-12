@@ -138,6 +138,7 @@ test("hero visual editor keeps custom color values behind swatch-only controls",
       ...heroDefaults.style,
       textColor: "var(--color-text)",
       subheadColor: "rgba(17, 24, 39, 0.8)",
+      bodyColor: "not-a-color",
       primaryButtonBorder: "transparent",
     },
     background: {
@@ -164,6 +165,26 @@ test("hero visual editor keeps custom color values behind swatch-only controls",
   expect(html).not.toContain('placeholder="transparent"');
   expect(html).not.toContain('value="var(--color-text)"');
   expect(html).not.toContain('value="rgba(17, 24, 39, 0.8)"');
+});
+
+test("hero direct color controls mount currentColor and inherit without mutation", () => {
+  let writes = 0;
+  const html = renderToString(
+    <HeroVisualEditor
+      value={{
+        ...heroDefaults,
+        style: { ...heroDefaults.style, textColor: "currentColor", subheadColor: "inherit" },
+      }}
+      onChange={() => {
+        writes += 1;
+      }}
+      variant="split"
+      onVariantChange={() => undefined}
+    />
+  );
+  expect(html.match(/data-shared-color-state="inherited"/g)).toHaveLength(2);
+  expect(html).toContain("Inherited color");
+  expect(writes).toBe(0);
 });
 
 test("hero visual editor switches image alt controls to video metadata", () => {

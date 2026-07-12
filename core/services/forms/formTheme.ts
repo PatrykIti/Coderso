@@ -13,10 +13,10 @@
 //
 // The enum unions + `FORM_THEME_*` Sets live in `formSettings.ts` (the persisted
 // reject-unknown allowlist); they are re-exported here so 516-02/04/06 have a
-// single import site. Colors run through `resolveClearableCssColorValue` here
+// single import site. Colors run through the canonical theme service here
 // (defence in depth) before reaching any inline style.
 
-import { resolveClearableCssColorValue } from "../../widgets/core/clearableStyle";
+import { normalizeCssColorValue } from "../theme/cssColorContract";
 import type {
   FormFormTheme,
   FormThemeAlign,
@@ -152,7 +152,7 @@ export const FORM_THEME_DEFAULTS: ResolvedFormTheme = {
 };
 
 const resolveColor = (value: string | undefined): string | undefined =>
-  value === undefined ? undefined : resolveClearableCssColorValue(value);
+  value === undefined ? undefined : normalizeCssColorValue(value, "inherited-render");
 
 // Per-GROUP deep-merge over FORM_THEME_DEFAULTS. An undefined/omitted group or
 // key falls back to the default value. Enum/bool tokens are always concrete;
@@ -294,7 +294,8 @@ export const formThemeFontFamilyClass: Record<FormThemeFontFamily, string> = {
 export function buildFormThemeStyleVars(theme: ResolvedFormTheme): Record<string, string> {
   const vars: Record<string, string> = {};
   const put = (key: string, value: string | undefined) => {
-    const safe = value === undefined ? undefined : resolveClearableCssColorValue(value);
+    const safe =
+      value === undefined ? undefined : normalizeCssColorValue(value, "inherited-render");
     if (safe) vars[key] = safe;
   };
   put("--form-surface-bg", theme.surface.background);

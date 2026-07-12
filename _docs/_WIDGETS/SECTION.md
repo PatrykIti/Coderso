@@ -108,11 +108,15 @@ Notes:
 
 - Renders semantic element selected in data (`section` or `div`).
 - Supports optional overlay on top of background color/gradient.
-- Public inline color output is allowlisted at render time. Section accepts
-  hex colors, bounded `rgb/rgba` and `hsl/hsla`, `var(--color-*)` theme
-  variables, and `transparent/currentColor/inherit`; unsafe strings such as
-  `url(...)`, `javascript:`, `expression(...)`, arbitrary CSS functions, and
-  non-color variables are omitted or fall back to safe defaults.
+- Public inline color output is canonicalized at normalization and render time.
+  The direct fields `heading.labelColor`, `heading.titleColor`,
+  `heading.descriptionColor`, `style.backgroundColor`, `style.borderColor`, and
+  `style.overlayColor` use the shared `inherited-render` profile and therefore
+  accept canonical `currentColor` and `inherit`. The nested gradient stops
+  `style.gradientFrom` and `style.gradientTo` use that profile with
+  `allowInheritKeyword=false`: `currentColor` remains valid, but `inherit` is
+  rejected instead of being interpolated into a composite. Unsafe or
+  semantically invalid values are omitted, never rendered raw.
 - Optional `style.shadow` tokens stay bounded to `none`, `sm`, `md`, `lg`, and
   `xl`; when unset, contained sections keep the legacy `shadow-sm` framing while
   other variants stay flat.
@@ -160,14 +164,19 @@ Notes:
 
 ## Clear Controls
 
-- `style.backgroundColor` is clearable; clear removes the key and the renderer
-  omits a forced `backgroundColor` style.
+- `style.backgroundColor` is clearable on an authored `style` object; clear
+  removes that key and the renderer omits a forced `backgroundColor` style.
+  A legacy document with no `style` object retains the historical normalized
+  `transparent` default.
 - `style.gradientFrom` and `style.gradientTo` are also clearable; when both are
   absent, the gradient output drops and background color remains the visible
   fallback.
 - `overlayOpacity: 0` remains the existing no-output behavior and is not
   replaced with a `None` token.
 - Deliberate `transparent` authored by a user remains a normal color value.
+- TASK-541 seeds no new replacement bytes. Authored sparse overrides clear by
+  omission, while the pre-existing no-`style` defaults (including overlay
+  fallback values) remain byte-compatible.
 
 ## Data Model (summary)
 

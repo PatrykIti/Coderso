@@ -1,5 +1,7 @@
 import { expect, test } from "vitest";
 
+import { FORM_SCHEMA_LIMITS } from "../../../core/services/forms/formSettings";
+
 import {
   FORM_THEME_DEFAULTS,
   buildFormThemeStyleVars,
@@ -18,6 +20,7 @@ import {
   formThemeWidthClass,
   resolveFormTheme,
 } from "../../../core/services/forms/formTheme";
+import { FORM_COLOR_CONSUMER_CASES, buildFormColorTheme } from "./formColorConsumerTable";
 
 test("resolveFormTheme(undefined) reproduces the prototype defaults", () => {
   const resolved = resolveFormTheme(undefined);
@@ -83,6 +86,26 @@ test("resolveFormTheme re-runs colors through the CSS policy (defence in depth)"
   });
   expect(resolved.surface.background).toBe("#abcdef");
   expect(resolved.surface.borderColor).toBeUndefined();
+});
+
+test("resolveFormTheme and CSS vars preserve canonical inherited Form colors", () => {
+  const resolved = resolveFormTheme(buildFormColorTheme("raw"));
+  expect(resolved).toMatchObject(buildFormColorTheme("canonical"));
+
+  const variables = buildFormThemeStyleVars(resolved);
+  for (const entry of FORM_COLOR_CONSUMER_CASES) {
+    expect(variables[entry.cssVar]).toBe(entry.canonical);
+  }
+});
+
+test("resolveFormTheme pins the inherited color boundary and control-character corpus", () => {
+  const exactCap = `${" ".repeat(FORM_SCHEMA_LIMITS.themeColor - 4)}#abc`;
+  expect(resolveFormTheme({ surface: { background: exactCap } }).surface.background).toBe("#abc");
+  for (const rejected of [` ${exactCap}`, "#fff\u0000", "#fff\u001f", "\u00a0#fff", "\u2003#fff"]) {
+    expect(resolveFormTheme({ surface: { background: rejected } }).surface.background).toBe(
+      undefined
+    );
+  }
 });
 
 test("token class maps cover their full enum sets", () => {

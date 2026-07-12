@@ -8,8 +8,12 @@
 **Category:** SVG Sanitizer / Security
 **Estimated Effort:** Small
 **Dependencies:** TASK-522, TASK-535
-**Status:** ⏳ To Do
-**Changelog:** 1250 (pinned; create only at implementation closure)
+**Status:** ✅ Done
+**Started:** 2026-07-11
+**Completed:** 2026-07-11
+**Implementation Gate:** ✅ Passed (59/59 targeted tests, lint, typecheck, and read-only
+final audit)
+**Changelog:** 1250
 
 ---
 
@@ -18,7 +22,8 @@
 Extract the closed SVG source policy to an immutable module, remove class from its
 attribute allowlist, and make the sanitizer consume that sole policy. Correct sanitizer
 comments so the contract no longer claims style alone closes layout escape. Preserve
-safe presentation/geometry attributes and fail-closed parser-differential guards.
+closed-name-allowlisted presentation/geometry attributes under the existing byte and
+local-reference limits plus all fail-closed parser-differential guards.
 
 ## Source ownership
 
@@ -39,13 +44,14 @@ files.
 export const SAFE_SVG_TAGS = Object.freeze([...canonical tags] as const);
 export const SAFE_SVG_SOURCE_ATTRS = Object.freeze([
   geometry/structural attributes,
-  bounded presentation attributes,
+  closed-name-allowlisted presentation attributes,
   id, role, aria-hidden,
   href/xlink:href, xmlns/xmlns:xlink,
   // deliberately no class and no style
 ] as const);
 export const SAFE_SVG_NAMESPACES = Object.freeze({...});
 export function isSafeSvgTag(value): value is SafeSvgTag;
+export function canonicalizeSafeSvgTag(value): SafeSvgTag | null;
 export function isSafeSvgSourceAttr(value): value is SafeSvgSourceAttr;
 export function isSafeLocalSvgReference(value): boolean;
 
@@ -53,6 +59,8 @@ sanitizeSvg(raw, cap) {
   import the readonly policy/predicates;
   retain existing byte/root/tripwire/local-ref/namespace guards;
   walk every root/descendant tag;
+  canonicalize case-insensitive tag input through canonicalizeSafeSvgTag before
+    re-emitting the exact policy-owned spelling;
   rebuild attributes only when isSafeSvgSourceAttr(name);
   therefore class and style are dropped regardless of case/location;
   preserve residual fail-closed pass and idempotence;
@@ -62,7 +70,10 @@ sanitizeSvg(raw, cap) {
 Do not add a class-value regex or utility-class allowlist. Do not weaken tripwires,
 allow event attributes, or make unknown attributes pass through. The sanitizer remains
 isomorphic and dependency-free. The policy module exposes no mutable Set/Map/array and
-contains no React-specific prop mapping; L02 owns that conversion.
+contains no React-specific prop mapping; L02 owns that conversion. Presentation
+attributes are bounded only by the existing byte/local-reference limits here;
+renderer-owned root geometry receives the separate ratio/block-size clamps in
+538-02-L01.
 
 ## Data flow and errors
 
@@ -78,6 +89,7 @@ Required cases:
 
 - class on root, nested group, and shape is absent after one and two passes;
 - mixed-case/duplicate class attributes cannot survive;
+- uppercase/mixed-case tags still canonicalize without leaking an unwrapped fragment;
 - class tokens matching current public utilities receive no special treatment;
 - safe fill/stroke/transform/viewBox/local references remain;
 - no-class input remains idempotent;
@@ -99,6 +111,13 @@ Re-run the named file alone before declaring a failure.
 ## Acceptance criteria
 
 - The literal class attribute is not allowlisted or re-emitted anywhere.
-- Sanitizer and safe-tree parser consume one immutable source policy without mirrors.
+- The sanitizer consumes the immutable source policy; L02 is contractually required to
+  consume those same exports without a mirror.
 - Existing safe presentation behavior is retained.
 - No scanner suppression, utility allowlist, dependency, or exploit fixture is added.
+
+## Completion evidence
+
+The immutable policy and sanitizer landed with the closed tag/attribute contract and
+root/descendant `class`/`style` removal. Its named gate, final family gate, targeted
+Semgrep, and post-audit policy lens passed without a scanner exception or allowlist.

@@ -3,7 +3,10 @@ import type { ComponentType } from "react";
 import { renderToString } from "react-dom/server";
 import { expect, test } from "vitest";
 
-import { ToggleBlockWizardEditor } from "../../../core/admin/ui/widgets/editors/ToggleBlockEditors";
+import {
+  ToggleBlockVisualEditor,
+  ToggleBlockWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/ToggleBlockEditors";
 import {
   createToggleBlockWidget,
   normalizeToggleBlockData,
@@ -18,6 +21,51 @@ import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<ToggleBlockData>> = () => null;
+
+test("toggle editor mounts inherited colors without mutation", () => {
+  let writes = 0;
+  const html = renderToString(
+    <ToggleBlockVisualEditor
+      value={{
+        ...toggleBlockDefaults,
+        style: {
+          ...toggleBlockDefaults.style,
+          surfaceColor: "currentColor",
+          borderColor: "inherit",
+        },
+      }}
+      onChange={() => {
+        writes += 1;
+      }}
+      variant="switch"
+      onVariantChange={() => undefined}
+    />
+  );
+  expect(html.match(/data-shared-color-state="inherited"/g)).toHaveLength(2);
+  expect(writes).toBe(0);
+});
+
+test("toggle block canonicalizes all inherited-compatible colors", () => {
+  const normalized = normalizeToggleBlockData({
+    ...toggleBlockDefaults,
+    style: {
+      ...toggleBlockDefaults.style,
+      surfaceColor: " CURRENTCOLOR ",
+      borderColor: " INHERIT ",
+      accentColor: " currentcolor ",
+      accentContrastColor: " inherit ",
+    },
+  });
+  expect(normalized.style).toMatchObject({
+    surfaceColor: "currentColor",
+    borderColor: "inherit",
+    accentColor: "currentColor",
+    accentContrastColor: "inherit",
+  });
+  const html = renderToString(<ToggleBlock data={normalized} variant="switch" />);
+  expect(html).toContain("currentColor");
+  expect(html).toContain("inherit");
+});
 
 const getOpeningTagByAttribute = (
   html: string,

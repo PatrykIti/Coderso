@@ -27,6 +27,51 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<ContactData>> = () => null;
 
+test("contact editor mounts inherited colors without mutation", () => {
+  let writes = 0;
+  const html = renderToString(
+    <ContactVisualEditor
+      value={{
+        ...contactDefaults,
+        style: { ...contactDefaults.style, background: "currentColor", textColor: "inherit" },
+      }}
+      onChange={() => {
+        writes += 1;
+      }}
+      variant="split"
+      onVariantChange={() => undefined}
+    />
+  );
+  expect(html.match(/data-shared-color-state="inherited"/g)).toHaveLength(2);
+  expect(html).toContain("Inherited color");
+  expect(writes).toBe(0);
+});
+
+test("contact canonicalizes every inherited-compatible style color", () => {
+  const fields = [
+    "background",
+    "surfaceColor",
+    "borderColor",
+    "textColor",
+    "mutedTextColor",
+    "buttonBackgroundColor",
+    "buttonTextColor",
+    "buttonBorderColor",
+  ] as const;
+  const normalized = normalizeContactData({
+    ...contactDefaults,
+    style: Object.fromEntries(
+      fields.map((field, index) => [field, index % 2 === 0 ? " CURRENTCOLOR " : " INHERIT "])
+    ),
+  });
+  for (const [index, field] of fields.entries()) {
+    expect(normalized.style?.[field]).toBe(index % 2 === 0 ? "currentColor" : "inherit");
+  }
+  const html = renderToString(<ContactBlock data={normalized} variant="split" />);
+  expect(html).toContain("currentColor");
+  expect(html).toContain("inherit");
+});
+
 test("contact renders semantic details, static form metadata, and enhanced map/social output", () => {
   const html = renderToString(
     <ContactBlock

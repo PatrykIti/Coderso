@@ -47,6 +47,7 @@ vi.mock("@/components/ui/input", () => ({
 }));
 
 import { SharedColorControl } from "../../../core/admin/ui/widgets/editors/SharedColorControl";
+import { CSS_COLOR_VALUE_MAX_LENGTH } from "../../../core/services/theme/cssColorContract";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -122,6 +123,7 @@ test("HI-1 round-trips an 8-digit hex: picker shows base, opacity slider reflect
     // Opacity slider reflects the alpha channel (0x9e / 255 ≈ 62%).
     expect(slider).toBeTruthy();
     expect(Number(slider?.value)).toBe(62);
+    expect(onChange).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -145,6 +147,40 @@ test("HI-1 classifies an alpha value as selected_swatch in swatch-only mode", ()
     expect(view.container.textContent).toContain("Selected color");
     // No opacity slider in swatch-only mode.
     expect(view.container.querySelector('input[type="range"]')).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("HSL remains canonical text while picker, alpha, and state use literal metadata", () => {
+  const onChange = vi.fn();
+  const value = "hsla(210,50%,40%,.5)";
+  const view = mount(
+    <SharedColorControl
+      label="Overlay"
+      value={value}
+      onChange={onChange}
+      pickerFallback="#ffffff"
+    />
+  );
+
+  try {
+    const picker = view.container.querySelector(
+      'input[aria-label="Overlay swatch"]'
+    ) as HTMLInputElement | null;
+    const text = view.container.querySelector(
+      'input[aria-label="Overlay value"]'
+    ) as HTMLInputElement | null;
+    const slider = view.container.querySelector('input[type="range"]') as HTMLInputElement | null;
+
+    expect(picker?.value).toBe("#336699");
+    expect(text?.value).toBe(value);
+    expect(slider?.value).toBe("50");
+    expect(view.container.firstElementChild?.getAttribute("data-shared-color-state")).toBe(
+      "selected_swatch"
+    );
+    expect(onChange).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -165,6 +201,7 @@ test("HI-2 slider authoring recomposes base + new alpha", () => {
     const slider = view.container.querySelector('input[type="range"]') as HTMLInputElement | null;
     expect(slider).toBeTruthy();
     dispatchInputValue(slider as HTMLInputElement, "50");
+    expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith("#08122080");
   } finally {
     view.cleanup();
@@ -187,13 +224,14 @@ test("HI-2 editing the base color via the picker keeps the current alpha", () =>
       'input[aria-label="Overlay swatch"]'
     ) as HTMLInputElement | null;
     dispatchInputValue(picker as HTMLInputElement, "#112233");
+    expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith("#1122339e");
   } finally {
     view.cleanup();
   }
 });
 
-test("type rgba canonicalizes a leading-dot alpha on commit so the render boundary accepts it", () => {
+test("type rgba canonicalizes a leading-dot alpha on commit through the owner", () => {
   const onChange = vi.fn();
   const view = mount(
     <SharedColorControl
@@ -209,7 +247,8 @@ test("type rgba canonicalizes a leading-dot alpha on commit so the render bounda
       'input[aria-label="Overlay value"]'
     ) as HTMLInputElement | null;
     typeThenBlur(text as HTMLInputElement, "rgba(8,17,31,.84)");
-    expect(onChange).toHaveBeenCalledWith("rgba(8,17,31,0.84)");
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith("rgba(8, 17, 31, 0.84)");
   } finally {
     view.cleanup();
   }
@@ -233,8 +272,7 @@ test("free-text field does not commit mid-typing: incremental hex8 entry is not 
     ) as HTMLInputElement;
 
     // Type `#0812209e` one character at a time. Each intermediate `#081`/`#0812`... is a
-    // valid color, but the field must NOT commit (which would remount + canonicalize the
-    // draft, e.g. `#081` -> `#008811`) until blur/Enter.
+    // valid color, but the field must NOT commit and remount until blur/Enter.
     for (const draft of [
       "#",
       "#0",
@@ -260,6 +298,71 @@ test("free-text field does not commit mid-typing: incremental hex8 entry is not 
       text.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
     });
     expect(onChange).toHaveBeenCalledWith("#0812209e");
+    expect(onChange).toHaveBeenCalledTimes(1);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("checks raw byte length before ASCII-space normalization in SharedColorControl", () => {
+  const onChange = vi.fn();
+  const view = mount(
+    <SharedColorControl
+      label="Overlay"
+      value="#000000"
+      onChange={onChange}
+      pickerFallback="#ffffff"
+    />
+  );
+
+  try {
+    const text = view.container.querySelector(
+      'input[aria-label="Overlay value"]'
+    ) as HTMLInputElement;
+    const terminal = "transparent";
+    const atCap = `${" ".repeat(CSS_COLOR_VALUE_MAX_LENGTH - terminal.length)}${terminal}`;
+    const overCap = `${atCap} `;
+
+    typeThenBlur(text, atCap);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith("transparent");
+
+    onChange.mockClear();
+    typeThenBlur(text, overCap);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(text.value).toBe(overCap);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("rejects Unicode whitespace, C0/C1 controls, and out-of-range literals without mutation", () => {
+  const onChange = vi.fn();
+  const view = mount(
+    <SharedColorControl
+      label="Overlay"
+      value="#000000"
+      onChange={onChange}
+      pickerFallback="#ffffff"
+    />
+  );
+
+  try {
+    const text = view.container.querySelector(
+      'input[aria-label="Overlay value"]'
+    ) as HTMLInputElement;
+    for (const draft of [
+      "\u00a0#abc",
+      "\u2003#abc",
+      "\u001f#abc",
+      "\u0085#abc",
+      "rgb(999,0,0)",
+      "hsl(361,100%,50%)",
+    ]) {
+      typeThenBlur(text, draft);
+      expect(text.value).toBe(draft);
+    }
+    expect(onChange).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -285,6 +388,7 @@ test("HI-3 transparent shortcut emits the transparent keyword", () => {
     React.act(() => {
       transparentButton?.click();
     });
+    expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith("transparent");
   } finally {
     view.cleanup();

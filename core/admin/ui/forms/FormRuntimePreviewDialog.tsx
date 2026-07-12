@@ -2,7 +2,13 @@ import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
@@ -293,9 +299,9 @@ export function FormRuntimePreviewDialog({
       >
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>Form Runtime Preview</DialogTitle>
-          <p className="text-xs text-muted-foreground">
+          <DialogDescription className="text-xs text-muted-foreground">
             Interactive preview for test submissions and automation verification.
-          </p>
+          </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="max-h-[calc(90vh-64px)]">

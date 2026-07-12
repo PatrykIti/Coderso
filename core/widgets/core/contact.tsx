@@ -1,5 +1,9 @@
 import type { CSSProperties, ComponentType } from "react";
 
+import {
+  CSS_COLOR_SCHEMA_PATTERNS,
+  CSS_COLOR_VALUE_MAX_LENGTH,
+} from "../../services/theme/cssColorContract";
 import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
 import { getFormRuntimeClientScript } from "./formRuntimeScript";
@@ -573,6 +577,17 @@ const normalizeContactSocialHref = (link: ContactSocialLink) => {
   }
 };
 
+const contactColorValueSchema = {
+  anyOf: [
+    { const: "" },
+    {
+      type: "string",
+      maxLength: CSS_COLOR_VALUE_MAX_LENGTH,
+      pattern: CSS_COLOR_SCHEMA_PATTERNS["inherited-render"],
+    },
+  ],
+} as const;
+
 export const contactSchema = {
   type: "object",
   additionalProperties: false,
@@ -747,16 +762,16 @@ export const contactSchema = {
       additionalProperties: false,
       properties: {
         spacing: { enum: ["none", "sm", "md", "lg", "xl"] },
-        background: { type: "string" },
+        background: contactColorValueSchema,
         columns: { enum: ["one", "two"] },
-        surfaceColor: { type: "string" },
-        borderColor: { type: "string" },
+        surfaceColor: contactColorValueSchema,
+        borderColor: contactColorValueSchema,
         borderWidth: { enum: ["0", "1", "2", "3"] },
-        textColor: { type: "string" },
-        mutedTextColor: { type: "string" },
-        buttonBackgroundColor: { type: "string" },
-        buttonTextColor: { type: "string" },
-        buttonBorderColor: { type: "string" },
+        textColor: contactColorValueSchema,
+        mutedTextColor: contactColorValueSchema,
+        buttonBackgroundColor: contactColorValueSchema,
+        buttonTextColor: contactColorValueSchema,
+        buttonBorderColor: contactColorValueSchema,
         maxWidth: { enum: ["none", "md", "lg", "xl", "2xl"] },
         paddingX: { enum: ["none", "sm", "md", "lg"] },
         panelRadius: { enum: ["sm", "md", "lg", "xl", "full"] },
@@ -1056,6 +1071,8 @@ export function normalizeContactData(data: ContactData): ContactData {
   const mapDefaults = contactDefaults.map!;
   const styleDefaults = contactDefaults.style!;
   const hasStyleObject = data.style !== undefined;
+  const normalizeColor = (value: unknown) =>
+    resolveClearableCssColorValue(value, "inherited-render");
 
   const fields = normalizeFieldList(data.form?.fields, formDefaults.fields ?? []);
   const requiredCandidates = normalizeFieldList(data.form?.required, formDefaults.required ?? []);
@@ -1115,31 +1132,29 @@ export function normalizeContactData(data: ContactData): ContactData {
     style: {
       spacing: resolveContactSpacing(data.style?.spacing),
       background: hasStyleObject
-        ? resolveClearableCssColorValue(data.style?.background)
+        ? normalizeColor(data.style?.background)
         : styleDefaults.background,
       columns: resolveContactColumns(data.style?.columns),
       surfaceColor: hasStyleObject
-        ? resolveClearableCssColorValue(data.style?.surfaceColor)
+        ? normalizeColor(data.style?.surfaceColor)
         : styleDefaults.surfaceColor,
       borderColor:
-        resolveClearableCssColorValue(data.style?.borderColor) ??
+        normalizeColor(data.style?.borderColor) ??
         styleDefaults.borderColor ??
         "var(--color-border)",
       borderWidth: resolveContactBorderWidth(data.style?.borderWidth),
-      textColor: hasStyleObject
-        ? resolveClearableCssColorValue(data.style?.textColor)
-        : styleDefaults.textColor,
+      textColor: hasStyleObject ? normalizeColor(data.style?.textColor) : styleDefaults.textColor,
       mutedTextColor: hasStyleObject
-        ? resolveClearableCssColorValue(data.style?.mutedTextColor)
+        ? normalizeColor(data.style?.mutedTextColor)
         : styleDefaults.mutedTextColor,
       buttonBackgroundColor: hasStyleObject
-        ? resolveClearableCssColorValue(data.style?.buttonBackgroundColor)
+        ? normalizeColor(data.style?.buttonBackgroundColor)
         : styleDefaults.buttonBackgroundColor,
       buttonTextColor: hasStyleObject
-        ? resolveClearableCssColorValue(data.style?.buttonTextColor)
+        ? normalizeColor(data.style?.buttonTextColor)
         : styleDefaults.buttonTextColor,
       buttonBorderColor: hasStyleObject
-        ? resolveClearableCssColorValue(data.style?.buttonBorderColor)
+        ? normalizeColor(data.style?.buttonBorderColor)
         : styleDefaults.buttonBorderColor,
       maxWidth: resolveContactMaxWidth(data.style?.maxWidth),
       paddingX: resolveContactPaddingX(data.style?.paddingX),
@@ -1460,10 +1475,11 @@ export function ContactBlock({
       : style.columns === "one"
         ? "md:grid-cols-1"
         : "md:grid-cols-2";
+  const renderColor = (value: unknown) => resolveClearableCssColorValue(value, "inherited-render");
 
   const sectionStyle: CSSProperties =
     compactStyle({
-      backgroundColor: resolveClearableCssColorValue(style.background),
+      backgroundColor: renderColor(style.background),
     }) ?? {};
 
   const panelBorderWidth = style.borderWidth ?? "1";
@@ -1471,24 +1487,24 @@ export function ContactBlock({
   const buttonRadius = style.buttonRadius ?? "md";
   const panelStyle: CSSProperties =
     compactStyle({
-      backgroundColor: resolveClearableCssColorValue(style.surfaceColor),
-      borderColor: resolveClearableCssColorValue(style.borderColor) ?? "var(--color-border)",
+      backgroundColor: renderColor(style.surfaceColor),
+      borderColor: renderColor(style.borderColor) ?? "var(--color-border)",
       borderStyle: "solid",
       borderWidth: `${panelBorderWidth}px`,
     }) ?? {};
   const headingTextStyle = compactStyle({
-    color: resolveClearableCssColorValue(style.textColor),
+    color: renderColor(style.textColor),
   });
   const bodyTextStyle = compactStyle({
-    color: resolveClearableCssColorValue(style.mutedTextColor),
+    color: renderColor(style.mutedTextColor),
   });
   const fieldBorderStyle = compactStyle({
-    borderColor: resolveClearableCssColorValue(style.borderColor) ?? "var(--color-border)",
+    borderColor: renderColor(style.borderColor) ?? "var(--color-border)",
   });
   const submitButtonStyle = compactStyle({
-    backgroundColor: resolveClearableCssColorValue(style.buttonBackgroundColor),
-    color: resolveClearableCssColorValue(style.buttonTextColor),
-    borderColor: resolveClearableCssColorValue(style.buttonBorderColor) ?? "transparent",
+    backgroundColor: renderColor(style.buttonBackgroundColor),
+    color: renderColor(style.buttonTextColor),
+    borderColor: renderColor(style.buttonBorderColor) ?? "transparent",
     borderStyle: "solid",
     borderWidth: "1px",
   });

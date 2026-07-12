@@ -12,6 +12,10 @@ import {
   Youtube,
 } from "lucide-react";
 
+import {
+  CSS_COLOR_SCHEMA_PATTERNS,
+  CSS_COLOR_VALUE_MAX_LENGTH,
+} from "../../services/theme/cssColorContract";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import type {
   DeviceTarget,
@@ -20,7 +24,7 @@ import type {
   WidgetEditorContract,
   WidgetEditorProps,
 } from "../types";
-import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
 import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
 export type FooterLinkTarget = "_self" | "_blank";
@@ -192,6 +196,17 @@ const footerSocialLabelMap: Record<FooterSocialType, string> = {
   custom: "Custom",
 };
 
+const footerColorValueSchema = {
+  anyOf: [
+    { const: "" },
+    {
+      type: "string",
+      maxLength: CSS_COLOR_VALUE_MAX_LENGTH,
+      pattern: CSS_COLOR_SCHEMA_PATTERNS["inherited-render"],
+    },
+  ],
+} as const;
+
 export const footerSchema = {
   type: "object",
   additionalProperties: false,
@@ -294,18 +309,18 @@ export const footerSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
-        surfaceColor: { type: "string" },
-        borderColor: { type: "string" },
+        surfaceColor: footerColorValueSchema,
+        borderColor: footerColorValueSchema,
         borderTopWidth: { enum: ["0", "1", "2", "3"] },
-        textColor: { type: "string" },
-        headingColor: { type: "string" },
-        linkColor: { type: "string" },
-        legalTextColor: { type: "string" },
-        socialColor: { type: "string" },
+        textColor: footerColorValueSchema,
+        headingColor: footerColorValueSchema,
+        linkColor: footerColorValueSchema,
+        legalTextColor: footerColorValueSchema,
+        socialColor: footerColorValueSchema,
         fontSize: { enum: ["none", "xs", "sm", "base"] },
         headingTransform: { enum: ["none", "uppercase", "capitalize"] },
-        linkHoverColor: { type: "string" },
-        linkActiveColor: { type: "string" },
+        linkHoverColor: footerColorValueSchema,
+        linkActiveColor: footerColorValueSchema,
         linkUnderline: { enum: ["none", "hover", "always"] },
         linkFontWeight: { enum: ["normal", "medium", "semibold"] },
         linkLetterSpacing: { enum: ["normal", "wide"] },
@@ -691,19 +706,8 @@ export const normalizeFooterImageSrc = (value: unknown) =>
     allowHttp: true,
   });
 
-const normalizeFooterRenderColor = (value: unknown) => {
-  const trimmed = resolveClearableStyleValue(value);
-  if (!trimmed) return undefined;
-  // TASK-519-05-L04 present-only widening: accept 4/8-digit (alpha) hex to match the
-  // authoritative render whitelist `resolveClearableCssColorValue` so an authored alpha
-  // value (opacity slider emits `#rrggbbaa`) round-trips; legacy 3/6-digit unchanged.
-  if (/^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(trimmed)) return trimmed;
-  if (/^var\(--[a-zA-Z0-9-_]+\)$/.test(trimmed)) return trimmed;
-  if (/^(?:rgb|hsl)a?\([\d\s,./%+-]+\)$/i.test(trimmed)) return trimmed;
-  if (/^(?:transparent|currentColor|inherit)$/i.test(trimmed)) return trimmed;
-  if (/^[a-zA-Z]+$/.test(trimmed)) return trimmed;
-  return undefined;
-};
+const normalizeFooterRenderColor = (value: unknown) =>
+  resolveClearableCssColorValue(value, "inherited-render");
 
 const normalizeFooterInteractiveColor = normalizeFooterRenderColor;
 

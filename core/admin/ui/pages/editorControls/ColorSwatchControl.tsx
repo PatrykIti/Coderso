@@ -5,6 +5,7 @@ import {
 import {
   colorAlpha,
   composeHexColor,
+  isAlphaPickerRepresentable,
   normalizeAdminColorValue,
   parseColorValue,
   pickerHexFor,
@@ -56,8 +57,8 @@ const transparentSwatchStyle = {
  * alpha-capable colors (`#rrggbbaa` like `#0812209e`, `rgba()`, `hsla()`). The
  * native picker edits the base color while the slider owns alpha, so editing one
  * never drops the other; the text field accepts any value the shared
- * `normalizeAdminColorValue` boundary mirror allows (canonicalizing a leading-dot
- * alpha `.84` -> `0.84` on emit) and reverts unknown input. Unknown stored values
+ * `normalizeAdminColorValue` canonical adapter allows and reverts unknown input.
+ * Unknown stored values
  * stay untouched (custom state, no swatch pressed) until the user picks a new
  * color; this control never mutates the stored value on mount. With
  * `allowTransparent`, a leading "Transparent"
@@ -80,32 +81,24 @@ export const ColorSwatchControl = ({
     resolvedTone === "light"
       ? editorPanelSwatchBorderClass
       : "border-white/15 hover:border-white/45";
-  const normalizedValue = value.trim().toLowerCase();
-  const transparentActive = normalizedValue.length === 0;
+  const normalizedValue = normalizeAdminColorValue(value, "authoring");
+  const transparentActive = value.length === 0;
   // Parse the stored value once so the picker (base color), the opacity slider
   // (alpha), and the hex/rgba text field stay in sync and round-trip alpha.
-  const parsed = parseColorValue(value);
+  const parsed = parseColorValue(value, "authoring");
   const alpha = colorAlpha(parsed);
   const baseHex = pickerHexFor(parsed, "#000000");
-  // The picker + opacity slider can only faithfully round-trip hex/rgb kinds;
-  // token/keyword/hsla/unknown values keep the raw text and disable the slider.
-  const alphaRepresentable = parsed.kind === "hex" || parsed.kind === "rgb";
+  const alphaRepresentable = isAlphaPickerRepresentable(value, "authoring");
   const commitDraft = (input: HTMLInputElement) => {
-    const draft = input.value.trim();
+    const draft = input.value;
     if (draft === value) return;
-    const safe = normalizeAdminColorValue(draft);
+    const safe = normalizeAdminColorValue(draft, "authoring");
     if (!safe) {
       // Reject-unknown -> revert to the prior value (unchanged behavior).
       input.value = value;
       return;
     }
-    // A hex draft is re-emitted through the canonical composer so a byte-identical
-    // lowercase `#rrggbb[aa]` is stored; rgba/hsla/token/keyword pass through the
-    // already-canonicalized (leading-dot alpha -> `0.`) normalizer output.
-    const safeParsed = parseColorValue(safe);
-    const emit =
-      safeParsed.kind === "hex" ? composeHexColor(safeParsed.baseHex, safeParsed.alpha) : safe;
-    onChange(emit);
+    onChange(safe);
   };
   return (
     <div className="grid gap-1" data-page-editor-control="color-swatch">
@@ -131,7 +124,11 @@ export const ColorSwatchControl = ({
           />
         ) : null}
         {palette.map((swatch) => {
-          const active = swatch.value.trim().toLowerCase() === normalizedValue;
+          const normalizedSwatch = normalizeAdminColorValue(swatch.value, "authoring");
+          const active =
+            normalizedValue !== undefined &&
+            normalizedSwatch !== undefined &&
+            normalizedSwatch === normalizedValue;
           return (
             <button
               key={swatch.id}
@@ -164,7 +161,10 @@ export const ColorSwatchControl = ({
               className={`size-7 cursor-pointer rounded-lg border-2 bg-transparent p-0 disabled:cursor-not-allowed disabled:opacity-50 ${
                 resolvedTone === "light" ? "border-border" : "border-white/15"
               } ${focusClass}`}
-              onChange={(event) => onChange(composeHexColor(event.target.value, alpha))}
+              onChange={(event) => {
+                const next = composeHexColor(event.target.value, alpha);
+                if (next !== undefined) onChange(next);
+              }}
             />
             <input
               key={value}
@@ -199,7 +199,10 @@ export const ColorSwatchControl = ({
             value={Math.round(alpha * 100)}
             disabled={disabled || !alphaRepresentable}
             tone={resolvedTone}
-            onChange={(pct) => onChange(composeHexColor(baseHex, pct / 100))}
+            onChange={(pct) => {
+              const next = composeHexColor(baseHex, pct / 100);
+              if (next !== undefined) onChange(next);
+            }}
           />
           {alphaRepresentable ? null : (
             <p

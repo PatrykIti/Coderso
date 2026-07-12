@@ -18,6 +18,8 @@ import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { FileImage, GripVertical, Video } from "lucide-react";
 import { reorderItemsById, resolveDropIndexFromPointer } from "@/ui/posts/editor/blocks/blockDnD";
 
+import { composeHexColor } from "../../shared/colorValue";
+import { parseCssColorValue } from "../../../../services/theme/cssColorContract";
 import {
   countGalleryMosaicEligibleLightboxItems,
   describeGalleryMosaicCountReduction,
@@ -45,6 +47,7 @@ import {
 } from "../../../../widgets/core/galleryMosaic";
 import type { WidgetEditorProps, WidgetEditorSectionRole } from "../../../../widgets/types";
 import { LinkDestinationField } from "./LinkDestinationField";
+import { SharedColorControl } from "./SharedColorControl";
 import {
   ReadonlyWidgetSummaryRow,
   WidgetControlRow,
@@ -146,10 +149,6 @@ const itemCountOptions = Array.from({ length: galleryMosaicItemMax }, (_, index)
   String(index + 1)
 );
 
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
-const rgbColorPattern =
-  /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)$/i;
-
 type HeaderData = NonNullable<GalleryMosaicData["header"]>;
 type InteractionData = NonNullable<GalleryMosaicData["interaction"]>;
 type StyleData = NonNullable<GalleryMosaicData["style"]>;
@@ -167,16 +166,6 @@ type PendingGalleryMosaicItemRemoval = {
   index: number;
   itemId?: string;
   label: string;
-};
-
-const resolvePickerColor = (value: string | undefined, fallback: string) => {
-  if (!value) return fallback;
-  if (hexColorPattern.test(value)) return value;
-  const rgbMatch = value.match(rgbColorPattern);
-  if (!rgbMatch) return fallback;
-  const [, red, green, blue] = rgbMatch;
-  const toHex = (channel: string) => Number.parseInt(channel, 10).toString(16).padStart(2, "0");
-  return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
 };
 
 function normalizeValue(value: GalleryMosaicData): GalleryMosaicData {
@@ -325,63 +314,22 @@ function ColorField({
   helperText?: string;
   onClear?: () => void;
 }) {
-  const normalizedValue = value?.trim();
-  const hasValue = Boolean(normalizedValue);
-  const hasCustomValue =
-    hasValue &&
-    !hexColorPattern.test(normalizedValue ?? "") &&
-    !rgbColorPattern.test(normalizedValue ?? "");
-  const swatchColor = resolvePickerColor(value, pickerFallback);
-
   return (
-    <WidgetControlRow
-      id={id}
-      label={label}
-      help={helperText}
-      path={id.replace("gallery-mosaic.", "")}
-      actions={
-        onClear ? (
-          <Button type="button" variant="ghost" size="sm" onClick={onClear} disabled={!hasValue}>
-            Clear
-          </Button>
-        ) : null
-      }
-    >
-      {(fieldProps) => (
-        <div className="space-y-3">
-          <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-            <Input
-              id={fieldProps.id}
-              type="color"
-              value={swatchColor}
-              onChange={(event) => (onPickerChange ?? onChange)(event.target.value)}
-              className="h-9 w-10 p-1"
-              aria-labelledby={fieldProps["aria-labelledby"]}
-              aria-describedby={fieldProps["aria-describedby"]}
-            />
-            <div className="flex min-h-9 flex-wrap items-center gap-2">
-              <span
-                aria-hidden="true"
-                className="h-6 w-6 rounded-md border border-border/70 shadow-inner"
-                style={{ backgroundColor: swatchColor }}
-              />
-              <span className="rounded-md border border-border/70 px-2 py-1 text-xs text-muted-foreground">
-                {hasCustomValue
-                  ? "Saved custom color"
-                  : hasValue
-                    ? "Selected color"
-                    : "Theme default"}
-              </span>
-            </div>
-          </div>
-          {hasCustomValue ? (
-            <p className="rounded-md border border-dashed border-border/70 bg-muted/40 p-2 text-xs text-muted-foreground">
-              A saved custom color is configured. Pick a swatch to replace it, or clear the field.
-            </p>
-          ) : null}
-        </div>
-      )}
-    </WidgetControlRow>
+    <div className="space-y-2">
+      <SharedColorControl
+        label={label}
+        value={value}
+        onChange={onChange}
+        onSwatchChange={onPickerChange}
+        onClear={onClear}
+        controlId={id}
+        controlPath={id.replace("gallery-mosaic.", "")}
+        pickerFallback={pickerFallback}
+        showValueInput={false}
+        colorProfile="inherited-render"
+      />
+      {helperText ? <p className="text-xs text-muted-foreground">{helperText}</p> : null}
+    </div>
   );
 }
 
@@ -451,27 +399,23 @@ function clearStyleField(
   });
 }
 
-function applyColorWithExistingAlpha(currentValue: string | undefined, nextHex: string): string {
-  const match = currentValue?.match(
-    /^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*(0|1|0?\.\d+)\s*\)$/i
-  );
-  if (!match) {
-    return nextHex;
+function applyColorWithExistingAlpha(
+  currentValue: string | undefined,
+  nextHex: string
+): string | undefined {
+  const current = parseCssColorValue(currentValue, "inherited-render");
+  const next = parseCssColorValue(nextHex, "inherited-render");
+  if (!next || (next.kind !== "hex" && next.kind !== "rgb" && next.kind !== "hsl")) {
+    return undefined;
   }
-
-  const alpha = match[1];
-  const hex = nextHex.replace("#", "");
-  const normalizedHex =
-    hex.length === 3
-      ? hex
-          .split("")
-          .map((entry) => `${entry}${entry}`)
-          .join("")
-      : hex;
-  const red = Number.parseInt(normalizedHex.slice(0, 2), 16);
-  const green = Number.parseInt(normalizedHex.slice(2, 4), 16);
-  const blue = Number.parseInt(normalizedHex.slice(4, 6), 16);
-  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+  if (
+    !current ||
+    (current.kind !== "hex" && current.kind !== "rgb" && current.kind !== "hsl") ||
+    current.alpha >= 1
+  ) {
+    return next.normalized;
+  }
+  return composeHexColor(next.baseHex, current.alpha) ?? next.normalized;
 }
 
 function describeGalleryHeadingStatus(value: GalleryMosaicData) {
@@ -535,8 +479,9 @@ function describeGalleryStyleSummary(value: GalleryMosaicData) {
 }
 
 function describeGalleryOverlaySummary(value: GalleryMosaicData) {
-  const normalized = normalizeValue(value);
-  return normalized.style?.overlay?.trim() ? "Overlay configured" : "Overlay cleared";
+  return parseCssColorValue(value.style?.overlay, "inherited-render")
+    ? "Overlay configured"
+    : "Overlay cleared";
 }
 
 function updateItem(
@@ -1577,13 +1522,12 @@ export function GalleryMosaicVisualEditor({
         <ColorField
           id="gallery-mosaic.style.overlay"
           label="Overlay color"
-          value={normalized.style?.overlay}
+          value={value.style?.overlay}
           onChange={(next) => updateStyle(value, onChange, { overlay: next })}
-          onPickerChange={(next) =>
-            updateStyle(value, onChange, {
-              overlay: applyColorWithExistingAlpha(normalized.style?.overlay, next),
-            })
-          }
+          onPickerChange={(next) => {
+            const overlay = applyColorWithExistingAlpha(value.style?.overlay, next);
+            if (overlay !== undefined) updateStyle(value, onChange, { overlay });
+          }}
           onClear={() => clearStyleField(value, onChange, "overlay")}
           pickerFallback="#0f172a"
           helperText={

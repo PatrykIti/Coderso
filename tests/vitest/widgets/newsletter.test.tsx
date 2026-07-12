@@ -23,6 +23,48 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<NewsletterData>> = () => null;
 
+test("newsletter keeps all stored overrides authoring-only and fail-closed", () => {
+  const normalized = normalizeNewsletterData({
+    ...newsletterDefaults,
+    style: {
+      background: " #ABC ",
+      textColor: " HSL(210DEG, 50%, 40%) ",
+      buttonBackground: " rgb(12, 24, 36) ",
+      buttonTextColor: " RGBA(255, 255, 255, .5) ",
+    },
+  });
+  expect(normalized.style).toMatchObject({
+    background: "#abc",
+    textColor: "hsl(210, 50%, 40%)",
+    buttonBackground: "rgb(12, 24, 36)",
+    buttonTextColor: "rgba(255, 255, 255, 0.5)",
+  });
+  const html = renderToString(<NewsletterBlock data={normalized} variant="centered" />);
+  expect(html).toContain("background-color:#abc");
+  expect(html).toContain("color:hsl(210, 50%, 40%)");
+  expect(html).toContain("background-color:rgb(12, 24, 36)");
+  expect(html).toContain("color:rgba(255, 255, 255, 0.5)");
+
+  const rejected = normalizeNewsletterData({
+    ...newsletterDefaults,
+    style: {
+      background: " currentColor ",
+      textColor: " inherit ",
+      buttonBackground: "\u00a0#fff",
+      buttonTextColor: "\u2003#fff",
+    },
+  });
+  expect(rejected.style).toMatchObject({
+    background: undefined,
+    textColor: "",
+    buttonBackground: "",
+    buttonTextColor: "",
+  });
+  const rejectedHtml = renderToString(<NewsletterBlock data={rejected} variant="centered" />);
+  expect(rejectedHtml).not.toContain("\u00a0#fff");
+  expect(rejectedHtml).not.toContain("\u2003#fff");
+});
+
 test("newsletter renders disconnected semantics without a native form submit target", () => {
   const html = renderToString(
     <NewsletterBlock

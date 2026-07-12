@@ -4,7 +4,12 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import { contactDefaults, type ContactData } from "../../../core/widgets/core/contact";
+import {
+  contactDefaults,
+  normalizeContactData,
+  type ContactData,
+} from "../../../core/widgets/core/contact";
+import { RETAINED_COLOR_FIELDS } from "../widgets/retainedColorConsumerTable";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -892,6 +897,87 @@ test("ContactVisualEditor exposes Forms runtime binding, mapping, and compatibil
     if (!runtimeSection) throw new Error("Missing runtime section");
     expect(runtimeSection.textContent).toContain("forms.submit");
     expect(latestValue.form?.submission?.formId).toBe(internalForm.id);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ContactVisualEditor preserves inherited states for every retained color and emits picker replacement plus clear exactly", async () => {
+  const { ContactVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/ContactEditors");
+
+  const inheritedStyle = Object.fromEntries(
+    RETAINED_COLOR_FIELDS.contact.map(({ path }, index) => [
+      path.slice("style.".length),
+      index % 2 === 0 ? "currentColor" : "inherit",
+    ])
+  ) as NonNullable<ContactData["style"]>;
+  const initialValue: ContactData = {
+    ...contactDefaults,
+    style: inheritedStyle,
+  };
+  let latestValue = initialValue;
+  const onChange = vi.fn<(next: ContactData) => void>();
+
+  const Harness = () => {
+    const [value, setValue] = useState<ContactData>(initialValue);
+
+    return (
+      <ContactVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          onChange(next);
+          setValue(next);
+        }}
+        variant="form-left"
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flushEffects();
+    expect(onChange).not.toHaveBeenCalled();
+
+    for (const field of RETAINED_COLOR_FIELDS.contact) {
+      const control = view.container.querySelector(`[data-widget-control="${field.control}"]`);
+      const colorState = control?.querySelector("[data-shared-color-state]");
+
+      expect(control, field.control).toBeInstanceOf(HTMLElement);
+      expect(colorState?.getAttribute("data-shared-color-state"), field.control).toBe("inherited");
+      expect(colorState?.textContent, field.control).toContain("Inherited color");
+    }
+
+    const replacementField = RETAINED_COLOR_FIELDS.contact[0];
+    const clearField = RETAINED_COLOR_FIELDS.contact[1];
+    setInputValue(findColorInputByControl(view.container, replacementField.control), "#A1B2C3");
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const pickerEmission = onChange.mock.calls[0]?.[0];
+    expect(pickerEmission?.style).toEqual({
+      ...normalizeContactData(initialValue).style,
+      background: "#a1b2c3",
+    });
+    expect(latestValue).toEqual(pickerEmission);
+
+    const clearControl = view.container.querySelector(
+      `[data-widget-control="${clearField.control}"]`
+    );
+    clickButtonByText(clearControl ?? view.container, "Clear");
+
+    expect(onChange).toHaveBeenCalledTimes(2);
+    const clearEmission = onChange.mock.calls[1]?.[0];
+    const { surfaceColor: _cleared, ...expectedStyle } = pickerEmission?.style ?? {};
+    const expectedClearEmission = normalizeContactData({
+      ...pickerEmission,
+      style: expectedStyle,
+    });
+    expect(clearEmission).toStrictEqual(expectedClearEmission);
+    expect(clearEmission?.style?.surfaceColor).toBeUndefined();
+    expect(clearEmission?.style?.background).toBe("#a1b2c3");
+    expect(latestValue).toEqual(clearEmission);
   } finally {
     view.cleanup();
   }

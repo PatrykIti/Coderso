@@ -6,6 +6,7 @@ import { afterEach, expect, test, vi } from "vitest";
 
 import type { SectionData } from "../../../core/widgets/core/section";
 import type { WidgetBlock, WidgetBlockPatcher } from "../../../core/widgets/types";
+import { RETAINED_COLOR_FIELDS } from "../widgets/retainedColorConsumerTable";
 
 const sectionMediaState = vi.hoisted(() => {
   const createMediaItems = () => [
@@ -545,6 +546,53 @@ const renderSectionBlockSettings = async () => {
     onChangeSpy,
   };
 };
+
+test("Section mounted color inventory preserves direct inheritance and nested-stop policy", async () => {
+  const view = await renderEditors({
+    initialVariant: "default",
+    initialValue: {
+      heading: {
+        labelColor: "currentColor",
+        titleColor: "inherit",
+        descriptionColor: "currentColor",
+      },
+      style: {
+        backgroundColor: "inherit",
+        gradientFrom: "currentColor",
+        gradientTo: "inherit",
+        borderColor: "currentColor",
+        overlayColor: "inherit",
+      },
+    },
+  });
+
+  try {
+    await flush();
+    for (const entry of RETAINED_COLOR_FIELDS.section) {
+      const control = findWidgetControl(view.container, entry.control);
+      const state = control
+        .querySelector("[data-shared-color-state]")
+        ?.getAttribute("data-shared-color-state");
+      expect(state, entry.path).toBe(
+        entry.nested && entry.path.endsWith("gradientTo") ? "saved_custom" : "inherited"
+      );
+    }
+    expect(view.container.textContent).toContain("Inherited color");
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
+
+    const labelControl = findWidgetControl(view.container, "section.heading.labelColor");
+    setInputValue(findColorInputByLabel(labelControl, "Label color"), "#102030");
+    expect(view.getLatestValue().heading?.labelColor).toBe("#102030");
+    expect(view.onChangeSpy).toHaveBeenCalledTimes(1);
+
+    const overlayControl = findWidgetControl(view.container, "section.style.overlayColor");
+    clickByText(overlayControl, "Clear");
+    expect(view.getLatestValue().style?.overlayColor).toBe("#000000");
+    expect(view.onChangeSpy).toHaveBeenCalledTimes(2);
+  } finally {
+    view.cleanup();
+  }
+});
 
 test("Section builder-owned Region controls expose stable control paths", async () => {
   const view = await renderSectionBlockSettings();

@@ -176,15 +176,23 @@ Notes:
 ## Validation Notes
 
 - `columns[]` stays strict and bounded (`additionalProperties: false`)
-- global and per-column surface colors accept only approved `var(--color-*)`
-  tokens or hex colors (`#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`)
+- global `style.columnBackground`/`style.columnBorderColor` and per-column
+  `columns[].style.background`/`columns[].style.borderColor` use the shared
+  `authoring` profile. It accepts canonical supported hex, bounded comma-form
+  `rgb(a)`/`hsl(a)`, `transparent`, and `var(--color-*)`; `currentColor` and
+  `inherit` are rejected for these ordinary stored overrides
 - arbitrary class strings, arbitrary CSS maps, `url(...)`, script-like
   fragments, and unknown nested style keys are rejected by schema validation
 - `gapX` and `gapY` remain separate persisted fields; TASK-271 only expanded the
   bounded token list and clarified editor labels
-- global and per-column saved color values preserve approved `var(--color-*)`
-  tokens verbatim at runtime, while Visual shows swatch-only replacement plus
-  clear actions instead of asking authors to type CSS/token strings
+- schema color patterns are structural prefilters; the shared semantic parser
+  still checks ranges/arity and produces canonical output before persistence and
+  rendering
+- global and per-column saved color values preserve approved canonical
+  `var(--color-*)` tokens at runtime, while the retained compatibility control
+  shows swatch-only replacement plus clear actions instead of raw CSS text
+- optional color fields are present-only; clear/omit does not seed replacement
+  color bytes
 - effective span totals follow the live slot count and each breakpoint's visibility toggles rather than the raw saved `columns[]` list alone
 - when live repeatable `column` slots exist, editor rows, layout presets, and asymmetric recovery follow the current live slot order and ignore saved phantom columns until the structure is reconciled
 - repeatable slot targets may resolve live column instance ids from either explicit `instanceId` values or parsable `column:<instanceId>` slot ids before the editor decides whether local structure controls should lock

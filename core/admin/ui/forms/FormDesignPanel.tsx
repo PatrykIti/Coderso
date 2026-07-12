@@ -229,6 +229,7 @@ export function FormDesignPanel({ theme, onThemeChange, disabled }: FormDesignPa
       value={(theme?.[group] as Record<string, unknown> | undefined)?.[key] as string | undefined}
       onChange={(next) => patchGroup(group, { [key]: next })}
       onClear={() => clearKey(group, key)}
+      colorProfile="inherited-render"
       {...(options?.transparent ? { allowTransparent: true, showValueInput: false } : {})}
     />
   );

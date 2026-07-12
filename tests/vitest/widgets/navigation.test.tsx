@@ -27,6 +27,53 @@ import type { MenuItemNode } from "../../../core/admin/services/menusClient";
 
 const StubEditor: ComponentType<WidgetEditorProps<NavigationData>> = () => null;
 
+test("navigation editor mounts inherited colors without mutation", () => {
+  let writes = 0;
+  const html = renderToString(
+    <NavigationVisualEditor
+      value={{
+        ...navigationDefaults,
+        style: { ...navigationDefaults.style, textColor: "currentColor", borderColor: "inherit" },
+      }}
+      onChange={() => {
+        writes += 1;
+      }}
+      variant="with-cta"
+      onVariantChange={() => undefined}
+    />
+  );
+  expect(html.match(/data-shared-color-state="inherited"/g)).toHaveLength(2);
+  expect(html).toContain("Inherited color");
+  expect(writes).toBe(0);
+});
+
+test("navigation canonicalizes every inherited-compatible style color", () => {
+  const fields = [
+    "textColor",
+    "logoColor",
+    "linkColor",
+    "linkHoverColor",
+    "linkActiveColor",
+    "surfaceColor",
+    "borderColor",
+    "ctaTextColor",
+    "ctaBackgroundColor",
+    "ctaBorderColor",
+  ] as const;
+  const normalized = normalizeNavigationData({
+    ...navigationDefaults,
+    style: Object.fromEntries(
+      fields.map((field, index) => [field, index % 2 === 0 ? " CURRENTCOLOR " : " INHERIT "])
+    ),
+  });
+  for (const [index, field] of fields.entries()) {
+    expect(normalized.style?.[field]).toBe(index % 2 === 0 ? "currentColor" : "inherit");
+  }
+  const html = renderToString(<NavigationBlock data={normalized} variant="with-cta" />);
+  expect(html).toContain("currentColor");
+  expect(html).toContain("inherit");
+});
+
 test("navigation exposes the current v2 editor contract for hero-style section ownership", () => {
   const widget = createNavigationWidget({
     wizard: StubEditor,

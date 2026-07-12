@@ -15,6 +15,7 @@ import { afterEach, expect, test } from "vitest";
 
 import { FormCanvas } from "../../../core/admin/ui/forms/FormCanvas";
 import type { FormFormTheme } from "../../../core/services/forms/formTheme";
+import { FORM_COLOR_CONSUMER_CASES, buildFormColorTheme } from "../forms/formColorConsumerTable";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -284,6 +285,39 @@ test("themed input size/radius + color vars plumb through to FieldPreview", () =
     expect(style).toContain("--form-input-border");
     expect(style).toContain("--form-input-text");
     expect(style).toContain("--form-label");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("FormCanvas consumes every canonical Form color variable at its concrete render target", () => {
+  const view = renderCanvas([field({ id: "f-color", type: "text" })], {
+    theme: buildFormColorTheme("raw"),
+  });
+  try {
+    const renderedCard = card(view.container);
+    for (const entry of FORM_COLOR_CONSUMER_CASES) {
+      expect(renderedCard.style.getPropertyValue(entry.cssVar).trim()).toBe(entry.canonical);
+    }
+
+    expect(renderedCard.className).toContain("bg-[var(--form-surface-bg)]");
+    expect(renderedCard.className).toContain("border-[color:var(--form-border)]");
+    expect(view.container.querySelector("h2")?.className).toContain(
+      "text-[color:var(--form-title)]"
+    );
+    expect(view.container.querySelector("h2 + p")?.className).toContain(
+      "text-[color:var(--form-helper)]"
+    );
+    expect(view.container.querySelector("label")?.className).toContain(
+      "text-[color:var(--form-label)]"
+    );
+    const input = view.container.querySelector("label + input") as HTMLInputElement;
+    expect(input.className).toContain("bg-[var(--form-input-bg)]");
+    expect(input.className).toContain("border-[color:var(--form-input-border)]");
+    expect(input.className).toContain("text-[color:var(--form-input-text)]");
+    const submit = submitButton(view.container);
+    expect(submit.className).toContain("bg-[var(--form-submit-bg)]");
+    expect(submit.className).toContain("text-[color:var(--form-submit-text)]");
   } finally {
     view.cleanup();
   }

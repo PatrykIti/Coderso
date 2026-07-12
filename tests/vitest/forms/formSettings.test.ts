@@ -10,6 +10,7 @@ import {
   resolveStepTitle,
 } from "../../../core/services/forms/formSettings";
 import { formCreateSchema, formUpdateSchema } from "../../../core/server/validation/formSchemas";
+import { FORM_COLOR_CONSUMER_CASES, buildFormColorTheme } from "./formColorConsumerTable";
 
 const ajv = new Ajv({
   allErrors: true,
@@ -20,6 +21,13 @@ const ajv = new Ajv({
 const validateCreate = ajv.compile(formCreateSchema);
 const validateUpdate = ajv.compile(formUpdateSchema);
 const validateSettings = ajv.compile(formSettingsSchema);
+
+test("Form color consumer table is deeply runtime-frozen", () => {
+  expect(Object.isFrozen(FORM_COLOR_CONSUMER_CASES)).toBe(true);
+  for (const entry of FORM_COLOR_CONSUMER_CASES) {
+    expect(Object.isFrozen(entry), `${entry.group}.${entry.key}`).toBe(true);
+  }
+});
 
 test("normalizeFormSettings returns defaults for invalid input", () => {
   const settings = normalizeFormSettings(null);
@@ -133,6 +141,41 @@ test("normalizeFormSettings omits bad enum/color VALUES (fail-soft)", () => {
     layout: { align: "center" },
     surface: { radius: "md" },
   });
+});
+
+test("normalizeFormSettings canonicalizes the inherited Form color exception end to end", () => {
+  const exactCapCurrentColor = `${" ".repeat(
+    FORM_SCHEMA_LIMITS.themeColor - "CURRENTCOLOR".length
+  )}CURRENTCOLOR`;
+  const out = normalizeFormSettings({ theme: buildFormColorTheme("raw") });
+  expect(out.theme).toEqual(buildFormColorTheme("canonical"));
+
+  const rejectedTheme = Object.fromEntries(
+    FORM_COLOR_CONSUMER_CASES.map(({ group, key }) => [
+      group,
+      {
+        ...(Object.fromEntries(
+          FORM_COLOR_CONSUMER_CASES.filter((entry) => entry.group === group).map((entry) => [
+            entry.key,
+            entry.key === key ? "rgb(256, 0, 0)" : "\u00a0#fff",
+          ])
+        ) as Record<string, string>),
+      },
+    ])
+  );
+  expect(normalizeFormSettings({ theme: rejectedTheme }).theme).toBeUndefined();
+
+  expect(validateSettings({ theme: { surface: { background: exactCapCurrentColor } } })).toBe(true);
+  expect(validateSettings({ theme: { surface: { background: ` ${exactCapCurrentColor}` } } })).toBe(
+    false
+  );
+  expect(validateSettings({ theme: buildFormColorTheme("raw") })).toBe(true);
+  for (const rejected of ["#fff\u0000", "#fff\u001f", "\u00a0#fff", "\u2003#fff"]) {
+    expect(validateSettings({ theme: { surface: { background: rejected } } })).toBe(false);
+    expect(normalizeFormSettings({ theme: { surface: { background: rejected } } }).theme).toBe(
+      undefined
+    );
+  }
 });
 
 test("normalizeFormSettings omits empty theme groups and emits no empty theme", () => {
@@ -270,6 +313,7 @@ describe("strict form write schemas", () => {
   });
 
   test("accepts every theme key at its boundary and pins color/label maxima", () => {
+    const exactCapColor = `${" ".repeat(FORM_SCHEMA_LIMITS.themeColor - 4)}#fff`;
     const settings = {
       theme: {
         layout: {
@@ -281,7 +325,7 @@ describe("strict form write schemas", () => {
         },
         surface: {
           card: true,
-          background: "x".repeat(128),
+          background: exactCapColor,
           borderColor: "#fff",
           borderWidth: "md",
           radius: "xl",
@@ -313,7 +357,15 @@ describe("strict form write schemas", () => {
       },
     };
     expect(validateSettings(settings)).toBe(true);
-    expect(validateSettings({ theme: { surface: { background: "x".repeat(129) } } })).toBe(false);
+    expect(validateCreate({ name: "Form", settings: { theme: buildFormColorTheme("raw") } })).toBe(
+      true
+    );
+    expect(validateUpdate({ settings: { theme: buildFormColorTheme("raw") } })).toBe(true);
+    expect(
+      validateSettings({
+        theme: { surface: { background: `${exactCapColor} ` } },
+      })
+    ).toBe(false);
     expect(validateSettings({ theme: { submit: { label: "" } } })).toBe(false);
     expect(validateSettings({ theme: { submit: { label: "x".repeat(241) } } })).toBe(false);
     expect(validateSettings({ theme: { layout: { columns: 3 } } })).toBe(false);

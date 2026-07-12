@@ -1,4 +1,8 @@
-import { resolveClearableCssColorValue } from "../../widgets/core/clearableStyle";
+import {
+  CSS_COLOR_SCHEMA_PATTERNS,
+  CSS_COLOR_VALUE_MAX_LENGTH,
+  normalizeCssColorValue,
+} from "../theme/cssColorContract";
 
 export const FORM_LAYOUT_MODE_VALUES = ["single", "multi_step"] as const;
 export type FormLayoutMode = (typeof FORM_LAYOUT_MODE_VALUES)[number];
@@ -14,7 +18,7 @@ export const FORM_SCHEMA_LIMITS = {
   successRedirectUrl: 2_048,
   stepTitles: 10,
   stepTitle: 240,
-  themeColor: 128,
+  themeColor: CSS_COLOR_VALUE_MAX_LENGTH,
   submitLabel: 240,
 } as const;
 
@@ -135,8 +139,14 @@ export type FormSettings = {
 };
 
 const themeColorSchema = {
-  type: "string",
-  maxLength: FORM_SCHEMA_LIMITS.themeColor,
+  anyOf: [
+    { const: "" },
+    {
+      type: "string",
+      maxLength: CSS_COLOR_VALUE_MAX_LENGTH,
+      pattern: CSS_COLOR_SCHEMA_PATTERNS["inherited-render"],
+    },
+  ],
 } as const;
 
 export const formAutomationRetrySchema = {
@@ -294,8 +304,8 @@ export function getDefaultFormSettings(): FormSettings {
 
 // -----------------------------------------------------------------------------
 // TASK-516-01: theme normalizer (present-only, reject-unknown KEYS, fail-soft
-// VALUES). Colors run through the widget's `resolveClearableCssColorValue`
-// policy at the write boundary (unsafe/blank → key dropped). Enum values are
+// VALUES). Colors run through the canonical inherited-render policy at the
+// write boundary (unsafe/blank → key dropped). Enum values are
 // validated against the `FORM_THEME_*` Sets; unknown enum values are dropped.
 // -----------------------------------------------------------------------------
 const normalizeThemeEnum = <T extends string>(value: unknown, allowed: Set<T>): T | undefined => {
@@ -310,7 +320,7 @@ const normalizeThemeBool = (value: unknown): boolean | undefined =>
   typeof value === "boolean" ? value : undefined;
 
 const normalizeThemeColor = (value: unknown): string | undefined =>
-  resolveClearableCssColorValue(value);
+  normalizeCssColorValue(value, "inherited-render");
 
 const normalizeOptionalText = (value: unknown): string | undefined => toString(value) ?? undefined;
 

@@ -8,8 +8,12 @@
 **Category:** SVG Parsing / Security
 **Estimated Effort:** Medium
 **Dependencies:** TASK-538-01-L01
-**Status:** ⏳ To Do
-**Changelog:** 1250 (pinned; create only at implementation closure)
+**Status:** ✅ Done
+**Started:** 2026-07-11
+**Completed:** 2026-07-11
+**Implementation Gate:** ✅ Passed (271/271 shared targeted tests, 38/38 dedicated
+safe-tree tests, lint, typecheck, mechanical probes, and final read-only audit)
+**Changelog:** 1250
 
 ---
 
@@ -42,6 +46,10 @@ export type SafeSvgNode = SafeSvgElement | SafeSvgText;
 export const SVG_SAFE_TREE_MAX_NODES = 2048;
 export const SVG_SAFE_TREE_MAX_DEPTH = 64;
 export const SVG_SAFE_TREE_MAX_TEXT_CHARS = 8192;
+export type SafeReactSvgProp = /* exact closed React SVG prop union */;
+export const SAFE_SVG_SOURCE_TO_REACT_PROP = Object.freeze({
+  /* every SafeSvgSourceAttr exactly once */
+} satisfies Record<SafeSvgSourceAttr, SafeReactSvgProp>);
 
 export function buildSafeSvgTree(raw: string): SafeSvgElement | null;
 ~~~
@@ -71,9 +79,14 @@ function buildSafeSvgTree(raw) {
       increment nodeCount; reject above SVG_SAFE_TREE_MAX_NODES;
       reject when stack depth would exceed SVG_SAFE_TREE_MAX_DEPTH;
       require isSafeSvgTag(tag) from immutable policy;
-      parse only quoted/normalized attributes emitted by sanitizeSvg;
+      parse the exact quote-aware grammar emitted by sanitizeSvg:
+        token = ([a-zA-Z_:][-\w:.]*)\s*=\s*("[^"]*"|'[^']*'|[^\s"'>]+);
+        allow XML whitespace before each complete token and around `=` exactly as the
+          producer does;
+      require a cursor-based parse to consume the entire attribute body; reject any
+        non-whitespace gap, residue, valueless token, or malformed quote;
       require isSafeSvgSourceAttr(name), decode the closed XML entity grammar, then map
-        through closed SOURCE_TO_REACT_PROP;
+        through closed SAFE_SVG_SOURCE_TO_REACT_PROP;
       recheck decoded href/url local fragment, namespace, controls, and reject
         class/style/on*/unknown;
       node = immutable SafeSvgElement;
@@ -99,7 +112,7 @@ already-sanitized canonical output and still rejects every unexpected token.
 Entity decoding is a closed XML operation, never HTML parsing: only `amp`, `lt`, `gt`,
 `quot`, `apos`, and valid numeric scalar references are accepted. Attribute security
 checks run after decoding so encoded text cannot change a local reference into a remote
-one. The limits above are part of the exported immutable policy and keep both tree
+one. The limits above are part of the exported safe-tree contract and keep both tree
 construction and TASK-538-02's recursive React render below a fixed safe depth.
 
 ## Error and compatibility contract
@@ -114,11 +127,15 @@ placeholder. No stored document migration or dependency is introduced.
 This leaf creates and passes `tests/vitest/pages/svg-safe-tree.test.ts` before its source
 gate. Add safe-tree tests for nested defs/gradients/use/text,
 self-closing shapes, a minimal `<path d="...">` whose sparse props contain no unrelated
-keys, canonical React prop mapping, malformed stack/residue rejection,
+keys, safe bare/single/double-quoted attribute parity plus two-pass idempotence,
+canonical React prop mapping, malformed stack/residue rejection,
 class/style/event/unknown prop impossibility, local refs, idempotent deterministic tree,
 and exact one-pass entity/text escaping. Test each node/depth/text limit at the boundary
 and one over, malformed/numeric entities, and an encoded non-local reference. Prove the
-returned tag cannot be caller-selected outside the closed set.
+returned tag cannot be caller-selected outside the closed set. Add an exhaustive parity
+assertion: every `SAFE_SVG_SOURCE_ATTRS` member maps to exactly one explicit React prop,
+no extra mapping key exists, and class/style/on*/unknown names have no mapping. Include
+attribute-body residue, valueless/gap, and edge-character cases from the producer grammar.
 
 TASK-538-02-L02 may add cross-renderer cases later but cannot re-baseline this parser
 contract.
@@ -145,3 +162,9 @@ a failure.
 - The tag/attribute/local-reference decision comes from the one immutable L01 policy.
 - No tree property can contain class, style, an event handler, or remote reference.
 - No author-controlled HTML/SVG string is required by the renderer.
+
+## Completion evidence
+
+The dependency-free closed tree, exhaustive source-to-React property mapping, entity
+handling, and node/depth/text caps landed. Dedicated and shared gates plus the final
+safe-tree post-audit lens passed with no unresolved High/Medium/Low finding.

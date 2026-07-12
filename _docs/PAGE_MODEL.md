@@ -811,6 +811,35 @@ Page Editor session controls are intentionally browser-local and Page-only:
   before insertion, and inserts blocks after the selected block or at the end of
   the selected section while sections paste after the selected section.
 
+### Page color boundary (TASK-541 / TASK-539 handoff)
+
+The landed TASK-541 seam is the shared Page admin color control: supported UI
+commits use the canonical `authoring` profile from
+`core/services/theme/cssColorContract.ts`. Page persistence and rendering still
+use the independent legacy sanitizer in `pageAuthoringSanitizers.ts`; that
+backend has not imported the shared parser yet. The admin adapter is therefore
+not the server trust boundary for direct/imported payloads.
+
+The current Page-owned sanitizer permits exactly these site-token references,
+in owner order: `var(--color-primary)`, `var(--color-secondary)`,
+`var(--color-accent)`, `var(--color-bg)`, `var(--color-surface)`,
+`var(--color-text)`, and `var(--color-border)`. Other syntactically valid
+`var(--color-*)` names fail closed. Its separate legacy raw-color branches still
+accept bounded hex, alphabetic named values, and the existing broad functional
+shape. Consequently direct/imported backend values such as `currentColor` and
+`inherit` retain the current named-value behavior even though the shared admin
+control does not commit them. The exact seven-token rule applies to
+`var(--color-*)`; it does not imply that the legacy backend already enforces the
+canonical simple-color grammar or numeric ranges.
+
+TASK-539-02-L01 owns importing the shared parser into that sanitizer while
+preserving the exact seven-token filter and Page-specific background/composite
+rules. Only after that future handoff may the Page backend be described as using
+the shared `authoring` profile and rejecting inherited/named values outside it.
+Until then, the existing legacy sanitizer remains authoritative. Optional Page
+color fields stay present-only: rejection or clear removes/omits the field and
+does not seed a resolution default.
+
 ## Responsive Cascade
 
 The owner normalizer keeps `desktop`, `tablet`, and `mobile` breakpoints stable.
@@ -1056,15 +1085,30 @@ jsonb (`block.style`, `section.style`, block props). Enums are `normalizeEnum`-g
 
 ### Custom-SVG block (`customSvg`) — the one new `pageBlockType`
 
-`customSvg` is the single new `pageBlockType` member (the FIVE exhaustive
+`customSvg` is a Page-owned block, not a configurable widget, and is the single new
+`pageBlockType` member (the FIVE exhaustive
 `Record<PageBlockType, …>` surfaces gain one entry each). `pageBlockPropKeys.customSvg
 = ["svg", "drawIn", "drawSpeed", "label"]`, defaults `{ svg: "", drawIn: false, label:
 "" }`:
 
-- `svg` — arbitrary inline SVG source, **sanitized by an allowlist sanitizer**
-  (`core/services/pages/svgSanitizer.ts`) at BOTH write (`normalizeBlockProps`) AND
-  render (defence-in-depth before `dangerouslySetInnerHTML`). See `SECURITY_SPEC.md` §
-  Pages custom-SVG sanitizer boundary.
+- `svg` — untrusted inline SVG source, sanitized at BOTH write (`normalizeBlockProps`)
+  and render by `core/services/pages/svgSanitizer.ts`. The shared immutable closed
+  policy excludes author-controlled `class` and `style` on the root and descendants;
+  unknown names are removed, while unsafe or malformed input fails closed. See
+  `SECURITY_SPEC.md` § Pages custom-SVG sanitizer and renderer boundary.
+- Sanitized text is parsed by `buildSafeSvgTree` without browser error recovery into a
+  deeply frozen closed tree, bounded to 2,048 elements, depth 64, and 8,192 decoded
+  text characters. The renderer traverses that tree into React elements through the
+  complete explicit source-to-React prop map; author data never enters a
+  `dangerouslySetInnerHTML` sink.
+- The root aspect ratio is snapshotted from a strict finite four-number `viewBox`, or
+  positive finite `width`/`height` fallback, before root `x`, `y`, `width`, `height`,
+  and `transform` are removed. Renderer-owned layout clamps the ratio to 1/8..8, sets
+  width to 100%, caps block size at 1,024 px, clips overflow, contains layout/paint,
+  and disables pointer events. Safe descendant drawing geometry remains unchanged.
+- Invalid input renders only the neutral placeholder. The verification contract covers
+  editor, published, and preview paths and requires narrow/wide browser isolation and
+  click-through smoke with zero console errors before task closure.
 - `drawIn` — boolean; enables an optional stroke draw-in animation
   (`@keyframes cx-draw { to { stroke-dashoffset: 0 } }`, the reference `.draw-line`).
 - `drawSpeed` — draw duration, clamped `PAGE_DRAW_SPEED_CLAMP = { min: 600, max: 6000 }`

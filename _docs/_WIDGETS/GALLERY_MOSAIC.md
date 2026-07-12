@@ -155,6 +155,10 @@ lightbox triggers.
 
 - `style.overlay` is clearable; clear removes the overlay value and the renderer
   omits the caption overlay node/style instead of writing a transparent overlay.
+- This direct compatibility field uses the shared `inherited-render` profile at
+  schema/normalization/control/render boundaries. Canonical `currentColor` and
+  `inherit` are valid; semantic-invalid or unsafe values are omitted rather than
+  rendered raw. The optional override remains present-only.
 - `image`, `video`, and `poster` are clearable through Visual actions. Clearing
   the active media also clears the poster because poster frames only apply to
   video items.

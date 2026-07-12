@@ -995,6 +995,27 @@ section); this is the authoring/UX surface.
   explicit `15`, and writes nothing on mount). The Menu editor header items badge shows
   the TOTAL nested item count with correct plural.
 
+### Menu color write contract (TASK-541)
+
+Every Menu color path, including brand, level 0/1/2, responsive, scrolled, and
+icon-color overrides, uses the canonical `authoring` profile from
+`core/services/theme/cssColorContract.ts`. Original input bytes reach the shared
+semantic parser before trimming; accepted values are stored in canonical form.
+`currentColor` and `inherit` are not Menu write values.
+
+`PATCH /menus/:id` has a shallow strict route envelope: unknown top-level keys
+are rejected, while `appearance` and `document` are checked only as
+object-or-null at that layer. There is no nested route color pattern or route
+color `maxLength`. Deep reject-unknown ownership belongs to
+`normalizeMenuAppearance` and `normalizeMenuDocumentV2ForWrite`; their color
+leaves pass the original value directly to `normalizeMenuColorValue`, which
+delegates to the shared semantic parser. Appearance-invalid values reject the
+write, while document leaves retain their declared reject/omit policy; neither
+path persists or renders rejected raw color bytes. Optional color overrides
+remain sparse/present-only, so reset prunes the field instead of materializing a
+resolved default. This rollout changes no endpoint, permission, CSRF,
+rate-limit, document version, or migration contract.
+
 ## Menu Design tab — base reset, visible defaults & 5 modern bundles (TASK-506)
 
 TASK-506 extends the same Design tab with the two owner-reported UX foundations and

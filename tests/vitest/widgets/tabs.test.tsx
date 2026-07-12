@@ -24,6 +24,23 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<TabsData>> = () => null;
 
+test("tabs editor mounts inherited colors without mutation", () => {
+  let writes = 0;
+  const html = renderToString(
+    <TabsVisualEditor
+      value={{ ...tabsDefaults, style: { surfaceColor: "currentColor", borderColor: "inherit" } }}
+      onChange={() => {
+        writes += 1;
+      }}
+      variant="pills"
+      onVariantChange={() => undefined}
+    />
+  );
+  expect(html.match(/data-shared-color-state="inherited"/g)).toHaveLength(2);
+  expect(html).toContain("Inherited color");
+  expect(writes).toBe(0);
+});
+
 test("tabs renders defaults with runtime marker", () => {
   const html = renderToString(<TabsBlock data={tabsDefaults} variant="pills" />);
 
@@ -418,6 +435,29 @@ test("tabs preserve bounded imported style colors", () => {
   expect(html).toContain("color:currentColor");
   expect(html).toContain("color:hsl(210, 50%, 40%)");
   expect(html).toContain("background-color:var(--color-surface)");
+});
+
+test("tabs canonicalize inherited values for every owned color field", () => {
+  const fields = [
+    "surfaceColor",
+    "borderColor",
+    "activeBackgroundColor",
+    "activeTextColor",
+    "inactiveTextColor",
+    "panelBackgroundColor",
+  ] as const;
+  const normalized = normalizeTabsData({
+    ...tabsDefaults,
+    style: Object.fromEntries(
+      fields.map((field, index) => [field, index % 2 === 0 ? " CURRENTCOLOR " : " INHERIT "])
+    ),
+  });
+  for (const [index, field] of fields.entries()) {
+    expect(normalized.style?.[field]).toBe(index % 2 === 0 ? "currentColor" : "inherit");
+  }
+  const html = renderToString(<TabsBlock data={normalized} variant="pills" />);
+  expect(html).toContain("currentColor");
+  expect(html).toContain("inherit");
 });
 
 test("tabs render editor placeholders only in preview contexts", () => {

@@ -21,6 +21,7 @@ import { ConfirmActionDialog } from "../../shared/ConfirmActionDialog";
 import {
   ctaBannerDefaults,
   normalizeCtaBannerData,
+  parseCtaBannerBackgroundGradient,
   resolveCtaBannerActionRenderState,
   resolveCtaBannerVariant,
   type CtaActionIcon,
@@ -45,6 +46,7 @@ import type {
 } from "../../../../widgets/types";
 import { resolveColorPickerValue } from "./ClearableFields";
 import { LinkDestinationField } from "./LinkDestinationField";
+import { SharedColorControl } from "./SharedColorControl";
 import {
   ReadonlyWidgetSummaryRow,
   WidgetControlRow,
@@ -209,8 +211,6 @@ const ctaHrefOptions = {
   allowHttp: true,
 } as const;
 
-const linearGradientPattern =
-  /^linear-gradient\(\s*(-?\d+(?:\.\d+)?)deg\s*,\s*(#[0-9a-fA-F]{3,8})\s*,\s*(#[0-9a-fA-F]{3,8})\s*\)$/;
 const defaultGradientStart = "#0f172a";
 const defaultGradientEnd = "#475569";
 const defaultGradientAngle = 135;
@@ -296,14 +296,19 @@ function GradientField({
   onChange: (next: string) => void;
   onClear?: () => void;
 }) {
-  const parsed = value?.match(linearGradientPattern);
-  const angle =
-    parsed && Number.isFinite(Number(parsed[1])) ? Number(parsed[1]) : defaultGradientAngle;
-  const start = parsed ? parsed[2] : defaultGradientStart;
-  const end = parsed ? parsed[3] : defaultGradientEnd;
+  const parsed = parseCtaBannerBackgroundGradient(value);
+  const angle = parsed?.angle ?? defaultGradientAngle;
+  const start = parsed?.start ?? defaultGradientStart;
+  const end = parsed?.end ?? defaultGradientEnd;
+  const preview =
+    parsed?.normalized ??
+    `linear-gradient(${defaultGradientAngle}deg, ${defaultGradientStart}, ${defaultGradientEnd})`;
 
   const emit = (nextAngle: number, nextStart: string, nextEnd: string) => {
-    onChange(`linear-gradient(${nextAngle}deg, ${nextStart}, ${nextEnd})`);
+    const next = parseCtaBannerBackgroundGradient(
+      `linear-gradient(${nextAngle}deg, ${nextStart}, ${nextEnd})`
+    );
+    if (next) onChange(next.normalized);
   };
 
   return (
@@ -312,7 +317,13 @@ function GradientField({
       path={path}
       label={label}
       actions={
-        <Button type="button" variant="ghost" size="sm" onClick={onClear} disabled={!value?.trim()}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onClear}
+          disabled={value === undefined || value === ""}
+        >
           Clear
         </Button>
       }
@@ -321,7 +332,7 @@ function GradientField({
         <div className="space-y-2 rounded-md border p-3">
           <div
             className="h-10 rounded-md border border-border/70"
-            style={{ backgroundImage: `linear-gradient(${angle}deg, ${start}, ${end})` }}
+            style={{ backgroundImage: preview }}
           />
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
@@ -391,81 +402,20 @@ function ColorField({
   allowTransparent?: boolean;
   treatAsThemeDefaultValues?: string[];
 }) {
-  const normalizedValue = value?.trim();
-  const isTransparent = normalizedValue === "transparent";
-  const themeDefaultValues = new Set(
-    (treatAsThemeDefaultValues ?? [])
-      .map((entry) => entry.trim())
-      .filter((entry) => entry.length > 0)
-  );
-  const isThemeDefaultValue = normalizedValue ? themeDefaultValues.has(normalizedValue) : false;
-  const hasValue = typeof value === "string" && value.trim().length > 0;
-  const hasCustomValue =
-    hasValue &&
-    !isTransparent &&
-    !isThemeDefaultValue &&
-    !/^#(?:[0-9a-fA-F]{3}){1,2}$/.test(normalizedValue ?? "");
-  const swatchValue = resolveColorPickerValue(value, pickerFallback);
-
   return (
-    <WidgetControlRow
-      id={id}
-      path={path}
+    <SharedColorControl
+      controlId={id}
+      controlPath={path}
       label={label}
-      actions={
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onClear}
-          disabled={!hasValue || isThemeDefaultValue}
-        >
-          Clear
-        </Button>
-      }
-    >
-      {(fieldProps) => (
-        <div className="space-y-3">
-          <div className="grid grid-cols-[2.75rem_1fr] gap-3">
-            <Input
-              id={fieldProps.id}
-              type="color"
-              value={swatchValue}
-              onChange={(event) => onChange(event.target.value)}
-              className="h-10 w-11 p-1"
-              aria-labelledby={fieldProps["aria-labelledby"]}
-              aria-describedby={fieldProps["aria-describedby"]}
-            />
-            <div className="flex min-h-10 flex-wrap items-center gap-2">
-              <span className="rounded-md border border-border/70 px-2 py-1 text-xs text-muted-foreground">
-                {isTransparent
-                  ? "Transparent"
-                  : hasCustomValue
-                    ? "Saved custom color"
-                    : hasValue && !isThemeDefaultValue
-                      ? "Selected color"
-                      : "Theme default"}
-              </span>
-              {allowTransparent ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onChange("transparent")}
-                >
-                  Use transparent
-                </Button>
-              ) : null}
-            </div>
-          </div>
-          {hasCustomValue ? (
-            <p className="rounded-md border border-dashed border-border/70 bg-muted/40 p-2 text-xs text-muted-foreground">
-              A saved custom color is configured. Pick a swatch to replace it, or clear the field.
-            </p>
-          ) : null}
-        </div>
-      )}
-    </WidgetControlRow>
+      value={value}
+      onChange={onChange}
+      onClear={onClear}
+      pickerFallback={pickerFallback}
+      showValueInput={false}
+      allowTransparent={allowTransparent}
+      treatAsThemeDefaultValues={treatAsThemeDefaultValues}
+      colorProfile="inherited-render"
+    />
   );
 }
 
@@ -1113,7 +1063,7 @@ export function CtaBannerVisualEditor({
           id="cta-banner.style.text"
           path="style.text"
           label="Text color"
-          value={normalized.style?.text}
+          value={value.style?.text ?? normalized.style?.text}
           onChange={(next) => updateStyle(value, onChange, { text: next })}
           onClear={() => clearStyleField(value, onChange, "text")}
           pickerFallback="#0f172a"
@@ -1123,7 +1073,7 @@ export function CtaBannerVisualEditor({
           id="cta-banner.style.badgeBackground"
           path="style.badgeBackground"
           label="Badge background"
-          value={normalized.style?.badgeBackground}
+          value={value.style?.badgeBackground ?? normalized.style?.badgeBackground}
           onChange={(next) => updateStyle(value, onChange, { badgeBackground: next })}
           onClear={() => clearStyleField(value, onChange, "badgeBackground")}
           pickerFallback="#1d4ed8"
@@ -1133,7 +1083,7 @@ export function CtaBannerVisualEditor({
           id="cta-banner.style.badgeText"
           path="style.badgeText"
           label="Badge text"
-          value={normalized.style?.badgeText}
+          value={value.style?.badgeText ?? normalized.style?.badgeText}
           onChange={(next) => updateStyle(value, onChange, { badgeText: next })}
           onClear={() => clearStyleField(value, onChange, "badgeText")}
           pickerFallback="#ffffff"
@@ -1143,7 +1093,7 @@ export function CtaBannerVisualEditor({
           id="cta-banner.style.primaryButtonBg"
           path="style.primaryButtonBg"
           label="Primary button background"
-          value={normalized.style?.primaryButtonBg}
+          value={value.style?.primaryButtonBg ?? normalized.style?.primaryButtonBg}
           onChange={(next) => updateStyle(value, onChange, { primaryButtonBg: next })}
           onClear={() => clearStyleField(value, onChange, "primaryButtonBg")}
           pickerFallback="#1d4ed8"
@@ -1153,7 +1103,7 @@ export function CtaBannerVisualEditor({
           id="cta-banner.style.primaryButtonText"
           path="style.primaryButtonText"
           label="Primary button text"
-          value={normalized.style?.primaryButtonText}
+          value={value.style?.primaryButtonText ?? normalized.style?.primaryButtonText}
           onChange={(next) => updateStyle(value, onChange, { primaryButtonText: next })}
           onClear={() => clearStyleField(value, onChange, "primaryButtonText")}
           pickerFallback="#ffffff"
@@ -1163,7 +1113,7 @@ export function CtaBannerVisualEditor({
           id="cta-banner.style.primaryButtonBorder"
           path="style.primaryButtonBorder"
           label="Primary button border"
-          value={normalized.style?.primaryButtonBorder}
+          value={value.style?.primaryButtonBorder ?? normalized.style?.primaryButtonBorder}
           onChange={(next) => updateStyle(value, onChange, { primaryButtonBorder: next })}
           onClear={() => clearStyleField(value, onChange, "primaryButtonBorder")}
           pickerFallback="#ffffff"
@@ -1173,7 +1123,7 @@ export function CtaBannerVisualEditor({
           id="cta-banner.style.secondaryButtonBg"
           path="style.secondaryButtonBg"
           label="Secondary button background"
-          value={normalized.style?.secondaryButtonBg}
+          value={value.style?.secondaryButtonBg ?? normalized.style?.secondaryButtonBg}
           onChange={(next) => updateStyle(value, onChange, { secondaryButtonBg: next })}
           onClear={() => clearStyleField(value, onChange, "secondaryButtonBg")}
           pickerFallback="#ffffff"
@@ -1183,7 +1133,7 @@ export function CtaBannerVisualEditor({
           id="cta-banner.style.secondaryButtonText"
           path="style.secondaryButtonText"
           label="Secondary button text"
-          value={normalized.style?.secondaryButtonText}
+          value={value.style?.secondaryButtonText ?? normalized.style?.secondaryButtonText}
           onChange={(next) => updateStyle(value, onChange, { secondaryButtonText: next })}
           onClear={() => clearStyleField(value, onChange, "secondaryButtonText")}
           pickerFallback="#0f172a"
@@ -1193,7 +1143,7 @@ export function CtaBannerVisualEditor({
           id="cta-banner.style.secondaryButtonBorder"
           path="style.secondaryButtonBorder"
           label="Secondary button border"
-          value={normalized.style?.secondaryButtonBorder}
+          value={value.style?.secondaryButtonBorder ?? normalized.style?.secondaryButtonBorder}
           onChange={(next) => updateStyle(value, onChange, { secondaryButtonBorder: next })}
           onClear={() => clearStyleField(value, onChange, "secondaryButtonBorder")}
           pickerFallback="#e2e8f0"
@@ -1203,7 +1153,7 @@ export function CtaBannerVisualEditor({
           id="cta-banner.style.border"
           path="style.border"
           label="Border color"
-          value={normalized.style?.border}
+          value={value.style?.border ?? normalized.style?.border}
           onChange={(next) => updateStyle(value, onChange, { border: next })}
           onClear={() => clearStyleField(value, onChange, "border")}
           pickerFallback="#e2e8f0"
@@ -1339,7 +1289,12 @@ export function CtaBannerVisualEditor({
           id="cta-banner.background.color"
           path="background.color"
           label="Background color"
-          value={normalized.background?.color ?? normalized.style?.background}
+          value={
+            value.background?.color ??
+            value.style?.background ??
+            normalized.background?.color ??
+            normalized.style?.background
+          }
           onChange={(next) => updateSurfaceColor(value, onChange, next)}
           onClear={() => clearBackgroundField(value, onChange, "color")}
           pickerFallback="#f8fafc"
@@ -1351,7 +1306,7 @@ export function CtaBannerVisualEditor({
           id="cta-banner.background.gradient"
           path="background.gradient"
           label="Background gradient"
-          value={normalized.background?.gradient}
+          value={value.background?.gradient ?? normalized.background?.gradient}
           onChange={(next) => updateBackground(value, onChange, { gradient: next })}
           onClear={() => clearBackgroundField(value, onChange, "gradient")}
         />
@@ -1441,7 +1396,9 @@ export function CtaBannerAdvancedEditor({
     },
     {
       label: "Background gradient",
-      value: normalized.background?.gradient?.trim() ? "Configured" : "Not configured",
+      value: parseCtaBannerBackgroundGradient(normalized.background?.gradient)
+        ? "Configured"
+        : "Not configured",
     },
     { label: "Text", value: normalized.style?.text },
     { label: "Border", value: normalized.style?.border },

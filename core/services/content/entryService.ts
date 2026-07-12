@@ -10,17 +10,24 @@ import {
   users,
 } from "../../db/schema";
 import { createPreviewToken } from "../pages/previewService";
-import { invalidateContentEntryCache } from "../../site/cache/siteCache";
+import { clearSiteCache, invalidateContentEntryCache } from "../../site/cache/siteCache";
 import { getContentType } from "./typeService";
-import { getSeoDocumentByTarget, upsertSeoDocument } from "../seo/seoService";
+import {
+  applyPreparedSeoMutationWithExecutor,
+  getSeoDocumentByTarget,
+  prepareSeoMutationWithExecutor,
+  upsertSeoDocument,
+  type PreparedSeoMutation,
+} from "../seo/seoService";
 import { resolveEmailValue } from "../security/piiEmail";
 import type { ListingPushdownPredicate } from "./listingPushdown";
 import { buildEntryDataPredicateSql } from "./listingPushdownSql";
 import {
+  applyEntryTaxonomyMutation,
   getEntryTaxonomies,
-  replaceEntryTaxonomies,
-  resolveEntryTagsFromTaxonomy,
+  prepareEntryTaxonomyMutation,
   type EntryTaxonomyAssignments,
+  type EntryTaxonomyPlan,
 } from "./taxonomyService";
 import { type ContentSchema, validateEntryData } from "./validation";
 
@@ -89,8 +96,128 @@ export type UpdateEntryMetadataInput = {
   seo?: EntrySeo;
 };
 
-type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type DbClient = typeof db | DbTransaction;
+type EntryTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type EntryTransactionRunner = <T>(callback: (tx: EntryTransaction) => Promise<T>) => Promise<T>;
+type DbClient = typeof db | EntryTransaction;
+
+type EntryPublishAuthorization =
+  | Readonly<{ kind: "route"; authorize: () => Promise<void> }>
+  | Readonly<{ kind: "trusted-internal" }>;
+
+type EntryMutationState = Readonly<{
+  id: string;
+  typeId: string;
+  slug: string;
+  title: string;
+  status: EntryStatus;
+  data: EntryData;
+  publishedAt: Date | null;
+  scheduledAt: Date | null;
+  visibility: EntryVisibility;
+  tags: string[];
+  createdAt: Date;
+  updatedAt: Date;
+  hasPassword: boolean;
+}>;
+
+type ContentTypeMutationContext = Readonly<{
+  id: string;
+  slug: string;
+  schema: ContentSchema;
+}>;
+
+type EntryCacheProjection = Readonly<{
+  id: string;
+  typeId: string;
+  slug: string;
+  status: EntryStatus;
+  publishedAt: Date | null;
+  scheduledAt: Date | null;
+  updatedAt: Date;
+}>;
+
+type EntryStatusWritePlan = Readonly<{
+  entryId: string;
+  values: Readonly<{
+    status: EntryStatus;
+    publishedAt?: Date | null;
+    scheduledAt: Date | null;
+    updatedAt: Date;
+  }>;
+}>;
+
+type EntryMetadataWritePlan = Readonly<{
+  entryId: string;
+  values: Readonly<{
+    tags?: string[];
+    visibility?: EntryVisibility;
+    accessPassword?: string | null;
+    scheduledAt?: Date | null;
+    updatedAt: Date;
+  }>;
+}>;
+
+type EntryMutationWritePlan = Readonly<{
+  transitionToPublished: boolean;
+  statusWrite: EntryStatusWritePlan | null;
+  taxonomyWrite: boolean;
+  metadataWrite: EntryMetadataWritePlan | null;
+  seoWrite: boolean;
+  changed: boolean;
+}>;
+
+type EntryCacheReference = Readonly<{
+  typeSlug: string;
+  entrySlug: string;
+  entryId: string;
+}>;
+
+type EntryCacheFailureCode = "entry_cache_invalidation_failed";
+
+const ENTRY_MUTATION_FIELDS = {
+  id: contentEntries.id,
+  typeId: contentEntries.typeId,
+  slug: contentEntries.slug,
+  title: contentEntries.title,
+  status: contentEntries.status,
+  data: contentEntries.data,
+  publishedAt: contentEntries.publishedAt,
+  scheduledAt: contentEntries.scheduledAt,
+  visibility: contentEntries.visibility,
+  tags: contentEntries.tags,
+  createdAt: contentEntries.createdAt,
+  updatedAt: contentEntries.updatedAt,
+  hasPassword: sql<boolean>`${contentEntries.accessPassword} is not null`,
+} as const;
+
+const ENTRY_CACHE_FIELDS = {
+  id: contentEntries.id,
+  typeId: contentEntries.typeId,
+  slug: contentEntries.slug,
+  status: contentEntries.status,
+  publishedAt: contentEntries.publishedAt,
+  scheduledAt: contentEntries.scheduledAt,
+  updatedAt: contentEntries.updatedAt,
+} as const;
+
+const ENTRY_DELETE_FIELDS = {
+  id: contentEntries.id,
+  title: contentEntries.title,
+} as const;
+
+const ENTRY_UPDATE_FIELDS = {
+  id: contentEntries.id,
+  typeId: contentEntries.typeId,
+  title: contentEntries.title,
+  slug: contentEntries.slug,
+  data: contentEntries.data,
+} as const;
+
+const CONTENT_TYPE_MUTATION_CONTEXT_FIELDS = {
+  id: contentTypes.id,
+  slug: contentTypes.slug,
+  schema: contentTypes.schema,
+} as const;
 
 type RelationFieldConfig = {
   name: string;
@@ -397,7 +524,7 @@ async function getContentSchema(typeId: string) {
 
 async function ensureEntrySlugAvailable(typeId: string, slug: string, excludeEntryId?: string) {
   const rows = await db
-    .select()
+    .select({ id: contentEntries.id })
     .from(contentEntries)
     .where(
       excludeEntryId
@@ -426,6 +553,201 @@ const normalizeTags = (tags?: string[]) => {
 const normalizeSeoSlug = (slug: string | null) => {
   if (!slug) return null;
   return slug.startsWith("/") ? slug : `/${slug}`;
+};
+
+const sameOptionalDate = (left: Date | null, right: Date | null) =>
+  left === null || right === null ? left === right : left.getTime() === right.getTime();
+
+async function loadEntryMutationStateForUpdate(
+  executor: EntryTransaction,
+  entryId: string
+): Promise<EntryMutationState | null> {
+  const [row] = await executor
+    .select(ENTRY_MUTATION_FIELDS)
+    .from(contentEntries)
+    .where(eq(contentEntries.id, entryId))
+    .limit(1)
+    .for("update");
+
+  if (!row) return null;
+  return {
+    id: row.id,
+    typeId: row.typeId,
+    slug: row.slug,
+    title: row.title,
+    status: row.status as EntryStatus,
+    data: row.data as EntryData,
+    publishedAt: row.publishedAt ?? null,
+    scheduledAt: row.scheduledAt ?? null,
+    visibility: row.visibility as EntryVisibility,
+    tags: (row.tags ?? []) as string[],
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    hasPassword: row.hasPassword,
+  };
+}
+
+async function getContentTypeMutationContextWithExecutor(
+  executor: EntryTransaction,
+  typeId: string
+): Promise<ContentTypeMutationContext | null> {
+  const [row] = await executor
+    .select(CONTENT_TYPE_MUTATION_CONTEXT_FIELDS)
+    .from(contentTypes)
+    .where(eq(contentTypes.id, typeId))
+    .limit(1);
+
+  return row
+    ? {
+        id: row.id,
+        slug: row.slug,
+        schema: row.schema as ContentSchema,
+      }
+    : null;
+}
+
+async function writeEntryStatusTx(
+  tx: EntryTransaction,
+  plan: EntryStatusWritePlan
+): Promise<EntryCacheProjection | null> {
+  const [row] = await tx
+    .update(contentEntries)
+    .set(plan.values)
+    .where(eq(contentEntries.id, plan.entryId))
+    .returning(ENTRY_CACHE_FIELDS);
+
+  return row ? { ...row, status: row.status as EntryStatus } : null;
+}
+
+async function writeEntryMetadataTx(
+  tx: EntryTransaction,
+  plan: EntryMetadataWritePlan
+): Promise<void> {
+  await tx.update(contentEntries).set(plan.values).where(eq(contentEntries.id, plan.entryId));
+}
+
+async function validateEntryForPublish(
+  tx: EntryTransaction,
+  entry: EntryMutationState,
+  contentSchema: ContentSchema
+) {
+  validateEntryData(entry.typeId, contentSchema, entry.data);
+  await validateRelationEntries(contentSchema, entry.data, tx);
+  await validateMediaAssets(contentSchema, entry.data, tx);
+}
+
+async function publishEntryTx(
+  deps: EntryMutationDeps,
+  tx: EntryTransaction,
+  entry: EntryMutationState,
+  contentSchema: ContentSchema,
+  actorId: string,
+  statusPlan: EntryStatusWritePlan
+): Promise<EntryCacheProjection | null> {
+  await validateEntryForPublish(tx, entry, contentSchema);
+  await deps.createRevision(tx, entry.id, entry.data, actorId);
+  return deps.writeStatus(tx, statusPlan);
+}
+
+function reportEntryCacheFailure(code: EntryCacheFailureCode): void {
+  try {
+    console.warn(code);
+  } catch {
+    // Best-effort reporting must not turn a durable commit into a failed request.
+  }
+}
+
+const runEntryTransaction: EntryTransactionRunner = async <T>(
+  callback: (tx: EntryTransaction) => Promise<T>
+) => db.transaction(callback);
+
+export type EntryMutationDeps = Readonly<{
+  transaction: EntryTransactionRunner;
+  hashPassword: typeof hashPassword;
+  prepareTaxonomy: typeof prepareEntryTaxonomyMutation;
+  applyTaxonomy: typeof applyEntryTaxonomyMutation;
+  prepareSeo: typeof prepareSeoMutationWithExecutor;
+  applySeo: typeof applyPreparedSeoMutationWithExecutor;
+  createRevision: typeof createEntryRevisionTx;
+  writeStatus: typeof writeEntryStatusTx;
+  writeMetadata: typeof writeEntryMetadataTx;
+  invalidateEntrySiteCache: typeof invalidateContentEntryCache;
+  clearAllSiteCache: typeof clearSiteCache;
+  reportCacheFailure: typeof reportEntryCacheFailure;
+}>;
+
+const entryMutationDeps: EntryMutationDeps = Object.freeze({
+  transaction: runEntryTransaction,
+  hashPassword,
+  prepareTaxonomy: prepareEntryTaxonomyMutation,
+  applyTaxonomy: applyEntryTaxonomyMutation,
+  prepareSeo: prepareSeoMutationWithExecutor,
+  applySeo: applyPreparedSeoMutationWithExecutor,
+  createRevision: createEntryRevisionTx,
+  writeStatus: writeEntryStatusTx,
+  writeMetadata: writeEntryMetadataTx,
+  invalidateEntrySiteCache: invalidateContentEntryCache,
+  clearAllSiteCache: clearSiteCache,
+  reportCacheFailure: reportEntryCacheFailure,
+});
+
+export function createEntryMutationDepsForTest(
+  overrides: Partial<EntryMutationDeps>
+): EntryMutationDeps {
+  return Object.freeze({ ...entryMutationDeps, ...overrides });
+}
+
+async function applyEntryPostCommitCache(
+  deps: EntryMutationDeps,
+  effect: Readonly<{
+    changed: boolean;
+    seoChanged: boolean;
+    cacheRef: EntryCacheReference;
+  }>
+) {
+  try {
+    if (effect.seoChanged) {
+      await deps.clearAllSiteCache();
+    } else if (effect.changed) {
+      await deps.invalidateEntrySiteCache(effect.cacheRef);
+    }
+  } catch {
+    try {
+      deps.reportCacheFailure("entry_cache_invalidation_failed");
+    } catch {
+      // Reporting is best-effort and must not change the durable mutation result.
+    }
+  }
+}
+
+const createStatusWritePlan = (
+  entry: EntryMutationState,
+  nextStatus: EntryStatus,
+  nextScheduledAt: Date | null
+): EntryStatusWritePlan => {
+  const now = new Date();
+  const values: EntryStatusWritePlan["values"] =
+    nextStatus === "published"
+      ? Object.freeze({
+          status: nextStatus,
+          publishedAt: now,
+          scheduledAt: null,
+          updatedAt: now,
+        })
+      : nextStatus === "draft"
+        ? Object.freeze({
+            status: nextStatus,
+            publishedAt: null,
+            scheduledAt: null,
+            updatedAt: now,
+          })
+        : Object.freeze({
+            status: nextStatus,
+            scheduledAt: nextStatus === "scheduled" ? nextScheduledAt : null,
+            updatedAt: now,
+          });
+
+  return Object.freeze({ entryId: entry.id, values });
 };
 
 const resolveDuplicateTitle = (sourceTitle: string, index: number) => {
@@ -683,7 +1005,10 @@ export async function getEntry(id: string): Promise<EntryDetail | null> {
 }
 
 export async function deleteEntry(id: string) {
-  const [row] = await db.delete(contentEntries).where(eq(contentEntries.id, id)).returning();
+  const [row] = await db
+    .delete(contentEntries)
+    .where(eq(contentEntries.id, id))
+    .returning(ENTRY_DELETE_FIELDS);
   return row ?? null;
 }
 
@@ -828,7 +1153,11 @@ export async function duplicateEntry(entryId: string, actorId?: string | null) {
 }
 
 export async function updateEntry(id: string, input: UpdateEntryInput) {
-  const entry = await getEntry(id);
+  const [entry] = await db
+    .select(ENTRY_UPDATE_FIELDS)
+    .from(contentEntries)
+    .where(eq(contentEntries.id, id))
+    .limit(1);
   if (!entry) throw new Error("entry_not_found");
 
   const contentType = await getContentSchema(entry.typeId);
@@ -850,8 +1179,7 @@ export async function updateEntry(id: string, input: UpdateEntryInput) {
       data: nextData,
       updatedAt: new Date(),
     })
-    .where(eq(contentEntries.id, entry.id))
-    .returning();
+    .where(eq(contentEntries.id, entry.id));
 
   if (input.title || input.slug) {
     await upsertSeoDocument({
@@ -866,54 +1194,41 @@ export async function updateEntry(id: string, input: UpdateEntryInput) {
 }
 
 export async function publishEntry(entryId: string, userId: string) {
-  const updated = await db.transaction(async (tx) => {
-    const [entry] = await tx.select().from(contentEntries).where(eq(contentEntries.id, entryId));
-
+  const committed = await entryMutationDeps.transaction(async (tx) => {
+    const entry = await loadEntryMutationStateForUpdate(tx, entryId);
     if (!entry) throw new Error("entry_not_found");
 
-    const contentType = await getContentSchema(entry.typeId);
+    const contentType = await getContentTypeMutationContextWithExecutor(tx, entry.typeId);
     if (!contentType) throw new Error("content_type_not_found");
-    validateEntryData(entry.typeId, contentType.schema as ContentSchema, entry.data);
-    await validateRelationEntries(contentType.schema as ContentSchema, entry.data as EntryData, tx);
-    await validateMediaAssets(contentType.schema as ContentSchema, entry.data as EntryData, tx);
 
-    await createEntryRevisionTx(tx, entry.id, entry.data as EntryData, userId);
-
-    const [updated] = await tx
-      .update(contentEntries)
-      .set({
-        status: "published",
-        publishedAt: new Date(),
-        scheduledAt: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(contentEntries.id, entry.id))
-      // TASK-514-01: narrow the returned shape to omit access_password.
-      .returning({
-        id: contentEntries.id,
-        typeId: contentEntries.typeId,
-        slug: contentEntries.slug,
-        status: contentEntries.status,
-        publishedAt: contentEntries.publishedAt,
-        scheduledAt: contentEntries.scheduledAt,
-        updatedAt: contentEntries.updatedAt,
-      });
-
-    return updated ?? null;
+    const statusPlan = createStatusWritePlan(entry, "published", null);
+    const updated = await publishEntryTx(
+      entryMutationDeps,
+      tx,
+      entry,
+      contentType.schema,
+      userId,
+      statusPlan
+    );
+    return {
+      updated,
+      cacheRef: {
+        typeSlug: contentType.slug,
+        entrySlug: entry.slug,
+        entryId: entry.id,
+      },
+    };
   });
 
-  if (updated) {
-    const contentType = await getContentType(updated.typeId);
-    if (contentType) {
-      await invalidateContentEntryCache({
-        typeSlug: contentType.slug,
-        entrySlug: updated.slug,
-        entryId: updated.id,
-      });
-    }
+  if (committed.updated) {
+    await applyEntryPostCommitCache(entryMutationDeps, {
+      changed: true,
+      seoChanged: false,
+      cacheRef: committed.cacheRef,
+    });
   }
 
-  return updated;
+  return committed.updated;
 }
 
 export async function unpublishEntry(entryId: string) {
@@ -926,16 +1241,7 @@ export async function unpublishEntry(entryId: string) {
       updatedAt: new Date(),
     })
     .where(eq(contentEntries.id, entryId))
-    // TASK-514-01: narrow the returned shape to omit access_password.
-    .returning({
-      id: contentEntries.id,
-      typeId: contentEntries.typeId,
-      slug: contentEntries.slug,
-      status: contentEntries.status,
-      publishedAt: contentEntries.publishedAt,
-      scheduledAt: contentEntries.scheduledAt,
-      updatedAt: contentEntries.updatedAt,
-    });
+    .returning(ENTRY_CACHE_FIELDS);
 
   if (row) {
     const contentType = await getContentType(row.typeId);
@@ -951,104 +1257,191 @@ export async function unpublishEntry(entryId: string) {
   return row ?? null;
 }
 
+export async function coordinateEntryMetadataMutation(
+  deps: EntryMutationDeps,
+  entryId: string,
+  input: UpdateEntryMetadataInput,
+  actorId: string | undefined,
+  publishAuthorization: EntryPublishAuthorization
+) {
+  const committed = await deps.transaction(async (tx) => {
+    const entry = await loadEntryMutationStateForUpdate(tx, entryId);
+    if (!entry) throw new Error("entry_not_found");
+
+    const hasScheduledAt = Object.hasOwn(input, "scheduledAt");
+    if (
+      hasScheduledAt &&
+      input.scheduledAt !== null &&
+      (!(input.scheduledAt instanceof Date) || Number.isNaN(input.scheduledAt.getTime()))
+    ) {
+      throw new Error("scheduled_at_invalid");
+    }
+
+    const nextStatus = input.status ?? entry.status;
+    const nextScheduledAt =
+      input.status !== undefined && input.status !== "scheduled"
+        ? null
+        : hasScheduledAt
+          ? (input.scheduledAt ?? null)
+          : entry.scheduledAt;
+    if (nextStatus === "scheduled" && !nextScheduledAt) {
+      throw new Error("scheduled_at_required");
+    }
+
+    const transitionToPublished = input.status === "published" && entry.status !== "published";
+    let publishActorId: string | null = null;
+    if (transitionToPublished) {
+      if (!actorId) throw new Error("auth_required");
+      const authorization = publishAuthorization as
+        | { kind?: unknown; authorize?: unknown }
+        | null
+        | undefined;
+      if (authorization?.kind === "route") {
+        if (typeof authorization.authorize !== "function") {
+          throw new Error("entry_publish_authorization_required");
+        }
+        await authorization.authorize();
+      } else if (authorization?.kind !== "trusted-internal") {
+        throw new Error("entry_publish_authorization_required");
+      }
+      publishActorId = actorId;
+    }
+
+    const hasNewPassword =
+      input.visibility === "password" &&
+      typeof input.accessPassword === "string" &&
+      input.accessPassword.length > 0;
+    if (input.visibility === "password" && !hasNewPassword && !entry.hasPassword) {
+      throw new Error("entry_password_required");
+    }
+    const preparedHash = hasNewPassword
+      ? await deps.hashPassword(input.accessPassword as string)
+      : undefined;
+
+    const normalizedTags = normalizeTags(input.tags);
+    const taxonomyPlan: EntryTaxonomyPlan | null =
+      input.taxonomy !== undefined
+        ? await deps.prepareTaxonomy(tx, entry.id, entry.typeId, input.taxonomy)
+        : null;
+    const seoPlan: PreparedSeoMutation | null =
+      input.seo !== undefined
+        ? await deps.prepareSeo(tx, {
+            targetType: "entry",
+            targetId: entry.id,
+            slug: normalizeSeoSlug(entry.slug),
+            title: input.seo.title ?? undefined,
+            description: input.seo.description ?? undefined,
+            canonicalUrl: input.seo.canonicalUrl ?? undefined,
+            robots: input.seo.robots ?? undefined,
+          })
+        : null;
+    const contentType = await getContentTypeMutationContextWithExecutor(tx, entry.typeId);
+    if (!contentType) throw new Error("content_type_not_found");
+
+    const statusTransition = input.status !== undefined && input.status !== entry.status;
+    const statusWrite = statusTransition
+      ? createStatusWritePlan(entry, nextStatus, nextScheduledAt)
+      : null;
+    const metadataValues: {
+      tags?: string[];
+      visibility?: EntryVisibility;
+      accessPassword?: string | null;
+      scheduledAt?: Date | null;
+    } = {};
+
+    if (taxonomyPlan) {
+      metadataValues.tags = [...taxonomyPlan.resolvedTagNames];
+    } else if (normalizedTags !== null) {
+      metadataValues.tags = normalizedTags;
+    }
+    if (
+      !statusTransition &&
+      hasScheduledAt &&
+      !sameOptionalDate(nextScheduledAt, entry.scheduledAt)
+    ) {
+      metadataValues.scheduledAt = nextScheduledAt;
+    }
+    if (input.visibility !== undefined) {
+      metadataValues.visibility = input.visibility;
+      if (input.visibility === "password") {
+        if (preparedHash !== undefined) metadataValues.accessPassword = preparedHash;
+      } else {
+        metadataValues.accessPassword = null;
+      }
+    }
+
+    const metadataWrite: EntryMetadataWritePlan | null =
+      Object.keys(metadataValues).length > 0
+        ? Object.freeze({
+            entryId: entry.id,
+            values: Object.freeze({ ...metadataValues, updatedAt: new Date() }),
+          })
+        : null;
+    const writePlan: EntryMutationWritePlan = Object.freeze({
+      transitionToPublished,
+      statusWrite,
+      taxonomyWrite: taxonomyPlan !== null,
+      metadataWrite,
+      seoWrite: seoPlan !== null,
+      changed:
+        statusWrite !== null || taxonomyPlan !== null || metadataWrite !== null || seoPlan !== null,
+    });
+
+    if (writePlan.transitionToPublished) {
+      if (!publishActorId || !writePlan.statusWrite) {
+        throw new Error("entry_publish_authorization_required");
+      }
+      await publishEntryTx(
+        deps,
+        tx,
+        entry,
+        contentType.schema,
+        publishActorId,
+        writePlan.statusWrite
+      );
+    } else if (writePlan.statusWrite) {
+      await deps.writeStatus(tx, writePlan.statusWrite);
+    }
+    if (taxonomyPlan) await deps.applyTaxonomy(tx, taxonomyPlan);
+    if (writePlan.metadataWrite) await deps.writeMetadata(tx, writePlan.metadataWrite);
+    if (seoPlan) await deps.applySeo(tx, seoPlan);
+
+    return {
+      changed: writePlan.changed,
+      seoChanged: writePlan.seoWrite,
+      resultId: entry.id,
+      cacheRef: {
+        typeSlug: contentType.slug,
+        entrySlug: entry.slug,
+        entryId: entry.id,
+      },
+    };
+  });
+
+  await applyEntryPostCommitCache(deps, committed);
+  return getEntry(committed.resultId);
+}
+
+export async function updateEntryMetadataForRoute(
+  entryId: string,
+  input: UpdateEntryMetadataInput,
+  actorId: string | undefined,
+  authorizePublishTransition: () => Promise<void>
+) {
+  return coordinateEntryMetadataMutation(entryMutationDeps, entryId, input, actorId, {
+    kind: "route",
+    authorize: authorizePublishTransition,
+  });
+}
+
 export async function updateEntryMetadata(
   entryId: string,
   input: UpdateEntryMetadataInput,
   actorId?: string
 ) {
-  const entry = await getEntry(entryId);
-  if (!entry) throw new Error("entry_not_found");
-
-  const nextStatus = input.status ?? entry.status;
-  const normalizedTags = normalizeTags(input.tags);
-  let resolvedTags: string[] | null = null;
-
-  if (input.scheduledAt && Number.isNaN(input.scheduledAt.getTime())) {
-    throw new Error("scheduled_at_invalid");
-  }
-
-  if (nextStatus === "scheduled") {
-    if (!input.scheduledAt && !entry.scheduledAt) {
-      throw new Error("scheduled_at_required");
-    }
-  }
-
-  // TASK-514-01: reject password-gating with no password BEFORE the status
-  // side-effects below commit, so a combined {status, visibility} PATCH fails
-  // atomically (no publish/unpublish/status write leaks out on a rejected req).
-  if (input.visibility === "password" && !input.accessPassword && !entry.hasPassword) {
-    throw new Error("entry_password_required");
-  }
-
-  if (input.status === "published" && entry.status !== "published") {
-    if (!actorId) throw new Error("auth_required");
-    await publishEntry(entry.id, actorId);
-  } else if (input.status === "draft" && entry.status !== "draft") {
-    await unpublishEntry(entry.id);
-  } else if (input.status && input.status !== entry.status) {
-    await db
-      .update(contentEntries)
-      .set({
-        status: input.status,
-        scheduledAt: input.status === "scheduled" ? (input.scheduledAt ?? null) : null,
-        updatedAt: new Date(),
-      })
-      .where(eq(contentEntries.id, entry.id));
-  }
-
-  if (input.taxonomy !== undefined) {
-    await replaceEntryTaxonomies(entry.id, entry.typeId, input.taxonomy);
-    resolvedTags = await resolveEntryTagsFromTaxonomy(entry.id, entry.typeId);
-  } else if (normalizedTags !== null) {
-    resolvedTags = normalizedTags;
-  }
-
-  const metadataUpdate: Partial<typeof contentEntries.$inferInsert> = {};
-  if (resolvedTags !== null) {
-    metadataUpdate.tags = resolvedTags;
-  }
-  if (input.scheduledAt !== undefined) {
-    metadataUpdate.scheduledAt = input.scheduledAt;
-  }
-  if (input.status && input.status !== "scheduled") {
-    metadataUpdate.scheduledAt = null;
-  }
-  // TASK-514-01: visibility + access-password hash write/clear (keyed on
-  // visibility, NOT accessPassword presence). Merged into the always-evaluated
-  // metadataUpdate accumulator so a visibility-only PATCH still writes.
-  if (input.visibility !== undefined) {
-    metadataUpdate.visibility = input.visibility;
-  }
-  if (input.visibility === "password") {
-    if (input.accessPassword) {
-      metadataUpdate.accessPassword = await hashPassword(input.accessPassword);
-    }
-    // else: existing hash guaranteed by the precondition above → keep it
-    // (accessPassword omitted from the update = unchanged).
-  } else if (input.visibility === "public" || input.visibility === "private") {
-    metadataUpdate.accessPassword = null; // clear the secret when not password-gated
-  }
-
-  if (Object.keys(metadataUpdate).length > 0) {
-    await db
-      .update(contentEntries)
-      .set({ ...metadataUpdate, updatedAt: new Date() })
-      .where(eq(contentEntries.id, entry.id));
-  }
-
-  if (input.seo) {
-    await upsertSeoDocument({
-      targetType: "entry",
-      targetId: entry.id,
-      title: input.seo.title ?? undefined,
-      description: input.seo.description ?? undefined,
-      canonicalUrl: input.seo.canonicalUrl ?? undefined,
-      robots: input.seo.robots ?? undefined,
-      slug: normalizeSeoSlug(entry.slug),
-    });
-  }
-
-  return getEntry(entry.id);
+  return coordinateEntryMetadataMutation(entryMutationDeps, entryId, input, actorId, {
+    kind: "trusted-internal",
+  });
 }
 
 export async function listEntryRevisions(entryId: string) {

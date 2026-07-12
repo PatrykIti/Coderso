@@ -26,6 +26,7 @@ import {
   collectNavigationMenuPageIds,
   mapMenuNodesToNavigationItems as mapNavigationMenuNodesToNavigationItems,
 } from "../../../../services/navigation/navigationMenuMapping";
+import { parseCssColorValue } from "../../../../services/theme/cssColorContract";
 
 import {
   navigationDefaults,
@@ -157,11 +158,10 @@ const isValidImageUrl = (value: string | undefined) =>
     })
   );
 
-const isHexColorValue = (value: string | undefined) =>
-  !value ||
-  value.trim().length === 0 ||
-  value.startsWith("var(") ||
-  /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(value.trim());
+const isSupportedNavigationColorValue = (value: string | undefined) => {
+  const parsed = parseCssColorValue(value, "inherited-render");
+  return value === undefined || value === "" || parsed !== undefined;
+};
 
 const createEmptyNavigationMeta = (): NavigationItemMeta => ({
   visibility: "all",
@@ -280,6 +280,7 @@ function ColorField({
       pickerFallback={pickerFallback}
       showValueInput={false}
       treatAsThemeDefaultValues={themeDefault ? [themeDefault] : undefined}
+      colorProfile="inherited-render"
     />
   );
 }
@@ -1603,9 +1604,9 @@ export function NavigationVisualEditor({
           themeDefault={navigationDefaults.style?.linkColor}
           controlPath="style.linkColor"
         />
-        {!isHexColorValue(style.linkColor) ? (
+        {!isSupportedNavigationColorValue(style.linkColor) ? (
           <p className="text-xs text-destructive">
-            Use a hex color like `#334155` or keep a CSS variable token.
+            Use a supported color value or keep a CSS variable token.
           </p>
         ) : null}
         <ColorField
@@ -1618,9 +1619,9 @@ export function NavigationVisualEditor({
           themeDefault={navigationDefaults.style?.linkHoverColor}
           controlPath="style.linkHoverColor"
         />
-        {!isHexColorValue(style.linkHoverColor) ? (
+        {!isSupportedNavigationColorValue(style.linkHoverColor) ? (
           <p className="text-xs text-destructive">
-            Use a hex color like `#0f172a` or keep a CSS variable token.
+            Use a supported color value or keep a CSS variable token.
           </p>
         ) : null}
         <ColorField
@@ -1633,9 +1634,9 @@ export function NavigationVisualEditor({
           themeDefault={navigationDefaults.style?.linkActiveColor}
           controlPath="style.linkActiveColor"
         />
-        {!isHexColorValue(style.linkActiveColor) ? (
+        {!isSupportedNavigationColorValue(style.linkActiveColor) ? (
           <p className="text-xs text-destructive">
-            Use a hex color like `#1d4ed8` or keep a CSS variable token.
+            Use a supported color value or keep a CSS variable token.
           </p>
         ) : null}
         <ColorField

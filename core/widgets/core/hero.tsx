@@ -1,4 +1,9 @@
 import type { ComponentType, CSSProperties } from "react";
+import {
+  CSS_COLOR_SCHEMA_PATTERNS,
+  CSS_COLOR_VALUE_MAX_LENGTH,
+  parseCssColorValue,
+} from "../../services/theme/cssColorContract";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import type {
   DeviceTarget,
@@ -9,7 +14,7 @@ import type {
   WidgetRenderContext,
 } from "../types";
 import { renderSharedWidgetRuntimeScript } from "../runtimeScripts";
-import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
 import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 import { sanitizeRichTextHtml } from "./richTextSection";
 
@@ -149,6 +154,38 @@ export type HeroData = {
   };
 };
 
+const heroColorValueSchema = {
+  anyOf: [
+    { const: "" },
+    {
+      type: "string",
+      maxLength: CSS_COLOR_VALUE_MAX_LENGTH,
+      pattern: CSS_COLOR_SCHEMA_PATTERNS["inherited-render"],
+    },
+  ],
+} as const;
+const heroNestedColorValueSchema = {
+  ...heroColorValueSchema,
+  not: {
+    type: "string",
+    pattern: "^[ ]*[iI][nN][hH][eE][rR][iI][tT][ ]*$",
+  },
+} as const;
+
+export const HERO_BACKGROUND_GRADIENT_MAX_LENGTH = CSS_COLOR_VALUE_MAX_LENGTH * 2 + 64;
+export const HERO_BACKGROUND_GRADIENT_SCHEMA_PATTERN =
+  "^(?![\\u0000-\\uffff]*[^\\u0020-\\u007e])[ ]*[lL][iI][nN][eE][aA][rR]-[gG][rR][aA][dD][iI][eE][nN][tT]\\([ -~]+\\)[ ]*$";
+const heroBackgroundGradientSchema = {
+  anyOf: [
+    { const: "" },
+    {
+      type: "string",
+      maxLength: HERO_BACKGROUND_GRADIENT_MAX_LENGTH,
+      pattern: HERO_BACKGROUND_GRADIENT_SCHEMA_PATTERN,
+    },
+  ],
+} as const;
+
 export const heroSchema = {
   type: "object",
   additionalProperties: false,
@@ -205,7 +242,7 @@ export const heroSchema = {
         title: { type: "string" },
         description: { type: "string" },
         ratio: { type: "string" },
-        overlay: { type: "string" },
+        overlay: heroNestedColorValueSchema,
       },
     },
     socialProof: {
@@ -262,25 +299,25 @@ export const heroSchema = {
       properties: {
         paddingTop: { type: "string" },
         paddingBottom: { type: "string" },
-        textColor: { type: "string" },
-        subheadColor: { type: "string" },
-        bodyColor: { type: "string" },
+        textColor: heroColorValueSchema,
+        subheadColor: heroColorValueSchema,
+        bodyColor: heroColorValueSchema,
         headlineSize: { enum: ["none", "2xl", "3xl", "4xl", "5xl"] },
         subheadSize: { enum: ["none", "base", "lg", "xl", "2xl"] },
         bodySize: { enum: ["none", "sm", "base", "lg", "xl"] },
-        borderColor: { type: "string" },
+        borderColor: heroColorValueSchema,
         borderWidth: { enum: ["0", "1", "2", "3"] },
         borderRadius: { enum: ["none", "lg", "xl", "2xl", "3xl"] },
-        mediaBorderColor: { type: "string" },
+        mediaBorderColor: heroColorValueSchema,
         mediaBorderWidth: { enum: ["0", "1", "2", "3"] },
         mediaRadius: { enum: ["none", "lg", "xl", "2xl", "3xl"] },
-        primaryButtonBg: { type: "string" },
-        primaryButtonText: { type: "string" },
-        primaryButtonBorder: { type: "string" },
+        primaryButtonBg: heroColorValueSchema,
+        primaryButtonText: heroColorValueSchema,
+        primaryButtonBorder: heroColorValueSchema,
         primaryButtonSize: { enum: ["none", "sm", "md", "lg"] },
-        secondaryButtonBg: { type: "string" },
-        secondaryButtonText: { type: "string" },
-        secondaryButtonBorder: { type: "string" },
+        secondaryButtonBg: heroColorValueSchema,
+        secondaryButtonText: heroColorValueSchema,
+        secondaryButtonBorder: heroColorValueSchema,
         secondaryButtonSize: { enum: ["none", "sm", "md", "lg"] },
         cardShadow: { enum: ["none", "soft", "medium", "strong"] },
         mediaShadow: { enum: ["none", "soft", "medium", "strong"] },
@@ -296,8 +333,8 @@ export const heroSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
-        color: { type: "string" },
-        gradient: { type: "string" },
+        color: heroColorValueSchema,
+        gradient: heroBackgroundGradientSchema,
         image: { type: "string" },
         media: {
           type: "object",
@@ -312,7 +349,7 @@ export const heroSchema = {
             posterSrc: { type: "string" },
             title: { type: "string" },
             description: { type: "string" },
-            overlay: { type: "string" },
+            overlay: heroNestedColorValueSchema,
           },
         },
       },
@@ -585,6 +622,58 @@ const normalizeHeroMediaSource = (value: string | undefined): HeroMediaSource =>
 const trimOptionalString = (value: string | undefined) =>
   typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 
+const trimAsciiSpace = (value: string) => {
+  let start = 0;
+  let end = value.length;
+  while (start < end && value.charCodeAt(start) === 0x20) start += 1;
+  while (end > start && value.charCodeAt(end - 1) === 0x20) end -= 1;
+  return value.slice(start, end);
+};
+
+const splitHeroGradientComponents = (value: string): string[] | undefined => {
+  const components: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+    if (character === "(") depth += 1;
+    if (character === ")") {
+      depth -= 1;
+      if (depth < 0) return undefined;
+    }
+    if (character === "," && depth === 0) {
+      components.push(value.slice(start, index));
+      start = index + 1;
+    }
+  }
+  if (depth !== 0) return undefined;
+  components.push(value.slice(start));
+  return components;
+};
+
+export function normalizeHeroBackgroundGradient(value: unknown): string | undefined {
+  if (typeof value !== "string" || value.length > HERO_BACKGROUND_GRADIENT_MAX_LENGTH) {
+    return undefined;
+  }
+  const raw = trimAsciiSpace(value);
+  const match = /^[lL][iI][nN][eE][aA][rR]-[gG][rR][aA][dD][iI][eE][nN][tT]\((.*)\)$/.exec(raw);
+  if (!match) return undefined;
+  const components = splitHeroGradientComponents(match[1] ?? "");
+  if (!components || components.length !== 3) return undefined;
+
+  const angleMatch = /^[ ]*([0-9]+)[dD][eE][gG][ ]*$/.exec(components[0] ?? "");
+  if (!angleMatch) return undefined;
+  const angle = Number(angleMatch[1]);
+  if (!Number.isSafeInteger(angle) || angle < 0 || angle > 360) return undefined;
+
+  const start = parseCssColorValue(components[1], "inherited-render");
+  const end = parseCssColorValue(components[2], "inherited-render");
+  if (!start || !end || start.normalized === "inherit" || end.normalized === "inherit") {
+    return undefined;
+  }
+  return `linear-gradient(${angle}deg, ${start.normalized}, ${end.normalized})`;
+}
+
 const toBackgroundImageOverlayLayer = (value: string | undefined) =>
   value ? `linear-gradient(${value}, ${value})` : undefined;
 
@@ -602,7 +691,9 @@ function normalizeHeroMedia(value: HeroMedia | undefined): HeroMedia {
     title: type === "video" ? trimOptionalString(value?.title) : undefined,
     description: type === "video" ? trimOptionalString(value?.description) : undefined,
     ratio: type !== "none" ? resolveHeroMediaRatio(trimOptionalString(value?.ratio)) : undefined,
-    overlay: trimOptionalString(value?.overlay),
+    overlay: resolveClearableCssColorValue(value?.overlay, "inherited-render", {
+      allowInheritKeyword: false,
+    }),
   };
 }
 
@@ -626,7 +717,9 @@ function normalizeHeroBackgroundMedia(
     posterSrc: type === "video" ? trimOptionalString(value?.posterSrc) : undefined,
     title: type === "video" ? trimOptionalString(value?.title) : undefined,
     description: type === "video" ? trimOptionalString(value?.description) : undefined,
-    overlay: trimOptionalString(value?.overlay),
+    overlay: resolveClearableCssColorValue(value?.overlay, "inherited-render", {
+      allowInheritKeyword: false,
+    }),
   };
 }
 
@@ -689,26 +782,28 @@ function normalizeHeroSpacing(
 
 function normalizeHeroStyle(value: HeroData["style"] | undefined): HeroData["style"] | undefined {
   if (!value) return undefined;
+  const color = (candidate: unknown) =>
+    resolveClearableCssColorValue(candidate, "inherited-render");
   return {
     headlineSize: resolveHeroHeadlineSize(value.headlineSize),
     subheadSize: resolveHeroSubheadSize(value.subheadSize),
     bodySize: resolveHeroBodySize(value.bodySize),
-    textColor: trimOptionalString(value.textColor),
-    subheadColor: trimOptionalString(value.subheadColor),
-    bodyColor: trimOptionalString(value.bodyColor),
-    borderColor: trimOptionalString(value.borderColor),
+    textColor: color(value.textColor),
+    subheadColor: color(value.subheadColor),
+    bodyColor: color(value.bodyColor),
+    borderColor: color(value.borderColor),
     borderWidth: resolveHeroBorderWidth(value.borderWidth),
     borderRadius: resolveHeroRadius(value.borderRadius, "3xl"),
     mediaRadius: resolveHeroRadius(value.mediaRadius, "2xl"),
-    mediaBorderColor: trimOptionalString(value.mediaBorderColor),
+    mediaBorderColor: color(value.mediaBorderColor),
     mediaBorderWidth: resolveHeroBorderWidth(value.mediaBorderWidth),
-    primaryButtonBg: trimOptionalString(value.primaryButtonBg),
-    primaryButtonText: trimOptionalString(value.primaryButtonText),
-    primaryButtonBorder: trimOptionalString(value.primaryButtonBorder),
+    primaryButtonBg: color(value.primaryButtonBg),
+    primaryButtonText: color(value.primaryButtonText),
+    primaryButtonBorder: color(value.primaryButtonBorder),
     primaryButtonSize: resolveHeroButtonSize(value.primaryButtonSize),
-    secondaryButtonBg: trimOptionalString(value.secondaryButtonBg),
-    secondaryButtonText: trimOptionalString(value.secondaryButtonText),
-    secondaryButtonBorder: trimOptionalString(value.secondaryButtonBorder),
+    secondaryButtonBg: color(value.secondaryButtonBg),
+    secondaryButtonText: color(value.secondaryButtonText),
+    secondaryButtonBorder: color(value.secondaryButtonBorder),
     secondaryButtonSize: resolveHeroButtonSize(value.secondaryButtonSize),
     cardShadow: resolveHeroShadowToken(value.cardShadow),
     mediaShadow: resolveHeroShadowToken(value.mediaShadow),
@@ -727,8 +822,8 @@ function normalizeHeroBackground(
   value: HeroData["background"] | undefined
 ): NonNullable<HeroData["background"]> {
   return {
-    color: trimOptionalString(value?.color),
-    gradient: trimOptionalString(value?.gradient),
+    color: resolveClearableCssColorValue(value?.color, "inherited-render"),
+    gradient: normalizeHeroBackgroundGradient(value?.gradient),
     image: trimOptionalString(value?.image),
     media: normalizeHeroBackgroundMedia(value?.media, value?.image),
   };
@@ -868,10 +963,12 @@ export function HeroBlock({
     backgroundMedia.type === "image" ? backgroundMedia.src : trimOptionalString(background.image);
   const resolvedBackgroundImage = explicitBackgroundImage;
   const centeredBackgroundImage = !explicitBackgroundImage ? centeredImageBackground : undefined;
-  const resolvedBackgroundGradient = resolveClearableStyleValue(background.gradient);
-  const resolvedBackgroundOverlay = resolveClearableStyleValue(
+  const resolvedBackgroundGradient = normalizeHeroBackgroundGradient(background.gradient);
+  const resolvedBackgroundOverlay = resolveClearableCssColorValue(
     backgroundMedia.overlay ??
-      (resolvedVariant === "centered" && media.type === "image" ? media.overlay : undefined)
+      (resolvedVariant === "centered" && media.type === "image" ? media.overlay : undefined),
+    "inherited-render",
+    { allowInheritKeyword: false }
   );
   const centeredBackgroundGradient =
     centeredBackgroundImage && !resolvedBackgroundVideo ? resolvedBackgroundGradient : undefined;
@@ -889,7 +986,7 @@ export function HeroBlock({
         : undefined;
 
   const backgroundStyle: CSSProperties = {
-    backgroundColor: resolveClearableStyleValue(background.color),
+    backgroundColor: resolveClearableCssColorValue(background.color, "inherited-render"),
     backgroundImage: layeredBackground,
     backgroundSize: resolvedBackgroundImage ? "cover" : undefined,
     backgroundPosition: resolvedBackgroundImage ? "center" : undefined,
@@ -903,12 +1000,15 @@ export function HeroBlock({
   const cardStyle: CSSProperties = {
     ...backgroundStyle,
     borderWidth: borderWidthValueMap[borderWidth] ?? "1px",
-    borderColor: style.borderColor ?? "var(--color-border)",
+    borderColor:
+      resolveClearableCssColorValue(style.borderColor, "inherited-render") ?? "var(--color-border)",
     borderStyle: "solid",
   };
   const mediaFrameStyle: CSSProperties = {
     borderWidth: borderWidthValueMap[mediaBorderWidth] ?? "1px",
-    borderColor: style.mediaBorderColor ?? "var(--color-border)",
+    borderColor:
+      resolveClearableCssColorValue(style.mediaBorderColor, "inherited-render") ??
+      "var(--color-border)",
     borderStyle: "solid",
   };
   const headlineSize = style.headlineSize ?? "3xl";
@@ -928,16 +1028,23 @@ export function HeroBlock({
   const tiltMaxDeg = HERO_TILT_MAX_DEG[tilt];
   const layoutHeight = resolveHeroLayoutHeight(layout.height);
   const layoutBleed = resolveHeroLayoutBleed(layout.bleed);
-  const headlineColor = style.textColor ?? "var(--color-text)";
-  const subheadColor = style.subheadColor ?? "var(--color-text)";
-  const bodyColor = style.bodyColor ?? "var(--color-text)";
+  const headlineColor =
+    resolveClearableCssColorValue(style.textColor, "inherited-render") ?? "var(--color-text)";
+  const subheadColor =
+    resolveClearableCssColorValue(style.subheadColor, "inherited-render") ?? "var(--color-text)";
+  const bodyColor =
+    resolveClearableCssColorValue(style.bodyColor, "inherited-render") ?? "var(--color-text)";
   const primaryButtonStyle: CSSProperties =
     compactStyle({
       background: hasStyleObject
-        ? resolveClearableStyleValue(style.primaryButtonBg)
+        ? resolveClearableCssColorValue(style.primaryButtonBg, "inherited-render")
         : "var(--color-primary)",
-      color: style.primaryButtonText ?? "var(--color-bg)",
-      borderColor: style.primaryButtonBorder ?? "transparent",
+      color:
+        resolveClearableCssColorValue(style.primaryButtonText, "inherited-render") ??
+        "var(--color-bg)",
+      borderColor:
+        resolveClearableCssColorValue(style.primaryButtonBorder, "inherited-render") ??
+        "transparent",
       borderStyle: "solid",
       borderWidth:
         style.primaryButtonBorder &&
@@ -949,10 +1056,14 @@ export function HeroBlock({
   const secondaryButtonStyle: CSSProperties =
     compactStyle({
       background: hasStyleObject
-        ? resolveClearableStyleValue(style.secondaryButtonBg)
+        ? resolveClearableCssColorValue(style.secondaryButtonBg, "inherited-render")
         : "transparent",
-      color: style.secondaryButtonText ?? "var(--color-text)",
-      borderColor: style.secondaryButtonBorder ?? "var(--color-border)",
+      color:
+        resolveClearableCssColorValue(style.secondaryButtonText, "inherited-render") ??
+        "var(--color-text)",
+      borderColor:
+        resolveClearableCssColorValue(style.secondaryButtonBorder, "inherited-render") ??
+        "var(--color-border)",
       borderStyle: "solid",
       borderWidth: "1px",
     }) ?? {};
@@ -1267,7 +1378,11 @@ export function HeroBlock({
                   <div
                     data-hero-inline-media-overlay="true"
                     className="pointer-events-none absolute inset-0"
-                    style={{ background: media.overlay }}
+                    style={{
+                      background: resolveClearableCssColorValue(media.overlay, "inherited-render", {
+                        allowInheritKeyword: false,
+                      }),
+                    }}
                   />
                 ) : null}
               </div>

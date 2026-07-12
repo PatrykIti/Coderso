@@ -15,6 +15,7 @@ import { afterEach, expect, test } from "vitest";
 import { FormRuntimePreviewDialog } from "../../../core/admin/ui/forms/FormRuntimePreviewDialog";
 import type { FormSettings } from "../../../core/admin/services/formsClient";
 import type { FormFormTheme } from "../../../core/services/forms/formTheme";
+import { FORM_COLOR_CONSUMER_CASES, buildFormColorTheme } from "../forms/formColorConsumerTable";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -51,7 +52,7 @@ const previewFields = [
     label: "Name",
     name: "name",
     required: true,
-    settings: {} as Record<string, never>,
+    settings: { helper: "Use your full name" },
   },
   {
     id: "f2",
@@ -80,6 +81,21 @@ const renderDialog = (settings: FormSettings) =>
 
 afterEach(() => {
   document.body.innerHTML = "";
+});
+
+test("runtime preview exposes its visible explanation as the dialog description", () => {
+  const { cleanup } = renderDialog(baseSettings());
+  try {
+    const dialog = document.body.querySelector('[role="dialog"]');
+    const descriptionId = dialog?.getAttribute("aria-describedby");
+
+    expect(descriptionId).toBeTruthy();
+    expect(document.getElementById(descriptionId ?? "")?.textContent?.trim()).toBe(
+      "Interactive preview for test submissions and automation verification."
+    );
+  } finally {
+    cleanup();
+  }
 });
 
 test("516-06: a themed preview applies width, title typography, columns, fieldGap and submit styling", () => {
@@ -113,6 +129,42 @@ test("516-06: a themed preview applies width, title typography, columns, fieldGa
   expect(html).toContain("bg-[var(--form-submit-bg)]");
 
   cleanup();
+});
+
+test("runtime preview consumes all ten canonical Form colors at concrete elements", () => {
+  const { cleanup } = renderDialog(baseSettings(buildFormColorTheme("raw")));
+  try {
+    const styleOwner = document.body.querySelector(
+      '[style*="--form-surface-bg"]'
+    ) as HTMLElement | null;
+    expect(styleOwner).not.toBeNull();
+    for (const entry of FORM_COLOR_CONSUMER_CASES) {
+      expect(styleOwner?.style.getPropertyValue(entry.cssVar).trim()).toBe(entry.canonical);
+    }
+
+    expect(styleOwner?.querySelector("h3")?.className).toContain("text-[color:var(--form-title)]");
+    expect(styleOwner?.querySelector("h3 + p")?.className).toContain(
+      "text-[color:var(--form-helper)]"
+    );
+    expect(styleOwner?.querySelector('label[for="runtime-field-f1"]')?.className).toContain(
+      "text-[color:var(--form-label)]"
+    );
+    const input = styleOwner?.querySelector("#runtime-field-f1") as HTMLInputElement | null;
+    expect(input?.className).toContain("bg-[var(--form-input-bg)]");
+    expect(input?.className).toContain("border-[color:var(--form-input-border)]");
+    expect(input?.className).toContain("text-[color:var(--form-input-text)]");
+    const helper = Array.from(styleOwner?.querySelectorAll("p") ?? []).find(
+      (node) => node.textContent === "Use your full name"
+    );
+    expect(helper?.className).toContain("text-[color:var(--form-helper)]");
+    const submit = Array.from(styleOwner?.querySelectorAll("button") ?? []).find(
+      (button) => button.textContent?.trim() === "Submit preview"
+    );
+    expect(submit?.className).toContain("bg-[var(--form-submit-bg)]");
+    expect(submit?.className).toContain("text-[color:var(--form-submit-text)]");
+  } finally {
+    cleanup();
+  }
 });
 
 test("516-06: a columns:1 themed preview collapses the grid to a single column", () => {

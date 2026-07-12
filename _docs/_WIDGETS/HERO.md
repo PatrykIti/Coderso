@@ -133,6 +133,27 @@ Advanced must not duplicate Visual as a second design panel.
   concrete warning/pass result for solid color combinations. Gradient, image,
   transparent, and token-based surfaces intentionally fall back to `unknown`.
 
+### TASK-541 retained color boundary
+
+- Direct color properties use the canonical `inherited-render` profile:
+  `style.textColor`, `style.subheadColor`, `style.bodyColor`,
+  `style.borderColor`, `style.mediaBorderColor`, both primary/secondary button
+  background/text/border triples, and `background.color`. Canonical
+  `currentColor` and `inherit` are valid in those direct CSS properties.
+- `media.overlay` and `background.media.overlay` are nested gradient stops.
+  They use `inherited-render` with `allowInheritKeyword=false`, so
+  `currentColor` is valid while `inherit` fails closed at
+  schema/normalize/control/render boundaries.
+- `background.gradient` has one Hero-owned parser capped at 320 original UTF-16
+  code units. It requires an ASCII-case-insensitive `linear-gradient`, an
+  unsigned integer angle in `0..360`, and exactly two shared inherited-profile
+  color stops. It rejects `inherit`, extra stops/layers, malformed nesting, and
+  unsafe functions, then emits canonical
+  `linear-gradient(<angle>deg, <stop>, <stop>)` bytes.
+- Schema patterns are structural prefilters only. Optional direct, overlay, and
+  gradient values remain present-only and are never emitted raw after
+  rejection.
+
 ## Presets
 
 - Presets are user-scoped (`widgets.hero.presets`) and capped at 24 entries.

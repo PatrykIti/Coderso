@@ -332,12 +332,17 @@ inside Page Editor v2 (see `_docs/PAGE_MODEL.md` § Composable Hero Toolkit & Pr
 Effects for the full contract — present-only, reject-unknown,
 `prefers-reduced-motion`-safe, no npm dependency, no migration):
 
-- **Custom-SVG block** (`customSvg`, the ONE new `pageBlockType`) — paste an
-  arbitrary inline SVG that is **sanitized by an allowlist sanitizer**
-  (`core/services/pages/svgSanitizer.ts`) at write AND render, with an optional stroke
-  **draw-in** animation. This is a PAGE block implemented through a renderer `case`,
-  NOT a composite widget — `core/widgets/registry.ts` / `modulePackMatrix.ts` are
-  unchanged and the widget-pack matrix (`_docs/WIDGET_PACK_MATRIX.md`) gains no row.
+- **Custom-SVG block** (`customSvg`, the ONE new `pageBlockType`) — a Page-owned block
+  whose author SVG is sanitized at write and render by one immutable closed policy.
+  Author `class`/`style` are excluded; sanitized text becomes a bounded, deeply frozen
+  safe-node tree and is rendered as React elements through an explicit sparse prop map,
+  never an author-data HTML sink. Renderer-owned root geometry removes author layout
+  authority, clamps aspect ratio to 1/8..8, caps the block at 1,024 px, clips/contains
+  it, and disables pointer events; invalid input becomes a neutral placeholder. The
+  optional stroke **draw-in** animation remains supported. This is a PAGE block
+  implemented through a renderer `case`, NOT a configurable widget —
+  `core/widgets/registry.ts` / `modulePackMatrix.ts` are unchanged and the widget-pack
+  matrix (`_docs/WIDGET_PACK_MATRIX.md`) gains no row.
 - **Floating-drift decoration** (`block.style.decoration`) — turns any block into a
   layered decoration (`float`/`drift`/`pulse`/`radiate`/`orbit`).
 - **Tilt-on-any-block** (`block.style.tilt` + `tiltGlare`) — generalizes 521's hero
@@ -459,29 +464,71 @@ type modes that already use `none` for content semantics.
 
 ## Visual Clear Controls
 
-TASK-244 adds `Clear` actions for configured visual surface fields such as
+TASK-244 adds `Clear` actions for configured sparse visual surface fields such as
 background colors, gradients, overlays, card surfaces, table shells, CTA button
 backgrounds, and framed custom-screen surfaces. `Clear` is an editor action, not
-a saved token. It removes the owning field from widget data so the renderer does
-not emit a forced inline style or fallback shell solely because the field was
-cleared.
+a saved token. On those explicitly sparse fields it removes the owning field from
+widget data so the renderer does not emit a forced inline style or fallback shell
+solely because the field was cleared. Retained schemas that already normalize an
+empty string or an explicit default such as `transparent` keep that historical
+sentinel/default contract; TASK-541 does not reinterpret or rewrite those bytes.
 
 `Clear` is separate from TASK-242 `None` token semantics:
 
 | Action/value | Saved payload | Runtime contract |
 |---|---|---|
-| `Clear` on a surface field | property omitted from the owning object | no forced background, gradient, overlay, card, table, or panel style for that field |
+| `Clear` on an explicitly sparse surface field | property omitted from the owning object | no forced background, gradient, overlay, card, table, or panel style for that field |
 | `none` visual token | literal `none` value on approved token fields | fixed zero/empty output for spacing, size, radius, typography, or other approved token maps |
 | deliberate color value such as `transparent` | literal string chosen by the user | render the configured color because it is user-authored data, not a clear sentinel |
 
-Widget editors must remove keys for clear actions and must not serialize
-`transparent` or an empty string as an off-state sentinel. Renderers should
+New sparse Clear actions must remove keys and must not introduce `transparent` or
+an empty string as a new off-state sentinel. Existing retained sentinel/default
+contracts remain compatible and are documented by their owning widget. Renderers
 normalize clearable surface values through the shared clearable-style helpers and
-compact omitted style keys before output.
+compact genuinely omitted style keys before output.
 
 Shared clearable inputs may also emit bounded undo feedback when the helper can
 restore the exact prior value. That undo path is editor-only feedback and must
 not persist extra sentinel state into widget JSON.
+
+## Canonical retained color compatibility (TASK-541)
+
+This section documents maintenance of already-stored compatibility records. It
+does not make `core/widgets/*` a creation or insertion surface: configurable
+product widgets exist only on the Admin Dashboard, while Pages, Forms, Menus,
+Posts, Custom Screens, and templates own sections and blocks.
+
+Simple colors are parsed by the Bun-free canonical owner in
+`core/services/theme/cssColorContract.ts`. JSON Schema patterns are structural
+prefilters only; normalization and every render sink still run the semantic
+parser. The `authoring` profile is used by Grid Columns, Newsletter, and
+Timeline. Explicit direct CSS-property reads use `inherited-render` in Section,
+Tabs, Accordion, Contact, Toggle Block, Divider `labelColor`, Navigation,
+Footer, Hero, Gallery Mosaic `style.overlay`, CTA Banner, and the TASK-516 Form
+Embed bridge. That inherited profile accepts canonical `currentColor` and
+`inherit`; it is not permission to widen Menu, Page, or ordinary new fields.
+
+Nested/composite positions are narrower. Section `style.gradientFrom` and
+`style.gradientTo`, Divider `color`, Hero `media.overlay` and
+`background.media.overlay`, and both Hero background-gradient stops accept
+`currentColor` but reject `inherit` at schema/normalize/control/render
+boundaries. Accordion alone retains its bounded historical hyphenated-token read
+adapter after canonical parsing fails; that fallback is not shared grammar.
+
+Hero owns an exact two-stop `linear-gradient` parser capped at 320 original
+UTF-16 code units. It accepts an unsigned integer angle from `0..360` and shared
+inherited-profile stops, canonicalizes the function/angle/stops, and rejects
+`inherit`. CTA Banner keeps a separate 96-code-unit compatibility grammar:
+lowercase `linear-gradient`/`deg`, an optional-minus signed integer or decimal
+angle, exactly two 3-through-8-digit hex stops, ASCII U+0020 spacing only, and
+outer-space trimming while preserving accepted inner bytes. CTA's 5/7-digit
+legacy stops are deliberately local and are not valid shared simple colors.
+
+TASK-541 introduces no new default bytes. Color fields whose existing owner
+contract is sparse remain present-only; retained fields with historical empty or
+explicit defaults keep their previous normalized bytes and fallback behavior.
+Rejected values fail closed according to that owner contract and are never
+rendered raw.
 
 ---
 

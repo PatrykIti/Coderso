@@ -906,11 +906,10 @@ const normalizeEnumLocal = <T>(options: readonly T[], value: unknown): T | null 
 // validated via `normalizeMenuColorValue`, comma-repeated up to 4 layers, total
 // length <= 200. It rejects `url(`/`expression(`/`javascript:`/`var(`/`calc(`/
 // `image-set(`/`{`/`}`/`;`/`<`/`>`/`@`/`\`/`/*` up front. Fail-soft (null ⇒ key
-// omitted; never throws). The leading-dot alpha form (`.24`) is PRESERVED verbatim
-// — UNLIKE TASK-519 (which canonicalizes `.84`→`0.84` because its render-boundary
-// regex rejects leading-dot): 520-02 emits this as raw CSS in a `<style>` block
-// (browsers accept leading-dot alpha there) and it never traverses 519's
-// `resolveClearableCssColorValue`.
+// omitted; never throws). The embedded color token is emitted in the canonical
+// authoring bytes returned by the shared owner, including leading-dot alpha
+// normalization (`.24` → `0.24`). The surrounding shadow grammar and its own
+// length/layer limits remain separate from the single-color contract.
 const BOX_SHADOW_MAX_LENGTH = 200;
 const BOX_SHADOW_MAX_LAYERS = 4;
 // One length token: optional sign, integer/decimal with unit px|rem|em, OR bare 0.

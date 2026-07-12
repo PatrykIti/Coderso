@@ -7,7 +7,8 @@
 **Category:** Content Entry Service / Transactions / Secret Handling
 **Estimated Effort:** Large
 **Dependencies:** TASK-537-01-L01, TASK-537-01-L02
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-07-12
 **Changelog:** 1249 (pinned; create only at implementation closure)
 
 ---
@@ -16,8 +17,11 @@
 
 As the sole entryService.ts writer, integrate the transaction-aware taxonomy/SEO seams
 into one updateEntryMetadata transaction and narrow every audited update/publish/delete
-query. This integration keeps transaction/projection changes in one source owner and
-prevents an intermediate revision from reintroducing broad secret-bearing rows.
+query. The same leaf owns the metadata route's small scheduling, transition-authorization,
+and error-mapping corrections plus the narrow executor-aware RBAC read seam because those
+boundaries must agree with the locked transaction state. This integration prevents an
+intermediate revision from reintroducing broad secret-bearing rows or a permission lookup
+from waiting on a second pooled connection while the entry row is locked.
 
 ## Grounded anchors
 
@@ -38,18 +42,31 @@ and cannot re-baseline source-owner assertions.
 
 ## Security Contract
 
-No route changes. Existing admin content endpoints retain session/API-key auth,
-content:write, content:publish for transitions, CSRF for session writes, admin_write,
-strict route envelopes, and centralized domain-error mapping. Plaintext password exists
-only long enough to hash. Queries may compute hasPassword in SQL but may not materialize
-the accessPassword column/value in JavaScript.
+No endpoint or permission-model expansion. Existing admin content endpoints retain Admin
+session-cookie auth, `content:write`, `content:publish` for a real transition, CSRF,
+`admin_write`, strict route envelopes, and centralized domain-error mapping; this route
+has no API-key mode and this task adds none. After the row lock, the route guard reads one
+permission snapshot through the same transaction executor, always rechecks
+`content:write`, conditionally checks `content:publish`, and runs before the first write.
+This closes split-snapshot authorization and the one-connection-pool deadlock without
+requiring `content:publish` for an ordinary metadata save on an already-published entry.
+Plaintext password exists only long
+enough to hash. Queries may compute `hasPassword` in SQL but may not materialize the
+`accessPassword` column/value in JavaScript. SEO canonical/robots domain errors map to
+machine-readable HTTP 400 responses.
 
 ## Compatibility and land order
 
-Land after both 537-01 leaves. Return/error/cache behavior remains compatible except
-that the formerly partial metadata commit becomes atomic. TASK-517 is blocked until this
-leaf and closure pass; its planned entryService changes must be rebased and freshly
-audited against the explicit projection/helper shape.
+Land after both 537-01 leaves. The first mutation lookup is a minimal `SELECT ... FOR
+UPDATE`; standalone publish uses the same locked path so password decisions and per-entry
+revision numbering are serialized. Route `scheduledAt` remains present-only, and the
+coordinator validates the final stored status/date pair before writing. Return/error/cache
+behavior remains compatible except that the formerly partial metadata commit becomes
+atomic, the two existing SEO validation codes are correctly mapped, and a post-commit
+cache invalidator failure is now redacted/reported while returning the durable result
+instead of surfacing a retry-prone failed request. TASK-517 is
+blocked until this leaf and closure pass; its planned entryService changes must be rebased
+and freshly audited against the explicit projection/helper shape.
 
 ## Validation
 
@@ -58,7 +75,21 @@ bun --cwd core lint:types
 bun --cwd core lint
 set -a && source .env && set +a && bun test --timeout=15000 \
   tests/unit/content/entryService.test.ts \
+  tests/unit/auth/rbac.test.ts \
   tests/unit/content/taxonomyService.test.ts \
   tests/unit/seo/seoService.test.ts \
-  tests/integration/routes/contentEntriesRoutes.test.ts
+  tests/integration/routes/contentEntriesRoutes.test.ts \
+  tests/integration/routes/contentTypes.test.ts \
+  tests/integration/runtime/detail-page-preview-cache.test.ts \
+  tests/integration/runtime/detail-page-runtime.test.ts \
+  tests/integration/runtime/detail-page-composer-runtime.test.tsx
+set -a && source .env && set +a && bun test --timeout=15000 \
+  tests/security/codersoSecurityGate.test.ts
+semgrep --error --timeout 120 --timeout-threshold 0 \
+  --config .semgrep.yml --config p/owasp-top-ten --config p/security-audit \
+  --config p/nodejs --config p/typescript \
+  core/services/content/taxonomyService.ts core/services/seo/seoService.ts \
+  core/services/content/entryService.ts core/server/routes/contentEntryRoutes.ts \
+  core/server/routes/index.ts \
+  core/services/auth/roleService.ts core/server/middleware/rbac.ts
 ~~~

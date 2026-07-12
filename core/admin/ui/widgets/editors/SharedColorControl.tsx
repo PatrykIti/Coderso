@@ -1,66 +1,55 @@
 import { Input } from "@/components/ui/input";
 
+import type { CssColorProfile } from "../../../../services/theme/cssColorContract";
 import {
   colorAlpha,
-  composeHexColor,
-  isAlphaPickerRepresentable,
   normalizeAdminColorValue,
   parseColorValue,
+  pickerHexFor,
+  type ParsedColor,
 } from "../../shared/colorValue";
 import {
   applySharedColorAlphaChange,
   applySharedColorPickerChange,
   ClearableFieldHeader,
-  isHexColorValue,
-  isPickerRepresentableColorValue,
-  resolveColorSwatchValue,
 } from "./ClearableFields";
 
-export type SharedColorState =
-  | {
-      kind: "cleared";
-      label: string;
-      description: string;
-      clearResultLabel: string;
-    }
-  | {
-      kind: "theme_token";
-      label: string;
-      description: string;
-      clearResultLabel: string;
-    }
-  | {
-      kind: "theme_default_token";
-      label: string;
-      description: string;
-      clearResultLabel: string;
-    }
-  | {
-      kind: "transparent";
-      label: string;
-      description: string;
-      clearResultLabel: string;
-    }
-  | {
-      kind: "selected_swatch";
-      label: string;
-      description: string;
-      clearResultLabel: string;
-    }
-  | {
-      kind: "saved_custom";
-      label: string;
-      description: string;
-      clearResultLabel: string;
-    };
+export type SharedColorStateKind =
+  | "cleared"
+  | "theme_token"
+  | "theme_default_token"
+  | "transparent"
+  | "inherited"
+  | "selected_swatch"
+  | "saved_custom";
 
-const cssTokenPattern = /^(?:var|color-mix)\(/i;
+export type SharedColorState = Readonly<{
+  kind: SharedColorStateKind;
+  label: string;
+  description: string;
+  clearResultLabel: string;
+}>;
+
 const defaultClearResultLabel = "removes the saved color value";
+
+const parseSharedColorValue = (
+  value: string | undefined,
+  colorProfile: CssColorProfile,
+  allowInheritKeyword: boolean
+): ParsedColor => {
+  const parsed = parseColorValue(value, colorProfile);
+  if (parsed.kind === "keyword" && parsed.normalized === "inherit" && !allowInheritKeyword) {
+    return { kind: "unknown", raw: parsed.raw };
+  }
+  return parsed;
+};
 
 export function describeSharedColorControlState({
   value,
   treatAsThemeDefaultValues,
   clearedState,
+  colorProfile = "authoring",
+  allowInheritKeyword = true,
 }: {
   value: string | undefined;
   treatAsThemeDefaultValues?: string[];
@@ -69,15 +58,10 @@ export function describeSharedColorControlState({
     description?: string;
     clearResultLabel?: string;
   };
+  colorProfile?: CssColorProfile;
+  allowInheritKeyword?: boolean;
 }): SharedColorState {
-  const normalizedValue = value?.trim();
-  const themeDefaultValues = new Set(
-    (treatAsThemeDefaultValues ?? [])
-      .map((entry) => entry.trim())
-      .filter((entry) => entry.length > 0)
-  );
-
-  if (!normalizedValue) {
+  if (value === undefined || value === "") {
     return {
       kind: "cleared",
       label: clearedState?.label ?? "Theme default",
@@ -88,7 +72,15 @@ export function describeSharedColorControlState({
     };
   }
 
-  if (normalizedValue === "transparent") {
+  const parsed = parseSharedColorValue(value, colorProfile, allowInheritKeyword);
+  const themeDefaultValues = new Set(
+    (treatAsThemeDefaultValues ?? [])
+      .map((entry) => parseSharedColorValue(entry, colorProfile, allowInheritKeyword))
+      .filter((entry) => entry.kind === "token")
+      .map((entry) => entry.normalized)
+  );
+
+  if (parsed.kind === "keyword" && parsed.normalized === "transparent") {
     return {
       kind: "transparent",
       label: "Transparent",
@@ -97,7 +89,7 @@ export function describeSharedColorControlState({
     };
   }
 
-  if (themeDefaultValues.has(normalizedValue)) {
+  if (parsed.kind === "token" && themeDefaultValues.has(parsed.normalized)) {
     return {
       kind: "theme_default_token",
       label: "Theme default",
@@ -106,7 +98,7 @@ export function describeSharedColorControlState({
     };
   }
 
-  if (cssTokenPattern.test(normalizedValue)) {
+  if (parsed.kind === "token") {
     return {
       kind: "theme_token",
       label: "Theme token",
@@ -115,7 +107,20 @@ export function describeSharedColorControlState({
     };
   }
 
-  if (isHexColorValue(normalizedValue) || isPickerRepresentableColorValue(normalizedValue)) {
+  if (
+    parsed.kind === "keyword" &&
+    (parsed.normalized === "currentColor" || parsed.normalized === "inherit")
+  ) {
+    return {
+      kind: "inherited",
+      label: "Inherited color",
+      description:
+        "An inherited color is preserved for retained rendering. The swatch is only a fallback preview.",
+      clearResultLabel: defaultClearResultLabel,
+    };
+  }
+
+  if (parsed.kind === "hex" || parsed.kind === "rgb" || parsed.kind === "hsl") {
     return {
       kind: "selected_swatch",
       label: "Selected color",
@@ -149,6 +154,8 @@ type SharedColorControlProps = {
   clearedDescription?: string;
   clearResultLabel?: string;
   swatchAriaLabel?: string;
+  colorProfile?: CssColorProfile;
+  allowInheritKeyword?: boolean;
 };
 
 export function SharedColorControl({
@@ -168,6 +175,8 @@ export function SharedColorControl({
   clearedDescription,
   clearResultLabel,
   swatchAriaLabel,
+  colorProfile = "authoring",
+  allowInheritKeyword = true,
 }: SharedColorControlProps) {
   const clearedState =
     clearedLabel !== undefined || clearedDescription !== undefined || clearResultLabel !== undefined
@@ -181,36 +190,29 @@ export function SharedColorControl({
     value,
     treatAsThemeDefaultValues,
     clearedState,
+    colorProfile,
+    allowInheritKeyword,
   });
   const hasCustomValue = colorState.kind === "saved_custom";
   // Parse once: the native picker + preview show the BASE hex (HTML pickers cannot
   // render alpha) while the opacity slider owns the alpha channel.
-  const parsed = parseColorValue(value);
-  const representable = isAlphaPickerRepresentable(value);
-  const pickerBaseHex = resolveColorSwatchValue(value, pickerFallback);
+  const parsed = parseSharedColorValue(value, colorProfile, allowInheritKeyword);
+  const representable = parsed.kind === "hex" || parsed.kind === "rgb" || parsed.kind === "hsl";
+  const pickerBaseHex = pickerHexFor(parsed, pickerFallback);
   // Standalone preview chip shows the REAL color (incl. alpha) for representable
   // values so the applied opacity is visible; token/keyword fall back to the base.
-  const previewColor = value && representable ? value : pickerBaseHex;
+  const previewColor = representable ? parsed.normalized : pickerBaseHex;
   const opacityPct = Math.round(colorAlpha(parsed) * 100);
 
-  // Free-text commit: canonicalize through the shared boundary mirror so the EMITTED
-  // value is render-safe (leading-dot alpha `.84` -> `0.84`, which the widget render
-  // boundary `resolveClearableCssColorValue` requires). Emit ONLY when the normalizer
-  // returns a whitelist-safe string; unknown/incomplete input is not emitted (the
-  // uncontrolled field keeps the typed draft). A hex draft re-emits via the canonical
-  // composer for a byte-identical lowercase `#rrggbb[aa]`. Committed on blur/Enter ONLY
-  // (mirrors ColorSwatchControl): a per-keystroke commit would remount the `key={value}`
-  // field mid-typing and canonicalize valid substrings (`#081` -> `#008811`), making a
-  // hex8 alpha value like `#0812209e` un-typable character-by-character.
+  // Free-text commits pass the original bytes to the canonical normalizer. Invalid or
+  // context-rejected input is not emitted, so the uncontrolled field keeps its draft.
+  // Commit on blur/Enter only: per-keystroke commits would remount the `key={value}`
+  // field and prevent incremental entry of otherwise valid longer color values.
   const commitText = (draft: string) => {
-    const trimmed = draft.trim();
-    if (trimmed === (value ?? "")) return;
-    const safe = normalizeAdminColorValue(trimmed);
-    if (!safe) return;
-    const safeParsed = parseColorValue(safe);
-    onChange(
-      safeParsed.kind === "hex" ? composeHexColor(safeParsed.baseHex, safeParsed.alpha) : safe
-    );
+    if (draft === (value ?? "")) return;
+    const safe = normalizeAdminColorValue(draft, colorProfile);
+    if (safe === undefined || (safe === "inherit" && !allowInheritKeyword)) return;
+    onChange(safe);
   };
 
   return (
@@ -218,6 +220,7 @@ export function SharedColorControl({
       data-widget-control={controlId}
       data-widget-control-path={controlPath}
       data-widget-control-ownership={controlPath ? "writable" : undefined}
+      data-shared-color-state={colorState.kind}
       className="space-y-2"
     >
       <ClearableFieldHeader
@@ -238,6 +241,7 @@ export function SharedColorControl({
               nextValue: event.target.value,
               onChange,
               onPickerChange: onSwatchChange,
+              colorProfile,
             })
           }
           className="h-9 w-10 p-1"
@@ -293,6 +297,7 @@ export function SharedColorControl({
                 currentValue: value,
                 alphaPct: Number(event.target.value),
                 onChange,
+                colorProfile,
               })
             }
             className="w-full accent-primary"
@@ -304,9 +309,7 @@ export function SharedColorControl({
           {colorState.description}
         </p>
       ) : !showValueInput ? (
-        <p className="text-xs text-muted-foreground" data-shared-color-state={colorState.kind}>
-          {colorState.description}
-        </p>
+        <p className="text-xs text-muted-foreground">{colorState.description}</p>
       ) : null}
     </div>
   );

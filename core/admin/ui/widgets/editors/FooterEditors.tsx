@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { listMediaCached } from "@/services/mediaClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
 
+import { parseCssColorValue } from "../../../../services/theme/cssColorContract";
 import {
   footerSocialTypes,
   normalizeFooterImageSrc,
@@ -188,8 +189,9 @@ const optionLabel = (options: Array<{ id: string; label: string }>, value: strin
 const variantLabel = (value: string | undefined) => optionLabel(variantOptions, value);
 
 const colorDiagnostic = (value: string | undefined) => {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : "Theme default";
+  const parsed = parseCssColorValue(value, "inherited-render");
+  if (value === undefined || value === "") return "Theme default";
+  return parsed?.normalized ?? "Unsupported saved color";
 };
 
 const actionAttributes = (id: string) => controlAttributes({ id, ownership: "action" });
@@ -738,6 +740,7 @@ function ColorField({
         placeholder={placeholder}
         pickerFallback={pickerFallback}
         showValueInput={false}
+        colorProfile="inherited-render"
       />
     </div>
   );

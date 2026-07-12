@@ -262,14 +262,18 @@ function ColorField({
   label,
   value,
   onChange,
+  onClear,
   placeholder,
   pickerFallback,
+  allowInheritKeyword = true,
 }: {
   label: string;
   value: string | undefined;
   onChange: (next: string) => void;
+  onClear?: () => void;
   placeholder: string;
   pickerFallback: string;
+  allowInheritKeyword?: boolean;
 }) {
   return (
     <SharedColorControl
@@ -277,9 +281,12 @@ function ColorField({
       value={value}
       onChange={onChange}
       onSwatchChange={onChange}
+      onClear={onClear}
       placeholder={placeholder}
       pickerFallback={pickerFallback}
       showValueInput={false}
+      colorProfile="inherited-render"
+      allowInheritKeyword={allowInheritKeyword}
     />
   );
 }
@@ -373,8 +380,13 @@ function LabelStyleFields({
         {() => (
           <ColorField
             label="Label color"
-            value={normalized.labelColor}
+            value={value.labelColor}
             onChange={(next) => updateData(value, variant, onChange, { labelColor: next })}
+            onClear={() =>
+              updateData(value, variant, onChange, {
+                labelColor: dividerDefaults.labelColor,
+              })
+            }
             placeholder="var(--color-text)"
             pickerFallback="#0f172a"
           />
@@ -654,10 +666,12 @@ function LineAndWidthFields({
         {() => (
           <ColorField
             label="Line color"
-            value={normalized.color}
+            value={value.color}
             onChange={(next) => updateData(value, variant, onChange, { color: next })}
+            onClear={() => updateData(value, variant, onChange, { color: dividerDefaults.color })}
             placeholder="var(--color-border)"
             pickerFallback="#e2e8f0"
+            allowInheritKeyword={false}
           />
         )}
       </WidgetControlRow>

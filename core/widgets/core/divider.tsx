@@ -1,5 +1,10 @@
 import type { CSSProperties, ComponentType } from "react";
 
+import {
+  CSS_COLOR_SCHEMA_PATTERNS,
+  CSS_COLOR_VALUE_MAX_LENGTH,
+  parseCssColorValue,
+} from "../../services/theme/cssColorContract";
 import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { resolveClearableCssColorValue } from "./clearableStyle";
 
@@ -31,21 +36,22 @@ export const dividerLineStyleTokens = ["solid", "dashed", "dotted"] as const;
 export const dividerOpacityTokens = ["100", "75", "50", "25"] as const;
 export const dividerDashPatternTokens = ["browser", "short", "wide"] as const;
 export const dividerVisibilityTokens = ["line", "spacer-only"] as const;
-const transparentKeywordPattern = "[tT][rR][aA][nN][sS][pP][aA][rR][eE][nN][tT]";
-const currentColorKeywordPattern = "[cC][uU][rR][rR][eE][nN][tT][cC][oO][lL][oO][rR]";
-const inheritKeywordPattern = "[iI][nN][hH][eE][rR][iI][tT]";
-const dividerColorValueSchemaPattern = [
-  "^\\s*(?:",
-  "#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})",
-  "|var\\(\\s*--color-[a-zA-Z0-9_-]+\\s*\\)",
-  "|[rR][gG][bB][aA]?\\(\\s*\\d{1,3}(?:\\.\\d+)?%?\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%?\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%?(?:\\s*,\\s*(?:0(?:\\.\\d+)?|1(?:\\.0+)?|\\d{1,3}(?:\\.\\d+)?%))?\\s*\\)",
-  "|[hH][sS][lL][aA]?\\(\\s*\\d{1,3}(?:\\.\\d+)?(?:deg)?\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%(?:\\s*,\\s*(?:0(?:\\.\\d+)?|1(?:\\.0+)?|\\d{1,3}(?:\\.\\d+)?%))?\\s*\\)",
-  `|${transparentKeywordPattern}|${currentColorKeywordPattern}|${inheritKeywordPattern}`,
-  ")?\\s*$",
-].join("");
 const dividerColorValueSchema = {
-  type: "string",
-  pattern: dividerColorValueSchemaPattern,
+  anyOf: [
+    { const: "" },
+    {
+      type: "string",
+      maxLength: CSS_COLOR_VALUE_MAX_LENGTH,
+      pattern: CSS_COLOR_SCHEMA_PATTERNS["inherited-render"],
+    },
+  ],
+} as const;
+const dividerNestedColorValueSchema = {
+  ...dividerColorValueSchema,
+  not: {
+    type: "string",
+    pattern: "^[ ]*[iI][nN][hH][eE][rR][iI][tT][ ]*$",
+  },
 } as const;
 
 export type DividerVariantId = "line" | "dashed" | "label-center";
@@ -203,7 +209,7 @@ export const dividerSchema = {
     labelLetterSpacing: { enum: dividerLabelLetterSpacingTokens },
     labelGap: { enum: dividerLabelGapTokens },
     thickness: { type: "number" },
-    color: dividerColorValueSchema,
+    color: dividerNestedColorValueSchema,
     width: { enum: ["full", "container", "custom"] },
     containerWidth: { enum: dividerContainerWidthTokens },
     customWidth: { type: "string" },
@@ -336,7 +342,6 @@ const dividerDashPatternValueMap: Record<DividerDashPattern, { dash: number; gap
 const joinClasses = (...classes: Array<string | false | undefined>) =>
   classes.filter(Boolean).join(" ");
 
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
 const pxPattern = /^\d+(?:\.\d+)?px$/i;
 const numberPattern = /^\d+(?:\.\d+)?$/;
 const cssLengthPattern = /^\d+(?:\.\d+)?(?:px|rem|em|%)$/i;
@@ -375,11 +380,19 @@ const resolveEnumToken = <T extends readonly string[]>(
 ): T[number] => (tokens.includes(value as T[number]) ? (value as T[number]) : fallback);
 
 export function normalizeDividerColorValue(value: unknown): string | undefined {
-  return resolveClearableCssColorValue(value);
+  return resolveClearableCssColorValue(value, "inherited-render", {
+    allowInheritKeyword: false,
+  });
 }
 
 const resolveColorString = (value: string | undefined, fallback: string) =>
   normalizeDividerColorValue(value) ?? fallback;
+
+const normalizeDividerLabelColorValue = (value: unknown): string | undefined =>
+  resolveClearableCssColorValue(value, "inherited-render");
+
+const resolveLabelColorString = (value: string | undefined, fallback: string) =>
+  normalizeDividerLabelColorValue(value) ?? fallback;
 
 export function resolveDividerVariant(variant: string): DividerVariantId {
   if (variant === "dashed" || variant === "label-center") return variant;
@@ -405,9 +418,9 @@ export const resolveDividerDefaultLineStyle = (variant: string): DividerLineStyl
   resolveDividerLineStyle(undefined, resolveDividerVariant(variant));
 
 const resolveDividerColorKind = (value: string) => {
-  const trimmed = value.trim();
-  if (trimmed.startsWith("var(")) return "token";
-  if (hexColorPattern.test(trimmed)) return "hex";
+  const parsed = parseCssColorValue(value, "inherited-render");
+  if (parsed?.kind === "token") return "token";
+  if (parsed?.kind === "hex") return "hex";
   return "custom";
 };
 
@@ -489,7 +502,7 @@ export function normalizeDividerData(data: DividerData, variant: string = "line"
 
   return {
     label: typeof data.label === "string" ? data.label : (dividerDefaults.label ?? ""),
-    labelColor: resolveColorString(data.labelColor, color),
+    labelColor: resolveLabelColorString(data.labelColor, color),
     labelSize: resolveEnumToken(data.labelSize, dividerLabelSizeTokens, "xs"),
     labelWeight: resolveEnumToken(data.labelWeight, dividerLabelWeightTokens, "medium"),
     labelTransform: resolveEnumToken(data.labelTransform, dividerLabelTransformTokens, "uppercase"),
@@ -581,7 +594,7 @@ export function DividerBlock({ data, variant }: { data: DividerData; variant: st
   const marginTop = normalized.marginTop ?? "6";
   const marginBottom = normalized.marginBottom ?? "6";
   const hasLabel = visibility === "line" && resolvedVariant === "label-center" && label.length > 0;
-  const labelColor = normalizeDividerColorValue(normalized.labelColor) ?? color;
+  const labelColor = normalizeDividerLabelColorValue(normalized.labelColor) ?? color;
   const labelGap = normalized.labelGap ?? "3";
   const constrainedWidthClass = widthMode === "full" ? "w-full" : dividerAlignmentClassMap[align];
   const constrainedWidthStyle =

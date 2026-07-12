@@ -7,8 +7,10 @@
 **Category:** SVG Sanitization / Security
 **Estimated Effort:** Medium
 **Dependencies:** TASK-522, TASK-535
-**Status:** ⏳ To Do
-**Changelog:** 1250 (pinned; create only at implementation closure)
+**Status:** ✅ Done
+**Started:** 2026-07-11
+**Completed:** 2026-07-11
+**Changelog:** 1250
 
 ---
 
@@ -62,5 +64,14 @@ bun --cwd core lint:types
 bun --cwd core lint
 bunx vitest run --config vitest.config.ts \
   tests/vitest/pages/svg-sanitizer.test.ts \
-  tests/vitest/pages/page-document-v2.test.ts
+  tests/vitest/pages/svg-safe-tree.test.ts \
+  tests/vitest/pages/page-document-v2.test.ts \
+  tests/vitest/pages/page-renderer-v2.test.tsx
 ~~~
+
+## Completion evidence
+
+Both leaves are complete. One immutable policy now owns the closed SVG vocabulary;
+sanitization removes author `class`/`style`, and the dependency-free parser produces
+only bounded, deeply immutable safe nodes. Leaf gates, the 423/423 final targeted
+Vitest gate, targeted Semgrep, and the sanitizer/safe-tree audit lenses passed.

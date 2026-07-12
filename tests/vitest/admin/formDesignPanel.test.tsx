@@ -12,6 +12,7 @@ import { afterEach, expect, test, vi } from "vitest";
 
 import { FormDesignPanel } from "../../../core/admin/ui/forms/FormDesignPanel";
 import type { FormFormTheme } from "../../../core/services/forms/formTheme";
+import { FORM_COLOR_CONSUMER_CASES, buildFormColorTheme } from "../forms/formColorConsumerTable";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -40,6 +41,21 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
   const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
   descriptor?.set?.call(element, value);
   element.dispatchEvent(new Event("change", { bubbles: true }));
+};
+
+const setInputValue = (element: HTMLInputElement, value: string) => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+  descriptor?.set?.call(element, value);
+  element.dispatchEvent(new Event("input", { bubbles: true }));
+  element.dispatchEvent(new Event("change", { bubbles: true }));
+};
+
+const buildUniformColorTheme = (value: string): FormFormTheme => {
+  const theme = buildFormColorTheme("canonical");
+  for (const entry of FORM_COLOR_CONSUMER_CASES) {
+    (theme[entry.group] as Record<string, string>)[entry.key] = value;
+  }
+  return theme;
 };
 
 const optionValues = (select: HTMLSelectElement) =>
@@ -83,6 +99,91 @@ test("renders every control group with resolved-default hints (no theme)", () =>
     expect(text).not.toContain("undefined");
   } finally {
     view.cleanup();
+  }
+});
+
+test("all ten Form Design color controls expose canonical table state without mount mutation", () => {
+  const onThemeChange = vi.fn();
+  const view = mount(
+    <FormDesignPanel theme={buildFormColorTheme("raw")} onThemeChange={onThemeChange} />
+  );
+  try {
+    for (const entry of FORM_COLOR_CONSUMER_CASES) {
+      const control = view.container.querySelector(`[data-widget-control="${entry.controlId}"]`);
+      expect(control?.getAttribute("data-widget-control-path")).toBe(
+        `theme.${entry.group}.${entry.key}`
+      );
+      expect(control?.getAttribute("data-shared-color-state")).toBe(
+        entry.canonical === "currentColor" || entry.canonical === "inherit"
+          ? "inherited"
+          : "selected_swatch"
+      );
+    }
+    expect(onThemeChange).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test.each(["currentColor", "inherit"])(
+  "all ten Form Design controls expose the inherited DOM state for %s",
+  (keyword) => {
+    const onThemeChange = vi.fn();
+    const view = mount(
+      <FormDesignPanel theme={buildUniformColorTheme(keyword)} onThemeChange={onThemeChange} />
+    );
+    try {
+      for (const entry of FORM_COLOR_CONSUMER_CASES) {
+        expect(
+          view.container
+            .querySelector(`[data-widget-control="${entry.controlId}"]`)
+            ?.getAttribute("data-shared-color-state")
+        ).toBe("inherited");
+      }
+      expect(view.container.querySelectorAll('[data-shared-color-state="inherited"]')).toHaveLength(
+        FORM_COLOR_CONSUMER_CASES.length
+      );
+      expect(onThemeChange).not.toHaveBeenCalled();
+    } finally {
+      view.cleanup();
+    }
+  }
+);
+
+test("every Form Design color control supports one scoped picker replacement and clear", () => {
+  for (const entry of FORM_COLOR_CONSUMER_CASES) {
+    const onThemeChange = vi.fn();
+    const theme = buildFormColorTheme("canonical");
+    const view = mount(<FormDesignPanel theme={theme} onThemeChange={onThemeChange} />);
+    try {
+      const control = view.container.querySelector(
+        `[data-widget-control="${entry.controlId}"]`
+      ) as HTMLElement | null;
+      const swatch = control?.querySelector('input[type="color"]') as HTMLInputElement | null;
+      expect(swatch).not.toBeNull();
+      React.act(() => {
+        if (swatch) setInputValue(swatch, "#102030");
+      });
+
+      const currentGroup = { ...(theme[entry.group] as Record<string, string>) };
+      expect(onThemeChange).toHaveBeenNthCalledWith(1, {
+        [entry.group]: { ...currentGroup, [entry.key]: entry.pickerReplacement },
+      });
+
+      const clearButton = control?.querySelector("button") as HTMLButtonElement | null;
+      expect(clearButton?.disabled).toBe(false);
+      React.act(() => {
+        clearButton?.click();
+      });
+      const clearedGroup: Record<string, string> = { ...currentGroup };
+      delete clearedGroup[entry.key];
+      expect(onThemeChange).toHaveBeenNthCalledWith(2, {
+        [entry.group]: clearedGroup,
+      });
+      expect(onThemeChange).toHaveBeenCalledTimes(2);
+    } finally {
+      view.cleanup();
+    }
   }
 });
 

@@ -335,18 +335,23 @@ not claim it as implemented.
 ### Form theme colors on the public render path (TASK-516-01)
 
 `forms.settings.theme` color tokens flow through `PATCH /forms/:id` into the
-PUBLIC Form block/section runtime inline `style`, so they are policy-checked at
-BOTH boundaries with `core/widgets/core/clearableStyle.ts`
-`resolveClearableCssColorValue`
-(allows hex / `var(--color-*)` / bounded `rgb[a]`/`hsl[a]` / `transparent`/
-`currentColor`/`inherit`; rejects `url(`/`expression(`/`javascript:`/`data:`/
-`;{}<>`): (1) at the normalize/write boundary in `normalizeFormTheme` (unsafe →
-key dropped, never persisted), and (2) at the render boundary in `resolveFormTheme`
-+ the `formEmbed`/runtime-preview paths (defence-in-depth) before any color reaches
-an inline style. Fixed write objects are strict: unknown keys and out-of-enum
-values fail route validation with `validation_error` before service logic. The
-field-by-field fail-soft normalizers remain only as non-destructive legacy/read
-defense; present-only emission still omits unauthored keys.
+PUBLIC Form block/section runtime inline `style`. The direct write and
+persisted-read boundaries use the Bun-free canonical parser in
+`core/services/theme/cssColorContract.ts`; the retained Form Embed bridge uses
+that same owner through `resolveClearableCssColorValue`. Form is the explicit
+TASK-516 end-to-end `inherited-render` exception, so canonical `currentColor` and
+`inherit` are accepted together with the ordinary safe color grammar. The
+builder canvas, runtime preview, resolver, and public renderer must keep that
+same profile instead of narrowing or widening it per consumer.
+
+Fixed write objects are strict: unknown keys and out-of-enum values fail route
+validation with `validation_error` before service logic. The schema pattern and
+128-code-unit cap are structural guards, not a semantic CSS parser; the shared
+parser still rejects controls/non-ASCII input, invalid function arity and numeric
+ranges, and dangerous or unknown functions before persistence or inline-style
+emission. Field-by-field fail-soft normalization remains only for
+non-destructive legacy/read defense, never as raw pass-through. Present-only
+emission still omits unauthored keys.
 
 ### Master key (storage secrets)
 
@@ -478,9 +483,19 @@ Rotacja klucza:
   only escaped `url("...")` values. `url(javascript:...)`, expression-like CSS,
   protocol-relative media, and event-handler payloads fail closed to `null` or
   the documented default.
-- CSS color values may be raw safe colors or the explicit allowlisted site
-  tokens `var(--color-primary|secondary|accent|bg|surface|text|border)`.
-  Arbitrary `var()` expressions remain rejected.
+- The supported Page admin color control now commits through the shared
+  canonical `authoring` profile. This browser adapter is not the backend trust
+  boundary: persistence and rendering still re-check through the independent
+  legacy Page sanitizer. That sanitizer allows only
+  `var(--color-primary|secondary|accent|bg|surface|text|border)` for token
+  references and rejects arbitrary `var()` expressions, URLs, delimiters, and
+  unsafe functions. Its separate alphabetic named-value branch still retains
+  current backend compatibility for values including `currentColor` and
+  `inherit`, and its functional branch is not yet the shared parser's semantic
+  range contract. Do not claim server-side shared-parser enforcement from the
+  admin control alone. TASK-539-02-L01 owns importing the shared parser while
+  retaining the exact seven-token filter and Page-specific
+  background/composite rules.
 - Page text marks (`heading`/plain `text`/`quote` `props.marks`) stay as
   bounded JSON ranges, not raw HTML. Color/highlight mark colors normalize
   through the CSS color sanitizer; link mark hrefs normalize through the Page
@@ -502,42 +517,41 @@ Rotacja klucza:
   coverage in the Vitest sanitizer/XSS suites and keep local Semgrep/security
   scans clean without scanner suppressions.
 
-## Pages custom-SVG sanitizer boundary (TASK-522)
+## Pages custom-SVG sanitizer and renderer boundary (TASK-522, TASK-538)
 
-- The `customSvg` Page v2 block's `svg` prop is the one place attacker-authored
-  MARKUP is stored. It is sanitized by a dependency-free **allowlist** sanitizer,
-  `core/services/pages/svgSanitizer.ts`, applied at BOTH write
-  (`normalizeBlockProps` for `customSvg`) AND render (defence in depth, before
-  `dangerouslySetInnerHTML`). The sanitizer is ISOMORPHIC (byte cap via `TextEncoder`,
-  never `Buffer`) because it also runs at render, which the client builder canvas
-  drives.
-- **Fail-closed pre-pass:** HTML comments (`<!--…-->`) and `<![CDATA[…]]>` sections —
-  which the tag regex cannot match and would otherwise survive verbatim — are stripped
-  before the walk.
-- **Fail-closed tripwires (reject the whole SVG → neutral empty fallback):** any
-  `<script`, `<foreignObject`, `<!ENTITY`/`<!DOCTYPE` (XXE), `on\w+=` event attribute,
-  `javascript:`/`vbscript:`/`data:text/html` URL, `expression(`/`behavior:`/
-  `-moz-binding` in style, `url(` to a non-`#` target, `<use>`/`href`/`xlink:href`
-  whose value is not a local `#fragment`, or bytes > `PAGE_CUSTOM_SVG_MAX_BYTES`
-  (24576).
-- **Allowlist walk:** only allowlisted SVG tags (`svg,g,defs,path,rect,circle,ellipse,
-  line,polyline,polygon,text,tspan,linear/radialGradient,stop,clipPath,mask,pattern,
-  use[local],symbol,title,desc,marker,filter,fe*`) and allowlisted attributes
-  (geometry + presentation + `class,id,transform,viewBox,preserveAspectRatio` +
-  `href`/`xlink:href` restricted to `#…` + `xmlns`/`xmlns:xlink` restricted to the SVG/
-  xlink namespace VALUES) survive. The `style` attribute is NOT allowlisted — it is
-  dropped (no raw author CSS reaches the DOM, closing the `position:fixed`
-  layout-escape/clickjacking class at source). Unknown tag/attr ⇒ dropped, never stored
-  raw.
-- **Fail-closed post-walk residual check:** after the walk, `return ""` if any residual
-  raw `<` (not a re-emitted allowlisted tag) or an unbalanced quote remains — so no
-  un-walked markup (dropped-tag TEXT, quote-desync) reaches the DOM.
-- Result: no `<script>`, no event handler, no external/JS URL, no XXE, no raw CSS ever
-  reaches the DOM; an SVG failing a tripwire renders a neutral placeholder, never
-  partial injected markup. The Vitest sanitizer/XSS corpus
-  (`tests/vitest/pages/svg-sanitizer.test.ts`) covers mXSS / parser-differential
-  vectors (comments, CDATA, unbalanced-quote desync, slash-separated handlers,
-  nested/duplicate `<svg>`, entity-encoded), each asserting a fail-CLOSED outcome.
+- Treat every `customSvg` Page block `svg` value as untrusted author text. The Page
+  write normalizer and renderer both call the same dependency-free sanitizer; the
+  second call is a defence-in-depth boundary for legacy or externally modified rows.
+  A 24 KiB isomorphic byte cap applies before parsing. Invalid, malformed, or
+  over-limit input fails closed to a neutral placeholder rather than partially
+  rendered markup.
+- `svgSanitizerPolicy.ts` is the single immutable, closed policy for accepted tag names,
+  source attribute names, namespaces, and local references. Its exported collections
+  are frozen. Author-controlled `class` and `style` are excluded at every element, and
+  no author-class exception or author-selected attribute expansion is permitted.
+- `buildSafeSvgTree` consumes sanitizer output through a strict parser with no browser
+  error recovery. It rechecks the closed policy, entities, namespaces, and local
+  references; enforces 2,048 element nodes, depth 64, and 8,192 decoded text characters;
+  and returns a deeply frozen plain-data tree. Any sanitizer/parser disagreement also
+  fails closed.
+- The renderer creates React elements only from that tree. A complete, explicit
+  source-attribute-to-React-prop map copies only present safe values, so neither an
+  arbitrary prop spread nor author-data `dangerouslySetInnerHTML` is part of the
+  `customSvg` branch.
+- Before root layout attributes are removed, the renderer snapshots a trusted aspect
+  ratio from an exact finite four-number `viewBox`, with positive finite `width` and
+  `height` as the fallback. It then removes root `x`, `y`, `width`, `height`, and
+  `transform`, sets a renderer-owned `width: 100%`, clamps the ratio to 1/8..8, and
+  caps block size at 1,024 px. Safe descendant drawing geometry remains available.
+- The renderer-owned wrapper clips overflow, applies `contain: layout paint`, and
+  disables pointer events; the root SVG also clips overflow and disables pointer
+  events. These controls are fixed renderer props and cannot be overridden by author
+  markup.
+- Verification covers write-to-render behavior, editor rendering, and the published
+  and preview runtime paths. Closure additionally requires narrow- and wide-viewport
+  browser smoke to confirm contained geometry, click-through behavior outside the
+  complete Page block frame, and zero console errors; test evidence must remain
+  redacted and must not document an actionable reproduction.
 - Decoration/tilt/surface/hover/marquee/composition/layer config values are
   reject-unknown allowlisted enums (`normalizeEnum`, fail-CLOSED) + `readNumber`
   clamps; colors run through `readSafeColor`. They reach CSS only as bounded numbers /

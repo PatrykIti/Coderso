@@ -6,7 +6,7 @@
 **Priority:** Medium
 **Category:** Media Folder Service / DB Reliability
 **Estimated Effort:** Small
-**Dependencies:** TASK-543 (program land order; no shared source ownership)
+**Dependencies:** TASK-537 (program land order; no shared source ownership)
 **Status:** ⏳ To Do
 **Changelog:** 1256 (pinned; create only at implementation closure)
 

@@ -8,21 +8,20 @@ import { normalizeMenuColorValue } from "../../../core/services/menus/normalizeM
  * MenuAppearancePanel 5 sites) inherit alpha authoring from the 519-02 control
  * upgrade and store the raw string via their `onChange` handlers (no 6-digit-only
  * re-normalize, no `allowCustom={false}` suppression). This asserts the menu write
- * boundary these values persist through (`normalizeMenuColorValue`) accepts an
- * authored alpha value UNCHANGED, so an authored `#0812209e` / `rgba(8,17,31,.84)`
- * round-trips schema-valid with NO schema widening.
+ * boundary these values persist through (`normalizeMenuColorValue`) accepts and
+ * emits the canonical authoring bytes owned by the shared color contract.
  */
 describe("menu color alpha rollout (519-04)", () => {
   test("8-digit alpha hex round-trips unchanged", () => {
     expect(normalizeMenuColorValue("#0812209e")).toBe("#0812209e");
   });
 
-  test("leading-dot rgba alpha round-trips unchanged at the menu write boundary", () => {
-    expect(normalizeMenuColorValue("rgba(8,17,31,.84)")).toBe("rgba(8,17,31,.84)");
+  test("leading-dot rgba alpha canonicalizes at the menu write boundary", () => {
+    expect(normalizeMenuColorValue("rgba(8,17,31,.84)")).toBe("rgba(8, 17, 31, 0.84)");
   });
 
   test("hsla alpha + 4-digit hex + transparent + token all stay schema-valid", () => {
-    expect(normalizeMenuColorValue("hsla(210,60%,8%,.84)")).toBe("hsla(210,60%,8%,.84)");
+    expect(normalizeMenuColorValue("hsla(210,60%,8%,.84)")).toBe("hsla(210, 60%, 8%, 0.84)");
     expect(normalizeMenuColorValue("#0812")).toBe("#0812");
     expect(normalizeMenuColorValue("transparent")).toBe("transparent");
     expect(normalizeMenuColorValue("var(--color-primary)")).toBe("var(--color-primary)");
@@ -32,5 +31,11 @@ describe("menu color alpha rollout (519-04)", () => {
     expect(normalizeMenuColorValue("url(javascript:alert(1))")).toBeNull();
     expect(normalizeMenuColorValue("expression(alert(1))")).toBeNull();
     expect(normalizeMenuColorValue("")).toBeNull();
+  });
+
+  test("Menu authoring rejects inherited-only and out-of-range values", () => {
+    expect(normalizeMenuColorValue("currentColor")).toBeNull();
+    expect(normalizeMenuColorValue("inherit")).toBeNull();
+    expect(normalizeMenuColorValue("rgb(256,0,0)")).toBeNull();
   });
 });

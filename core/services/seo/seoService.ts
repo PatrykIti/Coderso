@@ -22,6 +22,25 @@ type TargetRow = {
   targetType: SeoTargetType;
 };
 
+type SeoExecutor = Pick<typeof db, "select" | "insert" | "update">;
+
+const SEO_DOCUMENT_FIELDS = {
+  id: seoDocuments.id,
+  targetType: seoDocuments.targetType,
+  targetId: seoDocuments.targetId,
+  slug: seoDocuments.slug,
+  title: seoDocuments.title,
+  description: seoDocuments.description,
+  canonicalUrl: seoDocuments.canonicalUrl,
+  robots: seoDocuments.robots,
+  score: seoDocuments.score,
+  status: seoDocuments.status,
+  issues: seoDocuments.issues,
+  lastAuditAt: seoDocuments.lastAuditAt,
+  createdAt: seoDocuments.createdAt,
+  updatedAt: seoDocuments.updatedAt,
+} as const;
+
 const normalizeSlug = (value: string | null) => {
   if (!value) return null;
   return value.startsWith("/") ? value : `/${value}`;
@@ -212,6 +231,68 @@ export function analyzeSeoDocument(
   };
 }
 
+type MutableSeoAnalysis = ReturnType<typeof analyzeSeoDocument>;
+
+export type SeoAnalysis = Readonly<
+  Omit<MutableSeoAnalysis, "issues"> & {
+    readonly issues: readonly SeoIssue[];
+  }
+>;
+
+export type PreparedSeoMutation = Readonly<{
+  targetType: SeoTargetType;
+  targetId: string;
+  existingId: string | null;
+  slug: string | null;
+  title: string | null;
+  description: string | null;
+  canonicalUrl: string | null;
+  robots: string | null;
+  analysis: SeoAnalysis;
+}>;
+
+const freezeSeoAnalysis = (input: MutableSeoAnalysis): SeoAnalysis =>
+  Object.freeze({
+    ...input,
+    issues: Object.freeze(input.issues.map((issue) => Object.freeze({ ...issue }))),
+  });
+
+export function prepareSeoMutation(
+  input: SeoUpsertInput,
+  existing: SeoDocument | null
+): PreparedSeoMutation {
+  const slug = existing ? (input.slug ?? existing.slug) : (input.slug ?? null);
+  const title =
+    existing && input.title === undefined ? existing.title : normalizeNullableText(input.title);
+  const description =
+    existing && input.description === undefined
+      ? existing.description
+      : normalizeNullableText(input.description);
+  const canonicalUrl =
+    existing && input.canonicalUrl === undefined
+      ? existing.canonicalUrl
+      : normalizeCanonicalForStorage(input.canonicalUrl);
+  const robots =
+    existing && input.robots === undefined
+      ? existing.robots
+      : normalizeRobotsForStorage(input.robots);
+  const analysis = freezeSeoAnalysis(
+    analyzeSeoDocument({ title, description, canonicalUrl, robots })
+  );
+
+  return Object.freeze({
+    targetType: input.targetType,
+    targetId: input.targetId,
+    existingId: existing?.id ?? null,
+    slug,
+    title,
+    description,
+    canonicalUrl,
+    robots,
+    analysis,
+  });
+}
+
 const resolvePublicSeoValue = (
   documentValue: string | null | undefined,
   fallbackValue: string | null | undefined,
@@ -351,15 +432,23 @@ export async function getSeoDocument(id: string): Promise<SeoDocument | null> {
   return row ? mapDocument(row) : null;
 }
 
+export async function getSeoDocumentByTargetWithExecutor(
+  executor: SeoExecutor,
+  targetType: SeoTargetType,
+  targetId: string
+): Promise<SeoDocument | null> {
+  const [row] = await executor
+    .select(SEO_DOCUMENT_FIELDS)
+    .from(seoDocuments)
+    .where(and(eq(seoDocuments.targetType, targetType), eq(seoDocuments.targetId, targetId)));
+  return row ? mapDocument(row) : null;
+}
+
 export async function getSeoDocumentByTarget(
   targetType: SeoTargetType,
   targetId: string
 ): Promise<SeoDocument | null> {
-  const [row] = await db
-    .select()
-    .from(seoDocuments)
-    .where(and(eq(seoDocuments.targetType, targetType), eq(seoDocuments.targetId, targetId)));
-  return row ? mapDocument(row) : null;
+  return getSeoDocumentByTargetWithExecutor(db, targetType, targetId);
 }
 
 export async function resolvePublicSeoMetadata(input: {
@@ -409,56 +498,66 @@ export async function resolvePublicSeoMetadata(input: {
   };
 }
 
-export async function upsertSeoDocument(input: SeoUpsertInput) {
-  const existing = await getSeoDocumentByTarget(input.targetType, input.targetId);
-  if (existing) {
-    const next = {
-      slug: input.slug ?? existing.slug,
-      title: input.title !== undefined ? normalizeNullableText(input.title) : existing.title,
-      description:
-        input.description !== undefined
-          ? normalizeNullableText(input.description)
-          : existing.description,
-      canonicalUrl:
-        input.canonicalUrl !== undefined
-          ? normalizeCanonicalForStorage(input.canonicalUrl)
-          : existing.canonicalUrl,
-      robots:
-        input.robots !== undefined ? normalizeRobotsForStorage(input.robots) : existing.robots,
-    };
-    const analysis = analyzeSeoDocument(next);
-    const [row] = await db
+export async function prepareSeoMutationWithExecutor(
+  executor: SeoExecutor,
+  input: SeoUpsertInput
+): Promise<PreparedSeoMutation> {
+  const existing = await getSeoDocumentByTargetWithExecutor(
+    executor,
+    input.targetType,
+    input.targetId
+  );
+  return prepareSeoMutation(input, existing);
+}
+
+export async function applyPreparedSeoMutationWithExecutor(
+  executor: SeoExecutor,
+  plan: PreparedSeoMutation
+): Promise<SeoDocument | null> {
+  const values = {
+    slug: plan.slug,
+    title: plan.title,
+    description: plan.description,
+    canonicalUrl: plan.canonicalUrl,
+    robots: plan.robots,
+    score: plan.analysis.score,
+    status: plan.analysis.status,
+    issues: plan.analysis.issues,
+  };
+
+  if (plan.existingId) {
+    const [row] = await executor
       .update(seoDocuments)
-      .set({
-        ...next,
-        ...analysis,
-        updatedAt: new Date(),
-      })
-      .where(eq(seoDocuments.id, existing.id))
-      .returning();
-    if (row) clearSiteCache();
+      .set({ ...values, updatedAt: new Date() })
+      .where(eq(seoDocuments.id, plan.existingId))
+      .returning(SEO_DOCUMENT_FIELDS);
     return row ? mapDocument(row) : null;
   }
 
-  const next = {
-    title: normalizeNullableText(input.title),
-    description: normalizeNullableText(input.description),
-    canonicalUrl: normalizeCanonicalForStorage(input.canonicalUrl),
-    robots: normalizeRobotsForStorage(input.robots),
-  };
-  const analysis = analyzeSeoDocument(next);
-  const [row] = await db
+  const [row] = await executor
     .insert(seoDocuments)
     .values({
-      targetType: input.targetType,
-      targetId: input.targetId,
-      slug: input.slug ?? null,
-      ...next,
-      ...analysis,
+      targetType: plan.targetType,
+      targetId: plan.targetId,
+      ...values,
     })
-    .returning();
-  if (row) clearSiteCache();
+    .returning(SEO_DOCUMENT_FIELDS);
   return row ? mapDocument(row) : null;
+}
+
+export async function upsertSeoDocumentWithExecutor(
+  executor: SeoExecutor,
+  input: SeoUpsertInput
+): Promise<SeoDocument | null> {
+  const plan = await prepareSeoMutationWithExecutor(executor, input);
+  return applyPreparedSeoMutationWithExecutor(executor, plan);
+}
+
+export async function upsertSeoDocument(input: SeoUpsertInput): Promise<SeoDocument | null> {
+  const plan = await prepareSeoMutationWithExecutor(db, input);
+  const result = await applyPreparedSeoMutationWithExecutor(db, plan);
+  if (result) clearSiteCache();
+  return result;
 }
 
 export async function updateSeoDocumentById(

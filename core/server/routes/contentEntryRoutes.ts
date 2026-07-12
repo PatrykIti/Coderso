@@ -8,8 +8,9 @@ import {
   listEntries,
   publishEntry,
   unpublishEntry,
-  updateEntryMetadata,
+  updateEntryMetadataForRoute,
   updateEntry,
+  type UpdateEntryMetadataInput,
 } from "../../services/content/entryService";
 import { getContentTypeBySlug } from "../../services/content/typeService";
 import {
@@ -88,6 +89,10 @@ export const mapEntryMetadataError = (error: unknown) => {
       return new ApiError("taxonomy_term_invalid", "Term does not belong to taxonomy.", 400);
     case "taxonomy_term_missing":
       return new ApiError("taxonomy_term_missing", "Term not found.", 404);
+    case "seo_canonical_invalid":
+      return new ApiError("seo_canonical_invalid", "Canonical URL is invalid.", 400);
+    case "seo_robots_invalid":
+      return new ApiError("seo_robots_invalid", "Robots directive is invalid.", 400);
     default:
       return null;
   }
@@ -263,29 +268,29 @@ export function registerContentEntryRoutes(router: Router, deps: ContentEntryRou
           };
         };
 
-        if (body.status === "published" && entry.status !== "published") {
-          await requirePermission("content:publish")(ctx);
+        const metadataInput: UpdateEntryMetadataInput = {
+          status: body.status,
+          visibility: body.visibility,
+          accessPassword: body.accessPassword,
+          tags: body.tags,
+          taxonomy: body.taxonomy,
+          seo: body.seo,
+        };
+        if (Object.hasOwn(body, "scheduledAt")) {
+          metadataInput.scheduledAt =
+            body.scheduledAt === null ? null : new Date(body.scheduledAt as string);
         }
 
-        const scheduledAt =
-          body.scheduledAt === null || body.scheduledAt === undefined || body.scheduledAt === ""
-            ? null
-            : new Date(body.scheduledAt);
-
-        let metadata: Awaited<ReturnType<typeof updateEntryMetadata>>;
+        const authorizePublishTransition = async () => {
+          await requirePermission("content:publish")(ctx);
+        };
+        let metadata: Awaited<ReturnType<typeof updateEntryMetadataForRoute>>;
         try {
-          metadata = await updateEntryMetadata(
+          metadata = await updateEntryMetadataForRoute(
             entry.id,
-            {
-              status: body.status,
-              scheduledAt,
-              visibility: body.visibility,
-              accessPassword: body.accessPassword,
-              tags: body.tags,
-              taxonomy: body.taxonomy,
-              seo: body.seo,
-            },
-            ctx.user?.id
+            metadataInput,
+            ctx.user?.id,
+            authorizePublishTransition
           );
         } catch (error) {
           const mapped = mapEntryMetadataError(error);

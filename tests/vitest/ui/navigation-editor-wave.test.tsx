@@ -8,6 +8,7 @@ import {
   navigationEditorContract,
   type NavigationData,
 } from "../../../core/widgets/core/navigation";
+import { RETAINED_COLOR_FIELDS } from "../widgets/retainedColorConsumerTable";
 
 type TestMenuSummary = {
   id: string;
@@ -988,6 +989,62 @@ test("NavigationVisualEditor covers API menu resolver fallback and color picker 
   } finally {
     view.cleanup();
     navigationClientState.menuDetailError = null;
+  }
+});
+
+test("Navigation mounted color inventory preserves inheritance, replacement, and clear", async () => {
+  const { NavigationVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
+  const seededStyle = Object.fromEntries(
+    RETAINED_COLOR_FIELDS.navigation.map((entry, index) => [
+      entry.path.slice("style.".length),
+      index % 2 === 0 ? "currentColor" : "inherit",
+    ])
+  ) as NonNullable<NavigationData["style"]>;
+  let latestValue = createNavigationValue({ style: seededStyle });
+  const onChangeSpy = vi.fn();
+
+  const Harness = () => {
+    const [value, setValue] = useState(latestValue);
+    return (
+      <NavigationVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          onChangeSpy(next);
+          setValue(next);
+        }}
+        variant="with-cta"
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+  try {
+    await flush();
+    for (const entry of RETAINED_COLOR_FIELDS.navigation) {
+      const control = view.container.querySelector(`[data-widget-control="${entry.control}"]`);
+      expect(control?.getAttribute("data-widget-control-path"), entry.path).toBe(entry.path);
+      expect(control?.getAttribute("data-shared-color-state"), entry.path).toBe("inherited");
+    }
+    expect(view.container.textContent).toContain("Inherited color");
+    expect(onChangeSpy).not.toHaveBeenCalled();
+
+    const surfaceControl = view.container.querySelector(
+      '[data-widget-control="navigation.visual.style.surfaceColor"]'
+    );
+    setInputValue(surfaceControl?.querySelector('input[type="color"]'), "#102030");
+    expect(latestValue.style?.surfaceColor).toBe("#102030");
+    expect(onChangeSpy).toHaveBeenCalledTimes(1);
+
+    const borderControl = view.container.querySelector(
+      '[data-widget-control="navigation.visual.style.borderColor"]'
+    );
+    clickByText(borderControl ?? view.container, "Clear");
+    expect(latestValue.style?.borderColor).toBeUndefined();
+    expect(onChangeSpy).toHaveBeenCalledTimes(2);
+  } finally {
+    view.cleanup();
   }
 });
 

@@ -1236,8 +1236,331 @@ test("HeroVisualEditor keeps single CTA and colored overlay opacity changes roun
         "70"
       );
     });
-    expect(latestValue.media?.overlay).toBe("rgba(255, 0, 0, 0.70)");
+    expect(latestValue.media?.overlay).toBe("rgba(255, 0, 0, 0.7)");
     expect(findColorInputByControl(view.container, "hero.media.overlay")?.value).toBe("#ff0000");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("HeroVisualEditor keeps both overlay paths fail-closed across literal and nonliteral states", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+  const states = [
+    {
+      raw: "#abc",
+      preview: "rgba(170, 187, 204, 0.9)",
+      strength: "90%",
+      disabled: false,
+      hint: undefined,
+    },
+    {
+      raw: "RGB(1, 2, 3)",
+      preview: "rgba(1, 2, 3, 0.9)",
+      strength: "90%",
+      disabled: false,
+      hint: undefined,
+    },
+    {
+      raw: "HSL(120, 100%, 50%)",
+      preview: "rgba(0, 255, 0, 0.9)",
+      strength: "90%",
+      disabled: false,
+      hint: undefined,
+    },
+    {
+      raw: "#11223380",
+      preview: "rgba(17, 34, 51, 0.5)",
+      strength: "50%",
+      disabled: false,
+      hint: undefined,
+    },
+    {
+      raw: "rgba(1, 2, 3, 0.4)",
+      preview: "rgba(1, 2, 3, 0.4)",
+      strength: "40%",
+      disabled: false,
+      hint: undefined,
+    },
+    {
+      raw: "var(--color-primary)",
+      preview: "var(--color-primary)",
+      strength: "100%",
+      disabled: true,
+      hint: "Choose a picker color before editing overlay strength.",
+    },
+    {
+      raw: "currentcolor",
+      preview: "currentcolor",
+      strength: "100%",
+      disabled: true,
+      hint: "Choose a picker color before editing overlay strength.",
+    },
+    {
+      raw: "transparent",
+      preview: "transparent",
+      strength: "0%",
+      disabled: true,
+      hint: "Choose a picker color before editing overlay strength.",
+    },
+    {
+      raw: "inherit",
+      preview: "transparent",
+      strength: "0%",
+      disabled: true,
+      hint: "This saved overlay is unsupported. Choose a picker color to replace it.",
+    },
+  ] as const;
+
+  for (const path of ["hero.media.overlay", "hero.background.media.overlay"] as const) {
+    for (const state of states) {
+      const onChange = vi.fn();
+      const inline = path === "hero.media.overlay";
+      const value: HeroData = {
+        headline: "Hero",
+        media: {
+          type: "image",
+          src: "/hero.jpg",
+          overlay: inline ? state.raw : undefined,
+        },
+        background: {
+          media: {
+            type: "image",
+            src: "/background.jpg",
+            overlay: inline ? undefined : state.raw,
+          },
+        },
+      };
+      const view = mount(
+        <div
+          style={
+            {
+              color: "rgb(9, 8, 7)",
+              "--color-primary": "rgb(4, 5, 6)",
+            } as React.CSSProperties
+          }
+        >
+          <HeroVisualEditor
+            value={value}
+            onChange={onChange}
+            variant="split"
+            onVariantChange={() => undefined}
+          />
+        </div>
+      );
+
+      try {
+        await flush();
+        const control = view.container.querySelector(`[data-widget-control="${path}"]`);
+        const preview = control?.querySelector("div.h-10") as HTMLDivElement | null;
+        const slider = control?.querySelector('input[type="range"]') as HTMLInputElement | null;
+        expect(control, `${path}:${state.raw}`).not.toBeNull();
+        expect(preview?.getAttribute("style"), `${path}:${state.raw}`).toContain(
+          `background-color: ${state.preview}`
+        );
+        expect(slider?.min).toBe("0");
+        expect(slider?.max).toBe("90");
+        expect(slider?.step).toBe("5");
+        expect(slider?.disabled).toBe(state.disabled);
+        expect(control?.textContent).toContain(state.strength);
+        if (state.hint) expect(control?.textContent).toContain(state.hint);
+        expect(onChange).not.toHaveBeenCalled();
+
+        if (state.raw === "var(--color-primary)") {
+          expect(getComputedStyle(preview!).backgroundColor).toBe("rgb(4, 5, 6)");
+        }
+        if (state.raw === "currentcolor") {
+          const computed = getComputedStyle(preview!);
+          const resolvedCurrentColor =
+            computed.backgroundColor === "currentcolor" ? computed.color : computed.backgroundColor;
+          expect(resolvedCurrentColor).toBe("rgb(9, 8, 7)");
+        }
+
+        if (state.raw === "var(--color-primary)") {
+          React.act(() => {
+            setInputValue(findColorInputByControl(view.container, path), "#102030");
+          });
+          const expectedAlpha = inline ? "0.2" : "0.25";
+          const emitted = onChange.mock.calls.at(-1)?.[0] as HeroData | undefined;
+          const emittedOverlay = inline
+            ? emitted?.media?.overlay
+            : emitted?.background?.media?.overlay;
+          expect(emittedOverlay).toBe(`rgba(16, 32, 48, ${expectedAlpha})`);
+          expect(onChange).toHaveBeenCalledTimes(1);
+        }
+
+        if (state.raw === "#abc") {
+          React.act(() => {
+            setInputValue(findColorInputByControl(view.container, path), "#102030");
+          });
+          const pickerEmission = onChange.mock.calls.at(-1)?.[0] as HeroData | undefined;
+          expect(
+            inline ? pickerEmission?.media?.overlay : pickerEmission?.background?.media?.overlay
+          ).toBe("rgba(16, 32, 48, 0.9)");
+          expect(onChange).toHaveBeenCalledTimes(1);
+
+          React.act(() => {
+            setInputValue(slider, "55");
+          });
+          const sliderEmission = onChange.mock.calls.at(-1)?.[0] as HeroData | undefined;
+          expect(
+            inline ? sliderEmission?.media?.overlay : sliderEmission?.background?.media?.overlay
+          ).toBe("rgba(170, 187, 204, 0.55)");
+          expect(onChange).toHaveBeenCalledTimes(2);
+
+          React.act(() => {
+            clickElement(
+              Array.from(control?.querySelectorAll("button") ?? []).find(
+                (button) => button.textContent === "Clear"
+              )
+            );
+          });
+          const clearEmission = onChange.mock.calls.at(-1)?.[0] as HeroData | undefined;
+          expect(
+            inline ? clearEmission?.media?.overlay : clearEmission?.background?.media?.overlay
+          ).toBeUndefined();
+          expect(onChange).toHaveBeenCalledTimes(3);
+        }
+      } finally {
+        view.cleanup();
+      }
+    }
+  }
+});
+
+test("HeroVisualEditor preserves unset overlay defaults without mount writes on both paths", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+
+  for (const path of ["hero.media.overlay", "hero.background.media.overlay"] as const) {
+    for (const raw of [undefined, ""] as const) {
+      const inline = path === "hero.media.overlay";
+      const expectedOpacity = inline ? 0.2 : 0.25;
+      const expectedStrength = String(expectedOpacity * 100);
+      const caseLabel = `${path}:${raw === undefined ? "undefined" : "empty"}`;
+      const onChange = vi.fn();
+      const value: HeroData = {
+        headline: "Unset overlay",
+        media: {
+          type: "image",
+          src: "/hero.jpg",
+          ...(inline && raw !== undefined ? { overlay: raw } : {}),
+        },
+        background: {
+          media: {
+            type: "image",
+            src: "/background.jpg",
+            ...(!inline && raw !== undefined ? { overlay: raw } : {}),
+          },
+        },
+      };
+      const view = mount(
+        <HeroVisualEditor
+          value={value}
+          onChange={onChange}
+          variant="split"
+          onVariantChange={() => undefined}
+        />
+      );
+
+      try {
+        await flush();
+        const control = view.container.querySelector(`[data-widget-control="${path}"]`);
+        const preview = control?.querySelector("div.h-10") as HTMLDivElement | null;
+        const picker = findColorInputByControl(view.container, path);
+        const slider = control?.querySelector('input[type="range"]') as HTMLInputElement | null;
+        const clear = Array.from(control?.querySelectorAll("button") ?? []).find(
+          (button) => button.textContent === "Clear"
+        );
+
+        expect(control, caseLabel).not.toBeNull();
+        expect(preview?.getAttribute("style"), caseLabel).toContain(
+          `background-color: rgba(0, 0, 0, ${expectedOpacity})`
+        );
+        expect(picker?.value, caseLabel).toBe("#000000");
+        expect(slider?.value, caseLabel).toBe(expectedStrength);
+        expect(slider?.min).toBe("0");
+        expect(slider?.max).toBe("90");
+        expect(slider?.step).toBe("5");
+        expect(slider?.disabled, caseLabel).toBe(false);
+        expect(clear, caseLabel).toBeInstanceOf(HTMLButtonElement);
+        expect(clear?.disabled, caseLabel).toBe(true);
+        expect(control?.textContent).not.toContain("This saved overlay is unsupported");
+        expect(control?.textContent).not.toContain(
+          "Choose a picker color before editing overlay strength."
+        );
+        expect(onChange, caseLabel).not.toHaveBeenCalled();
+
+        React.act(() => {
+          setInputValue(picker, "#102030");
+        });
+        expect(onChange, `${caseLabel}:picker`).toHaveBeenCalledTimes(1);
+        const pickerEmission = onChange.mock.calls[0]?.[0] as HeroData | undefined;
+        expect(
+          inline ? pickerEmission?.media?.overlay : pickerEmission?.background?.media?.overlay
+        ).toBe(`rgba(16, 32, 48, ${expectedOpacity})`);
+
+        onChange.mockClear();
+        React.act(() => {
+          setInputValue(slider, "55");
+        });
+        expect(onChange, `${caseLabel}:slider`).toHaveBeenCalledTimes(1);
+        const sliderEmission = onChange.mock.calls[0]?.[0] as HeroData | undefined;
+        expect(
+          inline ? sliderEmission?.media?.overlay : sliderEmission?.background?.media?.overlay
+        ).toBe("rgba(0, 0, 0, 0.55)");
+      } finally {
+        view.cleanup();
+      }
+    }
+  }
+});
+
+test("Hero gradient stop controls reuse the production owner and reject inherit commits", async () => {
+  const { HeroVisualEditor } = await import("../../../core/admin/ui/widgets/editors/HeroEditors");
+  const onChange = vi.fn();
+  const view = mount(
+    <HeroVisualEditor
+      value={{
+        headline: "Gradient",
+        background: {
+          gradient: "LINEAR-GRADIENT(15DEG, currentcolor, VAR(--color-primary))",
+        },
+      }}
+      onChange={onChange}
+      variant="centered"
+      onVariantChange={() => undefined}
+    />
+  );
+  try {
+    await flush();
+    const control = view.container.querySelector(
+      '[data-widget-control="hero.background.gradient"]'
+    );
+    expect(control?.querySelector('[data-shared-color-state="inherited"]')).not.toBeNull();
+    expect(control?.querySelector('[data-shared-color-state="theme_token"]')).not.toBeNull();
+    expect(control?.querySelector("div.h-10")?.getAttribute("style")).toContain(
+      "linear-gradient(15deg, currentColor, var(--color-primary))"
+    );
+    expect(onChange).not.toHaveBeenCalled();
+
+    const startValue = control?.querySelector(
+      'input[aria-label="Gradient start value"]'
+    ) as HTMLInputElement | null;
+    expect(startValue).toBeInstanceOf(HTMLInputElement);
+    React.act(() => {
+      const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+      descriptor?.set?.call(startValue, "inherit");
+      startValue?.dispatchEvent(new FocusEvent("blur", { bubbles: true }));
+      startValue?.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    });
+    expect(onChange).not.toHaveBeenCalled();
+
+    React.act(() => {
+      setInputValue(control?.querySelector('input[aria-label="Gradient end swatch"]'), "#102030");
+    });
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect((onChange.mock.calls[0]?.[0] as HeroData).background?.gradient).toBe(
+      "linear-gradient(15deg, currentColor, #102030)"
+    );
   } finally {
     view.cleanup();
   }
@@ -1567,14 +1890,22 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
         findTextareaByPlaceholder(view.container, "Optional context for screen readers"),
         "Launch walkthrough"
       );
+      const overlayPicker = findColorInputByControl(view.container, "hero.media.overlay");
+      expect(overlayPicker).toBeInstanceOf(HTMLInputElement);
+      setInputValue(overlayPicker, "#102030");
+      setSelectValue(findSelectByOptions(view.container, ["16:9", "4:3", "1:1", "3:4"]), "1:1");
+    });
+    await flush();
+    expect(latestValue.media?.overlay).toBe("rgba(16, 32, 48, 0.2)");
+    React.act(() => {
       setInputValue(
         view.container.querySelector(
           '[data-widget-control="hero.media.overlay"] input[type="range"]'
         ),
         "40"
       );
-      setSelectValue(findSelectByOptions(view.container, ["16:9", "4:3", "1:1", "3:4"]), "1:1");
     });
+    expect(latestValue.media?.overlay).toBe("rgba(16, 32, 48, 0.4)");
     clickElement(findButtonsByText(findMediaPickers(view.container)[0], "pick-asset-video")[0]);
     await flush();
 
@@ -1668,7 +1999,7 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
         'input[type="color"]'
       ) as NodeListOf<HTMLInputElement>;
       const gradientAngle = backgroundRoot.querySelector(
-        'input[type="range"]'
+        '[data-widget-control="hero.background.gradient"] input[type="range"][max="360"]'
       ) as HTMLInputElement | null;
 
       expect(findInputByPlaceholder(backgroundRoot, "transparent")).toBeUndefined();
@@ -1701,7 +2032,7 @@ test("HeroVisualEditor covers content, CTA, media, typography, color, border, gr
           title: "Intro clip",
           description: "Launch walkthrough",
           ratio: "1:1",
-          overlay: "rgba(0, 0, 0, 0.40)",
+          overlay: "rgba(16, 32, 48, 0.4)",
         }),
         layout: expect.objectContaining({
           align: "left",
@@ -1751,6 +2082,7 @@ test("HeroVisualEditor keeps saved custom colors replace-or-clear in Visual", as
     style: {
       textColor: "var(--color-text)",
       subheadColor: "rgba(17, 24, 39, 0.8)",
+      bodyColor: "not-a-color",
       primaryButtonBg: "var(--color-primary)",
       primaryButtonBorder: "transparent",
     },

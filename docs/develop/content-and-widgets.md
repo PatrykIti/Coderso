@@ -113,6 +113,35 @@ Do not add a non-dashboard widget type, Wizard/Visual/Advanced widget editor,
 authoring route as a shortcut. If an old runtime helper is useful, consume it
 behind the new section/block adapter without widening the legacy product surface.
 
+## Color values across domain boundaries
+
+Consumers enrolled in the Bun-free canonical contract use
+`core/services/theme/cssColorContract.ts`. Its `authoring` profile accepts the
+bounded supported literals, `transparent`, and `var(--color-*)` references; the
+explicit `inherited-render` profile additionally accepts canonical
+`currentColor` and `inherit`. For those consumers, JSON Schema patterns provide
+an early structural guard, but the owning write/render boundary still calls the
+semantic parser for ranges, function arity, and canonical output. TASK-541 adds
+no defaults: existing sparse fields remain present-only, while retained empty or
+explicit default sentinels stay byte-compatible with their owning domain.
+
+Domain policy remains explicit. The landed Page admin control uses the shared
+`authoring` profile, while the current Page backend still uses its independent
+legacy sanitizer. That sanitizer has the exact token allowlist (`primary`,
+`secondary`, `accent`, `bg`, `surface`, `text`, `border`) but also retains its
+historical alphabetic named-value branch, including current backend handling of
+`currentColor` and `inherit`. TASK-539 owns the future backend parser handoff
+without removing the seven-token filter; until then, do not treat the admin
+adapter as server enforcement. Form theme colors are the TASK-516 exception that
+use `inherited-render` consistently from write normalization through builder
+preview and public Form rendering.
+
+Historical `core/widgets` read/render adapters opt into inherited keywords only
+for their enumerated direct CSS-property fields. A nested gradient or overlay
+stop may accept `currentColor` while rejecting `inherit`; its owning composite
+parser remains authoritative. These compatibility rules support existing domain
+callers and do not create a generic widget surface.
+
 ## Dashboard widgets
 
 Configurable widgets are an Admin Dashboard feature. Dashboard layout and widget

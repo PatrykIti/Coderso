@@ -97,6 +97,14 @@ const commitTextValue = (input: HTMLInputElement, value: string) => {
   });
 };
 
+const invalidPresentColorValues = [
+  ["ASCII spaces", "   "],
+  ["NBSP", "\u00a0"],
+  ["EM SPACE", "\u2003"],
+  ["C0 control", "\u0000"],
+  ["C1 control", "\u0085"],
+] as const;
+
 afterEach(() => {
   document.body.innerHTML = "";
   vi.restoreAllMocks();
@@ -215,6 +223,9 @@ test("can treat known token values as theme defaults in swatch-only mode", () =>
   );
 
   try {
+    expect(view.container.firstElementChild?.getAttribute("data-shared-color-state")).toBe(
+      "theme_default_token"
+    );
     expect(view.container.textContent).toContain("Theme default");
     expect(view.container.textContent).toContain("matches the widget default");
     expect(view.container.textContent).not.toContain("Saved custom color");
@@ -223,38 +234,238 @@ test("can treat known token values as theme defaults in swatch-only mode", () =>
   }
 });
 
-test("describes shared color state vocabulary", () => {
-  expect(describeSharedColorControlState({ value: undefined }).kind).toBe("cleared");
-  expect(
-    describeSharedColorControlState({
-      value: undefined,
-      clearedState: {
-        label: "No inline color",
-        description: "No inline value is saved.",
-        clearResultLabel: "removes the inline value",
-      },
-    })
-  ).toMatchObject({
+test("describes every state with exactly the shared four-field shape", () => {
+  const customCleared = describeSharedColorControlState({
+    value: undefined,
+    clearedState: {
+      label: "No inline color",
+      description: "No inline value is saved.",
+      clearResultLabel: "removes the inline value",
+    },
+  });
+  expect(customCleared).toEqual({
     kind: "cleared",
     label: "No inline color",
     description: "No inline value is saved.",
     clearResultLabel: "removes the inline value",
   });
-  expect(describeSharedColorControlState({ value: "transparent" }).kind).toBe("transparent");
-  expect(
+  const states = [
+    describeSharedColorControlState({ value: undefined }),
+    describeSharedColorControlState({ value: "transparent" }),
     describeSharedColorControlState({
       value: "var(--color-bg)",
       treatAsThemeDefaultValues: ["var(--color-bg)"],
+    }),
+    describeSharedColorControlState({ value: "var(--color-accent)" }),
+    describeSharedColorControlState({ value: "#112233" }),
+    describeSharedColorControlState({ value: "hsl(210, 50%, 40%)" }),
+    describeSharedColorControlState({ value: "currentColor", colorProfile: "inherited-render" }),
+    describeSharedColorControlState({ value: "color-mix(in srgb, red, blue)" }),
+  ];
+  expect(states.map((state) => state.kind)).toEqual([
+    "cleared",
+    "transparent",
+    "theme_default_token",
+    "theme_token",
+    "selected_swatch",
+    "selected_swatch",
+    "inherited",
+    "saved_custom",
+  ]);
+  for (const state of [customCleared, ...states]) {
+    expect(Object.keys(state), state.kind).toEqual([
+      "kind",
+      "label",
+      "description",
+      "clearResultLabel",
+    ]);
+  }
+});
+
+test("pins the exact profile/context state matrix and inherited copy", () => {
+  const inherited = {
+    kind: "inherited",
+    label: "Inherited color",
+    description:
+      "An inherited color is preserved for retained rendering. The swatch is only a fallback preview.",
+    clearResultLabel: "removes the saved color value",
+  } as const;
+
+  expect(describeSharedColorControlState({ value: "currentColor" }).kind).toBe("saved_custom");
+  expect(describeSharedColorControlState({ value: "inherit" }).kind).toBe("saved_custom");
+  expect(
+    describeSharedColorControlState({ value: "currentColor", colorProfile: "inherited-render" })
+  ).toEqual(inherited);
+  expect(
+    describeSharedColorControlState({ value: "inherit", colorProfile: "inherited-render" })
+  ).toEqual(inherited);
+  expect(
+    describeSharedColorControlState({
+      value: "currentColor",
+      colorProfile: "inherited-render",
+      allowInheritKeyword: false,
+    })
+  ).toEqual(inherited);
+  expect(
+    describeSharedColorControlState({
+      value: "inherit",
+      colorProfile: "inherited-render",
+      allowInheritKeyword: false,
     }).kind
-  ).toBe("theme_default_token");
-  expect(describeSharedColorControlState({ value: "var(--color-accent)" }).kind).toBe(
-    "theme_token"
+  ).toBe("saved_custom");
+  expect(describeSharedColorControlState({ value: "   " }).kind).toBe("saved_custom");
+  expect(describeSharedColorControlState({ value: "color-mix(in srgb, red, blue)" }).kind).toBe(
+    "saved_custom"
   );
-  expect(describeSharedColorControlState({ value: "#112233" }).kind).toBe("selected_swatch");
-  // Alpha rgba is picker-representable now (base swatch + opacity slider) -> selected_swatch.
-  expect(describeSharedColorControlState({ value: "rgba(10, 20, 30, 0.4)" }).kind).toBe(
-    "selected_swatch"
+});
+
+test("exposes inherited and saved-custom state on the root without mount mutation", () => {
+  const onCurrentColorChange = vi.fn();
+  const currentColor = mount(
+    <SharedColorControl
+      label="Color"
+      value="currentColor"
+      onChange={onCurrentColorChange}
+      colorProfile="inherited-render"
+    />
   );
+  try {
+    expect(currentColor.container.firstElementChild?.getAttribute("data-shared-color-state")).toBe(
+      "inherited"
+    );
+    expect(currentColor.container.textContent).not.toContain("Saved custom color");
+    expect(onCurrentColorChange).not.toHaveBeenCalled();
+  } finally {
+    currentColor.cleanup();
+  }
+
+  const onInheritChange = vi.fn();
+  const inherit = mount(
+    <SharedColorControl
+      label="Color"
+      value="inherit"
+      onChange={onInheritChange}
+      colorProfile="inherited-render"
+      showValueInput={false}
+    />
+  );
+  try {
+    expect(inherit.container.firstElementChild?.getAttribute("data-shared-color-state")).toBe(
+      "inherited"
+    );
+    expect(inherit.container.textContent).toContain("Inherited color");
+    expect(inherit.container.textContent).toContain(
+      "An inherited color is preserved for retained rendering. The swatch is only a fallback preview."
+    );
+    expect(onInheritChange).not.toHaveBeenCalled();
+  } finally {
+    inherit.cleanup();
+  }
+
+  const onCustomChange = vi.fn();
+  const custom = mount(
+    <SharedColorControl
+      label="Color"
+      value="color-mix(in srgb, red, blue)"
+      onChange={onCustomChange}
+      showValueInput={false}
+    />
+  );
+  try {
+    expect(custom.container.firstElementChild?.getAttribute("data-shared-color-state")).toBe(
+      "saved_custom"
+    );
+    expect(custom.container.textContent).toContain("Saved custom color");
+    expect(onCustomChange).not.toHaveBeenCalled();
+  } finally {
+    custom.cleanup();
+  }
+});
+
+test("allowInheritKeyword narrows only inherit in descriptor and commit paths", () => {
+  const onCurrentColorChange = vi.fn();
+  const currentColor = mount(
+    <SharedColorControl
+      label="Color"
+      value="currentColor"
+      onChange={onCurrentColorChange}
+      colorProfile="inherited-render"
+      allowInheritKeyword={false}
+    />
+  );
+  try {
+    expect(onCurrentColorChange).not.toHaveBeenCalled();
+    const text = currentColor.container.querySelector(
+      'input[aria-label="Color value"]'
+    ) as HTMLInputElement;
+    commitTextValue(text, " CURRENTCOLOR ");
+    expect(onCurrentColorChange).toHaveBeenCalledTimes(1);
+    expect(onCurrentColorChange).toHaveBeenCalledWith("currentColor");
+  } finally {
+    currentColor.cleanup();
+  }
+
+  const onInheritChange = vi.fn();
+  const inherit = mount(
+    <SharedColorControl
+      label="Color"
+      value="inherit"
+      onChange={onInheritChange}
+      colorProfile="inherited-render"
+      allowInheritKeyword={false}
+    />
+  );
+  try {
+    expect(inherit.container.firstElementChild?.getAttribute("data-shared-color-state")).toBe(
+      "saved_custom"
+    );
+    const text = inherit.container.querySelector(
+      'input[aria-label="Color value"]'
+    ) as HTMLInputElement;
+    commitTextValue(text, " INHERIT ");
+    expect(onInheritChange).not.toHaveBeenCalled();
+  } finally {
+    inherit.cleanup();
+  }
+});
+
+test("authoring cannot be widened and unknown state stays replaceable", () => {
+  const onTextChange = vi.fn();
+  const textView = mount(
+    <SharedColorControl label="Color" value="#000000" onChange={onTextChange} allowInheritKeyword />
+  );
+  try {
+    const text = textView.container.querySelector(
+      'input[aria-label="Color value"]'
+    ) as HTMLInputElement;
+    commitTextValue(text, "currentColor");
+    commitTextValue(text, "inherit");
+    expect(onTextChange).not.toHaveBeenCalled();
+  } finally {
+    textView.cleanup();
+  }
+
+  const onChange = vi.fn();
+  const view = mount(
+    <SharedColorControl
+      label="Color"
+      value="currentColor"
+      onChange={onChange}
+      allowInheritKeyword
+      showValueInput={false}
+    />
+  );
+  try {
+    expect(view.container.firstElementChild?.getAttribute("data-shared-color-state")).toBe(
+      "saved_custom"
+    );
+    const swatch = view.container.querySelector('input[aria-label="Color swatch"]');
+    dispatchInputValue(swatch as HTMLInputElement, "#112233");
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith("#112233");
+  } finally {
+    view.cleanup();
+  }
 });
 
 test("can expose a transparent shortcut in swatch-only mode", () => {
@@ -271,6 +482,9 @@ test("can expose a transparent shortcut in swatch-only mode", () => {
   );
 
   try {
+    expect(view.container.firstElementChild?.getAttribute("data-shared-color-state")).toBe(
+      "transparent"
+    );
     expect(view.container.textContent).toContain("Transparent");
     const transparentButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
       button.textContent?.includes("Use transparent")
@@ -295,6 +509,9 @@ test("clear stays disabled when only fallback swatch state exists", () => {
   );
 
   try {
+    expect(view.container.firstElementChild?.getAttribute("data-shared-color-state")).toBe(
+      "cleared"
+    );
     const button = view.container.querySelector("button");
     expect(button?.disabled).toBe(true);
     expect(button?.getAttribute("aria-label")).toBe("Clear Border; removes the saved color value");
@@ -308,6 +525,50 @@ test("clear stays disabled when only fallback swatch state exists", () => {
     view.cleanup();
   }
 });
+
+test.each(invalidPresentColorValues)(
+  "keeps invalid stored %s replaceable and clearable without a mount commit",
+  (_label, value) => {
+    const onChange = vi.fn();
+    const onClear = vi.fn();
+    const view = mount(
+      <SharedColorControl
+        label="Color"
+        value={value}
+        onChange={onChange}
+        onClear={onClear}
+        pickerFallback="#334455"
+      />
+    );
+
+    try {
+      expect(view.container.firstElementChild?.getAttribute("data-shared-color-state")).toBe(
+        "saved_custom"
+      );
+      expect(
+        (view.container.querySelector('input[aria-label="Color value"]') as HTMLInputElement | null)
+          ?.value
+      ).toBe(value);
+      expect(onChange).not.toHaveBeenCalled();
+      expect(onClear).not.toHaveBeenCalled();
+
+      const clearButton = view.container.querySelector("button");
+      expect(clearButton?.disabled).toBe(false);
+      expect(clearButton?.getAttribute("aria-label")).toBe(
+        "Clear Color; removes the saved color value"
+      );
+
+      React.act(() => {
+        clearButton?.click();
+      });
+
+      expect(onClear).toHaveBeenCalledTimes(1);
+      expect(onChange).not.toHaveBeenCalled();
+    } finally {
+      view.cleanup();
+    }
+  }
+);
 
 test("rgba text now previews the extracted base color in the swatch while still allowing clear", () => {
   const onChange = vi.fn();

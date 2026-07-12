@@ -5,9 +5,11 @@ import { renderToString } from "react-dom/server";
 
 import {
   createHeroWidget,
+  HERO_BACKGROUND_GRADIENT_MAX_LENGTH,
   heroDefaults,
   heroEditorContract,
   HeroBlock,
+  normalizeHeroBackgroundGradient,
   normalizeHeroData,
   type HeroData,
 } from "../../../core/widgets/core/hero";
@@ -19,10 +21,167 @@ import { createWidgetRuntimeScriptRegistry } from "../../../core/widgets/runtime
 import type { WidgetEditorProps, WidgetRenderContext } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<HeroData>> = () => null;
+const HERO_DIRECT_COLOR_FIELDS = [
+  "textColor",
+  "subheadColor",
+  "bodyColor",
+  "borderColor",
+  "mediaBorderColor",
+  "primaryButtonBg",
+  "primaryButtonText",
+  "primaryButtonBorder",
+  "secondaryButtonBg",
+  "secondaryButtonText",
+  "secondaryButtonBorder",
+] as const;
 
 test("hero renders defaults", () => {
   const html = renderToString(<HeroBlock data={heroDefaults} variant="centered" />);
   expect(html).toContain(heroDefaults.headline);
+});
+
+test("hero pins the independently reviewed composite cap", () => {
+  expect(HERO_BACKGROUND_GRADIENT_MAX_LENGTH).toBe(320);
+});
+
+test("hero owns one bounded two-stop gradient parser", () => {
+  const accepted = [
+    ["LINEAR-GRADIENT(0DEG, #ABC, currentcolor)", "linear-gradient(0deg, #abc, currentColor)"],
+    ["linear-gradient(1deg, #abcd, #abcdef)", "linear-gradient(1deg, #abcd, #abcdef)"],
+    [
+      "linear-gradient(2deg, #ABCDEF12, transparent)",
+      "linear-gradient(2deg, #abcdef12, transparent)",
+    ],
+    [
+      "linear-gradient(3deg, rgba(1, 2, 3, .5), var(--color-primary))",
+      "linear-gradient(3deg, rgba(1, 2, 3, 0.5), var(--color-primary))",
+    ],
+    [
+      "linear-gradient(360deg, RGB(12, 24, 36), HSLA(210, 50%, 40%, 25%))",
+      "linear-gradient(360deg, rgb(12, 24, 36), hsla(210, 50%, 40%, 25%))",
+    ],
+    [
+      "linear-gradient(4deg, HSL(210DEG, 50%, 40%), #FFF)",
+      "linear-gradient(4deg, hsl(210, 50%, 40%), #fff)",
+    ],
+  ] as const;
+  for (const [raw, canonical] of accepted) {
+    expect(normalizeHeroBackgroundGradient(raw)).toBe(canonical);
+  }
+
+  const terminal = "linear-gradient(1deg, #abc, var(--color-primary))";
+  const exactCap = `${" ".repeat(HERO_BACKGROUND_GRADIENT_MAX_LENGTH - terminal.length)}${terminal}`;
+  expect(exactCap).toHaveLength(HERO_BACKGROUND_GRADIENT_MAX_LENGTH);
+  expect(normalizeHeroBackgroundGradient(exactCap)).toBe(terminal);
+  expect(normalizeHeroBackgroundGradient(` ${exactCap}`)).toBeUndefined();
+
+  for (const value of [
+    "linear-gradient(-1deg, #abc, #def)",
+    "linear-gradient(+1deg, #abc, #def)",
+    "linear-gradient(1.5deg, #abc, #def)",
+    "linear-gradient(361deg, #abc, #def)",
+    "linear-gradient(1deg, inherit, #def)",
+    "linear-gradient(1deg, #abc, #def, #fff)",
+    "linear-gradient(1deg, url(x), #def)",
+    "linear-gradient(1deg, #abc 20%, #def)",
+    "linear-gradient(1deg, rgb(999, 0, 0), #def)",
+    "linear-gradient(1deg, #abc, #def",
+    "linear-gradient(1deg,\t#abc, #def)",
+    "linear-gradient(1deg,\u001f#abc, #def)",
+    "linear-gradient(1deg,\u0085#abc, #def)",
+    "linear-gradient(1deg,\u00a0#abc, #def)",
+    "linear-gradient(1deg,\u2003#abc, #def)",
+  ]) {
+    expect(normalizeHeroBackgroundGradient(value), value).toBeUndefined();
+  }
+});
+
+test("hero direct colors accept inherited values while nested overlays reject inherit", () => {
+  const style = Object.fromEntries(
+    HERO_DIRECT_COLOR_FIELDS.map((field, index) => [
+      field,
+      index % 2 === 0 ? " CURRENTCOLOR " : " INHERIT ",
+    ])
+  ) as NonNullable<HeroData["style"]>;
+  const normalized = normalizeHeroData({
+    ...heroDefaults,
+    style,
+    media: { type: "image", src: "/hero.jpg", overlay: " currentcolor " },
+    background: {
+      color: " inherit ",
+      gradient: "linear-gradient(15deg, currentcolor, var(--color-primary))",
+      media: { type: "image", src: "/bg.jpg", overlay: " inherit " },
+    },
+  });
+
+  for (const [index, field] of HERO_DIRECT_COLOR_FIELDS.entries()) {
+    expect(normalized.style?.[field]).toBe(index % 2 === 0 ? "currentColor" : "inherit");
+  }
+  expect(normalized.media?.overlay).toBe("currentColor");
+  expect(normalized.background).toMatchObject({
+    color: "inherit",
+    gradient: "linear-gradient(15deg, currentColor, var(--color-primary))",
+  });
+  expect(normalized.background?.media?.overlay).toBeUndefined();
+
+  const html = renderToString(<HeroBlock data={normalized} variant="split" />);
+  expect(html).toContain("currentColor");
+  expect(html).toContain("linear-gradient(15deg, currentColor, var(--color-primary))");
+  expect(html).not.toContain("linear-gradient(inherit, inherit)");
+});
+
+test("hero schema accepts currentColor nested stops and rejects inherit/control composites", () => {
+  clearWidgets();
+  registerWidget(
+    createHeroWidget({ wizard: StubEditor, visual: StubEditor, advanced: StubEditor })
+  );
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "hero-color-schema-valid",
+      type: "hero",
+      variant: "split",
+      data: {
+        headline: "Schema",
+        style: Object.fromEntries(
+          HERO_DIRECT_COLOR_FIELDS.map((field, index) => [
+            field,
+            index % 2 === 0 ? "currentColor" : "inherit",
+          ])
+        ),
+        media: { type: "image", overlay: "currentColor" },
+        background: {
+          color: "inherit",
+          gradient: "linear-gradient(1deg, currentColor, #abcd)",
+          media: { type: "image", overlay: "currentColor" },
+        },
+      },
+    })
+  ).not.toThrow();
+
+  for (const data of [
+    { headline: "Schema", media: { type: "image", overlay: "inherit" } },
+    {
+      headline: "Schema",
+      background: { media: { type: "image", overlay: "inherit" } },
+    },
+    {
+      headline: "Schema",
+      background: { gradient: ` ${" ".repeat(HERO_BACKGROUND_GRADIENT_MAX_LENGTH)}#abc` },
+    },
+    {
+      headline: "Schema",
+      background: { gradient: "linear-gradient(1deg,\u00a0#abc, #def)" },
+    },
+  ]) {
+    expect(() =>
+      normalizeWidgetBlock({
+        id: `hero-color-schema-${JSON.stringify(data).length}`,
+        type: "hero",
+        variant: "split",
+        data,
+      })
+    ).toThrow(/widget_schema_invalid/);
+  }
 });
 
 test("hero spacing falls back to defaults when spacing is empty", () => {

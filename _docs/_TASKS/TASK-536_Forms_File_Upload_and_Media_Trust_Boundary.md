@@ -135,13 +135,15 @@ authorize unrelated source changes.
 
 Land strictly `536-01 → 536-02 → 536-03 → 536-04 → 536-05`. Source ownership
 is declared in the leaves; no two leaves write the same source file. TASK-536
-lands first in the remediation program and before TASK-537. TASK-544 later touches
+belongs after TASK-538 and before TASK-541 in the audited dependency map. It closed
+early on 2026-07-11; that sequencing drift does not reopen the completed family, and
+TASK-538 now restores the declared path before TASK-541 starts. TASK-544 later touches
 the media route family, so it must read the post-536 `mediaRoutes.ts` state and
 must not run in parallel.
 
 The POST-M-05 correction lands the L02-owned narrow form-state projection/runtime nonce
 fix before the reopened L01 executor consumes that projection. This is a bounded
-post-audit dependency inside 536-04 and does not change the program-level land order.
+post-audit dependency inside 536-04 and does not change the declared program map.
 POST-M-06 then reopens only L01's existing shared response-boundary seam; it adds no new
 route, domain error, permission, or public payload field.
 POST-M-07 is a bounded full-gate repair inside the closure leaf. It changes only the

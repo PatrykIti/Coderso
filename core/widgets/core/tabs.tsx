@@ -6,6 +6,10 @@ import {
   type ReactNode,
 } from "react";
 
+import {
+  CSS_COLOR_SCHEMA_PATTERNS,
+  CSS_COLOR_VALUE_MAX_LENGTH,
+} from "../../services/theme/cssColorContract";
 import { renderEditorPlaceholder } from "../renderContext";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import { parseRepeatableSlotId, resolveWidgetSlotTargets } from "../slots";
@@ -85,6 +89,16 @@ const spacingOptions = ["sm", "md", "lg"] as const;
 const triggerTextSizeOptions = ["xs", "sm", "base"] as const;
 const triggerFontWeightOptions = ["normal", "medium", "semibold"] as const;
 const motionOptions = ["none", "fade", "slide"] as const;
+const tabsColorValueSchema = {
+  anyOf: [
+    { const: "" },
+    {
+      type: "string",
+      maxLength: CSS_COLOR_VALUE_MAX_LENGTH,
+      pattern: CSS_COLOR_SCHEMA_PATTERNS["inherited-render"],
+    },
+  ],
+} as const;
 
 export const tabsSchema = {
   type: "object",
@@ -129,12 +143,12 @@ export const tabsSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
-        surfaceColor: { type: "string" },
-        borderColor: { type: "string" },
-        activeBackgroundColor: { type: "string" },
-        activeTextColor: { type: "string" },
-        inactiveTextColor: { type: "string" },
-        panelBackgroundColor: { type: "string" },
+        surfaceColor: tabsColorValueSchema,
+        borderColor: tabsColorValueSchema,
+        activeBackgroundColor: tabsColorValueSchema,
+        activeTextColor: tabsColorValueSchema,
+        inactiveTextColor: tabsColorValueSchema,
+        panelBackgroundColor: tabsColorValueSchema,
       },
     },
   },
@@ -527,22 +541,22 @@ export function normalizeTabsData(data: TabsData, desiredCount?: number): TabsDa
     },
     style: {
       surfaceColor: hasStyleObject
-        ? resolveClearableCssColorValue(data.style?.surfaceColor)
+        ? resolveClearableCssColorValue(data.style?.surfaceColor, "inherited-render")
         : (tabsDefaults.style?.surfaceColor ?? "var(--color-surface)"),
       borderColor: hasStyleObject
-        ? resolveClearableCssColorValue(data.style?.borderColor)
+        ? resolveClearableCssColorValue(data.style?.borderColor, "inherited-render")
         : (tabsDefaults.style?.borderColor ?? "var(--color-border)"),
       activeBackgroundColor: hasStyleObject
-        ? resolveClearableCssColorValue(data.style?.activeBackgroundColor)
+        ? resolveClearableCssColorValue(data.style?.activeBackgroundColor, "inherited-render")
         : (tabsDefaults.style?.activeBackgroundColor ?? "var(--color-text)"),
       activeTextColor: hasStyleObject
-        ? resolveClearableCssColorValue(data.style?.activeTextColor)
+        ? resolveClearableCssColorValue(data.style?.activeTextColor, "inherited-render")
         : (tabsDefaults.style?.activeTextColor ?? "var(--color-background)"),
       inactiveTextColor: hasStyleObject
-        ? resolveClearableCssColorValue(data.style?.inactiveTextColor)
+        ? resolveClearableCssColorValue(data.style?.inactiveTextColor, "inherited-render")
         : (tabsDefaults.style?.inactiveTextColor ?? "var(--color-text)"),
       panelBackgroundColor: hasStyleObject
-        ? resolveClearableCssColorValue(data.style?.panelBackgroundColor)
+        ? resolveClearableCssColorValue(data.style?.panelBackgroundColor, "inherited-render")
         : (tabsDefaults.style?.panelBackgroundColor ?? "var(--color-surface)"),
     },
   };
@@ -803,27 +817,33 @@ export function TabsBlock({
 
   const containerStyle: CSSProperties =
     compactStyle({
-      borderColor: resolveClearableCssColorValue(style.borderColor),
-      backgroundColor: resolveClearableCssColorValue(style.surfaceColor),
+      borderColor: resolveClearableCssColorValue(style.borderColor, "inherited-render"),
+      backgroundColor: resolveClearableCssColorValue(style.surfaceColor, "inherited-render"),
     }) ?? {};
 
   const triggerStyle: CSSProperties = {
-    color: resolveClearableCssColorValue(style.inactiveTextColor),
+    color: resolveClearableCssColorValue(style.inactiveTextColor, "inherited-render"),
   };
 
   const activeTriggerStyle: CSSProperties =
     compactStyle({
-      backgroundColor: resolveClearableCssColorValue(style.activeBackgroundColor),
-      color: resolveClearableCssColorValue(style.activeTextColor),
+      backgroundColor: resolveClearableCssColorValue(
+        style.activeBackgroundColor,
+        "inherited-render"
+      ),
+      color: resolveClearableCssColorValue(style.activeTextColor, "inherited-render"),
       borderColor:
-        resolveClearableCssColorValue(style.activeBackgroundColor) ??
-        resolveClearableCssColorValue(style.borderColor),
+        resolveClearableCssColorValue(style.activeBackgroundColor, "inherited-render") ??
+        resolveClearableCssColorValue(style.borderColor, "inherited-render"),
     }) ?? {};
 
   const panelStyle: CSSProperties =
     compactStyle({
-      borderColor: resolveClearableCssColorValue(style.borderColor),
-      backgroundColor: resolveClearableCssColorValue(style.panelBackgroundColor),
+      borderColor: resolveClearableCssColorValue(style.borderColor, "inherited-render"),
+      backgroundColor: resolveClearableCssColorValue(
+        style.panelBackgroundColor,
+        "inherited-render"
+      ),
     }) ?? {};
 
   const enabledPanels = panels.filter((panel) => panel.disabled !== true);

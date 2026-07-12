@@ -6,10 +6,13 @@ import {
   isMenuAppearanceError,
   menuAppearanceNumberRanges,
   normalizeMenuAppearance,
+  normalizeMenuColorValue,
+  resolvePublishedMenuAppearance,
   resolveStoredMenuAppearance,
   sanitizeMenuAppearance,
   type MenuAppearance,
 } from "../../../core/services/menus/normalizeMenuAppearance";
+import { CSS_COLOR_VALUE_MAX_LENGTH } from "../../../core/services/theme/cssColorContract";
 
 const fullValidAppearance: MenuAppearance = {
   surfaceColor: "#0f172a",
@@ -30,6 +33,73 @@ const fullValidAppearance: MenuAppearance = {
   dropdownDirection: "top",
   mobileMode: "inline",
 };
+
+const boundaryTerminal = "transparent";
+const boundaryPaddingLength = CSS_COLOR_VALUE_MAX_LENGTH - boundaryTerminal.length;
+const rawAtCap = `${" ".repeat(Math.floor(boundaryPaddingLength / 2))}${boundaryTerminal}${" ".repeat(
+  Math.ceil(boundaryPaddingLength / 2)
+)}`;
+const rawOverCap = `${rawAtCap} `;
+const rawMenuColorCases = [
+  { id: "exact cap", input: rawAtCap, expected: "transparent" },
+  { id: "cap plus one", input: rawOverCap, expected: null },
+  { id: "C0 control", input: `\u001f${boundaryTerminal}`, expected: null },
+  { id: "C1 control", input: `\u0085${boundaryTerminal}`, expected: null },
+  { id: "NBSP", input: `\u00a0${boundaryTerminal}`, expected: null },
+  { id: "EM SPACE", input: `\u2003${boundaryTerminal}`, expected: null },
+  { id: "inherited currentColor", input: "currentColor", expected: null },
+  { id: "inherited inherit", input: "inherit", expected: null },
+  { id: "out-of-range function", input: "rgb(256,0,0)", expected: null },
+] as const;
+
+describe("canonical Menu color boundaries", () => {
+  test("passes original raw values to the authoring owner", () => {
+    expect(rawAtCap).toHaveLength(CSS_COLOR_VALUE_MAX_LENGTH);
+    expect(rawOverCap).toHaveLength(CSS_COLOR_VALUE_MAX_LENGTH + 1);
+
+    for (const colorCase of rawMenuColorCases) {
+      expect(normalizeMenuColorValue(colorCase.input), colorCase.id).toBe(colorCase.expected);
+    }
+  });
+
+  test("keeps flat writes strict with field-only errors and canonical accepted bytes", () => {
+    for (const colorCase of rawMenuColorCases) {
+      if (colorCase.expected !== null) {
+        expect(
+          normalizeMenuAppearance({ surfaceColor: colorCase.input, itemGap: 12 }),
+          colorCase.id
+        ).toEqual({ surfaceColor: colorCase.expected, itemGap: 12 });
+        continue;
+      }
+
+      try {
+        normalizeMenuAppearance({ surfaceColor: colorCase.input, itemGap: 12 });
+        throw new Error(`expected ${colorCase.id} to reject`);
+      } catch (error) {
+        expect(error, colorCase.id).toBeInstanceOf(MenuAppearanceError);
+        expect((error as MenuAppearanceError).code, colorCase.id).toBe(MENU_APPEARANCE_INVALID);
+        expect((error as MenuAppearanceError).field, colorCase.id).toBe("surfaceColor");
+        expect(error, colorCase.id).not.toHaveProperty("value");
+      }
+    }
+  });
+
+  test("sanitizes stored and published values field-by-field without restoring rejected bytes", () => {
+    for (const colorCase of rawMenuColorCases) {
+      const appearance = { surfaceColor: colorCase.input, itemGap: 12 };
+      const expected =
+        colorCase.expected === null
+          ? { itemGap: 12 }
+          : { surfaceColor: colorCase.expected, itemGap: 12 };
+
+      expect(sanitizeMenuAppearance(appearance), colorCase.id).toEqual(expected);
+      expect(resolveStoredMenuAppearance({ appearance }), colorCase.id).toEqual(expected);
+      expect(resolvePublishedMenuAppearance({ published: { appearance } }), colorCase.id).toEqual(
+        expected
+      );
+    }
+  });
+});
 
 describe("normalizeMenuAppearance accepts", () => {
   test("the full token-backed model and round-trips it unchanged", () => {
@@ -53,7 +123,7 @@ describe("normalizeMenuAppearance accepts", () => {
       })
     ).toEqual({
       surfaceColor: "transparent",
-      linkColor: "TRANSPARENT",
+      linkColor: "transparent",
       linkHoverColor: "transparent",
       linkActiveColor: "transparent",
       borderColor: "transparent",
@@ -67,7 +137,7 @@ describe("normalizeMenuAppearance accepts", () => {
       "var(--color-accent-2)"
     );
     expect(normalizeMenuAppearance({ linkHoverColor: "rgb(10,20,30)" }).linkHoverColor).toBe(
-      "rgb(10,20,30)"
+      "rgb(10, 20, 30)"
     );
     expect(
       normalizeMenuAppearance({ linkActiveColor: "hsla(200, 50%, 40%, 0.5)" }).linkActiveColor

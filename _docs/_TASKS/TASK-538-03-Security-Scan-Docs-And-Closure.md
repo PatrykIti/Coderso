@@ -7,8 +7,10 @@
 **Category:** Security Validation / Documentation / Closure
 **Estimated Effort:** Small
 **Dependencies:** TASK-538-02
-**Status:** ⏳ To Do
-**Changelog:** 1250 (pinned; create only at implementation closure)
+**Status:** ✅ Done
+**Started:** 2026-07-11
+**Completed:** 2026-07-11
+**Changelog:** 1250
 
 ---
 
@@ -29,7 +31,9 @@ changelog 1250 only.
   their owning task and cannot be suppressed here.
 - Fresh lenses cover sanitizer policy, safe-tree completeness, renderer sink removal,
   geometry/click evidence, and test integrity.
-- No tracked exploit payload, class allowlist, scanner ignore, or rule weakening.
+- No new detailed exploit payload in public closure docs/evidence, class allowlist,
+  scanner ignore, or rule weakening; historical audit evidence and regression tests are
+  not weakened.
 
 ## Validation
 
@@ -40,7 +44,10 @@ bunx vitest run --config vitest.config.ts \
   tests/vitest/pages/svg-sanitizer.test.ts \
   tests/vitest/pages/svg-safe-tree.test.ts \
   tests/vitest/pages/page-renderer-v2.test.tsx \
-  tests/vitest/pages/page-document-v2.test.ts
+  tests/vitest/pages/page-document-v2.test.ts \
+  tests/vitest/pages/page-editor-xss-guards.test.tsx
+set -a && source .env && set +a
+bun test tests/integration/runtime/pages-runtime.test.ts
 semgrep --error --timeout 120 --timeout-threshold 0 \
   --config .semgrep.yml --config p/owasp-top-ten --config p/security-audit \
   --config p/nodejs --config p/typescript \
@@ -51,3 +58,12 @@ semgrep --error --timeout 120 --timeout-threshold 0 \
 bun run scan:security:strict
 bun run gates:coderso
 ~~~
+
+## Completion evidence
+
+The documentation, task graph, and changelog are synchronized. Targeted Semgrep is
+clean, release gates pass 5/5, `node --check` passes for both TASK-538/program workflow
+scripts, and five fresh post-audit lenses report zero unresolved High/Medium/Low drift.
+The strict scan was executed; its only remaining finding is the unchanged
+TASK-545-owned workflow-script finding, not TASK-538, and no scanner rule or exception
+was changed.

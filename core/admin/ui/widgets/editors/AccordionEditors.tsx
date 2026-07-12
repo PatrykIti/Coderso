@@ -12,6 +12,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
+import { normalizeCssColorValue } from "../../../../services/theme/cssColorContract";
 import {
   accordionDefaults,
   accordionMaxWidthTokens,
@@ -195,9 +196,12 @@ function clearStyleField(
 }
 
 function resolveColorControlValue(value: string | undefined, themeDefault?: string) {
-  const normalized = value?.trim();
-  if (!normalized) return undefined;
-  return themeDefault && normalized === themeDefault ? undefined : normalized;
+  if (value === undefined || value === "") return undefined;
+  const normalized = normalizeCssColorValue(value, "inherited-render");
+  const normalizedThemeDefault = normalizeCssColorValue(themeDefault, "inherited-render");
+  return normalized && normalizedThemeDefault && normalized === normalizedThemeDefault
+    ? undefined
+    : value;
 }
 
 function ColorField({
@@ -231,6 +235,7 @@ function ColorField({
           onClear={controlValue ? onClear : undefined}
           pickerFallback={pickerFallback}
           showValueInput={false}
+          colorProfile="inherited-render"
         />
       )}
     </WidgetControlRow>
@@ -849,7 +854,7 @@ function BehaviorSection({
           id="accordion.visual.surface-color"
           path="style.surfaceColor"
           label="Surface color"
-          value={normalized.style?.surfaceColor}
+          value={value.style?.surfaceColor}
           onChange={(next) => updateStyle(value, onChange, { surfaceColor: next })}
           pickerFallback="#ffffff"
           onClear={() => clearStyleField(value, onChange, "surfaceColor")}
@@ -859,7 +864,7 @@ function BehaviorSection({
           id="accordion.visual.border-color"
           path="style.borderColor"
           label="Border color"
-          value={normalized.style?.borderColor}
+          value={value.style?.borderColor}
           onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
           pickerFallback="#d4d4d8"
           onClear={() => clearStyleField(value, onChange, "borderColor")}
@@ -869,7 +874,7 @@ function BehaviorSection({
           id="accordion.visual.summary-text-color"
           path="style.summaryTextColor"
           label="Summary text color"
-          value={normalized.style?.summaryTextColor}
+          value={value.style?.summaryTextColor}
           onChange={(next) => updateStyle(value, onChange, { summaryTextColor: next })}
           pickerFallback="#111827"
           onClear={() => clearStyleField(value, onChange, "summaryTextColor")}
@@ -879,7 +884,7 @@ function BehaviorSection({
           id="accordion.visual.description-text-color"
           path="style.descriptionTextColor"
           label="Body text color"
-          value={normalized.style?.descriptionTextColor}
+          value={value.style?.descriptionTextColor}
           onChange={(next) => updateStyle(value, onChange, { descriptionTextColor: next })}
           pickerFallback="#6b7280"
           onClear={() => clearStyleField(value, onChange, "descriptionTextColor")}

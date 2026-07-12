@@ -137,6 +137,15 @@ until migrated to a Coderso Form or supported external action URL.
 - `style.buttonBackground`: bounded clearable color
 - `style.buttonTextColor`: bounded clearable color
 
+These four ordinary stored overrides use the shared `authoring` profile at
+normalization and render boundaries. Supported literals and `var(--color-*)`
+tokens canonicalize through the semantic parser; `currentColor`, `inherit`,
+invalid numeric ranges, unknown functions, and unsafe fragments are rejected
+without raw fallback. Schema patterns are structural guards only. TASK-541 adds
+no defaults: Newsletter retains its historical normalized `transparent`
+background and `""` text/button sentinels when those values are absent or
+cleared, instead of rewriting old records into a new sparse representation.
+
 Contrast guidance is advisory only. It highlights obvious low-contrast
 combinations for hex/rgb values and reports `unknown` for theme tokens or
 transparent/inherited surfaces.

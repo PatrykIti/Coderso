@@ -8,8 +8,12 @@
 **Category:** Page Renderer / Security
 **Estimated Effort:** Medium
 **Dependencies:** TASK-538-01-L01, TASK-538-01-L02
-**Status:** ⏳ To Do
-**Changelog:** 1250 (pinned; create only at implementation closure)
+**Status:** ✅ Done
+**Started:** 2026-07-11
+**Completed:** 2026-07-11
+**Implementation Gate:** ✅ Passed (421/421 final shared targeted tests, 185/185
+renderer tests, lint, typecheck, and final read-only audit with 0 H/M/L)
+**Changelog:** 1250
 
 ---
 
@@ -30,10 +34,15 @@ changed-behavior/compatibility updates required before its gate in
 
 ## Grounded anchors
 
-The customSvg branch is pageRendererV2.tsx:2685-2725. It currently re-sanitizes, injects
-pathLength by regex string replacement, and passes clean to dangerouslySetInnerHTML.
-Other DSIH sites shown by search are static framework-owned CSS/runtime constants and are
-not authorization to retain this author-data sink.
+The pre-implementation snapshot placed the customSvg branch at
+`pageRendererV2.tsx:2685-2725`; it re-sanitized the string, injected `pathLength` by
+regex replacement, and passed the result to `dangerouslySetInnerHTML`. That obsolete
+author-data sink is the seam this leaf removed, not a description of the current
+renderer. The implemented branch now builds the closed safe tree at
+`core/services/pages/pageRendererV2.tsx:2817-2848` and renders it through the total
+`createElement` traversal at `core/services/pages/pageRendererV2.tsx:346-373`.
+Remaining DSIH sites shown by search are static framework-owned CSS/runtime constants
+and are not authorization to reintroduce an author-data sink.
 
 ## Implementation Pseudocode
 
@@ -53,8 +62,15 @@ const SAFE_CUSTOM_SVG_BOUNDARY_STYLE: Readonly<CSSProperties> = {
 };
 
 function resolveTrustedSvgViewportStyle(rootProps): Readonly<CSSProperties> {
-  parsed = parse exactly four finite viewBox numbers;
-  rawRatio = parsed has positive width/height ? width / height : 1;
+  parsed = parse exactly four finite viewBox numbers separated by SVG whitespace
+    and/or commas, including exponent notation;
+  dimensions = otherwise parse root width and height only when each is a positive,
+    finite unitless or px value;
+  rawRatio = positive viewBox width/height
+    ? viewBox width / viewBox height
+    : valid dimensions
+      ? width / height
+      : 1;
   aspectRatio = clamp(
     rawRatio,
     SAFE_CUSTOM_SVG_MIN_ASPECT_RATIO,
@@ -79,9 +95,10 @@ function renderSafeSvgNode(node, key, drawIn, isRoot = false): ReactNode {
 
   props = { key, ...node.props from closed mapping };
   if isRoot:
+    viewportStyle = resolveTrustedSvgViewportStyle(node.props); // immutable pre-strip snapshot
     delete props.x/y/width/height/transform; // author root cannot own layout
     props.width = "100%";
-    props.style = resolveTrustedSvgViewportStyle(props); // trusted derived/clamped CSS
+    props.style = viewportStyle; // trusted derived/clamped CSS
   if drawIn and node.tag in ["path", "line", "polyline"] and no pathLength:
     props.pathLength = "1";
 
@@ -126,7 +143,9 @@ pointer-transparent; the root drops author `x`/`y`/`width`/`height`/`transform`,
 trusted width/style, clamps only its CSS viewport ratio to `1/8..8`, caps root and
 wrapper block size at exactly `1024px`, and retains the author viewBox,
 preserveAspectRatio, paint, accessibility, and descendant geometry. Invalid/non-positive
-viewBox dimensions use trusted ratio `1`; they never remove the block-size cap. Neither
+viewBox dimensions use a ratio derived only from positive finite unitless/`px` root
+width plus height when both exist, otherwise trusted ratio `1`; author width/height are
+still removed and never copied into CSS. No fallback removes the block-size cap. Neither
 level may copy author `class`, `style`, an event handler, or a pointer override.
 Oversized descendant/filter geometry may render only inside the clipped paint boundary
 and cannot become a hit target.
@@ -140,7 +159,11 @@ and XML-entity one-pass escaping, cap overflow, label behavior, and no author-da
 in the customSvg branch. Render harmless viewport-relative/oversized root geometry and
 assert the author root layout attributes are absent/replaced, the exact trusted wrapper
 and root containment styles are present, extreme tall/wide/invalid viewBox inputs clamp
-to the exact ratio/block-size bounds, and descendant geometry/viewBox remains represented.
+to the exact ratio/block-size bounds, whitespace/comma/exponent viewBox grammar is
+covered, width/height-only safe inputs retain a clamped equivalent ratio without
+retaining those root attributes, and descendant geometry/viewBox remains represented.
+Include extra-token, NaN/Infinity, non-positive-dimension, and missing-one-dimension
+fallback cases.
 Keep trusted static CSS/runtime DSIH assertions separate. TASK-538-02-L02 owns additive
 cross-seam/browser proof and may not re-baseline these renderer assertions.
 
@@ -151,8 +174,10 @@ bun --cwd core lint:types
 bun --cwd core lint
 bunx vitest run --config vitest.config.ts \
   tests/vitest/pages/svg-sanitizer.test.ts \
+  tests/vitest/pages/svg-safe-tree.test.ts \
   tests/vitest/pages/page-renderer-v2.test.tsx \
-  tests/vitest/pages/page-document-v2.test.ts
+  tests/vitest/pages/page-document-v2.test.ts \
+  tests/vitest/pages/page-editor-xss-guards.test.tsx
 ~~~
 
 The safe-tree suite already exists from TASK-538-01-L02 and is a read-only input here.
@@ -165,3 +190,11 @@ Re-run a named failing file alone before declaring a failure.
   beyond the trusted ratio/`1024px` cap or create a hit target.
 - Safe tree nodes render with preserved geometry/presentation/draw-in.
 - Invalid content produces only the neutral placeholder.
+
+## Completion evidence
+
+The Page renderer now consumes only the closed tree, applies trusted/clamped root
+geometry and containment, and preserves draw-in without mutating author text. The final
+family gate reached 423/423 targeted Vitest assertions; the fresh renderer post-audit
+lens was clean after one Low stale renderer-leaf grounded source anchor was corrected
+and freshly re-audited.

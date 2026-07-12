@@ -1,17 +1,42 @@
 import { afterAll, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
-import { eq, sql } from "drizzle-orm";
+import { readFileSync } from "node:fs";
+import { and, eq, sql } from "drizzle-orm";
+import {
+  ScriptKind,
+  ScriptTarget,
+  createSourceFile,
+  forEachChild,
+  isAsExpression,
+  isCallExpression,
+  isFunctionDeclaration,
+  isIdentifier,
+  isObjectLiteralExpression,
+  isPropertyAccessExpression,
+  isVariableDeclaration,
+  type CallExpression,
+  type FunctionDeclaration,
+  type Node,
+  type SourceFile,
+} from "typescript";
 import { db } from "../../../core/db/client";
 import {
   contentEntries,
   contentRevisions,
+  contentTaxonomies,
+  contentTermAssignments,
+  contentTerms,
   contentTypes,
   media,
   previewTokens,
+  seoDocuments,
   users,
 } from "../../../core/db/schema";
 import {
+  coordinateEntryMetadataMutation,
   createEntry,
+  createEntryMutationDepsForTest,
+  deleteEntry,
   duplicateEntry,
   updateEntry,
   createEntryPreview,
@@ -23,6 +48,8 @@ import {
   publishEntry,
   unpublishEntry,
   updateEntryMetadata,
+  updateEntryMetadataForRoute,
+  type EntryMutationDeps,
 } from "../../../core/services/content/entryService";
 import { createTerm, setTaxonomyConfig } from "../../../core/services/content/taxonomyService";
 import { createContentType } from "../../../core/services/content/typeService";
@@ -75,6 +102,266 @@ const cleanup = async () => {
 
 afterAll(async () => {
   await cleanup();
+});
+
+const entryServiceSource = readFileSync(
+  new URL("../../../core/services/content/entryService.ts", import.meta.url),
+  "utf8"
+);
+const entryServiceAst = createSourceFile(
+  "entryService.ts",
+  entryServiceSource,
+  ScriptTarget.Latest,
+  true,
+  ScriptKind.TS
+);
+
+const findFunction = (sourceFile: SourceFile, name: string): FunctionDeclaration => {
+  let found: FunctionDeclaration | undefined;
+  const visit = (node: Node) => {
+    if (isFunctionDeclaration(node) && node.name?.text === name) found = node;
+    if (!found) forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  if (!found) throw new Error(`missing_function:${name}`);
+  return found;
+};
+
+const collectCalls = (root: Node): CallExpression[] => {
+  const calls: CallExpression[] = [];
+  const visit = (node: Node) => {
+    if (isCallExpression(node)) calls.push(node);
+    forEachChild(node, visit);
+  };
+  visit(root);
+  return calls;
+};
+
+const methodCallsNamed = (root: Node, name: string) =>
+  collectCalls(root).filter(
+    (call) => isPropertyAccessExpression(call.expression) && call.expression.name.text === name
+  );
+
+const readProjectionKeys = (name: string) => {
+  let initializer: Node | undefined;
+  const visit = (node: Node) => {
+    if (isVariableDeclaration(node) && isIdentifier(node.name) && node.name.text === name) {
+      initializer = node.initializer;
+      return;
+    }
+    if (!initializer) forEachChild(node, visit);
+  };
+  visit(entryServiceAst);
+  const object = initializer && isAsExpression(initializer) ? initializer.expression : initializer;
+  if (!object || !isObjectLiteralExpression(object)) throw new Error(`missing_projection:${name}`);
+  return object.properties.map((property) => property.name?.getText(entryServiceAst));
+};
+
+const createDeferred = <T>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+};
+
+type EntryMutationFixture = {
+  actorId: string;
+  entryId: string;
+  typeId: string;
+  typeSlug: string;
+};
+
+const withEntryMutationFixture = async <T>(
+  run: (fixture: EntryMutationFixture) => Promise<T>
+): Promise<T> => {
+  const [actor] = await db
+    .insert(users)
+    .values({
+      email: `entry-mutation-${randomUUID()}@example.com`,
+      passwordHash: "test",
+      status: "active",
+    })
+    .returning({ id: users.id });
+  if (!actor) throw new Error("missing_entry_mutation_actor");
+
+  let type: Awaited<ReturnType<typeof createContentType>> | null = null;
+  let createdEntryId: string | null = null;
+
+  try {
+    type = await createContentType({
+      name: uniqueName("Entry mutation"),
+      slug: `entry-mutation-${randomUUID()}`,
+      schema,
+    });
+    const entry = await createEntry(type.id, {
+      title: "Entry mutation fixture",
+      slug: `entry-mutation-${randomUUID()}`,
+      data: { title: "Entry mutation fixture" },
+      authorId: actor.id,
+    });
+    createdEntryId = entry.id;
+    return await run({
+      actorId: actor.id,
+      entryId: entry.id,
+      typeId: type.id,
+      typeSlug: type.slug,
+    });
+  } finally {
+    if (createdEntryId) {
+      await db.delete(seoDocuments).where(eq(seoDocuments.targetId, createdEntryId));
+      await db.delete(contentRevisions).where(eq(contentRevisions.entryId, createdEntryId));
+      await db
+        .delete(contentTermAssignments)
+        .where(eq(contentTermAssignments.entryId, createdEntryId));
+      await db.delete(contentEntries).where(eq(contentEntries.id, createdEntryId));
+    }
+    if (type) await db.delete(contentTypes).where(eq(contentTypes.id, type.id));
+    await db.delete(users).where(eq(users.id, actor.id));
+  }
+};
+
+const createCacheRecordingDeps = (overrides: Partial<EntryMutationDeps> = {}) => {
+  const cacheEvents: string[] = [];
+  const deps = createEntryMutationDepsForTest({
+    invalidateEntrySiteCache: async () => {
+      cacheEvents.push("targeted");
+    },
+    clearAllSiteCache: () => {
+      cacheEvents.push("global");
+    },
+    reportCacheFailure: (code) => {
+      cacheEvents.push(`report:${code}`);
+    },
+    ...overrides,
+  });
+  return { cacheEvents, deps };
+};
+
+const createMutationTag = async (typeId: string, name = "Mutation tag") => {
+  const taxonomies = await setTaxonomyConfig(typeId, { categories: true, tags: true });
+  const tagTaxonomy = taxonomies.find((taxonomy) => taxonomy.kind === "tag");
+  if (!tagTaxonomy) throw new Error("missing_mutation_tag_taxonomy");
+  const tag = await createTerm(tagTaxonomy.id, { name: `${name} ${randomUUID()}` });
+  if (!tag) throw new Error("missing_mutation_tag");
+  return tag;
+};
+
+const readStoredEntryMutationState = async (entryId: string) => {
+  const [row] = await db
+    .select({
+      status: contentEntries.status,
+      visibility: contentEntries.visibility,
+      accessPassword: contentEntries.accessPassword,
+      tags: contentEntries.tags,
+      publishedAt: contentEntries.publishedAt,
+      scheduledAt: contentEntries.scheduledAt,
+    })
+    .from(contentEntries)
+    .where(eq(contentEntries.id, entryId));
+  if (!row) throw new Error("missing_stored_entry_mutation_state");
+  return row;
+};
+
+test("entry mutation source pins secret-minimal projections and write query shapes", () => {
+  expect(readProjectionKeys("ENTRY_MUTATION_FIELDS")).toEqual([
+    "id",
+    "typeId",
+    "slug",
+    "title",
+    "status",
+    "data",
+    "publishedAt",
+    "scheduledAt",
+    "visibility",
+    "tags",
+    "createdAt",
+    "updatedAt",
+    "hasPassword",
+  ]);
+  expect(readProjectionKeys("ENTRY_CACHE_FIELDS")).toEqual([
+    "id",
+    "typeId",
+    "slug",
+    "status",
+    "publishedAt",
+    "scheduledAt",
+    "updatedAt",
+  ]);
+  expect(readProjectionKeys("ENTRY_DELETE_FIELDS")).toEqual(["id", "title"]);
+  expect(readProjectionKeys("ENTRY_UPDATE_FIELDS")).toEqual([
+    "id",
+    "typeId",
+    "title",
+    "slug",
+    "data",
+  ]);
+  expect(readProjectionKeys("CONTENT_TYPE_MUTATION_CONTEXT_FIELDS")).toEqual([
+    "id",
+    "slug",
+    "schema",
+  ]);
+
+  for (const name of [
+    "ENTRY_MUTATION_FIELDS",
+    "ENTRY_CACHE_FIELDS",
+    "ENTRY_DELETE_FIELDS",
+    "ENTRY_UPDATE_FIELDS",
+  ]) {
+    expect(readProjectionKeys(name)).not.toContain("accessPassword");
+  }
+
+  const loader = findFunction(entryServiceAst, "loadEntryMutationStateForUpdate");
+  expect(methodCallsNamed(loader, "select")[0]?.arguments[0]?.getText(entryServiceAst)).toBe(
+    "ENTRY_MUTATION_FIELDS"
+  );
+  expect(methodCallsNamed(loader, "for")[0]?.arguments[0]?.getText(entryServiceAst)).toBe(
+    '"update"'
+  );
+
+  const statusWriter = findFunction(entryServiceAst, "writeEntryStatusTx");
+  expect(
+    methodCallsNamed(statusWriter, "returning")[0]?.arguments[0]?.getText(entryServiceAst)
+  ).toBe("ENTRY_CACHE_FIELDS");
+  const metadataWriter = findFunction(entryServiceAst, "writeEntryMetadataTx");
+  expect(methodCallsNamed(metadataWriter, "returning")).toHaveLength(0);
+
+  const update = findFunction(entryServiceAst, "updateEntry");
+  expect(methodCallsNamed(update, "select")[0]?.arguments[0]?.getText(entryServiceAst)).toBe(
+    "ENTRY_UPDATE_FIELDS"
+  );
+  expect(methodCallsNamed(update, "returning")).toHaveLength(0);
+
+  const remove = findFunction(entryServiceAst, "deleteEntry");
+  expect(methodCallsNamed(remove, "returning")[0]?.arguments[0]?.getText(entryServiceAst)).toBe(
+    "ENTRY_DELETE_FIELDS"
+  );
+
+  const publish = findFunction(entryServiceAst, "publishEntry");
+  expect(
+    collectCalls(publish).some(
+      (call) =>
+        isIdentifier(call.expression) && call.expression.text === "loadEntryMutationStateForUpdate"
+    )
+  ).toBe(true);
+  expect(entryServiceSource).not.toContain("select({ accessPassword:");
+  expect(entryServiceSource).not.toContain("returning({ accessPassword:");
+});
+
+test("entry mutation dependency factory clones and freezes production seams", () => {
+  const hash = async () => "test-hash";
+  const first = createEntryMutationDepsForTest({ hashPassword: hash });
+  const second = createEntryMutationDepsForTest({});
+
+  expect(Object.isFrozen(first)).toBe(true);
+  expect(Object.isFrozen(second)).toBe(true);
+  expect(first.hashPassword).toBe(hash);
+  expect(second.hashPassword).not.toBe(hash);
+  expect(() => {
+    (first as unknown as { hashPassword: null }).hashPassword = null;
+  }).toThrow();
 });
 
 testIfDbWithOptions(
@@ -860,4 +1147,699 @@ testIfDb("all three read projections expose visibility + hasPassword", async () 
   await cleanup();
   contentTypeId = undefined;
   entryId = undefined;
+});
+
+testIfDbWithOptions(
+  "entry metadata write plans follow the exact status and accumulated metadata matrix",
+  async () => {
+    await withEntryMutationFixture(async (fixture) => {
+      const tag = await createMutationTag(fixture.typeId, "Write plan");
+      const statusPlans: Array<Parameters<EntryMutationDeps["writeStatus"]>[1]> = [];
+      const metadataPlans: Array<Parameters<EntryMutationDeps["writeMetadata"]>[1]> = [];
+      const cacheEvents: string[] = [];
+      const deps = createEntryMutationDepsForTest({
+        hashPassword: async () => "prepared-test-hash",
+        createRevision: async (_tx, entryId, data, userId) => ({
+          id: randomUUID(),
+          entryId,
+          version: 1,
+          data,
+          createdBy: userId,
+          createdAt: new Date(),
+        }),
+        writeStatus: async (_tx, plan) => {
+          statusPlans.push(plan);
+          return null;
+        },
+        applyTaxonomy: async () => ({ category: null, tags: [] }),
+        writeMetadata: async (_tx, plan) => {
+          metadataPlans.push(plan);
+        },
+        invalidateEntrySiteCache: async () => {
+          cacheEvents.push("targeted");
+        },
+        clearAllSiteCache: () => {
+          cacheEvents.push("global");
+        },
+      });
+
+      await coordinateEntryMetadataMutation(
+        deps,
+        fixture.entryId,
+        { status: "draft" },
+        fixture.actorId,
+        { kind: "trusted-internal" }
+      );
+      expect(statusPlans).toHaveLength(0);
+      expect(metadataPlans).toHaveLength(0);
+      expect(cacheEvents).toHaveLength(0);
+
+      const scheduledAt = new Date("2035-01-02T03:04:05.000Z");
+      await coordinateEntryMetadataMutation(
+        deps,
+        fixture.entryId,
+        { status: "scheduled", scheduledAt },
+        fixture.actorId,
+        { kind: "trusted-internal" }
+      );
+      expect(statusPlans.at(-1)?.entryId).toBe(fixture.entryId);
+      expect(statusPlans.at(-1)?.values).toMatchObject({
+        status: "scheduled",
+        scheduledAt,
+      });
+      expect(Object.hasOwn(statusPlans.at(-1)?.values ?? {}, "publishedAt")).toBe(false);
+      expect(Object.isFrozen(statusPlans.at(-1))).toBe(true);
+      expect(Object.isFrozen(statusPlans.at(-1)?.values)).toBe(true);
+
+      await coordinateEntryMetadataMutation(
+        deps,
+        fixture.entryId,
+        { status: "archived" },
+        fixture.actorId,
+        { kind: "trusted-internal" }
+      );
+      expect(statusPlans.at(-1)?.values).toMatchObject({
+        status: "archived",
+        scheduledAt: null,
+      });
+      expect(Object.hasOwn(statusPlans.at(-1)?.values ?? {}, "publishedAt")).toBe(false);
+
+      await coordinateEntryMetadataMutation(
+        deps,
+        fixture.entryId,
+        { status: "published" },
+        fixture.actorId,
+        { kind: "trusted-internal" }
+      );
+      expect(statusPlans.at(-1)?.values.status).toBe("published");
+      expect(statusPlans.at(-1)?.values.publishedAt).toBeInstanceOf(Date);
+      expect(statusPlans.at(-1)?.values.scheduledAt).toBeNull();
+
+      await coordinateEntryMetadataMutation(
+        deps,
+        fixture.entryId,
+        {
+          scheduledAt,
+          visibility: "password",
+          accessPassword: "new password",
+          taxonomy: { tagIds: [tag.id] },
+        },
+        fixture.actorId,
+        { kind: "trusted-internal" }
+      );
+      const metadataPlan = metadataPlans.at(-1);
+      expect(metadataPlan?.entryId).toBe(fixture.entryId);
+      expect(metadataPlan?.values).toMatchObject({
+        tags: [tag.name],
+        scheduledAt,
+        visibility: "password",
+        accessPassword: "prepared-test-hash",
+      });
+      expect(Object.keys(metadataPlan?.values ?? {}).sort()).toEqual([
+        "accessPassword",
+        "scheduledAt",
+        "tags",
+        "updatedAt",
+        "visibility",
+      ]);
+      expect(Object.isFrozen(metadataPlan)).toBe(true);
+      expect(Object.isFrozen(metadataPlan?.values)).toBe(true);
+      expect(cacheEvents.filter((event) => event === "targeted")).toHaveLength(4);
+      expect(cacheEvents).not.toContain("global");
+    });
+  },
+  { timeout: 30_000 }
+);
+
+testIfDbWithOptions(
+  "taxonomy and SEO preparation reject before every metadata write and cache effect",
+  async () => {
+    await withEntryMutationFixture(async (fixture) => {
+      const tag = await createMutationTag(fixture.typeId, "Prepare rollback");
+      const { cacheEvents, deps } = createCacheRecordingDeps();
+
+      await expect(
+        coordinateEntryMetadataMutation(
+          deps,
+          fixture.entryId,
+          {
+            status: "published",
+            taxonomy: { tagIds: [randomUUID()] },
+          },
+          fixture.actorId,
+          { kind: "trusted-internal" }
+        )
+      ).rejects.toThrow(/taxonomy_term_(missing|invalid)/);
+
+      await expect(
+        coordinateEntryMetadataMutation(
+          deps,
+          fixture.entryId,
+          {
+            taxonomy: { tagIds: [tag.id] },
+            visibility: "private",
+            seo: { canonicalUrl: "ftp://invalid.example.test" },
+          },
+          fixture.actorId,
+          { kind: "trusted-internal" }
+        )
+      ).rejects.toThrow("seo_canonical_invalid");
+
+      const stored = await readStoredEntryMutationState(fixture.entryId);
+      expect(stored.status).toBe("draft");
+      expect(stored.visibility).toBe("public");
+      expect(stored.tags ?? []).toEqual([]);
+      expect(
+        await db
+          .select({ id: contentRevisions.id })
+          .from(contentRevisions)
+          .where(eq(contentRevisions.entryId, fixture.entryId))
+      ).toHaveLength(0);
+      expect(
+        await db
+          .select({ termId: contentTermAssignments.termId })
+          .from(contentTermAssignments)
+          .where(eq(contentTermAssignments.entryId, fixture.entryId))
+      ).toHaveLength(0);
+      expect(
+        await db
+          .select({ id: seoDocuments.id })
+          .from(seoDocuments)
+          .where(eq(seoDocuments.targetId, fixture.entryId))
+      ).toHaveLength(0);
+      expect(cacheEvents).toHaveLength(0);
+    });
+  },
+  { timeout: 30_000 }
+);
+
+testIfDbWithOptions(
+  "entry metadata cache matrix is global for SEO, targeted otherwise, and no-op silent",
+  async () => {
+    await withEntryMutationFixture(async (fixture) => {
+      const { cacheEvents, deps } = createCacheRecordingDeps();
+
+      await coordinateEntryMetadataMutation(
+        deps,
+        fixture.entryId,
+        { seo: { description: "Cache matrix SEO description" } },
+        fixture.actorId,
+        { kind: "trusted-internal" }
+      );
+      expect(cacheEvents).toEqual(["global"]);
+
+      cacheEvents.length = 0;
+      await coordinateEntryMetadataMutation(
+        deps,
+        fixture.entryId,
+        { tags: ["cache-matrix"] },
+        fixture.actorId,
+        { kind: "trusted-internal" }
+      );
+      expect(cacheEvents).toEqual(["targeted"]);
+
+      cacheEvents.length = 0;
+      await coordinateEntryMetadataMutation(
+        deps,
+        fixture.entryId,
+        { status: "draft", accessPassword: "ignored" },
+        fixture.actorId,
+        { kind: "trusted-internal" }
+      );
+      expect(cacheEvents).toEqual([]);
+    });
+  },
+  { timeout: 30_000 }
+);
+
+testIfDbWithOptions(
+  "post-commit cache and reporter failures preserve durable metadata success",
+  async () => {
+    await withEntryMutationFixture(async (fixture) => {
+      const reported: string[] = [];
+      const deps = createEntryMutationDepsForTest({
+        invalidateEntrySiteCache: async () => {
+          throw new Error("raw-cache-provider-secret");
+        },
+        reportCacheFailure: (code) => {
+          reported.push(code);
+          throw new Error("reporter_failed");
+        },
+      });
+
+      const result = await coordinateEntryMetadataMutation(
+        deps,
+        fixture.entryId,
+        { tags: ["durable-cache-failure"] },
+        fixture.actorId,
+        { kind: "trusted-internal" }
+      );
+      expect(result?.tags).toEqual(["durable-cache-failure"]);
+      expect((await readStoredEntryMutationState(fixture.entryId)).tags).toEqual([
+        "durable-cache-failure",
+      ]);
+      expect(reported).toEqual(["entry_cache_invalidation_failed"]);
+      expect(JSON.stringify(reported)).not.toContain("raw-cache-provider-secret");
+    });
+  },
+  { timeout: 30_000 }
+);
+
+testIfDbWithOptions(
+  "a failure after every metadata write seam rolls the entire outer transaction back",
+  async () => {
+    await withEntryMutationFixture(async (fixture) => {
+      const tag = await createMutationTag(fixture.typeId, "Fault seam");
+      const { cacheEvents, deps: base } = createCacheRecordingDeps();
+
+      const failAfterCreateRevision: EntryMutationDeps["createRevision"] = async (...args) => {
+        await base.createRevision(...args);
+        throw new Error("fault_after_create_revision");
+      };
+      const failAfterWriteStatus: EntryMutationDeps["writeStatus"] = async (...args) => {
+        await base.writeStatus(...args);
+        throw new Error("fault_after_write_status");
+      };
+      const failAfterApplyTaxonomy: EntryMutationDeps["applyTaxonomy"] = async (...args) => {
+        await base.applyTaxonomy(...args);
+        throw new Error("fault_after_apply_taxonomy");
+      };
+      const failAfterWriteMetadata: EntryMutationDeps["writeMetadata"] = async (...args) => {
+        await base.writeMetadata(...args);
+        throw new Error("fault_after_write_metadata");
+      };
+      const failAfterApplySeo: EntryMutationDeps["applySeo"] = async (...args) => {
+        await base.applySeo(...args);
+        throw new Error("fault_after_apply_seo");
+      };
+
+      const faults: Array<{
+        code: string;
+        overrides: Partial<EntryMutationDeps>;
+      }> = [
+        {
+          code: "fault_after_create_revision",
+          overrides: { createRevision: failAfterCreateRevision },
+        },
+        { code: "fault_after_write_status", overrides: { writeStatus: failAfterWriteStatus } },
+        {
+          code: "fault_after_apply_taxonomy",
+          overrides: { applyTaxonomy: failAfterApplyTaxonomy },
+        },
+        {
+          code: "fault_after_write_metadata",
+          overrides: { writeMetadata: failAfterWriteMetadata },
+        },
+        { code: "fault_after_apply_seo", overrides: { applySeo: failAfterApplySeo } },
+      ];
+
+      for (const fault of faults) {
+        const deps = createEntryMutationDepsForTest({
+          ...base,
+          ...fault.overrides,
+        });
+        await expect(
+          coordinateEntryMetadataMutation(
+            deps,
+            fixture.entryId,
+            {
+              status: "published",
+              visibility: "private",
+              taxonomy: { tagIds: [tag.id] },
+              seo: { description: `SEO ${fault.code}` },
+            },
+            fixture.actorId,
+            { kind: "trusted-internal" }
+          )
+        ).rejects.toThrow(fault.code);
+
+        const stored = await readStoredEntryMutationState(fixture.entryId);
+        expect(stored.status, fault.code).toBe("draft");
+        expect(stored.visibility, fault.code).toBe("public");
+        expect(stored.tags ?? [], fault.code).toEqual([]);
+        expect(stored.publishedAt, fault.code).toBeNull();
+        expect(
+          await db
+            .select({ id: contentRevisions.id })
+            .from(contentRevisions)
+            .where(eq(contentRevisions.entryId, fixture.entryId)),
+          fault.code
+        ).toHaveLength(0);
+        expect(
+          await db
+            .select({ termId: contentTermAssignments.termId })
+            .from(contentTermAssignments)
+            .where(eq(contentTermAssignments.entryId, fixture.entryId)),
+          fault.code
+        ).toHaveLength(0);
+        expect(
+          await db
+            .select({ id: seoDocuments.id })
+            .from(seoDocuments)
+            .where(eq(seoDocuments.targetId, fixture.entryId)),
+          fault.code
+        ).toHaveLength(0);
+        expect(cacheEvents, fault.code).toHaveLength(0);
+      }
+    });
+  },
+  { timeout: 45_000 }
+);
+
+testIfDbWithOptions(
+  "deferred taxonomy and SEO applies are awaited and stay cache-silent until commit",
+  async () => {
+    await withEntryMutationFixture(async (fixture) => {
+      const tag = await createMutationTag(fixture.typeId, "Deferred seam");
+      const taxonomyGate = createDeferred<void>();
+      const taxonomyEntered = createDeferred<void>();
+      const { cacheEvents, deps: base } = createCacheRecordingDeps();
+      const taxonomyDeps = createEntryMutationDepsForTest({
+        ...base,
+        applyTaxonomy: async (...args) => {
+          taxonomyEntered.resolve();
+          await taxonomyGate.promise;
+          return base.applyTaxonomy(...args);
+        },
+      });
+
+      let taxonomySettled = false;
+      const pendingTaxonomy = coordinateEntryMetadataMutation(
+        taxonomyDeps,
+        fixture.entryId,
+        { taxonomy: { tagIds: [tag.id] } },
+        fixture.actorId,
+        { kind: "trusted-internal" }
+      );
+      void pendingTaxonomy.finally(() => {
+        taxonomySettled = true;
+      });
+      await taxonomyEntered.promise;
+      expect(taxonomySettled).toBe(false);
+      expect(cacheEvents).toHaveLength(0);
+      taxonomyGate.resolve();
+      await pendingTaxonomy;
+      expect(cacheEvents).toEqual(["targeted"]);
+
+      cacheEvents.length = 0;
+      const seoGate = createDeferred<void>();
+      const seoEntered = createDeferred<void>();
+      const seoDeps = createEntryMutationDepsForTest({
+        ...base,
+        applySeo: async (...args) => {
+          seoEntered.resolve();
+          await seoGate.promise;
+          return base.applySeo(...args);
+        },
+      });
+      const scheduledAt = new Date("2036-02-03T04:05:06.000Z");
+      const pendingSeo = coordinateEntryMetadataMutation(
+        seoDeps,
+        fixture.entryId,
+        {
+          status: "scheduled",
+          scheduledAt,
+          seo: { description: "Deferred SEO" },
+        },
+        fixture.actorId,
+        { kind: "trusted-internal" }
+      );
+      await seoEntered.promise;
+      expect(cacheEvents).toHaveLength(0);
+      seoGate.reject(new Error("deferred_seo_rejected"));
+      await expect(pendingSeo).rejects.toThrow("deferred_seo_rejected");
+      const stored = await readStoredEntryMutationState(fixture.entryId);
+      expect(stored.status).toBe("draft");
+      expect(stored.scheduledAt).toBeNull();
+      expect(cacheEvents).toHaveLength(0);
+    });
+  },
+  { timeout: 45_000 }
+);
+
+testIfDbWithOptions(
+  "locked publish authorization runs before preparation and only for a real transition",
+  async () => {
+    await withEntryMutationFixture(async (fixture) => {
+      const tag = await createMutationTag(fixture.typeId, "Authorization order");
+      const events: string[] = [];
+      const { deps: base } = createCacheRecordingDeps();
+      const deps = createEntryMutationDepsForTest({
+        ...base,
+        hashPassword: async () => {
+          events.push("hash");
+          return "authorization-order-hash";
+        },
+        prepareTaxonomy: async (...args) => {
+          events.push("prepare-taxonomy");
+          return base.prepareTaxonomy(...args);
+        },
+        prepareSeo: async (...args) => {
+          events.push("prepare-seo");
+          return base.prepareSeo(...args);
+        },
+        createRevision: async (...args) => {
+          events.push("create-revision");
+          return base.createRevision(...args);
+        },
+        writeStatus: async (...args) => {
+          events.push("write-status");
+          return base.writeStatus(...args);
+        },
+        applyTaxonomy: async (...args) => {
+          events.push("apply-taxonomy");
+          return base.applyTaxonomy(...args);
+        },
+        writeMetadata: async (...args) => {
+          events.push("write-metadata");
+          return base.writeMetadata(...args);
+        },
+        applySeo: async (...args) => {
+          events.push("apply-seo");
+          return base.applySeo(...args);
+        },
+      });
+
+      await expect(
+        coordinateEntryMetadataMutation(
+          deps,
+          fixture.entryId,
+          { status: "published" },
+          fixture.actorId,
+          undefined as never
+        )
+      ).rejects.toThrow("entry_publish_authorization_required");
+      expect(events).toHaveLength(0);
+      expect((await readStoredEntryMutationState(fixture.entryId)).status).toBe("draft");
+
+      await coordinateEntryMetadataMutation(
+        deps,
+        fixture.entryId,
+        {
+          status: "published",
+          visibility: "password",
+          accessPassword: "authorization password",
+          taxonomy: { tagIds: [tag.id] },
+          seo: { description: "Authorization order SEO" },
+        },
+        fixture.actorId,
+        {
+          kind: "route",
+          authorize: async () => {
+            events.push("authorize");
+          },
+        }
+      );
+      expect(events).toEqual([
+        "authorize",
+        "hash",
+        "prepare-taxonomy",
+        "prepare-seo",
+        "create-revision",
+        "write-status",
+        "apply-taxonomy",
+        "write-metadata",
+        "apply-seo",
+      ]);
+
+      let redundantAuthorizationCalls = 0;
+      await coordinateEntryMetadataMutation(
+        deps,
+        fixture.entryId,
+        { status: "published", tags: ["already-published"] },
+        fixture.actorId,
+        {
+          kind: "route",
+          authorize: async () => {
+            redundantAuthorizationCalls += 1;
+          },
+        }
+      );
+      expect(redundantAuthorizationCalls).toBe(0);
+    });
+  },
+  { timeout: 45_000 }
+);
+
+testIfDbWithOptions(
+  "accessPassword is ignored when visibility is omitted for every stored visibility",
+  async () => {
+    await withEntryMutationFixture(async (fixture) => {
+      let hashCalls = 0;
+      const { cacheEvents, deps: base } = createCacheRecordingDeps();
+      const deps = createEntryMutationDepsForTest({
+        ...base,
+        hashPassword: async () => {
+          hashCalls += 1;
+          return "must-not-be-used";
+        },
+      });
+      const states = [
+        { visibility: "public" as const, accessPassword: null },
+        { visibility: "private" as const, accessPassword: null },
+        { visibility: "password" as const, accessPassword: "stored-byte-identical-hash" },
+      ];
+
+      for (const state of states) {
+        await db.update(contentEntries).set(state).where(eq(contentEntries.id, fixture.entryId));
+        await coordinateEntryMetadataMutation(
+          deps,
+          fixture.entryId,
+          { accessPassword: "ignored-author-input" },
+          fixture.actorId,
+          { kind: "trusted-internal" }
+        );
+        const stored = await readStoredEntryMutationState(fixture.entryId);
+        expect(stored.visibility).toBe(state.visibility);
+        expect(stored.accessPassword).toBe(state.accessPassword);
+      }
+
+      expect(hashCalls).toBe(0);
+      expect(cacheEvents).toHaveLength(0);
+    });
+  },
+  { timeout: 30_000 }
+);
+
+testIfDbWithOptions(
+  "concurrent password keep and clear mutations cannot leave password visibility without a hash",
+  async () => {
+    await withEntryMutationFixture(async (fixture) => {
+      await db
+        .update(contentEntries)
+        .set({ visibility: "password", accessPassword: "concurrency-hash" })
+        .where(eq(contentEntries.id, fixture.entryId));
+      const { deps } = createCacheRecordingDeps();
+
+      const results = await Promise.allSettled([
+        coordinateEntryMetadataMutation(
+          deps,
+          fixture.entryId,
+          { visibility: "public" },
+          fixture.actorId,
+          { kind: "trusted-internal" }
+        ),
+        coordinateEntryMetadataMutation(
+          deps,
+          fixture.entryId,
+          { visibility: "password" },
+          fixture.actorId,
+          { kind: "trusted-internal" }
+        ),
+      ]);
+      expect(results.some((result) => result.status === "fulfilled")).toBe(true);
+      for (const result of results) {
+        if (result.status === "rejected") {
+          expect(String(result.reason)).toContain("entry_password_required");
+        }
+      }
+
+      const stored = await readStoredEntryMutationState(fixture.entryId);
+      expect(stored.visibility === "password" && stored.accessPassword === null).toBe(false);
+      if (stored.visibility === "password") {
+        expect(stored.accessPassword).toBe("concurrency-hash");
+      } else {
+        expect(stored.visibility).toBe("public");
+        expect(stored.accessPassword).toBeNull();
+      }
+    });
+  },
+  { timeout: 45_000 }
+);
+
+testIfDbWithOptions(
+  "concurrent standalone publishes serialize distinct revision versions",
+  async () => {
+    await withEntryMutationFixture(async (fixture) => {
+      const results = await Promise.all([
+        publishEntry(fixture.entryId, fixture.actorId),
+        publishEntry(fixture.entryId, fixture.actorId),
+      ]);
+      expect(results.every((result) => result?.status === "published")).toBe(true);
+      const revisions = await db
+        .select({ version: contentRevisions.version })
+        .from(contentRevisions)
+        .where(eq(contentRevisions.entryId, fixture.entryId));
+      expect(
+        revisions.map((revision) => revision.version).sort((left, right) => left - right)
+      ).toEqual([1, 2]);
+    });
+  },
+  { timeout: 45_000 }
+);
+
+testIfDbWithOptions(
+  "route metadata wrapper preserves direct SEO null values as omitted fields",
+  async () => {
+    await withEntryMutationFixture(async (fixture) => {
+      await updateEntryMetadata(fixture.entryId, {
+        seo: {
+          title: "Stored SEO title",
+          description: "Stored SEO description",
+          canonicalUrl: "https://example.test/stored",
+          robots: "index,follow",
+        },
+      });
+
+      await updateEntryMetadataForRoute(
+        fixture.entryId,
+        {
+          seo: {
+            title: null,
+            description: null,
+            canonicalUrl: null,
+            robots: null,
+          },
+        },
+        fixture.actorId,
+        async () => undefined
+      );
+      const [seo] = await db
+        .select({
+          title: seoDocuments.title,
+          description: seoDocuments.description,
+          canonicalUrl: seoDocuments.canonicalUrl,
+          robots: seoDocuments.robots,
+        })
+        .from(seoDocuments)
+        .where(
+          and(eq(seoDocuments.targetType, "entry"), eq(seoDocuments.targetId, fixture.entryId))
+        );
+      expect(seo).toEqual({
+        title: "Stored SEO title",
+        description: "Stored SEO description",
+        canonicalUrl: "https://example.test/stored",
+        robots: "index,follow",
+      });
+    });
+  },
+  { timeout: 30_000 }
+);
+
+testIfDb("deleteEntry returns only the assistant consumer id and title", async () => {
+  await withEntryMutationFixture(async (fixture) => {
+    const deleted = await deleteEntry(fixture.entryId);
+    expect(Object.keys(deleted ?? {})).toEqual(["id", "title"]);
+    expect(deleted?.id).toBe(fixture.entryId);
+  });
 });

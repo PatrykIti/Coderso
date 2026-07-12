@@ -6,6 +6,7 @@ import { afterEach, expect, test, vi } from "vitest";
 
 import type { FooterData } from "../../../core/widgets/core/footer";
 import type { WidgetBlock } from "../../../core/widgets/types";
+import { RETAINED_COLOR_FIELDS } from "../widgets/retainedColorConsumerTable";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -751,6 +752,94 @@ test("FooterAdvancedEditor is read-only diagnostics while Visual owns layout tok
       columnBreakpoint: "lg",
       sectionPaddingY: "12",
     });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("FooterVisualEditor preserves inherited states for every retained color and emits picker replacement plus clear exactly", async () => {
+  const { FooterVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/FooterEditors");
+
+  const inheritedStyle = Object.fromEntries(
+    RETAINED_COLOR_FIELDS.footer.map(({ path }, index) => [
+      path.slice("style.".length),
+      index % 2 === 0 ? "currentColor" : "inherit",
+    ])
+  ) as NonNullable<FooterData["style"]>;
+  const initialValue: FooterData = {
+    columns: [{ title: "Company", links: [] }],
+    style: inheritedStyle,
+  };
+  let latestValue = initialValue;
+  const onChange = vi.fn<(next: FooterData) => void>();
+
+  const Harness = () => {
+    const [value, setValue] = useState<FooterData>(initialValue);
+
+    return (
+      <FooterVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          onChange(next);
+          setValue(next);
+        }}
+        variant="columns-2"
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await React.act(async () => {
+      await Promise.resolve();
+    });
+    expect(onChange).not.toHaveBeenCalled();
+
+    for (const field of RETAINED_COLOR_FIELDS.footer) {
+      const control = view.container.querySelector(`[data-widget-control="${field.control}"]`);
+      const colorState = control?.querySelector("[data-shared-color-state]");
+
+      expect(control, field.control).toBeInstanceOf(HTMLElement);
+      expect(colorState?.getAttribute("data-shared-color-state"), field.control).toBe("inherited");
+      expect(colorState?.textContent, field.control).toContain("Inherited color");
+    }
+
+    const replacementField = RETAINED_COLOR_FIELDS.footer[0];
+    const clearField = RETAINED_COLOR_FIELDS.footer[1];
+    const replacementControl = view.container.querySelector(
+      `[data-widget-control="${replacementField.control}"]`
+    );
+    setInputValue(replacementControl?.querySelector('input[type="color"]'), "#A1B2C3");
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const pickerEmission = onChange.mock.calls[0]?.[0];
+    expect(pickerEmission).toEqual({
+      ...initialValue,
+      style: {
+        ...inheritedStyle,
+        surfaceColor: "#a1b2c3",
+      },
+    });
+    expect(latestValue).toEqual(pickerEmission);
+
+    const clearControl = view.container.querySelector(
+      `[data-widget-control="${clearField.control}"]`
+    );
+    clickByText(clearControl ?? view.container, "Clear");
+
+    expect(onChange).toHaveBeenCalledTimes(2);
+    const clearEmission = onChange.mock.calls[1]?.[0];
+    const { borderColor: _cleared, ...expectedStyle } = pickerEmission?.style ?? {};
+    expect(clearEmission).toEqual({
+      ...pickerEmission,
+      style: expectedStyle,
+    });
+    expect(clearEmission?.style).not.toHaveProperty("borderColor");
+    expect(clearEmission?.style?.surfaceColor).toBe("#a1b2c3");
+    expect(latestValue).toEqual(clearEmission);
   } finally {
     view.cleanup();
   }

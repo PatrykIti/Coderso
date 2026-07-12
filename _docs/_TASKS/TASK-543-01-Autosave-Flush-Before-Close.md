@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Posts Editor / Autosave / Reliability
 **Estimated Effort:** Medium
-**Dependencies:** TASK-542 (program land order; no shared source ownership)
+**Dependencies:** TASK-544 (program land order; no shared source ownership)
 **Status:** ⏳ To Do
 **Changelog:** 1255 (pinned; create only at implementation closure)
 

@@ -150,6 +150,19 @@ diagnostic instead of silently coercing to a different control.
   through to the form theme, an unset form token to the built-in default). Every
   theme-derived color still passes `resolveClearableCssColorValue` before reaching
   an inline style.
+- TASK-516 deliberately uses the shared `inherited-render` profile end to end:
+  Form write normalization, persisted-read resolution, builder canvas, runtime
+  preview/resolver, public renderer, and this retained bridge all accept
+  canonical `currentColor` and `inherit`. The eight direct per-embed fields are
+  `background`, `surface`, `borderColor`, `titleColor`, `labelColor`,
+  `helperColor`, `submitBackground`, and `submitTextColor`.
+- Color schema patterns are structural prefilters only. The shared semantic
+  parser still enforces original-input length, ranges, function arity, and
+  canonical output; rejected legacy input is omitted rather than rendered raw.
+  On an authored `style` object the eight per-embed overrides remain sparse.
+  A legacy record with no `style` object retains Form Embed's historical theme
+  defaults (including `transparent` background); TASK-541 adds no replacement
+  bytes.
 
 ## Security Notes
 

@@ -115,11 +115,20 @@ controls, raw JSON payloads, DOM id suffixes, CSS variables, or token text.
 - Saved custom colors can be replaced with a swatch or cleared when the field
   has a real custom value.
 - Imported/admin values for surface, border, summary text, and description text
-  colors are sanitized before public inline style output. Safe hex,
-  `rgb/rgba`, `hsl/hsla`, `transparent`, `currentColor`, `var(--color-*)`, and
-  legacy hyphenated color tokens are preserved; unsafe strings such as
-  `javascript:`, `expression(`, `data:`, raw URLs, semicolon injection, braces,
-  or HTML-like fragments are dropped or resolved back to theme defaults.
+  colors are sanitized before public inline style output. The canonical
+  `inherited-render` profile accepts safe hex, bounded `rgb/rgba` and
+  `hsl/hsla`, `transparent`, `currentColor`, `inherit`, and
+  `var(--color-*)`. Only after canonical parsing fails may Accordion's bounded
+  historical read adapter preserve a hyphenated legacy token, and the shared
+  128-code-unit cap is checked before that fallback. This adapter is not shared
+  color grammar. Unsafe or malformed values are dropped or resolved to theme
+  defaults, never emitted raw.
+- TASK-541 adds no defaults. On an authored `style` object `surfaceColor` and
+  `descriptionTextColor` remain sparse, while cleared/omitted `borderColor` and
+  `summaryTextColor` continue to materialize Accordion's historical theme
+  fallbacks. A record with no `style` object resolves the full historical
+  surface/border/text default set. Those normalized fallback bytes are not a new
+  persisted Clear sentinel.
 
 ## Data Model (summary)
 

@@ -50,7 +50,13 @@ import {
   PAGE_INTERACTIVITY_CSS,
   usesInteractivityRuntime,
 } from "./pageCompositionEffects";
-import { sanitizeSvg } from "./svgSanitizer";
+import {
+  SAFE_SVG_SOURCE_TO_REACT_PROP,
+  buildSafeSvgTree,
+  type SafeReactSvgProp,
+  type SafeSvgElement,
+  type SafeSvgNode,
+} from "./svgSafeTree";
 import { PAGE_EFFECTS_RUNTIME_ID, PAGE_EFFECTS_RUNTIME_SOURCE } from "./pageEffectsRuntime";
 import type { PageBlockPath } from "./pageBlockPaths";
 import {
@@ -240,6 +246,132 @@ const readNumber = (value: unknown, fallback: number) =>
 
 const readBoolean = (value: unknown, fallback: boolean) =>
   typeof value === "boolean" ? value : fallback;
+
+const SAFE_CUSTOM_SVG_MIN_ASPECT_RATIO = 1 / 8;
+const SAFE_CUSTOM_SVG_MAX_ASPECT_RATIO = 8;
+const SAFE_CUSTOM_SVG_MAX_BLOCK_SIZE_PX = 1024;
+
+const SAFE_CUSTOM_SVG_BOUNDARY_STYLE: Readonly<CSSProperties> = Object.freeze({
+  display: "block",
+  inlineSize: "100%",
+  maxInlineSize: "100%",
+  maxBlockSize: `${SAFE_CUSTOM_SVG_MAX_BLOCK_SIZE_PX}px`,
+  overflow: "hidden",
+  contain: "layout paint",
+  pointerEvents: "none",
+});
+
+const SAFE_CUSTOM_SVG_REACT_PROPS: readonly SafeReactSvgProp[] = Object.freeze(
+  Object.values(SAFE_SVG_SOURCE_TO_REACT_PROP)
+);
+
+const SAFE_CUSTOM_SVG_DRAW_TAGS: ReadonlySet<SafeSvgElement["tag"]> = new Set([
+  "path",
+  "line",
+  "polyline",
+]);
+
+const SVG_NUMBER_SOURCE = "[+-]?(?:(?:\\d+(?:\\.\\d*)?)|(?:\\.\\d+))(?:[eE][+-]?\\d+)?";
+const SVG_NUMBER_SEPARATOR_SOURCE = "(?:[ \\t\\r\\n]*,[ \\t\\r\\n]*|[ \\t\\r\\n]+)";
+const SAFE_CUSTOM_SVG_VIEWBOX_RE = new RegExp(
+  `^[ \\t\\r\\n]*(${SVG_NUMBER_SOURCE})${SVG_NUMBER_SEPARATOR_SOURCE}` +
+    `(${SVG_NUMBER_SOURCE})${SVG_NUMBER_SEPARATOR_SOURCE}` +
+    `(${SVG_NUMBER_SOURCE})${SVG_NUMBER_SEPARATOR_SOURCE}` +
+    `(${SVG_NUMBER_SOURCE})[ \\t\\r\\n]*$`
+);
+const SAFE_CUSTOM_SVG_DIMENSION_RE = new RegExp(`^(${SVG_NUMBER_SOURCE})(?:px)?$`);
+
+const parseFiniteSvgNumber = (value: string): number | null => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const parseSafeCustomSvgViewBoxRatio = (value: string | undefined): number | null => {
+  if (typeof value !== "string") return null;
+  const match = SAFE_CUSTOM_SVG_VIEWBOX_RE.exec(value);
+  if (!match) return null;
+  const x = parseFiniteSvgNumber(match[1]!);
+  const y = parseFiniteSvgNumber(match[2]!);
+  const width = parseFiniteSvgNumber(match[3]!);
+  const height = parseFiniteSvgNumber(match[4]!);
+  if (x === null || y === null || width === null || height === null) return null;
+  return width > 0 && height > 0 ? width / height : null;
+};
+
+const parseSafeCustomSvgDimension = (value: string | undefined): number | null => {
+  if (typeof value !== "string") return null;
+  const match = SAFE_CUSTOM_SVG_DIMENSION_RE.exec(value);
+  if (!match) return null;
+  const parsed = parseFiniteSvgNumber(match[1]!);
+  return parsed !== null && parsed > 0 ? parsed : null;
+};
+
+const resolveTrustedSvgViewportStyle = (
+  rootProps: SafeSvgElement["props"]
+): Readonly<CSSProperties> => {
+  const viewBoxRatio = parseSafeCustomSvgViewBoxRatio(rootProps.viewBox);
+  const width = parseSafeCustomSvgDimension(rootProps.width);
+  const height = parseSafeCustomSvgDimension(rootProps.height);
+  const rawRatio = viewBoxRatio ?? (width !== null && height !== null ? width / height : 1);
+  const aspectRatio = Math.max(
+    SAFE_CUSTOM_SVG_MIN_ASPECT_RATIO,
+    Math.min(SAFE_CUSTOM_SVG_MAX_ASPECT_RATIO, rawRatio)
+  );
+  return {
+    display: "block",
+    inlineSize: "100%",
+    maxInlineSize: "100%",
+    blockSize: "auto",
+    maxBlockSize: `${SAFE_CUSTOM_SVG_MAX_BLOCK_SIZE_PX}px`,
+    aspectRatio: String(aspectRatio),
+    overflow: "hidden",
+    pointerEvents: "none",
+  };
+};
+
+type SafeCustomSvgRenderProps = Record<string, string | CSSProperties>;
+
+const copySafeCustomSvgProps = (
+  source: SafeSvgElement["props"],
+  key: string
+): SafeCustomSvgRenderProps => {
+  const props: SafeCustomSvgRenderProps = { key };
+  for (const safeName of SAFE_CUSTOM_SVG_REACT_PROPS) {
+    const value = source[safeName];
+    if (typeof value === "string") props[safeName] = value;
+  }
+  return props;
+};
+
+const renderSafeSvgNode = (
+  node: SafeSvgNode,
+  key: string,
+  drawIn: boolean,
+  isRoot = false
+): ReactNode => {
+  if (node.kind === "text") return node.value;
+
+  const props = copySafeCustomSvgProps(node.props, key);
+
+  if (isRoot) {
+    const viewportStyle = resolveTrustedSvgViewportStyle(node.props);
+    delete props.x;
+    delete props.y;
+    delete props.width;
+    delete props.height;
+    delete props.transform;
+    props.width = "100%";
+    props.style = viewportStyle;
+  }
+  if (drawIn && SAFE_CUSTOM_SVG_DRAW_TAGS.has(node.tag) && node.props.pathLength === undefined) {
+    props.pathLength = "1";
+  }
+
+  const children = node.children.map((child, index) =>
+    renderSafeSvgNode(child, `${key}.${index}`, drawIn)
+  );
+  return createElement(node.tag, props, ...children);
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -2689,11 +2821,11 @@ export const renderPageBlockContent = (
         drawSpeed?: number;
         label?: string;
       };
-      // Defence in depth: re-sanitize at render (do NOT trust the stored value
-      // blindly). `sanitizeSvg` is ISOMORPHIC (TextEncoder byte count, no Node
-      // `Buffer`) because this case ALSO runs in the browser builder canvas.
-      let clean = sanitizeSvg(typeof props.svg === "string" ? props.svg : "");
-      if (!clean) {
+      // Defence in depth: sanitize and parse at render (do NOT trust the stored
+      // value blindly). The resulting deeply frozen tree exposes only closed SVG
+      // tags and React prop names, so author markup never reaches an HTML sink.
+      const tree = buildSafeSvgTree(typeof props.svg === "string" ? props.svg : "");
+      if (!tree) {
         // Neutral fallback (no injected markup) — a muted placeholder box.
         return (
           <span className="inline-block text-slate-400" aria-hidden="true">
@@ -2702,27 +2834,17 @@ export const renderPageBlockContent = (
         );
       }
       const { dataAttrs, cssVars } = resolveDrawInAttrs(props.drawIn, props.drawSpeed);
-      if (props.drawIn) {
-        // Length-INDEPENDENT draw-in: stamp `pathLength="1"` on every stroke shape
-        // so the 522-01-L04 CSS (stroke-dasharray:1;stroke-dashoffset:1) completes
-        // for ANY pasted SVG. `pathLength` is allowlisted in 522-01-L02, so this
-        // survives a re-sanitize round-trip; a safe numeric-attr string inject on
-        // the already-sanitized markup.
-        clean = clean.replace(
-          /<(path|line|polyline)\b(?![^>]*\bpathLength=)/gi,
-          '<$1 pathLength="1"'
-        );
-      }
       return (
         <span
           role="img"
           aria-label={props.label || undefined}
           aria-hidden={props.label ? undefined : "true"}
+          data-custom-svg-boundary="true"
           {...dataAttrs}
-          style={cssVars as CSSProperties}
-          // `clean` is allowlist-sanitized at write AND here; only SVG shape survives.
-          dangerouslySetInnerHTML={{ __html: clean }}
-        />
+          style={{ ...SAFE_CUSTOM_SVG_BOUNDARY_STYLE, ...(cssVars as CSSProperties) }}
+        >
+          {renderSafeSvgNode(tree, "svg-root", Boolean(props.drawIn), true)}
+        </span>
       );
     }
     // ── TASK-534 ── segmented SWITCHER / TABS (absorbs 527). A real role="tablist"

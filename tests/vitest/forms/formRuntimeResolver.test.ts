@@ -1,6 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest";
 
 import { resolveFormSubmissionAccess } from "../../../core/services/forms/formRuntimeResolver";
+import { buildFormColorTheme } from "./formColorConsumerTable";
 
 const NONCE_SECRET = "coderso_form_runtime_nonce_secret_for_tests";
 
@@ -236,10 +237,7 @@ test("resolveFormRuntimeData projects settings.theme when the form sets one (516
           baseDelayMs: 300,
           maxDelayMs: 2000,
         },
-        theme: {
-          layout: { width: "full" },
-          submit: { background: "#00ff00" },
-        },
+        theme: { layout: { width: "full" }, ...buildFormColorTheme("raw") },
       },
     }),
     listFormFields: async () => [
@@ -261,8 +259,10 @@ test("resolveFormRuntimeData projects settings.theme when the form sets one (516
   const result = await resolveFormRuntimeData("form-theme", { preview: false });
 
   expect(result.settings.theme).toBeDefined();
-  expect(result.settings.theme?.layout?.width).toBe("full");
-  expect(result.settings.theme?.submit?.background).toBe("#00ff00");
+  expect(result.settings.theme).toEqual({
+    layout: { width: "full" },
+    ...buildFormColorTheme("canonical"),
+  });
 });
 
 test("resolveFormRuntimeData omits settings.theme when the form has none (516-06)", async () => {
