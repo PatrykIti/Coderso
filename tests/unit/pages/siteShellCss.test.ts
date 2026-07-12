@@ -113,7 +113,7 @@ test("hover and active colors map onto the interaction rules", () => {
     linkHoverColor: "rgba(255,255,255,.12)",
     linkActiveColor: "var(--color-primary)",
   });
-  expect(css).toContain(":focus-visible{background:rgba(255,255,255,.12)}");
+  expect(css).toContain(":focus-visible{background:rgba(255, 255, 255, 0.12)}");
   expect(css).toContain(
     '[data-site-header="true"] .site-nav-link:active,[data-site-header="true"] .site-nav-group>summary:active{background:var(--color-primary)}'
   );

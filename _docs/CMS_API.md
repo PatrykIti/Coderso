@@ -2758,6 +2758,32 @@ Metadata update payload (example):
 Metadata status transitions to `published` require `content:publish`; ordinary
 metadata writes remain under `content:write`.
 
+### Entry metadata transaction and security (TASK-537)
+
+`PATCH /content/:type/entries/:id/metadata` remains an internal, session-only
+Admin write. The route keeps its early `content:write` middleware and, after a
+minimal `SELECT ... FOR UPDATE`, rechecks a fresh permission snapshot through
+the same transaction executor. Every mutation requires `content:write`; only a
+real transition from a locked non-published state to `published` additionally
+requires `content:publish`. The write uses the shared CSRF middleware and
+`admin_write` bucket, rejects unknown fields at every request-schema level, and
+does not support API-key auth, public nonce/HMAC, or captcha mode.
+
+Status/revision, taxonomy assignments and tags, visibility/password state,
+schedule, and SEO commit in one transaction. Schedule, password/hash,
+taxonomy, and SEO validation finish before the first write. A failure leaves
+all of those records unchanged and produces no cache side effect. Server cache
+work starts only after commit: an SEO mutation clears the global site cache
+once, while another changed metadata/status mutation performs one targeted
+entry invalidation. A no-op does neither. A post-commit cache failure is
+reported with a stable redacted code but does not turn the durable mutation
+into an HTTP failure.
+
+Mutation loaders and update/publish/delete returns use explicit minimal
+projections. They never materialize or return `accessPassword`; the only
+password-state value exposed by this path is the SQL-derived `hasPassword`
+boolean. Plaintext is retained only long enough to hash it.
+
 Duplicate entry payload:
 
 ```json

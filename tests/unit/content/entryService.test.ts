@@ -265,6 +265,33 @@ const readStoredEntryMutationState = async (entryId: string) => {
   return row;
 };
 
+const readEntryMutationDomainSnapshot = async (entryId: string) => ({
+  entry: await readStoredEntryMutationState(entryId),
+  revisions: await db
+    .select({
+      id: contentRevisions.id,
+      version: contentRevisions.version,
+      data: contentRevisions.data,
+      createdBy: contentRevisions.createdBy,
+    })
+    .from(contentRevisions)
+    .where(eq(contentRevisions.entryId, entryId)),
+  assignments: await db
+    .select({ termId: contentTermAssignments.termId })
+    .from(contentTermAssignments)
+    .where(eq(contentTermAssignments.entryId, entryId)),
+  seo: await db
+    .select({
+      id: seoDocuments.id,
+      title: seoDocuments.title,
+      description: seoDocuments.description,
+      canonicalUrl: seoDocuments.canonicalUrl,
+      robots: seoDocuments.robots,
+    })
+    .from(seoDocuments)
+    .where(eq(seoDocuments.targetId, entryId)),
+});
+
 test("entry mutation source pins secret-minimal projections and write query shapes", () => {
   expect(readProjectionKeys("ENTRY_MUTATION_FIELDS")).toEqual([
     "id",
@@ -1410,7 +1437,20 @@ testIfDbWithOptions(
   async () => {
     await withEntryMutationFixture(async (fixture) => {
       const tag = await createMutationTag(fixture.typeId, "Fault seam");
-      const { cacheEvents, deps: base } = createCacheRecordingDeps();
+      const initialScheduledAt = new Date("2036-01-02T03:04:05.000Z");
+      await db
+        .update(contentEntries)
+        .set({
+          status: "scheduled",
+          scheduledAt: initialScheduledAt,
+          visibility: "password",
+          accessPassword: "fault-baseline-hash",
+        })
+        .where(eq(contentEntries.id, fixture.entryId));
+      const before = await readEntryMutationDomainSnapshot(fixture.entryId);
+      const { cacheEvents, deps: base } = createCacheRecordingDeps({
+        hashPassword: async () => "fault-prepared-hash",
+      });
 
       const failAfterCreateRevision: EntryMutationDeps["createRevision"] = async (...args) => {
         await base.createRevision(...args);
@@ -1464,7 +1504,8 @@ testIfDbWithOptions(
             fixture.entryId,
             {
               status: "published",
-              visibility: "private",
+              visibility: "password",
+              accessPassword: "fault-new-password",
               taxonomy: { tagIds: [tag.id] },
               seo: { description: `SEO ${fault.code}` },
             },
@@ -1473,32 +1514,7 @@ testIfDbWithOptions(
           )
         ).rejects.toThrow(fault.code);
 
-        const stored = await readStoredEntryMutationState(fixture.entryId);
-        expect(stored.status, fault.code).toBe("draft");
-        expect(stored.visibility, fault.code).toBe("public");
-        expect(stored.tags ?? [], fault.code).toEqual([]);
-        expect(stored.publishedAt, fault.code).toBeNull();
-        expect(
-          await db
-            .select({ id: contentRevisions.id })
-            .from(contentRevisions)
-            .where(eq(contentRevisions.entryId, fixture.entryId)),
-          fault.code
-        ).toHaveLength(0);
-        expect(
-          await db
-            .select({ termId: contentTermAssignments.termId })
-            .from(contentTermAssignments)
-            .where(eq(contentTermAssignments.entryId, fixture.entryId)),
-          fault.code
-        ).toHaveLength(0);
-        expect(
-          await db
-            .select({ id: seoDocuments.id })
-            .from(seoDocuments)
-            .where(eq(seoDocuments.targetId, fixture.entryId)),
-          fault.code
-        ).toHaveLength(0);
+        expect(await readEntryMutationDomainSnapshot(fixture.entryId), fault.code).toEqual(before);
         expect(cacheEvents, fault.code).toHaveLength(0);
       }
     });
@@ -1509,83 +1525,123 @@ testIfDbWithOptions(
 testIfDbWithOptions(
   "deferred taxonomy and SEO applies are awaited and stay cache-silent until commit",
   async () => {
-    await withEntryMutationFixture(async (fixture) => {
-      const tag = await createMutationTag(fixture.typeId, "Deferred seam");
-      const taxonomyGate = createDeferred<void>();
-      const taxonomyEntered = createDeferred<void>();
-      const { cacheEvents, deps: base } = createCacheRecordingDeps();
-      const taxonomyDeps = createEntryMutationDepsForTest({
-        ...base,
-        applyTaxonomy: async (...args) => {
-          taxonomyEntered.resolve();
-          await taxonomyGate.promise;
-          return base.applyTaxonomy(...args);
-        },
-      });
+    const cases = [
+      { seam: "taxonomy" as const, outcome: "resolve" as const },
+      { seam: "taxonomy" as const, outcome: "reject" as const },
+      { seam: "seo" as const, outcome: "resolve" as const },
+      { seam: "seo" as const, outcome: "reject" as const },
+    ];
 
-      let taxonomySettled = false;
-      const pendingTaxonomy = coordinateEntryMetadataMutation(
-        taxonomyDeps,
-        fixture.entryId,
-        { taxonomy: { tagIds: [tag.id] } },
-        fixture.actorId,
-        { kind: "trusted-internal" }
-      );
-      void pendingTaxonomy.finally(() => {
-        taxonomySettled = true;
-      });
-      await taxonomyEntered.promise;
-      expect(taxonomySettled).toBe(false);
-      expect(cacheEvents).toHaveLength(0);
-      taxonomyGate.resolve();
-      await pendingTaxonomy;
-      expect(cacheEvents).toEqual(["targeted"]);
+    for (const testCase of cases) {
+      await withEntryMutationFixture(async (fixture) => {
+        const gate = createDeferred<void>();
+        const entered = createDeferred<void>();
+        const { cacheEvents, deps: base } = createCacheRecordingDeps();
+        const tag =
+          testCase.seam === "taxonomy"
+            ? await createMutationTag(fixture.typeId, `Deferred ${testCase.outcome}`)
+            : null;
+        const before = await readEntryMutationDomainSnapshot(fixture.entryId);
+        const deps = createEntryMutationDepsForTest({
+          ...base,
+          ...(testCase.seam === "taxonomy"
+            ? {
+                applyTaxonomy: async (...args: Parameters<EntryMutationDeps["applyTaxonomy"]>) => {
+                  entered.resolve();
+                  await gate.promise;
+                  return base.applyTaxonomy(...args);
+                },
+              }
+            : {
+                applySeo: async (...args: Parameters<EntryMutationDeps["applySeo"]>) => {
+                  entered.resolve();
+                  await gate.promise;
+                  return base.applySeo(...args);
+                },
+              }),
+        });
+        const scheduledAt = new Date("2036-02-03T04:05:06.000Z");
+        let settled = false;
+        const pending = coordinateEntryMetadataMutation(
+          deps,
+          fixture.entryId,
+          {
+            status: "scheduled",
+            scheduledAt,
+            ...(testCase.seam === "taxonomy"
+              ? { taxonomy: { tagIds: [tag?.id as string] } }
+              : { seo: { description: `Deferred SEO ${testCase.outcome}` } }),
+          },
+          fixture.actorId,
+          { kind: "trusted-internal" }
+        );
+        void pending.then(
+          () => {
+            settled = true;
+          },
+          () => {
+            settled = true;
+          }
+        );
 
-      cacheEvents.length = 0;
-      const seoGate = createDeferred<void>();
-      const seoEntered = createDeferred<void>();
-      const seoDeps = createEntryMutationDepsForTest({
-        ...base,
-        applySeo: async (...args) => {
-          seoEntered.resolve();
-          await seoGate.promise;
-          return base.applySeo(...args);
-        },
+        await entered.promise;
+        expect(settled, `${testCase.seam}:${testCase.outcome}`).toBe(false);
+        expect(cacheEvents, `${testCase.seam}:${testCase.outcome}`).toHaveLength(0);
+
+        if (testCase.outcome === "reject") {
+          gate.reject(new Error(`deferred_${testCase.seam}_rejected`));
+          await expect(pending).rejects.toThrow(`deferred_${testCase.seam}_rejected`);
+          expect(
+            await readEntryMutationDomainSnapshot(fixture.entryId),
+            `${testCase.seam}:${testCase.outcome}`
+          ).toEqual(before);
+          expect(cacheEvents, `${testCase.seam}:${testCase.outcome}`).toHaveLength(0);
+          return;
+        }
+
+        gate.resolve();
+        await pending;
+        const stored = await readStoredEntryMutationState(fixture.entryId);
+        expect(stored.status, testCase.seam).toBe("scheduled");
+        expect(stored.scheduledAt?.toISOString(), testCase.seam).toBe(scheduledAt.toISOString());
+        if (testCase.seam === "taxonomy") {
+          expect(cacheEvents).toEqual(["targeted"]);
+          expect(
+            await db
+              .select({ termId: contentTermAssignments.termId })
+              .from(contentTermAssignments)
+              .where(eq(contentTermAssignments.entryId, fixture.entryId))
+          ).toEqual([{ termId: tag?.id }]);
+        } else {
+          expect(cacheEvents).toEqual(["global"]);
+          expect(
+            await db
+              .select({ description: seoDocuments.description })
+              .from(seoDocuments)
+              .where(eq(seoDocuments.targetId, fixture.entryId))
+          ).toEqual([{ description: "Deferred SEO resolve" }]);
+        }
       });
-      const scheduledAt = new Date("2036-02-03T04:05:06.000Z");
-      const pendingSeo = coordinateEntryMetadataMutation(
-        seoDeps,
-        fixture.entryId,
-        {
-          status: "scheduled",
-          scheduledAt,
-          seo: { description: "Deferred SEO" },
-        },
-        fixture.actorId,
-        { kind: "trusted-internal" }
-      );
-      await seoEntered.promise;
-      expect(cacheEvents).toHaveLength(0);
-      seoGate.reject(new Error("deferred_seo_rejected"));
-      await expect(pendingSeo).rejects.toThrow("deferred_seo_rejected");
-      const stored = await readStoredEntryMutationState(fixture.entryId);
-      expect(stored.status).toBe("draft");
-      expect(stored.scheduledAt).toBeNull();
-      expect(cacheEvents).toHaveLength(0);
-    });
+    }
   },
-  { timeout: 45_000 }
+  { timeout: 60_000 }
 );
 
 testIfDbWithOptions(
-  "locked publish authorization runs before preparation and only for a real transition",
+  "locked route authorization runs before preparation for every mutation",
   async () => {
     await withEntryMutationFixture(async (fixture) => {
       const tag = await createMutationTag(fixture.typeId, "Authorization order");
       const events: string[] = [];
-      const { deps: base } = createCacheRecordingDeps();
+      const { cacheEvents, deps: base } = createCacheRecordingDeps();
+      let activeTransaction: unknown = null;
       const deps = createEntryMutationDepsForTest({
         ...base,
+        transaction: (callback) =>
+          base.transaction(async (tx) => {
+            activeTransaction = tx;
+            return callback(tx);
+          }),
         hashPassword: async () => {
           events.push("hash");
           return "authorization-order-hash";
@@ -1632,6 +1688,35 @@ testIfDbWithOptions(
       expect(events).toHaveLength(0);
       expect((await readStoredEntryMutationState(fixture.entryId)).status).toBe("draft");
 
+      await expect(
+        coordinateEntryMetadataMutation(
+          deps,
+          fixture.entryId,
+          { tags: ["ordinary-without-authorization"] },
+          fixture.actorId,
+          undefined as never
+        )
+      ).rejects.toThrow("entry_publish_authorization_required");
+      expect(events).toHaveLength(0);
+
+      await coordinateEntryMetadataMutation(
+        deps,
+        fixture.entryId,
+        { tags: ["ordinary-authorized"] },
+        fixture.actorId,
+        {
+          kind: "route",
+          authorize: async (tx, requirement) => {
+            expect(tx).toBe(activeTransaction);
+            expect(requirement).toEqual({ publishTransition: false });
+            expect(Object.isFrozen(requirement)).toBe(true);
+            events.push("authorize");
+          },
+        }
+      );
+      expect(events).toEqual(["authorize", "write-metadata"]);
+
+      events.length = 0;
       await coordinateEntryMetadataMutation(
         deps,
         fixture.entryId,
@@ -1645,7 +1730,10 @@ testIfDbWithOptions(
         fixture.actorId,
         {
           kind: "route",
-          authorize: async () => {
+          authorize: async (tx, requirement) => {
+            expect(tx).toBe(activeTransaction);
+            expect(requirement).toEqual({ publishTransition: true });
+            expect(Object.isFrozen(requirement)).toBe(true);
             events.push("authorize");
           },
         }
@@ -1662,7 +1750,8 @@ testIfDbWithOptions(
         "apply-seo",
       ]);
 
-      let redundantAuthorizationCalls = 0;
+      events.length = 0;
+      let alreadyPublishedAuthorizationCalls = 0;
       await coordinateEntryMetadataMutation(
         deps,
         fixture.entryId,
@@ -1670,12 +1759,162 @@ testIfDbWithOptions(
         fixture.actorId,
         {
           kind: "route",
-          authorize: async () => {
-            redundantAuthorizationCalls += 1;
+          authorize: async (tx, requirement) => {
+            expect(tx).toBe(activeTransaction);
+            expect(requirement).toEqual({ publishTransition: false });
+            alreadyPublishedAuthorizationCalls += 1;
+            events.push("authorize");
           },
         }
       );
-      expect(redundantAuthorizationCalls).toBe(0);
+      expect(alreadyPublishedAuthorizationCalls).toBe(1);
+      expect(events).toEqual(["authorize", "write-metadata"]);
+
+      events.length = 0;
+      cacheEvents.length = 0;
+      let noOpAuthorizationCalls = 0;
+      await coordinateEntryMetadataMutation(
+        deps,
+        fixture.entryId,
+        { status: "published" },
+        fixture.actorId,
+        {
+          kind: "route",
+          authorize: async (tx, requirement) => {
+            expect(tx).toBe(activeTransaction);
+            expect(requirement).toEqual({ publishTransition: false });
+            noOpAuthorizationCalls += 1;
+            events.push("authorize");
+          },
+        }
+      );
+      expect(noOpAuthorizationCalls).toBe(1);
+      expect(events).toEqual(["authorize"]);
+      expect(cacheEvents).toHaveLength(0);
+    });
+  },
+  { timeout: 45_000 }
+);
+
+testIfDbWithOptions(
+  "row-locked route mutation waits for the lock and a denial leaves every domain unchanged",
+  async () => {
+    await withEntryMutationFixture(async (fixture) => {
+      const tag = await createMutationTag(fixture.typeId, "Denied lock mutation");
+      const before = await readEntryMutationDomainSnapshot(fixture.entryId);
+      const holderLocked = createDeferred<void>();
+      const releaseHolder = createDeferred<void>();
+      const waiterStarted = createDeferred<void>();
+      const guardEntered = createDeferred<void>();
+      const seamEvents: string[] = [];
+      const { cacheEvents, deps: base } = createCacheRecordingDeps();
+      let waiterTransaction: unknown = null;
+      const deps = createEntryMutationDepsForTest({
+        ...base,
+        transaction: (callback) =>
+          base.transaction(async (tx) => {
+            waiterTransaction = tx;
+            waiterStarted.resolve();
+            return callback(tx);
+          }),
+        hashPassword: async (...args) => {
+          seamEvents.push("hash");
+          return base.hashPassword(...args);
+        },
+        prepareTaxonomy: async (...args) => {
+          seamEvents.push("prepare-taxonomy");
+          return base.prepareTaxonomy(...args);
+        },
+        prepareSeo: async (...args) => {
+          seamEvents.push("prepare-seo");
+          return base.prepareSeo(...args);
+        },
+        createRevision: async (...args) => {
+          seamEvents.push("create-revision");
+          return base.createRevision(...args);
+        },
+        writeStatus: async (...args) => {
+          seamEvents.push("write-status");
+          return base.writeStatus(...args);
+        },
+        applyTaxonomy: async (...args) => {
+          seamEvents.push("apply-taxonomy");
+          return base.applyTaxonomy(...args);
+        },
+        writeMetadata: async (...args) => {
+          seamEvents.push("write-metadata");
+          return base.writeMetadata(...args);
+        },
+        applySeo: async (...args) => {
+          seamEvents.push("apply-seo");
+          return base.applySeo(...args);
+        },
+      });
+
+      const holderPromise = db.transaction(async (tx) => {
+        await tx
+          .select({ id: contentEntries.id })
+          .from(contentEntries)
+          .where(eq(contentEntries.id, fixture.entryId))
+          .for("update");
+        holderLocked.resolve();
+        await releaseHolder.promise;
+      });
+
+      let mutationPromise: ReturnType<typeof coordinateEntryMetadataMutation> | null = null;
+      try {
+        await Promise.race([
+          holderLocked.promise,
+          holderPromise.then(() => {
+            throw new Error("entry_lock_holder_finished_before_barrier");
+          }),
+        ]);
+        mutationPromise = coordinateEntryMetadataMutation(
+          deps,
+          fixture.entryId,
+          {
+            status: "published",
+            visibility: "password",
+            accessPassword: "must never be hashed",
+            taxonomy: { tagIds: [tag.id] },
+            seo: { description: "must never be prepared" },
+          },
+          fixture.actorId,
+          {
+            kind: "route",
+            authorize: async (tx, requirement) => {
+              expect(tx).toBe(waiterTransaction);
+              expect(requirement).toEqual({ publishTransition: true });
+              guardEntered.resolve();
+              throw new Error("forbidden");
+            },
+          }
+        );
+        await waiterStarted.promise;
+
+        const guardStateBeforeRelease = await Promise.race([
+          guardEntered.promise.then(() => "called" as const),
+          new Promise<"blocked">((resolve) => {
+            setTimeout(() => resolve("blocked"), 100);
+          }),
+        ]);
+        expect(guardStateBeforeRelease).toBe("blocked");
+        expect(seamEvents).toHaveLength(0);
+        expect(cacheEvents).toHaveLength(0);
+
+        releaseHolder.resolve();
+        await holderPromise;
+        await expect(mutationPromise).rejects.toThrow("forbidden");
+        mutationPromise = null;
+
+        expect(seamEvents).toHaveLength(0);
+        expect(cacheEvents).toHaveLength(0);
+        expect(await readEntryMutationDomainSnapshot(fixture.entryId)).toEqual(before);
+      } finally {
+        releaseHolder.resolve();
+        await holderPromise.catch(() => undefined);
+        await mutationPromise?.catch(() => undefined);
+      }
     });
   },
   { timeout: 45_000 }

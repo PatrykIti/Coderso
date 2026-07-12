@@ -8,7 +8,8 @@
 **Category:** DB Tests / Reliability / Security / Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-537-02-L01
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-07-12
 **Changelog:** 1249 (pinned; create only at implementation closure)
 
 ---
@@ -21,12 +22,13 @@ cross-domain DB-fault/rollback/cache-after-commit cases to the relevant
 entry/taxonomy/SEO/cache test files and rerun source-owner assertions read-only; it must
 not weaken or re-baseline them. It also owns an additive cacheBus assertion in
 `tests/vitest/admin/entriesClient.test.ts`; `core/admin/services/entriesClient.ts`
-remains read-only. It may also edit _docs/CONTENT_TYPES_SPEC.md,
-_docs/CMS_API.md, _docs/SECURITY_SPEC.md,
-_docs/ADMIN_CACHE.md only if cache timing changes, this family’s statuses,
-_docs/_TASKS/README.md, changelog 1249, and _docs/_CHANGELOG/README.md. It must not edit
-production source or TASK-517. Read TASK-517 and record a fresh audit; route required
-changes into its own future contract rather than editing it here.
+remains read-only. It must update `_docs/RBAC_SPEC.md` with the permission and snapshot
+contract below. It may also edit `_docs/CONTENT_TYPES_SPEC.md`, `_docs/CMS_API.md`,
+`_docs/SECURITY_SPEC.md`, and `_docs/ADMIN_CACHE.md` when their owned contract changes,
+plus this family’s statuses, `_docs/_TASKS/README.md`, changelog 1249, and
+`_docs/_CHANGELOG/README.md`. It must not edit production source or TASK-517. Read
+TASK-517 and record a fresh audit; route required changes into its own future contract
+rather than editing it here.
 
 ## Implementation Pseudocode
 
@@ -62,8 +64,14 @@ test locked-state serialization:
   assert the shared SELECT FOR UPDATE serializes distinct increasing revision versions;
 
 test route authorization and schedule presence:
-  assert every route mutation rechecks content:write from one locked-transaction snapshot;
-  assert a real transition checks content:write + content:publish from that same snapshot;
+  assert every route mutation rechecks content:write from one joined minimal
+    user_roles -> roles SELECT on the locked transaction executor;
+  assert a real transition checks content:write + content:publish as all-of from that same
+    statement snapshot;
+  assert role/user-role commits before the joined statement starts are visible and later
+    commits do not retroactively change the current decision;
+  assert legacy string allow/deny, all-of allow/deny, wildcard allow, and empty-list
+    forbidden (including wildcard) behavior;
   assert DB_POOL_MAX=1 completes without a second global connection;
   assert already-published ordinary metadata remains content:write-only;
   assert omitted scheduledAt is absent from service input;
@@ -122,6 +130,8 @@ set -a && source .env && set +a && bun test --timeout=15000 \
   tests/security/codersoSecurityGate.test.ts
 NODE_ENV=test bunx vitest run --config vitest.config.ts \
   tests/vitest/admin/entriesClient.test.ts
+set -a && source .env && set +a && bun run test
+set -a && source .env && set +a && bun run precommit:check
 semgrep --error --timeout 120 --timeout-threshold 0 \
   --config .semgrep.yml --config p/owasp-top-ten --config p/security-audit \
   --config p/nodejs --config p/typescript \
@@ -133,6 +143,10 @@ bun run gates:coderso
 bun run scan:security:strict
 git diff --check
 ~~~
+
+The two global commands are mandatory in addition to the exact eleven targeted test
+files. Run them before smoke and before any status becomes Done. If a final-drift fixer
+changes source, tests, or documentation, rerun both commands before closure continues.
 
 Re-run each named failure once in isolation. If DATABASE_URL is unavailable, do not
 claim closure; record the blocker and rerun after recovery.
@@ -161,6 +175,12 @@ its future owner.
 ## Documentation and closure
 
 Document one metadata transaction, before-first-write validation, after-commit cache
-timing, and secret-minimal projections without exposing hashes. Run fresh post-audits.
-Then create changelog 1249, mark all physical descendants Done, close the parent, and
-synchronize task/changelog indexes. No descendant may remain open.
+timing, and secret-minimal projections without exposing hashes. In `_docs/RBAC_SPEC.md`,
+document that a legacy string becomes a one-element requirement, every non-empty array is
+all-of, an empty array fails closed even for wildcard actors, and `*` satisfies any
+non-empty requirement. Document that locked entry mutations build permissions with one
+minimal joined `user_roles` -> `roles` SELECT on the transaction executor, with commits
+before the READ COMMITTED statement snapshot visible and later commits affecting only the
+next guard. Run fresh post-audits. Then create changelog 1249, mark all physical
+descendants Done, close the parent, and synchronize task/changelog indexes. No descendant
+may remain open.

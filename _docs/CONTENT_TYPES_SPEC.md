@@ -137,6 +137,24 @@ byte-identycznie). Slug kolumny = **API ID** w edytorze (mono input).
 - Termy (category/tag) sa edytowane z poziomu edytora wpisu.
 - Tagi sa zapisywane rowniez w `content_entries.tags` dla wyszukiwania.
 
+## Granica mutacji metadanych wpisu (TASK-537)
+
+- Zmiana statusu i rewizji, przypisan taxonomy/tagow, visibility/password,
+  harmonogramu oraz SEO jednego wpisu nalezy do jednej zewnetrznej transakcji.
+  Pierwszy minimalny odczyt wpisu blokuje jego wiersz przez `FOR UPDATE`, a
+  helpery taxonomy i SEO korzystaja z przekazanego executora i nie otwieraja
+  zagniezdzonej transakcji.
+- Ostateczny stan harmonogramu, wymaganie i przygotowanie hasla, membership
+  taxonomy oraz canonical/robots SEO sa walidowane przed pierwszym zapisem.
+  Blad dowolnego apply cofa caly zestaw, lacznie z rewizja i statusem.
+- Odczyty uzywane przez update, publish, delete i koordynator metadanych maja
+  jawne minimalne projekcje. Hash `accessPassword` nie jest materializowany w
+  wyniku, cache ani logu; SQL wylicza jedynie `hasPassword`. Tekst jawny istnieje
+  tylko podczas przygotowania hasha przed zapisem.
+- Skutki cache serwera nastepuja dopiero po commicie: mutacja z SEO wykonuje
+  jedno globalne czyszczenie, a inna rzeczywista zmiana metadanych/statusu jedna
+  celowana invalidacje wpisu. Rollback i no-op nie uruchamiaja tych skutkow.
+
 ## Praktyczne wzorce
 
 Gotowe schematy i powiazania znajdziesz w `CONTENT_MODELING_COOKBOOK.md`.

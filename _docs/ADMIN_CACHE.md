@@ -512,7 +512,17 @@ Clients update caches and broadcast events on:
 - Entry duplicate writes the returned clone into `entries:detail:<typeSlug>:<id>`
   and invalidates/broadcasts `entries:list:<typeSlug>` so the list reloads from
   the authoritative list endpoint.
-- Failed metadata writes must not mutate list or detail cache state.
+- Entry metadata server effects run only after the outer DB transaction commits.
+  A metadata mutation containing SEO clears the global site cache exactly once;
+  another changed metadata/status mutation performs one targeted entry
+  invalidation. Rollback and no-op perform neither. A post-commit invalidator
+  failure is reported with a stable redacted code while the durable response
+  remains successful, preventing an unsafe duplicate mutation retry.
+- After a successful metadata HTTP response, `entriesClient` updates and emits
+  exactly `entries:list:<typeSlug>`, `entries:list:all`, and
+  `entries:detail:<typeSlug>:<id>` in that order. A rejected response emits no
+  cacheBus event and leaves list/detail cache state unchanged. These browser
+  events remain client-owned and are not server transaction side effects.
 - Entry editor background refresh must not overwrite unsaved content or metadata
   edits; the editor defers active reload while either dirty flag is set.
 

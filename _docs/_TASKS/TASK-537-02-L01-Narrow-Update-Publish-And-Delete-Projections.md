@@ -193,15 +193,28 @@ async function getContentTypeMutationContextWithExecutor(
   return row ? map the exact context shape : null;
 }
 
-// roleService.ts: role and permission reads accept the caller's structural executor.
+// roleService.ts: the authorization snapshot is one joined, minimally projected statement
+// through the caller's structural executor. Never first select userRoles IDs and then roles.
 export type RoleQueryExecutor = Pick<typeof db, "select">;
-export async function getUserRoles(userId, executor: RoleQueryExecutor = db) { ... }
+const ADMIN_PERMISSION_ROLE_FIELDS = {
+  id: roles.id,
+  name: roles.name,
+  permissions: roles.permissions,
+} as const;
+export async function getUserRoles(userId, executor: RoleQueryExecutor = db) {
+  return executor
+    .select(ADMIN_PERMISSION_ROLE_FIELDS)
+    .from(userRoles)
+    .innerJoin(roles, eq(userRoles.roleId, roles.id))
+    .where(eq(userRoles.userId, userId));
+}
 export async function getAdminPermissionSnapshot(
   userId,
   executor: RoleQueryExecutor = db
 ) {
-  roles = await getUserRoles(userId, executor);
-  return buildAdminPermissionSnapshotFromRoles(roles);
+  // Exactly one READ COMMITTED statement snapshot for assignment + role permissions.
+  roleRows = await getUserRoles(userId, executor);
+  return buildAdminPermissionSnapshotFromRoles(roleRows);
 }
 export async function getUserPermissions(userId, executor: RoleQueryExecutor = db) {
   return (await getAdminPermissionSnapshot(userId, executor)).permissions;
@@ -218,10 +231,16 @@ export type PermissionGuardFactory = (
   permission: PermissionRequirement
 ) => PermissionHandler;
 export const requirePermission: PermissionGuardFactory = (permission) => {
+  // Preserve the legacy string factory contract while evaluating every array member.
+  requiredPermissions = Object.freeze(
+    typeof permission === "string" ? [permission] : [...permission]
+  );
   return async (ctx, executor?: RoleQueryExecutor) => {
     require actor;
+    if (requiredPermissions.length === 0): throw Error("forbidden");
     permissions = await getUserPermissions(ctx.user.id, executor);
-    for each required permission: require hasPermission(permissions, required);
+    if !requiredPermissions.every(required => hasPermission(permissions, required)):
+      throw Error("forbidden");
   };
 };
 
@@ -440,6 +459,14 @@ status/revision/taxonomy write may precede authorization, taxonomy/SEO validatio
 publish content/relation/media validation. The locked state is the sole authority for
 password keep/clear and publish-transition decisions.
 
+The joined RBAC SELECT is the authorization linearization point under PostgreSQL READ
+COMMITTED: a role assignment, removal, or permission edit committed before the statement
+starts is eligible for that snapshot; one committed after the statement snapshot begins
+does not retroactively allow or cancel the already-evaluated mutation and is observed by
+the next guard. There is no first `user_roles` statement followed by a second `roles`
+statement. `ADMIN_PERMISSION_ROLE_FIELDS` contains only role `id`, `name`, and
+`permissions`; user-role link columns and unrelated role metadata are not materialized.
+
 ## Exact write-effect matrix
 
 Build one frozen plan before writing. `changed` is true if and only if at least one of
@@ -487,11 +514,14 @@ return, cache reference, log, or error payload.
 - **Visibility and auth:** the metadata route remains internal and uses the existing Admin
   session-cookie authentication. This route has no API-key mode and this task adds none.
 - **RBAC:** the route starts with `content:write` as an early rejection gate. After the row
-  lock, one fresh permission snapshot from the same transaction executor always rechecks
-  `content:write` and additionally checks `content:publish` only for a real transition.
-  A no-op `status:published` metadata edit remains `content:write`-only. The single
-  snapshot prevents split-permission authorization, and the shared executor prevents a
-  one-connection-pool self-deadlock or saturated-pool starvation.
+  lock, one fresh permission snapshot from one minimal joined `user_roles` -> `roles`
+  SELECT on the same transaction executor always rechecks `content:write` and additionally
+  checks `content:publish` only for a real transition. A no-op `status:published` metadata
+  edit remains `content:write`-only. Legacy string requirements normalize to one-element
+  all-of lists; every member of a non-empty array is required, wildcard permissions satisfy
+  non-empty requirements, and an empty array returns `forbidden` even for a wildcard actor.
+  The single-statement snapshot prevents split-permission authorization, and the shared
+  executor prevents a one-connection-pool self-deadlock or saturated-pool starvation.
 - **CSRF and rate limit:** session writes retain shared CSRF enforcement and the
   `admin_write` bucket.
 - **Validation:** the existing strict envelope stays reject-unknown. `scheduledAt` remains
@@ -561,6 +591,15 @@ Required cases:
   deadline shorter than the suite timeout. Parent `finally` kills and awaits a hung child
   and deletes only its owned link/role/user rows in FK-safe order. No trigger, truncation,
   global fixture, or unbounded child is permitted;
+- the RBAC suite records the executor query shape and proves the snapshot performs exactly
+  one SELECT with the `user_roles` -> `roles` join and only role id/name/permissions. It
+  commits one owned role/user-role change before the guard and proves it is observed. A
+  second owned permission edit remains uncommitted while the joined SELECT evaluates the
+  prior committed row; committing it afterward cannot alter that completed decision, and
+  the next guard observes the edit. Direct guard cases cover legacy string allow and deny,
+  non-empty all-of allow and missing-member deny, wildcard allow for both string and all-of
+  requirements, and `requirePermission([])` returning `forbidden` without querying
+  permissions even for a wildcard actor;
 - route omission preserves `scheduledAt`; explicit null clears; blank and invalid nonblank
   fail the real strict validator; valid timestamp parses; a resulting scheduled state
   without a date rejects;

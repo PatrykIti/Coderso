@@ -34,9 +34,12 @@ public enforcement and must be freshly audited on the post-537 tree.
   the same locked path, serializing password keep/clear decisions and per-entry revision
   numbering.
 - After the row lock, a route guard reads one fresh permission snapshot through the same
-  transaction executor. It always rechecks `content:write` and additionally checks
-  `content:publish` only when the locked state proves a real transition. It must never
-  acquire a second global-DB connection while the row lock is held.
+  transaction executor with one minimal joined `user_roles` -> `roles` SELECT. It always
+  rechecks `content:write` and additionally checks `content:publish` only when the locked
+  state proves a real transition. It must never split the snapshot across statements or
+  acquire a second global-DB connection while the row lock is held. Role/user-role changes
+  committed before that joined statement starts are visible; changes committed after its
+  statement snapshot begins do not retroactively change the current mutation decision.
 - Known validation (schedule, password requirement/hash preparation, taxonomy
   membership, SEO canonical/robots) completes before the first write.
 - Transaction-aware helpers accept the caller's DB executor and never open a
@@ -62,11 +65,13 @@ public enforcement and must be freshly audited on the post-537 tree.
 - **Auth/RBAC:** the existing Admin session-cookie authentication remains unchanged.
   Ordinary writes require `content:write`; a transition to published additionally
   requires `content:publish` and an actor id. The leading middleware remains an early
-  rejection gate. After the row lock, the route guard reads one permission snapshot
-  through that transaction executor and evaluates both required permissions before the
-  first write. This eliminates split-snapshot authorization and connection-pool
-  self-deadlock while preserving `content:write`-only metadata saves on already-published
-  entries. This route has no API-key mode and TASK-537 does not add one.
+  rejection gate. After the row lock, the route guard reads one permission snapshot with
+  one minimal joined `user_roles` -> `roles` SELECT through that transaction executor and
+  evaluates every required permission before the first write. A legacy string requirement
+  normalizes to a one-element all-of list; an empty list fails closed even for a wildcard
+  role. This eliminates split-snapshot authorization and connection-pool self-deadlock
+  while preserving `content:write`-only metadata saves on already-published entries. This
+  route has no API-key mode and TASK-537 does not add one.
 - **CSRF/rate limiting:** session mutations retain shared CSRF and `admin_write`. No
   nonce/captcha applies.
 - **Validation:** existing strict route envelopes remain reject-unknown. `scheduledAt`
@@ -82,7 +87,7 @@ public enforcement and must be freshly audited on the post-537 tree.
 |---|---|---|---|
 | TASK-537-01 | Entry metadata transaction boundary | TASK-537-01-L01, L02 | 🚧 In Progress — implementation/gates complete |
 | TASK-537-02 | Secret-minimal entry projections | TASK-537-02-L01 | 🚧 In Progress |
-| TASK-537-03 | Rollback/cache tests and closure | TASK-537-03-L01 | ⏳ To Do |
+| TASK-537-03 | Rollback/cache tests and closure | TASK-537-03-L01 | 🚧 In Progress |
 
 ## Finding coverage matrix
 
@@ -91,6 +96,7 @@ public enforcement and must be freshly audited on the post-537 tree.
 | M-01 multi-step metadata writes are non-atomic | 537-01/L01 + L02 + 537-02/L01 | DB fault injection at taxonomy/SEO/status seams rolls back all rows and revisions |
 | M-01 cache may run before the full mutation succeeds | 537-02/L01 + 537-03/L01 | cache spy remains silent on rollback and runs once after commit |
 | M-02 update/publish/delete materialize password hash | 537-02/L01 | projection-shape tests and query spies prove the column is absent |
+| Post-audit RBAC split snapshot and `DB_POOL_MAX=1` self-deadlock | 537-02/L01 | one minimal joined `user_roles` -> `roles` query on the locked transaction executor, non-empty all-of/fail-closed tests, READ COMMITTED linearization proof, controlled row-lock ordering, and bounded one-connection subprocess |
 
 ## Ownership and land order
 
@@ -107,6 +113,10 @@ security drift audit after 537.
 
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
+- With repo env loaded, the full `bun run test` and `bun run precommit:check` are
+  mandatory closure gates in addition to the eleven targeted files. Both must pass before
+  runtime smoke and before any status moves to Done, and both rerun after every final-drift
+  fix, including a docs-only fix.
 - With repo env loaded and DB reachable: targeted entry/taxonomy/SEO service and
   content route suites, including unique rollback fixtures.
 - Controlled concurrency covers password keep/clear and duplicate revision-number races;
@@ -115,6 +125,10 @@ security drift audit after 537.
 - A controlled row-lock test proves the guard cannot run before `FOR UPDATE`, and a
   `DB_POOL_MAX=1` subprocess proves the real RBAC lookup completes through the transaction
   executor without waiting for a second pooled connection.
+- RBAC tests prove the permission snapshot is one joined minimal projection rather than
+  two READ COMMITTED statements, pin the before/after-statement role-change linearization,
+  and cover legacy-string allow/deny, all-of allow/deny, wildcard allow, and empty-list
+  fail-closed behavior.
 - The existing Admin entries-client Vitest proves cacheBus reconciliation occurs only
   after a successful metadata HTTP response and emits nothing for a rejected response.
 - No optional projection helper module is created. Pure preparation behavior is tested
@@ -126,5 +140,8 @@ security drift audit after 537.
 ## Documentation Updates Required
 
 Update `_docs/CONTENT_TYPES_SPEC.md`, `_docs/CMS_API.md`, `_docs/SECURITY_SPEC.md`,
-and `_docs/ADMIN_CACHE.md` if cache timing text changes. At closure create
-changelog 1249 and mark all descendants done.
+and `_docs/ADMIN_CACHE.md` if cache timing text changes. Update `_docs/RBAC_SPEC.md`
+unconditionally with the non-empty all-of permission contract, empty-list fail-closed
+behavior, wildcard semantics, the one joined minimal transaction-executor permission
+snapshot, and its READ COMMITTED role-change linearization. At closure create changelog
+1249 and mark all descendants done.

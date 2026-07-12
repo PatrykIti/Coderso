@@ -225,6 +225,28 @@ co pozwala egzekwowac TTL bez dodatkowych kolumn w DB.
 - Internal layer nie jest publiczny, ale wciaz wymaga walidacji i RBAC.
 - Brak bezposredniego dostepu z zewnatrz.
 
+### Mutacje metadanych content entries (TASK-537)
+
+- `PATCH /admin/api/content/:type/entries/:id/metadata` pozostaje endpointem
+  internal-only dla sesji Admin. Kazda mutacja wymaga `content:write`, a
+  rzeczywiste przejscie z zablokowanego stanu do `published` dodatkowo
+  `content:publish`. API key, public nonce/HMAC, captcha i public-write mode nie
+  dotycza tego endpointu.
+- Po wczesnym middleware route wykonuje druga, swieza kontrole RBAC po
+  `SELECT ... FOR UPDATE`. Snapshot uprawnien jest jednym minimalnym JOIN
+  `user_roles` -> `roles` przez executor tej samej transakcji, bez pobierania
+  drugiego polaczenia. Mutacja zachowuje shared CSRF, bucket `admin_write` oraz
+  strict reject-unknown dla wszystkich poziomow requestu.
+- Status/revision, taxonomy/tags, visibility/password, schedule i SEO sa
+  zatwierdzane atomowo. Walidacja harmonogramu, wymagania i przygotowanie hasha,
+  membership taxonomy oraz canonical/robots konczy sie przed pierwszym zapisem.
+- `accessPassword` nie nalezy do projekcji update/publish/delete ani locked
+  mutation loadera. Hash pozostaje w DB; jedynym ujawnionym sygnalem stanu jest
+  SQL-derived `hasPassword`, a plaintext istnieje tylko podczas hashowania.
+- Cache jest invalidowany dopiero po commicie. Rollback/no-op nie emituje
+  skutkow; awaria post-commit invalidatora jest raportowana stabilnym,
+  zredagowanym kodem i nie zmienia trwale zapisanego wyniku w blad requestu.
+
 ### Custom Screens admin API (TASK-054-22-02)
 
 - Endpointy (internal):

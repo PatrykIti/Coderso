@@ -1,6 +1,8 @@
-import { eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "../../db/client";
 import { roles, userRoles } from "../../db/schema";
+
+export type RoleQueryExecutor = Pick<typeof db, "select">;
 
 export type AdminPermissionSnapshotRole = {
   id: string;
@@ -18,6 +20,12 @@ type RoleLike = {
   name: string;
   permissions: unknown;
 };
+
+const ADMIN_PERMISSION_ROLE_FIELDS = {
+  id: roles.id,
+  name: roles.name,
+  permissions: roles.permissions,
+} as const;
 
 const normalizePermissionList = (permissions: unknown) => {
   if (!Array.isArray(permissions)) return [];
@@ -48,13 +56,12 @@ export function hasPermission(permissions: string[], permission: string) {
   return permissions.includes(permission);
 }
 
-export async function getUserRoles(userId: string) {
-  const rows = await db.select().from(userRoles).where(eq(userRoles.userId, userId));
-
-  if (rows.length === 0) return [];
-  const roleIds = rows.map((row) => row.roleId);
-
-  return db.select().from(roles).where(inArray(roles.id, roleIds));
+export async function getUserRoles(userId: string, executor: RoleQueryExecutor = db) {
+  return executor
+    .select(ADMIN_PERMISSION_ROLE_FIELDS)
+    .from(userRoles)
+    .innerJoin(roles, eq(userRoles.roleId, roles.id))
+    .where(eq(userRoles.userId, userId));
 }
 
 export function buildAdminPermissionSnapshotFromRoles(
@@ -73,12 +80,15 @@ export function buildAdminPermissionSnapshotFromRoles(
   };
 }
 
-export async function getAdminPermissionSnapshot(userId: string): Promise<AdminPermissionSnapshot> {
-  const roleRows = await getUserRoles(userId);
+export async function getAdminPermissionSnapshot(
+  userId: string,
+  executor: RoleQueryExecutor = db
+): Promise<AdminPermissionSnapshot> {
+  const roleRows = await getUserRoles(userId, executor);
   return buildAdminPermissionSnapshotFromRoles(roleRows);
 }
 
-export async function getUserPermissions(userId: string) {
-  const snapshot = await getAdminPermissionSnapshot(userId);
+export async function getUserPermissions(userId: string, executor: RoleQueryExecutor = db) {
+  const snapshot = await getAdminPermissionSnapshot(userId, executor);
   return snapshot.permissions;
 }

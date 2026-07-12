@@ -24,6 +24,7 @@ import {
 import { ContentValidationError } from "../../services/content/validation";
 import { createPublicUrlContextFromHeaders, resolvePreviewUrl } from "../utils/previewUrls";
 import { ApiError } from "../errorHandler";
+import type { PermissionGuardFactory } from "../middleware/rbac";
 
 export type RouteContext = {
   params: Record<string, string>;
@@ -43,7 +44,7 @@ export type Router = {
 };
 
 export type ContentEntryRouteDeps = {
-  requirePermission: (permission: string) => RouteHandler;
+  requirePermission: PermissionGuardFactory;
   validate: (schema: unknown, payload: unknown) => void;
 };
 
@@ -281,8 +282,14 @@ export function registerContentEntryRoutes(router: Router, deps: ContentEntryRou
             body.scheduledAt === null ? null : new Date(body.scheduledAt as string);
         }
 
-        const authorizePublishTransition = async () => {
-          await requirePermission("content:publish")(ctx);
+        const authorizeMutation: Parameters<typeof updateEntryMetadataForRoute>[3] = async (
+          tx,
+          requirement
+        ) => {
+          const requiredPermissions = requirement.publishTransition
+            ? (["content:write", "content:publish"] as const)
+            : (["content:write"] as const);
+          await requirePermission(requiredPermissions)(ctx, tx);
         };
         let metadata: Awaited<ReturnType<typeof updateEntryMetadataForRoute>>;
         try {
@@ -290,7 +297,7 @@ export function registerContentEntryRoutes(router: Router, deps: ContentEntryRou
             entry.id,
             metadataInput,
             ctx.user?.id,
-            authorizePublishTransition
+            authorizeMutation
           );
         } catch (error) {
           const mapped = mapEntryMetadataError(error);

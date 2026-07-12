@@ -509,7 +509,7 @@ test("SearchBox visual owns visitor copy, interaction, and surface only", async 
   }
 });
 
-test("SearchBox visual labels saved theme default color tokens truthfully", async () => {
+test("SearchBox visual distinguishes retained custom and theme-default colors", async () => {
   const { SearchBoxVisualEditor } =
     await import("../../../core/admin/ui/widgets/editors/SearchBoxEditors");
 
@@ -527,13 +527,9 @@ test("SearchBox visual labels saved theme default color tokens truthfully", asyn
       view.container.querySelectorAll("[data-shared-color-state]")
     ).map((element) => element.getAttribute("data-shared-color-state"));
 
-    expect(colorStates).toEqual([
-      "theme_default_token",
-      "theme_default_token",
-      "theme_default_token",
-    ]);
+    expect(colorStates).toEqual(["saved_custom", "theme_default_token", "theme_default_token"]);
     expect(view.container.textContent).toContain("Theme default");
-    expect(view.container.textContent).not.toContain("Saved custom color");
+    expect(view.container.textContent).toContain("Saved custom color");
   } finally {
     view.cleanup();
   }

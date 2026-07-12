@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 
 import { ContentValidationError } from "../../../core/services/content/validation";
+import type { PermissionRequirement } from "../../../core/server/middleware/rbac";
 
 process.env.DATABASE_URL ??= "postgres://localhost/nextless_test";
 
@@ -65,7 +66,7 @@ const makeRouter = () => {
 
 test("registerContentEntryRoutes wires content entry endpoints and permissions", () => {
   const { router, routes } = makeRouter();
-  const requestedPermissions: string[] = [];
+  const requestedPermissions: PermissionRequirement[] = [];
 
   registerContentEntryRoutes(router, {
     requirePermission: (permission) => {
@@ -120,7 +121,7 @@ test("mapContentEntryError maps entry domain errors to route ApiErrors", () => {
 
 test("PATCH metadata route accepts visibility + accessPassword and gates publish", () => {
   const { router, routes } = makeRouter();
-  const requestedPermissions: string[] = [];
+  const requestedPermissions: PermissionRequirement[] = [];
 
   registerContentEntryRoutes(router, {
     requirePermission: (permission) => {
@@ -230,39 +231,62 @@ testIfDbWithOptions(
       await updateEntryMetadata(entry.id, { scheduledAt: initialScheduledAt });
 
       const { router, routes } = makeRouter();
-      const permissionCalls: string[] = [];
+      const permissionCalls: PermissionRequirement[] = [];
+      const permissionExecutors: unknown[] = [];
       registerContentEntryRoutes(router, {
-        requirePermission: (permission) => async () => {
+        requirePermission: (permission) => async (_ctx, executor) => {
           permissionCalls.push(permission);
+          permissionExecutors.push(executor);
         },
         validate: validateSchema,
       });
       const metadataRoute = routes.find(
         (route) => route.method === "PATCH" && route.path === "/content/:type/entries/:id/metadata"
       );
-      const handler = metadataRoute?.handlers.at(-1);
+      if (!metadataRoute) throw new Error("missing_metadata_route");
+      const handler = metadataRoute.handlers.at(-1);
       if (!handler) throw new Error("missing_metadata_route_handler");
-      const invoke = (body: unknown) =>
-        handler({
-          params: { type: typeSlug, id: entry.id },
-          query: {},
-          body,
-          user: { id: actor.id },
-        });
+      const createContext = (body: unknown): RouteContext => ({
+        params: { type: typeSlug, id: entry.id },
+        query: {},
+        body,
+        user: { id: actor.id },
+      });
+      const invoke = (body: unknown) => handler(createContext(body));
+      const invokeFullRoute = async (body: unknown) => {
+        let result: unknown;
+        const ctx = createContext(body);
+        for (const routeHandler of metadataRoute.handlers) {
+          result = await routeHandler(ctx);
+        }
+        return result;
+      };
 
       permissionCalls.length = 0;
       await invoke({ tags: ["omitted-schedule"] });
       expect((await getEntry(entry.id))?.scheduledAt?.getTime()).toBe(initialScheduledAt.getTime());
-      expect(permissionCalls).toEqual([]);
+      expect(permissionCalls).toEqual([["content:write"]]);
+      expect(permissionExecutors).toHaveLength(1);
+      expect(permissionExecutors[0]).toEqual(
+        expect.objectContaining({ select: expect.any(Function) })
+      );
 
+      permissionCalls.length = 0;
+      permissionExecutors.length = 0;
       await invoke({ scheduledAt: null });
       expect((await getEntry(entry.id))?.scheduledAt).toBeNull();
+      expect(permissionCalls).toEqual([["content:write"]]);
+      expect(permissionExecutors).toHaveLength(1);
 
       const replacementScheduledAt = new Date("2038-04-05T06:07:08.000Z");
+      permissionCalls.length = 0;
+      permissionExecutors.length = 0;
       await invoke({ scheduledAt: replacementScheduledAt.toISOString() });
       expect((await getEntry(entry.id))?.scheduledAt?.getTime()).toBe(
         replacementScheduledAt.getTime()
       );
+      expect(permissionCalls).toEqual([["content:write"]]);
+      expect(permissionExecutors).toHaveLength(1);
 
       for (const invalidScheduledAt of ["", "tomorrow"]) {
         try {
@@ -284,13 +308,35 @@ testIfDbWithOptions(
       }
 
       permissionCalls.length = 0;
+      permissionExecutors.length = 0;
       await invoke({ status: "published" });
-      expect(permissionCalls).toEqual(["content:publish"]);
+      expect(permissionCalls).toEqual([["content:write", "content:publish"]]);
+      expect(permissionExecutors).toHaveLength(1);
       expect((await getEntry(entry.id))?.status).toBe("published");
 
       permissionCalls.length = 0;
+      permissionExecutors.length = 0;
       await invoke({ status: "published", tags: ["already-published"] });
-      expect(permissionCalls).toEqual([]);
+      expect(permissionCalls).toEqual([["content:write"]]);
+      expect(permissionExecutors).toHaveLength(1);
+
+      permissionCalls.length = 0;
+      permissionExecutors.length = 0;
+      await invokeFullRoute({ tags: ["full-route-ordinary"] });
+      expect(permissionCalls).toEqual(["content:write", ["content:write"]]);
+      expect(permissionExecutors[0]).toBeUndefined();
+      expect(permissionExecutors[1]).toEqual(
+        expect.objectContaining({ select: expect.any(Function) })
+      );
+
+      permissionCalls.length = 0;
+      permissionExecutors.length = 0;
+      await invokeFullRoute({ status: "published" });
+      expect(permissionCalls).toEqual(["content:write", ["content:write"]]);
+      expect(permissionExecutors[0]).toBeUndefined();
+      expect(permissionExecutors[1]).toEqual(
+        expect.objectContaining({ select: expect.any(Function) })
+      );
 
       const beforeInvalidSeo = await getEntry(entry.id);
       for (const [field, value, expectedCode] of [

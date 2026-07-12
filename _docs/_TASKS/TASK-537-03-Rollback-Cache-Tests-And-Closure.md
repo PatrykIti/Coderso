@@ -7,7 +7,8 @@
 **Category:** DB Tests / Cache / Documentation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-537-02
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-07-12
 **Changelog:** 1249 (pinned; create only at implementation closure)
 
 ---
@@ -24,8 +25,8 @@ assertions.
 
 TASK-537-03-L01 is the only leaf. Source leaves already own their pre-gate behavior-test
 changes; this leaf owns additive cross-domain rollback/cache test changes, relevant
-docs, task/index status changes, TASK-517 read-only re-audit evidence, and changelog
-1249. The client-side cache proof is owned by
+docs including the required `_docs/RBAC_SPEC.md` permission/snapshot update, task/index
+status changes, TASK-517 read-only re-audit evidence, and changelog 1249. The client-side cache proof is owned by
 `tests/vitest/admin/entriesClient.test.ts`; production Admin client code is read-only.
 
 The final cache proof distinguishes three owners: an entry SEO mutation clears the global
@@ -57,6 +58,8 @@ set -a && source .env && set +a && bun test --timeout=15000 \
   tests/security/codersoSecurityGate.test.ts
 NODE_ENV=test bunx vitest run --config vitest.config.ts \
   tests/vitest/admin/entriesClient.test.ts
+set -a && source .env && set +a && bun run test
+set -a && source .env && set +a && bun run precommit:check
 semgrep --error --timeout 120 --timeout-threshold 0 \
   --config .semgrep.yml --config p/owasp-top-ten --config p/security-audit \
   --config p/nodejs --config p/typescript \
@@ -68,6 +71,10 @@ bun run gates:coderso
 bun run scan:security:strict
 git diff --check
 ~~~
+
+The full `bun run test` and `bun run precommit:check` are additive to the nine targeted
+Bun files, one security Bun file, and one Vitest file. They must pass before smoke and
+Done, and rerun after any final-drift fix even when that fix touches only documentation.
 
 Post-audit lenses cover transaction completeness, secret projections, row-lock
 concurrency, cache-after-commit, route/RBAC/error mapping, and TASK-517 compatibility.

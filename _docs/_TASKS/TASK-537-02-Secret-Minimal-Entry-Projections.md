@@ -46,10 +46,14 @@ No endpoint or permission-model expansion. Existing admin content endpoints reta
 session-cookie auth, `content:write`, `content:publish` for a real transition, CSRF,
 `admin_write`, strict route envelopes, and centralized domain-error mapping; this route
 has no API-key mode and this task adds none. After the row lock, the route guard reads one
-permission snapshot through the same transaction executor, always rechecks
-`content:write`, conditionally checks `content:publish`, and runs before the first write.
-This closes split-snapshot authorization and the one-connection-pool deadlock without
-requiring `content:publish` for an ordinary metadata save on an already-published entry.
+permission snapshot with one minimal joined `user_roles` -> `roles` SELECT through the
+same transaction executor, always rechecks `content:write`, conditionally checks
+`content:publish`, and runs before the first write. A string requirement is a one-element
+all-of list and an empty list fails closed, including for wildcard roles. This closes
+split-snapshot authorization and the one-connection-pool deadlock without requiring
+`content:publish` for an ordinary metadata save on an already-published entry. Role and
+user-role commits before the joined statement starts are visible; later commits do not
+retroactively change that mutation's authorization result.
 Plaintext password exists only long
 enough to hash. Queries may compute `hasPassword` in SQL but may not materialize the
 `accessPassword` column/value in JavaScript. SEO canonical/robots domain errors map to

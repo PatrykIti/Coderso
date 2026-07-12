@@ -100,8 +100,14 @@ type EntryTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type EntryTransactionRunner = <T>(callback: (tx: EntryTransaction) => Promise<T>) => Promise<T>;
 type DbClient = typeof db | EntryTransaction;
 
-type EntryPublishAuthorization =
-  | Readonly<{ kind: "route"; authorize: () => Promise<void> }>
+type EntryMutationAuthorization =
+  | Readonly<{
+      kind: "route";
+      authorize: (
+        tx: EntryTransaction,
+        requirement: Readonly<{ publishTransition: boolean }>
+      ) => Promise<void>;
+    }>
   | Readonly<{ kind: "trusted-internal" }>;
 
 type EntryMutationState = Readonly<{
@@ -1262,7 +1268,7 @@ export async function coordinateEntryMetadataMutation(
   entryId: string,
   input: UpdateEntryMetadataInput,
   actorId: string | undefined,
-  publishAuthorization: EntryPublishAuthorization
+  mutationAuthorization: EntryMutationAuthorization
 ) {
   const committed = await deps.transaction(async (tx) => {
     const entry = await loadEntryMutationStateForUpdate(tx, entryId);
@@ -1289,21 +1295,25 @@ export async function coordinateEntryMetadataMutation(
     }
 
     const transitionToPublished = input.status === "published" && entry.status !== "published";
+    const authorization = mutationAuthorization as
+      | { kind?: unknown; authorize?: unknown }
+      | null
+      | undefined;
+    if (authorization?.kind === "route") {
+      if (typeof authorization.authorize !== "function") {
+        throw new Error("entry_publish_authorization_required");
+      }
+      await authorization.authorize(
+        tx,
+        Object.freeze({ publishTransition: transitionToPublished })
+      );
+    } else if (authorization?.kind !== "trusted-internal") {
+      throw new Error("entry_publish_authorization_required");
+    }
+
     let publishActorId: string | null = null;
     if (transitionToPublished) {
       if (!actorId) throw new Error("auth_required");
-      const authorization = publishAuthorization as
-        | { kind?: unknown; authorize?: unknown }
-        | null
-        | undefined;
-      if (authorization?.kind === "route") {
-        if (typeof authorization.authorize !== "function") {
-          throw new Error("entry_publish_authorization_required");
-        }
-        await authorization.authorize();
-      } else if (authorization?.kind !== "trusted-internal") {
-        throw new Error("entry_publish_authorization_required");
-      }
       publishActorId = actorId;
     }
 
@@ -1426,11 +1436,14 @@ export async function updateEntryMetadataForRoute(
   entryId: string,
   input: UpdateEntryMetadataInput,
   actorId: string | undefined,
-  authorizePublishTransition: () => Promise<void>
+  authorizeMutation: (
+    tx: EntryTransaction,
+    requirement: Readonly<{ publishTransition: boolean }>
+  ) => Promise<void>
 ) {
   return coordinateEntryMetadataMutation(entryMutationDeps, entryId, input, actorId, {
     kind: "route",
-    authorize: authorizePublishTransition,
+    authorize: authorizeMutation,
   });
 }
 

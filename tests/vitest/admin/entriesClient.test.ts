@@ -24,6 +24,7 @@ import {
 import type { EntryMetadataPayload } from "../../../core/admin/services/entriesClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
+import { subscribeCacheEvents, type CacheEvent } from "../../../core/admin/utils/cacheBus";
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -180,6 +181,77 @@ test("updateEntryMetadata uses CSRF and PATCH /metadata", async () => {
     expect(calls[1]?.init?.method).toBe("PATCH");
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("successful updateEntryMetadata broadcasts exactly three cache events after the response", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalBroadcast = (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  const events: Array<Pick<CacheEvent, "key" | "action"> & { responseResolved: boolean }> = [];
+  let responseResolved = false;
+  const updatedEntry = {
+    id: "entry-cache-success",
+    typeId: "type-cache-success",
+    title: "Updated metadata",
+    slug: "updated-metadata",
+    status: "published" as const,
+    data: {},
+    tags: ["updated"],
+    createdAt: "2026-07-12T00:00:00.000Z",
+    updatedAt: "2026-07-12T00:01:00.000Z",
+    taxonomy: null,
+  };
+
+  delete (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+  const unsubscribe = subscribeCacheEvents((event) => {
+    events.push({ key: event.key, action: event.action, responseResolved });
+  });
+  globalThis.fetch = async (input) => {
+    if (String(input).endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    responseResolved = true;
+    return jsonResponse(updatedEntry);
+  };
+
+  try {
+    resetCsrfToken();
+    resetCaches("cache-success");
+    await updateEntryMetadata("cache-success", updatedEntry.id, {
+      status: "published",
+      tags: ["updated"],
+    });
+
+    expect(events).toEqual([
+      {
+        key: cacheKeys.entriesList("cache-success"),
+        action: "update",
+        responseResolved: true,
+      },
+      { key: cacheKeys.entriesAllList, action: "update", responseResolved: true },
+      {
+        key: cacheKeys.entryDetail("cache-success", updatedEntry.id),
+        action: "update",
+        responseResolved: true,
+      },
+    ]);
+  } finally {
+    unsubscribe();
+    globalThis.fetch = originalFetch;
+    if (originalBroadcast === undefined) {
+      delete (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
+    } else {
+      (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel = originalBroadcast;
+    }
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches("cache-success");
   }
 });
 
@@ -344,7 +416,11 @@ test("duplicateEntry uses CSRF and primes list/detail caches", async () => {
 
 test("failed updateEntryMetadata leaves cached list untouched", async () => {
   const originalFetch = globalThis.fetch;
+  const originalBroadcast = (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createLocalStorage();
+  const events: CacheEvent[] = [];
   const originalEntry = {
     id: "entry-1",
     typeId: "type-1",
@@ -356,6 +432,9 @@ test("failed updateEntryMetadata leaves cached list untouched", async () => {
     updatedAt: "2026-02-14T00:00:00.000Z",
   };
 
+  delete (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+  const unsubscribe = subscribeCacheEvents((event) => events.push(event));
   globalThis.fetch = async (input, init) => {
     calls.push({ input, init });
     const url = String(input);
@@ -376,8 +455,20 @@ test("failed updateEntryMetadata leaves cached list untouched", async () => {
       updateEntryMetadata("blog", "entry-1", { seo: { description: "Updated" } })
     ).rejects.toThrow();
     expect(getCachedEntries("blog")?.[0]?.title).toBe("Original");
+    expect(events).toEqual([]);
   } finally {
+    unsubscribe();
     globalThis.fetch = originalFetch;
+    if (originalBroadcast === undefined) {
+      delete (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
+    } else {
+      (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel = originalBroadcast;
+    }
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
     resetCaches("blog");
   }
 });

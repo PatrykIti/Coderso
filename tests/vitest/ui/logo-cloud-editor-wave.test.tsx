@@ -1110,7 +1110,7 @@ test("LogoCloud advanced renders read-only human summaries without raw payload c
   expect(presentationSection.textContent).toContain("Center");
   expect(presentationSection.textContent).toContain("Effective in Dense: not active");
   expect(presentationSection.textContent).toContain("tile: Theme token");
-  expect(presentationSection.textContent).toContain("border: Theme token");
+  expect(presentationSection.textContent).toContain("border: Saved custom color");
   expect(boundarySection.textContent).toContain("Use Visual for logos");
   expect(container.textContent).not.toContain("Raw payload");
   expect(container.textContent).not.toContain("Normalize now");

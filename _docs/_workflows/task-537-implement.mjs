@@ -39,6 +39,109 @@ const EXPECTED_TASK_FILES = Object.freeze([
   "TASK-537-03-L01-Db-Rollback-Cache-After-Commit-And-Closure.md",
 ]);
 
+const TODO_STATUS = "⏳ To Do";
+const ACTIVE_STATUS = "🚧 In Progress";
+const TASK_537_PARENT = "TASK-537_Entry_Mutation_Atomicity_and_Secret_Minimal_Projections.md";
+const TASK_537_01 = "TASK-537-01-Entry-Metadata-Transaction-Boundary.md";
+const TASK_537_01_L01 = "TASK-537-01-L01-Transaction-Aware-Taxonomy-Mutations.md";
+const TASK_537_01_L02 = "TASK-537-01-L02-Transaction-Aware-Seo-Mutations.md";
+const TASK_537_02 = "TASK-537-02-Secret-Minimal-Entry-Projections.md";
+const TASK_537_02_L01 = "TASK-537-02-L01-Narrow-Update-Publish-And-Delete-Projections.md";
+const TASK_537_03 = "TASK-537-03-Rollback-Cache-Tests-And-Closure.md";
+const TASK_537_03_L01 = "TASK-537-03-L01-Db-Rollback-Cache-After-Commit-And-Closure.md";
+
+const ACTIVATION_STATE_CONTRACTS = Object.freeze({
+  start: {
+    prerequisites: [],
+    steps: [
+      { kind: "status", file: TASK_537_PARENT, from: TODO_STATUS, to: ACTIVE_STATUS },
+      { kind: "board", file: "_docs/_TASKS/README.md", from: "toDo", to: "inProgress" },
+      { kind: "status", file: TASK_537_01, from: TODO_STATUS, to: ACTIVE_STATUS },
+      {
+        kind: "row",
+        file: TASK_537_PARENT,
+        id: "TASK-537-01",
+        from: TODO_STATUS,
+        to: ACTIVE_STATUS,
+      },
+      { kind: "status", file: TASK_537_01_L01, from: TODO_STATUS, to: ACTIVE_STATUS },
+      {
+        kind: "row",
+        file: TASK_537_01,
+        id: "TASK-537-01-L01",
+        from: TODO_STATUS,
+        to: ACTIVE_STATUS,
+      },
+    ],
+  },
+  "537-01-L02": {
+    prerequisites: [
+      { kind: "status", file: TASK_537_PARENT, value: ACTIVE_STATUS },
+      { kind: "status", file: TASK_537_01, value: ACTIVE_STATUS },
+      { kind: "status", file: TASK_537_01_L01, value: ACTIVE_STATUS },
+      { kind: "row", file: TASK_537_PARENT, id: "TASK-537-01", value: ACTIVE_STATUS },
+      { kind: "row", file: TASK_537_01, id: "TASK-537-01-L01", value: ACTIVE_STATUS },
+    ],
+    steps: [
+      { kind: "status", file: TASK_537_01_L02, from: TODO_STATUS, to: ACTIVE_STATUS },
+      {
+        kind: "row",
+        file: TASK_537_01,
+        id: "TASK-537-01-L02",
+        from: TODO_STATUS,
+        to: ACTIVE_STATUS,
+      },
+    ],
+  },
+  "537-02-L01": {
+    prerequisites: [
+      { kind: "status", file: TASK_537_PARENT, value: ACTIVE_STATUS },
+      { kind: "status", file: TASK_537_01, value: ACTIVE_STATUS },
+      { kind: "status", file: TASK_537_01_L01, value: ACTIVE_STATUS },
+      { kind: "status", file: TASK_537_01_L02, value: ACTIVE_STATUS },
+      { kind: "row", file: TASK_537_PARENT, id: "TASK-537-01", value: ACTIVE_STATUS },
+      { kind: "row", file: TASK_537_01, id: "TASK-537-01-L01", value: ACTIVE_STATUS },
+      { kind: "row", file: TASK_537_01, id: "TASK-537-01-L02", value: ACTIVE_STATUS },
+    ],
+    steps: [
+      { kind: "status", file: TASK_537_02, from: TODO_STATUS, to: ACTIVE_STATUS },
+      {
+        kind: "row",
+        file: TASK_537_PARENT,
+        id: "TASK-537-02",
+        from: TODO_STATUS,
+        to: ACTIVE_STATUS,
+      },
+      { kind: "status", file: TASK_537_02_L01, from: TODO_STATUS, to: ACTIVE_STATUS },
+    ],
+  },
+  "537-03-L01": {
+    prerequisites: [
+      { kind: "status", file: TASK_537_PARENT, value: ACTIVE_STATUS },
+      { kind: "status", file: TASK_537_01, value: ACTIVE_STATUS },
+      { kind: "status", file: TASK_537_01_L01, value: ACTIVE_STATUS },
+      { kind: "status", file: TASK_537_01_L02, value: ACTIVE_STATUS },
+      { kind: "status", file: TASK_537_02, value: ACTIVE_STATUS },
+      { kind: "status", file: TASK_537_02_L01, value: ACTIVE_STATUS },
+      { kind: "row", file: TASK_537_PARENT, id: "TASK-537-01", value: ACTIVE_STATUS },
+      { kind: "row", file: TASK_537_PARENT, id: "TASK-537-02", value: ACTIVE_STATUS },
+      { kind: "row", file: TASK_537_01, id: "TASK-537-01-L01", value: ACTIVE_STATUS },
+      { kind: "row", file: TASK_537_01, id: "TASK-537-01-L02", value: ACTIVE_STATUS },
+    ],
+    steps: [
+      { kind: "status", file: TASK_537_03, from: TODO_STATUS, to: ACTIVE_STATUS },
+      {
+        kind: "row",
+        file: TASK_537_PARENT,
+        id: "TASK-537-03",
+        from: TODO_STATUS,
+        to: ACTIVE_STATUS,
+      },
+      { kind: "status", file: TASK_537_03_L01, from: TODO_STATUS, to: ACTIVE_STATUS },
+    ],
+  },
+});
+
 const ENTRY_GATE_TEST_FILES = Object.freeze([
   "tests/unit/content/taxonomyService.test.ts",
   "tests/unit/seo/seoService.test.ts",
@@ -176,6 +279,8 @@ const VALIDATION_SCHEMA = {
         "securityBun",
         "clientVitest",
         "targetedSemgrep",
+        "fullTest",
+        "precommitCheck",
         "releaseGates",
         "strictScanExecuted",
         "diffCheck",
@@ -189,6 +294,8 @@ const VALIDATION_SCHEMA = {
         securityBun: { type: "boolean" },
         clientVitest: { type: "boolean" },
         targetedSemgrep: { type: "boolean" },
+        fullTest: { type: "boolean" },
+        precommitCheck: { type: "boolean" },
         releaseGates: { type: "boolean" },
         strictScanExecuted: { type: "boolean" },
         diffCheck: { type: "boolean" },
@@ -444,6 +551,141 @@ async function readTask537BoardState() {
   return { bucket, stats: readBoardStats(board) };
 }
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function readCanonicalActivationFile(file) {
+  const source = await readFile(TASKS + "/" + file, "utf8");
+  const statusMatches = [...source.matchAll(/^\*\*Status:\*\* (.+)$/gm)];
+  if (statusMatches.length !== 1) {
+    throw new Error("TASK-537 activation status missing/duplicated: " + file);
+  }
+  const status = statusMatches[0][1];
+  if (status !== TODO_STATUS && status !== ACTIVE_STATUS) {
+    throw new Error("TASK-537 activation status is non-canonical: " + file);
+  }
+  const startedMatches = [...source.matchAll(/^\*\*Started:\*\* (\d{4}-\d{2}-\d{2})$/gm)];
+  if (
+    (status === ACTIVE_STATUS && startedMatches.length !== 1) ||
+    (status === TODO_STATUS && startedMatches.length !== 0)
+  ) {
+    throw new Error("TASK-537 activation Started metadata mismatch: " + file);
+  }
+  return { source, status };
+}
+
+function readCanonicalActivationRow(source, file, id) {
+  const rows = [...source.matchAll(new RegExp("^\\| " + escapeRegExp(id) + " \\|.*$", "gm"))];
+  if (rows.length !== 1) {
+    throw new Error("TASK-537 activation table row missing/duplicated: " + file + ":" + id);
+  }
+  const markers = [TODO_STATUS, ACTIVE_STATUS].filter((status) => rows[0][0].includes(status));
+  if (markers.length !== 1) {
+    throw new Error("TASK-537 activation table row status mismatch: " + file + ":" + id);
+  }
+  return markers[0];
+}
+
+function activationRepoPath(operation) {
+  return operation.kind === "board" ? operation.file : "_docs/_TASKS/" + operation.file;
+}
+
+function describeActivationOperation(operation) {
+  if (operation.kind === "status") {
+    return operation.file + " status " + operation.from + " -> " + operation.to;
+  }
+  if (operation.kind === "row") {
+    return operation.file + " row " + operation.id + " " + operation.from + " -> " + operation.to;
+  }
+  return operation.file + " TASK-537 board bucket " + operation.from + " -> " + operation.to;
+}
+
+async function readActivationPlan(label, contract) {
+  const files = new Map();
+  const taskOperations = [...contract.prerequisites, ...contract.steps].filter(
+    (operation) => operation.kind !== "board"
+  );
+  for (const file of new Set(taskOperations.map((operation) => operation.file))) {
+    files.set(file, await readCanonicalActivationFile(file));
+  }
+
+  const needsBoard = contract.steps.some((operation) => operation.kind === "board");
+  const boardState = needsBoard ? await readTask537BoardState() : null;
+  const readValue = (operation) => {
+    if (operation.kind === "status") return files.get(operation.file).status;
+    if (operation.kind === "row") {
+      const task = files.get(operation.file);
+      return readCanonicalActivationRow(task.source, operation.file, operation.id);
+    }
+    return boardState.bucket;
+  };
+
+  for (const prerequisite of contract.prerequisites) {
+    const actual = readValue(prerequisite);
+    if (actual !== prerequisite.value) {
+      throw new Error(
+        label +
+          ": prerequisite is not canonical: " +
+          activationRepoPath(prerequisite) +
+          " expected " +
+          prerequisite.value +
+          ", got " +
+          actual
+      );
+    }
+  }
+
+  let missingSeen = false;
+  const missingOperations = [];
+  for (const operation of contract.steps) {
+    const actual = readValue(operation);
+    if (actual !== operation.from && actual !== operation.to) {
+      throw new Error(label + ": activation step has an unexpected value: " + actual);
+    }
+    const complete = actual === operation.to;
+    if (complete && missingSeen) {
+      throw new Error(
+        label +
+          ": activation advanced past an incomplete prefix at " +
+          activationRepoPath(operation)
+      );
+    }
+    if (!complete) {
+      missingSeen = true;
+      missingOperations.push(operation);
+    }
+  }
+
+  const missingFiles = [...new Set(missingOperations.map(activationRepoPath))];
+  return {
+    active: missingOperations.length === 0,
+    missingFiles,
+    missingOperations: missingOperations.map(describeActivationOperation),
+  };
+}
+
+function createResumableActivationOwner(label, owner, plan) {
+  if (
+    plan.active ||
+    plan.missingFiles.length === 0 ||
+    !plan.missingFiles.every((file) => owner.allowedFiles.includes(file))
+  ) {
+    throw new Error(label + ": resumable activation ownership mismatch");
+  }
+  return Object.freeze({
+    allowedFiles: Object.freeze([...plan.missingFiles]),
+    requiredTouched: Object.freeze([...plan.missingFiles]),
+  });
+}
+
+async function requireActiveActivationState(label, contract) {
+  const plan = await readActivationPlan(label, contract);
+  if (!plan.active) {
+    throw new Error(label + ": activation writer did not produce the canonical active state");
+  }
+}
+
 async function requirePreImplementationTaskGraph() {
   const onDisk = (await readdir(TASKS))
     .filter((name) => /^TASK-537(?:[-_].*)?\.md$/.test(name))
@@ -632,6 +874,9 @@ const CLIENT_CACHE_TEST =
   "NODE_ENV=test bunx vitest run --config vitest.config.ts " +
   "tests/vitest/admin/entriesClient.test.ts";
 
+const FULL_REPO_TEST = ENV + "bun run test";
+const PRECOMMIT_CHECK = ENV + "bun run precommit:check";
+
 const TARGETED_SEMGREP =
   "semgrep --error --timeout 120 --timeout-threshold 0 " +
   "--config .semgrep.yml --config p/owasp-top-ten --config p/security-audit " +
@@ -735,6 +980,7 @@ const CLOSURE_OWNER = Object.freeze({
     "_docs/CONTENT_TYPES_SPEC.md",
     "_docs/CMS_API.md",
     "_docs/SECURITY_SPEC.md",
+    "_docs/RBAC_SPEC.md",
     "_docs/ADMIN_CACHE.md",
   ],
   requiredTouched: [
@@ -743,6 +989,7 @@ const CLOSURE_OWNER = Object.freeze({
     "_docs/CONTENT_TYPES_SPEC.md",
     "_docs/CMS_API.md",
     "_docs/SECURITY_SPEC.md",
+    "_docs/RBAC_SPEC.md",
     "_docs/ADMIN_CACHE.md",
   ],
 });
@@ -807,6 +1054,7 @@ const CLOSURE_DRAFT_OWNER = Object.freeze({
     "_docs/CONTENT_TYPES_SPEC.md",
     "_docs/CMS_API.md",
     "_docs/SECURITY_SPEC.md",
+    "_docs/RBAC_SPEC.md",
     "_docs/ADMIN_CACHE.md",
   ],
   requiredTouched: [
@@ -888,12 +1136,17 @@ async function runFullValidation(label, phaseName) {
       "\n" +
       TARGETED_SEMGREP +
       "\n" +
+      FULL_REPO_TEST +
+      "\n" +
+      PRECOMMIT_CHECK +
+      "\n" +
       "bun run gates:coderso\n" +
       "bun run scan:security:strict\n" +
       "git diff --check\n" +
       "All DB tests must execute. Re-run each named failing file once alone. Populate every " +
-      "structured outcome/count and return these exact eleven executed test files with zero " +
-      "skips/failures: " +
+      "structured outcome/count. The full repository test and precommit check are mandatory " +
+      "additive gates and both command outcomes must be true. Return these exact eleven " +
+      "targeted executed test files with zero targeted skips/failures: " +
       JSON.stringify(FULL_TEST_FILES) +
       ". Strict scan may be non-green " +
       "only for the one exact unchanged TASK-545 finding; any TASK-537/other finding or " +
@@ -1037,20 +1290,26 @@ async function runSmokeCycle(
 const initialBoardState = await requirePreImplementationTaskGraph();
 
 phase("Start");
-const start = await agent(
-  "Start TASK-537 at " +
-    ROOT +
-    " without touching source/tests. Fresh-read indexes. Mark " +
-    "the parent, TASK-537-01 and TASK-537-01-L01 In Progress with actual Started date; sync " +
-    "their parent/child table cells. If the board row is To Do, move its sole row to In Progress " +
-    "and apply exactly To Do -1 / In Progress +1; if already In Progress, do not change stats. " +
-    "Keep every future child/leaf To Do, do not create changelog 1249, stage, or commit. Return " +
-    "exact repo-relative touchedFiles within " +
-    JSON.stringify(START_OWNER.allowedFiles) +
-    ".",
-  { label: "start:537", phase: "Start", schema: LEAF_RESULT_SCHEMA }
-);
-requireLeafResult(start, START_OWNER, "TASK-537 start status");
+const startPlan = await readActivationPlan("TASK-537 start", ACTIVATION_STATE_CONTRACTS.start);
+if (!startPlan.active) {
+  const startOwner = createResumableActivationOwner("TASK-537 start", START_OWNER, startPlan);
+  const start = await agent(
+    "Start TASK-537 at " +
+      ROOT +
+      " without touching source/tests. Fresh-read every listed file and complete only this " +
+      "validated missing activation prefix: " +
+      JSON.stringify(startPlan.missingOperations) +
+      ". Add an actual Started date only when changing a task status. If the board transition " +
+      "is listed, move its sole row and apply exactly To Do -1 / In Progress +1; otherwise do " +
+      "not edit the board/index. Do not touch already synchronized files, future children, " +
+      "changelog 1249, staging, or commits. Return exact repo-relative touchedFiles within " +
+      JSON.stringify(startOwner.allowedFiles) +
+      ".",
+    { label: "start:537", phase: "Start", schema: LEAF_RESULT_SCHEMA }
+  );
+  requireLeafResult(start, startOwner, "TASK-537 start status");
+}
+await requireActiveActivationState("TASK-537 start", ACTIVATION_STATE_CONTRACTS.start);
 const startedBoardState = await readTask537BoardState();
 const expectedStartedStats =
   initialBoardState.bucket === "toDo"
@@ -1071,21 +1330,33 @@ for (const leaf of LEAVES) {
   phase(leaf.id);
   const activationOwner = ACTIVATION_OWNERS[leaf.id];
   if (activationOwner) {
-    const activation = await agent(
-      "Activate " +
-        leaf.id +
-        " at " +
-        ROOT +
-        " without touching source/tests/indexes. Mark " +
-        "that leaf and its technical child In Progress with actual Started date and sync the " +
-        "TASK-537 parent/child table cells. Earlier leaves remain In Progress until family " +
-        "changelog closure; future leaves remain To Do. Do not create changelog, stage, or " +
-        "commit. Return exact repo-relative touchedFiles within " +
-        JSON.stringify(activationOwner.allowedFiles) +
-        ".",
-      { label: "activate:" + leaf.id, phase: leaf.id, schema: LEAF_RESULT_SCHEMA }
-    );
-    requireLeafResult(activation, activationOwner, leaf.id + " activation");
+    const activationContract = ACTIVATION_STATE_CONTRACTS[leaf.id];
+    if (!activationContract) throw new Error(leaf.id + ": activation state contract missing");
+    const activationPlan = await readActivationPlan(leaf.id + " activation", activationContract);
+    if (!activationPlan.active) {
+      const resumableOwner = createResumableActivationOwner(
+        leaf.id + " activation",
+        activationOwner,
+        activationPlan
+      );
+      const activation = await agent(
+        "Activate " +
+          leaf.id +
+          " at " +
+          ROOT +
+          " without touching source/tests/indexes. Complete only this validated missing " +
+          "activation prefix: " +
+          JSON.stringify(activationPlan.missingOperations) +
+          ". Add an actual Started date only for a listed status transition. Do not edit already " +
+          "synchronized files; earlier leaves remain In Progress and future leaves remain To Do. " +
+          "Do not create changelog, stage, or commit. Return exact repo-relative touchedFiles within " +
+          JSON.stringify(resumableOwner.allowedFiles) +
+          ".",
+        { label: "activate:" + leaf.id, phase: leaf.id, schema: LEAF_RESULT_SCHEMA }
+      );
+      requireLeafResult(activation, resumableOwner, leaf.id + " activation");
+    }
+    await requireActiveActivationState(leaf.id + " activation", activationContract);
   }
   const implementation = await agent(
     COMMON +
@@ -1135,18 +1406,33 @@ for (const leaf of LEAVES) {
 }
 
 phase("537-03 prepare");
-const closureActivation = await agent(
-  "Activate TASK-537-03/L01 at " +
-    ROOT +
-    " without touching source/tests/indexes. Mark the " +
-    "child and leaf In Progress with actual Started date and sync the parent table; earlier " +
-    "leaves remain In Progress and no changelog/status closes yet. Return exact repo-relative " +
-    "touchedFiles within " +
-    JSON.stringify(CLOSURE_ACTIVATION_OWNER.allowedFiles) +
-    ".",
-  { label: "activate:537-03", phase: "537-03 prepare", schema: LEAF_RESULT_SCHEMA }
+const closureActivationContract = ACTIVATION_STATE_CONTRACTS["537-03-L01"];
+const closureActivationPlan = await readActivationPlan(
+  "TASK-537-03 activation",
+  closureActivationContract
 );
-requireLeafResult(closureActivation, CLOSURE_ACTIVATION_OWNER, "TASK-537-03 activation");
+if (!closureActivationPlan.active) {
+  const closureActivationOwner = createResumableActivationOwner(
+    "TASK-537-03 activation",
+    CLOSURE_ACTIVATION_OWNER,
+    closureActivationPlan
+  );
+  const closureActivation = await agent(
+    "Activate TASK-537-03/L01 at " +
+      ROOT +
+      " without touching source/tests/indexes. Complete only this validated missing activation " +
+      "prefix: " +
+      JSON.stringify(closureActivationPlan.missingOperations) +
+      ". Add an actual Started date only for a listed status transition. Do not edit already " +
+      "synchronized files; earlier leaves remain In Progress and no changelog/status closes yet. " +
+      "Return exact repo-relative touchedFiles within " +
+      JSON.stringify(closureActivationOwner.allowedFiles) +
+      ".",
+    { label: "activate:537-03", phase: "537-03 prepare", schema: LEAF_RESULT_SCHEMA }
+  );
+  requireLeafResult(closureActivation, closureActivationOwner, "TASK-537-03 activation");
+}
+await requireActiveActivationState("TASK-537-03 activation", closureActivationContract);
 const closureTests = await agent(
   COMMON +
     "\n\nFresh-read " +
@@ -1156,7 +1442,8 @@ const closureTests = await agent(
     "documentation. Do not edit production source, TASK-517, statuses, task index, changelog " +
     "file/index, or smoke evidence. Return exact repo-relative touchedFiles within " +
     JSON.stringify(CLOSURE_OWNER.allowedFiles) +
-    ". Rerun the seven named Bun suites plus the entries-client Vitest and report exact failures.",
+    ". Rerun the nine targeted Bun suites, the one security Bun suite, and the one " +
+    "entries-client Vitest (11 files total) and report exact failures.",
   { label: "prepare:537-03", phase: "537-03 prepare", schema: LEAF_RESULT_SCHEMA }
 );
 requireLeafResult(closureTests, CLOSURE_OWNER, "TASK-537 closure preparation");
@@ -1170,7 +1457,7 @@ const LENSES = [
   ["cache", "global-vs-targeted cache matrix, after-commit timing, post-commit failure truth"],
   [
     "route",
-    "locked-state content:publish guard, present-only scheduling, error mapping, strict route contract",
+    "locked-state content:publish guard, one joined RBAC snapshot and fail-closed all-of requirements, present-only scheduling, error mapping, strict route contract",
   ],
   ["tests-517", "test integrity/fixture isolation and read-only TASK-517 compatibility/blockers"],
 ];
@@ -1252,7 +1539,10 @@ const FINAL_LENSES = [
     "implementation",
     "transaction/locks/RBAC/scheduling/projections/cache behavior against final source/tests",
   ],
-  ["evidence", "validation/smoke/security claims, PNGs, cleanup and strict-scan truth"],
+  [
+    "evidence",
+    "targeted 11-file results plus full bun run test/precommit outcomes, smoke/security claims, PNGs, cleanup and strict-scan truth",
+  ],
 ];
 let finalDriftClean = false;
 for (let round = 1; round <= 2; round += 1) {
@@ -1303,34 +1593,30 @@ for (let round = 1; round <= 2; round += 1) {
   const runtimeContractChanged = finalFix.touchedFiles.some(
     (file) => file.startsWith("core/") || file.startsWith("tests/")
   );
+  fullValidation = await runFullValidation("validation:537:final-fix", "Final drift");
   if (runtimeContractChanged) {
-    fullValidation = await runFullValidation("validation:537:final-fix", "Final drift");
     ({ smoke, canonicalScreenshots } = await runSmokeCycle(
       "smoke:537:final-fix",
       "wf537smoke-finalfix",
       "Final drift",
       "Final drift"
     ));
-    const evidenceRefresh = await agent(
-      COMMON +
-        "\n\nRefresh only the provisional TASK-537 source-of-truth and task evidence " +
-        "after the validated final-drift source/test fix. Keep every status and the board row " +
-        "In Progress; do not edit source/tests/indexes, create changelog 1249, stage, or commit. " +
-        "Return exact repo-relative touchedFiles within " +
-        JSON.stringify(CLOSURE_DRAFT_OWNER.allowedFiles) +
-        ". Replacement evidence:\n" +
-        JSON.stringify({
-          validation: fullValidation,
-          smoke: { ...smoke, screenshots: canonicalScreenshots },
-        }),
-      { label: "evidence-refresh:537", phase: "Final drift", schema: LEAF_RESULT_SCHEMA }
-    );
-    requireLeafResult(
-      evidenceRefresh,
-      CLOSURE_DRAFT_OWNER,
-      "TASK-537 final-drift evidence refresh"
-    );
   }
+  const evidenceRefresh = await agent(
+    COMMON +
+      "\n\nRefresh only the provisional TASK-537 source-of-truth and task evidence " +
+      "after the validated final-drift fix. Keep every status and the board row In Progress; " +
+      "do not edit source/tests/indexes, create changelog 1249, stage, or commit. Return exact " +
+      "repo-relative touchedFiles within " +
+      JSON.stringify(CLOSURE_DRAFT_OWNER.allowedFiles) +
+      ". Replacement evidence:\n" +
+      JSON.stringify({
+        validation: fullValidation,
+        smoke: { ...smoke, screenshots: canonicalScreenshots },
+      }),
+    { label: "evidence-refresh:537", phase: "Final drift", schema: LEAF_RESULT_SCHEMA }
+  );
+  requireLeafResult(evidenceRefresh, CLOSURE_DRAFT_OWNER, "TASK-537 final-drift evidence refresh");
 }
 if (!finalDriftClean) {
   throw new Error("TASK-537 final drift did not reach a clean bounded result");
