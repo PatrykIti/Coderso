@@ -8,9 +8,10 @@
 **Category:** Taxonomy Domain / Transactions
 **Estimated Effort:** Medium
 **Dependencies:** TASK-514, TASK-541 (program order)
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-07-12
-**Changelog:** 1249 (pinned; create only at implementation closure)
+**Completed:** 2026-07-12
+**Changelog:** 1249
 
 ---
 

@@ -7,9 +7,10 @@
 **Category:** Content Entry Service / Transactions / Secret Handling
 **Estimated Effort:** Large
 **Dependencies:** TASK-537-01-L01, TASK-537-01-L02
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-07-12
-**Changelog:** 1249 (pinned; create only at implementation closure)
+**Completed:** 2026-07-12
+**Changelog:** 1249
 
 ---
 
@@ -55,8 +56,11 @@ split-snapshot authorization and the one-connection-pool deadlock without requir
 user-role commits before the joined statement starts are visible; later commits do not
 retroactively change that mutation's authorization result.
 Plaintext password exists only long
-enough to hash. Queries may compute `hasPassword` in SQL but may not materialize the
-`accessPassword` column/value in JavaScript. SEO canonical/robots domain errors map to
+enough to hash. Read/return projections may compute `hasPassword` in SQL but may not
+materialize the stored `accessPassword` column/value in JavaScript. A newly prepared
+hash may exist transiently only inside the coordinator's DB-write path (local
+preparation and write plan) and must never be returned, cached, or logged. SEO
+canonical/robots domain errors map to
 machine-readable HTTP 400 responses.
 
 ## Compatibility and land order

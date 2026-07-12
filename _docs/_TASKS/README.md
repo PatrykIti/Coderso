@@ -79,8 +79,8 @@ Task board for project work. Keep task files and this board in sync.
   exists or the family changelog records that leaf.
 
 - **To Do:** 363 tasks
-- **In Progress:** 6 tasks
-- **Done:** 3111 tasks
+- **In Progress:** 5 tasks
+- **Done:** 3112 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
 > 18 leaves) were broken down 2026-06-27. The table below lists the
@@ -98,14 +98,13 @@ Task board for project work. Keep task files and this board in sync.
 > 2026-07-09: the TASK-536–545 remediation program was authored as 10 umbrellas,
 > 43 technical children, and 74 executable leaves (127 physical tasks).
 > The table lists the umbrellas; every descendant and its status is linked from
-> the corresponding parent/child file. Changelogs 1248, 1250, and 1253 are
-> consumed by TASK-536, TASK-538, and TASK-541; 1249, 1251–1252, and 1254–1257
-> remain reserved for implementation closure only. Implement by the audited
+> the corresponding parent/child file. Changelogs 1248–1250 and 1253 are
+> consumed by TASK-536, TASK-537, TASK-538, and TASK-541; 1251–1252 and
+> 1254–1257 remain reserved for implementation closure only. Implement by the audited
 > dependency map, not numeric ID:
 > TASK-538 → TASK-536 → TASK-541 → TASK-537 → TASK-544 → TASK-543 → TASK-540 →
 > TASK-539 → TASK-542 → TASK-545. TASK-536 and TASK-538 completed on
-> 2026-07-11; TASK-541 completed on 2026-07-12; TASK-537 is in progress at
-> TASK-537-02-L01. TASK-539 and
+> 2026-07-11; TASK-541 and TASK-537 completed on 2026-07-12. TASK-539 and
 > TASK-542 must remain sequential because both own `siteShell` seams.
 
 ---
@@ -159,7 +158,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-537 | Entry Mutation Atomicity and Secret-Minimal Projections | High | Large | 🚧 In Progress (2026-07-12): taxonomy and SEO executor seams passed their gates/audits; implementing the locked atomic entry coordinator, minimal projections, route guard, and cache-after-commit. Changelog 1249 pinned. 3 children + 4 leaves. |
 | TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
@@ -171,6 +169,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-537 | Entry Mutation Atomicity and Secret-Minimal Projections | High | Large | ✅ Done (2026-07-12): one locked metadata transaction now owns entry status/revision, taxonomy, visibility/password/schedule, tags, and SEO; rejectable state is prepared before the first write; update/publish/delete use secret-minimal projections; RBAC uses one joined transaction-executor snapshot; and cache effects occur after commit. Full Bun 1,680 pass / 1 optional live skip / 0 fail, full Vitest 836 files / 6,746 tests, precommit and release gates 5/5 passed; final audits reported 0 H/M/L. Live smoke passed 6/6 canonical flows in light/dark and wide/narrow with eight screenshots, zero canonical console/page errors, and complete cleanup. Strict scan's sole residual is unchanged and TASK-545-owned. Changelog 1249. All 3 children + 4 leaves terminal. |
 | TASK-541 | Canonical CSS Color Contract | High | Very Large | ✅ Done (2026-07-12): one Bun-free parser and explicit authoring/inherited-render profiles now own the finite Admin, Menu, Form, and retained read/render color inventory. Configurable widgets remain Admin Dashboard-only; production `formRuntimeScript.ts` stayed byte-identical and no endpoint, migration, dependency, generic widget, preset, template, or module-pack entry was added. Final validation passed 55 Vitest files / 1,428 tests, 40 DB route tests / 392 expectations, core/root static checks, Admin build (2,637 modules), browser boundary (776 files), bundle budgets, and release gates 5/5; five final lenses found 0 H/M/L. The current-source corrective Flow 7 proved save/reopen, the actual accessible Runtime Preview dialog, and public Page/Form computed-color parity with zero console errors/warnings/page errors; the full history retains 21 unique valid PNGs and all fixtures, sessions, ports, and helper processes were cleaned/restored. Strict scan remains truthfully non-green only for the exact unchanged TASK-545-owned workflow finding, without suppression. Changelog 1253. All 3 children + 6 leaves terminal. |
 | TASK-538 | Custom SVG Layout Isolation | Critical | Large | ✅ Done (2026-07-11): existing Page `customSvg` now uses one immutable closed sanitizer policy, bounded safe-node conversion, no author-data raw-markup sink, trusted/clamped root geometry, clipped pointer-transparent containment, and public/preview parity. Configurable widgets remain Admin Dashboard-only; no generic widget surface was added. Final validation: lint/types pass; targeted Vitest 423/423; Page runtime 19/19 with the named TASK-538 case executed; targeted Semgrep 0; release gates 5/5; five post-audit lenses 0 H/M/L after one Low stale renderer-leaf grounded source anchor was corrected and freshly re-audited. Real builder smoke passed 6/6 in light/dark and wide/narrow with visible geometry/DOM/click assertions, zero console/page errors, six distinct screenshots, and scoped UI cleanup. Strict scan's sole residual is the unchanged TASK-545-owned workflow finding, without suppression. Changelog 1250. All 3 children + 5 leaves terminal. |
 | TASK-536 | Forms File Upload and Media Trust Boundary | Critical | Large | ✅ Done (2026-07-11): byte-owned media identity/storage and provider-neutral `nosniff` delivery; upload-before-submit with retry and ordered media IDs for existing Form blocks/sections; strict fixed-object Forms schemas; one write-rate owner; late status/access revalidation; and unknown-error redaction at both mounts. POST-M-07 aligns the hidden Widget compatibility route with canonical `legacy-maintenance`, removes provider-facing create/insert advertising, and retains exact-row update/delete/block-patch only—no non-dashboard widget surface was added. Final validation: Bun 1633 pass / 1 opt-in live skip / 0 fail; Vitest 832/832 files, 6552/6552 tests; `precommit:check` pass; release gates 5/5; task-scoped security clean; final policy/product/test-integrity audits 0 H/M/L. Real smoke: 7/7 flows, 8 screenshots, light/dark + wide/narrow, zero console errors, scoped cleanup. Strict scan's only findings remain TASK-538/TASK-545-owned without suppression. Changelog 1248. All 5 children + 9 leaves terminal; TASK-516-07 retains abandoned-upload cleanup. |

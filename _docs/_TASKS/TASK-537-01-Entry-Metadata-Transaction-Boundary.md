@@ -7,9 +7,10 @@
 **Category:** Content Entries / Transactions / Data Integrity
 **Estimated Effort:** Medium
 **Dependencies:** TASK-514, TASK-541 (program order)
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-07-12
-**Changelog:** 1249 (pinned; create only at implementation closure)
+**Completed:** 2026-07-12
+**Changelog:** 1249
 
 ---
 
@@ -34,8 +35,8 @@ as its sole writer.
 
 | Leaf | Scope | Source ownership | Status |
 |---|---|---|---|
-| TASK-537-01-L01 | Prepare/apply taxonomy assignments through caller executor | taxonomyService.ts | 🚧 In Progress — implementation/gate complete |
-| TASK-537-01-L02 | Prepare/apply SEO mutation through caller executor without cache effects | seoService.ts | 🚧 In Progress — implementation/gate complete |
+| TASK-537-01-L01 | Prepare/apply taxonomy assignments through caller executor | taxonomyService.ts | ✅ Done |
+| TASK-537-01-L02 | Prepare/apply SEO mutation through caller executor without cache effects | seoService.ts | ✅ Done |
 
 ## Shared executor contract
 

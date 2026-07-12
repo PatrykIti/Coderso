@@ -8,9 +8,10 @@
 **Category:** DB Tests / Reliability / Security / Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-537-02-L01
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-07-12
-**Changelog:** 1249 (pinned; create only at implementation closure)
+**Completed:** 2026-07-12
+**Changelog:** 1249
 
 ---
 
@@ -90,7 +91,9 @@ test cache effect matrix:
 
 test projections:
   inspect named projection keys and static/query shape;
-  assert accessPassword is absent from update/publish/delete/metadata JavaScript materialization;
+  assert stored accessPassword is absent from update/publish/delete/metadata read and
+    return projections; permit a transient freshly prepared hash only inside the
+    coordinator's DB-write path (local preparation and write plan);
   permit only the SQL-derived access_password IS NOT NULL -> hasPassword boolean;
   assert delete returns id/title, publish returns cache fields, and update has no returning.
 
@@ -163,14 +166,48 @@ The closeout must explicitly record, without editing TASK-517:
   projections, locked loader, and coordinator land;
 - its proposed `getEntryAccessPasswordHash` remains the sole raw-hash projection and
   must not be merged into the locked public/detail projection;
-- its pinned changelog `1236` is already occupied by TASK-526, while the board still
-  advertises stale `1230`; the TASK-517 owner must select a currently free pin and sync
-  its parent/children/board before implementation;
-- TASK-517 must consume the post-537 cache timing and may not reintroduce pre-commit
-  invalidation or bypass the locked mutation contract.
+- its parent and TASK-517-03 pin changelog `1236`, which is already occupied by
+  TASK-526, while the board and changelog index still reserve stale `1230`; the
+  TASK-517 owner must select a currently free pin and synchronize its parent,
+  TASK-517-03, board, and changelog index before implementation;
+- TASK-517 must consume the post-537 cache timing: its proposed memoized gated-route
+  signal must invalidate through the post-commit seam and may not reintroduce
+  pre-commit invalidation or bypass the locked mutation contract.
 
 Record those blockers in TASK-537 closeout and leave every TASK-517 file/status open for
 its future owner.
+
+## Closure Evidence
+
+- Targeted Bun closure gate: 109/109 tests, 663 assertions, 0 failures across the
+  ten task-owned runtime/service/route/security files. The named entry-service suite
+  passed 29/29 tests and 208 assertions; entries-client Vitest passed 19/19.
+- Full validation: Bun 1,680 pass / 1 optional live OpenAI skip / 0 fail across
+  261 files with 8,866 assertions; Vitest 836/836 files and 6,746/6,746 tests;
+  core lint/types, root TypeScript, formatting, `precommit:check`, and release gates
+  5/5 passed. Targeted Semgrep was clean. The strict scan's sole remaining finding is
+  the unchanged TASK-545-owned workflow-script finding; audit, Trivy, and Gitleaks were
+  clean and no allowlist/configuration changed.
+- The six canonical live flows used `coderso-dev-core-host` plus separate full
+  `playwright-cli -s=wf537smoke ...` commands, covered both themes and both wide/narrow
+  viewports, asserted visible persisted/front effects, and recorded zero console errors,
+  warnings, or page errors. Eight valid, unique PNGs were captured under
+  `_docs/_workflows/_smoke/`; all created database rows, front routes, preferences,
+  sessions, ports, and helper processes were verified cleaned or restored.
+- Non-canonical setup/debug/cleanup probes intentionally encountered the existing
+  Radix description warning or expected 4xx resource responses. They were discarded
+  before measured runs and are not represented as zero-error acceptance scenarios.
+
+| Screenshot | SHA-256 | Viewport |
+|---|---|---|
+| `task-537-wf537smoke-01-taxonomy-seo-light-wide.png` | `728fe2539a1e1a0ae41ffe81819a79c6f735113390494ce61e68385ff95fc9db` | 1440x1000 |
+| `task-537-wf537smoke-02-schedule-omit-dark-narrow.png` | `b7e230ca79ad27c70cfb1ca9004148df56d54a10541ed2b4c581faf9b7645ff6` | 390x844 |
+| `task-537-wf537smoke-03-schedule-null-reject-light-wide.png` | `4e2938ed56d35fe13f49846b8dde038b4e8f3168a3a29baaa0b4863872bcf9f3` | 1440x1000 |
+| `task-537-wf537smoke-04-password-has-password-light-wide.png` | `89a47de5d6731a1db40175832bf484a602868f1cc4181fe8011a77d6e578c4fe` | 1440x1000 |
+| `task-537-wf537smoke-04-password-public-light-wide.png` | `91cb4740ac88a10365aa8ffcdc8aae93855078de1fdb4a22d7f3f1944f5bf02b` | 1440x1000 |
+| `task-537-wf537smoke-05-publish-invalid-taxonomy-rollback-dark-narrow.png` | `75ac955b625e73c56c510c0f4a38fce3516bc7f963654df5efcf9bfee26f3b68` | 390x844 |
+| `task-537-wf537smoke-06-published-front-dark-wide.png` | `889dbc941b0776e0699c0d8e342c4363e4bf55444e65da62d9a79c0806e091f1` | 1280x720 |
+| `task-537-wf537smoke-06-unpublished-front-dark-wide.png` | `049136e4a8a375649b6e6fd05f2cb6ebcf9a23806310f363b43071451459d5a8` | 1280x720 |
 
 ## Documentation and closure
 

@@ -6,9 +6,10 @@
 **Category:** Content Entries / Data Integrity / Security / Cache
 **Estimated Effort:** Large
 **Dependencies:** TASK-514, TASK-541 (program order); must land before TASK-517
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-07-12
-**Changelog:** 1249 (pinned; create only at implementation closure)
+**Completed:** 2026-07-12
+**Changelog:** 1249
 
 ---
 
@@ -85,9 +86,9 @@ public enforcement and must be freshly audited on the post-537 tree.
 
 | ID | Title | Leaves | Status |
 |---|---|---|---|
-| TASK-537-01 | Entry metadata transaction boundary | TASK-537-01-L01, L02 | 🚧 In Progress — implementation/gates complete |
-| TASK-537-02 | Secret-minimal entry projections | TASK-537-02-L01 | 🚧 In Progress |
-| TASK-537-03 | Rollback/cache tests and closure | TASK-537-03-L01 | 🚧 In Progress |
+| TASK-537-01 | Entry metadata transaction boundary | TASK-537-01-L01, L02 | ✅ Done |
+| TASK-537-02 | Secret-minimal entry projections | TASK-537-02-L01 | ✅ Done |
+| TASK-537-03 | Rollback/cache tests and closure | TASK-537-03-L01 | ✅ Done |
 
 ## Finding coverage matrix
 
@@ -145,3 +146,52 @@ unconditionally with the non-empty all-of permission contract, empty-list fail-c
 behavior, wildcard semantics, the one joined minimal transaction-executor permission
 snapshot, and its READ COMMITTED role-change linearization. At closure create changelog
 1249 and mark all descendants done.
+
+## Completion Record
+
+- The metadata coordinator now validates rejectable state before its first write and
+  commits entry status/revision, taxonomy assignments, visibility/password/schedule,
+  tags, and SEO through one locked transaction. Taxonomy and SEO expose caller-executor
+  prepare/apply seams without nested transactions or cache effects.
+- Update, publish, delete, and metadata paths use explicit minimal projections. No
+  audited read/return projection materializes the stored `accessPassword` hash; only
+  the SQL-derived `hasPassword` signal is exposed. A freshly prepared hash exists
+  transiently only inside the coordinator's DB-write path (local preparation and write
+  plan) and is never returned, cached, or logged. Locked authorization uses one minimal
+  joined role
+  snapshot on the transaction executor, with non-empty all-of and empty fail-closed
+  semantics.
+- Cache invalidation occurs after durable commit: SEO uses one global clear, other
+  changed metadata/status uses one targeted clear, and no-op/rollback emits neither.
+  Browser cache reconciliation remains client-owned after a successful response.
+- The initial post-implementation audit found two Medium test-integrity gaps: the
+  rollback snapshot did not pin a non-null schedule/hash baseline, and the deferred
+  apply matrix did not cover both resolve/reject outcomes for taxonomy and SEO. Both
+  were corrected; three fresh final read-only lenses then reported 0 High/Medium/Low
+  findings.
+- Full validation passed: targeted Bun 109/109 tests (663 assertions), entries-client
+  Vitest 19/19, full Bun 1,680 pass / 1 optional live skip / 0 fail (8,866 assertions),
+  full Vitest 836 files / 6,746 tests, core/root static checks, `precommit:check`, and
+  all five Coderso release gates. Targeted Semgrep reported zero findings. The strict
+  scan remained non-green only for the exact unchanged TASK-545-owned finding in
+  `_docs/_workflows/task-522-author.mjs`; no scanner configuration changed.
+- Live smoke used the required dev-host helper and separate full
+  `playwright-cli -s=wf537smoke ...` commands. Six canonical entry flows covered
+  taxonomy/SEO, schedule omit/reject, password-state minimization, full rollback, and
+  publish/unpublish front parity in light/dark and wide/narrow viewports, with zero
+  console errors, warnings, or page errors. Eight distinct valid PNGs were captured and
+  every fixture, preference, browser session, listener, and helper process was cleaned
+  or restored. Setup/debug/cleanup probes that intentionally exercised existing dialog
+  warnings or expected 4xx responses were discarded before the canonical measurements
+  and are not counted as clean acceptance flows.
+
+### TASK-517 follow-on audit
+
+TASK-517 remains open and untouched. Before its implementation, its owner must add
+TASK-537 as a dependency, reground all stale `entryService.ts` anchors, keep
+`getEntryAccessPasswordHash` as the sole raw-hash projection outside
+`ENTRY_MUTATION_FIELDS`, choose a free changelog pin because its parent/517-03 files pin
+occupied 1236 while the board and changelog index still reserve stale 1230, and sync all
+four locations. Its proposed memoized gated-route signal must invalidate through
+TASK-537's post-commit cache seam; it may not reintroduce pre-commit invalidation or
+bypass the locked mutation contract.

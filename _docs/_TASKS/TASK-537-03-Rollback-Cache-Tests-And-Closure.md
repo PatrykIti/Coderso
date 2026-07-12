@@ -7,9 +7,10 @@
 **Category:** DB Tests / Cache / Documentation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-537-02
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-07-12
-**Changelog:** 1249 (pinned; create only at implementation closure)
+**Completed:** 2026-07-12
+**Changelog:** 1249
 
 ---
 
