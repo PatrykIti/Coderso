@@ -7,8 +7,9 @@
 **Category:** Posts Editor / Autosave / Reliability
 **Estimated Effort:** Medium
 **Dependencies:** TASK-544 (program land order; no shared source ownership)
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-07-13
+**Completed:** 2026-07-13
 **Reopened:** 2026-07-13 — final closure audit found that a global drain blocked unrelated posts, while a naive per-session drain allowed stale same-post overwrites
 **Changelog:** 1255
 
@@ -109,6 +110,14 @@ bunx vitest run --config vitest.config.ts \
   tests/vitest/ui/post-block-editor-shell-wave.test.tsx \
   tests/vitest/ui-integration/post-autosave-flow.test.tsx
 ~~~
+
+## Completion
+
+The final implementation scopes logical save state by route session while serializing physical
+writes by post identity. Same-post ABA writes, authoritative barriers, restoration debt, loading
+and rejected-load mutation gates, failure propagation, and idempotent Close navigation are pinned
+by the final 13-file TASK-543 matrix (159/159). Full-lane and live-browser evidence is owned by
+TASK-543-03-L01 and changelog 1255.
 
 ## Superseded pre-fix evidence
 

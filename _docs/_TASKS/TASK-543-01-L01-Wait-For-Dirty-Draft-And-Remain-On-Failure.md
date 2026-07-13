@@ -8,8 +8,9 @@
 **Category:** Posts Editor / Autosave / Reliability
 **Estimated Effort:** Medium
 **Dependencies:** TASK-543-01
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-07-13
+**Completed:** 2026-07-13
 **Reopened:** 2026-07-13 — final closure audit found that a global drain blocked unrelated posts, while a naive per-session drain allowed stale same-post overwrites
 **Changelog:** 1255
 
@@ -893,6 +894,13 @@ Re-run a named file alone before declaring a failure.
 - An older response cannot overwrite or falsely mark a newer revision saved.
 - Flush failure is observable by the shell and prevents navigation.
 - Repeated activation yields one save chain and one navigation.
+
+## Completion
+
+Implemented and regression-pinned the exact-revision queue, per-post transport ownership,
+route-session epochs, authoritative barriers, settlement generations, exact metadata restoration,
+failure-propagating retry, and zero-write clean Close. The final family matrix passed 159/159;
+TASK-543-03-L01 and changelog 1255 own the complete full-lane, gate, and live-browser proof.
 
 ## Superseded pre-fix evidence
 

@@ -7,8 +7,9 @@
 **Category:** UI Tests / Accessibility Smoke / Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-543-01, TASK-543-02
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-07-13
+**Completed:** 2026-07-13
 **Reopened:** 2026-07-13 — full validation and live smoke must be repeated after the cross-session drain fix
 **Changelog:** 1255
 
@@ -68,6 +69,15 @@ bun run precommit:check
 bun run scan:security:strict
 node --check _docs/_workflows/task-543-implement.mjs
 ~~~
+
+## Completion
+
+The final 13-file matrix passed 159/159. Fresh full lanes passed 1,687 Bun tests and
+6,880 Vitest tests (8,567 total), with one intentional opt-in live-provider skip and zero
+failures. `precommit:check`, Admin build/boundary/bundle, and release gates 5/5 passed.
+The strict scan was clean except for the exact unchanged TASK-545-owned workflow finding.
+Seven real CLI flows passed in light/dark with 11 distinct final evidence PNGs, zero console
+errors/warnings/page errors, and complete fixture/session/helper/route/port cleanup.
 
 ## Superseded pre-fix evidence
 

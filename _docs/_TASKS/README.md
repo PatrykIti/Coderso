@@ -79,8 +79,8 @@ Task board for project work. Keep task files and this board in sync.
   exists or the family changelog records that leaf.
 
 - **To Do:** 361 tasks
-- **In Progress:** 6 tasks
-- **Done:** 3113 tasks
+- **In Progress:** 5 tasks
+- **Done:** 3114 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
 > 18 leaves) were broken down 2026-06-27. The table below lists the
@@ -105,7 +105,7 @@ Task board for project work. Keep task files and this board in sync.
 > TASK-538 → TASK-536 → TASK-541 → TASK-537 → TASK-544 → TASK-543 → TASK-540 →
 > TASK-539 → TASK-542 → TASK-545. TASK-536 and TASK-538 completed on
 > 2026-07-11; TASK-541, TASK-537, and TASK-544 completed on 2026-07-12; TASK-543
-> is in final cross-session drain remediation. TASK-539 and
+> completed on 2026-07-13. TASK-539 and
 > TASK-542 must remain sequential because both own `siteShell` seams.
 
 ---
@@ -157,7 +157,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-543 | Posts Exit Safety and List Accessibility | High | Small | Reopened by final closure audit: replace the global save drain with session-scoped drain/in-flight ownership so an unresolved A0 request cannot block B/A1 Save or Close, strengthen the ABA regression, then repeat every full gate and live CLI flow before closure. TASK-543-02 remains complete. |
 | TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
@@ -169,6 +168,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-543 | Posts Exit Safety and List Accessibility | High | Small | ✅ Done (2026-07-13): Close now awaits the newest exact durable draft across route epochs, propagates save failure, preserves exact metadata restoration, and coalesces repeated navigation. Posts rows are passive; title/checkbox/actions retain native keyboard behavior and contextual names; one status/author/date copy remains visible at 390/768/900/1024 px. Final matrix 159/159; full Bun 1,687 pass / 1 intentional opt-in skip / 0 fail; full Vitest 836 files / 6,880 tests; precommit/Admin build-boundary-bundle and release gates 5/5 passed. Seven real light/dark CLI flows produced 11 distinct PNGs with zero console/page errors and complete cleanup. Strict scan's sole residual is exact, unchanged, and TASK-545-owned. No endpoint, migration, RBAC, security-contract, or widget expansion. Changelog 1255. All 3 children + 3 leaves terminal. |
 | TASK-544 | Media Folder Reliability and Error Recovery | Medium | Medium | ✅ Done (2026-07-12): exact owned PostgreSQL slug races map to the existing bounded 409; folder-list promise/cache generations are retryable and canonical; load/create/rename/reorder/delete retain visible state and immutable Retry behavior. Full Bun 1,687 pass / 1 optional live skip / 0 fail, Vitest 6,794/6,794, precommit/Admin build-boundary-bundle, and release gates 5/5 passed; final audits reported 0 H/M/L. Live smoke passed 5/5 canonical list/create/rename/reorder/delete flows in light/dark and wide/narrow with five distinct valid PNGs, zero canonical console/page errors, and complete fixture/session/process/port cleanup. Strict scan's sole residual is exact, unchanged, and TASK-545-owned. No endpoint, migration, RBAC, security-contract, or Dashboard/widget expansion. Changelog 1256. All 4 children + 4 leaves terminal. |
 | TASK-537 | Entry Mutation Atomicity and Secret-Minimal Projections | High | Large | ✅ Done (2026-07-12): one locked metadata transaction now owns entry status/revision, taxonomy, visibility/password/schedule, tags, and SEO; rejectable state is prepared before the first write; update/publish/delete use secret-minimal projections; RBAC uses one joined transaction-executor snapshot; and cache effects occur after commit. Full Bun 1,680 pass / 1 optional live skip / 0 fail, full Vitest 836 files / 6,746 tests, precommit and release gates 5/5 passed; final audits reported 0 H/M/L. Live smoke passed 6/6 canonical flows in light/dark and wide/narrow with eight screenshots, zero canonical console/page errors, and complete cleanup. Strict scan's sole residual is unchanged and TASK-545-owned. Changelog 1249. All 3 children + 4 leaves terminal. |
 | TASK-541 | Canonical CSS Color Contract | High | Very Large | ✅ Done (2026-07-12): one Bun-free parser and explicit authoring/inherited-render profiles now own the finite Admin, Menu, Form, and retained read/render color inventory. Configurable widgets remain Admin Dashboard-only; production `formRuntimeScript.ts` stayed byte-identical and no endpoint, migration, dependency, generic widget, preset, template, or module-pack entry was added. Final validation passed 55 Vitest files / 1,428 tests, 40 DB route tests / 392 expectations, core/root static checks, Admin build (2,637 modules), browser boundary (776 files), bundle budgets, and release gates 5/5; five final lenses found 0 H/M/L. The current-source corrective Flow 7 proved save/reopen, the actual accessible Runtime Preview dialog, and public Page/Form computed-color parity with zero console errors/warnings/page errors; the full history retains 21 unique valid PNGs and all fixtures, sessions, ports, and helper processes were cleaned/restored. Strict scan remains truthfully non-green only for the exact unchanged TASK-545-owned workflow finding, without suppression. Changelog 1253. All 3 children + 6 leaves terminal. |

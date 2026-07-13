@@ -5603,7 +5603,7 @@ for (const leaf of LEAVES) {
 
 phase("Cross-lane gate");
 const crossLane = await agent(
-  `Read-only TASK-543 cross-lane gate at ${ROOT}. Run the eight-suite Vitest matrix from ` +
+  `Read-only TASK-543 cross-lane gate at ${ROOT}. Run the canonical 13-file Vitest matrix from ` +
     `${TASKS}/TASK-543-03-L01-Close-Failure-Keyboard-Viewport-Flows-And-Closure.md, then ` +
     "bun --cwd core lint:types, bun --cwd core lint, and git diff --check. Do not edit. " +
     "Return pass=true only when every command exits zero.",

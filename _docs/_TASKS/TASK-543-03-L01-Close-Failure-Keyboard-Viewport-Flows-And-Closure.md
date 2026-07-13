@@ -8,8 +8,9 @@
 **Category:** UI Tests / Accessibility / Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-543-01-L01, TASK-543-02-L01
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-07-13
+**Completed:** 2026-07-13
 **Reopened:** 2026-07-13 — full validation and live smoke must be repeated after the cross-session drain fix
 **Changelog:** 1255
 
@@ -440,6 +441,27 @@ all descendants Done, close the parent, and synchronize task/changelog indexes.
 Closure agents never stage or commit. They report the exact changed paths and exact TASK-543
 commit scope to the owner. Only the owner runs `bun run precommit`, stages that reviewed
 scope, and creates one task commit after all gates, smoke, cleanup, and final audits pass.
+
+## Completion
+
+- The final 13-file matrix passed 159/159. Fresh full lanes passed 1,687 Bun tests and
+  6,880 Vitest tests (8,567 total), with one intentional opt-in live-provider skip and zero
+  failures.
+- `precommit:check`, Admin build (2,637 modules), browser boundary (776 files), bundle budgets,
+  release gates 5/5, workflow syntax, and diff checks passed. Strict security scanning was clean
+  except for the exact unchanged TASK-545-owned Semgrep finding at
+  `_docs/_workflows/task-522-author.mjs:185`; no suppression or scanner configuration changed.
+- Seven separate real `playwright-cli -s=wf543smoke --raw ...` flows passed against the exact
+  helper-hosted Admin/front pair. The failure flow proved the required autosave → base PATCH →
+  metadata PATCH retry chain followed by a separate zero-write Close. Light/dark, keyboard,
+  pending-state, request-order, and 390/768/900/1024 px visible assertions produced zero console
+  errors, warnings, or page errors.
+- The UI-created fixture was deleted and proved absent. Routes, theme, named browser session,
+  helper processes, and ports were restored or removed. Changelog 1255 records the 11 fresh,
+  distinct screenshot hashes.
+- Independent final source, evidence, and graph/docs/security audits found one stale statistics
+  count and two stale current suite-count references (parent contract and workflow). All were
+  corrected, and fresh post-fix re-audits returned 0 HIGH / 0 MEDIUM / 0 LOW.
 
 ## Superseded pre-fix evidence
 

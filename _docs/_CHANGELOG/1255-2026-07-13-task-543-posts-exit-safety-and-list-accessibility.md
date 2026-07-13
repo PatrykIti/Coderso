@@ -2,7 +2,6 @@
 
 Date: 2026-07-13
 Version: Unreleased
-Status: Draft — final closure audit found cross-session drain blocking; all validation and live-smoke evidence below is superseded until the fix is rerun
 Tasks: TASK-543, TASK-543-01, TASK-543-01-L01, TASK-543-02,
 TASK-543-02-L01, TASK-543-03, TASK-543-03-L01
 
@@ -38,12 +37,12 @@ was added.
 
 ## Validation
 
-- The final targeted matrix passed 144/144 across 13 files, including the autosave/editor
+- The final targeted matrix passed 159/159 across 13 files, including the autosave/editor
   source suites, loaded-mock and SSR fail-closed boundary suites, PostsTable/list integration,
   PageRowActions, and the shared PageTable no-regression gate.
 - Full Bun passed 1,687 tests with one intentional opt-in OpenAI live skip and zero
-  failures. Sequential full Vitest passed 836/836 files and 6,865/6,865 tests. The combined
-  executed total was 8,552 passing tests, one intentional skip, and zero failures.
+  failures. Sequential full Vitest passed 836/836 files and 6,880/6,880 tests. The combined
+  executed total was 8,567 passing tests, one intentional skip, and zero failures.
 - TypeScript, `precommit:check`, Admin build, browser-boundary check (776 files), Admin
   bundle budgets, and all five Coderso release gates passed. The Admin build emitted only
   the existing large-chunk warnings.
@@ -52,6 +51,10 @@ was added.
   non-green result was the exact unchanged Semgrep finding at
   `_docs/_workflows/task-522-author.mjs:185`, owned by TASK-545. No suppression or scanner
   configuration changed.
+- Three independent final audit lenses found one stale board-statistics count and two stale
+  current `8`-suite references (parent contract and workflow). All were corrected; fresh
+  re-audits reported 0 HIGH / 0 MEDIUM / 0 LOW across source, evidence, graph, docs, and
+  security boundaries.
 
 ## Live smoke
 
@@ -62,8 +65,9 @@ was added.
   without printing or persisting their values.
 - Seven distinct scenarios used one uniquely titled real-UI fixture: clean Close; delayed
   dirty Close with a visible pending boundary; pending B→A restoration; invalid-JSON save
-  failure with retained draft and focused Retry, exactly one Retry PATCH without
-  navigation, then a separate zero-write Close; double Close with one transport and one
+  failure with retained draft and focused Retry, then the required autosave → base PATCH →
+  metadata PATCH retry chain without navigation and a separate zero-write Close; double Close
+  with one transport and one
   replace navigation; native keyboard title/checkbox/actions behavior with a passive row;
   and responsive metadata at 390, 768, 900, and 1024 px.
 - Light and dark coverage produced zero console errors, warnings, or page errors. The one
@@ -78,17 +82,17 @@ was added.
 
 | Screenshot | SHA-256 |
 |---|---|
-| `task-543-wf543smoke-clean-final.png` | `070d66cdfae77213e370675c86d40f0e0e5e25505081820320bf4d5e146336c2` |
-| `task-543-wf543smoke-delayed-final.png` | `fdb868ce4d252d695e10fb08e8dfa13a37a3fe5ca2d89dc73847c996bad1015e` |
-| `task-543-wf543smoke-delayed-transient.png` | `9b41822de85b1c029d39b4de6567e6009efe33c022dbedfeb24faaab94d044ab` |
-| `task-543-wf543smoke-double-final.png` | `0ec5aa3c8cd2a5e348ca2c3ba75d3553b8800b27fc20100bad2405c711460bdc` |
-| `task-543-wf543smoke-double-transient.png` | `4411b4dc8731c7aec7600baa6d5f7a1c716bd5e56e13f8595b41412d6383e0b6` |
-| `task-543-wf543smoke-failure-final.png` | `2aae7a2bc7e02190869d6753915df727d6f2b5d66ce1659e8d88fc73700b8379` |
-| `task-543-wf543smoke-failure-transient.png` | `f7ed301005ea68233d19a7e45389c62f67b571c7a8cc1b6d4cf4e2898445c7f6` |
-| `task-543-wf543smoke-keyboard-final.png` | `78471d0a16b434d97cdeac9564479d845e9b587fb1408451ce1e4672c8cde373` |
-| `task-543-wf543smoke-responsive-final.png` | `d2f03aa7313fd3b3f2e4e1829b0f158ec8ae262ffef9deebf204258106581f41` |
-| `task-543-wf543smoke-revert-final.png` | `070d66cdfae77213e370675c86d40f0e0e5e25505081820320bf4d5e146336c2` |
-| `task-543-wf543smoke-revert-transient.png` | `7606cdda5ff5be461708fe2859477a7309b92bfd7ea5ac01b14ca842488380be` |
+| `task-543-wf543smoke-clean-close-final.png` | `44b4120dc4cc746945fe72fe136326f977e44bc9eba39b30b63f0c88b7dd259d` |
+| `task-543-wf543smoke-dirty-delayed-close-transient.png` | `761f617e63bf8b3e29d48cc2c4886605f90ba814e47646f576b71fb774e05911` |
+| `task-543-wf543smoke-dirty-delayed-close-final.png` | `3504eaad14bad923b0399dada9825bf7981fc5ddd8513a44b666cb302b8b35a4` |
+| `task-543-wf543smoke-pending-revert-restoration-transient.png` | `79bfd001b3b3080b1c183f9ea303ac4a35d0890f6d9a287c03a1ba6de9468002` |
+| `task-543-wf543smoke-pending-revert-restoration-final.png` | `fff91148a431939192f1e1f1aa0473630d7de5401ca16e9d829b778c0cc41937` |
+| `task-543-wf543smoke-failure-retry-transient.png` | `2b61fd8e5948c94f339c1b29856647a59efaf9a5fbaf4aec70012ddf147a4262` |
+| `task-543-wf543smoke-failure-retry-final.png` | `ba3e12a7896cd9d1b5c8a4a95d1f094f0761b1c6ce4c4ffa4db049b141ba920f` |
+| `task-543-wf543smoke-double-close-transient.png` | `1c18c43b790072c91b4ec0b85518a876b8f0b586681e80bb4319b599db5efbee` |
+| `task-543-wf543smoke-double-close-final.png` | `c1d76caa9c99a6783228f38cfe4210b6427209d75e7f923aa90a07833ef388c4` |
+| `task-543-wf543smoke-table-keyboard-final.png` | `5bb75ccdd3c0e277fdbebf687c53148a7a081a3e7f22c70d65d8950b228099ea` |
+| `task-543-wf543smoke-mid-viewport-metadata-final.png` | `a02816ab2a3cd1548d6a6d6c59d8e8ca7a0255a3ca21b0afea7d248d84b22677` |
 
 These PNGs are task-local smoke evidence, not a claim that TASK-545's future manifest
 contract already exists.

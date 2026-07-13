@@ -6,8 +6,9 @@
 **Category:** Posts / Autosave / Admin UI / Accessibility
 **Estimated Effort:** Small
 **Dependencies:** Existing Posts editor and PostsTable contracts; TASK-544 (program order)
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-07-13
+**Completed:** 2026-07-13
 **Reopened:** 2026-07-13 — final closure audit found that a global drain blocked unrelated posts, while a naive per-session drain allowed stale same-post overwrites
 **Changelog:** 1255
 
@@ -71,9 +72,9 @@ mutation boundary.
 
 | ID | Title | Leaves | Status |
 |---|---|---|---|
-| TASK-543-01 | Autosave flush before Close | TASK-543-01-L01 | 🚧 In Progress |
+| TASK-543-01 | Autosave flush before Close | TASK-543-01-L01 | ✅ Done |
 | TASK-543-02 | Posts table keyboard and metadata parity | TASK-543-02-L01 | ✅ Done |
-| TASK-543-03 | Tests, smoke, and closure | TASK-543-03-L01 | 🚧 In Progress |
+| TASK-543-03 | Tests, smoke, and closure | TASK-543-03-L01 | ✅ Done |
 
 ## Finding coverage matrix
 
@@ -91,7 +92,7 @@ mutation boundary.
 Land `543-01 → 543-02 → 543-03`, after TASK-544 and before TASK-540 in the
 audited dependency map. The autosave/editor-state/shell seam and its direct tests belong exclusively to
 543-01; PostsTable, PageRowActions, and their direct tests belong exclusively to 543-02.
-Closure reruns all eight targeted suites read-only and reopens neither source nor
+Closure reruns all 13 targeted suites read-only and reopens neither source nor
 changed-behavior tests.
 The orchestrator solely authors `_docs/_workflows/task-543-implement.mjs`; implementation
 agents do not edit workflow/task/index/changelog files.
@@ -116,6 +117,16 @@ agents do not edit workflow/task/index/changelog files.
 Update `docs/guide/coderso/post-editor-preview-revisions-and-settings.md` and
 `docs/guide/coderso/posts-list-and-creation.md`. At closure finalize draft
 changelog 1255 and close all descendants.
+
+## Completion
+
+TASK-543 is complete. Close now awaits the newest exact durable draft across same-post route
+epochs, remains in the editor on failure, and coalesces repeated activation. Posts rows are
+passive, native controls have contextual accessible names, and one status/author/date copy stays
+visible across 390/768/900/1024 px. The final matrix passed 159/159; fresh full lanes passed
+8,567 tests with one intentional opt-in skip and zero failures; static/Admin/release gates passed.
+Seven real light/dark CLI flows produced 11 distinct screenshots with zero console errors,
+warnings, or page errors and complete cleanup. Changelog 1255 contains the exact evidence.
 
 ## Superseded pre-fix evidence
 
