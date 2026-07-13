@@ -29,6 +29,8 @@ type PostEditorHeaderProps = {
   saving: boolean;
   lastSavedAt: string | null;
   onClose: () => void;
+  closePending?: boolean;
+  actionsDisabled?: boolean;
   outlineVisible: boolean;
   onToggleOutline: () => void;
   onToggleDetails: () => void;
@@ -64,6 +66,8 @@ export function PostEditorHeader({
   saving,
   lastSavedAt,
   onClose,
+  closePending = false,
+  actionsDisabled = false,
   outlineVisible,
   onToggleOutline,
   onToggleDetails,
@@ -108,11 +112,17 @@ export function PostEditorHeader({
           variant="ghost"
           size="icon"
           onClick={onClose}
+          disabled={closePending}
+          aria-busy={closePending || undefined}
           aria-label="Back to posts"
           title="Back to posts"
           data-post-editor-header-close="true"
+          data-post-editor-close-pending={closePending ? "true" : "false"}
         >
           <ArrowLeft className="h-4 w-4" />
+          {closePending ? (
+            <span className="sr-only">Saving latest changes before closing</span>
+          ) : null}
         </Button>
         <span className="text-sm font-medium">Post editor</span>
       </div>
@@ -135,7 +145,7 @@ export function PostEditorHeader({
             variant="ghost"
             size="icon-sm"
             onClick={onUndo}
-            disabled={!canUndo}
+            disabled={actionsDisabled || !canUndo}
             aria-label="Undo"
             title="Undo"
             data-post-editor-undo="true"
@@ -149,7 +159,7 @@ export function PostEditorHeader({
             variant="ghost"
             size="icon-sm"
             onClick={onRedo}
-            disabled={!canRedo}
+            disabled={actionsDisabled || !canRedo}
             aria-label="Redo"
             title="Redo"
             data-post-editor-redo="true"
@@ -171,6 +181,7 @@ export function PostEditorHeader({
               size="icon-sm"
               aria-pressed={viewportMode !== "mobile"}
               aria-label="Desktop preview"
+              disabled={actionsDisabled}
               onClick={() => onSetViewportMode("desktop")}
               className={
                 viewportMode !== "mobile" ? "bg-muted text-foreground" : "text-muted-foreground"
@@ -184,6 +195,7 @@ export function PostEditorHeader({
               size="icon-sm"
               aria-pressed={viewportMode === "mobile"}
               aria-label="Mobile preview"
+              disabled={actionsDisabled}
               onClick={() => onSetViewportMode("mobile")}
               className={
                 viewportMode === "mobile" ? "bg-muted text-foreground" : "text-muted-foreground"
@@ -202,6 +214,7 @@ export function PostEditorHeader({
           variant={inserterVisible ? "secondary" : "ghost"}
           size="icon"
           onClick={onToggleInserter}
+          disabled={actionsDisabled}
           aria-pressed={inserterVisible}
           aria-expanded={inserterVisible}
           aria-controls="post-editor-block-inserter"
@@ -219,6 +232,7 @@ export function PostEditorHeader({
           variant={outlineVisible ? "secondary" : "ghost"}
           size="icon"
           onClick={onToggleOutline}
+          disabled={actionsDisabled}
           aria-pressed={outlineVisible}
           aria-expanded={outlineVisible}
           aria-controls="post-editor-document-overview"
@@ -236,6 +250,7 @@ export function PostEditorHeader({
           variant={detailsOpen ? "secondary" : "ghost"}
           size="icon"
           onClick={onToggleDetails}
+          disabled={actionsDisabled}
           aria-pressed={detailsOpen}
           aria-expanded={detailsOpen}
           aria-controls="post-editor-details"
@@ -252,6 +267,7 @@ export function PostEditorHeader({
           variant={focusMode ? "secondary" : "ghost"}
           size="icon"
           onClick={onToggleFocusMode}
+          disabled={actionsDisabled}
           aria-pressed={focusMode}
           aria-label="Toggle full width editor"
           title="Toggle full width editor"
@@ -264,6 +280,7 @@ export function PostEditorHeader({
           variant="ghost"
           size="icon"
           onClick={onOpenRevisions}
+          disabled={actionsDisabled}
           aria-label="Open revision history"
           title="Revisions"
         >
@@ -275,6 +292,7 @@ export function PostEditorHeader({
           variant="ghost"
           size="icon"
           onClick={onOpenSettings}
+          disabled={actionsDisabled}
           aria-label="Editor settings"
           title="Editor settings"
           data-post-editor-header-settings="true"

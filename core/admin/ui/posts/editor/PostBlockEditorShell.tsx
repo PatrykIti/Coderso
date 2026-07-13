@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -69,6 +69,14 @@ const resolveTaxonomyErrorCopy = (error: unknown) => {
     return "Categories are not enabled for this post type.";
   }
   return TAXONOMY_LOAD_ERROR_COPY;
+};
+
+const isEditorIdentityChangedError = (error: unknown) =>
+  isRecord(error) && error.code === "editor_identity_changed";
+
+type CloseAttemptRecord = {
+  sessionKey: string;
+  promise: Promise<void>;
 };
 
 const resolveInitialDetailsTab = (preferences: PostEditorPreferences): PostEditorDetailsTab =>
@@ -150,12 +158,21 @@ export function PostBlockEditorShell() {
   const { navigate } = useAdminRouter();
   const editor = usePostEditorState();
   const editorPostId = editor.postId;
+  const editorSessionKey = editor.editorSessionKey;
   const editorCanonicalUrl = editor.seoDraft.canonicalUrl;
   const setEditorSeoDraft = editor.setSeoDraft;
+  const flushLatestAutosave = editor.flushLatestAutosave;
+  const publishEditorPost = editor.publish;
+  const editorStatus = editor.status;
   const focusReturn = useFocusReturn();
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const outlineButtonRef = useRef<HTMLButtonElement>(null);
   const detailsButtonRef = useRef<HTMLButtonElement>(null);
+  const retryAutosaveButtonRef = useRef<HTMLButtonElement>(null);
+  const closeAttemptRef = useRef<CloseAttemptRecord | null>(null);
+  const editorSessionKeyRef = useRef(editorSessionKey);
+  const shellMountedRef = useRef(true);
+  const focusRetryAfterCloseFailureRef = useRef<string | null>(null);
   const canonicalAutoFillRef = useRef<{ postId: string; value: string } | null>(null);
   const { preferences, initialPreferences, setPreferences, resetPreferences } =
     usePostEditorPreferences();
@@ -168,6 +185,8 @@ export function PostBlockEditorShell() {
   const [taxonomyLoading, setTaxonomyLoading] = useState(false);
   const [taxonomyError, setTaxonomyError] = useState<string | null>(null);
   const [taxonomyRetryToken, setTaxonomyRetryToken] = useState(0);
+  const [closePendingSessionKey, setClosePendingSessionKey] = useState<string | null>(null);
+  const closePending = closePendingSessionKey === editorSessionKey;
   const [initialFocusMode] = useState(() => resolveInitialFocusMode(initialPreferences));
   const [initialLayoutState] = useState(() => resolveInitialLayoutState(initialPreferences));
 
@@ -178,6 +197,70 @@ export function PostBlockEditorShell() {
     initialFocusMode,
     initialLeftRailMode: initialLayoutState.leftRailMode,
   });
+
+  useEffect(() => {
+    shellMountedRef.current = true;
+    return () => {
+      shellMountedRef.current = false;
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    editorSessionKeyRef.current = editorSessionKey;
+  }, [editorSessionKey]);
+
+  useEffect(() => {
+    const sessionKey = editorSessionKey;
+    if (
+      closePending ||
+      !editor.autosaveError ||
+      focusRetryAfterCloseFailureRef.current !== sessionKey
+    ) {
+      return;
+    }
+    focusRetryAfterCloseFailureRef.current = null;
+    retryAutosaveButtonRef.current?.focus();
+  }, [closePending, editor.autosaveError, editorSessionKey]);
+
+  const handleClose = useCallback(() => {
+    const sessionKey = editorSessionKey;
+    if (closeAttemptRef.current?.sessionKey === sessionKey) return;
+    setClosePendingSessionKey(sessionKey);
+    const closeRecord: CloseAttemptRecord = {
+      sessionKey,
+      promise: Promise.resolve(),
+    };
+    closeAttemptRef.current = closeRecord;
+    const closePromise = flushLatestAutosave()
+      .then(() => {
+        if (
+          !shellMountedRef.current ||
+          closeAttemptRef.current !== closeRecord ||
+          editorSessionKeyRef.current !== sessionKey
+        ) {
+          return;
+        }
+        navigate("/admin/posts", { replace: true });
+      })
+      .catch(() => {
+        if (
+          !shellMountedRef.current ||
+          closeAttemptRef.current !== closeRecord ||
+          editorSessionKeyRef.current !== sessionKey
+        ) {
+          return;
+        }
+        focusRetryAfterCloseFailureRef.current = sessionKey;
+      })
+      .finally(() => {
+        if (closeAttemptRef.current !== closeRecord) return;
+        closeAttemptRef.current = null;
+        if (shellMountedRef.current && editorSessionKeyRef.current === sessionKey) {
+          setClosePendingSessionKey((current) => (current === sessionKey ? null : current));
+        }
+      });
+    closeRecord.promise = closePromise;
+  }, [editorSessionKey, flushLatestAutosave, navigate]);
 
   const handleMoveToTrash = () => {
     if (editor.deletingPost) return;
@@ -394,12 +477,15 @@ export function PostBlockEditorShell() {
     }
   }, [focusReturn, handleCloseSecondarySidebar, layout]);
 
-  usePostEditorShortcuts({
-    onToggleInserter: handleToggleInserter,
-    onToggleOutline: handleToggleOutline,
-    onToggleDetails: handleToggleDetails,
-    onEscape: handleEscapePanels,
-  });
+  usePostEditorShortcuts(
+    {
+      onToggleInserter: handleToggleInserter,
+      onToggleOutline: handleToggleOutline,
+      onToggleDetails: handleToggleDetails,
+      onEscape: handleEscapePanels,
+    },
+    { enabled: editor.canMutatePost }
+  );
 
   const handleSelectBlock = useCallback(
     (id: string | null) => {
@@ -446,7 +532,7 @@ export function PostBlockEditorShell() {
         scheduledAt: editor.post?.scheduledAt ?? null,
         publishedAt: editor.post?.publishedAt ?? null,
         moveToTrashPending: editor.deletingPost,
-        onMoveToTrash: handleMoveToTrash,
+        onMoveToTrash: editor.canMutatePost ? handleMoveToTrash : undefined,
         onTitleChange: editor.setTitle,
         onSlugChange: editor.setSlug,
         onExcerptChange: editor.setExcerpt,
@@ -515,6 +601,7 @@ export function PostBlockEditorShell() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <span>{editor.autosaveError}</span>
                 <Button
+                  ref={retryAutosaveButtonRef}
                   type="button"
                   variant="outline"
                   size="sm"
@@ -530,23 +617,26 @@ export function PostBlockEditorShell() {
         </div>
       ) : null}
 
-      <PostRevisionDrawer
-        open={editor.revisionsOpen}
-        onOpenChange={editor.setRevisionsOpen}
-        revisions={editor.revisions}
-        isLoading={editor.revisionsLoading}
-        error={editor.revisionsError}
-        restoringId={editor.restoringRevisionId}
-        onRestore={(revisionId) => {
-          editor.restoreRevision(revisionId).catch(() => undefined);
-        }}
-      />
+      {editor.canMutatePost ? (
+        <PostRevisionDrawer
+          key={editor.editorSessionKey}
+          open={editor.revisionsOpen}
+          onOpenChange={editor.setRevisionsOpen}
+          revisions={editor.revisions}
+          isLoading={editor.revisionsLoading}
+          error={editor.revisionsError}
+          restoringId={editor.restoringRevisionId}
+          onRestore={(revisionId) => {
+            editor.restoreRevision(revisionId).catch(() => undefined);
+          }}
+        />
+      ) : null}
 
       {editor.loading ? (
         <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
           Loading post editor...
         </div>
-      ) : (
+      ) : editor.canMutatePost ? (
         <PostEditorCanvas
           document={editor.state.document}
           title={editor.title}
@@ -564,6 +654,10 @@ export function PostBlockEditorShell() {
           onEnsureDynamicTocBlock={editor.ensureDynamicTocBlock}
           onOpenBlockDetails={handleOpenBlockDetails}
         />
+      ) : (
+        <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
+          Post editor is unavailable.
+        </div>
       )}
 
       <RuntimePreviewDialog
@@ -571,7 +665,7 @@ export function PostBlockEditorShell() {
         onOpenChange={editor.setPreviewOpen}
         title="Runtime preview"
         subtitle="Rendered post view for current draft."
-        canPreview={Boolean(editor.postId)}
+        canPreview={editor.canMutatePost}
         previewUrl={editor.previewUrl}
         isLoading={editor.previewLoading}
         error={editor.previewError}
@@ -580,22 +674,37 @@ export function PostBlockEditorShell() {
   );
 
   const handlePublish = useCallback(() => {
-    const wasPublished = editor.status === "published";
+    const sessionKey = editorSessionKey;
+    const wasPublished = editorStatus === "published";
     const action = wasPublished ? "update" : "publish";
-    editor
-      .publish()
+    publishEditorPost()
       .then(() => {
+        if (!shellMountedRef.current || editorSessionKeyRef.current !== sessionKey) {
+          return;
+        }
         postEditorActionToasts.success(action);
       })
       .catch((error) => {
+        if (
+          !shellMountedRef.current ||
+          editorSessionKeyRef.current !== sessionKey ||
+          isEditorIdentityChangedError(error)
+        ) {
+          return;
+        }
         postEditorActionToasts.error(action, error);
       });
-  }, [editor]);
+  }, [editorSessionKey, editorStatus, publishEditorPost]);
 
   const pageActions = (
     <PostEditorActionCluster
       status={editor.status}
-      saving={editor.state.saving || editor.autosaveSaving || editor.restoringRevisionId !== null}
+      saving={
+        !editor.canMutatePost ||
+        editor.state.saving ||
+        editor.autosaveSaving ||
+        editor.restoringRevisionId !== null
+      }
       onPreview={() => {
         editor.preview().catch(() => undefined);
       }}
@@ -622,7 +731,9 @@ export function PostBlockEditorShell() {
               editor.state.saving || editor.autosaveSaving || editor.restoringRevisionId !== null
             }
             lastSavedAt={editor.lastSavedAt}
-            onClose={() => navigate("/admin/posts", { replace: true })}
+            onClose={handleClose}
+            closePending={closePending}
+            actionsDisabled={!editor.canMutatePost}
             onOpenRevisions={editor.openRevisions}
             canUndo={editor.canUndo}
             canRedo={editor.canRedo}
@@ -647,9 +758,10 @@ export function PostBlockEditorShell() {
           />
         }
         content={content}
-        secondarySidebar={secondarySidebar}
+        secondarySidebar={editor.canMutatePost ? secondarySidebar : null}
         secondarySidebarOpen={layout.secondarySidebarOpen}
         onSecondarySidebarOpenChange={(open) => {
+          if (!editor.canMutatePost) return;
           if (!open) {
             handleCloseSecondarySidebar(layout.showInserter ? "inserter" : "outline");
             return;
@@ -659,9 +771,10 @@ export function PostBlockEditorShell() {
             layout.openListView();
           }
         }}
-        detailsSidebar={detailsSidebar}
+        detailsSidebar={editor.canMutatePost ? detailsSidebar : null}
         detailsSidebarOpen={layout.detailsSidebarOpen}
         onDetailsSidebarOpenChange={(open) => {
+          if (!editor.canMutatePost) return;
           if (!open) {
             layout.closeDetails();
             focusReturn.returnFocus("details");

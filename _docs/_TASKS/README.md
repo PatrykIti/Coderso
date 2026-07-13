@@ -78,8 +78,8 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 362 tasks
-- **In Progress:** 5 tasks
+- **To Do:** 361 tasks
+- **In Progress:** 6 tasks
 - **Done:** 3113 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
@@ -98,13 +98,14 @@ Task board for project work. Keep task files and this board in sync.
 > 2026-07-09: the TASK-536–545 remediation program was authored as 10 umbrellas,
 > 43 technical children, and 74 executable leaves (127 physical tasks).
 > The table lists the umbrellas; every descendant and its status is linked from
-> the corresponding parent/child file. Changelogs 1248–1250, 1253, and 1256 are
-> consumed by TASK-536, TASK-537, TASK-538, TASK-541, and TASK-544; 1251–1252,
-> 1254–1255, and 1257 remain reserved for implementation closure only. Implement by the audited
+> the corresponding parent/child file. Changelogs 1248–1250, 1253, 1255, and 1256 are
+> consumed by TASK-536, TASK-537, TASK-538, TASK-541, TASK-543, and TASK-544; 1251–1252,
+> 1254, and 1257 remain reserved for implementation closure only. Implement by the audited
 > dependency map, not numeric ID:
 > TASK-538 → TASK-536 → TASK-541 → TASK-537 → TASK-544 → TASK-543 → TASK-540 →
 > TASK-539 → TASK-542 → TASK-545. TASK-536 and TASK-538 completed on
-> 2026-07-11; TASK-541, TASK-537, and TASK-544 completed on 2026-07-12. TASK-539 and
+> 2026-07-11; TASK-541, TASK-537, and TASK-544 completed on 2026-07-12; TASK-543
+> is in final cross-session drain remediation. TASK-539 and
 > TASK-542 must remain sequential because both own `siteShell` seams.
 
 ---
@@ -116,7 +117,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-539 | Page V2 Post-Audit Remediation II | High | Very Large | Residual Page v2 model, sanitizer, authoring, transform, renderer, responsive CSS, runtime-init, and narrow-canvas corrections after TASK-535. Changelog 1251 pinned. 8 children + 17 leaves. |
 | TASK-540 | Custom Screens Functional and Data-Integrity Remediation | High | Large | Strict Screen data/URLs/Tabs, link-only Button action, accessible runtime, dirty/cache recovery, responsive canvas, and per-user preferences. Changelog 1252 pinned. 6 children + 10 leaves. |
 | TASK-542 | Menu Determinism, Responsive Cascade, and Runtime Parity | High | Large | Strict deterministic MenuDocumentV2, complete responsive neutralizers, shared public projection/active identity, and dirty-safe revalidation. Changelog 1254 pinned. 4 children + 6 leaves. |
-| TASK-543 | Posts Exit Safety and List Accessibility | High | Small | Close awaits the latest autosave and remains on failure; PostsTable restores semantic link navigation and mid-width metadata. Changelog 1255 pinned. 3 children + 3 leaves. |
 | TASK-545 | Workflow, Smoke Evidence, and Task-Graph Integrity | High | Large | All-results guard, five-round workflow enforcement, durable hashed smoke manifests, and bounded historical graph/index repair. Changelog 1257 pinned. 4 children + 10 leaves. |
 | TASK-478 | Page Editor Inline Link And Toolbar Placement UX | Medium | Medium | Inline links are invisible/uneditable/unremovable and hijack selection (navigate on click); plus a request to dock the mark toolbar to the block side so the picker doesn't cover the text. Live-verified 2026-06-27. |
 | TASK-478-01 | Inline Link Visual Feedback | Medium | Small | Linked fragments render as a bare `<a>` (no underline/color); add token-driven link styling on canvas+front (`pageRendererV2.tsx:780`). |
@@ -157,6 +157,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-543 | Posts Exit Safety and List Accessibility | High | Small | Reopened by final closure audit: replace the global save drain with session-scoped drain/in-flight ownership so an unresolved A0 request cannot block B/A1 Save or Close, strengthen the ABA regression, then repeat every full gate and live CLI flow before closure. TASK-543-02 remains complete. |
 | TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |

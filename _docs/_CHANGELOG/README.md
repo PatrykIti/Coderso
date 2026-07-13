@@ -33,10 +33,13 @@ assistant policy coverage fix. 1229/1230/1231 are reserved (pinned) for the
 in-flight TASK-511/517/518; TASK-519 took its pinned 1232; TASK-520 took 1233.
 Changelogs 1248, 1249, 1250, 1253, and 1256 are consumed by the completed TASK-536,
 TASK-537, TASK-538, TASK-541, and TASK-544 families.
-Changelogs 1251–1252, 1254–1255, and 1257 remain reserved, respectively, for the
-implementation closure of TASK-539, TASK-540, TASK-542, TASK-543, and TASK-545.
+Changelogs 1251, 1252, 1254, 1255, and 1257 remain reserved for the implementation
+closure of TASK-539, TASK-540, TASK-542, TASK-543, and TASK-545, respectively.
 These remaining numbers are contract reservations only: do not add index
 rows or changelog files before the corresponding family is complete.
+If a completed family is reopened after its changelog draft was already authored, that draft
+may remain only with an explicit `Draft` status that supersedes its closure evidence; keep its
+index row absent until fresh reclosure validation succeeds.
 Use 1258 for the next unreserved changelog entry.
 
 | No. | Date | Title | Type |

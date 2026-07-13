@@ -8,6 +8,8 @@ type PostEditorTopBarProps = {
   saving: boolean;
   lastSavedAt: string | null;
   onClose: () => void;
+  closePending?: boolean;
+  actionsDisabled?: boolean;
   onOpenRevisions: () => void;
   onToggleInserter: () => void;
   inserterVisible: boolean;
@@ -35,6 +37,8 @@ export function PostEditorTopBar({
   saving,
   lastSavedAt,
   onClose,
+  closePending = false,
+  actionsDisabled = false,
   onOpenRevisions,
   onToggleInserter,
   inserterVisible,
@@ -62,6 +66,8 @@ export function PostEditorTopBar({
       saving={saving}
       lastSavedAt={lastSavedAt}
       onClose={onClose}
+      closePending={closePending}
+      actionsDisabled={actionsDisabled}
       onToggleOutline={onToggleOutline}
       onToggleDetails={onToggleDetails}
       onOpenRevisions={onOpenRevisions}

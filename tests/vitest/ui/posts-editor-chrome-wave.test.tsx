@@ -71,6 +71,7 @@ const chromeState = vi.hoisted(() => ({
     autosaveError: null as string | null,
     autosaveSaving: false,
     loading: false,
+    canMutatePost: true,
     title: "Post A",
     status: "draft",
     slug: "post-a",
@@ -82,6 +83,7 @@ const chromeState = vi.hoisted(() => ({
     },
     selectedBlock: null as { id: string; type: string } | null,
     postId: "post-1",
+    editorSessionKey: '["post-1",0]',
     post: {
       updatedAt: "2026-03-08T10:00:00.000Z",
       scheduledAt: null,
@@ -131,6 +133,7 @@ const chromeState = vi.hoisted(() => ({
     undo: vi.fn(),
     redo: vi.fn(),
     saveDraft: vi.fn(async () => undefined),
+    flushLatestAutosave: vi.fn(async () => undefined),
     publish: vi.fn(async () => undefined),
     preview: vi.fn(async () => undefined),
     setPreviewOpen: vi.fn(),
@@ -147,11 +150,15 @@ const chromeState = vi.hoisted(() => ({
     this.editor.error = null;
     this.editor.autosaveError = null;
     this.editor.loading = false;
+    this.editor.canMutatePost = true;
+    this.editor.editorSessionKey = '["post-1",0]';
     this.editor.status = "draft";
     this.editor.canUndo = true;
     this.editor.canRedo = true;
     this.editor.selectedBlock = null;
     this.editor.state.selectedBlockId = null;
+    this.editor.flushLatestAutosave.mockReset();
+    this.editor.flushLatestAutosave.mockResolvedValue(undefined);
     this.layout.showInserter = false;
     this.layout.showListView = false;
     this.layout.secondarySidebarOpen = true;

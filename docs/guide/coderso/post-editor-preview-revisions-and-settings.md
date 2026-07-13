@@ -28,6 +28,7 @@ In the current UI, the block editor is organized into three main working areas:
   advanced fields, and danger zone
 
 The top action bar exposes the main workflow actions:
+- `Back to posts` (the Close action)
 - `Preview`
 - `Publish`
 - `Add block`
@@ -139,6 +140,11 @@ The shell also communicates editorial state directly:
     - post-level metadata is correct,
     - runtime preview looks acceptable,
     - you are comfortable with the available revision state.
+19. Use `Back to posts` (the Close action) when you are ready to leave the editor.
+    It waits for the latest
+    draft save before returning to Posts. If that save fails, the editor stays open,
+    keeps the draft, and focuses the available `Retry now` action instead of navigating
+    away.
 
 Use this safe working order when you want the lowest chance of editorial
 mistakes:
@@ -183,6 +189,9 @@ mistakes:
 - Preview looks wrong:
   confirm you are checking the runtime preview, not the editable canvas, and
   validate the latest draft state before publishing.
+- Close leaves you in the editor with a save alert:
+  your draft is still available. Use `Retry now`, wait for the save to succeed,
+  and then activate Close again; Retry itself does not navigate away.
 - You changed the wrong thing in the inspector:
   verify whether you are on the `Post` tab or the `Block` tab.
 - An old revision looks safer than the current draft:

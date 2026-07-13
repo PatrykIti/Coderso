@@ -20,6 +20,7 @@ type PageRowActionsProps = {
   onUnpublish: () => void;
   onDelete?: () => void;
   disabled?: boolean;
+  actionLabel?: string;
 };
 
 export function PageRowActions({
@@ -31,6 +32,7 @@ export function PageRowActions({
   onUnpublish,
   onDelete,
   disabled = false,
+  actionLabel = "Page actions",
 }: PageRowActionsProps) {
   const canPublish = status !== "published";
   const canUnpublish = status === "published";
@@ -38,8 +40,8 @@ export function PageRowActions({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-sm" disabled={disabled}>
-          <MoreHorizontal className="h-4 w-4" />
+        <Button variant="ghost" size="icon-sm" disabled={disabled} aria-label={actionLabel}>
+          <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">
@@ -55,26 +57,16 @@ export function PageRowActions({
           <Copy className="h-4 w-4" />
           Duplicate
         </DropdownMenuItem>
-        <DropdownMenuItem
-          disabled={!canPublish}
-          onClick={onPublish}
-        >
+        <DropdownMenuItem disabled={!canPublish} onClick={onPublish}>
           <Upload className="h-4 w-4" />
           Publish
         </DropdownMenuItem>
-        <DropdownMenuItem
-          disabled={!canUnpublish}
-          onClick={onUnpublish}
-        >
+        <DropdownMenuItem disabled={!canUnpublish} onClick={onUnpublish}>
           <Upload className="h-4 w-4 rotate-180" />
           Unpublish
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          variant="destructive"
-          disabled={!onDelete}
-          onClick={() => onDelete?.()}
-        >
+        <DropdownMenuItem variant="destructive" disabled={!onDelete} onClick={() => onDelete?.()}>
           <Trash2 className="h-4 w-4" />
           Delete
         </DropdownMenuItem>

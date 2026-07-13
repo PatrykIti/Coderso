@@ -65,6 +65,7 @@ const postShellState = vi.hoisted(() => ({
     error: "Post editor error" as string | null,
     autosaveError: "Autosave paused" as string | null,
     loading: false,
+    canMutatePost: true,
     title: "Post A",
     status: "draft",
     hasUnsavedChanges: true,
@@ -84,6 +85,7 @@ const postShellState = vi.hoisted(() => ({
     },
     selectedBlock: { id: "block-1", type: "paragraph" } as { id: string; type: string } | null,
     postId: "post-1",
+    editorSessionKey: '["post-1",0]' as string | null,
     post: { updatedAt: "2026-03-08T10:00:00.000Z" },
     insertFocusToken: 1,
     canUndo: true,
@@ -135,7 +137,8 @@ const postShellState = vi.hoisted(() => ({
     undo: vi.fn(),
     redo: vi.fn(),
     saveDraft: vi.fn(),
-    publish: vi.fn(async () => undefined),
+    flushLatestAutosave: vi.fn<() => Promise<void>>(async () => undefined),
+    publish: vi.fn<() => Promise<void>>(async () => undefined),
     unpublish: vi.fn(),
     preview: vi.fn(async () => undefined),
     setPreviewOpen: vi.fn(),
@@ -168,6 +171,9 @@ const postShellState = vi.hoisted(() => ({
       if (key === "error") this.editor.error = "Post editor error";
       if (key === "autosaveError") this.editor.autosaveError = "Autosave paused";
       if (key === "loading") this.editor.loading = false;
+      if (key === "canMutatePost") this.editor.canMutatePost = true;
+      if (key === "postId") this.editor.postId = "post-1";
+      if (key === "editorSessionKey") this.editor.editorSessionKey = '["post-1",0]';
       if (key === "status") this.editor.status = "draft";
       if (key === "deletingPost") this.editor.deletingPost = false;
     }
@@ -176,6 +182,7 @@ const postShellState = vi.hoisted(() => ({
     };
     this.editor.moveToTrash.mockResolvedValue(true);
     this.editor.saveDraft.mockResolvedValue(undefined);
+    this.editor.flushLatestAutosave.mockResolvedValue(undefined);
     this.editor.preview.mockResolvedValue(undefined);
     this.editor.publish.mockResolvedValue(undefined);
     this.editor.restoreRevision.mockResolvedValue(undefined);
@@ -242,14 +249,24 @@ const taxonomyClientState = vi.hoisted(() => {
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 vi.mock("@/components/ui/alert", () => ({
-  Alert: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Alert: ({ children }: { children: React.ReactNode }) => <div role="alert">{children}</div>,
   AlertDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AlertTitle: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
 }));
 
 vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
-  RuntimePreviewDialog: ({ open, title }: { open: boolean; title: string }) => (
-    <div>{`${title}:${open ? "open" : "closed"}`}</div>
+  RuntimePreviewDialog: ({
+    open,
+    title,
+    canPreview,
+  }: {
+    open: boolean;
+    title: string;
+    canPreview: boolean;
+  }) => (
+    <div data-runtime-can-preview={canPreview ? "true" : "false"}>
+      {`${title}:${open ? "open" : "closed"}`}
+    </div>
   ),
 }));
 
@@ -386,13 +403,18 @@ vi.mock("../../../core/admin/ui/posts/editor/layout/PostEditorLayout", () => ({
 
 vi.mock("../../../core/admin/ui/posts/editor/PostEditorCanvas", () => ({
   PostEditorCanvas: ({
+    onTitleChange,
     onSelectBlock,
     onOpenBlockDetails,
   }: {
+    onTitleChange: (title: string) => void;
     onSelectBlock: (id: string | null) => void;
     onOpenBlockDetails: (id: string) => void;
   }) => (
     <div>
+      <button type="button" onClick={() => onTitleChange("Post A edited during Close")}>
+        edit-canvas-title
+      </button>
       <button type="button" onClick={() => onSelectBlock("block-2")}>
         select-canvas-block
       </button>
@@ -412,6 +434,8 @@ vi.mock("../../../core/admin/ui/posts/editor/PostEditorTopBar", () => ({
     onToggleDetails,
     onOpenSettings,
     onToggleFocusMode,
+    closePending,
+    actionsDisabled,
   }: {
     onClose: () => void;
     onOpenRevisions: () => void;
@@ -420,27 +444,35 @@ vi.mock("../../../core/admin/ui/posts/editor/PostEditorTopBar", () => ({
     onToggleDetails: () => void;
     onOpenSettings: () => void;
     onToggleFocusMode: () => void;
+    closePending?: boolean;
+    actionsDisabled?: boolean;
   }) => (
     <div>
-      <button type="button" onClick={onClose}>
+      <button
+        type="button"
+        onClick={onClose}
+        disabled={closePending}
+        aria-busy={closePending || undefined}
+        data-post-editor-close-pending={closePending ? "true" : "false"}
+      >
         close-editor
       </button>
-      <button type="button" onClick={onOpenRevisions}>
+      <button type="button" onClick={onOpenRevisions} disabled={actionsDisabled}>
         open-revisions
       </button>
-      <button type="button" onClick={onToggleInserter}>
+      <button type="button" onClick={onToggleInserter} disabled={actionsDisabled}>
         toggle-inserter
       </button>
-      <button type="button" onClick={onToggleOutline}>
+      <button type="button" onClick={onToggleOutline} disabled={actionsDisabled}>
         toggle-outline
       </button>
-      <button type="button" onClick={onToggleDetails}>
+      <button type="button" onClick={onToggleDetails} disabled={actionsDisabled}>
         toggle-details
       </button>
-      <button type="button" onClick={onOpenSettings}>
+      <button type="button" onClick={onOpenSettings} disabled={actionsDisabled}>
         open-settings
       </button>
-      <button type="button" onClick={onToggleFocusMode}>
+      <button type="button" onClick={onToggleFocusMode} disabled={actionsDisabled}>
         toggle-focus-mode
       </button>
     </div>
@@ -454,14 +486,31 @@ vi.mock("../../../core/admin/ui/posts/editor/PostRevisionDrawer", () => ({
   }: {
     open: boolean;
     onRestore: (revisionId: string) => void;
-  }) => (
-    <div>
-      <span>{`revisions:${open ? "open" : "closed"}`}</span>
-      <button type="button" onClick={() => onRestore("rev-1")}>
-        restore-revision
-      </button>
-    </div>
-  ),
+  }) => {
+    const [pendingRevisionId, setPendingRevisionId] = React.useState<string | null>(null);
+    return (
+      <div>
+        <span>{`revisions:${open ? "open" : "closed"}`}</span>
+        <button type="button" onClick={() => onRestore("rev-1")}>
+          restore-revision
+        </button>
+        <button type="button" onClick={() => setPendingRevisionId("rev-1")}>
+          begin-restore-confirm
+        </button>
+        {pendingRevisionId ? (
+          <button
+            type="button"
+            onClick={() => {
+              onRestore(pendingRevisionId);
+              setPendingRevisionId(null);
+            }}
+          >
+            confirm-restore-revision
+          </button>
+        ) : null}
+      </div>
+    );
+  },
 }));
 
 vi.mock("../../../core/admin/ui/posts/editor/sidebars/PostListViewSidebar", () => ({
@@ -642,6 +691,429 @@ test("PostBlockEditorShell retries autosave and emits publish success toast thro
   }
 });
 
+test("PostBlockEditorShell closes a failed blank load after a zero-write flush", async () => {
+  const { PostBlockEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
+  const previousEditorState = {
+    error: postShellState.editor.error,
+    autosaveError: postShellState.editor.autosaveError,
+    loading: postShellState.editor.loading,
+    canMutatePost: postShellState.editor.canMutatePost,
+    title: postShellState.editor.title,
+    hasUnsavedChanges: postShellState.editor.hasUnsavedChanges,
+    post: postShellState.editor.post,
+    state: postShellState.editor.state,
+    selectedBlock: postShellState.editor.selectedBlock,
+  };
+  postShellState.editor.error = "Failed to load post editor.";
+  postShellState.editor.autosaveError = null;
+  postShellState.editor.loading = false;
+  postShellState.editor.canMutatePost = false;
+  postShellState.editor.title = "";
+  postShellState.editor.hasUnsavedChanges = false;
+  postShellState.editor.post = null as never;
+  postShellState.editor.state = {
+    ...postShellState.editor.state,
+    document: {
+      ...postShellState.editor.state.document,
+      blocks: [],
+    },
+    selectedBlockId: null as never,
+    saving: false,
+  };
+  postShellState.editor.selectedBlock = null;
+  postShellState.editor.flushLatestAutosave.mockResolvedValueOnce(undefined);
+  const view = mount(<PostBlockEditorShell />);
+
+  try {
+    expect(view.container.querySelector("[role='alert']")?.textContent).toContain(
+      "Failed to load post editor."
+    );
+    expect(view.container.textContent).toContain("Edit Post");
+
+    const close = Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.textContent === "close-editor"
+    );
+    expect(close).toBeDefined();
+    expect(close?.disabled).toBe(false);
+    for (const label of ["Open runtime preview", "Save draft", "Publish post"]) {
+      expect(
+        view.container.querySelector<HTMLButtonElement>(`button[aria-label='${label}']`)?.disabled
+      ).toBe(true);
+    }
+    expect(
+      Array.from(view.container.querySelectorAll("button")).find(
+        (button) => button.textContent === "open-revisions"
+      )?.disabled
+    ).toBe(true);
+    expect(view.container.textContent).toContain("Post editor is unavailable.");
+    expect(view.container.textContent).toContain("Runtime preview:open");
+    expect(
+      view.container
+        .querySelector("[data-runtime-can-preview]")
+        ?.getAttribute("data-runtime-can-preview")
+    ).toBe("false");
+
+    await React.act(async () => {
+      close?.click();
+      close?.click();
+      await flushMicrotasks();
+    });
+
+    expect(postShellState.editor.flushLatestAutosave).toHaveBeenCalledTimes(1);
+    expect(postShellState.editor.saveDraft).not.toHaveBeenCalled();
+    expect(postShellState.navigate).toHaveBeenCalledTimes(1);
+    expect(postShellState.navigate).toHaveBeenCalledWith("/admin/posts", {
+      replace: true,
+    });
+  } finally {
+    view.cleanup();
+    Object.assign(postShellState.editor, previousEditorState);
+  }
+});
+
+test("PostBlockEditorShell closes a missing-ID route through one zero-write flush", async () => {
+  const { PostBlockEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
+  postShellState.editor.postId = null as never;
+  postShellState.editor.editorSessionKey = "[null,9]";
+  postShellState.editor.post = null as never;
+  postShellState.editor.loading = false;
+  postShellState.editor.canMutatePost = false;
+  postShellState.editor.error = "Post ID is missing.";
+  postShellState.editor.autosaveError = null;
+  postShellState.editor.flushLatestAutosave.mockResolvedValueOnce(undefined);
+  const view = mount(<PostBlockEditorShell />);
+
+  try {
+    const close = Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.textContent === "close-editor"
+    );
+    expect(close?.disabled).toBe(false);
+    await React.act(async () => {
+      close?.click();
+      close?.click();
+      await flushMicrotasks();
+    });
+    expect(postShellState.editor.flushLatestAutosave).toHaveBeenCalledTimes(1);
+    expect(postShellState.navigate).toHaveBeenCalledTimes(1);
+    expect(postShellState.navigate).toHaveBeenCalledWith("/admin/posts", {
+      replace: true,
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostBlockEditorShell coalesces Close, waits for flush, and focuses Retry on failure", async () => {
+  const { PostBlockEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
+  postShellState.editor.error = null;
+  postShellState.editor.autosaveError = null;
+  let rejectFlush: (error: unknown) => void = () => undefined;
+  postShellState.editor.flushLatestAutosave.mockImplementationOnce(
+    () =>
+      new Promise<void>((_resolve, reject) => {
+        rejectFlush = (error) => {
+          postShellState.editor.autosaveError = "Failed to save latest changes before closing.";
+          reject(error);
+        };
+      })
+  );
+  const view = mount(<PostBlockEditorShell />);
+
+  try {
+    const close = Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.textContent === "close-editor"
+    );
+    await React.act(async () => {
+      close?.click();
+      close?.click();
+      await flushMicrotasks();
+    });
+
+    expect(postShellState.editor.flushLatestAutosave).toHaveBeenCalledTimes(1);
+    expect(postShellState.navigate).not.toHaveBeenCalled();
+    expect(close?.disabled).toBe(true);
+    expect(close?.getAttribute("aria-busy")).toBe("true");
+    expect(close?.getAttribute("data-post-editor-close-pending")).toBe("true");
+    const editTitle = Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.textContent === "edit-canvas-title"
+    );
+    expect(editTitle?.disabled).toBe(false);
+    await React.act(async () => {
+      editTitle?.click();
+      await flushMicrotasks();
+    });
+    expect(postShellState.editor.setTitle).toHaveBeenCalledWith("Post A edited during Close");
+
+    await React.act(async () => {
+      rejectFlush(new Error("save rejected"));
+      await flushMicrotasks();
+    });
+
+    expect(postShellState.navigate).not.toHaveBeenCalled();
+    expect(close?.disabled).toBe(false);
+    const alert = view.container.querySelector("[role='alert']");
+    const retry = Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Retry now"
+    );
+    expect(alert?.textContent).toContain("Failed to save latest changes before closing.");
+    expect(retry).toBeDefined();
+    expect(document.activeElement?.textContent).toContain("Retry now");
+
+    await React.act(async () => {
+      retry?.click();
+      await flushMicrotasks();
+    });
+    expect(postShellState.editor.saveDraft).toHaveBeenCalledTimes(1);
+
+    postShellState.editor.autosaveError = null;
+    view.rerender(<PostBlockEditorShell />);
+    const retryClose = Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.textContent === "close-editor"
+    );
+    await React.act(async () => {
+      retryClose?.click();
+      await flushMicrotasks();
+    });
+    expect(postShellState.editor.flushLatestAutosave).toHaveBeenCalledTimes(2);
+    expect(postShellState.navigate).toHaveBeenCalledTimes(1);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostBlockEditorShell navigates once after Close flush and ignores late unmount resolution", async () => {
+  const { PostBlockEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
+  let resolveFlush: () => void = () => undefined;
+  postShellState.editor.flushLatestAutosave.mockImplementation(
+    () =>
+      new Promise<void>((resolve) => {
+        resolveFlush = resolve;
+      })
+  );
+  const completedView = mount(<PostBlockEditorShell />);
+  const completedClose = Array.from(completedView.container.querySelectorAll("button")).find(
+    (button) => button.textContent === "close-editor"
+  );
+  try {
+    await React.act(async () => {
+      completedClose?.click();
+      resolveFlush();
+      await flushMicrotasks();
+    });
+    expect(postShellState.navigate).toHaveBeenCalledTimes(1);
+  } finally {
+    completedView.cleanup();
+  }
+
+  postShellState.navigate.mockClear();
+  postShellState.editor.flushLatestAutosave.mockReset();
+  postShellState.editor.flushLatestAutosave.mockImplementation(
+    () =>
+      new Promise<void>((resolve) => {
+        resolveFlush = resolve;
+      })
+  );
+  const unmountedView = mount(<PostBlockEditorShell />);
+  const unmountedClose = Array.from(unmountedView.container.querySelectorAll("button")).find(
+    (button) => button.textContent === "close-editor"
+  );
+  await React.act(async () => {
+    unmountedClose?.click();
+    await flushMicrotasks();
+  });
+  unmountedView.cleanup();
+  await React.act(async () => {
+    resolveFlush();
+    await flushMicrotasks();
+  });
+  expect(postShellState.navigate).not.toHaveBeenCalled();
+});
+
+test("PostBlockEditorShell commits B session before late A Close settles", async () => {
+  const { PostBlockEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
+  let rejectCloseA: (error: unknown) => void = () => undefined;
+  let resolveCloseB: () => void = () => undefined;
+  const closeA = new Promise<void>((_resolve, reject) => {
+    rejectCloseA = reject;
+  });
+  const closeB = new Promise<void>((resolve) => {
+    resolveCloseB = resolve;
+  });
+  postShellState.editor.error = null;
+  postShellState.editor.autosaveError = null;
+  postShellState.editor.flushLatestAutosave
+    .mockImplementationOnce(() => closeA)
+    .mockImplementationOnce(() => closeB);
+  const view = mount(<PostBlockEditorShell />);
+  const findButton = (label: string) =>
+    Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.textContent === label
+    );
+
+  try {
+    React.act(() => findButton("close-editor")?.click());
+    postShellState.editor.editorSessionKey = '["post-2",1]';
+    postShellState.editor.postId = "post-2";
+    view.rerender(<PostBlockEditorShell />);
+    postShellState.editor.autosaveError = "late A failure";
+    await React.act(async () => {
+      rejectCloseA(new Error("late A failure"));
+      await flushMicrotasks();
+    });
+    view.rerender(<PostBlockEditorShell />);
+    expect(postShellState.navigate).not.toHaveBeenCalled();
+    expect(findButton("close-editor")?.disabled).toBe(false);
+    expect(document.activeElement).not.toBe(findButton("Retry now"));
+
+    postShellState.editor.autosaveError = null;
+    view.rerender(<PostBlockEditorShell />);
+    React.act(() => findButton("close-editor")?.click());
+    expect(findButton("close-editor")?.disabled).toBe(true);
+    await React.act(async () => {
+      resolveCloseB();
+      await flushMicrotasks();
+    });
+    expect(postShellState.navigate).toHaveBeenCalledTimes(1);
+    expect(findButton("close-editor")?.disabled).toBe(false);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostBlockEditorShell scopes pending Close work to the exact A-to-B-to-A session", async () => {
+  const { PostBlockEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
+  const createPendingClose = () => {
+    let resolve: () => void = () => undefined;
+    let reject: (error: unknown) => void = () => undefined;
+    const promise = new Promise<void>((resolvePromise, rejectPromise) => {
+      resolve = resolvePromise;
+      reject = rejectPromise;
+    });
+    return { promise, resolve, reject };
+  };
+  const closeA0 = createPendingClose();
+  const closeB = createPendingClose();
+  const closeA1 = createPendingClose();
+  postShellState.editor.error = null;
+  postShellState.editor.autosaveError = null;
+  postShellState.editor.flushLatestAutosave
+    .mockImplementationOnce(() => closeA0.promise)
+    .mockImplementationOnce(() => closeB.promise)
+    .mockImplementationOnce(() => closeA1.promise);
+  const view = mount(<PostBlockEditorShell />);
+  const findClose = () =>
+    Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.textContent === "close-editor"
+    );
+
+  try {
+    await React.act(async () => {
+      findClose()?.click();
+      await flushMicrotasks();
+    });
+    expect(findClose()?.disabled).toBe(true);
+
+    postShellState.editor.editorSessionKey = '["post-2",1]';
+    postShellState.editor.postId = "post-2";
+    view.rerender(<PostBlockEditorShell />);
+    expect(findClose()?.disabled).toBe(false);
+    await React.act(async () => {
+      findClose()?.click();
+      await flushMicrotasks();
+    });
+    expect(findClose()?.disabled).toBe(true);
+
+    postShellState.editor.editorSessionKey = '["post-1",2]';
+    postShellState.editor.postId = "post-1";
+    view.rerender(<PostBlockEditorShell />);
+    expect(findClose()?.disabled).toBe(false);
+    await React.act(async () => {
+      findClose()?.click();
+      await flushMicrotasks();
+    });
+    expect(postShellState.editor.flushLatestAutosave).toHaveBeenCalledTimes(3);
+    expect(findClose()?.disabled).toBe(true);
+
+    postShellState.editor.autosaveError = "stale A0 failure";
+    await React.act(async () => {
+      closeA0.reject(new Error("stale A0 failure"));
+      await flushMicrotasks();
+    });
+    view.rerender(<PostBlockEditorShell />);
+    expect(postShellState.navigate).not.toHaveBeenCalled();
+    expect(findClose()?.disabled).toBe(true);
+    expect(document.activeElement).not.toBe(
+      Array.from(view.container.querySelectorAll("button")).find(
+        (button) => button.textContent === "Retry now"
+      )
+    );
+
+    await React.act(async () => {
+      closeB.resolve();
+      await flushMicrotasks();
+    });
+    expect(postShellState.navigate).not.toHaveBeenCalled();
+    expect(findClose()?.disabled).toBe(true);
+
+    postShellState.editor.autosaveError = null;
+    view.rerender(<PostBlockEditorShell />);
+    await React.act(async () => {
+      closeA1.resolve();
+      await flushMicrotasks();
+    });
+    expect(postShellState.navigate).toHaveBeenCalledTimes(1);
+    expect(findClose()?.disabled).toBe(false);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostBlockEditorShell unmounts revision confirmation across loading and ABA sessions", async () => {
+  const { PostBlockEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
+  postShellState.editor.error = null;
+  postShellState.editor.autosaveError = null;
+  const view = mount(<PostBlockEditorShell />);
+  const findButton = (label: string) =>
+    Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.textContent === label
+    );
+
+  try {
+    React.act(() => findButton("begin-restore-confirm")?.click());
+    expect(findButton("confirm-restore-revision")).toBeDefined();
+
+    postShellState.editor.editorSessionKey = '["post-2",1]';
+    postShellState.editor.postId = "post-2";
+    postShellState.editor.loading = true;
+    postShellState.editor.canMutatePost = false;
+    view.rerender(<PostBlockEditorShell />);
+    expect(findButton("confirm-restore-revision")).toBeUndefined();
+    expect(findButton("begin-restore-confirm")).toBeUndefined();
+
+    postShellState.editor.loading = false;
+    postShellState.editor.canMutatePost = true;
+    view.rerender(<PostBlockEditorShell />);
+    expect(findButton("confirm-restore-revision")).toBeUndefined();
+    React.act(() => findButton("begin-restore-confirm")?.click());
+    expect(findButton("confirm-restore-revision")).toBeDefined();
+
+    postShellState.editor.editorSessionKey = '["post-1",2]';
+    postShellState.editor.postId = "post-1";
+    view.rerender(<PostBlockEditorShell />);
+    expect(findButton("confirm-restore-revision")).toBeUndefined();
+    expect(postShellState.editor.restoreRevision).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PostBlockEditorShell emits update success and bounded failure toasts", async () => {
   const { ApiClientError } = await import("../../../core/admin/services/apiClient");
   const { PostBlockEditorShell } =
@@ -683,6 +1155,66 @@ test("PostBlockEditorShell emits update success and bounded failure toasts", asy
     expect(toastState.success).not.toHaveBeenCalled();
   } finally {
     failureView.cleanup();
+  }
+});
+
+test("PostBlockEditorShell suppresses stale and identity-changed publish toasts", async () => {
+  const { PostBlockEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
+  let resolveOldSuccess: () => void = () => undefined;
+  let rejectOldFailure: (error: unknown) => void = () => undefined;
+  const oldSuccess = new Promise<void>((resolve) => {
+    resolveOldSuccess = resolve;
+  });
+  const oldFailure = new Promise<void>((_resolve, reject) => {
+    rejectOldFailure = reject;
+  });
+  postShellState.editor.error = null;
+  postShellState.editor.autosaveError = null;
+  postShellState.editor.publish
+    .mockImplementationOnce(() => oldSuccess)
+    .mockImplementationOnce(() => oldFailure)
+    .mockRejectedValueOnce(
+      Object.assign(new Error("stale editor"), {
+        code: "editor_identity_changed",
+      })
+    );
+  const view = mount(<PostBlockEditorShell />);
+  const publishButton = () =>
+    view.container.querySelector<HTMLButtonElement>("button[aria-label='Publish post']");
+
+  try {
+    React.act(() => publishButton()?.click());
+    postShellState.editor.editorSessionKey = '["post-2",1]';
+    postShellState.editor.postId = "post-2";
+    view.rerender(<PostBlockEditorShell />);
+    await React.act(async () => {
+      resolveOldSuccess();
+      await flushMicrotasks();
+    });
+    expect(toastState.success).not.toHaveBeenCalled();
+    expect(toastState.error).not.toHaveBeenCalled();
+
+    React.act(() => publishButton()?.click());
+    postShellState.editor.editorSessionKey = '["post-1",2]';
+    postShellState.editor.postId = "post-1";
+    view.rerender(<PostBlockEditorShell />);
+    await React.act(async () => {
+      rejectOldFailure(new Error("old B publish failed"));
+      await flushMicrotasks();
+    });
+    expect(toastState.success).not.toHaveBeenCalled();
+    expect(toastState.error).not.toHaveBeenCalled();
+
+    await React.act(async () => {
+      publishButton()?.click();
+      await flushMicrotasks();
+    });
+    expect(toastState.success).not.toHaveBeenCalled();
+    expect(toastState.error).not.toHaveBeenCalled();
+    expect(postShellState.editor.publish).toHaveBeenCalledTimes(3);
+  } finally {
+    view.cleanup();
   }
 });
 
@@ -785,7 +1317,7 @@ test("PostBlockEditorShell handles move-to-trash confirm flow and list-view inte
   }
 });
 
-test("PostBlockEditorShell handles loading shell, details reopen, and cancelled trash flow", async () => {
+test("PostBlockEditorShell keeps Close enabled and every editor mutation disabled while loading", async () => {
   const { PostBlockEditorShell } =
     await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
 
@@ -794,6 +1326,7 @@ test("PostBlockEditorShell handles loading shell, details reopen, and cancelled 
   postShellState.layout.showInserter = false;
   postShellState.layout.showListView = false;
   postShellState.editor.loading = true;
+  postShellState.editor.canMutatePost = false;
   postShellState.editor.error = null;
   postShellState.editor.autosaveError = null;
   postShellState.editor.selectedBlock = null;
@@ -812,15 +1345,27 @@ test("PostBlockEditorShell handles loading shell, details reopen, and cancelled 
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
+    const close = buttons.find((button) => button.textContent === "close-editor");
+    const revisions = buttons.find((button) => button.textContent === "open-revisions");
+    const details = buttons.find((button) => button.textContent === "toggle-details");
+    expect(close?.disabled).toBe(false);
+    expect(revisions?.disabled).toBe(true);
+    expect(details?.disabled).toBe(true);
+    expect(
+      buttons.find((button) => button.getAttribute("aria-label") === "Open runtime preview")
+        ?.disabled
+    ).toBe(true);
+    expect(buttons.find((button) => button.textContent === "move-to-trash")).toBeUndefined();
+
     React.act(() => {
       buttons.find((button) => button.textContent === "toggle-details")?.click();
       buttons.find((button) => button.textContent === "open-secondary-shell")?.click();
       buttons.find((button) => button.textContent === "move-to-trash")?.click();
     });
 
-    expect(postShellState.layout.openDetailsForSelection).toHaveBeenCalledWith(false);
-    expect(postShellState.layout.setLeftRailMode).toHaveBeenCalledWith("blocks");
-    expect(postShellState.layout.openListView).toHaveBeenCalled();
+    expect(postShellState.layout.openDetailsForSelection).not.toHaveBeenCalled();
+    expect(postShellState.layout.setLeftRailMode).not.toHaveBeenCalled();
+    expect(postShellState.layout.openListView).not.toHaveBeenCalled();
     expect(postShellState.editor.moveToTrash).not.toHaveBeenCalled();
   } finally {
     view.cleanup();

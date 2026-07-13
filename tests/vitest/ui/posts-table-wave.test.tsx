@@ -11,8 +11,7 @@ import { PostsTable } from "../../../core/admin/ui/posts/PostsTable";
 vi.mock("@/components/ui/table", () => ({
   Table: ({ children }: { children: React.ReactNode }) => <table>{children}</table>,
   TableBody: ({ children }: { children: React.ReactNode }) => <tbody>{children}</tbody>,
-  // TASK-497-01: forward className + onClick so the restyle (quiet header, soft shadow,
-  // whole-row click, stopPropagation cells) can be asserted.
+  // Forward structural props so passive-row and responsive contracts can be asserted.
   TableCell: ({
     children,
     colSpan,
@@ -34,19 +33,7 @@ vi.mock("@/components/ui/table", () => ({
   TableHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <thead className={className}>{children}</thead>
   ),
-  TableRow: ({
-    children,
-    className,
-    onClick,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    onClick?: (event: React.MouseEvent) => void;
-  }) => (
-    <tr className={className} onClick={onClick}>
-      {children}
-    </tr>
-  ),
+  TableRow: ({ children, ...props }: React.ComponentProps<"tr">) => <tr {...props}>{children}</tr>,
 }));
 
 vi.mock("@/components/ui/badge", () => ({
@@ -84,13 +71,15 @@ vi.mock("@/ui/shared/AdminLink", () => ({
   AdminLink: ({
     children,
     href,
+    prefetch,
     "aria-label": ariaLabel,
   }: {
     children: React.ReactNode;
     href: string;
+    prefetch?: boolean;
     "aria-label"?: string;
   }) => (
-    <a href={href} aria-label={ariaLabel}>
+    <a href={href} aria-label={ariaLabel} data-prefetch={String(Boolean(prefetch))}>
       {children}
     </a>
   ),
@@ -105,6 +94,7 @@ vi.mock("../../../core/admin/ui/pages/PageRowActions", () => ({
     onUnpublish,
     onDuplicate,
     onDelete,
+    actionLabel,
   }: {
     status: string;
     onEdit: () => void;
@@ -113,8 +103,13 @@ vi.mock("../../../core/admin/ui/pages/PageRowActions", () => ({
     onUnpublish: () => void;
     onDuplicate: () => void;
     onDelete?: () => void;
+    actionLabel?: string;
   }) => (
-    <div data-status={status} data-has-delete={String(Boolean(onDelete))}>
+    <div
+      data-status={status}
+      data-has-delete={String(Boolean(onDelete))}
+      data-action-label={actionLabel}
+    >
       <button type="button" onClick={onEdit}>
         edit-post
       </button>
@@ -282,7 +277,31 @@ test("PostsTable renders lean columns, first-name author, and forwards row actio
 
   try {
     expect(view.container.querySelector("[data-has-delete='true']")).toBeTruthy();
-    expect(view.container.querySelector("a")?.getAttribute("href")).toBe("/posts/post-1");
+    const titleLink = view.container.querySelector("a");
+    expect(titleLink?.getAttribute("href")).toBe("/posts/post-1");
+    expect(titleLink?.getAttribute("data-prefetch")).toBe("true");
+    expect(titleLink?.getAttribute("aria-label")).toBe("Edit post: Launch");
+    expect(
+      view.container.querySelector("[data-action-label]")?.getAttribute("data-action-label")
+    ).toBe("Actions for Launch");
+
+    const fallbackMetadata = view.container.querySelector("[data-post-row-metadata='fallback']");
+    const fallbackStatus = view.container.querySelector("[data-post-row-status-fallback='true']");
+    expect(fallbackMetadata?.className).toContain("lg:hidden");
+    expect(fallbackMetadata?.className).not.toContain("md:hidden");
+    expect(fallbackStatus?.className).toBe("md:hidden");
+    expect(fallbackMetadata?.children[2]?.className).toBe("");
+    expect(fallbackMetadata?.querySelector("time")?.className).toBe("");
+    expect(fallbackMetadata?.querySelector("time")?.getAttribute("datetime")).toBe(
+      post.publishedAt
+    );
+    const separators = Array.from(fallbackMetadata?.querySelectorAll("[aria-hidden='true']") ?? []);
+    expect(separators).toHaveLength(2);
+
+    const bodyCells = Array.from(view.container.querySelectorAll("tbody td"));
+    expect(bodyCells[2]?.className).toBe("hidden md:table-cell");
+    expect(bodyCells[3]?.className).toBe("hidden lg:table-cell");
+    expect(bodyCells[4]?.className).toBe("hidden text-sm text-muted-foreground lg:table-cell");
     // TASK-497-01: tags column dropped; author cell shows first name only (Avatar initials
     // still derive from the full name).
     expect(view.container.textContent).toContain("Admin");
@@ -478,16 +497,20 @@ test("PostsTable renders a quiet header on a soft-shadow container with lean col
     );
     expect(slug?.textContent).toBe("launch");
 
-    // A9: whole row is clickable.
-    expect(view.container.querySelector("tbody tr")?.className ?? "").toContain("cursor-pointer");
+    const dataRow = view.container.querySelector("tbody tr");
+    expect(dataRow?.className ?? "").not.toContain("cursor-pointer");
+    expect(dataRow?.getAttribute("role")).toBeNull();
+    expect(dataRow?.getAttribute("tabindex")).toBeNull();
+    expect(dataRow?.getAttribute("onclick")).toBeNull();
   } finally {
     view.cleanup();
   }
 });
 
-test("PostsTable navigates on whole-row click and stops propagation on checkbox + actions cells", () => {
+test("PostsTable keeps the row passive and isolates checkbox and action callbacks", () => {
   const onEdit = vi.fn();
   const onTogglePost = vi.fn();
+  const onPreview = vi.fn();
   const post = {
     id: "post-1",
     title: "Launch",
@@ -504,7 +527,7 @@ test("PostsTable navigates on whole-row click and stops propagation on checkbox 
       items={[post] as never}
       onTogglePost={onTogglePost}
       onEdit={onEdit}
-      onPreview={() => undefined}
+      onPreview={onPreview}
       onPublish={() => undefined}
       onUnpublish={() => undefined}
       onDuplicate={() => undefined}
@@ -513,16 +536,14 @@ test("PostsTable navigates on whole-row click and stops propagation on checkbox 
   );
 
   try {
-    // A9: clicking the row reuses the existing onEdit navigation.
     const dataRow = view.container.querySelector("tbody tr");
     React.act(() => {
       dataRow?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      dataRow?.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Enter" }));
+      dataRow?.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: " " }));
     });
-    expect(onEdit).toHaveBeenCalledWith("post-1");
+    expect(onEdit).not.toHaveBeenCalled();
 
-    onEdit.mockClear();
-
-    // checkbox cell stopPropagation: toggles selection without firing row nav.
     const checkbox = view.container.querySelector('input[aria-label="Select Launch"]');
     React.act(() => {
       (checkbox as HTMLInputElement).click();
@@ -530,8 +551,8 @@ test("PostsTable navigates on whole-row click and stops propagation on checkbox 
     expect(onTogglePost).toHaveBeenCalledWith("post-1");
     expect(onEdit).not.toHaveBeenCalled();
 
-    // actions cell stopPropagation: a row action does not fire row nav.
     clickByText(view.container, "preview-post");
+    expect(onPreview).toHaveBeenCalledWith("post-1");
     expect(onEdit).not.toHaveBeenCalled();
   } finally {
     view.cleanup();

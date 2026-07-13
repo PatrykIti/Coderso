@@ -20,9 +20,9 @@ editor, and start a new post from the `Create New Post` drawer.
 
 In the current UI, this surface includes:
 - a list header with `Posts` and a short editorial description,
-- a primary action `Create New Post`,
+- a primary action `New post`,
 - status and author filters,
-- a posts table with title, status, author, categories/tags, and actions,
+- a posts table with title, status, author, published date, and actions,
 - a create drawer with title, slug, and `Open in editor after create`.
 
 # Medium
@@ -44,10 +44,15 @@ The key parts of the screen are:
 - filters:
   title search, `Status`, `Author`
 - table columns:
-  `Post title`, `Status`, `Author`, `Categories/Tags`, `Published`, `Updated`,
-  `Actions`
+  `Title`, `Status`, `Author`, `Published`, `Actions`
 - row actions:
   edit, preview, duplicate, publish, unpublish, delete
+
+The row itself is not a navigation control, so clicking blank row space does not open
+the editor. Use the post-title link or the explicit `Edit` row action; the checkbox and
+actions button keep their own native keyboard and pointer behavior. On mid-width
+layouts, author and published/date context remains visible below the title until the
+dedicated large-screen columns take over.
 
 # Instruction
 
@@ -58,12 +63,12 @@ The key parts of the screen are:
    - slug shown under the title,
    - status badge,
    - author,
-   - categories/tags,
-   - published and updated dates when visible.
+   - published date when visible.
 3. Use the search field when you know part of the post title or slug.
 4. Use `Status` if you want to isolate drafts or published posts.
 5. Use `Author` if you want to narrow the list to one editor’s work.
-6. Open a post for editing by clicking its title.
+6. Open a post for editing by clicking or keyboard-activating its title link.
+   Clicking empty row space does not navigate.
 7. Use the row actions menu when you need a fast operation without first
    entering the full editor:
    - `Edit`
@@ -72,7 +77,7 @@ The key parts of the screen are:
    - `Publish`
    - `Unpublish`
    - `Delete`
-8. To create a new post, click `Create New Post`.
+8. To create a new post, click `New post`.
 9. In the create drawer, fill the fields in this order:
    - `Post title`
    - `Slug`
@@ -101,9 +106,8 @@ Use this safe list workflow when you want the least friction:
 - Use duplication when a new article should inherit an existing writing
   structure or content scaffold. Use create when you want a clean editorial
   shell.
-- Categories and tags in the list are for quick visibility, not deep taxonomy
-  strategy work. If categorization becomes confusing, resolve it in the editor
-  and your editorial process rather than overloading the list screen.
+- Categories and tags are managed in the editor rather than displayed in the
+  Posts list. Resolve taxonomy there as part of the editorial workflow.
 - Publishing from the list is operationally fast, but the editor remains the
   safer place for release decisions when content, preview, and revision context
   matter.
@@ -112,6 +116,9 @@ Use this safe list workflow when you want the least friction:
 
 - You cannot find a post:
   clear the search field first, then reset `Status` and `Author` to `All`.
+- Clicking blank space in a post row does nothing:
+  this is intentional. Use the title link to open the editor, the checkbox to
+  select the row, or the named actions button for row operations.
 - The post exists but is not in the current result set:
   check whether it is filtered out by status or author.
 - You created a post but did not land in the editor:
@@ -129,9 +136,9 @@ Use this safe list workflow when you want the least friction:
 - Choose search vs filter:
   use search for known title/slug fragments; use filters for state- or
   owner-based review.
-- Choose click title vs row action:
-  click the title for full editorial work; use row actions for fast operational
-  actions.
+- Choose title link vs row action:
+  use the title link for full editorial work; use row actions for fast
+  operational actions. The surrounding row is intentionally passive.
 - Choose create vs duplicate:
   create for a clean editorial shell; duplicate when you want a reusable
   structure or content pattern.
