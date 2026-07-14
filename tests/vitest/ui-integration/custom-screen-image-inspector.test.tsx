@@ -5,6 +5,9 @@
 // onPatchBlockData, and the static-src input coexists with the Bound-field control
 // (the placeholder copy states that a bound field overrides the static src).
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
@@ -217,6 +220,34 @@ test('a partial https:/ commits src: "" until the safe prefix is complete', () =
   } finally {
     view.cleanup();
   }
+});
+
+test.each(["//evil.example/image.png", "https:\\\\evil.example\\image.png"])(
+  "protocol-relative and backslash-confused input stays draft-only: %s",
+  (unsafe) => {
+    const view = renderInspector({
+      id: "image-1",
+      type: "image",
+      data: { fit: "cover", src: "" },
+    });
+    try {
+      const input = findImageUrlInput(view.container);
+      setInputValue(input!, unsafe);
+      expect(view.onPatchBlockData).toHaveBeenLastCalledWith("image-1", { src: "" });
+      expect(input?.value).toBe(unsafe);
+    } finally {
+      view.cleanup();
+    }
+  }
+);
+
+test("the Image URL row uses the canonical Screen authoring URL wrapper", () => {
+  const source = readFileSync(
+    resolve(process.cwd(), "core/admin/ui/custom-screens/ScreenBlockInspector.tsx"),
+    "utf8"
+  );
+  expect(source).toContain('sanitizeScreenAuthoringUrl(raw, "media")');
+  expect(source).not.toContain("normalizeScreenImageSrc");
 });
 
 // --- TASK-503-03: Ratio EnumRow (enum select, legacy free text displays as Auto) ---

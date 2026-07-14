@@ -91,12 +91,49 @@ const selectBoundField = (container: ParentNode, optionText: string) => {
   });
 };
 
+const setInputValue = (input: HTMLInputElement, next: string) => {
+  React.act(() => {
+    input.focus();
+    const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), "value")?.set;
+    setter?.call(input, next);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+};
+
+const clickButton = (container: ParentNode, accessibleName: string) => {
+  const button = Array.from(container.querySelectorAll("button")).find(
+    (candidate) =>
+      candidate.getAttribute("aria-label") === accessibleName ||
+      candidate.textContent?.trim() === accessibleName
+  ) as HTMLButtonElement | undefined;
+  expect(button).toBeTruthy();
+  React.act(() => {
+    button?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  return button;
+};
+
+const openSelectForLabel = (container: ParentNode, label: string) => {
+  const trigger = (Array.from(container.querySelectorAll("span"))
+    .find((span) => span.textContent === label)
+    ?.parentElement?.querySelector('[role="combobox"]') ?? null) as HTMLElement | null;
+  expect(trigger).not.toBeNull();
+  React.act(() => {
+    trigger?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0 }));
+    trigger?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  return trigger;
+};
+
 const mountInspector = (props: {
   selectedBlock: ScreenBlockV1;
   bindings?: ScreenFieldBinding[];
   fields?: ContentField[];
   onPatchBinding?: (...args: unknown[]) => void;
   onPatchBlockData?: (...args: unknown[]) => void;
+  onPatchBlock?: (...args: unknown[]) => void;
+  onArmSlotInsert?: (...args: unknown[]) => void;
+  armedInsertSlotId?: string | null;
 }) =>
   mount(
     <ScreenBlockInspector
@@ -105,14 +142,82 @@ const mountInspector = (props: {
       fields={props.fields ?? []}
       panel="all"
       showBlockActions={false}
-      onPatchBlock={noop}
+      onPatchBlock={props.onPatchBlock ?? noop}
       onPatchBlockData={props.onPatchBlockData ?? noop}
       onPatchBinding={props.onPatchBinding ?? noop}
+      onArmSlotInsert={props.onArmSlotInsert}
+      armedInsertSlotId={props.armedInsertSlotId}
       onMove={noop}
       onDuplicate={noop}
       onDelete={noop}
     />
   );
+
+type StatefulTabsInspectorHarnessProps = {
+  initialBlock: ScreenBlockV1;
+  onPatchBlock: (blockId: string, patch: Partial<ScreenBlockV1>) => void;
+};
+
+class StatefulTabsInspectorHarness extends React.Component<
+  StatefulTabsInspectorHarnessProps,
+  { block: ScreenBlockV1 }
+> {
+  state = { block: this.props.initialBlock };
+
+  refresh = (block: ScreenBlockV1) => this.setState({ block });
+  currentBlock = () => this.state.block;
+
+  render() {
+    return (
+      <ScreenBlockInspector
+        selectedBlock={this.state.block}
+        bindings={[]}
+        fields={[]}
+        panel="all"
+        showBlockActions={false}
+        onPatchBlock={(blockId, patch) => {
+          this.props.onPatchBlock(blockId, patch);
+          this.setState((current) => ({ block: { ...current.block, ...patch } }));
+        }}
+        onPatchBlockData={noop}
+        onPatchBinding={noop}
+        onMove={noop}
+        onDuplicate={noop}
+        onDelete={noop}
+      />
+    );
+  }
+}
+
+const mountStatefulTabsInspector = (initialBlock: ScreenBlockV1) => {
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  const controller = React.createRef<StatefulTabsInspectorHarness>();
+  const onPatchBlock = vi.fn<(blockId: string, patch: Partial<ScreenBlockV1>) => void>();
+
+  React.act(() => {
+    root.render(
+      <StatefulTabsInspectorHarness
+        ref={controller}
+        initialBlock={initialBlock}
+        onPatchBlock={onPatchBlock}
+      />
+    );
+  });
+  return {
+    container,
+    onPatchBlock,
+    currentBlock: () => controller.current?.currentBlock() ?? initialBlock,
+    refresh: (nextBlock: ScreenBlockV1) => {
+      React.act(() => controller.current?.refresh(nextBlock));
+    },
+    cleanup: () => {
+      React.act(() => root.unmount());
+      container.remove();
+    },
+  };
+};
 
 test("ScreenBlockInspector binds a display kind (stat) with mode 'read', not readwrite", () => {
   const onPatchBinding = vi.fn();
@@ -280,6 +385,312 @@ test("ScreenBlockInspector binding options dedupe system and schema fields with 
     expect(optionLabels).toContain("Description (text)");
     // System fields that do not collide remain available.
     expect(optionLabels).toContain("Slug (system)");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Button exposes the href binding and clears only an existing exact binding", () => {
+  const onPatchBinding = vi.fn();
+  const button: ScreenBlockV1 = {
+    id: "button-1",
+    type: "button",
+    data: { action: "link", variant: "primary", href: "/fallback" },
+  };
+  const unboundView = mountInspector({
+    selectedBlock: button,
+    fields: [{ id: "f-destination", name: "destination", type: "text", label: "Destination" }],
+    onPatchBinding,
+  });
+  try {
+    expect(unboundView.container.textContent).not.toContain("Use static link");
+    selectBoundField(unboundView.container, "Destination");
+    expect(onPatchBinding).toHaveBeenCalledWith("button-1", "href", {
+      field: "destination",
+      mode: "read",
+    });
+  } finally {
+    unboundView.cleanup();
+  }
+
+  onPatchBinding.mockClear();
+  const boundView = mountInspector({
+    selectedBlock: button,
+    bindings: [
+      {
+        id: "button-1-href",
+        blockId: "button-1",
+        propPath: "href",
+        source: "entry",
+        field: "destination",
+        mode: "read",
+      },
+    ],
+    fields: [{ id: "f-destination", name: "destination", type: "text", label: "Destination" }],
+    onPatchBinding,
+  });
+  try {
+    clickButton(boundView.container, "Use static link");
+    expect(onPatchBinding).toHaveBeenCalledTimes(1);
+    expect(onPatchBinding).toHaveBeenCalledWith("button-1", "href", { field: "" });
+  } finally {
+    boundView.cleanup();
+  }
+});
+
+test("link-specific clear copy is absent from unrelated binding rows", () => {
+  const view = mountInspector({
+    selectedBlock: {
+      id: "heading-1",
+      type: "heading",
+      data: { text: "Heading", level: 2, align: "left" },
+    },
+    bindings: [
+      {
+        id: "heading-1-text",
+        blockId: "heading-1",
+        propPath: "text",
+        source: "entry",
+        field: "title",
+        mode: "read",
+      },
+    ],
+  });
+  try {
+    expect(view.container.textContent).not.toContain("Use static link");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Button Action authoring exposes only the supported Link option", () => {
+  const view = mountInspector({
+    selectedBlock: {
+      id: "button-legacy",
+      type: "button",
+      data: { action: "custom", variant: "primary", href: "/fallback" },
+    },
+  });
+  try {
+    const trigger = openSelectForLabel(view.container, "Action");
+    expect(trigger?.textContent).toBe("Link");
+    expect(view.container.textContent).toContain("Link");
+    const optionLabels = Array.from(document.body.querySelectorAll('[role="option"]')).map(
+      (option) => option.textContent?.trim() ?? ""
+    );
+    expect(optionLabels).toEqual(["Link"]);
+    expect(optionLabels).not.toContain("Publish");
+    expect(optionLabels).not.toContain("Custom");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Tabs add a deterministic collision-free slot and arm that exact target", () => {
+  const onPatchBlock = vi.fn();
+  const onArmSlotInsert = vi.fn();
+  const view = mountInspector({
+    selectedBlock: {
+      id: "tabs-1",
+      type: "tabs",
+      data: {
+        tabs: [
+          { id: "tab-1", label: "First" },
+          { id: "tab-3", label: "Third" },
+        ],
+      },
+      slots: { "tab-1": [], "tab-3": [] },
+    },
+    onPatchBlock,
+    onArmSlotInsert,
+  });
+  try {
+    clickButton(view.container, "Add tab");
+    expect(onPatchBlock).toHaveBeenCalledWith("tabs-1", {
+      data: {
+        tabs: [
+          { id: "tab-1", label: "First" },
+          { id: "tab-3", label: "Third" },
+          { id: "tab-4", label: "Tab 3" },
+        ],
+      },
+      slots: { "tab-1": [], "tab-3": [], "tab-4": [] },
+    });
+    expect(onArmSlotInsert).toHaveBeenCalledWith("tabs-1", "tab-4");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Tabs use Unicode boundaries and invalidate stale label drafts across parent rerenders", () => {
+  const view = mountStatefulTabsInspector({
+    id: "tabs-1",
+    type: "tabs",
+    data: { tabs: [{ id: "tab-1", label: "Original" }] },
+    slots: { "tab-1": [] },
+  });
+  const readInput = () =>
+    view.container.querySelector('[data-screen-tab-label="tab-1"]') as HTMLInputElement | null;
+  try {
+    expect(readInput()).not.toBeNull();
+    expect(readInput()?.hasAttribute("maxlength")).toBe(false);
+    expect(readInput()?.maxLength).toBe(-1);
+
+    const unicodeBoundary = "😀".repeat(120);
+    setInputValue(readInput()!, `  ${unicodeBoundary}  `);
+    expect(view.onPatchBlock).not.toHaveBeenCalled();
+    React.act(() => {
+      readInput()?.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    });
+    expect(view.onPatchBlock).toHaveBeenLastCalledWith("tabs-1", {
+      data: { tabs: [{ id: "tab-1", label: unicodeBoundary }] },
+      slots: { "tab-1": [] },
+    });
+    expect(readInput()?.value).toBe(unicodeBoundary);
+    expect(view.currentBlock().data.tabs).toEqual([{ id: "tab-1", label: unicodeBoundary }]);
+
+    view.onPatchBlock.mockClear();
+    setInputValue(readInput()!, "😀".repeat(121));
+    React.act(() => {
+      readInput()?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+    expect(view.onPatchBlock).not.toHaveBeenCalled();
+
+    setInputValue(readInput()!, "  Latest committed  ");
+    React.act(() => {
+      readInput()?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+    expect(view.onPatchBlock).toHaveBeenLastCalledWith("tabs-1", {
+      data: { tabs: [{ id: "tab-1", label: "Latest committed" }] },
+      slots: { "tab-1": [] },
+    });
+    expect(readInput()?.value).toBe("Latest committed");
+
+    view.onPatchBlock.mockClear();
+    setInputValue(readInput()!, "Discard me");
+    React.act(() => {
+      readInput()?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(readInput()?.value).toBe("Latest committed");
+    expect(view.onPatchBlock).not.toHaveBeenCalled();
+
+    setInputValue(readInput()!, "Stale local draft");
+    view.refresh({
+      ...view.currentBlock(),
+      data: { tabs: [{ id: "tab-1", label: "Remote committed" }] },
+    });
+    expect(readInput()?.value).toBe("Remote committed");
+
+    view.refresh({
+      ...view.currentBlock(),
+      data: { tabs: [{ id: "tab-1", label: "Latest committed" }] },
+    });
+    expect(readInput()?.value).toBe("Latest committed");
+
+    setInputValue(readInput()!, "Identity-scoped stale draft");
+    view.refresh({
+      id: "tabs-2",
+      type: "tabs",
+      data: { tabs: [{ id: "tab-1", label: "Different block" }] },
+      slots: { "tab-1": [] },
+    });
+    expect(readInput()?.value).toBe("Different block");
+
+    view.refresh({
+      id: "tabs-1",
+      type: "tabs",
+      data: { tabs: [{ id: "tab-1", label: "Latest committed" }] },
+      slots: { "tab-1": [] },
+    });
+    expect(readInput()?.value).toBe("Latest committed");
+    expect(view.onPatchBlock).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Tabs remove exactly one slot, arm the nearest remaining slot, and protect the minimum", () => {
+  const onPatchBlock = vi.fn();
+  const onArmSlotInsert = vi.fn();
+  const child: ScreenBlockV1 = { id: "text-child", type: "text", data: { content: "Keep" } };
+  const view = mountInspector({
+    selectedBlock: {
+      id: "tabs-1",
+      type: "tabs",
+      data: {
+        tabs: [
+          { id: "tab-1", label: "First" },
+          { id: "tab-2", label: "Second" },
+        ],
+      },
+      slots: { "tab-1": [], "tab-2": [child] },
+    },
+    onPatchBlock,
+    onArmSlotInsert,
+  });
+  try {
+    clickButton(view.container, "Remove First");
+    expect(onPatchBlock).toHaveBeenCalledWith("tabs-1", {
+      data: { tabs: [{ id: "tab-2", label: "Second" }] },
+      slots: { "tab-2": [child] },
+    });
+    expect(onArmSlotInsert).toHaveBeenCalledWith("tabs-1", "tab-2");
+  } finally {
+    view.cleanup();
+  }
+
+  onPatchBlock.mockClear();
+  onArmSlotInsert.mockClear();
+  const minimumView = mountInspector({
+    selectedBlock: {
+      id: "tabs-min",
+      type: "tabs",
+      data: { tabs: [{ id: "tab-1", label: "Only" }] },
+      slots: { "tab-1": [child] },
+    },
+    onPatchBlock,
+    onArmSlotInsert,
+  });
+  try {
+    const remove = clickButton(minimumView.container, "Remove Only");
+    expect(remove?.disabled).toBe(true);
+    expect(onPatchBlock).not.toHaveBeenCalled();
+    expect(onArmSlotInsert).not.toHaveBeenCalled();
+  } finally {
+    minimumView.cleanup();
+  }
+});
+
+test("Tabs edit-content controls arm exact slots and the maximum prevents a 25th tab", () => {
+  const onPatchBlock = vi.fn();
+  const onArmSlotInsert = vi.fn();
+  const view = mountInspector({
+    selectedBlock: {
+      id: "tabs-max",
+      type: "tabs",
+      data: {
+        tabs: Array.from({ length: 24 }, (_, index) => ({
+          id: `tab-${index + 1}`,
+          label: `Tab ${index + 1}`,
+        })),
+      },
+      slots: Object.fromEntries(Array.from({ length: 24 }, (_, index) => [`tab-${index + 1}`, []])),
+    },
+    onPatchBlock,
+    onArmSlotInsert,
+    armedInsertSlotId: "tab-2",
+  });
+  try {
+    const activeEdit = view.container.querySelector(
+      'button[aria-label="Edit content for Tab 2"]'
+    ) as HTMLButtonElement | null;
+    expect(activeEdit?.getAttribute("aria-pressed")).toBe("true");
+    clickButton(view.container, "Edit content for Tab 24");
+    expect(onArmSlotInsert).toHaveBeenCalledWith("tabs-max", "tab-24");
+
+    const add = clickButton(view.container, "Add tab");
+    expect(add?.disabled).toBe(true);
+    expect(onPatchBlock).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }

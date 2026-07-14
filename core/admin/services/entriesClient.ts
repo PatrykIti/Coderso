@@ -138,13 +138,11 @@ const writeEntryDetailCache = (typeSlug: string, entry: EntryDetail) => {
 
 const primeEntriesCacheInternal = (typeSlug: string, items: EntrySummary[]) => {
   cachedEntries.set(typeSlug, items);
-  cachedEntriesPromise.delete(typeSlug);
   writeLocalCache(cacheKeys.entriesList(typeSlug), items);
 };
 
 const primeAllEntriesCacheInternal = (items: EntryListItem[]) => {
   cachedAllEntries = items;
-  cachedAllEntriesPromise = null;
   writeLocalCache(cacheKeys.entriesAllList, items);
 };
 
@@ -157,6 +155,7 @@ const getCachedEntryDetailsMap = (typeSlug: string) => {
 };
 
 const upsertCachedEntry = (typeSlug: string, entry: EntrySummary | EntryDetail) => {
+  cachedEntriesPromise.delete(typeSlug);
   const current = cachedEntries.get(typeSlug) ?? readEntriesCache(typeSlug) ?? [];
   const summary = toEntrySummary(entry);
   const index = current.findIndex((item) => item.id === summary.id);
@@ -173,6 +172,7 @@ const upsertCachedEntry = (typeSlug: string, entry: EntrySummary | EntryDetail) 
 };
 
 const updateCachedEntryStatus = (typeSlug: string, id: string, status: EntryStatus) => {
+  cachedEntriesPromise.delete(typeSlug);
   const current = cachedEntries.get(typeSlug) ?? readEntriesCache(typeSlug);
   if (current) {
     primeEntriesCacheInternal(
@@ -190,6 +190,7 @@ const updateCachedEntryStatus = (typeSlug: string, id: string, status: EntryStat
 };
 
 const removeCachedEntry = (typeSlug: string, id: string) => {
+  cachedEntriesPromise.delete(typeSlug);
   const current = cachedEntries.get(typeSlug) ?? readEntriesCache(typeSlug);
   if (current) {
     primeEntriesCacheInternal(
@@ -258,31 +259,53 @@ export async function listAllEntries() {
   });
 }
 
-export async function listEntriesCached(typeSlug: string, options?: { force?: boolean }) {
+export function listEntriesCached(typeSlug: string, options?: { force?: boolean }) {
   if (!options?.force) {
     const cached = getCachedEntries(typeSlug);
-    if (cached) return cached;
+    if (cached) return Promise.resolve(cached);
     const pending = cachedEntriesPromise.get(typeSlug);
     if (pending) return pending;
   }
-  const request = listEntries(typeSlug);
+
+  let request: Promise<EntrySummary[]>;
+  request = listEntries(typeSlug)
+    .then((items) => {
+      if (cachedEntriesPromise.get(typeSlug) === request) {
+        primeEntriesCacheInternal(typeSlug, items);
+      }
+      return items;
+    })
+    .finally(() => {
+      if (cachedEntriesPromise.get(typeSlug) === request) {
+        cachedEntriesPromise.delete(typeSlug);
+      }
+    });
   cachedEntriesPromise.set(typeSlug, request);
-  const items = await request;
-  primeEntriesCacheInternal(typeSlug, items);
-  return items;
+  return request;
 }
 
-export async function listAllEntriesCached(options?: { force?: boolean }) {
+export function listAllEntriesCached(options?: { force?: boolean }) {
   if (!options?.force) {
     const cached = getCachedAllEntries();
-    if (cached) return cached;
+    if (cached) return Promise.resolve(cached);
     if (cachedAllEntriesPromise) return cachedAllEntriesPromise;
   }
-  const request = listAllEntries();
+
+  let request: Promise<EntryListItem[]>;
+  request = listAllEntries()
+    .then((items) => {
+      if (cachedAllEntriesPromise === request) {
+        primeAllEntriesCacheInternal(items);
+      }
+      return items;
+    })
+    .finally(() => {
+      if (cachedAllEntriesPromise === request) {
+        cachedAllEntriesPromise = null;
+      }
+    });
   cachedAllEntriesPromise = request;
-  const items = await request;
-  primeAllEntriesCacheInternal(items);
-  return items;
+  return request;
 }
 
 export async function getEntry(typeSlug: string, id: string) {

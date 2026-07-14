@@ -1,6 +1,12 @@
 import { resolveAdminHref } from "@/utils/adminPaths";
 
-export const resolveCustomScreenId = (pathname: string) => {
+const resolveCustomScreenPathname = (input: string) => {
+  const withoutHash = input.split("#", 1)[0] ?? input;
+  return withoutHash.split("?", 1)[0] ?? withoutHash;
+};
+
+export const resolveCustomScreenId = (input: string) => {
+  const pathname = resolveCustomScreenPathname(input);
   const parts = pathname.split("/").filter(Boolean);
   const index = parts.findIndex((segment) => segment === "custom-screens");
   if (index === -1) return null;
@@ -8,7 +14,8 @@ export const resolveCustomScreenId = (pathname: string) => {
   return value ? decodeURIComponent(value) : null;
 };
 
-export const resolveCustomScreenEntryParams = (pathname: string) => {
+export const resolveCustomScreenEntryParams = (input: string) => {
+  const pathname = resolveCustomScreenPathname(input);
   const parts = pathname.split("/").filter(Boolean);
   const index = parts.findIndex((segment) => segment === "custom-screens");
   if (index === -1) {
@@ -32,6 +39,10 @@ export function buildCustomScreenWorkspacePath(input: {
 }) {
   const path = `/advanced/custom-screens/${encodeURIComponent(input.screenId)}/entries`;
   return input.entryId ? `${path}/${encodeURIComponent(input.entryId)}` : path;
+}
+
+export function buildCustomScreenEditorPath(input: { screenId: string }) {
+  return `/advanced/custom-screens/${encodeURIComponent(input.screenId)}`;
 }
 
 export function buildCustomScreenWorkspaceHref(

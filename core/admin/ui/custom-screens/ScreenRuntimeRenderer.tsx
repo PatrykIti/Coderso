@@ -1,8 +1,12 @@
 import {
   Fragment,
+  useId,
+  useRef,
   useState,
   type CSSProperties,
   type DragEvent as ReactDragEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
 import { AlertTriangle, Image as ImageIcon, MoveDown, MoveUp, Trash2 } from "lucide-react";
@@ -13,12 +17,14 @@ import { cn } from "@/lib/utils";
 import { InlineEditWrapper, selectionBorder } from "@/ui/authoring";
 import { FieldRenderer } from "@/ui/entries/FieldRenderer";
 import {
-  normalizeScreenImageSrc,
+  isScreenMediaAssetUuid,
+  sanitizeScreenAuthoringUrl,
   screenSectionColumnTemplate, // TASK-505-02 (value): preset → grid-template-columns fr map (505-01 owns it)
   type ScreenBlockStyleV1,
   type ScreenBlockV1,
   type ScreenDocumentV1,
   type ScreenFieldBinding,
+  type ScreenTabItem,
 } from "../../../services/customScreens/customScreenSchemas";
 import {
   screenBlockLabels,
@@ -48,6 +54,8 @@ type ScreenRuntimeRendererProps = {
    * block means "not resolved yet" → the block renders its loading skeleton.
    */
   relatedEntries?: Record<string, RelatedEntrySummary[]>;
+  /** Host-resolved media URLs keyed by media asset UUID. Direct images only. */
+  presentationMediaUrlsById?: Readonly<Record<string, string>>;
   mode: "builder" | "preview" | "entry";
   selectedSectionId?: string | null;
   selectedBlockId?: string | null;
@@ -278,13 +286,49 @@ const relatedInitials = (title: string): string => {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 };
 
-const resolveMediaSrc = (value: unknown): string | null => {
-  if (typeof value === "string" && value.trim()) return value;
-  if (Array.isArray(value)) {
-    const first = value.find((item) => typeof item === "string" && item.trim());
-    return typeof first === "string" ? first : null;
-  }
+const firstMediaAssetUuid = (value: unknown): string | null => {
+  if (isScreenMediaAssetUuid(value)) return value;
+  if (!Array.isArray(value)) return null;
+  return value.find(isScreenMediaAssetUuid) ?? null;
+};
+
+const selectionInteractiveOriginSelector =
+  'a,button,input,select,textarea,[contenteditable="true"],[role="tab"]';
+
+const isSelectionInteractiveOrigin = (target: EventTarget | null, boundary: HTMLElement) => {
+  if (!(target instanceof Element) || target === boundary) return false;
+  const interactive = target.closest(selectionInteractiveOriginSelector);
+  return interactive !== null && boundary.contains(interactive);
+};
+
+const resolveRovingTabIndex = (key: string, index: number, length: number): number | null => {
+  if (length <= 0) return null;
+  if (key === "Home") return 0;
+  if (key === "End") return length - 1;
+  if (key === "ArrowRight" || key === "ArrowDown") return (index + 1) % length;
+  if (key === "ArrowLeft" || key === "ArrowUp") return (index - 1 + length) % length;
   return null;
+};
+
+const blockContainsId = (block: ScreenBlockV1, targetId: string): boolean =>
+  block.id === targetId ||
+  (block.children ?? []).some((child) => blockContainsId(child, targetId)) ||
+  Object.values(block.slots ?? {}).some((children) =>
+    children.some((child) => blockContainsId(child, targetId))
+  );
+
+const builderTabSlot = (
+  block: ScreenBlockV1,
+  tabs: readonly ScreenTabItem[],
+  current: ScreenInsertTarget | null | undefined
+): string | null => {
+  if (!current || (current.kind !== "slot-end" && current.kind !== "slot-index")) return null;
+  if (current.parentId === block.id) return current.slotId;
+  return (
+    tabs.find((tab) =>
+      (block.slots?.[tab.id] ?? []).some((child) => blockContainsId(child, current.parentId))
+    )?.id ?? null
+  );
 };
 
 const bindingAllowsWrite = (binding: ScreenFieldBinding | null | undefined) =>
@@ -326,6 +370,7 @@ export function ScreenRuntimeRenderer({
   presentationOverrides = [],
   relationTargets = [],
   relatedEntries = {},
+  presentationMediaUrlsById,
   mode,
   selectedSectionId,
   selectedBlockId,
@@ -345,6 +390,10 @@ export function ScreenRuntimeRenderer({
   emptyMessage,
   showFieldMetadata = false,
 }: ScreenRuntimeRendererProps) {
+  const rendererRootRef = useRef<HTMLDivElement>(null);
+  const reactInstanceId = useId();
+  const instanceId = reactInstanceId.replace(/[^a-zA-Z0-9_-]/g, "") || "root";
+  const [localActiveTabByBlock, setLocalActiveTabByBlock] = useState<Record<string, string>>({});
   // TASK-500-02: id of the card being natively dragged (builder-only) —
   // suppresses that block's OWN inner drop zones while it is in flight. Set and
   // cleared exclusively from DnD event handlers (no setState-in-effect).
@@ -363,6 +412,63 @@ export function ScreenRuntimeRenderer({
     dragHoverTarget ? insertTargetsEqual(dragHoverTarget, target) : false;
   const canInsert = mode === "builder" && Boolean(onSetInsertPoint);
   const canDrag = mode === "builder" && Boolean(onDragMove);
+
+  const tabDomIds = (blockId: string, tabId: string) => ({
+    tab: `screen-tab-${instanceId}-${blockId}-${tabId}`,
+    panel: `screen-tabpanel-${instanceId}-${blockId}-${tabId}`,
+  });
+
+  const resolveActiveTab = (block: ScreenBlockV1, tabs: readonly ScreenTabItem[]) => {
+    const requested =
+      mode === "builder"
+        ? builderTabSlot(block, tabs, insertPoint)
+        : localActiveTabByBlock[block.id];
+    return tabs.some((tab) => tab.id === requested) ? requested : (tabs[0]?.id ?? null);
+  };
+
+  const activateTab = (block: ScreenBlockV1, tabId: string, sectionId: string) => {
+    if (mode === "builder") {
+      onSetInsertPoint?.({
+        kind: "slot-end",
+        sectionId,
+        parentId: block.id,
+        slotId: tabId,
+      });
+      return;
+    }
+    setLocalActiveTabByBlock((state) =>
+      state[block.id] === tabId ? state : { ...state, [block.id]: tabId }
+    );
+  };
+
+  const focusTabWithinRenderer = (blockId: string, tabId: string) => {
+    const targetId = tabDomIds(blockId, tabId).tab;
+    queueMicrotask(() => {
+      const root = rendererRootRef.current;
+      if (!root) return;
+      const target = Array.from(root.querySelectorAll<HTMLElement>('[role="tab"]')).find(
+        (element) => element.id === targetId
+      );
+      target?.focus();
+    });
+  };
+
+  const onTabKeyDown = (
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    index: number,
+    tabs: readonly ScreenTabItem[],
+    block: ScreenBlockV1,
+    sectionId: string
+  ) => {
+    const nextIndex = resolveRovingTabIndex(event.key, index, tabs.length);
+    if (nextIndex === null) return;
+    const nextTab = tabs[nextIndex];
+    if (!nextTab) return;
+    event.preventDefault();
+    event.stopPropagation();
+    activateTab(block, nextTab.id, sectionId);
+    focusTabWithinRenderer(block.id, nextTab.id);
+  };
 
   // Shared native-DnD drop wiring: dataTransfer carries the dragged block id as
   // text/plain; a drop resolves the ScreenInsertTarget of the zone it landed on.
@@ -588,12 +694,27 @@ export function ScreenRuntimeRenderer({
   const withTextPresentation = (blockId: string, className: string) =>
     cn(className, resolveTextPresentationClassName(blockId));
 
-  const readMediaPresentationValue = (blockId: string) =>
-    readPresentationOverride(blockId, "mediaAssetId") ?? readPresentationOverride(blockId, "image");
+  const readMediaPresentationSource = (blockId: string) => {
+    for (const propPath of ["mediaAssetId", "image"] as const) {
+      const key = `${blockId}\u0000${propPath}`;
+      if (!presentationOverrideMap.has(key)) continue;
+      const value = presentationOverrideMap.get(key);
+      return {
+        present: true,
+        assetId: isScreenMediaAssetUuid(value) ? value : null,
+      } as const;
+    }
+    return { present: false, assetId: null } as const;
+  };
 
   const renderBlock = (block: ScreenBlockV1, ctx: RenderBlockContext): ReactNode => {
     const selected = selectedBlockId === block.id;
     const isInteractive = mode !== "preview" && Boolean(onSelectBlock);
+    const selectionLabel = readText(
+      block.data,
+      "label",
+      screenBlockLabels[block.type as ScreenBlockKind] ?? block.type
+    );
     // TASK-500-02: a dragged container suppresses its OWN inner drop zones
     // (children inherit `suppressed`); the op-level cycle guard is the real guard.
     const childCtx: RenderBlockContext = {
@@ -667,6 +788,12 @@ export function ScreenRuntimeRenderer({
       return event.clientY < rect.top + rect.height / 2 ? targets.before : targets.after;
     };
 
+    const selectBlockFromContainer = (event: ReactMouseEvent<HTMLDivElement>) => {
+      event.stopPropagation();
+      if (isSelectionInteractiveOrigin(event.target, event.currentTarget)) return;
+      onSelectBlock?.(block.id);
+    };
+
     const wrap = (content: ReactNode) => (
       <div
         key={block.id}
@@ -678,8 +805,6 @@ export function ScreenRuntimeRenderer({
           blocksWithPresentationOverrides.has(block.id) ? "true" : undefined
         }
         data-selected={selected ? "true" : "false"}
-        role={isInteractive ? "button" : undefined}
-        tabIndex={isInteractive ? 0 : undefined}
         // TASK-503-02 D: the drag source moved OFF the card onto the corner type
         // Badge (below) so nested draggable children no longer shadow their
         // container. The card stays a drop-only target (onDragOver/onDrop kept).
@@ -706,26 +831,23 @@ export function ScreenRuntimeRenderer({
               }
             : undefined
         }
-        onClick={
-          isInteractive
-            ? (event) => {
-                event.stopPropagation();
-                onSelectBlock?.(block.id);
-              }
-            : undefined
-        }
-        onKeyDown={
-          isInteractive
-            ? (event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  onSelectBlock?.(block.id);
-                }
-              }
-            : undefined
-        }
+        onClick={isInteractive ? selectBlockFromContainer : undefined}
       >
+        {isInteractive ? (
+          <button
+            type="button"
+            aria-label={`Select ${selectionLabel} block`}
+            aria-pressed={selected}
+            data-screen-select-block={block.id}
+            className="absolute -left-3 top-3 z-20 rounded-md border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground opacity-0 shadow-sm transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
+            onClick={(event) => {
+              event.stopPropagation();
+              onSelectBlock?.(block.id);
+            }}
+          >
+            Select
+          </button>
+        ) : null}
         {mode === "builder" ? (
           <>
             <Badge
@@ -903,7 +1025,7 @@ export function ScreenRuntimeRenderer({
       const tokenLabel = label || defaultLabel;
       const value = binding ? readBindingPathValue(values, binding.field) : undefined;
       const presentationMediaValue =
-        field?.type === "media" ? readMediaPresentationValue(block.id) : null;
+        field?.type === "media" ? readMediaPresentationSource(block.id).assetId : null;
       const displayValue = presentationMediaValue ?? value;
       const writable = bindingAllowsWrite(binding);
       const canEdit = canWriteBinding(binding, field);
@@ -1167,24 +1289,26 @@ export function ScreenRuntimeRenderer({
       // class → today's exact markup.
       const ratioValue = typeof block.data.ratio === "string" ? block.data.ratio : "auto";
       const ratioClass = screenImageRatioClass[ratioValue];
-      const bound = binding ? readBindingPathValue(values, binding.field) : undefined;
-      // TASK-500-04 / 503-02 E: authored static src, now filtered at READ time
-      // (defense-in-depth — idempotent for saved docs since the save path already
-      // normalized, but it gates the builder's live preview of a raw inspector
-      // draft pre-503-03 so an unsafe scheme can never reach <img src>).
-      const staticSrc = normalizeScreenImageSrc(readText(block.data, "src"));
-      const src =
-        readMediaPresentationValue(block.id) ?? resolveMediaSrc(bound) ?? (staticSrc || null);
-      // Builder mirrors heading: a bound image keeps the {{ label }} token; an unbound
-      // image with an authored static src previews the real image.
-      const showImage = Boolean(src) && (mode !== "builder" || (!binding && Boolean(staticSrc)));
-      if (showImage && src) {
+      const presentationSource = readMediaPresentationSource(block.id);
+      let rawImageSrc: unknown = null;
+      if (presentationSource.present) {
+        rawImageSrc = presentationSource.assetId
+          ? (presentationMediaUrlsById?.[presentationSource.assetId] ?? null)
+          : null;
+      } else if (binding) {
+        const boundAssetId = firstMediaAssetUuid(readBindingPathValue(values, binding.field));
+        rawImageSrc = boundAssetId ? (presentationMediaUrlsById?.[boundAssetId] ?? null) : null;
+      } else {
+        rawImageSrc = block.data.src;
+      }
+      const safeImageSrc = sanitizeScreenAuthoringUrl(rawImageSrc, "media");
+      if (safeImageSrc) {
         return wrap(
           <div className={cn("px-4 py-3", mode === "preview" && "rounded-xl border bg-card")}>
             {ratioClass ? (
               <div className={cn("relative w-full overflow-hidden rounded-lg", ratioClass)}>
                 <img
-                  src={src}
+                  src={safeImageSrc}
                   alt={label}
                   className={cn(
                     "h-full w-full",
@@ -1194,7 +1318,7 @@ export function ScreenRuntimeRenderer({
               </div>
             ) : (
               <img
-                src={src}
+                src={safeImageSrc}
                 alt={label}
                 className={cn(
                   "w-full rounded-lg",
@@ -1208,6 +1332,7 @@ export function ScreenRuntimeRenderer({
       return wrap(
         <div className={cn("px-4 py-3", mode === "preview" && "rounded-xl border bg-card")}>
           <div
+            data-image-disabled="true"
             className={cn(
               "flex w-full items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground",
               ratioClass ?? "aspect-video"
@@ -1232,7 +1357,9 @@ export function ScreenRuntimeRenderer({
       const variant = readText(block.data, "variant", "primary");
       const action = readText(block.data, "action", "link");
       const boundHref = binding ? readBindingPathValue(values, binding.field) : block.data.href;
-      const href = typeof boundHref === "string" ? boundHref : undefined;
+      const safeHref = sanitizeScreenAuthoringUrl(boundHref, "link");
+      const canNavigate = mode !== "builder" && action === "link" && safeHref !== null;
+      const disabled = action !== "link" || safeHref === null;
       const variantClass =
         variant === "secondary"
           ? "bg-secondary text-secondary-foreground"
@@ -1245,145 +1372,166 @@ export function ScreenRuntimeRenderer({
       );
       return wrap(
         <div className={cn("px-4 py-3", mode === "preview" && "rounded-xl border bg-card")}>
-          {mode !== "builder" && action === "link" && href ? (
-            <a href={href} className={ctaClass}>
+          {canNavigate ? (
+            <a href={safeHref} className={ctaClass} data-screen-button-affordance="true">
               {label}
             </a>
           ) : (
-            <span className={ctaClass}>{label}</span>
+            <span
+              className={ctaClass}
+              aria-disabled={disabled ? "true" : undefined}
+              data-screen-button-affordance="true"
+            >
+              {label}
+            </span>
           )}
         </div>
       );
     }
 
     if (block.type === "tabs") {
-      const tabs = Array.isArray(block.data.tabs)
-        ? (block.data.tabs as Array<Record<string, unknown>>)
-        : [];
+      const tabs = Array.isArray(block.data.tabs) ? (block.data.tabs as ScreenTabItem[]) : [];
+      const activeTabId = resolveActiveTab(block, tabs);
       return wrap(
         <div className={cn("px-4 py-3", mode === "preview" && "rounded-xl border bg-card")}>
-          <div className="flex flex-wrap gap-2 border-b border-border pb-2">
+          <div
+            className="flex flex-wrap gap-2 border-b border-border pb-2"
+            role="tablist"
+            aria-label={readText(block.data, "label", "Tabs")}
+          >
             {tabs.map((tab, index) => {
-              const tabId = typeof tab.id === "string" ? tab.id : `tab-${index + 1}`;
-              const tabLabel = typeof tab.label === "string" && tab.label ? tab.label : tabId;
+              const ids = tabDomIds(block.id, tab.id);
+              const active = activeTabId === tab.id;
               return (
-                <span
-                  key={tabId}
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  id={ids.tab}
+                  aria-controls={ids.panel}
+                  aria-selected={active}
+                  tabIndex={active ? 0 : -1}
                   className={cn(
                     "rounded-md px-2.5 py-1 text-xs font-medium",
-                    index === 0 ? "bg-muted text-foreground" : "text-muted-foreground"
+                    active ? "bg-muted text-foreground" : "text-muted-foreground"
                   )}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    activateTab(block, tab.id, ctx.sectionId);
+                  }}
+                  onKeyDown={(event) => onTabKeyDown(event, index, tabs, block, ctx.sectionId)}
                 >
-                  {tabLabel}
-                </span>
+                  {tab.label}
+                </button>
               );
             })}
           </div>
-          <div className="mt-3 space-y-4">
-            {tabs.map((tab, index) => {
-              const tabId = typeof tab.id === "string" ? tab.id : `tab-${index + 1}`;
-              const slotBlocks = block.slots?.[tabId] ?? [];
-              // TASK-500-02 (builder only): each tab slot mirrors the renderSlots
-              // affordances — per-slot drop zone + sibling gaps + armable empty
-              // placeholder; preview/entry markup stays byte-identical.
-              const showAffordances = mode === "builder" && !childCtx.suppressed;
-              const tabEndTarget: ScreenInsertTarget = {
-                kind: "slot-end",
-                sectionId: childCtx.sectionId,
-                parentId: block.id,
-                slotId: tabId,
-              };
-              const tabArmed =
-                canInsert && insertPoint ? insertTargetsEqual(insertPoint, tabEndTarget) : false;
-              const tabDragHover = showAffordances && isDragHover(tabEndTarget);
-              const tabChildDropTargets = (
-                childIndex: number
-              ): RenderBlockContext["dropTargets"] | undefined =>
-                showAffordances
-                  ? {
-                      before: {
+          {tabs.map((tab) => {
+            const ids = tabDomIds(block.id, tab.id);
+            const active = activeTabId === tab.id;
+            const slotBlocks = block.slots?.[tab.id] ?? [];
+            const showAffordances = mode === "builder" && !childCtx.suppressed;
+            const tabEndTarget: ScreenInsertTarget = {
+              kind: "slot-end",
+              sectionId: childCtx.sectionId,
+              parentId: block.id,
+              slotId: tab.id,
+            };
+            const tabArmed =
+              canInsert && insertPoint ? insertTargetsEqual(insertPoint, tabEndTarget) : false;
+            const tabDragHover = showAffordances && isDragHover(tabEndTarget);
+            const tabChildDropTargets = (
+              childIndex: number
+            ): RenderBlockContext["dropTargets"] | undefined =>
+              showAffordances
+                ? {
+                    before: {
+                      kind: "slot-index",
+                      sectionId: childCtx.sectionId,
+                      parentId: block.id,
+                      slotId: tab.id,
+                      index: childIndex,
+                    },
+                    after: {
+                      kind: "slot-index",
+                      sectionId: childCtx.sectionId,
+                      parentId: block.id,
+                      slotId: tab.id,
+                      index: childIndex + 1,
+                    },
+                  }
+                : undefined;
+            return (
+              <div
+                key={tab.id}
+                role="tabpanel"
+                id={ids.panel}
+                aria-labelledby={ids.tab}
+                hidden={!active}
+                tabIndex={0}
+                className="mt-3 space-y-3"
+                data-screen-runtime-tab={tab.id}
+                {...(showAffordances ? dropHandlers(tabEndTarget) : {})}
+              >
+                {slotBlocks.length > 0 ? (
+                  showAffordances ? (
+                    <>
+                      {slotBlocks.map((child, childIndex) => (
+                        <Fragment key={child.id}>
+                          {renderInsertGap({
+                            kind: "slot-index",
+                            sectionId: childCtx.sectionId,
+                            parentId: block.id,
+                            slotId: tab.id,
+                            index: childIndex,
+                          })}
+                          {renderBlock(child, {
+                            ...childCtx,
+                            dropTargets: tabChildDropTargets(childIndex),
+                          })}
+                        </Fragment>
+                      ))}
+                      {renderInsertGap({
                         kind: "slot-index",
                         sectionId: childCtx.sectionId,
                         parentId: block.id,
-                        slotId: tabId,
-                        index: childIndex,
-                      },
-                      after: {
-                        kind: "slot-index",
-                        sectionId: childCtx.sectionId,
-                        parentId: block.id,
-                        slotId: tabId,
-                        index: childIndex + 1,
-                      },
-                    }
-                  : undefined;
-              return (
-                <div
-                  key={tabId}
-                  className="space-y-3"
-                  data-screen-runtime-tab={tabId}
-                  {...(showAffordances ? dropHandlers(tabEndTarget) : {})}
-                >
-                  {slotBlocks.length > 0 ? (
-                    showAffordances ? (
-                      <>
-                        {slotBlocks.map((child, childIndex) => (
-                          <Fragment key={child.id}>
-                            {renderInsertGap({
-                              kind: "slot-index",
-                              sectionId: childCtx.sectionId,
-                              parentId: block.id,
-                              slotId: tabId,
-                              index: childIndex,
-                            })}
-                            {renderBlock(child, {
-                              ...childCtx,
-                              dropTargets: tabChildDropTargets(childIndex),
-                            })}
-                          </Fragment>
-                        ))}
-                        {renderInsertGap({
-                          kind: "slot-index",
-                          sectionId: childCtx.sectionId,
-                          parentId: block.id,
-                          slotId: tabId,
-                          index: slotBlocks.length,
-                        })}
-                      </>
-                    ) : (
-                      slotBlocks.map((child) =>
-                        renderBlock(child, { ...childCtx, dropTargets: undefined })
-                      )
-                    )
-                  ) : showAffordances && canInsert ? (
-                    <button
-                      type="button"
-                      data-screen-slot-dropzone={tabId}
-                      data-insert-parent={block.id}
-                      data-armed={tabArmed ? "true" : "false"}
-                      data-drag-hover={tabDragHover ? "true" : undefined}
-                      className={cn(
-                        "w-full rounded-lg border border-dashed bg-muted/20 px-3 py-4 text-left text-sm text-muted-foreground transition-colors hover:border-ring/50 hover:text-foreground",
-                        tabArmed && "border-primary ring-1 ring-primary",
-                        !tabArmed && tabDragHover && "border-primary bg-primary/10 text-foreground"
-                      )}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onSetInsertPoint?.(tabArmed ? null : tabEndTarget);
-                      }}
-                      {...dropHandlers(tabEndTarget)}
-                    >
-                      Empty {typeof tab.label === "string" && tab.label ? tab.label : tabId}
-                    </button>
+                        slotId: tab.id,
+                        index: slotBlocks.length,
+                      })}
+                    </>
                   ) : (
-                    <div className="rounded-lg border border-dashed bg-muted/20 px-3 py-4 text-sm text-muted-foreground">
-                      Empty {typeof tab.label === "string" && tab.label ? tab.label : tabId}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                    slotBlocks.map((child) =>
+                      renderBlock(child, { ...childCtx, dropTargets: undefined })
+                    )
+                  )
+                ) : showAffordances && canInsert ? (
+                  <button
+                    type="button"
+                    data-screen-slot-dropzone={tab.id}
+                    data-insert-parent={block.id}
+                    data-armed={tabArmed ? "true" : "false"}
+                    data-drag-hover={tabDragHover ? "true" : undefined}
+                    className={cn(
+                      "w-full rounded-lg border border-dashed bg-muted/20 px-3 py-4 text-left text-sm text-muted-foreground transition-colors hover:border-ring/50 hover:text-foreground",
+                      tabArmed && "border-primary ring-1 ring-primary",
+                      !tabArmed && tabDragHover && "border-primary bg-primary/10 text-foreground"
+                    )}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onSetInsertPoint?.(tabArmed ? null : tabEndTarget);
+                    }}
+                    {...dropHandlers(tabEndTarget)}
+                  >
+                    Empty {tab.label}
+                  </button>
+                ) : (
+                  <div className="rounded-lg border border-dashed bg-muted/20 px-3 py-4 text-sm text-muted-foreground">
+                    Empty {tab.label}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       );
     }
@@ -1558,7 +1706,7 @@ export function ScreenRuntimeRenderer({
   }
 
   return (
-    <div className="space-y-5">
+    <div ref={rendererRootRef} className="space-y-5">
       {document.sections.map((section) => {
         const selected = selectedSectionId === section.id;
         const isInteractive = mode === "builder" && Boolean(onSelectSection);
@@ -1579,11 +1727,17 @@ export function ScreenRuntimeRenderer({
           typeof section.data.title === "string" && section.data.title.trim()
             ? section.data.title.trim()
             : section.label || "Section";
+        const selectSectionFromContainer = (event: ReactMouseEvent<HTMLElement>) => {
+          event.stopPropagation();
+          if (isSelectionInteractiveOrigin(event.target, event.currentTarget)) return;
+          onSelectSection?.(section.id);
+        };
         return (
           <section
             key={section.id}
             className={cn(
               "relative p-4 transition",
+              isInteractive && "group/section",
               mode === "preview"
                 ? "rounded-2xl border bg-background/80"
                 : mode === "builder"
@@ -1610,28 +1764,23 @@ export function ScreenRuntimeRenderer({
             data-screen-section-id={section.id}
             data-screen-section-type={section.type}
             data-selected={selected ? "true" : "false"}
-            role={isInteractive ? "button" : undefined}
-            tabIndex={isInteractive ? 0 : undefined}
-            onClick={
-              isInteractive
-                ? (event) => {
-                    event.stopPropagation();
-                    onSelectSection?.(section.id);
-                  }
-                : undefined
-            }
-            onKeyDown={
-              isInteractive
-                ? (event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      onSelectSection?.(section.id);
-                    }
-                  }
-                : undefined
-            }
+            onClick={isInteractive ? selectSectionFromContainer : undefined}
           >
+            {isInteractive ? (
+              <button
+                type="button"
+                aria-label={`Select ${title} section`}
+                aria-pressed={selected}
+                data-screen-select-section={section.id}
+                className="absolute -left-3 top-3 z-20 rounded-md border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground opacity-0 shadow-sm transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover/section:opacity-100"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelectSection?.(section.id);
+                }}
+              >
+                Select
+              </button>
+            ) : null}
             {mode === "builder" ? (
               // Chrome shows only when the SECTION ITSELF is the active target
               // (a selected block keeps the plain title — its own chrome wins).
@@ -1651,11 +1800,7 @@ export function ScreenRuntimeRenderer({
                       aria-label="Rename section"
                       data-screen-section-rename="true"
                       className="h-7 min-w-0 flex-1 rounded-md border border-border bg-background px-2 text-xs font-semibold text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      // REQUIRED (real-input bug guard): the parent <section>
-                      // onKeyDown preventDefault()s Space (swallowing it) and
-                      // re-selects on Enter. Stop propagation HERE so Space/Enter
-                      // reach the field and Enter commits the rename WITHOUT
-                      // re-triggering the section select.
+                      // Keep rename input events local to the section chrome.
                       onClick={(event) => event.stopPropagation()}
                       onKeyDown={(event) => {
                         event.stopPropagation();

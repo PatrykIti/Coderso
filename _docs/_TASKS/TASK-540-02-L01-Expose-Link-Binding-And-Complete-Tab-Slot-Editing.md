@@ -8,7 +8,9 @@
 **Category:** Custom Screens / Admin UI
 **Estimated Effort:** Small
 **Dependencies:** TASK-540-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-07-13
+**Completed:** 2026-07-13
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -17,11 +19,11 @@
 
 - `core/admin/ui/custom-screens/ScreenBlockInspector.tsx`
 - compatibility updates required by this source gate in
-  `tests/vitest/ui/custom-screen-binding-panel.test.tsx` and
-  `tests/vitest/customScreens/screenDocumentOps.test.ts`
+  `tests/vitest/ui/custom-screen-binding-panel.test.tsx`,
+  `tests/vitest/ui-integration/custom-screen-image-inspector.test.tsx`
 
 Do not edit the palette/factory, schema, renderer, shared controls, or the parent editor
-page. Update the two named behavior tests before this leaf's gate; TASK-540-06 owns only
+page. Update the named behavior test before this leaf's gate; TASK-540-06 owns only
 later aggregate additions.
 
 ## Grounded anchors
@@ -31,17 +33,26 @@ later aggregate additions.
 - Existing bound-field consumers: `:652-907`.
 - Button controls with unsupported options and no binding row: `:960-992`.
 - Generic slot arm UI: `:994+`.
+- Image URL control importing the transitional alias: `:1-30,463-492`.
 
 ## Implementation Pseudocode
 
 ```tsx
-// Import ScreenTabItem, SCREEN_TABS_MIN, and SCREEN_TABS_MAX from
-// customScreenSchemas; no local mirror.
+// Import ScreenTabItem, SCREEN_TABS_MIN, SCREEN_TABS_MAX, and
+// SCREEN_TAB_LABEL_MAX from customScreenSchemas; no local mirror.
 function nextTabId(tabs: ScreenTabItem[]): string {
   let n = tabs.length + 1;
   while (tabs.some((tab) => tab.id === `tab-${n}`)) n += 1;
   return `tab-${n}`;
 }
+
+type BoundFieldClearAffordance = Readonly<{
+  label: string;
+  onClear: () => void;
+}>;
+
+// BoundFieldRow accepts clearAffordance?: BoundFieldClearAffordance and renders it
+// only when this exact block/propPath binding exists. All unrelated callers omit it.
 
 // Button branch
 <BoundFieldRow
@@ -51,10 +62,12 @@ function nextTabId(tabs: ScreenTabItem[]): string {
   fields={fields}
   bindMode="read"
   onPatchBinding={onPatchBinding}
+  clearAffordance={{
+    label: "Use static link",
+    onClear: () =>
+      onPatchBinding(selectedBlock.id, "href", { field: "" }),
+  }}
 />
-// BoundFieldRow renders a named `Use static link` button only when this exact
-// block/propPath binding exists. Its click is the existing callback's removal sentinel:
-onPatchBinding(selectedBlock.id, "href", { field: "" });
 <EnumRow
   label="Action"
   value="link"
@@ -66,10 +79,20 @@ onPatchBinding(selectedBlock.id, "href", { field: "" });
 // Each tab row has a real "Edit content" button which arms that exact slot.
 // Add uses nextTabId(), creates slots[nextId]=[], and arms it.
 // Disable Add at SCREEN_TABS_MAX and keep the draft unchanged at the cap.
-// Rename changes label only; ID/slot identity stays stable.
+// Rename keeps local draft text keyed by block+tab plus the committed label on which
+// that draft was based. Do NOT use native maxLength=SCREEN_TAB_LABEL_MAX: HTML counts
+// raw UTF-16 units while the schema counts post-trim Unicode code points. Blur/Enter
+// commits only draft.trim() when non-empty and Array.from(trimmed).length is <= the
+// shared SCREEN_TAB_LABEL_MAX. Invalid transient text never calls onPatchBlock. A
+// parent prop refresh invalidates a draft based on an older label, and Escape restores
+// the latest committed label. ID/slot identity stays stable.
 // Remove is disabled/hidden when tabs.length <= SCREEN_TABS_MIN. Its event handler
 // also returns the original draft at that boundary. Otherwise it deletes exactly its
 // slot and arms the nearest remaining tab.
+
+// ImageSrcRow completes the handoff from TASK-540-01's compatibility alias:
+const safe = sanitizeScreenAuthoringUrl(raw, "media");
+onPatchBlockData(block.id, { src: safe ?? "" });
 ```
 
 Filter Button-bound fields through the same existing eligible-field policy used
@@ -87,23 +110,38 @@ and named.
 3. The visible `Use static link` affordance emits `{field:""}` for only the matching
    `href` binding. TASK-540-04-L04 owns the parent handler that consumes this sentinel
    by removing exactly that binding; the sentinel is never stored. Static href data and
-   every other binding are preserved.
+   every other binding are preserved. The Button branch is the only caller that passes
+   the optional clear affordance; header, field, heading, image, and related-list rows
+   omit it and therefore gain neither link-specific copy nor a clear action.
 4. Invalid legacy data is never fabricated in UI. Server errors remain visible
    through the existing editor save error surface.
+5. The armed tab identity is host-owned: “Edit content”, add, and remove call
+   `onArmSlotInsert(block.id, tabId)`. The Inspector never keeps a second active-tab
+   state. TASK-540-03 derives the builder's visible active panel from this same
+   `insertPoint` and tab activation writes the same slot-end target.
 
 ## Gate regressions owned here; aggregate additions owned by TASK-540-06
 
 - `custom-screen-binding-panel.test.tsx`: eligible-field filtering and Link-only
   action UI; pass the real `block` prop and assert the named clear affordance emits the
-  exact empty-field sentinel only for an existing href binding.
-- `screenDocumentOps.test.ts`/authoring operations: deterministic tab ID,
-  rename identity stability, remove-slot cleanup, active slot arm, and the shared
-  minimum/maximum UI: the last tab cannot be removed or lose its slot, and no 25th tab
-  or orphan slot can be created.
+  exact empty-field sentinel only for an existing href binding, and assert unrelated
+  binding-row consumers do not render `Use static link`. The same suite owns
+  deterministic tab ID, buffered valid rename/invalid transient rejection, Escape,
+  and a stateful parent rerender that proves the 120-code-point Unicode boundary,
+  surrounding-whitespace trim, latest-committed restore, and stale-draft invalidation,
+  remove-slot cleanup, exact active slot arm, and shared minimum/maximum UI: the last
+  tab cannot be removed or lose its slot, and no 25th tab or orphan slot can be
+  created.
+- `custom-screen-image-inspector.test.tsx`: the image control imports/uses the
+  canonical Screen wrapper and rejects protocol-relative and backslash-confused UI
+  input before patching the document.
+
+`tests/vitest/customScreens/screenDocumentOps.test.ts` remains read-only in this leaf;
+the Inspector is the physical UI owner and no document-op source changes.
 
 The end-to-end palette bind→clear→rebind flow runs after TASK-540-04-L04 wires the
 sentinel in the parent editor; TASK-540-06 owns that aggregate addition. This leaf must
-update and pass its two named tests before its source gate.
+update and pass its named test before its source gate.
 
 ## Validation
 
@@ -111,7 +149,18 @@ update and pass its two named tests before its source gate.
 bun --cwd core lint:types
 bun --cwd core lint
 bunx vitest run tests/vitest/ui/custom-screen-binding-panel.test.tsx \
-  tests/vitest/customScreens/screenDocumentOps.test.ts
+  tests/vitest/ui-integration/custom-screen-image-inspector.test.tsx
 ```
 
 Rerun any named failure once in isolation. No route, DB, or runtime Bun change.
+
+## Completion
+
+Implemented Button `href` binding and its exact clear sentinel, Link-only action
+authoring, deterministic slot-locked Tabs controls, buffered Unicode-aware label
+editing, exact slot arming, and the canonical Screen media-URL wrapper. The first
+post-audit exposed a native UTF-16 `maxLength` mismatch and a mock-only rerender gap;
+the contract and implementation were corrected with code-point validation plus a
+keyed label editor and a stateful A→B→A harness. The fresh re-audit reported zero
+HIGH, MEDIUM, or LOW findings. Final targeted Vitest passed 31/31; typecheck, lint,
+diff-check, staging, and collision guards passed.

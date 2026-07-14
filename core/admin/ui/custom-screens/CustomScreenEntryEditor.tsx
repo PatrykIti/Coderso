@@ -1,5 +1,13 @@
 import { RefreshCw, RotateCcw, Save, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -32,10 +40,10 @@ import {
   createEntry,
   getCachedEntryDetail,
   getEntryCached,
-  listEntriesCached,
   updateEntry,
   type EntryDetail,
 } from "@/services/entriesClient";
+import { listMediaCached, type MediaRecord } from "@/services/mediaClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import {
   clearActiveAssistantSurfaceContext,
@@ -44,10 +52,12 @@ import {
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import { CanvasEditor } from "@/ui/shared/CanvasEditor";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { useAdminDirtyNavigationGuard } from "@/ui/shared/AdminDirtyNavigationGuard";
 import { fieldsFromSchema } from "@/ui/content-types/schemaMapping";
 import { MediaPicker } from "@/ui/media/MediaPicker";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import {
+  isScreenMediaAssetUuid,
   normalizeCustomScreenDefinitionForRead,
   type CustomScreenDefinition,
   type CustomScreenEditorViewDefinitionV4,
@@ -66,18 +76,15 @@ import {
   findScreenBlockById,
   getFirstScreenBlockId,
 } from "../../../services/customScreens/screenDocumentOps";
-import {
-  relatedEntriesMapEqual,
-  resolveRelatedEntries,
-  type RelatedEntrySummary,
-} from "../../../services/customScreens/relatedEntryResolver";
+import type { RelatedEntrySummary } from "../../../services/customScreens/relatedEntryResolver";
 import { readBindingPathValue } from "../../../services/utils/bindingPath";
 
 import { CustomScreenPreview } from "./CustomScreenPreview";
 import { CustomScreenEntryCanvas } from "./CustomScreenEntryCanvas";
 import { useScreenEntryPreferences } from "./hooks/useScreenEntryPreferences";
+import { useScreenRelatedEntries } from "./hooks/useScreenRelatedEntries";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
-import { resolveCustomScreenEntryParams } from "./routeParams";
+import { buildCustomScreenWorkspacePath, resolveCustomScreenEntryParams } from "./routeParams";
 import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
 import type { ContentField } from "../content-types/SchemaBuilder";
 import {
@@ -94,6 +101,9 @@ const emptyScreenDocument: ScreenDocumentV1 = {
   schemaVersion: 1,
   sections: [],
 };
+const emptyContentFields: ContentField[] = [];
+const emptyFieldValues: Record<string, unknown> = {};
+const emptyPresentationOverrides: CustomScreenEntryPresentationOverride[] = [];
 
 const emptyEditorView: CustomScreenEditorViewDefinitionV4 = {
   document: emptyScreenDocument,
@@ -153,6 +163,7 @@ type PresentationTarget = {
   label: string;
   supportsText: boolean;
   mediaField: ContentField | null;
+  supportsDirectImage: boolean;
 };
 
 const presentationTextSizeOptions = screenEntryPresentationTextSizes.map((value) => ({
@@ -183,6 +194,32 @@ const normalizePresentationOverrideOrder = (overrides: CustomScreenEntryPresenta
 
 const serializePresentationOverrides = (overrides: CustomScreenEntryPresentationOverride[]) =>
   JSON.stringify(normalizePresentationOverrideOrder(overrides));
+
+export function resolvePresentationDraftTransition(input: {
+  saved: readonly CustomScreenEntryPresentationOverride[];
+  current: readonly CustomScreenEntryPresentationOverride[];
+  update: (
+    current: readonly CustomScreenEntryPresentationOverride[]
+  ) => CustomScreenEntryPresentationOverride[];
+}) {
+  const nextDraft = normalizePresentationOverrideOrder(input.update(input.current));
+  return {
+    nextDraft,
+    dirty:
+      serializePresentationOverrides([...input.saved]) !==
+      serializePresentationOverrides(nextDraft),
+  };
+}
+
+export const isDraftAuthorityClean = (input: {
+  capturedGeneration: number;
+  currentGeneration: number;
+  contentDirty: boolean;
+  presentationDirty: boolean;
+}) =>
+  input.capturedGeneration === input.currentGeneration &&
+  !input.contentDirty &&
+  !input.presentationDirty;
 
 const readString = (value: unknown) => (typeof value === "string" ? value.trim() : "");
 
@@ -230,6 +267,7 @@ const resolvePresentationTarget = (input: {
       label: resolveBlockLabel(block, fields),
       supportsText: true,
       mediaField: null,
+      supportsDirectImage: false,
     };
   }
 
@@ -247,6 +285,17 @@ const resolvePresentationTarget = (input: {
       label: resolveBlockLabel(block, fields),
       supportsText: true,
       mediaField: null,
+      supportsDirectImage: false,
+    };
+  }
+
+  if (block.type === "image") {
+    return {
+      block,
+      label: resolveBlockLabel(block, fields),
+      supportsText: false,
+      mediaField: null,
+      supportsDirectImage: true,
     };
   }
 
@@ -259,11 +308,12 @@ const resolvePresentationTarget = (input: {
     label: resolveBlockLabel(block, fields),
     supportsText: true,
     mediaField: field?.type === "media" ? field : null,
+    supportsDirectImage: false,
   };
 };
 
 const upsertPresentationOverride = (
-  overrides: CustomScreenEntryPresentationOverride[],
+  overrides: readonly CustomScreenEntryPresentationOverride[],
   blockId: string,
   propPath: ScreenEntryPresentationOverridePropPath,
   value: string | null
@@ -287,14 +337,285 @@ const upsertPresentationOverride = (
 };
 
 const removePresentationOverridesForBlock = (
-  overrides: CustomScreenEntryPresentationOverride[],
+  overrides: readonly CustomScreenEntryPresentationOverride[],
   blockId: string
 ) => overrides.filter((override) => override.blockId !== blockId);
 
+export type MediaAttemptCause = "initial" | "manual-retry" | "cache-event";
+export type MediaAttempt = {
+  requestKey: string;
+  token: number;
+  cause: MediaAttemptCause;
+  force: boolean;
+  requestedIds: readonly string[];
+};
+export type MediaMachineState = {
+  lastToken: number;
+  settledToken: number | null;
+  requestKey: string;
+  attempt: MediaAttempt | null;
+};
+export type MediaAttemptInput = {
+  requestKey: string;
+  requestedIds: readonly string[];
+};
+export type MediaAttemptAction =
+  | { type: "sync-request"; requestKey: string; requestedIds: readonly string[] }
+  | { type: "retry"; requestKey: string; cause: "manual-retry" | "cache-event" }
+  | { type: "settled"; requestKey: string; token: number };
+
+type MediaCommit = {
+  routeVisit: RouteVisit | null;
+  requestKey: string | null;
+  attemptToken: number | null;
+  urlsById: Readonly<Record<string, string>>;
+  error: string | null;
+};
+
+type RouteVisit = Readonly<{ routeKey: string }>;
+type RouteMessageCommit = { routeVisit: RouteVisit; message: string };
+type PresentationErrorCommit = RouteMessageCommit & { kind: "load" | "save" };
+
+export const PRESENTATION_MEDIA_LOAD_ERROR = "Presentation image could not be loaded.";
+
+const invalidPresentationMediaKey = () => new Error("custom_screen_presentation_media_invalid");
+
+const parsePresentationMediaJson = (value: string): unknown => {
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    throw invalidPresentationMediaKey();
+  }
+};
+
+export function buildEntryRouteKey(input: {
+  screenId: string | null;
+  entryId: string | null;
+  isCreateMode: boolean;
+}): string {
+  return JSON.stringify([input.screenId ?? "", input.entryId ?? "", input.isCreateMode]);
+}
+
+const decodeAndValidateEntryRouteKey = (routeKey: string) => {
+  const tuple = parsePresentationMediaJson(routeKey);
+  if (
+    !Array.isArray(tuple) ||
+    tuple.length !== 3 ||
+    typeof tuple[0] !== "string" ||
+    typeof tuple[1] !== "string" ||
+    typeof tuple[2] !== "boolean"
+  ) {
+    throw invalidPresentationMediaKey();
+  }
+  return Object.freeze([tuple[0], tuple[1], tuple[2]] as const);
+};
+
+const assertScreenMediaAssetUuid = (value: unknown): string => {
+  if (!isScreenMediaAssetUuid(value)) throw invalidPresentationMediaKey();
+  return value;
+};
+
+export function buildPresentationMediaRequestKey(
+  routeKey: string,
+  requestedIds: readonly string[]
+): string {
+  decodeAndValidateEntryRouteKey(routeKey);
+  const ids = [...new Set(requestedIds.map(assertScreenMediaAssetUuid))].sort();
+  if (ids.length > 200) throw invalidPresentationMediaKey();
+  return JSON.stringify([routeKey, ids]);
+}
+
+export function decodeAndValidatePresentationMediaRequestKey(key: string): {
+  routeKey: string;
+  requestedIds: readonly string[];
+} {
+  const tuple = parsePresentationMediaJson(key);
+  if (
+    !Array.isArray(tuple) ||
+    tuple.length !== 2 ||
+    typeof tuple[0] !== "string" ||
+    !Array.isArray(tuple[1]) ||
+    tuple[1].length > 200
+  ) {
+    throw invalidPresentationMediaKey();
+  }
+  decodeAndValidateEntryRouteKey(tuple[0]);
+  const requestedIds = Object.freeze(tuple[1].map(assertScreenMediaAssetUuid));
+  if (new Set(requestedIds).size !== requestedIds.length) {
+    throw invalidPresentationMediaKey();
+  }
+  if (requestedIds.some((id, index) => index > 0 && requestedIds[index - 1]! > id)) {
+    throw invalidPresentationMediaKey();
+  }
+  return { routeKey: tuple[0], requestedIds };
+}
+
+export const readRequestedIdsFromMediaRequestKey = (key: string): readonly string[] =>
+  Object.freeze([...decodeAndValidatePresentationMediaRequestKey(key).requestedIds]);
+
+export function allocateMediaAttempt(
+  state: MediaMachineState,
+  input: MediaAttemptInput,
+  cause: MediaAttemptCause,
+  force: boolean
+): MediaMachineState {
+  const token = state.lastToken + 1;
+  return {
+    ...state,
+    lastToken: token,
+    requestKey: input.requestKey,
+    attempt: Object.freeze({
+      requestKey: input.requestKey,
+      token,
+      cause,
+      force,
+      requestedIds: Object.freeze([...input.requestedIds]),
+    }),
+  };
+}
+
+const assertNeverMediaAttemptAction = (action: never): never => {
+  throw new Error(`Unhandled media-attempt action: ${String(action)}`);
+};
+
+export function mediaAttemptReducer(
+  state: MediaMachineState,
+  action: MediaAttemptAction
+): MediaMachineState {
+  switch (action.type) {
+    case "sync-request": {
+      if (action.requestKey === state.requestKey) return state;
+      if (action.requestedIds.length === 0) {
+        return { ...state, requestKey: action.requestKey, attempt: null };
+      }
+      const priorPending = state.attempt !== null && state.attempt.token !== state.settledToken;
+      const inheritForce = priorPending && state.attempt?.force === true;
+      return allocateMediaAttempt(
+        state,
+        action,
+        inheritForce ? state.attempt!.cause : "initial",
+        inheritForce
+      );
+    }
+    case "retry":
+      if (action.requestKey !== state.requestKey || !state.attempt) return state;
+      return allocateMediaAttempt(
+        state,
+        { requestKey: state.requestKey, requestedIds: state.attempt.requestedIds },
+        action.cause,
+        true
+      );
+    case "settled":
+      if (
+        state.attempt?.requestKey !== action.requestKey ||
+        state.attempt.token !== action.token ||
+        state.settledToken === action.token
+      ) {
+        return state;
+      }
+      return { ...state, settledToken: action.token };
+    default:
+      return assertNeverMediaAttemptAction(action);
+  }
+}
+
+export function initializeMediaMachineState(input: MediaAttemptInput): MediaMachineState {
+  const empty: MediaMachineState = {
+    lastToken: 0,
+    settledToken: null,
+    requestKey: input.requestKey,
+    attempt: null,
+  };
+  return input.requestedIds.length === 0
+    ? empty
+    : allocateMediaAttempt(empty, input, "initial", false);
+}
+
+const firstMediaAssetUuid = (value: unknown): string | null => {
+  const values = Array.isArray(value) ? value : [value];
+  return values.find(isScreenMediaAssetUuid) ?? null;
+};
+
+export function collectWinningDirectImageAssetIds(input: {
+  document: ScreenDocumentV1;
+  bindings: readonly ScreenFieldBinding[];
+  values: Record<string, unknown>;
+  overrides: readonly CustomScreenEntryPresentationOverride[];
+}): string[] {
+  const ids = new Set<string>();
+  for (const block of collectScreenDocumentBlocks(input.document)) {
+    if (block.type !== "image") continue;
+    const authoredMediaAsset = input.overrides.find(
+      (override) => override.blockId === block.id && override.propPath === "mediaAssetId"
+    );
+    const authoredLegacyImage = input.overrides.find(
+      (override) => override.blockId === block.id && override.propPath === "image"
+    );
+    const authored = authoredMediaAsset ?? authoredLegacyImage;
+    if (authored) {
+      if (isScreenMediaAssetUuid(authored.value)) ids.add(authored.value);
+      continue;
+    }
+    const binding = input.bindings.find(
+      (candidate) => candidate.blockId === block.id && candidate.propPath === "src"
+    );
+    const boundId = binding
+      ? firstMediaAssetUuid(readBindingPathValue(input.values, binding.field))
+      : null;
+    if (boundId) ids.add(boundId);
+  }
+  return [...ids].sort();
+}
+
+export function projectExactRequestedMediaUrls(
+  records: readonly MediaRecord[],
+  requestedIds: readonly string[]
+): Readonly<Record<string, string>> {
+  const requested = new Set(requestedIds);
+  const result: Record<string, string> = {};
+  for (const record of records) {
+    if (
+      requested.has(record.id) &&
+      isScreenMediaAssetUuid(record.id) &&
+      record.type === "image" &&
+      typeof record.url === "string"
+    ) {
+      result[record.id] = record.url;
+    }
+  }
+  return Object.freeze(result);
+}
+
 export function CustomScreenEntryEditor() {
-  const { path, navigate } = useAdminRouter();
+  const { path } = useAdminRouter();
   const { screenId, entryId } = useMemo(() => resolveCustomScreenEntryParams(path), [path]);
   const isCreateMode = entryId === "new";
+  const routeKey = buildEntryRouteKey({ screenId, entryId, isCreateMode });
+
+  return (
+    <CustomScreenEntryRouteSession
+      key={routeKey}
+      screenId={screenId}
+      entryId={entryId}
+      isCreateMode={isCreateMode}
+      routeKey={routeKey}
+    />
+  );
+}
+
+function CustomScreenEntryRouteSession({
+  screenId,
+  entryId,
+  isCreateMode,
+  routeKey,
+}: {
+  screenId: string | null;
+  entryId: string | null;
+  isCreateMode: boolean;
+  routeKey: string;
+}) {
+  const { navigate } = useAdminRouter();
+  const [routeVisit] = useState<RouteVisit>(() => Object.freeze({ routeKey }));
   const initialScreen = useMemo(
     () => (screenId ? (getCachedCustomScreen(screenId) ?? null) : null),
     [screenId]
@@ -340,6 +661,10 @@ export function CustomScreenEntryEditor() {
     [entryId, isCreateMode, screenId]
   );
   const initialPresentationOverrides = initialCachedPresentationOverrides ?? [];
+  const initialEntryRouteReady = Boolean(
+    initialScreen && initialContentType && (isCreateMode || initialEntry)
+  );
+  const initialPresentationRouteReady = isCreateMode || initialCachedPresentationOverrides !== null;
 
   const [screen, setScreen] = useState<CustomScreenRecord | null>(initialScreen);
   const [contentType, setContentType] = useState<ContentTypeSummary | null>(initialContentType);
@@ -356,25 +681,38 @@ export function CustomScreenEntryEditor() {
   );
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [isLoading, setIsLoading] = useState(
-    () => !(initialScreen && initialContentType && (isCreateMode || initialEntry))
+  const [committedEntryVisit, setCommittedEntryVisit] = useState<RouteVisit | null>(
+    initialEntryRouteReady ? routeVisit : null
   );
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
-  const [savedOverrides, setSavedOverrides] = useState<CustomScreenEntryPresentationOverride[]>(
+  const [committedOverrideVisit, setCommittedOverrideVisit] = useState<RouteVisit | null>(
+    initialPresentationRouteReady ? routeVisit : null
+  );
+  const [entryErrorCommit, setEntryErrorCommit] = useState<RouteMessageCommit | null>(null);
+  const [presentationErrorCommit, setPresentationErrorCommit] =
+    useState<PresentationErrorCommit | null>(null);
+  const [remoteEntryWarningVisit, setRemoteEntryWarningVisit] = useState<RouteVisit | null>(null);
+  const [remotePresentationWarningVisit, setRemotePresentationWarningVisit] =
+    useState<RouteVisit | null>(null);
+  const [entryLoadActivityVisit, setEntryLoadActivityVisit] = useState<RouteVisit | null>(
+    initialEntryRouteReady ? null : routeVisit
+  );
+  const [presentationLoadActivityVisit, setPresentationLoadActivityVisit] =
+    useState<RouteVisit | null>(
+      !isCreateMode && initialCachedPresentationOverrides === null ? routeVisit : null
+    );
+  const [contentSaveActivityVisit, setContentSaveActivityVisit] = useState<RouteVisit | null>(null);
+  const [presentationSaveActivityVisit, setPresentationSaveActivityVisit] =
+    useState<RouteVisit | null>(null);
+  const [saveNoticeCommit, setSaveNoticeCommit] = useState<RouteMessageCommit | null>(null);
+  const [presentationSaveNoticeCommit, setPresentationSaveNoticeCommit] =
+    useState<RouteMessageCommit | null>(null);
+  const [, setSavedOverrides] = useState<CustomScreenEntryPresentationOverride[]>(
     initialPresentationOverrides
   );
   const [draftOverrides, setDraftOverrides] = useState<CustomScreenEntryPresentationOverride[]>(
     initialPresentationOverrides
   );
-  const [isPresentationLoading, setIsPresentationLoading] = useState(
-    () =>
-      !isCreateMode && Boolean(screenId && entryId) && initialCachedPresentationOverrides === null
-  );
-  const [isPresentationSaving, setIsPresentationSaving] = useState(false);
-  const [presentationError, setPresentationError] = useState<string | null>(null);
-  const [remotePresentationUpdatePending, setRemotePresentationUpdatePending] = useState(false);
+  const [hasUnsavedPresentationChanges, setHasUnsavedPresentationChanges] = useState(false);
   const [selectedRuntimeBlockId, setSelectedRuntimeBlockId] = useState<string | null>(null);
   // TASK-503-03: per-user entry-view badge preference (localStorage, default OFF).
   const { preferences: entryPreferences, setPreferences: setEntryPreferences } =
@@ -390,18 +728,70 @@ export function CustomScreenEntryEditor() {
       }))
   );
 
-  const schemaFieldNames = useMemo(() => new Set(fields.map((field) => field.name)), [fields]);
+  const contentDirtyRef = useRef(false);
+  const presentationDirtyRef = useRef(false);
+  const savedOverridesRef = useRef(initialPresentationOverrides);
+  const draftOverridesRef = useRef(initialPresentationOverrides);
+  const draftMutationGenerationRef = useRef(0);
+  const entryLoadGenerationRef = useRef(0);
+  const overrideLoadGenerationRef = useRef(0);
+  const contentSaveGenerationRef = useRef(0);
+  const presentationSaveGenerationRef = useRef(0);
+  const mediaLoadGenerationRef = useRef(0);
+  const mediaPendingAttemptRef = useRef<{
+    attempt: MediaAttempt;
+    promise: Promise<MediaRecord[]>;
+  } | null>(null);
+  const mountedRef = useRef(true);
+  const routeGenerationRef = useRef(0);
+  const persistedEntryTargetRef = useRef<{
+    routeVisit: RouteVisit;
+    routeGeneration: number;
+    id: string;
+  } | null>(null);
+
+  const entryRouteReady = committedEntryVisit === routeVisit;
+  const overrideRouteReady = committedOverrideVisit === routeVisit;
+  const error = entryErrorCommit?.routeVisit === routeVisit ? entryErrorCommit.message : null;
+  const presentationError =
+    presentationErrorCommit?.routeVisit === routeVisit ? presentationErrorCommit.message : null;
+  const presentationErrorKind =
+    presentationErrorCommit?.routeVisit === routeVisit ? presentationErrorCommit.kind : null;
+  const remoteUpdatePending = remoteEntryWarningVisit === routeVisit;
+  const remotePresentationUpdatePending = remotePresentationWarningVisit === routeVisit;
+  const isLoading = entryLoadActivityVisit === routeVisit || (!entryRouteReady && error === null);
+  const isPresentationLoading =
+    presentationLoadActivityVisit === routeVisit ||
+    (!isCreateMode && !overrideRouteReady && presentationError === null);
+  const isSaving = contentSaveActivityVisit === routeVisit;
+  const isPresentationSaving = presentationSaveActivityVisit === routeVisit;
+  const currentSaveNotice =
+    saveNoticeCommit?.routeVisit === routeVisit ? saveNoticeCommit.message : null;
+  const currentPresentationSaveNotice =
+    presentationSaveNoticeCommit?.routeVisit === routeVisit
+      ? presentationSaveNoticeCommit.message
+      : null;
+  const currentScreen = entryRouteReady ? screen : null;
+  const currentContentType = entryRouteReady ? contentType : null;
+  const currentEntry = entryRouteReady ? entry : null;
+  const currentFields = entryRouteReady ? fields : emptyContentFields;
+  const currentDraftOverrides = overrideRouteReady ? draftOverrides : emptyPresentationOverrides;
+
+  const schemaFieldNames = useMemo(
+    () => new Set(currentFields.map((field) => field.name)),
+    [currentFields]
+  );
   const screenCapabilities = useMemo(
     () =>
-      screen?.capabilities ??
+      currentScreen?.capabilities ??
       resolveCustomScreenCapabilities({
-        definition: screen ? resolveRuntimeDefinition(screen) : undefined,
+        definition: currentScreen ? resolveRuntimeDefinition(currentScreen) : undefined,
       }),
-    [screen]
+    [currentScreen]
   );
   const canEditInScreen = screenCapabilities.supportsDedicatedEditor;
-  const runtimeDocument = useMemo(() => resolveRuntimeDocument(screen), [screen]);
-  const runtimeBindings = useMemo(() => resolveRuntimeBindings(screen), [screen]);
+  const runtimeDocument = useMemo(() => resolveRuntimeDocument(currentScreen), [currentScreen]);
+  const runtimeBindings = useMemo(() => resolveRuntimeBindings(currentScreen), [currentScreen]);
   const selectedRuntimeBlock = useMemo(
     () =>
       selectedRuntimeBlockId ? findScreenBlockById(runtimeDocument, selectedRuntimeBlockId) : null,
@@ -412,20 +802,10 @@ export function CustomScreenEntryEditor() {
       resolvePresentationTarget({
         block: selectedRuntimeBlock,
         bindings: runtimeBindings,
-        fields,
+        fields: currentFields,
       }),
-    [fields, runtimeBindings, selectedRuntimeBlock]
+    [currentFields, runtimeBindings, selectedRuntimeBlock]
   );
-  const savedPresentationKey = useMemo(
-    () => serializePresentationOverrides(savedOverrides),
-    [savedOverrides]
-  );
-  const draftPresentationKey = useMemo(
-    () => serializePresentationOverrides(draftOverrides),
-    [draftOverrides]
-  );
-  const hasUnsavedPresentationChanges = savedPresentationKey !== draftPresentationKey;
-  const hasUnsavedPresentationChangesRef = useRef(hasUnsavedPresentationChanges);
   const overrideCacheKey = useMemo(
     () =>
       screenId && entryId && !isCreateMode
@@ -435,18 +815,14 @@ export function CustomScreenEntryEditor() {
   );
 
   useEffect(() => {
-    hasUnsavedPresentationChangesRef.current = hasUnsavedPresentationChanges;
-  }, [hasUnsavedPresentationChanges]);
-
-  useEffect(() => {
-    if (!screen || !screenId || !entryId) {
+    if (!currentScreen || !screenId || !entryId) {
       clearActiveAssistantSurfaceContext();
       return undefined;
     }
 
     setActiveAssistantSurfaceContext(
       buildCustomScreenAssistantSurface({
-        screen,
+        screen: currentScreen,
         blocks: runtimeDocument.sections.flatMap((section) => section.blocks),
         bindings: runtimeBindings,
         capabilities: screenCapabilities,
@@ -474,7 +850,7 @@ export function CustomScreenEntryEditor() {
     hasUnsavedPresentationChanges,
     remoteUpdatePending,
     remotePresentationUpdatePending,
-    screen,
+    currentScreen,
     screenCapabilities,
     screenId,
     runtimeDocument.sections,
@@ -482,24 +858,37 @@ export function CustomScreenEntryEditor() {
     selectedRuntimeBlockId,
   ]);
 
+  useLayoutEffect(() => {
+    mountedRef.current = true;
+    routeGenerationRef.current += 1;
+    return () => {
+      clearActiveAssistantSurfaceContext();
+      persistedEntryTargetRef.current = null;
+      mountedRef.current = false;
+      routeGenerationRef.current += 1;
+      entryLoadGenerationRef.current += 1;
+      overrideLoadGenerationRef.current += 1;
+      contentSaveGenerationRef.current += 1;
+      presentationSaveGenerationRef.current += 1;
+      mediaLoadGenerationRef.current += 1;
+    };
+  }, [routeKey]);
+
+  const mayMutateCurrentEntry = () => entryRouteReady && currentContentType !== null;
+  const mayMutateCurrentPresentation = () => entryRouteReady && overrideRouteReady && !isCreateMode;
+
   const applyLoadedState = useCallback(
     (
       nextScreen: CustomScreenRecord,
       nextContentType: ContentTypeSummary,
-      nextEntry: EntryDetail | null
+      nextEntry: EntryDetail | null,
+      acceptedRouteVisit: RouteVisit
     ) => {
       const nextFields = fieldsFromSchema(nextContentType.schema);
       const editorView = resolveRuntimeEditorView(nextScreen);
       const nextDraft = nextEntry
-        ? hydrateEditorViewDraft({
-            contentType: nextContentType,
-            editorView,
-            entry: nextEntry,
-          })
-        : buildInitialEntryDraft({
-            contentType: nextContentType,
-            editorView,
-          });
+        ? hydrateEditorViewDraft({ contentType: nextContentType, editorView, entry: nextEntry })
+        : buildInitialEntryDraft({ contentType: nextContentType, editorView });
       setScreen(nextScreen);
       setContentType(nextContentType);
       setEntry(nextEntry);
@@ -510,200 +899,234 @@ export function CustomScreenEntryEditor() {
       setEditableFields(nextDraft.editableFields);
       setOriginalData(nextDraft.originalData);
       setFieldErrors({});
+      contentDirtyRef.current = false;
       setHasUnsavedChanges(false);
-      setRemoteUpdatePending(false);
-      const nextDocument = resolveRuntimeDocument(nextScreen);
+      setRemoteEntryWarningVisit(null);
       setSelectedRuntimeBlockId((current) =>
         preserveSelectedElementAcrossRefresh({
           selectedBlockId: current,
-          nextDocument,
+          nextDocument: resolveRuntimeDocument(nextScreen),
         })
       );
-      setError(null);
+      setEntryErrorCommit(null);
+      setCommittedEntryVisit(acceptedRouteVisit);
     },
     []
   );
 
-  const applyLoadedPresentationOverrides = useCallback(
-    (overrides: CustomScreenEntryPresentationOverride[], options?: { keepUnsaved?: boolean }) => {
-      if (options?.keepUnsaved && hasUnsavedPresentationChangesRef.current) {
-        setRemotePresentationUpdatePending(true);
-        return;
-      }
+  const applyAuthoritativePresentationState = useCallback(
+    (overrides: CustomScreenEntryPresentationOverride[], acceptedRouteVisit: RouteVisit) => {
       const ordered = normalizePresentationOverrideOrder(overrides);
+      savedOverridesRef.current = ordered;
+      draftOverridesRef.current = ordered;
+      presentationDirtyRef.current = false;
       setSavedOverrides(ordered);
       setDraftOverrides(ordered);
-      setRemotePresentationUpdatePending(false);
-      setPresentationError(null);
+      setHasUnsavedPresentationChanges(false);
+      setPresentationErrorCommit(null);
+      setRemotePresentationWarningVisit(null);
+      setCommittedOverrideVisit(acceptedRouteVisit);
     },
     []
   );
 
-  const refreshPresentation = useCallback(
-    async (force = false, options?: { keepUnsaved?: boolean; background?: boolean }) => {
-      if (!screenId || !entryId || isCreateMode) return;
-      if (!options?.background) setIsPresentationLoading(true);
+  type LoadChannel = "entry" | "override";
+  type LoadToken = {
+    channel: LoadChannel;
+    routeKey: string;
+    routeVisit: RouteVisit;
+    routeGeneration: number;
+    loadGeneration: number;
+    draftGeneration: number;
+  };
+
+  const captureLoadToken = useCallback(
+    (channel: LoadChannel): LoadToken => ({
+      channel,
+      routeKey,
+      routeVisit,
+      routeGeneration: routeGenerationRef.current,
+      loadGeneration:
+        channel === "entry"
+          ? ++entryLoadGenerationRef.current
+          : ++overrideLoadGenerationRef.current,
+      draftGeneration: draftMutationGenerationRef.current,
+    }),
+    [routeKey, routeVisit]
+  );
+
+  const isLoadIdentityCurrent = useCallback(
+    (token: LoadToken) => {
+      const generation =
+        token.channel === "entry"
+          ? entryLoadGenerationRef.current
+          : overrideLoadGenerationRef.current;
+      return (
+        mountedRef.current &&
+        token.routeKey === routeKey &&
+        token.routeVisit === routeVisit &&
+        token.routeGeneration === routeGenerationRef.current &&
+        token.loadGeneration === generation
+      );
+    },
+    [routeKey, routeVisit]
+  );
+
+  const mayApplyAuthoritativeDraft = useCallback(
+    (token: LoadToken) =>
+      isLoadIdentityCurrent(token) &&
+      isDraftAuthorityClean({
+        capturedGeneration: token.draftGeneration,
+        currentGeneration: draftMutationGenerationRef.current,
+        contentDirty: contentDirtyRef.current,
+        presentationDirty: presentationDirtyRef.current,
+      }),
+    [isLoadIdentityCurrent]
+  );
+
+  const didCompleteDraftRemainClean = useCallback(
+    (token: LoadToken) =>
+      isDraftAuthorityClean({
+        capturedGeneration: token.draftGeneration,
+        currentGeneration: draftMutationGenerationRef.current,
+        contentDirty: contentDirtyRef.current,
+        presentationDirty: presentationDirtyRef.current,
+      }),
+    []
+  );
+
+  const loadEntryRoute = useCallback(
+    async (force: boolean) => {
+      if (!screenId || !entryId) throw new Error("custom_screen_entry_route_invalid");
+      const nextScreen = await getCustomScreenCached(screenId, { force });
+      if (!nextScreen) throw new Error("custom_screen_not_found");
+      const contentTypes = await listContentTypesCached({ force: true });
+      const nextContentType =
+        contentTypes.find((item) => item.id === nextScreen.contentTypeId) ?? null;
+      if (!nextContentType) throw new Error("content_type_not_found");
+      const nextEntry = isCreateMode
+        ? null
+        : await getEntryCached(nextContentType.slug, entryId, { force });
+      if (!isCreateMode && !nextEntry) throw new Error("entry_not_found");
+      return { nextScreen, nextContentType, nextEntry };
+    },
+    [entryId, isCreateMode, screenId]
+  );
+
+  const runEntryHydration = useCallback(
+    async (force: boolean, isActive: () => boolean) => {
+      const token = captureLoadToken("entry");
+      setEntryLoadActivityVisit(token.routeVisit);
       try {
-        const overrides = await getScreenEntryOverridesCached(screenId, entryId, { force });
-        applyLoadedPresentationOverrides(overrides, {
-          keepUnsaved: options?.keepUnsaved,
-        });
-      } catch (err) {
-        if (isApiClientError(err)) {
-          setPresentationError(err.message);
-        } else {
-          setPresentationError("Failed to load presentation overrides.");
+        const result = await loadEntryRoute(force);
+        if (!isActive() || !isLoadIdentityCurrent(token)) return;
+        if (!mayApplyAuthoritativeDraft(token)) {
+          setRemoteEntryWarningVisit(token.routeVisit);
+          return;
         }
+        applyLoadedState(
+          result.nextScreen,
+          result.nextContentType,
+          result.nextEntry,
+          token.routeVisit
+        );
+      } catch {
+        if (!isActive() || !isLoadIdentityCurrent(token)) return;
+        setEntryErrorCommit({
+          routeVisit: token.routeVisit,
+          message: didCompleteDraftRemainClean(token)
+            ? "Failed to load record."
+            : "Could not check for record updates. Local changes are unchanged.",
+        });
       } finally {
-        if (!options?.background) setIsPresentationLoading(false);
+        if (isActive() && isLoadIdentityCurrent(token)) {
+          setEntryLoadActivityVisit((current) => (current === token.routeVisit ? null : current));
+        }
       }
     },
-    [applyLoadedPresentationOverrides, entryId, isCreateMode, screenId]
+    [
+      applyLoadedState,
+      captureLoadToken,
+      didCompleteDraftRemainClean,
+      isLoadIdentityCurrent,
+      loadEntryRoute,
+      mayApplyAuthoritativeDraft,
+    ]
+  );
+
+  const runOverrideHydration = useCallback(
+    async (force: boolean, isActive: () => boolean) => {
+      const token = captureLoadToken("override");
+      setPresentationLoadActivityVisit(token.routeVisit);
+      try {
+        const overrides =
+          !screenId || !entryId || isCreateMode
+            ? []
+            : await getScreenEntryOverridesCached(screenId, entryId, { force });
+        if (!isActive() || !isLoadIdentityCurrent(token)) return;
+        if (!mayApplyAuthoritativeDraft(token)) {
+          setRemotePresentationWarningVisit(token.routeVisit);
+          return;
+        }
+        applyAuthoritativePresentationState(overrides, token.routeVisit);
+      } catch {
+        if (!isActive() || !isLoadIdentityCurrent(token)) return;
+        setPresentationErrorCommit({
+          routeVisit: token.routeVisit,
+          kind: "load",
+          message: didCompleteDraftRemainClean(token)
+            ? "Failed to load presentation overrides."
+            : "Could not check for presentation updates. Local changes are unchanged.",
+        });
+      } finally {
+        if (isActive() && isLoadIdentityCurrent(token)) {
+          setPresentationLoadActivityVisit((current) =>
+            current === token.routeVisit ? null : current
+          );
+        }
+      }
+    },
+    [
+      applyAuthoritativePresentationState,
+      captureLoadToken,
+      didCompleteDraftRemainClean,
+      entryId,
+      isCreateMode,
+      isLoadIdentityCurrent,
+      mayApplyAuthoritativeDraft,
+      screenId,
+    ]
   );
 
   const refresh = useCallback(
-    async (force = false, options?: { keepUnsaved?: boolean }) => {
-      if (!screenId || !entryId) return;
-      setIsLoading(true);
-      try {
-        const nextScreen = await getCustomScreenCached(screenId, { force });
-        if (!nextScreen) {
-          setError("Custom screen not found.");
-          return;
-        }
-
-        const contentTypes = await listContentTypesCached({ force: true });
-        const nextContentType =
-          contentTypes.find((item) => item.id === nextScreen.contentTypeId) ?? null;
-        if (!nextContentType) {
-          setError("Content type not found.");
-          return;
-        }
-
-        let nextEntry: EntryDetail | null = null;
-        if (!isCreateMode) {
-          nextEntry = await getEntryCached(nextContentType.slug, entryId, {
-            force,
-          });
-          if (!nextEntry) {
-            setError("Record not found.");
-            return;
-          }
-        }
-
-        if (options?.keepUnsaved && hasUnsavedChanges) {
-          setRemoteUpdatePending(true);
-          return;
-        }
-
-        applyLoadedState(nextScreen, nextContentType, nextEntry);
-      } catch (err) {
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load record.");
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [applyLoadedState, entryId, hasUnsavedChanges, isCreateMode, screenId]
+    (force = false) => runEntryHydration(force, () => true),
+    [runEntryHydration]
+  );
+  const refreshPresentation = useCallback(
+    (force = false) => runOverrideHydration(force, () => true),
+    [runOverrideHydration]
   );
 
   useEffect(() => {
-    if (!screenId || !entryId) return;
+    if (!screenId || !entryId) return undefined;
     let active = true;
-    getCustomScreenCached(screenId, { force: true })
-      .then(async (nextScreen) => {
-        if (!active) return;
-        if (!nextScreen) {
-          setError("Custom screen not found.");
-          return;
-        }
-        const contentTypes = await listContentTypesCached({ force: true });
-        if (!active) return;
-        const nextContentType =
-          contentTypes.find((item) => item.id === nextScreen.contentTypeId) ?? null;
-        if (!nextContentType) {
-          setError("Content type not found.");
-          return;
-        }
-        let nextEntry: EntryDetail | null = null;
-        if (!isCreateMode) {
-          nextEntry = await getEntryCached(nextContentType.slug, entryId, {
-            force: true,
-          });
-          if (!active) return;
-          if (!nextEntry) {
-            setError("Record not found.");
-            return;
-          }
-        }
-        applyLoadedState(nextScreen, nextContentType, nextEntry);
-      })
-      .catch((err) => {
-        if (!active) return;
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load record.");
-        }
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
-      });
+    queueMicrotask(() => {
+      if (active) void runEntryHydration(true, () => active);
+    });
     return () => {
       active = false;
     };
-  }, [applyLoadedState, entryId, isCreateMode, screenId]);
+  }, [entryId, runEntryHydration, screenId]);
 
   useEffect(() => {
     let active = true;
-    const loadPresentationOverrides = async () => {
-      if (!screenId || !entryId || isCreateMode) {
-        if (!active) return;
-        setSavedOverrides([]);
-        setDraftOverrides([]);
-        setRemotePresentationUpdatePending(false);
-        setPresentationError(null);
-        setIsPresentationLoading(false);
-        return;
-      }
-
-      const cached = getCachedScreenEntryOverrides(screenId, entryId);
-      if (cached) {
-        if (!active) return;
-        applyLoadedPresentationOverrides(cached);
-        setIsPresentationLoading(false);
-      } else {
-        if (!active) return;
-        setSavedOverrides([]);
-        setDraftOverrides([]);
-        setIsPresentationLoading(true);
-      }
-
-      try {
-        const overrides = await getScreenEntryOverridesCached(screenId, entryId, { force: true });
-        if (!active) return;
-        applyLoadedPresentationOverrides(overrides, { keepUnsaved: true });
-      } catch (err) {
-        if (!active) return;
-        if (isApiClientError(err)) {
-          setPresentationError(err.message);
-        } else {
-          setPresentationError("Failed to load presentation overrides.");
-        }
-      } finally {
-        if (active) setIsPresentationLoading(false);
-      }
-    };
-
-    void Promise.resolve().then(loadPresentationOverrides);
-
+    queueMicrotask(() => {
+      if (active) void runOverrideHydration(true, () => active);
+    });
     return () => {
       active = false;
     };
-  }, [applyLoadedPresentationOverrides, entryId, isCreateMode, screenId]);
+  }, [runOverrideHydration]);
 
   useEffect(() => {
     listContentTypesCached({ force: true })
@@ -713,43 +1136,27 @@ export function CustomScreenEntryEditor() {
       .catch(() => undefined);
   }, []);
 
-  useEffect(() => {
-    if (!screenId || !entryId || !contentType) return undefined;
-    return subscribeCacheEvents((event) => {
-      if (overrideCacheKey && event.key === overrideCacheKey) {
-        refreshPresentation(true, { keepUnsaved: true, background: true }).catch(() => undefined);
-        return;
-      }
-      if (
-        event.key === cacheKeys.customScreensList ||
-        event.key === cacheKeys.customScreenDetail(screenId) ||
-        (!isCreateMode && event.key === cacheKeys.entryDetail(contentType.slug, entryId))
-      ) {
-        refresh(true, { keepUnsaved: true }).catch(() => undefined);
-      }
-    });
-  }, [
-    contentType,
-    entryId,
-    isCreateMode,
-    overrideCacheKey,
-    refresh,
-    refreshPresentation,
-    screenId,
-  ]);
+  const markContentMutation = () => {
+    if (!mayMutateCurrentEntry()) return false;
+    draftMutationGenerationRef.current += 1;
+    contentDirtyRef.current = true;
+    setHasUnsavedChanges(true);
+    return true;
+  };
 
   const handleFieldChange = (name: string, value: unknown) => {
+    if (!markContentMutation()) return;
     setValues((current) => ({ ...current, [name]: value }));
     setFieldErrors((current) => {
       const next = { ...current };
       delete next[name];
       return next;
     });
-    setHasUnsavedChanges(true);
-    setError(null);
+    setEntryErrorCommit(null);
   };
 
   const handleTitleChange = (value: string) => {
+    if (!markContentMutation()) return;
     setTitle(value);
     setFieldErrors((current) => {
       const next = { ...current };
@@ -759,10 +1166,10 @@ export function CustomScreenEntryEditor() {
     if (schemaFieldNames.has("title")) {
       setValues((current) => ({ ...current, title: value }));
     }
-    setHasUnsavedChanges(true);
   };
 
   const handleSlugChange = (value: string) => {
+    if (!markContentMutation()) return;
     setSlug(value);
     setFieldErrors((current) => {
       const next = { ...current };
@@ -772,7 +1179,6 @@ export function CustomScreenEntryEditor() {
     if (schemaFieldNames.has("slug")) {
       setValues((current) => ({ ...current, slug: value }));
     }
-    setHasUnsavedChanges(true);
   };
 
   const buildPayloadData = () => {
@@ -789,10 +1195,10 @@ export function CustomScreenEntryEditor() {
     ...buildPayloadData(),
     title,
     slug,
-    status: entry?.status ?? "draft",
-    createdAt: entry?.createdAt ?? null,
-    updatedAt: entry?.updatedAt ?? null,
-    publishedAt: entry?.publishedAt ?? null,
+    status: currentEntry?.status ?? "draft",
+    createdAt: currentEntry?.createdAt ?? null,
+    updatedAt: currentEntry?.updatedAt ?? null,
+    publishedAt: currentEntry?.publishedAt ?? null,
   });
 
   // TASK-498-03 B3.4 — STABLE `values` source for the related-list precompute effect.
@@ -803,71 +1209,309 @@ export function CustomScreenEntryEditor() {
   const canvasFieldValues = useMemo<Record<string, unknown>>(
     () => buildCanvasFieldValues(),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [originalData, editableFields, values, schemaFieldNames, title, slug, entry]
+    [originalData, editableFields, values, schemaFieldNames, title, slug, currentEntry]
   );
 
-  // TASK-498-03 B3.4 — OWNER host: precompute the related-list `relatedEntries` map for
-  // every related-list block in the document via the EXISTING entries-read
-  // (`listEntriesCached`, no new route). The SAME map feeds both `canEditInScreen`
-  // branches (editable canvas + read-only preview). Diff-guarded to avoid a setState loop.
-  const [relatedEntries, setRelatedEntries] = useState<Record<string, RelatedEntrySummary[]>>({});
+  const relatedState = useScreenRelatedEntries({
+    enabled: entryRouteReady,
+    document: runtimeDocument,
+    bindings: runtimeBindings,
+    values: entryRouteReady ? canvasFieldValues : emptyFieldValues,
+    fields: currentFields,
+  });
+  const relatedEntries: Record<string, RelatedEntrySummary[]> = relatedState.items;
+
+  const requestedIdsPlan = useMemo(
+    () =>
+      collectWinningDirectImageAssetIds({
+        document: runtimeDocument,
+        bindings: runtimeBindings,
+        values: entryRouteReady ? canvasFieldValues : emptyFieldValues,
+        overrides: currentDraftOverrides,
+      }),
+    [canvasFieldValues, currentDraftOverrides, entryRouteReady, runtimeBindings, runtimeDocument]
+  );
+  const mediaRequestKey = buildPresentationMediaRequestKey(routeKey, requestedIdsPlan);
+  const [mediaMachine, dispatchMediaAttempt] = useReducer(
+    mediaAttemptReducer,
+    { requestKey: mediaRequestKey, requestedIds: requestedIdsPlan },
+    initializeMediaMachineState
+  );
+  useEffect(() => {
+    if (mediaMachine.requestKey === mediaRequestKey) return undefined;
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      mediaLoadGenerationRef.current += 1;
+      dispatchMediaAttempt({
+        type: "sync-request",
+        requestKey: mediaRequestKey,
+        requestedIds: readRequestedIdsFromMediaRequestKey(mediaRequestKey),
+      });
+    });
+    return () => {
+      active = false;
+    };
+  }, [mediaMachine.requestKey, mediaRequestKey]);
+
+  const attempt = mediaMachine.requestKey === mediaRequestKey ? mediaMachine.attempt : null;
+  const attemptToken = attempt?.token ?? null;
+  const [mediaCommit, setMediaCommit] = useState<MediaCommit>({
+    routeVisit: null,
+    requestKey: null,
+    attemptToken: null,
+    urlsById: {},
+    error: null,
+  });
+  const beginMediaAttempt = useCallback(
+    (cause: "manual-retry" | "cache-event") => {
+      mediaLoadGenerationRef.current += 1;
+      dispatchMediaAttempt({ type: "retry", requestKey: mediaRequestKey, cause });
+    },
+    [mediaRequestKey]
+  );
+  const hasRequestedMediaIds = requestedIdsPlan.length > 0;
+  useEffect(
+    () =>
+      subscribeCacheEvents((event) => {
+        if (event.key === cacheKeys.mediaList && hasRequestedMediaIds) {
+          beginMediaAttempt("cache-event");
+        }
+      }),
+    [beginMediaAttempt, hasRequestedMediaIds]
+  );
+  useEffect(() => {
+    if (!attempt || attempt.requestKey !== mediaRequestKey) return undefined;
+    const frozenRouteVisit = routeVisit;
+    const frozenRequestedIds = attempt.requestedIds;
+    const frozenAttemptToken = attempt.token;
+    let active = true;
+    const generation = ++mediaLoadGenerationRef.current;
+    const isCurrent = () =>
+      active && mountedRef.current && generation === mediaLoadGenerationRef.current;
+    let pending = mediaPendingAttemptRef.current;
+    if (!pending || pending.attempt !== attempt) {
+      pending = {
+        attempt,
+        promise: listMediaCached({ force: attempt.force }),
+      };
+      mediaPendingAttemptRef.current = pending;
+    }
+    void pending.promise
+      .then((records) => {
+        if (!isCurrent()) return;
+        dispatchMediaAttempt({
+          type: "settled",
+          requestKey: mediaRequestKey,
+          token: frozenAttemptToken,
+        });
+        setMediaCommit({
+          routeVisit: frozenRouteVisit,
+          requestKey: mediaRequestKey,
+          attemptToken: frozenAttemptToken,
+          urlsById: projectExactRequestedMediaUrls(records, frozenRequestedIds),
+          error: null,
+        });
+      })
+      .catch(() => {
+        if (!isCurrent()) return;
+        dispatchMediaAttempt({
+          type: "settled",
+          requestKey: mediaRequestKey,
+          token: frozenAttemptToken,
+        });
+        setMediaCommit((previous) => ({
+          routeVisit: frozenRouteVisit,
+          requestKey: mediaRequestKey,
+          attemptToken: frozenAttemptToken,
+          urlsById:
+            previous.routeVisit === frozenRouteVisit && previous.requestKey === mediaRequestKey
+              ? previous.urlsById
+              : {},
+          error: PRESENTATION_MEDIA_LOAD_ERROR,
+        }));
+      });
+    return () => {
+      active = false;
+    };
+  }, [attempt, mediaRequestKey, routeVisit]);
+
+  const mediaMatchesRequest =
+    mediaCommit.routeVisit === routeVisit && mediaCommit.requestKey === mediaRequestKey;
+  const presentationMediaState =
+    requestedIdsPlan.length === 0
+      ? { urlsById: {}, loading: false, refreshing: false, error: null }
+      : mediaMatchesRequest
+        ? {
+            urlsById: mediaCommit.urlsById,
+            loading: false,
+            refreshing: mediaCommit.attemptToken !== attemptToken,
+            error: mediaCommit.attemptToken === attemptToken ? mediaCommit.error : null,
+          }
+        : { urlsById: {}, loading: true, refreshing: false, error: null };
 
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const blocks = collectScreenDocumentBlocks(runtimeDocument).filter(
-        (block) => block.type === "related-list"
-      );
-      if (blocks.length === 0) {
-        // block-GUARD: zero fetch when the document has no related-list block.
-        if (!cancelled) {
-          setRelatedEntries((current) => (Object.keys(current).length === 0 ? current : {}));
-        }
+    if (!screenId || !entryId || !currentContentType) return undefined;
+    return subscribeCacheEvents((event) => {
+      if (overrideCacheKey && event.key === overrideCacheKey) {
+        void refreshPresentation(true);
         return;
       }
-      const pairs = await Promise.all(
-        blocks.map(async (block) => {
-          const binding = runtimeBindings.find(
-            (bd) => bd.blockId === block.id && bd.propPath === "items"
-          );
-          if (!binding) return [block.id, [] as RelatedEntrySummary[]] as const;
-          const ids = readBindingPathValue(canvasFieldValues, binding.field) as
-            | string[]
-            | string
-            | null
-            | undefined;
-          const data = (block.data ?? {}) as {
-            displayField?: string;
-            limit?: number;
-            target?: string;
-          };
-          // DERIVE target from the bound relation field (authoritative); stored
-          // data.target is only a fallback. `(fields ?? [])` — fields is optional.
-          const target =
-            (fields ?? []).find((f) => f.name === binding.field)?.relation?.target ??
-            data.target ??
-            "";
-          const rows = await resolveRelatedEntries({
-            ids,
-            target,
-            displayField: data.displayField,
-            limit: data.limit,
-            readEntries: (t) => listEntriesCached(t),
-          });
-          return [block.id, rows] as const;
-        })
-      );
-      if (cancelled) return;
-      const next = Object.fromEntries(pairs) as Record<string, RelatedEntrySummary[]>;
-      setRelatedEntries((current) => (relatedEntriesMapEqual(current, next) ? current : next));
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [runtimeDocument, runtimeBindings, canvasFieldValues, fields]);
+      if (
+        event.key === cacheKeys.customScreensList ||
+        event.key === cacheKeys.customScreenDetail(screenId) ||
+        (!isCreateMode && event.key === cacheKeys.entryDetail(currentContentType.slug, entryId))
+      ) {
+        void refresh(true);
+      }
+    });
+  }, [
+    currentContentType,
+    entryId,
+    isCreateMode,
+    overrideCacheKey,
+    refresh,
+    refreshPresentation,
+    screenId,
+  ]);
+
+  const applyPresentationDraftMutation = (
+    update: (
+      current: readonly CustomScreenEntryPresentationOverride[]
+    ) => CustomScreenEntryPresentationOverride[]
+  ) => {
+    if (!mayMutateCurrentPresentation()) return false;
+    const transition = resolvePresentationDraftTransition({
+      saved: savedOverridesRef.current,
+      current: draftOverridesRef.current,
+      update,
+    });
+    const nextDraft = transition.nextDraft;
+    if (
+      serializePresentationOverrides(nextDraft) ===
+      serializePresentationOverrides(draftOverridesRef.current)
+    ) {
+      return false;
+    }
+    draftMutationGenerationRef.current += 1;
+    draftOverridesRef.current = nextDraft;
+    const dirty = transition.dirty;
+    presentationDirtyRef.current = dirty;
+    setDraftOverrides(nextDraft);
+    setHasUnsavedPresentationChanges(dirty);
+    return true;
+  };
+
+  const clearUnsavedPresentationDraftWithoutPersisting = () => {
+    const saved = savedOverridesRef.current;
+    draftOverridesRef.current = saved;
+    presentationDirtyRef.current = false;
+    setDraftOverrides(saved);
+    setHasUnsavedPresentationChanges(false);
+  };
+
+  const { dialog: dirtyNavigationDialog } = useAdminDirtyNavigationGuard({
+    blocked: hasUnsavedChanges || hasUnsavedPresentationChanges,
+    title: "Discard unsaved entry changes?",
+    description: "Content or presentation changes have not been saved.",
+    confirmLabel: "Discard and continue",
+    cancelLabel: "Keep editing",
+    onConfirmDiscard: () => {
+      contentDirtyRef.current = false;
+      presentationDirtyRef.current = false;
+      draftMutationGenerationRef.current += 1;
+      entryLoadGenerationRef.current += 1;
+      overrideLoadGenerationRef.current += 1;
+      contentSaveGenerationRef.current += 1;
+      presentationSaveGenerationRef.current += 1;
+      mediaLoadGenerationRef.current += 1;
+      persistedEntryTargetRef.current = null;
+      setCommittedEntryVisit(null);
+      setCommittedOverrideVisit(null);
+      setEntryLoadActivityVisit(null);
+      setPresentationLoadActivityVisit(null);
+      setContentSaveActivityVisit(null);
+      setPresentationSaveActivityVisit(null);
+      setEntryErrorCommit(null);
+      setPresentationErrorCommit(null);
+      setRemoteEntryWarningVisit(null);
+      setRemotePresentationWarningVisit(null);
+      setSaveNoticeCommit(null);
+      setPresentationSaveNoticeCommit(null);
+      setHasUnsavedChanges(false);
+      clearUnsavedPresentationDraftWithoutPersisting();
+    },
+  });
+
+  type SaveChannel = "content" | "presentation";
+  type SaveToken = {
+    channel: SaveChannel;
+    routeKey: string;
+    routeVisit: RouteVisit;
+    routeGeneration: number;
+    saveGeneration: number;
+    draftGeneration: number;
+    createRouteVisit: RouteVisit | null;
+  };
+
+  const captureSaveToken = (channel: SaveChannel): SaveToken => ({
+    channel,
+    routeKey,
+    routeVisit,
+    routeGeneration: routeGenerationRef.current,
+    saveGeneration:
+      channel === "content"
+        ? ++contentSaveGenerationRef.current
+        : ++presentationSaveGenerationRef.current,
+    draftGeneration: draftMutationGenerationRef.current,
+    createRouteVisit: isCreateMode ? routeVisit : null,
+  });
+
+  const isSaveIdentityCurrent = (token: SaveToken) => {
+    const generation =
+      token.channel === "content"
+        ? contentSaveGenerationRef.current
+        : presentationSaveGenerationRef.current;
+    return (
+      mountedRef.current &&
+      token.routeKey === routeKey &&
+      token.routeVisit === routeVisit &&
+      token.routeGeneration === routeGenerationRef.current &&
+      token.saveGeneration === generation
+    );
+  };
+
+  const isExactSaveDraft = (token: SaveToken) =>
+    isSaveIdentityCurrent(token) && token.draftGeneration === draftMutationGenerationRef.current;
+
+  const updatePersistedEntryBaselineWithoutReplacingDraft = (saved: EntryDetail) => {
+    setEntry(saved);
+    setOriginalData(saved.data);
+  };
+
+  const applySavedEntryAndBaseline = (
+    saved: EntryDetail,
+    savedContentType: ContentTypeSummary,
+    savedScreen: CustomScreenRecord | null
+  ) => {
+    const savedDraft = hydrateEditorViewDraft({
+      contentType: savedContentType,
+      editorView: savedScreen ? resolveRuntimeEditorView(savedScreen) : emptyEditorView,
+      entry: saved,
+    });
+    setEntry(saved);
+    setTitle(saved.title);
+    setSlug(saved.slug);
+    setValues(savedDraft.data);
+    setEditableFields(savedDraft.editableFields);
+    setOriginalData(savedDraft.originalData);
+    setFieldErrors({});
+  };
 
   const handleSave = async () => {
-    if (!contentType || !entryId) return;
+    if (!mayMutateCurrentEntry() || !currentContentType || !entryId) return;
+    const capturedContentType = currentContentType;
+    const capturedScreen = currentScreen;
     const draft: CustomScreenEntryDraft = {
       title,
       slug,
@@ -876,66 +1520,99 @@ export function CustomScreenEntryEditor() {
       originalData,
       fieldErrors,
     };
-    const nextFieldErrors = validateEntryDraft({ contentType, draft });
+    const nextFieldErrors = validateEntryDraft({ contentType: capturedContentType, draft });
     if (Object.keys(nextFieldErrors).length > 0) {
       setFieldErrors(nextFieldErrors);
-      setError("Fix the highlighted fields before saving.");
+      setEntryErrorCommit({
+        routeVisit,
+        message: "Fix the highlighted fields before saving.",
+      });
       return;
     }
-    setIsSaving(true);
-    setError(null);
+    const token = captureSaveToken("content");
+    setContentSaveActivityVisit(token.routeVisit);
+    setEntryErrorCommit(null);
     setFieldErrors({});
     try {
-      const saved = isCreateMode
-        ? await createEntry(contentType.slug, buildEditorViewCreatePayload({ contentType, draft }))
-        : await updateEntry(
-            contentType.slug,
-            entryId,
-            buildEditorViewUpdatePayload({ contentType, draft })
+      const capturedTarget = persistedEntryTargetRef.current;
+      const targetId = !isCreateMode
+        ? entryId
+        : capturedTarget?.routeVisit === routeVisit &&
+            capturedTarget.routeGeneration === routeGenerationRef.current
+          ? capturedTarget.id
+          : null;
+      const saved = targetId
+        ? await updateEntry(
+            capturedContentType.slug,
+            targetId,
+            buildEditorViewUpdatePayload({ contentType: capturedContentType, draft })
+          )
+        : await createEntry(
+            capturedContentType.slug,
+            buildEditorViewCreatePayload({ contentType: capturedContentType, draft })
           );
-      setEntry(saved);
-      setTitle(saved.title);
-      setSlug(saved.slug);
-      const savedDraft = hydrateEditorViewDraft({
-        contentType,
-        editorView: screen ? resolveRuntimeEditorView(screen) : emptyEditorView,
-        entry: saved,
-      });
-      setValues(savedDraft.data);
-      setEditableFields(savedDraft.editableFields);
-      setOriginalData(savedDraft.originalData);
-      setFieldErrors({});
+      if (!isSaveIdentityCurrent(token)) return;
+      entryLoadGenerationRef.current += 1;
+      setEntryLoadActivityVisit((current) => (current === token.routeVisit ? null : current));
+      setRemoteEntryWarningVisit(null);
+      if (!isExactSaveDraft(token)) {
+        updatePersistedEntryBaselineWithoutReplacingDraft(saved);
+        if (token.createRouteVisit !== null) {
+          persistedEntryTargetRef.current = {
+            routeVisit: token.createRouteVisit,
+            routeGeneration: token.routeGeneration,
+            id: saved.id,
+          };
+        }
+        setSaveNoticeCommit({
+          routeVisit: token.routeVisit,
+          message: "Saved server version; newer local changes remain unsaved.",
+        });
+        return;
+      }
+      contentDirtyRef.current = false;
+      persistedEntryTargetRef.current = null;
+      applySavedEntryAndBaseline(saved, capturedContentType, capturedScreen);
       setHasUnsavedChanges(false);
-      setRemoteUpdatePending(false);
+      setSaveNoticeCommit(null);
       if (isCreateMode && screenId) {
-        navigate(
-          `/advanced/custom-screens/${encodeURIComponent(screenId)}/entries/${encodeURIComponent(saved.id)}`
-        );
+        navigate(buildCustomScreenWorkspacePath({ screenId, entryId: saved.id }), {
+          skipBlockers: true,
+        });
       }
     } catch (err) {
+      if (!isSaveIdentityCurrent(token)) return;
       if (isApiClientError(err)) {
         const nextFieldErrors = resolveEntryFieldErrorsFromApiError({
-          contentType,
+          contentType: capturedContentType,
           error: err,
         });
         if (Object.keys(nextFieldErrors).length > 0) {
           setFieldErrors(nextFieldErrors);
-          setError("Fix the highlighted fields before saving.");
+          setEntryErrorCommit({
+            routeVisit: token.routeVisit,
+            message: "Fix the highlighted fields before saving.",
+          });
         } else {
-          setError(err.message);
+          setEntryErrorCommit({ routeVisit: token.routeVisit, message: err.message });
         }
       } else {
-        setError("Failed to save record.");
+        setEntryErrorCommit({
+          routeVisit: token.routeVisit,
+          message: "Failed to save record.",
+        });
       }
     } finally {
-      setIsSaving(false);
+      if (isSaveIdentityCurrent(token)) {
+        setContentSaveActivityVisit((current) => (current === token.routeVisit ? null : current));
+      }
     }
   };
 
   const readSelectedPresentationOverride = (propPath: ScreenEntryPresentationOverridePropPath) => {
     if (!selectedPresentationTarget) return null;
     return (
-      draftOverrides.find(
+      currentDraftOverrides.find(
         (override) =>
           override.blockId === selectedPresentationTarget.block.id && override.propPath === propPath
       )?.value ?? null
@@ -947,45 +1624,100 @@ export function CustomScreenEntryEditor() {
     value: string | null
   ) => {
     if (!selectedPresentationTarget) return;
-    setDraftOverrides((current) =>
+    const changed = applyPresentationDraftMutation((current) =>
       upsertPresentationOverride(current, selectedPresentationTarget.block.id, propPath, value)
     );
-    setPresentationError(null);
+    if (changed) {
+      setPresentationErrorCommit((current) =>
+        current?.routeVisit === routeVisit && current.kind === "save" ? null : current
+      );
+    }
   };
 
   const handleClearSelectedPresentation = () => {
     if (!selectedPresentationTarget) return;
-    setDraftOverrides((current) =>
+    const changed = applyPresentationDraftMutation((current) =>
       removePresentationOverridesForBlock(current, selectedPresentationTarget.block.id)
     );
-    setPresentationError(null);
+    if (changed) {
+      setPresentationErrorCommit((current) =>
+        current?.routeVisit === routeVisit && current.kind === "save" ? null : current
+      );
+    }
   };
 
   const handleSavePresentation = async () => {
-    if (!screenId || !entryId || isCreateMode) return;
-    setIsPresentationSaving(true);
-    setPresentationError(null);
+    if (!mayMutateCurrentPresentation() || !screenId || !entryId) return;
+    const token = captureSaveToken("presentation");
+    const capturedDraft = [...draftOverridesRef.current];
+    setPresentationSaveActivityVisit(token.routeVisit);
+    setPresentationErrorCommit((current) =>
+      current?.routeVisit === routeVisit && current.kind === "save" ? null : current
+    );
     try {
-      const saved = await replaceScreenEntryOverrides(screenId, entryId, draftOverrides);
-      applyLoadedPresentationOverrides(saved);
+      const saved = await replaceScreenEntryOverrides(screenId, entryId, capturedDraft);
+      if (!isSaveIdentityCurrent(token)) return;
+      overrideLoadGenerationRef.current += 1;
+      setPresentationLoadActivityVisit((current) =>
+        current === token.routeVisit ? null : current
+      );
+      setRemotePresentationWarningVisit(null);
+      const ordered = normalizePresentationOverrideOrder(saved);
+      savedOverridesRef.current = ordered;
+      setSavedOverrides(ordered);
+      if (!isExactSaveDraft(token)) {
+        const stillDirty =
+          serializePresentationOverrides(ordered) !==
+          serializePresentationOverrides(draftOverridesRef.current);
+        presentationDirtyRef.current = stillDirty;
+        setHasUnsavedPresentationChanges(stillDirty);
+        setPresentationSaveNoticeCommit(
+          stillDirty
+            ? {
+                routeVisit: token.routeVisit,
+                message: "Saved server presentation; newer local changes remain unsaved.",
+              }
+            : null
+        );
+        return;
+      }
+      presentationDirtyRef.current = false;
+      draftOverridesRef.current = ordered;
+      setDraftOverrides(ordered);
+      setHasUnsavedPresentationChanges(false);
+      setPresentationSaveNoticeCommit(null);
     } catch (err) {
+      if (!isSaveIdentityCurrent(token)) return;
       if (isApiClientError(err)) {
-        setPresentationError(err.message);
+        setPresentationErrorCommit({
+          routeVisit: token.routeVisit,
+          kind: "save",
+          message: err.message,
+        });
       } else {
-        setPresentationError("Failed to save presentation overrides.");
+        setPresentationErrorCommit({
+          routeVisit: token.routeVisit,
+          kind: "save",
+          message: "Failed to save presentation overrides.",
+        });
       }
     } finally {
-      setIsPresentationSaving(false);
+      if (isSaveIdentityCurrent(token)) {
+        setPresentationSaveActivityVisit((current) =>
+          current === token.routeVisit ? null : current
+        );
+      }
     }
   };
 
   const handleReloadPresentation = () => {
-    refreshPresentation(true).catch(() => undefined);
+    void refreshPresentation(true);
   };
 
   const selectedPresentationOverrideCount = selectedPresentationTarget
-    ? draftOverrides.filter((override) => override.blockId === selectedPresentationTarget.block.id)
-        .length
+    ? currentDraftOverrides.filter(
+        (override) => override.blockId === selectedPresentationTarget.block.id
+      ).length
     : 0;
   const selectedTextSize = readSelectedPresentationOverride("textSize") ?? inheritPresentationValue;
   const selectedTextEmphasis =
@@ -997,7 +1729,12 @@ export function CustomScreenEntryEditor() {
     null;
 
   const presentationPanel =
-    screen && canEditInScreen && !isCreateMode && selectedPresentationTarget ? (
+    currentScreen &&
+    canEditInScreen &&
+    !isCreateMode &&
+    overrideRouteReady &&
+    !isPresentationLoading &&
+    selectedPresentationTarget ? (
       <div
         className="rounded-2xl border border-border bg-card p-4 shadow-soft"
         data-custom-screen-entry-presentation-panel="true"
@@ -1056,13 +1793,6 @@ export function CustomScreenEntryEditor() {
             </Button>
           </div>
         </div>
-
-        {presentationError ? (
-          <Alert variant="destructive" className="mt-4">
-            <AlertTitle>Presentation error</AlertTitle>
-            <AlertDescription>{presentationError}</AlertDescription>
-          </Alert>
-        ) : null}
 
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           {selectedPresentationTarget.supportsText ? (
@@ -1149,7 +1879,7 @@ export function CustomScreenEntryEditor() {
           ) : null}
         </div>
 
-        {selectedPresentationTarget.mediaField ? (
+        {selectedPresentationTarget.mediaField || selectedPresentationTarget.supportsDirectImage ? (
           <div className="mt-4" data-presentation-control="mediaAssetId">
             <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Media override
@@ -1163,7 +1893,10 @@ export function CustomScreenEntryEditor() {
                 )
               }
               multiple={false}
-              accept={selectedPresentationTarget.mediaField.media?.accept}
+              accept={
+                selectedPresentationTarget.mediaField?.media?.accept ??
+                (selectedPresentationTarget.supportsDirectImage ? ["image/*"] : undefined)
+              }
             />
           </div>
         ) : null}
@@ -1176,30 +1909,39 @@ export function CustomScreenEntryEditor() {
 
   return (
     <>
+      {dirtyNavigationDialog}
       <EditorShell
         activeHref={screenRecordsHref}
         breadcrumbs={
-          screen?.name
+          currentScreen?.name
             ? [
                 "Coderso",
                 "Screens",
-                screen.name,
-                isCreateMode ? "New record" : entry?.title?.trim() ? entry.title : "Record",
+                currentScreen.name,
+                isCreateMode
+                  ? "New record"
+                  : currentEntry?.title?.trim()
+                    ? currentEntry.title
+                    : "Record",
               ]
             : [
                 "Coderso",
                 "Screens",
-                isCreateMode ? "New record" : entry?.title?.trim() ? entry.title : "Record",
+                isCreateMode
+                  ? "New record"
+                  : currentEntry?.title?.trim()
+                    ? currentEntry.title
+                    : "Record",
               ]
         }
         topbarActions={
           <div className="flex items-center gap-2">
-            {entry ? (
+            {currentEntry ? (
               <Badge
-                variant={entry.status === "published" ? "default" : "outline"}
+                variant={currentEntry.status === "published" ? "default" : "outline"}
                 className="ml-1 text-[10px] uppercase"
               >
-                {entry.status}
+                {currentEntry.status}
               </Badge>
             ) : null}
             {hasUnsavedChanges ? (
@@ -1207,12 +1949,12 @@ export function CustomScreenEntryEditor() {
                 Unsaved changes
               </span>
             ) : null}
-            {canEditInScreen ? (
+            {currentScreen && canEditInScreen && !isLoading ? (
               <Button
                 size="sm"
                 className="gap-2"
                 onClick={handleSave}
-                disabled={isSaving || isLoading || !contentType}
+                disabled={isSaving || isLoading || !currentContentType}
               >
                 <Save className="h-4 w-4" />
                 {isSaving ? "Saving..." : "Save"}
@@ -1222,12 +1964,42 @@ export function CustomScreenEntryEditor() {
         }
         variant="canvas"
       >
-        {error || remoteUpdatePending || remotePresentationUpdatePending || !canEditInScreen ? (
+        {error ||
+        presentationError ||
+        remoteUpdatePending ||
+        remotePresentationUpdatePending ||
+        currentSaveNotice ||
+        currentPresentationSaveNotice ||
+        relatedState.error ||
+        presentationMediaState.error ||
+        (currentScreen !== null && !canEditInScreen) ? (
           <div className="shrink-0 space-y-3 px-6 pt-4">
             {error ? (
               <Alert variant="destructive">
                 <AlertTitle>Custom screen record error</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+            {presentationError ? (
+              <Alert
+                variant="destructive"
+                data-custom-screen-presentation-error={presentationErrorKind ?? "unknown"}
+              >
+                <AlertTitle>Presentation error</AlertTitle>
+                <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <span>{presentationError}</span>
+                  {presentationErrorKind === "load" ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleReloadPresentation}
+                      disabled={isPresentationLoading}
+                    >
+                      Retry presentation load
+                    </Button>
+                  ) : null}
+                </AlertDescription>
               </Alert>
             ) : null}
             {remoteUpdatePending ? (
@@ -1258,7 +2030,48 @@ export function CustomScreenEntryEditor() {
                 </AlertDescription>
               </Alert>
             ) : null}
-            {!canEditInScreen ? (
+            {currentSaveNotice ? (
+              <Alert>
+                <AlertTitle>Record saved</AlertTitle>
+                <AlertDescription>{currentSaveNotice}</AlertDescription>
+              </Alert>
+            ) : null}
+            {currentPresentationSaveNotice ? (
+              <Alert>
+                <AlertTitle>Presentation saved</AlertTitle>
+                <AlertDescription>{currentPresentationSaveNotice}</AlertDescription>
+              </Alert>
+            ) : null}
+            {relatedState.error && !relatedState.loading && !relatedState.refreshing ? (
+              <Alert variant="destructive">
+                <AlertTitle>Related records unavailable</AlertTitle>
+                <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <span>{relatedState.error}</span>
+                  <Button type="button" variant="outline" size="sm" onClick={relatedState.retry}>
+                    Retry
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : null}
+            {presentationMediaState.error &&
+            !presentationMediaState.loading &&
+            !presentationMediaState.refreshing ? (
+              <Alert variant="destructive">
+                <AlertTitle>Presentation image unavailable</AlertTitle>
+                <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <span>{PRESENTATION_MEDIA_LOAD_ERROR}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => beginMediaAttempt("manual-retry")}
+                  >
+                    Retry
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : null}
+            {currentScreen !== null && !canEditInScreen ? (
               <Alert>
                 <AlertTitle>Workspace upgrade required</AlertTitle>
                 <AlertDescription>
@@ -1274,13 +2087,13 @@ export function CustomScreenEntryEditor() {
           <div className="mx-6 mb-6 flex min-h-0 flex-1 items-center justify-center rounded-2xl border border-border bg-card text-sm text-muted-foreground shadow-card">
             Loading custom screen record...
           </div>
-        ) : screen && canEditInScreen ? (
+        ) : currentScreen && canEditInScreen ? (
           <div className="flex min-h-0 flex-1 flex-col" data-custom-screen-entry-document="true">
             <CanvasEditor
               header={
                 <PageHeader
                   className="mb-0 shrink-0 px-6 pb-3 pt-4"
-                  title={entry?.title?.trim() || (isCreateMode ? "New record" : "Record")}
+                  title={currentEntry?.title?.trim() || (isCreateMode ? "New record" : "Record")}
                   description={
                     canEditInScreen
                       ? "The canvas is the active editing surface for this record."
@@ -1336,13 +2149,14 @@ export function CustomScreenEntryEditor() {
                       bindings={runtimeBindings}
                       fieldValues={canvasFieldValues}
                       fieldErrors={fieldErrors}
-                      fields={fields}
+                      fields={currentFields}
                       relationTargets={relationTargets}
                       relatedEntries={relatedEntries}
                       onFieldChange={handleFieldChange}
                       onTitleChange={handleTitleChange}
                       onSlugChange={handleSlugChange}
-                      presentationOverrides={draftOverrides}
+                      presentationOverrides={currentDraftOverrides}
+                      presentationMediaUrlsById={presentationMediaState.urlsById}
                       selectedBlockId={selectedRuntimeBlockId}
                       onSelectBlock={setSelectedRuntimeBlockId}
                       showFieldMetadata={entryPreferences.showFieldMetadata}
@@ -1352,15 +2166,17 @@ export function CustomScreenEntryEditor() {
               }
             />
           </div>
-        ) : screen ? (
+        ) : currentScreen ? (
           <div className="min-h-0 flex-1 overflow-auto px-6 py-8">
             <div className="mx-auto max-w-5xl">
               <CustomScreenPreview
                 document={runtimeDocument}
                 bindings={runtimeBindings}
                 data={buildPayloadData()}
-                fields={fields}
+                fields={currentFields}
                 relatedEntries={relatedEntries}
+                presentationOverrides={currentDraftOverrides}
+                presentationMediaUrlsById={presentationMediaState.urlsById}
                 emptyTitle="Editor upgrade required"
                 emptyMessage="Add writable screen blocks and bindings in the builder before using this route as the dedicated record editor."
               />

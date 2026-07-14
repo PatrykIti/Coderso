@@ -4,23 +4,27 @@ import type {
   ScreenBlockV1,
   ScreenFieldBinding,
 } from "./customScreenSchemas";
-import { normalizeCustomScreenDefinitionForRead } from "./customScreenSchemas";
+import {
+  isScreenMediaAssetUuid,
+  normalizeCustomScreenDefinitionForRead,
+} from "./customScreenSchemas";
 import {
   customScreenOverrideErrorCodes,
-  screenEntryPresentationOverridePropPaths,
-  screenEntryPresentationTextEmphasisValues,
-  screenEntryPresentationTextSizes,
-  screenEntryPresentationToneValues,
+  normalizeScreenEntryPresentationOverrideList,
+  normalizeScreenEntryPresentationOverrideReplacePayload,
+  normalizeScreenEntryPresentationScopeId,
   type ScreenEntryPresentationOverrideDraft,
   type ScreenEntryPresentationOverridePropPath,
   type ScreenEntryPresentationOverrideRecord,
-  type ScreenEntryPresentationOverrideReplacePayload,
   type ScreenEntryPresentationOverrideValue,
 } from "./screenEntryPresentationOverrideContract";
 import { collectScreenDocumentBlocks } from "./screenDocumentOps";
 
 export {
   customScreenOverrideErrorCodes,
+  normalizeScreenEntryPresentationOverrideDraft as normalizeScreenEntryPresentationOverride,
+  normalizeScreenEntryPresentationOverrideList,
+  normalizeScreenEntryPresentationOverrideReplacePayload,
   screenEntryPresentationOverridePropPaths,
   screenEntryPresentationOverrideReplaceSchema,
   screenEntryPresentationOverrideSchema,
@@ -88,13 +92,8 @@ type ScreenOnlyContext = {
   definition: CustomScreenDefinition;
 };
 
-const unsafePathSegments = new Set(["__proto__", "prototype", "constructor"]);
-const overridePropPathSet = new Set<string>(screenEntryPresentationOverridePropPaths);
 const mediaPropPathSet = new Set<string>(["image", "mediaAssetId"]);
 const textPresentationPropPathSet = new Set<string>(["textSize", "textEmphasis", "tone"]);
-const textSizeSet = new Set<string>(screenEntryPresentationTextSizes);
-const textEmphasisSet = new Set<string>(screenEntryPresentationTextEmphasisValues);
-const toneSet = new Set<string>(screenEntryPresentationToneValues);
 const systemFieldRoots = new Set([
   "title",
   "slug",
@@ -110,7 +109,6 @@ const recordHeaderPresentationBindings = new Set([
   "description",
   "badge",
 ]);
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -123,90 +121,6 @@ const normalizeText = (value: unknown) => {
 
 const createOverrideError = (code: (typeof customScreenOverrideErrorCodes)[number]) =>
   new Error(code);
-
-const rejectUnknownOverrideKeys = (input: Record<string, unknown>, allowed: readonly string[]) => {
-  const allowedSet = new Set(allowed);
-  const unknown = Object.keys(input).find((key) => !allowedSet.has(key));
-  if (unknown) throw createOverrideError("custom_screen_override_invalid");
-};
-
-const normalizeSafePath = (value: unknown, maxLength = 160) => {
-  const text = normalizeText(value);
-  if (!text || text.length > maxLength || !/^[a-zA-Z0-9_.-]+$/.test(text)) {
-    throw createOverrideError("custom_screen_override_invalid");
-  }
-  const segments = text.split(".");
-  if (segments.some((segment) => segment.length === 0 || unsafePathSegments.has(segment))) {
-    throw createOverrideError("custom_screen_override_invalid");
-  }
-  return text;
-};
-
-const normalizePropPath = (value: unknown): ScreenEntryPresentationOverridePropPath => {
-  const propPath = normalizeSafePath(value);
-  if (!overridePropPathSet.has(propPath)) {
-    throw createOverrideError("custom_screen_override_invalid");
-  }
-  return propPath as ScreenEntryPresentationOverridePropPath;
-};
-
-const normalizeStringEnumValue = (
-  value: unknown,
-  allowed: Set<string>
-): ScreenEntryPresentationOverrideValue => {
-  const text = normalizeText(value);
-  if (!text || !allowed.has(text)) {
-    throw createOverrideError("custom_screen_override_invalid");
-  }
-  return text;
-};
-
-const normalizeMediaAssetId = (value: unknown) => {
-  const text = normalizeText(value);
-  if (!text || !uuidPattern.test(text)) {
-    throw createOverrideError("custom_screen_override_invalid");
-  }
-  return text;
-};
-
-const normalizeAllowedPresentationValue = (
-  propPath: ScreenEntryPresentationOverridePropPath,
-  value: unknown
-): ScreenEntryPresentationOverrideValue => {
-  if (propPath === "image" || propPath === "mediaAssetId") {
-    return normalizeMediaAssetId(value);
-  }
-  if (propPath === "textSize") return normalizeStringEnumValue(value, textSizeSet);
-  if (propPath === "textEmphasis") return normalizeStringEnumValue(value, textEmphasisSet);
-  return normalizeStringEnumValue(value, toneSet);
-};
-
-export function normalizeScreenEntryPresentationOverride(
-  input: unknown
-): ScreenEntryPresentationOverrideDraft {
-  if (!isRecord(input)) throw createOverrideError("custom_screen_override_invalid");
-  rejectUnknownOverrideKeys(input, ["blockId", "propPath", "value"]);
-  const blockId = normalizeSafePath(input.blockId);
-  const propPath = normalizePropPath(input.propPath);
-  return {
-    blockId,
-    propPath,
-    value: normalizeAllowedPresentationValue(propPath, input.value),
-  };
-}
-
-export function normalizeScreenEntryPresentationOverrideReplacePayload(
-  input: unknown
-): ScreenEntryPresentationOverrideReplacePayload {
-  if (!isRecord(input)) throw createOverrideError("custom_screen_override_invalid");
-  rejectUnknownOverrideKeys(input, ["overrides"]);
-  if (!Array.isArray(input.overrides) || input.overrides.length > 200) {
-    throw createOverrideError("custom_screen_override_invalid");
-  }
-  return {
-    overrides: input.overrides.map(normalizeScreenEntryPresentationOverride),
-  };
-}
 
 const assertUniqueOverrideTargets = (overrides: ScreenEntryPresentationOverrideDraft[]) => {
   const keys = new Set<string>();
@@ -289,6 +203,7 @@ const isOverrideTargetActive = (
   const bindings = definition.editorView.bindings;
 
   if (mediaPropPathSet.has(override.propPath)) {
+    if (block.type === "image") return true;
     if (block.type !== "field") return false;
     const field = resolveFieldBlockField(block, bindings);
     return field ? isMediaFieldResolvable(field, properties) : false;
@@ -308,40 +223,17 @@ const isOverrideTargetActive = (
   return block.type === "rich-text";
 };
 
-const normalizeStoredOverride = (
-  row: ScreenEntryPresentationOverrideRecord
-): ScreenEntryPresentationOverrideRecord | null => {
-  try {
-    const normalized = normalizeScreenEntryPresentationOverride({
-      blockId: row.blockId,
-      propPath: row.propPath,
-      value: row.value,
-    });
-    return {
-      screenId: row.screenId,
-      entryId: row.entryId,
-      updatedBy: row.updatedBy,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      ...normalized,
-    };
-  } catch {
-    return null;
-  }
-};
-
 export function resolveActiveScreenEntryPresentationOverrides(input: {
   overrides: ScreenEntryPresentationOverrideRecord[];
   definition: CustomScreenDefinition;
   contentType: ScreenEntryPresentationOverrideScreenContext["contentType"];
 }) {
-  return input.overrides.flatMap((row) => {
-    const normalized = normalizeStoredOverride(row);
-    if (!normalized) return [];
-    return isOverrideTargetActive(normalized, input.definition, input.contentType)
-      ? [normalized]
-      : [];
+  const normalized = normalizeScreenEntryPresentationOverrideList(input.overrides, {
+    source: "repository-record",
   });
+  return normalized.filter((row) =>
+    isOverrideTargetActive(row, input.definition, input.contentType)
+  );
 }
 
 let defaultRepositoryPromise: Promise<ScreenEntryPresentationOverrideRepository> | null = null;
@@ -528,14 +420,13 @@ const loadScopeContext = async (
   return { ...screenContext, entry };
 };
 
-const normalizeScopeId = (value: unknown) => normalizeSafePath(value);
+const normalizeScopeId = (value: unknown) => normalizeScreenEntryPresentationScopeId(value);
 
 const normalizeActorId = (value: unknown) => {
-  const actorId = normalizeText(value);
-  if (!actorId || !uuidPattern.test(actorId)) {
+  if (!isScreenMediaAssetUuid(value)) {
     throw createOverrideError("custom_screen_override_invalid");
   }
-  return actorId;
+  return value;
 };
 
 export async function getScreenEntryPresentationOverrides(input: {

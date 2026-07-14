@@ -1,5 +1,6 @@
 import { LayoutTemplate } from "lucide-react";
 
+import type { ScreenEntryPresentationOverrideDraft } from "../../../services/customScreens/screenEntryPresentationOverrideContract";
 import type {
   ScreenDocumentV1,
   ScreenFieldBinding,
@@ -16,6 +17,8 @@ type CustomScreenPreviewProps = {
   // TASK-498-03: host-precomputed related entries (forward-only — the owner supplies
   // the map, e.g. CustomScreenWorkspacePreviewDialog / CustomScreenEntryEditor).
   relatedEntries?: Record<string, RelatedEntrySummary[]>;
+  presentationOverrides?: ScreenEntryPresentationOverrideDraft[];
+  presentationMediaUrlsById?: Readonly<Record<string, string>>;
   emptyTitle?: string;
   emptyMessage?: string;
 };
@@ -26,6 +29,8 @@ export function CustomScreenPreview({
   data,
   fields,
   relatedEntries,
+  presentationOverrides,
+  presentationMediaUrlsById,
   emptyTitle,
   emptyMessage,
 }: CustomScreenPreviewProps) {
@@ -53,6 +58,8 @@ export function CustomScreenPreview({
         values={data}
         fields={fields}
         relatedEntries={relatedEntries}
+        presentationOverrides={presentationOverrides}
+        presentationMediaUrlsById={presentationMediaUrlsById}
         mode="preview"
       />
     </div>

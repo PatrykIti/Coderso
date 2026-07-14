@@ -40,6 +40,32 @@ const createLocalStorage = () => {
   };
 };
 
+const installLocalStorage = () => {
+  const original = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+  return {
+    restore: () => {
+      if (original === undefined) {
+        delete (globalThis as { localStorage?: unknown }).localStorage;
+      } else {
+        (globalThis as { localStorage?: unknown }).localStorage = original;
+      }
+    },
+    storage,
+  };
+};
+
+const createDeferred = <T>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, reject, resolve };
+};
+
 const resetCaches = () => {
   clearMediaCache();
 };
@@ -559,5 +585,351 @@ test("mutating an asset while the list cache is expired does not poison it to a 
     } else {
       (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
     }
+  }
+});
+
+test("media list callers share the authoritative promise and reuse its published value", async () => {
+  const originalFetch = globalThis.fetch;
+  const { restore } = installLocalStorage();
+  const response = createDeferred<Response>();
+  let calls = 0;
+
+  globalThis.fetch = () => {
+    calls += 1;
+    return response.promise;
+  };
+
+  try {
+    resetCaches();
+    const first = listMediaCached();
+    const second = listMediaCached();
+    expect(second).toBe(first);
+    expect(calls).toBe(1);
+
+    const rows = [mediaRecord({ id: "media-authoritative" })];
+    response.resolve(jsonResponse(rows));
+    await expect(first).resolves.toEqual(rows);
+    await expect(listMediaCached()).resolves.toEqual(rows);
+    expect(calls).toBe(1);
+  } finally {
+    resetCaches();
+    restore();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("media reads publish only the latest forced request in both A/B settle orders", async () => {
+  const originalFetch = globalThis.fetch;
+  const { restore } = installLocalStorage();
+  const responses: Array<ReturnType<typeof createDeferred<Response>>> = [];
+
+  globalThis.fetch = () => {
+    const response = responses.shift();
+    if (!response) throw new Error("unexpected_media_read");
+    return response.promise;
+  };
+
+  try {
+    const firstA = createDeferred<Response>();
+    const firstB = createDeferred<Response>();
+    responses.push(firstA, firstB);
+    resetCaches();
+    const requestA = listMediaCached();
+    const requestB = listMediaCached({ force: true });
+    expect(listMediaCached()).toBe(requestB);
+    firstA.resolve(jsonResponse([mediaRecord({ id: "stale-a" })]));
+    await requestA;
+    expect(getCachedMedia()).toBeNull();
+    expect(listMediaCached()).toBe(requestB);
+    firstB.resolve(jsonResponse([mediaRecord({ id: "fresh-b" })]));
+    await requestB;
+    expect(getCachedMedia()?.map((item) => item.id)).toEqual(["fresh-b"]);
+
+    resetCaches();
+    const secondA = createDeferred<Response>();
+    const secondB = createDeferred<Response>();
+    responses.push(secondA, secondB);
+    const lateA = listMediaCached();
+    const earlyB = listMediaCached({ force: true });
+    secondB.resolve(jsonResponse([mediaRecord({ id: "fresh-b-first" })]));
+    await earlyB;
+    secondA.resolve(jsonResponse([mediaRecord({ id: "stale-a-late" })]));
+    await lateA;
+    expect(getCachedMedia()?.map((item) => item.id)).toEqual(["fresh-b-first"]);
+  } finally {
+    resetCaches();
+    restore();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("media promise cache survives superseded rejection and retries authoritative rejection", async () => {
+  const originalFetch = globalThis.fetch;
+  const { restore } = installLocalStorage();
+  const responses: Array<ReturnType<typeof createDeferred<Response>>> = [];
+
+  globalThis.fetch = () => {
+    const response = responses.shift();
+    if (!response) throw new Error("unexpected_media_retry");
+    return response.promise;
+  };
+
+  try {
+    resetCaches();
+    const a = createDeferred<Response>();
+    const b = createDeferred<Response>();
+    const c = createDeferred<Response>();
+    responses.push(a, b, c);
+    const requestA = listMediaCached();
+    const requestB = listMediaCached({ force: true });
+    const requestC = listMediaCached({ force: true });
+    expect(listMediaCached()).toBe(requestC);
+
+    b.reject(new Error("superseded-media-b"));
+    await expect(requestB).rejects.toThrow("superseded-media-b");
+    expect(listMediaCached()).toBe(requestC);
+    a.resolve(jsonResponse([mediaRecord({ id: "stale-media-a" })]));
+    await requestA;
+    expect(getCachedMedia()).toBeNull();
+    c.resolve(jsonResponse([mediaRecord({ id: "authoritative-media-c" })]));
+    await requestC;
+    expect(getCachedMedia()?.[0]?.id).toBe("authoritative-media-c");
+
+    resetCaches();
+    const rejected = createDeferred<Response>();
+    const retried = createDeferred<Response>();
+    responses.push(rejected, retried);
+    const failed = listMediaCached();
+    rejected.reject(new Error("authoritative-media-failure"));
+    await expect(failed).rejects.toThrow("authoritative-media-failure");
+    const retry = listMediaCached();
+    expect(retry).not.toBe(failed);
+    retried.resolve(jsonResponse([mediaRecord({ id: "media-retried" })]));
+    await retry;
+    expect(getCachedMedia()?.[0]?.id).toBe("media-retried");
+  } finally {
+    resetCaches();
+    restore();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("every media upsert path revokes a late read with present and absent full-list caches", async () => {
+  const originalFetch = globalThis.fetch;
+  const { restore, storage } = installLocalStorage();
+  const operations = [
+    {
+      name: "upload",
+      run: () => uploadMedia(new File(["image"], "upload.png", { type: "image/png" })),
+    },
+    { name: "update", run: () => updateMedia("media-target", { title: "Mutation" }) },
+    { name: "recover", run: () => recoverMediaDimensions("media-target") },
+    {
+      name: "replace",
+      run: () =>
+        replaceMedia("media-target", new File(["image"], "replacement.png", { type: "image/png" })),
+    },
+  ];
+
+  try {
+    for (const cacheState of ["present", "absent"] as const) {
+      for (const operation of operations) {
+        const pendingRead = createDeferred<Response>();
+        const mutated = mediaRecord({ id: "media-target", title: `Mutation ${operation.name}` });
+        let listReads = 0;
+        resetCsrfToken();
+        resetCaches();
+        if (cacheState === "present") {
+          setCacheValue(storage, [
+            mediaRecord({ id: "media-target", title: "Before" }),
+            mediaRecord({ id: "media-other", title: "Other" }),
+          ]);
+          expect(getCachedMedia()).toHaveLength(2);
+        }
+
+        globalThis.fetch = (input, init) => {
+          const url = String(input);
+          if (url.endsWith("/auth/csrf")) return Promise.resolve(jsonResponse({ token: "csrf" }));
+          if (url.endsWith("/media") && init?.method === "GET") {
+            listReads += 1;
+            return pendingRead.promise;
+          }
+          return Promise.resolve(jsonResponse(mutated));
+        };
+
+        const staleRead = listMediaCached({ force: cacheState === "present" });
+        await operation.run();
+        if (cacheState === "present") {
+          expect(getCachedMedia()?.[0]?.title).toBe(`Mutation ${operation.name}`);
+          expect(getCachedMedia()).toHaveLength(2);
+        } else {
+          expect(getCachedMedia()).toBeNull();
+        }
+
+        pendingRead.resolve(jsonResponse([mediaRecord({ id: "stale-media-row" })]));
+        await staleRead;
+        if (cacheState === "present") {
+          expect(getCachedMedia()?.some((item) => item.id === "stale-media-row")).toBe(false);
+          await expect(listMediaCached()).resolves.toEqual(getCachedMedia());
+          expect(listReads).toBe(1);
+        } else {
+          expect(getCachedMedia()).toBeNull();
+        }
+      }
+    }
+  } finally {
+    resetCaches();
+    restore();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("media removal revokes a late read with and without a current full list", async () => {
+  const originalFetch = globalThis.fetch;
+  const { restore, storage } = installLocalStorage();
+
+  try {
+    for (const cacheState of ["present", "absent"] as const) {
+      const pendingRead = createDeferred<Response>();
+      resetCsrfToken();
+      resetCaches();
+      if (cacheState === "present") {
+        setCacheValue(storage, [
+          mediaRecord({ id: "media-target" }),
+          mediaRecord({ id: "media-keeper" }),
+        ]);
+        expect(getCachedMedia()).toHaveLength(2);
+      }
+
+      globalThis.fetch = (input, init) => {
+        const url = String(input);
+        if (url.endsWith("/auth/csrf")) return Promise.resolve(jsonResponse({ token: "csrf" }));
+        if (init?.method === "GET") return pendingRead.promise;
+        return Promise.resolve(jsonResponse({ ok: true }));
+      };
+
+      const staleRead = listMediaCached({ force: cacheState === "present" });
+      await deleteMedia("media-target");
+      if (cacheState === "present") {
+        expect(getCachedMedia()?.map((item) => item.id)).toEqual(["media-keeper"]);
+      } else {
+        expect(getCachedMedia()).toBeNull();
+      }
+
+      pendingRead.resolve(jsonResponse([mediaRecord({ id: "stale-removed-media" })]));
+      await staleRead;
+      if (cacheState === "present") {
+        expect(getCachedMedia()?.map((item) => item.id)).toEqual(["media-keeper"]);
+      } else {
+        expect(getCachedMedia()).toBeNull();
+      }
+    }
+  } finally {
+    resetCaches();
+    restore();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a rejected media mutation leaves the authoritative pending read untouched", async () => {
+  const originalFetch = globalThis.fetch;
+  const { restore } = installLocalStorage();
+  const pendingRead = createDeferred<Response>();
+
+  globalThis.fetch = (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) return Promise.resolve(jsonResponse({ token: "csrf" }));
+    if (init?.method === "GET") return pendingRead.promise;
+    return Promise.resolve(
+      jsonResponse({ error: { code: "media_update_failed", message: "failed" } }, 500)
+    );
+  };
+
+  try {
+    resetCsrfToken();
+    resetCaches();
+    const pending = listMediaCached();
+    await expect(updateMedia("media-target", { title: "Rejected" })).rejects.toThrow("failed");
+    expect(listMediaCached()).toBe(pending);
+    pendingRead.resolve(jsonResponse([mediaRecord({ id: "media-after-rejection" })]));
+    await pending;
+    expect(getCachedMedia()?.[0]?.id).toBe("media-after-rejection");
+  } finally {
+    resetCaches();
+    restore();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("media A/B/C authority survives C-first success and C rejection followed by D", async () => {
+  const originalFetch = globalThis.fetch;
+  const { restore } = installLocalStorage();
+  const responses: Array<ReturnType<typeof createDeferred<Response>>> = [];
+  let transportCalls = 0;
+
+  globalThis.fetch = () => {
+    transportCalls += 1;
+    const response = responses.shift();
+    if (!response) throw new Error("unexpected_media_matrix_read");
+    return response.promise;
+  };
+
+  try {
+    resetCaches();
+    const firstA = createDeferred<Response>();
+    const firstB = createDeferred<Response>();
+    const firstC = createDeferred<Response>();
+    responses.push(firstA, firstB, firstC);
+    const firstRequestA = listMediaCached();
+    const firstRequestB = listMediaCached({ force: true });
+    const firstRequestC = listMediaCached({ force: true });
+    expect(listMediaCached()).toBe(firstRequestC);
+
+    firstC.resolve(jsonResponse([mediaRecord({ id: "media-c-first" })]));
+    await firstRequestC;
+    expect(getCachedMedia()?.[0]?.id).toBe("media-c-first");
+    firstA.resolve(jsonResponse([mediaRecord({ id: "media-a-late-success" })]));
+    await firstRequestA;
+    const firstBRejection = expect(firstRequestB).rejects.toThrow("media-b-late-rejection");
+    firstB.reject(new Error("media-b-late-rejection"));
+    await firstBRejection;
+    expect(getCachedMedia()?.[0]?.id).toBe("media-c-first");
+    expect(transportCalls).toBe(3);
+
+    resetCaches();
+    const retryA = createDeferred<Response>();
+    const retryB = createDeferred<Response>();
+    const retryC = createDeferred<Response>();
+    const retryD = createDeferred<Response>();
+    responses.push(retryA, retryB, retryC, retryD);
+    const retryRequestA = listMediaCached();
+    const retryRequestB = listMediaCached({ force: true });
+    const retryRequestC = listMediaCached({ force: true });
+    expect(listMediaCached()).toBe(retryRequestC);
+
+    const cRejection = expect(retryRequestC).rejects.toThrow("media-c-authoritative-rejection");
+    retryC.reject(new Error("media-c-authoritative-rejection"));
+    await cRejection;
+    const retryRequestD = listMediaCached();
+    expect(retryRequestD).not.toBe(retryRequestC);
+
+    retryB.resolve(jsonResponse([mediaRecord({ id: "media-b-late-success" })]));
+    await retryRequestB;
+    expect(getCachedMedia()).toBeNull();
+    expect(listMediaCached()).toBe(retryRequestD);
+    const aRejection = expect(retryRequestA).rejects.toThrow("media-a-late-rejection");
+    retryA.reject(new Error("media-a-late-rejection"));
+    await aRejection;
+    expect(getCachedMedia()).toBeNull();
+    expect(listMediaCached()).toBe(retryRequestD);
+
+    retryD.resolve(jsonResponse([mediaRecord({ id: "media-d-authoritative" })]));
+    await retryRequestD;
+    expect(getCachedMedia()?.[0]?.id).toBe("media-d-authoritative");
+    expect(transportCalls).toBe(7);
+  } finally {
+    resetCaches();
+    restore();
+    globalThis.fetch = originalFetch;
   }
 });

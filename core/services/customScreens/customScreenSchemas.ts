@@ -6,6 +6,10 @@ import { normalizeWidgetBlock } from "../../widgets/validator";
 // bans only @/ui/pages imports. PAGE_BLOCK_BOX_SPACING_CLAMP = { min: 0, max: 240 }.
 import { PAGE_BLOCK_BOX_SPACING_CLAMP } from "../pages/pageDocumentV2";
 import {
+  sanitizeAuthoringLinkHref,
+  sanitizeAuthoringMediaUrl,
+} from "../pages/pageAuthoringSanitizers";
+import {
   isBindingWriteModeSupported,
   resolveCustomScreenBindingContracts,
 } from "./bindingResolver";
@@ -222,6 +226,54 @@ const systemListFields = new Set([
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+type ScreenNormalizeMode = "write" | "stored-read";
+type ScreenFieldPathToken =
+  | "definition"
+  | "editorView"
+  | "listView"
+  | "rowTemplate"
+  | "document"
+  | "sections"
+  | "blocks"
+  | "children"
+  | "slots"
+  | "data"
+  | "tabs"
+  | "id"
+  | "action"
+  | "href"
+  | "src";
+type ScreenFieldPathSegment = ScreenFieldPathToken | number;
+type GeneratedScreenFieldPath = string & { readonly __generated: unique symbol };
+
+export const CUSTOM_SCREEN_ERROR_FIELDS_MAX = 8;
+export const CUSTOM_SCREEN_ERROR_FIELD_PATH_MAX = 240;
+
+const generatedFieldPath = (
+  ...segments: ReadonlyArray<ScreenFieldPathSegment>
+): GeneratedScreenFieldPath =>
+  segments.join(".").slice(0, CUSTOM_SCREEN_ERROR_FIELD_PATH_MAX) as GeneratedScreenFieldPath;
+
+const boundGeneratedFields = (fields: readonly GeneratedScreenFieldPath[]): string[] =>
+  [...new Set(fields)]
+    .slice(0, CUSTOM_SCREEN_ERROR_FIELDS_MAX)
+    .map((field) => field.slice(0, CUSTOM_SCREEN_ERROR_FIELD_PATH_MAX));
+
+export class CustomScreenDefinitionError extends Error {
+  readonly code = "custom_screen_definition_invalid" as const;
+  readonly fields: string[];
+
+  constructor(fields: readonly GeneratedScreenFieldPath[] = []) {
+    super("custom_screen_definition_invalid");
+    this.name = "CustomScreenDefinitionError";
+    this.fields = boundGeneratedFields(fields);
+  }
+}
+
+const invalid = (...fields: readonly GeneratedScreenFieldPath[]): never => {
+  throw new CustomScreenDefinitionError(fields);
+};
+
 const normalizeText = (value: unknown) => {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -396,14 +448,7 @@ const normalizeScreenData = (value: unknown): Record<string, unknown> => {
   return normalized;
 };
 
-// TASK-498-02 B0: per-kind, schema-first, reject-unknown `data` allow-lists for the
-// data-oriented block kinds. `"label"` is REQUIRED in EVERY kind (including heading +
-// tabs) because `createScreenBlock`'s base factory always seeds `data.label` and each
-// branch spreads it — omitting it would make normalizeScreenBlockData reject the
-// base-seeded label and throw `custom_screen_definition_invalid` on save. LEGACY kinds
-// (field / record-header / field-group / columns / rich-text / legacy-widget) are NOT
-// listed here and stay permissive, so stored V4 screens read back byte-stable.
-const screenBlockDataAllowedKeys: Record<string, readonly string[]> = {
+const screenBlockDataAllowedKeys = {
   heading: ["label", "text", "level", "align", "field"],
   text: ["content", "tone", "label"],
   stat: ["label", "format", "trend", "deltaField", "field"],
@@ -412,7 +457,37 @@ const screenBlockDataAllowedKeys: Record<string, readonly string[]> = {
   "related-list": ["label", "target", "displayField", "variant", "limit", "field"],
   tabs: ["label", "tabs"],
   button: ["label", "action", "variant", "href", "field"],
-};
+} as const satisfies Record<string, readonly string[]>;
+
+const compatibilityScreenBlockTypes = [
+  "field",
+  "field-group",
+  "record-header",
+  "columns",
+  "rich-text",
+  "legacy-widget",
+] as const;
+
+type FixedScreenBlockType = keyof typeof screenBlockDataAllowedKeys;
+
+export type ScreenTabItem = Readonly<{ id: string; label: string }>;
+export const SCREEN_TAB_ID = /^[a-z][a-z0-9_-]{0,63}$/;
+export const SCREEN_TABS_MIN = 1;
+export const SCREEN_TABS_MAX = 24;
+export const SCREEN_TAB_LABEL_MAX = 120;
+export const SCREEN_DOCUMENT_SECTIONS_MAX = 120;
+export const SCREEN_BLOCK_COLLECTION_MAX = 500;
+const SCREEN_FIXED_DATA_PATH_MAX = 160;
+const SCREEN_MEDIA_ASSET_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const screenCodePoints = (value: string) => Array.from(value);
+const screenCodePointLength = (value: string) => screenCodePoints(value).length;
+const truncateScreenCodePoints = (value: string, maximum: number) =>
+  screenCodePoints(value).slice(0, maximum).join("");
+
+export function isScreenMediaAssetUuid(value: unknown): value is string {
+  return typeof value === "string" && SCREEN_MEDIA_ASSET_UUID.test(value);
+}
 
 const coerceScreenEnum = <T extends string>(
   value: unknown,
@@ -589,84 +664,268 @@ export type ScreenBindingWarningSink = {
   removedBlockOrphans: string[];
 };
 
-// TASK-500-04: static <img src> for the image kind — relative paths + http(s) only.
-// Everything else (javascript:, data:, blob:, file:, vbscript:, bare tokens, non-strings)
-// normalizes to "" (dropped, NEVER throws) so a stored value can never reach <img src>
-// with an unsafe scheme (write-path defense-in-depth). NOT a navigational href
-// (button.href) — so no mailto:/tel:. Idempotent: a safe value round-trips byte-stable.
-const safeImageSrcPrefixes = ["/", "http://", "https://"] as const;
-// TASK-503-01: exported as the single source of truth — 503-02 builder-preview gate
-// and 503-03 inspector write filter enforce the same prefix filter pre-save.
-export const normalizeScreenImageSrc = (value: unknown): string => {
-  if (typeof value !== "string") return "";
+const isFixedScreenBlockType = (type: string): type is FixedScreenBlockType =>
+  Object.prototype.hasOwnProperty.call(screenBlockDataAllowedKeys, type);
+const compatibilityScreenBlockTypeSet = new Set<string>(compatibilityScreenBlockTypes);
+const isCompatibilityScreenBlockType = (type: string) => compatibilityScreenBlockTypeSet.has(type);
+
+export function sanitizeScreenAuthoringUrl(value: unknown, kind: "link" | "media"): string | null {
+  if (typeof value !== "string") return null;
   const trimmed = value.trim();
-  if (!trimmed) return "";
-  const lower = trimmed.toLowerCase();
-  return safeImageSrcPrefixes.some((prefix) => lower.startsWith(prefix)) ? trimmed : "";
+  if (!trimmed || trimmed.includes("\\")) return null;
+  return kind === "link" ? sanitizeAuthoringLinkHref(trimmed) : sanitizeAuthoringMediaUrl(trimmed);
+}
+
+// Transitional compatibility for the Inspector and renderer. Their sequential TASK-540
+// leaves migrate to sanitizeScreenAuthoringUrl directly.
+export const normalizeScreenImageSrc = (value: unknown): string =>
+  sanitizeScreenAuthoringUrl(value, "media") ?? "";
+
+const normalizeScreenUrl = (
+  value: unknown,
+  kind: "link" | "media",
+  mode: ScreenNormalizeMode,
+  path: GeneratedScreenFieldPath
+): string | undefined => {
+  if (value === undefined || value === "") return undefined;
+  if (value === null || typeof value !== "string") {
+    if (mode === "write") invalid(path);
+    return undefined;
+  }
+  const safe = sanitizeScreenAuthoringUrl(value, kind);
+  if (safe !== null) return safe;
+  if (mode === "write") invalid(path);
+  return undefined;
 };
 
-const normalizeScreenBlockData = (type: string, value: unknown): Record<string, unknown> => {
-  const data = normalizeScreenData(value); // existing JSON-safe normalize
-  const allowed = screenBlockDataAllowedKeys[type];
-  if (!allowed) return data; // legacy kinds: permissive (backward-compat)
-  rejectUnknownKeys(data, allowed); // throws "custom_screen_definition_invalid" on unknown keys
-  // Coerce enums / numerics to their allow-lists (no-op for already-valid stored data,
-  // so a valid new-kind block round-trips byte-stable).
+const normalizeOptionalStringProperty = (
+  data: Record<string, unknown>,
+  key: string,
+  mode: ScreenNormalizeMode
+) => {
+  if (!(key in data)) return;
+  if (typeof data[key] === "string") return;
+  if (mode === "write") invalid();
+  delete data[key];
+};
+
+const normalizeOptionalPathProperty = (
+  data: Record<string, unknown>,
+  key: string,
+  mode: ScreenNormalizeMode,
+  allowEmpty: boolean
+) => {
+  if (!(key in data)) return;
+  const value = data[key];
+  if (allowEmpty && value === "") return;
+  try {
+    const normalized = normalizePath(value);
+    if (normalized.length > SCREEN_FIXED_DATA_PATH_MAX) throw new Error("path_too_long");
+    data[key] = normalized;
+  } catch {
+    if (mode === "write") invalid();
+    delete data[key];
+  }
+};
+
+const normalizeOptionalEnumProperty = <T extends string>(
+  data: Record<string, unknown>,
+  key: string,
+  values: readonly T[],
+  fallback: T,
+  mode: ScreenNormalizeMode
+) => {
+  if (!(key in data)) return;
+  const value = data[key];
+  if (typeof value === "string" && values.includes(value as T)) return;
+  if (mode === "write") invalid();
+  data[key] = fallback;
+};
+
+const normalizeOptionalIntegerProperty = (
+  data: Record<string, unknown>,
+  key: string,
+  fallback: number,
+  min: number,
+  max: number,
+  mode: ScreenNormalizeMode
+) => {
+  if (!(key in data)) return;
+  const value = data[key];
+  if (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    Number.isInteger(value) &&
+    value >= min &&
+    value <= max
+  ) {
+    return;
+  }
+  if (mode === "write") invalid();
+  data[key] = clampScreenInt(value, fallback, min, max);
+};
+
+const normalizeTabsForWrite = (
+  raw: unknown,
+  blockPath: readonly ScreenFieldPathSegment[]
+): ScreenTabItem[] => {
+  if (!Array.isArray(raw) || raw.length < SCREEN_TABS_MIN || raw.length > SCREEN_TABS_MAX) {
+    invalid(generatedFieldPath(...blockPath, "data", "tabs"));
+  }
+  const tabs = raw as unknown[];
+  const seen = new Set<string>();
+  let changed = false;
+  const normalized = tabs.map((item, index) => {
+    if (!isRecord(item)) {
+      invalid(generatedFieldPath(...blockPath, "data", "tabs", index));
+    }
+    const tab = item as Record<string, unknown>;
+    try {
+      rejectUnknownKeys(tab, ["id", "label"]);
+    } catch {
+      invalid(generatedFieldPath(...blockPath, "data", "tabs", index));
+    }
+    const id = typeof tab.id === "string" ? tab.id.trim() : "";
+    const label = typeof tab.label === "string" ? tab.label.trim() : "";
+    if (!SCREEN_TAB_ID.test(id) || seen.has(id)) {
+      invalid(generatedFieldPath(...blockPath, "data", "tabs", index, "id"));
+    }
+    if (!label || screenCodePointLength(label) > SCREEN_TAB_LABEL_MAX) {
+      invalid(generatedFieldPath(...blockPath, "data", "tabs", index));
+    }
+    seen.add(id);
+    if (id === tab.id && label === tab.label) return tab as ScreenTabItem;
+    changed = true;
+    return { id, label };
+  });
+  return changed ? normalized : (tabs as ScreenTabItem[]);
+};
+
+const normalizeScreenBlockData = (
+  type: string,
+  value: unknown,
+  mode: ScreenNormalizeMode,
+  blockPath: readonly ScreenFieldPathSegment[]
+): Record<string, unknown> => {
+  const fixedType = isFixedScreenBlockType(type);
+  if (mode === "write") {
+    if (!fixedType && !isCompatibilityScreenBlockType(type)) invalid();
+    if (!isRecord(value)) invalid();
+  }
+  const data = normalizeScreenData(value);
+  if (!fixedType) return data;
+  try {
+    rejectUnknownKeys(data, screenBlockDataAllowedKeys[type]);
+  } catch {
+    invalid();
+  }
+
   switch (type) {
     case "heading":
-      if ("level" in data) data.level = clampScreenInt(data.level, 2, 1, 3);
-      if ("align" in data)
-        data.align = coerceScreenEnum(data.align, ["left", "center", "right"], "left");
+      normalizeOptionalStringProperty(data, "label", mode);
+      normalizeOptionalStringProperty(data, "text", mode);
+      normalizeOptionalIntegerProperty(data, "level", 2, 1, 3, mode);
+      normalizeOptionalEnumProperty(data, "align", ["left", "center", "right"], "left", mode);
+      normalizeOptionalPathProperty(data, "field", mode, false);
       break;
     case "text":
-      if ("tone" in data) data.tone = coerceScreenEnum(data.tone, ["default", "muted"], "default");
+      normalizeOptionalStringProperty(data, "content", mode);
+      normalizeOptionalEnumProperty(data, "tone", ["default", "muted"], "default", mode);
+      normalizeOptionalStringProperty(data, "label", mode);
       break;
     case "stat":
-      if ("format" in data)
-        data.format = coerceScreenEnum(data.format, ["number", "percent", "money"], "number");
-      if ("trend" in data)
-        data.trend = coerceScreenEnum(data.trend, ["auto", "up", "down", "flat"], "auto");
+      normalizeOptionalStringProperty(data, "label", mode);
+      normalizeOptionalEnumProperty(data, "format", ["number", "percent", "money"], "number", mode);
+      normalizeOptionalEnumProperty(data, "trend", ["auto", "up", "down", "flat"], "auto", mode);
+      normalizeOptionalPathProperty(data, "deltaField", mode, true);
+      normalizeOptionalPathProperty(data, "field", mode, false);
       break;
     case "divider":
-      if ("variant" in data)
-        data.variant = coerceScreenEnum(data.variant, ["line", "space", "label"], "line");
+      normalizeOptionalEnumProperty(data, "variant", ["line", "space", "label"], "line", mode);
+      normalizeOptionalStringProperty(data, "label", mode);
       break;
-    case "image":
-      if ("fit" in data) data.fit = coerceScreenEnum(data.fit, ["cover", "contain"], "cover");
-      // TASK-500-04: optional static src — absent key is a no-op (stored-V4 byte-stable);
-      // unsafe/blank values coerce to "" (fail-soft, never throws).
-      if ("src" in data) data.src = normalizeScreenImageSrc(data.src);
-      break;
-    case "related-list":
-      if ("variant" in data)
-        data.variant = coerceScreenEnum(
-          data.variant,
-          ["checklist", "activity", "cards"],
-          "checklist"
+    case "image": {
+      normalizeOptionalStringProperty(data, "label", mode);
+      normalizeOptionalEnumProperty(data, "fit", ["cover", "contain"], "cover", mode);
+      normalizeOptionalStringProperty(data, "ratio", mode);
+      normalizeOptionalPathProperty(data, "field", mode, false);
+      if ("src" in data) {
+        const src = normalizeScreenUrl(
+          data.src,
+          "media",
+          mode,
+          generatedFieldPath(...blockPath, "data", "src")
         );
-      if ("limit" in data) data.limit = clampScreenInt(data.limit, 5, 1, 50);
-      break;
-    case "tabs":
-      if ("tabs" in data) {
-        const raw = Array.isArray(data.tabs) ? data.tabs : [];
-        data.tabs = raw
-          .filter((tab): tab is Record<string, unknown> => isRecord(tab))
-          .map((tab) => ({
-            id: typeof tab.id === "string" ? tab.id : "",
-            label: typeof tab.label === "string" ? tab.label : "",
-          }));
+        if (src === undefined) delete data.src;
+        else data.src = src;
       }
       break;
-    case "button":
-      if ("action" in data)
-        data.action = coerceScreenEnum(data.action, ["link", "publish", "custom"], "link");
-      if ("variant" in data)
-        data.variant = coerceScreenEnum(data.variant, ["primary", "secondary", "ghost"], "primary");
+    }
+    case "related-list":
+      normalizeOptionalStringProperty(data, "label", mode);
+      normalizeOptionalPathProperty(data, "target", mode, true);
+      normalizeOptionalPathProperty(data, "displayField", mode, true);
+      normalizeOptionalEnumProperty(
+        data,
+        "variant",
+        ["checklist", "activity", "cards"],
+        "checklist",
+        mode
+      );
+      normalizeOptionalIntegerProperty(data, "limit", 5, 1, 50, mode);
+      normalizeOptionalPathProperty(data, "field", mode, false);
       break;
-    default:
+    case "tabs":
+      normalizeOptionalStringProperty(data, "label", mode);
+      data.tabs = normalizeTabsForWrite(data.tabs, blockPath);
       break;
+    case "button": {
+      normalizeOptionalStringProperty(data, "label", mode);
+      if ("action" in data && data.action !== "link") {
+        if (mode === "write") {
+          invalid(generatedFieldPath(...blockPath, "data", "action"));
+        }
+        data.action = "link";
+        delete data.href;
+      }
+      normalizeOptionalEnumProperty(
+        data,
+        "variant",
+        ["primary", "secondary", "ghost"],
+        "primary",
+        mode
+      );
+      normalizeOptionalPathProperty(data, "field", mode, false);
+      if ("href" in data) {
+        const href = normalizeScreenUrl(
+          data.href,
+          "link",
+          mode,
+          generatedFieldPath(...blockPath, "data", "href")
+        );
+        if (href === undefined) delete data.href;
+        else data.href = href;
+      }
+      break;
+    }
   }
   return data;
+};
+
+const sameSet = (left: readonly string[], right: readonly string[]) =>
+  left.length === right.length && left.every((value) => right.includes(value));
+
+const assertTabSlots = (block: ScreenBlockV1, blockPath: readonly ScreenFieldPathSegment[]) => {
+  if (block.type !== "tabs") return;
+  const tabs = block.data.tabs as ScreenTabItem[];
+  const tabIds = tabs.map((tab) => tab.id);
+  const slotIds = Object.keys(block.slots ?? {});
+  if (!sameSet(tabIds, slotIds)) {
+    invalid(
+      generatedFieldPath(...blockPath, "data", "tabs"),
+      generatedFieldPath(...blockPath, "slots")
+    );
+  }
 };
 
 const screenBlockTypeFromWidgetType = (type: string) => {
@@ -700,7 +959,12 @@ const widgetTypeFromScreenBlock = (block: ScreenBlockV1) => {
   }
 };
 
-const normalizeScreenBlock = (value: unknown, index: number): ScreenBlockV1 => {
+const normalizeScreenBlock = (
+  value: unknown,
+  index: number,
+  mode: ScreenNormalizeMode,
+  blockPath: readonly ScreenFieldPathSegment[]
+): ScreenBlockV1 => {
   if (!isRecord(value)) throw new Error("custom_screen_definition_invalid");
   rejectUnknownKeys(value, [
     "id",
@@ -723,9 +987,14 @@ const normalizeScreenBlock = (value: unknown, index: number): ScreenBlockV1 => {
   const variant = normalizeText(value.variant);
   const style = normalizeScreenBlockStyle(value.style);
   const legacyWidgetType = normalizeText(value.legacyWidgetType);
+  if (Array.isArray(value.children) && value.children.length > SCREEN_BLOCK_COLLECTION_MAX) {
+    invalid(generatedFieldPath(...blockPath, "children"));
+  }
   const children = Array.isArray(value.children)
     ? normalizeUniqueIds(
-        value.children.map((item, childIndex) => normalizeScreenBlock(item, childIndex))
+        value.children.map((item, childIndex) =>
+          normalizeScreenBlock(item, childIndex, mode, [...blockPath, "children", childIndex])
+        )
       )
     : undefined;
   const slots =
@@ -733,13 +1002,23 @@ const normalizeScreenBlock = (value: unknown, index: number): ScreenBlockV1 => {
       ? undefined
       : isRecord(value.slots)
         ? Object.fromEntries(
-            Object.entries(value.slots).map(([slotId, items]) => {
+            Object.entries(value.slots).map(([slotId, items], slotGroupIndex) => {
               if (!normalizeText(slotId)) throw new Error("custom_screen_definition_invalid");
               if (!Array.isArray(items)) throw new Error("custom_screen_definition_invalid");
+              if (items.length > SCREEN_BLOCK_COLLECTION_MAX) {
+                invalid(generatedFieldPath(...blockPath, "slots", slotGroupIndex));
+              }
               return [
                 slotId,
                 normalizeUniqueIds(
-                  items.map((item, slotIndex) => normalizeScreenBlock(item, slotIndex))
+                  items.map((item, slotIndex) =>
+                    normalizeScreenBlock(item, slotIndex, mode, [
+                      ...blockPath,
+                      "slots",
+                      slotGroupIndex,
+                      slotIndex,
+                    ])
+                  )
                 ),
               ];
             })
@@ -747,13 +1026,13 @@ const normalizeScreenBlock = (value: unknown, index: number): ScreenBlockV1 => {
         : null;
   if (slots === null) throw new Error("custom_screen_definition_invalid");
 
-  return {
+  const block: ScreenBlockV1 = {
     id,
     type,
     ...(label ? { label } : {}),
     ...(variant ? { variant } : {}),
     ...(style ? { style } : {}),
-    data: normalizeScreenBlockData(type, value.data),
+    data: normalizeScreenBlockData(type, value.data, mode, blockPath),
     ...(value.layout !== undefined
       ? { layout: normalizeJsonValue(value.layout) as WidgetBlock["layout"] }
       : {}),
@@ -767,6 +1046,8 @@ const normalizeScreenBlock = (value: unknown, index: number): ScreenBlockV1 => {
     ...(children ? { children } : {}),
     ...(slots ? { slots } : {}),
   };
+  assertTabSlots(block, blockPath);
+  return block;
 };
 
 const createDefaultScreenSection = (
@@ -780,7 +1061,12 @@ const createDefaultScreenSection = (
   blocks,
 });
 
-const normalizeScreenSection = (value: unknown, index: number): ScreenSectionV1 => {
+const normalizeScreenSection = (
+  value: unknown,
+  index: number,
+  mode: ScreenNormalizeMode,
+  sectionPath: readonly ScreenFieldPathSegment[]
+): ScreenSectionV1 => {
   if (!isRecord(value)) throw new Error("custom_screen_definition_invalid");
   rejectUnknownKeys(value, [
     "id",
@@ -800,6 +1086,9 @@ const normalizeScreenSection = (value: unknown, index: number): ScreenSectionV1 
   if (value.blocks !== undefined && !Array.isArray(value.blocks)) {
     throw new Error("custom_screen_definition_invalid");
   }
+  if (Array.isArray(value.blocks) && value.blocks.length > SCREEN_BLOCK_COLLECTION_MAX) {
+    invalid(generatedFieldPath(...sectionPath, "blocks"));
+  }
   return {
     id,
     type: "section",
@@ -813,7 +1102,9 @@ const normalizeScreenSection = (value: unknown, index: number): ScreenSectionV1 
       : {}),
     ...(style ? { style } : {}),
     blocks: normalizeUniqueIds(
-      (value.blocks ?? []).map((item, blockIndex) => normalizeScreenBlock(item, blockIndex))
+      (value.blocks ?? []).map((item, blockIndex) =>
+        normalizeScreenBlock(item, blockIndex, mode, [...sectionPath, "blocks", blockIndex])
+      )
     ),
   };
 };
@@ -821,7 +1112,11 @@ const normalizeScreenSection = (value: unknown, index: number): ScreenSectionV1 
 const sectionsLookLikeLegacyBlockArray = (sections: unknown[]) =>
   sections.some((item) => isRecord(item) && !("blocks" in item));
 
-export function normalizeScreenDocumentV1(input: unknown): ScreenDocumentV1 {
+const normalizeScreenDocumentV1AtPath = (
+  input: unknown,
+  mode: ScreenNormalizeMode,
+  documentPath: readonly ScreenFieldPathSegment[]
+): ScreenDocumentV1 => {
   if (input === undefined || input === null) return { schemaVersion: 1, sections: [] };
   if (!isRecord(input)) throw new Error("custom_screen_definition_invalid");
   rejectUnknownKeys(input, ["schemaVersion", "sections"]);
@@ -830,12 +1125,21 @@ export function normalizeScreenDocumentV1(input: unknown): ScreenDocumentV1 {
   if (input.sections !== undefined && !Array.isArray(input.sections)) {
     throw new Error("custom_screen_definition_invalid");
   }
+  if (Array.isArray(input.sections) && input.sections.length > SCREEN_DOCUMENT_SECTIONS_MAX) {
+    invalid(generatedFieldPath(...documentPath, "sections"));
+  }
   return {
     schemaVersion: 1,
     sections: normalizeUniqueIds(
-      (input.sections ?? []).map((item, index) => normalizeScreenSection(item, index))
+      (input.sections ?? []).map((item, index) =>
+        normalizeScreenSection(item, index, mode, [...documentPath, "sections", index])
+      )
     ),
   };
+};
+
+export function normalizeScreenDocumentV1(input: unknown): ScreenDocumentV1 {
+  return normalizeScreenDocumentV1AtPath(input, "write", ["definition", "editorView", "document"]);
 }
 
 // TASK-498-04: READ-PATH-ONLY block repair — remap a stored `actions` placeholder block
@@ -848,6 +1152,106 @@ export function normalizeScreenDocumentV1(input: unknown): ScreenDocumentV1 {
 // to the neutral legacy placeholder. Non-`actions` records pass through byte-stable.
 const READ_REPAIR_BLOCK_TYPE: Record<string, string> = { actions: "button" };
 
+const nextRepairedTabId = (index: number, used: ReadonlySet<string>) => {
+  const base = `tab-${index + 1}`;
+  if (!used.has(base)) return base;
+  let suffix = 2;
+  while (used.has(`${base}-${suffix}`)) suffix += 1;
+  return `${base}-${suffix}`;
+};
+
+const hasCanonicalStoredTabs = (data: Record<string, unknown>, slots: unknown) => {
+  if (
+    !Array.isArray(data.tabs) ||
+    data.tabs.length < SCREEN_TABS_MIN ||
+    data.tabs.length > SCREEN_TABS_MAX ||
+    !isRecord(slots)
+  ) {
+    return false;
+  }
+  const seen = new Set<string>();
+  const tabIds: string[] = [];
+  for (const item of data.tabs) {
+    if (!isRecord(item)) return false;
+    const keys = Object.keys(item);
+    if (
+      keys.length !== 2 ||
+      !Object.prototype.hasOwnProperty.call(item, "id") ||
+      !Object.prototype.hasOwnProperty.call(item, "label") ||
+      typeof item.id !== "string" ||
+      typeof item.label !== "string"
+    ) {
+      return false;
+    }
+    if (
+      item.id !== item.id.trim() ||
+      !SCREEN_TAB_ID.test(item.id) ||
+      seen.has(item.id) ||
+      item.label !== item.label.trim() ||
+      !item.label ||
+      screenCodePointLength(item.label) > SCREEN_TAB_LABEL_MAX
+    ) {
+      return false;
+    }
+    seen.add(item.id);
+    tabIds.push(item.id);
+  }
+  const slotIds = Object.keys(slots);
+  return sameSet(tabIds, slotIds) && Object.values(slots).every(Array.isArray);
+};
+
+const repairStoredTabsForRead = (
+  data: Record<string, unknown>,
+  slots: unknown
+): { data: Record<string, unknown>; slots: Record<string, unknown[]>; repaired: boolean } => {
+  if (hasCanonicalStoredTabs(data, slots)) {
+    return {
+      data,
+      slots: slots as Record<string, unknown[]>,
+      repaired: false,
+    };
+  }
+  const rawTabs = Array.isArray(data.tabs) ? data.tabs.slice(0, SCREEN_TABS_MAX) : [];
+  const tabs = rawTabs.length > 0 ? rawTabs : [{ id: "tab-1", label: "Tab 1" }];
+  const rawSlots = isRecord(slots) ? slots : {};
+  const consumedSlotIds = new Set<string>();
+  const usedIds = new Set<string>();
+  const repairedSlots: Record<string, unknown[]> = {};
+  const repairedTabs: ScreenTabItem[] = tabs.map((rawTab, index) => {
+    const rawItem = isRecord(rawTab) ? rawTab : {};
+    const rawId = typeof rawItem.id === "string" ? rawItem.id : "";
+    const trimmedId = rawId.trim();
+    const id =
+      SCREEN_TAB_ID.test(trimmedId) && !usedIds.has(trimmedId)
+        ? trimmedId
+        : nextRepairedTabId(index, usedIds);
+    usedIds.add(id);
+
+    const trimmedLabel = typeof rawItem.label === "string" ? rawItem.label.trim() : "";
+    const label = trimmedLabel
+      ? truncateScreenCodePoints(trimmedLabel, SCREEN_TAB_LABEL_MAX)
+      : `Tab ${index + 1}`;
+    const sourceSlotId =
+      rawId && Object.prototype.hasOwnProperty.call(rawSlots, rawId)
+        ? rawId
+        : Object.prototype.hasOwnProperty.call(rawSlots, trimmedId)
+          ? trimmedId
+          : null;
+    const sourceItems = sourceSlotId ? rawSlots[sourceSlotId] : undefined;
+    repairedSlots[id] =
+      sourceSlotId && !consumedSlotIds.has(sourceSlotId) && Array.isArray(sourceItems)
+        ? sourceItems
+        : [];
+    if (sourceSlotId) consumedSlotIds.add(sourceSlotId);
+    return { id, label };
+  });
+  return {
+    data: { ...data, tabs: repairedTabs },
+    slots: repairedSlots,
+    repaired: true,
+  };
+};
+
 const repairLegacyScreenRecordForRead = (node: unknown): unknown => {
   if (Array.isArray(node)) return node.map(repairLegacyScreenRecordForRead);
   if (!isRecord(node)) return node;
@@ -857,13 +1261,32 @@ const repairLegacyScreenRecordForRead = (node: unknown): unknown => {
     typeof node.type === "string" ? READ_REPAIR_BLOCK_TYPE[node.type] : undefined;
   if (repairedType) {
     next.type = repairedType;
-    const allowed = screenBlockDataAllowedKeys[repairedType];
+    const allowed = isFixedScreenBlockType(repairedType)
+      ? screenBlockDataAllowedKeys[repairedType]
+      : null;
     if (allowed && isRecord(node.data)) {
+      const allowedSet = new Set<string>(allowed);
       next.data = Object.fromEntries(
-        Object.entries(node.data).filter(([key]) => allowed.includes(key))
+        Object.entries(node.data).filter(([key]) => allowedSet.has(key))
       );
     }
     changed = true;
+  }
+  const effectiveType = repairedType ?? (typeof node.type === "string" ? node.type : undefined);
+  if (effectiveType === "button" && isRecord(next.data)) {
+    if (next.data.action === "publish" || next.data.action === "custom") {
+      next.data = { ...next.data, action: "link" };
+      delete (next.data as Record<string, unknown>).href;
+      changed = true;
+    }
+  }
+  if (effectiveType === "tabs" && isRecord(next.data)) {
+    const repairedTabs = repairStoredTabsForRead(next.data, node.slots);
+    if (repairedTabs.repaired) {
+      next.data = repairedTabs.data;
+      next.slots = repairedTabs.slots;
+      changed = true;
+    }
   }
   for (const key of ["blocks", "children"] as const) {
     if (Array.isArray(node[key])) {
@@ -871,9 +1294,10 @@ const repairLegacyScreenRecordForRead = (node: unknown): unknown => {
       changed = true;
     }
   }
-  if (isRecord(node.slots)) {
+  const repairedSlotSource = isRecord(next.slots) ? next.slots : node.slots;
+  if (isRecord(repairedSlotSource)) {
     next.slots = Object.fromEntries(
-      Object.entries(node.slots).map(([slot, items]) => [
+      Object.entries(repairedSlotSource).map(([slot, items]) => [
         slot,
         Array.isArray(items) ? items.map(repairLegacyScreenRecordForRead) : items,
       ])
@@ -883,7 +1307,37 @@ const repairLegacyScreenRecordForRead = (node: unknown): unknown => {
   return changed ? next : node;
 };
 
-export function normalizeScreenDocumentV1ForRead(input: unknown): ScreenDocumentV1 {
+const collectRawUnsupportedButtonIds = (rawDocument: unknown): Set<string> => {
+  const ids = new Set<string>();
+  const visit = (node: unknown) => {
+    if (Array.isArray(node)) {
+      node.forEach(visit);
+      return;
+    }
+    if (!isRecord(node)) return;
+    const type = typeof node.type === "string" ? node.type : null;
+    if ((type === "button" || type === "actions") && isRecord(node.data)) {
+      if (node.data.action === "publish" || node.data.action === "custom") {
+        try {
+          ids.add(normalizePath(node.id));
+        } catch {
+          // The ordinary stored-read validator owns malformed IDs.
+        }
+      }
+    }
+    if (Array.isArray(node.sections)) visit(node.sections);
+    if (Array.isArray(node.blocks)) visit(node.blocks);
+    if (Array.isArray(node.children)) visit(node.children);
+    if (isRecord(node.slots)) Object.values(node.slots).forEach(visit);
+  };
+  visit(rawDocument);
+  return ids;
+};
+
+const normalizeScreenDocumentV1ForReadAtPath = (
+  input: unknown,
+  documentPath: readonly ScreenFieldPathSegment[]
+): ScreenDocumentV1 => {
   if (input === undefined || input === null) return { schemaVersion: 1, sections: [] };
   if (!isRecord(input)) throw new Error("custom_screen_definition_invalid");
   rejectUnknownKeys(input, ["schemaVersion", "sections"]);
@@ -892,7 +1346,15 @@ export function normalizeScreenDocumentV1ForRead(input: unknown): ScreenDocument
   if (input.sections !== undefined && !Array.isArray(input.sections)) {
     throw new Error("custom_screen_definition_invalid");
   }
-  const sections = repairLegacyScreenRecordForRead(input.sections ?? []) as unknown[];
+  const rawSections = input.sections ?? [];
+  const legacyFlatSections = sectionsLookLikeLegacyBlockArray(rawSections);
+  if (
+    rawSections.length >
+    (legacyFlatSections ? SCREEN_BLOCK_COLLECTION_MAX : SCREEN_DOCUMENT_SECTIONS_MAX)
+  ) {
+    throw new Error("custom_screen_definition_invalid");
+  }
+  const sections = repairLegacyScreenRecordForRead(rawSections) as unknown[];
   if (sectionsLookLikeLegacyBlockArray(sections)) {
     return {
       schemaVersion: 1,
@@ -900,7 +1362,17 @@ export function normalizeScreenDocumentV1ForRead(input: unknown): ScreenDocument
         sections.length > 0
           ? [
               createDefaultScreenSection(
-                normalizeUniqueIds(sections.map((item, index) => normalizeScreenBlock(item, index)))
+                normalizeUniqueIds(
+                  sections.map((item, index) =>
+                    normalizeScreenBlock(item, index, "stored-read", [
+                      ...documentPath,
+                      "sections",
+                      0,
+                      "blocks",
+                      index,
+                    ])
+                  )
+                )
               ),
             ]
           : [],
@@ -909,9 +1381,15 @@ export function normalizeScreenDocumentV1ForRead(input: unknown): ScreenDocument
   return {
     schemaVersion: 1,
     sections: normalizeUniqueIds(
-      sections.map((item, index) => normalizeScreenSection(item, index))
+      sections.map((item, index) =>
+        normalizeScreenSection(item, index, "stored-read", [...documentPath, "sections", index])
+      )
     ),
   };
+};
+
+export function normalizeScreenDocumentV1ForRead(input: unknown): ScreenDocumentV1 {
+  return normalizeScreenDocumentV1ForReadAtPath(input, ["definition", "editorView", "document"]);
 }
 
 // TASK-505-01 (Item B): a missing-content-type-field binding (fieldRoot ∉ live schema) is
@@ -1381,7 +1859,7 @@ const assertScreenFieldBindingsTargetDocument = (
   bindings: ScreenFieldBinding[]
 ) => {
   const blockIds = collectScreenDocumentBlockIds(document);
-  if (blockIds.size > 0 && bindings.some((binding) => !blockIds.has(binding.blockId))) {
+  if (bindings.some((binding) => !blockIds.has(binding.blockId))) {
     throw new Error("custom_screen_definition_invalid");
   }
 };
@@ -1398,13 +1876,18 @@ const normalizeCustomScreenListRowTemplate = (
 ): CustomScreenListRowTemplate => {
   if (!isRecord(input)) throw new Error("custom_screen_definition_invalid");
   rejectUnknownKeys(input, ["document", "bindings"]);
-  const document = normalizeScreenDocumentV1(input.document);
+  const document = normalizeScreenDocumentV1AtPath(input.document, "write", [
+    "definition",
+    "listView",
+    "rowTemplate",
+    "document",
+  ]);
   const bindings = normalizeScreenFieldBindings(input.bindings, context, sink);
   if (sink) {
     const blockIds = collectScreenDocumentBlockIds(document);
     const kept: ScreenFieldBinding[] = [];
     for (const binding of bindings) {
-      if (blockIds.size === 0 || blockIds.has(binding.blockId)) kept.push(binding);
+      if (blockIds.has(binding.blockId)) kept.push(binding);
       else sink.removedBlockOrphans.push(binding.field);
     }
     return { document, bindings: kept };
@@ -1419,12 +1902,29 @@ const normalizeCustomScreenListRowTemplateForRead = (
   context?: CustomScreenDefinitionContext
 ): CustomScreenListRowTemplate => {
   try {
-    // Pass a DISCARD sink so field-/block-orphans prune silently (read-repair cleanup) —
-    // preserves the authored row template instead of the whole-template try/catch fallback.
-    return normalizeCustomScreenListRowTemplate(input, context, {
+    if (!isRecord(input)) throw new Error("custom_screen_definition_invalid");
+    rejectUnknownKeys(input, ["document", "bindings"]);
+    const unsupportedButtonIds = collectRawUnsupportedButtonIds(input.document);
+    const document = normalizeScreenDocumentV1ForReadAtPath(input.document, [
+      "definition",
+      "listView",
+      "rowTemplate",
+      "document",
+    ]);
+    const discardSink: ScreenBindingWarningSink = {
       removedFieldOrphans: [],
       removedBlockOrphans: [],
-    });
+    };
+    const bindings = normalizeScreenFieldBindings(input.bindings, context, discardSink);
+    const blockIds = collectScreenDocumentBlockIds(document);
+    return {
+      document,
+      bindings: bindings.filter(
+        (binding) =>
+          blockIds.has(binding.blockId) &&
+          !(unsupportedButtonIds.has(binding.blockId) && binding.propPath === "href")
+      ),
+    };
   } catch {
     return fallback;
   }
@@ -1584,7 +2084,11 @@ export function normalizeCustomScreenEditorViewDefinitionV4(
   if (saveMode !== "entry") throw new Error("custom_screen_definition_invalid");
   const interactionMode = normalizeText(input.interactionMode) ?? "inline";
   if (interactionMode !== "inline") throw new Error("custom_screen_definition_invalid");
-  const document = normalizeScreenDocumentV1(input.document);
+  const document = normalizeScreenDocumentV1AtPath(input.document, "write", [
+    "definition",
+    "editorView",
+    "document",
+  ]);
   const bindings = normalizeScreenFieldBindings(input.bindings, context, sink);
   const blockIds = collectScreenBlockIds(document);
   // TASK-505-01 (Item B): when a sink is threaded, PRUNE block-orphans inline (recoverable
@@ -1592,7 +2096,7 @@ export function normalizeCustomScreenEditorViewDefinitionV4(
   if (sink) {
     const kept: ScreenFieldBinding[] = [];
     for (const binding of bindings) {
-      if (blockIds.size === 0 || blockIds.has(binding.blockId)) kept.push(binding);
+      if (blockIds.has(binding.blockId)) kept.push(binding);
       else sink.removedBlockOrphans.push(binding.field);
     }
     return {
@@ -1602,7 +2106,7 @@ export function normalizeCustomScreenEditorViewDefinitionV4(
       interactionMode: "inline",
     };
   }
-  if (blockIds.size > 0 && bindings.some((binding) => !blockIds.has(binding.blockId))) {
+  if (bindings.some((binding) => !blockIds.has(binding.blockId))) {
     throw new Error("custom_screen_definition_invalid");
   }
   return {
@@ -1631,7 +2135,12 @@ export function normalizeCustomScreenEditorViewDefinitionV4ForRead(
   if (saveMode !== "entry") throw new Error("custom_screen_definition_invalid");
   const interactionMode = normalizeText(input.interactionMode) ?? "inline";
   if (interactionMode !== "inline") throw new Error("custom_screen_definition_invalid");
-  const document = normalizeScreenDocumentV1ForRead(input.document);
+  const unsupportedButtonIds = collectRawUnsupportedButtonIds(input.document);
+  const document = normalizeScreenDocumentV1ForReadAtPath(input.document, [
+    "definition",
+    "editorView",
+    "document",
+  ]);
   // TASK-505-01/03 (Item B) — read-path RETAINS field-orphans so recovery UX can NAME them.
   // A field-orphan (binding → LIVE block, but its content-type field was deleted AFTER save)
   // is created by an EXTERNAL schema change, never re-saved, so it can only surface on
@@ -1647,7 +2156,9 @@ export function normalizeCustomScreenEditorViewDefinitionV4ForRead(
   const bindings = normalizeScreenFieldBindings(input.bindings);
   const blockIds = collectScreenBlockIds(document);
   const keptBindings = bindings.filter(
-    (binding) => blockIds.size === 0 || blockIds.has(binding.blockId)
+    (binding) =>
+      blockIds.has(binding.blockId) &&
+      !(unsupportedButtonIds.has(binding.blockId) && binding.propPath === "href")
   );
   return {
     document,
@@ -2410,36 +2921,124 @@ const screenBlockStyleV1Schema = {
   additionalProperties: false,
 } as const;
 
-const screenBlockV1Schema = {
-  type: "object",
-  required: ["id", "type", "data"],
-  properties: {
-    id: { type: "string", minLength: 1, maxLength: 160 },
-    type: { type: "string", minLength: 1, maxLength: 160 },
-    label: { type: "string", minLength: 1, maxLength: 160 },
-    variant: { type: "string", minLength: 1, maxLength: 80 },
-    style: screenBlockStyleV1Schema,
-    data: { type: "object" },
-    layout: { type: "object" },
-    visibility: { type: "object" },
-    editor: { type: "object" },
-    legacyWidgetType: { type: "string", minLength: 1, maxLength: 160 },
-    children: {
-      type: "array",
-      maxItems: 500,
-      items: { type: "object" },
+const unsafeScreenPathSegmentPattern = "(^|\\.)(?:__proto__|prototype|constructor)(?:\\.|$)";
+const nonEmptyScreenPathSchema = {
+  type: "string",
+  minLength: 1,
+  maxLength: 160,
+  pattern: "^[a-zA-Z0-9_.-]+$",
+  not: { pattern: unsafeScreenPathSegmentPattern },
+} as const;
+const emptyOrScreenPathSchema = {
+  type: "string",
+  maxLength: 160,
+  pattern: "^(?:[a-zA-Z0-9_.-]+)?$",
+  not: { pattern: unsafeScreenPathSegmentPattern },
+} as const;
+const clearableScreenDataLabelSchema = { type: "string" } as const;
+
+const fixedScreenBlockDataSchemas = {
+  heading: {
+    type: "object",
+    properties: {
+      label: clearableScreenDataLabelSchema,
+      text: { type: "string" },
+      level: { type: "integer", minimum: 1, maximum: 3 },
+      align: { enum: ["left", "center", "right"] },
+      field: nonEmptyScreenPathSchema,
     },
-    slots: {
-      type: "object",
-      additionalProperties: {
+    additionalProperties: false,
+  },
+  text: {
+    type: "object",
+    properties: {
+      content: { type: "string" },
+      tone: { enum: ["default", "muted"] },
+      label: clearableScreenDataLabelSchema,
+    },
+    additionalProperties: false,
+  },
+  stat: {
+    type: "object",
+    properties: {
+      label: clearableScreenDataLabelSchema,
+      format: { enum: ["number", "percent", "money"] },
+      trend: { enum: ["auto", "up", "down", "flat"] },
+      deltaField: emptyOrScreenPathSchema,
+      field: nonEmptyScreenPathSchema,
+    },
+    additionalProperties: false,
+  },
+  divider: {
+    type: "object",
+    properties: {
+      variant: { enum: ["line", "space", "label"] },
+      label: clearableScreenDataLabelSchema,
+    },
+    additionalProperties: false,
+  },
+  image: {
+    type: "object",
+    properties: {
+      label: clearableScreenDataLabelSchema,
+      fit: { enum: ["cover", "contain"] },
+      ratio: { type: "string" },
+      field: nonEmptyScreenPathSchema,
+      src: { type: "string" },
+    },
+    additionalProperties: false,
+  },
+  "related-list": {
+    type: "object",
+    properties: {
+      label: clearableScreenDataLabelSchema,
+      target: emptyOrScreenPathSchema,
+      displayField: emptyOrScreenPathSchema,
+      variant: { enum: ["checklist", "activity", "cards"] },
+      limit: { type: "integer", minimum: 1, maximum: 50 },
+      field: nonEmptyScreenPathSchema,
+    },
+    additionalProperties: false,
+  },
+  tabs: {
+    type: "object",
+    required: ["tabs"],
+    properties: {
+      label: clearableScreenDataLabelSchema,
+      tabs: {
         type: "array",
-        maxItems: 500,
-        items: { type: "object" },
+        minItems: SCREEN_TABS_MIN,
+        maxItems: SCREEN_TABS_MAX,
+        items: {
+          type: "object",
+          required: ["id", "label"],
+          properties: {
+            id: { type: "string", pattern: SCREEN_TAB_ID.source },
+            label: {
+              type: "string",
+              minLength: 1,
+              maxLength: SCREEN_TAB_LABEL_MAX,
+              pattern: "\\S",
+            },
+          },
+          additionalProperties: false,
+        },
       },
     },
+    additionalProperties: false,
   },
-  additionalProperties: false,
-} as const;
+  button: {
+    type: "object",
+    properties: {
+      label: clearableScreenDataLabelSchema,
+      action: { enum: ["link"] },
+      variant: { enum: ["primary", "secondary", "ghost"] },
+      href: { type: "string" },
+      field: nonEmptyScreenPathSchema,
+    },
+    additionalProperties: false,
+  },
+} as const satisfies Record<FixedScreenBlockType, object>;
 
 // TASK-505-01: Ajv mirror of ScreenSectionStyleV1 — references the SAME exported constants
 // as normalizeScreenSectionStyle (zero drift). Rejects out-of-range gap / unknown key at the
@@ -2457,12 +3056,47 @@ const screenSectionStyleV1Schema = {
   additionalProperties: false,
 } as const;
 
-const screenSectionV1Schema = {
+const localScreenBlockRef = { $ref: "#/$defs/customScreenV4ScreenBlock" } as const;
+const localScreenDocumentRef = { $ref: "#/$defs/customScreenV4ScreenDocument" } as const;
+const localScreenDefinitionRef = { $ref: "#/$defs/customScreenV4Definition" } as const;
+
+const screenBlockBranch = (type: string, dataSchema: object) => ({
+  type: "object",
+  required: ["id", "type", "data"],
+  properties: {
+    id: { type: "string", minLength: 1, maxLength: 160 },
+    type: { const: type },
+    label: { type: "string", minLength: 1, maxLength: 160 },
+    variant: { type: "string", minLength: 1, maxLength: 80 },
+    style: screenBlockStyleV1Schema,
+    data: dataSchema,
+    layout: { type: "object" },
+    visibility: { type: "object" },
+    editor: { type: "object" },
+    legacyWidgetType: { type: "string", minLength: 1, maxLength: 160 },
+    children: {
+      type: "array",
+      maxItems: SCREEN_BLOCK_COLLECTION_MAX,
+      items: localScreenBlockRef,
+    },
+    slots: {
+      type: "object",
+      additionalProperties: {
+        type: "array",
+        maxItems: SCREEN_BLOCK_COLLECTION_MAX,
+        items: localScreenBlockRef,
+      },
+    },
+  },
+  additionalProperties: false,
+});
+
+const screenSectionSchemaUsing = (blockRef: object) => ({
   type: "object",
   required: ["id", "type", "data", "blocks"],
   properties: {
     id: { type: "string", minLength: 1, maxLength: 160 },
-    type: { enum: ["section"] },
+    type: { const: "section" },
     label: { type: "string", minLength: 1, maxLength: 160 },
     data: { type: "object" },
     layout: { type: "object" },
@@ -2470,127 +3104,118 @@ const screenSectionV1Schema = {
     style: screenSectionStyleV1Schema,
     blocks: {
       type: "array",
-      maxItems: 500,
-      items: screenBlockV1Schema,
+      maxItems: SCREEN_BLOCK_COLLECTION_MAX,
+      items: blockRef,
     },
   },
   additionalProperties: false,
-} as const;
+});
 
-const screenDocumentV1Schema = {
-  type: "object",
-  required: ["schemaVersion", "sections"],
-  properties: {
-    schemaVersion: { enum: [1] },
-    sections: {
-      type: "array",
-      maxItems: 120,
-      items: screenSectionV1Schema,
-    },
-  },
-  additionalProperties: false,
-} as const;
-
-const customScreenListRowTemplateSchema = {
-  type: "object",
-  required: ["document", "bindings"],
-  properties: {
-    document: screenDocumentV1Schema,
-    bindings: {
-      type: "array",
-      maxItems: 200,
-      items: screenFieldBindingSchema,
-    },
-  },
-  additionalProperties: false,
-} as const;
-
-const customScreenV4ListViewSchema = {
+const customScreenV4ListViewSchemaUsing = (documentRef: object) => ({
   ...customScreenV3DefinitionSchema.properties.listView,
   properties: {
     ...customScreenV3DefinitionSchema.properties.listView.properties,
-    rowTemplate: customScreenListRowTemplateSchema,
-  },
-  additionalProperties: false,
-} as const;
-
-const customScreenV4DefinitionSchema = {
-  type: "object",
-  required: ["schemaVersion", "listView", "editorView"],
-  properties: {
-    schemaVersion: { enum: [4] },
-    listView: customScreenV4ListViewSchema,
-    editorView: {
+    rowTemplate: {
       type: "object",
-      required: ["document", "bindings", "saveMode", "interactionMode"],
+      required: ["document", "bindings"],
       properties: {
-        document: screenDocumentV1Schema,
+        document: documentRef,
         bindings: {
           type: "array",
           maxItems: 200,
           items: screenFieldBindingSchema,
         },
-        saveMode: { enum: ["entry"] },
-        interactionMode: { enum: ["inline"] },
       },
       additionalProperties: false,
     },
   },
   additionalProperties: false,
-} as const;
+});
 
-export const customScreenDefinitionSchema = {
-  ...customScreenV4DefinitionSchema,
-} as const;
-
-export const customScreenCreateSchema = {
+const customScreenV4DefinitionSchemaUsing = (documentRef: object) => ({
   type: "object",
-  required: ["name", "contentTypeId"],
+  required: ["schemaVersion", "listView", "editorView"],
   properties: {
-    name: { type: "string", minLength: 1, maxLength: 160 },
-    contentTypeId: { type: "string", minLength: 1, maxLength: 64 },
-    status: { enum: customScreenStatusValues },
-    collectionRole: {
-      anyOf: [{ enum: customScreenCollectionRoleValues }, { type: "null" }],
+    schemaVersion: { const: 4 },
+    listView: customScreenV4ListViewSchemaUsing(documentRef),
+    editorView: {
+      type: "object",
+      required: ["document", "bindings", "saveMode", "interactionMode"],
+      properties: {
+        document: documentRef,
+        bindings: {
+          type: "array",
+          maxItems: 200,
+          items: screenFieldBindingSchema,
+        },
+        saveMode: { const: "entry" },
+        interactionMode: { const: "inline" },
+      },
+      additionalProperties: false,
     },
-    compositionKey: {
-      anyOf: [
-        { type: "string", minLength: 1, maxLength: 160, pattern: "^[a-zA-Z0-9_.-]+$" },
-        { type: "null" },
-      ],
-    },
-    showInSidebar: { type: "boolean" },
-    sidebarLabel: {
-      anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }],
-    },
-    schemaVersion: { enum: [4] },
-    definition: customScreenDefinitionSchema,
   },
   additionalProperties: false,
-} as const;
+});
 
-export const customScreenUpdateSchema = {
-  type: "object",
-  minProperties: 1,
-  properties: {
-    name: { type: "string", minLength: 1, maxLength: 160 },
-    contentTypeId: { type: "string", minLength: 1, maxLength: 64 },
-    status: { enum: customScreenStatusValues },
-    collectionRole: {
-      anyOf: [{ enum: customScreenCollectionRoleValues }, { type: "null" }],
-    },
-    compositionKey: {
-      anyOf: [
-        { type: "string", minLength: 1, maxLength: 160, pattern: "^[a-zA-Z0-9_.-]+$" },
-        { type: "null" },
-      ],
-    },
-    showInSidebar: { type: "boolean" },
-    sidebarLabel: {
-      anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }],
-    },
-    schemaVersion: { enum: [4] },
-    definition: customScreenDefinitionSchema,
+const buildCustomScreenV4Defs = () => ({
+  customScreenV4ScreenBlock: {
+    oneOf: [
+      ...Object.entries(fixedScreenBlockDataSchemas).map(([type, dataSchema]) =>
+        screenBlockBranch(type, dataSchema)
+      ),
+      ...compatibilityScreenBlockTypes.map((type) => screenBlockBranch(type, { type: "object" })),
+    ],
   },
+  customScreenV4ScreenDocument: {
+    type: "object",
+    required: ["schemaVersion", "sections"],
+    properties: {
+      schemaVersion: { const: 1 },
+      sections: {
+        type: "array",
+        maxItems: SCREEN_DOCUMENT_SECTIONS_MAX,
+        items: screenSectionSchemaUsing(localScreenBlockRef),
+      },
+    },
+    additionalProperties: false,
+  },
+  customScreenV4Definition: customScreenV4DefinitionSchemaUsing(localScreenDocumentRef),
+});
+
+const buildStandaloneCustomScreenDefinitionSchema = () => {
+  const $defs = buildCustomScreenV4Defs();
+  return { ...$defs.customScreenV4Definition, $defs };
+};
+
+const buildCustomScreenMutationProperties = () => ({
+  name: { type: "string", minLength: 1, maxLength: 160 },
+  contentTypeId: { type: "string", minLength: 1, maxLength: 64 },
+  status: { enum: customScreenStatusValues },
+  collectionRole: {
+    anyOf: [{ enum: customScreenCollectionRoleValues }, { type: "null" }],
+  },
+  compositionKey: {
+    anyOf: [
+      { type: "string", minLength: 1, maxLength: 160, pattern: "^[a-zA-Z0-9_.-]+$" },
+      { type: "null" },
+    ],
+  },
+  showInSidebar: { type: "boolean" },
+  sidebarLabel: {
+    anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }],
+  },
+  schemaVersion: { const: 4 },
+  definition: localScreenDefinitionRef,
+});
+
+const buildCustomScreenMutationSchema = (kind: "create" | "update") => ({
+  type: "object",
+  $defs: buildCustomScreenV4Defs(),
+  ...(kind === "create" ? { required: ["name", "contentTypeId"] } : { minProperties: 1 }),
+  properties: buildCustomScreenMutationProperties(),
   additionalProperties: false,
-} as const;
+});
+
+export const customScreenDefinitionSchema = buildStandaloneCustomScreenDefinitionSchema();
+export const customScreenCreateSchema = buildCustomScreenMutationSchema("create");
+export const customScreenUpdateSchema = buildCustomScreenMutationSchema("update");

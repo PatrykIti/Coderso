@@ -4,10 +4,37 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-import { updateEntry } from "@/services/entriesClient";
-import { CustomScreenEntryEditor } from "../../../core/admin/ui/custom-screens/CustomScreenEntryEditor";
+import { updateEntry, type EntryDetail } from "@/services/entriesClient";
+import { listMediaCached } from "@/services/mediaClient";
+import {
+  replaceScreenEntryOverrides,
+  type CustomScreenRecord,
+} from "@/services/customScreensClient";
+import type { ContentTypeSummary } from "@/services/contentTypesClient";
+import type { CustomScreenDefinition } from "../../../core/services/customScreens/customScreenSchemas";
+import { cacheKeys } from "../../../core/admin/services/cachePolicy";
+import {
+  allocateMediaAttempt,
+  buildEntryRouteKey,
+  buildPresentationMediaRequestKey,
+  collectWinningDirectImageAssetIds,
+  CustomScreenEntryEditor,
+  decodeAndValidatePresentationMediaRequestKey,
+  initializeMediaMachineState,
+  mediaAttemptReducer,
+} from "../../../core/admin/ui/custom-screens/CustomScreenEntryEditor";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 import { renderAdminUi } from "../../utils/adminRouterRender";
+
+const deferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((nextResolve, nextReject) => {
+    resolve = nextResolve;
+    reject = nextReject;
+  });
+  return { promise, resolve, reject };
+};
 
 /**
  * TASK-479-14-L05: presentation guard for the entry content editor restyle
@@ -24,6 +51,12 @@ import { renderAdminUi } from "../../utils/adminRouterRender";
  * are intentionally NOT asserted here; per-screen presentation is proven through
  * the real, definition-driven bound-field layout instead.
  */
+type EntryEditorFixture = {
+  screen: CustomScreenRecord & { definition: CustomScreenDefinition };
+  contentType: ContentTypeSummary;
+  entry: EntryDetail;
+};
+
 const makeFixture = (opts: {
   screenId: string;
   contentTypeId: string;
@@ -31,8 +64,8 @@ const makeFixture = (opts: {
   fieldLabel: string;
   fieldName: string;
   entryTitle: string;
-}) => {
-  const contentType = {
+}): EntryEditorFixture => {
+  const contentType: ContentTypeSummary = {
     id: opts.contentTypeId,
     name: opts.slug,
     slug: opts.slug,
@@ -51,11 +84,13 @@ const makeFixture = (opts: {
     createdAt: "2026-05-02T00:00:00.000Z",
     updatedAt: "2026-05-02T00:00:00.000Z",
   };
-  const screen = {
+  const screen: EntryEditorFixture["screen"] = {
     id: opts.screenId,
     name: opts.slug,
     contentTypeId: opts.contentTypeId,
     status: "active" as const,
+    collectionRole: null,
+    compositionKey: null,
     showInSidebar: true,
     sidebarLabel: opts.slug,
     schemaVersion: 4,
@@ -104,12 +139,14 @@ const makeFixture = (opts: {
     createdAt: "2026-05-02T00:00:00.000Z",
     updatedAt: "2026-05-02T00:00:00.000Z",
   };
-  const entry = {
+  const entry: EntryDetail = {
     id: "1",
     typeId: opts.contentTypeId,
     title: opts.entryTitle,
     slug: "entry-1",
     status: "draft" as const,
+    visibility: "public",
+    hasPassword: false,
     data: { [opts.fieldName]: opts.entryTitle },
     createdAt: "2026-05-02T00:00:00.000Z",
     updatedAt: "2026-05-02T00:00:00.000Z",
@@ -135,16 +172,119 @@ const clientFixture = makeFixture({
   entryTitle: "Acme Corp",
 });
 
+const BOUND_MEDIA_ID = "11111111-1111-4111-8111-111111111111";
+const OVERRIDE_MEDIA_ID = "22222222-2222-4222-8222-222222222222";
+const imageFixture = (() => {
+  const base = makeFixture({
+    screenId: "image-catalog",
+    contentTypeId: "type-image",
+    slug: "images",
+    fieldLabel: "Headline",
+    fieldName: "headline",
+    entryTitle: "Image record",
+  });
+  return {
+    ...base,
+    contentType: {
+      ...base.contentType,
+      schema: {
+        ...base.contentType.schema,
+        properties: {
+          ...base.contentType.schema.properties,
+          cover: {
+            type: "string" as const,
+            title: "Cover",
+            xFieldType: "media",
+          },
+        },
+      },
+    },
+    screen: {
+      ...base.screen,
+      definition: {
+        ...base.screen.definition,
+        editorView: {
+          ...base.screen.definition.editorView,
+          document: {
+            schemaVersion: 1 as const,
+            sections: [
+              {
+                id: "section-1",
+                type: "section" as const,
+                data: { title: "Details" },
+                blocks: [
+                  { id: "image-1", type: "image" as const, data: { label: "Cover" } },
+                  {
+                    id: "media-field",
+                    type: "field" as const,
+                    data: { label: "Media field", field: "cover" },
+                  },
+                  ...base.screen.definition.editorView.document.sections[0]!.blocks,
+                ],
+              },
+            ],
+          },
+          bindings: [
+            {
+              id: "image-src",
+              blockId: "image-1",
+              propPath: "src",
+              source: "entry" as const,
+              field: "cover",
+              mode: "read" as const,
+            },
+            {
+              id: "media-field-value",
+              blockId: "media-field",
+              propPath: "value",
+              source: "entry" as const,
+              field: "cover",
+              mode: "readwrite" as const,
+            },
+            ...base.screen.definition.editorView.bindings,
+          ],
+        },
+      },
+    },
+    entry: {
+      ...base.entry,
+      data: { ...base.entry.data, cover: BOUND_MEDIA_ID },
+    },
+  };
+})();
+
 let current = projectFixture;
+let currentOverrides: Array<{ blockId: string; propPath: "mediaAssetId"; value: string }> = [];
+let cacheListeners: Array<(event: { key: string; action?: string }) => void> = [];
+const mediaRecords = [
+  {
+    id: BOUND_MEDIA_ID,
+    key: "bound.jpg",
+    url: "/media/bound.jpg",
+    type: "image" as const,
+    mimeType: "image/jpeg",
+    size: 10,
+    createdAt: "2026-07-13T00:00:00.000Z",
+  },
+  {
+    id: OVERRIDE_MEDIA_ID,
+    key: "override.jpg",
+    url: "/media/override.jpg",
+    type: "image" as const,
+    mimeType: "image/jpeg",
+    size: 10,
+    createdAt: "2026-07-13T00:00:00.000Z",
+  },
+];
 
 vi.mock("@/services/customScreensClient", () => ({
   getCachedCustomScreens: vi.fn(() => [current.screen]),
   listCustomScreensCached: vi.fn(async () => [current.screen]),
   getCachedCustomScreen: vi.fn(() => current.screen),
   getCustomScreenCached: vi.fn(async () => current.screen),
-  getCachedScreenEntryOverrides: vi.fn(() => []),
-  getScreenEntryOverridesCached: vi.fn(async () => []),
-  replaceScreenEntryOverrides: vi.fn(async () => []),
+  getCachedScreenEntryOverrides: vi.fn(() => currentOverrides),
+  getScreenEntryOverridesCached: vi.fn(async () => currentOverrides),
+  replaceScreenEntryOverrides: vi.fn(async (_screenId, _entryId, overrides) => overrides),
   invalidateScreenEntryOverrides: vi.fn(),
 }));
 
@@ -160,8 +300,40 @@ vi.mock("@/services/entriesClient", () => ({
   getEntryCached: vi.fn(async () => current.entry),
 }));
 
+vi.mock("@/services/mediaClient", () => ({
+  getCachedMedia: vi.fn(() => null),
+  listMediaCached: vi.fn(async () => mediaRecords),
+}));
+
+vi.mock("@/ui/media/MediaPicker", () => ({
+  MediaPicker: ({
+    accept,
+    value,
+    onChange,
+  }: {
+    accept?: string[];
+    value: unknown;
+    onChange: (value: unknown) => void;
+  }) => (
+    <div
+      data-media-picker
+      data-accept={(accept ?? []).join(",")}
+      data-value={typeof value === "string" ? value : JSON.stringify(value)}
+    >
+      <button type="button" data-media-picker-choose onClick={() => onChange(BOUND_MEDIA_ID)}>
+        Choose bound media
+      </button>
+    </div>
+  ),
+}));
+
 vi.mock("@/utils/cacheBus", () => ({
-  subscribeCacheEvents: vi.fn(() => () => undefined),
+  subscribeCacheEvents: vi.fn((listener: (event: { key: string; action?: string }) => void) => {
+    cacheListeners.push(listener);
+    return () => {
+      cacheListeners = cacheListeners.filter((candidate) => candidate !== listener);
+    };
+  }),
 }));
 
 vi.mock("@/ui/assistant/activeSurfaceContext", () => ({
@@ -183,16 +355,17 @@ vi.mock("@/services/solutionKitSelection", () => ({
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const mount = (path: string) => {
+const mount = (path: string, options: { strict?: boolean } = {}) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
   const root = createRoot(container);
+  const editor = (
+    <AdminRouterProvider initialPath={path}>
+      <CustomScreenEntryEditor />
+    </AdminRouterProvider>
+  );
   React.act(() => {
-    root.render(
-      <AdminRouterProvider initialPath={path}>
-        <CustomScreenEntryEditor />
-      </AdminRouterProvider>
-    );
+    root.render(options.strict ? <React.StrictMode>{editor}</React.StrictMode> : editor);
   });
   return {
     container,
@@ -213,8 +386,18 @@ const flush = async () => {
   });
 };
 
+const findButton = (container: HTMLElement, label: string) =>
+  [...container.querySelectorAll("button")].find(
+    (button) => button.textContent?.trim() === label
+  ) ?? null;
+
 beforeEach(() => {
   current = projectFixture;
+  currentOverrides = [];
+  cacheListeners = [];
+  vi.mocked(listMediaCached).mockReset();
+  vi.mocked(listMediaCached).mockResolvedValue(mediaRecords);
+  vi.mocked(replaceScreenEntryOverrides).mockClear();
   vi.mocked(updateEntry).mockResolvedValue(projectFixture.entry as never);
   window.localStorage.clear();
 });
@@ -303,7 +486,7 @@ test("the entry sub-toolbar exposes an unchecked Field metadata toggle and drops
   }
 });
 
-test("toggling Field metadata on persists to localStorage and reveals the entry badges", async () => {
+test("toggling Field metadata changes aria state and visibly reveals the entry badges", async () => {
   current = projectFixture;
   const view = mount("/admin/advanced/custom-screens/project-catalog/entries/1");
   try {
@@ -320,14 +503,518 @@ test("toggling Field metadata on persists to localStorage and reveals the entry 
     });
     await flush();
 
-    // Persisted per-user (survives a reload)…
-    expect(
-      JSON.parse(window.localStorage.getItem("coderso.screens.entry.preferences.v1") ?? "null")
-    ).toEqual({ showFieldMetadata: true });
-    // …and the badge is now visible through the threaded prop → the 503-02 gate.
+    // The badge is visible through the threaded prop → the 503-02 gate. Preference
+    // transport is owned by TASK-540-05-L02 and is intentionally not asserted here.
     expect(view.container.textContent).toContain("Editable");
     expect(switchButton?.getAttribute("aria-checked")).toBe("true");
   } finally {
     view.cleanup();
   }
+});
+
+test("direct-image presentation exposes media authoring and renders the winning override URL", async () => {
+  current = imageFixture;
+  currentOverrides = [{ blockId: "image-1", propPath: "mediaAssetId", value: OVERRIDE_MEDIA_ID }];
+  const view = mount("/admin/advanced/custom-screens/image-catalog/entries/1");
+  try {
+    await flush();
+    await flush();
+    await vi.waitFor(() => {
+      expect(view.container.querySelector('img[alt="Cover"]')?.getAttribute("src")).toBe(
+        "/media/override.jpg"
+      );
+    });
+    expect(
+      view.container.querySelector(`[data-media-picker][data-value="${BOUND_MEDIA_ID}"]`)
+    ).not.toBeNull();
+
+    const imageBlock = view.container.querySelector('[data-screen-block-id="image-1"]');
+    React.act(() => {
+      imageBlock?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+    expect(
+      view.container.querySelector('[data-presentation-control="mediaAssetId"]')
+    ).not.toBeNull();
+    expect(view.container.textContent).toContain("Media override");
+    const presentationMediaControl = view.container.querySelector(
+      '[data-presentation-control="mediaAssetId"]'
+    );
+    expect(
+      presentationMediaControl?.querySelector("[data-media-picker]")?.getAttribute("data-accept")
+    ).toBe("image/*");
+    React.act(() => {
+      presentationMediaControl
+        ?.querySelector("[data-media-picker-choose]")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+    React.act(() => {
+      findButton(view.container, "Save presentation")?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true })
+      );
+    });
+    await flush();
+    expect(replaceScreenEntryOverrides).toHaveBeenCalledWith("image-catalog", "1", [
+      { blockId: "image-1", propPath: "mediaAssetId", value: BOUND_MEDIA_ID },
+    ]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("StrictMode replays reuse one exact pending media attempt and one effective read", async () => {
+  const media = deferred<typeof mediaRecords>();
+  current = imageFixture;
+  currentOverrides = [{ blockId: "image-1", propPath: "mediaAssetId", value: OVERRIDE_MEDIA_ID }];
+  vi.mocked(listMediaCached).mockReturnValue(media.promise);
+  const view = mount("/admin/advanced/custom-screens/image-catalog/entries/1", { strict: true });
+  try {
+    await flush();
+    expect(listMediaCached).toHaveBeenCalledTimes(1);
+    media.resolve(mediaRecords);
+    await flush();
+    expect(view.container.querySelector('img[alt="Cover"]')?.getAttribute("src")).toBe(
+      "/media/override.jpg"
+    );
+    expect(listMediaCached).toHaveBeenCalledTimes(1);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("a pending forced media attempt survives semantic rehydrate with one read and stable subscriptions", async () => {
+  const forcedRead = deferred<typeof mediaRecords>();
+  const coverIds = [BOUND_MEDIA_ID, OVERRIDE_MEDIA_ID, BOUND_MEDIA_ID];
+  const secondaryIds = [OVERRIDE_MEDIA_ID, BOUND_MEDIA_ID, OVERRIDE_MEDIA_ID];
+  const baseSection = imageFixture.screen.definition.editorView.document.sections[0]!;
+  current = {
+    ...imageFixture,
+    screen: {
+      ...imageFixture.screen,
+      definition: {
+        ...imageFixture.screen.definition,
+        editorView: {
+          ...imageFixture.screen.definition.editorView,
+          document: {
+            ...imageFixture.screen.definition.editorView.document,
+            sections: [
+              {
+                ...baseSection,
+                blocks: [
+                  ...baseSection.blocks,
+                  {
+                    id: "image-2",
+                    type: "image" as const,
+                    data: { label: "Secondary" },
+                  },
+                ],
+              },
+            ],
+          },
+          bindings: [
+            ...imageFixture.screen.definition.editorView.bindings,
+            {
+              id: "image-secondary-src",
+              blockId: "image-2",
+              propPath: "src",
+              source: "entry" as const,
+              field: "secondary",
+              mode: "read" as const,
+            },
+          ],
+        },
+      },
+    },
+    entry: {
+      ...imageFixture.entry,
+      data: {
+        ...imageFixture.entry.data,
+        cover: coverIds,
+        secondary: secondaryIds,
+      },
+    },
+  };
+  currentOverrides = [];
+  vi.mocked(listMediaCached)
+    .mockResolvedValueOnce(mediaRecords)
+    .mockReturnValueOnce(forcedRead.promise);
+  const view = mount("/admin/advanced/custom-screens/image-catalog/entries/1");
+  try {
+    await flush();
+    expect(listMediaCached).toHaveBeenCalledTimes(1);
+    expect(view.container.querySelector('img[alt="Cover"]')?.getAttribute("src")).toBe(
+      "/media/bound.jpg"
+    );
+    expect(view.container.querySelector('img[alt="Secondary"]')?.getAttribute("src")).toBe(
+      "/media/override.jpg"
+    );
+
+    React.act(() => {
+      cacheListeners.forEach((listener) =>
+        listener({ key: cacheKeys.mediaList, action: "update" })
+      );
+    });
+    await flush();
+    expect(listMediaCached).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(listMediaCached).mock.calls[1]?.[0]).toEqual({ force: true });
+    const subscriptionsDuringForcedRead = [...cacheListeners];
+
+    React.act(() => {
+      cacheListeners.forEach((listener) =>
+        listener({ key: cacheKeys.entryDetail("images", "1"), action: "update" })
+      );
+    });
+    await flush();
+    expect(listMediaCached).toHaveBeenCalledTimes(2);
+    expect(cacheListeners).toHaveLength(subscriptionsDuringForcedRead.length);
+    cacheListeners.forEach((listener, index) => {
+      expect(listener).toBe(subscriptionsDuringForcedRead[index]);
+    });
+
+    coverIds.splice(1, 2, BOUND_MEDIA_ID, OVERRIDE_MEDIA_ID);
+    secondaryIds.splice(1, 2, OVERRIDE_MEDIA_ID, BOUND_MEDIA_ID);
+    expect(coverIds).toEqual([BOUND_MEDIA_ID, BOUND_MEDIA_ID, OVERRIDE_MEDIA_ID]);
+    expect(secondaryIds).toEqual([OVERRIDE_MEDIA_ID, OVERRIDE_MEDIA_ID, BOUND_MEDIA_ID]);
+
+    forcedRead.resolve([
+      { ...mediaRecords[0]!, url: "/media/forced-bound.jpg" },
+      { ...mediaRecords[1]!, url: "/media/forced-override.jpg" },
+    ]);
+    await flush();
+    expect(listMediaCached).toHaveBeenCalledTimes(2);
+    expect(view.container.querySelector('img[alt="Cover"]')?.getAttribute("src")).toBe(
+      "/media/forced-bound.jpg"
+    );
+    expect(view.container.querySelector('img[alt="Secondary"]')?.getAttribute("src")).toBe(
+      "/media/forced-override.jpg"
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("bound direct-image UUID resolves in the read-only entry Preview branch", async () => {
+  current = {
+    ...imageFixture,
+    screen: {
+      ...imageFixture.screen,
+      definition: {
+        ...imageFixture.screen.definition,
+        editorView: {
+          ...imageFixture.screen.definition.editorView,
+          bindings: imageFixture.screen.definition.editorView.bindings.map((binding) => ({
+            ...binding,
+            mode: "read" as const,
+          })),
+        },
+      },
+    },
+  };
+  const view = mount("/admin/advanced/custom-screens/image-catalog/entries/1");
+  try {
+    await flush();
+    await flush();
+    expect(view.container.textContent).toContain("Workspace upgrade required");
+    await vi.waitFor(() => {
+      expect(view.container.querySelector('img[alt="Cover"]')?.getAttribute("src")).toBe(
+        "/media/bound.jpg"
+      );
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("presentation media failure is visible and manual/cache retries force authoritative reads", async () => {
+  const blocks = imageFixture.screen.definition.editorView.document.sections[0]!.blocks;
+  current = {
+    ...imageFixture,
+    screen: {
+      ...imageFixture.screen,
+      definition: {
+        ...imageFixture.screen.definition,
+        editorView: {
+          ...imageFixture.screen.definition.editorView,
+          document: {
+            ...imageFixture.screen.definition.editorView.document,
+            sections: [
+              {
+                ...imageFixture.screen.definition.editorView.document.sections[0]!,
+                blocks: [blocks[1]!, blocks[0]!],
+              },
+            ],
+          },
+        },
+      },
+    },
+  };
+  currentOverrides = [{ blockId: "image-1", propPath: "mediaAssetId", value: OVERRIDE_MEDIA_ID }];
+  vi.mocked(listMediaCached)
+    .mockRejectedValueOnce(new Error("media unavailable"))
+    .mockResolvedValue(mediaRecords);
+  const view = mount("/admin/advanced/custom-screens/image-catalog/entries/1");
+  try {
+    await flush();
+    await flush();
+    expect(view.container.textContent).toContain("Presentation image unavailable");
+    expect(vi.mocked(listMediaCached).mock.calls[0]?.[0]).toEqual({ force: false });
+
+    React.act(() => {
+      findButton(view.container, "Retry")?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true })
+      );
+    });
+    await flush();
+    expect(view.container.querySelector('img[alt="Cover"]')?.getAttribute("src")).toBe(
+      "/media/override.jpg"
+    );
+    expect(vi.mocked(listMediaCached).mock.calls.at(-1)?.[0]).toEqual({ force: true });
+
+    const beforeCacheEvent = vi.mocked(listMediaCached).mock.calls.length;
+    React.act(() => {
+      cacheListeners.forEach((listener) =>
+        listener({ key: cacheKeys.mediaList, action: "update" })
+      );
+    });
+    await flush();
+    expect(vi.mocked(listMediaCached).mock.calls.length).toBeGreaterThan(beforeCacheEvent);
+    expect(vi.mocked(listMediaCached).mock.calls.at(-1)?.[0]).toEqual({ force: true });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("an ID-set change during a forced media attempt commits only the new request", async () => {
+  const staleForcedRead = deferred<typeof mediaRecords>();
+  current = imageFixture;
+  currentOverrides = [{ blockId: "image-1", propPath: "mediaAssetId", value: OVERRIDE_MEDIA_ID }];
+  vi.mocked(listMediaCached)
+    .mockResolvedValueOnce(mediaRecords)
+    .mockReturnValueOnce(staleForcedRead.promise)
+    .mockResolvedValue(mediaRecords);
+  const view = mount("/admin/advanced/custom-screens/image-catalog/entries/1");
+  try {
+    await flush();
+    expect(view.container.querySelector('img[alt="Cover"]')?.getAttribute("src")).toBe(
+      "/media/override.jpg"
+    );
+
+    React.act(() => {
+      cacheListeners.forEach((listener) =>
+        listener({ key: cacheKeys.mediaList, action: "update" })
+      );
+    });
+    await flush();
+    expect(vi.mocked(listMediaCached).mock.calls.at(-1)?.[0]).toEqual({ force: true });
+
+    currentOverrides = [{ blockId: "image-1", propPath: "mediaAssetId", value: BOUND_MEDIA_ID }];
+    React.act(() => {
+      cacheListeners.forEach((listener) =>
+        listener({
+          key: cacheKeys.customScreenEntryOverrides("image-catalog", "1"),
+          action: "update",
+        })
+      );
+    });
+    await flush();
+    expect(view.container.querySelector('img[alt="Cover"]')?.getAttribute("src")).toBe(
+      "/media/bound.jpg"
+    );
+    expect(vi.mocked(listMediaCached).mock.calls.at(-1)?.[0]).toEqual({ force: true });
+
+    staleForcedRead.resolve([{ ...mediaRecords[1]!, url: "/media/stale-override.jpg" }]);
+    await flush();
+    expect(view.container.querySelector('img[alt="Cover"]')?.getAttribute("src")).toBe(
+      "/media/bound.jpg"
+    );
+    expect(view.container.innerHTML).not.toContain("stale-override.jpg");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("an unmounted media attempt cannot commit or report a React update error", async () => {
+  const pending = deferred<typeof mediaRecords>();
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  current = imageFixture;
+  currentOverrides = [{ blockId: "image-1", propPath: "mediaAssetId", value: OVERRIDE_MEDIA_ID }];
+  vi.mocked(listMediaCached).mockReturnValue(pending.promise);
+  const view = mount("/admin/advanced/custom-screens/image-catalog/entries/1");
+  await flush();
+  expect(listMediaCached).toHaveBeenCalledTimes(1);
+  view.cleanup();
+  pending.resolve(mediaRecords);
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(consoleError).not.toHaveBeenCalled();
+  consoleError.mockRestore();
+});
+
+test("presentation media key codec is route-scoped, canonical, and rejects malformed snapshots", () => {
+  const mediaA = "11111111-1111-4111-8111-111111111111";
+  const mediaB = "22222222-2222-4222-8222-222222222222";
+  const routeA = buildEntryRouteKey({
+    screenId: "screen-a",
+    entryId: "entry-1",
+    isCreateMode: false,
+  });
+  const routeB = buildEntryRouteKey({
+    screenId: "screen-b",
+    entryId: "entry-1",
+    isCreateMode: false,
+  });
+  const keyA = buildPresentationMediaRequestKey(routeA, [mediaB, mediaA, mediaA]);
+  const keyB = buildPresentationMediaRequestKey(routeB, [mediaA, mediaB]);
+
+  expect(keyB).not.toBe(keyA);
+  expect(decodeAndValidatePresentationMediaRequestKey(keyA)).toEqual({
+    routeKey: routeA,
+    requestedIds: [mediaA, mediaB],
+  });
+  expect(() =>
+    decodeAndValidatePresentationMediaRequestKey(JSON.stringify([routeA, [mediaB, mediaA]]))
+  ).toThrow("custom_screen_presentation_media_invalid");
+  expect(() =>
+    decodeAndValidatePresentationMediaRequestKey(JSON.stringify([routeA, [mediaA, mediaA]]))
+  ).toThrow("custom_screen_presentation_media_invalid");
+  expect(() => buildPresentationMediaRequestKey(routeA, ["not-a-uuid"])).toThrow(
+    "custom_screen_presentation_media_invalid"
+  );
+});
+
+test("media attempt reducer preserves identity for semantic no-ops and allocates frozen monotonic attempts", () => {
+  const mediaA = "11111111-1111-4111-8111-111111111111";
+  const routeA = buildEntryRouteKey({
+    screenId: "screen-a",
+    entryId: "entry-1",
+    isCreateMode: false,
+  });
+  const routeB = buildEntryRouteKey({
+    screenId: "screen-b",
+    entryId: "entry-1",
+    isCreateMode: false,
+  });
+  const keyA = buildPresentationMediaRequestKey(routeA, [mediaA]);
+  const keyB = buildPresentationMediaRequestKey(routeB, [mediaA]);
+  const sourceIds = [mediaA];
+  const initial = initializeMediaMachineState({ requestKey: keyA, requestedIds: sourceIds });
+  sourceIds.length = 0;
+
+  expect(initial.attempt?.token).toBe(1);
+  expect(initial.attempt?.force).toBe(false);
+  expect(initial.attempt?.requestedIds).toEqual([mediaA]);
+  expect(Object.isFrozen(initial.attempt?.requestedIds)).toBe(true);
+  expect(
+    mediaAttemptReducer(initial, {
+      type: "sync-request",
+      requestKey: keyA,
+      requestedIds: [mediaA],
+    })
+  ).toBe(initial);
+
+  const forced = mediaAttemptReducer(initial, {
+    type: "retry",
+    requestKey: keyA,
+    cause: "manual-retry",
+  });
+  expect(forced.attempt).not.toBe(initial.attempt);
+  expect(forced.attempt).toMatchObject({ token: 2, force: true, cause: "manual-retry" });
+  const inherited = mediaAttemptReducer(forced, {
+    type: "sync-request",
+    requestKey: keyB,
+    requestedIds: [mediaA],
+  });
+  expect(inherited.attempt).toMatchObject({ token: 3, force: true, cause: "manual-retry" });
+
+  const staleSettlement = mediaAttemptReducer(inherited, {
+    type: "settled",
+    requestKey: keyA,
+    token: 2,
+  });
+  expect(staleSettlement).toBe(inherited);
+  const settled = mediaAttemptReducer(inherited, {
+    type: "settled",
+    requestKey: keyB,
+    token: 3,
+  });
+  expect(settled.attempt).toBe(inherited.attempt);
+  expect(mediaAttemptReducer(settled, { type: "settled", requestKey: keyB, token: 3 })).toBe(
+    settled
+  );
+
+  const manuallyAllocated = allocateMediaAttempt(
+    settled,
+    { requestKey: keyB, requestedIds: [mediaA] },
+    "cache-event",
+    true
+  );
+  expect(manuallyAllocated.attempt?.token).toBe(4);
+});
+
+test("direct-image media planning chooses override then binding, deduplicates, and ignores media fields", () => {
+  const overrideId = "11111111-1111-4111-8111-111111111111";
+  const boundId = "22222222-2222-4222-8222-222222222222";
+  const document = {
+    schemaVersion: 1 as const,
+    sections: [
+      {
+        id: "section-1",
+        type: "section" as const,
+        data: {},
+        blocks: [
+          { id: "image-a", type: "image" as const, data: {} },
+          { id: "image-b", type: "image" as const, data: {} },
+          { id: "media-field", type: "field" as const, data: { field: "hero" } },
+        ],
+      },
+    ],
+  };
+  const bindings = [
+    {
+      id: "image-a-src",
+      blockId: "image-a",
+      propPath: "src",
+      source: "entry" as const,
+      field: "cover",
+      mode: "read" as const,
+    },
+    {
+      id: "image-b-src",
+      blockId: "image-b",
+      propPath: "src",
+      source: "entry" as const,
+      field: "gallery",
+      mode: "read" as const,
+    },
+    {
+      id: "media-field-value",
+      blockId: "media-field",
+      propPath: "value",
+      source: "entry" as const,
+      field: "hero",
+      mode: "readwrite" as const,
+    },
+  ];
+
+  expect(
+    collectWinningDirectImageAssetIds({
+      document,
+      bindings,
+      values: { cover: boundId, gallery: [boundId], hero: overrideId },
+      overrides: [{ blockId: "image-a", propPath: "mediaAssetId", value: overrideId }],
+    })
+  ).toEqual([overrideId, boundId].sort());
+
+  expect(
+    collectWinningDirectImageAssetIds({
+      document,
+      bindings,
+      values: { cover: boundId, gallery: null, hero: overrideId },
+      overrides: [
+        { blockId: "image-a", propPath: "image", value: boundId },
+        { blockId: "image-a", propPath: "mediaAssetId", value: overrideId },
+      ],
+    })
+  ).toEqual([overrideId]);
 });

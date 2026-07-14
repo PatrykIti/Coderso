@@ -11,6 +11,10 @@ import {
   resolveEntryFieldErrorsFromApiError,
   validateEntryDraft,
 } from "../../../core/admin/ui/custom-screens/customScreenEntryDraft";
+import {
+  isDraftAuthorityClean,
+  resolvePresentationDraftTransition,
+} from "../../../core/admin/ui/custom-screens/CustomScreenEntryEditor";
 import type {
   CustomScreenEditorViewDefinition,
   CustomScreenEditorViewDefinitionV4,
@@ -320,4 +324,59 @@ test("resolveEntryFieldErrorsFromApiError maps slug conflicts and validation det
   ).toEqual({
     projectStatus: "Project Status is required.",
   });
+});
+
+test("presentation draft authority becomes dirty and synchronously becomes clean after revert", () => {
+  const saved = [{ blockId: "hero", propPath: "tone" as const, value: "muted" }];
+  const changed = resolvePresentationDraftTransition({
+    saved,
+    current: saved,
+    update: (current) => [
+      ...current.filter((override) => override.propPath !== "tone"),
+      { blockId: "hero", propPath: "tone", value: "strong" },
+    ],
+  });
+  expect(changed.dirty).toBe(true);
+
+  const reverted = resolvePresentationDraftTransition({
+    saved,
+    current: changed.nextDraft,
+    update: () => [...saved],
+  });
+  expect(reverted).toEqual({ nextDraft: saved, dirty: false });
+});
+
+test("draft authority requires exact generation and both synchronous dirty refs to be clean", () => {
+  expect(
+    isDraftAuthorityClean({
+      capturedGeneration: 4,
+      currentGeneration: 4,
+      contentDirty: false,
+      presentationDirty: false,
+    })
+  ).toBe(true);
+  expect(
+    isDraftAuthorityClean({
+      capturedGeneration: 4,
+      currentGeneration: 5,
+      contentDirty: false,
+      presentationDirty: false,
+    })
+  ).toBe(false);
+  expect(
+    isDraftAuthorityClean({
+      capturedGeneration: 4,
+      currentGeneration: 4,
+      contentDirty: true,
+      presentationDirty: false,
+    })
+  ).toBe(false);
+  expect(
+    isDraftAuthorityClean({
+      capturedGeneration: 4,
+      currentGeneration: 4,
+      contentDirty: false,
+      presentationDirty: true,
+    })
+  ).toBe(false);
 });

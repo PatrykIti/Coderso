@@ -26,9 +26,8 @@ import {
   type CustomScreenDefinition,
 } from "../../services/customScreens/customScreenSchemas";
 import {
-  screenEntryPresentationOverridePropPaths,
+  normalizeScreenEntryPresentationOverrideList,
   type ScreenEntryPresentationOverrideDraft,
-  type ScreenEntryPresentationOverridePropPath,
 } from "../../services/customScreens/screenEntryPresentationOverrideContract";
 
 export type CustomScreenStatus = "draft" | "active";
@@ -103,44 +102,27 @@ export type CustomScreenEntryPresentationOverride = ScreenEntryPresentationOverr
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const screenEntryPresentationOverridePropPathSet = new Set<string>(
-  screenEntryPresentationOverridePropPaths
-);
-
-const isScreenEntryPresentationOverridePropPath = (
+const isScreenEntryPresentationOverrideList = (
   value: unknown
-): value is ScreenEntryPresentationOverridePropPath =>
-  typeof value === "string" && screenEntryPresentationOverridePropPathSet.has(value);
-
-const normalizeScreenEntryPresentationOverrideDraft = (
-  value: unknown
-): ScreenEntryPresentationOverrideDraft | null => {
-  if (!isRecord(value)) return null;
-  if (
-    typeof value.blockId !== "string" ||
-    !isScreenEntryPresentationOverridePropPath(value.propPath) ||
-    typeof value.value !== "string"
-  ) {
-    return null;
+): value is ScreenEntryPresentationOverrideDraft[] => {
+  try {
+    normalizeScreenEntryPresentationOverrideList(value, { source: "draft-cache" });
+    return true;
+  } catch {
+    return false;
   }
-  return {
-    blockId: value.blockId,
-    propPath: value.propPath,
-    value: value.value,
-  };
 };
 
-const normalizeScreenEntryPresentationOverrides = (
-  value: unknown[]
-): ScreenEntryPresentationOverrideDraft[] =>
-  value.flatMap((item) => {
-    const normalized = normalizeScreenEntryPresentationOverrideDraft(item);
-    return normalized ? [normalized] : [];
+const normalizeOverrideResponseEnvelope = (
+  value: unknown
+): ScreenEntryPresentationOverrideDraft[] => {
+  if (!isRecord(value) || Object.keys(value).some((key) => key !== "overrides")) {
+    throw new Error("custom_screen_override_invalid");
+  }
+  return normalizeScreenEntryPresentationOverrideList(value.overrides, {
+    source: "transport-response",
   });
-
-const isScreenEntryPresentationOverrideList = (value: unknown): value is unknown[] =>
-  Array.isArray(value) &&
-  value.every((item) => normalizeScreenEntryPresentationOverrideDraft(item) !== null);
+};
 
 const isCustomScreenStatus = (value: unknown): value is CustomScreenStatus =>
   value === "draft" || value === "active";
@@ -252,7 +234,9 @@ const readScreenEntryOverridesCache = (screenId: string, entryId: string) => {
     cacheTtlMs.detail,
     isScreenEntryPresentationOverrideList
   );
-  return cached ? normalizeScreenEntryPresentationOverrides(cached) : null;
+  return cached
+    ? normalizeScreenEntryPresentationOverrideList(cached, { source: "draft-cache" })
+    : null;
 };
 
 const writeScreenEntryOverridesCache = (
@@ -260,7 +244,10 @@ const writeScreenEntryOverridesCache = (
   entryId: string,
   overrides: ScreenEntryPresentationOverrideDraft[]
 ) => {
-  writeLocalCache(getScreenEntryOverridesCacheKey(screenId, entryId), overrides);
+  writeLocalCache(
+    getScreenEntryOverridesCacheKey(screenId, entryId),
+    normalizeScreenEntryPresentationOverrideList(overrides, { source: "draft-cache" })
+  );
 };
 
 const clearScreenEntryOverridesCache = (screenId: string, entryId: string) => {
@@ -290,37 +277,41 @@ export const clearCustomScreensCache = () => {
 };
 
 async function getScreenEntryOverrides(screenId: string, entryId: string) {
-  const payload = await apiRequest<{ overrides: unknown[] }>(
+  const payload = await apiRequest<unknown>(
     `/custom-screens/${encodeURIComponent(screenId)}/entries/${encodeURIComponent(entryId)}/overrides`,
     { method: "GET" }
   );
-  return normalizeScreenEntryPresentationOverrides(payload.overrides ?? []);
+  return normalizeOverrideResponseEnvelope(payload);
 }
 
-export async function getScreenEntryOverridesCached(
+export function getScreenEntryOverridesCached(
   screenId: string,
   entryId: string,
   options?: { force?: boolean }
-) {
+): Promise<ScreenEntryPresentationOverrideDraft[]> {
   const key = getScreenEntryOverridesCacheKey(screenId, entryId);
   if (!options?.force) {
     const cached = getCachedScreenEntryOverrides(screenId, entryId);
-    if (cached) return cached;
+    if (cached) return Promise.resolve(cached);
     const pending = screenEntryOverridesPromises.get(key);
     if (pending) return pending;
   }
 
-  const request = getScreenEntryOverrides(screenId, entryId);
+  let request: Promise<ScreenEntryPresentationOverrideDraft[]>;
+  request = getScreenEntryOverrides(screenId, entryId)
+    .then((overrides) => {
+      if (screenEntryOverridesPromises.get(key) === request) {
+        writeScreenEntryOverridesCache(screenId, entryId, overrides);
+      }
+      return overrides;
+    })
+    .finally(() => {
+      if (screenEntryOverridesPromises.get(key) === request) {
+        screenEntryOverridesPromises.delete(key);
+      }
+    });
   screenEntryOverridesPromises.set(key, request);
-  try {
-    const overrides = await request;
-    writeScreenEntryOverridesCache(screenId, entryId, overrides);
-    return overrides;
-  } finally {
-    if (screenEntryOverridesPromises.get(key) === request) {
-      screenEntryOverridesPromises.delete(key);
-    }
-  }
+  return request;
 }
 
 export async function replaceScreenEntryOverrides(
@@ -328,8 +319,10 @@ export async function replaceScreenEntryOverrides(
   entryId: string,
   overrides: ScreenEntryPresentationOverrideDraft[]
 ) {
-  const normalized = normalizeScreenEntryPresentationOverrides(overrides);
-  const payload = await apiRequest<{ overrides: unknown[] }>(
+  const normalized = normalizeScreenEntryPresentationOverrideList(overrides, {
+    source: "draft-cache",
+  });
+  const payload = await apiRequest<unknown>(
     `/custom-screens/${encodeURIComponent(screenId)}/entries/${encodeURIComponent(entryId)}/overrides`,
     {
       method: "PATCH",
@@ -338,7 +331,8 @@ export async function replaceScreenEntryOverrides(
     },
     { withCsrf: true }
   );
-  const saved = normalizeScreenEntryPresentationOverrides(payload.overrides ?? []);
+  const saved = normalizeOverrideResponseEnvelope(payload);
+  screenEntryOverridesPromises.delete(getScreenEntryOverridesCacheKey(screenId, entryId));
   writeScreenEntryOverridesCache(screenId, entryId, saved);
   broadcastCacheEvent({
     key: getScreenEntryOverridesCacheKey(screenId, entryId),

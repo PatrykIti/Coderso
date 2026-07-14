@@ -12,19 +12,23 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  normalizeScreenImageSrc,
+  sanitizeScreenAuthoringUrl,
   screenBlockAligns,
   screenBlockWidths,
   screenImageRatios,
   screenSectionColumnPresets,
   SCREEN_BLOCK_MIN_HEIGHT_CLAMP,
   SCREEN_SECTION_COLUMN_GAP_CLAMP,
+  SCREEN_TAB_LABEL_MAX,
+  SCREEN_TABS_MAX,
+  SCREEN_TABS_MIN,
   type CustomScreenBindingMode,
   type ScreenBlockStyleV1,
   type ScreenBlockV1,
   type ScreenFieldBinding,
   type ScreenSectionStyleV1,
   type ScreenSectionV1,
+  type ScreenTabItem,
 } from "../../../services/customScreens/customScreenSchemas";
 import { PAGE_BLOCK_BOX_SPACING_CLAMP } from "../../../services/pages/pageDocumentV2";
 import type { ContentField } from "../content-types/SchemaBuilder";
@@ -115,6 +119,11 @@ function InspectorRow({ label, children }: { label: string; children: ReactNode 
   );
 }
 
+type BoundFieldClearAffordance = Readonly<{
+  label: string;
+  onClear: () => void;
+}>;
+
 /**
  * First-class flat "Bound field" row (prototype :258-266). The binding MODE
  * ("Interaction" read/readwrite) is no longer a user-visible control — it is set
@@ -140,6 +149,7 @@ function BoundFieldRow({
   filterTypes,
   bindMode,
   onFieldSelected,
+  clearAffordance,
 }: {
   block: ScreenBlockV1;
   propPath: string;
@@ -149,6 +159,7 @@ function BoundFieldRow({
   filterTypes?: readonly string[];
   bindMode?: CustomScreenBindingMode;
   onFieldSelected?: (fieldName: string) => void;
+  clearAffordance?: BoundFieldClearAffordance;
 }) {
   const binding = bindings.find((item) => item.blockId === block.id && item.propPath === propPath);
   const allOptions = buildFieldOptions(fields);
@@ -182,6 +193,19 @@ function BoundFieldRow({
           </SelectContent>
         </Select>
       )}
+      {binding && clearAffordance ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={(event) => {
+            event.stopPropagation();
+            clearAffordance.onClear();
+          }}
+        >
+          {clearAffordance.label}
+        </Button>
+      ) : null}
     </InspectorRow>
   );
 }
@@ -464,8 +488,8 @@ function BoxSpacingRow({
 
 // TASK-503-03: image src draft. The raw text lives in local state so typing
 // "https://…" character-by-character is not destroyed, while data.src only ever
-// receives the filtered value (normalizeScreenImageSrc — the same filter the save
-// path runs). Unsafe/incomplete → "" (placeholder shows); safe → verbatim.
+// receives the value accepted by the Screen-owned media authoring policy (the
+// same policy the save path runs). Unsafe/incomplete → ""; safe → verbatim.
 function ImageSrcRow({
   block,
   onPatchBlockData,
@@ -484,85 +508,165 @@ function ImageSrcRow({
         onChange={(event) => {
           const raw = event.target.value;
           setDraft({ blockId: block.id, value: raw });
-          onPatchBlockData(block.id, { src: normalizeScreenImageSrc(raw) });
+          onPatchBlockData(block.id, { src: sanitizeScreenAuthoringUrl(raw, "media") ?? "" });
         }}
       />
     </InspectorRow>
   );
 }
 
-/** Tabs add/remove editor — keeps `data.tabs` and `slots` in sync (TASK-498-02 B4). */
+const nextTabId = (tabs: readonly ScreenTabItem[]) => {
+  let suffix = tabs.length + 1;
+  while (tabs.some((tab) => tab.id === `tab-${suffix}`)) suffix += 1;
+  return `tab-${suffix}`;
+};
+
+const screenLabelLength = (value: string) => Array.from(value).length;
+
+type ScreenTabLabelDraft = Readonly<{
+  baseLabel: string;
+  value: string;
+}>;
+
+function TabLabelInput({
+  tab,
+  index,
+  onCommit,
+}: {
+  tab: ScreenTabItem;
+  index: number;
+  onCommit: (label: string) => void;
+}) {
+  const [draft, setDraft] = useState<ScreenTabLabelDraft>(() => ({
+    baseLabel: tab.label,
+    value: tab.label,
+  }));
+  const restoreCommitted = () => setDraft({ baseLabel: tab.label, value: tab.label });
+  const commitDraft = (raw: string) => {
+    const label = raw.trim();
+    if (!label || screenLabelLength(label) > SCREEN_TAB_LABEL_MAX) return;
+    if (label === tab.label) {
+      restoreCommitted();
+      return;
+    }
+    setDraft({ baseLabel: tab.label, value: label });
+    onCommit(label);
+  };
+
+  return (
+    <Input
+      value={draft.value}
+      data-screen-tab-label={tab.id}
+      aria-label={`Label for ${tab.label}`}
+      onChange={(event) => {
+        setDraft({ baseLabel: tab.label, value: event.target.value });
+      }}
+      onBlur={(event) => commitDraft(event.currentTarget.value)}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+        if (event.key === "Enter") {
+          event.preventDefault();
+          commitDraft(event.currentTarget.value);
+        } else if (event.key === "Escape") {
+          event.preventDefault();
+          restoreCommitted();
+        }
+      }}
+      placeholder={`Tab ${index + 1}`}
+    />
+  );
+}
+
+/** Tabs authoring keeps labels buffered and `data.tabs` / `slots` in lockstep. */
 function TabsEditor({
   block,
   onPatchBlock,
+  onArmSlotInsert,
+  armedInsertSlotId,
 }: {
   block: ScreenBlockV1;
   onPatchBlock: ScreenBlockInspectorProps["onPatchBlock"];
+  onArmSlotInsert?: ScreenBlockInspectorProps["onArmSlotInsert"];
+  armedInsertSlotId: string | null;
 }) {
-  const tabs = Array.isArray(block.data.tabs)
-    ? (block.data.tabs as Array<Record<string, unknown>>)
-    : [];
+  const tabs = Array.isArray(block.data.tabs) ? (block.data.tabs as ScreenTabItem[]) : [];
   const slots = block.slots ?? {};
 
-  const commit = (
-    nextTabs: Array<{ id: string; label: string }>,
-    nextSlots: Record<string, ScreenBlockV1[]>
-  ) => {
+  const commit = (nextTabs: ScreenTabItem[], nextSlots: Record<string, ScreenBlockV1[]>) => {
+    if (nextTabs.length < SCREEN_TABS_MIN || nextTabs.length > SCREEN_TABS_MAX) return;
     onPatchBlock(block.id, {
       data: { ...block.data, tabs: nextTabs },
       slots: nextSlots,
     });
   };
 
-  const normalizedTabs = tabs.map((tab, index) => ({
-    id: typeof tab.id === "string" && tab.id ? tab.id : `tab-${index + 1}`,
-    label: typeof tab.label === "string" ? tab.label : `Tab ${index + 1}`,
-  }));
+  const commitLabel = (tab: ScreenTabItem, label: string) => {
+    commit(
+      tabs.map((item) => (item.id === tab.id ? { ...item, label } : item)),
+      slots
+    );
+  };
 
   return (
     <InspectorRow label="Tabs">
       <div className="flex flex-col gap-2">
-        {normalizedTabs.map((tab, index) => (
-          <div key={tab.id} className="flex items-center gap-2">
-            <Input
-              value={tab.label}
-              onChange={(event) => {
-                const nextTabs = normalizedTabs.map((item, itemIndex) =>
-                  itemIndex === index ? { ...item, label: event.target.value } : item
-                );
-                commit(nextTabs, slots);
-              }}
-              placeholder={`Tab ${index + 1}`}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              aria-label={`Remove ${tab.label || `tab ${index + 1}`}`}
-              disabled={normalizedTabs.length <= 1}
-              onClick={() => {
-                const nextTabs = normalizedTabs.filter((_, itemIndex) => itemIndex !== index);
-                const nextSlots = Object.fromEntries(
-                  Object.entries(slots).filter(([slotId]) => slotId !== tab.id)
-                );
-                commit(nextTabs, nextSlots);
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
+        {tabs.map((tab, index) => {
+          return (
+            <div key={tab.id} className="flex flex-wrap items-center gap-2">
+              <TabLabelInput
+                key={`${block.id}:${tab.id}:${tab.label}`}
+                tab={tab}
+                index={index}
+                onCommit={(label) => commitLabel(tab, label)}
+              />
+              <Button
+                type="button"
+                variant={armedInsertSlotId === tab.id ? "secondary" : "outline"}
+                size="sm"
+                aria-label={`Edit content for ${tab.label}`}
+                aria-pressed={armedInsertSlotId === tab.id}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onArmSlotInsert?.(block.id, tab.id);
+                }}
+              >
+                Edit content
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                aria-label={`Remove ${tab.label || `tab ${index + 1}`}`}
+                disabled={tabs.length <= SCREEN_TABS_MIN}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (tabs.length <= SCREEN_TABS_MIN) return;
+                  const nextTabs = tabs.filter((_, itemIndex) => itemIndex !== index);
+                  const nextSlots = Object.fromEntries(
+                    Object.entries(slots).filter(([slotId]) => slotId !== tab.id)
+                  );
+                  commit(nextTabs, nextSlots);
+                  const nearestTab = nextTabs[Math.min(index, nextTabs.length - 1)];
+                  if (nearestTab) onArmSlotInsert?.(block.id, nearestTab.id);
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          );
+        })}
         <Button
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => {
-            const nextId = `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`;
-            const nextTabs = [
-              ...normalizedTabs,
-              { id: nextId, label: `Tab ${normalizedTabs.length + 1}` },
-            ];
+          disabled={tabs.length >= SCREEN_TABS_MAX}
+          onClick={(event) => {
+            event.stopPropagation();
+            if (tabs.length >= SCREEN_TABS_MAX) return;
+            const nextId = nextTabId(tabs);
+            const nextTabs = [...tabs, { id: nextId, label: `Tab ${tabs.length + 1}` }];
             commit(nextTabs, { ...slots, [nextId]: [] });
+            onArmSlotInsert?.(block.id, nextId);
           }}
         >
           Add tab
@@ -954,20 +1058,33 @@ export function ScreenBlockInspector({
       ) : null}
 
       {selectedBlock.type === "tabs" ? (
-        <TabsEditor block={selectedBlock} onPatchBlock={onPatchBlock} />
+        <TabsEditor
+          block={selectedBlock}
+          onPatchBlock={onPatchBlock}
+          onArmSlotInsert={onArmSlotInsert}
+          armedInsertSlotId={armedInsertSlotId}
+        />
       ) : null}
 
       {selectedBlock.type === "button" ? (
         <>
+          <BoundFieldRow
+            block={selectedBlock}
+            propPath="href"
+            bindings={bindings}
+            fields={fields}
+            onPatchBinding={onPatchBinding}
+            bindMode="read"
+            clearAffordance={{
+              label: "Use static link",
+              onClear: () => onPatchBinding(selectedBlock.id, "href", { field: "" }),
+            }}
+          />
           <EnumRow
             label="Action"
-            value={readEnum(selectedBlock.data.action, "link")}
-            options={[
-              { value: "link", label: "Link" },
-              { value: "publish", label: "Publish" },
-              { value: "custom", label: "Custom" },
-            ]}
-            onChange={(value) => patchData({ action: value })}
+            value="link"
+            options={[{ value: "link", label: "Link" }]}
+            onChange={() => patchData({ action: "link" })}
           />
           <EnumRow
             label="Variant"
@@ -979,15 +1096,13 @@ export function ScreenBlockInspector({
             ]}
             onChange={(value) => patchData({ variant: value })}
           />
-          {readEnum(selectedBlock.data.action, "link") === "link" ? (
-            <InspectorRow label="Link">
-              <Input
-                value={readString(selectedBlock.data.href)}
-                onChange={(event) => patchData({ href: event.target.value })}
-                placeholder="https://…"
-              />
-            </InspectorRow>
-          ) : null}
+          <InspectorRow label="Link">
+            <Input
+              value={readString(selectedBlock.data.href)}
+              onChange={(event) => patchData({ href: event.target.value })}
+              placeholder="https://…"
+            />
+          </InspectorRow>
         </>
       ) : null}
 

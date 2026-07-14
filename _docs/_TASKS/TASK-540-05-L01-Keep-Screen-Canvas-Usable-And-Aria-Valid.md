@@ -39,8 +39,9 @@ to the shared shell and do not edit Page-owned TASK-478/481/539 files.
 <div
   data-screen-canvas-panel-open={panelOpen ? "true" : undefined}
   className={cn(
-    existingScrollerClasses,
-    panelOpen && "lg:pr-[300px]" // no reserve below the proven wide breakpoint
+    // Preserve the existing p-6 lg:p-8 base gutters.
+    "min-h-0 flex-1 overflow-auto overscroll-contain bg-dotted p-6 lg:p-8",
+    panelOpen && "lg:pr-[332px]" // 32 px base + 300 px wide-only reserve
   )}
 />
 
@@ -53,25 +54,37 @@ to the shared shell and do not edit Page-owned TASK-478/481/539 files.
 />
 ```
 
-The `lg` breakpoint is final: below 1024 CSS px, open/closed scroller
-`padding-right` is exactly `0px`; at 1024 CSS px and above, panel-open padding is exactly
-`300px` and panel-closed padding is `0px`. At 320/390/480, the scroller border-box width
-equals its host width within 1 CSS px and the panel bounding box stays inside the
-viewport. At 1280, opening the panel reduces the content-box width by exactly 300 CSS px
-(within 1 CSS px) without moving the panel out of viewport. Do not change the breakpoint
-after smoke, add a resize listener, or use effect-driven viewport state. Keep panel
-width/max-height and reopen control unchanged.
+The `lg` breakpoint is final and the existing base padding is part of the contract:
+
+- at 320/390/480 CSS px, both open and closed scrollers have computed
+  `padding-left:24px` and `padding-right:24px`;
+- at 1024 CSS px and above, both states retain `padding-left:32px`, the closed
+  scroller has `padding-right:32px`, and the open scroller has
+  `padding-right:332px`;
+- the scroller border-box width and left edge do not change when the panel opens;
+  therefore the wide content-box width decreases by exactly 300 CSS px (within
+  1 CSS px), while narrow content-box geometry is unchanged;
+- at 320/390/480 the scroller border-box equals its host width within 1 CSS px,
+  its content box remains wider than 0 px, and the panel bounding box stays
+  inside the viewport; at 1024 and 1280 the panel also stays inside the viewport.
+
+Do not replace the base `p-6 lg:p-8`, change the breakpoint after smoke, add a
+resize listener, or use effect-driven viewport state. Keep panel width/max-height
+and reopen control unchanged.
 
 ## Error/compatibility flow
 
-No async/error path. Panel closed and wide layouts remain byte-equivalent except
-for the semantic role. Existing panel `data-*` hooks and drag/drop behavior stay.
+No async/error path. Closed and narrow computed gutters remain equivalent to the
+current `p-6 lg:p-8` layout; only the wide open state gains the 300 px reserve.
+Existing panel `data-*` hooks and drag/drop behavior stay.
 
 ## Gate tests owned here; aggregate additions owned by TASK-540-06
 
-- Structural test rejects inline `paddingRight:300` and pins conditional class.
+- Structural test rejects inline `paddingRight:300`, preserves `p-6 lg:p-8`, and
+  pins the conditional `lg:pr-[332px]` class.
 - UI render asserts `role=region` plus accessible name.
-- Browser smoke asserts the exact breakpoint/geometry contract above.
+- Browser smoke asserts computed padding plus border/content/panel geometry for
+  open and closed states at 320/390/480/1024/1280.
 
 Update the named structural/component expectations before this source gate.
 TASK-540-06 owns real-browser aggregation but must not re-baseline these assertions.

@@ -1,11 +1,39 @@
 import { expect, test } from "vitest";
 
 import {
+  buildCustomScreenEditorPath,
   buildCustomScreenWorkspaceHref,
   buildCustomScreenWorkspacePath,
+  resolveCustomScreenId,
   resolveCustomScreenEntryParams,
   resolveCustomScreenWorkspacePrefetchTarget,
 } from "../../../core/admin/ui/custom-screens/routeParams";
+
+test("custom screen editor paths encode IDs without entering the records workspace", () => {
+  expect(buildCustomScreenEditorPath({ screenId: "screen / 1" })).toBe(
+    "/advanced/custom-screens/screen%20%2F%201"
+  );
+  expect(buildCustomScreenEditorPath({ screenId: "screen-1" })).toBe(
+    "/advanced/custom-screens/screen-1"
+  );
+  expect(buildCustomScreenEditorPath({ screenId: "screen-1" })).not.toContain("/entries");
+});
+
+test("custom screen ID resolution strips query and hash before decoding", () => {
+  const variants = [
+    "/admin/advanced/custom-screens/screen%20one",
+    "/admin/advanced/custom-screens/screen%20one?panel=settings",
+    "/admin/advanced/custom-screens/screen%20one#binding",
+    "/admin/advanced/custom-screens/screen%20one?panel=settings#binding",
+  ];
+
+  expect(variants.map(resolveCustomScreenId)).toEqual([
+    "screen one",
+    "screen one",
+    "screen one",
+    "screen one",
+  ]);
+});
 
 test("custom screen workspace route helpers encode and decode entry paths", () => {
   expect(

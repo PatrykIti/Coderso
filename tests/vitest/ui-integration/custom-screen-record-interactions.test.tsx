@@ -323,8 +323,19 @@ test("record editor keeps child selection scoped and preserves it across refresh
     expect(parent?.getAttribute("data-selected")).toBe("true");
     expect(child?.getAttribute("data-selected")).toBe("false");
 
+    const selectionHandle = child?.querySelector<HTMLButtonElement>(
+      '[data-screen-select-block="field-1"]'
+    );
+    expect(parent?.getAttribute("role")).toBeNull();
+    expect(parent?.getAttribute("tabindex")).toBeNull();
+    expect(child?.getAttribute("role")).toBeNull();
+    expect(child?.getAttribute("tabindex")).toBeNull();
+    expect(selectionHandle?.tagName).toBe("BUTTON");
+    expect(selectionHandle?.getAttribute("aria-label")).toContain("Headline");
+
     React.act(() => {
-      child?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      selectionHandle?.focus();
+      selectionHandle?.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 0 }));
     });
     await flush();
 
@@ -335,7 +346,6 @@ test("record editor keeps child selection scoped and preserves it across refresh
     });
     expect(view.container.textContent).toContain("Headline");
 
-    expect(child?.querySelector("button")).toBeNull();
     expect(document.body.querySelector("[data-custom-screen-record-value-panel]")).toBeNull();
     expect(child?.querySelector('[role="textbox"]')).not.toBeNull();
 
@@ -350,6 +360,46 @@ test("record editor keeps child selection scoped and preserves it across refresh
         .querySelector('[data-screen-block-id="field-1"]')
         ?.getAttribute("data-selected")
     ).toBe("true");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("contenteditable Space is not canceled and its interaction does not activate the block wrapper", async () => {
+  const view = mount("/admin/advanced/custom-screens/screen-1/entries/entry-1");
+
+  try {
+    await flush();
+
+    const parent = view.container.querySelector('[data-screen-block-id="group-1"]');
+    const child = view.container.querySelector('[data-screen-block-id="field-1"]');
+    const textbox = child?.querySelector<HTMLElement>('[role="textbox"][contenteditable="true"]');
+    expect(parent?.getAttribute("data-selected")).toBe("true");
+    expect(child?.getAttribute("data-selected")).toBe("false");
+    expect(textbox).not.toBeNull();
+
+    React.act(() => {
+      textbox?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
+    await flush();
+    expect(parent?.getAttribute("data-selected")).toBe("true");
+    expect(child?.getAttribute("data-selected")).toBe("false");
+
+    const space = new KeyboardEvent("keydown", {
+      key: " ",
+      code: "Space",
+      bubbles: true,
+      cancelable: true,
+    });
+    let dispatched = false;
+    React.act(() => {
+      dispatched = textbox?.dispatchEvent(space) ?? false;
+      if (!space.defaultPrevented && textbox) textbox.textContent = `${textbox.textContent ?? ""} `;
+    });
+    expect(dispatched).toBe(true);
+    expect(space.defaultPrevented).toBe(false);
+    expect(textbox?.textContent?.endsWith(" ")).toBe(true);
+    expect(child?.getAttribute("data-selected")).toBe("false");
   } finally {
     view.cleanup();
   }

@@ -78,8 +78,8 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 361 tasks
-- **In Progress:** 5 tasks
+- **To Do:** 360 tasks
+- **In Progress:** 6 tasks
 - **Done:** 3114 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
@@ -115,7 +115,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-539 | Page V2 Post-Audit Remediation II | High | Very Large | Residual Page v2 model, sanitizer, authoring, transform, renderer, responsive CSS, runtime-init, and narrow-canvas corrections after TASK-535. Changelog 1251 pinned. 8 children + 17 leaves. |
-| TASK-540 | Custom Screens Functional and Data-Integrity Remediation | High | Large | Strict Screen data/URLs/Tabs, link-only Button action, accessible runtime, dirty/cache recovery, responsive canvas, and per-user preferences. Changelog 1252 pinned. 6 children + 10 leaves. |
 | TASK-542 | Menu Determinism, Responsive Cascade, and Runtime Parity | High | Large | Strict deterministic MenuDocumentV2, complete responsive neutralizers, shared public projection/active identity, and dirty-safe revalidation. Changelog 1254 pinned. 4 children + 6 leaves. |
 | TASK-545 | Workflow, Smoke Evidence, and Task-Graph Integrity | High | Large | All-results guard, five-round workflow enforcement, durable hashed smoke manifests, and bounded historical graph/index repair. Changelog 1257 pinned. 4 children + 10 leaves. |
 | TASK-478 | Page Editor Inline Link And Toolbar Placement UX | Medium | Medium | Inline links are invisible/uneditable/unremovable and hijack selection (navigate on click); plus a request to dock the mark toolbar to the block side so the picker doesn't cover the text. Live-verified 2026-06-27. |
@@ -157,6 +156,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-540 | Custom Screens Functional and Data-Integrity Remediation | High | Large | 🚧 In progress (2026-07-13): strict Screen data/URLs/Tabs, link-only Button action, accessible runtime, dirty/cache recovery, responsive canvas, and per-user preferences. Session-only Admin contracts; no generic/widget expansion. Changelog 1252 pinned. 6 children + 10 leaves. |
 | TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |

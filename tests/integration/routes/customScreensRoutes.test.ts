@@ -238,6 +238,18 @@ const patchScreenDefinition = async (screenId: string, definition: CustomScreenD
   });
 };
 
+const postScreen = async (body: unknown) => {
+  const { router, routes } = makeRouter();
+  registerCustomScreenRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate,
+  });
+  return runRoute(findRoute(routes, "POST", "/custom-screens"), {
+    body,
+    user: { id: "44444444-4444-4444-8444-444444444444" },
+  });
+};
+
 testIfDb(
   "PATCH /custom-screens/:id persists a definition carrying a valid block style and round-trips byte-stable",
   async () => {
@@ -496,6 +508,264 @@ testIfDb(
     const reread = await getCustomScreen(screen.id);
     expect("style" in (reread?.definition.editorView.document.sections[0] ?? {})).toBe(false);
     expect(reread?.definition.editorView.bindings.map((b) => b.field)).toEqual(["name"]);
+  }
+);
+
+const definitionWithEditorBlocks = (blocks: unknown[]): CustomScreenDefinition => {
+  const base = buildDefinition();
+  return {
+    ...base,
+    editorView: {
+      ...base.editorView,
+      document: {
+        schemaVersion: 1,
+        sections: [{ id: "section-1", type: "section", data: {}, blocks }],
+      },
+      bindings: [],
+    },
+  } as CustomScreenDefinition;
+};
+
+testIfDb(
+  "TASK-540-01 PATCH rejects fixed-kind unknown keys recursively in children and slots without mutating storage",
+  async () => {
+    const screen = await seedBoundScreen();
+    const before = JSON.stringify((await getCustomScreen(screen.id))?.definition);
+    const submittedUnknownKey = "submittedUnknownKeyMustNotEcho";
+    const invalidDefinitions = [
+      definitionWithEditorBlocks([
+        {
+          id: "child-parent",
+          type: "field-group",
+          data: {},
+          children: [
+            {
+              id: "child-middle",
+              type: "field-group",
+              data: {},
+              children: [
+                {
+                  id: "bad-heading-child",
+                  type: "heading",
+                  data: { text: "Nested", [submittedUnknownKey]: true },
+                },
+              ],
+            },
+          ],
+        },
+      ]),
+      definitionWithEditorBlocks([
+        {
+          id: "slot-parent",
+          type: "columns",
+          data: {},
+          slots: {
+            left: [
+              {
+                id: "slot-middle",
+                type: "columns",
+                data: {},
+                slots: {
+                  right: [
+                    {
+                      id: "bad-heading-slot",
+                      type: "heading",
+                      data: { text: "Nested", [submittedUnknownKey]: true },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      ]),
+    ];
+
+    for (const definition of invalidDefinitions) {
+      try {
+        await patchScreenDefinition(screen.id, definition);
+        throw new Error("expected recursive schema rejection");
+      } catch (error) {
+        expect(error).toMatchObject({
+          code: "validation_error",
+          message: "Invalid payload",
+          status: 400,
+        });
+        expect(JSON.stringify((error as { details?: unknown }).details)).not.toContain(
+          submittedUnknownKey
+        );
+      }
+      expect(JSON.stringify((await getCustomScreen(screen.id))?.definition)).toBe(before);
+    }
+  }
+);
+
+testIfDb(
+  "TASK-540-01 PATCH rejects unsupported block types at root, child, and slot boundaries without mutating storage",
+  async () => {
+    const screen = await seedBoundScreen();
+    const before = JSON.stringify((await getCustomScreen(screen.id))?.definition);
+    const submittedType = "submitted-plugin-type-must-not-echo";
+    const invalidDefinitions = [
+      definitionWithEditorBlocks([{ id: "unsupported-root", type: submittedType, data: {} }]),
+      definitionWithEditorBlocks([
+        {
+          id: "child-parent",
+          type: "field-group",
+          data: {},
+          children: [{ id: "unsupported-child", type: submittedType, data: {} }],
+        },
+      ]),
+      definitionWithEditorBlocks([
+        {
+          id: "slot-parent",
+          type: "columns",
+          data: {},
+          slots: {
+            content: [{ id: "unsupported-slot", type: submittedType, data: {} }],
+          },
+        },
+      ]),
+    ];
+
+    for (const definition of invalidDefinitions) {
+      try {
+        await patchScreenDefinition(screen.id, definition);
+        throw new Error("expected unsupported block type rejection");
+      } catch (error) {
+        expect(error).toMatchObject({
+          code: "validation_error",
+          message: "Invalid payload",
+          status: 400,
+        });
+        expect(JSON.stringify((error as { details?: unknown }).details)).not.toContain(
+          submittedType
+        );
+      }
+      expect(JSON.stringify((await getCustomScreen(screen.id))?.definition)).toBe(before);
+    }
+  }
+);
+
+testIfDb(
+  "TASK-540-01 PATCH maps unsafe URLs, duplicate Tabs, and tab-slot mismatch to bounded non-echo domain errors",
+  async () => {
+    const screen = await seedBoundScreen();
+    const before = JSON.stringify((await getCustomScreen(screen.id))?.definition);
+    const rejectedUrl = "javascript:submitted-value-must-not-echo";
+    const semanticFailures = [
+      definitionWithEditorBlocks([
+        { id: "unsafe-image", type: "image", data: { src: rejectedUrl } },
+      ]),
+      definitionWithEditorBlocks([
+        {
+          id: "unsafe-button",
+          type: "button",
+          data: { action: "link", href: rejectedUrl },
+        },
+      ]),
+      definitionWithEditorBlocks([
+        {
+          id: "duplicate-tabs",
+          type: "tabs",
+          data: {
+            tabs: [
+              { id: "same", label: "First" },
+              { id: "same", label: "Second" },
+            ],
+          },
+          slots: { same: [] },
+        },
+      ]),
+      definitionWithEditorBlocks([
+        {
+          id: "mismatched-tabs",
+          type: "tabs",
+          data: { tabs: [{ id: "expected", label: "Expected" }] },
+          slots: { other: [] },
+        },
+      ]),
+    ];
+
+    for (const definition of semanticFailures) {
+      try {
+        await patchScreenDefinition(screen.id, definition);
+        throw new Error("expected semantic definition rejection");
+      } catch (error) {
+        expect(error).toMatchObject({
+          code: "custom_screen_definition_invalid",
+          message: "Custom screen definition is invalid",
+          status: 400,
+        });
+        const fields =
+          ((error as { details?: { fields?: unknown } }).details?.fields as string[] | undefined) ??
+          [];
+        expect(fields.length).toBeLessThanOrEqual(8);
+        expect(fields.every((field) => field.length <= 240)).toBe(true);
+        expect(fields.join(" ")).not.toContain(rejectedUrl);
+        expect(fields.join(" ")).not.toContain("same");
+        expect(fields.join(" ")).not.toContain("other");
+      }
+      expect(JSON.stringify((await getCustomScreen(screen.id))?.definition)).toBe(before);
+    }
+  }
+);
+
+testIfDb(
+  "TASK-540-01 POST prunes empty-document block ghosts, returns de-duplicated warnings, and GET stays warning-free",
+  async () => {
+    const contentType = await createContentType({
+      name: `Empty Screen ${randomUUID()}`,
+      slug: `empty-screen-${randomUUID()}`,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: { name: { type: "string", xFieldType: "text" } },
+      },
+    });
+    trackedContentTypeIds.add(contentType.id);
+    const base = buildDefinition();
+    const ghostBinding = (id: string) => ({
+      id,
+      blockId: "missing-block",
+      propPath: "value",
+      source: "entry" as const,
+      field: "name",
+      mode: "read" as const,
+    });
+    const definition: CustomScreenDefinition = {
+      ...base,
+      listView: {
+        ...base.listView,
+        rowTemplate: {
+          document: { schemaVersion: 1, sections: [] },
+          bindings: [ghostBinding("row-ghost")],
+        },
+      },
+      editorView: {
+        ...base.editorView,
+        document: { schemaVersion: 1, sections: [] },
+        bindings: [ghostBinding("editor-ghost-a"), ghostBinding("editor-ghost-b")],
+      },
+    };
+
+    const created = (await postScreen({
+      name: `Empty Screen ${randomUUID()}`,
+      contentTypeId: contentType.id,
+      definition,
+    })) as Awaited<ReturnType<typeof getCustomScreen>> & {
+      warnings?: { code: string; fields: string[] }[];
+    };
+    if (!created) throw new Error("custom screen create did not return a record");
+    trackedScreenIds.add(created.id);
+    expect(created.definition.listView.rowTemplate?.bindings).toEqual([]);
+    expect(created.definition.editorView.bindings).toEqual([]);
+    expect(created.warnings).toEqual([{ code: "binding_block_removed", fields: ["name"] }]);
+
+    const reread = await getCustomScreen(created.id);
+    expect(reread?.definition.listView.rowTemplate?.bindings).toEqual([]);
+    expect(reread?.definition.editorView.bindings).toEqual([]);
+    expect(reread?.warnings).toBeUndefined();
   }
 );
 

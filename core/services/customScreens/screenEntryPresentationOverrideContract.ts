@@ -72,6 +72,14 @@ export type ScreenEntryPresentationOverrideRecord = ScreenEntryPresentationOverr
   updatedAt: Date;
 };
 
+export type ScreenEntryPresentationOverrideTransportRecord = Omit<
+  ScreenEntryPresentationOverrideRecord,
+  "createdAt" | "updatedAt"
+> & {
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type ScreenEntryPresentationOverrideReplacePayload = {
   overrides: ScreenEntryPresentationOverrideDraft[];
 };
@@ -104,3 +112,189 @@ export const screenEntryPresentationOverrideReplaceSchema = {
   },
   additionalProperties: false,
 } as const;
+
+const unsafePathSegments = new Set(["__proto__", "prototype", "constructor"]);
+const overridePropPathSet = new Set<string>(screenEntryPresentationOverridePropPaths);
+const mediaPropPathSet = new Set<string>(["image", "mediaAssetId"]);
+const textSizeSet = new Set<string>(screenEntryPresentationTextSizes);
+const textEmphasisSet = new Set<string>(screenEntryPresentationTextEmphasisValues);
+const toneSet = new Set<string>(screenEntryPresentationToneValues);
+
+const invalidOverride = () => new Error("custom_screen_override_invalid");
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const expectOverrideRecord = (value: unknown): Record<string, unknown> => {
+  if (!isRecord(value)) throw invalidOverride();
+  return value;
+};
+
+const rejectUnknownKeys = (input: Record<string, unknown>, allowed: readonly string[]) => {
+  const allowedSet = new Set(allowed);
+  if (Object.keys(input).some((key) => !allowedSet.has(key))) throw invalidOverride();
+};
+
+const normalizeSafePath = (value: unknown, maxLength = 160): string => {
+  if (typeof value !== "string") throw invalidOverride();
+  const normalized = value.trim();
+  if (
+    normalized.length === 0 ||
+    normalized.length > maxLength ||
+    !/^[a-zA-Z0-9_.-]+$/.test(normalized)
+  ) {
+    throw invalidOverride();
+  }
+  if (
+    normalized.split(".").some((segment) => segment.length === 0 || unsafePathSegments.has(segment))
+  ) {
+    throw invalidOverride();
+  }
+  return normalized;
+};
+
+export const normalizeScreenEntryPresentationScopeId = (value: unknown): string =>
+  normalizeSafePath(value);
+
+const normalizePropPath = (value: unknown): ScreenEntryPresentationOverridePropPath => {
+  const normalized = normalizeSafePath(value);
+  if (!overridePropPathSet.has(normalized)) throw invalidOverride();
+  return normalized as ScreenEntryPresentationOverridePropPath;
+};
+
+const normalizeOwnedEnum = (value: unknown, allowed: ReadonlySet<string>): string => {
+  if (typeof value !== "string" || !allowed.has(value)) throw invalidOverride();
+  return value;
+};
+
+const normalizeCanonicalMediaUuid = (value: unknown): string => {
+  if (!isScreenMediaAssetUuid(value)) throw invalidOverride();
+  return value;
+};
+
+const normalizeOverrideValue = (
+  propPath: ScreenEntryPresentationOverridePropPath,
+  value: unknown
+): ScreenEntryPresentationOverrideValue => {
+  if (mediaPropPathSet.has(propPath)) return normalizeCanonicalMediaUuid(value);
+  if (propPath === "textSize") return normalizeOwnedEnum(value, textSizeSet);
+  if (propPath === "textEmphasis") return normalizeOwnedEnum(value, textEmphasisSet);
+  if (propPath === "tone") return normalizeOwnedEnum(value, toneSet);
+  throw invalidOverride();
+};
+
+export function normalizeScreenEntryPresentationOverrideDraft(
+  input: unknown
+): ScreenEntryPresentationOverrideDraft {
+  const record = expectOverrideRecord(input);
+  rejectUnknownKeys(record, ["blockId", "propPath", "value"]);
+  const propPath = normalizePropPath(record.propPath);
+  return {
+    blockId: normalizeSafePath(record.blockId),
+    propPath,
+    value: normalizeOverrideValue(propPath, record.value),
+  };
+}
+
+const normalizeDraftKeys = (record: Record<string, unknown>) =>
+  normalizeScreenEntryPresentationOverrideDraft({
+    blockId: record.blockId,
+    propPath: record.propPath,
+    value: record.value,
+  });
+
+const normalizeUpdatedBy = (value: unknown): string | null => {
+  if (value === null) return null;
+  return normalizeCanonicalMediaUuid(value);
+};
+
+const normalizeRepositoryDate = (value: unknown): Date => {
+  if (!(value instanceof Date) || !Number.isFinite(value.getTime())) throw invalidOverride();
+  return value;
+};
+
+const normalizeTransportTimestamp = (value: unknown): string => {
+  if (typeof value !== "string") throw invalidOverride();
+  const timestamp = new Date(value);
+  if (!Number.isFinite(timestamp.getTime()) || timestamp.toISOString() !== value) {
+    throw invalidOverride();
+  }
+  return value;
+};
+
+const recordKeys = [
+  "blockId",
+  "propPath",
+  "value",
+  "screenId",
+  "entryId",
+  "updatedBy",
+  "createdAt",
+  "updatedAt",
+] as const;
+
+const normalizeRepositoryRecord = (value: unknown): ScreenEntryPresentationOverrideRecord => {
+  const record = expectOverrideRecord(value);
+  rejectUnknownKeys(record, recordKeys);
+  return {
+    screenId: normalizeScreenEntryPresentationScopeId(record.screenId),
+    entryId: normalizeScreenEntryPresentationScopeId(record.entryId),
+    updatedBy: normalizeUpdatedBy(record.updatedBy),
+    createdAt: normalizeRepositoryDate(record.createdAt),
+    updatedAt: normalizeRepositoryDate(record.updatedAt),
+    ...normalizeDraftKeys(record),
+  };
+};
+
+const normalizeTransportRecord = (value: unknown): ScreenEntryPresentationOverrideDraft => {
+  const record = expectOverrideRecord(value);
+  rejectUnknownKeys(record, recordKeys);
+  normalizeScreenEntryPresentationScopeId(record.screenId);
+  normalizeScreenEntryPresentationScopeId(record.entryId);
+  normalizeUpdatedBy(record.updatedBy);
+  normalizeTransportTimestamp(record.createdAt);
+  normalizeTransportTimestamp(record.updatedAt);
+  return normalizeDraftKeys(record);
+};
+
+type OverrideListSource = "draft-cache" | "repository-record" | "transport-response";
+
+type NormalizedOverrideList<TSource extends OverrideListSource> =
+  TSource extends "repository-record"
+    ? ScreenEntryPresentationOverrideRecord[]
+    : ScreenEntryPresentationOverrideDraft[];
+
+export function normalizeScreenEntryPresentationOverrideList<TSource extends OverrideListSource>(
+  input: unknown,
+  options: { source: TSource }
+): NormalizedOverrideList<TSource> {
+  if (!Array.isArray(input) || input.length > 200) throw invalidOverride();
+  let normalized: ScreenEntryPresentationOverrideDraft[] | ScreenEntryPresentationOverrideRecord[];
+  switch (options.source) {
+    case "draft-cache":
+      normalized = input.map(normalizeScreenEntryPresentationOverrideDraft);
+      break;
+    case "repository-record":
+      normalized = input.map(normalizeRepositoryRecord);
+      break;
+    case "transport-response":
+      normalized = input.map(normalizeTransportRecord);
+      break;
+    default:
+      throw invalidOverride();
+  }
+  return normalized as NormalizedOverrideList<TSource>;
+}
+
+export function normalizeScreenEntryPresentationOverrideReplacePayload(
+  input: unknown
+): ScreenEntryPresentationOverrideReplacePayload {
+  const record = expectOverrideRecord(input);
+  rejectUnknownKeys(record, ["overrides"]);
+  return {
+    overrides: normalizeScreenEntryPresentationOverrideList(record.overrides, {
+      source: "draft-cache",
+    }),
+  };
+}
+import { isScreenMediaAssetUuid } from "./customScreenSchemas";

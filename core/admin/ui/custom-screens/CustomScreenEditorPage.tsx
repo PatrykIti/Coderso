@@ -1,5 +1,13 @@
 import { Eye, Save, SlidersHorizontal } from "lucide-react";
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -45,8 +53,9 @@ import { resolveCustomScreenCapabilities } from "../../../services/customScreens
 
 import { CustomScreenShell } from "./CustomScreenShell";
 import { CustomScreenWorkspacePreviewDialog } from "./CustomScreenWorkspacePreviewDialog";
-import { resolveCustomScreenId } from "./routeParams";
+import { buildCustomScreenEditorPath, resolveCustomScreenId } from "./routeParams";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { useAdminDirtyNavigationGuard } from "@/ui/shared/AdminDirtyNavigationGuard";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import {
   addScreenBlockAt,
@@ -78,6 +87,29 @@ import { ScreenAuthoringCanvas } from "./ScreenAuthoringCanvas";
 import type { ContentField } from "../content-types/SchemaBuilder";
 
 const normalizeText = (value: string) => value.trim();
+
+type BuilderRouteVisit = Readonly<{ routeKey: string }>;
+type BuilderRouteMessage = Readonly<{
+  routeVisit: BuilderRouteVisit;
+  kind: "load" | "save";
+  message: string;
+}>;
+type BuilderLoadToken = Readonly<{
+  routeKey: string;
+  routeVisit: BuilderRouteVisit;
+  routeGeneration: number;
+  requestGeneration: number;
+  draftGeneration: number;
+}>;
+type BuilderSaveToken = Readonly<{
+  routeKey: string;
+  routeVisit: BuilderRouteVisit;
+  routeGeneration: number;
+  saveGeneration: number;
+  draftGeneration: number;
+}>;
+
+export const advanceBuilderDraftGeneration = (current: number) => current + 1;
 
 const blockTreeContains = (blocks: readonly ScreenBlockV1[], blockId: string): boolean =>
   blocks.some(
@@ -223,42 +255,73 @@ function CustomScreenPreviewRecordOwner({
 }
 
 export function CustomScreenEditorPage() {
-  const { path, navigate } = useAdminRouter();
+  const { path } = useAdminRouter();
   const screenId = useMemo(() => resolveCustomScreenId(path), [path]);
   const isCreateMode = !screenId || screenId === "new";
+  const routeKey = `${screenId ?? ""}\u0000${isCreateMode}`;
+
+  return (
+    <CustomScreenEditorRouteSession
+      key={routeKey}
+      routeKey={routeKey}
+      screenId={screenId}
+      isCreateMode={isCreateMode}
+    />
+  );
+}
+
+function CustomScreenEditorRouteSession({
+  routeKey,
+  screenId,
+  isCreateMode,
+}: {
+  routeKey: string;
+  screenId: string | null;
+  isCreateMode: boolean;
+}) {
+  const { navigate } = useAdminRouter();
+  const [routeVisit] = useState<BuilderRouteVisit>(() => Object.freeze({ routeKey }));
+  const initialScreen = useMemo(
+    () => (!isCreateMode && screenId ? (getCachedCustomScreen(screenId) ?? null) : null),
+    [isCreateMode, screenId]
+  );
+  const initialDefinition = useMemo(() => resolveScreenDefinition(initialScreen), [initialScreen]);
+  const initialSelection = useMemo(
+    () => resolveInitialSelection(initialDefinition.editorView.document),
+    [initialDefinition]
+  );
+  const initialRouteReady = isCreateMode || initialScreen !== null;
 
   const [contentTypes, setContentTypes] = useState<ContentTypeSummary[]>(
     () => getCachedContentTypes() ?? []
   );
-  const [screen, setScreen] = useState<CustomScreenRecord | null>(() => {
-    if (isCreateMode || !screenId) return null;
-    return getCachedCustomScreen(screenId) ?? null;
-  });
-  const [name, setName] = useState(screen?.name ?? "");
-  const [contentTypeId, setContentTypeId] = useState(screen?.contentTypeId ?? "");
-  const [status, setStatus] = useState<CustomScreenStatus>(screen?.status ?? "draft");
-  const [showInSidebar, setShowInSidebar] = useState(screen?.showInSidebar ?? false);
-  const [sidebarLabel, setSidebarLabel] = useState(screen?.sidebarLabel ?? "");
-  const [definition, setDefinition] = useState<CustomScreenDefinition>(() =>
-    resolveScreenDefinition(screen)
-  );
+  const [screen, setScreen] = useState<CustomScreenRecord | null>(initialScreen);
+  const [name, setName] = useState(initialScreen?.name ?? "");
+  const [contentTypeId, setContentTypeId] = useState(initialScreen?.contentTypeId ?? "");
+  const [status, setStatus] = useState<CustomScreenStatus>(initialScreen?.status ?? "draft");
+  const [showInSidebar, setShowInSidebar] = useState(initialScreen?.showInSidebar ?? false);
+  const [sidebarLabel, setSidebarLabel] = useState(initialScreen?.sidebarLabel ?? "");
+  const [definition, setDefinition] = useState<CustomScreenDefinition>(initialDefinition);
   const screenDocument = definition.editorView.document;
   const screenBindings = definition.editorView.bindings;
-  const [selectedId, setSelectedId] = useState<string | null>(
-    () => resolveInitialSelection(resolveScreenDefinition(screen).editorView.document).blockId
-  );
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelection.blockId);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(
-    () => resolveInitialSelection(resolveScreenDefinition(screen).editorView.document).sectionId
+    initialSelection.sectionId
   );
-  const [isLoading, setIsLoading] = useState(() => !isCreateMode && !screen);
-  const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [committedScreenVisit, setCommittedScreenVisit] = useState<BuilderRouteVisit | null>(
+    initialRouteReady ? routeVisit : null
+  );
+  const [loadActivityVisit, setLoadActivityVisit] = useState<BuilderRouteVisit | null>(
+    initialRouteReady ? null : routeVisit
+  );
+  const [saveActivityVisit, setSaveActivityVisit] = useState<BuilderRouteVisit | null>(null);
+  const [errorCommit, setErrorCommit] = useState<BuilderRouteMessage | null>(null);
   // TASK-505-03 (Item B3): a NON-blocking, success-adjacent notice naming the
   // field(s) the 505-01 save-path GC pruned (read off the returned record's
   // transient `warnings`). Cleared by markDirty alongside setError(null).
-  const [saveNotice, setSaveNotice] = useState<string | null>(null);
-  const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
+  const [saveNoticeCommit, setSaveNoticeCommit] = useState<BuilderRouteMessage | null>(null);
+  const [remoteWarningVisit, setRemoteWarningVisit] = useState<BuilderRouteVisit | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   // TASK-496-02: host-owned controlled flag for the shared `CanvasEditor` shell
   // (the shell only READS it; the toolbar toggle + reopen chip flip it directly).
@@ -270,6 +333,25 @@ export function CustomScreenEditorPage() {
   // silently redirect the next insert).
   const [insertPoint, setInsertPoint] = useState<ScreenInsertTarget | null>(null);
   const definitionRef = useRef(definition);
+  const builderDirtyRef = useRef(false);
+  const draftMutationGenerationRef = useRef(0);
+  const screenHydrationGenerationRef = useRef(0);
+  const screenSaveGenerationRef = useRef(0);
+  const activeScreenSaveTokenRef = useRef<BuilderSaveToken | null>(null);
+  const persistedScreenTargetRef = useRef<{
+    routeVisit: BuilderRouteVisit;
+    routeGeneration: number;
+    id: string;
+  } | null>(null);
+  const mountedRef = useRef(true);
+  const routeGenerationRef = useRef(0);
+
+  const routeReady = committedScreenVisit === routeVisit;
+  const isLoading = !routeReady && loadActivityVisit === routeVisit;
+  const isSaving = saveActivityVisit === routeVisit;
+  const error = errorCommit?.routeVisit === routeVisit ? errorCommit.message : null;
+  const remoteUpdatePending = remoteWarningVisit === routeVisit;
+  const saveNotice = saveNoticeCommit?.routeVisit === routeVisit ? saveNoticeCommit.message : null;
 
   const selectedContentType = useMemo(
     () => contentTypes.find((type) => type.id === contentTypeId) ?? null,
@@ -284,8 +366,22 @@ export function CustomScreenEditorPage() {
     [definition]
   );
 
+  useLayoutEffect(() => {
+    mountedRef.current = true;
+    routeGenerationRef.current += 1;
+    return () => {
+      clearActiveAssistantSurfaceContext();
+      activeScreenSaveTokenRef.current = null;
+      persistedScreenTargetRef.current = null;
+      mountedRef.current = false;
+      routeGenerationRef.current += 1;
+      screenHydrationGenerationRef.current += 1;
+      screenSaveGenerationRef.current += 1;
+    };
+  }, [routeVisit]);
+
   useEffect(() => {
-    if (isCreateMode || !screen || !screenId) {
+    if (!routeReady || isCreateMode || !screen || !screenId) {
       clearActiveAssistantSurfaceContext();
       return undefined;
     }
@@ -323,6 +419,7 @@ export function CustomScreenEditorPage() {
     name,
     previewCapabilities,
     remoteUpdatePending,
+    routeReady,
     screen,
     screenBindings,
     screenDocument.sections,
@@ -334,16 +431,24 @@ export function CustomScreenEditorPage() {
   ]);
 
   const markDirty = useCallback(() => {
+    if (committedScreenVisit !== routeVisit) return false;
+    draftMutationGenerationRef.current = advanceBuilderDraftGeneration(
+      draftMutationGenerationRef.current
+    );
+    builderDirtyRef.current = true;
     setHasUnsavedChanges(true);
-    setError(null);
-    setSaveNotice(null);
-  }, []);
+    setErrorCommit(null);
+    setSaveNoticeCommit(null);
+    return true;
+  }, [committedScreenVisit, routeVisit]);
 
   const updateDefinition = useCallback(
     (next: CustomScreenDefinition) => {
+      if (next === definitionRef.current) return false;
+      if (!markDirty()) return false;
       definitionRef.current = next;
       setDefinition(next);
-      markDirty();
+      return true;
     },
     [markDirty]
   );
@@ -354,12 +459,17 @@ export function CustomScreenEditorPage() {
       bindings?: ScreenFieldBinding[];
     }) => {
       const current = definitionRef.current;
-      updateDefinition({
+      const document = next.document ?? current.editorView.document;
+      const bindings = next.bindings ?? current.editorView.bindings;
+      if (document === current.editorView.document && bindings === current.editorView.bindings) {
+        return false;
+      }
+      return updateDefinition({
         ...current,
         editorView: {
           ...current.editorView,
-          document: next.document ?? current.editorView.document,
-          bindings: next.bindings ?? current.editorView.bindings,
+          document,
+          bindings,
         },
       });
     },
@@ -393,7 +503,7 @@ export function CustomScreenEditorPage() {
     });
   };
 
-  const applyScreen = useCallback((record: CustomScreenRecord) => {
+  const applyScreenFieldsAndDefinition = useCallback((record: CustomScreenRecord) => {
     const nextDefinition = resolveScreenDefinition(record);
     const nextSelection = resolveInitialSelection(nextDefinition.editorView.document);
     definitionRef.current = nextDefinition;
@@ -406,28 +516,172 @@ export function CustomScreenEditorPage() {
     setDefinition(nextDefinition);
     setSelectedId(nextSelection.blockId);
     setSelectedSectionId(nextSelection.sectionId);
+  }, []);
+
+  const resetBuilderDraftAuthority = useCallback(() => {
+    draftMutationGenerationRef.current = advanceBuilderDraftGeneration(
+      draftMutationGenerationRef.current
+    );
+    builderDirtyRef.current = false;
     setHasUnsavedChanges(false);
   }, []);
 
-  const refreshScreen = useCallback(
-    async (force?: boolean) => {
-      if (!screenId || isCreateMode) return;
+  const buildScreenSaveNotice = useCallback((record: CustomScreenRecord) => {
+    const prunedFields = uniqueFieldNames(
+      (record.warnings ?? [])
+        .filter((warning) => warning.code === "binding_field_removed")
+        .flatMap((warning) => warning.fields)
+    );
+    return prunedFields.length > 0
+      ? `Removed binding(s) for deleted field(s): ${prunedFields.join(", ")}.`
+      : null;
+  }, []);
+
+  const applyPersistedScreen = useCallback(
+    (
+      record: CustomScreenRecord,
+      acceptedRouteVisit: BuilderRouteVisit,
+      source: "load" | "save"
+    ) => {
+      applyScreenFieldsAndDefinition(record);
+      resetBuilderDraftAuthority();
+      setRemoteWarningVisit(null);
+      setCommittedScreenVisit(acceptedRouteVisit);
+      const notice = source === "save" ? buildScreenSaveNotice(record) : null;
+      setSaveNoticeCommit(
+        notice ? { routeVisit: acceptedRouteVisit, kind: "save", message: notice } : null
+      );
+    },
+    [applyScreenFieldsAndDefinition, buildScreenSaveNotice, resetBuilderDraftAuthority]
+  );
+
+  const updatePersistedScreenBaselineWithoutReplacingDraft = useCallback(
+    (record: CustomScreenRecord, acceptedRouteVisit: BuilderRouteVisit) => {
+      setScreen(record);
+      setCommittedScreenVisit(acceptedRouteVisit);
+    },
+    []
+  );
+
+  const captureScreenLoadToken = useCallback(
+    (): BuilderLoadToken => ({
+      routeKey,
+      routeVisit,
+      routeGeneration: routeGenerationRef.current,
+      requestGeneration: ++screenHydrationGenerationRef.current,
+      draftGeneration: draftMutationGenerationRef.current,
+    }),
+    [routeKey, routeVisit]
+  );
+
+  const isScreenLoadIdentityCurrent = useCallback(
+    (token: BuilderLoadToken) =>
+      mountedRef.current &&
+      token.routeKey === routeKey &&
+      token.routeVisit === routeVisit &&
+      token.routeGeneration === routeGenerationRef.current &&
+      token.requestGeneration === screenHydrationGenerationRef.current,
+    [routeKey, routeVisit]
+  );
+
+  const mayApplyScreenLoad = useCallback(
+    (token: BuilderLoadToken) =>
+      isScreenLoadIdentityCurrent(token) &&
+      token.draftGeneration === draftMutationGenerationRef.current &&
+      !builderDirtyRef.current,
+    [isScreenLoadIdentityCurrent]
+  );
+
+  const didBuilderDraftRemainClean = useCallback(
+    (token: BuilderLoadToken) =>
+      token.draftGeneration === draftMutationGenerationRef.current && !builderDirtyRef.current,
+    []
+  );
+
+  const hasCurrentScreenSaveAuthority = useCallback(() => {
+    const token = activeScreenSaveTokenRef.current;
+    return Boolean(
+      token &&
+      mountedRef.current &&
+      token.routeKey === routeKey &&
+      token.routeVisit === routeVisit &&
+      token.routeGeneration === routeGenerationRef.current &&
+      token.saveGeneration === screenSaveGenerationRef.current
+    );
+  }, [routeKey, routeVisit]);
+
+  const runBackgroundScreenHydration = useCallback(
+    async (load: () => Promise<CustomScreenRecord | null>, isActive: () => boolean) => {
+      if (!mountedRef.current || !isActive()) return;
+      const token = captureScreenLoadToken();
+      setLoadActivityVisit(token.routeVisit);
       try {
-        const detail = await getCustomScreenCached(screenId, { force });
-        if (!detail) {
-          setError("Custom screen not found.");
+        const detail = await load();
+        if (!isActive() || !isScreenLoadIdentityCurrent(token)) return;
+        if (hasCurrentScreenSaveAuthority()) return;
+        if (!mayApplyScreenLoad(token)) {
+          setErrorCommit(null);
+          setRemoteWarningVisit(token.routeVisit);
           return;
         }
-        applyScreen(detail);
-        setError(null);
-      } catch (err) {
-        setError(isApiClientError(err) ? err.message : "Failed to load custom screen.");
+        if (!detail) {
+          setErrorCommit({
+            routeVisit: token.routeVisit,
+            kind: "load",
+            message: "Custom screen not found.",
+          });
+          return;
+        }
+        applyPersistedScreen(detail, token.routeVisit, "load");
+        setErrorCommit(null);
+      } catch (loadError) {
+        if (!isActive() || !isScreenLoadIdentityCurrent(token)) return;
+        if (hasCurrentScreenSaveAuthority()) return;
+        setErrorCommit({
+          routeVisit: token.routeVisit,
+          kind: "load",
+          message: didBuilderDraftRemainClean(token)
+            ? isApiClientError(loadError)
+              ? loadError.message
+              : "Failed to load custom screen."
+            : "Could not check for Screen updates. Local changes are unchanged.",
+        });
       } finally {
-        setIsLoading(false);
+        if (isActive() && isScreenLoadIdentityCurrent(token)) {
+          setLoadActivityVisit((current) => (current === token.routeVisit ? null : current));
+        }
       }
     },
-    [applyScreen, isCreateMode, screenId]
+    [
+      applyPersistedScreen,
+      captureScreenLoadToken,
+      didBuilderDraftRemainClean,
+      hasCurrentScreenSaveAuthority,
+      isScreenLoadIdentityCurrent,
+      mayApplyScreenLoad,
+    ]
   );
+
+  const refreshScreen = useCallback(
+    async (force = true, isActive: () => boolean = () => true) => {
+      if (!screenId || isCreateMode) return;
+      await runBackgroundScreenHydration(
+        () => getCustomScreenCached(screenId, { force }),
+        () => mountedRef.current && isActive()
+      );
+    },
+    [isCreateMode, runBackgroundScreenHydration, screenId]
+  );
+
+  const handleCurrentScreenCacheEvent = useCallback(() => {
+    if (!mountedRef.current) return;
+    if (hasCurrentScreenSaveAuthority()) return;
+    if (builderDirtyRef.current) {
+      setRemoteWarningVisit(routeVisit);
+      return;
+    }
+    void refreshScreen(true);
+  }, [hasCurrentScreenSaveAuthority, refreshScreen, routeVisit]);
 
   const handleSelectBlock = useCallback((id: string | null) => {
     setSelectedId(id);
@@ -437,32 +691,27 @@ export function CustomScreenEditorPage() {
   }, []);
 
   useEffect(() => {
-    listContentTypesCached({ force: true })
-      .then((items) => setContentTypes(items))
-      .catch(() => undefined);
-  }, []);
-
-  useEffect(() => {
-    if (isCreateMode) return;
-    if (!screenId) return;
     let active = true;
-    getCustomScreenCached(screenId, { force: true })
-      .then((detail) => {
-        if (!active || !detail) return;
-        applyScreen(detail);
-        setError(null);
+    void listContentTypesCached({ force: true })
+      .then((items) => {
+        if (active && mountedRef.current) setContentTypes(items);
       })
-      .catch((err) => {
-        if (!active) return;
-        setError(isApiClientError(err) ? err.message : "Failed to load custom screen.");
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
-      });
+      .catch(() => undefined);
     return () => {
       active = false;
     };
-  }, [applyScreen, isCreateMode, screenId]);
+  }, []);
+
+  useEffect(() => {
+    if (isCreateMode || !screenId) return undefined;
+    let active = true;
+    queueMicrotask(() => {
+      if (active && mountedRef.current) void refreshScreen(true, () => active);
+    });
+    return () => {
+      active = false;
+    };
+  }, [isCreateMode, refreshScreen, screenId]);
 
   useEffect(() => {
     if (isCreateMode || !screenId) return undefined;
@@ -473,13 +722,9 @@ export function CustomScreenEditorPage() {
       ) {
         return;
       }
-      if (hasUnsavedChanges) {
-        setRemoteUpdatePending(true);
-        return;
-      }
-      refreshScreen(true).catch(() => undefined);
+      handleCurrentScreenCacheEvent();
     });
-  }, [hasUnsavedChanges, isCreateMode, refreshScreen, screenId]);
+  }, [handleCurrentScreenCacheEvent, isCreateMode, screenId]);
 
   // TASK-500-02: resolve the ScreenInsertTarget an insert should use. Priority:
   // (a) the explicit armed insertion point (before/after gap or slot drop zone)
@@ -692,6 +937,14 @@ export function CustomScreenEditorPage() {
     patch: Partial<Pick<ScreenFieldBinding, "field" | "mode">>
   ) => {
     const current = definitionRef.current;
+    if (patch.field === "") {
+      const nextBindings = current.editorView.bindings.filter(
+        (binding) => !(binding.blockId === blockId && binding.propPath === propPath)
+      );
+      if (nextBindings.length === current.editorView.bindings.length) return;
+      updateEditorView({ bindings: nextBindings });
+      return;
+    }
     const existing = current.editorView.bindings.find(
       (binding) => binding.blockId === blockId && binding.propPath === propPath
     );
@@ -713,89 +966,202 @@ export function CustomScreenEditorPage() {
         )
       : [...current.editorView.bindings, nextBinding];
     const matchingField = contentFields.find((field) => field.name === fieldName);
-    const nextDocument =
-      propPath === "value"
-        ? updateScreenBlock(current.editorView.document, blockId, (block) => ({
-            ...block,
-            data: {
-              ...block.data,
-              field: fieldName,
-              ...(matchingField ? { label: matchingField.label } : {}),
-            },
-          }))
-        : current.editorView.document;
+    const selectedBlock = findScreenBlockById(current.editorView.document, blockId);
+    const documentNeedsFieldUpdate =
+      propPath === "value" &&
+      Boolean(
+        selectedBlock &&
+        (selectedBlock.data.field !== fieldName ||
+          (matchingField && selectedBlock.data.label !== matchingField.label))
+      );
+    if (
+      existing &&
+      existing.field === nextBinding.field &&
+      existing.mode === nextBinding.mode &&
+      !documentNeedsFieldUpdate
+    ) {
+      return;
+    }
+    const nextDocument = documentNeedsFieldUpdate
+      ? updateScreenBlock(current.editorView.document, blockId, (block) => ({
+          ...block,
+          data: {
+            ...block.data,
+            field: fieldName,
+            ...(matchingField ? { label: matchingField.label } : {}),
+          },
+        }))
+      : current.editorView.document;
     updateEditorView({
       document: nextDocument,
       bindings: nextBindings,
     });
   };
 
+  const mapBoundedScreenSaveError = (saveError: unknown) => {
+    if (!isApiClientError(saveError)) return "Failed to save custom screen.";
+    const detail = saveError.details;
+    const rawFields =
+      detail && typeof detail === "object" && "fields" in detail
+        ? (detail as { fields?: unknown }).fields
+        : undefined;
+    const fields = Array.isArray(rawFields)
+      ? rawFields.filter((field): field is string => typeof field === "string")
+      : [];
+    return fields.length > 0
+      ? `${saveError.message} (field(s): ${fields.join(", ")})`
+      : saveError.message;
+  };
+
+  const captureScreenSaveToken = (): BuilderSaveToken => ({
+    routeKey,
+    routeVisit,
+    routeGeneration: routeGenerationRef.current,
+    saveGeneration: ++screenSaveGenerationRef.current,
+    draftGeneration: draftMutationGenerationRef.current,
+  });
+
+  const isScreenSaveIdentityCurrent = (token: BuilderSaveToken) =>
+    mountedRef.current &&
+    token.routeKey === routeKey &&
+    token.routeVisit === routeVisit &&
+    token.routeGeneration === routeGenerationRef.current &&
+    token.saveGeneration === screenSaveGenerationRef.current;
+
+  const commitScreenSaveResponse = (
+    saved: CustomScreenRecord,
+    token: BuilderSaveToken
+  ): { mayNavigate: boolean } => {
+    if (!isScreenSaveIdentityCurrent(token) || activeScreenSaveTokenRef.current !== token) {
+      return { mayNavigate: false };
+    }
+    activeScreenSaveTokenRef.current = null;
+    screenHydrationGenerationRef.current += 1;
+    setLoadActivityVisit(null);
+    setErrorCommit(null);
+    setRemoteWarningVisit(null);
+    if (token.draftGeneration !== draftMutationGenerationRef.current) {
+      if (isCreateMode) {
+        persistedScreenTargetRef.current = {
+          routeVisit: token.routeVisit,
+          routeGeneration: token.routeGeneration,
+          id: saved.id,
+        };
+      }
+      updatePersistedScreenBaselineWithoutReplacingDraft(saved, token.routeVisit);
+      setSaveNoticeCommit({
+        routeVisit: token.routeVisit,
+        kind: "save",
+        message: "Saved server version; newer local changes remain unsaved.",
+      });
+      return { mayNavigate: false };
+    }
+    persistedScreenTargetRef.current = null;
+    applyPersistedScreen(saved, token.routeVisit, "save");
+    return { mayNavigate: true };
+  };
+
+  const invalidateBuilderVisitForDiscard = useCallback(() => {
+    draftMutationGenerationRef.current = advanceBuilderDraftGeneration(
+      draftMutationGenerationRef.current
+    );
+    builderDirtyRef.current = false;
+    screenHydrationGenerationRef.current += 1;
+    screenSaveGenerationRef.current += 1;
+    activeScreenSaveTokenRef.current = null;
+    persistedScreenTargetRef.current = null;
+    setHasUnsavedChanges(false);
+    setCommittedScreenVisit(null);
+    setLoadActivityVisit(null);
+    setSaveActivityVisit(null);
+    setErrorCommit(null);
+    setRemoteWarningVisit(null);
+    setSaveNoticeCommit(null);
+    setPreviewOpen(false);
+    clearActiveAssistantSurfaceContext();
+  }, []);
+
+  const { dialog: dirtyNavigationDialog } = useAdminDirtyNavigationGuard({
+    blocked: hasUnsavedChanges,
+    title: "Discard unsaved Screen changes?",
+    description: "The Screen document or bindings have local changes.",
+    confirmLabel: "Discard and continue",
+    cancelLabel: "Keep editing",
+    onConfirmDiscard: invalidateBuilderVisitForDiscard,
+  });
+
   const handleSave = async () => {
+    if (!routeReady) return;
     const trimmedName = normalizeText(name);
     if (!trimmedName) {
-      setError("Screen name is required.");
+      setErrorCommit({
+        routeVisit,
+        kind: "save",
+        message: "Screen name is required.",
+      });
       return;
     }
     if (!contentTypeId) {
-      setError("Select a content type before saving.");
+      setErrorCommit({
+        routeVisit,
+        kind: "save",
+        message: "Select a content type before saving.",
+      });
       return;
     }
 
-    setIsSaving(true);
-    setError(null);
-    setSaveNotice(null);
+    const token = captureScreenSaveToken();
+    activeScreenSaveTokenRef.current = token;
+    screenHydrationGenerationRef.current += 1;
+    setLoadActivityVisit((current) => (current === token.routeVisit ? null : current));
+    setSaveActivityVisit(token.routeVisit);
+    setErrorCommit(null);
+    setSaveNoticeCommit(null);
     const payload = {
       name: trimmedName,
       contentTypeId,
       status,
       showInSidebar,
       sidebarLabel: sidebarLabel.trim() || null,
-      definition,
-    };
-
-    // TASK-505-03 (Item B3): surface the field(s) the 505-01 save-path GC pruned.
-    // The returned record carries a TRANSIENT `warnings` (computed at normalize
-    // time, NOT persisted); reading it directly avoids any client-side diff.
-    const applySavedRecord = (record: CustomScreenRecord) => {
-      const prunedFields = uniqueFieldNames(
-        (record.warnings ?? [])
-          .filter((warning) => warning.code === "binding_field_removed")
-          .flatMap((warning) => warning.fields)
-      );
-      applyScreen(record);
-      setSaveNotice(
-        prunedFields.length > 0
-          ? `Removed binding(s) for deleted field(s): ${prunedFields.join(", ")}.`
-          : null
-      );
+      definition: definitionRef.current,
     };
 
     try {
-      if (isCreateMode) {
-        const created = await createCustomScreen(payload);
-        applySavedRecord(created);
-        navigate(`/advanced/custom-screens/${encodeURIComponent(created.id)}`);
-      } else if (screenId) {
-        const updated = await updateCustomScreen(screenId, payload);
-        applySavedRecord(updated);
+      const capturedTarget = persistedScreenTargetRef.current;
+      const targetId =
+        screenId && !isCreateMode
+          ? screenId
+          : capturedTarget?.routeVisit === routeVisit &&
+              capturedTarget.routeGeneration === routeGenerationRef.current
+            ? capturedTarget.id
+            : null;
+      const saved = targetId
+        ? await updateCustomScreen(targetId, payload)
+        : await createCustomScreen(payload);
+      const { mayNavigate } = commitScreenSaveResponse(saved, token);
+      if (isCreateMode && mayNavigate) {
+        navigate(buildCustomScreenEditorPath({ screenId: saved.id }), {
+          skipBlockers: true,
+        });
       }
-      setRemoteUpdatePending(false);
-    } catch (err) {
-      if (isApiClientError(err)) {
-        // TASK-505-03 (Item B4): the residual malformed-binding 400 keeps its
-        // byte-frozen `err.message`; append any field name(s) that ride the
-        // response DETAIL (`err.details.fields`, from 505-01) when present.
-        const detailFields = (err.details as { fields?: string[] } | undefined)?.fields;
-        setError(
-          detailFields?.length
-            ? `${err.message} (field(s): ${detailFields.join(", ")})`
-            : err.message
-        );
-      } else {
-        setError("Failed to save custom screen.");
+    } catch (saveError) {
+      if (isScreenSaveIdentityCurrent(token)) {
+        if (activeScreenSaveTokenRef.current === token) {
+          activeScreenSaveTokenRef.current = null;
+        }
+        setErrorCommit({
+          routeVisit: token.routeVisit,
+          kind: "save",
+          message: mapBoundedScreenSaveError(saveError),
+        });
       }
     } finally {
-      setIsSaving(false);
+      if (isScreenSaveIdentityCurrent(token)) {
+        if (activeScreenSaveTokenRef.current === token) {
+          activeScreenSaveTokenRef.current = null;
+        }
+        setSaveActivityVisit((current) => (current === token.routeVisit ? null : current));
+      }
     }
   };
 
@@ -808,8 +1174,9 @@ export function CustomScreenEditorPage() {
         <Input
           value={name}
           onChange={(event) => {
-            setName(event.target.value);
-            markDirty();
+            const next = event.target.value;
+            if (next === name || !markDirty()) return;
+            setName(next);
           }}
           placeholder="Custom screen name"
         />
@@ -821,8 +1188,8 @@ export function CustomScreenEditorPage() {
         <Select
           value={contentTypeId}
           onValueChange={(value) => {
+            if (value === contentTypeId || !markDirty()) return;
             setContentTypeId(value);
-            markDirty();
           }}
         >
           <SelectTrigger>
@@ -850,8 +1217,9 @@ export function CustomScreenEditorPage() {
         <Select
           value={status}
           onValueChange={(value) => {
-            setStatus(value as CustomScreenStatus);
-            markDirty();
+            const next = value as CustomScreenStatus;
+            if (next === status || !markDirty()) return;
+            setStatus(next);
           }}
         >
           <SelectTrigger>
@@ -872,8 +1240,9 @@ export function CustomScreenEditorPage() {
           <Switch
             checked={showInSidebar}
             onCheckedChange={(checked) => {
-              setShowInSidebar(checked === true);
-              markDirty();
+              const next = checked === true;
+              if (next === showInSidebar || !markDirty()) return;
+              setShowInSidebar(next);
             }}
           />
         </div>
@@ -885,8 +1254,9 @@ export function CustomScreenEditorPage() {
         <Input
           value={sidebarLabel}
           onChange={(event) => {
-            setSidebarLabel(event.target.value);
-            markDirty();
+            const next = event.target.value;
+            if (next === sidebarLabel || !markDirty()) return;
+            setSidebarLabel(next);
           }}
           placeholder={name.trim() || "Use screen name"}
           disabled={!showInSidebar}
@@ -901,191 +1271,198 @@ export function CustomScreenEditorPage() {
   const previewOwnerKey = selectedContentType?.slug ?? "no-content-type";
 
   return (
-    <CustomScreenPreviewRecordOwner key={previewOwnerKey} contentType={selectedContentType}>
-      {({ isLoading: previewDataLoading, previewRecordState }) => {
-        // TASK-498-01: the List/Editor view toggle is removed — the screen editor
-        // is now the entry-view BUILDER only. The header keeps Preview + Save; the
-        // in-content PageHeader still renders above the shared `CanvasEditor` shell
-        // (prototype CustomScreenEditorPreview.tsx:188-211).
-        const screenPageHeader = (
-          <PageHeader
-            className="mb-0 shrink-0 px-6 pb-3 pt-4"
-            title={name || (isCreateMode ? "New screen" : "Untitled")}
-            actions={
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => setPreviewOpen(true)}
-                >
-                  <Eye className="h-4 w-4" />
-                  Preview
-                </Button>
-                <Button
-                  size="sm"
-                  className="gap-2"
-                  onClick={handleSave}
-                  disabled={isLoading || isSaving}
-                >
-                  <Save className="h-4 w-4" />
-                  {isSaving ? "Saving..." : "Save"}
-                </Button>
-              </>
-            }
-          />
-        );
-        // Panel Hide/Show toggle (mirrors PageEditor) — the real consumer of
-        // setPanelOpen, so the controlled-shell setter is not a dead passthrough.
-        const screenPanelToggle = (
-          <Button
-            type="button"
-            variant={panelOpen ? "soft" : "ghost"}
-            size="sm"
-            onClick={() => setPanelOpen((open) => !open)}
-            aria-label={panelOpen ? "Hide panel" : "Show panel"}
-            aria-pressed={panelOpen}
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            {panelOpen ? "Hide panel" : "Show panel"}
-          </Button>
-        );
-        // Pages-parity reopen chip shown when the panel is hidden.
-        const screenReopen = (
-          <button
-            type="button"
-            onClick={() => setPanelOpen(true)}
-            aria-label="Show panel"
-            className="absolute right-4 top-4 z-30 flex items-center gap-1.5 rounded-xl border border-border bg-popover px-3 py-2 text-xs font-medium shadow-pop transition-colors hover:text-primary"
-          >
-            <SlidersHorizontal className="size-3.5" /> Show panel
-          </button>
-        );
-        return (
-          <>
-            <CustomScreenShell
-              variant="canvas"
-              name={name}
-              status={status}
-              hasUnsavedChanges={hasUnsavedChanges}
-              isCreateMode={isCreateMode}
+    <>
+      <CustomScreenPreviewRecordOwner key={previewOwnerKey} contentType={selectedContentType}>
+        {({ isLoading: previewDataLoading, previewRecordState }) => {
+          // TASK-498-01: the List/Editor view toggle is removed — the screen editor
+          // is now the entry-view BUILDER only. The header keeps Preview + Save; the
+          // in-content PageHeader still renders above the shared `CanvasEditor` shell
+          // (prototype CustomScreenEditorPreview.tsx:188-211).
+          const screenPageHeader = (
+            <PageHeader
+              className="mb-0 shrink-0 px-6 pb-3 pt-4"
+              title={name || (isCreateMode ? "New screen" : "Untitled")}
+              actions={
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => setPreviewOpen(true)}
+                  >
+                    <Eye className="h-4 w-4" />
+                    Preview
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="gap-2"
+                    onClick={handleSave}
+                    disabled={!routeReady || isLoading || isSaving}
+                  >
+                    <Save className="h-4 w-4" />
+                    {isSaving ? "Saving..." : "Save"}
+                  </Button>
+                </>
+              }
+            />
+          );
+          // Panel Hide/Show toggle (mirrors PageEditor) — the real consumer of
+          // setPanelOpen, so the controlled-shell setter is not a dead passthrough.
+          const screenPanelToggle = (
+            <Button
+              type="button"
+              variant={panelOpen ? "soft" : "ghost"}
+              size="sm"
+              onClick={() => setPanelOpen((open) => !open)}
+              aria-label={panelOpen ? "Hide panel" : "Show panel"}
+              aria-pressed={panelOpen}
             >
-              {/* TASK-505-03 (Item B2/B3): the outer gate is widened beyond
+              <SlidersHorizontal className="h-4 w-4" />
+              {panelOpen ? "Hide panel" : "Show panel"}
+            </Button>
+          );
+          // Pages-parity reopen chip shown when the panel is hidden.
+          const screenReopen = (
+            <button
+              type="button"
+              onClick={() => setPanelOpen(true)}
+              aria-label="Show panel"
+              className="absolute right-4 top-4 z-30 flex items-center gap-1.5 rounded-xl border border-border bg-popover px-3 py-2 text-xs font-medium shadow-pop transition-colors hover:text-primary"
+            >
+              <SlidersHorizontal className="size-3.5" /> Show panel
+            </button>
+          );
+          return (
+            <>
+              <CustomScreenShell
+                variant="canvas"
+                name={name}
+                status={status}
+                hasUnsavedChanges={hasUnsavedChanges}
+                isCreateMode={isCreateMode}
+              >
+                {/* TASK-505-03 (Item B2/B3): the outer gate is widened beyond
                   `error || remoteUpdatePending` so the amber orphan notice (no
                   current error on the reopen path) and the post-save pruned-field
                   notice (no error on a clean save) actually mount. The per-notice
                   inner gates still decide which Alert shows. */}
-              {error || remoteUpdatePending || orphanCount > 0 || saveNotice ? (
-                <div className="shrink-0 space-y-3 px-6 pt-4">
-                  {error ? (
-                    <Alert variant="destructive">
-                      <AlertTitle>Custom screen error</AlertTitle>
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  ) : null}
-                  {orphanCount > 0 ? (
-                    <Alert data-screen-orphan-notice="true">
-                      <AlertTitle>Orphaned field bindings</AlertTitle>
-                      <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <span>
-                          {orphanCount} binding(s) reference{" "}
-                          {bindingOrphans.fieldOrphans.length > 0
-                            ? `deleted field(s): ${uniqueFieldNames(bindingOrphans.fieldOrphans).join(", ")}`
-                            : "removed blocks"}
-                          . They block saving until removed.
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleRemoveOrphanBindings}
-                          data-screen-remove-orphans="true"
-                        >
-                          Remove orphaned bindings
-                        </Button>
-                      </AlertDescription>
-                    </Alert>
-                  ) : null}
-                  {saveNotice ? (
-                    <Alert data-screen-save-notice="true">
-                      <AlertTitle>Binding cleanup</AlertTitle>
-                      <AlertDescription>{saveNotice}</AlertDescription>
-                    </Alert>
-                  ) : null}
-                  {remoteUpdatePending ? (
-                    <Alert>
-                      <AlertTitle>Updated in another tab</AlertTitle>
-                      <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <span>New changes are available. Refresh to load the latest version.</span>
-                        <Button variant="outline" size="sm" onClick={() => refreshScreen(true)}>
-                          Refresh
-                        </Button>
-                      </AlertDescription>
-                    </Alert>
-                  ) : null}
-                </div>
-              ) : null}
+                {error || remoteUpdatePending || orphanCount > 0 || saveNotice ? (
+                  <div className="shrink-0 space-y-3 px-6 pt-4">
+                    {error ? (
+                      <Alert variant="destructive">
+                        <AlertTitle>Custom screen error</AlertTitle>
+                        <AlertDescription>{error}</AlertDescription>
+                      </Alert>
+                    ) : null}
+                    {orphanCount > 0 ? (
+                      <Alert data-screen-orphan-notice="true">
+                        <AlertTitle>Orphaned field bindings</AlertTitle>
+                        <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <span>
+                            {orphanCount} binding(s) reference{" "}
+                            {bindingOrphans.fieldOrphans.length > 0
+                              ? `deleted field(s): ${uniqueFieldNames(bindingOrphans.fieldOrphans).join(", ")}`
+                              : "removed blocks"}
+                            . They block saving until removed.
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleRemoveOrphanBindings}
+                            data-screen-remove-orphans="true"
+                          >
+                            Remove orphaned bindings
+                          </Button>
+                        </AlertDescription>
+                      </Alert>
+                    ) : null}
+                    {saveNotice ? (
+                      <Alert data-screen-save-notice="true">
+                        <AlertTitle>Binding cleanup</AlertTitle>
+                        <AlertDescription>{saveNotice}</AlertDescription>
+                      </Alert>
+                    ) : null}
+                    {remoteUpdatePending ? (
+                      <Alert>
+                        <AlertTitle>Updated in another tab</AlertTitle>
+                        <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <span>
+                            New changes are available. Refresh to load the latest version.
+                          </span>
+                          <Button variant="outline" size="sm" onClick={() => refreshScreen(true)}>
+                            Refresh
+                          </Button>
+                        </AlertDescription>
+                      </Alert>
+                    ) : null}
+                  </div>
+                ) : null}
 
-              {isLoading ? (
-                <div className="mx-6 mb-6 flex min-h-0 flex-1 items-center justify-center rounded-2xl border border-border bg-card text-sm text-muted-foreground shadow-card">
-                  Loading custom screen...
-                </div>
-              ) : (
-                <ScreenAuthoringCanvas
+                {isLoading ? (
+                  <div className="mx-6 mb-6 flex min-h-0 flex-1 items-center justify-center rounded-2xl border border-border bg-card text-sm text-muted-foreground shadow-card">
+                    Loading custom screen...
+                  </div>
+                ) : routeReady ? (
+                  <ScreenAuthoringCanvas
+                    document={screenDocument}
+                    bindings={screenBindings}
+                    fields={contentFields}
+                    values={previewRecordState.data}
+                    header={screenPageHeader}
+                    panelToggle={screenPanelToggle}
+                    reopenAffordance={screenReopen}
+                    panelOpen={panelOpen}
+                    onPanelOpenChange={setPanelOpen}
+                    previewNotice={
+                      <PreviewStateNotice
+                        contentType={selectedContentType}
+                        previewRecordState={previewRecordState}
+                        isLoading={previewDataLoading}
+                      />
+                    }
+                    settingsPanel={screenSettingsPanel}
+                    selectedSectionId={selectedSectionId}
+                    selectedBlockId={selectedId}
+                    onSelectSection={handleSelectSection}
+                    onSelectBlock={handleSelectBlock}
+                    onAddSection={handleAddSection}
+                    onRenameSection={handleRenameSection}
+                    onMoveSection={handleMoveSection}
+                    onDeleteSection={handleDeleteSection}
+                    onAddBlock={handleAddBlock}
+                    insertPoint={insertPoint}
+                    onSetInsertPoint={setInsertPoint}
+                    onDragMove={handleDragMove}
+                    onPatchBlock={handlePatchBlock}
+                    onPatchSection={handlePatchSection}
+                    onPatchBlockData={handlePatchBlockData}
+                    onPatchBinding={handlePatchBinding}
+                    onMove={handleMoveBlock}
+                    onDuplicate={handleDuplicateBlock}
+                    onDelete={handleDeleteBlock}
+                  />
+                ) : null}
+              </CustomScreenShell>
+
+              {routeReady ? (
+                <CustomScreenWorkspacePreviewDialog
+                  open={previewOpen}
+                  onOpenChange={setPreviewOpen}
+                  mode="editor-view"
+                  contentType={selectedContentType}
+                  listView={definition.listView}
                   document={screenDocument}
                   bindings={screenBindings}
                   fields={contentFields}
-                  values={previewRecordState.data}
-                  header={screenPageHeader}
-                  panelToggle={screenPanelToggle}
-                  reopenAffordance={screenReopen}
-                  panelOpen={panelOpen}
-                  onPanelOpenChange={setPanelOpen}
-                  previewNotice={
-                    <PreviewStateNotice
-                      contentType={selectedContentType}
-                      previewRecordState={previewRecordState}
-                      isLoading={previewDataLoading}
-                    />
-                  }
-                  settingsPanel={screenSettingsPanel}
-                  selectedSectionId={selectedSectionId}
-                  selectedBlockId={selectedId}
-                  onSelectSection={handleSelectSection}
-                  onSelectBlock={handleSelectBlock}
-                  onAddSection={handleAddSection}
-                  onRenameSection={handleRenameSection}
-                  onMoveSection={handleMoveSection}
-                  onDeleteSection={handleDeleteSection}
-                  onAddBlock={handleAddBlock}
-                  insertPoint={insertPoint}
-                  onSetInsertPoint={setInsertPoint}
-                  onDragMove={handleDragMove}
-                  onPatchBlock={handlePatchBlock}
-                  onPatchSection={handlePatchSection}
-                  onPatchBlockData={handlePatchBlockData}
-                  onPatchBinding={handlePatchBinding}
-                  onMove={handleMoveBlock}
-                  onDuplicate={handleDuplicateBlock}
-                  onDelete={handleDeleteBlock}
+                  previewRecordState={previewRecordState}
+                  previewLoading={previewDataLoading}
                 />
-              )}
-            </CustomScreenShell>
-
-            <CustomScreenWorkspacePreviewDialog
-              open={previewOpen}
-              onOpenChange={setPreviewOpen}
-              mode="editor-view"
-              contentType={selectedContentType}
-              listView={definition.listView}
-              document={screenDocument}
-              bindings={screenBindings}
-              fields={contentFields}
-              previewRecordState={previewRecordState}
-              previewLoading={previewDataLoading}
-            />
-          </>
-        );
-      }}
-    </CustomScreenPreviewRecordOwner>
+              ) : null}
+            </>
+          );
+        }}
+      </CustomScreenPreviewRecordOwner>
+      {dirtyNavigationDialog}
+    </>
   );
 }

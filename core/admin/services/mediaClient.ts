@@ -106,11 +106,11 @@ const mediaListCache = createMemoryBackedLocalCache({
 });
 
 const primeMediaCacheInternal = (items: MediaRecord[]) => {
-  cachedMediaPromise = null;
   mediaListCache.write(items);
 };
 
 const upsertCachedMedia = (item: MediaRecord) => {
+  cachedMediaPromise = null;
   const current = getCachedMedia();
   // If there is no valid cached list (unset or TTL-expired) do NOT seed a
   // partial single-item cache: writing `[item]` would masquerade as the
@@ -131,6 +131,7 @@ const upsertCachedMedia = (item: MediaRecord) => {
 };
 
 const removeCachedMedia = (id: string) => {
+  cachedMediaPromise = null;
   const current = getCachedMedia();
   if (!current) return;
   primeMediaCacheInternal(current.filter((media) => media.id !== id));
@@ -149,17 +150,28 @@ export async function listMedia() {
   return apiRequest<MediaRecord[]>("/media", { method: "GET" });
 }
 
-export async function listMediaCached(options?: { force?: boolean }) {
+export function listMediaCached(options?: { force?: boolean }) {
   if (!options?.force) {
     const cached = getCachedMedia();
-    if (cached) return cached;
+    if (cached) return Promise.resolve(cached);
     if (cachedMediaPromise) return cachedMediaPromise;
   }
-  const request = listMedia();
+
+  let request: Promise<MediaRecord[]>;
+  request = listMedia()
+    .then((items) => {
+      if (cachedMediaPromise === request) {
+        primeMediaCacheInternal(items);
+      }
+      return items;
+    })
+    .finally(() => {
+      if (cachedMediaPromise === request) {
+        cachedMediaPromise = null;
+      }
+    });
   cachedMediaPromise = request;
-  const items = await request;
-  primeMediaCacheInternal(items);
-  return items;
+  return request;
 }
 
 export async function uploadMedia(file: File, meta?: UploadMediaMeta) {
