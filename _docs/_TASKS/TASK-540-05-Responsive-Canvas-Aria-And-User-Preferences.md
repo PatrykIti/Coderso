@@ -7,7 +7,9 @@
 **Category:** Custom Screens / Responsive UI / Accessibility / User Settings
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-04
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-07-14
+**Completed:** 2026-07-14
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -29,8 +31,8 @@ the per-user coordinator; a TypeScript generic is not response validation.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-540-05-L01 | Keep Screen canvas usable and ARIA-valid | `ScreenAuthoringCanvas.tsx`, `CanvasEditor.tsx` | ⏳ To Do |
-| TASK-540-05-L02 | Scope Screen preferences through user settings | exact Bun-free preference/auth-identity contracts + route-persistent auth provider + user-settings service/client/route + Screen hook + narrow central HTTP error mapping | ⏳ To Do |
+| TASK-540-05-L01 | Keep Screen canvas usable and ARIA-valid | `ScreenAuthoringCanvas.tsx`, `CanvasEditor.tsx` | ✅ Done |
+| TASK-540-05-L02 | Scope Screen preferences through user settings | exact Bun-free preference/auth-identity contracts + route-persistent auth provider + user-settings service/client/route + Screen hook + narrow central HTTP error mapping | ✅ Done |
 
 ## Security Contract
 
@@ -51,6 +53,9 @@ captured A identity epoch is current. Sign-out, A→B, or provider unmount inval
 undispatched A work even when every Screen consumer is unmounted. An already-dispatched
 A response may settle but cannot publish into B. Malformed, unknown-key, wrong-key, or
 invalid-value GET/PATCH responses fail closed without exposing raw transport data.
+When no authenticated user exists, the hook keeps only a mount-local ephemeral
+preference value: it starts OFF, may be toggled for that mounted UI, emits no transport
+or storage operation, and resets to OFF on a fresh hook remount.
 
 ## Acceptance
 
@@ -72,15 +77,18 @@ invalid-value GET/PATCH responses fail closed without exposing raw transport dat
   may finish after abort, but every subsequent PATCH/retry receives the already-aborted
   signal and emits zero PATCHes. Cancellation/failure releases queue authority; a
   failed PATCH retries only after one fresh setter action. Unauthenticated/unavailable
-  service falls back to in-memory defaults for the session and writes no global browser
-  key.
+  service writes no global browser key. With no authenticated user, the visible switch
+  starts OFF, one setter action toggles the hook-mount-local ephemeral value, and a full
+  hook remount resets it to OFF with zero GET/PATCH/storage calls.
 - Isolated GET and PATCH accept only the requested key plus the strict versioned
   preference value. Malformed JSON, a non-object envelope, unknown envelope/value
   keys, a mismatched key, wrong version, or wrong value type is a handled failure and
-  remains retryable; no optimistic or hydrated state is published from it. A rejected
-  or malformed GET evicts its exact registry entry without an in-mount retry loop; a
-  fresh remount or identity revisit performs one fresh GET. A failed PATCH never
-  auto-replays and succeeds only through a later explicit setter action.
+  remains retryable; no response-derived optimistic or hydrated value is published.
+  For a malformed PATCH response, the already-normalized local per-user intent remains
+  visibly optimistic but marked unsynced; it never auto-replays and only a later
+  explicit setter action creates a retry. A rejected or malformed GET evicts its exact
+  registry entry without an in-mount retry loop; a fresh remount or identity revisit
+  performs one fresh GET.
 - Once a settled coordinator snapshot is identity-guardedly pruned, an A→B→A return
   inside the same mounted hook session may keep visible only its hook-local copy of
   that identity's latest exact shared settled snapshot while a fresh current-epoch GET
@@ -123,8 +131,10 @@ invalid-value GET/PATCH responses fail closed without exposing raw transport dat
   write plus queued A write followed by Screen-consumer unmount and provider A→B (the
   queued PATCH hit count stays zero), stale in-flight completion rejection,
   same-mounted-session prune→A→B→A retaining only the latest exact shared-settled
-  hook-local copy, and a brand-new post-prune remount starting default/unhydrated with
-  a fresh GET.
+  hook-local copy, a brand-new post-prune remount starting default/unhydrated with a
+  fresh GET, no-user OFF→toggle→remount-reset with zero transport/storage, a single
+  identity event/epoch for provider A→B with no transitional null, and malformed PATCH
+  retaining only the normalized local unsynced intent until an explicit setter retry.
 - The real `startHttpServer` suite owns session/CSRF/rate-limit/error-boundary proof
   and task-scoped access-log ledger/acquisition/quiescence/cleanup. Its deterministic
   helper tests cover exact success plus missing, extra/duplicate, wrong signature or

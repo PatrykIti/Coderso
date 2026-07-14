@@ -100,6 +100,10 @@ const makeUserSettings = (overrides: Partial<UserSettings> = {}): UserSettings =
     "assistant.ui.enabled": true,
     "assistant.ui.avatarEnabled": false,
     "assistant.ui.avatarAsset": null,
+    "customScreens.entry.preferences": {
+      version: 1,
+      showFieldMetadata: false,
+    },
   };
 
   Object.assign(settings, overrides);

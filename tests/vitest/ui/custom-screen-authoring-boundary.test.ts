@@ -33,6 +33,21 @@ const expectNoForbiddenImports = (
 };
 
 describe("custom screen authoring boundaries", () => {
+  test("screen canvas reserves panel clearance only at the wide breakpoint", async () => {
+    const source = await readFile(
+      path.join(repoRoot, "core/admin/ui/custom-screens/ScreenAuthoringCanvas.tsx"),
+      "utf8"
+    );
+
+    expect(source).toContain('import { cn } from "@/lib/utils";');
+    expect(source).toContain(
+      '"min-h-0 flex-1 overflow-auto overscroll-contain bg-dotted p-6 lg:p-8"'
+    );
+    expect(source).toContain('panelOpen && "lg:pr-[332px]"');
+    expect(source).toContain('data-screen-canvas-panel-open={panelOpen ? "true" : undefined}');
+    expect(source).not.toMatch(/paddingRight\s*:\s*300/);
+  });
+
   test("neutral authoring modules stay UI-only", async () => {
     const files = await readSourceFiles(path.join(repoRoot, "core/admin/ui/authoring"));
 

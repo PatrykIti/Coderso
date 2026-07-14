@@ -133,6 +133,27 @@ const errorResponse = (error: unknown) => {
         }
       );
     }
+    if (error.message === "user_setting_identity_changed") {
+      return jsonResponse(
+        toErrorResponse(
+          new ApiError("user_setting_identity_changed", "Authenticated user changed", 409)
+        ),
+        { status: 409 }
+      );
+    }
+    if (
+      error.message === "user_settings_key_invalid" ||
+      error.message === "user_settings_value_invalid"
+    ) {
+      const code = error.message;
+      const message =
+        code === "user_settings_key_invalid"
+          ? "Invalid user setting key"
+          : "Invalid user setting value";
+      return jsonResponse(toErrorResponse(new ApiError(code, message, 400)), {
+        status: 400,
+      });
+    }
     if (error.message === "media_file_invalid") {
       return jsonResponse(
         toErrorResponse(new ApiError("media_file_invalid", "Invalid upload payload", 400)),

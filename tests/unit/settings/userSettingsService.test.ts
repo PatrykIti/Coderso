@@ -10,6 +10,10 @@ import {
   setUserSetting,
   validateUserSettingValue,
 } from "../../../core/services/settings/userSettingsService";
+import {
+  normalizeScreenEntryPreferences,
+  normalizeScreenEntryPreferencesSetting,
+} from "../../../core/services/settings/screenEntryPreferencesContract";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
@@ -81,6 +85,14 @@ testIfDb(
     expect(defaultAssistantAvatarEnabled).toBe(false);
     const defaultAssistantAvatarAsset = await getUserSetting(userId, "assistant.ui.avatarAsset");
     expect(defaultAssistantAvatarAsset).toBeNull();
+    const defaultScreenEntryPreferences = await getUserSetting(
+      userId,
+      "customScreens.entry.preferences"
+    );
+    expect(defaultScreenEntryPreferences).toEqual({
+      version: 1,
+      showFieldMetadata: false,
+    });
 
     await setUserSetting(userId, "pages.openAfterCreate", false);
     await setUserSetting(userId, "customScreens.openAfterCreate", false);
@@ -108,6 +120,10 @@ testIfDb(
     await setUserSetting(userId, "assistant.ui.enabled", false);
     await setUserSetting(userId, "assistant.ui.avatarEnabled", true);
     await setUserSetting(userId, "assistant.ui.avatarAsset", "assistant-bot.glb");
+    await setUserSetting(userId, "customScreens.entry.preferences", {
+      version: 1,
+      showFieldMetadata: true,
+    });
     const updated = await getUserSetting(userId, "pages.openAfterCreate");
     expect(updated).toBe(false);
     const updatedCustomScreensOpenAfterCreate = await getUserSetting(
@@ -165,6 +181,10 @@ testIfDb(
     expect(updatedAssistantAvatarEnabled).toBe(true);
     const updatedAssistantAvatarAsset = await getUserSetting(userId, "assistant.ui.avatarAsset");
     expect(updatedAssistantAvatarAsset).toBe("assistant-bot.glb");
+    expect(await getUserSetting(userId, "customScreens.entry.preferences")).toEqual({
+      version: 1,
+      showFieldMetadata: true,
+    });
 
     const list = await listUserSettings(userId);
     expect(list["pages.openAfterCreate"]).toBe(false);
@@ -205,6 +225,10 @@ testIfDb(
     expect(list["assistant.ui.enabled"]).toBe(false);
     expect(list["assistant.ui.avatarEnabled"]).toBe(true);
     expect(list["assistant.ui.avatarAsset"]).toBe("assistant-bot.glb");
+    expect(list["customScreens.entry.preferences"]).toEqual({
+      version: 1,
+      showFieldMetadata: true,
+    });
   },
   15_000
 );
@@ -474,3 +498,64 @@ test("validateUserSettingValue validates assistant and post editor settings", ()
     restoreLastSidebarsState: true,
   });
 });
+
+test("Screen entry preference storage is strict while its public view remains compatible", () => {
+  expect(
+    validateUserSettingValue("customScreens.entry.preferences", {
+      version: 1,
+      showFieldMetadata: true,
+    })
+  ).toEqual({ version: 1, showFieldMetadata: true });
+  expect(
+    normalizeScreenEntryPreferencesSetting({
+      version: 1,
+      showFieldMetadata: false,
+    })
+  ).toEqual({ version: 1, showFieldMetadata: false });
+  expect(normalizeScreenEntryPreferences({ showFieldMetadata: true })).toEqual({
+    showFieldMetadata: true,
+  });
+
+  for (const invalid of [
+    null,
+    [],
+    { showFieldMetadata: true },
+    { version: 2, showFieldMetadata: true },
+    { version: 1, showFieldMetadata: "yes" },
+    { version: 1, showFieldMetadata: true, extra: true },
+  ]) {
+    expect(() => validateUserSettingValue("customScreens.entry.preferences", invalid)).toThrow(
+      "user_settings_value_invalid"
+    );
+    expect(() => normalizeScreenEntryPreferencesSetting(invalid)).toThrow(
+      "user_settings_value_invalid"
+    );
+  }
+});
+
+testIfDb(
+  "Screen entry preferences stay isolated by user",
+  async () => {
+    const userA = randomUUID();
+    const userB = randomUUID();
+    cleanupUserIds.push(userA, userB);
+    await db.insert(users).values([
+      { id: userA, email: `user-${userA}@example.com`, passwordHash: "hash" },
+      { id: userB, email: `user-${userB}@example.com`, passwordHash: "hash" },
+    ]);
+
+    await setUserSetting(userA, "customScreens.entry.preferences", {
+      version: 1,
+      showFieldMetadata: true,
+    });
+    expect(await getUserSetting(userA, "customScreens.entry.preferences")).toEqual({
+      version: 1,
+      showFieldMetadata: true,
+    });
+    expect(await getUserSetting(userB, "customScreens.entry.preferences")).toEqual({
+      version: 1,
+      showFieldMetadata: false,
+    });
+  },
+  15_000
+);

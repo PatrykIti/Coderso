@@ -1,11 +1,13 @@
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 import {
   getUserSetting,
+  getUserSettingIsolated,
   getUserSettings,
   invalidateUserSettingsCache,
   setUserSetting,
+  setUserSettingIsolated,
   type UserSettings,
 } from "../../../core/admin/services/userSettingsClient";
 
@@ -36,6 +38,10 @@ const makeSettings = (): UserSettings => ({
   "assistant.ui.enabled": true,
   "assistant.ui.avatarEnabled": false,
   "assistant.ui.avatarAsset": null,
+  "customScreens.entry.preferences": {
+    version: 1,
+    showFieldMetadata: false,
+  },
 });
 
 test("getUserSettings uses read-through cache", async () => {
@@ -203,5 +209,275 @@ test("setUserSetting handles media-center hero preset payloads", async () => {
   } finally {
     globalThis.fetch = originalFetch;
     invalidateUserSettingsCache();
+  }
+});
+
+test("isolated helpers reject every non-exact response envelope", async () => {
+  const originalFetch = globalThis.fetch;
+  const invalidPayloads: unknown[] = [
+    null,
+    [],
+    false,
+    {},
+    { key: "customScreens.entry.preferences" },
+    { value: { version: 1, showFieldMetadata: true } },
+    {
+      key: "customScreens.entry.preferences",
+      value: { version: 1, showFieldMetadata: true },
+      extra: true,
+    },
+    {
+      key: "forms.openAfterCreate",
+      value: { version: 1, showFieldMetadata: true },
+    },
+  ];
+
+  try {
+    for (const payload of invalidPayloads) {
+      globalThis.fetch = async () => jsonResponse(payload);
+      await expect(getUserSettingIsolated("customScreens.entry.preferences")).rejects.toThrow(
+        "user_settings_response_invalid"
+      );
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("isolated PATCH rejects every non-exact response envelope", async () => {
+  const originalFetch = globalThis.fetch;
+  const invalidPayloads: unknown[] = [
+    null,
+    [],
+    {},
+    { key: "customScreens.entry.preferences" },
+    {
+      key: "customScreens.entry.preferences",
+      value: { version: 1, showFieldMetadata: true },
+      extra: true,
+    },
+    {
+      key: "forms.openAfterCreate",
+      value: { version: 1, showFieldMetadata: true },
+    },
+  ];
+
+  try {
+    resetCsrfToken();
+    for (const payload of invalidPayloads) {
+      globalThis.fetch = async (input) =>
+        String(input).endsWith("/auth/csrf")
+          ? jsonResponse({ token: "csrf-token" })
+          : jsonResponse(payload);
+      await expect(
+        setUserSettingIsolated(
+          "customScreens.entry.preferences",
+          { version: 1, showFieldMetadata: true },
+          { expectedUserId: "user-a" }
+        )
+      ).rejects.toThrow("user_settings_response_invalid");
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+    resetCsrfToken();
+  }
+});
+
+test("isolated reads and writes bypass the aggregate cache", async () => {
+  const originalFetch = globalThis.fetch;
+  const aggregate = makeSettings();
+  const calls: string[] = [];
+
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    calls.push(`${init?.method ?? "GET"} ${url}`);
+    if (url.endsWith("/auth/csrf")) return jsonResponse({ token: "csrf-token" });
+    if (url.endsWith("/user-settings") && init?.method === "GET") {
+      return jsonResponse(aggregate);
+    }
+    if (url.endsWith("/user-settings/customScreens.entry.preferences")) {
+      return jsonResponse({
+        key: "customScreens.entry.preferences",
+        value: { version: 1, showFieldMetadata: true },
+      });
+    }
+    return jsonResponse({}, 404);
+  };
+
+  try {
+    invalidateUserSettingsCache();
+    resetCsrfToken();
+    await getUserSettings();
+    await getUserSettingIsolated("customScreens.entry.preferences");
+    await setUserSettingIsolated(
+      "customScreens.entry.preferences",
+      { version: 1, showFieldMetadata: true },
+      { expectedUserId: "user-a" }
+    );
+
+    expect((await getUserSetting("customScreens.entry.preferences")).value).toEqual({
+      version: 1,
+      showFieldMetadata: false,
+    });
+    expect(calls.filter((call) => call.endsWith("GET /admin/api/user-settings"))).toHaveLength(1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    invalidateUserSettingsCache();
+    resetCsrfToken();
+  }
+});
+
+test("a delayed isolated A write cannot mutate aggregate state already owned by B", async () => {
+  const originalFetch = globalThis.fetch;
+  const aggregateB = makeSettings();
+  let releaseA: ((response: Response) => void) | undefined;
+
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) return jsonResponse({ token: "csrf-token" });
+    if (url.endsWith("/user-settings") && init?.method === "GET") {
+      return jsonResponse(aggregateB);
+    }
+    if (
+      url.endsWith("/user-settings/customScreens.entry.preferences") &&
+      init?.method === "PATCH"
+    ) {
+      return new Promise<Response>((resolve) => {
+        releaseA = resolve;
+      });
+    }
+    return jsonResponse({}, 404);
+  };
+
+  try {
+    invalidateUserSettingsCache();
+    resetCsrfToken();
+    const delayedA = setUserSettingIsolated(
+      "customScreens.entry.preferences",
+      { version: 1, showFieldMetadata: true },
+      { expectedUserId: "user-a" }
+    );
+    await vi.waitFor(() => expect(releaseA).toBeTypeOf("function"));
+    const aggregateBefore = structuredClone(await getUserSettings());
+    expect(aggregateBefore["customScreens.entry.preferences"]).toEqual({
+      version: 1,
+      showFieldMetadata: false,
+    });
+
+    const responseA = {
+      key: "customScreens.entry.preferences" as const,
+      value: { version: 1 as const, showFieldMetadata: true },
+    };
+    releaseA?.(jsonResponse(responseA));
+    await expect(delayedA).resolves.toEqual(responseA);
+    expect(await getUserSettings()).toEqual(aggregateBefore);
+  } finally {
+    globalThis.fetch = originalFetch;
+    invalidateUserSettingsCache();
+    resetCsrfToken();
+  }
+});
+
+test("isolated writes forward the captured owner and exact AbortSignal", async () => {
+  const originalFetch = globalThis.fetch;
+  const controller = new AbortController();
+  let capturedInit: RequestInit | undefined;
+
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) return jsonResponse({ token: "csrf-token" });
+    capturedInit = init;
+    return jsonResponse({
+      key: "customScreens.entry.preferences",
+      value: { version: 1, showFieldMetadata: true },
+    });
+  };
+
+  try {
+    resetCsrfToken();
+    await setUserSettingIsolated(
+      "customScreens.entry.preferences",
+      { version: 1, showFieldMetadata: true },
+      { expectedUserId: "user-a", signal: controller.signal }
+    );
+    expect(capturedInit?.signal).toBe(controller.signal);
+    expect(new Headers(capturedInit?.headers).get("x-coderso-expected-user-id")).toBe("user-a");
+  } finally {
+    globalThis.fetch = originalFetch;
+    resetCsrfToken();
+  }
+});
+
+test("an abort during CSRF acquisition prevents the initial PATCH transport", async () => {
+  const originalFetch = globalThis.fetch;
+  const controller = new AbortController();
+  let releaseCsrf: ((response: Response) => void) | undefined;
+  let patchHits = 0;
+
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return new Promise<Response>((resolve) => {
+        releaseCsrf = resolve;
+      });
+    }
+    if (init?.signal?.aborted) throw new DOMException("Aborted", "AbortError");
+    patchHits += 1;
+    return jsonResponse({
+      key: "customScreens.entry.preferences",
+      value: { version: 1, showFieldMetadata: true },
+    });
+  };
+
+  try {
+    resetCsrfToken();
+    const write = setUserSettingIsolated(
+      "customScreens.entry.preferences",
+      { version: 1, showFieldMetadata: true },
+      { expectedUserId: "user-a", signal: controller.signal }
+    );
+    await vi.waitFor(() => expect(releaseCsrf).toBeTypeOf("function"));
+    controller.abort();
+    releaseCsrf?.(jsonResponse({ token: "csrf-token" }));
+    await expect(write).rejects.toMatchObject({ name: "AbortError" });
+    expect(patchHits).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    resetCsrfToken();
+  }
+});
+
+test("an abort after a refreshable CSRF response prevents the retry PATCH", async () => {
+  const originalFetch = globalThis.fetch;
+  const controller = new AbortController();
+  let csrfHits = 0;
+  let patchHits = 0;
+
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      csrfHits += 1;
+      return jsonResponse({ token: `csrf-token-${csrfHits}` });
+    }
+    if (init?.signal?.aborted) throw new DOMException("Aborted", "AbortError");
+    patchHits += 1;
+    controller.abort();
+    return jsonResponse({ error: { code: "csrf_invalid", message: "Invalid CSRF token" } }, 403);
+  };
+
+  try {
+    resetCsrfToken();
+    await expect(
+      setUserSettingIsolated(
+        "customScreens.entry.preferences",
+        { version: 1, showFieldMetadata: true },
+        { expectedUserId: "user-a", signal: controller.signal }
+      )
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(csrfHits).toBe(2);
+    expect(patchHits).toBe(1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    resetCsrfToken();
   }
 });

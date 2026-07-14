@@ -3,6 +3,11 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "../../db/client";
 import { userSettings } from "../../db/schema";
 import { normalizeHeroData, type HeroData } from "../../widgets/core/hero";
+import {
+  DEFAULT_SCREEN_ENTRY_PREFERENCES_SETTING,
+  normalizeScreenEntryPreferencesSetting,
+  type ScreenEntryPreferencesSettingValue,
+} from "./screenEntryPreferencesContract";
 
 const heroVariants = new Set(["centered", "split", "media-left", "media-center"]);
 const heroPresetLimit = 24;
@@ -42,6 +47,7 @@ export type UserSettingValueMap = {
   "assistant.ui.enabled": boolean;
   "assistant.ui.avatarEnabled": boolean;
   "assistant.ui.avatarAsset": string | null;
+  "customScreens.entry.preferences": ScreenEntryPreferencesSettingValue;
 };
 
 export type UserSettingKey = keyof UserSettingValueMap;
@@ -75,6 +81,7 @@ const DEFAULT_USER_SETTINGS: UserSettingValueMap = {
   "assistant.ui.enabled": true,
   "assistant.ui.avatarEnabled": false,
   "assistant.ui.avatarAsset": null,
+  "customScreens.entry.preferences": DEFAULT_SCREEN_ENTRY_PREFERENCES_SETTING,
 };
 
 const ALLOWED_KEYS = new Set(Object.keys(DEFAULT_USER_SETTINGS));
@@ -255,6 +262,9 @@ export function validateUserSettingValue<K extends UserSettingKey>(
       throw new Error("user_settings_value_invalid");
     }
     return normalized as UserSettingValueMap[K];
+  }
+  if (key === "customScreens.entry.preferences") {
+    return normalizeScreenEntryPreferencesSetting(value) as UserSettingValueMap[K];
   }
 
   throw new Error("user_settings_value_invalid");

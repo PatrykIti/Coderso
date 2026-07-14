@@ -535,6 +535,7 @@ const ROUTE_EXPECTATIONS = Object.freeze({
   "related-first-failure": { method: "GET", mode: "malformed-json" },
   "related-a-refresh": { method: "GET", mode: "delayed-success" },
   "related-b-load": { method: "GET", mode: "delayed-success" },
+  "preference-a-write-epoch": { method: "PATCH", mode: "delayed-success" },
 });
 const ROUTE_SCENARIOS = Object.freeze({
   "media-prior-resolution": "button-image",
@@ -542,6 +543,7 @@ const ROUTE_SCENARIOS = Object.freeze({
   "related-first-failure": "related-retry-cache",
   "related-a-refresh": "related-retry-cache",
   "related-b-load": "related-retry-cache",
+  "preference-a-write-epoch": "responsive-users",
 });
 const SMOKE_RECEIPT_SCENARIOS = Object.freeze(["setup", ...SMOKE_KINDS, "cleanup"]);
 const HELPER_PORTS = Object.freeze([3000, 5173, 5174]);
@@ -660,7 +662,20 @@ const REQUIRED_SMOKE_ASSERTIONS = Object.freeze({
     "newer-local-write-wins-refresh",
     "legacy-local-storage-absent",
     "light-and-dark-computed",
+    "preference-a-write-hit-before-release",
+    "preference-a-write-hit-after-release",
+    "queued-a-write-zero-dispatch",
+    "user-b-default-unchanged",
   ],
+});
+
+const EXACT_SMOKE_ASSERTION_OUTPUTS = Object.freeze({
+  "responsive-users": Object.freeze({
+    "preference-a-write-hit-before-release": "1",
+    "preference-a-write-hit-after-release": "1",
+    "queued-a-write-zero-dispatch": "0",
+    "user-b-default-unchanged": '{"before":false,"after":false}',
+  }),
 });
 
 const RUNTIME_SUBJECT_KINDS = Object.freeze([
@@ -884,8 +899,8 @@ const SMOKE_SCHEMA = {
     },
     routes: {
       type: "array",
-      minItems: 5,
-      maxItems: 5,
+      minItems: 6,
+      maxItems: 6,
       items: {
         type: "object",
         additionalProperties: false,
@@ -1723,6 +1738,9 @@ function fixtureItem(smoke, kind) {
 
 function expectedRoutePattern(smoke, key) {
   if (key === "media-prior-resolution") return "**/admin/api/media";
+  if (key === "preference-a-write-epoch") {
+    return "**/admin/api/user-settings/customScreens.entry.preferences";
+  }
   if (key === "entry-save-failure") {
     const type = fixtureItem(smoke, "content-type-editable");
     const entry = fixtureItem(smoke, "editable-entry");
@@ -4691,7 +4709,7 @@ const POST_AUDIT_LENSES = Object.freeze([
   ],
   [
     "preferences-responsive-security",
-    "Narrow/wide geometry and landmark role, isolated per-user settings with no localStorage/aggregate leak, central 400 mapping, auth/CSRF/rate/self-scope route proof.",
+    "Narrow/wide geometry and landmark role; isolated per-user settings with no localStorage/aggregate leak; a no-user toggle is hook-mount-local in-memory fallback that issues zero isolated GET/PATCH requests, writes zero browser storage, and resets on remount; direct provider A→B publishes B without an intermediate null while explicit sign-out/null and provider unmount still publish null; malformed GET/PATCH responses are rejected, and a malformed PATCH retains the exact optimistic intent as unsynced without automatic replay; central 400 mapping plus auth/CSRF/rate/self-scope route proof.",
   ],
   [
     "tests-docs-scope",
@@ -5574,6 +5592,8 @@ async function validateSmoke(smoke, expectedPrefix) {
       smoke.browserReceipts.some((receipt) => receipt.scenario === scenario)
     ) ||
     !sameUniqueSet(routeKeys, Object.keys(ROUTE_EXPECTATIONS)) ||
+    !sameUniqueSet(Object.keys(ROUTE_SCENARIOS), Object.keys(ROUTE_EXPECTATIONS)) ||
+    Object.values(ROUTE_SCENARIOS).some((scenario) => !SMOKE_KINDS.includes(scenario)) ||
     !sameUniqueSet(fixtureKinds, REQUIRED_FIXTURE_KINDS) ||
     new Set(fixtureIds).size !== fixtureIds.length ||
     !smoke.fixtures.items.every(
@@ -5810,6 +5830,46 @@ async function validateSmoke(smoke, expectedPrefix) {
     ) {
       throw new Error("TASK-540 route interception mismatch: " + route.key);
     }
+    if (route.key === "preference-a-write-epoch") {
+      const routeSetup = routeReceipts.find((receipt) => receipt.operation === "route-setup");
+      const routeRelease = routeReceipts.find((receipt) => receipt.operation === "route-release");
+      const unroute = routeReceipts.find((receipt) => receipt.operation === "unroute");
+      const preferenceAssertions = Object.fromEntries(
+        Object.keys(EXACT_SMOKE_ASSERTION_OUTPUTS["responsive-users"]).map((name) => [
+          name,
+          smoke.browserReceipts.filter(
+            (receipt) => receipt.scenario === "responsive-users" && receipt.assertionName === name
+          ),
+        ])
+      );
+      const beforeRelease = preferenceAssertions["preference-a-write-hit-before-release"];
+      const afterReleaseNames = [
+        "preference-a-write-hit-after-release",
+        "queued-a-write-zero-dispatch",
+        "user-b-default-unchanged",
+      ];
+      if (
+        !routeSetup ||
+        !routeRelease ||
+        !unroute ||
+        !hitRead ||
+        beforeRelease.length !== 1 ||
+        afterReleaseNames.some((name) => preferenceAssertions[name].length !== 1) ||
+        Object.entries(EXACT_SMOKE_ASSERTION_OUTPUTS["responsive-users"]).some(
+          ([name, actual]) => preferenceAssertions[name][0]?.sanitizedOutput !== actual
+        ) ||
+        routeSetup.sequence >= beforeRelease[0].sequence ||
+        beforeRelease[0].sequence >= routeRelease.sequence ||
+        hitRead.sequence >= routeRelease.sequence ||
+        afterReleaseNames.some(
+          (name) =>
+            preferenceAssertions[name][0].sequence <= routeRelease.sequence ||
+            preferenceAssertions[name][0].sequence >= unroute.sequence
+        )
+      ) {
+        throw new Error("TASK-540 preference write epoch evidence order mismatch");
+      }
+    }
   }
 
   const loggerReceipts = smoke.browserReceipts.filter(
@@ -5831,9 +5891,15 @@ async function validateSmoke(smoke, expectedPrefix) {
 
   for (const scenario of smoke.scenarios) {
     const names = scenario.visibleAssertions.map(({ name }) => name);
+    const exactOutputs = EXACT_SMOKE_ASSERTION_OUTPUTS[scenario.kind] ?? {};
     if (
       new Set(names).size !== names.length ||
       !REQUIRED_SMOKE_ASSERTIONS[scenario.kind].every((name) => names.includes(name)) ||
+      !Object.entries(exactOutputs).every(([name, actual]) =>
+        scenario.visibleAssertions.some(
+          (assertion) => assertion.name === name && assertion.actual === actual
+        )
+      ) ||
       !scenario.visibleAssertions.every((item) => {
         const matches = smoke.browserReceipts.filter(
           (receipt) =>
@@ -5998,7 +6064,7 @@ async function runSmoke(attempt) {
           "for the three content-type records, and slug=null for every other kind. Capture " +
           "acquisition IDs and prove provenance. Run exactly these seven visible flows: " +
           JSON.stringify(SMOKE_KINDS) +
-          ". Run the five exact method-aware interceptions and require one hit each: " +
+          ". Run the six exact method-aware interceptions and require one hit each: " +
           JSON.stringify(ROUTE_EXPECTATIONS) +
           ". Expand their exact patterns from fixture slugs/entry ID according to " +
           JSON.stringify(ROUTE_SCENARIOS) +
@@ -6008,6 +6074,14 @@ async function runSmoke(attempt) {
           "Assert the exact required visible/ARIA/computed/geometry/persisted/request-order " +
           "effects " +
           JSON.stringify(REQUIRED_SMOKE_ASSERTIONS) +
+          ". For the responsive-users flow, return these exact structured observed outputs: " +
+          JSON.stringify(EXACT_SMOKE_ASSERTION_OUTPUTS["responsive-users"]) +
+          ". Record each as its own assertion receipt. After route setup, both the route hit-read " +
+          "and preference-a-write-hit-before-release must observe exactly one first A PATCH " +
+          "before route-release. Only after route-release, but before unroute, record " +
+          "preference-a-write-hit-after-release=1, queued-a-write-zero-dispatch=0, and B's " +
+          "default byte-identical before/after. The post-release hit value proves the same first " +
+          "request remained the sole hit; never dispatch or require a second network request" +
           ", light and dark, viewports 320/390/480/1024/1280, and empty console-error, warning, " +
           "and page-error arrays after every flow. Capture exactly the eleven task-scoped PNGs " +
           JSON.stringify(SCREENSHOT_PATHS.map((path) => ROOT + "/" + path)) +
@@ -7537,6 +7611,10 @@ const FINAL_LENSES = Object.freeze([
   [
     "scope-tests-docs",
     "Single-writer code/tests and product/cache/API/user docs match implementation; screenshots are real/distinct; forbidden Page/widget paths and commits/staging are absent.",
+  ],
+  [
+    "preference-identity-recovery",
+    "The final implementation/tests/evidence prove hook-mount-local no-user in-memory fallback with zero isolated GET/PATCH requests, zero browser storage, and remount reset; direct provider A→B has no transitional null while explicit sign-out/null/provider-unmount remain valid null boundaries; malformed GET/PATCH responses are rejected, and malformed PATCH retains the exact optimistic intent as unsynced with no automatic replay; the live route matrix proves the same sole first A PATCH hit before and after release, zero queued-A dispatch, and B default unchanged after release and before unroute.",
   ],
 ]);
 

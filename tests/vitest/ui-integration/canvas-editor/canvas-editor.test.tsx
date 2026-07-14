@@ -141,7 +141,7 @@ test("(c) panelPosition='bottom' yields the centered-bottom container", () => {
   expect(html).toContain("-translate-x-1/2");
 });
 
-test("(d) panelRef / panelAriaLabel / panelDataProps land on the single rail div", () => {
+test("(d) panelRef / region role / panelAriaLabel / panelDataProps land on the single rail div", () => {
   const ref = React.createRef<HTMLDivElement>();
   const view = mount(
     <CanvasEditor
@@ -165,7 +165,9 @@ test("(d) panelRef / panelAriaLabel / panelDataProps land on the single rail div
     expect(rail).toBe(ref.current);
     expect(rail.getAttribute("data-page-editor-floating-toolbar")).toBe("true");
     expect(rail.getAttribute("data-page-editor-toolbar-collapsed")).toBe("false");
+    expect(rail.getAttribute("role")).toBe("region");
     expect(rail.getAttribute("aria-label")).toBe("Section tools");
+    expect(view.container.querySelector('[role="region"][aria-label="Section tools"]')).toBe(rail);
   } finally {
     view.cleanup();
   }

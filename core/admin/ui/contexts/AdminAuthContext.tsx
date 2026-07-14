@@ -1,6 +1,7 @@
-import { createContext, useCallback, useContext, useMemo } from "react";
+import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useState } from "react";
 
 import { canAdmin, type AdminPermissionSnapshot, type AuthUser } from "@/services/authClient";
+import { clearAdminAuthIdentity, publishAdminAuthIdentity } from "@/services/adminAuthIdentity";
 
 type AdminAuthContextValue = {
   user: AuthUser | null;
@@ -27,6 +28,7 @@ export function AdminAuthProvider({
   refreshPermissions?: () => Promise<void>;
   user: AuthUser | null;
 }) {
+  const [authIdentityPublisher] = useState(() => Symbol("admin-auth-provider"));
   const permissionSnapshot = user?.permissionSnapshot ?? null;
   const can = useCallback(
     (permission?: string) => {
@@ -43,6 +45,15 @@ export function AdminAuthProvider({
       refreshPermissions: refreshPermissions ?? defaultContext.refreshPermissions,
     }),
     [can, permissionSnapshot, refreshPermissions, user]
+  );
+
+  useLayoutEffect(() => {
+    publishAdminAuthIdentity(authIdentityPublisher, user?.id ?? null);
+  }, [authIdentityPublisher, user?.id]);
+
+  useLayoutEffect(
+    () => () => clearAdminAuthIdentity(authIdentityPublisher),
+    [authIdentityPublisher]
   );
 
   return <AdminAuthContext.Provider value={value}>{children}</AdminAuthContext.Provider>;

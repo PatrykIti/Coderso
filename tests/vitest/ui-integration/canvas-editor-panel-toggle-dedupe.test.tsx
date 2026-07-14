@@ -159,6 +159,9 @@ test("Screens: exactly ONE hide affordance — the top toggle; the in-panel Pane
   const dom = parseHtml(html);
   const railHead = dom.querySelector('[data-screen-rail-head="true"]');
   expect(railHead).not.toBeNull();
+  const scroller = dom.querySelector('[data-screen-editor-canvas-scroller="true"]');
+  expect(scroller?.getAttribute("data-screen-canvas-panel-open")).toBe("true");
+  expect(scroller?.classList.contains("lg:pr-[332px]")).toBe(true);
   // The removed rail-head closer must not resurface: no hide button inside the
   // rail head — and none anywhere inside the floating panel body.
   expect(railHead?.querySelector('button[aria-label="Hide panel"]')).toBeNull();
@@ -198,12 +201,22 @@ test("Screens: hide/reopen round-trips through the top toggle + the reopen chip 
   try {
     await flush();
     expect(view.container.querySelector('[data-screen-editor-panel="true"]')).not.toBeNull();
+    const openScroller = view.container.querySelector(
+      '[data-screen-editor-canvas-scroller="true"]'
+    );
+    expect(openScroller?.getAttribute("data-screen-canvas-panel-open")).toBe("true");
+    expect(openScroller?.classList.contains("lg:pr-[332px]")).toBe(true);
 
     // Hide via the sole surviving hide surface — the top toolbar toggle.
     clickButtonByLabel(view.container, "Hide panel");
     await flush();
     expect(view.container.querySelector('[data-screen-editor-panel="true"]')).toBeNull();
     expect(view.container.querySelector('button[aria-label="Hide panel"]')).toBeNull();
+    const closedScroller = view.container.querySelector(
+      '[data-screen-editor-canvas-scroller="true"]'
+    );
+    expect(closedScroller?.hasAttribute("data-screen-canvas-panel-open")).toBe(false);
+    expect(closedScroller?.classList.contains("lg:pr-[332px]")).toBe(false);
 
     // Reopen via the chip (the shell renders it only while hidden).
     const chips = view.container.querySelectorAll('button[aria-label="Show panel"]');
@@ -211,6 +224,11 @@ test("Screens: hide/reopen round-trips through the top toggle + the reopen chip 
     clickButtonByLabel(view.container, "Show panel");
     await flush();
     expect(view.container.querySelector('[data-screen-editor-panel="true"]')).not.toBeNull();
+    const reopenedScroller = view.container.querySelector(
+      '[data-screen-editor-canvas-scroller="true"]'
+    );
+    expect(reopenedScroller?.getAttribute("data-screen-canvas-panel-open")).toBe("true");
+    expect(reopenedScroller?.classList.contains("lg:pr-[332px]")).toBe(true);
     // The panel returns with the single hide surface — still no in-panel closer.
     expect(view.container.querySelectorAll('button[aria-label="Hide panel"]')).toHaveLength(1);
     expect(

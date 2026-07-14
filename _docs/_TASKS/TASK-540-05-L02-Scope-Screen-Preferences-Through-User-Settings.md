@@ -8,7 +8,10 @@
 **Category:** User Settings / Custom Screens / Privacy
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-05-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-07-14
+**Completed:** 2026-07-14
+**Targeted Gate Passed:** 2026-07-14 — `core lint:types`, `core lint`, root `tsc`, the exact six-file Vitest matrix (64/64), the exact two-file Bun/DB matrix (20/20), and `git diff --check`
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -21,8 +24,9 @@
   authenticated-identity epoch publisher/subscription boundary
 - `core/admin/services/userSettingsClient.ts`
 - `core/admin/ui/contexts/AdminAuthContext.tsx`, limited to publishing the
-  provider's exact `user.id`/null identity in a layout effect and clearing it on
-  provider unmount; permission behavior and public context shape stay unchanged
+  provider's exact `user.id`/null identity in a publish-only layout effect and
+  clearing it from a separate stable-token cleanup-only unmount effect; permission
+  behavior and public context shape stay unchanged
 - `core/admin/ui/custom-screens/hooks/useScreenEntryPreferences.ts`
 - `core/server/routes/userSettingsRoutes.ts`, limited to the optional
   `X-Coderso-Expected-User-Id` PATCH guard after session auth and before the
@@ -195,13 +199,17 @@ export function clearAdminAuthIdentity(publisher: symbol): void {
 }
 
 // AdminAuthContext.tsx: AdminApp keeps this provider mounted above route
-// elements. Its cleanup still publishes null when the auth boundary itself
-// unmounts; a Screen hook unmount does not own or clear global auth identity.
+// elements. Identity publication and provider-unmount cleanup are separate so
+// A→B performs exactly one publish/epoch advance and never emits transitional null.
+// A Screen hook unmount does not own or clear global auth identity.
 const [authIdentityPublisher] = useState(() => Symbol("admin-auth-provider"));
 useLayoutEffect(() => {
   publishAdminAuthIdentity(authIdentityPublisher, user?.id ?? null);
-  return () => clearAdminAuthIdentity(authIdentityPublisher);
 }, [authIdentityPublisher, user?.id]);
+useLayoutEffect(
+  () => () => clearAdminAuthIdentity(authIdentityPublisher),
+  [authIdentityPublisher]
+);
 
 // userSettingsRoutes.ts: extend its local RouteContext with the already supplied
 // shared-router header shape; do not add a new route or request-body field.
@@ -622,6 +630,8 @@ function enqueuePreferenceWrite(
         generation,
         pruneEpoch,
         phase: outcome.ok ? "succeeded" : "failed",
+        // A failed or malformed PATCH may retain only the captured normalized
+        // local intent as unsynced state. No response-derived value is published.
         view: outcome.ok ? outcome.preferences : view,
         tail: null,
       };
@@ -672,6 +682,10 @@ export function useScreenEntryPreferences(): Readonly<{
     useState<ScopedPreferenceViews>(() => new Map());
   const [optimisticByUser, setOptimisticByUser] =
     useState<ScopedPreferenceViews>(() => new Map());
+  // This state belongs only to this hook mount. It is neither keyed globally nor
+  // transported/stored, and a fresh remount therefore starts from OFF again.
+  const [noUserPreferences, setNoUserPreferences] =
+    useState<ScreenEntryPreferences>(() => DEFAULT_SCREEN_ENTRY_PREFERENCES);
   const requestGeneration = useRef(0);
   const localUnsyncedByUser = useRef(new Map<string, LocalPreferenceView>());
   const currentUserIdRef = useRef<string | null>(null);
@@ -744,7 +758,7 @@ export function useScreenEntryPreferences(): Readonly<{
         ? localObserved.view
         : undefined) ??
       DEFAULT_SCREEN_ENTRY_PREFERENCES
-    : DEFAULT_SCREEN_ENTRY_PREFERENCES;
+    : noUserPreferences;
 
   useLayoutEffect((): (() => void) => {
     mountedRef.current = true;
@@ -840,13 +854,18 @@ export function useScreenEntryPreferences(): Readonly<{
 
   const setPreferences = useCallback(
     (next: ScreenEntryPreferences): void => {
-      if (!userId) return;
+      // Normalize both authenticated and no-user actions through the public view
+      // contract. No-user actions update only mount-local ephemeral state.
+      const normalized = normalizeScreenEntryPreferences(next);
+      if (!userId) {
+        setNoUserPreferences(normalized);
+        return;
+      }
       const capturedUserId = userId;
       const authIdentity = capturePreferenceAuthIdentity(capturedUserId);
       if (!authIdentity) return;
       // The public normalizer owns UI compatibility. Boolean(...) would turn an
       // invalid truthy value into an authored true and diverge from that contract.
-      const normalized = normalizeScreenEntryPreferences(next);
       const { generation, pruneEpoch, tail } = enqueuePreferenceWrite(
         capturedUserId,
         authIdentity,
@@ -946,9 +965,12 @@ Remove all reads/writes of
 `coderso.screens.entry.preferences.v1`. Do not replace it with another global
 browser key. The hook reads `user.id` from the existing `AdminAuthContext`; no caller
 prop changes. The route-persistent `AdminAuthProvider` publishes identity before
-passive Screen work and clears it on provider unmount; Screen consumer unmount never
-clears that authority. `getUserSettingIsolated` and `setUserSettingIsolated` are the
-only client functions this hook uses. Existing aggregate-aware `getUserSetting` /
+passive Screen work. Its publish-only layout effect handles A/B/null prop values, while
+a separate stable-token cleanup-only effect clears authority on actual provider
+unmount; therefore A→B emits exactly one epoch/event and never an intermediate null.
+Screen consumer unmount never clears that authority. `getUserSettingIsolated` and
+`setUserSettingIsolated` are the only client functions this hook uses. Existing
+aggregate-aware `getUserSetting` /
 `setUserSetting` keep their legacy transport (or may delegate isolated GET only), and
 only those aggregate-aware wrappers may touch `userSettingsReadCache`; they need not
 send the optional expected-user header. The isolated Screen setter requires an exact
@@ -972,14 +994,22 @@ hook call site remains source-compatible.
   returns status 409 for exact `user_setting_identity_changed`. It does not expose
   a stack or turn any of those client errors into 500.
 - No public mode, nonce/captcha, secret, entry content, or migration.
+- With no authenticated identity, the hook's OFF→toggle behavior is strictly
+  hook-mount-local: it makes no user-settings request, browser-storage write, or
+  module-scoped publication and resets to OFF on a fresh remount.
 
 ## Error/compatibility flow
 
 - Missing row returns server default. Invalid stored row falls back through the
   existing service behavior. A malformed runtime GET or PATCH response is rejected by
-  the strict stored-value normalizer and cannot become hook state.
+  the strict stored-value normalizer and no response-derived value can become hook
+  state. For malformed PATCH, the normalized locally authored per-user optimistic view
+  remains visible as failed/unsynced state; it is not evidence of response acceptance,
+  never auto-replays, and only a later explicit setter action retries it.
 - Network/auth failure leaves a functional in-memory default/current value and
-  never leaks another user's cache or localStorage value.
+  never leaks another user's cache or localStorage value. In the no-user case, the
+  functional value is an ephemeral mount-local OFF default that may be toggled locally
+  and resets on remount without transport or storage.
 - A rejected GET, malformed exact envelope, or malformed Screen value removes only its
   identity-matched read-registry entry on settlement. The same mounted effect remains
   fail-closed and does not auto-loop. Fully unmounting and freshly mounting the Screen
@@ -1058,18 +1088,23 @@ hook call site remains source-compatible.
   aggregate remains byte-identical.
 - `tests/vitest/ui/admin-auth-identity.test.tsx`: render the real
   `AdminAuthProvider`, assert exact A publication, no epoch change for a same-ID prop
-  update, A→B publication, null publication, provider-unmount cleanup, and a stale old
-  provider cleanup that cannot clear a newer publisher token. This suite tests only the
-  boundary and does not duplicate the Screen coordinator.
+  update, exactly one A→B publication/epoch advance with no transitional null, one null
+  publication for an actual null prop, provider-unmount cleanup, and a stale old
+  provider cleanup that cannot clear a newer publisher token. This suite tests only
+  the boundary and does not duplicate the Screen coordinator.
 - `tests/vitest/ui/assistant-panel-interaction.test.tsx`: add only
   `"customScreens.entry.preferences": {version:1, showFieldMetadata:false}` to its
   typed complete-`UserSettings` fixture. Do not alter Assistant behavior assertions.
 - `tests/vitest/ui/use-screen-entry-preferences.test.ts` owns the coordinator matrix:
-  async hydrate; no localStorage; default/no-user behavior; public-view normalization
+  async hydrate; no localStorage; no-user mount-local OFF→toggle behavior with zero
+  GET/PATCH/storage calls and reset to OFF after full remount; public-view normalization
   versus strict stored-setting normalization; invalid truthy input passed to the setter
   follows the public normalizer rather than `Boolean(...)`; malformed GET and PATCH
-  response values never enter state; optimistic success/failure/unmount; and no
-  unhandled rejection or synchronous effect-body state update.
+  response-derived values never enter state; a malformed PATCH retains the already
+  normalized local per-user optimistic intent as failed/unsynced without auto-replay,
+  then one later explicit setter action makes exactly one retry; optimistic
+  success/failure/unmount; and no unhandled rejection or synchronous effect-body state
+  update.
 - The same hook suite serializes rapid ON→OFF and two opposite simultaneous same-user
   consumers (one PATCH in flight, deterministic server order, final durable/UI OFF),
   proves an earlier transport failure releases the later queued action, and proves a

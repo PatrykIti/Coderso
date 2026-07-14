@@ -9,6 +9,7 @@ export type RouteContext = {
   params: Record<string, string>;
   query: Record<string, string | undefined>;
   body: unknown;
+  headers?: Record<string, string | undefined>;
   user?: { id: string };
 };
 
@@ -24,10 +25,7 @@ export type UserSettingsRouteDeps = {
   validate: (schema: unknown, payload: unknown) => void;
 };
 
-export function registerUserSettingsRoutes(
-  router: Router,
-  deps: UserSettingsRouteDeps
-) {
+export function registerUserSettingsRoutes(router: Router, deps: UserSettingsRouteDeps) {
   const { requireAuth, validate } = deps;
 
   router.get("/user-settings", requireAuth, async (ctx) => {
@@ -48,6 +46,10 @@ export function registerUserSettingsRoutes(
   router.patch("/user-settings/:key", requireAuth, async (ctx) => {
     if (!ctx.user?.id) {
       throw new Error("auth_required");
+    }
+    const expectedUserId = ctx.headers?.["x-coderso-expected-user-id"];
+    if (expectedUserId !== undefined && expectedUserId !== ctx.user.id) {
+      throw new Error("user_setting_identity_changed");
     }
     validate(userSettingsUpdateSchema, ctx.body);
     const body = ctx.body as { value: unknown };

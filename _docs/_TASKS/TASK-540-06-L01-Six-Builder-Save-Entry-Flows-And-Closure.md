@@ -8,7 +8,8 @@
 **Category:** Testing / Documentation / Smoke / Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-01-L01, TASK-540-02-L01, TASK-540-03-L01, TASK-540-04-L01..L04, TASK-540-05-L01..L02
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-07-14
 **Changelog:** 1252 (pinned; closure only)
 **Changelog File:** `_docs/_CHANGELOG/1252-2026-07-14-task-540-custom-screens-functional-and-data-integrity-remediation.md`
 

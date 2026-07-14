@@ -7,7 +7,8 @@
 **Category:** Testing / Documentation / Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-01..05
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-07-14
 **Changelog:** 1252 (pinned; closure only)
 **Changelog File:** `_docs/_CHANGELOG/1252-2026-07-14-task-540-custom-screens-functional-and-data-integrity-remediation.md`
 
@@ -28,7 +29,7 @@ subtask owns no production source and may not edit shared/source-owner test suit
 
 | ID | Title | Ownership | Status |
 |---|---|---|---|
-| TASK-540-06-L01 | Seven builder-save-entry flows and closure | one new aggregate test, docs, smoke evidence, TASK-540 closure metadata | ⏳ To Do |
+| TASK-540-06-L01 | Seven builder-save-entry flows and closure | one new aggregate test, docs, smoke evidence, TASK-540 closure metadata | 🚧 In Progress |
 
 ## Security Contract
 

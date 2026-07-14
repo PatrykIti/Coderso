@@ -8,7 +8,10 @@
 **Category:** Custom Screens / Responsive UI / Accessibility
 **Estimated Effort:** Small
 **Dependencies:** TASK-540-04-L04
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-07-14
+**Completed:** 2026-07-14
+**Targeted Gate Passed:** 2026-07-14 — `core lint:types`, `core lint`, root `tsc`, and the exact three-file Vitest matrix (16/16)
 **Changelog:** 1252 (pinned; closure only)
 
 ---

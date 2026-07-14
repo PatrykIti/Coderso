@@ -14,6 +14,7 @@ import {
 import { useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   AuthoringCommandPalette,
   AuthoringLayersPanel,
@@ -518,9 +519,12 @@ export function ScreenAuthoringCanvas({
             />
           ) : null}
           <div
-            className="min-h-0 flex-1 overflow-auto overscroll-contain bg-dotted p-6 lg:p-8"
+            className={cn(
+              "min-h-0 flex-1 overflow-auto overscroll-contain bg-dotted p-6 lg:p-8",
+              panelOpen && "lg:pr-[332px]"
+            )}
             data-screen-editor-canvas-scroller="true"
-            style={panelOpen ? { paddingRight: 300 } : undefined}
+            data-screen-canvas-panel-open={panelOpen ? "true" : undefined}
             onClick={() => selectTarget(null)}
           >
             <div className="mx-auto w-full max-w-2xl space-y-4" data-screen-authoring-canvas="true">
