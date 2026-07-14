@@ -8,8 +8,10 @@
 **Category:** Custom Screens / Builder / Data Safety
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-04-L03
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-07-14
+**Completed:** 2026-07-14
+**Revalidation Passed:** 2026-07-14 — `core lint:types`, `core lint`, root `tsc`, and the exact five-file Vitest matrix (57/57)
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -21,26 +23,43 @@
 - `tests/vitest/ui/custom-screens-page.test.tsx`
 - `tests/vitest/ui/custom-screen-route-params.test.ts`
 - `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
+- `tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx` (only the additive
+  cacheBus factory mock required by the L03 API; all TASK-505 assertions stay byte-identical)
 
 No other TASK-540 leaf edits these paths. In particular, TASK-540-03-L01 owns only the
 renderer and record-interaction suites; this leaf exclusively owns the binding-flow
 suite. TASK-540-04-L03 consumes the existing workspace/entry helper read-only; L04 owns
 only the additive Screen-editor helper seam and its route-params assertions.
-`tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx` is a read-only
-TASK-505 regression gate for pruned-binding notices and detailed save errors; L04 may run
-it but must not edit it.
+The recovery suite remains a TASK-505 regression gate for pruned-binding notices and
+detailed save errors. L04 may add exactly
+`createCacheEventOperationToken: () => Symbol()` to its full-module cacheBus mock so the
+real L04 import can execute; it must not edit or re-baseline any behavior assertion.
+
+L04 consumes L03's landed cache-bus and mutation-client operation seams read-only. Existing
+one-argument subscribers remain valid. The optional symbol token is same-context callback
+metadata only; no cache key, serialized event field, storage key, network payload, or
+broadcast transport changes.
+The reopened corrective pass was dispatched by `_docs/_workflows/task-540-fix.mjs`
+only after its L03 substrate/client phase and gate pass. The canonical resumable
+workflow recognizes both completed corrective leaves as landed and continues at the
+first later unlanded leaf without rerunning them.
 
 ## Grounded anchors
 
-- Dirty state and diagnostics: `CustomScreenEditorPage.tsx:255-321`.
-- `markDirty`: `:336-349`.
-- Apply/save/clear path: `:396-430`.
-- Initial and cache hydration: `:445-482`.
-- Successful create navigation: `:759-780`.
-- Existing workspace-only helper (ends in `/entries`): `routeParams.ts:29-42`.
-- Existing route helper suite: `custom-screen-route-params.test.ts:1-41`.
-- Shell receives badge only: `:970`.
-- Shared guard: `AdminDirtyNavigationGuard.tsx:17-105`.
+- Dirty, external-revision, and diagnostic state:
+  `CustomScreenEditorPage.tsx:319-385`.
+- Production-used refresh/save guards: `:121-136,713-740`.
+- `markDirty` and the single definition mutation path: `:465-510`.
+- Persisted apply, binding clear, and save paths: `:572-600`, `:1027-1107`, and
+  `:1109-1276`.
+- Initial/detail-cache hydration and exact self-event correlation: `:603-799`.
+- Successful create navigation: `:1248-1256`.
+- Existing workspace-only helper (ends in `/entries`): `routeParams.ts:36-48`.
+- Existing route helper suite: `custom-screen-route-params.test.ts:1-74`.
+- Shell dirty badge, unresolved Save state, warning action, and discard dialog:
+  `CustomScreenEditorPage.tsx:1391-1513,1581-1591`.
+- Shared guard: `AdminDirtyNavigationGuard.tsx:17-106`.
+- Cache-event local/remote/operation delivery: `cacheBus.ts:73-138`.
 
 ## Implementation Pseudocode
 
@@ -76,12 +95,39 @@ type BuilderSaveToken = Readonly<{
   routeGeneration: number;
   saveGeneration: number;
   draftGeneration: number;
+  externalEventGeneration: number;
+  cacheEventOperationToken: CacheEventOperationToken;
 }>;
+
+// Consume, do not mirror, the exact L03-owned cacheBus contract.
+import {
+  createCacheEventOperationToken,
+  subscribeCacheEvents,
+  type CacheEventOperationToken,
+  type CacheEventOrigin,
+} from "@/utils/cacheBus";
 
 // Production and tests use the same pure monotonic transition. Static source audit
 // verifies that every semantic mutation reaches exactly one call through markDirty.
 export function advanceBuilderDraftGeneration(current: number) {
   return current + 1;
+}
+
+export function runBuilderManualRefresh(input: {
+  saveActive: boolean;
+  refresh: () => void;
+}): boolean {
+  if (input.saveActive) return false;
+  input.refresh();
+  return true;
+}
+
+export function getBuilderExternalRevisionSaveError(
+  externalRevisionUnresolved: boolean
+): string | null {
+  return externalRevisionUnresolved
+    ? "Refresh the newer Screen version before saving."
+    : null;
 }
 
 // The outer component owns no draft state. A textual A route returning after B gets
@@ -120,6 +166,8 @@ const draftMutationGenerationRef = useRef(0);
 const screenHydrationGenerationRef = useRef(0);
 const screenSaveGenerationRef = useRef(0);
 const activeScreenSaveTokenRef = useRef<BuilderSaveToken | null>(null);
+const externalScreenEventGenerationRef = useRef(0);
+const externalUpdateUnresolvedRef = useRef(false);
 const persistedScreenTargetRef = useRef<{
   routeVisit: BuilderRouteVisit;
   routeGeneration: number;
@@ -135,14 +183,17 @@ const [loadActivityVisit, setLoadActivityVisit] = useState<BuilderRouteVisit | n
 );
 const [saveActivityVisit, setSaveActivityVisit] = useState<BuilderRouteVisit | null>(null);
 const [errorCommit, setErrorCommit] = useState<BuilderRouteMessage | null>(null);
-const [remoteWarningVisit, setRemoteWarningVisit] = useState<BuilderRouteVisit | null>(null);
+const [externalWarningVisit, setExternalWarningVisit] = useState<BuilderRouteVisit | null>(null);
+const [externalRevisionVisit, setExternalRevisionVisit] = useState<BuilderRouteVisit | null>(null);
+const [externalRefreshConfirmOpen, setExternalRefreshConfirmOpen] = useState(false);
 const [saveNoticeCommit, setSaveNoticeCommit] = useState<BuilderRouteMessage | null>(null);
 
 const routeReady = committedScreenVisit === routeVisit;
 const isLoading = !routeReady && loadActivityVisit === routeVisit;
 const isSaving = saveActivityVisit === routeVisit;
 const error = errorCommit?.routeVisit === routeVisit ? errorCommit.message : null;
-const remoteUpdatePending = remoteWarningVisit === routeVisit;
+const externalUpdatePending = externalWarningVisit === routeVisit;
+const externalRevisionUnresolved = externalRevisionVisit === routeVisit;
 const saveNotice = saveNoticeCommit?.routeVisit === routeVisit ? saveNoticeCommit.message : null;
 
 useLayoutEffect(() => {
@@ -151,6 +202,7 @@ useLayoutEffect(() => {
   return () => {
     clearActiveAssistantSurfaceContext();
     activeScreenSaveTokenRef.current = null;
+    externalUpdateUnresolvedRef.current = false;
     persistedScreenTargetRef.current = null;
     mountedRef.current = false;
     routeGenerationRef.current += 1;
@@ -264,11 +316,16 @@ const applyPersistedScreen = useCallback(
   (
     record: CustomScreenRecord,
     acceptedRouteVisit: BuilderRouteVisit,
-    source: "load" | "save"
+    source: "load" | "save",
+    preserveExternalWarning = false
   ) => {
     applyScreenFieldsAndDefinition(record);
     resetBuilderDraftAuthority();
-    setRemoteWarningVisit(null);
+    if (source === "load") {
+      externalUpdateUnresolvedRef.current = false;
+      setExternalRevisionVisit(null);
+    }
+    if (!preserveExternalWarning) setExternalWarningVisit(null);
     setCommittedScreenVisit(acceptedRouteVisit);
     const notice = source === "save" ? buildScreenSaveNotice(record) : null;
     setSaveNoticeCommit(
@@ -305,6 +362,8 @@ const runBackgroundScreenHydration = useCallback(
     load: () => Promise<CustomScreenRecord | null>,
     isActive: () => boolean
   ) => {
+    // No manual/cache hydration may start while a save owns the visit.
+    if (!mountedRef.current || !isActive() || hasCurrentScreenSaveAuthority()) return;
     const token = captureScreenLoadToken();
     setLoadActivityVisit(token.routeVisit);
     try {
@@ -314,7 +373,7 @@ const runBackgroundScreenHydration = useCallback(
       // mutation response and must not advance the draft baseline/generation.
       if (hasCurrentScreenSaveAuthority()) return;
       if (!mayApplyScreenLoad(token)) {
-        setRemoteWarningVisit(token.routeVisit);
+        setExternalWarningVisit(token.routeVisit);
         return;
       }
       if (!result) {
@@ -364,6 +423,8 @@ function captureScreenSaveToken(): BuilderSaveToken {
     routeGeneration: routeGenerationRef.current,
     saveGeneration: ++screenSaveGenerationRef.current,
     draftGeneration: draftMutationGenerationRef.current,
+    externalEventGeneration: externalScreenEventGenerationRef.current,
+    cacheEventOperationToken: createCacheEventOperationToken(),
   };
 }
 
@@ -388,7 +449,9 @@ function commitScreenSaveResponse(saved, token) {
   screenHydrationGenerationRef.current += 1;
   setLoadActivityVisit(null);
   setErrorCommit(null);
-  setRemoteWarningVisit(null);
+  const externalEventArrivedDuringSave =
+    token.externalEventGeneration !== externalScreenEventGenerationRef.current;
+  if (!externalEventArrivedDuringSave) setExternalWarningVisit(null);
   if (token.draftGeneration !== draftMutationGenerationRef.current) {
     if (isCreateMode) {
       persistedScreenTargetRef.current = {
@@ -406,7 +469,7 @@ function commitScreenSaveResponse(saved, token) {
     return { mayNavigate: false };
   }
   persistedScreenTargetRef.current = null;
-  applyPersistedScreen(saved, token.routeVisit, "save");
+  applyPersistedScreen(saved, token.routeVisit, "save", externalEventArrivedDuringSave);
   return { mayNavigate: true };
 }
 
@@ -421,11 +484,69 @@ const refreshScreen = useCallback(
   [isCreateMode, runBackgroundScreenHydration, screenId]
 );
 
-// Cache events read the synchronous authority, never a delayed React-state closure.
-const handleCurrentScreenCacheEvent = useCallback(() => {
-  if (hasCurrentScreenSaveAuthority()) return;
-  if (builderDirtyRef.current) {
-    setRemoteWarningVisit(routeVisit);
+const requestExternalRefresh = useCallback(() => {
+  runBuilderManualRefresh({
+    saveActive: hasCurrentScreenSaveAuthority(),
+    refresh: () => {
+      if (builderDirtyRef.current) {
+        setExternalRefreshConfirmOpen(true);
+        return;
+      }
+      void refreshScreen(true);
+    },
+  });
+}, [hasCurrentScreenSaveAuthority, refreshScreen]);
+
+const discardLocalDraftAndRefresh = useCallback(() => {
+  // The user explicitly discarded the authored draft. Restore the last known persisted
+  // baseline synchronously so failed/missing refresh never presents discarded values as clean.
+  if (!screen) return;
+  draftMutationGenerationRef.current = advanceBuilderDraftGeneration(
+    draftMutationGenerationRef.current
+  );
+  builderDirtyRef.current = false;
+  screenHydrationGenerationRef.current += 1;
+  applyScreenFieldsAndDefinition(screen);
+  setHasUnsavedChanges(false);
+  setLoadActivityVisit(null);
+  setErrorCommit(null);
+  setSaveNoticeCommit(null);
+  setExternalRefreshConfirmOpen(false);
+  void refreshScreen(true);
+}, [applyScreenFieldsAndDefinition, refreshScreen, screen]);
+
+// Visible disabling and the production-used helper are separate defenses. React
+// intentionally suppresses delegated click listeners for a disabled button.
+<Button disabled={isSaving} onClick={requestExternalRefresh}>Refresh</Button>;
+<ConfirmActionDialog
+  open={externalRefreshConfirmOpen}
+  onOpenChange={setExternalRefreshConfirmOpen}
+  title="Discard local Screen changes and refresh?"
+  description="Your unsaved Screen changes will be discarded before loading the newer version."
+  confirmLabel="Discard and refresh"
+  cancelLabel="Keep editing"
+  tone="warning"
+  onConfirm={discardLocalDraftAndRefresh}
+/>;
+
+// Origin alone is insufficient: Assistant and other same-context actions are independent writers.
+const handleCurrentScreenCacheEvent = useCallback((
+  origin: CacheEventOrigin,
+  operationToken?: CacheEventOperationToken
+) => {
+  const activeSave = activeScreenSaveTokenRef.current;
+  const saveActive = hasCurrentScreenSaveAuthority();
+  const isExactSelfEvent = Boolean(
+    saveActive &&
+      origin === "local" &&
+      operationToken === activeSave?.cacheEventOperationToken
+  );
+  if (isExactSelfEvent) return;
+  externalScreenEventGenerationRef.current += 1;
+  externalUpdateUnresolvedRef.current = true;
+  setExternalRevisionVisit(routeVisit);
+  setExternalWarningVisit(routeVisit);
+  if (builderDirtyRef.current || saveActive) {
     return;
   }
   void refreshScreen(true);
@@ -445,14 +566,11 @@ useEffect(() => {
 
 useEffect(() => {
   if (isCreateMode || !screenId) return undefined;
-  return subscribeCacheEvents((event) => {
-    if (
-      event.key !== cacheKeys.customScreensList &&
-      event.key !== cacheKeys.customScreenDetail(screenId)
-    ) {
-      return;
-    }
-    handleCurrentScreenCacheEvent();
+  return subscribeCacheEvents((event, origin, operationToken) => {
+    // A list event does not identify which Screen changed. Every supported mutation of
+    // the current Screen also emits its exact detail key.
+    if (event.key !== cacheKeys.customScreenDetail(screenId)) return;
+    handleCurrentScreenCacheEvent(origin, operationToken);
   });
 }, [handleCurrentScreenCacheEvent, isCreateMode, screenId]);
 
@@ -465,13 +583,15 @@ function invalidateBuilderVisitForDiscard() {
   screenHydrationGenerationRef.current += 1;
   screenSaveGenerationRef.current += 1;
   activeScreenSaveTokenRef.current = null;
+  externalUpdateUnresolvedRef.current = false;
+  setExternalRevisionVisit(null);
   persistedScreenTargetRef.current = null;
   setHasUnsavedChanges(false);
   setCommittedScreenVisit(null);
   setLoadActivityVisit(null);
   setSaveActivityVisit(null);
   setErrorCommit(null);
-  setRemoteWarningVisit(null);
+  setExternalWarningVisit(null);
   setSaveNoticeCommit(null);
   clearActiveAssistantSurfaceContext();
 }
@@ -525,6 +645,36 @@ function handlePatchBinding(blockId, propPath, patch) {
   // No direct markDirty here: updateEditorView reaches the one marker exactly once.
 }
 
+function resolveSiblingList(
+  document: ScreenDocumentV1,
+  location: ScreenBlockLocation
+): ScreenBlockV1[] | null {
+  const section = document.sections.find((item) => item.id === location.sectionId);
+  if (!section) return null;
+  if (location.parentId === null) {
+    return location.slotId === null ? section.blocks : null;
+  }
+  const parent = findScreenBlockById(document, location.parentId);
+  if (!parent) return null;
+  return location.slotId === null
+    ? (parent.children ?? null)
+    : (parent.slots?.[location.slotId] ?? null);
+}
+
+function handleMoveBlock(blockId, direction) {
+  const current = definitionRef.current;
+  const location = findScreenBlockLocation(current.editorView.document, blockId);
+  const siblings = location
+    ? resolveSiblingList(current.editorView.document, location)
+    : null;
+  if (!location || !siblings) return;
+  if (direction === "up" && location.index === 0) return;
+  if (direction === "down" && location.index === siblings.length - 1) return;
+  updateEditorView({
+    document: moveScreenBlock(current.editorView.document, blockId, direction),
+  });
+}
+
 function mapBoundedScreenSaveError(error: unknown) {
   if (!isApiClientError(error)) return "Failed to save custom screen.";
   const detail = error.details;
@@ -540,7 +690,31 @@ function mapBoundedScreenSaveError(error: unknown) {
     : error.message;
 }
 
+function commitSynchronousSaveValidationError(message: string) {
+  // A validation click is newer diagnostic authority than every load already in flight.
+  screenHydrationGenerationRef.current += 1;
+  setLoadActivityVisit((current) => (current === routeVisit ? null : current));
+  setErrorCommit({ routeVisit, kind: "save", message });
+}
+
 async function saveScreen(payload) {
+  const externalRevisionError = getBuilderExternalRevisionSaveError(
+    externalUpdateUnresolvedRef.current
+  );
+  if (externalRevisionError) {
+    // Unlike field validation, this guard MUST NOT invalidate the forced GET that can
+    // resolve the external authority. Keep its loading token/activity alive.
+    setErrorCommit({ routeVisit, kind: "save", message: externalRevisionError });
+    return;
+  }
+  if (!normalizeText(name)) {
+    commitSynchronousSaveValidationError("Screen name is required.");
+    return;
+  }
+  if (!contentTypeId) {
+    commitSynchronousSaveValidationError("Select a content type before saving.");
+    return;
+  }
   const token = captureScreenSaveToken();
   activeScreenSaveTokenRef.current = token;
   setSaveActivityVisit(token.routeVisit);
@@ -556,9 +730,12 @@ async function saveScreen(payload) {
           capturedTarget.routeGeneration === routeGenerationRef.current
         ? capturedTarget.id
         : null;
+    const mutationOptions = {
+      cacheEventOperationToken: token.cacheEventOperationToken,
+    };
     const saved = targetId
-      ? await updateCustomScreen(targetId, payload)
-      : await createCustomScreen(payload);
+      ? await updateCustomScreen(targetId, payload, mutationOptions)
+      : await createCustomScreen(payload, mutationOptions);
     const { mayNavigate } = commitScreenSaveResponse(saved, token);
     if (isCreateMode && mayNavigate) {
       navigate(buildCustomScreenEditorPath({ screenId: saved.id }), {
@@ -589,6 +766,12 @@ async function saveScreen(payload) {
 return (
   <>
     <CustomScreenShell ...>
+      <Button
+        onClick={saveScreen}
+        disabled={!routeReady || isLoading || isSaving || externalRevisionUnresolved}
+      >
+        Save
+      </Button>
       {error ? <BuilderErrorAlert message={error} /> : null}
       {isLoading ? (
         <BuilderLoadingState />
@@ -596,6 +779,7 @@ return (
         <ScreenAuthoringCanvas ... />
       ) : null}
     </CustomScreenShell>
+    <ConfirmActionDialog ...external refresh discard contract... />
     {dirtyNavigationDialog}
   </>
 );
@@ -615,7 +799,7 @@ leave the generation/ref stale.
 
 Both initial forced revalidation and every cache-bus/manual refresh use
 `runBackgroundScreenHydration`. They capture route, request, and draft identity before
-awaiting, then guard every success apply, missing-record/error message, remote-update
+awaiting, then guard every success apply, missing-record/error message, external-update
 warning, and loading-finalization commit. A request that started clean must not
 overwrite edits made while it was in flight; checking dirty only when starting the
 request is insufficient. A user-confirmed destructive discard advances the draft
@@ -640,7 +824,7 @@ route readiness; visit tagging hides every stale-visit diagnostic. No first-visi
 can become authoritative on the second A visit.
 
 The draft-generation/dirty barrier applies only to draft replacement. A current success
-denied by a newer edit emits the bounded remote-update warning; a current rejection
+denied by a newer edit emits the bounded external-update warning; a current rejection
 after a newer edit shows `Could not check for Screen updates. Local changes are
 unchanged.`; and current `finally` always ends loading. None changes the draft. Only
 route/request-current commits may update warning, error, or spinner state.
@@ -649,6 +833,24 @@ Generic API/`Failed to load custom screen.` copy is allowed only when the captur
 generation is still exact and `builderDirtyRef.current` is false at catch time. A request
 started while dirty, or any defensive dirty-ref/generation mismatch, uses the bounded
 local-changes-unchanged copy; generation equality alone is never enough.
+
+Every non-self current-detail event synchronously marks an unresolved external revision
+before any await, pairs the synchronous ref with visit-scoped render state, shows the neutral
+warning, and disables/rejects Save. Generic list events
+are ignored because they do not identify the current Screen. A clean editor starts a
+forced hydration; only an authoritative current load success clears the unresolved ref and
+render state plus warning. Missing/error settlement keeps the warning and retry action. The
+unresolved Save guard publishes its bounded diagnostic without advancing the hydration
+generation or clearing load activity, so the already-authoritative forced GET remains able to
+settle. If the user edits
+while that load is pending, the draft barrier rejects the result and the unresolved marker
+continues to block stale full-document PATCHes. Dirty Refresh first opens the dedicated
+`ConfirmActionDialog`; cancel preserves the complete draft, while confirm synchronously
+advances/clears dirty authority, restores the last known persisted baseline, and then performs
+a fresh forced read. A missing/rejected read leaves that known baseline visible and clean while
+the unresolved warning, retry action, and bounded load error remain. Discarded authored values
+are never presented as clean or editable after confirmation. No failed refresh silently
+discards a draft without that confirmation.
 
 Keep the shared hook as the only router blocker and `beforeunload` owner. Confirm
 synchronously advances draft, hydration, and save generations; clears the visit-scoped
@@ -674,14 +876,25 @@ Failed, edit-superseded, or unsaved navigation never bypasses blockers. Do not c
 An old create-A response settling after navigation cannot seed create-B; synchronous
 route cleanup plus save identity means B performs POST, never PATCH against A's ID.
 The Custom Screens client broadcasts list/detail cache events before its mutation promise
-resumes. A synchronous `activeScreenSaveTokenRef` is installed before the client call.
-While that exact save owns the visit, matching cache events do not start hydration and
+resumes. The cache bus marks same-context delivery as `local` and
+BroadcastChannel/storage delivery as `remote` without changing the serialized event. The
+L03-owned mutation client also forwards the save's unique symbol token only to same-context
+callbacks. A synchronous `activeScreenSaveTokenRef` is installed before the client call.
+Only local events carrying that exact token are self-events. Remote events and independent
+same-context writers (including Assistant) advance the visit's external-event generation,
+preserve the warning, and cannot start a competing refresh while save authority is active.
+Manual Refresh is disabled and synchronously rejected while save authority is active by
+the production-used `runBuilderManualRefresh` helper. A
+save response clears only warnings that predate its captured external-event generation.
+Therefore a failed save cannot lose a concurrent other-tab or Assistant update and no
+refresh settlement can replace its later save diagnostic. In addition,
 any older hydration resolution or rejection is discarded before it can publish content,
 diagnostics, or advance the draft baseline. Other cache events consult
 `builderDirtyRef.current`, not a rendered-state
 closure. Only identity-current save settlement, confirmed discard, or route cleanup may
 clear the active token. The exact response still revokes its visit's hydration generation
-and clears its superseded load error/warning/loading state before applying the server baseline. Save-first and
+and clears its superseded load error/loading state plus only pre-capture warnings before
+applying the server baseline. Save-first and
 pre-existing-refresh-first settlement orders therefore preserve the same exact clean or
 edit-superseded result without a false newer-local-changes notice.
 
@@ -691,6 +904,18 @@ edit-superseded result without a false newer-local-changes notice.
 - Confirm invalidates every current load/save continuation, hides the discarded visit,
   clears local dirty state, and performs the pending navigation once.
 - Save failure remains dirty; only an exact-generation save success becomes clean.
+- Synchronous name/content-type validation invalidates every older hydration before
+  publishing its save error, so a late load success/rejection cannot erase or replace it.
+- External-update copy is origin-neutral: title `Newer changes are available`; description
+  `This Screen changed outside this editor. Refresh to load the latest version.` The same
+  exact copy covers another tab and independent same-context writers.
+- An unresolved current-detail event blocks Save synchronously and visibly until a current
+  forced hydration succeeds. The guard does not invalidate that hydration. A list-only event
+  for another Screen has no effect.
+- Dirty Refresh requires `Discard local Screen changes and refresh?`; cancel preserves the
+  draft, confirm discards once, immediately restores the last persisted baseline, and loads the
+  current server version. Failed/missing retry keeps that baseline plus the warning/action and
+  bounded error visible; discarded values never masquerade as a clean draft.
 - Exact existing-update save, exact create-save, and confirmed discard each advance the
   generation once and synchronously reset the dirty ref/state; rejected or
   edit-superseded saves reset none of them.
@@ -706,12 +931,16 @@ edit-superseded result without a false newer-local-changes notice.
   preserves static href data and every other binding, marks the builder dirty, and
   never persists the sentinel. Bind→clear→rebind remains deterministic.
 
-## Gate tests owned here; aggregate additions owned by TASK-540-06
+## L04-owned tests and read-only prerequisite gate suites
 
 - `custom-screens-page.test.tsx`: clean navigation; dirty internal navigation;
   beforeunload; cancel/confirm; save error; successful create-save navigation with no
   dialog to the Screen editor via `buildCustomScreenEditorPath({screenId})`; successful
   existing update;
+  for each synchronous validation branch (blank name and missing content type), start a
+  forced hydration first, click Save, and settle that older load as both resolve and reject;
+  all four cases retain the exact save diagnostic, authored draft, dirty state, no external
+  warning, and no spinner, while both create/update mutation call counts remain unchanged;
   deferred update and create saves followed by a local mutation preserve the newer
   draft/dirty ref, advance only the safe server baseline, show the bounded notice, and
   do not navigate; retry after stale create PATCHes the captured server ID without a
@@ -720,24 +949,55 @@ edit-superseded result without a false newer-local-changes notice.
   prove B POSTs rather than PATCHing A; exact deferred saves clear/navigate; stale save
   rejection/finally and unmount cannot commit; existing Screen A→B→A with pending
   hydration in both old/new settlement orders, pending update, and create-route A→B→A
-  prove that first-A content/error/warning/notice/spinner/save target and assistant
-  context never become second-A authority;
+  prove that the stale first-A continuation cannot directly commit error/warning/notice/
+  spinner/save-target/assistant authority. A successful first-A server update still emits
+  real client cache events; a deferred current-visit hydration keeps the second A baseline
+  unchanged until that hydration resolves, while rejection emits no event and keeps its baseline;
   exactly one mutation-generation advance for metadata, document, binding create/update,
-  and binding clear; initial hydration starts clean then an edit occurs before
+  and binding clear, including an exact-one `updateEditorView -> updateDefinition` proof;
+  first/last boundary block moves stay clean while a real move becomes dirty and persists
+  the reordered block list for top-level, `children[]`, and named-slot siblings; initial
+  hydration starts clean then an edit occurs before
   settlement; cache refresh starts clean then an edit occurs before settlement; stale
   request/route success, failure, remote-warning, and `finally` in both settlement orders
   plus unmount cannot commit; explicitly settle in the route-render → passive-cleanup
-  window and prove layout invalidation; a current dirty success emits only the remote warning, a
+  window and prove layout invalidation; a current dirty success emits only the external-update warning, a
   current dirty rejection shows the fixed local-changes-unchanged message for both
   dirty-before-start and dirty-during-load cases even with equal generation, while only
   fully clean unchanged state gets generic failure; current dirty `finally` ends loading;
   current clean loads can commit; an uncached current visit first renders its loading
   state, then a visible not-found/API/generic error without any old/default builder
-  content; a clean existing-Screen save suppresses its matching self-cache event, and a
+  content; a clean existing-Screen save suppresses only cache events carrying its exact
+  operation token. The Page suite injects all three independent variants: remote origin,
+  local origin with a distinct `Symbol()`, and local origin with no token. Both nonmatching
+  local variants and the remote event remain external during pending-save success and
+  rejection; none starts a load, rejection preserves the exact save error/dirty draft/
+  exact neutral external-warning copy, and exact success retains a post-capture warning.
+  A clean external current-detail event immediately shows the warning and visibly disables
+  Save. A direct test of the production-used `getBuilderExternalRevisionSaveError` plus a
+  source-slice assertion proving `handleSave` delegates to it pins the same-tick synchronous
+  rejection without bypassing React's disabled-event semantics. Direct or edit-then-Save stays
+  blocked while its forced GET is pending without invalidating that GET; resolve applies only through that GET,
+  reject retains the warning/retry, and a list-only event for another Screen is ignored.
+  Dirty Refresh proves cancel-preserves and confirm-discard-then-forced-load behavior for
+  success, missing, and failure; immediately after confirm, discarded authored values are no
+  longer visible/interactable and the persisted baseline is clean. Refresh is visibly disabled during save; a direct test of the
+  production-used `runBuilderManualRefresh` proves its active-save branch starts no load,
+  while its idle branch invokes exactly one refresh; a handler source-slice assertion proves
+  the production Refresh action delegates to that helper. A
   pre-existing pending refresh resolving or rejecting before/after the mutation
   continuation cannot advance the draft generation, create a false error/warning/notice,
   or replace the draft;
-  confirmed
+  the owned Page suite asserts the complete bounded save-error description and complete
+  `binding_field_removed` save-notice description, rather than partial substrings;
+  Every deferred promise first proves consumption by its owning call before settlement:
+  hydration defers pin the exact `{screenId, force:true}` call increment, while create/update
+  defers pin the corresponding mutation-call increment and queue consumption. The A→B→A success case
+  keeps cache hydration deferred and asserts the stale save continuation cannot directly
+  update the second A. Document/binding handler source slices forbid direct `markDirty`,
+  `updateDefinition`, or `draftMutationGenerationRef` access; metadata-handler slices instead
+  require exactly one `markDirty` call and forbid direct `updateDefinition` or generation-ref
+  mutation. Confirmed
   discard during hydration and during save invalidates all late success/failure/finally
   commits before navigation, while cancel leaves those continuations and the draft
   untouched.
@@ -746,12 +1006,16 @@ edit-superseded result without a false newer-local-changes notice.
   `resolveCustomScreenId` strips query/hash before decoding and query/hash-only variants
   resolve to the same ID; existing workspace/helper parsing and prefetch assertions
   remain unchanged.
-- `custom-screen-editor-binding-flow.test.tsx`: visible bind→clear→rebind; exact
-  binding removal; other bindings/static href preserved; mutation generation advances;
-  no empty-field sentinel reaches the saved definition.
-- `custom-screen-section-recovery.test.tsx` remains read-only and pins the existing
-  `binding_field_removed` exact-save notice plus `ApiClientError.details.fields` save-error
-  copy; L04 must run it but must not edit or re-baseline it.
+- `custom-screen-editor-binding-flow.test.tsx`: visible bind→existing-binding update→clear
+  →rebind; exact binding replacement/removal; other bindings/static href preserved;
+  mutation generation advances; no empty-field sentinel reaches the saved definition.
+- `cacheBus.test.ts`: same-tab callbacks receive `local`; storage/BroadcastChannel-shaped
+  cross-context callbacks receive `remote`; an optional symbol token reaches only the
+  exact same-context callback and never the serialized cache event.
+- `custom-screen-section-recovery.test.tsx` adds only the cacheBus factory mock required
+  by the new L03 import. Its TASK-505 recovery-flow and partial-copy assertions remain
+  byte-identical and must not be re-baselined. The owned Page suite above pins both
+  complete diagnostic strings exactly.
 
 The owned Page suite directly tests the production-used pure
 `advanceBuilderDraftGeneration(current)` transition. Per-handler exact-one ownership is
@@ -760,17 +1024,31 @@ document/binding handlers call only `updateDefinition -> markDirty`, and no hand
 both paths. Mounted tests prove semantic no-ops (including clearing an absent binding) do
 not become dirty, while each real metadata/document/binding mutation does.
 
-TASK-540-06 runs all three suites read-only and must not re-baseline these assertions.
+TASK-540-06 runs all owned and read-only gate suites without re-baselining these assertions.
 
 ## Validation
 
 ```bash
 bun --cwd core lint:types
 bun --cwd core lint
+./node_modules/.bin/tsc -p tsconfig.json --noEmit
 bunx vitest run tests/vitest/ui/custom-screens-page.test.tsx \
   tests/vitest/ui/custom-screen-route-params.test.ts \
   tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx \
-  tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx
+  tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx \
+  tests/vitest/admin/cacheBus.test.ts
 ```
 
 Rerun a named failing file once in isolation.
+
+## Current completion evidence
+
+- Fresh corrective revalidation on 2026-07-14 passed `bun --cwd core lint:types`,
+  `bun --cwd core lint`, and `./node_modules/.bin/tsc -p tsconfig.json --noEmit`.
+- The exact owned/read-only matrix passed 5/5 files and 57/57 tests:
+  `custom-screens-page`, `custom-screen-route-params`,
+  `custom-screen-editor-binding-flow`, `custom-screen-section-recovery`, and
+  `cacheBus`.
+- This receipt supersedes the pre-correction validation narrative; the leaf remains
+  complete because the corrective source state was re-gated rather than inferred from
+  its status.

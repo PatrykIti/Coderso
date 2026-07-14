@@ -9,6 +9,7 @@
 **Dependencies:** TASK-540-01..05
 **Status:** ⏳ To Do
 **Changelog:** 1252 (pinned; closure only)
+**Changelog File:** `_docs/_CHANGELOG/1252-2026-07-14-task-540-custom-screens-functional-and-data-integrity-remediation.md`
 
 ---
 
@@ -50,8 +51,24 @@ boundary-aware matching) join the private corpus. Raw smoke failure results, ful
 summaries, findings, and every other structured agent result are scanned before reuse;
 rejected dispatch/schema errors are discarded behind a generic label-only error, and
 the complete created changelog is scanned before its canonical block is byte-verified.
-Changelog 1252 receives and byte-verifies the canonical redacted smoke block, then
-the complete full validation passes while every contract is still In Progress. Only
-then may the separate status mutation mark descendants Done; it must touch all 17
-physical TASK-540 contracts and bind them to the same evidence hash. Any later
-mechanical/final failure atomically reopens all 17 where execution can continue.
+Before any closure status mutation, the evidence owner writes and byte-verifies one
+strict canonical control anchor in the existing changelog index plus changelog 1252's
+redacted smoke block. The anchor binds its evidence SHA-256, generation, board baseline,
+the fixed safe changelog path above, and the SHA-256 of the closure-leaf gate value. It
+remains independent authority if the changelog file is missing and may carry one exact
+old-gate -> Repair Pending -> successor-gate authorization during closure-leaf repair.
+The three active closure contracts then persist identical
+Closure Pending, Closure Board Baseline, and Closure Changelog Path receipts. A restart
+must compare their status-owner state against that independent control rather than
+recapturing it. Then
+the complete full validation passes while the TASK-540 root, TASK-540-06, and
+TASK-540-06-L01 closure contracts remain In Progress. Already completed source
+descendants stay Done and byte-identical. Only then may the separate status mutation
+mark those three closure contracts Done and synchronize the board row against the
+same evidence hash. A later mechanical or final-validation failure reopens the root
+and closure contracts; it reopens an earlier source-owner leaf only when a classified
+finding names that exact owner, while unrelated completed descendants remain Done.
+Every shared board/index mutation preserves an orchestrator-captured projection of all
+unrelated rows and bytes after both success and dispatch failure. Only TASK-540's board
+row/statistics, the exact 1252 row/reservation prose, and the exact TASK-540 control
+anchor are mutable.

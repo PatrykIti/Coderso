@@ -1,5 +1,5 @@
 import { apiRequest } from "./apiClient";
-import { broadcastCacheEvent } from "@/utils/cacheBus";
+import { broadcastCacheEvent, type CacheEventOperationToken } from "@/utils/cacheBus";
 import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
 import {
   clearCustomScreenDetailBrowserCache,
@@ -96,6 +96,10 @@ export type CustomScreenCreateInput = {
 };
 
 export type CustomScreenUpdateInput = Partial<CustomScreenCreateInput>;
+
+export type CustomScreenMutationOptions = Readonly<{
+  cacheEventOperationToken?: CacheEventOperationToken;
+}>;
 
 export type CustomScreenEntryPresentationOverride = ScreenEntryPresentationOverrideDraft;
 
@@ -392,7 +396,10 @@ export async function getCustomScreenCached(id: string, options?: { force?: bool
   }
 }
 
-export async function createCustomScreen(input: CustomScreenCreateInput) {
+export async function createCustomScreen(
+  input: CustomScreenCreateInput,
+  options?: CustomScreenMutationOptions
+): Promise<CustomScreenRecord> {
   const created = await apiRequest<CustomScreenRecord>(
     "/custom-screens",
     {
@@ -403,15 +410,25 @@ export async function createCustomScreen(input: CustomScreenCreateInput) {
     { withCsrf: true }
   );
   upsertCachedScreen(normalizeCustomScreenRecord(created));
-  broadcastCacheEvent({ key: cacheKeys.customScreensList, action: "update" });
-  broadcastCacheEvent({
-    key: cacheKeys.customScreenDetail(created.id),
-    action: "update",
-  });
+  broadcastCacheEvent(
+    { key: cacheKeys.customScreensList, action: "update" },
+    { operationToken: options?.cacheEventOperationToken }
+  );
+  broadcastCacheEvent(
+    {
+      key: cacheKeys.customScreenDetail(created.id),
+      action: "update",
+    },
+    { operationToken: options?.cacheEventOperationToken }
+  );
   return created;
 }
 
-export async function updateCustomScreen(id: string, input: CustomScreenUpdateInput) {
+export async function updateCustomScreen(
+  id: string,
+  input: CustomScreenUpdateInput,
+  options?: CustomScreenMutationOptions
+): Promise<CustomScreenRecord> {
   const updated = await apiRequest<CustomScreenRecord>(
     `/custom-screens/${encodeURIComponent(id)}`,
     {
@@ -422,11 +439,17 @@ export async function updateCustomScreen(id: string, input: CustomScreenUpdateIn
     { withCsrf: true }
   );
   upsertCachedScreen(normalizeCustomScreenRecord(updated));
-  broadcastCacheEvent({ key: cacheKeys.customScreensList, action: "update" });
-  broadcastCacheEvent({
-    key: cacheKeys.customScreenDetail(updated.id),
-    action: "update",
-  });
+  broadcastCacheEvent(
+    { key: cacheKeys.customScreensList, action: "update" },
+    { operationToken: options?.cacheEventOperationToken }
+  );
+  broadcastCacheEvent(
+    {
+      key: cacheKeys.customScreenDetail(updated.id),
+      action: "update",
+    },
+    { operationToken: options?.cacheEventOperationToken }
+  );
   return updated;
 }
 

@@ -7,8 +7,10 @@
 **Category:** Custom Screens / Admin State / Cache / Reliability
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-01, TASK-540-03
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-07-13
+**Completed:** 2026-07-14
+**Revalidation Passed:** 2026-07-14 — corrective L03 and L04 gates passed with core type/lint, root `tsc`, and exact Vitest matrices (155/155 and 57/57)
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -28,8 +30,18 @@ when the user edits after a background request has already started.
 |---|---|---|---|
 | TASK-540-04-L01 | Make related-entry and media promise caches retryable | `entriesClient.ts`, `mediaClient.ts`, and their admin Vitest suites | ✅ Done |
 | TASK-540-04-L02 | Cancel and retry related-entry loads | shared Screen hook, Preview dialog, and hook/Preview tests | ✅ Done |
-| TASK-540-04-L03 | Guard entry drafts, expand direct-image presentation targets, and resolve presentation media UUIDs | entry editor/canvas/read-only Preview, `customScreensClient.ts`, the Bun-free override contract + service, and five assigned suites | ✅ Done |
-| TASK-540-04-L04 | Guard Screen builder drafts | Screen editor page, additive editor-path helper, route/Page tests, binding-flow test | 🚧 In Progress |
+| TASK-540-04-L03 | Guard entry drafts, expand direct-image presentation targets, resolve presentation media UUIDs, and correlate mutation cache events | entry editor/canvas/read-only Preview, `customScreensClient.ts`, cache-bus substrate, the Bun-free override contract + service, and assigned suites | ✅ Done |
+| TASK-540-04-L04 | Guard Screen builder drafts | Screen editor page, additive editor-path helper, route/Page/binding-flow tests, and the recovery-suite cacheBus mock seam; read-only cache-bus/client production seams | ✅ Done |
+
+## Corrective workflow
+
+The L04 post-audit correction was executed through
+`_docs/_workflows/task-540-fix.mjs`: it accepted completed earlier leaves, landed the
+L03 cache-bus/client substrate first, gated it, then landed and gated the L04 editor
+consumer. The canonical `_docs/_workflows/task-540-implement.mjs` now validates that
+historical corrective evidence, classifies all four leaves as landed, and resumes at
+the first later unlanded leaf. Neither workflow may rerun or mutate these completed
+leaves.
 
 ## Shared contract
 
@@ -80,7 +92,7 @@ when the user edits after a background request has already started.
   success, bounded error/warning, and loading-finalization commits by route, channel,
   request generation, and unmount identity. Draft generation plus dirty refs form an
   additional barrier only for authoritative draft replacement; a current dirty success
-  emits a bounded remote warning, a current dirty rejection reports that local changes
+  emits a bounded external-update warning, a current dirty rejection reports that local changes
   are unchanged, and current `finally` still ends the spinner. Independent entry and
   override hydrations use separate load generations so starting one never cancels the
   other. Confirm synchronously clears all applicable refs/flags before blocker-skipping
@@ -116,11 +128,25 @@ when the user edits after a background request has already started.
 - Entry, override, and Custom Screen clients broadcast same-tab cache updates before their
   save promises resume. Entry/override saves invalidate their matching pre-response load
   generation. The Screen builder additionally installs an exact visit/save token before
-  its client call: matching self-events start no hydration, and any older hydration that
+  its client call. The shared cache bus supplies backward-compatible `local`/`remote`
+  delivery provenance plus an optional non-serialized operation token. L03's mutation
+  client forwards the editor's exact token to both local list/detail events. Only matching
+  token events are self-events; remote events and independent same-context writers remain
+  visible and advance a visit-scoped external-event generation. Only the current Screen
+  detail key is an external mutation signal; generic list events cannot identify the
+  resource and are ignored by the builder. Every non-self detail event synchronously marks
+  an unresolved external revision in both ref and visit-scoped render state, blocks stale
+  full-document saves without invalidating the resolving forced GET, and clears only after a
+  current forced hydration succeeds. Dirty refresh requires explicit discard confirmation and
+  synchronously restores the last persisted baseline before the forced read, so failure never
+  presents discarded authored values as clean.
+  Neither external events nor manual Refresh may start hydration while the save token is active. Save settlement clears
+  only warnings that predate its captured external-event generation. Any older hydration that
   settles while the token is active cannot publish or advance the draft generation. Only
   identity-current settlement, discard, or route cleanup clears that token; the response
-  then invalidates its visit's hydration and warning/loading state before advancing the
-  baseline. Other Screen cache events consult the synchronous dirty ref, never a delayed
+  then invalidates its visit's hydration/loading state and only pre-capture warnings before
+  advancing the baseline. Other Screen cache events consult the synchronous dirty ref,
+  never a delayed
   rendered-state closure.
 - Cache refreshes use existing `keepUnsaved` behavior and must never replace a dirty
   draft, even when the request began while the draft was clean. Successful create-save
@@ -161,9 +187,11 @@ when the user edits after a background request has already started.
 - TASK-540-04-L03 exclusively owns `custom-screen-entry-editor-restyle.test.tsx`,
   `custom-screen-entry-draft.test.ts`, the new
   `custom-screen-entry-navigation-guard.test.tsx`, and
-  `screenEntryPresentationOverrides.test.ts`, plus `customScreensClient.test.ts` for
-  strict UUID response/cache normalization. Its exclusive source ownership includes
-  `customScreensClient.ts`, `screenEntryPresentationOverrideContract.ts`, and
+  `screenEntryPresentationOverrides.test.ts`, plus `customScreensClient.test.ts` and
+  `cacheBus.test.ts` for strict UUID response/cache normalization and exact
+  same-context operation correlation. Its exclusive source ownership includes
+  `customScreensClient.ts`, `cacheBus.ts`,
+  `screenEntryPresentationOverrideContract.ts`, and
   `screenEntryPresentationOverrides.ts` in addition to the entry editor/canvas.
   `CustomScreenPreview.tsx` is also owned only to add optional pass-through props; absent
   props preserve its existing builder/list and retained compatibility output. The
@@ -171,9 +199,12 @@ when the user edits after a background request has already started.
 - TASK-540-04-L04 exclusively owns `CustomScreenEditorPage.tsx`, the additive
   `buildCustomScreenEditorPath` seam in `routeParams.ts`, `custom-screens-page.test.tsx`,
   `custom-screen-route-params.test.ts`, and
-  `custom-screen-editor-binding-flow.test.tsx`. It runs
-  `custom-screen-section-recovery.test.tsx` read-only to preserve TASK-505's pruned-field
-  notice and detailed API-error behavior.
+  `custom-screen-editor-binding-flow.test.tsx`. It also owns only the additive
+  `createCacheEventOperationToken: () => Symbol()` mock export in
+  `custom-screen-section-recovery.test.tsx`; TASK-505's behavior assertions remain frozen
+  and may not be re-baselined. It consumes L03-owned
+  `customScreensClient.ts`, `cacheBus.ts`, `customScreensClient.test.ts`, and
+  `cacheBus.test.ts` read-only; no cache key, serialized payload, or transport changes.
 
 ## Security Contract
 

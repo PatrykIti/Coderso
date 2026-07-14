@@ -48,7 +48,12 @@ import {
   setActiveAssistantSurfaceContext,
 } from "@/ui/assistant/activeSurfaceContext";
 import { fieldsFromSchema } from "@/ui/content-types/schemaMapping";
-import { subscribeCacheEvents } from "@/utils/cacheBus";
+import {
+  createCacheEventOperationToken,
+  subscribeCacheEvents,
+  type CacheEventOperationToken,
+  type CacheEventOrigin,
+} from "@/utils/cacheBus";
 import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
 
 import { CustomScreenShell } from "./CustomScreenShell";
@@ -56,6 +61,7 @@ import { CustomScreenWorkspacePreviewDialog } from "./CustomScreenWorkspacePrevi
 import { buildCustomScreenEditorPath, resolveCustomScreenId } from "./routeParams";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { useAdminDirtyNavigationGuard } from "@/ui/shared/AdminDirtyNavigationGuard";
+import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import {
   addScreenBlockAt,
@@ -75,6 +81,7 @@ import {
   updateScreenBlock,
   updateScreenSection,
   type ScreenBlockKind,
+  type ScreenBlockLocation,
   type ScreenInsertTarget,
   type ScreenSectionPatch,
 } from "../../../services/customScreens/screenDocumentOps";
@@ -107,9 +114,26 @@ type BuilderSaveToken = Readonly<{
   routeGeneration: number;
   saveGeneration: number;
   draftGeneration: number;
+  externalEventGeneration: number;
+  cacheEventOperationToken: CacheEventOperationToken;
 }>;
 
 export const advanceBuilderDraftGeneration = (current: number) => current + 1;
+
+export const runBuilderManualRefresh = ({
+  saveActive,
+  refresh,
+}: {
+  saveActive: boolean;
+  refresh: () => void;
+}) => {
+  if (saveActive) return false;
+  refresh();
+  return true;
+};
+
+export const getBuilderExternalRevisionSaveError = (externalRevisionUnresolved: boolean) =>
+  externalRevisionUnresolved ? "Refresh the newer Screen version before saving." : null;
 
 const blockTreeContains = (blocks: readonly ScreenBlockV1[], blockId: string): boolean =>
   blocks.some(
@@ -321,7 +345,11 @@ function CustomScreenEditorRouteSession({
   // field(s) the 505-01 save-path GC pruned (read off the returned record's
   // transient `warnings`). Cleared by markDirty alongside setError(null).
   const [saveNoticeCommit, setSaveNoticeCommit] = useState<BuilderRouteMessage | null>(null);
-  const [remoteWarningVisit, setRemoteWarningVisit] = useState<BuilderRouteVisit | null>(null);
+  const [externalWarningVisit, setExternalWarningVisit] = useState<BuilderRouteVisit | null>(null);
+  const [externalRevisionVisit, setExternalRevisionVisit] = useState<BuilderRouteVisit | null>(
+    null
+  );
+  const [externalRefreshConfirmOpen, setExternalRefreshConfirmOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   // TASK-496-02: host-owned controlled flag for the shared `CanvasEditor` shell
   // (the shell only READS it; the toolbar toggle + reopen chip flip it directly).
@@ -337,6 +365,8 @@ function CustomScreenEditorRouteSession({
   const draftMutationGenerationRef = useRef(0);
   const screenHydrationGenerationRef = useRef(0);
   const screenSaveGenerationRef = useRef(0);
+  const externalScreenEventGenerationRef = useRef(0);
+  const externalUpdateUnresolvedRef = useRef(false);
   const activeScreenSaveTokenRef = useRef<BuilderSaveToken | null>(null);
   const persistedScreenTargetRef = useRef<{
     routeVisit: BuilderRouteVisit;
@@ -350,7 +380,8 @@ function CustomScreenEditorRouteSession({
   const isLoading = !routeReady && loadActivityVisit === routeVisit;
   const isSaving = saveActivityVisit === routeVisit;
   const error = errorCommit?.routeVisit === routeVisit ? errorCommit.message : null;
-  const remoteUpdatePending = remoteWarningVisit === routeVisit;
+  const externalUpdatePending = externalWarningVisit === routeVisit;
+  const externalRevisionUnresolved = externalRevisionVisit === routeVisit;
   const saveNotice = saveNoticeCommit?.routeVisit === routeVisit ? saveNoticeCommit.message : null;
 
   const selectedContentType = useMemo(
@@ -372,6 +403,7 @@ function CustomScreenEditorRouteSession({
     return () => {
       clearActiveAssistantSurfaceContext();
       activeScreenSaveTokenRef.current = null;
+      externalUpdateUnresolvedRef.current = false;
       persistedScreenTargetRef.current = null;
       mountedRef.current = false;
       routeGenerationRef.current += 1;
@@ -403,7 +435,7 @@ function CustomScreenEditorRouteSession({
         selectedBlockId: selectedId,
         warnings: [
           ...(hasUnsavedChanges ? ["custom_screen_has_unsaved_changes"] : []),
-          ...(remoteUpdatePending ? ["custom_screen_remote_update_pending"] : []),
+          ...(externalUpdatePending ? ["custom_screen_external_update_pending"] : []),
         ],
       })
     );
@@ -418,7 +450,7 @@ function CustomScreenEditorRouteSession({
     isCreateMode,
     name,
     previewCapabilities,
-    remoteUpdatePending,
+    externalUpdatePending,
     routeReady,
     screen,
     screenBindings,
@@ -541,11 +573,16 @@ function CustomScreenEditorRouteSession({
     (
       record: CustomScreenRecord,
       acceptedRouteVisit: BuilderRouteVisit,
-      source: "load" | "save"
+      source: "load" | "save",
+      preserveExternalWarning = false
     ) => {
       applyScreenFieldsAndDefinition(record);
       resetBuilderDraftAuthority();
-      setRemoteWarningVisit(null);
+      if (source === "load") {
+        externalUpdateUnresolvedRef.current = false;
+        setExternalRevisionVisit(null);
+      }
+      if (!preserveExternalWarning) setExternalWarningVisit(null);
       setCommittedScreenVisit(acceptedRouteVisit);
       const notice = source === "save" ? buildScreenSaveNotice(record) : null;
       setSaveNoticeCommit(
@@ -612,7 +649,7 @@ function CustomScreenEditorRouteSession({
 
   const runBackgroundScreenHydration = useCallback(
     async (load: () => Promise<CustomScreenRecord | null>, isActive: () => boolean) => {
-      if (!mountedRef.current || !isActive()) return;
+      if (!mountedRef.current || !isActive() || hasCurrentScreenSaveAuthority()) return;
       const token = captureScreenLoadToken();
       setLoadActivityVisit(token.routeVisit);
       try {
@@ -621,7 +658,7 @@ function CustomScreenEditorRouteSession({
         if (hasCurrentScreenSaveAuthority()) return;
         if (!mayApplyScreenLoad(token)) {
           setErrorCommit(null);
-          setRemoteWarningVisit(token.routeVisit);
+          setExternalWarningVisit(token.routeVisit);
           return;
         }
         if (!detail) {
@@ -673,15 +710,55 @@ function CustomScreenEditorRouteSession({
     [isCreateMode, runBackgroundScreenHydration, screenId]
   );
 
-  const handleCurrentScreenCacheEvent = useCallback(() => {
-    if (!mountedRef.current) return;
-    if (hasCurrentScreenSaveAuthority()) return;
-    if (builderDirtyRef.current) {
-      setRemoteWarningVisit(routeVisit);
-      return;
-    }
+  const requestExternalRefresh = useCallback(() => {
+    runBuilderManualRefresh({
+      saveActive: hasCurrentScreenSaveAuthority(),
+      refresh: () => {
+        if (builderDirtyRef.current) {
+          setExternalRefreshConfirmOpen(true);
+          return;
+        }
+        void refreshScreen(true);
+      },
+    });
+  }, [hasCurrentScreenSaveAuthority, refreshScreen]);
+
+  const discardLocalDraftAndRefresh = useCallback(() => {
+    if (!screen) return;
+    draftMutationGenerationRef.current = advanceBuilderDraftGeneration(
+      draftMutationGenerationRef.current
+    );
+    builderDirtyRef.current = false;
+    screenHydrationGenerationRef.current += 1;
+    applyScreenFieldsAndDefinition(screen);
+    setHasUnsavedChanges(false);
+    setLoadActivityVisit(null);
+    setErrorCommit(null);
+    setSaveNoticeCommit(null);
+    setExternalRefreshConfirmOpen(false);
     void refreshScreen(true);
-  }, [hasCurrentScreenSaveAuthority, refreshScreen, routeVisit]);
+  }, [applyScreenFieldsAndDefinition, refreshScreen, screen]);
+
+  const handleCurrentScreenCacheEvent = useCallback(
+    (origin: CacheEventOrigin, operationToken?: CacheEventOperationToken) => {
+      if (!mountedRef.current) return;
+      const activeSave = activeScreenSaveTokenRef.current;
+      const saveActive = hasCurrentScreenSaveAuthority();
+      const isExactSelfEvent = Boolean(
+        saveActive && origin === "local" && operationToken === activeSave?.cacheEventOperationToken
+      );
+      if (isExactSelfEvent) return;
+      externalScreenEventGenerationRef.current += 1;
+      externalUpdateUnresolvedRef.current = true;
+      setExternalRevisionVisit(routeVisit);
+      setExternalWarningVisit(routeVisit);
+      if (builderDirtyRef.current || saveActive) {
+        return;
+      }
+      void refreshScreen(true);
+    },
+    [hasCurrentScreenSaveAuthority, refreshScreen, routeVisit]
+  );
 
   const handleSelectBlock = useCallback((id: string | null) => {
     setSelectedId(id);
@@ -715,14 +792,9 @@ function CustomScreenEditorRouteSession({
 
   useEffect(() => {
     if (isCreateMode || !screenId) return undefined;
-    return subscribeCacheEvents((event) => {
-      if (
-        event.key !== cacheKeys.customScreensList &&
-        event.key !== cacheKeys.customScreenDetail(screenId)
-      ) {
-        return;
-      }
-      handleCurrentScreenCacheEvent();
+    return subscribeCacheEvents((event, origin, operationToken) => {
+      if (event.key !== cacheKeys.customScreenDetail(screenId)) return;
+      handleCurrentScreenCacheEvent(origin, operationToken);
     });
   }, [handleCurrentScreenCacheEvent, isCreateMode, screenId]);
 
@@ -818,7 +890,7 @@ function CustomScreenEditorRouteSession({
   // on EVERY blur, and renameScreenSection always returns new objects even for
   // an identical label — so the host must no-op an unchanged commit itself or a
   // mere focus+blur marks the document dirty (unsaved-changes chip + suppressed
-  // remote refresh / "Updated in another tab" alert).
+  // external refresh warning).
   const handleRenameSection = (sectionId: string, label: string) => {
     const document = definitionRef.current.editorView.document;
     const section = document.sections.find((item) => item.id === sectionId);
@@ -862,8 +934,29 @@ function CustomScreenEditorRouteSession({
     setSelectedId(null);
   };
 
+  const resolveSiblingList = (
+    document: ScreenDocumentV1,
+    location: ScreenBlockLocation
+  ): ScreenBlockV1[] | null => {
+    const section = document.sections.find((item) => item.id === location.sectionId);
+    if (!section) return null;
+    if (location.parentId === null) {
+      return location.slotId === null ? section.blocks : null;
+    }
+    const parent = findScreenBlockById(document, location.parentId);
+    if (!parent) return null;
+    return location.slotId === null
+      ? (parent.children ?? null)
+      : (parent.slots?.[location.slotId] ?? null);
+  };
+
   const handleMoveBlock = (blockId: string, direction: "up" | "down") => {
     const current = definitionRef.current;
+    const location = findScreenBlockLocation(current.editorView.document, blockId);
+    const siblings = location ? resolveSiblingList(current.editorView.document, location) : null;
+    if (!location || !siblings) return;
+    if (direction === "up" && location.index === 0) return;
+    if (direction === "down" && location.index === siblings.length - 1) return;
     updateEditorView({
       document: moveScreenBlock(current.editorView.document, blockId, direction),
     });
@@ -1019,6 +1112,8 @@ function CustomScreenEditorRouteSession({
     routeGeneration: routeGenerationRef.current,
     saveGeneration: ++screenSaveGenerationRef.current,
     draftGeneration: draftMutationGenerationRef.current,
+    externalEventGeneration: externalScreenEventGenerationRef.current,
+    cacheEventOperationToken: createCacheEventOperationToken(),
   });
 
   const isScreenSaveIdentityCurrent = (token: BuilderSaveToken) =>
@@ -1039,7 +1134,9 @@ function CustomScreenEditorRouteSession({
     screenHydrationGenerationRef.current += 1;
     setLoadActivityVisit(null);
     setErrorCommit(null);
-    setRemoteWarningVisit(null);
+    const externalEventArrivedDuringSave =
+      token.externalEventGeneration !== externalScreenEventGenerationRef.current;
+    if (!externalEventArrivedDuringSave) setExternalWarningVisit(null);
     if (token.draftGeneration !== draftMutationGenerationRef.current) {
       if (isCreateMode) {
         persistedScreenTargetRef.current = {
@@ -1057,7 +1154,7 @@ function CustomScreenEditorRouteSession({
       return { mayNavigate: false };
     }
     persistedScreenTargetRef.current = null;
-    applyPersistedScreen(saved, token.routeVisit, "save");
+    applyPersistedScreen(saved, token.routeVisit, "save", externalEventArrivedDuringSave);
     return { mayNavigate: true };
   };
 
@@ -1069,13 +1166,16 @@ function CustomScreenEditorRouteSession({
     screenHydrationGenerationRef.current += 1;
     screenSaveGenerationRef.current += 1;
     activeScreenSaveTokenRef.current = null;
+    externalUpdateUnresolvedRef.current = false;
     persistedScreenTargetRef.current = null;
     setHasUnsavedChanges(false);
     setCommittedScreenVisit(null);
     setLoadActivityVisit(null);
     setSaveActivityVisit(null);
     setErrorCommit(null);
-    setRemoteWarningVisit(null);
+    setExternalWarningVisit(null);
+    setExternalRevisionVisit(null);
+    setExternalRefreshConfirmOpen(false);
     setSaveNoticeCommit(null);
     setPreviewOpen(false);
     clearActiveAssistantSurfaceContext();
@@ -1090,23 +1190,30 @@ function CustomScreenEditorRouteSession({
     onConfirmDiscard: invalidateBuilderVisitForDiscard,
   });
 
+  const commitSynchronousSaveValidationError = (message: string) => {
+    screenHydrationGenerationRef.current += 1;
+    setLoadActivityVisit((current) => (current === routeVisit ? null : current));
+    setSaveNoticeCommit(null);
+    setErrorCommit({ routeVisit, kind: "save", message });
+  };
+
   const handleSave = async () => {
     if (!routeReady) return;
+    const externalRevisionError = getBuilderExternalRevisionSaveError(
+      externalUpdateUnresolvedRef.current
+    );
+    if (externalRevisionError) {
+      setSaveNoticeCommit(null);
+      setErrorCommit({ routeVisit, kind: "save", message: externalRevisionError });
+      return;
+    }
     const trimmedName = normalizeText(name);
     if (!trimmedName) {
-      setErrorCommit({
-        routeVisit,
-        kind: "save",
-        message: "Screen name is required.",
-      });
+      commitSynchronousSaveValidationError("Screen name is required.");
       return;
     }
     if (!contentTypeId) {
-      setErrorCommit({
-        routeVisit,
-        kind: "save",
-        message: "Select a content type before saving.",
-      });
+      commitSynchronousSaveValidationError("Select a content type before saving.");
       return;
     }
 
@@ -1135,9 +1242,12 @@ function CustomScreenEditorRouteSession({
               capturedTarget.routeGeneration === routeGenerationRef.current
             ? capturedTarget.id
             : null;
+      const mutationOptions = {
+        cacheEventOperationToken: token.cacheEventOperationToken,
+      };
       const saved = targetId
-        ? await updateCustomScreen(targetId, payload)
-        : await createCustomScreen(payload);
+        ? await updateCustomScreen(targetId, payload, mutationOptions)
+        : await createCustomScreen(payload, mutationOptions);
       const { mayNavigate } = commitScreenSaveResponse(saved, token);
       if (isCreateMode && mayNavigate) {
         navigate(buildCustomScreenEditorPath({ screenId: saved.id }), {
@@ -1297,7 +1407,7 @@ function CustomScreenEditorRouteSession({
                     size="sm"
                     className="gap-2"
                     onClick={handleSave}
-                    disabled={!routeReady || isLoading || isSaving}
+                    disabled={!routeReady || isLoading || isSaving || externalRevisionUnresolved}
                   >
                     <Save className="h-4 w-4" />
                     {isSaving ? "Saving..." : "Save"}
@@ -1342,11 +1452,11 @@ function CustomScreenEditorRouteSession({
                 isCreateMode={isCreateMode}
               >
                 {/* TASK-505-03 (Item B2/B3): the outer gate is widened beyond
-                  `error || remoteUpdatePending` so the amber orphan notice (no
+                  `error || externalUpdatePending` so the amber orphan notice (no
                   current error on the reopen path) and the post-save pruned-field
                   notice (no error on a clean save) actually mount. The per-notice
                   inner gates still decide which Alert shows. */}
-                {error || remoteUpdatePending || orphanCount > 0 || saveNotice ? (
+                {error || externalUpdatePending || orphanCount > 0 || saveNotice ? (
                   <div className="shrink-0 space-y-3 px-6 pt-4">
                     {error ? (
                       <Alert variant="destructive">
@@ -1382,14 +1492,20 @@ function CustomScreenEditorRouteSession({
                         <AlertDescription>{saveNotice}</AlertDescription>
                       </Alert>
                     ) : null}
-                    {remoteUpdatePending ? (
+                    {externalUpdatePending ? (
                       <Alert>
-                        <AlertTitle>Updated in another tab</AlertTitle>
+                        <AlertTitle>Newer changes are available</AlertTitle>
                         <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <span>
-                            New changes are available. Refresh to load the latest version.
+                            This Screen changed outside this editor. Refresh to load the latest
+                            version.
                           </span>
-                          <Button variant="outline" size="sm" onClick={() => refreshScreen(true)}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={isSaving}
+                            onClick={requestExternalRefresh}
+                          >
                             Refresh
                           </Button>
                         </AlertDescription>
@@ -1462,6 +1578,16 @@ function CustomScreenEditorRouteSession({
           );
         }}
       </CustomScreenPreviewRecordOwner>
+      <ConfirmActionDialog
+        open={externalRefreshConfirmOpen}
+        onOpenChange={setExternalRefreshConfirmOpen}
+        title="Discard local Screen changes and refresh?"
+        description="Your unsaved Screen changes will be discarded before loading the newer version."
+        confirmLabel="Discard and refresh"
+        cancelLabel="Keep editing"
+        tone="warning"
+        onConfirm={discardLocalDraftAndRefresh}
+      />
       {dirtyNavigationDialog}
     </>
   );

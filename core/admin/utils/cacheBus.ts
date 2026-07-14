@@ -7,7 +7,19 @@ export type CacheEvent = {
   ts: number;
 };
 
-type CacheEventHandler = (event: CacheEvent) => void;
+export type CacheEventOrigin = "local" | "remote";
+
+export type CacheEventOperationToken = symbol;
+
+export type CacheEventBroadcastOptions = Readonly<{
+  operationToken?: CacheEventOperationToken;
+}>;
+
+type CacheEventHandler = (
+  event: CacheEvent,
+  origin: CacheEventOrigin,
+  operationToken?: CacheEventOperationToken
+) => void;
 
 type BroadcastChannelLike = {
   postMessage: (message: unknown) => void;
@@ -28,6 +40,8 @@ const cacheBusId = (() => {
   }
   return `cache-${Math.random().toString(36).slice(2)}`;
 })();
+
+export const createCacheEventOperationToken = (): CacheEventOperationToken => Symbol();
 
 const getBroadcastChannel = (): BroadcastChannelLike | null => {
   if (typeof BroadcastChannel === "undefined") return null;
@@ -56,7 +70,10 @@ const parseEvent = (payload: unknown): CacheEvent | null => {
   return event;
 };
 
-export const broadcastCacheEvent = (input: Omit<CacheEvent, "ts" | "sourceId">) => {
+export const broadcastCacheEvent = (
+  input: Omit<CacheEvent, "ts" | "sourceId">,
+  options: CacheEventBroadcastOptions = {}
+) => {
   const event: CacheEvent = { ...input, ts: Date.now(), sourceId: cacheBusId };
   const channel = getBroadcastChannel();
   if (channel) {
@@ -69,7 +86,7 @@ export const broadcastCacheEvent = (input: Omit<CacheEvent, "ts" | "sourceId">) 
     emitStorageEvent(event);
   }
   for (const handler of localHandlers) {
-    handler(event);
+    handler(event, "local", options.operationToken);
   }
 };
 
@@ -81,7 +98,7 @@ export const subscribeCacheEvents = (handler: CacheEventHandler) => {
     const listener = (event: MessageEvent) => {
       const parsed = parseEvent(event.data);
       if (!parsed || parsed.sourceId === cacheBusId) return;
-      handler(parsed);
+      handler(parsed, "remote");
     };
     channel.addEventListener("message", listener);
     legacyChannel?.addEventListener("message", listener);
@@ -95,17 +112,14 @@ export const subscribeCacheEvents = (handler: CacheEventHandler) => {
   }
 
   const storageListener = (event: StorageEvent) => {
-    if (
-      event.key !== STORAGE_EVENT_KEY &&
-      event.key !== LEGACY_STORAGE_EVENT_KEY
-    ) {
+    if (event.key !== STORAGE_EVENT_KEY && event.key !== LEGACY_STORAGE_EVENT_KEY) {
       return;
     }
     if (!event.newValue) return;
     try {
       const parsed = parseEvent(JSON.parse(event.newValue));
       if (!parsed || parsed.sourceId === cacheBusId) return;
-      handler(parsed);
+      handler(parsed, "remote");
     } catch {
       // ignore
     }

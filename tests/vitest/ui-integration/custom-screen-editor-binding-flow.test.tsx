@@ -303,17 +303,14 @@ const createEditorScreen = (): CustomScreenRecord => ({
 type Deferred<T> = {
   promise: Promise<T>;
   resolve: (value: T | PromiseLike<T>) => void;
-  reject: (reason?: unknown) => void;
 };
 
 const deferred = <T,>(): Deferred<T> => {
   let resolve!: Deferred<T>["resolve"];
-  let reject!: Deferred<T>["reject"];
-  const promise = new Promise<T>((nextResolve, nextReject) => {
+  const promise = new Promise<T>((nextResolve) => {
     resolve = nextResolve;
-    reject = nextReject;
   });
-  return { promise, resolve, reject };
+  return { promise, resolve };
 };
 
 const flushEditor = async () => {
@@ -407,7 +404,7 @@ describe("CustomScreenEditorPage Button href binding flow", () => {
       });
   });
 
-  test("binds, clears, saves, and rebinds Button href without changing its static link or unrelated bindings", async () => {
+  test("binds, updates, clears, and rebinds Button href without changing its static link or unrelated bindings", async () => {
     const view = mountEditor();
     try {
       await flushEditor();
@@ -450,7 +447,35 @@ describe("CustomScreenEditorPage Button href binding flow", () => {
       expect(view.container.textContent).not.toContain("Unsaved changes");
       expect(view.container.textContent).toContain("Use static link");
 
-      const savedWithPrimaryBinding = screen;
+      selectBoundField(view.container, "Secondary URL");
+      await flushEditor();
+      expect(view.container.textContent).toContain("Use static link");
+      expect(view.container.textContent).toContain("Unsaved changes");
+      expect(staticLink()?.value).toBe("/static-target");
+
+      clickEditorElement(findEditorButton(view.container, "Save"));
+      await flushEditor();
+      expect(updateSpy).toHaveBeenCalledTimes(2);
+      const secondPayload = updateSpy.mock.calls[1]?.[1];
+      expect(updateSpy.mock.calls[1]?.[0]).toBe("screen-binding-flow");
+      expect(secondPayload?.definition.editorView.bindings).toEqual([
+        unrelatedBinding,
+        {
+          id: "button-1-href",
+          blockId: "button-1",
+          propPath: "href",
+          source: "entry",
+          field: "urlB",
+          mode: "read",
+        },
+      ]);
+      expect(secondPayload?.definition.editorView.document.sections[0]?.blocks[0]?.data.href).toBe(
+        "/static-target"
+      );
+      expect(JSON.stringify(secondPayload?.definition)).not.toContain('"field":""');
+      expect(view.container.textContent).not.toContain("Unsaved changes");
+
+      const savedWithSecondaryBinding = screen;
       const staleHydration = deferred<CustomScreenRecord | null>();
       loadQueue.push(staleHydration.promise);
       React.act(() => {
@@ -469,24 +494,46 @@ describe("CustomScreenEditorPage Button href binding flow", () => {
       expect(view.container.textContent).toContain("Unsaved changes");
       expect(staticLink()?.value).toBe("/static-target");
 
-      // The refresh began while the saved Primary binding was authoritative. Its late
+      // The refresh began while the saved Secondary binding was authoritative. Its late
       // result must not restore that binding over the newer local clear.
-      staleHydration.resolve(savedWithPrimaryBinding);
+      staleHydration.resolve(savedWithSecondaryBinding);
       await flushEditor();
       expect(view.container.textContent).not.toContain("Use static link");
       expect(view.container.textContent).toContain("Unsaved changes");
       expect(staticLink()?.value).toBe("/static-target");
 
+      // The tokenless cache event represents an independent writer, so the late read leaves
+      // unresolved external authority. Confirming Refresh discards the local clear, restores
+      // the persisted Secondary binding, and resolves authority through a fresh forced read.
+      const authoritativeRefresh = deferred<CustomScreenRecord | null>();
+      loadQueue.push(authoritativeRefresh.promise);
+      clickEditorElement(findEditorButton(view.container, "Refresh"));
+      await flushEditor();
+      expect(document.body.textContent).toContain("Discard local Screen changes and refresh?");
+      clickEditorElement(findEditorButton(document, "Discard and refresh"));
+      await flushEditor();
+      authoritativeRefresh.resolve(savedWithSecondaryBinding);
+      await flushEditor();
+      expect(view.container.textContent).toContain("Use static link");
+      expect(view.container.textContent).not.toContain("Unsaved changes");
+      expect(view.container.textContent).not.toContain("Newer changes are available");
+
+      // Re-apply the intended clear against the now-authoritative baseline.
+      clickEditorElement(findEditorButton(view.container, "Use static link"));
+      await flushEditor();
+      expect(view.container.textContent).not.toContain("Use static link");
+      expect(view.container.textContent).toContain("Unsaved changes");
+
       clickEditorElement(findEditorButton(view.container, "Save"));
       await flushEditor();
-      expect(updateSpy).toHaveBeenCalledTimes(2);
-      const secondPayload = updateSpy.mock.calls[1]?.[1];
-      expect(updateSpy.mock.calls[1]?.[0]).toBe("screen-binding-flow");
-      expect(secondPayload?.definition.editorView.bindings).toEqual([unrelatedBinding]);
-      expect(secondPayload?.definition.editorView.document.sections[0]?.blocks[0]?.data.href).toBe(
+      expect(updateSpy).toHaveBeenCalledTimes(3);
+      const thirdPayload = updateSpy.mock.calls[2]?.[1];
+      expect(updateSpy.mock.calls[2]?.[0]).toBe("screen-binding-flow");
+      expect(thirdPayload?.definition.editorView.bindings).toEqual([unrelatedBinding]);
+      expect(thirdPayload?.definition.editorView.document.sections[0]?.blocks[0]?.data.href).toBe(
         "/static-target"
       );
-      expect(JSON.stringify(secondPayload?.definition)).not.toContain('"field":""');
+      expect(JSON.stringify(thirdPayload?.definition)).not.toContain('"field":""');
       expect(view.container.textContent).not.toContain("Unsaved changes");
 
       // The visible affordance is now gone. Invoke the same production callback once
@@ -496,10 +543,10 @@ describe("CustomScreenEditorPage Button href binding flow", () => {
       );
       await flushEditor();
       expect(view.container.textContent).not.toContain("Unsaved changes");
-      expect(updateSpy).toHaveBeenCalledTimes(2);
+      expect(updateSpy).toHaveBeenCalledTimes(3);
       expect(staticLink()?.value).toBe("/static-target");
 
-      selectBoundField(view.container, "Secondary URL");
+      selectBoundField(view.container, "Primary URL");
       await flushEditor();
       expect(view.container.textContent).toContain("Use static link");
       expect(view.container.textContent).toContain("Unsaved changes");
@@ -507,29 +554,24 @@ describe("CustomScreenEditorPage Button href binding flow", () => {
 
       clickEditorElement(findEditorButton(view.container, "Save"));
       await flushEditor();
-      expect(updateSpy).toHaveBeenCalledTimes(3);
-      const thirdPayload = updateSpy.mock.calls[2]?.[1];
-      expect(updateSpy.mock.calls[2]?.[0]).toBe("screen-binding-flow");
-      expect(thirdPayload?.definition.editorView.bindings).toEqual([
+      expect(updateSpy).toHaveBeenCalledTimes(4);
+      const fourthPayload = updateSpy.mock.calls[3]?.[1];
+      expect(updateSpy.mock.calls[3]?.[0]).toBe("screen-binding-flow");
+      expect(fourthPayload?.definition.editorView.bindings).toEqual([
         unrelatedBinding,
         {
           id: "button-1-href",
           blockId: "button-1",
           propPath: "href",
           source: "entry",
-          field: "urlB",
+          field: "urlA",
           mode: "read",
         },
       ]);
-      expect(thirdPayload?.definition.editorView.document.sections[0]?.blocks[0]?.data.href).toBe(
+      expect(fourthPayload?.definition.editorView.document.sections[0]?.blocks[0]?.data.href).toBe(
         "/static-target"
       );
-      expect(JSON.stringify(thirdPayload?.definition)).not.toContain('"field":""');
-      expect(updateSpy.mock.calls.map(([screenId]) => screenId)).toEqual([
-        "screen-binding-flow",
-        "screen-binding-flow",
-        "screen-binding-flow",
-      ]);
+      expect(JSON.stringify(fourthPayload?.definition)).not.toContain('"field":""');
       expect(view.container.textContent).not.toContain("Unsaved changes");
     } finally {
       view.cleanup();

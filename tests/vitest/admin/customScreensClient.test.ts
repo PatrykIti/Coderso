@@ -16,7 +16,12 @@ import {
   updateCustomScreen,
   type CustomScreenRecord,
 } from "../../../core/admin/services/customScreensClient";
-import { subscribeCacheEvents } from "../../../core/admin/utils/cacheBus";
+import {
+  createCacheEventOperationToken,
+  subscribeCacheEvents,
+  type CacheEventOperationToken,
+  type CacheEventOrigin,
+} from "../../../core/admin/utils/cacheBus";
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -238,6 +243,122 @@ test("custom screen mutations use CSRF and update cache", async () => {
     expect(csrfHeaders).toContain("csrf-token");
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("custom screen mutations correlate only their local cache events without serializing tokens", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalBroadcast = (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const events: Array<{
+    event: { key: string; action: string; sourceId: string; ts: number };
+    origin: CacheEventOrigin;
+    operationToken?: CacheEventOperationToken;
+  }> = [];
+  const createToken = createCacheEventOperationToken();
+  const updateToken = createCacheEventOperationToken();
+
+  delete (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+  const unsubscribe = subscribeCacheEvents((event, origin, operationToken) => {
+    events.push({ event, origin, operationToken });
+  });
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    if (url.endsWith("/custom-screens") && init?.method === "POST") {
+      return jsonResponse(makeScreen({ id: "correlated-screen" }));
+    }
+    if (url.endsWith("/custom-screens/correlated-screen") && init?.method === "PATCH") {
+      return jsonResponse(makeScreen({ id: "correlated-screen", name: "Updated screen" }));
+    }
+    return jsonResponse({}, 404);
+  };
+
+  try {
+    resetCsrfToken();
+    clearCustomScreensCache();
+
+    await createCustomScreen(
+      { name: "Catalog screen", contentTypeId: "ct-1" },
+      { cacheEventOperationToken: createToken }
+    );
+    await updateCustomScreen(
+      "correlated-screen",
+      { name: "Updated screen" },
+      { cacheEventOperationToken: updateToken }
+    );
+
+    expect(events).toHaveLength(4);
+    expect(
+      events.map(({ event, origin, operationToken }) => ({
+        key: event.key,
+        origin,
+        operationToken,
+      }))
+    ).toEqual([
+      { key: cacheKeys.customScreensList, origin: "local", operationToken: createToken },
+      {
+        key: cacheKeys.customScreenDetail("correlated-screen"),
+        origin: "local",
+        operationToken: createToken,
+      },
+      { key: cacheKeys.customScreensList, origin: "local", operationToken: updateToken },
+      {
+        key: cacheKeys.customScreenDetail("correlated-screen"),
+        origin: "local",
+        operationToken: updateToken,
+      },
+    ]);
+    expect(
+      events.every(({ event }) => Object.keys(event).sort().join(",") === "action,key,sourceId,ts")
+    ).toBe(true);
+
+    const postCall = calls.find(
+      (call) => String(call.input).endsWith("/custom-screens") && call.init?.method === "POST"
+    );
+    const patchCall = calls.find(
+      (call) =>
+        String(call.input).endsWith("/custom-screens/correlated-screen") &&
+        call.init?.method === "PATCH"
+    );
+    expect(JSON.parse(String(postCall?.init?.body))).toEqual({
+      name: "Catalog screen",
+      contentTypeId: "ct-1",
+    });
+    expect(JSON.parse(String(patchCall?.init?.body))).toEqual({ name: "Updated screen" });
+
+    const serializedEvent = storage.getItem("coderso.admin.cache.event");
+    expect(Object.keys(JSON.parse(serializedEvent ?? "{}")).sort()).toEqual([
+      "action",
+      "key",
+      "sourceId",
+      "ts",
+    ]);
+    expect(serializedEvent).not.toContain("operationToken");
+    expect(storage.getItem(cacheKeys.customScreensList)).not.toContain("operationToken");
+    expect(storage.getItem(cacheKeys.customScreenDetail("correlated-screen"))).not.toContain(
+      "operationToken"
+    );
+    expect(JSON.stringify(getCachedCustomScreens())).not.toContain("operationToken");
+  } finally {
+    unsubscribe();
+    globalThis.fetch = originalFetch;
+    if (originalBroadcast === undefined) {
+      delete (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
+    } else {
+      (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel = originalBroadcast;
+    }
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
   }
 });
 

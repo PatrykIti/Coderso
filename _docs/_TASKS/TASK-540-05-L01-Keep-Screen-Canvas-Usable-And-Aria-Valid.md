@@ -97,6 +97,7 @@ bun --cwd core lint
 bunx vitest run tests/vitest/ui-integration/canvas-editor-panel-toggle-dedupe.test.tsx \
   tests/vitest/ui/custom-screen-authoring-boundary.test.ts \
   tests/vitest/ui-integration/canvas-editor/canvas-editor.test.tsx
+./node_modules/.bin/tsc -p tsconfig.json --noEmit
 ```
 
 The semantic role belongs to the shared shell, so the adjacent component suite is part

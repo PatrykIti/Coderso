@@ -10,6 +10,7 @@
 **Dependencies:** TASK-540-01-L01, TASK-540-02-L01, TASK-540-03-L01, TASK-540-04-L01..L04, TASK-540-05-L01..L02
 **Status:** ⏳ To Do
 **Changelog:** 1252 (pinned; closure only)
+**Changelog File:** `_docs/_CHANGELOG/1252-2026-07-14-task-540-custom-screens-functional-and-data-integrity-remediation.md`
 
 ---
 
@@ -34,6 +35,7 @@ workflow, re-run that leaf's gate, then resume closure.
 ## Required test matrix
 
 ```text
+tests/vitest/admin/cacheBus.test.ts
 tests/vitest/admin/custom-screen-schemas.test.ts
 tests/vitest/admin/customScreensClient.test.ts
 tests/vitest/customScreens/screenDocumentOps.test.ts
@@ -44,6 +46,8 @@ tests/vitest/customScreens/relatedEntryResolver.test.ts
 tests/vitest/admin/entriesClient.test.ts
 tests/vitest/admin/mediaClient.test.ts
 tests/vitest/admin/userSettingsClient.test.ts
+tests/vitest/ui/admin-auth-identity.test.tsx
+tests/vitest/ui/assistant-panel-interaction.test.tsx
 tests/vitest/ui/use-screen-entry-preferences.test.ts
 tests/vitest/ui/use-screen-related-entries.test.tsx
 tests/vitest/ui/custom-screen-entry-draft.test.ts
@@ -56,11 +60,13 @@ tests/vitest/ui/custom-screen-route-params.test.ts
 tests/vitest/ui-integration/canvas-editor-panel-toggle-dedupe.test.tsx
 tests/vitest/ui-integration/canvas-editor/canvas-editor.test.tsx
 tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx
+tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx
 tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx
 tests/vitest/ui-integration/custom-screen-entry-preferences-persistence.test.tsx
 tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx
 tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx
 tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx
+tests/vitest/widgets/screenWidgets.test.tsx
 tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx
 tests/unit/settings/userSettingsService.test.ts
 tests/integration/routes/userSettings.test.ts
@@ -68,11 +74,19 @@ tests/integration/routes/customScreensRoutes.test.ts
 ```
 
 The closure ownership reconcile also verifies, read-only, that TASK-540-02-L01
-solely wrote `ScreenBlockInspector.tsx` plus its image-inspector suite, and that
-TASK-540-04-L03 solely wrote `screenEntryPresentationOverrideContract.ts`,
-`screenEntryPresentationOverrides.ts`, `customScreensClient.ts`, and
-`customScreensClient.test.ts`. The workflow's leaf allowlists, targeted commands,
+solely wrote `ScreenBlockInspector.tsx` plus its image-inspector suite; TASK-540-04-L03
+solely wrote `screenEntryPresentationOverrideContract.ts`,
+  `screenEntryPresentationOverrides.ts`, `customScreensClient.ts`, `cacheBus.ts`, and their
+  two admin suites; and TASK-540-04-L04 solely wrote `CustomScreenEditorPage.tsx`, its
+  route helper, Page/route/binding suites, plus only the additive cacheBus factory mock in
+  the recovery suite, while consuming the L03 token names and signatures byte-identically.
+  TASK-505 recovery assertions must remain byte-identical. The workflow's leaf allowlists, targeted commands,
 aggregate matrix, and closure hash set must name these exact paths identically.
+TASK-540-05-L02 additionally owns the exact auth-identity contract/provider/route paths
+and `admin-auth-identity.test.tsx`; its Assistant suite is mechanically projected to the
+one required typed fixture property. TASK-540-04-L03 remains the sole writer of
+`CustomScreenEntryEditor.tsx` and leaves its hook call transport-neutral before L02;
+L02 consumes that component byte-identically.
 
 Assertions must cover exact reject-unknown/round-trip behavior, hostile URL
 corpus, recursive children/slot rejection, direct-image UUID→media URL resolution and
@@ -80,8 +94,20 @@ cancellation, link-only/legacy disabled compatibility, Tabs minimum/maximum plus
 panel behavior, nested interactive Space, promise fail→retry and identity guard,
 cacheBus target refresh without dirty overwrite, target A→B immediate stale-row
 disappearance before delayed B resolves, both dirty guards, narrow layout,
-landmark role, and per-user settings isolation including a delayed prior-user PATCH.
-The aggregate Button flow must bind, clear, rebind, save, and reopen while proving no
+landmark role, and per-user settings isolation including strict isolated GET/PATCH
+response normalization, safe failure/cancellation retry, a delayed prior-user PATCH,
+an undispatched queued A write canceled by the auth-identity epoch before B can own
+the session, same-mounted-session prune→A→B→A retaining only the latest exact shared-
+settled hook-local copy during fresh GET, and a brand-new post-prune remount starting
+default/unhydrated with a fresh GET. The real HTTP suite
+must inventory, delete, and prove absence of only the access-log rows emitted by its
+synthetic sessions and requests before it removes those sessions/users. Since logging
+is fire-and-forget, every suite request (including unauthenticated cases) uses one
+unique non-secret exact User-Agent marker, and proof includes a bounded marker plus
+exact-user/session stable-set and absence poll after synthetic traffic stops; failure
+to reach quiescence fails the test.
+The aggregate Button flow must bind, update the existing binding, clear, rebind, save,
+and reopen while proving no
 empty-field sentinel reaches the persisted definition. The new aggregate file may
 compose public production seams and leaf-owned test helpers, but it must not copy
 production algorithms or weaken a source-owner assertion.
@@ -103,13 +129,56 @@ create only tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx for
 cross-leaf regressions; keep every other named test byte-identical during closure
 run each named lane; on failure rerun the named file once and route real defects
 back to the single owning source leaf
+when resuming an active no-gate implementation leaf after an interrupted writer, run its
+exact gate first: a green gate closes it without requiring a second source diff; a red
+behavior gate enters the scoped fix loop, while infrastructure stops; the special
+pre-pending active 540-06-L01 repair below always closes this gate-first path with its
+exact deterministic Revalidation value, whether the first gate is green or a scoped fix
+is required
 run full test/precommit/Admin build-boundary-bundle/release/security gates
 restart the Bun server, execute the seven synthetic builder -> save -> entry flows,
 save task-540-prefixed screenshots and record visible scenario evidence in closeout
 update only the declared product/cache/API docs
-atomically keep all TASK-540 files In Progress, create/verify pinned changelog 1252,
-run full validation, then atomically update all statuses/rows/statistics and close the
-parent; run the mechanical graph gate and rollback to In Progress on a later failure
+preserve already completed source leaves/children as Done, keep the active closure
+leaf/child and root In Progress, and leave every unstarted descendant To Do
+mechanically require the L03-owned entry editor to remain byte-identical during L02,
+and restrict L02's Assistant suite to the exact typed UserSettings fixture property
+on an ordinary source-owner repair, or any 540-06-L01 repair after a valid
+evidence-before-pending anchor or durable Closure Pending exists, invalidate old gate
+receipts and persist one exact Repair Pending generation/token; a restart repairs/re-gates
+only that owner and closes it only with a matching fresh Revalidation receipt while later
+Done leaves remain untouched; an anchor-backed 540-06-L01 repair additionally binds prior
+gate, Repair Pending hash, and exact successor Revalidation in the changelog-index
+repairAuthorization before task-state reopen
+for a verified post-audit or smoke-evidence source finding owned by already-active
+540-06-L01 only while the changelog index is still in its canonical reserved/no-anchor
+state and Closure Pending does not exist, atomically remove its old gate and write the
+same canonical Fix Started ISO date on only 540-06 and 540-06-L01; write no Repair Pending
+or repairAuthorization, preserve the root/child/leaf plus task-board snapshot for exact
+rollback, then run only its scoped fixer and gate
+define preClosureRegateValue(fixStartedDate) to reject a non-canonical YYYY-MM-DD and
+otherwise return exactly `pre-closure remediation / fix-started ${fixStartedDate} / gate green`;
+require the transition agent to write that precomputed Revalidation Passed value and
+verify byte equality, including after restart
+after a task-metadata-capable fixer and before its gate, mechanically re-read the exact
+repair owner/status tables plus closure receipts after both successful and failed dispatch,
+and reject any changed pending token, pre-pending Fix Started marker, or stale gate
+use the program-pinned changelog path above (never a new RUN_DATE derivation), discover
+exactly zero or one changelog 1252 file, reject duplicates, and reuse that path even when
+a failed evidence dispatch temporarily removed the file, run full validation, then mark the closure
+leaf/child and root Done only after every other descendant is Done; run the mechanical
+graph gate and reopen only the affected owner plus closure/root on a later failure
+capture one board baseline, the closure leaf's exact gate field/value, and the fixed
+changelog path from the unchanged active graph before the first status mutation; first
+bind their strict control manifest plus generation/evidence hash into the independently
+evidence-owned changelog-index anchor and hashed changelog block, then persist the identical baseline/path through pending, retry, rollback,
+status, terminal restart, and verification without recapturing them from a mutated board/task
+on terminal startup, validate all 17 Done contracts, closure-leaf gate receipt, board row
+plus its exact persisted statistics baseline, unique changelog-index row, shared closure
+receipt, and the single changelog evidence hash before scoped-reopening closure/root and rerunning the
+post-audit, full validation, smoke, closure, final drift, and final gate sequence
+strict-parse a persisted Closure Pending or terminal Closure Generation, seed the durable
+counter from it, and require every later closure attempt to use a greater generation
 ```
 
 ### Orchestrated status flow
@@ -117,27 +186,144 @@ parent; run the mechanical graph gate and rollback to In Progress on a later fai
 Before each implementation/fix pass, a task-only transition agent marks the exact
 leaf and its direct child `🚧 In Progress`, keeps the board parent and root
 TASK-540 `🚧 In Progress`, and synchronizes the child leaf table plus root
-subtask table. A green targeted gate does **not** close the leaf or child: both
-remain In Progress and the leaf receives a dedicated `**Targeted Gate Passed:**`
-field with the date and exact gate evidence. A fixer likewise keeps its owner
-leaf/child In Progress and records `**Revalidation Passed:**` after the re-gate.
+subtask table. A green targeted gate closes that exact leaf `✅ Done`; its direct
+child becomes Done only when all of its physical leaves are terminal. This source
+completion is valid before the family changelog exists because changelog 1252 is
+pinned and created once at family closure. An ordinary source-owner repair, and any
+540-06-L01 repair after a valid evidence-before-pending anchor or durable
+`Closure Pending` exists, reopens only its exact owner leaf/direct child, removes stale
+`Targeted Gate Passed`/`Revalidation Passed` evidence, and persists one
+`**Repair Pending:** generation ... / token ...` receipt. A restart
+recognizes exactly that non-prefix repair owner even when later leaves are Done, executes
+only its implementation/re-gate, and closes it only after replacing Repair Pending with
+the fresh matching `**Revalidation Passed:**` receipt. An anchor-backed closure-leaf
+repair also requires the evidence-owned anchor authorization chain described below. A
+task-metadata-capable fixer is followed, before any read-only gate, by a deterministic
+re-read that requires the same Repair Pending token, active root/child/leaf statuses and
+rows, cleared old gate/Completed fields, and byte-identical closure
+pending/evidence/generation/baseline receipts. Completed siblings never rerun. Reopening
+a source owner requires the board to be already In Progress and preserves the complete
+board byte-identically; only the dedicated closure-pending and closure-status transitions
+may move TASK-540 or change the board statistics.
+
+The sole pre-pending exception is a verified post-audit or smoke-evidence source finding
+owned by `540-06-L01` while that closure leaf, its child, and TASK-540 are already active,
+the changelog index is still the canonical reserved state with no TASK-540 control anchor,
+and no durable `Closure Pending` exists. One task-only transaction removes the closure
+leaf's old gate and writes one identical canonical `Fix Started` ISO date on only
+TASK-540-06 and TASK-540-06-L01. It writes neither `Repair Pending` nor
+`repairAuthorization`, and it captures the exact root/child/leaf plus task-board bytes so
+any mutation or verification failure restores the whole task-and-board transaction. The
+scoped owner fixer and exact leaf gate then run. Whether the gate-first restart is green
+immediately or becomes green after that fixer, the status transition writes the exact
+precomputed `preClosureRegateValue(persistedFixStartedDate)` value
+`pre-closure remediation / fix-started ${persistedFixStartedDate} / gate green` into
+`Revalidation Passed` and verifies byte equality. The helper rejects a non-canonical
+YYYY-MM-DD. This marker is recovery state only: it is not closure authority and cannot
+satisfy pending or terminal closure validation.
 These transition agents may edit only the root TASK-540 file, the exact child, and
 the exact leaf; they never edit source, tests, board, changelog, or another task
-family. Every root/child status table remains In Progress, and the board row plus
-statistics stay byte-identical until closure.
+family. Unstarted leaves stay canonically `⏳ To Do`; only the currently executing
+leaf/direct child is `🚧 In Progress`; completed leaves/children stay `✅ Done`.
+The board parent remains In Progress and its statistics stay byte-identical until
+final family closure.
 
-All 17 task files remain In Progress through prepare, post-audit, full validation,
-live smoke, deterministic cleanup, and smoke-evidence audit. Closure first atomically
-sets/keeps every physical task In Progress with a unique pending-generation receipt.
-Its evidence owner then creates/updates changelog 1252 with the exact canonical
-redacted appendix, the orchestrator byte-verifies it, and the complete full validation
-runs while statuses are still In Progress. Only after that pass may the separate
-status owner atomically mark every leaf, every child, and finally the root Done and
-update the board. A final mechanical graph/evidence/diff gate follows. Every closure
-or re-closure updates all 17 task files with the evidence hash and generation; a
-missing descendant fails. Any exception after status mutation triggers a best-effort
-atomic all-17 reopen/board rollback before propagating the error. No task is Done
-before its changelog evidence and full validation pass.
+At closure, previously completed descendants remain Done; the closure leaf/direct
+child and root stay In Progress, while no unlanded descendant may be promoted from
+To Do. The workflow uses only the fixed `Changelog File` path above, discovers exactly
+zero or one `1252-*.md`, rejects duplicates, and persists that same safe repo-relative
+path on the root, TASK-540-06, and TASK-540-06-L01. Before any status-owner mutation,
+the orchestrator pins the unchanged active board baseline, exact closure-leaf gate
+field/value, path, and positive generation. The evidence owner creates/updates changelog
+1252 and one strict canonical HTML-comment JSON anchor in the existing changelog index:
+
+```json
+{
+  "schemaVersion": 1,
+  "evidenceSha256": "64-lowercase-hex",
+  "closureControl": {
+    "schemaVersion": 1,
+    "generation": 1,
+    "boardBaseline": "toDo 0 / inProgress 0 / done 0",
+    "changelogPath": "_docs/_CHANGELOG/1252-2026-07-14-task-540-custom-screens-functional-and-data-integrity-remediation.md",
+    "gateReceipt": {
+      "field": "Targeted Gate Passed",
+      "valueSha256": "64-lowercase-hex"
+    }
+  },
+  "repairAuthorization": null
+}
+```
+
+The changelog evidence block embeds the exact same `closureControl`; its whole byte hash
+must equal `evidenceSha256`. The real counters/hash replace the illustrative values. Unknown/missing keys,
+an unsafe/different path, non-positive generation, unsupported gate field, or non-64-hex
+digest fail closed. The orchestrator byte-verifies and hashes the whole block before the
+status owner writes identical `Closure Pending`, `Closure Board Baseline`, and
+`Closure Changelog Path` receipts on the three active closure contracts. Complete full
+validation then runs before final family status mutation. Only when every physical descendant other than the active closure
+leaf/direct child is already Done may the status owner mark TASK-540-06-L01,
+TASK-540-06, and finally TASK-540 Done and update the board. A final mechanical
+graph/evidence/diff gate follows. Each terminal descendant
+must carry its own completion/gate evidence, while the final three closure contracts
+carry the family evidence hash/generation; a missing or open descendant fails. Any
+later exception reopens only the affected source owner (when applicable), the closure
+leaf/direct child, and root before propagating. Unrelated completed descendants remain
+Done, and unstarted descendants remain To Do.
+
+A process restart from a terminal-looking graph is not accepted on status alone. It
+first requires all 17 contracts plus the board Done, identical valid evidence
+hash/generation/baseline/path fields on exactly the root and closure child/leaf, no closure-only
+receipt on a source descendant, exactly one byte-pinned Targeted Gate Passed or
+Revalidation Passed field/value on the closure leaf, exactly one four-cell TASK-540 row
+in the 1252 changelog index with filename-matching date/title/type, consumed reservation
+prose, and exactly one valid canonical TASK-540 control anchor. When the changelog exists,
+its canonical evidence block must hash to both the task receipt and anchor; when it is
+missing/malformed, the valid independent anchor is required before scoped reopen and
+regeneration at the same fixed path through fresh validation/smoke. The anchor's strict
+evidence-owner `closureControl` must independently match the task generation, pinned
+baseline, pinned path, and SHA-256 of the exact closure-leaf gate value; coherent edits
+to the status-owner task files plus board therefore cannot become trusted after a process
+restart. The three closure
+contracts also carry one identical `Closure Board Baseline` captured once while TASK-540
+is In Progress; terminal validation requires current statistics to equal that pinned
+baseline with In Progress -1 and Done +1. It is never recalculated from the board after
+the first closure transition. Only then does startup scoped-reopen the three closure
+contracts and rerun post-audit, full validation, live smoke, closure, final drift, and
+the final mechanical gate. A malformed/mismatched terminal graph fails closed.
+`Closure Pending` is strict `generation <positive-safe-integer> / <12-lower-hex-token>`;
+startup seeds the in-memory counter from that receipt or the shared terminal
+`Closure Generation`, so the next `runClosure` generation is strictly greater even
+across a new UTC date or process.
+
+A restart before `Closure Pending` accepts the special active 540-06-L01 repair only
+from the canonical reserved/no-anchor state and only when TASK-540-06 and
+TASK-540-06-L01 carry the same canonical `Fix Started` date, the date is less than or
+equal to the current UTC run date, neither contract is completed, and the leaf has
+neither `Repair Pending` nor a stale gate. It runs the exact gate first;
+both an immediately green gate and a gate made green by the scoped fixer must write the
+same byte-identical `preClosureRegateValue(persistedFixStartedDate)` receipt. That narrow
+recovery acceptance forces a fresh post-audit, full validation, live smoke,
+smoke-evidence audit, and fresh evidence/control write before any `Closure Pending` is
+created. The persisted prior-day Fix Started date is retained across UTC rollover;
+startup never replaces it with the new run date. Neither the ungated nor regated recovery
+marker authorizes pending or terminal closure. If a valid evidence-before-pending anchor
+already exists, startup rejects a task-only ungated marker or forged Revalidation and uses
+the ordinary exact Repair Pending plus anchor `repairAuthorization` prior/successor hash
+chain instead; normal `runClosure` later replaces that repair authorization with fresh
+control and `repairAuthorization:null`.
+
+`Repair Pending` is independently strict
+`generation <32-lower-hex> / token <32-lower-hex>`; every active repair root, child,
+owner leaf, and active closure sibling must have no `Completed` receipt. Duplicate or
+malformed repair/status/table receipts fail before dispatch.
+For a closure-leaf repair after a valid evidence-before-pending anchor or durable
+`Closure Pending` exists, the evidence owner stores one exact
+`repairAuthorization` in the index anchor. It binds the SHA-256 of Repair Pending, the
+prior gate field/value hash already held by `closureControl`, and the exact successor
+Revalidation field/value hash. A missing-gate pending restart or successor gate mismatch
+is accepted only through that exact chain; matching a receipt regex alone is never
+authority. Normal reclosure replaces the anchor with `repairAuthorization:null`.
 
 ## Post-audit
 
@@ -155,12 +341,18 @@ Every finding needs `file:line` evidence and every expected lens result must be 
 Fix verified HIGH/MEDIUM drift in its sole source-owning leaf, rerun the affected gates,
 then execute a fresh reconcile before smoke. This pass cannot claim runtime evidence:
 the separate smoke-evidence audit runs only after the real helper/browser flows and
-inspects their receipts plus PNGs. A missing result is not a pass.
+inspects their receipts plus PNGs. A missing result is not a pass. When that sole owner is
+540-06-L01, only canonical reserved/no-anchor state uses the pre-pending Fix Started plus
+deterministic Revalidation path; once a valid evidence anchor exists, the same finding
+uses exact Repair Pending and the anchor repair-authorization chain.
 
 Final closure drift has at most two fresh rounds and is remedial, not throw-only.
-Any non-clean round atomically reopens all 17 contracts before remediation starts.
-Source-owner findings keep that leaf/child In Progress, fix only its owned files,
-re-gate and run full validation, then rerun smoke plus the evidence audit and refresh
+Any non-clean round reopens the closure leaf/direct child and root; it additionally
+reopens only a source leaf/direct child named by a verified source-owner finding.
+Unrelated completed descendants remain Done and unlanded descendants remain To Do.
+Source-owner findings keep that exact leaf/child In Progress, fix only its owned files,
+persist their Repair Pending generation/token, re-gate to a matching fresh Revalidation,
+and run full validation, then rerun smoke plus the evidence audit and refresh
 the changelog evidence block before re-closing. Runtime/evidence-only findings are
 owned by the orchestrator: run deterministic cleanup and a fresh smoke attempt,
 never route them to TASK-540-06 tests/docs. Closure/task/changelog-only findings use
@@ -292,7 +484,14 @@ value is never printed. Record IDs and generated fixture labels only. Provision
 the content, media, Screen, builder definition, and records through real Admin
 flows; capturing a POST response ID is acquisition evidence, while a separate
 list/detail read proves provenance. Reuse the same fixtures for all seven flows
-and reset authored state between flows.
+and reset authored state between flows. Before deleting either synthetic session or
+user, query `access_logs` by those exact task-owned user/session UUIDs, inventory each
+returned access-log UUID separately, and treat only that exact ID set as acquired
+cleanup state; bootstrap-admin and unrelated access rows are never owned. Access-log
+writes are fire-and-forget, so after the last synthetic-user request the cleanup uses
+a bounded stable-set poll, deletes only each discovered UUID, and requires bounded
+repeated exact-absence observations before sessions/users may be removed. Failure to
+reach quiescence blocks cleanup and closure.
 
 Provision A/B in one task-scoped Bun fixture setup: call the existing `createUser`
 with deterministic non-empty names `WF540 User A <nonce>` / `WF540 User B <nonce>`,
@@ -328,12 +527,17 @@ playwright-cli -s=wf540smoke --raw click 'button[type="submit"]'
 Agent-owned fixture/browser cleanup runs in a `finally`: release every latch, remove every task route, restore
 the original light/dark mode, sign back in as the bootstrap admin, then delete in
 reverse dependency order only the inventoried overrides, entries, Screen, media,
-content types, user-settings rows, sessions, and synthetic users. Alongside the
+content types, user-settings rows, access-log rows, sessions, and synthetic users.
+Every inventoried access-log row is deleted by its exact UUID before its referenced
+session/user; the cleanup then proves that exact UUID absent. Alongside the
 entity inventory, keep redacted cleanup-resource records for `session-user-a`,
 `session-user-b`, `setting-user-a`, `presentation-override`, and
-`media-storage-object`. Each `session-user-*` record uses `identifierType:"db-id"`
-and the synthetic user's/session row's UUID; it never stores an authentication
-credential. Every other record contains only its non-secret DB ID, bounded
+`media-storage-object`, plus one `access-log-user-a|b` record per acquired row. Each
+`session-user-*` record uses `identifierType:"db-id"` and the synthetic session
+row's UUID. Each `access-log-user-*` record uses `identifierType:"db-id"` and that
+exact access-log row UUID, with its owning synthetic user/session UUID only as a
+non-secret subject link; neither record stores an authentication credential. Every
+other record contains only its non-secret DB ID, bounded
 composite key, or storage key plus a bounded sanitized absence-probe result; it
 must never contain a cookie, session token/hash, CSRF token, password/hash, raw
 row, or storage credential. Use one record per acquired row/object, so multiple
@@ -356,7 +560,8 @@ and fixes the nonce/prefix before dispatch. Even if the smoke agent is interrupt
 throws, or fails schema validation, a separate cleanup agent always discovers only
 rows and objects belonging to that nonce, resolves them to exact non-secret IDs/keys,
 deletes by those exact identifiers (never by prefix), and proves fixture/session/object
-absence while the owned host is still available. It returns exactly one runtime
+and access-log absence while the owned host is still available. It returns exactly one
+runtime
 receipt for each of `orchestrator-discovery`, `orchestrator-identifier-validation`,
 `orchestrator-exact-delete`, `orchestrator-absence`,
 `orchestrator-helper-stop`, and `orchestrator-port-probe`, all bound to the fixed
@@ -418,6 +623,7 @@ The required intercepted attempts are:
 | `related-first-failure` | `GET **/admin/api/content/<RELATED_A_SLUG>/entries` | one malformed-JSON failure; visible Retry |
 | `related-a-refresh` | same exact A path | delayed captured success; old rows remain with visible refreshing state |
 | `related-b-load` | `GET **/admin/api/content/<RELATED_B_SLUG>/entries` | delayed captured success after A→B; immediate empty/loading and stale-A rejection |
+| `preference-a-write-epoch` | `PATCH **/admin/api/user-settings/customScreens.entry.preferences` | hold the first A write, queue a second A toggle, switch auth identity to B, then release; the queued A write must never dispatch and hit count stays `1` |
 
 The command shapes below are binding. Substitute only key, method, and expanded
 pattern. A one-shot failure refuses an unexpected second hit; its real retry occurs
@@ -504,6 +710,13 @@ playwright-cli -s=wf540smoke --raw run-code '(page) => page.__wf540PageErrors ??
    while the authoritative A read is pending, after which the changed server value
    replaces it. Repeat the refresh, make a newer local A toggle while it is held,
    then release it and prove the local value wins by per-user write generation.
+   Finally hold the first `preference-a-write-epoch` PATCH, issue the opposite visible
+   A toggle so it is queued, and switch A→B before releasing the first response. Read
+   hit count `1` before and after release, prove the queued A write never executes with
+   B's session, then unroute and return to A. One fresh visible A toggle retries
+   successfully and both current UI and durable server value converge without an
+   unhandled rejection; during same-session A→B→A revalidation, only A's latest exact
+   shared-settled hook-local copy may remain visible, never a superseded value/default.
    Prove `coderso.screens.entry.preferences.v1` is absent throughout. User A is
    observed in light and user B in dark, with each theme asserted from computed
    root/surface colors.
@@ -549,7 +762,9 @@ markers below it stores one canonical, pretty-printed, redacted JSON object
 containing browser receipts, runtime receipts, routes, fixtures/cleanup resources,
 helper/PID lineage, screenshots, and scenario assertions. The workflow scans the
 complete created changelog for the private value corpus, then requires the block to be
-byte-identical to its in-memory validated evidence before any task status becomes Done:
+byte-identical to its in-memory validated evidence before the closure leaf/direct child
+and TASK-540 become Done (source leaves already closed by their targeted gates remain
+Done):
 
 ````text
 <!-- TASK-540-SMOKE-EVIDENCE:BEGIN -->
@@ -603,8 +818,9 @@ real stdout/stderr hashes from each recovery CLI invocation, and remains termina
 ```bash
 bun --cwd core lint:types
 bun --cwd core lint
-bunx tsc -p tsconfig.json --noEmit
-bunx vitest run tests/vitest/admin/custom-screen-schemas.test.ts \
+./node_modules/.bin/tsc -p tsconfig.json --noEmit
+bunx vitest run tests/vitest/admin/cacheBus.test.ts \
+  tests/vitest/admin/custom-screen-schemas.test.ts \
   tests/vitest/admin/customScreensClient.test.ts \
   tests/vitest/customScreens/screenDocumentOps.test.ts \
   tests/vitest/customScreens/screen-document-image-src.test.ts \
@@ -614,6 +830,8 @@ bunx vitest run tests/vitest/admin/custom-screen-schemas.test.ts \
   tests/vitest/admin/entriesClient.test.ts \
   tests/vitest/admin/mediaClient.test.ts \
   tests/vitest/admin/userSettingsClient.test.ts \
+  tests/vitest/ui/admin-auth-identity.test.tsx \
+  tests/vitest/ui/assistant-panel-interaction.test.tsx \
   tests/vitest/ui/use-screen-entry-preferences.test.ts \
   tests/vitest/ui/use-screen-related-entries.test.tsx \
   tests/vitest/ui/custom-screen-entry-draft.test.ts \
@@ -626,11 +844,13 @@ bunx vitest run tests/vitest/admin/custom-screen-schemas.test.ts \
   tests/vitest/ui-integration/canvas-editor-panel-toggle-dedupe.test.tsx \
   tests/vitest/ui-integration/canvas-editor/canvas-editor.test.tsx \
   tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx \
+  tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx \
   tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx \
   tests/vitest/ui-integration/custom-screen-entry-preferences-persistence.test.tsx \
   tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx \
   tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx \
   tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx \
+  tests/vitest/widgets/screenWidgets.test.tsx \
   tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx
 set -a && source .env && set +a
 bun --eval 'import { canConnect } from "./tests/utils/db"; if (!(await canConnect())) throw new Error("task_540_db_unreachable"); process.exit(0)'
@@ -663,17 +883,28 @@ compare the same map after closure; every hash must be byte-identical. The
 closure-attributable test patch may contain only
 `tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx`; earlier
 source-leaf changes can still appear in the overall working-tree diff and are not
-misclassified as closure edits. Atomically set/keep all 17 tasks In Progress, then
-create exactly `_docs/_CHANGELOG/1252-...md` with the canonical evidence block. The
-evidence-stage agent self-verifies it and the orchestrator byte-compares it. Run the
-complete full validation now, before any Done mutation. Only after it passes may the
-status-stage agent touch all 17 task files, record the exact evidence SHA-256 and
-generation, atomically set every descendant and then root Done, and recalculate board
+misclassified as closure edits. Preserve completed descendants as Done, keep the
+closure leaf/direct child and root In Progress, and keep any unlanded descendant To Do;
+then discover exactly zero or one `_docs/_CHANGELOG/1252-*.md`, reject duplicates, and
+create or reuse the fixed safe path above. Before any status mutation, write and
+byte-verify the changelog-index anchor plus canonical evidence block containing the
+strict generation, baseline, path, evidence hash, and hashed-gate control manifest. The subsequent pending transition
+persists identical Closure Pending, Closure Board Baseline, and Closure Changelog Path
+receipts on the root/closure parent/leaf. A validated restart requires all three to match
+the independently owned control even if the changelog file must be restored at the same
+pinned path. Run the complete full validation now, before final family closure. Only after it passes and
+every other physical descendant is Done may the status-stage agent record the exact
+evidence SHA-256/generation while preserving their identical Closure Board Baseline and
+Closure Changelog Path,
+mark TASK-540-06-L01,
+TASK-540-06, and then TASK-540 Done, and recalculate board
 statistics. A read-only mechanical graph gate verifies all statuses/tables, evidence,
-`node --check`, and `git diff --check`. Any status-stage, mechanical-gate, final-audit,
-or final-gate failure invokes an atomic all-17 In-Progress rollback where execution
-can continue; interruption that kills the workflow process is the only unavoidable
-best-effort boundary. Do not close with a failed/skipped DB preflight,
+the deterministic board-statistics delta, unique 1252 index row, `node --check`, and
+`git diff --check`. Any status-stage, mechanical-gate, final-audit,
+or final-gate failure reopens the closure leaf/direct child and root, plus only an
+exact source owner implicated by verified drift; unrelated completed descendants stay
+Done and unlanded descendants stay To Do. Interruption that kills the workflow process
+is the only unavoidable best-effort boundary. Do not close with a failed/skipped DB preflight,
 functional gate, runtime flow, fixture cleanup, or open child. The strict scan must
 run without suppression. Its only permitted non-zero result is the exact unchanged
 Semgrep finding
@@ -681,3 +912,13 @@ Semgrep finding
 at `_docs/_workflows/task-522-author.mjs:185`, already owned by TASK-545. Record that
 truthfully as external non-green, verify the exact rule/path/line against structured
 scanner output, and block closure for any additional finding or scanner/tool failure.
+
+Every closure status dispatch captures the exact pre-dispatch Pending/Evidence/
+Generation/Baseline/Path/gate projection. Failure rollback restores that projection,
+never a partially mutated post-failure value. Pending restart accepts Evidence and
+Generation only when both are absent on all three closure contracts or present with one
+identical well-formed value on all three. `Repair Pending` is rejected from every root or
+parent and every terminal contract; gate receipts are rejected on the root and
+TASK-540-06 parent. Board and changelog-index mutation guards compare unrelated-byte
+projections after success and failure. Repository snapshots also compare hashes of
+ignored `.env`/`.env.*` files without logging their values or hashes.

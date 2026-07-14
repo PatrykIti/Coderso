@@ -714,7 +714,7 @@ function CustomScreenEntryRouteSession({
   );
   const [hasUnsavedPresentationChanges, setHasUnsavedPresentationChanges] = useState(false);
   const [selectedRuntimeBlockId, setSelectedRuntimeBlockId] = useState<string | null>(null);
-  // TASK-503-03: per-user entry-view badge preference (localStorage, default OFF).
+  // Entry-view badge preferences are owned by the dedicated hook (default OFF).
   const { preferences: entryPreferences, setPreferences: setEntryPreferences } =
     useScreenEntryPreferences();
   // TASK-496-02: host-owned controlled flag for the shared `CanvasEditor` shell

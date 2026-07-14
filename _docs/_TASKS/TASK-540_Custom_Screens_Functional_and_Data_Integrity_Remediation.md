@@ -9,6 +9,7 @@
 **Status:** 🚧 In Progress
 **Started:** 2026-07-13
 **Changelog:** 1252 (pinned; create only at implementation closure)
+**Changelog File:** `_docs/_CHANGELOG/1252-2026-07-14-task-540-custom-screens-functional-and-data-integrity-remediation.md`
 
 ---
 
@@ -115,7 +116,7 @@ module-pack entry, or any non-Dashboard widget authoring surface.
 | TASK-540-01 | Strict Screen data, URLs, Tabs, and binding GC | TASK-540-01-L01 | ✅ Done |
 | TASK-540-02 | Button binding and Tabs authoring | TASK-540-02-L01 | ✅ Done |
 | TASK-540-03 | Accessible Tabs and selection semantics | TASK-540-03-L01 | ✅ Done |
-| TASK-540-04 | Dirty navigation and async/cache recovery | TASK-540-04-L01..L04 | 🚧 In Progress |
+| TASK-540-04 | Dirty navigation and async/cache recovery | TASK-540-04-L01..L04 | ✅ Done |
 | TASK-540-05 | Responsive canvas, ARIA, and user preferences | TASK-540-05-L01, L02 | ⏳ To Do |
 | TASK-540-06 | Tests, smoke, and closure | TASK-540-06-L01 | ⏳ To Do |
 

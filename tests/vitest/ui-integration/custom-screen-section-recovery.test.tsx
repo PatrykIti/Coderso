@@ -127,6 +127,7 @@ vi.mock("@/services/contentTypesClient", () => ({
 }));
 
 vi.mock("@/utils/cacheBus", () => ({
+  createCacheEventOperationToken: () => Symbol(),
   subscribeCacheEvents: vi.fn(() => () => undefined),
 }));
 

@@ -16,13 +16,20 @@ import type { CustomScreenRecord } from "../../../core/admin/services/customScre
 import {
   advanceBuilderDraftGeneration,
   CustomScreenEditorPage,
+  getBuilderExternalRevisionSaveError,
+  runBuilderManualRefresh,
 } from "../../../core/admin/ui/custom-screens/CustomScreenEditorPage";
 import { CustomScreenListPage } from "../../../core/admin/ui/custom-screens/CustomScreenListPage";
 import {
   AdminRouterProvider,
   useAdminRouter,
 } from "../../../core/admin/ui/contexts/AdminRouterContext";
-import { broadcastCacheEvent, subscribeCacheEvents } from "../../../core/admin/utils/cacheBus";
+import {
+  broadcastCacheEvent,
+  createCacheEventOperationToken,
+  subscribeCacheEvents,
+  type CacheEventOperationToken,
+} from "../../../core/admin/utils/cacheBus";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -264,6 +271,18 @@ type Deferred<T> = {
   promise: Promise<T>;
   resolve: (value: T | PromiseLike<T>) => void;
   reject: (reason?: unknown) => void;
+  consumedBy: "screen-load" | "screen-create" | "screen-update" | null;
+  assertOwningCall: (() => void) | null;
+};
+
+const deferredByPromise = new WeakMap<Promise<unknown>, Deferred<unknown>>();
+
+const markDeferredConsumed = (
+  promise: Promise<unknown>,
+  owner: Exclude<Deferred<unknown>["consumedBy"], null>
+) => {
+  const request = deferredByPromise.get(promise);
+  if (request) request.consumedBy = owner;
 };
 
 const deferred = <T,>(): Deferred<T> => {
@@ -273,7 +292,15 @@ const deferred = <T,>(): Deferred<T> => {
     resolve = nextResolve;
     reject = nextReject;
   });
-  return { promise, resolve, reject };
+  const request: Deferred<T> = {
+    promise,
+    resolve,
+    reject,
+    consumedBy: null,
+    assertOwningCall: null,
+  };
+  deferredByPromise.set(promise, request as Deferred<unknown>);
+  return request;
 };
 
 const mountedContentType = {
@@ -398,15 +425,23 @@ function RouterProbe() {
 function LayoutRemovalCacheBroadcast({
   showEditor,
   broadcastAfterRemoval,
+  settleAfterRemoval,
 }: {
   showEditor: boolean;
   broadcastAfterRemoval: boolean;
+  settleAfterRemoval?: () => void;
 }) {
   React.useLayoutEffect(() => {
-    if (!showEditor && broadcastAfterRemoval) {
-      broadcastCacheEvent({ key: cacheKeys.customScreensList, action: "update" });
+    if (!showEditor) {
+      if (broadcastAfterRemoval) {
+        broadcastCacheEvent({
+          key: cacheKeys.customScreenDetail("screen-1"),
+          action: "update",
+        });
+      }
+      settleAfterRemoval?.();
     }
-  }, [broadcastAfterRemoval, showEditor]);
+  }, [broadcastAfterRemoval, settleAfterRemoval, showEditor]);
 
   return showEditor ? <CustomScreenEditorPage /> : null;
 }
@@ -433,7 +468,7 @@ const mountEditor = (path: string) => {
   };
 };
 
-const mountLayoutRemovalRace = (path: string) => {
+const mountLayoutRemovalRace = (path: string, settleAfterRemoval?: () => void) => {
   window.history.replaceState({}, "", path);
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -445,6 +480,7 @@ const mountLayoutRemovalRace = (path: string) => {
           <LayoutRemovalCacheBroadcast
             showEditor={showEditor}
             broadcastAfterRemoval={broadcastAfterRemoval}
+            settleAfterRemoval={settleAfterRemoval}
           />
         </AdminRouterProvider>
       );
@@ -453,7 +489,7 @@ const mountLayoutRemovalRace = (path: string) => {
   render(true, false);
   return {
     container,
-    removeEditorAndBroadcast: () => render(false, true),
+    removeEditor: (broadcastAfterRemoval = false) => render(false, broadcastAfterRemoval),
     cleanup: () => {
       React.act(() => root.unmount());
       container.remove();
@@ -467,7 +503,13 @@ const flushMountedEditor = async () => {
   });
 };
 
+const assertDeferredOwningCall = <T,>(request: Deferred<T>) => {
+  expect(request.assertOwningCall, "deferred promise must declare its owning call").not.toBeNull();
+  request.assertOwningCall?.();
+};
+
 const resolveDeferred = async <T,>(request: Deferred<T>, value: T) => {
+  assertDeferredOwningCall(request);
   await React.act(async () => {
     request.resolve(value);
     await request.promise;
@@ -476,6 +518,7 @@ const resolveDeferred = async <T,>(request: Deferred<T>, value: T) => {
 };
 
 const rejectDeferred = async <T,>(request: Deferred<T>, error: unknown) => {
+  assertDeferredOwningCall(request);
   await React.act(async () => {
     request.reject(error);
     await request.promise.catch(() => undefined);
@@ -547,6 +590,61 @@ const chooseScreenContentType = async (container: ParentNode, optionText = "Proj
 
 const saveScreen = (container: ParentNode) => clickElement(findButton(container, "Save"));
 
+const emitRemoteScreenCacheEvent = (screenId: string) => {
+  const event = {
+    key: cacheKeys.customScreenDetail(screenId),
+    action: "update" as const,
+    sourceId: `remote-test-${screenId}`,
+    ts: Date.now(),
+  };
+  if (typeof BroadcastChannel !== "undefined") {
+    const channel = new BroadcastChannel("coderso.admin.cache");
+    channel.postMessage(event);
+    channel.close();
+    return;
+  }
+  React.act(() => {
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key: "coderso.admin.cache.event",
+        newValue: JSON.stringify(event),
+      })
+    );
+  });
+};
+
+const emitLocalScreenCacheEvent = (screenId: string, operationToken?: CacheEventOperationToken) => {
+  React.act(() => {
+    broadcastCacheEvent(
+      {
+        key: cacheKeys.customScreenDetail(screenId),
+        action: "update",
+      },
+      { operationToken }
+    );
+  });
+};
+
+const getAlertDescription = (container: ParentNode, title: string) => {
+  const alert = Array.from(container.querySelectorAll<HTMLElement>('[data-slot="alert"]')).find(
+    (candidate) =>
+      candidate.querySelector('[data-slot="alert-title"]')?.textContent?.trim() === title
+  );
+  return alert?.querySelector('[data-slot="alert-description"]')?.textContent?.trim() ?? null;
+};
+
+const getAlertMessage = (container: ParentNode, title: string) => {
+  const alert = Array.from(container.querySelectorAll<HTMLElement>('[data-slot="alert"]')).find(
+    (candidate) =>
+      candidate.querySelector('[data-slot="alert-title"]')?.textContent?.trim() === title
+  );
+  return (
+    alert
+      ?.querySelector<HTMLElement>('[data-slot="alert-description"] > span')
+      ?.textContent?.trim() ?? null
+  );
+};
+
 const currentPath = (container: ParentNode) =>
   container.querySelector("[data-current-path]")?.textContent ?? "";
 
@@ -565,8 +663,34 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
   let assistantSetSpy: ReturnType<typeof vi.spyOn>;
   let assistantClearSpy: ReturnType<typeof vi.spyOn>;
 
-  const queueScreenLoad = (screenId: string, request: Promise<CustomScreenRecord | null>) => {
-    loadQueue.push({ screenId, request });
+  const queueScreenLoad = (screenId: string, request: Deferred<CustomScreenRecord | null>) => {
+    const callIndex = loadSpy.mock.calls.length;
+    request.assertOwningCall = () => {
+      expect(request.consumedBy).toBe("screen-load");
+      expect(loadSpy.mock.calls[callIndex]).toEqual([screenId, { force: true }]);
+      expect(loadQueue.some((queued) => queued.request === request.promise)).toBe(false);
+    };
+    loadQueue.push({ screenId, request: request.promise });
+  };
+
+  const queueScreenCreate = (request: Deferred<CustomScreenRecord>) => {
+    const callIndex = createSpy.mock.calls.length;
+    request.assertOwningCall = () => {
+      expect(request.consumedBy).toBe("screen-create");
+      expect(createSpy.mock.calls[callIndex]).toBeDefined();
+      expect(createQueue.includes(request.promise)).toBe(false);
+    };
+    createQueue.push(request.promise);
+  };
+
+  const queueScreenUpdate = (request: Deferred<CustomScreenRecord>) => {
+    const callIndex = updateSpy.mock.calls.length;
+    request.assertOwningCall = () => {
+      expect(request.consumedBy).toBe("screen-update");
+      expect(updateSpy.mock.calls[callIndex]).toBeDefined();
+      expect(updateQueue.includes(request.promise)).toBe(false);
+    };
+    updateQueue.push(request.promise);
   };
 
   beforeEach(() => {
@@ -602,28 +726,38 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
       .mockImplementation(async (id) => {
         const queuedIndex = loadQueue.findIndex((queued) => queued.screenId === id);
         const queued = queuedIndex === -1 ? null : loadQueue.splice(queuedIndex, 1)[0];
+        if (queued) markDeferredConsumed(queued.request, "screen-load");
         return queued ? await queued.request : (remoteScreens.get(id) ?? null);
       });
     createSpy = vi
       .spyOn(customScreensClient, "createCustomScreen")
-      .mockImplementation(async (payload) => {
+      .mockImplementation(async (payload, options) => {
         const queued = createQueue.shift();
+        if (queued) markDeferredConsumed(queued, "screen-create");
         const created = queued
           ? await queued
           : recordFromPayload(makeMountedScreen("created-screen"), payload);
         cachedScreens.set(created.id, created);
         remoteScreens.set(created.id, created);
-        broadcastCacheEvent({ key: cacheKeys.customScreensList, action: "update" });
-        broadcastCacheEvent({
-          key: cacheKeys.customScreenDetail(created.id),
-          action: "update",
-        });
+        const broadcastOptions = { operationToken: options?.cacheEventOperationToken };
+        broadcastCacheEvent(
+          { key: cacheKeys.customScreensList, action: "update" },
+          broadcastOptions
+        );
+        broadcastCacheEvent(
+          {
+            key: cacheKeys.customScreenDetail(created.id),
+            action: "update",
+          },
+          broadcastOptions
+        );
         return created;
       });
     updateSpy = vi
       .spyOn(customScreensClient, "updateCustomScreen")
-      .mockImplementation(async (id, payload) => {
+      .mockImplementation(async (id, payload, options) => {
         const queued = updateQueue.shift();
+        if (queued) markDeferredConsumed(queued, "screen-update");
         const updated = queued
           ? await queued
           : recordFromPayload(
@@ -632,11 +766,18 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
             );
         cachedScreens.set(updated.id, updated);
         remoteScreens.set(updated.id, updated);
-        broadcastCacheEvent({ key: cacheKeys.customScreensList, action: "update" });
-        broadcastCacheEvent({
-          key: cacheKeys.customScreenDetail(updated.id),
-          action: "update",
-        });
+        const broadcastOptions = { operationToken: options?.cacheEventOperationToken };
+        broadcastCacheEvent(
+          { key: cacheKeys.customScreensList, action: "update" },
+          broadcastOptions
+        );
+        broadcastCacheEvent(
+          {
+            key: cacheKeys.customScreenDetail(updated.id),
+            action: "update",
+          },
+          broadcastOptions
+        );
         return updated;
       });
   });
@@ -651,6 +792,18 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
     expect(advanceBuilderDraftGeneration(41)).toBe(42);
   });
 
+  test("manual refresh and external-revision save helpers enforce their production branches", () => {
+    const refresh = vi.fn();
+    expect(runBuilderManualRefresh({ saveActive: true, refresh })).toBe(false);
+    expect(refresh).not.toHaveBeenCalled();
+    expect(runBuilderManualRefresh({ saveActive: false, refresh })).toBe(true);
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(getBuilderExternalRevisionSaveError(false)).toBeNull();
+    expect(getBuilderExternalRevisionSaveError(true)).toBe(
+      "Refresh the newer Screen version before saving."
+    );
+  });
+
   test("local Screen mutations have one static dirty-generation owner", () => {
     const source = readFileSync(
       resolve(process.cwd(), "core/admin/ui/custom-screens/CustomScreenEditorPage.tsx"),
@@ -662,18 +815,180 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
     );
     expect(updateDefinitionSource.match(/markDirty\(/g)).toHaveLength(1);
 
-    const documentAndBindingHandlers = source.slice(
-      source.indexOf("const handleAddBlock"),
-      source.indexOf("const mapBoundedScreenSaveError")
+    const updateEditorViewSource = source.slice(
+      source.indexOf("const updateEditorView = useCallback"),
+      source.indexOf("const bindingOrphans = useMemo")
     );
-    expect(documentAndBindingHandlers).toContain("updateEditorView({");
-    expect(documentAndBindingHandlers).not.toContain("markDirty(");
+    expect(updateEditorViewSource.match(/updateDefinition\(/g)).toHaveLength(1);
+    expect(updateEditorViewSource).not.toContain("markDirty(");
+    expect(updateEditorViewSource).not.toContain("draftMutationGenerationRef.current");
+
+    const orphanRemovalSource = source.slice(
+      source.indexOf("const handleRemoveOrphanBindings"),
+      source.indexOf("const applyScreenFieldsAndDefinition")
+    );
+    expect(orphanRemovalSource).not.toContain("markDirty(");
+    expect(orphanRemovalSource).not.toContain("updateDefinition(");
+    expect(orphanRemovalSource).not.toContain("draftMutationGenerationRef.current");
+    expect(orphanRemovalSource.match(/updateEditorView\(\{/g)).toHaveLength(1);
+
+    const handlerNames = [
+      "handleAddBlock",
+      "handleDragMove",
+      "handleAddSection",
+      "handleRenameSection",
+      "handleMoveSection",
+      "handleDeleteSection",
+      "handleMoveBlock",
+      "handleDuplicateBlock",
+      "handleDeleteBlock",
+      "handlePatchBlock",
+      "handlePatchSection",
+      "handlePatchBlockData",
+      "handlePatchBinding",
+    ] as const;
+    const handlerBoundaries = [...handlerNames, "mapBoundedScreenSaveError"];
+    for (const [index, handlerName] of handlerNames.entries()) {
+      const handlerSource = source.slice(
+        source.indexOf(`const ${handlerName}`),
+        source.indexOf(`const ${handlerBoundaries[index + 1]}`)
+      );
+      expect(handlerSource, handlerName).not.toContain("markDirty(");
+      expect(handlerSource, handlerName).not.toContain("updateDefinition(");
+      expect(handlerSource, handlerName).not.toContain("draftMutationGenerationRef.current");
+      expect(handlerSource.match(/updateEditorView\(\{/g), handlerName).toHaveLength(
+        handlerName === "handlePatchBinding" ? 2 : 1
+      );
+    }
 
     const metadataHandlers = source.slice(
       source.indexOf("const screenSettingsPanel"),
       source.indexOf("const previewOwnerKey")
     );
-    expect(metadataHandlers.match(/markDirty\(\)/g)).toHaveLength(5);
+    const metadataPaths = [
+      /if \(next === name \|\| !markDirty\(\)\) return;\s*setName\(next\);/g,
+      /if \(value === contentTypeId \|\| !markDirty\(\)\) return;\s*setContentTypeId\(value\);/g,
+      /if \(next === status \|\| !markDirty\(\)\) return;\s*setStatus\(next\);/g,
+      /if \(next === showInSidebar \|\| !markDirty\(\)\) return;\s*setShowInSidebar\(next\);/g,
+      /if \(next === sidebarLabel \|\| !markDirty\(\)\) return;\s*setSidebarLabel\(next\);/g,
+    ];
+    for (const path of metadataPaths) {
+      expect(metadataHandlers.match(path)).toHaveLength(1);
+    }
+    expect(metadataHandlers.match(/markDirty\(\)/g)).toHaveLength(metadataPaths.length);
+    expect(metadataHandlers).not.toContain("updateDefinition(");
+    expect(metadataHandlers).not.toContain("draftMutationGenerationRef.current");
+
+    const manualRefreshSource = source.slice(
+      source.indexOf("const requestExternalRefresh = useCallback"),
+      source.indexOf("const discardLocalDraftAndRefresh = useCallback")
+    );
+    expect(manualRefreshSource.match(/runBuilderManualRefresh\(/g)).toHaveLength(1);
+
+    const saveSource = source.slice(
+      source.indexOf("const handleSave = async"),
+      source.indexOf("const screenSettingsPanel")
+    );
+    expect(saveSource.match(/getBuilderExternalRevisionSaveError\(/g)).toHaveLength(1);
+    const externalRevisionGuardSource = saveSource.slice(
+      saveSource.indexOf("const externalRevisionError"),
+      saveSource.indexOf("const trimmedName")
+    );
+    expect(externalRevisionGuardSource).not.toContain("screenHydrationGenerationRef.current");
+    expect(externalRevisionGuardSource).not.toContain("setLoadActivityVisit");
+  });
+
+  test("block boundary moves stay clean and persist across top-level, children, and slot siblings", async () => {
+    for (const kind of ["top-level", "children", "slot"] as const) {
+      const screenId = `screen-block-order-${kind}`;
+      const baseline = makeMountedScreen(screenId, `Block order ${kind}`);
+      const definition = baseline.definition;
+      const firstSection = definition?.editorView.document.sections[0];
+      if (!definition || !firstSection) throw new Error("Block-order fixture is invalid");
+      const actions = [
+        {
+          id: `${kind}-button-1`,
+          type: "button",
+          data: { label: "First action", action: "link", href: "/first-target" },
+        },
+        {
+          id: `${kind}-button-2`,
+          type: "button",
+          data: { label: "Second action", action: "link", href: "/second-target" },
+        },
+      ];
+      const blocks =
+        kind === "top-level"
+          ? actions
+          : [
+              {
+                id: `${kind}-parent`,
+                type: "field-group",
+                data: { title: `${kind} parent`, description: "" },
+                ...(kind === "children" ? { children: actions } : { slots: { content: actions } }),
+              },
+            ];
+      const orderedScreen: CustomScreenRecord = {
+        ...baseline,
+        definition: {
+          ...definition,
+          editorView: {
+            ...definition.editorView,
+            document: {
+              ...definition.editorView.document,
+              sections: [{ ...firstSection, blocks }],
+            },
+          },
+        },
+      };
+      cachedScreens.set(screenId, orderedScreen);
+      remoteScreens.set(screenId, orderedScreen);
+      const updateCallsBefore = updateSpy.mock.calls.length;
+      const view = mountEditor(`/admin/advanced/custom-screens/${screenId}`);
+
+      try {
+        await flushMountedEditor();
+        const selectLayer = async (blockId: string) => {
+          clickElement(view.container.querySelector('button[aria-label="Layers"]'));
+          await flushMountedEditor();
+          clickElement(view.container.querySelector(`[data-authoring-layer-node="${blockId}"]`));
+          await flushMountedEditor();
+        };
+        await selectLayer(`${kind}-button-1`);
+        await flushMountedEditor();
+        clickElement(view.container.querySelector('button[aria-label="Move selected block up"]'));
+        await flushMountedEditor();
+        expect(view.container.textContent).not.toContain("Unsaved changes");
+
+        await selectLayer(`${kind}-button-2`);
+        clickElement(view.container.querySelector('button[aria-label="Move selected block down"]'));
+        await flushMountedEditor();
+        expect(view.container.textContent).not.toContain("Unsaved changes");
+
+        clickElement(view.container.querySelector('button[aria-label="Move selected block up"]'));
+        await flushMountedEditor();
+        expect(view.container.textContent).toContain("Unsaved changes");
+
+        saveScreen(view.container);
+        await flushMountedEditor();
+        expect(updateSpy).toHaveBeenCalledTimes(updateCallsBefore + 1);
+        const savedTopLevel =
+          updateSpy.mock.calls.at(-1)?.[1].definition?.editorView.document.sections[0]?.blocks;
+        const savedSiblings =
+          kind === "top-level"
+            ? savedTopLevel
+            : kind === "children"
+              ? savedTopLevel?.[0]?.children
+              : savedTopLevel?.[0]?.slots?.content;
+        expect(savedSiblings?.map((block: { id: string }) => block.id)).toEqual([
+          `${kind}-button-2`,
+          `${kind}-button-1`,
+        ]);
+        expect(view.container.textContent).not.toContain("Unsaved changes");
+      } finally {
+        view.cleanup();
+      }
+    }
   });
 
   test("clean navigation proceeds, while dirty navigation guards beforeunload and preserves cancel/confirm semantics", async () => {
@@ -738,7 +1053,7 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
 
   test("existing update failure keeps the draft dirty and an exact retry clears it without self-cache hydration", async () => {
     const failedUpdate = deferred<CustomScreenRecord>();
-    updateQueue.push(failedUpdate.promise);
+    queueScreenUpdate(failedUpdate);
     const view = mountEditor("/admin/advanced/custom-screens/screen-1");
 
     try {
@@ -756,11 +1071,24 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
           fields: ["name"],
         })
       );
-      expect(view.container.textContent).toContain("Screen save rejected (field(s): name)");
+      expect(getAlertDescription(view.container, "Custom screen error")).toBe(
+        "Screen save rejected (field(s): name)"
+      );
       expect(view.container.textContent).toContain("Unsaved changes");
       expect(getScreenNameInput(view.container)?.value).toBe("Locally updated Screen");
       expect(updateSpy.mock.calls[0]?.[0]).toBe("screen-1");
 
+      updateQueue.push(
+        Promise.resolve({
+          ...makeMountedScreen("screen-1", "Locally updated Screen"),
+          warnings: [
+            {
+              code: "binding_field_removed",
+              fields: ["legacyUrl", "secondaryUrl", "legacyUrl"],
+            },
+          ],
+        })
+      );
       saveScreen(view.container);
       await flushMountedEditor();
       expect(updateSpy).toHaveBeenCalledTimes(2);
@@ -768,6 +1096,9 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
       expect(updateSpy.mock.calls[1]?.[1].name).toBe("Locally updated Screen");
       expect(view.container.textContent).not.toContain("Unsaved changes");
       expect(view.container.textContent).not.toContain("Screen save rejected");
+      expect(getAlertDescription(view.container, "Binding cleanup")).toBe(
+        "Removed binding(s) for deleted field(s): legacyUrl, secondaryUrl."
+      );
       expect(loadSpy).toHaveBeenCalledTimes(loadsBeforeSave);
       expect(currentPath(view.container)).toBe("/admin/advanced/custom-screens/screen-1");
     } finally {
@@ -807,7 +1138,7 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
 
   test("an edit during an existing update preserves the newer local draft and bounded notice", async () => {
     const pendingUpdate = deferred<CustomScreenRecord>();
-    updateQueue.push(pendingUpdate.promise);
+    queueScreenUpdate(pendingUpdate);
     const view = mountEditor("/admin/advanced/custom-screens/screen-1");
 
     try {
@@ -840,7 +1171,7 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
 
   test("a stale create stores its ID and an exact retry PATCHes once before canonical navigation", async () => {
     const pendingCreate = deferred<CustomScreenRecord>();
-    createQueue.push(pendingCreate.promise);
+    queueScreenCreate(pendingCreate);
     const view = mountEditor("/admin/advanced/custom-screens/new");
 
     try {
@@ -881,9 +1212,9 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
 
   test("a failed stale-create PATCH retry stays dirty and never navigates", async () => {
     const pendingCreate = deferred<CustomScreenRecord>();
-    createQueue.push(pendingCreate.promise);
+    queueScreenCreate(pendingCreate);
     const failedRetry = deferred<CustomScreenRecord>();
-    updateQueue.push(failedRetry.promise);
+    queueScreenUpdate(failedRetry);
     const view = mountEditor("/admin/advanced/custom-screens/new");
 
     try {
@@ -919,7 +1250,7 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
 
   test("a hydration that resolves after a local edit preserves the draft and shows only the remote-update warning", async () => {
     const pendingLoad = deferred<CustomScreenRecord | null>();
-    queueScreenLoad("screen-1", pendingLoad.promise);
+    queueScreenLoad("screen-1", pendingLoad);
     const view = mountEditor("/admin/advanced/custom-screens/screen-1");
 
     try {
@@ -929,7 +1260,7 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
 
       expect(getScreenNameInput(view.container)?.value).toBe("Local draft during hydration");
       expect(view.container.textContent).toContain("Unsaved changes");
-      expect(view.container.textContent).toContain("Updated in another tab");
+      expect(view.container.textContent).toContain("Newer changes are available");
       expect(view.container.textContent).not.toContain("Remote hydration result");
       expect(view.container.textContent).not.toContain("Failed to load custom screen.");
       expect(view.container.textContent).not.toContain("Loading custom screen...");
@@ -940,7 +1271,7 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
 
   test("a hydration rejection after a local edit uses the bounded local-copy error", async () => {
     const pendingLoad = deferred<CustomScreenRecord | null>();
-    queueScreenLoad("screen-1", pendingLoad.promise);
+    queueScreenLoad("screen-1", pendingLoad);
     const view = mountEditor("/admin/advanced/custom-screens/screen-1");
 
     try {
@@ -960,45 +1291,99 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
     }
   });
 
-  test("a refresh started while already dirty also uses the bounded local-copy error", async () => {
-    const view = mountEditor("/admin/advanced/custom-screens/screen-1");
+  test("dirty external Refresh confirms discard, restores the baseline, and remains retryable", async () => {
+    for (const outcome of ["success", "missing", "reject"] as const) {
+      const screenId = `dirty-external-refresh-${outcome}`;
+      const baseline = makeMountedScreen(screenId, `Persisted baseline ${outcome}`);
+      cachedScreens.set(screenId, baseline);
+      remoteScreens.set(screenId, baseline);
+      const view = mountEditor(`/admin/advanced/custom-screens/${screenId}`);
 
-    try {
-      await flushMountedEditor();
-      await editScreenName(view.container, "Dirty before refresh");
-      const callsBeforeCacheEvent = loadSpy.mock.calls.length;
-      React.act(() => {
-        broadcastCacheEvent({
-          key: cacheKeys.customScreenDetail("screen-1"),
-          action: "update",
-        });
-      });
-      await flushMountedEditor();
-      expect(loadSpy).toHaveBeenCalledTimes(callsBeforeCacheEvent);
-      expect(view.container.textContent).toContain("Updated in another tab");
+      try {
+        await flushMountedEditor();
+        await editScreenName(view.container, `Discarded local draft ${outcome}`);
+        const callsBeforeCacheEvent = loadSpy.mock.calls.length;
+        emitLocalScreenCacheEvent(screenId);
+        await flushMountedEditor();
+        expect(loadSpy).toHaveBeenCalledTimes(callsBeforeCacheEvent);
+        expect(view.container.textContent).toContain("Newer changes are available");
 
-      const pendingRefresh = deferred<CustomScreenRecord | null>();
-      queueScreenLoad("screen-1", pendingRefresh.promise);
-      clickElement(findButton(view.container, "Refresh"));
-      await flushMountedEditor();
-      await rejectDeferred(pendingRefresh, new Error("refresh failed privately"));
+        clickElement(findButton(view.container, "Refresh"));
+        await flushMountedEditor();
+        expect(document.body.textContent).toContain("Discard local Screen changes and refresh?");
+        clickElement(findButton(document, "Keep editing"));
+        await flushMountedEditor();
+        expect(getScreenNameInput(view.container)?.value).toBe(`Discarded local draft ${outcome}`);
+        expect(view.container.textContent).toContain("Unsaved changes");
+        expect(loadSpy).toHaveBeenCalledTimes(callsBeforeCacheEvent);
 
-      expect(loadSpy).toHaveBeenCalledTimes(callsBeforeCacheEvent + 1);
-      expect(getScreenNameInput(view.container)?.value).toBe("Dirty before refresh");
-      expect(view.container.textContent).toContain("Unsaved changes");
-      expect(view.container.textContent).toContain(
-        "Could not check for Screen updates. Local changes are unchanged."
-      );
-      expect(view.container.textContent).not.toContain("refresh failed privately");
-    } finally {
-      view.cleanup();
+        const pendingRefresh = deferred<CustomScreenRecord | null>();
+        queueScreenLoad(screenId, pendingRefresh);
+        clickElement(findButton(view.container, "Refresh"));
+        await flushMountedEditor();
+        clickElement(findButton(document, "Discard and refresh"));
+        await flushMountedEditor();
+
+        expect(loadSpy).toHaveBeenCalledTimes(callsBeforeCacheEvent + 1);
+        expect(loadSpy).toHaveBeenLastCalledWith(screenId, { force: true });
+        expect(loadQueue.some((queued) => queued.screenId === screenId)).toBe(false);
+        expect(getScreenNameInput(view.container)?.value).toBe(`Persisted baseline ${outcome}`);
+        expect(view.container.textContent).not.toContain(`Discarded local draft ${outcome}`);
+        expect(view.container.textContent).not.toContain("Unsaved changes");
+        expect(view.container.textContent).toContain("Newer changes are available");
+        expect(findButton(view.container, "Save")?.disabled).toBe(true);
+
+        if (outcome === "success") {
+          await resolveDeferred(
+            pendingRefresh,
+            makeMountedScreen(screenId, "Authoritative refreshed Screen")
+          );
+          expect(getScreenNameInput(view.container)?.value).toBe("Authoritative refreshed Screen");
+          expect(view.container.textContent).not.toContain("Newer changes are available");
+          expect(findButton(view.container, "Save")?.disabled).toBe(false);
+        } else if (outcome === "missing") {
+          await resolveDeferred(pendingRefresh, null);
+          expect(getScreenNameInput(view.container)?.value).toBe(`Persisted baseline ${outcome}`);
+          expect(view.container.textContent).toContain("Custom screen not found.");
+          expect(view.container.textContent).toContain("Newer changes are available");
+          expect(findButton(view.container, "Save")?.disabled).toBe(true);
+          expect(findButton(view.container, "Refresh")?.disabled).toBe(false);
+        } else {
+          await rejectDeferred(pendingRefresh, new Error("refresh failed privately"));
+          expect(getScreenNameInput(view.container)?.value).toBe(`Persisted baseline ${outcome}`);
+          expect(view.container.textContent).toContain("Failed to load custom screen.");
+          expect(view.container.textContent).not.toContain("refresh failed privately");
+          expect(view.container.textContent).toContain("Newer changes are available");
+          expect(findButton(view.container, "Save")?.disabled).toBe(true);
+          expect(findButton(view.container, "Refresh")?.disabled).toBe(false);
+        }
+
+        if (outcome !== "success") {
+          const retryRefresh = deferred<CustomScreenRecord | null>();
+          queueScreenLoad(screenId, retryRefresh);
+          clickElement(findButton(view.container, "Refresh"));
+          await flushMountedEditor();
+          await resolveDeferred(
+            retryRefresh,
+            makeMountedScreen(screenId, `Authoritative retry ${outcome}`)
+          );
+          await openScreenSettings(view.container);
+          expect(getScreenNameInput(view.container)?.value).toBe(`Authoritative retry ${outcome}`);
+          expect(view.container.textContent).not.toContain("Newer changes are available");
+          expect(view.container.textContent).not.toContain("Custom screen not found.");
+          expect(view.container.textContent).not.toContain("Failed to load custom screen.");
+          expect(findButton(view.container, "Save")?.disabled).toBe(false);
+        }
+      } finally {
+        view.cleanup();
+      }
     }
   });
 
   test("an uncached current visit shows loading then not-found without mounting old or default builder content", async () => {
     cachedScreens.delete("screen-1");
     const pendingLoad = deferred<CustomScreenRecord | null>();
-    queueScreenLoad("screen-1", pendingLoad.promise);
+    queueScreenLoad("screen-1", pendingLoad);
     const view = mountEditor("/admin/advanced/custom-screens/screen-1");
 
     try {
@@ -1037,7 +1422,7 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
     for (const testCase of cases) {
       cachedScreens.delete(testCase.screenId);
       const pendingLoad = deferred<CustomScreenRecord | null>();
-      queueScreenLoad(testCase.screenId, pendingLoad.promise);
+      queueScreenLoad(testCase.screenId, pendingLoad);
       const view = mountEditor(`/admin/advanced/custom-screens/${testCase.screenId}`);
       try {
         expect(view.container.textContent).toContain("Loading custom screen...");
@@ -1057,6 +1442,81 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
     }
   });
 
+  test("synchronous save validation owns diagnostics over every older hydration settlement", async () => {
+    const branches = [
+      {
+        kind: "blank-name" as const,
+        message: "Screen name is required.",
+      },
+      {
+        kind: "missing-content-type" as const,
+        message: "Select a content type before saving.",
+      },
+    ];
+
+    for (const branch of branches) {
+      for (const outcome of ["resolve", "reject"] as const) {
+        const screenId = `validation-${branch.kind}-${outcome}`;
+        const baseline = {
+          ...makeMountedScreen(screenId, `Validation ${branch.kind}`),
+          ...(branch.kind === "missing-content-type" ? { contentTypeId: "" } : {}),
+        };
+        cachedScreens.set(screenId, baseline);
+        remoteScreens.set(screenId, baseline);
+        const pendingLoad = deferred<CustomScreenRecord | null>();
+        queueScreenLoad(screenId, pendingLoad);
+        const view = mountEditor(`/admin/advanced/custom-screens/${screenId}`);
+
+        try {
+          await flushMountedEditor();
+          await editScreenName(
+            view.container,
+            branch.kind === "blank-name" ? "" : `Authored ${branch.kind} ${outcome}`
+          );
+          const expectedDraft =
+            branch.kind === "blank-name" ? "" : `Authored ${branch.kind} ${outcome}`;
+          const createCallsBeforeValidation = createSpy.mock.calls.length;
+          const updateCallsBeforeValidation = updateSpy.mock.calls.length;
+
+          saveScreen(view.container);
+          await flushMountedEditor();
+
+          expect(getAlertDescription(view.container, "Custom screen error")).toBe(branch.message);
+          expect(getScreenNameInput(view.container)?.value).toBe(expectedDraft);
+          expect(view.container.textContent).toContain("Unsaved changes");
+          expect(view.container.textContent).not.toContain("Newer changes are available");
+          expect(view.container.textContent).not.toContain("Loading custom screen...");
+          expect(createSpy).toHaveBeenCalledTimes(createCallsBeforeValidation);
+          expect(updateSpy).toHaveBeenCalledTimes(updateCallsBeforeValidation);
+
+          if (outcome === "resolve") {
+            await resolveDeferred(
+              pendingLoad,
+              makeMountedScreen(screenId, `Older validation hydration ${branch.kind}`)
+            );
+          } else {
+            await rejectDeferred(
+              pendingLoad,
+              new Error(`Older validation rejection ${branch.kind}`)
+            );
+          }
+
+          expect(getAlertDescription(view.container, "Custom screen error")).toBe(branch.message);
+          expect(getScreenNameInput(view.container)?.value).toBe(expectedDraft);
+          expect(view.container.textContent).toContain("Unsaved changes");
+          expect(view.container.textContent).not.toContain("Newer changes are available");
+          expect(view.container.textContent).not.toContain("Loading custom screen...");
+          expect(view.container.textContent).not.toContain("Older validation hydration");
+          expect(view.container.textContent).not.toContain("Older validation rejection");
+          expect(createSpy).toHaveBeenCalledTimes(createCallsBeforeValidation);
+          expect(updateSpy).toHaveBeenCalledTimes(updateCallsBeforeValidation);
+        } finally {
+          view.cleanup();
+        }
+      }
+    }
+  });
+
   test("an older hydration cannot erase or replace a newer save failure", async () => {
     const cases: Array<"resolve" | "reject"> = ["resolve", "reject"];
 
@@ -1066,9 +1526,9 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
       cachedScreens.set(screenId, baseline);
       remoteScreens.set(screenId, baseline);
       const pendingLoad = deferred<CustomScreenRecord | null>();
-      queueScreenLoad(screenId, pendingLoad.promise);
+      queueScreenLoad(screenId, pendingLoad);
       const failedUpdate = deferred<CustomScreenRecord>();
-      updateQueue.push(failedUpdate.promise);
+      queueScreenUpdate(failedUpdate);
       const view = mountEditor(`/admin/advanced/custom-screens/${screenId}`);
 
       try {
@@ -1095,7 +1555,7 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
         expect(view.container.textContent).toContain(`Save failed visibly ${index}`);
         expect(view.container.textContent).toContain("Unsaved changes");
         expect(view.container.textContent).not.toContain(`Older hydration ${index}`);
-        expect(view.container.textContent).not.toContain("Updated in another tab");
+        expect(view.container.textContent).not.toContain("Newer changes are available");
         expect(view.container.textContent).not.toContain(
           "Could not check for Screen updates. Local changes are unchanged."
         );
@@ -1120,9 +1580,9 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
       cachedScreens.set(screenId, baseline);
       remoteScreens.set(screenId, baseline);
       const pendingLoad = deferred<CustomScreenRecord | null>();
-      queueScreenLoad(screenId, pendingLoad.promise);
+      queueScreenLoad(screenId, pendingLoad);
       const pendingUpdate = deferred<CustomScreenRecord>();
-      updateQueue.push(pendingUpdate.promise);
+      queueScreenUpdate(pendingUpdate);
       const view = mountEditor(`/admin/advanced/custom-screens/${screenId}`);
 
       const settleHydration = async () => {
@@ -1150,7 +1610,7 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
 
         expect(getScreenNameInput(view.container)?.value).toBe(`Exact saved Screen ${index}`);
         expect(view.container.textContent).not.toContain("Unsaved changes");
-        expect(view.container.textContent).not.toContain("Updated in another tab");
+        expect(view.container.textContent).not.toContain("Newer changes are available");
         expect(view.container.textContent).not.toContain(
           "Could not check for Screen updates. Local changes are unchanged."
         );
@@ -1159,6 +1619,194 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
           "Saved server version; newer local changes remain unsaved."
         );
         expect(view.container.textContent).not.toContain(`Stale hydration ${index}`);
+      } finally {
+        view.cleanup();
+      }
+    }
+  });
+
+  test("only an exact self token is suppressed while every external event variant survives save settlement", async () => {
+    const externalVariants = [
+      {
+        name: "remote",
+        emit: (screenId: string) => emitRemoteScreenCacheEvent(screenId),
+      },
+      {
+        name: "local-distinct-token",
+        emit: (screenId: string) =>
+          emitLocalScreenCacheEvent(screenId, createCacheEventOperationToken()),
+      },
+      {
+        name: "local-tokenless",
+        emit: (screenId: string) => emitLocalScreenCacheEvent(screenId),
+      },
+    ];
+
+    for (const variant of externalVariants) {
+      for (const outcome of ["resolve", "reject"] as const) {
+        const screenId = `${variant.name}-during-save-${outcome}`;
+        const baseline = makeMountedScreen(screenId, `External save ${outcome}`);
+        cachedScreens.set(screenId, baseline);
+        remoteScreens.set(screenId, baseline);
+        const pendingUpdate = deferred<CustomScreenRecord>();
+        queueScreenUpdate(pendingUpdate);
+        const view = mountEditor(`/admin/advanced/custom-screens/${screenId}`);
+
+        try {
+          await flushMountedEditor();
+          await editScreenName(view.container, `External save draft ${variant.name} ${outcome}`);
+          saveScreen(view.container);
+          await flushMountedEditor();
+          const payload = updateSpy.mock.calls.at(-1)?.[1];
+          const operationToken = updateSpy.mock.calls.at(-1)?.[2]?.cacheEventOperationToken;
+          if (!payload) throw new Error("External-race update payload was not captured");
+          if (!operationToken) throw new Error("Save operation token was not captured");
+          const loadsBeforeCacheEvents = loadSpy.mock.calls.length;
+
+          emitLocalScreenCacheEvent(screenId, operationToken);
+          await flushMountedEditor();
+          expect(view.container.textContent).not.toContain("Newer changes are available");
+          expect(loadSpy).toHaveBeenCalledTimes(loadsBeforeCacheEvents);
+
+          variant.emit(screenId);
+          await flushMountedEditor();
+
+          expect(view.container.textContent).toContain("Newer changes are available");
+          expect(getAlertMessage(view.container, "Newer changes are available")).toBe(
+            "This Screen changed outside this editor. Refresh to load the latest version."
+          );
+          const refresh = findButton(view.container, "Refresh");
+          expect(refresh?.disabled).toBe(true);
+          if (!refresh) throw new Error("Refresh button was not rendered");
+          const guardedRefresh = vi.fn();
+          expect(runBuilderManualRefresh({ saveActive: true, refresh: guardedRefresh })).toBe(
+            false
+          );
+          expect(guardedRefresh).not.toHaveBeenCalled();
+          expect(loadSpy).toHaveBeenCalledTimes(loadsBeforeCacheEvents);
+
+          if (outcome === "resolve") {
+            await resolveDeferred(pendingUpdate, recordFromPayload(baseline, payload));
+            expect(view.container.textContent).not.toContain("Unsaved changes");
+            expect(getScreenNameInput(view.container)?.value).toBe(
+              `External save draft ${variant.name} ${outcome}`
+            );
+            expect(view.container.textContent).not.toContain(
+              "Saved server version; newer local changes remain unsaved."
+            );
+          } else {
+            await rejectDeferred(
+              pendingUpdate,
+              new ApiClientError("custom_screen_conflict", "Concurrent Screen save rejected", 409, {
+                fields: ["definition"],
+              })
+            );
+            expect(getAlertDescription(view.container, "Custom screen error")).toBe(
+              "Concurrent Screen save rejected (field(s): definition)"
+            );
+            expect(view.container.textContent).toContain("Unsaved changes");
+            expect(getScreenNameInput(view.container)?.value).toBe(
+              `External save draft ${variant.name} ${outcome}`
+            );
+          }
+
+          expect(view.container.textContent).toContain("Newer changes are available");
+          expect(getAlertMessage(view.container, "Newer changes are available")).toBe(
+            "This Screen changed outside this editor. Refresh to load the latest version."
+          );
+          expect(loadSpy).toHaveBeenCalledTimes(loadsBeforeCacheEvents);
+        } finally {
+          view.cleanup();
+        }
+      }
+    }
+  });
+
+  test("a generic Screen-list event cannot claim that the current Screen changed", async () => {
+    const view = mountEditor("/admin/advanced/custom-screens/screen-1");
+    try {
+      await flushMountedEditor();
+      const callsBeforeListEvent = loadSpy.mock.calls.length;
+      React.act(() => {
+        broadcastCacheEvent({ key: cacheKeys.customScreensList, action: "update" });
+      });
+      await flushMountedEditor();
+      expect(loadSpy).toHaveBeenCalledTimes(callsBeforeListEvent);
+      expect(view.container.textContent).not.toContain("Newer changes are available");
+      expect(findButton(view.container, "Save")?.disabled).toBe(false);
+    } finally {
+      view.cleanup();
+    }
+  });
+
+  test("an unresolved current-Screen revision visibly blocks Save without cancelling its GET", async () => {
+    const cases = [
+      { outcome: "resolve" as const, editDuringLoad: false },
+      { outcome: "reject" as const, editDuringLoad: false },
+      { outcome: "resolve" as const, editDuringLoad: true },
+    ];
+
+    for (const [index, testCase] of cases.entries()) {
+      const screenId = `external-authority-${index}`;
+      const baseline = makeMountedScreen(screenId, `External baseline ${index}`);
+      cachedScreens.set(screenId, baseline);
+      remoteScreens.set(screenId, baseline);
+      const view = mountEditor(`/admin/advanced/custom-screens/${screenId}`);
+      try {
+        await flushMountedEditor();
+        const pendingRefresh = deferred<CustomScreenRecord | null>();
+        queueScreenLoad(screenId, pendingRefresh);
+        const callsBeforeEvent = loadSpy.mock.calls.length;
+        emitLocalScreenCacheEvent(screenId);
+        await flushMountedEditor();
+
+        expect(loadSpy).toHaveBeenCalledTimes(callsBeforeEvent + 1);
+        expect(loadSpy).toHaveBeenLastCalledWith(screenId, { force: true });
+        expect(loadQueue.some((queued) => queued.screenId === screenId)).toBe(false);
+        expect(view.container.textContent).toContain("Newer changes are available");
+        expect(findButton(view.container, "Save")?.disabled).toBe(true);
+        expect(getBuilderExternalRevisionSaveError(true)).toBe(
+          "Refresh the newer Screen version before saving."
+        );
+
+        if (testCase.editDuringLoad) {
+          await editScreenName(view.container, `Local draft during external GET ${index}`);
+          expect(findButton(view.container, "Save")?.disabled).toBe(true);
+        }
+        const updatesBeforeBlockedSave = updateSpy.mock.calls.length;
+        saveScreen(view.container);
+        await flushMountedEditor();
+        expect(updateSpy).toHaveBeenCalledTimes(updatesBeforeBlockedSave);
+
+        if (testCase.outcome === "reject") {
+          await rejectDeferred(pendingRefresh, new Error("private external refresh failure"));
+          await openScreenSettings(view.container);
+          expect(getScreenNameInput(view.container)?.value).toBe(`External baseline ${index}`);
+          expect(view.container.textContent).toContain("Failed to load custom screen.");
+          expect(view.container.textContent).not.toContain("private external refresh failure");
+          expect(view.container.textContent).toContain("Newer changes are available");
+          expect(findButton(view.container, "Save")?.disabled).toBe(true);
+        } else {
+          await resolveDeferred(
+            pendingRefresh,
+            makeMountedScreen(screenId, `Authoritative external Screen ${index}`)
+          );
+          await openScreenSettings(view.container);
+          if (testCase.editDuringLoad) {
+            expect(getScreenNameInput(view.container)?.value).toBe(
+              `Local draft during external GET ${index}`
+            );
+            expect(view.container.textContent).toContain("Unsaved changes");
+            expect(view.container.textContent).toContain("Newer changes are available");
+            expect(findButton(view.container, "Save")?.disabled).toBe(true);
+          } else {
+            expect(getScreenNameInput(view.container)?.value).toBe(
+              `Authoritative external Screen ${index}`
+            );
+            expect(view.container.textContent).not.toContain("Newer changes are available");
+            expect(findButton(view.container, "Save")?.disabled).toBe(false);
+          }
+        }
       } finally {
         view.cleanup();
       }
@@ -1182,7 +1830,7 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
       remoteScreens.set("screen-2", secondBaseline);
       const oldA = deferred<CustomScreenRecord | null>();
       const newA = deferred<CustomScreenRecord | null>();
-      queueScreenLoad("screen-1", oldA.promise);
+      queueScreenLoad("screen-1", oldA);
       const view = mountEditor("/admin/advanced/custom-screens/screen-1");
 
       const settleOldA = async () => {
@@ -1201,9 +1849,8 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
         expect(view.container.textContent).toContain(`B baseline ${index}`);
 
         cachedScreens.delete("screen-1");
-        queueScreenLoad("screen-1", newA.promise);
+        queueScreenLoad("screen-1", newA);
         assistantSetSpy.mockClear();
-        assistantClearSpy.mockClear();
         clickElement(view.container.querySelector("[data-navigate-screen-one]"));
         expect(currentPath(view.container)).toBe("/admin/advanced/custom-screens/screen-1");
         expect(view.container.textContent).toContain("Loading custom screen...");
@@ -1216,7 +1863,7 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
           expect(view.container.textContent).toContain("Loading custom screen...");
           expect(view.container.textContent).not.toContain(`First A late ${index}`);
           expect(view.container.textContent).not.toContain("Failed to load custom screen.");
-          expect(view.container.textContent).not.toContain("Updated in another tab");
+          expect(view.container.textContent).not.toContain("Newer changes are available");
           expect(assistantSetSpy).not.toHaveBeenCalled();
         }
 
@@ -1238,7 +1885,7 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
         expect(view.container.textContent).not.toContain(`First A late ${index}`);
         expect(view.container.textContent).not.toContain(`First A failure ${index}`);
         expect(view.container.textContent).not.toContain(`B baseline ${index}`);
-        expect(view.container.textContent).not.toContain("Updated in another tab");
+        expect(view.container.textContent).not.toContain("Newer changes are available");
         expect(view.container.textContent).not.toContain(
           "Saved server version; newer local changes remain unsaved."
         );
@@ -1254,9 +1901,85 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
     }
   });
 
+  test("a first-A update reaches the second A only through its current cache-driven hydration", async () => {
+    for (const outcome of ["resolve", "reject"] as const) {
+      const firstBaseline = makeMountedScreen("screen-1", `Pending update A ${outcome}`);
+      const secondBaseline = makeMountedScreen("screen-2", `Pending update B ${outcome}`);
+      cachedScreens.set("screen-1", firstBaseline);
+      cachedScreens.set("screen-2", secondBaseline);
+      remoteScreens.set("screen-1", firstBaseline);
+      remoteScreens.set("screen-2", secondBaseline);
+      const pendingUpdate = deferred<CustomScreenRecord>();
+      queueScreenUpdate(pendingUpdate);
+      const view = mountEditor("/admin/advanced/custom-screens/screen-1");
+
+      try {
+        await flushMountedEditor();
+        await editScreenName(view.container, `First A draft ${outcome}`);
+        saveScreen(view.container);
+        await flushMountedEditor();
+        const payload = updateSpy.mock.calls.at(-1)?.[1];
+        if (!payload) throw new Error("Pending A update payload was not captured");
+        clickElement(view.container.querySelector("[data-navigate-screen-two]"));
+        await flushMountedEditor();
+        clickElement(findButton(document, "Discard and continue"));
+        await flushMountedEditor();
+        expect(currentPath(view.container)).toBe("/admin/advanced/custom-screens/screen-2");
+
+        clickElement(view.container.querySelector("[data-navigate-screen-one]"));
+        await flushMountedEditor();
+        expect(currentPath(view.container)).toBe("/admin/advanced/custom-screens/screen-1");
+        expect(view.container.textContent).not.toContain("Unsaved changes");
+        await openScreenSettings(view.container);
+        expect(getScreenNameInput(view.container)?.value).toBe(`Pending update A ${outcome}`);
+        const loadsBeforeOldSaveSettlement = loadSpy.mock.calls.length;
+
+        if (outcome === "resolve") {
+          const currentHydration = deferred<CustomScreenRecord | null>();
+          queueScreenLoad("screen-1", currentHydration);
+          const savedFirstA: CustomScreenRecord = {
+            ...recordFromPayload(firstBaseline, payload),
+            warnings: [{ code: "binding_field_removed", fields: ["first-a-only"] }],
+          };
+          expect(updateQueue).toHaveLength(0);
+          await resolveDeferred(pendingUpdate, savedFirstA);
+          expect(loadSpy).toHaveBeenCalledTimes(loadsBeforeOldSaveSettlement + 1);
+          expect(loadSpy).toHaveBeenLastCalledWith("screen-1", { force: true });
+          expect(loadQueue.some((queued) => queued.screenId === "screen-1")).toBe(false);
+          expect(getScreenNameInput(view.container)?.value).toBe(`Pending update A ${outcome}`);
+          expect(view.container.textContent).toContain("Newer changes are available");
+          await resolveDeferred(currentHydration, savedFirstA);
+        } else {
+          await rejectDeferred(pendingUpdate, new Error("First A late update rejection"));
+        }
+
+        expect(currentPath(view.container)).toBe("/admin/advanced/custom-screens/screen-1");
+        expect(getScreenNameInput(view.container)?.value).toBe(
+          outcome === "resolve" ? `First A draft ${outcome}` : `Pending update A ${outcome}`
+        );
+        if (outcome === "resolve") {
+          expect(loadSpy).toHaveBeenCalledTimes(loadsBeforeOldSaveSettlement + 1);
+        } else {
+          expect(loadSpy).toHaveBeenCalledTimes(loadsBeforeOldSaveSettlement);
+          expect(view.container.textContent).not.toContain(`First A draft ${outcome}`);
+        }
+        expect(view.container.textContent).not.toContain("Saving...");
+        expect(view.container.textContent).not.toContain("Unsaved changes");
+        expect(view.container.textContent).not.toContain("First A late update rejection");
+        expect(view.container.textContent).not.toContain("first-a-only");
+        expect(view.container.textContent).not.toContain("Newer changes are available");
+        expect(view.container.textContent).not.toContain(
+          "Saved server version; newer local changes remain unsaved."
+        );
+      } finally {
+        view.cleanup();
+      }
+    }
+  });
+
   test("cancel keeps a pending hydration live while confirm invalidates all of its late outcomes", async () => {
     const cancelLoad = deferred<CustomScreenRecord | null>();
-    queueScreenLoad("screen-1", cancelLoad.promise);
+    queueScreenLoad("screen-1", cancelLoad);
     const cancelView = mountEditor("/admin/advanced/custom-screens/screen-1");
     try {
       await flushMountedEditor();
@@ -1273,7 +1996,7 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
       expect(currentPath(cancelView.container)).toBe("/admin/advanced/custom-screens/screen-1");
       expect(getScreenNameInput(cancelView.container)?.value).toBe("Hydration cancel draft");
       expect(cancelView.container.textContent).toContain("Unsaved changes");
-      expect(cancelView.container.textContent).toContain("Updated in another tab");
+      expect(cancelView.container.textContent).toContain("Newer changes are available");
       expect(cancelView.container.textContent).not.toContain("Remote after hydration cancel");
     } finally {
       cancelView.cleanup();
@@ -1281,7 +2004,7 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
 
     for (const outcome of ["resolve", "reject"] as const) {
       const pendingLoad = deferred<CustomScreenRecord | null>();
-      queueScreenLoad("screen-1", pendingLoad.promise);
+      queueScreenLoad("screen-1", pendingLoad);
       const view = mountEditor("/admin/advanced/custom-screens/screen-1");
       try {
         await flushMountedEditor();
@@ -1306,7 +2029,7 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
         expect(view.container.textContent).not.toContain(`Hydration confirm ${outcome}`);
         expect(view.container.textContent).not.toContain("Discarded hydration result");
         expect(view.container.textContent).not.toContain("discarded hydration failure");
-        expect(view.container.textContent).not.toContain("Updated in another tab");
+        expect(view.container.textContent).not.toContain("Newer changes are available");
         expect(view.container.textContent).not.toContain("Loading custom screen...");
       } finally {
         view.cleanup();
@@ -1316,7 +2039,7 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
 
   test("cancel keeps a pending save authoritative while confirm invalidates success and failure", async () => {
     const cancelSave = deferred<CustomScreenRecord>();
-    updateQueue.push(cancelSave.promise);
+    queueScreenUpdate(cancelSave);
     const cancelView = mountEditor("/admin/advanced/custom-screens/screen-1");
     try {
       await flushMountedEditor();
@@ -1341,7 +2064,7 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
 
     for (const outcome of ["resolve", "reject"] as const) {
       const pendingSave = deferred<CustomScreenRecord>();
-      updateQueue.push(pendingSave.promise);
+      queueScreenUpdate(pendingSave);
       const view = mountEditor("/admin/advanced/custom-screens/screen-1");
       try {
         await flushMountedEditor();
@@ -1385,7 +2108,7 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
 
   test("an old create response cannot seed the next create visit with a PATCH target", async () => {
     const oldCreate = deferred<CustomScreenRecord>();
-    createQueue.push(oldCreate.promise);
+    queueScreenCreate(oldCreate);
     const view = mountEditor("/admin/advanced/custom-screens/new");
 
     try {
@@ -1425,7 +2148,7 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
   test("a cache event between layout removal and passive unsubscribe starts no old-visit work", async () => {
     let observedBroadcasts = 0;
     const unsubscribeObserver = subscribeCacheEvents((event) => {
-      if (event.key === cacheKeys.customScreensList) observedBroadcasts += 1;
+      if (event.key === cacheKeys.customScreenDetail("screen-1")) observedBroadcasts += 1;
     });
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const view = mountLayoutRemovalRace("/admin/advanced/custom-screens/screen-1");
@@ -1434,7 +2157,7 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
       await flushMountedEditor();
       const loadsBeforeRemoval = loadSpy.mock.calls.length;
       assistantSetSpy.mockClear();
-      view.removeEditorAndBroadcast();
+      view.removeEditor(true);
       await flushMountedEditor();
 
       expect(observedBroadcasts).toBe(1);
@@ -1445,6 +2168,80 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
       unsubscribeObserver();
       view.cleanup();
       consoleError.mockRestore();
+    }
+  });
+
+  test("promise settlement in the route-render to passive-cleanup window has no old-visit authority", async () => {
+    const cases = [
+      { operation: "hydrate" as const, outcome: "resolve" as const },
+      { operation: "hydrate" as const, outcome: "reject" as const },
+      { operation: "save" as const, outcome: "resolve" as const },
+      { operation: "save" as const, outcome: "reject" as const },
+    ];
+
+    for (const [index, testCase] of cases.entries()) {
+      const screenId = `layout-settlement-${testCase.operation}-${testCase.outcome}-${index}`;
+      const baseline = makeMountedScreen(screenId, `Layout settlement ${index}`);
+      cachedScreens.set(screenId, baseline);
+      remoteScreens.set(screenId, baseline);
+      const hydration = deferred<CustomScreenRecord | null>();
+      const save = deferred<CustomScreenRecord>();
+      let savePayload: Parameters<typeof customScreensClient.updateCustomScreen>[1] | null = null;
+      if (testCase.operation === "hydrate") {
+        queueScreenLoad(screenId, hydration);
+      } else {
+        queueScreenUpdate(save);
+      }
+      const settleAfterRemoval = () => {
+        if (testCase.operation === "hydrate") {
+          if (testCase.outcome === "resolve") {
+            hydration.resolve(makeMountedScreen(screenId, `Layout-window hydration ${index}`));
+          } else {
+            hydration.reject(new Error(`Layout-window hydration failure ${index}`));
+          }
+          return;
+        }
+        if (testCase.outcome === "resolve") {
+          if (!savePayload) throw new Error("Layout-window save payload was unavailable");
+          save.resolve(recordFromPayload(baseline, savePayload));
+        } else {
+          save.reject(new Error(`Layout-window save failure ${index}`));
+        }
+      };
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const view = mountLayoutRemovalRace(
+        `/admin/advanced/custom-screens/${screenId}`,
+        settleAfterRemoval
+      );
+
+      try {
+        await flushMountedEditor();
+        if (testCase.operation === "save") {
+          await editScreenName(view.container, `Layout-window draft ${index}`);
+          saveScreen(view.container);
+          await flushMountedEditor();
+          savePayload = updateSpy.mock.calls.at(-1)?.[1] ?? null;
+          if (!savePayload) throw new Error("Layout-window save payload was not captured");
+        }
+        if (testCase.operation === "hydrate") {
+          assertDeferredOwningCall(hydration);
+        } else {
+          assertDeferredOwningCall(save);
+        }
+        const assistantCallsBeforeRemoval = assistantSetSpy.mock.calls.length;
+        const loadsBeforeRemoval = loadSpy.mock.calls.length;
+
+        view.removeEditor();
+        await flushMountedEditor();
+
+        expect(view.container.querySelector('[data-screen-authoring-canvas="true"]')).toBeNull();
+        expect(assistantSetSpy.mock.calls.length).toBe(assistantCallsBeforeRemoval);
+        expect(loadSpy.mock.calls.length).toBe(loadsBeforeRemoval);
+        expect(consoleError).not.toHaveBeenCalled();
+      } finally {
+        view.cleanup();
+        consoleError.mockRestore();
+      }
     }
   });
 
@@ -1464,9 +2261,9 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
       const hydration = deferred<CustomScreenRecord | null>();
       const save = deferred<CustomScreenRecord>();
       if (testCase.operation === "hydrate") {
-        queueScreenLoad(screenId, hydration.promise);
+        queueScreenLoad(screenId, hydration);
       } else {
-        updateQueue.push(save.promise);
+        queueScreenUpdate(save);
       }
       const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
       const view = mountEditor(`/admin/advanced/custom-screens/${screenId}`);
@@ -1498,6 +2295,7 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
             await rejectDeferred(hydration, new Error(`Late hydration failure ${index}`));
           }
         } else if (testCase.outcome === "resolve") {
+          if (!savePayload) throw new Error("Unmount-save payload became unavailable");
           await resolveDeferred(save, recordFromPayload(baseline, savePayload));
         } else {
           await rejectDeferred(save, new Error(`Late save failure ${index}`));

@@ -10,7 +10,9 @@
 **Dependencies:** TASK-540-03-L01, TASK-540-04-L02
 **Status:** ✅ Done
 **Started:** 2026-07-13
+**Reopened:** 2026-07-14 (L04 post-audit: exact cache-event operation correlation)
 **Completed:** 2026-07-14
+**Revalidation Passed:** 2026-07-14 — `core lint:types`, `core lint`, root `tsc`, and the exact nine-file L03 Vitest matrix (155/155)
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -21,9 +23,11 @@
 - `core/admin/ui/custom-screens/CustomScreenEntryCanvas.tsx`
 - `core/admin/ui/custom-screens/CustomScreenPreview.tsx`
 - `core/admin/services/customScreensClient.ts`
+- `core/admin/utils/cacheBus.ts` (only additive origin/operation delivery)
 - `core/services/customScreens/screenEntryPresentationOverrideContract.ts`
 - `core/services/customScreens/screenEntryPresentationOverrides.ts`
 - `tests/vitest/admin/customScreensClient.test.ts`
+- `tests/vitest/admin/cacheBus.test.ts` (only origin/operation assertions)
 - `tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx`
 - `tests/vitest/ui/custom-screen-entry-draft.test.ts`
 - new `tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx`
@@ -36,24 +40,34 @@ landed renderer contract read-only. The retained
 `tests/vitest/widgets/screenWidgets.test.tsx` Preview compatibility suite is also a
 read-only gate. TASK-540-06 owns the corresponding
 `_docs/CMS_API.md` correction at closure.
+L03 lands the cache-bus substrate and mutation-client forwarding together before L04;
+L04 consumes both seams read-only and never edits these four L03-owned files.
+The reopened corrective pass was dispatched by `_docs/_workflows/task-540-fix.mjs`.
+The canonical `_docs/_workflows/task-540-implement.mjs` treats this completed leaf and
+its correction evidence as landed, resumes at the first later unlanded leaf, and must
+never rerun this leaf.
 
 ## Grounded anchors
 
-- Entry content/presentation dirty state:
-  `CustomScreenEntryEditor.tsx:344-439`.
-- Entry cache refresh and initial hydration:
-  `CustomScreenEntryEditor.tsx:564-658,716-739`.
-- Inline related-entry IIFE to remove: `:809-867`.
-- Save/create navigation flow: `:869-933`.
-- Direct-image presentation target currently rejected by the UI:
-  `CustomScreenEntryEditor.tsx:219-263`.
-- Media target service validation currently accepts only field/media blocks:
-  `screenEntryPresentationOverrides.ts:277-309`.
-- Admin override response/cache normalization currently flatMap-drops malformed rows
-  and accepts arbitrary string media values: `customScreensClient.ts:103-139,249-263`.
-- Bun-free override schema/type owner to extend with the single strict normalizer:
-  `screenEntryPresentationOverrideContract.ts:1-106`.
-- Shared guard: `AdminDirtyNavigationGuard.tsx:17-105`.
+- Entry content/presentation state and dirty authority:
+  `CustomScreenEntryEditor.tsx:683-778,1390-1435`.
+- Entry/override hydration, refresh, and cache subscriptions:
+  `CustomScreenEntryEditor.tsx:880-1139,1350-1372`.
+- Related-entry hook consumption: `CustomScreenEntryEditor.tsx:1215-1224`.
+- Save/create navigation authority: `CustomScreenEntryEditor.tsx:1446-1608`.
+- Direct-image presentation target and winning UUID collection:
+  `CustomScreenEntryEditor.tsx:256-342,539-565`.
+- Direct-image/media-field active-target validation:
+  `screenEntryPresentationOverrides.ts:145-220`.
+- Admin override response/cache normalization:
+  `customScreensClient.ts:109-129,235-255`.
+- Same-context-only cache-event origin/operation delivery and unchanged serialized transports:
+  `cacheBus.ts:10-22,44,56-61,73-138`.
+- Optional Custom Screen mutation token forwarding across both local list/detail events:
+  `customScreensClient.ts:100-102,399-453`.
+- Bun-free override schema/type owner:
+  `screenEntryPresentationOverrideContract.ts:1-300`.
+- Shared guard: `AdminDirtyNavigationGuard.tsx:17-106`.
 
 ## Implementation Pseudocode
 
@@ -166,6 +180,77 @@ function normalizeOverrideResponseEnvelope(input: unknown) {
     source: "transport-response",
   });
 }
+
+// cacheBus.ts owns this exact additive API. Symbol identity is unique per call and cannot
+// be serialized accidentally. Existing one-argument subscribers and broadcasts remain valid.
+export type CacheEventOperationToken = symbol;
+export type CacheEventBroadcastOptions = Readonly<{
+  operationToken?: CacheEventOperationToken;
+}>;
+export type CacheEventOrigin = "local" | "remote";
+
+export const createCacheEventOperationToken = (): CacheEventOperationToken => Symbol();
+
+type CacheEventHandler = (
+  event: CacheEvent,
+  origin: CacheEventOrigin,
+  operationToken?: CacheEventOperationToken
+) => void;
+
+export function broadcastCacheEvent(
+  input: Omit<CacheEvent, "ts" | "sourceId">,
+  options: CacheEventBroadcastOptions = {}
+) {
+  const event = { ...input, ts: Date.now(), sourceId: cacheBusId };
+  postSerializedEvent(event); // exact existing CacheEvent keys only
+  localHandlers.forEach((handler) =>
+    handler(event, "local", options.operationToken)
+  );
+}
+
+// BroadcastChannel/storage consumers receive only event + "remote"; operationToken is
+// intentionally undefined outside the originating JS context.
+handler(parsed, "remote");
+
+// The L03-owned mutation client forwards one caller-provided local operation token to
+// both list/detail cache notifications. Existing callers omit it.
+export type CustomScreenMutationOptions = Readonly<{
+  cacheEventOperationToken?: CacheEventOperationToken;
+}>;
+
+export async function createCustomScreen(
+  input: CustomScreenCreateInput,
+  options?: CustomScreenMutationOptions
+): Promise<CustomScreenRecord> {
+  const created = await postCustomScreen(input); // options never joins this request
+  upsertCachedScreen(created);
+  broadcastCacheEvent(listEvent, {
+    operationToken: options?.cacheEventOperationToken,
+  });
+  broadcastCacheEvent(detailEvent(created.id), {
+    operationToken: options?.cacheEventOperationToken,
+  });
+  return created;
+}
+
+export async function updateCustomScreen(
+  id: string,
+  input: CustomScreenUpdateInput,
+  options?: CustomScreenMutationOptions
+): Promise<CustomScreenRecord> {
+  const updated = await patchCustomScreen(id, input);
+  upsertCachedScreen(updated);
+  broadcastCacheEvent(listEvent, {
+    operationToken: options?.cacheEventOperationToken,
+  });
+  broadcastCacheEvent(detailEvent(updated.id), {
+    operationToken: options?.cacheEventOperationToken,
+  });
+  return updated;
+}
+
+// The token never joins fetch input, JSON, cache values, storage, BroadcastChannel
+// payloads, logs, or server contracts.
 
 // Extend the existing service-owned active-target check; do not add a parallel schema.
 function isMediaOverrideTargetActive(override, block, bindings, properties) {
@@ -662,6 +747,11 @@ preference source in this leaf. TASK-540-05-L02 later owns the dedicated
 `custom-screen-entry-preferences-persistence.test.tsx` coverage for server-backed,
 per-user persistence and absence of localStorage, and runs this restyle suite read-only
 after that transport switch.
+
+This leaf is also the sole writer of `CustomScreenEntryEditor.tsx`. At its existing hook
+call, replace the stale TASK-503/localStorage source comment with the transport-neutral
+English comment `Entry-view badge preferences are owned by the dedicated hook (default
+OFF).` No executable line changes. Later leaves consume that call site read-only.
 
 ### Dirty hydration and navigation contract
 
@@ -1235,7 +1325,7 @@ the mutation promise resumes, every identity-current successful save first incre
 matching load generation, clears only that channel's self-event warning/loading state,
 and then advances the server baseline. This invalidates a same-tab forced hydration
 without cancelling the independent channel. A save-triggered cache event must therefore
-never surface a false remote-update warning or replace the just-saved baseline.
+never surface a false external-update warning or replace the just-saved baseline.
 Save commits do not advance the shared local-mutation generation: their channel-specific
 load generation is the invalidation seam, so a safe overlapping load in the independent
 channel can still commit after the saved channel becomes clean.
@@ -1347,9 +1437,16 @@ here and obey the commit-time generation contract.
   only B in old-first and new-first settlement orders; authoritative rejection clears
   then retries; successful PATCH revokes a pre-write pending GET before value write both
   with and without an existing cache, and late GET cannot overwrite it; rejected PATCH
-  performs no revoke, prime, or broadcast.
+  performs no revoke, prime, or broadcast; create/update called with an operation token
+  deliver that exact token only to same-context list/detail subscribers, while omitted
+  options remain backward compatible and no token appears in network/cache/event JSON.
+- `cacheBus.test.ts`: two `createCacheEventOperationToken()` calls return distinct symbol
+  identities; an exact caller token reaches only same-context callbacks; remote delivery
+  has no token; serialized storage/BroadcastChannel event keys remain exactly
+  `action`, `key`, `sourceId`, and `ts`; existing tokenless broadcasts/subscribers remain
+  backward compatible.
 
-TASK-540-06 runs these five suites read-only and must not re-baseline the assertions.
+TASK-540-06 runs these six suites read-only and must not re-baseline the assertions.
 `custom-screen-record-interactions.test.tsx` and
 `custom-screen-runtime-renderer.test.tsx` remain exclusively owned by
 TASK-540-03-L01.
@@ -1360,14 +1457,18 @@ The route family remains internal admin only. Existing authenticated session,
 `content:read` for reads, `content:write` for replacement, CSRF enforcement for the
 write, and the admin rate-limit bucket remain mandatory. The existing strict
 reject-unknown envelope and UUID validation remain fail-closed. No public endpoint,
-nonce, signature, CAPTCHA, API-key mode, browser storage, secret, or token is added.
+nonce, signature, CAPTCHA, API-key mode, browser storage, secret, credential, or auth token
+is added. The in-memory cache-operation symbol carries no data and never crosses a process,
+transport, storage, or logging boundary.
 
 ## Validation
 
 ```bash
 bun --cwd core lint:types
 bun --cwd core lint
-bunx vitest run tests/vitest/admin/customScreensClient.test.ts \
+./node_modules/.bin/tsc -p tsconfig.json --noEmit
+bunx vitest run tests/vitest/admin/cacheBus.test.ts \
+  tests/vitest/admin/customScreensClient.test.ts \
   tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx \
   tests/vitest/ui/custom-screen-entry-draft.test.ts \
   tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx \
@@ -1381,7 +1482,7 @@ bunx vitest run tests/vitest/ui-integration/custom-screen-record-interactions.te
 
 Rerun a named failing file once in isolation.
 
-## Completion
+## Current validation evidence
 
 Implemented a keyed entry-route session with one opaque `RouteVisit` per mount,
 generation- and visit-scoped entry/override/media continuations, complete content and
@@ -1391,9 +1492,14 @@ resolution. Strict shared override normalization now rejects malformed draft-cac
 repository, and transport lists atomically; exact pending-promise and PATCH-revocation
 authority prevents stale cache publication.
 
-The post-audit identified and corrected the serialized-route A→B→A reactivation risk,
+The earlier post-audit identified and corrected the serialized-route A→B→A reactivation risk,
 presentation-control exposure during failed/pending hydration, and a missing mounted
 forced-media regression. The final fresh read-only audit reported zero HIGH, MEDIUM, or
 LOW findings. Final validation: isolated restyle 15/15; the exact eight-file L03 matrix
 147/147; L02 cross-leaf prerequisites 44/44; full core typecheck and lint; workflow
-syntax, diff checks, and Page collision guards all passed.
+syntax, diff checks, and Page collision guards all passed. L03 was reopened after the
+L04 post-audit proved that same-context cache provenance alone cannot identify the exact
+editor save; the operation-token seam was implemented and re-gated before L03 returned
+to Done. The later single-writer reconcile moved the transport-neutral hook-call comment
+into this L03-owned source file. A fresh 2026-07-14 gate then passed `core lint:types`,
+`core lint`, root `tsc`, and all nine declared Vitest files (155/155).
