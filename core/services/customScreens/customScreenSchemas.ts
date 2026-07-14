@@ -1317,7 +1317,10 @@ const collectRawUnsupportedButtonIds = (rawDocument: unknown): Set<string> => {
     if (!isRecord(node)) return;
     const type = typeof node.type === "string" ? node.type : null;
     if ((type === "button" || type === "actions") && isRecord(node.data)) {
-      if (node.data.action === "publish" || node.data.action === "custom") {
+      if (
+        Object.prototype.hasOwnProperty.call(node.data, "action") &&
+        node.data.action !== "link"
+      ) {
         try {
           ids.add(normalizePath(node.id));
         } catch {

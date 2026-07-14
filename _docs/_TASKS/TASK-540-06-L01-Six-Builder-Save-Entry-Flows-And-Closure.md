@@ -507,7 +507,9 @@ After provisioning, expose only the generated non-secret emails as
 `WF540_USER_A_EMAIL`/`WF540_USER_B_EMAIL` in the task shell; both use the loaded
 `ADMIN_PASSWORD` value without printing it. The real A→B→A transitions in flow 7
 use these separate full commands (the user-menu trigger is the TopBar button that
-contains the rendered identity text):
+contains the rendered identity text). Sign out and login each perform a full-page
+redirect and therefore create a new JavaScript realm; their live proof is durable
+per-user isolation, not same-mounted hook retention:
 
 ```bash
 playwright-cli -s=wf540smoke --raw fill 'input[type="email"]' "$WF540_USER_A_EMAIL" >/dev/null
@@ -536,8 +538,9 @@ entity inventory, keep redacted cleanup-resource records for `session-user-a`,
 `media-storage-object`, plus one `access-log-user-a|b` record per acquired row. Each
 `session-user-*` record uses `identifierType:"db-id"` and the synthetic session
 row's UUID. Each `access-log-user-*` record uses `identifierType:"db-id"` and that
-exact access-log row UUID, with its owning synthetic user/session UUID only as a
-non-secret subject link; neither record stores an authentication credential. Every
+exact access-log row UUID, with its owning synthetic user/session UUID only in
+`ownerSubjectIdentifier`; every non-access-log cleanup record sets that field to
+`null`. Neither record stores an authentication credential. Every
 other record contains only its non-secret DB ID, bounded
 composite key, or storage key plus a bounded sanitized absence-probe result; it
 must never contain a cookie, session token/hash, CSRF token, password/hash, raw
@@ -622,9 +625,9 @@ The required intercepted attempts are:
 | `media-prior-resolution` | `GET **/admin/api/media` | delay captured old media list; a newer override/request must win |
 | `entry-save-failure` | `PATCH **/admin/api/content/<TYPE_SLUG>/entries/<ENTRY_ID>` | one malformed-JSON failure; dirty guard remains until real retry |
 | `related-first-failure` | `GET **/admin/api/content/<RELATED_A_SLUG>/entries` | one malformed-JSON failure; visible Retry |
-| `related-a-refresh` | same exact A path | delayed captured success; old rows remain with visible refreshing state |
-| `related-b-load` | `GET **/admin/api/content/<RELATED_B_SLUG>/entries` | delayed captured success after A→B; immediate empty/loading and stale-A rejection |
-| `preference-a-write-epoch` | `PATCH **/admin/api/user-settings/customScreens.entry.preferences` | hold the first A write, queue a second A toggle, switch auth identity to B, then release; the queued A write must never dispatch and hit count stays `1` |
+| `related-a-refresh` | same exact A path | delayed captured success; the already rendered A rows and their geometry remain visible while the route is pending |
+| `preference-a-read-refresh` | `GET **/admin/api/user-settings/customScreens.entry.preferences` | hold one same-user SPA remount read after the latest A value is shared-settled; that exact value may remain visible, then a newer local generation must win after release |
+| `preference-a-write-exit` | `PATCH **/admin/api/user-settings/customScreens.entry.preferences` | hold the first A write, queue a second A toggle, leave the old realm through real sign-out, authenticate B, then release; the queued A write must never dispatch and hit count stays `1` |
 
 The command shapes below are binding. Substitute only key, method, and expanded
 pattern. A one-shot failure refuses an unexpected second hit; its real retry occurs
@@ -693,34 +696,63 @@ playwright-cli -s=wf540smoke --raw run-code '(page) => page.__wf540PageErrors ??
    command, and only then click the real Save control. A successful retry clears
    only the channels actually persisted, and confirm-discard navigates once.
 6. **Related retry/cache identity, dark, 1280×900.** Trigger the one-shot
-   `related-first-failure`, read hit `1`, unroute it, then use the visible Retry and
-   prove A rows. During
-   `related-a-refresh`, rows remain visible with computed refreshing state. Switch
-   A→B while A is held; prove immediate empty/loading, release stale A with no DOM
-   commit, then release B and prove only B rows. Existing dirty content/presentation
-   remains byte-identical throughout.
+   `related-first-failure`, read hit `1`, assert the visible error and capture
+   `task-540-wf540smoke-related-first-failure.png`, then unroute it and use the
+   visible Retry to prove A rows. Install `related-a-refresh`, then open a second tab in the same
+   named browser session at
+   `/admin/advanced/entries/<RELATED_A_SLUG>/<RELATED_A_ENTRY_ID>`, change one harmless
+   authored value, and save through the real entry UI. That real mutation broadcasts
+   the `entries:list:<RELATED_A_SLUG>` cache event to the still-mounted first tab and
+   triggers the authoritative A refresh; return to the first tab before assertions.
+   During
+   `related-a-refresh`, prove the already rendered A row text and non-zero geometry
+   remain byte-identical while the route hit is held, with no replacement error or
+   empty/loading canvas. Use two authored relation fields: A initially contains IDs
+   while B is empty. Both real relation pickers load on mount, so B is intentionally
+   warm before the switch. Clear A, prove the expected empty/loading transition, then
+   select B through the real entry control and prove B is visible from the warmed
+   cache. This changes the normalized target identity A→B without mutating the Screen
+   document. Release stale A and prove it cannot replace B. The pre-existing unrelated
+   content field and presentation draft remain byte-identical; the only content diff
+   is exactly relation A cleared plus relation B selected.
+
+   The cache-event trigger uses separate full CLI commands; it must not call
+   `clearEntriesCache`, `broadcastCacheEvent`, or another in-page test helper:
+
+   ```bash
+   playwright-cli -s=wf540smoke --raw tab-new http://coderso-a.localhost:5173/admin/advanced/entries/<RELATED_A_SLUG>/<RELATED_A_ENTRY_ID>
+   playwright-cli -s=wf540smoke --raw fill '<REAL_RELATED_A_EDIT_CONTROL>' '<UPDATED_VISIBLE_VALUE>'
+   playwright-cli -s=wf540smoke --raw click 'button:text-is("Save")'
+   playwright-cli -s=wf540smoke --raw tab-select 0
+   ```
 7. **Responsive geometry and two users, light/dark.** Execute every resize below
    in order. At 320/390/480, open and closed computed right padding is `24px`, the
    scroller border box is unchanged, content width is positive, and the panel rect
    remains inside the viewport. At 1024/1280, closed/open right padding is
    `32px`/`332px`, border-box width/left edge stay fixed, and open content width is
    exactly 300 CSS px smaller within 1 px. User A enables field metadata and waits
-   for the real PATCH; after real sign-out/sign-in, user B initially sees the server
-   default and no A value. While B is active, change A's server value through the
-   scoped fixture path; when A returns, its keyed in-session value may appear only
-   while the authoritative A read is pending, after which the changed server value
-   replaces it. Repeat the refresh, make a newer local A toggle while it is held,
-   then release it and prove the local value wins by per-user write generation.
-   Finally hold the first `preference-a-write-epoch` PATCH, issue the opposite visible
-   A toggle so it is queued, and switch A→B before releasing the first response. Read
-   hit count `1` before and after release, prove the queued A write never executes with
-   B's session, then unroute and return to A. One fresh visible A toggle retries
-   successfully and both current UI and durable server value converge without an
-   unhandled rejection; during same-session A→B→A revalidation, only A's latest exact
-   shared-settled hook-local copy may remain visible, never a superseded value/default.
+   for the real PATCH. Navigate away through a real internal Admin link while clean,
+   change A's server value through the scoped fixture path, return within the same SPA
+   realm, and prove the real authoritative read replaces the older A value. Navigate
+   away again, install `preference-a-read-refresh`, and remount the entry surface as A:
+   only A's latest exact shared-settled value may remain visible while that GET is
+   pending. Make a newer local A toggle while it is held, then release it and prove the
+   local value wins by per-user write generation.
+   After real sign-out/sign-in, user B initially sees the server default and no A
+   value; a real return to A restores only A's durable value. Finally hold the first
+   `preference-a-write-exit` PATCH, issue the opposite visible A toggle so it is queued,
+   and leave the old realm through real sign-out before authenticating B and releasing
+   the first response. Read hit count `1` before and after release, prove the queued A
+   write never executes with B's session and B stays unchanged, then unroute and return
+   to A. One fresh visible A toggle retries successfully and both current UI and durable
+   server value converge without an unhandled rejection. Same-mounted A→B→A identity
+   generations remain covered by the required Vitest hook suite because real auth
+   redirects intentionally replace the realm.
    Prove `coderso.screens.entry.preferences.v1` is absent throughout. User A is
    observed in light and user B in dark, with each theme asserted from computed
-   root/surface colors.
+   root/surface colors. After the final durable A retry converges, capture the separate
+   post-release `task-540-wf540smoke-responsive-user-a-converged.png` final screenshot;
+   neither pending A nor pending B image may substitute for it.
 
 ```bash
 playwright-cli -s=wf540smoke --raw resize 320 844
@@ -743,15 +775,18 @@ playwright-cli -s=wf540smoke --raw screenshot --filename /home/coder/project/Cod
 playwright-cli -s=wf540smoke --raw screenshot --filename /home/coder/project/Coderso/_docs/_workflows/_smoke/task-540-wf540smoke-space-selection-dark.png --full-page
 playwright-cli -s=wf540smoke --raw screenshot --filename /home/coder/project/Coderso/_docs/_workflows/_smoke/task-540-wf540smoke-dirty-save-failure.png --full-page
 playwright-cli -s=wf540smoke --raw screenshot --filename /home/coder/project/Coderso/_docs/_workflows/_smoke/task-540-wf540smoke-dirty-guards-final.png --full-page
+playwright-cli -s=wf540smoke --raw screenshot --filename /home/coder/project/Coderso/_docs/_workflows/_smoke/task-540-wf540smoke-related-first-failure.png --full-page
 playwright-cli -s=wf540smoke --raw screenshot --filename /home/coder/project/Coderso/_docs/_workflows/_smoke/task-540-wf540smoke-related-a-stale.png --full-page
 playwright-cli -s=wf540smoke --raw screenshot --filename /home/coder/project/Coderso/_docs/_workflows/_smoke/task-540-wf540smoke-related-b-dark.png --full-page
 playwright-cli -s=wf540smoke --raw screenshot --filename /home/coder/project/Coderso/_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-a-light.png --full-page
 playwright-cli -s=wf540smoke --raw screenshot --filename /home/coder/project/Coderso/_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-b-dark.png --full-page
+playwright-cli -s=wf540smoke --raw screenshot --filename /home/coder/project/Coderso/_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-a-converged.png --full-page
 ```
 
 Record for each flow its ID, theme, viewport, linked expanded command receipts,
 route hit counts, visible/geometry/ARIA assertions with bounded sanitized observed
-outputs, both empty error arrays, and screenshot path/size/SHA-256/device/inode.
+outputs, all three empty console-error/console-warning/page-error arrays, and
+screenshot path/size/SHA-256/device/inode.
 Verify every file is a non-symlink PNG with the PNG signature and that all canonical
 paths, `(device,inode)` identities, and hashes are distinct.
 Assertions use computed style, bounding boxes, DOM/ARIA state, persisted server

@@ -534,16 +534,17 @@ const ROUTE_EXPECTATIONS = Object.freeze({
   "entry-save-failure": { method: "PATCH", mode: "malformed-json" },
   "related-first-failure": { method: "GET", mode: "malformed-json" },
   "related-a-refresh": { method: "GET", mode: "delayed-success" },
-  "related-b-load": { method: "GET", mode: "delayed-success" },
-  "preference-a-write-epoch": { method: "PATCH", mode: "delayed-success" },
+  "preference-a-read-refresh": { method: "GET", mode: "delayed-success" },
+  "preference-a-write-exit": { method: "PATCH", mode: "delayed-success" },
 });
+const ROUTE_EXPECTATION_COUNT = Object.keys(ROUTE_EXPECTATIONS).length;
 const ROUTE_SCENARIOS = Object.freeze({
   "media-prior-resolution": "button-image",
   "entry-save-failure": "dirty-guards",
   "related-first-failure": "related-retry-cache",
   "related-a-refresh": "related-retry-cache",
-  "related-b-load": "related-retry-cache",
-  "preference-a-write-epoch": "responsive-users",
+  "preference-a-read-refresh": "responsive-users",
+  "preference-a-write-exit": "responsive-users",
 });
 const SMOKE_RECEIPT_SCENARIOS = Object.freeze(["setup", ...SMOKE_KINDS, "cleanup"]);
 const HELPER_PORTS = Object.freeze([3000, 5173, 5174]);
@@ -591,12 +592,17 @@ const REQUIRED_FIXTURE_KINDS = Object.freeze([
   "screen",
   "media",
 ]);
-const REQUIRED_CLEANUP_RESOURCE_KINDS = Object.freeze([
+const REQUIRED_BASE_CLEANUP_RESOURCE_KINDS = Object.freeze([
   "session-user-a",
   "session-user-b",
   "setting-user-a",
   "presentation-override",
   "media-storage-object",
+]);
+const ACCESS_LOG_CLEANUP_RESOURCE_KINDS = Object.freeze(["access-log-user-a", "access-log-user-b"]);
+const REQUIRED_CLEANUP_RESOURCE_KINDS = Object.freeze([
+  ...REQUIRED_BASE_CLEANUP_RESOURCE_KINDS,
+  ...ACCESS_LOG_CLEANUP_RESOURCE_KINDS,
 ]);
 const SCREENSHOT_PATHS = Object.freeze([
   "_docs/_workflows/_smoke/task-540-wf540smoke-button-image-light.png",
@@ -606,10 +612,12 @@ const SCREENSHOT_PATHS = Object.freeze([
   "_docs/_workflows/_smoke/task-540-wf540smoke-space-selection-dark.png",
   "_docs/_workflows/_smoke/task-540-wf540smoke-dirty-save-failure.png",
   "_docs/_workflows/_smoke/task-540-wf540smoke-dirty-guards-final.png",
+  "_docs/_workflows/_smoke/task-540-wf540smoke-related-first-failure.png",
   "_docs/_workflows/_smoke/task-540-wf540smoke-related-a-stale.png",
   "_docs/_workflows/_smoke/task-540-wf540smoke-related-b-dark.png",
   "_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-a-light.png",
   "_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-b-dark.png",
+  "_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-a-converged.png",
 ]);
 const REQUIRED_SMOKE_ASSERTIONS = Object.freeze({
   "button-image": [
@@ -619,6 +627,8 @@ const REQUIRED_SMOKE_ASSERTIONS = Object.freeze({
     "direct-image-safe-url",
     "missing-or-unsafe-placeholder",
     "stale-media-result-ignored",
+    "prior-media-resolution-pending",
+    "newer-media-winner-selected-pending",
     "media-field-keeps-uuid",
   ],
   "tabs-content": [
@@ -641,28 +651,37 @@ const REQUIRED_SMOKE_ASSERTIONS = Object.freeze({
   "dirty-guards": [
     "builder-cancel-byte-identical",
     "builder-confirm-navigates-once",
+    "entry-cancel-byte-identical",
+    "entry-cancel-url-stable",
+    "entry-confirm-navigates-once",
     "entry-error-retains-both-drafts",
     "beforeunload-active",
     "successful-retry-clears-persisted-channel",
   ],
   "related-retry-cache": [
+    "related-error-visible-before-retry",
     "visible-retry-succeeds",
-    "same-target-rows-refreshing",
+    "same-target-visible-rows-retained",
     "target-switch-immediate-empty",
     "stale-a-cannot-commit",
     "only-b-rows-visible",
-    "dirty-draft-byte-identical",
+    "unrelated-draft-byte-identical",
+    "relation-diff-exact",
   ],
   "responsive-users": [
     "narrow-padding-and-positive-geometry",
     "wide-padding-delta-300",
     "panel-inside-viewport",
     "user-a-b-a-isolated",
+    "same-user-retained-view-pending",
     "same-user-authoritative-refresh",
+    "newer-local-write-pending",
     "newer-local-write-wins-refresh",
     "legacy-local-storage-absent",
     "light-and-dark-computed",
     "preference-a-write-hit-before-release",
+    "second-a-intent-visible-before-exit",
+    "user-b-default-before-release",
     "preference-a-write-hit-after-release",
     "queued-a-write-zero-dispatch",
     "user-b-default-unchanged",
@@ -672,10 +691,64 @@ const REQUIRED_SMOKE_ASSERTIONS = Object.freeze({
 const EXACT_SMOKE_ASSERTION_OUTPUTS = Object.freeze({
   "responsive-users": Object.freeze({
     "preference-a-write-hit-before-release": "1",
+    "user-b-default-before-release": "false",
     "preference-a-write-hit-after-release": "1",
     "queued-a-write-zero-dispatch": "0",
     "user-b-default-unchanged": '{"before":false,"after":false}',
   }),
+});
+
+const PRE_RELEASE_ROUTE_ASSERTIONS = Object.freeze({
+  "media-prior-resolution": Object.freeze([
+    "prior-media-resolution-pending",
+    "newer-media-winner-selected-pending",
+  ]),
+  "related-a-refresh": Object.freeze([
+    "same-target-visible-rows-retained",
+    "target-switch-immediate-empty",
+    "only-b-rows-visible",
+    "unrelated-draft-byte-identical",
+    "relation-diff-exact",
+  ]),
+  "preference-a-read-refresh": Object.freeze([
+    "same-user-retained-view-pending",
+    "newer-local-write-pending",
+  ]),
+  "preference-a-write-exit": Object.freeze([
+    "preference-a-write-hit-before-release",
+    "second-a-intent-visible-before-exit",
+    "user-b-default-before-release",
+  ]),
+});
+
+const POST_RELEASE_ROUTE_ASSERTIONS = Object.freeze({
+  "media-prior-resolution": Object.freeze(["stale-media-result-ignored"]),
+  "related-a-refresh": Object.freeze(["stale-a-cannot-commit"]),
+  "preference-a-read-refresh": Object.freeze(["newer-local-write-wins-refresh"]),
+  "preference-a-write-exit": Object.freeze([
+    "preference-a-write-hit-after-release",
+    "queued-a-write-zero-dispatch",
+    "user-b-default-unchanged",
+  ]),
+});
+
+const PRE_RELEASE_ROUTE_SCREENSHOTS = Object.freeze({
+  "media-prior-resolution": "_docs/_workflows/_smoke/task-540-wf540smoke-media-prior-pending.png",
+  "related-a-refresh": "_docs/_workflows/_smoke/task-540-wf540smoke-related-a-stale.png",
+  "preference-a-read-refresh":
+    "_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-a-light.png",
+  "preference-a-write-exit":
+    "_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-b-dark.png",
+});
+
+const PRE_RETRY_ROUTE_ASSERTIONS = Object.freeze({
+  "entry-save-failure": Object.freeze(["entry-error-retains-both-drafts", "beforeunload-active"]),
+  "related-first-failure": Object.freeze(["related-error-visible-before-retry"]),
+});
+
+const PRE_RETRY_ROUTE_SCREENSHOTS = Object.freeze({
+  "entry-save-failure": "_docs/_workflows/_smoke/task-540-wf540smoke-dirty-save-failure.png",
+  "related-first-failure": "_docs/_workflows/_smoke/task-540-wf540smoke-related-first-failure.png",
 });
 
 const RUNTIME_SUBJECT_KINDS = Object.freeze([
@@ -899,8 +972,8 @@ const SMOKE_SCHEMA = {
     },
     routes: {
       type: "array",
-      minItems: 6,
-      maxItems: 6,
+      minItems: ROUTE_EXPECTATION_COUNT,
+      maxItems: ROUTE_EXPECTATION_COUNT,
       items: {
         type: "object",
         additionalProperties: false,
@@ -1008,7 +1081,7 @@ const SMOKE_SCHEMA = {
         cleanupResources: {
           type: "array",
           minItems: REQUIRED_CLEANUP_RESOURCE_KINDS.length,
-          maxItems: 32,
+          maxItems: 512,
           items: {
             type: "object",
             additionalProperties: false,
@@ -1016,6 +1089,7 @@ const SMOKE_SCHEMA = {
               "kind",
               "identifierType",
               "scopedIdentifier",
+              "ownerSubjectIdentifier",
               "acquired",
               "cleaned",
               "absenceVerified",
@@ -1025,6 +1099,11 @@ const SMOKE_SCHEMA = {
               kind: { enum: REQUIRED_CLEANUP_RESOURCE_KINDS },
               identifierType: { enum: ["db-id", "composite-key", "storage-key"] },
               scopedIdentifier: { type: "string", minLength: 1, maxLength: 240 },
+              ownerSubjectIdentifier: {
+                type: ["string", "null"],
+                minLength: 1,
+                maxLength: 240,
+              },
               acquired: { const: true },
               cleaned: { const: true },
               absenceVerified: { const: true },
@@ -1738,7 +1817,7 @@ function fixtureItem(smoke, kind) {
 
 function expectedRoutePattern(smoke, key) {
   if (key === "media-prior-resolution") return "**/admin/api/media";
-  if (key === "preference-a-write-epoch") {
+  if (key === "preference-a-read-refresh" || key === "preference-a-write-exit") {
     return "**/admin/api/user-settings/customScreens.entry.preferences";
   }
   if (key === "entry-save-failure") {
@@ -1746,8 +1825,7 @@ function expectedRoutePattern(smoke, key) {
     const entry = fixtureItem(smoke, "editable-entry");
     return `**/admin/api/content/${type?.slug}/entries/${entry?.id}`;
   }
-  const typeKind = key === "related-b-load" ? "content-type-related-b" : "content-type-related-a";
-  const type = fixtureItem(smoke, typeKind);
+  const type = fixtureItem(smoke, "content-type-related-a");
   return `**/admin/api/content/${type?.slug}/entries`;
 }
 
@@ -5547,6 +5625,14 @@ async function validateSmoke(smoke, expectedPrefix) {
   const cleanupIdentifiers = smoke.fixtures.cleanupResources.map(
     ({ scopedIdentifier }) => scopedIdentifier
   );
+  const accessLogOwnerIds = new Set([
+    ...smoke.fixtures.items
+      .filter(({ kind }) => kind === "user-a" || kind === "user-b")
+      .map(({ id }) => id),
+    ...smoke.fixtures.cleanupResources
+      .filter(({ kind }) => kind === "session-user-a" || kind === "session-user-b")
+      .map(({ scopedIdentifier }) => scopedIdentifier),
+  ]);
   const helperChildKinds = smoke.helper.childProcesses.map(({ kind }) => kind);
   const helperChildPids = smoke.helper.childProcesses.map(({ pid }) => pid);
   const scenarioScreenshots = smoke.scenarios.flatMap(({ screenshotPaths }) => screenshotPaths);
@@ -5615,11 +5701,24 @@ async function validateSmoke(smoke, expectedPrefix) {
         item.cleaned &&
         item.absenceVerified &&
         isSafeEvidenceIdentifier(item.scopedIdentifier) &&
+        (item.ownerSubjectIdentifier === null ||
+          isSafeEvidenceIdentifier(item.ownerSubjectIdentifier)) &&
         item.sanitizedProbe.length > 0 &&
         !hasSensitiveEvidence(item.sanitizedProbe) &&
         !ENV_REFERENCE_PATTERN.test(item.sanitizedProbe) &&
         (!item.kind.startsWith("session-user-") ||
-          (item.identifierType === "db-id" && UUID_IDENTIFIER_PATTERN.test(item.scopedIdentifier)))
+          (item.identifierType === "db-id" &&
+            UUID_IDENTIFIER_PATTERN.test(item.scopedIdentifier) &&
+            item.ownerSubjectIdentifier === null)) &&
+        (!ACCESS_LOG_CLEANUP_RESOURCE_KINDS.includes(item.kind) ||
+          (item.identifierType === "db-id" &&
+            UUID_IDENTIFIER_PATTERN.test(item.scopedIdentifier) &&
+            typeof item.ownerSubjectIdentifier === "string" &&
+            UUID_IDENTIFIER_PATTERN.test(item.ownerSubjectIdentifier) &&
+            accessLogOwnerIds.has(item.ownerSubjectIdentifier))) &&
+        (item.kind.startsWith("session-user-") ||
+          ACCESS_LOG_CLEANUP_RESOURCE_KINDS.includes(item.kind) ||
+          item.ownerSubjectIdentifier === null)
     ) ||
     !smoke.fixtures.cleanupOrderVerified ||
     !smoke.themeRestored ||
@@ -5830,7 +5929,119 @@ async function validateSmoke(smoke, expectedPrefix) {
     ) {
       throw new Error("TASK-540 route interception mismatch: " + route.key);
     }
-    if (route.key === "preference-a-write-epoch") {
+    const preReleaseAssertionNames = PRE_RELEASE_ROUTE_ASSERTIONS[route.key] ?? [];
+    const postReleaseAssertionNames = POST_RELEASE_ROUTE_ASSERTIONS[route.key] ?? [];
+    const preReleaseScreenshotPath = PRE_RELEASE_ROUTE_SCREENSHOTS[route.key] ?? null;
+    if (
+      preReleaseAssertionNames.length > 0 ||
+      postReleaseAssertionNames.length > 0 ||
+      preReleaseScreenshotPath
+    ) {
+      const routeSetup = routeReceipts.find((receipt) => receipt.operation === "route-setup");
+      const routeRelease = routeReceipts.find((receipt) => receipt.operation === "route-release");
+      const unroute = routeReceipts.find((receipt) => receipt.operation === "unroute");
+      const preReleaseAssertionReceipts = preReleaseAssertionNames.map((assertionName) =>
+        smoke.browserReceipts.filter(
+          (receipt) =>
+            receipt.scenario === ROUTE_SCENARIOS[route.key] &&
+            receipt.assertionName === assertionName
+        )
+      );
+      const postReleaseAssertionReceipts = postReleaseAssertionNames.map((assertionName) =>
+        smoke.browserReceipts.filter(
+          (receipt) =>
+            receipt.scenario === ROUTE_SCENARIOS[route.key] &&
+            receipt.assertionName === assertionName
+        )
+      );
+      const screenshotRecord = preReleaseScreenshotPath
+        ? smoke.screenshots.find(({ path }) => path === preReleaseScreenshotPath)
+        : null;
+      const screenshotReceipts = screenshotRecord
+        ? smoke.browserReceipts.filter(
+            (receipt) =>
+              receipt.scenario === ROUTE_SCENARIOS[route.key] &&
+              receipt.operation === "screenshot" &&
+              receipt.command === screenshotRecord.command
+          )
+        : [];
+      if (
+        !routeSetup ||
+        !routeRelease ||
+        !unroute ||
+        !hitRead ||
+        routeSetup.sequence >= hitRead.sequence ||
+        hitRead.sequence >= routeRelease.sequence ||
+        preReleaseAssertionReceipts.some(
+          (receipts) =>
+            receipts.length !== 1 ||
+            receipts[0].sequence <= hitRead.sequence ||
+            receipts[0].sequence >= routeRelease.sequence
+        ) ||
+        postReleaseAssertionReceipts.some(
+          (receipts) =>
+            receipts.length !== 1 ||
+            receipts[0].sequence <= routeRelease.sequence ||
+            receipts[0].sequence >= unroute.sequence
+        ) ||
+        (preReleaseScreenshotPath &&
+          (!screenshotRecord ||
+            screenshotReceipts.length !== 1 ||
+            screenshotReceipts[0].sequence <= hitRead.sequence ||
+            screenshotReceipts[0].sequence >= routeRelease.sequence))
+      ) {
+        throw new Error("TASK-540 delayed-route evidence order mismatch: " + route.key);
+      }
+    }
+    const preRetryAssertionNames = PRE_RETRY_ROUTE_ASSERTIONS[route.key] ?? [];
+    const preRetryScreenshotPath = PRE_RETRY_ROUTE_SCREENSHOTS[route.key] ?? null;
+    if (preRetryAssertionNames.length > 0 || preRetryScreenshotPath) {
+      const routeSetup = routeReceipts.find((receipt) => receipt.operation === "route-setup");
+      const unroute = routeReceipts.find((receipt) => receipt.operation === "unroute");
+      const realRetry = routeReceipts.find((receipt) => receipt.operation === "real-retry");
+      const assertionReceipts = preRetryAssertionNames.map((assertionName) =>
+        smoke.browserReceipts.filter(
+          (receipt) =>
+            receipt.scenario === ROUTE_SCENARIOS[route.key] &&
+            receipt.assertionName === assertionName
+        )
+      );
+      const screenshotRecord = preRetryScreenshotPath
+        ? smoke.screenshots.find(({ path }) => path === preRetryScreenshotPath)
+        : null;
+      const screenshotReceipts = screenshotRecord
+        ? smoke.browserReceipts.filter(
+            (receipt) =>
+              receipt.scenario === ROUTE_SCENARIOS[route.key] &&
+              receipt.operation === "screenshot" &&
+              receipt.command === screenshotRecord.command
+          )
+        : [];
+      if (
+        expected.mode !== "malformed-json" ||
+        !routeSetup ||
+        !hitRead ||
+        !unroute ||
+        !realRetry ||
+        routeSetup.sequence >= hitRead.sequence ||
+        hitRead.sequence >= unroute.sequence ||
+        unroute.sequence >= realRetry.sequence ||
+        assertionReceipts.some(
+          (receipts) =>
+            receipts.length !== 1 ||
+            receipts[0].sequence <= hitRead.sequence ||
+            receipts[0].sequence >= unroute.sequence
+        ) ||
+        (preRetryScreenshotPath &&
+          (!screenshotRecord ||
+            screenshotReceipts.length !== 1 ||
+            screenshotReceipts[0].sequence <= hitRead.sequence ||
+            screenshotReceipts[0].sequence >= unroute.sequence))
+      ) {
+        throw new Error("TASK-540 malformed-route evidence order mismatch: " + route.key);
+      }
+    }
+    if (route.key === "preference-a-write-exit") {
       const routeSetup = routeReceipts.find((receipt) => receipt.operation === "route-setup");
       const routeRelease = routeReceipts.find((receipt) => receipt.operation === "route-release");
       const unroute = routeReceipts.find((receipt) => receipt.operation === "unroute");
@@ -5858,16 +6069,16 @@ async function validateSmoke(smoke, expectedPrefix) {
         Object.entries(EXACT_SMOKE_ASSERTION_OUTPUTS["responsive-users"]).some(
           ([name, actual]) => preferenceAssertions[name][0]?.sanitizedOutput !== actual
         ) ||
-        routeSetup.sequence >= beforeRelease[0].sequence ||
+        routeSetup.sequence >= hitRead.sequence ||
+        hitRead.sequence >= beforeRelease[0].sequence ||
         beforeRelease[0].sequence >= routeRelease.sequence ||
-        hitRead.sequence >= routeRelease.sequence ||
         afterReleaseNames.some(
           (name) =>
             preferenceAssertions[name][0].sequence <= routeRelease.sequence ||
             preferenceAssertions[name][0].sequence >= unroute.sequence
         )
       ) {
-        throw new Error("TASK-540 preference write epoch evidence order mismatch");
+        throw new Error("TASK-540 preference write exit evidence order mismatch");
       }
     }
   }
@@ -6064,13 +6275,30 @@ async function runSmoke(attempt) {
           "for the three content-type records, and slug=null for every other kind. Capture " +
           "acquisition IDs and prove provenance. Run exactly these seven visible flows: " +
           JSON.stringify(SMOKE_KINDS) +
-          ". Run the six exact method-aware interceptions and require one hit each: " +
+          ". Run exactly " +
+          ROUTE_EXPECTATION_COUNT +
+          " method-aware interceptions and require one hit each: " +
           JSON.stringify(ROUTE_EXPECTATIONS) +
           ". Expand their exact patterns from fixture slugs/entry ID according to " +
           JSON.stringify(ROUTE_SCENARIOS) +
           ". Malformed JSON failures use HTTP 200, refuse a second hit, record hit 1, and are " +
           "unrouted in a separate full command before the real Save/Retry click. Delayed handlers " +
           "capture the old response, accept one hit, release through named latches, then unroute. " +
+          "For related-a-refresh, install the route on the dirty entry tab, open the real related-A " +
+          "entry editor in a second tab of the same session, save a harmless visible value through " +
+          "that UI, and return to the first tab so its BroadcastChannel cache event starts the " +
+          "refresh. Never call an in-page cache-clear/cacheBus helper. Before every delayed release, " +
+          "record the ordered assertions and transient screenshot from " +
+          JSON.stringify(PRE_RELEASE_ROUTE_ASSERTIONS) +
+          " and " +
+          JSON.stringify(PRE_RELEASE_ROUTE_SCREENSHOTS) +
+          "; after release but before unroute record " +
+          JSON.stringify(POST_RELEASE_ROUTE_ASSERTIONS) +
+          ". For malformed routes, after hit-read and before unroute capture " +
+          JSON.stringify(PRE_RETRY_ROUTE_ASSERTIONS) +
+          " plus " +
+          JSON.stringify(PRE_RETRY_ROUTE_SCREENSHOTS) +
+          "; only then unroute and execute real-retry. " +
           "Assert the exact required visible/ARIA/computed/geometry/persisted/request-order " +
           "effects " +
           JSON.stringify(REQUIRED_SMOKE_ASSERTIONS) +
@@ -6083,7 +6311,9 @@ async function runSmoke(attempt) {
           "default byte-identical before/after. The post-release hit value proves the same first " +
           "request remained the sole hit; never dispatch or require a second network request" +
           ", light and dark, viewports 320/390/480/1024/1280, and empty console-error, warning, " +
-          "and page-error arrays after every flow. Capture exactly the eleven task-scoped PNGs " +
+          "and page-error arrays after every flow. Capture exactly " +
+          SCREENSHOT_PATHS.length +
+          " task-scoped PNGs " +
           JSON.stringify(SCREENSHOT_PATHS.map((path) => ROOT + "/" + path)) +
           " using separate full commands; stat, PNG-signature, mtime, device, inode, and SHA-256 " +
           "each, with distinct canonical paths, device:inode identities, and hashes. Return a " +
@@ -6100,8 +6330,12 @@ async function runSmoke(attempt) {
           "theme, sign back in as bootstrap admin, delete only inventoried fixtures in reverse " +
           "dependency order, and return exact redacted cleanup-resource evidence for " +
           JSON.stringify(REQUIRED_CLEANUP_RESOURCE_KINDS) +
-          " using only scoped non-secret DB IDs/labels/storage keys and bounded sanitized absence " +
-          "probes. Session resources use DB IDs/labels, never a cookie, token, session hash, CSRF " +
+          ". Return every base kind at least once and repeat access-log-user-a/access-log-user-b " +
+          "once for every exact acquired access-log row. Use only scoped non-secret DB " +
+          "IDs/labels/storage keys and bounded sanitized absence " +
+          "probes. Set ownerSubjectIdentifier to the owning synthetic user/session UUID for each " +
+          "access-log record and null for every other cleanup resource. Session resources use DB " +
+          "IDs/labels, never a cookie, token, session hash, CSRF " +
           "value, or password hash. Prove each " +
           "absent, then execute this exact seven-receipt final browser cleanup matrix consecutively " +
           "with scenario=cleanup, no duplicate/extra cleanup-* operation, and exact command/output: " +
@@ -7452,7 +7686,9 @@ async function runClosure(smoke, fullValidation, label, findings = []) {
           "contracts remain In " +
           "Progress and every TASK-540-01 through TASK-540-05 source descendant remains Done. Replace any " +
           "prior evidence region with the exact byte sequence below; keep one BEGIN/END marker and " +
-          "self-read it byte-for-byte. Record truthful prior validation, seven flows, eleven PNGs, " +
+          "self-read it byte-for-byte. Record truthful prior validation, seven flows, " +
+          SCREENSHOT_PATHS.length +
+          " PNGs, " +
           "zero browser channels, exact cleanup, and generation " +
           generation +
           ". Strict scan remains external non-green with sole exact finding " +

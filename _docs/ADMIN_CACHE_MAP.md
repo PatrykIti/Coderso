@@ -179,8 +179,10 @@ This file maps admin UI surfaces to their implementation files and the cached AP
     `CustomScreenEntryEditor.tsx`, `CustomScreenEntryCanvas.tsx`
   - Cached APIs: `getCustomScreenCached`, `getCachedCustomScreen`,
     `listCustomScreensCached`, `listContentTypesCached`, `listEntriesCached`,
-    `getEntryCached`, `getScreenEntryOverridesCached`,
-    `getCachedScreenEntryOverrides`
+    `getEntryCached`, `listMediaCached`, `getScreenEntryOverridesCached`,
+    `getCachedScreenEntryOverrides`; Screen entry preferences intentionally use
+    isolated `getUserSettingIsolated` / `setUserSettingIsolated` transport rather
+    than the aggregate user-settings cache
   - Preview owner: `customScreenPreviewData.ts` reuses
     `entries:list:<typeSlug>` for cached-first first-record hydration in both
     the builder canvas and the preview dialog
@@ -192,10 +194,31 @@ This file maps admin UI surfaces to their implementation files and the cached AP
     `entries:detail:<typeSlug>:<entryId>`,
     `customScreens:entryOverrides:<screenId>:<entryId>` for presentation
     override cache updates and invalidation
+  - Retry/identity: entries, related targets, media, and override reads publish
+    only from the exact request that still owns their pending slot. Rejections
+    release that slot; forced/newer requests and successful mutations cannot be
+    cleared or overwritten by older settlements. Related target changes clear
+    stale rows immediately; same-target cache refresh keeps the last good rows
+    while the refresh is pending.
+  - Dirty safety: Screen document/binding drafts and entry
+    content/presentation drafts use the shared navigation/`beforeunload` guard.
+    Background cache events never replace dirty state. Builder detail mutation
+    events carry a non-serialized operation token so its own save event is not
+    misclassified as an external revision; independent detail events remain
+    visible and require authoritative reconciliation.
   - Record presentation: `CustomScreenEntryEditor.tsx` hydrates entry content
     and per-record presentation overrides independently. Content edits continue
     through `entriesClient`; text/media presentation saves use
     `PATCH /admin/api/custom-screens/:screenId/entries/:entryId/overrides`.
+    Direct image overrides and media-field values stay as media UUIDs in caches;
+    only an ephemeral winning-ID map carries resolved safe URLs to the renderer.
+  - Entry preference: `useScreenEntryPreferences.ts` stores
+    `{version:1, showFieldMetadata:boolean}` at
+    `customScreens.entry.preferences` through the existing user-settings route.
+    In-memory snapshots are keyed by authenticated user and pruned after the
+    bounded settled handoff; auth-identity epochs cancel old-user queues. There
+    is no Screen preference cache-bus key, aggregate-cache merge, or
+    `localStorage` value. An unauthenticated hook keeps only mount-local state.
   - Prefetch: `/advanced/custom-screens/:screenId/entries` warms screen,
     content type list, and the assigned entries list. Detail routes warm the
     entry detail cache except for `entries/new`.

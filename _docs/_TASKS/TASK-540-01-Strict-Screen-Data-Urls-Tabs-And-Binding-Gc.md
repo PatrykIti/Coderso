@@ -7,9 +7,10 @@
 **Category:** Custom Screens / Schema / Security / Compatibility
 **Estimated Effort:** Medium
 **Dependencies:** TASK-498, TASK-500, TASK-505
-**Status:** ✅ Done
+**Status:** 🚧 In Progress
 **Started:** 2026-07-13
-**Completed:** 2026-07-13
+**Fix Started:** 2026-07-14
+**Fix Reason:** TASK-540-01-L01 post-audit fail-closed Button read-adapter repair.
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -31,7 +32,7 @@ introduced.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-540-01-L01 | Reject unknown, sanitize URLs, unique Tabs, and prune ghosts | `core/services/customScreens/customScreenSchemas.ts`; narrow create-warning seam in `core/services/customScreens/customScreenService.ts`; narrow error-carrier import/mapping seam in `core/server/routes/customScreenRoutes.ts` | ✅ Done |
+| TASK-540-01-L01 | Reject unknown, sanitize URLs, unique Tabs, and prune ghosts | `core/services/customScreens/customScreenSchemas.ts`; narrow create-warning seam in `core/services/customScreens/customScreenService.ts`; narrow error-carrier import/mapping seam in `core/server/routes/customScreenRoutes.ts` | 🚧 In Progress |
 
 ## Contract
 

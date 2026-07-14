@@ -37,6 +37,7 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `entries:detail:<typeSlug>:<id>`
 - `customScreens:list`
 - `customScreens:detail:<id>`
+- `customScreens:entryOverrides:<bounded-screen-id>:<bounded-entry-id>`
 - `contentTypes:list`
 - `contentTypes:detail:<id>`
 - `contentTypes:collectionWorkspace:<contentTypeId>`
@@ -164,6 +165,11 @@ Contract:
 - Read-through cache includes TTL and in-flight request dedupe.
 - Mutations invalidate relevant read-through caches (`setUserSetting`, assistant reindex, admin theme profile mutations).
 - This layer complements list/detail localStorage cache and does not replace entity mutation invalidation.
+- The Custom Screen entry preference deliberately uses isolated
+  `GET/PATCH /user-settings/customScreens.entry.preferences` calls and does not
+  read from or merge into this aggregate `getUserSettings()` cache. Its
+  user-keyed coordinator is in-memory only; no Screen preference is stored in
+  `localStorage`.
 
 ### Shell Lifecycle Policy
 - `AdminApp` auth bootstrap:
@@ -435,6 +441,11 @@ Clients update caches and broadcast events on:
 
 - Media list cache (`media:list`) is owned by
   `core/admin/services/mediaClient.ts`.
+- `listMediaCached()` de-duplicates only the exact active non-forced request.
+  Success publishes only while that request still owns the pending slot, and
+  `finally` clears only that same request. Rejection therefore remains
+  retryable, while a forced/newer read or a successful media mutation cannot be
+  cleared or overwritten by an older completion.
 - Media folder list cache (`media:folders`) is owned by
   `core/admin/services/mediaFoldersClient.ts`. Network rows are projected to
   exactly `id`, `name`, `slug`, `parentId`, `orderIndex`, and `createdAt` before
@@ -607,6 +618,16 @@ Clients update caches and broadcast events on:
   `entriesClient`; no Custom Screens-specific entry cache is introduced, and the
   screen-owned records workspace no longer hydrates or opens `EntryCreateDrawer`
   as a parallel create path.
+- Entry-list promise de-duplication follows the same exact-request rule as the
+  media list: rejected requests release their pending slot, forced/newer reads
+  retain publication authority, and successful write-derived upserts/removals
+  revoke a pre-write pending list before publishing cache state.
+- Related-list hosts subscribe to every normalized target's
+  `entries:list:<typeSlug>` event. Initial loads are non-forced; Retry and
+  cache-event revalidation are forced. A target change derives empty/loading
+  state immediately instead of showing rows from the prior target. A
+  same-target refresh keeps the last good rows while the refresh is pending, and
+  request/attempt generations reject stale or unmounted settlements.
 - Per-record presentation overrides use the separate
   `customScreens:entryOverrides:<screenId>:<entryId>` detail cache key, with
   bounded dynamic key segments from `cacheKeys.customScreenEntryOverrides`.
@@ -620,6 +641,31 @@ Clients update caches and broadcast events on:
 - Override cache-bus events refresh the presentation draft only when it is clean.
   Dirty presentation drafts keep local edits, set a presentation-specific
   remote-update warning, and do not overwrite unsaved entry content changes.
+- Override and entry content hydrations have independent route/request
+  generations. Builder document/binding drafts and entry
+  content/presentation drafts register the shared internal-navigation plus
+  `beforeunload` guard; a request that began while clean still cannot replace a
+  draft that became dirty before settlement. Failed load/save state remains
+  visible and retryable.
+- Screen builder writes attach a non-serialized cache-event operation token.
+  Matching current-save detail events are self-events; independent local or
+  remote `customScreens:detail:<id>` events are external revisions. External
+  detail events never overwrite a dirty builder and unresolved revisions block
+  stale full-document saves until an authoritative refresh succeeds. Generic
+  list events do not claim identity for the open detail resource.
+- Direct-image presentation keeps media UUIDs in override/entry caches. The
+  entry host resolves only the winning IDs through `listMediaCached()` and
+  gives the renderer an ephemeral UUID-to-URL map; resolved URLs are neither
+  written into media fields nor persisted as override values.
+- `customScreens.entry.preferences` has a separate authenticated-user
+  coordinator. Settled snapshots are keyed by user and retained in memory for a
+  bounded handoff (30 seconds) after the last subscriber, then pruned. A return
+  to the same user revalidates through the isolated endpoint; a generation made
+  newer by a local toggle wins over an older read. Auth-identity epochs abort
+  dispatched work and prevent queued work for user A from dispatching under
+  user B. Failed/malformed writes keep only the normalized local intent as
+  unsynced state and retry only after a fresh setter action. No aggregate cache,
+  cache-bus event, or browser-storage key is used for this preference.
 
 ### Forms list/detail cache note
 

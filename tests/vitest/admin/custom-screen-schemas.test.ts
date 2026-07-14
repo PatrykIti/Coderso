@@ -1897,6 +1897,89 @@ test("TASK-540-01 legacy unsupported Buttons are independently disabled in edito
   expect(normalizeCustomScreenDefinitionForWrite({ definition: read })).toEqual(read);
 });
 
+test("TASK-540-01 every present non-link Button action prunes href bindings on stored read", () => {
+  const unsupportedButtons = (scope: "editor" | "row") => [
+    {
+      id: `${scope}-unknown-action`,
+      type: "button",
+      data: {
+        label: "Unknown action",
+        action: "unexpected-action",
+        href: "/must-not-survive",
+      },
+    },
+    {
+      id: `${scope}-non-string-action`,
+      type: "button",
+      data: {
+        label: "Non-string action",
+        action: { legacy: true },
+        href: "/must-not-survive-either",
+      },
+    },
+  ];
+  const bindingsFor = (scope: "editor" | "row") =>
+    unsupportedButtons(scope).flatMap((block, index) => [
+      {
+        id: `${scope}-href-${index}`,
+        blockId: block.id,
+        propPath: "href",
+        source: "entry" as const,
+        field: "targetUrl",
+        mode: "read" as const,
+      },
+      {
+        id: `${scope}-label-${index}`,
+        blockId: block.id,
+        propPath: "label",
+        source: "entry" as const,
+        field: "title",
+        mode: "read" as const,
+      },
+    ]);
+  const base = buildV4WithBlocks(unsupportedButtons("editor"));
+  const stored = {
+    ...base,
+    listView: {
+      ...base.listView,
+      rowTemplate: {
+        document: {
+          schemaVersion: 1,
+          sections: [
+            {
+              id: "row",
+              type: "section",
+              data: {},
+              blocks: unsupportedButtons("row"),
+            },
+          ],
+        },
+        bindings: bindingsFor("row"),
+      },
+    },
+    editorView: { ...base.editorView, bindings: bindingsFor("editor") },
+  };
+  const before = JSON.stringify(stored);
+
+  const read = normalizeCustomScreenDefinitionForRead({ definition: stored });
+
+  expect(JSON.stringify(stored)).toBe(before);
+  const editorButtons = read.editorView.document.sections[0]?.blocks ?? [];
+  const rowButtons = read.listView.rowTemplate?.document.sections[0]?.blocks ?? [];
+  for (const button of [...editorButtons, ...rowButtons]) {
+    expect(button.data).toMatchObject({ action: "link" });
+    expect(button.data.href).toBeUndefined();
+  }
+  expect(read.editorView.bindings.map((binding) => binding.propPath)).toEqual(["label", "label"]);
+  expect(read.listView.rowTemplate?.bindings.map((binding) => binding.propPath)).toEqual([
+    "label",
+    "label",
+  ]);
+  expect(() => validate(customScreenDefinitionSchema, read)).not.toThrow();
+  expect(normalizeCustomScreenDefinitionForWrite({ definition: read })).toEqual(read);
+  expect(normalizeCustomScreenDefinitionForRead({ definition: read })).toEqual(read);
+});
+
 test("TASK-540-01 empty editor and row documents prune every block ghost into one sink", () => {
   const ghostBinding = (id: string, field: string): ScreenFieldBinding => ({
     id,

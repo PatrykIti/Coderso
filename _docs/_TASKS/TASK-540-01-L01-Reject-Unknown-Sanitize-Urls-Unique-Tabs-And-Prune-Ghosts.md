@@ -8,9 +8,10 @@
 **Category:** Custom Screens / Schema / Security
 **Estimated Effort:** Medium
 **Dependencies:** None inside TASK-540
-**Status:** ✅ Done
+**Status:** 🚧 In Progress
 **Started:** 2026-07-13
-**Completed:** 2026-07-13
+**Fix Started:** 2026-07-14
+**Fix Reason:** Post-audit found that an arbitrary present non-`link` stored Button action could retain its `href` binding after read coercion.
 **Changelog:** 1252 (pinned; closure only)
 
 ---

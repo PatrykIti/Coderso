@@ -1369,6 +1369,35 @@ Notes:
 - `section.blocks[]` korzysta z screen-owned block types such as `field`,
   `field-group`, `record-header`, `columns`, and `rich-text`; legacy widget
   blocks are compatibility migration inputs only.
+- Fixed data-oriented block kinds (`heading`, `text`, `stat`, `divider`,
+  `image`, `related-list`, `tabs`, `button`) use per-kind
+  `additionalProperties:false` data schemas on create/update. Tabs require
+  exact `{id,label}` items, 1..24 unique grammar-safe IDs, non-empty labels of
+  at most 120 Unicode code points, and the exact same ID set in `slots`.
+  Structurally invalid payloads remain `validation_error`/400; duplicate Tabs
+  IDs, tab/slot mismatch, unsafe non-empty Screen URLs, and other semantic
+  definition failures return `custom_screen_definition_invalid`/400 without
+  echoing submitted values.
+- Fresh Button data supports only `action:"link"`. A Button `href` may be
+  static or supplied by a read binding at `propPath:"href"`. Every stored
+  Button/`actions` record with a present action other than the exact `link`
+  value—including legacy `publish`/`custom` and malformed values—is adapted on
+  read to Link with no href and no matching href binding, so it renders
+  disabled. The adapter does not write a migration marker or invent a second
+  action. A missing stored action keeps the established Link-compatible read.
+- `sanitizeScreenAuthoringUrl` owns Button/image URL policy. Links allow safe
+  root-relative paths, fragments, HTTP(S), `mailto:`, and `tel:`; media URLs
+  allow safe root-relative paths and HTTP(S). Protocol-relative,
+  backslash-confused, executable, data, blob, file, and unsupported schemes
+  fail closed. The renderer repeats this check at the final DOM boundary.
+- Write normalization prunes bindings whose content field or block no longer
+  exists, including every ghost binding when the document is empty. Successful
+  POST / PATCH responses may include transient `warnings` entries with
+  `binding_field_removed` or `binding_block_removed` and the affected field
+  names. Warnings are not persisted. Stored row-template reads prune field and
+  block ghosts silently; the editor stored-read path prunes block ghosts but
+  intentionally retains a binding to a live block whose content field was
+  removed, so the recovery UI can name it before the next write removes it.
 - builder insert library pokazuje screen-owned blocks oraz pola wybranego
   content type; Page Builder uzywa wlasnego insertera sekcji/blokow, a
   konfigurowalne widgety sa osobna powierzchnia Admin Dashboard.
@@ -1385,6 +1414,10 @@ Notes:
   surface registration.
 - builder preview i read-only fragmenty record editora renderuja
   `editorView.document` przez screen runtime.
+- Tabs in builder, preview, and entry mode render one visible `tabpanel` with a
+  scoped `tablist`, roving `tabIndex`, reciprocal ARIA IDs, mouse activation,
+  and Arrow/Home/End keyboard behavior. Builder selection targets the active
+  tab's concrete slot; preview/entry state stays local to one renderer instance.
 - `List View` and `Editor View` use the neutral authoring canvas shell. List
   elements, columns, hidden columns, insert, layers, content, binding, style,
   and screen settings open as panels attached to the floating toolbar rather
@@ -1448,6 +1481,12 @@ Notes:
   otwiera juz shared `EntryCreateDrawer`.
 - screen-owned record editor renders the `ScreenDocumentV1` layout as the main
   surface and edits only writable bound entry values inline.
+- Builder and record routes guard unsaved Screen document/binding drafts and
+  entry content/presentation drafts for internal navigation and
+  `beforeunload`. Clean state may revalidate in the background; dirty state is
+  never replaced by cache events or late hydration. Related-entry/media reads
+  are retryable and request-identity guarded, so a rejected or superseded
+  request cannot pin or overwrite a newer result.
 - `contentTypeId` z custom screen jest najpierw rozwiazywany do `content_types.slug`, dopiero potem uzywany przez powyzsze entry endpoints.
 
 ### Custom Screen entry presentation overrides
@@ -1485,8 +1524,12 @@ Override contract:
   `definition.editorView.document`.
 - `propPath` is a bounded presentation target only:
   `image`, `mediaAssetId`, `textSize`, `textEmphasis`, or `tone`.
-- `image` / `mediaAssetId` values must be media asset UUIDs and only apply to
-  field blocks bound to media fields.
+- `image` / `mediaAssetId` values must be media asset UUIDs. They may apply to a
+  direct `image` block or to a field block bound to a media field. UUIDs remain
+  the persisted and cached identity; the entry host resolves only the winning
+  direct-image UUID through the existing media list and passes a UUID-to-URL map
+  to the renderer. Missing or unsafe winning assets render a placeholder and do
+  not fall back to a lower-priority source.
 - `textSize`, `textEmphasis`, and `tone` use bounded enum values owned by the
   Custom Screen override service.
 - Writes replace the full `(screenId, entryId)` override set atomically and
@@ -4072,6 +4115,12 @@ Auth: wymagane zalogowanie (session cookie). Dotyczy preferencji per użytkownik
 { "value": true }
 ```
 
+The PATCH envelope is strict: `value` is required and unknown envelope keys are
+rejected with `validation_error`/400. `GET /user-settings/:key` and successful
+PATCH return the exact `{ "key": "...", "value": ... }` envelope. The
+authenticated session is the sole user scope; callers cannot provide another
+write owner in the body.
+
 Przykładowe klucze:
 - `pages.openAfterCreate` (bool)
 - `customScreens.openAfterCreate` (bool)
@@ -4084,6 +4133,31 @@ Przykładowe klucze:
 - `assistant.ui.enabled` (bool; legacy compatibility)
 - `assistant.ui.avatarEnabled` (bool; legacy compatibility)
 - `assistant.ui.avatarAsset` (string | null; legacy compatibility)
+- `customScreens.entry.preferences` (strict object
+  `{ "version": 1, "showFieldMetadata": false }`; defaults to OFF)
+
+Custom Screen entry preferences use the isolated key endpoint rather than the
+aggregate user-settings browser cache. Screen writes send the optional
+`X-Coderso-Expected-User-Id` header with the user ID captured when the intent was
+created. The route still derives its real owner from the current session; if the
+header is present and differs from that session user, it returns
+`user_setting_identity_changed`/409 before persistence. Header omission remains
+compatible with existing user-settings callers.
+
+Security/error contract:
+
+- visibility is internal Admin only; session authentication is required and no
+  API-key or public-write mode is added;
+- GET uses the Admin read rate-limit bucket; PATCH uses the Admin write bucket
+  and requires the normal CSRF protection;
+- unknown keys return `user_settings_key_invalid`/400 and invalid values return
+  `user_settings_value_invalid`/400;
+- an expected-user mismatch returns `user_setting_identity_changed`/409;
+- malformed client response envelopes/values fail closed in the Screen client
+  and do not become hydrated preference state;
+- Screen preferences are not written to `localStorage`. With no authenticated
+  user, only the current mounted Screen UI may hold an ephemeral value and a
+  fresh mount resets it to OFF without GET or PATCH.
 
 ---
 

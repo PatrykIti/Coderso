@@ -113,6 +113,36 @@ Do not add a non-dashboard widget type, Wizard/Visual/Advanced widget editor,
 authoring route as a shortcut. If an old runtime helper is useful, consume it
 behind the new section/block adapter without widening the legacy product surface.
 
+### Custom Screen implementation boundaries
+
+Custom Screens keep `definition.schemaVersion: 4` and a Screen-owned
+`ScreenDocumentV1` (`schemaVersion: 1`). Fixed block kinds have discriminated,
+reject-unknown `data` schemas; Tabs items and their slot keys are one exact
+identity set. The active Button contract is Link-only. Stored legacy
+`publish`/`custom` actions use a non-persisting disabled read adapter instead of
+an expanded action API.
+
+Use `sanitizeScreenAuthoringUrl` for authored Button links and image sources,
+and repeat the check at the render sink. Direct-image presentation overrides
+and bound media-field values remain media UUIDs; the host may resolve the
+winning ID to an ephemeral safe URL map, but must not replace the stored
+field/override value with a URL. An unbound image block may instead persist its
+separately sanitized static `data.src` URL.
+
+Builder document/binding state and entry content/presentation state are separate
+dirty channels. Both use the shared navigation/`beforeunload` guard, and cache
+hydration must consult current dirty refs and route/request generations before it
+commits. Related-entry and media reads clear only their exact pending promise so
+failure remains retryable and older requests cannot publish over newer work.
+
+The entry-only `showFieldMetadata` preference uses the existing authenticated
+user-settings key `customScreens.entry.preferences` with the strict value
+`{version:1, showFieldMetadata:boolean}`. It is isolated from the aggregate
+user-settings cache and browser storage; auth-identity epochs cancel queued work
+for a previous user. The Screen canvas keeps narrow gutters, applies desktop
+panel clearance only at `lg`, and exposes its labelled floating panel as an ARIA
+region.
+
 ## Color values across domain boundaries
 
 Consumers enrolled in the Bun-free canonical contract use

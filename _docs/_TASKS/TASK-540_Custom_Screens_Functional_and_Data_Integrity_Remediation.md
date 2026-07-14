@@ -113,7 +113,7 @@ module-pack entry, or any non-Dashboard widget authoring surface.
 
 | ID | Title | Leaves | Status |
 |---|---|---|---|
-| TASK-540-01 | Strict Screen data, URLs, Tabs, and binding GC | TASK-540-01-L01 | ✅ Done |
+| TASK-540-01 | Strict Screen data, URLs, Tabs, and binding GC | TASK-540-01-L01 | 🚧 In Progress |
 | TASK-540-02 | Button binding and Tabs authoring | TASK-540-02-L01 | ✅ Done |
 | TASK-540-03 | Accessible Tabs and selection semantics | TASK-540-03-L01 | ✅ Done |
 | TASK-540-04 | Dirty navigation and async/cache recovery | TASK-540-04-L01..L04 | ✅ Done |

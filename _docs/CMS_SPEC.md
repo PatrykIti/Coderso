@@ -193,6 +193,16 @@ Storage:
   panels attached to the floating toolbar, not permanent Editor View rails. The
   command palette is a focus-trapped dialog and advanced style controls open in
   modals while simple controls stay inline.
+- Custom Screens own this bounded section/block contract directly. They do not
+  create or select configurable product widgets; those remain exclusive to the
+  Admin Dashboard. Fresh V4 writes validate every fixed block kind through a
+  discriminated reject-unknown schema, while stored legacy rows use only the
+  deterministic non-destructive read adapters required for compatibility.
+- Button authoring supports only the implemented Link action. Static and bound
+  links pass through the Screen URL policy at write and render boundaries;
+  unsupported stored `publish`/`custom` actions read as disabled and are never
+  promoted into a new action API. Tabs keep their item IDs and slot IDs in
+  lockstep and render as functional, keyboard-operable, root-scoped ARIA tabs.
 - Record detail mode reuses the same neutral canvas shell but exposes only
   record-editing controls. It does not show builder add, move, duplicate,
   delete, library, settings controls, or a detached Value panel. Writable bound
@@ -210,6 +220,23 @@ Storage:
   presentation panel is selection-scoped, hidden for unsaved records, and keeps
   presentation dirty/remote-update state separate from entry content dirty
   state.
+- Direct-image presentation overrides and bound media-field values store media
+  UUIDs, never resolved URLs. An unbound image block may separately persist a
+  sanitized static `data.src` URL. For UUID-backed values, the entry host
+  resolves only the winning asset through the existing media read and the
+  renderer revalidates the resolved URL at the DOM boundary; missing or unsafe
+  winners show a placeholder without falling through to a lower-priority
+  source.
+- Builder document/binding drafts and record content/presentation drafts use the
+  shared navigation and `beforeunload` guards. Cache events and background
+  revalidation may update clean state but cannot overwrite a dirty draft;
+  failures remain visible and retryable and stale route/request completions are
+  ignored.
+- The Screen authoring panel is an accessible labelled region. Narrow canvases
+  retain their normal gutters instead of reserving desktop panel width. The
+  entry-only `showFieldMetadata` preference is stored under the existing
+  authenticated per-user settings key `customScreens.entry.preferences`; it is
+  never stored in a global browser key or shared across users.
 - TASK-473 ships storage, service validation, routes, stale target cleanup, and
   record detail panel/cache/render wiring. Text and media overrides merge at
   render time only and never mutate `content_entries.data`, entry drafts, screen

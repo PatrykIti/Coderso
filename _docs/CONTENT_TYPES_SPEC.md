@@ -610,14 +610,17 @@ allow-list; out-of-range/invalid values fall back to the listed default.
 | `image` | `label`, `fit`, `ratio`, `field`, `src` | `fit ∈ cover\|contain`; bound → propPath `src`, `mode:"read"`; static `src` OPTIONAL + scheme-validated (TASK-500-04, see below) |
 | `related-list` | `label`, `target`, `displayField`, `variant`, `limit`, `field` | `variant ∈ checklist\|activity\|cards`; `limit` clamped `1..50`; bound → propPath **`items`**, `mode:"read"` |
 | `tabs` | `label`, `tabs` | `tabs = [{ id, label }]` with ids matching `slots` keys |
-| `button` | `label`, `action`, `variant`, `href`, `field` | `action ∈ link\|publish\|custom`; `variant ∈ primary\|secondary\|ghost`; bound → propPath `href` |
+| `button` | `label`, `action`, `variant`, `href`, `field` | fresh writes accept only `action: "link"`; `variant ∈ primary\|secondary\|ghost`; bound → propPath `href`, `mode:"read"` |
 
 `field` and `record-header` remain the writable kinds (bind `mode:"readwrite"` — inline
 write-back stays on `title`/`slug`/schema fields only); every other bound kind binds
 `mode:"read"` (display-only). The pre-TASK-498 `actions` placeholder is promoted to
-`button`; a stored `actions` block is remapped to a usable `button` on the **read path only**
-(`normalizeScreenDocumentV1ForRead`, data intersected with the button allow-list) — the write
-path is untouched (no visual-repair on save).
+`button` on the **read path only** (`normalizeScreenDocumentV1ForRead`, data intersected
+with the Button allow-list). Stored Button/`actions` records carrying the unsupported
+legacy `publish` or `custom` action are adapted non-destructively to `action:"link"`
+with no `href`; their matching `href` binding is omitted from the read model, so they
+render as disabled instead of acquiring an invented action. Fresh writes do not accept
+those legacy actions and never persist a separate `disabled` action.
 
 ### Related-list relation-resolution contract
 
@@ -723,10 +726,13 @@ bind).
 
 The image kind's `data` allow-list gains an OPTIONAL `src`
 (`["label","fit","ratio","field","src"]`), making image consistent with the other
-static kinds. `normalizeScreenImageSrc` accepts only relative paths (`/…`) and
-`http://`/`https://` URLs; everything else (`javascript:`, `data:`, `blob:`, `file:`,
-bare tokens, non-strings) normalizes to `""` (dropped, never throws) — reject-unknown on
-other keys stays intact, and a stored V4 image WITHOUT `src` round-trips byte-stable.
+static kinds. The current owner is `sanitizeScreenAuthoringUrl(value, "media")`: it
+accepts safe root-relative paths and `http://`/`https://` URLs, and rejects
+protocol-relative and backslash-confused input before delegating to the shared
+authoring URL policy. Everything else (`javascript:`, `data:`, `blob:`, `file:`, bare
+tokens, non-strings) is rejected; strict writes report an invalid definition while the
+stored-read adapter drops the unsafe value. Reject-unknown on other keys stays intact,
+and a stored V4 image WITHOUT `src` round-trips byte-stable.
 Renderer resolution order on entry/preview (override-first precedence preserved):
 per-entry media/presentation override → bound `field` src → static `data.src` → labeled
 placeholder. The rejected alternative — marking image "requires a bound field"
@@ -839,10 +845,14 @@ The published-screen **entry** canvas is clean by default. Three gated changes,
   presentation-override panel is scoped to — load-bearing, NOT stripped), the entry
   section carries `bg-transparent`, and the entry canvas scroller drops `bg-dotted`.
   The section's 2-way fork was forked into 3 so builder keeps `bg-background/60`.
-- **Preference:** `useScreenEntryPreferences` (`usePostEditorPreferences` pattern) —
-  localStorage-only, key `coderso.screens.entry.preferences.v1`, default
-  `{ showFieldMetadata: false }`; junk / non-boolean / parse errors swallow to the
-  default. Surfaced as a "Show field metadata" Switch
+- **Preference:** `useScreenEntryPreferences` uses the existing authenticated
+  per-user settings route with the strict key `customScreens.entry.preferences` and
+  stored value `{ version: 1, showFieldMetadata: boolean }`. The default remains
+  `{ showFieldMetadata: false }`; malformed transport/stored values fail closed and
+  remain retryable. No Screen preference is written to `localStorage`. When no
+  authenticated identity is available, only the current hook mount may hold an
+  ephemeral value and a fresh mount starts from OFF. The preference is surfaced as a
+  "Show field metadata" Switch
   (`[data-screen-entry-metadata-toggle]`) in the entry-canvas sub-toolbar
   (reachable on a fresh record view with no block selected — NOT the Presentation
   panel, which is null until a presentation-capable block is selected).
@@ -866,10 +876,9 @@ rows (record-header renders `null` for empty values). There is deliberately **NO
 read-path mutation** — that would break stored-V4 byte-stability and could discard
 copy the author kept intentionally.
 
-**Residual follow-ups (documented, not silent gaps):** a future validated
+**Residual follow-up (documented, not a silent gap):** a future validated
 `ScreenBlockStyleV1.background` enum (the additive successor to the removed free-text
-`variant` "Background" row); `useScreenEntryPreferences` is local-only v1, with
-`userSettingsClient` cross-device sync deferred.
+`variant` "Background" row).
 
 ## Custom Screen section column layout & binding integrity (TASK-505)
 
@@ -968,10 +977,67 @@ it to an opaque static 400 with no field name. TASK-505 makes it **recoverable**
   is threaded as an optional final parameter (no return-type widening) so the three assistant
   callers and the internal read/assistant caller compile unchanged (verified by root `tsc`).
 
+TASK-540 removes the former non-empty-live-set exception from both editor-view and
+row-template binding pruning. An empty document therefore produces zero live block IDs,
+removes every ghost binding, and reports the existing transient
+`binding_block_removed` warning on a successful write. Stored reads perform the same
+cleanup silently and do not persist warning metadata.
+
 **Deferred residuals (recorded, not silent gaps):** per-block `columnSpan`/`columnStart`
 (a later `ScreenBlockStyleV1.span`/`start`); a visual column-ratio picker / SegmentedControl
 (v1 uses the plain `EnumRow`); custom (non-preset) fr ratios; responsive per-breakpoint
 column counts; nested-section grids; `reconcileScreenBindings` delete-site wiring.
+
+## Custom Screen functional and data-integrity hardening (TASK-540)
+
+TASK-540 keeps Custom Screens on `definition.schemaVersion: 4` and
+`ScreenDocumentV1.schemaVersion: 1`; it adds no endpoint or database migration. The
+active authoring model remains Screen-owned sections and blocks, not product widgets.
+
+- Fixed data-oriented blocks (`heading`, `text`, `stat`, `divider`, `image`,
+  `related-list`, `tabs`, and `button`) use discriminated, reject-unknown nested schemas
+  on fresh writes. Section arrays are bounded to 120 and recursive block, child, and
+  slot collections to 500. Compatibility kinds retain their bounded legacy-read arm
+  without widening new authoring.
+- Tabs write exact `{ id, label }` items: 1–24 items, unique grammar-safe IDs,
+  non-empty labels of at most 120 Unicode code points, and a slot-key set equal to the
+  tab-ID set. The Inspector adds, renames, removes, and arms the exact tab slot in
+  lockstep. Runtime Tabs expose `tablist`/`tab`/`tabpanel`, roving focus, reciprocal
+  ARIA relationships, one visible panel, mouse activation, and Arrow/Home/End behavior
+  in builder, preview, and entry modes. Renderer-instance IDs keep nested and adjacent
+  Tabs isolated.
+- Button authoring exposes one supported action, Link. A Button may use a static safe
+  `href` or a read binding at `propPath:"href"`; clearing that binding keeps the static
+  link and never persists the UI sentinel. Builder mode never navigates. Preview/entry
+  render an anchor only after the final DOM-boundary URL check; absent, unsafe, or
+  legacy-disabled links render a non-anchor `aria-disabled` affordance.
+- `sanitizeScreenAuthoringUrl` is the single Screen policy for Button links and image
+  media URLs. It rejects backslashes and delegates to the shared bounded authoring
+  profiles: links may use safe root-relative paths, fragments, HTTP(S), `mailto:`, or
+  `tel:`; media accepts safe root-relative or HTTP(S) sources. Protocol-relative and
+  executable/data/blob/file schemes fail closed.
+- Image fields and per-entry presentation overrides retain media UUID identity. The
+  entry host resolves only the winning direct-image UUID through the existing media
+  list and passes an explicit UUID-to-safe-URL map to the pure renderer. A missing,
+  malformed, or unsafe winning asset displays the placeholder and never falls back to
+  a lower-priority source. Media field editors continue to receive UUIDs, not resolved
+  URLs.
+- Builder and record editors register the shared dirty-navigation and `beforeunload`
+  guards. Background hydration/cache events may refresh clean state, but never
+  overwrite a dirty document, binding, entry-content, or presentation draft. Failed
+  loads/saves stay visible and retryable; late results are rejected by route, request,
+  and generation identity.
+- Related-entry and media loaders share only the exact in-flight request. A rejected
+  promise clears its own slot; a newer/forced request cannot be cleared or published
+  over by an older completion. Relation-target changes immediately hide stale rows,
+  same-target background refresh keeps the last good rows while the refresh is pending,
+  and manual/cache-event retries are forceful and cancellation-safe.
+- The authoring scroller keeps `p-6` gutters below `lg`; opening the floating panel
+  adds `lg:pr-[332px]` only at desktop widths. The labelled shared panel is a
+  `role="region"`. The entry metadata preference is scoped to the authenticated user
+  through `customScreens.entry.preferences`; identity epochs cancel queued work from a
+  previous user, and the optional expected-user guard prevents a captured write from
+  crossing a session change.
 
 ## Menu Design tab — brand style & per-level styling authoring (TASK-504)
 
