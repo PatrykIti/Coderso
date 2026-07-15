@@ -9,8 +9,14 @@
 **Dependencies:** TASK-540-01, TASK-540-03
 **Status:** ✅ Done
 **Started:** 2026-07-13
-**Completed:** 2026-07-14
-**Revalidation Passed:** 2026-07-14 — corrective L03 and L04 gates passed with core type/lint, root `tsc`, and exact Vitest matrices (155/155 and 57/57)
+**Fix Started:** 2026-07-15
+**Repair Reason:** Mandatory repository-wide `bun run test` confirmed that the legacy `screen-editor-sections.test.tsx` Save flow lacked the fresh-symbol cacheBus factory required by the L04-owned `CustomScreenEditorPage`. L04 added only that mock export and passed its exact six-file re-gate; L01 through L03 remained historically Done, and closure resumed.
+**Completed:** 2026-07-15
+**Historical Completion:** 2026-07-14
+**Historical Reopen:** 2026-07-14 (final post-audit: stale detail-cache publication and mixed-case media UUID projection)
+**Historical Corrective Revalidation:** 2026-07-14 — L01 exact Entries/Media gate 65/65; core lint/typecheck and diff check green; fresh L01 post-audit zero findings
+**Historical Previous Completion:** 2026-07-14
+**Historical Previous Revalidation:** ✅ Passed (L01 exact gate 57/57; L03 exact gate 161/161; static gates green)
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -31,17 +37,20 @@ when the user edits after a background request has already started.
 | TASK-540-04-L01 | Make related-entry and media promise caches retryable | `entriesClient.ts`, `mediaClient.ts`, and their admin Vitest suites | ✅ Done |
 | TASK-540-04-L02 | Cancel and retry related-entry loads | shared Screen hook, Preview dialog, and hook/Preview tests | ✅ Done |
 | TASK-540-04-L03 | Guard entry drafts, expand direct-image presentation targets, resolve presentation media UUIDs, and correlate mutation cache events | entry editor/canvas/read-only Preview, `customScreensClient.ts`, cache-bus substrate, the Bun-free override contract + service, and assigned suites | ✅ Done |
-| TASK-540-04-L04 | Guard Screen builder drafts | Screen editor page, additive editor-path helper, route/Page/binding-flow tests, and the recovery-suite cacheBus mock seam; read-only cache-bus/client production seams | ✅ Done |
+| TASK-540-04-L04 | Guard Screen builder drafts | Screen editor page, additive editor-path helper, route/Page/binding-flow tests, and the recovery-suite plus screen-editor-sections cacheBus mock seams; read-only cache-bus/client production seams | ✅ Done |
 
 ## Corrective workflow
 
-The L04 post-audit correction was executed through
-`_docs/_workflows/task-540-fix.mjs`: it accepted completed earlier leaves, landed the
-L03 cache-bus/client substrate first, gated it, then landed and gated the L04 editor
-consumer. The canonical `_docs/_workflows/task-540-implement.mjs` now validates that
-historical corrective evidence, classifies all four leaves as landed, and resumes at
-the first later unlanded leaf. Neither workflow may rerun or mutate these completed
-leaves.
+The earlier five-owner corrective work completed sequentially across
+`540-01-L01 → 540-03-L01 → 540-04-L01 → 540-04-L03 → 540-05-L02`; its durable evidence
+is the affected task files' Revalidation/Post-Audit metadata and current green gates,
+not the mutable `_docs/_workflows/task-540-fix.mjs` file. That current file records only
+the later completed R01→R03 URL-control correction. Mandatory repository-wide testing on
+2026-07-15 then exposed the L04-owned `CustomScreenEditorPage` Save dependency missing
+from the legacy `screen-editor-sections.test.tsx` full-module cacheBus mock. L04 completed
+the one-property compatibility repair and exact six-file/66-test re-gate; L01 through L03
+and every non-L04 source descendant remained Done. TASK-540-04 is Done and closure has
+resumed while the family-wide parent gate remains pending.
 
 ## Shared contract
 
@@ -49,9 +58,19 @@ leaves.
   mutate value caches only. Only the exact request still occupying its pending slot
   may publish a value or clear that slot. Exported cached loaders return the stored
   promise directly so concurrent non-force callers receive the same promise object.
-  Every successful write-derived entry upsert, status update, or removal and every
-  media upsert/removal revokes the relevant pending read even when no value cache exists,
-  before any value prime or cache event can expose the mutation.
+  Every successful write-derived entry upsert, status update, or removal revokes its
+  matching pending detail and records a typed value/patch/tombstone; it keeps an older
+  full-list request so reconciliation can fill unrelated rows. Media upsert/removal
+  remains list-only and revokes its pending read even when no value cache exists.
+- Entry and Custom Screen list/detail publishers additionally share a monotonic
+  per-resource authority ledger. A full-list response reconciles against every newer
+  pending detail or successful mutation: it fills unrelated rows, preserves newer
+  values/creates, and honors newer deletion tombstones. A detail response updates only
+  its exact still-authoritative item and never collapses a complete list to one row.
+  List-start→detail and detail-start→list are pinned in both settlement orders. A
+  Custom Screen detail fallback that fetched the list publishes the reconciled complete
+  list, not only its matched row. Rejected reads/writes do not erase the last successful
+  item authority, and explicit clear invalidates every captured continuation.
 - Scoped presentation-override GETs obey the same exact pending-promise authority:
   concurrent non-force callers share the stored promise, forced B supersedes A, and only
   the exact registered request publishes or cleans up. A successful PATCH revokes a
@@ -202,7 +221,10 @@ leaves.
   `custom-screen-editor-binding-flow.test.tsx`. It also owns only the additive
   `createCacheEventOperationToken: () => Symbol()` mock export in
   `custom-screen-section-recovery.test.tsx`; TASK-505's behavior assertions remain frozen
-  and may not be re-baselined. It consumes L03-owned
+  and may not be re-baselined. The 2026-07-15 repair additionally owns only the identical
+  additive `createCacheEventOperationToken: () => Symbol(),` property in
+  `screen-editor-sections.test.tsx`; all nine TASK-500 tests and all of their assertions,
+  imports, and every other mock byte remain frozen. It consumes L03-owned
   `customScreensClient.ts`, `cacheBus.ts`, `customScreensClient.test.ts`, and
   `cacheBus.test.ts` read-only; no cache key, serialized payload, or transport changes.
 
@@ -212,3 +234,18 @@ Existing internal content reads/writes only. Authentication, `content:read` /
 `content:write`, CSRF, and admin rate-limit buckets are unchanged. Cache keys and
 errors contain resource identities only; no content, secret, or token is placed
 in browser storage or logs.
+
+## Historical revalidation evidence
+
+The 2026-07-14 corrective pass repaired stale entry and Screen detail-cache publication,
+made forced Screen list/detail reads identity-authoritative and retryable, and preserved
+exact requested media UUID keys across canonical record lookup. Reopened L01 now has
+atomic monotonic list/detail reconciliation, replayable replace/status/delete authority,
+success-only invalidation, and captured-clear safety; its exact owner gate passed 65/65
+with static checks and a zero-finding post-audit. Reopened L03 now publishes complete
+fallback lists and reconciles monotonic Screen list/detail/mutation authority; its exact
+nine-file owner gate passed 181/181 with `core` lint/typecheck, root typecheck, diff
+check, and a zero-finding fresh post-audit. Those receipts remain historical and L01
+through L03 remain complete. L04's narrow 2026-07-15 mock repair passed its six-file/
+66-test gate and five zero-finding post-audit lenses. TASK-540-06 retains ownership of the
+fresh family-wide audit, aggregate gates, runtime smoke, and final changelog/board closure.

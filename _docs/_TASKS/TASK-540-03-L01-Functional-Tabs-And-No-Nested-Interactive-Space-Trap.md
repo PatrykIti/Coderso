@@ -10,7 +10,16 @@
 **Dependencies:** TASK-540-01-L01, TASK-540-02-L01
 **Status:** ✅ Done
 **Started:** 2026-07-13
-**Completed:** 2026-07-13
+**Completed:** 2026-07-14
+**Revalidation:** 2026-07-14 — `core lint:types`, `core lint`, the exact renderer/interaction/image Vitest matrix (89/89), and `git diff --check`
+**Post-Audit:** 2026-07-14 — PASS; zero HIGH, MEDIUM, or LOW findings for the five-value final Button/Image DOM-sink regression matrix
+**Fix Started:** 2026-07-14
+**Fix Reason:** Final closure audit requires explicit Button and Image final-sink regressions for TAB/LF/CR protocol-relative confusion and the remaining ASCII-control boundary.
+**Prior Corrective Revalidation:** 2026-07-14 — `core lint:types`, `core lint`, the exact renderer/interaction/image Vitest matrix (83/83), and `git diff --check`, before the control-character corpus was added
+**Prior Corrective Post-Audit:** 2026-07-14 — PASS; zero HIGH, MEDIUM, or LOW findings on the Tabs/selection-corrected working tree before the control-character corpus was added
+**Previous Revalidation:** 2026-07-14 — `core lint:types`, `core lint`, and the exact renderer/interaction/image Vitest matrix (83/83)
+**Previous Completion:** 2026-07-14
+**Reopened:** 2026-07-14 (final URL-sink control-character regressions)
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -21,6 +30,13 @@
 - compatibility-expectation updates required before this source gate in
   `tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx`,
   `tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
+
+For the current correction, R03 writes only
+`tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx`. It consumes the
+R01 Screen wrapper read-only and adds final DOM-sink regressions; it need not edit
+`ScreenRuntimeRenderer.tsx` when the wrapper fix alone makes the existing renderer fail
+closed. `custom-screen-record-interactions.test.tsx` and
+`screen-document-image-src.test.ts` remain read-only prerequisites in this gate.
 
 Do not edit `InlineEditWrapper.tsx`, `CustomScreenEntryCanvas.tsx`, schemas,
 inspector, or shared selection helpers. Fix the ancestor semantics at the owning
@@ -91,11 +107,23 @@ function activateTab(block, tabId, sectionId) {
   setLocalActiveTabByBlock((state) => ({ ...state, [block.id]: tabId }));
 }
 
-function tabDomIds(instanceId: string, blockId: string, tabId: string) {
+function tabDomIds(blockId: string, tabId: string) {
+  const identity = `b${blockId.length}-${blockId}-t${tabId.length}-${tabId}`;
   return {
-    tab: `screen-tab-${instanceId}-${blockId}-${tabId}`,
-    panel: `screen-tabpanel-${instanceId}-${blockId}-${tabId}`,
+    tab: `screen-tab-${instanceId}-${identity}`,
+    panel: `screen-tabpanel-${instanceId}-${identity}`,
   };
+}
+
+function focusTabWithinRenderer(blockId: string, tabId: string) {
+  const targetId = tabDomIds(blockId, tabId).tab;
+  queueMicrotask(() => {
+    const root = rendererRootRef.current;
+    if (!root) return;
+    Array.from(root.querySelectorAll<HTMLElement>('[role="tab"]'))
+      .find((element) => element.id === targetId)
+      ?.focus();
+  });
 }
 
 function onTabKeyDown(event, index, tabs, block, sectionId) {
@@ -104,12 +132,7 @@ function onTabKeyDown(event, index, tabs, block, sectionId) {
   event.preventDefault();
   const next = tabs[nextIndex];
   activateTab(block, next.id, sectionId);
-  const ids = tabDomIds(instanceId, block.id, next.id);
-  queueMicrotask(() =>
-    rendererRootRef.current
-      ?.querySelector<HTMLElement>(`#${CSS.escape(ids.tab)}`)
-      ?.focus()
-  );
+  focusTabWithinRenderer(block.id, next.id);
 }
 
 <div role="tablist" aria-label={block.label ?? "Tabs"}>
@@ -190,6 +213,36 @@ if (block.type === "field" && field?.type === "media") {
 }
 ```
 
+Current corrective regression pseudocode (test-only unless the existing sink still
+fails after R01):
+
+```tsx
+const controlConfusedUrls = [
+  "/\t/evil.example/x",
+  "/\n/evil.example/x",
+  "/\r/evil.example/x",
+  "/\u0000/evil.example/x",
+  "/\u007F/evil.example/x",
+];
+
+for (const value of controlConfusedUrls) {
+  const buttonView = render([buttonBlock({ href: value })], "entry");
+  const buttonRoot = buttonView.container.querySelector('[data-screen-block-id="button-1"]');
+  expect(buttonRoot?.querySelector("a")).toBeNull();
+  expect(buttonRoot?.querySelector('[aria-disabled="true"]')).not.toBeNull();
+
+  const imageView = render([imageBlock({ src: value })], "entry");
+  const imageRoot = imageView.container.querySelector('[data-screen-block-id="image-1"]');
+  expect(imageRoot?.querySelector("img")).toBeNull();
+  expect(imageRoot?.querySelector('[data-image-disabled="true"]')).not.toBeNull();
+}
+```
+
+Use the suite's existing fixture/build/render helpers rather than introducing parallel
+test utilities. The Button proof must observe a disabled non-anchor, and the Image proof
+must observe the existing placeholder plus the absence of `img`; checking only a
+sanitizer return value or emitted URL string is insufficient for R03.
+
 Import `sanitizeScreenAuthoringUrl` and `isScreenMediaAssetUuid` from TASK-540-01's
 Screen-owned Bun-free contract; do not call the Page helper directly or duplicate its
 URL ordering/UUID regex. This keeps the renderer feasible in its declared land order
@@ -254,6 +307,13 @@ selection handle remains the keyboard path. Drag/drop handlers stay intact.
   remaining a non-anchor/non-navigating affordance in builder, that same safe Button
   becoming an anchor in preview/entry, unsafe/absent disabled Button behavior, and
   unique tab/panel IDs plus root-scoped focus across two concurrent renderers.
+- The same existing renderer test owns the final-sink control corpus. Parameterize the
+  exact TAB/LF/CR protocol-relative-confusion values plus NUL/DEL shown in the corrective
+  pseudocode. For each value, a Button in entry mode has no `a` and exposes an
+  `aria-disabled="true"` affordance; an Image has no `img` and exposes the existing
+  `data-image-disabled="true"` placeholder. These are visible DOM-state assertions.
+  Do not duplicate sanitizer/write/stored-read/compatibility-alias cases here; R01 owns
+  those in `screen-document-image-src.test.ts`.
 - `screen-document-image-src.test.ts` is read-only here but remains in this leaf's gate
   to pin the shared URL corpus and final-consumer migration.
 - `custom-screen-runtime-renderer.test.tsx` passes real UUID-keyed resolved URL maps and
@@ -267,6 +327,11 @@ selection handle remains the keyboard path. Drag/drop handlers stay intact.
   behavior.
 - `custom-screen-record-interactions.test.tsx`: contenteditable Space is not
   canceled; links/inputs do not select wrapper; selection handle works by keyboard.
+- The renderer suite supplies both block and section selection callbacks while
+  activating a nested builder input, an entry link, and a nested builder Tabs control.
+  The Tabs case must prove its own visible panel change, exact slot-end `insertPoint`,
+  and root-scoped focus while both ancestor callbacks remain unchanged; input and link
+  cases likewise prove their own action without changing either passive selection.
 - Accessibility assertions cover both block and section roots.
 
 Update all stale expectations, including the prior “no selection button” assertion,
@@ -285,19 +350,9 @@ bunx vitest run tests/vitest/ui-integration/custom-screen-runtime-renderer.test.
 
 Rerun any named failing file once in isolation. No Bun runtime route is touched.
 
-## Completion
+## Corrective repair completed
 
-Implemented accessible and functional Tabs for builder, preview, and entry; unique
-renderer-scoped ARIA wiring and keyboard focus; passive selection roots with sibling
-selection handles; Button final-sink URL sanitization; and direct-image UUID
-provenance with fail-closed override/binding precedence. Media fields continue to
-receive their exact scalar/array UUID identity.
-
-The first fresh post-audit found one HIGH nested-builder ancestor-panel regression,
-one MEDIUM preview/entry-to-builder state leak, and one LOW unrelated-markup drift.
-After correcting the contract and source, recursive child/slot traversal keeps all
-ancestor Tabs panels visible, builder state derives exclusively from the host
-`insertPoint`, and the renderer emits no global root marker or non-builder section
-group class. A second fresh audit found zero HIGH, MEDIUM, or LOW drift. Final
-validation: targeted Vitest 82/82, `bun --cwd core lint:types`, `bun --cwd core lint`,
-`git diff --check`, empty staging, and forbidden Page-path guard all passed.
+The accessible Tabs, passive-selection, URL/UUID sink implementation, length-delimited
+DOM identity, and 83/83 gate remain historical metadata. After R01 landed, this leaf
+added the explicit final Button/Image control-character DOM regressions, passed the exact
+final 89/89 gate, and passed a fresh zero-finding post-audit before returning to Done.

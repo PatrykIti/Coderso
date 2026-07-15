@@ -6,13 +6,11 @@ import { promisify } from "node:util";
 export const meta = {
   name: "task-540-fix",
   description:
-    "Resume TASK-540 from reopened 540-04-L03/L04: land exact cache-event operation correlation first, repair Screen-builder save/hydration authority second, run owner gates, and finish with fresh structured audits. Agents never stage or commit.",
+    "Repair the current TASK-540 Screen URL control-character finding in strict single-writer order: R01 rejects ASCII controls before shared-helper delegation and pins normalization evidence, then R03 pins final Button/Image DOM sinks. Previously completed R04/R05 repairs remain read-only. Gate both active owners and finish with fresh structured audits. Agents never stage or commit.",
   phases: [
     { title: "Corrective start gate" },
-    { title: "540-04-L03 repair" },
-    { title: "540-04-L03 gate" },
-    { title: "540-04-L04 repair" },
-    { title: "540-04-L04 gate" },
+    { title: "540-01-L01 URL control repair + gate" },
+    { title: "540-03-L01 final-sink regressions + gate" },
     { title: "Post-audit" },
   ],
 };
@@ -44,22 +42,22 @@ const TASK_STATUS_FILES = Object.freeze({
 
 const EXPECTED_TASK_STATUSES = Object.freeze({
   "TASK-540": "🚧 In Progress",
-  "TASK-540-01": "✅ Done",
-  "TASK-540-01-L01": "✅ Done",
+  "TASK-540-01": "🚧 In Progress",
+  "TASK-540-01-L01": "🚧 In Progress",
   "TASK-540-02": "✅ Done",
   "TASK-540-02-L01": "✅ Done",
-  "TASK-540-03": "✅ Done",
-  "TASK-540-03-L01": "✅ Done",
-  "TASK-540-04": "🚧 In Progress",
+  "TASK-540-03": "🚧 In Progress",
+  "TASK-540-03-L01": "🚧 In Progress",
+  "TASK-540-04": "✅ Done",
   "TASK-540-04-L01": "✅ Done",
   "TASK-540-04-L02": "✅ Done",
-  "TASK-540-04-L03": "🚧 In Progress",
-  "TASK-540-04-L04": "🚧 In Progress",
-  "TASK-540-05": "⏳ To Do",
-  "TASK-540-05-L01": "⏳ To Do",
-  "TASK-540-05-L02": "⏳ To Do",
-  "TASK-540-06": "⏳ To Do",
-  "TASK-540-06-L01": "⏳ To Do",
+  "TASK-540-04-L03": "✅ Done",
+  "TASK-540-04-L04": "✅ Done",
+  "TASK-540-05": "✅ Done",
+  "TASK-540-05-L01": "✅ Done",
+  "TASK-540-05-L02": "✅ Done",
+  "TASK-540-06": "🚧 In Progress",
+  "TASK-540-06-L01": "🚧 In Progress",
 });
 
 const LINT_TYPES = "bun --cwd core lint:types";
@@ -67,6 +65,14 @@ const LINT = "bun --cwd core lint";
 const ROOT_TSC = "./node_modules/.bin/tsc -p tsconfig.json --noEmit";
 const PRECOMMIT_CHECK = "bun run precommit:check";
 const DIFF_CHECK = "git diff --check";
+const ENV = "set -a && source .env && set +a && ";
+const DB_PREFLIGHT =
+  ENV +
+  'bun --eval \'import { canConnect } from "./tests/utils/db"; ' +
+  "const configured = Boolean(process.env.DATABASE_URL?.trim()); " +
+  "const reachable = configured && await canConnect(); " +
+  "process.stdout.write(JSON.stringify({ configured, reachable, selectOne: reachable ? 1 : 0 })); " +
+  "if (!reachable) process.exit(1); process.exit(0)'";
 
 function command(id, value) {
   return Object.freeze({ id, command: value });
@@ -76,23 +82,90 @@ function vitestCommand(files) {
   return "./node_modules/.bin/vitest run --config vitest.config.ts " + files.join(" ");
 }
 
-const L03 = Object.freeze({
+const R01 = Object.freeze({
+  id: "540-01-L01",
+  phase: "540-01-L01 repair",
+  gatePhase: "540-01-L01 gate",
+  taskFile: "TASK-540-01-L01-Reject-Unknown-Sanitize-Urls-Unique-Tabs-And-Prune-Ghosts.md",
+  allowedFiles: Object.freeze([
+    "core/services/customScreens/customScreenSchemas.ts",
+    "tests/vitest/customScreens/screen-document-image-src.test.ts",
+  ]),
+  requiredFiles: Object.freeze([]),
+  commands: Object.freeze([
+    command("lintTypes", LINT_TYPES),
+    command("lint", LINT),
+    command(
+      "vitest",
+      vitestCommand([
+        "tests/vitest/admin/custom-screen-schemas.test.ts",
+        "tests/vitest/customScreens/screen-document-image-src.test.ts",
+      ])
+    ),
+    command("dbPreflight", DB_PREFLIGHT),
+    command("bun", ENV + "bun test tests/integration/routes/customScreensRoutes.test.ts"),
+    command("diffCheck", DIFF_CHECK),
+  ]),
+});
+
+const R03 = Object.freeze({
+  id: "540-03-L01",
+  phase: "540-03-L01 repair",
+  gatePhase: "540-03-L01 gate",
+  taskFile: "TASK-540-03-L01-Functional-Tabs-And-No-Nested-Interactive-Space-Trap.md",
+  allowedFiles: Object.freeze([
+    "tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx",
+  ]),
+  requiredFiles: Object.freeze([]),
+  commands: Object.freeze([
+    command("lintTypes", LINT_TYPES),
+    command("lint", LINT),
+    command(
+      "vitest",
+      vitestCommand([
+        "tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx",
+        "tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx",
+        "tests/vitest/customScreens/screen-document-image-src.test.ts",
+      ])
+    ),
+    command("diffCheck", DIFF_CHECK),
+  ]),
+});
+
+const R04L01 = Object.freeze({
+  id: "540-04-L01",
+  phase: "540-04-L01 repair",
+  gatePhase: "540-04-L01 gate",
+  taskFile: "TASK-540-04-L01-Make-Related-Entry-Promise-Caches-Retryable.md",
+  allowedFiles: Object.freeze([
+    "core/admin/services/entriesClient.ts",
+    "tests/vitest/admin/entriesClient.test.ts",
+  ]),
+  requiredFiles: Object.freeze([]),
+  commands: Object.freeze([
+    command("lintTypes", LINT_TYPES),
+    command("lint", LINT),
+    command(
+      "vitest",
+      vitestCommand([
+        "tests/vitest/admin/entriesClient.test.ts",
+        "tests/vitest/admin/mediaClient.test.ts",
+      ])
+    ),
+    command("diffCheck", DIFF_CHECK),
+  ]),
+});
+
+const R04L03 = Object.freeze({
   id: "540-04-L03",
   phase: "540-04-L03 repair",
   gatePhase: "540-04-L03 gate",
   taskFile: "TASK-540-04-L03-Guard-Entry-Drafts-And-Subscribe-Related-Caches.md",
   allowedFiles: Object.freeze([
-    "core/admin/utils/cacheBus.ts",
-    "tests/vitest/admin/cacheBus.test.ts",
     "core/admin/services/customScreensClient.ts",
     "tests/vitest/admin/customScreensClient.test.ts",
   ]),
-  requiredFiles: Object.freeze([
-    "core/admin/utils/cacheBus.ts",
-    "tests/vitest/admin/cacheBus.test.ts",
-    "core/admin/services/customScreensClient.ts",
-    "tests/vitest/admin/customScreensClient.test.ts",
-  ]),
+  requiredFiles: Object.freeze([]),
   commands: Object.freeze([
     command("lintTypes", LINT_TYPES),
     command("lint", LINT),
@@ -124,46 +197,47 @@ const L03 = Object.freeze({
   ]),
 });
 
-const L04 = Object.freeze({
-  id: "540-04-L04",
-  phase: "540-04-L04 repair",
-  gatePhase: "540-04-L04 gate",
-  taskFile: "TASK-540-04-L04-Guard-Screen-Builder-Drafts.md",
+const R05 = Object.freeze({
+  id: "540-05-L02",
+  phase: "540-05-L02 repair",
+  gatePhase: "540-05-L02 gate",
+  taskFile: "TASK-540-05-L02-Scope-Screen-Preferences-Through-User-Settings.md",
   allowedFiles: Object.freeze([
-    "core/admin/ui/custom-screens/CustomScreenEditorPage.tsx",
-    "tests/vitest/ui/custom-screens-page.test.tsx",
-    "tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx",
-    "tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx",
+    "core/services/settings/securitySettings.ts",
+    "core/server/middleware/cors.ts",
+    "tests/integration/routes/cors.test.ts",
   ]),
-  requiredFiles: Object.freeze([
-    "core/admin/ui/custom-screens/CustomScreenEditorPage.tsx",
-    "tests/vitest/ui/custom-screens-page.test.tsx",
-    "tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx",
-    "tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx",
-  ]),
+  requiredFiles: Object.freeze([]),
   commands: Object.freeze([
     command("lintTypes", LINT_TYPES),
     command("lint", LINT),
     command("rootTsc", ROOT_TSC),
     command(
-      "builderVitest",
+      "vitest",
       vitestCommand([
-        "tests/vitest/ui/custom-screens-page.test.tsx",
-        "tests/vitest/ui/custom-screen-route-params.test.ts",
-        "tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx",
-        "tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx",
-        "tests/vitest/admin/cacheBus.test.ts",
+        "tests/vitest/admin/userSettingsClient.test.ts",
+        "tests/vitest/ui/admin-auth-identity.test.tsx",
+        "tests/vitest/ui/assistant-panel-interaction.test.tsx",
+        "tests/vitest/ui/use-screen-entry-preferences.test.ts",
+        "tests/vitest/ui-integration/custom-screen-entry-preferences-persistence.test.tsx",
+        "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
       ])
     ),
-    command("precommitCheck", PRECOMMIT_CHECK),
+    command("dbPreflight", DB_PREFLIGHT),
+    command(
+      "bun",
+      ENV +
+        "bun test tests/unit/settings/userSettingsService.test.ts tests/integration/routes/userSettings.test.ts tests/integration/routes/cors.test.ts"
+    ),
     command("diffCheck", DIFF_CHECK),
   ]),
 });
 
 const OWNER_BY_ID = new Map([
-  [L03.id, L03],
-  [L04.id, L04],
+  [R01.id, R01],
+  [R03.id, R03],
 ]);
+const REPAIR_OWNERS = Object.freeze([...OWNER_BY_ID.values()]);
 
 const FORBIDDEN_PATHS = Object.freeze([
   "every path outside the active owner's exact allowedFiles list",
@@ -241,7 +315,7 @@ const AUDIT_SCHEMA = {
         required: ["severity", "owner", "area", "finding", "evidence", "recommendation"],
         properties: {
           severity: { enum: ["high", "medium", "low"] },
-          owner: { enum: ["540-04-L03", "540-04-L04", "orchestrator"] },
+          owner: { enum: [...OWNER_BY_ID.keys(), "orchestrator"] },
           area: { type: "string" },
           finding: { type: "string" },
           evidence: { type: "string" },
@@ -479,7 +553,7 @@ async function runGate(owner, attempt, labelPrefix = "gate") {
 const COMMON_IMPLEMENTATION_PROMPT =
   "Repository " +
   ROOT +
-  ". Read root AGENTS.md, the TASK-540 parent, TASK-540-04 parent, exact leaf, current " +
+  ". Read root AGENTS.md, the TASK-540 parent, the exact child/leaf, current " +
   "source/tests, HEAD/status/full diff before editing. Build on the current dirty worktree; " +
   "never revert or overwrite earlier/user work. Implement the full correction, not a smaller " +
   "MVP. Code/comments are English. Never stage, commit, push, reset, checkout, change branch, " +
@@ -545,24 +619,24 @@ async function implementOwner(owner, correctiveScope) {
 
 const AUDIT_LENSES = Object.freeze([
   [
-    "operation-correlation",
-    "Verify L03's exact additive API: a freshly-created opaque symbol is same-context callback metadata only; serialized event keys and storage/BroadcastChannel/network/cache/server contracts are unchanged; create/update forward the caller's exact token to both local list/detail events; omitted options remain backward compatible. Verify L04 suppresses only the exact active local token and treats remote, distinct-symbol local, and tokenless local writers as external.",
+    "screen-url-wrapper",
+    "Verify sanitizeScreenAuthoringUrl rejects every U+0000..U+001F and U+007F code point, plus every backslash, against the original string before trim or shared-helper delegation; safe existing values remain canonical; Page-owned sanitizer source is untouched.",
   ],
   [
-    "save-hydration-authority",
-    "Verify Screen save/hydration/route authority for both settlement orders: no hydration starts or commits under an active save; only identity-current settlement/discard/cleanup clears the save token; every non-self current-detail event marks ref plus render-visible unresolved authority and blocks Save without invalidating the current forced hydration; unresolved authority clears only after current forced hydration succeeds; list-only events are ignored; dirty refresh requires explicit discard confirmation and restores the persisted baseline before reading; a save may clear only non-unresolved warning state predating its captured external-event generation; A→B→A cannot directly commit stale first-A state and any successful first-A server result reaches second A only through a deferred current forced hydration.",
+    "normalization-evidence",
+    "Verify the exact TAB/LF/CR protocol-relative-confusion corpus plus NUL/DEL is covered in screen-document-image-src.test.ts for both URL profiles: direct sanitizer null, direct Button/Image write rejection with exact non-echo paths, stored-read omission, and compatibility-alias empty result. Preserve all prior safe/backslash/non-string/idempotence evidence.",
   ],
   [
-    "mutation-diagnostics-ux",
-    "Verify synchronous blank-name and missing-content-type validation invalidates older hydration before publishing exact errors; boundary move up/down semantic no-ops stay clean; real moves persist; every metadata/document/binding create-update-clear mutation advances exactly once; neutral external-warning copy is exact and accessible.",
+    "renderer-final-sinks",
+    "Verify the existing runtime-renderer test injects the exact control-confused corpus at final sinks and proves Button is an aria-disabled non-anchor while Image shows data-image-disabled placeholder with no img. R03 does not duplicate R01 normalization tests or edit renderer production when the corrected imported wrapper is sufficient.",
   ],
   [
-    "test-integrity",
-    "Verify owned tests genuinely execute all contract paths: every deferred promise is proven consumed by its owning hydration/create/update call; four late hydration validation cases; direct production-helper Refresh guard plus handler delegation; render-visible and synchronous unresolved clean-event save block that preserves its forced GET; dirty confirm-refresh restores persisted baseline and covers success/missing/failure; remote/distinct-symbol/tokenless writers during save success and rejection; deferred real client cache hydration in A→B→A; top-level/children/slot move boundaries; bind→existing update→clear→rebind; exact-one updateEditorView→updateDefinition proof with document/binding handlers forbidden from direct dirty/generation writes and metadata handlers pinned to one markDirty; the recovery suite changes only its additive cacheBus factory mock and preserves every TASK-505 assertion; renderer/Preview suites are not weakened.",
+    "regression-integrity",
+    "Verify the exact R01 schema/image/DB gate and R03 renderer/interaction/image gate preserve prior Tabs provenance, schema, accessibility, selection, UUID/image precedence, safe URL, and non-string assertions without re-baselining or weakening them.",
   ],
   [
     "scope-and-gates",
-    "Verify sole-writer ownership and dependency order L03 then L04; no Page/widget/dashboard/route/API/DB/migration/endpoint expansion; root TypeScript and precommit checks are included alongside the exact targeted lanes; current task statuses remain L03/L04 In Progress and later leaves To Do because this corrective workflow does not perform closure.",
+    "Verify sole-writer ownership and exact current repair order 540-01-L01→540-03-L01; R01 writes only the Screen schema owner and screen-document-image-src test, R03 writes only the existing renderer test, completed R04/R05 owners stay Done/read-only, and no Page/widget/dashboard/API/DB/migration/task/changelog expansion occurs.",
   ],
 ]);
 
@@ -571,13 +645,13 @@ async function runPostAuditRound(round) {
     AUDIT_LENSES.map(([id, lens]) => async () => ({
       id,
       result: await runReadOnlyAgent(
-        "Fresh read-only TASK-540-04 corrective post-audit round " +
+        "Fresh read-only TASK-540 corrective post-audit round " +
           round +
-          ". Read root AGENTS.md, TASK-540/TASK-540-04/L03/L04 contracts, current source, " +
+          ". Read root AGENTS.md, both reopened TASK-540 URL repair contracts, current source, " +
           "tests, workflow, HEAD/status/full diff and latest gate evidence. Lens: " +
           lens +
           " Return every real HIGH/MEDIUM/LOW finding with concrete file:line evidence. " +
-          "Assign source/test findings to the exact owner 540-04-L03 or 540-04-L04; assign " +
+          "Assign source/test findings to the exact repair owner; assign " +
           "task/workflow-only drift to orchestrator. Empty findings means this lens is clean. " +
           "Do not edit, stage, commit, or print secrets.",
         { label: "post-audit:" + id + ":" + round, phase: "Post-audit", schema: AUDIT_SCHEMA }
@@ -587,7 +661,7 @@ async function runPostAuditRound(round) {
   requireAllResults(
     results,
     AUDIT_LENSES.map(([id]) => id),
-    "TASK-540-04 corrective post-audit round " + round
+    "TASK-540 corrective post-audit round " + round
   );
   return results.flatMap(({ result }) => result.findings);
 }
@@ -601,39 +675,22 @@ async function fixAuditFindings(findings) {
     );
   }
 
-  const l03Findings = findings.filter((finding) => finding.owner === L03.id);
-  const l04Findings = findings.filter((finding) => finding.owner === L04.id);
-
-  if (l03Findings.length > 0) {
+  for (const owner of REPAIR_OWNERS) {
+    const ownerFindings = findings.filter((finding) => finding.owner === owner.id);
+    if (ownerFindings.length === 0) continue;
     await runMutatingAgent(
       COMMON_IMPLEMENTATION_PROMPT +
-        "\n\nFix every verified TASK-540-04-L03 post-audit finding within only " +
-        JSON.stringify(L03.allowedFiles) +
+        "\n\nFix every verified TASK-" +
+        owner.id +
+        " post-audit finding within only " +
+        JSON.stringify(owner.allowedFiles) +
         ". Findings: " +
-        JSON.stringify(l03Findings),
-      { label: "post-audit-fix:" + L03.id, phase: "Post-audit" },
-      L03,
+        JSON.stringify(ownerFindings),
+      { label: "post-audit-fix:" + owner.id, phase: "Post-audit" },
+      owner,
       false
     );
-    await runGateWithFixLoop(L03, "post-audit-regate");
-  }
-
-  if (l04Findings.length > 0) {
-    await runMutatingAgent(
-      COMMON_IMPLEMENTATION_PROMPT +
-        "\n\nFix every verified TASK-540-04-L04 post-audit finding within only " +
-        JSON.stringify(L04.allowedFiles) +
-        ". Findings: " +
-        JSON.stringify(l04Findings),
-      { label: "post-audit-fix:" + L04.id, phase: "Post-audit" },
-      L04,
-      false
-    );
-  }
-
-  // L04 consumes L03. Any correction in either owner therefore ends with the L04 gate.
-  if (l03Findings.length > 0 || l04Findings.length > 0) {
-    await runGateWithFixLoop(L04, "post-audit-regate");
+    await runGateWithFixLoop(owner, "post-audit-regate");
   }
 }
 
@@ -653,41 +710,38 @@ for (const [id, expected] of Object.entries(EXPECTED_TASK_STATUSES)) {
 }
 
 const startGate = await runReadOnlyAgent(
-  "Read-only resumed TASK-540 corrective start gate. Verify: branch feature/tasks-fixes; " +
+  "Read-only final TASK-540 corrective start gate. Verify: branch feature/tasks-fixes; " +
     "empty staging area; intentional dirty worktree is preserved; TASK-540 root In Progress; " +
-    "all 17 physical TASK-540 statuses: 540-01 through 540-03 parents/leaves Done; " +
-    "540-04 parent/L03/L04 In Progress with L01/L02 Done; 540-05/06 parents/leaves To Do; " +
-    "changelog 1252 remains pinned without a closure file; L03 now solely owns " +
-    "cacheBus/customScreensClient plus tests and must land before L04; L04 owns only its Page, " +
-    "two primary suites, and the additive recovery-suite cacheBus mock for this correction; " +
-    "task-540-implement.mjs remains the cold-start " +
-    "program while task-540-fix.mjs is the resumed corrective owner. Read all relevant files " +
-    "fresh. Do not edit.",
+    "the exact R01 and R03 repair leaves and parents are In Progress, every R04/R05 leaf and " +
+    "parent remains Done, other landed siblings are Done, " +
+    "and closure remains In Progress; changelog 1252 remains pinned without a closure file; " +
+    "single-writer repair order is 540-01-L01 then 540-03-L01; task-540-fix.mjs owns this " +
+    "URL-specific repair pass and task-540-implement.mjs resumes only after both leaves return " +
+    "to Done. Verify every allowed file and command " +
+    "matches the current task contracts. Read all relevant files fresh. Do not edit.",
   { label: "start-gate:540-fix", phase: "Corrective start gate", schema: RESULT_SCHEMA }
 );
 if (!resultPassed(startGate)) {
   throw new Error("TASK-540 corrective start gate failed: " + startGate.errors.join("; "));
 }
 
-await implementOwner(
-  L03,
-  "Add the exact createCacheEventOperationToken/symbol operation-correlation contract to the " +
-    "cache bus without serializing it; forward the optional caller token through Custom Screen " +
-    "create/update local list/detail events; prove transport/cache/event JSON byte shape and " +
-    "tokenless callers remain backward compatible."
-);
-phase(L03.gatePhase);
-const l03Gate = await runGateWithFixLoop(L03);
+const CORRECTIVE_SCOPES = new Map([
+  [
+    R01.id,
+    "Reject every ASCII control U+0000..U+001F plus U+007F, and every backslash, against the original Screen URL string before trim/shared-helper delegation. Add the exact TAB/LF/CR protocol-relative-confusion plus NUL/DEL direct sanitizer/write/stored-read/compatibility-alias matrix without changing Page-owned helpers.",
+  ],
+  [
+    R03.id,
+    "Consume the corrected Screen wrapper and add only the existing renderer suite's final-sink regressions: each control-confused Button is an aria-disabled non-anchor and each Image is a data-image-disabled placeholder with no img. Do not edit renderer production when the wrapper fix suffices.",
+  ],
+]);
 
-await implementOwner(
-  L04,
-  "Consume L03 read-only. Suppress only exact self-token events; preserve independent local and " +
-    "remote updates; close save/hydration/validation/A→B→A races; make boundary moves semantic " +
-    "no-ops; use neutral external-update copy; and add the complete mounted/static regressions " +
-    "including bind→existing update→clear→rebind."
-);
-phase(L04.gatePhase);
-const l04Gate = await runGateWithFixLoop(L04);
+const ownerGates = {};
+for (const owner of REPAIR_OWNERS) {
+  await implementOwner(owner, CORRECTIVE_SCOPES.get(owner.id));
+  phase(owner.gatePhase);
+  ownerGates[owner.id] = await runGateWithFixLoop(owner);
+}
 
 phase("Post-audit");
 let postAuditFindings = await runPostAuditRound(1);
@@ -699,19 +753,18 @@ if (postAuditFindings.length > 0) {
 }
 if (postAuditFindings.length > 0) {
   throw new Error(
-    "TASK-540-04 corrective post-audit remained non-clean: " + JSON.stringify(postAuditFindings)
+    "TASK-540 corrective post-audit remained non-clean: " + JSON.stringify(postAuditFindings)
   );
 }
 
 export const result = {
   pass: true,
   summary:
-    "TASK-540-04-L03 cache-event correlation and TASK-540-04-L04 builder authority corrections passed owner gates and a fresh zero-finding post-audit.",
+    "Both current TASK-540 URL-control repair owners passed their exact gates in R01-before-R03 order and a fresh zero-finding post-audit.",
   errors: [],
-  order: [L03.id, L04.id],
+  order: REPAIR_OWNERS.map(({ id }) => id),
   gateFixRoundLimit: MAX_GATE_FIX_ROUNDS,
-  l03Gate,
-  l04Gate,
+  ownerGates,
   postAuditRounds,
   postAuditFindings,
 };

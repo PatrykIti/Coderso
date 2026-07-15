@@ -635,6 +635,60 @@ test("unsafe, absent, and legacy-disabled Button hrefs render disabled non-ancho
   }
 });
 
+test.each([
+  ["TAB", "/\t/evil.example/x"],
+  ["LF", "/\n/evil.example/x"],
+  ["CR", "/\r/evil.example/x"],
+  ["NUL", "/\u0000/evil.example/x"],
+  ["DEL", "/\u007F/evil.example/x"],
+] as const)(
+  "ASCII-control %s URL stays disabled at the final Button and Image DOM sinks",
+  (controlName, value) => {
+    const buttonView = render(
+      [
+        {
+          id: "button-control",
+          type: "button",
+          data: { label: "Open", action: "link", variant: "primary", href: value },
+        },
+      ],
+      "entry"
+    );
+    try {
+      const buttonRoot = buttonView.container.querySelector(
+        '[data-screen-block-id="button-control"]'
+      );
+      expect(buttonRoot?.querySelector("a"), controlName).toBeNull();
+      expect(
+        buttonRoot
+          ?.querySelector('[data-screen-button-affordance="true"]')
+          ?.getAttribute("aria-disabled"),
+        controlName
+      ).toBe("true");
+    } finally {
+      buttonView.cleanup();
+    }
+
+    const imageView = render(
+      [
+        {
+          id: "image-control",
+          type: "image",
+          data: { label: "Cover", fit: "cover", src: value },
+        },
+      ],
+      "entry"
+    );
+    try {
+      const imageRoot = imageView.container.querySelector('[data-screen-block-id="image-control"]');
+      expect(imageRoot?.querySelector("img"), controlName).toBeNull();
+      expect(imageRoot?.querySelector('[data-image-disabled="true"]'), controlName).not.toBeNull();
+    } finally {
+      imageView.cleanup();
+    }
+  }
+);
+
 test("Button binding is re-sanitized and an unsafe bound value cannot fall back to a safe static href", () => {
   const block: ScreenBlockV1 = {
     id: "button-1",
@@ -671,7 +725,7 @@ test("block and section roots stay passive while sibling selection handles remai
     {
       onSelectBlock,
       onSelectSection,
-      renderBuilderActions: () => <input aria-label="Nested builder input" />,
+      renderBuilderActions: () => <input type="checkbox" aria-label="Nested builder input" />,
     }
   );
   try {
@@ -711,12 +765,14 @@ test("block and section roots stay passive while sibling selection handles remai
     expect(onSelectSection).toHaveBeenLastCalledWith("section-1");
 
     onSelectBlock.mockClear();
-    React.act(() =>
-      block
-        .querySelector<HTMLInputElement>('[aria-label="Nested builder input"]')
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }))
-    );
+    onSelectSection.mockClear();
+    const nestedInput = block.querySelector<HTMLInputElement>(
+      '[aria-label="Nested builder input"]'
+    )!;
+    React.act(() => nestedInput.click());
+    expect(nestedInput.checked).toBe(true);
     expect(onSelectBlock).not.toHaveBeenCalled();
+    expect(onSelectSection).not.toHaveBeenCalled();
 
     React.act(() =>
       block
@@ -724,6 +780,7 @@ test("block and section roots stay passive while sibling selection handles remai
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))
     );
     expect(onSelectBlock).toHaveBeenLastCalledWith("text-select");
+    expect(onSelectSection).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -731,6 +788,7 @@ test("block and section roots stay passive while sibling selection handles remai
 
 test("entry link activation performs only the link action and never selects its passive wrapper", () => {
   const onSelectBlock = vi.fn();
+  const onSelectSection = vi.fn();
   const view = render(
     [
       {
@@ -742,19 +800,24 @@ test("entry link activation performs only the link action and never selects its 
     "entry",
     [],
     {},
-    { onSelectBlock }
+    { onSelectBlock, onSelectSection }
   );
   try {
     const block = view.container.querySelector<HTMLElement>(
       '[data-screen-block-id="button-link"]'
     )!;
     const link = block.querySelector<HTMLAnchorElement>('a[href="/details"]')!;
+    const onLinkAction = vi.fn();
+    link.addEventListener("click", onLinkAction);
     expect(block.getAttribute("role")).toBeNull();
     expect(block.getAttribute("tabindex")).toBeNull();
-    React.act(() =>
-      link.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }))
-    );
+    React.act(() => {
+      link.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
+    expect(link.getAttribute("href")).toBe("/details");
+    expect(onLinkAction).toHaveBeenCalledOnce();
     expect(onSelectBlock).not.toHaveBeenCalled();
+    expect(onSelectSection).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -899,7 +962,13 @@ test("builder Tabs derive visibility from slot-index/slot-end host state and act
   }
 });
 
-function NestedBuilderTabsHarness() {
+function NestedBuilderTabsHarness({
+  onSelectBlock,
+  onSelectSection,
+}: {
+  onSelectBlock: (blockId: string) => void;
+  onSelectSection: (sectionId: string) => void;
+}) {
   const nested = tabsBlock("tabs-nested");
   const outer = tabsBlock();
   outer.slots = {
@@ -913,20 +982,29 @@ function NestedBuilderTabsHarness() {
     slotId: "tab-2",
   });
   return (
-    <ScreenRuntimeRenderer
-      document={doc([outer])}
-      bindings={[]}
-      values={{}}
-      fields={fields}
-      mode="builder"
-      insertPoint={insertPoint}
-      onSetInsertPoint={setInsertPoint}
-    />
+    <>
+      <output data-nested-builder-insert-point="true">{JSON.stringify(insertPoint)}</output>
+      <ScreenRuntimeRenderer
+        document={doc([outer])}
+        bindings={[]}
+        values={{}}
+        fields={fields}
+        mode="builder"
+        insertPoint={insertPoint}
+        onSetInsertPoint={setInsertPoint}
+        onSelectBlock={onSelectBlock}
+        onSelectSection={onSelectSection}
+      />
+    </>
   );
 }
 
 test("nested builder Tabs keep every ancestor non-first panel visible for click and keyboard activation", async () => {
-  const view = mount(<NestedBuilderTabsHarness />);
+  const onSelectBlock = vi.fn();
+  const onSelectSection = vi.fn();
+  const view = mount(
+    <NestedBuilderTabsHarness onSelectBlock={onSelectBlock} onSelectSection={onSelectSection} />
+  );
   try {
     const outer = getTabs(view.container, "tabs-1");
     const nested = getTabs(view.container, "tabs-nested");
@@ -939,6 +1017,18 @@ test("nested builder Tabs keep every ancestor non-first panel visible for click 
     expect(outer.panels[1]?.hidden).toBe(false);
     expect(nested.tabs[1]?.getAttribute("aria-selected")).toBe("true");
     expect(nested.panels[1]?.hidden).toBe(false);
+    expect(
+      view.container.querySelector('[data-nested-builder-insert-point="true"]')?.textContent
+    ).toBe(
+      JSON.stringify({
+        kind: "slot-end",
+        sectionId: "section-1",
+        parentId: "tabs-nested",
+        slotId: "tab-2",
+      })
+    );
+    expect(onSelectBlock).not.toHaveBeenCalled();
+    expect(onSelectSection).not.toHaveBeenCalled();
 
     await React.act(async () => {
       nested.tabs[1]?.dispatchEvent(
@@ -951,6 +1041,22 @@ test("nested builder Tabs keep every ancestor non-first panel visible for click 
     expect(nested.tabs[0]?.getAttribute("aria-selected")).toBe("true");
     expect(nested.panels[0]?.hidden).toBe(false);
     expect(document.activeElement).toBe(nested.tabs[0]);
+    const rendererRoot = view.container.querySelector(
+      '[data-screen-section-id="section-1"]'
+    )?.parentElement;
+    expect(rendererRoot?.contains(document.activeElement)).toBe(true);
+    expect(
+      view.container.querySelector('[data-nested-builder-insert-point="true"]')?.textContent
+    ).toBe(
+      JSON.stringify({
+        kind: "slot-end",
+        sectionId: "section-1",
+        parentId: "tabs-nested",
+        slotId: "tab-1",
+      })
+    );
+    expect(onSelectBlock).not.toHaveBeenCalled();
+    expect(onSelectSection).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }
@@ -1126,6 +1232,61 @@ test("two concurrent renderer instances namespace identical tab IDs and keep foc
     expect(first[1]?.getAttribute("aria-selected")).toBe("true");
     expect(second[0]?.getAttribute("aria-selected")).toBe("true");
     expect(document.activeElement).toBe(first[1]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Tabs encode ambiguous block and tab ID pairs without DOM collisions or cross-block focus", async () => {
+  const makeAmbiguousTabs = (blockId: string, firstTabId: string, label: string) => ({
+    id: blockId,
+    type: "tabs",
+    data: {
+      label,
+      tabs: [
+        { id: firstTabId, label: `${label} first` },
+        { id: "second", label: `${label} second` },
+      ],
+    },
+    slots: {
+      [firstTabId]: [
+        { id: `${blockId}-first`, type: "text", data: { content: `${label} first panel` } },
+      ],
+      second: [
+        { id: `${blockId}-second`, type: "text", data: { content: `${label} second panel` } },
+      ],
+    },
+  });
+  const view = render(
+    [
+      makeAmbiguousTabs("alpha-beta", "gamma", "One"),
+      makeAmbiguousTabs("alpha", "beta-gamma", "Two"),
+    ],
+    "entry"
+  );
+  try {
+    const first = getTabs(view.container, "alpha-beta");
+    const second = getTabs(view.container, "alpha");
+    const identities = [...first.tabs, ...first.panels, ...second.tabs, ...second.panels].map(
+      (element) => element.id
+    );
+    expect(new Set(identities).size).toBe(identities.length);
+    for (const group of [first, second]) {
+      for (let index = 0; index < group.tabs.length; index += 1) {
+        expect(group.tabs[index]?.getAttribute("aria-controls")).toBe(group.panels[index]?.id);
+        expect(group.panels[index]?.getAttribute("aria-labelledby")).toBe(group.tabs[index]?.id);
+      }
+    }
+
+    await React.act(async () => {
+      second.tabs[1]?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Home", bubbles: true, cancelable: true })
+      );
+      await Promise.resolve();
+    });
+    expect(second.tabs[0]?.getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(second.tabs[0]);
+    expect(first.tabs[0]?.getAttribute("aria-selected")).toBe("true");
   } finally {
     view.cleanup();
   }

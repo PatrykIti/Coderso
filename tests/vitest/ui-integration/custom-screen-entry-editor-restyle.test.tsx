@@ -22,6 +22,7 @@ import {
   decodeAndValidatePresentationMediaRequestKey,
   initializeMediaMachineState,
   mediaAttemptReducer,
+  projectExactRequestedMediaUrls,
 } from "../../../core/admin/ui/custom-screens/CustomScreenEntryEditor";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 import { renderAdminUi } from "../../utils/adminRouterRender";
@@ -1017,4 +1018,22 @@ test("direct-image media planning chooses override then binding, deduplicates, a
       ],
     })
   ).toEqual([overrideId]);
+});
+
+test("presentation media projection preserves requested UUID casing while matching canonical records", () => {
+  const canonicalId = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+  const requestedId = canonicalId.toUpperCase();
+  const record = {
+    ...mediaRecords[0]!,
+    id: canonicalId,
+    url: "/media/canonical.jpg",
+  };
+
+  expect(projectExactRequestedMediaUrls([record], [requestedId])).toEqual({
+    [requestedId]: "/media/canonical.jpg",
+  });
+  expect(projectExactRequestedMediaUrls([record], [requestedId, canonicalId])).toEqual({
+    [requestedId]: "/media/canonical.jpg",
+    [canonicalId]: "/media/canonical.jpg",
+  });
 });

@@ -9,7 +9,14 @@
 **Dependencies:** TASK-540-01, TASK-540-02
 **Status:** ✅ Done
 **Started:** 2026-07-13
-**Completed:** 2026-07-13
+**Completed:** 2026-07-14
+**Corrective Revalidation:** 2026-07-14 — TASK-540-03-L01 passed the exact 89/89 renderer/interaction/image Vitest matrix, core lint/typecheck, `git diff --check`, and a fresh zero-finding post-audit
+**Fix Started:** 2026-07-14
+**Fix Reason:** TASK-540-03-L01 must pin final Button and Image DOM-sink behavior for ASCII-control-confused URLs after the R01 wrapper correction.
+**Prior Corrective Revalidation:** 2026-07-14 — TASK-540-03-L01 passed `core lint:types`, `core lint`, the exact 83/83 renderer/interaction/image Vitest gate, `git diff --check`, and a fresh read-only post-audit with zero findings before the control-character corpus was added
+**Previous Revalidation:** 2026-07-14 — TASK-540-03-L01 passed its exact core static and 83/83 renderer/interaction/image Vitest gate
+**Previous Completion:** 2026-07-14
+**Reopened:** 2026-07-14 (final URL-sink control-character regressions)
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -47,6 +54,9 @@ authoring controls without swallowing Space or link/input activation.
   non-anchor, non-navigating affordance, even for a safe link; preview and entry render
   an anchor only when `mode !== "builder"` and the href is safe. An absent, unsafe, or
   legacy-disabled href renders an `aria-disabled` non-anchor affordance in every mode.
+- TAB/LF/CR protocol-relative-confused Button hrefs (plus NUL/DEL controls) are unsafe
+  at that final seam and render as disabled non-anchors. The same control corpus used as
+  an Image source renders the existing placeholder and emits no `img` element.
 - Presentation image values remain media UUIDs. The pure renderer consumes an
   explicit host-resolved UUID→URL map only for direct image blocks. An active override
   is UUID-only and wins absolutely: resolve it through the map or show a placeholder,
@@ -65,14 +75,10 @@ TASK-540-01 normalization, and URL policy is repeated at the final DOM sink.
 Static DOM IDs derive only from validated block/tab IDs. No HTML injection or
 dynamic script is added.
 
-## Completion
+## Corrective repair completed
 
-The renderer now owns functional, instance-isolated Tabs; passive block and section
-containers with explicit authoring selection controls; final Button URL enforcement;
-and fail-closed UUID-to-host-URL image provenance while media fields retain asset
-identity. A fresh post-audit exposed nested builder-panel collapse, preview/entry
-state leaking into builder, and unrelated markup drift. The implementation and task
-contract were corrected with recursive ancestor-slot resolution, strict mode-owned
-state, and builder-only section grouping. The final fresh audit reported zero HIGH,
-MEDIUM, or LOW findings. Targeted Vitest passed 82/82; typecheck, lint, diff-check,
-staging, and Page collision guards passed.
+The renderer behavior, collision correction, and 83/83 gate remain historical evidence.
+After R01 tightened the shared Screen wrapper, R03 added the final Button/Image
+control-character DOM-sink regressions in its existing renderer test. The exact final
+89/89 gate and a fresh zero-finding post-audit passed, so this subtask returned to Done
+without requiring a renderer production change.

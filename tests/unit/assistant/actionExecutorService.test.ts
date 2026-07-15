@@ -2224,8 +2224,8 @@ test("executeAssistantActionPlan patches custom screen block data", async () => 
     showInSidebar: false,
     sidebarLabel: null,
     definition: createNativeTestCustomScreenDefinition([
-      { id: "hero-1", type: "hero", data: { headline: "Old headline", body: "Keep body" } },
-      { id: "text-1", type: "rich-text-section", data: { title: "Keep sibling" } },
+      { id: "heading-1", type: "heading", data: { text: "Old headline", label: "Keep label" } },
+      { id: "text-1", type: "text", data: { content: "Keep sibling" } },
     ]),
   });
   const plan: AssistantActionPlan = {
@@ -2236,7 +2236,7 @@ test("executeAssistantActionPlan patches custom screen block data", async () => 
     intentFamily: "unknown",
     title: "Patch custom screen block",
     answer: "I can patch the selected custom screen block.",
-    summary: "Patch screen hero headline.",
+    summary: "Patch screen heading text.",
     confidence: 0.9,
     assumptions: [],
     questions: [],
@@ -2244,15 +2244,15 @@ test("executeAssistantActionPlan patches custom screen block data", async () => 
       {
         id: "custom-screen-block-patch-1",
         type: "custom-screen.block.patch",
-        title: "Patch hero",
+        title: "Patch heading",
         description: "Patch selected custom screen block.",
         input: {
           id: screen.id,
           name: "Projects Screen",
           expectedStatus: "draft",
-          blockId: "hero-1",
-          expectedBlockType: "hero",
-          dataPath: ["headline"],
+          blockId: "heading-1",
+          expectedBlockType: "heading",
+          dataPath: ["text"],
           value: "New headline",
         },
       },
@@ -2271,9 +2271,9 @@ test("executeAssistantActionPlan patches custom screen block data", async () => 
     deps
   );
 
-  expect(deps.__state.customScreens[0]?.blocks[0]?.data.headline).toBe("New headline");
-  expect(deps.__state.customScreens[0]?.blocks[0]?.data.body).toBe("Keep body");
-  expect(deps.__state.customScreens[0]?.blocks[1]?.data.title).toBe("Keep sibling");
+  expect(deps.__state.customScreens[0]?.blocks[0]?.data.text).toBe("New headline");
+  expect(deps.__state.customScreens[0]?.blocks[0]?.data.label).toBe("Keep label");
+  expect(deps.__state.customScreens[0]?.blocks[1]?.data.content).toBe("Keep sibling");
 });
 
 test("executeAssistantActionPlan deletes pages through explicit delete actions", async () => {

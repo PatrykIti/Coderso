@@ -137,6 +137,8 @@ const EXISTING_CHANGELOG_REL = DISCOVERED_CHANGELOG_REL;
 const CHANGELOG_TITLE_PREFIX = "TASK-540 Custom Screens Functional and Data-Integrity Remediation";
 const CHANGELOG_TYPE =
   "Custom Screens/Admin UI/API/Reliability/Accessibility/Security/Testing/Docs/Task Board";
+const CHANGELOG_TASKS_LINE =
+  "Tasks: TASK-540, TASK-540-01-L01, TASK-540-02-L01, TASK-540-03-L01, TASK-540-04-L01, TASK-540-04-L02, TASK-540-04-L03, TASK-540-04-L04, TASK-540-05-L01, TASK-540-05-L02, TASK-540-06-L01";
 const ENV = "set -a && source .env && set +a && ";
 
 const TASK_FILES = Object.freeze([
@@ -258,13 +260,14 @@ const TARGET_VITEST_FILES = Object.freeze([
   "tests/vitest/ui/custom-screen-binding-panel.test.tsx",
   "tests/vitest/ui-integration/custom-screen-image-inspector.test.tsx",
   "tests/vitest/ui/custom-screen-authoring-boundary.test.ts",
-  "tests/vitest/ui/custom-screen-route-params.test.ts",
   "tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx",
   "tests/vitest/ui/custom-screens-page.test.tsx",
+  "tests/vitest/ui/custom-screen-route-params.test.ts",
   "tests/vitest/ui-integration/canvas-editor-panel-toggle-dedupe.test.tsx",
   "tests/vitest/ui-integration/canvas-editor/canvas-editor.test.tsx",
   "tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx",
   "tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx",
+  "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
   "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
   "tests/vitest/ui-integration/custom-screen-entry-preferences-persistence.test.tsx",
   "tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx",
@@ -276,7 +279,9 @@ const TARGET_VITEST_FILES = Object.freeze([
 const TARGET_BUN_FILES = Object.freeze([
   "tests/unit/settings/userSettingsService.test.ts",
   "tests/integration/routes/userSettings.test.ts",
+  "tests/integration/routes/cors.test.ts",
   "tests/integration/routes/customScreensRoutes.test.ts",
+  "tests/unit/assistant/actionExecutorService.test.ts",
 ]);
 const SOURCE_OWNER_TEST_FILES = Object.freeze([
   ...TARGET_VITEST_FILES.filter(
@@ -284,6 +289,19 @@ const SOURCE_OWNER_TEST_FILES = Object.freeze([
   ),
   ...TARGET_BUN_FILES,
 ]);
+const CLOSURE_OWNER_TEST_FILES = Object.freeze([
+  "tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx",
+]);
+if (
+  TARGET_VITEST_FILES.length !== 34 ||
+  TARGET_BUN_FILES.length !== 5 ||
+  SOURCE_OWNER_TEST_FILES.length !== 38 ||
+  CLOSURE_OWNER_TEST_FILES.length !== 1 ||
+  new Set([...TARGET_VITEST_FILES, ...TARGET_BUN_FILES]).size !== 39
+) {
+  throw new Error("TASK-540 test matrix cardinality drift");
+}
+let sourceOwnerTestHashesAtClosureBoundary = null;
 
 const DB_PREFLIGHT =
   ENV +
@@ -313,6 +331,11 @@ const FULL_GATE_COMMANDS = Object.freeze([
   { id: "adminBundle", command: "bun run check:admin-bundle" },
   { id: "releaseGates", command: "bun run gates:coderso" },
   { id: "strictScan", command: "bun run scan:security:strict" },
+  { id: "workflowSyntax", command: "node --check _docs/_workflows/task-540-implement.mjs" },
+  {
+    id: "workflowRepairResumeSelfTest",
+    command: "node _docs/_workflows/task-540-implement.mjs --self-test-repair-siblings",
+  },
   { id: "diffCheck", command: "git diff --check" },
 ]);
 
@@ -604,21 +627,66 @@ const REQUIRED_CLEANUP_RESOURCE_KINDS = Object.freeze([
   ...REQUIRED_BASE_CLEANUP_RESOURCE_KINDS,
   ...ACCESS_LOG_CLEANUP_RESOURCE_KINDS,
 ]);
-const SCREENSHOT_PATHS = Object.freeze([
-  "_docs/_workflows/_smoke/task-540-wf540smoke-button-image-light.png",
-  "_docs/_workflows/_smoke/task-540-wf540smoke-media-prior-pending.png",
-  "_docs/_workflows/_smoke/task-540-wf540smoke-tabs-content-dark.png",
-  "_docs/_workflows/_smoke/task-540-wf540smoke-tabs-keyboard-light.png",
-  "_docs/_workflows/_smoke/task-540-wf540smoke-space-selection-dark.png",
-  "_docs/_workflows/_smoke/task-540-wf540smoke-dirty-save-failure.png",
-  "_docs/_workflows/_smoke/task-540-wf540smoke-dirty-guards-final.png",
-  "_docs/_workflows/_smoke/task-540-wf540smoke-related-first-failure.png",
-  "_docs/_workflows/_smoke/task-540-wf540smoke-related-a-stale.png",
-  "_docs/_workflows/_smoke/task-540-wf540smoke-related-b-dark.png",
-  "_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-a-light.png",
-  "_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-b-dark.png",
-  "_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-a-converged.png",
-]);
+const SMOKE_SCENARIO_EXPECTATIONS = Object.freeze({
+  "button-image": Object.freeze({
+    theme: "light",
+    viewports: Object.freeze(["1280x900"]),
+    screenshotPaths: Object.freeze([
+      "_docs/_workflows/_smoke/task-540-wf540smoke-button-image-light.png",
+      "_docs/_workflows/_smoke/task-540-wf540smoke-media-prior-pending.png",
+    ]),
+  }),
+  "tabs-content": Object.freeze({
+    theme: "dark",
+    viewports: Object.freeze(["1280x900"]),
+    screenshotPaths: Object.freeze([
+      "_docs/_workflows/_smoke/task-540-wf540smoke-tabs-content-dark.png",
+    ]),
+  }),
+  "tabs-keyboard-aria": Object.freeze({
+    theme: "light",
+    viewports: Object.freeze(["1024x900"]),
+    screenshotPaths: Object.freeze([
+      "_docs/_workflows/_smoke/task-540-wf540smoke-tabs-keyboard-light.png",
+    ]),
+  }),
+  "space-selection": Object.freeze({
+    theme: "dark",
+    viewports: Object.freeze(["1024x900"]),
+    screenshotPaths: Object.freeze([
+      "_docs/_workflows/_smoke/task-540-wf540smoke-space-selection-dark.png",
+    ]),
+  }),
+  "dirty-guards": Object.freeze({
+    theme: "light-dark",
+    viewports: Object.freeze(["1280x900"]),
+    screenshotPaths: Object.freeze([
+      "_docs/_workflows/_smoke/task-540-wf540smoke-dirty-save-failure.png",
+      "_docs/_workflows/_smoke/task-540-wf540smoke-dirty-guards-final.png",
+    ]),
+  }),
+  "related-retry-cache": Object.freeze({
+    theme: "dark",
+    viewports: Object.freeze(["1280x900"]),
+    screenshotPaths: Object.freeze([
+      "_docs/_workflows/_smoke/task-540-wf540smoke-related-first-failure.png",
+      "_docs/_workflows/_smoke/task-540-wf540smoke-related-a-stale.png",
+      "_docs/_workflows/_smoke/task-540-wf540smoke-related-b-dark.png",
+    ]),
+  }),
+  "responsive-users": Object.freeze({
+    theme: "light-dark",
+    viewports: Object.freeze(["320x844", "390x844", "480x844", "1024x900", "1280x900"]),
+    screenshotPaths: Object.freeze([
+      "_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-a-light.png",
+      "_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-b-dark.png",
+      "_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-a-converged.png",
+    ]),
+  }),
+});
+const SCREENSHOT_PATHS = Object.freeze(
+  Object.values(SMOKE_SCENARIO_EXPECTATIONS).flatMap(({ screenshotPaths }) => screenshotPaths)
+);
 const REQUIRED_SMOKE_ASSERTIONS = Object.freeze({
   "button-image": [
     "persisted-no-empty-binding",
@@ -1149,6 +1217,22 @@ function sameUniqueSet(actual, expected) {
     actual.length === expected.length &&
     new Set(actual).size === actual.length &&
     actual.every((value) => expected.includes(value))
+  );
+}
+
+function sameOrderedValues(actual, expected) {
+  return (
+    actual.length === expected.length && actual.every((value, index) => value === expected[index])
+  );
+}
+
+function scenarioMetadataMatchesExpectation(scenario) {
+  const expected = SMOKE_SCENARIO_EXPECTATIONS[scenario.kind];
+  return (
+    Boolean(expected) &&
+    scenario.theme === expected.theme &&
+    sameOrderedValues(scenario.viewports, expected.viewports) &&
+    sameOrderedValues(scenario.screenshotPaths, expected.screenshotPaths)
   );
 }
 
@@ -2421,6 +2505,10 @@ async function runReadOnlyAgent(prompt, options) {
 }
 
 const ASSISTANT_FIXTURE_ONLY_PATH = "tests/vitest/ui/assistant-panel-interaction.test.tsx";
+const ASSISTANT_ACTION_EXECUTOR_FIXTURE_ONLY_PATH =
+  "tests/unit/assistant/actionExecutorService.test.ts";
+const SCREEN_EDITOR_SECTIONS_FIXTURE_ONLY_PATH =
+  "tests/vitest/ui-integration/screen-editor-sections.test.tsx";
 const ASSISTANT_PREFERENCE_PROPERTY_FORMS = Object.freeze([
   '    "customScreens.entry.preferences": { version: 1, showFieldMetadata: false },\n',
   '    "customScreens.entry.preferences": {\n' +
@@ -2462,6 +2550,86 @@ function projectAssistantFixtureOnlySource(source) {
   });
 }
 
+const CUSTOM_SCREEN_PATCH_FIXTURE_REPLACEMENTS = Object.freeze([
+  Object.freeze([
+    "    definition: createNativeTestCustomScreenDefinition([\n" +
+      '      { id: "hero-1", type: "hero", data: { headline: "Old headline", body: "Keep body" } },\n' +
+      '      { id: "text-1", type: "rich-text-section", data: { title: "Keep sibling" } },\n' +
+      "    ]),",
+    "    definition: createNativeTestCustomScreenDefinition([\n" +
+      '      { id: "heading-1", type: "heading", data: { text: "Old headline", label: "Keep label" } },\n' +
+      '      { id: "text-1", type: "text", data: { content: "Keep sibling" } },\n' +
+      "    ]),",
+  ]),
+  Object.freeze(['        title: "Patch hero",', '        title: "Patch heading",']),
+  Object.freeze([
+    '    summary: "Patch screen hero headline.",',
+    '    summary: "Patch screen heading text.",',
+  ]),
+  Object.freeze([
+    '          blockId: "hero-1",\n' +
+      '          expectedBlockType: "hero",\n' +
+      '          dataPath: ["headline"],',
+    '          blockId: "heading-1",\n' +
+      '          expectedBlockType: "heading",\n' +
+      '          dataPath: ["text"],',
+  ]),
+  Object.freeze([
+    '  expect(deps.__state.customScreens[0]?.blocks[0]?.data.headline).toBe("New headline");\n' +
+      '  expect(deps.__state.customScreens[0]?.blocks[0]?.data.body).toBe("Keep body");\n' +
+      '  expect(deps.__state.customScreens[0]?.blocks[1]?.data.title).toBe("Keep sibling");',
+    '  expect(deps.__state.customScreens[0]?.blocks[0]?.data.text).toBe("New headline");\n' +
+      '  expect(deps.__state.customScreens[0]?.blocks[0]?.data.label).toBe("Keep label");\n' +
+      '  expect(deps.__state.customScreens[0]?.blocks[1]?.data.content).toBe("Keep sibling");',
+  ]),
+]);
+
+function canonicalizeCustomScreenPatchFixtureSource(source) {
+  const startMarker =
+    'test("executeAssistantActionPlan patches custom screen block data", async () => {';
+  const endMarker =
+    '\ntest("executeAssistantActionPlan deletes pages through explicit delete actions"';
+  const start = source.indexOf(startMarker);
+  const end = source.indexOf(endMarker, start);
+  if (start < 0 || end < 0) {
+    throw new Error("TASK-540 assistant action fixture boundary is missing");
+  }
+  let body = source.slice(start, end);
+  for (const [legacy, canonical] of CUSTOM_SCREEN_PATCH_FIXTURE_REPLACEMENTS) {
+    const legacyCount = body.split(legacy).length - 1;
+    const canonicalCount = body.split(canonical).length - 1;
+    if (legacyCount + canonicalCount !== 1) {
+      throw new Error("TASK-540 assistant action fixture form is missing or duplicated");
+    }
+    if (legacyCount === 1) body = body.replace(legacy, canonical);
+  }
+  return source.slice(0, start) + body + source.slice(end);
+}
+
+const SCREEN_EDITOR_SECTIONS_CACHE_BUS_MOCK_BEFORE =
+  'vi.mock("@/utils/cacheBus", () => ({\n' +
+  "  subscribeCacheEvents: vi.fn(() => () => undefined),\n" +
+  "}));";
+const SCREEN_EDITOR_SECTIONS_CACHE_BUS_MOCK_AFTER =
+  'vi.mock("@/utils/cacheBus", () => ({\n' +
+  "  createCacheEventOperationToken: () => Symbol(),\n" +
+  "  subscribeCacheEvents: vi.fn(() => () => undefined),\n" +
+  "}));";
+
+function canonicalizeScreenEditorSectionsCacheBusMockSource(source) {
+  const legacyCount = source.split(SCREEN_EDITOR_SECTIONS_CACHE_BUS_MOCK_BEFORE).length - 1;
+  const canonicalCount = source.split(SCREEN_EDITOR_SECTIONS_CACHE_BUS_MOCK_AFTER).length - 1;
+  if (legacyCount + canonicalCount !== 1) {
+    throw new Error("TASK-540 Screen editor sections cacheBus mock is missing or duplicated");
+  }
+  return legacyCount === 1
+    ? source.replace(
+        SCREEN_EDITOR_SECTIONS_CACHE_BUS_MOCK_BEFORE,
+        SCREEN_EDITOR_SECTIONS_CACHE_BUS_MOCK_AFTER
+      )
+    : source;
+}
+
 async function captureFixtureOnlySources(owner) {
   const sources = new Map();
   for (const relativePath of owner.fixtureOnlyFiles ?? []) {
@@ -2472,6 +2640,31 @@ async function captureFixtureOnlySources(owner) {
 
 async function verifyFixtureOnlySources(owner, beforeSources) {
   for (const relativePath of owner.fixtureOnlyFiles ?? []) {
+    if (relativePath === SCREEN_EDITOR_SECTIONS_FIXTURE_ONLY_PATH) {
+      const before = beforeSources.get(relativePath);
+      const expectedAfter = canonicalizeScreenEditorSectionsCacheBusMockSource(before);
+      const after = await readFile(ROOT + "/" + relativePath, "utf8");
+      if (
+        after !== expectedAfter ||
+        canonicalizeScreenEditorSectionsCacheBusMockSource(after) !== after
+      ) {
+        throw new Error(
+          "TASK-540 Screen editor sections fixture-only seam changed outside the exact cacheBus factory export"
+        );
+      }
+      continue;
+    }
+    if (relativePath === ASSISTANT_ACTION_EXECUTOR_FIXTURE_ONLY_PATH) {
+      const before = beforeSources.get(relativePath);
+      const expectedAfter = canonicalizeCustomScreenPatchFixtureSource(before);
+      const after = await readFile(ROOT + "/" + relativePath, "utf8");
+      if (after !== expectedAfter || canonicalizeCustomScreenPatchFixtureSource(after) !== after) {
+        throw new Error(
+          "TASK-540 assistant action fixture-only seam changed outside the exact canonical Screen block projection"
+        );
+      }
+      continue;
+    }
     if (relativePath !== ASSISTANT_FIXTURE_ONLY_PATH) {
       throw new Error("TASK-540 has no fixture-only verifier for " + relativePath);
     }
@@ -2830,10 +3023,13 @@ const LEAVES = Object.freeze(
         "core/services/customScreens/customScreenSchemas.ts",
         "core/services/customScreens/customScreenService.ts",
         "core/server/routes/customScreenRoutes.ts",
+        "tests/unit/assistant/actionExecutorService.test.ts",
         "tests/vitest/admin/custom-screen-schemas.test.ts",
         "tests/vitest/customScreens/screen-document-image-src.test.ts",
         "tests/integration/routes/customScreensRoutes.test.ts",
       ]),
+      repairAllowedFiles: Object.freeze(["tests/unit/assistant/actionExecutorService.test.ts"]),
+      fixtureOnlyFiles: Object.freeze(["tests/unit/assistant/actionExecutorService.test.ts"]),
       commands: Object.freeze([
         command("lintTypes", LINT_TYPES),
         command("lint", LINT),
@@ -2845,7 +3041,18 @@ const LEAVES = Object.freeze(
           ])
         ),
         command("dbPreflight", DB_PREFLIGHT),
-        command("bun", ENV + "bun test tests/integration/routes/customScreensRoutes.test.ts"),
+        command(
+          "bun",
+          ENV +
+            "bun test tests/integration/routes/customScreensRoutes.test.ts " +
+            "tests/unit/assistant/actionExecutorService.test.ts"
+        ),
+        command("workflowSyntax", "node --check _docs/_workflows/task-540-implement.mjs"),
+        command(
+          "workflowRepairResumeSelfTest",
+          "node _docs/_workflows/task-540-implement.mjs --self-test-repair-siblings"
+        ),
+        command("diffCheck", "git diff --check"),
       ]),
     },
     {
@@ -2978,10 +3185,18 @@ const LEAVES = Object.freeze(
         "tests/vitest/ui/custom-screen-route-params.test.ts",
         "tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx",
         "tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx",
+        "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
+      ]),
+      repairAllowedFiles: Object.freeze([
+        "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
+      ]),
+      fixtureOnlyFiles: Object.freeze([
+        "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
       ]),
       commands: Object.freeze([
         command("lintTypes", LINT_TYPES),
         command("lint", LINT),
+        command("rootTsc", ROOT_TSC),
         command(
           "vitest",
           vitestCommand([
@@ -2989,9 +3204,16 @@ const LEAVES = Object.freeze(
             "tests/vitest/ui/custom-screen-route-params.test.ts",
             "tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx",
             "tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx",
+            "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
             "tests/vitest/admin/cacheBus.test.ts",
           ])
         ),
+        command("workflowSyntax", "node --check _docs/_workflows/task-540-implement.mjs"),
+        command(
+          "workflowRepairResumeSelfTest",
+          "node _docs/_workflows/task-540-implement.mjs --self-test-repair-siblings"
+        ),
+        command("diffCheck", "git diff --check"),
       ]),
     },
     {
@@ -3030,6 +3252,8 @@ const LEAVES = Object.freeze(
         "core/admin/ui/custom-screens/hooks/useScreenEntryPreferences.ts",
         "core/server/routes/userSettingsRoutes.ts",
         "core/server/httpServer.ts",
+        "core/services/settings/securitySettings.ts",
+        "core/server/middleware/cors.ts",
         "tests/unit/settings/userSettingsService.test.ts",
         "tests/vitest/admin/userSettingsClient.test.ts",
         "tests/vitest/ui/admin-auth-identity.test.tsx",
@@ -3037,6 +3261,7 @@ const LEAVES = Object.freeze(
         "tests/vitest/ui/use-screen-entry-preferences.test.ts",
         "tests/vitest/ui-integration/custom-screen-entry-preferences-persistence.test.tsx",
         "tests/integration/routes/userSettings.test.ts",
+        "tests/integration/routes/cors.test.ts",
       ]),
       fixtureOnlyFiles: Object.freeze(["tests/vitest/ui/assistant-panel-interaction.test.tsx"]),
       commands: Object.freeze([
@@ -3059,7 +3284,8 @@ const LEAVES = Object.freeze(
           "bun",
           ENV +
             "bun test tests/unit/settings/userSettingsService.test.ts " +
-            "tests/integration/routes/userSettings.test.ts"
+            "tests/integration/routes/userSettings.test.ts " +
+            "tests/integration/routes/cors.test.ts"
         ),
       ]),
     },
@@ -3072,6 +3298,7 @@ const LEAVES = Object.freeze(
         "_docs/CONTENT_TYPES_SPEC.md",
         "_docs/CMS_SPEC.md",
         "_docs/CMS_API.md",
+        "_docs/SECURITY_SPEC.md",
         "_docs/ADMIN_CACHE.md",
         "_docs/ADMIN_CACHE_MAP.md",
         "docs/guide/coderso/custom-screen-records-and-entry-workflow.md",
@@ -3100,7 +3327,28 @@ const LEAVES = Object.freeze(
 const LEAF_BY_ID = new Map(LEAVES.map((leaf) => [leaf.id, leaf]));
 const leafRestrictionPrompt = (leaf) => {
   const restrictions = [];
-  if (leaf.fixtureOnlyFiles?.length) {
+  if (leaf.id === "540-01-L01" && leaf.fixtureOnlyFiles?.length) {
+    restrictions.push(
+      " This owned path is a fixture-only compatibility seam: " +
+        JSON.stringify(leaf.fixtureOnlyFiles) +
+        ". Change only the existing custom-screen.block.patch test from unsupported fresh-write " +
+        "hero/rich-text-section fixtures to canonical heading/text blocks, patch heading.data.text, " +
+        "and preserve the heading label plus sibling text content. Do not change production, loosen " +
+        "the Screen schema, add compatibility kinds, or weaken any assertion. The orchestrator " +
+        "mechanically verifies the exact projection."
+    );
+  } else if (leaf.id === "540-04-L04" && leaf.fixtureOnlyFiles?.length) {
+    restrictions.push(
+      " This owned path is a fixture-only compatibility seam: " +
+        JSON.stringify(leaf.fixtureOnlyFiles) +
+        ". Add or preserve only `createCacheEventOperationToken: () => Symbol(),` inside " +
+        "the existing @/utils/cacheBus mock immediately before subscribeCacheEvents. Every " +
+        "other byte, including all nine TASK-500 tests and all of their behavior assertions, " +
+        "imports, fixtures, and " +
+        "mocks, must remain byte-identical. Do not change production or replace the fresh-symbol " +
+        "factory with a shared token. The orchestrator mechanically verifies the exact projection."
+    );
+  } else if (leaf.fixtureOnlyFiles?.length) {
     restrictions.push(
       " These owned paths are fixture-only compatibility seams: " +
         JSON.stringify(leaf.fixtureOnlyFiles) +
@@ -3157,6 +3405,181 @@ const RESUME_TASK_STATUS = Object.freeze({
   active: "🚧 In Progress",
   done: "✅ Done",
 });
+
+function isTask540RepairSiblingStateAllowed(state) {
+  if (state.id === "540-06-L01") {
+    return (
+      state.status === RESUME_TASK_STATUS.active &&
+      !state.completed &&
+      !state.targetedGate &&
+      !state.revalidation &&
+      !state.repairPending
+    );
+  }
+  return (
+    state.status === RESUME_TASK_STATUS.done && Boolean(state.completed) && !state.repairPending
+  );
+}
+
+function assertTask540RepairSiblingStateContract() {
+  const cases = [
+    {
+      label: "ungated active closure sibling",
+      state: {
+        id: "540-06-L01",
+        status: RESUME_TASK_STATUS.active,
+        completed: null,
+        targetedGate: null,
+        revalidation: null,
+        repairPending: null,
+      },
+      allowed: true,
+    },
+    {
+      label: "gated active closure sibling",
+      state: {
+        id: "540-06-L01",
+        status: RESUME_TASK_STATUS.active,
+        completed: null,
+        targetedGate: "gate green",
+        revalidation: null,
+        repairPending: null,
+      },
+      allowed: false,
+    },
+    {
+      label: "revalidated active closure sibling",
+      state: {
+        id: "540-06-L01",
+        status: RESUME_TASK_STATUS.active,
+        completed: null,
+        targetedGate: null,
+        revalidation: "gate green",
+        repairPending: null,
+      },
+      allowed: false,
+    },
+    {
+      label: "prematurely done closure sibling",
+      state: {
+        id: "540-06-L01",
+        status: RESUME_TASK_STATUS.done,
+        completed: "2026-07-14",
+        repairPending: null,
+      },
+      allowed: false,
+    },
+    {
+      label: "completed source sibling",
+      state: {
+        id: "540-03-L01",
+        status: RESUME_TASK_STATUS.done,
+        completed: "2026-07-14",
+        repairPending: null,
+      },
+      allowed: true,
+    },
+    {
+      label: "active source sibling",
+      state: {
+        id: "540-03-L01",
+        status: RESUME_TASK_STATUS.active,
+        completed: null,
+        repairPending: null,
+      },
+      allowed: false,
+    },
+    {
+      label: "done source sibling without completion receipt",
+      state: {
+        id: "540-03-L01",
+        status: RESUME_TASK_STATUS.done,
+        completed: null,
+        repairPending: null,
+      },
+      allowed: false,
+    },
+    {
+      label: "done source sibling with pending repair",
+      state: {
+        id: "540-03-L01",
+        status: RESUME_TASK_STATUS.done,
+        completed: "2026-07-14",
+        repairPending: "generation duplicate / token duplicate",
+      },
+      allowed: false,
+    },
+    {
+      label: "second pending repair on closure sibling",
+      state: {
+        id: "540-06-L01",
+        status: RESUME_TASK_STATUS.active,
+        completed: null,
+        repairPending: "generation duplicate / token duplicate",
+      },
+      allowed: false,
+    },
+  ];
+  for (const testCase of cases) {
+    if (isTask540RepairSiblingStateAllowed(testCase.state) !== testCase.allowed) {
+      throw new Error("TASK-540 repair sibling self-test failed: " + testCase.label);
+    }
+  }
+  return cases.length;
+}
+
+function assertSmokeScenarioExpectationContract() {
+  const canonicalCases = Object.entries(SMOKE_SCENARIO_EXPECTATIONS).map(([kind, expectation]) => ({
+    label: "canonical " + kind,
+    scenario: {
+      kind,
+      theme: expectation.theme,
+      viewports: [...expectation.viewports],
+      screenshotPaths: [...expectation.screenshotPaths],
+    },
+    allowed: true,
+  }));
+  const cases = [
+    ...canonicalCases,
+    {
+      label: "wrong theme ownership",
+      scenario: { ...canonicalCases[0].scenario, theme: "dark" },
+      allowed: false,
+    },
+    {
+      label: "reordered responsive viewports",
+      scenario: {
+        ...canonicalCases.at(-1).scenario,
+        viewports: [...canonicalCases.at(-1).scenario.viewports].reverse(),
+      },
+      allowed: false,
+    },
+    {
+      label: "cross-flow screenshot ownership",
+      scenario: {
+        ...canonicalCases[0].scenario,
+        screenshotPaths: [...SMOKE_SCENARIO_EXPECTATIONS["tabs-content"].screenshotPaths],
+      },
+      allowed: false,
+    },
+  ];
+  if (!sameOrderedValues(Object.keys(SMOKE_SCENARIO_EXPECTATIONS), SMOKE_KINDS)) {
+    throw new Error("TASK-540 smoke scenario expectation order mismatch");
+  }
+  for (const testCase of cases) {
+    if (scenarioMetadataMatchesExpectation(testCase.scenario) !== testCase.allowed) {
+      throw new Error("TASK-540 smoke scenario expectation self-test failed: " + testCase.label);
+    }
+  }
+  return cases.length;
+}
+
+if (process.argv.includes("--self-test-repair-siblings")) {
+  const cases = assertTask540RepairSiblingStateContract();
+  const smokeScenarioCases = assertSmokeScenarioExpectationContract();
+  process.stdout.write(JSON.stringify({ pass: true, cases, smokeScenarioCases }));
+  process.exit(0);
+}
 
 function readTaskMetadataField(source, field) {
   const prefix = "**" + field + ":**";
@@ -3564,7 +3987,20 @@ async function requireTask540ChangelogIndex() {
   const versionLines = [...changelogSource.matchAll(/^Version:\s*(.+)$/gm)].map(
     (match) => match[1]
   );
-  const taskLines = [...changelogSource.matchAll(/^Tasks:\s*(.+)$/gm)].map((match) => match[1]);
+  const taskLines = changelogSource.match(/^Tasks:.*$/gm) ?? [];
+  const expectedTaskIds = CHANGELOG_TASKS_LINE.slice("Tasks: ".length).split(", ");
+  const actualTaskIds =
+    taskLines.length === 1
+      ? taskLines[0]
+          .slice("Tasks:".length)
+          .split(",")
+          .map((taskId) => taskId.trim())
+      : [];
+  const hasExactUniqueOrderedTaskIds =
+    new Set(expectedTaskIds).size === expectedTaskIds.length &&
+    new Set(actualTaskIds).size === actualTaskIds.length &&
+    actualTaskIds.length === expectedTaskIds.length &&
+    actualTaskIds.every((taskId, index) => taskId === expectedTaskIds[index]);
   if (
     !changelogSource.startsWith("# 1252 - " + CHANGELOG_TITLE_PREFIX + "\n") ||
     h1Lines.length !== 1 ||
@@ -3573,7 +4009,8 @@ async function requireTask540ChangelogIndex() {
     versionLines.length !== 1 ||
     versionLines[0] !== "Unreleased" ||
     taskLines.length !== 1 ||
-    !/\bTASK-540\b/.test(taskLines[0])
+    taskLines[0] !== CHANGELOG_TASKS_LINE ||
+    !hasExactUniqueOrderedTaskIds
   ) {
     throw new Error("TASK-540 changelog metadata does not match its pinned file/index contract");
   }
@@ -3827,12 +4264,7 @@ async function resolveLeafResumeState() {
     }
     for (const state of leafStates) {
       if (state.id === repairState.id) continue;
-      const isClosureLeaf = state.id === "540-06-L01";
-      const expectedStatus = isClosureLeaf ? RESUME_TASK_STATUS.active : RESUME_TASK_STATUS.done;
-      if (
-        state.status !== expectedStatus ||
-        (isClosureLeaf && !state.targetedGate && !state.revalidation)
-      ) {
+      if (!isTask540RepairSiblingStateAllowed(state)) {
         throw new Error("TASK-" + state.id + ": invalid sibling state during repair resume");
       }
     }
@@ -4669,6 +5101,13 @@ async function resumeInterruptedRepair(resumeState) {
   const repair = resumeState.repair;
   const leaf = repair ? LEAF_BY_ID.get(repair.id) : null;
   if (!repair || !leaf) throw new Error("TASK-540 repair resume owner is missing");
+  const repairOwner = leaf.repairAllowedFiles
+    ? Object.freeze({
+        ...leaf,
+        allowedFiles: leaf.repairAllowedFiles,
+        requiredFiles: leaf.repairAllowedFiles,
+      })
+    : leaf;
   const repairInvariant = await capturePersistedRepairInvariant(leaf, repair.pending);
   phase(leaf.phase);
   await runRepairMutationWithInvariant(
@@ -4680,12 +5119,12 @@ async function resumeInterruptedRepair(resumeState) {
       ". Re-read the entire exact leaf contract, current owned source/tests/docs and full diff, " +
       "then complete every still-missing behavior in that owner's contract. Old gate receipts " +
       "were invalidated and may not be recreated here. Edit only " +
-      JSON.stringify(leaf.allowedFiles) +
+      JSON.stringify(repairOwner.allowedFiles) +
       leafRestrictionPrompt(leaf) +
       ". Preserve every later Done leaf byte-identically. Return exact touchedFiles; no task, " +
       "board, changelog, workflow, stage, or commit changes.",
     { label: "repair-resume:" + leaf.id, phase: leaf.phase },
-    leaf,
+    repairOwner,
     leaf,
     repairInvariant,
     false
@@ -4699,12 +5138,12 @@ async function resumeInterruptedRepair(resumeState) {
     await runRepairMutationWithInvariant(
       COMMON +
         "\n\nFix only the persisted repair owner's verified gate defect within " +
-        JSON.stringify(leaf.allowedFiles) +
+        JSON.stringify(repairOwner.allowedFiles) +
         leafRestrictionPrompt(leaf) +
         ". Do not weaken an assertion. Failures:\n- " +
         gate.errors.join("\n- "),
       { label: "repair-resume-fix:" + leaf.id + ":" + attempt, phase: leaf.phase },
-      leaf,
+      repairOwner,
       leaf,
       repairInvariant,
       false
@@ -5426,6 +5865,9 @@ async function fixAuditFindings(findings, label, phaseName, { afterClosure = fal
       label + "-regate-green",
       remediation.mode === "repair-pending" ? remediation.repairPending : null
     );
+    if (ownerId !== "540-06-L01" && sourceOwnerTestHashesAtClosureBoundary !== null) {
+      await captureSourceOwnerTestHashBoundary(label + ":source-regate:" + ownerId);
+    }
   }
 }
 
@@ -5668,6 +6110,7 @@ async function validateSmoke(smoke, expectedPrefix) {
     !smoke.session.closed ||
     !smoke.session.finalAbsent ||
     !sameUniqueSet(scenarioKinds, SMOKE_KINDS) ||
+    !sameOrderedValues(Object.keys(SMOKE_SCENARIO_EXPECTATIONS), SMOKE_KINDS) ||
     new Set(scenarioIds).size !== scenarioIds.length ||
     !smoke.scenarios.every(
       (scenario) =>
@@ -6104,6 +6547,7 @@ async function validateSmoke(smoke, expectedPrefix) {
     const names = scenario.visibleAssertions.map(({ name }) => name);
     const exactOutputs = EXACT_SMOKE_ASSERTION_OUTPUTS[scenario.kind] ?? {};
     if (
+      !scenarioMetadataMatchesExpectation(scenario) ||
       new Set(names).size !== names.length ||
       !REQUIRED_SMOKE_ASSERTIONS[scenario.kind].every((name) => names.includes(name)) ||
       !Object.entries(exactOutputs).every(([name, actual]) =>
@@ -6125,7 +6569,7 @@ async function validateSmoke(smoke, expectedPrefix) {
       scenario.consoleWarnings.length > 0 ||
       scenario.pageErrors.length > 0
     ) {
-      throw new Error("TASK-540 visible scenario evidence mismatch: " + scenario.kind);
+      throw new Error("TASK-540 scenario metadata/visible evidence mismatch: " + scenario.kind);
     }
     for (const [assertionName, expectedCommand] of Object.entries(CONSOLE_CHANNEL_COMMANDS)) {
       const receipts = smoke.browserReceipts.filter(
@@ -6275,6 +6719,9 @@ async function runSmoke(attempt) {
           "for the three content-type records, and slug=null for every other kind. Capture " +
           "acquisition IDs and prove provenance. Run exactly these seven visible flows: " +
           JSON.stringify(SMOKE_KINDS) +
+          ". For each flow return the exact theme, ordered viewport list, and ordered screenshot " +
+          "association from " +
+          JSON.stringify(SMOKE_SCENARIO_EXPECTATIONS) +
           ". Run exactly " +
           ROUTE_EXPECTATION_COUNT +
           " method-aware interceptions and require one hit each: " +
@@ -6285,9 +6732,11 @@ async function runSmoke(attempt) {
           "unrouted in a separate full command before the real Save/Retry click. Delayed handlers " +
           "capture the old response, accept one hit, release through named latches, then unroute. " +
           "For related-a-refresh, install the route on the dirty entry tab, open the real related-A " +
-          "entry editor in a second tab of the same session, save a harmless visible value through " +
-          "that UI, and return to the first tab so its BroadcastChannel cache event starts the " +
-          "refresh. Never call an in-page cache-clear/cacheBus helper. Before every delayed release, " +
+          "entry editor in a second tab of the same session, change a harmless visible value, and " +
+          "save it with the exact separate CLI click command `playwright-cli -s=wf540smoke --raw " +
+          "click 'button:text-is(\"Save draft\")'`. Return to the first tab with a separate CLI " +
+          "command so that real entry mutation's BroadcastChannel cache event starts the refresh. " +
+          "Never call an in-page cache-clear/cacheBus helper. Before every delayed release, " +
           "record the ordered assertions and transient screenshot from " +
           JSON.stringify(PRE_RELEASE_ROUTE_ASSERTIONS) +
           " and " +
@@ -7634,7 +8083,10 @@ async function verifyClosureState(evidenceHash, generation) {
 
 async function runClosure(smoke, fullValidation, label, findings = []) {
   phase("Closure");
-  const testHashesBefore = await hashFiles([...TARGET_VITEST_FILES, ...TARGET_BUN_FILES]);
+  const sourceOwnerTestHashesBefore = requireSourceOwnerTestHashBoundary(
+    "TASK-540 closure " + label
+  );
+  const closureOwnerTestHashesBefore = await hashFiles(CLOSURE_OWNER_TEST_FILES);
   if (closureGeneration >= Number.MAX_SAFE_INTEGER) {
     throw new Error("TASK-540 closure generation cannot advance safely");
   }
@@ -7670,7 +8122,10 @@ async function runClosure(smoke, fullValidation, label, findings = []) {
           CHANGELOG_REL +
           " with exact H1 `# 1252 - " +
           CHANGELOG_TITLE_PREFIX +
-          "`, Date matching its filename, Version Unreleased, and a Tasks field containing TASK-540. " +
+          "`, Date matching its filename, Version Unreleased, and exactly one task metadata line " +
+          "byte-identical to `" +
+          CHANGELOG_TASKS_LINE +
+          "`. " +
           "Create exactly one four-cell index row ordered numerically between 1253 and 1250: its " +
           "title starts `" +
           CHANGELOG_TITLE_PREFIX +
@@ -7816,9 +8271,13 @@ async function runClosure(smoke, fullValidation, label, findings = []) {
     if (!resultPassed(mechanicalGate)) {
       throw new Error("TASK-540 post-status mechanical graph gate failed");
     }
-    const testHashesAfter = await hashFiles([...TARGET_VITEST_FILES, ...TARGET_BUN_FILES]);
-    if (!equalHashMaps(testHashesBefore, testHashesAfter)) {
-      throw new Error("TASK-540 closure changed a source-owner or aggregate test");
+    const sourceOwnerTestHashesAfter = await hashFiles(SOURCE_OWNER_TEST_FILES);
+    if (!equalHashMaps(sourceOwnerTestHashesBefore, sourceOwnerTestHashesAfter)) {
+      throw new Error("TASK-540 closure changed a source-owner test after its boundary");
+    }
+    const closureOwnerTestHashesAfter = await hashFiles(CLOSURE_OWNER_TEST_FILES);
+    if (!equalHashMaps(closureOwnerTestHashesBefore, closureOwnerTestHashesAfter)) {
+      throw new Error("TASK-540 closure changed its aggregate test after runClosure entry");
     }
     return closureValidation;
   } catch (error) {
@@ -7895,6 +8354,22 @@ async function hashFiles(paths) {
   return hashes;
 }
 
+async function captureSourceOwnerTestHashBoundary(label) {
+  if (typeof label !== "string" || label.length === 0) {
+    throw new Error("TASK-540 source-owner hash boundary requires a label");
+  }
+  sourceOwnerTestHashesAtClosureBoundary = Object.freeze({
+    ...(await hashFiles(SOURCE_OWNER_TEST_FILES)),
+  });
+}
+
+function requireSourceOwnerTestHashBoundary(label) {
+  if (!sourceOwnerTestHashesAtClosureBoundary) {
+    throw new Error(label + ": source-owner test hash boundary is missing");
+  }
+  return { ...sourceOwnerTestHashesAtClosureBoundary };
+}
+
 function equalHashMaps(left, right) {
   return (
     Object.keys(left).length === Object.keys(right).length &&
@@ -7947,8 +8422,10 @@ const startGate = await runReadOnlyAgent(
     "is current, branch is exactly `" +
     EXPECTED_BRANCH +
     "`, and no staged files exist. task-540-implement.mjs is the canonical remaining " +
-    "program owner; task-540-fix.mjs is accepted completed historical corrective evidence for " +
-    "540-04-L03/L04 and is not an active or conflicting owner. " +
+    "program owner. The current mutable task-540-fix.mjs is completed evidence only for the " +
+    "R01-before-R03 URL-control correction and is not an active or conflicting owner. Earlier " +
+    "five-owner corrective work, including R04/R05, is durable only in the affected task files' " +
+    "Revalidation/Post-Audit metadata and current gates, not attributed to the current workflow file. " +
     "Do not edit.",
   { label: "start-gate:540", phase: "Start gate", schema: RESULT_SCHEMA }
 );
@@ -7963,6 +8440,14 @@ if (
   throw new Error("TASK-540 resume state changed during the read-only start gate");
 }
 seedClosureGeneration(verifiedChangelogResumeState);
+
+if (verifiedResumeState.mode === "terminal") {
+  await captureSourceOwnerTestHashBoundary("closure-terminal-reopen");
+}
+
+if (verifiedResumeState.mode === "repair" && verifiedResumeState.repair?.id === "540-06-L01") {
+  await captureSourceOwnerTestHashBoundary("closure-repair-resume");
+}
 
 if (verifiedResumeState.mode === "repair") {
   await resumeInterruptedRepair(verifiedResumeState);
@@ -7999,12 +8484,19 @@ if (
 }
 
 for (const leaf of LEAVES.slice(executionResumeState.startIndex)) {
+  if (leaf.id === "540-06-L01" && sourceOwnerTestHashesAtClosureBoundary === null) {
+    await captureSourceOwnerTestHashBoundary("closure-leaf-entry");
+  }
   const persistedState = executionResumeState.leafStates.find(({ id }) => id === leaf.id);
   if (persistedState?.status === RESUME_TASK_STATUS.active && !persistedState.landed) {
     await resumeActiveUngatedLeaf(leaf);
   } else {
     await implementAndGate(leaf);
   }
+}
+
+if (sourceOwnerTestHashesAtClosureBoundary === null) {
+  await captureSourceOwnerTestHashBoundary("closure-post-resume-entry");
 }
 
 await runPostAudit();

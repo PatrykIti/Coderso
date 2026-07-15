@@ -179,7 +179,7 @@ test("a bound field and the static src control coexist in the image inspector", 
   }
 });
 
-// --- TASK-503-03: Image URL src filter (draft + normalizeScreenImageSrc write) ---
+// --- TASK-503-03 / TASK-540: Image URL src filter (draft + canonical Screen URL write) ---
 
 test('typing an unsafe scheme keeps the draft visible but commits src: ""', () => {
   const view = renderInspector({

@@ -7,10 +7,20 @@
 **Category:** Custom Screens / Schema / Security / Compatibility
 **Estimated Effort:** Medium
 **Dependencies:** TASK-498, TASK-500, TASK-505
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-07-13
-**Fix Started:** 2026-07-14
-**Fix Reason:** TASK-540-01-L01 post-audit fail-closed Button read-adapter repair.
+**Completed:** 2026-07-14
+**Repair Started:** 2026-07-14
+**Repair Reason:** Repository-wide Bun validation confirmed one stale Assistant test fixture crossing the strict V4 Screen write boundary with unsupported `hero`/`rich-text-section` kinds. TASK-540-01-L01 owns only that fixture and its sibling-preservation assertions; production/schema contracts stay strict.
+**Historical Completion:** 2026-07-14
+**Historical Corrective Revalidation:** 2026-07-14 — TASK-540-01-L01 passed 75/75 exact Vitest, 15/15 DB routes (82 expectations), core lint/typecheck, `git diff --check`, and a fresh zero-finding post-audit
+**Previous Fix Started:** 2026-07-14
+**Previous Fix Reason:** TASK-540-01-L01 must reject ASCII control characters before the shared URL helper can reinterpret TAB/LF/CR-confused protocol-relative values.
+**Prior Corrective Revalidation:** 2026-07-14 — TASK-540-01-L01 passed `core lint:types`, `core lint`, 74/74 exact Vitest, 15/15 DB routes (82 expectations), `git diff --check`, and a fresh read-only post-audit with zero findings before the control-character contract was added
+**Previous Revalidation:** 2026-07-14 — TASK-540-01-L01 passed its exact core static, 72/72 Vitest, and 15/15 DB route gates (82 expectations)
+**Previous Completion:** 2026-07-14
+**Previous Reopened:** 2026-07-14 (Screen URL control-character repair)
+**Reopened:** 2026-07-14 (Assistant Custom Screen block-patch fixture compatibility)
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -32,7 +42,7 @@ introduced.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-540-01-L01 | Reject unknown, sanitize URLs, unique Tabs, and prune ghosts | `core/services/customScreens/customScreenSchemas.ts`; narrow create-warning seam in `core/services/customScreens/customScreenService.ts`; narrow error-carrier import/mapping seam in `core/server/routes/customScreenRoutes.ts` | 🚧 In Progress |
+| TASK-540-01-L01 | Reject unknown, sanitize URLs, unique Tabs, and prune ghosts | strict Screen sources remain read-only; narrow fixture-only compatibility seam in `tests/unit/assistant/actionExecutorService.test.ts` | ✅ Done |
 
 ## Contract
 
@@ -46,17 +56,22 @@ introduced.
   never writes to storage. Duplicate legacy tab IDs retain the first matching
   slot; later repaired tabs receive stable suffixed IDs and empty slots rather
   than duplicated content.
-- Button write data accepts `action:"link"` only. Before stored-read normalization,
-  the adapter collects the IDs of `button`/repaired `actions` blocks carrying
-  `publish`/`custom`; it then maps them to `link`, removes static `href`, and prunes
-  only each matching `propPath:"href"` binding from both editor and row-template
-  bindings. The supported model therefore renders them disabled even when the legacy
-  record had a bound href, and an unrelated later save remains valid.
+- Button write data accepts `action:"link"` only. During the same recursive stored-read
+  repair that removes/reorders legacy Tabs slots, the adapter records provenance on the
+  exact repaired `button`/`actions` node whenever its own present action is anything
+  other than the exact string `link`. After normalization assigns the final block ID,
+  that structural provenance—not an independently flattened raw position—selects only
+  the matching `propPath:"href"` binding for pruning in editor and row-template
+  documents. Removed orphan slots cannot empty the whole document, reordered slots
+  cannot transfer provenance to another Button, and unsupported generated-ID Buttons
+  remain safely disabled.
 - This canonical `link` plus absent href pair is the parent's reserved safe-
   disabled read representation; `"disabled"` is not a second persisted action.
 - `sanitizeScreenAuthoringUrl` is the sole Screen URL-policy entry point for Button
-  href and image src. It rejects every backslash before internally delegating to the
-  shared Page helpers. During sequential rollout, the existing
+  href and image src. Before trimming or calling a shared helper it rejects every ASCII
+  control (`U+0000..U+001F` and `U+007F`) anywhere in the submitted string, plus every
+  backslash. This prevents TAB/LF/CR protocol-relative confusion without modifying the
+  Page-owned helpers. During sequential rollout, the existing
   `normalizeScreenImageSrc` export remains as a compatibility alias that delegates to
   `sanitizeScreenAuthoringUrl(value, "media")` and returns `""` for `null`. TASK-540-02
   migrates the Inspector and TASK-540-03 migrates the renderer; after those leaves no
@@ -105,14 +120,20 @@ introduced.
   existing warning sink. POST and PATCH responses surface the transient warning;
   stored-read cleanup is silent.
 - Safe relative/HTTP(S)/supported navigation URLs survive canonically; protocol-
-  relative, backslash-confused, executable, data/blob/file, and unsupported
+  relative, ASCII-control-confused, backslash-confused, executable, data/blob/file, and unsupported
   schemes fail closed under the owning profile.
 - Strict write rejects legacy unsupported actions, while stored read remains
   deterministic and disabled in both editor and row-template documents even when the
   repaired legacy button had an href binding. No disabled marker is persisted.
 
-## Completion
+## Historical corrective completion and current fixture repair
 
-The sole implementation leaf is complete and independently re-audited. Its targeted
-type, lint, pure-domain/UI, and DB route gates are green; aggregate TASK-540 validation
-and runtime smoke remain owned by TASK-540-06.
+The structural-provenance correction and its green gates remain historical evidence.
+The subsequent Screen-wrapper repair added original-string ASCII-control rejection
+before shared-helper delegation, then passed the leaf's final 75/75 Vitest and 15/15 DB
+route gates plus a fresh zero-finding post-audit before this subtask returned to Done.
+The current reopen changes only the stale Assistant block-patch fixture to canonical
+`heading.data.text` plus an independent `text.data.content` sibling and retains explicit
+same-block and sibling-block preservation assertions. No production or schema fallback
+is permitted. This subtask returns to Done only after its leaf passes the expanded exact
+gate including `tests/unit/assistant/actionExecutorService.test.ts`.

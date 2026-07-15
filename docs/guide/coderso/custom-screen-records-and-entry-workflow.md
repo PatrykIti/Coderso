@@ -66,10 +66,10 @@ definition.
    - custom screen record canvas,
    - inline editing for writable bound values,
    - selection-scoped presentation controls for supported existing-record blocks,
-   - `Save record`.
+   - `Save`.
 8. Use the default Entries editor when the custom screen is read-only or not yet
    complete for full editing.
-9. Use `Save record` only when the custom screen is in a writable mode and the
+9. Use `Save` only when the custom screen is in a writable mode and the
    required bindings exist.
 10. Use the custom screen preview to confirm that mapped record data appears in
     the intended admin-focused layout.

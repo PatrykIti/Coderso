@@ -10,9 +10,12 @@
 **Dependencies:** TASK-540-03-L01, TASK-540-04-L02
 **Status:** ✅ Done
 **Started:** 2026-07-13
-**Reopened:** 2026-07-14 (L04 post-audit: exact cache-event operation correlation)
 **Completed:** 2026-07-14
-**Revalidation Passed:** 2026-07-14 — `core lint:types`, `core lint`, root `tsc`, and the exact nine-file L03 Vitest matrix (155/155)
+**Reopened:** 2026-07-14 (final post-audit: cross-channel Screen list/detail reconciliation and complete fallback-list publication)
+**Revalidation:** 2026-07-14 — focused `customScreensClient` 40/40; exact nine-file L03 Vitest matrix 181/181; `core` lint/typecheck, root typecheck, and `git diff --check` all green
+**Post-Audit:** 2026-07-14 — PASS; zero HIGH, MEDIUM, or LOW findings on the corrected working tree
+**Previous Completion:** 2026-07-14
+**Previous Revalidation:** ✅ Passed (`core` lint/typecheck, root typecheck, and the exact nine-file Vitest matrix: 161/161)
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -42,10 +45,12 @@ read-only gate. TASK-540-06 owns the corresponding
 `_docs/CMS_API.md` correction at closure.
 L03 lands the cache-bus substrate and mutation-client forwarding together before L04;
 L04 consumes both seams read-only and never edits these four L03-owned files.
-The reopened corrective pass was dispatched by `_docs/_workflows/task-540-fix.mjs`.
-The canonical `_docs/_workflows/task-540-implement.mjs` treats this completed leaf and
-its correction evidence as landed, resumes at the first later unlanded leaf, and must
-never rerun this leaf.
+The later cache-authority correction edited only `customScreensClient.ts` plus its owner
+test; the already-gated cacheBus/editor/service seams stayed read-only. Its durable
+evidence is the Revalidation/Post-Audit metadata above and the current green gate, not
+the mutable `_docs/_workflows/task-540-fix.mjs`, which now records only the completed
+R01→R03 URL-control correction. The canonical `_docs/_workflows/task-540-implement.mjs`
+may treat this Done leaf as landed and resume at closure.
 
 ## Grounded anchors
 
@@ -386,6 +391,116 @@ or delete B's slot. A successful PATCH revokes any pending GET before it writes 
 normalized PATCH value, so a late pre-write GET cannot publish over it. Rejected PATCH
 does not revoke or prime. Non-force concurrent GET callers receive the same stored
 promise object.
+
+Custom Screen list/detail publication uses the same monotonic reconciliation model as
+the L01 Entry client, adapted to full Screen records:
+
+```ts
+type PendingVersioned<T> = Readonly<{ promise: Promise<T>; version: number }>;
+type ScreenItemAuthority = Readonly<{
+  version: number;
+  change: { kind: "replace"; value: CustomScreenRecord } | { kind: "delete" };
+}>;
+
+let pendingScreensList: PendingVersioned<CustomScreenRecord[]> | null = null;
+let committedScreensListVersion = 0;
+const pendingScreenDetails = new Map<
+  string,
+  PendingVersioned<CustomScreenRecord | null>
+>();
+const settledScreenItemAuthority = new Map<string, ScreenItemAuthority>();
+
+function publishScreenList(items, listVersion) {
+  if (listVersion <= committedScreensListVersion) return;
+  // Reconcile every server row with pending details and replace/delete mutations newer
+  // than this list start. Fill unrelated rows and preserve newer creates/tombstones.
+  const reconciled = reconcileCompleteScreenList(
+    items,
+    listVersion,
+    pendingScreenDetails,
+    settledScreenItemAuthority
+  );
+  invalidateScreenDetailsAtOrBefore(listVersion);
+  clearKnownScreenDetailsOmittedFrom(reconciled, listVersion); // unless newer authority
+  primeScreensListValue(reconciled);
+  reconciled.forEach((item) => writeScreenDetailValue(item, listVersion));
+  committedScreensListVersion = listVersion;
+  discardSettledScreenAuthorityAtOrBefore(listVersion);
+}
+
+function listCustomScreensCached(options) {
+  if (!options?.force) {
+    const cached = getCachedCustomScreens();
+    if (cached) return Promise.resolve(cached);
+    if (pendingScreensList) return pendingScreensList.promise;
+  }
+  const version = nextScreenPublicationVersion();
+  let pending!: PendingVersioned<CustomScreenRecord[]>;
+  const promise = listCustomScreens()
+    .then((items) => {
+      if (pendingScreensList === pending) publishScreenList(items, version);
+      return items;
+    })
+    .finally(() => {
+      if (pendingScreensList === pending) pendingScreensList = null;
+    });
+  pending = { promise, version };
+  pendingScreensList = pending;
+  return promise;
+}
+
+function getCustomScreenCached(id, options) {
+  if (!options?.force) {
+    const cached = getCachedCustomScreen(id);
+    if (cached) return Promise.resolve(cached);
+    const pending = pendingScreenDetails.get(id);
+    if (pending) return pending.promise;
+  }
+  const version = nextScreenPublicationVersion();
+  let pending!: PendingVersioned<CustomScreenRecord | null>;
+  const promise = getCustomScreen(id)
+    .then((item) => ({ kind: "detail" as const, item }))
+    .catch(async () => {
+      const items = await listCustomScreens();
+      return {
+        kind: "fallback-list" as const,
+        items,
+        item: items.find((entry) => entry.id === id) ?? null,
+      };
+    })
+    .then((result) => {
+      if (pendingScreenDetails.get(id) !== pending) return result.item;
+      if (result.kind === "fallback-list") {
+        publishScreenList(result.items, version); // complete, omission-cleaning list
+      } else {
+        settleScreenAuthority(id, {
+          version,
+          change: { kind: "replace", value: result.item },
+        });
+        mergeScreenIntoCurrentList(result.item); // preserve unrelated rows
+        writeScreenDetailValue(result.item, version);
+      }
+      return result.item;
+    })
+    .finally(() => removePendingScreenDetailOnlyIfExact(id, pending));
+  pending = { promise, version };
+  pendingScreenDetails.set(id, pending);
+  return promise;
+}
+```
+
+A full-list request and a detail request each capture a monotonic start version. In
+detail-start→newer-list, the newer list wins that item; in list-start→newer-detail, the
+list still fills unrelated rows while preserving the newer item. Both settlement orders
+produce the same final cache. A full-list version becomes committed only on successful
+exact publication; rejection clears only its pending record and cannot permanently block
+an older detail. Successful create/update/delete records a newer exact value/tombstone
+and revokes only the matching detail; an older full list may still fill unrelated rows
+but cannot undo that mutation. Rejected mutations allocate no authority. Every complete
+list publication—including detail fallback—clears known omitted detail rows unless a
+newer value/tombstone owns that ID. Explicit cache clear invalidates list/detail pending
+records, values, known IDs, and captured versions. Helpers that write reconciled values
+never mutate pending-request slots.
 
 The service first runs every repository row through the shared fail-closed stored-list
 normalizer; only after that complete list succeeds may the existing active-target pass
@@ -1440,6 +1555,12 @@ here and obey the commit-time generation contract.
   performs no revoke, prime, or broadcast; create/update called with an operation token
   deliver that exact token only to same-context list/detail subscribers, while omitted
   options remain backward compatible and no token appears in network/cache/event JSON.
+  Cross-channel cases cover detail-start→list and list-start→detail in both settlement
+  orders, preserve every unrelated row, publish the complete fallback list, preserve
+  successful create/update/delete authority against older lists, retain authority after
+  rejection, and invalidate every captured publisher on explicit clear. A fallback-list
+  racing a regular forced list in both orders obeys exact committed full-list authority;
+  complete publication evicts an omitted stale detail unless a newer replace/delete owns it.
 - `cacheBus.test.ts`: two `createCacheEventOperationToken()` calls return distinct symbol
   identities; an exact caller token reaches only same-context callbacks; remote delivery
   has no token; serialized storage/BroadcastChannel event keys remain exactly
@@ -1492,14 +1613,21 @@ resolution. Strict shared override normalization now rejects malformed draft-cac
 repository, and transport lists atomically; exact pending-promise and PATCH-revocation
 authority prevents stale cache publication.
 
-The earlier post-audit identified and corrected the serialized-route A→B→A reactivation risk,
-presentation-control exposure during failed/pending hydration, and a missing mounted
-forced-media regression. The final fresh read-only audit reported zero HIGH, MEDIUM, or
-LOW findings. Final validation: isolated restyle 15/15; the exact eight-file L03 matrix
-147/147; L02 cross-leaf prerequisites 44/44; full core typecheck and lint; workflow
-syntax, diff checks, and Page collision guards all passed. L03 was reopened after the
-L04 post-audit proved that same-context cache provenance alone cannot identify the exact
-editor save; the operation-token seam was implemented and re-gated before L03 returned
-to Done. The later single-writer reconcile moved the transport-neutral hook-call comment
-into this L03-owned source file. A fresh 2026-07-14 gate then passed `core lint:types`,
-`core lint`, root `tsc`, and all nine declared Vitest files (155/155).
+Earlier audits corrected the serialized-route A→B→A reactivation risk,
+presentation-control exposure during failed/pending hydration, a missing mounted
+forced-media regression, and exact same-context save correlation. The final family
+post-audit then reopened this leaf for two further issues: mixed-case requested media
+UUIDs did not project onto lowercase canonical records, and a late forced Screen detail
+read could overwrite a newer request or mutation in shared caches. The corrective pass
+now preserves the exact requested UUID key while matching records canonically, gives
+Screen list/detail requests identity-guarded publication authority, revokes matching
+pending detail reads on successful mutations, and keeps rejected requests retryable.
+A fresh 2026-07-14 gate initially passed `core lint:types`, `core lint`, root `tsc`, and
+all nine declared Vitest files (161/161). The subsequent cross-channel audit reproduced
+a detail/list ordering that either staled the target row or reduced a complete fallback
+list to its matched row. The corrected client now uses monotonic list/detail authority,
+publishes complete fallback lists, reconciles newer replace/delete mutations, evicts
+omitted details, and invalidates captured continuations on explicit clear. The expanded
+exact gate passed 181/181 with all static checks, and a fresh read-only post-audit
+reported zero findings. TASK-540-06 still owns the final family-wide audit, aggregate
+validation, runtime smoke, and closure evidence.

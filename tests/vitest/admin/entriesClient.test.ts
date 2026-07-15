@@ -817,6 +817,306 @@ test("getEntryCached reads from local storage", async () => {
   }
 });
 
+test.each(["first-resolves-first", "replacement-resolves-first"] as const)(
+  "entry detail reads publish only the newest forced request (%s)",
+  async (settleOrder) => {
+    const originalFetch = globalThis.fetch;
+    const { restore } = installLocalStorage();
+    const first = createDeferred<Response>();
+    const replacement = createDeferred<Response>();
+    let calls = 0;
+    const typeSlug = `detail-authority-${settleOrder}`;
+
+    globalThis.fetch = () => {
+      calls += 1;
+      return calls === 1 ? first.promise : replacement.promise;
+    };
+
+    try {
+      resetCaches(typeSlug);
+      const requestA = getEntryCached(typeSlug, "entry-1", { force: true });
+      const requestB = getEntryCached(typeSlug, "entry-1", { force: true });
+      expect(requestB).not.toBe(requestA);
+      if (settleOrder === "first-resolves-first") {
+        first.resolve(jsonResponse(entryDetail("entry-1", "Stale A")));
+        await requestA;
+        expect(getCachedEntryDetail(typeSlug, "entry-1")).toBeNull();
+        replacement.resolve(jsonResponse(entryDetail("entry-1", "Current B")));
+        await requestB;
+      } else {
+        replacement.resolve(jsonResponse(entryDetail("entry-1", "Current B")));
+        await requestB;
+        first.resolve(jsonResponse(entryDetail("entry-1", "Stale A")));
+        await requestA;
+      }
+      expect(getCachedEntryDetail(typeSlug, "entry-1")?.title).toBe("Current B");
+    } finally {
+      resetCaches(typeSlug);
+      restore();
+      globalThis.fetch = originalFetch;
+    }
+  }
+);
+
+test("entry detail requests share identity, clear rejected authority, and retry", async () => {
+  const originalFetch = globalThis.fetch;
+  const { restore } = installLocalStorage();
+  const first = createDeferred<Response>();
+  const second = createDeferred<Response>();
+  let calls = 0;
+  const typeSlug = "detail-retry";
+
+  globalThis.fetch = () => {
+    calls += 1;
+    return calls === 1 ? first.promise : second.promise;
+  };
+
+  try {
+    resetCaches(typeSlug);
+    const requestA = getEntryCached(typeSlug, "entry-1");
+    expect(getEntryCached(typeSlug, "entry-1")).toBe(requestA);
+    first.reject(new Error("temporary"));
+    await expect(requestA).rejects.toThrow("temporary");
+    const retry = getEntryCached(typeSlug, "entry-1");
+    expect(retry).not.toBe(requestA);
+    second.resolve(jsonResponse(entryDetail("entry-1", "Recovered")));
+    await expect(retry).resolves.toMatchObject({ title: "Recovered" });
+    expect(calls).toBe(2);
+  } finally {
+    resetCaches(typeSlug);
+    restore();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("successful entry mutation revokes only its matching late detail read", async () => {
+  const originalFetch = globalThis.fetch;
+  const { restore } = installLocalStorage();
+  const staleTarget = createDeferred<Response>();
+  const other = createDeferred<Response>();
+  const typeSlug = "detail-mutation-authority";
+
+  globalThis.fetch = (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) return Promise.resolve(jsonResponse({ token: "csrf" }));
+    if (init?.method === "GET") {
+      return url.endsWith("/entry-target") ? staleTarget.promise : other.promise;
+    }
+    return Promise.resolve(jsonResponse(entryDetail("entry-target", "Mutation wins")));
+  };
+
+  try {
+    resetCsrfToken();
+    resetCaches(typeSlug);
+    const staleRequest = getEntryCached(typeSlug, "entry-target", { force: true });
+    const otherRequest = getEntryCached(typeSlug, "entry-other", { force: true });
+    await updateEntry(typeSlug, "entry-target", { title: "Mutation wins" });
+    staleTarget.resolve(jsonResponse(entryDetail("entry-target", "Stale read")));
+    other.resolve(jsonResponse(entryDetail("entry-other", "Other remains authoritative")));
+    await Promise.all([staleRequest, otherRequest]);
+    expect(getCachedEntryDetail(typeSlug, "entry-target")?.title).toBe("Mutation wins");
+    expect(getCachedEntryDetail(typeSlug, "entry-other")?.title).toBe(
+      "Other remains authoritative"
+    );
+  } finally {
+    resetCaches(typeSlug);
+    restore();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("rejected entry mutation leaves the matching detail read authoritative", async () => {
+  const originalFetch = globalThis.fetch;
+  const { restore } = installLocalStorage();
+  const pending = createDeferred<Response>();
+  const typeSlug = "detail-rejected-mutation";
+
+  globalThis.fetch = (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) return Promise.resolve(jsonResponse({ token: "csrf" }));
+    if (init?.method === "GET") return pending.promise;
+    return Promise.resolve(
+      jsonResponse({ error: { code: "entry_update_failed", message: "failed" } }, 500)
+    );
+  };
+
+  try {
+    resetCsrfToken();
+    resetCaches(typeSlug);
+    const read = getEntryCached(typeSlug, "entry-1");
+    await expect(updateEntry(typeSlug, "entry-1", { title: "Rejected" })).rejects.toThrow();
+    expect(getEntryCached(typeSlug, "entry-1")).toBe(read);
+    pending.resolve(jsonResponse(entryDetail("entry-1", "Authoritative read")));
+    await read;
+    expect(getCachedEntryDetail(typeSlug, "entry-1")?.title).toBe("Authoritative read");
+  } finally {
+    resetCaches(typeSlug);
+    restore();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test.each([
+  { startOrder: "detail-then-list", settleOrder: "first-started-first" },
+  { startOrder: "detail-then-list", settleOrder: "second-started-first" },
+  { startOrder: "list-then-detail", settleOrder: "first-started-first" },
+  { startOrder: "list-then-detail", settleOrder: "second-started-first" },
+] as const)(
+  "entry list/detail reconciliation is order-independent ($startOrder, $settleOrder)",
+  async ({ startOrder, settleOrder }) => {
+    const originalFetch = globalThis.fetch;
+    const { restore, storage } = installLocalStorage();
+    const detailResponse = createDeferred<Response>();
+    const listResponse = createDeferred<Response>();
+    const typeSlug = `cross-channel-${startOrder}-${settleOrder}`;
+
+    globalThis.fetch = (input) => {
+      const url = String(input);
+      if (url.endsWith(`/content/${typeSlug}/entries/entry-target`)) {
+        return detailResponse.promise;
+      }
+      if (url.endsWith(`/content/${typeSlug}/entries`)) return listResponse.promise;
+      throw new Error(`unexpected_cross_channel_read:${url}`);
+    };
+
+    try {
+      resetCaches(typeSlug);
+      storage.setItem(
+        cacheKeys.entryDetail(typeSlug, "entry-omitted"),
+        JSON.stringify({
+          value: entryDetail("entry-omitted", "Observed before list"),
+          savedAt: Date.now(),
+        })
+      );
+      expect(getCachedEntryDetail(typeSlug, "entry-omitted")?.title).toBe("Observed before list");
+      let detailRequest!: Promise<EntryDetail>;
+      let listRequest!: Promise<EntrySummary[]>;
+      if (startOrder === "detail-then-list") {
+        detailRequest = getEntryCached(typeSlug, "entry-target", { force: true });
+        listRequest = listEntriesCached(typeSlug, { force: true });
+      } else {
+        listRequest = listEntriesCached(typeSlug, { force: true });
+        detailRequest = getEntryCached(typeSlug, "entry-target", { force: true });
+      }
+
+      const settleDetail = async () => {
+        detailResponse.resolve(jsonResponse(entryDetail("entry-target", "Detail authority")));
+        await detailRequest;
+      };
+      const settleList = async () => {
+        listResponse.resolve(
+          jsonResponse([
+            entrySummary("entry-target", "List authority"),
+            entrySummary("entry-unrelated", "Unrelated"),
+          ])
+        );
+        await listRequest;
+      };
+
+      const firstSettlement = startOrder === "detail-then-list" ? settleDetail : settleList;
+      const secondSettlement = startOrder === "detail-then-list" ? settleList : settleDetail;
+      if (settleOrder === "first-started-first") {
+        await firstSettlement();
+        await secondSettlement();
+      } else {
+        await secondSettlement();
+        await firstSettlement();
+      }
+
+      expect(getCachedEntries(typeSlug)?.map((entry) => entry.id)).toEqual([
+        "entry-target",
+        "entry-unrelated",
+      ]);
+      const expectedTitle =
+        startOrder === "detail-then-list" ? "List authority" : "Detail authority";
+      expect(getCachedEntries(typeSlug)?.[0]?.title).toBe(expectedTitle);
+      expect(getCachedEntryDetail(typeSlug, "entry-omitted")).toBeNull();
+      if (startOrder === "detail-then-list") {
+        expect(getCachedEntryDetail(typeSlug, "entry-target")).toBeNull();
+      } else {
+        expect(getCachedEntryDetail(typeSlug, "entry-target")?.title).toBe(expectedTitle);
+      }
+    } finally {
+      resetCaches(typeSlug);
+      restore();
+      globalThis.fetch = originalFetch;
+    }
+  }
+);
+
+test("a rejected newer list leaves an older detail request publishable", async () => {
+  const originalFetch = globalThis.fetch;
+  const { restore } = installLocalStorage();
+  const detailResponse = createDeferred<Response>();
+  const listResponse = createDeferred<Response>();
+  const typeSlug = "rejected-list-keeps-detail";
+
+  globalThis.fetch = (input) => {
+    const url = String(input);
+    return url.endsWith("/entry-target") ? detailResponse.promise : listResponse.promise;
+  };
+
+  try {
+    resetCaches(typeSlug);
+    const detailRequest = getEntryCached(typeSlug, "entry-target", { force: true });
+    const listRequest = listEntriesCached(typeSlug, { force: true });
+    const listFailure = expect(listRequest).rejects.toThrow("newer-list-rejected");
+    listResponse.reject(new Error("newer-list-rejected"));
+    await listFailure;
+    expect(getEntryCached(typeSlug, "entry-target")).toBe(detailRequest);
+
+    detailResponse.resolve(jsonResponse(entryDetail("entry-target", "Detail survives")));
+    await detailRequest;
+    expect(getCachedEntries(typeSlug)?.map((entry) => entry.id)).toEqual(["entry-target"]);
+    expect(getCachedEntryDetail(typeSlug, "entry-target")?.title).toBe("Detail survives");
+  } finally {
+    resetCaches(typeSlug);
+    restore();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("scoped clear invalidates captured entry list/detail publishers and known detail storage", async () => {
+  const originalFetch = globalThis.fetch;
+  const { restore, storage } = installLocalStorage();
+  const detailResponse = createDeferred<Response>();
+  const listResponse = createDeferred<Response>();
+  const typeSlug = "scoped-clear-authority";
+
+  globalThis.fetch = (input) => {
+    const url = String(input);
+    return url.endsWith("/entry-target") ? detailResponse.promise : listResponse.promise;
+  };
+
+  try {
+    resetCaches(typeSlug);
+    storage.setItem(
+      cacheKeys.entryDetail(typeSlug, "entry-known"),
+      JSON.stringify({
+        value: entryDetail("entry-known", "Known before clear"),
+        savedAt: Date.now(),
+      })
+    );
+    expect(getCachedEntryDetail(typeSlug, "entry-known")?.title).toBe("Known before clear");
+
+    const listRequest = listEntriesCached(typeSlug, { force: true });
+    const detailRequest = getEntryCached(typeSlug, "entry-target", { force: true });
+    clearEntriesCache(typeSlug);
+    expect(storage.getItem(cacheKeys.entryDetail(typeSlug, "entry-known"))).toBeNull();
+
+    listResponse.resolve(jsonResponse([entrySummary("entry-list-late")]));
+    detailResponse.resolve(jsonResponse(entryDetail("entry-target", "Detail late")));
+    await Promise.all([listRequest, detailRequest]);
+    expect(getCachedEntries(typeSlug)).toBeNull();
+    expect(getCachedEntryDetail(typeSlug, "entry-target")).toBeNull();
+    expect(getCachedEntryDetail(typeSlug, "entry-known")).toBeNull();
+  } finally {
+    resetCaches(typeSlug);
+    restore();
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("entry list caches expose one authoritative promise and reuse the published value", async () => {
   const originalFetch = globalThis.fetch;
   const { restore } = installLocalStorage();
@@ -1034,7 +1334,7 @@ test("entry promise caches survive superseded rejection and retry authoritative 
   }
 });
 
-test("every entry upsert path revokes a late read with present and absent list caches", async () => {
+test("every entry upsert path reconciles an older list with present and absent caches", async () => {
   const originalFetch = globalThis.fetch;
   const { restore, storage } = installLocalStorage();
   const operations = [
@@ -1094,11 +1394,18 @@ test("every entry upsert path revokes a late read with present and absent list c
         if (cacheState === "present") expect(getCachedEntries(typeSlug)).toHaveLength(2);
         else expect(getCachedEntries(typeSlug)).toHaveLength(1);
 
-        pendingRead.resolve(jsonResponse([entrySummary("stale-server-row")]));
-        await staleRead;
-        expect(getCachedEntries(typeSlug)?.some((entry) => entry.id === "stale-server-row")).toBe(
-          false
+        pendingRead.resolve(
+          jsonResponse([
+            entrySummary("entry-target", "Stale server target"),
+            entrySummary("server-unrelated", "Server unrelated"),
+          ])
         );
+        await staleRead;
+        expect(getCachedEntries(typeSlug)?.map((entry) => entry.id)).toEqual([
+          "entry-target",
+          "server-unrelated",
+        ]);
+        expect(getCachedEntries(typeSlug)?.[0]?.title).toBe(`Mutation ${operation.name}`);
         await expect(listEntriesCached(typeSlug)).resolves.toEqual(getCachedEntries(typeSlug));
         expect(listReads).toBe(1);
         clearEntriesCache(typeSlug);
@@ -1116,7 +1423,7 @@ test("every entry upsert path revokes a late read with present and absent list c
   }
 });
 
-test("publish and unpublish revoke late reads without inventing absent list caches", async () => {
+test("publish and unpublish reconcile exact status over an older complete list", async () => {
   const originalFetch = globalThis.fetch;
   const { restore, storage } = installLocalStorage();
   const operations = [
@@ -1163,13 +1470,22 @@ test("publish and unpublish revoke late reads without inventing absent list cach
           expect(getCachedEntries(typeSlug)).toBeNull();
         }
 
-        pendingRead.resolve(jsonResponse([entrySummary("stale-status-row")]));
+        pendingRead.resolve(
+          jsonResponse([
+            entrySummary(
+              "entry-target",
+              "Stale status target",
+              operation.name === "publish" ? "draft" : "published"
+            ),
+            entrySummary("status-server-unrelated"),
+          ])
+        );
         await staleRead;
-        if (cacheState === "present") {
-          expect(getCachedEntries(typeSlug)?.[0]?.status).toBe(operation.expected);
-        } else {
-          expect(getCachedEntries(typeSlug)).toBeNull();
-        }
+        expect(getCachedEntries(typeSlug)?.map((entry) => entry.id)).toEqual([
+          "entry-target",
+          "status-server-unrelated",
+        ]);
+        expect(getCachedEntries(typeSlug)?.[0]?.status).toBe(operation.expected);
         clearEntriesCache(typeSlug);
       }
     }
@@ -1185,7 +1501,7 @@ test("publish and unpublish revoke late reads without inventing absent list cach
   }
 });
 
-test("delete revokes late reads with and without a current entry list", async () => {
+test("delete reconciles its tombstone over an older list with and without a cache", async () => {
   const originalFetch = globalThis.fetch;
   const { restore, storage } = installLocalStorage();
 
@@ -1221,19 +1537,172 @@ test("delete revokes late reads with and without a current entry list", async ()
         expect(getCachedEntries(typeSlug)).toBeNull();
       }
 
-      pendingRead.resolve(jsonResponse([entrySummary("stale-deleted-row")]));
+      pendingRead.resolve(
+        jsonResponse([entrySummary("entry-target"), entrySummary("entry-keeper")])
+      );
       await staleRead;
-      if (cacheState === "present") {
-        expect(getCachedEntries(typeSlug)?.map((entry) => entry.id)).toEqual(["entry-keeper"]);
-      } else {
-        expect(getCachedEntries(typeSlug)).toBeNull();
-      }
+      expect(getCachedEntries(typeSlug)?.map((entry) => entry.id)).toEqual(["entry-keeper"]);
       clearEntriesCache(typeSlug);
     }
   } finally {
     clearEntriesCache("delete-present");
     clearEntriesCache("delete-absent");
     clearAllEntriesCache();
+    restore();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("settled replace/status/delete survives an older list and newer rejected detail", async () => {
+  const originalFetch = globalThis.fetch;
+  const { restore, storage } = installLocalStorage();
+  const operations = [
+    {
+      name: "replace",
+      run: (typeSlug: string) =>
+        updateEntry(typeSlug, "entry-target", { title: "Mutation replace" }),
+    },
+    {
+      name: "status",
+      run: (typeSlug: string) => publishEntry(typeSlug, "entry-target"),
+    },
+    {
+      name: "delete",
+      run: (typeSlug: string) => deleteEntry(typeSlug, "entry-target"),
+    },
+  ] as const;
+
+  try {
+    for (const cacheState of ["present", "absent"] as const) {
+      for (const operation of operations) {
+        const typeSlug = `settled-vs-pending-${cacheState}-${operation.name}`;
+        const listResponse = createDeferred<Response>();
+        const detailResponse = createDeferred<Response>();
+        resetCsrfToken();
+        resetCaches(typeSlug);
+        if (cacheState === "present") {
+          storage.setItem(
+            cacheKeys.entriesList(typeSlug),
+            JSON.stringify({
+              value: [entrySummary("entry-target", "Cached target"), entrySummary("cached-only")],
+              savedAt: Date.now(),
+            })
+          );
+          storage.setItem(
+            cacheKeys.entryDetail(typeSlug, "entry-target"),
+            JSON.stringify({
+              value: entryDetail("entry-target", "Cached target"),
+              savedAt: Date.now(),
+            })
+          );
+          expect(getCachedEntryDetail(typeSlug, "entry-target")?.title).toBe("Cached target");
+        }
+
+        globalThis.fetch = (input, init) => {
+          const url = String(input);
+          if (url.endsWith("/auth/csrf")) return Promise.resolve(jsonResponse({ token: "csrf" }));
+          if (init?.method === "GET" && url.endsWith(`/content/${typeSlug}/entries`)) {
+            return listResponse.promise;
+          }
+          if (init?.method === "GET" && url.endsWith("/entry-target")) {
+            return detailResponse.promise;
+          }
+          if (operation.name === "replace") {
+            return Promise.resolve(
+              jsonResponse(entryDetail("entry-target", "Mutation replace", "published"))
+            );
+          }
+          return Promise.resolve(jsonResponse({ ok: true }));
+        };
+
+        const olderList = listEntriesCached(typeSlug, { force: cacheState === "present" });
+        await operation.run(typeSlug);
+        const newerDetail = getEntryCached(typeSlug, "entry-target", { force: true });
+        const detailFailure = expect(newerDetail).rejects.toThrow("newer-detail-rejected");
+
+        listResponse.resolve(
+          jsonResponse([
+            entrySummary("entry-target", "Stale server target", "draft"),
+            entrySummary("server-unrelated"),
+          ])
+        );
+        await olderList;
+        detailResponse.reject(new Error("newer-detail-rejected"));
+        await detailFailure;
+
+        const cached = getCachedEntries(typeSlug);
+        if (operation.name === "delete") {
+          expect(cached?.map((entry) => entry.id)).toEqual(["server-unrelated"]);
+          expect(getCachedEntryDetail(typeSlug, "entry-target")).toBeNull();
+        } else {
+          expect(cached?.map((entry) => entry.id)).toEqual(["entry-target", "server-unrelated"]);
+          if (operation.name === "replace") {
+            expect(cached?.[0]?.title).toBe("Mutation replace");
+            expect(getCachedEntryDetail(typeSlug, "entry-target")?.title).toBe("Mutation replace");
+          } else {
+            expect(cached?.[0]?.status).toBe("published");
+            if (cacheState === "present") {
+              expect(getCachedEntryDetail(typeSlug, "entry-target")?.status).toBe("published");
+            } else {
+              expect(getCachedEntryDetail(typeSlug, "entry-target")).toBeNull();
+            }
+          }
+        }
+        clearEntriesCache(typeSlug);
+      }
+    }
+  } finally {
+    for (const cacheState of ["present", "absent"] as const) {
+      for (const operation of operations) {
+        clearEntriesCache(`settled-vs-pending-${cacheState}-${operation.name}`);
+      }
+    }
+    clearAllEntriesCache();
+    restore();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a status mutation composes with an earlier replacement over an older list", async () => {
+  const originalFetch = globalThis.fetch;
+  const { restore } = installLocalStorage();
+  const listResponse = createDeferred<Response>();
+  const typeSlug = "composed-replace-status";
+
+  globalThis.fetch = (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) return Promise.resolve(jsonResponse({ token: "csrf" }));
+    if (init?.method === "GET") return listResponse.promise;
+    if (init?.method === "PATCH") {
+      return Promise.resolve(jsonResponse(entryDetail("entry-target", "Replacement", "draft")));
+    }
+    return Promise.resolve(jsonResponse({ ok: true }));
+  };
+
+  try {
+    resetCsrfToken();
+    resetCaches(typeSlug);
+    const olderList = listEntriesCached(typeSlug);
+    await updateEntry(typeSlug, "entry-target", { title: "Replacement" });
+    await publishEntry(typeSlug, "entry-target");
+
+    listResponse.resolve(
+      jsonResponse([
+        entrySummary("entry-target", "Stale server target", "draft"),
+        entrySummary("entry-unrelated"),
+      ])
+    );
+    await olderList;
+    expect(getCachedEntries(typeSlug)?.map((entry) => entry.id)).toEqual([
+      "entry-target",
+      "entry-unrelated",
+    ]);
+    expect(getCachedEntries(typeSlug)?.[0]).toMatchObject({
+      status: "published",
+      title: "Replacement",
+    });
+  } finally {
+    resetCaches(typeSlug);
     restore();
     globalThis.fetch = originalFetch;
   }

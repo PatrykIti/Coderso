@@ -8,10 +8,23 @@
 **Category:** Custom Screens / Schema / Security
 **Estimated Effort:** Medium
 **Dependencies:** None inside TASK-540
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-07-13
-**Fix Started:** 2026-07-14
-**Fix Reason:** Post-audit found that an arbitrary present non-`link` stored Button action could retain its `href` binding after read coercion.
+**Completed:** 2026-07-14
+**Repair Started:** 2026-07-14
+**Repair Reason:** Repository-wide Bun validation confirmed that the Assistant Custom Screen block-patch test still constructs unsupported `hero` and `rich-text-section` blocks at the strict V4 write boundary. R01 owns a fixture-only update to canonical fixed kinds and data paths while preserving the selected block's sibling data and the untouched sibling block; production/schema behavior must not loosen.
+**Revalidation Passed:** generation 18cd43dd8f0f89cff684d430e2f38b9d / token 1b3e7a821edc208050497e6675544347 / gate green
+**Historical Completion:** 2026-07-14
+**Historical Revalidation:** 2026-07-14 — `core lint:types`, `core lint`, the exact schema/image Vitest matrix (75/75), the DB-backed Custom Screens route suite (15/15; 82 expectations), and `git diff --check`
+**Historical Post-Audit:** 2026-07-14 — PASS; zero HIGH, MEDIUM, or LOW findings for the original-string ASCII-control repair and its exact five-value regression matrix
+**Previous Fix Started:** 2026-07-14
+**Previous Fix Reason:** Final closure audit reproduced that TAB/LF/CR and other ASCII controls can survive the Screen wrapper and be reinterpreted at a URL sink; the wrapper must reject them before Page-helper delegation.
+**Prior Corrective Revalidation:** 2026-07-14 — `core lint:types`, `core lint`, the exact schema/image Vitest matrix (74/74), the DB-backed Custom Screens route suite (15/15; 82 expectations), and `git diff --check`, before the control-character contract was added
+**Prior Corrective Post-Audit:** 2026-07-14 — PASS; zero HIGH, MEDIUM, or LOW findings on the provenance-corrected working tree before the control-character corpus was added
+**Previous Revalidation:** 2026-07-14 — `core lint:types`, `core lint`, the exact schema/image Vitest matrix (72/72), and the DB-backed Custom Screens route suite (15/15; 82 expectations)
+**Previous Completion:** 2026-07-14
+**Previous Reopened:** 2026-07-14 (Screen URL control-character repair)
+**Reopened:** 2026-07-14 (Assistant Custom Screen block-patch fixture compatibility)
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -28,6 +41,32 @@
   `tests/vitest/admin/custom-screen-schemas.test.ts`,
   `tests/vitest/customScreens/screen-document-image-src.test.ts`,
   `tests/integration/routes/customScreensRoutes.test.ts`
+- fixture-only compatibility update in
+  `tests/unit/assistant/actionExecutorService.test.ts`, limited to the existing
+  `executeAssistantActionPlan patches custom screen block data` case
+
+For the completed control-character correction, the exact writable implementation set was
+`core/services/customScreens/customScreenSchemas.ts` plus
+`tests/vitest/customScreens/screen-document-image-src.test.ts`. The other historical
+owner files and named gate suites are read-only unless a separately verified finding
+reopens their contract. The Page-owned sanitizer module remains read-only.
+
+For the current Assistant repair, the only writable test region is the existing block-
+patch case in `tests/unit/assistant/actionExecutorService.test.ts`. Replace its
+unsupported Screen `hero`/`rich-text-section` fixture and matching action identifiers,
+type, path, and assertions with canonical fixed-kind equivalents. Use a `heading` block
+patched at `dataPath: ["text"]` and an independent `text` sibling; assert the patched
+heading text, another unchanged property on that same heading, and the untouched text
+sibling's content. Do not edit shared test helpers, another Assistant case, production
+Assistant code, the Screen schema/normalizer, or compatibility arms. The strict V4
+boundary remains authoritative and receives no fallback for stale fixtures.
+
+While this earlier source owner carries `Repair Pending`, TASK-540-06-L01 is the sole
+later leaf allowed to remain `🚧 In Progress`, and it remains deliberately ungated with
+neither `Targeted Gate Passed` nor `Revalidation Passed`. Every other source sibling
+must be `✅ Done` with its `Completed` receipt. Never fabricate gate evidence for the
+active closure leaf. `_docs/_workflows/task-540-implement.mjs` owns this restart
+invariant and exposes `--self-test-repair-siblings` as its executable projection.
 
 Do not edit route registration/handlers, `ScreenBlockLibrary.tsx`,
 `screenDocumentOps.ts`, renderer/UI files,
@@ -78,6 +117,73 @@ Re-grep these symbols before editing; line numbers may shift.
   values or rejected unknown-key names.
 - **Anti-abuse/secrets:** this leaf adds no public write, so nonce/captcha are not
   applicable. It adds no token, secret, browser storage, logging, or debug payload.
+
+## Current fixture-repair pseudocode
+
+Keep the existing
+`test("executeAssistantActionPlan patches custom screen block data", async () => ...)`
+and its existing `createNativeTestCustomScreenDefinition(blocks, bindings?)` helper.
+Change only that test's native Screen fixture, the exact plan summary/action title and
+matching action coordinates shown below, and the final preservation assertions. Every
+other existing plan/action envelope field and value remains byte-identical:
+
+```ts
+const screen = await deps.createCustomScreen({
+  // Keep the existing name/content-type/status/sidebar fields unchanged.
+  definition: createNativeTestCustomScreenDefinition([
+    {
+      id: "heading-1",
+      type: "heading",
+      data: { text: "Old headline", label: "Keep label" },
+    },
+    {
+      id: "text-1",
+      type: "text",
+      data: { content: "Keep sibling" },
+    },
+  ]),
+});
+
+const plan: AssistantActionPlan = {
+  // Keep every omitted existing plan/action envelope field byte-identical.
+  summary: "Patch screen heading text.",
+  actions: [
+    {
+      title: "Patch heading",
+      type: "custom-screen.block.patch",
+      input: {
+        id: screen.id,
+        name: "Projects Screen",
+        expectedStatus: "draft",
+        blockId: "heading-1",
+        expectedBlockType: "heading",
+        dataPath: ["text"],
+        value: "New headline",
+      },
+    },
+  ],
+};
+
+const preview = await dryRunAssistantActionPlan({ plan }, deps);
+expect(preview.changes[0]?.operation).toBe("update");
+
+await executeAssistantActionPlan(
+  {
+    plan,
+    actorId: "user-1",
+    idempotencyKey: "assistant-custom-screen-block-patch-1",
+  },
+  deps
+);
+
+expect(deps.__state.customScreens[0]?.blocks[0]?.data.text).toBe("New headline");
+expect(deps.__state.customScreens[0]?.blocks[0]?.data.label).toBe("Keep label");
+expect(deps.__state.customScreens[0]?.blocks[1]?.data.content).toBe("Keep sibling");
+```
+
+The data flow remains preview → execute → inspect the persisted in-memory projection.
+Do not add a catch, compatibility fallback, normalizer exception, or production change;
+an invalid fixture must fail rather than be silently repaired.
 
 ## Implementation Pseudocode
 
@@ -154,8 +260,9 @@ export function sanitizeScreenAuthoringUrl(
   kind: "link" | "media"
 ): string | null {
   if (typeof value !== "string") return null;
+  if (/[\u0000-\u001F\u007F]/.test(value) || value.includes("\\")) return null;
   const trimmed = value.trim();
-  if (!trimmed || trimmed.includes("\\")) return null;
+  if (!trimmed) return null;
   return kind === "link"
     ? sanitizeAuthoringLinkHref(trimmed)
     : sanitizeAuthoringMediaUrl(trimmed);
@@ -272,18 +379,26 @@ function normalizeImageData(
 }
 
 function repairDocumentAndBindingsForRead(rawDocument, rawBindings) {
-  // Collect canonical IDs BEFORE rewriting action/type. Do this independently for
-  // editorView.document and listView.rowTemplate.document so equal IDs in separate
-  // documents cannot suppress one another's bindings.
-  const unsupportedButtonIds = collectRawUnsupportedButtonIds(rawDocument, {
-    blockTypes: ["button", "actions"],
-    actions: ["publish", "custom"],
-  });
+  // One repair context follows the exact recursive objects that survive Tabs repair.
+  // Mark any button/repaired-actions node with an own, present action !== exact "link"
+  // before action/type coercion. Do not flatten the unrepaired raw tree.
+  const context = { unsupportedButtonNodes: new WeakSet<object>() };
+  const repaired = repairLegacyScreenRecordForRead(rawDocument, context);
+  const document = normalizeRepairedDocumentForRead(repaired);
 
-  // Existing actions->button repair stays. Unsupported buttons become action:"link"
-  // with static href absent. Tabs receive deterministic tab-N[-K] repair: first
-  // matching legacy slot keeps its content; collision repairs receive empty slots.
-  const document = normalizeRepairedDocumentForRead(rawDocument);
+  // Traverse the repaired and normalized trees in the same structural order. Removed
+  // orphan slots are absent from both; renamed/reordered slots carry their original
+  // repaired node identity. Pairing therefore maps provenance to the final generated
+  // or authored normalized ID without transferring it to a sibling.
+  const repairedBlocks = collectRepairedBlocksInReadOrder(repaired);
+  const normalizedBlocks = collectNormalizedBlocksInReadOrder(document);
+  assertSameLength(repairedBlocks, normalizedBlocks);
+  const unsupportedButtonIds = new Set(
+    repairedBlocks.flatMap((node, index) =>
+      context.unsupportedButtonNodes.has(node) ? [normalizedBlocks[index].id] : []
+    )
+  );
+
   const bindings = normalizeBindingsForRead(rawBindings).filter(
     (binding) =>
       !(unsupportedButtonIds.has(binding.blockId) && binding.propPath === "href")
@@ -316,6 +431,12 @@ async function createCustomScreen(input: CustomScreenCreateInput) {
   };
 }
 ```
+
+The ASCII-control check is performed against the original string, before `trim()` and
+before either imported Page helper. It is not reduced to whitespace or prefix checks:
+all code points `U+0000..U+001F` and `U+007F` fail closed wherever they occur. This leaf
+does not change the Page-owned helper because that policy has consumers outside Custom
+Screens.
 
 Replace every `blockIds.size === 0 || blockIds.has(...)` and every
 `blockIds.size > 0 && orphan` gate with unconditional membership semantics.
@@ -522,6 +643,11 @@ fields, limits, enums, and URL/action policy.
   exact `.href` or `.src` path before persistence. Only stored-read compatibility may
   omit that URL; it never substitutes an executable fallback. Error details never
   contain the rejected URL value.
+- ASCII controls are unsafe before trimming or shared-helper delegation. In particular,
+  `"/\t/evil.example/x"`, `"/\n/evil.example/x"`, and `"/\r/evil.example/x"`
+  cannot survive as relative strings that a URL sink could reinterpret as protocol-
+  relative. NUL (`"/\u0000/evil.example/x"`) and DEL
+  (`"/\u007F/evil.example/x"`) are rejected by the same range check.
 - Valid legacy/no-override documents preserve object and emitted-byte identity,
   including absent/empty fixed-kind labels and image ratio `"16:9"`/`""` strings.
 - Do not add `disabled`, `publish`, or `custom` to the write enum. Safe-disabled
@@ -541,13 +667,39 @@ fields, limits, enums, and URL/action policy.
   warnings, and byte-stable round-trip. Legacy `button` and repaired `actions` fixtures
   carry href bindings in both editor and row-template views; read repair removes only
   those bindings and yields write-valid disabled Buttons without a persisted marker.
+  Two compositional regressions run in both views. The first gives the removed orphan
+  slot a missing/null-ID Button with an own non-`link` action plus a binding targeting
+  its would-be generated ID; duplicate-Tab repair must preserve survivor sections/slot
+  content, prune only that unsupported href binding, avoid empty-document fallback, and
+  return a write-valid model. The second keeps equal block counts while slot repair
+  reverses traversal order; it must not transfer provenance to a safe Button or preserve
+  the generated unsupported Button's bound href. Both results re-read and write-normalize
+  deterministically.
   Using fresh module instances of the real shared `schemaValidator`, validate valid
   create then update payloads and, in a second fresh instance, update then create; both
   orders must compile and pass, proving there is no duplicate schema-ID registration.
 - `tests/vitest/customScreens/screen-document-image-src.test.ts`: shared safe and
-  hostile URL corpus, including relative/absolute backslash confusion rejected before
-  delegation; a non-empty unsafe write reports the exact `.src`/`.href` path, while the
-  stored-read adapter alone omits it. Direct write-normalizer cases also prove that
+  hostile URL corpus, including relative/absolute backslash confusion and the exact
+  TAB/LF/CR protocol-relative-confusion strings below, plus NUL/DEL, all rejected before
+  delegation for both link and media profiles:
+
+  ```ts
+  const controlConfusedUrls = [
+    "/\t/evil.example/x",
+    "/\n/evil.example/x",
+    "/\r/evil.example/x",
+    "/\u0000/evil.example/x",
+    "/\u007F/evil.example/x",
+  ];
+  ```
+
+  For every value, call `sanitizeScreenAuthoringUrl` directly and expect `null`; direct
+  Button/Image write normalization must throw with the exact generated `.href`/`.src`
+  path and no submitted-value echo; stored-read normalization must omit the field; and
+  `normalizeScreenImageSrc(value)` must return `""`, proving the compatibility alias
+  delegates to the corrected wrapper. Existing safe, hostile, idempotence, non-string,
+  and backslash assertions remain intact. A non-empty unsafe write reports the exact
+  `.src`/`.href` path, while the stored-read adapter alone omits it. Direct write-normalizer cases also prove that
   `null` and every non-string present value throw rather than bypassing the Ajv contract,
   while stored-read compatibility omits those malformed legacy values. It pins the
   delegating compatibility contract
@@ -565,6 +717,13 @@ fields, limits, enums, and URL/action policy.
   `binding_block_removed` warning fields, persists only the pruned bindings, and a
   subsequent GET contains no transient warning. PATCH retains the existing equivalent
   proof. Cleanup deletes only rows created by this suite.
+- `tests/unit/assistant/actionExecutorService.test.ts` (Bun): the existing Custom Screen
+  block-patch case uses only strict V4 fixed kinds and their owned data paths. The action
+  patches `heading.data.text`, preserves another property on the selected heading, and
+  preserves the independent `text.data.content` sibling. No expectation may normalize,
+  accept, or silently repair `hero`, `rich-text-section`, `headline`, or another stale
+  Screen authoring shape; those names may remain in unrelated Page/Widget tests whose
+  contracts legitimately own them.
 
 `tests/vitest/customScreens/customScreenService.test.ts` is not changed or run as a
 source-owned gate here. It may continue to run in the repository-wide suite, but the
@@ -579,20 +738,26 @@ write-versus-stored-read assertions.
 ```bash
 bun --cwd core lint:types
 bun --cwd core lint
-bunx vitest run tests/vitest/admin/custom-screen-schemas.test.ts \
+bunx vitest run --config vitest.config.ts tests/vitest/admin/custom-screen-schemas.test.ts \
   tests/vitest/customScreens/screen-document-image-src.test.ts
 set -a && source .env && set +a
-bun test tests/integration/routes/customScreensRoutes.test.ts
+bun --eval 'import { canConnect } from "./tests/utils/db"; const configured = Boolean(process.env.DATABASE_URL?.trim()); const reachable = configured && await canConnect(); process.stdout.write(JSON.stringify({ configured, reachable, selectOne: reachable ? 1 : 0 })); if (!reachable) process.exit(1); process.exit(0)'
+bun test tests/integration/routes/customScreensRoutes.test.ts tests/unit/assistant/actionExecutorService.test.ts
+node --check _docs/_workflows/task-540-implement.mjs
+node _docs/_workflows/task-540-implement.mjs --self-test-repair-siblings
+git diff --check
 ```
 
 If a named test fails, rerun that exact file once in isolation before classifying
 the failure. This leaf adds no DB migration and no public/security gate exception.
 
-## Completion
+## Historical corrective completion and current fixture repair
 
-Implemented the strict recursive fixed-kind schema, deterministic stored-read repair,
-Screen-owned URL and media-UUID helpers, empty-document binding pruning, bounded
-non-echoing domain errors, and create/update warning parity. The final source audit found
-no unresolved HIGH, MEDIUM, or feasibility LOW drift. Typecheck and lint passed; the two
-targeted Vitest files passed 70/70 and the DB-backed Bun route suite passed 15/15 with
-82 expectations.
+The structural-provenance implementation and its 74/74 Vitest plus 15/15 DB route
+evidence remain historical metadata. The later repair landed the original-string
+ASCII-control guard and direct sanitizer/write/stored-read/compatibility-alias matrix,
+then passed the final 75/75 Vitest and 15/15 DB route gates plus a fresh zero-finding
+post-audit before this leaf returned to Done. That evidence remains historical and is
+not invalidated as schema/source evidence. The leaf is now reopened only for the narrow
+Assistant fixture compatibility seam above; it returns to Done only after the exact
+schema/image Vitest, Custom Screens route, Assistant Bun, static, and diff gates pass.

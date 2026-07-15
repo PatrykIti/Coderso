@@ -668,16 +668,24 @@ const isFixedScreenBlockType = (type: string): type is FixedScreenBlockType =>
   Object.prototype.hasOwnProperty.call(screenBlockDataAllowedKeys, type);
 const compatibilityScreenBlockTypeSet = new Set<string>(compatibilityScreenBlockTypes);
 const isCompatibilityScreenBlockType = (type: string) => compatibilityScreenBlockTypeSet.has(type);
+const hasScreenAuthoringUrlAsciiControl = (value: string): boolean => {
+  for (let index = 0; index < value.length; index += 1) {
+    const codeUnit = value.charCodeAt(index);
+    if (codeUnit <= 0x1f || codeUnit === 0x7f) return true;
+  }
+  return false;
+};
 
 export function sanitizeScreenAuthoringUrl(value: unknown, kind: "link" | "media"): string | null {
   if (typeof value !== "string") return null;
+  if (hasScreenAuthoringUrlAsciiControl(value) || value.includes("\\")) return null;
   const trimmed = value.trim();
-  if (!trimmed || trimmed.includes("\\")) return null;
+  if (!trimmed) return null;
   return kind === "link" ? sanitizeAuthoringLinkHref(trimmed) : sanitizeAuthoringMediaUrl(trimmed);
 }
 
-// Transitional compatibility for the Inspector and renderer. Their sequential TASK-540
-// leaves migrate to sanitizeScreenAuthoringUrl directly.
+// Retained delegating compatibility export after the Inspector and renderer migrated to
+// sanitizeScreenAuthoringUrl directly.
 export const normalizeScreenImageSrc = (value: unknown): string =>
   sanitizeScreenAuthoringUrl(value, "media") ?? "";
 
@@ -1252,8 +1260,17 @@ const repairStoredTabsForRead = (
   };
 };
 
-const repairLegacyScreenRecordForRead = (node: unknown): unknown => {
-  if (Array.isArray(node)) return node.map(repairLegacyScreenRecordForRead);
+type ScreenReadRepairContext = {
+  unsupportedButtonNodes: WeakSet<Record<string, unknown>>;
+};
+
+const repairLegacyScreenRecordForRead = (
+  node: unknown,
+  context: ScreenReadRepairContext
+): unknown => {
+  if (Array.isArray(node)) {
+    return node.map((item) => repairLegacyScreenRecordForRead(item, context));
+  }
   if (!isRecord(node)) return node;
   const next: Record<string, unknown> = { ...node };
   let changed = false;
@@ -1273,6 +1290,11 @@ const repairLegacyScreenRecordForRead = (node: unknown): unknown => {
     changed = true;
   }
   const effectiveType = repairedType ?? (typeof node.type === "string" ? node.type : undefined);
+  const hasUnsupportedButtonAction =
+    effectiveType === "button" &&
+    isRecord(node.data) &&
+    Object.prototype.hasOwnProperty.call(node.data, "action") &&
+    node.data.action !== "link";
   if (effectiveType === "button" && isRecord(next.data)) {
     if (next.data.action === "publish" || next.data.action === "custom") {
       next.data = { ...next.data, action: "link" };
@@ -1290,7 +1312,7 @@ const repairLegacyScreenRecordForRead = (node: unknown): unknown => {
   }
   for (const key of ["blocks", "children"] as const) {
     if (Array.isArray(node[key])) {
-      next[key] = node[key].map(repairLegacyScreenRecordForRead);
+      next[key] = node[key].map((item) => repairLegacyScreenRecordForRead(item, context));
       changed = true;
     }
   }
@@ -1299,49 +1321,85 @@ const repairLegacyScreenRecordForRead = (node: unknown): unknown => {
     next.slots = Object.fromEntries(
       Object.entries(repairedSlotSource).map(([slot, items]) => [
         slot,
-        Array.isArray(items) ? items.map(repairLegacyScreenRecordForRead) : items,
+        Array.isArray(items)
+          ? items.map((item) => repairLegacyScreenRecordForRead(item, context))
+          : items,
       ])
     );
     changed = true;
   }
-  return changed ? next : node;
+  const repairedNode = changed ? next : node;
+  if (hasUnsupportedButtonAction) {
+    context.unsupportedButtonNodes.add(repairedNode);
+  }
+  return repairedNode;
 };
 
-const collectRawUnsupportedButtonIds = (rawDocument: unknown): Set<string> => {
-  const ids = new Set<string>();
-  const visit = (node: unknown) => {
-    if (Array.isArray(node)) {
-      node.forEach(visit);
-      return;
-    }
-    if (!isRecord(node)) return;
-    const type = typeof node.type === "string" ? node.type : null;
-    if ((type === "button" || type === "actions") && isRecord(node.data)) {
-      if (
-        Object.prototype.hasOwnProperty.call(node.data, "action") &&
-        node.data.action !== "link"
-      ) {
-        try {
-          ids.add(normalizePath(node.id));
-        } catch {
-          // The ordinary stored-read validator owns malformed IDs.
-        }
+const collectRepairedScreenBlocksInReadOrder = (
+  repairedSections: unknown[]
+): Record<string, unknown>[] => {
+  const blocks: Record<string, unknown>[] = [];
+  const visit = (items: unknown[]) => {
+    items.forEach((node) => {
+      if (!isRecord(node)) return;
+      blocks.push(node);
+      if (Array.isArray(node.children)) visit(node.children);
+      if (isRecord(node.slots)) {
+        Object.values(node.slots).forEach((slotItems) => {
+          if (Array.isArray(slotItems)) visit(slotItems);
+        });
       }
-    }
-    if (Array.isArray(node.sections)) visit(node.sections);
-    if (Array.isArray(node.blocks)) visit(node.blocks);
-    if (Array.isArray(node.children)) visit(node.children);
-    if (isRecord(node.slots)) Object.values(node.slots).forEach(visit);
+    });
   };
-  visit(rawDocument);
+  if (sectionsLookLikeLegacyBlockArray(repairedSections)) {
+    visit(repairedSections);
+  } else {
+    repairedSections.forEach((section) => {
+      if (isRecord(section) && Array.isArray(section.blocks)) visit(section.blocks);
+    });
+  }
+  return blocks;
+};
+
+const collectNormalizedUnsupportedButtonIds = (
+  repairedSections: unknown[],
+  normalizedDocument: ScreenDocumentV1,
+  context: ScreenReadRepairContext
+): Set<string> => {
+  const repairedBlocks = collectRepairedScreenBlocksInReadOrder(repairedSections);
+  const normalizedBlocks: ScreenBlockV1[] = [];
+  normalizedDocument.sections.forEach((section) =>
+    visitScreenBlocks(section.blocks, (block) => normalizedBlocks.push(block))
+  );
+  if (repairedBlocks.length !== normalizedBlocks.length) {
+    throw new Error("custom_screen_definition_invalid");
+  }
+  const ids = new Set<string>();
+  repairedBlocks.forEach((repairedBlock, index) => {
+    if (context.unsupportedButtonNodes.has(repairedBlock)) {
+      const normalizedBlock = normalizedBlocks[index];
+      if (!normalizedBlock) throw new Error("custom_screen_definition_invalid");
+      ids.add(normalizedBlock.id);
+    }
+  });
   return ids;
 };
 
-const normalizeScreenDocumentV1ForReadAtPath = (
+type NormalizedScreenDocumentRead = {
+  document: ScreenDocumentV1;
+  unsupportedButtonIds: Set<string>;
+};
+
+const normalizeScreenDocumentV1ForReadWithRepairAtPath = (
   input: unknown,
   documentPath: readonly ScreenFieldPathSegment[]
-): ScreenDocumentV1 => {
-  if (input === undefined || input === null) return { schemaVersion: 1, sections: [] };
+): NormalizedScreenDocumentRead => {
+  if (input === undefined || input === null) {
+    return {
+      document: { schemaVersion: 1, sections: [] },
+      unsupportedButtonIds: new Set<string>(),
+    };
+  }
   if (!isRecord(input)) throw new Error("custom_screen_definition_invalid");
   rejectUnknownKeys(input, ["schemaVersion", "sections"]);
   const schemaVersion = input.schemaVersion ?? 1;
@@ -1357,38 +1415,55 @@ const normalizeScreenDocumentV1ForReadAtPath = (
   ) {
     throw new Error("custom_screen_definition_invalid");
   }
-  const sections = repairLegacyScreenRecordForRead(rawSections) as unknown[];
-  if (sectionsLookLikeLegacyBlockArray(sections)) {
-    return {
-      schemaVersion: 1,
-      sections:
-        sections.length > 0
-          ? [
-              createDefaultScreenSection(
-                normalizeUniqueIds(
-                  sections.map((item, index) =>
-                    normalizeScreenBlock(item, index, "stored-read", [
-                      ...documentPath,
-                      "sections",
-                      0,
-                      "blocks",
-                      index,
-                    ])
+  const repairContext: ScreenReadRepairContext = {
+    unsupportedButtonNodes: new WeakSet<Record<string, unknown>>(),
+  };
+  const repairedSections = repairLegacyScreenRecordForRead(rawSections, repairContext) as unknown[];
+  const document: ScreenDocumentV1 = sectionsLookLikeLegacyBlockArray(repairedSections)
+    ? {
+        schemaVersion: 1,
+        sections:
+          repairedSections.length > 0
+            ? [
+                createDefaultScreenSection(
+                  normalizeUniqueIds(
+                    repairedSections.map((item, index) =>
+                      normalizeScreenBlock(item, index, "stored-read", [
+                        ...documentPath,
+                        "sections",
+                        0,
+                        "blocks",
+                        index,
+                      ])
+                    )
                   )
-                )
-              ),
-            ]
-          : [],
-    };
-  }
+                ),
+              ]
+            : [],
+      }
+    : {
+        schemaVersion: 1,
+        sections: normalizeUniqueIds(
+          repairedSections.map((item, index) =>
+            normalizeScreenSection(item, index, "stored-read", [...documentPath, "sections", index])
+          )
+        ),
+      };
   return {
-    schemaVersion: 1,
-    sections: normalizeUniqueIds(
-      sections.map((item, index) =>
-        normalizeScreenSection(item, index, "stored-read", [...documentPath, "sections", index])
-      )
+    document,
+    unsupportedButtonIds: collectNormalizedUnsupportedButtonIds(
+      repairedSections,
+      document,
+      repairContext
     ),
   };
+};
+
+const normalizeScreenDocumentV1ForReadAtPath = (
+  input: unknown,
+  documentPath: readonly ScreenFieldPathSegment[]
+): ScreenDocumentV1 => {
+  return normalizeScreenDocumentV1ForReadWithRepairAtPath(input, documentPath).document;
 };
 
 export function normalizeScreenDocumentV1ForRead(input: unknown): ScreenDocumentV1 {
@@ -1907,13 +1982,10 @@ const normalizeCustomScreenListRowTemplateForRead = (
   try {
     if (!isRecord(input)) throw new Error("custom_screen_definition_invalid");
     rejectUnknownKeys(input, ["document", "bindings"]);
-    const unsupportedButtonIds = collectRawUnsupportedButtonIds(input.document);
-    const document = normalizeScreenDocumentV1ForReadAtPath(input.document, [
-      "definition",
-      "listView",
-      "rowTemplate",
-      "document",
-    ]);
+    const { document, unsupportedButtonIds } = normalizeScreenDocumentV1ForReadWithRepairAtPath(
+      input.document,
+      ["definition", "listView", "rowTemplate", "document"]
+    );
     const discardSink: ScreenBindingWarningSink = {
       removedFieldOrphans: [],
       removedBlockOrphans: [],
@@ -2138,12 +2210,10 @@ export function normalizeCustomScreenEditorViewDefinitionV4ForRead(
   if (saveMode !== "entry") throw new Error("custom_screen_definition_invalid");
   const interactionMode = normalizeText(input.interactionMode) ?? "inline";
   if (interactionMode !== "inline") throw new Error("custom_screen_definition_invalid");
-  const unsupportedButtonIds = collectRawUnsupportedButtonIds(input.document);
-  const document = normalizeScreenDocumentV1ForReadAtPath(input.document, [
-    "definition",
-    "editorView",
-    "document",
-  ]);
+  const { document, unsupportedButtonIds } = normalizeScreenDocumentV1ForReadWithRepairAtPath(
+    input.document,
+    ["definition", "editorView", "document"]
+  );
   // TASK-505-01/03 (Item B) — read-path RETAINS field-orphans so recovery UX can NAME them.
   // A field-orphan (binding → LIVE block, but its content-type field was deleted AFTER save)
   // is created by an EXTERNAL schema change, never re-saved, so it can only surface on

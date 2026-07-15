@@ -87,7 +87,7 @@ type ScreenRuntimeRendererProps = {
    * TASK-503-02 C(i): entry-mode-only chrome gate for the binding badges
    * ("Editable"/"Read"/"Unbound") and the uppercase field-type badge.
    * DEFAULT OFF — a published entry view is clean unless the user opts in
-   * (503-03 threads the per-user localStorage preference). Preview ALWAYS
+   * (503-03 threads the authenticated per-user entry preference). Preview ALWAYS
    * shows the badges; builder chrome is untouched by this prop.
    */
   showFieldMetadata?: boolean;
@@ -413,10 +413,13 @@ export function ScreenRuntimeRenderer({
   const canInsert = mode === "builder" && Boolean(onSetInsertPoint);
   const canDrag = mode === "builder" && Boolean(onDragMove);
 
-  const tabDomIds = (blockId: string, tabId: string) => ({
-    tab: `screen-tab-${instanceId}-${blockId}-${tabId}`,
-    panel: `screen-tabpanel-${instanceId}-${blockId}-${tabId}`,
-  });
+  const tabDomIds = (blockId: string, tabId: string) => {
+    const identity = `b${blockId.length}-${blockId}-t${tabId.length}-${tabId}`;
+    return {
+      tab: `screen-tab-${instanceId}-${identity}`,
+      panel: `screen-tabpanel-${instanceId}-${identity}`,
+    };
+  };
 
   const resolveActiveTab = (block: ScreenBlockV1, tabs: readonly ScreenTabItem[]) => {
     const requested =

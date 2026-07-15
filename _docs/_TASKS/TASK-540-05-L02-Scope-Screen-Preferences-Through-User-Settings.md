@@ -11,7 +11,11 @@
 **Status:** ✅ Done
 **Started:** 2026-07-14
 **Completed:** 2026-07-14
-**Targeted Gate Passed:** 2026-07-14 — `core lint:types`, `core lint`, root `tsc`, the exact six-file Vitest matrix (64/64), the exact two-file Bun/DB matrix (20/20), and `git diff --check`
+**Revalidation:** 2026-07-14 — `core` lint/typecheck, root typecheck, exact six-file Vitest matrix 65/65, DB preflight, exact three-file Bun matrix 27/27 (162 expectations), and `git diff --check` all green
+**Post-Audit:** 2026-07-14 — PASS; zero HIGH, MEDIUM, or LOW findings on the corrected working tree
+**Previous Completion:** 2026-07-14
+**Previous Targeted Gate:** 2026-07-14 — `core lint:types`, `core lint`, root `tsc`, the exact six-file Vitest matrix (64/64), the exact two-file Bun/DB matrix (20/20), and `git diff --check`
+**Reopened:** 2026-07-14 (trusted cross-origin Admin preflight must allow the expected-user header)
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -34,6 +38,12 @@
 - `core/server/httpServer.ts`, limited to the central `errorResponse` mapping for
   `user_settings_key_invalid`, `user_settings_value_invalid`, and
   `user_setting_identity_changed`
+- `core/services/settings/securitySettings.ts` and
+  `core/server/middleware/cors.ts`, limited to making
+  `X-Coderso-Expected-User-Id` a case-insensitive server-required CORS header while
+  preserving every configured header and supporting already-persisted settings
+- `tests/integration/routes/cors.test.ts`, limited to trusted-origin OPTIONS coverage
+  for that backward-compatible required-header union
 - compatibility-expectation updates required before this source gate in
   `tests/unit/settings/userSettingsService.test.ts`,
   `tests/vitest/admin/userSettingsClient.test.ts`,
@@ -51,15 +61,20 @@
 `tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx` is a
 read-only compatibility gate here. TASK-540-04-L03 is its sole writer and removes
 the stale localStorage-specific assertion before this leaf starts; this leaf must
-not edit it. The new persistence suite above is the only integration test that
-TASK-540-05-L02 creates or edits.
+not edit it. The new persistence suite remains the only UI integration test this leaf
+creates or edits; the reopened correction additionally owns only the narrow CORS route
+test named above.
 
 No new user-settings endpoint or DB schema edit is needed. The existing PATCH route
 compares the optional expected-owner header with its already authenticated
 `ctx.user.id`; omission preserves every legacy caller, while the Screen transport
 always sends it. Keep all three plain machine-readable error mappings at the real
-central `httpServer.ts` boundary. Update the named behavior tests before this leaf's
-gate; TASK-540-06 owns docs and only aggregate test additions.
+central `httpServer.ts` boundary. Trusted cross-origin Admin deployments must also pass
+browser preflight: the CORS middleware unions the expected-owner header into configured
+allowed headers case-insensitively at response time, so already-persisted settings work,
+and the default settings include it for new/default configurations. Update the named
+behavior tests before this leaf's gate; TASK-540-06 owns source-of-truth docs and only
+aggregate test additions.
 
 ## Grounded anchors
 
@@ -309,6 +324,22 @@ export async function setUserSettingIsolated<K extends keyof UserSettings>(
   const response = normalizeIsolatedUserSettingResponse(key, payload);
   return { key: response.key, value: response.value as UserSettings[K] };
 }
+
+// securitySettings.ts includes the header in defaults. cors.ts also owns a
+// server-required union so older persisted allowedHeaders arrays remain usable.
+const REQUIRED_ADMIN_CORS_HEADERS = ["x-coderso-expected-user-id"] as const;
+
+function allowedCorsHeaders(configured: readonly string[]) {
+  const byLowerCase = new Map(configured.map((header) => [header.toLowerCase(), header]));
+  for (const required of REQUIRED_ADMIN_CORS_HEADERS) {
+    if (!byLowerCase.has(required)) byLowerCase.set(required, required);
+  }
+  return [...byLowerCase.values()];
+}
+
+// A trusted-origin OPTIONS response lists content-type, x-csrf-token, and the
+// expected-user header even when its supplied config models an older persisted value.
+headers.set("Access-Control-Allow-Headers", allowedCorsHeaders(config.allowedHeaders).join(", "));
 
 type PreferenceVersion = Readonly<{
   generation: number;
@@ -1086,6 +1117,12 @@ hook call site remains source-compatible.
   envelope before returning a value.
   Defer A's PATCH, populate aggregate state for B, resolve/abort A, and prove B's
   aggregate remains byte-identical.
+- `tests/integration/routes/cors.test.ts`: a trusted-origin OPTIONS response built from
+  an older configured header list still includes the expected-user header exactly once,
+  case-insensitive configured duplicates do not duplicate it, and configured custom
+  headers plus credentials/origin behavior remain unchanged. A separate assertion reads
+  `SECURITY_SETTINGS_DEFAULTS.cors.allowedHeaders` and pins the new expected-user header
+  in the default itself.
 - `tests/vitest/ui/admin-auth-identity.test.tsx`: render the real
   `AdminAuthProvider`, assert exact A publication, no epoch change for a same-ID prop
   update, exactly one A→B publication/epoch advance with no transitional null, one null
@@ -1610,7 +1647,8 @@ bun --cwd core lint
 ./node_modules/.bin/tsc -p tsconfig.json --noEmit
 set -a && source .env && set +a
 bun test tests/unit/settings/userSettingsService.test.ts \
-  tests/integration/routes/userSettings.test.ts
+  tests/integration/routes/userSettings.test.ts \
+  tests/integration/routes/cors.test.ts
 ```
 
 Verify DB reachability before DB-backed tests; rerun a named failure once.

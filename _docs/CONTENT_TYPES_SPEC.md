@@ -598,8 +598,9 @@ for the data-oriented kinds. Unknown keys within a new kind's `data` throw
 `custom_screen_definition_invalid`; **legacy** kinds (`field`, `record-header`,
 `field-group`, `columns`, `rich-text`, `legacy-widget`) keep their permissive
 normalization, so stored V4 screens read back byte-stable. `"label"` is allow-listed for
-every new kind (the base factory always seeds `data.label`). Enums are coerced to their
-allow-list; out-of-range/invalid values fall back to the listed default.
+every new kind (the base factory always seeds `data.label`). Fresh writes reject invalid
+enum values and out-of-range integers. Only stored-read compatibility may coerce an
+invalid enum to its listed fallback or clamp/fallback an invalid integer.
 
 | Kind | `data` keys (allow-list) | Enums / bound propPath |
 |------|--------------------------|------------------------|
@@ -608,7 +609,7 @@ allow-list; out-of-range/invalid values fall back to the listed default.
 | `stat` | `label`, `format`, `trend`, `deltaField`, `field` | `format ∈ number\|percent\|money`; `trend ∈ auto\|up\|down\|flat`; bound → propPath `value`, `mode:"read"` |
 | `divider` | `variant`, `label` | `variant ∈ line\|space\|label` |
 | `image` | `label`, `fit`, `ratio`, `field`, `src` | `fit ∈ cover\|contain`; bound → propPath `src`, `mode:"read"`; static `src` OPTIONAL + scheme-validated (TASK-500-04, see below) |
-| `related-list` | `label`, `target`, `displayField`, `variant`, `limit`, `field` | `variant ∈ checklist\|activity\|cards`; `limit` clamped `1..50`; bound → propPath **`items`**, `mode:"read"` |
+| `related-list` | `label`, `target`, `displayField`, `variant`, `limit`, `field` | `variant ∈ checklist\|activity\|cards`; `limit` integer `1..50` on write (stored-read compatibility may clamp/fallback); bound → propPath **`items`**, `mode:"read"` |
 | `tabs` | `label`, `tabs` | `tabs = [{ id, label }]` with ids matching `slots` keys |
 | `button` | `label`, `action`, `variant`, `href`, `field` | fresh writes accept only `action: "link"`; `variant ∈ primary\|secondary\|ghost`; bound → propPath `href`, `mode:"read"` |
 
@@ -726,16 +727,21 @@ bind).
 
 The image kind's `data` allow-list gains an OPTIONAL `src`
 (`["label","fit","ratio","field","src"]`), making image consistent with the other
-static kinds. The current owner is `sanitizeScreenAuthoringUrl(value, "media")`: it
-accepts safe root-relative paths and `http://`/`https://` URLs, and rejects
-protocol-relative and backslash-confused input before delegating to the shared
-authoring URL policy. Everything else (`javascript:`, `data:`, `blob:`, `file:`, bare
-tokens, non-strings) is rejected; strict writes report an invalid definition while the
-stored-read adapter drops the unsafe value. Reject-unknown on other keys stays intact,
-and a stored V4 image WITHOUT `src` round-trips byte-stable.
-Renderer resolution order on entry/preview (override-first precedence preserved):
-per-entry media/presentation override → bound `field` src → static `data.src` → labeled
-placeholder. The rejected alternative — marking image "requires a bound field"
+static kinds. The sole Screen URL owner is
+`sanitizeScreenAuthoringUrl(value, "media")`: it rejects any ASCII control in the
+original string (`U+0000..U+001F` or `U+007F`) and every backslash before trimming and
+delegating to the shared authoring URL policy. Safe root-relative paths and
+`http://`/`https://` URLs are accepted; protocol-relative, control-confused,
+`javascript:`, `data:`, `blob:`, `file:`, bare-token, and non-string input fails closed.
+Strict writes report an invalid definition while the stored-read adapter drops the
+unsafe value. Reject-unknown on other keys stays intact, and a stored V4 image WITHOUT
+`src` round-trips byte-stable.
+Renderer resolution on entry/preview is presence-based, not a fall-through chain. A
+present per-entry media/presentation override is the only eligible source; otherwise a
+present binding is the only eligible source; static `data.src` is eligible only when
+both override and binding are absent. An unresolved, malformed, or unsafe winning
+source renders the labeled placeholder and never falls back to a lower-precedence
+source. The rejected alternative — marking image "requires a bound field"
 (builder-only affordance, no schema change) — was declined because it would keep image
 the single kind unable to carry authored static content.
 
@@ -820,14 +826,12 @@ is consumed only by the renderer class-map and the inspector EnumRow:
 no wrapper — byte-parity). The inspector EnumRow shows colon LABELS
 (`auto/1:1/4:3/16:9/3:2`) but WRITES the slash enum value.
 
-### Exported `normalizeScreenImageSrc` (TASK-503-01) — enforced write + preview + save
+### Exported `normalizeScreenImageSrc` compatibility alias (TASK-503-01 / TASK-540)
 
-`normalizeScreenImageSrc` is now EXPORTED and is the single source of truth for the
-`src` prefix filter (`/`, `http://`, `https://` allowed; everything else → `""`,
-never throws). It runs on the save path (as before) AND the inspector write path
-(raw text stays in a local input draft so typing `https://…` character-by-character
-is not destroyed) AND the builder preview — so a `javascript:`/`data:` src can never
-reach `<img src>` at any point in the authoring session.
+`normalizeScreenImageSrc` remains exported only as a compatibility alias that delegates
+to `sanitizeScreenAuthoringUrl(value, "media")` and maps rejection to `""`. It does not
+own a separate prefix filter or URL policy; Screen writes, inspector/preview paths, and
+final render sinks use the Screen-owned sanitizer contract described above.
 
 ### Entry-view presentation (`showFieldMetadata`, TASK-503-03)
 
@@ -1011,11 +1015,14 @@ active authoring model remains Screen-owned sections and blocks, not product wid
   link and never persists the UI sentinel. Builder mode never navigates. Preview/entry
   render an anchor only after the final DOM-boundary URL check; absent, unsafe, or
   legacy-disabled links render a non-anchor `aria-disabled` affordance.
-- `sanitizeScreenAuthoringUrl` is the single Screen policy for Button links and image
-  media URLs. It rejects backslashes and delegates to the shared bounded authoring
-  profiles: links may use safe root-relative paths, fragments, HTTP(S), `mailto:`, or
-  `tel:`; media accepts safe root-relative or HTTP(S) sources. Protocol-relative and
-  executable/data/blob/file schemes fail closed.
+- `sanitizeScreenAuthoringUrl` is the sole Screen policy for Button links and image
+  media URLs. It rejects any ASCII control in the original string
+  (`U+0000..U+001F` or `U+007F`) and every backslash before trim/delegation to the
+  shared bounded profiles. Links may use safe root-relative paths, fragments, HTTP(S),
+  `mailto:`, or `tel:`; media accepts safe root-relative or HTTP(S) sources.
+  Protocol-relative, control-confused, executable, data, blob, file, and unsupported
+  schemes fail closed. `normalizeScreenImageSrc` is only a delegating compatibility
+  alias, not another owner or prefix filter.
 - Image fields and per-entry presentation overrides retain media UUID identity. The
   entry host resolves only the winning direct-image UUID through the existing media
   list and passes an explicit UUID-to-safe-URL map to the pure renderer. A missing,

@@ -1385,11 +1385,14 @@ Notes:
   read to Link with no href and no matching href binding, so it renders
   disabled. The adapter does not write a migration marker or invent a second
   action. A missing stored action keeps the established Link-compatible read.
-- `sanitizeScreenAuthoringUrl` owns Button/image URL policy. Links allow safe
-  root-relative paths, fragments, HTTP(S), `mailto:`, and `tel:`; media URLs
-  allow safe root-relative paths and HTTP(S). Protocol-relative,
-  backslash-confused, executable, data, blob, file, and unsupported schemes
-  fail closed. The renderer repeats this check at the final DOM boundary.
+- `sanitizeScreenAuthoringUrl` is the sole Button/image URL policy owner. It rejects
+  every ASCII control in the original string (`U+0000..U+001F` and `U+007F`) and every
+  backslash before trim/delegation to the shared helper. Links allow safe root-relative
+  paths, fragments, HTTP(S), `mailto:`, and `tel:`; media URLs allow safe root-relative
+  paths and HTTP(S). Protocol-relative, control-confused, executable, data, blob, file,
+  and unsupported schemes fail closed. The renderer repeats the check at the final DOM
+  boundary. `normalizeScreenImageSrc` is a compatibility delegating alias only, not a
+  second owner or prefix filter.
 - Write normalization prunes bindings whose content field or block no longer
   exists, including every ghost binding when the document is empty. Successful
   POST / PATCH responses may include transient `warnings` entries with
@@ -4142,7 +4145,12 @@ aggregate user-settings browser cache. Screen writes send the optional
 created. The route still derives its real owner from the current session; if the
 header is present and differs from that session user, it returns
 `user_setting_identity_changed`/409 before persistence. Header omission remains
-compatible with existing user-settings callers.
+compatible with existing user-settings callers. For a configured trusted origin,
+the PATCH preflight always includes `X-Coderso-Expected-User-Id` in
+`Access-Control-Allow-Headers`: the CORS middleware unions the required name into
+persisted `cors.allowedHeaders` case-insensitively while preserving the configured
+order and first spelling. This keeps older persisted security settings compatible;
+an untrusted origin remains rejected.
 
 Security/error contract:
 
@@ -4761,7 +4769,11 @@ Permissions: `settings:read`, `settings:write`
     "allowedOrigins": ["https://admin.example.com"],
     "allowCredentials": true,
     "allowedMethods": ["GET", "POST", "PATCH", "DELETE"],
-    "allowedHeaders": ["content-type", "x-csrf-token"],
+    "allowedHeaders": [
+      "content-type",
+      "x-csrf-token",
+      "x-coderso-expected-user-id"
+    ],
     "maxAgeSeconds": 600
   },
   "plugins": {

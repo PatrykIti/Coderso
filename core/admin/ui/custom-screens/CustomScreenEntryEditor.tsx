@@ -571,16 +571,18 @@ export function projectExactRequestedMediaUrls(
   records: readonly MediaRecord[],
   requestedIds: readonly string[]
 ): Readonly<Record<string, string>> {
-  const requested = new Set(requestedIds);
-  const result: Record<string, string> = {};
+  const recordsByCanonicalId = new Map<string, MediaRecord>();
   for (const record of records) {
-    if (
-      requested.has(record.id) &&
-      isScreenMediaAssetUuid(record.id) &&
-      record.type === "image" &&
-      typeof record.url === "string"
-    ) {
-      result[record.id] = record.url;
+    if (isScreenMediaAssetUuid(record.id) && !recordsByCanonicalId.has(record.id.toLowerCase())) {
+      recordsByCanonicalId.set(record.id.toLowerCase(), record);
+    }
+  }
+  const result: Record<string, string> = {};
+  for (const requestedId of requestedIds) {
+    if (!isScreenMediaAssetUuid(requestedId)) continue;
+    const record = recordsByCanonicalId.get(requestedId.toLowerCase());
+    if (record && record.type === "image" && typeof record.url === "string") {
+      result[requestedId] = record.url;
     }
   }
   return Object.freeze(result);

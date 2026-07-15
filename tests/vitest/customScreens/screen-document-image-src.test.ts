@@ -48,6 +48,14 @@ const buttonBlock = (href?: unknown) => ({
   },
 });
 
+const controlConfusedUrls = [
+  "/\t/evil.example/x",
+  "/\n/evil.example/x",
+  "/\r/evil.example/x",
+  "/\u0000/evil.example/x",
+  "/\u007F/evil.example/x",
+] as const;
+
 const writeData = (block: unknown) =>
   normalizeCustomScreenDefinitionForWrite({
     definition: buildV4WithBlocks([block]),
@@ -73,6 +81,7 @@ describe("Custom Screen authoring URL trust boundary", () => {
     );
 
     const hostile: unknown[] = [
+      ...controlConfusedUrls,
       "//evil.example/x.png",
       "/media\\..\\evil.png",
       "https:\\evil.example\\x.png",
@@ -98,6 +107,7 @@ describe("Custom Screen authoring URL trust boundary", () => {
 
   test("normalizeScreenImageSrc remains an exact delegating compatibility alias", () => {
     const corpus: unknown[] = [
+      ...controlConfusedUrls,
       "/media/a.jpg",
       "https://x/y.png",
       "http://host/x.png",
@@ -115,6 +125,32 @@ describe("Custom Screen authoring URL trust boundary", () => {
       expect(normalizeScreenImageSrc(value)).toBe(sanitizeScreenAuthoringUrl(value, "media") ?? "");
     }
     expect(normalizeScreenImageSrc(normalizeScreenImageSrc("/media/a.jpg"))).toBe("/media/a.jpg");
+  });
+
+  test("rejects ASCII-control URL confusion before delegation in every Screen seam", () => {
+    for (const value of controlConfusedUrls) {
+      expect(sanitizeScreenAuthoringUrl(value, "media")).toBeNull();
+      expect(sanitizeScreenAuthoringUrl(value, "link")).toBeNull();
+      expect(normalizeScreenImageSrc(value)).toBe("");
+
+      for (const [block, expectedPath] of [
+        [imageBlock(value), "definition.editorView.document.sections.0.blocks.0.data.src"],
+        [buttonBlock(value), "definition.editorView.document.sections.0.blocks.0.data.href"],
+      ] as const) {
+        try {
+          writeData(block);
+          throw new Error("expected control-confused URL rejection");
+        } catch (error) {
+          expect(error).toBeInstanceOf(CustomScreenDefinitionError);
+          const definitionError = error as CustomScreenDefinitionError;
+          expect(definitionError.fields).toEqual([expectedPath]);
+          expect(definitionError.fields.join(" ")).not.toContain(value);
+        }
+      }
+
+      expect(readData(imageBlock(value)).src).toBeUndefined();
+      expect(readData(buttonBlock(value)).href).toBeUndefined();
+    }
   });
 
   test("write rejects unsafe image and Button URLs with generated non-echo paths", () => {

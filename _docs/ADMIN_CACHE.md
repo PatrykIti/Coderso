@@ -544,6 +544,18 @@ Clients update caches and broadcast events on:
   with `contentTypes:list`.
 - Type-scoped caches (`entries:list:<typeSlug>`) remain authoritative for the
   editor, widgets, relation fields, and existing type-scoped clients.
+- Within each type slug, `entriesClient` assigns one monotonic publication order
+  across complete list reads, per-entry detail reads, successful
+  create/update/metadata/status/duplicate publications, and delete tombstones. An
+  older list cannot overwrite a newer detail, successful mutation, or delete for the
+  same entry; list reconciliation preserves that item authority while still accepting
+  the returned rows for unrelated entries.
+- A newer authoritative complete list cancels/invalidates observed detail publishers
+  and cached detail values at or before its version, including cleanup for an omitted
+  observed entry. A newer per-entry detail or mutation remains authoritative. Rejected
+  reads and mutations publish no cache state; only successful mutations broadcast.
+  `clearEntriesCache(typeSlug)` clears the scoped list/detail/authority state and makes
+  captured pre-clear list/detail promises ineligible to publish when they settle.
 - Entry create/update/metadata/duplicate/delete mutations update or invalidate
   the type-scoped cache and clear/broadcast `entries:list:all` so the cross-type
   list reloads from the joined read model.
@@ -602,6 +614,20 @@ Clients update caches and broadcast events on:
   update or invalidate `customScreens:list` / `customScreens:detail:<id>` and
   broadcast cache events for the list, sidebar shortcuts, builder, and records
   workflow.
+- `customScreensClient` assigns one monotonic publication order across complete list
+  reads, per-screen detail reads, successful create/update publications, and delete
+  tombstones. An older list cannot overwrite a newer detail, mutation, or delete for
+  the same screen; reconciliation preserves that item authority while accepting the
+  returned rows for unrelated screens. An authoritative list cleans up observed
+  details omitted from that list and primes returned rows without displacing a newer
+  per-screen value.
+- If a direct detail read falls back to the list endpoint, the client publishes and
+  reconciles the complete returned list under that same authority, not only the
+  requested row. Reads that ultimately reject and rejected mutations publish and
+  broadcast nothing.
+  `clearCustomScreensCache()` clears tracked list/detail/pending/authority state and
+  known browser detail entries; captured pre-clear list/detail promises cannot publish,
+  and corrupt stored-list discovery fails safe while clearing known state.
 - Builder previews do not introduce a separate Custom Screens preview API or
   preview-only cache family.
 - `Editor View` preview and the mounted builder canvas now share one
@@ -618,10 +644,8 @@ Clients update caches and broadcast events on:
   `entriesClient`; no Custom Screens-specific entry cache is introduced, and the
   screen-owned records workspace no longer hydrates or opens `EntryCreateDrawer`
   as a parallel create path.
-- Entry-list promise de-duplication follows the same exact-request rule as the
-  media list: rejected requests release their pending slot, forced/newer reads
-  retain publication authority, and successful write-derived upserts/removals
-  revoke a pre-write pending list before publishing cache state.
+- The screen records workspace reuses the type-scoped Entry list/detail ordering
+  defined above; it does not introduce a second Entry authority model.
 - Related-list hosts subscribe to every normalized target's
   `entries:list:<typeSlug>` event. Initial loads are non-forced; Retry and
   cache-event revalidation are forced. A target change derives empty/loading

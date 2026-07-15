@@ -199,10 +199,15 @@ Storage:
   discriminated reject-unknown schema, while stored legacy rows use only the
   deterministic non-destructive read adapters required for compatibility.
 - Button authoring supports only the implemented Link action. Static and bound
-  links pass through the Screen URL policy at write and render boundaries;
-  unsupported stored `publish`/`custom` actions read as disabled and are never
-  promoted into a new action API. Tabs keep their item IDs and slot IDs in
-  lockstep and render as functional, keyboard-operable, root-scoped ARIA tabs.
+  links pass through the sole Screen URL owner,
+  `sanitizeScreenAuthoringUrl`: it rejects original-string ASCII controls
+  (`U+0000..U+001F` and `U+007F`) and backslashes before trim/delegation, so
+  protocol-relative, control-confused, executable, and unsupported forms fail closed
+  at write and render boundaries. `normalizeScreenImageSrc` remains only a delegating
+  compatibility alias, not a second policy owner. Unsupported stored
+  `publish`/`custom` actions read as disabled and are never promoted into a new action
+  API. Tabs keep their item IDs and slot IDs in lockstep and render as functional,
+  keyboard-operable, root-scoped ARIA tabs.
 - Record detail mode reuses the same neutral canvas shell but exposes only
   record-editing controls. It does not show builder add, move, duplicate,
   delete, library, settings controls, or a detached Value panel. Writable bound

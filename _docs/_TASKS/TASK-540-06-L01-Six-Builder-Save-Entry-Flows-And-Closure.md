@@ -10,6 +10,11 @@
 **Dependencies:** TASK-540-01-L01, TASK-540-02-L01, TASK-540-03-L01, TASK-540-04-L01..L04, TASK-540-05-L01..L02
 **Status:** 🚧 In Progress
 **Started:** 2026-07-14
+**Source Repair Started:** 2026-07-15
+**Source Repair Reason:** Mandatory repository-wide `bun run test` paused closure after confirming that `screen-editor-sections.test.tsx` lacked the fresh-symbol cacheBus factory required by the L04-owned Screen builder Save path. TASK-540-04-L04 completed the additive mock repair and exact six-file re-gate; closure resumed with every source-owner test read-only.
+**Source Repair Revalidated:** 2026-07-15 — `bun --cwd core lint:types`, `bun --cwd core lint`, root `tsc`, exact six-file Vitest gate 66/66, isolated `screen-editor-sections` 9/9, workflow syntax, repair-sibling self-test 9/9, diff check, and five post-audit lenses with zero HIGH/MEDIUM/LOW findings
+**Historical Source Repair Started:** 2026-07-14
+**Historical Source Repair Reason:** Repository-wide Bun validation paused closure after confirming a stale strict-V4 Custom Screen fixture in `tests/unit/assistant/actionExecutorService.test.ts`. TASK-540-01-L01 alone owned the fixture-only repair and re-gate; closure kept every source-owner test read-only and resumed after R01 was Done.
 **Changelog:** 1252 (pinned; closure only)
 **Changelog File:** `_docs/_CHANGELOG/1252-2026-07-14-task-540-custom-screens-functional-and-data-integrity-remediation.md`
 
@@ -23,7 +28,9 @@
 - every other Vitest/Bun path in the required matrix is read-only here and remains
   owned by its source leaf, including the image-inspector, Custom Screens client,
   entry-preference persistence, and navigation-guard suites
-- `_docs/CONTENT_TYPES_SPEC.md`, `_docs/CMS_SPEC.md`, `_docs/CMS_API.md`
+- `_docs/CONTENT_TYPES_SPEC.md`, `_docs/CMS_SPEC.md`, `_docs/CMS_API.md`, and the
+  narrow `_docs/SECURITY_SPEC.md` correction stating that CSRF covers every unsafe
+  method, including PATCH
 - `_docs/ADMIN_CACHE.md`, `_docs/ADMIN_CACHE_MAP.md`
 - relevant Custom Screens user/developer guides
 - task-prefixed screenshots named `_docs/_workflows/_smoke/task-540-*`
@@ -62,6 +69,7 @@ tests/vitest/ui-integration/canvas-editor-panel-toggle-dedupe.test.tsx
 tests/vitest/ui-integration/canvas-editor/canvas-editor.test.tsx
 tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx
 tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx
+tests/vitest/ui-integration/screen-editor-sections.test.tsx
 tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx
 tests/vitest/ui-integration/custom-screen-entry-preferences-persistence.test.tsx
 tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx
@@ -71,8 +79,14 @@ tests/vitest/widgets/screenWidgets.test.tsx
 tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx
 tests/unit/settings/userSettingsService.test.ts
 tests/integration/routes/userSettings.test.ts
+tests/integration/routes/cors.test.ts
 tests/integration/routes/customScreensRoutes.test.ts
+tests/unit/assistant/actionExecutorService.test.ts
 ```
+
+This required matrix contains exactly 39 files: 34 Vitest files plus 5 Bun files.
+Exactly 38 are source-owner files and 1 is the closure-owned aggregate
+`custom-screen-task-540-flow.test.tsx`.
 
 The closure ownership reconcile also verifies, read-only, that TASK-540-02-L01
 solely wrote `ScreenBlockInspector.tsx` plus its image-inspector suite; TASK-540-04-L03
@@ -80,14 +94,26 @@ solely wrote `screenEntryPresentationOverrideContract.ts`,
   `screenEntryPresentationOverrides.ts`, `customScreensClient.ts`, `cacheBus.ts`, and their
   two admin suites; and TASK-540-04-L04 solely wrote `CustomScreenEditorPage.tsx`, its
   route helper, Page/route/binding suites, plus only the additive cacheBus factory mock in
-  the recovery suite, while consuming the L03 token names and signatures byte-identically.
-  TASK-505 recovery assertions must remain byte-identical. The workflow's leaf allowlists, targeted commands,
+  the recovery suite and the identical additive
+  `createCacheEventOperationToken: () => Symbol(),` property in
+  `screen-editor-sections.test.tsx`, while consuming the L03 token names and signatures
+  byte-identically. TASK-505 recovery assertions and all nine TASK-500 section-suite
+  tests and all of their assertions, imports, and other mock bytes must remain byte-identical. The workflow's leaf allowlists, targeted commands,
 aggregate matrix, and closure hash set must name these exact paths identically.
 TASK-540-05-L02 additionally owns the exact auth-identity contract/provider/route paths
-and `admin-auth-identity.test.tsx`; its Assistant suite is mechanically projected to the
-one required typed fixture property. TASK-540-04-L03 remains the sole writer of
+and `admin-auth-identity.test.tsx`; its reopened correction solely owns
+`securitySettings.ts`, `cors.ts`, and `cors.test.ts` for the required-header union and
+default/preflight evidence. Its Assistant suite is mechanically projected to the one
+required typed fixture property. TASK-540-04-L03 remains the sole writer of
 `CustomScreenEntryEditor.tsx` and leaves its hook call transport-neutral before L02;
 L02 consumes that component byte-identically.
+TASK-540-01-L01 additionally owns only the existing
+`executeAssistantActionPlan patches custom screen block data` fixture/assertion region
+inside `tests/unit/assistant/actionExecutorService.test.ts`. Its canonical fixed-kind
+repair may change the selected block kind/ID, `dataPath`, value assertions, and the
+independent sibling fixture/assertion needed to prove preservation; shared helpers,
+other Assistant cases, production Assistant code, and strict Screen schema/source are
+read-only. Closure runs and hashes the whole Assistant file without editing it.
 
 Assertions must cover exact reject-unknown/round-trip behavior, hostile URL
 corpus, recursive children/slot rejection, direct-image UUID→media URL resolution and
@@ -112,6 +138,11 @@ and reopen while proving no
 empty-field sentinel reaches the persisted definition. The new aggregate file may
 compose public production seams and leaf-owned test helpers, but it must not copy
 production algorithms or weaken a source-owner assertion.
+The R01-owned Assistant regression must construct the native strict-V4 fixture only
+from canonical fixed kinds, patch `heading.data.text`, preserve another property on that
+heading, and preserve the independent `text.data.content` sibling. It must not make
+unsupported Screen `hero`/`rich-text-section` kinds acceptable; similarly named Page or
+Widget fixtures outside this exact Custom Screen case remain outside TASK-540.
 TASK-540-02-L01 owns `custom-screen-image-inspector.test.tsx`; TASK-540-04-L02 owns
 `use-screen-related-entries.test.tsx`; TASK-540-04-L03 owns
 `customScreensClient.test.ts` plus `custom-screen-entry-navigation-guard.test.tsx`;
@@ -207,6 +238,14 @@ a source owner requires the board to be already In Progress and preserves the co
 board byte-identically; only the dedicated closure-pending and closure-status transitions
 may move TASK-540 or change the board statistics.
 
+During an earlier source-owner `Repair Pending`, TASK-540-06-L01 is the sole later leaf
+permitted to remain `🚧 In Progress`. It is deliberately ungated in that graph and must
+have neither `Targeted Gate Passed` nor `Revalidation Passed`; its active status is not a
+claim that the closure gate ran. Every other source sibling must remain `✅ Done` with
+its `Completed` receipt. Never fabricate closure or source gate evidence to satisfy a
+restart projection. `_docs/_workflows/task-540-implement.mjs` owns this invariant and
+must keep `--self-test-repair-siblings` green.
+
 The sole pre-pending exception is a verified post-audit or smoke-evidence source finding
 owned by `540-06-L01` while that closure leaf, its child, and TASK-540 are already active,
 the changelog index is still the canonical reserved state with no TASK-540 control anchor,
@@ -271,6 +310,13 @@ carry the family evidence hash/generation; a missing or open descendant fails. A
 later exception reopens only the affected source owner (when applicable), the closure
 leaf/direct child, and root before propagating. Unrelated completed descendants remain
 Done, and unstarted descendants remain To Do.
+
+Changelog 1252 must contain exactly one task metadata line, byte-identical to this
+complete, unique, deterministically ordered family set:
+
+```text
+Tasks: TASK-540, TASK-540-01-L01, TASK-540-02-L01, TASK-540-03-L01, TASK-540-04-L01, TASK-540-04-L02, TASK-540-04-L03, TASK-540-04-L04, TASK-540-05-L01, TASK-540-05-L02, TASK-540-06-L01
+```
 
 A process restart from a terminal-looking graph is not accepted on status alone. It
 first requires all 17 contracts plus the board Done, identical valid evidence
@@ -722,7 +768,7 @@ playwright-cli -s=wf540smoke --raw run-code '(page) => page.__wf540PageErrors ??
    ```bash
    playwright-cli -s=wf540smoke --raw tab-new http://coderso-a.localhost:5173/admin/advanced/entries/<RELATED_A_SLUG>/<RELATED_A_ENTRY_ID>
    playwright-cli -s=wf540smoke --raw fill '<REAL_RELATED_A_EDIT_CONTROL>' '<UPDATED_VISIBLE_VALUE>'
-   playwright-cli -s=wf540smoke --raw click 'button:text-is("Save")'
+   playwright-cli -s=wf540smoke --raw click 'button:text-is("Save draft")'
    playwright-cli -s=wf540smoke --raw tab-select 0
    ```
 7. **Responsive geometry and two users, light/dark.** Execute every resize below
@@ -852,10 +898,12 @@ real stdout/stderr hashes from each recovery CLI invocation, and remains termina
 ## Validation and closure
 
 ```bash
+set -a && source .env && set +a
+bun --eval 'import { canConnect } from "./tests/utils/db"; const configured = Boolean(process.env.DATABASE_URL?.trim()); const reachable = configured && await canConnect(); process.stdout.write(JSON.stringify({ configured, reachable, selectOne: reachable ? 1 : 0 })); if (!reachable) process.exit(1); process.exit(0)'
 bun --cwd core lint:types
 bun --cwd core lint
 ./node_modules/.bin/tsc -p tsconfig.json --noEmit
-bunx vitest run tests/vitest/admin/cacheBus.test.ts \
+bunx vitest run --config vitest.config.ts tests/vitest/admin/cacheBus.test.ts \
   tests/vitest/admin/custom-screen-schemas.test.ts \
   tests/vitest/admin/customScreensClient.test.ts \
   tests/vitest/customScreens/screenDocumentOps.test.ts \
@@ -881,6 +929,7 @@ bunx vitest run tests/vitest/admin/cacheBus.test.ts \
   tests/vitest/ui-integration/canvas-editor/canvas-editor.test.tsx \
   tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx \
   tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx \
+  tests/vitest/ui-integration/screen-editor-sections.test.tsx \
   tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx \
   tests/vitest/ui-integration/custom-screen-entry-preferences-persistence.test.tsx \
   tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx \
@@ -888,11 +937,11 @@ bunx vitest run tests/vitest/admin/cacheBus.test.ts \
   tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx \
   tests/vitest/widgets/screenWidgets.test.tsx \
   tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx
-set -a && source .env && set +a
-bun --eval 'import { canConnect } from "./tests/utils/db"; if (!(await canConnect())) throw new Error("task_540_db_unreachable"); process.exit(0)'
 bun test tests/unit/settings/userSettingsService.test.ts \
   tests/integration/routes/userSettings.test.ts \
-  tests/integration/routes/customScreensRoutes.test.ts
+  tests/integration/routes/cors.test.ts \
+  tests/integration/routes/customScreensRoutes.test.ts \
+  tests/unit/assistant/actionExecutorService.test.ts
 bun run test
 bun run precommit:check
 bun --cwd core build:admin
@@ -902,6 +951,8 @@ bun run gates:coderso
 # Must be executed and captured even when it exits non-zero for the exact known
 # TASK-545-owned finding described below.
 bun run scan:security:strict
+node --check _docs/_workflows/task-540-implement.mjs
+node _docs/_workflows/task-540-implement.mjs --self-test-repair-siblings
 git diff --check
 ```
 
@@ -913,16 +964,24 @@ file once with `bun test <exact-file>` before classification; after any fix,
 rerun the failed parent command, and rerun full `bun run test` plus
 `bun run precommit:check` whenever source/tests/docs change after their pass.
 
-At the closure phase boundary, record a content hash for every existing
-source-owner matrix file (including the newly created navigation-guard file) and
-compare the same map after closure; every hash must be byte-identical. The
+Immediately before any TASK-540-06-L01 preparation or repair resume, record a content
+hash for every existing source-owner matrix file (including the newly created
+navigation-guard file, the R01-owned whole-file hash of
+`tests/unit/assistant/actionExecutorService.test.ts`, and the L04-repaired whole-file hash
+of `tests/vitest/ui-integration/screen-editor-sections.test.tsx`). Refresh that
+source-owner baseline only after an exact earlier
+source-owner repair passes its matching re-gate, then compare the retained map after
+closure; every hash must be byte-identical. Hash the closure-owned aggregate suite
+separately at `runClosure` entry and compare it after status closure. The
 closure-attributable test patch may contain only
 `tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx`; earlier
 source-leaf changes can still appear in the overall working-tree diff and are not
 misclassified as closure edits. Preserve completed descendants as Done, keep the
 closure leaf/direct child and root In Progress, and keep any unlanded descendant To Do;
 then discover exactly zero or one `_docs/_CHANGELOG/1252-*.md`, reject duplicates, and
-create or reuse the fixed safe path above. Before any status mutation, write and
+create or reuse the fixed safe path above. Require exactly one `Tasks:` metadata line
+whose parsed IDs are the exact unique ordered set pinned above; reject missing,
+duplicate, reordered, or additional IDs. Before any status mutation, write and
 byte-verify the changelog-index anchor plus canonical evidence block containing the
 strict generation, baseline, path, evidence hash, and hashed-gate control manifest. The subsequent pending transition
 persists identical Closure Pending, Closure Board Baseline, and Closure Changelog Path

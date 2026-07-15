@@ -10,8 +10,12 @@
 **Dependencies:** TASK-540-04-L03
 **Status:** ✅ Done
 **Started:** 2026-07-14
-**Completed:** 2026-07-14
-**Revalidation Passed:** 2026-07-14 — `core lint:types`, `core lint`, root `tsc`, and the exact five-file Vitest matrix (57/57)
+**Fix Started:** 2026-07-15
+**Repair Reason:** Mandatory repository-wide `bun run test` confirmed that `tests/vitest/ui-integration/screen-editor-sections.test.tsx` had fully mocked `@/utils/cacheBus` without the L04-required `createCacheEventOperationToken` export. Its Save path rejected before `updateCustomScreen`, producing an unhandled rejection and zero mutation calls; the repair added only the missing fresh-symbol factory and re-gated the owning leaf.
+**Completed:** 2026-07-15
+**Revalidation Passed:** generation 57974d94b81d8f4afbf85a22ebe32bf4 / token 1e62523100e412eaf5611d3f3b152f24 / gate green
+**Historical Completion:** 2026-07-14
+**Historical Revalidation:** 2026-07-14 — `core lint:types`, `core lint`, root `tsc`, and the exact five-file Vitest matrix (57/57)
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -25,24 +29,43 @@
 - `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx` (only the additive
   cacheBus factory mock required by the L03 API; all TASK-505 assertions stay byte-identical)
+- `tests/vitest/ui-integration/screen-editor-sections.test.tsx` (only the additive
+  `createCacheEventOperationToken: () => Symbol(),` property in its existing full-module
+  cacheBus mock; all nine TASK-500 tests and all of their assertions, imports, and every other mock byte stay
+  byte-identical)
 
 No other TASK-540 leaf edits these paths. In particular, TASK-540-03-L01 owns only the
 renderer and record-interaction suites; this leaf exclusively owns the binding-flow
 suite. TASK-540-04-L03 consumes the existing workspace/entry helper read-only; L04 owns
 only the additive Screen-editor helper seam and its route-params assertions.
 The recovery suite remains a TASK-505 regression gate for pruned-binding notices and
-detailed save errors. L04 may add exactly
+detailed save errors. L04 added exactly
 `createCacheEventOperationToken: () => Symbol()` to its full-module cacheBus mock so the
 real L04 import can execute; it must not edit or re-baseline any behavior assertion.
+The same exact additive factory was added in `screen-editor-sections.test.tsx`
+because that legacy suite executes Save. Its nine TASK-500 tests retain their existing
+behavior and assertion strength; this repair does not change imports, fixtures, mutation
+mocks, save expectations, or any other cacheBus mock property.
+
+Four other focused suites intentionally keep their current partial cacheBus mocks:
+`canvas-editor-panel-toggle-dedupe.test.tsx`, `custom-screen-editor-restyle.test.tsx`,
+`custom-screen-widget-picker.test.tsx`, and
+`screen-editor-insertion-targeting.test.tsx`. None executes the Screen builder Save path,
+so the existing `subscribeCacheEvents` export is sufficient for the behavior each suite
+owns. Under YAGNI this repair does not edit them. Any future Save coverage in one of those
+files must consciously add a fresh-symbol `createCacheEventOperationToken` factory rather
+than reuse one shared symbol or silently import the real cache transport.
 
 L04 consumes L03's landed cache-bus and mutation-client operation seams read-only. Existing
 one-argument subscribers remain valid. The optional symbol token is same-context callback
 metadata only; no cache key, serialized event field, storage key, network payload, or
 broadcast transport changes.
-The reopened corrective pass was dispatched by `_docs/_workflows/task-540-fix.mjs`
-only after its L03 substrate/client phase and gate pass. The canonical resumable
-workflow recognizes both completed corrective leaves as landed and continues at the
-first later unlanded leaf without rerunning them.
+The earlier corrective pass ran only after its L03 substrate/client phase and gate
+passed. Its durable evidence is the affected task metadata and current gates, not the
+mutable `_docs/_workflows/task-540-fix.mjs`, which now records only the completed
+R01→R03 URL-control correction. That completion evidence remains historical. The
+2026-07-15 one-property L04 repair and fresh six-file gate completed without rerunning
+completed sibling leaves. L04 and TASK-540-04 are Done, and closure has resumed.
 
 ## Grounded anchors
 
@@ -54,7 +77,7 @@ first later unlanded leaf without rerunning them.
   `:1109-1276`.
 - Initial/detail-cache hydration and exact self-event correlation: `:603-799`.
 - Successful create navigation: `:1248-1256`.
-- Existing workspace-only helper (ends in `/entries`): `routeParams.ts:36-48`.
+- Existing workspace-only helper (ends in `/entries`): `routeParams.ts:36-42`.
 - Existing route helper suite: `custom-screen-route-params.test.ts:1-74`.
 - Shell dirty badge, unresolved Save state, warning action, and discard dialog:
   `CustomScreenEditorPage.tsx:1391-1513,1581-1591`.
@@ -64,6 +87,21 @@ first later unlanded leaf without rerunning them.
 ## Implementation Pseudocode
 
 ```tsx
+// tests/vitest/ui-integration/screen-editor-sections.test.tsx
+// Preserve all imports, all nine TASK-500 tests and all of their assertions, and every other mock byte.
+vi.mock("@/utils/cacheBus", () => ({
+  createCacheEventOperationToken: () => Symbol(),
+  subscribeCacheEvents: vi.fn(() => () => undefined),
+}));
+
+// Existing test data flow remains:
+// Save click -> captureScreenSaveToken() -> fresh opaque symbol -> updateCustomScreen()
+// -> assert exactly one mutation and the binding-pruned persisted definition.
+// Without the factory, the async Save handler rejects before the mutation; do not catch,
+// fall back, weaken the call-count assertion, or re-baseline the persisted payload.
+// Every call returns a distinct symbol so exact same-context operation identity remains
+// reference-based and no token is serialized or shared across saves.
+
 // routeParams.ts: canonical Screen-definition editor path (not the /entries workspace).
 export function buildCustomScreenEditorPath(input: { screenId: string }) {
   return `/advanced/custom-screens/${encodeURIComponent(input.screenId)}`;
@@ -1016,6 +1054,12 @@ edit-superseded result without a false newer-local-changes notice.
   by the new L03 import. Its TASK-505 recovery-flow and partial-copy assertions remain
   byte-identical and must not be re-baselined. The owned Page suite above pins both
   complete diagnostic strings exactly.
+- `screen-editor-sections.test.tsx` adds only
+  `createCacheEventOperationToken: () => Symbol(),` to the existing cacheBus mock. All
+  nine TASK-500 tests remain byte-identical otherwise. In particular, the section-delete
+  Save regression still proves one `updateCustomScreen` call and an empty persisted
+  binding list; the repair supplies the production-required opaque token instead of
+  catching the rejection or weakening those assertions.
 
 The owned Page suite directly tests the production-used pure
 `advanceBuilderDraftGeneration(current)` transition. Per-handler exact-one ownership is
@@ -1028,27 +1072,35 @@ TASK-540-06 runs all owned and read-only gate suites without re-baselining these
 
 ## Validation
 
+The 2026-07-15 repair gate passed `bun --cwd core lint:types`, `bun --cwd core lint`,
+root `tsc`, exactly 6/6 Vitest files and 66/66 tests, workflow syntax, the 9/9
+repair-sibling self-test, and diff check.
+The originally failing `screen-editor-sections.test.tsx` suite also passed 9/9 in
+isolation. Five fresh post-implementation audit lenses returned zero HIGH, MEDIUM, or LOW
+findings.
+
 ```bash
 bun --cwd core lint:types
 bun --cwd core lint
 ./node_modules/.bin/tsc -p tsconfig.json --noEmit
-bunx vitest run tests/vitest/ui/custom-screens-page.test.tsx \
+bunx vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx \
   tests/vitest/ui/custom-screen-route-params.test.ts \
   tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx \
   tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx \
+  tests/vitest/ui-integration/screen-editor-sections.test.tsx \
   tests/vitest/admin/cacheBus.test.ts
+node --check _docs/_workflows/task-540-implement.mjs
+node _docs/_workflows/task-540-implement.mjs --self-test-repair-siblings
+git diff --check
 ```
 
-Rerun a named failing file once in isolation.
+## Historical completion evidence
 
-## Current completion evidence
-
-- Fresh corrective revalidation on 2026-07-14 passed `bun --cwd core lint:types`,
+- The pre-repair corrective revalidation on 2026-07-14 passed `bun --cwd core lint:types`,
   `bun --cwd core lint`, and `./node_modules/.bin/tsc -p tsconfig.json --noEmit`.
-- The exact owned/read-only matrix passed 5/5 files and 57/57 tests:
+- That historical exact owned/read-only matrix passed 5/5 files and 57/57 tests:
   `custom-screens-page`, `custom-screen-route-params`,
   `custom-screen-editor-binding-flow`, `custom-screen-section-recovery`, and
   `cacheBus`.
-- This receipt supersedes the pre-correction validation narrative; the leaf remains
-  complete because the corrective source state was re-gated rather than inferred from
-  its status.
+- This evidence remains truthful history and is distinct from the completed 2026-07-15
+  six-file repair revalidation recorded above.

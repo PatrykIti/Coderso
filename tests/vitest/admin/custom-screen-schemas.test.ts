@@ -1980,6 +1980,284 @@ test("TASK-540-01 every present non-link Button action prunes href bindings on s
   expect(normalizeCustomScreenDefinitionForRead({ definition: read })).toEqual(read);
 });
 
+test("TASK-540-01 generated stored-read Button IDs cannot retain unsupported href bindings", () => {
+  const unsupportedButtons = [
+    {
+      type: "actions",
+      data: { label: "Missing ID", action: "publish", href: "/must-not-survive" },
+    },
+    {
+      id: null,
+      type: "button",
+      data: { label: "Null ID", action: { legacy: true }, href: "/must-not-survive-either" },
+    },
+    {
+      id: "safe-button",
+      type: "button",
+      data: { label: "Safe", action: "link" },
+    },
+  ];
+  const bindings = (scope: "editor" | "row") => [
+    ...["block-1", "block-2"].map((blockId, index) => ({
+      id: `${scope}-unsafe-${index}`,
+      blockId,
+      propPath: "href",
+      source: "entry" as const,
+      field: "targetUrl",
+      mode: "read" as const,
+    })),
+    {
+      id: `${scope}-safe`,
+      blockId: "safe-button",
+      propPath: "href",
+      source: "entry" as const,
+      field: "targetUrl",
+      mode: "read" as const,
+    },
+  ];
+  const base = buildV4WithBlocks(unsupportedButtons);
+  const stored = {
+    ...base,
+    listView: {
+      ...base.listView,
+      rowTemplate: {
+        document: {
+          schemaVersion: 1,
+          sections: [
+            {
+              id: "row",
+              type: "section",
+              data: {},
+              blocks: unsupportedButtons,
+            },
+          ],
+        },
+        bindings: bindings("row"),
+      },
+    },
+    editorView: { ...base.editorView, bindings: bindings("editor") },
+  };
+  const before = JSON.stringify(stored);
+
+  const read = normalizeCustomScreenDefinitionForRead({ definition: stored });
+
+  expect(JSON.stringify(stored)).toBe(before);
+  const editorButtons = read.editorView.document.sections[0]?.blocks ?? [];
+  const rowButtons = read.listView.rowTemplate?.document.sections[0]?.blocks ?? [];
+  for (const button of [...editorButtons, ...rowButtons].slice(0, 2)) {
+    expect(button.data).toMatchObject({ action: "link" });
+    expect(button.data.href).toBeUndefined();
+  }
+  expect(read.editorView.bindings).toEqual([expect.objectContaining({ blockId: "safe-button" })]);
+  expect(read.listView.rowTemplate?.bindings).toEqual([
+    expect.objectContaining({ blockId: "safe-button" }),
+  ]);
+  expect(normalizeCustomScreenDefinitionForRead({ definition: read })).toEqual(read);
+  expect(normalizeCustomScreenDefinitionForWrite({ definition: read })).toEqual(read);
+});
+
+test("TASK-540-01 removed orphan Tabs slots preserve both stored-read documents", () => {
+  const tabsWithOrphanSlot = (scope: "editor" | "row", nullId: boolean) => ({
+    id: `${scope}-tabs`,
+    type: "tabs",
+    data: {
+      tabs: [
+        { id: "kept", label: "Kept" },
+        { id: "kept", label: "Duplicate" },
+      ],
+    },
+    slots: {
+      kept: [
+        {
+          id: `${scope}-survivor`,
+          type: "button",
+          data: { label: "Survivor", action: "link", href: "/safe" },
+        },
+      ],
+      orphan: [
+        {
+          ...(nullId ? { id: null } : {}),
+          type: "button",
+          data: { label: "Removed", action: "unsupported", href: "/must-not-survive" },
+        },
+      ],
+    },
+  });
+  const bindingsFor = (scope: "editor" | "row") => [
+    {
+      id: `${scope}-removed-href`,
+      blockId: "block-1",
+      propPath: "href",
+      source: "entry" as const,
+      field: "targetUrl",
+      mode: "read" as const,
+    },
+    {
+      id: `${scope}-survivor-href`,
+      blockId: `${scope}-survivor`,
+      propPath: "href",
+      source: "entry" as const,
+      field: "targetUrl",
+      mode: "read" as const,
+    },
+  ];
+  const editorTabs = tabsWithOrphanSlot("editor", false);
+  const rowTabs = tabsWithOrphanSlot("row", true);
+  const base = buildV4WithBlocks([editorTabs]);
+  const stored = {
+    ...base,
+    listView: {
+      ...base.listView,
+      rowTemplate: {
+        document: {
+          schemaVersion: 1,
+          sections: [{ id: "row", type: "section", data: {}, blocks: [rowTabs] }],
+        },
+        bindings: bindingsFor("row"),
+      },
+    },
+    editorView: { ...base.editorView, bindings: bindingsFor("editor") },
+  };
+  const before = JSON.stringify(stored);
+
+  const read = normalizeCustomScreenDefinitionForRead({ definition: stored });
+
+  expect(JSON.stringify(stored)).toBe(before);
+  const repairedViews = [
+    {
+      scope: "editor",
+      tabs: read.editorView.document.sections[0]?.blocks[0],
+      bindings: read.editorView.bindings,
+    },
+    {
+      scope: "row",
+      tabs: read.listView.rowTemplate?.document.sections[0]?.blocks[0],
+      bindings: read.listView.rowTemplate?.bindings ?? [],
+    },
+  ] as const;
+  for (const { scope, tabs, bindings } of repairedViews) {
+    expect(tabs?.type).toBe("tabs");
+    expect(Object.keys(tabs?.slots ?? {})).toEqual(["kept", "tab-2"]);
+    expect(tabs?.slots?.kept?.map((block) => block.id)).toEqual([`${scope}-survivor`]);
+    expect(tabs?.slots?.["tab-2"]).toEqual([]);
+    expect(bindings.map((binding) => binding.id)).toEqual([`${scope}-survivor-href`]);
+  }
+  expect(() => validate(customScreenDefinitionSchema, read)).not.toThrow();
+  expect(normalizeCustomScreenDefinitionForRead({ definition: read })).toEqual(read);
+  expect(normalizeCustomScreenDefinitionForWrite({ definition: read })).toEqual(read);
+});
+
+test("TASK-540-01 reordered Tabs slots keep Button action provenance structural", () => {
+  const tabsWithReorderedSlots = (scope: "editor" | "row", nullId: boolean) => ({
+    id: `${scope}-tabs`,
+    type: "tabs",
+    data: {
+      tabs: [
+        { id: "first", label: " First " },
+        { id: "second", label: "Second" },
+      ],
+    },
+    slots: {
+      second: [
+        {
+          id: `${scope}-safe`,
+          type: "button",
+          data: { label: "Safe", action: "link", href: "/safe" },
+        },
+      ],
+      first: [
+        {
+          ...(nullId ? { id: null } : {}),
+          type: "button",
+          data: {
+            label: "Unsupported",
+            action: nullId ? { legacy: true } : "unexpected-action",
+            href: "/must-not-survive",
+          },
+        },
+      ],
+    },
+  });
+  const bindingsFor = (scope: "editor" | "row") => [
+    {
+      id: `${scope}-unsupported-href`,
+      blockId: "block-1",
+      propPath: "href",
+      source: "entry" as const,
+      field: "targetUrl",
+      mode: "read" as const,
+    },
+    {
+      id: `${scope}-unsupported-label`,
+      blockId: "block-1",
+      propPath: "label",
+      source: "entry" as const,
+      field: "title",
+      mode: "read" as const,
+    },
+    {
+      id: `${scope}-safe-href`,
+      blockId: `${scope}-safe`,
+      propPath: "href",
+      source: "entry" as const,
+      field: "targetUrl",
+      mode: "read" as const,
+    },
+  ];
+  const editorTabs = tabsWithReorderedSlots("editor", false);
+  const rowTabs = tabsWithReorderedSlots("row", true);
+  const base = buildV4WithBlocks([editorTabs]);
+  const stored = {
+    ...base,
+    listView: {
+      ...base.listView,
+      rowTemplate: {
+        document: {
+          schemaVersion: 1,
+          sections: [{ id: "row", type: "section", data: {}, blocks: [rowTabs] }],
+        },
+        bindings: bindingsFor("row"),
+      },
+    },
+    editorView: { ...base.editorView, bindings: bindingsFor("editor") },
+  };
+  const before = JSON.stringify(stored);
+
+  const read = normalizeCustomScreenDefinitionForRead({ definition: stored });
+
+  expect(JSON.stringify(stored)).toBe(before);
+  const repairedViews = [
+    {
+      scope: "editor",
+      tabs: read.editorView.document.sections[0]?.blocks[0],
+      bindings: read.editorView.bindings,
+    },
+    {
+      scope: "row",
+      tabs: read.listView.rowTemplate?.document.sections[0]?.blocks[0],
+      bindings: read.listView.rowTemplate?.bindings ?? [],
+    },
+  ] as const;
+  for (const { scope, tabs, bindings } of repairedViews) {
+    expect(Object.keys(tabs?.slots ?? {})).toEqual(["first", "second"]);
+    const unsupported = tabs?.slots?.first?.[0];
+    const safe = tabs?.slots?.second?.[0];
+    expect(unsupported).toMatchObject({ id: "block-1", data: { action: "link" } });
+    expect(unsupported?.data.href).toBeUndefined();
+    expect(safe).toMatchObject({
+      id: `${scope}-safe`,
+      data: { action: "link", href: "/safe" },
+    });
+    expect(bindings.map((binding) => binding.id)).toEqual([
+      `${scope}-unsupported-label`,
+      `${scope}-safe-href`,
+    ]);
+  }
+  expect(() => validate(customScreenDefinitionSchema, read)).not.toThrow();
+  expect(normalizeCustomScreenDefinitionForRead({ definition: read })).toEqual(read);
+  expect(normalizeCustomScreenDefinitionForWrite({ definition: read })).toEqual(read);
+});
+
 test("TASK-540-01 empty editor and row documents prune every block ghost into one sink", () => {
   const ghostBinding = (id: string, field: string): ScreenFieldBinding => ({
     id,

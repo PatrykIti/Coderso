@@ -44,6 +44,14 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - Cached APIs: `listContentTypesCached`, `listAllEntriesCached`, `getCachedAllEntries`
   - Mutations: `duplicateEntry`, `deleteEntry`, `updateEntryMetadata`
   - Cache bus: `entries:list:all`, `entries:list:<typeSlug>`, `entries:detail:<typeSlug>:<id>`
+  - Type-scoped authority: one monotonic order spans complete
+    `entries:list:<typeSlug>` reads, per-entry details, successful mutations, and
+    delete tombstones. Older lists preserve newer authority for the same entry while
+    still filling unrelated rows; authoritative list omission clears an observed
+    detail only when no newer per-entry publication exists.
+  - Failure/clear: rejected work publishes nothing, successful mutations alone emit
+    their cache events, and `clearEntriesCache(typeSlug)` prevents captured pre-clear
+    list/detail promises from publishing.
 - Entry editor
   - UI: `core/admin/ui/entries/EntryEditor.tsx`
   - Cached APIs: `listContentTypesCached`, `getEntryCached`, `getCachedEntryDetail`
@@ -161,6 +169,17 @@ This file maps admin UI surfaces to their implementation files and the cached AP
     are not active browser write state.
   - Mutations: `createCustomScreen`, `updateCustomScreen`,
     `deleteCustomScreen`
+  - List/detail authority: one monotonic order spans complete list reads, per-screen
+    detail reads, successful create/update publications, and delete tombstones. Older
+    lists preserve newer same-screen authority while still accepting unrelated rows;
+    authoritative omission cleans up observed details without replacing newer values.
+    A detail fallback publishes/reconciles the complete returned list, not only the
+    requested screen.
+  - Failure/clear: reads that ultimately reject and rejected mutations
+    publish/broadcast nothing;
+    `clearCustomScreensCache()` clears tracked list/detail/pending/authority state and
+    prevents captured pre-clear list/detail publishers from settling into cache, with
+    corrupt stored-list discovery handled fail-safe.
   - Assistant mutations: `custom-screen.upsert`, `custom-screen.update`,
     `custom-screen.delete`, `custom-screen.section.add`,
     `custom-screen.block.add`, `custom-screen.block.patch`,
@@ -194,7 +213,7 @@ This file maps admin UI surfaces to their implementation files and the cached AP
     `entries:detail:<typeSlug>:<entryId>`,
     `customScreens:entryOverrides:<screenId>:<entryId>` for presentation
     override cache updates and invalidation
-  - Retry/identity: entries, related targets, media, and override reads publish
+  - Retry/identity: related targets, media, and override reads publish
     only from the exact request that still owns their pending slot. Rejections
     release that slot; forced/newer requests and successful mutations cannot be
     cleared or overwritten by older settlements. Related target changes clear

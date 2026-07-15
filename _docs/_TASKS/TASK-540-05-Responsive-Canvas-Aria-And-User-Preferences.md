@@ -10,6 +10,9 @@
 **Status:** ✅ Done
 **Started:** 2026-07-14
 **Completed:** 2026-07-14
+**Corrective Revalidation:** 2026-07-14 — L02 exact Vitest matrix 65/65, exact Bun matrix 27/27 after reachable DB preflight, core/root static gates green, and fresh post-audit zero findings
+**Previous Completion:** 2026-07-14
+**Reopened:** 2026-07-14
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -26,6 +29,9 @@ the user-settings service's two machine-readable validation errors to determinis
 of the generic 500 fallback. The isolated client transport
 must runtime-normalize the exact response key/value envelope before any value enters
 the per-user coordinator; a TypeScript generic is not response validation.
+The expected-owner PATCH header is a server-required CORS header: middleware unions it
+case-insensitively with configured allowed headers so trusted cross-origin Admin origins
+work with both default and already-persisted security settings.
 
 ## Leaves and order
 
