@@ -1,6 +1,7 @@
 import { expect, test, vi } from "vitest";
 
 import {
+  buildScreenFieldBindingId,
   buildDefaultListViewDefinition,
   customScreenCreateSchema,
   customScreenDefinitionSchema,
@@ -16,6 +17,7 @@ import {
   normalizeCustomScreenSidebarConfig,
   normalizeScreenDocumentV1,
   normalizeScreenDocumentV1ForRead,
+  normalizeScreenFieldBindings,
   SCREEN_BLOCK_COLLECTION_MAX,
   SCREEN_DOCUMENT_SECTIONS_MAX,
   SCREEN_TAB_ID,
@@ -442,6 +444,126 @@ test("normalizeCustomScreenDefinitionForRead migrates strict v2 definitions to v
     mode: "readwrite",
     propPath: "value",
   });
+});
+
+test("normalizeCustomScreenDefinitionForRead repairs legacy V1/V2/V3 editor IDs and binding references once", () => {
+  const defaults = buildDefaultListViewDefinition();
+  const legacyListView = {
+    columns: defaults.columns,
+    filters: defaults.filters,
+    defaultSort: defaults.defaultSort,
+    bulkActions: defaults.bulkActions,
+  };
+  const versions = [1, 2, 3] as const;
+  const variants = ["binding-id", "block-id", "prop-path", "field"] as const;
+
+  for (const version of versions) {
+    for (const variant of variants) {
+      const label = `V${version}:${variant}`;
+      const editorBlockId =
+        variant === "block-id"
+          ? `legacy-editor-${"b".repeat(170)}`
+          : `legacy-editor-${version}-${variant}`;
+      const siblingBlockId = `legacy-sibling-${version}-${variant}`;
+      const editorBlocks = [
+        {
+          id: editorBlockId,
+          type: "screen-record-header",
+          data: { marker: "primary-marker", variant },
+        },
+        {
+          id: siblingBlockId,
+          type: "screen-record-header",
+          data: { marker: "sibling-marker" },
+        },
+      ];
+      const primaryBinding = {
+        id: variant === "binding-id" ? "e".repeat(121) : `primary-binding-${version}-${variant}`,
+        widgetId: editorBlockId,
+        propPath: variant === "prop-path" ? "p".repeat(161) : "title",
+        field: variant === "field" ? "f".repeat(161) : "primaryTitle",
+        mode: "read",
+      };
+      const siblingBinding = {
+        id: `sibling-binding-${version}-${variant}`,
+        widgetId: siblingBlockId,
+        propPath: "title",
+        field: "siblingTitle",
+        mode: "read",
+      };
+      const editorBindings = [primaryBinding, siblingBinding];
+      const definition =
+        version === 1
+          ? { schemaVersion: 1, blocks: editorBlocks, bindings: editorBindings }
+          : version === 2
+            ? {
+                schemaVersion: 2,
+                listView: {
+                  ...legacyListView,
+                  rowClick: "editor-view",
+                  createMode: "editor-view",
+                },
+                editorView: { blocks: editorBlocks, bindings: editorBindings, saveMode: "entry" },
+              }
+            : {
+                schemaVersion: 3,
+                listView: legacyListView,
+                editorView: {
+                  blocks: editorBlocks,
+                  bindings: editorBindings,
+                  saveMode: "entry",
+                  interactionMode: "inline",
+                },
+              };
+
+      const before = JSON.stringify(definition);
+      const migrated = normalizeCustomScreenDefinitionForRead({ definition });
+      expect(JSON.stringify(definition), `${label}:immutable`).toBe(before);
+
+      const [editorBlock, siblingBlock] = migrated.editorView.document.sections[0]?.blocks ?? [];
+      const [editorBinding, migratedSiblingBinding] = migrated.editorView.bindings;
+      expect(editorBlock, `${label}:editor-block`).toBeDefined();
+      expect(editorBinding, `${label}:editor-binding`).toBeDefined();
+      expect(editorBlock!.data).toMatchObject({ marker: "primary-marker", variant });
+      expect(editorBlock!.id.length).toBeLessThanOrEqual(160);
+      expect(editorBinding!.id.length).toBeLessThanOrEqual(120);
+      expect(editorBinding!.blockId).toBe(editorBlock!.id);
+      expect(editorBinding!.propPath.length).toBeLessThanOrEqual(160);
+      expect(editorBinding!.field.length).toBeLessThanOrEqual(160);
+      expect(editorBlock!.id === editorBlockId, `${label}:block-repair`).toBe(
+        variant !== "block-id"
+      );
+      expect(editorBinding!.id === primaryBinding.id, `${label}:binding-id-repair`).toBe(
+        variant !== "binding-id"
+      );
+      expect(editorBinding!.propPath === primaryBinding.propPath, `${label}:prop-path-repair`).toBe(
+        variant !== "prop-path"
+      );
+      expect(editorBinding!.field === primaryBinding.field, `${label}:field-repair`).toBe(
+        variant !== "field"
+      );
+
+      expect(siblingBlock).toMatchObject({
+        id: siblingBlockId,
+        data: { marker: "sibling-marker" },
+      });
+      expect(migratedSiblingBinding).toEqual({
+        id: siblingBinding.id,
+        blockId: siblingBlockId,
+        propPath: "title",
+        source: "entry",
+        field: "siblingTitle",
+        mode: "read",
+      });
+      expect(() => validate(customScreenDefinitionSchema, migrated), label).not.toThrow();
+      expect(normalizeCustomScreenDefinitionForWrite({ definition: migrated }), label).toEqual(
+        migrated
+      );
+      expect(normalizeCustomScreenDefinitionForRead({ definition: migrated }), label).toEqual(
+        migrated
+      );
+    }
+  }
 });
 
 test("normalizeCustomScreenDefinitionForRead tolerates stale field references and falls back to a safe v4 shape", () => {
@@ -1837,6 +1959,564 @@ test("TASK-540-01 stored Tabs repair is deterministic and never duplicates slot 
   expect(normalizeCustomScreenDefinitionForRead({ definition: read })).toEqual(read);
 });
 
+test("TASK-540-01 stored Tabs with non-record data repair locally without dropping sibling or slot content", () => {
+  const overviewContent = [
+    { id: "overview-copy", type: "text", data: { content: "Keep overview" } },
+  ];
+  const detailsContent = [{ id: "details-copy", type: "text", data: { content: "Keep details" } }];
+  const sibling = { id: "sibling-copy", type: "text", data: { content: "Keep sibling" } };
+  const storedEditor = buildV4WithBlocks([
+    {
+      id: "legacy-tabs-data",
+      type: "tabs",
+      data: "malformed-stored-data",
+      slots: { overview: overviewContent, details: detailsContent },
+    },
+    sibling,
+  ]);
+  const stored = {
+    ...storedEditor,
+    listView: {
+      ...storedEditor.listView,
+      rowTemplate: {
+        document: storedEditor.editorView.document,
+        bindings: [],
+      },
+    },
+  };
+  const before = JSON.stringify(stored);
+
+  const read = normalizeCustomScreenDefinitionForRead({ definition: stored });
+
+  expect(JSON.stringify(stored)).toBe(before);
+  for (const blocks of [
+    read.editorView.document.sections[0]?.blocks ?? [],
+    read.listView.rowTemplate?.document.sections[0]?.blocks ?? [],
+  ]) {
+    const repairedTabs = blocks[0];
+    expect(blocks[1]).toEqual(sibling);
+    expect(repairedTabs?.data.tabs).toEqual([
+      { id: "details", label: "Tab 1" },
+      { id: "overview", label: "Tab 2" },
+    ]);
+    expect(repairedTabs?.slots?.overview).toEqual(overviewContent);
+    expect(repairedTabs?.slots?.details).toEqual(detailsContent);
+  }
+  expect(() => validate(customScreenDefinitionSchema, read)).not.toThrow();
+  expect(normalizeCustomScreenDefinitionForWrite({ definition: read })).toEqual(read);
+  expect(normalizeCustomScreenDefinitionForRead({ definition: read })).toEqual(read);
+});
+
+test("TASK-540-01 strict V4 ID and path writes reject the same non-canonical values in Ajv and the normalizer", () => {
+  const invalidDefinitions = [
+    buildV4WithBlocks([{ id: " padded-block ", type: "heading", data: { text: "Title" } }]),
+    buildV4WithBlocks([{ id: "__proto__.polluted", type: "heading", data: { text: "Title" } }]),
+    buildV4WithBlocks([{ id: "b".repeat(161), type: "heading", data: { text: "Title" } }]),
+    ...[".leading", "trailing.", "a..b"].map((id) =>
+      buildV4WithBlocks([{ id, type: "heading", data: { text: "Title" } }])
+    ),
+    {
+      ...buildV4WithBlocks([]),
+      editorView: {
+        ...buildV4WithBlocks([]).editorView,
+        document: {
+          schemaVersion: 1,
+          sections: [{ id: " padded-section ", type: "section", data: {}, blocks: [] }],
+        },
+      },
+    },
+    ...[".leading", "trailing.", "a..b"].map((id) => {
+      const definition = buildV4WithBlocks([]);
+      return {
+        ...definition,
+        editorView: {
+          ...definition.editorView,
+          document: {
+            schemaVersion: 1,
+            sections: [{ id, type: "section", data: {}, blocks: [] }],
+          },
+        },
+      };
+    }),
+    buildV4WithBlocks([{ id: "path-whitespace", type: "heading", data: { field: " title " } }]),
+    buildV4WithBlocks([
+      { id: "path-unsafe", type: "heading", data: { field: "constructor.value" } },
+    ]),
+    buildV4WithBlocks([{ id: "path-overflow", type: "heading", data: { field: "f".repeat(161) } }]),
+    buildV4WithBlocks([
+      { id: "path-empty-segment", type: "heading", data: { field: "content..title" } },
+    ]),
+  ];
+
+  for (const definition of invalidDefinitions) {
+    expect(() => validate(customScreenDefinitionSchema, definition)).toThrow("Invalid payload");
+    expect(() => normalizeCustomScreenDefinitionForWrite({ definition })).toThrow(
+      "custom_screen_definition_invalid"
+    );
+  }
+
+  const definitionWithBinding = (overrides: Record<string, unknown>) => {
+    const definition = buildV4WithBlocks([
+      { id: "binding-target", type: "field", data: { label: "Title" } },
+    ]);
+    return {
+      ...definition,
+      editorView: {
+        ...definition.editorView,
+        bindings: [
+          {
+            id: "binding-1",
+            blockId: "binding-target",
+            propPath: "value",
+            source: "entry",
+            field: "title",
+            mode: "read",
+            ...overrides,
+          },
+        ],
+      },
+    };
+  };
+  for (const key of ["blockId", "propPath", "field"] as const) {
+    for (const value of [
+      " padded ",
+      "constructor.value",
+      "x".repeat(161),
+      ".leading",
+      "trailing.",
+      "a..b",
+    ]) {
+      const definition = definitionWithBinding({ [key]: value });
+      expect(
+        () => validate(customScreenDefinitionSchema, definition),
+        `${key}:${value.length}`
+      ).toThrow("Invalid payload");
+      expect(
+        () => normalizeCustomScreenDefinitionForWrite({ definition }),
+        `${key}:${value.length}`
+      ).toThrow("custom_screen_definition_invalid");
+    }
+  }
+
+  const dottedBase = buildV4WithBlocks([
+    { id: "binding.target", type: "heading", data: { field: "content.title" } },
+  ]);
+  const validDottedDefinition = {
+    ...dottedBase,
+    editorView: {
+      ...dottedBase.editorView,
+      document: {
+        ...dottedBase.editorView.document,
+        sections: dottedBase.editorView.document.sections.map((section) => ({
+          ...section,
+          id: "section.details",
+        })),
+      },
+      bindings: [
+        {
+          id: "binding-dotted",
+          blockId: "binding.target",
+          propPath: "content.value",
+          source: "entry",
+          field: "content.title",
+          mode: "read",
+        },
+      ],
+    },
+  };
+  expect(() => validate(customScreenDefinitionSchema, validDottedDefinition)).not.toThrow();
+  expect(() =>
+    normalizeCustomScreenDefinitionForWrite({ definition: validDottedDefinition })
+  ).not.toThrow();
+
+  const missingSource = definitionWithBinding({});
+  Reflect.deleteProperty(missingSource.editorView.bindings[0]!, "source");
+  const invalidSourceAndModeDefinitions = [
+    missingSource,
+    definitionWithBinding({ source: " entry " }),
+    definitionWithBinding({ source: 42 }),
+    definitionWithBinding({ mode: "invalid" }),
+    definitionWithBinding({ mode: null }),
+    definitionWithBinding({ mode: " read " }),
+  ];
+  for (const definition of invalidSourceAndModeDefinitions) {
+    expect(() => validate(customScreenDefinitionSchema, definition)).toThrow("Invalid payload");
+    expect(() => normalizeCustomScreenDefinitionForWrite({ definition })).toThrow(
+      "custom_screen_definition_invalid"
+    );
+  }
+
+  const missingMode = definitionWithBinding({});
+  Reflect.deleteProperty(missingMode.editorView.bindings[0]!, "mode");
+  expect(() => validate(customScreenDefinitionSchema, missingMode)).not.toThrow();
+  expect(
+    normalizeCustomScreenDefinitionForWrite({ definition: missingMode }).editorView.bindings[0]
+      ?.mode
+  ).toBe("readwrite");
+
+  const stored = buildV4WithBlocks([
+    { id: " repaired-block ", type: "heading", data: { field: " title " } },
+  ]);
+  const repaired = normalizeCustomScreenDefinitionForRead({ definition: stored });
+  expect(repaired.editorView.document.sections[0]?.blocks[0]).toMatchObject({
+    id: "repaired-block",
+    data: { field: "title" },
+  });
+  expect(normalizeCustomScreenDefinitionForWrite({ definition: repaired })).toEqual(repaired);
+
+  const storedBinding = definitionWithBinding({
+    blockId: " binding-target ",
+    propPath: " value ",
+    field: " title ",
+  });
+  const repairedBinding = normalizeCustomScreenDefinitionForRead({ definition: storedBinding });
+  expect(repairedBinding.editorView.bindings).toEqual([
+    {
+      id: "binding-1",
+      blockId: "binding-target",
+      propPath: "value",
+      source: "entry",
+      field: "title",
+      mode: "read",
+    },
+  ]);
+  expect(normalizeCustomScreenDefinitionForWrite({ definition: repairedBinding })).toEqual(
+    repairedBinding
+  );
+});
+
+test("TASK-540-01 widgetId is compatibility-only and canonicalizes to blockId in editor and row bindings", () => {
+  const target = { id: "legacy-binding-target", type: "field", data: { label: "Title" } };
+  const aliasBinding = {
+    id: "legacy-binding",
+    widgetId: target.id,
+    propPath: "value",
+    field: "title",
+  };
+  const storedEditor = buildV4WithBlocks([target]);
+  const stored = {
+    ...storedEditor,
+    listView: {
+      ...storedEditor.listView,
+      rowTemplate: {
+        document: storedEditor.editorView.document,
+        bindings: [aliasBinding],
+      },
+    },
+    editorView: {
+      ...storedEditor.editorView,
+      bindings: [aliasBinding],
+    },
+  };
+  const before = JSON.stringify(stored);
+
+  expect(normalizeScreenFieldBindings([aliasBinding])).toEqual([
+    {
+      id: "legacy-binding",
+      blockId: target.id,
+      propPath: "value",
+      source: "entry",
+      field: "title",
+      mode: "readwrite",
+    },
+  ]);
+
+  expect(() => validate(customScreenDefinitionSchema, stored)).toThrow("Invalid payload");
+  expect(() => normalizeCustomScreenDefinitionForWrite({ definition: stored })).toThrow(
+    "custom_screen_definition_invalid"
+  );
+
+  const read = normalizeCustomScreenDefinitionForRead({ definition: stored });
+  expect(JSON.stringify(stored)).toBe(before);
+  for (const bindings of [read.editorView.bindings, read.listView.rowTemplate?.bindings ?? []]) {
+    expect(bindings).toEqual([
+      {
+        id: "legacy-binding",
+        blockId: target.id,
+        propPath: "value",
+        source: "entry",
+        field: "title",
+        mode: "readwrite",
+      },
+    ]);
+  }
+  expect(() => validate(customScreenDefinitionSchema, read)).not.toThrow();
+  expect(normalizeCustomScreenDefinitionForWrite({ definition: read })).toEqual(read);
+
+  const withBothIds = {
+    ...storedEditor,
+    editorView: {
+      ...storedEditor.editorView,
+      bindings: [{ ...aliasBinding, blockId: target.id }],
+    },
+  };
+  expect(() => validate(customScreenDefinitionSchema, withBothIds)).toThrow("Invalid payload");
+  expect(() => normalizeCustomScreenDefinitionForWrite({ definition: withBothIds })).toThrow(
+    "custom_screen_definition_invalid"
+  );
+  expect(
+    normalizeCustomScreenDefinitionForRead({ definition: withBothIds }).editorView.bindings
+  ).toEqual([
+    {
+      id: "legacy-binding",
+      blockId: target.id,
+      propPath: "value",
+      source: "entry",
+      field: "title",
+      mode: "readwrite",
+    },
+  ]);
+
+  expect(() => normalizeScreenFieldBindings([{ ...aliasBinding, blockId: target.id }])).toThrow(
+    "custom_screen_definition_invalid"
+  );
+  const missingCompatibilityTarget = { ...aliasBinding };
+  Reflect.deleteProperty(missingCompatibilityTarget, "widgetId");
+  expect(() => normalizeScreenFieldBindings([missingCompatibilityTarget])).toThrow(
+    "custom_screen_definition_invalid"
+  );
+  expect(() => normalizeScreenFieldBindings([{ ...aliasBinding, widgetId: undefined }])).toThrow(
+    "custom_screen_definition_invalid"
+  );
+
+  const compatibilityInvalidBindings = [
+    { ...aliasBinding, widgetId: " legacy-binding-target " },
+    { ...aliasBinding, propPath: " value " },
+    { ...aliasBinding, field: "f".repeat(161) },
+    { ...aliasBinding, id: " Non Canonical " },
+    { ...aliasBinding, id: "x".repeat(121) },
+    { ...aliasBinding, source: " entry " },
+    { ...aliasBinding, source: null },
+    { ...aliasBinding, mode: "invalid" },
+    { ...aliasBinding, mode: null },
+    { ...aliasBinding, mode: " read " },
+  ];
+  for (const binding of compatibilityInvalidBindings) {
+    expect(() => normalizeScreenFieldBindings([binding])).toThrow(
+      "custom_screen_definition_invalid"
+    );
+  }
+
+  expect(
+    normalizeScreenFieldBindings([{ ...aliasBinding, source: "entry", mode: "read" }])[0]
+  ).toMatchObject({ blockId: target.id, source: "entry", mode: "read" });
+});
+
+test("TASK-540-01 binding IDs stay canonical and bounded across strict writes and stored reads", () => {
+  const shortSeparatorTupleIds = [
+    buildScreenFieldBindingId("a-b", "c"),
+    buildScreenFieldBindingId("a", "b-c"),
+  ];
+  const shortCaseTupleIds = [
+    buildScreenFieldBindingId("A", "value"),
+    buildScreenFieldBindingId("a", "value"),
+  ];
+  for (const id of [...shortSeparatorTupleIds, ...shortCaseTupleIds]) {
+    expect(id).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*-[a-z0-9]{13}$/);
+    expect(id.length).toBeLessThanOrEqual(120);
+  }
+  expect(shortSeparatorTupleIds[0]).not.toBe(shortSeparatorTupleIds[1]);
+  expect(shortCaseTupleIds[0]).not.toBe(shortCaseTupleIds[1]);
+  expect(buildScreenFieldBindingId("a-b", "c")).toBe(shortSeparatorTupleIds[0]);
+  expect(buildScreenFieldBindingId("___", "___")).toMatch(/^binding-[a-z0-9]{13}$/);
+
+  const ambiguousBase = buildV4WithBlocks([
+    { id: "a-b", type: "field", data: { label: "First" } },
+    { id: "a", type: "field", data: { label: "Second" } },
+  ]);
+  const ambiguousDefinition = {
+    ...ambiguousBase,
+    editorView: {
+      ...ambiguousBase.editorView,
+      bindings: [
+        {
+          blockId: "a-b",
+          propPath: "c",
+          source: "entry",
+          field: "firstField",
+          mode: "read",
+        },
+        {
+          blockId: "a",
+          propPath: "b-c",
+          source: "entry",
+          field: "secondField",
+          mode: "read",
+        },
+      ],
+    },
+  };
+  expect(() => validate(customScreenDefinitionSchema, ambiguousDefinition)).not.toThrow();
+  const normalizedAmbiguous = normalizeCustomScreenDefinitionForWrite({
+    definition: ambiguousDefinition,
+  });
+  expect(normalizedAmbiguous.editorView.bindings.map(({ id }) => id)).toEqual(
+    shortSeparatorTupleIds
+  );
+  expect(() => validate(customScreenDefinitionSchema, normalizedAmbiguous)).not.toThrow();
+  expect(normalizeCustomScreenDefinitionForWrite({ definition: normalizedAmbiguous })).toEqual(
+    normalizedAmbiguous
+  );
+
+  const blockId = "b".repeat(160);
+  const propPaths = [`${"p".repeat(159)}1`, `${"p".repeat(159)}2`];
+  const base = buildV4WithBlocks([{ id: blockId, type: "field", data: { label: "Title" } }]);
+  const definitionWithBindings = (bindings: Array<Record<string, unknown>>) => ({
+    ...base,
+    editorView: {
+      ...base.editorView,
+      bindings,
+    },
+  });
+  const binding = (overrides: Record<string, unknown> = {}) => ({
+    blockId,
+    propPath: propPaths[0],
+    source: "entry",
+    field: "title",
+    mode: "read",
+    ...overrides,
+  });
+
+  for (const id of [" Non Canonical ", "x".repeat(121)]) {
+    const invalidDefinition = definitionWithBindings([binding({ id })]);
+    expect(() => validate(customScreenDefinitionSchema, invalidDefinition)).toThrow(
+      "Invalid payload"
+    );
+    expect(() =>
+      normalizeCustomScreenDefinitionForWrite({ definition: invalidDefinition })
+    ).toThrow("custom_screen_definition_invalid");
+  }
+
+  const generatedDefinition = definitionWithBindings([
+    binding(),
+    binding({ propPath: propPaths[1] }),
+  ]);
+  const generated = normalizeCustomScreenDefinitionForWrite({ definition: generatedDefinition });
+  expect(generated.editorView.bindings).toHaveLength(2);
+  expect(new Set(generated.editorView.bindings.map(({ id }) => id)).size).toBe(2);
+  for (const { id } of generated.editorView.bindings) {
+    expect(id).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+    expect(id.length).toBeLessThanOrEqual(120);
+  }
+  expect(() => validate(customScreenDefinitionSchema, generated)).not.toThrow();
+  expect(normalizeCustomScreenDefinitionForWrite({ definition: generated })).toEqual(generated);
+
+  const stored = definitionWithBindings([binding({ id: ` Legacy ${"I".repeat(121)} ` })]);
+  const repaired = normalizeCustomScreenDefinitionForRead({ definition: stored });
+  expect(repaired.editorView.bindings[0]?.id).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+  expect(repaired.editorView.bindings[0]?.id.length).toBeLessThanOrEqual(120);
+  expect(normalizeCustomScreenDefinitionForRead({ definition: repaired })).toEqual(repaired);
+  expect(normalizeCustomScreenDefinitionForWrite({ definition: repaired })).toEqual(repaired);
+
+  const tuplePrefix = "a".repeat(140);
+  const separatorTupleIds = [
+    buildScreenFieldBindingId(`${tuplePrefix}-b`, "c"),
+    buildScreenFieldBindingId(tuplePrefix, "b-c"),
+  ];
+  expect(separatorTupleIds[0]).not.toBe(separatorTupleIds[1]);
+  expect(separatorTupleIds.every((id) => id.length <= 120)).toBe(true);
+
+  const caseTupleIds = [
+    buildScreenFieldBindingId("A".repeat(140), "value"),
+    buildScreenFieldBindingId("a".repeat(140), "value"),
+  ];
+  expect(caseTupleIds[0]).not.toBe(caseTupleIds[1]);
+  expect(buildScreenFieldBindingId(blockId, propPaths[0])).toBe(
+    buildScreenFieldBindingId(blockId, propPaths[0])
+  );
+
+  expect(() =>
+    normalizeCustomScreenDefinitionForWrite({
+      definition: definitionWithBindings([binding(), binding()]),
+    })
+  ).toThrow("custom_screen_definition_invalid");
+});
+
+test("TASK-540-01 stored-read canonicalizes overlong IDs and paths without losing binding identity", () => {
+  const longSectionId = `section-${"s".repeat(170)}`;
+  const longBlockPrefix = `block-${"b".repeat(170)}`;
+  const longBlockIds = [`${longBlockPrefix}-first`, `${longBlockPrefix}-second`];
+  const longPropPaths = [`value.${"p".repeat(170)}.first`, `value.${"p".repeat(170)}.second`];
+  const longFields = [`field.${"f".repeat(170)}.first`, `field.${"f".repeat(170)}.second`];
+  const blocks = longBlockIds.map((id, index) => ({
+    id,
+    type: "field",
+    data: { label: `Field ${index + 1}` },
+  }));
+  const bindings = longBlockIds.map((blockId, index) => ({
+    id: `long-binding-${index + 1}`,
+    blockId,
+    propPath: longPropPaths[index],
+    source: "entry",
+    field: longFields[index],
+    mode: "read",
+  }));
+  const document = {
+    schemaVersion: 1,
+    sections: [{ id: longSectionId, type: "section", data: {}, blocks }],
+  };
+  const base = buildV4WithBlocks([]);
+  const stored = {
+    ...base,
+    listView: {
+      ...base.listView,
+      rowTemplate: { document, bindings },
+    },
+    editorView: {
+      ...base.editorView,
+      document,
+      bindings,
+    },
+  };
+  const before = JSON.stringify(stored);
+
+  expect(() => validate(customScreenDefinitionSchema, stored)).toThrow("Invalid payload");
+  expect(() => normalizeCustomScreenDefinitionForWrite({ definition: stored })).toThrow(
+    "custom_screen_definition_invalid"
+  );
+
+  const read = normalizeCustomScreenDefinitionForRead({ definition: stored });
+  expect(JSON.stringify(stored)).toBe(before);
+  const scopes = [
+    {
+      document: read.editorView.document,
+      bindings: read.editorView.bindings,
+    },
+    {
+      document: read.listView.rowTemplate!.document,
+      bindings: read.listView.rowTemplate!.bindings,
+    },
+  ];
+  for (const scope of scopes) {
+    const section = scope.document.sections[0]!;
+    expect(section.id).toMatch(/^[a-zA-Z0-9_.-]+$/);
+    expect(section.id.length).toBeLessThanOrEqual(160);
+    expect(section.blocks).toHaveLength(2);
+    expect(section.blocks[0]?.id).not.toBe(section.blocks[1]?.id);
+    for (const [index, block] of section.blocks.entries()) {
+      expect(block.id).toMatch(/^[a-zA-Z0-9_.-]+$/);
+      expect(block.id.length).toBeLessThanOrEqual(160);
+      expect(scope.bindings[index]?.blockId).toBe(block.id);
+      expect(scope.bindings[index]?.propPath.length).toBeLessThanOrEqual(160);
+      expect(scope.bindings[index]?.field.length).toBeLessThanOrEqual(160);
+    }
+  }
+  expect(scopes[0]?.document).toEqual(scopes[1]?.document);
+  expect(scopes[0]?.bindings).toEqual(scopes[1]?.bindings);
+  expect(() => validate(customScreenDefinitionSchema, read)).not.toThrow();
+  expect(normalizeCustomScreenDefinitionForWrite({ definition: read })).toEqual(read);
+  expect(normalizeCustomScreenDefinitionForRead({ definition: read })).toEqual(read);
+
+  const fixedDataRead = normalizeCustomScreenDefinitionForRead({
+    definition: buildV4WithBlocks([
+      { id: "fixed-data-path", type: "heading", data: { field: "f".repeat(161) } },
+    ]),
+  });
+  expect(fixedDataRead.editorView.document.sections[0]?.blocks[0]?.data).not.toHaveProperty(
+    "field"
+  );
+});
+
 test("TASK-540-01 legacy unsupported Buttons are independently disabled in editor and row documents", () => {
   const unsupportedBlock = (type: "button" | "actions") => ({
     id: "same-legacy-id",
@@ -2318,6 +2998,27 @@ test("TASK-540-01 shared Ajv compiles create/update in both orders without schem
   const updateFirst = await import("../../../core/server/validation/schemaValidator");
   expect(() => updateFirst.validate(customScreenUpdateSchema, updatePayload)).not.toThrow();
   expect(() => updateFirst.validate(customScreenCreateSchema, createPayload)).not.toThrow();
+});
+
+test("TASK-540-01 fresh PATCH schema validation and direct writes reject every unsupported Button action", async () => {
+  for (const action of ["publish", "custom"] as const) {
+    const definition = buildV4WithBlocks([
+      {
+        id: `unsupported-${action}`,
+        type: "button",
+        data: { label: "Unsupported", action, href: "/must-not-persist" },
+      },
+    ]);
+
+    vi.resetModules();
+    const freshValidator = await import("../../../core/server/validation/schemaValidator");
+    expect(() => freshValidator.validate(customScreenUpdateSchema, { definition })).toThrow(
+      "Invalid payload"
+    );
+    expect(() => normalizeCustomScreenDefinitionForWrite({ definition })).toThrow(
+      "custom_screen_definition_invalid"
+    );
+  }
 });
 
 test("TASK-540-01 media identity predicate has one exact UUID contract", () => {

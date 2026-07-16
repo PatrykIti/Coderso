@@ -10,8 +10,11 @@
 **Status:** 🚧 In Progress
 **Started:** 2026-07-13
 **Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
-**Repair Started:** 2026-07-14
-**Repair Reason:** Repository-wide Bun validation confirmed one stale Assistant test fixture crossing the strict V4 Screen write boundary with unsupported `hero`/`rich-text-section` kinds. TASK-540-01-L01 owns only that fixture and its sibling-preservation assertions; production/schema contracts stay strict.
+**Repair Started:** 2026-07-16
+**Repair Reason:** The final TASK-540 workflow audit reproduced route/direct-normalizer drift for structural and binding identities, ambiguous public compatibility bindings, collision-prone generated binding IDs, and stored-read repair during metadata-only PATCH. TASK-540-01-L01 owns the strict three-mode contract and the shared domain binding-ID builder: every generated ID now carries a bounded readable prefix plus the 13-character hash of its framed JSON tuple, while valid explicit IDs remain unchanged and V4 writes do not widen.
+**Repair Revalidated:** 2026-07-16 — TASK-540-01-L01 passed `core lint:types`, `core lint`, its exact five-file Vitest gate 168/168, reachable DB preflight, the exact route/Assistant Bun gate 92/92 with 564 expectations, isolated document-op 11/11, and `git diff --check`; no full-suite, post-audit, smoke, changelog, or closure pass is claimed.
+**Previous Assistant Repair Started:** 2026-07-14
+**Historical Assistant Repair Reason:** Repository-wide Bun validation confirmed one stale Assistant test fixture crossing the strict V4 Screen write boundary with unsupported `hero`/`rich-text-section` kinds. TASK-540-01-L01 owned only that fixture and its sibling-preservation assertions; production/schema contracts stayed strict.
 **Historical Completion:** 2026-07-14
 **Historical Corrective Revalidation:** 2026-07-14 — TASK-540-01-L01 passed 75/75 exact Vitest, 15/15 DB routes (82 expectations), core lint/typecheck, `git diff --check`, and a fresh zero-finding post-audit
 **Previous Fix Started:** 2026-07-14
@@ -20,7 +23,8 @@
 **Previous Revalidation:** 2026-07-14 — TASK-540-01-L01 passed its exact core static, 72/72 Vitest, and 15/15 DB route gates (82 expectations)
 **Previous Completion:** 2026-07-14
 **Previous Reopened:** 2026-07-14 (Screen URL control-character repair)
-**Reopened:** 2026-07-14 (Assistant Custom Screen block-patch fixture compatibility)
+**Historical Reopened:** 2026-07-14 (Assistant Custom Screen block-patch fixture compatibility)
+**Reopened:** 2026-07-16 (strict identity, compatibility-write, and shared binding-ID correction)
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -42,7 +46,7 @@ introduced.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-540-01-L01 | Reject unknown, sanitize URLs, unique Tabs, and prune ghosts | strict Screen sources remain read-only; narrow fixture-only compatibility seam in `tests/unit/assistant/actionExecutorService.test.ts` | 🚧 In Progress |
+| TASK-540-01-L01 | Reject unknown, sanitize URLs, unique Tabs, and prune ghosts | strict Screen schema/service/route owner; narrow shared binding-ID handoff in `screenDocumentOps.ts`; schema/image/document-op gates; read-only Assistant plan/catalog consumers; DB route proof; and narrow fixture-only compatibility seam in `tests/unit/assistant/actionExecutorService.test.ts` | 🚧 In Progress |
 
 ## Contract
 
@@ -95,6 +99,29 @@ introduced.
   `SCREEN_TAB_LABEL_MAX`, and `isScreenMediaAssetUuid` are exported by the Bun-free
   schema owner. Inspector/renderer and the later override contract import only the
   members they consume; no local bound or UUID-regex mirror is permitted.
+- Structural section/block IDs and binding `blockId`/`propPath`/`field` share one strict
+  max-160 path contract; binding IDs share canonical slug grammar and max 120. Fresh V4
+  writes reject non-canonical/overlong values. Stored read deterministically shortens
+  safe overlong paths with a full-value hash suffix, preserving exact editor and
+  row-template binding references, input bytes, and read/write idempotence. A
+  metadata-only PATCH persists that repaired base definition without losing local Tabs,
+  slots, siblings, or bindings. Legacy V1/V2/V3 editor migrations map first and then use
+  that same V4 stored-read pass, so their max-160/max-120 identities become strict-write
+  valid without remigrating list views or dropping sibling data.
+- Binding normalization has exact `write`, `compatibility-write`, and `stored-read`
+  modes. Strict V4 accepts only `blockId`; the public Assistant helper keeps a narrowly
+  typed compatibility write that requires exactly one of `blockId|widgetId`, defaults
+  only absent source/mode, and rejects ambiguous or malformed values. Stored read keeps
+  its historical fail-soft alias adapter and emits canonical `blockId`.
+- `buildScreenFieldBindingId(blockId, propPath)` is owned by the Bun-free schema domain.
+  Every generated ID is a bounded readable slug prefix followed by `-` and the exact
+  13-character base36 hash of `JSON.stringify([blockId, propPath])`, even when the
+  readable prefix is short. The result is deterministic, canonical, and at most 120
+  characters; separator/case variants remain distinct. A valid explicit binding ID is
+  validated and returned unchanged rather than being replaced with a generated ID.
+  The schema normalizer and `screenDocumentOps` factories/duplication use it under R01;
+  TASK-540-02-L01 owns the Inspector consumer. The older blanket `screenDocumentOps`
+  exclusion is superseded only for this helper handoff.
 
 ## Security Contract
 
@@ -125,6 +152,11 @@ introduced.
 - Strict write rejects legacy unsupported actions, while stored read remains
   deterministic and disabled in both editor and row-template documents even when the
   repaired legacy button had an href binding. No disabled marker is persisted.
+- Every absent binding ID normalizes through the domain builder to
+  `<bounded-readable-prefix>-<13-character-framed-tuple-hash>`; present canonical IDs
+  remain byte-identical. Full write-normalizer regressions, not helper-only assertions,
+  prove that the short separator pair `(a-b,c)` / `(a,b-c)` and short case pair
+  `(A,value)` / `(a,value)` produce distinct schema-valid IDs and round-trip unchanged.
 
 ## Historical corrective completion and fixture repair
 
@@ -137,6 +169,10 @@ canonical `heading.data.text` plus an independent `text.data.content` sibling an
 retained explicit same-block and sibling-block preservation assertions. No production
 or schema fallback was permitted. Its leaf passed the expanded exact gate including
 `tests/unit/assistant/actionExecutorService.test.ts`, and that repair/Done transition is
-historical. In the current pre-1252 landed state this subtask remains `🚧 In Progress`
-with `Implementation Complete`; TASK-540-04-L03 alone carries `Repair Pending`, and the
-closure leaf remains active and ungated.
+historical. The current 2026-07-16 strict identity/binding-ID correction keeps this
+subtask `🚧 In Progress` with the leaf's exact current `Revalidation Passed` receipt.
+R01 source and targeted gates are complete; workflow/final audit and closure remain
+separate. TASK-540-04-L03 keeps its canonical
+`Revalidation Passed` successor and no `Repair Pending`; the closure leaf remains
+landed with its exact pre-closure evidence. Family changelog 1252, full validation, and
+live smoke remain closure-owned.

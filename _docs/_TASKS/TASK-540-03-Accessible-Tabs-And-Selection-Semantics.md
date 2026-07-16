@@ -10,7 +10,10 @@
 **Status:** 🚧 In Progress
 **Started:** 2026-07-13
 **Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
-**Corrective Revalidation:** 2026-07-14 — TASK-540-03-L01 passed the exact 89/89 renderer/interaction/image Vitest matrix, core lint/typecheck, `git diff --check`, and a fresh zero-finding post-audit
+**Repair Started:** 2026-07-16
+**Repair Reason:** Current final-source revalidation reproduced an accessibility defect in the defensive zero-item Tabs renderer: an empty `tablist` exposed no usable `tab`. TASK-540-03-L01 owns the visible fail-safe empty state and must emit no tablist, tab, or panel when there are zero tabs.
+**Repair Revalidated:** 2026-07-16 — TASK-540-03-L01 independently passed `core lint:types`, `core lint`, its exact renderer/interaction/image Vitest gate 89/89, and `git diff --check` on the final shared source. This current receipt claims no new post-audit, live smoke, changelog, or closure result.
+**Historical Corrective Revalidation:** 2026-07-14 — TASK-540-03-L01 passed the then-current exact 89/89 renderer/interaction/image Vitest matrix, core lint/typecheck, `git diff --check`, and a fresh zero-finding post-audit
 **Fix Started:** 2026-07-14
 **Fix Reason:** TASK-540-03-L01 must pin final Button and Image DOM-sink behavior for ASCII-control-confused URLs after the R01 wrapper correction.
 **Prior Corrective Revalidation:** 2026-07-14 — TASK-540-03-L01 passed `core lint:types`, `core lint`, the exact 83/83 renderer/interaction/image Vitest gate, `git diff --check`, and a fresh read-only post-audit with zero findings before the control-character corpus was added
@@ -38,6 +41,9 @@ authoring controls without swallowing Space or link/input activation.
 
 - Tabs expose `tablist`, `tab`, `tabpanel`, unique relationships, roving
   `tabIndex`, `aria-selected`, one visible panel, and Arrow/Home/End behavior.
+- A defensive zero-item Tabs value takes a separate accessible empty-state branch:
+  it emits no `tablist`, `tab`, or `tabpanel`, and visibly renders exact
+  `role="status"` text `No tabs available.`.
 - Mouse and keyboard activation show a visible content change in builder,
   preview, and entry modes. Builder activation writes the tab's slot-end
   `insertPoint`, and its visible active panel derives from a direct target for that
@@ -79,6 +85,8 @@ dynamic script is added.
 
 The renderer behavior, collision correction, and 83/83 gate remain historical evidence.
 After R01 tightened the shared Screen wrapper, R03 added the final Button/Image
-control-character DOM-sink regressions in its existing renderer test. The exact final
-89/89 gate and a fresh zero-finding post-audit passed, so this subtask returned to Done
-without requiring a renderer production change.
+control-character DOM-sink regressions in its existing renderer test. That historical
+89/89 gate and zero-finding post-audit remain evidence. The current 2026-07-16 repair
+adds the visible accessible zero-item Tabs state, independently re-passed the exact
+89/89 gate plus lint/typecheck/diff, and remains `🚧 In Progress` pending the family
+post-audit, live smoke, changelog 1252, and closure.

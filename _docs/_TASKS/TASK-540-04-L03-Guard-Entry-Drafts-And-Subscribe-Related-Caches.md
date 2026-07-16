@@ -40,10 +40,13 @@
 - new `tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx`
 - `tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts`
 
-The completed 2026-07-15 repair's mutation authority was a separate exact set and did
-not widen historical full-leaf ownership: `core/admin/utils/cacheBus.ts`,
+The completed 2026-07-15 repair's mutation authority was a separate exact historical set:
+`core/admin/utils/cacheBus.ts`,
 `tests/vitest/admin/cacheBus.test.ts`, and the additive-only
-`tests/integration/routes/customScreensRoutes.test.ts`.
+`tests/integration/routes/customScreensRoutes.test.ts`. That route suite is retained only
+as read-only historical provenance in this L03 contract. R01 owns the shared route-test
+file for every new TASK-540 route assertion or future finding; L03 may not reuse the
+historical additive exception without a newly reconciled owner contract.
 
 No other TASK-540 leaf edits these paths. TASK-540-03-L01 exclusively owns
 `ScreenRuntimeRenderer.tsx`, `custom-screen-runtime-renderer.test.tsx`, and
@@ -52,17 +55,20 @@ landed renderer contract read-only. The retained
 `tests/vitest/widgets/screenWidgets.test.tsx` Preview compatibility suite is also a
 read-only gate. TASK-540-06 owns the corresponding
 `_docs/CMS_API.md` correction at closure.
-L03 landed the cache-bus substrate and mutation-client forwarding before L04. That
-historical full-leaf ownership remains closed. The 2026-07-15 repair reopened exactly
+L03 landed the cache-bus substrate and mutation-client forwarding before L04. The
+2026-07-15 repair reopened exactly
 `cacheBus.ts`, `cacheBus.test.ts`, and the additive
 `customScreensRoutes.test.ts`; every UI, client, service, production route, renderer,
-hook, dialog, and other consumer suite listed by this contract is read-only.
-L04 consumes the repaired seam read-only and never edits these L03-owned files.
-That pre-closure repair mutation and its audit/gate fixers used exactly those three
-writable paths. An after-closure audit fixer may additionally edit only the root TASK-540 contract,
-this TASK-540-04 child contract, and this exact L03 leaf contract when a finding is
-evidenced there; it may never regain any historical L03 consumer path. Reopen/complete
-status transitions remain separate task-state mutations.
+hook, dialog, and other consumer suite listed by this contract remained read-only in
+that historical repair. L04 consumes the repaired seam read-only and never edits these
+L03-owned files. For a new exact evidence-backed post-audit or final-drift L03 repair,
+the pre-closure fixer uses the full original owner set listed above, including
+`screenEntryPresentationOverrideContract.ts`; the additive historical
+`customScreensRoutes.test.ts` exception is not automatically reusable. The exact finding
+prompt and post-agent `touchedFiles` verification bound the mutation. An after-closure
+audit fixer may additionally edit only the root TASK-540 contract, this TASK-540-04
+child contract, and this exact L03 leaf contract when a finding is evidenced there.
+Reopen/complete status transitions remain separate task-state mutations.
 The later cache-authority correction edited only `customScreensClient.ts` plus its owner
 test; the already-gated cacheBus/editor/service seams stayed read-only. Its durable
 evidence is the Historical Revalidation/Historical Post-Audit metadata above, not
@@ -70,7 +76,8 @@ the mutable `_docs/_workflows/task-540-fix.mjs`, which now records only the comp
 R01→R03 URL-control correction. With L03 `🚧 In Progress`, canonical
 `Implementation Complete`, one `Revalidation Passed`, and no `Repair Pending`, the
 `_docs/_workflows/task-540-implement.mjs` resolver treats L03 as landed and resumes at
-TASK-540-06-L01 closure.
+the prepared pre-closure boundary with all ten leaves landed and no remaining leaf
+cursor.
 
 ## Grounded anchors
 
@@ -91,8 +98,10 @@ TASK-540-06-L01 closure.
   `cacheBus.ts:10-39,42-48,57-237`.
 - Cache-bus transport/token, twin correlation, descriptor hardening, and bounds regressions:
   `cacheBus.test.ts:184-1180`.
-- Real registered-route direct-image override fixtures, PATCH→GET round trip, and bounded
-  invalid-target mapping: `customScreensRoutes.test.ts:313-463`.
+- Read-only historical provenance for the registered-route direct-image override
+  fixtures, PATCH→GET round trip, and bounded invalid-target mapping:
+  `customScreensRoutes.test.ts:313-463`. Any new finding on this shared suite is assigned
+  to R01, not L03.
 - Optional Custom Screen mutation token forwarding across both local list/detail events:
   `customScreensClient.ts:100-102,399-453`.
 - Bun-free override schema/type owner:
@@ -1947,6 +1956,8 @@ bunx vitest run tests/vitest/admin/cacheBus.test.ts
 set -a && source .env && set +a && bun --eval 'import { canConnect } from "./tests/utils/db"; const configured = Boolean(process.env.DATABASE_URL?.trim()); const reachable = configured && await canConnect(); process.stdout.write(JSON.stringify({ configured, reachable, selectOne: reachable ? 1 : 0 })); if (!reachable) process.exit(1); process.exit(0)'
 set -a && source .env && set +a && bun test tests/integration/routes/customScreensRoutes.test.ts
 # Exact expanded L03 owner/dependency gate; within it only cacheBus.test.ts is writable.
+# The current gate covers 14 files: 11 prior owner/dependencies plus the three direct
+# Entry/Preview behavior consumers added by the final dependency-shape audit.
 bunx vitest run tests/vitest/admin/cacheBus.test.ts \
   tests/vitest/admin/customScreensClient.test.ts \
   tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx \
@@ -1957,13 +1968,21 @@ bunx vitest run tests/vitest/admin/cacheBus.test.ts \
   tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx \
   tests/vitest/widgets/screenWidgets.test.tsx \
   tests/vitest/ui/use-screen-related-entries.test.tsx \
-  tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx
+  tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx \
+  tests/vitest/ui/custom-screen-records.test.tsx \
+  tests/vitest/ui-integration/custom-screen-entries-restyle.test.tsx \
+  tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx
 # Exact L04 read-only consumer gate; do not edit or re-baseline these files.
+# The current gate covers 10 files, including every direct EditorPage behavior consumer.
 bunx vitest run tests/vitest/ui/custom-screens-page.test.tsx \
   tests/vitest/ui/custom-screen-route-params.test.ts \
   tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx \
+  tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx \
+  tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx \
   tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx \
+  tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx \
   tests/vitest/ui-integration/screen-editor-sections.test.tsx \
+  tests/vitest/ui/custom-screen-list-view-canvas.test.tsx \
   tests/vitest/admin/cacheBus.test.ts
 node --check _docs/_workflows/task-540-implement.mjs
 node _docs/_workflows/task-540-implement.mjs --self-test-repair-siblings
@@ -1974,8 +1993,12 @@ The workflow derives named-file isolation metadata from the actual Vitest/Bun co
 shape, not the command ID. `expandedL03Vitest`, `l04ReadOnlyConsumerVitest`, and
 `directImageOverrideRouteBun` must enumerate every named file above exactly so any
 identified failure is rerun once in isolation. The DB preflight owns no isolation file.
-The permanent repair-sibling self-test pins the exact three-file repair authority, all
-three named-test metadata sets, and the exact DB preflight command.
+The permanent repair-sibling self-test preserves sibling-state safety while the
+effective-owner self-test pins full original L03 authority for a new verified finding,
+keeps `screenEntryPresentationOverrideContract.ts` writable, excludes the historical
+additive route-test exception, adds only the three task contracts after closure, and
+denies task-transition authority. Named-file isolation still pins all three named-test
+metadata sets and the exact DB preflight command.
 
 ## Completed 2026-07-15 repair evidence
 

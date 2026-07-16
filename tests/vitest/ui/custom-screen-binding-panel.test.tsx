@@ -4,11 +4,19 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import { ScreenBlockInspector } from "../../../core/admin/ui/custom-screens/ScreenBlockInspector";
-import type {
-  ScreenBlockV1,
-  ScreenFieldBinding,
+import {
+  createScreenFieldBinding,
+  ScreenBlockInspector,
+} from "../../../core/admin/ui/custom-screens/ScreenBlockInspector";
+import {
+  buildDefaultListViewDefinition,
+  buildScreenFieldBindingId,
+  customScreenDefinitionSchema,
+  normalizeCustomScreenDefinitionForWrite,
+  type ScreenBlockV1,
+  type ScreenFieldBinding,
 } from "../../../core/services/customScreens/customScreenSchemas";
+import { validate } from "../../../core/server/validation/schemaValidator";
 import type { ContentField } from "../../../core/admin/ui/content-types/SchemaBuilder";
 
 /**
@@ -49,6 +57,7 @@ const renderInspector = (props: {
   selectedBlock: ScreenBlockV1 | null;
   bindings?: ScreenFieldBinding[];
   fields?: ContentField[];
+  onPatchBlock?: React.ComponentProps<typeof ScreenBlockInspector>["onPatchBlock"];
 }) =>
   mount(
     <ScreenBlockInspector
@@ -57,7 +66,7 @@ const renderInspector = (props: {
       fields={props.fields ?? []}
       panel="all"
       showBlockActions={false}
-      onPatchBlock={noop}
+      onPatchBlock={props.onPatchBlock ?? noop}
       onPatchBlockData={noop}
       onPatchBinding={noop}
       onMove={noop}
@@ -68,6 +77,86 @@ const renderInspector = (props: {
 
 afterEach(() => {
   document.body.innerHTML = "";
+});
+
+test("createScreenFieldBinding emits bounded, distinct IDs for valid maximum-length block IDs", () => {
+  const prefix = `block-${"b".repeat(153)}`;
+  const blockIds = [`${prefix}1`, `${prefix}2`];
+  const bindings = blockIds.map((blockId, index) =>
+    createScreenFieldBinding({
+      blockId,
+      propPath: "value",
+      field: `field${index + 1}`,
+    })
+  );
+  expect(blockIds.every((id) => id.length === 160)).toBe(true);
+  expect(bindings.every(({ id }) => id.length <= 120)).toBe(true);
+  expect(bindings[0]?.id).not.toBe(bindings[1]?.id);
+  for (const binding of bindings) {
+    expect(binding.id).toBe(buildScreenFieldBindingId(binding.blockId, binding.propPath));
+  }
+
+  const definition = {
+    schemaVersion: 4,
+    listView: buildDefaultListViewDefinition(),
+    editorView: {
+      document: {
+        schemaVersion: 1,
+        sections: [
+          {
+            id: "section-default",
+            type: "section",
+            data: {},
+            blocks: blockIds.map((id) => ({ id, type: "field", data: {} })),
+          },
+        ],
+      },
+      bindings,
+      saveMode: "entry",
+      interactionMode: "inline",
+    },
+  };
+  expect(() => validate(customScreenDefinitionSchema, definition)).not.toThrow();
+  expect(normalizeCustomScreenDefinitionForWrite({ definition }).editorView.bindings).toEqual(
+    bindings
+  );
+});
+
+test("ScreenBlockInspector restores the latest committed Tab label after an invalid blur", () => {
+  const onPatchBlock = vi.fn();
+  const view = renderInspector({
+    selectedBlock: {
+      id: "tabs-1",
+      type: "tabs",
+      data: { tabs: [{ id: "overview", label: "Overview" }] },
+      slots: { overview: [] },
+    },
+    onPatchBlock,
+  });
+  const input = view.container.querySelector<HTMLInputElement>(
+    '[data-screen-tab-label="overview"]'
+  );
+
+  try {
+    expect(input).not.toBeNull();
+    setInputValue(input!, "   ");
+    expect(input?.value).toBe("   ");
+    React.act(() => {
+      input?.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    });
+    expect(input?.value).toBe("Overview");
+    expect(onPatchBlock).not.toHaveBeenCalled();
+
+    setInputValue(input!, "x".repeat(121));
+    expect(input?.value).toHaveLength(121);
+    React.act(() => {
+      input?.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    });
+    expect(input?.value).toBe("Overview");
+    expect(onPatchBlock).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
 });
 
 // TASK-498-02 B4: open the flat "Bound field" Select and pick the option whose text
@@ -555,6 +644,7 @@ test("Tabs use Unicode boundaries and invalidate stale label drafts across paren
       readInput()?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     });
     expect(view.onPatchBlock).not.toHaveBeenCalled();
+    expect(readInput()?.value).toBe(unicodeBoundary);
 
     setInputValue(readInput()!, "  Latest committed  ");
     React.act(() => {

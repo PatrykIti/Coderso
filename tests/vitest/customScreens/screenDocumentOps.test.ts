@@ -9,10 +9,15 @@ import {
   removeScreenSection,
   updateScreenSection,
 } from "../../../core/services/customScreens/screenDocumentOps";
-import type {
-  ScreenDocumentV1,
-  ScreenFieldBinding,
+import {
+  buildDefaultListViewDefinition,
+  buildScreenFieldBindingId,
+  customScreenDefinitionSchema,
+  normalizeCustomScreenDefinitionForWrite,
+  type ScreenDocumentV1,
+  type ScreenFieldBinding,
 } from "../../../core/services/customScreens/customScreenSchemas";
+import { validate } from "../../../core/server/validation/schemaValidator";
 
 const document: ScreenDocumentV1 = {
   schemaVersion: 1,
@@ -97,6 +102,47 @@ test("createScreenBlock emits typed data + gated read bindings per new kind", ()
   expect(button.bindings[0]).toMatchObject({ propPath: "href", field: "url", mode: "read" });
 });
 
+test("createScreenBlock emits bounded, schema-valid binding IDs for maximum-length block IDs", () => {
+  const prefix = `block-${"b".repeat(153)}`;
+  const created = [
+    createScreenBlock({ type: "field", id: `${prefix}1`, field: "title" }),
+    createScreenBlock({ type: "field", id: `${prefix}2`, field: "summary" }),
+    createScreenBlock({ type: "stat", id: `${prefix}3`, field: "score" }),
+  ];
+  expect(created.every(({ block }) => block.id.length === 160)).toBe(true);
+  const generatedBindings = created.flatMap(({ bindings: nextBindings }) => nextBindings);
+  expect(generatedBindings.every(({ id }) => id.length <= 120)).toBe(true);
+  expect(new Set(generatedBindings.map(({ id }) => id)).size).toBe(generatedBindings.length);
+  for (const binding of generatedBindings) {
+    expect(binding.id).toBe(buildScreenFieldBindingId(binding.blockId, binding.propPath));
+  }
+
+  const definition = {
+    schemaVersion: 4,
+    listView: buildDefaultListViewDefinition(),
+    editorView: {
+      document: {
+        schemaVersion: 1,
+        sections: [
+          {
+            id: "section-default",
+            type: "section",
+            data: {},
+            blocks: created.map(({ block }) => block),
+          },
+        ],
+      },
+      bindings: generatedBindings,
+      saveMode: "entry",
+      interactionMode: "inline",
+    },
+  };
+  expect(() => validate(customScreenDefinitionSchema, definition)).not.toThrow();
+  expect(normalizeCustomScreenDefinitionForWrite({ definition }).editorView.bindings).toEqual(
+    generatedBindings
+  );
+});
+
 test("createScreenBlock related-list binds items + derives target from relationTarget", () => {
   const related = createScreenBlock({
     type: "related-list",
@@ -130,7 +176,12 @@ test("duplicateScreenBlockWithBindings clones nested bindings onto cloned block 
     field: "headline",
     mode: "readwrite",
   });
-  expect(result.bindings[1]?.blockId).not.toBe("field-1");
+  const duplicatedBinding = result.bindings[1]!;
+  expect(duplicatedBinding.blockId).not.toBe("field-1");
+  expect(duplicatedBinding.id).toBe(
+    buildScreenFieldBindingId(duplicatedBinding.blockId, duplicatedBinding.propPath)
+  );
+  expect(duplicatedBinding.id.length).toBeLessThanOrEqual(120);
 });
 
 // ---------------------------------------------------------------------------

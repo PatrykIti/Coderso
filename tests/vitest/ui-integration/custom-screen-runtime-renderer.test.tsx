@@ -1292,16 +1292,19 @@ test("Tabs encode ambiguous block and tab ID pairs without DOM collisions or cro
   }
 });
 
-test("zero Tabs fails safe without emitting a selected tab or panel", () => {
+test("zero Tabs exposes an accessible empty state without an empty tablist", () => {
   const view = render(
     [{ id: "tabs-1", type: "tabs", data: { label: "Empty tabs", tabs: [] }, slots: {} }],
     "preview"
   );
   try {
     const block = view.container.querySelector('[data-screen-block-id="tabs-1"]');
-    expect(block?.querySelector('[role="tablist"]')).not.toBeNull();
+    expect(block?.querySelector('[role="tablist"]')).toBeNull();
     expect(block?.querySelector('[role="tab"]')).toBeNull();
     expect(block?.querySelector('[role="tabpanel"]')).toBeNull();
+    const emptyState = block?.querySelector('[data-screen-tabs-empty="true"]');
+    expect(emptyState?.getAttribute("role")).toBe("status");
+    expect(emptyState?.textContent).toBe("No tabs available.");
   } finally {
     view.cleanup();
   }

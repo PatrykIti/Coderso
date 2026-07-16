@@ -11,8 +11,11 @@
 **Status:** 🚧 In Progress
 **Started:** 2026-07-13
 **Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
-**Revalidation Passed:** 2026-07-14 — `core lint:types`, `core lint`, the exact renderer/interaction/image Vitest matrix (89/89), and `git diff --check`
-**Post-Audit:** 2026-07-14 — PASS; zero HIGH, MEDIUM, or LOW findings for the five-value final Button/Image DOM-sink regression matrix
+**Repair Started:** 2026-07-16
+**Repair Reason:** The defensive zero-item Tabs branch rendered an empty `tablist` with no usable tab. R03 owns the accessible fail-safe renderer state: no empty tablist/tab/panel and visible exact `role="status"` text `No tabs available.`.
+**Revalidation Passed:** 2026-07-16 — `core lint:types`, `core lint`, the exact renderer/interaction/image Vitest matrix (89/89), and `git diff --check` independently passed on the final shared source. This current receipt claims no new post-audit, live smoke, changelog, or closure result.
+**Historical Corrective Revalidation:** 2026-07-14 — `core lint:types`, `core lint`, the then-current exact renderer/interaction/image Vitest matrix (89/89), and `git diff --check`
+**Historical Post-Audit:** 2026-07-14 — PASS; zero HIGH, MEDIUM, or LOW findings for the five-value final Button/Image DOM-sink regression matrix
 **Fix Started:** 2026-07-14
 **Fix Reason:** Final closure audit requires explicit Button and Image final-sink regressions for TAB/LF/CR protocol-relative confusion and the remaining ASCII-control boundary.
 **Prior Corrective Revalidation:** 2026-07-14 — `core lint:types`, `core lint`, the exact renderer/interaction/image Vitest matrix (83/83), and `git diff --check`, before the control-character corpus was added
@@ -38,10 +41,14 @@ R01 Screen wrapper read-only and adds final DOM-sink regressions; it need not ed
 closed. `custom-screen-record-interactions.test.tsx` and
 `screen-document-image-src.test.ts` remain read-only prerequisites in this gate.
 
-That correction is landed and gated. This leaf is not a current repair owner: it remains
-`🚧 In Progress` with `Implementation Complete` only because canonical `✅ Done` awaits
-family changelog 1252. While the exact later L03 repair receipt exists,
-TASK-540-04-L03 alone carries `Repair Pending` and family closure remains paused.
+That historical correction remains landed and gated. This leaf is now the current R03
+repair owner only for the accessible zero-item Tabs branch and its renderer regression;
+the current exact 89/89 gate plus lint/typecheck/diff passed independently. It remains
+`🚧 In Progress` with `Implementation Complete` because canonical `✅ Done` awaits family
+changelog 1252. TASK-540-04-L03 is not a current repair owner: its attempted current
+`screenEntryPresentationOverrideContract.ts` import-only diff was reverted and that file
+is clean. Its older cache/entry repair receipt remains historical evidence, not current
+TASK-540 source-repair authority.
 
 Do not edit `InlineEditWrapper.tsx`, `CustomScreenEntryCanvas.tsx`, schemas,
 inspector, or shared selection helpers. Fix the ancestor semantics at the owning
@@ -144,6 +151,15 @@ function onTabKeyDown(event, index, tabs, block, sectionId) {
   activateTab(block, next.id, sectionId);
   focusTabWithinRenderer(block.id, next.id);
 }
+
+if (tabs.length === 0) {
+  return wrap(
+    <p role="status" data-screen-tabs-empty="true">
+      No tabs available.
+    </p>
+  );
+}
+// Only a non-empty collection may continue into tablist/tab/tabpanel markup.
 
 <div role="tablist" aria-label={block.label ?? "Tabs"}>
   {tabs.map((tab, index) => (
@@ -294,7 +310,9 @@ selection handle remains the keyboard path. Drag/drop handlers stay intact.
 
 ## Error/compatibility flow
 
-- Zero Tabs is a fail-safe empty state; valid writes require at least one.
+- Zero Tabs is a fail-safe accessible empty state; valid writes require at least one,
+  while a defensive read/runtime value renders exact visible `role="status"` text
+  `No tabs available.` and emits no `tablist`, `tab`, or `tabpanel`.
 - Removed active tab derives to the first remaining tab without stale focus.
 - Legacy unsupported Button action already reads as link-without-href and renders
   disabled. Unsafe defense-in-depth URL also renders disabled, never `#`. Builder mode
@@ -317,6 +335,9 @@ selection handle remains the keyboard path. Drag/drop handlers stay intact.
   remaining a non-anchor/non-navigating affordance in builder, that same safe Button
   becoming an anchor in preview/entry, unsafe/absent disabled Button behavior, and
   unique tab/panel IDs plus root-scoped focus across two concurrent renderers.
+- The same renderer suite passes a defensive zero-item Tabs value and asserts visible
+  exact `role="status"` text `No tabs available.` together with the absence of an empty
+  `tablist`, every `tab`, and every `tabpanel`.
 - The same existing renderer test owns the final-sink control corpus. Parameterize the
   exact TAB/LF/CR protocol-relative-confusion values plus NUL/DEL shown in the corrective
   pseudocode. For each value, a Button in entry mode has no `a` and exposes an
@@ -364,5 +385,8 @@ Rerun any named failing file once in isolation. No Bun runtime route is touched.
 
 The accessible Tabs, passive-selection, URL/UUID sink implementation, length-delimited
 DOM identity, and 83/83 gate remain historical metadata. After R01 landed, this leaf
-added the explicit final Button/Image control-character DOM regressions, passed the exact
-final 89/89 gate, and passed a fresh zero-finding post-audit before returning to Done.
+added the explicit final Button/Image control-character DOM regressions and historically
+passed the then-current exact 89/89 gate plus a zero-finding post-audit. The current
+2026-07-16 accessible zero-item Tabs repair independently passed the exact 89/89 gate,
+lint/typecheck, and diff check; no new post-audit or smoke is claimed, and closure remains
+pending.

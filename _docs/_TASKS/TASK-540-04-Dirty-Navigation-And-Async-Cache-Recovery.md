@@ -11,7 +11,7 @@
 **Started:** 2026-07-13
 **Fix Started:** 2026-07-15
 **Implementation Complete:** 2026-07-15 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
-**Repair Reason:** Closure validation reproduced duplicate remote invalidation when the canonical and legacy cache transports delivered the same serialized event, and contract audit required direct-image route-boundary coverage at the strict write seam. The phase-neutral repair state machine designates L03 as the sole repair owner with exactly three writable paths: `core/admin/utils/cacheBus.ts`, `tests/vitest/admin/cacheBus.test.ts`, and additive direct-image regressions in `tests/integration/routes/customScreensRoutes.test.ts`. No production route file may change. While L03's exact `Repair Pending` receipt exists, family closure is paused until the focused cache-bus gate, expanded L03 owner/dependency gate, L04 read-only consumer gate, direct-image Bun/DB route gate, core lint/typecheck, root typecheck, workflow self-tests, and diff check all pass. After that receipt is replaced by the exact successor `Revalidation Passed`, L03 and TASK-540-04 remain `🚧 In Progress` with `Implementation Complete` until changelog 1252; L01, L02, and L04 follow the same closure-waiting status, and every other L03 UI/client/service/route production consumer stays read-only.
+**Repair Reason:** Closure validation reproduced duplicate remote invalidation when the canonical and legacy cache transports delivered the same serialized event, and contract audit required direct-image route-boundary coverage at the strict write seam. The phase-neutral repair state machine designated L03 as the sole repair owner with exactly three writable paths: `core/admin/utils/cacheBus.ts`, `tests/vitest/admin/cacheBus.test.ts`, and additive direct-image regressions in `tests/integration/routes/customScreensRoutes.test.ts`. No production route file changed. L03 completed the focused cache-bus gate, expanded owner/dependency gate, L04 read-only consumer gate, direct-image Bun/DB route gate, core lint/typecheck, root typecheck, workflow self-tests, and diff check; its exact `Repair Pending` receipt was replaced by the matching `Revalidation Passed` successor. L03 and TASK-540-04 remain `🚧 In Progress` with `Implementation Complete` until changelog 1252; L01, L02, and L04 follow the same closure-waiting status, and every other L03 UI/client/service/route production consumer stays read-only.
 **Historical L04 Fix Started:** 2026-07-15
 **Historical L04 Repair Reason:** Mandatory repository-wide `bun run test` confirmed that the legacy `screen-editor-sections.test.tsx` Save flow lacked the fresh-symbol cacheBus factory required by the L04-owned `CustomScreenEditorPage`. L04 added only that mock export and passed its exact six-file re-gate; L01 through L03 remained historically Done, and closure resumed.
 **Historical L04 Completion:** 2026-07-15
@@ -55,17 +55,17 @@ the one-property compatibility repair and exact six-file/66-test re-gate; L01 th
 and every non-L04 source descendant remained Done at that point. Closure validation then
 reproduced canonical+legacy twin delivery of one serialized remote cache event, and
 contract audit required direct-image route-boundary coverage at the strict write seam.
-The phase-neutral repair state machine designates L03 as the sole repair owner with
+The phase-neutral repair state machine designated L03 as the sole repair owner with
 exactly three writable paths: `core/admin/utils/cacheBus.ts`,
 `tests/vitest/admin/cacheBus.test.ts`, and additive regressions in
 `tests/integration/routes/customScreensRoutes.test.ts`; production route code remains
-read-only. While its exact `Repair Pending` receipt exists, family closure is paused.
-The focused cache-bus gate, expanded L03 owner/dependency gate, L04 read-only consumer
-gate, direct-image Bun/DB route gate, core lint/typecheck, root typecheck, workflow
-self-tests, and diff check are all required predecessors of the exact successor
-`Revalidation Passed`. After that receipt replaces `Repair Pending`, L03 and TASK-540-04
+read-only. The focused cache-bus gate, expanded L03 owner/dependency gate, L04 read-only
+consumer gate, direct-image Bun/DB route gate, core lint/typecheck, root typecheck,
+workflow self-tests, and diff check all passed, and the exact `Repair Pending` receipt
+was replaced by its matching `Revalidation Passed` successor. L03 and TASK-540-04
 remain `🚧 In Progress` with `Implementation Complete` until changelog 1252; L01, L02,
-and L04 follow the same closure-waiting status.
+and L04 follow the same closure-waiting status. All ten leaves are landed, so closure
+continues from the prepared pre-closure boundary with no remaining leaf cursor.
 
 ## Shared contract
 
@@ -245,18 +245,17 @@ and L04 follow the same closure-waiting status.
   `CustomScreenPreview.tsx` is also owned only to add optional pass-through props; absent
   props preserve its existing builder/list and retained compatibility output. The
   record-interactions and retained Preview compatibility suites run read-only. During
-  the current 2026-07-15 repair, L03's only writable files are
+  the completed 2026-07-15 repair, L03's only writable files were
   `core/admin/utils/cacheBus.ts`, `tests/vitest/admin/cacheBus.test.ts`, and additive
   direct-image route-boundary regressions in
   `tests/integration/routes/customScreensRoutes.test.ts`. That third path is a narrow
-  repair-specific ownership exception: existing TASK-540-01 assertions may not be
-  re-baselined, and `core/server/routes/customScreenRoutes.ts` remains read-only. Every
-  other path in this ownership paragraph, both L02 hook/dialog suites, and all L04
-  consumer suites are read-only gates. Every pre-closure audit/gate fixer is mechanically
-  narrowed to those same three files. After closure it may add only the TASK-540 root,
-  TASK-540-04 child, and exact L03 task contracts for evidenced contract findings;
-  task-state transitions remain separate and historical consumer ownership never
-  reopens.
+  historical repair-specific ownership exception; it is not silently added to a future
+  L03 repair. For a new exact evidence-backed post-audit or final-drift finding, the
+  pre-closure fixer uses L03's full original `allowedFiles` declared by the workflow,
+  including `screenEntryPresentationOverrideContract.ts`, and remains bounded by the
+  exact finding prompt plus post-agent `touchedFiles` verification. After closure it may
+  add only the TASK-540 root, TASK-540-04 child, and exact L03 task contracts for
+  evidenced contract findings; task-state transitions remain separate.
 - TASK-540-04-L04 exclusively owns `CustomScreenEditorPage.tsx`, the additive
   `buildCustomScreenEditorPath` seam in `routeParams.ts`, `custom-screens-page.test.tsx`,
   `custom-screen-route-params.test.ts`, and
@@ -269,6 +268,12 @@ and L04 follow the same closure-waiting status.
   imports, and every other mock byte remain frozen. It consumes L03-owned
   `customScreensClient.ts`, `cacheBus.ts`, `customScreensClient.test.ts`, and
   `cacheBus.test.ts` read-only; no cache key, serialized payload, or transport changes.
+  That one-property path records only the completed historical repair and does not
+  permanently narrow L04 repair authority. For a new exact evidence-backed post-audit
+  or final-drift finding, the fixer uses L04's full original `allowedFiles`, including
+  its production and owned test paths. The `screen-editor-sections.test.tsx` seam remains
+  fixture-only and is touched only when the finding requires it; the exact finding prompt
+  plus post-agent `touchedFiles` verification bound every mutation.
 
 ## Security Contract
 
@@ -314,12 +319,12 @@ with static checks and a zero-finding post-audit. Reopened L03 now publishes com
 fallback lists and reconciles monotonic Screen list/detail/mutation authority; its exact
 nine-file owner gate passed 181/181 with `core` lint/typecheck, root typecheck, diff
 check, and a zero-finding fresh post-audit. Those receipts remain historical. The
-phase-neutral repair state machine designates L03 as the sole current repair owner. Its
-exact three writable paths and full required re-gate are defined above. While the exact
-`Repair Pending` receipt exists, family closure is paused. After that receipt is replaced
-by the exact successor `Revalidation Passed`, L03 and TASK-540-04 remain
-`🚧 In Progress` with `Implementation Complete` until changelog 1252; L01, L02, and L04
-follow the same closure-waiting status. L04's narrow 2026-07-15 mock repair passed its
+phase-neutral repair state machine designated L03 as the sole repair owner. Its exact
+three writable paths and full required re-gate are defined above and are now complete.
+The former `Repair Pending` receipt has been replaced by the exact successor
+`Revalidation Passed`; L03 and TASK-540-04 remain `🚧 In Progress` with
+`Implementation Complete` until changelog 1252, while L01, L02, and L04 follow the same
+closure-waiting status. L04's narrow 2026-07-15 mock repair passed its
 six-file/66-test gate and five zero-finding post-audit lenses. TASK-540-06 retains
 ownership of the fresh family-wide audit, aggregate gates, runtime smoke, and final
 changelog/board closure.

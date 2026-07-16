@@ -94,6 +94,9 @@ Testing docs:
   task before implementation. Do not silently downgrade agreed scope to a
   smaller MVP.
 - Use `_docs/_TASKS/TASK-###_Short_Title.md` for board-level task files unless a dedicated migration task renames a board family.
+- `TASK-9999` is the sole reserved four-digit sentinel exception to the
+  `TASK-###` naming rule. It is the permanent deferred-LOW family described
+  below; do not allocate any other four-digit task ID.
 - Use physical child files for implementation work that is too large for one task file:
   - `TASK-###-NN-Title.md` for a technical subtask under `TASK-###`,
   - `TASK-###-NN-LNN-Title.md` for an executable leaf under `TASK-###-NN`,
@@ -168,6 +171,23 @@ Testing docs:
   docs/changelog evidence when needed, and repeat with a fresh pass. Continue
   until no unresolved high/medium/low drift remains or every remaining item is
   explicitly split into a non-blocking follow-up task with rationale.
+- Evidence-backed LOW findings may be deferred only through the permanent
+  `TASK-9999` backlog and only when the evidence proves both of these conditions:
+  zero current user-visible UI, UX, or accessibility effect; and zero data,
+  security, privacy, auth, RBAC, API, persistence, migration, performance,
+  reliability, or test-integrity impact. HIGH and MEDIUM findings are never
+  eligible. The source task must link a concrete execution-ready `TASK-9999`
+  leaf and record the exact evidence plus the reason deferral is safe; a vague
+  umbrella note is not a deferral. Search the existing backlog first and link a
+  duplicate finding to its existing leaf instead of creating another one.
+  Re-triage deferred leaves at the source task's closure, at the quarterly
+  `TASK-9999` review, and whenever new evidence changes impact or severity;
+  promote any no-longer-eligible item back into active work immediately.
+  `TASK-9999` intentionally remains `🚧 In Progress` as the final board item so
+  new source-family children can be appended without ever closing the parent.
+  Completed TASK-9999 leaves and children still follow normal closure rules,
+  including terminal descendant order, changelog coverage, task-board updates,
+  and Statistics synchronization; only the sentinel parent remains open.
 - Drift passes supplement dependency-shaped validation; they do not replace
   required tests, linters, type checks, security scans, task graph audits, or
   runtime smoke tests.

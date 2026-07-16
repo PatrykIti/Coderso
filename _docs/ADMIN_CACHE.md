@@ -221,6 +221,18 @@ Contract:
 `core/admin/utils/cacheBus.ts` broadcasts cache events:
 - Primary: `BroadcastChannel`.
 - Fallback: `localStorage` storage event.
+- During the compatibility window, each publication uses both the canonical
+  `coderso.admin.cache` transport and the legacy `nextless.admin.cache`
+  transport (or both matching storage keys). A subscription correlates the
+  canonical/legacy copies by `sourceId`, `ts`, `key`, and `action`, so one
+  logical remote publication is delivered exactly once while repeated events
+  observed through only one transport remain distinct. Correlation state is
+  bounded and scoped to the subscription.
+- Subscribers receive an explicit `local` or `remote` origin. A same-context
+  publication may also carry a symbol operation token so an editor can
+  recognize its own mutation event. That token is process-local: neither the
+  origin nor the token joins the wire payload, `BroadcastChannel`, or
+  `localStorage`, and remote subscribers always receive no token.
 - Consumers must treat broadcasts as hints, not truth: the Page Editor
   rehydrates from `pages:detail:<id>` events only when the cached record is
   strictly newer (`updatedAt`) than the loaded page (TASK-449-02). Stale,

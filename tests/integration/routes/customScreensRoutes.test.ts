@@ -255,7 +255,7 @@ const buildDefinition = (style?: Record<string, unknown>): CustomScreenDefinitio
     },
   }) as CustomScreenDefinition;
 
-const patchScreenDefinition = async (screenId: string, definition: CustomScreenDefinition) => {
+const patchScreen = async (screenId: string, body: unknown) => {
   const { router, routes } = makeRouter();
   registerCustomScreenRoutes(router, {
     requirePermission: () => async () => undefined,
@@ -264,10 +264,13 @@ const patchScreenDefinition = async (screenId: string, definition: CustomScreenD
   const route = findRoute(routes, "PATCH", "/custom-screens/:id");
   return runRoute(route, {
     params: { id: screenId },
-    body: { definition },
+    body,
     user: { id: "44444444-4444-4444-8444-444444444444" },
   });
 };
+
+const patchScreenDefinition = async (screenId: string, definition: CustomScreenDefinition) =>
+  patchScreen(screenId, { definition });
 
 const postScreen = async (body: unknown) => {
   const { router, routes } = makeRouter();
@@ -737,6 +740,131 @@ const definitionWithEditorBlocks = (blocks: unknown[]): CustomScreenDefinition =
     },
   } as CustomScreenDefinition;
 };
+
+testIfDb(
+  "TASK-540-01 metadata-only registered PATCH persists local Tabs and overlong-ID read repair without document loss",
+  async () => {
+    const screen = await seedBoundScreen();
+    const base = buildDefinition();
+    const overviewContent = [
+      { id: "overview-copy", type: "text", data: { content: "Keep overview" } },
+    ];
+    const detailsContent = [
+      { id: "details-copy", type: "text", data: { content: "Keep details" } },
+    ];
+    const longSectionId = `section-${"s".repeat(170)}`;
+    const longBlockPrefix = `block-${"b".repeat(170)}`;
+    const longTabsId = `${longBlockPrefix}-tabs`;
+    const longSiblingId = `${longBlockPrefix}-sibling`;
+    const longPropPath = `value.${"p".repeat(170)}`;
+    const sibling = { id: longSiblingId, type: "field", data: { label: "Keep sibling" } };
+    const malformedDefinition = {
+      ...base,
+      editorView: {
+        ...base.editorView,
+        document: {
+          schemaVersion: 1,
+          sections: [
+            {
+              id: longSectionId,
+              type: "section",
+              data: {},
+              blocks: [
+                {
+                  id: longTabsId,
+                  type: "tabs",
+                  data: "malformed-stored-data",
+                  slots: { overview: overviewContent, details: detailsContent },
+                },
+                sibling,
+              ],
+            },
+          ],
+        },
+        bindings: [
+          {
+            id: "sibling-binding",
+            blockId: longSiblingId,
+            propPath: longPropPath,
+            source: "entry",
+            field: "name",
+            mode: "read",
+          },
+        ],
+      },
+    } as unknown as CustomScreenDefinition;
+    await db
+      .update(customScreens)
+      .set({ definition: malformedDefinition })
+      .where(eq(customScreens.id, screen.id));
+
+    const response = (await patchScreen(screen.id, { name: "Repaired metadata name" })) as {
+      name: string;
+      definition: CustomScreenDefinition;
+    };
+    const responseSection = response.definition.editorView.document.sections[0]!;
+    const responseBlocks = responseSection.blocks;
+    expect(response.name).toBe("Repaired metadata name");
+    expect(responseSection.id.length).toBeLessThanOrEqual(160);
+    expect(responseBlocks[0]?.id.length).toBeLessThanOrEqual(160);
+    expect(responseBlocks[1]?.id.length).toBeLessThanOrEqual(160);
+    expect(responseBlocks[0]?.id).not.toBe(responseBlocks[1]?.id);
+    expect(responseBlocks[1]).toMatchObject({ type: "field", data: { label: "Keep sibling" } });
+    expect(responseBlocks[0]?.data.tabs).toEqual([
+      { id: "details", label: "Tab 1" },
+      { id: "overview", label: "Tab 2" },
+    ]);
+    expect(responseBlocks[0]?.slots?.overview).toEqual(overviewContent);
+    expect(responseBlocks[0]?.slots?.details).toEqual(detailsContent);
+    expect(response.definition.editorView.bindings).toEqual([
+      {
+        id: "sibling-binding",
+        blockId: responseBlocks[1]?.id,
+        propPath: expect.stringMatching(/^[a-zA-Z0-9_.-]{1,160}$/),
+        source: "entry",
+        field: "name",
+        mode: "read",
+      },
+    ]);
+
+    const [persisted] = await db
+      .select({ name: customScreens.name, definition: customScreens.definition })
+      .from(customScreens)
+      .where(eq(customScreens.id, screen.id));
+    const persistedDefinition = persisted?.definition as CustomScreenDefinition | undefined;
+    expect(persisted?.name).toBe("Repaired metadata name");
+    expect(persistedDefinition).toEqual(response.definition);
+  }
+);
+
+testIfDb(
+  "TASK-540-01 registered PATCH rejects fresh publish and custom Button actions before persistence",
+  async () => {
+    const screen = await seedBoundScreen();
+    const before = JSON.stringify((await getCustomScreen(screen.id))?.definition);
+
+    for (const action of ["publish", "custom"] as const) {
+      const definition = definitionWithEditorBlocks([
+        {
+          id: `unsupported-${action}`,
+          type: "button",
+          data: { label: "Unsupported", action, href: "/must-not-persist" },
+        },
+      ]);
+      try {
+        await patchScreenDefinition(screen.id, definition);
+        throw new Error(`expected ${action} action rejection`);
+      } catch (error) {
+        expect(error).toMatchObject({
+          code: "validation_error",
+          message: "Invalid payload",
+          status: 400,
+        });
+      }
+      expect(JSON.stringify((await getCustomScreen(screen.id))?.definition)).toBe(before);
+    }
+  }
+);
 
 testIfDb(
   "TASK-540-01 PATCH rejects fixed-kind unknown keys recursively in children and slots without mutating storage",

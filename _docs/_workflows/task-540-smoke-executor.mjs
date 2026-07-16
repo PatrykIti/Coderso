@@ -665,7 +665,7 @@ const RESOURCE_BUN_BRIDGE_PARTICIPATION = deepFreezeExact({
       ),
     },
     cleanup: null,
-    absence: DATABASE_NODE_AND_BUN_ONE_SHOT,
+    absence: bunParticipation("node+bun-one-shot", "bootstrap-preflight"),
   },
   "missing-media-baseline": {
     provenance: {
@@ -11099,6 +11099,8 @@ async function runBunBridge(state, descriptor, input) {
 const BRIDGE_INPUT_READER = String.raw`const raw = await new Response(Bun.stdin.stream()).text();
 if (!raw.endsWith("\n") || raw.slice(0, -1).includes("\n") || raw.includes("\0") || raw.includes("\r")) throw new Error("wf540_bridge_frame");
 const input = JSON.parse(raw.slice(0, -1));
+const validateJsonBounds = (root) => { const stack = [{ value:root, depth:0 }]; let nodes = 0; while (stack.length > 0) { const current = stack.pop(); nodes += 1; if (nodes > 100000 || current.depth > 64) throw new Error("wf540_input_json_bounds"); const value = current.value; if (value === null || typeof value === "string" || typeof value === "boolean") continue; if (typeof value === "number") { if (!Number.isFinite(value)) throw new Error("wf540_input_json_number"); continue; } if (!value || typeof value !== "object") throw new Error("wf540_input_json_value"); if (Array.isArray(value)) { if (value.length > 10000) throw new Error("wf540_input_json_array"); for (let index = value.length - 1; index >= 0; index -= 1) stack.push({ value:value[index], depth:current.depth + 1 }); } else { const values = Object.values(value); for (let index = values.length - 1; index >= 0; index -= 1) stack.push({ value:values[index], depth:current.depth + 1 }); } } };
+validateJsonBounds(input);
 const canonical = (value) => value === null || typeof value !== "object" ? JSON.stringify(value) : Array.isArray(value) ? "[" + value.map(canonical).join(",") + "]" : "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + canonical(value[key])).join(",") + "}";
 if (canonical(input) + "\n" !== raw) throw new Error("wf540_bridge_noncanonical");
 const inputKeys = (value, expected) => { if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).sort().join(",") !== [...expected].sort().join(",")) throw new Error("wf540_input_keys"); };
@@ -12032,54 +12034,59 @@ function validateResponseLostContentSchema(schema, label) {
     label + " root drift"
   );
   validateBridgeJsonObject(schema.properties, label + " properties");
+  const fieldOrders = [];
+  invariant(
+    Object.keys(schema.properties).length <= MAX_NATURAL_KEY_CANDIDATES,
+    label + " property bound drift"
+  );
   for (const [field, property] of Object.entries(schema.properties)) {
-    const allowed = ["items", "title", "type", "xFieldConfig", "xFieldType", "xRelationTarget"];
-    invariant(
-      Object.keys(property).every((key) => allowed.includes(key)),
-      label + " property has unknown keys: " + field
-    );
-    invariant(
-      ["array", "string"].includes(property.type),
-      label + " property type drift: " + field
-    );
+    requireBoundedBridgeString(field, label + " field name", 128);
+    validateBridgeJsonObject(property, label + " property " + field);
     requireBoundedBridgeString(property.title, label + " title " + field, 256);
-    requireBoundedBridgeString(property.xFieldType, label + " field type " + field, 64);
+    invariant(
+      ["media", "relation", "text"].includes(property.xFieldType),
+      label + " field discriminator drift: " + field
+    );
     validateBridgeJsonObject(property.xFieldConfig, label + " field config " + field);
     invariant(
       Number.isSafeInteger(property.xFieldConfig.order) && property.xFieldConfig.order >= 0,
       label + " field order drift: " + field
     );
-    if (Object.hasOwn(property, "items")) {
+    fieldOrders.push(property.xFieldConfig.order);
+    const validateStringItems = () => {
       exactOwnKeys(property.items, ["type"], label + " items " + field, { plain: true });
-      invariant(
-        property.type === "array" && property.items.type === "string",
-        label + " items drift: " + field
-      );
-    }
-    if (Object.hasOwn(property, "xRelationTarget"))
-      requireBoundedBridgeString(
-        property.xRelationTarget,
-        label + " relation target " + field,
-        256
-      );
-    if (Object.hasOwn(property.xFieldConfig, "relation")) {
+      invariant(property.items.type === "string", label + " items drift: " + field);
+    };
+    if (property.xFieldType === "text") {
       exactOwnKeys(
-        property.xFieldConfig.relation,
-        ["multiple", "target"],
-        label + " relation " + field,
+        property,
+        ["title", "type", "xFieldConfig", "xFieldType"],
+        label + " text property " + field,
         { plain: true }
       );
-      invariant(
-        typeof property.xFieldConfig.relation.multiple === "boolean",
-        label + " relation multiple drift: " + field
-      );
-      requireBoundedBridgeString(
-        property.xFieldConfig.relation.target,
-        label + " relation config target " + field,
-        256
-      );
+      exactOwnKeys(property.xFieldConfig, ["order"], label + " text config " + field, {
+        plain: true,
+      });
+      invariant(property.type === "string", label + " text type drift: " + field);
+      continue;
     }
-    if (Object.hasOwn(property.xFieldConfig, "media")) {
+    if (property.xFieldType === "media") {
+      const mediaIsMultiple = property.type === "array";
+      invariant(
+        mediaIsMultiple || property.type === "string",
+        label + " media type drift: " + field
+      );
+      exactOwnKeys(
+        property,
+        mediaIsMultiple
+          ? ["items", "title", "type", "xFieldConfig", "xFieldType"]
+          : ["title", "type", "xFieldConfig", "xFieldType"],
+        label + " media property " + field,
+        { plain: true }
+      );
+      exactOwnKeys(property.xFieldConfig, ["media", "order"], label + " media config " + field, {
+        plain: true,
+      });
       exactOwnKeys(property.xFieldConfig.media, ["accept"], label + " media " + field, {
         plain: true,
       });
@@ -12089,14 +12096,54 @@ function validateResponseLostContentSchema(schema, label) {
         32,
         128
       );
+      if (mediaIsMultiple) validateStringItems();
+      continue;
     }
-    invariant(
-      Object.keys(property.xFieldConfig).every((key) =>
-        ["media", "order", "relation"].includes(key)
-      ),
-      label + " field config has unknown keys: " + field
+    exactOwnKeys(
+      property.xFieldConfig,
+      ["order", "relation"],
+      label + " relation config " + field,
+      { plain: true }
     );
+    exactOwnKeys(
+      property.xFieldConfig.relation,
+      ["multiple", "target"],
+      label + " relation " + field,
+      { plain: true }
+    );
+    const relationIsMultiple = property.xFieldConfig.relation.multiple;
+    invariant(
+      typeof relationIsMultiple === "boolean" &&
+        property.type === (relationIsMultiple ? "array" : "string"),
+      label + " relation multiplicity/type drift: " + field
+    );
+    exactOwnKeys(
+      property,
+      relationIsMultiple
+        ? ["items", "title", "type", "xFieldConfig", "xFieldType", "xRelationTarget"]
+        : ["title", "type", "xFieldConfig", "xFieldType", "xRelationTarget"],
+      label + " relation property " + field,
+      { plain: true }
+    );
+    requireBoundedBridgeString(
+      property.xFieldConfig.relation.target,
+      label + " relation config target " + field,
+      256
+    );
+    requireBoundedBridgeString(property.xRelationTarget, label + " relation target " + field, 256);
+    invariant(
+      property.xRelationTarget === property.xFieldConfig.relation.target,
+      label + " relation target correlation drift: " + field
+    );
+    if (relationIsMultiple) validateStringItems();
   }
+  invariant(
+    deepEqualJson(
+      [...fieldOrders].sort((left, right) => left - right),
+      Array.from({ length: fieldOrders.length }, (_value, index) => index)
+    ),
+    label + " field order sequence drift"
+  );
 }
 
 function validateResponseLostContentConfig(config, label) {
@@ -12862,7 +12909,7 @@ const BUN_BRIDGE_INPUT_VALIDATORS = deepFreezeExact({
       requireBridgeUuid(input.contentType.id, "Bun Screen content-type ID");
       requireBoundedBridgeString(input.contentType.name, "Bun Screen content-type name", 256);
       requireBoundedBridgeString(input.contentType.slug, "Bun Screen content-type slug", 256);
-      assertPlainJsonValue(input.contentType.schema, "Bun Screen content-type schema");
+      validateBridgeJsonObject(input.contentType.schema, "Bun Screen content-type schema");
       exactOwnKeys(
         input.definitionWithoutListView,
         ["editorView", "schemaVersion"],
@@ -12873,7 +12920,7 @@ const BUN_BRIDGE_INPUT_VALIDATORS = deepFreezeExact({
         input.definitionWithoutListView.schemaVersion === 4,
         "Bun Screen definition version drift"
       );
-      assertPlainJsonValue(
+      validateBridgeJsonObject(
         input.definitionWithoutListView.editorView,
         "Bun Screen editor definition"
       );
@@ -13962,6 +14009,7 @@ function validateBootstrapPrivateBaseline(bootstrap, label = "bootstrap private 
       typeof role.roleId === "string" &&
       /^[0-9a-f-]{36}$/u.test(role.roleId) &&
       role.roleName === "admin" &&
+      Array.isArray(role.rolePermissions) &&
       deepEqualJson([...new Set(role.rolePermissions)].sort(), ["*"]) &&
       isNullableIsoTimestamp(role.roleCreatedAt),
     label + " canonical Admin role drift"
@@ -18506,6 +18554,184 @@ function selfTestNativeTransport({
   };
 }
 
+function selfTestBunBridgeInputForSchema(schemaId) {
+  const uuid = (ordinal) => `54000000-0000-4000-8000-${String(ordinal).padStart(12, "0")}`;
+  const primaryId = uuid(7500);
+  const roleId = uuid(7501);
+  const timestamp = "2026-07-16T00:00:00.000Z";
+  const bootstrap = {
+    decryptEmailProof: true,
+    emailHashProof: true,
+    encryptedEmailProof: true,
+    id: primaryId,
+    lastLoginAt: null,
+    normalizedEmailProof: true,
+    rawUserRow: {
+      createdAt: timestamp,
+      email: "admin@example.test",
+      emailEncrypted: "encrypted-email",
+      emailHash: "a".repeat(64),
+      id: primaryId,
+      lastLoginAt: null,
+      name: "Task 540 Admin",
+      passwordHash: "private-hash",
+      status: "active",
+      updatedAt: timestamp,
+    },
+    roleTuples: [
+      {
+        roleCreatedAt: timestamp,
+        roleDescription: null,
+        roleId,
+        roleName: "admin",
+        rolePermissions: ["*"],
+        userId: primaryId,
+      },
+    ],
+    updatedAt: timestamp,
+  };
+  const fixtures = {
+    "bootstrap-restore-input-v1": {
+      baseline: bootstrap,
+      newestOwnedPair: { lastLoginAt: timestamp, updatedAt: timestamp },
+      userId: primaryId,
+    },
+    "email-input-v1": { email: "task-540@example.test" },
+    "empty-input-v1": {},
+    "entry-discovery-input-v1": { slug: "task-540-entry", typeId: uuid(7502) },
+    "entry-preflight-input-v1": {
+      entrySlug: "task-540-entry",
+      typeSlug: "task-540-type",
+    },
+    "identifier-media-input-v1": {
+      identifier: [uuid(7503), `2026/07/${uuid(7503)}.png`],
+    },
+    "identifier-override-input-v1": {
+      identifier: [uuid(7504), uuid(7505), "task-540-block", "mediaAssetId"],
+    },
+    "identifier-setting-input-v1": {
+      identifier: [uuid(7506), "customScreens.entry.preferences"],
+    },
+    "identifier-uuid-input-v1": { identifier: [uuid(7507)] },
+    "media-id-input-v1": { mediaId: uuid(7508) },
+    "media-natural-input-v1": {
+      mimeType: "image/png",
+      originalName: "task-540.png",
+      size: 540,
+    },
+    "override-discovery-input-v1": {
+      blockId: "task-540-block",
+      entryId: uuid(7509),
+      propPath: "mediaAssetId",
+      screenId: uuid(7510),
+    },
+    "override-preflight-input-v1": {
+      blockId: "task-540-block",
+      contentTypeSlug: "task-540-type",
+      entrySlug: "task-540-entry",
+      propPath: "mediaAssetId",
+      screenName: "Task 540 Screen",
+    },
+    "preference-write-input-v1": {
+      showFieldMetadata: true,
+      userId: uuid(7511),
+    },
+    "resource-owner-input-v1": {
+      entryIds: Array.from({ length: 6 }, (_value, index) => uuid(7520 + index)),
+      mediaId: uuid(7526),
+      override: {
+        blockId: "task-540-block",
+        entryId: uuid(7520),
+        propPath: "mediaAssetId",
+        screenId: uuid(7527),
+      },
+    },
+    "screen-discovery-input-v1": {
+      contentTypeId: uuid(7528),
+      name: "Task 540 Screen",
+    },
+    "screen-materialize-input-v1": {
+      bodyWithoutDefinition: {
+        contentTypeId: uuid(7529),
+        name: "Task 540 Screen",
+        showInSidebar: true,
+        sidebarLabel: "Task 540",
+        status: "active",
+      },
+      contentType: {
+        id: uuid(7529),
+        name: "Task 540 Type",
+        schema: { type: "object" },
+        slug: "task-540-type",
+      },
+      definitionWithoutListView: { editorView: {}, schemaVersion: 4 },
+    },
+    "screen-preflight-input-v1": {
+      contentTypeSlug: "task-540-type",
+      name: "Task 540 Screen",
+    },
+    "slug-input-v1": { slug: "task-540-type" },
+    "user-agents-input-v1": {
+      userAgents: Array.from(
+        { length: 4 },
+        (_value, index) => `TASK-540/self-test-bun-${index + 1}`
+      ),
+    },
+    "user-id-input-v1": { userId: uuid(7530) },
+    "user-identity-input-v1": {
+      email: "task-540-user@example.test",
+      userId: uuid(7531),
+    },
+    "user-provision-input-v1": {
+      email: "task-540-user@example.test",
+      name: "Task 540 User",
+    },
+    "user-session-observation-input-v1": {
+      userAgent: "TASK-540/self-test-session",
+      userId: uuid(7532),
+    },
+  };
+  invariant(
+    deepEqualJson(Object.keys(fixtures).sort(), Object.keys(BUN_BRIDGE_INPUT_VALIDATORS).sort()),
+    "self-test Bun input fixture registry is not exhaustive"
+  );
+  invariant(
+    Object.hasOwn(fixtures, schemaId),
+    "self-test Bun input schema is unknown: " + schemaId
+  );
+  return deepFreezeExact(fixtures[schemaId]);
+}
+
+async function selfTestExactBunChildInputSource(schemaId, input) {
+  invariant(
+    Object.hasOwn(BUN_BRIDGE_INPUT_VALIDATORS, schemaId),
+    "self-test child Bun input schema is unknown: " + schemaId
+  );
+  assertPlainJsonValue(input, "self-test child Bun input");
+  const runtimeFramingLine = "const raw = await new Response(Bun.stdin.stream()).text();\n";
+  invariant(
+    BRIDGE_INPUT_READER.startsWith(runtimeFramingLine),
+    "Bun child input reader framing source drift"
+  );
+  const raw = canonicalJson(input) + "\n";
+  const hermeticReader =
+    "const raw = " +
+    JSON.stringify(raw) +
+    ";\n" +
+    BRIDGE_INPUT_READER.slice(runtimeFramingLine.length);
+  const program =
+    "(async()=>{\n" +
+    hermeticReader +
+    "\nvalidateInput(" +
+    JSON.stringify(schemaId) +
+    ",input);\nreturn true;\n})()";
+  const result = await new Script(program, {
+    filename: "task-540-bun-child-" + schemaId + ".self-test.js",
+  }).runInNewContext({ TextEncoder }, { timeout: 5_000 });
+  invariant(result === true, schemaId + " child Bun input source did not return success");
+  return input;
+}
+
 async function runExpectedAuthChallengeSelfTest({ expectNegative, assertNegative }) {
   const expectedUrl = "http://127.0.0.1:5173/admin/api/auth/me";
   const loginUrl = "http://127.0.0.1:5173/admin/login";
@@ -19738,6 +19964,178 @@ export async function runTask540SmokeExecutorSelfTest() {
   );
 
   validateStaticBunBridgeDescriptorRegistries();
+  const exactChildInputSchemaIds = Object.keys(BUN_BRIDGE_INPUT_VALIDATORS).sort();
+  invariant(exactChildInputSchemaIds.length === 24, "Bun child input schema count drift");
+  for (const schemaId of exactChildInputSchemaIds) {
+    const input = selfTestBunBridgeInputForSchema(schemaId);
+    invariant(
+      (await selfTestExactBunChildInputSource(schemaId, input)) === input,
+      schemaId + " child Bun positive input parity drift"
+    );
+  }
+  const dryResourceUuid = (ordinal) =>
+    `54000000-0000-4000-8000-${String(7600 + ordinal).padStart(12, "0")}`;
+  const dryResourceCoreSpecs = [
+    [
+      "presentation-override",
+      "failure-discovery",
+      [dryResourceUuid(1), dryResourceUuid(2), "task-540-block", "mediaAssetId"],
+    ],
+    [
+      "setting-user-a",
+      "failure-discovery",
+      [dryResourceUuid(3), "customScreens.entry.preferences"],
+    ],
+    [
+      "setting-user-b",
+      "failure-discovery",
+      [dryResourceUuid(4), "customScreens.entry.preferences"],
+    ],
+    ["screen-main", "failure-discovery", [dryResourceUuid(5)]],
+    ["screen-retry", "failure-discovery", [dryResourceUuid(6)]],
+    ["entry-editable", "failure-discovery", [dryResourceUuid(7)]],
+    ["entry-related", "failure-discovery", [dryResourceUuid(8)]],
+    ["content-type", "failure-discovery", [dryResourceUuid(9)]],
+    ["media-row-key", "admin-api", [dryResourceUuid(10), `2026/07/${dryResourceUuid(10)}.png`]],
+    [
+      "media-row-key",
+      "failure-discovery",
+      [dryResourceUuid(11), `2026/07/${dryResourceUuid(11)}.png`],
+    ],
+    ["audit-log-task-ua", "terminal-db-delta", [dryResourceUuid(12)]],
+    ["access-log-task-ua", "terminal-db-delta", [dryResourceUuid(13)]],
+    ["session-task", "terminal-db-delta", [dryResourceUuid(14)]],
+    ["user-a", "failure-discovery", [dryResourceUuid(15)]],
+    ["user-b", "failure-discovery", [dryResourceUuid(16)]],
+    ["bootstrap-user-login-state", "preflight", [dryResourceUuid(17)]],
+    ["site-content-routes-baseline", "preflight", ["site.contentRoutes"]],
+    ["storage-baseline", "preflight", ["storage-baseline"]],
+    ["missing-media-baseline", "preflight", [dryResourceUuid(18)]],
+  ];
+  const dryResourceCores = deepFreezeExact(
+    dryResourceCoreSpecs.map(([kind, acquisitionChannel, identifier], index) =>
+      createResourceCore({
+        acquisitionChannel,
+        acquisitionSourceId: "self-test-bun-resource-" + String(index + 1),
+        identifier,
+        kind,
+        sourceActionOrdinal: index + 1,
+      })
+    )
+  );
+  const dryResourceDelta = deepFreezeExact({
+    cores: dryResourceCores,
+    dependencyEdges: [],
+  });
+  const dryResourceLedger = new ResourceLedgerBuilder();
+  dryResourceLedger.appendValidatedDelta(dryResourceDelta);
+  const dryPersistentResourceRecords = dryResourceLedger.compileResourceRecords("persistent");
+  const dryTerminalResourceRecords = dryResourceLedger.compileResourceRecords("terminal");
+  invariant(
+    dryPersistentResourceRecords.length === 16 &&
+      dryTerminalResourceRecords.length === 3 &&
+      new Set(
+        [...dryPersistentResourceRecords, ...dryTerminalResourceRecords].map(
+          ({ resourceKey }) => resourceKey
+        )
+      ).size === dryResourceCores.length,
+    "dry-dispatch resource cores did not cross the real ledger boundary"
+  );
+  const dryResourceDescriptorState = {};
+  initializeBunBridgeOperationAuthority(dryResourceDescriptorState);
+  promoteResourceBunDescriptorsAfterLedgerAppend(dryResourceDescriptorState, dryResourceDelta);
+  assertResourceBunDescriptorSetExact(dryResourceDescriptorState, dryResourceCores);
+  const staticDryDescriptors = Object.values(BUN_BRIDGE_OPERATION_DESCRIPTORS);
+  const resourceDryDescriptors = [
+    ...PRIVATE_BUN_RESOURCE_DESCRIPTORS.get(dryResourceDescriptorState).values(),
+  ];
+  const seenResourceSpecKeys = new Set(
+    resourceDryDescriptors.map((descriptor) =>
+      descriptor.resourceSlot === "provenance"
+        ? descriptor.resourceKind + "/provenance/" + descriptor.acquisitionChannel
+        : descriptor.resourceKind + "/" + descriptor.resourceSlot
+    )
+  );
+  invariant(
+    staticDryDescriptors.length === 60 &&
+      resourceDryDescriptors.length === 40 &&
+      seenResourceSpecKeys.size === 38 &&
+      Object.keys(RESOURCE_BUN_SOURCE_SPECS).length === 38 &&
+      deepEqualJson(
+        [...seenResourceSpecKeys].sort(),
+        Object.keys(RESOURCE_BUN_SOURCE_SPECS).sort()
+      ),
+    "Bun dry-dispatch descriptor/spec matrix drift"
+  );
+  const dryResourceCoreByKey = new Map(dryResourceCores.map((core) => [core.resourceKey, core]));
+  const dryExternalExecutionTrap = new Error("TASK-540 hermetic Bun external execution trap");
+  let dryExternalExecutionTrapCalls = 0;
+  const dryDispatchProjections = [];
+  for (const descriptor of [...staticDryDescriptors, ...resourceDryDescriptors]) {
+    const core = Object.hasOwn(descriptor, "resourceKey")
+      ? dryResourceCoreByKey.get(descriptor.resourceKey)
+      : null;
+    invariant(
+      core !== undefined,
+      descriptor.operationId + " dry-dispatch resource core binding is absent"
+    );
+    const genericInput = selfTestBunBridgeInputForSchema(descriptor.inputSchemaId);
+    let input = genericInput;
+    if (core !== null && descriptor.inputSchemaId.startsWith("identifier-")) {
+      input = deepFreezeExact({ identifier: core.identifier });
+    } else if (core !== null && descriptor.inputSchemaId === "user-session-observation-input-v1") {
+      input = deepFreezeExact({ ...genericInput, userId: core.identifier[0] });
+    } else if (core !== null && descriptor.inputSchemaId === "media-id-input-v1") {
+      input = deepFreezeExact({ mediaId: core.identifier[0] });
+    } else if (core !== null && descriptor.inputSchemaId === "bootstrap-restore-input-v1") {
+      input = deepFreezeExact({
+        ...genericInput,
+        baseline: {
+          ...genericInput.baseline,
+          id: core.identifier[0],
+          rawUserRow: {
+            ...genericInput.baseline.rawUserRow,
+            id: core.identifier[0],
+          },
+          roleTuples: genericInput.baseline.roleTuples.map((role) => ({
+            ...role,
+            userId: core.identifier[0],
+          })),
+        },
+        userId: core.identifier[0],
+      });
+    }
+    let trappedAtExternalBoundary = false;
+    try {
+      dryDispatchBunBridgeDescriptor({}, descriptor, input, (projection) => {
+        dryExternalExecutionTrapCalls += 1;
+        invariant(
+          projection.operationId === descriptor.operationId &&
+            projection.sourceSha256 === descriptor.sourceSha256 &&
+            projection.inputSchemaId === descriptor.inputSchemaId &&
+            projection.outputSchemaId === descriptor.outputSchemaId &&
+            Number.isSafeInteger(projection.frameBytes) &&
+            projection.frameBytes > 0 &&
+            /^[a-f0-9]{64}$/u.test(projection.frameSha256),
+          descriptor.operationId + " dry-dispatch projection drift"
+        );
+        dryDispatchProjections.push(projection);
+        throw dryExternalExecutionTrap;
+      });
+    } catch (error) {
+      trappedAtExternalBoundary = error === dryExternalExecutionTrap;
+    }
+    invariant(
+      trappedAtExternalBoundary,
+      descriptor.operationId + " did not reach the hermetic external-execution trap"
+    );
+  }
+  invariant(
+    dryExternalExecutionTrapCalls === 100 &&
+      dryDispatchProjections.length === 100 &&
+      new Set(dryDispatchProjections.map(({ operationId }) => operationId)).size === 100,
+    "Bun static/resource dry-dispatch coverage drift"
+  );
   const missingRuntimeRegistry = { ...BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS };
   delete missingRuntimeRegistry["runtime/set-001-storage-preflight"];
   await expectAsyncFailure(
@@ -19799,6 +20197,27 @@ export async function runTask540SmokeExecutorSelfTest() {
         runtimeRegistry: driftedLimitRuntimeRegistry,
       }),
     "drifted Bun descriptor stream bound"
+  );
+  const guardedDescriptor =
+    BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS["runtime/set-001-storage-preflight"];
+  const exactChildGuard = bridgeInputSchemaGuard(guardedDescriptor.inputSchemaId);
+  invariant(
+    guardedDescriptor.source.startsWith(BRIDGE_INPUT_READER + exactChildGuard),
+    "self-test child input guard fixture drift"
+  );
+  const sourceWithoutChildGuard =
+    BRIDGE_INPUT_READER +
+    guardedDescriptor.source.slice((BRIDGE_INPUT_READER + exactChildGuard).length);
+  await expectAsyncFailure(
+    async () =>
+      validateBunBridgeOperationDescriptor(
+        deepFreezeExact({
+          ...guardedDescriptor,
+          source: sourceWithoutChildGuard,
+          sourceSha256: hashBytes(Buffer.from(sourceWithoutChildGuard)),
+        })
+      ),
+    "Bun child source without its independently bound input schema guard"
   );
   await expectAsyncFailure(
     async () =>
@@ -19918,6 +20337,435 @@ export async function runTask540SmokeExecutorSelfTest() {
       ),
     "array-coerced terminal Bun output UUID"
   );
+  const completeSessionBoundaryRows = Array.from(
+    { length: MAX_COMPLETE_SESSION_ROWS },
+    (_value, index) => ({
+      id: `54000000-0000-4000-8000-${String(780000 + index).padStart(12, "0")}`,
+      userAgent: null,
+      userId: "54000000-0000-4000-8000-000000007406",
+    })
+  );
+  invariant(
+    validateBunBridgeOutput(
+      {},
+      taskTrafficOutputDescriptor,
+      { userAgents: taskTrafficUserAgents },
+      {
+        access: [],
+        audit: [],
+        completeSession: completeSessionBoundaryRows,
+        session: [],
+      }
+    ).completeSession.length === MAX_COMPLETE_SESSION_ROWS,
+    "exact-limit complete-session Bun output inventory drift"
+  );
+  await expectAsyncFailure(
+    async () =>
+      validateBunBridgeOutput(
+        {},
+        taskTrafficOutputDescriptor,
+        { userAgents: taskTrafficUserAgents },
+        {
+          access: [],
+          audit: [],
+          completeSession: [
+            ...completeSessionBoundaryRows,
+            {
+              id: "54000000-0000-4000-8000-000000007405",
+              userAgent: null,
+              userId: "54000000-0000-4000-8000-000000007406",
+            },
+          ],
+          session: [],
+        }
+      ),
+    "over-limit complete-session Bun output inventory"
+  );
+  for (const [blueprintKey, blueprint] of Object.entries(plan.fixtureBlueprint.contentTypes)) {
+    validateResponseLostContentSchema(
+      contentSchemaFromFields(blueprint.fields),
+      "self-test authored content schema " + blueprintKey
+    );
+  }
+  const authoredEditableFields = plan.fixtureBlueprint.contentTypes.editable.fields;
+  const authoredMediaField = authoredEditableFields.find(({ type }) => type === "media");
+  const authoredRelationField = authoredEditableFields.find(({ type }) => type === "relation");
+  invariant(
+    authoredMediaField?.media && authoredRelationField?.relation,
+    "self-test authored content union fixtures are absent"
+  );
+  const multipleMediaContentSchema = contentSchemaFromFields([
+    {
+      ...authoredMediaField,
+      media: { ...authoredMediaField.media, multiple: true },
+      name: "multipleMediaProof",
+    },
+  ]);
+  const singleRelationContentSchema = contentSchemaFromFields([
+    {
+      ...authoredRelationField,
+      name: "singleRelationProof",
+      relation: { ...authoredRelationField.relation, multiple: false },
+    },
+  ]);
+  validateResponseLostContentSchema(
+    multipleMediaContentSchema,
+    "self-test authored multiple-media content schema"
+  );
+  validateResponseLostContentSchema(
+    singleRelationContentSchema,
+    "self-test authored single-relation content schema"
+  );
+  const responseLostPreferredInputSchemaByFamily = {
+    contentType: "slug-input-v1",
+    entry: "entry-discovery-input-v1",
+    media: "media-natural-input-v1",
+    override: "override-discovery-input-v1",
+    screen: "screen-discovery-input-v1",
+    setting: "user-id-input-v1",
+    user: "email-input-v1",
+  };
+  const responseLostCandidateDescriptorByFamily = Object.fromEntries(
+    Object.keys(responseLostPreferredInputSchemaByFamily).map((family) => {
+      const descriptor = Object.values(BUN_BRIDGE_RESPONSE_LOST_OPERATION_DESCRIPTORS).find(
+        (candidateDescriptor) =>
+          responseLostCandidateFamilyForDescriptor(candidateDescriptor) === family &&
+          candidateDescriptor.inputSchemaId === responseLostPreferredInputSchemaByFamily[family]
+      );
+      invariant(descriptor !== undefined, family + " response-lost self-test descriptor is absent");
+      return [family, descriptor];
+    })
+  );
+  const responseLostCandidateInputByFamily = Object.fromEntries(
+    Object.entries(responseLostCandidateDescriptorByFamily).map(([family, descriptor]) => [
+      family,
+      selfTestBunBridgeInputForSchema(descriptor.inputSchemaId),
+    ])
+  );
+  const candidateUuid = (ordinal) =>
+    `54000000-0000-4000-8000-${String(7700 + ordinal).padStart(12, "0")}`;
+  const mediaCandidateKey = `2026/07/${candidateUuid(8)}.png`;
+  const responseLostValidCandidateByFamily = {
+    user: {
+      adminRoleTupleCount: 1,
+      adminWildcardPermissionCount: 1,
+      id: candidateUuid(1),
+      name: "Task 540 User",
+      normalizedEmailMatches: true,
+      passwordHashPresent: true,
+      status: "active",
+    },
+    contentType: {
+      config: {},
+      id: candidateUuid(2),
+      name: "Task 540 Type",
+      schema: { additionalProperties: false, properties: {}, type: "object" },
+      slug: responseLostCandidateInputByFamily.contentType.slug,
+      status: "draft",
+    },
+    entry: {
+      accessPasswordAbsent: true,
+      authorId: null,
+      data: {},
+      id: candidateUuid(3),
+      publishedAt: null,
+      scheduledAt: null,
+      slug: responseLostCandidateInputByFamily.entry.slug,
+      status: "draft",
+      tags: [],
+      title: "Task 540 Entry",
+      typeId: responseLostCandidateInputByFamily.entry.typeId,
+      visibility: "public",
+    },
+    screen: {
+      collectionRole: null,
+      compositionKey: null,
+      contentTypeId: responseLostCandidateInputByFamily.screen.contentTypeId,
+      definition: { editorView: {}, listView: {}, schemaVersion: 4 },
+      id: candidateUuid(4),
+      name: responseLostCandidateInputByFamily.screen.name,
+      schemaVersion: 4,
+      showInSidebar: true,
+      sidebarLabel: null,
+      status: "active",
+    },
+    media: {
+      alt: null,
+      caption: null,
+      createdBy: null,
+      credit: null,
+      description: null,
+      focalX: null,
+      focalY: null,
+      folderId: null,
+      height: null,
+      id: candidateUuid(8),
+      key: mediaCandidateKey,
+      mimeType: responseLostCandidateInputByFamily.media.mimeType,
+      originalName: responseLostCandidateInputByFamily.media.originalName,
+      size: responseLostCandidateInputByFamily.media.size,
+      tags: [],
+      title: null,
+      type: "image",
+      url: "/media/" + mediaCandidateKey,
+      width: null,
+    },
+    override: {
+      blockId: responseLostCandidateInputByFamily.override.blockId,
+      entryId: responseLostCandidateInputByFamily.override.entryId,
+      propPath: responseLostCandidateInputByFamily.override.propPath,
+      screenId: responseLostCandidateInputByFamily.override.screenId,
+      updatedBy: null,
+      value: candidateUuid(9),
+    },
+    setting: {
+      key: "customScreens.entry.preferences",
+      userId: responseLostCandidateInputByFamily.setting.userId,
+      value: { showFieldMetadata: false, version: 1 },
+    },
+  };
+  for (const family of Object.keys(responseLostValidCandidateByFamily)) {
+    const candidate = responseLostValidCandidateByFamily[family];
+    invariant(
+      validateBunBridgeOutput(
+        {},
+        responseLostCandidateDescriptorByFamily[family],
+        responseLostCandidateInputByFamily[family],
+        { candidates: [candidate], overflow: false }
+      ).candidates[0] === candidate,
+      family + " response-lost candidate positive contract drift"
+    );
+  }
+  const responseLostCandidateNegativeByFamily = {
+    user: {
+      ...responseLostValidCandidateByFamily.user,
+      adminRoleTupleCount: [1],
+    },
+    contentType: {
+      ...responseLostValidCandidateByFamily.contentType,
+      config: { permissions: { admin: { read: "true" } } },
+    },
+    entry: {
+      ...responseLostValidCandidateByFamily.entry,
+      ["access" + "Password"]: "forbidden-self-test-value",
+    },
+    screen: {
+      ...responseLostValidCandidateByFamily.screen,
+      definition: {
+        ...responseLostValidCandidateByFamily.screen.definition,
+        schemaVersion: 3,
+      },
+    },
+    media: {
+      ...responseLostValidCandidateByFamily.media,
+      tags: ["hero", 1],
+    },
+    override: {
+      ...responseLostValidCandidateByFamily.override,
+      value: [candidateUuid(9)],
+    },
+    setting: {
+      ...responseLostValidCandidateByFamily.setting,
+      value: {
+        ...responseLostValidCandidateByFamily.setting.value,
+        unexpected: true,
+      },
+    },
+  };
+  for (const family of Object.keys(responseLostCandidateNegativeByFamily)) {
+    await expectAsyncFailure(
+      async () =>
+        validateBunBridgeOutput(
+          {},
+          responseLostCandidateDescriptorByFamily[family],
+          responseLostCandidateInputByFamily[family],
+          {
+            candidates: [responseLostCandidateNegativeByFamily[family]],
+            overflow: false,
+          }
+        ),
+      family + " malformed response-lost candidate"
+    );
+  }
+  await expectAsyncFailure(
+    async () =>
+      validateBunBridgeOutput(
+        {},
+        responseLostCandidateDescriptorByFamily.contentType,
+        responseLostCandidateInputByFamily.contentType,
+        {
+          candidates: [
+            {
+              ...responseLostValidCandidateByFamily.contentType,
+              schema: {
+                additionalProperties: false,
+                properties: {
+                  impossibleTextArray: {
+                    title: "Impossible text array",
+                    type: "array",
+                    xFieldConfig: { order: 0 },
+                    xFieldType: "text",
+                  },
+                },
+                type: "object",
+              },
+            },
+          ],
+          overflow: false,
+        }
+      ),
+    "internally inconsistent content-type candidate schema"
+  );
+  const contentSchemaWithSingleProperty = (name, property) => ({
+    additionalProperties: false,
+    properties: { [name]: property },
+    type: "object",
+  });
+  const multipleMediaProperty = multipleMediaContentSchema.properties.multipleMediaProof;
+  const { items: ignoredMediaItems, ...multipleMediaWithoutItems } = multipleMediaProperty;
+  void ignoredMediaItems;
+  const singleRelationProperty = singleRelationContentSchema.properties.singleRelationProof;
+  const twoTextContentSchema = contentSchemaFromFields(
+    authoredEditableFields.filter(({ type }) => type === "text").slice(0, 2)
+  );
+  const twoTextNames = Object.keys(twoTextContentSchema.properties);
+  invariant(twoTextNames.length === 2, "self-test text order fixture drift");
+  const duplicateOrderContentSchema = {
+    ...twoTextContentSchema,
+    properties: {
+      ...twoTextContentSchema.properties,
+      [twoTextNames[1]]: {
+        ...twoTextContentSchema.properties[twoTextNames[1]],
+        xFieldConfig: {
+          ...twoTextContentSchema.properties[twoTextNames[1]].xFieldConfig,
+          order: 0,
+        },
+      },
+    },
+  };
+  const contentSchemaInvariantNegatives = [
+    [
+      "foreign media branch key",
+      contentSchemaWithSingleProperty("multipleMediaProof", {
+        ...multipleMediaProperty,
+        xRelationTarget: "forbidden-target",
+      }),
+    ],
+    [
+      "multiple media missing items",
+      contentSchemaWithSingleProperty("multipleMediaProof", multipleMediaWithoutItems),
+    ],
+    [
+      "single relation with array type",
+      contentSchemaWithSingleProperty("singleRelationProof", {
+        ...singleRelationProperty,
+        items: { type: "string" },
+        type: "array",
+      }),
+    ],
+    [
+      "relation target mismatch",
+      contentSchemaWithSingleProperty("singleRelationProof", {
+        ...singleRelationProperty,
+        xRelationTarget: singleRelationProperty.xRelationTarget + "-drift",
+      }),
+    ],
+    ["duplicate field order", duplicateOrderContentSchema],
+  ];
+  for (const [label, schema] of contentSchemaInvariantNegatives) {
+    await expectAsyncFailure(
+      async () =>
+        validateBunBridgeOutput(
+          {},
+          responseLostCandidateDescriptorByFamily.contentType,
+          responseLostCandidateInputByFamily.contentType,
+          {
+            candidates: [
+              {
+                ...responseLostValidCandidateByFamily.contentType,
+                schema,
+              },
+            ],
+            overflow: false,
+          }
+        ),
+      "content-type schema " + label
+    );
+  }
+  invariant(
+    BRIDGE_INPUT_READER.includes("validateJsonBounds(input);") &&
+      BRIDGE_INPUT_READER.includes("nodes > 100000 || current.depth > 64") &&
+      BRIDGE_INPUT_READER.includes("value.length > 10000"),
+    "Bun child recursive JSON input bound source drift"
+  );
+  const screenMaterializeInput = selfTestBunBridgeInputForSchema("screen-materialize-input-v1");
+  const screenMaterializeDescriptor =
+    BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS["runtime/set-035-screen-create"];
+  let overDepthScreenSchema = {};
+  for (let depth = 0; depth < 65; depth += 1) {
+    overDepthScreenSchema = { nested: overDepthScreenSchema };
+  }
+  const bootstrapRestoreInput = selfTestBunBridgeInputForSchema("bootstrap-restore-input-v1");
+  const bunInputParityNegativeCases = [
+    [
+      "Screen content schema object root",
+      "screen-materialize-input-v1",
+      screenMaterializeDescriptor,
+      {
+        ...screenMaterializeInput,
+        contentType: { ...screenMaterializeInput.contentType, schema: "not-an-object" },
+      },
+    ],
+    [
+      "Screen editor object root",
+      "screen-materialize-input-v1",
+      screenMaterializeDescriptor,
+      {
+        ...screenMaterializeInput,
+        definitionWithoutListView: {
+          ...screenMaterializeInput.definitionWithoutListView,
+          editorView: [],
+        },
+      },
+    ],
+    [
+      "Screen recursive JSON depth",
+      "screen-materialize-input-v1",
+      screenMaterializeDescriptor,
+      {
+        ...screenMaterializeInput,
+        contentType: {
+          ...screenMaterializeInput.contentType,
+          schema: overDepthScreenSchema,
+        },
+      },
+    ],
+    [
+      "bootstrap role-permission array",
+      "bootstrap-restore-input-v1",
+      BUN_BRIDGE_AUXILIARY_OPERATION_DESCRIPTORS["resource/bootstrap-cas-restore"],
+      {
+        ...bootstrapRestoreInput,
+        baseline: {
+          ...bootstrapRestoreInput.baseline,
+          roleTuples: bootstrapRestoreInput.baseline.roleTuples.map((role) => ({
+            ...role,
+            rolePermissions: "*",
+          })),
+        },
+      },
+    ],
+  ];
+  for (const [label, schemaId, descriptor, malformedInput] of bunInputParityNegativeCases) {
+    await expectAsyncFailure(
+      async () => validateBunBridgeInput({}, descriptor, malformedInput),
+      "Node " + label + " alignment"
+    );
+    await expectAsyncFailure(
+      async () => selfTestExactBunChildInputSource(schemaId, malformedInput),
+      "child " + label + " alignment"
+    );
+  }
   await expectAsyncFailure(
     async () =>
       validateBunBridgeInput(

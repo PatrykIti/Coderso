@@ -1394,6 +1394,19 @@ export function ScreenRuntimeRenderer({
 
     if (block.type === "tabs") {
       const tabs = Array.isArray(block.data.tabs) ? (block.data.tabs as ScreenTabItem[]) : [];
+      if (tabs.length === 0) {
+        return wrap(
+          <div className={cn("px-4 py-3", mode === "preview" && "rounded-xl border bg-card")}>
+            <p
+              role="status"
+              data-screen-tabs-empty="true"
+              className="text-sm text-muted-foreground"
+            >
+              No tabs available.
+            </p>
+          </div>
+        );
+      }
       const activeTabId = resolveActiveTab(block, tabs);
       return wrap(
         <div className={cn("px-4 py-3", mode === "preview" && "rounded-xl border bg-card")}>

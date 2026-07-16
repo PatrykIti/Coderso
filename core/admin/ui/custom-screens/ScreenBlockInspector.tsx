@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  buildScreenFieldBindingId,
   sanitizeScreenAuthoringUrl,
   screenBlockAligns,
   screenBlockWidths,
@@ -75,16 +76,13 @@ const systemFieldOptions: FieldOption[] = [
   { value: "publishedAt", label: "Published", type: "system" },
 ];
 
-const createBindingId = (blockId: string, propPath: string) =>
-  `${blockId}-${propPath}`.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-
 export const createScreenFieldBinding = (input: {
   blockId: string;
   propPath: string;
   field: string;
   mode?: CustomScreenBindingMode;
 }): ScreenFieldBinding => ({
-  id: createBindingId(input.blockId, input.propPath),
+  id: buildScreenFieldBindingId(input.blockId, input.propPath),
   blockId: input.blockId,
   propPath: input.propPath,
   source: "entry",
@@ -544,7 +542,10 @@ function TabLabelInput({
   const restoreCommitted = () => setDraft({ baseLabel: tab.label, value: tab.label });
   const commitDraft = (raw: string) => {
     const label = raw.trim();
-    if (!label || screenLabelLength(label) > SCREEN_TAB_LABEL_MAX) return;
+    if (!label || screenLabelLength(label) > SCREEN_TAB_LABEL_MAX) {
+      restoreCommitted();
+      return;
+    }
     if (label === tab.label) {
       restoreCommitted();
       return;

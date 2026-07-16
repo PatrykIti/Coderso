@@ -47,6 +47,16 @@ because that legacy suite executes Save. Its nine TASK-500 tests retain their ex
 behavior and assertion strength; this repair does not change imports, fixtures, mutation
 mocks, save expectations, or any other cacheBus mock property.
 
+That exact one-property mutation is the completed 2026-07-15 repair scope, not a global
+narrowing of future L04 repairs. For a new exact evidence-backed post-audit or final-drift
+finding, the workflow uses the full original L04 owner set listed above, including
+production and owned test paths. The `screen-editor-sections.test.tsx` path remains a
+fixture-only seam: touch it only when the verified finding requires it and preserve the
+exact cacheBus factory projection plus every other byte. The exact finding prompt and
+post-agent `touchedFiles` verification constrain all such mutations. An after-closure
+fixer adds only the TASK-540 root, TASK-540-04 child, and this L04 leaf task contracts;
+task-state transitions remain separate authority.
+
 Four other focused suites intentionally keep their current partial cacheBus mocks:
 `canvas-editor-panel-toggle-dedupe.test.tsx`, `custom-screen-editor-restyle.test.tsx`,
 `custom-screen-widget-picker.test.tsx`, and
@@ -67,9 +77,12 @@ R01→R03 URL-control correction. That completion evidence remains historical. T
 2026-07-15 one-property L04 repair and fresh six-file gate completed without rerunning
 the then-completed sibling leaves. At that historical phase L04 and TASK-540-04 were
 Done and closure resumed. The later TASK-540-04-L03 duplicate-delivery finding paused
-closure again. In the current pre-1252 landed state L04 and TASK-540-04 remain
-`🚧 In Progress` with `Implementation Complete`; L03 alone carries `Repair Pending`,
-and TASK-540-06-L01 remains active and ungated.
+closure again, then its scoped repair completed and passed the required re-gate. In the
+current pre-1252 landed state L04 and TASK-540-04 remain `🚧 In Progress` with
+`Implementation Complete`; L03 has one canonical `Revalidation Passed` successor and
+no `Repair Pending`. TASK-540-06-L01 also remains active but is landed with its exact
+pre-closure `Revalidation Passed`; all ten leaves await family changelog 1252, full
+validation, and live smoke.
 
 ## Historical pre-implementation grounded anchors
 
@@ -1086,7 +1099,13 @@ root `tsc`, exactly 6/6 Vitest files and 66/66 tests, workflow syntax, the 9/9
 repair-sibling self-test, and diff check.
 The originally failing `screen-editor-sections.test.tsx` suite also passed 9/9 in
 isolation. Five fresh post-implementation audit lenses returned zero HIGH, MEDIUM, or LOW
-findings.
+findings. The effective-owner self-test separately pins full original L04 authority for
+a new verified finding, retains the exact conditional fixture-only verifier, and adds
+only the three task contracts after closure.
+The current dependency-shaped gate below intentionally expands to 10 read-only consumer
+files after the final audit identified four additional direct `CustomScreenEditorPage`
+behavior suites. The historical 6-file/66-test receipt above remains unchanged evidence
+of the completed 2026-07-15 repair, not the current gate cardinality.
 
 ```bash
 bun --cwd core lint:types
@@ -1095,8 +1114,12 @@ bun --cwd core lint
 bunx vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx \
   tests/vitest/ui/custom-screen-route-params.test.ts \
   tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx \
+  tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx \
+  tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx \
   tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx \
+  tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx \
   tests/vitest/ui-integration/screen-editor-sections.test.tsx \
+  tests/vitest/ui/custom-screen-list-view-canvas.test.tsx \
   tests/vitest/admin/cacheBus.test.ts
 node --check _docs/_workflows/task-540-implement.mjs
 node _docs/_workflows/task-540-implement.mjs --self-test-repair-siblings

@@ -10,6 +10,7 @@
 **Status:** 🚧 In Progress
 **Started:** 2026-07-14
 **Fix Started:** 2026-07-15
+**Implementation Complete:** 2026-07-16 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Changelog:** 1252 (pinned; closure only)
 **Changelog File:** `_docs/_CHANGELOG/1252-2026-07-14-task-540-custom-screens-functional-and-data-integrity-remediation.md`
 
@@ -20,10 +21,14 @@
 Create one cross-leaf aggregate regression suite for TASK-540, run every source-owner
 suite read-only, update Custom Screen/cache/API documentation, execute seven real
 browser flows, and close the family only after every descendant and required gate is
-green. Approximately five fresh post-audit lenses must cover schema/URL compatibility,
+green. Exactly five fresh post-audit lenses, in their contract order, must cover schema/URL compatibility,
 Tabs/accessibility, async/dirty/cache safety, per-user responsive behavior, and
 test/docs/smoke-feasibility/task-graph integrity before runtime starts; the separate
-smoke-evidence audit runs only after the live flows. A missing lens result is not a pass. This
+smoke-evidence audit runs only after the live flows. The pre-smoke lenses run strictly
+sequentially, and the first dispatch/transport/schema failure stops later lens launch with
+no same-invocation retry; final closure-drift lenses use the same boundary. A missing lens
+result is not a pass. Every verified HIGH, MEDIUM, or LOW finding blocks this task's
+closure unless it is explicitly split into a non-blocking follow-up with rationale. This
 subtask owns no production source and may not edit shared/source-owner test suites.
 Flow 6 freezes the complete persisted reset draft at `rc-002`, then the complete
 post-intentional-edit current draft at `rc-017`; `rc-032` derives relation before
@@ -40,12 +45,19 @@ baseline while the local presentation bytes remain preserved and dirty; no
 |---|---|---|---|
 | TASK-540-06-L01 | Seven builder-save-entry flows and closure | one new aggregate test, docs, smoke evidence, TASK-540 closure metadata | 🚧 In Progress |
 
+TASK-540-06-L01 deliberately retains the historical physical filename
+`TASK-540-06-L01-Six-Builder-Save-Entry-Flows-And-Closure.md` from the original
+six-flow contract. The row uses the current seven-flow title, and no rename is part of
+TASK-540.
+
 ## Orchestrator-only smoke helpers
 
-The workflow orchestrator, outside every closure-agent `allowedFiles` list, solely owns
+The root-local orchestrator, outside every closure-agent `allowedFiles` list, solely owns
 `_docs/_workflows/task-540-smoke-contract.mjs` and
-`_docs/_workflows/task-540-smoke-executor.mjs`, plus the future repo-owned
-`_docs/_workflows/task-540-smoke-host.mjs`. They are task-workflow infrastructure,
+`_docs/_workflows/task-540-smoke-executor.mjs`, plus the repo-owned
+`_docs/_workflows/task-540-smoke-host.mjs` and the root-local
+`_docs/_workflows/task-540-local-orchestrator.mjs` Node host. They are task-workflow
+infrastructure,
 not production/source files and not closure-owned tests or docs. The contract helper
 exports only `buildTask540SmokePlan({nonce})` and
 `runTask540SmokeContractSelfTest()`; it is import-side-effect-free, uses no environment,
@@ -60,8 +72,56 @@ after its dependencies and capture producers have completed. The executor export
 `runTask540SmokeExecutorSelfTest()`, rejects unknown input keys, accepts no raw
 environment/secrets, agent dispatcher, arbitrary shell command, or caller-supplied
 receipt/hash, and keeps its real/fake capability boundary private.
+The local-orchestrator host is the runner-compatibility boundary for Claude Code
+Workflow `2.1.210`, whose sandbox exposes no Node APIs or module loading. It accepts
+only `--self-test` or `--run`, injects only the implementation orchestrator's
+`agent`/`phase` bindings, and sends prompts over stdin. Each agent child receives only
+the explicit non-secret OS allowlist (`HOME`, `HOSTNAME`, locale, `NO_COLOR`, `PATH`,
+`TERM`, `USER`) plus fixed `CI=true` and `GIT_OPTIONAL_LOCKS=0`; database/Postgres,
+SSH/Git-helper, cloud/profile, Kubernetes, browser/MCP, provider-key, credential,
+token, and connection-string handles are absent. Read-only agents have exactly
+`Read,Grep,Glob` in `plan` mode; mutating agents have exactly
+`Read,Grep,Glob,Edit,Write` in `acceptEdits` mode. Neither class has Bash, Workflow,
+browser, ambient MCP, slash-command, or Chrome authority. Higher-precedence Read/Edit
+deny rules cover Read/Grep/Glob and Edit/Write and block all home dotfiles (including
+CLI auth/config), every sibling project discovered at startup, root and nested
+repository `.env*`/`.git`, and system/runtime trees outside Coderso; mutation agents
+also cannot edit repository `node_modules`. `HOME` therefore authenticates the CLI
+without exposing its credential files to the agent. Each invocation instead detaches a fixed repo-owned Node launcher as
+group/session leader; it self-stops before spawning Claude, then starts Claude in the
+same group/session only after the host binds and revalidates the launcher's PID/start,
+PGID, and session identity. The launcher relays stdio, mirrors normal exits, and maps a
+signalled Claude exit deterministically to `128 + signalNumber` (`255` only for an
+unknown signal). Any post-PID authority/resume failure must complete bounded owned-group
+cleanup; a cleanup failure is aggregated with the sanitized authorization failure. The
+host bounded-polls normal/aborted completion, uses group TERM then conditional KILL
+without an unbounded close wait, and proves the complete owned group/session absent.
+When no authority identity was observable, the still-stopped launcher cannot have
+spawned Claude and is disposed only through its owned child handle with a bounded
+close. The hermetic local-host self-test executes the real Node launcher only around a
+local no-network Node probe, not `/usr/bin/claude`. It proves local Claude-argv
+construction, synthetic structured-envelope parsing, the projected child environment,
+launcher/process-ownership and cleanup invariants, and deterministic signal-code
+mapping; it makes no live Claude CLI-compatibility claim. Compatibility with the
+installed Claude CLI and its current flags, schema handling, and structured output is
+proven only when an actual `--run` invocation successfully dispatches the read-only
+Start gate. The bounded value-scanned HEAD patch is supplied
+locally for drift review together with at most 256 complete untracked projections:
+tracked text is bounded to 20 MiB, aggregate untracked UTF-8 text to 8 MiB, and each
+untracked file to 32 MiB. Text supplies path/kind/size/hash/content, binary supplies
+path/kind/size/hash, and symlinks supply only a scanned target projection. Sensitive
+paths/content, `.env*`/`.git`, unsafe/unsupported entries, bound overflow, and
+handle/path identity drift fail before dispatch; regular-file reads bind and recheck an
+opened handle so path-to-symlink swaps cannot redirect bytes. The implementation
+orchestrator independently verifies every result and repository snapshot. The adapter defines no gate, helper, DB operation,
+browser command, or smoke capability itself. Those operations remain direct children
+of the root-local implementation orchestrator and executor; no agent execution path is
+introduced.
 The host module exposes only its hermetic self-test and closed `--serve <canonical-root>`
-CLI. It never reads/sources `.env`, receives only the executor's exact null-prototype
+CLI. Its direct-entry guard is compatible with the pinned Node 22.14 runtime and
+hermetically tests absolute/relative matches plus mismatched/missing argv rejection; it
+does not rely on the later `import.meta.main` API. It never reads/sources `.env`,
+receives only the executor's exact null-prototype
 allowlisted host environment, directly spawns the backend/Admin/site descriptors, and
 while still alive owns only descendant cleanup: after identity revalidation it sends
 graceful TERM and then conditional KILL to surviving same-identity descendants and
@@ -81,10 +141,13 @@ discriminants `literal/path/selector/secret/capture/fixture`; secret refs contai
 the names `ADMIN_EMAIL` or `ADMIN_PASSWORD` and are legal solely in the seven exact
 native credential fills. All ordinary goto/resize/click/non-secret fill/press/type/
 focus operations are one-layer-JSON run-code. The executor self-test uses the real
-ordinal loop with hermetic fakes and mechanically proves 490 dispatches, 490 receipts,
-receipt ordinals `1..490`, manifest-ID set equality, the exact disjoint `55/428/7`
-receipt partition, and exactly one dispatch plus one receipt per action without
-starting a real capability.
+executor loop with hermetic fakes and proves one capability dispatch for each of the
+490 action rows before cleanup, plus the executor's lane-specific runtime/browser
+receipts and deterministic cleanup. Independently, the contract self-test's model loop
+mechanically proves 490 model dispatches, 490 model receipts, receipt ordinals
+`1..490`, manifest-ID set equality, the exact disjoint `55/428/7` receipt partition,
+and exactly one model dispatch plus receipt per action. Neither self-test starts a real
+capability.
 
 The editable content-type detail projection is not an eighteenth public capture. Only
 the exact `set-017-editable-type-proof` four-key output `{id,slug,name,schema}` may bind
@@ -108,7 +171,7 @@ mandatory in the closure gate, the complete full gate, and every final mechanica
 They are absent only from a sealed source-owner repair gate that predates the three
 modules. That is a phase/evidence rule, not a claim about any sibling's current repair
 or completion status: every pre-1252 closure/full/final gate after the modules land,
-and every post-1252 covered final gate, includes all six commands below.
+and every post-1252 covered final gate, includes all eight commands below.
 
 If a final-drift source repair changes the closure leaf's gate or completion metadata,
 the workflow must invalidate every pre-repair durable Pending snapshot before it tries
@@ -124,6 +187,8 @@ node --check _docs/_workflows/task-540-smoke-executor.mjs
 node _docs/_workflows/task-540-smoke-executor.mjs --self-test
 node --check _docs/_workflows/task-540-smoke-host.mjs
 node _docs/_workflows/task-540-smoke-host.mjs --self-test
+node --check _docs/_workflows/task-540-local-orchestrator.mjs
+node _docs/_workflows/task-540-local-orchestrator.mjs --self-test
 ```
 
 ## Security Contract
@@ -275,7 +340,7 @@ of terminal polling while `RunState.apiContexts` is not closed, and terminal-chi
 failure blocking the exact user. They also reject a cloned, recomputed, substituted, or
 stale final graph and any second browser receipt after successful `end-007`.
 
-The future repo-owned `_docs/_workflows/task-540-smoke-host.mjs` runner executes as the
+The repo-owned `_docs/_workflows/task-540-smoke-host.mjs` runner executes as the
 leader of the executor-created detached process group. While the host is alive, its
 cleanup revalidates PID/PPID/PGID/start identities, sends graceful TERM and then
 conditional KILL only to surviving same-identity descendants, and proves descendant
@@ -336,9 +401,39 @@ and serialized only into that private file, never sourced by the public browser 
 recipe, printed, placed in `/proc/*/cmdline`, or persisted in smoke evidence.
 All non-empty classified secret-like environment values (including short values via
 boundary-aware matching) join the private corpus. Raw smoke failure results, full-gate
-summaries, findings, and every other structured agent result are scanned before reuse;
-rejected dispatch/schema errors are discarded behind a generic label-only error, and
-the complete created changelog is scanned before its canonical block is byte-verified.
+summaries, findings, and every other structured agent result are scanned before reuse.
+Accepted schema-valid audit findings retain their fixed lens ID and complete ordered
+finding set in one parseable, sensitivity-rechecked intervention diagnostic whenever any
+finding belongs to the orchestrator; mixed leaf findings remain visible and no fixer runs
+before that stop. Rejected dispatch/schema output and any unsafe intervention projection
+are discarded behind a generic label-only error. A still-non-clean second round also
+stops with the complete ordered sensitivity-rechecked finding set, including a leaf-only
+residual. The complete created changelog is scanned before its canonical block is
+byte-verified.
+The local non-Git validation runner accepts only the exact repo process-control names
+`PATH`, `BUN_OPTIONS`, and `NODE_ENV`, then centralizes their value check in the fixed
+projection: identical `HOST_FIXED_ENV` values pass and any different value fails. Every
+other repo process-control key is rejected. Ambient `CI` may be absent, `1`, or `true`;
+all three project to fixed `CI=true`, while any other inherited value fails. Commands use
+fixed `PATH=/usr/local/bin:/usr/bin:/bin` plus `BUN_OPTIONS=--no-env-file`; the sole
+full-test exception remains exactly the three
+pinned explicit `.env` source operations in the existing `test`, `test:bun`, and
+`test:vitest` scripts. Hermetic workflow self-tests use synthetic repo/environment
+authority and never parse the real `.env`. Bun, Node, Git, and repo-local TypeScript
+targets are absolute identity/hash-pinned and revalidated before launch; observational
+Git—including validation `git diff --check` children—has its own minimal no-secret
+environment and fixed external-diff/textconv-disabled argv. All executable identities
+are revalidated before launch; the sole user-owned TypeScript target also rechecks its
+SHA-256 at each boundary. Stable no-follow reads bind
+bytes plus `dev/ino/mode/nlink/size/mtime/ctime` for the initial `.env` parse, index,
+worktree, untracked set, every prompt-carried TASK-540 status file (including Git-clean
+files), and all root `.env*` projection at every command,
+agent, smoke, and terminal workflow boundary; `.env*` means every root name beginning
+`.env`, with a 64-entry bound. The smoke executor is dynamically loaded
+once only after exact canonical-file identity and SHA-256
+`255f0eaa6f1ce5b20cb18ec3c040e2461c2192d13e2e7a9bc8870075bdafb74b` pass; the same
+authority must match after import, after full validation, and immediately before the
+one-shot call.
 Before any closure status mutation, the evidence owner writes and byte-verifies one
 strict canonical control anchor in the existing changelog index plus changelog 1252's
 redacted smoke block. The anchor binds its evidence SHA-256, generation, board baseline,

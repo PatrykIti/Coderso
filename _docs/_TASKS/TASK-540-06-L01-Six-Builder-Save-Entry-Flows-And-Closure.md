@@ -2,6 +2,8 @@
 
 # FileName: TASK-540-06-L01-Six-Builder-Save-Entry-Flows-And-Closure.md
 
+**Historical Filename:** The physical filename retains the original six-flow slug for stable task identity. The executable contract later expanded to seven flows, so the current H1 and scope correctly say “Seven”; no rename is part of TASK-540.
+
 **Parent Task:** TASK-540
 **Parent Subtask:** TASK-540-06
 **Priority:** High
@@ -11,9 +13,14 @@
 **Status:** 🚧 In Progress
 **Started:** 2026-07-14
 **Fix Started:** 2026-07-15
-**Source Repair Required:** Historical prerequisite identified 2026-07-15 — the live-smoke feasibility audit proved duplicate canonical/legacy cacheBus transport delivery made the exact-one `related-a-refresh` route contract impossible; the scoped repair is now landed and revalidated.
-**Source Repair Owner:** TASK-540-04-L03 was the sole repair owner for the generic per-subscription cacheBus transport dedupe in `core/admin/utils/cacheBus.ts`, its regressions in `tests/vitest/admin/cacheBus.test.ts`, and additive direct-image route-boundary regressions in `tests/integration/routes/customScreensRoutes.test.ts`. Its matching `Revalidation Passed` successor is now the durable landed evidence; no production route file changed, and every source-owner file remains read-only during closure.
-**Source Repair Gate Contract:** The mutation and re-gate phases are historical and complete: TASK-540-04-L03 alone held the exact three-path repair authority, ran its required gates, and atomically replaced its matching `Repair Pending` receipt with one `Revalidation Passed` successor plus canonical `Implementation Complete`. The current closure prerequisite is the landed projection: L03 remains `🚧 In Progress` with exactly that gate evidence, no `Repair Pending`, and family changelog 1252 still pending. Only from that state may closure run the pre-smoke completed-state and fresh exact-one `related-a-refresh` dispatch audit. A stale/pending repair, a green command without the atomic task transition, or manufactured duplicate evidence can never authorize plan construction or smoke execution.
+**Implementation Complete:** 2026-07-16 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Revalidation Passed:** pre-closure remediation / fix-started 2026-07-15 / gate green
+**Source Repair Required:** Current prerequisite identified 2026-07-16 — the final workflow audit reproduced R01 route/direct-normalizer identity and generated-ID drift, a local L02 Inspector binding-ID mirror plus invalid Tab-label restore, and an inaccessible zero-item Tabs branch in R03. R01, then L02, then R03 must be landed and revalidated before closure resumes; this does not replace the later full validation, final audit, or live smoke.
+**Source Repair Owner:** TASK-540-01-L01 owns `core/services/customScreens/customScreenSchemas.ts`, the narrow `buildScreenFieldBindingId` handoff in `core/services/customScreens/screenDocumentOps.ts`, their schema/document-op regressions, registered-route proof, and Assistant executor gate. Its Assistant action-plan/catalog Vitest consumers are explicit read-only command/aggregate inputs. TASK-540-02-L01 owns only `core/admin/ui/custom-screens/ScreenBlockInspector.tsx` plus the binding-panel/image-inspector UI gate; it consumes but does not own the domain builder and owns invalid blank/over-120 blur/Enter restore. TASK-540-03-L01 owns only `core/admin/ui/custom-screens/ScreenRuntimeRenderer.tsx` plus its renderer/interaction regressions for the accessible zero-item Tabs state. TASK-540-04-L03 is not a current repair owner: its sole attempted current import-only diff in `screenEntryPresentationOverrideContract.ts` was reverted and that file is clean; its 2026-07-15 repair remains historical evidence.
+**Source Repair Gate Contract:** R01, L02, and R03 are landed sequentially as `🚧 In Progress` with canonical `Implementation Complete`, one exact current leaf `Revalidation Passed` receipt each, and no `Repair Pending`. R01's current gate includes core typecheck/lint, five Vitest files with 168/168, reachable DB preflight, the route/Assistant Bun files with 92/92 and 564 expectations, isolated document-op proof 11/11, and diff checks, and never grants mutation authority over the two read-only Assistant Vitest consumers. L02's current gate includes core typecheck/lint, its exact two UI Vitest files with 33/33, and diff check. R03 independently passed core typecheck/lint, its exact renderer/interaction/image Vitest gate 89/89, and diff check. The closure leaf remains `🚧 In Progress` with its existing pre-closure receipt; no new post-audit, full validation, live smoke, changelog 1252, or atomic Done transition is claimed. A stale/pending owner, missing read-only consumer, green command without the matching leaf receipt, or manufactured evidence cannot authorize plan construction or smoke execution.
+**Historical L03 Source Repair Required:** On 2026-07-15 the live-smoke feasibility audit proved duplicate canonical/legacy cacheBus transport delivery made the exact-one `related-a-refresh` route contract impossible; the scoped repair landed and was revalidated.
+**Historical L03 Source Repair Owner:** TASK-540-04-L03 was the sole repair owner for the generic per-subscription cacheBus transport dedupe in `core/admin/utils/cacheBus.ts`, its regressions in `tests/vitest/admin/cacheBus.test.ts`, and additive direct-image route-boundary regressions in `tests/integration/routes/customScreensRoutes.test.ts`. No production route file changed.
+**Historical L03 Source Repair Gate:** TASK-540-04-L03 alone held the exact three-path repair authority, ran its required gates, and atomically replaced its matching `Repair Pending` receipt with one `Revalidation Passed` successor plus canonical `Implementation Complete`. That durable evidence remains valid but does not substitute for the later R01/L02/R03 corrections or closure gates.
 **Prior Source Repair Started:** 2026-07-15
 **Prior Source Repair Reason:** Mandatory repository-wide `bun run test` paused closure after confirming that `screen-editor-sections.test.tsx` lacked the fresh-symbol cacheBus factory required by the L04-owned Screen builder Save path. TASK-540-04-L04 completed the additive mock repair and exact six-file re-gate; closure resumed with every source-owner test read-only.
 **Prior Source Repair Revalidated:** 2026-07-15 — `bun --cwd core lint:types`, `bun --cwd core lint`, root `tsc`, exact six-file Vitest gate 66/66, isolated `screen-editor-sections` 9/9, workflow syntax, repair-sibling self-test 9/9, diff check, and five then-current post-audit lenses with zero HIGH/MEDIUM/LOW findings; this historical L04 receipt predates and cannot substitute for the later cacheBus repair's own landed L03 revalidation.
@@ -44,13 +51,38 @@ Do not reopen production source or re-baseline/edit a source-owner test. If a so
 defect or missing source-owner assertion remains, return it to its owning leaf/fix
 workflow, re-run that leaf's gate, then resume closure.
 
+### Accepted non-blocking LOW follow-ups
+
+Closure may treat only these two concrete, execution-ready TASK-9999 leaves as
+non-blocking:
+
+- TASK-9999-01-L01:
+  `_docs/_TASKS/TASK-9999-01-L01-Decouple-Actor-And-Media-Uuid-Domain-Naming.md`.
+  TASK-9999-01-L01 approved evidence: core/services/customScreens/customScreenSchemas.ts:548; core/services/customScreens/screenEntryPresentationOverrideContract.ts:171; core/services/customScreens/screenEntryPresentationOverrideContract.ts:206; core/services/customScreens/screenEntryPresentationOverrides.ts:426.
+  TASK-9999-01-L01 approved rationale: the shared UUID predicate already accepts and rejects the intended actor/media UUID grammar and preserves exact input bytes; deferral changes no UI/UX/accessibility, data, security/privacy/auth/RBAC, API, persistence/migration, performance/reliability, or test-integrity behavior.
+- TASK-9999-01-L02:
+  `_docs/_TASKS/TASK-9999-01-L02-Remove-Unread-Screen-Tab-Label-Draft-State.md`.
+  TASK-9999-01-L02 approved evidence: core/admin/ui/custom-screens/ScreenBlockInspector.tsx:524; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:525; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:538; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:542; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:553; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:559; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:563.
+  TASK-9999-01-L02 approved rationale: baseLabel is assigned but never read; deferral changes no rendered UI, keyboard/blur/commit behavior, accessibility, saved data, security/privacy/auth/RBAC, API, persistence/migration, performance/reliability, or test-integrity behavior.
+
+The workflow verifies both leaf contracts and both backlinks before excluding an exact
+matching LOW from the blocking audit set. Any mismatch, different finding, HIGH/MEDIUM,
+or LOW involving UI/UX/accessibility/data/security/privacy/auth/RBAC/API/persistence/
+migration/performance/reliability/test integrity remains blocking.
+TASK-9999 remains byte-identical as the final In Progress board row throughout closure;
+board counts are read fresh and TASK-540 applies only its own In Progress→Done delta.
+
 ### Orchestrator-only smoke module boundary
 
-The workflow orchestrator is the sole writer of these three task-workflow modules:
+The root-local orchestrator is the sole writer of exactly three smoke modules:
 
 - `_docs/_workflows/task-540-smoke-contract.mjs`
 - `_docs/_workflows/task-540-smoke-executor.mjs`
 - `_docs/_workflows/task-540-smoke-host.mjs`
+
+It also solely owns the separate task-scoped orchestration host:
+
+- `_docs/_workflows/task-540-local-orchestrator.mjs`
 
 They are neither production/source files nor closure-owned tests/docs, and they must
 never appear in a closure agent's `allowedFiles`. The orchestrator lands and integrates
@@ -60,6 +92,83 @@ agent-executed `runSmoke`/browser/cleanup/evidence path and every alternate agen
 fallback. It may retain a read-only post-execution evidence audit, but no agent may
 execute, recover, or supply observations for the smoke. The old and new execution
 models must not coexist.
+
+Claude Code Workflow `2.1.210` executes its DSL in a null-prototype VM context that
+does not expose `process`, `require`, `Buffer`, Node builtins, local modules, static
+imports, or dynamic imports. It therefore cannot be the local process authority for
+this contract. `_docs/_workflows/task-540-local-orchestrator.mjs` is the task-scoped
+Node host for `_docs/_workflows/task-540-implement.mjs`; direct execution accepts only
+these exact forms:
+
+```bash
+node _docs/_workflows/task-540-local-orchestrator.mjs --self-test
+node _docs/_workflows/task-540-local-orchestrator.mjs --run
+```
+
+The host injects only the `agent(prompt, options)` and `phase(title)` bindings used by
+the implementation orchestrator. Agent prompts travel over stdin rather than argv,
+and each child receives a new null-prototype environment containing only non-empty
+`HOME`, `HOSTNAME`, `LANG`, `LC_ALL`, `LC_CTYPE`, `NO_COLOR`, `PATH`, `TERM`, and
+`USER`, plus fixed `CI=true` and `GIT_OPTIONAL_LOCKS=0`. No inherited database,
+Postgres, SSH agent, Git credential-helper, cloud/profile, Kubernetes, browser, MCP,
+provider-key, password, token, or connection-string handle is forwarded. Read-only
+agents run in `plan` mode with exactly `Read,Grep,Glob`; mutation agents run in
+`acceptEdits` mode with exactly `Read,Grep,Glob,Edit,Write`. Both omit `Bash`,
+Workflow, browser tooling, ambient MCP servers, slash commands, and Chrome integration.
+CLI deny rules apply to Read/Grep/Glob and Edit/Write: they block all home dotfiles
+(including Claude auth/config), every sibling project discovered at host start,
+repository-root and nested `.env*`/`.git`, and system/runtime trees outside Coderso;
+mutation agents additionally cannot edit repository `node_modules`. The CLI's Read
+permission class covers Read/Grep/Glob and its Edit permission class covers Edit/Write,
+so the higher-precedence deny rules apply to every enabled filesystem tool. Retaining
+`HOME` for CLI authentication therefore does not make its credential files
+agent-readable.
+The implementation orchestrator supplies the value-scanned tracked HEAD patch (maximum
+20 MiB) plus complete bounded untracked projections over stdin. At most 256 untracked
+entries are accepted; each file is at most 32 MiB and aggregate UTF-8 text content is
+at most 8 MiB. Text entries expose only `{path,kind:"text",byteLength,sha256,content}`;
+binary entries expose only `{path,kind:"binary",byteLength,sha256}`; symlinks expose
+only their scanned target projection. Sensitive/token-like paths, repository
+`.env*`/`.git`, sensitive text, unsafe paths, unsupported entries, count/size overflow,
+and any identity race fail before dispatch. Regular files are opened only after
+`lstat`, identity-checked through the file handle before read, then handle/path-checked
+again after read so a symlink swap cannot redirect content. The implementation
+orchestrator still verifies every read-only/mutating result against exact repository
+snapshots and ownership.
+
+Every Claude invocation uses a fixed repo-owned Node launcher detached as the leader of
+its own process group and session. The launcher self-stops before loading
+`node:child_process` or spawning Claude. Only after the host binds the launcher's PID,
+PPID, PGID, session ID, and Linux start identity from `/proc` does a just-in-time
+identity check send `SIGCONT`; the launcher then starts Claude as a descendant in the
+same group/session, relays stdio, and mirrors a normal exit byte-for-byte. A signalled
+Claude exit maps deterministically to `128 + signalNumber` (`255` only for an unknown
+signal) instead of re-signalling the launcher. Any authority or resume failure after a
+PID is observed runs bounded owned-process cleanup before the error leaves the host;
+cleanup failure is retained with the sanitized authorization failure in an
+`AggregateError`. Normal completion and every
+timeout/output-limit path bounded-poll the complete owned group/session. Failure sends
+negative-PGID TERM, then conditional KILL, uses no unbounded close wait, and returns
+only after PID/start plus PGID/session absence is proven. Each signal follows a fresh
+process-table read, rejects a recycled leader by PID/start identity, and selects only
+rows still owned by the bound process-group/session or retained exact identities. If
+authority acquisition observed the launcher, cleanup
+uses that retained identity; if no identity was observable, the still-self-stopped
+launcher cannot have started Claude and is disposed only through its owned
+`ChildProcess` handle with a bounded close. The hermetic local-host self-test executes
+the real Node launcher only around a local no-network Node probe, not
+`/usr/bin/claude`. It proves local Claude-argv construction, synthetic
+structured-envelope parsing, the projected child environment, launcher/process-
+ownership and cleanup invariants, and deterministic signal-code mapping; it makes no
+live Claude CLI-compatibility claim. Compatibility with the installed Claude CLI and
+its current flags, schema handling, and structured output is proven only when an actual
+`--run` invocation successfully dispatches the read-only Start gate. The host adapter
+itself defines no server, browser, helper, DB
+operation, validation command, or smoke capability. All validation commands and the
+single smoke execution remain direct responsibilities of the root-local implementation
+orchestrator; only `executeTask540SmokePlan` may construct the private real smoke
+capabilities. This boundary is a runner compatibility adapter, not an agent-executed or
+external smoke runner.
 
 `_docs/_workflows/task-540-smoke-contract.mjs` has exactly these public exports:
 
@@ -87,8 +196,10 @@ public capture names, 13 screenshots, and 55 unique visible assertions.
 counts, strict unknown-key rejection, registries, dependency/capture closure, state
 transitions, recursive freezing, the exact disjoint `55/428/7` action-set partition,
 dense ordinals `1..490`, and one fake execution plus one receipt for each action exactly
-once through the same ordinal loop used by the real executor. Direct `--self-test`
-execution calls that export, while importing the module runs nothing.
+once through an independent contract-model loop. The executor self-test separately
+exercises the real executor loop with hermetic capabilities; the two loops do not share
+execution authority. Direct `--self-test` execution calls that export, while importing
+the module runs nothing.
 
 `_docs/_workflows/task-540-smoke-executor.mjs` has exactly these public exports:
 
@@ -130,7 +241,7 @@ fixed one-shot Bun bridge defined below. HTTP requests, isolated API-session own
 cookie/CSRF handling, health probes, Playwright dispatch, filesystem observation, and
 host-process control remain Node-local and never pass through that bridge.
 
-`_docs/_workflows/task-540-smoke-host.mjs` is the future repo-owned, import-side-
+`_docs/_workflows/task-540-smoke-host.mjs` is the repo-owned, import-side-
 effect-free host runner. Its only public export is
 `runTask540SmokeHostSelfTest()`. Direct execution accepts exactly one of these two
 closed CLI forms:
@@ -184,11 +295,12 @@ The bridge does not add a fourth smoke module. Its action-specific registry, imm
 `--eval` source constants, schemas, and one-shot spawn primitive are non-exported
 declarations inside `task-540-smoke-executor.mjs`; there is no bridge file, package
 script, installed helper, executable wrapper, daemon, persistent worker, or reusable Bun
-server. The exact three repo-owned smoke modules above remain the complete on-disk
+server. The exact three named repo-owned smoke modules remain the complete on-disk
 module set.
 
-Once all three smoke modules exist, the closure leaf gate, `FULL_GATE_COMMANDS`, and every final
-mechanical gate run these exact commands in this order:
+Once all three smoke modules and the separate local-orchestrator host exist, the closure
+leaf gate, `FULL_GATE_COMMANDS`, and every final mechanical gate run these exact eight
+task-infrastructure commands in this order:
 
 ```bash
 node --check _docs/_workflows/task-540-smoke-contract.mjs
@@ -197,9 +309,11 @@ node --check _docs/_workflows/task-540-smoke-executor.mjs
 node _docs/_workflows/task-540-smoke-executor.mjs --self-test
 node --check _docs/_workflows/task-540-smoke-host.mjs
 node _docs/_workflows/task-540-smoke-host.mjs --self-test
+node --check _docs/_workflows/task-540-local-orchestrator.mjs
+node _docs/_workflows/task-540-local-orchestrator.mjs --self-test
 ```
 
-These commands are additive to the existing implementation-workflow syntax and
+These commands are additive to the existing implementation-orchestrator syntax and
 repair-resume checks. They were not added to the pre-existing TASK-540-04-L03
 repair-only gate: that historical gate ran before these smoke modules existed and retained
 its exact repair-set ownership and command set. This temporal exclusion never permits a
@@ -257,6 +371,8 @@ tests/vitest/customScreens/relatedEntryResolver.test.ts
 tests/vitest/admin/entriesClient.test.ts
 tests/vitest/admin/mediaClient.test.ts
 tests/vitest/admin/userSettingsClient.test.ts
+tests/vitest/assistant/action-plan-schema.test.ts
+tests/vitest/assistant/catalogBlueprintEngine.test.ts
 tests/vitest/ui/admin-auth-identity.test.tsx
 tests/vitest/ui/assistant-panel-interaction.test.tsx
 tests/vitest/ui/use-screen-entry-preferences.test.ts
@@ -266,15 +382,22 @@ tests/vitest/ui/custom-screen-binding-panel.test.tsx
 tests/vitest/ui-integration/custom-screen-image-inspector.test.tsx
 tests/vitest/ui/custom-screen-authoring-boundary.test.ts
 tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx
+tests/vitest/ui/custom-screen-records.test.tsx
 tests/vitest/ui/custom-screens-page.test.tsx
+tests/vitest/ui/custom-screen-list-view-canvas.test.tsx
 tests/vitest/ui/custom-screen-route-params.test.ts
 tests/vitest/ui-integration/canvas-editor-panel-toggle-dedupe.test.tsx
 tests/vitest/ui-integration/canvas-editor/canvas-editor.test.tsx
 tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx
+tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx
+tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx
 tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx
+tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx
 tests/vitest/ui-integration/screen-editor-sections.test.tsx
+tests/vitest/ui-integration/custom-screen-entries-restyle.test.tsx
 tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx
 tests/vitest/ui-integration/custom-screen-entry-preferences-persistence.test.tsx
+tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx
 tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx
 tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx
 tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx
@@ -287,13 +410,19 @@ tests/integration/routes/customScreensRoutes.test.ts
 tests/unit/assistant/actionExecutorService.test.ts
 ```
 
-This required matrix contains exactly 39 files: 34 Vitest files plus 5 Bun files.
-Exactly 38 are source-owner files and 1 is the closure-owned aggregate
+This required matrix contains exactly 48 files: 43 Vitest files plus 5 Bun files.
+Exactly 47 are source-owner/read-only dependency files and 1 is the closure-owned aggregate
 `custom-screen-task-540-flow.test.tsx`.
 
-The closure ownership reconcile also verifies, read-only, that TASK-540-02-L01
-solely wrote `ScreenBlockInspector.tsx` plus its image-inspector suite; TASK-540-04-L03
-solely wrote `screenEntryPresentationOverrideContract.ts`,
+The closure ownership reconcile also verifies, read-only, that TASK-540-01-L01 owns
+`customScreenSchemas.ts`, the narrow shared-builder replacement in
+`screenDocumentOps.ts`, and their schema/document-op regressions, while the Assistant
+action-plan/catalog Vitest files remain read-only consumers. TASK-540-02-L01 solely owns
+the `ScreenBlockInspector.tsx` helper call site plus its binding-panel/image-inspector
+UI gate, including visible invalid-label restore; schema and document-op files remain
+R01-owned. TASK-540-03-L01 solely owns the current accessible zero-item Tabs branch in
+`ScreenRuntimeRenderer.tsx` plus its renderer/interaction gate. TASK-540-04-L03
+historically wrote `screenEntryPresentationOverrideContract.ts`,
   `screenEntryPresentationOverrides.ts`, `customScreensClient.ts`, `cacheBus.ts`, and their
   two admin suites; its completed 2026-07-15 repair additionally owned only additive
   direct-image route-boundary assertions in `tests/integration/routes/customScreensRoutes.test.ts`
@@ -305,6 +434,10 @@ solely wrote `screenEntryPresentationOverrideContract.ts`,
   byte-identically. TASK-505 recovery assertions and all nine TASK-500 section-suite
   tests and all of their assertions, imports, and other mock bytes must remain byte-identical. The workflow's leaf allowlists, targeted commands,
 aggregate matrix, and closure hash set must name these exact paths identically.
+TASK-540-04-L03 is not a current repair owner: its only attempted current change was an
+import-only diff in `screenEntryPresentationOverrideContract.ts`, that change was
+reverted, and the file is clean. Its historical ownership does not replace the current
+R01, L02, or R03 receipts.
 TASK-540-05-L02 additionally owns the exact auth-identity contract/provider/route paths
 and `admin-auth-identity.test.tsx`; its reopened correction solely owns
 `securitySettings.ts`, `cors.ts`, and `cors.test.ts` for the required-header union and
@@ -312,13 +445,34 @@ default/preflight evidence. Its Assistant suite is mechanically projected to the
 required typed fixture property. TASK-540-04-L03 remains the sole writer of
 `CustomScreenEntryEditor.tsx` and leaves its hook call transport-neutral before L02;
 L02 consumes that component byte-identically.
-TASK-540-01-L01 additionally owns only the existing
+For the historical Assistant fixture correction, TASK-540-01-L01 additionally owns
+only the existing
 `executeAssistantActionPlan patches custom screen block data` fixture/assertion region
 inside `tests/unit/assistant/actionExecutorService.test.ts`. Its canonical fixed-kind
 repair may change the selected block kind/ID, `dataPath`, value assertions, and the
 independent sibling fixture/assertion needed to prove preservation; shared helpers,
-other Assistant cases, production Assistant code, and strict Screen schema/source are
-read-only. Closure runs and hashes the whole Assistant file without editing it.
+other Assistant cases and production Assistant code remain read-only. The current
+identity correction separately owns the strict Screen schema and narrow document-op
+builder handoff described above. Closure runs and hashes the whole Assistant file
+without editing it. R01 also runs the direct dependency gates
+`tests/vitest/assistant/action-plan-schema.test.ts` and
+`tests/vitest/assistant/catalogBlueprintEngine.test.ts`; closure runs them read-only and
+does not re-baseline their existing action-plan/catalog normalization behavior. They
+never enter R01 `allowedFiles`, effective repair ownership, or closure mutation
+authority.
+The R01 schema/document-op regressions pin segment-safe max-160 structural and binding
+paths, canonical max-120 binding IDs, the bounded-readable-prefix plus mandatory
+13-character framed-tuple hash on every generated ID, separator/case separation for
+short and long tuples, valid explicit-ID preservation, strict write versus
+public compatibility-write versus fail-soft stored-read behavior, exact editor/row
+references and idempotence, shared factory/duplication IDs, and metadata-only PATCH
+document preservation. Its 12-case V1/V2/V3 migration table independently exercises
+overlong binding IDs, block IDs/references, prop paths, and fields while preserving
+primary/sibling data. The L02 binding-panel regression pins the Inspector's same
+max-120 helper output and blank/over-120 blur/Enter restore to the latest committed
+label without a patch. The R03 renderer regression pins the exact visible
+`role="status"` text `No tabs available.` and absence of `tablist`, `tab`, and
+`tabpanel` for zero tabs.
 
 Assertions must cover exact reject-unknown/round-trip behavior, hostile URL
 corpus, recursive children/slot rejection, direct-image UUID→media URL resolution and
@@ -466,12 +620,20 @@ may move TASK-540 or change the board statistics.
 
 During an earlier source-owner `Repair Pending`, every landed sibling remains
 `🚧 In Progress`; each completed implementation sibling retains exactly one current
-gate receipt and no `Completed` field. TASK-540-06-L01 may also remain In Progress but
-is deliberately ungated until its own gate runs, so it must have neither `Targeted Gate
-Passed` nor `Revalidation Passed`; its active status is not a claim that the closure
-gate ran. Never fabricate closure or source gate evidence to satisfy a
-restart projection. `_docs/_workflows/task-540-implement.mjs` owns this invariant and
-must keep `--self-test-repair-siblings` green.
+gate receipt and no `Completed` field. Before the closure leaf's own gate,
+TASK-540-06-L01 remains deliberately ungated and has neither `Targeted Gate Passed` nor
+`Revalidation Passed`. After all ten leaves land, an exact reserved/no-anchor
+pre-closure continuation may instead preserve TASK-540-06-L01's deterministic
+`Revalidation Passed` while a non-closure source owner is reopened. That exception
+requires matching canonical child/leaf `Fix Started`, the exact
+`preClosureRegateValue`, no changelog 1252 draft, no control anchor, no closure receipt,
+one non-closure Repair Pending owner, and exactly that owner as the sole remaining leaf;
+the independently resolved changelog mode must be
+`reserved-pre-closure-regated-source-repair`. A closure-owner repair, Targeted Gate,
+wrong date/value, extra remaining leaf, anchor, draft, or Closure Pending fails closed.
+Never fabricate closure or source gate evidence to satisfy a restart projection.
+`_docs/_workflows/task-540-implement.mjs` owns this invariant and its hermetic
+`--self-test-repair-siblings` cases cover both accepted phases and the rejection matrix.
 
 The sole pre-pending exception is a verified post-audit or smoke-evidence source finding
 owned by `540-06-L01` while that closure leaf, its child, and TASK-540 are already active,
@@ -587,7 +749,10 @@ recovery acceptance forces a fresh post-audit, full validation, live smoke,
 smoke-evidence audit, and fresh evidence/control write before any `Closure Pending` is
 created. The persisted prior-day Fix Started date is retained across UTC rollover;
 startup never replaces it with the new run date. Neither the ungated nor regated recovery
-marker authorizes pending or terminal closure. If a valid evidence-before-pending anchor
+marker authorizes pending or terminal closure. This closure-owner recovery is distinct
+from the exact non-closure source-repair sibling state above: the latter preserves the
+already-regated closure leaf and is authorized only by the reserved/no-anchor changelog
+mode's independent byte match. If a valid evidence-before-pending anchor
 already exists, startup rejects a task-only ungated marker or forged Revalidation and uses
 the ordinary exact Repair Pending plus anchor `repairAuthorization` prior/successor hash
 chain instead; normal `runClosure` later replaces that repair authorization with fresh
@@ -607,8 +772,9 @@ authority. Normal reclosure replaces the anchor with `repairAuthorization:null`.
 
 ## Post-audit
 
-After source owners, tests, and docs are final—but before live smoke—run approximately
-five fresh read-only lenses over implementation fidelity plus runtime-smoke feasibility:
+After source owners, tests, and docs are final—but before live smoke—run exactly five
+fresh read-only lenses, in the following fixed order, over implementation fidelity plus
+runtime-smoke feasibility:
 
 1. fixed-kind schema/legacy-read/URL-policy and present-only round-trip fidelity;
 2. Tabs identity, scoped DOM IDs, interaction semantics, and accessibility;
@@ -618,8 +784,20 @@ five fresh read-only lenses over implementation fidelity plus runtime-smoke feas
    runtime scenarios/receipts/cleanup remain executable against the final source.
 
 Every finding needs `file:line` evidence and every expected lens result must be present.
-Fix verified HIGH/MEDIUM drift in its sole source-owning leaf, rerun the affected gates,
-then execute a fresh reconcile before smoke. This pass cannot claim runtime evidence:
+Dispatch these lenses strictly sequentially. A transport, schema, or agent failure stops
+before any later lens is launched; it has no same-invocation retry, so no sibling agent
+process can outlive the failed audit boundary.
+Every accepted finding is projected with its fixed lens ID in lens/result order. If any
+accepted finding belongs to the orchestrator, the workflow stops before every fixer and
+returns one parseable sensitivity-rechecked diagnostic containing the complete mixed
+finding set; only rejected/schema-invalid or unsafe projections use a generic discarded
+marker. A non-clean second round uses the same complete ordered diagnostic for
+orchestrator, mixed, or leaf-only residual findings before the invocation stops.
+This task applies the repository's stricter no-unresolved-drift closure rule: every
+verified HIGH, MEDIUM, or LOW finding blocks this closure unless it is explicitly split
+into a non-blocking follow-up with rationale. Fix every retained finding in its sole
+source-owning leaf, rerun the affected gates, then execute a fresh reconcile before
+smoke. This pass cannot claim runtime evidence:
 the separate smoke-evidence audit runs only after the real helper/browser flows and
 inspects their receipts plus PNGs. A missing result is not a pass. When that sole owner is
 540-06-L01, only canonical reserved/no-anchor state uses the pre-pending Fix Started plus
@@ -627,13 +805,17 @@ deterministic Revalidation path; once a valid evidence anchor exists, the same f
 uses exact Repair Pending and the anchor repair-authorization chain.
 
 Final closure drift has at most two fresh rounds and is remedial, not throw-only.
+Its audit lenses use the same strict sequential dispatch and fail-stop/no-retry boundary
+as the pre-smoke post-audit.
 Any non-clean round reopens the closure leaf/direct child and root; it additionally
 reopens only a source leaf/direct child named by a verified source-owner finding.
 Unrelated completed descendants remain Done and unlanded descendants remain To Do.
 Source-owner findings keep that exact leaf/child In Progress, fix only its owned files,
 persist their Repair Pending generation/token, re-gate to a matching fresh Revalidation,
-and run full validation, then rerun smoke plus the evidence audit and refresh
-the changelog evidence block before re-closing. Runtime/evidence-only findings are
+and run full validation, then stop the current invocation under durable Closure Pending.
+A later fresh top-level run may execute its one smoke plus evidence audit and refresh the
+changelog evidence block before re-closing; the repairing invocation never executes a
+second smoke. Runtime/evidence-only findings are
 owned by the executor boundary: the current invocation completes deterministic cleanup,
 returns only the fixed sanitized failure, and stops. After a verified contract fix and
 fresh clean-baseline proof, a later top-level closure run may invoke the executor once;
@@ -1951,11 +2133,14 @@ row/current marker, alternate route-list text, screenshot path drift, close with
 LF, and any nonempty global browser listing). JSON negatives cover zero/two layers,
 `JSON.stringify(...)` string output, LF-only/undefined, duplicate keys, noncanonical
 bytes, trailing whitespace, and unknown result keys. The positive executor self-test
-runs the sole ordinal loop with hermetic fake capabilities. Its private trace must have
-exactly 490 entries and exactly 490 receipts; action IDs are set-equal to the manifest,
-receipt ordinals equal `1..490` in order, every per-action execution count is exactly
-one, and receipt IDs form the same disjoint `55/428/7` setup/flow/terminal partition.
-It separately proves the derived executable partition `76/386/14/13/1`, every declared
+runs the sole real executor loop with hermetic fake capabilities and requires its first
+490 capability calls to cover the 490 action rows before cleanup. It then validates the
+executor's separate browser/runtime receipt lanes, cleanup order, and finalization; it
+does not manufacture a global 490-receipt executor trace. Independently, the contract
+self-test's model loop proves 490 model dispatches and receipts, manifest-ID equality,
+dense ordinals `1..490`, exact-once counts, and the disjoint `55/428/7` partition.
+The executor self-test separately proves the derived executable partition
+`76/386/14/13/1`, every declared
 top-level/page/route/auth/theme transition in order, rejection of an undeclared,
 duplicate, delayed, or stale-page route transition, and assignment of each validated
 next `RunState` before the following precondition is checked. Its fake successful-create
@@ -3299,7 +3484,7 @@ const RESOURCE_BUN_BRIDGE_PARTICIPATION = deepFreezeExact({
       },
     },
     cleanup: null,
-    absence: { mode: "node+bun-one-shot", envProfileId: "database" },
+    absence: { mode: "node+bun-one-shot", envProfileId: "bootstrap-preflight" },
   },
   "missing-media-baseline": {
     provenance: {
@@ -4797,9 +4982,11 @@ path are forbidden. Thus private Playwright output/temp cannot mutate the repo a
 secret/config/snapshot artifact survives success or failure.
 
 No child receives `process.env`, `{...process.env}`, or the complete parsed `.env`.
-The host module uses exactly these imports; `import.meta.main` closes direct CLI
-execution without another path-discovery import, and every imported capability remains
-unused on the `--self-test` branch:
+The host module uses exactly these imports. Because the repository runtime includes
+Node 22.14, it does not depend on the later `import.meta.main` API: a pure guard compares
+`import.meta.url` with `pathToFileURL(path.resolve(cwd, process.argv[1]))`. Its hermetic
+self-test pins absolute and relative direct-entry matches plus mismatched and missing
+argv rejection. Every runtime capability remains unused on the `--self-test` branch:
 
 ```ts
 import { spawn } from "node:child_process";
@@ -4815,6 +5002,7 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
+import { pathToFileURL } from "node:url";
 ```
 
 The executor constructs the host environment from these disjoint frozen contracts:
@@ -5295,10 +5483,12 @@ key joins the corpus; values shorter than six characters use boundary-aware matc
 instead of being silently skipped. Every classifier result—including its non-canonical
 `summary`, full-gate classification, and audit/fixer findings—is scanned before
 forwarding. It can label a locally captured failure but cannot change a command, status,
-byte count, hash, parsed observation, page identity, or fingerprint. The evidence-audit
-prompt receives only the already validated canonical evidence object. A rejected agent
-dispatch or schema parse is replaced with a generic label-only error; its raw error
-object/message never enters an aggregate failure, retry prompt, log, or artifact.
+byte count, hash, parsed observation, page identity, or fingerprint. Accepted audit
+findings are projected with their fixed lens ID and rechecked before the complete ordered
+set may enter a parseable orchestrator-intervention diagnostic. A rejected agent dispatch,
+schema parse, or unsafe projection is replaced with a generic label-only error; its raw
+error object/message never enters an aggregate failure, retry prompt, log, or artifact.
+The evidence-audit prompt receives only the already validated canonical evidence object.
 Route receipts use the exact operation labels `route-setup`, `route-hit-read`,
 `route-release`, `unroute`, and `real-retry`; the contiguous sequence proves that
 malformed routes are read/unrouted before retry and delayed routes are read,
@@ -6287,9 +6477,24 @@ outputs. The orchestrator local process runs them sequentially with the same 4 M
 per-stream bound, retains raw bytes and bounded excerpts only in its
 `LOCAL_COMMAND_AUTHORITY` WeakMap, recomputes both SHA-256 values, and fails closed on
 timeout, spawn error, truncation, changed repository state, or an unaccepted exit
-status. Each command uses the same owned-process-group timeout adapter: bounded TERM,
-bounded KILL for same-identity survivors, then PID/PGID absence proof; a signal to only
-the leader cannot satisfy the gate. Neither a command receipt nor any agent-visible projection carries raw bytes or
+status. Each command is an exact executable/argv child of a fixed Node launcher that
+self-stops as the detached group/session leader before spawn, receives the fresh strict
+environment unchanged, and remains alive until it mirrors the command exit. After
+identity binding and `SIGCONT`, the command runs in that same owned group/session; exact
+`bun run test` therefore gains no workflow-added shell wrapper. The timeout adapter uses
+bounded TERM, bounded KILL for same-identity survivors, then PID/PGID absence proof; a
+signal to only the leader cannot satisfy the gate. Signalled command exits map
+deterministically to `128 + signalNumber` (`255` only for an unknown signal). Bun, Node,
+Git, and the repository-local TypeScript CLI are resolved to fixed absolute paths at
+startup and bound to their requested/resolved file identities plus initial SHA-256
+authority. Every identity is revalidated immediately before launch and again before the
+stopped launcher receives `SIGCONT`; the user-owned TypeScript target additionally
+rechecks its SHA-256 at both boundaries. Repository-local `tsc` runs as the pinned TypeScript target through pinned
+Node, never through its PATH-dependent shebang; `bunx` materializes as pinned Bun with
+`x --no-install`. System executables must be root-owned and not group/world-writable;
+the sole user-owned target must remain under the exact repository-local TypeScript
+package and pass its just-in-time hash recheck. Neither a command receipt nor any
+agent-visible projection carries raw bytes or
 excerpts; it exposes only numeric stdout/stderr byte counts, hashes, truncation flags,
 and the command's start/end repository fingerprints. The sequence result additionally
 has the exact authority projection
@@ -6298,15 +6503,47 @@ An agent sees only the secret-scanned bounded projection and may classify a loca
 observed failure; it cannot execute a gate, alter its status/output/hash/fingerprint,
 or turn a non-pass into evidence. The only strict-scan exception remains the exact
 locally parsed TASK-545-owned finding declared below. Before the first displayed
-command, the local runner privately parses the existing canonical-root `.env`, starts
+command, the local runner opens the existing canonical-root `.env` with no-follow
+pre/handle/post identity checks, fingerprints its bytes plus
+`dev/ino/mode/nlink/size/mtime/ctime`, parses only those stable bytes, and later requires
+the workflow baseline to match that exact initial fingerprint. It admits only the exact
+repo process-control names `PATH`, `BUN_OPTIONS`, and `NODE_ENV` for centralized fixed-
+value comparison; values identical to `HOST_FIXED_ENV` pass, different values fail, and
+every other Bun/Node/package-manager/Git/SSH/loader/shell/proxy process-control key is
+rejected. Ambient `CI` absent, `1`, or `true` always projects to fixed `CI=true`; every
+other inherited `CI` value fails. It starts
 from an empty null-prototype child map, and copies only the required/optional-present
 names from `HOST_REQUIRED_INHERITED_ENV`, `HOST_OPTIONAL_INHERITED_ENV`,
 `HOST_REQUIRED_REPO_ENV`, and `HOST_OPTIONAL_REPO_ENV`, then applies the exact
-`HOST_FIXED_ENV` conflict rules and adds `ADMIN_EMAIL` plus `ADMIN_PASSWORD` when
+`HOST_FIXED_ENV` conflict rules. Every command receives fixed
+`PATH=/usr/local/bin:/usr/bin:/bin` and `BUN_OPTIONS=--no-env-file`; it adds
+`ADMIN_EMAIL` plus `ADMIN_PASSWORD` when
 defined. It rejects unknown projected keys and never forwards either complete
-environment map. Every displayed command except exact `bun run test` receives only a
-fresh clone of that strict projection; a prior child cannot mutate the parent authority
-or widen a later command.
+environment map. Every displayed non-Git command except exact `bun run test` receives
+only a fresh clone of that strict projection; Git receives only the smaller dedicated
+environment below. A prior child cannot mutate the parent authority or widen a later
+command. A live hermetic self-test proves both the parent Bun and a
+nested Bun see the same exact projected key set and retain `--no-env-file`. Workflow
+self-test modes use a fixed synthetic null-prototype repository environment and
+synthetic private `.env*` projection; they do not read or parse the real repo `.env`.
+
+All observational Git calls—including every validation `git diff --check` child—use
+absolute `/usr/bin/git`, `--no-pager`, disabled
+fsmonitor/untracked-cache, and a separate minimal frozen null-prototype environment
+with fixed locale/PATH, `/dev/null` global config, disabled system config/optional
+locks/prompts, and a nonexistent HOME. Diff capture also disables external diff and
+textconv. Git never receives application secrets or the validation environment.
+Repository/index/tracked/untracked context reads use no-follow opened handles with
+pre/post handle and path identity checks; their fingerprints bind bytes plus
+`dev/ino/mode/nlink/size/mtime/ctime`. Every TASK-540 status file included in an agent
+prompt is decoded from the same stable reader and joins both context-sandwich snapshots
+plus the immediate pre-dispatch authority check, even when the file is otherwise Git
+clean. The exact Git index and all root `.env*`
+projection (every root name beginning `.env`, bounded to 64 stable regular files) is
+privately captured before and after every command and agent boundary,
+before/after the one-shot smoke, and at terminal workflow exit; create/delete/rename,
+content drift, or same-byte inode replacement fails closed without exposing names,
+values, or hashes.
 
 Exact `bun run test` is the sole full-`.env` consumer in `FULL_GATE_COMMANDS`. It is
 still spawned only by the orchestrator-local authority, from canonical repo root, with
@@ -6326,9 +6563,20 @@ Those exact strings authorize exactly three root-`.env` source operations: one i
 `test`, one in its `test:bun` child, and one in its `test:vitest` child. The runner
 requires all three operations to occur in that fixed parent/child order and rejects a
 missing, additional, reordered, alternate-path, `test:full`, manual-source, or changed
-script operation. The full environment exists only inside that one owned process group
+script operation. Fixed inherited `BUN_OPTIONS=--no-env-file` disables Bun's implicit
+dotenv discovery throughout that process tree, so only those three explicit shell
+source operations may load `.env`. The full environment exists only inside that one owned process group
 and dies with it; it is never copied back into local authority or reused by any later
 command.
+
+Before importing the smoke executor, the implementation orchestrator opens the one
+canonical regular module with no-follow identity checks and requires SHA-256
+`255f0eaa6f1ce5b20cb18ec3c040e2461c2192d13e2e7a9bc8870075bdafb74b`. It performs
+exactly one literal dynamic import, requires the exact two-export surface, and repeats
+the byte/identity check after import. Full validation binds that same executor authority
+to its result; immediately before the single smoke call the current, imported, and
+validated identities/hashes must all match. A mismatch fails before the one-shot latch
+and never selects an alternate executor.
 
 The same 4 MiB-per-stream bound applies to this exception. Raw output and bounded
 excerpts remain private, are scanned against the in-memory inherited/repo secret corpus,
@@ -6356,6 +6604,8 @@ bunx vitest run --config vitest.config.ts tests/vitest/admin/cacheBus.test.ts \
   tests/vitest/admin/entriesClient.test.ts \
   tests/vitest/admin/mediaClient.test.ts \
   tests/vitest/admin/userSettingsClient.test.ts \
+  tests/vitest/assistant/action-plan-schema.test.ts \
+  tests/vitest/assistant/catalogBlueprintEngine.test.ts \
   tests/vitest/ui/admin-auth-identity.test.tsx \
   tests/vitest/ui/assistant-panel-interaction.test.tsx \
   tests/vitest/ui/use-screen-entry-preferences.test.ts \
@@ -6365,15 +6615,22 @@ bunx vitest run --config vitest.config.ts tests/vitest/admin/cacheBus.test.ts \
   tests/vitest/ui-integration/custom-screen-image-inspector.test.tsx \
   tests/vitest/ui/custom-screen-authoring-boundary.test.ts \
   tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx \
+  tests/vitest/ui/custom-screen-records.test.tsx \
   tests/vitest/ui/custom-screens-page.test.tsx \
+  tests/vitest/ui/custom-screen-list-view-canvas.test.tsx \
   tests/vitest/ui/custom-screen-route-params.test.ts \
   tests/vitest/ui-integration/canvas-editor-panel-toggle-dedupe.test.tsx \
   tests/vitest/ui-integration/canvas-editor/canvas-editor.test.tsx \
   tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx \
+  tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx \
+  tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx \
   tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx \
+  tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx \
   tests/vitest/ui-integration/screen-editor-sections.test.tsx \
+  tests/vitest/ui-integration/custom-screen-entries-restyle.test.tsx \
   tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx \
   tests/vitest/ui-integration/custom-screen-entry-preferences-persistence.test.tsx \
+  tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx \
   tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx \
   tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx \
   tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx \
@@ -6399,6 +6656,8 @@ node --check _docs/_workflows/task-540-smoke-executor.mjs
 node _docs/_workflows/task-540-smoke-executor.mjs --self-test
 node --check _docs/_workflows/task-540-smoke-host.mjs
 node _docs/_workflows/task-540-smoke-host.mjs --self-test
+node --check _docs/_workflows/task-540-local-orchestrator.mjs
+node _docs/_workflows/task-540-local-orchestrator.mjs --self-test
 node --check _docs/_workflows/task-540-implement.mjs
 node _docs/_workflows/task-540-implement.mjs --self-test-repair-siblings
 git diff --check
@@ -6445,8 +6704,8 @@ preserving the identical Closure Board Baseline and Closure Changelog Path; prep
 ten leaves, then six children, then TASK-540, and atomically publish all Done/Completed
 fields plus the board-statistics delta. A read-only mechanical graph gate verifies all statuses/tables, evidence,
 the deterministic board-statistics delta, unique 1252 index row, and reruns the exact
-six smoke-module `node --check`/`--self-test` commands displayed above plus the
-implementation-workflow checks and `git diff --check`. Any status-stage,
+eight task-infrastructure `node --check`/`--self-test` commands displayed above plus the
+implementation-orchestrator checks and `git diff --check`. Any status-stage,
 mechanical-gate, final-audit,
 or final-gate failure reopens the closure leaf/direct child and root, plus only an
 exact source owner implicated by verified drift; unrelated completed descendants stay
@@ -6468,7 +6727,8 @@ identical well-formed value on all three. `Repair Pending` is rejected from ever
 parent and every terminal contract; gate receipts are rejected on the root and
 TASK-540-06 parent. Board and changelog-index mutation guards compare unrelated-byte
 projections after success and failure. Repository snapshots also compare hashes of
-ignored `.env`/`.env.*` files without logging their values or hashes.
+every root `.env*` file (including non-dot suffixes) without logging its value,
+name, or hash.
 
 After a final-drift source repair and its fresh gate, the pre-repair durable Pending
 projection is explicitly invalidated before any recapture assignment. If that recapture

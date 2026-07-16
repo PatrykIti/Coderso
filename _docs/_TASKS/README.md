@@ -15,6 +15,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Task file format
 - Board-level file name: `TASK-###_Short_Title.md` (see `EXAMPLE_TASK.md` for
   a Coderso-specific template example).
+- `TASK-9999` is the sole reserved four-digit sentinel exception. It is the
+  permanent deferred non-user-facing LOW backlog; no other four-digit task ID
+  may be allocated.
 - Physical child file names:
   - `TASK-###-NN-Title.md` for a technical subtask under `TASK-###`.
   - `TASK-###-NN-LNN-Title.md` for an executable leaf under `TASK-###-NN`.
@@ -78,8 +81,8 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 360 tasks
-- **In Progress:** 6 tasks
+- **To Do:** 363 tasks
+- **In Progress:** 7 tasks
 - **Done:** 3114 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
@@ -162,6 +165,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
+| TASK-9999 | Permanent Deferred Non-User-Facing Low-Severity Backlog | Low | Very Large | Sole four-digit sentinel and intentionally permanent final board item. Accepts only evidence-backed LOW findings that satisfy the strict zero-user-visible and zero-contract-impact policy in `AGENTS.md`; source tasks must link deduplicated execution-ready leaves with exact rationale. Completed children/leaves retain normal changelog + board/stat closure. Current intake: TASK-9999-01 with 2 leaves from TASK-540. |
 ---
 
 ## Done

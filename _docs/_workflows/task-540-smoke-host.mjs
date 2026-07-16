@@ -3,6 +3,7 @@ import { constants as fsConstants } from "node:fs";
 import { access, lstat, readFile, readdir, readlink, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
+import { pathToFileURL } from "node:url";
 
 const PORTS = Object.freeze([3000, 5173, 5174]);
 const READY_TIMEOUT_MS = 60_000;
@@ -1282,6 +1283,20 @@ async function runHostCli(args, adapters) {
   return serve(command.root, adapters.createRuntimeDependencies());
 }
 
+function isDirectModuleExecution(moduleUrl, argvEntry, cwd) {
+  if (
+    typeof moduleUrl !== "string" ||
+    moduleUrl.length === 0 ||
+    typeof argvEntry !== "string" ||
+    argvEntry.length === 0 ||
+    typeof cwd !== "string" ||
+    cwd.length === 0
+  ) {
+    return false;
+  }
+  return pathToFileURL(path.resolve(cwd, argvEntry)).href === moduleUrl;
+}
+
 async function waitForDirectChildIdentity(child, runnerIdentity, deps) {
   for (let attempt = 0; attempt < 50; attempt += 1) {
     invariant(!child.spawnFailed, child.kind + " failed to spawn");
@@ -1967,6 +1982,19 @@ export async function runTask540SmokeHostSelfTest() {
     "self-test CLI adapter unknown key"
   );
   invariant(runtimeTrapCalls === 0, "self-test CLI adapter rejection touched runtime");
+  const directEntryPath = path.join(root, "task-540 smoke host.mjs");
+  const directEntryUrl = pathToFileURL(directEntryPath).href;
+  invariant(
+    isDirectModuleExecution(directEntryUrl, directEntryPath, root) &&
+      isDirectModuleExecution(directEntryUrl, path.basename(directEntryPath), root) &&
+      !isDirectModuleExecution(
+        directEntryUrl,
+        path.join(root, "task-540-smoke-host-copy.mjs"),
+        root
+      ) &&
+      !isDirectModuleExecution(directEntryUrl, undefined, root),
+    "Node 22.14-compatible direct-entry guard drift"
+  );
   let serveRuntimeFactoryCalls = 0;
   await expectAsyncFailure(
     () =>
@@ -2486,11 +2514,12 @@ export async function runTask540SmokeHostSelfTest() {
     descriptorNegativeCases: descriptorNegatives.length,
     injectedServeCases: 9,
     runtimeTrapCalls,
+    directEntryCases: 4,
     serveRuntimeFactoryCalls,
   });
 }
 
-if (import.meta.main) {
+if (isDirectModuleExecution(import.meta.url, process.argv[1], process.cwd())) {
   await runHostCli(process.argv.slice(2), {
     async runSelfTest() {
       process.stdout.write(JSON.stringify(await runTask540SmokeHostSelfTest()));

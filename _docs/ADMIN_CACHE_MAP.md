@@ -212,7 +212,12 @@ This file maps admin UI surfaces to their implementation files and the cached AP
     `contentTypes:list`, `entries:list:<typeSlug>`,
     `entries:detail:<typeSlug>:<entryId>`,
     `customScreens:entryOverrides:<screenId>:<entryId>` for presentation
-    override cache updates and invalidation
+    override cache updates and invalidation. The shared bus publishes canonical
+    and legacy transport copies during compatibility migration, correlates
+    those copies to one remote delivery, and reports `local` or `remote`
+    origin. Same-context builder saves may attach a local-only symbol operation
+    token; origin/token metadata is never serialized and is absent from remote
+    delivery.
   - Retry/identity: related targets, media, and override reads publish
     only from the exact request that still owns their pending slot. Rejections
     release that slot; forced/newer requests and successful mutations cannot be

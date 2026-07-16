@@ -5,7 +5,7 @@ import type {
   ScreenFieldBinding,
   ScreenSectionV1,
 } from "./customScreenSchemas";
-import { defaultScreenSectionId } from "./customScreenSchemas";
+import { buildScreenFieldBindingId, defaultScreenSectionId } from "./customScreenSchemas";
 
 export type ScreenBlockKind =
   | "record-header"
@@ -30,13 +30,6 @@ export type ScreenBlockPatch = Partial<
 export type ScreenSectionPatch = Partial<
   Pick<ScreenSectionV1, "label" | "data" | "layout" | "visibility" | "style">
 >;
-
-const slugify = (value: string) =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "");
 
 const createId = (prefix: string) =>
   `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -81,7 +74,7 @@ const createReadBinding = (
   field: string,
   mode: CustomScreenBindingMode = "read"
 ): ScreenFieldBinding => ({
-  id: slugify(`${blockId}-${propPath}`) || `${blockId}-${propPath}`,
+  id: buildScreenFieldBindingId(blockId, propPath),
   blockId,
   propPath,
   source: "entry",
@@ -126,7 +119,7 @@ export function createScreenBlock(input: {
       },
       bindings: [
         {
-          id: slugify(`${id}-value`) || `${id}-value`,
+          id: buildScreenFieldBindingId(id, "value"),
           blockId: id,
           propPath: "value",
           source: "entry",
@@ -180,7 +173,7 @@ export function createScreenBlock(input: {
       },
       bindings: [
         {
-          id: slugify(`${id}-title`) || `${id}-title`,
+          id: buildScreenFieldBindingId(id, "title"),
           blockId: id,
           propPath: "title",
           source: "entry",
@@ -942,7 +935,7 @@ export function duplicateScreenBlockWithBindings(
     return [
       {
         ...binding,
-        id: slugify(`${nextBlockId}-${binding.propPath}`) || `${nextBlockId}-${binding.propPath}`,
+        id: buildScreenFieldBindingId(nextBlockId, binding.propPath),
         blockId: nextBlockId,
       },
     ];

@@ -1,24 +1,7 @@
-import { execFile, spawn } from "node:child_process";
-import { createHash, randomUUID } from "node:crypto";
-import {
-  lstat,
-  open,
-  readFile,
-  readdir,
-  readlink,
-  realpath,
-  rename,
-  unlink,
-} from "node:fs/promises";
-import { parseEnv, promisify } from "node:util";
-
-import { buildTask540SmokePlan } from "./task-540-smoke-contract.mjs";
-import { executeTask540SmokePlan } from "./task-540-smoke-executor.mjs";
-
 export const meta = {
   name: "task-540-implement",
   description:
-    "Implement TASK-540 in strict leaf order, run owner-scoped gates and five-lens audits, execute seven real Custom Screen flows once through the repo-owned local executor, and close changelog 1252. Agents never stage or commit.",
+    "Implement TASK-540 in strict leaf order, run owner-scoped gates, one exact five-lens post-audit, and sequential final-drift audits, execute seven real Custom Screen flows once through the repo-owned local executor, and close changelog 1252. Agents never stage or commit.",
   phases: [
     { title: "Start gate" },
     { title: "540-01-L01" },
@@ -42,21 +25,269 @@ export const meta = {
   ],
 };
 
+import { execFile, spawn } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
+import { constants as FS_CONSTANTS } from "node:fs";
+import {
+  lstat,
+  open,
+  readFile,
+  readdir,
+  readlink,
+  realpath,
+  rename,
+  unlink,
+} from "node:fs/promises";
+import { parseEnv, promisify } from "node:util";
+
+import { buildTask540SmokePlan } from "./task-540-smoke-contract.mjs";
+
+function deepFreezeExact(value) {
+  if (value === null || typeof value !== "object" || Object.isFrozen(value)) return value;
+  for (const key of Reflect.ownKeys(value)) deepFreezeExact(value[key]);
+  return Object.freeze(value);
+}
+
+function ownEnvironmentString(source, key, { required = false } = {}) {
+  const descriptor = Object.getOwnPropertyDescriptor(source, key);
+  if (!descriptor) {
+    if (required) throw new Error("TASK-540 required environment value is missing: " + key);
+    return null;
+  }
+  if (
+    !Object.hasOwn(descriptor, "value") ||
+    typeof descriptor.value !== "string" ||
+    (required && descriptor.value.length === 0)
+  ) {
+    throw new Error("TASK-540 environment value is invalid: " + key);
+  }
+  return descriptor.value;
+}
+
+function parseStrictRepoEnvironment(source) {
+  if (
+    typeof source !== "string" ||
+    Buffer.byteLength(source) > 1024 * 1024 ||
+    source.includes("\0")
+  ) {
+    throw new Error("TASK-540 repo environment is unavailable or invalid");
+  }
+  const seen = new Set();
+  for (const line of source.split(/\r?\n/u)) {
+    const match = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/u.exec(line);
+    if (!match) continue;
+    if (seen.has(match[1])) throw new Error("TASK-540 repo environment repeats a key");
+    seen.add(match[1]);
+  }
+  const parsed = parseEnv(source);
+  const result = Object.create(null);
+  for (const key of Reflect.ownKeys(parsed)) {
+    if (typeof key !== "string" || ["__proto__", "prototype", "constructor"].includes(key)) {
+      throw new Error("TASK-540 repo environment contains an unsafe key");
+    }
+    const value = ownEnvironmentString(parsed, key, { required: true });
+    const processControlKey =
+      /^(?:PATH|BUN_.+|NODE_.+|NPM_CONFIG_.+|PNPM_.+|YARN_.+|DENO_.+|GIT_.+|SSH_.+|LD_.+|DYLD_.+|BASH_ENV|ENV|IFS|SHELLOPTS|CDPATH|HTTP_PROXY|HTTPS_PROXY|ALL_PROXY|NO_PROXY|SSL_CERT_FILE|SSL_CERT_DIR)$/iu.test(
+        key
+      );
+    if (processControlKey && !REPO_FIXED_PROCESS_CONTROL_KEYS.includes(key)) {
+      throw new Error("TASK-540 repo environment contains a process-control key");
+    }
+    result[key] = value;
+  }
+  return Object.freeze(result);
+}
+
 const execFileAsync = promisify(execFile);
 const ROOT = "/home/coder/project/Coderso";
+const SAFE_COMMAND_PATH = "/usr/local/bin:/usr/bin:/bin";
+const HOST_FIXED_ENV = deepFreezeExact({
+  BUN_OPTIONS: "--no-env-file",
+  PORT: "3000",
+  PUBLIC_BASE_URL: "http://coderso-a.localhost:3000",
+  NODE_ENV: "development",
+  PATH: SAFE_COMMAND_PATH,
+  COOKIE_SECURE: "false",
+  VITE_DEV_SERVER_URL: "http://127.0.0.1:5173",
+  VITE_SITE_DEV_SERVER_URL: "http://127.0.0.1:5174",
+  VITE_API_ORIGIN: "http://127.0.0.1:3000",
+  VITE_ADMIN_STRICT_MODE: "false",
+  CODERSO_PUBLIC_VITE_DEV_URL: "http://coderso-a.localhost:5173",
+  CI: "true",
+});
+const REPO_FIXED_PROCESS_CONTROL_KEYS = Object.freeze(["PATH", "BUN_OPTIONS", "NODE_ENV"]);
+const GIT_EXECUTABLE = "/usr/bin/git";
+const OBSERVATIONAL_GIT_ENVIRONMENT = Object.freeze(
+  Object.assign(Object.create(null), {
+    GIT_CONFIG_GLOBAL: "/dev/null",
+    GIT_CONFIG_NOSYSTEM: "1",
+    GIT_OPTIONAL_LOCKS: "0",
+    GIT_TERMINAL_PROMPT: "0",
+    HOME: "/nonexistent/task540-git-home",
+    LANG: "C.UTF-8",
+    LC_ALL: "C.UTF-8",
+    PATH: SAFE_COMMAND_PATH,
+  })
+);
+const OBSERVATIONAL_GIT_PREFIX_ARGS = Object.freeze([
+  "--no-pager",
+  "-c",
+  "core.fsmonitor=false",
+  "-c",
+  "core.untrackedCache=false",
+]);
+const OBSERVATIONAL_GIT_DIFF_ARGS = Object.freeze(["--no-ext-diff", "--no-textconv"]);
+
+function buildObservationalGitEnvironment() {
+  return Object.freeze(Object.assign(Object.create(null), OBSERVATIONAL_GIT_ENVIRONMENT));
+}
+
+function materializeObservationalGitArgs(args) {
+  if (
+    !Array.isArray(args) ||
+    args.length === 0 ||
+    args.some((value) => typeof value !== "string")
+  ) {
+    throw new Error("TASK-540 observational Git argv is invalid");
+  }
+  const [command, ...rawTail] = args;
+  const tail =
+    command === "diff"
+      ? rawTail.filter((value) => !OBSERVATIONAL_GIT_DIFF_ARGS.includes(value))
+      : rawTail;
+  return Object.freeze([
+    ...OBSERVATIONAL_GIT_PREFIX_ARGS,
+    command,
+    ...(command === "diff" ? OBSERVATIONAL_GIT_DIFF_ARGS : []),
+    ...tail,
+  ]);
+}
+const VALIDATION_EXECUTABLE_REQUESTS = deepFreezeExact({
+  bun: "/usr/local/bin/bun",
+  git: GIT_EXECUTABLE,
+  node: process.execPath,
+  tsc: ROOT + "/node_modules/.bin/tsc",
+});
+
+function executableStatProjection(info) {
+  return Object.freeze({
+    ctimeNs: info.ctimeNs.toString(),
+    dev: info.dev.toString(),
+    gid: info.gid.toString(),
+    ino: info.ino.toString(),
+    mode: Number(info.mode),
+    mtimeNs: info.mtimeNs.toString(),
+    size: info.size.toString(),
+    uid: info.uid.toString(),
+  });
+}
+
+async function captureValidationExecutableIdentity(requestedPath, { hash = false } = {}) {
+  if (!requestedPath.startsWith("/") || requestedPath.includes("\0")) {
+    throw new Error("TASK-540 validation executable path is not absolute");
+  }
+  const resolvedPath = await realpath(requestedPath);
+  const [requestedInfo, targetInfo] = await Promise.all([
+    lstat(requestedPath, { bigint: true }),
+    lstat(resolvedPath, { bigint: true }),
+  ]);
+  const targetMode = Number(targetInfo.mode) & 0o7777;
+  const currentUid = typeof process.getuid === "function" ? BigInt(process.getuid()) : -1n;
+  if (
+    !resolvedPath.startsWith("/") ||
+    !targetInfo.isFile() ||
+    (targetMode & 0o111) === 0 ||
+    (targetInfo.uid === 0n && (targetMode & 0o022) !== 0) ||
+    (targetInfo.uid !== 0n &&
+      (targetInfo.uid !== currentUid ||
+        !resolvedPath.startsWith(ROOT + "/node_modules/typescript/")))
+  ) {
+    throw new Error("TASK-540 validation executable identity is unsafe");
+  }
+  let sha256 = null;
+  if (hash) {
+    const stableTarget = await readStableRegularFile(
+      resolvedPath,
+      "TASK-540 validation executable",
+      256 * 1024 * 1024
+    );
+    if (!sameGitIndexStat(targetInfo, stableTarget.stat)) {
+      throw new Error("TASK-540 validation executable changed during hash capture");
+    }
+    sha256 = createHash("sha256").update(stableTarget.bytes).digest("hex");
+  }
+  return Object.freeze({
+    requestedPath,
+    resolvedPath,
+    requested: executableStatProjection(requestedInfo),
+    target: executableStatProjection(targetInfo),
+    sha256,
+    requiresHashRecheck: targetInfo.uid === currentUid,
+  });
+}
+
+function sameExecutableStat(left, right) {
+  return (
+    left.ctimeNs === right.ctimeNs &&
+    left.dev === right.dev &&
+    left.gid === right.gid &&
+    left.ino === right.ino &&
+    left.mode === right.mode &&
+    left.mtimeNs === right.mtimeNs &&
+    left.size === right.size &&
+    left.uid === right.uid
+  );
+}
+
+const VALIDATION_EXECUTABLE_IDENTITIES = Object.freeze(
+  Object.fromEntries(
+    await Promise.all(
+      Object.entries(VALIDATION_EXECUTABLE_REQUESTS).map(async ([key, requestedPath]) => [
+        key,
+        await captureValidationExecutableIdentity(requestedPath, { hash: true }),
+      ])
+    )
+  )
+);
+
+async function requireValidationExecutableIdentity(key, { resolved = true } = {}) {
+  const expected = VALIDATION_EXECUTABLE_IDENTITIES[key];
+  if (!expected) throw new Error("TASK-540 validation executable authority is unknown");
+  const current = await captureValidationExecutableIdentity(expected.requestedPath, {
+    hash: expected.requiresHashRecheck,
+  });
+  if (
+    current.resolvedPath !== expected.resolvedPath ||
+    !sameExecutableStat(current.requested, expected.requested) ||
+    !sameExecutableStat(current.target, expected.target) ||
+    (expected.requiresHashRecheck && current.sha256 !== expected.sha256)
+  ) {
+    throw new Error("TASK-540 validation executable identity changed");
+  }
+  return resolved ? expected.resolvedPath : expected.requestedPath;
+}
 const MAX_VALIDATION_STREAM_BYTES = 4 * 1024 * 1024;
-const MAX_VALIDATION_EXCERPT_BYTES = 8 * 1024;
+const MAX_GROUNDED_DIFF_BYTES = 20 * 1024 * 1024;
+const MAX_GROUNDED_UNTRACKED_BYTES = 8 * 1024 * 1024;
+const MAX_GROUNDED_UNTRACKED_FILE_BYTES = 32 * 1024 * 1024;
 const VALIDATION_COMMAND_TIMEOUT_MS = 45 * 60 * 1000;
+const VALIDATION_TERMINATION_GRACE_MS = 5_000;
+const VALIDATION_ABSENCE_TIMEOUT_MS = 5_000;
+const VALIDATION_LAUNCHER_SOURCE =
+  'process.kill(process.pid,"SIGSTOP");' +
+  'const{spawn}=require("node:child_process");' +
+  'const child=spawn(process.argv[1],process.argv.slice(2),{env:process.env,stdio:"inherit"});' +
+  'child.once("error",()=>process.exit(127));' +
+  'child.once("exit",(code,signal)=>{' +
+  'if(signal){const number=require("node:os").constants.signals[signal];' +
+  "process.exit(Number.isInteger(number)&&number>0?128+number:255);}" +
+  "process.exit(code??128);" +
+  "});";
 const LOCAL_COMMAND_AUTHORITY = new WeakMap();
+const GROUNDED_CONTEXT_AUTHORITY = new WeakMap();
+let workflowSensitiveEnvBaseline = null;
 const TRACKED_TEST_FILES = Object.freeze(
-  (
-    await execFileAsync("git", ["ls-files", "tests"], {
-      cwd: ROOT,
-      encoding: "utf8",
-      env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
-      maxBuffer: 2 * 1024 * 1024,
-    })
-  ).stdout
+  (await git(["ls-files", "tests"]))
     .split("\n")
     .filter((file) => /\.test\.[cm]?[jt]sx?$/.test(file))
     .sort()
@@ -66,37 +297,320 @@ const TRACKED_TEST_FILES = Object.freeze(
 // Overwrite only keys declared by the repo file so helper/runtime and redaction
 // use the same values. Neither map is ever serialized into prompts or evidence.
 const INHERITED_ENV_FOR_REDACTION = Object.freeze({ ...process.env });
-const REPO_ENV = Object.freeze(
-  await (async () => {
-    try {
-      return parseEnv(await readFile(ROOT + "/.env", "utf8"));
-    } catch {
-      throw new Error("TASK-540 repo environment is unavailable or invalid");
-    }
-  })()
+const HERMETIC_SELF_TEST_MODE =
+  process.argv.includes("--self-test-repair-siblings") ||
+  process.argv.some((value) => value.startsWith("--self-test-current-resume="));
+const HERMETIC_SELF_TEST_SENSITIVE_ENV_PROJECTION = Object.freeze(
+  Object.assign(Object.create(null), {
+    "<hermetic-self-test>": createHash("sha256")
+      .update("task-540-hermetic-sensitive-environment-projection")
+      .digest("hex"),
+  })
 );
-Object.assign(process.env, REPO_ENV);
-// Every Git command in this workflow is observational. Disable optional index
-// refresh writes so even read-oriented Git subprocesses preserve the exact
-// caller-owned index file captured at workflow start.
-process.env.GIT_OPTIONAL_LOCKS = "0";
+const HERMETIC_SELF_TEST_REPO_ENVIRONMENT = Object.freeze(
+  Object.assign(Object.create(null), {
+    ADMIN_EMAIL: "task540-self-test@example.invalid",
+    ADMIN_PASSWORD: "task540-self-test-password",
+    DATABASE_URL: "postgres://task540:db-credential-fixture-8472@127.0.0.1:1/task540",
+    MEDIA_SECRET_MASTER_KEY: "task540-self-test-media-key",
+    PII_ENC_KEY: "task540-self-test-encryption-key",
+    PII_HASH_KEY: "task540-self-test-hash-key",
+  })
+);
+let initialRepoEnvironmentFingerprint = null;
+const REPO_ENV = HERMETIC_SELF_TEST_MODE
+  ? HERMETIC_SELF_TEST_REPO_ENVIRONMENT
+  : await (async () => {
+      try {
+        const { bytes, stat } = await readStableRegularFile(
+          ROOT + "/.env",
+          "TASK-540 initial repo environment",
+          1024 * 1024
+        );
+        const source = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+        initialRepoEnvironmentFingerprint = hashStableRegularFileAuthority(bytes, stat);
+        return parseStrictRepoEnvironment(source);
+      } catch {
+        throw new Error("TASK-540 repo environment is unavailable or invalid");
+      }
+    })();
+const INITIAL_REPO_ENVIRONMENT_FINGERPRINT = initialRepoEnvironmentFingerprint;
+const HOST_REQUIRED_INHERITED_ENV = Object.freeze([]);
+const HOST_OPTIONAL_INHERITED_ENV = Object.freeze([
+  "HOME",
+  "USER",
+  "LOGNAME",
+  "SHELL",
+  "TMPDIR",
+  "TMP",
+  "TEMP",
+  "LANG",
+  "LC_ALL",
+  "LC_CTYPE",
+  "TZ",
+  "TERM",
+  "COLORTERM",
+  "NO_COLOR",
+  "FORCE_COLOR",
+  "XDG_CONFIG_HOME",
+  "XDG_CACHE_HOME",
+  "XDG_DATA_HOME",
+  "DISPLAY",
+  "WAYLAND_DISPLAY",
+  "XAUTHORITY",
+  "DBUS_SESSION_BUS_ADDRESS",
+]);
+const HOST_REQUIRED_REPO_ENV = Object.freeze([
+  "DATABASE_URL",
+  "PII_HASH_KEY",
+  "PII_ENC_KEY",
+  "MEDIA_SECRET_MASTER_KEY",
+]);
+const HOST_OPTIONAL_REPO_ENV = Object.freeze([
+  "CORE_VERSION",
+  "DB_POOL_MAX",
+  "AUTH_PASSWORD_PEPPER",
+  "ANALYTICS_IP_HASH_SECRET",
+  "FORM_SUBMIT_NONCE_SECRET",
+  "FORM_SUBMIT_NONCE_TTL_MINUTES",
+  "ANALYTICS_BEACON_NONCE_SECRET",
+  "ANALYTICS_BEACON_NONCE_TTL_MINUTES",
+  "MEDIA_BASE_URL",
+  "MEDIA_ALLOWED_MIME",
+  "MEDIA_MAX_SIZE_BYTES",
+  "EMAIL_TRANSPORT",
+  "THEMES_DIR",
+  "PLUGINS_RUNTIME_DIR",
+  "PLUGINS_SAFE_MODE",
+  "PLUGIN_UPDATE_MODE",
+  "PLUGIN_ERROR_THRESHOLD",
+  "PLUGIN_TIMEOUT_MS",
+  "PLUGIN_DOWNLOAD_TIMEOUT_MS",
+  "PLUGIN_MAX_SIZE_MB",
+  "STORE_BASE_URL",
+  "STORE_PUBLIC_KEY",
+]);
+const VALIDATION_OPTIONAL_CREDENTIAL_ENV = Object.freeze(["ADMIN_EMAIL", "ADMIN_PASSWORD"]);
+const VALIDATION_ENVIRONMENT_KEYS = Object.freeze([
+  ...HOST_REQUIRED_INHERITED_ENV,
+  ...HOST_OPTIONAL_INHERITED_ENV,
+  ...HOST_REQUIRED_REPO_ENV,
+  ...HOST_OPTIONAL_REPO_ENV,
+  ...Object.keys(HOST_FIXED_ENV),
+  ...VALIDATION_OPTIONAL_CREDENTIAL_ENV,
+]);
+if (new Set(VALIDATION_ENVIRONMENT_KEYS).size !== VALIDATION_ENVIRONMENT_KEYS.length) {
+  throw new Error("TASK-540 validation environment allowlists overlap");
+}
+const REQUIRED_TEST_ENV_SOURCE_SCRIPTS = deepFreezeExact({
+  test: "set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun run test:bun && bun run test:vitest",
+  "test:bun":
+    "set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun test --parallel=1 --timeout=15000 tests/unit tests/integration/routes tests/integration/runtime tests/integration/server tests/integration/store tests/integration/plugins tests/integration/analytics tests/perf tests/security",
+  "test:vitest":
+    "set -a && { [ ! -f .env ] || . ./.env; } && set +a && NODE_ENV=test vitest run --config vitest.config.ts",
+});
+const FORBIDDEN_TEST_LIFECYCLE_SCRIPTS = Object.freeze([
+  "pretest",
+  "posttest",
+  "pretest:bun",
+  "posttest:bun",
+  "pretest:vitest",
+  "posttest:vitest",
+]);
+const LOCAL_RUNNER_SELF_TEST_COMMAND =
+  "node --eval 'process.stdout.write(JSON.stringify(Object.keys(process.env).sort()))'";
+const LOCAL_RUNNER_BUN_ENV_SELF_TEST_COMMAND =
+  "bun --eval '" +
+  'const child=Bun.spawnSync(["bun","--eval","process.stdout.write(JSON.stringify(Object.keys(process.env).sort()))"],{stdout:"pipe",stderr:"pipe"});' +
+  "process.stdout.write(JSON.stringify({parent:Object.keys(process.env).sort(),child:JSON.parse(new TextDecoder().decode(child.stdout)),status:child.exitCode,stderrBytes:child.stderr.length}));" +
+  "'";
+
+function buildStrictValidationEnvironment(
+  inheritedEnvironment = process.env,
+  repoEnvironment = REPO_ENV
+) {
+  const result = Object.create(null);
+  for (const key of HOST_REQUIRED_INHERITED_ENV) {
+    result[key] = ownEnvironmentString(inheritedEnvironment, key, { required: true });
+  }
+  for (const key of HOST_OPTIONAL_INHERITED_ENV) {
+    const value = ownEnvironmentString(inheritedEnvironment, key);
+    if (value !== null) result[key] = value;
+  }
+  for (const key of HOST_REQUIRED_REPO_ENV) {
+    result[key] = ownEnvironmentString(repoEnvironment, key, { required: true });
+  }
+  for (const key of HOST_OPTIONAL_REPO_ENV) {
+    const value = ownEnvironmentString(repoEnvironment, key);
+    if (value !== null) result[key] = value;
+  }
+  for (const [key, value] of Object.entries(HOST_FIXED_ENV)) {
+    const inherited = ownEnvironmentString(inheritedEnvironment, key);
+    const repo = ownEnvironmentString(repoEnvironment, key);
+    const inheritedConflict =
+      key === "CI"
+        ? inherited !== null && !["1", "true"].includes(inherited)
+        : key !== "PATH" && inherited !== null && inherited !== value;
+    if (inheritedConflict) {
+      throw new Error("TASK-540 fixed inherited environment conflict: " + key);
+    }
+    if (repo !== null && repo !== value) {
+      throw new Error("TASK-540 fixed repo environment conflict: " + key);
+    }
+    result[key] = value;
+  }
+  for (const key of VALIDATION_OPTIONAL_CREDENTIAL_ENV) {
+    const value = ownEnvironmentString(repoEnvironment, key);
+    if (value !== null) result[key] = value;
+  }
+  if (Reflect.ownKeys(result).some((key) => !VALIDATION_ENVIRONMENT_KEYS.includes(key))) {
+    throw new Error("TASK-540 validation environment contains an unknown key");
+  }
+  return Object.freeze(result);
+}
+
+function requireExactTestEnvironmentSourceScriptObject(packageJson) {
+  if (
+    packageJson === null ||
+    typeof packageJson !== "object" ||
+    Array.isArray(packageJson) ||
+    packageJson.scripts === null ||
+    typeof packageJson.scripts !== "object" ||
+    Array.isArray(packageJson.scripts)
+  ) {
+    throw new Error("TASK-540 package scripts are unavailable or invalid");
+  }
+  for (const [key, value] of Object.entries(REQUIRED_TEST_ENV_SOURCE_SCRIPTS)) {
+    const descriptor = Object.getOwnPropertyDescriptor(packageJson.scripts, key);
+    if (!descriptor || !Object.hasOwn(descriptor, "value") || descriptor.value !== value) {
+      throw new Error("TASK-540 package test environment source contract drifted");
+    }
+  }
+  if (FORBIDDEN_TEST_LIFECYCLE_SCRIPTS.some((key) => Object.hasOwn(packageJson.scripts, key))) {
+    throw new Error("TASK-540 package test lifecycle authority drifted");
+  }
+}
+
+async function requireExactTestEnvironmentSourceScripts() {
+  let packageJson;
+  try {
+    packageJson = JSON.parse(await readFile(ROOT + "/package.json", "utf8"));
+  } catch {
+    throw new Error("TASK-540 package scripts are unavailable or invalid");
+  }
+  requireExactTestEnvironmentSourceScriptObject(packageJson);
+}
 const TASKS = ROOT + "/_docs/_TASKS";
 const WORKFLOW_REL = "_docs/_workflows/task-540-implement.mjs";
 const WORKFLOW = ROOT + "/" + WORKFLOW_REL;
 const SMOKE_CONTRACT_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-contract.mjs";
 const SMOKE_EXECUTOR_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-executor.mjs";
+const FROZEN_SMOKE_EXECUTOR_SHA256 =
+  "255f0eaa6f1ce5b20cb18ec3c040e2461c2192d13e2e7a9bc8870075bdafb74b";
 const SMOKE_HOST_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-host.mjs";
-const WORKFLOW_MECHANICAL_GATE_COMMAND = [
-  "node --check " + SMOKE_CONTRACT_WORKFLOW_REL,
-  "node " + SMOKE_CONTRACT_WORKFLOW_REL + " --self-test",
-  "node --check " + SMOKE_EXECUTOR_WORKFLOW_REL,
-  "node " + SMOKE_EXECUTOR_WORKFLOW_REL + " --self-test",
-  "node --check " + SMOKE_HOST_WORKFLOW_REL,
-  "node " + SMOKE_HOST_WORKFLOW_REL + " --self-test",
-  "node --check " + WORKFLOW_REL,
-  "node " + WORKFLOW_REL + " --self-test-repair-siblings",
-  "git diff --check",
-].join(" && ");
+const LOCAL_ORCHESTRATOR_WORKFLOW_REL = "_docs/_workflows/task-540-local-orchestrator.mjs";
+async function captureFrozenSmokeExecutorAuthority(label) {
+  const absolutePath = ROOT + "/" + SMOKE_EXECUTOR_WORKFLOW_REL;
+  const resolvedPath = await realpath(absolutePath);
+  if (resolvedPath !== absolutePath) {
+    throw new Error(label + ": frozen smoke executor path redirected");
+  }
+  const { bytes, stat } = await readStableRegularFile(
+    absolutePath,
+    label + " frozen smoke executor",
+    4 * 1024 * 1024
+  );
+  const sha256 = createHash("sha256").update(bytes).digest("hex");
+  if (sha256 !== FROZEN_SMOKE_EXECUTOR_SHA256) {
+    throw new Error(label + ": frozen smoke executor bytes drifted");
+  }
+  return Object.freeze({
+    resolvedPath,
+    stat: executableStatProjection(stat),
+    sha256,
+  });
+}
+
+function sameFrozenSmokeExecutorAuthority(left, right) {
+  return (
+    left.resolvedPath === right.resolvedPath &&
+    left.sha256 === right.sha256 &&
+    sameExecutableStat(left.stat, right.stat)
+  );
+}
+
+const IMPORTED_SMOKE_EXECUTOR_AUTHORITY = await captureFrozenSmokeExecutorAuthority(
+  "TASK-540 before smoke executor import"
+);
+const SMOKE_EXECUTOR_MODULE = await import("./task-540-smoke-executor.mjs");
+const SMOKE_EXECUTOR_MODULE_SYMBOLS = Object.getOwnPropertySymbols(SMOKE_EXECUTOR_MODULE);
+if (
+  JSON.stringify(Object.keys(SMOKE_EXECUTOR_MODULE).sort()) !==
+    JSON.stringify(["executeTask540SmokePlan", "runTask540SmokeExecutorSelfTest"]) ||
+  SMOKE_EXECUTOR_MODULE_SYMBOLS.length !== 1 ||
+  SMOKE_EXECUTOR_MODULE_SYMBOLS[0] !== Symbol.toStringTag
+) {
+  throw new Error("TASK-540 smoke executor export surface drifted");
+}
+const executeTask540SmokePlan = SMOKE_EXECUTOR_MODULE.executeTask540SmokePlan;
+if (typeof executeTask540SmokePlan !== "function") {
+  throw new Error("TASK-540 smoke executor export is invalid");
+}
+const POST_IMPORT_SMOKE_EXECUTOR_AUTHORITY = await captureFrozenSmokeExecutorAuthority(
+  "TASK-540 after smoke executor import"
+);
+if (
+  !sameFrozenSmokeExecutorAuthority(
+    IMPORTED_SMOKE_EXECUTOR_AUTHORITY,
+    POST_IMPORT_SMOKE_EXECUTOR_AUTHORITY
+  )
+) {
+  throw new Error("TASK-540 smoke executor changed across import");
+}
+const FULL_VALIDATION_AUTHORITY = new WeakMap();
+const WORKFLOW_MECHANICAL_GATE_COMMANDS = Object.freeze([
+  Object.freeze({
+    id: "smokeContractSyntax",
+    command: "node --check " + SMOKE_CONTRACT_WORKFLOW_REL,
+  }),
+  Object.freeze({
+    id: "smokeContractSelfTest",
+    command: "node " + SMOKE_CONTRACT_WORKFLOW_REL + " --self-test",
+  }),
+  Object.freeze({
+    id: "smokeExecutorSyntax",
+    command: "node --check " + SMOKE_EXECUTOR_WORKFLOW_REL,
+  }),
+  Object.freeze({
+    id: "smokeExecutorSelfTest",
+    command: "node " + SMOKE_EXECUTOR_WORKFLOW_REL + " --self-test",
+  }),
+  Object.freeze({
+    id: "smokeHostSyntax",
+    command: "node --check " + SMOKE_HOST_WORKFLOW_REL,
+  }),
+  Object.freeze({
+    id: "smokeHostSelfTest",
+    command: "node " + SMOKE_HOST_WORKFLOW_REL + " --self-test",
+  }),
+  Object.freeze({
+    id: "localOrchestratorSyntax",
+    command: "node --check " + LOCAL_ORCHESTRATOR_WORKFLOW_REL,
+  }),
+  Object.freeze({
+    id: "localOrchestratorSelfTest",
+    command: "node " + LOCAL_ORCHESTRATOR_WORKFLOW_REL + " --self-test",
+  }),
+  Object.freeze({ id: "workflowSyntax", command: "node --check " + WORKFLOW_REL }),
+  Object.freeze({
+    id: "workflowRepairResumeSelfTest",
+    command: "node " + WORKFLOW_REL + " --self-test-repair-siblings",
+  }),
+  Object.freeze({ id: "diffCheck", command: "git diff --check" }),
+]);
+const HERMETIC_VALIDATION_COMMAND_IDS = Object.freeze(
+  WORKFLOW_MECHANICAL_GATE_COMMANDS.map(({ id }) => id)
+);
 const HISTORICAL_FIX_WORKFLOW_REL = "_docs/_workflows/task-540-fix.mjs";
 const EXPECTED_BRANCH = "feature/tasks-fixes";
 const RUN_DATE = new Date().toISOString().slice(0, 10);
@@ -176,8 +690,6 @@ const CHANGELOG_TYPE =
   "Custom Screens/Admin UI/API/Reliability/Accessibility/Security/Testing/Docs/Task Board";
 const CHANGELOG_TASKS_LINE =
   "Tasks: TASK-540, TASK-540-01, TASK-540-01-L01, TASK-540-02, TASK-540-02-L01, TASK-540-03, TASK-540-03-L01, TASK-540-04, TASK-540-04-L01, TASK-540-04-L02, TASK-540-04-L03, TASK-540-04-L04, TASK-540-05, TASK-540-05-L01, TASK-540-05-L02, TASK-540-06, TASK-540-06-L01";
-const ENV = "set -a && source .env && set +a && ";
-
 const TASK_FILES = Object.freeze([
   "TASK-540_Custom_Screens_Functional_and_Data_Integrity_Remediation.md",
   "TASK-540-01-Strict-Screen-Data-Urls-Tabs-And-Binding-Gc.md",
@@ -295,6 +807,69 @@ const FAMILY_STATUS_ORDER = Object.freeze([
   ROOT_TASK_PATH,
 ]);
 const AUDIT_OWNERS = Object.freeze([...LEAF_ORDER, "orchestrator"]);
+const DEFERRED_LOW_FOLLOW_UPS = deepFreezeExact({
+  "deferred-low:actor-media-uuid-domain-naming": {
+    followUpTask: "TASK-9999-01-L01",
+    taskPath: "_docs/_TASKS/TASK-9999-01-L01-Decouple-Actor-And-Media-Uuid-Domain-Naming.md",
+    allowedOwners: ["540-01-L01", "540-04-L03"],
+    finding: "Actor UUID validation reuses the media-named UUID predicate without behavior change.",
+    evidenceAnchors: [
+      "core/services/customScreens/customScreenSchemas.ts:548",
+      "core/services/customScreens/screenEntryPresentationOverrideContract.ts:171",
+      "core/services/customScreens/screenEntryPresentationOverrideContract.ts:206",
+      "core/services/customScreens/screenEntryPresentationOverrides.ts:426",
+    ],
+    anchorLineIncludes: [
+      "export function isScreenMediaAssetUuid",
+      "if (!isScreenMediaAssetUuid(value))",
+      "const normalizeUpdatedBy",
+      "if (!isScreenMediaAssetUuid(value))",
+    ],
+    leafEvidenceTokens: [
+      "customScreenSchemas.ts",
+      "isScreenMediaAssetUuid",
+      "screenEntryPresentationOverrideContract.ts",
+      "screenEntryPresentationOverrides.ts",
+    ],
+    approvedEvidenceLanguage:
+      "TASK-9999-01-L01 approved evidence: core/services/customScreens/customScreenSchemas.ts:548; core/services/customScreens/screenEntryPresentationOverrideContract.ts:171; core/services/customScreens/screenEntryPresentationOverrideContract.ts:206; core/services/customScreens/screenEntryPresentationOverrides.ts:426.",
+    approvedRationaleLanguage:
+      "TASK-9999-01-L01 approved rationale: the shared UUID predicate already accepts and rejects the intended actor/media UUID grammar and preserves exact input bytes; deferral changes no UI/UX/accessibility, data, security/privacy/auth/RBAC, API, persistence/migration, performance/reliability, or test-integrity behavior.",
+  },
+  "deferred-low:unread-screen-tab-label-draft-state": {
+    followUpTask: "TASK-9999-01-L02",
+    taskPath: "_docs/_TASKS/TASK-9999-01-L02-Remove-Unread-Screen-Tab-Label-Draft-State.md",
+    allowedOwners: ["540-02-L01"],
+    finding: "ScreenTabLabelDraft.baseLabel is written but never read and has no behavior effect.",
+    evidenceAnchors: [
+      "core/admin/ui/custom-screens/ScreenBlockInspector.tsx:524",
+      "core/admin/ui/custom-screens/ScreenBlockInspector.tsx:525",
+      "core/admin/ui/custom-screens/ScreenBlockInspector.tsx:538",
+      "core/admin/ui/custom-screens/ScreenBlockInspector.tsx:542",
+      "core/admin/ui/custom-screens/ScreenBlockInspector.tsx:553",
+      "core/admin/ui/custom-screens/ScreenBlockInspector.tsx:559",
+      "core/admin/ui/custom-screens/ScreenBlockInspector.tsx:563",
+    ],
+    anchorLineIncludes: [
+      "type ScreenTabLabelDraft",
+      "baseLabel: string;",
+      "const [draft, setDraft] = useState<ScreenTabLabelDraft>",
+      "const restoreCommitted = () => setDraft({ baseLabel:",
+      "setDraft({ baseLabel:",
+      "value={draft.value}",
+      "setDraft({ baseLabel:",
+    ],
+    leafEvidenceTokens: ["ScreenBlockInspector.tsx", "ScreenTabLabelDraft", "baseLabel"],
+    approvedEvidenceLanguage:
+      "TASK-9999-01-L02 approved evidence: core/admin/ui/custom-screens/ScreenBlockInspector.tsx:524; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:525; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:538; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:542; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:553; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:559; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:563.",
+    approvedRationaleLanguage:
+      "TASK-9999-01-L02 approved rationale: baseLabel is assigned but never read; deferral changes no rendered UI, keyboard/blur/commit behavior, accessibility, saved data, security/privacy/auth/RBAC, API, persistence/migration, performance/reliability, or test-integrity behavior.",
+  },
+});
+const DEFERRED_LOW_SOURCE_LINK_PATHS = Object.freeze([
+  ROOT_TASK_PATH,
+  LEAF_STATUS_GROUPS["540-06-L01"].leafPath,
+]);
 
 const TARGET_VITEST_FILES = Object.freeze([
   "tests/vitest/admin/cacheBus.test.ts",
@@ -308,6 +883,8 @@ const TARGET_VITEST_FILES = Object.freeze([
   "tests/vitest/admin/entriesClient.test.ts",
   "tests/vitest/admin/mediaClient.test.ts",
   "tests/vitest/admin/userSettingsClient.test.ts",
+  "tests/vitest/assistant/action-plan-schema.test.ts",
+  "tests/vitest/assistant/catalogBlueprintEngine.test.ts",
   "tests/vitest/ui/admin-auth-identity.test.tsx",
   "tests/vitest/ui/assistant-panel-interaction.test.tsx",
   "tests/vitest/ui/use-screen-entry-preferences.test.ts",
@@ -317,15 +894,22 @@ const TARGET_VITEST_FILES = Object.freeze([
   "tests/vitest/ui-integration/custom-screen-image-inspector.test.tsx",
   "tests/vitest/ui/custom-screen-authoring-boundary.test.ts",
   "tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx",
+  "tests/vitest/ui/custom-screen-records.test.tsx",
   "tests/vitest/ui/custom-screens-page.test.tsx",
+  "tests/vitest/ui/custom-screen-list-view-canvas.test.tsx",
   "tests/vitest/ui/custom-screen-route-params.test.ts",
   "tests/vitest/ui-integration/canvas-editor-panel-toggle-dedupe.test.tsx",
   "tests/vitest/ui-integration/canvas-editor/canvas-editor.test.tsx",
   "tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx",
+  "tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx",
+  "tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx",
   "tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx",
+  "tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx",
   "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
+  "tests/vitest/ui-integration/custom-screen-entries-restyle.test.tsx",
   "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
   "tests/vitest/ui-integration/custom-screen-entry-preferences-persistence.test.tsx",
+  "tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx",
   "tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx",
   "tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx",
   "tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx",
@@ -349,18 +933,17 @@ const CLOSURE_OWNER_TEST_FILES = Object.freeze([
   "tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx",
 ]);
 if (
-  TARGET_VITEST_FILES.length !== 34 ||
+  TARGET_VITEST_FILES.length !== 43 ||
   TARGET_BUN_FILES.length !== 5 ||
-  SOURCE_OWNER_TEST_FILES.length !== 38 ||
+  SOURCE_OWNER_TEST_FILES.length !== 47 ||
   CLOSURE_OWNER_TEST_FILES.length !== 1 ||
-  new Set([...TARGET_VITEST_FILES, ...TARGET_BUN_FILES]).size !== 39
+  new Set([...TARGET_VITEST_FILES, ...TARGET_BUN_FILES]).size !== 48
 ) {
   throw new Error("TASK-540 test matrix cardinality drift");
 }
 let sourceOwnerTestHashesAtClosureBoundary = null;
 
 const DB_PREFLIGHT =
-  ENV +
   'bun --eval \'import { canConnect } from "./tests/utils/db"; ' +
   "const configured = Boolean(process.env.DATABASE_URL?.trim()); " +
   "const reachable = configured && await canConnect(); " +
@@ -371,7 +954,7 @@ const LINT = "bun --cwd core lint";
 const ROOT_TSC = "./node_modules/.bin/tsc -p tsconfig.json --noEmit";
 const TARGETED_VITEST =
   "bunx vitest run --config vitest.config.ts " + TARGET_VITEST_FILES.join(" ");
-const TARGETED_BUN = ENV + "bun test " + TARGET_BUN_FILES.join(" ");
+const TARGETED_BUN = "bun test " + TARGET_BUN_FILES.join(" ");
 
 function isolationCommandForTestFile(file) {
   if (!TRACKED_TEST_FILES.includes(file)) {
@@ -379,7 +962,7 @@ function isolationCommandForTestFile(file) {
   }
   return file.startsWith("tests/vitest/")
     ? "bunx vitest run --config vitest.config.ts " + file
-    : ENV + "bun test " + file;
+    : "bun test " + file;
 }
 
 function isolationMetadata(files) {
@@ -405,7 +988,7 @@ const FULL_GATE_COMMANDS = Object.freeze([
   },
   {
     id: "fullTest",
-    command: ENV + "bun run test",
+    command: "bun run test",
     isolationCommands: isolationMetadata(TRACKED_TEST_FILES),
   },
   { id: "precommitCheck", command: "bun run precommit:check" },
@@ -437,6 +1020,14 @@ const FULL_GATE_COMMANDS = Object.freeze([
   {
     id: "smokeHostSelfTest",
     command: "node _docs/_workflows/task-540-smoke-host.mjs --self-test",
+  },
+  {
+    id: "localOrchestratorSyntax",
+    command: "node --check _docs/_workflows/task-540-local-orchestrator.mjs",
+  },
+  {
+    id: "localOrchestratorSelfTest",
+    command: "node _docs/_workflows/task-540-local-orchestrator.mjs --self-test",
   },
   { id: "workflowSyntax", command: "node --check _docs/_workflows/task-540-implement.mjs" },
   {
@@ -757,7 +1348,13 @@ const SENSITIVE_FIELD_NAME =
   "authorization|cookie|set-cookie|access[_\\s.-]*token|refresh[_\\s.-]*token|" +
   "session[_\\s.-]*(?:token|hash|cookie)|token[_\\s.-]*hash|password[_\\s.-]*hash";
 const SENSITIVE_ASSIGNMENT_PATTERN = new RegExp(
-  "(?:^|[\\s,{;])(?:[\\\"']?(?:" + SENSITIVE_FIELD_NAME + ")[\\\"']?)\\s*(?::|=)\\s*([^\\s,;}]+)",
+  "(?:^[ \\t]*[+-]?[ \\t]*|[\\r\\n][ \\t]*[+-]?[ \\t]*|[ \\t,{;])" +
+    "(?:[\\\"']?(?:" +
+    SENSITIVE_FIELD_NAME +
+    ")[\\\"']?)\\s*(?::|=)\\s*" +
+    "(\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'|`(?:\\\\.|[^`\\\\])*`|" +
+    "[|>][+-]?[^\\r\\n]*(?:\\r?\\n[ \\t]+[^\\r\\n]*)*|" +
+    "[\"'`][^,;}\\r\\n]*(?:\\r?\\n[ \\t]+[^\\r\\n]*)*|[^,;}\\r\\n]+)",
   "gi"
 );
 const RAW_AUTHORIZATION_PATTERN =
@@ -769,7 +1366,7 @@ const JWT_VALUE_PATTERN = /\beyJ[a-zA-Z0-9_-]{8,}\.[a-zA-Z0-9_-]{8,}\.[a-zA-Z0-9
 const SECRET_BROWSER_ACCESS_PATTERN =
   /\bdocument\.cookie\b|\b(?:localStorage|sessionStorage)\.getItem\(\s*["'][^"']*(?:token|cookie|csrf|secret|password)[^"']*["']/i;
 const SAFE_REDACTED_VALUE_PATTERN =
-  /^(?:\$[A-Z][A-Z0-9_]*|\[?(?:discarded|redacted)\]?|<redacted>|null|undefined|true|false)$/i;
+  /^(?:\$[A-Z][A-Z0-9_]*|\[?(?:discarded|discard-me|redacted)\]?|<redacted>|null|undefined|true|false)$/i;
 const SENSITIVE_ENV_KEY_PATTERN =
   /(?:^ADMIN_EMAIL$|PASSWORD|PASSWD|SECRET|(?:^|_)TOKEN(?:_|$)|(?:^|_)KEY(?:_|$)|API[_-]?KEY|PRIVATE[_-]?KEY|ACCESS[_-]?KEY|(?:ENC|HASH)[_-]?KEY|CONNECTION[_-]?STRING|DATABASE_URL|REDIS_URL|DSN)/i;
 const REQUIRED_REDACTION_CREDENTIAL_KEYS = Object.freeze(["ADMIN_EMAIL", "ADMIN_PASSWORD"]);
@@ -826,10 +1423,54 @@ function hasSensitiveEvidence(value) {
   }
   SENSITIVE_ASSIGNMENT_PATTERN.lastIndex = 0;
   for (const match of value.matchAll(SENSITIVE_ASSIGNMENT_PATTERN)) {
-    const assigned = (match[1] ?? "").replace(/^["'`]|["'`]$/g, "");
+    const assigned = (match[1] ?? "").trim().replace(/^["'`]|["'`]$/g, "");
     if (!SAFE_REDACTED_VALUE_PATTERN.test(assigned)) return true;
   }
   return false;
+}
+
+function globalPattern(pattern) {
+  return new RegExp(
+    pattern.source,
+    pattern.flags.includes("g") ? pattern.flags : pattern.flags + "g"
+  );
+}
+
+function sanitizeSensitiveEvidence(value) {
+  let sanitized = value;
+  for (const secret of SENSITIVE_VALUE_CORPUS) {
+    const escaped = secret.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (secret.length >= 6) {
+      sanitized = sanitized.replace(new RegExp(escaped, "g"), "[redacted]");
+    } else {
+      sanitized = sanitized.replace(
+        new RegExp("(^|[^A-Za-z0-9])" + escaped + "(?=$|[^A-Za-z0-9])", "g"),
+        "$1[redacted]"
+      );
+    }
+  }
+  SENSITIVE_ASSIGNMENT_PATTERN.lastIndex = 0;
+  sanitized = sanitized.replace(SENSITIVE_ASSIGNMENT_PATTERN, (match, assigned) => {
+    const clean = (assigned ?? "").trim().replace(/^["'`]|["'`]$/g, "");
+    if (SAFE_REDACTED_VALUE_PATTERN.test(clean)) return match;
+    const boundary = match.lastIndexOf(assigned);
+    return boundary < 0
+      ? "[redacted-sensitive-assignment]"
+      : match.slice(0, boundary) + "[redacted]";
+  });
+  for (const pattern of [
+    RAW_AUTHORIZATION_PATTERN,
+    RAW_COOKIE_HEADER_PATTERN,
+    RAW_BEARER_PATTERN,
+    JWT_VALUE_PATTERN,
+    SECRET_BROWSER_ACCESS_PATTERN,
+  ]) {
+    sanitized = sanitized.replace(globalPattern(pattern), "[redacted-sensitive-evidence]");
+  }
+  if (hasSensitiveEvidence(sanitized)) {
+    throw new Error("TASK-540 sensitive evidence could not be sanitized");
+  }
+  return sanitized;
 }
 
 function hasSensitiveEvidenceDeep(value) {
@@ -850,31 +1491,49 @@ function requireSensitiveSafeAgentResult(result, label) {
   return result;
 }
 
-async function dispatchAgentSafely(prompt, options) {
+async function dispatchAgentSafely(grounded, options) {
+  if (
+    !grounded ||
+    typeof grounded !== "object" ||
+    typeof grounded.text !== "string" ||
+    !grounded.context
+  ) {
+    throw new Error(options.label + ": grounded agent prompt is invalid");
+  }
+  await requireWorkflowSensitiveEnvBaseline(options.label + " before agent dispatch");
   await requireInitialGitIndexBaseline(options.label + " before agent dispatch");
+  await requireGroundedContextCurrent(
+    grounded.context,
+    options.label + " immediately before agent dispatch"
+  );
   let result = null;
   let dispatchError = null;
   try {
-    result = requireSensitiveSafeAgentResult(await agent(prompt, options), options.label);
+    result = requireSensitiveSafeAgentResult(await agent(grounded.text, options), options.label);
   } catch {
     // Agent/schema errors may contain rejected structured output. Discard the
     // original object/message before it can enter failures, logs, or a prompt.
     dispatchError = new Error(options.label + ": agent dispatch failed; details discarded");
   }
-  let indexError = null;
+  const boundaryErrors = [];
+  if (dispatchError) boundaryErrors.push(dispatchError);
   try {
     await requireInitialGitIndexBaseline(options.label + " after agent dispatch");
   } catch (error) {
-    indexError = error;
+    boundaryErrors.push(error);
   }
-  if (dispatchError && indexError) {
+  try {
+    await requireWorkflowSensitiveEnvBaseline(options.label + " after agent dispatch");
+  } catch (error) {
+    boundaryErrors.push(error);
+  }
+  if (boundaryErrors.length > 1) {
     throw new AggregateError(
-      [dispatchError, indexError],
-      options.label + ": agent dispatch failed and changed the exact initial Git index baseline"
+      boundaryErrors,
+      options.label + ": agent dispatch or its repository boundaries failed"
     );
   }
-  if (dispatchError) throw dispatchError;
-  if (indexError) throw indexError;
+  if (boundaryErrors.length === 1) throw boundaryErrors[0];
   return result;
 }
 
@@ -896,22 +1555,30 @@ function requireAllResults(results, expectedIds, label) {
 }
 
 async function git(args) {
-  const result = await execFileAsync("git", args, {
-    cwd: ROOT,
-    encoding: "utf8",
-    env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
-    maxBuffer: 32 * 1024 * 1024,
-  });
+  const result = await execFileAsync(
+    await requireValidationExecutableIdentity("git"),
+    materializeObservationalGitArgs(args),
+    {
+      cwd: ROOT,
+      encoding: "utf8",
+      env: buildObservationalGitEnvironment(),
+      maxBuffer: 32 * 1024 * 1024,
+    }
+  );
   return result.stdout;
 }
 
 async function gitBytes(args) {
-  const result = await execFileAsync("git", args, {
-    cwd: ROOT,
-    encoding: "buffer",
-    env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
-    maxBuffer: 64 * 1024 * 1024,
-  });
+  const result = await execFileAsync(
+    await requireValidationExecutableIdentity("git"),
+    materializeObservationalGitArgs(args),
+    {
+      cwd: ROOT,
+      encoding: "buffer",
+      env: buildObservationalGitEnvironment(),
+      maxBuffer: 64 * 1024 * 1024,
+    }
+  );
   return Buffer.isBuffer(result.stdout) ? result.stdout : Buffer.from(result.stdout);
 }
 
@@ -1065,6 +1732,55 @@ function sameGitIndexStat(left, right) {
   );
 }
 
+async function readStableRegularFile(path, label, maxBytes) {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0) {
+    throw new Error(label + ": stable-file bound is invalid");
+  }
+  const pathBefore = await lstat(path, { bigint: true });
+  if (!pathBefore.isFile() || pathBefore.isSymbolicLink()) {
+    throw new Error(label + ": stable-file path is not a regular file");
+  }
+  const handle = await open(
+    path,
+    FS_CONSTANTS.O_RDONLY | FS_CONSTANTS.O_NOFOLLOW | FS_CONSTANTS.O_CLOEXEC
+  );
+  try {
+    const handleBefore = await handle.stat({ bigint: true });
+    if (
+      !handleBefore.isFile() ||
+      !sameGitIndexStat(pathBefore, handleBefore) ||
+      handleBefore.size > BigInt(maxBytes)
+    ) {
+      throw new Error(label + ": stable-file identity or bound changed before read");
+    }
+    const byteLength = Number(handleBefore.size);
+    const bytes = Buffer.alloc(byteLength);
+    let offset = 0;
+    while (offset < byteLength) {
+      const { bytesRead } = await handle.read(bytes, offset, byteLength - offset, offset);
+      if (bytesRead <= 0) throw new Error(label + ": stable-file read ended early");
+      offset += bytesRead;
+    }
+    const [handleAfter, pathAfter] = await Promise.all([
+      handle.stat({ bigint: true }),
+      lstat(path, { bigint: true }),
+    ]);
+    if (
+      !handleAfter.isFile() ||
+      !pathAfter.isFile() ||
+      pathAfter.isSymbolicLink() ||
+      !sameGitIndexStat(handleBefore, handleAfter) ||
+      !sameGitIndexStat(handleAfter, pathAfter) ||
+      BigInt(bytes.length) !== handleAfter.size
+    ) {
+      throw new Error(label + ": stable-file identity changed during read");
+    }
+    return Object.freeze({ bytes, stat: handleAfter });
+  } finally {
+    await handle.close();
+  }
+}
+
 async function readGitIndexFileAuthority(label) {
   const unresolvedPath = parseResolvedGitIndexPath(
     await gitBytes(["rev-parse", "--path-format=absolute", "--git-path", "index"]),
@@ -1074,20 +1790,11 @@ async function readGitIndexFileAuthority(label) {
   if (!Buffer.isBuffer(resolvedPath) || resolvedPath.length === 0) {
     throw new Error(label + ": Git index path did not resolve as bytes");
   }
-  const before = await lstat(resolvedPath, { bigint: true });
-  if (!before.isFile() || before.isSymbolicLink()) {
-    throw new Error(label + ": resolved Git index is not a regular file");
-  }
-  const bytes = await readFile(resolvedPath);
-  const after = await lstat(resolvedPath, { bigint: true });
-  if (
-    !after.isFile() ||
-    after.isSymbolicLink() ||
-    !sameGitIndexStat(before, after) ||
-    BigInt(bytes.length) !== after.size
-  ) {
-    throw new Error(label + ": resolved Git index changed while its bytes were read");
-  }
+  const { bytes, stat: after } = await readStableRegularFile(
+    resolvedPath,
+    label + " resolved Git index",
+    64 * 1024 * 1024
+  );
   return freezeGitIndexAuthority(
     {
       identity: gitIndexStatIdentity(after, resolvedPath),
@@ -1275,35 +1982,91 @@ async function assertTask540GitIndexBaselineContract() {
   return cases.length + 1;
 }
 
+function hashStableRegularFileAuthority(bytes, stat) {
+  if (!Buffer.isBuffer(bytes)) {
+    throw new Error("TASK-540 stable-file fingerprint bytes are invalid");
+  }
+  const identityKeys = Object.freeze(["dev", "ino", "mode", "nlink", "size", "mtimeNs", "ctimeNs"]);
+  if (identityKeys.some((key) => typeof stat?.[key] !== "bigint")) {
+    throw new Error("TASK-540 stable-file fingerprint identity is invalid");
+  }
+  const hash = createHash("sha256");
+  hash.update("stable-file-v1\0");
+  for (const key of identityKeys) hash.update(key + "\0" + stat[key].toString() + "\0");
+  hash.update(bytes);
+  return hash.digest("hex");
+}
+
 async function hashPath(relativePath) {
   const absolute = ROOT + "/" + relativePath;
   try {
-    const info = await lstat(absolute);
-    const mode = String(info.mode & 0o7777);
-    if (info.isSymbolicLink()) {
-      return createHash("sha256")
-        .update("symlink\0" + mode + "\0" + (await readlink(absolute)))
-        .digest("hex");
-    }
-    if (!info.isFile()) return "non-file:" + info.mode;
-    const hash = createHash("sha256");
-    hash.update("file\0" + mode + "\0");
-    hash.update(await readFile(absolute));
-    return hash.digest("hex");
+    const { bytes, stat } = await readStableRegularFile(
+      absolute,
+      "TASK-540 worktree file snapshot",
+      64 * 1024 * 1024
+    );
+    return hashStableRegularFileAuthority(bytes, stat);
   } catch (error) {
     if (error && error.code === "ENOENT") return "<missing>";
     throw error;
   }
 }
 
+function isRootSensitiveEnvironmentName(name) {
+  return (
+    typeof name === "string" &&
+    name.startsWith(".env") &&
+    !name.includes("/") &&
+    !name.includes("\0") &&
+    Buffer.byteLength(name) <= 255
+  );
+}
+
+function selectRootSensitiveEnvironmentNames(entries) {
+  if (!Array.isArray(entries)) {
+    throw new Error("TASK-540 private environment directory projection is invalid");
+  }
+  const candidates = entries
+    .map((entry) => entry?.name)
+    .filter((name) => typeof name === "string" && name.startsWith(".env"));
+  if (candidates.some((name) => !isRootSensitiveEnvironmentName(name))) {
+    throw new Error("TASK-540 private environment name is unsafe");
+  }
+  if (candidates.length > 64) {
+    throw new Error("TASK-540 private environment projection exceeds its entry bound");
+  }
+  return Object.freeze([...candidates].sort());
+}
+
 async function hashSensitiveEnvProjection() {
-  const entries = (await readdir(ROOT, { withFileTypes: true }))
-    .filter(({ name }) => /^\.env(?:\..+)?$/.test(name))
-    .map(({ name }) => name)
-    .sort();
-  const hashes = {};
+  if (HERMETIC_SELF_TEST_MODE) return HERMETIC_SELF_TEST_SENSITIVE_ENV_PROJECTION;
+  const entries = selectRootSensitiveEnvironmentNames(await readdir(ROOT, { withFileTypes: true }));
+  const hashes = Object.create(null);
   for (const relativePath of entries) hashes[relativePath] = await hashPath(relativePath);
   return Object.freeze(hashes);
+}
+
+async function captureWorkflowSensitiveEnvBaseline(label) {
+  if (workflowSensitiveEnvBaseline !== null) {
+    throw new Error(label + ": private environment baseline was already captured");
+  }
+  const projection = await hashSensitiveEnvProjection();
+  if (
+    INITIAL_REPO_ENVIRONMENT_FINGERPRINT !== null &&
+    projection[".env"] !== INITIAL_REPO_ENVIRONMENT_FINGERPRINT
+  ) {
+    throw new Error(label + ": private environment changed after its stable initial parse");
+  }
+  workflowSensitiveEnvBaseline = projection;
+}
+
+async function requireWorkflowSensitiveEnvBaseline(label) {
+  if (
+    workflowSensitiveEnvBaseline !== null &&
+    !equalHashMaps(workflowSensitiveEnvBaseline, await hashSensitiveEnvProjection())
+  ) {
+    throw new Error(label + ": private environment baseline changed");
+  }
 }
 
 async function worktreeSnapshot(
@@ -1333,7 +2096,7 @@ async function worktreeSnapshot(
   const paths = [
     ...new Set([...splitNul(tracked), ...splitNul(untracked), ...additionalPaths]),
   ].sort();
-  const hashes = {};
+  const hashes = Object.create(null);
   for (const path of paths) hashes[path] = await hashPath(path);
   return {
     head: head.trim(),
@@ -1405,29 +2168,375 @@ function createBoundedCommandStream() {
   });
 }
 
-function boundedValidationExcerpt(bytes) {
-  const excerpt = bytes.subarray(0, MAX_VALIDATION_EXCERPT_BYTES).toString("utf8");
-  if (hasSensitiveEvidence(excerpt)) return "[redacted-sensitive-output]";
-  return excerpt;
+function parseValidationProcStat(source, expectedPid) {
+  if (typeof source !== "string" || source.length === 0) {
+    throw new Error("TASK-540 validation proc stat is invalid");
+  }
+  const close = source.lastIndexOf(")");
+  const pid = Number(source.slice(0, source.indexOf(" ")));
+  const fields =
+    close > 0
+      ? source
+          .slice(close + 1)
+          .trim()
+          .split(/\s+/)
+      : [];
+  if (!Number.isSafeInteger(pid) || pid !== expectedPid || fields.length < 20) {
+    throw new Error("TASK-540 validation proc identity is invalid");
+  }
+  const ppid = Number(fields[1]);
+  const processGroupId = Number(fields[2]);
+  const sessionId = Number(fields[3]);
+  const startTime = fields[19];
+  if (
+    !/^[A-Zt]$/.test(fields[0]) ||
+    ![ppid, processGroupId, sessionId].every(
+      (value) => Number.isSafeInteger(value) && value >= 0
+    ) ||
+    !/^\d+$/.test(startTime)
+  ) {
+    throw new Error("TASK-540 validation proc authority is invalid");
+  }
+  return Object.freeze({
+    pid,
+    ppid,
+    processGroupId,
+    sessionId,
+    startTime,
+    state: fields[0],
+  });
 }
 
-async function terminateLocalCommand(child) {
-  if (!child.pid) return;
+async function readValidationProcessIdentity(pid) {
   try {
-    process.kill(-child.pid, "SIGTERM");
+    return parseValidationProcStat(await readFile("/proc/" + pid + "/stat", "utf8"), pid);
+  } catch (error) {
+    if (error?.code === "ENOENT" || error?.code === "ESRCH") return null;
+    throw error;
+  }
+}
+
+async function readValidationProcessTable() {
+  const names = await readdir("/proc");
+  const rows = await Promise.all(
+    names
+      .filter((name) => /^\d+$/.test(name))
+      .map((name) => readValidationProcessIdentity(Number(name)))
+  );
+  return rows.filter((row) => row !== null);
+}
+
+function sameValidationProcessIdentity(left, right) {
+  return left.pid === right.pid && left.startTime === right.startTime;
+}
+
+function isOwnedValidationProcess(row, authority, retainedIdentities = []) {
+  return (
+    sameValidationProcessIdentity(row, authority) ||
+    row.processGroupId === authority.processGroupId ||
+    row.sessionId === authority.sessionId ||
+    retainedIdentities.some((identity) => sameValidationProcessIdentity(row, identity))
+  );
+}
+
+async function captureValidationProcessAuthority(pid) {
+  if (!Number.isSafeInteger(pid) || pid <= 1) {
+    throw new Error("TASK-540 validation child PID is invalid");
+  }
+  let observedAuthority = null;
+  try {
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const identity = await readValidationProcessIdentity(pid);
+      if (identity) {
+        if (identity.processGroupId !== pid || identity.sessionId !== pid) {
+          throw new Error("TASK-540 validation child is not its process-group/session leader");
+        }
+        if (observedAuthority === null) observedAuthority = identity;
+        if (!sameValidationProcessIdentity(identity, observedAuthority)) {
+          throw new Error("TASK-540 validation child identity changed during acquisition");
+        }
+        if (identity.state === "T" || identity.state === "t") return identity;
+      }
+      await delay(25);
+    }
+  } catch (error) {
+    error.observedAuthority = observedAuthority;
+    throw error;
+  }
+  const error = new Error("TASK-540 validation process authority was not observable");
+  error.observedAuthority = observedAuthority;
+  throw error;
+}
+
+async function captureOwnedValidationProcesses(authority) {
+  return (await readValidationProcessTable()).filter((row) =>
+    isOwnedValidationProcess(row, authority)
+  );
+}
+
+async function waitForValidationProcessAbsence(authority, retainedIdentities, timeoutMs) {
+  const deadline = performance.now() + timeoutMs;
+  do {
+    const active = (await readValidationProcessTable()).filter((row) =>
+      isOwnedValidationProcess(row, authority, retainedIdentities)
+    );
+    if (active.length === 0) return true;
+    await delay(100);
+  } while (performance.now() < deadline);
+  return false;
+}
+
+async function signalOwnedValidationProcessGroup(authority, retainedIdentities, signal) {
+  const table = await readValidationProcessTable();
+  const currentLeader = table.find((row) => row.pid === authority.pid);
+  if (currentLeader && !sameValidationProcessIdentity(currentLeader, authority)) {
+    throw new Error("TASK-540 validation leader PID was recycled");
+  }
+  const active = table.filter((row) =>
+    isOwnedValidationProcess(row, authority, retainedIdentities)
+  );
+  if (active.length === 0) return false;
+  try {
+    process.kill(-authority.processGroupId, signal);
   } catch (error) {
     if (error?.code !== "ESRCH") throw error;
   }
-  await delay(250);
-  try {
-    process.kill(-child.pid, "SIGKILL");
-  } catch (error) {
-    if (error?.code !== "ESRCH") throw error;
+  return true;
+}
+
+function releaseLocalCommandHandles(child) {
+  child.stdin?.destroy();
+  child.stdout?.destroy();
+  child.stderr?.destroy();
+  child.unref();
+}
+
+async function disposeUnboundValidationChild(child, closePromise, observedAuthority = null) {
+  if (observedAuthority) {
+    await terminateLocalCommand(child, closePromise, observedAuthority);
+    return;
+  }
+  const earlyCompletion = await Promise.race([closePromise, delay(25).then(() => null)]);
+  if (earlyCompletion === null) child.kill("SIGKILL");
+  const completion =
+    earlyCompletion ??
+    (await Promise.race([closePromise, delay(VALIDATION_ABSENCE_TIMEOUT_MS).then(() => null)]));
+  releaseLocalCommandHandles(child);
+  if (completion === null) {
+    throw new Error("TASK-540 unbound validation child did not close safely");
   }
 }
 
-async function runLocalValidationCommand(spec, label) {
-  const before = await worktreeSnapshot(label + " before local command");
+async function signalOwnedValidationLeader(child, authority, signal) {
+  const current = await readValidationProcessIdentity(authority.pid);
+  if (
+    current === null ||
+    !sameValidationProcessIdentity(current, authority) ||
+    current.processGroupId !== authority.processGroupId ||
+    current.sessionId !== authority.sessionId
+  ) {
+    throw new Error("TASK-540 validation leader changed before signal");
+  }
+  return child.kill(signal);
+}
+
+async function authorizeAndResumeStoppedValidationChild({ label, authorize, resume, cleanup }) {
+  if (
+    typeof label !== "string" ||
+    label.length === 0 ||
+    typeof authorize !== "function" ||
+    typeof resume !== "function" ||
+    typeof cleanup !== "function"
+  ) {
+    throw new Error("TASK-540 validation pre-resume dependencies are invalid");
+  }
+  try {
+    await authorize();
+    if (!(await resume())) throw new Error("TASK-540 validation child could not resume");
+  } catch {
+    const authorizationError = new Error(
+      label + ": validation child pre-resume authorization failed; details discarded"
+    );
+    try {
+      await cleanup();
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [authorizationError, cleanupError],
+        label + ": validation child pre-resume authorization and cleanup failed"
+      );
+    }
+    throw authorizationError;
+  }
+}
+
+async function terminateLocalCommand(child, closePromise, authority) {
+  const retainedIdentities = await captureOwnedValidationProcesses(authority);
+  await signalOwnedValidationProcessGroup(authority, retainedIdentities, "SIGTERM");
+  if (
+    await waitForValidationProcessAbsence(
+      authority,
+      retainedIdentities,
+      VALIDATION_TERMINATION_GRACE_MS
+    )
+  ) {
+    const completion = await Promise.race([closePromise, delay(250).then(() => null)]);
+    releaseLocalCommandHandles(child);
+    return completion;
+  }
+  await signalOwnedValidationProcessGroup(authority, retainedIdentities, "SIGKILL");
+  const absent = await waitForValidationProcessAbsence(
+    authority,
+    retainedIdentities,
+    VALIDATION_ABSENCE_TIMEOUT_MS
+  );
+  const completion = await Promise.race([closePromise, delay(250).then(() => null)]);
+  releaseLocalCommandHandles(child);
+  if (!absent) throw new Error("TASK-540 validation process group/session did not terminate");
+  return completion;
+}
+
+function parseValidationCommandArgv(command) {
+  if (typeof command !== "string" || command.length === 0 || command.includes("\0")) {
+    throw new Error("TASK-540 validation command is invalid");
+  }
+  const words = [];
+  let word = "";
+  let started = false;
+  let quote = null;
+  const pushWord = () => {
+    if (!started) return;
+    words.push(word);
+    word = "";
+    started = false;
+  };
+  for (let index = 0; index < command.length; index += 1) {
+    const character = command[index];
+    if (quote === "single") {
+      if (character === "'") quote = null;
+      else word += character;
+      continue;
+    }
+    if (quote === "double") {
+      if (character === '"') {
+        quote = null;
+      } else if (character === "\\") {
+        index += 1;
+        if (index >= command.length) throw new Error("TASK-540 validation escape is incomplete");
+        word += command[index];
+      } else {
+        if (character === "$" || character === "`") {
+          throw new Error("TASK-540 validation command expansion is forbidden");
+        }
+        word += character;
+      }
+      continue;
+    }
+    if (/\s/u.test(character)) {
+      pushWord();
+      continue;
+    }
+    if (character === "'") {
+      quote = "single";
+      started = true;
+      continue;
+    }
+    if (character === '"') {
+      quote = "double";
+      started = true;
+      continue;
+    }
+    if (character === "\\") {
+      index += 1;
+      if (index >= command.length) throw new Error("TASK-540 validation escape is incomplete");
+      word += command[index];
+      started = true;
+      continue;
+    }
+    if (/[;&|<>`$\r\n]/u.test(character)) {
+      throw new Error("TASK-540 validation shell syntax is forbidden");
+    }
+    word += character;
+    started = true;
+  }
+  if (quote !== null) throw new Error("TASK-540 validation quote is incomplete");
+  pushWord();
+  if (
+    words.length === 0 ||
+    !/^(?:[A-Za-z0-9_.-]+|\.\/[A-Za-z0-9_./-]+)$/u.test(words[0]) ||
+    words[0].includes("..")
+  ) {
+    throw new Error("TASK-540 validation executable is invalid");
+  }
+  return Object.freeze(words);
+}
+
+async function buildValidationCommandInvocation(spec) {
+  if (!VALIDATION_COMMAND_AUTHORITY.has(spec.id + "\0" + spec.command)) {
+    throw new Error("TASK-540 validation command is outside its closed authority");
+  }
+  const repositoryEnvironment = HERMETIC_VALIDATION_COMMAND_IDS.includes(spec.id)
+    ? HERMETIC_SELF_TEST_REPO_ENVIRONMENT
+    : REPO_ENV;
+  if (spec.id === "fullTest") {
+    if (spec.command !== "bun run test") {
+      throw new Error("TASK-540 full test command drifted");
+    }
+    await requireExactTestEnvironmentSourceScripts();
+    const environment = buildStrictValidationEnvironment(process.env, repositoryEnvironment);
+    return Object.freeze({
+      executable: await requireValidationExecutableIdentity("bun"),
+      args: Object.freeze(["run", "test"]),
+      environment,
+      identityKeys: Object.freeze(["bun"]),
+    });
+  }
+  if (spec.command === "bun run test") {
+    throw new Error("TASK-540 full test command escaped its sole authority");
+  }
+  const argv = parseValidationCommandArgv(spec.command);
+  if (
+    !VALIDATION_EXECUTABLE_ALLOWLIST.includes(argv[0]) ||
+    ["bash", "sh", "env", "/bin/bash", "/bin/sh", "/usr/bin/env"].includes(argv[0]) ||
+    (argv[0] === "bun" &&
+      argv[1] === "run" &&
+      ["test", "test:bun", "test:vitest"].includes(argv[2]))
+  ) {
+    throw new Error("TASK-540 validation executable/argv authority is forbidden");
+  }
+  if (argv[0] === "git") {
+    return Object.freeze({
+      executable: await requireValidationExecutableIdentity("git"),
+      args: materializeObservationalGitArgs(argv.slice(1)),
+      environment: buildObservationalGitEnvironment(),
+      identityKeys: Object.freeze(["git"]),
+    });
+  }
+  const environment = buildStrictValidationEnvironment(process.env, repositoryEnvironment);
+  let executableKey = argv[0] === "bunx" ? "bun" : argv[0];
+  let identityKeys = Object.freeze([executableKey]);
+  let args =
+    argv[0] === "bunx"
+      ? Object.freeze(["x", "--no-install", ...argv.slice(1)])
+      : Object.freeze(argv.slice(1));
+  if (argv[0] === "./node_modules/.bin/tsc") {
+    const tscPath = await requireValidationExecutableIdentity("tsc");
+    executableKey = "node";
+    identityKeys = Object.freeze(["node", "tsc"]);
+    args = Object.freeze([tscPath, ...argv.slice(1)]);
+  }
+  return Object.freeze({
+    executable: await requireValidationExecutableIdentity(executableKey),
+    args,
+    environment,
+    identityKeys,
+  });
+}
+
+async function executeLocalValidationCommand(spec, label) {
+  const [before, sensitiveEnvBefore] = await Promise.all([
+    worktreeSnapshot(label + " before local command"),
+    hashSensitiveEnvProjection(),
+  ]);
   const startFingerprint = canonicalRepositoryFingerprint(before);
   const stdout = createBoundedCommandStream();
   const stderr = createBoundedCommandStream();
@@ -1435,32 +2544,102 @@ async function runLocalValidationCommand(spec, label) {
   let timedOut = false;
   let outputLimitExceeded = false;
   let spawnError = null;
-  const child = spawn("/bin/bash", ["--noprofile", "--norc", "-c", spec.command], {
-    cwd: ROOT,
-    env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
-    detached: true,
-    stdio: ["ignore", "pipe", "pipe"],
+  let lifecycleFailure = false;
+  let requestAbort;
+  const abortPromise = new Promise((resolve) => {
+    requestAbort = (reason) => resolve(reason);
+  });
+  const invocation = await buildValidationCommandInvocation(spec);
+  const launcherExecutable = await requireValidationExecutableIdentity("node");
+  const child = spawn(
+    launcherExecutable,
+    ["--eval", VALIDATION_LAUNCHER_SOURCE, invocation.executable, ...invocation.args],
+    {
+      cwd: ROOT,
+      env: invocation.environment,
+      detached: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    }
+  );
+  const closePromise = new Promise((resolve) => {
+    child.once("close", (code, signal) => resolve({ code, signal }));
   });
   const captureChunk = (stream, chunk) => {
     if (stream.push(chunk) && !outputLimitExceeded) {
       outputLimitExceeded = true;
-      void terminateLocalCommand(child).catch(() => {});
+      requestAbort("output-limit");
     }
   };
   child.stdout.on("data", (chunk) => captureChunk(stdout, chunk));
   child.stderr.on("data", (chunk) => captureChunk(stderr, chunk));
   child.once("error", (error) => {
     spawnError = error;
+    requestAbort("spawn-error");
+  });
+  if (!Number.isSafeInteger(child.pid)) {
+    await disposeUnboundValidationChild(child, closePromise);
+    throw new Error(label + ": validation child could not establish authority");
+  }
+  let authority;
+  try {
+    authority = await captureValidationProcessAuthority(child.pid);
+  } catch (error) {
+    const authorityError = new Error(
+      label + ": validation child authority failed; details discarded"
+    );
+    try {
+      await disposeUnboundValidationChild(child, closePromise, error?.observedAuthority ?? null);
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [authorityError, cleanupError],
+        label + ": validation child authority and cleanup failed"
+      );
+    }
+    throw authorityError;
+  }
+  await authorizeAndResumeStoppedValidationChild({
+    label,
+    authorize: async () => {
+      for (const executableKey of invocation.identityKeys) {
+        await requireValidationExecutableIdentity(executableKey);
+      }
+      await requireValidationExecutableIdentity("node");
+    },
+    resume: () => signalOwnedValidationLeader(child, authority, "SIGCONT"),
+    cleanup: () => terminateLocalCommand(child, closePromise, authority),
   });
   const timeout = setTimeout(() => {
     timedOut = true;
-    void terminateLocalCommand(child).catch(() => {});
+    requestAbort("timeout");
   }, VALIDATION_COMMAND_TIMEOUT_MS);
-  const completion = await new Promise((resolve) => {
-    child.once("close", (code, signal) => resolve({ code, signal }));
-  });
+  const outcome = await Promise.race([
+    closePromise.then((completion) => ({ kind: "closed", completion })),
+    abortPromise.then((reason) => ({ kind: "aborted", reason })),
+  ]);
   clearTimeout(timeout);
-  const after = await worktreeSnapshot(label + " after local command");
+  let completion;
+  if (outcome.kind === "aborted") {
+    completion =
+      (await terminateLocalCommand(child, closePromise, authority)) ??
+      Object.freeze({ code: null, signal: null });
+  } else {
+    completion = outcome.completion;
+    const absent = await waitForValidationProcessAbsence(
+      authority,
+      [],
+      VALIDATION_ABSENCE_TIMEOUT_MS
+    );
+    if (!absent) {
+      lifecycleFailure = true;
+      await terminateLocalCommand(child, closePromise, authority);
+    } else {
+      releaseLocalCommandHandles(child);
+    }
+  }
+  const [after, sensitiveEnvAfter] = await Promise.all([
+    worktreeSnapshot(label + " after local command"),
+    hashSensitiveEnvProjection(),
+  ]);
   const endFingerprint = canonicalRepositoryFingerprint(after);
   const stdoutResult = stdout.finish();
   const stderrResult = stderr.finish();
@@ -1470,7 +2649,9 @@ async function runLocalValidationCommand(spec, label) {
       ? 125
       : spawnError
         ? 127
-        : (completion.code ?? 128);
+        : lifecycleFailure
+          ? 128
+          : (completion.code ?? 128);
   const receipt = {
     runnerVersion: "orchestrator-local-v1",
     id: spec.id,
@@ -1490,7 +2671,9 @@ async function runLocalValidationCommand(spec, label) {
     repository: Object.freeze({
       start: startFingerprint,
       end: endFingerprint,
-      unchanged: sameRepositoryFingerprint(startFingerprint, endFingerprint),
+      unchanged:
+        sameRepositoryFingerprint(startFingerprint, endFingerprint) &&
+        equalHashMaps(sensitiveEnvBefore, sensitiveEnvAfter),
     }),
   };
   LOCAL_COMMAND_AUTHORITY.set(
@@ -1499,29 +2682,48 @@ async function runLocalValidationCommand(spec, label) {
       label,
       stdout: stdoutResult.retained,
       stderr: stderrResult.retained,
-      stdoutExcerpt: boundedValidationExcerpt(stdoutResult.retained),
-      stderrExcerpt: boundedValidationExcerpt(stderrResult.retained),
+      containsSensitiveOutput:
+        hasSensitiveEvidence(stdoutResult.retained.toString("utf8")) ||
+        hasSensitiveEvidence(stderrResult.retained.toString("utf8")),
       spawnError: Boolean(spawnError),
     })
   );
   return Object.freeze(receipt);
 }
 
-function localCommandFailureProjection(receipt, label) {
-  const authority = localCommandAuthority(receipt, label);
-  const projection = ["stdout:\n" + authority.stdoutExcerpt, "stderr:\n" + authority.stderrExcerpt]
-    .join("\n")
-    .slice(0, MAX_VALIDATION_EXCERPT_BYTES);
-  if (hasSensitiveEvidence(projection)) {
-    return "[redacted-sensitive-command-failure]";
+async function runLocalValidationCommand(spec, label) {
+  await requireWorkflowSensitiveEnvBaseline(label + " before local command");
+  let receipt = null;
+  let executionError = null;
+  try {
+    receipt = await executeLocalValidationCommand(spec, label);
+  } catch (error) {
+    executionError = error;
   }
-  return projection;
+  let environmentError = null;
+  try {
+    await requireWorkflowSensitiveEnvBaseline(label + " after local command");
+  } catch (error) {
+    environmentError = error;
+  }
+  if (executionError && environmentError) {
+    throw new AggregateError(
+      [executionError, environmentError],
+      label + ": local command and private environment boundary failed"
+    );
+  }
+  if (executionError) throw executionError;
+  if (environmentError) throw environmentError;
+  return receipt;
 }
 
 function localCommandAuthority(receipt, label) {
   const authority = LOCAL_COMMAND_AUTHORITY.get(receipt);
   if (!authority || authority.label !== label) {
     throw new Error(label + ": local command authority is missing");
+  }
+  if (typeof authority.containsSensitiveOutput !== "boolean") {
+    throw new Error(label + ": local command redaction authority is missing");
   }
   if (receipt.stdoutTruncated || receipt.stderrTruncated) {
     throw new Error(label + ": bounded local command output was truncated");
@@ -1593,13 +2795,20 @@ async function runNamedIsolationCommands(spec, receipt, label) {
 }
 
 async function runLocalCommandSequence(commands, { label, allowStrictScan = false } = {}) {
-  const before = await worktreeSnapshot(label + " before local sequence");
+  await requireWorkflowSensitiveEnvBaseline(label + " before local sequence");
+  const [before, sensitiveEnvStart] = await Promise.all([
+    worktreeSnapshot(label + " before local sequence"),
+    hashSensitiveEnvProjection(),
+  ]);
   const start = canonicalRepositoryFingerprint(before);
   const receipts = [];
   const isolationReceipts = [];
   let failedReceipt = null;
   let strictScan = null;
   for (const spec of commands) {
+    if (!equalHashMaps(sensitiveEnvStart, await hashSensitiveEnvProjection())) {
+      throw new Error(label + ": private environment projection changed between commands");
+    }
     const commandLabel = label + ":" + spec.id;
     const receipt = await runLocalValidationCommand(spec, commandLabel);
     receipts.push(receipt);
@@ -1622,9 +2831,14 @@ async function runLocalCommandSequence(commands, { label, allowStrictScan = fals
       break;
     }
   }
-  const after = await worktreeSnapshot(label + " after local sequence");
+  const [after, sensitiveEnvEnd] = await Promise.all([
+    worktreeSnapshot(label + " after local sequence"),
+    hashSensitiveEnvProjection(),
+  ]);
   const end = canonicalRepositoryFingerprint(after);
-  const unchanged = sameRepositoryFingerprint(start, end);
+  const unchanged =
+    sameRepositoryFingerprint(start, end) && equalHashMaps(sensitiveEnvStart, sensitiveEnvEnd);
+  await requireWorkflowSensitiveEnvBaseline(label + " after local sequence");
   if (!unchanged && !failedReceipt) {
     failedReceipt = Object.freeze({
       id: "repositoryFingerprint",
@@ -1645,6 +2859,55 @@ async function runLocalCommandSequence(commands, { label, allowStrictScan = fals
       unchanged,
     }),
   });
+}
+
+async function runWorkflowMechanicalGateLocally(label) {
+  const execution = await runLocalCommandSequence(WORKFLOW_MECHANICAL_GATE_COMMANDS, {
+    label,
+  });
+  const receiptsMatch =
+    execution.failedReceipt === null &&
+    execution.authority.unchanged &&
+    execution.receipts.length === WORKFLOW_MECHANICAL_GATE_COMMANDS.length &&
+    execution.receipts.every((receipt, index) => {
+      const expected = WORKFLOW_MECHANICAL_GATE_COMMANDS[index];
+      return (
+        receipt.id === expected.id &&
+        receipt.command === expected.command &&
+        receipt.status === 0 &&
+        receipt.signal === null &&
+        !receipt.timedOut &&
+        !receipt.outputLimitExceeded &&
+        !receipt.stdoutTruncated &&
+        !receipt.stderrTruncated &&
+        receipt.repository.unchanged
+      );
+    });
+  if (!receiptsMatch) {
+    throw new Error(label + ": local mechanical command gate failed; output discarded");
+  }
+  const projection = Object.freeze({
+    pass: true,
+    runner: execution.authority.runner,
+    repository: Object.freeze({
+      unchanged: execution.authority.unchanged,
+      start: execution.authority.start,
+      end: execution.authority.end,
+    }),
+    commands: Object.freeze(
+      execution.receipts.map((receipt) =>
+        Object.freeze({
+          id: receipt.id,
+          command: receipt.command,
+          status: receipt.status,
+          stdoutSha256: receipt.stdoutSha256,
+          stderrSha256: receipt.stderrSha256,
+          repositoryUnchanged: receipt.repository.unchanged,
+        })
+      )
+    ),
+  });
+  return requireSensitiveSafeAgentResult(projection, label + " projection");
 }
 
 function requireSafeRollbackPath(relativePath, label) {
@@ -2069,42 +3332,267 @@ async function restoreExactRollbackFiles(
 async function taskStatusState() {
   const rows = [];
   for (const file of TASK_FILES) {
-    const source = await readFile(TASKS + "/" + file, "utf8");
+    const { bytes } = await readStableRegularFile(
+      TASKS + "/" + file,
+      "TASK-540 grounded task status",
+      8 * 1024 * 1024
+    );
+    const source = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     const status = source.match(/^\*\*Status:\*\*\s*(.+)$/m)?.[1] ?? "<missing>";
     rows.push({ file, status });
   }
   return rows;
 }
 
+const GROUNDED_TASK_STATUS_PATHS = Object.freeze(TASK_FILES.map((file) => "_docs/_TASKS/" + file));
+
+function sameGroundedFileStat(left, right) {
+  return (
+    left.dev === right.dev &&
+    left.ino === right.ino &&
+    left.mode === right.mode &&
+    left.size === right.size &&
+    left.mtimeNs === right.mtimeNs &&
+    left.ctimeNs === right.ctimeNs
+  );
+}
+
+function isSensitiveGroundedPath(relativePath) {
+  return (
+    /(?:^|\/)\.env[^/]*(?:\/|$)/iu.test(relativePath) ||
+    /(?:^|\/)\.git(?:\/|$)/u.test(relativePath) ||
+    /(?:credential|password|private[_-]?key|secret|session|token)/iu.test(relativePath) ||
+    SENSITIVE_ENV_KEY_PATTERN.test(relativePath) ||
+    hasSensitiveEvidence(relativePath)
+  );
+}
+
+async function groundedUntrackedFiles() {
+  const paths = splitNul(await git(["ls-files", "--others", "--exclude-standard", "-z"]));
+  if (paths.length > 256) {
+    throw new Error("TASK-540 grounded untracked file count exceeds its bound");
+  }
+  const entries = [];
+  let retainedTextBytes = 0;
+  for (const relativePath of paths.sort()) {
+    if (
+      relativePath.length === 0 ||
+      relativePath.startsWith("/") ||
+      relativePath.includes("\0") ||
+      relativePath.split("/").includes("..") ||
+      isSensitiveGroundedPath(relativePath)
+    ) {
+      throw new Error("TASK-540 grounded untracked path is unsafe");
+    }
+    const absolutePath = ROOT + "/" + relativePath;
+    const before = await lstat(absolutePath, { bigint: true });
+    if (before.isSymbolicLink()) {
+      const target = await readlink(absolutePath);
+      const after = await lstat(absolutePath, { bigint: true });
+      if (
+        !sameGroundedFileStat(before, after) ||
+        target.startsWith("/") ||
+        target.includes("\0") ||
+        target.split("/").includes("..") ||
+        isSensitiveGroundedPath(target)
+      ) {
+        throw new Error("TASK-540 grounded untracked symlink changed or is sensitive");
+      }
+      entries.push(
+        Object.freeze({
+          path: relativePath,
+          kind: "symlink",
+          target,
+          byteLength: Buffer.byteLength(target),
+          sha256: createHash("sha256").update(target).digest("hex"),
+        })
+      );
+      continue;
+    }
+    if (!before.isFile() || before.size > BigInt(MAX_GROUNDED_UNTRACKED_FILE_BYTES)) {
+      throw new Error("TASK-540 grounded untracked entry is unsupported or too large");
+    }
+    const handle = await open(absolutePath, "r");
+    let bytes;
+    try {
+      const handleBefore = await handle.stat({ bigint: true });
+      if (!handleBefore.isFile() || !sameGroundedFileStat(before, handleBefore)) {
+        throw new Error("TASK-540 grounded untracked file identity changed before read");
+      }
+      const chunks = [];
+      let totalBytes = 0;
+      let position = 0;
+      while (totalBytes <= MAX_GROUNDED_UNTRACKED_FILE_BYTES) {
+        const capacity = Math.min(64 * 1024, MAX_GROUNDED_UNTRACKED_FILE_BYTES + 1 - totalBytes);
+        const chunk = Buffer.allocUnsafe(capacity);
+        const { bytesRead } = await handle.read(chunk, 0, capacity, position);
+        if (bytesRead === 0) break;
+        chunks.push(chunk.subarray(0, bytesRead));
+        totalBytes += bytesRead;
+        position += bytesRead;
+      }
+      if (totalBytes > MAX_GROUNDED_UNTRACKED_FILE_BYTES) {
+        throw new Error("TASK-540 grounded untracked file exceeded its read bound");
+      }
+      bytes = Buffer.concat(chunks, totalBytes);
+      const [handleAfter, pathAfter] = await Promise.all([
+        handle.stat({ bigint: true }),
+        lstat(absolutePath, { bigint: true }),
+      ]);
+      if (
+        !sameGroundedFileStat(handleBefore, handleAfter) ||
+        !sameGroundedFileStat(before, pathAfter) ||
+        BigInt(bytes.length) !== handleAfter.size
+      ) {
+        throw new Error("TASK-540 grounded untracked file changed while read");
+      }
+    } finally {
+      await handle.close();
+    }
+    const sha256 = createHash("sha256").update(bytes).digest("hex");
+    const textContent = bytes.toString("utf8");
+    const isText = !bytes.includes(0) && Buffer.from(textContent, "utf8").equals(bytes);
+    if (!isText) {
+      entries.push(
+        Object.freeze({
+          path: relativePath,
+          kind: "binary",
+          byteLength: bytes.length,
+          sha256,
+        })
+      );
+      continue;
+    }
+    retainedTextBytes += bytes.length;
+    if (retainedTextBytes > MAX_GROUNDED_UNTRACKED_BYTES) {
+      throw new Error("TASK-540 grounded untracked text exceeds its bounded prompt budget");
+    }
+    if (hasSensitiveEvidence(textContent)) {
+      throw new Error("TASK-540 grounded untracked text failed value-aware redaction");
+    }
+    entries.push(
+      Object.freeze({
+        path: relativePath,
+        kind: "text",
+        byteLength: bytes.length,
+        sha256,
+        content: textContent,
+      })
+    );
+  }
+  return Object.freeze(entries);
+}
+
 async function repoContext() {
-  const [head, branch, status, diffStat, diffNames, staged, taskStatuses] = await Promise.all([
+  const [before, sensitiveEnvBefore] = await Promise.all([
+    worktreeSnapshot("TASK-540 grounded context before projection", GROUNDED_TASK_STATUS_PATHS),
+    hashSensitiveEnvProjection(),
+  ]);
+  const beforeFingerprint = canonicalRepositoryFingerprint(before);
+  const [
+    head,
+    branch,
+    status,
+    diffStat,
+    diffNames,
+    diffPatch,
+    staged,
+    taskStatuses,
+    untrackedFiles,
+  ] = await Promise.all([
     git(["rev-parse", "HEAD"]),
     git(["branch", "--show-current"]),
-    git(["status", "--short", "--untracked-files=all"]),
-    git(["diff", "--stat", "HEAD"]),
-    git(["diff", "--name-only", "HEAD"]),
+    git(["status", "--short", "--untracked-files=all", "--no-renames"]),
+    git(["diff", "--stat", "--no-renames", "HEAD"]),
+    git(["diff", "--name-only", "--no-renames", "HEAD"]),
+    git([
+      "diff",
+      "--no-ext-diff",
+      "--no-textconv",
+      "--no-renames",
+      "--text",
+      "--unified=3",
+      "HEAD",
+      "--",
+    ]),
     git(["diff", "--cached", "--name-only"]),
     taskStatusState(),
+    groundedUntrackedFiles(),
   ]);
-  return {
+  if (Buffer.byteLength(diffPatch) > MAX_GROUNDED_DIFF_BYTES) {
+    throw new Error("TASK-540 grounded diff exceeds its bounded prompt budget");
+  }
+  for (const relativePath of diffNames.split("\n").filter(Boolean)) {
+    if (
+      relativePath.startsWith("/") ||
+      relativePath.includes("\0") ||
+      relativePath.split("/").includes("..") ||
+      isSensitiveGroundedPath(relativePath)
+    ) {
+      throw new Error("TASK-540 grounded tracked path is unsafe");
+    }
+  }
+  const groundedDiffPatch = sanitizeSensitiveEvidence(diffPatch);
+  const sanitizeMetadata = (value) => sanitizeSensitiveEvidence(value.trim());
+  const context = deepFreezeExact({
     root: ROOT,
     head: head.trim(),
-    branch: branch.trim(),
-    status: status.trim(),
-    diffStat: diffStat.trim(),
-    diffNames: diffNames.trim(),
-    stagedNamesForContext: staged.trim(),
+    branch: sanitizeMetadata(branch),
+    status: sanitizeMetadata(status),
+    diffStat: sanitizeMetadata(diffStat),
+    diffNames: sanitizeMetadata(diffNames),
+    diffPatch: groundedDiffPatch,
+    stagedNamesForContext: sanitizeMetadata(staged),
+    untrackedFiles,
     taskStatuses,
-  };
+  });
+  if (hasSensitiveEvidenceDeep(context)) {
+    throw new Error("TASK-540 grounded context failed value-aware redaction");
+  }
+  const [after, sensitiveEnvAfter] = await Promise.all([
+    worktreeSnapshot("TASK-540 grounded context after projection", GROUNDED_TASK_STATUS_PATHS),
+    hashSensitiveEnvProjection(),
+  ]);
+  const afterFingerprint = canonicalRepositoryFingerprint(after);
+  if (
+    !sameRepositoryFingerprint(beforeFingerprint, afterFingerprint) ||
+    !equalHashMaps(sensitiveEnvBefore, sensitiveEnvAfter)
+  ) {
+    throw new Error("TASK-540 grounded context changed while it was assembled");
+  }
+  GROUNDED_CONTEXT_AUTHORITY.set(
+    context,
+    Object.freeze({ fingerprint: afterFingerprint, sensitiveEnv: sensitiveEnvAfter })
+  );
+  return context;
 }
 
 async function groundedPrompt(body) {
-  return (
-    body +
-    "\n\nRoot-local state captured immediately before dispatch (verify it yourself; " +
-    "do not treat it as permission to alter unrelated work):\n" +
-    JSON.stringify(await repoContext())
-  );
+  const context = await repoContext();
+  return Object.freeze({
+    context,
+    text:
+      body +
+      "\n\nRoot-local state captured immediately before dispatch, including the tracked " +
+      "HEAD patch and bounded complete untracked-file projections (verify it yourself; " +
+      "do not treat it as permission to alter unrelated work):\n" +
+      JSON.stringify(context),
+  });
+}
+
+async function requireGroundedContextCurrent(context, label) {
+  const authority = GROUNDED_CONTEXT_AUTHORITY.get(context);
+  if (!authority) throw new Error(label + ": grounded context authority is missing");
+  const [snapshot, sensitiveEnv] = await Promise.all([
+    worktreeSnapshot(label + " repository snapshot", GROUNDED_TASK_STATUS_PATHS),
+    hashSensitiveEnvProjection(),
+  ]);
+  if (
+    !sameRepositoryFingerprint(authority.fingerprint, canonicalRepositoryFingerprint(snapshot)) ||
+    !equalHashMaps(authority.sensitiveEnv, sensitiveEnv)
+  ) {
+    throw new Error(label + ": grounded context authority changed before dispatch");
+  }
 }
 
 async function runReadOnlyAgent(prompt, options) {
@@ -2690,14 +4178,19 @@ const LEAVES = Object.freeze(
       taskFile: "TASK-540-01-L01-Reject-Unknown-Sanitize-Urls-Unique-Tabs-And-Prune-Ghosts.md",
       allowedFiles: Object.freeze([
         "core/services/customScreens/customScreenSchemas.ts",
+        "core/services/customScreens/screenDocumentOps.ts",
         "core/services/customScreens/customScreenService.ts",
         "core/server/routes/customScreenRoutes.ts",
         "tests/unit/assistant/actionExecutorService.test.ts",
         "tests/vitest/admin/custom-screen-schemas.test.ts",
+        "tests/vitest/customScreens/screenDocumentOps.test.ts",
         "tests/vitest/customScreens/screen-document-image-src.test.ts",
         "tests/integration/routes/customScreensRoutes.test.ts",
       ]),
-      repairAllowedFiles: Object.freeze(["tests/unit/assistant/actionExecutorService.test.ts"]),
+      readOnlyConsumerFiles: Object.freeze([
+        "tests/vitest/assistant/action-plan-schema.test.ts",
+        "tests/vitest/assistant/catalogBlueprintEngine.test.ts",
+      ]),
       fixtureOnlyFiles: Object.freeze(["tests/unit/assistant/actionExecutorService.test.ts"]),
       commands: Object.freeze([
         command("lintTypes", LINT_TYPES),
@@ -2706,14 +4199,16 @@ const LEAVES = Object.freeze(
           "vitest",
           vitestCommand([
             "tests/vitest/admin/custom-screen-schemas.test.ts",
+            "tests/vitest/assistant/action-plan-schema.test.ts",
+            "tests/vitest/assistant/catalogBlueprintEngine.test.ts",
             "tests/vitest/customScreens/screen-document-image-src.test.ts",
+            "tests/vitest/customScreens/screenDocumentOps.test.ts",
           ])
         ),
         command("dbPreflight", DB_PREFLIGHT),
         command(
           "bun",
-          ENV +
-            "bun test tests/integration/routes/customScreensRoutes.test.ts " +
+          "bun test tests/integration/routes/customScreensRoutes.test.ts " +
             "tests/unit/assistant/actionExecutorService.test.ts"
         ),
         command("workflowSyntax", "node --check _docs/_workflows/task-540-implement.mjs"),
@@ -2825,11 +4320,6 @@ const LEAVES = Object.freeze(
         "tests/vitest/admin/customScreensClient.test.ts",
         "tests/vitest/admin/cacheBus.test.ts",
       ]),
-      repairAllowedFiles: Object.freeze([
-        "core/admin/utils/cacheBus.ts",
-        "tests/vitest/admin/cacheBus.test.ts",
-        "tests/integration/routes/customScreensRoutes.test.ts",
-      ]),
       commands: Object.freeze([
         command("lintTypes", LINT_TYPES),
         command("lint", LINT),
@@ -2849,6 +4339,9 @@ const LEAVES = Object.freeze(
             "tests/vitest/widgets/screenWidgets.test.tsx",
             "tests/vitest/ui/use-screen-related-entries.test.tsx",
             "tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx",
+            "tests/vitest/ui/custom-screen-records.test.tsx",
+            "tests/vitest/ui-integration/custom-screen-entries-restyle.test.tsx",
+            "tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx",
           ])
         ),
         command(
@@ -2857,15 +4350,19 @@ const LEAVES = Object.freeze(
             "tests/vitest/ui/custom-screens-page.test.tsx",
             "tests/vitest/ui/custom-screen-route-params.test.ts",
             "tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx",
+            "tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx",
+            "tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx",
             "tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx",
+            "tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx",
             "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
+            "tests/vitest/ui/custom-screen-list-view-canvas.test.tsx",
             "tests/vitest/admin/cacheBus.test.ts",
           ])
         ),
         command("dbPreflight", DB_PREFLIGHT),
         command(
           "directImageOverrideRouteBun",
-          ENV + "bun test tests/integration/routes/customScreensRoutes.test.ts"
+          "bun test tests/integration/routes/customScreensRoutes.test.ts"
         ),
         command("workflowSyntax", "node --check _docs/_workflows/task-540-implement.mjs"),
         command(
@@ -2887,9 +4384,6 @@ const LEAVES = Object.freeze(
         "tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx",
         "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
       ]),
-      repairAllowedFiles: Object.freeze([
-        "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
-      ]),
       fixtureOnlyFiles: Object.freeze([
         "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
       ]),
@@ -2903,8 +4397,12 @@ const LEAVES = Object.freeze(
             "tests/vitest/ui/custom-screens-page.test.tsx",
             "tests/vitest/ui/custom-screen-route-params.test.ts",
             "tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx",
+            "tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx",
+            "tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx",
             "tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx",
+            "tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx",
             "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
+            "tests/vitest/ui/custom-screen-list-view-canvas.test.tsx",
             "tests/vitest/admin/cacheBus.test.ts",
           ])
         ),
@@ -2982,8 +4480,7 @@ const LEAVES = Object.freeze(
         command("dbPreflight", DB_PREFLIGHT),
         command(
           "bun",
-          ENV +
-            "bun test tests/unit/settings/userSettingsService.test.ts " +
+          "bun test tests/unit/settings/userSettingsService.test.ts " +
             "tests/integration/routes/userSettings.test.ts " +
             "tests/integration/routes/cors.test.ts"
         ),
@@ -3024,6 +4521,14 @@ const LEAVES = Object.freeze(
         ),
         command("smokeHostSyntax", "node --check _docs/_workflows/task-540-smoke-host.mjs"),
         command("smokeHostSelfTest", "node _docs/_workflows/task-540-smoke-host.mjs --self-test"),
+        command(
+          "localOrchestratorSyntax",
+          "node --check _docs/_workflows/task-540-local-orchestrator.mjs"
+        ),
+        command(
+          "localOrchestratorSelfTest",
+          "node _docs/_workflows/task-540-local-orchestrator.mjs --self-test"
+        ),
         command("workflowSyntax", "node --check _docs/_workflows/task-540-implement.mjs"),
         command(
           "workflowRepairResumeSelfTest",
@@ -3032,19 +4537,77 @@ const LEAVES = Object.freeze(
         command("diffCheck", "git diff --check"),
       ]),
     },
-  ].map((leaf) =>
-    Object.freeze({
+  ].map((leaf) => {
+    const readOnlyConsumerFiles = leaf.readOnlyConsumerFiles ?? Object.freeze([]);
+    if (
+      new Set(readOnlyConsumerFiles).size !== readOnlyConsumerFiles.length ||
+      readOnlyConsumerFiles.some((file) => leaf.allowedFiles.includes(file))
+    ) {
+      throw new Error("TASK-540 read-only consumer authority overlaps writable ownership");
+    }
+    return Object.freeze({
       ...leaf,
       phase: leaf.phase ?? leaf.id,
+      readOnlyConsumerFiles,
       requiredFiles: leaf.allowedFiles,
-    })
-  )
+    });
+  })
 );
+
+const VALIDATION_EXECUTABLE_ALLOWLIST = Object.freeze([
+  "bun",
+  "bunx",
+  "git",
+  "node",
+  "./node_modules/.bin/tsc",
+]);
+const VALIDATION_COMMAND_AUTHORITY = (() => {
+  const authority = new Set();
+  const specs = [
+    ...FULL_GATE_COMMANDS,
+    ...WORKFLOW_MECHANICAL_GATE_COMMANDS,
+    ...LEAVES.flatMap((leaf) => leaf.commands),
+    Object.freeze({
+      id: "localRunnerEnvironmentSelfTest",
+      command: LOCAL_RUNNER_SELF_TEST_COMMAND,
+    }),
+    Object.freeze({
+      id: "localRunnerBunEnvironmentSelfTest",
+      command: LOCAL_RUNNER_BUN_ENV_SELF_TEST_COMMAND,
+    }),
+  ];
+  for (const spec of [
+    ...specs,
+    ...specs.flatMap((candidate) =>
+      (candidate.isolationCommands ?? []).map(({ file, command: isolationCommand }) =>
+        Object.freeze({ id: "isolate:" + file, command: isolationCommand })
+      )
+    ),
+  ]) {
+    const argv = parseValidationCommandArgv(spec.command);
+    if (
+      !VALIDATION_EXECUTABLE_ALLOWLIST.includes(argv[0]) ||
+      ["bash", "sh", "env", "/bin/bash", "/bin/sh", "/usr/bin/env"].includes(argv[0]) ||
+      (argv[0] === "bun" &&
+        argv[1] === "run" &&
+        ["test", "test:bun", "test:vitest"].includes(argv[2]) &&
+        !(spec.id === "fullTest" && argv.length === 3 && argv[2] === "test"))
+    ) {
+      throw new Error("TASK-540 validation command matrix contains forbidden argv authority");
+    }
+    authority.add(spec.id + "\0" + spec.command);
+  }
+  return Object.freeze({
+    has(value) {
+      return authority.has(value);
+    },
+  });
+})();
 
 const LEAF_BY_ID = new Map(LEAVES.map((leaf) => [leaf.id, leaf]));
 
 function effectiveRepairMutationOwner(leaf, { afterClosure = false } = {}) {
-  const repairFiles = leaf.repairAllowedFiles ?? leaf.allowedFiles;
+  const repairFiles = leaf.allowedFiles;
   const group = LEAF_STATUS_GROUPS[leaf.id];
   if (!group) throw new Error("TASK-540 effective repair owner has no status group: " + leaf.id);
   const taskContracts = afterClosure ? [ROOT_TASK_PATH, group.childPath, group.leafPath] : [];
@@ -3063,62 +4626,36 @@ function effectiveRepairMutationOwner(leaf, { afterClosure = false } = {}) {
 
 const leafRestrictionPrompt = (leaf) => {
   const restrictions = [];
+  if (leaf.readOnlyConsumerFiles?.length) {
+    restrictions.push(
+      " These dependency-shaped consumer gates are read-only and outside every mutation owner: " +
+        JSON.stringify(leaf.readOnlyConsumerFiles) +
+        ". Run them through the declared targeted and aggregate commands, but never edit, " +
+        "re-baseline, or add them to allowedFiles, repair authority, or closure authority."
+    );
+  }
   if (leaf.id === "540-01-L01" && leaf.fixtureOnlyFiles?.length) {
     restrictions.push(
-      " This owned path is a fixture-only compatibility seam: " +
+      " This leaf's full declared owner set is available only for the exact verified finding. " +
+        "Its Assistant path remains a fixture-only compatibility seam: " +
         JSON.stringify(leaf.fixtureOnlyFiles) +
-        ". Change only the existing custom-screen.block.patch test from unsupported fresh-write " +
-        "hero/rich-text-section fixtures to canonical heading/text blocks, patch heading.data.text, " +
-        "and preserve the heading label plus sibling text content. Do not change production, loosen " +
-        "the Screen schema, add compatibility kinds, or weaken any assertion. The orchestrator " +
-        "mechanically verifies the exact projection."
-    );
-  } else if (leaf.id === "540-04-L03" && leaf.repairAllowedFiles?.length) {
-    restrictions.push(
-      " This persisted repair has exactly three implementation/test repair paths: " +
-        JSON.stringify(leaf.repairAllowedFiles) +
-        ". In cacheBus.ts implement only private per-subscription canonical/legacy remote " +
-        "correlation keyed by JSON.stringify([sourceId, ts, key, action]): count each family, " +
-        "select delivery when max(canonical, legacy) exceeds delivered, subtract balanced pairs, " +
-        "commit/delete/touch the complete state before handler invocation, and cap residual LRU " +
-        "state at 128 with oldest fail-open eviction. " +
-        "Reject unless Reflect.ownKeys is the order-independent exact string-key set action/key/" +
-        "sourceId/ts, strictly bound every field, " +
-        "reject storage over 2048 code units before JSON.parse, and reject malformed/own-source input " +
-        "before every correlation lookup, touch, insertion, or eviction. Preserve self-source filtering, " +
-        "use separate family listener wrappers with exact teardown/clear, and remove-before-set each " +
-        "storage key so identical broadcasts re-arm. " +
-        "Preserve canonical-only, legacy-only, repeated-identical, local bypass, exact local operation " +
-        "tokens, remote undefined tokens, payload/API/cache-key/route/UI compatibility, and the explicit " +
-        "no-TTL/fail-open contract. cacheBus.test.ts is the sole cache-bus test writer and must add the exact " +
-        "interleaving and delimiter-collision matrix; asymmetric instance-directed A/B subscription " +
-        "isolation plus unsubscribe/resubscribe; throwing-handler committed-state behavior; storage " +
-        "remove/set and pre-parse oversize spy; exact unknown-own-key and timestamp reject/accept corpus; " +
-        "specifically reject -1/fraction/NaN/Infinity/MAX_SAFE+1 and accept 0/MAX_SAFE; at the full " +
-        "128-residual cap prove accessor/proxy/invalid-action/type/bound and own-source channel input, " +
-        "plus malformed/removal/invalid/own-source storage input, are state-neutral and cannot evict " +
-        "the oldest correlated twin; exact-cap and re-touch 128-entry true-LRU/FIFO " +
-        "discriminator; local-token/own-echo behavior; and exact-four-key serialization from the leaf. " +
-        "customScreensRoutes.test.ts is the sole additive Bun route-test writer: use its existing hasDb " +
-        "pattern, the real registerCustomScreenRoutes boundary and validate helper, imported production " +
-        "services/schema, uniquely scoped content-type/screen/entry/user fixtures, and cleanup limited to " +
-        "owned rows. Prove a direct-image UUID override PATCH then GET round trip and a structurally valid " +
-        "inactive target mapped to the bounded custom_screen_override_invalid 400 with no persistence. " +
-        "Do not edit production routes or add another DB skip mechanism. " +
-        "Every other dependent/consumer test is read-only; do not edit production consumers, unrelated " +
-        "task/docs/changelog/board/workflow, weaken assertions, stage, or commit. Only an explicit " +
-        "after-closure audit owner may separately add the exact root/child/leaf task contracts for " +
-        "evidenced prose, without performing the separate status transition."
+        ". Touch that path only when the verified finding requires it; if touched, change only the " +
+        "existing custom-screen.block.patch test from unsupported fresh-write hero/rich-text-section " +
+        "fixtures to canonical heading/text blocks, patch heading.data.text, and preserve the heading " +
+        "label plus sibling text content. Do not loosen the Screen schema, add compatibility kinds, " +
+        "or weaken any assertion. The orchestrator mechanically verifies the exact fixture projection."
     );
   } else if (leaf.id === "540-04-L04" && leaf.fixtureOnlyFiles?.length) {
     restrictions.push(
-      " This owned path is a fixture-only compatibility seam: " +
+      " This leaf's full declared owner set is available only for the exact verified finding. " +
+        "Its Screen editor sections path remains a fixture-only compatibility seam: " +
         JSON.stringify(leaf.fixtureOnlyFiles) +
-        ". Add or preserve only `createCacheEventOperationToken: () => Symbol(),` inside " +
+        ". Touch that path only when the verified finding requires it; if touched, add or preserve " +
+        "only `createCacheEventOperationToken: () => Symbol(),` inside " +
         "the existing @/utils/cacheBus mock immediately before subscribeCacheEvents. Every " +
         "other byte, including all nine TASK-500 tests and all of their behavior assertions, " +
         "imports, fixtures, and " +
-        "mocks, must remain byte-identical. Do not change production or replace the fresh-symbol " +
+        "mocks, must remain byte-identical. Do not replace the fresh-symbol " +
         "factory with a shared token. The orchestrator mechanically verifies the exact projection."
     );
   } else if (leaf.fixtureOnlyFiles?.length) {
@@ -3179,7 +4716,10 @@ const RESUME_TASK_STATUS = Object.freeze({
   done: "✅ Done",
 });
 
-function isTask540RepairSiblingStateAllowed(state, { allowCoveredDone = false } = {}) {
+function isTask540RepairSiblingStateAllowed(
+  state,
+  { allowCoveredDone = false, reservedPreClosureRegated = null } = {}
+) {
   const hasTargetedGate = Boolean(state.targetedGate);
   const hasRevalidation = Boolean(state.revalidation);
   const hasExactlyOneGate = hasTargetedGate !== hasRevalidation;
@@ -3189,7 +4729,12 @@ function isTask540RepairSiblingStateAllowed(state, { allowCoveredDone = false } 
       !state.completed &&
       !state.repairPending &&
       ((!state.closurePending && !hasTargetedGate && !hasRevalidation) ||
-        (allowCoveredDone && Boolean(state.closurePending) && hasExactlyOneGate))
+        (allowCoveredDone && Boolean(state.closurePending) && hasExactlyOneGate) ||
+        (Boolean(reservedPreClosureRegated) &&
+          !state.closurePending &&
+          !hasTargetedGate &&
+          hasRevalidation &&
+          state.revalidation === reservedPreClosureRegated.gateValue))
     );
   }
   return (
@@ -3237,6 +4782,40 @@ function assertTask540RepairSiblingStateContract() {
         targetedGate: "gate green",
         revalidation: null,
         repairPending: null,
+      },
+      allowed: false,
+    },
+    {
+      label: "exact reserved pre-closure regated sibling with explicit authority",
+      state: {
+        id: "540-06-L01",
+        status: RESUME_TASK_STATUS.active,
+        completed: null,
+        targetedGate: null,
+        revalidation: "pre-closure remediation / fix-started 2026-07-15 / gate green",
+        repairPending: null,
+        closurePending: null,
+      },
+      reservedPreClosureRegated: {
+        fixStartedDate: "2026-07-15",
+        gateValue: "pre-closure remediation / fix-started 2026-07-15 / gate green",
+      },
+      allowed: true,
+    },
+    {
+      label: "reserved pre-closure authority with wrong successor gate",
+      state: {
+        id: "540-06-L01",
+        status: RESUME_TASK_STATUS.active,
+        completed: null,
+        targetedGate: null,
+        revalidation: "different gate",
+        repairPending: null,
+        closurePending: null,
+      },
+      reservedPreClosureRegated: {
+        fixStartedDate: "2026-07-15",
+        gateValue: "pre-closure remediation / fix-started 2026-07-15 / gate green",
       },
       allowed: false,
     },
@@ -3322,6 +4901,7 @@ function assertTask540RepairSiblingStateContract() {
     if (
       isTask540RepairSiblingStateAllowed(testCase.state, {
         allowCoveredDone: testCase.allowCoveredDone ?? false,
+        reservedPreClosureRegated: testCase.reservedPreClosureRegated ?? null,
       }) !== testCase.allowed
     ) {
       throw new Error("TASK-540 repair sibling self-test failed: " + testCase.label);
@@ -3331,18 +4911,6 @@ function assertTask540RepairSiblingStateContract() {
 }
 
 function assertTask540L03RepairSiblingContract() {
-  const repairOwner = LEAF_BY_ID.get("540-04-L03");
-  const expectedRepairFiles = [
-    "core/admin/utils/cacheBus.ts",
-    "tests/vitest/admin/cacheBus.test.ts",
-    "tests/integration/routes/customScreensRoutes.test.ts",
-  ];
-  if (
-    !repairOwner ||
-    JSON.stringify(repairOwner.repairAllowedFiles) !== JSON.stringify(expectedRepairFiles)
-  ) {
-    throw new Error("TASK-540 L03 repair owner is not pinned to the exact three-file repair set");
-  }
   const cases = [
     {
       label: "L03 repair preserves the exact ungated active closure sibling",
@@ -3411,34 +4979,39 @@ function assertTask540L03EffectiveRepairOwnerContract() {
   const leaf = LEAF_BY_ID.get("540-04-L03");
   const group = LEAF_STATUS_GROUPS["540-04-L03"];
   if (!leaf || !group) throw new Error("TASK-540 L03 effective repair owner is missing");
-  const repairFiles = [
-    "core/admin/utils/cacheBus.ts",
-    "tests/vitest/admin/cacheBus.test.ts",
-    "tests/integration/routes/customScreensRoutes.test.ts",
-  ];
   const taskContracts = [ROOT_TASK_PATH, group.childPath, group.leafPath];
   const preClosure = effectiveRepairMutationOwner(leaf);
   const afterClosure = effectiveRepairMutationOwner(leaf, { afterClosure: true });
-  const historicalConsumers = leaf.allowedFiles.filter((file) => !repairFiles.includes(file));
   const cases = [
     {
-      label: "L03 pre-closure audit fixer owns only the exact three-file repair set",
-      pass: JSON.stringify(preClosure.allowedFiles) === JSON.stringify(repairFiles),
+      label: "L03 has no global historical repair narrowing",
+      pass: !Object.hasOwn(leaf, "repairAllowedFiles"),
     },
     {
-      label: "L03 after-closure audit fixer adds only three status contracts",
+      label: "L03 pre-closure audit fixer retains the full declared owner set",
+      pass: JSON.stringify(preClosure.allowedFiles) === JSON.stringify(leaf.allowedFiles),
+    },
+    {
+      label: "L03 presentation override contract remains writable for verified findings",
+      pass: preClosure.allowedFiles.includes(
+        "core/services/customScreens/screenEntryPresentationOverrideContract.ts"
+      ),
+    },
+    {
+      label: "L03 historical additive route-test exception is not future authority",
+      pass: !preClosure.allowedFiles.includes(
+        "tests/integration/routes/customScreensRoutes.test.ts"
+      ),
+    },
+    {
+      label: "L03 after-closure audit fixer adds only three task contracts",
       pass:
         JSON.stringify(afterClosure.allowedFiles) ===
-        JSON.stringify([...repairFiles, ...taskContracts]),
+        JSON.stringify([...leaf.allowedFiles, ...taskContracts]),
     },
     {
-      label: "L03 audit fixers cannot recover historical consumers or status-transition authority",
+      label: "L03 audit fixers have no task-transition authority",
       pass:
-        historicalConsumers.length > 0 &&
-        historicalConsumers.every(
-          (file) =>
-            !preClosure.allowedFiles.includes(file) && !afterClosure.allowedFiles.includes(file)
-        ) &&
         !Object.hasOwn(preClosure, "taskContractMutations") &&
         !Object.hasOwn(afterClosure, "taskContractMutations"),
     },
@@ -3446,6 +5019,138 @@ function assertTask540L03EffectiveRepairOwnerContract() {
   for (const testCase of cases) {
     if (!testCase.pass) {
       throw new Error("TASK-540 L03 effective repair owner self-test failed: " + testCase.label);
+    }
+  }
+  return cases.length;
+}
+
+function assertTask540R01EffectiveRepairOwnerContract() {
+  const leaf = LEAF_BY_ID.get("540-01-L01");
+  const group = LEAF_STATUS_GROUPS["540-01-L01"];
+  if (!leaf || !group) throw new Error("TASK-540 R01 effective repair owner is missing");
+  const taskContracts = [ROOT_TASK_PATH, group.childPath, group.leafPath];
+  const preClosure = effectiveRepairMutationOwner(leaf);
+  const afterClosure = effectiveRepairMutationOwner(leaf, { afterClosure: true });
+  const restriction = leafRestrictionPrompt(leaf);
+  const readOnlyConsumers = [
+    "tests/vitest/assistant/action-plan-schema.test.ts",
+    "tests/vitest/assistant/catalogBlueprintEngine.test.ts",
+  ];
+  const namedR01CommandFiles = leaf.commands.flatMap(({ command: value }) =>
+    namedTestFilesForCommand(value)
+  );
+  const allWorkflowWritableFiles = LEAVES.flatMap(({ allowedFiles }) => allowedFiles);
+  const cases = [
+    {
+      label: "R01 pre-closure audit fixer retains the full declared owner set",
+      pass:
+        !Object.hasOwn(leaf, "repairAllowedFiles") &&
+        JSON.stringify(preClosure.allowedFiles) === JSON.stringify(leaf.allowedFiles),
+    },
+    {
+      label: "R01 schema, document-op, and route regressions retain mutation authority",
+      pass:
+        preClosure.allowedFiles.includes("tests/vitest/admin/custom-screen-schemas.test.ts") &&
+        preClosure.allowedFiles.includes("core/services/customScreens/screenDocumentOps.ts") &&
+        preClosure.allowedFiles.includes("tests/vitest/customScreens/screenDocumentOps.test.ts") &&
+        namedR01CommandFiles.includes("tests/vitest/customScreens/screenDocumentOps.test.ts") &&
+        preClosure.allowedFiles.includes("tests/integration/routes/customScreensRoutes.test.ts"),
+    },
+    {
+      label: "R01 Assistant consumers have exact explicit read-only metadata",
+      pass:
+        JSON.stringify(leaf.readOnlyConsumerFiles) === JSON.stringify(readOnlyConsumers) &&
+        readOnlyConsumers.every((file) => !allWorkflowWritableFiles.includes(file)) &&
+        readOnlyConsumers.every((file) => !leaf.requiredFiles.includes(file)) &&
+        readOnlyConsumers.every((file) => !preClosure.allowedFiles.includes(file)) &&
+        readOnlyConsumers.every((file) => !afterClosure.allowedFiles.includes(file)),
+    },
+    {
+      label: "R01 read-only consumers remain targeted-command and aggregate covered",
+      pass:
+        readOnlyConsumers.every((file) => namedR01CommandFiles.includes(file)) &&
+        readOnlyConsumers.every((file) => TARGET_VITEST_FILES.includes(file)) &&
+        readOnlyConsumers.every((file) => SOURCE_OWNER_TEST_FILES.includes(file)),
+    },
+    {
+      label: "R01 after-closure audit fixer adds only its three task contracts",
+      pass:
+        JSON.stringify(afterClosure.allowedFiles) ===
+        JSON.stringify([...leaf.allowedFiles, ...taskContracts]),
+    },
+    {
+      label: "R01 Assistant path retains its exact fixture-only verifier",
+      pass:
+        JSON.stringify(leaf.fixtureOnlyFiles) ===
+        JSON.stringify(["tests/unit/assistant/actionExecutorService.test.ts"]),
+    },
+    {
+      label: "R01 restriction is conditional instead of globally fixture-only",
+      pass:
+        restriction.includes("Touch that path only when the verified finding requires it") &&
+        restriction.includes("full declared owner set") &&
+        restriction.includes("dependency-shaped consumer gates are read-only") &&
+        readOnlyConsumers.every((file) => restriction.includes(file)) &&
+        !restriction.includes(". Change only the existing custom-screen.block.patch test"),
+    },
+  ];
+  for (const testCase of cases) {
+    if (!testCase.pass) {
+      throw new Error("TASK-540 R01 effective repair owner self-test failed: " + testCase.label);
+    }
+  }
+  return cases.length;
+}
+
+function assertTask540L04EffectiveRepairOwnerContract() {
+  const leaf = LEAF_BY_ID.get("540-04-L04");
+  const group = LEAF_STATUS_GROUPS["540-04-L04"];
+  if (!leaf || !group) throw new Error("TASK-540 L04 effective repair owner is missing");
+  const taskContracts = [ROOT_TASK_PATH, group.childPath, group.leafPath];
+  const preClosure = effectiveRepairMutationOwner(leaf);
+  const afterClosure = effectiveRepairMutationOwner(leaf, { afterClosure: true });
+  const restriction = leafRestrictionPrompt(leaf);
+  const cases = [
+    {
+      label: "L04 pre-closure audit fixer retains the full declared owner set",
+      pass:
+        !Object.hasOwn(leaf, "repairAllowedFiles") &&
+        JSON.stringify(preClosure.allowedFiles) === JSON.stringify(leaf.allowedFiles),
+    },
+    {
+      label: "L04 production and test paths remain writable for verified findings",
+      pass:
+        preClosure.allowedFiles.includes(
+          "core/admin/ui/custom-screens/CustomScreenEditorPage.tsx"
+        ) && preClosure.allowedFiles.includes("tests/vitest/ui/custom-screens-page.test.tsx"),
+    },
+    {
+      label: "L04 after-closure audit fixer adds only its three task contracts",
+      pass:
+        JSON.stringify(afterClosure.allowedFiles) ===
+          JSON.stringify([...leaf.allowedFiles, ...taskContracts]) &&
+        !Object.hasOwn(preClosure, "taskContractMutations") &&
+        !Object.hasOwn(afterClosure, "taskContractMutations"),
+    },
+    {
+      label: "L04 Screen editor sections path retains its exact fixture-only verifier",
+      pass:
+        JSON.stringify(leaf.fixtureOnlyFiles) ===
+          JSON.stringify(["tests/vitest/ui-integration/screen-editor-sections.test.tsx"]) &&
+        SCREEN_EDITOR_SECTIONS_FIXTURE_ONLY_PATH ===
+          "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
+    },
+    {
+      label: "L04 restriction is conditional instead of globally fixture-only",
+      pass:
+        restriction.includes("Touch that path only when the verified finding requires it") &&
+        restriction.includes("full declared owner set") &&
+        !restriction.includes("Do not change production"),
+    },
+  ];
+  for (const testCase of cases) {
+    if (!testCase.pass) {
+      throw new Error("TASK-540 L04 effective repair owner self-test failed: " + testCase.label);
     }
   }
   return cases.length;
@@ -3469,6 +5174,9 @@ function assertTask540L03GateIsolationContract() {
         "tests/vitest/widgets/screenWidgets.test.tsx",
         "tests/vitest/ui/use-screen-related-entries.test.tsx",
         "tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx",
+        "tests/vitest/ui/custom-screen-records.test.tsx",
+        "tests/vitest/ui-integration/custom-screen-entries-restyle.test.tsx",
+        "tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx",
       ],
     },
     {
@@ -3477,8 +5185,12 @@ function assertTask540L03GateIsolationContract() {
         "tests/vitest/ui/custom-screens-page.test.tsx",
         "tests/vitest/ui/custom-screen-route-params.test.ts",
         "tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx",
+        "tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx",
+        "tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx",
         "tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx",
+        "tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx",
         "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
+        "tests/vitest/ui/custom-screen-list-view-canvas.test.tsx",
         "tests/vitest/admin/cacheBus.test.ts",
       ],
     },
@@ -3523,7 +5235,7 @@ function assertTask540L03GateIsolationContract() {
   const routeGate = leaf.commands.find(({ id }) => id === "directImageOverrideRouteBun");
   if (
     !routeGate ||
-    routeGate.command !== ENV + "bun test tests/integration/routes/customScreensRoutes.test.ts"
+    routeGate.command !== "bun test tests/integration/routes/customScreensRoutes.test.ts"
   ) {
     throw new Error("TASK-540 L03 direct-image route command self-test failed");
   }
@@ -3587,6 +5299,103 @@ function preClosureRegateValue(fixStartedDate) {
     throw new Error("TASK-540 pre-closure re-gate requires a canonical Fix Started date");
   }
   return "pre-closure remediation / fix-started " + fixStartedDate + " / gate green";
+}
+
+function matchesReservedPreClosureRegatedSourceRepair({
+  resumeState,
+  fixStartedDate,
+  gateReceipts,
+  indexKind,
+  hasSharedPending,
+  hasExistingChangelog,
+}) {
+  if (!isCanonicalIsoDate(fixStartedDate)) return false;
+  const gateValue = preClosureRegateValue(fixStartedDate);
+  return Boolean(
+    indexKind === "reserved" &&
+    !hasSharedPending &&
+    !hasExistingChangelog &&
+    gateReceipts.length === 1 &&
+    gateReceipts[0].field === "Revalidation Passed" &&
+    gateReceipts[0].value === gateValue &&
+    resumeState.mode === "repair" &&
+    resumeState.repair?.id &&
+    resumeState.repair.id !== "540-06-L01" &&
+    resumeState.startLeafId === resumeState.repair.id &&
+    JSON.stringify(resumeState.remainingLeafIds) === JSON.stringify([resumeState.repair.id]) &&
+    JSON.stringify(resumeState.reservedPreClosureRegatedSibling) ===
+      JSON.stringify({ fixStartedDate, gateValue })
+  );
+}
+
+function assertTask540ReservedPreClosureRegatedSourceRepairContract() {
+  const fixStartedDate = "2026-07-15";
+  const gateValue = preClosureRegateValue(fixStartedDate);
+  const resumeState = Object.freeze({
+    mode: "repair",
+    repair: Object.freeze({ id: "540-04-L03", pending: "synthetic" }),
+    startLeafId: "540-04-L03",
+    remainingLeafIds: Object.freeze(["540-04-L03"]),
+    reservedPreClosureRegatedSibling: Object.freeze({ fixStartedDate, gateValue }),
+  });
+  const gateReceipts = Object.freeze([
+    Object.freeze({ field: "Revalidation Passed", value: gateValue }),
+  ]);
+  const base = Object.freeze({
+    resumeState,
+    fixStartedDate,
+    gateReceipts,
+    indexKind: "reserved",
+    hasSharedPending: false,
+    hasExistingChangelog: false,
+  });
+  const cases = [
+    ["exact reserved source repair", base, true],
+    ["consumed anchor", { ...base, indexKind: "consumed" }, false],
+    ["existing changelog draft", { ...base, hasExistingChangelog: true }, false],
+    ["closure pending", { ...base, hasSharedPending: true }, false],
+    [
+      "targeted gate field",
+      { ...base, gateReceipts: [{ field: "Targeted Gate Passed", value: gateValue }] },
+      false,
+    ],
+    [
+      "wrong gate value",
+      { ...base, gateReceipts: [{ field: "Revalidation Passed", value: "different" }] },
+      false,
+    ],
+    ["child leaf date mismatch", { ...base, fixStartedDate: "2026-07-14" }, false],
+    [
+      "closure repair owner",
+      {
+        ...base,
+        resumeState: { ...resumeState, repair: { id: "540-06-L01", pending: "synthetic" } },
+      },
+      false,
+    ],
+    [
+      "extra remaining leaf",
+      {
+        ...base,
+        resumeState: {
+          ...resumeState,
+          remainingLeafIds: ["540-04-L03", "540-06-L01"],
+        },
+      },
+      false,
+    ],
+    [
+      "missing prepared sibling authority",
+      { ...base, resumeState: { ...resumeState, reservedPreClosureRegatedSibling: null } },
+      false,
+    ],
+  ];
+  for (const [label, input, expected] of cases) {
+    if (matchesReservedPreClosureRegatedSourceRepair(input) !== expected) {
+      throw new Error("TASK-540 reserved pre-closure source-repair self-test failed: " + label);
+    }
+  }
+  return cases.length;
 }
 
 function matchingPreClosureFixStartedDate(childSource, leafSource, label) {
@@ -4346,6 +6155,7 @@ async function resolveLeafResumeState() {
   const repairState = pendingRepairs[0] ?? null;
   let mode = terminalCandidate ? "terminal" : "initial";
   let startIndex = null;
+  let reservedPreClosureRegatedSibling = null;
   if (terminalCandidate) {
     if (repairState || leafStates.some(({ status }) => status !== RESUME_TASK_STATUS.done)) {
       throw new Error("TASK-540 terminal restart requires every leaf Done without pending repair");
@@ -4361,11 +6171,52 @@ async function resolveLeafResumeState() {
     ) {
       throw new Error("TASK-" + repairState.id + ": invalid pending repair receipts");
     }
+    if (repairState.id !== "540-06-L01") {
+      const closureGroup = LEAF_STATUS_GROUPS["540-06-L01"];
+      const closureLeafState = leafStates.find(({ id }) => id === "540-06-L01");
+      const closureChildState = allContractStates.find(
+        ({ relativePath }) => relativePath === closureGroup.childPath
+      );
+      if (!closureLeafState || !closureChildState) {
+        throw new Error("TASK-540 prepared closure sibling contract is missing");
+      }
+      const fixStartedDate = matchingPreClosureFixStartedDate(
+        closureChildState.source,
+        closureLeafState.source,
+        "TASK-540 prepared closure sibling"
+      );
+      const closureReceiptsAbsent = closureContractPaths().every((relativePath) => {
+        const contractState = allContractStates.find(
+          (candidate) => candidate.relativePath === relativePath
+        );
+        return Boolean(
+          contractState &&
+          CLOSURE_RECEIPT_FIELDS.every(
+            (field) => readTaskMetadataField(contractState.source, field) === null
+          )
+        );
+      });
+      if (
+        fixStartedDate &&
+        closureReceiptsAbsent &&
+        closureLeafState.status === RESUME_TASK_STATUS.active &&
+        !closureLeafState.completed &&
+        !closureLeafState.repairPending &&
+        !closureLeafState.targetedGate &&
+        closureLeafState.revalidation === preClosureRegateValue(fixStartedDate)
+      ) {
+        reservedPreClosureRegatedSibling = Object.freeze({
+          fixStartedDate,
+          gateValue: closureLeafState.revalidation,
+        });
+      }
+    }
     for (const state of leafStates) {
       if (state.id === repairState.id) continue;
       if (
         !isTask540RepairSiblingStateAllowed(state, {
           allowCoveredDone: true,
+          reservedPreClosureRegated: reservedPreClosureRegatedSibling,
         })
       ) {
         throw new Error("TASK-" + state.id + ": invalid sibling state during repair resume");
@@ -4449,6 +6300,7 @@ async function resolveLeafResumeState() {
     repair: repairState
       ? Object.freeze({ id: repairState.id, pending: repairState.repairPending })
       : null,
+    reservedPreClosureRegatedSibling,
     terminal,
     landedLeafIds: Object.freeze(leafStates.filter(({ landed }) => landed).map(({ id }) => id)),
     remainingLeafIds: Object.freeze(
@@ -4511,6 +6363,11 @@ async function resolveChangelogResumeState(resumeState) {
     "TASK-540 closure restart"
   );
   const anchor = indexState.anchor;
+  if (resumeState.reservedPreClosureRegatedSibling && (sharedPending || anchor)) {
+    throw new Error(
+      "TASK-540 reserved pre-closure regated source repair cannot use consumed authority"
+    );
+  }
   if ((sharedPending || allowMissingGate) && !anchor) {
     throw new Error("TASK-540 closure restart requires a canonical consumed anchor");
   }
@@ -4556,12 +6413,25 @@ async function resolveChangelogResumeState(resumeState) {
           resumeState.startIndex === LEAVES.length &&
           resumeState.startLeafId === null &&
           resumeState.remainingLeafIds.length === 0;
-        if (EXISTING_CHANGELOG_REL || (!exactUngatedRestart && !exactRegatedContinuation)) {
+        const exactRegatedSourceRepair = matchesReservedPreClosureRegatedSourceRepair({
+          resumeState,
+          fixStartedDate,
+          gateReceipts,
+          indexKind: indexState.kind,
+          hasSharedPending: Boolean(sharedPending),
+          hasExistingChangelog: Boolean(EXISTING_CHANGELOG_REL),
+        });
+        if (
+          EXISTING_CHANGELOG_REL ||
+          (!exactUngatedRestart && !exactRegatedContinuation && !exactRegatedSourceRepair)
+        ) {
           throw new Error("TASK-540 reserved pre-closure remediation state is not exact");
         }
         reservedMode = exactUngatedRestart
           ? "reserved-pre-closure-ungated"
-          : "reserved-pre-closure-regated";
+          : exactRegatedSourceRepair
+            ? "reserved-pre-closure-regated-source-repair"
+            : "reserved-pre-closure-regated";
       }
       if (EXISTING_CHANGELOG_REL && resumeState.startIndex !== LEAVES.length) {
         throw new Error("TASK-540 pre-pending changelog draft appeared before all leaves landed");
@@ -4957,6 +6827,19 @@ function validateResumeLeafCoverageContract(
 }
 
 async function validateResumeGraphCoverage(resumeState, changelogState, label) {
+  const reservedRegatedSourceRepairMode =
+    changelogState?.mode === "reserved-pre-closure-regated-source-repair";
+  if (
+    Boolean(resumeState.reservedPreClosureRegatedSibling) !== reservedRegatedSourceRepairMode ||
+    (reservedRegatedSourceRepairMode &&
+      (resumeState.mode !== "repair" ||
+        !resumeState.repair?.id ||
+        resumeState.repair.id === "540-06-L01" ||
+        resumeState.startLeafId !== resumeState.repair.id ||
+        JSON.stringify(resumeState.remainingLeafIds) !== JSON.stringify([resumeState.repair.id])))
+  ) {
+    throw new Error(label + ": reserved pre-closure regated repair authority is not bidirectional");
+  }
   const allowCoveredDone = hasIndependentTask540CoverageAuthority(changelogState);
   const leafSummary = validateResumeLeafCoverageContract(resumeState.leafStates, {
     allowCoveredDone,
@@ -5504,10 +7387,6 @@ async function runLeafGate(leaf, attempt, phaseName = leaf.phase) {
     failedCommand: pass ? null : failed.command,
     commands: execution.receipts,
     isolationCommands: execution.isolationReceipts,
-    failureProjection:
-      pass || !execution.receipts.includes(failed)
-        ? null
-        : localCommandFailureProjection(failed, label + ":" + failed.id),
     authority: execution.authority,
   });
   if (pass && result.commands.some((receipt) => receipt.status !== 0)) {
@@ -5517,10 +7396,7 @@ async function runLeafGate(leaf, attempt, phaseName = leaf.phase) {
 }
 
 function gateFailurePrompt(gate) {
-  const values = [...gate.errors];
-  if (gate.failureProjection)
-    values.push("Bounded local failure projection:\n" + gate.failureProjection);
-  return values.join("\n- ");
+  return gate.errors.join("\n- ");
 }
 
 async function implementAndGate(leaf) {
@@ -5744,7 +7620,15 @@ async function runFullValidation(label, phaseName) {
       }),
     authority: execution.authority,
   });
-  return requireFullValidation(result, label);
+  const verified = requireFullValidation(result, label);
+  const executorAuthority = await captureFrozenSmokeExecutorAuthority(
+    label + " validated smoke executor"
+  );
+  if (!sameFrozenSmokeExecutorAuthority(IMPORTED_SMOKE_EXECUTOR_AUTHORITY, executorAuthority)) {
+    throw new Error(label + ": validated smoke executor differs from imported authority");
+  }
+  FULL_VALIDATION_AUTHORITY.set(verified, executorAuthority);
+  return verified;
 }
 
 const POST_AUDIT_LENSES = Object.freeze([
@@ -6368,10 +8252,258 @@ async function runRepairMutationWithInvariant(
   return mutationResult;
 }
 
-async function fixAuditFindings(findings, label, phaseName, { afterClosure = false } = {}) {
-  if (findings.some((finding) => finding.owner === "orchestrator")) {
-    throw new Error(label + ": task/workflow contract drift requires orchestrator intervention");
+const AUDIT_INTERVENTION_FINDINGS_MARKER = "; findings=";
+
+function projectSequentialAuditFindings(results, label) {
+  if (!Array.isArray(results)) {
+    throw new Error(label + ": sequential audit results are invalid");
   }
+  const projected = [];
+  for (const entry of results) {
+    if (
+      !entry ||
+      typeof entry !== "object" ||
+      typeof entry.id !== "string" ||
+      entry.id.length === 0 ||
+      !entry.result ||
+      !Array.isArray(entry.result.findings)
+    ) {
+      throw new Error(label + ": sequential audit result entry is invalid");
+    }
+    for (const finding of entry.result.findings) {
+      if (!finding || typeof finding !== "object") {
+        throw new Error(label + ": sequential audit finding is invalid");
+      }
+      projected.push({
+        lensId: entry.id,
+        severity: finding.severity,
+        owner: finding.owner,
+        area: finding.area,
+        finding: finding.finding,
+        evidence: finding.evidence,
+        recommendation: finding.recommendation,
+      });
+    }
+  }
+  return deepFreezeExact(projected);
+}
+
+function parseDeferredLowEvidenceAnchors(value) {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    value.length > 4096 ||
+    /[\r\n\0]/u.test(value)
+  ) {
+    return null;
+  }
+  const anchors = value.split("; ");
+  if (anchors.join("; ") !== value || new Set(anchors).size !== anchors.length) return null;
+  for (const anchor of anchors) {
+    const match = /^((?:core|tests|docs|_docs)\/[A-Za-z0-9._/-]+):([1-9][0-9]*)$/u.exec(anchor);
+    if (
+      !match ||
+      match[1].includes("//") ||
+      match[1].split("/").some((segment) => segment === "." || segment === "..")
+    ) {
+      return null;
+    }
+  }
+  return Object.freeze(anchors);
+}
+
+async function requireDeferredLowAnchorLines(label) {
+  const sources = new Map();
+  for (const spec of Object.values(DEFERRED_LOW_FOLLOW_UPS)) {
+    if (
+      spec.evidenceAnchors.length === 0 ||
+      spec.evidenceAnchors.length !== spec.anchorLineIncludes.length ||
+      JSON.stringify(parseDeferredLowEvidenceAnchors(spec.evidenceAnchors.join("; "))) !==
+        JSON.stringify(spec.evidenceAnchors)
+    ) {
+      throw new Error(label + ": deferred LOW approved anchor configuration is invalid");
+    }
+    for (const [index, anchor] of spec.evidenceAnchors.entries()) {
+      const separator = anchor.lastIndexOf(":");
+      const relativePath = anchor.slice(0, separator);
+      const lineNumber = Number(anchor.slice(separator + 1));
+      if (!sources.has(relativePath)) {
+        sources.set(relativePath, await readFile(ROOT + "/" + relativePath, "utf8"));
+      }
+      const line = sources.get(relativePath).split("\n")[lineNumber - 1];
+      if (typeof line !== "string" || !line.includes(spec.anchorLineIncludes[index])) {
+        throw new Error(label + ": deferred LOW approved source anchor drifted: " + anchor);
+      }
+    }
+  }
+}
+
+function requireDeferredLowSourceLinkLanguage(sourceLinks, label) {
+  if (
+    !Array.isArray(sourceLinks) ||
+    sourceLinks.length !== DEFERRED_LOW_SOURCE_LINK_PATHS.length ||
+    !sameUniqueSet(
+      sourceLinks.map(({ relativePath }) => relativePath),
+      DEFERRED_LOW_SOURCE_LINK_PATHS
+    )
+  ) {
+    throw new Error(label + ": TASK-540 deferred LOW source-link projection is invalid");
+  }
+  for (const { relativePath, source } of sourceLinks) {
+    if (typeof source !== "string") {
+      throw new Error(label + ": TASK-540 deferred LOW source contract is invalid");
+    }
+    for (const spec of Object.values(DEFERRED_LOW_FOLLOW_UPS)) {
+      if (
+        !source.includes(spec.followUpTask) ||
+        !source.includes(spec.taskPath) ||
+        source.split(spec.approvedEvidenceLanguage).length - 1 !== 1 ||
+        source.split(spec.approvedRationaleLanguage).length - 1 !== 1
+      ) {
+        throw new Error(
+          label + ": TASK-540 deferred LOW evidence/rationale drifted in " + relativePath
+        );
+      }
+    }
+  }
+}
+
+function deferredLowAuditPrompt() {
+  return (
+    " The only findings eligible for non-blocking deferral are the two already-authored " +
+    "TASK-9999 leaves below. Report either one only when the current evidence still proves " +
+    "the exact behavior-neutral finding, using the fixed severity/area/finding/" +
+    "recommendation literally and one exact owner from ownerOneOf: " +
+    JSON.stringify(
+      Object.entries(DEFERRED_LOW_FOLLOW_UPS).map(([area, spec]) => ({
+        severity: "low",
+        ownerOneOf: spec.allowedOwners,
+        area,
+        finding: spec.finding,
+        evidenceMustEqual: spec.evidenceAnchors.join("; "),
+        recommendation: spec.followUpTask,
+      }))
+    ) +
+    ". HIGH/MEDIUM and every UI/UX/accessibility/data/security/privacy/auth/RBAC/API/" +
+    "persistence/migration/performance/reliability/test-integrity finding remain active. " +
+    "Do not use a TASK-9999 recommendation or deferred-low area for any other finding."
+  );
+}
+
+function partitionDeferredLowFindings(findings) {
+  if (!Array.isArray(findings)) {
+    throw new Error("TASK-540 deferred LOW finding projection is invalid");
+  }
+  const blockingFindings = [];
+  const deferredFindings = [];
+  for (const finding of findings) {
+    const spec = DEFERRED_LOW_FOLLOW_UPS[finding?.area];
+    const evidenceAnchors = parseDeferredLowEvidenceAnchors(finding?.evidence);
+    const accepted =
+      spec !== undefined &&
+      finding.severity === "low" &&
+      spec.allowedOwners.includes(finding.owner) &&
+      finding.finding === spec.finding &&
+      finding.recommendation === spec.followUpTask &&
+      evidenceAnchors !== null &&
+      JSON.stringify(evidenceAnchors) === JSON.stringify(spec.evidenceAnchors);
+    (accepted ? deferredFindings : blockingFindings).push(finding);
+  }
+  return deepFreezeExact({ blockingFindings, deferredFindings });
+}
+
+async function requireDeferredLowFollowUpContracts(label) {
+  if (typeof label !== "string" || label.length === 0) {
+    throw new Error("TASK-540 deferred LOW contract check input is invalid");
+  }
+  const [sourceLinks, parent, child, board] = await Promise.all([
+    Promise.all(
+      DEFERRED_LOW_SOURCE_LINK_PATHS.map(async (relativePath) => ({
+        relativePath,
+        source: await readFile(ROOT + "/" + relativePath, "utf8"),
+      }))
+    ),
+    readFile(
+      ROOT + "/_docs/_TASKS/TASK-9999_Permanent_Deferred_Non_User_Facing_Low_Severity_Backlog.md",
+      "utf8"
+    ),
+    readFile(ROOT + "/_docs/_TASKS/TASK-9999-01-Task-540-Deferred-Non-User-Facing-Lows.md", "utf8"),
+    readFile(TASKS + "/README.md", "utf8"),
+  ]);
+  await requireDeferredLowAnchorLines(label);
+  const inProgressSection = board.slice(board.indexOf("## In Progress"), board.indexOf("## Done"));
+  const inProgressTaskRows = [...inProgressSection.matchAll(/^\| TASK-[^\n]+$/gm)].map(
+    (match) => match[0]
+  );
+  requireDeferredLowSourceLinkLanguage(sourceLinks, label);
+  if (
+    !parent.includes("**Status:** 🚧 In Progress") ||
+    !child.includes("**Status:** ⏳ To Do") ||
+    inProgressTaskRows.filter((row) => row.startsWith("| TASK-9999 |")).length !== 1 ||
+    !inProgressTaskRows.at(-1)?.startsWith("| TASK-9999 |")
+  ) {
+    throw new Error(
+      label + ": TASK-9999 parent/child or permanent final board-row contract drifted"
+    );
+  }
+  for (const spec of Object.values(DEFERRED_LOW_FOLLOW_UPS)) {
+    const leaf = await readFile(ROOT + "/" + spec.taskPath, "utf8");
+    if (
+      !leaf.includes("**Parent Task:** TASK-9999") ||
+      !leaf.includes("**Parent Subtask:** TASK-9999-01") ||
+      !leaf.includes("**Source Task:** TASK-540") ||
+      !leaf.includes("**Status:** ⏳ To Do") ||
+      !spec.leafEvidenceTokens.every((token) => leaf.includes(token))
+    ) {
+      throw new Error(label + ": deferred LOW follow-up contract or TASK-540 backlink drifted");
+    }
+  }
+}
+
+function auditFindingsDiagnosticError(findings, message) {
+  const genericMessage = message + "; findings discarded";
+  let payload;
+  try {
+    requireSensitiveSafeAgentResult(findings, message + ": audit diagnostic projection");
+    payload = JSON.stringify({ findings });
+    if (hasSensitiveEvidence(payload)) throw new Error("unsafe audit diagnostic payload");
+  } catch {
+    return new Error(genericMessage);
+  }
+  return new Error(message + AUDIT_INTERVENTION_FINDINGS_MARKER + payload);
+}
+
+function auditInterventionError(findings, label) {
+  if (!findings.some((finding) => finding.owner === "orchestrator")) return null;
+  return auditFindingsDiagnosticError(
+    findings,
+    label + ": task/workflow contract drift requires orchestrator intervention"
+  );
+}
+
+function decidePostAuditRound(findings, round) {
+  if (!Array.isArray(findings) || ![1, 2].includes(round)) {
+    throw new Error("TASK-540 post-audit decision input is invalid");
+  }
+  if (findings.length === 0) {
+    return Object.freeze({ action: "clean", error: null });
+  }
+  const interventionError = auditInterventionError(findings, "post-audit-" + round);
+  if (interventionError) {
+    return Object.freeze({ action: "stop", error: interventionError });
+  }
+  if (round === 2) {
+    return Object.freeze({
+      action: "stop",
+      error: auditFindingsDiagnosticError(findings, "TASK-540 post-audit remained non-clean"),
+    });
+  }
+  return Object.freeze({ action: "repair", error: null });
+}
+
+async function fixAuditFindings(findings, label, phaseName, { afterClosure = false } = {}) {
+  const interventionError = auditInterventionError(findings, label);
+  if (interventionError) throw interventionError;
   for (const ownerId of LEAF_ORDER) {
     const owned = findings.filter((finding) => finding.owner === ownerId);
     if (owned.length === 0) continue;
@@ -6436,13 +8568,21 @@ async function fixAuditFindings(findings, label, phaseName, { afterClosure = fal
   }
 }
 
+async function runSequentialAuditLenses(lenses, runLens) {
+  const results = [];
+  for (const [id, lens] of lenses) {
+    results.push({ id, result: await runLens(id, lens) });
+  }
+  return results;
+}
+
 async function runPostAudit() {
   phase("Post-audit");
   for (let round = 1; round <= 2; round += 1) {
-    const results = await Promise.all(
-      POST_AUDIT_LENSES.map(async ([id, lens]) => ({
-        id,
-        result: await runReadOnlyAgent(
+    const results = await runSequentialAuditLenses(
+      POST_AUDIT_LENSES,
+      async (id, lens) =>
+        await runReadOnlyAgent(
           "Fresh read-only TASK-540 post-audit round " +
             round +
             " at " +
@@ -6453,25 +8593,96 @@ async function runPostAudit() {
             " Return every evidence-backed HIGH/MEDIUM/LOW with concrete file:line and assign " +
             "the exact sole owner leaf; use owner=orchestrator only for immutable task/workflow " +
             "drift. This pre-smoke pass checks source/tests/docs and smoke feasibility only and " +
-            "must not claim runtime receipts, screenshots, or browser evidence. No edits.",
+            "must not claim runtime receipts, screenshots, or browser evidence. No edits." +
+            deferredLowAuditPrompt(),
           {
             label: "post-audit:" + id + ":" + round,
             phase: "Post-audit",
             schema: AUDIT_SCHEMA,
           }
-        ),
-      }))
+        )
     );
     requireAllResults(
       results,
       POST_AUDIT_LENSES.map(([id]) => id),
       "TASK-540 post-audit round " + round
     );
-    const findings = results.flatMap(({ result }) => result.findings);
-    if (findings.length === 0) return;
-    if (round === 2) throw new Error("TASK-540 post-audit remained non-clean");
-    await fixAuditFindings(findings, "post-audit-" + round, "Post-audit");
+    const findings = projectSequentialAuditFindings(results, "TASK-540 post-audit round " + round);
+    const partition = partitionDeferredLowFindings(findings);
+    await requireDeferredLowFollowUpContracts("TASK-540 post-audit round " + round);
+    const decision = decidePostAuditRound(partition.blockingFindings, round);
+    if (decision.action === "clean") return;
+    if (decision.action === "stop") throw decision.error;
+    await fixAuditFindings(partition.blockingFindings, "post-audit-" + round, "Post-audit");
   }
+}
+
+async function assertTask540SequentialAuditDispatchContract() {
+  const lenses = POST_AUDIT_LENSES;
+  const expectedLensIds = Object.freeze([
+    "schema-url",
+    "tabs-renderer",
+    "async-dirty-cache",
+    "preferences-responsive-security",
+    "tests-docs-scope",
+  ]);
+  const lensIds = lenses.map(([id]) => id);
+  if (JSON.stringify(lensIds) !== JSON.stringify(expectedLensIds)) {
+    throw new Error("TASK-540 post-audit lens IDs or strict order drifted");
+  }
+  const dispatchOrder = [];
+  let active = 0;
+  let maximumActive = 0;
+  const results = await runSequentialAuditLenses(lenses, async (id, lens) => {
+    active += 1;
+    maximumActive = Math.max(maximumActive, active);
+    dispatchOrder.push("start:" + id);
+    await Promise.resolve();
+    dispatchOrder.push("finish:" + id);
+    active -= 1;
+    return Object.freeze({ pass: true, id, lens });
+  });
+  if (
+    maximumActive !== 1 ||
+    JSON.stringify(dispatchOrder) !==
+      JSON.stringify(lensIds.flatMap((id) => ["start:" + id, "finish:" + id])) ||
+    JSON.stringify(results.map(({ id }) => id)) !== JSON.stringify(lensIds)
+  ) {
+    throw new Error("TASK-540 audit lenses were not dispatched sequentially");
+  }
+
+  const failureOrder = [];
+  let failureActive = 0;
+  let rejected = false;
+  try {
+    await runSequentialAuditLenses(lenses, async (id) => {
+      failureActive += 1;
+      failureOrder.push(id);
+      await Promise.resolve();
+      failureActive -= 1;
+      if (id === lensIds[1]) throw new Error("synthetic audit failure");
+      return Object.freeze({ pass: true });
+    });
+  } catch (error) {
+    rejected = error instanceof Error && error.message === "synthetic audit failure";
+  }
+  if (
+    !rejected ||
+    failureActive !== 0 ||
+    JSON.stringify(failureOrder) !== JSON.stringify(lensIds.slice(0, 2))
+  ) {
+    throw new Error("TASK-540 audit failure did not stop later lens dispatch after cleanup");
+  }
+
+  const restartOrder = [];
+  await runSequentialAuditLenses(lenses, async (id) => {
+    restartOrder.push(id);
+    return Object.freeze({ pass: true });
+  });
+  if (JSON.stringify(restartOrder) !== JSON.stringify(lensIds)) {
+    throw new Error("TASK-540 fresh audit restart did not begin from the first lens");
+  }
+  return lenses.length + failureOrder.length + restartOrder.length;
 }
 
 function recursivelyFrozen(value, seen = new WeakSet()) {
@@ -6480,6 +8691,292 @@ function recursivelyFrozen(value, seen = new WeakSet()) {
   if (!Object.isFrozen(value)) return false;
   seen.add(value);
   return Reflect.ownKeys(value).every((key) => recursivelyFrozen(value[key], seen));
+}
+
+function assertTask540AuditInterventionContract() {
+  const lensIds = POST_AUDIT_LENSES.map(([id]) => id);
+  const finding = (owner, suffix) =>
+    Object.freeze({
+      severity: owner === "orchestrator" ? "medium" : "low",
+      owner,
+      area: "fixture-area-" + suffix,
+      finding: "fixture finding " + suffix,
+      evidence: "fixture.ts:" + suffix,
+      recommendation: "fixture recommendation " + suffix,
+    });
+  const resultsWith = (...entries) =>
+    lensIds.map((id) => ({
+      id,
+      result: {
+        findings: entries
+          .filter(([lensId]) => lensId === id)
+          .map(([, projectedFinding]) => projectedFinding),
+      },
+    }));
+  const payloadOf = (error) => {
+    if (!(error instanceof Error)) return null;
+    const marker = error.message.indexOf(AUDIT_INTERVENTION_FINDINGS_MARKER);
+    return marker < 0
+      ? null
+      : JSON.parse(error.message.slice(marker + AUDIT_INTERVENTION_FINDINGS_MARKER.length));
+  };
+  const expectedProjection = (lensId, projectedFinding) => ({
+    lensId,
+    severity: projectedFinding.severity,
+    owner: projectedFinding.owner,
+    area: projectedFinding.area,
+    finding: projectedFinding.finding,
+    evidence: projectedFinding.evidence,
+    recommendation: projectedFinding.recommendation,
+  });
+
+  const clean = projectSequentialAuditFindings(resultsWith(), "fixture clean audit");
+  const cleanDecision = decidePostAuditRound(clean, 1);
+  const leafOnlyFinding = finding("540-01-L01", "leaf-only");
+  const leafOnlyProjection = projectSequentialAuditFindings(
+    resultsWith([lensIds[0], leafOnlyFinding]),
+    "fixture leaf-only audit"
+  );
+  const leafRoundOneDecision = decidePostAuditRound(leafOnlyProjection, 1);
+  const leafRoundTwoDecision = decidePostAuditRound(leafOnlyProjection, 2);
+  const expectedLeafOnly = [expectedProjection(lensIds[0], leafOnlyFinding)];
+
+  const orchestratorFinding = finding("orchestrator", "3");
+  const orchestratorProjection = projectSequentialAuditFindings(
+    resultsWith([lensIds[2], orchestratorFinding]),
+    "fixture orchestrator audit"
+  );
+  const orchestratorDecision = decidePostAuditRound(orchestratorProjection, 1);
+  const expectedOrchestrator = [expectedProjection(lensIds[2], orchestratorFinding)];
+
+  const firstLeafFinding = finding("540-01-L01", "1a");
+  const secondLeafFinding = finding("540-01-L01", "1b");
+  const mixedInput = resultsWith(
+    [lensIds[0], firstLeafFinding],
+    [lensIds[0], secondLeafFinding],
+    [lensIds[2], orchestratorFinding]
+  );
+  const mixedInputBefore = JSON.stringify(mixedInput);
+  const mixedProjection = projectSequentialAuditFindings(mixedInput, "fixture mixed audit");
+  const mixedRoundOneDecision = decidePostAuditRound(mixedProjection, 1);
+  const mixedRoundTwoDecision = decidePostAuditRound(mixedProjection, 2);
+  const expectedMixed = [
+    expectedProjection(lensIds[0], firstLeafFinding),
+    expectedProjection(lensIds[0], secondLeafFinding),
+    expectedProjection(lensIds[2], orchestratorFinding),
+  ];
+
+  const unsafeRaw = 'password="fixture audit secret"';
+  const unsafeProjection = projectSequentialAuditFindings(
+    resultsWith([
+      lensIds[4],
+      Object.freeze({
+        ...finding("orchestrator", "unsafe"),
+        evidence: unsafeRaw,
+      }),
+    ]),
+    "fixture unsafe audit"
+  );
+  const unsafeDecision = decidePostAuditRound(unsafeProjection, 1);
+
+  const stablePayload = JSON.stringify({ findings: mixedProjection });
+  const cases = [
+    {
+      label: "production decision accepts a clean first round",
+      pass: clean.length === 0 && cleanDecision.action === "clean" && cleanDecision.error === null,
+    },
+    {
+      label: "production decision sends a first-round leaf finding to repair",
+      pass: leafRoundOneDecision.action === "repair" && leafRoundOneDecision.error === null,
+    },
+    {
+      label: "first-round orchestrator finding retains every exact value",
+      pass:
+        orchestratorDecision.action === "stop" &&
+        JSON.stringify(payloadOf(orchestratorDecision.error)?.findings) ===
+          JSON.stringify(expectedOrchestrator),
+    },
+    {
+      label: "first-round mixed findings stop before repair with complete lens order",
+      pass:
+        mixedRoundOneDecision.action === "stop" &&
+        JSON.stringify(payloadOf(mixedRoundOneDecision.error)?.findings) ===
+          JSON.stringify(expectedMixed),
+    },
+    {
+      label: "second-round mixed findings use the same complete intervention diagnostic",
+      pass:
+        mixedRoundTwoDecision.action === "stop" &&
+        JSON.stringify(payloadOf(mixedRoundTwoDecision.error)?.findings) ===
+          JSON.stringify(expectedMixed),
+    },
+    {
+      label: "second-round leaf residual retains every exact value",
+      pass:
+        leafRoundTwoDecision.action === "stop" &&
+        JSON.stringify(payloadOf(leafRoundTwoDecision.error)?.findings) ===
+          JSON.stringify(expectedLeafOnly),
+    },
+    {
+      label: "unsafe intervention uses only the generic discarded marker",
+      pass:
+        unsafeDecision.action === "stop" &&
+        unsafeDecision.error?.message ===
+          "post-audit-1: task/workflow contract drift requires orchestrator intervention; findings discarded" &&
+        !unsafeDecision.error.message.includes(unsafeRaw),
+    },
+    {
+      label: "projected findings are recursively frozen",
+      pass: recursivelyFrozen(orchestratorProjection) && recursivelyFrozen(mixedProjection),
+    },
+    {
+      label: "finding projection does not mutate structured agent input",
+      pass: JSON.stringify(mixedInput) === mixedInputBefore,
+    },
+    {
+      label: "intervention serialization is byte-stable",
+      pass:
+        JSON.stringify(JSON.parse(stablePayload)) === stablePayload &&
+        JSON.stringify(Object.keys(expectedMixed[0])) ===
+          JSON.stringify([
+            "lensId",
+            "severity",
+            "owner",
+            "area",
+            "finding",
+            "evidence",
+            "recommendation",
+          ]),
+    },
+  ];
+  for (const testCase of cases) {
+    if (!testCase.pass) {
+      throw new Error("TASK-540 audit intervention self-test failed: " + testCase.label);
+    }
+  }
+  return cases.length;
+}
+
+async function assertTask540DeferredLowContract() {
+  const [actorSpec, draftSpec] = Object.values(DEFERRED_LOW_FOLLOW_UPS);
+  const findingFor = (area, spec, overrides = {}) =>
+    Object.freeze({
+      lensId: "fixture-lens",
+      severity: "low",
+      owner: spec.allowedOwners[0],
+      area,
+      finding: spec.finding,
+      evidence: spec.evidenceAnchors.join("; "),
+      recommendation: spec.followUpTask,
+      ...overrides,
+    });
+  const actorFinding = findingFor("deferred-low:actor-media-uuid-domain-naming", actorSpec);
+  const draftFinding = findingFor("deferred-low:unread-screen-tab-label-draft-state", draftSpec);
+  const accepted = partitionDeferredLowFindings([actorFinding, draftFinding]);
+  await requireDeferredLowFollowUpContracts("TASK-540 deferred LOW self-test");
+  const sourceLinks = await Promise.all(
+    DEFERRED_LOW_SOURCE_LINK_PATHS.map(async (relativePath) => ({
+      relativePath,
+      source: await readFile(ROOT + "/" + relativePath, "utf8"),
+    }))
+  );
+  let missingRationaleRejected = false;
+  try {
+    requireDeferredLowSourceLinkLanguage(
+      sourceLinks.map((entry, index) =>
+        index === 0
+          ? Object.freeze({
+              ...entry,
+              source: entry.source.replace(actorSpec.approvedRationaleLanguage, ""),
+            })
+          : entry
+      ),
+      "TASK-540 missing-rationale self-test"
+    );
+  } catch {
+    missingRationaleRejected = true;
+  }
+  const high = partitionDeferredLowFindings([
+    findingFor("deferred-low:actor-media-uuid-domain-naming", actorSpec, {
+      severity: "high",
+    }),
+  ]);
+  const wrongTask = partitionDeferredLowFindings([
+    findingFor("deferred-low:actor-media-uuid-domain-naming", actorSpec, {
+      recommendation: "TASK-9999-01-L02",
+    }),
+  ]);
+  const missingLine = partitionDeferredLowFindings([
+    findingFor("deferred-low:unread-screen-tab-label-draft-state", draftSpec, {
+      evidence: draftSpec.evidenceAnchors
+        .map((anchor, index) => (index === 0 ? anchor.replace(/:[0-9]+$/u, "") : anchor))
+        .join("; "),
+    }),
+  ]);
+  const missingPath = partitionDeferredLowFindings([
+    findingFor("deferred-low:unread-screen-tab-label-draft-state", draftSpec, {
+      evidence: draftSpec.evidenceAnchors
+        .map((anchor, index) => (index === 0 ? anchor.slice(anchor.lastIndexOf(":") + 1) : anchor))
+        .join("; "),
+    }),
+  ]);
+  const fabricatedSubstrings = partitionDeferredLowFindings([
+    findingFor("deferred-low:actor-media-uuid-domain-naming", actorSpec, {
+      evidence: actorSpec.evidenceAnchors.map((anchor) => anchor + "-fabricated").join("; "),
+    }),
+  ]);
+  const excludedImpact = partitionDeferredLowFindings([
+    Object.freeze({
+      ...draftFinding,
+      area: "accessibility",
+      finding: "An empty tablist has no accessible tab.",
+      evidence: "ScreenRuntimeRenderer.tsx:1",
+    }),
+  ]);
+  const cases = [
+    {
+      label: "only both exact authored LOW follow-ups are non-blocking",
+      pass: accepted.blockingFindings.length === 0 && accepted.deferredFindings.length === 2,
+    },
+    {
+      label: "HIGH cannot use the deferred path",
+      pass: high.blockingFindings.length === 1 && high.deferredFindings.length === 0,
+    },
+    {
+      label: "wrong follow-up cannot use the deferred path",
+      pass: wrongTask.blockingFindings.length === 1 && wrongTask.deferredFindings.length === 0,
+    },
+    {
+      label: "evidence without a line cannot use the deferred path",
+      pass: missingLine.blockingFindings.length === 1 && missingLine.deferredFindings.length === 0,
+    },
+    {
+      label: "evidence without a repo-relative path cannot use the deferred path",
+      pass: missingPath.blockingFindings.length === 1 && missingPath.deferredFindings.length === 0,
+    },
+    {
+      label: "substring-fabricated anchors cannot use the deferred path",
+      pass:
+        fabricatedSubstrings.blockingFindings.length === 1 &&
+        fabricatedSubstrings.deferredFindings.length === 0,
+    },
+    {
+      label: "missing exact source-task rationale fails closed",
+      pass: missingRationaleRejected,
+    },
+    {
+      label: "accessibility LOW remains blocking",
+      pass:
+        excludedImpact.blockingFindings.length === 1 &&
+        excludedImpact.deferredFindings.length === 0,
+    },
+  ];
+  for (const testCase of cases) {
+    if (!testCase.pass) {
+      throw new Error("TASK-540 deferred LOW self-test failed: " + testCase.label);
+    }
+  }
+  return cases.length;
 }
 
 let sealedSmokeEvidenceKeys = null;
@@ -7016,21 +9513,61 @@ async function executeAndAuditSmokeEvidenceOnce({
 }
 
 async function runSmokeEvidenceOnce(label, validation) {
+  await requireWorkflowSensitiveEnvBaseline(
+    "TASK-540 before frozen one-shot smoke executor verification"
+  );
+  const validatedExecutorAuthority = FULL_VALIDATION_AUTHORITY.get(validation);
+  if (!validatedExecutorAuthority) {
+    throw new Error("TASK-540 smoke lacks frozen full-validation executor authority");
+  }
+  const currentExecutorAuthority = await captureFrozenSmokeExecutorAuthority(
+    "TASK-540 immediately before one-shot smoke"
+  );
+  if (
+    !sameFrozenSmokeExecutorAuthority(
+      IMPORTED_SMOKE_EXECUTOR_AUTHORITY,
+      validatedExecutorAuthority
+    ) ||
+    !sameFrozenSmokeExecutorAuthority(validatedExecutorAuthority, currentExecutorAuthority)
+  ) {
+    throw new Error("TASK-540 frozen smoke executor changed before one-shot execution");
+  }
   phase("Smoke");
   const nonce = randomUUID().replaceAll("-", "").slice(0, 12);
   const plan = buildTask540SmokePlan({ nonce });
   const screenshotPaths = Object.freeze([...plan.requiredScreenshotPaths]);
-  return await executeAndAuditSmokeEvidenceOnce({
-    label,
-    validation,
-    nonce,
-    plan,
-    controller: smokeExecutionController,
-    snapshotRepository: () =>
-      worktreeSnapshot("TASK-540 one-shot smoke repository snapshot", screenshotPaths),
-    auditRunner: runReadOnlyAgent,
-    phaseReporter: phase,
-  });
+  let result = null;
+  let executionError = null;
+  try {
+    result = await executeAndAuditSmokeEvidenceOnce({
+      label,
+      validation,
+      nonce,
+      plan,
+      controller: smokeExecutionController,
+      snapshotRepository: () =>
+        worktreeSnapshot("TASK-540 one-shot smoke repository snapshot", screenshotPaths),
+      auditRunner: runReadOnlyAgent,
+      phaseReporter: phase,
+    });
+  } catch (error) {
+    executionError = error;
+  }
+  let environmentError = null;
+  try {
+    await requireWorkflowSensitiveEnvBaseline("TASK-540 after frozen one-shot smoke execution");
+  } catch (error) {
+    environmentError = error;
+  }
+  if (executionError && environmentError) {
+    throw new AggregateError(
+      [executionError, environmentError],
+      "TASK-540 one-shot smoke and private environment boundary failed"
+    );
+  }
+  if (executionError) throw executionError;
+  if (environmentError) throw environmentError;
+  return result;
 }
 
 const closureEvidenceOwner = Object.freeze({
@@ -7754,7 +10291,8 @@ async function setClosurePendingState(label, generation = closureGeneration) {
         "`. Remove Completed from those three active closure contracts. Preserve canonical " +
         "Implementation Complete on the closure parent and leaf and keep it absent on the root. " +
         "Move only TASK-540's board row to 🚧 In progress and restore the exact pinned baseline " +
-        "statistics. Preserve " +
+        "statistics. Preserve TASK-9999 byte-identically as the final In Progress row; derive " +
+        "counts from the fresh board and apply only TASK-540's bucket delta. Preserve " +
         "every prior Closure Evidence SHA-256 and Closure Generation value byte-identically. " +
         "Preserve the exact closure-leaf gate receipt `**" +
         closureLeafGateReceipt.field +
@@ -7846,6 +10384,9 @@ async function setClosurePendingState(label, generation = closureGeneration) {
     ) {
       throw new Error("TASK-540 closure-pending board row/statistics mismatch");
     }
+    await requireDeferredLowFollowUpContracts(
+      "TASK-540 closure-pending board verification " + label
+    );
     await readSharedClosurePending({ required: true });
     persistedPendingProjection = await captureExactPendingClosureProjection(
       "TASK-540 durable closure-pending " + label
@@ -8118,11 +10659,13 @@ async function verifyClosureState(evidenceHash, generation, entryGraph = null) {
   ) {
     throw new Error("TASK-540 board row/statistics mismatch after closure");
   }
+  await requireDeferredLowFollowUpContracts("TASK-540 closed board verification");
   await requireTask540ChangelogIndex();
 }
 
 async function runClosure(smoke, fullValidation, label, findings = []) {
   phase("Closure");
+  await requireDeferredLowFollowUpContracts("TASK-540 closure entry " + label);
   const sourceOwnerTestHashesBefore = requireSourceOwnerTestHashBoundary(
     "TASK-540 closure " + label
   );
@@ -8290,7 +10833,8 @@ async function runClosure(smoke, fullValidation, label, findings = []) {
           "` without adding the other gate field. The resulting graph must have every physical " +
           "TASK-540 contract Done. Synchronize only the owned active child/root rows, move only " +
           "TASK-540's board row to ✅ Done, and recalculate " +
-          "statistics. Apply closure-metadata findings " +
+          "statistics from the fresh board with only TASK-540's In Progress→Done delta. Preserve " +
+          "TASK-9999 byte-identically as the final In Progress row. Apply closure-metadata findings " +
           JSON.stringify(findings) +
           ". Never edit changelog/source/tests/product docs/workflow, stage, or commit.",
         { label: "closure-status:540:" + label, phase: "Closure" },
@@ -8329,6 +10873,9 @@ async function runClosure(smoke, fullValidation, label, findings = []) {
       }
       throw finalStatusError;
     }
+    const localMechanicalReceipt = await runWorkflowMechanicalGateLocally(
+      "TASK-540 post-status mechanical local gate " + generation + ":" + label
+    );
     const mechanicalGate = await runReadOnlyAgent(
       "Read-only TASK-540 post-status mechanical graph gate at " +
         ROOT +
@@ -8336,9 +10883,10 @@ async function runClosure(smoke, fullValidation, label, findings = []) {
         "TASK-540-06-L01, TASK-540-06, and the root with identical board-baseline/changelog-path " +
         "pins and a strict matching independent closureControl. Verify board row/statistics, " +
         "changelog 1252/index, the exact initial Git index baseline remains unchanged with no " +
-        "agent index write or commit, and run exactly: " +
-        WORKFLOW_MECHANICAL_GATE_COMMAND +
-        ". Do not edit.",
+        "agent index write or commit. Independently review this exact orchestrator-local command " +
+        "receipt projection: " +
+        JSON.stringify(localMechanicalReceipt) +
+        ". Do not run commands and do not edit.",
       {
         label: "closure-mechanical:540:" + generation + ":" + label,
         phase: "Closure",
@@ -8662,10 +11210,10 @@ async function assertTask540FinalDriftRoundContract() {
 
 async function runFinalAudit(round) {
   phase("Final drift");
-  const results = await Promise.all(
-    FINAL_LENSES.map(async ([id, lens]) => ({
-      id,
-      result: await runReadOnlyAgent(
+  const results = await runSequentialAuditLenses(
+    FINAL_LENSES,
+    async (id, lens) =>
+      await runReadOnlyAgent(
         "Fresh read-only TASK-540 final closure audit round " +
           round +
           " at " +
@@ -8678,21 +11226,24 @@ async function runFinalAudit(round) {
           "Assign a defect in a TASK-540-01 through TASK-540-05 source contract to its exact leaf " +
           "owner even when the defect is task metadata. Assign only TASK-540-06/root/changelog/" +
           "index/board defects to owner=orchestrator and area exactly closure-metadata. Do not " +
-          "edit or start runtime.",
+          "edit or start runtime." +
+          deferredLowAuditPrompt(),
         {
           label: "final-drift:" + id + ":" + round,
           phase: "Final drift",
           schema: AUDIT_SCHEMA,
         }
-      ),
-    }))
+      )
   );
   requireAllResults(
     results,
     FINAL_LENSES.map(([id]) => id),
     "TASK-540 final drift round " + round
   );
-  return results.flatMap(({ result }) => result.findings);
+  const findings = projectSequentialAuditFindings(results, "TASK-540 final drift round " + round);
+  const partition = partitionDeferredLowFindings(findings);
+  await requireDeferredLowFollowUpContracts("TASK-540 final drift round " + round);
+  return partition.blockingFindings;
 }
 
 async function hashFiles(paths) {
@@ -8870,10 +11421,628 @@ async function assertTask540SmokeExecutionOnceContract() {
   return cases.length;
 }
 
+async function assertTask540LocalCommandRunnerContract() {
+  const inherited = Object.freeze({ PATH: "/usr/bin:/bin" });
+  const repo = Object.freeze({
+    DATABASE_URL: "postgres://task540.invalid/test",
+    PII_HASH_KEY: "task540-hash",
+    PII_ENC_KEY: "task540-encryption",
+    MEDIA_SECRET_MASTER_KEY: "task540-media",
+    ADMIN_EMAIL: "task540@example.invalid",
+  });
+  const projected = buildStrictValidationEnvironment(inherited, repo);
+  const expectedProjectionKeys = [
+    ...HOST_REQUIRED_REPO_ENV,
+    ...Object.keys(HOST_FIXED_ENV),
+    "ADMIN_EMAIL",
+  ].sort();
+  const projectionPass =
+    Object.getPrototypeOf(projected) === null &&
+    Object.isFrozen(projected) &&
+    JSON.stringify(Object.keys(projected).sort()) === JSON.stringify(expectedProjectionKeys) &&
+    Object.keys(projected).every((key) => VALIDATION_ENVIRONMENT_KEYS.includes(key));
+
+  const fixedRepoProcessControlsAccepted = REPO_FIXED_PROCESS_CONTROL_KEYS.every((key) => {
+    const parsed = parseStrictRepoEnvironment(key + "=" + HOST_FIXED_ENV[key] + "\n");
+    const projectedWithFixedRepoValue = buildStrictValidationEnvironment(
+      inherited,
+      Object.freeze({ ...repo, ...parsed })
+    );
+    return (
+      parsed[key] === HOST_FIXED_ENV[key] &&
+      projectedWithFixedRepoValue[key] === HOST_FIXED_ENV[key]
+    );
+  });
+  let fixedRepoProcessControlConflictsRejected = 0;
+  for (const [key, conflictingValue] of [
+    ["PATH", "/tmp/task540-path-conflict"],
+    ["BUN_OPTIONS", "--smol"],
+    ["NODE_ENV", "production"],
+  ]) {
+    const parsed = parseStrictRepoEnvironment(key + "=" + conflictingValue + "\n");
+    try {
+      buildStrictValidationEnvironment(inherited, Object.freeze({ ...repo, ...parsed }));
+    } catch {
+      fixedRepoProcessControlConflictsRejected += 1;
+    }
+  }
+  const acceptedAmbientCiValues = [null, "1", "true"].every((ci) => {
+    const source = ci === null ? inherited : Object.freeze({ ...inherited, CI: ci });
+    return buildStrictValidationEnvironment(source, repo).CI === "true";
+  });
+  let invalidAmbientCiRejected = false;
+  try {
+    buildStrictValidationEnvironment(Object.freeze({ PATH: "/usr/bin", CI: "false" }), repo);
+  } catch {
+    invalidAmbientCiRejected = true;
+  }
+  let accessorRejected = false;
+  try {
+    ownEnvironmentString(
+      Object.defineProperty({}, "PATH", { configurable: true, get: () => "/usr/bin" }),
+      "PATH",
+      { required: true }
+    );
+  } catch {
+    accessorRejected = true;
+  }
+  let duplicateRepoKeyRejected = false;
+  try {
+    parseStrictRepoEnvironment("TASK540_VALUE=one\nTASK540_VALUE=two\n");
+  } catch {
+    duplicateRepoKeyRejected = true;
+  }
+  let processControlKeyRejected = false;
+  try {
+    parseStrictRepoEnvironment("NODE_OPTIONS=--require=fixture\n");
+  } catch {
+    processControlKeyRejected = true;
+  }
+  let scriptDriftRejected = false;
+  try {
+    requireExactTestEnvironmentSourceScriptObject({
+      scripts: { ...REQUIRED_TEST_ENV_SOURCE_SCRIPTS, test: "bun run test:bun" },
+    });
+  } catch {
+    scriptDriftRejected = true;
+  }
+  requireExactTestEnvironmentSourceScriptObject({
+    scripts: { ...REQUIRED_TEST_ENV_SOURCE_SCRIPTS },
+  });
+  let lifecycleScriptRejected = false;
+  try {
+    requireExactTestEnvironmentSourceScriptObject({
+      scripts: { ...REQUIRED_TEST_ENV_SOURCE_SCRIPTS, pretest: "node --version" },
+    });
+  } catch {
+    lifecycleScriptRejected = true;
+  }
+
+  const fullTestInvocation = await buildValidationCommandInvocation({
+    id: "fullTest",
+    command: "bun run test",
+  });
+  const directFullTestPass =
+    fullTestInvocation.executable === VALIDATION_EXECUTABLE_IDENTITIES.bun.resolvedPath &&
+    JSON.stringify(fullTestInvocation.args) === JSON.stringify(["run", "test"]) &&
+    Object.getPrototypeOf(fullTestInvocation.environment) === null &&
+    fullTestInvocation.environment.BUN_OPTIONS === "--no-env-file" &&
+    fullTestInvocation.environment.PATH === SAFE_COMMAND_PATH;
+  const tscInvocation = await buildValidationCommandInvocation({
+    id: "rootTsc",
+    command: ROOT_TSC,
+  });
+  const vitestInvocation = await buildValidationCommandInvocation({
+    id: "targetedVitest",
+    command: TARGETED_VITEST,
+  });
+  const executableBindingPass =
+    tscInvocation.executable === VALIDATION_EXECUTABLE_IDENTITIES.node.resolvedPath &&
+    tscInvocation.args[0] === VALIDATION_EXECUTABLE_IDENTITIES.tsc.resolvedPath &&
+    vitestInvocation.executable === VALIDATION_EXECUTABLE_IDENTITIES.bun.resolvedPath &&
+    JSON.stringify(vitestInvocation.args.slice(0, 2)) === JSON.stringify(["x", "--no-install"]);
+  const gitEnvironmentPass =
+    Object.getPrototypeOf(OBSERVATIONAL_GIT_ENVIRONMENT) === null &&
+    Object.isFrozen(OBSERVATIONAL_GIT_ENVIRONMENT) &&
+    JSON.stringify(Object.keys(OBSERVATIONAL_GIT_ENVIRONMENT).sort()) ===
+      JSON.stringify(
+        [
+          "GIT_CONFIG_GLOBAL",
+          "GIT_CONFIG_NOSYSTEM",
+          "GIT_OPTIONAL_LOCKS",
+          "GIT_TERMINAL_PROMPT",
+          "HOME",
+          "LANG",
+          "LC_ALL",
+          "PATH",
+        ].sort()
+      ) &&
+    !Object.hasOwn(OBSERVATIONAL_GIT_ENVIRONMENT, "DATABASE_URL");
+  const gitValidationSpec = WORKFLOW_MECHANICAL_GATE_COMMANDS.find(({ id }) => id === "diffCheck");
+  const gitValidationInvocation = await buildValidationCommandInvocation(gitValidationSpec);
+  const minimalGitValidationPass =
+    gitValidationInvocation.executable === VALIDATION_EXECUTABLE_IDENTITIES.git.resolvedPath &&
+    Object.getPrototypeOf(gitValidationInvocation.environment) === null &&
+    Object.isFrozen(gitValidationInvocation.environment) &&
+    !Object.hasOwn(gitValidationInvocation.environment, "DATABASE_URL") &&
+    JSON.stringify(gitValidationInvocation.args) ===
+      JSON.stringify([
+        ...OBSERVATIONAL_GIT_PREFIX_ARGS,
+        "diff",
+        ...OBSERVATIONAL_GIT_DIFF_ARGS,
+        "--check",
+      ]);
+  const launcherSignalPass =
+    VALIDATION_LAUNCHER_SOURCE.includes('require("node:os").constants.signals[signal]') &&
+    !VALIDATION_LAUNCHER_SOURCE.includes("process.kill(process.pid,signal)");
+  let escapedFullTestRejections = 0;
+  for (const escaped of [
+    Object.freeze({ id: "notFullTest", command: "bun  run test" }),
+    Object.freeze({ id: "notFullTest", command: "bun run test " }),
+    Object.freeze({ id: "notFullTest", command: "env bun run test" }),
+    Object.freeze({ id: "notFullTest", command: "bash -c 'source .env; bun run test'" }),
+  ]) {
+    try {
+      await buildValidationCommandInvocation(escaped);
+    } catch {
+      escapedFullTestRejections += 1;
+    }
+  }
+
+  const procIdentity = parseValidationProcStat(
+    "6543 (task 540 validation) " +
+      ["S", "321", "6543", "6543", ...Array(15).fill("0"), "123456"].join(" "),
+    6543
+  );
+  const processIdentityPass =
+    procIdentity.ppid === 321 &&
+    procIdentity.processGroupId === 6543 &&
+    procIdentity.sessionId === 6543 &&
+    procIdentity.startTime === "123456" &&
+    isOwnedValidationProcess(procIdentity, procIdentity) &&
+    !isOwnedValidationProcess(
+      Object.freeze({
+        ...procIdentity,
+        pid: 7000,
+        processGroupId: 7000,
+        sessionId: 7000,
+        startTime: "123457",
+      }),
+      procIdentity
+    );
+
+  let validationPreResumeCleanupCalls = 0;
+  let validationPreResumeAuthorizeRejected = false;
+  try {
+    await authorizeAndResumeStoppedValidationChild({
+      label: "TASK-540 validation pre-resume self-test",
+      authorize: async () => {
+        throw new Error("synthetic authorization failure");
+      },
+      resume: async () => true,
+      cleanup: async () => {
+        validationPreResumeCleanupCalls += 1;
+      },
+    });
+  } catch {
+    validationPreResumeAuthorizeRejected = true;
+  }
+  let validationPreResumeFalseRejected = false;
+  try {
+    await authorizeAndResumeStoppedValidationChild({
+      label: "TASK-540 validation pre-resume self-test",
+      authorize: async () => {},
+      resume: async () => false,
+      cleanup: async () => {
+        validationPreResumeCleanupCalls += 1;
+      },
+    });
+  } catch {
+    validationPreResumeFalseRejected = true;
+  }
+  let validationPreResumeAggregateRejected = false;
+  try {
+    await authorizeAndResumeStoppedValidationChild({
+      label: "TASK-540 validation pre-resume self-test",
+      authorize: async () => {
+        throw new Error("synthetic authorization failure");
+      },
+      resume: async () => true,
+      cleanup: async () => {
+        validationPreResumeCleanupCalls += 1;
+        throw new Error("synthetic cleanup failure");
+      },
+    });
+  } catch (error) {
+    validationPreResumeAggregateRejected =
+      error instanceof AggregateError && error.errors.length === 2;
+  }
+  let validationPreResumeSuccessCleanupCalls = 0;
+  await authorizeAndResumeStoppedValidationChild({
+    label: "TASK-540 validation pre-resume self-test",
+    authorize: async () => {},
+    resume: async () => true,
+    cleanup: async () => {
+      validationPreResumeSuccessCleanupCalls += 1;
+    },
+  });
+  const validationPreResumeCleanupPass =
+    validationPreResumeAuthorizeRejected &&
+    validationPreResumeFalseRejected &&
+    validationPreResumeAggregateRejected &&
+    validationPreResumeCleanupCalls === 3 &&
+    validationPreResumeSuccessCleanupCalls === 0;
+
+  const commandSpecs = [
+    ...FULL_GATE_COMMANDS,
+    ...WORKFLOW_MECHANICAL_GATE_COMMANDS,
+    ...LEAVES.flatMap((leaf) => leaf.commands),
+  ];
+  const commandArgvPass = commandSpecs.every((spec) => {
+    if (spec.id === "fullTest") return spec.command === "bun run test";
+    const argv = parseValidationCommandArgv(spec.command);
+    return argv.length > 0 && typeof argv[0] === "string";
+  });
+  let shellSyntaxRejected = false;
+  try {
+    parseValidationCommandArgv("node --version && env");
+  } catch {
+    shellSyntaxRejected = true;
+  }
+
+  const label = "TASK-540 local command runner self-test";
+  const hermeticEnvironmentProjectionPass =
+    HERMETIC_SELF_TEST_MODE &&
+    (await hashSensitiveEnvProjection()) === HERMETIC_SELF_TEST_SENSITIVE_ENV_PROJECTION;
+  await captureWorkflowSensitiveEnvBaseline(label + ": private environment baseline");
+  await requireWorkflowSensitiveEnvBaseline(label + ": private environment baseline check");
+  const environmentReceipt = await runLocalValidationCommand(
+    Object.freeze({
+      id: "localRunnerEnvironmentSelfTest",
+      command: LOCAL_RUNNER_SELF_TEST_COMMAND,
+    }),
+    label
+  );
+  const environmentAuthority = localCommandAuthority(environmentReceipt, label);
+  const observedEnvironmentKeys = JSON.parse(environmentAuthority.stdout.toString("utf8"));
+  const liveEnvironmentPass =
+    environmentReceipt.status === 0 &&
+    environmentReceipt.signal === null &&
+    !environmentReceipt.timedOut &&
+    !environmentReceipt.outputLimitExceeded &&
+    environmentReceipt.repository.unchanged &&
+    environmentAuthority.containsSensitiveOutput === false &&
+    JSON.stringify(observedEnvironmentKeys) ===
+      JSON.stringify(Object.keys(buildStrictValidationEnvironment()).sort());
+  const bunEnvironmentLabel = label + ":nested-bun";
+  const bunEnvironmentReceipt = await runLocalValidationCommand(
+    Object.freeze({
+      id: "localRunnerBunEnvironmentSelfTest",
+      command: LOCAL_RUNNER_BUN_ENV_SELF_TEST_COMMAND,
+    }),
+    bunEnvironmentLabel
+  );
+  const bunEnvironmentAuthority = localCommandAuthority(bunEnvironmentReceipt, bunEnvironmentLabel);
+  const observedBunEnvironment = JSON.parse(bunEnvironmentAuthority.stdout.toString("utf8"));
+  const expectedLiveEnvironmentKeys = Object.keys(buildStrictValidationEnvironment()).sort();
+  const liveNestedBunEnvironmentPass =
+    bunEnvironmentReceipt.status === 0 &&
+    bunEnvironmentReceipt.signal === null &&
+    !bunEnvironmentReceipt.timedOut &&
+    !bunEnvironmentReceipt.outputLimitExceeded &&
+    bunEnvironmentReceipt.repository.unchanged &&
+    bunEnvironmentAuthority.containsSensitiveOutput === false &&
+    observedBunEnvironment.status === 0 &&
+    observedBunEnvironment.stderrBytes === 0 &&
+    JSON.stringify(observedBunEnvironment.parent) === JSON.stringify(expectedLiveEnvironmentKeys) &&
+    JSON.stringify(observedBunEnvironment.child) === JSON.stringify(expectedLiveEnvironmentKeys);
+
+  const source = await readFile(WORKFLOW, "utf8");
+  const noAgentOutputProjection = [
+    "failure" + "Projection",
+    "stdout" + "Excerpt",
+    "stderr" + "Excerpt",
+  ].every((token) => !source.includes(token));
+  const grounded = await repoContext();
+  const groundedContextPass =
+    typeof grounded.diffPatch === "string" &&
+    Array.isArray(grounded.taskStatuses) &&
+    grounded.taskStatuses.length === TASK_FILES.length &&
+    grounded.taskStatuses.every(
+      ({ file, status }) => TASK_FILES.includes(file) && typeof status === "string"
+    ) &&
+    Array.isArray(grounded.untrackedFiles) &&
+    grounded.untrackedFiles.every((entry) => {
+      if (
+        typeof entry.path !== "string" ||
+        typeof entry.kind !== "string" ||
+        !Number.isSafeInteger(entry.byteLength) ||
+        !/^[0-9a-f]{64}$/.test(entry.sha256)
+      ) {
+        return false;
+      }
+      if (entry.kind === "text") return typeof entry.content === "string";
+      if (entry.kind === "binary") return !Object.hasOwn(entry, "content");
+      if (entry.kind === "symlink") return typeof entry.target === "string";
+      return false;
+    });
+  const sensitiveGroundedPathPass =
+    isSensitiveGroundedPath(".envrc") &&
+    isSensitiveGroundedPath("nested/.git/config") &&
+    isSensitiveGroundedPath("artifacts/session-token.bin") &&
+    !isSensitiveGroundedPath("_docs/_workflows/task-540-local-orchestrator.mjs");
+  const rootSensitiveEnvironmentNamePass =
+    [
+      ".env",
+      ".env.local",
+      ".envrc",
+      ".environment",
+      ".env-prod",
+      ".env.",
+      ".env\\credential",
+    ].every(isRootSensitiveEnvironmentName) &&
+    [".en", "env", "nested/.env", ".config"].every(
+      (name) => !isRootSensitiveEnvironmentName(name)
+    ) &&
+    JSON.stringify(
+      selectRootSensitiveEnvironmentNames([
+        { name: ".env\\credential" },
+        { name: "ordinary" },
+        { name: ".env.local" },
+      ])
+    ) === JSON.stringify([".env.local", ".env\\credential"]);
+  let unsafeRootSensitiveEnvironmentNameRejected = false;
+  try {
+    selectRootSensitiveEnvironmentNames([{ name: ".env/escape" }]);
+  } catch {
+    unsafeRootSensitiveEnvironmentNameRejected = true;
+  }
+  const exactRootSensitiveEnvironmentBoundAccepted =
+    selectRootSensitiveEnvironmentNames(
+      Array.from({ length: 64 }, (_, index) => ({
+        name: ".env.bound." + String(index).padStart(2, "0"),
+      }))
+    ).length === 64;
+  let excessiveRootSensitiveEnvironmentNamesRejected = false;
+  try {
+    selectRootSensitiveEnvironmentNames(
+      Array.from({ length: 65 }, (_, index) => ({
+        name: ".env.excess." + String(index).padStart(2, "0"),
+      }))
+    );
+  } catch {
+    excessiveRootSensitiveEnvironmentNamesRejected = true;
+  }
+  const stableFingerprintStat = Object.freeze({
+    dev: 1n,
+    ino: 2n,
+    mode: 0o100600n,
+    nlink: 1n,
+    size: 7n,
+    mtimeNs: 3n,
+    ctimeNs: 4n,
+  });
+  const stableFingerprintBytes = Buffer.from("fixture");
+  const stableFingerprint = hashStableRegularFileAuthority(
+    stableFingerprintBytes,
+    stableFingerprintStat
+  );
+  const stableFileIdentityPass =
+    stableFingerprint ===
+      hashStableRegularFileAuthority(stableFingerprintBytes, stableFingerprintStat) &&
+    stableFingerprint !==
+      hashStableRegularFileAuthority(
+        stableFingerprintBytes,
+        Object.freeze({ ...stableFingerprintStat, ino: 5n })
+      ) &&
+    stableFingerprint !==
+      hashStableRegularFileAuthority(
+        stableFingerprintBytes,
+        Object.freeze({ ...stableFingerprintStat, ctimeNs: 6n })
+      );
+  const sanitizerFixtures = [
+    'password="fixture-value"',
+    'password: "fixture value with spaces", safe: true',
+    "+password=fixture value from added first line",
+    "-private_key: fixture value from deleted first line",
+    "  +password=fixture value from indented added first line",
+    "\n  -private_key: fixture value from indented deleted line",
+    "\n-password='deleted fixture value'\nnext: true",
+    "private_key: |-\n  fixture line one\n  fixture line two\nnext: true",
+  ];
+  const sanitizerPass = sanitizerFixtures.every((fixture) => {
+    const sanitized = sanitizeSensitiveEvidence(fixture);
+    return (
+      sanitized.includes("[redacted]") &&
+      !sanitized.includes("fixture value") &&
+      !sanitized.includes("fixture line") &&
+      !hasSensitiveEvidence(sanitized)
+    );
+  });
+  let duplicateEnvironmentBaselineRejected = false;
+  try {
+    await captureWorkflowSensitiveEnvBaseline(label + ": duplicate private environment baseline");
+  } catch {
+    duplicateEnvironmentBaselineRejected = true;
+  }
+
+  const cases = [
+    ["strict-projection", projectionPass],
+    ["fixed-repo-process-controls", fixedRepoProcessControlsAccepted],
+    ["fixed-repo-process-control-conflicts", fixedRepoProcessControlConflictsRejected === 3],
+    ["ambient-ci-normalization", acceptedAmbientCiValues && invalidAmbientCiRejected],
+    ["accessor-rejection", accessorRejected],
+    ["duplicate-repo-key", duplicateRepoKeyRejected],
+    ["process-control-key", processControlKeyRejected],
+    ["script-drift", scriptDriftRejected],
+    ["lifecycle-script", lifecycleScriptRejected],
+    ["direct-full-test", directFullTestPass],
+    ["absolute-executable-binding", executableBindingPass],
+    ["minimal-git-environment", gitEnvironmentPass],
+    ["minimal-git-validation", minimalGitValidationPass],
+    ["deterministic-launcher-signal", launcherSignalPass],
+    ["hermetic-sensitive-environment-projection", hermeticEnvironmentProjectionPass],
+    ["single-assignment-environment-baseline", duplicateEnvironmentBaselineRejected],
+    [
+      "hermetic-self-test-repo-environment",
+      HERMETIC_SELF_TEST_MODE && REPO_ENV === HERMETIC_SELF_TEST_REPO_ENVIRONMENT,
+    ],
+    ["escaped-full-test", escapedFullTestRejections === 4],
+    ["process-identity", processIdentityPass],
+    ["pre-resume-cleanup", validationPreResumeCleanupPass],
+    ["command-argv", commandArgvPass],
+    ["shell-syntax", shellSyntaxRejected],
+    [
+      "live-environment:" +
+        JSON.stringify({
+          status: environmentReceipt.status,
+          signal: environmentReceipt.signal,
+          timedOut: environmentReceipt.timedOut,
+          outputLimit: environmentReceipt.outputLimitExceeded,
+          repository: environmentReceipt.repository.unchanged,
+          sensitive: environmentAuthority.containsSensitiveOutput,
+          keySetMatch:
+            JSON.stringify(observedEnvironmentKeys) ===
+            JSON.stringify(Object.keys(buildStrictValidationEnvironment()).sort()),
+        }),
+      liveEnvironmentPass,
+    ],
+    ["live-nested-bun-environment", liveNestedBunEnvironmentPass],
+    ["no-agent-output", noAgentOutputProjection],
+    ["grounded-context", groundedContextPass],
+    ["sensitive-grounded-path", sensitiveGroundedPathPass],
+    ["root-sensitive-environment-name", rootSensitiveEnvironmentNamePass],
+    ["unsafe-root-sensitive-environment-name", unsafeRootSensitiveEnvironmentNameRejected],
+    [
+      "root-sensitive-environment-bound",
+      exactRootSensitiveEnvironmentBoundAccepted && excessiveRootSensitiveEnvironmentNamesRejected,
+    ],
+    ["stable-file-identity", stableFileIdentityPass],
+    ["sensitive-grounded-sanitizer", sanitizerPass],
+  ];
+  const failed = cases.filter(([, pass]) => !pass).map(([name]) => name);
+  if (failed.length > 0) {
+    throw new Error("TASK-540 local command runner self-test failed: " + failed.join(","));
+  }
+  return cases.length;
+}
+
+const TASK540_LOCAL_ORCHESTRATOR_IMPORTS = Object.freeze([
+  "node:child_process",
+  "node:crypto",
+  "node:fs",
+  "node:fs/promises",
+  "node:util",
+  "./task-540-smoke-contract.mjs",
+]);
+const TASK540_LOCAL_ORCHESTRATOR_IMPORT_BINDINGS = Object.freeze([
+  "{execFile,spawn}",
+  "{createHash,randomUUID}",
+  "{constantsasFS_CONSTANTS}",
+  "{lstat,open,readFile,readdir,readlink,realpath,rename,unlink,}",
+  "{parseEnv,promisify}",
+  "{buildTask540SmokePlan}",
+]);
+
+function requireTask540LocalOrchestratorEntrypointSource(source, label) {
+  if (!source.startsWith("export const meta = {")) {
+    throw new Error(label + ": meta must remain the first local-orchestrator statement");
+  }
+  const entrypointEnd = source.indexOf("const execFileAsync = promisify(execFile);");
+  if (entrypointEnd <= 0) {
+    throw new Error(label + ": local-orchestrator entrypoint boundary is missing");
+  }
+  const entrypoint = source.slice(0, entrypointEnd);
+  const staticImports = [
+    ...entrypoint.matchAll(/^[\t ]*import\s+(\{[\s\S]*?\})\s+from\s+["']([^"']+)["'];[\t ]*$/gm),
+  ];
+  const importTokens = entrypoint.match(/\bimport\b/g) ?? [];
+  const bindings = staticImports.map((match) => match[1].replace(/\s+/g, ""));
+  const specifiers = staticImports.map((match) => match[2]);
+  if (
+    importTokens.length !== TASK540_LOCAL_ORCHESTRATOR_IMPORTS.length ||
+    JSON.stringify(specifiers) !== JSON.stringify(TASK540_LOCAL_ORCHESTRATOR_IMPORTS) ||
+    JSON.stringify(bindings) !== JSON.stringify(TASK540_LOCAL_ORCHESTRATOR_IMPORT_BINDINGS)
+  ) {
+    throw new Error(label + ": local-orchestrator static import contract drifted");
+  }
+  const runtimeBoundaryEnd = source.indexOf(
+    "const TASK540_LOCAL_ORCHESTRATOR_IMPORTS = Object.freeze(["
+  );
+  const runtimePrefix = source.slice(entrypointEnd, runtimeBoundaryEnd);
+  const dynamicImports = [...runtimePrefix.matchAll(/\bimport\s*\(\s*["']([^"']+)["']\s*\)/g)].map(
+    (match) => match[1]
+  );
+  if (
+    runtimeBoundaryEnd <= entrypointEnd ||
+    JSON.stringify(dynamicImports) !== JSON.stringify(["./task-540-smoke-executor.mjs"])
+  ) {
+    throw new Error(label + ": frozen smoke executor dynamic import contract drifted");
+  }
+}
+
+async function assertTask540LocalOrchestratorEntrypointContract() {
+  const source = await readFile(WORKFLOW, "utf8");
+  requireTask540LocalOrchestratorEntrypointSource(source, "TASK-540 local entrypoint");
+  const mutations = [
+    source.replace(
+      'import { execFile, spawn } from "node:child_process";',
+      'import { execFile, spawn } from "node:path";'
+    ),
+    source.replace(
+      "const execFileAsync = promisify(execFile);",
+      'import { resolve } from "node:path";\nconst execFileAsync = promisify(execFile);'
+    ),
+    source.replace(
+      "const execFileAsync = promisify(execFile);",
+      'await import ("node:path");\nconst execFileAsync = promisify(execFile);'
+    ),
+    source.replace(
+      "const execFileAsync = promisify(execFile);",
+      'const seventh = import("node:path");\nconst execFileAsync = promisify(execFile);'
+    ),
+    source.replace(
+      'from "./task-540-smoke-contract.mjs";',
+      'from "./task-540-smoke-contract-copy.mjs";'
+    ),
+    source.replace(
+      'await import("./task-540-smoke-executor.mjs")',
+      'await import("./task-540-smoke-executor-copy.mjs")'
+    ),
+    source.replace(
+      'import { execFile, spawn } from "node:child_process";',
+      'import { execFile } from "node:child_process";'
+    ),
+    "\n" + source,
+  ];
+  for (const [index, mutation] of mutations.entries()) {
+    let rejected = false;
+    try {
+      requireTask540LocalOrchestratorEntrypointSource(
+        mutation,
+        "TASK-540 local entrypoint mutation " + (index + 1)
+      );
+    } catch {
+      rejected = true;
+    }
+    if (!rejected) {
+      throw new Error("TASK-540 local entrypoint mutation escaped validation");
+    }
+  }
+  return mutations.length + 1;
+}
+
 if (process.argv.includes("--self-test-repair-siblings")) {
+  await captureInitialGitIndexBaseline("TASK-540 repair self-test initial Git index baseline");
+  const localOrchestratorEntrypointCases = await assertTask540LocalOrchestratorEntrypointContract();
+  const localCommandRunnerCases = await assertTask540LocalCommandRunnerContract();
   const cases = assertTask540RepairSiblingStateContract();
+  const reservedPreClosureSourceRepairCases =
+    assertTask540ReservedPreClosureRegatedSourceRepairContract();
   const l03RepairCases = assertTask540L03RepairSiblingContract();
   const effectiveRepairOwnerCases = assertTask540L03EffectiveRepairOwnerContract();
+  const r01EffectiveRepairOwnerCases = assertTask540R01EffectiveRepairOwnerContract();
+  const l04EffectiveRepairOwnerCases = assertTask540L04EffectiveRepairOwnerContract();
   const namedFileIsolationCases = assertTask540L03GateIsolationContract();
   const smokeExecutionOnceCases = await assertTask540SmokeExecutionOnceContract();
   const atomicClosureCases = assertTask540AtomicClosureContract();
@@ -8882,12 +12051,20 @@ if (process.argv.includes("--self-test-repair-siblings")) {
   const boardStateCases = assertTask540BoardStateContract();
   const finalDriftRoundCases = await assertTask540FinalDriftRoundContract();
   const gitIndexBaselineCases = await assertTask540GitIndexBaselineContract();
+  const sequentialAuditDispatchCases = await assertTask540SequentialAuditDispatchContract();
+  const auditInterventionCases = assertTask540AuditInterventionContract();
+  const deferredLowCases = await assertTask540DeferredLowContract();
   process.stdout.write(
     JSON.stringify({
       pass: true,
+      localOrchestratorEntrypointCases,
+      localCommandRunnerCases,
       cases,
+      reservedPreClosureSourceRepairCases,
       l03RepairCases,
       effectiveRepairOwnerCases,
+      r01EffectiveRepairOwnerCases,
+      l04EffectiveRepairOwnerCases,
       namedFileIsolationCases,
       smokeExecutionOnceCases,
       atomicClosureCases,
@@ -8896,6 +12073,9 @@ if (process.argv.includes("--self-test-repair-siblings")) {
       boardStateCases,
       finalDriftRoundCases,
       gitIndexBaselineCases,
+      sequentialAuditDispatchCases,
+      auditInterventionCases,
+      deferredLowCases,
     })
   );
   process.exit(0);
@@ -8906,7 +12086,7 @@ const currentResumeSelfTest = process.argv.find((value) =>
 );
 if (currentResumeSelfTest) {
   const expectedMode = currentResumeSelfTest.slice("--self-test-current-resume=".length);
-  if (!new Set(["initial", "repair", "terminal"]).has(expectedMode)) {
+  if (!new Set(["initial", "prepared", "repair", "terminal"]).has(expectedMode)) {
     throw new Error("TASK-540 current-resume self-test mode is invalid");
   }
   const currentResume = await resolveLeafResumeState();
@@ -8916,9 +12096,13 @@ if (currentResumeSelfTest) {
     currentChangelog,
     "TASK-540 current-resume self-test"
   );
-  if (currentResume.mode !== expectedMode) {
+  const resolvedExpectedMode = expectedMode === "prepared" ? "initial" : expectedMode;
+  if (currentResume.mode !== resolvedExpectedMode) {
     throw new Error(
-      "TASK-540 current-resume self-test expected " + expectedMode + ", got " + currentResume.mode
+      "TASK-540 current-resume self-test expected " +
+        resolvedExpectedMode +
+        ", got " +
+        currentResume.mode
     );
   }
   if (
@@ -8961,10 +12145,22 @@ if (currentResumeSelfTest) {
   ) {
     throw new Error("TASK-540 current-resume initial cursor is not exact");
   }
+  if (
+    expectedMode === "prepared" &&
+    (currentResume.startIndex !== LEAVES.length ||
+      currentResume.startLeafId !== null ||
+      currentResume.repair !== null ||
+      JSON.stringify(currentResume.landedLeafIds) !== JSON.stringify(LEAF_ORDER) ||
+      currentResume.remainingLeafIds.length !== 0 ||
+      currentChangelog.mode !== "reserved-pre-closure-regated")
+  ) {
+    throw new Error("TASK-540 current-resume prepared cursor is not exact");
+  }
   process.stdout.write(
     JSON.stringify({
       pass: true,
-      mode: currentResume.mode,
+      mode: expectedMode,
+      resolvedMode: currentResume.mode,
       startLeafId: currentResume.startLeafId,
       landedLeafIds: currentResume.landedLeafIds,
       remainingLeafIds: currentResume.remainingLeafIds,
@@ -8974,292 +12170,326 @@ if (currentResumeSelfTest) {
 }
 
 await captureInitialGitIndexBaseline("TASK-540 workflow initial Git index baseline");
-const workflowBranch = (await git(["branch", "--show-current"])).trim();
-if (workflowBranch !== EXPECTED_BRANCH) {
-  throw new Error(
-    "TASK-540 workflow requires exact branch " + EXPECTED_BRANCH + ", got " + workflowBranch
-  );
-}
-phase("Start gate");
-const resumeState = await resolveLeafResumeState();
-const changelogResumeState = await resolveChangelogResumeState(resumeState);
-await validateResumeGraphCoverage(resumeState, changelogResumeState, "TASK-540 startup");
-seedClosureGeneration(changelogResumeState);
-const startGate = await runReadOnlyAgent(
-  "Read-only TASK-540 start gate at " +
-    ROOT +
-    ". Read all 17 physical TASK-540 files plus board/changelog indexes and both workflow files " +
-    "fresh. The orchestrator deterministically resolved this resume state: " +
-    JSON.stringify(resumeState) +
-    ". The pinned changelog state is " +
-    JSON.stringify(changelogResumeState) +
-    ". In terminal mode verify all 17 contracts and the board are Done, the three closure " +
-    "contracts share the exact validated evidence hash/generation and pinned board baseline/" +
-    "changelog path, the closure leaf preserves one exact gate field/value, and the single " +
-    "changelog block hashes to that receipt with a strict matching closureControl. Startup will " +
-    "scoped-reopen only closure/root before rerunning " +
-    "post-audit, full validation, smoke, closure, and final gates. In initial mode before independent " +
-    "changelog 1252 authority, require every landed leaf to remain In Progress with no Completed, " +
-    "canonical Implementation Complete, and exactly one Targeted Gate Passed/Revalidation Passed " +
-    "field. Accept Done only in a closure-restart graph whose consumed anchor and strict " +
-    "closureControl independently cover it. No startup normalization may manufacture or rerun " +
-    "landed evidence. In repair mode require exactly the named active " +
-    "Repair Pending owner using exact `generation <32 lowercase hex> / token <32 lowercase hex>`, " +
-    "no Completed or old gate receipt on any active repair root/child/owner/closure sibling, every " +
-    "other source leaf either gated In Progress before family closure or Done with Completed after " +
-    "a validated family closure, and the closure leaf active with no gate before closure or its one " +
-    "pinned gate plus durable Closure Pending after closure; only that exact owner will be repaired/" +
-    "re-gated. A closure-leaf repair without Closure Pending is valid only for a consumed " +
-    "evidence-before-pending anchor whose exact repairAuthorization binds the pending hash, prior " +
-    "control gate, and successor Revalidation hash. A reserved/no-anchor closure remediation stays " +
-    "ungated and uses the exact deterministic preClosureRegateValue of its persisted matching Fix " +
-    "Started date. In initial mode the " +
-    "first unlanded leaf is the resume cursor and every later leaf remains To Do, with no skipped " +
-    "dependency. Verify every parent/child table and the exact strict land order is " +
-    JSON.stringify(LEAF_ORDER) +
-    ", changelog 1252 is either absent/reserved, the exact authorized evidence-before-pending " +
-    "repair, or the exact single reused closure-restart file with matching Closure Pending " +
-    "receipts; duplicates are forbidden. TASK-543 is complete, HEAD " +
-    "is current, branch is exactly `" +
-    EXPECTED_BRANCH +
-    "`, and the exact initial Git index baseline is unchanged with no agent index write. " +
-    "task-540-implement.mjs is the canonical remaining " +
-    "program owner. The current mutable task-540-fix.mjs is completed evidence only for the " +
-    "R01-before-R03 URL-control correction and is not an active or conflicting owner. Earlier " +
-    "five-owner corrective work, including R04/R05, is durable only in the affected task files' " +
-    "Revalidation/Post-Audit metadata and current gates, not attributed to the current workflow file. " +
-    "Do not edit.",
-  { label: "start-gate:540", phase: "Start gate", schema: RESULT_SCHEMA }
-);
-if (!resultPassed(startGate)) throw new Error("TASK-540 start gate failed");
-
-const verifiedResumeState = await resolveLeafResumeState();
-const verifiedChangelogResumeState = await resolveChangelogResumeState(verifiedResumeState);
-await validateResumeGraphCoverage(
-  verifiedResumeState,
-  verifiedChangelogResumeState,
-  "TASK-540 verified startup"
-);
-if (
-  JSON.stringify(verifiedResumeState) !== JSON.stringify(resumeState) ||
-  JSON.stringify(verifiedChangelogResumeState) !== JSON.stringify(changelogResumeState)
-) {
-  throw new Error("TASK-540 resume state changed during the read-only start gate");
-}
-seedClosureGeneration(verifiedChangelogResumeState);
-
-if (verifiedResumeState.mode === "terminal") {
-  await captureSourceOwnerTestHashBoundary("closure-terminal-reopen");
-}
-
-if (verifiedResumeState.mode === "repair" && verifiedResumeState.repair?.id === "540-06-L01") {
-  await captureSourceOwnerTestHashBoundary("closure-repair-resume");
-}
-
-if (verifiedResumeState.mode === "repair") {
-  await resumeInterruptedRepair(verifiedResumeState);
-} else if (verifiedResumeState.mode === "terminal") {
-  await setClosurePendingState("startup-reopen:terminal", closureGeneration);
-}
-const executionResumeState = await resolveLeafResumeState();
-if (executionResumeState.mode !== "initial") {
-  throw new Error("TASK-540 persisted repair did not close after its fresh matching re-gate");
-}
-if (verifiedResumeState.mode === "terminal" && executionResumeState.startIndex !== LEAVES.length) {
-  throw new Error("TASK-540 terminal reopen changed the fully landed leaf cursor");
-}
-const executionChangelogResumeState = await resolveChangelogResumeState(executionResumeState);
-await validateResumeGraphCoverage(
-  executionResumeState,
-  executionChangelogResumeState,
-  "TASK-540 execution resume"
-);
-seedClosureGeneration(executionChangelogResumeState);
-if (
-  (verifiedResumeState.mode === "initial" &&
-    executionResumeState.startIndex !== verifiedResumeState.startIndex) ||
-  (verifiedResumeState.mode === "initial" &&
-    executionResumeState.startLeafId !== verifiedResumeState.startLeafId)
-) {
-  throw new Error("TASK-540 resume cursor changed during the read-only startup boundary");
-}
-
-for (const leaf of LEAVES.slice(executionResumeState.startIndex)) {
-  if (leaf.id === "540-06-L01" && sourceOwnerTestHashesAtClosureBoundary === null) {
-    await captureSourceOwnerTestHashBoundary("closure-leaf-entry");
-  }
-  const persistedState = executionResumeState.leafStates.find(({ id }) => id === leaf.id);
-  if (persistedState?.status === RESUME_TASK_STATUS.active && !persistedState.landed) {
-    await resumeActiveUngatedLeaf(leaf);
-  } else {
-    await implementAndGate(leaf);
-  }
-}
-
-if (sourceOwnerTestHashesAtClosureBoundary === null) {
-  await captureSourceOwnerTestHashBoundary("closure-post-resume-entry");
-}
-
-await runPostAudit();
-
-phase("Full validation");
-let fullValidation = await runFullValidation("full-validation:post-audit", "Full validation");
-
-const smokeCycle = await runSmokeEvidenceOnce("initial", fullValidation);
-const smoke = smokeCycle.smoke;
-fullValidation = smokeCycle.fullValidation;
-
-fullValidation = await runClosure(smoke, fullValidation, "initial");
-
-let finalDurablePendingProjection = null;
-let finalPendingTransitionSelfRestored = false;
+await captureWorkflowSensitiveEnvBaseline("TASK-540 workflow private environment baseline");
+let workflowExecutionError = null;
 try {
-  let finalDriftClean = false;
-  for (let round = 1; round <= 2; round += 1) {
-    const findings = await runFinalAudit(round);
-    if (findings.length === 0) {
-      finalDriftClean = true;
-      break;
-    }
-    const classification = classifyFinalDriftFindings(findings);
-    const roundPlan = planFinalDriftRound(round, classification);
-    const { sourceFindings, metadataFindings } = classification;
-
-    // A non-clean final audit reopens only the closure contracts. Exact source
-    // owners are reopened later, after findings have been classified.
-    try {
-      finalDurablePendingProjection = await setClosurePendingState("final-drift:" + round);
-    } catch (error) {
-      finalPendingTransitionSelfRestored = true;
-      throw error;
-    }
-
-    if (roundPlan.repairSourceBeforeStop) {
-      await fixAuditFindings(sourceFindings, "final-drift-" + round, "Final drift", {
-        afterClosure: true,
-      });
-      // The successful fixer includes the fresh owner gate/completion transition.
-      // From this point onward a pre-repair closure snapshot is never rollback
-      // authority, including if full validation fails before recapture.
-      finalDurablePendingProjection = invalidatePreRepairPendingProjectionAfterFreshGate(
-        roundPlan,
-        finalDurablePendingProjection
-      );
-      fullValidation = await runFullValidation(
-        "full-validation:after-final-source-fix:" + round,
-        "Final validation"
-      );
-    }
-
-    if (roundPlan.stopPending) {
-      let pendingRecaptureError = null;
-      if (roundPlan.repairSourceBeforeStop) {
-        // The pre-repair projection is no longer rollback authority once the
-        // repaired source owner has a fresh gate/completion receipt.
-        finalDurablePendingProjection = null;
-        const reacquiredPending = await reacquireCurrentPendingProjection(
-          "TASK-540 repaired-source durable pending " + round
-        );
-        finalDurablePendingProjection = reacquiredPending.projection;
-        pendingRecaptureError = reacquiredPending.captureError;
-      }
-      const stopError = new Error(
-        sourceFindings.length > 0
-          ? "TASK-540 source drift was repaired/re-gated and fully validated; workflow stopped under durable Closure Pending and requires a fresh top-level one-shot smoke"
-          : roundPlan.requiresFreshTopLevelSmoke
-            ? "TASK-540 runtime evidence drift requires a fresh top-level invocation; workflow stopped under durable Closure Pending without retry"
-            : "TASK-540 round-two closure metadata drift remained; workflow stopped under durable Closure Pending"
-      );
-      if (pendingRecaptureError) {
-        throw new AggregateError(
-          [stopError, pendingRecaptureError],
-          "TASK-540 repaired-source recapture failed after fresh Pending recovery"
-        );
-      }
-      throw stopError;
-    }
-
-    if (!roundPlan.runReclosure) {
-      throw new Error("TASK-540 final drift plan unexpectedly omitted reclosure");
-    }
-    if (!roundPlan.reuseSealedEvidence || canonicalSmokeEvidence(smoke) !== smoke) {
-      throw new Error("TASK-540 metadata-only reclosure did not retain the same sealed evidence");
-    }
-
-    finalDurablePendingProjection = null;
-    const preReclosurePending = await reacquireCurrentPendingProjection(
-      "TASK-540 final-remediation durable pending " + round
+  const workflowBranch = (await git(["branch", "--show-current"])).trim();
+  if (workflowBranch !== EXPECTED_BRANCH) {
+    throw new Error(
+      "TASK-540 workflow requires exact branch " + EXPECTED_BRANCH + ", got " + workflowBranch
     );
-    finalDurablePendingProjection = preReclosurePending.projection;
-    if (preReclosurePending.captureError) {
-      throw new AggregateError(
-        [preReclosurePending.captureError],
-        "TASK-540 final remediation recapture failed after fresh Pending recovery"
-      );
+  }
+  await requireDeferredLowFollowUpContracts("TASK-540 workflow startup");
+  phase("Start gate");
+  const resumeState = await resolveLeafResumeState();
+  const changelogResumeState = await resolveChangelogResumeState(resumeState);
+  await validateResumeGraphCoverage(resumeState, changelogResumeState, "TASK-540 startup");
+  seedClosureGeneration(changelogResumeState);
+  const startGate = await runReadOnlyAgent(
+    "Read-only TASK-540 start gate at " +
+      ROOT +
+      ". Read all 17 physical TASK-540 files, board/changelog indexes, the current implementation, " +
+      "local-orchestrator, smoke contract/executor/host, and historical fix workflow files " +
+      "fresh. The orchestrator deterministically resolved this resume state: " +
+      JSON.stringify(resumeState) +
+      ". The pinned changelog state is " +
+      JSON.stringify(changelogResumeState) +
+      ". In terminal mode verify all 17 contracts and the board are Done, the three closure " +
+      "contracts share the exact validated evidence hash/generation and pinned board baseline/" +
+      "changelog path, the closure leaf preserves one exact gate field/value, and the single " +
+      "changelog block hashes to that receipt with a strict matching closureControl. Startup will " +
+      "scoped-reopen only closure/root before rerunning " +
+      "post-audit, full validation, smoke, closure, and final gates. In initial mode before independent " +
+      "changelog 1252 authority, require every landed leaf to remain In Progress with no Completed, " +
+      "canonical Implementation Complete, and exactly one Targeted Gate Passed/Revalidation Passed " +
+      "field. Accept Done only in a closure-restart graph whose consumed anchor and strict " +
+      "closureControl independently cover it. No startup normalization may manufacture or rerun " +
+      "landed evidence. In repair mode require exactly the named active " +
+      "Repair Pending owner using exact `generation <32 lowercase hex> / token <32 lowercase hex>`, " +
+      "no Completed or old gate receipt on the active repair root/child/owner, every " +
+      "other source leaf either gated In Progress before family closure or Done with Completed after " +
+      "a validated family closure, and the closure leaf active in exactly one authorized phase: " +
+      "ungated before its own gate; its deterministic preClosureRegateValue while the changelog is " +
+      "reserved with no draft/anchor/Closure Pending and the sole Repair Pending belongs to a " +
+      "non-closure source owner under mode reserved-pre-closure-regated-source-repair; or its one " +
+      "pinned gate plus durable Closure Pending after closure. The reserved-regated source-repair " +
+      "phase additionally requires matching canonical child/leaf Fix Started, no Targeted Gate, " +
+      "and the exact sole remaining repair cursor. Only that exact owner will be repaired/" +
+      "re-gated. A closure-leaf repair without Closure Pending is valid only for a consumed " +
+      "evidence-before-pending anchor whose exact repairAuthorization binds the pending hash, prior " +
+      "control gate, and successor Revalidation hash. A reserved/no-anchor closure-owner remediation " +
+      "starts ungated and uses the exact deterministic preClosureRegateValue of its persisted matching Fix " +
+      "Started date. In initial mode the " +
+      "first unlanded leaf is the resume cursor and every later leaf remains To Do, with no skipped " +
+      "dependency. Verify every parent/child table and the exact strict land order is " +
+      JSON.stringify(LEAF_ORDER) +
+      ", changelog 1252 is either absent/reserved, the exact authorized evidence-before-pending " +
+      "repair, or the exact single reused closure-restart file with matching Closure Pending " +
+      "receipts; duplicates are forbidden. TASK-543 is complete, HEAD " +
+      "is current, branch is exactly `" +
+      EXPECTED_BRANCH +
+      "`, and the exact initial Git index baseline is unchanged with no agent index write. " +
+      "task-540-implement.mjs is the canonical remaining " +
+      "program owner. The current mutable task-540-fix.mjs is completed evidence only for the " +
+      "R01-before-R03 URL-control correction and is not an active or conflicting owner. Earlier " +
+      "five-owner corrective work, including R04/R05, is durable only in the affected task files' " +
+      "Revalidation/Post-Audit metadata and current gates, not attributed to the current workflow file. " +
+      "Do not edit.",
+    { label: "start-gate:540", phase: "Start gate", schema: RESULT_SCHEMA }
+  );
+  if (!resultPassed(startGate)) throw new Error("TASK-540 start gate failed");
+
+  const verifiedResumeState = await resolveLeafResumeState();
+  const verifiedChangelogResumeState = await resolveChangelogResumeState(verifiedResumeState);
+  await validateResumeGraphCoverage(
+    verifiedResumeState,
+    verifiedChangelogResumeState,
+    "TASK-540 verified startup"
+  );
+  if (
+    JSON.stringify(verifiedResumeState) !== JSON.stringify(resumeState) ||
+    JSON.stringify(verifiedChangelogResumeState) !== JSON.stringify(changelogResumeState)
+  ) {
+    throw new Error("TASK-540 resume state changed during the read-only start gate");
+  }
+  seedClosureGeneration(verifiedChangelogResumeState);
+
+  if (verifiedResumeState.mode === "terminal") {
+    await captureSourceOwnerTestHashBoundary("closure-terminal-reopen");
+  }
+
+  if (verifiedResumeState.mode === "repair" && verifiedResumeState.repair?.id === "540-06-L01") {
+    await captureSourceOwnerTestHashBoundary("closure-repair-resume");
+  }
+
+  if (verifiedResumeState.mode === "repair") {
+    await resumeInterruptedRepair(verifiedResumeState);
+  } else if (verifiedResumeState.mode === "terminal") {
+    await setClosurePendingState("startup-reopen:terminal", closureGeneration);
+  }
+  const executionResumeState = await resolveLeafResumeState();
+  if (executionResumeState.mode !== "initial") {
+    throw new Error("TASK-540 persisted repair did not close after its fresh matching re-gate");
+  }
+  if (
+    verifiedResumeState.mode === "terminal" &&
+    executionResumeState.startIndex !== LEAVES.length
+  ) {
+    throw new Error("TASK-540 terminal reopen changed the fully landed leaf cursor");
+  }
+  const executionChangelogResumeState = await resolveChangelogResumeState(executionResumeState);
+  await validateResumeGraphCoverage(
+    executionResumeState,
+    executionChangelogResumeState,
+    "TASK-540 execution resume"
+  );
+  seedClosureGeneration(executionChangelogResumeState);
+  if (
+    (verifiedResumeState.mode === "initial" &&
+      executionResumeState.startIndex !== verifiedResumeState.startIndex) ||
+    (verifiedResumeState.mode === "initial" &&
+      executionResumeState.startLeafId !== verifiedResumeState.startLeafId)
+  ) {
+    throw new Error("TASK-540 resume cursor changed during the read-only startup boundary");
+  }
+
+  for (const leaf of LEAVES.slice(executionResumeState.startIndex)) {
+    if (leaf.id === "540-06-L01" && sourceOwnerTestHashesAtClosureBoundary === null) {
+      await captureSourceOwnerTestHashBoundary("closure-leaf-entry");
     }
-    try {
-      fullValidation = await runClosure(
-        smoke,
-        fullValidation,
-        "final-remediation-" + round,
-        metadataFindings
-      );
-      finalDurablePendingProjection = null;
-    } catch (error) {
+    const persistedState = executionResumeState.leafStates.find(({ id }) => id === leaf.id);
+    if (persistedState?.status === RESUME_TASK_STATUS.active && !persistedState.landed) {
+      await resumeActiveUngatedLeaf(leaf);
+    } else {
+      await implementAndGate(leaf);
+    }
+  }
+
+  if (sourceOwnerTestHashesAtClosureBoundary === null) {
+    await captureSourceOwnerTestHashBoundary("closure-post-resume-entry");
+  }
+
+  await runPostAudit();
+
+  phase("Full validation");
+  let fullValidation = await runFullValidation("full-validation:post-audit", "Full validation");
+
+  const smokeCycle = await runSmokeEvidenceOnce("initial", fullValidation);
+  const smoke = smokeCycle.smoke;
+  fullValidation = smokeCycle.fullValidation;
+
+  fullValidation = await runClosure(smoke, fullValidation, "initial");
+
+  let finalDurablePendingProjection = null;
+  let finalPendingTransitionSelfRestored = false;
+  try {
+    let finalDriftClean = false;
+    for (let round = 1; round <= 2; round += 1) {
+      const findings = await runFinalAudit(round);
+      if (findings.length === 0) {
+        finalDriftClean = true;
+        break;
+      }
+      const classification = classifyFinalDriftFindings(findings);
+      const roundPlan = planFinalDriftRound(round, classification);
+      const { sourceFindings, metadataFindings } = classification;
+
+      // A non-clean final audit reopens only the closure contracts. Exact source
+      // owners are reopened later, after findings have been classified.
       try {
-        finalDurablePendingProjection = null;
-        const failedReclosurePending = await reacquireCurrentPendingProjection(
-          "TASK-540 failed final-remediation durable pending " + round
+        finalDurablePendingProjection = await setClosurePendingState("final-drift:" + round);
+      } catch (error) {
+        finalPendingTransitionSelfRestored = true;
+        throw error;
+      }
+
+      if (roundPlan.repairSourceBeforeStop) {
+        await fixAuditFindings(sourceFindings, "final-drift-" + round, "Final drift", {
+          afterClosure: true,
+        });
+        // The successful fixer includes the fresh owner gate/completion transition.
+        // From this point onward a pre-repair closure snapshot is never rollback
+        // authority, including if full validation fails before recapture.
+        finalDurablePendingProjection = invalidatePreRepairPendingProjectionAfterFreshGate(
+          roundPlan,
+          finalDurablePendingProjection
         );
-        finalDurablePendingProjection = failedReclosurePending.projection;
-        if (failedReclosurePending.captureError) {
+        fullValidation = await runFullValidation(
+          "full-validation:after-final-source-fix:" + round,
+          "Final validation"
+        );
+      }
+
+      if (roundPlan.stopPending) {
+        let pendingRecaptureError = null;
+        if (roundPlan.repairSourceBeforeStop) {
+          // The pre-repair projection is no longer rollback authority once the
+          // repaired source owner has a fresh gate/completion receipt.
+          finalDurablePendingProjection = null;
+          const reacquiredPending = await reacquireCurrentPendingProjection(
+            "TASK-540 repaired-source durable pending " + round
+          );
+          finalDurablePendingProjection = reacquiredPending.projection;
+          pendingRecaptureError = reacquiredPending.captureError;
+        }
+        const stopError = new Error(
+          sourceFindings.length > 0
+            ? "TASK-540 source drift was repaired/re-gated and fully validated; workflow stopped under durable Closure Pending and requires a fresh top-level one-shot smoke"
+            : roundPlan.requiresFreshTopLevelSmoke
+              ? "TASK-540 runtime evidence drift requires a fresh top-level invocation; workflow stopped under durable Closure Pending without retry"
+              : "TASK-540 round-two closure metadata drift remained; workflow stopped under durable Closure Pending"
+        );
+        if (pendingRecaptureError) {
           throw new AggregateError(
-            [error, failedReclosurePending.captureError],
-            "TASK-540 final remediation failed and fresh Pending required recovery"
+            [stopError, pendingRecaptureError],
+            "TASK-540 repaired-source recapture failed after fresh Pending recovery"
           );
         }
-      } catch (captureError) {
+        throw stopError;
+      }
+
+      if (!roundPlan.runReclosure) {
+        throw new Error("TASK-540 final drift plan unexpectedly omitted reclosure");
+      }
+      if (!roundPlan.reuseSealedEvidence || canonicalSmokeEvidence(smoke) !== smoke) {
+        throw new Error("TASK-540 metadata-only reclosure did not retain the same sealed evidence");
+      }
+
+      finalDurablePendingProjection = null;
+      const preReclosurePending = await reacquireCurrentPendingProjection(
+        "TASK-540 final-remediation durable pending " + round
+      );
+      finalDurablePendingProjection = preReclosurePending.projection;
+      if (preReclosurePending.captureError) {
         throw new AggregateError(
-          [error, captureError],
-          "TASK-540 final remediation failed and its durable Pending recapture also failed"
+          [preReclosurePending.captureError],
+          "TASK-540 final remediation recapture failed after fresh Pending recovery"
         );
       }
-      throw error;
+      try {
+        fullValidation = await runClosure(
+          smoke,
+          fullValidation,
+          "final-remediation-" + round,
+          metadataFindings
+        );
+        finalDurablePendingProjection = null;
+      } catch (error) {
+        try {
+          finalDurablePendingProjection = null;
+          const failedReclosurePending = await reacquireCurrentPendingProjection(
+            "TASK-540 failed final-remediation durable pending " + round
+          );
+          finalDurablePendingProjection = failedReclosurePending.projection;
+          if (failedReclosurePending.captureError) {
+            throw new AggregateError(
+              [error, failedReclosurePending.captureError],
+              "TASK-540 final remediation failed and fresh Pending required recovery"
+            );
+          }
+        } catch (captureError) {
+          throw new AggregateError(
+            [error, captureError],
+            "TASK-540 final remediation failed and its durable Pending recapture also failed"
+          );
+        }
+        throw error;
+      }
     }
-  }
-  if (!finalDriftClean) {
-    throw new Error("TASK-540 final drift loop ended without a clean fresh round");
-  }
+    if (!finalDriftClean) {
+      throw new Error("TASK-540 final drift loop ended without a clean fresh round");
+    }
 
-  phase("Final gate");
-  const finalGate = await runReadOnlyAgent(
-    "Read-only final TASK-540 mechanical gate at " +
-      ROOT +
-      ". Run exactly: " +
-      WORKFLOW_MECHANICAL_GATE_COMMAND +
-      ". Confirm the full task graph/changelog evidence remains closed, " +
-      "including identical changelog-path pins and strict closureControl binding. Confirm HEAD/" +
-      "branch and exact initial Git index baseline unchanged, with no agent index write or " +
-      "commit. Do not edit.",
-    { label: "final-gate:540", phase: "Final gate", schema: RESULT_SCHEMA }
-  );
-  if (!resultPassed(finalGate)) throw new Error("TASK-540 final mechanical gate failed");
-} catch (error) {
-  if (finalPendingTransitionSelfRestored) throw error;
-  try {
-    if (finalDurablePendingProjection) {
-      await restoreExactPendingClosureProjection(
-        finalDurablePendingProjection,
-        "post-status-failure"
-      );
-    } else {
-      finalDurablePendingProjection = await setClosurePendingState("post-status-failure");
-    }
-  } catch (rollbackError) {
-    throw new AggregateError(
-      [error, rollbackError],
-      "TASK-540 post-status failure and mandatory rollback both failed"
+    phase("Final gate");
+    const finalLocalMechanicalReceipt = await runWorkflowMechanicalGateLocally(
+      "TASK-540 final mechanical local gate"
     );
+    const finalGate = await runReadOnlyAgent(
+      "Read-only final TASK-540 mechanical gate at " +
+        ROOT +
+        ". Confirm the full task graph/changelog evidence remains closed, " +
+        "including identical changelog-path pins and strict closureControl binding. Confirm HEAD/" +
+        "branch and exact initial Git index baseline unchanged, with no agent index write or " +
+        "commit. Independently review this exact orchestrator-local command receipt projection: " +
+        JSON.stringify(finalLocalMechanicalReceipt) +
+        ". Do not run commands and do not edit.",
+      { label: "final-gate:540", phase: "Final gate", schema: RESULT_SCHEMA }
+    );
+    if (!resultPassed(finalGate)) throw new Error("TASK-540 final mechanical gate failed");
+    await requireWorkflowSensitiveEnvBaseline("TASK-540 final workflow environment boundary");
+  } catch (error) {
+    if (finalPendingTransitionSelfRestored) throw error;
+    try {
+      if (finalDurablePendingProjection) {
+        await restoreExactPendingClosureProjection(
+          finalDurablePendingProjection,
+          "post-status-failure"
+        );
+      } else {
+        finalDurablePendingProjection = await setClosurePendingState("post-status-failure");
+      }
+    } catch (rollbackError) {
+      throw new AggregateError(
+        [error, rollbackError],
+        "TASK-540 post-status failure and mandatory rollback both failed"
+      );
+    }
+    throw error;
   }
-  throw error;
+} catch (error) {
+  workflowExecutionError = error;
 }
+let workflowEnvironmentError = null;
+try {
+  await requireWorkflowSensitiveEnvBaseline("TASK-540 terminal workflow environment boundary");
+} catch (error) {
+  workflowEnvironmentError = error;
+}
+if (workflowExecutionError && workflowEnvironmentError) {
+  throw new AggregateError(
+    [workflowExecutionError, workflowEnvironmentError],
+    "TASK-540 workflow and private environment boundary failed"
+  );
+}
+if (workflowExecutionError) throw workflowExecutionError;
+if (workflowEnvironmentError) throw workflowEnvironmentError;

@@ -11,7 +11,9 @@
 **Status:** 🚧 In Progress
 **Started:** 2026-07-13
 **Implementation Complete:** 2026-07-13 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
-**Targeted Gate Passed:** 2026-07-13 — `core lint:types`, `core lint`, the exact two-file Vitest matrix (31/31), `git diff --check`, staging, and collision guards all green
+**Repair Started:** 2026-07-16
+**Repair Reason:** R01 centralized binding-ID generation in `buildScreenFieldBindingId`; L02 must consume that domain helper from its existing Inspector binding factory and prove maximum-length tuples stay distinct and bounded. L02 also owns the visible behavior correction that restores a blank or over-120 Tab-label draft to the latest committed label on blur or Enter without calling `onPatchBlock`.
+**Revalidation Passed:** 2026-07-16 — `core lint:types` and `core lint` passed; the exact two-file L02 Vitest gate passed 33/33 on the final shared schema state, including the domain-builder consumer and invalid blur/Enter restore regressions; and `git diff --check` passed. This receipt claims no full-suite, post-audit, smoke, changelog, or closure result.
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -26,6 +28,11 @@
 Do not edit the palette/factory, schema, renderer, shared controls, or the parent editor
 page. Update the named behavior test before this leaf's gate; TASK-540-06 owns only
 later aggregate additions.
+
+`customScreenSchemas.ts`, `screenDocumentOps.ts`, and
+`tests/vitest/customScreens/screenDocumentOps.test.ts` remain R01-owned. This leaf owns
+only the Inspector import/call site that consumes `buildScreenFieldBindingId`; it must
+not duplicate, alter, or re-export the domain builder.
 
 ## Historical pre-implementation grounded anchors
 
@@ -55,6 +62,16 @@ type BoundFieldClearAffordance = Readonly<{
   label: string;
   onClear: () => void;
 }>;
+
+// The Inspector remains the UI owner, while R01's schema domain owns ID semantics.
+export const createScreenFieldBinding = (input): ScreenFieldBinding => ({
+  id: buildScreenFieldBindingId(input.blockId, input.propPath),
+  blockId: input.blockId,
+  propPath: input.propPath,
+  source: "entry",
+  field: input.field,
+  mode: input.mode ?? "readwrite",
+});
 
 // BoundFieldRow accepts clearAffordance?: BoundFieldClearAffordance and renders it
 // only when this exact block/propPath binding exists. All unrelated callers omit it.
@@ -88,9 +105,10 @@ type BoundFieldClearAffordance = Readonly<{
 // that draft was based. Do NOT use native maxLength=SCREEN_TAB_LABEL_MAX: HTML counts
 // raw UTF-16 units while the schema counts post-trim Unicode code points. Blur/Enter
 // commits only draft.trim() when non-empty and Array.from(trimmed).length is <= the
-// shared SCREEN_TAB_LABEL_MAX. Invalid transient text never calls onPatchBlock. A
-// parent prop refresh invalidates a draft based on an older label, and Escape restores
-// the latest committed label. ID/slot identity stays stable.
+// shared SCREEN_TAB_LABEL_MAX. On blur or Enter, invalid transient text immediately
+// restores the visible input to the latest committed label and never calls onPatchBlock.
+// A parent prop refresh invalidates a draft based on an older label, and Escape restores
+// that same latest committed value. ID/slot identity stays stable.
 // Remove is disabled/hidden when tabs.length <= SCREEN_TABS_MIN. Its event handler
 // also returns the original draft at that boundary. Otherwise it deletes exactly its
 // slot and arms the nearest remaining tab.
@@ -133,16 +151,21 @@ and named.
   binding-row consumers do not render `Use static link`. The same suite owns
   deterministic tab ID, buffered valid rename/invalid transient rejection, Escape,
   and a stateful parent rerender that proves the 120-code-point Unicode boundary,
-  surrounding-whitespace trim, latest-committed restore, and stale-draft invalidation,
+  surrounding-whitespace trim, blank/over-120 blur and Enter restoring the visible
+  latest committed value with no patch, Escape restore, and stale-draft invalidation,
   remove-slot cleanup, exact active slot arm, and shared minimum/maximum UI: the last
   tab cannot be removed or lose its slot, and no 25th tab or orphan slot can be
-  created.
+  created. The same suite pins the Inspector's builder handoff: two valid maximum-
+  length block/prop-path tuples produce distinct canonical IDs of at most 120
+  characters through `createScreenFieldBinding`.
 - `custom-screen-image-inspector.test.tsx`: the image control imports/uses the
   canonical Screen wrapper and rejects protocol-relative and backslash-confused UI
   input before patching the document.
 
-`tests/vitest/customScreens/screenDocumentOps.test.ts` remains read-only in this leaf;
-the Inspector is the physical UI owner and no document-op source changes.
+`core/services/customScreens/screenDocumentOps.ts` and
+`tests/vitest/customScreens/screenDocumentOps.test.ts` remain read-only in this leaf.
+The Inspector is the physical UI owner; R01 alone owns the corrective document-op
+builder handoff and its regression.
 
 The end-to-end palette bind→clear→rebind flow runs after TASK-540-04-L04 wires the
 sentinel in the parent editor; TASK-540-06 owns that aggregate addition. This leaf must
@@ -163,9 +186,8 @@ Rerun any named failure once in isolation. No route, DB, or runtime Bun change.
 
 Implemented Button `href` binding and its exact clear sentinel, Link-only action
 authoring, deterministic slot-locked Tabs controls, buffered Unicode-aware label
-editing, exact slot arming, and the canonical Screen media-URL wrapper. The first
-post-audit exposed a native UTF-16 `maxLength` mismatch and a mock-only rerender gap;
-the contract and implementation were corrected with code-point validation plus a
-keyed label editor and a stateful A→B→A harness. The fresh re-audit reported zero
-HIGH, MEDIUM, or LOW findings. Final targeted Vitest passed 31/31; typecheck, lint,
-diff-check, staging, and collision guards passed.
+editing, exact slot arming, and the canonical Screen media-URL wrapper. The historical
+Unicode/React-state correction and its 31/31 gate remain valid evidence. The current
+2026-07-16 domain-builder consumer and visible invalid-label restore corrections are
+revalidated by the exact 33/33 gate above; no new post-audit or smoke is claimed.
+Aggregate persistence and live browser flows remain closure-owned.

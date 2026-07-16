@@ -8,8 +8,11 @@
 **Dependencies:** TASK-496, TASK-498, TASK-500, TASK-503, TASK-505, TASK-543 (program order)
 **Status:** 🚧 In Progress
 **Started:** 2026-07-13
-**Repair Started:** 2026-07-15
-**Repair Reason:** Closure validation reproduced one logical remote cache event twice when canonical and legacy BroadcastChannel/storage transports delivered the same serialized event, and contract audit required direct-image route-boundary coverage at the strict write seam. TASK-540-04/L03 was the sole scoped repair owner with exactly three writable paths: `core/admin/utils/cacheBus.ts`, `tests/vitest/admin/cacheBus.test.ts`, and additive direct-image regressions in `tests/integration/routes/customScreensRoutes.test.ts`; `core/server/routes/customScreenRoutes.ts` and every other production route/UI/client/service file remained read-only. That repair passed its focused and dependency-shaped gates on 2026-07-15, and its exact `Repair Pending` receipt was replaced by the matching `Revalidation Passed` successor. L03 and every other landed source leaf now remain `🚧 In Progress` with `Implementation Complete` awaiting family changelog 1252; the active closure cursor is TASK-540-06-L01.
+**Repair Started:** 2026-07-16
+**Repair Reason:** The final TASK-540 workflow audit reproduced strict path/identity and generated-ID drift in R01, a local binding-ID mirror plus invalid Tab-label restore defect in L02, and an inaccessible zero-item Tabs branch in R03. R01 owns `customScreenSchemas.ts`, the narrow shared-builder handoff in `screenDocumentOps.ts`, their source-owner tests and route/Assistant gates; L02 owns only `ScreenBlockInspector.tsx` plus its UI gate; R03 owns only `ScreenRuntimeRenderer.tsx` plus its renderer/interaction gate. The Assistant action-plan/catalog Vitest files remain read-only consumers. TASK-540-04-L03 is not a current repair owner: its sole attempted current import-only diff in `screenEntryPresentationOverrideContract.ts` was reverted and that file is clean; its 2026-07-15 repair remains historical evidence.
+**Repair Revalidated:** 2026-07-16 — R01 passed `core lint:types`, `core lint`, its exact five-file Vitest gate 168/168, reachable DB preflight, route/Assistant Bun gate 92/92 with 564 expectations, isolated document-op 11/11, and `git diff --check`; L02 passed its exact two-file Vitest gate 33/33 on the final shared schema state, including domain-builder consumption and invalid blur/Enter restore; R03 independently passed `core lint:types`, `core lint`, its exact renderer/interaction/image Vitest gate 89/89, and `git diff --check` for the accessible zero-item state. This records targeted source repair only; no new post-audit, full validation, live smoke, changelog 1252, or atomic closure is claimed.
+**Historical L03 Repair Started:** 2026-07-15
+**Historical L03 Repair Reason:** Closure validation reproduced one logical remote cache event twice when canonical and legacy BroadcastChannel/storage transports delivered the same serialized event, and contract audit required direct-image route-boundary coverage at the strict write seam. TASK-540-04/L03 was the sole scoped repair owner with exactly three writable paths: `core/admin/utils/cacheBus.ts`, `tests/vitest/admin/cacheBus.test.ts`, and additive direct-image regressions in `tests/integration/routes/customScreensRoutes.test.ts`; `core/server/routes/customScreenRoutes.ts` and every other production route/UI/client/service file remained read-only. That repair passed its focused and dependency-shaped gates on 2026-07-15, and its exact `Repair Pending` receipt was replaced by the matching `Revalidation Passed` successor. L03 and every other then-landed source leaf remained `🚧 In Progress` with `Implementation Complete` awaiting family changelog 1252, while post-audit, full validation, live smoke, and atomic closure remained pending.
 **Historical L04 Repair Started:** 2026-07-15
 **Historical L04 Repair Reason:** Mandatory repository-wide `bun run test` confirmed that `screen-editor-sections.test.tsx` fully mocked cacheBus without the fresh-symbol factory required by the L04-owned Screen builder Save path. TASK-540-04/L04 completed the additive mock repair and exact six-file/66-test re-gate; at that historical phase closure resumed and every source descendant was Done, before the later L03 duplicate-delivery finding paused closure again.
 **Historical Repair Started:** 2026-07-14
@@ -37,6 +40,24 @@ binding, so it is safely disabled without adding a persisted `disabled` enum. No
 endpoint or migration is added. Custom Screens remain a Screen-owned sections/blocks
 surface; this family does not add or widen `core/widgets/*`, a Widget Template, a
 module-pack entry, or any non-Dashboard widget authoring surface.
+
+## Accepted non-blocking LOW follow-ups
+
+Exactly two evidence-backed, currently behavior-neutral LOW findings are deferred under
+the permanent TASK-9999 eligibility contract:
+
+- TASK-9999-01-L01 at
+  `_docs/_TASKS/TASK-9999-01-L01-Decouple-Actor-And-Media-Uuid-Domain-Naming.md`.
+  TASK-9999-01-L01 approved evidence: core/services/customScreens/customScreenSchemas.ts:548; core/services/customScreens/screenEntryPresentationOverrideContract.ts:171; core/services/customScreens/screenEntryPresentationOverrideContract.ts:206; core/services/customScreens/screenEntryPresentationOverrides.ts:426.
+  TASK-9999-01-L01 approved rationale: the shared UUID predicate already accepts and rejects the intended actor/media UUID grammar and preserves exact input bytes; deferral changes no UI/UX/accessibility, data, security/privacy/auth/RBAC, API, persistence/migration, performance/reliability, or test-integrity behavior.
+- TASK-9999-01-L02 at
+  `_docs/_TASKS/TASK-9999-01-L02-Remove-Unread-Screen-Tab-Label-Draft-State.md`.
+  TASK-9999-01-L02 approved evidence: core/admin/ui/custom-screens/ScreenBlockInspector.tsx:524; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:525; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:538; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:542; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:553; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:559; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:563.
+  TASK-9999-01-L02 approved rationale: baseLabel is assigned but never read; deferral changes no rendered UI, keyboard/blur/commit behavior, accessibility, saved data, security/privacy/auth/RBAC, API, persistence/migration, performance/reliability, or test-integrity behavior.
+
+These are the only TASK-540 deferred findings. HIGH/MEDIUM findings and every LOW with
+user-visible, accessibility, data, security, privacy, auth/RBAC, API, persistence,
+migration, performance, reliability, or test-integrity impact remain blocking.
 
 ## Hard invariants
 
@@ -68,11 +89,31 @@ module-pack entry, or any non-Dashboard widget authoring surface.
   by the renderer and later strict override contract; no consumer mirrors its regex.
 - Binding GC prunes every missing block, including when the live block set is
   empty, and reports the existing warning shape.
+- Fresh V4 section/block IDs and binding `blockId`/`propPath`/`field` values share one
+  segment-safe max-160 path grammar; explicit/generated binding IDs share canonical
+  slug grammar and max 120. Strict writes accept only `blockId`; the public Assistant
+  compatibility helper requires exactly one `blockId|widgetId` and exact present
+  source/mode values. Stored read consciously retains its legacy fail-soft alias and
+  source/mode coercion, but emits canonical `blockId` and deterministically hashes safe
+  overlong identities so editor/row references, siblings, Tabs slots, input bytes, and
+  read/write idempotence survive repair. Legacy V1/V2/V3 editor migrations converge on
+  that same V4 stored-read pass after mapping, closing the historical max-bound bypass
+  without remigrating list views or losing block data. Metadata-only PATCH persists that
+  repaired base definition without document loss.
+- `customScreenSchemas.ts` solely owns `buildScreenFieldBindingId(blockId, propPath)`.
+  Every generated ID consists of a bounded readable prefix, `-`, and the exact
+  13-character hash of `JSON.stringify([blockId, propPath])`; the suffix applies to
+  short and long tuples and distinguishes separator/case variants. Valid explicit IDs
+  remain unchanged. The schema normalizer and R01-owned `screenDocumentOps` binding
+  factories/duplication consume it; the TASK-540-02 Inspector is a read-only
+  domain-helper consumer under L02 ownership. No caller keeps a local binding-ID mirror.
 - Tabs use real `tablist`/`tab`/`tabpanel`, one active panel, unique DOM IDs, and
   roving keyboard navigation. In builder mode the visible active tab is derived from
   the host `insertPoint`; activating a tab also arms that tab's slot-end target. Preview
   and entry renderers keep instance-local active state. Authoring and rendering never
   maintain competing tab identities.
+- A defensive zero-item Tabs runtime value emits no empty tablist, tab, or panel and
+  instead visibly renders exact `role="status"` text `No tabs available.`.
 - Selection is not represented by a focusable `role=button` wrapper containing
   links/inputs/contenteditable. Space in an editor stays text input.
 - Both builder and entry dirty states use the shared navigation/beforeunload
@@ -174,9 +215,19 @@ Custom Screen block-patch fixture. R01 alone owned replacement with canonical
 `heading.data.text` and an independent `text.data.content` sibling plus same-block and
 sibling-block preservation assertions; production Assistant and Screen schema/source
 files remained unchanged. Its repair, revalidation, and then-Done transition are
-historical. In the current pre-1252 landed phase R01 is `🚧 In Progress` with
-`Implementation Complete` and no `Repair Pending`; after changelog 1252 covers its
-physical ID, the covered post-1252 state may be `✅ Done` with `Completed`.
+historical. On 2026-07-16 the final workflow audit reopened R01 for the strict
+section/block/binding path max-160 contract, binding-ID max-120 contract, three-mode
+normalizer, deterministic identity-preserving stored-read repair, metadata-only PATCH
+proof, and domain-owned `buildScreenFieldBindingId`. R01 alone owned
+`customScreenSchemas.ts`, the narrow builder replacement in `screenDocumentOps.ts`,
+their source-owner tests, route/Assistant Bun proof, and two unchanged read-only
+Assistant Vitest consumers. L02 then owned only the Inspector call-site handoff, invalid
+Tab-label restore, and its UI regressions; schema and document ops remained R01-owned.
+R03 owned only the accessible zero-item Tabs renderer branch and its renderer regression.
+All three corrections are now `🚧 In Progress` with `Implementation Complete`, exact
+current `Revalidation Passed` receipts, and no `Repair Pending`; none claims a fresh
+post-audit, full validation, smoke, or closure. After changelog 1252 covers their
+physical IDs, the covered post-1252 state may be `✅ Done` with `Completed`.
 Mandatory repository-wide `bun run test` on 2026-07-15 then confirmed that the legacy
 `screen-editor-sections.test.tsx` full-module cacheBus mock omitted the fresh-symbol factory
 called before every L04 Screen-builder mutation. L04 alone owns the additive
@@ -185,6 +236,12 @@ of their assertions, imports, and other mock bytes are frozen. The one-property 
 isolated 9/9 regression, exact six-file/66-test re-gate, and five zero-finding post-audit
 lenses passed on 2026-07-15; that historical implementation evidence remains valid, while
 L04 is `🚧 In Progress` with `Implementation Complete` awaiting family changelog 1252.
+That one-property path is the exact historical repair scope, not a permanent narrowing
+of L04. For a new exact evidence-backed post-audit or final-drift L04 repair, the workflow
+uses the full original L04 `allowedFiles`, including its production and owned test paths.
+The `screen-editor-sections.test.tsx` seam remains fixture-only and may be touched only
+when the finding requires it; the exact finding prompt and post-agent `touchedFiles`
+verification constrain the mutation.
 Closure validation subsequently reproduced
 one logical remote event delivered once from each canonical/legacy compatibility
 transport. TASK-540-04/L03 alone owned the scoped repair, completed it, and replaced its
@@ -195,24 +252,34 @@ and every other landed source leaf now remain `🚧 In Progress` with
 direct-image route-boundary regressions in
 `tests/integration/routes/customScreensRoutes.test.ts`; the production
 `core/server/routes/customScreenRoutes.ts` file plus every UI, client, service,
-hook/dialog, renderer, and L04 consumer file remain read-only gates. The workflow uses
-that exact same three-path owner for any future evidence-backed L03 repair/audit/gate mutation.
-An after-closure task-contract audit fixer has a separate exact allowlist containing
-only the TASK-540 root, TASK-540-04 child, and L03 leaf contracts; status transitions
-remain separate task-state mutations, and neither authority may reopen historical
-source/test ownership. TASK-540-06-L01 also remains deliberately active and ungated while closure
-awaits its own gate, so it still has neither `Targeted Gate Passed` nor `Revalidation Passed`. The
-pre-fix repository-wide `bun run test` command still requires a fresh parent rerun; no
-full-suite pass is claimed here.
+hook/dialog, renderer, and L04 consumer file remained read-only during that historical
+repair. The additive route-test path was a one-time historical exception and is not part
+of L03's original declared owner set. For a new exact evidence-backed post-audit or
+final-drift L03 repair, the workflow uses the full original L03 `allowedFiles`, including
+`core/services/customScreens/screenEntryPresentationOverrideContract.ts`, without
+silently re-adding the historical route-test exception. The exact finding prompt and
+post-agent `touchedFiles` verification still constrain every mutation.
+TASK-540-04-L03 is not one of the current 2026-07-16 repair owners: its only attempted
+current change was an import-only edit in
+`screenEntryPresentationOverrideContract.ts`, that edit was reverted, and the file is
+clean. Only R01, L02, and R03 own current source-repair receipts.
+After closure, that exact-finding owner additionally receives only the TASK-540 root,
+TASK-540-04 child, and L03 leaf task contracts for evidenced prose; status transitions
+remain separate task-state mutations. TASK-540-06-L01 remains deliberately active but
+is now landed with its one exact pre-closure `Revalidation Passed`; it has no
+`Repair Pending` or `Completed`, and all ten leaves await family changelog 1252. The pre-fix
+repository-wide `bun run test` command still requires a fresh parent rerun; no
+full-suite or live-smoke pass is claimed here.
 Leaves have exclusive source ownership; any shared block data/action/DOM-id
 shape is defined by 540-01 and consumed verbatim. TASK-540-03 owns the pure renderer's
 optional UUID→URL map prop; TASK-540-04-L03 exclusively threads and populates it through
 `CustomScreenEntryCanvas.tsx`, the optional pass-through props of
 `CustomScreenPreview.tsx`, and `CustomScreenEntryEditor.tsx`. Preview output remains
 byte-identical when no entry-scoped presentation inputs are supplied.
-TASK-540-02 exclusively owns compatibility expectation changes in
-`tests/vitest/ui-integration/custom-screen-image-inspector.test.tsx` and gates that
-suite together with its binding-panel test.
+TASK-540-02 exclusively owns the Inspector's shared binding-ID helper call site and
+compatibility expectations in `tests/vitest/ui/custom-screen-binding-panel.test.tsx`
+plus `tests/vitest/ui-integration/custom-screen-image-inspector.test.tsx`; R01 retains
+the helper and document-op source/test ownership.
 
 TASK-540 must not edit TASK-478/TASK-481 page-only seams while either stream is
 active. Its forbidden paths include `core/admin/ui/pages/**`,
@@ -228,8 +295,12 @@ fix is sufficient. No direct Screen consumer may remain on the alias after that 
 both entry-list and media-list promise publication. TASK-540-04-L03 exclusively owns
 the presentation-target service expansion plus entry host/canvas forwarding. Its completed
 2026-07-15 repair alone owned the cache-bus canonical/legacy multiset and its owner tests.
-That repair is revalidated, so the resolver treats L03 as landed, resumes at
-TASK-540-06-L01, and permits closure to update the matching `_docs/CMS_API.md` contract.
+The historical L03 repair plus the current R01/L02/R03 corrections are revalidated, so
+the resolver treats the landed task graph as prepared at the pre-closure boundary with
+all ten leaves landed and no remaining leaf cursor. L03 has no current source diff or
+current repair receipt. The matching
+`_docs/CMS_API.md` update is already landed and remains read-only while closure validates
+and consumes it.
 If shared `CanvasEditor.tsx` changed meanwhile, re-read and re-audit before land.
 
 ## Testing Requirements
@@ -239,6 +310,14 @@ If shared `CanvasEditor.tsx` changed meanwhile, re-read and re-audit before land
   may add aggregate cases but never defers or re-baselines a source-owner assertion.
 - Targeted Custom Screen schema/ops/service/client/UI/runtime Vitest suites and
   existing Bun route integration suites.
+- R01's identity correction owns `custom-screen-schemas.test.ts` and
+  `screenDocumentOps.test.ts`; its targeted gate also runs the unchanged
+  `action-plan-schema.test.ts` and `catalogBlueprintEngine.test.ts` as explicit read-only
+  Assistant consumers plus the existing image-src contract. L02 owns only the Inspector
+  call site and `custom-screen-binding-panel.test.tsx`, gated with the existing image
+  inspector suite. R03 owns the accessible zero-item renderer state and its exact 89/89
+  renderer/interaction/image gate. Closure runs all of them read-only in the
+  43-Vitest/5-Bun aggregate.
 - R01's exact Bun gate includes `tests/unit/assistant/actionExecutorService.test.ts`;
   only its existing Custom Screen block-patch fixture/assertions may change, while the
   full file proves the fixture remains compatible with the Assistant executor contract.
