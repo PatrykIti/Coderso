@@ -8,9 +8,10 @@
 **Category:** Custom Screens / Admin UI
 **Estimated Effort:** Small
 **Dependencies:** TASK-540-01-L01
-**Status:** ✅ Done
+**Status:** 🚧 In Progress
 **Started:** 2026-07-13
-**Completed:** 2026-07-13
+**Implementation Complete:** 2026-07-13 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Targeted Gate Passed:** 2026-07-13 — `core lint:types`, `core lint`, the exact two-file Vitest matrix (31/31), `git diff --check`, staging, and collision guards all green
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -26,7 +27,11 @@ Do not edit the palette/factory, schema, renderer, shared controls, or the paren
 page. Update the named behavior test before this leaf's gate; TASK-540-06 owns only
 later aggregate additions.
 
-## Grounded anchors
+## Historical pre-implementation grounded anchors
+
+These 2026-07-13 line snapshots are retained as audit provenance. They describe the
+pre-implementation source layout; current ownership and validation are anchored by the
+named symbols and regression suites in this contract rather than mutable line numbers.
 
 - Reusable `BoundFieldRow`: `ScreenBlockInspector.tsx:134-175`.
 - Tabs editor: `:494-573`.

@@ -8,9 +8,9 @@
 **Category:** Custom Screens / Responsive UI / Accessibility
 **Estimated Effort:** Small
 **Dependencies:** TASK-540-04-L04
-**Status:** ✅ Done
+**Status:** 🚧 In Progress
 **Started:** 2026-07-14
-**Completed:** 2026-07-14
+**Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Targeted Gate Passed:** 2026-07-14 — `core lint:types`, `core lint`, root `tsc`, and the exact three-file Vitest matrix (16/16)
 **Changelog:** 1252 (pinned; closure only)
 
@@ -28,7 +28,11 @@
 TASK-542 separately owns Menu host clearance. Do not add Menu/Page special cases
 to the shared shell and do not edit Page-owned TASK-478/481/539 files.
 
-## Grounded anchors
+## Historical pre-implementation grounded anchors
+
+These 2026-07-14 line snapshots are retained as audit provenance. They describe the
+pre-implementation source layout; current ownership and validation are anchored by the
+named symbols and regression suites in this contract rather than mutable line numbers.
 
 - Screen canvas fixed reserve: `ScreenAuthoringCanvas.tsx:491-523`.
 - Responsive panel width already exists:

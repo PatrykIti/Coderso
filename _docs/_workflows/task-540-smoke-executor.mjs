@@ -1,0 +1,21237 @@
+import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
+import { constants as fsConstants } from "node:fs";
+import {
+  chmod,
+  lstat,
+  mkdir,
+  mkdtemp,
+  open,
+  readFile,
+  readdir,
+  readlink,
+  realpath,
+  rmdir,
+  unlink,
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { parseEnv } from "node:util";
+import { Script } from "node:vm";
+
+import { buildTask540SmokePlan } from "./task-540-smoke-contract.mjs";
+
+const INPUT_KEYS = Object.freeze(["root", "nonce", "assertSafeEvidence", "snapshotRepository"]);
+const NONCE_PATTERN = /^[a-f0-9]{12}$/;
+const MAX_STREAM_BYTES = 4 * 1024 * 1024;
+const MAX_SESSION_LIST_BYTES = 64 * 1024;
+const MAX_SESSION_LIST_ENTRIES = 256;
+const MAX_SESSION_LIST_LINE_BYTES = 4096;
+const MAX_NATURAL_KEY_CANDIDATES = 64;
+const MAX_TASK_TRAFFIC_ROWS = 4096;
+const MAX_COMPLETE_SESSION_ROWS = 4096;
+const BUN_BRIDGE_EXECUTION_AUTHORITY = deepFreezeExact({
+  argvShape: ["--no-env-file", "--cwd", "<canonical-core>", "--eval", "<immutable-source>"],
+  cwdShape: { bun: "<canonical-core>", spawn: "<canonical-root>" },
+  file: "bun",
+  maxStderrBytes: MAX_STREAM_BYTES,
+  maxStdinBytes: 1024 * 1024,
+  maxStdoutBytes: MAX_STREAM_BYTES,
+  timeoutMs: 30_000,
+});
+const COMMAND_TIMEOUT_MS = 120_000;
+const ORCHESTRATOR_EVIDENCE_RUNNER_VERSION = 1;
+const SESSION_NAME = "wf540smoke";
+const TASK_FAILURE = deepFreezeExact({ code: "task540_smoke_failed" });
+const PRIVATE_AUTHORITY = new WeakMap();
+const PRIVATE_CAPTURES = new WeakMap();
+const PRIVATE_CORE = new WeakMap();
+const PRIVATE_CONSTRUCTION_AUTHORITY = new WeakMap();
+const PRIVATE_WORKSPACE_LEDGER = new WeakMap();
+const PRIVATE_RESOURCE_LEDGER = new WeakMap();
+const PRIVATE_CLEANUP_PLANNER = new WeakMap();
+const PRIVATE_PENDING_ATTEMPTS = new WeakMap();
+const PRIVATE_API_REQUEST_CONTEXT = new WeakMap();
+const PRIVATE_EPHEMERAL_API_REQUEST_CONTEXT = new WeakMap();
+const PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY = new WeakMap();
+const PRIVATE_BUN_EXECUTABLE_AUTHORITY = new WeakMap();
+const PRIVATE_BUN_RESOURCE_DESCRIPTORS = new WeakMap();
+const PRIVATE_BUN_OPERATION_DESCRIPTORS = new WeakMap();
+let PRE_AUTHORITY_FAILURE_COUNT = 0;
+const SAFE_IDENTIFIER_PATTERN = /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/u;
+const SAFE_PATH_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/u;
+const ALLOWED_SECRET_NAMES = new Set(["ADMIN_EMAIL", "ADMIN_PASSWORD"]);
+const EXPECTED_AUTH_CHALLENGE_TEXT =
+  "Failed to load resource: the server responded with a status of 401 (Unauthorized)";
+const EXPECTED_AUTH_CHALLENGE_PHASES = deepFreezeExact([
+  {
+    armActionId: "set-007-goto-login",
+    closeActionId: "set-007-goto-login",
+    tokens: ["initial-protected-bootstrap", "initial-login-document-bootstrap"],
+    successiveInitialEpochs: true,
+  },
+  {
+    armActionId: "ru-040-bootstrap-signout",
+    closeActionId: "ru-040a-bootstrap-signout-settled",
+    tokens: ["ru-040-bootstrap-signout"],
+    successiveInitialEpochs: false,
+  },
+  {
+    armActionId: "ru-066-a-signout",
+    closeActionId: "ru-066a-a-signout-settled",
+    tokens: ["ru-066-a-signout"],
+    successiveInitialEpochs: false,
+  },
+  {
+    armActionId: "ru-076-b-signout",
+    closeActionId: "ru-076a-b-signout-settled",
+    tokens: ["ru-076-b-signout"],
+    successiveInitialEpochs: false,
+  },
+  {
+    armActionId: "ru-090-a-exit-signout",
+    closeActionId: "ru-090a-a-exit-signout-settled",
+    tokens: ["ru-090-a-exit-signout"],
+    successiveInitialEpochs: false,
+  },
+  {
+    armActionId: "ru-102-b2-signout",
+    closeActionId: "ru-102a-b2-signout-settled",
+    tokens: ["ru-102-b2-signout"],
+    successiveInitialEpochs: false,
+  },
+]);
+const RECORD_ENTRY_MENU_ACTION_IDS = Object.freeze([
+  "bi-022-entry-link",
+  "dg-018-entry-link",
+  "rc-012b-entry-remount",
+  "ru-052-a-return",
+  "ru-056-a-remount-pending",
+]);
+const RECORDS_WORKSPACE_ACTION_IDS = Object.freeze([
+  "bi-021-records-link",
+  "rc-012a-records-remount",
+  "ru-049-a-away",
+  "ru-054-a-away-again",
+]);
+const PRIMARY_RUNTIME_OPERATION_BY_ACTION_ID = deepFreezeExact({
+  "set-001-storage-preflight": "fixture-setup",
+  "set-002-helper-launch": "host-runner-launch",
+  "set-003-admin-health": "admin-health",
+  "set-004-front-health": "front-health",
+});
+
+const RESOURCE_RECORD_INPUT_KEYS = Object.freeze([
+  "schemaVersion",
+  "resourceKey",
+  "class",
+  "kind",
+  "identifierType",
+  "identifier",
+  "ownerSubjectIdentifier",
+  "acquisitionSourceId",
+  "sourceActionOrdinal",
+  "acquisitionChannel",
+  "provenanceAdapterId",
+  "cleanupAdapterId",
+  "absenceAdapterId",
+  "cleanupPhase",
+  "cleanupPolicy",
+  "deleteAuthority",
+  "restoreAuthority",
+  "provenanceOpId",
+  "cleanupOpId",
+  "absenceOpId",
+  "provenanceSchemaId",
+  "cleanupSchemaId",
+  "absenceSchemaId",
+]);
+const RESOURCE_RECORD_KEYS = Object.freeze([
+  ...RESOURCE_RECORD_INPUT_KEYS.slice(0, 9),
+  "acquisitionOrdinal",
+  ...RESOURCE_RECORD_INPUT_KEYS.slice(9, 10),
+  "dependsOn",
+  ...RESOURCE_RECORD_INPUT_KEYS.slice(10),
+]);
+const RESOURCE_DELTA_KEYS = Object.freeze(["cores", "dependencyEdges"]);
+const RESOURCE_EDGE_KEYS = Object.freeze(["parentKey", "childKey", "relation"]);
+const CLEANUP_OPERATION_KINDS = deepFreezeExact(["provenance", "delete", "absence"]);
+const BROWSER_RECEIPT_KEYS = Object.freeze([
+  "runnerVersion",
+  "sequence",
+  "kind",
+  "scenario",
+  "operation",
+  "routeKey",
+  "method",
+  "pattern",
+  "assertionName",
+  "command",
+  "status",
+  "stdoutBytes",
+  "stderrBytes",
+  "stdoutSha256",
+  "stderrSha256",
+  "stdoutTruncated",
+  "stderrTruncated",
+  "sanitizedOutput",
+  "stdoutDiscarded",
+  "pageId",
+  "tabIndex",
+]);
+const RUNTIME_RECEIPT_KEYS = Object.freeze([
+  "runnerVersion",
+  "sequence",
+  "operation",
+  "operationDescriptor",
+  "status",
+  "evidenceSha256",
+  "subjectKind",
+  "subjectIdentifier",
+  "sanitizedOutput",
+]);
+const TERMINAL_RESOURCE_KINDS = new Set([
+  "audit-log-task-ua",
+  "access-log-task-ua",
+  "session-task",
+]);
+
+function resourceKindContract({
+  className,
+  identifierType,
+  identifierArity,
+  acquisitions,
+  cleanupAdapterId,
+  absenceAdapterId,
+  phase,
+  policy,
+  deleteAuthority = false,
+  restoreAuthority = false,
+  operationSlots = "PCA",
+}) {
+  return deepFreezeExact({
+    class: className,
+    identifierType,
+    identifierArity,
+    acquisitions,
+    cleanupAdapterId,
+    absenceAdapterId,
+    cleanupPhase: { success: phase.success, failure: phase.failure },
+    cleanupPolicy: policy,
+    deleteAuthority,
+    restoreAuthority,
+    operationSlots,
+  });
+}
+
+const ADMIN_OR_FAILURE_DB = deepFreezeExact({
+  "admin-api": "admin-api-exact",
+  "failure-discovery": "db-exact",
+});
+const SERVICE_SETTING_OR_FAILURE_DB = deepFreezeExact({
+  service: "user-setting-service",
+  "failure-discovery": "db-exact",
+});
+const SERVICE_USER_OR_FAILURE_DB = deepFreezeExact({
+  service: "user-provisioning-service",
+  "failure-discovery": "db-exact",
+});
+const RESOURCE_KIND_CONTRACTS = deepFreezeExact({
+  "presentation-override": resourceKindContract({
+    className: "delete",
+    identifierType: "db-composite",
+    identifierArity: 4,
+    acquisitions: ADMIN_OR_FAILURE_DB,
+    cleanupAdapterId: "db-exact",
+    absenceAdapterId: "db-exact",
+    phase: { success: 3, failure: 3 },
+    policy: "delete-and-prove-absent",
+    deleteAuthority: true,
+  }),
+  "setting-user-a": resourceKindContract({
+    className: "delete",
+    identifierType: "setting-row",
+    identifierArity: 2,
+    acquisitions: SERVICE_SETTING_OR_FAILURE_DB,
+    cleanupAdapterId: "db-exact",
+    absenceAdapterId: "db-exact",
+    phase: { success: 3, failure: 3 },
+    policy: "delete-and-prove-absent",
+    deleteAuthority: true,
+  }),
+  "setting-user-b": resourceKindContract({
+    className: "delete",
+    identifierType: "setting-row",
+    identifierArity: 2,
+    acquisitions: SERVICE_SETTING_OR_FAILURE_DB,
+    cleanupAdapterId: "db-exact",
+    absenceAdapterId: "db-exact",
+    phase: { success: 3, failure: 3 },
+    policy: "delete-and-prove-absent",
+    deleteAuthority: true,
+  }),
+  "screen-main": resourceKindContract({
+    className: "delete",
+    identifierType: "db-id",
+    identifierArity: 1,
+    acquisitions: ADMIN_OR_FAILURE_DB,
+    cleanupAdapterId: "admin-api-exact",
+    absenceAdapterId: "admin-api-exact",
+    phase: { success: 3, failure: 3 },
+    policy: "delete-and-prove-absent",
+    deleteAuthority: true,
+  }),
+  "screen-retry": resourceKindContract({
+    className: "delete",
+    identifierType: "db-id",
+    identifierArity: 1,
+    acquisitions: ADMIN_OR_FAILURE_DB,
+    cleanupAdapterId: "admin-api-exact",
+    absenceAdapterId: "admin-api-exact",
+    phase: { success: 3, failure: 3 },
+    policy: "delete-and-prove-absent",
+    deleteAuthority: true,
+  }),
+  "entry-editable": resourceKindContract({
+    className: "delete",
+    identifierType: "db-id",
+    identifierArity: 1,
+    acquisitions: ADMIN_OR_FAILURE_DB,
+    cleanupAdapterId: "admin-api-exact",
+    absenceAdapterId: "admin-api-exact",
+    phase: { success: 3, failure: 3 },
+    policy: "delete-and-prove-absent",
+    deleteAuthority: true,
+  }),
+  "entry-related": resourceKindContract({
+    className: "delete",
+    identifierType: "db-id",
+    identifierArity: 1,
+    acquisitions: ADMIN_OR_FAILURE_DB,
+    cleanupAdapterId: "admin-api-exact",
+    absenceAdapterId: "admin-api-exact",
+    phase: { success: 3, failure: 3 },
+    policy: "delete-and-prove-absent",
+    deleteAuthority: true,
+  }),
+  "media-row-key": resourceKindContract({
+    className: "delete",
+    identifierType: "media-id-and-storage-key",
+    identifierArity: 2,
+    acquisitions: {
+      "admin-api": "media-api-composite",
+      "failure-discovery": "media-api-composite",
+    },
+    cleanupAdapterId: "media-api-composite",
+    absenceAdapterId: "media-api-composite",
+    phase: { success: 3, failure: 3 },
+    policy: "delete-and-prove-absent",
+    deleteAuthority: true,
+  }),
+  "content-type": resourceKindContract({
+    className: "delete",
+    identifierType: "db-id",
+    identifierArity: 1,
+    acquisitions: ADMIN_OR_FAILURE_DB,
+    cleanupAdapterId: "admin-api-exact",
+    absenceAdapterId: "admin-api-exact",
+    phase: { success: 3, failure: 3 },
+    policy: "delete-and-prove-absent",
+    deleteAuthority: true,
+  }),
+  "audit-log-task-ua": resourceKindContract({
+    className: "delete",
+    identifierType: "db-id",
+    identifierArity: 1,
+    acquisitions: { "terminal-db-delta": "db-terminal-delta" },
+    cleanupAdapterId: "db-exact",
+    absenceAdapterId: "db-exact",
+    phase: { success: 6, failure: 6 },
+    policy: "delete-and-prove-absent",
+    deleteAuthority: true,
+  }),
+  "access-log-task-ua": resourceKindContract({
+    className: "delete",
+    identifierType: "db-id",
+    identifierArity: 1,
+    acquisitions: { "terminal-db-delta": "db-terminal-delta" },
+    cleanupAdapterId: "db-exact",
+    absenceAdapterId: "db-exact",
+    phase: { success: 6, failure: 6 },
+    policy: "delete-and-prove-absent",
+    deleteAuthority: true,
+  }),
+  "session-task": resourceKindContract({
+    className: "delete",
+    identifierType: "db-id",
+    identifierArity: 1,
+    acquisitions: { "terminal-db-delta": "db-terminal-delta" },
+    cleanupAdapterId: "db-exact",
+    absenceAdapterId: "db-exact",
+    phase: { success: 6, failure: 6 },
+    policy: "delete-and-prove-absent",
+    deleteAuthority: true,
+  }),
+  "user-a": resourceKindContract({
+    className: "delete",
+    identifierType: "db-id",
+    identifierArity: 1,
+    acquisitions: SERVICE_USER_OR_FAILURE_DB,
+    cleanupAdapterId: "db-exact",
+    absenceAdapterId: "db-exact",
+    phase: { success: 7, failure: 7 },
+    policy: "delete-and-prove-absent",
+    deleteAuthority: true,
+  }),
+  "user-b": resourceKindContract({
+    className: "delete",
+    identifierType: "db-id",
+    identifierArity: 1,
+    acquisitions: SERVICE_USER_OR_FAILURE_DB,
+    cleanupAdapterId: "db-exact",
+    absenceAdapterId: "db-exact",
+    phase: { success: 7, failure: 7 },
+    policy: "delete-and-prove-absent",
+    deleteAuthority: true,
+  }),
+  "bootstrap-user-login-state": resourceKindContract({
+    className: "restore",
+    identifierType: "db-id",
+    identifierArity: 1,
+    acquisitions: { preflight: "db-exact" },
+    cleanupAdapterId: "postgres-bootstrap-cas",
+    absenceAdapterId: "db-exact",
+    phase: { success: 8, failure: 8 },
+    policy: "restore-and-prove-byte-identical",
+    restoreAuthority: true,
+  }),
+  "site-content-routes-baseline": resourceKindContract({
+    className: "retained",
+    identifierType: "proof-key",
+    identifierArity: 1,
+    acquisitions: { preflight: "db-exact" },
+    cleanupAdapterId: null,
+    absenceAdapterId: "db-exact",
+    phase: { success: 9, failure: 9 },
+    policy: "observe-only",
+    operationSlots: "PA",
+  }),
+  "storage-baseline": resourceKindContract({
+    className: "retained",
+    identifierType: "proof-key",
+    identifierArity: 1,
+    acquisitions: { preflight: "filesystem-identity" },
+    cleanupAdapterId: null,
+    absenceAdapterId: "filesystem-identity",
+    phase: { success: 9, failure: 9 },
+    policy: "observe-only",
+    operationSlots: "PA",
+  }),
+  "missing-media-baseline": resourceKindContract({
+    className: "retained",
+    identifierType: "proof-key",
+    identifierArity: 1,
+    acquisitions: { preflight: "filesystem-identity" },
+    cleanupAdapterId: null,
+    absenceAdapterId: "filesystem-identity",
+    phase: { success: 9, failure: 9 },
+    policy: "observe-only",
+    operationSlots: "PA",
+  }),
+  screenshot: resourceKindContract({
+    className: "retained",
+    identifierType: "filesystem-path",
+    identifierArity: 1,
+    acquisitions: { filesystem: "filesystem-identity", "failure-discovery": "filesystem-identity" },
+    cleanupAdapterId: "filesystem-identity",
+    absenceAdapterId: "filesystem-identity",
+    phase: { success: 9, failure: 2 },
+    policy: "retain-on-success-remove-on-failure",
+    deleteAuthority: true,
+  }),
+  "browser-session": resourceKindContract({
+    className: "runtime",
+    identifierType: "browser-session-name",
+    identifierArity: 1,
+    acquisitions: { browser: "playwright-session" },
+    cleanupAdapterId: "playwright-session",
+    absenceAdapterId: "playwright-session",
+    phase: { success: 1, failure: 1 },
+    policy: "dispose-and-prove-closed",
+  }),
+  "route-registry": resourceKindContract({
+    className: "runtime",
+    identifierType: "proof-key",
+    identifierArity: 1,
+    acquisitions: { browser: "playwright-route-registry" },
+    cleanupAdapterId: "playwright-route-registry",
+    absenceAdapterId: "playwright-route-registry",
+    phase: { success: 1, failure: 1 },
+    policy: "release-and-prove-empty",
+  }),
+  "api-context-bootstrap": resourceKindContract({
+    className: "runtime",
+    identifierType: "api-context-name",
+    identifierArity: 1,
+    acquisitions: { service: "api-request-context" },
+    cleanupAdapterId: "api-request-context",
+    absenceAdapterId: "api-request-context",
+    phase: { success: 4, failure: 4 },
+    policy: "dispose-and-prove-closed",
+  }),
+  "api-context-user-a": resourceKindContract({
+    className: "runtime",
+    identifierType: "api-context-name",
+    identifierArity: 1,
+    acquisitions: { service: "api-request-context" },
+    cleanupAdapterId: "api-request-context",
+    absenceAdapterId: "api-request-context",
+    phase: { success: 4, failure: 4 },
+    policy: "dispose-and-prove-closed",
+  }),
+  "browser-private-root": resourceKindContract({
+    className: "runtime",
+    identifierType: "filesystem-path",
+    identifierArity: 1,
+    acquisitions: { filesystem: "filesystem-identity" },
+    cleanupAdapterId: "filesystem-identity",
+    absenceAdapterId: "filesystem-identity",
+    phase: { success: 1, failure: 1 },
+    policy: "dispose-and-prove-closed",
+  }),
+  "host-process-group": resourceKindContract({
+    className: "runtime",
+    identifierType: "process-group-id",
+    identifierArity: 1,
+    acquisitions: { process: "owned-process-group" },
+    cleanupAdapterId: "owned-process-group",
+    absenceAdapterId: "owned-process-group",
+    phase: { success: 10, failure: 10 },
+    policy: "dispose-and-prove-closed",
+  }),
+});
+
+function bunParticipation(mode, envProfileId = null, operationId = null) {
+  invariant(
+    [
+      "node-local",
+      "bound-runtime-bridge",
+      "node+bound-runtime-bridge",
+      "bun-one-shot",
+      "node+bun-one-shot",
+    ].includes(mode),
+    "Bun bridge participation mode is invalid"
+  );
+  return deepFreezeExact({ mode, envProfileId, operationId });
+}
+
+const NODE_LOCAL_BUN_PARTICIPATION = bunParticipation("node-local");
+const DATABASE_BUN_ONE_SHOT = bunParticipation("bun-one-shot", "database");
+const DATABASE_NODE_AND_BUN_ONE_SHOT = bunParticipation("node+bun-one-shot", "database");
+const USER_IDENTITY_BUN_ONE_SHOT = bunParticipation("bun-one-shot", "user-identity-proof");
+const RESOURCE_BUN_BRIDGE_PARTICIPATION = deepFreezeExact({
+  "presentation-override": {
+    provenance: {
+      "admin-api": NODE_LOCAL_BUN_PARTICIPATION,
+      "failure-discovery": DATABASE_BUN_ONE_SHOT,
+    },
+    cleanup: DATABASE_BUN_ONE_SHOT,
+    absence: DATABASE_BUN_ONE_SHOT,
+  },
+  "setting-user-a": {
+    provenance: {
+      service: bunParticipation("bound-runtime-bridge", null, "runtime/set-041-preference-a"),
+      "failure-discovery": DATABASE_BUN_ONE_SHOT,
+    },
+    cleanup: DATABASE_BUN_ONE_SHOT,
+    absence: DATABASE_BUN_ONE_SHOT,
+  },
+  "setting-user-b": {
+    provenance: {
+      service: bunParticipation("bound-runtime-bridge", null, "runtime/set-043-preference-b"),
+      "failure-discovery": DATABASE_BUN_ONE_SHOT,
+    },
+    cleanup: DATABASE_BUN_ONE_SHOT,
+    absence: DATABASE_BUN_ONE_SHOT,
+  },
+  "screen-main": {
+    provenance: {
+      "admin-api": NODE_LOCAL_BUN_PARTICIPATION,
+      "failure-discovery": DATABASE_BUN_ONE_SHOT,
+    },
+    cleanup: NODE_LOCAL_BUN_PARTICIPATION,
+    absence: NODE_LOCAL_BUN_PARTICIPATION,
+  },
+  "screen-retry": {
+    provenance: {
+      "admin-api": NODE_LOCAL_BUN_PARTICIPATION,
+      "failure-discovery": DATABASE_BUN_ONE_SHOT,
+    },
+    cleanup: NODE_LOCAL_BUN_PARTICIPATION,
+    absence: NODE_LOCAL_BUN_PARTICIPATION,
+  },
+  "entry-editable": {
+    provenance: {
+      "admin-api": NODE_LOCAL_BUN_PARTICIPATION,
+      "failure-discovery": DATABASE_BUN_ONE_SHOT,
+    },
+    cleanup: NODE_LOCAL_BUN_PARTICIPATION,
+    absence: NODE_LOCAL_BUN_PARTICIPATION,
+  },
+  "entry-related": {
+    provenance: {
+      "admin-api": NODE_LOCAL_BUN_PARTICIPATION,
+      "failure-discovery": DATABASE_BUN_ONE_SHOT,
+    },
+    cleanup: NODE_LOCAL_BUN_PARTICIPATION,
+    absence: NODE_LOCAL_BUN_PARTICIPATION,
+  },
+  "media-row-key": {
+    provenance: {
+      "admin-api": DATABASE_NODE_AND_BUN_ONE_SHOT,
+      "failure-discovery": DATABASE_NODE_AND_BUN_ONE_SHOT,
+    },
+    cleanup: DATABASE_NODE_AND_BUN_ONE_SHOT,
+    absence: DATABASE_NODE_AND_BUN_ONE_SHOT,
+  },
+  "content-type": {
+    provenance: {
+      "admin-api": NODE_LOCAL_BUN_PARTICIPATION,
+      "failure-discovery": DATABASE_BUN_ONE_SHOT,
+    },
+    cleanup: NODE_LOCAL_BUN_PARTICIPATION,
+    absence: NODE_LOCAL_BUN_PARTICIPATION,
+  },
+  "audit-log-task-ua": {
+    provenance: { "terminal-db-delta": DATABASE_BUN_ONE_SHOT },
+    cleanup: DATABASE_BUN_ONE_SHOT,
+    absence: DATABASE_BUN_ONE_SHOT,
+  },
+  "access-log-task-ua": {
+    provenance: { "terminal-db-delta": DATABASE_BUN_ONE_SHOT },
+    cleanup: DATABASE_BUN_ONE_SHOT,
+    absence: DATABASE_BUN_ONE_SHOT,
+  },
+  "session-task": {
+    provenance: { "terminal-db-delta": DATABASE_BUN_ONE_SHOT },
+    cleanup: DATABASE_BUN_ONE_SHOT,
+    absence: DATABASE_BUN_ONE_SHOT,
+  },
+  "user-a": {
+    provenance: {
+      service: bunParticipation("bound-runtime-bridge", null, "runtime/set-012-user-a-create"),
+      "failure-discovery": USER_IDENTITY_BUN_ONE_SHOT,
+    },
+    cleanup: DATABASE_BUN_ONE_SHOT,
+    absence: DATABASE_BUN_ONE_SHOT,
+  },
+  "user-b": {
+    provenance: {
+      service: bunParticipation("bound-runtime-bridge", null, "runtime/set-014-user-b-create"),
+      "failure-discovery": USER_IDENTITY_BUN_ONE_SHOT,
+    },
+    cleanup: DATABASE_BUN_ONE_SHOT,
+    absence: DATABASE_BUN_ONE_SHOT,
+  },
+  "bootstrap-user-login-state": {
+    provenance: {
+      preflight: bunParticipation(
+        "bound-runtime-bridge",
+        null,
+        "runtime/set-001-storage-preflight"
+      ),
+    },
+    cleanup: DATABASE_BUN_ONE_SHOT,
+    absence: DATABASE_BUN_ONE_SHOT,
+  },
+  "site-content-routes-baseline": {
+    provenance: {
+      preflight: bunParticipation(
+        "bound-runtime-bridge",
+        null,
+        "runtime/set-001-storage-preflight"
+      ),
+    },
+    cleanup: null,
+    absence: DATABASE_BUN_ONE_SHOT,
+  },
+  "storage-baseline": {
+    provenance: {
+      preflight: bunParticipation(
+        "node+bound-runtime-bridge",
+        null,
+        "runtime/set-001-storage-preflight"
+      ),
+    },
+    cleanup: null,
+    absence: DATABASE_NODE_AND_BUN_ONE_SHOT,
+  },
+  "missing-media-baseline": {
+    provenance: {
+      preflight: bunParticipation(
+        "node+bound-runtime-bridge",
+        null,
+        "runtime/set-001-storage-preflight"
+      ),
+    },
+    cleanup: null,
+    absence: DATABASE_NODE_AND_BUN_ONE_SHOT,
+  },
+  screenshot: {
+    provenance: {
+      filesystem: NODE_LOCAL_BUN_PARTICIPATION,
+      "failure-discovery": NODE_LOCAL_BUN_PARTICIPATION,
+    },
+    cleanup: NODE_LOCAL_BUN_PARTICIPATION,
+    absence: NODE_LOCAL_BUN_PARTICIPATION,
+  },
+  "browser-session": {
+    provenance: { browser: NODE_LOCAL_BUN_PARTICIPATION },
+    cleanup: NODE_LOCAL_BUN_PARTICIPATION,
+    absence: NODE_LOCAL_BUN_PARTICIPATION,
+  },
+  "route-registry": {
+    provenance: { browser: NODE_LOCAL_BUN_PARTICIPATION },
+    cleanup: NODE_LOCAL_BUN_PARTICIPATION,
+    absence: NODE_LOCAL_BUN_PARTICIPATION,
+  },
+  "api-context-bootstrap": {
+    provenance: { service: NODE_LOCAL_BUN_PARTICIPATION },
+    cleanup: NODE_LOCAL_BUN_PARTICIPATION,
+    absence: NODE_LOCAL_BUN_PARTICIPATION,
+  },
+  "api-context-user-a": {
+    provenance: { service: NODE_LOCAL_BUN_PARTICIPATION },
+    cleanup: NODE_LOCAL_BUN_PARTICIPATION,
+    absence: NODE_LOCAL_BUN_PARTICIPATION,
+  },
+  "browser-private-root": {
+    provenance: { filesystem: NODE_LOCAL_BUN_PARTICIPATION },
+    cleanup: NODE_LOCAL_BUN_PARTICIPATION,
+    absence: NODE_LOCAL_BUN_PARTICIPATION,
+  },
+  "host-process-group": {
+    provenance: { process: NODE_LOCAL_BUN_PARTICIPATION },
+    cleanup: NODE_LOCAL_BUN_PARTICIPATION,
+    absence: NODE_LOCAL_BUN_PARTICIPATION,
+  },
+});
+
+function assertResourceBunParticipationExhaustive() {
+  invariant(
+    deepEqualJson(
+      Object.keys(RESOURCE_BUN_BRIDGE_PARTICIPATION).sort(),
+      Object.keys(RESOURCE_KIND_CONTRACTS).sort()
+    ),
+    "resource Bun participation kind-set drift"
+  );
+  for (const [kind, contract] of Object.entries(RESOURCE_KIND_CONTRACTS)) {
+    const participation = RESOURCE_BUN_BRIDGE_PARTICIPATION[kind];
+    invariant(
+      deepEqualJson(
+        Object.keys(participation.provenance).sort(),
+        Object.keys(contract.acquisitions).sort()
+      ),
+      kind + " resource Bun provenance channel-set drift"
+    );
+    invariant(
+      (participation.cleanup === null) === (contract.cleanupAdapterId === null),
+      kind + " resource Bun cleanup-slot drift"
+    );
+    invariant(participation.absence !== null, kind + " resource Bun absence-slot drift");
+  }
+}
+
+const RESOURCE_IDENTIFIER_TYPES = deepFreezeExact({
+  "db-id": 1,
+  "db-composite": 4,
+  "media-id-and-storage-key": 2,
+  "setting-row": 2,
+  "filesystem-path": 1,
+  "browser-session-name": 1,
+  "api-context-name": 1,
+  "process-group-id": 1,
+  "proof-key": 1,
+});
+
+function resourceOperationPair(slot, resourceKey, required) {
+  if (!required) return { op: null, schema: null };
+  const digest = hashBytes(Buffer.from(slot + "\0" + resourceKey)).slice(0, 24);
+  return { op: slot + "-" + digest, schema: slot + "-schema-v1-" + digest };
+}
+
+function validateResourceCoreInput(core, expectedOrdinal) {
+  exactOwnKeys(core, RESOURCE_RECORD_INPUT_KEYS, "resource acquisition core", { plain: true });
+  invariant(core.schemaVersion === 1, "resource core schema drift");
+  invariant(
+    typeof core.resourceKey === "string" &&
+      core.resourceKey.length > 0 &&
+      core.resourceKey.length <= 512,
+    "resource key is invalid"
+  );
+  const contract = RESOURCE_KIND_CONTRACTS[core.kind];
+  invariant(contract !== undefined, "resource kind is not registered");
+  invariant(
+    core.class === contract.class && core.identifierType === contract.identifierType,
+    "resource kind shape drift"
+  );
+  invariant(
+    Array.isArray(core.identifier) &&
+      Object.isFrozen(core.identifier) &&
+      core.identifier.length === contract.identifierArity &&
+      core.identifier.every(
+        (value) =>
+          typeof value === "string" &&
+          value.length > 0 &&
+          value.length <= 4096 &&
+          !value.includes("\0")
+      ),
+    "resource identifier tuple is invalid"
+  );
+  invariant(
+    RESOURCE_IDENTIFIER_TYPES[core.identifierType] === core.identifier.length,
+    "resource identifier arity drift"
+  );
+  invariant(
+    core.ownerSubjectIdentifier === null ||
+      (typeof core.ownerSubjectIdentifier === "string" &&
+        core.ownerSubjectIdentifier.length > 0 &&
+        core.ownerSubjectIdentifier.length <= 128),
+    "resource owner correlation is invalid"
+  );
+  invariant(
+    typeof core.acquisitionSourceId === "string" &&
+      core.acquisitionSourceId.length > 0 &&
+      core.acquisitionSourceId.length <= 128,
+    "resource acquisition source is invalid"
+  );
+  invariant(
+    core.sourceActionOrdinal === null ||
+      (Number.isSafeInteger(core.sourceActionOrdinal) &&
+        core.sourceActionOrdinal > 0 &&
+        core.sourceActionOrdinal <= 490),
+    "resource source ordinal is invalid"
+  );
+  invariant(
+    contract.acquisitions[core.acquisitionChannel] === core.provenanceAdapterId,
+    "resource acquisition provenance drift"
+  );
+  invariant(
+    core.cleanupAdapterId === contract.cleanupAdapterId &&
+      core.absenceAdapterId === contract.absenceAdapterId,
+    "resource cleanup adapter drift"
+  );
+  invariant(
+    deepEqualJson(core.cleanupPhase, contract.cleanupPhase),
+    "resource cleanup phase drift"
+  );
+  invariant(
+    core.cleanupPolicy === contract.cleanupPolicy &&
+      core.deleteAuthority === contract.deleteAuthority &&
+      core.restoreAuthority === contract.restoreAuthority,
+    "resource authority drift"
+  );
+  const slots = [
+    ["P", core.provenanceOpId, core.provenanceSchemaId],
+    ["C", core.cleanupOpId, core.cleanupSchemaId],
+    ["A", core.absenceOpId, core.absenceSchemaId],
+  ];
+  for (const [slot, op, schema] of slots) {
+    const required = contract.operationSlots.includes(slot);
+    invariant((op === null) === (schema === null), "resource operation/schema pair drift");
+    invariant(
+      required
+        ? typeof op === "string" && typeof schema === "string"
+        : op === null && schema === null,
+      "resource operation slot drift"
+    );
+    const expected = resourceOperationPair(slot.toLowerCase(), core.resourceKey, required);
+    invariant(
+      op === expected.op && schema === expected.schema,
+      "resource operation identifier drift"
+    );
+  }
+  invariant(
+    Number.isSafeInteger(expectedOrdinal) && expectedOrdinal > 0,
+    "resource acquisition ordinal is invalid"
+  );
+}
+
+function validateResourceEdge(edge) {
+  exactOwnKeys(edge, RESOURCE_EDGE_KEYS, "resource dependency edge", { plain: true });
+  invariant(
+    typeof edge.parentKey === "string" &&
+      edge.parentKey.length > 0 &&
+      typeof edge.childKey === "string" &&
+      edge.childKey.length > 0 &&
+      edge.parentKey !== edge.childKey &&
+      edge.relation === "destructive-parent-depends-on-child",
+    "resource dependency edge is invalid"
+  );
+}
+
+class ResourceLedgerBuilder {
+  constructor(contracts = RESOURCE_KIND_CONTRACTS) {
+    invariant(
+      contracts === RESOURCE_KIND_CONTRACTS,
+      "resource contract registry substitution is forbidden"
+    );
+    PRIVATE_RESOURCE_LEDGER.set(this, {
+      cores: [],
+      edges: [],
+      keys: new Set(),
+      edgeKeys: new Set(),
+      persistentProjection: null,
+      terminalProjection: null,
+      finalProjection: null,
+      finalFrozen: false,
+    });
+  }
+
+  appendValidatedDelta(delta) {
+    const state = PRIVATE_RESOURCE_LEDGER.get(this);
+    invariant(state && !state.finalFrozen, "resource ledger is frozen");
+    exactOwnKeys(delta, RESOURCE_DELTA_KEYS, "resource acquisition delta", { plain: true });
+    invariant(
+      Array.isArray(delta.cores) && Array.isArray(delta.dependencyEdges),
+      "resource delta arrays are invalid"
+    );
+    const pendingKeys = new Set();
+    const cores = delta.cores.map((core, index) => {
+      const ordinal = state.cores.length + index + 1;
+      validateResourceCoreInput(core, ordinal);
+      invariant(
+        !state.keys.has(core.resourceKey) && !pendingKeys.has(core.resourceKey),
+        "resource key was acquired twice"
+      );
+      pendingKeys.add(core.resourceKey);
+      return deepFreezeExact({
+        ...core,
+        acquisitionOrdinal: ordinal,
+      });
+    });
+    const allKeys = new Set([...state.keys, ...pendingKeys]);
+    const edges = delta.dependencyEdges.map((edge) => {
+      validateResourceEdge(edge);
+      invariant(
+        allKeys.has(edge.parentKey) && allKeys.has(edge.childKey),
+        "resource edge endpoint is not acquired"
+      );
+      const encoded = lengthPrefixedTuple([edge.parentKey, edge.childKey, edge.relation]);
+      invariant(!state.edgeKeys.has(encoded), "resource dependency edge was appended twice");
+      return { edge: deepFreezeExact({ ...edge }), encoded };
+    });
+    for (const core of cores) {
+      state.cores.push(core);
+      state.keys.add(core.resourceKey);
+    }
+    for (const { edge, encoded } of edges) {
+      state.edges.push(edge);
+      state.edgeKeys.add(encoded);
+    }
+    return deepFreezeExact({ appendedCores: cores.length, appendedEdges: edges.length });
+  }
+
+  compileResourceRecords(stage) {
+    const state = PRIVATE_RESOURCE_LEDGER.get(this);
+    invariant(
+      ["persistent", "terminal", "final"].includes(stage),
+      "resource compile stage is invalid"
+    );
+    const existingSlot =
+      stage === "persistent"
+        ? state.persistentProjection
+        : stage === "terminal"
+          ? state.terminalProjection
+          : state.finalProjection;
+    if (existingSlot !== null) return existingSlot;
+    if (stage === "terminal")
+      invariant(
+        state.persistentProjection !== null,
+        "terminal ledger compiled before persistent ledger"
+      );
+    if (stage === "final")
+      invariant(
+        state.persistentProjection !== null && state.terminalProjection !== null,
+        "final ledger compiled before stage ledgers"
+      );
+    const selected = state.cores.filter(
+      (core) =>
+        stage === "final" || (stage === "terminal") === TERMINAL_RESOURCE_KINDS.has(core.kind)
+    );
+    const selectedKeys = new Set(selected.map(({ resourceKey }) => resourceKey));
+    const dependsOnByKey = new Map(selected.map(({ resourceKey }) => [resourceKey, []]));
+    for (const edge of state.edges) {
+      const parentSelected = selectedKeys.has(edge.parentKey);
+      const childSelected = selectedKeys.has(edge.childKey);
+      if (stage === "final")
+        invariant(parentSelected && childSelected, "final resource graph has a missing endpoint");
+      if (parentSelected && childSelected) dependsOnByKey.get(edge.parentKey).push(edge.childKey);
+    }
+    const records = selected.map((core) => {
+      const dependsOn = [...new Set(dependsOnByKey.get(core.resourceKey))].sort();
+      invariant(
+        dependsOn.length === dependsOnByKey.get(core.resourceKey).length,
+        "resource dependency list contains duplicates"
+      );
+      const { acquisitionOrdinal, ...input } = core;
+      const record = {
+        ...input,
+        acquisitionOrdinal,
+        dependsOn: deepFreezeExact(dependsOn),
+      };
+      exactOwnKeys(record, RESOURCE_RECORD_KEYS, "compiled resource record", { plain: true });
+      return deepFreezeExact(record);
+    });
+    assertAcyclicResourceGraph(records);
+    const projection = deepFreezeExact(records);
+    if (stage === "persistent") state.persistentProjection = projection;
+    else if (stage === "terminal") state.terminalProjection = projection;
+    else {
+      state.finalProjection = projection;
+      state.finalFrozen = true;
+    }
+    return projection;
+  }
+}
+
+function assertAcyclicResourceGraph(records) {
+  const byKey = new Map(records.map((record) => [record.resourceKey, record]));
+  const visiting = new Set();
+  const visited = new Set();
+  const visit = (key) => {
+    if (visited.has(key)) return;
+    invariant(!visiting.has(key), "resource dependency graph contains a cycle");
+    visiting.add(key);
+    const record = byKey.get(key);
+    invariant(record !== undefined, "resource graph references an unknown key");
+    for (const childKey of record.dependsOn) visit(childKey);
+    visiting.delete(key);
+    visited.add(key);
+  };
+  for (const key of byKey.keys()) visit(key);
+}
+
+function lengthPrefixedTuple(values) {
+  invariant(
+    Array.isArray(values) && values.every((value) => typeof value === "string"),
+    "tuple values are invalid"
+  );
+  return values.map((value) => Buffer.byteLength(value) + ":" + value).join("|");
+}
+
+function cartesianCleanupTuples(resourceKeys) {
+  return resourceKeys.flatMap((resourceKey) =>
+    CLEANUP_OPERATION_KINDS.map((operationKind) => deepFreezeExact([resourceKey, operationKind]))
+  );
+}
+
+function assertExactCleanupTupleSet(actual, resourceKeys, label) {
+  const expected = cartesianCleanupTuples(resourceKeys);
+  const encode = (tuple) => {
+    invariant(Array.isArray(tuple) && tuple.length === 2, label + " cleanup tuple shape drift");
+    return lengthPrefixedTuple(tuple);
+  };
+  const actualKeys = actual.map(encode);
+  const expectedKeys = expected.map(encode);
+  invariant(
+    new Set(actualKeys).size === actualKeys.length,
+    label + " cleanup tuples contain duplicates"
+  );
+  invariant(
+    actualKeys.length === expectedKeys.length &&
+      actualKeys.every((key) => expectedKeys.includes(key)),
+    label + " cleanup tuple set drift"
+  );
+}
+
+function createCleanupActionPlan(records, stage) {
+  const priority = {
+    "presentation-override": 0,
+    "setting-user-a": 1,
+    "setting-user-b": 2,
+    "screen-main": 3,
+    "screen-retry": 4,
+    "entry-editable": 5,
+    "entry-related": 6,
+    "media-row-key": 7,
+    "content-type": 8,
+    "audit-log-task-ua": 9,
+    "access-log-task-ua": 10,
+    "session-task": 11,
+    "user-a": 12,
+    "user-b": 13,
+  };
+  const resourceKeys = records
+    .filter(
+      (record) =>
+        record.class === "delete" &&
+        (stage === "terminal") === TERMINAL_RESOURCE_KINDS.has(record.kind)
+    )
+    .sort(
+      (left, right) =>
+        (priority[left.kind] ?? 100) - (priority[right.kind] ?? 100) ||
+        left.acquisitionOrdinal - right.acquisitionOrdinal
+    )
+    .map(({ resourceKey }) => resourceKey);
+  const tuples = cartesianCleanupTuples(resourceKeys);
+  assertExactCleanupTupleSet(tuples, resourceKeys, stage);
+  return deepFreezeExact({
+    stage,
+    resourceKeys: deepFreezeExact(resourceKeys),
+    tuples: deepFreezeExact(tuples),
+  });
+}
+
+class ResourceCleanupPlanner {
+  constructor() {
+    PRIVATE_CLEANUP_PLANNER.set(this, {
+      persistentPlan: null,
+      terminalPlan: null,
+      finalPlan: null,
+      blockerRoots: null,
+    });
+  }
+
+  freezePersistent(records, blockerRoots = []) {
+    const state = PRIVATE_CLEANUP_PLANNER.get(this);
+    invariant(
+      state.persistentPlan === null && state.finalPlan === null,
+      "persistent cleanup plan was assigned twice"
+    );
+    invariant(
+      Array.isArray(blockerRoots) && new Set(blockerRoots).size === blockerRoots.length,
+      "failure-discovery blocker roots are invalid"
+    );
+    state.blockerRoots = deepFreezeExact([...blockerRoots].sort());
+    state.persistentPlan = createCleanupActionPlan(records, "persistent");
+    return state.persistentPlan;
+  }
+
+  freezeTerminal(records) {
+    const state = PRIVATE_CLEANUP_PLANNER.get(this);
+    invariant(
+      state.persistentPlan !== null && state.terminalPlan === null && state.finalPlan === null,
+      "terminal cleanup plan assignment drift"
+    );
+    state.terminalPlan = createCleanupActionPlan(records, "terminal");
+    invariant(
+      state.persistentPlan.resourceKeys.every(
+        (key) => !state.terminalPlan.resourceKeys.includes(key)
+      ),
+      "persistent and terminal cleanup plans overlap"
+    );
+    return state.terminalPlan;
+  }
+
+  freezeFinal(finalLedger) {
+    const state = PRIVATE_CLEANUP_PLANNER.get(this);
+    invariant(
+      state.persistentPlan !== null && state.terminalPlan !== null && state.finalPlan === null,
+      "final cleanup plan assignment drift"
+    );
+    const dependencyGraph = deepFreezeExact(
+      Object.fromEntries(finalLedger.map(({ resourceKey, dependsOn }) => [resourceKey, dependsOn]))
+    );
+    const blocked = compileBlockedParentClosure(dependencyGraph, state.blockerRoots);
+    const kindByKey = new Map(finalLedger.map(({ resourceKey, kind }) => [resourceKey, kind]));
+    const persistentUserKeys = new Set(
+      state.persistentPlan.resourceKeys.filter(
+        (key) => kindByKey.get(key) === "user-a" || kindByKey.get(key) === "user-b"
+      )
+    );
+    const actionTuples = deepFreezeExact([
+      ...state.persistentPlan.tuples.filter(
+        ([resourceKey]) => !persistentUserKeys.has(resourceKey)
+      ),
+      ...state.terminalPlan.tuples,
+      ...state.persistentPlan.tuples.filter(([resourceKey]) => persistentUserKeys.has(resourceKey)),
+    ]);
+    const resourceKeys = deepFreezeExact(
+      [...state.persistentPlan.resourceKeys, ...state.terminalPlan.resourceKeys].sort()
+    );
+    assertExactCleanupTupleSet(actionTuples, resourceKeys, "final");
+    state.finalPlan = deepFreezeExact({
+      ledger: finalLedger,
+      dependencyGraph,
+      persistentActionPlan: state.persistentPlan,
+      terminalActionPlan: state.terminalPlan,
+      failureDiscoveryBlockedParentKeys: blocked,
+      resourceKeys,
+      actionTuples,
+    });
+    invariant(
+      state.finalPlan.persistentActionPlan === state.persistentPlan &&
+        state.finalPlan.terminalActionPlan === state.terminalPlan,
+      "final cleanup plan cloned a stage plan"
+    );
+    return state.finalPlan;
+  }
+}
+
+function compileBlockedParentClosure(graph, roots) {
+  const blocked = new Set(roots);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [parentKey, childKeys] of Object.entries(graph)) {
+      if (!blocked.has(parentKey) && childKeys.some((childKey) => blocked.has(childKey))) {
+        blocked.add(parentKey);
+        changed = true;
+      }
+    }
+  }
+  return deepFreezeExact([...blocked].sort());
+}
+
+function createResourceCore({
+  kind,
+  identifier,
+  ownerSubjectIdentifier = null,
+  acquisitionSourceId,
+  sourceActionOrdinal,
+  acquisitionChannel,
+}) {
+  const contract = RESOURCE_KIND_CONTRACTS[kind];
+  invariant(contract !== undefined, "resource core kind is not registered");
+  const frozenIdentifier = deepFreezeExact([...identifier]);
+  const resourceKey =
+    kind + ":" + hashBytes(Buffer.from(canonicalJson(frozenIdentifier))).slice(0, 32);
+  const provenance = resourceOperationPair("p", resourceKey, contract.operationSlots.includes("P"));
+  const cleanup = resourceOperationPair("c", resourceKey, contract.operationSlots.includes("C"));
+  const absence = resourceOperationPair("a", resourceKey, contract.operationSlots.includes("A"));
+  return deepFreezeExact({
+    schemaVersion: 1,
+    resourceKey,
+    class: contract.class,
+    kind,
+    identifierType: contract.identifierType,
+    identifier: frozenIdentifier,
+    ownerSubjectIdentifier,
+    acquisitionSourceId,
+    sourceActionOrdinal,
+    acquisitionChannel,
+    provenanceAdapterId: contract.acquisitions[acquisitionChannel],
+    cleanupAdapterId: contract.cleanupAdapterId,
+    absenceAdapterId: contract.absenceAdapterId,
+    cleanupPhase: contract.cleanupPhase,
+    cleanupPolicy: contract.cleanupPolicy,
+    deleteAuthority: contract.deleteAuthority,
+    restoreAuthority: contract.restoreAuthority,
+    provenanceOpId: provenance.op,
+    cleanupOpId: cleanup.op,
+    absenceOpId: absence.op,
+    provenanceSchemaId: provenance.schema,
+    cleanupSchemaId: cleanup.schema,
+    absenceSchemaId: absence.schema,
+  });
+}
+
+function emptyResourceDelta() {
+  return deepFreezeExact({ cores: [], dependencyEdges: [] });
+}
+
+function destructiveResourceEdge(parentKey, childKey) {
+  return deepFreezeExact({
+    parentKey,
+    childKey,
+    relation: "destructive-parent-depends-on-child",
+  });
+}
+
+function actionOrdinal(plan, actionId) {
+  const action = plan.actionManifest.find(({ id }) => id === actionId);
+  invariant(action !== undefined, "resource origin action is absent: " + actionId);
+  return action.ordinal;
+}
+
+const PROVEN_RESOURCE_ACTIONS = deepFreezeExact({
+  "set-013-user-a-proof": {
+    origin: "set-012-user-a-create",
+    kind: "user-a",
+    capture: "user-a.id",
+    semantic: "user-a",
+    channel: "service",
+  },
+  "set-015-user-b-proof": {
+    origin: "set-014-user-b-create",
+    kind: "user-b",
+    capture: "user-b.id",
+    semantic: "user-b",
+    channel: "service",
+  },
+  "set-017-editable-type-proof": {
+    origin: "set-016-editable-type-create",
+    kind: "content-type",
+    capture: "content-type-editable.id",
+    semantic: "content-type-editable",
+    channel: "admin-api",
+  },
+  "set-019-related-a-type-proof": {
+    origin: "set-018-related-a-type-create",
+    kind: "content-type",
+    capture: "content-type-related-a.id",
+    semantic: "content-type-related-a",
+    channel: "admin-api",
+  },
+  "set-021-related-b-type-proof": {
+    origin: "set-020-related-b-type-create",
+    kind: "content-type",
+    capture: "content-type-related-b.id",
+    semantic: "content-type-related-b",
+    channel: "admin-api",
+  },
+  "set-021b-related-failure-type-proof": {
+    origin: "set-021a-related-failure-type-create",
+    kind: "content-type",
+    capture: "content-type-related-failure.id",
+    semantic: "content-type-related-failure",
+    channel: "admin-api",
+  },
+  "set-023-related-a1-proof": {
+    origin: "set-022-related-a1-create",
+    kind: "entry-related",
+    capture: "related-entry-a1.id",
+    semantic: "related-entry-a1",
+    channel: "admin-api",
+    parent: "content-type-related-a",
+  },
+  "set-025-related-a2-proof": {
+    origin: "set-024-related-a2-create",
+    kind: "entry-related",
+    capture: "related-entry-a2.id",
+    semantic: "related-entry-a2",
+    channel: "admin-api",
+    parent: "content-type-related-a",
+  },
+  "set-027-related-b1-proof": {
+    origin: "set-026-related-b1-create",
+    kind: "entry-related",
+    capture: "related-entry-b1.id",
+    semantic: "related-entry-b1",
+    channel: "admin-api",
+    parent: "content-type-related-b",
+  },
+  "set-029-related-b2-proof": {
+    origin: "set-028-related-b2-create",
+    kind: "entry-related",
+    capture: "related-entry-b2.id",
+    semantic: "related-entry-b2",
+    channel: "admin-api",
+    parent: "content-type-related-b",
+  },
+  "set-029b-related-failure1-proof": {
+    origin: "set-029a-related-failure1-create",
+    kind: "entry-related",
+    capture: "related-entry-failure1.id",
+    semantic: "related-entry-failure1",
+    channel: "admin-api",
+    parent: "content-type-related-failure",
+  },
+  "set-031-media-proof": {
+    origin: "set-030-media-upload",
+    kind: "media-row-key",
+    capture: "media.id",
+    secondCapture: "media.storage-key",
+    semantic: "media",
+    channel: "admin-api",
+  },
+  "set-034-entry-proof": {
+    origin: "set-033-entry-create",
+    kind: "entry-editable",
+    capture: "entry.id",
+    semantic: "editable-entry",
+    channel: "admin-api",
+    parent: "content-type-editable",
+  },
+  "set-036-screen-proof": {
+    origin: "set-035-screen-create",
+    kind: "screen-main",
+    capture: "screen.id",
+    semantic: "screen",
+    channel: "admin-api",
+    parent: "content-type-editable",
+  },
+  "set-038-retry-screen-proof": {
+    origin: "set-037-retry-screen-create",
+    kind: "screen-retry",
+    capture: "retry-screen.id",
+    semantic: "retry-screen",
+    channel: "admin-api",
+    parent: "content-type-editable",
+  },
+  "set-040-override-proof": {
+    origin: "set-039-override-create",
+    kind: "presentation-override",
+    semantic: "presentation-override",
+    channel: "admin-api",
+  },
+  "set-042-preference-a-proof": {
+    origin: "set-041-preference-a",
+    kind: "setting-user-a",
+    semantic: "setting-user-a",
+    channel: "service",
+    owner: "user-a",
+  },
+  "set-044-preference-b-proof": {
+    origin: "set-043-preference-b",
+    kind: "setting-user-b",
+    semantic: "setting-user-b",
+    channel: "service",
+    owner: "user-b",
+  },
+});
+
+const RESPONSE_LOST_CREATE_DESCRIPTORS = deepFreezeExact(
+  Object.fromEntries(
+    Object.values(PROVEN_RESOURCE_ACTIONS).map((descriptor) => [descriptor.origin, descriptor])
+  )
+);
+const RESPONSE_LOST_CREATE_ACTION_IDS = deepFreezeExact(
+  Object.keys(RESPONSE_LOST_CREATE_DESCRIPTORS).sort()
+);
+const PENDING_ATTEMPT_KEYS = Object.freeze([
+  "pendingAttemptKey",
+  "actionId",
+  "actionOrdinal",
+  "kind",
+  "semantic",
+  "naturalKey",
+  "baseline",
+  "authoredRequestSha256",
+  "failureObservationSha256",
+  "intendedParentBlockerKeys",
+]);
+const FAILURE_DISCOVERY_RESULT_KEYS = Object.freeze([
+  "pendingAttemptKey",
+  "safeDelta",
+  "failure",
+  "intendedParentBlockerKeys",
+]);
+
+class PendingFailureAttemptRegistry {
+  constructor() {
+    PRIVATE_PENDING_ATTEMPTS.set(this, {
+      active: new Map(),
+      consumed: false,
+    });
+  }
+
+  arm(action, intendedParentBlockerKeys, intent) {
+    const descriptor = RESPONSE_LOST_CREATE_DESCRIPTORS[action.id];
+    if (descriptor === undefined) return null;
+    const state = PRIVATE_PENDING_ATTEMPTS.get(this);
+    invariant(
+      !state.consumed && !state.active.has(action.id),
+      "pending create attempt assignment drift"
+    );
+    invariant(
+      Array.isArray(intendedParentBlockerKeys) &&
+        new Set(intendedParentBlockerKeys).size === intendedParentBlockerKeys.length &&
+        intendedParentBlockerKeys.every((key) => typeof key === "string" && key.length > 0),
+      "pending create intended-parent set is invalid"
+    );
+    exactOwnKeys(
+      intent,
+      ["naturalKey", "baseline", "authoredRequestSha256"],
+      "pending create intent",
+      { plain: true }
+    );
+    assertRecursivelyFrozen(intent);
+    assertPlainJsonValue(intent.naturalKey, "pending create natural key");
+    assertPlainJsonValue(intent.baseline, "pending create baseline");
+    invariant(
+      typeof intent.authoredRequestSha256 === "string" &&
+        /^[a-f0-9]{64}$/u.test(intent.authoredRequestSha256),
+      "pending create authored request digest is invalid"
+    );
+    const attempt = deepFreezeExact({
+      pendingAttemptKey:
+        "pending:" + hashBytes(Buffer.from(action.id + "\0" + action.ordinal)).slice(0, 24),
+      actionId: action.id,
+      actionOrdinal: action.ordinal,
+      kind: descriptor.kind,
+      semantic: descriptor.semantic,
+      naturalKey: intent.naturalKey,
+      baseline: intent.baseline,
+      authoredRequestSha256: intent.authoredRequestSha256,
+      failureObservationSha256: null,
+      intendedParentBlockerKeys: deepFreezeExact([...intendedParentBlockerKeys].sort()),
+    });
+    exactOwnKeys(attempt, PENDING_ATTEMPT_KEYS, "pending create attempt", { plain: true });
+    state.active.set(action.id, attempt);
+    return attempt;
+  }
+
+  settle(actionId) {
+    const state = PRIVATE_PENDING_ATTEMPTS.get(this);
+    invariant(
+      !state.consumed && state.active.delete(actionId),
+      "pending create attempt settlement drift"
+    );
+  }
+
+  retainPrimaryFailureObservation(cause) {
+    const state = PRIVATE_PENDING_ATTEMPTS.get(this);
+    invariant(!state.consumed, "pending create failure observation arrived after consumption");
+    const observation = deepFreezeExact({
+      name:
+        typeof cause?.name === "string" && cause.name.length > 0 && cause.name.length <= 128
+          ? cause.name
+          : "Error",
+      code:
+        typeof cause?.code === "string" && cause.code.length > 0 && cause.code.length <= 128
+          ? cause.code
+          : null,
+    });
+    const digest = hashBytes(Buffer.from(canonicalJson(observation)));
+    for (const [actionId, attempt] of state.active) {
+      if (attempt.failureObservationSha256 !== null) continue;
+      state.active.set(actionId, deepFreezeExact({ ...attempt, failureObservationSha256: digest }));
+    }
+  }
+
+  takeFrozenOnce() {
+    const state = PRIVATE_PENDING_ATTEMPTS.get(this);
+    invariant(!state.consumed, "pending create attempts were consumed twice");
+    state.consumed = true;
+    invariant(
+      [...state.active.values()].every(
+        ({ failureObservationSha256 }) =>
+          typeof failureObservationSha256 === "string" &&
+          /^[a-f0-9]{64}$/u.test(failureObservationSha256)
+      ),
+      "pending create lacks its real failure observation"
+    );
+    return deepFreezeExact(
+      [...state.active.values()].sort((left, right) => left.actionOrdinal - right.actionOrdinal)
+    );
+  }
+}
+
+function validateFailureDiscoveryAttemptResult(result, attempt) {
+  exactOwnKeys(result, FAILURE_DISCOVERY_RESULT_KEYS, "failure discovery attempt result", {
+    plain: true,
+  });
+  invariant(
+    result.pendingAttemptKey === attempt.pendingAttemptKey,
+    "failure discovery attempt identity drift"
+  );
+  exactOwnKeys(result.safeDelta, RESOURCE_DELTA_KEYS, "failure discovery safe delta", {
+    plain: true,
+  });
+  invariant(
+    result.failure === null ||
+      (Object.getPrototypeOf(result.failure) === Object.prototype &&
+        typeof result.failure.code === "string" &&
+        result.failure.code.length > 0),
+    "failure discovery failure shape drift"
+  );
+  invariant(
+    Array.isArray(result.intendedParentBlockerKeys) &&
+      deepEqualJson(
+        result.intendedParentBlockerKeys,
+        result.failure === null ? [] : attempt.intendedParentBlockerKeys
+      ),
+    "failure discovery blocker set drift"
+  );
+  assertRecursivelyFrozen(result);
+}
+
+async function discoverResponseLostPersistentCreatesNeverThrowPerAttempt(attempts, adapter) {
+  invariant(
+    Array.isArray(attempts) && Object.isFrozen(attempts),
+    "pending attempt batch is mutable"
+  );
+  invariant(typeof adapter === "function", "failure discovery adapter is absent");
+  const attemptResults = [];
+  for (const attempt of attempts) {
+    let result;
+    try {
+      result = await adapter(attempt);
+    } catch {
+      result = deepFreezeExact({
+        pendingAttemptKey: attempt.pendingAttemptKey,
+        safeDelta: emptyResourceDelta(),
+        failure: deepFreezeExact({ code: "failure_discovery_ambiguous" }),
+        intendedParentBlockerKeys: attempt.intendedParentBlockerKeys,
+      });
+    }
+    validateFailureDiscoveryAttemptResult(result, attempt);
+    attemptResults.push(result);
+  }
+  return deepFreezeExact({ attemptResults: deepFreezeExact(attemptResults) });
+}
+
+function intendedParentBlockerKeysForCreate(state, action) {
+  const descriptor = RESPONSE_LOST_CREATE_DESCRIPTORS[action.id];
+  if (descriptor === undefined) return [];
+  const semantics = [];
+  if (descriptor.parent) semantics.push(descriptor.parent);
+  if (descriptor.kind === "presentation-override")
+    semantics.push("screen", "editable-entry", "media");
+  if (descriptor.kind === "setting-user-a") semantics.push("user-a");
+  if (descriptor.kind === "setting-user-b") semantics.push("user-b");
+  return [
+    ...new Set(semantics.map((semantic) => state.resourceKeys.get(semantic)).filter(Boolean)),
+  ].sort();
+}
+
+const RESPONSE_LOST_CONTENT_TYPE_ACTIONS = deepFreezeExact({
+  "set-016-editable-type-create": "editable",
+  "set-018-related-a-type-create": "relatedA",
+  "set-020-related-b-type-create": "relatedB",
+  "set-021a-related-failure-type-create": "relatedFailure",
+});
+const RESPONSE_LOST_ENTRY_ACTIONS = deepFreezeExact({
+  "set-022-related-a1-create": ["a1", "relatedA"],
+  "set-024-related-a2-create": ["a2", "relatedA"],
+  "set-026-related-b1-create": ["b1", "relatedB"],
+  "set-028-related-b2-create": ["b2", "relatedB"],
+  "set-029a-related-failure1-create": ["failure1", "relatedFailure"],
+});
+
+const RESPONSE_LOST_QUERY_OPERATION_BINDINGS = deepFreezeExact({
+  "set-012-user-a-create": {
+    baselineOperationId: "response-lost/preflight/user-a",
+    discoveryOperationId: "response-lost/discovery/user-a",
+    inputKeys: ["email"],
+  },
+  "set-014-user-b-create": {
+    baselineOperationId: "response-lost/preflight/user-b",
+    discoveryOperationId: "response-lost/discovery/user-b",
+    inputKeys: ["email"],
+  },
+  "set-016-editable-type-create": {
+    baselineOperationId: "response-lost/preflight/content-type-editable",
+    discoveryOperationId: "response-lost/discovery/content-type-editable",
+    inputKeys: ["slug"],
+  },
+  "set-018-related-a-type-create": {
+    baselineOperationId: "response-lost/preflight/content-type-related-a",
+    discoveryOperationId: "response-lost/discovery/content-type-related-a",
+    inputKeys: ["slug"],
+  },
+  "set-020-related-b-type-create": {
+    baselineOperationId: "response-lost/preflight/content-type-related-b",
+    discoveryOperationId: "response-lost/discovery/content-type-related-b",
+    inputKeys: ["slug"],
+  },
+  "set-021a-related-failure-type-create": {
+    baselineOperationId: "response-lost/preflight/content-type-related-failure",
+    discoveryOperationId: "response-lost/discovery/content-type-related-failure",
+    inputKeys: ["slug"],
+  },
+  "set-022-related-a1-create": {
+    baselineOperationId: "response-lost/preflight/entry-related-a1",
+    discoveryOperationId: "response-lost/discovery/entry-related-a1",
+    inputKeys: ["slug", "typeId"],
+  },
+  "set-024-related-a2-create": {
+    baselineOperationId: "response-lost/preflight/entry-related-a2",
+    discoveryOperationId: "response-lost/discovery/entry-related-a2",
+    inputKeys: ["slug", "typeId"],
+  },
+  "set-026-related-b1-create": {
+    baselineOperationId: "response-lost/preflight/entry-related-b1",
+    discoveryOperationId: "response-lost/discovery/entry-related-b1",
+    inputKeys: ["slug", "typeId"],
+  },
+  "set-028-related-b2-create": {
+    baselineOperationId: "response-lost/preflight/entry-related-b2",
+    discoveryOperationId: "response-lost/discovery/entry-related-b2",
+    inputKeys: ["slug", "typeId"],
+  },
+  "set-029a-related-failure1-create": {
+    baselineOperationId: "response-lost/preflight/entry-related-failure1",
+    discoveryOperationId: "response-lost/discovery/entry-related-failure1",
+    inputKeys: ["slug", "typeId"],
+  },
+  "set-030-media-upload": {
+    baselineOperationId: "response-lost/preflight/media",
+    discoveryOperationId: "response-lost/discovery/media",
+    inputKeys: ["mimeType", "originalName", "size"],
+  },
+  "set-033-entry-create": {
+    baselineOperationId: "response-lost/preflight/entry-editable",
+    discoveryOperationId: "response-lost/discovery/entry-editable",
+    inputKeys: ["slug", "typeId"],
+  },
+  "set-035-screen-create": {
+    baselineOperationId: "response-lost/preflight/screen-main",
+    discoveryOperationId: "response-lost/discovery/screen-main",
+    inputKeys: ["contentTypeId", "name"],
+  },
+  "set-037-retry-screen-create": {
+    baselineOperationId: "response-lost/preflight/screen-retry",
+    discoveryOperationId: "response-lost/discovery/screen-retry",
+    inputKeys: ["contentTypeId", "name"],
+  },
+  "set-039-override-create": {
+    baselineOperationId: "response-lost/preflight/override",
+    discoveryOperationId: "response-lost/discovery/override",
+    inputKeys: ["blockId", "entryId", "propPath", "screenId"],
+  },
+  "set-041-preference-a": {
+    baselineOperationId: "response-lost/preflight/setting-user-a",
+    discoveryOperationId: "response-lost/discovery/setting-user-a",
+    inputKeys: ["userId"],
+  },
+  "set-043-preference-b": {
+    baselineOperationId: "response-lost/preflight/setting-user-b",
+    discoveryOperationId: "response-lost/discovery/setting-user-b",
+    inputKeys: ["userId"],
+  },
+});
+
+function validateBoundedNaturalCandidateResult(output, label) {
+  exactOwnKeys(output, ["candidates", "overflow"], label, { plain: true });
+  invariant(
+    Array.isArray(output.candidates) &&
+      output.candidates.length <= MAX_NATURAL_KEY_CANDIDATES &&
+      typeof output.overflow === "boolean",
+    label + " bounded result shape drift"
+  );
+  invariant(output.overflow === false, label + " overflowed its DB-side limit");
+  output.candidates.forEach((candidate) => assertPlainJsonValue(candidate, label + " candidate"));
+  return deepFreezeExact({ candidates: deepFreezeExact(output.candidates), overflow: false });
+}
+
+function responseLostStorageRoot(state) {
+  invariant(
+    typeof state.storageRootBaseline === "string" && state.storageRootBaseline.length > 0,
+    "storage root baseline is absent"
+  );
+  const absolute = path.isAbsolute(state.storageRootBaseline)
+    ? path.resolve(state.storageRootBaseline)
+    : path.resolve(state.root, state.storageRootBaseline);
+  invariant(
+    absolute !== state.root && absolute !== path.parse(absolute).root,
+    "storage root resolution drift"
+  );
+  return absolute;
+}
+
+async function queryResponseLostNaturalCandidates(state, actionId, naturalKey) {
+  const binding = RESPONSE_LOST_QUERY_OPERATION_BINDINGS[actionId];
+  invariant(binding !== undefined, "response-lost natural query operation is not registered");
+  exactOwnKeys(naturalKey, binding.inputKeys, "response-lost natural key", { plain: true });
+  const output = await runBunBridgeOperation(state, binding.discoveryOperationId, naturalKey);
+  return validateBoundedNaturalCandidateResult(output, "response-lost natural query");
+}
+
+async function captureAllResponseLostNaturalBaselinesBeforeFirstWrite(
+  state,
+  bridgeQuery = (operationId, input) => runBunBridgeOperation(state, operationId, input)
+) {
+  invariant(
+    state.responseLostBaselines.size === 0 && state.responseLostIntents.size === 0,
+    "response-lost preflight baseline was assigned twice"
+  );
+  invariant(typeof bridgeQuery === "function", "response-lost preflight query authority is absent");
+  const plan = state.plan;
+  const entryPreflight = {
+    "set-022-related-a1-create": [
+      plan.fixtureBlueprint.contentTypes.relatedA.slug,
+      plan.fixtureBlueprint.relatedEntries.a1.slug,
+    ],
+    "set-024-related-a2-create": [
+      plan.fixtureBlueprint.contentTypes.relatedA.slug,
+      plan.fixtureBlueprint.relatedEntries.a2.slug,
+    ],
+    "set-026-related-b1-create": [
+      plan.fixtureBlueprint.contentTypes.relatedB.slug,
+      plan.fixtureBlueprint.relatedEntries.b1.slug,
+    ],
+    "set-028-related-b2-create": [
+      plan.fixtureBlueprint.contentTypes.relatedB.slug,
+      plan.fixtureBlueprint.relatedEntries.b2.slug,
+    ],
+    "set-029a-related-failure1-create": [
+      plan.fixtureBlueprint.contentTypes.relatedFailure.slug,
+      plan.fixtureBlueprint.relatedEntries.failure1.slug,
+    ],
+    "set-033-entry-create": [
+      plan.fixtureBlueprint.contentTypes.editable.slug,
+      plan.fixtureBlueprint.entry.slug,
+    ],
+  };
+  for (const actionId of RESPONSE_LOST_CREATE_ACTION_IDS) {
+    const binding = RESPONSE_LOST_QUERY_OPERATION_BINDINGS[actionId];
+    invariant(binding !== undefined, "response-lost preflight operation binding is absent");
+    let input;
+    if (actionId === "set-012-user-a-create" || actionId === "set-014-user-b-create") {
+      const user = plan.fixtureBlueprint.users[actionId === "set-012-user-a-create" ? "a" : "b"];
+      input = { email: user.email };
+    } else if (Object.hasOwn(RESPONSE_LOST_CONTENT_TYPE_ACTIONS, actionId)) {
+      input = {
+        slug: plan.fixtureBlueprint.contentTypes[RESPONSE_LOST_CONTENT_TYPE_ACTIONS[actionId]].slug,
+      };
+    } else if (Object.hasOwn(entryPreflight, actionId)) {
+      const [typeSlug, entrySlug] = entryPreflight[actionId];
+      input = { entrySlug, typeSlug };
+    } else if (actionId === "set-030-media-upload") {
+      const media = plan.fixtureBlueprint.media;
+      input = {
+        originalName: media.originalName,
+        mimeType: media.mimeType,
+        size: media.uploadFixture.decodedSizeBytes,
+      };
+    } else if (actionId === "set-035-screen-create" || actionId === "set-037-retry-screen-create") {
+      input = {
+        contentTypeSlug: plan.fixtureBlueprint.contentTypes.editable.slug,
+        name:
+          actionId === "set-035-screen-create"
+            ? plan.fixtureBlueprint.screen.name
+            : plan.fixtureBlueprint.retryScreen.name,
+      };
+    } else if (actionId === "set-039-override-create") {
+      input = {
+        blockId: plan.fixtureBlueprint.screen.blockIds.raceImage,
+        contentTypeSlug: plan.fixtureBlueprint.contentTypes.editable.slug,
+        entrySlug: plan.fixtureBlueprint.entry.slug,
+        propPath: "mediaAssetId",
+        screenName: plan.fixtureBlueprint.screen.name,
+      };
+    } else if (actionId === "set-041-preference-a" || actionId === "set-043-preference-b") {
+      input = {
+        email: plan.fixtureBlueprint.users[actionId === "set-041-preference-a" ? "a" : "b"].email,
+      };
+    } else {
+      invariant(false, "response-lost preflight action is not registered");
+    }
+    const output = await bridgeQuery(binding.baselineOperationId, input);
+    const baseline = validateBoundedNaturalCandidateResult(output, "response-lost preflight query");
+    if (
+      actionId === "set-039-override-create" ||
+      actionId === "set-041-preference-a" ||
+      actionId === "set-043-preference-b"
+    ) {
+      invariant(
+        baseline.candidates.length === 0,
+        "delete-not-restore natural key exists at preflight"
+      );
+    }
+    state.responseLostBaselines.set(actionId, baseline);
+  }
+  invariant(
+    state.responseLostBaselines.size === RESPONSE_LOST_CREATE_ACTION_IDS.length,
+    "response-lost preflight baseline cardinality drift"
+  );
+}
+
+async function buildResponseLostAuthoredIntent(state, action, captures) {
+  const plan = state.plan;
+  let naturalKey;
+  let authoredProjection;
+  let preparedBody = null;
+  if (action.id === "set-012-user-a-create" || action.id === "set-014-user-b-create") {
+    const key = action.id === "set-012-user-a-create" ? "a" : "b";
+    const user = plan.fixtureBlueprint.users[key];
+    naturalKey = { email: user.email };
+    authoredProjection = {
+      normalizedEmailMatches: true,
+      name: user.displayName,
+      status: "active",
+      passwordHashPresent: true,
+      adminWildcardPermissionCount: 1,
+      adminRoleTupleCount: 1,
+    };
+  } else if (Object.hasOwn(RESPONSE_LOST_CONTENT_TYPE_ACTIONS, action.id)) {
+    const contentType =
+      plan.fixtureBlueprint.contentTypes[RESPONSE_LOST_CONTENT_TYPE_ACTIONS[action.id]];
+    preparedBody = {
+      name: contentType.name,
+      slug: contentType.slug,
+      schema: contentSchemaFromFields(contentType.fields),
+    };
+    naturalKey = { slug: preparedBody.slug };
+    authoredProjection = { ...preparedBody, status: "draft", config: {} };
+  } else if (Object.hasOwn(RESPONSE_LOST_ENTRY_ACTIONS, action.id)) {
+    const [entryKey, typeKey] = RESPONSE_LOST_ENTRY_ACTIONS[action.id];
+    const entry = plan.fixtureBlueprint.relatedEntries[entryKey];
+    const typeId = captures.get(
+      "content-type-" +
+        typeKey
+          .replace(/[A-Z]/gu, (letter) => "-" + letter.toLowerCase())
+          .replace("related-failure", "related-failure") +
+        ".id"
+    );
+    preparedBody = { title: entry.title, slug: entry.slug, data: entry.data };
+    naturalKey = { typeId, slug: entry.slug };
+    authoredProjection = {
+      typeId,
+      authorId: state.bootstrapBaseline.id,
+      ...preparedBody,
+      status: "draft",
+      visibility: "public",
+      accessPasswordAbsent: true,
+      tags: [],
+      publishedAt: null,
+      scheduledAt: null,
+    };
+  } else if (action.id === "set-033-entry-create") {
+    const typeId = captures.get("content-type-editable.id");
+    preparedBody = {
+      title: plan.fixtureBlueprint.entry.title,
+      slug: plan.fixtureBlueprint.entry.slug,
+      data: resolveFixtureValue(plan.fixtureBlueprint.entry.baseline, captures),
+    };
+    naturalKey = { typeId, slug: preparedBody.slug };
+    authoredProjection = {
+      typeId,
+      authorId: state.bootstrapBaseline.id,
+      ...preparedBody,
+      status: "draft",
+      visibility: "public",
+      accessPasswordAbsent: true,
+      tags: [],
+      publishedAt: null,
+      scheduledAt: null,
+    };
+  } else if (action.id === "set-030-media-upload") {
+    const media = plan.fixtureBlueprint.media;
+    naturalKey = {
+      originalName: media.originalName,
+      mimeType: media.mimeType,
+      size: media.uploadFixture.decodedSizeBytes,
+    };
+    authoredProjection = {
+      originalName: media.originalName,
+      type: "image",
+      mimeType: media.mimeType,
+      size: media.uploadFixture.decodedSizeBytes,
+      width: 1,
+      height: 1,
+      alt: null,
+      title: media.title,
+      caption: null,
+      folderId: null,
+      tags: [],
+      focalX: null,
+      focalY: null,
+      description: null,
+      credit: null,
+      createdBy: state.bootstrapBaseline.id,
+      fileSha256: media.uploadFixture.sha256,
+    };
+  } else if (action.id === "set-035-screen-create" || action.id === "set-037-retry-screen-create") {
+    const key = action.id === "set-035-screen-create" ? "main" : "retry";
+    const blueprint =
+      key === "main" ? plan.fixtureBlueprint.screen : plan.fixtureBlueprint.retryScreen;
+    preparedBody = await materializeScreenBody(
+      state,
+      blueprint,
+      captures,
+      action.id === "set-035-screen-create"
+        ? "runtime/set-035-screen-create"
+        : "runtime/set-037-retry-screen-create"
+    );
+    naturalKey = { name: preparedBody.name, contentTypeId: preparedBody.contentTypeId };
+    authoredProjection = { ...preparedBody, collectionRole: null, compositionKey: null };
+  } else if (action.id === "set-039-override-create") {
+    naturalKey = {
+      screenId: captures.get("screen.id"),
+      entryId: captures.get("entry.id"),
+      blockId: plan.fixtureBlueprint.screen.blockIds.raceImage,
+      propPath: "mediaAssetId",
+    };
+    authoredProjection = {
+      ...naturalKey,
+      value: captures.get("media.id"),
+      updatedBy: state.bootstrapBaseline.id,
+    };
+  } else if (action.id === "set-041-preference-a" || action.id === "set-043-preference-b") {
+    const userId = state.ids[action.id === "set-041-preference-a" ? "userA" : "userB"];
+    naturalKey = { userId };
+    authoredProjection = {
+      userId,
+      key: "customScreens.entry.preferences",
+      value: { version: 1, showFieldMetadata: false },
+    };
+  } else {
+    invariant(false, "response-lost authored intent action is not registered");
+  }
+  assertPlainJsonValue(naturalKey, "response-lost natural key");
+  assertPlainJsonValue(authoredProjection, "response-lost authored projection");
+  return deepFreezeExact({
+    naturalKey: deepFreezeExact(naturalKey),
+    authoredProjection: deepFreezeExact(authoredProjection),
+    authoredRequestSha256: hashBytes(Buffer.from(canonicalJson(authoredProjection))),
+    preparedBody: preparedBody === null ? null : deepFreezeExact(preparedBody),
+  });
+}
+
+async function armResponseLostCreateBeforeWrite(state, action, captures) {
+  if (RESPONSE_LOST_CREATE_DESCRIPTORS[action.id] === undefined) return;
+  invariant(
+    !state.responseLostIntents.has(action.id),
+    "response-lost authored intent was assigned twice"
+  );
+  const intent = await buildResponseLostAuthoredIntent(state, action, captures);
+  const baseline = state.responseLostBaselines.get(action.id);
+  invariant(baseline !== undefined, "response-lost preflight baseline is absent");
+  state.responseLostIntents.set(action.id, intent);
+  if (intent.preparedBody !== null) {
+    invariant(
+      !state.preparedCreateBodies.has(action.id),
+      "prepared create body was assigned twice"
+    );
+    state.preparedCreateBodies.set(action.id, intent.preparedBody);
+  }
+  state.pendingFailureAttempts.arm(
+    action,
+    intendedParentBlockerKeysForCreate(state, action),
+    deepFreezeExact({
+      naturalKey: intent.naturalKey,
+      baseline,
+      authoredRequestSha256: intent.authoredRequestSha256,
+    })
+  );
+}
+
+function responseLostCandidateIdentity(actionId, candidate) {
+  if (actionId === "set-039-override-create") {
+    return lengthPrefixedTuple([
+      candidate.screenId,
+      candidate.entryId,
+      candidate.blockId,
+      candidate.propPath,
+    ]);
+  }
+  if (actionId === "set-041-preference-a" || actionId === "set-043-preference-b") {
+    return lengthPrefixedTuple([candidate.userId, candidate.key]);
+  }
+  invariant(
+    typeof candidate.id === "string" && /^[0-9a-f-]{36}$/u.test(candidate.id),
+    "response-lost candidate ID is invalid"
+  );
+  return candidate.id;
+}
+
+async function responseLostCandidateProjection(state, attempt, candidate) {
+  let projection;
+  if (
+    attempt.actionId === "set-012-user-a-create" ||
+    attempt.actionId === "set-014-user-b-create"
+  ) {
+    exactOwnKeys(
+      candidate,
+      [
+        "adminRoleTupleCount",
+        "adminWildcardPermissionCount",
+        "id",
+        "name",
+        "normalizedEmailMatches",
+        "passwordHashPresent",
+        "status",
+      ],
+      "user discovery candidate",
+      { plain: true }
+    );
+    const { id: ignoredId, ...rest } = candidate;
+    invariant(typeof ignoredId === "string", "user discovery candidate ID drift");
+    projection = rest;
+  } else if (Object.hasOwn(RESPONSE_LOST_CONTENT_TYPE_ACTIONS, attempt.actionId)) {
+    exactOwnKeys(
+      candidate,
+      ["id", "name", "slug", "schema", "status", "config"],
+      "content type discovery candidate",
+      { plain: true }
+    );
+    const { id: ignoredId, ...rest } = candidate;
+    invariant(typeof ignoredId === "string", "content type discovery candidate ID drift");
+    projection = rest;
+  } else if (
+    Object.hasOwn(RESPONSE_LOST_ENTRY_ACTIONS, attempt.actionId) ||
+    attempt.actionId === "set-033-entry-create"
+  ) {
+    exactOwnKeys(
+      candidate,
+      [
+        "id",
+        "typeId",
+        "authorId",
+        "title",
+        "slug",
+        "status",
+        "visibility",
+        "tags",
+        "data",
+        "publishedAt",
+        "scheduledAt",
+        "accessPasswordAbsent",
+      ],
+      "entry discovery candidate",
+      { plain: true }
+    );
+    projection = {
+      typeId: candidate.typeId,
+      authorId: candidate.authorId,
+      title: candidate.title,
+      slug: candidate.slug,
+      status: candidate.status,
+      visibility: candidate.visibility,
+      accessPasswordAbsent: candidate.accessPasswordAbsent,
+      tags: candidate.tags,
+      data: candidate.data,
+      publishedAt: candidate.publishedAt,
+      scheduledAt: candidate.scheduledAt,
+    };
+  } else if (
+    attempt.actionId === "set-035-screen-create" ||
+    attempt.actionId === "set-037-retry-screen-create"
+  ) {
+    exactOwnKeys(
+      candidate,
+      [
+        "id",
+        "name",
+        "contentTypeId",
+        "status",
+        "collectionRole",
+        "compositionKey",
+        "showInSidebar",
+        "sidebarLabel",
+        "schemaVersion",
+        "definition",
+      ],
+      "Screen discovery candidate",
+      { plain: true }
+    );
+    const { id: ignoredId, ...rest } = candidate;
+    invariant(typeof ignoredId === "string", "Screen discovery candidate ID drift");
+    projection = rest;
+  } else if (attempt.actionId === "set-030-media-upload") {
+    exactOwnKeys(
+      candidate,
+      [
+        "id",
+        "key",
+        "url",
+        "originalName",
+        "type",
+        "mimeType",
+        "size",
+        "width",
+        "height",
+        "alt",
+        "title",
+        "caption",
+        "folderId",
+        "tags",
+        "focalX",
+        "focalY",
+        "description",
+        "credit",
+        "createdBy",
+      ],
+      "media discovery candidate",
+      { plain: true }
+    );
+    invariant(
+      typeof candidate.key === "string" &&
+        candidate.key.length > 0 &&
+        candidate.key.length <= 1024 &&
+        !candidate.key.includes("\\") &&
+        !candidate.key.startsWith("/") &&
+        candidate.key.split("/").every((part) => part.length > 0 && part !== "." && part !== ".."),
+      "media discovery storage key is not canonical"
+    );
+    const storageRoot = responseLostStorageRoot(state);
+    const absolute = path.resolve(storageRoot, candidate.key);
+    invariant(
+      absolute.startsWith(storageRoot + path.sep),
+      "media discovery storage key escaped its root"
+    );
+    const identity = await captureCanonicalMediaStorageOwnership(state, candidate.key);
+    const bytes = await readOwnedRegularFileNoFollow(absolute, identity, MAX_STREAM_BYTES);
+    projection = {
+      originalName: candidate.originalName,
+      type: candidate.type,
+      mimeType: candidate.mimeType,
+      size: candidate.size,
+      width: candidate.width,
+      height: candidate.height,
+      alt: candidate.alt,
+      title: candidate.title,
+      caption: candidate.caption,
+      folderId: candidate.folderId,
+      tags: candidate.tags,
+      focalX: candidate.focalX,
+      focalY: candidate.focalY,
+      description: candidate.description,
+      credit: candidate.credit,
+      createdBy: candidate.createdBy,
+      fileSha256: hashBytes(bytes),
+    };
+  } else if (attempt.actionId === "set-039-override-create") {
+    exactOwnKeys(
+      candidate,
+      ["screenId", "entryId", "blockId", "propPath", "value", "updatedBy"],
+      "override discovery candidate",
+      { plain: true }
+    );
+    projection = { ...candidate };
+  } else if (
+    attempt.actionId === "set-041-preference-a" ||
+    attempt.actionId === "set-043-preference-b"
+  ) {
+    exactOwnKeys(candidate, ["userId", "key", "value"], "setting discovery candidate", {
+      plain: true,
+    });
+    projection = { ...candidate };
+  } else {
+    invariant(false, "response-lost candidate projection action is not registered");
+  }
+  assertPlainJsonValue(projection, "response-lost candidate authored projection");
+  return deepFreezeExact(projection);
+}
+
+function failureDiscoveryDeltaForCandidate(state, attempt, candidate) {
+  const descriptor = RESPONSE_LOST_CREATE_DESCRIPTORS[attempt.actionId];
+  invariant(
+    descriptor !== undefined &&
+      descriptor.kind === attempt.kind &&
+      descriptor.semantic === attempt.semantic,
+    "failure discovery descriptor drift"
+  );
+  let identifier;
+  let ownerSubjectIdentifier = null;
+  if (descriptor.kind === "presentation-override") {
+    identifier = [candidate.screenId, candidate.entryId, candidate.blockId, candidate.propPath];
+    ownerSubjectIdentifier = candidate.updatedBy ?? null;
+  } else if (descriptor.kind === "setting-user-a" || descriptor.kind === "setting-user-b") {
+    identifier = [candidate.userId, candidate.key];
+    ownerSubjectIdentifier = candidate.userId;
+  } else if (descriptor.kind === "media-row-key") {
+    identifier = [candidate.id, candidate.key];
+    ownerSubjectIdentifier = candidate.createdBy ?? null;
+  } else {
+    identifier = [candidate.id];
+    if (descriptor.kind === "entry-editable" || descriptor.kind === "entry-related") {
+      ownerSubjectIdentifier = candidate.authorId ?? null;
+    }
+  }
+  const core = createResourceCore({
+    kind: descriptor.kind,
+    identifier,
+    ownerSubjectIdentifier,
+    acquisitionSourceId: attempt.actionId,
+    sourceActionOrdinal: attempt.actionOrdinal,
+    acquisitionChannel: "failure-discovery",
+  });
+  invariant(
+    !state.resourceKeys.has(descriptor.semantic),
+    "failure discovery semantic was already acquired"
+  );
+  const dependencyEdges = [];
+  const addEdge = (parentSemantic) => {
+    const parentKey = state.resourceKeys.get(parentSemantic);
+    invariant(parentKey, "failure discovery dependency parent endpoint is absent");
+    dependencyEdges.push(destructiveResourceEdge(parentKey, core.resourceKey));
+  };
+  if (descriptor.parent) addEdge(descriptor.parent);
+  if (descriptor.kind === "presentation-override") {
+    addEdge("screen");
+    addEdge("editable-entry");
+    addEdge("media");
+  }
+  if (descriptor.kind === "setting-user-a") addEdge("user-a");
+  if (descriptor.kind === "setting-user-b") addEdge("user-b");
+  const taskUserSemantic =
+    ownerSubjectIdentifier === state.ids.userA
+      ? "user-a"
+      : ownerSubjectIdentifier === state.ids.userB
+        ? "user-b"
+        : null;
+  if (
+    taskUserSemantic !== null &&
+    ["entry-editable", "entry-related", "media-row-key", "presentation-override"].includes(
+      descriptor.kind
+    )
+  ) {
+    addEdge(taskUserSemantic);
+  }
+  return deepFreezeExact({
+    cores: deepFreezeExact([core]),
+    dependencyEdges: deepFreezeExact(dependencyEdges),
+  });
+}
+
+function registerFailureDiscoveredResourceAfterLedgerAppend(state, attempt, safeDelta) {
+  if (safeDelta.cores.length === 0) return;
+  invariant(
+    safeDelta.cores.length === 1 && safeDelta.cores[0].kind === attempt.kind,
+    "failure discovery post-append core drift"
+  );
+  const descriptor = RESPONSE_LOST_CREATE_DESCRIPTORS[attempt.actionId];
+  const core = safeDelta.cores[0];
+  invariant(
+    descriptor !== undefined &&
+      descriptor.semantic === attempt.semantic &&
+      !state.resourceKeys.has(descriptor.semantic),
+    "failure discovery post-append semantic drift"
+  );
+  state.resourceKeys.set(descriptor.semantic, core.resourceKey);
+  state.resourceOwners.set(descriptor.semantic, core.ownerSubjectIdentifier);
+  if (descriptor.kind === "user-a" || descriptor.kind === "user-b") {
+    const idKey = descriptor.kind === "user-a" ? "userA" : "userB";
+    invariant(
+      state.ids[idKey] === undefined || state.ids[idKey] === core.identifier[0],
+      "failure discovery user identity drift"
+    );
+    state.ids[idKey] = core.identifier[0];
+  }
+  if (
+    descriptor.kind !== "presentation-override" &&
+    descriptor.kind !== "setting-user-a" &&
+    descriptor.kind !== "setting-user-b"
+  ) {
+    const existingFixtureId = state.fixtureIds.get(descriptor.semantic);
+    invariant(
+      existingFixtureId === undefined || existingFixtureId === core.identifier[0],
+      "failure discovery fixture identity drift"
+    );
+    state.fixtureIds.set(descriptor.semantic, core.identifier[0]);
+  }
+  for (const userSemantic of ["user-a", "user-b"]) {
+    const userKey = state.resourceKeys.get(userSemantic);
+    if (
+      userKey &&
+      safeDelta.dependencyEdges.some(
+        ({ parentKey, childKey }) => parentKey === userKey && childKey === core.resourceKey
+      )
+    ) {
+      state.syntheticOwnerEdgeKeys.add(userSemantic + "\0" + descriptor.semantic);
+    }
+  }
+}
+
+async function discoverOneResponseLostCreate(
+  state,
+  attempt,
+  naturalQuery = (actionId, naturalKey) =>
+    queryResponseLostNaturalCandidates(state, actionId, naturalKey)
+) {
+  invariant(typeof naturalQuery === "function", "response-lost natural query authority is absent");
+  const intent = state.responseLostIntents.get(attempt.actionId);
+  invariant(intent !== undefined, "response-lost authored intent is absent");
+  invariant(
+    deepEqualJson(intent.naturalKey, attempt.naturalKey) &&
+      intent.authoredRequestSha256 === attempt.authoredRequestSha256 &&
+      hashBytes(Buffer.from(canonicalJson(intent.authoredProjection))) ===
+        attempt.authoredRequestSha256,
+    "response-lost authored intent digest drift"
+  );
+  const current = await naturalQuery(attempt.actionId, attempt.naturalKey);
+  const baselineByIdentity = new Map(
+    attempt.baseline.candidates.map((candidate) => [
+      responseLostCandidateIdentity(attempt.actionId, candidate),
+      candidate,
+    ])
+  );
+  invariant(
+    baselineByIdentity.size === attempt.baseline.candidates.length,
+    "response-lost baseline contains duplicate identities"
+  );
+  const currentByIdentity = new Map(
+    current.candidates.map((candidate) => [
+      responseLostCandidateIdentity(attempt.actionId, candidate),
+      candidate,
+    ])
+  );
+  invariant(
+    currentByIdentity.size === current.candidates.length,
+    "response-lost query contains duplicate identities"
+  );
+  for (const [identity, baselineCandidate] of baselineByIdentity) {
+    const currentCandidate = currentByIdentity.get(identity);
+    invariant(
+      currentCandidate !== undefined && deepEqualJson(currentCandidate, baselineCandidate),
+      "response-lost natural-key baseline changed"
+    );
+  }
+  const candidates = current.candidates.filter(
+    (candidate) =>
+      !baselineByIdentity.has(responseLostCandidateIdentity(attempt.actionId, candidate))
+  );
+  if (candidates.length === 0) {
+    return deepFreezeExact({
+      pendingAttemptKey: attempt.pendingAttemptKey,
+      safeDelta: emptyResourceDelta(),
+      failure: null,
+      intendedParentBlockerKeys: deepFreezeExact([]),
+    });
+  }
+  invariant(candidates.length === 1, "response-lost natural-key query is ambiguous");
+  const candidate = candidates[0];
+  const projection = await responseLostCandidateProjection(state, attempt, candidate);
+  invariant(
+    deepEqualJson(projection, intent.authoredProjection) &&
+      hashBytes(Buffer.from(canonicalJson(projection))) === attempt.authoredRequestSha256,
+    "response-lost candidate does not match the authored request"
+  );
+  return deepFreezeExact({
+    pendingAttemptKey: attempt.pendingAttemptKey,
+    safeDelta: failureDiscoveryDeltaForCandidate(state, attempt, candidate),
+    failure: null,
+    intendedParentBlockerKeys: deepFreezeExact([]),
+  });
+}
+
+function captureFromCurrentResult(captures, captureBindings, name) {
+  if (Object.hasOwn(captureBindings, name)) return captureBindings[name];
+  return captures.get(name);
+}
+
+function deriveActionResourceDelta(state, action, result, captures) {
+  const cores = [];
+  const dependencyEdges = [];
+  const pendingResourceKeys = new Map();
+  const addCore = (semantic, core) => {
+    invariant(
+      !state.resourceKeys.has(semantic) && !pendingResourceKeys.has(semantic),
+      "resource semantic key was acquired twice: " + semantic
+    );
+    pendingResourceKeys.set(semantic, core.resourceKey);
+    cores.push(core);
+    return core.resourceKey;
+  };
+  const edge = (parentSemantic, childSemantic) => {
+    const parentKey =
+      pendingResourceKeys.get(parentSemantic) ?? state.resourceKeys.get(parentSemantic);
+    const childKey =
+      pendingResourceKeys.get(childSemantic) ?? state.resourceKeys.get(childSemantic);
+    invariant(parentKey && childKey, "resource dependency semantic endpoint is absent");
+    dependencyEdges.push(destructiveResourceEdge(parentKey, childKey));
+  };
+  if (action.id === "set-001-storage-preflight") {
+    invariant(state.bootstrapBaseline?.id, "bootstrap baseline is absent after preflight");
+    addCore(
+      "bootstrap-login",
+      createResourceCore({
+        kind: "bootstrap-user-login-state",
+        identifier: [state.bootstrapBaseline.id],
+        acquisitionSourceId: "preflight-baseline",
+        sourceActionOrdinal: null,
+        acquisitionChannel: "preflight",
+      })
+    );
+    addCore(
+      "site-content-routes",
+      createResourceCore({
+        kind: "site-content-routes-baseline",
+        identifier: ["site.contentRoutes"],
+        acquisitionSourceId: "preflight-baseline",
+        sourceActionOrdinal: null,
+        acquisitionChannel: "preflight",
+      })
+    );
+    addCore(
+      "storage-baseline",
+      createResourceCore({
+        kind: "storage-baseline",
+        identifier: ["storage-root-baseline"],
+        acquisitionSourceId: "preflight-baseline",
+        sourceActionOrdinal: null,
+        acquisitionChannel: "preflight",
+      })
+    );
+    addCore(
+      "missing-media-baseline",
+      createResourceCore({
+        kind: "missing-media-baseline",
+        identifier: [state.plan.fixtureBlueprint.media.missingBoundMediaId],
+        acquisitionSourceId: "preflight-baseline",
+        sourceActionOrdinal: null,
+        acquisitionChannel: "preflight",
+      })
+    );
+  } else if (action.id === "set-002-helper-launch") {
+    invariant(state.host?.identity?.pgid, "host process group is absent after launch");
+    addCore(
+      "host-process-group",
+      createResourceCore({
+        kind: "host-process-group",
+        identifier: [String(state.host.identity.pgid)],
+        acquisitionSourceId: action.id,
+        sourceActionOrdinal: action.ordinal,
+        acquisitionChannel: "process",
+      })
+    );
+  } else if (action.id === "set-005-open") {
+    addCore(
+      "browser-private-root",
+      createResourceCore({
+        kind: "browser-private-root",
+        identifier: [state.browserWorkspace.root],
+        acquisitionSourceId: "preflight-baseline",
+        sourceActionOrdinal: null,
+        acquisitionChannel: "filesystem",
+      })
+    );
+    addCore(
+      "browser-session",
+      createResourceCore({
+        kind: "browser-session",
+        identifier: [SESSION_NAME],
+        acquisitionSourceId: action.id,
+        sourceActionOrdinal: action.ordinal,
+        acquisitionChannel: "browser",
+      })
+    );
+  } else if (action.id === "set-006-logger") {
+    addCore(
+      "route-registry",
+      createResourceCore({
+        kind: "route-registry",
+        identifier: ["wf540-context-route-registry"],
+        acquisitionSourceId: action.id,
+        sourceActionOrdinal: action.ordinal,
+        acquisitionChannel: "browser",
+      })
+    );
+  } else if (action.id === "set-011b-bootstrap-api-login") {
+    addCore(
+      "api-context-bootstrap",
+      createResourceCore({
+        kind: "api-context-bootstrap",
+        identifier: ["bootstrap"],
+        acquisitionSourceId: action.id,
+        sourceActionOrdinal: action.ordinal,
+        acquisitionChannel: "service",
+      })
+    );
+  } else if (action.id === "ru-043b-a-api-login") {
+    addCore(
+      "api-context-user-a",
+      createResourceCore({
+        kind: "api-context-user-a",
+        identifier: ["user-a"],
+        acquisitionSourceId: action.id,
+        sourceActionOrdinal: action.ordinal,
+        acquisitionChannel: "service",
+      })
+    );
+  } else if (action.executable.type === "browser-screenshot") {
+    const relative = state.plan.registries.screenshotPaths[action.executable.screenshotId];
+    addCore(
+      "screenshot:" + relative,
+      createResourceCore({
+        kind: "screenshot",
+        identifier: [relative],
+        acquisitionSourceId: action.id,
+        sourceActionOrdinal: action.ordinal,
+        acquisitionChannel: "filesystem",
+      })
+    );
+  } else {
+    const descriptor = PROVEN_RESOURCE_ACTIONS[action.id];
+    if (descriptor !== undefined) {
+      let identifier;
+      let ownerSubjectIdentifier = null;
+      if (descriptor.kind === "presentation-override") {
+        identifier = [
+          captures.get("screen.id"),
+          captures.get("entry.id"),
+          state.plan.fixtureBlueprint.screen.blockIds.raceImage,
+          "mediaAssetId",
+        ];
+        ownerSubjectIdentifier = state.resourceOwners?.get(descriptor.semantic) ?? null;
+      } else if (descriptor.kind === "setting-user-a" || descriptor.kind === "setting-user-b") {
+        ownerSubjectIdentifier = captures.get(descriptor.owner + ".id");
+        identifier = [ownerSubjectIdentifier, "customScreens.entry.preferences"];
+      } else {
+        identifier = [
+          captureFromCurrentResult(captures, result.captureBindings, descriptor.capture),
+        ];
+        if (descriptor.secondCapture)
+          identifier.push(
+            captureFromCurrentResult(captures, result.captureBindings, descriptor.secondCapture)
+          );
+        ownerSubjectIdentifier = state.resourceOwners?.get(descriptor.semantic) ?? null;
+      }
+      const resourceKey = addCore(
+        descriptor.semantic,
+        createResourceCore({
+          kind: descriptor.kind,
+          identifier,
+          ownerSubjectIdentifier,
+          acquisitionSourceId: descriptor.origin,
+          sourceActionOrdinal: actionOrdinal(state.plan, descriptor.origin),
+          acquisitionChannel: descriptor.channel,
+        })
+      );
+      invariant(typeof resourceKey === "string", "resource key derivation failed");
+      if (descriptor.parent) edge(descriptor.parent, descriptor.semantic);
+      if (descriptor.kind === "presentation-override") {
+        edge("screen", descriptor.semantic);
+        edge("editable-entry", descriptor.semantic);
+        edge("media", descriptor.semantic);
+      }
+      if (descriptor.kind === "setting-user-a") edge("user-a", descriptor.semantic);
+      if (descriptor.kind === "setting-user-b") edge("user-b", descriptor.semantic);
+      const ownerUserSemantic =
+        ownerSubjectIdentifier === state.ids?.userA
+          ? "user-a"
+          : ownerSubjectIdentifier === state.ids?.userB
+            ? "user-b"
+            : null;
+      if (
+        ownerUserSemantic !== null &&
+        ["entry-editable", "entry-related", "media-row-key", "presentation-override"].includes(
+          descriptor.kind
+        )
+      ) {
+        edge(ownerUserSemantic, descriptor.semantic);
+      }
+    }
+  }
+  return deepFreezeExact({
+    cores: deepFreezeExact(cores),
+    dependencyEdges: deepFreezeExact(dependencyEdges),
+  });
+}
+
+function registerSuccessfulActionResourcesAfterLedgerAppend(state, action, delta) {
+  const assignments = [];
+  const assignByKind = (semantic, kind) => {
+    const matches = delta.cores.filter((core) => core.kind === kind);
+    invariant(matches.length === 1, action.id + " post-append core assignment drift");
+    assignments.push([semantic, matches[0]]);
+  };
+  if (action.id === "set-001-storage-preflight") {
+    assignByKind("bootstrap-login", "bootstrap-user-login-state");
+    assignByKind("site-content-routes", "site-content-routes-baseline");
+    assignByKind("storage-baseline", "storage-baseline");
+    assignByKind("missing-media-baseline", "missing-media-baseline");
+  } else if (action.id === "set-002-helper-launch") {
+    assignByKind("host-process-group", "host-process-group");
+  } else if (action.id === "set-005-open") {
+    assignByKind("browser-private-root", "browser-private-root");
+    assignByKind("browser-session", "browser-session");
+  } else if (action.id === "set-006-logger") {
+    assignByKind("route-registry", "route-registry");
+  } else if (action.id === "set-011b-bootstrap-api-login") {
+    assignByKind("api-context-bootstrap", "api-context-bootstrap");
+  } else if (action.id === "ru-043b-a-api-login") {
+    assignByKind("api-context-user-a", "api-context-user-a");
+  } else if (action.executable.type === "browser-screenshot") {
+    const relative = state.plan.registries.screenshotPaths[action.executable.screenshotId];
+    assignByKind("screenshot:" + relative, "screenshot");
+  } else {
+    const descriptor = PROVEN_RESOURCE_ACTIONS[action.id];
+    if (descriptor !== undefined) assignByKind(descriptor.semantic, descriptor.kind);
+  }
+  invariant(
+    assignments.length === delta.cores.length,
+    action.id + " post-append acquisition set drift"
+  );
+  for (const [semantic, core] of assignments) {
+    invariant(
+      !state.resourceKeys.has(semantic),
+      action.id + " post-append semantic was already assigned"
+    );
+    state.resourceKeys.set(semantic, core.resourceKey);
+  }
+  const descriptor = PROVEN_RESOURCE_ACTIONS[action.id];
+  if (descriptor !== undefined) {
+    for (const userSemantic of ["user-a", "user-b"]) {
+      const userKey = state.resourceKeys.get(userSemantic);
+      const childKey = state.resourceKeys.get(descriptor.semantic);
+      if (
+        userKey &&
+        childKey &&
+        delta.dependencyEdges.some(
+          ({ parentKey, childKey: edgeChildKey }) =>
+            parentKey === userKey && edgeChildKey === childKey
+        )
+      ) {
+        state.syntheticOwnerEdgeKeys.add(userSemantic + "\0" + descriptor.semantic);
+      }
+    }
+  }
+}
+
+class PrivateConstructionCleanupAuthority {
+  constructor() {
+    PRIVATE_CONSTRUCTION_AUTHORITY.set(this, {
+      workspaceLedger: null,
+      capabilityState: null,
+      capabilities: null,
+      cleanupPromise: null,
+      cleanupRequest: null,
+      cleanupCalls: 0,
+      failures: [],
+    });
+  }
+
+  registerWorkspaceLedger(ledger) {
+    const state = PRIVATE_CONSTRUCTION_AUTHORITY.get(this);
+    invariant(state.workspaceLedger === null, "private workspace authority was assigned twice");
+    state.workspaceLedger = ledger;
+  }
+
+  registerCapabilityState(capabilityState) {
+    const state = PRIVATE_CONSTRUCTION_AUTHORITY.get(this);
+    invariant(state.capabilityState === null, "capability construction state was assigned twice");
+    state.capabilityState = capabilityState;
+  }
+
+  bindCompleteCapabilities(capabilities) {
+    const state = PRIVATE_CONSTRUCTION_AUTHORITY.get(this);
+    invariant(state.capabilities === null, "complete capabilities were assigned twice");
+    invariant(
+      capabilities && typeof capabilities.cleanup === "function",
+      "complete cleanup capability is missing"
+    );
+    state.capabilities = capabilities;
+  }
+
+  cleanupWhateverWasAcquiredOnceNeverThrow(request = null) {
+    const state = PRIVATE_CONSTRUCTION_AUTHORITY.get(this);
+    state.cleanupCalls += 1;
+    if (state.cleanupPromise === null) {
+      state.cleanupRequest = request;
+      state.cleanupPromise = (async () => {
+        try {
+          if (state.capabilities !== null) {
+            return await state.capabilities.cleanup(request);
+          }
+          if (state.capabilityState !== null) {
+            return await cleanupConstructionStateOnce(state.capabilityState, request);
+          }
+          if (state.workspaceLedger !== null) {
+            await removePrivateWorkspaceLedger(state.workspaceLedger);
+          }
+          return deepFreezeExact({ absenceProven: true, lifecycle: null });
+        } catch (error) {
+          state.failures.push(error);
+          return deepFreezeExact({ absenceProven: false, lifecycle: null });
+        }
+      })();
+    }
+    return state.cleanupPromise;
+  }
+
+  retainFailureAndCleanupDiagnosticsNeverThrow(cause, diagnostics) {
+    try {
+      const state = PRIVATE_CONSTRUCTION_AUTHORITY.get(this);
+      state.failures.push(cause, diagnostics);
+    } catch {
+      // Private diagnostics never replace the fixed public failure.
+    }
+  }
+}
+
+function createPrivateConstructionCleanupAuthority() {
+  return new PrivateConstructionCleanupAuthority();
+}
+
+function retainOrDiscardPreAuthorityCauseNeverThrow() {
+  try {
+    PRE_AUTHORITY_FAILURE_COUNT += 1;
+  } catch {
+    // The null-authority path has no acquired resource and never throws.
+  }
+}
+
+function privateConstructionAuthorityProjection(authority) {
+  const state = PRIVATE_CONSTRUCTION_AUTHORITY.get(authority);
+  return deepFreezeExact({
+    cleanupCalls: state.cleanupCalls,
+    cleanupStarted: state.cleanupPromise !== null,
+    cleanupMode:
+      state.cleanupRequest?.failure === true
+        ? "failure"
+        : state.cleanupRequest === null
+          ? null
+          : "success",
+    failureCount: state.failures.length,
+  });
+}
+
+function createExpectedAuthChallengeAuthority(options) {
+  const fail = (code) => {
+    throw new Error("wf540_auth_challenge_" + code);
+  };
+  const exactKeys = (value, keys) =>
+    Boolean(
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      Object.keys(value).length === keys.length &&
+      keys.every((key) => Object.prototype.hasOwnProperty.call(value, key))
+    );
+  const freeze = (value, seen = new WeakSet()) => {
+    if ((typeof value !== "object" && typeof value !== "function") || value === null) return value;
+    if (seen.has(value)) return value;
+    seen.add(value);
+    for (const key of Reflect.ownKeys(value)) freeze(value[key], seen);
+    return Object.freeze(value);
+  };
+  const integer = (value) => Number.isSafeInteger(value) && value >= 0;
+  const pageIdPattern = /^wf540-page-[1-9][0-9]*$/u;
+  const safeTokenPattern = /^[a-z0-9][a-z0-9-]{0,95}$/u;
+  if (
+    !exactKeys(options, [
+      "expectedUrl",
+      "loginUrl",
+      "expectedText",
+      "expectedPageId",
+      "phases",
+      "maxFailureEvents",
+      "maxAuthEvents",
+    ])
+  )
+    fail("options_shape");
+  if (
+    typeof options.expectedUrl !== "string" ||
+    options.expectedUrl.length === 0 ||
+    options.expectedUrl.length > 4096 ||
+    typeof options.loginUrl !== "string" ||
+    options.loginUrl.length === 0 ||
+    options.loginUrl.length > 4096 ||
+    typeof options.expectedText !== "string" ||
+    options.expectedText.length === 0 ||
+    options.expectedText.length > 16384 ||
+    typeof options.expectedPageId !== "string" ||
+    !pageIdPattern.test(options.expectedPageId) ||
+    !Number.isSafeInteger(options.maxFailureEvents) ||
+    options.maxFailureEvents < 1 ||
+    !Number.isSafeInteger(options.maxAuthEvents) ||
+    options.maxAuthEvents < 1 ||
+    !Array.isArray(options.phases) ||
+    options.phases.length !== 6
+  )
+    fail("options_value");
+  let expectedUrl;
+  let loginUrl;
+  try {
+    expectedUrl = new URL(options.expectedUrl);
+    loginUrl = new URL(options.loginUrl);
+  } catch {
+    fail("options_url");
+  }
+  if (
+    expectedUrl.href !== options.expectedUrl ||
+    expectedUrl.search !== "" ||
+    expectedUrl.hash !== "" ||
+    loginUrl.href !== options.loginUrl ||
+    loginUrl.search !== "" ||
+    loginUrl.hash !== ""
+  )
+    fail("options_url_canonical");
+  const phaseDefinitions = options.phases.map((phase) => {
+    if (!exactKeys(phase, ["armActionId", "closeActionId", "tokens", "successiveInitialEpochs"])) {
+      fail("phase_shape");
+    }
+    if (
+      typeof phase.armActionId !== "string" ||
+      !safeTokenPattern.test(phase.armActionId) ||
+      typeof phase.closeActionId !== "string" ||
+      !safeTokenPattern.test(phase.closeActionId) ||
+      !Array.isArray(phase.tokens) ||
+      (phase.tokens.length !== 1 && phase.tokens.length !== 2) ||
+      phase.tokens.some((token) => typeof token !== "string" || !safeTokenPattern.test(token)) ||
+      typeof phase.successiveInitialEpochs !== "boolean" ||
+      (phase.tokens.length === 2) !== phase.successiveInitialEpochs
+    )
+      fail("phase_value");
+    return freeze({
+      armActionId: phase.armActionId,
+      closeActionId: phase.closeActionId,
+      tokens: [...phase.tokens],
+      successiveInitialEpochs: phase.successiveInitialEpochs,
+    });
+  });
+  const allArmIds = phaseDefinitions.map(({ armActionId }) => armActionId);
+  const allCloseIds = phaseDefinitions.map(({ closeActionId }) => closeActionId);
+  const allTokenIds = phaseDefinitions.flatMap(({ tokens }) => tokens);
+  if (
+    new Set(allArmIds).size !== 6 ||
+    new Set(allCloseIds).size !== 6 ||
+    allTokenIds.length !== 7 ||
+    new Set(allTokenIds).size !== 7 ||
+    phaseDefinitions.filter(({ successiveInitialEpochs }) => successiveInitialEpochs).length !== 1
+  )
+    fail("phase_cardinality");
+
+  const definitionsByArm = new Map(
+    phaseDefinitions.map((definition) => [definition.armActionId, definition])
+  );
+  const definitionsByClose = new Map(
+    phaseDefinitions.map((definition) => [definition.closeActionId, definition])
+  );
+  const phaseStates = new Map(
+    phaseDefinitions.map((definition) => [
+      definition.armActionId,
+      {
+        status: "idle",
+        definition,
+        pageId: null,
+        failureBaseline: null,
+        nextTokenIndex: 0,
+        tokenStates: new Map(),
+        consumedEpochs: [],
+      },
+    ])
+  );
+  const failureLedger = [];
+  const authLedger = [];
+  const consumedFailureSequences = new Set();
+  let activePhaseId = null;
+  let nextFailureSequence = 1;
+  let nextAuthSequence = 1;
+
+  const appendFailure = (event) => {
+    if (failureLedger.length >= options.maxFailureEvents) fail("failure_ledger_overflow");
+    const row = freeze({ sequence: nextFailureSequence++, ...event });
+    failureLedger.push(row);
+    return row;
+  };
+  const appendAuth = (event) => {
+    if (authLedger.length >= options.maxAuthEvents) fail("auth_ledger_overflow");
+    const row = freeze({ sequence: nextAuthSequence++, ...event });
+    authLedger.push(row);
+    return row;
+  };
+  const classifyUrl = (value) => {
+    let parsed;
+    try {
+      parsed = new URL(value);
+    } catch {
+      return "invalid_url";
+    }
+    if (parsed.origin === expectedUrl.origin && parsed.pathname.startsWith("/admin/api/"))
+      return "admin_api";
+    if (parsed.pathname.startsWith("/media/")) return "media_delivery";
+    if (parsed.pathname.startsWith("/site/") || parsed.port === "5174") return "site_vite";
+    if (parsed.origin === expectedUrl.origin && parsed.pathname.startsWith("/admin/"))
+      return "admin_asset";
+    if (parsed.pathname.includes("favicon")) return "favicon";
+    return "front_other";
+  };
+  const classifyText = (value) => {
+    if (/net::err_connection_refused/iu.test(value)) return "connection_refused";
+    if (/net::err_aborted/iu.test(value)) return "request_aborted";
+    if (/net::err_/iu.test(value)) return "network";
+    if (/cors|cross-origin/iu.test(value)) return "cors";
+    if (/failed to load resource/iu.test(value) && /(?:\b5[0-9]{2}\b|server error)/iu.test(value))
+      return "resource_5xx";
+    if (
+      /failed to load resource/iu.test(value) &&
+      /(?:\b401\b|\b403\b|unauthorized|forbidden)/iu.test(value)
+    )
+      return "resource_auth";
+    if (/failed to load resource/iu.test(value) && /(?:404|not found)/iu.test(value))
+      return "resource_404";
+    if (/failed to load resource/iu.test(value) && /\b4[0-9]{2}\b/iu.test(value))
+      return "resource_4xx";
+    if (/failed to load resource/iu.test(value)) return "resource_load";
+    if (/content security policy|refused to/iu.test(value)) return "csp";
+    if (/hydration|react/iu.test(value)) return "react";
+    if (/typeerror|referenceerror|syntaxerror/iu.test(value)) return "runtime";
+    return "other";
+  };
+  const currentTokenState = () => {
+    if (activePhaseId === null) return null;
+    const phaseState = phaseStates.get(activePhaseId);
+    if (!phaseState || phaseState.status !== "armed") return null;
+    const tokenId = phaseState.definition.tokens[phaseState.nextTokenIndex];
+    return tokenId === undefined ? null : (phaseState.tokenStates.get(tokenId) ?? null);
+  };
+  const responseMatchesToken = (response, tokenState, phaseState) =>
+    Boolean(
+      response.pageId === tokenState.record.pageId &&
+      response.pageId === options.expectedPageId &&
+      response.method === "GET" &&
+      response.url === options.expectedUrl &&
+      response.status === 401 &&
+      response.navigationEpoch > tokenState.record.navigationBaseline &&
+      (!phaseState.definition.successiveInitialEpochs ||
+        response.navigationEpoch === tokenState.record.navigationBaseline + 1)
+    );
+  const consoleMatchesResponse = (message, response) =>
+    Boolean(
+      message.type === "console-error" &&
+      message.pageId === response.pageId &&
+      message.navigationEpoch === response.navigationEpoch &&
+      message.locationUrl === response.url &&
+      message.text === options.expectedText
+    );
+  const armToken = (phaseState, tokenIndex, navigationBaseline) => {
+    const tokenId = phaseState.definition.tokens[tokenIndex];
+    if (tokenId === undefined || phaseState.tokenStates.has(tokenId)) fail("token_reuse");
+    const armEvent = appendAuth({
+      type: "arm",
+      phaseId: phaseState.definition.armActionId,
+      tokenId,
+      pageId: phaseState.pageId,
+      navigationBaseline,
+    });
+    const record = freeze({
+      phaseId: phaseState.definition.armActionId,
+      tokenId,
+      pageId: phaseState.pageId,
+      navigationBaseline,
+      armEventSequence: armEvent.sequence,
+    });
+    phaseState.tokenStates.set(tokenId, {
+      record,
+      boundResponseSequence: null,
+      consumedPair: null,
+    });
+  };
+  const tryConsumeAdjacentPair = () => {
+    if (failureLedger.length < 2 || activePhaseId === null) return false;
+    const left = failureLedger.at(-2);
+    const right = failureLedger.at(-1);
+    const response = left.type === "response" ? left : right.type === "response" ? right : null;
+    const message =
+      left.type === "console-error" ? left : right.type === "console-error" ? right : null;
+    if (!response || !message || response === message) return false;
+    const phaseState = phaseStates.get(activePhaseId);
+    const tokenState = currentTokenState();
+    if (!phaseState || !tokenState || !responseMatchesToken(response, tokenState, phaseState))
+      return false;
+    if (tokenState.boundResponseSequence === null) {
+      tokenState.boundResponseSequence = response.sequence;
+      appendAuth({
+        type: "bind",
+        phaseId: phaseState.definition.armActionId,
+        tokenId: tokenState.record.tokenId,
+        failureSequence: response.sequence,
+      });
+    }
+    if (tokenState.boundResponseSequence !== response.sequence || tokenState.consumedPair !== null)
+      return false;
+    if (!consoleMatchesResponse(message, response)) return false;
+    tokenState.consumedPair = freeze({
+      responseSequence: response.sequence,
+      messageSequence: message.sequence,
+    });
+    consumedFailureSequences.add(response.sequence);
+    consumedFailureSequences.add(message.sequence);
+    phaseState.consumedEpochs.push(response.navigationEpoch);
+    appendAuth({
+      type: "consume",
+      phaseId: phaseState.definition.armActionId,
+      tokenId: tokenState.record.tokenId,
+      responseSequence: response.sequence,
+      messageSequence: message.sequence,
+    });
+    phaseState.nextTokenIndex += 1;
+    if (phaseState.nextTokenIndex < phaseState.definition.tokens.length) {
+      armToken(phaseState, phaseState.nextTokenIndex, response.navigationEpoch);
+    }
+    return true;
+  };
+  const bindResponseIfEligible = (response) => {
+    if (activePhaseId === null) return false;
+    const phaseState = phaseStates.get(activePhaseId);
+    const tokenState = currentTokenState();
+    if (!phaseState || !tokenState || !responseMatchesToken(response, tokenState, phaseState))
+      return false;
+    if (tokenState.boundResponseSequence !== null) return false;
+    tokenState.boundResponseSequence = response.sequence;
+    appendAuth({
+      type: "bind",
+      phaseId: phaseState.definition.armActionId,
+      tokenId: tokenState.record.tokenId,
+      failureSequence: response.sequence,
+    });
+    return true;
+  };
+  const safePageId = (value) => {
+    if (typeof value !== "string" || !pageIdPattern.test(value)) fail("page_id");
+    return value;
+  };
+
+  const arm = (input) => {
+    if (!exactKeys(input, ["phaseId", "pageId", "navigationBaseline"])) fail("arm_shape");
+    const definition = definitionsByArm.get(input.phaseId);
+    if (
+      !definition ||
+      activePhaseId !== null ||
+      input.pageId !== options.expectedPageId ||
+      !integer(input.navigationBaseline)
+    ) {
+      fail("arm_state");
+    }
+    const phaseState = phaseStates.get(definition.armActionId);
+    if (!phaseState || phaseState.status !== "idle") fail("arm_reuse");
+    phaseState.status = "armed";
+    phaseState.pageId = safePageId(input.pageId);
+    phaseState.failureBaseline = nextFailureSequence - 1;
+    activePhaseId = definition.armActionId;
+    armToken(phaseState, 0, input.navigationBaseline);
+    return true;
+  };
+  const close = (input) => {
+    if (!exactKeys(input, ["closeActionId", "pageId", "navigationEpoch", "url"]))
+      fail("close_shape");
+    const definition = definitionsByClose.get(input.closeActionId);
+    if (
+      !definition ||
+      activePhaseId !== definition.armActionId ||
+      input.pageId !== options.expectedPageId ||
+      !integer(input.navigationEpoch) ||
+      input.url !== options.loginUrl
+    )
+      fail("close_state");
+    const phaseState = phaseStates.get(definition.armActionId);
+    if (
+      !phaseState ||
+      phaseState.status !== "armed" ||
+      phaseState.nextTokenIndex !== definition.tokens.length ||
+      phaseState.consumedEpochs.length !== definition.tokens.length ||
+      phaseState.consumedEpochs.some((epoch) => epoch > input.navigationEpoch)
+    )
+      fail("close_unconsumed");
+    if (
+      definition.successiveInitialEpochs &&
+      phaseState.consumedEpochs[1] !== phaseState.consumedEpochs[0] + 1
+    )
+      fail("close_epoch_order");
+    const remainingDuringPhase = failureLedger.some(
+      (event) =>
+        event.sequence > phaseState.failureBaseline && !consumedFailureSequences.has(event.sequence)
+    );
+    if (remainingDuringPhase) fail("close_unexpected_failure");
+    appendAuth({
+      type: "close",
+      phaseId: definition.armActionId,
+      closeActionId: definition.closeActionId,
+      pageId: input.pageId,
+      navigationEpoch: input.navigationEpoch,
+    });
+    phaseState.status = "closed";
+    activePhaseId = null;
+    return true;
+  };
+  const recordResponse = (input) => {
+    if (!exactKeys(input, ["pageId", "navigationEpoch", "url", "method", "status"]))
+      fail("response_shape");
+    if (
+      typeof input.url !== "string" ||
+      input.url.length === 0 ||
+      input.url.length > 4096 ||
+      typeof input.method !== "string" ||
+      input.method.length === 0 ||
+      input.method.length > 16 ||
+      !Number.isSafeInteger(input.status) ||
+      input.status < 400 ||
+      input.status > 599 ||
+      !integer(input.navigationEpoch)
+    )
+      fail("response_value");
+    const row = appendFailure({
+      type: "response",
+      pageId: safePageId(input.pageId),
+      navigationEpoch: input.navigationEpoch,
+      url: input.url,
+      method: input.method,
+      status: input.status,
+      safeCode:
+        "response_" +
+        classifyUrl(input.url) +
+        "_" +
+        (input.status === 401 || input.status === 403
+          ? "auth"
+          : input.status === 404
+            ? "not_found"
+            : input.status >= 500
+              ? "server"
+              : "client"),
+    });
+    bindResponseIfEligible(row);
+    tryConsumeAdjacentPair();
+    return true;
+  };
+  const recordConsole = (input) => {
+    if (!exactKeys(input, ["pageId", "navigationEpoch", "type", "text", "locationUrl"]))
+      fail("console_shape");
+    if (
+      (input.type !== "error" && input.type !== "warning") ||
+      typeof input.text !== "string" ||
+      input.text.length > 16384 ||
+      typeof input.locationUrl !== "string" ||
+      input.locationUrl.length > 4096 ||
+      !integer(input.navigationEpoch)
+    )
+      fail("console_value");
+    appendFailure({
+      type: input.type === "error" ? "console-error" : "console-warning",
+      pageId: safePageId(input.pageId),
+      navigationEpoch: input.navigationEpoch,
+      text: input.text,
+      locationUrl: input.locationUrl,
+      safeCode: (input.type === "error" ? "console_" : "warning_") + classifyText(input.text),
+    });
+    tryConsumeAdjacentPair();
+    return true;
+  };
+  const recordPageError = (input) => {
+    if (!exactKeys(input, ["pageId", "navigationEpoch", "text"])) fail("page_error_shape");
+    if (
+      typeof input.text !== "string" ||
+      input.text.length > 16384 ||
+      !integer(input.navigationEpoch)
+    )
+      fail("page_error_value");
+    appendFailure({
+      type: "page-error",
+      pageId: safePageId(input.pageId),
+      navigationEpoch: input.navigationEpoch,
+      text: input.text,
+      safeCode: "page_" + classifyText(input.text),
+    });
+    tryConsumeAdjacentPair();
+    return true;
+  };
+  const reconcile = (pageRecords) => {
+    if (!Array.isArray(pageRecords)) fail("page_records_shape");
+    const pages = pageRecords
+      .map((record) => {
+        if (
+          !exactKeys(record, ["pageId", "tabIndex", "mediaGetCount"]) ||
+          typeof record.pageId !== "string" ||
+          !pageIdPattern.test(record.pageId) ||
+          !integer(record.tabIndex) ||
+          !integer(record.mediaGetCount)
+        )
+          fail("page_record_value");
+        return {
+          pageId: record.pageId,
+          tabIndex: record.tabIndex,
+          consoleErrors: [],
+          consoleWarnings: [],
+          pageErrors: [],
+          mediaGetCount: record.mediaGetCount,
+        };
+      })
+      .sort((left, right) => left.tabIndex - right.tabIndex);
+    if (
+      new Set(pages.map(({ pageId }) => pageId)).size !== pages.length ||
+      new Set(pages.map(({ tabIndex }) => tabIndex)).size !== pages.length
+    ) {
+      fail("page_record_duplicate");
+    }
+    const byPage = new Map(pages.map((page) => [page.pageId, page]));
+    let firstUnexpected = null;
+    for (const event of failureLedger) {
+      if (consumedFailureSequences.has(event.sequence)) continue;
+      const page = byPage.get(event.pageId);
+      if (!page) fail("event_page_missing");
+      const channel =
+        event.type === "console-warning"
+          ? "consoleWarnings"
+          : event.type === "page-error"
+            ? "pageErrors"
+            : "consoleErrors";
+      page[channel].push(event.safeCode);
+      if (firstUnexpected === null) firstUnexpected = { channel, code: event.safeCode };
+    }
+    for (const page of pages) {
+      Object.freeze(page.consoleErrors);
+      Object.freeze(page.consoleWarnings);
+      Object.freeze(page.pageErrors);
+      Object.freeze(page);
+    }
+    const aggregate = freeze({
+      consoleErrors: pages.flatMap((page) => page.consoleErrors.map(() => page.pageId)),
+      consoleWarnings: pages.flatMap((page) => page.consoleWarnings.map(() => page.pageId)),
+      pageErrors: pages.flatMap((page) => page.pageErrors.map(() => page.pageId)),
+      mediaGetCount: pages.reduce((total, page) => total + page.mediaGetCount, 0),
+    });
+    return freeze({ aggregate, pages, firstUnexpected });
+  };
+  return freeze({ arm, close, recordResponse, recordConsole, recordPageError, reconcile });
+}
+
+const ALLOWED_PROGRAMS = new Set(["playwright-cli", "bun", "curl", process.execPath]);
+
+const BROWSER_KINDS = new Set([
+  "open",
+  "logger-install",
+  "goto",
+  "resize",
+  "fill",
+  "click",
+  "observe",
+  "blocksBefore",
+  "captureNew",
+  "assert",
+  "route",
+  "screen",
+  "media-count-before-release",
+  "media-count-after-release",
+  "logs",
+  "focus",
+  "press",
+  "type",
+  "dispatchAndCaptureSelectionHandle",
+  "tab-new",
+  "tab-select",
+  "tab-close",
+  "authRateWindowBarrier",
+  "cleanup-release-unroute",
+  "cleanup-route-list",
+  "cleanup-console-errors",
+  "cleanup-console-warnings",
+  "cleanup-page-errors",
+  "cleanup-close",
+  "cleanup-session-absence",
+]);
+
+const RUNTIME_KINDS = new Set([
+  "storage",
+  "host",
+  "health",
+  "apiPublicRead",
+  "settingsRead",
+  "isolatedApiSessionLogin",
+  "isolatedApiSessionCsrfCapture",
+  "fixture",
+  "fixtureRead",
+  "api",
+  "apiRead",
+  "isolatedApiSessionApiReadAs",
+  "isolatedApiSessionApiAs",
+]);
+
+function invariant(condition, message) {
+  if (!condition) throw new Error("TASK-540 smoke executor: " + message);
+}
+
+function deepFreezeExact(value, seen = new WeakSet()) {
+  if ((typeof value !== "object" && typeof value !== "function") || value === null) return value;
+  if (seen.has(value)) return value;
+  seen.add(value);
+  for (const key of Reflect.ownKeys(value)) deepFreezeExact(value[key], seen);
+  return Object.freeze(value);
+}
+
+function exactOwnKeys(value, keys, label, { plain = false } = {}) {
+  invariant(
+    value && typeof value === "object" && !Array.isArray(value),
+    label + " must be an object"
+  );
+  if (plain) invariant(Object.getPrototypeOf(value) === Object.prototype, label + " must be plain");
+  const actual = Reflect.ownKeys(value);
+  invariant(
+    actual.length === keys.length && keys.every((key) => actual.includes(key)),
+    label + " has non-canonical keys"
+  );
+}
+
+function assertExecutionInput(input) {
+  exactOwnKeys(input, INPUT_KEYS, "execution input", { plain: true });
+  invariant(
+    typeof input.root === "string" &&
+      input.root.length > 1 &&
+      !input.root.includes("\0") &&
+      path.isAbsolute(input.root) &&
+      path.resolve(input.root) === input.root,
+    "root must be a canonical absolute repository path"
+  );
+  invariant(
+    typeof input.nonce === "string" && NONCE_PATTERN.test(input.nonce),
+    "nonce must be 12 lowercase hex characters"
+  );
+  invariant(
+    typeof input.assertSafeEvidence === "function",
+    "assertSafeEvidence must be a function"
+  );
+  invariant(
+    typeof input.snapshotRepository === "function",
+    "snapshotRepository must be a function"
+  );
+}
+
+function hashBytes(bytes) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+function canonicalJson(value) {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return "[" + value.map(canonicalJson).join(",") + "]";
+  return (
+    "{" +
+    Object.keys(value)
+      .sort()
+      .map((key) => JSON.stringify(key) + ":" + canonicalJson(value[key]))
+      .join(",") +
+    "}"
+  );
+}
+
+function parseBuilder(builder) {
+  invariant(typeof builder === "string" && builder.length > 0, "builder must be non-empty");
+  const open = builder.indexOf("(");
+  if (open === -1) return deepFreezeExact({ callee: builder, args: [] });
+  invariant(builder.endsWith(")"), "builder call must close");
+  const callee = builder.slice(0, open);
+  const body = builder.slice(open + 1, -1);
+  const args = [];
+  let quote = null;
+  let escaped = false;
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < body.length; index += 1) {
+    const character = body[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (quote) {
+      if (character === "\\") escaped = true;
+      else if (character === quote) quote = null;
+      continue;
+    }
+    if (character === '"' || character === "'" || character === "`") {
+      quote = character;
+      continue;
+    }
+    if (character === "(") depth += 1;
+    else if (character === ")") {
+      invariant(depth > 0, "builder has an unmatched close parenthesis");
+      depth -= 1;
+    } else if (character === "," && depth === 0) {
+      args.push(body.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  invariant(quote === null && depth === 0, "builder has an unterminated expression");
+  if (body.trim().length > 0) args.push(body.slice(start).trim());
+  invariant(
+    args.every((argument) => argument.length > 0),
+    "builder has an empty argument"
+  );
+  return deepFreezeExact({ callee, args });
+}
+
+function assertRecursivelyFrozen(value, seen = new WeakSet()) {
+  if ((typeof value !== "object" && typeof value !== "function") || value === null) return;
+  if (seen.has(value)) return;
+  seen.add(value);
+  invariant(Object.isFrozen(value), "plan contains mutable state");
+  for (const key of Reflect.ownKeys(value)) assertRecursivelyFrozen(value[key], seen);
+}
+
+function assertRegisteredExecutable(plan, action) {
+  const executable = action.executable;
+  invariant(executable && typeof executable === "object", action.id + " executable is missing");
+  if (executable.type === "runtime-operation") {
+    const descriptor = plan.registries.runtimeOperations[executable.operationId];
+    invariant(
+      descriptor?.actionId === action.id && descriptor.refCount === executable.refs.length,
+      action.id + " runtime registry mismatch"
+    );
+  } else if (executable.type === "browser-run-code") {
+    const descriptor = plan.registries.browserRunCodeSources[executable.sourceId];
+    invariant(
+      descriptor?.actionId === action.id && descriptor.refCount === executable.refs.length,
+      action.id + " run-code registry mismatch"
+    );
+  } else if (executable.type === "browser-native") {
+    const descriptor = plan.registries.browserNativeOperations[executable.operationId];
+    invariant(
+      descriptor?.operationId === executable.operationId &&
+        descriptor.actionIds.includes(action.id),
+      action.id + " native registry mismatch"
+    );
+  } else if (executable.type === "browser-screenshot") {
+    const registeredPath = plan.registries.screenshotPaths[executable.screenshotId];
+    invariant(
+      typeof registeredPath === "string" &&
+        action.repositoryMutationPolicy.mode === "allowlist" &&
+        action.repositoryMutationPolicy.paths.length === 1 &&
+        action.repositoryMutationPolicy.paths[0] === registeredPath &&
+        isSafeRepositoryRelativePath(registeredPath),
+      action.id + " screenshot registry mismatch"
+    );
+  } else {
+    invariant(
+      executable.type === "browser-global-list" && action.id === "end-007-session-absence",
+      action.id + " global-list registry mismatch"
+    );
+  }
+  invariant(
+    plan.registries.outputs[action.outputSchemaId] !== undefined,
+    action.id + " output schema is missing"
+  );
+  return executable;
+}
+
+function shellDisplay(program, args) {
+  const quote = (value) => {
+    if (/^[A-Za-z0-9_./:=@+-]+$/.test(value)) return value;
+    return "'" + value.replaceAll("'", "'\\''") + "'";
+  };
+  return [program, ...args].map(quote).join(" ");
+}
+
+function createBoundedStream(maximumBytes = MAX_STREAM_BYTES) {
+  invariant(
+    Number.isSafeInteger(maximumBytes) && maximumBytes > 0,
+    "bounded stream limit is invalid"
+  );
+  const chunks = [];
+  let size = 0;
+  let exceeded = false;
+  return Object.freeze({
+    push(chunk) {
+      const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      const remaining = maximumBytes - size;
+      if (remaining > 0) {
+        const retained = bytes.subarray(0, remaining);
+        chunks.push(retained);
+        size += retained.length;
+      }
+      if (bytes.length > Math.max(0, remaining)) exceeded = true;
+    },
+    finish() {
+      return Object.freeze({ bytes: Buffer.concat(chunks, size), exceeded });
+    },
+  });
+}
+
+function configuredSensitiveValues(...sources) {
+  const values = [];
+  const append = (value) => {
+    if (typeof value !== "string" || value.length === 0) return;
+    values.push(value);
+    try {
+      values.push(decodeURIComponent(value));
+    } catch {
+      // The undecoded value is still part of the private corpus.
+    }
+  };
+  for (const source of sources) {
+    if (!source || typeof source !== "object") continue;
+    for (const key of Reflect.ownKeys(source)) {
+      if (typeof key !== "string") continue;
+      const descriptor = Object.getOwnPropertyDescriptor(source, key);
+      if (
+        !descriptor ||
+        !Object.hasOwn(descriptor, "value") ||
+        typeof descriptor.value !== "string"
+      ) {
+        continue;
+      }
+      const value = descriptor.value;
+      let urlCredentials = null;
+      try {
+        const parsed = new URL(value);
+        if (parsed.username.length > 0 || parsed.password.length > 0) {
+          urlCredentials = [parsed.username, parsed.password];
+        }
+      } catch {
+        // Non-URL values are classified only by their key.
+      }
+      const keyLooksSensitive =
+        !/public[_-]?key/iu.test(key) &&
+        /(?:password|passwd|secret|token|cookie|authorization|api[_-]?key|encryption|database[_-]?url|redis[_-]?url|dsn|(?:^|_)(?:pii[_-]?)?hash[_-]?key|private[_-]?key|signing[_-]?key|master[_-]?key)/iu.test(
+          key
+        );
+      if (keyLooksSensitive || urlCredentials !== null) append(value);
+      if (urlCredentials !== null) {
+        for (const credential of urlCredentials) append(credential);
+      }
+    }
+  }
+  return [...new Set(values.filter(Boolean))];
+}
+
+function rawBytesAreSensitive(bytes, sensitiveValues) {
+  const value = bytes.toString("utf8");
+  if (
+    /(?:authorization|cookie|set-cookie)\s*:/i.test(value) ||
+    /bearer\s+[A-Za-z0-9._~+/-]+=*/i.test(value) ||
+    /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/.test(value)
+  ) {
+    return true;
+  }
+  return sensitiveValues.some((secret) => secret.length > 0 && value.includes(secret));
+}
+
+function repositorySnapshotDelta(before, after) {
+  invariant(
+    before &&
+      after &&
+      Array.isArray(before.paths) &&
+      Array.isArray(after.paths) &&
+      before.hashes &&
+      after.hashes,
+    "repository snapshot shape is invalid"
+  );
+  const paths = [...new Set([...before.paths, ...after.paths])].sort();
+  return paths.filter(
+    (entry) => (before.hashes[entry] ?? "<clean>") !== (after.hashes[entry] ?? "<clean>")
+  );
+}
+
+function assertRepositoryMutationPolicy(action, before, after) {
+  const changed = repositorySnapshotDelta(before, after);
+  const policy = action.repositoryMutationPolicy;
+  invariant(
+    policy &&
+      (policy.mode === "none" || policy.mode === "allowlist") &&
+      Array.isArray(policy.paths),
+    action.id + " repository policy is invalid"
+  );
+  if (policy.mode === "none") {
+    invariant(changed.length === 0, action.id + " changed repository state");
+    return;
+  }
+  invariant(
+    changed.length === policy.paths.length &&
+      changed.every((entry) => policy.paths.includes(entry)),
+    action.id + " changed repository state outside its exact allowlist"
+  );
+}
+
+class SingleAssignmentCaptureMap {
+  constructor() {
+    PRIVATE_CAPTURES.set(this, new Map());
+  }
+
+  bind(name, value) {
+    const values = PRIVATE_CAPTURES.get(this);
+    invariant(typeof name === "string" && name.length > 0, "capture name must be non-empty");
+    invariant(!values.has(name), "capture may be bound only once: " + name);
+    invariant(
+      typeof value === "string" && value.length > 0 && value.length <= 2048,
+      "capture value must be bounded"
+    );
+    values.set(name, value);
+  }
+
+  get(name) {
+    const values = PRIVATE_CAPTURES.get(this);
+    invariant(values.has(name), "capture is unbound: " + name);
+    return values.get(name);
+  }
+
+  has(name) {
+    return PRIVATE_CAPTURES.get(this).has(name);
+  }
+
+  safeProjection(names) {
+    const values = PRIVATE_CAPTURES.get(this);
+    return names.map((name) => {
+      invariant(values.has(name), "canonical capture is unbound: " + name);
+      return deepFreezeExact({ name, value: values.get(name) });
+    });
+  }
+}
+
+class LocalCommandAuthority {
+  constructor({ root, assertSafeEvidence, snapshotRepository, sensitiveValues }) {
+    PRIVATE_AUTHORITY.set(this, {
+      root,
+      assertSafeEvidence,
+      snapshotRepository,
+      sensitiveValues,
+      rawByReceipt: new WeakMap(),
+    });
+  }
+
+  async executeProgram({
+    action,
+    program,
+    args,
+    sequence,
+    operation,
+    routeKey,
+    assertionName,
+    displayArgs = args,
+    stdoutDiscarded = false,
+    cwd,
+    env,
+    stdinBytes = null,
+    timeoutMs = COMMAND_TIMEOUT_MS,
+  }) {
+    invariant(ALLOWED_PROGRAMS.has(program), "program is not allowlisted");
+    invariant(
+      Array.isArray(args) && args.every((value) => typeof value === "string"),
+      "argv invalid"
+    );
+    invariant(
+      Array.isArray(displayArgs) && displayArgs.every((value) => typeof value === "string"),
+      "display argv invalid"
+    );
+    const state = PRIVATE_AUTHORITY.get(this);
+    const before = await state.snapshotRepository();
+    invariant(
+      stdinBytes === null || (Buffer.isBuffer(stdinBytes) && stdinBytes.length <= 1024 * 1024),
+      "stdin frame is invalid"
+    );
+    invariant(
+      Number.isSafeInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= COMMAND_TIMEOUT_MS,
+      "command timeout is invalid"
+    );
+    const execution = await runRetainedProcessGroup({
+      file: program,
+      args,
+      cwd,
+      env,
+      stdinBytes,
+      timeoutMs,
+    });
+    const completion = execution.completion;
+    const stdoutResult = execution.stdout;
+    const stderrResult = execution.stderr;
+    const after = await state.snapshotRepository();
+    assertRepositoryMutationPolicy(action, before, after);
+    invariant(!stdoutResult.exceeded && !stderrResult.exceeded, "command output exceeded 4 MiB");
+    const browserErrorMarker =
+      program === "playwright-cli" && stdoutResult.bytes.includes(Buffer.from("### Error\n"));
+    const sensitiveOutput =
+      rawBytesAreSensitive(stdoutResult.bytes, state.sensitiveValues) ||
+      rawBytesAreSensitive(stderrResult.bytes, state.sensitiveValues);
+    invariant(
+      !execution.timedOut &&
+        !execution.spawnError &&
+        completion.code === 0 &&
+        stderrResult.bytes.length === 0 &&
+        execution.termination.absent === true,
+      "local command failed"
+    );
+    invariant(!browserErrorMarker, "browser command reported an error");
+    invariant(!sensitiveOutput, "local command emitted sensitive bytes");
+    const displayCommand = shellDisplay(program, displayArgs);
+    const receipt = {
+      runnerVersion: ORCHESTRATOR_EVIDENCE_RUNNER_VERSION,
+      sequence,
+      kind: action.kind,
+      scenario: action.scenario,
+      operation,
+      routeKey,
+      assertionName,
+      command: displayCommand,
+      status: 0,
+      stdoutBytes: stdoutResult.bytes.length,
+      stderrBytes: stderrResult.bytes.length,
+      stdoutSha256: hashBytes(stdoutResult.bytes),
+      stderrSha256: hashBytes(stderrResult.bytes),
+      stdoutTruncated: false,
+      stderrTruncated: false,
+      sanitizedOutput: stdoutDiscarded ? "[discarded]" : "",
+      stdoutDiscarded,
+      pageId: action.pageId,
+      tabIndex: action.tabIndex,
+    };
+    state.rawByReceipt.set(receipt, {
+      stdout: stdoutResult.bytes,
+      stderr: stderrResult.bytes,
+      before,
+      after,
+    });
+    state.assertSafeEvidence(receipt, "TASK-540 local command receipt");
+    return { receipt, stdout: stdoutResult.bytes, stderr: stderrResult.bytes };
+  }
+
+  async executeLocal({
+    action,
+    sequence,
+    operation,
+    operationDescriptor,
+    subjectKind,
+    subjectIdentifier,
+    run,
+  }) {
+    invariant(typeof operation === "string" && operation.length > 0, "local operation invalid");
+    invariant(typeof run === "function", "local operation callback invalid");
+    const state = PRIVATE_AUTHORITY.get(this);
+    const before = await state.snapshotRepository();
+    let rawValue;
+    let cause = null;
+    try {
+      rawValue = await run();
+    } catch (error) {
+      cause = error;
+    }
+    const after = await state.snapshotRepository();
+    assertRepositoryMutationPolicy(action, before, after);
+    if (cause !== null) throw cause;
+    const raw = Buffer.from(canonicalJson(rawValue) + "\n");
+    invariant(raw.length <= MAX_STREAM_BYTES, "local observation exceeded 4 MiB");
+    invariant(!rawBytesAreSensitive(raw, state.sensitiveValues), "local observation is sensitive");
+    const empty = Buffer.alloc(0);
+    const receipt = deepFreezeExact({
+      runnerVersion: ORCHESTRATOR_EVIDENCE_RUNNER_VERSION,
+      sequence,
+      operation,
+      operationDescriptor,
+      status: 0,
+      evidenceSha256: hashBytes(raw),
+      subjectKind,
+      subjectIdentifier,
+      sanitizedOutput: "",
+    });
+    state.rawByReceipt.set(receipt, { stdout: raw, stderr: empty, before, after });
+    state.assertSafeEvidence(receipt, "TASK-540 local runtime receipt");
+    return { receipt, stdout: raw, stderr: empty };
+  }
+}
+
+function parseTransportJson(bytes) {
+  const text = bytes.toString("utf8").trim();
+  invariant(text.length > 0, "command returned empty output");
+  return JSON.parse(text);
+}
+
+function strictParsedObjectValue(value, keys, label) {
+  exactOwnKeys(value, keys, label);
+  invariant(!Object.prototype.hasOwnProperty.call(value, "pass"), label + " must not trust pass");
+  return value;
+}
+
+function strictParsedObject(bytes, keys, label) {
+  return strictParsedObjectValue(parseTransportJson(bytes), keys, label);
+}
+
+function assertFiniteJson(value, label, seen = new WeakSet()) {
+  if (typeof value === "number") {
+    invariant(Number.isFinite(value), label + " contains a non-finite number");
+    return;
+  }
+  if (value === null || typeof value !== "object") return;
+  invariant(!seen.has(value), label + " contains a cycle");
+  seen.add(value);
+  invariant(
+    Array.isArray(value) || Object.getPrototypeOf(value) === Object.prototype,
+    label + " has a non-JSON prototype"
+  );
+  for (const child of Array.isArray(value) ? value : Object.values(value)) {
+    assertFiniteJson(child, label, seen);
+  }
+  seen.delete(value);
+}
+
+function assertDenseJsonArray(value, label) {
+  invariant(Array.isArray(value), label + " must be an array");
+  invariant(Number.isSafeInteger(value.length) && value.length <= 10_000, label + " is too large");
+  invariant(
+    Reflect.ownKeys(value).every((key) => typeof key === "string"),
+    label + " has symbol keys"
+  );
+  const ownNames = Object.getOwnPropertyNames(value);
+  invariant(
+    ownNames.length === value.length + 1 && ownNames.includes("length"),
+    label + " has custom keys or holes"
+  );
+  for (let index = 0; index < value.length; index += 1) {
+    invariant(Object.hasOwn(value, String(index)), label + " has an array hole");
+  }
+}
+
+function assertPlainJsonValue(value, label, state = { seen: new WeakSet(), nodes: 0 }, depth = 0) {
+  state.nodes += 1;
+  invariant(state.nodes <= 100_000 && depth <= 64, label + " exceeds JSON bounds");
+  if (value === null || typeof value === "string" || typeof value === "boolean") return;
+  if (typeof value === "number") {
+    invariant(Number.isFinite(value), label + " contains a non-finite number");
+    return;
+  }
+  invariant(typeof value === "object", label + " contains a non-JSON value");
+  invariant(!state.seen.has(value), label + " contains a cycle");
+  state.seen.add(value);
+  if (Array.isArray(value)) {
+    assertDenseJsonArray(value, label);
+    for (let index = 0; index < value.length; index += 1) {
+      assertPlainJsonValue(value[index], label + "[" + index + "]", state, depth + 1);
+    }
+  } else {
+    invariant(
+      Object.getPrototypeOf(value) === Object.prototype,
+      label + " must contain only plain objects"
+    );
+    invariant(
+      Reflect.ownKeys(value).every((key) => typeof key === "string"),
+      label + " has symbol keys"
+    );
+    for (const key of Object.keys(value)) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      invariant(
+        descriptor && Object.hasOwn(descriptor, "value") && descriptor.enumerable,
+        label + " contains a non-data property"
+      );
+      assertPlainJsonValue(descriptor.value, label + "." + key, state, depth + 1);
+    }
+  }
+  state.seen.delete(value);
+}
+
+function deepEqualJson(left, right) {
+  if (Object.is(left, right)) return true;
+  if (typeof left !== typeof right || left === null || right === null) return false;
+  if (typeof left !== "object") return false;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false;
+    return left.every((value, index) => deepEqualJson(value, right[index]));
+  }
+  const leftKeys = Object.keys(left).sort();
+  const rightKeys = Object.keys(right).sort();
+  return (
+    leftKeys.length === rightKeys.length &&
+    leftKeys.every((key, index) => key === rightKeys[index] && deepEqualJson(left[key], right[key]))
+  );
+}
+
+function assertNullableBound(value, label, { integer = false } = {}) {
+  if (value === null) return;
+  invariant(
+    typeof value === "number" && Number.isFinite(value) && (!integer || Number.isInteger(value)),
+    label + " must be a finite bound or null"
+  );
+}
+
+function assertSchemaDescriptor(schema, label, depth = 0) {
+  invariant(depth <= 32, label + " schema exceeds maximum depth");
+  if (depth === 0) assertPlainJsonValue(schema, label + " schema descriptor");
+  invariant(
+    schema && typeof schema === "object" && !Array.isArray(schema),
+    label + " schema must be an object"
+  );
+  invariant(Object.getPrototypeOf(schema) === Object.prototype, label + " schema must be plain");
+  invariant(typeof schema.type === "string", label + " schema type is invalid");
+  if (schema.type === "literal") {
+    exactOwnKeys(schema, ["type", "value"], label + " schema", { plain: true });
+    assertPlainJsonValue(schema.value, label + " literal");
+    return;
+  }
+  if (schema.type === "boolean" || schema.type === "null") {
+    exactOwnKeys(schema, ["type"], label + " schema", { plain: true });
+    return;
+  }
+  if (schema.type === "string") {
+    exactOwnKeys(schema, ["type", "minLength", "maxLength", "enum", "format"], label + " schema", {
+      plain: true,
+    });
+    assertNullableBound(schema.minLength, label + " minLength", { integer: true });
+    assertNullableBound(schema.maxLength, label + " maxLength", { integer: true });
+    invariant(schema.minLength === null || schema.minLength >= 0, label + " minLength is negative");
+    invariant(schema.maxLength === null || schema.maxLength >= 0, label + " maxLength is negative");
+    invariant(
+      schema.minLength === null ||
+        schema.maxLength === null ||
+        schema.minLength <= schema.maxLength,
+      label + " string bounds are inverted"
+    );
+    if (schema.enum !== null) {
+      assertDenseJsonArray(schema.enum, label + " enum");
+      invariant(
+        schema.enum.every((item) => typeof item === "string"),
+        label + " enum is not textual"
+      );
+      invariant(
+        new Set(schema.enum).size === schema.enum.length,
+        label + " enum contains duplicates"
+      );
+    }
+    invariant(
+      schema.format === null ||
+        ["uuid", "sha256", "http-url", "repo-relative", "css-color", "page-id"].includes(
+          schema.format
+        ),
+      label + " string format is invalid"
+    );
+    return;
+  }
+  if (schema.type === "number" || schema.type === "integer") {
+    exactOwnKeys(schema, ["type", "minimum", "maximum"], label + " schema", { plain: true });
+    assertNullableBound(schema.minimum, label + " minimum", { integer: schema.type === "integer" });
+    assertNullableBound(schema.maximum, label + " maximum", { integer: schema.type === "integer" });
+    invariant(
+      schema.minimum === null || schema.maximum === null || schema.minimum <= schema.maximum,
+      label + " numeric bounds are inverted"
+    );
+    return;
+  }
+  if (schema.type === "array") {
+    exactOwnKeys(schema, ["type", "items", "minItems", "maxItems", "unique"], label + " schema", {
+      plain: true,
+    });
+    assertSchemaDescriptor(schema.items, label + " items", depth + 1);
+    assertNullableBound(schema.minItems, label + " minItems", { integer: true });
+    assertNullableBound(schema.maxItems, label + " maxItems", { integer: true });
+    invariant(schema.minItems === null || schema.minItems >= 0, label + " minItems is negative");
+    invariant(schema.maxItems === null || schema.maxItems >= 0, label + " maxItems is negative");
+    invariant(
+      schema.minItems === null || schema.maxItems === null || schema.minItems <= schema.maxItems,
+      label + " array bounds are inverted"
+    );
+    invariant(typeof schema.unique === "boolean", label + " unique must be boolean");
+    return;
+  }
+  if (schema.type === "tuple") {
+    exactOwnKeys(schema, ["type", "items"], label + " schema", { plain: true });
+    assertDenseJsonArray(schema.items, label + " tuple items");
+    schema.items.forEach((item, index) =>
+      assertSchemaDescriptor(item, label + " tuple[" + index + "]", depth + 1)
+    );
+    return;
+  }
+  if (schema.type === "object") {
+    exactOwnKeys(schema, ["type", "properties"], label + " schema", { plain: true });
+    invariant(
+      schema.properties &&
+        typeof schema.properties === "object" &&
+        !Array.isArray(schema.properties) &&
+        Object.getPrototypeOf(schema.properties) === Object.prototype,
+      label + " properties must be a plain object"
+    );
+    invariant(
+      Reflect.ownKeys(schema.properties).every((key) => typeof key === "string"),
+      label + " properties have symbols"
+    );
+    invariant(Object.keys(schema.properties).length <= 1_000, label + " has too many properties");
+    for (const [key, child] of Object.entries(schema.properties)) {
+      invariant(
+        !["__proto__", "prototype", "constructor"].includes(key),
+        label + " has an unsafe property key"
+      );
+      assertSchemaDescriptor(child, label + "." + key, depth + 1);
+    }
+    return;
+  }
+  if (schema.type === "union") {
+    exactOwnKeys(schema, ["type", "variants"], label + " schema", { plain: true });
+    assertDenseJsonArray(schema.variants, label + " variants");
+    invariant(
+      schema.variants.length > 0 && schema.variants.length <= 32,
+      label + " union cardinality is invalid"
+    );
+    schema.variants.forEach((variant, index) =>
+      assertSchemaDescriptor(variant, label + " variant[" + index + "]", depth + 1)
+    );
+    return;
+  }
+  invariant(false, label + " schema type is not registered");
+}
+
+function validateSchemaValue(schema, value, label) {
+  if (schema.type === "literal") {
+    invariant(deepEqualJson(value, schema.value), label + " does not match the literal schema");
+    return;
+  }
+  if (schema.type === "boolean") {
+    invariant(typeof value === "boolean", label + " must be boolean");
+    return;
+  }
+  if (schema.type === "null") {
+    invariant(value === null, label + " must be null");
+    return;
+  }
+  if (schema.type === "string") {
+    invariant(typeof value === "string", label + " must be a string");
+    invariant(
+      schema.minLength === null || value.length >= schema.minLength,
+      label + " is too short"
+    );
+    invariant(
+      schema.maxLength === null || value.length <= schema.maxLength,
+      label + " is too long"
+    );
+    invariant(schema.enum === null || schema.enum.includes(value), label + " is outside the enum");
+    if (schema.format === "uuid") {
+      invariant(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(value),
+        label + " is not a canonical UUID"
+      );
+    } else if (schema.format === "sha256") {
+      invariant(/^[0-9a-f]{64}$/u.test(value), label + " is not a SHA-256 digest");
+    } else if (schema.format === "http-url") {
+      let parsed;
+      try {
+        parsed = new URL(value);
+      } catch {
+        invariant(false, label + " is not a valid URL");
+      }
+      invariant(
+        (parsed.protocol === "http:" || parsed.protocol === "https:") &&
+          parsed.username === "" &&
+          parsed.password === "" &&
+          !value.includes("\0"),
+        label + " is not a safe HTTP URL"
+      );
+    } else if (schema.format === "repo-relative") {
+      invariant(
+        isSafeRepositoryRelativePath(value),
+        label + " is not a safe repository-relative path"
+      );
+    } else if (schema.format === "css-color") {
+      invariant(
+        value.length <= 256 &&
+          /^(?:#[0-9A-Fa-f]{3,8}|(?:rgb|rgba|hsl|hsla)\([^\r\n;{}]+\)|transparent|[A-Za-z]+)$/u.test(
+            value
+          ),
+        label + " is not a bounded CSS color"
+      );
+    } else if (schema.format === "page-id") {
+      invariant(/^wf540-page-[1-9][0-9]{0,3}$/u.test(value), label + " is not a page ID");
+    }
+    return;
+  }
+  if (schema.type === "number" || schema.type === "integer") {
+    invariant(
+      typeof value === "number" &&
+        Number.isFinite(value) &&
+        (schema.type !== "integer" || Number.isInteger(value)),
+      label + " has an invalid numeric value"
+    );
+    invariant(schema.minimum === null || value >= schema.minimum, label + " is below minimum");
+    invariant(schema.maximum === null || value <= schema.maximum, label + " is above maximum");
+    return;
+  }
+  if (schema.type === "array") {
+    assertDenseJsonArray(value, label);
+    invariant(
+      schema.minItems === null || value.length >= schema.minItems,
+      label + " has too few items"
+    );
+    invariant(
+      schema.maxItems === null || value.length <= schema.maxItems,
+      label + " has too many items"
+    );
+    value.forEach((item, index) =>
+      validateSchemaValue(schema.items, item, label + "[" + index + "]")
+    );
+    if (schema.unique) {
+      const identities = value.map((item) => canonicalJson(item));
+      invariant(
+        new Set(identities).size === identities.length,
+        label + " contains duplicate items"
+      );
+    }
+    return;
+  }
+  if (schema.type === "tuple") {
+    assertDenseJsonArray(value, label);
+    invariant(value.length === schema.items.length, label + " tuple length is invalid");
+    value.forEach((item, index) =>
+      validateSchemaValue(schema.items[index], item, label + "[" + index + "]")
+    );
+    return;
+  }
+  if (schema.type === "object") {
+    exactOwnKeys(value, Object.keys(schema.properties), label, { plain: true });
+    for (const [key, child] of Object.entries(schema.properties)) {
+      validateSchemaValue(child, value[key], label + "." + key);
+    }
+    return;
+  }
+  if (schema.type === "union") {
+    let matches = 0;
+    for (const variant of schema.variants) {
+      try {
+        validateSchemaValue(variant, value, label);
+        matches += 1;
+      } catch {
+        // A union is valid when at least one fully validated variant matches.
+      }
+    }
+    invariant(matches > 0, label + " matches no union variant");
+    return;
+  }
+  invariant(false, label + " schema type is not implemented");
+}
+
+function validateExactJsonSchema(schema, value, label) {
+  assertSchemaDescriptor(schema, label);
+  assertPlainJsonValue(value, label);
+  validateSchemaValue(schema, value, label);
+  return value;
+}
+
+function isSafeRepositoryRelativePath(value) {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    value.length > 1024 ||
+    value.includes("\0") ||
+    value.includes("\\") ||
+    path.posix.isAbsolute(value) ||
+    path.posix.normalize(value) !== value
+  ) {
+    return false;
+  }
+  const segments = value.split("/");
+  return segments.every((segment) => segment.length > 0 && segment !== "." && segment !== "..");
+}
+
+function assertRefPath(value, label, { nonEmpty = false } = {}) {
+  assertDenseJsonArray(value, label);
+  invariant(!nonEmpty || value.length > 0, label + " must not be empty");
+  invariant(value.length <= 32, label + " is too deep");
+  for (const part of value) {
+    invariant(
+      typeof part === "string" &&
+        part.length > 0 &&
+        part.length <= 128 &&
+        !["__proto__", "prototype", "constructor"].includes(part),
+      label + " contains an invalid segment"
+    );
+  }
+}
+
+function assertRefDescriptor(ref, label, depth = 0) {
+  invariant(depth <= 32, label + " exceeds Ref depth");
+  if (depth === 0) assertPlainJsonValue(ref, label + " Ref descriptor");
+  invariant(ref && typeof ref === "object" && !Array.isArray(ref), label + " must be a Ref object");
+  invariant(Object.getPrototypeOf(ref) === Object.prototype, label + " must be a plain Ref object");
+  invariant(typeof ref.op === "string", label + " Ref opcode is invalid");
+  if (ref.op === "literal") {
+    exactOwnKeys(ref, ["op", "value"], label, { plain: true });
+    assertPlainJsonValue(ref.value, label + " literal");
+    return;
+  }
+  if (ref.op === "secret") {
+    exactOwnKeys(ref, ["op", "name"], label, { plain: true });
+    invariant(ALLOWED_SECRET_NAMES.has(ref.name), label + " secret is not allowlisted");
+    return;
+  }
+  if (ref.op === "capture") {
+    exactOwnKeys(ref, ["op", "name"], label, { plain: true });
+    invariant(
+      typeof ref.name === "string" && SAFE_IDENTIFIER_PATTERN.test(ref.name),
+      label + " capture name is invalid"
+    );
+    return;
+  }
+  if (ref.op === "fixture") {
+    exactOwnKeys(ref, ["op", "path"], label, { plain: true });
+    assertRefPath(ref.path, label + " path", { nonEmpty: true });
+    return;
+  }
+  if (ref.op === "prior") {
+    exactOwnKeys(ref, ["op", "actionId", "path"], label, { plain: true });
+    invariant(
+      typeof ref.actionId === "string" && ref.actionId.length > 0 && ref.actionId.length <= 128,
+      label + " actionId is invalid"
+    );
+    assertRefPath(ref.path, label + " path");
+    return;
+  }
+  if (ref.op === "output") {
+    exactOwnKeys(ref, ["op", "path"], label, { plain: true });
+    assertRefPath(ref.path, label + " path");
+    return;
+  }
+  if (ref.op === "var") {
+    exactOwnKeys(ref, ["op", "name", "path"], label, { plain: true });
+    invariant(
+      typeof ref.name === "string" && SAFE_IDENTIFIER_PATTERN.test(ref.name),
+      label + " variable name is invalid"
+    );
+    assertRefPath(ref.path, label + " path");
+    return;
+  }
+  if (ref.op === "rootPath") {
+    exactOwnKeys(ref, ["op", "parts"], label, { plain: true });
+    assertDenseJsonArray(ref.parts, label + " parts");
+    invariant(
+      ref.parts.length > 0 && ref.parts.length <= 32,
+      label + " rootPath parts are invalid"
+    );
+    ref.parts.forEach((part, index) =>
+      assertRefDescriptor(part, label + " parts[" + index + "]", depth + 1)
+    );
+    return;
+  }
+  if (ref.op === "selector") {
+    exactOwnKeys(ref, ["op", "templateId", "args"], label, { plain: true });
+    invariant(
+      typeof ref.templateId === "string" && SAFE_PATH_KEY_PATTERN.test(ref.templateId),
+      label + " templateId is invalid"
+    );
+    assertDenseJsonArray(ref.args, label + " args");
+    invariant(ref.args.length <= 16, label + " selector has too many arguments");
+    ref.args.forEach((argument, index) =>
+      assertRefDescriptor(argument, label + " args[" + index + "]", depth + 1)
+    );
+    return;
+  }
+  if (ref.op === "path") {
+    exactOwnKeys(ref, ["op", "key"], label, { plain: true });
+    invariant(
+      typeof ref.key === "string" && SAFE_PATH_KEY_PATTERN.test(ref.key),
+      label + " path key is invalid"
+    );
+    return;
+  }
+  if (ref.op === "array") {
+    exactOwnKeys(ref, ["op", "items"], label, { plain: true });
+    assertDenseJsonArray(ref.items, label + " items");
+    ref.items.forEach((item, index) =>
+      assertRefDescriptor(item, label + " items[" + index + "]", depth + 1)
+    );
+    return;
+  }
+  if (ref.op === "object") {
+    exactOwnKeys(ref, ["op", "properties"], label, { plain: true });
+    invariant(
+      ref.properties &&
+        typeof ref.properties === "object" &&
+        !Array.isArray(ref.properties) &&
+        Object.getPrototypeOf(ref.properties) === Object.prototype,
+      label + " properties must be plain"
+    );
+    invariant(
+      Reflect.ownKeys(ref.properties).every((key) => typeof key === "string"),
+      label + " properties have symbols"
+    );
+    for (const [key, child] of Object.entries(ref.properties)) {
+      invariant(SAFE_PATH_KEY_PATTERN.test(key), label + " property key is invalid");
+      assertRefDescriptor(child, label + "." + key, depth + 1);
+    }
+    return;
+  }
+  if (ref.op === "sub") {
+    exactOwnKeys(ref, ["op", "left", "right"], label, { plain: true });
+    assertRefDescriptor(ref.left, label + " left", depth + 1);
+    assertRefDescriptor(ref.right, label + " right", depth + 1);
+    return;
+  }
+  if (ref.op === "length") {
+    exactOwnKeys(ref, ["op", "value"], label, { plain: true });
+    assertRefDescriptor(ref.value, label + " value", depth + 1);
+    return;
+  }
+  if (ref.op === "changedKeys") {
+    exactOwnKeys(ref, ["op", "before", "after"], label, { plain: true });
+    assertRefDescriptor(ref.before, label + " before", depth + 1);
+    assertRefDescriptor(ref.after, label + " after", depth + 1);
+    return;
+  }
+  invariant(false, label + " Ref opcode is not registered");
+}
+
+function readRefPath(value, parts, label) {
+  let current = value;
+  for (const part of parts) {
+    invariant(
+      current !== null && typeof current === "object" && Object.hasOwn(current, part),
+      label + " path is absent"
+    );
+    current = current[part];
+  }
+  return current;
+}
+
+function jsonPointerSegment(value) {
+  return String(value).replaceAll("~", "~0").replaceAll("/", "~1");
+}
+
+function changedJsonPointers(before, after) {
+  assertPlainJsonValue(before, "changedKeys before");
+  assertPlainJsonValue(after, "changedKeys after");
+  invariant(
+    before !== null &&
+      after !== null &&
+      typeof before === "object" &&
+      typeof after === "object" &&
+      Array.isArray(before) === Array.isArray(after),
+    "changedKeys roots must be matching JSON composites"
+  );
+  const changed = [];
+  const visit = (left, right, pointer) => {
+    if (deepEqualJson(left, right)) return;
+    const leftComposite = left !== null && typeof left === "object";
+    const rightComposite = right !== null && typeof right === "object";
+    if (!leftComposite || !rightComposite || Array.isArray(left) !== Array.isArray(right)) {
+      invariant(pointer.length > 0, "changedKeys cannot emit an empty root pointer");
+      changed.push(pointer);
+      return;
+    }
+    const keys = [...new Set([...Object.keys(left), ...Object.keys(right)])].sort();
+    for (const key of keys) {
+      const childPointer = pointer + "/" + jsonPointerSegment(key);
+      if (!Object.hasOwn(left, key) || !Object.hasOwn(right, key)) changed.push(childPointer);
+      else visit(left[key], right[key], childPointer);
+    }
+  };
+  visit(before, after, "");
+  return [...new Set(changed)].sort();
+}
+
+function expandRegisteredPath(plan, key, captures) {
+  invariant(
+    plan?.fixtureBlueprint?.paths && Object.hasOwn(plan.fixtureBlueprint.paths, key),
+    "path Ref is not registered"
+  );
+  const descriptor = plan.fixtureBlueprint.paths[key];
+  let expanded;
+  if (typeof descriptor === "string") {
+    invariant(!/[{}]/u.test(descriptor), "registered path contains unresolved braces");
+    expanded = descriptor;
+  } else {
+    exactOwnKeys(descriptor, ["template", "captures"], "registered path template");
+    invariant(typeof descriptor.template === "string", "registered path template is invalid");
+    assertDenseJsonArray(descriptor.captures, "registered path captures");
+    invariant(
+      new Set(descriptor.captures).size === descriptor.captures.length,
+      "registered path captures repeat"
+    );
+    expanded = descriptor.template;
+    for (const captureName of descriptor.captures) {
+      invariant(
+        typeof captureName === "string" && captureName.length > 0,
+        "registered path capture is invalid"
+      );
+      const placeholder = "{" + captureName + "}";
+      invariant(
+        expanded.split(placeholder).length === 2,
+        "registered path capture occurrence mismatch"
+      );
+      expanded = expanded.replace(placeholder, encodeURIComponent(captures.get(captureName)));
+    }
+    invariant(!/[{}]/u.test(expanded), "registered path contains unresolved braces");
+  }
+  if (/^https?:\/\//u.test(expanded) || expanded.startsWith("#")) return expanded;
+  invariant(
+    expanded.startsWith("/") && !expanded.startsWith("//"),
+    "registered path must be Admin-relative"
+  );
+  const adminOrigin = plan.fixtureBlueprint.origins?.admin;
+  invariant(
+    typeof adminOrigin === "string" && /^https?:\/\/[^/]+$/u.test(adminOrigin),
+    "Admin origin is invalid"
+  );
+  return adminOrigin + expanded;
+}
+
+function resolveExactRef(ref, context, label = "Ref") {
+  assertRefDescriptor(ref, label);
+  if (ref.op === "literal") {
+    invariant(
+      typeof ref.value !== "string" || !ref.value.startsWith("$"),
+      label + " cannot encode a secret reference as a literal"
+    );
+    return ref.value;
+  }
+  if (ref.op === "secret") return ref.name;
+  if (ref.op === "capture") return context.captures.get(ref.name);
+  if (ref.op === "fixture") return readRefPath(context.plan.fixtureBlueprint, ref.path, label);
+  if (ref.op === "prior") {
+    invariant(context.priorOutputs.has(ref.actionId), label + " prior output is absent");
+    return readRefPath(context.priorOutputs.get(ref.actionId), ref.path, label);
+  }
+  if (ref.op === "output") return readRefPath(context.currentOutput, ref.path, label);
+  if (ref.op === "var") {
+    invariant(context.variables.has(ref.name), label + " variable is absent");
+    return readRefPath(context.variables.get(ref.name), ref.path, label);
+  }
+  if (ref.op === "rootPath") {
+    invariant(
+      typeof context.root === "string" &&
+        path.isAbsolute(context.root) &&
+        path.resolve(context.root) === context.root,
+      label + " root authority is invalid"
+    );
+    const parts = ref.parts.map((part, index) =>
+      resolveExactRef(part, context, label + " parts[" + index + "]")
+    );
+    const normalized = [];
+    for (const part of parts) {
+      invariant(
+        typeof part === "string" && part.length > 0 && part.length <= 1024 && !part.includes("\0"),
+        label + " rootPath segment is invalid"
+      );
+      invariant(
+        !path.isAbsolute(part) && !part.includes("\\"),
+        label + " rootPath segment must be relative"
+      );
+      const segments = part.split("/");
+      invariant(
+        segments.every((segment) => segment.length > 0 && segment !== "." && segment !== ".."),
+        label + " rootPath traverses"
+      );
+      normalized.push(...segments);
+    }
+    const resolved = path.resolve(context.root, ...normalized);
+    invariant(
+      resolved.startsWith(context.root + path.sep),
+      label + " rootPath escapes repository root"
+    );
+    return resolved;
+  }
+  if (ref.op === "selector") {
+    const template = context.plan.registries?.selectors?.[ref.templateId];
+    invariant(template !== undefined, label + " selector template is not registered");
+    const args = ref.args.map((argument, index) =>
+      resolveExactRef(argument, context, label + " args[" + index + "]")
+    );
+    return renderSelectorTemplate(template, args, ref.templateId);
+  }
+  if (ref.op === "path") return expandRegisteredPath(context.plan, ref.key, context.captures);
+  if (ref.op === "array")
+    return ref.items.map((item, index) =>
+      resolveExactRef(item, context, label + " items[" + index + "]")
+    );
+  if (ref.op === "object") {
+    return Object.fromEntries(
+      Object.entries(ref.properties).map(([key, child]) => [
+        key,
+        resolveExactRef(child, context, label + "." + key),
+      ])
+    );
+  }
+  if (ref.op === "sub") {
+    const left = resolveExactRef(ref.left, context, label + " left");
+    const right = resolveExactRef(ref.right, context, label + " right");
+    invariant(
+      typeof left === "number" &&
+        Number.isFinite(left) &&
+        typeof right === "number" &&
+        Number.isFinite(right),
+      label + " subtraction operands are invalid"
+    );
+    const result = left - right;
+    invariant(Number.isFinite(result), label + " subtraction result is non-finite");
+    return result;
+  }
+  if (ref.op === "length") {
+    const value = resolveExactRef(ref.value, context, label + " value");
+    invariant(
+      typeof value === "string" || Array.isArray(value),
+      label + " length operand is invalid"
+    );
+    return value.length;
+  }
+  if (ref.op === "changedKeys") {
+    return changedJsonPointers(
+      resolveExactRef(ref.before, context, label + " before"),
+      resolveExactRef(ref.after, context, label + " after")
+    );
+  }
+  invariant(false, label + " Ref opcode is not implemented");
+}
+
+function assertPredicateDescriptor(predicate, label, depth = 0) {
+  invariant(depth <= 32, label + " exceeds Predicate depth");
+  if (depth === 0) assertPlainJsonValue(predicate, label + " Predicate descriptor");
+  invariant(
+    predicate && typeof predicate === "object" && !Array.isArray(predicate),
+    label + " must be a Predicate object"
+  );
+  invariant(
+    Object.getPrototypeOf(predicate) === Object.prototype,
+    label + " must be a plain Predicate object"
+  );
+  if (predicate.op === "and" || predicate.op === "or") {
+    exactOwnKeys(predicate, ["op", "items"], label, { plain: true });
+    assertDenseJsonArray(predicate.items, label + " items");
+    invariant(predicate.items.length > 0, label + " items must not be empty");
+    predicate.items.forEach((item, index) =>
+      assertPredicateDescriptor(item, label + " items[" + index + "]", depth + 1)
+    );
+    return;
+  }
+  if (predicate.op === "not") {
+    exactOwnKeys(predicate, ["op", "item"], label, { plain: true });
+    assertPredicateDescriptor(predicate.item, label + " item", depth + 1);
+    return;
+  }
+  if (predicate.op === "deepEqual") {
+    exactOwnKeys(predicate, ["op", "left", "right"], label, { plain: true });
+    assertRefDescriptor(predicate.left, label + " left");
+    assertRefDescriptor(predicate.right, label + " right");
+    return;
+  }
+  if (predicate.op === "sameSet") {
+    exactOwnKeys(predicate, ["op", "left", "right", "duplicates"], label, { plain: true });
+    invariant(predicate.duplicates === "reject", label + " duplicate policy is invalid");
+    assertRefDescriptor(predicate.left, label + " left");
+    assertRefDescriptor(predicate.right, label + " right");
+    return;
+  }
+  if (predicate.op === "compare") {
+    exactOwnKeys(predicate, ["op", "mode", "left", "right"], label, { plain: true });
+    invariant(
+      ["gt", "gte", "lt", "lte"].includes(predicate.mode),
+      label + " compare mode is invalid"
+    );
+    assertRefDescriptor(predicate.left, label + " left");
+    assertRefDescriptor(predicate.right, label + " right");
+    return;
+  }
+  if (predicate.op === "within") {
+    exactOwnKeys(predicate, ["op", "actual", "expected", "tolerance"], label, { plain: true });
+    assertRefDescriptor(predicate.actual, label + " actual");
+    assertRefDescriptor(predicate.expected, label + " expected");
+    assertRefDescriptor(predicate.tolerance, label + " tolerance");
+    return;
+  }
+  if (predicate.op === "every") {
+    exactOwnKeys(predicate, ["op", "source", "as", "predicate"], label, { plain: true });
+    invariant(
+      typeof predicate.as === "string" && SAFE_IDENTIFIER_PATTERN.test(predicate.as),
+      label + " binding name is invalid"
+    );
+    assertRefDescriptor(predicate.source, label + " source");
+    assertPredicateDescriptor(predicate.predicate, label + " predicate", depth + 1);
+    return;
+  }
+  if (predicate.op === "nonEmptyString") {
+    exactOwnKeys(predicate, ["op", "value"], label, { plain: true });
+    assertRefDescriptor(predicate.value, label + " value");
+    return;
+  }
+  invariant(false, label + " Predicate opcode is not registered");
+}
+
+function evaluateExactPredicate(predicate, context, label = "Predicate") {
+  assertPredicateDescriptor(predicate, label);
+  if (predicate.op === "and")
+    return predicate.items.every((item, index) =>
+      evaluateExactPredicate(item, context, label + " items[" + index + "]")
+    );
+  if (predicate.op === "or")
+    return predicate.items.some((item, index) =>
+      evaluateExactPredicate(item, context, label + " items[" + index + "]")
+    );
+  if (predicate.op === "not")
+    return !evaluateExactPredicate(predicate.item, context, label + " item");
+  if (predicate.op === "deepEqual") {
+    const left = resolveExactRef(predicate.left, context, label + " left");
+    const right = resolveExactRef(predicate.right, context, label + " right");
+    assertPlainJsonValue(left, label + " left value");
+    assertPlainJsonValue(right, label + " right value");
+    return deepEqualJson(left, right);
+  }
+  if (predicate.op === "sameSet") {
+    const left = resolveExactRef(predicate.left, context, label + " left");
+    const right = resolveExactRef(predicate.right, context, label + " right");
+    assertDenseJsonArray(left, label + " left set");
+    assertDenseJsonArray(right, label + " right set");
+    left.forEach((item, index) => assertPlainJsonValue(item, label + " left[" + index + "]"));
+    right.forEach((item, index) => assertPlainJsonValue(item, label + " right[" + index + "]"));
+    const leftKeys = left.map(canonicalJson);
+    const rightKeys = right.map(canonicalJson);
+    invariant(new Set(leftKeys).size === leftKeys.length, label + " left set contains duplicates");
+    invariant(
+      new Set(rightKeys).size === rightKeys.length,
+      label + " right set contains duplicates"
+    );
+    return leftKeys.length === rightKeys.length && leftKeys.every((key) => rightKeys.includes(key));
+  }
+  if (predicate.op === "compare") {
+    const left = resolveExactRef(predicate.left, context, label + " left");
+    const right = resolveExactRef(predicate.right, context, label + " right");
+    invariant(
+      typeof left === "number" &&
+        Number.isFinite(left) &&
+        typeof right === "number" &&
+        Number.isFinite(right),
+      label + " compare values are invalid"
+    );
+    if (predicate.mode === "gt") return left > right;
+    if (predicate.mode === "gte") return left >= right;
+    if (predicate.mode === "lt") return left < right;
+    return left <= right;
+  }
+  if (predicate.op === "within") {
+    const actual = resolveExactRef(predicate.actual, context, label + " actual");
+    const expected = resolveExactRef(predicate.expected, context, label + " expected");
+    const tolerance = resolveExactRef(predicate.tolerance, context, label + " tolerance");
+    invariant(
+      typeof actual === "number" &&
+        Number.isFinite(actual) &&
+        typeof expected === "number" &&
+        Number.isFinite(expected) &&
+        typeof tolerance === "number" &&
+        Number.isFinite(tolerance) &&
+        tolerance >= 0,
+      label + " tolerance values are invalid"
+    );
+    return Math.abs(actual - expected) <= tolerance;
+  }
+  if (predicate.op === "every") {
+    const source = resolveExactRef(predicate.source, context, label + " source");
+    assertDenseJsonArray(source, label + " source");
+    invariant(!context.variables.has(predicate.as), label + " variable shadowing is forbidden");
+    return source.every((value, index) => {
+      const variables = new Map(context.variables);
+      variables.set(predicate.as, value);
+      return evaluateExactPredicate(
+        predicate.predicate,
+        { ...context, variables },
+        label + " predicate[" + index + "]"
+      );
+    });
+  }
+  if (predicate.op === "nonEmptyString") {
+    const value = resolveExactRef(predicate.value, context, label + " value");
+    return typeof value === "string" && value.length > 0;
+  }
+  invariant(false, label + " Predicate opcode is not implemented");
+}
+
+function decodeBoundedUtf8(bytes, label, maximum = MAX_STREAM_BYTES) {
+  invariant(
+    Buffer.isBuffer(bytes) && bytes.length > 0 && bytes.length <= maximum,
+    label + " bytes are invalid"
+  );
+  let text;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    invariant(false, label + " is not valid UTF-8");
+  }
+  invariant(!text.includes("\0"), label + " contains NUL");
+  return text;
+}
+
+function parseBoundedSessionList(bytes, label) {
+  invariant(bytes.length <= MAX_SESSION_LIST_BYTES, label + " exceeds the session-list byte bound");
+  const output = decodeExactNativeUtf8(bytes, label);
+  if (output === "  (no browsers)\n") return [];
+  invariant(!output.includes("\r"), label + " contains non-canonical line endings");
+  const lines = output.split("\n");
+  invariant(
+    lines.pop() === "" && lines.shift() === "### Browsers" && lines.length > 0,
+    label + " header is malformed"
+  );
+  invariant(
+    lines.every((line) => Buffer.byteLength(line) <= MAX_SESSION_LIST_LINE_BYTES),
+    label + " line is too long"
+  );
+  const sessions = [];
+  while (lines.length > 0) {
+    invariant(sessions.length < MAX_SESSION_LIST_ENTRIES, label + " has too many sessions");
+    const nameMatch = /^- ([A-Za-z0-9._-]+):$/u.exec(lines.shift() ?? "");
+    invariant(
+      nameMatch !== null && !sessions.includes(nameMatch[1]),
+      label + " session entry is malformed"
+    );
+    sessions.push(nameMatch[1]);
+    invariant(lines.shift() === "  - status: open", label + " session status is malformed");
+    if (/^  - version: v[^\r\n]+ \[incompatible please re-open\]$/u.test(lines[0] ?? ""))
+      lines.shift();
+    const browserTypeMatch = /^  - browser-type: [A-Za-z0-9._-]+( \(attached\))?$/u.exec(
+      lines[0] ?? ""
+    );
+    const attached = browserTypeMatch?.[1] !== undefined;
+    if (browserTypeMatch) lines.shift();
+    if (attached) continue;
+    invariant(
+      /^  - user-data-dir: (?:<in-memory>|[^\r\n]+)$/u.test(lines.shift() ?? ""),
+      label + " user-data-dir is malformed"
+    );
+    if (/^  - headed: (?:true|false)$/u.test(lines[0] ?? "")) lines.shift();
+  }
+  return sessions;
+}
+
+function isExactOutputContractDescriptor(value) {
+  return Boolean(
+    value && typeof value === "object" && !Array.isArray(value) && Object.hasOwn(value, "grammar")
+  );
+}
+
+function assertExactOutputContractDescriptor(contract, label) {
+  assertPlainJsonValue(contract, label + " descriptor");
+  exactOwnKeys(contract, ["grammar", "schema", "predicate", "rememberAs"], label, { plain: true });
+  exactOwnKeys(
+    contract.grammar,
+    ["encoding", "jsonLayers", "nativeMode", "exactText", "sessionName", "normalizedValue"],
+    label + " grammar",
+    { plain: true }
+  );
+  assertSchemaDescriptor(contract.schema, label + " schema");
+  if (contract.predicate !== null)
+    assertPredicateDescriptor(contract.predicate, label + " predicate");
+  invariant(
+    contract.rememberAs === null ||
+      (typeof contract.rememberAs === "string" &&
+        SAFE_IDENTIFIER_PATTERN.test(contract.rememberAs)),
+    label + " rememberAs is invalid"
+  );
+  const grammar = contract.grammar;
+  invariant(
+    grammar.encoding === "json" || grammar.encoding === "native",
+    label + " encoding is invalid"
+  );
+  if (grammar.encoding === "json") {
+    invariant(
+      Number.isSafeInteger(grammar.jsonLayers) &&
+        grammar.jsonLayers >= 1 &&
+        grammar.jsonLayers <= 3 &&
+        grammar.nativeMode === null &&
+        grammar.exactText === null &&
+        grammar.sessionName === null &&
+        grammar.normalizedValue === null,
+      label + " JSON grammar fields are invalid"
+    );
+    return;
+  }
+  invariant(grammar.jsonLayers === 0, label + " native grammar cannot declare JSON layers");
+  if (grammar.nativeMode === "exact-text") {
+    invariant(
+      typeof grammar.exactText === "string" &&
+        grammar.exactText.length > 0 &&
+        grammar.sessionName === null,
+      label + " exact-text grammar is invalid"
+    );
+  } else if (grammar.nativeMode === "session-list-absence") {
+    invariant(
+      grammar.exactText === null &&
+        typeof grammar.sessionName === "string" &&
+        SAFE_IDENTIFIER_PATTERN.test(grammar.sessionName),
+      label + " session-list grammar is invalid"
+    );
+  } else {
+    invariant(false, label + " nativeMode is not registered");
+  }
+  assertPlainJsonValue(grammar.normalizedValue, label + " normalizedValue");
+}
+
+function parseExactOutputContract(contract, bytes, label, context) {
+  assertExactOutputContractDescriptor(contract, label);
+  invariant(
+    context &&
+      context.plan &&
+      context.captures &&
+      context.priorOutputs instanceof Map &&
+      context.variables instanceof Map &&
+      typeof context.actionId === "string",
+    label + " evaluation context is invalid"
+  );
+  const grammar = contract.grammar;
+  let value;
+  if (grammar.encoding === "json") {
+    invariant(grammar.jsonLayers === 1, label + " must use exactly one JSON layer");
+    const frame = decodeExactNativeUtf8(bytes, label);
+    invariant(frame.endsWith("\n") && frame.length > 1, label + " JSON frame must end in one LF");
+    const body = frame.slice(0, -1);
+    invariant(
+      !body.includes("\n") && !body.includes("\r") && !body.includes("\0"),
+      label + " JSON frame has extra bytes"
+    );
+    try {
+      value = JSON.parse(body);
+    } catch {
+      invariant(false, label + " contains malformed JSON");
+    }
+    invariant(canonicalJson(value) === body, label + " JSON frame is not canonical");
+  } else if (grammar.nativeMode === "exact-text") {
+    invariant(
+      decodeExactNativeUtf8(bytes, label) === grammar.exactText,
+      label + " native text mismatch"
+    );
+    value = grammar.normalizedValue;
+  } else {
+    invariant(
+      decodeExactNativeUtf8(bytes, label) === "  (no browsers)\n",
+      label + " global browser list is not empty"
+    );
+    value = grammar.normalizedValue;
+  }
+  validateExactJsonSchema(contract.schema, value, label + " value");
+  const evaluationContext = { ...context, currentOutput: value };
+  if (contract.predicate !== null) {
+    invariant(
+      evaluateExactPredicate(contract.predicate, evaluationContext, label + " predicate"),
+      label + " predicate failed"
+    );
+  }
+  invariant(!context.priorOutputs.has(context.actionId), label + " prior output is already bound");
+  if (contract.rememberAs !== null) {
+    invariant(
+      !context.variables.has(contract.rememberAs),
+      label + " remembered variable is already bound"
+    );
+  }
+  deepFreezeExact(value);
+  context.priorOutputs.set(context.actionId, value);
+  if (contract.rememberAs !== null) context.variables.set(contract.rememberAs, value);
+  return value;
+}
+
+function parseRegisteredOutput(schema, bytes, label, context = null) {
+  if (isExactOutputContractDescriptor(schema)) {
+    return parseExactOutputContract(schema, bytes, label, context);
+  }
+  exactOwnKeys(schema, Reflect.ownKeys(schema), label + " schema");
+  if (schema.encoding === "native") {
+    if (schema.kind === "session-absence") {
+      const sessions = parseBoundedSessionList(bytes, label);
+      invariant(
+        typeof schema.sessionName === "string" &&
+          schema.sessionName.length > 0 &&
+          !sessions.includes(schema.sessionName),
+        label + " named browser session is still present"
+      );
+      return schema.exactValue;
+    }
+    if (schema.kind === "unit" || schema.kind === "literal") {
+      if (schema.exactText !== undefined) {
+        invariant(
+          decodeExactNativeUtf8(bytes, label) === schema.exactText,
+          label + " native text mismatch"
+        );
+      }
+      return schema.exactValue;
+    }
+    if (schema.kind === "array") {
+      invariant(
+        decodeExactNativeUtf8(bytes, label) === schema.exactText,
+        label + " native text mismatch"
+      );
+      return [];
+    }
+    invariant(false, label + " has an unsupported native output schema");
+  }
+  invariant(
+    schema.encoding === "json" || schema.encoding === "json-string",
+    label + " output encoding is invalid"
+  );
+  let value = parseTransportJson(bytes);
+  if (schema.encoding === "json-string") {
+    invariant(
+      typeof value === "string",
+      label + " must use exactly one JSON-string transport layer"
+    );
+    value = JSON.parse(value);
+  } else {
+    invariant(
+      typeof value !== "string" || schema.kind !== "object",
+      label + " has an unexpected JSON-string layer"
+    );
+  }
+  assertFiniteJson(value, label);
+  if (schema.kind === "literal") {
+    invariant(Object.is(value, schema.exactValue), label + " literal output mismatch");
+    return value;
+  }
+  if (schema.kind === "integer") {
+    invariant(
+      Number.isInteger(value) && value === schema.exactValue,
+      label + " integer output mismatch"
+    );
+    return value;
+  }
+  invariant(schema.kind === "object", label + " output kind is not implemented");
+  if (schema.mode === "ordinary") {
+    strictParsedObjectValue(value, schema.topLevelKeys, label);
+    invariant(value.assertion === label.split(":").at(-1), label + " assertion identity mismatch");
+    strictParsedObjectValue(value.observations, schema.observationKeys, label + " observations");
+    invariant(
+      typeof value.target === "string" && value.target.length > 0,
+      label + " target is invalid"
+    );
+    return value;
+  }
+  strictParsedObjectValue(value, schema.keys ?? schema.topLevelKeys, label);
+  return value;
+}
+
+function fixtureCaptureValue(name, plan) {
+  const numeric = String(plan.requiredCaptureNames.indexOf(name) + 1).padStart(12, "0");
+  if (name === "media.resolved-url")
+    return plan.fixtureBlueprint.origins.front + "/media/" + plan.prefix;
+  if (name === "media.storage-key") return "task-540/" + plan.prefix + ".png";
+  return "54000000-0000-4000-8000-" + numeric;
+}
+
+function canonicalManifestRuntimeOperation(action) {
+  if (action.id === "set-032-storage-post-setup") return "media-race-missing-absence-setup";
+  if (action.id === "set-040-override-proof") return "media-race-projection-provenance";
+  return PRIMARY_RUNTIME_OPERATION_BY_ACTION_ID[action.id] ?? action.executable.operationId;
+}
+
+function buildFakeCapabilities({
+  failOrdinal = null,
+  terminalMatrix = false,
+  failCleanupLifecycle = false,
+} = {}) {
+  const calls = [];
+  let cleaned = false;
+  let browserSequence = 0;
+  let runtimeSequence = 0;
+  let fakeState = null;
+  let coreCleanupContext = null;
+  let lastFinalPlan = null;
+  let lastFinalization = null;
+  let lastPersistentPlan = null;
+  let lastTerminalPlan = null;
+  let cleanupPromise = null;
+  let cleanupExecutions = 0;
+  const capabilities = {
+    calls,
+    get cleaned() {
+      return cleaned;
+    },
+    get cleanupExecutions() {
+      return cleanupExecutions;
+    },
+    get lastFinalPlan() {
+      return lastFinalPlan;
+    },
+    get lastFinalization() {
+      return lastFinalization;
+    },
+    get lastPersistentPlan() {
+      return lastPersistentPlan;
+    },
+    get lastTerminalPlan() {
+      return lastTerminalPlan;
+    },
+    bindCoreCleanupAuthority(context) {
+      invariant(coreCleanupContext === null, "fake core cleanup authority was assigned twice");
+      coreCleanupContext = context;
+    },
+    registerActionResourcesAfterLedgerAppend(action, delta) {
+      invariant(fakeState !== null, "fake post-ledger acquisition state is absent");
+      registerSuccessfulActionResourcesAfterLedgerAppend(fakeState, action, delta);
+    },
+    settleResponseLostCreateAfterLedgerAppend(actionId) {
+      invariant(
+        RESPONSE_LOST_CREATE_DESCRIPTORS[actionId] !== undefined,
+        "fake response-lost settlement origin drift"
+      );
+    },
+    retainPrimaryFailureObservation() {},
+    async executeAction({ action, plan, captures }) {
+      calls.push(action.id);
+      if (action.ordinal === failOrdinal) throw new Error("private fake failure detail");
+      if (fakeState === null) {
+        fakeState = {
+          plan,
+          bootstrapBaseline: { id: "54000000-0000-4000-8000-000000009999" },
+          host: { identity: { pgid: 54000 } },
+          browserWorkspace: { root: "/tmp/wf540-self-test-private" },
+          resourceKeys: new Map(),
+          resourceOwners: new Map(),
+          syntheticOwnerEdgeKeys: new Set(),
+        };
+      }
+      const captureBindings = {};
+      for (const name of plan.fixtureCaptureBindings[action.id] ?? []) {
+        captureBindings[name] = fixtureCaptureValue(name, plan);
+      }
+      for (const name of plan.runtimeCaptureBindings[action.id] ?? []) {
+        captureBindings[name] = plan.prefix + "-" + name.replaceAll(".", "-");
+      }
+      const isRuntime = action.executable.type === "runtime-operation";
+      const executionSpec = isRuntime ? null : compileActionExecutionSpec(action);
+      const routeMetadata = isRuntime
+        ? null
+        : routeReceiptMetadata(action, executionSpec, plan, captures, {
+            csrfHeaderName: "x-self-test-csrf",
+          });
+      const receipt = isRuntime
+        ? {
+            runnerVersion: 1,
+            sequence: ++runtimeSequence,
+            operation: canonicalManifestRuntimeOperation(action),
+            operationDescriptor:
+              action.id === "set-032-storage-post-setup"
+                ? "db+storage:missing-media-absence"
+                : action.id === "set-040-override-proof"
+                  ? "admin-api:media-race-projection"
+                  : action.executable.operationId,
+            status: 0,
+            evidenceSha256: hashBytes(Buffer.from("fake:" + action.id)),
+            subjectKind:
+              action.id === "set-032-storage-post-setup"
+                ? "media-race-missing-media"
+                : action.id === "set-040-override-proof"
+                  ? "screen"
+                  : null,
+            subjectIdentifier:
+              action.id === "set-032-storage-post-setup"
+                ? plan.fixtureBlueprint.media.missingBoundMediaId
+                : action.id === "set-040-override-proof"
+                  ? fixtureCaptureValue("screen.id", plan)
+                  : null,
+            sanitizedOutput:
+              action.id === "set-032-storage-post-setup"
+                ? canonicalJson({ rowCount: 0, storageMatches: 0 })
+                : action.id === "set-040-override-proof"
+                  ? canonicalJson({
+                      bindingCount: 1,
+                      overrideCount: 1,
+                      entryValueMatches: true,
+                      safeUrlMatches: true,
+                    })
+                  : "{}",
+          }
+        : {
+            runnerVersion: 1,
+            sequence: ++browserSequence,
+            kind: action.kind,
+            scenario: action.scenario,
+            operation: executionSpec.operation,
+            routeKey: routeMetadata.routeKey,
+            method: routeMetadata.method,
+            pattern: routeMetadata.pattern,
+            assertionName: action.kind === "assert" ? parseBuilder(action.builder).args[0] : null,
+            command:
+              action.executable.type === "browser-global-list"
+                ? "playwright-cli --raw list"
+                : "fake:" + action.id,
+            status: 0,
+            stdoutBytes: 0,
+            stderrBytes: 0,
+            stdoutSha256: hashBytes(Buffer.alloc(0)),
+            stderrSha256: hashBytes(Buffer.alloc(0)),
+            stdoutTruncated: false,
+            stderrTruncated: false,
+            sanitizedOutput: "{}",
+            stdoutDiscarded: false,
+            pageId: action.pageId,
+            tabIndex: action.tabIndex,
+          };
+      const acquisitionDelta = deriveActionResourceDelta(
+        fakeState,
+        action,
+        { captureBindings },
+        captures
+      );
+      return deepFreezeExact({
+        receipt: deepFreezeExact(receipt),
+        captureBindings,
+        acquisitionDelta,
+        settledCreateOrigin: PROVEN_RESOURCE_ACTIONS[action.id]?.origin ?? null,
+      });
+    },
+    async executeCleanupLifecycle({ plan, resourceLedger, cleanupPlanner }) {
+      if (failCleanupLifecycle) throw new Error("private fake cleanup lifecycle failure");
+      const persistentLedger = resourceLedger.compileResourceRecords("persistent");
+      const persistentPlan = cleanupPlanner.freezePersistent(persistentLedger, []);
+      lastPersistentPlan = persistentPlan;
+      if (terminalMatrix) {
+        const userAId = fixtureCaptureValue("user-a.id", plan);
+        const userAKey = fakeState.resourceKeys.get("user-a");
+        invariant(typeof userAKey === "string", "terminal matrix user parent is absent");
+        const audit = createResourceCore({
+          kind: "audit-log-task-ua",
+          identifier: ["54000000-0000-4000-8000-000000008001"],
+          ownerSubjectIdentifier: userAId,
+          acquisitionSourceId: "terminal-task-ua-discovery",
+          sourceActionOrdinal: null,
+          acquisitionChannel: "terminal-db-delta",
+        });
+        const session = createResourceCore({
+          kind: "session-task",
+          identifier: ["54000000-0000-4000-8000-000000008002"],
+          ownerSubjectIdentifier: userAId,
+          acquisitionSourceId: "terminal-task-ua-discovery",
+          sourceActionOrdinal: null,
+          acquisitionChannel: "terminal-db-delta",
+        });
+        const access = createResourceCore({
+          kind: "access-log-task-ua",
+          identifier: ["54000000-0000-4000-8000-000000008003"],
+          ownerSubjectIdentifier: session.identifier[0],
+          acquisitionSourceId: "terminal-task-ua-discovery",
+          sourceActionOrdinal: null,
+          acquisitionChannel: "terminal-db-delta",
+        });
+        resourceLedger.appendValidatedDelta(
+          deepFreezeExact({
+            cores: deepFreezeExact([audit, access, session]),
+            dependencyEdges: deepFreezeExact([
+              destructiveResourceEdge(userAKey, audit.resourceKey),
+              destructiveResourceEdge(userAKey, session.resourceKey),
+              destructiveResourceEdge(session.resourceKey, access.resourceKey),
+            ]),
+          })
+        );
+      }
+      const terminalLedger = resourceLedger.compileResourceRecords("terminal");
+      const terminalPlan = cleanupPlanner.freezeTerminal(terminalLedger);
+      lastTerminalPlan = terminalPlan;
+      const finalLedger = resourceLedger.compileResourceRecords("final");
+      const finalPlan = cleanupPlanner.freezeFinal(finalLedger);
+      lastFinalPlan = finalPlan;
+      invariant(
+        finalPlan.persistentActionPlan === persistentPlan,
+        "fake lifecycle persistent plan identity drift"
+      );
+      const recordByKey = finalRecordByKey(finalLedger);
+      const fakeRuntimeReceipt = (
+        operation,
+        operationDescriptor,
+        subjectKind,
+        subjectIdentifier,
+        output
+      ) => {
+        const bytes = Buffer.from(canonicalJson(output) + "\n");
+        return deepFreezeExact({
+          runnerVersion: ORCHESTRATOR_EVIDENCE_RUNNER_VERSION,
+          sequence: ++runtimeSequence,
+          operation,
+          operationDescriptor,
+          status: 0,
+          evidenceSha256: hashBytes(bytes),
+          subjectKind,
+          subjectIdentifier,
+          sanitizedOutput: canonicalJson(output),
+        });
+      };
+      const userKeys = new Set(
+        finalLedger
+          .filter(({ kind }) => kind === "user-a" || kind === "user-b")
+          .map(({ resourceKey }) => resourceKey)
+      );
+      const orderedTuples = [
+        ...persistentPlan.tuples.filter(([resourceKey]) => !userKeys.has(resourceKey)),
+        ...terminalPlan.tuples,
+        ...persistentPlan.tuples.filter(([resourceKey]) => userKeys.has(resourceKey)),
+      ];
+      assertExactCleanupTupleSet(orderedTuples, finalPlan.resourceKeys, "fake execution");
+      const cleanupReceipts = orderedTuples.map(([resourceKey, operationKind]) => {
+        const record = recordByKey.get(resourceKey);
+        return fakeRuntimeReceipt(
+          "cleanup-" + operationKind,
+          record[
+            operationKind === "provenance"
+              ? "provenanceOpId"
+              : operationKind === "delete"
+                ? "cleanupOpId"
+                : "absenceOpId"
+          ],
+          record.kind,
+          record.identifier.length === 1
+            ? record.identifier[0]
+            : lengthPrefixedTuple(record.identifier),
+          { ok: true }
+        );
+      });
+      const phaseProofReceipts = [
+        "api-contexts-close-and-prove",
+        "terminal-task-ua-stable-delta",
+        "bootstrap-login-state-restore",
+        "media-race-missing-absence-cleanup",
+        "final-storage-database-screenshot-proof",
+        "host-runner-stop",
+      ].map((operation) => {
+        if (operation === "media-race-missing-absence-cleanup") {
+          return fakeRuntimeReceipt(
+            operation,
+            "db+storage:missing-media-absence",
+            "media-race-missing-media",
+            plan.fixtureBlueprint.media.missingBoundMediaId,
+            { rowCount: 0, storageMatches: 0 }
+          );
+        }
+        if (operation === "host-runner-stop") {
+          return fakeRuntimeReceipt(
+            operation,
+            "owned-process-group-and-ports-absence-v1",
+            "host-runner",
+            "54000",
+            { termSent: true, killSent: false }
+          );
+        }
+        return fakeRuntimeReceipt(operation, operation + "-v1", null, null, { ok: true });
+      });
+      for (const phase of ["before-delete", "after-delete"]) {
+        for (const poll of [1, 2]) {
+          for (const kind of ["audit", "access", "session"]) {
+            phaseProofReceipts.push(
+              fakeRuntimeReceipt(
+                "terminal-" + kind + "-stable-poll",
+                "terminal-task-ua-bounded-stable-poll-v1",
+                "task-ua-" + kind,
+                phase + ":" + poll,
+                { phase, poll, rowCount: phase === "before-delete" && terminalMatrix ? 1 : 0 }
+              )
+            );
+          }
+        }
+      }
+      for (const processSubject of [
+        { kind: "runner", pid: 54000 },
+        { kind: "backend", pid: 54001 },
+        { kind: "admin", pid: 54002 },
+        { kind: "site", pid: 54003 },
+      ]) {
+        const subject =
+          processSubject.kind === "runner"
+            ? String(processSubject.pid)
+            : processSubject.kind + ":" + processSubject.pid;
+        phaseProofReceipts.push(
+          fakeRuntimeReceipt(
+            "pid-lineage",
+            "owned-process-group-and-ports-absence-v1",
+            "host-process",
+            subject,
+            { lineageValid: true }
+          )
+        );
+        phaseProofReceipts.push(
+          fakeRuntimeReceipt(
+            "process-absence",
+            "owned-process-group-and-ports-absence-v1",
+            "host-process",
+            subject,
+            { absent: true, stableObservations: 2 }
+          )
+        );
+      }
+      for (const port of [3000, 5173, 5174]) {
+        phaseProofReceipts.push(
+          fakeRuntimeReceipt(
+            "port-absence",
+            "owned-process-group-and-ports-absence-v1",
+            "host-port",
+            String(port),
+            { absent: true, stableObservations: 2 }
+          )
+        );
+      }
+      const phaseTrace = deepFreezeExact(
+        Array.from({ length: 10 }, (_, index) => ({ phase: index + 1, completed: true }))
+      );
+      const fakeScreenshots = deepFreezeExact(
+        plan.requiredScreenshotPaths.map((relative, index) => ({
+          path: relative,
+          size: 1024 + index,
+          sha256: hashBytes(Buffer.from("fake-screenshot:" + relative)),
+          dev: "540",
+          ino: String(1000 + index),
+        }))
+      );
+      const setupMissingSequence =
+        plan.actionManifest
+          .filter(({ executable }) => executable.type === "runtime-operation")
+          .findIndex(({ id }) => id === "set-032-storage-post-setup") + 1;
+      const cleanupMissingSequence = phaseProofReceipts.find(
+        ({ operation }) => operation === "media-race-missing-absence-cleanup"
+      ).sequence;
+      calls.push(
+        ...orderedTuples.map(([resourceKey, operationKind]) => operationKind + ":" + resourceKey)
+      );
+      calls.push("finalize");
+      const lifecycle = deepFreezeExact({
+        cleanupReceipts,
+        mediaRace: deepFreezeExact({
+          acquiredMedia: deepFreezeExact({
+            id: fixtureCaptureValue("media.id", plan),
+            canonicalSafeUrl: "/media/2026/07/54000000-0000-4000-8000-000000000777.png",
+          }),
+          missingBoundMediaId: plan.fixtureBlueprint.media.missingBoundMediaId,
+          screenId: fixtureCaptureValue("screen.id", plan),
+          entryId: fixtureCaptureValue("entry.id", plan),
+          directImageBlockId: plan.fixtureBlueprint.screen.blockIds.raceImage,
+          boundField: "raceImageId",
+          override: deepFreezeExact({
+            screenId: fixtureCaptureValue("screen.id", plan),
+            entryId: fixtureCaptureValue("entry.id", plan),
+            blockId: plan.fixtureBlueprint.screen.blockIds.raceImage,
+            propPath: "mediaAssetId",
+            mediaId: fixtureCaptureValue("media.id", plan),
+          }),
+        }),
+        finalization: deepFreezeExact({
+          apiContexts: deepFreezeExact({
+            names: deepFreezeExact(["bootstrap", "user-a"]),
+            closed: true,
+            absenceProven: true,
+          }),
+          browserSession: deepFreezeExact({
+            name: SESSION_NAME,
+            closeReceiptSequence: 413,
+            absenceReceiptSequence: 414,
+            terminalListSha256: hashBytes(Buffer.from("  (no browsers)\n")),
+            closed: true,
+            absent: true,
+          }),
+          privateRoot: deepFreezeExact({
+            outsideRepository: true,
+            mode: "0700",
+            identityRemoved: true,
+            absent: true,
+          }),
+          host: deepFreezeExact({
+            runnerPid: 54000,
+            pgid: 54000,
+            children: deepFreezeExact([
+              { kind: "backend", pid: 54001 },
+              { kind: "admin", pid: 54002 },
+              { kind: "site", pid: 54003 },
+            ]),
+            listeners: deepFreezeExact([
+              { kind: "backend", port: 3000, pid: 54001 },
+              { kind: "admin", port: 5173, pid: 54002 },
+              { kind: "site", port: 5174, pid: 54003 },
+            ]),
+            ports: deepFreezeExact([3000, 5173, 5174]),
+            listenerOwnershipStableObservations: 2,
+            termSent: true,
+            killSent: false,
+            processesAbsent: true,
+            processAbsenceStableObservations: 2,
+            portsAbsent: deepFreezeExact([3000, 5173, 5174]),
+            portAbsenceStableObservations: 2,
+          }),
+          bootstrap: deepFreezeExact({
+            id: "54000000-0000-4000-8000-000000009999",
+            setupCompletedBeforeStart: true,
+            casRestored: true,
+            completeRowByteIdentical: true,
+            roleTuplesByteIdentical: true,
+          }),
+          contentRoutes: deepFreezeExact({
+            key: "site.contentRoutes",
+            taskSlugsAbsentAtBaseline: true,
+            byteIdenticalBeforeEachDelete: true,
+            byteIdenticalAfterCleanup: true,
+          }),
+          settings: deepFreezeExact({ userAAbsent: true, userBAbsent: true }),
+          storage: deepFreezeExact({
+            driver: "local",
+            rootIdentityByteIdentical: true,
+            baselineManifestByteIdentical: true,
+            acquiredMediaRowAbsent: true,
+            acquiredStorageKeyAbsent: true,
+            missingMedia: deepFreezeExact({
+              id: plan.fixtureBlueprint.media.missingBoundMediaId,
+              rowCount: 0,
+              storageMatches: 0,
+              setupReceiptSequence: setupMissingSequence,
+              cleanupReceiptSequence: cleanupMissingSequence,
+            }),
+          }),
+          taskTraffic: deepFreezeExact({
+            baselineCounts: deepFreezeExact({ audit: 0, access: 0, session: 0 }),
+            deltaCounts: deepFreezeExact({
+              audit: terminalMatrix ? 1 : 0,
+              access: terminalMatrix ? 1 : 0,
+              session: terminalMatrix ? 1 : 0,
+            }),
+            deletedCounts: deepFreezeExact({
+              audit: terminalMatrix ? 1 : 0,
+              access: terminalMatrix ? 1 : 0,
+              session: terminalMatrix ? 1 : 0,
+            }),
+            stablePollsBeforeDelete: 2,
+            stablePollsAfterDelete: 2,
+            returnedToBaseline: true,
+          }),
+          screenshots: fakeScreenshots,
+          phaseProofReceipts: deepFreezeExact(phaseProofReceipts),
+          phaseTrace,
+        }),
+        terminalLedger,
+        terminalPlan,
+        finalLedger,
+        finalPlan,
+        persistentLedger,
+        persistentPlan,
+        phaseTrace,
+      });
+      lastFinalization = lifecycle.finalization;
+      return lifecycle;
+    },
+    cleanup(request) {
+      if (cleanupPromise === null) {
+        cleanupPromise = (async () => {
+          cleanupExecutions += 1;
+          cleaned = true;
+          if (request?.failure === true) {
+            calls.push("failure-cleanup");
+            return deepFreezeExact({ absenceProven: true, lifecycle: null });
+          }
+          const lifecycle = await capabilities.executeCleanupLifecycle(request);
+          return deepFreezeExact({ absenceProven: true, lifecycle });
+        })();
+      }
+      return cleanupPromise;
+    },
+  };
+  return capabilities;
+}
+
+function validateCapabilityResult(result, action, executable, plan) {
+  exactOwnKeys(
+    result,
+    ["receipt", "captureBindings", "acquisitionDelta", "settledCreateOrigin"],
+    action.id + " result"
+  );
+  assertRecursivelyFrozen(result);
+  invariant(result.receipt.status === 0, action.id + " receipt mismatch");
+  if (executable.type === "runtime-operation") {
+    exactOwnKeys(result.receipt, RUNTIME_RECEIPT_KEYS, action.id + " runtime receipt", {
+      plain: true,
+    });
+    const expectedOperation = canonicalManifestRuntimeOperation(action);
+    invariant(
+      result.receipt.runnerVersion === ORCHESTRATOR_EVIDENCE_RUNNER_VERSION &&
+        Number.isSafeInteger(result.receipt.sequence) &&
+        result.receipt.sequence > 0 &&
+        result.receipt.operation === expectedOperation &&
+        typeof result.receipt.operationDescriptor === "string" &&
+        result.receipt.operationDescriptor.length > 0 &&
+        typeof result.receipt.evidenceSha256 === "string" &&
+        /^[a-f0-9]{64}$/u.test(result.receipt.evidenceSha256) &&
+        (result.receipt.subjectKind === null || typeof result.receipt.subjectKind === "string") &&
+        (result.receipt.subjectIdentifier === null ||
+          typeof result.receipt.subjectIdentifier === "string") &&
+        typeof result.receipt.sanitizedOutput === "string" &&
+        result.receipt.sanitizedOutput.length <= 4096,
+      action.id + " runtime receipt contract drift"
+    );
+  } else {
+    exactOwnKeys(result.receipt, BROWSER_RECEIPT_KEYS, action.id + " browser receipt", {
+      plain: true,
+    });
+    invariant(
+      result.receipt.runnerVersion === ORCHESTRATOR_EVIDENCE_RUNNER_VERSION &&
+        Number.isSafeInteger(result.receipt.sequence) &&
+        result.receipt.sequence > 0 &&
+        result.receipt.kind === action.kind &&
+        result.receipt.scenario === action.scenario &&
+        typeof result.receipt.operation === "string" &&
+        result.receipt.operation.length > 0 &&
+        (result.receipt.routeKey === null || typeof result.receipt.routeKey === "string") &&
+        (result.receipt.method === null || typeof result.receipt.method === "string") &&
+        (result.receipt.pattern === null || typeof result.receipt.pattern === "string") &&
+        (result.receipt.assertionName === null ||
+          typeof result.receipt.assertionName === "string") &&
+        typeof result.receipt.command === "string" &&
+        result.receipt.command.length > 0 &&
+        Number.isSafeInteger(result.receipt.stdoutBytes) &&
+        result.receipt.stdoutBytes >= 0 &&
+        Number.isSafeInteger(result.receipt.stderrBytes) &&
+        result.receipt.stderrBytes >= 0 &&
+        typeof result.receipt.stdoutSha256 === "string" &&
+        /^[a-f0-9]{64}$/u.test(result.receipt.stdoutSha256) &&
+        typeof result.receipt.stderrSha256 === "string" &&
+        /^[a-f0-9]{64}$/u.test(result.receipt.stderrSha256) &&
+        result.receipt.stdoutTruncated === false &&
+        result.receipt.stderrTruncated === false &&
+        typeof result.receipt.sanitizedOutput === "string" &&
+        typeof result.receipt.stdoutDiscarded === "boolean" &&
+        (result.receipt.pageId === null ||
+          /^wf540-page-[1-9][0-9]*$/u.test(result.receipt.pageId)) &&
+        (result.receipt.tabIndex === null ||
+          (Number.isSafeInteger(result.receipt.tabIndex) && result.receipt.tabIndex >= 0)),
+      action.id + " browser receipt contract drift"
+    );
+    invariant(
+      executable.type === "browser-global-list"
+        ? result.receipt.pageId === null && result.receipt.tabIndex === null
+        : result.receipt.pageId !== null && result.receipt.tabIndex !== null,
+      action.id + " browser page identity drift"
+    );
+    if (executable.type === "browser-global-list") {
+      invariant(
+        result.receipt.command === "playwright-cli --raw list" &&
+          result.receipt.operation === "cleanup-session-absence",
+        action.id + " global-list receipt command drift"
+      );
+    }
+  }
+  exactOwnKeys(
+    result.captureBindings,
+    Object.keys(result.captureBindings),
+    action.id + " captures",
+    {
+      plain: true,
+    }
+  );
+  const allowed = [
+    ...(plan.fixtureCaptureBindings[action.id] ?? []),
+    ...(plan.runtimeCaptureBindings[action.id] ?? []),
+  ];
+  invariant(
+    Object.keys(result.captureBindings).length === allowed.length &&
+      Object.keys(result.captureBindings).every((name) => allowed.includes(name)),
+    action.id + " returned an unauthorized capture"
+  );
+  exactOwnKeys(result.acquisitionDelta, RESOURCE_DELTA_KEYS, action.id + " acquisition delta", {
+    plain: true,
+  });
+  const expectedSettledOrigin = PROVEN_RESOURCE_ACTIONS[action.id]?.origin ?? null;
+  invariant(
+    result.settledCreateOrigin === expectedSettledOrigin,
+    action.id + " response-lost settlement drift"
+  );
+}
+
+function acquiredSubjects(plan, captures) {
+  return plan.requiredFixtureSubjectKeys.map((kind) => ({
+    kind,
+    id: captures.get(plan.fixtureSubjectCapture[kind]),
+  }));
+}
+
+function assertCanonicalMediaRaceProjection(mediaRace, plan, captures) {
+  exactOwnKeys(
+    mediaRace,
+    [
+      "acquiredMedia",
+      "missingBoundMediaId",
+      "screenId",
+      "entryId",
+      "directImageBlockId",
+      "boundField",
+      "override",
+    ],
+    "media-race projection",
+    { plain: true }
+  );
+  exactOwnKeys(mediaRace.acquiredMedia, ["id", "canonicalSafeUrl"], "media-race acquired media", {
+    plain: true,
+  });
+  exactOwnKeys(
+    mediaRace.override,
+    ["screenId", "entryId", "blockId", "propPath", "mediaId"],
+    "media-race override",
+    { plain: true }
+  );
+  for (const [label, value] of [
+    ["acquired media", mediaRace.acquiredMedia.id],
+    ["missing media", mediaRace.missingBoundMediaId],
+    ["screen", mediaRace.screenId],
+    ["entry", mediaRace.entryId],
+    ["override media", mediaRace.override.mediaId],
+  ]) {
+    invariant(
+      typeof value === "string" &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(value),
+      label + " UUID drift"
+    );
+  }
+  invariant(
+    mediaRace.acquiredMedia.id === captures.get("media.id") &&
+      mediaRace.missingBoundMediaId === plan.fixtureBlueprint.media.missingBoundMediaId &&
+      mediaRace.screenId === captures.get("screen.id") &&
+      mediaRace.entryId === captures.get("entry.id") &&
+      mediaRace.directImageBlockId === plan.fixtureBlueprint.screen.blockIds.raceImage &&
+      mediaRace.boundField === "raceImageId" &&
+      mediaRace.override.screenId === mediaRace.screenId &&
+      mediaRace.override.entryId === mediaRace.entryId &&
+      mediaRace.override.blockId === mediaRace.directImageBlockId &&
+      mediaRace.override.propPath === "mediaAssetId" &&
+      mediaRace.override.mediaId === mediaRace.acquiredMedia.id &&
+      mediaRace.acquiredMedia.id !== mediaRace.missingBoundMediaId &&
+      captures.get("retry-screen.id") !== mediaRace.screenId,
+    "media-race projection cross-binding drift"
+  );
+  invariant(
+    /^\/media\/[A-Za-z0-9][A-Za-z0-9._/-]{0,1023}$/u.test(
+      mediaRace.acquiredMedia.canonicalSafeUrl
+    ) &&
+      !mediaRace.acquiredMedia.canonicalSafeUrl.includes("..") &&
+      !mediaRace.acquiredMedia.canonicalSafeUrl.includes("\\") &&
+      !mediaRace.acquiredMedia.canonicalSafeUrl.includes("?") &&
+      !mediaRace.acquiredMedia.canonicalSafeUrl.includes("#"),
+    "media-race canonical safe URL drift"
+  );
+  assertRecursivelyFrozen(mediaRace);
+  return mediaRace;
+}
+
+function assertCanonicalFinalization(finalization, plan) {
+  exactOwnKeys(
+    finalization,
+    [
+      "apiContexts",
+      "browserSession",
+      "privateRoot",
+      "host",
+      "bootstrap",
+      "contentRoutes",
+      "settings",
+      "storage",
+      "taskTraffic",
+      "screenshots",
+      "phaseProofReceipts",
+      "phaseTrace",
+    ],
+    "canonical finalization",
+    { plain: true }
+  );
+  exactOwnKeys(
+    finalization.apiContexts,
+    ["names", "closed", "absenceProven"],
+    "final API contexts",
+    { plain: true }
+  );
+  exactOwnKeys(
+    finalization.browserSession,
+    [
+      "name",
+      "closeReceiptSequence",
+      "absenceReceiptSequence",
+      "terminalListSha256",
+      "closed",
+      "absent",
+    ],
+    "final browser session",
+    { plain: true }
+  );
+  exactOwnKeys(
+    finalization.privateRoot,
+    ["outsideRepository", "mode", "identityRemoved", "absent"],
+    "final private root",
+    { plain: true }
+  );
+  exactOwnKeys(
+    finalization.host,
+    [
+      "runnerPid",
+      "pgid",
+      "children",
+      "listeners",
+      "ports",
+      "listenerOwnershipStableObservations",
+      "termSent",
+      "killSent",
+      "processesAbsent",
+      "processAbsenceStableObservations",
+      "portsAbsent",
+      "portAbsenceStableObservations",
+    ],
+    "final host",
+    { plain: true }
+  );
+  exactOwnKeys(
+    finalization.bootstrap,
+    [
+      "id",
+      "setupCompletedBeforeStart",
+      "casRestored",
+      "completeRowByteIdentical",
+      "roleTuplesByteIdentical",
+    ],
+    "final bootstrap",
+    { plain: true }
+  );
+  exactOwnKeys(
+    finalization.contentRoutes,
+    [
+      "key",
+      "taskSlugsAbsentAtBaseline",
+      "byteIdenticalBeforeEachDelete",
+      "byteIdenticalAfterCleanup",
+    ],
+    "final content routes",
+    { plain: true }
+  );
+  exactOwnKeys(finalization.settings, ["userAAbsent", "userBAbsent"], "final settings", {
+    plain: true,
+  });
+  exactOwnKeys(
+    finalization.storage,
+    [
+      "driver",
+      "rootIdentityByteIdentical",
+      "baselineManifestByteIdentical",
+      "acquiredMediaRowAbsent",
+      "acquiredStorageKeyAbsent",
+      "missingMedia",
+    ],
+    "final storage",
+    { plain: true }
+  );
+  exactOwnKeys(
+    finalization.storage.missingMedia,
+    ["id", "rowCount", "storageMatches", "setupReceiptSequence", "cleanupReceiptSequence"],
+    "final missing media",
+    { plain: true }
+  );
+  exactOwnKeys(
+    finalization.taskTraffic,
+    [
+      "baselineCounts",
+      "deltaCounts",
+      "deletedCounts",
+      "stablePollsBeforeDelete",
+      "stablePollsAfterDelete",
+      "returnedToBaseline",
+    ],
+    "final task traffic",
+    { plain: true }
+  );
+  for (const key of ["baselineCounts", "deltaCounts", "deletedCounts"]) {
+    exactOwnKeys(
+      finalization.taskTraffic[key],
+      ["audit", "access", "session"],
+      "final task traffic " + key,
+      { plain: true }
+    );
+    invariant(
+      Object.values(finalization.taskTraffic[key]).every(
+        (value) => Number.isSafeInteger(value) && value >= 0
+      ),
+      "final task traffic count drift"
+    );
+  }
+  for (const [index, row] of finalization.host.children.entries()) {
+    exactOwnKeys(row, ["kind", "pid"], "final host child[" + index + "]", { plain: true });
+  }
+  for (const [index, row] of finalization.host.listeners.entries()) {
+    exactOwnKeys(row, ["kind", "pid", "port"], "final host listener[" + index + "]", {
+      plain: true,
+    });
+  }
+  for (const [index, row] of finalization.screenshots.entries()) {
+    exactOwnKeys(row, ["dev", "ino", "path", "sha256", "size"], "final screenshot[" + index + "]", {
+      plain: true,
+    });
+  }
+  for (const [index, row] of finalization.phaseTrace.entries()) {
+    exactOwnKeys(row, ["completed", "phase"], "final phase trace[" + index + "]", { plain: true });
+  }
+  for (const [index, receipt] of finalization.phaseProofReceipts.entries()) {
+    exactOwnKeys(receipt, RUNTIME_RECEIPT_KEYS, "final phase proof receipt[" + index + "]", {
+      plain: true,
+    });
+  }
+  invariant(
+    deepEqualJson(finalization.apiContexts.names, ["bootstrap", "user-a"]) &&
+      finalization.apiContexts.closed === true &&
+      finalization.apiContexts.absenceProven === true &&
+      finalization.browserSession.name === SESSION_NAME &&
+      finalization.browserSession.closeReceiptSequence === 413 &&
+      finalization.browserSession.absenceReceiptSequence === 414 &&
+      finalization.browserSession.terminalListSha256 ===
+        hashBytes(Buffer.from("  (no browsers)\n")) &&
+      finalization.browserSession.closed === true &&
+      finalization.browserSession.absent === true &&
+      deepEqualJson(finalization.privateRoot, {
+        outsideRepository: true,
+        mode: "0700",
+        identityRemoved: true,
+        absent: true,
+      }) &&
+      finalization.bootstrap.setupCompletedBeforeStart === true &&
+      finalization.bootstrap.casRestored === true &&
+      finalization.bootstrap.completeRowByteIdentical === true &&
+      finalization.bootstrap.roleTuplesByteIdentical === true &&
+      finalization.contentRoutes.key === "site.contentRoutes" &&
+      finalization.contentRoutes.taskSlugsAbsentAtBaseline === true &&
+      finalization.contentRoutes.byteIdenticalBeforeEachDelete === true &&
+      finalization.contentRoutes.byteIdenticalAfterCleanup === true &&
+      finalization.settings.userAAbsent === true &&
+      finalization.settings.userBAbsent === true &&
+      finalization.storage.driver === "local" &&
+      finalization.storage.rootIdentityByteIdentical === true &&
+      finalization.storage.baselineManifestByteIdentical === true &&
+      finalization.storage.acquiredMediaRowAbsent === true &&
+      finalization.storage.acquiredStorageKeyAbsent === true &&
+      finalization.storage.missingMedia.id === plan.fixtureBlueprint.media.missingBoundMediaId &&
+      finalization.storage.missingMedia.rowCount === 0 &&
+      finalization.storage.missingMedia.storageMatches === 0 &&
+      deepEqualJson(finalization.taskTraffic.deltaCounts, finalization.taskTraffic.deletedCounts) &&
+      Number.isSafeInteger(finalization.taskTraffic.stablePollsBeforeDelete) &&
+      finalization.taskTraffic.stablePollsBeforeDelete >= 2 &&
+      finalization.taskTraffic.stablePollsBeforeDelete <= 80 &&
+      finalization.taskTraffic.stablePollsAfterDelete === 2 &&
+      finalization.taskTraffic.returnedToBaseline === true,
+    "canonical finalization proof drift"
+  );
+  const expectedChildren = ["backend", "admin", "site"];
+  invariant(
+    Number.isSafeInteger(finalization.host.runnerPid) &&
+      finalization.host.runnerPid > 1 &&
+      finalization.host.pgid === finalization.host.runnerPid &&
+      finalization.host.children.length === 3 &&
+      finalization.host.children.every(
+        (row, index) =>
+          row.kind === expectedChildren[index] && Number.isSafeInteger(row.pid) && row.pid > 1
+      ) &&
+      finalization.host.listeners.length === 3 &&
+      finalization.host.listeners.every(
+        (row, index) =>
+          row.kind === expectedChildren[index] &&
+          row.pid === finalization.host.children[index].pid &&
+          row.port === SMOKE_PORTS[index]
+      ) &&
+      deepEqualJson(finalization.host.ports, SMOKE_PORTS) &&
+      deepEqualJson(finalization.host.portsAbsent, SMOKE_PORTS) &&
+      finalization.host.listenerOwnershipStableObservations === 2 &&
+      finalization.host.processesAbsent === true &&
+      finalization.host.processAbsenceStableObservations === 2 &&
+      finalization.host.portAbsenceStableObservations === 2 &&
+      typeof finalization.host.termSent === "boolean" &&
+      typeof finalization.host.killSent === "boolean",
+    "canonical host finalization drift"
+  );
+  invariant(
+    finalization.screenshots.length === plan.requiredScreenshotPaths.length &&
+      finalization.phaseTrace.length === 10 &&
+      finalization.phaseTrace.every(
+        ({ phase, completed }, index) => phase === index + 1 && completed === true
+      ),
+    "canonical finalization matrix drift"
+  );
+  const expectedProcessSubjects = [
+    String(finalization.host.runnerPid),
+    ...finalization.host.children.map(({ kind, pid }) => kind + ":" + pid),
+  ];
+  const hostStopReceipts = finalization.phaseProofReceipts.filter(
+    ({ operation }) => operation === "host-runner-stop"
+  );
+  const lineageReceipts = finalization.phaseProofReceipts.filter(
+    ({ operation }) => operation === "pid-lineage"
+  );
+  const processAbsenceReceipts = finalization.phaseProofReceipts.filter(
+    ({ operation }) => operation === "process-absence"
+  );
+  const portAbsenceReceipts = finalization.phaseProofReceipts.filter(
+    ({ operation }) => operation === "port-absence"
+  );
+  invariant(
+    hostStopReceipts.length === 1 &&
+      hostStopReceipts[0].subjectIdentifier === String(finalization.host.runnerPid) &&
+      deepEqualJson(
+        lineageReceipts.map(({ subjectIdentifier }) => subjectIdentifier),
+        expectedProcessSubjects
+      ) &&
+      deepEqualJson(
+        processAbsenceReceipts.map(({ subjectIdentifier }) => subjectIdentifier),
+        expectedProcessSubjects
+      ) &&
+      deepEqualJson(
+        portAbsenceReceipts.map(({ subjectIdentifier }) => subjectIdentifier),
+        SMOKE_PORTS.map(String)
+      ),
+    "canonical host proof receipt set drift"
+  );
+  assertRecursivelyFrozen(finalization);
+  return finalization;
+}
+
+function assertCanonicalMediaRuntimeReceipts(runtimeReceipts, mediaRace, finalization) {
+  const byOperation = (operation) =>
+    runtimeReceipts.filter((receipt) => receipt.operation === operation);
+  const setup = byOperation("media-race-missing-absence-setup");
+  const projection = byOperation("media-race-projection-provenance");
+  const cleanup = byOperation("media-race-missing-absence-cleanup");
+  invariant(
+    setup.length === 1 && projection.length === 1 && cleanup.length === 1,
+    "media-race runtime receipt cardinality drift"
+  );
+  const expectedMissingOutput = canonicalJson({ rowCount: 0, storageMatches: 0 });
+  invariant(
+    setup[0].operationDescriptor === "db+storage:missing-media-absence" &&
+      cleanup[0].operationDescriptor === "db+storage:missing-media-absence" &&
+      setup[0].subjectKind === "media-race-missing-media" &&
+      cleanup[0].subjectKind === "media-race-missing-media" &&
+      setup[0].subjectIdentifier === mediaRace.missingBoundMediaId &&
+      cleanup[0].subjectIdentifier === mediaRace.missingBoundMediaId &&
+      setup[0].sanitizedOutput === expectedMissingOutput &&
+      cleanup[0].sanitizedOutput === expectedMissingOutput &&
+      setup[0].evidenceSha256 !== cleanup[0].evidenceSha256 &&
+      projection[0].operationDescriptor === "admin-api:media-race-projection" &&
+      projection[0].subjectKind === "screen" &&
+      projection[0].subjectIdentifier === mediaRace.screenId &&
+      projection[0].sanitizedOutput ===
+        canonicalJson({
+          bindingCount: 1,
+          overrideCount: 1,
+          entryValueMatches: true,
+          safeUrlMatches: true,
+        }) &&
+      projection[0].evidenceSha256 !== hashBytes(Buffer.from(projection[0].sanitizedOutput)) &&
+      finalization.storage.missingMedia.setupReceiptSequence === setup[0].sequence &&
+      finalization.storage.missingMedia.cleanupReceiptSequence === cleanup[0].sequence &&
+      setup[0].sequence < projection[0].sequence &&
+      projection[0].sequence < cleanup[0].sequence,
+    "media-race runtime receipt binding drift"
+  );
+}
+
+function assertCanonicalPrimaryRuntimeInventory(runtimeReceipts, finalization, finalPlan) {
+  const byOperation = (operation) =>
+    runtimeReceipts.filter((receipt) => receipt.operation === operation);
+  for (const operation of [
+    "fixture-setup",
+    "host-runner-launch",
+    "admin-health",
+    "front-health",
+    "host-runner-stop",
+  ]) {
+    invariant(
+      byOperation(operation).length === 1,
+      operation + " primary runtime receipt cardinality drift"
+    );
+  }
+  for (const kind of ["audit", "access", "session"]) {
+    const receipts = byOperation("terminal-" + kind + "-stable-poll");
+    const before = receipts.filter(({ subjectIdentifier }) =>
+      subjectIdentifier.startsWith("before-delete:")
+    );
+    const after = receipts.filter(({ subjectIdentifier }) =>
+      subjectIdentifier.startsWith("after-delete:")
+    );
+    invariant(
+      before.length === finalization.taskTraffic.stablePollsBeforeDelete &&
+        after.length === 2 &&
+        before.every(
+          (receipt, index) => receipt.subjectIdentifier === "before-delete:" + (index + 1)
+        ) &&
+        after.every(
+          (receipt, index) => receipt.subjectIdentifier === "after-delete:" + (index + 1)
+        ),
+      kind + " terminal poll runtime receipt drift"
+    );
+  }
+  invariant(
+    byOperation("cleanup-provenance").length === finalPlan.resourceKeys.length &&
+      byOperation("cleanup-absence").length === finalPlan.resourceKeys.length &&
+      runtimeReceipts.every(
+        ({ sanitizedOutput, evidenceSha256 }) =>
+          typeof sanitizedOutput === "string" &&
+          sanitizedOutput.length <= 4096 &&
+          evidenceSha256 !== hashBytes(Buffer.from(sanitizedOutput))
+      ),
+    "primary cleanup runtime receipt inventory/hash drift"
+  );
+}
+
+function assertCleanupReceiptBijection(finalPlan, cleanupReceipts) {
+  invariant(
+    cleanupReceipts.length === finalPlan.actionTuples.length,
+    "cleanup receipt/final tuple cardinality drift"
+  );
+  const actual = cleanupReceipts.map((receipt) => {
+    exactOwnKeys(receipt, RUNTIME_RECEIPT_KEYS, "cleanup receipt", { plain: true });
+    invariant(
+      receipt.runnerVersion === ORCHESTRATOR_EVIDENCE_RUNNER_VERSION &&
+        receipt.status === 0 &&
+        Number.isSafeInteger(receipt.sequence) &&
+        receipt.sequence > 0 &&
+        receipt.operation.startsWith("cleanup-") &&
+        typeof receipt.subjectIdentifier === "string",
+      "cleanup receipt contract drift"
+    );
+    const operationKind = receipt.operation.slice("cleanup-".length);
+    invariant(CLEANUP_OPERATION_KINDS.includes(operationKind), "cleanup receipt operation drift");
+    const operationField =
+      operationKind === "provenance"
+        ? "provenanceOpId"
+        : operationKind === "delete"
+          ? "cleanupOpId"
+          : "absenceOpId";
+    const matches = finalPlan.ledger.filter(
+      (record) => record[operationField] === receipt.operationDescriptor
+    );
+    invariant(matches.length === 1, "cleanup receipt operation descriptor is not bijective");
+    const [record] = matches;
+    const expectedSubject =
+      record.identifier.length === 1
+        ? record.identifier[0]
+        : lengthPrefixedTuple(record.identifier);
+    invariant(
+      receipt.subjectKind === record.kind && receipt.subjectIdentifier === expectedSubject,
+      "cleanup receipt exact subject drift"
+    );
+    return [record.resourceKey, operationKind];
+  });
+  const encode = (tuple) => lengthPrefixedTuple(tuple);
+  const expectedSet = new Set(finalPlan.actionTuples.map(encode));
+  const actualKeys = actual.map(encode);
+  invariant(
+    new Set(actualKeys).size === actualKeys.length &&
+      actualKeys.length === expectedSet.size &&
+      actualKeys.every((key) => expectedSet.has(key)) &&
+      deepEqualJson(actual, finalPlan.actionTuples),
+    "cleanup receipt/final tuple bijection drift"
+  );
+}
+
+function buildCanonicalRouteEvidence(plan, actionReceiptPairs, captures) {
+  const rows = [];
+  for (const [routeKey, descriptor] of Object.entries(plan.registries.routes)) {
+    const expected = expandedRoute(plan, routeKey, captures, {
+      csrfHeaderName: "x-redacted-csrf-name",
+    });
+    const routePairs = actionReceiptPairs.filter(({ receipt }) => receipt.routeKey === routeKey);
+    const pairs = routePairs.filter(({ receipt }) =>
+      descriptor.operations.includes(receipt.operation)
+    );
+    invariant(
+      pairs.length === descriptor.operations.length,
+      routeKey + " route operation receipt set is not exact"
+    );
+    const requiredOperations = pairs;
+    invariant(
+      requiredOperations.length === descriptor.operations.length &&
+        descriptor.operations.every(
+          (operation) =>
+            requiredOperations.filter(({ receipt }) => receipt.operation === operation).length === 1
+        ),
+      routeKey + " route operation set drift"
+    );
+    for (const { receipt } of routePairs) {
+      invariant(
+        receipt.method === expected.method && receipt.pattern === expected.pattern,
+        routeKey + " route receipt metadata drift"
+      );
+    }
+    const retryActionId =
+      routeKey === "entry-save-failure"
+        ? "dg-035-real-retry"
+        : routeKey === "related-first-failure"
+          ? "rc-011-visible-retry"
+          : null;
+    const retryPair =
+      retryActionId === null
+        ? null
+        : actionReceiptPairs.find(({ action }) => action.id === retryActionId);
+    invariant(
+      retryActionId === null || retryPair !== undefined,
+      routeKey + " real retry receipt is absent"
+    );
+    const operations = pairs.map(({ action, receipt }) =>
+      deepFreezeExact({
+        actionId: action.id,
+        sequence: receipt.sequence,
+        operation: receipt.operation,
+        sanitizedOutput: receipt.sanitizedOutput,
+      })
+    );
+    if (retryPair !== null) {
+      operations.push(
+        deepFreezeExact({
+          actionId: retryPair.action.id,
+          sequence: retryPair.receipt.sequence,
+          operation: "real-retry",
+          sanitizedOutput: retryPair.receipt.sanitizedOutput,
+        })
+      );
+    }
+    rows.push(
+      deepFreezeExact({
+        key: routeKey,
+        mode: descriptor.mode,
+        method: expected.method,
+        pattern: expected.pattern,
+        hitCount: 1,
+        operations: deepFreezeExact(operations),
+      })
+    );
+  }
+  invariant(rows.length === 6, "route evidence cardinality drift");
+  return deepFreezeExact(rows);
+}
+
+function buildCanonicalScenarioEvidence(plan, actionReceiptPairs, finalization) {
+  const screenshotByPath = new Map(finalization.screenshots.map((row) => [row.path, row]));
+  const assertionsSeen = [];
+  const themesByScenario = {
+    "button-image": ["light"],
+    "tabs-content": ["dark"],
+    "tabs-keyboard-aria": ["light"],
+    "space-selection": ["dark"],
+    "dirty-guards": ["light", "dark"],
+    "related-retry-cache": ["dark"],
+    "responsive-users": ["light", "dark"],
+  };
+  const viewportReceiptBindings = {
+    "button-image": [{ actionId: "bi-002-resize", width: 1280, height: 900 }],
+    "tabs-content": [{ actionId: "tc-006-resize", width: 1280, height: 900 }],
+    "tabs-keyboard-aria": [{ actionId: "tk-003-resize", width: 1024, height: 900 }],
+    "space-selection": [{ actionId: "ss-010-resize", width: 1024, height: 900 }],
+    "dirty-guards": [{ actionId: "dg-006-resize", width: 1280, height: 900 }],
+    "related-retry-cache": [{ actionId: "dg-006-resize", width: 1280, height: 900 }],
+    "responsive-users": [
+      { actionId: "ru-008-resize-320", width: 320, height: 844 },
+      { actionId: "ru-013-resize-390", width: 390, height: 844 },
+      { actionId: "ru-018-resize-480", width: 480, height: 844 },
+      { actionId: "ru-023-resize-1024", width: 1024, height: 900 },
+      { actionId: "ru-028-resize-1280", width: 1280, height: 900 },
+    ],
+  };
+  const scenarios = plan.requiredScenarios.map((scenarioId) => {
+    const pairs = actionReceiptPairs.filter(({ action }) => action.scenario === scenarioId);
+    const expectedAssertions = plan.requiredAssertions[scenarioId];
+    invariant(Array.isArray(expectedAssertions), scenarioId + " assertion registry is absent");
+    const visibleAssertions = expectedAssertions.map((assertionName) => {
+      const matches = pairs.filter(({ receipt }) => receipt.assertionName === assertionName);
+      invariant(
+        matches.length === 1,
+        scenarioId + ":" + assertionName + " receipt cardinality drift"
+      );
+      const [{ action, receipt }] = matches;
+      assertionsSeen.push(assertionName);
+      return deepFreezeExact({
+        name: assertionName,
+        actionId: action.id,
+        sequence: receipt.sequence,
+        sanitizedOutput: receipt.sanitizedOutput,
+      });
+    });
+    const screenshots = pairs
+      .filter(({ action }) => action.executable.type === "browser-screenshot")
+      .map(({ action, receipt }) => {
+        const relative = plan.registries.screenshotPaths[action.executable.screenshotId];
+        const identity = screenshotByPath.get(relative);
+        invariant(identity !== undefined, scenarioId + " screenshot identity is absent");
+        return deepFreezeExact({ actionId: action.id, sequence: receipt.sequence, ...identity });
+      });
+    const logs = pairs
+      .filter(({ action }) => action.kind === "logs")
+      .map(({ action, receipt }) => {
+        const ast = parseBuilder(action.builder);
+        invariant(ast.callee === "logs" && ast.args.length === 2, action.id + " log builder drift");
+        return deepFreezeExact({
+          actionId: action.id,
+          sequence: receipt.sequence,
+          scope: ast.args[0],
+          channel: ast.args[1],
+          sanitizedOutput: receipt.sanitizedOutput,
+        });
+      });
+    invariant(logs.length === 6, scenarioId + " log evidence cardinality drift");
+    const linkedReceipts = pairs.map(({ action, receipt, lane }) =>
+      deepFreezeExact({
+        actionId: action.id,
+        lane,
+        sequence: receipt.sequence,
+      })
+    );
+    const viewports = viewportReceiptBindings[scenarioId].map(({ actionId, width, height }) => {
+      const matches = actionReceiptPairs.filter(({ action }) => action.id === actionId);
+      invariant(matches.length === 1, scenarioId + " exact viewport receipt cardinality drift");
+      const [pair] = matches;
+      const ast = parseBuilder(pair.action.builder);
+      invariant(
+        pair.action.kind === "resize" &&
+          ast.callee === "resize" &&
+          deepEqualJson(ast.args.map(resolveLiteral), [width, height]) &&
+          pair.receipt.operation === "resize" &&
+          pair.action.executable.sourceId === "run-code/" + actionId &&
+          (pair.action.scenario === scenarioId ||
+            (scenarioId === "related-retry-cache" && pair.action.scenario === "dirty-guards")),
+        scenarioId + " exact viewport receipt binding drift"
+      );
+      return deepFreezeExact({ actionId, width, height, sequence: pair.receipt.sequence });
+    });
+    const routeHits = pairs
+      .filter(({ receipt }) => receipt.routeKey !== null && receipt.operation === "route-hit-read")
+      .map(({ receipt }) =>
+        deepFreezeExact({ key: receipt.routeKey, count: 1, sequence: receipt.sequence })
+      );
+    return deepFreezeExact({
+      id: scenarioId,
+      themes: deepFreezeExact(themesByScenario[scenarioId]),
+      viewports: deepFreezeExact(viewports),
+      linkedReceipts: deepFreezeExact(linkedReceipts),
+      routeHits: deepFreezeExact(routeHits),
+      visibleAssertions: deepFreezeExact(visibleAssertions),
+      logs: deepFreezeExact(logs),
+      screenshots: deepFreezeExact(screenshots),
+    });
+  });
+  invariant(
+    scenarios.length === 7 && assertionsSeen.length === 55 && new Set(assertionsSeen).size === 55,
+    "scenario/assertion evidence cardinality drift"
+  );
+  return deepFreezeExact(scenarios);
+}
+
+async function executeSmokePlanCore(plan, capabilities, constructionCleanupAuthority = null) {
+  assertRecursivelyFrozen(plan);
+  const captures = new SingleAssignmentCaptureMap();
+  const resourceLedger = new ResourceLedgerBuilder();
+  const cleanupPlanner = new ResourceCleanupPlanner();
+  const completed = new Set();
+  const browserReceipts = [];
+  const runtimeReceipts = [];
+  const actionReceiptPairs = [];
+  const state = { route: "absent", terminalCleanupStarted: false };
+  PRIVATE_CORE.set(state, { capabilities, captures });
+  invariant(
+    typeof capabilities.bindCoreCleanupAuthority === "function",
+    "core cleanup authority binder is missing"
+  );
+  capabilities.bindCoreCleanupAuthority({
+    plan,
+    captures,
+    resourceLedger,
+    cleanupPlanner,
+  });
+  try {
+    for (const action of plan.actionManifest) {
+      const executable = assertRegisteredExecutable(plan, action);
+      invariant(
+        action.assertionDependencies.every((dependency) => completed.has(dependency)),
+        action.id + " dependency not completed"
+      );
+      if (action.routeStateBefore !== "all terminal") {
+        invariant(action.routeStateBefore === state.route, action.id + " route state mismatch");
+      }
+      const result = await capabilities.executeAction({ action, executable, plan, captures });
+      validateCapabilityResult(result, action, executable, plan);
+      resourceLedger.appendValidatedDelta(result.acquisitionDelta);
+      invariant(
+        typeof capabilities.registerActionResourcesAfterLedgerAppend === "function",
+        "post-ledger acquisition registrar is missing"
+      );
+      capabilities.registerActionResourcesAfterLedgerAppend(action, result.acquisitionDelta);
+      if (result.settledCreateOrigin !== null) {
+        invariant(
+          typeof capabilities.settleResponseLostCreateAfterLedgerAppend === "function",
+          "response-lost settlement authority is missing"
+        );
+        capabilities.settleResponseLostCreateAfterLedgerAppend(result.settledCreateOrigin);
+      }
+      for (const [name, value] of Object.entries(result.captureBindings))
+        captures.bind(name, value);
+      state.route = action.routeStateAfter;
+      completed.add(action.id);
+      if (executable.type === "runtime-operation") {
+        runtimeReceipts.push(result.receipt);
+        actionReceiptPairs.push({ action, receipt: result.receipt, lane: "runtime" });
+      } else {
+        browserReceipts.push(result.receipt);
+        actionReceiptPairs.push({ action, receipt: result.receipt, lane: "browser" });
+      }
+    }
+    invariant(state.route === "absent", "static manifest left an active route");
+    invariant(
+      completed.size === 490 && browserReceipts.length === 414 && runtimeReceipts.length === 76,
+      "manifest receipt partition cardinality drift"
+    );
+    invariant(
+      browserReceipts.every((receipt, index) => receipt.sequence === index + 1) &&
+        runtimeReceipts.every((receipt, index) => receipt.sequence === index + 1),
+      "browser/runtime receipt sequence is not separately contiguous"
+    );
+    invariant(
+      browserReceipts[0].operation === "open" &&
+        browserReceipts[1].operation === "logger-install" &&
+        browserReceipts.at(-1).sequence === 414 &&
+        browserReceipts.at(-1).operation === "cleanup-session-absence",
+      "browser receipt terminal anchors drift"
+    );
+    const cleanupRequest = deepFreezeExact({
+      plan,
+      captures,
+      resourceLedger,
+      cleanupPlanner,
+      failure: false,
+    });
+    const cleanupOutcome =
+      constructionCleanupAuthority !== null
+        ? await constructionCleanupAuthority.cleanupWhateverWasAcquiredOnceNeverThrow(
+            cleanupRequest
+          )
+        : await capabilities.cleanup(cleanupRequest);
+    exactOwnKeys(cleanupOutcome, ["absenceProven", "lifecycle"], "cleanup once outcome", {
+      plain: true,
+    });
+    invariant(
+      cleanupOutcome.absenceProven === true && cleanupOutcome.lifecycle !== null,
+      "cleanup lifecycle did not complete"
+    );
+    const lifecycle = cleanupOutcome.lifecycle;
+    exactOwnKeys(
+      lifecycle,
+      [
+        "cleanupReceipts",
+        "mediaRace",
+        "finalization",
+        "persistentLedger",
+        "persistentPlan",
+        "terminalLedger",
+        "terminalPlan",
+        "finalLedger",
+        "finalPlan",
+        "phaseTrace",
+      ],
+      "cleanup lifecycle result",
+      { plain: true }
+    );
+    invariant(
+      lifecycle.finalPlan.persistentActionPlan === lifecycle.persistentPlan &&
+        lifecycle.finalPlan.terminalActionPlan === lifecycle.terminalPlan,
+      "cleanup lifecycle substituted a stage plan"
+    );
+    assertCleanupReceiptBijection(lifecycle.finalPlan, lifecycle.cleanupReceipts);
+    const canonicalRuntimeReceipts = deepFreezeExact(
+      [
+        ...runtimeReceipts,
+        ...lifecycle.cleanupReceipts,
+        ...lifecycle.finalization.phaseProofReceipts,
+      ].sort((left, right) => left.sequence - right.sequence)
+    );
+    invariant(
+      canonicalRuntimeReceipts.every((receipt, index) => receipt.sequence === index + 1) &&
+        canonicalRuntimeReceipts
+          .slice(0, runtimeReceipts.length)
+          .every((receipt, index) => receipt === runtimeReceipts[index]),
+      "canonical runtime receipt sequence is not contiguous from the 76-row manifest prefix"
+    );
+    const subjects = acquiredSubjects(plan, captures);
+    const routes = buildCanonicalRouteEvidence(plan, actionReceiptPairs, captures);
+    const canonicalFinalization = assertCanonicalFinalization(lifecycle.finalization, plan);
+    const canonicalMediaRace = assertCanonicalMediaRaceProjection(
+      lifecycle.mediaRace,
+      plan,
+      captures
+    );
+    assertCanonicalMediaRuntimeReceipts(
+      canonicalRuntimeReceipts,
+      canonicalMediaRace,
+      canonicalFinalization
+    );
+    assertCanonicalPrimaryRuntimeInventory(
+      canonicalRuntimeReceipts,
+      canonicalFinalization,
+      lifecycle.finalPlan
+    );
+    const scenarios = buildCanonicalScenarioEvidence(
+      plan,
+      actionReceiptPairs,
+      canonicalFinalization
+    );
+    const safeResources = lifecycle.finalLedger.map((record) =>
+      deepFreezeExact({
+        resourceKey: record.resourceKey,
+        kind: record.kind,
+        class: record.class,
+        acquisitionOrdinal: record.acquisitionOrdinal,
+        sourceActionOrdinal: record.sourceActionOrdinal,
+        cleanupPhase: record.cleanupPhase,
+        cleanupPolicy: record.cleanupPolicy,
+        dependsOn: record.dependsOn,
+      })
+    );
+    const evidence = deepFreezeExact({
+      schemaVersion: 1,
+      pass: true,
+      prefix: plan.prefix,
+      manifestSha256: hashBytes(Buffer.from(canonicalJson(plan.actionManifest))),
+      browserReceipts,
+      runtimeReceipts: canonicalRuntimeReceipts,
+      routes,
+      fixtureSubjects: subjects,
+      mediaRace: canonicalMediaRace,
+      cleanupReceipts: lifecycle.cleanupReceipts,
+      resources: safeResources,
+      scenarios,
+      finalization: canonicalFinalization,
+      captureProjection: captures.safeProjection([
+        ...plan.requiredCaptureNames,
+        ...plan.requiredRuntimeBlockCaptures,
+      ]),
+    });
+    exactOwnKeys(
+      evidence,
+      [
+        "schemaVersion",
+        "pass",
+        "prefix",
+        "manifestSha256",
+        "browserReceipts",
+        "runtimeReceipts",
+        "routes",
+        "fixtureSubjects",
+        "mediaRace",
+        "cleanupReceipts",
+        "resources",
+        "scenarios",
+        "finalization",
+        "captureProjection",
+      ],
+      "canonical smoke evidence",
+      { plain: true }
+    );
+    assertRecursivelyFrozen(evidence);
+    return evidence;
+  } catch (cause) {
+    PRIVATE_CORE.get(state).cause = cause;
+    if (typeof capabilities.retainPrimaryFailureObservation === "function") {
+      capabilities.retainPrimaryFailureObservation(cause);
+    }
+    state.terminalCleanupStarted = true;
+    if (constructionCleanupAuthority !== null) {
+      const cleanupDiagnostics =
+        await constructionCleanupAuthority.cleanupWhateverWasAcquiredOnceNeverThrow(
+          deepFreezeExact({ plan, captures, resourceLedger, cleanupPlanner, failure: true })
+        );
+      constructionCleanupAuthority.retainFailureAndCleanupDiagnosticsNeverThrow(
+        cause,
+        cleanupDiagnostics
+      );
+    } else {
+      await capabilities.cleanup(
+        deepFreezeExact({ plan, captures, resourceLedger, cleanupPlanner, failure: true })
+      );
+    }
+    throw TASK_FAILURE;
+  }
+}
+
+function resolveLiteral(expression) {
+  if (expression.startsWith('"') && expression.endsWith('"')) return JSON.parse(expression);
+  if (/^-?\d+$/.test(expression)) return Number(expression);
+  return expression;
+}
+
+function expandPathTemplate(pathDescriptor, captures) {
+  if (typeof pathDescriptor === "string") {
+    invariant(!/[{}]/u.test(pathDescriptor), "path template has unresolved markers");
+    return pathDescriptor;
+  }
+  exactOwnKeys(pathDescriptor, ["template", "captures"], "path template");
+  invariant(typeof pathDescriptor.template === "string", "path template invalid");
+  assertDenseJsonArray(pathDescriptor.captures, "path template captures");
+  invariant(
+    new Set(pathDescriptor.captures).size === pathDescriptor.captures.length,
+    "path template captures repeat"
+  );
+  let expanded = pathDescriptor.template;
+  for (const captureName of pathDescriptor.captures) {
+    invariant(
+      typeof captureName === "string" && captureName.length > 0,
+      "path capture name invalid"
+    );
+    const marker = "{" + captureName + "}";
+    invariant(expanded.split(marker).length === 2, "path capture marker drift");
+    expanded = expanded.replace(marker, encodeURIComponent(captures.get(captureName)));
+  }
+  invariant(!/[{}]/u.test(expanded), "path template has unresolved markers");
+  return expanded;
+}
+
+function encodeSelectorSlot(value) {
+  invariant(typeof value === "string", "selector slot must resolve to a string");
+  invariant(
+    value.length <= 512 && !value.includes("\0") && !/[\r\n]/.test(value),
+    "selector slot is not bounded"
+  );
+  return value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+}
+
+function renderSelectorTemplate(template, args, label) {
+  exactOwnKeys(
+    template,
+    ["kind", "minArity", "maxArity", "parts", "slots", "optionalDefaults"],
+    label + " selector template"
+  );
+  invariant(
+    template.kind === "selector-template" &&
+      Number.isInteger(template.minArity) &&
+      Number.isInteger(template.maxArity) &&
+      template.minArity >= 0 &&
+      template.maxArity >= template.minArity &&
+      args.length >= template.minArity &&
+      args.length <= template.maxArity &&
+      template.parts.length === template.slots.length + 1,
+    label + " selector arity drift"
+  );
+  const resolvedArgs = Array.from({ length: template.maxArity }, (_, index) => {
+    if (index < args.length) return args[index];
+    invariant(
+      Object.hasOwn(template.optionalDefaults, index),
+      label + " selector default is missing"
+    );
+    return template.optionalDefaults[index];
+  });
+  let output = template.parts[0];
+  for (const [index, slot] of template.slots.entries()) {
+    exactOwnKeys(slot, ["argIndex", "encoding"], label + " selector slot");
+    invariant(slot.encoding === "css-string", label + " selector encoding drift");
+    output += encodeSelectorSlot(resolvedArgs[slot.argIndex]) + template.parts[index + 1];
+  }
+  output = output.trim();
+  invariant(output.length > 0 && output.length <= 4096, label + " selector output is invalid");
+  return output;
+}
+
+function registeredSelector(plan, key, args = []) {
+  invariant(
+    Object.hasOwn(plan.registries.selectors, key),
+    "selector key is not registered: " + key
+  );
+  return renderSelectorTemplate(plan.registries.selectors[key], args, key);
+}
+
+function resolveBuilderExpression(expression, plan, captures) {
+  const literal = resolveLiteral(expression);
+  if (literal !== expression || typeof literal === "number") return literal;
+  if (expression.startsWith("$")) {
+    invariant(
+      ["$ADMIN_EMAIL", "$ADMIN_PASSWORD", "$WF540_USER_A_EMAIL", "$WF540_USER_B_EMAIL"].includes(
+        expression
+      ),
+      "credential reference is not allowlisted"
+    );
+    const key = expression.slice(1);
+    if (key === "WF540_USER_A_EMAIL") return plan.fixtureBlueprint.users.a.email;
+    if (key === "WF540_USER_B_EMAIL") return plan.fixtureBlueprint.users.b.email;
+    invariant(ALLOWED_SECRET_NAMES.has(key), "secret reference is not allowlisted");
+    return key;
+  }
+  if (expression.startsWith("paths.")) {
+    const key = expression.slice("paths.".length);
+    return expandRegisteredPath(plan, key, captures);
+  }
+  if (expression === "about:blank") return expression;
+  if (expression.startsWith("S.")) {
+    const selectorExpression = expression.slice(2);
+    const parsed = parseBuilder(selectorExpression);
+    const selector = plan.registries.selectors[parsed.callee];
+    invariant(selector !== undefined, "selector is not registered: " + parsed.callee);
+    const args = parsed.args.map((argument) => resolveBuilderExpression(argument, plan, captures));
+    return renderSelectorTemplate(selector, args, parsed.callee);
+  }
+  if (expression.startsWith("screen.blockIds.")) {
+    const key = expression.slice("screen.blockIds.".length);
+    invariant(Object.hasOwn(plan.fixtureBlueprint.screen.blockIds, key), "unknown Screen block ID");
+    return plan.fixtureBlueprint.screen.blockIds[key];
+  }
+  if (expression.startsWith("palette.")) {
+    const aliases = {
+      button: "palette.button",
+      image: "palette.image",
+      mediaField: "palette.media-field",
+      outerTabs: "palette.outer-tabs",
+      tabOneText: "palette.tab-one-text",
+      tabTwoText: "palette.tab-two-text",
+      tabThreeText: "palette.tab-three-text",
+      innerTabs: "palette.inner-tabs",
+      dirtyText: "palette.dirty-text",
+    };
+    const captureName = aliases[expression.slice("palette.".length)];
+    invariant(captureName, "unknown runtime block capture");
+    return captures.get(captureName);
+  }
+  if (expression === "screen.id") return captures.get("screen.id");
+  if (expression === "entry.id") return captures.get("entry.id");
+  if (expression === "media.title") return plan.fixtureBlueprint.media.title;
+  if (expression === "users.a.displayName") return plan.fixtureBlueprint.users.a.displayName;
+  if (expression === "users.b.displayName") return plan.fixtureBlueprint.users.b.displayName;
+  return expression;
+}
+
+function playwrightArgs(...args) {
+  return ["-s=" + SESSION_NAME, "--raw", ...args.map(String)];
+}
+
+function runCode(source) {
+  invariant(
+    typeof source === "string" && source.length > 0 && !source.includes("\0"),
+    "run-code invalid"
+  );
+  const wrapped = `(async (page) => {
+    const canonicalize = (value, seen = new WeakSet()) => {
+      if (value === null || typeof value === "string" || typeof value === "boolean") return value;
+      if (typeof value === "number") {
+        if (!Number.isFinite(value)) throw new Error("wf540_nonfinite_output");
+        return value;
+      }
+      if (typeof value !== "object" || seen.has(value)) throw new Error("wf540_nonjson_output");
+      seen.add(value);
+      if (Array.isArray(value)) return value.map((item) => canonicalize(item, seen));
+      const output = {};
+      for (const key of Object.keys(value).sort()) output[key] = canonicalize(value[key], seen);
+      return output;
+    };
+    return canonicalize(await (${source})(page));
+  })`;
+  return playwrightArgs("run-code", wrapped);
+}
+
+function buildLoggerInstallSource(plan) {
+  const userAgent = JSON.stringify(plan.fixtureBlueprint.userAgents.browser);
+  const preferencePath = "/admin/api/user-settings/customScreens.entry.preferences";
+  const authChallengeOptions = {
+    expectedUrl: plan.fixtureBlueprint.origins.admin + "/admin/api/auth/me",
+    loginUrl: plan.fixtureBlueprint.origins.admin + plan.fixtureBlueprint.paths.login,
+    expectedText: EXPECTED_AUTH_CHALLENGE_TEXT,
+    expectedPageId: "wf540-page-1",
+    phases: EXPECTED_AUTH_CHALLENGE_PHASES,
+    maxFailureEvents: 128,
+    maxAuthEvents: 64,
+  };
+  const relatedListPaths = [
+    plan.fixtureBlueprint.contentTypes.relatedA.slug,
+    plan.fixtureBlueprint.contentTypes.relatedB.slug,
+    plan.fixtureBlueprint.contentTypes.relatedFailure.slug,
+  ].map((slug) => "/admin/api/content/" + slug + "/entries");
+  return `(async (page) => {
+    const context = page.context();
+    const ownedKeys = [
+      "__wf540ReadLogProjection", "__wf540ReadAggregateChannels", "__wf540ReadAllPageChannels",
+      "__wf540ReadMediaGetCount", "__wf540ReadPreferenceWrites",
+      "__wf540ReadPreferenceReads", "__wf540ReadRelatedListGetCounts",
+      "__wf540ReadRelatedEntryWrites", "__wf540ArmExpectedAuthChallenge",
+      "__wf540CloseExpectedAuthChallenge",
+      "__wf540BindActiveUser", "__wf540Remember",
+      "__wf540Recall", "__wf540RouteHas", "__wf540RouteSet",
+      "__wf540RouteGet", "__wf540RouteDeactivate", "__wf540ActiveRouteKeys"
+    ];
+    if (ownedKeys.some((key) => Object.prototype.hasOwnProperty.call(context, key))) {
+      throw new Error("wf540_duplicate_instrumentation");
+    }
+    await context.clearCookies();
+    await context.setExtraHTTPHeaders({ "user-agent": ${userAgent} });
+    const createExpectedAuthChallengeAuthority = ${createExpectedAuthChallengeAuthority.toString()};
+    const authAuthority = createExpectedAuthChallengeAuthority(${JSON.stringify(authChallengeOptions)});
+    const pageRecords = [];
+    const samples = new Map();
+    const routes = new Map();
+    const activeUserIds = new Map();
+    const preferenceWrites = [];
+    const preferenceReads = [];
+    const relatedEntryWrites = [];
+    const relatedListGetCounts = Object.create(null);
+    const preferencePath = ${JSON.stringify(preferencePath)};
+    const relatedListPaths = Object.freeze(${JSON.stringify(relatedListPaths)});
+    for (const pathname of relatedListPaths) relatedListGetCounts[pathname] = 0;
+    const MAX_SAFE_REQUESTS = 64;
+    let nextPageNumber = 1;
+    let nextPreferenceReadSequence = 1;
+    let nextPreferenceWriteSequence = 1;
+    const frozenCopy = (value) => Object.freeze(JSON.parse(JSON.stringify(value)));
+    const exactKeys = (value, keys) => Boolean(
+      value && typeof value === "object" && !Array.isArray(value) &&
+      Object.keys(value).length === keys.length && keys.every((key) => Object.prototype.hasOwnProperty.call(value, key))
+    );
+    const parsePreference = (value) => {
+      if (!exactKeys(value, ["key", "value"]) || value.key !== "customScreens.entry.preferences") throw new Error("wf540_preference_response_shape");
+      if (!exactKeys(value.value, ["version", "showFieldMetadata"]) || value.value.version !== 1 || typeof value.value.showFieldMetadata !== "boolean") throw new Error("wf540_preference_value_shape");
+      return Object.freeze({ version: 1, showFieldMetadata: value.value.showFieldMetadata });
+    };
+    const appendBounded = (rows, value, label) => {
+      if (rows.length >= MAX_SAFE_REQUESTS) throw new Error("wf540_" + label + "_overflow");
+      rows.push(Object.freeze(value));
+    };
+    const copyRows = (rows) => Object.freeze(rows.map(frozenCopy));
+    const logProjection = () => authAuthority.reconcile(pageRecords.map((record) => ({
+      pageId: record.pageId,
+      tabIndex: record.tabIndex,
+      mediaGetCount: record.mediaGetCount,
+    })));
+    const remember = (key, value) => {
+      if (typeof key !== "string" || !key || samples.has(key)) throw new Error("wf540_sample_assignment");
+      samples.set(key, frozenCopy(value));
+      return true;
+    };
+    const recall = (key) => {
+      if (!samples.has(key)) throw new Error("wf540_sample_missing");
+      return frozenCopy(samples.get(key));
+    };
+    const preferenceWriteSnapshots = () => copyRows(preferenceWrites);
+    const preferenceReadSnapshots = () => copyRows(preferenceReads);
+    const relatedEntryWriteSnapshots = () => copyRows(relatedEntryWrites);
+    const relatedListCountSnapshot = () => Object.freeze(Object.fromEntries(
+      relatedListPaths.map((pathname) => [pathname, relatedListGetCounts[pathname]])
+    ));
+    const instrumentPage = (candidate) => {
+      if (Object.prototype.hasOwnProperty.call(candidate, "__wf540PageIdentity")) {
+        return candidate.__wf540PageIdentity;
+      }
+      const pageNumber = nextPageNumber++;
+      const record = {
+        pageId: "wf540-page-" + pageNumber,
+        tabIndex: pageNumber - 1,
+        mediaGetCount: 0,
+        navigationCount: 0,
+      };
+      pageRecords.push(record);
+      const identity = Object.freeze({ pageId: record.pageId, tabIndex: record.tabIndex });
+      Object.defineProperties(candidate, {
+        __wf540PageIdentity: { value: identity, writable: false, configurable: false },
+        __wf540ReadMediaGetCount: { value: () => pageRecords.reduce((total, item) => total + item.mediaGetCount, 0), writable: false, configurable: false },
+        __wf540ReadNavigationCount: { value: () => record.navigationCount, writable: false, configurable: false },
+      });
+      candidate.on("console", (message) => {
+        if (message.type() !== "error" && message.type() !== "warning") return;
+        const location = message.location();
+        authAuthority.recordConsole({
+          pageId: record.pageId,
+          navigationEpoch: record.navigationCount,
+          type: message.type(),
+          text: message.text(),
+          locationUrl: typeof location?.url === "string" ? location.url : "",
+        });
+      });
+      candidate.on("pageerror", (error) => {
+        authAuthority.recordPageError({
+          pageId: record.pageId,
+          navigationEpoch: record.navigationCount,
+          text: error.message,
+        });
+      });
+      candidate.on("framenavigated", (frame) => {
+        if (frame === candidate.mainFrame()) record.navigationCount += 1;
+      });
+      candidate.on("request", (request) => {
+        const requestUrl = request.url();
+        const scheme = requestUrl.indexOf("://");
+        const pathStart = requestUrl.indexOf("/", scheme === -1 ? 0 : scheme + 3);
+        const pathname = (pathStart === -1 ? "/" : requestUrl.slice(pathStart)).split("?", 1)[0].split("#", 1)[0];
+        if (request.method() === "GET" && pathname === "/admin/api/media") {
+          record.mediaGetCount += 1;
+        }
+        if (request.method() === "GET" && Object.prototype.hasOwnProperty.call(relatedListGetCounts, pathname)) {
+          relatedListGetCounts[pathname] += 1;
+        }
+        if (pathname === preferencePath && (request.method() === "GET" || request.method() === "PATCH")) {
+          const method = request.method();
+          request.response().then(async (response) => {
+            if (!response) throw new Error("wf540_preference_response_missing");
+            const value = parsePreference(await response.json());
+            const sequence = method === "GET" ? nextPreferenceReadSequence++ : nextPreferenceWriteSequence++;
+            const base = {
+              pageId: record.pageId,
+              sequence,
+              status: response.status(),
+              keyMatches: true,
+              value,
+            };
+            if (method === "GET") {
+              appendBounded(preferenceReads, base, "preference_reads");
+              return;
+            }
+            const activeUserId = activeUserIds.get(record.pageId) ?? null;
+            const expectedUserId = request.headers()["x-coderso-expected-user-id"] ?? null;
+            appendBounded(preferenceWrites, {
+              ...base,
+              expectedUserIdMatches: typeof activeUserId === "string" && expectedUserId === activeUserId,
+            }, "preference_writes");
+          }).catch(() => {});
+        }
+        const relatedWriteMatch = request.method() === "PATCH"
+          ? /^\\/admin\\/api\\/content\\/[^/]+\\/entries\\/([0-9a-f-]{36})$/u.exec(pathname)
+          : null;
+        if (relatedWriteMatch) {
+          const expectedEntryId = relatedWriteMatch[1];
+          request.response().then(async (response) => {
+            if (!response) throw new Error("wf540_related_write_response_missing");
+            const payload = await response.json();
+            if (!payload || typeof payload !== "object" || Array.isArray(payload) || typeof payload.id !== "string" || typeof payload.title !== "string") throw new Error("wf540_related_write_response_shape");
+            let requestTitle = null;
+            try {
+              const requestPayload = JSON.parse(request.postData() ?? "null");
+              if (requestPayload && typeof requestPayload === "object" && !Array.isArray(requestPayload) && typeof requestPayload.title === "string") requestTitle = requestPayload.title;
+            } catch {}
+            appendBounded(relatedEntryWrites, {
+              pageId: record.pageId,
+              method: "PATCH",
+              pathMatches: true,
+              status: response.status(),
+              idMatches: payload.id === expectedEntryId,
+              titleMatches: requestTitle !== null && payload.title === requestTitle,
+            }, "related_entry_writes");
+          }).catch(() => {});
+        }
+      });
+      candidate.on("response", (response) => {
+        if (response.status() < 400) return;
+        authAuthority.recordResponse({
+          pageId: record.pageId,
+          navigationEpoch: record.navigationCount,
+          url: response.url(),
+          method: response.request().method(),
+          status: response.status(),
+        });
+      });
+      return identity;
+    };
+    Object.defineProperties(context, {
+      __wf540ReadLogProjection: { value: logProjection, writable: false, configurable: false },
+      __wf540ReadAggregateChannels: { value: () => logProjection().aggregate, writable: false, configurable: false },
+      __wf540ReadAllPageChannels: { value: () => logProjection().pages, writable: false, configurable: false },
+      __wf540ReadMediaGetCount: { value: () => pageRecords.reduce((total, record) => total + record.mediaGetCount, 0), writable: false, configurable: false },
+      __wf540ReadPreferenceWrites: { value: preferenceWriteSnapshots, writable: false, configurable: false },
+      __wf540ReadPreferenceReads: { value: preferenceReadSnapshots, writable: false, configurable: false },
+      __wf540ReadRelatedListGetCounts: { value: relatedListCountSnapshot, writable: false, configurable: false },
+      __wf540ReadRelatedEntryWrites: { value: relatedEntryWriteSnapshots, writable: false, configurable: false },
+      __wf540ArmExpectedAuthChallenge: { value: authAuthority.arm, writable: false, configurable: false },
+      __wf540CloseExpectedAuthChallenge: { value: authAuthority.close, writable: false, configurable: false },
+      __wf540BindActiveUser: { value: (pageId, userId) => {
+        if (typeof pageId !== "string" || !/^wf540-page-[1-9][0-9]*$/u.test(pageId) || typeof userId !== "string" || !/^[0-9a-f-]{36}$/u.test(userId)) throw new Error("wf540_active_user_binding");
+        activeUserIds.set(pageId, userId);
+        return true;
+      }, writable: false, configurable: false },
+      __wf540Remember: { value: remember, writable: false, configurable: false },
+      __wf540Recall: { value: recall, writable: false, configurable: false },
+      __wf540RouteHas: { value: (key) => routes.has(key), writable: false, configurable: false },
+      __wf540RouteSet: { value: (key, value) => { if (routes.has(key)) throw new Error("wf540_duplicate_route"); routes.set(key, value); return true; }, writable: false, configurable: false },
+      __wf540RouteGet: { value: (key) => { if (!routes.has(key)) throw new Error("wf540_route_missing"); return routes.get(key); }, writable: false, configurable: false },
+      __wf540RouteDeactivate: { value: (key) => { const route = routes.get(key); if (!route || !route.active()) throw new Error("wf540_route_inactive"); route.deactivate(); return true; }, writable: false, configurable: false },
+      __wf540ActiveRouteKeys: { value: () => Object.freeze([...routes].filter(([, route]) => route.active()).map(([key]) => key).sort()), writable: false, configurable: false },
+    });
+    await context.addInitScript(({ legacyKey }) => {
+      if (Object.prototype.hasOwnProperty.call(window, "__wf540ReadLegacyStorageWrites")) throw new Error("wf540_duplicate_storage_instrumentation");
+      let writes = 0;
+      const original = Storage.prototype.setItem;
+      Object.defineProperty(Storage.prototype, "setItem", {
+        value: function wf540SetItem(key, value) {
+          if (this === window.localStorage && key === legacyKey) writes += 1;
+          return original.call(this, key, value);
+        },
+        writable: false,
+        configurable: false,
+      });
+      Object.defineProperty(window, "__wf540ReadLegacyStorageWrites", {
+        value: () => writes,
+        writable: false,
+        configurable: false,
+      });
+    }, { legacyKey: "coderso.screens.entry.preferences.v1" });
+    for (const existingPage of context.pages()) instrumentPage(existingPage);
+    context.on("page", instrumentPage);
+    return true;
+  })`;
+}
+
+function buildBlockBaselineSource(action, selector) {
+  return `(async (page) => {
+    const canvas = page.locator(${JSON.stringify(selector)});
+    await canvas.waitFor({ state: "visible", timeout: 10000 });
+    if (await canvas.count() !== 1 || !(await canvas.isVisible())) throw new Error("wf540_canvas_count");
+    const blockIds = await canvas.locator("[data-screen-block-id][data-screen-block-type]").evaluateAll((nodes) => {
+      const rows = nodes.map((node) => ({ id: node.getAttribute("data-screen-block-id"), type: node.getAttribute("data-screen-block-type") }));
+      if (rows.some(({ id, type }) => !id || !type)) throw new Error("wf540_block_identity");
+      const ids = rows.map(({ id }) => id);
+      if (new Set(ids).size !== ids.length) throw new Error("wf540_block_duplicate");
+      return ids.sort();
+    });
+    page.context().__wf540Remember(${JSON.stringify("block-baseline:" + action.id)}, { blockIds });
+    return { blockIds };
+  })`;
+}
+
+function buildCaptureNewSource(action, executionSpec, plan, captures) {
+  const [captureExpression, expectedTypeExpression, beforeActionToken] =
+    executionSpec.builderAst.args;
+  const captureNames = plan.runtimeCaptureBindings[action.id] ?? [];
+  invariant(captureNames.length === 1, action.id + " runtime capture contract drift");
+  const expectedType = resolveBuilderExpression(expectedTypeExpression, plan, captures);
+  const beforeAction = plan.actionManifest.find(({ id }) => id.startsWith(beforeActionToken + "-"));
+  invariant(beforeAction !== undefined, action.id + " block baseline dependency is missing");
+  invariant(captureExpression.startsWith("palette."), action.id + " capture expression drift");
+  return `(async (page) => {
+    const baseline = page.context().__wf540Recall(${JSON.stringify("block-baseline:" + beforeAction.id)});
+    const canvas = page.locator(${JSON.stringify(registeredSelector(plan, "canvas"))});
+    await canvas.waitFor({ state: "visible", timeout: 10000 });
+    if (await canvas.count() !== 1 || !(await canvas.isVisible())) throw new Error("wf540_canvas_count");
+    let rows = [];
+    const deadline = Date.now() + 10000;
+    while (Date.now() < deadline) {
+      rows = await canvas.locator("[data-screen-block-id][data-screen-block-type]").evaluateAll((nodes) => nodes.map((node) => ({ id: node.getAttribute("data-screen-block-id"), type: node.getAttribute("data-screen-block-type") })));
+      const added = rows.filter(({ id }) => !baseline.blockIds.includes(id));
+      if (added.length === 1 && added[0].type === ${JSON.stringify(expectedType)}) break;
+      await page.waitForTimeout(25);
+    }
+    if (rows.some(({ id, type }) => !id || !type)) throw new Error("wf540_block_identity");
+    const afterIds = rows.map(({ id }) => id);
+    if (new Set(afterIds).size !== afterIds.length || baseline.blockIds.some((id) => !afterIds.includes(id))) throw new Error("wf540_block_set");
+    const added = rows.filter(({ id }) => !baseline.blockIds.includes(id));
+    if (added.length !== 1 || added[0].type !== ${JSON.stringify(expectedType)}) throw new Error("wf540_new_block");
+    page.context().__wf540Remember(${JSON.stringify("capture:" + captureNames[0])}, added[0].id);
+    return { id: added[0].id, type: added[0].type };
+  })`;
+}
+
+function buildLogReadSource() {
+  return `(page) => {
+    const projection = page.context().__wf540ReadLogProjection();
+    const { aggregate, pages, firstUnexpected } = projection;
+    const hasFailures = aggregate.consoleErrors.length || aggregate.consoleWarnings.length || aggregate.pageErrors.length ||
+      pages.some((item) => item.consoleErrors.length || item.consoleWarnings.length || item.pageErrors.length);
+    if (hasFailures) {
+      if (!firstUnexpected) throw new Error("wf540_browser_log_projection_mismatch");
+      const channel = firstUnexpected.channel === "consoleErrors"
+        ? "console_error"
+        : firstUnexpected.channel === "consoleWarnings"
+          ? "console_warning"
+          : firstUnexpected.channel === "pageErrors"
+            ? "page_error"
+            : null;
+      if (channel === null || !/^[a-z0-9_]+$/u.test(firstUnexpected.code)) throw new Error("wf540_browser_log_diagnostic_shape");
+      throw new Error("wf540_browser_log_" + channel + "_" + firstUnexpected.code);
+    }
+    if (firstUnexpected !== null) throw new Error("wf540_browser_log_projection_mismatch");
+    return { aggregate, pages };
+  }`;
+}
+
+function buildSelectionHandleSource(selector) {
+  return `(async (page) => {
+    const locator = page.locator(${JSON.stringify(selector)});
+    if (await locator.count() !== 1) throw new Error("wf540_target_count");
+    const handle = await locator.elementHandle();
+    if (!handle) throw new Error("wf540_target_handle");
+    const token = "wf540-selection-" + Date.now();
+    await handle.evaluate((element, key) => {
+      let seen = 0;
+      let captured = null;
+      const listener = (event) => { seen += 1; captured = event; };
+      element.addEventListener("click", listener, { capture: true });
+      window[key] = { element, listener, read: () => ({ seen, captured }) };
+    }, token);
+    try {
+      await locator.click();
+      await page.evaluate(() => Promise.resolve());
+      const output = await handle.evaluate((element, key) => {
+        const state = window[key];
+        const observed = state?.read();
+        if (!observed || observed.seen !== 1 || !(observed.captured instanceof MouseEvent) || !observed.captured.isTrusted || observed.captured.target !== element || !observed.captured.cancelable) throw new Error("wf540_selection_event");
+        const wrapper = element.closest("[data-screen-block-id]");
+        return {
+          handleFocused: document.activeElement === element,
+          ariaPressed: element.getAttribute("aria-pressed") === "true",
+          selectedBlockId: wrapper?.getAttribute("data-screen-block-id") ?? "",
+          defaultPrevented: observed.captured.defaultPrevented,
+        };
+      }, token);
+      page.context().__wf540Remember("selection-handle", output);
+      return output;
+    } finally {
+      await handle.evaluate((element, key) => {
+        const state = window[key];
+        if (state) element.removeEventListener("click", state.listener, { capture: true });
+        delete window[key];
+      }, token).catch(() => {});
+      await handle.dispose();
+    }
+  })`;
+}
+
+function expandedRoute(plan, key, captures, runtimeConfig) {
+  const route = plan.registries.routes[key];
+  invariant(route !== undefined, "unknown registered route: " + key);
+  const rawPattern = expandPathTemplate(route.fixture.pattern, captures);
+  const pathname = rawPattern.startsWith("/") ? rawPattern : new URL(rawPattern).pathname;
+  invariant(pathname.startsWith("/admin/api/"), "route pathname must remain Admin-internal");
+  const pattern = "**" + pathname;
+  return deepFreezeExact({
+    key,
+    method: route.method,
+    mode: route.mode,
+    pathname,
+    pattern,
+    expectedUserId: key === "preference-a-write-exit" ? captures.get("user-a.id") : null,
+    csrfHeaderName: key === "preference-a-write-exit" ? runtimeConfig.csrfHeaderName : null,
+    expectedRows:
+      key === "related-a-refresh"
+        ? [
+            {
+              id: captures.get("related-entry-a1.id"),
+              typeId: captures.get("content-type-related-a.id"),
+              title: plan.fixtureBlueprint.relatedEntries.a1.updatedTitle,
+            },
+            {
+              id: captures.get("related-entry-a2.id"),
+              typeId: captures.get("content-type-related-a.id"),
+              title: plan.fixtureBlueprint.relatedEntries.a2.title,
+            },
+          ]
+        : null,
+  });
+}
+
+function buildRouteSetupSource(route) {
+  const descriptor = JSON.stringify(route);
+  return `(async (page) => {
+    const descriptor = ${descriptor};
+    const context = page.context();
+    if (context.__wf540RouteHas(descriptor.key)) throw new Error("wf540_duplicate_route");
+    let active = true;
+    let hits = 0;
+    let capturedResolve;
+    let releaseResolve;
+    let fulfilledResolve;
+    let uiSettledResolve;
+    let backingSettledResolve;
+    let clientAbortedResolve;
+    let capturedRequest = null;
+    let requestFailureListener = null;
+    const captured = new Promise((resolve) => { capturedResolve = resolve; });
+    const releaseGate = new Promise((resolve) => { releaseResolve = resolve; });
+    const fulfilled = new Promise((resolve) => { fulfilledResolve = resolve; });
+    const uiSettled = new Promise((resolve) => { uiSettledResolve = resolve; });
+    const backingSettled = new Promise((resolve) => { backingSettledResolve = resolve; });
+    const clientAborted = new Promise((resolve) => { clientAbortedResolve = resolve; });
+    let backingStatus = null;
+    let bodyAbsent = null;
+    let bodyMatches = null;
+    let contentTypeJson = null;
+    let expectedUserIdMatches = null;
+    let csrfPresent = null;
+    let preferenceValue = null;
+    let rowCount = null;
+    let rowIdsMatch = null;
+    let uniqueIds = null;
+    let updatedA1Matches = null;
+    let handlerFailure = null;
+    if (descriptor.mode === "abort-aware-preference-write") {
+      if (typeof descriptor.expectedUserId !== "string" || !/^[0-9a-f-]{36}$/u.test(descriptor.expectedUserId) ||
+        typeof descriptor.csrfHeaderName !== "string" || !/^[a-z0-9][a-z0-9-]{0,127}$/u.test(descriptor.csrfHeaderName)) {
+        throw new Error("wf540_preference_route_private_config");
+      }
+      requestFailureListener = (request) => {
+        if (request !== capturedRequest) return;
+        const href = request.url();
+        const scheme = href.indexOf("://");
+        const start = href.indexOf("/", scheme === -1 ? 0 : scheme + 3);
+        const pathname = (start === -1 ? "/" : href.slice(start)).split(/[?#]/u, 1)[0];
+        if (request.method() !== "PATCH" || pathname !== descriptor.pathname) throw new Error("wf540_abort_request_identity");
+        const failure = request.failure();
+        if (!failure || failure.errorText !== "net::ERR_ABORTED") throw new Error("wf540_abort_reason");
+        clientAbortedResolve(true);
+      };
+      page.on("requestfailed", requestFailureListener);
+    }
+    const handler = async (route) => {
+      let handlerStage = "request_identity";
+      try {
+      const request = route.request();
+      const requestHref = request.url();
+      const authorityEnd = requestHref.indexOf("/", requestHref.indexOf("://") + 3);
+      const requestSuffix = authorityEnd === -1 ? "/" : requestHref.slice(authorityEnd);
+      const requestPathname = requestSuffix.split(/[?#]/u, 1)[0];
+      if (request.method() !== descriptor.method || requestPathname !== descriptor.pathname) {
+        return route.continue();
+      }
+      hits += 1;
+      if (hits !== 1) throw new Error("wf540_unexpected_duplicate");
+      capturedRequest = request;
+      bodyAbsent = request.postData() === null;
+      if (descriptor.mode === "malformed") {
+        capturedResolve(true);
+        return route.fulfill({ status: 200, contentType: "application/json", body: "{" });
+      }
+      if (descriptor.mode === "abort-aware-preference-write") {
+        let body = null;
+        try { body = JSON.parse(request.postData() ?? ""); } catch { body = null; }
+        bodyMatches = body?.value?.version === 1 && body?.value?.showFieldMetadata === true && Object.keys(body).length === 1 && Object.keys(body.value).length === 2;
+        contentTypeJson = (request.headers()["content-type"] ?? "").startsWith("application/json");
+        expectedUserIdMatches = request.headers()["x-coderso-expected-user-id"] === descriptor.expectedUserId;
+        csrfPresent = typeof request.headers()[descriptor.csrfHeaderName] === "string" && request.headers()[descriptor.csrfHeaderName].length > 0;
+      }
+      handlerStage = "backing_fetch";
+      const backingUrl = "http://127.0.0.1:5173" + requestSuffix;
+      const response = await route.fetch({
+        url: backingUrl,
+        method: request.method(),
+        headers: request.headers(),
+        postData: request.postData() ?? undefined,
+      });
+      backingStatus = response.status();
+      handlerStage = "backing_validation";
+      if (descriptor.mode === "delayed-preference-read") {
+        const payload = await response.json();
+        if (!payload || typeof payload !== "object" || Array.isArray(payload) || Object.keys(payload).length !== 2 || payload.key !== "customScreens.entry.preferences" || !payload.value || typeof payload.value !== "object" || Array.isArray(payload.value) || Object.keys(payload.value).length !== 2 || payload.value.version !== 1 || typeof payload.value.showFieldMetadata !== "boolean") throw new Error("wf540_preference_route_response_shape");
+        preferenceValue = payload.value.showFieldMetadata;
+      }
+      if (descriptor.key === "related-a-refresh") {
+        const payload = await response.json();
+        if (!Array.isArray(payload) || payload.length !== 2 || !Array.isArray(descriptor.expectedRows) || descriptor.expectedRows.length !== 2) throw new Error("wf540_related_route_response_shape");
+        const allowedRowKeys = new Set(["id", "typeId", "title", "slug", "status", "visibility", "hasPassword", "data", "tags", "scheduledAt", "createdAt", "updatedAt", "publishedAt", "author", "seo"]);
+        const requiredRowKeys = ["id", "typeId", "title", "slug", "status", "visibility", "hasPassword", "data", "createdAt", "updatedAt"];
+        const exactOptionalObject = (value, allowed, label) => {
+          if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).some((key) => !allowed.includes(key))) throw new Error(label);
+        };
+        for (const row of payload) {
+          if (!row || typeof row !== "object" || Array.isArray(row) || Object.keys(row).some((key) => !allowedRowKeys.has(key)) || requiredRowKeys.some((key) => !Object.prototype.hasOwnProperty.call(row, key))) throw new Error("wf540_related_route_row_keys");
+          if (!/^[0-9a-f-]{36}$/u.test(row.id) || !/^[0-9a-f-]{36}$/u.test(row.typeId) || typeof row.title !== "string" || row.title.length === 0 || typeof row.slug !== "string" || row.slug.length === 0 || !["draft", "published", "scheduled", "archived"].includes(row.status) || !["public", "private", "password"].includes(row.visibility) || typeof row.hasPassword !== "boolean") throw new Error("wf540_related_route_row_scalar");
+          if (!row.data || typeof row.data !== "object" || Array.isArray(row.data) || Object.keys(row.data).length !== 1 || typeof row.data.label !== "string") throw new Error("wf540_related_route_row_data");
+          if (typeof row.createdAt !== "string" || typeof row.updatedAt !== "string" || !Number.isFinite(Date.parse(row.createdAt)) || !Number.isFinite(Date.parse(row.updatedAt))) throw new Error("wf540_related_route_row_dates");
+          for (const key of ["publishedAt", "scheduledAt"]) if (Object.prototype.hasOwnProperty.call(row, key) && row[key] !== null && (typeof row[key] !== "string" || !Number.isFinite(Date.parse(row[key])))) throw new Error("wf540_related_route_optional_date");
+          if (Object.prototype.hasOwnProperty.call(row, "tags") && (!Array.isArray(row.tags) || row.tags.some((tag) => typeof tag !== "string") || new Set(row.tags).size !== row.tags.length)) throw new Error("wf540_related_route_tags");
+          if (Object.prototype.hasOwnProperty.call(row, "author") && row.author !== null) {
+            exactOptionalObject(row.author, ["id", "name", "email"], "wf540_related_route_author_keys");
+            if (Object.keys(row.author).length !== 3 || !/^[0-9a-f-]{36}$/u.test(row.author.id) || (row.author.name !== null && typeof row.author.name !== "string") || typeof row.author.email !== "string") throw new Error("wf540_related_route_author");
+          }
+          if (Object.prototype.hasOwnProperty.call(row, "seo") && row.seo !== null) {
+            exactOptionalObject(row.seo, ["title", "description", "canonicalUrl", "robots"], "wf540_related_route_seo_keys");
+            if (Object.values(row.seo).some((value) => value !== null && typeof value !== "string")) throw new Error("wf540_related_route_seo");
+          }
+        }
+        const ids = payload.map((row) => row.id);
+        const expectedIds = descriptor.expectedRows.map((row) => row.id);
+        rowCount = payload.length;
+        uniqueIds = new Set(ids).size === ids.length;
+        rowIdsMatch = uniqueIds && [...ids].sort().join("\\u0000") === [...expectedIds].sort().join("\\u0000") && payload.every((row) => descriptor.expectedRows.some((expected) => expected.id === row.id && expected.typeId === row.typeId));
+        updatedA1Matches = descriptor.expectedRows.every((expected) => payload.some((row) => row.id === expected.id && row.title === expected.title));
+        if (!rowIdsMatch || !uniqueIds || !updatedA1Matches) throw new Error("wf540_related_route_authority");
+      }
+      backingSettledResolve(true);
+      capturedResolve(true);
+      handlerStage = "release_wait";
+      await releaseGate;
+      if (descriptor.mode === "abort-aware-preference-write") return;
+      handlerStage = "fulfill";
+      await route.fulfill({ response });
+      fulfilledResolve(true);
+      handlerStage = "ui_settlement";
+      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      uiSettledResolve(true);
+      } catch (error) {
+        const privateMessage = String(error?.message ?? "");
+        const failureClass = handlerStage === "backing_fetch"
+          ? privateMessage.includes("ENOTFOUND") || privateMessage.includes("getaddrinfo")
+            ? "dns"
+            : privateMessage.includes("ECONNREFUSED") || privateMessage.includes("connect refused")
+              ? "connection_refused"
+              : privateMessage.includes("Route is already handled")
+                ? "already_handled"
+                : privateMessage.includes("Target page, context or browser has been closed")
+                  ? "context_closed"
+                  : privateMessage.includes("Invalid URL")
+                    ? "invalid_url"
+                    : privateMessage.includes("fetch")
+                      ? "fetch_error"
+                      : "unknown"
+          : "failed";
+        handlerFailure = "wf540_route_handler_" + handlerStage + "_" + failureClass;
+        capturedResolve(true);
+        throw new Error(handlerFailure);
+      }
+    };
+    await page.route(descriptor.pattern, handler);
+    const entry = Object.freeze({
+      descriptor: Object.freeze(descriptor),
+      ownerPage: page,
+      handler,
+      active: () => active,
+      deactivate: () => { active = false; },
+      hits: () => hits,
+      failure: () => handlerFailure,
+      captured,
+      fulfilled,
+      uiSettled,
+      backingSettled,
+      clientAborted,
+      release: () => { if (!releaseResolve) throw new Error("wf540_route_released_twice"); const resolve = releaseResolve; releaseResolve = null; resolve(true); return true; },
+      projection: () => Object.freeze({ backingStatus, bodyAbsent, bodyMatches, contentTypeJson, expectedUserIdMatches, csrfPresent, preferenceValue, rowCount, rowIdsMatch, uniqueIds, updatedA1Matches }),
+      removeFailureListener: () => { if (requestFailureListener) { page.off("requestfailed", requestFailureListener); requestFailureListener = null; } },
+    });
+    context.__wf540RouteSet(descriptor.key, entry);
+    const mode = descriptor.mode === "malformed" ? "malformed" : descriptor.mode === "abort-aware-preference-write" ? "abort-aware" : "delayed";
+    return { key: descriptor.key, method: descriptor.method, pattern: descriptor.pattern, mode };
+  })`;
+}
+
+function buildRouteHitSource(route) {
+  return `(async (page) => {
+    const route = page.context().__wf540RouteGet(${JSON.stringify(route.key)});
+    const timeout = page.waitForTimeout(10000).then(() => { throw new Error("wf540_capture_timeout"); });
+    await Promise.race([route.captured, timeout]);
+    if (route.failure() !== null) throw new Error(route.failure());
+    if (route.hits() !== 1) throw new Error("wf540_route_hits");
+    const projection = route.projection();
+    if (${JSON.stringify(route.mode)} === "malformed") return { hits: 1 };
+    if (${JSON.stringify(route.mode)} === "delayed-preference-read") return { hits: 1, captured: true, method: "GET", bodyAbsent: projection.bodyAbsent === true };
+    if (${JSON.stringify(route.key)} === "related-a-refresh") return { hits: 1, captured: true, rowCount: projection.rowCount, rowIdsMatch: projection.rowIdsMatch === true, uniqueIds: projection.uniqueIds === true, updatedA1Matches: projection.updatedA1Matches === true };
+    if (${JSON.stringify(route.mode)} === "abort-aware-preference-write") {
+      await Promise.race([route.backingSettled, timeout]);
+      return { hits: 1, captured: true, backingSettled: true, method: "PATCH", bodyMatches: projection.bodyMatches === true, contentTypeJson: projection.contentTypeJson === true, expectedUserIdMatches: projection.expectedUserIdMatches === true, csrfPresent: projection.csrfPresent === true };
+    }
+    return { hits: 1, captured: true };
+  })`;
+}
+
+function buildRouteReleaseSource(route) {
+  return `(async (page) => {
+    const route = page.context().__wf540RouteGet(${JSON.stringify(route.key)});
+    route.release();
+    const timeout = page.waitForTimeout(10000).then(() => { throw new Error("wf540_settlement_timeout"); });
+    if (${JSON.stringify(route.mode)} === "abort-aware-preference-write") {
+      const settled = await Promise.race([Promise.all([route.backingSettled, route.clientAborted]), timeout]);
+      return { released: true, backingSettled: settled[0] === true, clientAborted: settled[1] === true };
+    }
+    const settled = await Promise.race([Promise.all([route.fulfilled, route.uiSettled]), timeout]);
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    return { released: true, fulfilled: settled[0] === true, uiSettled: settled[1] === true };
+  })`;
+}
+
+function buildRouteUnrouteSource(route) {
+  return `(async (page) => {
+    const context = page.context();
+    const route = context.__wf540RouteGet(${JSON.stringify(route.key)});
+    await route.ownerPage.unroute(${JSON.stringify(route.pattern)}, route.handler);
+    route.removeFailureListener();
+    context.__wf540RouteDeactivate(${JSON.stringify(route.key)});
+    return true;
+  })`;
+}
+
+function buildCleanupRoutesSource(plan) {
+  const keys = Object.keys(plan.registries.routes).sort();
+  return `(async (page) => {
+    const context = page.context();
+    for (const key of context.__wf540ActiveRouteKeys()) {
+      const route = context.__wf540RouteGet(key);
+      try { route.release(); } catch {}
+      await route.ownerPage.unroute(route.descriptor.pattern, route.handler).catch(() => {});
+      route.removeFailureListener();
+      context.__wf540RouteDeactivate(key);
+    }
+    for (const candidate of context.pages()) await candidate.unrouteAll({ behavior: "wait" });
+    const inactiveKeys = ${JSON.stringify(keys)}.filter((key) => context.__wf540RouteHas(key) && !context.__wf540RouteGet(key).active());
+    if (context.__wf540ActiveRouteKeys().length !== 0 || inactiveKeys.length !== ${keys.length}) throw new Error("wf540_route_cleanup");
+    return true;
+  })`;
+}
+
+function buildFailureCleanupRoutesSource() {
+  return `(async (page) => {
+    const context = page.context();
+    for (const key of context.__wf540ActiveRouteKeys()) {
+      const route = context.__wf540RouteGet(key);
+      try { route.release(); } catch {}
+      await route.ownerPage.unroute(route.descriptor.pattern, route.handler).catch(() => {});
+      route.removeFailureListener();
+      context.__wf540RouteDeactivate(key);
+    }
+    for (const candidate of context.pages()) await candidate.unrouteAll({ behavior: "wait" });
+    if (context.__wf540ActiveRouteKeys().length !== 0) throw new Error("wf540_failure_route_cleanup");
+    return true;
+  })`;
+}
+
+function buildObservationSource(action, name, plan, captures, selectionSelector = null) {
+  const outputContract = plan.registries.observations[name];
+  invariant(outputContract !== undefined, "unknown observation: " + name);
+  const authClosePhase = EXPECTED_AUTH_CHALLENGE_PHASES.find(
+    ({ closeActionId }) => closeActionId === action.id
+  );
+  const screenId = captures.has("screen.id") ? captures.get("screen.id") : null;
+  const entryId = captures.has("entry.id") ? captures.get("entry.id") : null;
+  const config = {
+    name,
+    actionId: action.id,
+    adminOrigin: plan.fixtureBlueprint.origins.admin,
+    loginUrl: plan.fixtureBlueprint.origins.admin + plan.fixtureBlueprint.paths.login,
+    screenId,
+    entryId,
+    screenBlockIds: plan.fixtureBlueprint.screen.blockIds,
+    paletteButtonId: captures.has("palette.button") ? captures.get("palette.button") : null,
+    retryBlockId: plan.fixtureBlueprint.retryScreen.relatedListBlockId,
+    userAId: captures.has("user-a.id") ? captures.get("user-a.id") : null,
+    userAName: plan.fixtureBlueprint.users.a.displayName,
+    userBId: captures.has("user-b.id") ? captures.get("user-b.id") : null,
+    userBName: plan.fixtureBlueprint.users.b.displayName,
+    outputFields: Object.keys(outputContract.schema.properties),
+    preferencePath: "/admin/api/user-settings/customScreens.entry.preferences",
+    relatedListPaths: {
+      a: "/admin/api/content/" + plan.fixtureBlueprint.contentTypes.relatedA.slug + "/entries",
+      b: "/admin/api/content/" + plan.fixtureBlueprint.contentTypes.relatedB.slug + "/entries",
+    },
+    relatedEntryWritePath: captures.has("related-entry-a1.id")
+      ? "/admin/api/content/" +
+        plan.fixtureBlueprint.contentTypes.relatedA.slug +
+        "/entries/" +
+        encodeURIComponent(captures.get("related-entry-a1.id"))
+      : null,
+    selectionSelector,
+    related: {
+      a1: captures.has("related-entry-a1.id")
+        ? {
+            id: captures.get("related-entry-a1.id"),
+            title: plan.fixtureBlueprint.relatedEntries.a1.title,
+            updatedTitle: plan.fixtureBlueprint.relatedEntries.a1.updatedTitle,
+          }
+        : null,
+      a2: captures.has("related-entry-a2.id")
+        ? {
+            id: captures.get("related-entry-a2.id"),
+            title: plan.fixtureBlueprint.relatedEntries.a2.title,
+          }
+        : null,
+      b1: captures.has("related-entry-b1.id")
+        ? {
+            id: captures.get("related-entry-b1.id"),
+            title: plan.fixtureBlueprint.relatedEntries.b1.title,
+          }
+        : null,
+      b2: captures.has("related-entry-b2.id")
+        ? {
+            id: captures.get("related-entry-b2.id"),
+            title: plan.fixtureBlueprint.relatedEntries.b2.title,
+          }
+        : null,
+    },
+    selectors: {
+      loginEmail: registeredSelector(plan, "loginEmail"),
+      loginPassword: registeredSelector(plan, "loginPassword"),
+      loginSubmit: registeredSelector(plan, "loginSubmit"),
+      bootstrapUserMenu: registeredSelector(plan, "bootstrapUserMenu"),
+      userA: registeredSelector(plan, "userMenu", [plan.fixtureBlueprint.users.a.displayName]),
+      userB: registeredSelector(plan, "userMenu", [plan.fixtureBlueprint.users.b.displayName]),
+      colorMode: registeredSelector(plan, "colorMode"),
+      canvas: registeredSelector(plan, "canvas"),
+      previewShell: registeredSelector(plan, "previewShell"),
+      canvasScroller: registeredSelector(plan, "canvasScroller"),
+      editorPanel: registeredSelector(plan, "editorPanel"),
+      metadata: registeredSelector(plan, "metadata"),
+      entrySave: registeredSelector(plan, "entrySave"),
+      secondTabTitle: registeredSelector(plan, "secondTabTitle"),
+      secondTabSave: registeredSelector(plan, "secondTabSave"),
+      headlineEditableBadge: registeredSelector(plan, "fieldBadge", [
+        plan.fixtureBlueprint.screen.blockIds.headlineField,
+        "Editable",
+      ]),
+      headlineTextBadge: registeredSelector(plan, "fieldBadge", [
+        plan.fixtureBlueprint.screen.blockIds.headlineField,
+        "Text",
+      ]),
+      readOnlyReadBadge: registeredSelector(plan, "fieldBadge", [
+        plan.fixtureBlueprint.screen.blockIds.readOnlyField,
+        "Read",
+      ]),
+      readOnlyTextBadge: registeredSelector(plan, "fieldBadge", [
+        plan.fixtureBlueprint.screen.blockIds.readOnlyField,
+        "Text",
+      ]),
+      relationA1: registeredSelector(plan, "relationEntry", [
+        plan.fixtureBlueprint.screen.blockIds.relationAField,
+        plan.fixtureBlueprint.relatedEntries.a1.title,
+      ]),
+      relationA2: registeredSelector(plan, "relationEntry", [
+        plan.fixtureBlueprint.screen.blockIds.relationAField,
+        plan.fixtureBlueprint.relatedEntries.a2.title,
+      ]),
+      relationB1: registeredSelector(plan, "relationEntry", [
+        plan.fixtureBlueprint.screen.blockIds.relationBField,
+        plan.fixtureBlueprint.relatedEntries.b1.title,
+      ]),
+      relationB2: registeredSelector(plan, "relationEntry", [
+        plan.fixtureBlueprint.screen.blockIds.relationBField,
+        plan.fixtureBlueprint.relatedEntries.b2.title,
+      ]),
+    },
+  };
+  return `(async (page) => {
+    const config = ${JSON.stringify(config)};
+    const context = page.context();
+    const finiteRect = (value) => {
+      if (!value) return null;
+      const result = { left: value.x, right: value.x + value.width, width: value.width, height: value.height };
+      if (Object.values(result).some((item) => !Number.isFinite(item))) throw new Error("wf540_nonfinite_geometry");
+      return result;
+    };
+    const positive = (value) => Boolean(value && value.width > 0 && value.height > 0);
+    const one = async (selector) => {
+      const locator = page.locator(selector);
+      const deadline = Date.now() + 10000;
+      while (Date.now() < deadline && await locator.count() !== 1) {
+        await page.waitForTimeout(25);
+      }
+      if (await locator.count() !== 1) throw new Error("wf540_observation_target_count");
+      return locator;
+    };
+    const visible = async (selector) => {
+      const locator = await one(selector);
+      return positive(finiteRect(await locator.boundingBox())) && await locator.isVisible();
+    };
+    const exactOutput = (value) => {
+      if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("wf540_observation_output_object");
+      const keys = Object.keys(value);
+      if (keys.length !== config.outputFields.length || !config.outputFields.every((key) => Object.prototype.hasOwnProperty.call(value, key))) throw new Error("wf540_observation_output_keys");
+      return value;
+    };
+    const waitFor = async (read) => {
+      const deadline = Date.now() + 10000;
+      while (Date.now() < deadline) {
+        const value = await read();
+        if (value) return value;
+        await page.waitForTimeout(25);
+      }
+      throw new Error("wf540_observation_timeout");
+    };
+    const preferenceEffect = async () => {
+      const toggle = await one(config.selectors.metadata);
+      const switchRect = finiteRect(await toggle.boundingBox());
+      if (!positive(switchRect) || !(await toggle.isVisible())) throw new Error("wf540_metadata_toggle_geometry");
+      const ariaChecked = await toggle.getAttribute("aria-checked");
+      const dataState = await toggle.getAttribute("data-state");
+      if (ariaChecked !== "true" && ariaChecked !== "false" && dataState !== "checked" && dataState !== "unchecked") throw new Error("wf540_metadata_switch_state");
+      const switchChecked = ariaChecked === "true" || dataState === "checked";
+      const badgeSelectors = [
+        config.selectors.headlineEditableBadge,
+        config.selectors.headlineTextBadge,
+        config.selectors.readOnlyReadBadge,
+        config.selectors.readOnlyTextBadge,
+      ];
+      const badgeRects = [];
+      for (const selector of badgeSelectors) {
+        const badges = page.locator(selector);
+        if (switchChecked) {
+          if (await badges.count() !== 1 || !(await badges.isVisible())) throw new Error("wf540_metadata_badge_count");
+          const rect = finiteRect(await badges.boundingBox());
+          if (!positive(rect)) throw new Error("wf540_metadata_badge_geometry");
+          badgeRects.push(rect);
+        } else if (await badges.count() !== 0) {
+          throw new Error("wf540_metadata_badge_absence");
+        }
+      }
+      return {
+        switchChecked,
+        switchRect,
+        metadataRect: switchChecked ? badgeRects[0] : null,
+        metadataEffect: switchChecked,
+      };
+    };
+    const themeSample = async (includeMetadata = false) => {
+      const toggle = await one(config.selectors.colorMode);
+      const colors = await page.evaluate(() => ({
+        theme: document.documentElement.classList.contains("dark") ? "dark" : "light",
+        rootColor: getComputedStyle(document.documentElement).backgroundColor,
+        bodyColor: getComputedStyle(document.body).backgroundColor,
+      }));
+      if (!colors.rootColor || !colors.bodyColor) throw new Error("wf540_theme_color");
+      const toggleAriaPressed = await toggle.getAttribute("aria-pressed");
+      if (toggleAriaPressed !== "true" && toggleAriaPressed !== "false") throw new Error("wf540_theme_toggle_state");
+      return includeMetadata
+        ? { ...colors, toggleAriaPressed, metadataEffect: (await preferenceEffect()).metadataEffect }
+        : { ...colors, toggleAriaPressed };
+    };
+    const loginSample = async (clientAborted = undefined) => {
+      const result = {
+        url: page.url(),
+        loginEmailVisible: await visible(config.selectors.loginEmail),
+        loginPasswordVisible: await visible(config.selectors.loginPassword),
+        loginSubmitVisible: await visible(config.selectors.loginSubmit),
+      };
+      if (result.url !== config.loginUrl) throw new Error("wf540_login_url");
+      return clientAborted === undefined ? result : { ...result, clientAborted };
+    };
+    const authSample = async (selector, expectedName, userId = null) => {
+      const menu = await one(selector);
+      const label = menu.locator("span.block.text-sm");
+      if (await label.count() !== 1) throw new Error("wf540_user_menu_label_count");
+      const userName = (await label.textContent())?.trim() ?? "";
+      const menuRect = finiteRect(await menu.boundingBox());
+      const userMenuVisible = positive(menuRect) && await menu.isVisible();
+      if (!userMenuVisible || userName !== expectedName) throw new Error("wf540_user_menu_identity");
+      if (userId !== null) context.__wf540BindActiveUser(page.__wf540PageIdentity.pageId, userId);
+      return { url: page.url(), userMenuVisible, userName };
+    };
+    const geometrySample = async () => {
+      const match = /^geometry-(320|390|480|1024|1280)-(open|closed)$/.exec(config.name);
+      if (!match) throw new Error("wf540_geometry_name");
+      const scroller = await one(config.selectors.canvasScroller);
+      const panel = page.locator(config.selectors.editorPanel);
+      const values = await scroller.evaluate((element) => {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        const contentWidth = rect.width - parseFloat(style.paddingLeft || "0") - parseFloat(style.paddingRight || "0") - parseFloat(style.borderLeftWidth || "0") - parseFloat(style.borderRightWidth || "0");
+        return {
+          viewportWidth: innerWidth,
+          paddingRight: style.paddingRight,
+          border: { x: rect.x, width: rect.width, height: rect.height },
+          content: { x: rect.x + parseFloat(style.borderLeftWidth || "0") + parseFloat(style.paddingLeft || "0"), width: contentWidth, height: rect.height },
+        };
+      });
+      const panelRect = await panel.count() === 1 && await panel.isVisible() ? finiteRect(await panel.boundingBox()) : null;
+      return {
+        width: values.viewportWidth,
+        state: positive(panelRect) ? "open" : "closed",
+        viewportWidth: values.viewportWidth,
+        paddingRight: values.paddingRight,
+        scrollerBorder: finiteRect(values.border),
+        scrollerContent: finiteRect(values.content),
+        panel: panelRect,
+      };
+    };
+    const selectedBlock = async () => {
+      const selected = page.locator('button[data-screen-select-block][aria-pressed="true"]');
+      if (await selected.count() !== 1) throw new Error("wf540_selected_block_count");
+      return (await selected.getAttribute("data-screen-select-block")) ?? "";
+    };
+    const entryDraftSample = async () => {
+      const runtime = await one('[data-screen-runtime-root]');
+      const content = await runtime.locator('[role="textbox"]').evaluateAll((nodes) => nodes.map((node) => ({
+        blockId: node.closest('[data-screen-block-id]')?.getAttribute('data-screen-block-id') ?? "",
+        label: node.getAttribute("aria-label"),
+        text: node.textContent ?? "",
+        value: "value" in node ? node.value : null,
+      })).sort((left, right) => (left.blockId + "\\u0000" + left.label).localeCompare(right.blockId + "\\u0000" + right.label)));
+      const panel = await one('[data-custom-screen-entry-presentation-panel="true"]');
+      const presentation = await panel.evaluate((node) => node.innerHTML);
+      return { contentBytes: JSON.stringify(content), presentationBytes: JSON.stringify(presentation), url: page.url(), navigationCount: page.__wf540ReadNavigationCount() };
+    };
+    const relationSelections = async () => {
+      const rows = [
+        { selector: config.selectors.relationA1, id: config.related.a1.id, field: "relationA" },
+        { selector: config.selectors.relationA2, id: config.related.a2.id, field: "relationA" },
+        { selector: config.selectors.relationB1, id: config.related.b1.id, field: "relationB" },
+        { selector: config.selectors.relationB2, id: config.related.b2.id, field: "relationB" },
+      ];
+      const selected = { relationA: [], relationB: [] };
+      for (const row of rows) {
+        if (typeof row.id !== "string") throw new Error("wf540_relation_fixture_id");
+        const button = await one(row.selector);
+        const checkbox = button.locator('[role="checkbox"]');
+        if (await checkbox.count() !== 1) throw new Error("wf540_relation_checkbox_count");
+        const ariaChecked = await checkbox.getAttribute("aria-checked");
+        const dataState = await checkbox.getAttribute("data-state");
+        if (ariaChecked !== "true" && ariaChecked !== "false" && dataState !== "checked" && dataState !== "unchecked") throw new Error("wf540_relation_checkbox_state");
+        if (ariaChecked === "true" || dataState === "checked") selected[row.field].push(row.id);
+      }
+      return selected;
+    };
+    const ownedTabs = async (root) => root.evaluate((element) => {
+      const owns = (node) => node.closest('[data-screen-block-id]') === element;
+      const rect = (node) => {
+        const value = node.getBoundingClientRect();
+        return { left: value.left, right: value.right, width: value.width, height: value.height };
+      };
+      const tabs = [...element.querySelectorAll('[role="tab"]')].filter(owns);
+      const panels = [...element.querySelectorAll('[role="tabpanel"]')].filter(owns);
+      const rawTabId = (tab) => panels.find((panel) => panel.id === tab.getAttribute("aria-controls"))?.getAttribute("data-screen-runtime-tab") ?? "";
+      return {
+        tabs: tabs.map((tab) => ({
+          tabId: rawTabId(tab),
+          domTabId: tab.id,
+          label: (tab.textContent ?? "").trim(),
+          ariaControls: tab.getAttribute("aria-controls") ?? "",
+          selected: tab.getAttribute("aria-selected") === "true",
+        })),
+        panels: panels.map((panel) => ({
+          panelId: panel.getAttribute("data-screen-runtime-tab") ?? "",
+          domPanelId: panel.id,
+          hidden: panel.hidden,
+          rect: rect(panel),
+        })),
+      };
+    });
+    const relatedRootSample = async (blockId) => {
+      const root = await one('[data-screen-block-id="' + blockId + '"]');
+      const rows = root.locator("[data-screen-related-entry]");
+      const rowIds = await rows.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-screen-related-entry") ?? ""));
+      const rowText = await rows.evaluateAll((nodes) => nodes.map((node) => (node.textContent ?? "").trim()));
+      const rects = [];
+      for (let index = 0; index < await rows.count(); index += 1) rects.push(finiteRect(await rows.nth(index).boundingBox()));
+      const skeletons = root.locator('span:text-is("Chip")');
+      const empty = root.locator("p", { hasText: "No related" });
+      return { rootId: blockId, rowIds, rowText, rects, skeletonCount: await skeletons.count(), emptyVisible: await empty.count() > 0 && await empty.first().isVisible(), navigationCount: page.__wf540ReadNavigationCount() };
+    };
+    let output;
+    if (["theme-light", "theme-dark", "theme-light-user-a-candidate", "user-a-light-computed", "user-b-dark-computed"].includes(config.name)) {
+      output = await themeSample(config.name === "user-b-dark-computed");
+    } else if (config.name === "bootstrap-auth-identity-settled") {
+      const menu = await one(config.selectors.bootstrapUserMenu);
+      const label = menu.locator("span.block.text-sm");
+      if (await label.count() !== 1) throw new Error("wf540_bootstrap_menu_label_count");
+      const userName = (await label.textContent())?.trim() ?? "";
+      const rect = finiteRect(await menu.boundingBox());
+      output = { url: page.url(), userMenuVisible: positive(rect) && await menu.isVisible(), userName };
+    } else if (config.name === "auth-identity-settled-users-a") {
+      output = await authSample(config.selectors.userA, config.userAName, config.userAId);
+      context.__wf540Remember(config.actionId + ":preference-read-baseline", context.__wf540ReadPreferenceReads().length);
+    } else if (config.name === "auth-identity-settled-users-b") {
+      output = await authSample(config.selectors.userB, config.userBName, config.userBId);
+    } else if (["signout-settled-bootstrap", "signout-settled-user-a", "signout-settled-user-b"].includes(config.name)) {
+      output = await loginSample();
+    } else if (config.name === "signout-settled-user-a-with-abort") {
+      const route = context.__wf540RouteGet("preference-a-write-exit");
+      const aborted = await Promise.race([route.clientAborted, page.waitForTimeout(10000).then(() => { throw new Error("wf540_abort_timeout"); })]);
+      output = await loginSample(aborted === true);
+    } else if (config.name.startsWith("geometry-")) {
+      output = await geometrySample();
+    } else if (config.name === "binding-after-save") {
+      const response = await page.evaluate(async (pathname) => {
+        const result = await fetch(pathname, { credentials: "same-origin", headers: { Accept: "application/json" } });
+        return { status: result.status, text: await result.text() };
+      }, "/admin/api/custom-screens/" + encodeURIComponent(config.screenId));
+      if (response.status !== 200 || response.text.length === 0 || response.text.length > 1048576) throw new Error("wf540_screen_read");
+      const payload = JSON.parse(response.text);
+      output = { screenId: payload.id, bindings: payload.definition?.editorView?.bindings ?? payload.bindings ?? [] };
+    } else if (config.name === "safe-link-anchor-before-activation") {
+      if (typeof config.paletteButtonId !== "string" || config.paletteButtonId.length === 0) {
+        throw new Error("wf540_safe_link_capture");
+      }
+      const locator = await one('[data-screen-block-id="' + config.paletteButtonId + '"] [data-screen-button-affordance="true"]');
+      output = { tagName: await locator.evaluate((element) => element.tagName), href: await locator.getAttribute("href"), rect: finiteRect(await locator.boundingBox()) };
+    } else if (config.name === "outer-tabs-details-state" || config.name === "outer-tabs-history-state") {
+      const root = await one('[data-screen-block-id="' + context.__wf540Recall("capture:palette.outer-tabs") + '"]');
+      const owned = await ownedTabs(root);
+      const selected = owned.tabs.filter(({ selected }) => selected);
+      if (selected.length !== 1 || owned.tabs.length !== 3 || owned.panels.length !== 3) throw new Error("wf540_owned_tabs_shape");
+      const activeTabId = selected[0].tabId;
+      const visiblePanelIds = owned.panels.filter(({ hidden, rect }) => !hidden && positive(rect)).map(({ panelId }) => panelId);
+      const hiddenPanelIds = owned.panels.filter(({ hidden, rect }) => hidden && !positive(rect)).map(({ panelId }) => panelId);
+      const rects = owned.panels.map(({ rect }) => rect);
+      output = { activeTabId, visiblePanelIds, hiddenPanelIds, armedSlotId: activeTabId, rects };
+    } else if (config.name === "preview-shell-desktop") {
+      const shell = await one(config.selectors.previewShell);
+      output = { shellVisible: positive(finiteRect(await shell.boundingBox())) && await shell.isVisible(), device: (await shell.getAttribute("data-preview-device")) ?? "", rendererCount: await shell.locator('[data-screen-runtime-root]').count() };
+    } else if (config.name.startsWith("key-step-")) {
+      const keyByName = { "key-step-arrow-left": "ArrowLeft", "key-step-arrow-right": "ArrowRight", "key-step-home": "Home", "key-step-end": "End" };
+      output = await page.evaluate((key) => {
+        const focused = document.activeElement;
+        const selected = focused?.closest('[data-screen-block-id]')?.querySelector('[role="tab"][aria-selected="true"]');
+        const rawId = (tab) => document.getElementById(tab?.getAttribute("aria-controls") ?? "")?.getAttribute("data-screen-runtime-tab") ?? "";
+        return { key, focusedTabText: focused?.textContent?.trim() ?? "", focusedTabId: rawId(focused), selectedTabId: rawId(selected), tabIndex: focused?.tabIndex ?? -1 };
+      }, keyByName[config.name]);
+    } else if (config.name === "selected-block-before-nested-controls") {
+      if (typeof config.selectionSelector !== "string" || config.selectionSelector.length === 0) throw new Error("wf540_selection_selector");
+      const handle = await one(config.selectionSelector);
+      await handle.click();
+      const selectedBlockId = await waitFor(async () => {
+        const wrapper = handle.locator("xpath=..");
+        const selected = await selectedBlock();
+        return selected === config.screenBlockIds.spaceGroup &&
+          await handle.getAttribute("aria-pressed") === "true" &&
+          await wrapper.getAttribute("data-selected") === "true"
+          ? selected
+          : null;
+      });
+      output = { selectedBlockId, url: page.url() };
+    } else if (config.name === "selected-block-after-nested-input" || config.name === "selected-block-after-nested-link") {
+      output = { selectedBlockId: await selectedBlock(), focused: await page.evaluate(() => document.activeElement?.getAttribute("role") === "textbox" || document.activeElement?.tagName === "A"), url: page.url() };
+    } else if (config.name === "builder-draft-url-before-cancel") {
+      const draftBytes = await page.locator(config.selectors.canvas).evaluate((node) => JSON.stringify({ text: node.textContent, html: node.innerHTML }));
+      output = { draftBytes, url: page.url(), navigationCount: page.__wf540ReadNavigationCount() };
+    } else if (config.name === "entry-drafts-url-before-cancel") {
+      output = await entryDraftSample();
+    } else if (config.name === "entry-save-failure-ui-settled") {
+      const save = await one(config.selectors.entrySave);
+      const alert = page.locator('[role="alert"]');
+      output = await waitFor(async () => {
+        const errorVisible = await alert.count() > 0 && await alert.first().isVisible();
+        const saveEnabled = await save.isEnabled();
+        const saveLabel = (await save.textContent())?.trim() ?? "";
+        return errorVisible && saveEnabled && saveLabel === "Save"
+          ? { errorVisible, saveEnabled, saveLabel }
+          : null;
+      });
+    } else if (config.name === "relation-pickers-a-b-warm") {
+      const readPickerTitles = async (blockId, expectedTitles) => {
+        const root = await one('[data-screen-block-id="' + blockId + '"]');
+        const values = [];
+        for (const expectedTitle of expectedTitles) {
+          const button = root.locator('button:has(p:text-is("' + expectedTitle + '"))');
+          if (await button.count() !== 1 || !(await button.isVisible()) || !positive(finiteRect(await button.boundingBox()))) throw new Error("wf540_relation_picker");
+          const titleNode = button.locator('p:text-is("' + expectedTitle + '")');
+          values.push((await titleNode.textContent())?.trim() ?? "");
+        }
+        return values;
+      };
+      const aButtons = await readPickerTitles(config.screenBlockIds.relationAField, [config.related.a1.title, config.related.a2.title]);
+      const bButtons = await readPickerTitles(config.screenBlockIds.relationBField, [config.related.b1.title, config.related.b2.title]);
+      const aRows = (await relatedRootSample(config.screenBlockIds.relatedListA)).rowIds;
+      const relatedCounts = context.__wf540ReadRelatedListGetCounts();
+      output = { aButtons, bButtons, aRows, bListGetCount: relatedCounts[config.relatedListPaths.b] };
+    } else if (config.name === "related-unrelated-drafts-before") {
+      const sample = await entryDraftSample();
+      context.__wf540Remember(config.actionId + ":relations", await relationSelections());
+      output = { contentBytes: sample.contentBytes, presentationBytes: sample.presentationBytes };
+    } else if (config.name === "related-a-visible-baseline") {
+      output = await relatedRootSample(config.screenBlockIds.relatedListA);
+    } else if (config.name === "related-tab-save-settled") {
+      const write = await waitFor(() => context.__wf540ReadRelatedEntryWrites().find((item) => item.pageId === page.__wf540PageIdentity.pageId && item.idMatches && item.titleMatches));
+      const save = await one(config.selectors.secondTabSave);
+      const title = await one(config.selectors.secondTabTitle);
+      const pageHref = page.url();
+      const pageAuthorityEnd = pageHref.indexOf("/", pageHref.indexOf("://") + 3);
+      const pagePathname = (pageAuthorityEnd === -1 ? "/" : pageHref.slice(pageAuthorityEnd)).split(/[?#]/u, 1)[0];
+      const editorEntryId = pagePathname.split("/").filter(Boolean).at(-1) ?? "";
+      if (!write.pathMatches || editorEntryId !== config.related.a1.id || config.relatedEntryWritePath === null) throw new Error("wf540_related_write_identity");
+      const settled = await waitFor(async () => {
+        const saveEnabled = await save.isEnabled();
+        const savingAbsent = await page.getByText("Saving...", { exact: true }).count() === 0;
+        return saveEnabled && savingAbsent ? { saveEnabled, savingAbsent } : null;
+      });
+      output = { method: write.method, pathname: config.relatedEntryWritePath, status: write.status, entryId: editorEntryId, title: await title.inputValue(), ...settled };
+    } else if (config.name === "preference-a-write-settled" || config.name === "nondefault-browser-patch-settled" || config.name === "new-local-browser-patch-settled") {
+      const expectedSequence = config.name === "preference-a-write-settled" ? 1 : config.name === "nondefault-browser-patch-settled" ? 2 : 3;
+      const rows = await waitFor(() => { const candidates = context.__wf540ReadPreferenceWrites(); return candidates.length >= expectedSequence ? candidates : null; });
+      const request = rows[expectedSequence - 1];
+      const base = { sequence: request.sequence, method: "PATCH", pathname: config.preferencePath, status: request.status, userIdMatches: request.expectedUserIdMatches, value: request.value };
+      if (config.name === "preference-a-write-settled") {
+        const effect = await preferenceEffect();
+        output = { ...base, switchChecked: effect.switchChecked, switchRect: effect.switchRect, metadataRect: effect.metadataRect };
+      } else output = base;
+    } else if (config.name === "post-redirect-a-fresh-read-settled") {
+      const baseline = context.__wf540Recall("ru-105a-a3-identity-settled:preference-read-baseline");
+      const requests = await waitFor(() => { const rows = context.__wf540ReadPreferenceReads(); return rows.length === baseline + 1 ? rows : null; });
+      const request = requests.at(-1);
+      if (request.pageId !== page.__wf540PageIdentity.pageId || !request.keyMatches) throw new Error("wf540_fresh_preference_read_identity");
+      const settled = await waitFor(async () => {
+        try {
+          const menu = await one(config.selectors.userA);
+          const activeUserMenuVisible = positive(finiteRect(await menu.boundingBox())) && await menu.isVisible();
+          const effect = await preferenceEffect();
+          return activeUserMenuVisible && effect.switchChecked && positive(effect.metadataRect)
+            ? { activeUserMenuVisible, effect }
+            : null;
+        } catch {
+          return null;
+        }
+      });
+      const { activeUserMenuVisible, effect } = settled;
+      context.__wf540Remember(config.actionId + ":preference-write-baseline", context.__wf540ReadPreferenceWrites().length);
+      output = { sequence: request.sequence, method: "GET", pathname: config.preferencePath, status: request.status, activeUserMenuVisible, value: request.value, switchChecked: effect.switchChecked, metadataRect: effect.metadataRect };
+    } else {
+      throw new Error("wf540_unknown_observation");
+    }
+    ${
+      authClosePhase
+        ? `
+      context.__wf540CloseExpectedAuthChallenge({
+        closeActionId: ${JSON.stringify(authClosePhase.closeActionId)},
+        pageId: page.__wf540PageIdentity?.pageId,
+        navigationEpoch: page.__wf540ReadNavigationCount(),
+        url: page.url(),
+      });
+    `
+        : ""
+    }
+    output = exactOutput(output);
+    context.__wf540Remember(config.actionId, output);
+    return output;
+  })`;
+}
+
+function resolveVisibleAssertionTarget(name, plan, captures) {
+  const targetRef = plan.registries.visibleAssertionTargets[name];
+  invariant(targetRef !== undefined, "visible assertion target is not registered: " + name);
+  const value = resolveExactRef(
+    targetRef,
+    {
+      plan,
+      captures,
+      priorOutputs: new Map(),
+      variables: new Map(),
+      currentOutput: null,
+      root: null,
+    },
+    "visible assertion target " + name
+  );
+  invariant(
+    typeof value === "string" && value.length > 0 && value.length <= 2048,
+    "visible assertion target is invalid: " + name
+  );
+  return value;
+}
+
+function buildVisibleAssertionSource(action, name, plan, captures) {
+  const assertion = plan.registries.visibleAssertions[name];
+  invariant(assertion !== undefined, "unknown visible assertion: " + name);
+  const ordinaryAssertion =
+    assertion.schema?.type === "object" &&
+    Object.hasOwn(assertion.schema.properties ?? {}, "assertion");
+  const captureValue = (captureName) =>
+    captures.has(captureName) ? captures.get(captureName) : null;
+  const config = {
+    name,
+    actionId: action.id,
+    target: ordinaryAssertion ? resolveVisibleAssertionTarget(name, plan, captures) : null,
+    outputFields: Object.keys(assertion.schema.properties ?? {}),
+    observationFields: ordinaryAssertion
+      ? Object.keys(assertion.schema.properties.observations.properties)
+      : null,
+    adminOrigin: plan.fixtureBlueprint.origins.admin,
+    frontSafeUrl: plan.fixtureBlueprint.paths.safeFront,
+    nestedHash: plan.fixtureBlueprint.paths.nestedHash,
+    screenId: captureValue("screen.id"),
+    retryScreenId: captureValue("retry-screen.id"),
+    entryId: captureValue("entry.id"),
+    mediaId: captureValue("media.id"),
+    mediaUrl: captureValue("media.resolved-url"),
+    mediaTitle: plan.fixtureBlueprint.media.title,
+    userAId: captureValue("user-a.id"),
+    userBId: captureValue("user-b.id"),
+    palette: {
+      button: captureValue("palette.button"),
+      image: captureValue("palette.image"),
+      mediaField: captureValue("palette.media-field"),
+      outerTabs: captureValue("palette.outer-tabs"),
+      innerTabs: captureValue("palette.inner-tabs"),
+      dirtyText: captureValue("palette.dirty-text"),
+    },
+    blockIds: plan.fixtureBlueprint.screen.blockIds,
+    retryBlockId: plan.fixtureBlueprint.retryScreen.relatedListBlockId,
+    typeSlug: plan.fixtureBlueprint.contentTypes.editable.slug,
+    preferencePath: "/admin/api/user-settings/customScreens.entry.preferences",
+    legacyPreferenceKey: "coderso.screens.entry.preferences.v1",
+    relatedListPaths: {
+      a: "/admin/api/content/" + plan.fixtureBlueprint.contentTypes.relatedA.slug + "/entries",
+      b: "/admin/api/content/" + plan.fixtureBlueprint.contentTypes.relatedB.slug + "/entries",
+      failure:
+        "/admin/api/content/" + plan.fixtureBlueprint.contentTypes.relatedFailure.slug + "/entries",
+    },
+    entry: plan.fixtureBlueprint.entry,
+    tabs: plan.fixtureBlueprint.tabs,
+    users: {
+      a: { id: captureValue("user-a.id"), name: plan.fixtureBlueprint.users.a.displayName },
+      b: { id: captureValue("user-b.id"), name: plan.fixtureBlueprint.users.b.displayName },
+    },
+    related: {
+      a1: {
+        id: captureValue("related-entry-a1.id"),
+        title: plan.fixtureBlueprint.relatedEntries.a1.title,
+        updatedTitle: plan.fixtureBlueprint.relatedEntries.a1.updatedTitle,
+      },
+      a2: {
+        id: captureValue("related-entry-a2.id"),
+        title: plan.fixtureBlueprint.relatedEntries.a2.title,
+      },
+      b1: {
+        id: captureValue("related-entry-b1.id"),
+        title: plan.fixtureBlueprint.relatedEntries.b1.title,
+      },
+      b2: {
+        id: captureValue("related-entry-b2.id"),
+        title: plan.fixtureBlueprint.relatedEntries.b2.title,
+      },
+      failure1: {
+        id: captureValue("related-entry-failure1.id"),
+        title: plan.fixtureBlueprint.relatedEntries.failure1.title,
+      },
+    },
+    selectors: {
+      canvas: registeredSelector(plan, "canvas"),
+      metadata: registeredSelector(plan, "metadata"),
+      relatedAlert: registeredSelector(plan, "relatedAlert"),
+      relatedRetry: registeredSelector(plan, "relatedRetry"),
+      canvasScroller: registeredSelector(plan, "canvasScroller"),
+      editorPanel: registeredSelector(plan, "editorPanel"),
+      colorMode: registeredSelector(plan, "colorMode"),
+      userA: registeredSelector(plan, "userMenu", [plan.fixtureBlueprint.users.a.displayName]),
+      userB: registeredSelector(plan, "userMenu", [plan.fixtureBlueprint.users.b.displayName]),
+      relationA1: registeredSelector(plan, "relationEntry", [
+        plan.fixtureBlueprint.screen.blockIds.relationAField,
+        plan.fixtureBlueprint.relatedEntries.a1.title,
+      ]),
+      relationA2: registeredSelector(plan, "relationEntry", [
+        plan.fixtureBlueprint.screen.blockIds.relationAField,
+        plan.fixtureBlueprint.relatedEntries.a2.title,
+      ]),
+      relationB1: registeredSelector(plan, "relationEntry", [
+        plan.fixtureBlueprint.screen.blockIds.relationBField,
+        plan.fixtureBlueprint.relatedEntries.b1.title,
+      ]),
+      relationB2: registeredSelector(plan, "relationEntry", [
+        plan.fixtureBlueprint.screen.blockIds.relationBField,
+        plan.fixtureBlueprint.relatedEntries.b2.title,
+      ]),
+      headlineEditableBadge: registeredSelector(plan, "fieldBadge", [
+        plan.fixtureBlueprint.screen.blockIds.headlineField,
+        "Editable",
+      ]),
+      headlineTextBadge: registeredSelector(plan, "fieldBadge", [
+        plan.fixtureBlueprint.screen.blockIds.headlineField,
+        "Text",
+      ]),
+      readOnlyReadBadge: registeredSelector(plan, "fieldBadge", [
+        plan.fixtureBlueprint.screen.blockIds.readOnlyField,
+        "Read",
+      ]),
+      readOnlyTextBadge: registeredSelector(plan, "fieldBadge", [
+        plan.fixtureBlueprint.screen.blockIds.readOnlyField,
+        "Text",
+      ]),
+    },
+  };
+  return `(async (page) => {
+    const config = ${JSON.stringify(config)};
+    const context = page.context();
+    const finiteRect = (value) => {
+      if (!value) return null;
+      const result = { left: value.x, right: value.x + value.width, width: value.width, height: value.height };
+      if (Object.values(result).some((item) => !Number.isFinite(item))) throw new Error("wf540_nonfinite_geometry");
+      return result;
+    };
+    const positive = (rect) => Boolean(rect && rect.width > 0 && rect.height > 0);
+    const one = async (selector) => {
+      const locator = page.locator(selector);
+      const deadline = Date.now() + 10000;
+      while (Date.now() < deadline && await locator.count() !== 1) await page.waitForTimeout(25);
+      if (await locator.count() !== 1) throw new Error("wf540_assertion_target_count");
+      return locator;
+    };
+    const exactKeys = (value, keys) => Boolean(
+      value && typeof value === "object" && !Array.isArray(value) &&
+      Object.keys(value).length === keys.length && keys.every((key) => Object.prototype.hasOwnProperty.call(value, key))
+    );
+    const waitFor = async (read) => {
+      const deadline = Date.now() + 10000;
+      while (Date.now() < deadline) {
+        const value = await read();
+        if (value) return value;
+        await page.waitForTimeout(25);
+      }
+      throw new Error("wf540_assertion_timeout");
+    };
+    const finalizeOutput = (value) => {
+      if (["preference-a-write-hit-before-release", "preference-a-write-hit-after-release", "queued-a-write-zero-dispatch"].includes(config.name)) {
+        if (!Number.isSafeInteger(value)) throw new Error("wf540_assertion_scalar_output");
+        return value;
+      }
+      if (!exactKeys(value, config.outputFields)) throw new Error("wf540_assertion_output_keys");
+      if (config.observationFields !== null) {
+        if (value.assertion !== config.name || value.target !== config.target || !exactKeys(value.observations, config.observationFields)) throw new Error("wf540_assertion_observation_keys");
+      }
+      return value;
+    };
+    const safeGet = async (pathname) => {
+      const response = await page.evaluate(async (target) => {
+        const result = await fetch(target, { credentials: "same-origin", headers: { Accept: "application/json" } });
+        return { status: result.status, text: await result.text() };
+      }, pathname);
+      if (response.status !== 200 || response.text.length === 0 || response.text.length > 1048576) throw new Error("wf540_assertion_api_read");
+      const value = JSON.parse(response.text);
+      if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("wf540_assertion_api_shape");
+      return value;
+    };
+    const screen = () => safeGet("/admin/api/custom-screens/" + encodeURIComponent(config.screenId));
+    const entry = () => safeGet("/admin/api/content/" + encodeURIComponent(config.typeSlug) + "/entries/" + encodeURIComponent(config.entryId));
+    const preference = () => safeGet("/admin/api/user-settings/customScreens.entry.preferences");
+    const strictPreference = async () => {
+      const value = await preference();
+      if (!exactKeys(value, ["key", "value"]) || value.key !== "customScreens.entry.preferences" || !exactKeys(value.value, ["version", "showFieldMetadata"]) || value.value.version !== 1 || typeof value.value.showFieldMetadata !== "boolean") throw new Error("wf540_preference_shape");
+      return { key: value.key, value: { version: 1, showFieldMetadata: value.value.showFieldMetadata } };
+    };
+    const overrides = async () => {
+      const value = await safeGet("/admin/api/custom-screens/" + encodeURIComponent(config.screenId) + "/entries/" + encodeURIComponent(config.entryId) + "/overrides");
+      if (!exactKeys(value, ["overrides"]) || !Array.isArray(value.overrides)) throw new Error("wf540_override_shape");
+      const normalized = value.overrides.map((item) => {
+        if (!exactKeys(item, ["blockId", "propPath", "value"]) ||
+          typeof item.blockId !== "string" || item.blockId.length === 0 ||
+          typeof item.propPath !== "string" || item.propPath.length === 0 ||
+          typeof item.value !== "string") throw new Error("wf540_override_item_shape");
+        return { blockId: item.blockId, propPath: item.propPath, value: item.value };
+      }).sort((left, right) => (left.blockId + "\\u0000" + left.propPath).localeCompare(right.blockId + "\\u0000" + right.propPath));
+      if (new Set(normalized.map((item) => item.blockId + "\\u0000" + item.propPath)).size !== normalized.length) throw new Error("wf540_override_duplicate");
+      return normalized;
+    };
+    const relatedRoot = async (blockId) => {
+      const root = await one('[data-screen-block-id="' + blockId + '"]');
+      const rows = root.locator("[data-screen-related-entry]");
+      const rowIds = await rows.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-screen-related-entry") ?? ""));
+      const rowText = await rows.evaluateAll((nodes) => nodes.map((node) => (node.textContent ?? "").trim()));
+      const rects = [];
+      for (let index = 0; index < await rows.count(); index += 1) rects.push(finiteRect(await rows.nth(index).boundingBox()));
+      const skeletons = root.locator('span:text-is("Chip")');
+      const skeletonRects = [];
+      for (let index = 0; index < await skeletons.count(); index += 1) skeletonRects.push(finiteRect(await skeletons.nth(index).boundingBox()));
+      const empty = root.locator("p", { hasText: "No related" });
+      return { rootId: blockId, rowIds, rowText, rects, skeletonChipCount: await skeletons.count(), skeletonRects, emptyVisible: await empty.count() > 0 && await empty.first().isVisible() };
+    };
+    const entryDraft = async () => {
+      const runtime = await one('[data-screen-runtime-root]');
+      const content = await runtime.locator('[role="textbox"]').evaluateAll((nodes) => nodes.map((node) => ({
+        blockId: node.closest('[data-screen-block-id]')?.getAttribute('data-screen-block-id') ?? "",
+        label: node.getAttribute("aria-label"),
+        text: node.textContent ?? "",
+        value: "value" in node ? node.value : null,
+      })).sort((left, right) => (left.blockId + "\\u0000" + left.label).localeCompare(right.blockId + "\\u0000" + right.label)));
+      const panel = page.locator('[data-custom-screen-entry-presentation-panel="true"]');
+      if (await panel.count() !== 1) throw new Error("wf540_presentation_panel_count");
+      const presentation = await panel.evaluate((node) => node.innerHTML);
+      return { content: JSON.stringify(content), presentation: JSON.stringify(presentation) };
+    };
+    const preferenceEffect = async () => {
+      const toggle = await one(config.selectors.metadata);
+      const toggleRect = finiteRect(await toggle.boundingBox());
+      if (!positive(toggleRect) || !(await toggle.isVisible())) throw new Error("wf540_metadata_toggle_geometry");
+      const ariaChecked = await toggle.getAttribute("aria-checked");
+      const dataState = await toggle.getAttribute("data-state");
+      if (ariaChecked !== "true" && ariaChecked !== "false" && dataState !== "checked" && dataState !== "unchecked") throw new Error("wf540_metadata_state");
+      const visibleValue = ariaChecked === "true" || dataState === "checked";
+      const badgeSelectors = [
+        config.selectors.headlineEditableBadge,
+        config.selectors.headlineTextBadge,
+        config.selectors.readOnlyReadBadge,
+        config.selectors.readOnlyTextBadge,
+      ];
+      let visibleBadges = 0;
+      for (const selector of badgeSelectors) {
+        const badge = page.locator(selector);
+        if (visibleValue) {
+          if (await badge.count() !== 1 || !(await badge.isVisible()) || !positive(finiteRect(await badge.boundingBox()))) throw new Error("wf540_metadata_badge_geometry");
+          visibleBadges += 1;
+        } else if (await badge.count() !== 0) {
+          throw new Error("wf540_metadata_badge_absence");
+        }
+      }
+      return { visibleValue, metadataEffect: visibleValue && visibleBadges === badgeSelectors.length };
+    };
+    const relationSelections = async () => {
+      const rows = [
+        { selector: config.selectors.relationA1, id: config.related.a1.id },
+        { selector: config.selectors.relationA2, id: config.related.a2.id },
+        { selector: config.selectors.relationB1, id: config.related.b1.id },
+        { selector: config.selectors.relationB2, id: config.related.b2.id },
+      ];
+      const selected = { relationA: [], relationB: [] };
+      for (const [index, row] of rows.entries()) {
+        const button = await one(row.selector);
+        const checkbox = button.locator('[role="checkbox"]');
+        if (await checkbox.count() !== 1) throw new Error("wf540_relation_checkbox_count");
+        const checked = (await checkbox.getAttribute("aria-checked")) === "true" || (await checkbox.getAttribute("data-state")) === "checked";
+        if (checked) selected[index < 2 ? "relationA" : "relationB"].push(row.id);
+      }
+      return selected;
+    };
+    const ownedTabs = async (root) => root.evaluate((element) => {
+      const owns = (node) => node.closest('[data-screen-block-id]') === element;
+      const tabs = [...element.querySelectorAll('[role="tab"]')].filter(owns);
+      const panels = [...element.querySelectorAll('[role="tabpanel"]')].filter(owns);
+      const rawTabId = (tab) => panels.find((panel) => panel.id === tab.getAttribute("aria-controls"))?.getAttribute("data-screen-runtime-tab") ?? "";
+      return {
+        tabs: tabs.map((tab) => ({
+          tabId: rawTabId(tab),
+          domTabId: tab.id,
+          label: (tab.textContent ?? "").trim(),
+          ariaControls: tab.getAttribute("aria-controls") ?? "",
+          selected: tab.getAttribute("aria-selected") === "true",
+        })),
+        panels: panels.map((panel) => ({
+          panelId: panel.getAttribute("data-screen-runtime-tab") ?? "",
+          domPanelId: panel.id,
+          ariaLabelledBy: panel.getAttribute("aria-labelledby") ?? "",
+          hidden: panel.hidden,
+        })),
+      };
+    });
+    const ordinary = (observations) => ({ assertion: config.name, target: config.target, observations });
+    let output;
+    if (config.name === "media-cache-cold-before-route") {
+      const canvas = await one(config.selectors.canvas);
+      output = { builderUrl: page.url(), builderMarkerVisible: positive(finiteRect(await canvas.boundingBox())) && await canvas.isVisible(), localStorageAbsent: await page.evaluate(() => localStorage.getItem("media:list") === null), mediaGetCount: context.__wf540ReadMediaGetCount() };
+    } else if (["prior-media-resolution-pending", "newer-media-winner-selected-pending", "stale-media-result-ignored"].includes(config.name)) {
+      const root = await one('[data-screen-block-id="' + config.blockIds.raceImage + '"]');
+      const placeholder = root.locator('[data-image-disabled="true"]');
+      const common = { overridePresent: (await root.getAttribute("data-screen-presentation-override")) === "true", imagePresent: await root.locator("img").count() > 0, placeholderVisible: await placeholder.count() === 1 && positive(finiteRect(await placeholder.boundingBox())) && await placeholder.isVisible() };
+      if (config.name === "newer-media-winner-selected-pending") {
+        const dirty = page.getByText("Unsaved presentation", { exact: true });
+        output = { ...common, presentationDirtyVisible: await dirty.count() === 1 && await dirty.isVisible(), mediaGetCount: context.__wf540ReadMediaGetCount() };
+      } else if (config.name === "stale-media-result-ignored") {
+        const images = await root.locator("img").evaluateAll((nodes) => nodes.map((node) => node.src));
+        const acquiredUrl = await page.evaluate((value) => new URL(value, location.href).href, config.mediaUrl);
+        output = { ...common, acquiredUrlPresent: images.some((value) => value === acquiredUrl), mediaGetCount: context.__wf540ReadMediaGetCount() };
+      } else output = { ...common, mediaGetCount: context.__wf540ReadMediaGetCount() };
+    } else if (["preference-a-write-hit-before-release", "preference-a-write-hit-after-release", "queued-a-write-zero-dispatch"].includes(config.name)) {
+      const hits = context.__wf540RouteGet("preference-a-write-exit").hits();
+      output = config.name === "queued-a-write-zero-dispatch" ? Math.max(0, hits - 1) : hits;
+    } else if (config.name === "persisted-no-empty-binding") {
+      const persisted = await screen();
+      const bindings = persisted.definition?.editorView?.bindings ?? persisted.bindings ?? [];
+      const href = bindings.filter((item) => item.blockId === config.palette.button && item.propPath === "href");
+      output = ordinary({ screenId: persisted.id, hrefBindingCount: href.length, hrefBindingField: href[0]?.field ?? null, emptyFieldCount: bindings.filter((item) => item.field === "").length });
+    } else if (config.name === "safe-link-front-url") {
+      const sample = context.__wf540Recall("bi-056a-safe-link-observe");
+      output = ordinary({ tagName: sample.tagName, href: sample.href, pageUrl: page.url() });
+    } else if (config.name === "unsafe-link-disabled") {
+      const root = await one('[data-screen-block-id="' + config.palette.button + '"]');
+      const affordance = await one('[data-screen-block-id="' + config.palette.button + '"] [data-screen-button-affordance="true"]');
+      output = ordinary({ tagName: await affordance.evaluate((element) => element.tagName), ariaDisabled: await affordance.getAttribute("aria-disabled"), href: await affordance.getAttribute("href"), anchorCount: await root.locator("a").count() });
+    } else if (config.name === "direct-image-safe-url") {
+      const root = await one('[data-screen-block-id="' + config.target + '"]');
+      const images = root.locator("img");
+      const imageCount = await images.count();
+      if (imageCount !== 1) throw new Error("wf540_direct_image_count");
+      const src = await images.evaluate((image) => image.src);
+      if (typeof config.mediaUrl !== "string" || !config.mediaUrl.includes("://")) {
+        throw new Error("wf540_direct_image_expected_url");
+      }
+      if (src !== config.mediaUrl) {
+        const pathname = (href) => {
+          const scheme = href.indexOf("://");
+          const start = href.indexOf("/", scheme === -1 ? 0 : scheme + 3);
+          return start === -1 ? "/" : href.slice(start);
+        };
+        throw new Error(
+          pathname(src) === pathname(config.mediaUrl)
+            ? "wf540_direct_image_origin_mismatch"
+            : "wf540_direct_image_url_mismatch"
+        );
+      }
+      const placeholderVisible = await root.locator('[data-image-disabled="true"]').count() > 0;
+      if (placeholderVisible) throw new Error("wf540_direct_image_placeholder_visible");
+      output = ordinary({ imageCount, src, placeholderVisible });
+    } else if (config.name === "missing-or-unsafe-placeholder") {
+      const root = await one('[data-screen-block-id="' + config.target + '"]');
+      const placeholder = root.locator('[data-image-disabled="true"]');
+      const unsafeUrlPresent = await root.evaluate((element) => [...element.querySelectorAll("*")].some((node) =>
+        ["href", "src", "xlink:href"].some((attribute) => (node.getAttribute(attribute) ?? "").trim().toLowerCase().startsWith("javascript:"))
+      ));
+      output = ordinary({ imageCount: await root.locator("img").count(), placeholderVisible: await placeholder.count() === 1 && await placeholder.isVisible() && positive(finiteRect(await placeholder.boundingBox())), unsafeUrlPresent });
+    } else if (config.name === "media-field-keeps-uuid") {
+      const persisted = await entry();
+      const root = await one('[data-screen-block-id="' + config.target + '"]');
+      const title = root.locator('p:text-is("' + config.mediaTitle + '")');
+      if (await title.count() !== 1 || !(await title.isVisible()) || !positive(finiteRect(await title.boundingBox()))) throw new Error("wf540_media_title_geometry");
+      const image = root.locator("img");
+      if (await image.count() !== 1 || !(await image.isVisible()) || !positive(finiteRect(await image.boundingBox()))) throw new Error("wf540_media_image_geometry");
+      const selectedMediaTitle = (await title.textContent())?.trim() ?? "";
+      const selectedImageSrc = await image.evaluate((node) => node.src);
+      const persistedMediaId = persisted.data?.mediaAsset ?? null;
+      output = ordinary({ selectedMediaTitle, selectedImageSrc, persistedMediaId, persistedResolvedUrlPresent: JSON.stringify(persistedMediaId).includes(config.mediaUrl) });
+    } else if (config.name === "three-tabs-persisted") {
+      const persisted = await screen();
+      const root = await one('[data-screen-block-id="' + config.palette.outerTabs + '"]');
+      const owned = await ownedTabs(root);
+      const tabIds = owned.tabs.map(({ tabId }) => tabId);
+      const labels = owned.tabs.map(({ label }) => label);
+      const slotIds = owned.panels.map(({ panelId }) => panelId);
+      const nestedText = [];
+      for (const expectedText of Object.values(config.tabs.text)) {
+        const text = root.locator('p:text-is("' + expectedText + '")');
+        if (await text.count() !== 1) throw new Error("wf540_tab_text_count");
+        nestedText.push((await text.textContent())?.trim() ?? "");
+      }
+      if (!JSON.stringify(persisted.definition ?? {}).includes(nestedText[0])) throw new Error("wf540_tab_persistence");
+      output = ordinary({ tabIds, labels, slotIds, nestedText });
+    } else if (config.name === "one-panel-visible") {
+      const sample = context.__wf540Recall("tc-038-history-state");
+      output = ordinary({ activeTabId: sample.activeTabId, visiblePanelIds: sample.visiblePanelIds, visibleRects: sample.rects.filter(positive) });
+    } else if (config.name === "other-panels-zero-geometry") {
+      const sample = context.__wf540Recall("tc-038-history-state");
+      const hiddenRects = sample.rects.filter((rect) => !positive(rect));
+      output = ordinary({ hiddenPanelIds: sample.hiddenPanelIds, hiddenValues: sample.hiddenPanelIds.map(() => true), rects: hiddenRects });
+    } else if (config.name === "armed-slot-equals-active-tab") {
+      const samples = [context.__wf540Recall("tc-036-details-state"), context.__wf540Recall("tc-038-history-state")];
+      const selectedTabId = [];
+      const root = await one('[data-screen-block-id="' + config.palette.outerTabs + '"]');
+      const current = await ownedTabs(root);
+      selectedTabId.push(samples[0].activeTabId, current.tabs.find(({ selected }) => selected)?.tabId ?? "");
+      output = ordinary({ activeTabId: samples.map((item) => item.activeTabId), armedSlotId: samples.map((item) => item.armedSlotId), selectedTabId });
+    } else if (config.name === "arrow-home-end-focus") {
+      output = ordinary({ steps: ["tk-014-observe-left", "tk-016-observe-right", "tk-018-observe-home", "tk-020-observe-end"].map((id) => context.__wf540Recall(id)) });
+    } else if (config.name === "aria-reciprocal") {
+      const root = await one('[data-screen-block-id="' + config.palette.outerTabs + '"]');
+      const owned = await ownedTabs(root);
+      const pairs = owned.tabs.map((tab) => {
+        const panel = owned.panels.find(({ domPanelId }) => domPanelId === tab.ariaControls);
+        if (!panel) throw new Error("wf540_aria_panel_missing");
+        if (panel.ariaLabelledBy !== tab.domTabId) throw new Error("wf540_aria_reciprocal");
+        return { tabId: tab.tabId, panelId: panel.panelId, ariaControls: panel.panelId, ariaLabelledBy: tab.tabId, selected: tab.selected, hidden: panel.hidden };
+      });
+      const visiblePanelId = owned.panels.find(({ hidden }) => !hidden)?.panelId ?? "";
+      const hiddenPanelIds = owned.panels.filter(({ hidden }) => hidden).map(({ panelId }) => panelId);
+      output = ordinary({ pairs, visiblePanelId, hiddenPanelIds });
+    } else if (config.name === "nested-tabs-isolated") {
+      const outer = await one('[data-screen-block-id="' + config.palette.outerTabs + '"]');
+      const inner = await one('[data-screen-block-id="' + config.palette.innerTabs + '"]');
+      const outerOwned = await ownedTabs(outer);
+      const innerOwned = await ownedTabs(inner);
+      output = ordinary({ outerRootId: await outer.getAttribute("data-screen-block-id"), innerRootId: await inner.getAttribute("data-screen-block-id"), outerSelectedId: outerOwned.tabs.find(({ selected }) => selected)?.tabId ?? "", innerSelectedId: innerOwned.tabs.find(({ selected }) => selected)?.tabId ?? "" });
+    } else if (config.name === "renderer-ids-unique") {
+      const ids = await page.locator('[data-screen-runtime-root] [id]').evaluateAll((nodes) => nodes.map((node) => node.id));
+      output = ordinary({ ids, uniqueCount: new Set(ids).size });
+    } else if (config.name === "space-text-preserved") {
+      const editor = await one('[data-screen-block-id="' + config.blockIds.spaceNoteField + '"] [role="textbox"]');
+      output = ordinary({ text: (await editor.textContent()) ?? "", expectedText: config.entry.spacePhrase });
+    } else if (config.name === "nested-controls-do-not-select") {
+      const before = context.__wf540Recall("ss-011-selection-before");
+      const afterInput = context.__wf540Recall("ss-022-selection-after-input");
+      const afterLink = context.__wf540Recall("ss-024-selection-after-link");
+      output = ordinary({ linkActivated: afterLink.url.endsWith(config.nestedHash), inputFocused: afterInput.focused, selectedBefore: before.selectedBlockId, selectedAfter: afterLink.selectedBlockId });
+    } else if (config.name === "selection-handle-independent") {
+      output = ordinary(context.__wf540Recall("selection-handle"));
+    } else if (config.name === "builder-cancel-byte-identical") {
+      const before = context.__wf540Recall("dg-011-builder-before-cancel");
+      const draftAfter = await page.locator(config.selectors.canvas).evaluate((node) => JSON.stringify({ text: node.textContent, html: node.innerHTML }));
+      output = ordinary({ draftBefore: before.draftBytes, draftAfter, urlBefore: before.url, urlAfter: page.url() });
+    } else if (config.name === "builder-confirm-navigates-once") {
+      const before = context.__wf540Recall("dg-011-builder-before-cancel");
+      output = ordinary({ urlBefore: before.url, urlAfter: page.url(), navigationCount: page.__wf540ReadNavigationCount() - before.navigationCount, draftDiscarded: !page.url().includes(config.screenId) });
+    } else if (config.name === "entry-cancel-byte-identical" || config.name === "entry-cancel-url-stable") {
+      const before = context.__wf540Recall("dg-023-entry-before-cancel");
+      const after = await entryDraft();
+      output = config.name === "entry-cancel-byte-identical" ? ordinary({ contentBefore: before.contentBytes, contentAfter: after.content, presentationBefore: before.presentationBytes, presentationAfter: after.presentation }) : ordinary({ urlBefore: before.url, urlAfter: page.url() });
+    } else if (config.name === "entry-confirm-navigates-once") {
+      const before = context.__wf540Recall("dg-023-entry-before-cancel");
+      output = ordinary({ urlBefore: before.url, urlAfter: page.url(), navigationCount: page.__wf540ReadNavigationCount() - before.navigationCount });
+    } else if (config.name === "entry-error-retains-both-drafts") {
+      const headline = await one('[data-screen-block-id="' + config.blockIds.headlineField + '"] [role="textbox"][aria-label="Headline"]');
+      const presentationPanel = await one('[data-custom-screen-entry-presentation-panel="true"]');
+      const tone = presentationPanel.locator('[data-presentation-control="tone"] button[role="combobox"]');
+      if (await tone.count() !== 1) throw new Error("wf540_tone_control_count");
+      const toneValue = (await tone.textContent())?.trim().toLowerCase() ?? "";
+      const contentValue = await headline.evaluate((node) => "value" in node ? node.value : node.textContent ?? "");
+      const alert = page.locator('[role="alert"]');
+      output = ordinary({ errorVisible: await alert.count() > 0 && await alert.first().isVisible(), contentValue, presentationValue: { tone: toneValue }, contentDirty: (await page.getByText("Unsaved changes", { exact: true }).count()) > 0, presentationDirty: (await page.getByText("Unsaved presentation", { exact: true }).count()) > 0 });
+    } else if (config.name === "beforeunload-active") {
+      const observed = await page.evaluate(() => { const event = new Event("beforeunload", { cancelable: true }); const dispatched = window.dispatchEvent(event); return { defaultPrevented: event.defaultPrevented || !dispatched, returnValueSet: event.returnValue !== true && event.returnValue !== undefined }; });
+      output = ordinary(observed);
+    } else if (config.name === "successful-retry-clears-persisted-channel") {
+      const persisted = await entry();
+      const persistedOverrides = await overrides();
+      const before = context.__wf540Recall("dg-023-entry-before-cancel");
+      const currentDraft = await entryDraft();
+      const presentationPanel = await one('[data-custom-screen-entry-presentation-panel="true"]');
+      const tone = presentationPanel.locator('[data-presentation-control="tone"] button[role="combobox"]');
+      if (await tone.count() !== 1) throw new Error("wf540_retry_tone_control_count");
+      const toneValue = (await tone.textContent())?.trim().toLowerCase() ?? "";
+      const serverContainsIntentionalDraft = persistedOverrides.some((item) =>
+        item && item.blockId === config.blockIds.headlineField && item.propPath === "tone" && item.value === config.entry.presentationDraft.tone
+      );
+      const contentDirty = (await page.getByText("Unsaved changes", { exact: true }).count()) > 0;
+      const presentationDirty = (await page.getByText("Unsaved presentation", { exact: true }).count()) === 1;
+      output = ordinary({
+        persistedContentMatches: persisted.data?.headline === config.entry.contentDraft,
+        persistedPresentationUnchanged: persistedOverrides.length === 0 && !serverContainsIntentionalDraft,
+        localPresentationPreserved: currentDraft.presentation === before.presentationBytes && toneValue === config.entry.presentationDraft.tone,
+        contentDirty,
+        presentationDirty,
+      });
+    } else if (config.name === "related-error-visible-before-retry" || config.name === "visible-retry-succeeds") {
+      const settled = await waitFor(async () => {
+        const root = await relatedRoot(config.retryBlockId);
+        const errorVisible = await page.locator(config.selectors.relatedAlert).count() === 1 && await page.locator(config.selectors.relatedAlert).isVisible();
+        const retryVisible = await page.locator(config.selectors.relatedRetry).count() === 1 && await page.locator(config.selectors.relatedRetry).isVisible();
+        const ready = config.name === "related-error-visible-before-retry"
+          ? errorVisible && retryVisible && root.rowIds.length === 0 && root.skeletonChipCount === 3 && !root.emptyVisible
+          : !errorVisible && !retryVisible && root.rowIds.length === 1 && root.rects.every(positive) && root.skeletonChipCount === 0 && !root.emptyVisible;
+        return ready ? { root, errorVisible, retryVisible } : null;
+      });
+      const { root, errorVisible, retryVisible } = settled;
+      output = config.name === "related-error-visible-before-retry" ? ordinary({ rootId: root.rootId, errorVisible, retryVisible, rowCount: root.rowIds.length, skeletonChipCount: root.skeletonChipCount, skeletonRects: root.skeletonRects, emptyVisible: root.emptyVisible }) : ordinary({ rootId: root.rootId, errorVisible, retryVisible, failureRowIds: root.rowIds, failureRowRects: root.rects, skeletonVisible: root.skeletonChipCount > 0, emptyVisible: root.emptyVisible });
+    } else if (config.name === "same-target-visible-rows-retained") {
+      const before = context.__wf540Recall("rc-017a-pre-route-a-baseline");
+      const pending = await relatedRoot(config.blockIds.relatedListA);
+      const alert = page.locator(config.selectors.relatedAlert);
+      output = ordinary({ rootId: pending.rootId, rowIdsBefore: before.rowIds, rowIdsPending: pending.rowIds, rowTextBefore: before.rowText, rowTextPending: pending.rowText, rectsBefore: before.rects, rectsPending: pending.rects, errorVisible: await alert.count() === 1 && await alert.isVisible(), skeletonVisible: pending.skeletonChipCount > 0, emptyVisible: pending.emptyVisible });
+    } else if (config.name === "target-switch-immediate-empty") {
+      const a = await relatedRoot(config.blockIds.relatedListA);
+      const b = await relatedRoot(config.blockIds.relatedListB);
+      output = ordinary({ aRootId: a.rootId, bRootId: b.rootId, aRowCount: a.rowIds.length, bRowCount: b.rowIds.length, aEmptyVisible: a.emptyVisible, bEmptyVisible: b.emptyVisible, aSkeletonChipCount: a.skeletonChipCount, bSkeletonChipCount: b.skeletonChipCount, skeletonRects: [...a.skeletonRects, ...b.skeletonRects] });
+    } else if (config.name === "only-b-rows-visible") {
+      const b = await relatedRoot(config.blockIds.relatedListB);
+      const baseline = context.__wf540Recall("rc-012c-picker-warm-proof").bListGetCount;
+      const counts = context.__wf540ReadRelatedListGetCounts();
+      if (!Object.prototype.hasOwnProperty.call(counts, config.relatedListPaths.b)) throw new Error("wf540_related_b_count_path");
+      const current = counts[config.relatedListPaths.b];
+      output = ordinary({ rootId: b.rootId, visibleRowIds: b.rowIds, visibleRects: b.rects, skeletonVisible: b.skeletonChipCount > 0, emptyVisible: b.emptyVisible, bListGetCountBaseline: baseline, bListGetCount: current, bListGetDelta: current - baseline });
+    } else if (config.name === "unrelated-draft-byte-identical") {
+      const before = context.__wf540Recall("rc-017-unrelated-before");
+      const after = await entryDraft();
+      output = ordinary({ contentBefore: before.contentBytes, contentAfter: after.content, presentationBefore: before.presentationBytes, presentationAfter: after.presentation });
+    } else if (config.name === "relation-diff-exact") {
+      const before = context.__wf540Recall("rc-017-unrelated-before:relations");
+      const after = await relationSelections();
+      const unrelatedBefore = context.__wf540Recall("rc-017-unrelated-before");
+      const unrelatedAfter = await entryDraft();
+      const otherDiffPaths = [];
+      if (unrelatedBefore.contentBytes !== unrelatedAfter.content) otherDiffPaths.push("/content");
+      if (unrelatedBefore.presentationBytes !== unrelatedAfter.presentation) otherDiffPaths.push("/presentation");
+      output = ordinary({ relationABefore: before.relationA, relationAAfter: after.relationA, relationBBefore: before.relationB, relationBAfter: after.relationB, otherDiffPaths: otherDiffPaths.sort() });
+    } else if (config.name === "stale-a-cannot-commit") {
+      const a = await relatedRoot(config.blockIds.relatedListA);
+      const b = await relatedRoot(config.blockIds.relatedListB);
+      output = ordinary({ aRootId: a.rootId, bRootId: b.rootId, aRowCount: a.rowIds.length, bRowIds: b.rowIds, staleATextPresent: a.rowText.some((value) => value.includes(config.related.a1.updatedTitle)) });
+    } else if (config.name === "flow6-exit-discarded-once") {
+      const baseline = context.__wf540Recall("rc-017a-pre-route-a-baseline").navigationCount;
+      const current = page.__wf540ReadNavigationCount();
+      output = ordinary({ url: page.url(), navigationCountBaseline: baseline, navigationCountCurrent: current, navigationCountDelta: current - baseline, entryDirtyBadgeCount: await page.getByText("Unsaved changes", { exact: true }).count(), presentationDirtyBadgeCount: await page.getByText("Unsaved presentation", { exact: true }).count() });
+    } else if (config.name === "narrow-padding-and-positive-geometry" || config.name === "wide-padding-delta-300" || config.name === "panel-inside-viewport") {
+      const ids = config.name === "narrow-padding-and-positive-geometry" ? ["ru-010-closed-320", "ru-012-open-320", "ru-015-closed-390", "ru-017-open-390", "ru-020-closed-480", "ru-022-open-480"] : config.name === "wide-padding-delta-300" ? ["ru-025-closed-1024", "ru-027-open-1024", "ru-030-closed-1280", "ru-032-open-1280"] : ["ru-012-open-320", "ru-017-open-390", "ru-022-open-480", "ru-027-open-1024", "ru-032-open-1280"];
+      output = ordinary({ samples: ids.map((id) => context.__wf540Recall(id)) });
+    } else if (config.name === "same-user-authoritative-refresh") {
+      const before = context.__wf540Recall("ru-047-a-write-settle");
+      const server = await strictPreference();
+      const effect = await preferenceEffect();
+      output = ordinary({ before: before.value.showFieldMetadata, server: server.value.showFieldMetadata, after: effect.visibleValue, metadataEffect: effect.metadataEffect });
+    } else if (config.name === "same-user-retained-view-pending") {
+      const durable = context.__wf540Recall("ru-053b-a-nondefault-write-settled");
+      const effect = await preferenceEffect();
+      output = ordinary({ visibleValue: effect.visibleValue, durableA: durable.value.showFieldMetadata, readPending: context.__wf540RouteGet("preference-a-read-refresh").hits() === 1, metadataEffect: effect.metadataEffect });
+    } else if (config.name === "newer-local-write-pending") {
+      const write = context.__wf540Recall("ru-059a-new-local-browser-write-settled");
+      const effect = await preferenceEffect();
+      output = ordinary({ visibleValue: effect.visibleValue, newLocalValue: write.value.showFieldMetadata, readPending: context.__wf540RouteGet("preference-a-read-refresh").hits() === 1, metadataEffect: effect.metadataEffect });
+    } else if (config.name === "newer-local-write-wins-refresh") {
+      const durable = context.__wf540Recall("ru-059a-new-local-browser-write-settled");
+      const routeProjection = context.__wf540RouteGet("preference-a-read-refresh").projection();
+      const effect = await preferenceEffect();
+      output = ordinary({ visibleValue: effect.visibleValue, persistedValue: durable.value.showFieldMetadata, staleReadValue: routeProjection.preferenceValue, metadataEffect: effect.metadataEffect });
+    } else if (config.name === "legacy-local-storage-absent") {
+      const observed = await page.evaluate((key) => ({
+        key,
+        value: localStorage.getItem(key),
+        writeCount: typeof window.__wf540ReadLegacyStorageWrites === "function" ? window.__wf540ReadLegacyStorageWrites() : -1,
+      }), config.legacyPreferenceKey);
+      output = ordinary(observed);
+    } else if (config.name === "light-and-dark-computed") {
+      output = ordinary({ userA: context.__wf540Recall("ru-045-a-light-capture"), userB: context.__wf540Recall("ru-072-b-dark-capture") });
+    } else if (config.name === "user-a-b-a-isolated") {
+      const first = context.__wf540Recall("ru-047-a-write-settle");
+      const b = context.__wf540Recall("ru-072-b-dark-capture");
+      const returned = await preferenceEffect();
+      const durable = await strictPreference();
+      const computed = await page.evaluate(() => ({ theme: document.documentElement.classList.contains("dark") ? "dark" : "light", rootColor: getComputedStyle(document.documentElement).backgroundColor, bodyColor: getComputedStyle(document.body).backgroundColor }));
+      const toggleAriaPressed = await (await one(config.selectors.colorMode)).getAttribute("aria-pressed");
+      if (toggleAriaPressed !== "true" && toggleAriaPressed !== "false") throw new Error("wf540_return_theme_toggle");
+      output = ordinary({ userAFirst: first.value.showFieldMetadata, userB: b.metadataEffect, userAReturn: returned.visibleValue, durableA: durable.value.showFieldMetadata, metadataEffects: { userAFirst: first.switchChecked && positive(first.metadataRect), userB: b.metadataEffect, userAReturn: returned.metadataEffect }, userAReturnComputed: { ...computed, toggleAriaPressed } });
+    } else if (config.name === "second-a-intent-visible-before-exit") {
+      const route = context.__wf540RouteGet("preference-a-write-exit");
+      const effect = await preferenceEffect();
+      output = ordinary({ visibleValue: effect.visibleValue, queuedIntent: Math.max(0, route.hits() - 1) > 0, firstWritePending: route.hits() === 1 && route.active(), metadataEffect: effect.metadataEffect });
+    } else if (config.name === "user-b-default-before-release") {
+      const response = await strictPreference();
+      const effect = await preferenceEffect();
+      output = ordinary({ response, metadataEffect: effect.metadataEffect });
+    } else if (config.name === "user-b-default-unchanged") {
+      const before = context.__wf540Recall("assert:ru-095-b-before-release");
+      const after = await strictPreference();
+      const effect = await preferenceEffect();
+      output = ordinary({ before: before.observations.response, after, metadataEffect: effect.metadataEffect });
+    } else if (config.name === "final-a-retry-converges") {
+      const pageId = page.__wf540PageIdentity.pageId;
+      const baseline = context.__wf540Recall("ru-106a-a3-fresh-read-settled:preference-write-baseline");
+      const writes = await waitFor(() => {
+        const rows = context.__wf540ReadPreferenceWrites();
+        return rows.length === baseline + 1 ? rows : null;
+      });
+      const settledWrite = writes.at(-1);
+      if (settledWrite.pageId !== pageId || settledWrite.sequence !== baseline + 1 ||
+        settledWrite.status < 200 || settledWrite.status > 299 ||
+        settledWrite.expectedUserIdMatches !== true ||
+        settledWrite.value.version !== 1 || settledWrite.value.showFieldMetadata !== false) {
+        throw new Error("wf540_final_preference_write_identity");
+      }
+      const durable = await strictPreference();
+      const effect = await preferenceEffect();
+      output = ordinary({ visibleValue: effect.visibleValue, persistedValue: durable.value.showFieldMetadata, writePending: context.__wf540RouteHas("preference-a-write-exit") && context.__wf540RouteGet("preference-a-write-exit").active(), unhandledRejectionCount: context.__wf540ReadAggregateChannels().pageErrors.length, metadataEffect: effect.metadataEffect });
+    } else {
+      throw new Error("wf540_unknown_assertion");
+    }
+    output = finalizeOutput(output);
+    context.__wf540Remember("assert:" + config.actionId, output);
+    return output;
+  })`;
+}
+
+function operationForAction(action, builderAst) {
+  if (action.kind === "assert") return "visible-effect-assertion";
+  if (action.kind === "observe") return "observation";
+  if (action.kind === "route") return builderAst.args[1];
+  if (action.kind === "screen") return "screenshot";
+  if (["dg-035-real-retry", "rc-011-visible-retry"].includes(action.id)) return "real-retry";
+  if (action.kind === "logs") return "log-read";
+  if (action.kind === "captureNew") return "capture-new-block";
+  if (action.kind === "blocksBefore") return "capture-block-baseline";
+  if (action.kind === "dispatchAndCaptureSelectionHandle") return "selection-handle-click";
+  return action.kind;
+}
+
+function routeReceiptMetadata(action, executionSpec, plan, captures, runtimeConfig) {
+  let routeKey = action.kind === "route" ? executionSpec.builderAst.args[0] : null;
+  if (action.id === "dg-035-real-retry") routeKey = "entry-save-failure";
+  if (action.id === "rc-011-visible-retry") routeKey = "related-first-failure";
+  if (routeKey === null) return deepFreezeExact({ routeKey: null, method: null, pattern: null });
+  const route = expandedRoute(plan, routeKey, captures, runtimeConfig);
+  return deepFreezeExact({ routeKey, method: route.method, pattern: route.pattern });
+}
+
+function compileActionExecutionSpec(action) {
+  const builderAst = parseBuilder(action.builder);
+  return deepFreezeExact({
+    actionId: action.id,
+    kind: action.kind,
+    builder: action.builder,
+    builderAst,
+    refs: Object.hasOwn(action.executable, "refs") ? action.executable.refs : [],
+    operation: operationForAction(action, builderAst),
+    outputSchemaId: action.outputSchemaId,
+    discardOutput:
+      action.executable.type === "browser-native" &&
+      action.executable.operationId === "fill-secret",
+  });
+}
+
+function buildSimpleBrowserInvocation(
+  action,
+  executionSpec,
+  plan,
+  captures,
+  root,
+  browserCwd,
+  refContext
+) {
+  invariant(
+    executionSpec.builder === action.builder && executionSpec.kind === action.kind,
+    "registered browser execution drift"
+  );
+  const parsed = executionSpec.builderAst;
+  const resolvedArgs = executionSpec.refs.map((ref, index) =>
+    resolveExactRef(ref, refContext, action.id + " executable Ref[" + index + "]")
+  );
+  switch (action.kind) {
+    case "open":
+      invariant(parsed.args.length === 1, "open arity");
+      return { args: playwrightArgs("open", resolvedArgs[0]), displayArgs: null };
+    case "goto": {
+      invariant(parsed.args.length === 1, "goto arity");
+      const url = JSON.stringify(resolvedArgs[0]);
+      if (action.id === "set-007-goto-login") {
+        const email = JSON.stringify(registeredSelector(plan, "loginEmail"));
+        const password = JSON.stringify(registeredSelector(plan, "loginPassword"));
+        const submit = JSON.stringify(registeredSelector(plan, "loginSubmit"));
+        const loginUrl = JSON.stringify(
+          plan.fixtureBlueprint.origins.admin + plan.fixtureBlueprint.paths.login
+        );
+        return {
+          args: runCode(`async (page) => {
+            const context = page.context();
+            const pageId = page.__wf540PageIdentity?.pageId;
+            context.__wf540ArmExpectedAuthChallenge({
+              phaseId: "set-007-goto-login",
+              pageId,
+              navigationBaseline: page.__wf540ReadNavigationCount(),
+            });
+            await page.goto(${url});
+            const targets = [page.locator(${email}), page.locator(${password}), page.locator(${submit})];
+            for (const [index, target] of targets.entries()) {
+              try {
+                await target.waitFor({ state: "visible", timeout: 60000 });
+              } catch {
+                const currentUrl = page.url();
+                const bodyText = ((await page.locator("body").innerText().catch(() => "")) ?? "").trim();
+                const failureClass = currentUrl.includes("/setup")
+                  ? "setup_route"
+                  : !currentUrl.startsWith(${loginUrl})
+                    ? "wrong_route"
+                    : bodyText.length === 0
+                      ? "empty_body"
+                      : "selector_" + index;
+                throw new Error("wf540_login_wait_" + failureClass);
+              }
+              if (await target.count() !== 1) throw new Error("wf540_login_target_count");
+            }
+            if (page.url() !== ${loginUrl}) throw new Error("wf540_login_url");
+            context.__wf540CloseExpectedAuthChallenge({
+              closeActionId: "set-007-goto-login",
+              pageId,
+              navigationEpoch: page.__wf540ReadNavigationCount(),
+              url: page.url(),
+            });
+            return true;
+          }`),
+          displayArgs: null,
+        };
+      }
+      if (resolvedArgs[0] === expandRegisteredPath(plan, "builder", captures)) {
+        const canvas = JSON.stringify(registeredSelector(plan, "canvas"));
+        return {
+          args: runCode(`async (page) => {
+            await page.goto(${url});
+            const marker = page.locator(${canvas});
+            try {
+              await marker.waitFor({ state: "visible", timeout: 30000 });
+            } catch {
+              const bodyText = ((await page.locator("body").innerText().catch(() => "")) ?? "").trim();
+              throw new Error(
+                !page.url().startsWith(${url})
+                  ? "wf540_builder_wait_wrong_route"
+                  : bodyText.length === 0
+                    ? "wf540_builder_wait_empty_body"
+                    : "wf540_builder_wait_marker"
+              );
+            }
+            if (await marker.count() !== 1) throw new Error("wf540_builder_marker_count");
+            return true;
+          }`),
+          displayArgs: null,
+        };
+      }
+      return {
+        args: runCode(
+          `async (page) => { await page.goto(${url}); await page.waitForFunction(() => { const text = document.body?.innerText.trim() ?? ""; return text.length > 0 && text !== "Loading..."; }, null, { timeout: 30000 }); return true; }`
+        ),
+        displayArgs: null,
+      };
+    }
+    case "resize": {
+      invariant(parsed.args.length === 2, "resize arity");
+      const width = Number(resolvedArgs[0]);
+      const height = Number(resolvedArgs[1]);
+      invariant(
+        Number.isSafeInteger(width) && Number.isSafeInteger(height),
+        "resize dimensions drift"
+      );
+      return {
+        args: runCode(
+          `async (page) => { await page.setViewportSize({width:${width},height:${height}}); return true; }`
+        ),
+        displayArgs: null,
+      };
+    }
+    case "click": {
+      const isRecordEntryMenuAction = RECORD_ENTRY_MENU_ACTION_IDS.includes(action.id);
+      invariant(parsed.args.length === (isRecordEntryMenuAction ? 2 : 1), "click arity");
+      const selector = JSON.stringify(resolvedArgs[0]);
+      if (isRecordEntryMenuAction) {
+        const menuItemSelector = JSON.stringify(resolvedArgs[1]);
+        const expectedEntryUrl = JSON.stringify(expandRegisteredPath(plan, "entry", captures));
+        return {
+          args: runCode(`async (page) => {
+            const trigger = page.locator(${selector});
+            await trigger.waitFor({ state: "visible", timeout: 20000 });
+            if (await trigger.count() !== 1 || !(await trigger.isVisible())) throw new Error("wf540_record_actions_target");
+            await trigger.click({ timeout: 10000 });
+            const menuItem = page.locator(${menuItemSelector});
+            await menuItem.waitFor({ state: "visible", timeout: 10000 });
+            if (await menuItem.count() !== 1 || !(await menuItem.isVisible())) throw new Error("wf540_edit_record_target");
+            await menuItem.click({ timeout: 10000 });
+            const realm = page.locator('[data-custom-screen-entry-document="true"]');
+            const deadline = Date.now() + 30000;
+            while (Date.now() < deadline) {
+              const rect = await realm.count() === 1 ? await realm.boundingBox() : null;
+              if (page.url() === ${expectedEntryUrl} && rect && rect.width > 0 && rect.height > 0 && await realm.isVisible()) return true;
+              await page.waitForTimeout(25);
+            }
+            if (page.url() !== ${expectedEntryUrl}) throw new Error("wf540_entry_navigation_url");
+            throw new Error("wf540_entry_navigation_realm");
+          }`),
+          displayArgs: null,
+        };
+      }
+      const authPhase = EXPECTED_AUTH_CHALLENGE_PHASES.find(
+        ({ armActionId }) => armActionId === action.id
+      );
+      if (authPhase && action.id !== "set-007-goto-login") {
+        return {
+          args: runCode(`async (page) => {
+            const locator = page.locator(${selector});
+            await locator.waitFor({ state: "visible", timeout: 10000 });
+            if (await locator.count() !== 1) throw new Error("wf540_signout_target_count");
+            const context = page.context();
+            const pageId = page.__wf540PageIdentity?.pageId;
+            context.__wf540ArmExpectedAuthChallenge({
+              phaseId: ${JSON.stringify(authPhase.armActionId)},
+              pageId,
+              navigationBaseline: page.__wf540ReadNavigationCount(),
+            });
+            await locator.click({ timeout: 10000 });
+            return true;
+          }`),
+          displayArgs: null,
+        };
+      }
+      if (action.id === "bi-042-save-presentation") {
+        const writePath =
+          "/admin/api/custom-screens/" +
+          encodeURIComponent(captures.get("screen.id")) +
+          "/entries/" +
+          encodeURIComponent(captures.get("entry.id")) +
+          "/overrides";
+        return {
+          args: runCode(`async (page) => {
+            const locator = page.locator(${selector});
+            await locator.waitFor({ state: "visible", timeout: 10000 });
+            if (await locator.count() !== 1) throw new Error("wf540_presentation_save_target_count");
+            const pathname = (href) => { const scheme = href.indexOf("://"); const start = href.indexOf("/", scheme === -1 ? 0 : scheme + 3); return (start === -1 ? "/" : href.slice(start)).split(/[?#]/u, 1)[0]; };
+            const responsePromise = page.waitForResponse((response) => response.request().method() === "PATCH" && pathname(response.url()) === ${JSON.stringify(writePath)}, { timeout: 30000 });
+            await locator.click();
+            const response = await responsePromise;
+            if (!response.ok()) throw new Error("wf540_presentation_save_response");
+            const deadline = Date.now() + 10000;
+            while (Date.now() < deadline) {
+              const cleanDisabled = await locator.count() === 1 && !(await locator.isEnabled()) && (await locator.textContent())?.trim() === "Save presentation";
+              const savingAbsent = await page.getByText("Saving...", { exact: true }).count() === 0;
+              const dirtyAbsent = await page.getByText("Unsaved presentation", { exact: true }).count() === 0;
+              if (cleanDisabled && savingAbsent && dirtyAbsent) return true;
+              await page.waitForTimeout(25);
+            }
+            throw new Error("wf540_presentation_save_settlement");
+          }`),
+          displayArgs: null,
+        };
+      }
+      if (action.id === "dg-035-real-retry") {
+        const writePath =
+          "/admin/api/content/" +
+          encodeURIComponent(plan.fixtureBlueprint.contentTypes.editable.slug) +
+          "/entries/" +
+          encodeURIComponent(captures.get("entry.id"));
+        return {
+          args: runCode(`async (page) => {
+            const locator = page.locator(${selector});
+            await locator.waitFor({ state: "visible", timeout: 10000 });
+            if (await locator.count() !== 1) throw new Error("wf540_entry_retry_target_count");
+            const pathname = (href) => { const scheme = href.indexOf("://"); const start = href.indexOf("/", scheme === -1 ? 0 : scheme + 3); return (start === -1 ? "/" : href.slice(start)).split(/[?#]/u, 1)[0]; };
+            const responsePromise = page.waitForResponse((response) => response.request().method() === "PATCH" && pathname(response.url()) === ${JSON.stringify(writePath)}, { timeout: 30000 });
+            await locator.click();
+            const response = await responsePromise;
+            if (!response.ok()) throw new Error("wf540_entry_retry_response");
+            const deadline = Date.now() + 10000;
+            while (Date.now() < deadline) {
+              const enabled = await locator.count() === 1 && await locator.isEnabled() && (await locator.textContent())?.trim() === "Save";
+              const savingAbsent = await page.getByText("Saving...", { exact: true }).count() === 0;
+              const contentClean = await page.getByText("Unsaved changes", { exact: true }).count() === 0;
+              const presentationDirty = await page.getByText("Unsaved presentation", { exact: true }).count() === 1;
+              if (enabled && savingAbsent && contentClean && presentationDirty) return true;
+              await page.waitForTimeout(25);
+            }
+            throw new Error("wf540_entry_retry_settlement");
+          }`),
+          displayArgs: null,
+        };
+      }
+      if (action.id === "rc-011-visible-retry") {
+        const readPath =
+          "/admin/api/content/" +
+          plan.fixtureBlueprint.contentTypes.relatedFailure.slug +
+          "/entries";
+        const expectedRowId = captures.get("related-entry-failure1.id");
+        const rootSelector =
+          '[data-screen-block-id="' + plan.fixtureBlueprint.retryScreen.relatedListBlockId + '"]';
+        return {
+          args: runCode(`async (page) => {
+            const locator = page.locator(${selector});
+            await locator.waitFor({ state: "visible", timeout: 10000 });
+            if (await locator.count() !== 1) throw new Error("wf540_related_retry_target_count");
+            const pathname = (href) => { const scheme = href.indexOf("://"); const start = href.indexOf("/", scheme === -1 ? 0 : scheme + 3); return (start === -1 ? "/" : href.slice(start)).split(/[?#]/u, 1)[0]; };
+            const responsePromise = page.waitForResponse((response) => response.request().method() === "GET" && pathname(response.url()) === ${JSON.stringify(readPath)}, { timeout: 30000 });
+            await locator.click();
+            const response = await responsePromise;
+            if (!response.ok()) throw new Error("wf540_related_retry_response");
+            const root = page.locator(${JSON.stringify(rootSelector)});
+            const row = root.locator(${JSON.stringify('[data-screen-related-entry="' + expectedRowId + '"]')});
+            const deadline = Date.now() + 10000;
+            while (Date.now() < deadline) {
+              const rect = await row.count() === 1 ? await row.boundingBox() : null;
+              const retryAbsent = await page.locator(${selector}).count() === 0;
+              const alertAbsent = await page.locator('[role="alert"]').count() === 0;
+              if (rect && rect.width > 0 && rect.height > 0 && retryAbsent && alertAbsent) return true;
+              await page.waitForTimeout(25);
+            }
+            throw new Error("wf540_related_retry_settlement");
+          }`),
+          displayArgs: null,
+        };
+      }
+      if (RECORDS_WORKSPACE_ACTION_IDS.includes(action.id)) {
+        const recordActionsSelector = JSON.stringify(registeredSelector(plan, "recordActions"));
+        const expectedRecordsUrl = JSON.stringify(expandRegisteredPath(plan, "records", captures));
+        return {
+          args: runCode(`async (page) => {
+            const locator = page.locator(${selector});
+            await locator.waitFor({ state: "visible", timeout: 10000 });
+            if (await locator.count() !== 1) throw new Error("wf540_records_link_count");
+            await locator.click();
+            const recordActions = page.locator(${recordActionsSelector});
+            try {
+              await recordActions.waitFor({ state: "visible", timeout: 30000 });
+            } catch {
+              const bodyText = ((await page.locator("body").innerText().catch(() => "")) ?? "").trim();
+              throw new Error(
+                bodyText.length === 0
+                  ? "wf540_record_actions_wait_empty_body"
+                  : "wf540_record_actions_wait_missing_target"
+              );
+            }
+            if (page.url() !== ${expectedRecordsUrl}) throw new Error("wf540_records_navigation_url");
+            if (await recordActions.count() !== 1 || !(await recordActions.isVisible())) throw new Error("wf540_record_actions_count");
+            return true;
+          }`),
+          displayArgs: null,
+        };
+      }
+      if (
+        ["bi-014-builder-save", "bi-055-save-palette-media", "tc-031-save", "tk-009-save"].includes(
+          action.id
+        )
+      ) {
+        const writePath =
+          "/admin/api/custom-screens/" + encodeURIComponent(captures.get("screen.id"));
+        return {
+          args: runCode(`async (page) => {
+            const locator = page.locator(${selector});
+            await locator.waitFor({ state: "visible", timeout: 10000 });
+            if (await locator.count() !== 1) throw new Error("wf540_save_target_count");
+            const responsePromise = page.waitForResponse((response) => response.request().method() === "PATCH" && response.url().includes(${JSON.stringify(writePath)}), { timeout: 30000 });
+            await locator.click();
+            const response = await responsePromise;
+            if (!response.ok()) throw new Error("wf540_builder_save_response");
+            const deadline = Date.now() + 10000;
+            while (Date.now() < deadline) {
+              if (await locator.count() === 1 && await locator.isEnabled() && (await locator.textContent())?.trim() === "Save" && await page.getByText("Saving...", { exact: true }).count() === 0) return true;
+              await page.waitForTimeout(25);
+            }
+            throw new Error("wf540_builder_save_settlement");
+          }`),
+          displayArgs: null,
+        };
+      }
+      return {
+        args: runCode(`async (page) => {
+          const locator = page.locator(${selector});
+          const deadline = Date.now() + 10000;
+          while (Date.now() < deadline && await locator.count() !== 1) await page.waitForTimeout(25);
+          const count = await locator.count();
+          if (count !== 1) {
+            throw new Error(count === 0 ? "wf540_target_missing" : "wf540_target_duplicate");
+          }
+          await locator.click({ timeout: 10000 });
+          return true;
+        }`),
+        displayArgs: null,
+      };
+    }
+    case "fill": {
+      invariant(parsed.args.length === 2, "fill arity");
+      const selector = resolvedArgs[0];
+      const value = resolvedArgs[1];
+      const credential =
+        action.executable.type === "browser-native" &&
+        action.executable.operationId === "fill-secret";
+      if (!credential) {
+        return {
+          args: runCode(
+            `async (page) => { const locator=page.locator(${JSON.stringify(selector)}); await locator.waitFor({ state: "visible", timeout: 10000 }); if(await locator.count()!==1) throw new Error("wf540_target_count"); await locator.fill(${JSON.stringify(value)}); return true; }`
+          ),
+          displayArgs: null,
+        };
+      }
+      return {
+        args: playwrightArgs("fill", selector, value),
+        displayArgs: playwrightArgs("fill", selector, credential ? parsed.args[1] : value),
+        stdoutDiscarded: credential,
+      };
+    }
+    case "type": {
+      invariant(parsed.args.length === 2, "type arity");
+      const selector = JSON.stringify(resolvedArgs[0]);
+      const value = JSON.stringify(resolvedArgs[1]);
+      return {
+        args: runCode(
+          `(async (page) => { const locator = page.locator(${selector}); await locator.waitFor({ state: "visible", timeout: 10000 }); if (await locator.count() !== 1) throw new Error("wf540_target_count"); await locator.pressSequentially(${value}); return true; })`
+        ),
+        displayArgs: null,
+      };
+    }
+    case "press": {
+      invariant(parsed.args.length === 2, "press arity");
+      const selector = JSON.stringify(resolvedArgs[0]);
+      const key = JSON.stringify(resolvedArgs[1]);
+      return {
+        args: runCode(
+          `(async (page) => { const locator = page.locator(${selector}); await locator.waitFor({ state: "visible", timeout: 10000 }); if (await locator.count() !== 1) throw new Error("wf540_target_count"); await locator.press(${key}); return true; })`
+        ),
+        displayArgs: null,
+      };
+    }
+    case "focus": {
+      invariant(parsed.args.length === 1, "focus arity");
+      const selector = JSON.stringify(resolvedArgs[0]);
+      return {
+        args: runCode(
+          `(async (page) => { const locator = page.locator(${selector}); await locator.waitFor({ state: "visible", timeout: 10000 }); if (await locator.count() !== 1) throw new Error("wf540_target_count"); await locator.focus(); return true; })`
+        ),
+        displayArgs: null,
+      };
+    }
+    case "tab-new":
+      invariant(parsed.args.length === 1, "tab-new arity");
+      return { args: playwrightArgs("tab-new", resolvedArgs[0]), displayArgs: null };
+    case "tab-select":
+      invariant(parsed.args.length === 1, "tab-select arity");
+      return { args: playwrightArgs("tab-select", resolvedArgs[0]), displayArgs: null };
+    case "tab-close":
+      invariant(parsed.args.length === 1, "tab-close arity");
+      return { args: playwrightArgs("tab-close", resolvedArgs[0]), displayArgs: null };
+    case "screen": {
+      invariant(parsed.args.length === 1, "screen arity");
+      const registeredPath = plan.registries.screenshotPaths[action.executable.screenshotId];
+      invariant(
+        typeof registeredPath === "string" &&
+          action.repositoryMutationPolicy.paths[0] === registeredPath,
+        "screenshot path is not registered exactly once"
+      );
+      return {
+        args: playwrightArgs(
+          "screenshot",
+          "--filename",
+          path.relative(browserCwd, path.join(root, registeredPath)).split(path.sep).join("/"),
+          "--full-page"
+        ),
+        displayArgs: null,
+      };
+    }
+    default:
+      return null;
+  }
+}
+
+function buildAdvancedBrowserInvocation(
+  action,
+  executionSpec,
+  plan,
+  captures,
+  root,
+  refContext,
+  runtimeConfig
+) {
+  const parsed = executionSpec.builderAst;
+  const resolve = (argument) => resolveBuilderExpression(argument, plan, captures);
+  if (action.kind === "logger-install") {
+    invariant(parsed.args.length === 0, "logger-install arity");
+    return { args: runCode(buildLoggerInstallSource(plan)), displayArgs: null };
+  }
+  if (action.kind === "blocksBefore") {
+    invariant(parsed.args.length === 1, "blocksBefore arity");
+    return {
+      args: runCode(buildBlockBaselineSource(action, registeredSelector(plan, "canvas"))),
+      displayArgs: null,
+    };
+  }
+  if (action.kind === "captureNew") {
+    invariant(parsed.args.length === 3, "captureNew arity");
+    return {
+      args: runCode(buildCaptureNewSource(action, executionSpec, plan, captures)),
+      displayArgs: null,
+    };
+  }
+  if (action.kind === "route") {
+    invariant(parsed.args.length === 2, "route arity");
+    const route = expandedRoute(plan, parsed.args[0], captures, runtimeConfig);
+    const operation = parsed.args[1];
+    const source =
+      operation === "route-setup"
+        ? buildRouteSetupSource(route)
+        : operation === "route-hit-read"
+          ? buildRouteHitSource(route)
+          : operation === "route-release"
+            ? buildRouteReleaseSource(route)
+            : operation === "unroute"
+              ? buildRouteUnrouteSource(route)
+              : null;
+    invariant(source !== null, "route operation is not implemented");
+    return { args: runCode(source), displayArgs: null };
+  }
+  if (action.kind === "logs") {
+    invariant(parsed.args.length === 2, "logs arity");
+    return { args: runCode(buildLogReadSource()), displayArgs: null };
+  }
+  if (action.kind === "media-count-before-release" || action.kind === "media-count-after-release") {
+    invariant(parsed.args.length === 0, "media count arity");
+    return {
+      args: runCode("(page) => page.context().__wf540ReadMediaGetCount()"),
+      displayArgs: null,
+    };
+  }
+  if (action.kind === "dispatchAndCaptureSelectionHandle") {
+    invariant(parsed.args.length === 1, "selection-handle arity");
+    return {
+      args: runCode(buildSelectionHandleSource(resolve(parsed.args[0]))),
+      displayArgs: null,
+    };
+  }
+  if (action.kind === "observe") {
+    const selectsBaseline = action.id === "ss-011-selection-before";
+    invariant(parsed.args.length === (selectsBaseline ? 2 : 1), "observe arity");
+    const selectionSelector = selectsBaseline
+      ? resolveExactRef(executionSpec.refs[1], refContext, action.id + " selection Ref")
+      : null;
+    const source = buildObservationSource(
+      action,
+      parsed.args[0],
+      plan,
+      captures,
+      selectionSelector
+    );
+    return {
+      args: runCode(source),
+      displayArgs: null,
+    };
+  }
+  if (action.kind === "assert") {
+    invariant(parsed.args.length === 1, "assert arity");
+    return {
+      args: runCode(buildVisibleAssertionSource(action, parsed.args[0], plan, captures)),
+      displayArgs: null,
+    };
+  }
+  if (action.kind === "authRateWindowBarrier") {
+    invariant(parsed.args.length === 0, "auth rate barrier arity");
+    return {
+      args: runCode(
+        'async (page) => { await page.waitForTimeout(61000); if (!page.url()) throw new Error("wf540_barrier_page"); return { barrierSatisfied: true }; }'
+      ),
+      displayArgs: null,
+    };
+  }
+  if (action.kind === "cleanup-release-unroute") {
+    return { args: runCode(buildCleanupRoutesSource(plan)), displayArgs: null };
+  }
+  if (action.kind === "cleanup-route-list") {
+    return { args: playwrightArgs("route-list"), displayArgs: null };
+  }
+  if (
+    action.kind === "cleanup-console-errors" ||
+    action.kind === "cleanup-console-warnings" ||
+    action.kind === "cleanup-page-errors"
+  ) {
+    return { args: runCode(buildLogReadSource()), displayArgs: null };
+  }
+  if (action.kind === "cleanup-close") {
+    return { args: playwrightArgs("close"), displayArgs: null };
+  }
+  if (action.kind === "cleanup-session-absence") {
+    return { args: ["--raw", "list"], displayArgs: null };
+  }
+  return null;
+}
+
+function buildBrowserInvocation(
+  action,
+  executionSpec,
+  captures,
+  root,
+  browserCwd,
+  plan,
+  refContext,
+  runtimeConfig
+) {
+  invariant(action.executable.type !== "runtime-operation", action.id + " is not a browser action");
+  let invocation =
+    buildSimpleBrowserInvocation(
+      action,
+      executionSpec,
+      plan,
+      captures,
+      root,
+      browserCwd,
+      refContext
+    ) ??
+    buildAdvancedBrowserInvocation(
+      action,
+      executionSpec,
+      plan,
+      captures,
+      root,
+      refContext,
+      runtimeConfig
+    );
+  invariant(invocation !== null, "browser executable is not implemented: " + action.id);
+  if (action.executable.type === "browser-run-code" && action.outputSchemaId === "unit") {
+    const sourceIndex = invocation.args.indexOf("run-code") + 1;
+    invariant(
+      sourceIndex > 0 && typeof invocation.args[sourceIndex] === "string",
+      action.id + " unit run-code source is absent"
+    );
+    const unitSource = `(async (page) => { await (${invocation.args[sourceIndex]})(page); return { ok: true }; })`;
+    const args = [...invocation.args];
+    args[sourceIndex] = unitSource;
+    invocation = { ...invocation, args };
+  }
+  exactOwnKeys(
+    invocation,
+    [
+      "args",
+      "displayArgs",
+      ...(Object.hasOwn(invocation, "stdoutDiscarded") ? ["stdoutDiscarded"] : []),
+    ],
+    action.id + " invocation"
+  );
+  invariant(
+    Array.isArray(invocation.args) &&
+      invocation.args.every((value) => typeof value === "string") &&
+      ((action.kind === "cleanup-session-absence" &&
+        invocation.args[0] === "--raw" &&
+        invocation.args[1] === "list") ||
+        (invocation.args[0] === "-s=" + SESSION_NAME && invocation.args[1] === "--raw")),
+    action.id + " invocation argv drift"
+  );
+  return invocation;
+}
+
+const HOST_REQUIRED_INHERITED_ENV = Object.freeze(["PATH"]);
+const HOST_OPTIONAL_INHERITED_ENV = Object.freeze([
+  "HOME",
+  "USER",
+  "LOGNAME",
+  "SHELL",
+  "TMPDIR",
+  "TMP",
+  "TEMP",
+  "LANG",
+  "LC_ALL",
+  "LC_CTYPE",
+  "TZ",
+  "TERM",
+  "COLORTERM",
+  "NO_COLOR",
+  "FORCE_COLOR",
+  "XDG_CONFIG_HOME",
+  "XDG_CACHE_HOME",
+  "XDG_DATA_HOME",
+  "DISPLAY",
+  "WAYLAND_DISPLAY",
+  "XAUTHORITY",
+  "DBUS_SESSION_BUS_ADDRESS",
+]);
+const HOST_REQUIRED_REPO_ENV = Object.freeze([
+  "DATABASE_URL",
+  "PII_HASH_KEY",
+  "PII_ENC_KEY",
+  "MEDIA_SECRET_MASTER_KEY",
+]);
+const HOST_OPTIONAL_REPO_ENV = Object.freeze([
+  "CORE_VERSION",
+  "DB_POOL_MAX",
+  "AUTH_PASSWORD_PEPPER",
+  "ANALYTICS_IP_HASH_SECRET",
+  "FORM_SUBMIT_NONCE_SECRET",
+  "FORM_SUBMIT_NONCE_TTL_MINUTES",
+  "ANALYTICS_BEACON_NONCE_SECRET",
+  "ANALYTICS_BEACON_NONCE_TTL_MINUTES",
+  "MEDIA_BASE_URL",
+  "MEDIA_ALLOWED_MIME",
+  "MEDIA_MAX_SIZE_BYTES",
+  "EMAIL_TRANSPORT",
+  "THEMES_DIR",
+  "PLUGINS_RUNTIME_DIR",
+  "PLUGINS_SAFE_MODE",
+  "PLUGIN_UPDATE_MODE",
+  "PLUGIN_ERROR_THRESHOLD",
+  "PLUGIN_TIMEOUT_MS",
+  "PLUGIN_DOWNLOAD_TIMEOUT_MS",
+  "PLUGIN_MAX_SIZE_MB",
+  "STORE_BASE_URL",
+  "STORE_PUBLIC_KEY",
+]);
+const HOST_FIXED_ENV = deepFreezeExact({
+  PORT: "3000",
+  PUBLIC_BASE_URL: "http://coderso-a.localhost:3000",
+  NODE_ENV: "development",
+  COOKIE_SECURE: "false",
+  VITE_DEV_SERVER_URL: "http://127.0.0.1:5173",
+  VITE_SITE_DEV_SERVER_URL: "http://127.0.0.1:5174",
+  VITE_API_ORIGIN: "http://127.0.0.1:3000",
+  VITE_ADMIN_STRICT_MODE: "false",
+  CODERSO_PUBLIC_VITE_DEV_URL: "http://coderso-a.localhost:5173",
+  CI: "true",
+});
+const BROWSER_OPTIONAL_INHERITED_ENV = Object.freeze([
+  "USER",
+  "LOGNAME",
+  "SHELL",
+  "LANG",
+  "LC_ALL",
+  "LC_CTYPE",
+  "TZ",
+  "TERM",
+  "COLORTERM",
+  "NO_COLOR",
+  "FORCE_COLOR",
+  "DISPLAY",
+  "WAYLAND_DISPLAY",
+  "XAUTHORITY",
+  "DBUS_SESSION_BUS_ADDRESS",
+]);
+const SMOKE_PORTS = Object.freeze([3000, 5173, 5174]);
+const API_BASE = "http://127.0.0.1:3000/admin/api";
+const PRIVATE_RUNTIME = new WeakMap();
+
+function ownString(source, key, { required = false } = {}) {
+  const descriptor = Object.getOwnPropertyDescriptor(source, key);
+  if (!descriptor) {
+    invariant(!required, "required environment value is missing: " + key);
+    return null;
+  }
+  invariant(
+    Object.hasOwn(descriptor, "value") &&
+      typeof descriptor.value === "string" &&
+      (!required || descriptor.value.length > 0),
+    "environment value is invalid: " + key
+  );
+  return descriptor.value;
+}
+
+async function readStrictRepoEnvironment(root, expectedIdentity) {
+  const bytes = await readOwnedRegularFileNoFollow(
+    path.join(root, ".env"),
+    expectedIdentity,
+    1024 * 1024
+  );
+  const text = decodeBoundedUtf8(bytes, "repo environment", 1024 * 1024);
+  invariant(!text.includes("\0"), "repo environment contains NUL");
+  const seen = new Set();
+  for (const line of text.split(/\r?\n/u)) {
+    const match = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/u.exec(line);
+    if (!match) continue;
+    invariant(!seen.has(match[1]), "repo environment repeats a key");
+    seen.add(match[1]);
+  }
+  const parsed = parseEnv(text);
+  const result = Object.create(null);
+  for (const key of Reflect.ownKeys(parsed)) {
+    invariant(
+      typeof key === "string" && !["__proto__", "prototype", "constructor"].includes(key),
+      "unsafe repo environment key"
+    );
+    const value = ownString(parsed, key, { required: true });
+    result[key] = value;
+  }
+  return Object.freeze(result);
+}
+
+function buildExactHostEnvironment(repoEnvironment) {
+  const result = Object.create(null);
+  for (const key of HOST_REQUIRED_INHERITED_ENV)
+    result[key] = ownString(process.env, key, { required: true });
+  for (const key of HOST_OPTIONAL_INHERITED_ENV) {
+    const value = ownString(process.env, key);
+    if (value !== null) result[key] = value;
+  }
+  for (const key of HOST_REQUIRED_REPO_ENV)
+    result[key] = ownString(repoEnvironment, key, { required: true });
+  for (const key of HOST_OPTIONAL_REPO_ENV) {
+    const value = ownString(repoEnvironment, key);
+    if (value !== null) result[key] = value;
+  }
+  for (const [key, value] of Object.entries(HOST_FIXED_ENV)) {
+    const inherited = ownString(process.env, key);
+    const repo = ownString(repoEnvironment, key);
+    invariant(
+      inherited === null || inherited === value,
+      "fixed inherited host environment conflict: " + key
+    );
+    invariant(repo === null || repo === value, "fixed repo host environment conflict: " + key);
+    result[key] = value;
+  }
+  return Object.freeze(result);
+}
+
+async function requireMissingPath(target, label) {
+  try {
+    await lstat(target);
+    invariant(false, label + " already exists");
+  } catch (error) {
+    invariant(error && error.code === "ENOENT", label + " could not be proven absent");
+  }
+}
+
+function artifactType(info) {
+  if (info.isDirectory()) return "directory";
+  if (info.isFile()) return "file";
+  return "unsupported";
+}
+
+function projectArtifactIdentity(info) {
+  return Object.freeze({
+    dev: String(info.dev),
+    ino: String(info.ino),
+    type: artifactType(info),
+    mode: info.mode & 0o777,
+    size: info.size,
+  });
+}
+
+function sameArtifactIdentity(left, right, { includeSize = false } = {}) {
+  return Boolean(
+    left &&
+    right &&
+    left.dev === right.dev &&
+    left.ino === right.ino &&
+    left.type === right.type &&
+    left.mode === right.mode &&
+    (!includeSize || left.size === right.size)
+  );
+}
+
+async function readStableArtifactIdentity(
+  target,
+  { expectedType = null, expectedMode = null, expectedDev = null } = {}
+) {
+  const first = await lstat(target, { bigint: false });
+  invariant(!first.isSymbolicLink(), "private artifact is a symbolic link");
+  const firstIdentity = projectArtifactIdentity(first);
+  invariant(firstIdentity.type !== "unsupported", "private artifact type is unsupported");
+  await realpath(target);
+  const second = await lstat(target, { bigint: false });
+  const secondIdentity = projectArtifactIdentity(second);
+  invariant(
+    sameArtifactIdentity(firstIdentity, secondIdentity, { includeSize: true }),
+    "private artifact identity changed during observation"
+  );
+  if (expectedType !== null)
+    invariant(secondIdentity.type === expectedType, "private artifact type drift");
+  if (expectedMode !== null)
+    invariant(secondIdentity.mode === expectedMode, "private artifact mode drift");
+  if (expectedDev !== null)
+    invariant(secondIdentity.dev === expectedDev, "private artifact device drift");
+  return secondIdentity;
+}
+
+async function assertNoSymlinkAncestors(target) {
+  invariant(
+    path.isAbsolute(target) && path.resolve(target) === target,
+    "ancestor path is not canonical"
+  );
+  const parsed = path.parse(target);
+  let current = parsed.root;
+  const segments = target.slice(parsed.root.length).split(path.sep).filter(Boolean);
+  const identities = [];
+  for (const segment of segments) {
+    current = path.join(current, segment);
+    const info = await lstat(current);
+    invariant(!info.isSymbolicLink(), "canonical path has a symbolic-link ancestor");
+    identities.push(projectArtifactIdentity(info));
+  }
+  return deepFreezeExact(identities);
+}
+
+function createPrivateWorkspaceLedger(root, parentIdentity) {
+  const ledger = Object.freeze({});
+  PRIVATE_WORKSPACE_LEDGER.set(ledger, {
+    root,
+    parentPath: path.dirname(root),
+    parentIdentity,
+    rootIdentity: null,
+    entries: new Map(),
+    removed: false,
+  });
+  return ledger;
+}
+
+function registerWorkspaceArtifact(ledger, target, identity) {
+  const state = PRIVATE_WORKSPACE_LEDGER.get(ledger);
+  invariant(state && state.removed === false, "private workspace ledger is unavailable");
+  const relative = path.relative(state.root, target);
+  invariant(
+    target === state.root ||
+      (relative.length > 0 &&
+        !relative.startsWith(".." + path.sep) &&
+        relative !== ".." &&
+        !path.isAbsolute(relative)),
+    "private artifact escaped the workspace root"
+  );
+  const existing = state.entries.get(target);
+  if (existing !== undefined) {
+    invariant(
+      sameArtifactIdentity(existing, identity, { includeSize: existing.type === "file" }),
+      "private artifact identity was rebound"
+    );
+    return;
+  }
+  state.entries.set(target, identity);
+}
+
+function assignWorkspaceRootIdentity(ledger, identity) {
+  const state = PRIVATE_WORKSPACE_LEDGER.get(ledger);
+  invariant(state.rootIdentity === null, "private workspace root identity was assigned twice");
+  state.rootIdentity = identity;
+  registerWorkspaceArtifact(ledger, state.root, identity);
+}
+
+async function createOwnedWorkspaceDirectory(ledger, target, rootDev) {
+  await mkdir(target, { mode: 0o700 });
+  await chmod(target, 0o700);
+  const identity = await readStableArtifactIdentity(target, {
+    expectedType: "directory",
+    expectedMode: 0o700,
+    expectedDev: rootDev,
+  });
+  registerWorkspaceArtifact(ledger, target, identity);
+  return identity;
+}
+
+async function writeOwnedWorkspaceFile(ledger, target, bytes) {
+  invariant(Buffer.isBuffer(bytes), "private workspace file bytes are invalid");
+  const flags =
+    fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL | fsConstants.O_NOFOLLOW;
+  const handle = await open(target, flags, 0o600);
+  let descriptorIdentity;
+  try {
+    await handle.writeFile(bytes);
+    await handle.sync();
+    await handle.chmod(0o600);
+    descriptorIdentity = projectArtifactIdentity(await handle.stat());
+    invariant(
+      descriptorIdentity.type === "file" && descriptorIdentity.mode === 0o600,
+      "private workspace file descriptor identity drift"
+    );
+  } finally {
+    await handle.close();
+  }
+  const identity = await readStableArtifactIdentity(target, {
+    expectedType: "file",
+    expectedMode: 0o600,
+    expectedDev: descriptorIdentity.dev,
+  });
+  invariant(
+    sameArtifactIdentity(descriptorIdentity, identity, { includeSize: true }),
+    "private workspace file path/descriptor identity mismatch"
+  );
+  registerWorkspaceArtifact(ledger, target, identity);
+  return identity;
+}
+
+async function readOwnedRegularFileNoFollow(target, expectedIdentity, maximumBytes) {
+  const handle = await open(target, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+  try {
+    const before = projectArtifactIdentity(await handle.stat());
+    invariant(
+      before.type === "file" &&
+        sameArtifactIdentity(before, expectedIdentity, { includeSize: true }) &&
+        before.size <= maximumBytes,
+      "private file read identity drift"
+    );
+    const bytes = await handle.readFile();
+    const after = projectArtifactIdentity(await handle.stat());
+    invariant(
+      sameArtifactIdentity(before, after, { includeSize: true }) && bytes.length === after.size,
+      "private file changed during no-follow read"
+    );
+    return bytes;
+  } finally {
+    await handle.close();
+  }
+}
+
+async function inventoryPrivateWorkspace(ledger) {
+  const state = PRIVATE_WORKSPACE_LEDGER.get(ledger);
+  invariant(
+    state && state.rootIdentity !== null && state.removed === false,
+    "private workspace root is unowned"
+  );
+  const rootIdentity = await readStableArtifactIdentity(state.root, {
+    expectedType: "directory",
+    expectedDev: state.rootIdentity.dev,
+  });
+  invariant(
+    sameArtifactIdentity(rootIdentity, state.rootIdentity),
+    "private workspace root identity drift"
+  );
+  const walk = async (directory) => {
+    const names = (await readdir(directory)).sort();
+    invariant(names.length <= 4096, "private workspace directory entry bound exceeded");
+    for (const name of names) {
+      invariant(
+        name !== "." && name !== ".." && !name.includes(path.sep),
+        "private workspace entry name is unsafe"
+      );
+      const target = path.join(directory, name);
+      const identity = await readStableArtifactIdentity(target, {
+        expectedDev: state.rootIdentity.dev,
+      });
+      registerWorkspaceArtifact(ledger, target, identity);
+      if (identity.type === "directory") await walk(target);
+    }
+  };
+  await walk(state.root);
+}
+
+async function removePrivateWorkspaceLedger(ledger) {
+  const state = PRIVATE_WORKSPACE_LEDGER.get(ledger);
+  invariant(state !== undefined, "private workspace ledger is unknown");
+  if (state.removed) return;
+  if (state.rootIdentity === null) {
+    const parentIdentity = await readStableArtifactIdentity(state.parentPath, {
+      expectedType: "directory",
+      expectedDev: state.parentIdentity.dev,
+    });
+    invariant(
+      sameArtifactIdentity(parentIdentity, state.parentIdentity),
+      "private workspace parent identity drift"
+    );
+    const discoveredRoot = await readStableArtifactIdentity(state.root, {
+      expectedType: "directory",
+      expectedDev: state.parentIdentity.dev,
+    });
+    assignWorkspaceRootIdentity(ledger, discoveredRoot);
+  }
+  await inventoryPrivateWorkspace(ledger);
+  const ordered = [...state.entries.entries()].sort((left, right) => {
+    const depthDelta = right[0].split(path.sep).length - left[0].split(path.sep).length;
+    return depthDelta !== 0 ? depthDelta : right[0].localeCompare(left[0]);
+  });
+  for (const [target, expectedIdentity] of ordered) {
+    const current = await readStableArtifactIdentity(target, {
+      expectedDev: state.rootIdentity.dev,
+    });
+    invariant(
+      sameArtifactIdentity(current, expectedIdentity, { includeSize: current.type === "file" }),
+      "private workspace cleanup identity drift"
+    );
+    if (current.type === "directory") await rmdir(target);
+    else await unlink(target);
+    await requireMissingPath(target, "removed private artifact");
+  }
+  state.removed = true;
+}
+
+function serializeExactBrowserSecrets(adminEmail, adminPassword) {
+  const values = { ADMIN_EMAIL: adminEmail, ADMIN_PASSWORD: adminPassword };
+  invariant(
+    Object.values(values).every((value) => typeof value === "string" && value.length > 0),
+    "browser secret value is invalid"
+  );
+  return Buffer.from(
+    "ADMIN_EMAIL=" +
+      JSON.stringify(values.ADMIN_EMAIL) +
+      "\n" +
+      "ADMIN_PASSWORD=" +
+      JSON.stringify(values.ADMIN_PASSWORD) +
+      "\n"
+  );
+}
+
+function parseExactBrowserSecrets(bytes) {
+  const text = decodeBoundedUtf8(bytes, "browser secrets readback", 64 * 1024);
+  invariant(!text.includes("\r") && text.endsWith("\n"), "browser secrets frame drift");
+  const assignmentNames = text
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => {
+      const match = /^([A-Z_]+)=/u.exec(line);
+      invariant(match !== null, "browser secrets assignment is malformed");
+      return match[1];
+    });
+  invariant(
+    deepEqualJson(assignmentNames, ["ADMIN_EMAIL", "ADMIN_PASSWORD"]) &&
+      new Set(assignmentNames).size === 2,
+    "browser secrets assignments drift"
+  );
+  const parsed = parseEnv(text);
+  exactOwnKeys(parsed, ["ADMIN_EMAIL", "ADMIN_PASSWORD"], "browser secrets readback");
+  return parsed;
+}
+
+async function createPrivateBrowserWorkspace(
+  root,
+  plan,
+  repoEnvironment,
+  constructionCleanupAuthority
+) {
+  for (const relative of plan.requiredScreenshotPaths) {
+    const absolute = path.resolve(root, relative);
+    invariant(
+      absolute.startsWith(root + path.sep) && path.relative(root, absolute) === relative,
+      "screenshot path escaped the canonical repository root"
+    );
+    await requireMissingPath(absolute, "screenshot path " + relative);
+  }
+  const canonicalTmp = await realpath(tmpdir());
+  await assertNoSymlinkAncestors(canonicalTmp);
+  const tmpIdentity = await readStableArtifactIdentity(canonicalTmp, { expectedType: "directory" });
+  const privateRoot = await mkdtemp(path.join(canonicalTmp, "wf540smoke-"));
+  const ledger = createPrivateWorkspaceLedger(privateRoot, tmpIdentity);
+  constructionCleanupAuthority.registerWorkspaceLedger(ledger);
+  await chmod(privateRoot, 0o700);
+  const rootIdentity = await readStableArtifactIdentity(privateRoot, {
+    expectedType: "directory",
+    expectedMode: 0o700,
+    expectedDev: tmpIdentity.dev,
+  });
+  const rootRelativeToRepo = path.relative(root, privateRoot);
+  const repoRelativeToRoot = path.relative(privateRoot, root);
+  invariant(
+    privateRoot.startsWith(canonicalTmp + path.sep) &&
+      (rootRelativeToRepo.startsWith(".." + path.sep) || rootRelativeToRepo === "..") &&
+      (repoRelativeToRoot.startsWith(".." + path.sep) || repoRelativeToRoot === ".."),
+    "private workspace overlaps the repository"
+  );
+  assignWorkspaceRootIdentity(ledger, rootIdentity);
+  const names = [
+    "cwd",
+    "cwd/.playwright",
+    "home",
+    "tmp",
+    "xdg",
+    "xdg/config",
+    "xdg/cache",
+    "xdg/data",
+    "config",
+    "output",
+  ];
+  for (const name of names) {
+    const target = path.join(privateRoot, name);
+    await createOwnedWorkspaceDirectory(ledger, target, rootIdentity.dev);
+  }
+  const cwd = path.join(privateRoot, "cwd");
+  const configPath = path.join(privateRoot, "config", "playwright.json");
+  const secretsPath = path.join(privateRoot, "config", "secrets.env");
+  const outputDir = path.join(privateRoot, "output");
+  const config = {
+    browser: {
+      browserName: "chromium",
+      launchOptions: { args: ["--no-sandbox"] },
+    },
+    codegen: "none",
+    outputDir,
+  };
+  const configBytes = Buffer.from(canonicalJson(config) + "\n");
+  const configIdentity = await writeOwnedWorkspaceFile(ledger, configPath, configBytes);
+  const adminEmail = ownString(repoEnvironment, "ADMIN_EMAIL", { required: true });
+  const adminPassword = ownString(repoEnvironment, "ADMIN_PASSWORD", { required: true });
+  const secretsBytes = serializeExactBrowserSecrets(adminEmail, adminPassword);
+  const secretsIdentity = await writeOwnedWorkspaceFile(ledger, secretsPath, secretsBytes);
+  const configReadback = await readOwnedRegularFileNoFollow(configPath, configIdentity, 64 * 1024);
+  invariant(configReadback.equals(configBytes), "browser config bytes changed after write");
+  const parsedConfig = JSON.parse(configReadback.toString("utf8"));
+  invariant(deepEqualJson(parsedConfig, config), "browser config semantic readback drift");
+  const secretsReadback = await readOwnedRegularFileNoFollow(
+    secretsPath,
+    secretsIdentity,
+    64 * 1024
+  );
+  const parsedSecrets = parseExactBrowserSecrets(secretsReadback);
+  invariant(
+    parsedSecrets.ADMIN_EMAIL === adminEmail && parsedSecrets.ADMIN_PASSWORD === adminPassword,
+    "browser secrets readback value drift"
+  );
+  const browserRoot = await realpath("/ms-playwright");
+  invariant(browserRoot === "/ms-playwright", "browser runtime root is not canonical");
+  await assertNoSymlinkAncestors(browserRoot);
+  await readStableArtifactIdentity(browserRoot, { expectedType: "directory" });
+  const environment = Object.create(null);
+  environment.PATH = ownString(process.env, "PATH", { required: true });
+  for (const key of BROWSER_OPTIONAL_INHERITED_ENV) {
+    const value = ownString(process.env, key);
+    if (value !== null) environment[key] = value;
+  }
+  Object.assign(environment, {
+    HOME: path.join(privateRoot, "home"),
+    TMPDIR: path.join(privateRoot, "tmp"),
+    TMP: path.join(privateRoot, "tmp"),
+    TEMP: path.join(privateRoot, "tmp"),
+    XDG_CONFIG_HOME: path.join(privateRoot, "xdg", "config"),
+    XDG_CACHE_HOME: path.join(privateRoot, "xdg", "cache"),
+    XDG_DATA_HOME: path.join(privateRoot, "xdg", "data"),
+    PLAYWRIGHT_MCP_CONFIG: configPath,
+    PLAYWRIGHT_MCP_OUTPUT_DIR: outputDir,
+    PLAYWRIGHT_MCP_SECRETS_FILE: secretsPath,
+    PLAYWRIGHT_BROWSERS_PATH: "/ms-playwright",
+    CI: "1",
+    NO_UPDATE_NOTIFIER: "1",
+  });
+  return {
+    root: privateRoot,
+    cwd,
+    configPath,
+    secretsPath,
+    outputDir,
+    ledger,
+    environment: Object.freeze(environment),
+  };
+}
+
+function parseProcIdentity(text, expectedPid) {
+  const close = text.lastIndexOf(")");
+  invariant(close > 0, "process stat is malformed");
+  const pid = Number(text.slice(0, text.indexOf(" ")));
+  const fields = text
+    .slice(close + 2)
+    .trim()
+    .split(/\s+/u);
+  const value = { pid, ppid: Number(fields[1]), pgid: Number(fields[2]), startTicks: fields[19] };
+  invariant(
+    pid === expectedPid &&
+      Number.isSafeInteger(value.ppid) &&
+      Number.isSafeInteger(value.pgid) &&
+      value.pgid > 0 &&
+      /^[1-9][0-9]*$/u.test(value.startTicks ?? ""),
+    "process identity is invalid"
+  );
+  return value;
+}
+
+async function readProcIdentity(pid) {
+  return parseProcIdentity(await readFile(`/proc/${pid}/stat`, "utf8"), pid);
+}
+
+function sameProcessIdentity(left, right) {
+  return Boolean(
+    left &&
+    right &&
+    left.pid === right.pid &&
+    left.ppid === right.ppid &&
+    left.pgid === right.pgid &&
+    left.startTicks === right.startTicks
+  );
+}
+
+async function readProcessGroupMembers(pgid) {
+  const members = [];
+  for (const name of await readdir("/proc")) {
+    if (!/^[1-9][0-9]*$/u.test(name)) continue;
+    const pid = Number(name);
+    try {
+      const identity = await readProcIdentity(pid);
+      if (identity.pgid === pgid) members.push(identity);
+    } catch (error) {
+      if (!error || !["ENOENT", "ESRCH"].includes(error.code)) throw error;
+    }
+  }
+  return members.sort((left, right) => left.pid - right.pid);
+}
+
+const PROCESS_TERM_GRACE_MS = 3_000;
+const PROCESS_KILL_GRACE_MS = 3_000;
+const PROCESS_ABSENCE_STABILITY_MS = 40;
+
+function delayMilliseconds(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+async function readFreshProcessIdentityWithRetry(pid) {
+  let lastError = null;
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    try {
+      return await readProcIdentity(pid);
+    } catch (error) {
+      lastError = error;
+      await delayMilliseconds(5);
+    }
+  }
+  throw lastError ?? new Error("process identity is unavailable");
+}
+
+function appendRetainedGroupMembers(record, members, { requireLeader = true } = {}) {
+  invariant(
+    record && record.leader && record.retainedMembers instanceof Map && Array.isArray(members),
+    "retained process-group record is invalid"
+  );
+  const leader = members.find(({ pid }) => pid === record.leader.pid) ?? null;
+  if (requireLeader) {
+    invariant(
+      sameProcessIdentity(leader, record.leader),
+      "owned process-group leader identity drift"
+    );
+  } else if (leader !== null) {
+    invariant(sameProcessIdentity(leader, record.leader), "owned process-group leader was reused");
+  }
+  for (const member of members) {
+    invariant(
+      member.pgid === record.leader.pgid,
+      "owned process escaped its retained process group"
+    );
+    const retained = record.retainedMembers.get(member.pid);
+    if (retained === undefined) {
+      invariant(requireLeader, "an unretained process appeared after group termination began");
+      record.retainedMembers.set(member.pid, Object.freeze({ ...member }));
+    } else {
+      invariant(sameProcessIdentity(retained, member), "retained process identity was reused");
+    }
+  }
+}
+
+async function waitForOwnedGroupAbsence(record, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() <= deadline) {
+    const members = await readProcessGroupMembers(record.leader.pgid);
+    if (members.length === 0) return true;
+    appendRetainedGroupMembers(record, members, { requireLeader: false });
+    await delayMilliseconds(25);
+  }
+  return false;
+}
+
+async function proveOwnedGroupAbsentStable(record) {
+  invariant(
+    (await readProcessGroupMembers(record.leader.pgid)).length === 0,
+    "owned process group remains present"
+  );
+  await delayMilliseconds(PROCESS_ABSENCE_STABILITY_MS);
+  invariant(
+    (await readProcessGroupMembers(record.leader.pgid)).length === 0,
+    "owned process group reappeared"
+  );
+  return true;
+}
+
+async function terminateRetainedProcessGroup(record) {
+  if (record.terminationPromise !== null) return record.terminationPromise;
+  record.terminationPromise = (async () => {
+    const initialMembers = await readProcessGroupMembers(record.leader.pgid);
+    if (initialMembers.length === 0) {
+      await proveOwnedGroupAbsentStable(record);
+      return deepFreezeExact({ termSent: false, killSent: false, absent: true });
+    }
+    const leaderPresent = initialMembers.some(({ pid }) => pid === record.leader.pid);
+    appendRetainedGroupMembers(record, initialMembers, {
+      requireLeader: leaderPresent && record.membershipSealed !== true,
+    });
+    try {
+      process.kill(-record.leader.pgid, "SIGTERM");
+    } catch (error) {
+      invariant(
+        error?.code === "ESRCH" && (await readProcessGroupMembers(record.leader.pgid)).length === 0,
+        "owned process group SIGTERM failed"
+      );
+    }
+    if (await waitForOwnedGroupAbsence(record, PROCESS_TERM_GRACE_MS)) {
+      await proveOwnedGroupAbsentStable(record);
+      return deepFreezeExact({ termSent: true, killSent: false, absent: true });
+    }
+    const survivors = await readProcessGroupMembers(record.leader.pgid);
+    appendRetainedGroupMembers(record, survivors, { requireLeader: false });
+    try {
+      process.kill(-record.leader.pgid, "SIGKILL");
+    } catch (error) {
+      invariant(
+        error?.code === "ESRCH" && (await readProcessGroupMembers(record.leader.pgid)).length === 0,
+        "owned process group SIGKILL failed"
+      );
+    }
+    invariant(
+      await waitForOwnedGroupAbsence(record, PROCESS_KILL_GRACE_MS),
+      "owned process group survived SIGKILL"
+    );
+    await proveOwnedGroupAbsentStable(record);
+    return deepFreezeExact({ termSent: true, killSent: true, absent: true });
+  })();
+  return record.terminationPromise;
+}
+
+async function runRetainedProcessGroup({
+  file,
+  args,
+  cwd,
+  env,
+  stdinBytes,
+  timeoutMs,
+  maxStdoutBytes = MAX_STREAM_BYTES,
+  maxStderrBytes = MAX_STREAM_BYTES,
+}) {
+  invariant(typeof file === "string" && file.length > 0, "retained process executable is invalid");
+  invariant(
+    Array.isArray(args) && args.every((value) => typeof value === "string"),
+    "retained process argv is invalid"
+  );
+  invariant(
+    Buffer.isBuffer(stdinBytes) || stdinBytes === null,
+    "retained process stdin is invalid"
+  );
+  invariant(
+    Number.isSafeInteger(timeoutMs) && timeoutMs > 0,
+    "retained process timeout is invalid"
+  );
+  invariant(
+    Number.isSafeInteger(maxStdoutBytes) &&
+      maxStdoutBytes > 0 &&
+      Number.isSafeInteger(maxStderrBytes) &&
+      maxStderrBytes > 0,
+    "retained process stream bounds are invalid"
+  );
+  const stdout = createBoundedStream(maxStdoutBytes);
+  const stderr = createBoundedStream(maxStderrBytes);
+  const child = spawn(file, args, {
+    cwd,
+    env,
+    shell: false,
+    detached: true,
+    stdio: [stdinBytes === null ? "ignore" : "pipe", "pipe", "pipe"],
+  });
+  let spawnError = false;
+  child.once("error", () => {
+    spawnError = true;
+  });
+  child.stdout.on("data", (chunk) => stdout.push(chunk));
+  child.stderr.on("data", (chunk) => stderr.push(chunk));
+  const completionPromise = new Promise((resolve) => {
+    child.once("close", (code, signal) => resolve({ code, signal }));
+  });
+  if (stdinBytes !== null) child.stdin.end(stdinBytes);
+  invariant(Number.isSafeInteger(child.pid) && child.pid > 1, "retained process PID is invalid");
+  const leader = await readFreshProcessIdentityWithRetry(child.pid);
+  invariant(leader.pid === leader.pgid, "retained process is not its process-group leader");
+  const record = {
+    child,
+    leader: Object.freeze({ ...leader }),
+    retainedMembers: new Map([[leader.pid, Object.freeze({ ...leader })]]),
+    terminationPromise: null,
+    membershipSealed: false,
+  };
+  let timer = null;
+  const timeoutPromise = new Promise((resolve) => {
+    timer = setTimeout(() => resolve(null), timeoutMs);
+  });
+  let completion = await Promise.race([completionPromise, timeoutPromise]);
+  const timedOut = completion === null;
+  if (timedOut) {
+    await terminateRetainedProcessGroup(record);
+    completion = await Promise.race([
+      completionPromise,
+      delayMilliseconds(PROCESS_KILL_GRACE_MS).then(() => null),
+    ]);
+    invariant(completion !== null, "retained process streams did not close after termination");
+  } else {
+    await proveOwnedGroupAbsentStable(record);
+  }
+  if (timer !== null) clearTimeout(timer);
+  const stdoutResult = stdout.finish();
+  const stderrResult = stderr.finish();
+  return Object.freeze({
+    completion,
+    timedOut,
+    spawnError,
+    stdout: stdoutResult,
+    stderr: stderrResult,
+    leader: record.leader,
+    termination: timedOut
+      ? await record.terminationPromise
+      : { termSent: false, killSent: false, absent: true },
+  });
+}
+
+async function portsAreAbsent() {
+  const expected = new Set(
+    SMOKE_PORTS.map((port) => port.toString(16).toUpperCase().padStart(4, "0"))
+  );
+  for (const table of ["/proc/net/tcp", "/proc/net/tcp6"]) {
+    const rows = (await readFile(table, "utf8")).trim().split("\n").slice(1);
+    for (const row of rows) {
+      const columns = row.trim().split(/\s+/u);
+      if (columns[3] === "0A" && expected.has(columns[1].split(":").at(-1))) return false;
+    }
+  }
+  return true;
+}
+
+async function proveSmokePortsAbsentTwice() {
+  invariant(await portsAreAbsent(), "smoke ports are not absent");
+  await delayMilliseconds(PROCESS_ABSENCE_STABILITY_MS);
+  invariant(await portsAreAbsent(), "smoke ports reappeared during absence proof");
+  return true;
+}
+
+async function readListenerRowsForSmokePorts() {
+  const expectedPorts = new Set(SMOKE_PORTS);
+  const listeners = [];
+  for (const table of ["/proc/net/tcp", "/proc/net/tcp6"]) {
+    const text = await readFile(table, "utf8");
+    invariant(!text.includes("\0"), "listener table contains NUL");
+    for (const row of text.trim().split("\n").slice(1)) {
+      const columns = row.trim().split(/\s+/u);
+      if (columns.length < 10 || columns[3] !== "0A") continue;
+      const portHex = columns[1]?.split(":").at(-1) ?? "";
+      if (!/^[A-Fa-f0-9]{4}$/u.test(portHex)) continue;
+      const port = Number.parseInt(portHex, 16);
+      if (!expectedPorts.has(port)) continue;
+      const inode = columns[9];
+      invariant(/^[1-9][0-9]*$/u.test(inode), "listener inode is invalid");
+      listeners.push(Object.freeze({ port, inode }));
+    }
+  }
+  listeners.sort((left, right) => left.port - right.port || left.inode.localeCompare(right.inode));
+  return listeners;
+}
+
+async function readProcessSocketInodes(pid) {
+  const inodes = new Set();
+  const fdRoot = `/proc/${pid}/fd`;
+  for (const name of await readdir(fdRoot)) {
+    if (!/^[0-9]+$/u.test(name)) continue;
+    try {
+      const target = await readlink(path.join(fdRoot, name));
+      const match = /^socket:\[([1-9][0-9]*)\]$/u.exec(target);
+      if (match) inodes.add(match[1]);
+    } catch (error) {
+      if (!error || !["ENOENT", "ESRCH", "EACCES"].includes(error.code)) throw error;
+    }
+  }
+  return inodes;
+}
+
+async function proveExactHostListenerMapping(children) {
+  invariant(
+    Array.isArray(children) && children.length === 3,
+    "host listener child inventory is invalid"
+  );
+  const expected = [
+    { kind: "backend", port: 3000 },
+    { kind: "admin", port: 5173 },
+    { kind: "site", port: 5174 },
+  ];
+  const listeners = await readListenerRowsForSmokePorts();
+  invariant(listeners.length === expected.length, "host listener cardinality drift");
+  const socketInodesByPid = new Map();
+  for (const child of children) {
+    const current = await readProcIdentity(child.identity.pid);
+    invariant(sameProcessIdentity(current, child.identity), "host listener owner identity drift");
+    socketInodesByPid.set(child.identity.pid, await readProcessSocketInodes(child.identity.pid));
+  }
+  const projection = [];
+  for (const item of expected) {
+    const child = children.find(({ kind }) => kind === item.kind);
+    invariant(child !== undefined, "host listener kind is missing");
+    const candidates = listeners.filter(({ port }) => port === item.port);
+    invariant(candidates.length === 1, "host port has a missing or duplicate listener");
+    const owners = children.filter(({ identity }) =>
+      socketInodesByPid.get(identity.pid).has(candidates[0].inode)
+    );
+    invariant(
+      owners.length === 1 && owners[0].identity.pid === child.identity.pid,
+      "host listener inode is not owned by the exact child"
+    );
+    projection.push(
+      Object.freeze({
+        kind: item.kind,
+        port: item.port,
+        pid: child.identity.pid,
+        inode: candidates[0].inode,
+      })
+    );
+  }
+  return deepFreezeExact(projection);
+}
+
+async function proveExactHostListenerMappingTwice(children) {
+  const first = await proveExactHostListenerMapping(children);
+  await delayMilliseconds(PROCESS_ABSENCE_STABILITY_MS);
+  const second = await proveExactHostListenerMapping(children);
+  invariant(deepEqualJson(first, second), "host listener mapping was not stable");
+  return first;
+}
+
+async function readHostReadyLine(child) {
+  return new Promise((resolve, reject) => {
+    let bytes = Buffer.alloc(0);
+    const timer = setTimeout(() => reject(new Error("host ready timeout")), 70_000);
+    const fail = () => {
+      clearTimeout(timer);
+      reject(new Error("host exited before ready"));
+    };
+    child.once("exit", fail);
+    child.stdout.on("data", (chunk) => {
+      if (bytes === null) return;
+      bytes = Buffer.concat([bytes, Buffer.from(chunk)]);
+      if (bytes.length > 64 * 1024) {
+        clearTimeout(timer);
+        reject(new Error("host ready output exceeded bound"));
+        return;
+      }
+      const newline = bytes.indexOf(10);
+      if (newline === -1) return;
+      const line = bytes.subarray(0, newline).toString("utf8");
+      bytes = null;
+      clearTimeout(timer);
+      child.off("exit", fail);
+      try {
+        resolve(JSON.parse(line));
+      } catch {
+        reject(new Error("host ready output is malformed"));
+      }
+    });
+  });
+}
+
+async function startOwnedHost(state) {
+  invariant(state.host === null, "smoke host is already owned");
+  await proveSmokePortsAbsentTwice();
+  const child = spawn(
+    process.execPath,
+    [path.join(state.root, "_docs/_workflows/task-540-smoke-host.mjs"), "--serve", state.root],
+    {
+      cwd: state.root,
+      env: state.hostEnvironment,
+      shell: false,
+      detached: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    }
+  );
+  invariant(Number.isSafeInteger(child.pid) && child.pid > 1, "host runner PID is invalid");
+  const host = {
+    child,
+    pid: child.pid,
+    identity: null,
+    retainedMembers: new Map(),
+    retainedChildren: [],
+    listeners: null,
+    ready: null,
+    terminationPromise: null,
+  };
+  state.host = host;
+  let stderrBytes = 0;
+  let spawnError = false;
+  child.once("error", () => {
+    spawnError = true;
+  });
+  child.stderr.on("data", (chunk) => {
+    stderrBytes += Buffer.byteLength(chunk);
+  });
+  try {
+    const initialIdentity = await readFreshProcessIdentityWithRetry(child.pid);
+    invariant(!spawnError, "host runner spawn failed");
+    invariant(
+      initialIdentity.pid === initialIdentity.pgid,
+      "host runner is not its process-group leader"
+    );
+    host.identity = Object.freeze({ ...initialIdentity });
+    host.retainedMembers.set(initialIdentity.pid, host.identity);
+    const ready = await readHostReadyLine(child);
+    exactOwnKeys(
+      ready,
+      ["schemaVersion", "runnerPid", "children", "ports"],
+      "host ready projection",
+      { plain: true }
+    );
+    invariant(
+      ready.schemaVersion === 1 &&
+        ready.runnerPid === child.pid &&
+        deepEqualJson(ready.ports, SMOKE_PORTS) &&
+        Array.isArray(ready.children) &&
+        ready.children.length === 3 &&
+        stderrBytes === 0,
+      "host ready projection drift"
+    );
+    const current = await readProcIdentity(child.pid);
+    invariant(sameProcessIdentity(current, host.identity), "host runner ownership drift");
+    const expectedKinds = ["backend", "admin", "site"];
+    const retainedChildren = [];
+    for (const [index, projection] of ready.children.entries()) {
+      exactOwnKeys(projection, ["kind", "pid"], "host child ready projection", { plain: true });
+      invariant(
+        projection.kind === expectedKinds[index] &&
+          Number.isSafeInteger(projection.pid) &&
+          projection.pid > 1,
+        "host child ready order drift"
+      );
+      const identity = await readProcIdentity(projection.pid);
+      invariant(
+        identity.ppid === child.pid && identity.pgid === child.pid,
+        "host child lineage drift"
+      );
+      const retainedIdentity = Object.freeze({ ...identity });
+      host.retainedMembers.set(identity.pid, retainedIdentity);
+      retainedChildren.push(Object.freeze({ kind: projection.kind, identity: retainedIdentity }));
+    }
+    invariant(host.retainedMembers.size === 4, "host ready PID set drift");
+    const observedMembers = await readProcessGroupMembers(child.pid);
+    invariant(
+      observedMembers.length === host.retainedMembers.size,
+      "host process-group cardinality drift"
+    );
+    appendRetainedGroupMembers(
+      { leader: host.identity, retainedMembers: host.retainedMembers },
+      observedMembers,
+      { requireLeader: true }
+    );
+    host.retainedChildren = retainedChildren;
+    host.listeners = await proveExactHostListenerMappingTwice(retainedChildren);
+    host.ready = ready;
+    return ready;
+  } catch (cause) {
+    let cleanupFailure = null;
+    try {
+      await stopOwnedHost(state);
+    } catch (error) {
+      cleanupFailure = error;
+    }
+    if (cleanupFailure !== null)
+      throw new AggregateError([cause, cleanupFailure], "host startup cleanup failed");
+    throw cause;
+  }
+}
+
+async function stopOwnedHost(state) {
+  if (!state.host) return;
+  const host = state.host;
+  if (host.identity === null) {
+    try {
+      const identity = await readFreshProcessIdentityWithRetry(host.pid);
+      invariant(
+        identity.pid === identity.pgid,
+        "partial host runner is not a process-group leader"
+      );
+      host.identity = Object.freeze({ ...identity });
+      host.retainedMembers.set(identity.pid, host.identity);
+    } catch (error) {
+      const members = await readProcessGroupMembers(host.pid);
+      invariant(
+        members.length === 0 && host.child.exitCode !== null,
+        "partial host identity cannot be safely recovered"
+      );
+    }
+  }
+  if (host.identity !== null) {
+    const observedMembers = await readProcessGroupMembers(host.identity.pgid);
+    if (observedMembers.length > 0) {
+      const leaderPresent = observedMembers.some(({ pid }) => pid === host.identity.pid);
+      appendRetainedGroupMembers(
+        { leader: host.identity, retainedMembers: host.retainedMembers },
+        observedMembers,
+        { requireLeader: host.ready === null && leaderPresent }
+      );
+      const terminationRecord = {
+        leader: host.identity,
+        retainedMembers: host.retainedMembers,
+        terminationPromise: host.terminationPromise,
+        membershipSealed: host.ready !== null,
+      };
+      await terminateRetainedProcessGroup(terminationRecord);
+      host.terminationPromise = terminationRecord.terminationPromise;
+    } else {
+      await proveOwnedGroupAbsentStable({ leader: host.identity });
+    }
+  }
+  invariant(
+    host.identity === null || (await readProcessGroupMembers(host.identity.pgid)).length === 0,
+    "owned host process group remains present"
+  );
+  for (let attempt = 0; attempt < 30 && !(await portsAreAbsent()); attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  invariant(await portsAreAbsent(), "owned host ports remain open");
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  invariant(await portsAreAbsent(), "owned host ports reappeared after cleanup");
+  invariant(
+    host.identity !== null && host.ready !== null && host.listeners !== null,
+    "host finalization source is incomplete"
+  );
+  const termination =
+    host.terminationPromise === null
+      ? deepFreezeExact({ termSent: false, killSent: false, absent: true })
+      : await host.terminationPromise;
+  const children = host.retainedChildren.map(({ kind, identity }) =>
+    deepFreezeExact({
+      kind,
+      pid: identity.pid,
+    })
+  );
+  const listeners = host.listeners.map(({ kind, port, pid }) =>
+    deepFreezeExact({ kind, port, pid })
+  );
+  state.hostFinalization = deepFreezeExact({
+    runnerPid: host.identity.pid,
+    pgid: host.identity.pgid,
+    children: deepFreezeExact(children),
+    listeners: deepFreezeExact(listeners),
+    ports: deepFreezeExact([...SMOKE_PORTS]),
+    listenerOwnershipStableObservations: 2,
+    termSent: termination.termSent,
+    killSent: termination.killSent,
+    processesAbsent: true,
+    processAbsenceStableObservations: 2,
+    portsAbsent: deepFreezeExact([...SMOKE_PORTS]),
+    portAbsenceStableObservations: 2,
+  });
+  state.host = null;
+}
+
+async function resolveValidatedBundledPlaywrightRequest(pathValue) {
+  invariant(
+    typeof pathValue === "string" && !pathValue.includes("\0"),
+    "Playwright CLI PATH authority is invalid"
+  );
+  const directories = pathValue.split(path.delimiter).filter((entry) => path.isAbsolute(entry));
+  invariant(
+    directories.length > 0 && directories.length <= 128,
+    "Playwright CLI PATH search bound drift"
+  );
+  let cliRealPath = null;
+  for (const directory of directories) {
+    try {
+      cliRealPath = await realpath(path.join(directory, "playwright-cli"));
+      break;
+    } catch (error) {
+      if (!error || !["ENOENT", "ENOTDIR", "EACCES"].includes(error.code)) throw error;
+    }
+  }
+  invariant(
+    cliRealPath !== null && path.basename(cliRealPath) === "playwright-cli.js",
+    "validated Playwright CLI realpath is absent"
+  );
+  await assertNoSymlinkAncestors(cliRealPath);
+  await readStableArtifactIdentity(cliRealPath, { expectedType: "file" });
+  const cliPackageRoot = path.dirname(cliRealPath);
+  const cliPackagePath = path.join(cliPackageRoot, "package.json");
+  const cliPackage = JSON.parse(
+    decodeBoundedUtf8(await readFile(cliPackagePath), "Playwright CLI package", 64 * 1024)
+  );
+  invariant(
+    cliPackage.name === "@playwright/cli" &&
+      cliPackage.bin?.["playwright-cli"] === path.basename(cliRealPath) &&
+      typeof cliPackage.dependencies?.playwright === "string",
+    "Playwright CLI package identity drift"
+  );
+  const playwrightRoot = await realpath(path.join(cliPackageRoot, "node_modules", "playwright"));
+  invariant(
+    playwrightRoot.startsWith(cliPackageRoot + path.sep) &&
+      path.dirname(playwrightRoot) === path.join(cliPackageRoot, "node_modules"),
+    "bundled Playwright package escaped the validated CLI package"
+  );
+  await assertNoSymlinkAncestors(playwrightRoot);
+  const playwrightPackage = JSON.parse(
+    decodeBoundedUtf8(
+      await readFile(path.join(playwrightRoot, "package.json")),
+      "bundled Playwright package",
+      64 * 1024
+    )
+  );
+  invariant(
+    playwrightPackage.name === "playwright" &&
+      playwrightPackage.version === cliPackage.dependencies.playwright &&
+      playwrightPackage.exports?.["."]?.import === "./index.mjs",
+    "bundled Playwright package identity drift"
+  );
+  const entryPath = await realpath(path.join(playwrightRoot, "index.mjs"));
+  invariant(
+    path.dirname(entryPath) === playwrightRoot,
+    "bundled Playwright entry escaped its package"
+  );
+  await readStableArtifactIdentity(entryPath, { expectedType: "file" });
+  const playwrightModule = await import(pathToFileURL(entryPath).href);
+  invariant(
+    playwrightModule.request && typeof playwrightModule.request.newContext === "function",
+    "bundled Playwright API request factory is absent"
+  );
+  return {
+    cliRealPath,
+    entryPath,
+    request: playwrightModule.request,
+    version: playwrightPackage.version,
+  };
+}
+
+async function readBoundedJsonResponse(response, label) {
+  const text = await response.text();
+  invariant(
+    text.length > 0 && Buffer.byteLength(text) <= MAX_STREAM_BYTES,
+    label + " response bound drift"
+  );
+  let value;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    invariant(false, label + " response is not JSON");
+  }
+  assertPlainJsonValue(value, label);
+  return { value, bytes: Buffer.from(text) };
+}
+
+function privateApiContextRegistry(state) {
+  const registry = PRIVATE_API_REQUEST_CONTEXT.get(state);
+  invariant(registry instanceof Map, "private API context registry is absent");
+  return registry;
+}
+
+function privateEphemeralApiContextRegistry(state) {
+  const registry = PRIVATE_EPHEMERAL_API_REQUEST_CONTEXT.get(state);
+  invariant(registry instanceof Map, "private ephemeral API context registry is absent");
+  return registry;
+}
+
+function privateApiContextRecord(state, capability, expectedKey = capability?.key) {
+  const record = privateApiContextRegistry(state).get(expectedKey);
+  invariant(
+    capability &&
+      record &&
+      record.capability === capability &&
+      record.key === expectedKey &&
+      record.userAgent === capability.userAgent &&
+      record.disposeProof === null,
+    "API request context is missing, disposed, or has lost capability identity"
+  );
+  return record;
+}
+
+function validateEmptyApiStorageState(storageState, label) {
+  exactOwnKeys(storageState, ["cookies", "origins"], label, { plain: true });
+  invariant(
+    Array.isArray(storageState.cookies) &&
+      storageState.cookies.length === 0 &&
+      Array.isArray(storageState.origins) &&
+      storageState.origins.length === 0,
+    label + " is not an exact empty jar"
+  );
+  return storageState;
+}
+
+function validateApiSessionObservation(value, expectedUserId, expectedUserAgent, label) {
+  exactOwnKeys(value, ["rows"], label, { plain: true });
+  invariant(Array.isArray(value.rows) && value.rows.length <= 1, label + " cardinality drift");
+  for (const row of value.rows) {
+    exactOwnKeys(
+      row,
+      [
+        "createdAt",
+        "csrfTokenHash",
+        "expiresAt",
+        "id",
+        "ip",
+        "revokedAt",
+        "tokenHash",
+        "userAgent",
+        "userId",
+      ],
+      label + " row",
+      { plain: true }
+    );
+    invariant(
+      typeof row.id === "string" &&
+        /^[0-9a-f-]{36}$/u.test(row.id) &&
+        row.userId === expectedUserId &&
+        row.userAgent === expectedUserAgent &&
+        typeof row.tokenHash === "string" &&
+        /^[a-f0-9]{64}$/u.test(row.tokenHash) &&
+        (row.csrfTokenHash === null ||
+          (typeof row.csrfTokenHash === "string" && /^[a-f0-9]{64}$/u.test(row.csrfTokenHash))) &&
+        isNullableIsoTimestamp(row.createdAt) &&
+        isNullableIsoTimestamp(row.expiresAt) &&
+        isNullableIsoTimestamp(row.revokedAt) &&
+        (row.ip === null || typeof row.ip === "string"),
+      label + " row projection drift"
+    );
+  }
+  return value.rows;
+}
+
+async function readExactApiSessionRows(state, expectedUserId, expectedUserAgent, label) {
+  return validateApiSessionObservation(
+    await runBunBridgeOperation(state, "resource/api-session-observation", {
+      userAgent: expectedUserAgent,
+      userId: expectedUserId,
+    }),
+    expectedUserId,
+    expectedUserAgent,
+    label
+  );
+}
+
+function validateAuthenticatedApiStorageState(storageState, label) {
+  exactOwnKeys(storageState, ["cookies", "origins"], label, { plain: true });
+  invariant(
+    Array.isArray(storageState.cookies) &&
+      storageState.cookies.length === 1 &&
+      Array.isArray(storageState.origins) &&
+      storageState.origins.length === 0,
+    label + " isolated cookie cardinality drift"
+  );
+  const cookie = storageState.cookies[0];
+  exactOwnKeys(
+    cookie,
+    ["domain", "expires", "httpOnly", "name", "path", "sameSite", "secure", "value"],
+    label + " cookie",
+    { plain: true }
+  );
+  invariant(
+    cookie.name === "session" &&
+      cookie.domain === new URL(API_BASE).hostname &&
+      cookie.path === "/" &&
+      cookie.httpOnly === true &&
+      cookie.secure === false &&
+      cookie.sameSite === "Strict" &&
+      typeof cookie.value === "string" &&
+      cookie.value.length > 0 &&
+      typeof cookie.expires === "number" &&
+      Number.isFinite(cookie.expires),
+    label + " cookie identity drift"
+  );
+  return cookie;
+}
+
+async function bindAuthenticatedApiSession(state, capability, expectedUserId) {
+  const record = privateApiContextRecord(state, capability);
+  const storageState = await record.context.storageState();
+  const cookie = validateAuthenticatedApiStorageState(
+    storageState,
+    record.key + " authenticated storage"
+  );
+  const rows = await readExactApiSessionRows(
+    state,
+    expectedUserId,
+    record.userAgent,
+    record.key + " exact session observation"
+  );
+  invariant(rows.length === 1, record.key + " exact session row is absent");
+  const [row] = rows;
+  invariant(
+    row.csrfTokenHash === null &&
+      row.revokedAt === null &&
+      hashBytes(Buffer.from(cookie.value)) === row.tokenHash,
+    record.key + " cookie/session token identity drift"
+  );
+  if (record.sessionId !== null) {
+    invariant(
+      record.sessionId === row.id &&
+        record.userId === row.userId &&
+        record.tokenHash === row.tokenHash &&
+        canonicalJson(record.cookieStorageState) === canonicalJson(storageState),
+      record.key + " repeated session binding drift"
+    );
+    return row;
+  }
+  record.userId = row.userId;
+  record.sessionId = row.id;
+  record.tokenHash = row.tokenHash;
+  record.sessionRow = deepFreezeExact(row);
+  record.cookieStorageState = deepFreezeExact(storageState);
+  const earlyTuple = deepFreezeExact({ id: row.id, userAgent: row.userAgent, userId: row.userId });
+  invariant(
+    !state.earlyApiSessionTuples.has(record.key),
+    record.key + " early API session tuple was assigned twice"
+  );
+  state.earlyApiSessionTuples.set(record.key, earlyTuple);
+  return row;
+}
+
+async function adminApiRequest(state, session, method, route, options = {}) {
+  const privateContext = privateApiContextRecord(state, session);
+  const bootstrapAuthority = PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY.get(state);
+  invariant(
+    bootstrapAuthority?.restorationStarted !== true,
+    "API request is forbidden after bootstrap restoration starts"
+  );
+  const headers = { "User-Agent": session.userAgent, Accept: "application/json" };
+  if (options.json !== undefined) {
+    headers["Content-Type"] = "application/json";
+  }
+  if (options.expectedUserId) headers["X-Coderso-Expected-User-Id"] = options.expectedUserId;
+  if (options.csrf !== false && !["GET", "HEAD"].includes(method)) {
+    invariant(
+      typeof privateContext.csrf === "string" && privateContext.csrf.length > 0,
+      "API CSRF capability is missing"
+    );
+    const csrfHeaderName = PRIVATE_RUNTIME.get(state)?.csrfHeaderName;
+    invariant(
+      typeof csrfHeaderName === "string" && /^[a-z0-9][a-z0-9-]{0,127}$/u.test(csrfHeaderName),
+      "API CSRF header authority is missing"
+    );
+    headers[csrfHeaderName] = privateContext.csrf;
+  }
+  const response = await privateContext.context.fetch(API_BASE + route, {
+    method,
+    headers,
+    ...(options.multipart === undefined ? {} : { multipart: options.multipart }),
+    ...(options.json === undefined ? {} : { data: canonicalJson(options.json) }),
+    failOnStatusCode: false,
+    maxRedirects: 0,
+    maxRetries: 0,
+    timeout: 30_000,
+  });
+  const status = response.status();
+  const parsed =
+    status === 204
+      ? { value: null, bytes: Buffer.alloc(0) }
+      : await readBoundedJsonResponse(response, route);
+  const result =
+    options.retainAuthoritativeBytes === true
+      ? { status, value: parsed.value, authoritativeBytes: parsed.bytes }
+      : { status, value: parsed.value };
+  await response.dispose();
+  if (options.allowedStatus?.includes(status)) {
+    return result;
+  }
+  invariant(status >= 200 && status < 300, route + " returned HTTP " + status);
+  return result;
+}
+
+function validateExactApiLoginResponse(value, expectedUserId, expectedEmail) {
+  exactOwnKeys(value, ["session", "user"], "API login response", { plain: true });
+  exactOwnKeys(value.user, ["email", "id", "name"], "API login user", { plain: true });
+  exactOwnKeys(value.session, ["expiresAt"], "API login session", { plain: true });
+  invariant(
+    value.user.id === expectedUserId &&
+      typeof value.user.email === "string" &&
+      value.user.email.trim().toLowerCase() === expectedEmail.trim().toLowerCase() &&
+      (value.user.name === null || typeof value.user.name === "string") &&
+      typeof value.session.expiresAt === "string" &&
+      new Date(value.session.expiresAt).toISOString() === value.session.expiresAt,
+    "API login identity or strict response projection drift"
+  );
+  return value;
+}
+
+async function loginApiSession(state, key, email, userAgent) {
+  const registry = privateApiContextRegistry(state);
+  invariant(!state.sessions.has(key) && !registry.has(key), "API session already exists: " + key);
+  invariant(
+    state.playwrightRequest && typeof state.playwrightRequest.newContext === "function",
+    "Playwright request authority is absent"
+  );
+  const expectedUserId = key === "bootstrap" ? state.bootstrapBaseline?.id : state.ids.userA;
+  invariant(
+    typeof expectedUserId === "string" && /^[0-9a-f-]{36}$/u.test(expectedUserId),
+    key + " expected login identity is absent"
+  );
+  const priorRows = await readExactApiSessionRows(
+    state,
+    expectedUserId,
+    userAgent,
+    key + " pre-login session observation"
+  );
+  invariant(priorRows.length === 0, key + " task-UA session existed before isolated login");
+  const context = await state.playwrightRequest.newContext({
+    baseURL: API_BASE + "/",
+    extraHTTPHeaders: { Accept: "application/json", "User-Agent": userAgent },
+    failOnStatusCode: false,
+    maxRedirects: 0,
+    storageState: { cookies: [], origins: [] },
+    timeout: 30_000,
+    userAgent,
+  });
+  const session = { key, userAgent, userId: null };
+  const record = {
+    capability: session,
+    context,
+    cookieStorageState: null,
+    csrf: null,
+    disposalErrors: [],
+    disposeAttemptPromise: null,
+    disposeProof: null,
+    key,
+    sessionId: null,
+    sessionRow: null,
+    tokenHash: null,
+    userAgent,
+    userId: null,
+  };
+  registry.set(key, record);
+  try {
+    validateEmptyApiStorageState(await context.storageState(), key + " initial API storage");
+    const response = await adminApiRequest(state, session, "POST", "/auth/login", {
+      csrf: false,
+      json: {
+        email,
+        password: ownString(state.repoEnvironment, "ADMIN_PASSWORD", { required: true }),
+      },
+    });
+    validateExactApiLoginResponse(response.value, expectedUserId, email);
+    const row = await bindAuthenticatedApiSession(state, session, expectedUserId);
+    session.userId = row.userId;
+    Object.freeze(session);
+    state.sessions.set(key, session);
+    return session;
+  } catch (cause) {
+    const failures = [cause];
+    try {
+      await bindAuthenticatedApiSession(state, session, expectedUserId);
+    } catch (observationError) {
+      failures.push(observationError);
+    }
+    let disposalAttemptFailed = false;
+    try {
+      await disposeApiRequestContextAndProveAbsent(state, session, key);
+    } catch (disposeError) {
+      disposalAttemptFailed = true;
+      failures.push(disposeError);
+    }
+    if (!disposalAttemptFailed) {
+      const lifecycleError = retainedApiLifecycleFailure(record, key);
+      if (lifecycleError !== null) failures.push(lifecycleError);
+    }
+    throw failures.length === 1
+      ? cause
+      : new AggregateError(
+          failures,
+          "API login, exact session observation, or isolated context disposal failed"
+        );
+  }
+}
+
+async function captureApiCsrf(state, key) {
+  const session = state.sessions.get(key);
+  const record = privateApiContextRecord(state, session, key);
+  invariant(
+    record.csrf === null &&
+      record.sessionId !== null &&
+      record.sessionRow?.csrfTokenHash === null &&
+      canonicalJson(await record.context.storageState()) ===
+        canonicalJson(record.cookieStorageState),
+    "API CSRF session state drift"
+  );
+  const beforeRows = await readExactApiSessionRows(
+    state,
+    record.userId,
+    record.userAgent,
+    key + " pre-CSRF session observation"
+  );
+  invariant(
+    beforeRows.length === 1 &&
+      beforeRows[0].id === record.sessionId &&
+      beforeRows[0].tokenHash === record.tokenHash &&
+      beforeRows[0].csrfTokenHash === null,
+    key + " pre-CSRF row identity drift"
+  );
+  const response = await adminApiRequest(state, session, "GET", "/auth/csrf", { csrf: false });
+  invariant(
+    response.value &&
+      Object.keys(response.value).length === 1 &&
+      typeof response.value.token === "string" &&
+      response.value.token.length > 0,
+    "API CSRF response drift"
+  );
+  const storageAfter = await record.context.storageState();
+  invariant(
+    canonicalJson(storageAfter) === canonicalJson(record.cookieStorageState),
+    key + " CSRF request rotated or changed the isolated session cookie"
+  );
+  const afterRows = await readExactApiSessionRows(
+    state,
+    record.userId,
+    record.userAgent,
+    key + " post-CSRF session observation"
+  );
+  const [before] = beforeRows;
+  const [after] = afterRows;
+  invariant(
+    afterRows.length === 1 &&
+      after.id === before.id &&
+      after.userId === before.userId &&
+      after.userAgent === before.userAgent &&
+      after.tokenHash === before.tokenHash &&
+      after.ip === before.ip &&
+      after.createdAt === before.createdAt &&
+      after.expiresAt === before.expiresAt &&
+      after.revokedAt === before.revokedAt &&
+      after.csrfTokenHash === hashBytes(Buffer.from(response.value.token)),
+    key + " CSRF changed more than csrfTokenHash or failed to bind its exact hash"
+  );
+  record.csrf = response.value.token;
+  record.sessionRow = deepFreezeExact(after);
+  return session;
+}
+
+async function disposeOwnedApiRequestContextAndProveAbsent(privateContext, expectedKey) {
+  invariant(
+    privateContext &&
+      privateContext.key === expectedKey &&
+      privateContext.context &&
+      Array.isArray(privateContext.disposalErrors),
+    expectedKey + " API context disposal authority drift"
+  );
+  if (privateContext.disposeProof !== null) {
+    let capabilityRejected = false;
+    try {
+      await privateContext.context.storageState();
+    } catch {
+      capabilityRejected = true;
+    }
+    invariant(
+      capabilityRejected,
+      expectedKey + " API context capability reappeared after absence proof"
+    );
+    return privateContext.disposeProof;
+  }
+  if (privateContext.disposeAttemptPromise === null) {
+    privateContext.disposeAttemptPromise = (async () => {
+      const failures = [];
+      try {
+        await privateContext.context.dispose();
+      } catch (error) {
+        failures.push(error);
+      }
+      let capabilityRejected = false;
+      try {
+        await privateContext.context.storageState();
+      } catch {
+        capabilityRejected = true;
+      }
+      if (!capabilityRejected) {
+        failures.push(new Error(expectedKey + " API context retained capability after dispose"));
+      }
+      privateContext.disposalErrors.push(...failures);
+      if (!capabilityRejected) {
+        throw failures.length === 1
+          ? failures[0]
+          : new AggregateError(
+              failures,
+              expectedKey + " API context disposal and absence proof failed"
+            );
+      }
+      privateContext.disposeProof = deepFreezeExact({
+        acquired: true,
+        capabilityAbsent: true,
+        disposeCalled: true,
+        userAgent: privateContext.userAgent,
+      });
+      return privateContext.disposeProof;
+    })();
+  }
+  try {
+    return await privateContext.disposeAttemptPromise;
+  } finally {
+    if (privateContext.disposeProof === null) privateContext.disposeAttemptPromise = null;
+  }
+}
+
+async function disposeApiRequestContextAndProveAbsent(state, session, expectedKey) {
+  const privateContext = privateApiContextRegistry(state).get(expectedKey);
+  invariant(
+    privateContext && privateContext.capability === session,
+    expectedKey + " API context capability identity drift"
+  );
+  return disposeOwnedApiRequestContextAndProveAbsent(privateContext, expectedKey);
+}
+
+function retainedApiLifecycleFailure(record, label) {
+  if (!record || record.disposalErrors.length === 0) return null;
+  return new AggregateError(
+    [...record.disposalErrors],
+    label + " retained API context lifecycle failure"
+  );
+}
+
+async function runPrivateProcess({ file, args, cwd, env, stdin, timeoutMs = 30_000 }) {
+  const execution = await runRetainedProcessGroup({
+    file,
+    args,
+    cwd,
+    env,
+    stdinBytes: stdin,
+    timeoutMs,
+  });
+  invariant(
+    !execution.timedOut &&
+      !execution.spawnError &&
+      execution.completion.code === 0 &&
+      !execution.stdout.exceeded &&
+      !execution.stderr.exceeded &&
+      execution.stderr.bytes.length === 0 &&
+      execution.termination.absent === true,
+    "private child failed"
+  );
+  return execution.stdout.bytes;
+}
+
+function validatedBunPathEntries(pathValue) {
+  invariant(
+    typeof pathValue === "string" && !pathValue.includes("\0"),
+    "Bun executable PATH authority is invalid"
+  );
+  const pathEntries = pathValue.split(path.delimiter);
+  invariant(
+    pathEntries.length > 0 &&
+      pathEntries.length <= 128 &&
+      pathEntries.every(
+        (entry) => entry.length > 0 && path.isAbsolute(entry) && path.resolve(entry) === entry
+      ),
+    "Bun PATH search authority is not an exact bounded absolute projection"
+  );
+  return [...new Set(pathEntries)];
+}
+
+async function resolveBunPathSelection(pathValue) {
+  for (const directory of validatedBunPathEntries(pathValue)) {
+    const aliasPath = path.join(directory, "bun");
+    try {
+      const executablePath = await realpath(aliasPath);
+      return deepFreezeExact({ aliasPath, executablePath });
+    } catch (error) {
+      if (!error || !["ENOENT", "ENOTDIR", "EACCES"].includes(error.code)) throw error;
+    }
+  }
+  invariant(false, "canonical Bun executable is absent from PATH");
+}
+
+async function resolveValidatedBunExecutable(pathValue, root) {
+  invariant(
+    path.isAbsolute(root) && path.resolve(root) === root,
+    "Bun executable root authority is invalid"
+  );
+  const selection = await resolveBunPathSelection(pathValue);
+  const executablePath = selection.executablePath;
+  invariant(
+    path.isAbsolute(executablePath) && path.basename(executablePath) === "bun",
+    "canonical Bun executable is absent"
+  );
+  await assertNoSymlinkAncestors(executablePath);
+  const executableIdentity = await readStableArtifactIdentity(executablePath, {
+    expectedType: "file",
+  });
+  invariant((executableIdentity.mode & 0o111) !== 0, "canonical Bun executable is not executable");
+  await assertNoSymlinkAncestors(root);
+  const rootIdentity = await readStableArtifactIdentity(root, { expectedType: "directory" });
+  const corePath = path.join(root, "core");
+  invariant((await realpath(corePath)) === corePath, "canonical Bun core cwd drift");
+  await assertNoSymlinkAncestors(corePath);
+  const coreIdentity = await readStableArtifactIdentity(corePath, { expectedType: "directory" });
+  return deepFreezeExact({
+    coreIdentity,
+    corePath,
+    executableIdentity,
+    executablePath,
+    pathValue,
+    rootIdentity,
+    rootPath: root,
+    selectedAliasPath: selection.aliasPath,
+  });
+}
+
+function validateBunArtifactIdentityProjection(identity, expectedType, label) {
+  exactOwnKeys(identity, ["dev", "ino", "mode", "size", "type"], label, { plain: true });
+  invariant(
+    typeof identity.dev === "string" &&
+      identity.dev.length > 0 &&
+      typeof identity.ino === "string" &&
+      identity.ino.length > 0 &&
+      identity.type === expectedType &&
+      Number.isSafeInteger(identity.mode) &&
+      identity.mode >= 0 &&
+      identity.mode <= 0o777 &&
+      Number.isSafeInteger(identity.size) &&
+      identity.size >= 0,
+    label + " projection drift"
+  );
+  return identity;
+}
+
+function validateBunExecutableAuthorityObservation(authority, observation) {
+  exactOwnKeys(
+    authority,
+    [
+      "coreIdentity",
+      "corePath",
+      "executableIdentity",
+      "executablePath",
+      "pathValue",
+      "rootIdentity",
+      "rootPath",
+      "selectedAliasPath",
+    ],
+    "Bun executable authority",
+    { plain: true }
+  );
+  exactOwnKeys(
+    observation,
+    [
+      "coreIdentity",
+      "coreRealPath",
+      "currentPath",
+      "executableIdentity",
+      "executableRealPath",
+      "rootIdentity",
+      "rootRealPath",
+      "selectedAliasPath",
+      "selectedExecutableRealPath",
+    ],
+    "Bun executable authority observation",
+    { plain: true }
+  );
+  validateBunArtifactIdentityProjection(
+    authority.executableIdentity,
+    "file",
+    "Bun executable authority identity"
+  );
+  validateBunArtifactIdentityProjection(
+    observation.executableIdentity,
+    "file",
+    "Bun executable observed identity"
+  );
+  validateBunArtifactIdentityProjection(
+    authority.rootIdentity,
+    "directory",
+    "Bun root authority identity"
+  );
+  validateBunArtifactIdentityProjection(
+    observation.rootIdentity,
+    "directory",
+    "Bun root observed identity"
+  );
+  validateBunArtifactIdentityProjection(
+    authority.coreIdentity,
+    "directory",
+    "Bun core authority identity"
+  );
+  validateBunArtifactIdentityProjection(
+    observation.coreIdentity,
+    "directory",
+    "Bun core observed identity"
+  );
+  invariant(
+    observation.currentPath === authority.pathValue &&
+      observation.selectedAliasPath === authority.selectedAliasPath &&
+      observation.selectedExecutableRealPath === authority.executablePath &&
+      observation.executableRealPath === authority.executablePath &&
+      observation.rootRealPath === authority.rootPath &&
+      observation.coreRealPath === authority.corePath &&
+      sameArtifactIdentity(observation.executableIdentity, authority.executableIdentity, {
+        includeSize: true,
+      }) &&
+      sameArtifactIdentity(observation.rootIdentity, authority.rootIdentity) &&
+      sameArtifactIdentity(observation.coreIdentity, authority.coreIdentity) &&
+      (observation.executableIdentity.mode & 0o111) !== 0,
+    "Bun executable, PATH, or cwd authority drift"
+  );
+  return authority;
+}
+
+async function revalidateBunExecutableAuthority(state) {
+  const authority = PRIVATE_BUN_EXECUTABLE_AUTHORITY.get(state);
+  invariant(authority, "Bun executable authority is absent");
+  const selection = await resolveBunPathSelection(process.env.PATH);
+  await assertNoSymlinkAncestors(authority.executablePath);
+  const executableIdentity = await readStableArtifactIdentity(authority.executablePath, {
+    expectedType: "file",
+  });
+  await assertNoSymlinkAncestors(authority.rootPath);
+  const rootIdentity = await readStableArtifactIdentity(authority.rootPath, {
+    expectedType: "directory",
+  });
+  await assertNoSymlinkAncestors(authority.corePath);
+  const coreIdentity = await readStableArtifactIdentity(authority.corePath, {
+    expectedType: "directory",
+  });
+  return validateBunExecutableAuthorityObservation(authority, {
+    coreIdentity,
+    coreRealPath: await realpath(authority.corePath),
+    currentPath: process.env.PATH,
+    executableIdentity,
+    executableRealPath: await realpath(authority.executablePath),
+    rootIdentity,
+    rootRealPath: await realpath(authority.rootPath),
+    selectedAliasPath: selection.aliasPath,
+    selectedExecutableRealPath: selection.executablePath,
+  });
+}
+
+function buildBridgeEnvironment(state, profile) {
+  const environment = Object.create(null);
+  const selected = BUN_BRIDGE_ENV_PROFILES[profile];
+  invariant(selected !== undefined, "bridge environment profile is unknown");
+  const bunAuthority = PRIVATE_BUN_EXECUTABLE_AUTHORITY.get(state);
+  invariant(bunAuthority, "Bun executable authority is absent from bridge environment projection");
+  for (const key of selected.requiredInherited) {
+    const value = ownString(process.env, key, { required: true });
+    if (key === "PATH")
+      invariant(value === bunAuthority.pathValue, "Bun bridge inherited PATH drift");
+    environment[key] = value;
+  }
+  for (const key of selected.requiredRepo)
+    environment[key] = ownString(state.repoEnvironment, key, { required: true });
+  for (const key of selected.optionalRepo) {
+    const value = ownString(state.repoEnvironment, key);
+    if (value !== null && value.length > 0) environment[key] = value;
+  }
+  for (const [key, value] of Object.entries(selected.fixed)) environment[key] = value;
+  invariant(
+    deepEqualJson(
+      Object.keys(environment).sort(),
+      [
+        ...selected.requiredInherited,
+        ...selected.requiredRepo,
+        ...selected.optionalRepo.filter((key) => Object.hasOwn(environment, key)),
+        ...Object.keys(selected.fixed),
+      ].sort()
+    ),
+    "bridge environment exact projection drift"
+  );
+  return Object.freeze(environment);
+}
+
+function encodeBoundedBunBridgeCanonicalFrame(input, maximumBytes) {
+  invariant(
+    Number.isSafeInteger(maximumBytes) && maximumBytes > 0,
+    "Bun bridge stdin bound is invalid"
+  );
+  const frame = Buffer.from(canonicalJson(input) + "\n");
+  invariant(frame.length <= maximumBytes, "Bun bridge stdin exceeds its descriptor bound");
+  return frame;
+}
+
+function encodeBunBridgeInputFrame(state, descriptor, input) {
+  validateBunBridgeOperationDescriptor(descriptor);
+  validateBunBridgeInput(state, descriptor, input);
+  return encodeBoundedBunBridgeCanonicalFrame(input, descriptor.maxStdinBytes);
+}
+
+function prepareBunBridgeDispatch(state, descriptor, input) {
+  const frame = encodeBunBridgeInputFrame(state, descriptor, input);
+  return Object.freeze({
+    descriptor,
+    frame,
+    projection: deepFreezeExact({
+      envProfileId: descriptor.envProfileId,
+      file: descriptor.file,
+      frameBytes: frame.length,
+      frameSha256: hashBytes(frame),
+      inputSchemaId: descriptor.inputSchemaId,
+      operationId: descriptor.operationId,
+      outputSchemaId: descriptor.outputSchemaId,
+      sourceSha256: descriptor.sourceSha256,
+    }),
+  });
+}
+
+function dryDispatchBunBridgeDescriptor(state, descriptor, input, externalExecutionTrap) {
+  invariant(typeof externalExecutionTrap === "function", "Bun bridge dry-dispatch trap is absent");
+  const prepared = prepareBunBridgeDispatch(state, descriptor, input);
+  externalExecutionTrap(prepared.projection);
+  invariant(false, "Bun bridge dry-dispatch trap returned instead of stopping external execution");
+}
+
+async function runBunBridge(state, descriptor, input) {
+  const prepared = prepareBunBridgeDispatch(state, descriptor, input);
+  const frame = prepared.frame;
+  const executable = await revalidateBunExecutableAuthority(state);
+  invariant(
+    state.root === executable.rootPath &&
+      executable.corePath === path.join(executable.rootPath, "core") &&
+      path.isAbsolute(executable.executablePath),
+    "Bun bridge canonical executable/cwd binding drift"
+  );
+  const args = ["--no-env-file", "--cwd", executable.corePath, "--eval", descriptor.source];
+  const execution = await runRetainedProcessGroup({
+    file: executable.executablePath,
+    args,
+    cwd: executable.rootPath,
+    env: buildBridgeEnvironment(state, descriptor.envProfileId),
+    stdinBytes: frame,
+    timeoutMs: descriptor.timeoutMs,
+    maxStdoutBytes: descriptor.maxStdoutBytes,
+    maxStderrBytes: descriptor.maxStderrBytes,
+  });
+  invariant(
+    !execution.timedOut &&
+      !execution.spawnError &&
+      execution.completion.code === 0 &&
+      !execution.stdout.exceeded &&
+      !execution.stderr.exceeded &&
+      execution.stderr.bytes.length === 0 &&
+      execution.termination.absent === true,
+    "descriptor-bound Bun bridge child failed"
+  );
+  const text = decodeBoundedUtf8(
+    execution.stdout.bytes,
+    "Bun bridge output",
+    descriptor.maxStdoutBytes
+  );
+  invariant(
+    text.endsWith("\n") && !text.slice(0, -1).includes("\n"),
+    "Bun bridge output frame drift"
+  );
+  const value = JSON.parse(text.slice(0, -1));
+  assertPlainJsonValue(value, "Bun bridge output");
+  invariant(canonicalJson(value) + "\n" === text, "Bun bridge output is not canonical");
+  return value;
+}
+
+const BRIDGE_INPUT_READER = String.raw`const raw = await new Response(Bun.stdin.stream()).text();
+if (!raw.endsWith("\n") || raw.slice(0, -1).includes("\n") || raw.includes("\0") || raw.includes("\r")) throw new Error("wf540_bridge_frame");
+const input = JSON.parse(raw.slice(0, -1));
+const canonical = (value) => value === null || typeof value !== "object" ? JSON.stringify(value) : Array.isArray(value) ? "[" + value.map(canonical).join(",") + "]" : "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + canonical(value[key])).join(",") + "}";
+if (canonical(input) + "\n" !== raw) throw new Error("wf540_bridge_noncanonical");
+const inputKeys = (value, expected) => { if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).sort().join(",") !== [...expected].sort().join(",")) throw new Error("wf540_input_keys"); };
+const inputString = (value, maximum = 512) => { if (typeof value !== "string" || value.length === 0 || value.includes("\0") || new TextEncoder().encode(value).length > maximum) throw new Error("wf540_input_string"); return value; };
+const inputUuid = (value) => { if (typeof value !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value)) throw new Error("wf540_input_uuid"); return value; };
+const inputObject = (value) => { if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("wf540_input_object"); return value; };
+const inputNullableUuid = (value) => { if (value !== null) inputUuid(value); };
+const inputStringArray = (value, maximumItems, maximumLength) => { if (!Array.isArray(value) || value.length > maximumItems) throw new Error("wf540_input_array"); value.forEach((item) => inputString(item, maximumLength)); };
+const inputTuple = (value, length) => { if (!Array.isArray(value) || value.length !== length) throw new Error("wf540_input_tuple"); value.forEach((item) => inputString(item, 1024)); return value; };
+const inputIso = (value) => value === null || (typeof value === "string" && new Date(value).toISOString() === value);
+const validateInput = (schemaId, value) => {
+  const exact = (...keys) => inputKeys(value, keys);
+  if (schemaId === "empty-input-v1") { exact(); return value; }
+  if (schemaId === "email-input-v1") { exact("email"); inputString(value.email,320); if (value.email !== value.email.toLowerCase() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.email)) throw new Error("wf540_input_email"); return value; }
+  if (schemaId === "slug-input-v1") { exact("slug"); inputString(value.slug,256); return value; }
+  if (schemaId === "user-id-input-v1" || schemaId === "media-id-input-v1") { exact(schemaId === "user-id-input-v1" ? "userId" : "mediaId"); inputUuid(value[schemaId === "user-id-input-v1" ? "userId" : "mediaId"]); return value; }
+  if (schemaId === "user-identity-input-v1") { exact("email","userId"); inputUuid(value.userId); inputString(value.email,320); if (value.email !== value.email.toLowerCase() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.email)) throw new Error("wf540_input_email"); return value; }
+  if (schemaId === "user-provision-input-v1") { exact("email","name"); inputString(value.email,320); inputString(value.name,256); if (value.email !== value.email.toLowerCase() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.email)) throw new Error("wf540_input_email"); return value; }
+  if (schemaId === "preference-write-input-v1") { exact("showFieldMetadata","userId"); inputUuid(value.userId); if (typeof value.showFieldMetadata !== "boolean") throw new Error("wf540_input_boolean"); return value; }
+  if (schemaId === "user-session-observation-input-v1") { exact("userAgent","userId"); inputUuid(value.userId); inputString(value.userAgent,512); return value; }
+  if (schemaId === "user-agents-input-v1") { exact("userAgents"); if (!Array.isArray(value.userAgents) || value.userAgents.length !== 4 || new Set(value.userAgents).size !== 4) throw new Error("wf540_input_agents"); value.userAgents.forEach((item)=>inputString(item,512)); return value; }
+  if (schemaId === "entry-discovery-input-v1") { exact("slug","typeId"); inputString(value.slug,256); inputUuid(value.typeId); return value; }
+  if (schemaId === "entry-preflight-input-v1") { exact("entrySlug","typeSlug"); inputString(value.entrySlug,256); inputString(value.typeSlug,256); return value; }
+  if (schemaId === "screen-discovery-input-v1") { exact("contentTypeId","name"); inputUuid(value.contentTypeId); inputString(value.name,256); return value; }
+  if (schemaId === "screen-preflight-input-v1") { exact("contentTypeSlug","name"); inputString(value.contentTypeSlug,256); inputString(value.name,256); return value; }
+  if (schemaId === "media-natural-input-v1") { exact("mimeType","originalName","size"); inputString(value.mimeType,128); inputString(value.originalName,512); if (!Number.isSafeInteger(value.size) || value.size <= 0 || value.size > 4194304) throw new Error("wf540_input_size"); return value; }
+  if (schemaId === "override-discovery-input-v1") { exact("blockId","entryId","propPath","screenId"); inputUuid(value.entryId); inputUuid(value.screenId); inputString(value.blockId,256); if (value.propPath !== "mediaAssetId") throw new Error("wf540_input_prop"); return value; }
+  if (schemaId === "override-preflight-input-v1") { exact("blockId","contentTypeSlug","entrySlug","propPath","screenName"); ["blockId","contentTypeSlug","entrySlug","screenName"].forEach((key)=>inputString(value[key],256)); if (value.propPath !== "mediaAssetId") throw new Error("wf540_input_prop"); return value; }
+  if (schemaId === "resource-owner-input-v1") { exact("entryIds","mediaId","override"); if (!Array.isArray(value.entryIds) || value.entryIds.length !== 6 || new Set(value.entryIds).size !== 6) throw new Error("wf540_input_entries"); value.entryIds.forEach(inputUuid); inputUuid(value.mediaId); inputKeys(value.override,["blockId","entryId","propPath","screenId"]); inputUuid(value.override.entryId); inputUuid(value.override.screenId); inputString(value.override.blockId,256); if (value.override.propPath !== "mediaAssetId") throw new Error("wf540_input_prop"); return value; }
+  if (schemaId === "identifier-uuid-input-v1") { exact("identifier"); inputUuid(inputTuple(value.identifier,1)[0]); return value; }
+  if (schemaId === "identifier-setting-input-v1") { exact("identifier"); const tuple=inputTuple(value.identifier,2); inputUuid(tuple[0]); if (tuple[1] !== "customScreens.entry.preferences") throw new Error("wf540_input_setting_key"); return value; }
+  if (schemaId === "identifier-override-input-v1") { exact("identifier"); const tuple=inputTuple(value.identifier,4); inputUuid(tuple[0]); inputUuid(tuple[1]); inputString(tuple[2],256); if (tuple[3] !== "mediaAssetId") throw new Error("wf540_input_prop"); return value; }
+  if (schemaId === "identifier-media-input-v1") { exact("identifier"); const tuple=inputTuple(value.identifier,2); inputUuid(tuple[0]); if (!/^\d{4}\/(?:0[1-9]|1[0-2])\/[0-9a-f-]{36}\.png$/.test(tuple[1])) throw new Error("wf540_input_storage_key"); return value; }
+  if (schemaId === "screen-materialize-input-v1") { exact("bodyWithoutDefinition","contentType","definitionWithoutListView"); inputKeys(value.bodyWithoutDefinition,["contentTypeId","name","showInSidebar","sidebarLabel","status"]); inputUuid(value.bodyWithoutDefinition.contentTypeId); inputString(value.bodyWithoutDefinition.name,256); inputString(value.bodyWithoutDefinition.sidebarLabel,256); if (value.bodyWithoutDefinition.status !== "active" || typeof value.bodyWithoutDefinition.showInSidebar !== "boolean") throw new Error("wf540_input_screen_body"); inputKeys(value.contentType,["id","name","schema","slug"]); inputUuid(value.contentType.id); inputString(value.contentType.name,256); inputString(value.contentType.slug,256); inputObject(value.contentType.schema); inputKeys(value.definitionWithoutListView,["editorView","schemaVersion"]); inputObject(value.definitionWithoutListView.editorView); if (value.definitionWithoutListView.schemaVersion !== 4) throw new Error("wf540_input_screen_definition"); return value; }
+  if (schemaId === "bootstrap-restore-input-v1") { exact("baseline","newestOwnedPair","userId"); inputKeys(value.baseline,["id","lastLoginAt","updatedAt","normalizedEmailProof","emailHashProof","encryptedEmailProof","decryptEmailProof","rawUserRow","roleTuples"]); inputKeys(value.baseline.rawUserRow,["id","email","emailHash","emailEncrypted","passwordHash","name","status","createdAt","updatedAt","lastLoginAt"]); if (typeof value.baseline.id !== "string" || !/^[0-9a-f-]{36}$/.test(value.baseline.id) || value.baseline.rawUserRow.id !== value.baseline.id || value.baseline.rawUserRow.lastLoginAt !== value.baseline.lastLoginAt || value.baseline.rawUserRow.updatedAt !== value.baseline.updatedAt || !inputIso(value.baseline.lastLoginAt) || !inputIso(value.baseline.updatedAt) || !inputIso(value.baseline.rawUserRow.createdAt) || value.baseline.rawUserRow.status !== "active" || ![value.baseline.normalizedEmailProof,value.baseline.emailHashProof,value.baseline.encryptedEmailProof,value.baseline.decryptEmailProof].every((proof)=>proof === true)) throw new Error("wf540_input_bootstrap_identity"); if (!Array.isArray(value.baseline.roleTuples) || value.baseline.roleTuples.length !== 1) throw new Error("wf540_input_bootstrap_roles"); inputKeys(value.baseline.roleTuples[0],["userId","roleId","roleName","roleDescription","rolePermissions","roleCreatedAt"]); if (value.baseline.roleTuples[0].userId !== value.baseline.id || typeof value.baseline.roleTuples[0].roleId !== "string" || !/^[0-9a-f-]{36}$/.test(value.baseline.roleTuples[0].roleId) || value.baseline.roleTuples[0].roleName !== "admin" || !Array.isArray(value.baseline.roleTuples[0].rolePermissions) || canonical([...new Set(value.baseline.roleTuples[0].rolePermissions)].sort()) !== canonical(["*"]) || !inputIso(value.baseline.roleTuples[0].roleCreatedAt)) throw new Error("wf540_input_bootstrap_role"); inputKeys(value.newestOwnedPair,["lastLoginAt","updatedAt"]); if (value.userId !== value.baseline.id || !inputIso(value.newestOwnedPair.lastLoginAt) || !inputIso(value.newestOwnedPair.updatedAt)) throw new Error("wf540_input_bootstrap_pair"); return value; }
+  throw new Error("wf540_input_schema");
+};`;
+const bridgeInputSchemaGuard = (schemaId) =>
+  `validateInput(${JSON.stringify(schemaId)},input);/*wf540-bound-input*/\n`;
+const BRIDGE_OUTPUT_WRITER = String.raw`await Bun.write(Bun.stdout, canonical(output) + "\n"); process.exit(0);`;
+const USER_PROVISION_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("user-provision-input-v1") +
+  String.raw`
+import { eq } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { roles, userRoles, users } from "./db/schema.ts";
+import { createUser } from "./services/admin/usersService.ts";
+import { getAdminRoleIds } from "./services/admin/rolesService.ts";
+import { hashPassword } from "./services/auth/password.ts";
+import { updatePassword } from "./services/auth/userService.ts";
+import { normalizeEmail, resolveEmailValue } from "./services/security/piiEmail.ts";
+if (Object.keys(input).sort().join(",") !== "email,name" || normalizeEmail(input.email) !== input.email) throw new Error("wf540_input");
+const roleIds = await getAdminRoleIds();
+if (roleIds.length !== 1) throw new Error("wf540_admin_role");
+const adminRoles = await db.select({id:roles.id,name:roles.name,description:roles.description,permissions:roles.permissions,createdAt:roles.createdAt}).from(roles).where(eq(roles.id,roleIds[0])).limit(2);
+if (adminRoles.length !== 1 || adminRoles[0].name !== "admin" || canonical(adminRoles[0].permissions) !== canonical(["*"])) throw new Error("wf540_admin_role_tuple");
+const user = await createUser({ name: input.name, email: input.email, roleIds, status: "active" });
+if (!user) throw new Error("wf540_user_create");
+const passwordHash = await hashPassword(process.env.ADMIN_PASSWORD);
+const updated = await updatePassword(user.id, { passwordHash, activatePending: true });
+if (!updated || updated.id !== user.id || updated.passwordHash !== passwordHash) throw new Error("wf540_user_password_exact_id");
+const storedUsers = await db.select().from(users).where(eq(users.id,user.id)).limit(2);
+const storedRoles = await db.select({
+  userId:userRoles.userId,roleId:userRoles.roleId,roleName:roles.name,
+  roleDescription:roles.description,rolePermissions:roles.permissions,roleCreatedAt:roles.createdAt,
+}).from(userRoles).innerJoin(roles,eq(roles.id,userRoles.roleId)).where(eq(userRoles.userId,user.id)).limit(2);
+if (storedUsers.length !== 1 || storedRoles.length !== 1 || storedRoles[0].roleId !== roleIds[0] || storedRoles[0].roleName !== "admin" || canonical(storedRoles[0].rolePermissions) !== canonical(["*"]) || normalizeEmail(resolveEmailValue(storedUsers[0]) ?? "") !== input.email) throw new Error("wf540_user_complete_proof");
+const output = {
+  adminRoleTupleCount:1,exactIdPasswordUpdate:true,normalizedEmailMatches:true,
+  userEmail:input.email,userId:user.id,
+};` +
+  BRIDGE_OUTPUT_WRITER;
+const USER_PROOF_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("user-identity-input-v1") +
+  String.raw`
+import { getUser } from "./services/admin/usersService.ts";
+import { getAdminRoleIds } from "./services/admin/rolesService.ts";
+if (Object.keys(input).sort().join(",") !== "email,userId") throw new Error("wf540_input");
+const user = await getUser(input.userId); const adminRoleIds = await getAdminRoleIds();
+if (!user || user.email !== input.email || user.status !== "active" || adminRoleIds.length !== 1 || user.roleIds.length !== 1 || user.roleIds[0] !== adminRoleIds[0]) throw new Error("wf540_user_proof");
+const output = { ok: true };` +
+  BRIDGE_OUTPUT_WRITER;
+const USER_DELETE_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("user-id-input-v1") +
+  String.raw`
+import { deleteUser, getUser } from "./services/admin/usersService.ts";
+if (Object.keys(input).join(",") !== "userId") throw new Error("wf540_input");
+const before = await getUser(input.userId); if (!before) throw new Error("wf540_user_missing");
+const deleted = await deleteUser(input.userId); if (!deleted) throw new Error("wf540_user_delete");
+const output = { ok: (await getUser(input.userId)) === null };` +
+  BRIDGE_OUTPUT_WRITER;
+const USER_ABSENCE_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("user-id-input-v1") +
+  String.raw`
+import { getUser } from "./services/admin/usersService.ts";
+if (Object.keys(input).join(",") !== "userId") throw new Error("wf540_input");
+const output = { absent: (await getUser(input.userId)) === null };` +
+  BRIDGE_OUTPUT_WRITER;
+const PREFERENCE_SET_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("preference-write-input-v1") +
+  String.raw`
+import { setUserSetting } from "./services/settings/userSettingsService.ts";
+if (Object.keys(input).sort().join(",") !== "showFieldMetadata,userId" || typeof input.showFieldMetadata !== "boolean") throw new Error("wf540_input");
+const row = await setUserSetting(input.userId, "customScreens.entry.preferences", { version: 1, showFieldMetadata: input.showFieldMetadata });
+const output = { ok: row.userId === input.userId };` +
+  BRIDGE_OUTPUT_WRITER;
+const PREFERENCE_GET_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("user-id-input-v1") +
+  String.raw`
+import { getUserSetting } from "./services/settings/userSettingsService.ts";
+if (Object.keys(input).join(",") !== "userId") throw new Error("wf540_input");
+const value = await getUserSetting(input.userId, "customScreens.entry.preferences");
+if (!value || Object.keys(value).sort().join(",") !== "showFieldMetadata,version" || value.version !== 1 || typeof value.showFieldMetadata !== "boolean") throw new Error("wf540_preference");
+const output = { showFieldMetadata: value.showFieldMetadata };` +
+  BRIDGE_OUTPUT_WRITER;
+const RESPONSE_LOST_USER_QUERY_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("email-input-v1") +
+  String.raw`
+import { eq, or } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { roles, userRoles, users } from "./db/schema.ts";
+import { hashEmail, normalizeEmail, resolveEmailValue } from "./services/security/piiEmail.ts";
+if (Object.keys(input).join(",") !== "email" || typeof input.email !== "string") throw new Error("wf540_input");
+const normalizedEmail = normalizeEmail(input.email);
+const rows = await db.select({
+  id: users.id, email: users.email, emailEncrypted: users.emailEncrypted,
+  name: users.name, status: users.status, passwordHash: users.passwordHash,
+  roleId: userRoles.roleId, roleName: roles.name, rolePermissions: roles.permissions,
+}).from(users)
+  .leftJoin(userRoles, eq(userRoles.userId, users.id))
+  .leftJoin(roles, eq(roles.id, userRoles.roleId))
+  .where(or(eq(users.emailHash, hashEmail(normalizedEmail)), eq(users.email, normalizedEmail))).limit(65);
+const overflow = rows.length > 64;
+const byId = new Map();
+for (const row of rows.slice(0, 64)) {
+  let candidate = byId.get(row.id);
+  if (!candidate) {
+    candidate = { id: row.id, normalizedEmailMatches: normalizeEmail(resolveEmailValue(row) ?? "") === normalizedEmail, name: row.name, status: row.status, passwordHashPresent: typeof row.passwordHash === "string" && row.passwordHash.length > 0, adminWildcardPermissionCount: 0, adminRoleTupleCount: 0 };
+    byId.set(row.id, candidate);
+  }
+  if (row.roleId && row.roleName === "admin" && canonical(row.rolePermissions) === canonical(["*"])) {
+    candidate.adminWildcardPermissionCount += 1;
+    candidate.adminRoleTupleCount += 1;
+  }
+}
+const output = { candidates: [...byId.values()].sort((a,b)=>a.id.localeCompare(b.id)), overflow };` +
+  BRIDGE_OUTPUT_WRITER;
+const RESPONSE_LOST_CONTENT_TYPE_QUERY_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("slug-input-v1") +
+  String.raw`
+import { eq } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { contentTypes } from "./db/schema.ts";
+if (Object.keys(input).join(",") !== "slug" || typeof input.slug !== "string") throw new Error("wf540_input");
+const rows = await db.select({ id: contentTypes.id, name: contentTypes.name, slug: contentTypes.slug, schema: contentTypes.schema, status: contentTypes.status, config: contentTypes.config }).from(contentTypes).where(eq(contentTypes.slug,input.slug)).limit(65);
+const output = { candidates: rows.slice(0,64).sort((a,b)=>a.id.localeCompare(b.id)), overflow: rows.length > 64 };` +
+  BRIDGE_OUTPUT_WRITER;
+const RESPONSE_LOST_ENTRY_QUERY_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("entry-discovery-input-v1") +
+  String.raw`
+import { and, eq, isNull } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { contentEntries } from "./db/schema.ts";
+if (Object.keys(input).sort().join(",") !== "slug,typeId" || typeof input.slug !== "string" || typeof input.typeId !== "string") throw new Error("wf540_input");
+const rows = await db.select({ id: contentEntries.id, typeId: contentEntries.typeId, authorId: contentEntries.authorId, title: contentEntries.title, slug: contentEntries.slug, status: contentEntries.status, visibility: contentEntries.visibility, accessPasswordAbsent: isNull(contentEntries.accessPassword), tags: contentEntries.tags, data: contentEntries.data, publishedAt: contentEntries.publishedAt, scheduledAt: contentEntries.scheduledAt }).from(contentEntries).where(and(eq(contentEntries.typeId,input.typeId),eq(contentEntries.slug,input.slug))).limit(65);
+const output = { candidates: rows.slice(0,64).map((row)=>({ ...row, publishedAt: row.publishedAt?.toISOString() ?? null, scheduledAt: row.scheduledAt?.toISOString() ?? null })).sort((a,b)=>a.id.localeCompare(b.id)), overflow: rows.length > 64 };` +
+  BRIDGE_OUTPUT_WRITER;
+const RESPONSE_LOST_SCREEN_QUERY_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("screen-discovery-input-v1") +
+  String.raw`
+import { and, eq } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { customScreens } from "./db/schema.ts";
+if (Object.keys(input).sort().join(",") !== "contentTypeId,name" || typeof input.contentTypeId !== "string" || typeof input.name !== "string") throw new Error("wf540_input");
+const rows = await db.select({ id: customScreens.id, name: customScreens.name, contentTypeId: customScreens.contentTypeId, status: customScreens.status, collectionRole: customScreens.collectionRole, compositionKey: customScreens.compositionKey, showInSidebar: customScreens.showInSidebar, sidebarLabel: customScreens.sidebarLabel, schemaVersion: customScreens.schemaVersion, definition: customScreens.definition }).from(customScreens).where(and(eq(customScreens.name,input.name),eq(customScreens.contentTypeId,input.contentTypeId))).limit(65);
+const output = { candidates: rows.slice(0,64).sort((a,b)=>a.id.localeCompare(b.id)), overflow: rows.length > 64 };` +
+  BRIDGE_OUTPUT_WRITER;
+const RESPONSE_LOST_MEDIA_QUERY_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("media-natural-input-v1") +
+  String.raw`
+import { and, eq } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { media } from "./db/schema.ts";
+import { assertCanonicalStorageKey } from "./services/media/storage/adapter.ts";
+if (Object.keys(input).sort().join(",") !== "mimeType,originalName,size" || typeof input.originalName !== "string" || typeof input.mimeType !== "string" || !Number.isSafeInteger(input.size)) throw new Error("wf540_input");
+const rows = await db.select({ id: media.id, key: media.key, url: media.url, originalName: media.originalName, type: media.type, mimeType: media.mimeType, size: media.size, width: media.width, height: media.height, alt: media.alt, title: media.title, caption: media.caption, folderId: media.folderId, tags: media.tags, focalX: media.focalX, focalY: media.focalY, description: media.description, credit: media.credit, createdBy: media.createdBy }).from(media).where(and(eq(media.originalName,input.originalName),eq(media.mimeType,input.mimeType),eq(media.size,input.size))).limit(65);
+const candidates = rows.slice(0,64);
+for (const candidate of candidates) {
+  assertCanonicalStorageKey(candidate.key);
+  if (candidate.url !== "/media/" + candidate.key) throw new Error("wf540_media_url");
+}
+const output = { candidates: candidates.sort((a,b)=>a.id.localeCompare(b.id)), overflow: rows.length > 64 };` +
+  BRIDGE_OUTPUT_WRITER;
+const RESPONSE_LOST_OVERRIDE_QUERY_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("override-discovery-input-v1") +
+  String.raw`
+import { and, eq } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { customScreenEntryPresentationOverrides } from "./db/schema.ts";
+if (Object.keys(input).sort().join(",") !== "blockId,entryId,propPath,screenId" || input.propPath !== "mediaAssetId") throw new Error("wf540_input");
+const rows = await db.select({ screenId: customScreenEntryPresentationOverrides.screenId, entryId: customScreenEntryPresentationOverrides.entryId, blockId: customScreenEntryPresentationOverrides.blockId, propPath: customScreenEntryPresentationOverrides.propPath, value: customScreenEntryPresentationOverrides.value, updatedBy: customScreenEntryPresentationOverrides.updatedBy }).from(customScreenEntryPresentationOverrides).where(and(eq(customScreenEntryPresentationOverrides.screenId,input.screenId),eq(customScreenEntryPresentationOverrides.entryId,input.entryId),eq(customScreenEntryPresentationOverrides.blockId,input.blockId),eq(customScreenEntryPresentationOverrides.propPath,input.propPath))).limit(65);
+const output = { candidates: rows.slice(0,64), overflow: rows.length > 64 };` +
+  BRIDGE_OUTPUT_WRITER;
+const RESPONSE_LOST_SETTING_QUERY_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("user-id-input-v1") +
+  String.raw`
+import { and, eq } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { userSettings } from "./db/schema.ts";
+if (Object.keys(input).join(",") !== "userId" || typeof input.userId !== "string") throw new Error("wf540_input");
+const key = "customScreens.entry.preferences";
+const rows = await db.select({ userId: userSettings.userId, key: userSettings.key, value: userSettings.value }).from(userSettings).where(and(eq(userSettings.userId,input.userId),eq(userSettings.key,key))).limit(65);
+const output = { candidates: rows.slice(0,64), overflow: rows.length > 64 };` +
+  BRIDGE_OUTPUT_WRITER;
+const RESPONSE_LOST_ENTRY_PREFLIGHT_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("entry-preflight-input-v1") +
+  String.raw`
+import { and, eq, isNull } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { contentEntries, contentTypes } from "./db/schema.ts";
+if (Object.keys(input).sort().join(",") !== "entrySlug,typeSlug") throw new Error("wf540_input");
+const rows = await db.select({ id: contentEntries.id, typeId: contentEntries.typeId, authorId: contentEntries.authorId, title: contentEntries.title, slug: contentEntries.slug, status: contentEntries.status, visibility: contentEntries.visibility, accessPasswordAbsent: isNull(contentEntries.accessPassword), tags: contentEntries.tags, data: contentEntries.data, publishedAt: contentEntries.publishedAt, scheduledAt: contentEntries.scheduledAt }).from(contentEntries).innerJoin(contentTypes,eq(contentTypes.id,contentEntries.typeId)).where(and(eq(contentTypes.slug,input.typeSlug),eq(contentEntries.slug,input.entrySlug))).limit(65);
+const output = { candidates: rows.slice(0,64).map((row)=>({ ...row, publishedAt: row.publishedAt?.toISOString() ?? null, scheduledAt: row.scheduledAt?.toISOString() ?? null })).sort((a,b)=>a.id.localeCompare(b.id)), overflow: rows.length > 64 };` +
+  BRIDGE_OUTPUT_WRITER;
+const RESPONSE_LOST_SCREEN_PREFLIGHT_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("screen-preflight-input-v1") +
+  String.raw`
+import { and, eq } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { contentTypes, customScreens } from "./db/schema.ts";
+if (Object.keys(input).sort().join(",") !== "contentTypeSlug,name") throw new Error("wf540_input");
+const rows = await db.select({ id: customScreens.id, name: customScreens.name, contentTypeId: customScreens.contentTypeId, status: customScreens.status, collectionRole: customScreens.collectionRole, compositionKey: customScreens.compositionKey, showInSidebar: customScreens.showInSidebar, sidebarLabel: customScreens.sidebarLabel, schemaVersion: customScreens.schemaVersion, definition: customScreens.definition }).from(customScreens).innerJoin(contentTypes,eq(contentTypes.id,customScreens.contentTypeId)).where(and(eq(customScreens.name,input.name),eq(contentTypes.slug,input.contentTypeSlug))).limit(65);
+const output = { candidates: rows.slice(0,64).sort((a,b)=>a.id.localeCompare(b.id)), overflow: rows.length > 64 };` +
+  BRIDGE_OUTPUT_WRITER;
+const RESPONSE_LOST_OVERRIDE_PREFLIGHT_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("override-preflight-input-v1") +
+  String.raw`
+import { and, eq } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { contentEntries, contentTypes, customScreenEntryPresentationOverrides, customScreens } from "./db/schema.ts";
+if (Object.keys(input).sort().join(",") !== "blockId,contentTypeSlug,entrySlug,propPath,screenName" || input.propPath !== "mediaAssetId") throw new Error("wf540_input");
+const rows = await db.select({ screenId: customScreenEntryPresentationOverrides.screenId, entryId: customScreenEntryPresentationOverrides.entryId, blockId: customScreenEntryPresentationOverrides.blockId, propPath: customScreenEntryPresentationOverrides.propPath, value: customScreenEntryPresentationOverrides.value, updatedBy: customScreenEntryPresentationOverrides.updatedBy }).from(customScreenEntryPresentationOverrides).innerJoin(customScreens,eq(customScreens.id,customScreenEntryPresentationOverrides.screenId)).innerJoin(contentEntries,eq(contentEntries.id,customScreenEntryPresentationOverrides.entryId)).innerJoin(contentTypes,eq(contentTypes.id,contentEntries.typeId)).where(and(eq(customScreens.name,input.screenName),eq(contentTypes.slug,input.contentTypeSlug),eq(contentEntries.slug,input.entrySlug),eq(customScreenEntryPresentationOverrides.blockId,input.blockId),eq(customScreenEntryPresentationOverrides.propPath,input.propPath))).limit(65);
+const output = { candidates: rows.slice(0,64), overflow: rows.length > 64 };` +
+  BRIDGE_OUTPUT_WRITER;
+const RESPONSE_LOST_SETTING_PREFLIGHT_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("email-input-v1") +
+  String.raw`
+import { and, eq, or } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { userSettings, users } from "./db/schema.ts";
+import { hashEmail, normalizeEmail } from "./services/security/piiEmail.ts";
+if (Object.keys(input).join(",") !== "email") throw new Error("wf540_input");
+const email = normalizeEmail(input.email); const key = "customScreens.entry.preferences";
+const rows = await db.select({ userId:userSettings.userId,key:userSettings.key,value:userSettings.value }).from(userSettings).innerJoin(users,eq(users.id,userSettings.userId)).where(and(or(eq(users.emailHash,hashEmail(email)),eq(users.email,email)),eq(userSettings.key,key))).limit(65);
+const output = { candidates: rows.slice(0,64), overflow: rows.length > 64 };` +
+  BRIDGE_OUTPUT_WRITER;
+const MISSING_MEDIA_DB_ABSENCE_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("media-id-input-v1") +
+  String.raw`
+import { eq } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { media } from "./db/schema.ts";
+if (Object.keys(input).join(",") !== "mediaId" || !/^[0-9a-f-]{36}$/.test(input.mediaId)) throw new Error("wf540_input");
+const rows = await db.select({ id: media.id }).from(media).where(eq(media.id,input.mediaId)).limit(2);
+const output = { rowCount: rows.length };` +
+  BRIDGE_OUTPUT_WRITER;
+const CONTENT_ROUTES_EXACT_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("empty-input-v1") +
+  String.raw`
+import { eq } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { settings } from "./db/schema.ts";
+if (Object.keys(input).length !== 0) throw new Error("wf540_input");
+const rows = await db.select({ key:settings.key,value:settings.value,updatedAt:settings.updatedAt }).from(settings).where(eq(settings.key,"site.contentRoutes")).limit(2);
+if (rows.length > 1) throw new Error("wf540_content_routes_cardinality");
+const [row] = rows;
+const output = row ? { exists:true,value:row.value,updatedAt:row.updatedAt.toISOString() } : { exists:false,value:null,updatedAt:null };` +
+  BRIDGE_OUTPUT_WRITER;
+const CURRENT_RESOURCE_OWNER_QUERY_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("resource-owner-input-v1") +
+  String.raw`
+import { and, eq, inArray } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { contentEntries, customScreenEntryPresentationOverrides, media } from "./db/schema.ts";
+if (Object.keys(input).sort().join(",") !== "entryIds,mediaId,override" || !Array.isArray(input.entryIds) || input.entryIds.length !== 6 || new Set(input.entryIds).size !== 6 || Object.keys(input.override).sort().join(",") !== "blockId,entryId,propPath,screenId") throw new Error("wf540_input");
+const entries = (await db.select({ id:contentEntries.id,ownerSubjectIdentifier:contentEntries.authorId }).from(contentEntries).where(inArray(contentEntries.id,input.entryIds)).limit(7)).sort((a,b)=>a.id.localeCompare(b.id));
+const mediaRows = await db.select({ id:media.id,ownerSubjectIdentifier:media.createdBy }).from(media).where(eq(media.id,input.mediaId)).limit(2);
+const overrideRows = await db.select({ ownerSubjectIdentifier:customScreenEntryPresentationOverrides.updatedBy }).from(customScreenEntryPresentationOverrides).where(and(eq(customScreenEntryPresentationOverrides.screenId,input.override.screenId),eq(customScreenEntryPresentationOverrides.entryId,input.override.entryId),eq(customScreenEntryPresentationOverrides.blockId,input.override.blockId),eq(customScreenEntryPresentationOverrides.propPath,input.override.propPath))).limit(2);
+if (entries.length !== 6 || mediaRows.length !== 1 || overrideRows.length !== 1) throw new Error("wf540_owner_rows");
+const [mediaRow] = mediaRows; const [override] = overrideRows;
+const output = { entries, media:mediaRow, override };` +
+  BRIDGE_OUTPUT_WRITER;
+const STORAGE_PREFLIGHT_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("user-agents-input-v1") +
+  String.raw`
+import { eq, inArray, or, sql } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { accessLogs, auditLogs, roles, sessions, settings, userRoles, users } from "./db/schema.ts";
+import { getSetting } from "./services/settings/settingsService.ts";
+import { getStorageSettingsInternal } from "./services/settings/storageSettings.ts";
+import { decryptEmail, hashEmail, isEncryptedEmail, normalizeEmail } from "./services/security/piiEmail.ts";
+if (Object.keys(input).join(",") !== "userAgents" || !Array.isArray(input.userAgents) || input.userAgents.length !== 4 || new Set(input.userAgents).size !== 4) throw new Error("wf540_input");
+const setup = await getSetting("setup.completed"); const storage = await getStorageSettingsInternal();
+if (setup !== true || storage.driver !== "local" || !storage.localDir) throw new Error("wf540_preflight");
+const normalizedEmail = normalizeEmail(process.env.ADMIN_EMAIL);
+const bootstrapEmailHash = hashEmail(normalizedEmail);
+const bootstrapRows = await db.select().from(users).where(or(eq(users.emailHash,bootstrapEmailHash),inArray(users.email,[bootstrapEmailHash,normalizedEmail]))).limit(2);
+if (bootstrapRows.length !== 1) throw new Error("wf540_bootstrap_cardinality");
+const bootstrap = bootstrapRows[0];
+if (bootstrap.status !== "active" || bootstrap.emailHash !== bootstrapEmailHash || bootstrap.email !== bootstrapEmailHash || !isEncryptedEmail(bootstrap.emailEncrypted) || decryptEmail(bootstrap.emailEncrypted) !== normalizedEmail) throw new Error("wf540_bootstrap_canonical_identity");
+const roleRows = await db.select({
+  userId:userRoles.userId, roleId:userRoles.roleId, roleName:roles.name,
+  roleDescription:roles.description, rolePermissions:roles.permissions, roleCreatedAt:roles.createdAt,
+}).from(userRoles).innerJoin(roles,eq(roles.id,userRoles.roleId)).where(eq(userRoles.userId,bootstrap.id)).limit(2);
+if (roleRows.length !== 1) throw new Error("wf540_bootstrap_role_cardinality");
+const normalizedPermissions = Array.isArray(roleRows[0].rolePermissions) ? [...new Set(roleRows[0].rolePermissions)].sort() : [];
+if (roleRows[0].roleName !== "admin" || canonical(normalizedPermissions) !== canonical(["*"])) throw new Error("wf540_bootstrap_role");
+const contentRouteRows = await db.select().from(settings).where(eq(settings.key,"site.contentRoutes")).limit(2);
+if (contentRouteRows.length > 1) throw new Error("wf540_content_routes_cardinality");
+const contentRoutes = contentRouteRows[0];
+const auditRows = await db.select({ id:auditLogs.id }).from(auditLogs).where(inArray(sql.raw("metadata->>'userAgent'"),input.userAgents)).orderBy(auditLogs.id).limit(4097);
+const accessRows = await db.select({ id:accessLogs.id }).from(accessLogs).where(inArray(accessLogs.userAgent,input.userAgents)).orderBy(accessLogs.id).limit(4097);
+const sessionRows = await db.select({ id:sessions.id }).from(sessions).orderBy(sessions.id).limit(4097);
+if (auditRows.length > 4096 || accessRows.length > 4096 || sessionRows.length > 4096) throw new Error("wf540_task_traffic_baseline_overflow");
+const rawUserRow = {
+  id:bootstrap.id,email:bootstrap.email,emailHash:bootstrap.emailHash,emailEncrypted:bootstrap.emailEncrypted,
+  passwordHash:bootstrap.passwordHash,name:bootstrap.name,status:bootstrap.status,
+  createdAt:bootstrap.createdAt.toISOString(),updatedAt:bootstrap.updatedAt.toISOString(),
+  lastLoginAt:bootstrap.lastLoginAt?.toISOString() ?? null,
+};
+const roleTuples = roleRows.map((row)=>({
+  userId:row.userId,roleId:row.roleId,roleName:row.roleName,roleDescription:row.roleDescription,
+  rolePermissions:row.rolePermissions,roleCreatedAt:row.roleCreatedAt.toISOString(),
+})).sort((a,b)=>a.roleId.localeCompare(b.roleId));
+const output = {
+  bootstrap: {
+    id:bootstrap.id,lastLoginAt:rawUserRow.lastLoginAt,updatedAt:rawUserRow.updatedAt,
+    normalizedEmailProof:true,emailHashProof:true,encryptedEmailProof:true,decryptEmailProof:true,
+    rawUserRow,roleTuples,
+  },
+  contentRoutes: contentRoutes ? { exists: true, value: contentRoutes.value, updatedAt: contentRoutes.updatedAt.toISOString() } : { exists: false, value: null, updatedAt: null },
+  local: true,
+  setupComplete: true,
+  storageRoot: storage.localDir,
+  taskTrafficBaseline: { auditIds:auditRows.map((row)=>row.id), accessIds:accessRows.map((row)=>row.id), sessionIds:sessionRows.map((row)=>row.id) },
+};` +
+  BRIDGE_OUTPUT_WRITER;
+function securityBridgeSource(mode) {
+  invariant(mode === "session" || mode === "rate", "security bridge mode is invalid");
+  const projection =
+    mode === "session"
+      ? String.raw`const output = { csrfHeaderName: value.csrf.headerName.toLowerCase(), effectiveMaxPerUserAtLeast2: value.session.maxPerUser >= 2, singleSession: value.session.singleSession };`
+      : String.raw`const output = { enabled: value.rateLimit.enabled, maxRequests: value.rateLimit.buckets.auth.maxRequests, windowSeconds: value.rateLimit.buckets.auth.windowSeconds };`;
+  return (
+    BRIDGE_INPUT_READER +
+    bridgeInputSchemaGuard("empty-input-v1") +
+    String.raw`
+import { getSecuritySettings } from "./services/settings/securitySettings.ts";
+if (Object.keys(input).length !== 0) throw new Error("wf540_input");
+const value = await getSecuritySettings();
+` +
+    projection +
+    BRIDGE_OUTPUT_WRITER
+  );
+}
+const SECURITY_SESSION_BRIDGE_SOURCE = securityBridgeSource("session");
+const SECURITY_RATE_BRIDGE_SOURCE = securityBridgeSource("rate");
+const SCREEN_MATERIALIZE_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("screen-materialize-input-v1") +
+  String.raw`
+import { buildDefaultListViewDefinition, normalizeCustomScreenDefinitionForWrite, customScreenCreateSchema } from "./services/customScreens/customScreenSchemas.ts";
+import { validate } from "./server/validation/schemaValidator.ts";
+if (Object.keys(input).sort().join(",") !== "bodyWithoutDefinition,contentType,definitionWithoutListView") throw new Error("wf540_input");
+const definition = { ...input.definitionWithoutListView, listView: buildDefaultListViewDefinition(input.contentType) };
+const normalized = normalizeCustomScreenDefinitionForWrite({ definition }, { contentType: input.contentType });
+if (canonical(normalized) !== canonical(definition)) throw new Error("wf540_normalizer_delta");
+const output = { ...input.bodyWithoutDefinition, schemaVersion: 4, definition };
+validate(customScreenCreateSchema, output);` +
+  BRIDGE_OUTPUT_WRITER;
+function presentationOverrideExactBridgeSource(operation) {
+  invariant(
+    CLEANUP_OPERATION_KINDS.includes(operation),
+    "presentation override bridge operation drift"
+  );
+  const mutation =
+    operation === "delete"
+      ? "const affected = (await db.delete(customScreenEntryPresentationOverrides).where(predicate).returning({ screenId: customScreenEntryPresentationOverrides.screenId })).length;"
+      : "const affected = 0;";
+  const assertion =
+    operation === "provenance"
+      ? 'if (before.length !== 1) throw new Error("wf540_override_provenance");'
+      : operation === "delete"
+        ? 'if (affected !== 1 || after.length !== 0) throw new Error("wf540_override_delete");'
+        : 'if (after.length !== 0) throw new Error("wf540_override_absence");';
+  return (
+    BRIDGE_INPUT_READER +
+    bridgeInputSchemaGuard("identifier-override-input-v1") +
+    String.raw`
+import { and, eq } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { customScreenEntryPresentationOverrides } from "./db/schema.ts";
+if (Object.keys(input).join(",") !== "identifier" || !Array.isArray(input.identifier) || input.identifier.length !== 4) throw new Error("wf540_input");
+const [screenId,entryId,blockId,propPath] = input.identifier;
+const predicate = and(eq(customScreenEntryPresentationOverrides.screenId,screenId),eq(customScreenEntryPresentationOverrides.entryId,entryId),eq(customScreenEntryPresentationOverrides.blockId,blockId),eq(customScreenEntryPresentationOverrides.propPath,propPath));
+const before = await db.select({ screenId: customScreenEntryPresentationOverrides.screenId }).from(customScreenEntryPresentationOverrides).where(predicate).limit(2);
+` +
+    mutation +
+    String.raw`
+const after = await db.select({ screenId: customScreenEntryPresentationOverrides.screenId }).from(customScreenEntryPresentationOverrides).where(predicate).limit(2);
+` +
+    assertion +
+    String.raw`
+const output = { absent: after.length === 0, affected, present: before.length === 1 };` +
+    BRIDGE_OUTPUT_WRITER
+  );
+}
+const PRESENTATION_OVERRIDE_EXACT_BRIDGE_SOURCES = deepFreezeExact(
+  Object.fromEntries(
+    CLEANUP_OPERATION_KINDS.map((operation) => [
+      operation,
+      presentationOverrideExactBridgeSource(operation),
+    ])
+  )
+);
+
+function userSettingExactBridgeSource(operation) {
+  invariant(CLEANUP_OPERATION_KINDS.includes(operation), "user setting bridge operation drift");
+  const mutation =
+    operation === "delete"
+      ? "const affected = (await db.delete(userSettings).where(predicate).returning({ userId: userSettings.userId })).length;"
+      : "const affected = 0;";
+  const assertion =
+    operation === "provenance"
+      ? 'if (before.length !== 1) throw new Error("wf540_setting_provenance");'
+      : operation === "delete"
+        ? 'if (affected !== 1 || after.length !== 0) throw new Error("wf540_setting_delete");'
+        : 'if (after.length !== 0) throw new Error("wf540_setting_absence");';
+  return (
+    BRIDGE_INPUT_READER +
+    bridgeInputSchemaGuard("identifier-setting-input-v1") +
+    String.raw`
+import { and, eq } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { userSettings } from "./db/schema.ts";
+if (Object.keys(input).join(",") !== "identifier" || !Array.isArray(input.identifier) || input.identifier.length !== 2) throw new Error("wf540_input");
+const [userId,key] = input.identifier;
+const predicate = and(eq(userSettings.userId,userId),eq(userSettings.key,key));
+const before = await db.select({ userId: userSettings.userId }).from(userSettings).where(predicate).limit(2);
+` +
+    mutation +
+    String.raw`
+const after = await db.select({ userId: userSettings.userId }).from(userSettings).where(predicate).limit(2);
+` +
+    assertion +
+    String.raw`
+const output = { absent: after.length === 0, affected, present: before.length === 1 };` +
+    BRIDGE_OUTPUT_WRITER
+  );
+}
+const USER_SETTING_EXACT_BRIDGE_SOURCES = deepFreezeExact(
+  Object.fromEntries(
+    CLEANUP_OPERATION_KINDS.map((operation) => [operation, userSettingExactBridgeSource(operation)])
+  )
+);
+
+function userExactBridgeSource(operation) {
+  invariant(CLEANUP_OPERATION_KINDS.includes(operation), "user exact bridge operation drift");
+  const mutation =
+    operation === "delete"
+      ? "const affected = (await db.delete(users).where(eq(users.id,userId)).returning({ id: users.id })).length;"
+      : "const affected = 0;";
+  const assertion =
+    operation === "provenance"
+      ? 'if (before.length !== 1) throw new Error("wf540_user_provenance");'
+      : operation === "delete"
+        ? 'if (affected !== 1 || after.length !== 0) throw new Error("wf540_user_delete");'
+        : 'if (after.length !== 0) throw new Error("wf540_user_absence");';
+  return (
+    BRIDGE_INPUT_READER +
+    bridgeInputSchemaGuard("identifier-uuid-input-v1") +
+    String.raw`
+import { eq } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { users } from "./db/schema.ts";
+if (Object.keys(input).join(",") !== "identifier" || !Array.isArray(input.identifier) || input.identifier.length !== 1) throw new Error("wf540_input");
+const [userId] = input.identifier;
+const before = await db.select({ id: users.id }).from(users).where(eq(users.id,userId)).limit(2);
+` +
+    mutation +
+    String.raw`
+const after = await db.select({ id: users.id }).from(users).where(eq(users.id,userId)).limit(2);
+` +
+    assertion +
+    String.raw`
+const output = { absent: after.length === 0, affected, present: before.length === 1 };` +
+    BRIDGE_OUTPUT_WRITER
+  );
+}
+const USER_EXACT_BRIDGE_SOURCES = deepFreezeExact(
+  Object.fromEntries(
+    CLEANUP_OPERATION_KINDS.map((operation) => [operation, userExactBridgeSource(operation)])
+  )
+);
+const TASK_TRAFFIC_SNAPSHOT_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("user-agents-input-v1") +
+  String.raw`
+import { inArray, sql } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { accessLogs, auditLogs, sessions } from "./db/schema.ts";
+if (Object.keys(input).join(",") !== "userAgents" || !Array.isArray(input.userAgents) || input.userAgents.length !== 4 || new Set(input.userAgents).size !== 4) throw new Error("wf540_input");
+const auditRows = await db.select({ id:auditLogs.id,actorId:auditLogs.actorId,metadata:auditLogs.metadata }).from(auditLogs).where(inArray(sql.raw("metadata->>'userAgent'"),input.userAgents)).orderBy(auditLogs.id).limit(4097);
+const access = await db.select({ id:accessLogs.id,sessionId:accessLogs.sessionId,userId:accessLogs.userId,userAgent:accessLogs.userAgent }).from(accessLogs).where(inArray(accessLogs.userAgent,input.userAgents)).orderBy(accessLogs.id).limit(4097);
+const session = await db.select({ id:sessions.id,userId:sessions.userId,userAgent:sessions.userAgent }).from(sessions).where(inArray(sessions.userAgent,input.userAgents)).orderBy(sessions.id).limit(4097);
+const completeSession = await db.select({ id:sessions.id,userId:sessions.userId,userAgent:sessions.userAgent }).from(sessions).orderBy(sessions.id).limit(4097);
+if ([auditRows,access,session,completeSession].some((rows)=>rows.length > 4096)) throw new Error("wf540_task_traffic_overflow");
+const audit = auditRows.map(({id,actorId,metadata})=>{
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata) || !input.userAgents.includes(metadata.userAgent)) throw new Error("wf540_task_audit_projection");
+  return {id,actorId,userAgent:metadata.userAgent};
+});
+const output = { access, audit, completeSession, session };` +
+  BRIDGE_OUTPUT_WRITER;
+
+function exactTaskTrafficBridgeSource(kind, operation) {
+  invariant(CLEANUP_OPERATION_KINDS.includes(operation), "task traffic bridge operation drift");
+  const table =
+    kind === "audit-log-task-ua"
+      ? "auditLogs"
+      : kind === "access-log-task-ua"
+        ? "accessLogs"
+        : "sessions";
+  const importName = table;
+  const mutation =
+    operation === "delete"
+      ? `const affected = (await db.delete(${table}).where(eq(${table}.id,id)).returning({ id: ${table}.id })).length;`
+      : "const affected = 0;";
+  const assertion =
+    operation === "provenance"
+      ? 'if (before.length !== 1) throw new Error("wf540_terminal_provenance");'
+      : operation === "delete"
+        ? 'if (affected !== 1 || after.length !== 0) throw new Error("wf540_terminal_delete");'
+        : 'if (after.length !== 0) throw new Error("wf540_terminal_absence");';
+  return (
+    BRIDGE_INPUT_READER +
+    bridgeInputSchemaGuard("identifier-uuid-input-v1") +
+    `
+import { eq } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { ${importName} } from "./db/schema.ts";
+if (Object.keys(input).join(",") !== "identifier" || !Array.isArray(input.identifier) || input.identifier.length !== 1) throw new Error("wf540_input");
+const [id] = input.identifier;
+const before = await db.select({ id: ${table}.id }).from(${table}).where(eq(${table}.id,id)).limit(2);
+${mutation}
+const after = await db.select({ id: ${table}.id }).from(${table}).where(eq(${table}.id,id)).limit(2);
+${assertion}
+const output = { absent: after.length === 0, affected, present: before.length === 1 };` +
+    BRIDGE_OUTPUT_WRITER
+  );
+}
+const TASK_TRAFFIC_EXACT_BRIDGE_SOURCES = deepFreezeExact({
+  "audit-log-task-ua": Object.fromEntries(
+    CLEANUP_OPERATION_KINDS.map((operation) => [
+      operation,
+      exactTaskTrafficBridgeSource("audit-log-task-ua", operation),
+    ])
+  ),
+  "access-log-task-ua": Object.fromEntries(
+    CLEANUP_OPERATION_KINDS.map((operation) => [
+      operation,
+      exactTaskTrafficBridgeSource("access-log-task-ua", operation),
+    ])
+  ),
+  "session-task": Object.fromEntries(
+    CLEANUP_OPERATION_KINDS.map((operation) => [
+      operation,
+      exactTaskTrafficBridgeSource("session-task", operation),
+    ])
+  ),
+});
+
+function entityIdProvenanceBridgeSource(tableExport) {
+  invariant(
+    ["contentTypes", "contentEntries", "customScreens"].includes(tableExport),
+    "entity provenance table is not registered"
+  );
+  return (
+    BRIDGE_INPUT_READER +
+    bridgeInputSchemaGuard("identifier-uuid-input-v1") +
+    `
+import { eq } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { ${tableExport} } from "./db/schema.ts";
+if (Object.keys(input).join(",") !== "identifier" || !Array.isArray(input.identifier) || input.identifier.length !== 1) throw new Error("wf540_input");
+const [id] = input.identifier;
+const rows = await db.select({ id: ${tableExport}.id }).from(${tableExport}).where(eq(${tableExport}.id,id)).limit(2);
+if (rows.length !== 1) throw new Error("wf540_entity_provenance");
+const output = { present: true };` +
+    BRIDGE_OUTPUT_WRITER
+  );
+}
+const CONTENT_TYPE_PROVENANCE_BRIDGE_SOURCE = entityIdProvenanceBridgeSource("contentTypes");
+const CONTENT_ENTRY_PROVENANCE_BRIDGE_SOURCE = entityIdProvenanceBridgeSource("contentEntries");
+const CUSTOM_SCREEN_PROVENANCE_BRIDGE_SOURCE = entityIdProvenanceBridgeSource("customScreens");
+
+function mediaExactBridgeSource(operation) {
+  invariant(CLEANUP_OPERATION_KINDS.includes(operation), "media bridge operation drift");
+  const assertion =
+    operation === "provenance"
+      ? 'if (rows.length !== 1 || rows[0].key !== storageKey || rows[0].url !== "/media/" + storageKey) throw new Error("wf540_media_provenance");'
+      : 'if (rows.length !== 0) throw new Error("wf540_media_absence");';
+  return (
+    BRIDGE_INPUT_READER +
+    bridgeInputSchemaGuard("identifier-media-input-v1") +
+    String.raw`
+import { eq } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { media } from "./db/schema.ts";
+if (Object.keys(input).join(",") !== "identifier" || !Array.isArray(input.identifier) || input.identifier.length !== 2) throw new Error("wf540_input");
+const [mediaId,storageKey] = input.identifier;
+const rows = await db.select({ id:media.id,key:media.key,url:media.url }).from(media).where(eq(media.id,mediaId)).limit(2);
+const stage = ` +
+    JSON.stringify(operation) +
+    String.raw`;
+` +
+    assertion +
+    String.raw`
+const output = { absent: rows.length === 0, present: rows.length === 1, stage };` +
+    BRIDGE_OUTPUT_WRITER
+  );
+}
+const MEDIA_EXACT_BRIDGE_SOURCES = deepFreezeExact(
+  Object.fromEntries(
+    CLEANUP_OPERATION_KINDS.map((operation) => [operation, mediaExactBridgeSource(operation)])
+  )
+);
+const API_SESSION_OBSERVATION_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("user-session-observation-input-v1") +
+  String.raw`
+import { and, eq } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { sessions } from "./db/schema.ts";
+if (Object.keys(input).sort().join(",") !== "userAgent,userId" || typeof input.userAgent !== "string" || !input.userAgent || typeof input.userId !== "string") throw new Error("wf540_input");
+const sessionRows = await db.select({
+  id:sessions.id,userId:sessions.userId,tokenHash:sessions.tokenHash,csrfTokenHash:sessions.csrfTokenHash,
+  ip:sessions.ip,userAgent:sessions.userAgent,expiresAt:sessions.expiresAt,
+  createdAt:sessions.createdAt,revokedAt:sessions.revokedAt,
+}).from(sessions).where(and(eq(sessions.userId,input.userId),eq(sessions.userAgent,input.userAgent))).limit(2);
+if (sessionRows.length > 1) throw new Error("wf540_api_session_cardinality");
+const rows = sessionRows.map((row)=>({
+  id:row.id,userId:row.userId,tokenHash:row.tokenHash,csrfTokenHash:row.csrfTokenHash,
+  ip:row.ip,userAgent:row.userAgent,expiresAt:row.expiresAt.toISOString(),
+  createdAt:row.createdAt.toISOString(),revokedAt:row.revokedAt?.toISOString() ?? null,
+}));
+const output = { rows };` +
+  BRIDGE_OUTPUT_WRITER;
+const BOOTSTRAP_LOGIN_OBSERVATION_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("user-session-observation-input-v1") +
+  String.raw`
+import { and, eq, sql } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { auditLogs, roles, sessions, userRoles, users } from "./db/schema.ts";
+if (Object.keys(input).sort().join(",") !== "userAgent,userId" || typeof input.userAgent !== "string" || !input.userAgent || typeof input.userId !== "string") throw new Error("wf540_input");
+const userRows = await db.select().from(users).where(eq(users.id,input.userId)).limit(2);
+if (userRows.length !== 1) throw new Error("wf540_bootstrap_observation_cardinality");
+const roleRows = await db.select({
+  userId:userRoles.userId,roleId:userRoles.roleId,roleName:roles.name,
+  roleDescription:roles.description,rolePermissions:roles.permissions,roleCreatedAt:roles.createdAt,
+}).from(userRoles).innerJoin(roles,eq(roles.id,userRoles.roleId)).where(eq(userRoles.userId,input.userId)).limit(2);
+if (roleRows.length !== 1) throw new Error("wf540_bootstrap_observation_roles");
+const sessionRows = await db.select({id:sessions.id}).from(sessions).where(and(eq(sessions.userId,input.userId),eq(sessions.userAgent,input.userAgent))).orderBy(sessions.id).limit(4097);
+const auditRows = await db.select({id:auditLogs.id}).from(auditLogs).where(and(eq(auditLogs.actorId,input.userId),eq(auditLogs.action,"auth.login"),eq(sql.raw("metadata->>'userAgent'"),input.userAgent))).orderBy(auditLogs.id).limit(4097);
+if (sessionRows.length > 4096 || auditRows.length > 4096) throw new Error("wf540_bootstrap_observation_overflow");
+const row = userRows[0];
+const rawUserRow = {
+  id:row.id,email:row.email,emailHash:row.emailHash,emailEncrypted:row.emailEncrypted,
+  passwordHash:row.passwordHash,name:row.name,status:row.status,
+  createdAt:row.createdAt.toISOString(),updatedAt:row.updatedAt.toISOString(),
+  lastLoginAt:row.lastLoginAt?.toISOString() ?? null,
+};
+const roleTuples = roleRows.map((role)=>({
+  userId:role.userId,roleId:role.roleId,roleName:role.roleName,roleDescription:role.roleDescription,
+  rolePermissions:role.rolePermissions,roleCreatedAt:role.roleCreatedAt.toISOString(),
+})).sort((a,b)=>a.roleId.localeCompare(b.roleId));
+const output = {
+  auditIds:auditRows.map(({id})=>id),id:row.id,lastLoginAt:rawUserRow.lastLoginAt,rawUserRow,roleTuples,
+  sessionIds:sessionRows.map(({id})=>id),updatedAt:rawUserRow.updatedAt,
+};` +
+  BRIDGE_OUTPUT_WRITER;
+const BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("bootstrap-restore-input-v1") +
+  `
+import { and, eq, sql } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { roles, userRoles, users } from "./db/schema.ts";
+if (Object.keys(input).sort().join(",") !== "baseline,newestOwnedPair,userId") throw new Error("wf540_input");
+const timestamp = (value) => value === null ? null : new Date(value);
+const notDistinct = (column,value) => sql\`\${column} IS NOT DISTINCT FROM \${value}\`;
+const serializeUser = (row) => ({
+  id:row.id,email:row.email,emailHash:row.emailHash,emailEncrypted:row.emailEncrypted,
+  passwordHash:row.passwordHash,name:row.name,status:row.status,
+  createdAt:row.createdAt.toISOString(),updatedAt:row.updatedAt.toISOString(),
+  lastLoginAt:row.lastLoginAt?.toISOString() ?? null,
+});
+const selectRoles = async (executor,lock) => {
+  let query = executor.select({
+    userId:userRoles.userId,roleId:userRoles.roleId,roleName:roles.name,
+    roleDescription:roles.description,rolePermissions:roles.permissions,roleCreatedAt:roles.createdAt,
+  }).from(userRoles).innerJoin(roles,eq(roles.id,userRoles.roleId)).where(eq(userRoles.userId,input.userId)).limit(2);
+  if (lock) query = query.for("share");
+  return (await query).map((row)=>({
+    userId:row.userId,roleId:row.roleId,roleName:row.roleName,roleDescription:row.roleDescription,
+    rolePermissions:row.rolePermissions,roleCreatedAt:row.roleCreatedAt.toISOString(),
+  })).sort((a,b)=>a.roleId.localeCompare(b.roleId));
+};
+const transactionProof = await db.transaction(async (tx) => {
+  const lockedRows = await tx.select().from(users).where(eq(users.id,input.userId)).limit(2).for("update");
+  const lockedRoles = await selectRoles(tx,true);
+  if (lockedRows.length !== 1 || lockedRoles.length !== 1) throw new Error("wf540_bootstrap_lock_cardinality");
+  const locked = serializeUser(lockedRows[0]);
+  const pairMatches = locked.lastLoginAt === input.newestOwnedPair.lastLoginAt && locked.updatedAt === input.newestOwnedPair.updatedAt;
+  const unchangedMatches = canonical({...locked,lastLoginAt:input.baseline.rawUserRow.lastLoginAt,updatedAt:input.baseline.rawUserRow.updatedAt}) === canonical(input.baseline.rawUserRow);
+  const roleTuplesByteIdentical = canonical(lockedRoles) === canonical(input.baseline.roleTuples);
+  if (!pairMatches || !unchangedMatches || !roleTuplesByteIdentical) throw new Error("wf540_bootstrap_locked_drift");
+  const predicates = [
+    notDistinct(users.id,input.userId),notDistinct(users.email,input.baseline.rawUserRow.email),
+    notDistinct(users.emailHash,input.baseline.rawUserRow.emailHash),
+    notDistinct(users.emailEncrypted,input.baseline.rawUserRow.emailEncrypted),
+    notDistinct(users.passwordHash,input.baseline.rawUserRow.passwordHash),
+    notDistinct(users.name,input.baseline.rawUserRow.name),notDistinct(users.status,input.baseline.rawUserRow.status),
+    notDistinct(users.createdAt,new Date(input.baseline.rawUserRow.createdAt)),
+    notDistinct(users.updatedAt,new Date(input.newestOwnedPair.updatedAt)),
+    notDistinct(users.lastLoginAt,timestamp(input.newestOwnedPair.lastLoginAt)),
+  ];
+  const updated = await tx.update(users).set({
+    lastLoginAt:timestamp(input.baseline.rawUserRow.lastLoginAt),
+    updatedAt:new Date(input.baseline.rawUserRow.updatedAt),
+  }).where(and(...predicates)).returning();
+  const conditionalUpdateAffectedOne = updated.length === 1;
+  const inTransactionRows = await tx.select().from(users).where(eq(users.id,input.userId)).limit(2);
+  const inTransactionByteIdentical = conditionalUpdateAffectedOne && inTransactionRows.length === 1 &&
+    canonical(serializeUser(inTransactionRows[0])) === canonical(input.baseline.rawUserRow);
+  const rolesAfter = await selectRoles(tx,false);
+  const rolesInTransactionByteIdentical = canonical(rolesAfter) === canonical(input.baseline.roleTuples);
+  if (!conditionalUpdateAffectedOne || !inTransactionByteIdentical || !rolesInTransactionByteIdentical) throw new Error("wf540_bootstrap_transaction_proof");
+  return {
+    conditionalUpdateAffectedOne, inTransactionByteIdentical, roleTuplesByteIdentical,
+    rolesInTransactionByteIdentical, rolesShareLocked:true, transactionLocked:true,
+  };
+});
+const afterRows = await db.select().from(users).where(eq(users.id,input.userId)).limit(2);
+const afterRoles = await selectRoles(db,false);
+const afterCommitByteIdentical = afterRows.length === 1 && canonical(serializeUser(afterRows[0])) === canonical(input.baseline.rawUserRow);
+const completeRowByteIdentical = afterCommitByteIdentical;
+const roleTuplesByteIdentical = afterRoles.length === 1 && canonical(afterRoles) === canonical(input.baseline.roleTuples);
+if (!afterCommitByteIdentical || !roleTuplesByteIdentical) throw new Error("wf540_bootstrap_post_commit_proof");
+const output = {
+  ...transactionProof,afterCommitByteIdentical,completeRowByteIdentical,restored:true,
+  roleTuplesByteIdentical:transactionProof.roleTuplesByteIdentical && roleTuplesByteIdentical,
+};` +
+  BRIDGE_OUTPUT_WRITER;
+
+function validateExactBridgeKeys(value, keys, label) {
+  exactOwnKeys(value, keys, label, { plain: true });
+  assertPlainJsonValue(value, label);
+  return value;
+}
+
+function validateBooleanBridgeProjection(value, key, label) {
+  validateExactBridgeKeys(value, [key], label);
+  invariant(typeof value[key] === "boolean", label + " boolean drift");
+  return value;
+}
+
+function validateContentRoutesBridgeProjection(value, label) {
+  validateExactBridgeKeys(value, ["exists", "updatedAt", "value"], label);
+  invariant(
+    typeof value.exists === "boolean" &&
+      (value.updatedAt === null || isNullableIsoTimestamp(value.updatedAt)) &&
+      (value.exists ? value.updatedAt !== null : value.updatedAt === null && value.value === null),
+    label + " projection drift"
+  );
+  return value;
+}
+
+function responseLostCandidateFamilyForDescriptor(descriptor) {
+  const source = descriptor.source;
+  if (source === RESPONSE_LOST_USER_QUERY_BRIDGE_SOURCE) return "user";
+  if (source === RESPONSE_LOST_CONTENT_TYPE_QUERY_BRIDGE_SOURCE) return "contentType";
+  if (
+    source === RESPONSE_LOST_ENTRY_QUERY_BRIDGE_SOURCE ||
+    source === RESPONSE_LOST_ENTRY_PREFLIGHT_BRIDGE_SOURCE
+  ) {
+    return "entry";
+  }
+  if (
+    source === RESPONSE_LOST_SCREEN_QUERY_BRIDGE_SOURCE ||
+    source === RESPONSE_LOST_SCREEN_PREFLIGHT_BRIDGE_SOURCE
+  ) {
+    return "screen";
+  }
+  if (source === RESPONSE_LOST_MEDIA_QUERY_BRIDGE_SOURCE) return "media";
+  if (
+    source === RESPONSE_LOST_OVERRIDE_QUERY_BRIDGE_SOURCE ||
+    source === RESPONSE_LOST_OVERRIDE_PREFLIGHT_BRIDGE_SOURCE
+  ) {
+    return "override";
+  }
+  if (
+    source === RESPONSE_LOST_SETTING_QUERY_BRIDGE_SOURCE ||
+    source === RESPONSE_LOST_SETTING_PREFLIGHT_BRIDGE_SOURCE
+  ) {
+    return "setting";
+  }
+  invariant(false, "bounded candidate descriptor source is not registered");
+}
+
+const RESPONSE_LOST_CANDIDATE_KEYS_BY_FAMILY = deepFreezeExact({
+  user: [
+    "adminRoleTupleCount",
+    "adminWildcardPermissionCount",
+    "id",
+    "name",
+    "normalizedEmailMatches",
+    "passwordHashPresent",
+    "status",
+  ],
+  contentType: ["config", "id", "name", "schema", "slug", "status"],
+  entry: [
+    "accessPasswordAbsent",
+    "authorId",
+    "data",
+    "id",
+    "publishedAt",
+    "scheduledAt",
+    "slug",
+    "status",
+    "tags",
+    "title",
+    "typeId",
+    "visibility",
+  ],
+  screen: [
+    "collectionRole",
+    "compositionKey",
+    "contentTypeId",
+    "definition",
+    "id",
+    "name",
+    "schemaVersion",
+    "showInSidebar",
+    "sidebarLabel",
+    "status",
+  ],
+  media: [
+    "alt",
+    "caption",
+    "createdBy",
+    "credit",
+    "description",
+    "focalX",
+    "focalY",
+    "folderId",
+    "height",
+    "id",
+    "key",
+    "mimeType",
+    "originalName",
+    "size",
+    "tags",
+    "title",
+    "type",
+    "url",
+    "width",
+  ],
+  override: ["blockId", "entryId", "propPath", "screenId", "updatedBy", "value"],
+  setting: ["key", "userId", "value"],
+});
+
+function validateBridgeNullableUuid(value, label) {
+  if (value !== null) requireBridgeUuid(value, label);
+}
+
+function validateBridgeNullableString(value, label, maximum = 1024) {
+  if (value !== null) requireBoundedBridgeString(value, label, maximum);
+}
+
+function validateBridgeJsonObject(value, label) {
+  exactOwnKeys(value, Object.keys(value ?? {}), label, { plain: true });
+  assertPlainJsonValue(value, label);
+  return value;
+}
+
+function validateBridgeStringArray(value, label, maximumItems = 64, maximumLength = 256) {
+  invariant(Array.isArray(value) && value.length <= maximumItems, label + " array bound drift");
+  value.forEach((item, index) =>
+    requireBoundedBridgeString(item, label + "[" + index + "]", maximumLength)
+  );
+  invariant(new Set(value).size === value.length, label + " contains duplicates");
+  return value;
+}
+
+function validateResponseLostContentSchema(schema, label) {
+  exactOwnKeys(schema, ["additionalProperties", "properties", "type"], label, { plain: true });
+  invariant(
+    schema.type === "object" && schema.additionalProperties === false,
+    label + " root drift"
+  );
+  validateBridgeJsonObject(schema.properties, label + " properties");
+  for (const [field, property] of Object.entries(schema.properties)) {
+    const allowed = ["items", "title", "type", "xFieldConfig", "xFieldType", "xRelationTarget"];
+    invariant(
+      Object.keys(property).every((key) => allowed.includes(key)),
+      label + " property has unknown keys: " + field
+    );
+    invariant(
+      ["array", "string"].includes(property.type),
+      label + " property type drift: " + field
+    );
+    requireBoundedBridgeString(property.title, label + " title " + field, 256);
+    requireBoundedBridgeString(property.xFieldType, label + " field type " + field, 64);
+    validateBridgeJsonObject(property.xFieldConfig, label + " field config " + field);
+    invariant(
+      Number.isSafeInteger(property.xFieldConfig.order) && property.xFieldConfig.order >= 0,
+      label + " field order drift: " + field
+    );
+    if (Object.hasOwn(property, "items")) {
+      exactOwnKeys(property.items, ["type"], label + " items " + field, { plain: true });
+      invariant(
+        property.type === "array" && property.items.type === "string",
+        label + " items drift: " + field
+      );
+    }
+    if (Object.hasOwn(property, "xRelationTarget"))
+      requireBoundedBridgeString(
+        property.xRelationTarget,
+        label + " relation target " + field,
+        256
+      );
+    if (Object.hasOwn(property.xFieldConfig, "relation")) {
+      exactOwnKeys(
+        property.xFieldConfig.relation,
+        ["multiple", "target"],
+        label + " relation " + field,
+        { plain: true }
+      );
+      invariant(
+        typeof property.xFieldConfig.relation.multiple === "boolean",
+        label + " relation multiple drift: " + field
+      );
+      requireBoundedBridgeString(
+        property.xFieldConfig.relation.target,
+        label + " relation config target " + field,
+        256
+      );
+    }
+    if (Object.hasOwn(property.xFieldConfig, "media")) {
+      exactOwnKeys(property.xFieldConfig.media, ["accept"], label + " media " + field, {
+        plain: true,
+      });
+      validateBridgeStringArray(
+        property.xFieldConfig.media.accept,
+        label + " media accept " + field,
+        32,
+        128
+      );
+    }
+    invariant(
+      Object.keys(property.xFieldConfig).every((key) =>
+        ["media", "order", "relation"].includes(key)
+      ),
+      label + " field config has unknown keys: " + field
+    );
+  }
+}
+
+function validateResponseLostContentConfig(config, label) {
+  validateBridgeJsonObject(config, label);
+  const allowed = ["draftsEnabled", "permissions", "pluralName", "singularName", "versioning"];
+  invariant(
+    Object.keys(config).every((key) => allowed.includes(key)),
+    label + " has unknown keys"
+  );
+  for (const key of ["singularName", "pluralName"]) {
+    if (Object.hasOwn(config, key)) requireBoundedBridgeString(config[key], label + " " + key, 256);
+  }
+  for (const key of ["draftsEnabled", "versioning"]) {
+    if (Object.hasOwn(config, key))
+      invariant(typeof config[key] === "boolean", label + " " + key + " drift");
+  }
+  if (Object.hasOwn(config, "permissions")) {
+    validateBridgeJsonObject(config.permissions, label + " permissions");
+    invariant(Object.keys(config.permissions).length <= 50, label + " permission role bound drift");
+    for (const [role, grants] of Object.entries(config.permissions)) {
+      requireBoundedBridgeString(role, label + " role", 128);
+      validateBridgeJsonObject(grants, label + " grants " + role);
+      invariant(
+        Object.keys(grants).every((key) =>
+          ["create", "delete", "publish", "read", "update"].includes(key)
+        ),
+        label + " grant key drift"
+      );
+      invariant(
+        Object.values(grants).every((grant) => typeof grant === "boolean"),
+        label + " grant scalar drift"
+      );
+    }
+  }
+}
+
+function responseLostActionIdForOperation(operationId) {
+  return (
+    Object.entries(RESPONSE_LOST_QUERY_OPERATION_BINDINGS).find(
+      ([, binding]) =>
+        binding.baselineOperationId === operationId || binding.discoveryOperationId === operationId
+    )?.[0] ?? null
+  );
+}
+
+function validateResponseLostCandidateFamily(state, descriptor, input, family, candidate, label) {
+  requireBridgeUuid(candidate.id ?? candidate.userId ?? candidate.screenId, label + " primary ID");
+  if (family === "user") {
+    validateBridgeNullableString(candidate.name, label + " name", 256);
+    invariant(
+      [candidate.adminRoleTupleCount, candidate.adminWildcardPermissionCount].every(
+        (count) => Number.isSafeInteger(count) && count >= 0 && count <= MAX_NATURAL_KEY_CANDIDATES
+      ) &&
+        typeof candidate.normalizedEmailMatches === "boolean" &&
+        typeof candidate.passwordHashPresent === "boolean" &&
+        candidate.adminRoleTupleCount === candidate.adminWildcardPermissionCount &&
+        ["active", "inactive", "pending"].includes(candidate.status),
+      label + " user scalar drift"
+    );
+    return;
+  }
+  if (family === "contentType") {
+    requireBoundedBridgeString(candidate.name, label + " name", 256);
+    requireBoundedBridgeString(candidate.slug, label + " slug", 256);
+    invariant(
+      /^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(candidate.slug) &&
+        ["draft", "published"].includes(candidate.status) &&
+        (!Object.hasOwn(input, "slug") || candidate.slug === input.slug),
+      label + " slug/status correlation drift"
+    );
+    validateResponseLostContentSchema(candidate.schema, label + " schema");
+    validateResponseLostContentConfig(candidate.config, label + " config");
+    return;
+  }
+  if (family === "entry") {
+    requireBridgeUuid(candidate.typeId, label + " type ID");
+    validateBridgeNullableUuid(candidate.authorId, label + " author ID");
+    requireBoundedBridgeString(candidate.title, label + " title", 512);
+    requireBoundedBridgeString(candidate.slug, label + " slug", 256);
+    invariant(
+      ["draft", "published", "scheduled", "archived"].includes(candidate.status) &&
+        ["public", "private", "password"].includes(candidate.visibility) &&
+        typeof candidate.accessPasswordAbsent === "boolean" &&
+        candidate.slug === (Object.hasOwn(input, "slug") ? input.slug : input.entrySlug) &&
+        (!Object.hasOwn(input, "typeId") || candidate.typeId === input.typeId),
+      label + " entry scalar drift"
+    );
+    validateBridgeStringArray(candidate.tags, label + " tags", 20, 24);
+    validateBridgeJsonObject(candidate.data, label + " data");
+    invariant(
+      isNullableIsoTimestamp(candidate.publishedAt) &&
+        isNullableIsoTimestamp(candidate.scheduledAt),
+      label + " timestamp drift"
+    );
+    return;
+  }
+  if (family === "screen") {
+    requireBridgeUuid(candidate.contentTypeId, label + " content-type ID");
+    requireBoundedBridgeString(candidate.name, label + " name", 160);
+    validateBridgeNullableString(candidate.compositionKey, label + " composition key", 160);
+    validateBridgeNullableString(candidate.sidebarLabel, label + " sidebar label", 160);
+    invariant(
+      ["draft", "active"].includes(candidate.status) &&
+        (candidate.collectionRole === null ||
+          ["canonical-admin-screen", "secondary-admin-screen"].includes(
+            candidate.collectionRole
+          )) &&
+        typeof candidate.showInSidebar === "boolean" &&
+        candidate.schemaVersion === 4 &&
+        candidate.name === input.name &&
+        (!Object.hasOwn(input, "contentTypeId") ||
+          candidate.contentTypeId === input.contentTypeId) &&
+        (candidate.compositionKey === null || /^[a-zA-Z0-9_.-]+$/u.test(candidate.compositionKey)),
+      label + " Screen scalar drift"
+    );
+    validateBridgeJsonObject(candidate.definition, label + " definition");
+    exactOwnKeys(
+      candidate.definition,
+      ["editorView", "listView", "schemaVersion"],
+      label + " definition",
+      { plain: true }
+    );
+    invariant(candidate.definition.schemaVersion === 4, label + " definition version drift");
+    validateBridgeJsonObject(candidate.definition.editorView, label + " editor view");
+    validateBridgeJsonObject(candidate.definition.listView, label + " list view");
+    const screenActionId = responseLostActionIdForOperation(descriptor.operationId);
+    const intendedScreen =
+      screenActionId === null
+        ? null
+        : state?.responseLostIntents?.get(screenActionId)?.preparedBody;
+    if (intendedScreen?.definition)
+      invariant(
+        deepEqualJson(candidate.definition, intendedScreen.definition),
+        label + " authored Screen definition drift"
+      );
+    return;
+  }
+  if (family === "media") {
+    requireBoundedBridgeString(candidate.key, label + " storage key", 1024);
+    invariant(
+      /^\d{4}\/(?:0[1-9]|1[0-2])\/[0-9a-f-]{36}\.png$/u.test(candidate.key) &&
+        candidate.url === "/media/" + candidate.key,
+      label + " media path drift"
+    );
+    requireBoundedBridgeString(candidate.originalName, label + " original name", 255);
+    requireBoundedBridgeString(candidate.type, label + " type", 64);
+    requireBoundedBridgeString(candidate.mimeType, label + " MIME", 128);
+    invariant(
+      ["file", "image"].includes(candidate.type) &&
+        Number.isSafeInteger(candidate.size) &&
+        candidate.size > 0 &&
+        candidate.size <= MAX_STREAM_BYTES &&
+        candidate.originalName === input.originalName &&
+        candidate.mimeType === input.mimeType &&
+        candidate.size === input.size,
+      label + " media scalar/correlation drift"
+    );
+    for (const key of ["width", "height"]) {
+      invariant(
+        candidate[key] === null || (Number.isSafeInteger(candidate[key]) && candidate[key] > 0),
+        label + " " + key + " drift"
+      );
+    }
+    for (const key of ["focalX", "focalY"]) {
+      invariant(
+        candidate[key] === null ||
+          (typeof candidate[key] === "number" &&
+            Number.isFinite(candidate[key]) &&
+            candidate[key] >= 0 &&
+            candidate[key] <= 1),
+        label + " " + key + " drift"
+      );
+    }
+    for (const key of ["alt", "title", "caption"])
+      validateBridgeNullableString(candidate[key], label + " " + key, 2048);
+    validateBridgeNullableString(candidate.description, label + " description", 2000);
+    validateBridgeNullableString(candidate.credit, label + " credit", 300);
+    validateBridgeNullableUuid(candidate.folderId, label + " folder ID");
+    validateBridgeNullableUuid(candidate.createdBy, label + " creator ID");
+    validateBridgeStringArray(candidate.tags, label + " tags", 30, 40);
+    invariant(
+      candidate.tags.every((tag) => tag === tag.trim()),
+      label + " tags are not trimmed"
+    );
+    return;
+  }
+  if (family === "override") {
+    requireBridgeUuid(candidate.entryId, label + " entry ID");
+    requireBoundedBridgeString(candidate.blockId, label + " block ID", 160);
+    invariant(
+      /^[a-zA-Z0-9_.-]+$/u.test(candidate.blockId) &&
+        candidate.propPath === "mediaAssetId" &&
+        candidate.blockId === input.blockId &&
+        candidate.propPath === input.propPath &&
+        (!Object.hasOwn(input, "screenId") || candidate.screenId === input.screenId) &&
+        (!Object.hasOwn(input, "entryId") || candidate.entryId === input.entryId),
+      label + " override natural-key drift"
+    );
+    requireBridgeUuid(candidate.value, label + " value media ID");
+    validateBridgeNullableUuid(candidate.updatedBy, label + " updater ID");
+    return;
+  }
+  invariant(family === "setting", label + " family drift");
+  invariant(candidate.key === "customScreens.entry.preferences", label + " setting key drift");
+  if (Object.hasOwn(input, "userId"))
+    invariant(candidate.userId === input.userId, label + " setting user correlation drift");
+  exactOwnKeys(candidate.value, ["showFieldMetadata", "version"], label + " setting value", {
+    plain: true,
+  });
+  invariant(
+    candidate.value.version === 1 && typeof candidate.value.showFieldMetadata === "boolean",
+    label + " setting value drift"
+  );
+}
+
+function validateBoundedCandidatesBridgeOutput(state, descriptor, input, value) {
+  validateExactBridgeKeys(value, ["candidates", "overflow"], descriptor.operationId + " output");
+  invariant(
+    Array.isArray(value.candidates) &&
+      value.candidates.length <= MAX_NATURAL_KEY_CANDIDATES &&
+      typeof value.overflow === "boolean",
+    descriptor.operationId + " candidate envelope drift"
+  );
+  const family = responseLostCandidateFamilyForDescriptor(descriptor);
+  const candidateKeys = RESPONSE_LOST_CANDIDATE_KEYS_BY_FAMILY[family];
+  for (const candidate of value.candidates) {
+    validateExactBridgeKeys(candidate, candidateKeys, descriptor.operationId + " candidate");
+    validateResponseLostCandidateFamily(
+      state,
+      descriptor,
+      input,
+      family,
+      candidate,
+      descriptor.operationId + " candidate"
+    );
+  }
+  return value;
+}
+
+function validateStoragePreflightBridgeOutput(_state, descriptor, _input, value) {
+  validateExactBridgeKeys(
+    value,
+    ["bootstrap", "contentRoutes", "local", "setupComplete", "storageRoot", "taskTrafficBaseline"],
+    descriptor.operationId + " output"
+  );
+  validateBootstrapPrivateBaseline(value.bootstrap, descriptor.operationId + " bootstrap");
+  validateContentRoutesBridgeProjection(
+    value.contentRoutes,
+    descriptor.operationId + " content routes"
+  );
+  validateExactBridgeKeys(
+    value.taskTrafficBaseline,
+    ["accessIds", "auditIds", "sessionIds"],
+    descriptor.operationId + " task traffic baseline"
+  );
+  invariant(
+    value.local === true &&
+      value.setupComplete === true &&
+      typeof value.storageRoot === "string" &&
+      value.storageRoot.length > 0 &&
+      [
+        value.taskTrafficBaseline.accessIds,
+        value.taskTrafficBaseline.auditIds,
+        value.taskTrafficBaseline.sessionIds,
+      ].every(
+        (ids) =>
+          Array.isArray(ids) &&
+          ids.every((id) => typeof id === "string" && /^[0-9a-f-]{36}$/u.test(id))
+      ),
+    descriptor.operationId + " storage preflight projection drift"
+  );
+  return value;
+}
+
+function validateTaskTrafficBridgeOutput(_state, descriptor, input, value) {
+  validateExactBridgeKeys(
+    value,
+    ["access", "audit", "completeSession", "session"],
+    descriptor.operationId + " output"
+  );
+  const rowContracts = [
+    ["access", value.access, ["id", "sessionId", "userAgent", "userId"]],
+    ["audit", value.audit, ["actorId", "id", "userAgent"]],
+    ["completeSession", value.completeSession, ["id", "userAgent", "userId"]],
+    ["session", value.session, ["id", "userAgent", "userId"]],
+  ];
+  const nullableUuid = (candidate, label) => {
+    if (candidate !== null) requireBridgeUuid(candidate, label);
+  };
+  for (const [kind, rows, keys] of rowContracts) {
+    invariant(
+      Array.isArray(rows) && rows.length <= MAX_COMPLETE_SESSION_ROWS,
+      descriptor.operationId + " row bound drift"
+    );
+    for (const row of rows) {
+      validateExactBridgeKeys(row, keys, descriptor.operationId + " " + kind + " row");
+      requireBridgeUuid(row.id, descriptor.operationId + " " + kind + " row ID");
+      if (kind === "access") {
+        nullableUuid(row.sessionId, descriptor.operationId + " access session ID");
+        nullableUuid(row.userId, descriptor.operationId + " access user ID");
+      } else if (kind === "audit") {
+        nullableUuid(row.actorId, descriptor.operationId + " audit actor ID");
+      } else {
+        requireBridgeUuid(row.userId, descriptor.operationId + " " + kind + " user ID");
+      }
+      if (kind === "completeSession") {
+        invariant(
+          row.userAgent === null ||
+            (typeof row.userAgent === "string" && Buffer.byteLength(row.userAgent) <= 512),
+          descriptor.operationId + " complete-session user-agent drift"
+        );
+      } else {
+        invariant(
+          typeof row.userAgent === "string" && input.userAgents.includes(row.userAgent),
+          descriptor.operationId + " " + kind + " user-agent drift"
+        );
+      }
+    }
+  }
+  return value;
+}
+
+function validateBootstrapRestoreBridgeOutput(_state, descriptor, _input, value) {
+  const keys = [
+    "afterCommitByteIdentical",
+    "completeRowByteIdentical",
+    "conditionalUpdateAffectedOne",
+    "inTransactionByteIdentical",
+    "restored",
+    "roleTuplesByteIdentical",
+    "rolesInTransactionByteIdentical",
+    "rolesShareLocked",
+    "transactionLocked",
+  ];
+  validateExactBridgeKeys(value, keys, descriptor.operationId + " output");
+  invariant(
+    keys.every((key) => typeof value[key] === "boolean"),
+    descriptor.operationId + " restore boolean drift"
+  );
+  return value;
+}
+
+function validateStrictResourceBridgeOutput(state, descriptor, input, value) {
+  const source = descriptor.source;
+  if (
+    [
+      ...Object.values(PRESENTATION_OVERRIDE_EXACT_BRIDGE_SOURCES),
+      ...Object.values(USER_SETTING_EXACT_BRIDGE_SOURCES),
+      ...Object.values(USER_EXACT_BRIDGE_SOURCES),
+      ...Object.values(TASK_TRAFFIC_EXACT_BRIDGE_SOURCES).flatMap((sources) =>
+        Object.values(sources)
+      ),
+    ].includes(source)
+  ) {
+    validateExactBridgeKeys(
+      value,
+      ["absent", "affected", "present"],
+      descriptor.operationId + " output"
+    );
+    invariant(
+      typeof value.absent === "boolean" &&
+        Number.isSafeInteger(value.affected) &&
+        typeof value.present === "boolean",
+      descriptor.operationId + " resource result drift"
+    );
+    return value;
+  }
+  if (Object.values(MEDIA_EXACT_BRIDGE_SOURCES).includes(source)) {
+    validateExactBridgeKeys(
+      value,
+      ["absent", "present", "stage"],
+      descriptor.operationId + " output"
+    );
+    invariant(
+      typeof value.absent === "boolean" &&
+        typeof value.present === "boolean" &&
+        typeof value.stage === "string",
+      descriptor.operationId + " media result drift"
+    );
+    return value;
+  }
+  if (
+    [
+      CONTENT_TYPE_PROVENANCE_BRIDGE_SOURCE,
+      CONTENT_ENTRY_PROVENANCE_BRIDGE_SOURCE,
+      CUSTOM_SCREEN_PROVENANCE_BRIDGE_SOURCE,
+    ].includes(source)
+  ) {
+    return validateBooleanBridgeProjection(value, "present", descriptor.operationId + " output");
+  }
+  if (source === BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE)
+    return validateBootstrapRestoreBridgeOutput(state, descriptor, input, value);
+  if (source === BOOTSTRAP_LOGIN_OBSERVATION_BRIDGE_SOURCE)
+    return validateBootstrapLoginObservation(state, value, descriptor.operationId + " output");
+  if (source === CONTENT_ROUTES_EXACT_BRIDGE_SOURCE)
+    return validateContentRoutesBridgeProjection(value, descriptor.operationId + " output");
+  if (source === STORAGE_PREFLIGHT_BRIDGE_SOURCE)
+    return validateStoragePreflightBridgeOutput(state, descriptor, input, value);
+  if (source === MISSING_MEDIA_DB_ABSENCE_BRIDGE_SOURCE) {
+    validateExactBridgeKeys(value, ["rowCount"], descriptor.operationId + " output");
+    invariant(
+      Number.isSafeInteger(value.rowCount) && value.rowCount >= 0 && value.rowCount <= 1,
+      descriptor.operationId + " missing media count drift"
+    );
+    return value;
+  }
+  invariant(false, "strict resource bridge output source is not registered");
+}
+
+const BUN_BRIDGE_OUTPUT_VALIDATORS = deepFreezeExact({
+  "api-session-observation-private-v1": (state, descriptor, input, value) => {
+    validateApiSessionObservation(
+      value,
+      input.userId,
+      input.userAgent,
+      descriptor.operationId + " output"
+    );
+    return value;
+  },
+  "auth-rate-private-v1": (_state, descriptor, _input, value) => {
+    validateExactBridgeKeys(
+      value,
+      ["enabled", "maxRequests", "windowSeconds"],
+      descriptor.operationId + " output"
+    );
+    invariant(
+      typeof value.enabled === "boolean" &&
+        Number.isSafeInteger(value.maxRequests) &&
+        Number.isSafeInteger(value.windowSeconds),
+      descriptor.operationId + " rate projection drift"
+    );
+    return value;
+  },
+  "bootstrap-login-observation-private-v1": (state, descriptor, _input, value) =>
+    validateBootstrapLoginObservation(state, value, descriptor.operationId + " output"),
+  "bootstrap-restore-private-v2": validateBootstrapRestoreBridgeOutput,
+  "bounded-natural-candidates-v1": validateBoundedCandidatesBridgeOutput,
+  "content-routes-private-v1": (_state, descriptor, _input, value) =>
+    validateContentRoutesBridgeProjection(value, descriptor.operationId + " output"),
+  "legacy-user-absence-private-v1": (_state, descriptor, _input, value) =>
+    validateBooleanBridgeProjection(value, "absent", descriptor.operationId + " output"),
+  "legacy-user-delete-private-v1": (_state, descriptor, _input, value) =>
+    validateBooleanBridgeProjection(value, "ok", descriptor.operationId + " output"),
+  "missing-media-row-count-v1": (_state, descriptor, _input, value) => {
+    validateExactBridgeKeys(value, ["rowCount"], descriptor.operationId + " output");
+    invariant(
+      Number.isSafeInteger(value.rowCount) && value.rowCount >= 0 && value.rowCount <= 1,
+      descriptor.operationId + " missing media count drift"
+    );
+    return value;
+  },
+  "preference-read-private-v1": (_state, descriptor, _input, value) =>
+    validateBooleanBridgeProjection(value, "showFieldMetadata", descriptor.operationId + " output"),
+  "preference-write-private-v1": (_state, descriptor, _input, value) =>
+    validateBooleanBridgeProjection(value, "ok", descriptor.operationId + " output"),
+  "resource-owner-private-v1": (_state, descriptor, _input, value) => {
+    validateExactBridgeKeys(
+      value,
+      ["entries", "media", "override"],
+      descriptor.operationId + " output"
+    );
+    invariant(Array.isArray(value.entries), descriptor.operationId + " owner entries drift");
+    for (const entry of value.entries)
+      validateExactBridgeKeys(
+        entry,
+        ["id", "ownerSubjectIdentifier"],
+        descriptor.operationId + " owner entry"
+      );
+    validateExactBridgeKeys(
+      value.media,
+      ["id", "ownerSubjectIdentifier"],
+      descriptor.operationId + " media owner"
+    );
+    validateExactBridgeKeys(
+      value.override,
+      ["ownerSubjectIdentifier"],
+      descriptor.operationId + " override owner"
+    );
+    return value;
+  },
+  "screen-materialize-private-v1": (_state, descriptor, input, value) => {
+    validateExactBridgeKeys(
+      value,
+      [...Object.keys(input.bodyWithoutDefinition), "definition", "schemaVersion"],
+      descriptor.operationId + " output"
+    );
+    invariant(
+      value.schemaVersion === 4 &&
+        value.definition &&
+        typeof value.definition === "object" &&
+        !Array.isArray(value.definition),
+      descriptor.operationId + " screen projection drift"
+    );
+    return value;
+  },
+  "session-policy-private-v1": (_state, descriptor, _input, value) => {
+    validateExactBridgeKeys(
+      value,
+      ["csrfHeaderName", "effectiveMaxPerUserAtLeast2", "singleSession"],
+      descriptor.operationId + " output"
+    );
+    invariant(
+      typeof value.csrfHeaderName === "string" &&
+        typeof value.effectiveMaxPerUserAtLeast2 === "boolean" &&
+        typeof value.singleSession === "boolean",
+      descriptor.operationId + " session policy drift"
+    );
+    return value;
+  },
+  "storage-preflight-private-v2": validateStoragePreflightBridgeOutput,
+  "strict-resource-operation-v1": validateStrictResourceBridgeOutput,
+  "task-traffic-complete-private-v2": validateTaskTrafficBridgeOutput,
+  "user-identity-private-v2": (_state, descriptor, _input, value) => {
+    validateBooleanBridgeProjection(value, "ok", descriptor.operationId + " output");
+    invariant(value.ok === true, descriptor.operationId + " user identity proof drift");
+    return value;
+  },
+  "user-provision-private-v2": (_state, descriptor, _input, value) => {
+    validateExactBridgeKeys(
+      value,
+      [
+        "adminRoleTupleCount",
+        "exactIdPasswordUpdate",
+        "normalizedEmailMatches",
+        "userEmail",
+        "userId",
+      ],
+      descriptor.operationId + " output"
+    );
+    invariant(
+      Number.isSafeInteger(value.adminRoleTupleCount) &&
+        typeof value.exactIdPasswordUpdate === "boolean" &&
+        typeof value.normalizedEmailMatches === "boolean" &&
+        typeof value.userEmail === "string" &&
+        typeof value.userId === "string",
+      descriptor.operationId + " user provision drift"
+    );
+    return value;
+  },
+});
+
+function validateBunBridgeOutput(state, descriptor, input, value) {
+  const validator = BUN_BRIDGE_OUTPUT_VALIDATORS[descriptor.outputSchemaId];
+  invariant(
+    typeof validator === "function",
+    "Bun bridge output schema is not registered: " + descriptor.outputSchemaId
+  );
+  return validator(state, descriptor, input, value);
+}
+
+function bunBridgeInputSchema(inputKeys, validator) {
+  invariant(
+    Array.isArray(inputKeys) && typeof validator === "function",
+    "Bun bridge input schema declaration drift"
+  );
+  return deepFreezeExact({ inputKeys: [...inputKeys].sort(), validator });
+}
+
+function requireBoundedBridgeString(value, label, maximum = 512) {
+  invariant(
+    typeof value === "string" &&
+      value.length > 0 &&
+      !value.includes("\0") &&
+      Buffer.byteLength(value) <= maximum,
+    label + " bounded string drift"
+  );
+  return value;
+}
+
+function requireBridgeUuid(value, label) {
+  invariant(
+    typeof value === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(value),
+    label + " UUID drift"
+  );
+  return value;
+}
+
+function validateBridgeIdentifierTuple(input, length, label) {
+  invariant(
+    Array.isArray(input.identifier) && input.identifier.length === length,
+    label + " tuple bound drift"
+  );
+  input.identifier.forEach((value, index) =>
+    requireBoundedBridgeString(value, label + "[" + index + "]", 1024)
+  );
+  return input.identifier;
+}
+
+const BUN_BRIDGE_INPUT_VALIDATORS = deepFreezeExact({
+  "bootstrap-restore-input-v1": bunBridgeInputSchema(
+    ["baseline", "newestOwnedPair", "userId"],
+    (_state, _descriptor, input) => {
+      validateBootstrapPrivateBaseline(input.baseline, "Bun bootstrap restore baseline");
+      exactOwnKeys(
+        input.newestOwnedPair,
+        ["lastLoginAt", "updatedAt"],
+        "Bun bootstrap newest pair",
+        { plain: true }
+      );
+      invariant(
+        input.userId === input.baseline.id &&
+          isNullableIsoTimestamp(input.newestOwnedPair.lastLoginAt) &&
+          isNullableIsoTimestamp(input.newestOwnedPair.updatedAt),
+        "Bun bootstrap restore identity/timestamp drift"
+      );
+    }
+  ),
+  "email-input-v1": bunBridgeInputSchema(["email"], (_state, _descriptor, input) => {
+    requireBoundedBridgeString(input.email, "Bun email", 320);
+    invariant(
+      input.email === input.email.toLowerCase() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(input.email),
+      "Bun email normalization drift"
+    );
+  }),
+  "empty-input-v1": bunBridgeInputSchema([], () => {}),
+  "entry-discovery-input-v1": bunBridgeInputSchema(
+    ["slug", "typeId"],
+    (_state, _descriptor, input) => {
+      requireBridgeUuid(input.typeId, "Bun entry type ID");
+      requireBoundedBridgeString(input.slug, "Bun entry slug", 256);
+    }
+  ),
+  "entry-preflight-input-v1": bunBridgeInputSchema(
+    ["entrySlug", "typeSlug"],
+    (_state, _descriptor, input) => {
+      requireBoundedBridgeString(input.entrySlug, "Bun entry preflight slug", 256);
+      requireBoundedBridgeString(input.typeSlug, "Bun type preflight slug", 256);
+    }
+  ),
+  "identifier-media-input-v1": bunBridgeInputSchema(
+    ["identifier"],
+    (_state, _descriptor, input) => {
+      const [mediaId, storageKey] = validateBridgeIdentifierTuple(input, 2, "Bun media identifier");
+      requireBridgeUuid(mediaId, "Bun media identifier ID");
+      invariant(
+        /^\d{4}\/(?:0[1-9]|1[0-2])\/[0-9a-f-]{36}\.png$/u.test(storageKey),
+        "Bun media storage-key drift"
+      );
+    }
+  ),
+  "identifier-override-input-v1": bunBridgeInputSchema(
+    ["identifier"],
+    (_state, _descriptor, input) => {
+      const [screenId, entryId, blockId, propPath] = validateBridgeIdentifierTuple(
+        input,
+        4,
+        "Bun override identifier"
+      );
+      requireBridgeUuid(screenId, "Bun override Screen ID");
+      requireBridgeUuid(entryId, "Bun override entry ID");
+      requireBoundedBridgeString(blockId, "Bun override block ID", 256);
+      invariant(propPath === "mediaAssetId", "Bun override propPath drift");
+    }
+  ),
+  "identifier-setting-input-v1": bunBridgeInputSchema(
+    ["identifier"],
+    (_state, _descriptor, input) => {
+      const [userId, key] = validateBridgeIdentifierTuple(input, 2, "Bun setting identifier");
+      requireBridgeUuid(userId, "Bun setting user ID");
+      invariant(key === "customScreens.entry.preferences", "Bun setting key drift");
+    }
+  ),
+  "identifier-uuid-input-v1": bunBridgeInputSchema(["identifier"], (_state, _descriptor, input) => {
+    const [id] = validateBridgeIdentifierTuple(input, 1, "Bun UUID identifier");
+    requireBridgeUuid(id, "Bun UUID identifier");
+  }),
+  "media-id-input-v1": bunBridgeInputSchema(["mediaId"], (_state, _descriptor, input) => {
+    requireBridgeUuid(input.mediaId, "Bun media ID");
+  }),
+  "media-natural-input-v1": bunBridgeInputSchema(
+    ["mimeType", "originalName", "size"],
+    (_state, _descriptor, input) => {
+      requireBoundedBridgeString(input.mimeType, "Bun media MIME", 128);
+      requireBoundedBridgeString(input.originalName, "Bun media filename", 512);
+      invariant(
+        Number.isSafeInteger(input.size) && input.size > 0 && input.size <= MAX_STREAM_BYTES,
+        "Bun media size drift"
+      );
+    }
+  ),
+  "override-discovery-input-v1": bunBridgeInputSchema(
+    ["blockId", "entryId", "propPath", "screenId"],
+    (_state, _descriptor, input) => {
+      requireBridgeUuid(input.screenId, "Bun override Screen ID");
+      requireBridgeUuid(input.entryId, "Bun override entry ID");
+      requireBoundedBridgeString(input.blockId, "Bun override block ID", 256);
+      invariant(input.propPath === "mediaAssetId", "Bun override propPath drift");
+    }
+  ),
+  "override-preflight-input-v1": bunBridgeInputSchema(
+    ["blockId", "contentTypeSlug", "entrySlug", "propPath", "screenName"],
+    (_state, _descriptor, input) => {
+      for (const key of ["blockId", "contentTypeSlug", "entrySlug", "screenName"])
+        requireBoundedBridgeString(input[key], "Bun override " + key, 256);
+      invariant(input.propPath === "mediaAssetId", "Bun override preflight propPath drift");
+    }
+  ),
+  "preference-write-input-v1": bunBridgeInputSchema(
+    ["showFieldMetadata", "userId"],
+    (_state, _descriptor, input) => {
+      requireBridgeUuid(input.userId, "Bun preference user ID");
+      invariant(typeof input.showFieldMetadata === "boolean", "Bun preference boolean drift");
+    }
+  ),
+  "resource-owner-input-v1": bunBridgeInputSchema(
+    ["entryIds", "mediaId", "override"],
+    (_state, _descriptor, input) => {
+      invariant(
+        Array.isArray(input.entryIds) &&
+          input.entryIds.length === 6 &&
+          new Set(input.entryIds).size === 6,
+        "Bun owner entry tuple drift"
+      );
+      input.entryIds.forEach((id) => requireBridgeUuid(id, "Bun owner entry ID"));
+      requireBridgeUuid(input.mediaId, "Bun owner media ID");
+      exactOwnKeys(
+        input.override,
+        ["blockId", "entryId", "propPath", "screenId"],
+        "Bun owner override",
+        { plain: true }
+      );
+      requireBridgeUuid(input.override.entryId, "Bun owner override entry ID");
+      requireBridgeUuid(input.override.screenId, "Bun owner override Screen ID");
+      requireBoundedBridgeString(input.override.blockId, "Bun owner override block ID", 256);
+      invariant(input.override.propPath === "mediaAssetId", "Bun owner override propPath drift");
+    }
+  ),
+  "screen-discovery-input-v1": bunBridgeInputSchema(
+    ["contentTypeId", "name"],
+    (_state, _descriptor, input) => {
+      requireBridgeUuid(input.contentTypeId, "Bun Screen content-type ID");
+      requireBoundedBridgeString(input.name, "Bun Screen name", 256);
+    }
+  ),
+  "screen-materialize-input-v1": bunBridgeInputSchema(
+    ["bodyWithoutDefinition", "contentType", "definitionWithoutListView"],
+    (state, descriptor, input) => {
+      exactOwnKeys(
+        input.bodyWithoutDefinition,
+        ["contentTypeId", "name", "showInSidebar", "sidebarLabel", "status"],
+        "Bun Screen body",
+        { plain: true }
+      );
+      requireBridgeUuid(
+        input.bodyWithoutDefinition.contentTypeId,
+        "Bun Screen body content-type ID"
+      );
+      requireBoundedBridgeString(input.bodyWithoutDefinition.name, "Bun Screen body name", 256);
+      requireBoundedBridgeString(
+        input.bodyWithoutDefinition.sidebarLabel,
+        "Bun Screen sidebar label",
+        256
+      );
+      invariant(
+        input.bodyWithoutDefinition.status === "active" &&
+          typeof input.bodyWithoutDefinition.showInSidebar === "boolean",
+        "Bun Screen body scalar drift"
+      );
+      exactOwnKeys(input.contentType, ["id", "name", "schema", "slug"], "Bun Screen content type", {
+        plain: true,
+      });
+      requireBridgeUuid(input.contentType.id, "Bun Screen content-type ID");
+      requireBoundedBridgeString(input.contentType.name, "Bun Screen content-type name", 256);
+      requireBoundedBridgeString(input.contentType.slug, "Bun Screen content-type slug", 256);
+      assertPlainJsonValue(input.contentType.schema, "Bun Screen content-type schema");
+      exactOwnKeys(
+        input.definitionWithoutListView,
+        ["editorView", "schemaVersion"],
+        "Bun Screen definition",
+        { plain: true }
+      );
+      invariant(
+        input.definitionWithoutListView.schemaVersion === 4,
+        "Bun Screen definition version drift"
+      );
+      assertPlainJsonValue(
+        input.definitionWithoutListView.editorView,
+        "Bun Screen editor definition"
+      );
+      if (state?.editableContentTypeDetail)
+        invariant(
+          deepEqualJson(input.contentType, state.editableContentTypeDetail),
+          "Bun Screen content-type authority drift"
+        );
+      const blueprint =
+        descriptor.operationId === "runtime/set-035-screen-create"
+          ? state?.plan?.fixtureBlueprint?.screen
+          : state?.plan?.fixtureBlueprint?.retryScreen;
+      if (blueprint) {
+        const { listView: ignoredListView, ...expectedDefinition } = blueprint.definitionTemplate;
+        void ignoredListView;
+        invariant(
+          deepEqualJson(input.definitionWithoutListView, expectedDefinition),
+          "Bun Screen definition authority drift"
+        );
+      }
+    }
+  ),
+  "screen-preflight-input-v1": bunBridgeInputSchema(
+    ["contentTypeSlug", "name"],
+    (_state, _descriptor, input) => {
+      requireBoundedBridgeString(input.contentTypeSlug, "Bun Screen content-type slug", 256);
+      requireBoundedBridgeString(input.name, "Bun Screen name", 256);
+    }
+  ),
+  "slug-input-v1": bunBridgeInputSchema(["slug"], (_state, _descriptor, input) => {
+    requireBoundedBridgeString(input.slug, "Bun slug", 256);
+  }),
+  "user-agents-input-v1": bunBridgeInputSchema(["userAgents"], (_state, _descriptor, input) => {
+    invariant(
+      Array.isArray(input.userAgents) &&
+        input.userAgents.length === 4 &&
+        new Set(input.userAgents).size === 4,
+      "Bun user-agent tuple drift"
+    );
+    input.userAgents.forEach((value) => requireBoundedBridgeString(value, "Bun user agent", 512));
+  }),
+  "user-id-input-v1": bunBridgeInputSchema(["userId"], (_state, _descriptor, input) => {
+    requireBridgeUuid(input.userId, "Bun user ID");
+  }),
+  "user-identity-input-v1": bunBridgeInputSchema(
+    ["email", "userId"],
+    (_state, _descriptor, input) => {
+      requireBridgeUuid(input.userId, "Bun identity user ID");
+      requireBoundedBridgeString(input.email, "Bun identity email", 320);
+      invariant(
+        input.email === input.email.toLowerCase() &&
+          /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(input.email),
+        "Bun identity email drift"
+      );
+    }
+  ),
+  "user-provision-input-v1": bunBridgeInputSchema(
+    ["email", "name"],
+    (_state, _descriptor, input) => {
+      requireBoundedBridgeString(input.email, "Bun provision email", 320);
+      requireBoundedBridgeString(input.name, "Bun provision name", 256);
+      invariant(
+        input.email === input.email.toLowerCase() &&
+          /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(input.email),
+        "Bun provision email drift"
+      );
+    }
+  ),
+  "user-session-observation-input-v1": bunBridgeInputSchema(
+    ["userAgent", "userId"],
+    (_state, _descriptor, input) => {
+      requireBridgeUuid(input.userId, "Bun observed user ID");
+      requireBoundedBridgeString(input.userAgent, "Bun observed user agent", 512);
+    }
+  ),
+});
+
+function bunBridgeInputSchemaId(source, inputKeys) {
+  const signature = [...inputKeys].sort().join(",");
+  const direct = {
+    "": "empty-input-v1",
+    "baseline,newestOwnedPair,userId": "bootstrap-restore-input-v1",
+    "blockId,contentTypeSlug,entrySlug,propPath,screenName": "override-preflight-input-v1",
+    "blockId,entryId,propPath,screenId": "override-discovery-input-v1",
+    "bodyWithoutDefinition,contentType,definitionWithoutListView": "screen-materialize-input-v1",
+    "contentTypeId,name": "screen-discovery-input-v1",
+    "contentTypeSlug,name": "screen-preflight-input-v1",
+    email: "email-input-v1",
+    "email,name": "user-provision-input-v1",
+    "email,userId": "user-identity-input-v1",
+    "entryIds,mediaId,override": "resource-owner-input-v1",
+    "entrySlug,typeSlug": "entry-preflight-input-v1",
+    mediaId: "media-id-input-v1",
+    "mimeType,originalName,size": "media-natural-input-v1",
+    "showFieldMetadata,userId": "preference-write-input-v1",
+    slug: "slug-input-v1",
+    "slug,typeId": "entry-discovery-input-v1",
+    "userAgent,userId": "user-session-observation-input-v1",
+    userAgents: "user-agents-input-v1",
+    userId: "user-id-input-v1",
+  }[signature];
+  if (direct) return direct;
+  invariant(signature === "identifier", "Bun bridge input signature is unregistered: " + signature);
+  if (Object.values(PRESENTATION_OVERRIDE_EXACT_BRIDGE_SOURCES).includes(source))
+    return "identifier-override-input-v1";
+  if (Object.values(USER_SETTING_EXACT_BRIDGE_SOURCES).includes(source))
+    return "identifier-setting-input-v1";
+  if (Object.values(MEDIA_EXACT_BRIDGE_SOURCES).includes(source))
+    return "identifier-media-input-v1";
+  if (
+    [
+      ...Object.values(USER_EXACT_BRIDGE_SOURCES),
+      ...Object.values(TASK_TRAFFIC_EXACT_BRIDGE_SOURCES).flatMap((sources) =>
+        Object.values(sources)
+      ),
+      CONTENT_TYPE_PROVENANCE_BRIDGE_SOURCE,
+      CONTENT_ENTRY_PROVENANCE_BRIDGE_SOURCE,
+      CUSTOM_SCREEN_PROVENANCE_BRIDGE_SOURCE,
+    ].includes(source)
+  )
+    return "identifier-uuid-input-v1";
+  invariant(false, "Bun bridge identifier input source is unregistered");
+}
+
+function validateBunBridgeInput(state, descriptor, input) {
+  const schema = BUN_BRIDGE_INPUT_VALIDATORS[descriptor.inputSchemaId];
+  invariant(
+    schema && typeof schema.validator === "function",
+    "Bun bridge input schema is not registered: " + descriptor.inputSchemaId
+  );
+  exactOwnKeys(input, schema.inputKeys, descriptor.operationId + " Bun bridge input", {
+    plain: true,
+  });
+  assertPlainJsonValue(input, descriptor.operationId + " Bun bridge input");
+  schema.validator(state, descriptor, input);
+  return input;
+}
+
+const BUN_BRIDGE_ENV_PROFILES = deepFreezeExact({
+  "schema-only": { requiredInherited: ["PATH"], requiredRepo: [], optionalRepo: [], fixed: {} },
+  database: {
+    requiredInherited: ["PATH"],
+    requiredRepo: ["DATABASE_URL"],
+    optionalRepo: [],
+    fixed: { DB_POOL_MAX: "1" },
+  },
+  "bootstrap-preflight": {
+    requiredInherited: ["PATH"],
+    requiredRepo: ["DATABASE_URL", "PII_HASH_KEY", "PII_ENC_KEY", "ADMIN_EMAIL"],
+    optionalRepo: [],
+    fixed: { DB_POOL_MAX: "1" },
+  },
+  "user-identity-proof": {
+    requiredInherited: ["PATH"],
+    requiredRepo: ["DATABASE_URL", "PII_HASH_KEY", "PII_ENC_KEY"],
+    optionalRepo: [],
+    fixed: { DB_POOL_MAX: "1" },
+  },
+  "user-provisioning": {
+    requiredInherited: ["PATH"],
+    requiredRepo: ["DATABASE_URL", "PII_HASH_KEY", "PII_ENC_KEY", "ADMIN_PASSWORD"],
+    optionalRepo: ["AUTH_PASSWORD_PEPPER"],
+    fixed: { DB_POOL_MAX: "1" },
+  },
+});
+
+const BUN_BRIDGE_BASE_DESCRIPTOR_KEYS = deepFreezeExact([
+  "argvShape",
+  "cwdShape",
+  "envProfileId",
+  "file",
+  "inputKeys",
+  "inputSchemaId",
+  "maxStderrBytes",
+  "maxStdinBytes",
+  "maxStdoutBytes",
+  "operationId",
+  "outputSchemaId",
+  "source",
+  "sourceSha256",
+  "timeoutMs",
+]);
+const BUN_BRIDGE_RESOURCE_DESCRIPTOR_KEYS = deepFreezeExact([
+  "acquisitionChannel",
+  "participationMode",
+  "resourceKey",
+  "resourceKind",
+  "resourceSlot",
+]);
+
+function validateBunBridgeOperationDescriptor(
+  descriptor,
+  expectedOperationId = descriptor?.operationId
+) {
+  const resourceKeyCount = BUN_BRIDGE_RESOURCE_DESCRIPTOR_KEYS.filter(
+    (key) => descriptor && Object.hasOwn(descriptor, key)
+  ).length;
+  invariant(
+    resourceKeyCount === 0 || resourceKeyCount === BUN_BRIDGE_RESOURCE_DESCRIPTOR_KEYS.length,
+    "Bun bridge resource descriptor binding is partial"
+  );
+  exactOwnKeys(
+    descriptor,
+    resourceKeyCount === 0
+      ? BUN_BRIDGE_BASE_DESCRIPTOR_KEYS
+      : [...BUN_BRIDGE_BASE_DESCRIPTOR_KEYS, ...BUN_BRIDGE_RESOURCE_DESCRIPTOR_KEYS],
+    "Bun bridge operation descriptor",
+    { plain: true }
+  );
+  invariant(
+    Object.isFrozen(descriptor) &&
+      Object.isFrozen(descriptor.argvShape) &&
+      Object.isFrozen(descriptor.cwdShape) &&
+      Object.isFrozen(descriptor.inputKeys) &&
+      typeof expectedOperationId === "string" &&
+      expectedOperationId.length > 0 &&
+      descriptor.operationId === expectedOperationId &&
+      descriptor.file === BUN_BRIDGE_EXECUTION_AUTHORITY.file &&
+      deepEqualJson(descriptor.argvShape, BUN_BRIDGE_EXECUTION_AUTHORITY.argvShape) &&
+      deepEqualJson(descriptor.cwdShape, BUN_BRIDGE_EXECUTION_AUTHORITY.cwdShape) &&
+      typeof descriptor.source === "string" &&
+      descriptor.source.length > 0 &&
+      !descriptor.source.includes("\0") &&
+      Buffer.byteLength(descriptor.source) <= MAX_STREAM_BYTES &&
+      typeof descriptor.sourceSha256 === "string" &&
+      /^[a-f0-9]{64}$/u.test(descriptor.sourceSha256) &&
+      descriptor.sourceSha256 === hashBytes(Buffer.from(descriptor.source)) &&
+      descriptor.source.startsWith(
+        BRIDGE_INPUT_READER + bridgeInputSchemaGuard(descriptor.inputSchemaId)
+      ) &&
+      BUN_BRIDGE_ENV_PROFILES[descriptor.envProfileId] !== undefined &&
+      descriptor.inputSchemaId ===
+        bunBridgeInputSchemaId(descriptor.source, descriptor.inputKeys) &&
+      BUN_BRIDGE_INPUT_VALIDATORS[descriptor.inputSchemaId] !== undefined &&
+      Array.isArray(descriptor.inputKeys) &&
+      descriptor.inputKeys.every((key) => typeof key === "string" && key.length > 0) &&
+      new Set(descriptor.inputKeys).size === descriptor.inputKeys.length &&
+      deepEqualJson(descriptor.inputKeys, [...descriptor.inputKeys].sort()) &&
+      deepEqualJson(
+        descriptor.inputKeys,
+        BUN_BRIDGE_INPUT_VALIDATORS[descriptor.inputSchemaId].inputKeys
+      ) &&
+      typeof descriptor.outputSchemaId === "string" &&
+      typeof BUN_BRIDGE_OUTPUT_VALIDATORS[descriptor.outputSchemaId] === "function" &&
+      descriptor.timeoutMs === BUN_BRIDGE_EXECUTION_AUTHORITY.timeoutMs &&
+      descriptor.maxStdinBytes === BUN_BRIDGE_EXECUTION_AUTHORITY.maxStdinBytes &&
+      descriptor.maxStdoutBytes === BUN_BRIDGE_EXECUTION_AUTHORITY.maxStdoutBytes &&
+      descriptor.maxStderrBytes === BUN_BRIDGE_EXECUTION_AUTHORITY.maxStderrBytes,
+    "Bun bridge descriptor source/schema/argv/cwd/limit authority drift"
+  );
+  if (resourceKeyCount > 0) {
+    invariant(
+      [
+        descriptor.acquisitionChannel,
+        descriptor.participationMode,
+        descriptor.resourceKey,
+        descriptor.resourceKind,
+      ].every((value) => typeof value === "string" && value.length > 0) &&
+        ["absence", "cleanup", "provenance"].includes(descriptor.resourceSlot) &&
+        ["bun-one-shot", "node+bun-one-shot"].includes(descriptor.participationMode),
+      "Bun bridge resource descriptor binding drift"
+    );
+  }
+  return descriptor;
+}
+
+const REQUIRED_BUN_BRIDGE_RUNTIME_OPERATION_IDS_BY_ENV_PROFILE = deepFreezeExact({
+  "bootstrap-preflight": ["runtime/set-001-storage-preflight"],
+  database: [
+    "runtime/set-004b-session-policy-preflight",
+    "runtime/set-004c-auth-rate-budget-preflight",
+    "runtime/set-032-storage-post-setup",
+    "runtime/set-041-preference-a",
+    "runtime/set-042-preference-a-proof",
+    "runtime/set-043-preference-b",
+    "runtime/set-044-preference-b-proof",
+  ],
+  "user-identity-proof": ["runtime/set-013-user-a-proof", "runtime/set-015-user-b-proof"],
+  "user-provisioning": ["runtime/set-012-user-a-create", "runtime/set-014-user-b-create"],
+  "schema-only": ["runtime/set-035-screen-create", "runtime/set-037-retry-screen-create"],
+});
+
+function bunBridgeOperationDescriptor(
+  operationId,
+  source,
+  envProfileId,
+  inputKeys,
+  outputSchemaId
+) {
+  invariant(
+    typeof operationId === "string" &&
+      operationId.length > 0 &&
+      typeof source === "string" &&
+      source.length > 0 &&
+      BUN_BRIDGE_ENV_PROFILES[envProfileId] !== undefined &&
+      Array.isArray(inputKeys) &&
+      inputKeys.every((key) => typeof key === "string") &&
+      new Set(inputKeys).size === inputKeys.length &&
+      typeof BUN_BRIDGE_OUTPUT_VALIDATORS[outputSchemaId] === "function",
+    "Bun bridge descriptor input drift"
+  );
+  const descriptor = deepFreezeExact({
+    operationId,
+    file: BUN_BRIDGE_EXECUTION_AUTHORITY.file,
+    argvShape: BUN_BRIDGE_EXECUTION_AUTHORITY.argvShape,
+    cwdShape: BUN_BRIDGE_EXECUTION_AUTHORITY.cwdShape,
+    source,
+    sourceSha256: hashBytes(Buffer.from(source)),
+    envProfileId,
+    inputSchemaId: bunBridgeInputSchemaId(source, inputKeys),
+    inputKeys: deepFreezeExact([...inputKeys].sort()),
+    outputSchemaId,
+    timeoutMs: BUN_BRIDGE_EXECUTION_AUTHORITY.timeoutMs,
+    maxStdinBytes: BUN_BRIDGE_EXECUTION_AUTHORITY.maxStdinBytes,
+    maxStdoutBytes: BUN_BRIDGE_EXECUTION_AUTHORITY.maxStdoutBytes,
+    maxStderrBytes: BUN_BRIDGE_EXECUTION_AUTHORITY.maxStderrBytes,
+  });
+  return validateBunBridgeOperationDescriptor(descriptor, operationId);
+}
+
+const BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS = deepFreezeExact({
+  "runtime/set-001-storage-preflight": bunBridgeOperationDescriptor(
+    "runtime/set-001-storage-preflight",
+    STORAGE_PREFLIGHT_BRIDGE_SOURCE,
+    "bootstrap-preflight",
+    ["userAgents"],
+    "storage-preflight-private-v2"
+  ),
+  "runtime/set-004b-session-policy-preflight": bunBridgeOperationDescriptor(
+    "runtime/set-004b-session-policy-preflight",
+    SECURITY_SESSION_BRIDGE_SOURCE,
+    "database",
+    [],
+    "session-policy-private-v1"
+  ),
+  "runtime/set-004c-auth-rate-budget-preflight": bunBridgeOperationDescriptor(
+    "runtime/set-004c-auth-rate-budget-preflight",
+    SECURITY_RATE_BRIDGE_SOURCE,
+    "database",
+    [],
+    "auth-rate-private-v1"
+  ),
+  "runtime/set-032-storage-post-setup": bunBridgeOperationDescriptor(
+    "runtime/set-032-storage-post-setup",
+    MISSING_MEDIA_DB_ABSENCE_BRIDGE_SOURCE,
+    "database",
+    ["mediaId"],
+    "missing-media-row-count-v1"
+  ),
+  "runtime/set-041-preference-a": bunBridgeOperationDescriptor(
+    "runtime/set-041-preference-a",
+    PREFERENCE_SET_BRIDGE_SOURCE,
+    "database",
+    ["showFieldMetadata", "userId"],
+    "preference-write-private-v1"
+  ),
+  "runtime/set-042-preference-a-proof": bunBridgeOperationDescriptor(
+    "runtime/set-042-preference-a-proof",
+    PREFERENCE_GET_BRIDGE_SOURCE,
+    "database",
+    ["userId"],
+    "preference-read-private-v1"
+  ),
+  "runtime/set-043-preference-b": bunBridgeOperationDescriptor(
+    "runtime/set-043-preference-b",
+    PREFERENCE_SET_BRIDGE_SOURCE,
+    "database",
+    ["showFieldMetadata", "userId"],
+    "preference-write-private-v1"
+  ),
+  "runtime/set-044-preference-b-proof": bunBridgeOperationDescriptor(
+    "runtime/set-044-preference-b-proof",
+    PREFERENCE_GET_BRIDGE_SOURCE,
+    "database",
+    ["userId"],
+    "preference-read-private-v1"
+  ),
+  "runtime/set-013-user-a-proof": bunBridgeOperationDescriptor(
+    "runtime/set-013-user-a-proof",
+    USER_PROOF_BRIDGE_SOURCE,
+    "user-identity-proof",
+    ["email", "userId"],
+    "user-identity-private-v2"
+  ),
+  "runtime/set-015-user-b-proof": bunBridgeOperationDescriptor(
+    "runtime/set-015-user-b-proof",
+    USER_PROOF_BRIDGE_SOURCE,
+    "user-identity-proof",
+    ["email", "userId"],
+    "user-identity-private-v2"
+  ),
+  "runtime/set-012-user-a-create": bunBridgeOperationDescriptor(
+    "runtime/set-012-user-a-create",
+    USER_PROVISION_BRIDGE_SOURCE,
+    "user-provisioning",
+    ["email", "name"],
+    "user-provision-private-v2"
+  ),
+  "runtime/set-014-user-b-create": bunBridgeOperationDescriptor(
+    "runtime/set-014-user-b-create",
+    USER_PROVISION_BRIDGE_SOURCE,
+    "user-provisioning",
+    ["email", "name"],
+    "user-provision-private-v2"
+  ),
+  "runtime/set-035-screen-create": bunBridgeOperationDescriptor(
+    "runtime/set-035-screen-create",
+    SCREEN_MATERIALIZE_BRIDGE_SOURCE,
+    "schema-only",
+    ["bodyWithoutDefinition", "contentType", "definitionWithoutListView"],
+    "screen-materialize-private-v1"
+  ),
+  "runtime/set-037-retry-screen-create": bunBridgeOperationDescriptor(
+    "runtime/set-037-retry-screen-create",
+    SCREEN_MATERIALIZE_BRIDGE_SOURCE,
+    "schema-only",
+    ["bodyWithoutDefinition", "contentType", "definitionWithoutListView"],
+    "screen-materialize-private-v1"
+  ),
+});
+
+const RESPONSE_LOST_QUERY_FAMILY_BY_ACTION_ID = deepFreezeExact({
+  "set-012-user-a-create": "user",
+  "set-014-user-b-create": "user",
+  "set-016-editable-type-create": "content-type",
+  "set-018-related-a-type-create": "content-type",
+  "set-020-related-b-type-create": "content-type",
+  "set-021a-related-failure-type-create": "content-type",
+  "set-022-related-a1-create": "entry",
+  "set-024-related-a2-create": "entry",
+  "set-026-related-b1-create": "entry",
+  "set-028-related-b2-create": "entry",
+  "set-029a-related-failure1-create": "entry",
+  "set-033-entry-create": "entry",
+  "set-030-media-upload": "media",
+  "set-035-screen-create": "screen",
+  "set-037-retry-screen-create": "screen",
+  "set-039-override-create": "override",
+  "set-041-preference-a": "setting",
+  "set-043-preference-b": "setting",
+});
+const RESPONSE_LOST_QUERY_SOURCES_BY_FAMILY = deepFreezeExact({
+  user: {
+    preflight: RESPONSE_LOST_USER_QUERY_BRIDGE_SOURCE,
+    discovery: RESPONSE_LOST_USER_QUERY_BRIDGE_SOURCE,
+    profile: "user-identity-proof",
+    preflightKeys: ["email"],
+  },
+  "content-type": {
+    preflight: RESPONSE_LOST_CONTENT_TYPE_QUERY_BRIDGE_SOURCE,
+    discovery: RESPONSE_LOST_CONTENT_TYPE_QUERY_BRIDGE_SOURCE,
+    profile: "database",
+    preflightKeys: ["slug"],
+  },
+  entry: {
+    preflight: RESPONSE_LOST_ENTRY_PREFLIGHT_BRIDGE_SOURCE,
+    discovery: RESPONSE_LOST_ENTRY_QUERY_BRIDGE_SOURCE,
+    profile: "database",
+    preflightKeys: ["entrySlug", "typeSlug"],
+  },
+  media: {
+    preflight: RESPONSE_LOST_MEDIA_QUERY_BRIDGE_SOURCE,
+    discovery: RESPONSE_LOST_MEDIA_QUERY_BRIDGE_SOURCE,
+    profile: "database",
+    preflightKeys: ["mimeType", "originalName", "size"],
+  },
+  screen: {
+    preflight: RESPONSE_LOST_SCREEN_PREFLIGHT_BRIDGE_SOURCE,
+    discovery: RESPONSE_LOST_SCREEN_QUERY_BRIDGE_SOURCE,
+    profile: "database",
+    preflightKeys: ["contentTypeSlug", "name"],
+  },
+  override: {
+    preflight: RESPONSE_LOST_OVERRIDE_PREFLIGHT_BRIDGE_SOURCE,
+    discovery: RESPONSE_LOST_OVERRIDE_QUERY_BRIDGE_SOURCE,
+    profile: "database",
+    preflightKeys: ["blockId", "contentTypeSlug", "entrySlug", "propPath", "screenName"],
+  },
+  setting: {
+    preflight: RESPONSE_LOST_SETTING_PREFLIGHT_BRIDGE_SOURCE,
+    discovery: RESPONSE_LOST_SETTING_QUERY_BRIDGE_SOURCE,
+    profile: "user-identity-proof",
+    preflightKeys: ["email"],
+  },
+});
+const BUN_BRIDGE_RESPONSE_LOST_OPERATION_DESCRIPTORS = deepFreezeExact(
+  Object.fromEntries(
+    Object.entries(RESPONSE_LOST_QUERY_OPERATION_BINDINGS).flatMap(([actionId, binding]) => {
+      const family =
+        RESPONSE_LOST_QUERY_SOURCES_BY_FAMILY[RESPONSE_LOST_QUERY_FAMILY_BY_ACTION_ID[actionId]];
+      invariant(family !== undefined, "response-lost descriptor family is absent");
+      return [
+        [
+          binding.baselineOperationId,
+          bunBridgeOperationDescriptor(
+            binding.baselineOperationId,
+            family.preflight,
+            family.profile,
+            family.preflightKeys,
+            "bounded-natural-candidates-v1"
+          ),
+        ],
+        [
+          binding.discoveryOperationId,
+          bunBridgeOperationDescriptor(
+            binding.discoveryOperationId,
+            family.discovery,
+            family.profile,
+            binding.inputKeys,
+            "bounded-natural-candidates-v1"
+          ),
+        ],
+      ];
+    })
+  )
+);
+
+const BUN_BRIDGE_AUXILIARY_OPERATION_DESCRIPTORS = deepFreezeExact({
+  "terminal/task-traffic-snapshot": bunBridgeOperationDescriptor(
+    "terminal/task-traffic-snapshot",
+    TASK_TRAFFIC_SNAPSHOT_BRIDGE_SOURCE,
+    "database",
+    ["userAgents"],
+    "task-traffic-complete-private-v2"
+  ),
+  "resource/content-routes-exact": bunBridgeOperationDescriptor(
+    "resource/content-routes-exact",
+    CONTENT_ROUTES_EXACT_BRIDGE_SOURCE,
+    "database",
+    [],
+    "content-routes-private-v1"
+  ),
+  "resource/current-owner-exact": bunBridgeOperationDescriptor(
+    "resource/current-owner-exact",
+    CURRENT_RESOURCE_OWNER_QUERY_BRIDGE_SOURCE,
+    "database",
+    ["entryIds", "mediaId", "override"],
+    "resource-owner-private-v1"
+  ),
+  "resource/api-session-observation": bunBridgeOperationDescriptor(
+    "resource/api-session-observation",
+    API_SESSION_OBSERVATION_BRIDGE_SOURCE,
+    "database",
+    ["userAgent", "userId"],
+    "api-session-observation-private-v1"
+  ),
+  "resource/bootstrap-login-observation": bunBridgeOperationDescriptor(
+    "resource/bootstrap-login-observation",
+    BOOTSTRAP_LOGIN_OBSERVATION_BRIDGE_SOURCE,
+    "database",
+    ["userAgent", "userId"],
+    "bootstrap-login-observation-private-v1"
+  ),
+  "resource/bootstrap-cas-restore": bunBridgeOperationDescriptor(
+    "resource/bootstrap-cas-restore",
+    BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE,
+    "database",
+    ["baseline", "newestOwnedPair", "userId"],
+    "bootstrap-restore-private-v2"
+  ),
+  "resource/storage-final-preflight": bunBridgeOperationDescriptor(
+    "resource/storage-final-preflight",
+    STORAGE_PREFLIGHT_BRIDGE_SOURCE,
+    "bootstrap-preflight",
+    ["userAgents"],
+    "storage-preflight-private-v2"
+  ),
+  "resource/missing-media-db-absence": bunBridgeOperationDescriptor(
+    "resource/missing-media-db-absence",
+    MISSING_MEDIA_DB_ABSENCE_BRIDGE_SOURCE,
+    "database",
+    ["mediaId"],
+    "missing-media-row-count-v1"
+  ),
+  "legacy/user-delete-exact": bunBridgeOperationDescriptor(
+    "legacy/user-delete-exact",
+    USER_DELETE_BRIDGE_SOURCE,
+    "user-identity-proof",
+    ["userId"],
+    "legacy-user-delete-private-v1"
+  ),
+  "legacy/user-absence-exact": bunBridgeOperationDescriptor(
+    "legacy/user-absence-exact",
+    USER_ABSENCE_BRIDGE_SOURCE,
+    "user-identity-proof",
+    ["userId"],
+    "legacy-user-absence-private-v1"
+  ),
+});
+
+const BUN_BRIDGE_OPERATION_DESCRIPTORS = deepFreezeExact({
+  ...BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS,
+  ...BUN_BRIDGE_RESPONSE_LOST_OPERATION_DESCRIPTORS,
+  ...BUN_BRIDGE_AUXILIARY_OPERATION_DESCRIPTORS,
+});
+const BUN_BRIDGE_RESOURCE_OPERATION_DESCRIPTORS = PRIVATE_BUN_RESOURCE_DESCRIPTORS;
+
+function buildResourceBunSourceSpecs() {
+  const specs = Object.create(null);
+  const add = (key, source, envProfileId = "database", inputKeys = ["identifier"]) => {
+    invariant(!Object.hasOwn(specs, key), "resource Bun source spec duplicate: " + key);
+    specs[key] = {
+      source,
+      envProfileId,
+      inputKeys,
+      outputSchemaId: "strict-resource-operation-v1",
+    };
+  };
+  add(
+    "presentation-override/provenance/failure-discovery",
+    PRESENTATION_OVERRIDE_EXACT_BRIDGE_SOURCES.provenance
+  );
+  add("presentation-override/cleanup", PRESENTATION_OVERRIDE_EXACT_BRIDGE_SOURCES.delete);
+  add("presentation-override/absence", PRESENTATION_OVERRIDE_EXACT_BRIDGE_SOURCES.absence);
+  for (const kind of ["setting-user-a", "setting-user-b"]) {
+    add(kind + "/provenance/failure-discovery", USER_SETTING_EXACT_BRIDGE_SOURCES.provenance);
+    add(kind + "/cleanup", USER_SETTING_EXACT_BRIDGE_SOURCES.delete);
+    add(kind + "/absence", USER_SETTING_EXACT_BRIDGE_SOURCES.absence);
+  }
+  for (const kind of ["screen-main", "screen-retry"]) {
+    add(kind + "/provenance/failure-discovery", CUSTOM_SCREEN_PROVENANCE_BRIDGE_SOURCE);
+  }
+  for (const kind of ["entry-editable", "entry-related"]) {
+    add(kind + "/provenance/failure-discovery", CONTENT_ENTRY_PROVENANCE_BRIDGE_SOURCE);
+  }
+  add("content-type/provenance/failure-discovery", CONTENT_TYPE_PROVENANCE_BRIDGE_SOURCE);
+  for (const channel of ["admin-api", "failure-discovery"]) {
+    add("media-row-key/provenance/" + channel, MEDIA_EXACT_BRIDGE_SOURCES.provenance);
+  }
+  add("media-row-key/cleanup", MEDIA_EXACT_BRIDGE_SOURCES.delete);
+  add("media-row-key/absence", MEDIA_EXACT_BRIDGE_SOURCES.absence);
+  for (const kind of ["audit-log-task-ua", "access-log-task-ua", "session-task"]) {
+    add(kind + "/provenance/terminal-db-delta", TASK_TRAFFIC_EXACT_BRIDGE_SOURCES[kind].provenance);
+    add(kind + "/cleanup", TASK_TRAFFIC_EXACT_BRIDGE_SOURCES[kind].delete);
+    add(kind + "/absence", TASK_TRAFFIC_EXACT_BRIDGE_SOURCES[kind].absence);
+  }
+  for (const kind of ["user-a", "user-b"]) {
+    add(
+      kind + "/provenance/failure-discovery",
+      USER_EXACT_BRIDGE_SOURCES.provenance,
+      "user-identity-proof"
+    );
+    add(kind + "/cleanup", USER_EXACT_BRIDGE_SOURCES.delete);
+    add(kind + "/absence", USER_EXACT_BRIDGE_SOURCES.absence);
+  }
+  add("bootstrap-user-login-state/cleanup", BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE, "database", [
+    "baseline",
+    "newestOwnedPair",
+    "userId",
+  ]);
+  add("bootstrap-user-login-state/absence", BOOTSTRAP_LOGIN_OBSERVATION_BRIDGE_SOURCE, "database", [
+    "userAgent",
+    "userId",
+  ]);
+  add("site-content-routes-baseline/absence", CONTENT_ROUTES_EXACT_BRIDGE_SOURCE, "database", []);
+  add("storage-baseline/absence", STORAGE_PREFLIGHT_BRIDGE_SOURCE, "bootstrap-preflight", [
+    "userAgents",
+  ]);
+  add("missing-media-baseline/absence", MISSING_MEDIA_DB_ABSENCE_BRIDGE_SOURCE, "database", [
+    "mediaId",
+  ]);
+  return deepFreezeExact(specs);
+}
+const RESOURCE_BUN_SOURCE_SPECS = buildResourceBunSourceSpecs();
+
+function resourceBunParticipationSlot(core, slot) {
+  const participation = RESOURCE_BUN_BRIDGE_PARTICIPATION[core.kind];
+  invariant(participation !== undefined, "resource Bun participation kind is absent");
+  if (slot === "provenance") return participation.provenance[core.acquisitionChannel];
+  return participation[slot];
+}
+
+function resourceBunSourceSpecKey(core, slot) {
+  return slot === "provenance"
+    ? core.kind + "/provenance/" + core.acquisitionChannel
+    : core.kind + "/" + slot;
+}
+
+function promoteResourceBunDescriptorsAfterLedgerAppend(state, delta) {
+  const resourceRegistry = PRIVATE_BUN_RESOURCE_DESCRIPTORS.get(state);
+  const unionRegistry = PRIVATE_BUN_OPERATION_DESCRIPTORS.get(state);
+  invariant(
+    resourceRegistry instanceof Map && unionRegistry instanceof Map,
+    "resource Bun descriptor authority is absent"
+  );
+  for (const core of delta.cores) {
+    for (const [slot, operationId] of [
+      ["provenance", core.provenanceOpId],
+      ["cleanup", core.cleanupOpId],
+      ["absence", core.absenceOpId],
+    ]) {
+      const participation = resourceBunParticipationSlot(core, slot);
+      if (participation === null) {
+        invariant(operationId === null, "null resource Bun slot has an operation ID");
+        continue;
+      }
+      if (
+        participation.mode === "bound-runtime-bridge" ||
+        participation.mode === "node+bound-runtime-bridge"
+      ) {
+        invariant(
+          slot === "provenance" &&
+            BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS[participation.operationId] !== undefined,
+          "bound runtime resource descriptor drift"
+        );
+        continue;
+      }
+      if (participation.mode === "node-local") continue;
+      invariant(
+        participation.mode === "bun-one-shot" || participation.mode === "node+bun-one-shot",
+        "resource Bun descriptor mode is not executable"
+      );
+      const specKey = resourceBunSourceSpecKey(core, slot);
+      const spec = RESOURCE_BUN_SOURCE_SPECS[specKey];
+      invariant(
+        spec !== undefined && spec.envProfileId === participation.envProfileId,
+        "resource Bun source spec drift: " + specKey
+      );
+      invariant(
+        typeof operationId === "string" &&
+          !resourceRegistry.has(operationId) &&
+          !unionRegistry.has(operationId),
+        "resource Bun operation ID collision"
+      );
+      const descriptor = validateBunBridgeOperationDescriptor(
+        deepFreezeExact({
+          ...bunBridgeOperationDescriptor(
+            operationId,
+            spec.source,
+            spec.envProfileId,
+            spec.inputKeys,
+            spec.outputSchemaId
+          ),
+          resourceKey: core.resourceKey,
+          resourceKind: core.kind,
+          resourceSlot: slot,
+          acquisitionChannel: core.acquisitionChannel,
+          participationMode: participation.mode,
+        }),
+        operationId
+      );
+      resourceRegistry.set(operationId, descriptor);
+      unionRegistry.set(operationId, descriptor);
+    }
+  }
+}
+
+function expectedResourceBunOperationIds(records) {
+  const expected = [];
+  for (const record of records) {
+    for (const [slot, operationId] of [
+      ["provenance", record.provenanceOpId],
+      ["cleanup", record.cleanupOpId],
+      ["absence", record.absenceOpId],
+    ]) {
+      const participation = resourceBunParticipationSlot(record, slot);
+      if (
+        participation !== null &&
+        (participation.mode === "bun-one-shot" || participation.mode === "node+bun-one-shot")
+      ) {
+        expected.push(operationId);
+      }
+    }
+  }
+  invariant(
+    new Set(expected).size === expected.length,
+    "derived resource Bun operation IDs contain duplicates"
+  );
+  return expected.sort();
+}
+
+function assertResourceBunDescriptorSetExact(state, records) {
+  const resourceRegistry = PRIVATE_BUN_RESOURCE_DESCRIPTORS.get(state);
+  invariant(resourceRegistry instanceof Map, "resource Bun registry is absent");
+  const expected = expectedResourceBunOperationIds(records);
+  const actual = [...resourceRegistry.keys()].sort();
+  invariant(deepEqualJson(actual, expected), "resource Bun descriptor/ledger set equality drift");
+  for (const record of records) {
+    const perResourceSourceHashes = [];
+    for (const [slot, operationId] of [
+      ["provenance", record.provenanceOpId],
+      ["cleanup", record.cleanupOpId],
+      ["absence", record.absenceOpId],
+    ]) {
+      const participation = resourceBunParticipationSlot(record, slot);
+      if (
+        participation === null ||
+        !["bun-one-shot", "node+bun-one-shot"].includes(participation.mode)
+      )
+        continue;
+      const descriptor = resourceRegistry.get(operationId);
+      const spec = RESOURCE_BUN_SOURCE_SPECS[resourceBunSourceSpecKey(record, slot)];
+      validateBunBridgeOperationDescriptor(descriptor, operationId);
+      invariant(
+        descriptor?.operationId === operationId &&
+          descriptor.resourceKey === record.resourceKey &&
+          descriptor.resourceKind === record.kind &&
+          descriptor.resourceSlot === slot &&
+          descriptor.acquisitionChannel === record.acquisitionChannel &&
+          descriptor.participationMode === participation.mode &&
+          descriptor.source === spec?.source &&
+          descriptor.sourceSha256 === hashBytes(Buffer.from(spec.source)),
+        "resource Bun P/C/A descriptor binding drift"
+      );
+      perResourceSourceHashes.push(descriptor.sourceSha256);
+    }
+    invariant(
+      new Set(perResourceSourceHashes).size === perResourceSourceHashes.length,
+      "resource Bun P/C/A sources are not independently immutable"
+    );
+  }
+}
+
+async function runBoundResourceBunOperation(state, record, operationKind) {
+  const slot =
+    operationKind === "provenance"
+      ? "provenance"
+      : operationKind === "delete"
+        ? "cleanup"
+        : "absence";
+  const operationId =
+    record[
+      slot === "provenance" ? "provenanceOpId" : slot === "cleanup" ? "cleanupOpId" : "absenceOpId"
+    ];
+  const descriptor = PRIVATE_BUN_RESOURCE_DESCRIPTORS.get(state)?.get(operationId);
+  invariant(
+    descriptor !== undefined &&
+      descriptor.resourceKey === record.resourceKey &&
+      descriptor.resourceSlot === slot,
+    "bound resource Bun descriptor lookup drift"
+  );
+  return runBunBridgeOperation(state, operationId, { identifier: record.identifier });
+}
+
+function validateStaticBunBridgeDescriptorRegistries({
+  runtimeRegistry = BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS,
+  operationRegistry = BUN_BRIDGE_OPERATION_DESCRIPTORS,
+} = {}) {
+  assertResourceBunParticipationExhaustive();
+  const requiredRuntimeIds = Object.values(
+    REQUIRED_BUN_BRIDGE_RUNTIME_OPERATION_IDS_BY_ENV_PROFILE
+  ).flat();
+  invariant(
+    requiredRuntimeIds.length === 14 && new Set(requiredRuntimeIds).size === 14,
+    "required runtime Bun descriptor count drift"
+  );
+  invariant(
+    deepEqualJson(Object.keys(runtimeRegistry).sort(), [...requiredRuntimeIds].sort()),
+    "runtime Bun descriptor key-set drift"
+  );
+  invariant(
+    deepEqualJson(
+      Object.keys(BUN_BRIDGE_ENV_PROFILES).sort(),
+      Object.keys(REQUIRED_BUN_BRIDGE_RUNTIME_OPERATION_IDS_BY_ENV_PROFILE).sort()
+    ),
+    "Bun descriptor environment profile-set drift"
+  );
+  invariant(
+    Object.entries(BUN_BRIDGE_ENV_PROFILES).every(
+      ([profileId, profile]) =>
+        profile.requiredRepo.includes("ADMIN_PASSWORD") === (profileId === "user-provisioning") &&
+        !profile.optionalRepo.includes("ADMIN_PASSWORD")
+    ),
+    "ADMIN_PASSWORD may enter only the exact user-provisioning Bun profile"
+  );
+  const expectedStaticIds = [
+    ...Object.keys(runtimeRegistry),
+    ...Object.keys(BUN_BRIDGE_RESPONSE_LOST_OPERATION_DESCRIPTORS),
+    ...Object.keys(BUN_BRIDGE_AUXILIARY_OPERATION_DESCRIPTORS),
+  ].sort();
+  invariant(
+    deepEqualJson(Object.keys(operationRegistry).sort(), expectedStaticIds) &&
+      new Set(expectedStaticIds).size === expectedStaticIds.length,
+    "static Bun operation descriptor union drift"
+  );
+  const expectedOutputSchemaIds = [
+    ...new Set([
+      ...Object.values(BUN_BRIDGE_OPERATION_DESCRIPTORS).map(
+        ({ outputSchemaId }) => outputSchemaId
+      ),
+      ...Object.values(RESOURCE_BUN_SOURCE_SPECS).map(({ outputSchemaId }) => outputSchemaId),
+    ]),
+  ].sort();
+  invariant(
+    deepEqualJson(Object.keys(BUN_BRIDGE_OUTPUT_VALIDATORS).sort(), expectedOutputSchemaIds),
+    "Bun bridge output validator registry is not exhaustive"
+  );
+  const expectedInputSchemaIds = [
+    ...new Set([
+      ...Object.values(BUN_BRIDGE_OPERATION_DESCRIPTORS).map(({ inputSchemaId }) => inputSchemaId),
+      ...Object.values(RESOURCE_BUN_SOURCE_SPECS).map(({ inputKeys, source }) =>
+        bunBridgeInputSchemaId(source, inputKeys)
+      ),
+    ]),
+  ].sort();
+  invariant(
+    deepEqualJson(Object.keys(BUN_BRIDGE_INPUT_VALIDATORS).sort(), expectedInputSchemaIds),
+    "Bun bridge input validator registry is not exhaustive"
+  );
+  const expectedProfileByRuntimeId = new Map(
+    Object.entries(REQUIRED_BUN_BRIDGE_RUNTIME_OPERATION_IDS_BY_ENV_PROFILE).flatMap(
+      ([profile, operationIds]) => operationIds.map((operationId) => [operationId, profile])
+    )
+  );
+  for (const [operationId, descriptor] of Object.entries(operationRegistry)) {
+    validateBunBridgeOperationDescriptor(descriptor, operationId);
+    invariant(
+      deepEqualJson(descriptor, BUN_BRIDGE_OPERATION_DESCRIPTORS[operationId]) &&
+        (expectedProfileByRuntimeId.get(operationId) === undefined ||
+          expectedProfileByRuntimeId.get(operationId) === descriptor.envProfileId),
+      "Bun descriptor canonical source/profile/schema/argv/cwd/limit identity drift"
+    );
+  }
+}
+
+function initializeBunBridgeOperationAuthority(state) {
+  invariant(
+    !PRIVATE_BUN_RESOURCE_DESCRIPTORS.has(state) && !PRIVATE_BUN_OPERATION_DESCRIPTORS.has(state),
+    "Bun operation authority was assigned twice"
+  );
+  PRIVATE_BUN_RESOURCE_DESCRIPTORS.set(state, new Map());
+  PRIVATE_BUN_OPERATION_DESCRIPTORS.set(
+    state,
+    new Map(Object.entries(BUN_BRIDGE_OPERATION_DESCRIPTORS))
+  );
+}
+
+function bunBridgeDescriptorForOperation(state, operationId) {
+  invariant(
+    typeof operationId === "string" && operationId.length > 0,
+    "Bun bridge operation ID is invalid"
+  );
+  const privateRegistry = PRIVATE_BUN_OPERATION_DESCRIPTORS.get(state);
+  invariant(privateRegistry instanceof Map, "private Bun bridge operation registry is absent");
+  const descriptor = privateRegistry.get(operationId);
+  const staticDescriptor = BUN_BRIDGE_OPERATION_DESCRIPTORS[operationId];
+  const resourceDescriptor = PRIVATE_BUN_RESOURCE_DESCRIPTORS.get(state)?.get(operationId);
+  invariant(
+    descriptor !== undefined &&
+      (descriptor === staticDescriptor || descriptor === resourceDescriptor),
+    "Bun bridge operation is not registered by canonical identity: " + operationId
+  );
+  return validateBunBridgeOperationDescriptor(descriptor, operationId);
+}
+
+async function runBunBridgeOperation(state, operationId, input) {
+  const descriptor = bunBridgeDescriptorForOperation(state, operationId);
+  exactOwnKeys(input, descriptor.inputKeys, operationId + " Bun bridge input", { plain: true });
+  const value = await runBunBridge(state, descriptor, input);
+  return validateBunBridgeOutput(state, descriptor, input, value);
+}
+
+function contentSchemaFromFields(fields) {
+  const properties = {};
+  fields.forEach((field, order) => {
+    const common = { title: field.label, xFieldType: field.type };
+    if (field.type === "relation") {
+      properties[field.name] = {
+        type: field.relation.multiple ? "array" : "string",
+        ...(field.relation.multiple ? { items: { type: "string" } } : {}),
+        ...common,
+        xRelationTarget: field.relation.target,
+        xFieldConfig: { relation: field.relation, order },
+      };
+    } else if (field.type === "media") {
+      properties[field.name] = {
+        type: field.media.multiple ? "array" : "string",
+        ...(field.media.multiple ? { items: { type: "string" } } : {}),
+        ...common,
+        xFieldConfig: { media: { accept: field.media.accept }, order },
+      };
+    } else {
+      properties[field.name] = { type: "string", ...common, xFieldConfig: { order } };
+    }
+  });
+  return { type: "object", additionalProperties: false, properties };
+}
+
+function resolveFixtureValue(value, captures) {
+  if (Array.isArray(value)) return value.map((entry) => resolveFixtureValue(entry, captures));
+  if (!value || typeof value !== "object") return value;
+  if (Object.keys(value).length === 1 && typeof value.capture === "string")
+    return captures.get(value.capture);
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entry]) => [key, resolveFixtureValue(entry, captures)])
+  );
+}
+
+function runtimeSafeProjection(observation, captureBindings = {}) {
+  return {
+    captureBindings,
+    observationSha256: hashBytes(Buffer.from(canonicalJson(observation))),
+  };
+}
+
+function assertRecordIdentity(value, expected, label) {
+  invariant(value && typeof value === "object" && !Array.isArray(value), label + " is missing");
+  for (const [key, expectedValue] of Object.entries(expected)) {
+    invariant(deepEqualJson(value[key], expectedValue), label + " " + key + " drift");
+  }
+}
+
+function bootstrapApiSession(state) {
+  const session = state.sessions.get("bootstrap");
+  const record = session && privateApiContextRecord(state, session, "bootstrap");
+  invariant(
+    session?.userId === state.bootstrapBaseline.id &&
+      typeof record?.csrf === "string" &&
+      record.sessionId === state.earlyApiSessionTuples.get("bootstrap")?.id,
+    "bootstrap API session is not ready"
+  );
+  return session;
+}
+
+const BOOTSTRAP_RAW_USER_ROW_KEYS = Object.freeze([
+  "id",
+  "email",
+  "emailHash",
+  "emailEncrypted",
+  "passwordHash",
+  "name",
+  "status",
+  "createdAt",
+  "updatedAt",
+  "lastLoginAt",
+]);
+const BOOTSTRAP_ROLE_TUPLE_KEYS = Object.freeze([
+  "userId",
+  "roleId",
+  "roleName",
+  "roleDescription",
+  "rolePermissions",
+  "roleCreatedAt",
+]);
+
+function isNullableIsoTimestamp(value) {
+  return value === null || (typeof value === "string" && new Date(value).toISOString() === value);
+}
+
+function validateBootstrapPrivateBaseline(bootstrap, label = "bootstrap private baseline") {
+  exactOwnKeys(
+    bootstrap,
+    [
+      "id",
+      "lastLoginAt",
+      "updatedAt",
+      "normalizedEmailProof",
+      "emailHashProof",
+      "encryptedEmailProof",
+      "decryptEmailProof",
+      "rawUserRow",
+      "roleTuples",
+    ],
+    label,
+    { plain: true }
+  );
+  exactOwnKeys(bootstrap.rawUserRow, BOOTSTRAP_RAW_USER_ROW_KEYS, label + " raw user row", {
+    plain: true,
+  });
+  invariant(
+    typeof bootstrap.id === "string" &&
+      /^[0-9a-f-]{36}$/u.test(bootstrap.id) &&
+      bootstrap.rawUserRow.id === bootstrap.id &&
+      bootstrap.rawUserRow.lastLoginAt === bootstrap.lastLoginAt &&
+      bootstrap.rawUserRow.updatedAt === bootstrap.updatedAt &&
+      isNullableIsoTimestamp(bootstrap.lastLoginAt) &&
+      isNullableIsoTimestamp(bootstrap.updatedAt) &&
+      isNullableIsoTimestamp(bootstrap.rawUserRow.createdAt) &&
+      bootstrap.rawUserRow.status === "active" &&
+      [
+        bootstrap.normalizedEmailProof,
+        bootstrap.emailHashProof,
+        bootstrap.encryptedEmailProof,
+        bootstrap.decryptEmailProof,
+      ].every((value) => value === true),
+    label + " canonical Admin identity drift"
+  );
+  invariant(
+    Array.isArray(bootstrap.roleTuples) && bootstrap.roleTuples.length === 1,
+    label + " role tuple cardinality drift"
+  );
+  const role = bootstrap.roleTuples[0];
+  exactOwnKeys(role, BOOTSTRAP_ROLE_TUPLE_KEYS, label + " role tuple", { plain: true });
+  invariant(
+    role.userId === bootstrap.id &&
+      typeof role.roleId === "string" &&
+      /^[0-9a-f-]{36}$/u.test(role.roleId) &&
+      role.roleName === "admin" &&
+      deepEqualJson([...new Set(role.rolePermissions)].sort(), ["*"]) &&
+      isNullableIsoTimestamp(role.roleCreatedAt),
+    label + " canonical Admin role drift"
+  );
+  assertPlainJsonValue(bootstrap.rawUserRow, label + " raw user row");
+  assertPlainJsonValue(bootstrap.roleTuples, label + " role tuples");
+  return true;
+}
+
+function bootstrapTimestampPair(observation) {
+  return deepFreezeExact({
+    lastLoginAt: observation.lastLoginAt,
+    updatedAt: observation.updatedAt,
+  });
+}
+
+function bootstrapUnchangedProjection(observation) {
+  const {
+    lastLoginAt: ignoredLastLoginAt,
+    updatedAt: ignoredUpdatedAt,
+    ...unchangedRow
+  } = observation.rawUserRow;
+  void ignoredLastLoginAt;
+  void ignoredUpdatedAt;
+  return deepFreezeExact({ rawUserRow: unchangedRow, roleTuples: observation.roleTuples });
+}
+
+function initializeBootstrapLoginAuthority(state, baseline) {
+  invariant(
+    !PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY.has(state),
+    "bootstrap login authority was assigned twice"
+  );
+  validateBootstrapPrivateBaseline(baseline);
+  PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY.set(state, {
+    baseline,
+    baselineUnchanged: bootstrapUnchangedProjection(baseline),
+    newestOwnedPair: bootstrapTimestampPair(baseline),
+    attempts: [],
+    ownedAuditIds: new Set(),
+    ownedSessionIds: new Set(),
+    reconciliationError: null,
+    reconciliationSealed: false,
+    restorationStarted: false,
+    restorationPromise: null,
+    restorationProof: null,
+  });
+}
+
+function validateBootstrapLoginObservation(state, observation, label) {
+  exactOwnKeys(
+    observation,
+    ["auditIds", "id", "lastLoginAt", "rawUserRow", "roleTuples", "sessionIds", "updatedAt"],
+    label,
+    { plain: true }
+  );
+  exactOwnKeys(observation.rawUserRow, BOOTSTRAP_RAW_USER_ROW_KEYS, label + " raw user row", {
+    plain: true,
+  });
+  invariant(
+    observation.id === state.bootstrapBaseline.id &&
+      observation.rawUserRow.id === observation.id &&
+      observation.lastLoginAt === observation.rawUserRow.lastLoginAt &&
+      observation.updatedAt === observation.rawUserRow.updatedAt &&
+      isNullableIsoTimestamp(observation.lastLoginAt) &&
+      isNullableIsoTimestamp(observation.updatedAt),
+    label + " user identity drift"
+  );
+  invariant(
+    Array.isArray(observation.roleTuples) && observation.roleTuples.length === 1,
+    label + " role cardinality drift"
+  );
+  exactOwnKeys(observation.roleTuples[0], BOOTSTRAP_ROLE_TUPLE_KEYS, label + " role tuple", {
+    plain: true,
+  });
+  for (const [kind, ids] of [
+    ["audit", observation.auditIds],
+    ["session", observation.sessionIds],
+  ]) {
+    invariant(
+      Array.isArray(ids) &&
+        ids.length <= MAX_TASK_TRAFFIC_ROWS &&
+        ids.every((id) => typeof id === "string" && /^[0-9a-f-]{36}$/u.test(id)) &&
+        new Set(ids).size === ids.length &&
+        deepEqualJson(ids, [...ids].sort()),
+      label + " " + kind + " inventory drift"
+    );
+  }
+  const authority = PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY.get(state);
+  invariant(
+    authority &&
+      deepEqualJson(bootstrapUnchangedProjection(observation), authority.baselineUnchanged),
+    label + " non-login columns or role tuples drifted"
+  );
+  return observation;
+}
+
+async function readStableBootstrapLoginObservation(state, userAgent) {
+  let previous = null;
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    const observation = validateBootstrapLoginObservation(
+      state,
+      await runBunBridgeOperation(state, "resource/bootstrap-login-observation", {
+        userAgent,
+        userId: state.bootstrapBaseline.id,
+      }),
+      "bootstrap login observation"
+    );
+    const encoded = canonicalJson(observation);
+    if (encoded === previous) return deepFreezeExact(observation);
+    previous = encoded;
+    await delayMilliseconds(50);
+  }
+  invariant(false, "bootstrap login observation did not reach two stable observations");
+}
+
+function settleBootstrapLoginAttempt(state, authority, attempt, observation, options = {}) {
+  invariant(
+    authority === PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY.get(state) &&
+      ["entered", "pending-late"].includes(attempt.status) &&
+      deepEqualJson(authority.newestOwnedPair, attempt.beforePair),
+    "bootstrap attempt settlement authority drift"
+  );
+  const afterPair = bootstrapTimestampPair(observation);
+  const lastChanged = attempt.beforePair.lastLoginAt !== afterPair.lastLoginAt;
+  const updatedChanged = attempt.beforePair.updatedAt !== afterPair.updatedAt;
+  invariant(lastChanged === updatedChanged, "bootstrap login changed only one timestamp column");
+  invariant(
+    attempt.beforeSessionIds.every((id) => observation.sessionIds.includes(id)) &&
+      attempt.beforeAuditIds.every((id) => observation.auditIds.includes(id)),
+    "bootstrap login removed a pre-attempt boundary row"
+  );
+  const newSessionIds = observation.sessionIds.filter(
+    (id) => !attempt.beforeSessionIds.includes(id)
+  );
+  const newAuditIds = observation.auditIds.filter((id) => !attempt.beforeAuditIds.includes(id));
+  if (!lastChanged && options.deferUnchanged === true) {
+    invariant(
+      newSessionIds.length === 0 && newAuditIds.length === 0,
+      "unchanged bootstrap pair created boundary rows"
+    );
+    attempt.status = "pending-late";
+    attempt.provisionalAfterPair = afterPair;
+    return false;
+  }
+  if (options.requireChanged === true) {
+    invariant(lastChanged, "successful bootstrap login did not mutate both timestamps");
+  }
+  if (lastChanged) {
+    invariant(
+      newSessionIds.length === 1 &&
+        newAuditIds.length === 1 &&
+        !authority.ownedSessionIds.has(newSessionIds[0]) &&
+        !authority.ownedAuditIds.has(newAuditIds[0]),
+      "bootstrap changed pair lacks its exact task-UA session/audit boundary"
+    );
+    authority.newestOwnedPair = afterPair;
+    authority.ownedSessionIds.add(newSessionIds[0]);
+    authority.ownedAuditIds.add(newAuditIds[0]);
+  } else {
+    invariant(
+      newSessionIds.length === 0 && newAuditIds.length === 0,
+      "unchanged bootstrap pair created boundary rows"
+    );
+  }
+  attempt.afterPair = afterPair;
+  attempt.changed = lastChanged;
+  attempt.newAuditIds = deepFreezeExact(newAuditIds);
+  attempt.newSessionIds = deepFreezeExact(newSessionIds);
+  attempt.provisionalAfterPair = null;
+  attempt.status = "settled";
+  return true;
+}
+
+async function runObservedBootstrapLoginAttempt(state, channel, userAgent, operation) {
+  const authority = PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY.get(state);
+  invariant(
+    authority &&
+      !authority.restorationStarted &&
+      typeof operation === "function" &&
+      ["ui", "api-bootstrap"].includes(channel) &&
+      !authority.attempts.some((attempt) => attempt.channel === channel),
+    "bootstrap login attempt authority drift"
+  );
+  const before = await readStableBootstrapLoginObservation(state, userAgent);
+  invariant(
+    deepEqualJson(bootstrapTimestampPair(before), authority.newestOwnedPair),
+    "bootstrap timestamps drifted before an owned login attempt"
+  );
+  const attempt = {
+    afterPair: null,
+    beforeAuditIds: deepFreezeExact([...before.auditIds]),
+    beforePair: bootstrapTimestampPair(before),
+    beforeSessionIds: deepFreezeExact([...before.sessionIds]),
+    changed: null,
+    channel,
+    newAuditIds: null,
+    newSessionIds: null,
+    observationError: null,
+    operationReturned: false,
+    provisionalAfterPair: null,
+    status: "entered",
+    userAgent,
+  };
+  authority.attempts.push(attempt);
+  let value;
+  let primaryError = null;
+  let observationError = null;
+  let after = null;
+  try {
+    value = await operation();
+    attempt.operationReturned = true;
+  } catch (error) {
+    primaryError = error;
+  } finally {
+    try {
+      after = await readStableBootstrapLoginObservation(state, userAgent);
+      settleBootstrapLoginAttempt(state, authority, attempt, after, {
+        deferUnchanged: primaryError !== null,
+        requireChanged: primaryError === null,
+      });
+    } catch (error) {
+      observationError = error;
+      attempt.observationError = error;
+    }
+  }
+  if (primaryError !== null && observationError !== null) {
+    throw new AggregateError(
+      [primaryError, observationError],
+      "bootstrap login and final observation failed"
+    );
+  }
+  if (observationError !== null) throw observationError;
+  if (primaryError !== null) throw primaryError;
+  return value;
+}
+
+async function reconcileBootstrapLoginAuthority(
+  state,
+  { deferUnchanged = false, restoration = false, seal = true } = {}
+) {
+  const authority = PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY.get(state);
+  invariant(
+    authority && (restoration ? authority.restorationStarted : !authority.restorationStarted),
+    "bootstrap late reconciliation authority drift"
+  );
+  try {
+    const unresolved = authority.attempts.filter(({ status }) => status !== "settled");
+    invariant(
+      unresolved.length <= 1,
+      "multiple unresolved bootstrap login attempts cannot be attributed safely"
+    );
+    for (const attempt of unresolved) {
+      const observation = await readStableBootstrapLoginObservation(state, attempt.userAgent);
+      settleBootstrapLoginAttempt(state, authority, attempt, observation, {
+        deferUnchanged,
+        requireChanged: attempt.operationReturned,
+      });
+    }
+    const allSettled = authority.attempts.every(({ status }) => status === "settled");
+    for (const attempt of authority.attempts.filter(({ status }) => status === "settled")) {
+      const observation = await readStableBootstrapLoginObservation(state, attempt.userAgent);
+      const expectedSessionIds = [...attempt.beforeSessionIds, ...attempt.newSessionIds].sort();
+      const expectedAuditIds = [...attempt.beforeAuditIds, ...attempt.newAuditIds].sort();
+      invariant(
+        deepEqualJson(bootstrapTimestampPair(observation), authority.newestOwnedPair) &&
+          deepEqualJson(observation.sessionIds, expectedSessionIds) &&
+          deepEqualJson(observation.auditIds, expectedAuditIds),
+        "late bootstrap mutation or owned boundary disappearance detected"
+      );
+    }
+    if (seal)
+      invariant(allSettled, "bootstrap login attempt remained unresolved at the seal boundary");
+    authority.reconciliationError = null;
+    if (seal) authority.reconciliationSealed = true;
+    return allSettled;
+  } catch (error) {
+    authority.reconciliationError = error;
+    throw error;
+  }
+}
+
+async function runtimeStoragePreflight({ state, plan }) {
+  const proof = await runBunBridgeOperation(state, "runtime/set-001-storage-preflight", {
+    userAgents: [
+      plan.fixtureBlueprint.userAgents.browser,
+      plan.fixtureBlueprint.userAgents.publicPreflight,
+      plan.fixtureBlueprint.userAgents.apiBootstrap,
+      plan.fixtureBlueprint.userAgents.apiUserA,
+    ],
+  });
+  assertRecordIdentity(proof, { local: true, setupComplete: true }, "storage preflight");
+  exactOwnKeys(
+    proof,
+    ["bootstrap", "contentRoutes", "local", "setupComplete", "storageRoot", "taskTrafficBaseline"],
+    "storage preflight proof",
+    { plain: true }
+  );
+  exactOwnKeys(
+    proof.taskTrafficBaseline,
+    ["accessIds", "auditIds", "sessionIds"],
+    "task traffic baseline",
+    { plain: true }
+  );
+  validateBootstrapPrivateBaseline(proof.bootstrap);
+  for (const [kind, ids, bound] of [
+    ["access", proof.taskTrafficBaseline.accessIds, MAX_TASK_TRAFFIC_ROWS],
+    ["audit", proof.taskTrafficBaseline.auditIds, MAX_TASK_TRAFFIC_ROWS],
+    ["session", proof.taskTrafficBaseline.sessionIds, MAX_COMPLETE_SESSION_ROWS],
+  ]) {
+    invariant(
+      Array.isArray(ids) &&
+        ids.length <= bound &&
+        new Set(ids).size === ids.length &&
+        ids.every((id) => /^[0-9a-f-]{36}$/u.test(id)) &&
+        deepEqualJson(ids, [...ids].sort()),
+      kind + " preflight baseline inventory drift"
+    );
+  }
+  state.bootstrapBaseline = deepFreezeExact(proof.bootstrap);
+  initializeBootstrapLoginAuthority(state, state.bootstrapBaseline);
+  state.contentRoutesBaseline = deepFreezeExact(proof.contentRoutes);
+  state.storageRootBaseline = proof.storageRoot;
+  state.taskTrafficBaseline = deepFreezeExact(proof.taskTrafficBaseline);
+  const storageRoot = responseLostStorageRoot(state);
+  await assertNoSymlinkAncestors(storageRoot);
+  state.storageRootRealPath = await realpath(storageRoot);
+  invariant(
+    state.storageRootRealPath === storageRoot,
+    "storage root is not its canonical real path"
+  );
+  state.storageRootIdentity = await readStableArtifactIdentity(storageRoot, {
+    expectedType: "directory",
+  });
+  state.storageBaselineManifest = await scanExactLocalStorageManifest(state);
+  invariant(
+    !canonicalJson(proof.contentRoutes).includes(plan.prefix),
+    "content routes baseline already contains a task slug"
+  );
+  await captureAllResponseLostNaturalBaselinesBeforeFirstWrite(state);
+  return runtimeSafeProjection({
+    bootstrapId: proof.bootstrap.id,
+    contentRoutesExists: proof.contentRoutes.exists,
+    local: true,
+    setupComplete: true,
+    taskTrafficBaselineCounts: {
+      access: proof.taskTrafficBaseline.accessIds.length,
+      audit: proof.taskTrafficBaseline.auditIds.length,
+      sessions: proof.taskTrafficBaseline.sessionIds.length,
+    },
+  });
+}
+
+async function runtimeHostLaunch({ state }) {
+  const ready = await startOwnedHost(state);
+  return runtimeSafeProjection({ runnerPid: ready.runnerPid, ports: ready.ports });
+}
+
+async function runtimeHealth({ state }, kind) {
+  const url =
+    kind === "admin"
+      ? "http://coderso-a.localhost:5173/admin/advanced/custom-screens"
+      : "http://coderso-a.localhost:3000/";
+  const environment = Object.create(null);
+  environment.PATH = ownString(process.env, "PATH", { required: true });
+  const bytes = await runPrivateProcess({
+    file: "curl",
+    args: ["--fail", "--silent", "--show-error", url],
+    cwd: state.root,
+    env: Object.freeze(environment),
+    stdin: Buffer.alloc(0),
+    timeoutMs: 30_000,
+  });
+  invariant(bytes.length > 0, kind + " health response is empty");
+  return runtimeSafeProjection({ kind, bytes: bytes.length, sha256: hashBytes(bytes) });
+}
+
+async function readPublicApiExactlyOnce(state, route, userAgent) {
+  invariant(
+    PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY.get(state)?.restorationStarted !== true &&
+      state.playwrightRequest &&
+      typeof state.playwrightRequest.newContext === "function",
+    "public API read authority is unavailable"
+  );
+  const ephemeralRegistry = privateEphemeralApiContextRegistry(state);
+  const contextKey = "public-preflight";
+  invariant(!ephemeralRegistry.has(contextKey), "public preflight API context was acquired twice");
+  const context = await state.playwrightRequest.newContext({
+    baseURL: API_BASE + "/",
+    extraHTTPHeaders: { Accept: "application/json", "User-Agent": userAgent },
+    failOnStatusCode: false,
+    maxRedirects: 0,
+    storageState: { cookies: [], origins: [] },
+    timeout: 30_000,
+    userAgent,
+  });
+  const contextRecord = {
+    context,
+    disposalErrors: [],
+    disposeAttemptPromise: null,
+    disposeProof: null,
+    key: contextKey,
+    userAgent,
+  };
+  ephemeralRegistry.set(contextKey, contextRecord);
+  let value;
+  let primaryError = null;
+  try {
+    validateEmptyApiStorageState(
+      await context.storageState(),
+      "public preflight initial API storage"
+    );
+    const response = await context.fetch(API_BASE + route, {
+      method: "GET",
+      headers: { Accept: "application/json", "User-Agent": userAgent },
+      failOnStatusCode: false,
+      maxRedirects: 0,
+      maxRetries: 0,
+      timeout: 30_000,
+    });
+    try {
+      const status = response.status();
+      const parsed = await readBoundedJsonResponse(response, route);
+      invariant(status >= 200 && status < 300, route + " returned HTTP " + status);
+      value = parsed.value;
+    } finally {
+      await response.dispose();
+    }
+  } catch (error) {
+    primaryError = error;
+  }
+  let disposalAttemptError = null;
+  try {
+    await disposeOwnedApiRequestContextAndProveAbsent(contextRecord, contextKey);
+  } catch (error) {
+    disposalAttemptError = error;
+  }
+  const lifecycleError =
+    disposalAttemptError === null ? retainedApiLifecycleFailure(contextRecord, contextKey) : null;
+  if (contextRecord.disposeProof !== null && lifecycleError === null) {
+    ephemeralRegistry.delete(contextKey);
+  }
+  if (primaryError !== null || disposalAttemptError !== null || lifecycleError !== null) {
+    const failures = [primaryError, disposalAttemptError, lifecycleError].filter(
+      (error) => error !== null
+    );
+    throw failures.length === 1
+      ? failures[0]
+      : new AggregateError(failures, "public API read or ephemeral context disposal failed");
+  }
+  return value;
+}
+
+async function runtimeBotProtection({ state, plan }) {
+  const value = await readPublicApiExactlyOnce(
+    state,
+    "/auth/bot-protection",
+    plan.fixtureBlueprint.userAgents.publicPreflight
+  );
+  exactOwnKeys(value, ["enabled", "provider", "siteKey", "enforceOnLocalhost"], "bot protection", {
+    plain: true,
+  });
+  invariant(value.enabled === false, "bot protection must be disabled for the smoke");
+  return runtimeSafeProjection({ enabled: false });
+}
+
+async function runtimeSecurity({ state }, mode, operationId) {
+  invariant(
+    (mode === "session" && operationId === "runtime/set-004b-session-policy-preflight") ||
+      (mode === "rate" && operationId === "runtime/set-004c-auth-rate-budget-preflight"),
+    "security runtime descriptor binding drift"
+  );
+  const value = await runBunBridgeOperation(state, operationId, {});
+  if (mode === "session") {
+    invariant(
+      value.singleSession === false &&
+        value.effectiveMaxPerUserAtLeast2 === true &&
+        typeof value.csrfHeaderName === "string" &&
+        /^[a-z0-9][a-z0-9-]{0,127}$/u.test(value.csrfHeaderName),
+      "session policy is incompatible with the smoke"
+    );
+    const runtime = PRIVATE_RUNTIME.get(state);
+    invariant(runtime.csrfHeaderName === null, "CSRF header authority may be assigned only once");
+    runtime.csrfHeaderName = value.csrfHeaderName;
+    return runtimeSafeProjection({
+      singleSession: false,
+      effectiveMaxPerUserAtLeast2: true,
+    });
+  } else {
+    invariant(
+      typeof value.enabled === "boolean" &&
+        Number.isSafeInteger(value.maxRequests) &&
+        Number.isSafeInteger(value.windowSeconds) &&
+        (!value.enabled || value.maxRequests >= 10),
+      "auth rate budget is incompatible with the smoke"
+    );
+  }
+  return runtimeSafeProjection(value);
+}
+
+async function runtimeLogin({ state, plan }, key) {
+  const blueprint = plan.fixtureBlueprint;
+  const email =
+    key === "bootstrap"
+      ? ownString(state.repoEnvironment, "ADMIN_EMAIL", { required: true })
+      : blueprint.users.a.email;
+  const userAgent =
+    key === "bootstrap" ? blueprint.userAgents.apiBootstrap : blueprint.userAgents.apiUserA;
+  const session =
+    key === "bootstrap"
+      ? await runObservedBootstrapLoginAttempt(state, "api-bootstrap", userAgent, () =>
+          loginApiSession(state, key, email, userAgent)
+        )
+      : await loginApiSession(state, key, email, userAgent);
+  if (key === "user-a")
+    invariant(session.userId === state.ids.userA, "user-A isolated login identity drift");
+  return runtimeSafeProjection({ authenticated: true, identityMatches: true });
+}
+
+async function runtimeCsrf({ state }, key) {
+  await captureApiCsrf(state, key);
+  return runtimeSafeProjection({ captured: true });
+}
+
+async function runtimeProvisionUser({ state, plan, action }, key, operationId) {
+  const user = plan.fixtureBlueprint.users[key];
+  const captureName = key === "a" ? "user-a.id" : "user-b.id";
+  invariant(state.responseLostIntents.has(action.id), "user create lacks its pre-write intent");
+  const result = await runBunBridgeOperation(state, operationId, {
+    email: user.email,
+    name: user.displayName,
+  });
+  exactOwnKeys(
+    result,
+    [
+      "adminRoleTupleCount",
+      "exactIdPasswordUpdate",
+      "normalizedEmailMatches",
+      "userEmail",
+      "userId",
+    ],
+    "provisioned user proof",
+    { plain: true }
+  );
+  invariant(
+    result.userEmail === user.email &&
+      /^[0-9a-f-]{36}$/u.test(result.userId) &&
+      result.adminRoleTupleCount === 1 &&
+      result.exactIdPasswordUpdate === true &&
+      result.normalizedEmailMatches === true,
+    "provisioned user drift"
+  );
+  state.ids[key === "a" ? "userA" : "userB"] = result.userId;
+  return runtimeSafeProjection(
+    { userId: result.userId, userEmail: result.userEmail },
+    { [captureName]: result.userId }
+  );
+}
+
+async function runtimeProveUser({ state, plan }, key, operationId) {
+  const user = plan.fixtureBlueprint.users[key];
+  const userId = state.ids[key === "a" ? "userA" : "userB"];
+  const proof = await runBunBridgeOperation(state, operationId, {
+    email: user.email,
+    userId,
+  });
+  invariant(proof.ok === true, "user proof failed");
+  return runtimeSafeProjection({ active: true, admin: true, userId });
+}
+
+async function runtimeCreateContentType({ state, plan, action }, blueprintKey, captureName) {
+  const contentType = plan.fixtureBlueprint.contentTypes[blueprintKey];
+  const body = state.preparedCreateBodies.get(action.id);
+  invariant(
+    body !== undefined &&
+      deepEqualJson(body, {
+        name: contentType.name,
+        slug: contentType.slug,
+        schema: contentSchemaFromFields(contentType.fields),
+      }),
+    "content type prepared request drift"
+  );
+  const response = await adminApiRequest(
+    state,
+    bootstrapApiSession(state),
+    "POST",
+    "/content-types",
+    { json: body }
+  );
+  assertRecordIdentity(
+    response.value,
+    { name: body.name, slug: body.slug, schema: body.schema },
+    "content type create"
+  );
+  invariant(/^[0-9a-f-]{36}$/u.test(response.value.id), "content type ID drift");
+  state.contentTypeBodies[blueprintKey] = body;
+  state.ids[captureName] = response.value.id;
+  return runtimeSafeProjection(response.value, { [captureName]: response.value.id });
+}
+
+async function runtimeProveContentType(
+  { state, plan, captures },
+  blueprintKey,
+  captureName,
+  editable = false
+) {
+  const id = captures.get(captureName);
+  const response = await adminApiRequest(
+    state,
+    bootstrapApiSession(state),
+    "GET",
+    "/content-types/" + encodeURIComponent(id),
+    { csrf: false }
+  );
+  const expected = state.contentTypeBodies[blueprintKey];
+  assertRecordIdentity(
+    response.value,
+    { id, name: expected.name, slug: expected.slug, schema: expected.schema },
+    "content type proof"
+  );
+  if (editable) {
+    const projection = { id, slug: expected.slug, name: expected.name, schema: expected.schema };
+    state.editableContentTypeDetail = deepFreezeExact(projection);
+    return projection;
+  }
+  return runtimeSafeProjection({
+    id,
+    slug: expected.slug,
+    schemaSha256: hashBytes(Buffer.from(canonicalJson(expected.schema))),
+  });
+}
+
+async function runtimeCreateRelatedEntry(
+  { state, plan, action },
+  entryKey,
+  contentTypeKey,
+  captureName
+) {
+  const entry = plan.fixtureBlueprint.relatedEntries[entryKey];
+  const type = plan.fixtureBlueprint.contentTypes[contentTypeKey];
+  const body = state.preparedCreateBodies.get(action.id);
+  invariant(
+    body !== undefined &&
+      deepEqualJson(body, { title: entry.title, slug: entry.slug, data: entry.data }),
+    "related entry prepared request drift"
+  );
+  const response = await adminApiRequest(
+    state,
+    bootstrapApiSession(state),
+    "POST",
+    "/content/" + encodeURIComponent(type.slug) + "/entries",
+    { json: body }
+  );
+  assertRecordIdentity(response.value, body, "related entry create");
+  invariant(/^[0-9a-f-]{36}$/u.test(response.value.id), "related entry ID drift");
+  state.entryBodies[entryKey] = { ...body, typeSlug: type.slug };
+  return runtimeSafeProjection(response.value, { [captureName]: response.value.id });
+}
+
+async function runtimeProveRelatedEntry({ state, captures }, entryKey, captureName) {
+  const id = captures.get(captureName);
+  const body = state.entryBodies[entryKey];
+  const response = await adminApiRequest(
+    state,
+    bootstrapApiSession(state),
+    "GET",
+    "/content/" + encodeURIComponent(body.typeSlug) + "/entries/" + encodeURIComponent(id),
+    { csrf: false }
+  );
+  assertRecordIdentity(
+    response.value,
+    { id, title: body.title, slug: body.slug, data: body.data },
+    "related entry proof"
+  );
+  const semanticByEntryKey = {
+    a1: "related-entry-a1",
+    a2: "related-entry-a2",
+    b1: "related-entry-b1",
+    b2: "related-entry-b2",
+    failure1: "related-entry-failure1",
+  };
+  invariant(
+    response.value.authorId === null || typeof response.value.authorId === "string",
+    "related entry owner drift"
+  );
+  state.resourceOwners.set(semanticByEntryKey[entryKey], response.value.authorId ?? null);
+  return runtimeSafeProjection({
+    id,
+    title: body.title,
+    slug: body.slug,
+    dataSha256: hashBytes(Buffer.from(canonicalJson(body.data))),
+  });
+}
+
+async function runtimeUploadMedia({ state, plan, action }) {
+  const media = plan.fixtureBlueprint.media;
+  const bytes = Buffer.from(media.uploadFixture.data, media.uploadFixture.encoding);
+  invariant(state.responseLostIntents.has(action.id), "media upload lacks its pre-write intent");
+  invariant(
+    bytes.length === media.uploadFixture.decodedSizeBytes &&
+      hashBytes(bytes) === media.uploadFixture.sha256,
+    "media fixture bytes drift"
+  );
+  const multipart = {
+    file: { name: media.originalName, mimeType: media.mimeType, buffer: bytes },
+    title: media.title,
+  };
+  const response = await adminApiRequest(state, bootstrapApiSession(state), "POST", "/media", {
+    multipart,
+  });
+  invariant(
+    /^[0-9a-f-]{36}$/u.test(response.value.id) &&
+      typeof response.value.key === "string" &&
+      typeof response.value.url === "string" &&
+      response.value.mimeType === media.mimeType &&
+      response.value.size === bytes.length,
+    "media upload response drift"
+  );
+  const resolvedUrl = new URL(response.value.url, plan.fixtureBlueprint.origins.admin).href;
+  state.mediaRecord = response.value;
+  return runtimeSafeProjection(
+    { id: response.value.id, key: response.value.key, resolvedUrl },
+    {
+      "media.id": response.value.id,
+      "media.resolved-url": resolvedUrl,
+      "media.storage-key": response.value.key,
+    }
+  );
+}
+
+async function captureCanonicalMediaStorageOwnership(state, storageKey) {
+  invariant(
+    typeof storageKey === "string" &&
+      /^\d{4}\/(?:0[1-9]|1[0-2])\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.png$/u.test(
+        storageKey
+      ),
+    "media storage key is not the canonical yyyy/mm UUID PNG key"
+  );
+  const root = responseLostStorageRoot(state);
+  const absolute = path.resolve(root, ...storageKey.split("/"));
+  invariant(absolute.startsWith(root + path.sep), "media storage key escaped its canonical root");
+  await assertNoSymlinkAncestors(absolute);
+  const fileIdentity = await readStableArtifactIdentity(absolute, {
+    expectedType: "file",
+    expectedDev: state.storageRootIdentity.dev,
+  });
+  const baselineByKey = new Map(state.storageBaselineManifest.rows.map((row) => [row.key, row]));
+  invariant(!baselineByKey.has(storageKey), "media storage key existed at the pre-write baseline");
+  const [year, month] = storageKey.split("/");
+  const ancestors = [];
+  for (const relative of [year, year + "/" + month]) {
+    const identity = await readStableArtifactIdentity(path.join(root, ...relative.split("/")), {
+      expectedType: "directory",
+      expectedDev: state.storageRootIdentity.dev,
+    });
+    const baseline = baselineByKey.get(relative);
+    if (baseline !== undefined) {
+      invariant(
+        baseline.type === "directory" &&
+          baseline.dev === identity.dev &&
+          baseline.ino === identity.ino &&
+          (baseline.mode & 0o777) === identity.mode,
+        "pre-existing media ancestor identity drift"
+      );
+    }
+    ancestors.push(
+      deepFreezeExact({
+        relative,
+        identity,
+        acquiredByUpload: baseline === undefined,
+      })
+    );
+  }
+  const ownership = deepFreezeExact({
+    storageKey,
+    fileIdentity,
+    ancestors: deepFreezeExact(ancestors),
+  });
+  if (state.mediaStorageOwnership === null) {
+    state.mediaStorageOwnership = ownership;
+  } else {
+    invariant(
+      state.mediaStorageOwnership.storageKey === storageKey &&
+        sameArtifactIdentity(state.mediaStorageOwnership.fileIdentity, fileIdentity, {
+          includeSize: true,
+        }) &&
+        deepEqualJson(state.mediaStorageOwnership.ancestors, ancestors),
+      "media storage ownership was reassigned"
+    );
+  }
+  return fileIdentity;
+}
+
+async function restoreIdentitySafeMediaAncestorDirectories(state, storageKey) {
+  const ownership = state.mediaStorageOwnership;
+  invariant(
+    ownership !== null && ownership.storageKey === storageKey,
+    "media storage ownership proof is absent"
+  );
+  const root = responseLostStorageRoot(state);
+  for (const ancestor of [...ownership.ancestors].reverse()) {
+    const absolute = path.resolve(root, ...ancestor.relative.split("/"));
+    invariant(absolute.startsWith(root + path.sep), "media ancestor escaped its canonical root");
+    if (!ancestor.acquiredByUpload) {
+      const current = await readStableArtifactIdentity(absolute, {
+        expectedType: "directory",
+        expectedDev: state.storageRootIdentity.dev,
+      });
+      invariant(
+        sameArtifactIdentity(current, ancestor.identity),
+        "pre-existing media ancestor identity changed"
+      );
+      continue;
+    }
+    let current;
+    try {
+      current = await readStableArtifactIdentity(absolute, {
+        expectedType: "directory",
+        expectedDev: state.storageRootIdentity.dev,
+      });
+    } catch (error) {
+      invariant(error && error.code === "ENOENT", "acquired media ancestor could not be observed");
+      continue;
+    }
+    invariant(
+      sameArtifactIdentity(current, ancestor.identity),
+      "acquired media ancestor identity changed"
+    );
+    const names = await readdir(absolute);
+    invariant(names.length === 0, "acquired media ancestor is not empty");
+    await rmdir(absolute);
+    await requireMissingPath(absolute, "removed acquired media ancestor");
+  }
+}
+
+async function runtimeProveMedia({ state, captures }) {
+  const id = captures.get("media.id");
+  const response = await adminApiRequest(
+    state,
+    bootstrapApiSession(state),
+    "GET",
+    "/media/" + encodeURIComponent(id),
+    { csrf: false, retainAuthoritativeBytes: true }
+  );
+  assertRecordIdentity(
+    response.value,
+    {
+      id,
+      key: captures.get("media.storage-key"),
+      mimeType: state.mediaRecord.mimeType,
+      size: state.mediaRecord.size,
+    },
+    "media proof"
+  );
+  invariant(
+    response.value.createdBy === null || typeof response.value.createdBy === "string",
+    "media owner drift"
+  );
+  state.resourceOwners.set("media", response.value.createdBy ?? null);
+  invariant(
+    typeof response.value.url === "string" &&
+      response.value.url === "/media/" + response.value.key &&
+      !response.value.url.includes("?") &&
+      !response.value.url.includes("#"),
+    "media canonical safe URL drift"
+  );
+  await captureCanonicalMediaStorageOwnership(state, response.value.key);
+  state.mediaCanonicalSafeUrl = response.value.url;
+  state.mediaRaceAdminEvidence.media = response.authoritativeBytes;
+  return runtimeSafeProjection({
+    id,
+    key: response.value.key,
+    url: response.value.url,
+    size: response.value.size,
+  });
+}
+
+async function scanExactLocalStorageManifest(state) {
+  const root = responseLostStorageRoot(state);
+  invariant(state.storageRootRealPath === root, "storage manifest canonical root drift");
+  const startedAt = Date.now();
+  const rootIdentity = await readStableArtifactIdentity(root, {
+    expectedType: "directory",
+    expectedDev: state.storageRootIdentity.dev,
+  });
+  invariant(
+    sameArtifactIdentity(rootIdentity, state.storageRootIdentity, { includeSize: false }),
+    "storage root identity drift"
+  );
+  const rows = [];
+  let directoryCount = 0;
+  const pending = [{ relative: "", depth: 0 }];
+  while (pending.length > 0) {
+    invariant(Date.now() - startedAt <= 10_000, "storage manifest walk exceeded its time bound");
+    const { relative: relativeDirectory, depth } = pending.shift();
+    invariant(depth <= 3, "storage manifest exceeded its depth bound");
+    const absoluteDirectory = relativeDirectory === "" ? root : path.join(root, relativeDirectory);
+    const names = (await readdir(absoluteDirectory)).sort();
+    for (const name of names) {
+      invariant(Date.now() - startedAt <= 10_000, "storage manifest walk exceeded its time bound");
+      invariant(
+        name !== "." &&
+          name !== ".." &&
+          !name.includes("/") &&
+          !name.includes("\\") &&
+          !name.includes("\0"),
+        "storage manifest name drift"
+      );
+      const relative = relativeDirectory === "" ? name : relativeDirectory + "/" + name;
+      invariant(
+        depth + 1 <= 3 &&
+          Buffer.byteLength(relative) <= 512 &&
+          !relative.startsWith("/") &&
+          relative.split("/").every((part) => part.length > 0 && part !== "." && part !== ".."),
+        "storage manifest relative key drift"
+      );
+      const absolute = path.join(root, ...relative.split("/"));
+      const info = await lstat(absolute, { bigint: true });
+      invariant(
+        !info.isSymbolicLink() && (info.isFile() || info.isDirectory()),
+        "storage manifest contains a symlink or special file"
+      );
+      invariant(
+        info.dev.toString() === state.storageRootIdentity.dev,
+        "storage manifest crossed a device boundary"
+      );
+      const canonicalChild = await realpath(absolute);
+      invariant(
+        canonicalChild === absolute && canonicalChild.startsWith(root + path.sep),
+        "storage manifest child escaped its canonical root"
+      );
+      const size = Number(info.size);
+      const mode = Number(info.mode);
+      invariant(
+        Number.isSafeInteger(size) && size >= 0 && Number.isSafeInteger(mode),
+        "storage manifest metadata overflow"
+      );
+      rows.push(
+        deepFreezeExact({
+          key: relative,
+          dev: info.dev.toString(),
+          ino: info.ino.toString(),
+          type: info.isDirectory() ? "directory" : "file",
+          size,
+          mode,
+          mtimeNs: info.mtimeNs.toString(),
+        })
+      );
+      invariant(rows.length <= 10_000, "storage manifest entry bound exceeded");
+      if (info.isDirectory()) {
+        directoryCount += 1;
+        invariant(
+          directoryCount <= 2_000 && depth + 1 <= 3,
+          "storage manifest directory/depth bound exceeded"
+        );
+        pending.push({ relative, depth: depth + 1 });
+      }
+    }
+  }
+  rows.sort((left, right) => left.key.localeCompare(right.key));
+  invariant(
+    new Set(rows.map(({ key }) => key)).size === rows.length,
+    "storage manifest contains duplicate keys"
+  );
+  invariant(
+    Buffer.byteLength(canonicalJson(rows)) <= MAX_STREAM_BYTES && Date.now() - startedAt <= 10_000,
+    "storage manifest serialized/time bound exceeded"
+  );
+  return deepFreezeExact({ rootIdentity, rows: deepFreezeExact(rows) });
+}
+
+async function proveMissingMediaDbAndStorageAbsence(
+  state,
+  phase,
+  operationId = "resource/missing-media-db-absence"
+) {
+  invariant(phase === "setup" || phase === "cleanup", "missing media proof phase drift");
+  const mediaId = state.plan.fixtureBlueprint.media.missingBoundMediaId;
+  const before = await runBunBridgeOperation(state, operationId, { mediaId });
+  exactOwnKeys(before, ["rowCount"], "missing media DB-before proof", { plain: true });
+  const scan1 = await scanExactLocalStorageManifest(state);
+  await delayMilliseconds(PROCESS_ABSENCE_STABILITY_MS);
+  const scan2 = await scanExactLocalStorageManifest(state);
+  const after = await runBunBridgeOperation(state, operationId, { mediaId });
+  exactOwnKeys(after, ["rowCount"], "missing media DB-after proof", { plain: true });
+  invariant(before.rowCount === 0 && after.rowCount === 0, "missing media DB row exists");
+  invariant(deepEqualJson(scan1, scan2), "missing media storage scan is unstable");
+  const storageMatches = scan2.rows.filter(
+    ({ key, type }) => type === "file" && path.posix.parse(key).name === mediaId
+  ).length;
+  invariant(storageMatches === 0, "missing media storage basename exists");
+  const authoritativeBytes = Buffer.from(
+    canonicalJson({ before, scan1, scan2, after, mediaId, phase }) + "\n"
+  );
+  const projection = deepFreezeExact({ rowCount: 0, storageMatches: 0 });
+  const proof = deepFreezeExact({
+    evidenceSha256: hashBytes(authoritativeBytes),
+    projection,
+  });
+  if (phase === "setup") {
+    invariant(
+      state.missingMediaSetupProof === null,
+      "missing media setup proof was assigned twice"
+    );
+    state.missingMediaSetupProof = proof;
+  } else {
+    invariant(
+      state.missingMediaCleanupProof === null,
+      "missing media cleanup proof was assigned twice"
+    );
+    state.missingMediaCleanupProof = proof;
+  }
+  return proof;
+}
+
+async function runtimeStoragePostSetup({ state }) {
+  const proof = await proveMissingMediaDbAndStorageAbsence(
+    state,
+    "setup",
+    "runtime/set-032-storage-post-setup"
+  );
+  return runtimeSafeProjection(proof.projection);
+}
+
+async function runtimeCreateEditableEntry({ state, plan, action, captures }) {
+  const entry = plan.fixtureBlueprint.entry;
+  const body = state.preparedCreateBodies.get(action.id);
+  invariant(
+    body !== undefined &&
+      deepEqualJson(body, {
+        title: entry.title,
+        slug: entry.slug,
+        data: resolveFixtureValue(entry.baseline, captures),
+      }),
+    "editable entry prepared request drift"
+  );
+  const typeSlug = plan.fixtureBlueprint.contentTypes.editable.slug;
+  const response = await adminApiRequest(
+    state,
+    bootstrapApiSession(state),
+    "POST",
+    "/content/" + encodeURIComponent(typeSlug) + "/entries",
+    { json: body }
+  );
+  assertRecordIdentity(response.value, body, "editable entry create");
+  state.editableEntryBody = deepFreezeExact(body);
+  return runtimeSafeProjection(response.value, { "entry.id": response.value.id });
+}
+
+async function runtimeProveEditableEntry({ state, plan, captures }) {
+  const id = captures.get("entry.id");
+  const slug = plan.fixtureBlueprint.contentTypes.editable.slug;
+  const response = await adminApiRequest(
+    state,
+    bootstrapApiSession(state),
+    "GET",
+    "/content/" + encodeURIComponent(slug) + "/entries/" + encodeURIComponent(id),
+    { csrf: false, retainAuthoritativeBytes: true }
+  );
+  assertRecordIdentity(response.value, { id, ...state.editableEntryBody }, "editable entry proof");
+  invariant(
+    response.value.authorId === null || typeof response.value.authorId === "string",
+    "editable entry owner drift"
+  );
+  state.resourceOwners.set("editable-entry", response.value.authorId ?? null);
+  state.mediaRaceAdminEvidence.entry = response.authoritativeBytes;
+  return runtimeSafeProjection({
+    id,
+    bodySha256: hashBytes(Buffer.from(canonicalJson(state.editableEntryBody))),
+  });
+}
+
+async function materializeScreenBody(state, blueprint, captures, operationId) {
+  invariant(state.editableContentTypeDetail !== null, "editable content-type projection is absent");
+  const { listView: descriptor, ...definitionWithoutListView } = blueprint.definitionTemplate;
+  invariant(
+    descriptor.materializerId === "buildDefaultListViewDefinition" &&
+      descriptor.privateProjectionAuthorityId === "editable-content-type-detail",
+    "screen list-view descriptor drift"
+  );
+  const bodyWithoutDefinition = {
+    name: blueprint.name,
+    contentTypeId: captures.get("content-type-editable.id"),
+    status: blueprint.status,
+    showInSidebar: blueprint.showInSidebar,
+    sidebarLabel: blueprint.sidebarLabel,
+  };
+  const body = await runBunBridgeOperation(state, operationId, {
+    bodyWithoutDefinition,
+    contentType: state.editableContentTypeDetail,
+    definitionWithoutListView,
+  });
+  invariant(
+    body.contentTypeId === state.editableContentTypeDetail.id && body.schemaVersion === 4,
+    "materialized Screen body drift"
+  );
+  return deepFreezeExact(body);
+}
+
+async function runtimeCreateScreen({ state, plan, action, captures }, key, captureName) {
+  const blueprint =
+    key === "main" ? plan.fixtureBlueprint.screen : plan.fixtureBlueprint.retryScreen;
+  const body = state.preparedCreateBodies.get(action.id);
+  invariant(body !== undefined && body.name === blueprint.name, "Screen prepared request drift");
+  const response = await adminApiRequest(
+    state,
+    bootstrapApiSession(state),
+    "POST",
+    "/custom-screens",
+    { json: body }
+  );
+  assertRecordIdentity(
+    response.value,
+    { name: body.name, contentTypeId: body.contentTypeId, definition: body.definition },
+    "Screen create"
+  );
+  state.screenBodies[key] = body;
+  return runtimeSafeProjection(response.value, { [captureName]: response.value.id });
+}
+
+async function runtimeProveScreen({ state, captures }, key, captureName) {
+  const id = captures.get(captureName);
+  const body = state.screenBodies[key];
+  const response = await adminApiRequest(
+    state,
+    bootstrapApiSession(state),
+    "GET",
+    "/custom-screens/" + encodeURIComponent(id),
+    { csrf: false, retainAuthoritativeBytes: key === "main" }
+  );
+  assertRecordIdentity(
+    response.value,
+    { id, name: body.name, contentTypeId: body.contentTypeId, definition: body.definition },
+    "Screen proof"
+  );
+  if (key === "main") state.mediaRaceAdminEvidence.screen = response.authoritativeBytes;
+  return runtimeSafeProjection({
+    id,
+    definitionSha256: hashBytes(Buffer.from(canonicalJson(body.definition))),
+  });
+}
+
+async function runtimeReplaceOverrides({ state, plan, action, captures }, empty) {
+  const screenId = captures.get("screen.id");
+  const entryId = captures.get("entry.id");
+  const overrides = empty
+    ? []
+    : [
+        {
+          blockId: plan.fixtureBlueprint.screen.blockIds.raceImage,
+          propPath: "mediaAssetId",
+          value: captures.get("media.id"),
+        },
+      ];
+  if (!empty && action.id === "set-039-override-create") {
+    const intent = state.responseLostIntents.get(action.id);
+    invariant(
+      intent !== undefined &&
+        deepEqualJson(intent.authoredProjection, {
+          screenId,
+          entryId,
+          blockId: plan.fixtureBlueprint.screen.blockIds.raceImage,
+          propPath: "mediaAssetId",
+          value: captures.get("media.id"),
+          updatedBy: state.bootstrapBaseline.id,
+        }),
+      "override prepared request drift"
+    );
+  }
+  const response = await adminApiRequest(
+    state,
+    bootstrapApiSession(state),
+    "PATCH",
+    "/custom-screens/" +
+      encodeURIComponent(screenId) +
+      "/entries/" +
+      encodeURIComponent(entryId) +
+      "/overrides",
+    { json: { overrides } }
+  );
+  invariant(
+    deepEqualJson(
+      response.value?.overrides?.map(({ blockId, propPath, value }) => ({
+        blockId,
+        propPath,
+        value,
+      })),
+      overrides
+    ),
+    "override write drift"
+  );
+  state.expectedOverrides = overrides;
+  return runtimeSafeProjection({ count: overrides.length });
+}
+
+function parseMediaRaceAuthoritativeAdminEvidence(state) {
+  const sources = state.mediaRaceAdminEvidence;
+  const ordered = [
+    sources.screen,
+    sources.entry,
+    sources.media,
+    sources.override,
+    sources.retryOverride,
+  ];
+  invariant(
+    ordered.every(
+      (bytes) => Buffer.isBuffer(bytes) && bytes.length > 0 && bytes.length <= MAX_STREAM_BYTES
+    ),
+    "media-race authoritative Admin byte set is incomplete"
+  );
+  const values = ordered.map((bytes, index) => {
+    let value;
+    try {
+      value = JSON.parse(decodeBoundedUtf8(bytes, "media-race Admin response " + index));
+    } catch {
+      invariant(false, "media-race authoritative Admin response is unparseable");
+    }
+    assertPlainJsonValue(value, "media-race authoritative Admin response");
+    return value;
+  });
+  const [screen, entry, media, overrideResponse, retryOverrideResponse] = values;
+  const blockId = state.plan.fixtureBlueprint.screen.blockIds.raceImage;
+  const blocks = [];
+  const visit = (block) => {
+    blocks.push(block);
+    for (const slot of Object.values(block.slots ?? {})) for (const child of slot) visit(child);
+  };
+  for (const section of screen.definition.editorView.document.sections) {
+    for (const block of section.blocks) visit(block);
+  }
+  const imageBlocks = blocks.filter((block) => block.id === blockId && block.type === "image");
+  const bindings = screen.definition.editorView.bindings.filter(
+    (binding) =>
+      binding.blockId === blockId &&
+      binding.propPath === "src" &&
+      binding.source === "entry" &&
+      binding.mode === "read"
+  );
+  const overrideRows = overrideResponse.overrides;
+  const screenId = state.currentCaptures.get("screen.id");
+  const retryScreenId = state.currentCaptures.get("retry-screen.id");
+  const entryId = state.currentCaptures.get("entry.id");
+  const mediaId = state.currentCaptures.get("media.id");
+  invariant(
+    imageBlocks.length === 1 &&
+      bindings.length === 1 &&
+      Array.isArray(overrideRows) &&
+      overrideRows.length === 1 &&
+      Array.isArray(retryOverrideResponse.overrides) &&
+      retryOverrideResponse.overrides.length === 0 &&
+      screen.id === screenId &&
+      entry.id === entryId &&
+      media.id === mediaId &&
+      retryScreenId !== screenId &&
+      bindings[0].field === "raceImageId" &&
+      overrideRows[0].screenId === screenId &&
+      overrideRows[0].entryId === entryId &&
+      overrideRows[0].blockId === blockId &&
+      overrideRows[0].propPath === "mediaAssetId" &&
+      overrideRows[0].value === mediaId,
+    "media-race authoritative Admin cardinality drift"
+  );
+  const projection = deepFreezeExact({
+    bindingCount: bindings.length,
+    overrideCount: overrideRows.length,
+    entryValueMatches:
+      entry.data?.[bindings[0].field] === state.plan.fixtureBlueprint.media.missingBoundMediaId,
+    safeUrlMatches:
+      media.id === state.mediaRecord.id &&
+      media.url === state.mediaCanonicalSafeUrl &&
+      media.url === "/media/" + media.key,
+  });
+  exactOwnKeys(
+    projection,
+    ["bindingCount", "overrideCount", "entryValueMatches", "safeUrlMatches"],
+    "media-race authoritative projection",
+    { plain: true }
+  );
+  invariant(
+    deepEqualJson(projection, {
+      bindingCount: 1,
+      overrideCount: 1,
+      entryValueMatches: true,
+      safeUrlMatches: true,
+    }),
+    "media-race authoritative projection drift"
+  );
+  const frames = [];
+  for (const bytes of ordered) {
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(bytes.length);
+    frames.push(length, bytes);
+  }
+  const authoritativeBytes = Buffer.concat(frames);
+  const evidenceSha256 = hashBytes(authoritativeBytes);
+  invariant(
+    evidenceSha256 !== hashBytes(Buffer.from(canonicalJson(projection))),
+    "media-race evidence hash used the sanitized summary"
+  );
+  return deepFreezeExact({ evidenceSha256, projection });
+}
+
+async function runtimeProveOverrides({ state, captures }, empty) {
+  const response = await adminApiRequest(
+    state,
+    bootstrapApiSession(state),
+    "GET",
+    "/custom-screens/" +
+      encodeURIComponent(captures.get("screen.id")) +
+      "/entries/" +
+      encodeURIComponent(captures.get("entry.id")) +
+      "/overrides",
+    { csrf: false, retainAuthoritativeBytes: !empty }
+  );
+  const overrideRows = response.value?.overrides;
+  const overrides = overrideRows?.map(({ blockId, propPath, value }) => ({
+    blockId,
+    propPath,
+    value,
+  }));
+  invariant(
+    Array.isArray(overrides) &&
+      (empty ? overrides.length === 0 : deepEqualJson(overrides, state.expectedOverrides)),
+    "override proof drift"
+  );
+  if (!empty) {
+    invariant(
+      Buffer.isBuffer(response.authoritativeBytes) && response.authoritativeBytes.length > 0,
+      "override authoritative bytes are absent"
+    );
+    invariant(overrideRows.length === 1, "media-race override cardinality drift");
+    const row = overrideRows[0];
+    invariant(row.updatedBy === null || typeof row.updatedBy === "string", "override owner drift");
+    state.resourceOwners.set("presentation-override", row.updatedBy ?? null);
+    const retryResponse = await adminApiRequest(
+      state,
+      bootstrapApiSession(state),
+      "GET",
+      "/custom-screens/" +
+        encodeURIComponent(captures.get("retry-screen.id")) +
+        "/entries/" +
+        encodeURIComponent(captures.get("entry.id")) +
+        "/overrides",
+      { csrf: false, retainAuthoritativeBytes: true }
+    );
+    invariant(
+      Array.isArray(retryResponse.value?.overrides) && retryResponse.value.overrides.length === 0,
+      "retry Screen unexpectedly owns an override"
+    );
+    state.mediaRaceAdminEvidence.override = response.authoritativeBytes;
+    state.mediaRaceAdminEvidence.retryOverride = retryResponse.authoritativeBytes;
+    const blockId = state.plan.fixtureBlueprint.screen.blockIds.raceImage;
+    const sections = state.screenBodies.main.definition.editorView.document.sections;
+    const blocks = [];
+    const visit = (block) => {
+      blocks.push(block);
+      for (const slot of Object.values(block.slots ?? {})) for (const child of slot) visit(child);
+    };
+    for (const section of sections) for (const block of section.blocks) visit(block);
+    const matchingBlocks = blocks.filter((block) => block.id === blockId && block.type === "image");
+    invariant(matchingBlocks.length === 1, "media-race image block cardinality drift");
+    const bindings = state.screenBodies.main.definition.editorView.bindings.filter(
+      (binding) =>
+        binding.blockId === blockId &&
+        binding.propPath === "src" &&
+        binding.source === "entry" &&
+        binding.mode === "read"
+    );
+    invariant(
+      bindings.length === 1 && typeof bindings[0].field === "string",
+      "media-race src binding cardinality drift"
+    );
+    const boundField = bindings[0].field;
+    const missingBoundMediaId = state.plan.fixtureBlueprint.media.missingBoundMediaId;
+    invariant(
+      state.editableEntryBody.data[boundField] === missingBoundMediaId,
+      "media-race entry value drift"
+    );
+    invariant(
+      typeof state.mediaCanonicalSafeUrl === "string" &&
+        state.mediaCanonicalSafeUrl === state.mediaRecord.url &&
+        state.mediaCanonicalSafeUrl === "/media/" + state.mediaRecord.key,
+      "media-race safe URL provenance drift"
+    );
+    const projection = deepFreezeExact({
+      acquiredMedia: deepFreezeExact({
+        id: captures.get("media.id"),
+        canonicalSafeUrl: state.mediaCanonicalSafeUrl,
+      }),
+      missingBoundMediaId,
+      screenId: captures.get("screen.id"),
+      entryId: captures.get("entry.id"),
+      directImageBlockId: blockId,
+      boundField,
+      override: deepFreezeExact({
+        screenId: captures.get("screen.id"),
+        entryId: captures.get("entry.id"),
+        blockId,
+        propPath: "mediaAssetId",
+        mediaId: captures.get("media.id"),
+      }),
+    });
+    invariant(
+      projection.acquiredMedia.id !== projection.missingBoundMediaId,
+      "media-race IDs are not distinct"
+    );
+    invariant(
+      captures.get("retry-screen.id") !== projection.screenId,
+      "retry Screen substituted the main Screen"
+    );
+    const authoritative = parseMediaRaceAuthoritativeAdminEvidence(state);
+    state.mediaRaceProjection = projection;
+    state.mediaRaceReceiptHash = authoritative.evidenceSha256;
+  }
+  return runtimeSafeProjection({ count: overrides.length });
+}
+
+async function runtimeSetPreference({ state, action }, key, showFieldMetadata, operationId) {
+  const userId = state.ids[key === "a" ? "userA" : "userB"];
+  invariant(state.responseLostIntents.has(action.id), "setting write lacks its pre-write intent");
+  const result = await runBunBridgeOperation(state, operationId, { showFieldMetadata, userId });
+  invariant(result.ok === true, "preference write failed");
+  return runtimeSafeProjection({ key, showFieldMetadata });
+}
+
+async function runtimeProvePreference({ state }, key, expected, operationId) {
+  const userId = state.ids[key === "a" ? "userA" : "userB"];
+  const result = await runBunBridgeOperation(state, operationId, { userId });
+  invariant(result.showFieldMetadata === expected, "preference proof drift");
+  return runtimeSafeProjection({ key, showFieldMetadata: result.showFieldMetadata });
+}
+
+async function runtimePatchUnsafeBinding({ state, captures }) {
+  const screenId = captures.get("screen.id");
+  const current = await adminApiRequest(
+    state,
+    bootstrapApiSession(state),
+    "GET",
+    "/custom-screens/" + encodeURIComponent(screenId),
+    { csrf: false }
+  );
+  const buttonId = captures.get("palette.button");
+  let changed = 0;
+  const definition = structuredClone(current.value.definition);
+  definition.editorView.bindings = definition.editorView.bindings.map((binding) => {
+    if (binding.blockId === buttonId && binding.propPath === "href") {
+      changed += 1;
+      return { ...binding, field: "secondaryUrl" };
+    }
+    return binding;
+  });
+  invariant(changed === 1, "unsafe button binding target drift");
+  const response = await adminApiRequest(
+    state,
+    bootstrapApiSession(state),
+    "PATCH",
+    "/custom-screens/" + encodeURIComponent(screenId),
+    { json: { schemaVersion: 4, definition } }
+  );
+  state.latestUnsafeDefinition = response.value.definition;
+  return runtimeSafeProjection({ changed });
+}
+
+async function runtimeProveUnsafeBinding({ state, captures }) {
+  const response = await adminApiRequest(
+    state,
+    bootstrapApiSession(state),
+    "GET",
+    "/custom-screens/" + encodeURIComponent(captures.get("screen.id")),
+    { csrf: false }
+  );
+  const buttonId = captures.get("palette.button");
+  const bindings = response.value.definition.editorView.bindings.filter(
+    (binding) => binding.blockId === buttonId && binding.propPath === "href"
+  );
+  invariant(
+    bindings.length === 1 && bindings[0].field === "secondaryUrl",
+    "unsafe binding proof drift"
+  );
+  return runtimeSafeProjection({ bindingCount: 1, field: "secondaryUrl" });
+}
+
+async function runtimeResetScreen({ state, captures }) {
+  const id = captures.get("screen.id");
+  const definition = state.screenBodies.main.definition;
+  const response = await adminApiRequest(
+    state,
+    bootstrapApiSession(state),
+    "PATCH",
+    "/custom-screens/" + encodeURIComponent(id),
+    { json: { schemaVersion: 4, definition } }
+  );
+  invariant(deepEqualJson(response.value.definition, definition), "Screen baseline reset drift");
+  return runtimeSafeProjection({ reset: true });
+}
+
+async function runtimeProveScreenBaseline({ state, captures }) {
+  const id = captures.get("screen.id");
+  const response = await adminApiRequest(
+    state,
+    bootstrapApiSession(state),
+    "GET",
+    "/custom-screens/" + encodeURIComponent(id),
+    { csrf: false }
+  );
+  invariant(
+    deepEqualJson(response.value.definition, state.screenBodies.main.definition),
+    "Screen baseline proof drift"
+  );
+  return runtimeSafeProjection({ baseline: true });
+}
+
+async function runtimeResetEntry({ state, plan, captures }) {
+  const id = captures.get("entry.id");
+  const slug = plan.fixtureBlueprint.contentTypes.editable.slug;
+  const response = await adminApiRequest(
+    state,
+    bootstrapApiSession(state),
+    "PATCH",
+    "/content/" + encodeURIComponent(slug) + "/entries/" + encodeURIComponent(id),
+    { json: state.editableEntryBody }
+  );
+  assertRecordIdentity(response.value, { id, ...state.editableEntryBody }, "entry reset");
+  return runtimeSafeProjection({ reset: true });
+}
+
+async function runtimeProveEntryBaseline({ state, plan, captures }) {
+  const id = captures.get("entry.id");
+  const slug = plan.fixtureBlueprint.contentTypes.editable.slug;
+  const response = await adminApiRequest(
+    state,
+    bootstrapApiSession(state),
+    "GET",
+    "/content/" + encodeURIComponent(slug) + "/entries/" + encodeURIComponent(id),
+    { csrf: false }
+  );
+  assertRecordIdentity(response.value, { id, ...state.editableEntryBody }, "entry baseline proof");
+  return runtimeSafeProjection({ baseline: true });
+}
+
+async function runtimeUserAPreferenceRead({ state }, expected) {
+  const session = state.sessions.get("user-a");
+  invariant(session && session.userId === state.ids.userA, "user-A API session is unavailable");
+  const response = await adminApiRequest(
+    state,
+    session,
+    "GET",
+    "/user-settings/customScreens.entry.preferences",
+    { csrf: false }
+  );
+  exactOwnKeys(response.value, ["key", "value"], "isolated preference response", { plain: true });
+  invariant(
+    response.value.key === "customScreens.entry.preferences" &&
+      response.value.value.version === 1 &&
+      response.value.value.showFieldMetadata === expected,
+    "isolated preference read drift"
+  );
+  return runtimeSafeProjection({ showFieldMetadata: expected });
+}
+
+async function runtimeUserAPreferenceFalse({ state }) {
+  const session = state.sessions.get("user-a");
+  const response = await adminApiRequest(
+    state,
+    session,
+    "PATCH",
+    "/user-settings/customScreens.entry.preferences",
+    {
+      expectedUserId: state.ids.userA,
+      json: { value: { version: 1, showFieldMetadata: false } },
+    }
+  );
+  invariant(response.value?.value?.showFieldMetadata === false, "isolated preference write drift");
+  return runtimeSafeProjection({ showFieldMetadata: false });
+}
+
+function buildRuntimeOperationHandlers() {
+  const resetScreen = (context) => runtimeResetScreen(context);
+  const proveScreen = (context) => runtimeProveScreenBaseline(context);
+  const resetEntry = (context) => runtimeResetEntry(context);
+  const proveEntry = (context) => runtimeProveEntryBaseline(context);
+  const resetOverrides = (context) => runtimeReplaceOverrides(context, true);
+  const proveEmptyOverrides = (context) => runtimeProveOverrides(context, true);
+  return Object.freeze({
+    "runtime/set-001-storage-preflight": runtimeStoragePreflight,
+    "runtime/set-002-helper-launch": runtimeHostLaunch,
+    "runtime/set-003-admin-health": (context) => runtimeHealth(context, "admin"),
+    "runtime/set-004-front-health": (context) => runtimeHealth(context, "front"),
+    "runtime/set-004a-bot-protection-preflight": runtimeBotProtection,
+    "runtime/set-004b-session-policy-preflight": (context) =>
+      runtimeSecurity(context, "session", "runtime/set-004b-session-policy-preflight"),
+    "runtime/set-004c-auth-rate-budget-preflight": (context) =>
+      runtimeSecurity(context, "rate", "runtime/set-004c-auth-rate-budget-preflight"),
+    "runtime/set-011b-bootstrap-api-login": (context) => runtimeLogin(context, "bootstrap"),
+    "runtime/set-011c-bootstrap-csrf-capture": (context) => runtimeCsrf(context, "bootstrap"),
+    "runtime/set-012-user-a-create": (context) =>
+      runtimeProvisionUser(context, "a", "runtime/set-012-user-a-create"),
+    "runtime/set-013-user-a-proof": (context) =>
+      runtimeProveUser(context, "a", "runtime/set-013-user-a-proof"),
+    "runtime/set-014-user-b-create": (context) =>
+      runtimeProvisionUser(context, "b", "runtime/set-014-user-b-create"),
+    "runtime/set-015-user-b-proof": (context) =>
+      runtimeProveUser(context, "b", "runtime/set-015-user-b-proof"),
+    "runtime/set-016-editable-type-create": (context) =>
+      runtimeCreateContentType(context, "editable", "content-type-editable.id"),
+    "runtime/set-017-editable-type-proof": (context) =>
+      runtimeProveContentType(context, "editable", "content-type-editable.id", true),
+    "runtime/set-018-related-a-type-create": (context) =>
+      runtimeCreateContentType(context, "relatedA", "content-type-related-a.id"),
+    "runtime/set-019-related-a-type-proof": (context) =>
+      runtimeProveContentType(context, "relatedA", "content-type-related-a.id"),
+    "runtime/set-020-related-b-type-create": (context) =>
+      runtimeCreateContentType(context, "relatedB", "content-type-related-b.id"),
+    "runtime/set-021-related-b-type-proof": (context) =>
+      runtimeProveContentType(context, "relatedB", "content-type-related-b.id"),
+    "runtime/set-021a-related-failure-type-create": (context) =>
+      runtimeCreateContentType(context, "relatedFailure", "content-type-related-failure.id"),
+    "runtime/set-021b-related-failure-type-proof": (context) =>
+      runtimeProveContentType(context, "relatedFailure", "content-type-related-failure.id"),
+    "runtime/set-022-related-a1-create": (context) =>
+      runtimeCreateRelatedEntry(context, "a1", "relatedA", "related-entry-a1.id"),
+    "runtime/set-023-related-a1-proof": (context) =>
+      runtimeProveRelatedEntry(context, "a1", "related-entry-a1.id"),
+    "runtime/set-024-related-a2-create": (context) =>
+      runtimeCreateRelatedEntry(context, "a2", "relatedA", "related-entry-a2.id"),
+    "runtime/set-025-related-a2-proof": (context) =>
+      runtimeProveRelatedEntry(context, "a2", "related-entry-a2.id"),
+    "runtime/set-026-related-b1-create": (context) =>
+      runtimeCreateRelatedEntry(context, "b1", "relatedB", "related-entry-b1.id"),
+    "runtime/set-027-related-b1-proof": (context) =>
+      runtimeProveRelatedEntry(context, "b1", "related-entry-b1.id"),
+    "runtime/set-028-related-b2-create": (context) =>
+      runtimeCreateRelatedEntry(context, "b2", "relatedB", "related-entry-b2.id"),
+    "runtime/set-029-related-b2-proof": (context) =>
+      runtimeProveRelatedEntry(context, "b2", "related-entry-b2.id"),
+    "runtime/set-029a-related-failure1-create": (context) =>
+      runtimeCreateRelatedEntry(context, "failure1", "relatedFailure", "related-entry-failure1.id"),
+    "runtime/set-029b-related-failure1-proof": (context) =>
+      runtimeProveRelatedEntry(context, "failure1", "related-entry-failure1.id"),
+    "runtime/set-030-media-upload": runtimeUploadMedia,
+    "runtime/set-031-media-proof": runtimeProveMedia,
+    "runtime/set-032-storage-post-setup": runtimeStoragePostSetup,
+    "runtime/set-033-entry-create": runtimeCreateEditableEntry,
+    "runtime/set-034-entry-proof": runtimeProveEditableEntry,
+    "runtime/set-035-screen-create": (context) => runtimeCreateScreen(context, "main", "screen.id"),
+    "runtime/set-036-screen-proof": (context) => runtimeProveScreen(context, "main", "screen.id"),
+    "runtime/set-037-retry-screen-create": (context) =>
+      runtimeCreateScreen(context, "retry", "retry-screen.id"),
+    "runtime/set-038-retry-screen-proof": (context) =>
+      runtimeProveScreen(context, "retry", "retry-screen.id"),
+    "runtime/set-039-override-create": (context) => runtimeReplaceOverrides(context, false),
+    "runtime/set-040-override-proof": (context) => runtimeProveOverrides(context, false),
+    "runtime/set-041-preference-a": (context) =>
+      runtimeSetPreference(context, "a", false, "runtime/set-041-preference-a"),
+    "runtime/set-042-preference-a-proof": (context) =>
+      runtimeProvePreference(context, "a", false, "runtime/set-042-preference-a-proof"),
+    "runtime/set-043-preference-b": (context) =>
+      runtimeSetPreference(context, "b", false, "runtime/set-043-preference-b"),
+    "runtime/set-044-preference-b-proof": (context) =>
+      runtimeProvePreference(context, "b", false, "runtime/set-044-preference-b-proof"),
+    "runtime/bi-060-unsafe-patch": runtimePatchUnsafeBinding,
+    "runtime/bi-061-unsafe-proof-read": runtimeProveUnsafeBinding,
+    "runtime/bi-064-baseline-restore": resetScreen,
+    "runtime/bi-065-baseline-proof": proveScreen,
+    "runtime/tc-001-reset": resetOverrides,
+    "runtime/tc-002-reset-proof": proveEmptyOverrides,
+    "runtime/ss-001-screen-reset": resetScreen,
+    "runtime/ss-002-screen-proof": proveScreen,
+    "runtime/ss-003-entry-reset": resetEntry,
+    "runtime/ss-004-entry-proof": proveEntry,
+    "runtime/ss-005-overrides-reset": resetOverrides,
+    "runtime/ss-006-overrides-proof": proveEmptyOverrides,
+    "runtime/dg-001-entry-reset": resetEntry,
+    "runtime/dg-002-entry-proof": proveEntry,
+    "runtime/rc-001-entry-reset": resetEntry,
+    "runtime/rc-002-entry-proof": proveEntry,
+    "runtime/rc-003-overrides-reset": resetOverrides,
+    "runtime/rc-004-overrides-proof": proveEmptyOverrides,
+    "runtime/ru-001-screen-reset": resetScreen,
+    "runtime/ru-002-screen-proof": proveScreen,
+    "runtime/ru-003-entry-reset": resetEntry,
+    "runtime/ru-004-entry-proof": proveEntry,
+    "runtime/ru-005-overrides-reset": resetOverrides,
+    "runtime/ru-006-overrides-proof": proveEmptyOverrides,
+    "runtime/ru-043b-a-api-login": (context) => runtimeLogin(context, "user-a"),
+    "runtime/ru-043c-a-api-csrf-capture": (context) => runtimeCsrf(context, "user-a"),
+    "runtime/ru-047a-a-durable-proof": (context) => runtimeUserAPreferenceRead(context, true),
+    "runtime/ru-050-a-server-false": runtimeUserAPreferenceFalse,
+    "runtime/ru-051-a-server-false-proof": (context) => runtimeUserAPreferenceRead(context, false),
+    "runtime/ru-061a-a-durable-bypass-read": (context) => runtimeUserAPreferenceRead(context, true),
+  });
+}
+
+function decodeExactNativeUtf8(bytes, label) {
+  invariant(
+    Buffer.isBuffer(bytes) &&
+      !(bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) &&
+      !bytes.includes(0x0d) &&
+      !bytes.includes(0x00),
+    label + " has forbidden raw bytes"
+  );
+  const text = decodeBoundedUtf8(bytes, label);
+  invariant(
+    !text.startsWith("\uFEFF") && !text.includes("\r") && !text.includes("\0"),
+    label + " has forbidden bytes"
+  );
+  return text;
+}
+
+async function registerPrivateNativeSnapshot(state, token, label) {
+  invariant(
+    /^\.\.\/output\/page-[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{3}Z\.yml$/u.test(
+      token
+    ) &&
+      !token.includes("%") &&
+      !token.includes("\\"),
+    label + " snapshot token is invalid"
+  );
+  const absolute = path.resolve(state.browserWorkspace.cwd, token);
+  invariant(
+    absolute.startsWith(state.browserWorkspace.outputDir + path.sep) &&
+      path.dirname(absolute) === state.browserWorkspace.outputDir,
+    label + " snapshot escaped the private output directory"
+  );
+  const identity = await readStableArtifactIdentity(absolute, {
+    expectedType: "file",
+    expectedDev: PRIVATE_WORKSPACE_LEDGER.get(state.browserWorkspace.ledger).rootIdentity.dev,
+  });
+  invariant(
+    identity.size > 0 && identity.size <= MAX_STREAM_BYTES,
+    label + " snapshot size is invalid"
+  );
+  registerWorkspaceArtifact(state.browserWorkspace.ledger, absolute, identity);
+  invariant(!state.nativeSnapshots.has(absolute), label + " snapshot path was reused");
+  state.nativeSnapshots.set(absolute, identity);
+  return token;
+}
+
+function parseExactTabRow(line, expected, label) {
+  const match = /^- ([0-9]+): (\(current\) )?\[([^\\\[\]\(\)\r\n]{1,512})\]\(([^\r\n]+)\)\n$/u.exec(
+    line
+  );
+  invariant(match !== null, label + " tab row grammar drift");
+  invariant(
+    Number(match[1]) === expected.index &&
+      Boolean(match[2]) === expected.current &&
+      match[4] === expected.url &&
+      !match[4].includes("%0") &&
+      !match[4].includes("\\"),
+    label + " tab row identity drift"
+  );
+  return deepFreezeExact({
+    index: expected.index,
+    current: expected.current,
+    title: match[3],
+    url: match[4],
+  });
+}
+
+function consumeExactTabRow(text, offset, expected, label) {
+  const newline = text.indexOf("\n", offset);
+  invariant(newline !== -1, label + " tab row has no LF");
+  const line = text.slice(offset, newline + 1);
+  return { row: parseExactTabRow(line, expected, label), nextOffset: newline + 1 };
+}
+
+function expectedNativeTabRows(action, state) {
+  const entryUrl = expandRegisteredPath(state.plan, "entry", state.currentCaptures);
+  const relatedUrl = expandRegisteredPath(
+    state.plan,
+    "relatedEntryA1Editor",
+    state.currentCaptures
+  );
+  const recordsUrl = expandRegisteredPath(state.plan, "records", state.currentCaptures);
+  const byAction = {
+    "rc-019-related-tab-new": [
+      { index: 0, current: false, url: entryUrl },
+      { index: 1, current: true, url: relatedUrl },
+    ],
+    "rc-022-related-tab-origin": [
+      { index: 0, current: true, url: entryUrl },
+      { index: 1, current: false, url: relatedUrl },
+    ],
+    "rc-044-close-second-tab": [{ index: 0, current: true, url: recordsUrl }],
+    "rc-045-origin-proof": [{ index: 0, current: true, url: recordsUrl }],
+  };
+  const rows = byAction[action.id];
+  invariant(rows !== undefined, action.id + " native tab state is not registered");
+  return rows;
+}
+
+const NATIVE_OUTPUT_DESCRIPTOR_REGISTRY = deepFreezeExact({
+  "open-about-blank": {
+    actionIds: ["set-005-open"],
+    async parse({ state, action, text }) {
+      const prefix = "### Browser `wf540smoke` opened with pid ";
+      const middle = ".\n### Page\n- Page URL: about:blank\n### Snapshot\n- [Snapshot](";
+      invariant(
+        text.startsWith(prefix) && text.endsWith(")\n"),
+        action.id + " native open frame drift"
+      );
+      const middleIndex = text.indexOf(middle, prefix.length);
+      invariant(
+        middleIndex !== -1 && text.indexOf(middle, middleIndex + 1) === -1,
+        action.id + " native open section drift"
+      );
+      const pidText = text.slice(prefix.length, middleIndex);
+      invariant(/^[1-9][0-9]*$/u.test(pidText), action.id + " browser PID token drift");
+      const pid = Number(pidText);
+      invariant(Number.isSafeInteger(pid) && pid > 1, action.id + " browser PID is invalid");
+      const snapshot = text.slice(middleIndex + middle.length, -2);
+      await registerPrivateNativeSnapshot(state, snapshot, action.id);
+      const identity = await readProcIdentity(pid);
+      const environmentBytes = await readFile(`/proc/${pid}/environ`);
+      invariant(
+        environmentBytes.includes(
+          Buffer.from(`XDG_CACHE_HOME=${path.join(state.browserWorkspace.root, "xdg", "cache")}\0`)
+        ),
+        action.id + " browser process is outside the private authority root"
+      );
+      invariant(!state.browserProcessIdentities.has(pid), action.id + " browser PID was reused");
+      state.browserProcessIdentities.set(pid, deepFreezeExact(identity));
+      return Buffer.from('{"ok":true}\n');
+    },
+  },
+  "fill-secret": {
+    actionIds: [
+      "set-009-login-email",
+      "set-010-login-password",
+      "ru-042-a-password",
+      "ru-068-b-password",
+      "ru-078-a2-password",
+      "ru-092-b2-password",
+      "ru-104-a3-password",
+    ],
+    async parse({ action, text }) {
+      invariant(text === "\n", action.id + " native secret fill stdout drift");
+      return Buffer.from('{"ok":true}\n');
+    },
+  },
+  "tab-new": {
+    actionIds: ["rc-019-related-tab-new"],
+    async parse({ state, action, text }) {
+      let offset = 0;
+      for (const expected of expectedNativeTabRows(action, state)) {
+        offset = consumeExactTabRow(text, offset, expected, action.id).nextOffset;
+      }
+      const snapshotPrefix = "- [Snapshot](";
+      invariant(
+        text.startsWith(snapshotPrefix, offset) && text.endsWith(")\n"),
+        action.id + " tab-new snapshot row drift"
+      );
+      const snapshot = text.slice(offset + snapshotPrefix.length, -2);
+      await registerPrivateNativeSnapshot(state, snapshot, action.id);
+      return Buffer.from('{"ok":true}\n');
+    },
+  },
+  "tab-select": {
+    actionIds: ["rc-022-related-tab-origin", "rc-045-origin-proof"],
+    async parse({ state, action, text }) {
+      let offset = 0;
+      for (const expected of expectedNativeTabRows(action, state)) {
+        offset = consumeExactTabRow(text, offset, expected, action.id).nextOffset;
+      }
+      invariant(offset === text.length, action.id + " tab-select has extra bytes");
+      return Buffer.from('{"ok":true}\n');
+    },
+  },
+  "tab-close": {
+    actionIds: ["rc-044-close-second-tab"],
+    async parse({ state, action, text }) {
+      let offset = 0;
+      for (const expected of expectedNativeTabRows(action, state)) {
+        offset = consumeExactTabRow(text, offset, expected, action.id).nextOffset;
+      }
+      invariant(offset === text.length, action.id + " tab-close has extra bytes");
+      return Buffer.from('{"ok":true}\n');
+    },
+  },
+  "route-list": {
+    actionIds: ["end-002-route-list"],
+    async parse({ action, text, bytes }) {
+      invariant(text === "No active routes\n", action.id + " route-list stdout drift");
+      return bytes;
+    },
+  },
+  close: {
+    actionIds: ["end-006-close"],
+    async parse({ action, text, bytes }) {
+      invariant(text === "Browser 'wf540smoke' closed\n\n", action.id + " close stdout drift");
+      return bytes;
+    },
+  },
+});
+
+function validateNativeDescriptorRegistry(plan) {
+  invariant(
+    deepEqualJson(
+      Object.keys(NATIVE_OUTPUT_DESCRIPTOR_REGISTRY).sort(),
+      Object.keys(plan.registries.browserNativeOperations).sort()
+    ),
+    "native parser registry key-set drift"
+  );
+  for (const [operationId, descriptor] of Object.entries(NATIVE_OUTPUT_DESCRIPTOR_REGISTRY)) {
+    invariant(
+      deepEqualJson(
+        [...descriptor.actionIds].sort(),
+        [...plan.registries.browserNativeOperations[operationId].actionIds].sort()
+      ),
+      operationId + " native parser action-set drift"
+    );
+  }
+}
+
+async function normalizeBrowserCommandOutput(state, action, executable, bytes, invocation) {
+  const text = decodeExactNativeUtf8(bytes, action.id + " browser output");
+  invariant(
+    !text.startsWith("### Error\n") && !text.includes("\n### Error\n"),
+    action.id + " browser command reported an error"
+  );
+  if (executable.type === "browser-run-code") {
+    invariant(
+      text.endsWith("\n") && text.length > 1 && !text.slice(0, -1).includes("\n"),
+      action.id + " run-code output frame drift"
+    );
+    return bytes;
+  }
+  if (executable.type === "browser-global-list") {
+    invariant(
+      action.id === "end-007-session-absence" && text === "  (no browsers)\n",
+      action.id + " global list stdout drift"
+    );
+    invariant(
+      state.terminalSessionAbsenceSha256 === null,
+      "terminal session absence was assigned twice"
+    );
+    state.terminalSessionAbsenceSha256 = hashBytes(bytes);
+    return bytes;
+  }
+  if (executable.type === "browser-screenshot") {
+    const expectedPath = invocation.args[invocation.args.indexOf("--filename") + 1];
+    invariant(
+      typeof expectedPath === "string" &&
+        !expectedPath.includes("%") &&
+        !expectedPath.includes("\\"),
+      action.id + " screenshot argv path drift"
+    );
+    invariant(
+      text === "- [Screenshot of full page](" + expectedPath + ")\n" &&
+        executable.fullPage === true,
+      action.id + " screenshot stdout drift"
+    );
+    return Buffer.from("true\n");
+  }
+  invariant(executable.type === "browser-native", action.id + " browser output type drift");
+  const descriptor = NATIVE_OUTPUT_DESCRIPTOR_REGISTRY[executable.operationId];
+  invariant(
+    descriptor !== undefined && descriptor.actionIds.includes(action.id),
+    action.id + " native descriptor binding drift"
+  );
+  return descriptor.parse({ state, action, executable, bytes, text, invocation });
+}
+
+async function acquireScreenshotIdentity(state, action, plan) {
+  const relative = plan.registries.screenshotPaths[action.executable.screenshotId];
+  const absolute = path.resolve(state.root, relative);
+  invariant(
+    absolute.startsWith(state.root + path.sep) && path.relative(state.root, absolute) === relative,
+    action.id + " screenshot path escaped the repository"
+  );
+  const handle = await open(absolute, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+  let descriptorIdentity;
+  let bytes;
+  try {
+    descriptorIdentity = projectArtifactIdentity(await handle.stat());
+    invariant(
+      descriptorIdentity.type === "file" &&
+        descriptorIdentity.size > 8 &&
+        descriptorIdentity.size <= MAX_STREAM_BYTES,
+      action.id + " screenshot descriptor identity drift"
+    );
+    bytes = await handle.readFile();
+    const after = projectArtifactIdentity(await handle.stat());
+    invariant(
+      sameArtifactIdentity(descriptorIdentity, after, { includeSize: true }) &&
+        bytes.length === after.size,
+      action.id + " screenshot changed during read"
+    );
+  } finally {
+    await handle.close();
+  }
+  const pathIdentity = await readStableArtifactIdentity(absolute, {
+    expectedType: "file",
+    expectedDev: descriptorIdentity.dev,
+  });
+  invariant(
+    sameArtifactIdentity(descriptorIdentity, pathIdentity, { includeSize: true }),
+    action.id + " screenshot path/descriptor identity drift"
+  );
+  invariant(
+    bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])),
+    action.id + " screenshot is not PNG"
+  );
+  invariant(!state.screenshots.has(relative), action.id + " screenshot was acquired twice");
+  state.screenshots.set(relative, {
+    relative,
+    absolute,
+    dev: descriptorIdentity.dev,
+    ino: descriptorIdentity.ino,
+    mode: descriptorIdentity.mode,
+    size: descriptorIdentity.size,
+    sha256: hashBytes(bytes),
+  });
+}
+
+async function removeAcquiredScreenshots(state) {
+  for (const relative of state.plan.requiredScreenshotPaths) {
+    if (state.screenshots.has(relative)) continue;
+    const absolute = path.resolve(state.root, relative);
+    try {
+      await lstat(absolute);
+      invariant(false, "unowned screenshot path remains after failed acquisition");
+    } catch (error) {
+      invariant(error && error.code === "ENOENT", "unowned screenshot identity cannot be removed");
+    }
+  }
+  for (const record of [...state.screenshots.values()].reverse()) {
+    const current = await readStableArtifactIdentity(record.absolute, {
+      expectedType: "file",
+      expectedDev: record.dev,
+    });
+    invariant(
+      current.ino === record.ino && current.mode === record.mode && current.size === record.size,
+      "acquired screenshot identity changed before failure removal"
+    );
+    await unlink(record.absolute);
+    await requireMissingPath(record.absolute, "removed acquired screenshot");
+  }
+  state.screenshots.clear();
+}
+
+function cleanupSubjectRoute(state, subject) {
+  const blueprint = state.plan.fixtureBlueprint;
+  const typeByKind = {
+    "related-entry-a1": blueprint.contentTypes.relatedA.slug,
+    "related-entry-a2": blueprint.contentTypes.relatedA.slug,
+    "related-entry-b1": blueprint.contentTypes.relatedB.slug,
+    "related-entry-b2": blueprint.contentTypes.relatedB.slug,
+    "related-entry-failure1": blueprint.contentTypes.relatedFailure.slug,
+    "editable-entry": blueprint.contentTypes.editable.slug,
+  };
+  if (Object.hasOwn(typeByKind, subject.kind)) {
+    return (
+      "/content/" +
+      encodeURIComponent(typeByKind[subject.kind]) +
+      "/entries/" +
+      encodeURIComponent(subject.id)
+    );
+  }
+  if (subject.kind === "media") return "/media/" + encodeURIComponent(subject.id);
+  if (subject.kind === "screen" || subject.kind === "retry-screen")
+    return "/custom-screens/" + encodeURIComponent(subject.id);
+  if (subject.kind.startsWith("content-type-"))
+    return "/content-types/" + encodeURIComponent(subject.id);
+  return null;
+}
+
+async function deleteCleanupSubject(state, subject) {
+  if (state.deletedSubjects.has(subject.kind)) return deepFreezeExact({ authoritativeBytes: null });
+  let authoritativeBytes = null;
+  if (subject.kind === "user-a" || subject.kind === "user-b") {
+    const result = await runBunBridgeOperation(state, "legacy/user-delete-exact", {
+      userId: subject.id,
+    });
+    invariant(result.ok === true, subject.kind + " cleanup failed");
+  } else {
+    const route = cleanupSubjectRoute(state, subject);
+    invariant(route !== null, "cleanup subject route is unknown: " + subject.kind);
+    const response = await adminApiRequest(state, bootstrapApiSession(state), "DELETE", route, {
+      retainAuthoritativeBytes: true,
+    });
+    invariant(response.value?.ok === true, subject.kind + " delete response drift");
+    authoritativeBytes = response.authoritativeBytes;
+  }
+  state.deletedSubjects.add(subject.kind);
+  return deepFreezeExact({ authoritativeBytes });
+}
+
+async function proveCleanupSubjectPresent(state, subject) {
+  const route = cleanupSubjectRoute(state, subject);
+  invariant(route !== null, "cleanup provenance subject route is unknown: " + subject.kind);
+  const response = await adminApiRequest(state, bootstrapApiSession(state), "GET", route, {
+    csrf: false,
+    retainAuthoritativeBytes: true,
+  });
+  invariant(
+    response.status === 200 && response.value?.id === subject.id,
+    subject.kind + " cleanup provenance identity drift"
+  );
+  if (subject.kind === "media") {
+    invariant(
+      response.value.key === subject.storageKey &&
+        response.value.url === "/media/" + subject.storageKey,
+      "media cleanup provenance storage identity drift"
+    );
+  }
+  return deepFreezeExact({
+    output: deepFreezeExact({ present: true }),
+    authoritativeBytes: response.authoritativeBytes,
+  });
+}
+
+async function proveCleanupSubjectAbsent(state, subject) {
+  if (subject.kind === "user-a" || subject.kind === "user-b") {
+    const result = await runBunBridgeOperation(state, "legacy/user-absence-exact", {
+      userId: subject.id,
+    });
+    invariant(result.absent === true, subject.kind + " remains present");
+    return deepFreezeExact({ authoritativeBytes: null });
+  }
+  const route = cleanupSubjectRoute(state, subject);
+  const response = await adminApiRequest(state, bootstrapApiSession(state), "GET", route, {
+    csrf: false,
+    allowedStatus: [404],
+    retainAuthoritativeBytes: true,
+  });
+  invariant(response.status === 404, subject.kind + " remains present");
+  if (subject.kind === "media") {
+    const storageKey = subject.storageKey;
+    invariant(
+      typeof storageKey === "string" &&
+        !storageKey.startsWith("/") &&
+        storageKey.split("/").every((part) => part && part !== "." && part !== ".."),
+      "media cleanup storage key drift"
+    );
+    const storageRoot = responseLostStorageRoot(state);
+    const absolute = path.resolve(storageRoot, storageKey);
+    invariant(
+      absolute.startsWith(storageRoot + path.sep),
+      "media cleanup storage key escaped its root"
+    );
+    await requireMissingPath(absolute, "media cleanup storage key");
+    await restoreIdentitySafeMediaAncestorDirectories(state, storageKey);
+    const rootIdentity = await readStableArtifactIdentity(storageRoot, {
+      expectedType: "directory",
+      expectedDev: state.storageRootIdentity.dev,
+    });
+    invariant(
+      sameArtifactIdentity(rootIdentity, state.storageRootIdentity),
+      "media cleanup storage root identity drift"
+    );
+  }
+  return deepFreezeExact({ authoritativeBytes: response.authoritativeBytes });
+}
+
+async function closeBrowserIfPresent(state) {
+  if (!state.browserMayExist || state.browserClosed) return;
+  try {
+    const output = await runPrivateProcess({
+      file: "playwright-cli",
+      args: ["-s=" + SESSION_NAME, "--raw", "close"],
+      cwd: state.browserWorkspace.cwd,
+      env: state.browserWorkspace.environment,
+      stdin: Buffer.alloc(0),
+      timeoutMs: 30_000,
+    });
+    invariant(
+      output.equals(Buffer.from("Browser '" + SESSION_NAME + "' closed\n\n")),
+      "browser close stdout drift"
+    );
+  } finally {
+    state.browserClosed = true;
+  }
+}
+
+async function releaseFailureRoutesIfPresent(state) {
+  if (!state.browserMayExist || state.browserClosed) return;
+  const output = await runPrivateProcess({
+    file: "playwright-cli",
+    args: runCode(buildFailureCleanupRoutesSource()),
+    cwd: state.browserWorkspace.cwd,
+    env: state.browserWorkspace.environment,
+    stdin: Buffer.alloc(0),
+    timeoutMs: 30_000,
+  });
+  invariant(output.equals(Buffer.from("true\n")), "failure route cleanup stdout drift");
+}
+
+async function proveBrowserSessionAbsent(state) {
+  const output = await runPrivateProcess({
+    file: "playwright-cli",
+    args: ["--raw", "list"],
+    cwd: state.browserWorkspace.cwd,
+    env: state.browserWorkspace.environment,
+    stdin: Buffer.alloc(0),
+    timeoutMs: 30_000,
+  });
+  invariant(
+    output.equals(Buffer.from("  (no browsers)\n")),
+    "browser session absence stdout drift"
+  );
+}
+
+function taskUserAgents(state) {
+  return [
+    state.plan.fixtureBlueprint.userAgents.browser,
+    state.plan.fixtureBlueprint.userAgents.publicPreflight,
+    state.plan.fixtureBlueprint.userAgents.apiBootstrap,
+    state.plan.fixtureBlueprint.userAgents.apiUserA,
+  ];
+}
+
+async function readStableTaskTrafficDelta(state, onPoll = null) {
+  invariant(
+    state.apiContextsClosed === true &&
+      state.sessions.size === 0 &&
+      privateApiContextRegistry(state).size === 0 &&
+      privateEphemeralApiContextRegistry(state).size === 0,
+    "terminal discovery started before API contexts closed"
+  );
+  invariant(state.taskTrafficBaseline !== null, "task traffic baseline is absent");
+  invariant(
+    onPoll === null || typeof onPoll === "function",
+    "task traffic poll receipt authority drift"
+  );
+  let previous = null;
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    const snapshot = await runBunBridgeOperation(state, "terminal/task-traffic-snapshot", {
+      userAgents: taskUserAgents(state),
+    });
+    exactOwnKeys(
+      snapshot,
+      ["access", "audit", "completeSession", "session"],
+      "task traffic snapshot",
+      { plain: true }
+    );
+    const agents = taskUserAgents(state);
+    const validateRows = (kind, rows, exactKeys, bound, allowArbitraryUserAgent = false) => {
+      invariant(
+        Array.isArray(rows) &&
+          rows.length <= bound &&
+          deepEqualJson(
+            rows.map(({ id }) => id),
+            rows.map(({ id }) => id).sort()
+          ) &&
+          new Set(rows.map(({ id }) => id)).size === rows.length,
+        kind + " task traffic row inventory drift"
+      );
+      for (const row of rows) {
+        exactOwnKeys(row, exactKeys, kind + " task traffic row", { plain: true });
+        invariant(
+          typeof row.id === "string" && /^[0-9a-f-]{36}$/u.test(row.id),
+          kind + " task traffic row ID drift"
+        );
+        if (Object.hasOwn(row, "userAgent")) {
+          invariant(
+            allowArbitraryUserAgent
+              ? row.userAgent === null || typeof row.userAgent === "string"
+              : agents.includes(row.userAgent),
+            kind + " task traffic user-agent drift"
+          );
+        }
+      }
+    };
+    validateRows(
+      "access",
+      snapshot.access,
+      ["id", "sessionId", "userId", "userAgent"],
+      MAX_TASK_TRAFFIC_ROWS
+    );
+    validateRows("audit", snapshot.audit, ["actorId", "id", "userAgent"], MAX_TASK_TRAFFIC_ROWS);
+    validateRows("session", snapshot.session, ["id", "userAgent", "userId"], MAX_TASK_TRAFFIC_ROWS);
+    validateRows(
+      "complete session",
+      snapshot.completeSession,
+      ["id", "userAgent", "userId"],
+      MAX_COMPLETE_SESSION_ROWS,
+      true
+    );
+    const baseline = state.taskTrafficBaseline;
+    const completeIds = snapshot.completeSession.map(({ id }) => id);
+    invariant(
+      baseline.sessionIds.every((id) => completeIds.includes(id)),
+      "a baseline session disappeared before task-owned cleanup"
+    );
+    const newCompleteSessions = snapshot.completeSession.filter(
+      ({ id }) => !baseline.sessionIds.includes(id)
+    );
+    invariant(
+      newCompleteSessions.every(({ userAgent }) => agents.includes(userAgent)),
+      "a new session does not carry an exact task user-agent"
+    );
+    const taskSessionDelta = snapshot.session.filter(({ id }) => !baseline.sessionIds.includes(id));
+    invariant(
+      deepEqualJson(
+        newCompleteSessions.map(({ id }) => id).sort(),
+        taskSessionDelta.map(({ id }) => id).sort()
+      ),
+      "complete-session inventory does not equal the task-UA session inventory"
+    );
+    const bootstrapAuthority = PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY.get(state);
+    invariant(
+      bootstrapAuthority === undefined ||
+        [...bootstrapAuthority.ownedSessionIds].every((id) => {
+          const row = newCompleteSessions.find((candidate) => candidate.id === id);
+          return (
+            row?.userId === state.bootstrapBaseline.id &&
+            [
+              state.plan.fixtureBlueprint.userAgents.browser,
+              state.plan.fixtureBlueprint.userAgents.apiBootstrap,
+            ].includes(row.userAgent)
+          );
+        }),
+      "an early captured bootstrap session is absent from terminal complete inventory"
+    );
+    invariant(
+      [...state.earlyApiSessionTuples.entries()].every(([key, tuple]) => {
+        const expectedUserId = key === "bootstrap" ? state.bootstrapBaseline.id : state.ids.userA;
+        const expectedUserAgent =
+          key === "bootstrap"
+            ? state.plan.fixtureBlueprint.userAgents.apiBootstrap
+            : state.plan.fixtureBlueprint.userAgents.apiUserA;
+        const row = newCompleteSessions.find(({ id }) => id === tuple.id);
+        return (
+          (key === "bootstrap" || key === "user-a") &&
+          tuple.userId === expectedUserId &&
+          tuple.userAgent === expectedUserAgent &&
+          row?.userId === expectedUserId &&
+          row?.userAgent === expectedUserAgent
+        );
+      }),
+      "an early captured isolated API session is absent from terminal complete inventory"
+    );
+    const delta = deepFreezeExact({
+      access: snapshot.access.filter(({ id }) => !baseline.accessIds.includes(id)),
+      audit: snapshot.audit.filter(({ id }) => !baseline.auditIds.includes(id)),
+      session: newCompleteSessions,
+    });
+    if (onPoll !== null) await onPoll(attempt + 1, delta);
+    state.taskTrafficPollCount = attempt + 1;
+    const encoded = canonicalJson(delta);
+    if (encoded === previous) return delta;
+    previous = encoded;
+    await delayMilliseconds(50);
+  }
+  invariant(false, "task traffic delta did not reach two stable observations");
+}
+
+function appendTaskTrafficPollProofReceipts(state, receiptTarget, phase, poll, rowsByKind) {
+  invariant(
+    Array.isArray(receiptTarget) &&
+      (phase === "before-delete" || phase === "after-delete") &&
+      Number.isSafeInteger(poll) &&
+      poll > 0,
+    "task traffic poll proof input drift"
+  );
+  for (const kind of ["audit", "access", "session"]) {
+    const rows = rowsByKind[kind];
+    invariant(Array.isArray(rows), "task traffic poll rows are absent: " + kind);
+    const output = deepFreezeExact({ phase, poll, rowCount: rows.length });
+    const authoritativeBytes = Buffer.from(canonicalJson({ phase, poll, kind, rows }) + "\n");
+    receiptTarget.push(
+      authoritativeProofRuntimeReceipt(state, {
+        operation: "terminal-" + kind + "-stable-poll",
+        operationDescriptor: "terminal-task-ua-bounded-stable-poll-v1",
+        evidenceSha256: hashBytes(authoritativeBytes),
+        subjectKind: "task-ua-" + kind,
+        subjectIdentifier: phase + ":" + poll,
+        output,
+      })
+    );
+  }
+}
+
+function terminalResourceDelta(state, delta) {
+  const cores = [];
+  const dependencyEdges = [];
+  const keyByTerminal = new Map();
+  const append = (kind, row, ownerSubjectIdentifier) => {
+    invariant(
+      row && typeof row.id === "string" && /^[0-9a-f-]{36}$/u.test(row.id),
+      "terminal row identity is invalid"
+    );
+    const core = createResourceCore({
+      kind,
+      identifier: [row.id],
+      ownerSubjectIdentifier,
+      acquisitionSourceId: "terminal-task-ua-discovery",
+      sourceActionOrdinal: null,
+      acquisitionChannel: "terminal-db-delta",
+    });
+    cores.push(core);
+    keyByTerminal.set(kind + ":" + row.id, core.resourceKey);
+    return core;
+  };
+  for (const row of delta.audit) append("audit-log-task-ua", row, row.actorId ?? null);
+  for (const row of delta.access)
+    append("access-log-task-ua", row, row.sessionId ?? row.userId ?? null);
+  for (const row of delta.session) append("session-task", row, row.userId);
+  const taskUsers = new Map([
+    [state.ids.userA, state.resourceKeys.get("user-a")],
+    [state.ids.userB, state.resourceKeys.get("user-b")],
+  ]);
+  for (const row of delta.audit) {
+    const userKey = taskUsers.get(row.actorId);
+    if (userKey)
+      dependencyEdges.push(
+        destructiveResourceEdge(userKey, keyByTerminal.get("audit-log-task-ua:" + row.id))
+      );
+  }
+  for (const row of delta.session) {
+    const userKey = taskUsers.get(row.userId);
+    if (userKey)
+      dependencyEdges.push(
+        destructiveResourceEdge(userKey, keyByTerminal.get("session-task:" + row.id))
+      );
+  }
+  for (const row of delta.access) {
+    const accessKey = keyByTerminal.get("access-log-task-ua:" + row.id);
+    if (row.sessionId !== null) {
+      const sessionKey = keyByTerminal.get("session-task:" + row.sessionId);
+      invariant(sessionKey !== undefined, "terminal access row references a non-task session");
+      dependencyEdges.push(destructiveResourceEdge(sessionKey, accessKey));
+    } else {
+      const userKey = taskUsers.get(row.userId);
+      if (userKey) dependencyEdges.push(destructiveResourceEdge(userKey, accessKey));
+    }
+  }
+  return deepFreezeExact({
+    cores: deepFreezeExact(cores),
+    dependencyEdges: deepFreezeExact(dependencyEdges),
+  });
+}
+
+function registerTerminalResourcesAfterLedgerAppend(state, delta) {
+  for (const core of delta.cores) {
+    invariant(TERMINAL_RESOURCE_KINDS.has(core.kind), "post-append terminal core kind drift");
+    const semantic = core.kind + ":" + core.identifier[0];
+    invariant(
+      !state.resourceKeys.has(semantic),
+      "post-append terminal semantic was already assigned"
+    );
+    state.resourceKeys.set(semantic, core.resourceKey);
+  }
+}
+
+function assertExactFinalResourceDependencyGraph(state, finalLedger, dependencyGraph) {
+  invariant(
+    Array.isArray(finalLedger) && finalLedger.length > 0,
+    "final dependency ledger is absent"
+  );
+  const records = new Map(finalLedger.map((record) => [record.resourceKey, record]));
+  invariant(records.size === finalLedger.length, "final dependency ledger repeats a key");
+  exactOwnKeys(
+    dependencyGraph,
+    finalLedger.map(({ resourceKey }) => resourceKey),
+    "final dependency graph",
+    { plain: true }
+  );
+  const expected = new Map(finalLedger.map(({ resourceKey }) => [resourceKey, new Set()]));
+  const semanticByResourceKey = new Map(
+    [...state.resourceKeys.entries()].map(([semantic, resourceKey]) => [resourceKey, semantic])
+  );
+  const freshOwnerBySemantic = new Map(
+    (state.currentResourceOwnerProof ?? []).map(({ semantic, owner }) => [semantic, owner])
+  );
+  const addKeys = (parentKey, childKey, label) => {
+    invariant(
+      typeof parentKey === "string" &&
+        typeof childKey === "string" &&
+        expected.has(parentKey) &&
+        expected.has(childKey) &&
+        parentKey !== childKey,
+      label + " dependency endpoint drift"
+    );
+    expected.get(parentKey).add(childKey);
+  };
+  const addSemanticsWhenPresent = (parentSemantic, childSemantic, label) => {
+    const parentKey = state.resourceKeys.get(parentSemantic);
+    const childKey = state.resourceKeys.get(childSemantic);
+    if (parentKey === undefined || childKey === undefined) return;
+    addKeys(parentKey, childKey, label);
+  };
+  for (const [parentSemantic, childSemantic] of [
+    ["content-type-editable", "screen"],
+    ["content-type-editable", "retry-screen"],
+    ["content-type-editable", "editable-entry"],
+    ["content-type-related-a", "related-entry-a1"],
+    ["content-type-related-a", "related-entry-a2"],
+    ["content-type-related-b", "related-entry-b1"],
+    ["content-type-related-b", "related-entry-b2"],
+    ["content-type-related-failure", "related-entry-failure1"],
+    ["screen", "presentation-override"],
+    ["editable-entry", "presentation-override"],
+    ["media", "presentation-override"],
+    ["user-a", "setting-user-a"],
+    ["user-b", "setting-user-b"],
+  ]) {
+    addSemanticsWhenPresent(parentSemantic, childSemantic, "structural");
+  }
+  const taskUserKeyById = new Map();
+  for (const [idKey, semantic] of [
+    ["userA", "user-a"],
+    ["userB", "user-b"],
+  ]) {
+    const id = state.ids[idKey];
+    const key = state.resourceKeys.get(semantic);
+    if (typeof id === "string" && typeof key === "string") taskUserKeyById.set(id, key);
+  }
+  const taskSessionKeyById = new Map(
+    finalLedger
+      .filter(({ kind }) => kind === "session-task")
+      .map((record) => [record.identifier[0], record.resourceKey])
+  );
+  const nullableOwnerKinds = new Set([
+    "entry-editable",
+    "entry-related",
+    "media-row-key",
+    "presentation-override",
+    "session-task",
+    "audit-log-task-ua",
+    "access-log-task-ua",
+  ]);
+  for (const record of finalLedger) {
+    if (record.kind === "setting-user-a" || record.kind === "setting-user-b") {
+      invariant(
+        record.ownerSubjectIdentifier === record.identifier[0],
+        "setting owner correlation drift"
+      );
+      continue;
+    }
+    invariant(
+      nullableOwnerKinds.has(record.kind) || record.ownerSubjectIdentifier === null,
+      "non-owner resource carries an owner correlation"
+    );
+    const semantic = semanticByResourceKey.get(record.resourceKey);
+    const authoritativeOwner = freshOwnerBySemantic.has(semantic)
+      ? freshOwnerBySemantic.get(semantic)
+      : record.ownerSubjectIdentifier;
+    let parentKey = null;
+    if (record.kind === "access-log-task-ua") {
+      parentKey =
+        taskSessionKeyById.get(authoritativeOwner) ??
+        taskUserKeyById.get(authoritativeOwner) ??
+        null;
+    } else if (
+      record.kind === "entry-editable" ||
+      record.kind === "entry-related" ||
+      record.kind === "media-row-key" ||
+      record.kind === "presentation-override" ||
+      record.kind === "session-task" ||
+      record.kind === "audit-log-task-ua"
+    ) {
+      parentKey = taskUserKeyById.get(authoritativeOwner) ?? null;
+    }
+    if (parentKey !== null) addKeys(parentKey, record.resourceKey, "owner-correlated");
+  }
+  for (const record of finalLedger) {
+    const expectedChildren = [...expected.get(record.resourceKey)].sort();
+    invariant(
+      deepEqualJson(dependencyGraph[record.resourceKey], expectedChildren) &&
+        deepEqualJson(record.dependsOn, expectedChildren),
+      "final dependency graph is not the exact structural/owner graph"
+    );
+  }
+  return true;
+}
+
+async function refreshCurrentSyntheticOwnerDependencyEdges(state, resourceLedger) {
+  const entryKinds = [
+    "editable-entry",
+    "related-entry-a1",
+    "related-entry-a2",
+    "related-entry-b1",
+    "related-entry-b2",
+    "related-entry-failure1",
+  ];
+  const entryIds = entryKinds.map((kind) => state.fixtureIds.get(kind));
+  invariant(
+    entryIds.every((id) => typeof id === "string"),
+    "owner refresh entry inventory is incomplete"
+  );
+  const input = {
+    entryIds,
+    mediaId: state.fixtureIds.get("media"),
+    override: {
+      screenId: state.fixtureIds.get("screen"),
+      entryId: state.fixtureIds.get("editable-entry"),
+      blockId: state.plan.fixtureBlueprint.screen.blockIds.raceImage,
+      propPath: "mediaAssetId",
+    },
+  };
+  const proof = await runBunBridgeOperation(state, "resource/current-owner-exact", input);
+  exactOwnKeys(proof, ["entries", "media", "override"], "current resource owner proof", {
+    plain: true,
+  });
+  invariant(
+    Array.isArray(proof.entries) && proof.entries.length === 6,
+    "current entry owner proof drift"
+  );
+  const semanticById = new Map(entryKinds.map((kind) => [state.fixtureIds.get(kind), kind]));
+  const owned = [
+    ...proof.entries.map((row) => ({
+      semantic: semanticById.get(row.id),
+      owner: row.ownerSubjectIdentifier,
+    })),
+    { semantic: "media", owner: proof.media.ownerSubjectIdentifier },
+    { semantic: "presentation-override", owner: proof.override.ownerSubjectIdentifier },
+  ];
+  const dependencyEdges = [];
+  const appendedCorrelations = [];
+  for (const row of owned) {
+    invariant(
+      typeof row.semantic === "string" && (row.owner === null || typeof row.owner === "string"),
+      "current owner correlation drift"
+    );
+    const userSemantic =
+      row.owner === state.ids.userA ? "user-a" : row.owner === state.ids.userB ? "user-b" : null;
+    if (userSemantic === null) continue;
+    const correlation = userSemantic + "\0" + row.semantic;
+    if (state.syntheticOwnerEdgeKeys.has(correlation)) continue;
+    const parentKey = state.resourceKeys.get(userSemantic);
+    const childKey = state.resourceKeys.get(row.semantic);
+    invariant(parentKey && childKey, "current owner dependency endpoint is absent");
+    dependencyEdges.push(destructiveResourceEdge(parentKey, childKey));
+    appendedCorrelations.push(correlation);
+  }
+  resourceLedger.appendValidatedDelta(
+    deepFreezeExact({
+      cores: deepFreezeExact([]),
+      dependencyEdges: deepFreezeExact(dependencyEdges),
+    })
+  );
+  for (const correlation of appendedCorrelations) state.syntheticOwnerEdgeKeys.add(correlation);
+  invariant(
+    state.currentResourceOwnerProof === null,
+    "current resource owner proof was assigned twice"
+  );
+  state.currentResourceOwnerProof = deepFreezeExact(owned);
+  return deepFreezeExact(owned);
+}
+
+function legacySubjectForResource(state, record) {
+  const id = record.identifier[0];
+  const matched = [...state.fixtureIds.entries()].find(([, candidate]) => candidate === id);
+  invariant(matched !== undefined, "persistent resource has no exact fixture identity mapping");
+  return {
+    kind: matched[0],
+    id,
+    storageKey: record.kind === "media-row-key" ? record.identifier[1] : null,
+  };
+}
+
+function cleanupRuntimeReceipt(
+  state,
+  operation,
+  operationDescriptor,
+  record,
+  output,
+  observedBytes = null
+) {
+  invariant(
+    observedBytes === null ||
+      (Buffer.isBuffer(observedBytes) && observedBytes.length <= MAX_STREAM_BYTES),
+    "cleanup authoritative observation bytes drift"
+  );
+  const subjectKind = record?.kind ?? null;
+  const subjectIdentifier =
+    record === null || record === undefined
+      ? null
+      : record.identifier.length === 1
+        ? record.identifier[0]
+        : lengthPrefixedTuple(record.identifier);
+  const authoritativeBytes = Buffer.from(
+    canonicalJson({
+      operation,
+      operationDescriptor,
+      subjectKind,
+      subjectIdentifier,
+      observedBytesSha256: observedBytes === null ? null : hashBytes(observedBytes),
+      output,
+    }) + "\n"
+  );
+  const receipt = deepFreezeExact({
+    runnerVersion: ORCHESTRATOR_EVIDENCE_RUNNER_VERSION,
+    sequence: ++state.runtimeReceiptSequence,
+    operation,
+    operationDescriptor,
+    status: 0,
+    evidenceSha256: hashBytes(authoritativeBytes),
+    subjectKind,
+    subjectIdentifier,
+    sanitizedOutput: canonicalJson(output),
+  });
+  state.assertSafeEvidence(receipt, "TASK-540 cleanup runtime receipt");
+  return receipt;
+}
+
+async function proveContentRoutesBaselineIdentity(state, label) {
+  const current = await runBunBridgeOperation(state, "resource/content-routes-exact", {});
+  invariant(
+    deepEqualJson(current, state.contentRoutesBaseline),
+    label + " content routes baseline drift"
+  );
+  invariant(
+    !canonicalJson(current).includes(state.plan.prefix),
+    label + " content routes contains a task slug"
+  );
+  state.contentRoutesDeleteProofs += 1;
+  return true;
+}
+
+function authoritativeProofRuntimeReceipt(
+  state,
+  { operation, operationDescriptor, evidenceSha256, subjectKind, subjectIdentifier, output }
+) {
+  invariant(
+    typeof evidenceSha256 === "string" && /^[a-f0-9]{64}$/u.test(evidenceSha256),
+    "authoritative runtime proof hash drift"
+  );
+  const receipt = deepFreezeExact({
+    runnerVersion: ORCHESTRATOR_EVIDENCE_RUNNER_VERSION,
+    sequence: ++state.runtimeReceiptSequence,
+    operation,
+    operationDescriptor,
+    status: 0,
+    evidenceSha256,
+    subjectKind,
+    subjectIdentifier,
+    sanitizedOutput: canonicalJson(output),
+  });
+  state.assertSafeEvidence(receipt, "TASK-540 authoritative runtime proof receipt");
+  return receipt;
+}
+
+function createCleanupPhaseScheduler(failures, phaseTrace) {
+  invariant(
+    Array.isArray(failures) && Array.isArray(phaseTrace) && phaseTrace.length === 0,
+    "cleanup phase scheduler inputs are invalid"
+  );
+  let nextPhase = 1;
+  let sealed = false;
+  return Object.freeze({
+    async run(phase, operation) {
+      invariant(
+        !sealed && phase === nextPhase && phase >= 1 && phase <= 10,
+        "cleanup phase order drift"
+      );
+      invariant(typeof operation === "function", "cleanup phase operation is absent");
+      let completed = false;
+      try {
+        await operation();
+        completed = true;
+      } catch (error) {
+        failures.push(error);
+      }
+      phaseTrace.push(deepFreezeExact({ phase, completed }));
+      nextPhase += 1;
+    },
+    seal() {
+      invariant(
+        !sealed && nextPhase === 11 && phaseTrace.length === 10,
+        "cleanup phase scheduler ended early"
+      );
+      sealed = true;
+      return deepFreezeExact([...phaseTrace]);
+    },
+  });
+}
+
+async function runIndependentCleanupStepsNeverSkip(steps, label) {
+  invariant(
+    Array.isArray(steps) && steps.length > 0 && steps.every((step) => typeof step === "function"),
+    label + " cleanup step registry drift"
+  );
+  const failures = [];
+  for (const step of steps) {
+    try {
+      await step();
+    } catch (error) {
+      failures.push(error);
+    }
+  }
+  if (failures.length > 0) throw new AggregateError(failures, label + " cleanup branches failed");
+}
+
+async function executeResourceCleanupOperation(state, record, operationKind) {
+  invariant(
+    CLEANUP_OPERATION_KINDS.includes(operationKind),
+    "resource cleanup operation is invalid"
+  );
+  let output;
+  let observedBytes = null;
+  const slot =
+    operationKind === "provenance"
+      ? "provenance"
+      : operationKind === "delete"
+        ? "cleanup"
+        : "absence";
+  const participation = resourceBunParticipationSlot(record, slot);
+  invariant(participation !== null, "cleanup attempted a null resource operation slot");
+  if (
+    participation.mode === "bound-runtime-bridge" ||
+    participation.mode === "node+bound-runtime-bridge"
+  ) {
+    invariant(
+      operationKind === "provenance" &&
+        BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS[participation.operationId] !== undefined,
+      "bound runtime resource cleanup receipt drift"
+    );
+    output = { boundRuntimeOperationId: participation.operationId, alreadyExecuted: true };
+  } else if (participation.mode === "bun-one-shot") {
+    output = await runBoundResourceBunOperation(state, record, operationKind);
+    if (record.kind === "presentation-override" && operationKind === "delete")
+      state.overridesCleared = true;
+  } else {
+    invariant(
+      participation.mode === "node-local" || participation.mode === "node+bun-one-shot",
+      "resource cleanup participation mode drift"
+    );
+    if (record.kind === "presentation-override") {
+      invariant(
+        operationKind === "provenance" && participation.mode === "node-local",
+        "presentation override Node operation drift"
+      );
+      const [screenId, entryId, blockId, propPath] = record.identifier;
+      const response = await adminApiRequest(
+        state,
+        bootstrapApiSession(state),
+        "GET",
+        "/custom-screens/" +
+          encodeURIComponent(screenId) +
+          "/entries/" +
+          encodeURIComponent(entryId) +
+          "/overrides",
+        { csrf: false, retainAuthoritativeBytes: true }
+      );
+      const matches = response.value?.overrides?.filter(
+        (row) =>
+          row.screenId === screenId &&
+          row.entryId === entryId &&
+          row.blockId === blockId &&
+          row.propPath === propPath
+      );
+      invariant(
+        Array.isArray(matches) && matches.length === 1,
+        "presentation override Node provenance drift"
+      );
+      output = { present: true };
+      observedBytes = response.authoritativeBytes;
+    } else {
+      const subject = legacySubjectForResource(state, record);
+      if (operationKind === "provenance") {
+        invariant(
+          state.fixtureIds.get(subject.kind) === subject.id,
+          subject.kind + " cleanup provenance drift"
+        );
+        const proof = await proveCleanupSubjectPresent(state, subject);
+        output = proof.output;
+        observedBytes = proof.authoritativeBytes;
+      } else if (operationKind === "delete") {
+        if (record.kind === "content-type") {
+          await proveContentRoutesBaselineIdentity(state, "before content-type delete");
+        }
+        const deleted = await deleteCleanupSubject(state, subject);
+        observedBytes = deleted.authoritativeBytes;
+        output = { deleted: true };
+      } else {
+        const absent = await proveCleanupSubjectAbsent(state, subject);
+        observedBytes = absent.authoritativeBytes;
+        output = { absent: true };
+      }
+    }
+    if (participation.mode === "node+bun-one-shot") {
+      const dbProof = await runBoundResourceBunOperation(state, record, operationKind);
+      output = { node: output, bun: dbProof };
+    }
+  }
+  if (operationKind === "absence" && TERMINAL_RESOURCE_KINDS.has(record.kind)) {
+    state.terminalDeletedCounts[record.kind] += 1;
+  }
+  return cleanupRuntimeReceipt(
+    state,
+    "cleanup-" + operationKind,
+    record[
+      operationKind === "provenance"
+        ? "provenanceOpId"
+        : operationKind === "delete"
+          ? "cleanupOpId"
+          : "absenceOpId"
+    ],
+    record,
+    output,
+    observedBytes
+  );
+}
+
+function finalRecordByKey(finalLedger) {
+  return new Map(finalLedger.map((record) => [record.resourceKey, record]));
+}
+
+async function executeCleanupPlanStage(
+  state,
+  actionPlan,
+  finalPlan,
+  allowedKinds,
+  executeOperation = executeResourceCleanupOperation
+) {
+  invariant(typeof executeOperation === "function", "cleanup stage operation authority is absent");
+  const records = finalRecordByKey(finalPlan.ledger);
+  const receipts = [];
+  const failures = [];
+  for (const resourceKey of actionPlan.resourceKeys) {
+    const record = records.get(resourceKey);
+    if (record === undefined) {
+      failures.push(new Error("cleanup stage resource drift"));
+      state.cleanupFailedKeys.add(resourceKey);
+      continue;
+    }
+    if (!allowedKinds.has(record.kind)) continue;
+    const childKeys = finalPlan.dependencyGraph[resourceKey];
+    if (
+      finalPlan.failureDiscoveryBlockedParentKeys.includes(resourceKey) ||
+      childKeys.some(
+        (childKey) =>
+          !state.cleanupAbsenceKeys.has(childKey) || state.cleanupFailedKeys.has(childKey)
+      )
+    ) {
+      failures.push(new Error("destructive parent was blocked by an unproved child"));
+      state.cleanupFailedKeys.add(resourceKey);
+      continue;
+    }
+    let provenancePassed = false;
+    try {
+      receipts.push(await executeOperation(state, record, "provenance"));
+      provenancePassed = true;
+    } catch (error) {
+      failures.push(error);
+      state.cleanupFailedKeys.add(resourceKey);
+    }
+    if (!provenancePassed) continue;
+    let deletePassed = false;
+    try {
+      receipts.push(await executeOperation(state, record, "delete"));
+      deletePassed = true;
+    } catch (error) {
+      failures.push(error);
+      state.cleanupFailedKeys.add(resourceKey);
+    }
+    try {
+      receipts.push(await executeOperation(state, record, "absence"));
+      state.cleanupAbsenceKeys.add(resourceKey);
+    } catch (error) {
+      failures.push(error);
+      state.cleanupFailedKeys.add(resourceKey);
+    }
+    if (!deletePassed) {
+      state.cleanupFailedKeys.add(resourceKey);
+    }
+  }
+  return deepFreezeExact({
+    receipts: deepFreezeExact(receipts),
+    failures: deepFreezeExact(failures),
+  });
+}
+
+async function restoreBootstrapLoginState(state) {
+  const authority = PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY.get(state);
+  invariant(authority, "bootstrap restoration authority is absent");
+  if (authority.restorationPromise !== null) return authority.restorationPromise;
+  invariant(!authority.restorationStarted, "bootstrap restoration authority drift");
+  authority.restorationStarted = true;
+  authority.restorationPromise = (async () => {
+    let reconciliationError = null;
+    let restoreError = null;
+    let restored = null;
+    if (!authority.reconciliationSealed) {
+      try {
+        await reconcileBootstrapLoginAuthority(state, { restoration: true });
+      } catch (error) {
+        reconciliationError = error;
+      }
+    }
+    try {
+      restored = await runBunBridgeOperation(state, "resource/bootstrap-cas-restore", {
+        baseline: state.bootstrapBaseline,
+        newestOwnedPair: authority.newestOwnedPair,
+        userId: state.bootstrapBaseline.id,
+      });
+      exactOwnKeys(
+        restored,
+        [
+          "afterCommitByteIdentical",
+          "completeRowByteIdentical",
+          "conditionalUpdateAffectedOne",
+          "inTransactionByteIdentical",
+          "restored",
+          "roleTuplesByteIdentical",
+          "rolesInTransactionByteIdentical",
+          "rolesShareLocked",
+          "transactionLocked",
+        ],
+        "bootstrap CAS restore proof",
+        { plain: true }
+      );
+      invariant(
+        Object.values(restored).every((value) => value === true),
+        "bootstrap CAS restore proof failed"
+      );
+      authority.restorationProof = deepFreezeExact(restored);
+      state.bootstrapRestored = true;
+    } catch (error) {
+      restoreError = error;
+    }
+    const failures = [reconciliationError, restoreError].filter((error) => error !== null);
+    if (failures.length > 0) {
+      throw failures.length === 1
+        ? failures[0]
+        : new AggregateError(
+            failures,
+            "bootstrap late reconciliation and mandatory CAS restoration failed"
+          );
+    }
+    return restored;
+  })();
+  return authority.restorationPromise;
+}
+
+function cleanupPlanView(ledger, blockedRoots = []) {
+  return deepFreezeExact({
+    ledger,
+    dependencyGraph: deepFreezeExact(
+      Object.fromEntries(ledger.map(({ resourceKey, dependsOn }) => [resourceKey, dependsOn]))
+    ),
+    failureDiscoveryBlockedParentKeys: deepFreezeExact([...blockedRoots]),
+  });
+}
+
+async function validateSuccessfulScreenshotSet(state) {
+  invariant(
+    state.screenshots.size === state.plan.requiredScreenshotPaths.length,
+    "screenshot acquisition count drift"
+  );
+  const identities = new Set();
+  const hashes = new Set();
+  const paths = [];
+  const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  for (const relative of state.plan.requiredScreenshotPaths) {
+    const record = state.screenshots.get(relative);
+    invariant(record !== undefined, "required screenshot identity is absent");
+    const expectedIdentity = Object.freeze({
+      dev: record.dev,
+      ino: record.ino,
+      type: "file",
+      mode: record.mode,
+      size: record.size,
+    });
+    const bytes = await readOwnedRegularFileNoFollow(
+      record.absolute,
+      expectedIdentity,
+      MAX_STREAM_BYTES
+    );
+    invariant(
+      bytes.subarray(0, pngSignature.length).equals(pngSignature),
+      "screenshot PNG signature drift"
+    );
+    invariant(hashBytes(bytes) === record.sha256, "screenshot content identity drift");
+    const identityKey = record.dev + ":" + record.ino;
+    invariant(
+      !identities.has(identityKey) && !hashes.has(record.sha256),
+      "screenshot identity/hash is not unique"
+    );
+    identities.add(identityKey);
+    hashes.add(record.sha256);
+    paths.push(
+      deepFreezeExact({
+        path: relative,
+        size: record.size,
+        sha256: record.sha256,
+        dev: record.dev,
+        ino: record.ino,
+      })
+    );
+  }
+  return deepFreezeExact(paths);
+}
+
+async function proveFinalStorageAndDatabaseBaselines(state, onPoll = null) {
+  invariant(
+    onPoll === null || typeof onPoll === "function",
+    "post-delete task traffic poll authority drift"
+  );
+  const input = {
+    userAgents: taskUserAgents(state),
+  };
+  const proof = await runBunBridgeOperation(state, "resource/storage-final-preflight", input);
+  exactOwnKeys(
+    proof,
+    ["bootstrap", "contentRoutes", "local", "setupComplete", "storageRoot", "taskTrafficBaseline"],
+    "final storage/database proof poll 1",
+    { plain: true }
+  );
+  exactOwnKeys(
+    proof.taskTrafficBaseline,
+    ["accessIds", "auditIds", "sessionIds"],
+    "final task traffic poll 1",
+    { plain: true }
+  );
+  if (onPoll !== null) {
+    await onPoll(1, {
+      audit: proof.taskTrafficBaseline.auditIds,
+      access: proof.taskTrafficBaseline.accessIds,
+      session: proof.taskTrafficBaseline.sessionIds,
+    });
+  }
+  await delayMilliseconds(PROCESS_ABSENCE_STABILITY_MS);
+  const secondProof = await runBunBridgeOperation(state, "resource/storage-final-preflight", input);
+  exactOwnKeys(
+    secondProof,
+    ["bootstrap", "contentRoutes", "local", "setupComplete", "storageRoot", "taskTrafficBaseline"],
+    "final storage/database proof poll 2",
+    { plain: true }
+  );
+  exactOwnKeys(
+    secondProof.taskTrafficBaseline,
+    ["accessIds", "auditIds", "sessionIds"],
+    "final task traffic poll 2",
+    { plain: true }
+  );
+  if (onPoll !== null) {
+    await onPoll(2, {
+      audit: secondProof.taskTrafficBaseline.auditIds,
+      access: secondProof.taskTrafficBaseline.accessIds,
+      session: secondProof.taskTrafficBaseline.sessionIds,
+    });
+  }
+  invariant(
+    deepEqualJson(proof, secondProof) &&
+      proof.local === true &&
+      proof.setupComplete === true &&
+      proof.storageRoot === state.storageRootBaseline &&
+      deepEqualJson(proof.bootstrap, state.bootstrapBaseline) &&
+      deepEqualJson(proof.contentRoutes, state.contentRoutesBaseline) &&
+      deepEqualJson(proof.taskTrafficBaseline, state.taskTrafficBaseline),
+    "final storage/database baseline drift"
+  );
+  const contentRoutesAfterCleanup = await runBunBridgeOperation(
+    state,
+    "resource/content-routes-exact",
+    {}
+  );
+  invariant(
+    deepEqualJson(contentRoutesAfterCleanup, state.contentRoutesBaseline),
+    "final content routes baseline drift"
+  );
+  invariant(
+    !canonicalJson(contentRoutesAfterCleanup).includes(state.plan.prefix),
+    "final content routes contains a task slug"
+  );
+  const finalStorageManifest = await scanExactLocalStorageManifest(state);
+  invariant(
+    deepEqualJson(finalStorageManifest, state.storageBaselineManifest),
+    "final storage manifest differs from preflight"
+  );
+  const persistentLedger =
+    state.coreCleanupContext.resourceLedger.compileResourceRecords("persistent");
+  const settingRecords = persistentLedger.filter(
+    ({ kind }) => kind === "setting-user-a" || kind === "setting-user-b"
+  );
+  const mediaRecord = persistentLedger.find(({ kind }) => kind === "media-row-key");
+  invariant(
+    settingRecords.length === 2 &&
+      settingRecords.every(({ resourceKey }) => state.cleanupAbsenceKeys.has(resourceKey)) &&
+      mediaRecord !== undefined &&
+      state.cleanupAbsenceKeys.has(mediaRecord.resourceKey),
+    "final setting/media absence proof drift"
+  );
+  invariant(
+    state.contentRoutesDeleteProofs === 4,
+    "content routes was not proved before every content-type delete"
+  );
+  invariant(state.taskTrafficDeltaCounts !== null, "task traffic delta counts are absent");
+  const deletedCounts = {
+    audit: state.terminalDeletedCounts["audit-log-task-ua"],
+    access: state.terminalDeletedCounts["access-log-task-ua"],
+    session: state.terminalDeletedCounts["session-task"],
+  };
+  invariant(
+    deepEqualJson(deletedCounts, state.taskTrafficDeltaCounts),
+    "task traffic deleted/delta count drift"
+  );
+  return deepFreezeExact({
+    bootstrapByteIdentical: true,
+    contentRoutesByteIdentical: true,
+    storageRootByteIdentical: true,
+    storageManifestByteIdentical: true,
+    taskTrafficByteIdentical: true,
+    settingsAbsent: true,
+    acquiredMediaAbsent: true,
+    postDeleteStablePolls: 2,
+  });
+}
+
+function buildCanonicalFinalization(
+  state,
+  screenshots,
+  phaseProofReceipts,
+  phaseTrace,
+  baselineProof
+) {
+  invariant(
+    state.apiContextsClosedProof !== null &&
+      state.privateRootFinalization !== null &&
+      state.hostFinalization !== null &&
+      state.taskTrafficDeltaCounts !== null &&
+      state.missingMediaSetupProof !== null &&
+      state.missingMediaCleanupProof !== null &&
+      state.bootstrapRestored === true,
+    "canonical finalization source is incomplete"
+  );
+  invariant(
+    deepEqualJson(state.apiContextsClosedProof.inputContextNames, ["bootstrap", "user-a"]) &&
+      state.apiContextsClosedProof.allAcquiredContextsAbsent === true &&
+      state.apiContextsClosedProof.registryCleared === true &&
+      state.apiContextsClosedProof.bootstrap?.acquired === true &&
+      state.apiContextsClosedProof.bootstrap?.disposeCalled === true &&
+      state.apiContextsClosedProof.bootstrap?.capabilityAbsent === true &&
+      state.apiContextsClosedProof.userA?.acquired === true &&
+      state.apiContextsClosedProof.userA?.disposeCalled === true &&
+      state.apiContextsClosedProof.userA?.capabilityAbsent === true,
+    "canonical API-context finalization drift"
+  );
+  const missingCleanupReceipt = phaseProofReceipts.find(
+    ({ operation }) => operation === "media-race-missing-absence-cleanup"
+  );
+  invariant(
+    Number.isSafeInteger(state.missingMediaSetupReceiptSequence) &&
+      missingCleanupReceipt !== undefined &&
+      state.missingMediaSetupProof.evidenceSha256 !== state.missingMediaCleanupProof.evidenceSha256,
+    "missing media receipt finalization drift"
+  );
+  const deletedCounts = deepFreezeExact({
+    audit: state.terminalDeletedCounts["audit-log-task-ua"],
+    access: state.terminalDeletedCounts["access-log-task-ua"],
+    session: state.terminalDeletedCounts["session-task"],
+  });
+  const finalization = deepFreezeExact({
+    apiContexts: deepFreezeExact({
+      names: deepFreezeExact(["bootstrap", "user-a"]),
+      closed: true,
+      absenceProven: true,
+    }),
+    browserSession: deepFreezeExact({
+      name: SESSION_NAME,
+      closeReceiptSequence: 413,
+      absenceReceiptSequence: 414,
+      terminalListSha256: state.terminalSessionAbsenceSha256,
+      closed: true,
+      absent: true,
+    }),
+    privateRoot: state.privateRootFinalization,
+    host: state.hostFinalization,
+    bootstrap: deepFreezeExact({
+      id: state.bootstrapBaseline.id,
+      setupCompletedBeforeStart: true,
+      casRestored: true,
+      completeRowByteIdentical: baselineProof.bootstrapByteIdentical,
+      roleTuplesByteIdentical: baselineProof.bootstrapByteIdentical,
+    }),
+    contentRoutes: deepFreezeExact({
+      key: "site.contentRoutes",
+      taskSlugsAbsentAtBaseline: true,
+      byteIdenticalBeforeEachDelete: state.contentRoutesDeleteProofs === 4,
+      byteIdenticalAfterCleanup: baselineProof.contentRoutesByteIdentical,
+    }),
+    settings: deepFreezeExact({ userAAbsent: true, userBAbsent: true }),
+    storage: deepFreezeExact({
+      driver: "local",
+      rootIdentityByteIdentical: baselineProof.storageRootByteIdentical,
+      baselineManifestByteIdentical: baselineProof.storageManifestByteIdentical,
+      acquiredMediaRowAbsent: baselineProof.acquiredMediaAbsent,
+      acquiredStorageKeyAbsent: baselineProof.acquiredMediaAbsent,
+      missingMedia: deepFreezeExact({
+        id: state.plan.fixtureBlueprint.media.missingBoundMediaId,
+        rowCount: 0,
+        storageMatches: 0,
+        setupReceiptSequence: state.missingMediaSetupReceiptSequence,
+        cleanupReceiptSequence: missingCleanupReceipt.sequence,
+      }),
+    }),
+    taskTraffic: deepFreezeExact({
+      baselineCounts: deepFreezeExact({
+        audit: state.taskTrafficBaseline.auditIds.length,
+        access: state.taskTrafficBaseline.accessIds.length,
+        session: state.taskTrafficBaseline.sessionIds.length,
+      }),
+      deltaCounts: state.taskTrafficDeltaCounts,
+      deletedCounts,
+      stablePollsBeforeDelete: state.taskTrafficPollCount,
+      stablePollsAfterDelete: baselineProof.postDeleteStablePolls,
+      returnedToBaseline: baselineProof.taskTrafficByteIdentical,
+    }),
+    screenshots,
+    phaseProofReceipts: deepFreezeExact(phaseProofReceipts),
+    phaseTrace: deepFreezeExact(phaseTrace),
+  });
+  exactOwnKeys(
+    finalization,
+    [
+      "apiContexts",
+      "browserSession",
+      "privateRoot",
+      "host",
+      "bootstrap",
+      "contentRoutes",
+      "settings",
+      "storage",
+      "taskTraffic",
+      "screenshots",
+      "phaseProofReceipts",
+      "phaseTrace",
+    ],
+    "canonical finalization",
+    { plain: true }
+  );
+  invariant(
+    finalization.browserSession.terminalListSha256 ===
+      hashBytes(Buffer.from("  (no browsers)\n")) &&
+      phaseTrace.length === 10 &&
+      phaseTrace.every(({ phase, completed }, index) => phase === index + 1 && completed === true),
+    "canonical finalization terminal proof drift"
+  );
+  return finalization;
+}
+
+async function cleanupConstructionStateOnce(state) {
+  if (state.cleanupPromise) return state.cleanupPromise;
+  state.cleanupPromise = (async () => {
+    const failures = [];
+    const attempt = async (callback) => {
+      try {
+        await callback();
+      } catch (error) {
+        failures.push(error);
+      }
+    };
+    if (state.browserMayExist) {
+      await attempt(() => releaseFailureRoutesIfPresent(state));
+      await attempt(() => closeBrowserIfPresent(state));
+      await attempt(() => proveBrowserSessionAbsent(state));
+    }
+    const ephemeralContexts = privateEphemeralApiContextRegistry(state);
+    for (const [key, record] of [...ephemeralContexts.entries()].sort(([left], [right]) =>
+      left.localeCompare(right)
+    )) {
+      await attempt(async () => {
+        await disposeOwnedApiRequestContextAndProveAbsent(record, key);
+        const lifecycleError = retainedApiLifecycleFailure(record, key);
+        if (lifecycleError !== null) throw lifecycleError;
+      });
+      if (record.disposeProof !== null) ephemeralContexts.delete(key);
+    }
+    const privateContexts = privateApiContextRegistry(state);
+    for (const [key, record] of [...privateContexts.entries()].sort(([left], [right]) =>
+      left.localeCompare(right)
+    )) {
+      await attempt(async () => {
+        await disposeApiRequestContextAndProveAbsent(state, record.capability, key);
+        const lifecycleError = retainedApiLifecycleFailure(record, key);
+        if (lifecycleError !== null) throw lifecycleError;
+      });
+      if (record.disposeProof !== null) {
+        privateContexts.delete(key);
+        state.sessions.delete(key);
+      }
+    }
+    await attempt(() => removeAcquiredScreenshots(state));
+    await attempt(() => removePrivateWorkspaceLedger(state.browserWorkspace.ledger));
+    await attempt(() => stopOwnedHost(state));
+    state.cleanupFailures = failures.length;
+    return deepFreezeExact({ absenceProven: failures.length === 0 });
+  })();
+  return state.cleanupPromise;
+}
+
+async function createRealCapabilities(
+  { root, assertSafeEvidence, snapshotRepository },
+  plan,
+  constructionCleanupAuthority
+) {
+  invariant((await realpath(root)) === root, "repository root is not canonical");
+  await assertNoSymlinkAncestors(root);
+  const rootInfo = await lstat(root);
+  invariant(rootInfo.isDirectory() && !rootInfo.isSymbolicLink(), "repository root identity drift");
+  const envPath = path.join(root, ".env");
+  const envIdentity = await readStableArtifactIdentity(envPath, { expectedType: "file" });
+  const repoEnvironment = await readStrictRepoEnvironment(root, envIdentity);
+  const browserWorkspace = await createPrivateBrowserWorkspace(
+    root,
+    plan,
+    repoEnvironment,
+    constructionCleanupAuthority
+  );
+  const bundledPlaywright = await resolveValidatedBundledPlaywrightRequest(
+    browserWorkspace.environment.PATH
+  );
+  const bundledBun = await resolveValidatedBunExecutable(browserWorkspace.environment.PATH, root);
+  const state = {
+    root,
+    plan,
+    assertSafeEvidence,
+    repoEnvironment,
+    hostEnvironment: buildExactHostEnvironment(repoEnvironment),
+    browserWorkspace,
+    playwrightRequest: bundledPlaywright.request,
+    playwrightRequestProof: deepFreezeExact({
+      cliRealPath: bundledPlaywright.cliRealPath,
+      entryPath: bundledPlaywright.entryPath,
+      version: bundledPlaywright.version,
+    }),
+    host: null,
+    hostFinalization: null,
+    sessions: new Map(),
+    earlyApiSessionTuples: new Map(),
+    ids: Object.create(null),
+    fixtureIds: new Map(),
+    contentTypeBodies: Object.create(null),
+    entryBodies: Object.create(null),
+    editableContentTypeDetail: null,
+    editableEntryBody: null,
+    mediaRecord: null,
+    mediaStorageOwnership: null,
+    mediaCanonicalSafeUrl: null,
+    mediaRaceProjection: null,
+    mediaRaceReceiptHash: null,
+    mediaRaceAdminEvidence: {
+      screen: null,
+      entry: null,
+      media: null,
+      override: null,
+      retryOverride: null,
+    },
+    missingMediaSetupProof: null,
+    missingMediaCleanupProof: null,
+    missingMediaSetupReceiptSequence: null,
+    screenBodies: Object.create(null),
+    latestUnsafeDefinition: null,
+    expectedOverrides: [],
+    overridesCleared: false,
+    browserOpened: false,
+    browserClosed: false,
+    browserMayExist: false,
+    privateRootFinalization: null,
+    terminalSessionAbsenceSha256: null,
+    screenshots: new Map(),
+    deletedSubjects: new Set(),
+    cleanupPromise: null,
+    cleanupFailures: 0,
+    taskTrafficMayExist: false,
+    bootstrapBaseline: null,
+    bootstrapRestored: false,
+    contentRoutesBaseline: null,
+    storageRootBaseline: null,
+    taskTrafficBaseline: null,
+    taskTrafficDeltaCounts: null,
+    taskTrafficPollCount: 0,
+    terminalDeletedCounts: {
+      "audit-log-task-ua": 0,
+      "access-log-task-ua": 0,
+      "session-task": 0,
+    },
+    storageRootIdentity: null,
+    storageRootRealPath: null,
+    storageBaselineManifest: null,
+    contentRoutesDeleteProofs: 0,
+    resourceKeys: new Map(),
+    resourceOwners: new Map(),
+    currentResourceOwnerProof: null,
+    syntheticOwnerEdgeKeys: new Set(),
+    responseLostBaselines: new Map(),
+    responseLostIntents: new Map(),
+    preparedCreateBodies: new Map(),
+    nativeSnapshots: new Map(),
+    browserProcessIdentities: new Map(),
+    currentCaptures: null,
+    browserReceiptSequence: 0,
+    runtimeReceiptSequence: 0,
+    apiContextsClosed: false,
+    apiContextsClosedProof: null,
+    cleanupAbsenceKeys: new Set(),
+    cleanupFailedKeys: new Set(),
+    coreCleanupContext: null,
+    pendingFailureAttempts: new PendingFailureAttemptRegistry(),
+  };
+  PRIVATE_BUN_EXECUTABLE_AUTHORITY.set(state, bundledBun);
+  PRIVATE_API_REQUEST_CONTEXT.set(state, new Map());
+  PRIVATE_EPHEMERAL_API_REQUEST_CONTEXT.set(state, new Map());
+  constructionCleanupAuthority.registerCapabilityState(state);
+  validateStaticBunBridgeDescriptorRegistries();
+  initializeBunBridgeOperationAuthority(state);
+  PRIVATE_RUNTIME.set(state, { repoEnvironment, csrfHeaderName: null });
+  const authority = new LocalCommandAuthority({
+    root,
+    assertSafeEvidence,
+    snapshotRepository,
+    sensitiveValues: configuredSensitiveValues(repoEnvironment, process.env),
+  });
+  const runtimeHandlers = buildRuntimeOperationHandlers();
+  validateNativeDescriptorRegistry(plan);
+  invariant(
+    deepEqualJson(
+      Object.keys(runtimeHandlers).sort(),
+      Object.keys(plan.registries.runtimeOperations).sort()
+    ),
+    "runtime operation handler registry is not exhaustive"
+  );
+  const priorOutputs = new Map();
+  const variables = new Map();
+  const outputContext = (action, captures) => ({
+    plan,
+    captures,
+    priorOutputs,
+    variables,
+    currentOutput: null,
+    root,
+    actionId: action.id,
+  });
+  const rememberFixtureBindings = (bindings) => {
+    for (const [captureName, value] of Object.entries(bindings)) {
+      const subject = Object.entries(plan.fixtureSubjectCapture).find(
+        ([, name]) => name === captureName
+      )?.[0];
+      if (subject) state.fixtureIds.set(subject, value);
+    }
+  };
+  const capabilities = {
+    bindCoreCleanupAuthority(context) {
+      invariant(state.coreCleanupContext === null, "core cleanup authority was assigned twice");
+      exactOwnKeys(
+        context,
+        ["plan", "captures", "resourceLedger", "cleanupPlanner"],
+        "core cleanup authority",
+        { plain: true }
+      );
+      invariant(
+        context.plan === plan &&
+          context.resourceLedger instanceof ResourceLedgerBuilder &&
+          context.cleanupPlanner instanceof ResourceCleanupPlanner,
+        "core cleanup authority identity drift"
+      );
+      state.coreCleanupContext = context;
+    },
+    registerActionResourcesAfterLedgerAppend(action, delta) {
+      promoteResourceBunDescriptorsAfterLedgerAppend(state, delta);
+      registerSuccessfulActionResourcesAfterLedgerAppend(state, action, delta);
+    },
+    settleResponseLostCreateAfterLedgerAppend(actionId) {
+      invariant(
+        RESPONSE_LOST_CREATE_DESCRIPTORS[actionId] !== undefined,
+        "response-lost settlement origin drift"
+      );
+      state.pendingFailureAttempts.settle(actionId);
+    },
+    retainPrimaryFailureObservation(cause) {
+      state.pendingFailureAttempts.retainPrimaryFailureObservation(cause);
+    },
+    async executeAction({ action, executable, captures }) {
+      state.currentCaptures = captures;
+      if (executable.type === "runtime-operation") {
+        state.taskTrafficMayExist = true;
+        const handler = runtimeHandlers[executable.operationId];
+        invariant(typeof handler === "function", action.id + " runtime handler is absent");
+        let result;
+        try {
+          result = await authority.executeLocal({
+            action,
+            sequence: ++state.runtimeReceiptSequence,
+            operation: canonicalManifestRuntimeOperation(action),
+            operationDescriptor: executable.operationId,
+            subjectKind: null,
+            subjectIdentifier: null,
+            run: async () => {
+              await armResponseLostCreateBeforeWrite(state, action, captures);
+              return handler({ state, plan, action, executable, captures });
+            },
+          });
+        } catch (error) {
+          throw error;
+        }
+        const parsedOutput = parseRegisteredOutput(
+          plan.registries.outputs[action.outputSchemaId],
+          result.stdout,
+          action.id,
+          outputContext(action, captures)
+        );
+        const captureBindings =
+          action.outputSchemaId === "runtime-safe-projection" ? parsedOutput.captureBindings : {};
+        rememberFixtureBindings(captureBindings);
+        const receipt = {
+          ...result.receipt,
+          sanitizedOutput:
+            action.id === "set-017-editable-type-proof"
+              ? "[private-projection-proven]"
+              : canonicalJson(
+                  action.outputSchemaId === "runtime-safe-projection"
+                    ? {
+                        captureBindings: Object.keys(captureBindings),
+                        observationSha256: parsedOutput.observationSha256,
+                      }
+                    : { privateProjection: true }
+                ),
+        };
+        if (action.id === "set-032-storage-post-setup") {
+          invariant(
+            state.missingMediaSetupProof !== null,
+            "missing media setup receipt proof is absent"
+          );
+          Object.assign(receipt, {
+            operation: "media-race-missing-absence-setup",
+            operationDescriptor: "db+storage:missing-media-absence",
+            evidenceSha256: state.missingMediaSetupProof.evidenceSha256,
+            subjectKind: "media-race-missing-media",
+            subjectIdentifier: plan.fixtureBlueprint.media.missingBoundMediaId,
+            sanitizedOutput: canonicalJson(state.missingMediaSetupProof.projection),
+          });
+          state.missingMediaSetupReceiptSequence = receipt.sequence;
+        } else if (action.id === "set-040-override-proof") {
+          invariant(
+            state.mediaRaceProjection !== null &&
+              typeof state.mediaRaceReceiptHash === "string" &&
+              /^[a-f0-9]{64}$/u.test(state.mediaRaceReceiptHash),
+            "media-race projection receipt proof is absent"
+          );
+          Object.assign(receipt, {
+            operation: "media-race-projection-provenance",
+            operationDescriptor: "admin-api:media-race-projection",
+            evidenceSha256: state.mediaRaceReceiptHash,
+            subjectKind: "screen",
+            subjectIdentifier: state.mediaRaceProjection.screenId,
+            sanitizedOutput: canonicalJson({
+              bindingCount: 1,
+              overrideCount: 1,
+              entryValueMatches: true,
+              safeUrlMatches: true,
+            }),
+          });
+        }
+        assertSafeEvidence(receipt, "TASK-540 parsed runtime receipt");
+        const acquisitionDelta = deriveActionResourceDelta(
+          state,
+          action,
+          { captureBindings },
+          captures
+        );
+        const provenDescriptor = PROVEN_RESOURCE_ACTIONS[action.id];
+        return deepFreezeExact({
+          receipt: deepFreezeExact(receipt),
+          captureBindings,
+          acquisitionDelta,
+          settledCreateOrigin: provenDescriptor?.origin ?? null,
+        });
+      }
+
+      const executionSpec = compileActionExecutionSpec(action);
+      const routeMetadata = routeReceiptMetadata(
+        action,
+        executionSpec,
+        plan,
+        captures,
+        PRIVATE_RUNTIME.get(state)
+      );
+      const invocation = buildBrowserInvocation(
+        action,
+        executionSpec,
+        captures,
+        root,
+        browserWorkspace.cwd,
+        plan,
+        outputContext(action, captures),
+        PRIVATE_RUNTIME.get(state)
+      );
+      let commandResult;
+      if (executable.type === "browser-native" && executable.operationId === "open-about-blank") {
+        state.browserMayExist = true;
+        state.taskTrafficMayExist = true;
+      }
+      try {
+        const executeBrowserProgram = () =>
+          authority.executeProgram({
+            action,
+            program: "playwright-cli",
+            args: invocation.args,
+            sequence: ++state.browserReceiptSequence,
+            operation: executionSpec.operation,
+            routeKey: routeMetadata.routeKey,
+            assertionName: action.kind === "assert" ? executionSpec.builderAst.args[0] : null,
+            displayArgs:
+              executable.type === "browser-global-list"
+                ? ["--raw", "list"]
+                : [
+                    "-s=" + SESSION_NAME,
+                    "--raw",
+                    executable.type === "browser-run-code"
+                      ? executable.sourceId
+                      : executable.type === "browser-native"
+                        ? executable.operationId
+                        : executable.screenshotId,
+                  ],
+            stdoutDiscarded: invocation.stdoutDiscarded ?? false,
+            cwd: browserWorkspace.cwd,
+            env: browserWorkspace.environment,
+          });
+        commandResult =
+          action.id === "set-011-login-submit"
+            ? await runObservedBootstrapLoginAttempt(
+                state,
+                "ui",
+                plan.fixtureBlueprint.userAgents.browser,
+                executeBrowserProgram
+              )
+            : await executeBrowserProgram();
+      } catch (error) {
+        if (executable.type === "browser-screenshot") {
+          try {
+            await acquireScreenshotIdentity(state, action, plan);
+          } catch (identityError) {
+            throw new AggregateError(
+              [error, identityError],
+              "screenshot command and identity acquisition both failed"
+            );
+          }
+        }
+        throw error;
+      }
+      if (executable.type === "browser-screenshot") {
+        await acquireScreenshotIdentity(state, action, plan);
+      }
+      let normalizedBytes;
+      normalizedBytes = await normalizeBrowserCommandOutput(
+        state,
+        action,
+        executable,
+        commandResult.stdout,
+        invocation
+      );
+      let parsedOutput;
+      parsedOutput = parseRegisteredOutput(
+        plan.registries.outputs[action.outputSchemaId],
+        normalizedBytes,
+        action.id,
+        outputContext(action, captures)
+      );
+      if (executable.type === "browser-native" && executable.operationId === "open-about-blank") {
+        state.browserOpened = true;
+      }
+      if (executable.type === "browser-native" && executable.operationId === "close") {
+        state.browserClosed = true;
+      }
+      const receipt = {
+        ...commandResult.receipt,
+        method: routeMetadata.method,
+        pattern: routeMetadata.pattern,
+        sanitizedOutput: executionSpec.discardOutput ? "[discarded]" : canonicalJson(parsedOutput),
+      };
+      const captureBindings = {};
+      for (const name of plan.runtimeCaptureBindings[action.id] ?? []) {
+        invariant(
+          action.kind === "captureNew" && typeof parsedOutput?.id === "string",
+          action.id + " capture output drift"
+        );
+        captureBindings[name] = parsedOutput.id;
+      }
+      assertSafeEvidence(receipt, "TASK-540 parsed browser receipt");
+      const acquisitionDelta = deriveActionResourceDelta(
+        state,
+        action,
+        { captureBindings },
+        captures
+      );
+      return deepFreezeExact({
+        receipt: deepFreezeExact(receipt),
+        captureBindings,
+        acquisitionDelta,
+        settledCreateOrigin: null,
+      });
+    },
+    async executeCleanupLifecycleCore({ resourceLedger, cleanupPlanner, failure = false }) {
+      invariant(
+        resourceLedger instanceof ResourceLedgerBuilder &&
+          cleanupPlanner instanceof ResourceCleanupPlanner &&
+          typeof failure === "boolean",
+        "cleanup lifecycle authority drift"
+      );
+      const cleanupReceipts = [];
+      const phaseProofReceipts = [];
+      const phaseTrace = [];
+      const failures = [];
+      let persistentLedger = null;
+      let persistentPlan = null;
+      let terminalLedger = null;
+      let terminalPlan = null;
+      let finalLedger = null;
+      let finalPlan = null;
+      let screenshots = null;
+      let baselineProof = null;
+      const phaseScheduler = createCleanupPhaseScheduler(failures, phaseTrace);
+      const runPhase = (phase, operation) => phaseScheduler.run(phase, operation);
+
+      await runPhase(1, async () => {
+        const steps = [
+          async () => {
+            const privateRootIdentity = await readStableArtifactIdentity(browserWorkspace.root, {
+              expectedType: "directory",
+            });
+            invariant(
+              !browserWorkspace.root.startsWith(state.root + path.sep) &&
+                browserWorkspace.root !== state.root &&
+                (privateRootIdentity.mode & 0o777) === 0o700,
+              "browser private root ownership drift"
+            );
+          },
+        ];
+        if (failure) {
+          if (state.browserMayExist && !state.browserClosed) {
+            steps.push(
+              () => releaseFailureRoutesIfPresent(state),
+              () => closeBrowserIfPresent(state)
+            );
+          }
+          if (state.browserMayExist) {
+            steps.push(async () => {
+              await proveBrowserSessionAbsent(state);
+              state.terminalSessionAbsenceSha256 = hashBytes(Buffer.from("  (no browsers)\n"));
+            });
+          }
+        } else {
+          steps.push(async () =>
+            invariant(
+              state.browserClosed === true &&
+                state.terminalSessionAbsenceSha256 === hashBytes(Buffer.from("  (no browsers)\n")),
+              "terminal browser/session absence proof is incomplete"
+            )
+          );
+        }
+        steps.push(async () => {
+          await removePrivateWorkspaceLedger(browserWorkspace.ledger);
+          await requireMissingPath(browserWorkspace.root, "browser private root");
+          state.privateRootFinalization = deepFreezeExact({
+            outsideRepository: true,
+            mode: "0700",
+            identityRemoved: true,
+            absent: true,
+          });
+          state.browserMayExist = false;
+        });
+        await runIndependentCleanupStepsNeverSkip(steps, "phase 1 browser/root");
+      });
+      await runPhase(2, async () => {
+        if (failure) await removeAcquiredScreenshots(state);
+        else
+          invariant(
+            state.screenshots.size === plan.requiredScreenshotPaths.length,
+            "success screenshot set is incomplete"
+          );
+      });
+      await runPhase(3, async () => {
+        const phaseFailures = [];
+        let pendingAttempts = deepFreezeExact([]);
+        let attemptResults = deepFreezeExact([]);
+        const blockerRoots = new Set();
+        let discoveryRegistryUnavailable = false;
+        try {
+          pendingAttempts = state.pendingFailureAttempts.takeFrozenOnce();
+          const discoveryBatch = await discoverResponseLostPersistentCreatesNeverThrowPerAttempt(
+            pendingAttempts,
+            (attempt) => discoverOneResponseLostCreate(state, attempt)
+          );
+          invariant(
+            discoveryBatch.attemptResults.length === pendingAttempts.length,
+            "failure discovery result cardinality drift"
+          );
+          attemptResults = discoveryBatch.attemptResults;
+        } catch (error) {
+          phaseFailures.push(error);
+          discoveryRegistryUnavailable = pendingAttempts.length === 0;
+          for (const attempt of pendingAttempts) {
+            for (const parentKey of attempt.intendedParentBlockerKeys) blockerRoots.add(parentKey);
+          }
+        }
+        for (let index = 0; index < attemptResults.length; index += 1) {
+          const result = attemptResults[index];
+          const attempt = pendingAttempts[index];
+          try {
+            invariant(
+              result.pendingAttemptKey === attempt.pendingAttemptKey,
+              "failure discovery result order drift"
+            );
+            resourceLedger.appendValidatedDelta(result.safeDelta);
+            promoteResourceBunDescriptorsAfterLedgerAppend(state, result.safeDelta);
+            registerFailureDiscoveredResourceAfterLedgerAppend(state, attempt, result.safeDelta);
+          } catch (error) {
+            phaseFailures.push(error);
+            for (const parentKey of attempt.intendedParentBlockerKeys) blockerRoots.add(parentKey);
+          }
+          if (result.failure !== null) {
+            phaseFailures.push(new Error("response-lost resource discovery remained ambiguous"));
+            for (const parentKey of result.intendedParentBlockerKeys) blockerRoots.add(parentKey);
+          }
+        }
+        if (plan.requiredFixtureSubjectKeys.every((kind) => state.fixtureIds.has(kind))) {
+          try {
+            await refreshCurrentSyntheticOwnerDependencyEdges(state, resourceLedger);
+          } catch (error) {
+            phaseFailures.push(error);
+            for (const semantic of ["user-a", "user-b"]) {
+              const userKey = state.resourceKeys.get(semantic);
+              if (userKey) blockerRoots.add(userKey);
+            }
+          }
+        }
+        try {
+          persistentLedger = resourceLedger.compileResourceRecords("persistent");
+          assertResourceBunDescriptorSetExact(state, persistentLedger);
+          if (discoveryRegistryUnavailable) {
+            for (const record of persistentLedger) {
+              if (record.class === "delete") blockerRoots.add(record.resourceKey);
+            }
+          }
+          persistentPlan = cleanupPlanner.freezePersistent(persistentLedger, [...blockerRoots]);
+        } catch (error) {
+          phaseFailures.push(error);
+        }
+        if (persistentLedger !== null && persistentPlan !== null) {
+          const nonUserPersistentKinds = new Set(
+            Object.keys(RESOURCE_KIND_CONTRACTS).filter(
+              (kind) =>
+                RESOURCE_KIND_CONTRACTS[kind].class === "delete" &&
+                !TERMINAL_RESOURCE_KINDS.has(kind) &&
+                kind !== "user-a" &&
+                kind !== "user-b"
+            )
+          );
+          try {
+            const persistentGraph = cleanupPlanView(persistentLedger).dependencyGraph;
+            const phase3View = cleanupPlanView(
+              persistentLedger,
+              compileBlockedParentClosure(persistentGraph, [...blockerRoots])
+            );
+            const stageResult = await executeCleanupPlanStage(
+              state,
+              persistentPlan,
+              phase3View,
+              nonUserPersistentKinds
+            );
+            cleanupReceipts.push(...stageResult.receipts);
+            phaseFailures.push(...stageResult.failures);
+          } catch (error) {
+            phaseFailures.push(error);
+          }
+        }
+        if (phaseFailures.length > 0) {
+          throw new AggregateError(
+            phaseFailures,
+            "phase 3 response-lost/persistent cleanup failed"
+          );
+        }
+      });
+      await runPhase(4, async () => {
+        const phaseFailures = [];
+        try {
+          invariant(state.apiContextsClosedProof === null, "API context proof was assigned twice");
+        } catch (error) {
+          phaseFailures.push(error);
+        }
+        const ephemeralContexts = privateEphemeralApiContextRegistry(state);
+        for (const [key, record] of [...ephemeralContexts.entries()].sort(([left], [right]) =>
+          left.localeCompare(right)
+        )) {
+          try {
+            await disposeOwnedApiRequestContextAndProveAbsent(record, key);
+            const lifecycleError = retainedApiLifecycleFailure(record, key);
+            if (lifecycleError !== null) phaseFailures.push(lifecycleError);
+            ephemeralContexts.delete(key);
+          } catch (error) {
+            phaseFailures.push(error);
+          }
+        }
+        try {
+          invariant(
+            ephemeralContexts.size === 0,
+            "ephemeral API context cleanup authority remains live"
+          );
+        } catch (error) {
+          phaseFailures.push(error);
+        }
+        const privateContexts = privateApiContextRegistry(state);
+        const contextNames = [...privateContexts.keys()].sort();
+        try {
+          invariant(
+            contextNames.every((name) => name === "bootstrap" || name === "user-a") &&
+              (failure || deepEqualJson(contextNames, ["bootstrap", "user-a"])),
+            "API context ownership set drift"
+          );
+        } catch (error) {
+          phaseFailures.push(error);
+        }
+        const contextProofs = Object.create(null);
+        for (const [key, userAgent] of [
+          ["bootstrap", plan.fixtureBlueprint.userAgents.apiBootstrap],
+          ["user-a", plan.fixtureBlueprint.userAgents.apiUserA],
+        ]) {
+          const record = privateContexts.get(key);
+          if (record === undefined) {
+            contextProofs[key] = deepFreezeExact({
+              acquired: false,
+              capabilityAbsent: true,
+              disposeCalled: false,
+              userAgent,
+            });
+            continue;
+          }
+          try {
+            contextProofs[key] = await disposeApiRequestContextAndProveAbsent(
+              state,
+              record.capability,
+              key
+            );
+            const lifecycleError = retainedApiLifecycleFailure(record, key);
+            if (lifecycleError !== null) phaseFailures.push(lifecycleError);
+            privateContexts.delete(key);
+            state.sessions.delete(key);
+          } catch (error) {
+            phaseFailures.push(error);
+          }
+        }
+        for (const [key, record] of [...privateContexts.entries()].sort(([left], [right]) =>
+          left.localeCompare(right)
+        )) {
+          try {
+            await disposeApiRequestContextAndProveAbsent(state, record.capability, key);
+            const lifecycleError = retainedApiLifecycleFailure(record, key);
+            if (lifecycleError !== null) phaseFailures.push(lifecycleError);
+            privateContexts.delete(key);
+            state.sessions.delete(key);
+          } catch (error) {
+            phaseFailures.push(error);
+          }
+        }
+        const allAcquiredContextsAbsent =
+          contextNames.every((key) => contextProofs[key]?.capabilityAbsent === true) &&
+          privateContexts.size === 0;
+        state.apiContextsClosed = allAcquiredContextsAbsent && state.sessions.size === 0;
+        state.apiContextsClosedProof = deepFreezeExact({
+          allAcquiredContextsAbsent,
+          bootstrap: contextProofs.bootstrap,
+          bundledPlaywright: state.playwrightRequestProof,
+          inputContextNames: deepFreezeExact(contextNames),
+          registryCleared:
+            state.sessions.size === 0 && privateContexts.size === 0 && ephemeralContexts.size === 0,
+          userA: contextProofs["user-a"],
+        });
+        try {
+          phaseProofReceipts.push(
+            cleanupRuntimeReceipt(
+              state,
+              "api-contexts-close-and-prove",
+              "api-contexts-close-and-independent-absence-v1",
+              null,
+              state.apiContextsClosedProof
+            )
+          );
+        } catch (error) {
+          phaseFailures.push(error);
+        }
+        if (phaseFailures.length > 0)
+          throw new AggregateError(phaseFailures, "phase 4 API disposal failed");
+      });
+      await runPhase(5, async () => {
+        invariant(
+          state.apiContextsClosed === true &&
+            state.apiContextsClosedProof?.allAcquiredContextsAbsent === true &&
+            state.apiContextsClosedProof?.registryCleared === true,
+          "terminal discovery lacks the API-context absence proof"
+        );
+        let terminalRows =
+          state.taskTrafficBaseline === null
+            ? deepFreezeExact({ access: [], audit: [], session: [] })
+            : null;
+        if (state.bootstrapBaseline !== null) {
+          invariant(
+            state.taskTrafficBaseline !== null,
+            "bootstrap authority lacks task-traffic baseline"
+          );
+          const ownsExactBootstrapBoundaries = (rows) => {
+            const authority = PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY.get(state);
+            const allowedUserAgents = [
+              plan.fixtureBlueprint.userAgents.browser,
+              plan.fixtureBlueprint.userAgents.apiBootstrap,
+            ];
+            return (
+              [...authority.ownedSessionIds].every((id) => {
+                const row = rows.session.find((candidate) => candidate.id === id);
+                return (
+                  row?.userId === state.bootstrapBaseline.id &&
+                  allowedUserAgents.includes(row.userAgent)
+                );
+              }) &&
+              [...authority.ownedAuditIds].every((id) => {
+                const row = rows.audit.find((candidate) => candidate.id === id);
+                return (
+                  row?.actorId === state.bootstrapBaseline.id &&
+                  allowedUserAgents.includes(row.userAgent)
+                );
+              })
+            );
+          };
+          let coupledCandidate = null;
+          for (
+            let barrierRound = 0;
+            barrierRound < 4 && coupledCandidate === null;
+            barrierRound += 1
+          ) {
+            await readStableTaskTrafficDelta(state);
+            await reconcileBootstrapLoginAuthority(state, { deferUnchanged: true, seal: false });
+            const candidateRows = await readStableTaskTrafficDelta(state);
+            const allSettled = await reconcileBootstrapLoginAuthority(state, {
+              deferUnchanged: false,
+              seal: false,
+            });
+            if (allSettled && ownsExactBootstrapBoundaries(candidateRows)) {
+              coupledCandidate = candidateRows;
+            }
+          }
+          invariant(
+            coupledCandidate !== null,
+            "bootstrap/terminal traffic coupled barrier did not converge"
+          );
+          terminalRows = await readStableTaskTrafficDelta(state, async (poll, rows) => {
+            appendTaskTrafficPollProofReceipts(
+              state,
+              phaseProofReceipts,
+              "before-delete",
+              poll,
+              rows
+            );
+          });
+          await reconcileBootstrapLoginAuthority(state, { seal: true });
+          const bootstrapAuthority = PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY.get(state);
+          invariant(
+            bootstrapAuthority.reconciliationSealed === true &&
+              ownsExactBootstrapBoundaries(terminalRows),
+            "sealed bootstrap login boundaries are absent from terminal cleanup authority"
+          );
+        } else if (state.taskTrafficBaseline !== null) {
+          terminalRows = await readStableTaskTrafficDelta(state, async (poll, rows) => {
+            appendTaskTrafficPollProofReceipts(
+              state,
+              phaseProofReceipts,
+              "before-delete",
+              poll,
+              rows
+            );
+          });
+        } else {
+          state.taskTrafficPollCount = 2;
+          for (const poll of [1, 2]) {
+            appendTaskTrafficPollProofReceipts(
+              state,
+              phaseProofReceipts,
+              "before-delete",
+              poll,
+              terminalRows
+            );
+          }
+        }
+        invariant(terminalRows !== null, "terminal traffic coupled barrier produced no rows");
+        state.taskTrafficDeltaCounts = deepFreezeExact({
+          audit: terminalRows.audit.length,
+          access: terminalRows.access.length,
+          session: terminalRows.session.length,
+        });
+        const terminalDelta = terminalResourceDelta(state, terminalRows);
+        resourceLedger.appendValidatedDelta(terminalDelta);
+        promoteResourceBunDescriptorsAfterLedgerAppend(state, terminalDelta);
+        registerTerminalResourcesAfterLedgerAppend(state, terminalDelta);
+        terminalLedger = resourceLedger.compileResourceRecords("terminal");
+        terminalPlan = cleanupPlanner.freezeTerminal(terminalLedger);
+        finalLedger = resourceLedger.compileResourceRecords("final");
+        assertResourceBunDescriptorSetExact(state, finalLedger);
+        finalPlan = cleanupPlanner.freezeFinal(finalLedger);
+        invariant(
+          finalPlan.persistentActionPlan === persistentPlan &&
+            finalPlan.terminalActionPlan === terminalPlan,
+          "final cleanup plan substituted a stage plan"
+        );
+        assertExactFinalResourceDependencyGraph(state, finalLedger, finalPlan.dependencyGraph);
+        phaseProofReceipts.push(
+          cleanupRuntimeReceipt(
+            state,
+            "terminal-task-ua-stable-delta",
+            "terminal-task-ua-two-identical-polls-v1",
+            null,
+            {
+              access: terminalRows.access.length,
+              audit: terminalRows.audit.length,
+              session: terminalRows.session.length,
+            }
+          )
+        );
+      });
+      await runPhase(6, async () => {
+        invariant(terminalPlan !== null && finalPlan !== null, "terminal cleanup plan is absent");
+        const stageResult = await executeCleanupPlanStage(
+          state,
+          terminalPlan,
+          finalPlan,
+          TERMINAL_RESOURCE_KINDS
+        );
+        cleanupReceipts.push(...stageResult.receipts);
+        failures.push(...stageResult.failures);
+      });
+      await runPhase(7, async () => {
+        invariant(finalPlan !== null, "final cleanup plan is absent before user cleanup");
+        const stageResult = await executeCleanupPlanStage(
+          state,
+          persistentPlan,
+          finalPlan,
+          new Set(["user-a", "user-b"])
+        );
+        cleanupReceipts.push(...stageResult.receipts);
+        failures.push(...stageResult.failures);
+      });
+      await runPhase(8, async () => {
+        const restored =
+          state.bootstrapBaseline === null
+            ? deepFreezeExact({ notAcquired: true })
+            : await restoreBootstrapLoginState(state);
+        phaseProofReceipts.push(
+          cleanupRuntimeReceipt(
+            state,
+            "bootstrap-login-state-restore",
+            "bootstrap-is-not-distinct-cas-and-complete-row-proof-v1",
+            null,
+            restored
+          )
+        );
+      });
+      await runPhase(9, async () => {
+        screenshots = deepFreezeExact([]);
+        await runIndependentCleanupStepsNeverSkip(
+          [
+            async () => {
+              if (!failure) screenshots = await validateSuccessfulScreenshotSet(state);
+            },
+            async () => {
+              const missingMediaCleanup = await proveMissingMediaDbAndStorageAbsence(
+                state,
+                "cleanup"
+              );
+              phaseProofReceipts.push(
+                authoritativeProofRuntimeReceipt(state, {
+                  operation: "media-race-missing-absence-cleanup",
+                  operationDescriptor: "db+storage:missing-media-absence",
+                  evidenceSha256: missingMediaCleanup.evidenceSha256,
+                  subjectKind: "media-race-missing-media",
+                  subjectIdentifier: plan.fixtureBlueprint.media.missingBoundMediaId,
+                  output: missingMediaCleanup.projection,
+                })
+              );
+            },
+            async () => {
+              baselineProof =
+                state.bootstrapBaseline === null
+                  ? deepFreezeExact({ notAcquired: true })
+                  : await proveFinalStorageAndDatabaseBaselines(state, async (poll, rows) => {
+                      appendTaskTrafficPollProofReceipts(
+                        state,
+                        phaseProofReceipts,
+                        "after-delete",
+                        poll,
+                        rows
+                      );
+                    });
+              phaseProofReceipts.push(
+                cleanupRuntimeReceipt(
+                  state,
+                  "final-storage-database-screenshot-proof",
+                  "final-global-baseline-and-png-identity-proof-v1",
+                  null,
+                  { ...baselineProof, screenshotCount: screenshots.length }
+                )
+              );
+            },
+          ],
+          "phase 9 final baselines"
+        );
+      });
+      await runPhase(10, async () => {
+        let portsAbsent = false;
+        await runIndependentCleanupStepsNeverSkip(
+          [
+            () => stopOwnedHost(state),
+            async () => {
+              portsAbsent = await portsAreAbsent();
+              invariant(portsAbsent, "smoke ports remain owned after finalization");
+            },
+            async () => {
+              const host = state.hostFinalization;
+              invariant(host !== null && portsAbsent, "host finalization projection is absent");
+              const appendHostProof = (operation, subjectKind, subjectIdentifier, output) => {
+                const bytes = Buffer.from(
+                  canonicalJson({ operation, subjectKind, subjectIdentifier, output }) + "\n"
+                );
+                phaseProofReceipts.push(
+                  authoritativeProofRuntimeReceipt(state, {
+                    operation,
+                    operationDescriptor: "owned-process-group-and-ports-absence-v1",
+                    evidenceSha256: hashBytes(bytes),
+                    subjectKind,
+                    subjectIdentifier,
+                    output,
+                  })
+                );
+              };
+              appendHostProof("host-runner-stop", "host-runner", String(host.runnerPid), {
+                termSent: host.termSent,
+                killSent: host.killSent,
+                processesAbsent: host.processesAbsent,
+                portsAbsent: true,
+              });
+              const processSubjects = [
+                { kind: "runner", pid: host.runnerPid, parentPid: null },
+                ...host.children.map(({ kind, pid }) => ({ kind, pid, parentPid: host.runnerPid })),
+              ];
+              for (const processSubject of processSubjects) {
+                const subjectIdentifier =
+                  processSubject.kind === "runner"
+                    ? String(processSubject.pid)
+                    : processSubject.kind + ":" + processSubject.pid;
+                appendHostProof("pid-lineage", "host-process", subjectIdentifier, {
+                  pid: processSubject.pid,
+                  parentPid: processSubject.parentPid,
+                  pgid: host.pgid,
+                  lineageValid: true,
+                });
+                appendHostProof("process-absence", "host-process", subjectIdentifier, {
+                  absent: true,
+                  stableObservations: 2,
+                });
+              }
+              for (const port of host.ports) {
+                appendHostProof("port-absence", "host-port", String(port), {
+                  absent: true,
+                  stableObservations: 2,
+                });
+              }
+            },
+          ],
+          "phase 10 host shutdown"
+        );
+      });
+
+      phaseScheduler.seal();
+      if (failures.length > 0)
+        throw new AggregateError(failures, "TASK-540 deterministic cleanup failed");
+      invariant(
+        persistentLedger !== null &&
+          persistentPlan !== null &&
+          terminalLedger !== null &&
+          terminalPlan !== null &&
+          finalLedger !== null &&
+          finalPlan !== null &&
+          screenshots !== null &&
+          baselineProof !== null,
+        "cleanup lifecycle result is incomplete"
+      );
+      return deepFreezeExact({
+        cleanupReceipts: deepFreezeExact(cleanupReceipts),
+        mediaRace: assertCanonicalMediaRaceProjection(
+          state.mediaRaceProjection,
+          plan,
+          state.currentCaptures
+        ),
+        finalization: buildCanonicalFinalization(
+          state,
+          screenshots,
+          phaseProofReceipts,
+          phaseTrace,
+          baselineProof
+        ),
+        terminalLedger,
+        terminalPlan,
+        finalLedger,
+        finalPlan,
+        persistentLedger,
+        persistentPlan,
+        phaseTrace: deepFreezeExact(phaseTrace),
+      });
+    },
+    cleanup(request = null) {
+      if (state.cleanupPromise === null) {
+        state.cleanupPromise = (async () => {
+          try {
+            invariant(
+              state.coreCleanupContext !== null,
+              "failure cleanup lacks the core ledger authority"
+            );
+            const selected =
+              request === null
+                ? deepFreezeExact({ ...state.coreCleanupContext, failure: true })
+                : request;
+            exactOwnKeys(
+              selected,
+              ["plan", "captures", "resourceLedger", "cleanupPlanner", "failure"],
+              "cleanup once request",
+              { plain: true }
+            );
+            invariant(
+              selected.plan === state.coreCleanupContext.plan &&
+                selected.captures === state.coreCleanupContext.captures &&
+                selected.resourceLedger === state.coreCleanupContext.resourceLedger &&
+                selected.cleanupPlanner === state.coreCleanupContext.cleanupPlanner &&
+                typeof selected.failure === "boolean",
+              "cleanup once request identity drift"
+            );
+            const lifecycle = await capabilities.executeCleanupLifecycleCore(selected);
+            return deepFreezeExact({ absenceProven: true, lifecycle });
+          } catch (error) {
+            state.cleanupFailures += 1;
+            PRIVATE_RUNTIME.get(state).cleanupFailure = error;
+            return deepFreezeExact({ absenceProven: false, lifecycle: null });
+          }
+        })();
+      }
+      return state.cleanupPromise;
+    },
+  };
+  return capabilities;
+}
+
+async function executeTask540SmokePlanWithAuthorityFactory(
+  input,
+  authorityFactory = createPrivateConstructionCleanupAuthority
+) {
+  let constructionCleanupAuthority = null;
+  try {
+    constructionCleanupAuthority = authorityFactory();
+    invariant(
+      constructionCleanupAuthority instanceof PrivateConstructionCleanupAuthority,
+      "construction cleanup authority is invalid"
+    );
+    assertExecutionInput(input);
+    const plan = buildTask540SmokePlan({ nonce: input.nonce });
+    const capabilities = await createRealCapabilities(input, plan, constructionCleanupAuthority);
+    constructionCleanupAuthority.bindCompleteCapabilities(capabilities);
+    const evidence = await executeSmokePlanCore(plan, capabilities, constructionCleanupAuthority);
+    input.assertSafeEvidence(evidence, "TASK-540 canonical smoke evidence");
+    return evidence;
+  } catch (cause) {
+    if (constructionCleanupAuthority === null) {
+      retainOrDiscardPreAuthorityCauseNeverThrow();
+    } else {
+      const cleanupDiagnostics =
+        await constructionCleanupAuthority.cleanupWhateverWasAcquiredOnceNeverThrow();
+      constructionCleanupAuthority.retainFailureAndCleanupDiagnosticsNeverThrow(
+        cause,
+        cleanupDiagnostics
+      );
+    }
+    throw TASK_FAILURE;
+  }
+}
+
+export async function executeTask540SmokePlan(input) {
+  return executeTask540SmokePlanWithAuthorityFactory(input);
+}
+
+async function expectUncountedAsyncFailure(callback, label) {
+  let failed = false;
+  try {
+    await callback();
+  } catch {
+    failed = true;
+  }
+  invariant(failed, label + " must fail closed");
+}
+
+function selfTestStringSchema({
+  minLength = 0,
+  maxLength = 256,
+  enumValues = null,
+  format = null,
+} = {}) {
+  return {
+    type: "string",
+    minLength,
+    maxLength,
+    enum: enumValues,
+    format,
+  };
+}
+
+function selfTestNumberSchema({ minimum = null, maximum = null } = {}) {
+  return { type: "number", minimum, maximum };
+}
+
+function selfTestContext(plan, actionId) {
+  return {
+    plan,
+    captures: new SingleAssignmentCaptureMap(),
+    priorOutputs: new Map(),
+    variables: new Map(),
+    currentOutput: null,
+    root: "/task540-self-test-root",
+    actionId,
+  };
+}
+
+function selfTestJsonTransport(jsonLayers = 1) {
+  return {
+    encoding: "json",
+    jsonLayers,
+    nativeMode: null,
+    exactText: null,
+    sessionName: null,
+    normalizedValue: null,
+  };
+}
+
+function selfTestNativeTransport({
+  nativeMode,
+  exactText = null,
+  sessionName = null,
+  normalizedValue,
+}) {
+  return {
+    encoding: "native",
+    jsonLayers: 0,
+    nativeMode,
+    exactText,
+    sessionName,
+    normalizedValue,
+  };
+}
+
+async function runExpectedAuthChallengeSelfTest({ expectNegative, assertNegative }) {
+  const expectedUrl = "http://127.0.0.1:5173/admin/api/auth/me";
+  const loginUrl = "http://127.0.0.1:5173/admin/login";
+  const pageId = "wf540-page-1";
+  const secondPageId = "wf540-page-2";
+  const pageRecords = Object.freeze([
+    Object.freeze({ pageId, tabIndex: 0, mediaGetCount: 3 }),
+    Object.freeze({ pageId: secondPageId, tabIndex: 1, mediaGetCount: 0 }),
+  ]);
+  const options = (overrides = {}) => ({
+    expectedUrl,
+    loginUrl,
+    expectedText: EXPECTED_AUTH_CHALLENGE_TEXT,
+    expectedPageId: pageId,
+    phases: EXPECTED_AUTH_CHALLENGE_PHASES,
+    maxFailureEvents: 128,
+    maxAuthEvents: 64,
+    ...overrides,
+  });
+  const authority = (overrides = {}) => createExpectedAuthChallengeAuthority(options(overrides));
+  const response = (subject, overrides = {}) =>
+    subject.recordResponse({
+      pageId,
+      navigationEpoch: 2,
+      url: expectedUrl,
+      method: "GET",
+      status: 401,
+      ...overrides,
+    });
+  const message = (subject, overrides = {}) =>
+    subject.recordConsole({
+      pageId,
+      navigationEpoch: 2,
+      type: "error",
+      text: EXPECTED_AUTH_CHALLENGE_TEXT,
+      locationUrl: expectedUrl,
+      ...overrides,
+    });
+  const arm = (subject, definition, navigationBaseline) =>
+    subject.arm({
+      phaseId: definition.armActionId,
+      pageId,
+      navigationBaseline,
+    });
+  const close = (subject, definition, navigationEpoch) =>
+    subject.close({
+      closeActionId: definition.closeActionId,
+      pageId,
+      navigationEpoch,
+      url: loginUrl,
+    });
+  const emitPair = (subject, navigationEpoch, order = "response-first", overrides = {}) => {
+    const responseInput = { navigationEpoch, ...(overrides.response ?? {}) };
+    const messageInput = { navigationEpoch, ...(overrides.message ?? {}) };
+    if (order === "response-first") {
+      response(subject, responseInput);
+      message(subject, messageInput);
+    } else if (order === "message-first") {
+      message(subject, messageInput);
+      response(subject, responseInput);
+    } else {
+      invariant(false, "unknown auth callback self-test order");
+    }
+  };
+  const completeSingleTokenPhase = (
+    subject,
+    definition,
+    navigationBaseline,
+    order = "response-first"
+  ) => {
+    arm(subject, definition, navigationBaseline);
+    emitPair(subject, navigationBaseline + 1, order);
+    close(subject, definition, navigationBaseline + 1);
+  };
+  const firstInitial = EXPECTED_AUTH_CHALLENGE_PHASES[0];
+  const firstSignout = EXPECTED_AUTH_CHALLENGE_PHASES[1];
+
+  const allPhases = authority();
+  let navigationEpoch = 0;
+  for (const [phaseIndex, definition] of EXPECTED_AUTH_CHALLENGE_PHASES.entries()) {
+    arm(allPhases, definition, navigationEpoch);
+    if (definition.successiveInitialEpochs) {
+      emitPair(allPhases, navigationEpoch + 1, "response-first");
+      emitPair(allPhases, navigationEpoch + 2, "message-first");
+      navigationEpoch += 2;
+    } else {
+      emitPair(
+        allPhases,
+        navigationEpoch + 1,
+        phaseIndex % 2 === 0 ? "response-first" : "message-first"
+      );
+      navigationEpoch += 1;
+    }
+    close(allPhases, definition, navigationEpoch);
+  }
+  const firstRead = allPhases.reconcile(pageRecords);
+  const secondRead = allPhases.reconcile(pageRecords);
+  invariant(
+    deepEqualJson(firstRead, secondRead) &&
+      firstRead.aggregate.consoleErrors.length === 0 &&
+      firstRead.aggregate.consoleWarnings.length === 0 &&
+      firstRead.aggregate.pageErrors.length === 0 &&
+      firstRead.aggregate.mediaGetCount === 3 &&
+      firstRead.firstUnexpected === null,
+    "expected auth phases or idempotent reconciliation drift"
+  );
+  invariant(
+    Object.isFrozen(firstRead) &&
+      Object.isFrozen(firstRead.aggregate) &&
+      firstRead.pages.every((page) => Object.isFrozen(page)),
+    "expected auth projection is mutable"
+  );
+
+  {
+    const subject = authority();
+    emitPair(subject, 1);
+    const projection = subject.reconcile(pageRecords);
+    assertNegative(
+      projection.aggregate.consoleErrors.length === 2 &&
+        projection.firstUnexpected?.code === "response_admin_api_auth",
+      "unarmed auth challenge"
+    );
+  }
+  {
+    const subject = authority();
+    response(subject, {
+      navigationEpoch: 0,
+      url: "http://127.0.0.1:5173/admin/api/custom-screens",
+      status: 500,
+    });
+    const projection = subject.reconcile(pageRecords);
+    assertNegative(
+      projection.aggregate.consoleErrors.length === 1 &&
+        projection.firstUnexpected?.code === "response_admin_api_server",
+      "unarmed non-auth HTTP failure preservation"
+    );
+  }
+  {
+    const subject = authority();
+    completeSingleTokenPhase(subject, firstSignout, 0);
+    emitPair(subject, 2);
+    const projection = subject.reconcile(pageRecords);
+    assertNegative(
+      projection.aggregate.consoleErrors.length === 2 &&
+        projection.firstUnexpected?.channel === "consoleErrors",
+      "authenticated or late auth challenge"
+    );
+  }
+  {
+    const subject = authority();
+    arm(subject, firstSignout, 0);
+    emitPair(subject, 1);
+    emitPair(subject, 2);
+    await expectNegative(async () => close(subject, firstSignout, 2), "second 401 for one token");
+  }
+  {
+    const subject = authority();
+    arm(subject, firstSignout, 0);
+    response(subject, { navigationEpoch: 1 });
+    response(subject, { navigationEpoch: 1 });
+    message(subject, { navigationEpoch: 1 });
+    await expectNegative(async () => close(subject, firstSignout, 1), "rebound token response");
+  }
+  for (const [label, responseOverrides, messageOverrides] of [
+    ["403 response", { status: 403 }, {}],
+    ["POST auth response", { method: "POST" }, {}],
+    [
+      "media response path",
+      { url: "http://127.0.0.1:5173/media/private.png" },
+      { locationUrl: "http://127.0.0.1:5173/media/private.png" },
+    ],
+    [
+      "Site Vite response path",
+      { url: "http://127.0.0.1:5174/site/runtime.js" },
+      { locationUrl: "http://127.0.0.1:5174/site/runtime.js" },
+    ],
+    [
+      "other Admin response path",
+      { url: "http://127.0.0.1:5173/admin/api/users" },
+      { locationUrl: "http://127.0.0.1:5173/admin/api/users" },
+    ],
+  ]) {
+    const subject = authority();
+    arm(subject, firstSignout, 0);
+    emitPair(subject, 1, "response-first", {
+      response: responseOverrides,
+      message: messageOverrides,
+    });
+    await expectNegative(async () => close(subject, firstSignout, 1), label);
+  }
+  {
+    const subject = authority();
+    arm(subject, firstSignout, 0);
+    response(subject, { navigationEpoch: 1 });
+    await expectNegative(async () => close(subject, firstSignout, 1), "response without message");
+  }
+  {
+    const subject = authority();
+    arm(subject, firstSignout, 0);
+    message(subject, { navigationEpoch: 1 });
+    await expectNegative(async () => close(subject, firstSignout, 1), "message without response");
+  }
+  {
+    const subject = authority();
+    arm(subject, firstSignout, 0);
+    emitPair(subject, 1, "response-first", {
+      response: { pageId: secondPageId },
+      message: { pageId: secondPageId },
+    });
+    await expectNegative(async () => close(subject, firstSignout, 1), "cross-page pair");
+  }
+  {
+    const subject = authority();
+    arm(subject, firstSignout, 0);
+    response(subject, { navigationEpoch: 1 });
+    message(subject, { navigationEpoch: 2 });
+    await expectNegative(async () => close(subject, firstSignout, 2), "cross-navigation pair");
+  }
+  {
+    const subject = authority();
+    arm(subject, firstSignout, 0);
+    emitPair(subject, 1);
+    message(subject, { navigationEpoch: 1 });
+    await expectNegative(
+      async () => close(subject, firstSignout, 1),
+      "one response with two messages"
+    );
+  }
+  {
+    const subject = authority();
+    arm(subject, firstSignout, 0);
+    response(subject, { navigationEpoch: 1 });
+    subject.recordConsole({
+      pageId,
+      navigationEpoch: 1,
+      type: "warning",
+      text: "intervening warning",
+      locationUrl: loginUrl,
+    });
+    message(subject, { navigationEpoch: 1 });
+    await expectNegative(
+      async () => close(subject, firstSignout, 1),
+      "intervening unrelated failure"
+    );
+  }
+  for (const [label, text] of [
+    ["auth text prefix drift", "prefix " + EXPECTED_AUTH_CHALLENGE_TEXT],
+    ["auth text suffix drift", EXPECTED_AUTH_CHALLENGE_TEXT + " suffix"],
+    ["auth text case drift", EXPECTED_AUTH_CHALLENGE_TEXT.toLowerCase()],
+    ["auth text newline drift", EXPECTED_AUTH_CHALLENGE_TEXT + "\n"],
+  ]) {
+    const subject = authority();
+    arm(subject, firstSignout, 0);
+    emitPair(subject, 1, "response-first", { message: { text } });
+    await expectNegative(async () => close(subject, firstSignout, 1), label);
+  }
+  {
+    const subject = authority();
+    arm(subject, firstSignout, 0);
+    emitPair(subject, 1, "response-first", { message: { locationUrl: loginUrl } });
+    await expectNegative(async () => close(subject, firstSignout, 1), "userland console spoof");
+  }
+  for (const [label, url] of [
+    ["wrong auth query", expectedUrl + "?retry=1"],
+    ["wrong auth origin", "http://127.0.0.1:5174/admin/api/auth/me"],
+  ]) {
+    const subject = authority();
+    arm(subject, firstSignout, 0);
+    emitPair(subject, 1, "response-first", { message: { locationUrl: url } });
+    await expectNegative(async () => close(subject, firstSignout, 1), label);
+  }
+  {
+    const subject = authority();
+    subject.recordConsole({
+      pageId,
+      navigationEpoch: 0,
+      type: "warning",
+      text: "warning marker",
+      locationUrl: loginUrl,
+    });
+    const projection = subject.reconcile(pageRecords);
+    assertNegative(
+      projection.pages[0].consoleWarnings.length === 1 &&
+        projection.aggregate.consoleWarnings[0] === pageId &&
+        projection.firstUnexpected?.channel === "consoleWarnings",
+      "warning preservation"
+    );
+  }
+  {
+    const subject = authority();
+    subject.recordPageError({ pageId, navigationEpoch: 0, text: "TypeError: page marker" });
+    const projection = subject.reconcile(pageRecords);
+    assertNegative(
+      projection.pages[0].pageErrors.length === 1 &&
+        projection.aggregate.pageErrors[0] === pageId &&
+        projection.firstUnexpected?.channel === "pageErrors",
+      "page-error preservation"
+    );
+  }
+  {
+    const subject = authority();
+    arm(subject, firstSignout, 0);
+    await expectNegative(async () => close(subject, firstSignout, 1), "unused token");
+  }
+  {
+    const subject = authority();
+    completeSingleTokenPhase(subject, firstSignout, 0);
+    await expectNegative(async () => arm(subject, firstSignout, 1), "reused token");
+  }
+  {
+    const subject = authority({ maxFailureEvents: 1 });
+    subject.recordConsole({
+      pageId,
+      navigationEpoch: 0,
+      type: "warning",
+      text: "one",
+      locationUrl: loginUrl,
+    });
+    await expectNegative(
+      async () => subject.recordPageError({ pageId, navigationEpoch: 0, text: "two" }),
+      "failure ledger overflow"
+    );
+  }
+  {
+    const subject = authority({ maxAuthEvents: 1 });
+    arm(subject, firstSignout, 0);
+    await expectNegative(
+      async () => response(subject, { navigationEpoch: 1 }),
+      "auth ledger overflow"
+    );
+  }
+  {
+    const subject = authority();
+    completeSingleTokenPhase(subject, firstSignout, 0);
+    response(subject, { navigationEpoch: 2, status: 403 });
+    const projection = subject.reconcile(pageRecords);
+    assertNegative(
+      projection.firstUnexpected?.code === "response_admin_api_auth" &&
+        projection.pages[0].consoleErrors.length === 1,
+      "diagnostic after quarantined event"
+    );
+  }
+  {
+    const subject = authority();
+    arm(subject, firstInitial, 0);
+    emitPair(subject, 1);
+    await expectNegative(async () => close(subject, firstInitial, 1), "missing initial epoch");
+  }
+  {
+    const subject = authority();
+    arm(subject, firstInitial, 0);
+    emitPair(subject, 1);
+    emitPair(subject, 1);
+    await expectNegative(async () => close(subject, firstInitial, 1), "duplicate initial epoch");
+  }
+  {
+    const subject = authority();
+    arm(subject, firstInitial, 0);
+    emitPair(subject, 1);
+    emitPair(subject, 0);
+    await expectNegative(async () => close(subject, firstInitial, 1), "reversed initial epochs");
+  }
+  {
+    const privateMarker = "TASK540_AUTH_PRIVATE_DO_NOT_EGRESS";
+    const privateUrl = expectedUrl + "?private=" + privateMarker;
+    const subject = authority();
+    response(subject, { navigationEpoch: 0, url: privateUrl });
+    message(subject, { navigationEpoch: 0, text: privateMarker, locationUrl: privateUrl });
+    const serializedProjection = canonicalJson(subject.reconcile(pageRecords));
+    assertNegative(
+      !serializedProjection.includes(privateMarker) &&
+        !serializedProjection.includes(privateUrl) &&
+        !canonicalJson(subject).includes(privateMarker),
+      "private auth records do not egress"
+    );
+  }
+}
+
+export async function runTask540SmokeExecutorSelfTest() {
+  let negativeCases = 0;
+  const expectAsyncFailure = async (callback, label) => {
+    await expectUncountedAsyncFailure(callback, label);
+    negativeCases += 1;
+  };
+  const assertNegative = (condition, label) => {
+    invariant(condition, label + " negative case did not remain observable");
+    negativeCases += 1;
+  };
+  const plan = buildTask540SmokePlan({ nonce: "0123456789ab" });
+
+  const inheritedSecretCorpus = configuredSensitiveValues(
+    { DATABASE_URL: "postgres://wf540:p%40ssword@localhost/example" },
+    { INHERITED_SECRET: "sixteen-private", STORE_PUBLIC_KEY: "public-value" }
+  );
+  invariant(
+    inheritedSecretCorpus.includes("postgres://wf540:p%40ssword@localhost/example") &&
+      inheritedSecretCorpus.includes("p@ssword") &&
+      inheritedSecretCorpus.includes("sixteen-private") &&
+      !inheritedSecretCorpus.includes("public-value"),
+    "inherited/URL secret corpus projection drift"
+  );
+
+  const artifactIdentity = Object.freeze({
+    dev: "1",
+    ino: "2",
+    type: "file",
+    mode: 0o600,
+    size: 10,
+  });
+  invariant(
+    sameArtifactIdentity(artifactIdentity, { ...artifactIdentity }, { includeSize: true }),
+    "workspace identity equality drift"
+  );
+  const bunExecutableIdentity = deepFreezeExact({
+    dev: "62",
+    ino: "540",
+    mode: 0o755,
+    size: 1024,
+    type: "file",
+  });
+  const bunRootIdentity = deepFreezeExact({
+    dev: "62",
+    ino: "541",
+    mode: 0o755,
+    size: 128,
+    type: "directory",
+  });
+  const bunCoreIdentity = deepFreezeExact({
+    dev: "62",
+    ino: "542",
+    mode: 0o755,
+    size: 128,
+    type: "directory",
+  });
+  const bunExecutableAuthority = deepFreezeExact({
+    coreIdentity: bunCoreIdentity,
+    corePath: "/task540-self-test-root/core",
+    executableIdentity: bunExecutableIdentity,
+    executablePath: "/task540-self-test-bin/bun",
+    pathValue: "/task540-self-test-bin:/usr/bin",
+    rootIdentity: bunRootIdentity,
+    rootPath: "/task540-self-test-root",
+    selectedAliasPath: "/task540-self-test-bin/bun",
+  });
+  const bunExecutableObservation = deepFreezeExact({
+    coreIdentity: bunCoreIdentity,
+    coreRealPath: bunExecutableAuthority.corePath,
+    currentPath: bunExecutableAuthority.pathValue,
+    executableIdentity: bunExecutableIdentity,
+    executableRealPath: bunExecutableAuthority.executablePath,
+    rootIdentity: bunRootIdentity,
+    rootRealPath: bunExecutableAuthority.rootPath,
+    selectedAliasPath: bunExecutableAuthority.selectedAliasPath,
+    selectedExecutableRealPath: bunExecutableAuthority.executablePath,
+  });
+  invariant(
+    validateBunExecutableAuthorityObservation(bunExecutableAuthority, bunExecutableObservation) ===
+      bunExecutableAuthority,
+    "Bun executable authority observation drift"
+  );
+  await expectAsyncFailure(
+    async () =>
+      validateBunExecutableAuthorityObservation(
+        bunExecutableAuthority,
+        deepFreezeExact({
+          ...bunExecutableObservation,
+          executableIdentity: { ...bunExecutableIdentity, ino: "543" },
+        })
+      ),
+    "Bun executable inode drift"
+  );
+  await expectAsyncFailure(
+    async () =>
+      validateBunExecutableAuthorityObservation(
+        bunExecutableAuthority,
+        deepFreezeExact({ ...bunExecutableObservation, currentPath: "/attacker/bin:/usr/bin" })
+      ),
+    "Bun executable PATH drift"
+  );
+  await expectAsyncFailure(
+    async () =>
+      validateBunExecutableAuthorityObservation(
+        bunExecutableAuthority,
+        deepFreezeExact({
+          ...bunExecutableObservation,
+          selectedExecutableRealPath: "/task540-attacker-bin/bun",
+        })
+      ),
+    "Bun executable PATH alias retarget"
+  );
+  assertNegative(
+    !sameArtifactIdentity(
+      artifactIdentity,
+      { ...artifactIdentity, ino: "3" },
+      { includeSize: true }
+    ),
+    "workspace inode replacement"
+  );
+
+  const fakeLeader = Object.freeze({ pid: 101, ppid: 1, pgid: 101, startTicks: "1001" });
+  const fakeChild = Object.freeze({ pid: 102, ppid: 101, pgid: 101, startTicks: "1002" });
+  const fakeGroup = {
+    leader: fakeLeader,
+    retainedMembers: new Map([[fakeLeader.pid, fakeLeader]]),
+  };
+  appendRetainedGroupMembers(fakeGroup, [fakeLeader, fakeChild], { requireLeader: true });
+  invariant(fakeGroup.retainedMembers.size === 2, "retained process child acquisition drift");
+  await expectAsyncFailure(
+    async () =>
+      appendRetainedGroupMembers(fakeGroup, [{ ...fakeChild, startTicks: "9999" }], {
+        requireLeader: false,
+      }),
+    "retained process PID reuse"
+  );
+  await expectAsyncFailure(
+    async () =>
+      appendRetainedGroupMembers(
+        fakeGroup,
+        [{ pid: 103, ppid: 1, pgid: 101, startTicks: "1003" }],
+        { requireLeader: false }
+      ),
+    "unretained process after termination"
+  );
+
+  let constructionCleanupCalls = 0;
+  const constructionAuthority = createPrivateConstructionCleanupAuthority();
+  constructionAuthority.bindCompleteCapabilities({
+    async cleanup() {
+      constructionCleanupCalls += 1;
+      return deepFreezeExact({ absenceProven: true });
+    },
+  });
+  const firstConstructionCleanup =
+    await constructionAuthority.cleanupWhateverWasAcquiredOnceNeverThrow();
+  const secondConstructionCleanup =
+    await constructionAuthority.cleanupWhateverWasAcquiredOnceNeverThrow();
+  const constructionProjection = privateConstructionAuthorityProjection(constructionAuthority);
+  invariant(
+    firstConstructionCleanup === secondConstructionCleanup &&
+      constructionCleanupCalls === 1 &&
+      constructionProjection.cleanupCalls === 2 &&
+      constructionProjection.cleanupStarted,
+    "construction cleanup once-state drift"
+  );
+
+  let failingConstructionCleanupCalls = 0;
+  const failingConstructionAuthority = createPrivateConstructionCleanupAuthority();
+  failingConstructionAuthority.bindCompleteCapabilities({
+    async cleanup() {
+      failingConstructionCleanupCalls += 1;
+      throw new Error("private construction cleanup failure");
+    },
+  });
+  const failedConstructionCleanup =
+    await failingConstructionAuthority.cleanupWhateverWasAcquiredOnceNeverThrow();
+  const repeatedFailedConstructionCleanup =
+    await failingConstructionAuthority.cleanupWhateverWasAcquiredOnceNeverThrow();
+  invariant(
+    failedConstructionCleanup === repeatedFailedConstructionCleanup &&
+      failedConstructionCleanup.absenceProven === false &&
+      failingConstructionCleanupCalls === 1,
+    "construction cleanup failure once-state drift"
+  );
+  negativeCases += 1;
+
+  const coreSuccessCapabilities = buildFakeCapabilities();
+  const coreSuccessAuthority = createPrivateConstructionCleanupAuthority();
+  coreSuccessAuthority.bindCompleteCapabilities(coreSuccessCapabilities);
+  const coreSuccessEvidence = await executeSmokePlanCore(
+    plan,
+    coreSuccessCapabilities,
+    coreSuccessAuthority
+  );
+  const coreSuccessRepeatedCleanup =
+    await coreSuccessAuthority.cleanupWhateverWasAcquiredOnceNeverThrow();
+  invariant(
+    coreSuccessEvidence.pass === true &&
+      coreSuccessRepeatedCleanup.lifecycle !== null &&
+      coreSuccessCapabilities.cleanupExecutions === 1 &&
+      privateConstructionAuthorityProjection(coreSuccessAuthority).cleanupCalls === 2,
+    "core success/public cleanup once-state drift"
+  );
+
+  const coreFailureCapabilities = buildFakeCapabilities({ failOrdinal: 25 });
+  const coreFailureAuthority = createPrivateConstructionCleanupAuthority();
+  coreFailureAuthority.bindCompleteCapabilities(coreFailureCapabilities);
+  let sealedCoreFailure = null;
+  try {
+    await executeSmokePlanCore(plan, coreFailureCapabilities, coreFailureAuthority);
+  } catch (error) {
+    sealedCoreFailure = error;
+  }
+  await coreFailureAuthority.cleanupWhateverWasAcquiredOnceNeverThrow();
+  invariant(
+    sealedCoreFailure === TASK_FAILURE &&
+      coreFailureCapabilities.cleanupExecutions === 1 &&
+      privateConstructionAuthorityProjection(coreFailureAuthority).cleanupCalls === 2,
+    "core failure/public cleanup once-state drift"
+  );
+  negativeCases += 1;
+
+  const cleanupFailureCapabilities = buildFakeCapabilities({ failCleanupLifecycle: true });
+  const cleanupFailureAuthority = createPrivateConstructionCleanupAuthority();
+  cleanupFailureAuthority.bindCompleteCapabilities(cleanupFailureCapabilities);
+  let sealedCleanupFailure = null;
+  try {
+    await executeSmokePlanCore(plan, cleanupFailureCapabilities, cleanupFailureAuthority);
+  } catch (error) {
+    sealedCleanupFailure = error;
+  }
+  await cleanupFailureAuthority.cleanupWhateverWasAcquiredOnceNeverThrow();
+  invariant(
+    sealedCleanupFailure === TASK_FAILURE &&
+      cleanupFailureCapabilities.cleanupExecutions === 1 &&
+      privateConstructionAuthorityProjection(cleanupFailureAuthority).cleanupCalls === 3,
+    "cleanup lifecycle failure/public cleanup once-state drift"
+  );
+  negativeCases += 1;
+
+  let inputTrapCalls = 0;
+  const trappedInput = new Proxy(
+    {},
+    {
+      getPrototypeOf() {
+        inputTrapCalls += 1;
+        throw new Error("input prototype trap");
+      },
+      ownKeys() {
+        inputTrapCalls += 1;
+        throw new Error("input ownKeys trap");
+      },
+    }
+  );
+  const preAuthorityFailuresBefore = PRE_AUTHORITY_FAILURE_COUNT;
+  let constructorFailure = null;
+  try {
+    await executeTask540SmokePlanWithAuthorityFactory(trappedInput, () => {
+      throw new Error("private authority constructor failure");
+    });
+  } catch (error) {
+    constructorFailure = error;
+  }
+  invariant(
+    constructorFailure === TASK_FAILURE &&
+      inputTrapCalls === 0 &&
+      PRE_AUTHORITY_FAILURE_COUNT === preAuthorityFailuresBefore + 1,
+    "construction authority was not created before input inspection"
+  );
+  negativeCases += 1;
+
+  const sourceCaptures = new SingleAssignmentCaptureMap();
+  for (const name of plan.requiredCaptureNames)
+    sourceCaptures.bind(name, fixtureCaptureValue(name, plan));
+  for (const name of plan.requiredRuntimeBlockCaptures) {
+    sourceCaptures.bind(name, plan.prefix + "-" + name.replaceAll(".", "-"));
+  }
+  const sourceContext = {
+    plan,
+    captures: sourceCaptures,
+    priorOutputs: new Map(),
+    variables: new Map(),
+    currentOutput: null,
+    root: "/task540-self-test-root",
+    actionId: "source-compile",
+  };
+  let compiledRunCodeSources = 0;
+  const authArmSourceActionIds = [];
+  const authCloseSourceActionIds = [];
+  const recordEntryMenuSourceActionIds = [];
+  const recordsWorkspaceSourceActionIds = [];
+  for (const action of plan.actionManifest) {
+    if (action.executable.type === "runtime-operation") continue;
+    const executionSpec = compileActionExecutionSpec(action);
+    const invocation = buildBrowserInvocation(
+      action,
+      executionSpec,
+      sourceCaptures,
+      "/task540-self-test-root",
+      "/task540-self-test-root/private",
+      plan,
+      { ...sourceContext, actionId: action.id },
+      { csrfHeaderName: "x-self-test-csrf" }
+    );
+    if (action.executable.type !== "browser-run-code") continue;
+    const sourceIndex = invocation.args.indexOf("run-code") + 1;
+    invariant(
+      sourceIndex > 0 && typeof invocation.args[sourceIndex] === "string",
+      action.id + " run-code source is absent"
+    );
+    new Script("(" + invocation.args[sourceIndex] + ")", { filename: action.id + ".self-test.js" });
+    if (invocation.args[sourceIndex].includes("context.__wf540ArmExpectedAuthChallenge({")) {
+      authArmSourceActionIds.push(action.id);
+    }
+    if (invocation.args[sourceIndex].includes("context.__wf540CloseExpectedAuthChallenge({")) {
+      authCloseSourceActionIds.push(action.id);
+    }
+    if (invocation.args[sourceIndex].includes("wf540_record_actions_target")) {
+      recordEntryMenuSourceActionIds.push(action.id);
+      invariant(
+        invocation.args[sourceIndex].includes(
+          JSON.stringify(registeredSelector(plan, "recordActions"))
+        ) &&
+          invocation.args[sourceIndex].includes(
+            JSON.stringify(registeredSelector(plan, "editRecord"))
+          ) &&
+          invocation.args[sourceIndex].includes(
+            JSON.stringify(expandRegisteredPath(plan, "entry", sourceCaptures))
+          ) &&
+          invocation.args[sourceIndex].includes('[data-custom-screen-entry-document="true"]'),
+        action.id + " record-entry source contract drift"
+      );
+    }
+    if (invocation.args[sourceIndex].includes("wf540_record_actions_wait_empty_body")) {
+      recordsWorkspaceSourceActionIds.push(action.id);
+      invariant(
+        invocation.args[sourceIndex].includes(
+          JSON.stringify(registeredSelector(plan, "recordActions"))
+        ) &&
+          invocation.args[sourceIndex].includes(
+            JSON.stringify(expandRegisteredPath(plan, "records", sourceCaptures))
+          ),
+        action.id + " records-workspace source contract drift"
+      );
+    }
+    compiledRunCodeSources += 1;
+  }
+  invariant(compiledRunCodeSources === 386, "generated run-code source count drift");
+  invariant(
+    deepEqualJson(
+      authArmSourceActionIds.sort(),
+      EXPECTED_AUTH_CHALLENGE_PHASES.map(({ armActionId }) => armActionId).sort()
+    ),
+    "expected auth arm source ownership drift"
+  );
+  invariant(
+    deepEqualJson(
+      authCloseSourceActionIds.sort(),
+      EXPECTED_AUTH_CHALLENGE_PHASES.map(({ closeActionId }) => closeActionId).sort()
+    ),
+    "expected auth close source ownership drift"
+  );
+  invariant(
+    deepEqualJson(recordEntryMenuSourceActionIds.sort(), [...RECORD_ENTRY_MENU_ACTION_IDS].sort()),
+    "record-entry menu source ownership drift"
+  );
+  invariant(
+    deepEqualJson(recordsWorkspaceSourceActionIds.sort(), [...RECORDS_WORKSPACE_ACTION_IDS].sort()),
+    "records-workspace source ownership drift"
+  );
+  const successCapabilities = buildFakeCapabilities();
+  const evidence = await executeSmokePlanCore(plan, successCapabilities);
+  invariant(evidence.pass === true, "fake success evidence failed");
+  invariant(successCapabilities.calls.slice(0, 490).length === 490, "one action per row drift");
+  invariant(
+    deepEqualJson(
+      successCapabilities.calls.slice(490, -1),
+      successCapabilities.lastFinalPlan.actionTuples.map(
+        ([resourceKey, operationKind]) => operationKind + ":" + resourceKey
+      )
+    ) && successCapabilities.calls.at(-1) === "finalize",
+    "fake cleanup execution trace/order drift"
+  );
+  invariant(
+    plan.requiredFixtureSubjectKeys.length * CLEANUP_OPERATION_KINDS.length === 45,
+    "contract fixture cleanup cardinality drift"
+  );
+  invariant(
+    evidence.cleanupReceipts.length === 54 &&
+      evidence.cleanupReceipts.length ===
+        evidence.resources.filter(
+          ({ class: className, kind }) =>
+            className === "delete" && !TERMINAL_RESOURCE_KINDS.has(kind)
+        ).length *
+          3,
+    "ledger-derived persistent cleanup cardinality drift"
+  );
+  invariant(
+    deepEqualJson(
+      evidence.captureProjection.map(({ name }) => name),
+      [...plan.requiredCaptureNames, ...plan.requiredRuntimeBlockCaptures]
+    ) &&
+      evidence.captureProjection.every(
+        (row) =>
+          deepEqualJson(Object.keys(row), ["name", "value"]) &&
+          typeof row.name === "string" &&
+          row.name.length > 0 &&
+          typeof row.value === "string" &&
+          row.value.length > 0
+      ),
+    "fake captures incomplete"
+  );
+  invariant(
+    !canonicalJson(evidence).includes("private fake failure detail"),
+    "private value leaked"
+  );
+  const nestedUnknownFinalization = structuredClone(successCapabilities.lastFinalization);
+  nestedUnknownFinalization.host.children[0].unexpected = true;
+  deepFreezeExact(nestedUnknownFinalization);
+  await expectAsyncFailure(
+    async () => assertCanonicalFinalization(nestedUnknownFinalization, plan),
+    "nested finalization unknown property"
+  );
+  const rawMediaIds = {
+    screen: fixtureCaptureValue("screen.id", plan),
+    retryScreen: fixtureCaptureValue("retry-screen.id", plan),
+    entry: fixtureCaptureValue("entry.id", plan),
+    media: fixtureCaptureValue("media.id", plan),
+  };
+  const rawMediaKey = "2026/07/54000000-0000-4000-8000-000000000777.png";
+  const rawMediaValues = [
+    {
+      id: rawMediaIds.screen,
+      definition: {
+        editorView: {
+          document: {
+            sections: [
+              {
+                blocks: [
+                  { id: plan.fixtureBlueprint.screen.blockIds.raceImage, type: "image", slots: {} },
+                ],
+              },
+            ],
+          },
+          bindings: [
+            {
+              blockId: plan.fixtureBlueprint.screen.blockIds.raceImage,
+              propPath: "src",
+              source: "entry",
+              mode: "read",
+              field: "raceImageId",
+            },
+          ],
+        },
+      },
+    },
+    {
+      id: rawMediaIds.entry,
+      data: { raceImageId: plan.fixtureBlueprint.media.missingBoundMediaId },
+    },
+    { id: rawMediaIds.media, key: rawMediaKey, url: "/media/" + rawMediaKey },
+    {
+      overrides: [
+        {
+          screenId: rawMediaIds.screen,
+          entryId: rawMediaIds.entry,
+          blockId: plan.fixtureBlueprint.screen.blockIds.raceImage,
+          propPath: "mediaAssetId",
+          value: rawMediaIds.media,
+        },
+      ],
+    },
+    { overrides: [] },
+  ];
+  const makeRawMediaState = (values = rawMediaValues) => ({
+    plan,
+    currentCaptures: sourceCaptures,
+    mediaRecord: { id: rawMediaIds.media },
+    mediaCanonicalSafeUrl: "/media/" + rawMediaKey,
+    mediaRaceAdminEvidence: {
+      screen: Buffer.from(JSON.stringify(values[0])),
+      entry: Buffer.from(JSON.stringify(values[1])),
+      media: Buffer.from(JSON.stringify(values[2])),
+      override: Buffer.from(JSON.stringify(values[3])),
+      retryOverride: Buffer.from(JSON.stringify(values[4])),
+    },
+  });
+  const rawMediaState = makeRawMediaState();
+  const rawMediaProof = parseMediaRaceAuthoritativeAdminEvidence(rawMediaState);
+  const rawMediaFrames = [];
+  for (const bytes of Object.values(rawMediaState.mediaRaceAdminEvidence)) {
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(bytes.length);
+    rawMediaFrames.push(length, bytes);
+  }
+  invariant(
+    rawMediaProof.evidenceSha256 === hashBytes(Buffer.concat(rawMediaFrames)) &&
+      rawMediaProof.evidenceSha256 !==
+        hashBytes(Buffer.from(canonicalJson(rawMediaProof.projection))),
+    "media-race proof was not hashed from retained authoritative Admin bytes"
+  );
+  for (const [label, mutate] of [
+    [
+      "media raw duplicate binding",
+      (values) =>
+        values[0].definition.editorView.bindings.push({
+          ...values[0].definition.editorView.bindings[0],
+        }),
+    ],
+    [
+      "media raw entry mismatch",
+      (values) => {
+        values[1].data.raceImageId = rawMediaIds.media;
+      },
+    ],
+    [
+      "media raw unsafe URL",
+      (values) => {
+        values[2].url += "?private=1";
+      },
+    ],
+    [
+      "media raw override scope",
+      (values) => {
+        values[3].overrides[0].screenId = rawMediaIds.retryScreen;
+      },
+    ],
+    [
+      "media raw retry override",
+      (values) => values[4].overrides.push({ ...values[3].overrides[0] }),
+    ],
+  ]) {
+    const values = structuredClone(rawMediaValues);
+    mutate(values);
+    await expectAsyncFailure(
+      async () => parseMediaRaceAuthoritativeAdminEvidence(makeRawMediaState(values)),
+      label
+    );
+  }
+  const unparseableMediaState = makeRawMediaState();
+  unparseableMediaState.mediaRaceAdminEvidence.entry = Buffer.from("{");
+  await expectAsyncFailure(
+    async () => parseMediaRaceAuthoritativeAdminEvidence(unparseableMediaState),
+    "media raw unparseable response"
+  );
+  invariant(
+    RESPONSE_LOST_CREATE_ACTION_IDS.length === 18 &&
+      deepEqualJson(
+        RESPONSE_LOST_CREATE_ACTION_IDS,
+        [...new Set(Object.values(PROVEN_RESOURCE_ACTIONS).map(({ origin }) => origin))].sort()
+      ),
+    "response-lost create action registry drift"
+  );
+  const baselineProbeState = {
+    plan,
+    responseLostBaselines: new Map(),
+    responseLostIntents: new Map(),
+  };
+  const baselineProbeCalls = [];
+  await captureAllResponseLostNaturalBaselinesBeforeFirstWrite(
+    baselineProbeState,
+    async (operationId, input) => {
+      baselineProbeCalls.push(
+        deepFreezeExact({ operationId, input: deepFreezeExact({ ...input }) })
+      );
+      return deepFreezeExact({ candidates: deepFreezeExact([]), overflow: false });
+    }
+  );
+  invariant(
+    baselineProbeCalls.length === 18 &&
+      baselineProbeState.responseLostBaselines.size === 18 &&
+      RESPONSE_LOST_CREATE_ACTION_IDS.every((actionId) =>
+        baselineProbeState.responseLostBaselines.has(actionId)
+      ) &&
+      baselineProbeCalls.every(
+        ({ operationId }) =>
+          BUN_BRIDGE_RESPONSE_LOST_OPERATION_DESCRIPTORS[operationId]?.operationId === operationId
+      ) &&
+      new Set(baselineProbeCalls.map(({ operationId }) => operationId)).size === 18,
+    "all response-lost natural baselines were not captured before the first write"
+  );
+  await expectAsyncFailure(
+    () =>
+      Promise.resolve(
+        validateBoundedNaturalCandidateResult(
+          deepFreezeExact({ candidates: deepFreezeExact([]), overflow: true }),
+          "response-lost overflow self-test"
+        )
+      ),
+    "response-lost DB-side overflow sentinel"
+  );
+  invariant(
+    RESPONSE_LOST_USER_QUERY_BRIDGE_SOURCE.includes("roles.permissions") &&
+      RESPONSE_LOST_USER_QUERY_BRIDGE_SOURCE.includes('row.roleName === "admin"') &&
+      RESPONSE_LOST_USER_QUERY_BRIDGE_SOURCE.includes("adminRoleTupleCount") &&
+      USER_PROVISION_BRIDGE_SOURCE.includes("wf540_user_password_exact_id") &&
+      USER_PROVISION_BRIDGE_SOURCE.includes("normalizedEmailMatches:true") &&
+      RESPONSE_LOST_MEDIA_QUERY_BRIDGE_SOURCE.includes(
+        "assertCanonicalStorageKey(candidate.key)"
+      ) &&
+      RESPONSE_LOST_MEDIA_QUERY_BRIDGE_SOURCE.includes(
+        'candidate.url !== "/media/" + candidate.key'
+      ),
+    "response-lost user/media provenance source drift"
+  );
+  invariant(
+    API_SESSION_OBSERVATION_BRIDGE_SOURCE.includes(".limit(2)") &&
+      API_SESSION_OBSERVATION_BRIDGE_SOURCE.includes("csrfTokenHash:sessions.csrfTokenHash") &&
+      BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE.includes("IS NOT DISTINCT FROM") &&
+      BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE.includes("const inTransactionRows = await tx.select()") &&
+      BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE.includes("const afterRows = await db.select()") &&
+      !adminApiRequest.toString().includes("session.csrf") &&
+      !adminApiRequest.toString().includes("session.context") &&
+      disposeOwnedApiRequestContextAndProveAbsent.toString().includes("disposeAttemptPromise") &&
+      disposeOwnedApiRequestContextAndProveAbsent.toString().includes("storageState") &&
+      readPublicApiExactlyOnce.toString().indexOf("privateEphemeralApiContextRegistry") <
+        readPublicApiExactlyOnce.toString().indexOf("await state.playwrightRequest.newContext") &&
+      readPublicApiExactlyOnce.toString().indexOf("ephemeralRegistry.has") <
+        readPublicApiExactlyOnce.toString().indexOf("await state.playwrightRequest.newContext"),
+    "private API lifecycle or bootstrap CAS source drift"
+  );
+
+  const exactLoginProjection = deepFreezeExact({
+    session: { expiresAt: "2026-07-17T00:00:00.000Z" },
+    user: {
+      email: "admin@example.test",
+      id: "54000000-0000-4000-8000-000000007300",
+      name: "Admin",
+    },
+  });
+  invariant(
+    validateExactApiLoginResponse(
+      exactLoginProjection,
+      exactLoginProjection.user.id,
+      "ADMIN@example.test"
+    ) === exactLoginProjection,
+    "strict API login projection rejected the exact response"
+  );
+  await expectAsyncFailure(
+    () =>
+      Promise.resolve(
+        validateExactApiLoginResponse(
+          deepFreezeExact({ ...exactLoginProjection, unexpected: true }),
+          exactLoginProjection.user.id,
+          exactLoginProjection.user.email
+        )
+      ),
+    "API login top-level unknown key"
+  );
+  await expectAsyncFailure(
+    () =>
+      Promise.resolve(
+        validateExactApiLoginResponse(
+          deepFreezeExact({
+            ...exactLoginProjection,
+            user: { ...exactLoginProjection.user, unexpected: true },
+          }),
+          exactLoginProjection.user.id,
+          exactLoginProjection.user.email
+        )
+      ),
+    "API login nested unknown key"
+  );
+
+  const makeApiDisposalProbe = ({ disposeThrows = false, probeRejects = true } = {}) => {
+    const state = {};
+    const capability = Object.freeze({
+      key: "bootstrap",
+      userAgent: "TASK-540/self-test",
+      userId: null,
+    });
+    let disposeCalls = 0;
+    let storageCalls = 0;
+    const context = {
+      async dispose() {
+        disposeCalls += 1;
+        if (disposeThrows) throw new Error("self-test dispose failure");
+      },
+      async storageState() {
+        storageCalls += 1;
+        if (typeof probeRejects === "function" ? probeRejects(disposeCalls) : probeRejects) {
+          throw new Error("self-test closed context");
+        }
+        return { cookies: [], origins: [] };
+      },
+    };
+    const registry = new Map([
+      [
+        "bootstrap",
+        {
+          capability,
+          context,
+          disposalErrors: [],
+          disposeAttemptPromise: null,
+          disposeProof: null,
+          key: "bootstrap",
+          userAgent: capability.userAgent,
+        },
+      ],
+    ]);
+    PRIVATE_API_REQUEST_CONTEXT.set(state, registry);
+    return {
+      capability,
+      context,
+      get disposeCalls() {
+        return disposeCalls;
+      },
+      registry,
+      get storageCalls() {
+        return storageCalls;
+      },
+      state,
+    };
+  };
+  const successfulApiDisposal = makeApiDisposalProbe();
+  const [firstDisposalProof, secondDisposalProof] = await Promise.all([
+    disposeApiRequestContextAndProveAbsent(
+      successfulApiDisposal.state,
+      successfulApiDisposal.capability,
+      "bootstrap"
+    ),
+    disposeApiRequestContextAndProveAbsent(
+      successfulApiDisposal.state,
+      successfulApiDisposal.capability,
+      "bootstrap"
+    ),
+  ]);
+  invariant(
+    firstDisposalProof === secondDisposalProof &&
+      successfulApiDisposal.disposeCalls === 1 &&
+      successfulApiDisposal.storageCalls === 1 &&
+      successfulApiDisposal.registry.size === 1,
+    "API context disposal was not once-only with an independent absence probe"
+  );
+  const phase4DisposalProof = await disposeApiRequestContextAndProveAbsent(
+    successfulApiDisposal.state,
+    successfulApiDisposal.capability,
+    "bootstrap"
+  );
+  invariant(
+    phase4DisposalProof === firstDisposalProof &&
+      successfulApiDisposal.disposeCalls === 1 &&
+      successfulApiDisposal.storageCalls === 2 &&
+      successfulApiDisposal.registry.has("bootstrap"),
+    "eager API disposal did not retain acquired history for an independent phase-4 probe"
+  );
+  const throwingApiDisposal = makeApiDisposalProbe({ disposeThrows: true });
+  const throwingDisposalProof = await disposeApiRequestContextAndProveAbsent(
+    throwingApiDisposal.state,
+    throwingApiDisposal.capability,
+    "bootstrap"
+  );
+  invariant(
+    throwingDisposalProof.capabilityAbsent === true &&
+      throwingApiDisposal.disposeCalls === 1 &&
+      throwingApiDisposal.storageCalls === 1 &&
+      throwingApiDisposal.registry.has("bootstrap") &&
+      throwingApiDisposal.registry.get("bootstrap").disposalErrors.length === 1,
+    "throwing-but-absent API disposal lost its proof or retained error"
+  );
+  const liveApiDisposal = makeApiDisposalProbe({
+    probeRejects: (disposeCalls) => disposeCalls >= 2,
+  });
+  await expectAsyncFailure(
+    () =>
+      disposeApiRequestContextAndProveAbsent(
+        liveApiDisposal.state,
+        liveApiDisposal.capability,
+        "bootstrap"
+      ),
+    "API context live post-dispose capability"
+  );
+  invariant(
+    liveApiDisposal.disposeCalls === 1 &&
+      liveApiDisposal.storageCalls === 1 &&
+      liveApiDisposal.registry.has("bootstrap") &&
+      liveApiDisposal.registry.get("bootstrap").disposeAttemptPromise === null,
+    "live post-dispose capability was incorrectly removed from private authority"
+  );
+  const recoveredApiDisposal = await disposeApiRequestContextAndProveAbsent(
+    liveApiDisposal.state,
+    liveApiDisposal.capability,
+    "bootstrap"
+  );
+  invariant(
+    recoveredApiDisposal.capabilityAbsent === true &&
+      liveApiDisposal.disposeCalls === 2 &&
+      liveApiDisposal.storageCalls === 2 &&
+      liveApiDisposal.registry.has("bootstrap") &&
+      liveApiDisposal.registry.get("bootstrap").disposalErrors.length === 1,
+    "retained live API context did not recover through a fresh close/probe"
+  );
+
+  const makeBootstrapSettlementProbe = () => {
+    const state = {};
+    const beforePair = deepFreezeExact({
+      lastLoginAt: "2026-07-16T00:00:00.000Z",
+      updatedAt: "2026-07-16T00:00:00.000Z",
+    });
+    const authority = {
+      newestOwnedPair: beforePair,
+      ownedAuditIds: new Set(),
+      ownedSessionIds: new Set(),
+    };
+    const attempt = {
+      beforeAuditIds: deepFreezeExact([]),
+      beforePair,
+      beforeSessionIds: deepFreezeExact([]),
+      status: "pending-late",
+    };
+    PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY.set(state, authority);
+    return { attempt, authority, state };
+  };
+  const lateSettlement = makeBootstrapSettlementProbe();
+  const lateSessionId = "54000000-0000-4000-8000-000000007301";
+  const lateAuditId = "54000000-0000-4000-8000-000000007302";
+  invariant(
+    settleBootstrapLoginAttempt(
+      lateSettlement.state,
+      lateSettlement.authority,
+      lateSettlement.attempt,
+      {
+        lastLoginAt: "2026-07-16T00:00:01.000Z",
+        updatedAt: "2026-07-16T00:00:01.000Z",
+        sessionIds: [lateSessionId],
+        auditIds: [lateAuditId],
+      }
+    ) === true &&
+      lateSettlement.attempt.status === "settled" &&
+      lateSettlement.authority.ownedSessionIds.has(lateSessionId) &&
+      lateSettlement.authority.ownedAuditIds.has(lateAuditId),
+    "delayed exact bootstrap session/audit pair was not adopted"
+  );
+  const oneColumnSettlement = makeBootstrapSettlementProbe();
+  await expectAsyncFailure(
+    () =>
+      Promise.resolve(
+        settleBootstrapLoginAttempt(
+          oneColumnSettlement.state,
+          oneColumnSettlement.authority,
+          oneColumnSettlement.attempt,
+          {
+            lastLoginAt: "2026-07-16T00:00:01.000Z",
+            updatedAt: "2026-07-16T00:00:00.000Z",
+            sessionIds: [lateSessionId],
+            auditIds: [lateAuditId],
+          }
+        )
+      ),
+    "one-column delayed bootstrap mutation"
+  );
+
+  validateStaticBunBridgeDescriptorRegistries();
+  const missingRuntimeRegistry = { ...BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS };
+  delete missingRuntimeRegistry["runtime/set-001-storage-preflight"];
+  await expectAsyncFailure(
+    async () =>
+      validateStaticBunBridgeDescriptorRegistries({ runtimeRegistry: missingRuntimeRegistry }),
+    "missing runtime Bun descriptor"
+  );
+  const extraOperationRegistry = {
+    ...BUN_BRIDGE_OPERATION_DESCRIPTORS,
+    "runtime/extra": BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS["runtime/set-001-storage-preflight"],
+  };
+  await expectAsyncFailure(
+    async () =>
+      validateStaticBunBridgeDescriptorRegistries({ operationRegistry: extraOperationRegistry }),
+    "extra static Bun descriptor"
+  );
+  const reversedRuntimeRegistry = { ...BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS };
+  const reversedOperationRegistry = { ...BUN_BRIDGE_OPERATION_DESCRIPTORS };
+  const reversedId = "runtime/set-001-storage-preflight";
+  const reversedDescriptor = { ...reversedRuntimeRegistry[reversedId], envProfileId: "database" };
+  reversedRuntimeRegistry[reversedId] = reversedDescriptor;
+  reversedOperationRegistry[reversedId] = reversedDescriptor;
+  await expectAsyncFailure(
+    async () =>
+      validateStaticBunBridgeDescriptorRegistries({
+        operationRegistry: reversedOperationRegistry,
+        runtimeRegistry: reversedRuntimeRegistry,
+      }),
+    "reversed runtime Bun environment profile"
+  );
+  const unknownOutputRuntimeRegistry = { ...BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS };
+  const unknownOutputOperationRegistry = { ...BUN_BRIDGE_OPERATION_DESCRIPTORS };
+  const unknownOutputDescriptor = deepFreezeExact({
+    ...unknownOutputRuntimeRegistry[reversedId],
+    outputSchemaId: "unregistered-private-output-v1",
+  });
+  unknownOutputRuntimeRegistry[reversedId] = unknownOutputDescriptor;
+  unknownOutputOperationRegistry[reversedId] = unknownOutputDescriptor;
+  await expectAsyncFailure(
+    async () =>
+      validateStaticBunBridgeDescriptorRegistries({
+        operationRegistry: unknownOutputOperationRegistry,
+        runtimeRegistry: unknownOutputRuntimeRegistry,
+      }),
+    "unregistered Bun output schema"
+  );
+  const driftedLimitRuntimeRegistry = { ...BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS };
+  const driftedLimitOperationRegistry = { ...BUN_BRIDGE_OPERATION_DESCRIPTORS };
+  const driftedLimitDescriptor = deepFreezeExact({
+    ...driftedLimitRuntimeRegistry[reversedId],
+    maxStdoutBytes: BUN_BRIDGE_EXECUTION_AUTHORITY.maxStdoutBytes + 1,
+  });
+  driftedLimitRuntimeRegistry[reversedId] = driftedLimitDescriptor;
+  driftedLimitOperationRegistry[reversedId] = driftedLimitDescriptor;
+  await expectAsyncFailure(
+    async () =>
+      validateStaticBunBridgeDescriptorRegistries({
+        operationRegistry: driftedLimitOperationRegistry,
+        runtimeRegistry: driftedLimitRuntimeRegistry,
+      }),
+    "drifted Bun descriptor stream bound"
+  );
+  await expectAsyncFailure(
+    async () =>
+      encodeBoundedBunBridgeCanonicalFrame(
+        { payload: "x".repeat(BUN_BRIDGE_EXECUTION_AUTHORITY.maxStdinBytes) },
+        BUN_BRIDGE_EXECUTION_AUTHORITY.maxStdinBytes
+      ),
+    "over-limit Bun descriptor input frame"
+  );
+  const preferenceOutputDescriptor =
+    BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS["runtime/set-042-preference-a-proof"];
+  invariant(
+    validateBunBridgeOutput(
+      {},
+      preferenceOutputDescriptor,
+      { userId: "54000000-0000-4000-8000-000000007401" },
+      { showFieldMetadata: true }
+    ).showFieldMetadata === true,
+    "central Bun output validator selection drift"
+  );
+  await expectAsyncFailure(
+    async () =>
+      validateBunBridgeOutput(
+        {},
+        preferenceOutputDescriptor,
+        { userId: "54000000-0000-4000-8000-000000007401" },
+        { showFieldMetadata: true, unexpected: true }
+      ),
+    "unknown top-level Bun output field"
+  );
+  const apiSessionOutputDescriptor =
+    BUN_BRIDGE_AUXILIARY_OPERATION_DESCRIPTORS["resource/api-session-observation"];
+  const apiSessionUserId = "54000000-0000-4000-8000-000000007402";
+  const apiSessionUserAgent = "TASK-540/self-test-api-output";
+  const apiSessionOutputRow = deepFreezeExact({
+    createdAt: "2026-07-16T00:00:00.000Z",
+    csrfTokenHash: "b".repeat(64),
+    expiresAt: "2026-07-17T00:00:00.000Z",
+    id: "54000000-0000-4000-8000-000000007403",
+    ip: null,
+    revokedAt: null,
+    tokenHash: "a".repeat(64),
+    userAgent: apiSessionUserAgent,
+    userId: apiSessionUserId,
+  });
+  invariant(
+    validateBunBridgeOutput(
+      {},
+      apiSessionOutputDescriptor,
+      { userAgent: apiSessionUserAgent, userId: apiSessionUserId },
+      { rows: [apiSessionOutputRow] }
+    ).rows.length === 1,
+    "central nested Bun output validator drift"
+  );
+  await expectAsyncFailure(
+    async () =>
+      validateBunBridgeOutput(
+        {},
+        apiSessionOutputDescriptor,
+        { userAgent: apiSessionUserAgent, userId: apiSessionUserId },
+        { rows: [{ ...apiSessionOutputRow, unexpected: true }] }
+      ),
+    "unknown nested Bun output field"
+  );
+  await expectAsyncFailure(
+    async () =>
+      validateBunBridgeOutput(
+        {},
+        apiSessionOutputDescriptor,
+        { userAgent: apiSessionUserAgent, userId: apiSessionUserId },
+        { rows: [{ ...apiSessionOutputRow, id: [apiSessionOutputRow.id] }] }
+      ),
+    "array-coerced Bun output UUID"
+  );
+  await expectAsyncFailure(
+    async () =>
+      validateBunBridgeOutput(
+        {},
+        apiSessionOutputDescriptor,
+        { userAgent: apiSessionUserAgent, userId: apiSessionUserId },
+        { rows: [{ ...apiSessionOutputRow, tokenHash: [apiSessionOutputRow.tokenHash] }] }
+      ),
+    "array-coerced Bun output hash"
+  );
+  await expectAsyncFailure(
+    async () =>
+      validateBunBridgeInput({}, preferenceOutputDescriptor, { userId: [apiSessionUserId] }),
+    "array-coerced Bun input UUID"
+  );
+  const taskTrafficOutputDescriptor =
+    BUN_BRIDGE_AUXILIARY_OPERATION_DESCRIPTORS["terminal/task-traffic-snapshot"];
+  const taskTrafficUserAgents = [
+    "TASK-540/self-test-terminal-one",
+    "TASK-540/self-test-terminal-two",
+    "TASK-540/self-test-terminal-three",
+    "TASK-540/self-test-terminal-four",
+  ];
+  await expectAsyncFailure(
+    async () =>
+      validateBunBridgeOutput(
+        {},
+        taskTrafficOutputDescriptor,
+        { userAgents: taskTrafficUserAgents },
+        {
+          access: [
+            {
+              id: ["54000000-0000-4000-8000-000000007404"],
+              sessionId: null,
+              userAgent: taskTrafficUserAgents[0],
+              userId: null,
+            },
+          ],
+          audit: [],
+          completeSession: [],
+          session: [],
+        }
+      ),
+    "array-coerced terminal Bun output UUID"
+  );
+  await expectAsyncFailure(
+    async () =>
+      validateBunBridgeInput(
+        {},
+        BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS["runtime/set-041-preference-a"],
+        { showFieldMetadata: "true", userId: apiSessionUserId }
+      ),
+    "wrong Bun input scalar"
+  );
+  await expectAsyncFailure(
+    async () =>
+      validateBunBridgeInput(
+        {},
+        BUN_BRIDGE_AUXILIARY_OPERATION_DESCRIPTORS["terminal/task-traffic-snapshot"],
+        { userAgents: ["TASK-540/one", "TASK-540/two", "TASK-540/three"] }
+      ),
+    "wrong Bun input tuple bound"
+  );
+  const resourceOwnerInput = {
+    entryIds: [
+      "54000000-0000-4000-8000-000000007410",
+      "54000000-0000-4000-8000-000000007411",
+      "54000000-0000-4000-8000-000000007412",
+      "54000000-0000-4000-8000-000000007413",
+      "54000000-0000-4000-8000-000000007414",
+      "54000000-0000-4000-8000-000000007415",
+    ],
+    mediaId: "54000000-0000-4000-8000-000000007416",
+    override: {
+      blockId: "task-540-block",
+      entryId: "54000000-0000-4000-8000-000000007410",
+      propPath: "mediaAssetId",
+      screenId: "54000000-0000-4000-8000-000000007417",
+    },
+  };
+  invariant(
+    validateBunBridgeInput(
+      {},
+      BUN_BRIDGE_AUXILIARY_OPERATION_DESCRIPTORS["resource/current-owner-exact"],
+      resourceOwnerInput
+    ) === resourceOwnerInput,
+    "nested Bun input validator drift"
+  );
+  await expectAsyncFailure(
+    async () =>
+      validateBunBridgeInput(
+        {},
+        BUN_BRIDGE_AUXILIARY_OPERATION_DESCRIPTORS["resource/current-owner-exact"],
+        { ...resourceOwnerInput, override: { ...resourceOwnerInput.override, unexpected: true } }
+      ),
+    "unknown nested Bun input field"
+  );
+  const descriptorSelectionState = {};
+  initializeBunBridgeOperationAuthority(descriptorSelectionState);
+  invariant(
+    bunBridgeDescriptorForOperation(descriptorSelectionState, "runtime/set-001-storage-preflight")
+      .source === STORAGE_PREFLIGHT_BRIDGE_SOURCE &&
+      bunBridgeDescriptorForOperation(descriptorSelectionState, "runtime/set-012-user-a-create")
+        .source === USER_PROVISION_BRIDGE_SOURCE,
+    "Bun operation payload selection drift"
+  );
+  await expectAsyncFailure(
+    async () => bunBridgeDescriptorForOperation(descriptorSelectionState, "runtime/not-registered"),
+    "unregistered Bun operation payload selection"
+  );
+  const removedPrivateStaticDescriptor = PRIVATE_BUN_OPERATION_DESCRIPTORS.get(
+    descriptorSelectionState
+  ).get("runtime/set-001-storage-preflight");
+  PRIVATE_BUN_OPERATION_DESCRIPTORS.get(descriptorSelectionState).delete(
+    "runtime/set-001-storage-preflight"
+  );
+  await expectAsyncFailure(
+    async () =>
+      bunBridgeDescriptorForOperation(
+        descriptorSelectionState,
+        "runtime/set-001-storage-preflight"
+      ),
+    "missing private static Bun operation descriptor"
+  );
+  PRIVATE_BUN_OPERATION_DESCRIPTORS.get(descriptorSelectionState).set(
+    "runtime/set-001-storage-preflight",
+    removedPrivateStaticDescriptor
+  );
+  await expectAsyncFailure(
+    async () => bunBridgeDescriptorForOperation({}, "runtime/set-001-storage-preflight"),
+    "missing private Bun operation registry"
+  );
+  const resourceDescriptorState = {};
+  initializeBunBridgeOperationAuthority(resourceDescriptorState);
+  const descriptorProbeCore = createResourceCore({
+    kind: "media-row-key",
+    identifier: ["54000000-0000-4000-8000-000000007777", "task-540/descriptor-probe.png"],
+    ownerSubjectIdentifier: null,
+    acquisitionSourceId: "descriptor-probe",
+    sourceActionOrdinal: 1,
+    acquisitionChannel: "admin-api",
+  });
+  const descriptorProbeDelta = deepFreezeExact({
+    cores: [descriptorProbeCore],
+    dependencyEdges: [],
+  });
+  promoteResourceBunDescriptorsAfterLedgerAppend(resourceDescriptorState, descriptorProbeDelta);
+  assertResourceBunDescriptorSetExact(resourceDescriptorState, [descriptorProbeCore]);
+  const probeRegistry = PRIVATE_BUN_RESOURCE_DESCRIPTORS.get(resourceDescriptorState);
+  invariant(
+    probeRegistry.get(descriptorProbeCore.provenanceOpId).source ===
+      MEDIA_EXACT_BRIDGE_SOURCES.provenance &&
+      probeRegistry.get(descriptorProbeCore.cleanupOpId).source ===
+        MEDIA_EXACT_BRIDGE_SOURCES.delete &&
+      probeRegistry.get(descriptorProbeCore.absenceOpId).source ===
+        MEDIA_EXACT_BRIDGE_SOURCES.absence &&
+      new Set([
+        probeRegistry.get(descriptorProbeCore.provenanceOpId).sourceSha256,
+        probeRegistry.get(descriptorProbeCore.cleanupOpId).sourceSha256,
+        probeRegistry.get(descriptorProbeCore.absenceOpId).sourceSha256,
+      ]).size === 3,
+    "resource Bun P/C/A payload identity drift"
+  );
+  const removedProbeDescriptor = probeRegistry.get(descriptorProbeCore.absenceOpId);
+  probeRegistry.delete(descriptorProbeCore.absenceOpId);
+  await expectAsyncFailure(
+    async () => assertResourceBunDescriptorSetExact(resourceDescriptorState, [descriptorProbeCore]),
+    "missing resource Bun descriptor"
+  );
+  probeRegistry.set(descriptorProbeCore.absenceOpId, removedProbeDescriptor);
+  probeRegistry.set("resource/extra", removedProbeDescriptor);
+  await expectAsyncFailure(
+    async () => assertResourceBunDescriptorSetExact(resourceDescriptorState, [descriptorProbeCore]),
+    "extra resource Bun descriptor"
+  );
+  probeRegistry.delete("resource/extra");
+  const cleanupDescriptor = probeRegistry.get(descriptorProbeCore.cleanupOpId);
+  const absenceDescriptor = probeRegistry.get(descriptorProbeCore.absenceOpId);
+  probeRegistry.set(descriptorProbeCore.cleanupOpId, absenceDescriptor);
+  probeRegistry.set(descriptorProbeCore.absenceOpId, cleanupDescriptor);
+  await expectAsyncFailure(
+    async () => assertResourceBunDescriptorSetExact(resourceDescriptorState, [descriptorProbeCore]),
+    "reversed resource Bun cleanup/absence descriptors"
+  );
+
+  const mutablePendingRegistry = new PendingFailureAttemptRegistry();
+  const mutablePendingAction = plan.actionManifest.find(
+    ({ id }) => id === "set-016-editable-type-create"
+  );
+  await expectAsyncFailure(
+    async () =>
+      mutablePendingRegistry.arm(mutablePendingAction, [], {
+        naturalKey: { slug: "mutable" },
+        baseline: { candidates: [] },
+        authoredRequestSha256: hashBytes(Buffer.from("mutable-request")),
+      }),
+    "mutable response-lost request/baseline"
+  );
+
+  const responseLostAction = mutablePendingAction;
+  const responseLostBlueprint = plan.fixtureBlueprint.contentTypes.editable;
+  const responseLostAuthoredProjection = deepFreezeExact({
+    name: responseLostBlueprint.name,
+    slug: responseLostBlueprint.slug,
+    schema: contentSchemaFromFields(responseLostBlueprint.fields),
+    status: "draft",
+    config: deepFreezeExact({}),
+  });
+  const responseLostNaturalKey = deepFreezeExact({ slug: responseLostBlueprint.slug });
+  const responseLostDigest = hashBytes(Buffer.from(canonicalJson(responseLostAuthoredProjection)));
+  const responseLostBaselineCandidate = deepFreezeExact({
+    id: "54000000-0000-4000-8000-000000007101",
+    name: "Pre-existing natural-key row",
+    slug: responseLostBlueprint.slug,
+    schema: deepFreezeExact({ type: "object" }),
+    status: "draft",
+    config: deepFreezeExact({}),
+  });
+  const responseLostCreatedCandidate = deepFreezeExact({
+    id: "54000000-0000-4000-8000-000000007102",
+    ...responseLostAuthoredProjection,
+  });
+  const makeResponseLostState = () => ({
+    plan,
+    responseLostIntents: new Map([
+      [
+        responseLostAction.id,
+        deepFreezeExact({
+          naturalKey: responseLostNaturalKey,
+          authoredProjection: responseLostAuthoredProjection,
+          authoredRequestSha256: responseLostDigest,
+          preparedBody: null,
+        }),
+      ],
+    ]),
+    resourceKeys: new Map(),
+    resourceOwners: new Map(),
+    syntheticOwnerEdgeKeys: new Set(),
+    fixtureIds: new Map(),
+    ids: Object.create(null),
+  });
+  const responseLostAttempt = deepFreezeExact({
+    pendingAttemptKey: "pending:response-lost-real-path",
+    actionId: responseLostAction.id,
+    actionOrdinal: responseLostAction.ordinal,
+    kind: "content-type",
+    semantic: "content-type-editable",
+    naturalKey: responseLostNaturalKey,
+    baseline: deepFreezeExact({ candidates: deepFreezeExact([responseLostBaselineCandidate]) }),
+    authoredRequestSha256: responseLostDigest,
+    failureObservationSha256: hashBytes(
+      Buffer.from(canonicalJson({ name: "Error", code: "response_lost" }))
+    ),
+    intendedParentBlockerKeys: deepFreezeExact([]),
+  });
+  const discoveredState = makeResponseLostState();
+  let discoveredQueryCount = 0;
+  const discoveredResult = await discoverOneResponseLostCreate(
+    discoveredState,
+    responseLostAttempt,
+    async (actionId, naturalKey) => {
+      discoveredQueryCount += 1;
+      invariant(
+        actionId === responseLostAction.id && naturalKey === responseLostNaturalKey,
+        "response-lost query input identity drift"
+      );
+      return deepFreezeExact({
+        candidates: deepFreezeExact([responseLostBaselineCandidate, responseLostCreatedCandidate]),
+      });
+    }
+  );
+  invariant(
+    discoveredQueryCount === 1 &&
+      discoveredResult.failure === null &&
+      discoveredResult.safeDelta.cores.length === 1 &&
+      discoveredState.resourceKeys.size === 0,
+    "response-lost exact discovered-create path drift"
+  );
+  const discoveredLedger = new ResourceLedgerBuilder();
+  discoveredLedger.appendValidatedDelta(discoveredResult.safeDelta);
+  registerFailureDiscoveredResourceAfterLedgerAppend(
+    discoveredState,
+    responseLostAttempt,
+    discoveredResult.safeDelta
+  );
+  invariant(
+    discoveredState.fixtureIds.get("content-type-editable") === responseLostCreatedCandidate.id &&
+      discoveredLedger.compileResourceRecords("persistent").length === 1,
+    "response-lost discovered create did not atomically join cleanup inventory"
+  );
+  let absentQueryCount = 0;
+  const absentResult = await discoverOneResponseLostCreate(
+    makeResponseLostState(),
+    responseLostAttempt,
+    async () => {
+      absentQueryCount += 1;
+      return deepFreezeExact({ candidates: deepFreezeExact([responseLostBaselineCandidate]) });
+    }
+  );
+  invariant(
+    absentQueryCount === 1 &&
+      absentResult.failure === null &&
+      absentResult.safeDelta.cores.length === 0,
+    "response-lost exact absence path drift"
+  );
+  let ambiguousQueryCount = 0;
+  const ambiguousBatch = await discoverResponseLostPersistentCreatesNeverThrowPerAttempt(
+    deepFreezeExact([responseLostAttempt]),
+    (attempt) =>
+      discoverOneResponseLostCreate(makeResponseLostState(), attempt, async () => {
+        ambiguousQueryCount += 1;
+        return deepFreezeExact({
+          candidates: deepFreezeExact([
+            responseLostBaselineCandidate,
+            responseLostCreatedCandidate,
+            deepFreezeExact({
+              ...responseLostCreatedCandidate,
+              id: "54000000-0000-4000-8000-000000007103",
+            }),
+          ]),
+        });
+      })
+  );
+  invariant(
+    ambiguousQueryCount === 1 &&
+      ambiguousBatch.attemptResults[0].failure?.code === "failure_discovery_ambiguous" &&
+      ambiguousBatch.attemptResults[0].safeDelta.cores.length === 0,
+    "response-lost ambiguity did not fail per-attempt without delete authority"
+  );
+  const mixedAttempts = deepFreezeExact([
+    deepFreezeExact({ ...responseLostAttempt, pendingAttemptKey: "pending:mixed-discovered" }),
+    deepFreezeExact({ ...responseLostAttempt, pendingAttemptKey: "pending:mixed-absent" }),
+    deepFreezeExact({
+      ...responseLostAttempt,
+      pendingAttemptKey: "pending:mixed-ambiguous",
+      intendedParentBlockerKeys: deepFreezeExact(["mixed-parent"]),
+    }),
+  ]);
+  const mixedBatch = await discoverResponseLostPersistentCreatesNeverThrowPerAttempt(
+    mixedAttempts,
+    async (attempt) => {
+      if (attempt.pendingAttemptKey === "pending:mixed-discovered") {
+        return deepFreezeExact({
+          ...discoveredResult,
+          pendingAttemptKey: attempt.pendingAttemptKey,
+        });
+      }
+      if (attempt.pendingAttemptKey === "pending:mixed-absent") {
+        return deepFreezeExact({
+          ...absentResult,
+          pendingAttemptKey: attempt.pendingAttemptKey,
+        });
+      }
+      throw new Error("private mixed ambiguous discovery");
+    }
+  );
+  const mixedLedger = new ResourceLedgerBuilder();
+  for (const result of mixedBatch.attemptResults)
+    mixedLedger.appendValidatedDelta(result.safeDelta);
+  const mixedBlocked = compileBlockedParentClosure(
+    { "mixed-ancestor": ["mixed-parent"], "mixed-parent": [], "mixed-independent": [] },
+    mixedBatch.attemptResults.flatMap(({ intendedParentBlockerKeys }) => intendedParentBlockerKeys)
+  );
+  invariant(
+    mixedLedger.compileResourceRecords("persistent").length === 1 &&
+      mixedBatch.attemptResults.filter(({ failure }) => failure !== null).length === 1 &&
+      deepEqualJson(mixedBlocked, ["mixed-ancestor", "mixed-parent"]),
+    "mixed discovered/absent/ambiguous response-lost batch drift"
+  );
+  negativeCases += 1;
+  const pendingMatrix = new PendingFailureAttemptRegistry();
+  const pendingActionA = plan.actionManifest.find(
+    ({ id }) => id === RESPONSE_LOST_CREATE_ACTION_IDS[0]
+  );
+  const pendingActionB = plan.actionManifest.find(
+    ({ id }) => id === RESPONSE_LOST_CREATE_ACTION_IDS[1]
+  );
+  pendingMatrix.arm(
+    pendingActionA,
+    [],
+    deepFreezeExact({
+      naturalKey: deepFreezeExact({ key: "pending-a" }),
+      baseline: deepFreezeExact({ candidates: deepFreezeExact([]) }),
+      authoredRequestSha256: hashBytes(Buffer.from("pending-a-authored-request")),
+    })
+  );
+  pendingMatrix.arm(
+    pendingActionB,
+    ["existing-parent-key"],
+    deepFreezeExact({
+      naturalKey: deepFreezeExact({ key: "pending-b" }),
+      baseline: deepFreezeExact({ candidates: deepFreezeExact([]) }),
+      authoredRequestSha256: hashBytes(Buffer.from("pending-b-authored-request")),
+    })
+  );
+  await expectAsyncFailure(
+    async () =>
+      pendingMatrix.arm(
+        pendingActionA,
+        [],
+        deepFreezeExact({
+          naturalKey: deepFreezeExact({ key: "duplicate" }),
+          baseline: deepFreezeExact({ candidates: deepFreezeExact([]) }),
+          authoredRequestSha256: hashBytes(Buffer.from("duplicate-pending-request")),
+        })
+      ),
+    "duplicate pending response-lost attempt"
+  );
+  const missingObservationRegistry = new PendingFailureAttemptRegistry();
+  missingObservationRegistry.arm(
+    pendingActionA,
+    [],
+    deepFreezeExact({
+      naturalKey: deepFreezeExact({ key: "missing-observation" }),
+      baseline: deepFreezeExact({ candidates: deepFreezeExact([]) }),
+      authoredRequestSha256: hashBytes(Buffer.from("missing-observation-request")),
+    })
+  );
+  await expectAsyncFailure(
+    async () => missingObservationRegistry.takeFrozenOnce(),
+    "pending response-lost attempt missing failure observation"
+  );
+  pendingMatrix.retainPrimaryFailureObservation(
+    Object.assign(new Error("private pending failure"), {
+      code: "response_lost",
+    })
+  );
+  const pendingAttempts = pendingMatrix.takeFrozenOnce();
+  const expectedFailureObservationHash = hashBytes(
+    Buffer.from(canonicalJson({ name: "Error", code: "response_lost" }))
+  );
+  invariant(
+    pendingAttempts.every(
+      ({ failureObservationSha256 }) => failureObservationSha256 === expectedFailureObservationHash
+    ) && expectedFailureObservationHash !== hashBytes(Buffer.from("private pending failure")),
+    "pending failure observation hash was not derived from the real private observation projection"
+  );
+  const responseLostBatch = await discoverResponseLostPersistentCreatesNeverThrowPerAttempt(
+    pendingAttempts,
+    async (attempt) => {
+      if (attempt === pendingAttempts[0]) {
+        return deepFreezeExact({
+          pendingAttemptKey: attempt.pendingAttemptKey,
+          safeDelta: emptyResourceDelta(),
+          failure: null,
+          intendedParentBlockerKeys: deepFreezeExact([]),
+        });
+      }
+      throw new Error("private per-attempt adapter failure");
+    }
+  );
+  invariant(
+    responseLostBatch.attemptResults.length === 2 &&
+      responseLostBatch.attemptResults[0].failure === null &&
+      responseLostBatch.attemptResults[1].failure?.code === "failure_discovery_ambiguous" &&
+      deepEqualJson(responseLostBatch.attemptResults[1].intendedParentBlockerKeys, [
+        "existing-parent-key",
+      ]),
+    "response-lost mixed result batch drift"
+  );
+  await expectAsyncFailure(
+    async () => pendingMatrix.takeFrozenOnce(),
+    "pending attempt batch double consumption"
+  );
+  invariant(
+    Object.keys(RESOURCE_KIND_CONTRACTS).length === 25 &&
+      Object.keys(RESOURCE_KIND_CONTRACTS).every(
+        (kind) =>
+          RESOURCE_KIND_CONTRACTS[kind].identifierArity ===
+          RESOURCE_IDENTIFIER_TYPES[RESOURCE_KIND_CONTRACTS[kind].identifierType]
+      ),
+    "resource kind contract exhaustiveness drift"
+  );
+  await expectAsyncFailure(
+    async () => new ResourceLedgerBuilder({ ...RESOURCE_KIND_CONTRACTS }),
+    "resource contract registry substitution"
+  );
+  const planBoundaryLedger = new ResourceLedgerBuilder();
+  const planBoundaryCore = createResourceCore({
+    kind: "user-a",
+    identifier: ["54000000-0000-4000-8000-000000007001"],
+    acquisitionSourceId: "set-012-user-a-create",
+    sourceActionOrdinal: actionOrdinal(plan, "set-012-user-a-create"),
+    acquisitionChannel: "service",
+  });
+  planBoundaryLedger.appendValidatedDelta(
+    deepFreezeExact({
+      cores: deepFreezeExact([planBoundaryCore]),
+      dependencyEdges: deepFreezeExact([]),
+    })
+  );
+  const planBoundaryPlanner = new ResourceCleanupPlanner();
+  await expectAsyncFailure(
+    async () => planBoundaryPlanner.freezeTerminal([]),
+    "terminal plan before persistent plan"
+  );
+  const planBoundaryPersistentLedger = planBoundaryLedger.compileResourceRecords("persistent");
+  const planBoundaryPersistentPlan = planBoundaryPlanner.freezePersistent(
+    planBoundaryPersistentLedger,
+    []
+  );
+  await expectAsyncFailure(
+    async () => planBoundaryPlanner.freezePersistent(planBoundaryPersistentLedger, []),
+    "persistent plan double assignment"
+  );
+  const planBoundaryTerminalLedger = planBoundaryLedger.compileResourceRecords("terminal");
+  const planBoundaryTerminalPlan = planBoundaryPlanner.freezeTerminal(planBoundaryTerminalLedger);
+  const planBoundaryFinalLedger = planBoundaryLedger.compileResourceRecords("final");
+  const planBoundaryFinalPlan = planBoundaryPlanner.freezeFinal(planBoundaryFinalLedger);
+  invariant(
+    planBoundaryFinalPlan.persistentActionPlan === planBoundaryPersistentPlan &&
+      planBoundaryFinalPlan.terminalActionPlan === planBoundaryTerminalPlan,
+    "plan boundary object identity drift"
+  );
+  await expectAsyncFailure(
+    async () => planBoundaryPlanner.freezeFinal(planBoundaryFinalLedger),
+    "final plan double assignment"
+  );
+  const tupleKeys = ["matrix-a", "matrix-b", "matrix-c"];
+  const exactTuples = cartesianCleanupTuples(tupleKeys);
+  for (let mutationIndex = 0; mutationIndex < 27; mutationIndex += 1) {
+    const tupleIndex = mutationIndex % exactTuples.length;
+    let mutated;
+    if (mutationIndex < 9) {
+      mutated = exactTuples.filter((_, index) => index !== tupleIndex);
+    } else if (mutationIndex < 18) {
+      mutated = [...exactTuples, exactTuples[tupleIndex]];
+    } else {
+      mutated = exactTuples.map((tuple, index) =>
+        index === tupleIndex ? deepFreezeExact([tuple[0], "unknown-operation"]) : tuple
+      );
+    }
+    await expectAsyncFailure(
+      async () => assertExactCleanupTupleSet(mutated, tupleKeys, "tuple mutation " + mutationIndex),
+      "cleanup tuple mutation " + mutationIndex
+    );
+  }
+  for (const [label, bytes] of [
+    ["native CR", Buffer.from("value\r\n")],
+    ["native BOM", Buffer.from("\uFEFFvalue\n")],
+    ["native NUL", Buffer.from("value\0\n")],
+  ]) {
+    await expectAsyncFailure(async () => decodeExactNativeUtf8(bytes, label), label);
+  }
+  await expectAsyncFailure(
+    async () =>
+      exactOwnKeys(
+        { ...evidence, unexpected: true },
+        Object.keys(evidence),
+        "evidence unknown key",
+        { plain: true }
+      ),
+    "canonical evidence unknown key"
+  );
+  invariant(
+    rawBytesAreSensitive(Buffer.from("prefix-sixteen-private-suffix"), ["sixteen-private"]),
+    "canonical evidence secret corpus detector drift"
+  );
+
+  const terminalCapabilities = buildFakeCapabilities({ terminalMatrix: true });
+  const terminalEvidence = await executeSmokePlanCore(plan, terminalCapabilities);
+  const terminalRecords = terminalEvidence.resources.filter(({ kind }) =>
+    TERMINAL_RESOURCE_KINDS.has(kind)
+  );
+  const terminalCount = terminalRecords.length;
+  invariant(
+    terminalCount === 3 && terminalEvidence.cleanupReceipts.length === 54 + 3 * terminalCount,
+    "dynamic terminal cleanup cardinality drift"
+  );
+  const terminalFinalPlan = terminalCapabilities.lastFinalPlan;
+  invariant(
+    terminalFinalPlan.persistentActionPlan === terminalCapabilities.lastPersistentPlan &&
+      terminalFinalPlan.terminalActionPlan === terminalCapabilities.lastTerminalPlan,
+    "terminal matrix stage-plan identity drift"
+  );
+  assertRecursivelyFrozen(terminalFinalPlan);
+  const terminalSessionRecord = terminalFinalPlan.ledger.find(
+    ({ kind }) => kind === "session-task"
+  );
+  const terminalAccessRecord = terminalFinalPlan.ledger.find(
+    ({ kind }) => kind === "access-log-task-ua"
+  );
+  const userARecord = terminalFinalPlan.ledger.find(({ kind }) => kind === "user-a");
+  invariant(
+    terminalSessionRecord &&
+      terminalAccessRecord &&
+      userARecord &&
+      terminalFinalPlan.dependencyGraph[userARecord.resourceKey].includes(
+        terminalSessionRecord.resourceKey
+      ) &&
+      terminalFinalPlan.dependencyGraph[terminalSessionRecord.resourceKey].includes(
+        terminalAccessRecord.resourceKey
+      ),
+    "terminal-to-user dependency graph drift"
+  );
+  const blockedClosure = compileBlockedParentClosure(terminalFinalPlan.dependencyGraph, [
+    terminalAccessRecord.resourceKey,
+  ]);
+  invariant(
+    blockedClosure.includes(terminalSessionRecord.resourceKey) &&
+      blockedClosure.includes(userARecord.resourceKey),
+    "terminal-child blocker did not propagate to user"
+  );
+  const terminalAbsenceSequence = terminalEvidence.cleanupReceipts.find(
+    (receipt) =>
+      receipt.operationDescriptor === terminalSessionRecord.absenceOpId &&
+      receipt.operation === "cleanup-absence"
+  )?.sequence;
+  const userProvenanceSequence = terminalEvidence.cleanupReceipts.find(
+    (receipt) =>
+      receipt.operationDescriptor === userARecord.provenanceOpId &&
+      receipt.operation === "cleanup-provenance"
+  )?.sequence;
+  invariant(
+    Number.isSafeInteger(terminalAbsenceSequence) &&
+      Number.isSafeInteger(userProvenanceSequence) &&
+      terminalAbsenceSequence < userProvenanceSequence,
+    "synthetic user cleanup ran before its terminal child absence proof"
+  );
+
+  const graphUserId = "54000000-0000-4000-8000-000000007201";
+  const graphSessionId = "54000000-0000-4000-8000-000000007202";
+  const graphAccessId = "54000000-0000-4000-8000-000000007203";
+  const graphUserCore = createResourceCore({
+    kind: "user-a",
+    identifier: [graphUserId],
+    acquisitionSourceId: "set-012-user-a-create",
+    sourceActionOrdinal: actionOrdinal(plan, "set-012-user-a-create"),
+    acquisitionChannel: "service",
+  });
+  const graphIndependentCore = createResourceCore({
+    kind: "content-type",
+    identifier: ["54000000-0000-4000-8000-000000007204"],
+    acquisitionSourceId: "set-018-related-a-type-create",
+    sourceActionOrdinal: actionOrdinal(plan, "set-018-related-a-type-create"),
+    acquisitionChannel: "admin-api",
+  });
+  const graphSessionCore = createResourceCore({
+    kind: "session-task",
+    identifier: [graphSessionId],
+    ownerSubjectIdentifier: graphUserId,
+    acquisitionSourceId: "terminal-task-ua-discovery",
+    sourceActionOrdinal: null,
+    acquisitionChannel: "terminal-db-delta",
+  });
+  const graphAccessCore = createResourceCore({
+    kind: "access-log-task-ua",
+    identifier: [graphAccessId],
+    ownerSubjectIdentifier: graphSessionId,
+    acquisitionSourceId: "terminal-task-ua-discovery",
+    sourceActionOrdinal: null,
+    acquisitionChannel: "terminal-db-delta",
+  });
+  const exactGraphLedger = new ResourceLedgerBuilder();
+  exactGraphLedger.appendValidatedDelta(
+    deepFreezeExact({
+      cores: deepFreezeExact([graphUserCore, graphIndependentCore]),
+      dependencyEdges: deepFreezeExact([]),
+    })
+  );
+  exactGraphLedger.compileResourceRecords("persistent");
+  exactGraphLedger.appendValidatedDelta(
+    deepFreezeExact({
+      cores: deepFreezeExact([graphSessionCore, graphAccessCore]),
+      dependencyEdges: deepFreezeExact([
+        destructiveResourceEdge(graphUserCore.resourceKey, graphSessionCore.resourceKey),
+        destructiveResourceEdge(graphSessionCore.resourceKey, graphAccessCore.resourceKey),
+      ]),
+    })
+  );
+  exactGraphLedger.compileResourceRecords("terminal");
+  const exactGraphRecords = exactGraphLedger.compileResourceRecords("final");
+  const exactGraph = deepFreezeExact(
+    Object.fromEntries(
+      exactGraphRecords.map(({ resourceKey, dependsOn }) => [resourceKey, dependsOn])
+    )
+  );
+  const exactGraphState = {
+    ids: { userA: graphUserId },
+    resourceKeys: new Map([
+      ["user-a", graphUserCore.resourceKey],
+      ["independent-content-type", graphIndependentCore.resourceKey],
+      ["session-task:" + graphSessionId, graphSessionCore.resourceKey],
+      ["access-log-task-ua:" + graphAccessId, graphAccessCore.resourceKey],
+    ]),
+    currentResourceOwnerProof: null,
+  };
+  invariant(
+    assertExactFinalResourceDependencyGraph(exactGraphState, exactGraphRecords, exactGraph),
+    "exact final owner/dependency graph positive drift"
+  );
+  const omittedGraph = deepFreezeExact({
+    ...exactGraph,
+    [graphUserCore.resourceKey]: deepFreezeExact([]),
+  });
+  await expectAsyncFailure(
+    async () =>
+      assertExactFinalResourceDependencyGraph(exactGraphState, exactGraphRecords, omittedGraph),
+    "exact owner graph omitted edge"
+  );
+  const reversedGraph = deepFreezeExact({
+    ...exactGraph,
+    [graphSessionCore.resourceKey]: deepFreezeExact([]),
+    [graphAccessCore.resourceKey]: deepFreezeExact([graphSessionCore.resourceKey]),
+  });
+  await expectAsyncFailure(
+    async () =>
+      assertExactFinalResourceDependencyGraph(exactGraphState, exactGraphRecords, reversedGraph),
+    "exact owner graph reversed edge"
+  );
+  const wrongOwnerRecords = deepFreezeExact(
+    exactGraphRecords.map((record) =>
+      record.resourceKey === graphIndependentCore.resourceKey
+        ? deepFreezeExact({ ...record, ownerSubjectIdentifier: graphUserId })
+        : record
+    )
+  );
+  await expectAsyncFailure(
+    async () =>
+      assertExactFinalResourceDependencyGraph(exactGraphState, wrongOwnerRecords, exactGraph),
+    "non-owner record owner injection"
+  );
+
+  const branchCleanupState = {
+    cleanupAbsenceKeys: new Set(),
+    cleanupFailedKeys: new Set(),
+  };
+  const branchOperationCalls = [];
+  const branchResult = await executeCleanupPlanStage(
+    branchCleanupState,
+    deepFreezeExact({
+      resourceKeys: deepFreezeExact([
+        graphAccessCore.resourceKey,
+        graphSessionCore.resourceKey,
+        graphUserCore.resourceKey,
+        graphIndependentCore.resourceKey,
+      ]),
+    }),
+    deepFreezeExact({
+      ledger: exactGraphRecords,
+      dependencyGraph: exactGraph,
+      failureDiscoveryBlockedParentKeys: deepFreezeExact([]),
+    }),
+    new Set(["access-log-task-ua", "session-task", "user-a", "content-type"]),
+    async (_state, record, operationKind) => {
+      branchOperationCalls.push(record.resourceKey + ":" + operationKind);
+      if (record.resourceKey === graphAccessCore.resourceKey && operationKind === "absence") {
+        throw new Error("private branch absence failure");
+      }
+      return deepFreezeExact({ resourceKey: record.resourceKey, operationKind });
+    }
+  );
+  invariant(
+    branchResult.failures.length === 3 &&
+      branchOperationCalls.length === 6 &&
+      branchCleanupState.cleanupFailedKeys.has(graphAccessCore.resourceKey) &&
+      branchCleanupState.cleanupFailedKeys.has(graphSessionCore.resourceKey) &&
+      branchCleanupState.cleanupFailedKeys.has(graphUserCore.resourceKey) &&
+      branchCleanupState.cleanupAbsenceKeys.has(graphIndependentCore.resourceKey) &&
+      !branchOperationCalls.some((value) => value.startsWith(graphSessionCore.resourceKey + ":")) &&
+      !branchOperationCalls.some((value) => value.startsWith(graphUserCore.resourceKey + ":")),
+    "cleanup branch/transitive blocker continuation drift"
+  );
+  negativeCases += 1;
+
+  const scheduledFailures = [];
+  const scheduledTrace = [];
+  const scheduledCalls = [];
+  const testScheduler = createCleanupPhaseScheduler(scheduledFailures, scheduledTrace);
+  for (let phase = 1; phase <= 10; phase += 1) {
+    await testScheduler.run(phase, async () => {
+      scheduledCalls.push(phase);
+      if (phase === 3 || phase === 9) throw new Error("private scheduled phase failure");
+    });
+  }
+  testScheduler.seal();
+  invariant(
+    deepEqualJson(scheduledCalls, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) &&
+      scheduledFailures.length === 2 &&
+      scheduledTrace[2].completed === false &&
+      scheduledTrace[8].completed === false &&
+      scheduledTrace[9].completed === true,
+    "cleanup scheduler skipped phase 10 after prior failures"
+  );
+  let independentStepMask = 0;
+  await expectAsyncFailure(
+    async () =>
+      runIndependentCleanupStepsNeverSkip(
+        [
+          async () => {
+            independentStepMask |= 1;
+            throw new Error("private first branch failure");
+          },
+          async () => {
+            independentStepMask |= 2;
+          },
+          async () => {
+            independentStepMask |= 4;
+          },
+        ],
+        "self-test independent branches"
+      ),
+    "independent cleanup branch aggregate"
+  );
+  invariant(independentStepMask === 7, "independent cleanup branch was skipped");
+
+  const reorderedCleanupReceipts = [...terminalEvidence.cleanupReceipts];
+  [reorderedCleanupReceipts[0], reorderedCleanupReceipts[1]] = [
+    reorderedCleanupReceipts[1],
+    reorderedCleanupReceipts[0],
+  ];
+  await expectAsyncFailure(
+    async () => assertCleanupReceiptBijection(terminalFinalPlan, reorderedCleanupReceipts),
+    "reordered final cleanup receipts"
+  );
+  for (const [label, keys, tuples] of [
+    [
+      "real persistent tuple",
+      terminalCapabilities.lastPersistentPlan.resourceKeys,
+      terminalCapabilities.lastPersistentPlan.tuples,
+    ],
+    [
+      "real terminal tuple",
+      terminalCapabilities.lastTerminalPlan.resourceKeys,
+      terminalCapabilities.lastTerminalPlan.tuples,
+    ],
+    ["real final tuple", terminalFinalPlan.resourceKeys, terminalFinalPlan.actionTuples],
+  ]) {
+    await expectAsyncFailure(
+      async () => assertExactCleanupTupleSet(tuples.slice(1), keys, label),
+      label + " omission"
+    );
+  }
+
+  const failureCapabilities = buildFakeCapabilities({ failOrdinal: 25 });
+  let failure = null;
+  try {
+    await executeSmokePlanCore(plan, failureCapabilities);
+  } catch (error) {
+    failure = error;
+  }
+  invariant(failure === TASK_FAILURE && Object.isFrozen(failure), "failure shape drift");
+  invariant(failureCapabilities.cleaned, "failure cleanup did not run");
+  invariant(failureCapabilities.calls.at(-1) === "failure-cleanup", "failure cleanup order drift");
+  negativeCases += 1;
+
+  await expectAsyncFailure(async () => assertExecutionInput({}), "missing public input");
+  await expectAsyncFailure(
+    async () =>
+      assertExecutionInput({
+        root: "/home/coder/project/Coderso",
+        nonce: "0123456789ab",
+        assertSafeEvidence() {},
+        snapshotRepository() {},
+        dispatchAgent() {},
+      }),
+    "agent injection"
+  );
+  await expectAsyncFailure(
+    async () =>
+      assertExecutionInput({
+        root: "/home/coder/project/Coderso",
+        nonce: "0123456789ab",
+        assertSafeEvidence() {},
+        snapshotRepository() {},
+        command: "rm -rf /",
+      }),
+    "command injection"
+  );
+  const parsed = parseRegisteredOutput(
+    { encoding: "json-string", kind: "object", keys: ["assertion", "target", "observations"] },
+    Buffer.from(JSON.stringify(JSON.stringify({ assertion: "x", target: "y", observations: {} }))),
+    "transport parser self-test"
+  );
+  invariant(parsed.assertion === "x", "transport JSON unwrap drift");
+  await expectAsyncFailure(
+    async () =>
+      parseRegisteredOutput(
+        { encoding: "json", kind: "object", keys: ["assertion", "target", "observations"] },
+        Buffer.from(JSON.stringify({ assertion: "x", target: "y", observations: {}, pass: true })),
+        "pass injection"
+      ),
+    "trusted pass injection"
+  );
+
+  const strictObservationSchema = {
+    type: "object",
+    properties: {
+      assertion: selfTestStringSchema({ minLength: 1, maxLength: 64 }),
+      geometry: {
+        type: "object",
+        properties: {
+          x: selfTestNumberSchema(),
+          width: selfTestNumberSchema({ minimum: 0 }),
+        },
+      },
+      tags: {
+        type: "array",
+        items: selfTestStringSchema({ minLength: 1, maxLength: 32 }),
+        minItems: 1,
+        maxItems: 8,
+        unique: true,
+      },
+    },
+  };
+  const strictObservationPredicate = {
+    op: "and",
+    items: [
+      {
+        op: "nonEmptyString",
+        value: { op: "output", path: ["assertion"] },
+      },
+      {
+        op: "within",
+        actual: { op: "output", path: ["geometry", "x"] },
+        expected: { op: "literal", value: 10 },
+        tolerance: { op: "literal", value: 0.25 },
+      },
+      {
+        op: "compare",
+        mode: "gt",
+        left: { op: "output", path: ["geometry", "width"] },
+        right: { op: "literal", value: 0 },
+      },
+      {
+        op: "sameSet",
+        left: { op: "output", path: ["tags"] },
+        right: { op: "literal", value: ["visible", "settled"] },
+        duplicates: "reject",
+      },
+      {
+        op: "every",
+        source: { op: "output", path: ["tags"] },
+        as: "tag",
+        predicate: {
+          op: "nonEmptyString",
+          value: { op: "var", name: "tag", path: [] },
+        },
+      },
+    ],
+  };
+  const strictObservationContract = {
+    grammar: selfTestJsonTransport(1),
+    schema: strictObservationSchema,
+    predicate: strictObservationPredicate,
+    rememberAs: "strictObservation",
+  };
+  const strictObservation = {
+    assertion: "visible-geometry",
+    geometry: { x: 10.2, width: 320 },
+    tags: ["visible", "settled"],
+  };
+  const selfTestJsonFrame = (value) => Buffer.from(canonicalJson(value) + "\n");
+  const strictContext = selfTestContext(plan, "dsl-success");
+  const strictParsed = parseRegisteredOutput(
+    strictObservationContract,
+    selfTestJsonFrame(strictObservation),
+    "dsl-success",
+    strictContext
+  );
+  invariant(
+    deepEqualJson(strictParsed, strictObservation),
+    "exact output parser changed observations"
+  );
+  invariant(
+    strictContext.priorOutputs.get("dsl-success") === strictParsed &&
+      strictContext.variables.get("strictObservation") === strictParsed,
+    "validated observations were not remembered atomically"
+  );
+
+  const extraNested = JSON.parse(JSON.stringify(strictObservation));
+  extraNested.geometry.unexpected = true;
+  await expectAsyncFailure(
+    async () =>
+      parseRegisteredOutput(
+        strictObservationContract,
+        selfTestJsonFrame(extraNested),
+        "dsl-extra-nested",
+        selfTestContext(plan, "dsl-extra-nested")
+      ),
+    "extra nested output key"
+  );
+  await expectAsyncFailure(
+    async () =>
+      parseRegisteredOutput(
+        strictObservationContract,
+        selfTestJsonFrame(JSON.stringify(strictObservation)),
+        "dsl-wrong-layer",
+        selfTestContext(plan, "dsl-wrong-layer")
+      ),
+    "wrong JSON layer"
+  );
+
+  const failedPredicateContext = selfTestContext(plan, "dsl-failed-predicate");
+  const failedPredicateContract = {
+    grammar: selfTestJsonTransport(1),
+    schema: strictObservationSchema,
+    predicate: {
+      op: "within",
+      actual: { op: "output", path: ["geometry", "x"] },
+      expected: { op: "literal", value: 50 },
+      tolerance: { op: "literal", value: 0 },
+    },
+    rememberAs: "mustNotPersist",
+  };
+  await expectAsyncFailure(
+    async () =>
+      parseRegisteredOutput(
+        failedPredicateContract,
+        selfTestJsonFrame(strictObservation),
+        "dsl-failed-predicate",
+        failedPredicateContext
+      ),
+    "failed output predicate"
+  );
+  invariant(
+    failedPredicateContext.priorOutputs.size === 0 && failedPredicateContext.variables.size === 0,
+    "failed predicate retained an observation"
+  );
+
+  const duplicateSetContract = {
+    grammar: selfTestJsonTransport(1),
+    schema: {
+      type: "object",
+      properties: {
+        values: {
+          type: "array",
+          items: selfTestStringSchema({ minLength: 1, maxLength: 8 }),
+          minItems: 1,
+          maxItems: 8,
+          unique: false,
+        },
+      },
+    },
+    predicate: {
+      op: "sameSet",
+      left: { op: "output", path: ["values"] },
+      right: { op: "literal", value: ["a"] },
+      duplicates: "reject",
+    },
+    rememberAs: null,
+  };
+  await expectAsyncFailure(
+    async () =>
+      parseRegisteredOutput(
+        duplicateSetContract,
+        selfTestJsonFrame({ values: ["a", "a"] }),
+        "dsl-duplicate-set",
+        selfTestContext(plan, "dsl-duplicate-set")
+      ),
+    "sameSet duplicate"
+  );
+
+  const arraySchema = {
+    type: "array",
+    items: { type: "integer", minimum: 0, maximum: 10 },
+    minItems: 0,
+    maxItems: 4,
+    unique: false,
+  };
+  const arrayWithHole = new Array(1);
+  await expectAsyncFailure(
+    async () => validateExactJsonSchema(arraySchema, arrayWithHole, "array-hole"),
+    "array hole"
+  );
+  const arrayWithCustomKey = [1];
+  arrayWithCustomKey.extra = true;
+  await expectAsyncFailure(
+    async () => validateExactJsonSchema(arraySchema, arrayWithCustomKey, "array-custom-key"),
+    "array custom key"
+  );
+  await expectAsyncFailure(
+    async () =>
+      validateExactJsonSchema(
+        { type: "object", properties: { value: { type: "boolean" } } },
+        Object.assign(Object.create(null), { value: true }),
+        "nonplain-output"
+      ),
+    "nonplain JSON output"
+  );
+  await expectAsyncFailure(
+    async () =>
+      validateExactJsonSchema(selfTestNumberSchema(), Number.POSITIVE_INFINITY, "nonfinite-output"),
+    "nonfinite JSON output"
+  );
+  validateExactJsonSchema(
+    selfTestStringSchema({ minLength: 12, maxLength: 32, format: "page-id" }),
+    "wf540-page-1",
+    "valid-page-id"
+  );
+  await expectAsyncFailure(
+    async () =>
+      validateExactJsonSchema(
+        selfTestStringSchema({ minLength: 1, maxLength: 32, format: "page-id" }),
+        "p1",
+        "invalid-page-id"
+      ),
+    "legacy page ID format"
+  );
+
+  const refContext = selfTestContext(plan, "ref-self-test");
+  refContext.captures.bind("screen.id", "id/with-slash");
+  refContext.priorOutputs.set("prior-action", { nested: { value: 7 } });
+  refContext.variables.set("sample", { value: "retained" });
+  refContext.currentOutput = { value: 3 };
+  invariant(
+    resolveExactRef({ op: "secret", name: "ADMIN_EMAIL" }, refContext) === "ADMIN_EMAIL",
+    "secret Ref expanded a value"
+  );
+  invariant(
+    resolveExactRef({ op: "capture", name: "screen.id" }, refContext) === "id/with-slash",
+    "capture Ref drift"
+  );
+  invariant(
+    resolveExactRef({ op: "fixture", path: ["fixturePrefix"] }, refContext) ===
+      plan.fixtureBlueprint.fixturePrefix,
+    "fixture Ref drift"
+  );
+  invariant(
+    resolveExactRef(
+      { op: "prior", actionId: "prior-action", path: ["nested", "value"] },
+      refContext
+    ) === 7,
+    "prior Ref drift"
+  );
+  invariant(
+    resolveExactRef({ op: "output", path: ["value"] }, refContext) === 3,
+    "output Ref drift"
+  );
+  invariant(
+    resolveExactRef({ op: "var", name: "sample", path: ["value"] }, refContext) === "retained",
+    "var Ref drift"
+  );
+  invariant(
+    resolveExactRef(
+      {
+        op: "rootPath",
+        parts: [
+          { op: "literal", value: "_docs" },
+          { op: "literal", value: "evidence.json" },
+        ],
+      },
+      refContext
+    ) === "/task540-self-test-root/_docs/evidence.json",
+    "rootPath Ref drift"
+  );
+  invariant(
+    resolveExactRef({ op: "selector", templateId: "loginEmail", args: [] }, refContext) ===
+      'input#email[name="email"][type="email"]',
+    "selector Ref drift"
+  );
+  invariant(
+    resolveExactRef({ op: "path", key: "builder" }, refContext) ===
+      plan.fixtureBlueprint.origins.admin + "/admin/advanced/custom-screens/id%2Fwith-slash",
+    "path Ref capture expansion drift"
+  );
+  invariant(
+    deepEqualJson(
+      resolveExactRef(
+        {
+          op: "array",
+          items: [
+            { op: "literal", value: 1 },
+            { op: "literal", value: 2 },
+          ],
+        },
+        refContext
+      ),
+      [1, 2]
+    ),
+    "array Ref drift"
+  );
+  invariant(
+    deepEqualJson(
+      resolveExactRef(
+        { op: "object", properties: { safe: { op: "literal", value: true } } },
+        refContext
+      ),
+      { safe: true }
+    ),
+    "object Ref drift"
+  );
+  invariant(
+    resolveExactRef(
+      {
+        op: "sub",
+        left: { op: "prior", actionId: "prior-action", path: ["nested", "value"] },
+        right: { op: "output", path: ["value"] },
+      },
+      refContext
+    ) === 4,
+    "sub Ref drift"
+  );
+  invariant(
+    resolveExactRef({ op: "length", value: { op: "literal", value: [1, 2, 3] } }, refContext) === 3,
+    "length Ref drift"
+  );
+  const changedPointers = resolveExactRef(
+    {
+      op: "changedKeys",
+      before: {
+        op: "literal",
+        value: { same: 1, nested: { value: 1 }, array: [1, 2], removed: true, "~slash/": 1 },
+      },
+      after: {
+        op: "literal",
+        value: { same: 1, nested: { value: 2, added: true }, array: [1, 3, 4], "~slash/": 2 },
+      },
+    },
+    refContext
+  );
+  invariant(
+    deepEqualJson(changedPointers, [
+      "/array/1",
+      "/array/2",
+      "/nested/added",
+      "/nested/value",
+      "/removed",
+      "/~0slash~1",
+    ]),
+    "changedKeys JSON Pointer drift"
+  );
+  await expectAsyncFailure(
+    async () => resolveExactRef({ op: "unknown" }, refContext),
+    "unknown Ref opcode"
+  );
+  await expectAsyncFailure(
+    async () => resolveExactRef({ op: "literal", value: "$NOT_A_SECRET_REF" }, refContext),
+    "literal dollar secret reference"
+  );
+  await expectAsyncFailure(
+    async () => evaluateExactPredicate({ op: "unknown" }, refContext),
+    "unknown Predicate opcode"
+  );
+  const shadowContext = selfTestContext(plan, "shadow-test");
+  shadowContext.currentOutput = ["value"];
+  shadowContext.variables.set("item", "existing");
+  await expectAsyncFailure(
+    async () =>
+      evaluateExactPredicate(
+        {
+          op: "every",
+          source: { op: "output", path: [] },
+          as: "item",
+          predicate: { op: "nonEmptyString", value: { op: "var", name: "item", path: [] } },
+        },
+        shadowContext
+      ),
+    "Predicate variable shadowing"
+  );
+
+  const sessionAbsenceContract = {
+    grammar: selfTestNativeTransport({
+      nativeMode: "session-list-absence",
+      sessionName: "wf540smoke",
+      normalizedValue: true,
+    }),
+    schema: { type: "literal", value: true },
+    predicate: null,
+    rememberAs: null,
+  };
+  const emptySessionList = Buffer.from("  (no browsers)\n");
+  invariant(
+    parseRegisteredOutput(
+      sessionAbsenceContract,
+      emptySessionList,
+      "session-absence",
+      selfTestContext(plan, "session-absence")
+    ) === true,
+    "session absence parser drift"
+  );
+  const presentSessionList = Buffer.from(
+    "### Browsers\n- owner-session:\n  - status: open\n  - browser-type: chromium\n  - user-data-dir: <in-memory>\n- wf540smoke:\n  - status: open\n  - browser-type: chromium\n  - user-data-dir: <in-memory>\n"
+  );
+  await expectAsyncFailure(
+    async () =>
+      parseRegisteredOutput(
+        sessionAbsenceContract,
+        presentSessionList,
+        "session-present",
+        selfTestContext(plan, "session-present")
+      ),
+    "named session present"
+  );
+  await expectAsyncFailure(
+    async () =>
+      parseRegisteredOutput(
+        sessionAbsenceContract,
+        Buffer.from("### Browsers\n- malformed\n"),
+        "session-malformed",
+        selfTestContext(plan, "session-malformed")
+      ),
+    "malformed session list"
+  );
+  const nativeCloseContract = {
+    grammar: selfTestNativeTransport({
+      nativeMode: "exact-text",
+      exactText: "Browser 'wf540smoke' closed\n\n",
+      normalizedValue: "closed",
+    }),
+    schema: { type: "literal", value: "closed" },
+    predicate: null,
+    rememberAs: null,
+  };
+  invariant(
+    parseRegisteredOutput(
+      nativeCloseContract,
+      Buffer.from("Browser 'wf540smoke' closed\n\n"),
+      "native-close",
+      selfTestContext(plan, "native-close")
+    ) === "closed",
+    "native exact-text parser drift"
+  );
+
+  const privateMarker = "TASK540_PRIVATE_DO_NOT_EGRESS";
+  let privateFailure = null;
+  try {
+    parseRegisteredOutput(
+      strictObservationContract,
+      selfTestJsonFrame({
+        assertion: "visible-geometry",
+        geometry: { x: 10.2, width: 320, privateMarker },
+        tags: ["visible", "settled"],
+      }),
+      "private-egress-test",
+      selfTestContext(plan, "private-egress-test")
+    );
+  } catch (error) {
+    privateFailure = error;
+  }
+  invariant(privateFailure !== null, "private egress fixture did not fail");
+  invariant(
+    !String(privateFailure).includes(privateMarker),
+    "private output leaked through parser failure"
+  );
+  invariant(
+    !canonicalJson(TASK_FAILURE).includes(privateMarker),
+    "private output leaked through public failure"
+  );
+  negativeCases += 1;
+  await runExpectedAuthChallengeSelfTest({
+    expectNegative: expectAsyncFailure,
+    assertNegative,
+  });
+  return deepFreezeExact({
+    pass: true,
+    actions: plan.actionManifest.length,
+    runtimeReceipts: evidence.runtimeReceipts.length,
+    cleanupActions: evidence.cleanupReceipts.length,
+    nominalPersistentCleanupActions: 54,
+    terminalMatrixCases: 1,
+    captures: evidence.captureProjection.length,
+    negativeCases,
+  });
+}
+
+if (
+  process.argv[1]?.endsWith("/task-540-smoke-executor.mjs") &&
+  process.argv.includes("--self-test")
+) {
+  process.stdout.write(JSON.stringify(await runTask540SmokeExecutorSelfTest()));
+}

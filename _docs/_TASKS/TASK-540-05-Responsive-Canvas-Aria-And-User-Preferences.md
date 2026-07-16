@@ -7,9 +7,9 @@
 **Category:** Custom Screens / Responsive UI / Accessibility / User Settings
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-04
-**Status:** ✅ Done
+**Status:** 🚧 In Progress
 **Started:** 2026-07-14
-**Completed:** 2026-07-14
+**Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Corrective Revalidation:** 2026-07-14 — L02 exact Vitest matrix 65/65, exact Bun matrix 27/27 after reachable DB preflight, core/root static gates green, and fresh post-audit zero findings
 **Previous Completion:** 2026-07-14
 **Reopened:** 2026-07-14
@@ -37,24 +37,39 @@ work with both default and already-persisted security settings.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-540-05-L01 | Keep Screen canvas usable and ARIA-valid | `ScreenAuthoringCanvas.tsx`, `CanvasEditor.tsx` | ✅ Done |
-| TASK-540-05-L02 | Scope Screen preferences through user settings | exact Bun-free preference/auth-identity contracts + route-persistent auth provider + user-settings service/client/route + Screen hook + narrow central HTTP error mapping | ✅ Done |
+| TASK-540-05-L01 | Keep Screen canvas usable and ARIA-valid | `ScreenAuthoringCanvas.tsx`, `CanvasEditor.tsx` | 🚧 In Progress |
+| TASK-540-05-L02 | Scope Screen preferences through user settings | exact Bun-free preference/auth-identity contracts + route-persistent auth provider + user-settings service/client/route + Screen hook + narrow central HTTP error mapping | 🚧 In Progress |
 
 ## Security Contract
 
-Canvas changes are local UI only. Preference reads/writes reuse existing internal
-`/admin/api/user-settings*` routes: the authenticated session supplies the sole
-`userId`, PATCH retains CSRF and the `admin_write` rate-limit bucket, and validation
-keeps the strict `{value}` envelope. `user_settings_key_invalid` and
-`user_settings_value_invalid` preserve those exact response codes and map to HTTP
-400 at the central boundary. The existing PATCH route accepts an optional
+Canvas changes are local UI only.
+
+- **Visibility/endpoints:** preference transport remains internal session-admin traffic
+  on exactly `GET /admin/api/user-settings`,
+  `GET /admin/api/user-settings/:key`, and
+  `PATCH /admin/api/user-settings/:key`. No endpoint is added or made public.
+- **Authentication/RBAC:** the HttpOnly authenticated session is the only auth model,
+  and server-derived `ctx.user.id` is the sole read/write owner. User settings are
+  self-scoped and require no additional RBAC permission; this task adds neither an
+  API-key path nor any permission widening.
+- **CSRF/rate limits:** PATCH remains CSRF-protected. Both GET routes are classified as
+  `admin_read`; PATCH is classified as `admin_write`. The shared authenticated-admin
+  rate-limit bypass remains unchanged, so successful session requests are not claimed
+  to consume those counters.
+- **Validation/anti-abuse:** PATCH keeps the strict reject-unknown `{value}` envelope;
+  the service also rejects unknown setting keys and unknown value keys, versions, or
+  types. There is no public write, so nonce, signature/HMAC, and CAPTCHA do not apply.
+
+`user_settings_key_invalid` and `user_settings_value_invalid` preserve those exact
+response codes and map to HTTP 400 at the central boundary. The existing PATCH route
+accepts an optional
 `X-Coderso-Expected-User-Id`; every Screen write sends captured A, and authenticated B
 plus expected A returns exact `user_setting_identity_changed`/409 before persistence.
 Header omission preserves legacy clients and the session remains the sole write scope.
-Preference data is a non-secret boolean/version record. No public write, RBAC widening,
-nonce/captcha, localStorage content, migration, or endpoint is added. Auth identity is
-also a write-dispatch boundary published by the route-persistent `AdminAuthProvider`,
-not a Screen hook: a write queued for user A may reach the network only while the
+Preference data is a non-secret boolean/version record; no localStorage content or
+migration is added. Auth identity is also a write-dispatch boundary published by the
+route-persistent `AdminAuthProvider`, not a Screen hook: a write queued for user A may
+reach the network only while the
 captured A identity epoch is current. Sign-out, A→B, or provider unmount invalidates
 undispatched A work even when every Screen consumer is unmounted. An already-dispatched
 A response may settle but cannot publish into B. Malformed, unknown-key, wrong-key, or

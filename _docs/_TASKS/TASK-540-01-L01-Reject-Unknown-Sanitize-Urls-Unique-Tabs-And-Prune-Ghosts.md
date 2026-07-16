@@ -8,9 +8,9 @@
 **Category:** Custom Screens / Schema / Security
 **Estimated Effort:** Medium
 **Dependencies:** None inside TASK-540
-**Status:** ✅ Done
+**Status:** 🚧 In Progress
 **Started:** 2026-07-13
-**Completed:** 2026-07-14
+**Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Repair Started:** 2026-07-14
 **Repair Reason:** Repository-wide Bun validation confirmed that the Assistant Custom Screen block-patch test still constructs unsupported `hero` and `rich-text-section` blocks at the strict V4 write boundary. R01 owns a fixture-only update to canonical fixed kinds and data paths while preserving the selected block's sibling data and the untouched sibling block; production/schema behavior must not loosen.
 **Revalidation Passed:** generation 18cd43dd8f0f89cff684d430e2f38b9d / token 1b3e7a821edc208050497e6675544347 / gate green
@@ -51,22 +51,26 @@ For the completed control-character correction, the exact writable implementatio
 owner files and named gate suites are read-only unless a separately verified finding
 reopens their contract. The Page-owned sanitizer module remains read-only.
 
-For the current Assistant repair, the only writable test region is the existing block-
-patch case in `tests/unit/assistant/actionExecutorService.test.ts`. Replace its
-unsupported Screen `hero`/`rich-text-section` fixture and matching action identifiers,
-type, path, and assertions with canonical fixed-kind equivalents. Use a `heading` block
-patched at `dataPath: ["text"]` and an independent `text` sibling; assert the patched
-heading text, another unchanged property on that same heading, and the untouched text
-sibling's content. Do not edit shared test helpers, another Assistant case, production
-Assistant code, the Screen schema/normalizer, or compatibility arms. The strict V4
-boundary remains authoritative and receives no fallback for stale fixtures.
+For the historical Assistant fixture repair, the only writable test region was the
+existing block-patch case in `tests/unit/assistant/actionExecutorService.test.ts`. It
+replaced the unsupported Screen `hero`/`rich-text-section` fixture and matching action
+identifiers, type, path, and assertions with canonical fixed-kind equivalents. It used
+a `heading` block patched at `dataPath: ["text"]` and an independent `text` sibling,
+then asserted the patched heading text, another unchanged property on that same heading,
+and the untouched text sibling's content. Shared test helpers, other Assistant cases,
+production Assistant code, the Screen schema/normalizer, and compatibility arms remained
+unchanged. The strict V4 boundary remains authoritative and receives no fallback for
+stale fixtures.
 
-While this earlier source owner carries `Repair Pending`, TASK-540-06-L01 is the sole
-later leaf allowed to remain `🚧 In Progress`, and it remains deliberately ungated with
-neither `Targeted Gate Passed` nor `Revalidation Passed`. Every other source sibling
-must be `✅ Done` with its `Completed` receipt. Never fabricate gate evidence for the
-active closure leaf. `_docs/_workflows/task-540-implement.mjs` owns this restart
-invariant and exposes `--self-test-repair-siblings` as its executable projection.
+Status authority is phase-aware: before changelog 1252 covers the family, a landed,
+gated source sibling remains `🚧 In Progress` with its `Implementation Complete`
+receipt; after 1252 covers that physical ID, it may be `✅ Done` with `Completed`.
+TASK-540-04-L03 alone currently carries `Repair Pending`, while TASK-540-06-L01 remains
+the active closure leaf and deliberately has neither `Targeted Gate Passed` nor
+`Revalidation Passed`. This R01 leaf has no current repair ownership. Never fabricate
+gate evidence for the active closure leaf. `_docs/_workflows/task-540-implement.mjs`
+owns this phase-aware restart invariant and exposes `--self-test-repair-siblings` as
+its executable projection.
 
 Do not edit route registration/handlers, `ScreenBlockLibrary.tsx`,
 `screenDocumentOps.ts`, renderer/UI files,
@@ -80,7 +84,12 @@ move persistence assertions into that Vitest suite. Create/update response and s
 row behavior are proved in the existing Bun route integration lane with uniquely scoped
 fixtures and owned-row cleanup.
 
-## Grounded anchors
+## Historical pre-implementation grounded anchors
+
+These 2026-07-13 line snapshots are retained as audit provenance. They describe the
+pre-implementation source layout; current ownership and validation are anchored by the
+named files, symbols, and regression suites in this contract rather than mutable line
+numbers.
 
 - Per-kind allowlist and normalizer:
   `customScreenSchemas.ts:399-415,608-669`.
@@ -118,7 +127,7 @@ Re-grep these symbols before editing; line numbers may shift.
 - **Anti-abuse/secrets:** this leaf adds no public write, so nonce/captcha are not
   applicable. It adds no token, secret, browser storage, logging, or debug payload.
 
-## Current fixture-repair pseudocode
+## Historical fixture-repair pseudocode
 
 Keep the existing
 `test("executeAssistantActionPlan patches custom screen block data", async () => ...)`
@@ -751,13 +760,16 @@ git diff --check
 If a named test fails, rerun that exact file once in isolation before classifying
 the failure. This leaf adds no DB migration and no public/security gate exception.
 
-## Historical corrective completion and current fixture repair
+## Historical corrective completion and fixture repair
 
 The structural-provenance implementation and its 74/74 Vitest plus 15/15 DB route
 evidence remain historical metadata. The later repair landed the original-string
 ASCII-control guard and direct sanitizer/write/stored-read/compatibility-alias matrix,
 then passed the final 75/75 Vitest and 15/15 DB route gates plus a fresh zero-finding
 post-audit before this leaf returned to Done. That evidence remains historical and is
-not invalidated as schema/source evidence. The leaf is now reopened only for the narrow
-Assistant fixture compatibility seam above; it returns to Done only after the exact
-schema/image Vitest, Custom Screens route, Assistant Bun, static, and diff gates pass.
+not invalidated as schema/source evidence. The later narrow Assistant fixture repair
+also passed the exact schema/image Vitest, Custom Screens route, Assistant Bun, static,
+and diff gates before its then-current repair ownership ended. That repair and its Done
+transition are historical. In the current pre-1252 landed state this leaf remains
+`🚧 In Progress` with `Implementation Complete`; TASK-540-04-L03 alone carries
+`Repair Pending`, and the closure leaf remains active and ungated.

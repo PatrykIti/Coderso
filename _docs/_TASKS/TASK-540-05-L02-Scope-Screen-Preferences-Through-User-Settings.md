@@ -8,10 +8,10 @@
 **Category:** User Settings / Custom Screens / Privacy
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-05-L01
-**Status:** ✅ Done
+**Status:** 🚧 In Progress
 **Started:** 2026-07-14
-**Completed:** 2026-07-14
-**Revalidation:** 2026-07-14 — `core` lint/typecheck, root typecheck, exact six-file Vitest matrix 65/65, DB preflight, exact three-file Bun matrix 27/27 (162 expectations), and `git diff --check` all green
+**Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Revalidation Passed:** 2026-07-14 — `core` lint/typecheck, root typecheck, exact six-file Vitest matrix 65/65, DB preflight, exact three-file Bun matrix 27/27 (162 expectations), and `git diff --check` all green
 **Post-Audit:** 2026-07-14 — PASS; zero HIGH, MEDIUM, or LOW findings on the corrected working tree
 **Previous Completion:** 2026-07-14
 **Previous Targeted Gate:** 2026-07-14 — `core lint:types`, `core lint`, root `tsc`, the exact six-file Vitest matrix (64/64), the exact two-file Bun/DB matrix (20/20), and `git diff --check`
@@ -76,7 +76,12 @@ and the default settings include it for new/default configurations. Update the n
 behavior tests before this leaf's gate; TASK-540-06 owns source-of-truth docs and only
 aggregate test additions.
 
-## Grounded anchors
+## Historical pre-implementation grounded anchors
+
+These 2026-07-13 line snapshots are retained as audit provenance. They describe the
+pre-implementation source layout; current ownership and validation are anchored by the
+named files, symbols, and regression suites in this contract rather than mutable line
+numbers.
 
 - Service key/value map, defaults, allowlist, validator:
   `userSettingsService.ts:33-80,99-260`.

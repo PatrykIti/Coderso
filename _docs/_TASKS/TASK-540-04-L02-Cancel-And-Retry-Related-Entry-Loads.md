@@ -8,9 +8,10 @@
 **Category:** Custom Screens / Async UI / Cache
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-04-L01
-**Status:** ✅ Done
+**Status:** 🚧 In Progress
 **Started:** 2026-07-13
-**Completed:** 2026-07-13
+**Implementation Complete:** 2026-07-13 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Targeted Gate Passed:** 2026-07-13 — `core lint:types`, `core lint`, the exact two-file Vitest matrix (44/44), full core lint/typecheck, tracked and untracked diff checks, empty staging, and Page collision guards all green
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -27,7 +28,12 @@ distribution, attempt cause/force, retry/cancellation, and target-cache subscrip
 TASK-540-04-L03 consumes it. The existing related resolver and its tests are read-only
 dependencies of this leaf.
 
-## Grounded anchors
+## Historical pre-implementation grounded anchors
+
+These 2026-07-13 line snapshots are retained as audit provenance. They describe the
+pre-implementation source layout; current ownership and validation are anchored by the
+named files, symbols, and regression suites in this contract rather than mutable line
+numbers.
 
 - Duplicated preview async IIFE without catch:
   `CustomScreenWorkspacePreviewDialog.tsx:68-131`.

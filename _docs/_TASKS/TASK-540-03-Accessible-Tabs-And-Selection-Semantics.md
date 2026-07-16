@@ -7,9 +7,9 @@
 **Category:** Custom Screens / Runtime UI / Accessibility
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-01, TASK-540-02
-**Status:** ✅ Done
+**Status:** 🚧 In Progress
 **Started:** 2026-07-13
-**Completed:** 2026-07-14
+**Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Corrective Revalidation:** 2026-07-14 — TASK-540-03-L01 passed the exact 89/89 renderer/interaction/image Vitest matrix, core lint/typecheck, `git diff --check`, and a fresh zero-finding post-audit
 **Fix Started:** 2026-07-14
 **Fix Reason:** TASK-540-03-L01 must pin final Button and Image DOM-sink behavior for ASCII-control-confused URLs after the R01 wrapper correction.
@@ -32,7 +32,7 @@ authoring controls without swallowing Space or link/input activation.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-540-03-L01 | Functional Tabs and no nested-interactive Space trap | `core/admin/ui/custom-screens/ScreenRuntimeRenderer.tsx` | ✅ Done |
+| TASK-540-03-L01 | Functional Tabs and no nested-interactive Space trap | `core/admin/ui/custom-screens/ScreenRuntimeRenderer.tsx` | 🚧 In Progress |
 
 ## Acceptance
 

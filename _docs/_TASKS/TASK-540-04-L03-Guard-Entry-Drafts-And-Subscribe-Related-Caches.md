@@ -8,12 +8,16 @@
 **Category:** Custom Screens / Entry Editor / Data Safety
 **Estimated Effort:** Large
 **Dependencies:** TASK-540-03-L01, TASK-540-04-L02
-**Status:** ✅ Done
+**Status:** 🚧 In Progress
 **Started:** 2026-07-13
-**Completed:** 2026-07-14
-**Reopened:** 2026-07-14 (final post-audit: cross-channel Screen list/detail reconciliation and complete fallback-list publication)
-**Revalidation:** 2026-07-14 — focused `customScreensClient` 40/40; exact nine-file L03 Vitest matrix 181/181; `core` lint/typecheck, root typecheck, and `git diff --check` all green
-**Post-Audit:** 2026-07-14 — PASS; zero HIGH, MEDIUM, or LOW findings on the corrected working tree
+**Fix Started:** 2026-07-15
+**Implementation Complete:** 2026-07-15 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Revalidation Passed:** generation ff397af11ad9b309d5244372b0705637 / token 191e7db6acd8e2cf36016f821d2f6b88 / gate green
+**Repair Reason:** Closure validation reproduced one logical remote cache event twice when the canonical and legacy BroadcastChannel/storage transports delivered the same serialized event. The repair-contract audit also found that the at-capacity state-neutral corpus did not exercise every declared malformed channel/storage class and that the direct-image override contract lacked a DB-backed PATCH→GET route-boundary proof. The scoped 2026-07-15 repair reopened only the exact L03 cache-bus source/test pair plus one additive Custom Screens route test so the logical-occurrence fix, bounded-state invariants, persistence round trip, and mapped invalid-target failure were executable without changing another production contract.
+**Historical Completion:** 2026-07-14
+**Historical Reopen:** 2026-07-14 (final post-audit: cross-channel Screen list/detail reconciliation and complete fallback-list publication)
+**Historical Revalidation:** 2026-07-14 — focused `customScreensClient` 40/40; exact nine-file L03 Vitest matrix 181/181; `core` lint/typecheck, root typecheck, and `git diff --check` all green
+**Historical Post-Audit:** 2026-07-14 — PASS; zero HIGH, MEDIUM, or LOW findings on the corrected working tree
 **Previous Completion:** 2026-07-14
 **Previous Revalidation:** ✅ Passed (`core` lint/typecheck, root typecheck, and the exact nine-file Vitest matrix: 161/161)
 **Changelog:** 1252 (pinned; closure only)
@@ -26,15 +30,20 @@
 - `core/admin/ui/custom-screens/CustomScreenEntryCanvas.tsx`
 - `core/admin/ui/custom-screens/CustomScreenPreview.tsx`
 - `core/admin/services/customScreensClient.ts`
-- `core/admin/utils/cacheBus.ts` (only additive origin/operation delivery)
+- `core/admin/utils/cacheBus.ts` (sole writer for the canonical/legacy remote-event repair)
 - `core/services/customScreens/screenEntryPresentationOverrideContract.ts`
 - `core/services/customScreens/screenEntryPresentationOverrides.ts`
 - `tests/vitest/admin/customScreensClient.test.ts`
-- `tests/vitest/admin/cacheBus.test.ts` (only origin/operation assertions)
+- `tests/vitest/admin/cacheBus.test.ts` (sole repair-test writer)
 - `tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx`
 - `tests/vitest/ui/custom-screen-entry-draft.test.ts`
 - new `tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx`
 - `tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts`
+
+The completed 2026-07-15 repair's mutation authority was a separate exact set and did
+not widen historical full-leaf ownership: `core/admin/utils/cacheBus.ts`,
+`tests/vitest/admin/cacheBus.test.ts`, and the additive-only
+`tests/integration/routes/customScreensRoutes.test.ts`.
 
 No other TASK-540 leaf edits these paths. TASK-540-03-L01 exclusively owns
 `ScreenRuntimeRenderer.tsx`, `custom-screen-runtime-renderer.test.tsx`, and
@@ -43,36 +52,271 @@ landed renderer contract read-only. The retained
 `tests/vitest/widgets/screenWidgets.test.tsx` Preview compatibility suite is also a
 read-only gate. TASK-540-06 owns the corresponding
 `_docs/CMS_API.md` correction at closure.
-L03 lands the cache-bus substrate and mutation-client forwarding together before L04;
-L04 consumes both seams read-only and never edits these four L03-owned files.
+L03 landed the cache-bus substrate and mutation-client forwarding before L04. That
+historical full-leaf ownership remains closed. The 2026-07-15 repair reopened exactly
+`cacheBus.ts`, `cacheBus.test.ts`, and the additive
+`customScreensRoutes.test.ts`; every UI, client, service, production route, renderer,
+hook, dialog, and other consumer suite listed by this contract is read-only.
+L04 consumes the repaired seam read-only and never edits these L03-owned files.
+That pre-closure repair mutation and its audit/gate fixers used exactly those three
+writable paths. An after-closure audit fixer may additionally edit only the root TASK-540 contract,
+this TASK-540-04 child contract, and this exact L03 leaf contract when a finding is
+evidenced there; it may never regain any historical L03 consumer path. Reopen/complete
+status transitions remain separate task-state mutations.
 The later cache-authority correction edited only `customScreensClient.ts` plus its owner
 test; the already-gated cacheBus/editor/service seams stayed read-only. Its durable
-evidence is the Revalidation/Post-Audit metadata above and the current green gate, not
+evidence is the Historical Revalidation/Historical Post-Audit metadata above, not
 the mutable `_docs/_workflows/task-540-fix.mjs`, which now records only the completed
-R01→R03 URL-control correction. The canonical `_docs/_workflows/task-540-implement.mjs`
-may treat this Done leaf as landed and resume at closure.
+R01→R03 URL-control correction. With L03 `🚧 In Progress`, canonical
+`Implementation Complete`, one `Revalidation Passed`, and no `Repair Pending`, the
+`_docs/_workflows/task-540-implement.mjs` resolver treats L03 as landed and resumes at
+TASK-540-06-L01 closure.
 
 ## Grounded anchors
 
 - Entry content/presentation state and dirty authority:
-  `CustomScreenEntryEditor.tsx:683-778,1390-1435`.
+  `CustomScreenEntryEditor.tsx:671-780,1380-1446`.
 - Entry/override hydration, refresh, and cache subscriptions:
-  `CustomScreenEntryEditor.tsx:880-1139,1350-1372`.
-- Related-entry hook consumption: `CustomScreenEntryEditor.tsx:1215-1224`.
-- Save/create navigation authority: `CustomScreenEntryEditor.tsx:1446-1608`.
+  `CustomScreenEntryEditor.tsx:882-1131,1355-1378`.
+- Related-entry hook consumption: `CustomScreenEntryEditor.tsx:1217-1224`.
+- Save/create navigation authority: `CustomScreenEntryEditor.tsx:1415-1713`.
 - Direct-image presentation target and winning UUID collection:
-  `CustomScreenEntryEditor.tsx:256-342,539-565`.
+  `CustomScreenEntryEditor.tsx:256-342,539-567`.
 - Direct-image/media-field active-target validation:
   `screenEntryPresentationOverrides.ts:145-220`.
 - Admin override response/cache normalization:
   `customScreensClient.ts:109-129,235-255`.
-- Same-context-only cache-event origin/operation delivery and unchanged serialized transports:
-  `cacheBus.ts:10-22,44,56-61,73-138`.
+- Same-context-only cache-event origin/operation delivery, canonical/legacy transport
+  constants, storage emission, strict parsing, broadcast, and subscription teardown:
+  `cacheBus.ts:10-39,42-48,57-237`.
+- Cache-bus transport/token, twin correlation, descriptor hardening, and bounds regressions:
+  `cacheBus.test.ts:184-1180`.
+- Real registered-route direct-image override fixtures, PATCH→GET round trip, and bounded
+  invalid-target mapping: `customScreensRoutes.test.ts:313-463`.
 - Optional Custom Screen mutation token forwarding across both local list/detail events:
   `customScreensClient.ts:100-102,399-453`.
 - Bun-free override schema/type owner:
   `screenEntryPresentationOverrideContract.ts:1-300`.
 - Shared guard: `AdminDirtyNavigationGuard.tsx:17-106`.
+
+## Canonical/legacy remote-event repair contract
+
+This repair changes no route, payload, exported cache-bus type, cache key, consumer API,
+or intended UI/UX contract. It deliberately changes mirrored remote runtime delivery from
+two refresh attempts to one per logical occurrence. `CacheEvent` remains exactly
+`{ action, key, sourceId, ts }`; transport family is private subscription state and is
+never serialized. Local delivery continues to bypass remote correlation and preserves
+the exact caller-owned operation token.
+
+Each `subscribeCacheEvents` call owns an independent, bounded correlation map. Its key is
+the collision-free `JSON.stringify([sourceId, ts, key, action])`, and each value is
+`{ canonical, legacy, delivered }`. Canonical and legacy listener wrappers pass their
+private transport family into one remote-delivery helper. For each valid non-self event:
+
+1. Increment only the received family count.
+2. Compute delivery iff `Math.max(canonical, legacy) > delivered` and increment
+   `delivered` when true.
+3. Subtract `paired = Math.min(canonical, legacy)` from all three counters. Delete a
+   balanced entry; otherwise move its residual entry to the newest LRU position. Finish
+   this complete correlation-state update before invoking the consumer, so a throwing
+   handler cannot make the mirrored twin a retry.
+4. When delivery was selected, invoke the consumer after the state update. Keep at most
+   128 residual identities and evict the oldest residual identity on overflow.
+   Eviction is intentionally fail-open: a very late twin may duplicate an invalidation,
+   but memory remains bounded and no new invalidation is suppressed.
+
+This count/multiset rule preserves every occurrence from a canonical-only or legacy-only
+sender, including byte-identical repeats, and collapses the two mirrored transports from
+the current emitter. It supports either arrival order and all interleavings. A third-party
+sender that alternates exactly one transport family per logical occurrence while reusing
+the same complete tuple is inherently indistinguishable from delayed twins; that is an
+explicit compatibility limit, not a timestamp-expiry heuristic. Do not add TTL or wall-
+clock freshness logic.
+
+Remote parsing is strict, reject-unknown, accessor-safe, and bounded before correlation:
+
+- `MAX_REMOTE_IDENTITIES = 128`, `MAX_KEY_CODE_UNITS = 1024`,
+  `MAX_SOURCE_ID_CODE_UNITS = 128`, and `MAX_STORAGE_PAYLOAD_CODE_UNITS = 2048`.
+- `key` and `sourceId` are non-empty strings within their code-unit caps; `action` is
+  exactly `invalidate` or `update`; `ts` is a non-negative safe integer.
+- Storage strings larger than the payload cap are rejected before `JSON.parse`.
+- Obtain one snapshot with `Object.getOwnPropertyDescriptors(payload)` inside `try/catch`;
+  a proxy descriptor trap or any other descriptor-snapshot failure rejects the payload.
+  `Reflect.ownKeys(descriptors)` must then be exactly the four string keys `action`, `key`,
+  `sourceId`, and `ts`, with no extra string, symbol, or non-enumerable own key on the
+  payload. Every required descriptor must be enumerable and must own a data `value`;
+  accessor descriptors are rejected without invoking their getters. Validation reads only
+  the captured descriptor `.value` snapshots, never `payload[field]`, so a getter cannot
+  mutate the shape between key validation and value validation.
+- Unknown-key, accessor, non-enumerable, proxy-trap, invalid-type/action/bound, malformed
+  JSON, oversized storage, storage-removal, and same-source inputs are ignored before any
+  correlation lookup, insertion, LRU touch, or eviction. Every parse failure is therefore
+  state-neutral and cannot consume or perturb residual state.
+
+Storage fallback must re-arm identical serialized occurrences. For canonical and legacy
+storage keys independently, call `removeItem(key)` immediately before `setItem(key,
+serialized)`. Canonical and legacy writes still carry the same serialized four-key event;
+their resulting storage notifications enter the same per-family multiset algorithm.
+
+Teardown removes the exact canonical and legacy listener wrappers, closes both channels,
+removes the storage listener, deletes the local handler, and clears the subscription's
+private correlation map. A later subscription starts with fresh state. BroadcastChannel
+construction behavior and same-source filtering remain compatible with the existing
+seam; no module-global remote correlation state is permitted.
+
+### Repair pseudocode
+
+```ts
+type RemoteTransport = "canonical" | "legacy";
+type RemoteCounts = { canonical: number; legacy: number; delivered: number };
+const CACHE_EVENT_KEYS = Object.freeze(["action", "key", "sourceId", "ts"] as const);
+
+const remoteCounts = new Map<string, RemoteCounts>(); // private to one subscription
+
+function parseEvent(payload: unknown): CacheEvent | null {
+  if (!payload || typeof payload !== "object") return null;
+  let descriptors: PropertyDescriptorMap;
+  try {
+    descriptors = Object.getOwnPropertyDescriptors(payload);
+  } catch {
+    return null; // proxy descriptor traps fail closed and do not mutate correlation state
+  }
+
+  const ownKeys = Reflect.ownKeys(descriptors);
+  if (
+    ownKeys.length !== CACHE_EVENT_KEYS.length ||
+    !CACHE_EVENT_KEYS.every((key) => ownKeys.includes(key))
+  ) {
+    return null; // exact four descriptor keys; reject extra strings, symbols, and hidden keys
+  }
+  const values: Record<(typeof CACHE_EVENT_KEYS)[number], unknown> = {
+    action: undefined,
+    key: undefined,
+    sourceId: undefined,
+    ts: undefined,
+  };
+  for (const field of CACHE_EVENT_KEYS) {
+    const descriptor = descriptors[field];
+    if (!descriptor?.enumerable || !Object.hasOwn(descriptor, "value")) return null;
+    values[field] = descriptor.value; // snapshot read; no payload getter is invoked
+  }
+
+  const { action, key, sourceId, ts } = values;
+  if (action !== "invalidate" && action !== "update") return null;
+  if (typeof key !== "string" || key.length === 0 || key.length > MAX_KEY_CODE_UNITS) return null;
+  if (
+    typeof sourceId !== "string" ||
+    sourceId.length === 0 ||
+    sourceId.length > MAX_SOURCE_ID_CODE_UNITS
+  ) return null;
+  if (typeof ts !== "number" || !Number.isSafeInteger(ts) || ts < 0) return null;
+  return { action, key, sourceId, ts };
+}
+
+function parseStorageEvent(serialized: string): CacheEvent | null {
+  if (serialized.length > MAX_STORAGE_PAYLOAD_CODE_UNITS) return null;
+  try {
+    return parseEvent(JSON.parse(serialized));
+  } catch {
+    return null;
+  }
+}
+
+function touchLruAndEvictOldestFailOpen(
+  identity: string,
+  counts: RemoteCounts,
+  max: number
+): void {
+  remoteCounts.delete(identity);
+  remoteCounts.set(identity, counts);
+  if (remoteCounts.size <= max) return;
+  const oldest = remoteCounts.keys().next().value;
+  if (oldest !== undefined) remoteCounts.delete(oldest);
+}
+
+function deliverRemote(payload: unknown, transport: RemoteTransport): void {
+  const parsed = parseEvent(payload);
+  if (!parsed || parsed.sourceId === cacheBusId) return;
+  const identity = JSON.stringify([parsed.sourceId, parsed.ts, parsed.key, parsed.action]);
+  const counts = remoteCounts.get(identity) ?? { canonical: 0, legacy: 0, delivered: 0 };
+  counts[transport] += 1;
+  const shouldDeliver = Math.max(counts.canonical, counts.legacy) > counts.delivered;
+  if (shouldDeliver) counts.delivered += 1;
+  const paired = Math.min(counts.canonical, counts.legacy);
+  counts.canonical -= paired;
+  counts.legacy -= paired;
+  counts.delivered -= paired;
+  if (counts.canonical === 0 && counts.legacy === 0) remoteCounts.delete(identity);
+  else touchLruAndEvictOldestFailOpen(identity, counts, MAX_REMOTE_IDENTITIES);
+  if (shouldDeliver) handler(parsed, "remote"); // token undefined; state already final
+}
+
+const canonicalListener = (event: MessageEvent) =>
+  deliverRemote(event.data, "canonical");
+const legacyListener = (event: MessageEvent) => deliverRemote(event.data, "legacy");
+
+function emitStorageEvent(event: CacheEvent): void {
+  const serialized = JSON.stringify(event);
+  for (const key of [STORAGE_EVENT_KEY, LEGACY_STORAGE_EVENT_KEY]) {
+    localStorage.removeItem(key);
+    localStorage.setItem(key, serialized);
+  }
+}
+```
+
+### Repair regression matrix
+
+`cacheBus.test.ts` must retain every existing assertion and add deterministic proof for:
+
+1. One canonical plus one legacy twin delivers once in both `canonical→legacy` and
+   `legacy→canonical` order.
+2. Two identical logical occurrences deliver exactly the prefix maximum and final count
+   two for all six interleavings: `CCLL`, `CLCL`, `CLLC`, `LCCL`, `LCLC`, `LLCC`.
+3. `CCC` and `LLL` each deliver three occurrences; complementary late twins add no
+   deliveries.
+4. Different source IDs, timestamps, keys, and actions remain independent, including a
+   tuple corpus whose delimiter-like strings would collide under string concatenation.
+5. Per-subscription isolation is asymmetric and instance-directed: send only canonical
+   `C` to subscription A's canonical channel and only legacy `L` to subscription B's
+   legacy channel; both deliver. Their complementary twins suppress only in the same
+   subscription. Create another residual pair, unsubscribe A, prove B's complement still
+   suppresses, then resubscribe A and prove its matching tuple delivers from fresh state.
+6. Storage canonical/legacy twins collapse in either order. `newValue:null` removal
+   notifications are state-neutral, while two byte-identical fallback broadcasts each emit
+   because both keys use remove-before-set.
+7. Two identical local broadcasts both deliver with their exact distinct operation
+   tokens; remote tokens remain `undefined`, and own-source remote echoes stay filtered.
+8. Unsubscribe removes both exact channel wrappers/listeners, closes both channels, and
+   clears only that subscription's correlation state. During a canonical handler
+   invocation, synchronously re-enter the legacy listener with the exact twin and then
+   throw: the reentrant twin is suppressed because the complete multiset/LRU update happened
+   before the handler, the outer error still propagates to the harness, and an unrelated
+   tuple remains deliverable.
+9. True LRU and its exact cap use two fresh runs. At exactly 128 residual identities, the
+   oldest identity's twin suppresses. In a fresh run, re-touch identity 0, add identity
+   128, then prove identity 1 was evicted and delivers fail-open while identity 0 remains
+   resident and suppresses. This must fail FIFO and off-by-one caps of 1 or 127.
+10. Reject an extra enumerable string key, extra symbol key, extra non-enumerable key, and
+    a non-enumerable required key. Reject both a throwing accessor and a mutating accessor
+    on a required field, and assert exactly zero getter calls. Reject a proxy whose
+    `getOwnPropertyDescriptor` trap throws; no exception may escape remote parsing.
+11. Reject an unknown string action, a non-string action, and non-string `key`/`sourceId`.
+    Reject `ts` values `-1`, a fraction, `NaN`, `Infinity`, and
+    `Number.MAX_SAFE_INTEGER + 1`; accept `0` and `Number.MAX_SAFE_INTEGER`.
+12. Measure every string bound in UTF-16 code units: accept 512 astral characters for the
+    1024-unit key cap and 64 for the 128-unit source cap, but reject 513 and 65 respectively.
+    Keep the equivalent exact ASCII boundaries accepted.
+13. Reject storage payloads longer than 2048 UTF-16 code units before `JSON.parse`, proven
+    with a parse spy/counter. Accept an exactly 2048-unit padded JSON payload containing an
+    astral-boundary key; reject that payload plus one astral character as 2050 units without
+    another parse. Malformed JSON and unrelated storage keys are ignored.
+14. With 128 residual identities established, send enough unique unknown-key, accessor,
+    proxy-trap, invalid action/type/bound, malformed-storage, `newValue:null`, and own-source
+    inputs that any accidental insertion/touch would overflow or reorder the map. They must
+    deliver nothing and remain state-neutral; the oldest valid identity's later twin still
+    suppresses.
+15. Canonical channel, legacy channel, and storage serialization retain exactly
+    `action`, `key`, `sourceId`, and `ts`, including storage remove-before-set order.
 
 ## Implementation Pseudocode
 
@@ -186,36 +430,10 @@ function normalizeOverrideResponseEnvelope(input: unknown) {
   });
 }
 
-// cacheBus.ts owns this exact additive API. Symbol identity is unique per call and cannot
-// be serialized accidentally. Existing one-argument subscribers and broadcasts remain valid.
-export type CacheEventOperationToken = symbol;
-export type CacheEventBroadcastOptions = Readonly<{
-  operationToken?: CacheEventOperationToken;
-}>;
-export type CacheEventOrigin = "local" | "remote";
-
-export const createCacheEventOperationToken = (): CacheEventOperationToken => Symbol();
-
-type CacheEventHandler = (
-  event: CacheEvent,
-  origin: CacheEventOrigin,
-  operationToken?: CacheEventOperationToken
-) => void;
-
-export function broadcastCacheEvent(
-  input: Omit<CacheEvent, "ts" | "sourceId">,
-  options: CacheEventBroadcastOptions = {}
-) {
-  const event = { ...input, ts: Date.now(), sourceId: cacheBusId };
-  postSerializedEvent(event); // exact existing CacheEvent keys only
-  localHandlers.forEach((handler) =>
-    handler(event, "local", options.operationToken)
-  );
-}
-
-// BroadcastChannel/storage consumers receive only event + "remote"; operationToken is
-// intentionally undefined outside the originating JS context.
-handler(parsed, "remote");
+// NON-EXECUTABLE INDEX NOTE: the sole cacheBus implementation algorithm is the
+// "Canonical/legacy remote-event repair contract" pseudocode above. Do not add a second
+// post-serialization path or invoke a remote handler outside its state-before-handler
+// deliverRemote algorithm. The already-owned additive operation-token API remains unchanged.
 
 // The L03-owned mutation client forwards one caller-provided local operation token to
 // both list/detail cache notifications. Existing callers omit it.
@@ -511,6 +729,9 @@ silently dropped.
 ### Concrete media attempt contract
 
 ```tsx
+// One opaque object is allocated per keyed route-session mount. It is never serialized.
+type RouteVisit = Readonly<{ routeKey: string }>;
+
 export type MediaAttemptCause = "initial" | "manual-retry" | "cache-event";
 export type MediaAttempt = {
   requestKey: string;
@@ -541,6 +762,7 @@ const assertNeverMediaAttemptAction = (action: never): never => {
   throw new Error(`Unhandled media-attempt action: ${String(action)}`);
 };
 type MediaCommit = {
+  routeVisit: RouteVisit | null;
   requestKey: string | null;
   attemptToken: number | null;
   urlsById: Readonly<Record<string, string>>;
@@ -610,7 +832,8 @@ export function decodeAndValidatePresentationMediaRequestKey(key: string): {
   return { routeKey: tuple[0], requestedIds };
 }
 
-// One lossless route identity is shared by dirty/save guards and presentation media.
+// routeKey is the canonical serialized cache/media codec. It is not mounted-visit
+// authority; every async/visible continuation below also carries the opaque routeVisit.
 // JSON tuple decoding validates every member and rejects extra tuple positions.
 const routeKey = buildEntryRouteKey({ screenId, entryId, isCreateMode });
 
@@ -714,6 +937,7 @@ const [mediaMachine, dispatchMediaAttempt] = useReducer(
 );
 
 useEffect(() => {
+  if (mediaMachine.requestKey === mediaRequestKey) return undefined;
   let active = true;
   // Async result boundary: no synchronous state update in an effect, and IDs are
   // reconstructed from the canonical scalar key rather than captured as an array dep.
@@ -729,12 +953,13 @@ useEffect(() => {
   return () => {
     active = false;
   };
-}, [mediaRequestKey]);
+}, [mediaMachine.requestKey, mediaRequestKey]);
 
 const attempt =
   mediaMachine.requestKey === mediaRequestKey ? mediaMachine.attempt : null;
 const attemptToken = attempt?.token ?? null;
 const [mediaCommit, setMediaCommit] = useState<MediaCommit>({
+  routeVisit: null,
   requestKey: null,
   attemptToken: null,
   urlsById: {},
@@ -755,13 +980,15 @@ useEffect(() => subscribeCacheEvents((event) => {
 }), [beginMediaAttempt, hasRequestedMediaIds]);
 
 useEffect(() => {
-  if (!attempt || attempt.requestKey !== mediaRequestKey) return;
+  if (!attempt || attempt.requestKey !== mediaRequestKey) return undefined;
+  const frozenRouteVisit = routeVisit;
   const frozenRequestedIds = attempt.requestedIds;
   const frozenAttemptToken = attempt.token;
   let active = true;
   const generation = ++mediaLoadGenerationRef.current;
   const isCurrent = () =>
     active &&
+    mountedRef.current &&
     generation === mediaLoadGenerationRef.current;
   void listMediaCached({ force: attempt.force })
     .then((records) => {
@@ -772,6 +999,7 @@ useEffect(() => {
         token: frozenAttemptToken,
       });
       setMediaCommit({
+        routeVisit: frozenRouteVisit,
         requestKey: mediaRequestKey,
         attemptToken: frozenAttemptToken,
         urlsById: projectExactRequestedMediaUrls(records, frozenRequestedIds),
@@ -786,19 +1014,24 @@ useEffect(() => {
         token: frozenAttemptToken,
       });
       setMediaCommit((previous) => ({
+        routeVisit: frozenRouteVisit,
         requestKey: mediaRequestKey,
         attemptToken: frozenAttemptToken,
         urlsById:
-          previous.requestKey === mediaRequestKey ? previous.urlsById : {},
+          previous.routeVisit === frozenRouteVisit &&
+          previous.requestKey === mediaRequestKey
+            ? previous.urlsById
+            : {},
         error: PRESENTATION_MEDIA_LOAD_ERROR,
       }));
     });
   return () => {
     active = false;
   };
-}, [mediaRequestKey, attempt]);
+}, [attempt, mediaRequestKey, routeVisit]);
 
-const mediaMatchesRequest = mediaCommit.requestKey === mediaRequestKey;
+const mediaMatchesRequest =
+  mediaCommit.routeVisit === routeVisit && mediaCommit.requestKey === mediaRequestKey;
 const presentationMediaState =
   requestedIdsPlan.length === 0
     ? { urlsById: {}, loading: false, refreshing: false, error: null }
@@ -893,8 +1126,6 @@ export function CustomScreenEntryEditor() {
   return <CustomScreenEntryRouteSession key={routeKey} {...params} routeKey={routeKey} />;
 }
 
-type RouteVisit = Readonly<{ routeKey: string }>;
-
 function CustomScreenEntryRouteSession({ routeKey, ...route }: RouteSessionProps) {
   const [routeVisit] = useState<RouteVisit>(() => Object.freeze({ routeKey }));
   // All state, refs, effects, subscriptions, and async continuations live here.
@@ -924,9 +1155,8 @@ const entryLoadGenerationRef = useRef(0);
 const overrideLoadGenerationRef = useRef(0);
 const contentSaveGenerationRef = useRef(0);
 const presentationSaveGenerationRef = useRef(0);
-type RouteVisit = Readonly<{ routeKey: string }>;
-type RouteErrorCommit = { routeVisit: RouteVisit; message: string };
-const [routeVisit] = useState<RouteVisit>(() => Object.freeze({ routeKey }));
+type RouteMessageCommit = { routeVisit: RouteVisit; message: string };
+type PresentationErrorCommit = RouteMessageCommit & { kind: "load" | "save" };
 const persistedEntryTargetRef = useRef<{
   routeVisit: RouteVisit;
   routeGeneration: number;
@@ -947,35 +1177,50 @@ const [committedEntryVisit, setCommittedEntryVisit] = useState<RouteVisit | null
 const [committedOverrideVisit, setCommittedOverrideVisit] = useState<RouteVisit | null>(
   initialPresentationRouteReady ? routeVisit : null
 );
-const [entryErrorCommit, setEntryErrorCommit] = useState<RouteErrorCommit | null>(null);
+const [entryErrorCommit, setEntryErrorCommit] = useState<RouteMessageCommit | null>(null);
 const [presentationErrorCommit, setPresentationErrorCommit] =
-  useState<RouteErrorCommit | null>(null);
+  useState<PresentationErrorCommit | null>(null);
 const [remoteEntryWarningVisit, setRemoteEntryWarningVisit] =
   useState<RouteVisit | null>(null);
 const [remotePresentationWarningVisit, setRemotePresentationWarningVisit] =
   useState<RouteVisit | null>(null);
+const [entryLoadActivityVisit, setEntryLoadActivityVisit] = useState<RouteVisit | null>(
+  initialEntryRouteReady ? null : routeVisit
+);
+const [presentationLoadActivityVisit, setPresentationLoadActivityVisit] =
+  useState<RouteVisit | null>(
+    !isCreateMode && initialCachedPresentationOverrides === null ? routeVisit : null
+  );
 const [contentSaveActivityVisit, setContentSaveActivityVisit] =
   useState<RouteVisit | null>(null);
 const [presentationSaveActivityVisit, setPresentationSaveActivityVisit] =
   useState<RouteVisit | null>(null);
-const [saveNoticeCommit, setSaveNoticeCommit] = useState<RouteErrorCommit | null>(null);
+const [saveNoticeCommit, setSaveNoticeCommit] = useState<RouteMessageCommit | null>(null);
 const [presentationSaveNoticeCommit, setPresentationSaveNoticeCommit] =
-  useState<RouteErrorCommit | null>(null);
+  useState<RouteMessageCommit | null>(null);
 
 const entryRouteReady = committedEntryVisit === routeVisit;
 const overrideRouteReady = committedOverrideVisit === routeVisit;
-const currentEntryError =
+const error =
   entryErrorCommit?.routeVisit === routeVisit ? entryErrorCommit.message : null;
-const currentPresentationError =
+const presentationError =
   presentationErrorCommit?.routeVisit === routeVisit
     ? presentationErrorCommit.message
+    : null;
+const presentationErrorKind =
+  presentationErrorCommit?.routeVisit === routeVisit
+    ? presentationErrorCommit.kind
     : null;
 const remoteUpdatePending = remoteEntryWarningVisit === routeVisit;
 const remotePresentationUpdatePending =
   remotePresentationWarningVisit === routeVisit;
-const isSavingForCurrentRoute = contentSaveActivityVisit === routeVisit;
-const isPresentationSavingForCurrentRoute =
-  presentationSaveActivityVisit === routeVisit;
+const isLoading =
+  entryLoadActivityVisit === routeVisit || (!entryRouteReady && error === null);
+const isPresentationLoading =
+  presentationLoadActivityVisit === routeVisit ||
+  (!isCreateMode && !overrideRouteReady && presentationError === null);
+const isSaving = contentSaveActivityVisit === routeVisit;
+const isPresentationSaving = presentationSaveActivityVisit === routeVisit;
 const currentSaveNotice =
   saveNoticeCommit?.routeVisit === routeVisit ? saveNoticeCommit.message : null;
 const currentPresentationSaveNotice =
@@ -993,12 +1238,6 @@ const currentCanvasFieldValues = entryRouteReady ? canvasFieldValues : {};
 const currentScreenCapabilities = resolveCustomScreenCapabilities({
   definition: currentScreen ? resolveRuntimeDefinition(currentScreen) : undefined,
 });
-const entryLoadingForCurrentRoute =
-  isLoading || (!entryRouteReady && currentEntryError === null);
-const presentationLoadingForCurrentRoute =
-  isPresentationLoading ||
-  (!isCreateMode && !overrideRouteReady && currentPresentationError === null);
-
 function mayMutateCurrentEntry() {
   return entryRouteReady && currentContentType !== null;
 }
@@ -1020,6 +1259,7 @@ useLayoutEffect(() => {
   routeGenerationRef.current += 1;
   return () => {
     // Layout cleanup runs before the next route's async work can commit.
+    clearActiveAssistantSurfaceContext();
     persistedEntryTargetRef.current = null; // synchronous route-scope revocation
     mountedRef.current = false;
     routeGenerationRef.current += 1;
@@ -1062,7 +1302,7 @@ function applyLoadedState(
   nextScreen: CustomScreenRecord,
   nextContentType: ContentTypeSummary,
   nextEntry: EntryDetail | null,
-  acceptedRouteKey: string
+  acceptedRouteVisit: RouteVisit
 ) {
   const nextFields = fieldsFromSchema(nextContentType.schema);
   const editorView = resolveRuntimeEditorView(nextScreen);
@@ -1081,7 +1321,7 @@ function applyLoadedState(
   setFieldErrors({});
   contentDirtyRef.current = false;
   setHasUnsavedChanges(false);
-  setRemoteEntryWarningRouteKey(null);
+  setRemoteEntryWarningVisit(null);
   setSelectedRuntimeBlockId((current) =>
     preserveSelectedElementAcrossRefresh({
       selectedBlockId: current,
@@ -1089,12 +1329,12 @@ function applyLoadedState(
     })
   );
   setEntryErrorCommit(null);
-  setCommittedEntryRouteKey(acceptedRouteKey);
+  setCommittedEntryVisit(acceptedRouteVisit);
 }
 
 function applyAuthoritativePresentationState(
   overrides: ScreenEntryPresentationOverrideDraft[],
-  acceptedRouteKey: string
+  acceptedRouteVisit: RouteVisit
 ) {
   const ordered = normalizePresentationOverrideOrder(overrides);
   savedOverridesRef.current = ordered;
@@ -1104,11 +1344,21 @@ function applyAuthoritativePresentationState(
   setDraftOverrides(ordered);
   setHasUnsavedPresentationChanges(false);
   setPresentationErrorCommit(null);
-  setRemotePresentationWarningRouteKey(null);
-  setCommittedOverrideRouteKey(acceptedRouteKey);
+  setRemotePresentationWarningVisit(null);
+  setCommittedOverrideVisit(acceptedRouteVisit);
 }
 
-function captureLoadToken(channel: "entry" | "override") {
+type LoadChannel = "entry" | "override";
+type LoadToken = {
+  channel: LoadChannel;
+  routeKey: string;
+  routeVisit: RouteVisit;
+  routeGeneration: number;
+  loadGeneration: number;
+  draftGeneration: number;
+};
+
+function captureLoadToken(channel: LoadChannel): LoadToken {
   const loadGeneration =
     channel === "entry"
       ? ++entryLoadGenerationRef.current
@@ -1116,19 +1366,21 @@ function captureLoadToken(channel: "entry" | "override") {
   return {
     channel,
     routeKey,
+    routeVisit,
     routeGeneration: routeGenerationRef.current,
     loadGeneration,
     draftGeneration: draftMutationGenerationRef.current,
   };
 }
 
-function isLoadIdentityCurrent(token) {
+function isLoadIdentityCurrent(token: LoadToken) {
   const currentLoadGeneration =
     token.channel === "entry"
       ? entryLoadGenerationRef.current
       : overrideLoadGenerationRef.current;
   return mountedRef.current &&
     token.routeKey === routeKey &&
+    token.routeVisit === routeVisit &&
     routeGenerationRef.current === token.routeGeneration &&
     currentLoadGeneration === token.loadGeneration;
 }
@@ -1146,68 +1398,103 @@ function didCompleteDraftRemainClean(token) {
     !presentationDirtyRef.current;
 }
 
-const commitEntryLoadError = (message: string, acceptedRouteKey: string) => {
-  setEntryErrorCommit({ routeKey: acceptedRouteKey, message });
-};
-const commitPresentationLoadError = (message: string, acceptedRouteKey: string) => {
-  setPresentationErrorCommit({ routeKey: acceptedRouteKey, message });
-};
-const commitEntryRemoteWarning = (acceptedRouteKey: string) => {
-  setRemoteEntryWarningRouteKey(acceptedRouteKey);
-};
-const commitPresentationRemoteWarning = (acceptedRouteKey: string) => {
-  setRemotePresentationWarningRouteKey(acceptedRouteKey);
-};
-
-async function runEntryHydration(load, options, isActive: () => boolean) {
+async function runEntryHydration(force: boolean, isActive: () => boolean) {
   const token = captureLoadToken("entry");
-  options.onLoading?.(true);
+  setEntryLoadActivityVisit(token.routeVisit);
   try {
-    const result = await load();
+    const result = await loadEntryRoute(force);
     if (!isActive() || !isLoadIdentityCurrent(token)) return;
     if (!mayApplyAuthoritativeDraft(token)) {
-      options.onRemoteWarning(token.routeKey);
+      setRemoteEntryWarningVisit(token.routeVisit);
       return;
     }
-    options.onApply(result, token.routeKey);
-  } catch (_error) {
+    applyLoadedState(
+      result.nextScreen,
+      result.nextContentType,
+      result.nextEntry,
+      token.routeVisit
+    );
+  } catch {
     if (!isActive() || !isLoadIdentityCurrent(token)) return;
-    options.onError(
-      didCompleteDraftRemainClean(token)
+    setEntryErrorCommit({
+      routeVisit: token.routeVisit,
+      message: didCompleteDraftRemainClean(token)
         ? "Failed to load record."
         : "Could not check for record updates. Local changes are unchanged.",
-      token.routeKey
-    );
+    });
   } finally {
-    if (isActive() && isLoadIdentityCurrent(token)) options.onLoading?.(false);
+    if (isActive() && isLoadIdentityCurrent(token)) {
+      setEntryLoadActivityVisit((current) =>
+        current === token.routeVisit ? null : current
+      );
+    }
   }
 }
 
-async function runOverrideHydration(load, options, isActive: () => boolean) {
+async function runOverrideHydration(force: boolean, isActive: () => boolean) {
   const token = captureLoadToken("override");
-  options.onLoading?.(true);
+  setPresentationLoadActivityVisit(token.routeVisit);
   try {
-    const result = await load();
+    const result =
+      !screenId || !entryId || isCreateMode
+        ? []
+        : await getScreenEntryOverridesCached(screenId, entryId, { force });
     if (!isActive() || !isLoadIdentityCurrent(token)) return;
     if (!mayApplyAuthoritativeDraft(token)) {
-      options.onRemoteWarning(token.routeKey);
+      setRemotePresentationWarningVisit(token.routeVisit);
       return;
     }
-    options.onApply(result, token.routeKey);
-  } catch (_error) {
+    applyAuthoritativePresentationState(result, token.routeVisit);
+  } catch {
     if (!isActive() || !isLoadIdentityCurrent(token)) return;
-    options.onError(
-      didCompleteDraftRemainClean(token)
+    setPresentationErrorCommit({
+      routeVisit: token.routeVisit,
+      kind: "load",
+      message: didCompleteDraftRemainClean(token)
         ? "Failed to load presentation overrides."
         : "Could not check for presentation updates. Local changes are unchanged.",
-      token.routeKey
-    );
+    });
   } finally {
-    if (isActive() && isLoadIdentityCurrent(token)) options.onLoading?.(false);
+    if (isActive() && isLoadIdentityCurrent(token)) {
+      setPresentationLoadActivityVisit((current) =>
+        current === token.routeVisit ? null : current
+      );
+    }
   }
 }
 
-function captureSaveToken(channel: "content" | "presentation") {
+const refresh = useCallback(
+  (force = false) => runEntryHydration(force, () => true),
+  [runEntryHydration]
+);
+const refreshPresentation = useCallback(
+  (force = false) => runOverrideHydration(force, () => true),
+  [runOverrideHydration]
+);
+
+// Cache callbacks are owned by this keyed session and never commit directly. They enter
+// refresh helpers that capture a fresh LoadToken containing this exact routeVisit plus the
+// route/channel generations before any await.
+useEffect(() => subscribeCacheEvents((event) => {
+  if (overrideCacheKey && event.key === overrideCacheKey) {
+    void refreshPresentation(true);
+    return;
+  }
+  if (isCurrentEntryCacheEvent(event)) void refresh(true);
+}), [overrideCacheKey, refresh, refreshPresentation]);
+
+type SaveChannel = "content" | "presentation";
+type SaveToken = {
+  channel: SaveChannel;
+  routeKey: string;
+  routeVisit: RouteVisit;
+  routeGeneration: number;
+  saveGeneration: number;
+  draftGeneration: number;
+  createRouteVisit: RouteVisit | null;
+};
+
+function captureSaveToken(channel: SaveChannel): SaveToken {
   const saveGeneration =
     channel === "content"
       ? ++contentSaveGenerationRef.current
@@ -1215,47 +1502,51 @@ function captureSaveToken(channel: "content" | "presentation") {
   return {
     channel,
     routeKey,
+    routeVisit,
     routeGeneration: routeGenerationRef.current,
     saveGeneration,
     draftGeneration: draftMutationGenerationRef.current,
-    createRouteKey: isCreateMode ? routeKey : null,
+    createRouteVisit: isCreateMode ? routeVisit : null,
   };
 }
 
-function isSaveIdentityCurrent(token) {
+function isSaveIdentityCurrent(token: SaveToken) {
   const currentSaveGeneration =
     token.channel === "content"
       ? contentSaveGenerationRef.current
       : presentationSaveGenerationRef.current;
   return mountedRef.current &&
     token.routeKey === routeKey &&
+    token.routeVisit === routeVisit &&
     routeGenerationRef.current === token.routeGeneration &&
     currentSaveGeneration === token.saveGeneration;
 }
 
-function isExactSaveDraft(token) {
+function isExactSaveDraft(token: SaveToken) {
   return isSaveIdentityCurrent(token) &&
     token.draftGeneration === draftMutationGenerationRef.current;
 }
 
-function commitContentSaveResponse(saved, token) {
+function commitContentSaveResponse(saved: EntryDetail, token: SaveToken) {
   if (!isSaveIdentityCurrent(token)) return { mayNavigate: false };
   // The clients broadcast their cache event before this awaited promise resumes.
   // Revoke any self-event hydration before changing the persisted baseline.
   entryLoadGenerationRef.current += 1;
-  setIsLoading(false);
-  setRemoteEntryWarningRouteKey(null);
+  setEntryLoadActivityVisit((current) =>
+    current === token.routeVisit ? null : current
+  );
+  setRemoteEntryWarningVisit(null);
   if (!isExactSaveDraft(token)) {
     updatePersistedEntryBaselineWithoutReplacingDraft(saved);
-    if (token.createRouteKey !== null) {
+    if (token.createRouteVisit !== null) {
       persistedEntryTargetRef.current = {
-        createRouteKey: token.createRouteKey,
+        routeVisit: token.createRouteVisit,
         routeGeneration: token.routeGeneration,
         id: saved.id,
       };
     }
     setSaveNoticeCommit({
-      routeKey: token.routeKey,
+      routeVisit: token.routeVisit,
       message: "Saved server version; newer local changes remain unsaved.",
     });
     return { mayNavigate: false };
@@ -1268,12 +1559,14 @@ function commitContentSaveResponse(saved, token) {
   return { mayNavigate: true };
 }
 
-function commitPresentationSaveResponse(savedOverrides, token) {
+function commitPresentationSaveResponse(savedOverrides, token: SaveToken) {
   if (!isSaveIdentityCurrent(token)) return;
   // Revoke the same-tab PATCH cache-event hydration before publishing the baseline.
   overrideLoadGenerationRef.current += 1;
-  setIsPresentationLoading(false);
-  setRemotePresentationWarningRouteKey(null);
+  setPresentationLoadActivityVisit((current) =>
+    current === token.routeVisit ? null : current
+  );
+  setRemotePresentationWarningVisit(null);
   const ordered = normalizePresentationOverrideOrder(savedOverrides);
   savedOverridesRef.current = ordered;
   setSavedOverrides(ordered);
@@ -1288,7 +1581,7 @@ function commitPresentationSaveResponse(savedOverrides, token) {
     setPresentationSaveNoticeCommit(
       stillDirty
         ? {
-            routeKey: token.routeKey,
+            routeVisit: token.routeVisit,
             message: "Saved server presentation; newer local changes remain unsaved.",
           }
         : null
@@ -1313,6 +1606,24 @@ const { dialog: dirtyNavigationDialog } = useAdminDirtyNavigationGuard({
     contentDirtyRef.current = false;
     presentationDirtyRef.current = false;
     draftMutationGenerationRef.current += 1;
+    entryLoadGenerationRef.current += 1;
+    overrideLoadGenerationRef.current += 1;
+    contentSaveGenerationRef.current += 1;
+    presentationSaveGenerationRef.current += 1;
+    mediaLoadGenerationRef.current += 1;
+    persistedEntryTargetRef.current = null;
+    setCommittedEntryVisit(null);
+    setCommittedOverrideVisit(null);
+    setEntryLoadActivityVisit(null);
+    setPresentationLoadActivityVisit(null);
+    setContentSaveActivityVisit(null);
+    setPresentationSaveActivityVisit(null);
+    setEntryErrorCommit(null);
+    setPresentationErrorCommit(null);
+    setRemoteEntryWarningVisit(null);
+    setRemotePresentationWarningVisit(null);
+    setSaveNoticeCommit(null);
+    setPresentationSaveNoticeCommit(null);
     setHasUnsavedChanges(false);
     clearUnsavedPresentationDraftWithoutPersisting();
   },
@@ -1321,14 +1632,15 @@ const { dialog: dirtyNavigationDialog } = useAdminDirtyNavigationGuard({
 async function saveEntryContent(payload) {
   if (!mayMutateCurrentEntry()) return;
   const token = captureSaveToken("content");
-  setContentSaveActivityRouteKey(routeKey);
+  setContentSaveActivityVisit(token.routeVisit);
+  setEntryErrorCommit(null);
   try {
     // After a stale create response, retry updates that same server record; it must not
     // create a duplicate while the editor intentionally preserves its newer draft.
     const capturedTarget = persistedEntryTargetRef.current;
     const targetId = !isCreateMode
       ? entryId
-      : capturedTarget?.createRouteKey === routeKey &&
+      : capturedTarget?.routeVisit === routeVisit &&
           capturedTarget.routeGeneration === routeGenerationRef.current
         ? capturedTarget.id
         : null;
@@ -1341,24 +1653,46 @@ async function saveEntryContent(payload) {
         skipBlockers: true,
       });
     }
-  } catch (error) {
-    if (isSaveIdentityCurrent(token)) setBoundedContentSaveError(error);
+  } catch (saveError) {
+    if (isSaveIdentityCurrent(token)) {
+      setEntryErrorCommit({
+        routeVisit: token.routeVisit,
+        message: boundedContentSaveMessage(saveError),
+      });
+    }
   } finally {
-    if (isSaveIdentityCurrent(token)) setContentSaveActivityRouteKey(null);
+    if (isSaveIdentityCurrent(token)) {
+      setContentSaveActivityVisit((current) =>
+        current === token.routeVisit ? null : current
+      );
+    }
   }
 }
 
 async function savePresentation(drafts) {
   if (!mayMutateCurrentPresentation()) return;
   const token = captureSaveToken("presentation");
-  setPresentationSaveActivityRouteKey(routeKey);
+  setPresentationSaveActivityVisit(token.routeVisit);
+  setPresentationErrorCommit((current) =>
+    current?.routeVisit === routeVisit && current.kind === "save" ? null : current
+  );
   try {
     const saved = await replaceScreenEntryOverrides(screenId, entryId, drafts);
     commitPresentationSaveResponse(saved, token);
-  } catch (error) {
-    if (isSaveIdentityCurrent(token)) setBoundedPresentationSaveError(error);
+  } catch (saveError) {
+    if (isSaveIdentityCurrent(token)) {
+      setPresentationErrorCommit({
+        routeVisit: token.routeVisit,
+        kind: "save",
+        message: boundedPresentationSaveMessage(saveError),
+      });
+    }
   } finally {
-    if (isSaveIdentityCurrent(token)) setPresentationSaveActivityRouteKey(null);
+    if (isSaveIdentityCurrent(token)) {
+      setPresentationSaveActivityVisit((current) =>
+        current === token.routeVisit ? null : current
+      );
+    }
   }
 }
 
@@ -1454,7 +1788,7 @@ ref; a presentation save must not clear unsaved content. Rejections leave refs, 
 and navigation blocking unchanged.
 
 A create response that lost draft authority stores the created server ID as the
-persistence target scoped to the exact create `routeKey + routeGeneration`, does not
+persistence target scoped to the exact opaque create `routeVisit + routeGeneration`, does not
 auto-navigate, and leaves the navigation guard active. Layout cleanup synchronously
 clears that target before another route mounts. Retry on the same create route
 updates that same created record rather than creating a duplicate. When that PATCH retry
@@ -1484,6 +1818,10 @@ here and obey the commit-time generation contract.
 - Direct-image override and bound media values resolve by UUID; media fields preserve
   their original UUID identities.
 - Existing cache warning/debug codes remain machine-readable.
+- Invalid, unknown-key, oversized, and own-source remote hints fail closed before
+  correlation state. Consumer exceptions still propagate to the delivery harness, but
+  the selected occurrence and balanced-pair/LRU state commit first, so its legacy twin
+  cannot retry the throwing canonical invocation and unrelated tuples remain deliverable.
 
 ## Route, persistence, UI, and renderer proof
 
@@ -1491,6 +1829,13 @@ here and obey the commit-time generation contract.
   direct-image acceptance, non-media rejection, media-field UUID preservation,
   injected-repository replace/get round trip, and cleanup retaining only active UUID
   targets. This exercises the same exported service used by the route.
+- The additive DB-backed `customScreensRoutes.test.ts` proof uses the real
+  `registerCustomScreenRoutes` boundary and strict validator. It creates uniquely scoped
+  user, content-type, Screen, and Entry fixtures, PATCHes a UUID-valued direct-image
+  override, GETs the same persisted record, maps a structurally valid inactive target to
+  the bounded `custom_screen_override_invalid` 400, proves the rejected write persisted
+  nothing, and cleans up only its owned rows. It uses only the existing `hasDb` skip
+  pattern and does not add a production route or test-only fallback.
 - `custom-screen-entry-editor-restyle.test.tsx` proves the UI offers the direct-image
   media target, sends the UUID-valued existing route envelope, consumes its returned
   UUID, resolves override-or-bound direct-image winners, and never URL-converts a media
@@ -1561,26 +1906,35 @@ here and obey the commit-time generation contract.
   rejection, and invalidate every captured publisher on explicit clear. A fallback-list
   racing a regular forced list in both orders obeys exact committed full-list authority;
   complete publication evicts an omitted stale detail unless a newer replace/delete owns it.
-- `cacheBus.test.ts`: two `createCacheEventOperationToken()` calls return distinct symbol
-  identities; an exact caller token reaches only same-context callbacks; remote delivery
-  has no token; serialized storage/BroadcastChannel event keys remain exactly
-  `action`, `key`, `sourceId`, and `ts`; existing tokenless broadcasts/subscribers remain
-  backward compatible.
+- `cacheBus.test.ts`: the complete canonical/legacy remote-event repair matrix above;
+  distinct operation-symbol identities; exact same-context token delivery; remote
+  token absence; own-source filtering; strict bounded parsing; per-subscription state;
+  bounded LRU fail-open behavior; exact teardown; remove-before-set storage re-arming;
+  unchanged exact four-key serialization; and backward-compatible tokenless use.
 
-TASK-540-06 runs these six suites read-only and must not re-baseline the assertions.
+TASK-540-06 runs the declared owner/dependency suites read-only and must not re-baseline
+the assertions.
 `custom-screen-record-interactions.test.tsx` and
 `custom-screen-runtime-renderer.test.tsx` remain exclusively owned by
 TASK-540-03-L01.
 
 ## Security Contract
 
-The route family remains internal admin only. Existing authenticated session,
-`content:read` for reads, `content:write` for replacement, CSRF enforcement for the
-write, and the admin rate-limit bucket remain mandatory. The existing strict
-reject-unknown envelope and UUID validation remain fail-closed. No public endpoint,
-nonce, signature, CAPTCHA, API-key mode, browser storage, secret, credential, or auth token
-is added. The in-memory cache-operation symbol carries no data and never crosses a process,
-transport, storage, or logging boundary.
+The route family remains internal admin and authenticated-session only. Override GET is
+classified in the `admin_read` rate-limit bucket and requires `content:read`; override
+PATCH is classified in `admin_write`, requires `content:write`, and remains protected by
+the shared admin CSRF middleware. Both boundaries retain strict reject-unknown validation
+and fail-closed UUID/active-target normalization. There is no public or API-key mode and,
+because this is not a public write, no nonce, signature/HMAC, or CAPTCHA path is added.
+The existing authenticated-admin rate-limit bypass semantics remain shared rather than
+being reimplemented in this route. No browser secret, credential, or auth token is added.
+The in-memory cache-operation symbol carries no data and never crosses a process,
+transport, storage, or logging boundary. A remote cache event remains a same-origin
+invalidation hint, never authentication, authorization, or data authority. Invalid and
+oversized inputs, exact-own-key mismatches, and own-source echoes are rejected before
+handler delivery or any correlation-state mutation; correlation memory is capped at 128
+residual identities per subscription, and overflow fails open so an attacker cannot use
+deduplication state to suppress a valid invalidation.
 
 ## Validation
 
@@ -1588,22 +1942,51 @@ transport, storage, or logging boundary.
 bun --cwd core lint:types
 bun --cwd core lint
 ./node_modules/.bin/tsc -p tsconfig.json --noEmit
+bunx vitest run tests/vitest/admin/cacheBus.test.ts
+# DB preflight and exact Bun route gate; customScreensRoutes.test.ts is additive-only.
+set -a && source .env && set +a && bun --eval 'import { canConnect } from "./tests/utils/db"; const configured = Boolean(process.env.DATABASE_URL?.trim()); const reachable = configured && await canConnect(); process.stdout.write(JSON.stringify({ configured, reachable, selectOne: reachable ? 1 : 0 })); if (!reachable) process.exit(1); process.exit(0)'
+set -a && source .env && set +a && bun test tests/integration/routes/customScreensRoutes.test.ts
+# Exact expanded L03 owner/dependency gate; within it only cacheBus.test.ts is writable.
 bunx vitest run tests/vitest/admin/cacheBus.test.ts \
   tests/vitest/admin/customScreensClient.test.ts \
   tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx \
   tests/vitest/ui/custom-screen-entry-draft.test.ts \
   tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx \
-  tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts
-# Read-only cross-leaf prerequisite; do not edit/re-baseline it here.
-bunx vitest run tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx
-# Read-only editor/Preview dependency regressions; do not edit/re-baseline here.
-bunx vitest run tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx \
-  tests/vitest/widgets/screenWidgets.test.tsx
+  tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts \
+  tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx \
+  tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx \
+  tests/vitest/widgets/screenWidgets.test.tsx \
+  tests/vitest/ui/use-screen-related-entries.test.tsx \
+  tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx
+# Exact L04 read-only consumer gate; do not edit or re-baseline these files.
+bunx vitest run tests/vitest/ui/custom-screens-page.test.tsx \
+  tests/vitest/ui/custom-screen-route-params.test.ts \
+  tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx \
+  tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx \
+  tests/vitest/ui-integration/screen-editor-sections.test.tsx \
+  tests/vitest/admin/cacheBus.test.ts
+node --check _docs/_workflows/task-540-implement.mjs
+node _docs/_workflows/task-540-implement.mjs --self-test-repair-siblings
+git diff --check
 ```
 
-Rerun a named failing file once in isolation.
+The workflow derives named-file isolation metadata from the actual Vitest/Bun command
+shape, not the command ID. `expandedL03Vitest`, `l04ReadOnlyConsumerVitest`, and
+`directImageOverrideRouteBun` must enumerate every named file above exactly so any
+identified failure is rerun once in isolation. The DB preflight owns no isolation file.
+The permanent repair-sibling self-test pins the exact three-file repair authority, all
+three named-test metadata sets, and the exact DB preflight command.
 
-## Current validation evidence
+## Completed 2026-07-15 repair evidence
+
+- 2026-07-15 focused cache-bus proof: `cacheBus.test.ts` 22/22, including the full
+  at-capacity descriptor/proxy/type/bound/own-source channel corpus and malformed/removal
+  storage corpus with the oldest valid twin still correlated.
+- 2026-07-15 DB preflight: `{ configured: true, reachable: true, selectOne: 1 }`.
+- 2026-07-15 isolated real-route proof: `customScreensRoutes.test.ts` 17/17, including the
+  two additive direct-image PATCH→GET and invalid-target/no-persistence regressions.
+
+## Historical validation evidence
 
 Implemented a keyed entry-route session with one opaque `RouteVisit` per mount,
 generation- and visit-scoped entry/override/media continuations, complete content and

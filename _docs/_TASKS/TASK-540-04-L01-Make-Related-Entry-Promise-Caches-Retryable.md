@@ -8,12 +8,12 @@
 **Category:** Admin Client / Cache / Reliability
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-01-L01
-**Status:** ✅ Done
+**Status:** 🚧 In Progress
 **Started:** 2026-07-13
-**Completed:** 2026-07-14
+**Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Fix Started:** 2026-07-14
 **Fix Reason:** Final post-audit found that independent list/detail authority can let an older detail shrink or stale a newer full entry list.
-**Revalidation:** 2026-07-14 — `core lint:types`, `core lint`, the exact Entries/Media client Vitest matrix (65/65), and `git diff --check`
+**Revalidation Passed:** 2026-07-14 — `core lint:types`, `core lint`, the exact Entries/Media client Vitest matrix (65/65), and `git diff --check`
 **Post-Audit:** 2026-07-14 — PASS; zero HIGH, MEDIUM, or LOW findings on the corrected working tree
 **Previous Revalidation:** 2026-07-14 — `core lint:types`, `core lint`, and the exact entries/media client Vitest matrix (57/57)
 **Previous Completion:** 2026-07-14
@@ -35,7 +35,12 @@ remain unchanged. Entry writes revoke the matching pending detail and record a t
 reconciliation change while preserving the pending full list; media writes retain their
 list-only revocation. Both apply even when the value cache is absent.
 
-## Grounded anchors
+## Historical pre-implementation grounded anchors
+
+These 2026-07-13 line snapshots are retained as audit provenance. They describe the
+pre-implementation source layout; current ownership and validation are anchored by the
+named files, symbols, and regression suites in this contract rather than mutable line
+numbers.
 
 - Entry value/promise cache owners: `entriesClient.ts:92-96`.
 - Entry priming helpers that currently clear pending slots: `:139-149`.

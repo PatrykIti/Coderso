@@ -9,7 +9,9 @@
 **Status:** 🚧 In Progress
 **Started:** 2026-07-13
 **Repair Started:** 2026-07-15
-**Repair Reason:** Mandatory repository-wide `bun run test` confirmed that `screen-editor-sections.test.tsx` fully mocked cacheBus without the fresh-symbol factory required by the L04-owned Screen builder Save path. TASK-540-04/L04 completed the additive mock repair and exact six-file/66-test re-gate; closure resumed and remains In Progress while every source descendant is Done.
+**Repair Reason:** Closure validation reproduced one logical remote cache event twice when canonical and legacy BroadcastChannel/storage transports delivered the same serialized event, and contract audit required direct-image route-boundary coverage at the strict write seam. TASK-540-04/L03 was the sole scoped repair owner with exactly three writable paths: `core/admin/utils/cacheBus.ts`, `tests/vitest/admin/cacheBus.test.ts`, and additive direct-image regressions in `tests/integration/routes/customScreensRoutes.test.ts`; `core/server/routes/customScreenRoutes.ts` and every other production route/UI/client/service file remained read-only. That repair passed its focused and dependency-shaped gates on 2026-07-15, and its exact `Repair Pending` receipt was replaced by the matching `Revalidation Passed` successor. L03 and every other landed source leaf now remain `🚧 In Progress` with `Implementation Complete` awaiting family changelog 1252; the active closure cursor is TASK-540-06-L01.
+**Historical L04 Repair Started:** 2026-07-15
+**Historical L04 Repair Reason:** Mandatory repository-wide `bun run test` confirmed that `screen-editor-sections.test.tsx` fully mocked cacheBus without the fresh-symbol factory required by the L04-owned Screen builder Save path. TASK-540-04/L04 completed the additive mock repair and exact six-file/66-test re-gate; at that historical phase closure resumed and every source descendant was Done, before the later L03 duplicate-delivery finding paused closure again.
 **Historical Repair Started:** 2026-07-14
 **Historical Repair Reason:** Repository-wide Bun validation confirmed one stale Assistant Custom Screen block-patch fixture using unsupported strict-V4 block kinds. Only TASK-540-01/L01 was reopened for a fixture-only compatibility repair; every other source descendant remained historically Done and closure remained In Progress.
 **Changelog:** 1252 (pinned; create only at implementation closure)
@@ -93,6 +95,18 @@ module-pack entry, or any non-Dashboard widget authoring surface.
   authoritative may publish a value or clear its pending slot; subscriptions include
   every related target key, cache-event reads force one refresh per unique target, and
   async work checks identity/cancellation before every state commit.
+- Canonical and legacy remote cache transports are compatibility mirrors, not two logical
+  invalidations. Each subscription correlates their exact four-key event identity with a
+  private bounded multiset, rejects every non-exact own-key set before state mutation,
+  delivers once per logical occurrence in either order, retains canonical-only,
+  legacy-only, byte-identical repeated, and asymmetric per-subscription occurrences, and
+  commits correlation before invoking a handler so a throwing canonical handler is not
+  retried by its legacy twin. It uses a true touch-on-residual LRU with fail-open eviction
+  after exactly 128 entries. Malformed/own-source input cannot consume or evict residual
+  state. Local events bypass correlation and retain exact non-serialized operation tokens;
+  storage payloads over 2048 code units are rejected before parsing and remove-before-set
+  re-arms identical fallback broadcasts. The event payload and exported API remain
+  unchanged.
 - Entry and Custom Screen list/detail publishers reconcile by monotonic per-item
   authority: newer detail/mutation values and delete tombstones survive older lists,
   while full-list responses still fill unrelated rows. A Screen detail fallback that
@@ -123,11 +137,11 @@ module-pack entry, or any non-Dashboard widget authoring surface.
 
 | ID | Title | Leaves | Status |
 |---|---|---|---|
-| TASK-540-01 | Strict Screen data, URLs, Tabs, and binding GC | TASK-540-01-L01 | ✅ Done |
-| TASK-540-02 | Button binding and Tabs authoring | TASK-540-02-L01 | ✅ Done |
-| TASK-540-03 | Accessible Tabs and selection semantics | TASK-540-03-L01 | ✅ Done |
-| TASK-540-04 | Dirty navigation and async/cache recovery | TASK-540-04-L01..L04 | ✅ Done |
-| TASK-540-05 | Responsive canvas, ARIA, and user preferences | TASK-540-05-L01, L02 | ✅ Done |
+| TASK-540-01 | Strict Screen data, URLs, Tabs, and binding GC | TASK-540-01-L01 | 🚧 In Progress |
+| TASK-540-02 | Button binding and Tabs authoring | TASK-540-02-L01 | 🚧 In Progress |
+| TASK-540-03 | Accessible Tabs and selection semantics | TASK-540-03-L01 | 🚧 In Progress |
+| TASK-540-04 | Dirty navigation and async/cache recovery | TASK-540-04-L01..L04 | 🚧 In Progress |
+| TASK-540-05 | Responsive canvas, ARIA, and user preferences | TASK-540-05-L01, L02 | 🚧 In Progress |
 | TASK-540-06 | Tests, smoke, and closure | TASK-540-06-L01 | 🚧 In Progress |
 
 ## Finding coverage matrix
@@ -149,7 +163,7 @@ Land `540-01 → 02 → 03 → 04 → 05 → 06`, after TASK-543 and before TASK
 in the audited remediation dependency map.
 Earlier corrective work across
 `540-01-L01 → 540-03-L01 → 540-04-L01 → 540-04-L03 → 540-05-L02` is durable in
-the affected task files' Revalidation/Post-Audit metadata and the current gates; no
+the affected task files' historical revalidation/post-audit metadata; no
 mutable workflow file is treated as immutable evidence for that earlier pass. The
 current `_docs/_workflows/task-540-fix.mjs` records only the completed R01→R03
 control-character URL correction, with R01 gated before the R03 final-sink regressions.
@@ -159,19 +173,37 @@ validation subsequently exposed the stale `tests/unit/assistant/actionExecutorSe
 Custom Screen block-patch fixture. R01 alone owned replacement with canonical
 `heading.data.text` and an independent `text.data.content` sibling plus same-block and
 sibling-block preservation assertions; production Assistant and Screen schema/source
-files remained unchanged; its repair and revalidation are historical and R01 is Done.
+files remained unchanged. Its repair, revalidation, and then-Done transition are
+historical. In the current pre-1252 landed phase R01 is `🚧 In Progress` with
+`Implementation Complete` and no `Repair Pending`; after changelog 1252 covers its
+physical ID, the covered post-1252 state may be `✅ Done` with `Completed`.
 Mandatory repository-wide `bun run test` on 2026-07-15 then confirmed that the legacy
 `screen-editor-sections.test.tsx` full-module cacheBus mock omitted the fresh-symbol factory
 called before every L04 Screen-builder mutation. L04 alone owns the additive
 `createCacheEventOperationToken: () => Symbol(),` property; all nine TASK-500 tests and all
 of their assertions, imports, and other mock bytes are frozen. The one-property repair,
 isolated 9/9 regression, exact six-file/66-test re-gate, and five zero-finding post-audit
-lenses passed on 2026-07-15. L04 and TASK-540-04 are Done; R01 through R03, R05, and every
-other source leaf remain Done and read-only. Closure has resumed, and TASK-540-06-L01 is
-the sole leaf still `🚧 In Progress`. It remains deliberately ungated until its family-wide
-validation, smoke, and closure work runs, so it has neither `Targeted Gate Passed` nor
-`Revalidation Passed`. The pre-fix repository-wide `bun run test` command still requires
-a fresh parent rerun; no full-suite pass is claimed here.
+lenses passed on 2026-07-15; that historical implementation evidence remains valid, while
+L04 is `🚧 In Progress` with `Implementation Complete` awaiting family changelog 1252.
+Closure validation subsequently reproduced
+one logical remote event delivered once from each canonical/legacy compatibility
+transport. TASK-540-04/L03 alone owned the scoped repair, completed it, and replaced its
+persisted repair receipt with the matching `Revalidation Passed` successor. TASK-540-04
+and every other landed source leaf now remain `🚧 In Progress` with
+`Implementation Complete` awaiting family changelog 1252. The completed L03 repair wrote only
+`core/admin/utils/cacheBus.ts`, `tests/vitest/admin/cacheBus.test.ts`, and additive-only
+direct-image route-boundary regressions in
+`tests/integration/routes/customScreensRoutes.test.ts`; the production
+`core/server/routes/customScreenRoutes.ts` file plus every UI, client, service,
+hook/dialog, renderer, and L04 consumer file remain read-only gates. The workflow uses
+that exact same three-path owner for any future evidence-backed L03 repair/audit/gate mutation.
+An after-closure task-contract audit fixer has a separate exact allowlist containing
+only the TASK-540 root, TASK-540-04 child, and L03 leaf contracts; status transitions
+remain separate task-state mutations, and neither authority may reopen historical
+source/test ownership. TASK-540-06-L01 also remains deliberately active and ungated while closure
+awaits its own gate, so it still has neither `Targeted Gate Passed` nor `Revalidation Passed`. The
+pre-fix repository-wide `bun run test` command still requires a fresh parent rerun; no
+full-suite pass is claimed here.
 Leaves have exclusive source ownership; any shared block data/action/DOM-id
 shape is defined by 540-01 and consumed verbatim. TASK-540-03 owns the pure renderer's
 optional UUID→URL map prop; TASK-540-04-L03 exclusively threads and populates it through
@@ -194,8 +226,10 @@ R01 owns the direct sanitizer/write/stored-read/compat-alias evidence; R03 owns 
 final renderer-sink regressions and need not change renderer production when the wrapper
 fix is sufficient. No direct Screen consumer may remain on the alias after that rollout. TASK-540-04-L01 owns
 both entry-list and media-list promise publication. TASK-540-04-L03 exclusively owns
-the presentation-target service expansion plus entry host/canvas forwarding; closure
-updates the matching `_docs/CMS_API.md` contract.
+the presentation-target service expansion plus entry host/canvas forwarding. Its completed
+2026-07-15 repair alone owned the cache-bus canonical/legacy multiset and its owner tests.
+That repair is revalidated, so the resolver treats L03 as landed, resumes at
+TASK-540-06-L01, and permits closure to update the matching `_docs/CMS_API.md` contract.
 If shared `CanvasEditor.tsx` changed meanwhile, re-read and re-audit before land.
 
 ## Testing Requirements

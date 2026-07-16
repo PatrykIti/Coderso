@@ -7,9 +7,9 @@
 **Category:** Custom Screens / Admin Authoring
 **Estimated Effort:** Small
 **Dependencies:** TASK-540-01
-**Status:** ✅ Done
+**Status:** 🚧 In Progress
 **Started:** 2026-07-13
-**Completed:** 2026-07-13
+**Implementation Complete:** 2026-07-13 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -26,7 +26,7 @@ document model, or runtime renderer.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-540-02-L01 | Expose link binding and complete tab-slot editing | `core/admin/ui/custom-screens/ScreenBlockInspector.tsx` | ✅ Done |
+| TASK-540-02-L01 | Expose link binding and complete tab-slot editing | `core/admin/ui/custom-screens/ScreenBlockInspector.tsx` | 🚧 In Progress |
 
 ## Acceptance
 

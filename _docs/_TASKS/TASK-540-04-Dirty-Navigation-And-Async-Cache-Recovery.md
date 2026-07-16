@@ -7,11 +7,14 @@
 **Category:** Custom Screens / Admin State / Cache / Reliability
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-01, TASK-540-03
-**Status:** ✅ Done
+**Status:** 🚧 In Progress
 **Started:** 2026-07-13
 **Fix Started:** 2026-07-15
-**Repair Reason:** Mandatory repository-wide `bun run test` confirmed that the legacy `screen-editor-sections.test.tsx` Save flow lacked the fresh-symbol cacheBus factory required by the L04-owned `CustomScreenEditorPage`. L04 added only that mock export and passed its exact six-file re-gate; L01 through L03 remained historically Done, and closure resumed.
-**Completed:** 2026-07-15
+**Implementation Complete:** 2026-07-15 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Repair Reason:** Closure validation reproduced duplicate remote invalidation when the canonical and legacy cache transports delivered the same serialized event, and contract audit required direct-image route-boundary coverage at the strict write seam. The phase-neutral repair state machine designates L03 as the sole repair owner with exactly three writable paths: `core/admin/utils/cacheBus.ts`, `tests/vitest/admin/cacheBus.test.ts`, and additive direct-image regressions in `tests/integration/routes/customScreensRoutes.test.ts`. No production route file may change. While L03's exact `Repair Pending` receipt exists, family closure is paused until the focused cache-bus gate, expanded L03 owner/dependency gate, L04 read-only consumer gate, direct-image Bun/DB route gate, core lint/typecheck, root typecheck, workflow self-tests, and diff check all pass. After that receipt is replaced by the exact successor `Revalidation Passed`, L03 and TASK-540-04 remain `🚧 In Progress` with `Implementation Complete` until changelog 1252; L01, L02, and L04 follow the same closure-waiting status, and every other L03 UI/client/service/route production consumer stays read-only.
+**Historical L04 Fix Started:** 2026-07-15
+**Historical L04 Repair Reason:** Mandatory repository-wide `bun run test` confirmed that the legacy `screen-editor-sections.test.tsx` Save flow lacked the fresh-symbol cacheBus factory required by the L04-owned `CustomScreenEditorPage`. L04 added only that mock export and passed its exact six-file re-gate; L01 through L03 remained historically Done, and closure resumed.
+**Historical L04 Completion:** 2026-07-15
 **Historical Completion:** 2026-07-14
 **Historical Reopen:** 2026-07-14 (final post-audit: stale detail-cache publication and mixed-case media UUID projection)
 **Historical Corrective Revalidation:** 2026-07-14 — L01 exact Entries/Media gate 65/65; core lint/typecheck and diff check green; fresh L01 post-audit zero findings
@@ -34,23 +37,35 @@ when the user edits after a background request has already started.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-540-04-L01 | Make related-entry and media promise caches retryable | `entriesClient.ts`, `mediaClient.ts`, and their admin Vitest suites | ✅ Done |
-| TASK-540-04-L02 | Cancel and retry related-entry loads | shared Screen hook, Preview dialog, and hook/Preview tests | ✅ Done |
-| TASK-540-04-L03 | Guard entry drafts, expand direct-image presentation targets, resolve presentation media UUIDs, and correlate mutation cache events | entry editor/canvas/read-only Preview, `customScreensClient.ts`, cache-bus substrate, the Bun-free override contract + service, and assigned suites | ✅ Done |
-| TASK-540-04-L04 | Guard Screen builder drafts | Screen editor page, additive editor-path helper, route/Page/binding-flow tests, and the recovery-suite plus screen-editor-sections cacheBus mock seams; read-only cache-bus/client production seams | ✅ Done |
+| TASK-540-04-L01 | Make related-entry and media promise caches retryable | `entriesClient.ts`, `mediaClient.ts`, and their admin Vitest suites | 🚧 In Progress |
+| TASK-540-04-L02 | Cancel and retry related-entry loads | shared Screen hook, Preview dialog, and hook/Preview tests | 🚧 In Progress |
+| TASK-540-04-L03 | Guard entry drafts, expand direct-image presentation targets, resolve presentation media UUIDs, and correlate mutation cache events | entry editor/canvas/read-only Preview, `customScreensClient.ts`, cache-bus substrate, the Bun-free override contract + service, and assigned suites | 🚧 In Progress |
+| TASK-540-04-L04 | Guard Screen builder drafts | Screen editor page, additive editor-path helper, route/Page/binding-flow tests, and the recovery-suite plus screen-editor-sections cacheBus mock seams; read-only cache-bus/client production seams | 🚧 In Progress |
 
 ## Corrective workflow
 
 The earlier five-owner corrective work completed sequentially across
 `540-01-L01 → 540-03-L01 → 540-04-L01 → 540-04-L03 → 540-05-L02`; its durable evidence
-is the affected task files' Revalidation/Post-Audit metadata and current green gates,
+is the affected task files' historical revalidation/post-audit metadata,
 not the mutable `_docs/_workflows/task-540-fix.mjs` file. That current file records only
 the later completed R01→R03 URL-control correction. Mandatory repository-wide testing on
 2026-07-15 then exposed the L04-owned `CustomScreenEditorPage` Save dependency missing
 from the legacy `screen-editor-sections.test.tsx` full-module cacheBus mock. L04 completed
 the one-property compatibility repair and exact six-file/66-test re-gate; L01 through L03
-and every non-L04 source descendant remained Done. TASK-540-04 is Done and closure has
-resumed while the family-wide parent gate remains pending.
+and every non-L04 source descendant remained Done at that point. Closure validation then
+reproduced canonical+legacy twin delivery of one serialized remote cache event, and
+contract audit required direct-image route-boundary coverage at the strict write seam.
+The phase-neutral repair state machine designates L03 as the sole repair owner with
+exactly three writable paths: `core/admin/utils/cacheBus.ts`,
+`tests/vitest/admin/cacheBus.test.ts`, and additive regressions in
+`tests/integration/routes/customScreensRoutes.test.ts`; production route code remains
+read-only. While its exact `Repair Pending` receipt exists, family closure is paused.
+The focused cache-bus gate, expanded L03 owner/dependency gate, L04 read-only consumer
+gate, direct-image Bun/DB route gate, core lint/typecheck, root typecheck, workflow
+self-tests, and diff check are all required predecessors of the exact successor
+`Revalidation Passed`. After that receipt replaces `Repair Pending`, L03 and TASK-540-04
+remain `🚧 In Progress` with `Implementation Complete` until changelog 1252; L01, L02,
+and L04 follow the same closure-waiting status.
 
 ## Shared contract
 
@@ -167,6 +182,21 @@ resumed while the family-wide parent gate remains pending.
   advancing the baseline. Other Screen cache events consult the synchronous dirty ref,
   never a delayed
   rendered-state closure.
+- One logical remote event mirrored over the canonical and legacy channel/storage
+  families is delivered once per subscription and occurrence. L03 owns a private
+  per-subscription canonical/legacy multiset keyed by
+  `JSON.stringify([sourceId, ts, key, action])`, strict bounded parsing that rejects any
+  non-exact own-key set, and a true 128-entry residual LRU that touches repeated residual
+  identities and evicts oldest fail-open. Malformed and own-source input is rejected
+  before any correlation/LRU mutation. Canonical-only, legacy-only, identical repeated,
+  and asymmetric per-subscription occurrences remain lossless; correlation commits
+  before handler invocation so a throwing canonical handler is not retried by its legacy
+  twin. Local broadcasts bypass correlation and retain exact operation-symbol identity.
+  Storage fallback rejects more than 2048 code units before parsing and removes each
+  canonical/legacy key immediately before setting it so an identical later occurrence
+  re-emits.
+  This changes no payload, exported API, cache key, route, or intended UI/UX contract; it
+  deliberately reduces a mirrored remote event from two refresh attempts to one.
 - Cache refreshes use existing `keepUnsaved` behavior and must never replace a dirty
   draft, even when the request began while the draft was clean. Successful create-save
   navigation uses `{ skipBlockers: true }` only after persistence succeeds and captured
@@ -214,7 +244,19 @@ resumed while the family-wide parent gate remains pending.
   `screenEntryPresentationOverrides.ts` in addition to the entry editor/canvas.
   `CustomScreenPreview.tsx` is also owned only to add optional pass-through props; absent
   props preserve its existing builder/list and retained compatibility output. The
-  record-interactions and retained Preview compatibility suites run read-only.
+  record-interactions and retained Preview compatibility suites run read-only. During
+  the current 2026-07-15 repair, L03's only writable files are
+  `core/admin/utils/cacheBus.ts`, `tests/vitest/admin/cacheBus.test.ts`, and additive
+  direct-image route-boundary regressions in
+  `tests/integration/routes/customScreensRoutes.test.ts`. That third path is a narrow
+  repair-specific ownership exception: existing TASK-540-01 assertions may not be
+  re-baselined, and `core/server/routes/customScreenRoutes.ts` remains read-only. Every
+  other path in this ownership paragraph, both L02 hook/dialog suites, and all L04
+  consumer suites are read-only gates. Every pre-closure audit/gate fixer is mechanically
+  narrowed to those same three files. After closure it may add only the TASK-540 root,
+  TASK-540-04 child, and exact L03 task contracts for evidenced contract findings;
+  task-state transitions remain separate and historical consumer ownership never
+  reopens.
 - TASK-540-04-L04 exclusively owns `CustomScreenEditorPage.tsx`, the additive
   `buildCustomScreenEditorPath` seam in `routeParams.ts`, `custom-screens-page.test.tsx`,
   `custom-screen-route-params.test.ts`, and
@@ -230,10 +272,36 @@ resumed while the family-wide parent gate remains pending.
 
 ## Security Contract
 
-Existing internal content reads/writes only. Authentication, `content:read` /
-`content:write`, CSRF, and admin rate-limit buckets are unchanged. Cache keys and
-errors contain resource identities only; no content, secret, or token is placed
-in browser storage or logs.
+- **Visibility/endpoints:** session-admin traffic only under the existing internal
+  `/admin/api` prefix. The API-related scope is limited to the existing route templates
+  `GET|POST /admin/api/custom-screens`,
+  `GET|PATCH|DELETE /admin/api/custom-screens/:id`,
+  `GET|PATCH /admin/api/custom-screens/:screenId/entries/:entryId/overrides`,
+  `GET /admin/api/content-entries`, `GET|POST /admin/api/content/:type/entries`,
+  `GET|PATCH|DELETE /admin/api/content/:type/entries/:id`,
+  `PATCH /admin/api/content/:type/entries/:id/metadata`,
+  `POST /admin/api/content/:type/entries/:id/duplicate`,
+  `POST /admin/api/content/:type/entries/:id/preview`,
+  `POST /admin/api/content/:type/entries/:id/publish`,
+  `POST /admin/api/content/:type/entries/:id/unpublish`, and
+  `GET /admin/api/media`.
+  This task adds no route and keeps `core/server/routes/customScreenRoutes.ts` read-only
+  during the current regression repair.
+- **Authentication/RBAC:** the HttpOnly session cookie is the only auth model.
+  Custom Screen, override, and content-entry reads require `content:read`; their writes
+  require `content:write` (with existing `content:publish` checks still applying to any
+  publish transition). The media-list dependency requires `media:read`. No permission is
+  widened or bypassed.
+- **CSRF/rate limits:** every POST, PATCH, or DELETE remains CSRF-protected. GET requests
+  are classified as `admin_read`; writes are classified as `admin_write`. The shared
+  authenticated-admin rate-limit bypass remains unchanged, so this contract does not
+  claim that successful session requests consume those counters.
+- **Validation/anti-abuse:** Custom Screen, override, and entry write schemas remain
+  strict reject-unknown, and browser/service normalizers continue to fail closed before
+  persistence, rendering, or caching. There is no API-key mode or public write, so no
+  public nonce, signature/HMAC, or CAPTCHA path applies. Cache keys and errors contain
+  resource identities only; no content, secret, credential, or auth token is placed in
+  browser storage or logs.
 
 ## Historical revalidation evidence
 
@@ -245,7 +313,13 @@ success-only invalidation, and captured-clear safety; its exact owner gate passe
 with static checks and a zero-finding post-audit. Reopened L03 now publishes complete
 fallback lists and reconciles monotonic Screen list/detail/mutation authority; its exact
 nine-file owner gate passed 181/181 with `core` lint/typecheck, root typecheck, diff
-check, and a zero-finding fresh post-audit. Those receipts remain historical and L01
-through L03 remain complete. L04's narrow 2026-07-15 mock repair passed its six-file/
-66-test gate and five zero-finding post-audit lenses. TASK-540-06 retains ownership of the
-fresh family-wide audit, aggregate gates, runtime smoke, and final changelog/board closure.
+check, and a zero-finding fresh post-audit. Those receipts remain historical. The
+phase-neutral repair state machine designates L03 as the sole current repair owner. Its
+exact three writable paths and full required re-gate are defined above. While the exact
+`Repair Pending` receipt exists, family closure is paused. After that receipt is replaced
+by the exact successor `Revalidation Passed`, L03 and TASK-540-04 remain
+`🚧 In Progress` with `Implementation Complete` until changelog 1252; L01, L02, and L04
+follow the same closure-waiting status. L04's narrow 2026-07-15 mock repair passed its
+six-file/66-test gate and five zero-finding post-audit lenses. TASK-540-06 retains
+ownership of the fresh family-wide audit, aggregate gates, runtime smoke, and final
+changelog/board closure.

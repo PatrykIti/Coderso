@@ -8,11 +8,11 @@
 **Category:** Custom Screens / Builder / Data Safety
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-04-L03
-**Status:** ✅ Done
+**Status:** 🚧 In Progress
 **Started:** 2026-07-14
 **Fix Started:** 2026-07-15
 **Repair Reason:** Mandatory repository-wide `bun run test` confirmed that `tests/vitest/ui-integration/screen-editor-sections.test.tsx` had fully mocked `@/utils/cacheBus` without the L04-required `createCacheEventOperationToken` export. Its Save path rejected before `updateCustomScreen`, producing an unhandled rejection and zero mutation calls; the repair added only the missing fresh-symbol factory and re-gated the owning leaf.
-**Completed:** 2026-07-15
+**Implementation Complete:** 2026-07-15 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Revalidation Passed:** generation 57974d94b81d8f4afbf85a22ebe32bf4 / token 1e62523100e412eaf5611d3f3b152f24 / gate green
 **Historical Completion:** 2026-07-14
 **Historical Revalidation:** 2026-07-14 — `core lint:types`, `core lint`, root `tsc`, and the exact five-file Vitest matrix (57/57)
@@ -65,9 +65,18 @@ passed. Its durable evidence is the affected task metadata and current gates, no
 mutable `_docs/_workflows/task-540-fix.mjs`, which now records only the completed
 R01→R03 URL-control correction. That completion evidence remains historical. The
 2026-07-15 one-property L04 repair and fresh six-file gate completed without rerunning
-completed sibling leaves. L04 and TASK-540-04 are Done, and closure has resumed.
+the then-completed sibling leaves. At that historical phase L04 and TASK-540-04 were
+Done and closure resumed. The later TASK-540-04-L03 duplicate-delivery finding paused
+closure again. In the current pre-1252 landed state L04 and TASK-540-04 remain
+`🚧 In Progress` with `Implementation Complete`; L03 alone carries `Repair Pending`,
+and TASK-540-06-L01 remains active and ungated.
 
-## Grounded anchors
+## Historical pre-implementation grounded anchors
+
+These 2026-07-13 line snapshots are retained as audit provenance. They describe the
+pre-implementation source layout; current ownership and validation are anchored by the
+named files, symbols, and regression suites in this contract rather than mutable line
+numbers.
 
 - Dirty, external-revision, and diagnostic state:
   `CustomScreenEditorPage.tsx:319-385`.

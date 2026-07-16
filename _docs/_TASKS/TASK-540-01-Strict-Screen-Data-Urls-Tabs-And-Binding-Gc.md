@@ -7,9 +7,9 @@
 **Category:** Custom Screens / Schema / Security / Compatibility
 **Estimated Effort:** Medium
 **Dependencies:** TASK-498, TASK-500, TASK-505
-**Status:** ✅ Done
+**Status:** 🚧 In Progress
 **Started:** 2026-07-13
-**Completed:** 2026-07-14
+**Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Repair Started:** 2026-07-14
 **Repair Reason:** Repository-wide Bun validation confirmed one stale Assistant test fixture crossing the strict V4 Screen write boundary with unsupported `hero`/`rich-text-section` kinds. TASK-540-01-L01 owns only that fixture and its sibling-preservation assertions; production/schema contracts stay strict.
 **Historical Completion:** 2026-07-14
@@ -42,7 +42,7 @@ introduced.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-540-01-L01 | Reject unknown, sanitize URLs, unique Tabs, and prune ghosts | strict Screen sources remain read-only; narrow fixture-only compatibility seam in `tests/unit/assistant/actionExecutorService.test.ts` | ✅ Done |
+| TASK-540-01-L01 | Reject unknown, sanitize URLs, unique Tabs, and prune ghosts | strict Screen sources remain read-only; narrow fixture-only compatibility seam in `tests/unit/assistant/actionExecutorService.test.ts` | 🚧 In Progress |
 
 ## Contract
 
@@ -126,14 +126,17 @@ introduced.
   deterministic and disabled in both editor and row-template documents even when the
   repaired legacy button had an href binding. No disabled marker is persisted.
 
-## Historical corrective completion and current fixture repair
+## Historical corrective completion and fixture repair
 
 The structural-provenance correction and its green gates remain historical evidence.
 The subsequent Screen-wrapper repair added original-string ASCII-control rejection
 before shared-helper delegation, then passed the leaf's final 75/75 Vitest and 15/15 DB
 route gates plus a fresh zero-finding post-audit before this subtask returned to Done.
-The current reopen changes only the stale Assistant block-patch fixture to canonical
-`heading.data.text` plus an independent `text.data.content` sibling and retains explicit
-same-block and sibling-block preservation assertions. No production or schema fallback
-is permitted. This subtask returns to Done only after its leaf passes the expanded exact
-gate including `tests/unit/assistant/actionExecutorService.test.ts`.
+The later historical reopen changed only the stale Assistant block-patch fixture to
+canonical `heading.data.text` plus an independent `text.data.content` sibling and
+retained explicit same-block and sibling-block preservation assertions. No production
+or schema fallback was permitted. Its leaf passed the expanded exact gate including
+`tests/unit/assistant/actionExecutorService.test.ts`, and that repair/Done transition is
+historical. In the current pre-1252 landed state this subtask remains `🚧 In Progress`
+with `Implementation Complete`; TASK-540-04-L03 alone carries `Repair Pending`, and the
+closure leaf remains active and ungated.

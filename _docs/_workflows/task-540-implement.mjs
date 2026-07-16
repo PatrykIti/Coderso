@@ -8,15 +8,17 @@ import {
   readlink,
   realpath,
   rename,
-  stat,
   unlink,
 } from "node:fs/promises";
 import { parseEnv, promisify } from "node:util";
 
+import { buildTask540SmokePlan } from "./task-540-smoke-contract.mjs";
+import { executeTask540SmokePlan } from "./task-540-smoke-executor.mjs";
+
 export const meta = {
   name: "task-540-implement",
   description:
-    "Implement TASK-540 in strict leaf order, run owner-scoped gates and five-lens audits, prove seven real Custom Screen flows, and close changelog 1252. Agents never stage or commit.",
+    "Implement TASK-540 in strict leaf order, run owner-scoped gates and five-lens audits, execute seven real Custom Screen flows once through the repo-owned local executor, and close changelog 1252. Agents never stage or commit.",
   phases: [
     { title: "Start gate" },
     { title: "540-01-L01" },
@@ -42,6 +44,23 @@ export const meta = {
 
 const execFileAsync = promisify(execFile);
 const ROOT = "/home/coder/project/Coderso";
+const MAX_VALIDATION_STREAM_BYTES = 4 * 1024 * 1024;
+const MAX_VALIDATION_EXCERPT_BYTES = 8 * 1024;
+const VALIDATION_COMMAND_TIMEOUT_MS = 45 * 60 * 1000;
+const LOCAL_COMMAND_AUTHORITY = new WeakMap();
+const TRACKED_TEST_FILES = Object.freeze(
+  (
+    await execFileAsync("git", ["ls-files", "tests"], {
+      cwd: ROOT,
+      encoding: "utf8",
+      env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
+      maxBuffer: 2 * 1024 * 1024,
+    })
+  ).stdout
+    .split("\n")
+    .filter((file) => /\.test\.[cm]?[jt]sx?$/.test(file))
+    .sort()
+);
 // Parse the repo environment privately instead of process.loadEnvFile(), which
 // preserves inherited keys and could diverge from the smoke's `source .env`.
 // Overwrite only keys declared by the repo file so helper/runtime and redaction
@@ -57,9 +76,27 @@ const REPO_ENV = Object.freeze(
   })()
 );
 Object.assign(process.env, REPO_ENV);
+// Every Git command in this workflow is observational. Disable optional index
+// refresh writes so even read-oriented Git subprocesses preserve the exact
+// caller-owned index file captured at workflow start.
+process.env.GIT_OPTIONAL_LOCKS = "0";
 const TASKS = ROOT + "/_docs/_TASKS";
 const WORKFLOW_REL = "_docs/_workflows/task-540-implement.mjs";
 const WORKFLOW = ROOT + "/" + WORKFLOW_REL;
+const SMOKE_CONTRACT_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-contract.mjs";
+const SMOKE_EXECUTOR_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-executor.mjs";
+const SMOKE_HOST_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-host.mjs";
+const WORKFLOW_MECHANICAL_GATE_COMMAND = [
+  "node --check " + SMOKE_CONTRACT_WORKFLOW_REL,
+  "node " + SMOKE_CONTRACT_WORKFLOW_REL + " --self-test",
+  "node --check " + SMOKE_EXECUTOR_WORKFLOW_REL,
+  "node " + SMOKE_EXECUTOR_WORKFLOW_REL + " --self-test",
+  "node --check " + SMOKE_HOST_WORKFLOW_REL,
+  "node " + SMOKE_HOST_WORKFLOW_REL + " --self-test",
+  "node --check " + WORKFLOW_REL,
+  "node " + WORKFLOW_REL + " --self-test-repair-siblings",
+  "git diff --check",
+].join(" && ");
 const HISTORICAL_FIX_WORKFLOW_REL = "_docs/_workflows/task-540-fix.mjs";
 const EXPECTED_BRANCH = "feature/tasks-fixes";
 const RUN_DATE = new Date().toISOString().slice(0, 10);
@@ -138,7 +175,7 @@ const CHANGELOG_TITLE_PREFIX = "TASK-540 Custom Screens Functional and Data-Inte
 const CHANGELOG_TYPE =
   "Custom Screens/Admin UI/API/Reliability/Accessibility/Security/Testing/Docs/Task Board";
 const CHANGELOG_TASKS_LINE =
-  "Tasks: TASK-540, TASK-540-01-L01, TASK-540-02-L01, TASK-540-03-L01, TASK-540-04-L01, TASK-540-04-L02, TASK-540-04-L03, TASK-540-04-L04, TASK-540-05-L01, TASK-540-05-L02, TASK-540-06-L01";
+  "Tasks: TASK-540, TASK-540-01, TASK-540-01-L01, TASK-540-02, TASK-540-02-L01, TASK-540-03, TASK-540-03-L01, TASK-540-04, TASK-540-04-L01, TASK-540-04-L02, TASK-540-04-L03, TASK-540-04-L04, TASK-540-05, TASK-540-05-L01, TASK-540-05-L02, TASK-540-06, TASK-540-06-L01";
 const ENV = "set -a && source .env && set +a && ";
 
 const TASK_FILES = Object.freeze([
@@ -238,6 +275,25 @@ const LEAF_STATUS_GROUPS = Object.freeze({
     holdUntilClosure: true,
   },
 });
+const LEAF_TASK_PATHS = Object.freeze(
+  LEAF_ORDER.map((leafId) => LEAF_STATUS_GROUPS[leafId].leafPath)
+);
+const CHILD_IDS_IN_LAND_ORDER = Object.freeze([
+  ...new Set(LEAF_ORDER.map((leafId) => LEAF_STATUS_GROUPS[leafId].childId)),
+]);
+const CHILD_TASK_PATHS = Object.freeze(
+  CHILD_IDS_IN_LAND_ORDER.map(
+    (childId) =>
+      LEAF_STATUS_GROUPS[
+        LEAF_ORDER.find((leafId) => LEAF_STATUS_GROUPS[leafId].childId === childId)
+      ].childPath
+  )
+);
+const FAMILY_STATUS_ORDER = Object.freeze([
+  ...LEAF_TASK_PATHS,
+  ...CHILD_TASK_PATHS,
+  ROOT_TASK_PATH,
+]);
 const AUDIT_OWNERS = Object.freeze([...LEAF_ORDER, "orchestrator"]);
 
 const TARGET_VITEST_FILES = Object.freeze([
@@ -317,20 +373,71 @@ const TARGETED_VITEST =
   "bunx vitest run --config vitest.config.ts " + TARGET_VITEST_FILES.join(" ");
 const TARGETED_BUN = ENV + "bun test " + TARGET_BUN_FILES.join(" ");
 
+function isolationCommandForTestFile(file) {
+  if (!TRACKED_TEST_FILES.includes(file)) {
+    throw new Error("TASK-540 isolation metadata references an untracked test: " + file);
+  }
+  return file.startsWith("tests/vitest/")
+    ? "bunx vitest run --config vitest.config.ts " + file
+    : ENV + "bun test " + file;
+}
+
+function isolationMetadata(files) {
+  return Object.freeze(
+    files.map((file) => Object.freeze({ file, command: isolationCommandForTestFile(file) }))
+  );
+}
+
 const FULL_GATE_COMMANDS = Object.freeze([
   { id: "dbPreflight", command: DB_PREFLIGHT },
   { id: "lintTypes", command: LINT_TYPES },
   { id: "lint", command: LINT },
   { id: "rootTsc", command: ROOT_TSC },
-  { id: "targetedVitest", command: TARGETED_VITEST },
-  { id: "targetedBun", command: TARGETED_BUN },
-  { id: "fullTest", command: ENV + "bun run test" },
+  {
+    id: "targetedVitest",
+    command: TARGETED_VITEST,
+    isolationCommands: isolationMetadata(TARGET_VITEST_FILES),
+  },
+  {
+    id: "targetedBun",
+    command: TARGETED_BUN,
+    isolationCommands: isolationMetadata(TARGET_BUN_FILES),
+  },
+  {
+    id: "fullTest",
+    command: ENV + "bun run test",
+    isolationCommands: isolationMetadata(TRACKED_TEST_FILES),
+  },
   { id: "precommitCheck", command: "bun run precommit:check" },
   { id: "adminBuild", command: "bun --cwd core build:admin" },
   { id: "adminBoundary", command: "bun run check:admin-boundary" },
   { id: "adminBundle", command: "bun run check:admin-bundle" },
   { id: "releaseGates", command: "bun run gates:coderso" },
   { id: "strictScan", command: "bun run scan:security:strict" },
+  {
+    id: "smokeContractSyntax",
+    command: "node --check _docs/_workflows/task-540-smoke-contract.mjs",
+  },
+  {
+    id: "smokeContractSelfTest",
+    command: "node _docs/_workflows/task-540-smoke-contract.mjs --self-test",
+  },
+  {
+    id: "smokeExecutorSyntax",
+    command: "node --check _docs/_workflows/task-540-smoke-executor.mjs",
+  },
+  {
+    id: "smokeExecutorSelfTest",
+    command: "node _docs/_workflows/task-540-smoke-executor.mjs --self-test",
+  },
+  {
+    id: "smokeHostSyntax",
+    command: "node --check _docs/_workflows/task-540-smoke-host.mjs",
+  },
+  {
+    id: "smokeHostSelfTest",
+    command: "node _docs/_workflows/task-540-smoke-host.mjs --self-test",
+  },
   { id: "workflowSyntax", command: "node --check _docs/_workflows/task-540-implement.mjs" },
   {
     id: "workflowRepairResumeSelfTest",
@@ -346,6 +453,108 @@ const KNOWN_STRICT_FINDING = Object.freeze({
   line: 185,
   owner: "TASK-545",
 });
+const STRICT_SCAN_CLEAN_SCANNERS = Object.freeze([
+  "bun-audit",
+  "trivy-vuln",
+  "trivy-config",
+  "trivy-secret",
+  "gitleaks-history",
+  "gitleaks-worktree",
+]);
+
+function countLiteral(source, literal) {
+  return source.split(literal).length - 1;
+}
+
+function classifyStrictScanReceipt(receipt, label) {
+  const authority = localCommandAuthority(receipt, label);
+  const output = Buffer.concat([authority.stdout, Buffer.from("\n"), authority.stderr]).toString(
+    "utf8"
+  );
+  const knownRuleCount = countLiteral(output, KNOWN_STRICT_FINDING.rule);
+  const knownFileCount = countLiteral(output, KNOWN_STRICT_FINDING.file);
+  const exactLinePattern = new RegExp(
+    "(?:^|[^0-9])" + KNOWN_STRICT_FINDING.line + "(?:[:|\\u2502\\u2506]|[^0-9])"
+  );
+  const ruleIndex = output.indexOf(KNOWN_STRICT_FINDING.rule);
+  const fileIndex = output.indexOf(KNOWN_STRICT_FINDING.file);
+  const findingBlockStart = Math.max(0, Math.min(ruleIndex, fileIndex) - 2048);
+  const findingBlockEnd = Math.min(output.length, Math.max(ruleIndex, fileIndex) + 4096);
+  const findingBlock =
+    ruleIndex >= 0 && fileIndex >= 0 && Math.abs(ruleIndex - fileIndex) <= 8192
+      ? output.slice(findingBlockStart, findingBlockEnd)
+      : "";
+  const cohesiveFindingBlock =
+    countLiteral(findingBlock, KNOWN_STRICT_FINDING.rule) === 1 &&
+    countLiteral(findingBlock, KNOWN_STRICT_FINDING.file) === 1 &&
+    exactLinePattern.test(findingBlock);
+  const semgrepSummaryCount = (output.match(/^- semgrep-sast: non-zero:1 \([^)]+\)$/gm) ?? [])
+    .length;
+  const cleanSummariesExact = STRICT_SCAN_CLEAN_SCANNERS.every(
+    (scanner) =>
+      (output.match(new RegExp("^- " + scanner + ": ok \\([^)]+\\)$", "gm")) ?? []).length === 1
+  );
+  const scannerSummaryRows =
+    output.match(/^- [a-z0-9-]+: (?:ok|non-zero:[0-9]+) \([^)]+\)$/gm) ?? [];
+  const unexpectedNonGreenSummary = scannerSummaryRows.some(
+    (row) => !row.startsWith("- semgrep-sast: ") && row.includes("non-zero:")
+  );
+  const oneFindingSummary = /\b1 (?:code )?finding\b/i.test(output);
+  const toolingFailure =
+    /failed to start|could not run|command not found|internal error|traceback/i.test(output);
+  const suppressed = /nosemgrep|noqa|suppressed finding|ignored finding/i.test(output);
+  const accepted =
+    receipt.status === 1 &&
+    !receipt.stdoutTruncated &&
+    !receipt.stderrTruncated &&
+    output.includes("[security-scan] mode=strict") &&
+    output.includes(
+      "[security-scan] strict mode failed because these scanners reported findings: semgrep-sast"
+    ) &&
+    semgrepSummaryCount === 1 &&
+    cleanSummariesExact &&
+    knownRuleCount === 1 &&
+    knownFileCount === 1 &&
+    cohesiveFindingBlock &&
+    scannerSummaryRows.length === STRICT_SCAN_CLEAN_SCANNERS.length + 1 &&
+    !unexpectedNonGreenSummary &&
+    oneFindingSummary &&
+    !toolingFailure &&
+    !suppressed;
+  return Object.freeze({
+    accepted,
+    exitCode: receipt.status,
+    green: false,
+    classification: accepted ? "external-non-green" : "rejected",
+    task540Findings: accepted ? 0 : 1,
+    toolingFailure,
+    suppressed,
+    externalFindings: accepted ? [KNOWN_STRICT_FINDING] : [],
+  });
+}
+
+function parseDatabasePreflightReceipt(receipt, label) {
+  const authority = localCommandAuthority(receipt, label);
+  const output = authority.stdout.toString("utf8").trim();
+  const candidates = output
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("{") && line.endsWith("}"));
+  if (receipt.status !== 0 || candidates.length !== 1) {
+    throw new Error(label + ": database preflight did not emit one successful observation");
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(candidates[0]);
+  } catch {
+    throw new Error(label + ": database preflight emitted invalid JSON");
+  }
+  requireExactObjectKeys(parsed, ["configured", "reachable", "selectOne"], label);
+  if (parsed.configured !== true || parsed.reachable !== true || parsed.selectOne !== 1) {
+    throw new Error(label + ": database preflight did not prove select one");
+  }
+  return Object.freeze(parsed);
+}
 
 const FORBIDDEN_PATHS = Object.freeze([
   "core/admin/ui/pages/**",
@@ -529,710 +738,13 @@ const FULL_GATE_SCHEMA = {
   },
 };
 
-const SMOKE_SESSION_PREFIX = "playwright-cli -s=wf540smoke --raw ";
-const SMOKE_HELPER_COMMAND = "coderso-dev-core-host /home/coder/project/Coderso";
-const ADMIN_HEALTH_URL = "http://coderso-a.localhost:5173/admin/advanced/custom-screens";
-const FRONT_HEALTH_URL = "http://coderso-a.localhost:3000/";
-const ADMIN_HEALTH_COMMAND =
-  "curl --fail --silent --show-error " + ADMIN_HEALTH_URL + " >/dev/null";
-const FRONT_HEALTH_COMMAND =
-  "curl --fail --silent --show-error " + FRONT_HEALTH_URL + " >/dev/null";
-const healthExecFileDescriptor = (url) =>
-  "execFile:curl argv=" + JSON.stringify(["--fail", "--silent", "--show-error", url]);
-const ADMIN_HEALTH_OPERATION_DESCRIPTOR = healthExecFileDescriptor(ADMIN_HEALTH_URL);
-const FRONT_HEALTH_OPERATION_DESCRIPTOR = healthExecFileDescriptor(FRONT_HEALTH_URL);
 const EVIDENCE_BEGIN = "<!-- TASK-540-SMOKE-EVIDENCE:BEGIN -->";
 const EVIDENCE_END = "<!-- TASK-540-SMOKE-EVIDENCE:END -->";
-const SMOKE_KINDS = Object.freeze([
-  "button-image",
-  "tabs-content",
-  "tabs-keyboard-aria",
-  "space-selection",
-  "dirty-guards",
-  "related-retry-cache",
-  "responsive-users",
-]);
-const ROUTE_EXPECTATIONS = Object.freeze({
-  "media-prior-resolution": { method: "GET", mode: "delayed-success" },
-  "entry-save-failure": { method: "PATCH", mode: "malformed-json" },
-  "related-first-failure": { method: "GET", mode: "malformed-json" },
-  "related-a-refresh": { method: "GET", mode: "delayed-success" },
-  "preference-a-read-refresh": { method: "GET", mode: "delayed-success" },
-  "preference-a-write-exit": { method: "PATCH", mode: "delayed-success" },
-});
-const ROUTE_EXPECTATION_COUNT = Object.keys(ROUTE_EXPECTATIONS).length;
-const ROUTE_SCENARIOS = Object.freeze({
-  "media-prior-resolution": "button-image",
-  "entry-save-failure": "dirty-guards",
-  "related-first-failure": "related-retry-cache",
-  "related-a-refresh": "related-retry-cache",
-  "preference-a-read-refresh": "responsive-users",
-  "preference-a-write-exit": "responsive-users",
-});
-const SMOKE_RECEIPT_SCENARIOS = Object.freeze(["setup", ...SMOKE_KINDS, "cleanup"]);
-const HELPER_PORTS = Object.freeze([3000, 5173, 5174]);
-const FINAL_BROWSER_CLEANUP_COUNT = 7;
-const HELPER_CHILD_KINDS = Object.freeze(["backend", "admin-vite", "site-vite"]);
-const REQUIRED_RUNTIME_OPERATIONS = Object.freeze([
-  "helper-launch",
-  "admin-health",
-  "front-health",
-  "pid-lineage",
-  "fixture-setup",
-  "fixture-provenance",
-  "entity-absence",
-  "cleanup-absence",
-  "helper-stop",
-  "process-absence",
-  "port-absence",
-  "orchestrator-discovery",
-  "orchestrator-identifier-validation",
-  "orchestrator-exact-delete",
-  "orchestrator-absence",
-  "orchestrator-helper-stop",
-  "orchestrator-port-probe",
-]);
-const ORCHESTRATION_RUNTIME_OPERATIONS = Object.freeze(REQUIRED_RUNTIME_OPERATIONS.slice(-6));
-const CLEANUP_AGENT_RUNTIME_OPERATIONS = Object.freeze(
-  ORCHESTRATION_RUNTIME_OPERATIONS.slice(0, 4)
-);
-const OUTER_HOST_RUNTIME_OPERATIONS = Object.freeze(ORCHESTRATION_RUNTIME_OPERATIONS.slice(4));
-const SMOKE_AGENT_RUNTIME_OPERATIONS = Object.freeze([
-  "fixture-setup",
-  "fixture-provenance",
-  "entity-absence",
-  "cleanup-absence",
-]);
-const REQUIRED_FIXTURE_KINDS = Object.freeze([
-  "user-a",
-  "user-b",
-  "content-type-editable",
-  "content-type-related-a",
-  "content-type-related-b",
-  "related-entry-a",
-  "related-entry-b",
-  "editable-entry",
-  "screen",
-  "media",
-]);
-const REQUIRED_BASE_CLEANUP_RESOURCE_KINDS = Object.freeze([
-  "session-user-a",
-  "session-user-b",
-  "setting-user-a",
-  "presentation-override",
-  "media-storage-object",
-]);
-const ACCESS_LOG_CLEANUP_RESOURCE_KINDS = Object.freeze(["access-log-user-a", "access-log-user-b"]);
-const REQUIRED_CLEANUP_RESOURCE_KINDS = Object.freeze([
-  ...REQUIRED_BASE_CLEANUP_RESOURCE_KINDS,
-  ...ACCESS_LOG_CLEANUP_RESOURCE_KINDS,
-]);
-const SMOKE_SCENARIO_EXPECTATIONS = Object.freeze({
-  "button-image": Object.freeze({
-    theme: "light",
-    viewports: Object.freeze(["1280x900"]),
-    screenshotPaths: Object.freeze([
-      "_docs/_workflows/_smoke/task-540-wf540smoke-button-image-light.png",
-      "_docs/_workflows/_smoke/task-540-wf540smoke-media-prior-pending.png",
-    ]),
-  }),
-  "tabs-content": Object.freeze({
-    theme: "dark",
-    viewports: Object.freeze(["1280x900"]),
-    screenshotPaths: Object.freeze([
-      "_docs/_workflows/_smoke/task-540-wf540smoke-tabs-content-dark.png",
-    ]),
-  }),
-  "tabs-keyboard-aria": Object.freeze({
-    theme: "light",
-    viewports: Object.freeze(["1024x900"]),
-    screenshotPaths: Object.freeze([
-      "_docs/_workflows/_smoke/task-540-wf540smoke-tabs-keyboard-light.png",
-    ]),
-  }),
-  "space-selection": Object.freeze({
-    theme: "dark",
-    viewports: Object.freeze(["1024x900"]),
-    screenshotPaths: Object.freeze([
-      "_docs/_workflows/_smoke/task-540-wf540smoke-space-selection-dark.png",
-    ]),
-  }),
-  "dirty-guards": Object.freeze({
-    theme: "light-dark",
-    viewports: Object.freeze(["1280x900"]),
-    screenshotPaths: Object.freeze([
-      "_docs/_workflows/_smoke/task-540-wf540smoke-dirty-save-failure.png",
-      "_docs/_workflows/_smoke/task-540-wf540smoke-dirty-guards-final.png",
-    ]),
-  }),
-  "related-retry-cache": Object.freeze({
-    theme: "dark",
-    viewports: Object.freeze(["1280x900"]),
-    screenshotPaths: Object.freeze([
-      "_docs/_workflows/_smoke/task-540-wf540smoke-related-first-failure.png",
-      "_docs/_workflows/_smoke/task-540-wf540smoke-related-a-stale.png",
-      "_docs/_workflows/_smoke/task-540-wf540smoke-related-b-dark.png",
-    ]),
-  }),
-  "responsive-users": Object.freeze({
-    theme: "light-dark",
-    viewports: Object.freeze(["320x844", "390x844", "480x844", "1024x900", "1280x900"]),
-    screenshotPaths: Object.freeze([
-      "_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-a-light.png",
-      "_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-b-dark.png",
-      "_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-a-converged.png",
-    ]),
-  }),
-});
-const SCREENSHOT_PATHS = Object.freeze(
-  Object.values(SMOKE_SCENARIO_EXPECTATIONS).flatMap(({ screenshotPaths }) => screenshotPaths)
-);
-const REQUIRED_SMOKE_ASSERTIONS = Object.freeze({
-  "button-image": [
-    "persisted-no-empty-binding",
-    "safe-link-front-url",
-    "unsafe-link-disabled",
-    "direct-image-safe-url",
-    "missing-or-unsafe-placeholder",
-    "stale-media-result-ignored",
-    "prior-media-resolution-pending",
-    "newer-media-winner-selected-pending",
-    "media-field-keeps-uuid",
-  ],
-  "tabs-content": [
-    "three-tabs-persisted",
-    "one-panel-visible",
-    "other-panels-zero-geometry",
-    "armed-slot-equals-active-tab",
-  ],
-  "tabs-keyboard-aria": [
-    "arrow-home-end-focus",
-    "aria-reciprocal",
-    "nested-tabs-isolated",
-    "renderer-ids-unique",
-  ],
-  "space-selection": [
-    "space-text-preserved",
-    "nested-controls-do-not-select",
-    "selection-handle-independent",
-  ],
-  "dirty-guards": [
-    "builder-cancel-byte-identical",
-    "builder-confirm-navigates-once",
-    "entry-cancel-byte-identical",
-    "entry-cancel-url-stable",
-    "entry-confirm-navigates-once",
-    "entry-error-retains-both-drafts",
-    "beforeunload-active",
-    "successful-retry-clears-persisted-channel",
-  ],
-  "related-retry-cache": [
-    "related-error-visible-before-retry",
-    "visible-retry-succeeds",
-    "same-target-visible-rows-retained",
-    "target-switch-immediate-empty",
-    "stale-a-cannot-commit",
-    "only-b-rows-visible",
-    "unrelated-draft-byte-identical",
-    "relation-diff-exact",
-  ],
-  "responsive-users": [
-    "narrow-padding-and-positive-geometry",
-    "wide-padding-delta-300",
-    "panel-inside-viewport",
-    "user-a-b-a-isolated",
-    "same-user-retained-view-pending",
-    "same-user-authoritative-refresh",
-    "newer-local-write-pending",
-    "newer-local-write-wins-refresh",
-    "legacy-local-storage-absent",
-    "light-and-dark-computed",
-    "preference-a-write-hit-before-release",
-    "second-a-intent-visible-before-exit",
-    "user-b-default-before-release",
-    "preference-a-write-hit-after-release",
-    "queued-a-write-zero-dispatch",
-    "user-b-default-unchanged",
-  ],
-});
-
-const EXACT_SMOKE_ASSERTION_OUTPUTS = Object.freeze({
-  "responsive-users": Object.freeze({
-    "preference-a-write-hit-before-release": "1",
-    "user-b-default-before-release": "false",
-    "preference-a-write-hit-after-release": "1",
-    "queued-a-write-zero-dispatch": "0",
-    "user-b-default-unchanged": '{"before":false,"after":false}',
-  }),
-});
-
-const PRE_RELEASE_ROUTE_ASSERTIONS = Object.freeze({
-  "media-prior-resolution": Object.freeze([
-    "prior-media-resolution-pending",
-    "newer-media-winner-selected-pending",
-  ]),
-  "related-a-refresh": Object.freeze([
-    "same-target-visible-rows-retained",
-    "target-switch-immediate-empty",
-    "only-b-rows-visible",
-    "unrelated-draft-byte-identical",
-    "relation-diff-exact",
-  ]),
-  "preference-a-read-refresh": Object.freeze([
-    "same-user-retained-view-pending",
-    "newer-local-write-pending",
-  ]),
-  "preference-a-write-exit": Object.freeze([
-    "preference-a-write-hit-before-release",
-    "second-a-intent-visible-before-exit",
-    "user-b-default-before-release",
-  ]),
-});
-
-const POST_RELEASE_ROUTE_ASSERTIONS = Object.freeze({
-  "media-prior-resolution": Object.freeze(["stale-media-result-ignored"]),
-  "related-a-refresh": Object.freeze(["stale-a-cannot-commit"]),
-  "preference-a-read-refresh": Object.freeze(["newer-local-write-wins-refresh"]),
-  "preference-a-write-exit": Object.freeze([
-    "preference-a-write-hit-after-release",
-    "queued-a-write-zero-dispatch",
-    "user-b-default-unchanged",
-  ]),
-});
-
-const PRE_RELEASE_ROUTE_SCREENSHOTS = Object.freeze({
-  "media-prior-resolution": "_docs/_workflows/_smoke/task-540-wf540smoke-media-prior-pending.png",
-  "related-a-refresh": "_docs/_workflows/_smoke/task-540-wf540smoke-related-a-stale.png",
-  "preference-a-read-refresh":
-    "_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-a-light.png",
-  "preference-a-write-exit":
-    "_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-b-dark.png",
-});
-
-const PRE_RETRY_ROUTE_ASSERTIONS = Object.freeze({
-  "entry-save-failure": Object.freeze(["entry-error-retains-both-drafts", "beforeunload-active"]),
-  "related-first-failure": Object.freeze(["related-error-visible-before-retry"]),
-});
-
-const PRE_RETRY_ROUTE_SCREENSHOTS = Object.freeze({
-  "entry-save-failure": "_docs/_workflows/_smoke/task-540-wf540smoke-dirty-save-failure.png",
-  "related-first-failure": "_docs/_workflows/_smoke/task-540-wf540smoke-related-first-failure.png",
-});
-
-const RUNTIME_SUBJECT_KINDS = Object.freeze([
-  null,
-  "helper",
-  ...REQUIRED_FIXTURE_KINDS,
-  ...REQUIRED_CLEANUP_RESOURCE_KINDS,
-]);
-const RUNTIME_RECEIPT_SCHEMA = {
-  type: "object",
-  additionalProperties: false,
-  required: [
-    "sequence",
-    "operation",
-    "operationDescriptor",
-    "status",
-    "evidenceSha256",
-    "subjectKind",
-    "subjectIdentifier",
-    "sanitizedOutput",
-  ],
-  properties: {
-    sequence: { type: "integer", minimum: 1 },
-    operation: { enum: REQUIRED_RUNTIME_OPERATIONS },
-    operationDescriptor: { type: "string", minLength: 1, maxLength: 8192 },
-    status: { const: 0 },
-    evidenceSha256: { type: "string", pattern: "^[a-f0-9]{64}$" },
-    subjectKind: { enum: RUNTIME_SUBJECT_KINDS },
-    subjectIdentifier: { type: ["string", "null"], minLength: 1, maxLength: 240 },
-    sanitizedOutput: { type: "string", maxLength: 4096 },
-  },
-};
-
-const BROWSER_RECEIPT_SCHEMA = {
-  type: "object",
-  additionalProperties: false,
-  required: [
-    "scenario",
-    "sequence",
-    "operation",
-    "routeKey",
-    "routeMethod",
-    "routePattern",
-    "command",
-    "status",
-    "stdoutSha256",
-    "stderrSha256",
-    "stdoutDiscarded",
-    "assertionName",
-    "sanitizedOutput",
-  ],
-  properties: {
-    scenario: { enum: SMOKE_RECEIPT_SCENARIOS },
-    sequence: { type: "integer", minimum: 1 },
-    operation: { type: "string", minLength: 1, maxLength: 80 },
-    routeKey: { enum: [null, ...Object.keys(ROUTE_EXPECTATIONS)] },
-    routeMethod: { enum: [null, "GET", "PATCH"] },
-    routePattern: { type: ["string", "null"], minLength: 1, maxLength: 512 },
-    command: {
-      oneOf: [
-        {
-          type: "string",
-          pattern: "^playwright-cli -s=wf540smoke --raw [^\\n]+$",
-        },
-        { const: "playwright-cli --raw list" },
-      ],
-    },
-    status: { const: 0 },
-    stdoutSha256: { type: "string", pattern: "^[a-f0-9]{64}$" },
-    stderrSha256: { type: "string", pattern: "^[a-f0-9]{64}$" },
-    stdoutDiscarded: { type: "boolean" },
-    assertionName: { type: ["string", "null"], minLength: 1, maxLength: 120 },
-    sanitizedOutput: { type: "string", maxLength: 4096 },
-  },
-};
-
-const ORCHESTRATION_CLEANUP_SCHEMA = {
-  type: "object",
-  additionalProperties: false,
-  required: [
-    "pass",
-    "summary",
-    "errors",
-    "prefix",
-    "browserRecoveryRequired",
-    "browserRecoveryComplete",
-    "browserReceipts",
-    "runtimeReceipts",
-  ],
-  properties: {
-    pass: { type: "boolean" },
-    summary: { type: "string" },
-    errors: { type: "array", items: { type: "string" } },
-    prefix: { type: "string", pattern: "^wf540-[a-zA-Z0-9_-]+$" },
-    browserRecoveryRequired: { type: "boolean" },
-    browserRecoveryComplete: { type: "boolean" },
-    browserReceipts: {
-      type: "array",
-      maxItems: FINAL_BROWSER_CLEANUP_COUNT + 1,
-      items: BROWSER_RECEIPT_SCHEMA,
-    },
-    runtimeReceipts: {
-      type: "array",
-      minItems: CLEANUP_AGENT_RUNTIME_OPERATIONS.length,
-      maxItems: CLEANUP_AGENT_RUNTIME_OPERATIONS.length,
-      items: RUNTIME_RECEIPT_SCHEMA,
-    },
-  },
-};
-
-const SMOKE_SCHEMA = {
-  type: "object",
-  additionalProperties: false,
-  required: [
-    "pass",
-    "summary",
-    "errors",
-    "adminUp",
-    "frontUp",
-    "helper",
-    "session",
-    "browserReceipts",
-    "runtimeReceipts",
-    "routes",
-    "scenarios",
-    "fixtures",
-    "screenshots",
-    "consoleErrors",
-    "consoleWarnings",
-    "pageErrors",
-    "themeRestored",
-    "bootstrapAdminRestored",
-    "legacyLocalStorageAbsent",
-    "failures",
-  ],
-  properties: {
-    pass: { type: "boolean" },
-    summary: { type: "string" },
-    errors: { type: "array", items: { type: "string" } },
-    adminUp: { type: "boolean" },
-    frontUp: { type: "boolean" },
-    helper: {
-      type: "object",
-      additionalProperties: false,
-      required: [
-        "launchCommand",
-        "handle",
-        "helperPid",
-        "startedAtEpochMs",
-        "adminHealthUrl",
-        "adminHealthStatus",
-        "frontHealthUrl",
-        "frontHealthStatus",
-        "stopped",
-        "processesAbsent",
-        "childProcesses",
-        "portsAbsent",
-      ],
-      properties: {
-        launchCommand: { const: SMOKE_HELPER_COMMAND },
-        handle: { type: "string", minLength: 1 },
-        helperPid: { type: "integer", minimum: 1 },
-        startedAtEpochMs: { type: "integer", minimum: 1 },
-        adminHealthUrl: { const: ADMIN_HEALTH_URL },
-        adminHealthStatus: { const: 200 },
-        frontHealthUrl: { const: FRONT_HEALTH_URL },
-        frontHealthStatus: { const: 200 },
-        stopped: { type: "boolean" },
-        processesAbsent: { type: "boolean" },
-        childProcesses: {
-          type: "array",
-          minItems: HELPER_CHILD_KINDS.length,
-          maxItems: HELPER_CHILD_KINDS.length,
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["kind", "pid", "ppid", "ancestry", "absent"],
-            properties: {
-              kind: { enum: HELPER_CHILD_KINDS },
-              pid: { type: "integer", minimum: 1 },
-              ppid: { type: "integer", minimum: 1 },
-              ancestry: {
-                type: "array",
-                minItems: 2,
-                uniqueItems: true,
-                items: { type: "integer", minimum: 1 },
-              },
-              absent: { type: "boolean" },
-            },
-          },
-        },
-        portsAbsent: {
-          type: "array",
-          minItems: 0,
-          maxItems: HELPER_PORTS.length,
-          items: { enum: HELPER_PORTS },
-        },
-      },
-    },
-    session: {
-      type: "object",
-      additionalProperties: false,
-      required: ["name", "opened", "routesEmpty", "closed", "finalAbsent"],
-      properties: {
-        name: { const: "wf540smoke" },
-        opened: { type: "boolean" },
-        routesEmpty: { type: "boolean" },
-        closed: { type: "boolean" },
-        finalAbsent: { type: "boolean" },
-      },
-    },
-    browserReceipts: {
-      type: "array",
-      minItems: 30,
-      items: BROWSER_RECEIPT_SCHEMA,
-    },
-    runtimeReceipts: {
-      type: "array",
-      minItems: REQUIRED_RUNTIME_OPERATIONS.length - 6,
-      items: RUNTIME_RECEIPT_SCHEMA,
-    },
-    routes: {
-      type: "array",
-      minItems: ROUTE_EXPECTATION_COUNT,
-      maxItems: ROUTE_EXPECTATION_COUNT,
-      items: {
-        type: "object",
-        additionalProperties: false,
-        required: [
-          "key",
-          "method",
-          "expandedPattern",
-          "mode",
-          "hits",
-          "installed",
-          "hitRead",
-          "released",
-          "unrouted",
-          "unroutedBeforeRetry",
-        ],
-        properties: {
-          key: { enum: Object.keys(ROUTE_EXPECTATIONS) },
-          method: { enum: ["GET", "PATCH"] },
-          expandedPattern: { type: "string", minLength: 1 },
-          mode: { enum: ["delayed-success", "malformed-json"] },
-          hits: { const: 1 },
-          installed: { const: true },
-          hitRead: { const: true },
-          released: { type: "boolean" },
-          unrouted: { const: true },
-          unroutedBeforeRetry: { type: "boolean" },
-        },
-      },
-    },
-    scenarios: {
-      type: "array",
-      minItems: 7,
-      maxItems: 7,
-      items: {
-        type: "object",
-        additionalProperties: false,
-        required: [
-          "id",
-          "kind",
-          "theme",
-          "viewports",
-          "visibleAssertions",
-          "screenshotPaths",
-          "consoleErrors",
-          "consoleWarnings",
-          "pageErrors",
-        ],
-        properties: {
-          id: { type: "string", minLength: 1 },
-          kind: { enum: SMOKE_KINDS },
-          theme: { enum: ["light", "dark", "light-dark"] },
-          viewports: { type: "array", minItems: 1, items: { type: "string" } },
-          visibleAssertions: {
-            type: "array",
-            minItems: 1,
-            items: {
-              type: "object",
-              additionalProperties: false,
-              required: ["name", "actual", "pass"],
-              properties: {
-                name: { type: "string" },
-                actual: { type: "string", minLength: 1, maxLength: 4096 },
-                pass: { const: true },
-              },
-            },
-          },
-          screenshotPaths: {
-            type: "array",
-            minItems: 1,
-            items: { type: "string" },
-          },
-          consoleErrors: { type: "array", items: { type: "string" } },
-          consoleWarnings: { type: "array", items: { type: "string" } },
-          pageErrors: { type: "array", items: { type: "string" } },
-        },
-      },
-    },
-    fixtures: {
-      type: "object",
-      additionalProperties: false,
-      required: ["prefix", "items", "cleanupResources", "cleanupOrderVerified"],
-      properties: {
-        prefix: { type: "string", pattern: "^wf540-[a-zA-Z0-9_-]+$" },
-        items: {
-          type: "array",
-          minItems: REQUIRED_FIXTURE_KINDS.length,
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["kind", "id", "slug", "acquired", "cleaned", "absenceVerified"],
-            properties: {
-              kind: { enum: REQUIRED_FIXTURE_KINDS },
-              id: { type: "string", minLength: 1 },
-              slug: {
-                type: ["string", "null"],
-                pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-                maxLength: 120,
-              },
-              acquired: { const: true },
-              cleaned: { const: true },
-              absenceVerified: { const: true },
-            },
-          },
-        },
-        cleanupResources: {
-          type: "array",
-          minItems: REQUIRED_CLEANUP_RESOURCE_KINDS.length,
-          maxItems: 512,
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: [
-              "kind",
-              "identifierType",
-              "scopedIdentifier",
-              "ownerSubjectIdentifier",
-              "acquired",
-              "cleaned",
-              "absenceVerified",
-              "sanitizedProbe",
-            ],
-            properties: {
-              kind: { enum: REQUIRED_CLEANUP_RESOURCE_KINDS },
-              identifierType: { enum: ["db-id", "composite-key", "storage-key"] },
-              scopedIdentifier: { type: "string", minLength: 1, maxLength: 240 },
-              ownerSubjectIdentifier: {
-                type: ["string", "null"],
-                minLength: 1,
-                maxLength: 240,
-              },
-              acquired: { const: true },
-              cleaned: { const: true },
-              absenceVerified: { const: true },
-              sanitizedProbe: { type: "string", minLength: 1, maxLength: 512 },
-            },
-          },
-        },
-        cleanupOrderVerified: { const: true },
-      },
-    },
-    screenshots: {
-      type: "array",
-      minItems: SCREENSHOT_PATHS.length,
-      maxItems: SCREENSHOT_PATHS.length,
-      items: {
-        type: "object",
-        additionalProperties: false,
-        required: ["path", "size", "sha256", "signature", "mtimeMs", "device", "inode", "command"],
-        properties: {
-          path: { enum: SCREENSHOT_PATHS },
-          size: { type: "integer", minimum: 1 },
-          sha256: { type: "string", pattern: "^[a-f0-9]{64}$" },
-          signature: { const: "89504e470d0a1a0a" },
-          mtimeMs: { type: "number", minimum: 1 },
-          device: { type: "integer", minimum: 1 },
-          inode: { type: "integer", minimum: 1 },
-          command: { type: "string", minLength: 1 },
-        },
-      },
-    },
-    consoleErrors: { type: "array", items: { type: "string" } },
-    consoleWarnings: { type: "array", items: { type: "string" } },
-    pageErrors: { type: "array", items: { type: "string" } },
-    themeRestored: { type: "boolean" },
-    bootstrapAdminRestored: { type: "boolean" },
-    legacyLocalStorageAbsent: { type: "boolean" },
-    failures: { type: "array", items: { type: "string" } },
-  },
-};
-
 function sameUniqueSet(actual, expected) {
   return (
     actual.length === expected.length &&
     new Set(actual).size === actual.length &&
     actual.every((value) => expected.includes(value))
-  );
-}
-
-function sameOrderedValues(actual, expected) {
-  return (
-    actual.length === expected.length && actual.every((value, index) => value === expected[index])
-  );
-}
-
-function scenarioMetadataMatchesExpectation(scenario) {
-  const expected = SMOKE_SCENARIO_EXPECTATIONS[scenario.kind];
-  return (
-    Boolean(expected) &&
-    scenario.theme === expected.theme &&
-    sameOrderedValues(scenario.viewports, expected.viewports) &&
-    sameOrderedValues(scenario.screenshotPaths, expected.screenshotPaths)
   );
 }
 
@@ -1260,81 +772,14 @@ const SAFE_REDACTED_VALUE_PATTERN =
   /^(?:\$[A-Z][A-Z0-9_]*|\[?(?:discarded|redacted)\]?|<redacted>|null|undefined|true|false)$/i;
 const SENSITIVE_ENV_KEY_PATTERN =
   /(?:^ADMIN_EMAIL$|PASSWORD|PASSWD|SECRET|(?:^|_)TOKEN(?:_|$)|(?:^|_)KEY(?:_|$)|API[_-]?KEY|PRIVATE[_-]?KEY|ACCESS[_-]?KEY|(?:ENC|HASH)[_-]?KEY|CONNECTION[_-]?STRING|DATABASE_URL|REDIS_URL|DSN)/i;
-const REQUIRED_SMOKE_CREDENTIAL_KEYS = Object.freeze(["ADMIN_EMAIL", "ADMIN_PASSWORD"]);
-const UUID_IDENTIFIER_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const OPAQUE_SECRET_IDENTIFIER_PATTERN = /^(?:[a-f0-9]{32,}|[a-zA-Z0-9_+=/]{48,})$/;
-const EMAIL_FILL_COMMAND =
-  /^playwright-cli -s=wf540smoke --raw fill 'input\[type="email"\]' "\$(?:ADMIN_EMAIL|WF540_USER_A_EMAIL|WF540_USER_B_EMAIL)" >\/dev\/null$/;
-const PASSWORD_FILL_COMMAND =
-  /^playwright-cli -s=wf540smoke --raw fill 'input\[type="password"\]' "\$ADMIN_PASSWORD" >\/dev\/null$/;
-const CREDENTIAL_REFERENCE_PATTERN =
-  /\$(?:ADMIN_EMAIL|ADMIN_PASSWORD|WF540_USER_A_EMAIL|WF540_USER_B_EMAIL)/;
-const ENV_REFERENCE_PATTERN = /\$[A-Z][A-Z0-9_]*/;
-const CREDENTIAL_SELECTOR_PATTERN = /input\[type=["']?(?:email|password)["']?\]/;
-const CONSOLE_CHANNEL_COMMANDS = Object.freeze({
-  "console-errors": SMOKE_SESSION_PREFIX + "run-code '(page) => page.__wf540ConsoleErrors ?? []'",
-  "console-warnings":
-    SMOKE_SESSION_PREFIX + "run-code '(page) => page.__wf540ConsoleWarnings ?? []'",
-  "page-errors": SMOKE_SESSION_PREFIX + "run-code '(page) => page.__wf540PageErrors ?? []'",
-});
-const LOGGER_INSTALL_COMMAND =
-  SMOKE_SESSION_PREFIX +
-  'run-code \'(page) => { page.__wf540ConsoleErrors = []; page.__wf540ConsoleWarnings = []; page.__wf540PageErrors = []; page.on("console", (message) => { if (message.type() === "error") page.__wf540ConsoleErrors.push(message.text()); if (message.type() === "warning") page.__wf540ConsoleWarnings.push(message.text()); }); page.on("pageerror", (error) => page.__wf540PageErrors.push(error.message)); return true; }\'';
-const FINAL_BROWSER_CLEANUP = Object.freeze([
-  Object.freeze({
-    operation: "cleanup-release-unroute",
-    command:
-      SMOKE_SESSION_PREFIX +
-      "run-code '(page) => (async () => { for (const release of Object.values(page.__wf540Releases ?? {})) release(); await page.unrouteAll({ behavior: \"wait\" }); return true; })()'",
-    assertionName: "cleanup-release-unroute",
-    sanitizedOutput: "true",
-  }),
-  Object.freeze({
-    operation: "cleanup-route-list",
-    command: SMOKE_SESSION_PREFIX + "route-list",
-    assertionName: "cleanup-route-list",
-    sanitizedOutput: "[]",
-  }),
-  Object.freeze({
-    operation: "cleanup-console-errors",
-    command: CONSOLE_CHANNEL_COMMANDS["console-errors"],
-    assertionName: "cleanup-console-errors",
-    sanitizedOutput: "[]",
-  }),
-  Object.freeze({
-    operation: "cleanup-console-warnings",
-    command: CONSOLE_CHANNEL_COMMANDS["console-warnings"],
-    assertionName: "cleanup-console-warnings",
-    sanitizedOutput: "[]",
-  }),
-  Object.freeze({
-    operation: "cleanup-page-errors",
-    command: CONSOLE_CHANNEL_COMMANDS["page-errors"],
-    assertionName: "cleanup-page-errors",
-    sanitizedOutput: "[]",
-  }),
-  Object.freeze({
-    operation: "cleanup-close",
-    command: SMOKE_SESSION_PREFIX + "close",
-    assertionName: "cleanup-close",
-    sanitizedOutput: "closed",
-  }),
-  Object.freeze({
-    operation: "cleanup-session-absence",
-    command: "playwright-cli --raw list",
-    assertionName: "cleanup-session-absence",
-    sanitizedOutput: "true",
-  }),
-]);
-
+const REQUIRED_REDACTION_CREDENTIAL_KEYS = Object.freeze(["ADMIN_EMAIL", "ADMIN_PASSWORD"]);
 function buildSensitiveValueCorpus() {
   const values = new Set();
   const addClassifiedValue = (value) => {
     if (typeof value === "string" && value.length > 0) values.add(value);
   };
 
-  for (const key of REQUIRED_SMOKE_CREDENTIAL_KEYS) {
+  for (const key of REQUIRED_REDACTION_CREDENTIAL_KEYS) {
     if (typeof REPO_ENV[key] !== "string" || REPO_ENV[key].length === 0) {
       throw new Error("TASK-540 required smoke credentials are unavailable");
     }
@@ -1406,511 +851,35 @@ function requireSensitiveSafeAgentResult(result, label) {
 }
 
 async function dispatchAgentSafely(prompt, options) {
+  await requireInitialGitIndexBaseline(options.label + " before agent dispatch");
+  let result = null;
+  let dispatchError = null;
   try {
-    return requireSensitiveSafeAgentResult(await agent(prompt, options), options.label);
+    result = requireSensitiveSafeAgentResult(await agent(prompt, options), options.label);
   } catch {
     // Agent/schema errors may contain rejected structured output. Discard the
     // original object/message before it can enter failures, logs, or a prompt.
-    throw new Error(options.label + ": agent dispatch failed; details discarded");
+    dispatchError = new Error(options.label + ": agent dispatch failed; details discarded");
   }
+  let indexError = null;
+  try {
+    await requireInitialGitIndexBaseline(options.label + " after agent dispatch");
+  } catch (error) {
+    indexError = error;
+  }
+  if (dispatchError && indexError) {
+    throw new AggregateError(
+      [dispatchError, indexError],
+      options.label + ": agent dispatch failed and changed the exact initial Git index baseline"
+    );
+  }
+  if (dispatchError) throw dispatchError;
+  if (indexError) throw indexError;
+  return result;
 }
-
-function isSafeEvidenceIdentifier(value) {
-  if (typeof value !== "string" || value.length === 0 || value.length > 240) return false;
-  if (hasSensitiveEvidence(value) || JWT_VALUE_PATTERN.test(value)) return false;
-  if (UUID_IDENTIFIER_PATTERN.test(value)) return true;
-  return !OPAQUE_SECRET_IDENTIFIER_PATTERN.test(value);
-}
-
-function exactReceipts(receipts, operation, predicate = () => true) {
-  return receipts.filter((receipt) => receipt.operation === operation && predicate(receipt));
-}
-
-function runtimeSubjectMatches(receipt, kind, identifier) {
-  return receipt.subjectKind === kind && receipt.subjectIdentifier === identifier;
-}
-
-const MAX_HOST_OUTPUT_BYTES = 64 * 1024;
-const HOST_START_TIMEOUT_MS = 120_000;
-const HOST_STOP_TIMEOUT_MS = 15_000;
-const HOST_PROCESS_BY_PORT = Object.freeze({
-  3000: "backend",
-  5173: "admin-vite",
-  5174: "site-vite",
-});
 
 function delay(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
-function makeRuntimeReceipt({
-  operation,
-  operationDescriptor,
-  evidence,
-  subjectKind,
-  subjectIdentifier,
-  sanitizedOutput,
-}) {
-  const evidenceBytes = Buffer.isBuffer(evidence) ? evidence : Buffer.from(String(evidence));
-  return {
-    sequence: 1,
-    operation,
-    operationDescriptor,
-    status: 0,
-    evidenceSha256: createHash("sha256").update(evidenceBytes).digest("hex"),
-    subjectKind,
-    subjectIdentifier,
-    sanitizedOutput,
-  };
-}
-
-function retainBoundedOutput(stream) {
-  let retained = Buffer.alloc(0);
-  stream?.on("data", (chunk) => {
-    const next = Buffer.concat([retained, Buffer.from(chunk)]);
-    retained =
-      next.length <= MAX_HOST_OUTPUT_BYTES
-        ? next
-        : next.subarray(next.length - MAX_HOST_OUTPUT_BYTES);
-  });
-  return () => retained;
-}
-
-async function listenerPids(port) {
-  try {
-    const { stdout } = await execFileAsync("lsof", ["-nP", "-iTCP:" + port, "-sTCP:LISTEN", "-t"], {
-      cwd: ROOT,
-      encoding: "utf8",
-      timeout: 5_000,
-    });
-    return [
-      ...new Set(
-        stdout
-          .split(/\s+/)
-          .filter(Boolean)
-          .map(Number)
-          .filter((pid) => Number.isSafeInteger(pid) && pid > 0)
-      ),
-    ];
-  } catch (error) {
-    if (error && (error.code === 1 || error.code === "1")) return [];
-    throw error;
-  }
-}
-
-async function processParentPid(pid) {
-  const { stdout } = await execFileAsync("ps", ["-o", "ppid=", "-p", String(pid)], {
-    cwd: ROOT,
-    encoding: "utf8",
-    timeout: 5_000,
-  });
-  const ppid = Number(stdout.trim());
-  if (!Number.isSafeInteger(ppid) || ppid <= 0) {
-    throw new Error("TASK-540 could not resolve PPID for " + pid);
-  }
-  return ppid;
-}
-
-async function processAncestry(helperPid, pid) {
-  const reversed = [pid];
-  let current = pid;
-  for (let depth = 0; current !== helperPid && depth < 32; depth += 1) {
-    current = await processParentPid(current);
-    reversed.push(current);
-  }
-  const ancestry = reversed.reverse();
-  if (ancestry[0] !== helperPid || ancestry.at(-1) !== pid) {
-    throw new Error("TASK-540 listener is not owned by helper PID " + helperPid);
-  }
-  return ancestry;
-}
-
-async function processGroupPids(groupPid) {
-  const { stdout, stderr } = await execFileAsync("ps", ["-eo", "pid=,pgid="], {
-    cwd: ROOT,
-    encoding: "utf8",
-    timeout: 5_000,
-    maxBuffer: 1024 * 1024,
-  });
-  const pids = stdout
-    .split("\n")
-    .map((line) => line.trim().split(/\s+/).map(Number))
-    .filter(([pid, pgid]) => Number.isSafeInteger(pid) && pid > 0 && pgid === groupPid)
-    .map(([pid]) => pid);
-  return { pids: [...new Set(pids)].sort((left, right) => left - right), stdout, stderr };
-}
-
-async function waitForExactHealth(commandValue, url, child) {
-  const deadline = Date.now() + HOST_START_TIMEOUT_MS;
-  let lastError = null;
-  while (Date.now() < deadline) {
-    if (child.exitCode !== null || child.signalCode !== null) {
-      throw new Error("TASK-540 helper exited before health: " + commandValue);
-    }
-    try {
-      const result = await execFileAsync("curl", ["--fail", "--silent", "--show-error", url], {
-        cwd: ROOT,
-        encoding: "utf8",
-        timeout: 5_000,
-        maxBuffer: 1024 * 1024,
-      });
-      return {
-        status: 200,
-        evidence: Buffer.concat([Buffer.from(result.stdout), Buffer.from(result.stderr)]),
-      };
-    } catch (error) {
-      lastError = error;
-      await delay(250);
-    }
-  }
-  throw new AggregateError(
-    lastError ? [lastError] : [],
-    "TASK-540 helper health timed out: " + commandValue
-  );
-}
-
-async function terminateAndProveOwnedHostAbsence(child, helperPid) {
-  if (helperPid) {
-    signalOwnedProcessGroup(helperPid, "SIGTERM");
-    if (!(await waitForChildExit(child, 5_000))) {
-      signalOwnedProcessGroup(helperPid, "SIGKILL");
-      await waitForChildExit(child, 5_000);
-    }
-  }
-
-  const deadline = Date.now() + HOST_STOP_TIMEOUT_MS;
-  let groupPids = helperPid ? [helperPid] : [];
-  let portsAbsent = [];
-  let observation = null;
-  while (Date.now() < deadline) {
-    const group = helperPid
-      ? await processGroupPids(helperPid)
-      : { pids: [], stdout: "", stderr: "" };
-    groupPids = group.pids;
-    const listeners = [];
-    portsAbsent = [];
-    for (const port of HELPER_PORTS) {
-      const pids = await listenerPids(port);
-      listeners.push({ port, pids });
-      if (pids.length === 0) portsAbsent.push(port);
-    }
-    observation = {
-      helperPid,
-      childExited: child.exitCode !== null || child.signalCode !== null,
-      groupPids,
-      listeners,
-    };
-    if (
-      groupPids.length === 0 &&
-      portsAbsent.length === HELPER_PORTS.length &&
-      (!helperPid || !processExists(helperPid))
-    ) {
-      return {
-        groupPids,
-        portsAbsent,
-        evidence: Buffer.from(JSON.stringify(observation)),
-      };
-    }
-    if (helperPid && groupPids.length > 0) signalOwnedProcessGroup(helperPid, "SIGKILL");
-    await delay(100);
-  }
-  throw new Error(
-    "TASK-540 owned helper startup/stop absence proof failed: " + JSON.stringify(observation)
-  );
-}
-
-async function waitForChildExit(child, timeoutMs) {
-  if (child.exitCode !== null || child.signalCode !== null) return true;
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => {
-      child.removeListener("exit", onExit);
-      resolve(false);
-    }, timeoutMs);
-    const onExit = () => {
-      clearTimeout(timer);
-      resolve(true);
-    };
-    child.once("exit", onExit);
-  });
-}
-
-function signalOwnedProcessGroup(pid, signal) {
-  try {
-    process.kill(-pid, signal);
-    return true;
-  } catch (error) {
-    if (error && error.code === "ESRCH") return false;
-    throw error;
-  }
-}
-
-function processExists(pid) {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    if (error && error.code === "ESRCH") return false;
-    throw error;
-  }
-}
-
-async function startOwnedSmokeHost() {
-  const occupied = [];
-  for (const port of HELPER_PORTS) {
-    if ((await listenerPids(port)).length > 0) occupied.push(port);
-  }
-  if (occupied.length > 0) {
-    throw new Error("TASK-540 refuses to replace listeners on helper ports: " + occupied.join(","));
-  }
-
-  const startedAtEpochMs = Date.now();
-  const child = spawn("coderso-dev-core-host", [ROOT], {
-    cwd: ROOT,
-    detached: true,
-    env: process.env,
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  const readStdout = retainBoundedOutput(child.stdout);
-  const readStderr = retainBoundedOutput(child.stderr);
-  try {
-    await new Promise((resolve, reject) => {
-      child.once("spawn", resolve);
-      child.once("error", reject);
-    });
-    if (!child.pid) throw new Error("TASK-540 helper spawn returned no PID");
-    const launchEvidence = Buffer.from(
-      JSON.stringify({ event: "spawn", pid: child.pid, command: SMOKE_HELPER_COMMAND })
-    );
-    const [adminHealth, frontHealth] = await Promise.all([
-      waitForExactHealth(ADMIN_HEALTH_COMMAND, ADMIN_HEALTH_URL, child),
-      waitForExactHealth(FRONT_HEALTH_COMMAND, FRONT_HEALTH_URL, child),
-    ]);
-    const adminHealthStatus = adminHealth.status;
-    const frontHealthStatus = frontHealth.status;
-
-    const childProcesses = [];
-    const lineageReceipts = [];
-    for (const port of HELPER_PORTS) {
-      const pids = await listenerPids(port);
-      if (pids.length !== 1) {
-        throw new Error("TASK-540 expected one owned listener on port " + port);
-      }
-      const pid = pids[0];
-      const ancestry = await processAncestry(child.pid, pid);
-      const kind = HOST_PROCESS_BY_PORT[port];
-      const ppid = ancestry.at(-2);
-      childProcesses.push({ kind, pid, ppid, ancestry, absent: false });
-      lineageReceipts.push(
-        makeRuntimeReceipt({
-          operation: "pid-lineage",
-          operationDescriptor:
-            "node-observation:listenerPids(" +
-            port +
-            ")+processAncestry(" +
-            child.pid +
-            "," +
-            pid +
-            ")",
-          evidence: Buffer.from(JSON.stringify({ kind, pid, ppid, ancestry, port })),
-          subjectKind: "helper",
-          subjectIdentifier: kind + ":" + pid,
-          sanitizedOutput: JSON.stringify({ kind, pid, ppid, ancestry, port }),
-        })
-      );
-    }
-    const helperPid = child.pid;
-    return {
-      child,
-      helperPid,
-      readStdout,
-      readStderr,
-      helper: {
-        launchCommand: SMOKE_HELPER_COMMAND,
-        handle: "node-child-process:" + helperPid,
-        helperPid,
-        startedAtEpochMs,
-        adminHealthUrl: ADMIN_HEALTH_URL,
-        adminHealthStatus,
-        frontHealthUrl: FRONT_HEALTH_URL,
-        frontHealthStatus,
-        stopped: false,
-        processesAbsent: false,
-        childProcesses,
-        portsAbsent: [],
-      },
-      startReceipts: [
-        makeRuntimeReceipt({
-          operation: "helper-launch",
-          operationDescriptor: "spawn:" + SMOKE_HELPER_COMMAND,
-          evidence: launchEvidence,
-          subjectKind: "helper",
-          subjectIdentifier: String(helperPid),
-          sanitizedOutput: "started helper pid " + helperPid,
-        }),
-        makeRuntimeReceipt({
-          operation: "admin-health",
-          operationDescriptor: ADMIN_HEALTH_OPERATION_DESCRIPTOR,
-          evidence: adminHealth.evidence,
-          subjectKind: "helper",
-          subjectIdentifier: String(helperPid),
-          sanitizedOutput: "HTTP 200",
-        }),
-        makeRuntimeReceipt({
-          operation: "front-health",
-          operationDescriptor: FRONT_HEALTH_OPERATION_DESCRIPTOR,
-          evidence: frontHealth.evidence,
-          subjectKind: "helper",
-          subjectIdentifier: String(helperPid),
-          sanitizedOutput: "HTTP 200",
-        }),
-        ...lineageReceipts,
-      ],
-    };
-  } catch (error) {
-    let absenceProof = null;
-    let cleanupError = null;
-    try {
-      absenceProof = await terminateAndProveOwnedHostAbsence(child, child.pid ?? null);
-    } catch (caught) {
-      cleanupError = caught;
-    }
-    const aggregate = new AggregateError(
-      [
-        error,
-        ...(cleanupError ? [cleanupError] : []),
-        new Error(
-          "bounded helper output bytes stdout=" +
-            readStdout().length +
-            " stderr=" +
-            readStderr().length
-        ),
-      ],
-      "TASK-540 owned helper failed to start"
-    );
-    aggregate.hostAbsenceProven =
-      absenceProof !== null &&
-      absenceProof.groupPids.length === 0 &&
-      absenceProof.portsAbsent.length === HELPER_PORTS.length;
-    throw aggregate;
-  }
-}
-
-async function stopOwnedSmokeHost(host, prefix) {
-  const helperPid = host.helperPid;
-  const absenceProof = await terminateAndProveOwnedHostAbsence(host.child, helperPid);
-  const portsAbsent = absenceProof.portsAbsent;
-  const processObservations = host.helper.childProcesses.map(({ kind, pid }) => ({
-    kind,
-    pid,
-    exists: processExists(pid),
-  }));
-  const portObservations = [];
-  for (const port of HELPER_PORTS) {
-    portObservations.push({ port, pids: await listenerPids(port) });
-  }
-  const processesAbsent =
-    !processExists(helperPid) && processObservations.every(({ exists }) => !exists);
-  if (
-    !processesAbsent ||
-    absenceProof.groupPids.length !== 0 ||
-    portObservations.some(({ pids }) => pids.length > 0)
-  ) {
-    throw new Error("TASK-540 owned helper process/group/port absence proof failed");
-  }
-
-  const stoppedChildren = host.helper.childProcesses.map((item) => ({
-    ...item,
-    absent: true,
-  }));
-  const boundedOutput = {
-    stdoutBytes: host.readStdout().length,
-    stderrBytes: host.readStderr().length,
-  };
-  const stopReceipts = [
-    makeRuntimeReceipt({
-      operation: "helper-stop",
-      operationDescriptor: "node:terminateAndProveOwnedHostAbsence(" + helperPid + ")",
-      evidence: absenceProof.evidence,
-      subjectKind: "helper",
-      subjectIdentifier: String(helperPid),
-      sanitizedOutput: "stopped helper pid " + helperPid,
-    }),
-    ...stoppedChildren.map((item) =>
-      makeRuntimeReceipt({
-        operation: "process-absence",
-        operationDescriptor: "node:processExists(" + item.pid + ")",
-        evidence: Buffer.from(
-          JSON.stringify(processObservations.find(({ pid }) => pid === item.pid))
-        ),
-        subjectKind: "helper",
-        subjectIdentifier: item.kind + ":" + item.pid,
-        sanitizedOutput: "absent pid " + item.pid,
-      })
-    ),
-    ...HELPER_PORTS.map((port) =>
-      makeRuntimeReceipt({
-        operation: "port-absence",
-        operationDescriptor: "node:listenerPids(" + port + ")",
-        evidence: Buffer.from(JSON.stringify(portObservations.find((item) => item.port === port))),
-        subjectKind: "helper",
-        subjectIdentifier: String(port),
-        sanitizedOutput: "absent listener " + port,
-      })
-    ),
-    makeRuntimeReceipt({
-      operation: OUTER_HOST_RUNTIME_OPERATIONS[0],
-      operationDescriptor: "node:retained-child-handle-and-process-group-stop(" + helperPid + ")",
-      evidence: absenceProof.evidence,
-      subjectKind: null,
-      subjectIdentifier: prefix,
-      sanitizedOutput:
-        "owned helper group stopped and awaited; bounded stdoutBytes=" +
-        boundedOutput.stdoutBytes +
-        " stderrBytes=" +
-        boundedOutput.stderrBytes +
-        " limit=" +
-        MAX_HOST_OUTPUT_BYTES,
-    }),
-    makeRuntimeReceipt({
-      operation: OUTER_HOST_RUNTIME_OPERATIONS[1],
-      operationDescriptor: "node:listenerPids(3000,5173,5174)+processGroupPids",
-      evidence: Buffer.from(
-        JSON.stringify({ groupPids: absenceProof.groupPids, portObservations })
-      ),
-      subjectKind: null,
-      subjectIdentifier: prefix,
-      sanitizedOutput: "owned helper processes and ports absent",
-    }),
-  ];
-  return {
-    helper: {
-      ...host.helper,
-      stopped: true,
-      processesAbsent: true,
-      childProcesses: stoppedChildren,
-      portsAbsent,
-    },
-    stopReceipts,
-    boundedOutput,
-  };
-}
-
-function fixtureItem(smoke, kind) {
-  return smoke.fixtures.items.find((item) => item.kind === kind);
-}
-
-function expectedRoutePattern(smoke, key) {
-  if (key === "media-prior-resolution") return "**/admin/api/media";
-  if (key === "preference-a-read-refresh" || key === "preference-a-write-exit") {
-    return "**/admin/api/user-settings/customScreens.entry.preferences";
-  }
-  if (key === "entry-save-failure") {
-    const type = fixtureItem(smoke, "content-type-editable");
-    const entry = fixtureItem(smoke, "editable-entry");
-    return `**/admin/api/content/${type?.slug}/entries/${entry?.id}`;
-  }
-  const type = fixtureItem(smoke, "content-type-related-a");
-  return `**/admin/api/content/${type?.slug}/entries`;
 }
 
 function requireAllResults(results, expectedIds, label) {
@@ -1930,13 +899,380 @@ async function git(args) {
   const result = await execFileAsync("git", args, {
     cwd: ROOT,
     encoding: "utf8",
+    env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
     maxBuffer: 32 * 1024 * 1024,
   });
   return result.stdout;
 }
 
+async function gitBytes(args) {
+  const result = await execFileAsync("git", args, {
+    cwd: ROOT,
+    encoding: "buffer",
+    env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  return Buffer.isBuffer(result.stdout) ? result.stdout : Buffer.from(result.stdout);
+}
+
 function splitNul(value) {
   return value.split("\0").filter(Boolean);
+}
+
+const GIT_INDEX_AUTHORITY_KEYS = Object.freeze(["identity", "indexFile", "stageProjection"]);
+const GIT_INDEX_IDENTITY_KEYS = Object.freeze([
+  "resolvedPathByteLength",
+  "resolvedPathSha256",
+  "device",
+  "inode",
+  "mode",
+  "linkCount",
+  "mtimeNs",
+  "ctimeNs",
+]);
+const GIT_INDEX_BYTE_PROJECTION_KEYS = Object.freeze(["byteLength", "sha256"]);
+
+function hasExactOwnStringKeys(value, expected) {
+  if (!value || typeof value !== "object") return false;
+  const keys = Reflect.ownKeys(value);
+  return (
+    keys.length === expected.length &&
+    keys.every((key) => typeof key === "string" && expected.includes(key))
+  );
+}
+
+function freezeGitIndexByteProjection(value, label) {
+  if (
+    !hasExactOwnStringKeys(value, GIT_INDEX_BYTE_PROJECTION_KEYS) ||
+    !Number.isSafeInteger(value.byteLength) ||
+    value.byteLength < 0 ||
+    typeof value.sha256 !== "string" ||
+    !/^[0-9a-f]{64}$/.test(value.sha256)
+  ) {
+    throw new Error(label + ": malformed Git index byte projection");
+  }
+  return Object.freeze({ byteLength: value.byteLength, sha256: value.sha256 });
+}
+
+function freezeGitIndexAuthority(value, label) {
+  if (
+    !hasExactOwnStringKeys(value, GIT_INDEX_AUTHORITY_KEYS) ||
+    !hasExactOwnStringKeys(value.identity, GIT_INDEX_IDENTITY_KEYS) ||
+    !Number.isSafeInteger(value.identity.resolvedPathByteLength) ||
+    value.identity.resolvedPathByteLength <= 0 ||
+    typeof value.identity.resolvedPathSha256 !== "string" ||
+    !/^[0-9a-f]{64}$/.test(value.identity.resolvedPathSha256) ||
+    !["device", "inode", "mode", "linkCount", "mtimeNs", "ctimeNs"].every(
+      (key) => typeof value.identity[key] === "string" && /^\d+$/.test(value.identity[key])
+    )
+  ) {
+    throw new Error(label + ": malformed resolved Git index identity");
+  }
+  return Object.freeze({
+    identity: Object.freeze({
+      resolvedPathByteLength: value.identity.resolvedPathByteLength,
+      resolvedPathSha256: value.identity.resolvedPathSha256,
+      device: value.identity.device,
+      inode: value.identity.inode,
+      mode: value.identity.mode,
+      linkCount: value.identity.linkCount,
+      mtimeNs: value.identity.mtimeNs,
+      ctimeNs: value.identity.ctimeNs,
+    }),
+    indexFile: freezeGitIndexByteProjection(value.indexFile, label + " index file"),
+    stageProjection: freezeGitIndexByteProjection(
+      value.stageProjection,
+      label + " stage projection"
+    ),
+  });
+}
+
+function sameGitIndexAuthority(left, right) {
+  return (
+    left.identity.resolvedPathByteLength === right.identity.resolvedPathByteLength &&
+    left.identity.resolvedPathSha256 === right.identity.resolvedPathSha256 &&
+    left.identity.device === right.identity.device &&
+    left.identity.inode === right.identity.inode &&
+    left.identity.mode === right.identity.mode &&
+    left.identity.linkCount === right.identity.linkCount &&
+    left.identity.mtimeNs === right.identity.mtimeNs &&
+    left.identity.ctimeNs === right.identity.ctimeNs &&
+    left.indexFile.byteLength === right.indexFile.byteLength &&
+    left.indexFile.sha256 === right.indexFile.sha256 &&
+    left.stageProjection.byteLength === right.stageProjection.byteLength &&
+    left.stageProjection.sha256 === right.stageProjection.sha256
+  );
+}
+
+function createGitIndexBaselineController() {
+  let initial = null;
+  return Object.freeze({
+    captureInitial(authority, label) {
+      if (initial !== null) {
+        throw new Error(label + ": refusing mid-run Git index baseline adoption");
+      }
+      initial = freezeGitIndexAuthority(authority, label);
+      return initial;
+    },
+    requireUnchanged(authority, label) {
+      if (initial === null) {
+        throw new Error(label + ": initial Git index baseline is not captured");
+      }
+      const current = freezeGitIndexAuthority(authority, label);
+      if (!sameGitIndexAuthority(initial, current)) {
+        throw new Error(label + ": exact initial Git index baseline changed");
+      }
+      return current;
+    },
+  });
+}
+
+function parseResolvedGitIndexPath(output, label) {
+  if (!Buffer.isBuffer(output) || output.length < 2 || output.at(-1) !== 0x0a) {
+    throw new Error(label + ": Git index path output is not one complete line");
+  }
+  let end = output.length - 1;
+  if (end > 0 && output[end - 1] === 0x0d) end -= 1;
+  const path = output.subarray(0, end);
+  if (path.length === 0 || path.includes(0x00) || path.includes(0x0a) || path.includes(0x0d)) {
+    throw new Error(label + ": resolved Git index path is ambiguous");
+  }
+  return Buffer.from(path);
+}
+
+function gitIndexStatIdentity(info, resolvedPath) {
+  return Object.freeze({
+    resolvedPathByteLength: resolvedPath.length,
+    resolvedPathSha256: createHash("sha256").update(resolvedPath).digest("hex"),
+    device: info.dev.toString(),
+    inode: info.ino.toString(),
+    mode: info.mode.toString(),
+    linkCount: info.nlink.toString(),
+    mtimeNs: info.mtimeNs.toString(),
+    ctimeNs: info.ctimeNs.toString(),
+  });
+}
+
+function sameGitIndexStat(left, right) {
+  return (
+    left.dev === right.dev &&
+    left.ino === right.ino &&
+    left.mode === right.mode &&
+    left.nlink === right.nlink &&
+    left.size === right.size &&
+    left.mtimeNs === right.mtimeNs &&
+    left.ctimeNs === right.ctimeNs
+  );
+}
+
+async function readGitIndexFileAuthority(label) {
+  const unresolvedPath = parseResolvedGitIndexPath(
+    await gitBytes(["rev-parse", "--path-format=absolute", "--git-path", "index"]),
+    label
+  );
+  const resolvedPath = await realpath(unresolvedPath, { encoding: "buffer" });
+  if (!Buffer.isBuffer(resolvedPath) || resolvedPath.length === 0) {
+    throw new Error(label + ": Git index path did not resolve as bytes");
+  }
+  const before = await lstat(resolvedPath, { bigint: true });
+  if (!before.isFile() || before.isSymbolicLink()) {
+    throw new Error(label + ": resolved Git index is not a regular file");
+  }
+  const bytes = await readFile(resolvedPath);
+  const after = await lstat(resolvedPath, { bigint: true });
+  if (
+    !after.isFile() ||
+    after.isSymbolicLink() ||
+    !sameGitIndexStat(before, after) ||
+    BigInt(bytes.length) !== after.size
+  ) {
+    throw new Error(label + ": resolved Git index changed while its bytes were read");
+  }
+  return freezeGitIndexAuthority(
+    {
+      identity: gitIndexStatIdentity(after, resolvedPath),
+      indexFile: {
+        byteLength: bytes.length,
+        sha256: createHash("sha256").update(bytes).digest("hex"),
+      },
+      // Filled only by captureGitIndexAuthority after the binary stage projection
+      // is observed between two byte-identical index-file reads.
+      stageProjection: {
+        byteLength: 0,
+        sha256: createHash("sha256").update(Buffer.alloc(0)).digest("hex"),
+      },
+    },
+    label
+  );
+}
+
+async function captureGitIndexAuthority(label) {
+  const before = await readGitIndexFileAuthority(label + " before projection");
+  const stageProjection = await gitBytes(["ls-files", "--stage", "-z"]);
+  const after = await readGitIndexFileAuthority(label + " after projection");
+  if (
+    !sameGitIndexAuthority(
+      before,
+      Object.freeze({ ...after, stageProjection: before.stageProjection })
+    )
+  ) {
+    throw new Error(label + ": Git index changed around its raw stage projection");
+  }
+  return freezeGitIndexAuthority(
+    {
+      identity: after.identity,
+      indexFile: after.indexFile,
+      stageProjection: {
+        byteLength: stageProjection.length,
+        sha256: createHash("sha256").update(stageProjection).digest("hex"),
+      },
+    },
+    label
+  );
+}
+
+const GIT_INDEX_BASELINE = createGitIndexBaselineController();
+
+async function captureInitialGitIndexBaseline(label) {
+  return GIT_INDEX_BASELINE.captureInitial(await captureGitIndexAuthority(label), label);
+}
+
+async function requireInitialGitIndexBaseline(label) {
+  return GIT_INDEX_BASELINE.requireUnchanged(await captureGitIndexAuthority(label), label);
+}
+
+async function assertTask540GitIndexBaselineContract() {
+  const emptySha256 = createHash("sha256").update(Buffer.alloc(0)).digest("hex");
+  const base = Object.freeze({
+    identity: Object.freeze({
+      resolvedPathByteLength: 38,
+      resolvedPathSha256: "1".repeat(64),
+      device: "43",
+      inode: "1001",
+      mode: "33188",
+      linkCount: "1",
+      mtimeNs: "1000000000",
+      ctimeNs: "1000000001",
+    }),
+    indexFile: Object.freeze({ byteLength: 256, sha256: "2".repeat(64) }),
+    stageProjection: Object.freeze({ byteLength: 64, sha256: "3".repeat(64) }),
+  });
+  const withChanges = ({ identity, indexFile, stageProjection }) => ({
+    identity: { ...base.identity, ...identity },
+    indexFile: { ...base.indexFile, ...indexFile },
+    stageProjection: { ...base.stageProjection, ...stageProjection },
+  });
+  const rejects = (operation) => {
+    try {
+      operation();
+      return false;
+    } catch {
+      return true;
+    }
+  };
+  const cases = [
+    {
+      label: "empty stage projection baseline is accepted unchanged",
+      test() {
+        const controller = createGitIndexBaselineController();
+        const empty = withChanges({
+          stageProjection: { byteLength: 0, sha256: emptySha256 },
+        });
+        controller.captureInitial(empty, "empty initial");
+        controller.requireUnchanged(empty, "empty unchanged");
+        return true;
+      },
+    },
+    {
+      label: "non-empty stage projection baseline is accepted unchanged",
+      test() {
+        const controller = createGitIndexBaselineController();
+        controller.captureInitial(base, "non-empty initial");
+        controller.requireUnchanged(withChanges({}), "non-empty unchanged");
+        return true;
+      },
+    },
+    {
+      label: "index byte hash mutation is rejected",
+      test() {
+        const controller = createGitIndexBaselineController();
+        controller.captureInitial(base, "byte hash initial");
+        return rejects(() =>
+          controller.requireUnchanged(
+            withChanges({ indexFile: { sha256: "4".repeat(64) } }),
+            "byte hash mutation"
+          )
+        );
+      },
+    },
+    {
+      label: "resolved index file identity mutation is rejected",
+      test() {
+        const controller = createGitIndexBaselineController();
+        controller.captureInitial(base, "identity initial");
+        return rejects(() =>
+          controller.requireUnchanged(
+            withChanges({ identity: { inode: "1002" } }),
+            "identity mutation"
+          )
+        );
+      },
+    },
+    {
+      label: "raw stage projection hash mutation is rejected",
+      test() {
+        const controller = createGitIndexBaselineController();
+        controller.captureInitial(base, "stage hash initial");
+        return rejects(() =>
+          controller.requireUnchanged(
+            withChanges({ stageProjection: { sha256: "5".repeat(64) } }),
+            "stage hash mutation"
+          )
+        );
+      },
+    },
+    {
+      label: "raw stage projection byte-count mutation is rejected",
+      test() {
+        const controller = createGitIndexBaselineController();
+        controller.captureInitial(base, "stage count initial");
+        return rejects(() =>
+          controller.requireUnchanged(
+            withChanges({ stageProjection: { byteLength: 65 } }),
+            "stage count mutation"
+          )
+        );
+      },
+    },
+    {
+      label: "mid-run recapture is rejected without adopting the candidate",
+      test() {
+        const controller = createGitIndexBaselineController();
+        controller.captureInitial(base, "single-assignment initial");
+        const candidate = withChanges({ identity: { inode: "1003" } });
+        const recaptureRejected = rejects(() =>
+          controller.captureInitial(candidate, "mid-run recapture")
+        );
+        controller.requireUnchanged(withChanges({}), "original remains authoritative");
+        return recaptureRejected;
+      },
+    },
+  ];
+  for (const testCase of cases) {
+    if (testCase.test() !== true) {
+      throw new Error("TASK-540 Git index baseline self-test failed: " + testCase.label);
+    }
+  }
+  const liveController = createGitIndexBaselineController();
+  liveController.captureInitial(
+    await captureGitIndexAuthority("TASK-540 live Git index self-test initial"),
+    "TASK-540 live Git index self-test initial"
+  );
+  liveController.requireUnchanged(
+    await captureGitIndexAuthority("TASK-540 live Git index self-test unchanged"),
+    "TASK-540 live Git index self-test unchanged"
+  );
+  return cases.length + 1;
 }
 
 async function hashPath(relativePath) {
@@ -1970,21 +1306,39 @@ async function hashSensitiveEnvProjection() {
   return Object.freeze(hashes);
 }
 
-async function worktreeSnapshot() {
-  const [head, branch, tracked, untracked, staged] = await Promise.all([
+async function worktreeSnapshot(
+  label = "TASK-540 worktree snapshot",
+  additionalPaths = Object.freeze([])
+) {
+  if (
+    !Array.isArray(additionalPaths) ||
+    additionalPaths.some(
+      (relativePath) =>
+        typeof relativePath !== "string" ||
+        relativePath.length === 0 ||
+        relativePath.startsWith("/") ||
+        relativePath.includes("..") ||
+        relativePath.includes("\0")
+    )
+  ) {
+    throw new Error(label + ": repository snapshot additional paths are invalid");
+  }
+  const [head, branch, tracked, untracked, indexAuthority] = await Promise.all([
     git(["rev-parse", "HEAD"]),
     git(["branch", "--show-current"]),
     git(["diff", "--name-only", "-z", "HEAD"]),
     git(["ls-files", "--others", "--exclude-standard", "-z"]),
-    git(["diff", "--cached", "--name-only", "-z"]),
+    requireInitialGitIndexBaseline(label + " index authority"),
   ]);
-  const paths = [...new Set([...splitNul(tracked), ...splitNul(untracked)])].sort();
+  const paths = [
+    ...new Set([...splitNul(tracked), ...splitNul(untracked), ...additionalPaths]),
+  ].sort();
   const hashes = {};
   for (const path of paths) hashes[path] = await hashPath(path);
   return {
     head: head.trim(),
     branch: branch.trim(),
-    staged: splitNul(staged).sort(),
+    indexAuthority,
     paths,
     hashes,
   };
@@ -1995,6 +1349,302 @@ function snapshotDelta(before, after) {
   return paths.filter(
     (path) => (before.hashes[path] ?? "<clean>") !== (after.hashes[path] ?? "<clean>")
   );
+}
+
+function canonicalRepositoryFingerprint(snapshot) {
+  const projection = JSON.stringify({
+    head: snapshot.head,
+    branch: snapshot.branch,
+    indexAuthority: snapshot.indexAuthority,
+    paths: snapshot.paths,
+    hashes: snapshot.hashes,
+  });
+  return Object.freeze({
+    head: snapshot.head,
+    branch: snapshot.branch,
+    worktreeSha256: createHash("sha256").update(projection).digest("hex"),
+  });
+}
+
+function sameRepositoryFingerprint(left, right) {
+  return (
+    left.head === right.head &&
+    left.branch === right.branch &&
+    left.worktreeSha256 === right.worktreeSha256
+  );
+}
+
+function createBoundedCommandStream() {
+  const hash = createHash("sha256");
+  const chunks = [];
+  let byteLength = 0;
+  let retainedBytes = 0;
+  let truncated = false;
+  return Object.freeze({
+    push(chunk) {
+      const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      byteLength += bytes.length;
+      hash.update(bytes);
+      const remaining = MAX_VALIDATION_STREAM_BYTES - retainedBytes;
+      if (remaining > 0) {
+        const retained = bytes.subarray(0, remaining);
+        chunks.push(retained);
+        retainedBytes += retained.length;
+      }
+      if (bytes.length > Math.max(remaining, 0)) truncated = true;
+      return truncated;
+    },
+    finish() {
+      return Object.freeze({
+        bytes: byteLength,
+        sha256: hash.digest("hex"),
+        truncated,
+        retained: Buffer.concat(chunks, retainedBytes),
+      });
+    },
+  });
+}
+
+function boundedValidationExcerpt(bytes) {
+  const excerpt = bytes.subarray(0, MAX_VALIDATION_EXCERPT_BYTES).toString("utf8");
+  if (hasSensitiveEvidence(excerpt)) return "[redacted-sensitive-output]";
+  return excerpt;
+}
+
+async function terminateLocalCommand(child) {
+  if (!child.pid) return;
+  try {
+    process.kill(-child.pid, "SIGTERM");
+  } catch (error) {
+    if (error?.code !== "ESRCH") throw error;
+  }
+  await delay(250);
+  try {
+    process.kill(-child.pid, "SIGKILL");
+  } catch (error) {
+    if (error?.code !== "ESRCH") throw error;
+  }
+}
+
+async function runLocalValidationCommand(spec, label) {
+  const before = await worktreeSnapshot(label + " before local command");
+  const startFingerprint = canonicalRepositoryFingerprint(before);
+  const stdout = createBoundedCommandStream();
+  const stderr = createBoundedCommandStream();
+  const startedAtEpochMs = Date.now();
+  let timedOut = false;
+  let outputLimitExceeded = false;
+  let spawnError = null;
+  const child = spawn("/bin/bash", ["--noprofile", "--norc", "-c", spec.command], {
+    cwd: ROOT,
+    env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
+    detached: true,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const captureChunk = (stream, chunk) => {
+    if (stream.push(chunk) && !outputLimitExceeded) {
+      outputLimitExceeded = true;
+      void terminateLocalCommand(child).catch(() => {});
+    }
+  };
+  child.stdout.on("data", (chunk) => captureChunk(stdout, chunk));
+  child.stderr.on("data", (chunk) => captureChunk(stderr, chunk));
+  child.once("error", (error) => {
+    spawnError = error;
+  });
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    void terminateLocalCommand(child).catch(() => {});
+  }, VALIDATION_COMMAND_TIMEOUT_MS);
+  const completion = await new Promise((resolve) => {
+    child.once("close", (code, signal) => resolve({ code, signal }));
+  });
+  clearTimeout(timeout);
+  const after = await worktreeSnapshot(label + " after local command");
+  const endFingerprint = canonicalRepositoryFingerprint(after);
+  const stdoutResult = stdout.finish();
+  const stderrResult = stderr.finish();
+  const status = timedOut
+    ? 124
+    : outputLimitExceeded
+      ? 125
+      : spawnError
+        ? 127
+        : (completion.code ?? 128);
+  const receipt = {
+    runnerVersion: "orchestrator-local-v1",
+    id: spec.id,
+    command: spec.command,
+    status,
+    signal: completion.signal ?? null,
+    timedOut,
+    outputLimitExceeded,
+    startedAtEpochMs,
+    endedAtEpochMs: Date.now(),
+    stdoutBytes: stdoutResult.bytes,
+    stderrBytes: stderrResult.bytes,
+    stdoutSha256: stdoutResult.sha256,
+    stderrSha256: stderrResult.sha256,
+    stdoutTruncated: stdoutResult.truncated,
+    stderrTruncated: stderrResult.truncated,
+    repository: Object.freeze({
+      start: startFingerprint,
+      end: endFingerprint,
+      unchanged: sameRepositoryFingerprint(startFingerprint, endFingerprint),
+    }),
+  };
+  LOCAL_COMMAND_AUTHORITY.set(
+    receipt,
+    Object.freeze({
+      label,
+      stdout: stdoutResult.retained,
+      stderr: stderrResult.retained,
+      stdoutExcerpt: boundedValidationExcerpt(stdoutResult.retained),
+      stderrExcerpt: boundedValidationExcerpt(stderrResult.retained),
+      spawnError: Boolean(spawnError),
+    })
+  );
+  return Object.freeze(receipt);
+}
+
+function localCommandFailureProjection(receipt, label) {
+  const authority = localCommandAuthority(receipt, label);
+  const projection = ["stdout:\n" + authority.stdoutExcerpt, "stderr:\n" + authority.stderrExcerpt]
+    .join("\n")
+    .slice(0, MAX_VALIDATION_EXCERPT_BYTES);
+  if (hasSensitiveEvidence(projection)) {
+    return "[redacted-sensitive-command-failure]";
+  }
+  return projection;
+}
+
+function localCommandAuthority(receipt, label) {
+  const authority = LOCAL_COMMAND_AUTHORITY.get(receipt);
+  if (!authority || authority.label !== label) {
+    throw new Error(label + ": local command authority is missing");
+  }
+  if (receipt.stdoutTruncated || receipt.stderrTruncated) {
+    throw new Error(label + ": bounded local command output was truncated");
+  }
+  if (
+    createHash("sha256").update(authority.stdout).digest("hex") !== receipt.stdoutSha256 ||
+    createHash("sha256").update(authority.stderr).digest("hex") !== receipt.stderrSha256 ||
+    authority.stdout.length !== receipt.stdoutBytes ||
+    authority.stderr.length !== receipt.stderrBytes
+  ) {
+    throw new Error(label + ": local command bytes do not match their receipt");
+  }
+  return authority;
+}
+
+function localFailureKind(receipt) {
+  const authority = LOCAL_COMMAND_AUTHORITY.get(receipt);
+  const output = authority
+    ? Buffer.concat([authority.stdout, Buffer.from("\n"), authority.stderr]).toString("utf8")
+    : "";
+  if (
+    receipt.timedOut ||
+    receipt.outputLimitExceeded ||
+    receipt.status === 125 ||
+    receipt.status === 126 ||
+    receipt.status === 127 ||
+    receipt.id === "dbPreflight" ||
+    /\b(?:ECONNREFUSED|ENOTFOUND|ETIMEDOUT|database .*unavailable|could not connect|command not found|failed to spawn)\b/i.test(
+      output
+    )
+  ) {
+    return "infrastructure";
+  }
+  return "code-test";
+}
+
+async function runNamedIsolationCommands(spec, receipt, label) {
+  const metadata = spec.isolationCommands ?? [];
+  if (metadata.length === 0) return Object.freeze([]);
+  const authority = localCommandAuthority(receipt, label + ":" + spec.id);
+  const output = Buffer.concat([authority.stdout, Buffer.from("\n"), authority.stderr]).toString(
+    "utf8"
+  );
+  const failureLines = output
+    .split(/\r?\n/)
+    .filter((line) => /\bfail(?:ed|ure)?\b|\berror\b|[✗×]/i.test(line));
+  let selected = metadata.filter(({ file }) => failureLines.some((line) => line.includes(file)));
+  if (selected.length === 0) {
+    const mentioned = metadata.filter(({ file }) => output.includes(file));
+    if (mentioned.length === 1) selected = mentioned;
+  }
+  if (selected.length > 8) {
+    throw new Error(label + ": named isolation set exceeds the bounded maximum");
+  }
+  const receipts = [];
+  for (const isolation of selected) {
+    const isolationLabel = label + ":isolate:" + isolation.file;
+    const isolationReceipt = await runLocalValidationCommand(
+      { id: "isolate:" + isolation.file, command: isolation.command },
+      isolationLabel
+    );
+    localCommandAuthority(isolationReceipt, isolationLabel);
+    if (!isolationReceipt.repository.unchanged) {
+      throw new Error(label + ": named isolation command changed repository authority");
+    }
+    receipts.push(isolationReceipt);
+  }
+  return Object.freeze(receipts);
+}
+
+async function runLocalCommandSequence(commands, { label, allowStrictScan = false } = {}) {
+  const before = await worktreeSnapshot(label + " before local sequence");
+  const start = canonicalRepositoryFingerprint(before);
+  const receipts = [];
+  const isolationReceipts = [];
+  let failedReceipt = null;
+  let strictScan = null;
+  for (const spec of commands) {
+    const commandLabel = label + ":" + spec.id;
+    const receipt = await runLocalValidationCommand(spec, commandLabel);
+    receipts.push(receipt);
+    localCommandAuthority(receipt, commandLabel);
+    if (!receipt.repository.unchanged) {
+      failedReceipt = receipt;
+      break;
+    }
+    if (spec.id === "strictScan" && allowStrictScan) {
+      strictScan = classifyStrictScanReceipt(receipt, commandLabel);
+      if (!strictScan.accepted) {
+        failedReceipt = receipt;
+        break;
+      }
+      continue;
+    }
+    if (receipt.status !== 0) {
+      isolationReceipts.push(...(await runNamedIsolationCommands(spec, receipt, label)));
+      failedReceipt = receipt;
+      break;
+    }
+  }
+  const after = await worktreeSnapshot(label + " after local sequence");
+  const end = canonicalRepositoryFingerprint(after);
+  const unchanged = sameRepositoryFingerprint(start, end);
+  if (!unchanged && !failedReceipt) {
+    failedReceipt = Object.freeze({
+      id: "repositoryFingerprint",
+      command: "orchestrator-local repository fingerprint comparison",
+      status: 1,
+      timedOut: false,
+    });
+  }
+  return Object.freeze({
+    receipts: Object.freeze(receipts),
+    isolationReceipts: Object.freeze(isolationReceipts),
+    failedReceipt,
+    strictScan,
+    authority: Object.freeze({
+      runner: "orchestrator-local-v1",
+      start,
+      end,
+      unchanged,
+    }),
+  });
 }
 
 function requireSafeRollbackPath(relativePath, label) {
@@ -2092,7 +1742,10 @@ function freezeWorktreeAuthority(snapshot) {
   return Object.freeze({
     head: snapshot.head,
     branch: snapshot.branch,
-    staged: Object.freeze([...snapshot.staged]),
+    indexAuthority: freezeGitIndexAuthority(
+      snapshot.indexAuthority,
+      "TASK-540 frozen worktree index authority"
+    ),
     paths: Object.freeze([...snapshot.paths]),
     hashes: Object.freeze({ ...snapshot.hashes }),
   });
@@ -2102,7 +1755,7 @@ function equalWorktreeAuthority(left, right) {
   return (
     left.head === right.head &&
     left.branch === right.branch &&
-    JSON.stringify(left.staged) === JSON.stringify(right.staged) &&
+    sameGitIndexAuthority(left.indexAuthority, right.indexAuthority) &&
     JSON.stringify(left.paths) === JSON.stringify(right.paths) &&
     equalHashMaps(left.hashes, right.hashes)
   );
@@ -2114,12 +1767,9 @@ async function captureExactRollbackFiles(relativePaths, label, { allowMissing = 
   }
   const missingAllowed = new Set(allowMissing);
   const [authorityBefore, sensitiveEnvBefore] = await Promise.all([
-    worktreeSnapshot(),
+    worktreeSnapshot(label + " before exact snapshot capture"),
     hashSensitiveEnvProjection(),
   ]);
-  if (authorityBefore.staged.length > 0) {
-    throw new Error(label + ": staged files exist before exact snapshot capture");
-  }
   const entries = await Promise.all(
     relativePaths.map((relativePath) => readOptionalRollbackFile(relativePath, label))
   );
@@ -2129,7 +1779,7 @@ async function captureExactRollbackFiles(relativePaths, label, { allowMissing = 
     }
   }
   const [authorityAfter, sensitiveEnvAfter] = await Promise.all([
-    worktreeSnapshot(),
+    worktreeSnapshot(label + " after exact snapshot capture"),
     hashSensitiveEnvProjection(),
   ]);
   if (
@@ -2347,13 +1997,13 @@ async function restoreExactRollbackFiles(
     }
   }
   const [currentAuthority, currentSensitiveEnv] = await Promise.all([
-    worktreeSnapshot(),
+    worktreeSnapshot(label + " before exact rollback restore"),
     hashSensitiveEnvProjection(),
   ]);
   if (
     currentAuthority.head !== snapshot.authority.head ||
     currentAuthority.branch !== snapshot.authority.branch ||
-    JSON.stringify(currentAuthority.staged) !== JSON.stringify(snapshot.authority.staged) ||
+    !sameGitIndexAuthority(currentAuthority.indexAuthority, snapshot.authority.indexAuthority) ||
     !equalHashMaps(currentSensitiveEnv, snapshot.sensitiveEnv)
   ) {
     throw new Error(label + ": exact rollback authority changed before restore");
@@ -2387,14 +2037,14 @@ async function restoreExactRollbackFiles(
   try {
     await verifyExactRollbackFiles(snapshot, label);
     const [after, sensitiveEnvAfter] = await Promise.all([
-      worktreeSnapshot(),
+      worktreeSnapshot(label + " after exact rollback restore"),
       hashSensitiveEnvProjection(),
     ]);
     const residualDelta = snapshotDelta(snapshot.authority, after);
     const authorityRestored =
       after.head === snapshot.authority.head &&
       after.branch === snapshot.authority.branch &&
-      JSON.stringify(after.staged) === JSON.stringify(snapshot.authority.staged) &&
+      sameGitIndexAuthority(after.indexAuthority, snapshot.authority.indexAuthority) &&
       residualDelta.every((relativePath) => residualPathSet.has(relativePath));
     if (!authorityRestored || !equalHashMaps(snapshot.sensitiveEnv, sensitiveEnvAfter)) {
       throw new Error(
@@ -2443,7 +2093,7 @@ async function repoContext() {
     status: status.trim(),
     diffStat: diffStat.trim(),
     diffNames: diffNames.trim(),
-    staged: staged.trim(),
+    stagedNamesForContext: staged.trim(),
     taskStatuses,
   };
 }
@@ -2459,12 +2109,9 @@ async function groundedPrompt(body) {
 
 async function runReadOnlyAgent(prompt, options) {
   const [before, sensitiveEnvBefore] = await Promise.all([
-    worktreeSnapshot(),
+    worktreeSnapshot(options.label + " before read-only dispatch"),
     hashSensitiveEnvProjection(),
   ]);
-  if (before.staged.length > 0) {
-    throw new Error(options.label + ": read-only dispatch refused a non-empty staged pre-state");
-  }
   let result = null;
   let dispatchError = null;
   try {
@@ -2475,14 +2122,14 @@ async function runReadOnlyAgent(prompt, options) {
   let stateError = null;
   try {
     const [after, sensitiveEnvAfter] = await Promise.all([
-      worktreeSnapshot(),
+      worktreeSnapshot(options.label + " after read-only dispatch"),
       hashSensitiveEnvProjection(),
     ]);
     const delta = snapshotDelta(before, after);
     if (
       before.head !== after.head ||
       before.branch !== after.branch ||
-      JSON.stringify(after.staged) !== JSON.stringify(before.staged) ||
+      !sameGitIndexAuthority(before.indexAuthority, after.indexAuthority) ||
       !equalHashMaps(sensitiveEnvBefore, sensitiveEnvAfter) ||
       delta.length > 0
     ) {
@@ -2699,6 +2346,7 @@ const TASK_STATUS_MUTABLE_METADATA_FIELDS = Object.freeze([
   "Started",
   "Fix Started",
   "Reopened",
+  "Implementation Complete",
   "Completed",
   "Targeted Gate Passed",
   "Revalidation Passed",
@@ -2944,11 +2592,10 @@ async function verifySharedMutationProjections(owner, before, label) {
 async function runMutatingAgent(prompt, options, owner, requireOwned = true) {
   const fixtureOnlySources = await captureFixtureOnlySources(owner);
   const [before, sensitiveEnvBefore, sharedProjectionBefore] = await Promise.all([
-    worktreeSnapshot(),
+    worktreeSnapshot(options.label + " before mutating dispatch"),
     hashSensitiveEnvProjection(),
     captureSharedMutationProjections(owner),
   ]);
-  if (before.staged.length > 0) throw new Error(options.label + ": staged files exist");
   let result = null;
   let dispatchError = null;
   try {
@@ -2963,7 +2610,7 @@ async function runMutatingAgent(prompt, options, owner, requireOwned = true) {
   let verificationError = null;
   try {
     const [after, sensitiveEnvAfter] = await Promise.all([
-      worktreeSnapshot(),
+      worktreeSnapshot(options.label + " after mutating dispatch"),
       hashSensitiveEnvProjection(),
     ]);
     const delta = snapshotDelta(before, after);
@@ -2972,10 +2619,13 @@ async function runMutatingAgent(prompt, options, owner, requireOwned = true) {
     if (
       before.head !== after.head ||
       before.branch !== after.branch ||
-      after.staged.length > 0 ||
+      !sameGitIndexAuthority(before.indexAuthority, after.indexAuthority) ||
       !equalHashMaps(sensitiveEnvBefore, sensitiveEnvAfter)
     ) {
-      throw new Error(options.label + ": agent staged, committed, or changed branch");
+      throw new Error(
+        options.label +
+          ": agent changed the exact initial index baseline, committed, or changed branch"
+      );
     }
     if (delta.some((path) => !owner.allowedFiles.includes(path))) {
       throw new Error(options.label + ": file ownership violation: " + delta.join(", "));
@@ -3006,8 +2656,27 @@ async function runMutatingAgent(prompt, options, owner, requireOwned = true) {
   return result;
 }
 
+function namedTestFilesForCommand(value) {
+  const isVitestRun = /(?:^|\s)bunx\s+vitest\s+run(?:\s|$)/.test(value);
+  const isBunTest = /(?:^|\s)bun\s+test(?:\s|$)/.test(value);
+  if (!isVitestRun && !isBunTest) return Object.freeze([]);
+  const files = value
+    .split(/\s+/)
+    .filter((token) => /^tests\/.*\.(?:test|spec)\.[cm]?[jt]sx?$/.test(token));
+  if (new Set(files).size !== files.length) {
+    throw new Error("TASK-540 test command repeats a named isolation file");
+  }
+  for (const file of files) {
+    if (!TRACKED_TEST_FILES.includes(file)) {
+      throw new Error("TASK-540 test command names an untracked isolation file: " + file);
+    }
+  }
+  return Object.freeze(files);
+}
+
 function command(id, value) {
-  return Object.freeze({ id, command: value });
+  const isolationCommands = isolationMetadata(namedTestFilesForCommand(value));
+  return Object.freeze({ id, command: value, isolationCommands });
 }
 
 function vitestCommand(files) {
@@ -3156,11 +2825,18 @@ const LEAVES = Object.freeze(
         "tests/vitest/admin/customScreensClient.test.ts",
         "tests/vitest/admin/cacheBus.test.ts",
       ]),
+      repairAllowedFiles: Object.freeze([
+        "core/admin/utils/cacheBus.ts",
+        "tests/vitest/admin/cacheBus.test.ts",
+        "tests/integration/routes/customScreensRoutes.test.ts",
+      ]),
       commands: Object.freeze([
         command("lintTypes", LINT_TYPES),
         command("lint", LINT),
+        command("rootTsc", ROOT_TSC),
+        command("isolatedCacheBus", vitestCommand(["tests/vitest/admin/cacheBus.test.ts"])),
         command(
-          "vitest",
+          "expandedL03Vitest",
           vitestCommand([
             "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
             "tests/vitest/ui/custom-screen-entry-draft.test.ts",
@@ -3171,8 +2847,32 @@ const LEAVES = Object.freeze(
             "tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx",
             "tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx",
             "tests/vitest/widgets/screenWidgets.test.tsx",
+            "tests/vitest/ui/use-screen-related-entries.test.tsx",
+            "tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx",
           ])
         ),
+        command(
+          "l04ReadOnlyConsumerVitest",
+          vitestCommand([
+            "tests/vitest/ui/custom-screens-page.test.tsx",
+            "tests/vitest/ui/custom-screen-route-params.test.ts",
+            "tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx",
+            "tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx",
+            "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
+            "tests/vitest/admin/cacheBus.test.ts",
+          ])
+        ),
+        command("dbPreflight", DB_PREFLIGHT),
+        command(
+          "directImageOverrideRouteBun",
+          ENV + "bun test tests/integration/routes/customScreensRoutes.test.ts"
+        ),
+        command("workflowSyntax", "node --check _docs/_workflows/task-540-implement.mjs"),
+        command(
+          "workflowRepairResumeSelfTest",
+          "node _docs/_workflows/task-540-implement.mjs --self-test-repair-siblings"
+        ),
+        command("diffCheck", "git diff --check"),
       ]),
     },
     {
@@ -3312,6 +3012,23 @@ const LEAVES = Object.freeze(
         command("vitest", TARGETED_VITEST),
         command("dbPreflight", DB_PREFLIGHT),
         command("bun", TARGETED_BUN),
+        command("smokeContractSyntax", "node --check _docs/_workflows/task-540-smoke-contract.mjs"),
+        command(
+          "smokeContractSelfTest",
+          "node _docs/_workflows/task-540-smoke-contract.mjs --self-test"
+        ),
+        command("smokeExecutorSyntax", "node --check _docs/_workflows/task-540-smoke-executor.mjs"),
+        command(
+          "smokeExecutorSelfTest",
+          "node _docs/_workflows/task-540-smoke-executor.mjs --self-test"
+        ),
+        command("smokeHostSyntax", "node --check _docs/_workflows/task-540-smoke-host.mjs"),
+        command("smokeHostSelfTest", "node _docs/_workflows/task-540-smoke-host.mjs --self-test"),
+        command("workflowSyntax", "node --check _docs/_workflows/task-540-implement.mjs"),
+        command(
+          "workflowRepairResumeSelfTest",
+          "node _docs/_workflows/task-540-implement.mjs --self-test-repair-siblings"
+        ),
         command("diffCheck", "git diff --check"),
       ]),
     },
@@ -3325,6 +3042,25 @@ const LEAVES = Object.freeze(
 );
 
 const LEAF_BY_ID = new Map(LEAVES.map((leaf) => [leaf.id, leaf]));
+
+function effectiveRepairMutationOwner(leaf, { afterClosure = false } = {}) {
+  const repairFiles = leaf.repairAllowedFiles ?? leaf.allowedFiles;
+  const group = LEAF_STATUS_GROUPS[leaf.id];
+  if (!group) throw new Error("TASK-540 effective repair owner has no status group: " + leaf.id);
+  const taskContracts = afterClosure ? [ROOT_TASK_PATH, group.childPath, group.leafPath] : [];
+  if (
+    new Set(repairFiles).size !== repairFiles.length ||
+    repairFiles.some((file) => taskContracts.includes(file))
+  ) {
+    throw new Error("TASK-540 effective repair owner has duplicate/mixed mutation authority");
+  }
+  return Object.freeze({
+    ...leaf,
+    allowedFiles: Object.freeze([...repairFiles, ...taskContracts]),
+    requiredFiles: Object.freeze([]),
+  });
+}
+
 const leafRestrictionPrompt = (leaf) => {
   const restrictions = [];
   if (leaf.id === "540-01-L01" && leaf.fixtureOnlyFiles?.length) {
@@ -3336,6 +3072,43 @@ const leafRestrictionPrompt = (leaf) => {
         "and preserve the heading label plus sibling text content. Do not change production, loosen " +
         "the Screen schema, add compatibility kinds, or weaken any assertion. The orchestrator " +
         "mechanically verifies the exact projection."
+    );
+  } else if (leaf.id === "540-04-L03" && leaf.repairAllowedFiles?.length) {
+    restrictions.push(
+      " This persisted repair has exactly three implementation/test repair paths: " +
+        JSON.stringify(leaf.repairAllowedFiles) +
+        ". In cacheBus.ts implement only private per-subscription canonical/legacy remote " +
+        "correlation keyed by JSON.stringify([sourceId, ts, key, action]): count each family, " +
+        "select delivery when max(canonical, legacy) exceeds delivered, subtract balanced pairs, " +
+        "commit/delete/touch the complete state before handler invocation, and cap residual LRU " +
+        "state at 128 with oldest fail-open eviction. " +
+        "Reject unless Reflect.ownKeys is the order-independent exact string-key set action/key/" +
+        "sourceId/ts, strictly bound every field, " +
+        "reject storage over 2048 code units before JSON.parse, and reject malformed/own-source input " +
+        "before every correlation lookup, touch, insertion, or eviction. Preserve self-source filtering, " +
+        "use separate family listener wrappers with exact teardown/clear, and remove-before-set each " +
+        "storage key so identical broadcasts re-arm. " +
+        "Preserve canonical-only, legacy-only, repeated-identical, local bypass, exact local operation " +
+        "tokens, remote undefined tokens, payload/API/cache-key/route/UI compatibility, and the explicit " +
+        "no-TTL/fail-open contract. cacheBus.test.ts is the sole cache-bus test writer and must add the exact " +
+        "interleaving and delimiter-collision matrix; asymmetric instance-directed A/B subscription " +
+        "isolation plus unsubscribe/resubscribe; throwing-handler committed-state behavior; storage " +
+        "remove/set and pre-parse oversize spy; exact unknown-own-key and timestamp reject/accept corpus; " +
+        "specifically reject -1/fraction/NaN/Infinity/MAX_SAFE+1 and accept 0/MAX_SAFE; at the full " +
+        "128-residual cap prove accessor/proxy/invalid-action/type/bound and own-source channel input, " +
+        "plus malformed/removal/invalid/own-source storage input, are state-neutral and cannot evict " +
+        "the oldest correlated twin; exact-cap and re-touch 128-entry true-LRU/FIFO " +
+        "discriminator; local-token/own-echo behavior; and exact-four-key serialization from the leaf. " +
+        "customScreensRoutes.test.ts is the sole additive Bun route-test writer: use its existing hasDb " +
+        "pattern, the real registerCustomScreenRoutes boundary and validate helper, imported production " +
+        "services/schema, uniquely scoped content-type/screen/entry/user fixtures, and cleanup limited to " +
+        "owned rows. Prove a direct-image UUID override PATCH then GET round trip and a structurally valid " +
+        "inactive target mapped to the bounded custom_screen_override_invalid 400 with no persistence. " +
+        "Do not edit production routes or add another DB skip mechanism. " +
+        "Every other dependent/consumer test is read-only; do not edit production consumers, unrelated " +
+        "task/docs/changelog/board/workflow, weaken assertions, stage, or commit. Only an explicit " +
+        "after-closure audit owner may separately add the exact root/child/leaf task contracts for " +
+        "evidenced prose, without performing the separate status transition."
     );
   } else if (leaf.id === "540-04-L04" && leaf.fixtureOnlyFiles?.length) {
     restrictions.push(
@@ -3406,18 +3179,24 @@ const RESUME_TASK_STATUS = Object.freeze({
   done: "✅ Done",
 });
 
-function isTask540RepairSiblingStateAllowed(state) {
+function isTask540RepairSiblingStateAllowed(state, { allowCoveredDone = false } = {}) {
+  const hasTargetedGate = Boolean(state.targetedGate);
+  const hasRevalidation = Boolean(state.revalidation);
+  const hasExactlyOneGate = hasTargetedGate !== hasRevalidation;
   if (state.id === "540-06-L01") {
     return (
       state.status === RESUME_TASK_STATUS.active &&
       !state.completed &&
-      !state.targetedGate &&
-      !state.revalidation &&
-      !state.repairPending
+      !state.repairPending &&
+      ((!state.closurePending && !hasTargetedGate && !hasRevalidation) ||
+        (allowCoveredDone && Boolean(state.closurePending) && hasExactlyOneGate))
     );
   }
   return (
-    state.status === RESUME_TASK_STATUS.done && Boolean(state.completed) && !state.repairPending
+    !state.repairPending &&
+    hasExactlyOneGate &&
+    ((state.status === RESUME_TASK_STATUS.active && !state.completed) ||
+      (allowCoveredDone && state.status === RESUME_TASK_STATUS.done && Boolean(state.completed)))
   );
 }
 
@@ -3436,7 +3215,7 @@ function assertTask540RepairSiblingStateContract() {
       allowed: true,
     },
     {
-      label: "gated active closure sibling",
+      label: "gated active closure sibling with durable closure pending",
       state: {
         id: "540-06-L01",
         status: RESUME_TASK_STATUS.active,
@@ -3444,17 +3223,19 @@ function assertTask540RepairSiblingStateContract() {
         targetedGate: "gate green",
         revalidation: null,
         repairPending: null,
+        closurePending: "generation 1 / abcdef123456",
       },
-      allowed: false,
+      allowCoveredDone: true,
+      allowed: true,
     },
     {
-      label: "revalidated active closure sibling",
+      label: "gated active closure sibling without durable closure pending",
       state: {
         id: "540-06-L01",
         status: RESUME_TASK_STATUS.active,
         completed: null,
-        targetedGate: null,
-        revalidation: "gate green",
+        targetedGate: "gate green",
+        revalidation: null,
         repairPending: null,
       },
       allowed: false,
@@ -3470,17 +3251,32 @@ function assertTask540RepairSiblingStateContract() {
       allowed: false,
     },
     {
-      label: "completed source sibling",
+      label: "gated active source sibling",
       state: {
         id: "540-03-L01",
-        status: RESUME_TASK_STATUS.done,
-        completed: "2026-07-14",
+        status: RESUME_TASK_STATUS.active,
+        completed: null,
+        targetedGate: "gate green",
+        revalidation: null,
         repairPending: null,
       },
       allowed: true,
     },
     {
-      label: "active source sibling",
+      label: "completed source sibling after family closure",
+      state: {
+        id: "540-03-L01",
+        status: RESUME_TASK_STATUS.done,
+        completed: "2026-07-14",
+        targetedGate: null,
+        revalidation: "gate green",
+        repairPending: null,
+      },
+      allowCoveredDone: true,
+      allowed: true,
+    },
+    {
+      label: "ungated active source sibling",
       state: {
         id: "540-03-L01",
         status: RESUME_TASK_STATUS.active,
@@ -3490,22 +3286,24 @@ function assertTask540RepairSiblingStateContract() {
       allowed: false,
     },
     {
-      label: "done source sibling without completion receipt",
+      label: "done source sibling without gate receipt",
       state: {
         id: "540-03-L01",
         status: RESUME_TASK_STATUS.done,
-        completed: null,
+        completed: "2026-07-14",
         repairPending: null,
       },
       allowed: false,
     },
     {
-      label: "done source sibling with pending repair",
+      label: "source sibling with both gate fields",
       state: {
         id: "540-03-L01",
-        status: RESUME_TASK_STATUS.done,
-        completed: "2026-07-14",
-        repairPending: "generation duplicate / token duplicate",
+        status: RESUME_TASK_STATUS.active,
+        completed: null,
+        targetedGate: "gate green",
+        revalidation: "gate green",
+        repairPending: null,
       },
       allowed: false,
     },
@@ -3521,64 +3319,215 @@ function assertTask540RepairSiblingStateContract() {
     },
   ];
   for (const testCase of cases) {
-    if (isTask540RepairSiblingStateAllowed(testCase.state) !== testCase.allowed) {
+    if (
+      isTask540RepairSiblingStateAllowed(testCase.state, {
+        allowCoveredDone: testCase.allowCoveredDone ?? false,
+      }) !== testCase.allowed
+    ) {
       throw new Error("TASK-540 repair sibling self-test failed: " + testCase.label);
     }
   }
   return cases.length;
 }
 
-function assertSmokeScenarioExpectationContract() {
-  const canonicalCases = Object.entries(SMOKE_SCENARIO_EXPECTATIONS).map(([kind, expectation]) => ({
-    label: "canonical " + kind,
-    scenario: {
-      kind,
-      theme: expectation.theme,
-      viewports: [...expectation.viewports],
-      screenshotPaths: [...expectation.screenshotPaths],
-    },
-    allowed: true,
-  }));
+function assertTask540L03RepairSiblingContract() {
+  const repairOwner = LEAF_BY_ID.get("540-04-L03");
+  const expectedRepairFiles = [
+    "core/admin/utils/cacheBus.ts",
+    "tests/vitest/admin/cacheBus.test.ts",
+    "tests/integration/routes/customScreensRoutes.test.ts",
+  ];
+  if (
+    !repairOwner ||
+    JSON.stringify(repairOwner.repairAllowedFiles) !== JSON.stringify(expectedRepairFiles)
+  ) {
+    throw new Error("TASK-540 L03 repair owner is not pinned to the exact three-file repair set");
+  }
   const cases = [
-    ...canonicalCases,
     {
-      label: "wrong theme ownership",
-      scenario: { ...canonicalCases[0].scenario, theme: "dark" },
-      allowed: false,
+      label: "L03 repair preserves the exact ungated active closure sibling",
+      state: {
+        id: "540-06-L01",
+        status: RESUME_TASK_STATUS.active,
+        completed: null,
+        targetedGate: null,
+        revalidation: null,
+        repairPending: null,
+      },
+      allowed: true,
     },
     {
-      label: "reordered responsive viewports",
-      scenario: {
-        ...canonicalCases.at(-1).scenario,
-        viewports: [...canonicalCases.at(-1).scenario.viewports].reverse(),
+      label: "L03 pre-closure repair rejects a gate without durable closure pending",
+      state: {
+        id: "540-06-L01",
+        status: RESUME_TASK_STATUS.active,
+        completed: null,
+        targetedGate: "stale gate",
+        revalidation: null,
+        repairPending: null,
       },
       allowed: false,
     },
     {
-      label: "cross-flow screenshot ownership",
-      scenario: {
-        ...canonicalCases[0].scenario,
-        screenshotPaths: [...SMOKE_SCENARIO_EXPECTATIONS["tabs-content"].screenshotPaths],
+      label: "L03 post-closure repair accepts the pinned gate with durable pending",
+      state: {
+        id: "540-06-L01",
+        status: RESUME_TASK_STATUS.active,
+        completed: null,
+        targetedGate: "gate green",
+        revalidation: null,
+        repairPending: null,
+        closurePending: "generation 2 / abcdef123456",
+      },
+      allowCoveredDone: true,
+      allowed: true,
+    },
+    {
+      label: "L03 repair rejects a second pending repair on the closure sibling",
+      state: {
+        id: "540-06-L01",
+        status: RESUME_TASK_STATUS.active,
+        completed: null,
+        targetedGate: null,
+        revalidation: null,
+        repairPending: "generation duplicate / token duplicate",
       },
       allowed: false,
     },
   ];
-  if (!sameOrderedValues(Object.keys(SMOKE_SCENARIO_EXPECTATIONS), SMOKE_KINDS)) {
-    throw new Error("TASK-540 smoke scenario expectation order mismatch");
-  }
   for (const testCase of cases) {
-    if (scenarioMetadataMatchesExpectation(testCase.scenario) !== testCase.allowed) {
-      throw new Error("TASK-540 smoke scenario expectation self-test failed: " + testCase.label);
+    if (
+      isTask540RepairSiblingStateAllowed(testCase.state, {
+        allowCoveredDone: testCase.allowCoveredDone ?? false,
+      }) !== testCase.allowed
+    ) {
+      throw new Error("TASK-540 L03 repair sibling self-test failed: " + testCase.label);
     }
   }
   return cases.length;
 }
 
-if (process.argv.includes("--self-test-repair-siblings")) {
-  const cases = assertTask540RepairSiblingStateContract();
-  const smokeScenarioCases = assertSmokeScenarioExpectationContract();
-  process.stdout.write(JSON.stringify({ pass: true, cases, smokeScenarioCases }));
-  process.exit(0);
+function assertTask540L03EffectiveRepairOwnerContract() {
+  const leaf = LEAF_BY_ID.get("540-04-L03");
+  const group = LEAF_STATUS_GROUPS["540-04-L03"];
+  if (!leaf || !group) throw new Error("TASK-540 L03 effective repair owner is missing");
+  const repairFiles = [
+    "core/admin/utils/cacheBus.ts",
+    "tests/vitest/admin/cacheBus.test.ts",
+    "tests/integration/routes/customScreensRoutes.test.ts",
+  ];
+  const taskContracts = [ROOT_TASK_PATH, group.childPath, group.leafPath];
+  const preClosure = effectiveRepairMutationOwner(leaf);
+  const afterClosure = effectiveRepairMutationOwner(leaf, { afterClosure: true });
+  const historicalConsumers = leaf.allowedFiles.filter((file) => !repairFiles.includes(file));
+  const cases = [
+    {
+      label: "L03 pre-closure audit fixer owns only the exact three-file repair set",
+      pass: JSON.stringify(preClosure.allowedFiles) === JSON.stringify(repairFiles),
+    },
+    {
+      label: "L03 after-closure audit fixer adds only three status contracts",
+      pass:
+        JSON.stringify(afterClosure.allowedFiles) ===
+        JSON.stringify([...repairFiles, ...taskContracts]),
+    },
+    {
+      label: "L03 audit fixers cannot recover historical consumers or status-transition authority",
+      pass:
+        historicalConsumers.length > 0 &&
+        historicalConsumers.every(
+          (file) =>
+            !preClosure.allowedFiles.includes(file) && !afterClosure.allowedFiles.includes(file)
+        ) &&
+        !Object.hasOwn(preClosure, "taskContractMutations") &&
+        !Object.hasOwn(afterClosure, "taskContractMutations"),
+    },
+  ];
+  for (const testCase of cases) {
+    if (!testCase.pass) {
+      throw new Error("TASK-540 L03 effective repair owner self-test failed: " + testCase.label);
+    }
+  }
+  return cases.length;
+}
+
+function assertTask540L03GateIsolationContract() {
+  const leaf = LEAF_BY_ID.get("540-04-L03");
+  if (!leaf) throw new Error("TASK-540 L03 isolation owner is missing");
+  const cases = [
+    {
+      id: "expandedL03Vitest",
+      files: [
+        "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
+        "tests/vitest/ui/custom-screen-entry-draft.test.ts",
+        "tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx",
+        "tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts",
+        "tests/vitest/admin/customScreensClient.test.ts",
+        "tests/vitest/admin/cacheBus.test.ts",
+        "tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx",
+        "tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx",
+        "tests/vitest/widgets/screenWidgets.test.tsx",
+        "tests/vitest/ui/use-screen-related-entries.test.tsx",
+        "tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx",
+      ],
+    },
+    {
+      id: "l04ReadOnlyConsumerVitest",
+      files: [
+        "tests/vitest/ui/custom-screens-page.test.tsx",
+        "tests/vitest/ui/custom-screen-route-params.test.ts",
+        "tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx",
+        "tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx",
+        "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
+        "tests/vitest/admin/cacheBus.test.ts",
+      ],
+    },
+    {
+      id: "directImageOverrideRouteBun",
+      files: ["tests/integration/routes/customScreensRoutes.test.ts"],
+    },
+  ];
+  for (const testCase of cases) {
+    const gate = leaf.commands.find(({ id }) => id === testCase.id);
+    const metadata = gate?.isolationCommands ?? [];
+    if (
+      !gate ||
+      JSON.stringify(metadata.map(({ file }) => file)) !== JSON.stringify(testCase.files) ||
+      metadata.some(
+        ({ file, command: isolationCommand }) =>
+          isolationCommand !== isolationCommandForTestFile(file)
+      )
+    ) {
+      throw new Error("TASK-540 L03 named-file isolation self-test failed: " + testCase.id);
+    }
+  }
+  let duplicateRejected = false;
+  try {
+    namedTestFilesForCommand(
+      vitestCommand(["tests/vitest/admin/cacheBus.test.ts", "tests/vitest/admin/cacheBus.test.ts"])
+    );
+  } catch (error) {
+    duplicateRejected = error instanceof Error && error.message.includes("repeats");
+  }
+  if (!duplicateRejected) {
+    throw new Error("TASK-540 L03 named-file isolation self-test accepted a duplicate file");
+  }
+  const dbPreflight = leaf.commands.find(({ id }) => id === "dbPreflight");
+  if (
+    !dbPreflight ||
+    dbPreflight.command !== DB_PREFLIGHT ||
+    (dbPreflight.isolationCommands?.length ?? 0) !== 0
+  ) {
+    throw new Error("TASK-540 L03 DB preflight self-test failed");
+  }
+  const routeGate = leaf.commands.find(({ id }) => id === "directImageOverrideRouteBun");
+  if (
+    !routeGate ||
+    routeGate.command !== ENV + "bun test tests/integration/routes/customScreensRoutes.test.ts"
+  ) {
+    throw new Error("TASK-540 L03 direct-image route command self-test failed");
+  }
+  return cases.length + 2;
 }
 
 function readTaskMetadataField(source, field) {
@@ -3595,6 +3544,42 @@ function isCanonicalIsoDate(value) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const parsed = new Date(value + "T00:00:00.000Z");
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+const IMPLEMENTATION_COMPLETE_SUFFIX =
+  " — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.";
+
+function requireCanonicalReceiptDate(value, label) {
+  if (!isCanonicalIsoDate(value) || value > RUN_DATE) {
+    throw new Error(label + ": receipt date must be canonical and no later than " + RUN_DATE);
+  }
+  return value;
+}
+
+function requireCanonicalCompleted(value, label) {
+  return requireCanonicalReceiptDate(value, label + " Completed");
+}
+
+function requireAbsentCompleted(value, label) {
+  if (value !== null) throw new Error(label + ": Completed must be absent");
+  return null;
+}
+
+function requireCanonicalImplementationComplete(value, label) {
+  if (typeof value !== "string" || !value.endsWith(IMPLEMENTATION_COMPLETE_SUFFIX)) {
+    throw new Error(label + ": Implementation Complete has a non-canonical suffix");
+  }
+  const date = value.slice(0, -IMPLEMENTATION_COMPLETE_SUFFIX.length);
+  requireCanonicalReceiptDate(date, label + " Implementation Complete");
+  if (value !== date + IMPLEMENTATION_COMPLETE_SUFFIX) {
+    throw new Error(label + ": Implementation Complete is not byte-canonical");
+  }
+  return value;
+}
+
+function requireAbsentImplementationComplete(value, label) {
+  if (value !== null) throw new Error(label + ": Implementation Complete must be absent");
+  return null;
 }
 
 function preClosureRegateValue(fixStartedDate) {
@@ -3639,15 +3624,23 @@ const CLOSURE_RECEIPT_FIELDS = Object.freeze([
   CLOSURE_CHANGELOG_PATH_FIELD,
 ]);
 
-function readClosureLeafGateReceipt(source, label) {
-  const receipts = CLOSURE_GATE_FIELDS.flatMap((field) => {
+function readTaskGateReceipts(source) {
+  return CLOSURE_GATE_FIELDS.flatMap((field) => {
     const value = readTaskMetadataField(source, field);
     return value ? [Object.freeze({ field, value })] : [];
   });
+}
+
+function readTaskGateReceipt(source, label) {
+  const receipts = readTaskGateReceipts(source);
   if (receipts.length !== 1) {
-    throw new Error(label + ": closure leaf must carry exactly one gate receipt");
+    throw new Error(label + ": task leaf must carry exactly one gate receipt");
   }
   return receipts[0];
+}
+
+function readClosureLeafGateReceipt(source, label) {
+  return readTaskGateReceipt(source, label);
 }
 
 function equalClosureGateReceipts(left, right) {
@@ -3713,13 +3706,45 @@ function readTaskBoardStats(source) {
   });
 }
 
+const TASK_540_BOARD_BUCKET_MARKERS = Object.freeze({
+  toDo: "⏳ To Do",
+  inProgress: "🚧 In progress",
+  done: "✅ Done",
+});
+
+function requireTask540BoardNotesMarker(notes, bucket, label) {
+  const marker = TASK_540_BOARD_BUCKET_MARKERS[bucket];
+  if (!marker || (notes !== marker && !notes.startsWith(marker + " "))) {
+    throw new Error(label + ": Notes must start with exact bucket marker " + marker);
+  }
+  return marker;
+}
+
 function readTask540BoardState(source) {
   const rows = [...source.matchAll(/^\| TASK-540 \|.*$/gm)];
   if (rows.length !== 1) throw new Error("TASK-540 board row is missing or duplicated");
+  const row = rows[0][0];
+  const cells = row
+    .slice(1, -1)
+    .split("|")
+    .map((cell) => cell.trim());
+  if (cells.length !== 5 || cells[0] !== "TASK-540") {
+    throw new Error("TASK-540 board row must contain exactly five canonical cells");
+  }
   const rowIndex = rows[0].index ?? -1;
-  const toDoStart = source.indexOf("## To Do");
-  const inProgressStart = source.indexOf("## In Progress");
-  const doneStart = source.indexOf("## Done");
+  const headingIndex = (heading) => {
+    const matches = [...source.matchAll(new RegExp("^## " + heading + "$", "gm"))];
+    if (matches.length !== 1) {
+      throw new Error("TASK-540 board heading is missing or duplicated: " + heading);
+    }
+    return matches[0].index ?? -1;
+  };
+  const toDoStart = headingIndex("To Do");
+  const inProgressStart = headingIndex("In Progress");
+  const doneStart = headingIndex("Done");
+  if (!(toDoStart < inProgressStart && inProgressStart < doneStart)) {
+    throw new Error("TASK-540 board headings are not in canonical order");
+  }
   const bucket =
     rowIndex > toDoStart && rowIndex < inProgressStart
       ? "toDo"
@@ -3729,7 +3754,15 @@ function readTask540BoardState(source) {
           ? "done"
           : null;
   if (!bucket) throw new Error("TASK-540 board row is outside a canonical bucket");
-  return Object.freeze({ bucket, row: rows[0][0], stats: readTaskBoardStats(source) });
+  const notes = cells[4];
+  requireTask540BoardNotesMarker(notes, bucket, "TASK-540 board row");
+  return Object.freeze({
+    bucket,
+    row,
+    cells: Object.freeze(cells),
+    notes,
+    stats: readTaskBoardStats(source),
+  });
 }
 
 function formatClosureBoardBaseline(stats) {
@@ -3837,6 +3870,28 @@ async function readSharedClosurePending({ required = false, allowMissingGate = f
     );
   if (repairPendingValues[0] || repairPendingValues[1] || parentGateValues.some(Boolean)) {
     throw new Error("TASK-540 closure root/parent retained leaf-only repair or gate evidence");
+  }
+  for (let index = 0; index < states.length; index += 1) {
+    const completed = readTaskMetadataField(states[index].source, "Completed");
+    if (states[index].status === RESUME_TASK_STATUS.done) {
+      requireCanonicalCompleted(completed, "TASK-540 shared closure contract " + index);
+    } else {
+      requireAbsentCompleted(completed, "TASK-540 shared closure contract " + index);
+    }
+  }
+  requireAbsentImplementationComplete(
+    readTaskMetadataField(states[0].source, "Implementation Complete"),
+    "TASK-540 shared closure root"
+  );
+  const closureLeafGateCount = readTaskGateReceipts(states[2].source).length;
+  const closureImplementationExpected = closureLeafGateCount === 1 && !repairPendingValues[2];
+  for (const index of [1, 2]) {
+    const value = readTaskMetadataField(states[index].source, "Implementation Complete");
+    if (closureImplementationExpected) {
+      requireCanonicalImplementationComplete(value, "TASK-540 shared closure contract " + index);
+    } else {
+      requireAbsentImplementationComplete(value, "TASK-540 shared closure contract " + index);
+    }
   }
   if (pendingValues.every((value) => value === null)) {
     if (
@@ -4018,6 +4073,8 @@ async function requireTask540ChangelogIndex() {
 }
 
 async function validateTerminalResumeState() {
+  const leafPathSet = new Set(LEAF_TASK_PATHS);
+  const childPathSet = new Set(CHILD_TASK_PATHS);
   const taskStates = await Promise.all(
     TASK_PATHS.map(async (relativePath) => ({
       relativePath,
@@ -4025,11 +4082,34 @@ async function validateTerminalResumeState() {
     }))
   );
   for (const state of taskStates) {
-    if (
-      state.status !== RESUME_TASK_STATUS.done ||
-      !readTaskMetadataField(state.source, "Completed")
-    ) {
+    const completed = readTaskMetadataField(state.source, "Completed");
+    const implementationComplete = readTaskMetadataField(state.source, "Implementation Complete");
+    if (state.status !== RESUME_TASK_STATUS.done) {
       throw new Error("TASK-540 terminal restart found an open contract: " + state.relativePath);
+    }
+    requireCanonicalCompleted(completed, "TASK-540 terminal " + state.relativePath);
+    if (leafPathSet.has(state.relativePath) || childPathSet.has(state.relativePath)) {
+      requireCanonicalImplementationComplete(
+        implementationComplete,
+        "TASK-540 terminal " + state.relativePath
+      );
+    } else {
+      requireAbsentImplementationComplete(
+        implementationComplete,
+        "TASK-540 terminal " + state.relativePath
+      );
+    }
+    const gateReceipts = readTaskGateReceipts(state.source);
+    if (leafPathSet.has(state.relativePath)) {
+      if (gateReceipts.length !== 1 || readTaskMetadataField(state.source, "Repair Pending")) {
+        throw new Error(
+          "TASK-540 terminal leaf lacks its unique landed receipt: " + state.relativePath
+        );
+      }
+    } else if (gateReceipts.length !== 0 || readTaskMetadataField(state.source, "Repair Pending")) {
+      throw new Error(
+        "TASK-540 terminal non-leaf retained leaf-only evidence: " + state.relativePath
+      );
     }
   }
 
@@ -4164,9 +4244,17 @@ async function resolveLeafResumeState() {
   if (!terminalCandidate && rootState.status !== RESUME_TASK_STATUS.active) {
     throw new Error("TASK-540 resumable workflow requires the root In Progress or terminal Done");
   }
-  if (!terminalCandidate && readTaskMetadataField(rootState.source, "Completed")) {
-    throw new Error("TASK-540 active root retained stale Completed evidence");
+  const rootCompleted = readTaskMetadataField(rootState.source, "Completed");
+  const rootImplementationComplete = readTaskMetadataField(
+    rootState.source,
+    "Implementation Complete"
+  );
+  if (terminalCandidate) {
+    requireCanonicalCompleted(rootCompleted, "TASK-540 terminal root");
+  } else {
+    requireAbsentCompleted(rootCompleted, "TASK-540 active root");
   }
+  requireAbsentImplementationComplete(rootImplementationComplete, "TASK-540 root");
 
   const leafPathSet = new Set(LEAVES.map((leaf) => LEAF_STATUS_GROUPS[leaf.id].leafPath));
   const allContractStates = await Promise.all(
@@ -4202,32 +4290,43 @@ async function resolveLeafResumeState() {
     }
 
     const completed = readTaskMetadataField(state.source, "Completed");
+    const implementationComplete = readTaskMetadataField(state.source, "Implementation Complete");
     const targetedGate = readTaskMetadataField(state.source, "Targeted Gate Passed");
     const revalidation = readTaskMetadataField(state.source, "Revalidation Passed");
     const repairPending = readTaskMetadataField(state.source, "Repair Pending");
+    const closurePending = readTaskMetadataField(state.source, "Closure Pending");
     if (repairPending) parseRepairPending(repairPending, "TASK-" + leaf.id);
-    if (state.status === RESUME_TASK_STATUS.done && !completed) {
-      throw new Error("TASK-" + leaf.id + ": Done without exact Completed evidence");
+    if (targetedGate && revalidation) {
+      throw new Error("TASK-" + leaf.id + ": multiple current gate receipts");
+    }
+    if (state.status === RESUME_TASK_STATUS.done) {
+      requireCanonicalCompleted(completed, "TASK-" + leaf.id);
+    } else {
+      requireAbsentCompleted(completed, "TASK-" + leaf.id);
     }
     if (state.status === RESUME_TASK_STATUS.done && repairPending) {
       throw new Error("TASK-" + leaf.id + ": Done with a pending repair");
-    }
-    if (state.status !== RESUME_TASK_STATUS.done && completed) {
-      throw new Error("TASK-" + leaf.id + ": active/unstarted contract retained Completed");
     }
     const landed =
       state.status === RESUME_TASK_STATUS.done ||
       (state.status === RESUME_TASK_STATUS.active &&
         !repairPending &&
         Boolean(targetedGate || revalidation));
+    if (landed) {
+      requireCanonicalImplementationComplete(implementationComplete, "TASK-" + leaf.id);
+    } else {
+      requireAbsentImplementationComplete(implementationComplete, "TASK-" + leaf.id);
+    }
     leafStates.push({
       id: leaf.id,
       status: state.status,
       landed,
       completed,
+      implementationComplete,
       targetedGate,
       revalidation,
       repairPending,
+      closurePending,
       evidence:
         state.status === RESUME_TASK_STATUS.done
           ? "Completed: " + completed
@@ -4264,7 +4363,11 @@ async function resolveLeafResumeState() {
     }
     for (const state of leafStates) {
       if (state.id === repairState.id) continue;
-      if (!isTask540RepairSiblingStateAllowed(state)) {
+      if (
+        !isTask540RepairSiblingStateAllowed(state, {
+          allowCoveredDone: true,
+        })
+      ) {
         throw new Error("TASK-" + state.id + ": invalid sibling state during repair resume");
       }
     }
@@ -4306,17 +4409,20 @@ async function resolveLeafResumeState() {
         "TASK-" + childId + ": expected " + expectedChildStatus + ", got " + childState.status
       );
     }
-    if (
-      expectedChildStatus === RESUME_TASK_STATUS.done &&
-      !readTaskMetadataField(childState.source, "Completed")
-    ) {
-      throw new Error("TASK-" + childId + ": Done without exact Completed evidence");
+    const childCompleted = readTaskMetadataField(childState.source, "Completed");
+    const childImplementationComplete = readTaskMetadataField(
+      childState.source,
+      "Implementation Complete"
+    );
+    if (expectedChildStatus === RESUME_TASK_STATUS.done) {
+      requireCanonicalCompleted(childCompleted, "TASK-" + childId);
+    } else {
+      requireAbsentCompleted(childCompleted, "TASK-" + childId);
     }
-    if (
-      expectedChildStatus !== RESUME_TASK_STATUS.done &&
-      readTaskMetadataField(childState.source, "Completed")
-    ) {
-      throw new Error("TASK-" + childId + ": active/unstarted child retained Completed");
+    if (childLeaves.every(({ landed }) => landed)) {
+      requireCanonicalImplementationComplete(childImplementationComplete, "TASK-" + childId);
+    } else {
+      requireAbsentImplementationComplete(childImplementationComplete, "TASK-" + childId);
     }
     for (const leafState of childLeaves) {
       requireTableStatus(
@@ -4349,8 +4455,31 @@ async function resolveLeafResumeState() {
       repairState ? [repairState.id] : leafStates.slice(startIndex).map(({ id }) => id)
     ),
     leafStates: Object.freeze(
-      leafStates.map(({ id, status, landed, evidence, repairPending }) =>
-        Object.freeze({ id, status, landed, evidence, repairPending })
+      leafStates.map(
+        ({
+          id,
+          status,
+          landed,
+          completed,
+          implementationComplete,
+          targetedGate,
+          revalidation,
+          repairPending,
+          closurePending,
+          evidence,
+        }) =>
+          Object.freeze({
+            id,
+            status,
+            landed,
+            completed,
+            implementationComplete,
+            targetedGate,
+            revalidation,
+            repairPending,
+            closurePending,
+            evidence,
+          })
       )
     ),
   });
@@ -4405,12 +4534,20 @@ async function resolveChangelogResumeState(resumeState) {
           const value = readTaskMetadataField(leafState.source, field);
           return value ? [Object.freeze({ field, value })] : [];
         });
-        const exactUngatedRestart =
+        const exactClosureCursorRestart =
           gateReceipts.length === 0 &&
           resumeState.mode === "initial" &&
           resumeState.startIndex === LEAVES.length - 1 &&
           resumeState.startLeafId === "540-06-L01" &&
           JSON.stringify(resumeState.remainingLeafIds) === JSON.stringify(["540-06-L01"]);
+        const exactEarlierRepairRestart =
+          gateReceipts.length === 0 &&
+          resumeState.mode === "repair" &&
+          Boolean(resumeState.repair?.id) &&
+          resumeState.repair.id !== "540-06-L01" &&
+          resumeState.startLeafId === resumeState.repair.id &&
+          JSON.stringify(resumeState.remainingLeafIds) === JSON.stringify([resumeState.repair.id]);
+        const exactUngatedRestart = exactClosureCursorRestart || exactEarlierRepairRestart;
         const exactRegatedContinuation =
           gateReceipts.length === 1 &&
           gateReceipts[0].field === "Revalidation Passed" &&
@@ -4642,50 +4779,432 @@ async function resolveChangelogResumeState(resumeState) {
   });
 }
 
+const COVERED_CHANGELOG_MODES = new Set([
+  "terminal-reopen",
+  "closure-restart",
+  "closure-restart-after-gate-repair",
+]);
+
+function hasIndependentTask540CoverageAuthority(changelogState) {
+  if (!COVERED_CHANGELOG_MODES.has(changelogState?.mode)) return false;
+  const control = changelogState.closureControl;
+  const anchor = changelogState.anchor;
+  if (!control || !anchor || !changelogState.evidenceHash?.match(/^[0-9a-f]{64}$/)) return false;
+  try {
+    const canonicalControl = validateClosureControl(control, "TASK-540 coverage authority");
+    const canonicalAnchor = buildClosureAnchor(
+      anchor.evidenceSha256,
+      canonicalControl,
+      anchor.repairAuthorization
+    );
+    parseClosureBoardBaseline(changelogState.boardBaseline, "TASK-540 coverage authority");
+    if (
+      JSON.stringify(canonicalControl) !== JSON.stringify(control) ||
+      JSON.stringify(canonicalAnchor) !== JSON.stringify(anchor)
+    ) {
+      return false;
+    }
+  } catch {
+    return false;
+  }
+  if (
+    changelogState.path !== CHANGELOG_REL ||
+    changelogState.changelogPath !== CHANGELOG_REL ||
+    !Number.isSafeInteger(changelogState.generation) ||
+    changelogState.generation < 1 ||
+    !changelogState.boardBaseline ||
+    anchor.evidenceSha256 !== changelogState.evidenceHash ||
+    JSON.stringify(anchor.closureControl) !== JSON.stringify(control) ||
+    control.generation !== changelogState.generation ||
+    control.boardBaseline !== changelogState.boardBaseline ||
+    control.changelogPath !== CHANGELOG_REL
+  ) {
+    return false;
+  }
+  if (
+    changelogState.mode === "terminal-reopen" &&
+    (changelogState.closurePending !== null || anchor.repairAuthorization !== null)
+  ) {
+    return false;
+  }
+  if (
+    changelogState.mode !== "terminal-reopen" &&
+    typeof changelogState.closurePending !== "string"
+  ) {
+    return false;
+  }
+  if (changelogState.gateReceipt) {
+    const currentGate = hashedGateReceipt(changelogState.gateReceipt);
+    const gateAuthorized =
+      equalHashedGateReceipts(control.gateReceipt, currentGate) ||
+      Boolean(
+        anchor.repairAuthorization &&
+        equalHashedGateReceipts(anchor.repairAuthorization.successorGate, currentGate)
+      );
+    if (!gateAuthorized) return false;
+  } else if (!anchor.repairAuthorization) {
+    return false;
+  }
+  return true;
+}
+
+function validateResumeLeafCoverageContract(
+  leafStates,
+  { allowCoveredDone = false, repairId = null, startLeafId = null } = {}
+) {
+  if (
+    !Array.isArray(leafStates) ||
+    leafStates.length !== LEAF_ORDER.length ||
+    leafStates.some((state, index) => state.id !== LEAF_ORDER[index])
+  ) {
+    throw new Error("TASK-540 resume coverage requires every leaf in strict land order");
+  }
+  let doneCount = 0;
+  let activeCount = 0;
+  let landedCount = 0;
+  for (const state of leafStates) {
+    const isClosureLeaf = state.id === "540-06-L01";
+    const gateCount = Number(Boolean(state.targetedGate)) + Number(Boolean(state.revalidation));
+    if (gateCount > 1) {
+      throw new Error("TASK-" + state.id + ": resume coverage found both gate receipts");
+    }
+    if (!isClosureLeaf && state.closurePending) {
+      throw new Error("TASK-" + state.id + ": source leaf retained Closure Pending");
+    }
+    if (state.repairPending && state.id !== repairId) {
+      throw new Error("TASK-" + state.id + ": Repair Pending escaped the exact repair owner");
+    }
+    if (state.status === RESUME_TASK_STATUS.done) {
+      doneCount += 1;
+      requireCanonicalCompleted(state.completed, "TASK-" + state.id + " covered leaf");
+      requireCanonicalImplementationComplete(
+        state.implementationComplete,
+        "TASK-" + state.id + " covered leaf"
+      );
+      if (
+        !allowCoveredDone ||
+        gateCount !== 1 ||
+        state.repairPending ||
+        state.closurePending ||
+        !state.landed
+      ) {
+        throw new Error(
+          "TASK-" + state.id + ": Done is not covered by exact terminal leaf authority"
+        );
+      }
+      landedCount += 1;
+      continue;
+    }
+    requireAbsentCompleted(state.completed, "TASK-" + state.id + " nonterminal leaf");
+    if (state.status === RESUME_TASK_STATUS.todo) {
+      requireAbsentImplementationComplete(
+        state.implementationComplete,
+        "TASK-" + state.id + " To Do leaf"
+      );
+      if (
+        gateCount !== 0 ||
+        state.repairPending ||
+        state.closurePending ||
+        state.implementationComplete ||
+        state.landed
+      ) {
+        throw new Error("TASK-" + state.id + ": To Do leaf retained landed evidence");
+      }
+      continue;
+    }
+    if (state.status !== RESUME_TASK_STATUS.active) {
+      throw new Error("TASK-" + state.id + ": unsupported resume coverage status");
+    }
+    activeCount += 1;
+    if (state.repairPending) {
+      requireAbsentImplementationComplete(
+        state.implementationComplete,
+        "TASK-" + state.id + " repair leaf"
+      );
+      if (gateCount !== 0 || state.implementationComplete || state.landed) {
+        throw new Error("TASK-" + state.id + ": repair owner retained stale landed evidence");
+      }
+      continue;
+    }
+    if (gateCount === 1) {
+      requireCanonicalImplementationComplete(
+        state.implementationComplete,
+        "TASK-" + state.id + " landed leaf"
+      );
+      if (!state.landed) {
+        throw new Error("TASK-" + state.id + ": gated leaf lacks Implementation Complete");
+      }
+      if (state.closurePending && (!isClosureLeaf || !allowCoveredDone)) {
+        throw new Error("TASK-" + state.id + ": Closure Pending lacks covered authority");
+      }
+      landedCount += 1;
+      continue;
+    }
+    requireAbsentImplementationComplete(
+      state.implementationComplete,
+      "TASK-" + state.id + " active ungated leaf"
+    );
+    if (
+      state.implementationComplete ||
+      state.landed ||
+      state.closurePending ||
+      (state.id !== repairId && state.id !== startLeafId && !(isClosureLeaf && repairId))
+    ) {
+      throw new Error("TASK-" + state.id + ": unexpected active ungated leaf");
+    }
+  }
+  return Object.freeze({ doneCount, activeCount, landedCount });
+}
+
+async function validateResumeGraphCoverage(resumeState, changelogState, label) {
+  const allowCoveredDone = hasIndependentTask540CoverageAuthority(changelogState);
+  const leafSummary = validateResumeLeafCoverageContract(resumeState.leafStates, {
+    allowCoveredDone,
+    repairId: resumeState.repair?.id ?? null,
+    startLeafId: resumeState.startLeafId,
+  });
+  if (resumeState.mode === "terminal" && !allowCoveredDone) {
+    throw new Error(label + ": terminal graph lacks independently validated changelog 1252");
+  }
+
+  const taskStates = new Map(
+    await Promise.all(
+      TASK_PATHS.map(async (relativePath) => [
+        relativePath,
+        Object.freeze({ relativePath, ...(await readCanonicalTaskStatus(relativePath)) }),
+      ])
+    )
+  );
+  const leafById = new Map(resumeState.leafStates.map((state) => [state.id, state]));
+  const closurePathSet = new Set(closureContractPaths());
+  for (const leafId of LEAF_ORDER) {
+    const group = LEAF_STATUS_GROUPS[leafId];
+    const persisted = taskStates.get(group.leafPath);
+    const projected = leafById.get(leafId);
+    const persistedProjection = {
+      status: persisted.status,
+      completed: readTaskMetadataField(persisted.source, "Completed"),
+      implementationComplete: readTaskMetadataField(persisted.source, "Implementation Complete"),
+      targetedGate: readTaskMetadataField(persisted.source, "Targeted Gate Passed"),
+      revalidation: readTaskMetadataField(persisted.source, "Revalidation Passed"),
+      repairPending: readTaskMetadataField(persisted.source, "Repair Pending"),
+      closurePending: readTaskMetadataField(persisted.source, "Closure Pending"),
+    };
+    const resumeProjection = {
+      status: projected.status,
+      completed: projected.completed,
+      implementationComplete: projected.implementationComplete,
+      targetedGate: projected.targetedGate,
+      revalidation: projected.revalidation,
+      repairPending: projected.repairPending,
+      closurePending: projected.closurePending,
+    };
+    if (JSON.stringify(persistedProjection) !== JSON.stringify(resumeProjection)) {
+      throw new Error(label + ": leaf graph changed during coverage validation: TASK-" + leafId);
+    }
+    if (
+      leafId !== "540-06-L01" &&
+      CLOSURE_RECEIPT_FIELDS.some((field) => readTaskMetadataField(persisted.source, field))
+    ) {
+      throw new Error(label + ": source leaf retained closure-only authority: TASK-" + leafId);
+    }
+  }
+  for (const childId of CHILD_IDS_IN_LAND_ORDER) {
+    const leafIds = LEAF_ORDER.filter((leafId) => LEAF_STATUS_GROUPS[leafId].childId === childId);
+    const group = LEAF_STATUS_GROUPS[leafIds[0]];
+    const state = taskStates.get(group.childPath);
+    const childLeaves = leafIds.map((leafId) => leafById.get(leafId));
+    const expectedStatus = childLeaves.every(({ status }) => status === RESUME_TASK_STATUS.done)
+      ? RESUME_TASK_STATUS.done
+      : childLeaves.every(({ status }) => status === RESUME_TASK_STATUS.todo)
+        ? RESUME_TASK_STATUS.todo
+        : RESUME_TASK_STATUS.active;
+    const completed = readTaskMetadataField(state.source, "Completed");
+    const implementationComplete = readTaskMetadataField(state.source, "Implementation Complete");
+    const allLeavesLanded = childLeaves.every(({ landed }) => landed);
+    if (expectedStatus === RESUME_TASK_STATUS.done) {
+      requireCanonicalCompleted(completed, label + " TASK-" + childId);
+    } else {
+      requireAbsentCompleted(completed, label + " TASK-" + childId);
+    }
+    if (allLeavesLanded) {
+      requireCanonicalImplementationComplete(implementationComplete, label + " TASK-" + childId);
+    } else {
+      requireAbsentImplementationComplete(implementationComplete, label + " TASK-" + childId);
+    }
+    if (
+      state.status !== expectedStatus ||
+      (expectedStatus === RESUME_TASK_STATUS.done && !allowCoveredDone) ||
+      readTaskGateReceipts(state.source).length !== 0 ||
+      readTaskMetadataField(state.source, "Repair Pending")
+    ) {
+      throw new Error(label + ": child graph coverage mismatch for TASK-" + childId);
+    }
+    if (
+      !closurePathSet.has(group.childPath) &&
+      CLOSURE_RECEIPT_FIELDS.some((field) => readTaskMetadataField(state.source, field))
+    ) {
+      throw new Error(label + ": source child retained closure-only authority: TASK-" + childId);
+    }
+    for (const leafId of leafIds) {
+      requireTableStatus(state.source, leafId, leafById.get(leafId).status, label + " child");
+    }
+  }
+
+  const rootState = taskStates.get(ROOT_TASK_PATH);
+  const childStates = CHILD_IDS_IN_LAND_ORDER.map((childId) => {
+    const leafId = LEAF_ORDER.find(
+      (candidate) => LEAF_STATUS_GROUPS[candidate].childId === childId
+    );
+    return taskStates.get(LEAF_STATUS_GROUPS[leafId].childPath);
+  });
+  const expectedRootStatus = childStates.every(({ status }) => status === RESUME_TASK_STATUS.done)
+    ? RESUME_TASK_STATUS.done
+    : RESUME_TASK_STATUS.active;
+  const persistedRootCompleted = readTaskMetadataField(rootState.source, "Completed");
+  const persistedRootImplementationComplete = readTaskMetadataField(
+    rootState.source,
+    "Implementation Complete"
+  );
+  if (expectedRootStatus === RESUME_TASK_STATUS.done) {
+    requireCanonicalCompleted(persistedRootCompleted, label + " root");
+  } else {
+    requireAbsentCompleted(persistedRootCompleted, label + " root");
+  }
+  requireAbsentImplementationComplete(persistedRootImplementationComplete, label + " root");
+  if (
+    rootState.status !== expectedRootStatus ||
+    (expectedRootStatus === RESUME_TASK_STATUS.done && !allowCoveredDone) ||
+    readTaskGateReceipts(rootState.source).length !== 0 ||
+    readTaskMetadataField(rootState.source, "Repair Pending")
+  ) {
+    throw new Error(label + ": root graph coverage mismatch");
+  }
+  for (let index = 0; index < CHILD_IDS_IN_LAND_ORDER.length; index += 1) {
+    requireTableStatus(
+      rootState.source,
+      CHILD_IDS_IN_LAND_ORDER[index],
+      childStates[index].status,
+      label + " root"
+    );
+  }
+
+  const boardState = readTask540BoardState(await readFile(TASKS + "/README.md", "utf8"));
+  const expectedBoardBucket =
+    expectedRootStatus === RESUME_TASK_STATUS.done ? "done" : "inProgress";
+  if (boardState.bucket !== expectedBoardBucket) {
+    throw new Error(label + ": board bucket does not match the covered graph");
+  }
+  const statusByPath = Object.freeze(
+    Object.fromEntries(
+      FAMILY_STATUS_ORDER.map((relativePath) => [relativePath, taskStates.get(relativePath).status])
+    )
+  );
+  const completedByPath = Object.freeze(
+    Object.fromEntries(
+      FAMILY_STATUS_ORDER.map((relativePath) => [
+        relativePath,
+        readTaskMetadataField(taskStates.get(relativePath).source, "Completed"),
+      ])
+    )
+  );
+  const activePaths = Object.freeze(
+    FAMILY_STATUS_ORDER.filter(
+      (relativePath) => statusByPath[relativePath] === RESUME_TASK_STATUS.active
+    )
+  );
+  return Object.freeze({
+    allowCoveredDone,
+    leafSummary,
+    statusByPath,
+    completedByPath,
+    activePaths,
+    activeLeafIds: Object.freeze(
+      LEAF_ORDER.filter(
+        (leafId) => statusByPath[LEAF_STATUS_GROUPS[leafId].leafPath] === RESUME_TASK_STATUS.active
+      )
+    ),
+    activeChildIds: Object.freeze(
+      CHILD_IDS_IN_LAND_ORDER.filter((childId) => {
+        const leafId = LEAF_ORDER.find(
+          (candidate) => LEAF_STATUS_GROUPS[candidate].childId === childId
+        );
+        return statusByPath[LEAF_STATUS_GROUPS[leafId].childPath] === RESUME_TASK_STATUS.active;
+      })
+    ),
+    allActive: activePaths.length === FAMILY_STATUS_ORDER.length,
+  });
+}
+
+function implementationCompleteValue(date = RUN_DATE) {
+  requireCanonicalReceiptDate(date, "TASK-540 Implementation Complete value");
+  return date + IMPLEMENTATION_COMPLETE_SUFFIX;
+}
+
+function requireFinalCompletedForEntry(relativePath, value, entryGraph, label) {
+  requireCanonicalCompleted(value, label + " " + relativePath);
+  if (!entryGraph) return value;
+  const priorStatus = entryGraph.statusByPath[relativePath];
+  const priorCompleted = entryGraph.completedByPath[relativePath];
+  if (priorStatus === RESUME_TASK_STATUS.active) {
+    if (value !== RUN_DATE) {
+      throw new Error(label + ": newly closed contract requires Completed " + RUN_DATE);
+    }
+    return value;
+  }
+  if (priorStatus === RESUME_TASK_STATUS.done) {
+    requireCanonicalCompleted(priorCompleted, label + " historical " + relativePath);
+    if (value !== priorCompleted) {
+      throw new Error(label + ": covered Done contract changed historical Completed");
+    }
+    return value;
+  }
+  throw new Error(label + ": final entry status is not active or covered Done");
+}
+
 async function transitionLeafStatus(leaf, transition, reason, repairPending = null) {
   const group = LEAF_STATUS_GROUPS[leaf.id];
   if (!group) throw new Error("Missing status group for " + leaf.id);
   const closureReceiptsBefore = await captureClosureContractReceipts();
-  const preserveResumeEvidence =
-    transition === "complete" && reason.includes("resume-existing-gate");
   const repairCompletion = transition === "complete" && Boolean(repairPending);
-  const closeSourceLeaf = transition === "complete" && !group.holdUntilClosure;
-  const expectedLeafStatus = closeSourceLeaf ? RESUME_TASK_STATUS.done : RESUME_TASK_STATUS.active;
+  const expectedLeafStatus = RESUME_TASK_STATUS.active;
   const siblingStates = await Promise.all(
     group.leafIds.map(async (leafId) => {
-      if (leafId === leaf.id) return { id: leafId, status: expectedLeafStatus };
+      if (leafId === leaf.id) {
+        return { id: leafId, status: expectedLeafStatus, landed: transition === "complete" };
+      }
       const siblingGroup = LEAF_STATUS_GROUPS[leafId];
       const siblingState = await readCanonicalTaskStatus(siblingGroup.leafPath);
-      return { id: leafId, status: siblingState.status };
+      const targetedGate = readTaskMetadataField(siblingState.source, "Targeted Gate Passed");
+      const revalidation = readTaskMetadataField(siblingState.source, "Revalidation Passed");
+      return {
+        id: leafId,
+        status: siblingState.status,
+        landed:
+          siblingState.status === RESUME_TASK_STATUS.done ||
+          (siblingState.status === RESUME_TASK_STATUS.active &&
+            !readTaskMetadataField(siblingState.source, "Repair Pending") &&
+            Boolean(targetedGate) !== Boolean(revalidation)),
+      };
     })
   );
-  const expectedChildStatus = siblingStates.every(
-    ({ status }) => status === RESUME_TASK_STATUS.done
-  )
-    ? RESUME_TASK_STATUS.done
-    : RESUME_TASK_STATUS.active;
-  const sourceReceiptAction = closeSourceLeaf
-    ? " Remove stale Closure Pending/Closure Evidence SHA-256/Closure Generation/Closure Board Baseline/Closure Changelog Path fields from the exact source leaf and, when it becomes Done, its child; those receipts belong only to the closure contracts."
-    : "";
+  const expectedChildStatus = RESUME_TASK_STATUS.active;
+  const childImplementationComplete = siblingStates.every(({ landed }) => landed);
+  const exactImplementationComplete = implementationCompleteValue();
   const startMetadataField = reason.includes("repair") ? "Fix Started" : "Started";
   const childMutableFields =
     transition === "start"
       ? [startMetadataField]
-      : expectedChildStatus === RESUME_TASK_STATUS.done
-        ? ["Completed", ...(closeSourceLeaf ? CLOSURE_RECEIPT_FIELDS : [])]
+      : childImplementationComplete
+        ? ["Implementation Complete"]
         : [];
-  const leafGateMutableFields = repairCompletion
-    ? ["Targeted Gate Passed", "Revalidation Passed", "Repair Pending"]
-    : preserveResumeEvidence
-      ? []
-      : [reason.includes("regate") ? "Revalidation Passed" : "Targeted Gate Passed"];
-  const leafMutableFields =
-    transition === "start"
-      ? [startMetadataField]
-      : [
-          ...(closeSourceLeaf ? ["Completed", ...CLOSURE_RECEIPT_FIELDS] : []),
-          ...leafGateMutableFields,
-        ];
+  const leafGateMutableFields = [
+    "Implementation Complete",
+    "Targeted Gate Passed",
+    "Revalidation Passed",
+    "Repair Pending",
+  ];
+  const leafMutableFields = transition === "start" ? [startMetadataField] : leafGateMutableFields;
   const owner = Object.freeze({
     id: "status-" + leaf.id,
     allowedFiles: Object.freeze([ROOT_TASK_PATH, group.childPath, group.leafPath]),
@@ -4743,18 +5262,10 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
     transition === "start"
       ? "Set the exact leaf and its child In Progress before implementation/fix; add Started for first implementation or Fix Started for a verified repair."
       : repairCompletion
-        ? group.holdUntilClosure
-          ? "Keep the closure leaf and child In Progress, remove its exact Repair Pending receipt, and record a fresh matching Revalidation Passed receipt for this repair generation/token."
-          : "Mark the exact repaired source leaf Done with Completed, remove its exact Repair Pending receipt, and record a fresh matching Revalidation Passed receipt. Mark its child Done with Completed only when every physical leaf under that child is Done; otherwise keep the child In Progress."
-        : group.holdUntilClosure
-          ? reason.includes("regate")
-            ? "Keep the closure leaf and child In Progress and add/update a dedicated Revalidation Passed field with the green re-gate evidence."
-            : "Keep the closure leaf and child In Progress and add/update a dedicated Targeted Gate Passed field with the green targeted-gate evidence."
-          : preserveResumeEvidence
-            ? "Mark the exact source leaf Done with Completed while preserving its existing exact Targeted Gate Passed or Revalidation Passed receipt. Mark its child Done with Completed only when every physical leaf under that child is Done; otherwise keep the child In Progress."
-            : reason.includes("regate")
-              ? "Mark the exact source leaf Done with Completed and add/update a dedicated Revalidation Passed field with the green re-gate evidence. Mark its child Done with Completed only when every physical leaf under that child is Done; otherwise keep the child In Progress."
-              : "Mark the exact source leaf Done with Completed and add/update a dedicated Targeted Gate Passed field with the green targeted-gate evidence. Mark its child Done with Completed only when every physical leaf under that child is Done; otherwise keep the child In Progress.";
+        ? "Keep the exact repaired leaf and its child In Progress, remove the leaf's exact Repair Pending and old gate receipts, and record its canonical Implementation Complete plus one fresh matching Revalidation Passed receipt for this repair generation/token."
+        : reason.includes("regate")
+          ? "Keep the exact leaf and its child In Progress, record canonical Implementation Complete, remove the opposite/stale gate receipt, and add one dedicated Revalidation Passed field with the green re-gate evidence."
+          : "Keep the exact leaf and its child In Progress, record canonical Implementation Complete, remove the opposite/stale gate receipt, and add one dedicated Targeted Gate Passed field with the green targeted-gate evidence.";
 
   let transitionMutationError = null;
   try {
@@ -4771,7 +5282,14 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
         ", child=" +
         expectedChildStatus +
         ", root=🚧 In Progress." +
-        sourceReceiptAction +
+        (transition === "complete"
+          ? " Write exact leaf field `**Implementation Complete:** " +
+            exactImplementationComplete +
+            "`. " +
+            (childImplementationComplete
+              ? "Every physical leaf under the direct child is now landed, so write the same exact Implementation Complete field on that child."
+              : "The direct child is not fully landed, so it must not carry Implementation Complete.")
+          : "") +
         (repairCompletion
           ? " The leaf's exact current `**Repair Pending:** " +
             repairPending +
@@ -4787,8 +5305,8 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
         " Synchronize the child leaf-status table and root subtask-status " +
         "table. Keep TASK-540's board row/statistics byte-identical and In Progress. Preserve every " +
         "unrelated descendant status byte-identically. Use canonical " +
-        "status fields and dedicated Started/Fix Started/Targeted Gate Passed/Revalidation Passed fields " +
-        "plus Completed when a contract becomes Done, all dated " +
+        "status fields and dedicated Started/Fix Started/Implementation Complete/Targeted Gate Passed/Revalidation Passed fields " +
+        "dated " +
         RUN_DATE +
         "; do not put dates in **Status:**. Do not edit source, tests, docs outside these task " +
         "files, board, workflow, changelog, or another task. Never stage or commit. Transition " +
@@ -4815,47 +5333,58 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
     if (rootState.status !== "🚧 In Progress" || leafState.status !== expectedLeafStatus) {
       throw new Error("TASK-540 status transition field mismatch for " + leaf.id);
     }
-    if (readTaskMetadataField(rootState.source, "Completed")) {
-      throw new Error("TASK-540 active root retained Completed after transition " + leaf.id);
-    }
+    requireAbsentCompleted(
+      readTaskMetadataField(rootState.source, "Completed"),
+      "TASK-540 active root after transition " + leaf.id
+    );
+    requireAbsentImplementationComplete(
+      readTaskMetadataField(rootState.source, "Implementation Complete"),
+      "TASK-540 active root after transition " + leaf.id
+    );
     if (childState.status !== expectedChildStatus) {
       throw new Error("TASK-540 child status transition mismatch for " + group.childId);
     }
-    if (
-      (expectedLeafStatus !== RESUME_TASK_STATUS.done &&
-        readTaskMetadataField(leafState.source, "Completed")) ||
-      (expectedChildStatus !== RESUME_TASK_STATUS.done &&
-        readTaskMetadataField(childState.source, "Completed"))
-    ) {
-      throw new Error("TASK-540 active leaf/child retained Completed for " + leaf.id);
-    }
+    requireAbsentCompleted(
+      readTaskMetadataField(leafState.source, "Completed"),
+      "TASK-540 active leaf " + leaf.id
+    );
+    requireAbsentCompleted(
+      readTaskMetadataField(childState.source, "Completed"),
+      "TASK-540 active child " + group.childId
+    );
     requireTableStatus(childState.source, leaf.id, expectedLeafStatus, "TASK-540 child");
     requireTableStatus(rootState.source, group.childId, expectedChildStatus, "TASK-540 root");
     if (transition === "complete") {
-      const hasExpectedEvidence = repairCompletion
-        ? readTaskMetadataField(leafState.source, "Revalidation Passed") ===
-          repairGateValue(repairPending)
-        : preClosureGateValue
-          ? readTaskMetadataField(leafState.source, "Revalidation Passed") === preClosureGateValue
-          : preserveResumeEvidence
-            ? Boolean(
-                readTaskMetadataField(leafState.source, "Targeted Gate Passed") ||
-                readTaskMetadataField(leafState.source, "Revalidation Passed")
-              )
-            : Boolean(
-                readTaskMetadataField(
-                  leafState.source,
-                  reason.includes("regate") ? "Revalidation Passed" : "Targeted Gate Passed"
-                )
-              );
-      if (!hasExpectedEvidence) {
+      const gateReceipt = readTaskGateReceipt(
+        leafState.source,
+        "TASK-540 landed transition " + leaf.id
+      );
+      const expectedGateField =
+        repairCompletion || preClosureGateValue || reason.includes("regate")
+          ? "Revalidation Passed"
+          : "Targeted Gate Passed";
+      const expectedGateValue = repairCompletion
+        ? repairGateValue(repairPending)
+        : (preClosureGateValue ?? null);
+      if (
+        gateReceipt.field !== expectedGateField ||
+        (expectedGateValue !== null && gateReceipt.value !== expectedGateValue)
+      ) {
         throw new Error("TASK-540 missing gate evidence field for " + leaf.id);
       }
+      if (
+        readTaskMetadataField(leafState.source, "Implementation Complete") !==
+          exactImplementationComplete ||
+        Boolean(readTaskMetadataField(childState.source, "Implementation Complete")) !==
+          childImplementationComplete ||
+        (childImplementationComplete &&
+          readTaskMetadataField(childState.source, "Implementation Complete") !==
+            exactImplementationComplete)
+      ) {
+        throw new Error("TASK-540 missing canonical Implementation Complete for " + leaf.id);
+      }
       if (leaf.id === "540-06-L01") {
-        const currentGateReceipt = readClosureLeafGateReceipt(
-          leafState.source,
-          "TASK-540 closure leaf transition"
-        );
+        const currentGateReceipt = gateReceipt;
         const mayReplacePinnedGate =
           !closureLeafGateReceipt || repairCompletion || reason.includes("regate");
         if (
@@ -4883,40 +5412,22 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
       ) {
         throw new Error("TASK-540 pre-closure re-gate retained stale repair/gate evidence");
       }
-      if (closeSourceLeaf && !readTaskMetadataField(leafState.source, "Completed")) {
-        throw new Error("TASK-540 missing Completed evidence for " + leaf.id);
-      }
       if (
-        closeSourceLeaf &&
-        [
-          "Closure Pending",
-          "Closure Evidence SHA-256",
-          "Closure Generation",
-          "Closure Board Baseline",
-          CLOSURE_CHANGELOG_PATH_FIELD,
-        ].some((field) => readTaskMetadataField(leafState.source, field))
+        !repairCompletion &&
+        !preClosureGateValue &&
+        readTaskMetadataField(leafState.source, "Repair Pending")
       ) {
-        throw new Error("TASK-540 source leaf retained a closure-only receipt: " + leaf.id);
+        throw new Error("TASK-540 landed leaf retained Repair Pending: " + leaf.id);
       }
-      if (
-        expectedChildStatus === RESUME_TASK_STATUS.done &&
-        !readTaskMetadataField(childState.source, "Completed")
-      ) {
-        throw new Error("TASK-540 missing child Completed evidence for " + group.childId);
-      }
-      if (
-        closeSourceLeaf &&
-        expectedChildStatus === RESUME_TASK_STATUS.done &&
-        [
-          "Closure Pending",
-          "Closure Evidence SHA-256",
-          "Closure Generation",
-          "Closure Board Baseline",
-          CLOSURE_CHANGELOG_PATH_FIELD,
-        ].some((field) => readTaskMetadataField(childState.source, field))
-      ) {
-        throw new Error("TASK-540 source child retained a closure-only receipt: " + group.childId);
-      }
+    } else {
+      requireAbsentImplementationComplete(
+        readTaskMetadataField(leafState.source, "Implementation Complete"),
+        "TASK-540 starting leaf " + leaf.id
+      );
+      requireAbsentImplementationComplete(
+        readTaskMetadataField(childState.source, "Implementation Complete"),
+        "TASK-540 starting child " + group.childId
+      );
     }
     const boardBefore = requireExactRollbackSnapshotUtf8(
       transactionSnapshot,
@@ -4967,47 +5478,49 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
 }
 
 async function runLeafGate(leaf, attempt, phaseName = leaf.phase) {
-  const result = await runReadOnlyAgent(
-    "Read-only gate attempt " +
-      attempt +
-      " for " +
-      leaf.id +
-      " at " +
-      ROOT +
-      ". Run this exact fail-fast ordered command list using literal && between commands:\n" +
-      leaf.commands.map(({ id, command: value }) => id + ": " + value).join("\n") +
-      "\nReturn the exact executed command prefix and statuses. On a named test failure, " +
-      "rerun that exact file alone once before classifying it. Missing DB, executable, or " +
-      "network is infrastructure and must not trigger an edit. Do not edit.",
-    { label: "gate:" + leaf.id + ":" + attempt, phase: phaseName, schema: GATE_SCHEMA }
-  );
-  if (result.pass) {
-    if (
-      !resultPassed(result) ||
-      result.failureKind !== "none" ||
-      result.failedCommand !== null ||
-      result.commands.length !== leaf.commands.length ||
-      result.commands.some(
-        (receipt, index) =>
-          receipt.id !== leaf.commands[index].id ||
-          receipt.command !== leaf.commands[index].command ||
-          receipt.status !== 0
-      )
-    ) {
-      throw new Error(leaf.id + ": passing gate receipt mismatch");
-    }
-  } else {
-    const prefixValid =
-      result.commands.length <= leaf.commands.length &&
-      result.commands.every(
-        (receipt, index) =>
-          receipt.id === leaf.commands[index].id && receipt.command === leaf.commands[index].command
-      );
-    if (!prefixValid || result.failureKind === "none" || typeof result.failedCommand !== "string") {
-      throw new Error(leaf.id + ": failed gate receipt mismatch");
-    }
+  void phaseName;
+  const label = "gate:" + leaf.id + ":" + attempt;
+  const execution = await runLocalCommandSequence(leaf.commands, { label });
+  const failed = execution.failedReceipt;
+  const pass =
+    failed === null &&
+    execution.receipts.length === leaf.commands.length &&
+    execution.authority.unchanged;
+  const result = Object.freeze({
+    pass,
+    summary: pass
+      ? leaf.id + " local gate passed"
+      : leaf.id + " local gate stopped at " + (failed?.id ?? "unknown"),
+    errors: pass
+      ? []
+      : [
+          leaf.id +
+            ": orchestrator-local command failed: " +
+            (failed?.id ?? "repositoryFingerprint") +
+            " status=" +
+            (failed?.status ?? 1),
+        ],
+    failureKind: pass ? "none" : localFailureKind(failed),
+    failedCommand: pass ? null : failed.command,
+    commands: execution.receipts,
+    isolationCommands: execution.isolationReceipts,
+    failureProjection:
+      pass || !execution.receipts.includes(failed)
+        ? null
+        : localCommandFailureProjection(failed, label + ":" + failed.id),
+    authority: execution.authority,
+  });
+  if (pass && result.commands.some((receipt) => receipt.status !== 0)) {
+    throw new Error(leaf.id + ": local gate attempted to authorize a non-green command");
   }
   return result;
+}
+
+function gateFailurePrompt(gate) {
+  const values = [...gate.errors];
+  if (gate.failureProjection)
+    values.push("Bounded local failure projection:\n" + gate.failureProjection);
+  return values.join("\n- ");
 }
 
 async function implementAndGate(leaf) {
@@ -5043,7 +5556,7 @@ async function implementAndGate(leaf) {
         " gate defect within " +
         JSON.stringify(leaf.allowedFiles) +
         ". Do not weaken a behavior assertion. Failures:\n- " +
-        gate.errors.join("\n- ") +
+        gateFailurePrompt(gate) +
         leafRestrictionPrompt(leaf),
       { label: "fix:" + leaf.id + ":" + attempt, phase: leaf.phase },
       leaf,
@@ -5077,7 +5590,7 @@ async function resumeActiveUngatedLeaf(leaf) {
         JSON.stringify(leaf.allowedFiles) +
         ". Do not require a file mutation, weaken assertions, edit task state, stage, or commit. " +
         "Failures:\n- " +
-        gate.errors.join("\n- ") +
+        gateFailurePrompt(gate) +
         leafRestrictionPrompt(leaf),
       { label: "resume-active-fix:" + leaf.id + ":" + attempt, phase: leaf.phase },
       leaf,
@@ -5101,13 +5614,7 @@ async function resumeInterruptedRepair(resumeState) {
   const repair = resumeState.repair;
   const leaf = repair ? LEAF_BY_ID.get(repair.id) : null;
   if (!repair || !leaf) throw new Error("TASK-540 repair resume owner is missing");
-  const repairOwner = leaf.repairAllowedFiles
-    ? Object.freeze({
-        ...leaf,
-        allowedFiles: leaf.repairAllowedFiles,
-        requiredFiles: leaf.repairAllowedFiles,
-      })
-    : leaf;
+  const repairOwner = effectiveRepairMutationOwner(leaf);
   const repairInvariant = await capturePersistedRepairInvariant(leaf, repair.pending);
   phase(leaf.phase);
   await runRepairMutationWithInvariant(
@@ -5141,7 +5648,7 @@ async function resumeInterruptedRepair(resumeState) {
         JSON.stringify(repairOwner.allowedFiles) +
         leafRestrictionPrompt(leaf) +
         ". Do not weaken an assertion. Failures:\n- " +
-        gate.errors.join("\n- "),
+        gateFailurePrompt(gate),
       { label: "repair-resume-fix:" + leaf.id + ":" + attempt, phase: leaf.phase },
       repairOwner,
       leaf,
@@ -5195,19 +5702,48 @@ function requireFullValidation(result, label) {
 }
 
 async function runFullValidation(label, phaseName) {
-  const result = await runReadOnlyAgent(
-    "Read-only full TASK-540 validation at " +
-      ROOT +
-      ". Run every exact command sequentially and retain all structured receipts:\n" +
-      FULL_GATE_COMMANDS.map(({ id, command: value }) => id + ": " + value).join("\n") +
-      "\nThe DB preflight must report configured/reachable/selectOne and explicitly exits 0. " +
-      "Rerun each named failing test file alone once. Do not edit. The strict scan is never " +
-      "suppressed and must not be called green: its only accepted non-zero result is the sole " +
-      "unchanged TASK-545-owned finding " +
-      JSON.stringify(KNOWN_STRICT_FINDING) +
-      ". Any TASK-540/new/tooling finding makes pass=false. Never print env values.",
-    { label, phase: phaseName, schema: FULL_GATE_SCHEMA }
-  );
+  void phaseName;
+  const execution = await runLocalCommandSequence(FULL_GATE_COMMANDS, {
+    label,
+    allowStrictScan: true,
+  });
+  const dbReceipt = execution.receipts.find(({ id }) => id === "dbPreflight");
+  const database = dbReceipt
+    ? parseDatabasePreflightReceipt(dbReceipt, label + ":dbPreflight")
+    : Object.freeze({ configured: false, reachable: false, selectOne: 0 });
+  const pass =
+    execution.failedReceipt === null &&
+    execution.receipts.length === FULL_GATE_COMMANDS.length &&
+    execution.authority.unchanged &&
+    execution.strictScan?.accepted === true;
+  const result = Object.freeze({
+    pass,
+    summary: pass
+      ? "TASK-540 orchestrator-local full validation passed with exact external strict finding"
+      : "TASK-540 orchestrator-local full validation failed",
+    errors: pass
+      ? []
+      : [
+          "TASK-540 local full validation stopped at " +
+            (execution.failedReceipt?.id ?? "incomplete-command-matrix"),
+        ],
+    commands: execution.receipts,
+    isolationCommands: execution.isolationReceipts,
+    database,
+    strictScan:
+      execution.strictScan ??
+      Object.freeze({
+        accepted: false,
+        exitCode: execution.failedReceipt?.status ?? -1,
+        green: false,
+        classification: "rejected",
+        task540Findings: 1,
+        toolingFailure: true,
+        suppressed: false,
+        externalFindings: [],
+      }),
+    authority: execution.authority,
+  });
   return requireFullValidation(result, label);
 }
 
@@ -5337,13 +5873,14 @@ async function reopenClosureLeafUngated(leaf, label, phaseName) {
       Object.freeze({
         relativePath: group.childPath,
         tableTaskIds: [leaf.id],
-        mutableFields: Object.freeze(["Fix Started"]),
+        mutableFields: Object.freeze(["Fix Started", "Implementation Complete"]),
       }),
       Object.freeze({
         relativePath: group.leafPath,
         tableTaskIds: [],
         mutableFields: Object.freeze([
           "Fix Started",
+          "Implementation Complete",
           "Targeted Gate Passed",
           "Revalidation Passed",
         ]),
@@ -5396,7 +5933,7 @@ async function reopenClosureLeafUngated(leaf, label, phaseName) {
         oldGate.field +
         ":** " +
         oldGate.value +
-        "` and do not write Targeted Gate Passed, Revalidation Passed, Repair Pending, Completed, " +
+        "`; remove Implementation Complete from the active closure parent and leaf, and do not write Targeted Gate Passed, Revalidation Passed, Repair Pending, Completed, " +
         "or any closure receipt. Preserve the task board and every unrelated byte. Never edit the " +
         "changelog, source, tests, product docs, workflow, stage, or commit. Reason: " +
         label +
@@ -5417,12 +5954,20 @@ async function reopenClosureLeafUngated(leaf, label, phaseName) {
       readCanonicalTaskStatus(group.leafPath),
       readFile(TASKS + "/README.md", "utf8"),
     ]);
+    for (const [index, state] of [rootState, childState, leafState].entries()) {
+      requireAbsentCompleted(
+        readTaskMetadataField(state.source, "Completed"),
+        "TASK-540 ungated closure repair contract " + index
+      );
+      requireAbsentImplementationComplete(
+        readTaskMetadataField(state.source, "Implementation Complete"),
+        "TASK-540 ungated closure repair contract " + index
+      );
+    }
     if (
       [rootState, childState, leafState].some(
         ({ status, source }) =>
-          status !== RESUME_TASK_STATUS.active ||
-          readTaskMetadataField(source, "Completed") ||
-          readTaskMetadataField(source, "Repair Pending")
+          status !== RESUME_TASK_STATUS.active || readTaskMetadataField(source, "Repair Pending")
       ) ||
       readTaskMetadataField(childState.source, "Fix Started") !== RUN_DATE ||
       readTaskMetadataField(leafState.source, "Fix Started") !== RUN_DATE ||
@@ -5498,13 +6043,14 @@ async function reopenLeafForRepair(leaf, label, phaseName) {
       Object.freeze({
         relativePath: group.childPath,
         tableTaskIds: [leaf.id],
-        mutableFields: Object.freeze(["Fix Started", "Completed"]),
+        mutableFields: Object.freeze(["Fix Started", "Implementation Complete", "Completed"]),
       }),
       Object.freeze({
         relativePath: group.leafPath,
         tableTaskIds: [],
         mutableFields: Object.freeze([
           "Fix Started",
+          "Implementation Complete",
           "Completed",
           "Targeted Gate Passed",
           "Revalidation Passed",
@@ -5577,7 +6123,8 @@ async function reopenLeafForRepair(leaf, label, phaseName) {
         ". On the exact leaf write `**Repair Pending:** " +
         repairPending +
         "`; remove its Completed, Targeted Gate Passed, and Revalidation Passed fields so no old " +
-        "gate can satisfy this repair. Remove Completed from the active direct child. Keep unrelated " +
+        "gate can satisfy this repair. Remove Implementation Complete from the active leaf and remove " +
+        "Completed plus Implementation Complete from the active direct child. Keep unrelated " +
         "task/changelog state byte-identical. Never edit source/tests here, stage, " +
         "or commit. Reason: " +
         label +
@@ -5607,13 +6154,34 @@ async function reopenLeafForRepair(leaf, label, phaseName) {
     }
     requireTableStatus(childState.source, leaf.id, "🚧 In Progress", "TASK-540 child");
     requireTableStatus(rootState.source, group.childId, "🚧 In Progress", "TASK-540 root");
+    requireAbsentCompleted(
+      readTaskMetadataField(rootState.source, "Completed"),
+      "TASK-540 reopened root"
+    );
+    requireAbsentCompleted(
+      readTaskMetadataField(childState.source, "Completed"),
+      "TASK-540 reopened child " + group.childId
+    );
+    requireAbsentCompleted(
+      readTaskMetadataField(leafState.source, "Completed"),
+      "TASK-540 reopened leaf " + leaf.id
+    );
+    requireAbsentImplementationComplete(
+      readTaskMetadataField(rootState.source, "Implementation Complete"),
+      "TASK-540 reopened root"
+    );
+    requireAbsentImplementationComplete(
+      readTaskMetadataField(childState.source, "Implementation Complete"),
+      "TASK-540 reopened child " + group.childId
+    );
+    requireAbsentImplementationComplete(
+      readTaskMetadataField(leafState.source, "Implementation Complete"),
+      "TASK-540 reopened leaf " + leaf.id
+    );
     if (
       readTaskMetadataField(leafState.source, "Repair Pending") !== repairPending ||
-      readTaskMetadataField(rootState.source, "Completed") ||
-      readTaskMetadataField(leafState.source, "Completed") ||
       readTaskMetadataField(leafState.source, "Targeted Gate Passed") ||
       readTaskMetadataField(leafState.source, "Revalidation Passed") ||
-      readTaskMetadataField(childState.source, "Completed") ||
       readTaskMetadataField(rootState.source, "Repair Pending") ||
       readTaskMetadataField(childState.source, "Repair Pending") ||
       readTaskMetadataField(childState.source, "Fix Started") !== RUN_DATE ||
@@ -5624,8 +6192,8 @@ async function reopenLeafForRepair(leaf, label, phaseName) {
     if (boardSource !== boardSourceBefore) {
       throw new Error("TASK-540 source repair changed the board or its statistics");
     }
-    const boardRow = boardSource.split("\n").find((line) => line.startsWith("| TASK-540 |"));
-    if (!boardRow?.includes("🚧 In progress")) {
+    const boardState = readTask540BoardState(boardSource);
+    if (boardState.bucket !== "inProgress") {
       throw new Error("TASK-540 board was not reopened for source repair");
     }
     await verifyClosureContractReceipts(
@@ -5690,6 +6258,12 @@ async function capturePersistedRepairInvariant(leaf, repairPending) {
     })
   );
   const resume = await resolveLeafResumeState();
+  const changelog = await resolveChangelogResumeState(resume);
+  await validateResumeGraphCoverage(
+    resume,
+    changelog,
+    "TASK-540 persisted repair invariant " + leaf.id
+  );
   if (
     resume.mode !== "repair" ||
     resume.repair?.id !== leaf.id ||
@@ -5802,16 +6376,7 @@ async function fixAuditFindings(findings, label, phaseName, { afterClosure = fal
     const owned = findings.filter((finding) => finding.owner === ownerId);
     if (owned.length === 0) continue;
     const leaf = LEAF_BY_ID.get(ownerId);
-    const group = LEAF_STATUS_GROUPS[ownerId];
-    const fixOwner = afterClosure
-      ? Object.freeze({
-          ...leaf,
-          allowedFiles: Object.freeze([
-            ...new Set([...leaf.allowedFiles, ROOT_TASK_PATH, group.childPath, group.leafPath]),
-          ]),
-          requiredFiles: Object.freeze([]),
-        })
-      : leaf;
+    const fixOwner = effectiveRepairMutationOwner(leaf, { afterClosure });
     const remediation = await reopenLeafForRepair(leaf, label + "-verified-fix", phaseName);
     const fixPrompt =
       COMMON +
@@ -5909,1140 +6474,52 @@ async function runPostAudit() {
   }
 }
 
-async function verifyScreenshots(smoke) {
-  const actualPaths = smoke.screenshots.map(({ path }) => path);
-  if (!sameUniqueSet(actualPaths, SCREENSHOT_PATHS)) {
-    throw new Error("TASK-540 screenshot path set mismatch");
-  }
-  const hashes = [];
-  const canonicalPaths = [];
-  const inodeIdentities = [];
-  const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-  for (const record of smoke.screenshots) {
-    const absolute = ROOT + "/" + record.path;
-    const direct = await lstat(absolute);
-    if (direct.isSymbolicLink()) throw new Error("TASK-540 screenshot symlink: " + record.path);
-    const canonical = await realpath(absolute);
-    const file = await stat(canonical);
-    const bytes = await readFile(canonical);
-    const hash = createHash("sha256").update(bytes).digest("hex");
-    if (
-      canonical !== absolute ||
-      !file.isFile() ||
-      file.size !== record.size ||
-      file.size === 0 ||
-      file.mtimeMs < smoke.helper.startedAtEpochMs ||
-      hash !== record.sha256 ||
-      file.dev !== record.device ||
-      file.ino !== record.inode ||
-      !bytes.subarray(0, pngSignature.length).equals(pngSignature) ||
-      record.signature !== "89504e470d0a1a0a" ||
-      record.command !== SMOKE_SESSION_PREFIX + "screenshot --filename " + absolute + " --full-page"
-    ) {
-      throw new Error("TASK-540 invalid screenshot evidence: " + record.path);
-    }
-    hashes.push(hash);
-    canonicalPaths.push(canonical);
-    inodeIdentities.push(file.dev + ":" + file.ino);
-  }
-  if (
-    new Set(hashes).size !== hashes.length ||
-    new Set(canonicalPaths).size !== canonicalPaths.length ||
-    new Set(inodeIdentities).size !== inodeIdentities.length
-  ) {
-    throw new Error("TASK-540 screenshots are not distinct by path, inode, and SHA-256");
-  }
+function recursivelyFrozen(value, seen = new WeakSet()) {
+  if ((typeof value !== "object" && typeof value !== "function") || value === null) return true;
+  if (seen.has(value)) return true;
+  if (!Object.isFrozen(value)) return false;
+  seen.add(value);
+  return Reflect.ownKeys(value).every((key) => recursivelyFrozen(value[key], seen));
 }
 
-function validateRuntimeReceiptSafety(receipts, label) {
-  if (
-    !receipts.every((receipt, index) => receipt.sequence === index + 1) ||
-    receipts.some(
-      (receipt) =>
-        receipt.status !== 0 ||
-        !isSafeEvidenceIdentifier(receipt.operation) ||
-        receipt.operationDescriptor.includes("\n") ||
-        receipt.sanitizedOutput.length > 4096 ||
-        hasSensitiveEvidence(receipt.operationDescriptor) ||
-        hasSensitiveEvidence(receipt.sanitizedOutput) ||
-        ENV_REFERENCE_PATTERN.test(receipt.operationDescriptor) ||
-        ENV_REFERENCE_PATTERN.test(receipt.sanitizedOutput) ||
-        (receipt.subjectKind !== null && !isSafeEvidenceIdentifier(receipt.subjectKind)) ||
-        (receipt.subjectIdentifier !== null && !isSafeEvidenceIdentifier(receipt.subjectIdentifier))
-    )
-  ) {
-    throw new Error("TASK-540 invalid " + label + " runtime receipt");
+let sealedSmokeEvidenceKeys = null;
+
+function assertExecutorSafeProjection(value, label) {
+  if (hasSensitiveEvidenceDeep(value)) {
+    throw new Error(label + ": executor safe projection contains a sensitive value");
   }
-}
-
-function matchesCanonicalBrowserCleanup(receipts, requireTerminalOverall) {
-  const cleanupReceipts = receipts.filter((receipt) => receipt.operation.startsWith("cleanup-"));
-  return (
-    cleanupReceipts.length === FINAL_BROWSER_CLEANUP.length &&
-    (!requireTerminalOverall || cleanupReceipts.at(-1)?.sequence === receipts.length) &&
-    cleanupReceipts.every((receipt, index) => {
-      const expected = FINAL_BROWSER_CLEANUP[index];
-      return (
-        receipt.scenario === "cleanup" &&
-        receipt.operation === expected.operation &&
-        receipt.command === expected.command &&
-        receipt.assertionName === expected.assertionName &&
-        receipt.sanitizedOutput === expected.sanitizedOutput &&
-        !receipt.stdoutDiscarded &&
-        receipt.routeKey === null &&
-        receipt.routeMethod === null &&
-        receipt.routePattern === null &&
-        (index === 0 || receipt.sequence === cleanupReceipts[index - 1].sequence + 1)
-      );
-    })
-  );
-}
-
-function validateOrchestrationCleanup(cleanup, prefix, browserRecoveryRequired) {
-  validateRuntimeReceiptSafety(cleanup.runtimeReceipts, "orchestration cleanup");
-  const recoveryReceiptsSafe = cleanup.browserReceipts.every(
-    (receipt, index) =>
-      receipt.sequence === index + 1 &&
-      receipt.scenario === "cleanup" &&
-      receipt.status === 0 &&
-      receipt.routeKey === null &&
-      receipt.routeMethod === null &&
-      receipt.routePattern === null &&
-      isSafeEvidenceIdentifier(receipt.operation) &&
-      isSafeEvidenceIdentifier(receipt.scenario) &&
-      (receipt.assertionName === null || isSafeEvidenceIdentifier(receipt.assertionName)) &&
-      !receipt.stdoutDiscarded &&
-      !hasSensitiveEvidence(receipt.command) &&
-      !hasSensitiveEvidence(receipt.sanitizedOutput) &&
-      !ENV_REFERENCE_PATTERN.test(receipt.command) &&
-      !ENV_REFERENCE_PATTERN.test(receipt.sanitizedOutput)
-  );
-  if (
-    !resultPassed(cleanup) ||
-    cleanup.prefix !== prefix ||
-    cleanup.browserRecoveryRequired !== browserRecoveryRequired ||
-    !recoveryReceiptsSafe ||
-    (!browserRecoveryRequired &&
-      (cleanup.browserRecoveryComplete || cleanup.browserReceipts.length !== 0)) ||
-    (browserRecoveryRequired &&
-      (!cleanup.browserRecoveryComplete ||
-        cleanup.browserReceipts.length === 0 ||
-        ![1, FINAL_BROWSER_CLEANUP_COUNT + 1].includes(cleanup.browserReceipts.length) ||
-        (cleanup.browserReceipts.length === FINAL_BROWSER_CLEANUP_COUNT + 1 &&
-          (cleanup.browserReceipts[0].operation !== "recovery-session-discovery" ||
-            cleanup.browserReceipts[0].command !== "playwright-cli --raw list" ||
-            cleanup.browserReceipts[0].sanitizedOutput !== "wf540smoke-present" ||
-            !matchesCanonicalBrowserCleanup(cleanup.browserReceipts, true))) ||
-        cleanup.browserReceipts.at(-1)?.operation !== "cleanup-session-absence" ||
-        cleanup.browserReceipts.at(-1)?.command !== "playwright-cli --raw list" ||
-        cleanup.browserReceipts.at(-1)?.sanitizedOutput !== "true")) ||
-    !sameUniqueSet(
-      cleanup.runtimeReceipts.map(({ operation }) => operation),
-      CLEANUP_AGENT_RUNTIME_OPERATIONS
-    ) ||
-    !cleanup.runtimeReceipts.every(
-      (receipt, index) => receipt.operation === CLEANUP_AGENT_RUNTIME_OPERATIONS[index]
-    ) ||
-    !cleanup.runtimeReceipts.every(
-      (receipt) => receipt.subjectKind === null && receipt.subjectIdentifier === prefix
-    )
-  ) {
-    throw new Error("TASK-540 orchestration cleanup receipt mismatch");
-  }
-  return cleanup;
-}
-
-async function validateSmoke(smoke, expectedPrefix) {
-  // Scan the entire agent result before it can be forwarded to another agent.
-  // This covers non-canonical fields such as summary as well as persisted evidence.
-  if (hasSensitiveEvidenceDeep(smoke)) {
-    throw new Error("TASK-540 smoke result contains a sensitive value");
-  }
-  const scenarioKinds = smoke.scenarios.map(({ kind }) => kind);
-  const scenarioIds = smoke.scenarios.map(({ id }) => id);
-  const routeKeys = smoke.routes.map(({ key }) => key);
-  const fixtureKinds = smoke.fixtures.items.map(({ kind }) => kind);
-  const fixtureIds = smoke.fixtures.items.map(({ id }) => id);
-  const cleanupKinds = smoke.fixtures.cleanupResources.map(({ kind }) => kind);
-  const cleanupIdentifiers = smoke.fixtures.cleanupResources.map(
-    ({ scopedIdentifier }) => scopedIdentifier
-  );
-  const accessLogOwnerIds = new Set([
-    ...smoke.fixtures.items
-      .filter(({ kind }) => kind === "user-a" || kind === "user-b")
-      .map(({ id }) => id),
-    ...smoke.fixtures.cleanupResources
-      .filter(({ kind }) => kind === "session-user-a" || kind === "session-user-b")
-      .map(({ scopedIdentifier }) => scopedIdentifier),
-  ]);
-  const helperChildKinds = smoke.helper.childProcesses.map(({ kind }) => kind);
-  const helperChildPids = smoke.helper.childProcesses.map(({ pid }) => pid);
-  const scenarioScreenshots = smoke.scenarios.flatMap(({ screenshotPaths }) => screenshotPaths);
-  const contentTypeKinds = new Set([
-    "content-type-editable",
-    "content-type-related-a",
-    "content-type-related-b",
-  ]);
-
-  if (
-    !resultPassed(smoke) ||
-    smoke.fixtures.prefix !== expectedPrefix ||
-    !smoke.browserReceipts.every((receipt, index) => receipt.sequence === index + 1) ||
-    !smoke.adminUp ||
-    !smoke.frontUp ||
-    !smoke.helper.stopped ||
-    !smoke.helper.processesAbsent ||
-    smoke.helper.helperPid <= 0 ||
-    smoke.helper.handle !== "node-child-process:" + smoke.helper.helperPid ||
-    helperChildPids.includes(smoke.helper.helperPid) ||
-    !sameUniqueSet(helperChildKinds, HELPER_CHILD_KINDS) ||
-    new Set(helperChildPids).size !== helperChildPids.length ||
-    !smoke.helper.childProcesses.every(
-      (process) =>
-        process.absent &&
-        process.ancestry[0] === smoke.helper.helperPid &&
-        process.ancestry.at(-1) === process.pid &&
-        process.ancestry.at(-2) === process.ppid
-    ) ||
-    !sameUniqueSet(smoke.helper.portsAbsent, HELPER_PORTS) ||
-    !smoke.session.opened ||
-    !smoke.session.routesEmpty ||
-    !smoke.session.closed ||
-    !smoke.session.finalAbsent ||
-    !sameUniqueSet(scenarioKinds, SMOKE_KINDS) ||
-    !sameOrderedValues(Object.keys(SMOKE_SCENARIO_EXPECTATIONS), SMOKE_KINDS) ||
-    new Set(scenarioIds).size !== scenarioIds.length ||
-    !smoke.scenarios.every(
-      (scenario) =>
-        isSafeEvidenceIdentifier(scenario.id) &&
-        scenario.viewports.every((viewport) => isSafeEvidenceIdentifier(viewport))
-    ) ||
-    !SMOKE_RECEIPT_SCENARIOS.every((scenario) =>
-      smoke.browserReceipts.some((receipt) => receipt.scenario === scenario)
-    ) ||
-    !sameUniqueSet(routeKeys, Object.keys(ROUTE_EXPECTATIONS)) ||
-    !sameUniqueSet(Object.keys(ROUTE_SCENARIOS), Object.keys(ROUTE_EXPECTATIONS)) ||
-    Object.values(ROUTE_SCENARIOS).some((scenario) => !SMOKE_KINDS.includes(scenario)) ||
-    !sameUniqueSet(fixtureKinds, REQUIRED_FIXTURE_KINDS) ||
-    new Set(fixtureIds).size !== fixtureIds.length ||
-    !smoke.fixtures.items.every(
-      (item) =>
-        item.acquired &&
-        item.cleaned &&
-        item.absenceVerified &&
-        isSafeEvidenceIdentifier(item.id) &&
-        (item.slug === null || isSafeEvidenceIdentifier(item.slug)) &&
-        (contentTypeKinds.has(item.kind)
-          ? typeof item.slug === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(item.slug)
-          : item.slug === null)
-    ) ||
-    !REQUIRED_CLEANUP_RESOURCE_KINDS.every((kind) => cleanupKinds.includes(kind)) ||
-    new Set(cleanupIdentifiers).size !== cleanupIdentifiers.length ||
-    !smoke.fixtures.cleanupResources.every(
-      (item) =>
-        item.acquired &&
-        item.cleaned &&
-        item.absenceVerified &&
-        isSafeEvidenceIdentifier(item.scopedIdentifier) &&
-        (item.ownerSubjectIdentifier === null ||
-          isSafeEvidenceIdentifier(item.ownerSubjectIdentifier)) &&
-        item.sanitizedProbe.length > 0 &&
-        !hasSensitiveEvidence(item.sanitizedProbe) &&
-        !ENV_REFERENCE_PATTERN.test(item.sanitizedProbe) &&
-        (!item.kind.startsWith("session-user-") ||
-          (item.identifierType === "db-id" &&
-            UUID_IDENTIFIER_PATTERN.test(item.scopedIdentifier) &&
-            item.ownerSubjectIdentifier === null)) &&
-        (!ACCESS_LOG_CLEANUP_RESOURCE_KINDS.includes(item.kind) ||
-          (item.identifierType === "db-id" &&
-            UUID_IDENTIFIER_PATTERN.test(item.scopedIdentifier) &&
-            typeof item.ownerSubjectIdentifier === "string" &&
-            UUID_IDENTIFIER_PATTERN.test(item.ownerSubjectIdentifier) &&
-            accessLogOwnerIds.has(item.ownerSubjectIdentifier))) &&
-        (item.kind.startsWith("session-user-") ||
-          ACCESS_LOG_CLEANUP_RESOURCE_KINDS.includes(item.kind) ||
-          item.ownerSubjectIdentifier === null)
-    ) ||
-    !smoke.fixtures.cleanupOrderVerified ||
-    !smoke.themeRestored ||
-    !smoke.bootstrapAdminRestored ||
-    !smoke.legacyLocalStorageAbsent ||
-    smoke.consoleErrors.length > 0 ||
-    smoke.consoleWarnings.length > 0 ||
-    smoke.pageErrors.length > 0 ||
-    smoke.failures.length > 0
-  ) {
-    throw new Error("TASK-540 smoke top-level invariant failed");
-  }
-
-  validateRuntimeReceiptSafety(smoke.runtimeReceipts, "smoke");
-  const runtimeOperations = smoke.runtimeReceipts.map(({ operation }) => operation);
-  if (!REQUIRED_RUNTIME_OPERATIONS.every((operation) => runtimeOperations.includes(operation))) {
-    throw new Error("TASK-540 runtime operation coverage mismatch");
-  }
-  const expectedRuntimeStart = [
-    "helper-launch",
-    "admin-health",
-    "front-health",
-    ...HELPER_CHILD_KINDS.map(() => "pid-lineage"),
-  ];
-  const expectedRuntimeEnd = [
-    "helper-stop",
-    ...HELPER_CHILD_KINDS.map(() => "process-absence"),
-    ...HELPER_PORTS.map(() => "port-absence"),
-    ...OUTER_HOST_RUNTIME_OPERATIONS,
-  ];
-  const cleanupStart =
-    runtimeOperations.length - expectedRuntimeEnd.length - CLEANUP_AGENT_RUNTIME_OPERATIONS.length;
-  if (
-    !expectedRuntimeStart.every((operation, index) => runtimeOperations[index] === operation) ||
-    cleanupStart < expectedRuntimeStart.length ||
-    !CLEANUP_AGENT_RUNTIME_OPERATIONS.every(
-      (operation, index) => runtimeOperations[cleanupStart + index] === operation
-    ) ||
-    !expectedRuntimeEnd.every(
-      (operation, index) =>
-        runtimeOperations[runtimeOperations.length - expectedRuntimeEnd.length + index] ===
-        operation
-    )
-  ) {
-    throw new Error("TASK-540 orchestrator-owned runtime receipt order mismatch");
-  }
-
-  const oneRuntime = (operation, predicate) => {
-    const receipts = exactReceipts(smoke.runtimeReceipts, operation);
-    return receipts.length === 1 && predicate(receipts[0]);
-  };
-  const helperId = String(smoke.helper.helperPid);
-  if (
-    !oneRuntime(
-      "helper-launch",
-      (receipt) =>
-        receipt.operationDescriptor === "spawn:" + SMOKE_HELPER_COMMAND &&
-        runtimeSubjectMatches(receipt, "helper", helperId)
-    ) ||
-    !oneRuntime(
-      "admin-health",
-      (receipt) =>
-        receipt.operationDescriptor === ADMIN_HEALTH_OPERATION_DESCRIPTOR &&
-        runtimeSubjectMatches(receipt, "helper", helperId)
-    ) ||
-    !oneRuntime(
-      "front-health",
-      (receipt) =>
-        receipt.operationDescriptor === FRONT_HEALTH_OPERATION_DESCRIPTOR &&
-        runtimeSubjectMatches(receipt, "helper", helperId)
-    ) ||
-    !oneRuntime("fixture-setup", (receipt) =>
-      runtimeSubjectMatches(receipt, null, expectedPrefix)
-    ) ||
-    !oneRuntime("helper-stop", (receipt) => runtimeSubjectMatches(receipt, "helper", helperId))
-  ) {
-    throw new Error("TASK-540 helper/setup runtime receipt mismatch");
-  }
-
-  const lineageReceipts = exactReceipts(smoke.runtimeReceipts, "pid-lineage");
-  const processAbsenceReceipts = exactReceipts(smoke.runtimeReceipts, "process-absence");
-  if (
-    lineageReceipts.length !== smoke.helper.childProcesses.length ||
-    processAbsenceReceipts.length !== smoke.helper.childProcesses.length ||
-    !smoke.helper.childProcesses.every((process) => {
-      const identifier = process.kind + ":" + process.pid;
-      return (
-        lineageReceipts.filter((receipt) => runtimeSubjectMatches(receipt, "helper", identifier))
-          .length === 1 &&
-        processAbsenceReceipts.filter((receipt) =>
-          runtimeSubjectMatches(receipt, "helper", identifier)
-        ).length === 1
-      );
-    })
-  ) {
-    throw new Error("TASK-540 helper PID runtime receipt mismatch");
-  }
-
-  const portAbsenceReceipts = exactReceipts(smoke.runtimeReceipts, "port-absence");
-  if (
-    portAbsenceReceipts.length !== HELPER_PORTS.length ||
-    !HELPER_PORTS.every(
-      (port) =>
-        portAbsenceReceipts.filter((receipt) =>
-          runtimeSubjectMatches(receipt, "helper", String(port))
-        ).length === 1
-    )
-  ) {
-    throw new Error("TASK-540 helper port runtime receipt mismatch");
-  }
-
-  const provenanceReceipts = exactReceipts(smoke.runtimeReceipts, "fixture-provenance");
-  const entityAbsenceReceipts = exactReceipts(smoke.runtimeReceipts, "entity-absence");
-  if (
-    provenanceReceipts.length !== smoke.fixtures.items.length ||
-    entityAbsenceReceipts.length !== smoke.fixtures.items.length ||
-    !smoke.fixtures.items.every(
-      (item) =>
-        provenanceReceipts.filter((receipt) => runtimeSubjectMatches(receipt, item.kind, item.id))
-          .length === 1 &&
-        entityAbsenceReceipts.filter((receipt) =>
-          runtimeSubjectMatches(receipt, item.kind, item.id)
-        ).length === 1
-    )
-  ) {
-    throw new Error("TASK-540 fixture provenance/absence receipt mismatch");
-  }
-
-  const cleanupAbsenceReceipts = exactReceipts(smoke.runtimeReceipts, "cleanup-absence");
-  if (
-    cleanupAbsenceReceipts.length !== smoke.fixtures.cleanupResources.length ||
-    !smoke.fixtures.cleanupResources.every(
-      (item) =>
-        cleanupAbsenceReceipts.filter((receipt) =>
-          runtimeSubjectMatches(receipt, item.kind, item.scopedIdentifier)
-        ).length === 1
-    )
-  ) {
-    throw new Error("TASK-540 cleanup-resource absence receipt mismatch");
-  }
-
-  for (const operation of ORCHESTRATION_RUNTIME_OPERATIONS) {
-    if (!oneRuntime(operation, (receipt) => runtimeSubjectMatches(receipt, null, expectedPrefix))) {
-      throw new Error("TASK-540 orchestration receipt mismatch: " + operation);
-    }
-  }
-
-  const routeOperationNames = new Set([
-    "route-setup",
-    "route-hit-read",
-    "route-release",
-    "unroute",
-    "real-retry",
-  ]);
-  if (
-    smoke.browserReceipts.some(
-      (receipt) =>
-        (receipt.routeKey === null &&
-          (receipt.routeMethod !== null ||
-            receipt.routePattern !== null ||
-            routeOperationNames.has(receipt.operation))) ||
-        (receipt.routeKey !== null &&
-          (receipt.routeMethod === null ||
-            receipt.routePattern === null ||
-            !routeOperationNames.has(receipt.operation)))
-    )
-  ) {
-    throw new Error("TASK-540 route receipt metadata mismatch");
-  }
-
-  for (const route of smoke.routes) {
-    const expected = ROUTE_EXPECTATIONS[route.key];
-    const expectedPattern = expectedRoutePattern(smoke, route.key);
-    const routeReceipts = smoke.browserReceipts.filter((receipt) => receipt.routeKey === route.key);
-    const expectedOperations =
-      expected.mode === "malformed-json"
-        ? ["route-setup", "route-hit-read", "unroute", "real-retry"]
-        : ["route-setup", "route-hit-read", "route-release", "unroute"];
-    const hitRead = routeReceipts.find((receipt) => receipt.operation === "route-hit-read");
-    if (
-      route.method !== expected.method ||
-      route.mode !== expected.mode ||
-      route.expandedPattern !== expectedPattern ||
-      route.expandedPattern.includes("<") ||
-      route.expandedPattern.includes(">") ||
-      route.hits !== 1 ||
-      !route.installed ||
-      !route.hitRead ||
-      route.released !== (expected.mode === "delayed-success") ||
-      !route.unrouted ||
-      route.unroutedBeforeRetry !== (expected.mode === "malformed-json") ||
-      !sameUniqueSet(
-        routeReceipts.map(({ operation }) => operation),
-        expectedOperations
-      ) ||
-      !routeReceipts.every((receipt, index) => receipt.operation === expectedOperations[index]) ||
-      !routeReceipts.every(
-        (receipt) =>
-          receipt.scenario === ROUTE_SCENARIOS[route.key] &&
-          receipt.routeMethod === expected.method &&
-          receipt.routePattern === expectedPattern
-      ) ||
-      routeReceipts.some(
-        (receipt, index) => index > 0 && receipt.sequence <= routeReceipts[index - 1].sequence
-      ) ||
-      hitRead?.assertionName !== "route-hit:" + route.key ||
-      hitRead?.sanitizedOutput.trim() !== "1"
-    ) {
-      throw new Error("TASK-540 route interception mismatch: " + route.key);
-    }
-    const preReleaseAssertionNames = PRE_RELEASE_ROUTE_ASSERTIONS[route.key] ?? [];
-    const postReleaseAssertionNames = POST_RELEASE_ROUTE_ASSERTIONS[route.key] ?? [];
-    const preReleaseScreenshotPath = PRE_RELEASE_ROUTE_SCREENSHOTS[route.key] ?? null;
-    if (
-      preReleaseAssertionNames.length > 0 ||
-      postReleaseAssertionNames.length > 0 ||
-      preReleaseScreenshotPath
-    ) {
-      const routeSetup = routeReceipts.find((receipt) => receipt.operation === "route-setup");
-      const routeRelease = routeReceipts.find((receipt) => receipt.operation === "route-release");
-      const unroute = routeReceipts.find((receipt) => receipt.operation === "unroute");
-      const preReleaseAssertionReceipts = preReleaseAssertionNames.map((assertionName) =>
-        smoke.browserReceipts.filter(
-          (receipt) =>
-            receipt.scenario === ROUTE_SCENARIOS[route.key] &&
-            receipt.assertionName === assertionName
-        )
-      );
-      const postReleaseAssertionReceipts = postReleaseAssertionNames.map((assertionName) =>
-        smoke.browserReceipts.filter(
-          (receipt) =>
-            receipt.scenario === ROUTE_SCENARIOS[route.key] &&
-            receipt.assertionName === assertionName
-        )
-      );
-      const screenshotRecord = preReleaseScreenshotPath
-        ? smoke.screenshots.find(({ path }) => path === preReleaseScreenshotPath)
-        : null;
-      const screenshotReceipts = screenshotRecord
-        ? smoke.browserReceipts.filter(
-            (receipt) =>
-              receipt.scenario === ROUTE_SCENARIOS[route.key] &&
-              receipt.operation === "screenshot" &&
-              receipt.command === screenshotRecord.command
-          )
-        : [];
-      if (
-        !routeSetup ||
-        !routeRelease ||
-        !unroute ||
-        !hitRead ||
-        routeSetup.sequence >= hitRead.sequence ||
-        hitRead.sequence >= routeRelease.sequence ||
-        preReleaseAssertionReceipts.some(
-          (receipts) =>
-            receipts.length !== 1 ||
-            receipts[0].sequence <= hitRead.sequence ||
-            receipts[0].sequence >= routeRelease.sequence
-        ) ||
-        postReleaseAssertionReceipts.some(
-          (receipts) =>
-            receipts.length !== 1 ||
-            receipts[0].sequence <= routeRelease.sequence ||
-            receipts[0].sequence >= unroute.sequence
-        ) ||
-        (preReleaseScreenshotPath &&
-          (!screenshotRecord ||
-            screenshotReceipts.length !== 1 ||
-            screenshotReceipts[0].sequence <= hitRead.sequence ||
-            screenshotReceipts[0].sequence >= routeRelease.sequence))
-      ) {
-        throw new Error("TASK-540 delayed-route evidence order mismatch: " + route.key);
-      }
-    }
-    const preRetryAssertionNames = PRE_RETRY_ROUTE_ASSERTIONS[route.key] ?? [];
-    const preRetryScreenshotPath = PRE_RETRY_ROUTE_SCREENSHOTS[route.key] ?? null;
-    if (preRetryAssertionNames.length > 0 || preRetryScreenshotPath) {
-      const routeSetup = routeReceipts.find((receipt) => receipt.operation === "route-setup");
-      const unroute = routeReceipts.find((receipt) => receipt.operation === "unroute");
-      const realRetry = routeReceipts.find((receipt) => receipt.operation === "real-retry");
-      const assertionReceipts = preRetryAssertionNames.map((assertionName) =>
-        smoke.browserReceipts.filter(
-          (receipt) =>
-            receipt.scenario === ROUTE_SCENARIOS[route.key] &&
-            receipt.assertionName === assertionName
-        )
-      );
-      const screenshotRecord = preRetryScreenshotPath
-        ? smoke.screenshots.find(({ path }) => path === preRetryScreenshotPath)
-        : null;
-      const screenshotReceipts = screenshotRecord
-        ? smoke.browserReceipts.filter(
-            (receipt) =>
-              receipt.scenario === ROUTE_SCENARIOS[route.key] &&
-              receipt.operation === "screenshot" &&
-              receipt.command === screenshotRecord.command
-          )
-        : [];
-      if (
-        expected.mode !== "malformed-json" ||
-        !routeSetup ||
-        !hitRead ||
-        !unroute ||
-        !realRetry ||
-        routeSetup.sequence >= hitRead.sequence ||
-        hitRead.sequence >= unroute.sequence ||
-        unroute.sequence >= realRetry.sequence ||
-        assertionReceipts.some(
-          (receipts) =>
-            receipts.length !== 1 ||
-            receipts[0].sequence <= hitRead.sequence ||
-            receipts[0].sequence >= unroute.sequence
-        ) ||
-        (preRetryScreenshotPath &&
-          (!screenshotRecord ||
-            screenshotReceipts.length !== 1 ||
-            screenshotReceipts[0].sequence <= hitRead.sequence ||
-            screenshotReceipts[0].sequence >= unroute.sequence))
-      ) {
-        throw new Error("TASK-540 malformed-route evidence order mismatch: " + route.key);
-      }
-    }
-    if (route.key === "preference-a-write-exit") {
-      const routeSetup = routeReceipts.find((receipt) => receipt.operation === "route-setup");
-      const routeRelease = routeReceipts.find((receipt) => receipt.operation === "route-release");
-      const unroute = routeReceipts.find((receipt) => receipt.operation === "unroute");
-      const preferenceAssertions = Object.fromEntries(
-        Object.keys(EXACT_SMOKE_ASSERTION_OUTPUTS["responsive-users"]).map((name) => [
-          name,
-          smoke.browserReceipts.filter(
-            (receipt) => receipt.scenario === "responsive-users" && receipt.assertionName === name
-          ),
-        ])
-      );
-      const beforeRelease = preferenceAssertions["preference-a-write-hit-before-release"];
-      const afterReleaseNames = [
-        "preference-a-write-hit-after-release",
-        "queued-a-write-zero-dispatch",
-        "user-b-default-unchanged",
-      ];
-      if (
-        !routeSetup ||
-        !routeRelease ||
-        !unroute ||
-        !hitRead ||
-        beforeRelease.length !== 1 ||
-        afterReleaseNames.some((name) => preferenceAssertions[name].length !== 1) ||
-        Object.entries(EXACT_SMOKE_ASSERTION_OUTPUTS["responsive-users"]).some(
-          ([name, actual]) => preferenceAssertions[name][0]?.sanitizedOutput !== actual
-        ) ||
-        routeSetup.sequence >= hitRead.sequence ||
-        hitRead.sequence >= beforeRelease[0].sequence ||
-        beforeRelease[0].sequence >= routeRelease.sequence ||
-        afterReleaseNames.some(
-          (name) =>
-            preferenceAssertions[name][0].sequence <= routeRelease.sequence ||
-            preferenceAssertions[name][0].sequence >= unroute.sequence
-        )
-      ) {
-        throw new Error("TASK-540 preference write exit evidence order mismatch");
-      }
-    }
-  }
-
-  const loggerReceipts = smoke.browserReceipts.filter(
-    (receipt) => receipt.operation === "logger-install"
-  );
-  if (
-    loggerReceipts.length !== 1 ||
-    loggerReceipts[0].scenario !== "setup" ||
-    loggerReceipts[0].command !== LOGGER_INSTALL_COMMAND ||
-    loggerReceipts[0].stdoutDiscarded ||
-    loggerReceipts[0].sanitizedOutput !== "true"
-  ) {
-    throw new Error("TASK-540 browser logger instrumentation mismatch");
-  }
-
-  if (!matchesCanonicalBrowserCleanup(smoke.browserReceipts, true)) {
-    throw new Error("TASK-540 final browser cleanup receipt mismatch");
-  }
-
-  for (const scenario of smoke.scenarios) {
-    const names = scenario.visibleAssertions.map(({ name }) => name);
-    const exactOutputs = EXACT_SMOKE_ASSERTION_OUTPUTS[scenario.kind] ?? {};
-    if (
-      !scenarioMetadataMatchesExpectation(scenario) ||
-      new Set(names).size !== names.length ||
-      !REQUIRED_SMOKE_ASSERTIONS[scenario.kind].every((name) => names.includes(name)) ||
-      !Object.entries(exactOutputs).every(([name, actual]) =>
-        scenario.visibleAssertions.some(
-          (assertion) => assertion.name === name && assertion.actual === actual
-        )
-      ) ||
-      !scenario.visibleAssertions.every((item) => {
-        const matches = smoke.browserReceipts.filter(
-          (receipt) =>
-            receipt.scenario === scenario.kind &&
-            receipt.assertionName === item.name &&
-            receipt.sanitizedOutput === item.actual &&
-            !receipt.stdoutDiscarded
-        );
-        return item.pass && item.actual.length > 0 && matches.length === 1;
-      }) ||
-      scenario.consoleErrors.length > 0 ||
-      scenario.consoleWarnings.length > 0 ||
-      scenario.pageErrors.length > 0
-    ) {
-      throw new Error("TASK-540 scenario metadata/visible evidence mismatch: " + scenario.kind);
-    }
-    for (const [assertionName, expectedCommand] of Object.entries(CONSOLE_CHANNEL_COMMANDS)) {
-      const receipts = smoke.browserReceipts.filter(
-        (receipt) => receipt.scenario === scenario.kind && receipt.assertionName === assertionName
-      );
-      if (
-        receipts.length !== 1 ||
-        receipts[0].operation !== "log-read" ||
-        receipts[0].command !== expectedCommand ||
-        receipts[0].sanitizedOutput !== "[]" ||
-        receipts[0].stdoutDiscarded ||
-        receipts[0].routeKey !== null ||
-        receipts[0].sequence <= loggerReceipts[0].sequence
-      ) {
-        throw new Error(
-          "TASK-540 per-flow browser channel receipt mismatch: " +
-            scenario.kind +
-            ":" +
-            assertionName
-        );
-      }
-    }
-  }
-
-  const themes = new Set(smoke.scenarios.map(({ theme }) => theme));
-  const responsive = smoke.scenarios.find(({ kind }) => kind === "responsive-users");
-  if (
-    (!themes.has("light") && !themes.has("light-dark")) ||
-    (!themes.has("dark") && !themes.has("light-dark")) ||
-    !["320x844", "390x844", "480x844", "1024x900", "1280x900"].every((viewport) =>
-      responsive?.viewports.includes(viewport)
-    ) ||
-    !sameUniqueSet(scenarioScreenshots, SCREENSHOT_PATHS)
-  ) {
-    throw new Error("TASK-540 theme/viewport/scenario screenshot coverage mismatch");
-  }
-
-  if (
-    smoke.browserReceipts.some((receipt) => {
-      const exactCredentialFill =
-        EMAIL_FILL_COMMAND.test(receipt.command) || PASSWORD_FILL_COMMAND.test(receipt.command);
-      const mentionsCredential =
-        CREDENTIAL_SELECTOR_PATTERN.test(receipt.command) ||
-        CREDENTIAL_REFERENCE_PATTERN.test(receipt.command) ||
-        ENV_REFERENCE_PATTERN.test(receipt.command);
-      return (
-        receipt.status !== 0 ||
-        !isSafeEvidenceIdentifier(receipt.operation) ||
-        !isSafeEvidenceIdentifier(receipt.scenario) ||
-        (!receipt.command.startsWith(SMOKE_SESSION_PREFIX) &&
-          receipt.command !== "playwright-cli --raw list") ||
-        receipt.command.includes("\n") ||
-        receipt.sanitizedOutput.length > 4096 ||
-        hasSensitiveEvidence(receipt.command) ||
-        hasSensitiveEvidence(receipt.sanitizedOutput) ||
-        (receipt.routePattern !== null && hasSensitiveEvidence(receipt.routePattern)) ||
-        (receipt.assertionName !== null && !isSafeEvidenceIdentifier(receipt.assertionName)) ||
-        ENV_REFERENCE_PATTERN.test(receipt.sanitizedOutput) ||
-        (receipt.assertionName !== null && receipt.sanitizedOutput.length === 0) ||
-        (mentionsCredential && !exactCredentialFill) ||
-        (exactCredentialFill
-          ? !receipt.stdoutDiscarded || receipt.sanitizedOutput !== "[discarded]"
-          : receipt.stdoutDiscarded)
-      );
-    }) ||
-    smoke.screenshots.some(({ command: value, path }) => {
-      const matches = smoke.browserReceipts.filter(
-        (receipt) => receipt.command === value && receipt.operation === "screenshot"
-      );
-      const owningScenario = smoke.scenarios.find((scenario) =>
-        scenario.screenshotPaths.includes(path)
-      );
-      return matches.length !== 1 || !owningScenario || matches[0].scenario !== owningScenario.kind;
-    })
-  ) {
-    throw new Error("TASK-540 browser command receipt mismatch");
-  }
-
-  await verifyScreenshots(smoke);
-  return smoke;
-}
-
-async function runSmoke(attempt) {
-  phase("Smoke");
-  const nonce = randomUUID().replaceAll("-", "").slice(0, 12);
-  const prefix = "wf540-" + nonce;
-  const before = await worktreeSnapshot();
-  let host = null;
-  let hostStop = null;
-  let smoke = null;
-  let cleanup = null;
-  let startAbsenceProven = false;
-  let primaryTerminalBrowserComplete = false;
-  const failures = [];
-
-  try {
-    host = await startOwnedSmokeHost();
-    smoke = await dispatchAgentSafely(
-      await groundedPrompt(
-        "Final TASK-540 real-browser smoke attempt " +
-          attempt +
-          " at " +
-          ROOT +
-          ". The orchestrator-fixed fixture prefix is exactly " +
-          prefix +
-          "; use it verbatim and never choose another nonce. The workflow orchestrator has " +
-          "already spawned and health-checked the sole task-owned host. Attach to it; never " +
-          "launch, restart, replace, signal, or stop a server/process. Echo this pre-dispatch " +
-          "non-secret helper inventory exactly in the helper field: " +
-          JSON.stringify(host.helper) +
-          ". Read the entire 540-06-L01 Real browser smoke contract immediately before execution. " +
-          "Load .env without printing or " +
-          "persisting credentials. The only commands allowed to contain any literal environment " +
-          "reference are exact credential fills matching " +
-          EMAIL_FILL_COMMAND.source +
-          " or " +
-          PASSWORD_FILL_COMMAND.source +
-          ". Their stdout is redirected to /dev/null, stdoutDiscarded=true, and sanitizedOutput " +
-          "is exactly [discarded]. Every browser operation—open, resize, fill, click, goto, route setup/release/hit " +
-          "read/unroute/route-list, assertion, log read, screenshot, sign-out/in, and close—must " +
-          "be its own separate full playwright-cli -s=wf540smoke --raw command. Never combine " +
-          "browser operations or substitute prose for a receipt. Install console error, console " +
-          "warning, and page-error listeners once with exact logger command " +
-          LOGGER_INSTALL_COMMAND +
-          " and record operation=logger-install, scenario=setup, sanitizedOutput=true. After each " +
-          "of the seven flows execute exactly one separate command for each channel, use " +
-          "operation=log-read and the exact assertion-name/command map " +
-          JSON.stringify(CONSOLE_CHANNEL_COMMANDS) +
-          ", and require sanitizedOutput exactly []. Link every receipt to setup, cleanup, or one " +
-          "exact scenario kind; include a bounded operation label, nullable route metadata, " +
-          "contiguous sequence, assertion name, and at most 4096 characters of sanitized observed " +
-          "output. Before returning evidence, reject raw secret assignments/headers/bearer or " +
-          "cookie values in every browser command/output, runtime operation descriptor/output, " +
-          "runtime subjectIdentifier, fixture ID/slug, cleanup scopedIdentifier, and sanitizedProbe; " +
-          "benign prose naming a security concept without a value is allowed. Route operations use " +
-          "exactly route-setup, route-hit-read, route-release, " +
-          "unroute, and real-retry. For every route receipt set the route key, exact method and " +
-          "expanded pattern; leave all three null on non-route receipts. Every required visible " +
-          "assertion and route hit read needs exactly one same-scenario receipt with matching " +
-          "output. Create the exact " +
-          prefix +
-          " fixture family with two real active Admin users named deterministically WF540 User " +
-          "A/B " +
-          nonce +
-          " and exact inventoried content types, A/B related entries, editable entry, Screen, " +
-          "media, overrides/settings. Fixture records use server IDs, safe generated slug only " +
-          "for the three content-type records, and slug=null for every other kind. Capture " +
-          "acquisition IDs and prove provenance. Run exactly these seven visible flows: " +
-          JSON.stringify(SMOKE_KINDS) +
-          ". For each flow return the exact theme, ordered viewport list, and ordered screenshot " +
-          "association from " +
-          JSON.stringify(SMOKE_SCENARIO_EXPECTATIONS) +
-          ". Run exactly " +
-          ROUTE_EXPECTATION_COUNT +
-          " method-aware interceptions and require one hit each: " +
-          JSON.stringify(ROUTE_EXPECTATIONS) +
-          ". Expand their exact patterns from fixture slugs/entry ID according to " +
-          JSON.stringify(ROUTE_SCENARIOS) +
-          ". Malformed JSON failures use HTTP 200, refuse a second hit, record hit 1, and are " +
-          "unrouted in a separate full command before the real Save/Retry click. Delayed handlers " +
-          "capture the old response, accept one hit, release through named latches, then unroute. " +
-          "For related-a-refresh, install the route on the dirty entry tab, open the real related-A " +
-          "entry editor in a second tab of the same session, change a harmless visible value, and " +
-          "save it with the exact separate CLI click command `playwright-cli -s=wf540smoke --raw " +
-          "click 'button:text-is(\"Save draft\")'`. Return to the first tab with a separate CLI " +
-          "command so that real entry mutation's BroadcastChannel cache event starts the refresh. " +
-          "Never call an in-page cache-clear/cacheBus helper. Before every delayed release, " +
-          "record the ordered assertions and transient screenshot from " +
-          JSON.stringify(PRE_RELEASE_ROUTE_ASSERTIONS) +
-          " and " +
-          JSON.stringify(PRE_RELEASE_ROUTE_SCREENSHOTS) +
-          "; after release but before unroute record " +
-          JSON.stringify(POST_RELEASE_ROUTE_ASSERTIONS) +
-          ". For malformed routes, after hit-read and before unroute capture " +
-          JSON.stringify(PRE_RETRY_ROUTE_ASSERTIONS) +
-          " plus " +
-          JSON.stringify(PRE_RETRY_ROUTE_SCREENSHOTS) +
-          "; only then unroute and execute real-retry. " +
-          "Assert the exact required visible/ARIA/computed/geometry/persisted/request-order " +
-          "effects " +
-          JSON.stringify(REQUIRED_SMOKE_ASSERTIONS) +
-          ". For the responsive-users flow, return these exact structured observed outputs: " +
-          JSON.stringify(EXACT_SMOKE_ASSERTION_OUTPUTS["responsive-users"]) +
-          ". Record each as its own assertion receipt. After route setup, both the route hit-read " +
-          "and preference-a-write-hit-before-release must observe exactly one first A PATCH " +
-          "before route-release. Only after route-release, but before unroute, record " +
-          "preference-a-write-hit-after-release=1, queued-a-write-zero-dispatch=0, and B's " +
-          "default byte-identical before/after. The post-release hit value proves the same first " +
-          "request remained the sole hit; never dispatch or require a second network request" +
-          ", light and dark, viewports 320/390/480/1024/1280, and empty console-error, warning, " +
-          "and page-error arrays after every flow. Capture exactly " +
-          SCREENSHOT_PATHS.length +
-          " task-scoped PNGs " +
-          JSON.stringify(SCREENSHOT_PATHS.map((path) => ROOT + "/" + path)) +
-          " using separate full commands; stat, PNG-signature, mtime, device, inode, and SHA-256 " +
-          "each, with distinct canonical paths, device:inode identities, and hashes. Return a " +
-          "contiguous agent runtimeReceipts sequence containing exactly one fixture-setup, one " +
-          "fixture-provenance and entity-absence per fixture, and one cleanup-absence per cleanup " +
-          "resource. Do not fabricate helper launch/health/PID/stop/port or orchestration receipts; " +
-          "the workflow itself owns those. Every runtime receipt records an operationDescriptor for " +
-          "the operation that really executed and evidenceSha256 over its real captured stdout/stderr " +
-          "or explicit Node/DB/storage observation bytes; never hash sanitized prose as a substitute " +
-          "for operation evidence. Use null/" +
-          prefix +
-          " for setup; and exact kind/non-secret ID for fixture/resource receipts. In the smoke " +
-          "agent's own finally release all latches, unroute all task routes, restore the original " +
-          "theme, sign back in as bootstrap admin, delete only inventoried fixtures in reverse " +
-          "dependency order, and return exact redacted cleanup-resource evidence for " +
-          JSON.stringify(REQUIRED_CLEANUP_RESOURCE_KINDS) +
-          ". Return every base kind at least once and repeat access-log-user-a/access-log-user-b " +
-          "once for every exact acquired access-log row. Use only scoped non-secret DB " +
-          "IDs/labels/storage keys and bounded sanitized absence " +
-          "probes. Set ownerSubjectIdentifier to the owning synthetic user/session UUID for each " +
-          "access-log record and null for every other cleanup resource. Session resources use DB " +
-          "IDs/labels, never a cookie, token, session hash, CSRF " +
-          "value, or password hash. Prove each " +
-          "absent, then execute this exact seven-receipt final browser cleanup matrix consecutively " +
-          "with scenario=cleanup, no duplicate/extra cleanup-* operation, and exact command/output: " +
-          JSON.stringify(FINAL_BROWSER_CLEANUP) +
-          ". The final global list must independently prove wf540smoke absent. Leave host stop and " +
-          "process/port absence to the orchestrator outer finally. You may write only " +
-          "the named PNG files; never edit tracked source/tests/docs/tasks/workflow. Return the " +
-          "exact structured result even on failure, with truthful cleanup and failures."
-      ),
-      { label: "smoke:540:" + attempt, phase: "Smoke", schema: SMOKE_SCHEMA }
-    );
-    primaryTerminalBrowserComplete = matchesCanonicalBrowserCleanup(smoke.browserReceipts, true);
-    validateRuntimeReceiptSafety(smoke.runtimeReceipts, "agent smoke");
-    if (
-      smoke.runtimeReceipts.some(
-        (receipt) => !SMOKE_AGENT_RUNTIME_OPERATIONS.includes(receipt.operation)
-      )
-    ) {
-      throw new Error("TASK-540 smoke agent fabricated an orchestrator-owned receipt");
-    }
-    if (!resultPassed(smoke)) {
-      failures.push(
-        new Error("TASK-540 primary smoke reported failure: " + smoke.errors.join("; "))
-      );
-    }
-  } catch (error) {
-    if (host === null) startAbsenceProven = error?.hostAbsenceProven === true;
-    failures.push(error);
-  } finally {
-    const cleanupAttemptErrors = [];
-    try {
-      if (host) {
-        const browserRecoveryRequired = !primaryTerminalBrowserComplete;
-        let browserRecoveryDispatched = false;
-        for (let cleanupAttempt = 1; cleanupAttempt <= 2; cleanupAttempt += 1) {
-          // At most one cleanup agent may receive browser authority. If that agent
-          // executed terminal receipt 7 but then threw or returned an invalid result,
-          // a second Playwright command would violate the terminal-absence contract.
-          // The bounded second attempt is therefore resource-only and cannot turn an
-          // unproven browser recovery into a successful/new-prefix-safe cleanup.
-          const attemptBrowserRecoveryRequired =
-            browserRecoveryRequired && !browserRecoveryDispatched;
-          if (attemptBrowserRecoveryRequired) browserRecoveryDispatched = true;
-          try {
-            const cleanupCandidate = await dispatchAgentSafely(
-              await groundedPrompt(
-                "TASK-540 orchestration-level fixture cleanup and conditional browser recovery attempt " +
-                  cleanupAttempt +
-                  " of 2 at " +
-                  ROOT +
-                  " for fixed prefix " +
-                  prefix +
-                  ". This resource cleanup is mandatory even when the primary or prior cleanup agent " +
-                  "threw, was interrupted, or failed schema validation. The orchestrator still " +
-                  "owns live healthy helper PID " +
-                  host.helperPid +
-                  "; never signal, stop, replace, or claim process/port cleanup. Do not edit repo " +
-                  "files or create screenshots. Load .env without printing values. Discover only " +
-                  "rows/objects for the exact prefix, resolve each to an exact non-secret DB ID/label/storage key, " +
-                  "and delete only those exact identifiers—never prefix/wildcard delete or " +
-                  "truncate. Session cleanup identifiers are user/session-row DB IDs or bounded labels, " +
-                  "never cookie values, session tokens/hashes, CSRF values, or credential hashes. Prove " +
-                  "exact fixture/session/object absence. Return exactly four contiguous runtime receipts " +
-                  "in exact set/order " +
-                  JSON.stringify(CLEANUP_AGENT_RUNTIME_OPERATIONS) +
-                  ". Every receipt uses subjectKind=null and subjectIdentifier=" +
-                  prefix +
-                  ". Each runtime receipt uses operationDescriptor (not a claimed shell command), " +
-                  "evidenceSha256 over the real captured exec/Node observation bytes, and bounded " +
-                  "sanitizedOutput. Discovery inventories resolved IDs; identifier-validation is an " +
-                  "actually executed fail-closed ownership/non-secret check; exact-delete is truthfully a " +
-                  "no-op when empty; absence proves all IDs absent. No sensitive value, raw row, " +
-                  "expanded credential, or environment reference may enter an operation descriptor, " +
-                  "subject identifier, command, or output. The orchestrator sets browserRecoveryRequired=" +
-                  attemptBrowserRecoveryRequired +
-                  ". If false, execute ZERO playwright-cli/browser operations and return " +
-                  "browserReceipts=[] and browserRecoveryComplete=false. This means either the primary " +
-                  "terminal matrix is canonical or a prior recovery dispatch failed; in the latter case " +
-                  "this bounded retry is resource-only and must not issue any command after a possible " +
-                  "terminal receipt 7. " +
-                  "If true, finish all DB/storage cleanup first, then run `playwright-cli --raw list` as " +
-                  "a separate real command. If wf540smoke is absent, return that one receipt as " +
-                  "cleanup-session-absence with sanitizedOutput=true. If present, return the list as " +
-                  "recovery-session-discovery with sanitizedOutput=wf540smoke-present, then execute and " +
-                  "return the exact seven separate CLI receipts " +
-                  JSON.stringify(FINAL_BROWSER_CLEANUP) +
-                  ". Browser receipts retain SHA-256 of actual captured stdout/stderr, and the final " +
-                  "global absence receipt must be the last browser operation/receipt. Return " +
-                  "browserRecoveryComplete=true only after that real global list proof."
-              ),
-              {
-                label: "smoke-cleanup:540:" + attempt + ":" + cleanupAttempt,
-                phase: "Smoke",
-                schema: ORCHESTRATION_CLEANUP_SCHEMA,
-              }
-            );
-            validateOrchestrationCleanup(cleanupCandidate, prefix, attemptBrowserRecoveryRequired);
-            if (browserRecoveryRequired && !attemptBrowserRecoveryRequired) {
-              cleanupAttemptErrors.push(
-                new Error(
-                  "TASK-540 resource-only retry cannot replace failed browser recovery proof"
-                )
-              );
-              cleanup = null;
-              break;
-            }
-            cleanup = cleanupCandidate;
-            break;
-          } catch (error) {
-            cleanup = null;
-            cleanupAttemptErrors.push(error);
-          }
-        }
-      }
-    } finally {
-      if (cleanupAttemptErrors.length > 0) {
-        failures.push(
-          new AggregateError(
-            cleanupAttemptErrors,
-            cleanup
-              ? "TASK-540 cleanup recovered only on the bounded second exact attempt"
-              : "TASK-540 cleanup failed after two exact-prefix attempts"
-          )
-        );
-      }
-      if (host) {
-        try {
-          hostStop = await stopOwnedSmokeHost(host, prefix);
-        } catch (error) {
-          failures.push(error);
-        }
-      }
-    }
-  }
-
-  try {
-    const after = await worktreeSnapshot();
-    const delta = snapshotDelta(before, after);
-    if (
-      before.head !== after.head ||
-      before.branch !== after.branch ||
-      after.staged.length > 0 ||
-      delta.some((path) => !SCREENSHOT_PATHS.includes(path))
-    ) {
-      throw new Error("TASK-540 smoke changed out-of-scope repository state: " + delta.join(", "));
-    }
-  } catch (error) {
-    failures.push(error);
-  }
-
-  if (smoke && cleanup && host && hostStop && failures.length === 0) {
-    const recoveryMatrixComplete =
-      cleanup.browserRecoveryRequired &&
-      cleanup.browserReceipts.length === FINAL_BROWSER_CLEANUP_COUNT + 1 &&
-      matchesCanonicalBrowserCleanup(cleanup.browserReceipts, true);
-    const browserReceipts = recoveryMatrixComplete
-      ? [
-          ...smoke.browserReceipts.map((receipt) =>
-            receipt.operation.startsWith("cleanup-")
-              ? { ...receipt, operation: "superseded-" + receipt.operation }
-              : receipt
-          ),
-          ...cleanup.browserReceipts,
-        ].map((receipt, index) => ({ ...receipt, sequence: index + 1 }))
-      : smoke.browserReceipts;
-    const runtimeReceipts = [
-      ...host.startReceipts,
-      ...smoke.runtimeReceipts,
-      ...cleanup.runtimeReceipts,
-      ...hostStop.stopReceipts,
-    ].map((receipt, index) => ({ ...receipt, sequence: index + 1 }));
-    smoke = {
-      ...smoke,
-      adminUp: true,
-      frontUp: true,
-      helper: hostStop.helper,
-      browserReceipts,
-      session: recoveryMatrixComplete
-        ? {
-            ...smoke.session,
-            routesEmpty: true,
-            closed: true,
-            finalAbsent: true,
-          }
-        : smoke.session,
-      runtimeReceipts,
-    };
-    try {
-      return await validateSmoke(smoke, prefix);
-    } catch (error) {
-      failures.push(error);
-    }
-  }
-
-  const aggregate = new AggregateError(
-    failures,
-    "TASK-540 smoke attempt " + attempt + " failed after mandatory cleanup"
-  );
-  aggregate.mayRetryWithNewPrefix =
-    (host === null && startAbsenceProven) ||
-    (host !== null &&
-      cleanup !== null &&
-      (primaryTerminalBrowserComplete || cleanup.browserRecoveryComplete === true) &&
-      hostStop !== null);
-  throw aggregate;
+  return value;
 }
 
 function canonicalSmokeEvidence(smoke) {
-  const evidence = {
-    task: "TASK-540",
-    fixturePrefix: smoke.fixtures.prefix,
-    browserReceipts: smoke.browserReceipts,
-    runtimeReceipts: smoke.runtimeReceipts,
-    routes: smoke.routes,
-    fixtures: smoke.fixtures,
-    helper: smoke.helper,
-    session: smoke.session,
-    screenshots: smoke.screenshots,
-    assertions: smoke.scenarios.map((scenario) => ({
-      id: scenario.id,
-      kind: scenario.kind,
-      theme: scenario.theme,
-      viewports: scenario.viewports,
-      visibleAssertions: scenario.visibleAssertions,
-      screenshotPaths: scenario.screenshotPaths,
-      consoleErrors: scenario.consoleErrors,
-      consoleWarnings: scenario.consoleWarnings,
-      pageErrors: scenario.pageErrors,
-    })),
-    finalState: {
-      consoleErrors: smoke.consoleErrors,
-      consoleWarnings: smoke.consoleWarnings,
-      pageErrors: smoke.pageErrors,
-      themeRestored: smoke.themeRestored,
-      bootstrapAdminRestored: smoke.bootstrapAdminRestored,
-      legacyLocalStorageAbsent: smoke.legacyLocalStorageAbsent,
-    },
-  };
-  if (hasSensitiveEvidenceDeep(evidence)) {
+  if (
+    !smoke ||
+    typeof smoke !== "object" ||
+    Array.isArray(smoke) ||
+    smoke.schemaVersion !== 1 ||
+    smoke.pass !== true ||
+    typeof smoke.prefix !== "string" ||
+    !/^wf540-[0-9a-f]{12}$/.test(smoke.prefix) ||
+    !smoke.finalization ||
+    !Array.isArray(smoke.finalization.screenshots) ||
+    smoke.finalization.screenshots.length !== 13 ||
+    Object.hasOwn(smoke, "closureControl") ||
+    !recursivelyFrozen(smoke)
+  ) {
+    throw new Error("TASK-540 executor returned invalid canonical smoke evidence");
+  }
+  if (hasSensitiveEvidenceDeep(smoke)) {
     throw new Error("TASK-540 canonical smoke evidence contains a sensitive value");
   }
-  return evidence;
+  const keys = Object.freeze(Object.keys(smoke));
+  if (sealedSmokeEvidenceKeys === null) {
+    sealedSmokeEvidenceKeys = keys;
+  } else if (JSON.stringify(sealedSmokeEvidenceKeys) !== JSON.stringify(keys)) {
+    throw new Error("TASK-540 canonical smoke evidence key set changed within one invocation");
+  }
+  return smoke;
 }
 
-const CANONICAL_EVIDENCE_KEYS = Object.freeze([
-  "task",
-  "fixturePrefix",
-  "browserReceipts",
-  "runtimeReceipts",
-  "routes",
-  "fixtures",
-  "helper",
-  "session",
-  "screenshots",
-  "assertions",
-  "finalState",
-  "closureControl",
-]);
 const CLOSURE_CONTROL_KEYS = Object.freeze([
   "schemaVersion",
   "generation",
@@ -7167,7 +6644,16 @@ function parseClosureControlFromEvidenceBlock(block, label) {
   } catch (error) {
     throw new Error(label + ": canonical evidence JSON is invalid", { cause: error });
   }
-  requireExactObjectKeys(evidence, CANONICAL_EVIDENCE_KEYS, label + " evidence");
+  if (!evidence || typeof evidence !== "object" || Array.isArray(evidence)) {
+    throw new Error(label + ": canonical evidence payload is not an object");
+  }
+  if (sealedSmokeEvidenceKeys !== null) {
+    requireExactObjectKeys(
+      evidence,
+      [...sealedSmokeEvidenceKeys, "closureControl"],
+      label + " evidence"
+    );
+  }
   return validateClosureControl(evidence.closureControl, label + " closureControl");
 }
 
@@ -7415,96 +6901,136 @@ async function verifyChangelogEvidence(smoke, closureControl) {
   return expected;
 }
 
-async function runSmokeEvidenceCycle(label, validation, { afterClosure = false } = {}) {
-  let latestSmoke = null;
-  let latestAudit = null;
-  let latestValidation = validation;
-  const attemptFailures = [];
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
-    try {
-      latestSmoke = await runSmoke(label + ":" + attempt);
-    } catch (error) {
-      attemptFailures.push(error);
-      if (error?.mayRetryWithNewPrefix === false) {
-        throw new AggregateError(
-          attemptFailures,
-          "TASK-540 refuses a new prefix because prior exact cleanup/host absence is unproven"
-        );
+function createSmokeExecutionController(execute) {
+  if (typeof execute !== "function") {
+    throw new Error("TASK-540 smoke execution controller requires one executor");
+  }
+  let invoked = false;
+  return Object.freeze({
+    async execute(input) {
+      if (invoked) {
+        throw new Error("TASK-540 smoke executor may run only once per top-level invocation");
       }
-      if (attempt === 2) {
-        throw new AggregateError(
-          attemptFailures,
-          "TASK-540 smoke execution failed after two cleanup-protected attempts"
-        );
-      }
-      continue;
-    }
-    phase("Smoke evidence audit");
-    latestAudit = await runReadOnlyAgent(
+      invoked = true;
+      return await execute(input);
+    },
+    hasExecuted() {
+      return invoked;
+    },
+  });
+}
+
+const smokeExecutionController = createSmokeExecutionController(executeTask540SmokePlan);
+
+function requireCleanSmokeEvidenceAudit(audit, label) {
+  if (!audit || !Array.isArray(audit.findings)) {
+    throw new Error(label + ": smoke evidence audit result is invalid");
+  }
+  if (audit.findings.length > 0) {
+    throw new Error(
+      label + ": smoke evidence audit found drift; this invocation stops without retry or fixer"
+    );
+  }
+  return audit;
+}
+
+async function executeAndAuditSmokeEvidenceOnce({
+  label,
+  validation,
+  nonce,
+  plan,
+  controller,
+  snapshotRepository,
+  auditRunner,
+  phaseReporter,
+}) {
+  if (
+    typeof label !== "string" ||
+    label.length === 0 ||
+    typeof nonce !== "string" ||
+    !/^[0-9a-f]{12}$/.test(nonce) ||
+    !plan ||
+    !Array.isArray(plan.requiredScreenshotPaths) ||
+    typeof snapshotRepository !== "function" ||
+    typeof auditRunner !== "function" ||
+    typeof phaseReporter !== "function"
+  ) {
+    throw new Error("TASK-540 one-shot smoke dependencies are invalid");
+  }
+  const screenshotPaths = Object.freeze([...plan.requiredScreenshotPaths]);
+  if (
+    screenshotPaths.length !== 13 ||
+    new Set(screenshotPaths).size !== screenshotPaths.length ||
+    screenshotPaths.some(
+      (relativePath) =>
+        typeof relativePath !== "string" ||
+        !/^_docs\/_workflows\/_smoke\/task-540-[a-z0-9-]+\.png$/.test(relativePath)
+    )
+  ) {
+    throw new Error("TASK-540 contract-derived screenshot path set is invalid");
+  }
+  const smoke = canonicalSmokeEvidence(
+    await controller.execute({
+      root: ROOT,
+      nonce,
+      assertSafeEvidence: assertExecutorSafeProjection,
+      snapshotRepository,
+    })
+  );
+  if (smoke.prefix !== "wf540-" + nonce) {
+    throw new Error("TASK-540 executor evidence prefix differs from the one-shot plan");
+  }
+  const evidenceScreenshotPaths = smoke.finalization.screenshots.map(({ path }) => path);
+  if (!sameUniqueSet(evidenceScreenshotPaths, screenshotPaths)) {
+    throw new Error("TASK-540 executor screenshot evidence differs from the pure plan");
+  }
+
+  phaseReporter("Smoke evidence audit");
+  const audit = requireCleanSmokeEvidenceAudit(
+    await auditRunner(
       "Fresh read-only TASK-540 smoke evidence audit " +
         label +
-        " attempt " +
-        attempt +
         " at " +
         ROOT +
-        ". Inspect all actual PNGs and compare them to the structured evidence. Verify every " +
-        "visible/ARIA/computed/geometry/persistence/request-order claim; exact route method, " +
-        "fixture-derived pattern, operation cardinality/order and one hit; exact discarded " +
-        "credential command forms; one separate console-error, console-warning and page-error " +
-        "receipt with [] after each flow; sensitive-output rejection; runtime helper launch/" +
-        "health/PID ancestry grounded in the orchestrator-retained Node ChildProcess; bounded " +
-        "same-prefix cleanup retry; exact seven-step final browser cleanup with session absence " +
-        "as the last browser receipt; fixture provenance; exact-ID reverse cleanup/absence; screenshot " +
-        "device:inode identity; restored theme/bootstrap identity; empty route list; closed " +
-        "wf540smoke session; orchestration-finally receipts; and stopped owned helper child " +
-        "PIDs/ports 3000/5173/5174. Return every H/M/L with concrete file:line or screenshot " +
-        "path. Assign a real source defect to its exact 540 leaf owner. Assign runtime/receipt/" +
-        "fixture/screenshot/cleanup evidence defects to owner=orchestrator and area exactly " +
-        "runtime-evidence; those findings must trigger cleanup plus a fresh smoke and must never " +
-        "be routed to a repo fixer. Do not edit or start runtime. Evidence: " +
-        JSON.stringify(canonicalSmokeEvidence(latestSmoke)),
+        ". Inspect the actual PNGs at the exact contract-derived paths " +
+        JSON.stringify(screenshotPaths) +
+        " and compare them to the sealed executor-owned canonical evidence. Verify the manifest " +
+        "hash, contiguous browser/runtime receipts, visible/ARIA/computed/geometry/persistence " +
+        "observations, exact route and authentication state transitions, fixture acquisition and " +
+        "reverse cleanup/absence, terminal browser cleanup, screenshot identity/hash evidence, " +
+        "owned host/process/port absence, restored bootstrap state, and zero unexpected console, " +
+        "warning, or page-error channels. Return every H/M/L with concrete evidence. Assign source " +
+        "drift to its exact TASK-540 leaf and executor/runtime/evidence drift to owner=orchestrator " +
+        "with area=runtime-evidence. Do not edit, start runtime, execute browser commands, recover, " +
+        "retry, or request a fixer. Any finding stops this top-level invocation. Evidence: " +
+        JSON.stringify(smoke),
       {
-        label: "smoke-evidence-audit:540:" + label + ":" + attempt,
+        label: "smoke-evidence-audit:540:" + label,
         phase: "Smoke evidence audit",
         schema: AUDIT_SCHEMA,
       }
-    );
-    if (latestAudit.findings.length === 0) {
-      return {
-        smoke: latestSmoke,
-        audit: latestAudit,
-        fullValidation: latestValidation,
-      };
-    }
-    if (attempt === 2) {
-      throw new Error("TASK-540 smoke evidence remained non-clean after two fresh attempts");
-    }
-    const sourceFindings = latestAudit.findings.filter(
-      (finding) => finding.owner !== "orchestrator"
-    );
-    const runtimeFindings = latestAudit.findings.filter(
-      (finding) => finding.owner === "orchestrator"
-    );
-    if (runtimeFindings.some((finding) => finding.area !== "runtime-evidence")) {
-      throw new Error("TASK-540 smoke audit returned an invalid orchestrator finding area");
-    }
-    if (sourceFindings.length > 0) {
-      await fixAuditFindings(
-        sourceFindings,
-        "smoke-evidence-" + label + "-" + attempt,
-        "Smoke evidence audit",
-        { afterClosure }
-      );
-      latestValidation = await runFullValidation(
-        "full-validation:after-smoke-source-fix:" + label + ":" + attempt,
-        "Full validation"
-      );
-    }
-    // Runtime/evidence findings intentionally have no repository fixer. The next
-    // iteration starts with runSmoke(), whose orchestration-level finally first
-    // guarantees deterministic cleanup and then produces wholly fresh evidence.
-  }
-  throw new Error("TASK-540 smoke evidence cycle exhausted unexpectedly");
+    ),
+    "TASK-540 " + label
+  );
+  return Object.freeze({ smoke, audit, fullValidation: validation });
+}
+
+async function runSmokeEvidenceOnce(label, validation) {
+  phase("Smoke");
+  const nonce = randomUUID().replaceAll("-", "").slice(0, 12);
+  const plan = buildTask540SmokePlan({ nonce });
+  const screenshotPaths = Object.freeze([...plan.requiredScreenshotPaths]);
+  return await executeAndAuditSmokeEvidenceOnce({
+    label,
+    validation,
+    nonce,
+    plan,
+    controller: smokeExecutionController,
+    snapshotRepository: () =>
+      worktreeSnapshot("TASK-540 one-shot smoke repository snapshot", screenshotPaths),
+    auditRunner: runReadOnlyAgent,
+    phaseReporter: phase,
+  });
 }
 
 const closureEvidenceOwner = Object.freeze({
@@ -7542,8 +7068,8 @@ const CLOSURE_TASK_PATH_SET = new Set(CLOSURE_TASK_PATHS);
 const SOURCE_DESCENDANT_TASK_PATHS = Object.freeze(
   TASK_PATHS.filter((relativePath) => !CLOSURE_TASK_PATH_SET.has(relativePath))
 );
-const closureStatusOwner = Object.freeze({
-  id: "540-06-L01-closure",
+const closurePendingStatusOwner = Object.freeze({
+  id: "540-06-L01-closure-pending",
   allowedFiles: Object.freeze([...CLOSURE_TASK_PATHS, "_docs/_TASKS/README.md"]),
   requiredFiles: CLOSURE_TASK_PATHS,
   taskContractMutations: Object.freeze([
@@ -7560,23 +7086,487 @@ const closureStatusOwner = Object.freeze({
     Object.freeze({
       relativePath: CLOSURE_TASK_PATHS[2],
       tableTaskIds: [],
-      mutableFields: ["Completed", ...CLOSURE_RECEIPT_FIELDS, ...CLOSURE_GATE_FIELDS],
+      mutableFields: ["Completed", ...CLOSURE_RECEIPT_FIELDS],
     }),
   ]),
 });
+const FULL_STATUS_ROLLBACK_PATHS = Object.freeze([...TASK_PATHS, "_docs/_TASKS/README.md"]);
 const closureStatusRollbackOwner = Object.freeze({
   id: "540-06-L01-closure-rollback",
-  allowedFiles: closureStatusOwner.allowedFiles,
+  allowedFiles: FULL_STATUS_ROLLBACK_PATHS,
   requiredFiles: Object.freeze([]),
   skipTaskBoardProjection: true,
 });
 const closurePendingStatusRollbackOwner = Object.freeze({
   id: "540-06-L01-pending-closure-rollback",
-  allowedFiles: Object.freeze([...closureStatusOwner.allowedFiles, "_docs/_CHANGELOG/README.md"]),
+  allowedFiles: Object.freeze([
+    ...closurePendingStatusOwner.allowedFiles,
+    "_docs/_CHANGELOG/README.md",
+  ]),
   requiredFiles: Object.freeze([]),
   skipTaskBoardProjection: true,
   skipChangelogIndexProjection: true,
 });
+
+function buildClosureStatusOwner(graph) {
+  const activePathSet = new Set(graph.activePaths);
+  if (
+    !activePathSet.has(ROOT_TASK_PATH) ||
+    !CLOSURE_TASK_PATHS.every((relativePath) => activePathSet.has(relativePath))
+  ) {
+    throw new Error("TASK-540 final status owner requires the active closure/root frontier");
+  }
+  const orderedActivePaths = FAMILY_STATUS_ORDER.filter((relativePath) =>
+    activePathSet.has(relativePath)
+  );
+  if (orderedActivePaths.length !== activePathSet.size) {
+    throw new Error("TASK-540 final status owner contains an unknown active path");
+  }
+  const activeLeafIds = new Set(graph.activeLeafIds);
+  const activeChildIds = new Set(graph.activeChildIds);
+  return Object.freeze({
+    id: "540-06-L01-closure",
+    allowedFiles: Object.freeze([...orderedActivePaths, "_docs/_TASKS/README.md"]),
+    requiredFiles: Object.freeze([...orderedActivePaths]),
+    taskContractMutations: Object.freeze(
+      orderedActivePaths.map((relativePath) => {
+        const leafId = LEAF_ORDER.find(
+          (candidate) => LEAF_STATUS_GROUPS[candidate].leafPath === relativePath
+        );
+        const childId = CHILD_IDS_IN_LAND_ORDER.find((candidate) => {
+          const candidateLeafId = LEAF_ORDER.find(
+            (id) => LEAF_STATUS_GROUPS[id].childId === candidate
+          );
+          return LEAF_STATUS_GROUPS[candidateLeafId].childPath === relativePath;
+        });
+        const tableTaskIds = leafId
+          ? []
+          : relativePath === ROOT_TASK_PATH
+            ? CHILD_IDS_IN_LAND_ORDER.filter((id) => activeChildIds.has(id))
+            : LEAF_ORDER.filter(
+                (id) => childId === LEAF_STATUS_GROUPS[id].childId && activeLeafIds.has(id)
+              );
+        return Object.freeze({
+          relativePath,
+          tableTaskIds: Object.freeze(tableTaskIds),
+          mutableFields: Object.freeze([
+            "Completed",
+            ...(CLOSURE_TASK_PATH_SET.has(relativePath) ? CLOSURE_RECEIPT_FIELDS : []),
+          ]),
+        });
+      })
+    ),
+  });
+}
+
+function assertTask540AtomicClosureContract() {
+  const exactTasksLine =
+    "Tasks: TASK-540, TASK-540-01, TASK-540-01-L01, TASK-540-02, TASK-540-02-L01, TASK-540-03, TASK-540-03-L01, TASK-540-04, TASK-540-04-L01, TASK-540-04-L02, TASK-540-04-L03, TASK-540-04-L04, TASK-540-05, TASK-540-05-L01, TASK-540-05-L02, TASK-540-06, TASK-540-06-L01";
+  const expectedPendingFiles = [...CLOSURE_TASK_PATHS, "_docs/_TASKS/README.md"];
+  const graph = (activeLeafIds, activeChildIds) => {
+    const activePathSet = new Set([
+      ...activeLeafIds.map((leafId) => LEAF_STATUS_GROUPS[leafId].leafPath),
+      ...activeChildIds.map((childId) => {
+        const leafId = LEAF_ORDER.find(
+          (candidate) => LEAF_STATUS_GROUPS[candidate].childId === childId
+        );
+        return LEAF_STATUS_GROUPS[leafId].childPath;
+      }),
+      ROOT_TASK_PATH,
+    ]);
+    return Object.freeze({
+      activePaths: Object.freeze(
+        FAMILY_STATUS_ORDER.filter((relativePath) => activePathSet.has(relativePath))
+      ),
+      activeLeafIds: Object.freeze([...activeLeafIds]),
+      activeChildIds: Object.freeze([...activeChildIds]),
+    });
+  };
+  const initialOwner = buildClosureStatusOwner(
+    graph([...LEAF_ORDER], [...CHILD_IDS_IN_LAND_ORDER])
+  );
+  const terminalReopenOwner = buildClosureStatusOwner(graph(["540-06-L01"], ["540-06"]));
+  const sourceRepairOwner = buildClosureStatusOwner(
+    graph(["540-04-L03", "540-06-L01"], ["540-04", "540-06"])
+  );
+  const expectedTerminalOrder = [
+    LEAF_STATUS_GROUPS["540-06-L01"].leafPath,
+    LEAF_STATUS_GROUPS["540-06-L01"].childPath,
+    ROOT_TASK_PATH,
+    "_docs/_TASKS/README.md",
+  ];
+  const expectedSourceRepairOrder = [
+    LEAF_STATUS_GROUPS["540-04-L03"].leafPath,
+    LEAF_STATUS_GROUPS["540-06-L01"].leafPath,
+    LEAF_STATUS_GROUPS["540-04-L03"].childPath,
+    LEAF_STATUS_GROUPS["540-06-L01"].childPath,
+    ROOT_TASK_PATH,
+    "_docs/_TASKS/README.md",
+  ];
+  const cases = [
+    {
+      label: "family changelog covers every physical contract in canonical order",
+      pass: CHANGELOG_TASKS_LINE === exactTasksLine,
+    },
+    {
+      label: "all-active final owner is mechanically leaf-child-root ordered",
+      pass:
+        JSON.stringify(initialOwner.allowedFiles) ===
+          JSON.stringify([...FAMILY_STATUS_ORDER, "_docs/_TASKS/README.md"]) &&
+        JSON.stringify(initialOwner.requiredFiles) === JSON.stringify(FAMILY_STATUS_ORDER),
+    },
+    {
+      label: "pending owner remains limited to the three closure contracts and board",
+      pass:
+        JSON.stringify(closurePendingStatusOwner.allowedFiles) ===
+          JSON.stringify(expectedPendingFiles) &&
+        JSON.stringify(closurePendingStatusOwner.requiredFiles) ===
+          JSON.stringify(CLOSURE_TASK_PATHS),
+    },
+    {
+      label: "terminal reclosure owns only its covered active frontier in land order",
+      pass:
+        JSON.stringify(terminalReopenOwner.allowedFiles) === JSON.stringify(expectedTerminalOrder),
+    },
+    {
+      label: "source repair reclosure owns repaired and closure frontiers in land order",
+      pass:
+        JSON.stringify(sourceRepairOwner.allowedFiles) ===
+        JSON.stringify(expectedSourceRepairOrder),
+    },
+    {
+      label: "source repair reclosure mutates only active child and root table rows",
+      pass:
+        JSON.stringify(
+          sourceRepairOwner.taskContractMutations.map(({ relativePath, tableTaskIds }) => [
+            relativePath,
+            tableTaskIds,
+          ])
+        ) ===
+        JSON.stringify([
+          [LEAF_STATUS_GROUPS["540-04-L03"].leafPath, []],
+          [LEAF_STATUS_GROUPS["540-06-L01"].leafPath, []],
+          [LEAF_STATUS_GROUPS["540-04-L03"].childPath, ["540-04-L03"]],
+          [LEAF_STATUS_GROUPS["540-06-L01"].childPath, ["540-06-L01"]],
+          [ROOT_TASK_PATH, ["540-04", "540-06"]],
+        ]),
+    },
+    {
+      label: "final status cannot rewrite a leaf gate receipt",
+      pass: [initialOwner, terminalReopenOwner, sourceRepairOwner].every((owner) =>
+        owner.taskContractMutations.every(
+          ({ mutableFields }) =>
+            !mutableFields.includes("Targeted Gate Passed") &&
+            !mutableFields.includes("Revalidation Passed") &&
+            mutableFields.includes("Completed")
+        )
+      ),
+    },
+    {
+      label: "final-status rollback owns the full 17-contract snapshot and board",
+      pass:
+        JSON.stringify(closureStatusRollbackOwner.allowedFiles) ===
+        JSON.stringify(FULL_STATUS_ROLLBACK_PATHS),
+    },
+  ];
+  for (const testCase of cases) {
+    if (!testCase.pass) {
+      throw new Error("TASK-540 atomic closure self-test failed: " + testCase.label);
+    }
+  }
+  return cases.length;
+}
+
+function assertTask540CoverageContract() {
+  const landed = (id, overrides = {}) => ({
+    id,
+    status: RESUME_TASK_STATUS.active,
+    landed: true,
+    completed: null,
+    implementationComplete: implementationCompleteValue("2026-07-14"),
+    targetedGate: "gate green",
+    revalidation: null,
+    repairPending: null,
+    closurePending: null,
+    ...overrides,
+  });
+  const expectRejected = (label, states, options) => {
+    try {
+      validateResumeLeafCoverageContract(states, options);
+    } catch {
+      return;
+    }
+    throw new Error("TASK-540 coverage self-test failed to reject: " + label);
+  };
+  const currentRepair = LEAF_ORDER.map((id) =>
+    id === "540-04-L03"
+      ? landed(id, {
+          landed: false,
+          implementationComplete: null,
+          targetedGate: null,
+          repairPending:
+            "generation aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa / token bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        })
+      : id === "540-06-L01"
+        ? landed(id, {
+            landed: false,
+            implementationComplete: null,
+            targetedGate: null,
+          })
+        : landed(id)
+  );
+  validateResumeLeafCoverageContract(currentRepair, {
+    repairId: "540-04-L03",
+    startLeafId: "540-04-L03",
+  });
+
+  const allActiveLanded = LEAF_ORDER.map((id) => landed(id));
+  const allActiveSummary = validateResumeLeafCoverageContract(allActiveLanded, {
+    startLeafId: null,
+  });
+  if (allActiveSummary.landedCount !== LEAF_ORDER.length || allActiveSummary.doneCount !== 0) {
+    throw new Error("TASK-540 coverage self-test failed: all-active landed frontier");
+  }
+
+  const coveredDone = allActiveLanded.map((state) => ({
+    ...state,
+    status: RESUME_TASK_STATUS.done,
+    completed: "2026-07-15",
+  }));
+  validateResumeLeafCoverageContract(coveredDone, { allowCoveredDone: true });
+  expectRejected("pre-1252 Done", coveredDone, { allowCoveredDone: false });
+  expectRejected(
+    "Done without a gate",
+    coveredDone.map((state, index) => (index === 0 ? { ...state, targetedGate: null } : state)),
+    { allowCoveredDone: true }
+  );
+  expectRejected(
+    "both gate fields",
+    allActiveLanded.map((state, index) =>
+      index === 0 ? { ...state, revalidation: "second gate" } : state
+    ),
+    {}
+  );
+  expectRejected(
+    "active Completed",
+    allActiveLanded.map((state, index) =>
+      index === 0 ? { ...state, completed: "2026-07-15" } : state
+    ),
+    {}
+  );
+  const closurePending = allActiveLanded.map((state) =>
+    state.id === "540-06-L01" ? { ...state, closurePending: "generation 1 / abcdef123456" } : state
+  );
+  expectRejected("uncovered Closure Pending", closurePending, {});
+  validateResumeLeafCoverageContract(closurePending, { allowCoveredDone: true });
+  const gateReceipt = Object.freeze({ field: "Targeted Gate Passed", value: "gate green" });
+  const canonicalBoardBaseline = formatClosureBoardBaseline({
+    toDo: 1,
+    inProgress: 2,
+    done: 3,
+  });
+  const closureControl = Object.freeze({
+    schemaVersion: 1,
+    generation: 3,
+    boardBaseline: canonicalBoardBaseline,
+    changelogPath: CHANGELOG_REL,
+    gateReceipt: hashedGateReceipt(gateReceipt),
+  });
+  const canonicalAnchor = buildClosureAnchor("a".repeat(64), closureControl, null);
+  const coveredAuthority = Object.freeze({
+    mode: "terminal-reopen",
+    path: CHANGELOG_REL,
+    closurePending: null,
+    generation: 3,
+    evidenceHash: "a".repeat(64),
+    boardBaseline: closureControl.boardBaseline,
+    changelogPath: CHANGELOG_REL,
+    gateReceipt,
+    closureControl,
+    anchor: canonicalAnchor,
+  });
+  if (!hasIndependentTask540CoverageAuthority(coveredAuthority)) {
+    throw new Error("TASK-540 coverage self-test rejected independent terminal authority");
+  }
+  if (
+    hasIndependentTask540CoverageAuthority({
+      ...coveredAuthority,
+      evidenceHash: "b".repeat(64),
+    })
+  ) {
+    throw new Error("TASK-540 coverage self-test accepted tampered terminal authority");
+  }
+  if (
+    hasIndependentTask540CoverageAuthority({
+      ...coveredAuthority,
+      boardBaseline: "To Do=1 / In Progress=2 / Done=3",
+    })
+  ) {
+    throw new Error("TASK-540 coverage self-test accepted a non-canonical board baseline");
+  }
+  if (
+    hasIndependentTask540CoverageAuthority({
+      ...coveredAuthority,
+      closureControl: { ...closureControl, unexpected: true },
+    })
+  ) {
+    throw new Error("TASK-540 coverage self-test accepted mutated closure authority");
+  }
+  return 12;
+}
+
+function assertTask540CompletionMetadataContract() {
+  const expectRejected = (label, callback) => {
+    try {
+      callback();
+    } catch {
+      return;
+    }
+    throw new Error("TASK-540 completion metadata self-test failed to reject: " + label);
+  };
+  const receiptDateAtOffset = (days) =>
+    new Date(Date.parse(RUN_DATE + "T00:00:00.000Z") + days * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+  const priorDate = receiptDateAtOffset(-1);
+  const futureDate = receiptDateAtOffset(1);
+  const path = LEAF_STATUS_GROUPS["540-04-L03"].leafPath;
+  requireCanonicalCompleted(priorDate, "TASK-540 metadata self-test prior");
+  requireCanonicalCompleted(RUN_DATE, "TASK-540 metadata self-test current");
+  requireCanonicalImplementationComplete(
+    implementationCompleteValue(priorDate),
+    "TASK-540 metadata self-test prior"
+  );
+  requireCanonicalImplementationComplete(
+    implementationCompleteValue(RUN_DATE),
+    "TASK-540 metadata self-test current"
+  );
+  requireAbsentCompleted(null, "TASK-540 metadata self-test absent");
+  requireAbsentImplementationComplete(null, "TASK-540 metadata self-test absent");
+  requireFinalCompletedForEntry(
+    path,
+    RUN_DATE,
+    {
+      statusByPath: { [path]: RESUME_TASK_STATUS.active },
+      completedByPath: { [path]: null },
+    },
+    "TASK-540 metadata self-test active"
+  );
+  requireFinalCompletedForEntry(
+    path,
+    priorDate,
+    {
+      statusByPath: { [path]: RESUME_TASK_STATUS.done },
+      completedByPath: { [path]: priorDate },
+    },
+    "TASK-540 metadata self-test covered"
+  );
+  expectRejected("future Completed", () =>
+    requireCanonicalCompleted(futureDate, "TASK-540 metadata self-test")
+  );
+  expectRejected("malformed Completed", () =>
+    requireCanonicalCompleted("2026-7-15", "TASK-540 metadata self-test")
+  );
+  expectRejected("future Implementation Complete", () =>
+    requireCanonicalImplementationComplete(
+      futureDate + IMPLEMENTATION_COMPLETE_SUFFIX,
+      "TASK-540 metadata self-test"
+    )
+  );
+  expectRejected("non-canonical Implementation Complete suffix", () =>
+    requireCanonicalImplementationComplete(
+      priorDate + " — implementation complete",
+      "TASK-540 metadata self-test"
+    )
+  );
+  expectRejected("unexpected Completed", () =>
+    requireAbsentCompleted(priorDate, "TASK-540 metadata self-test")
+  );
+  expectRejected("unexpected Implementation Complete", () =>
+    requireAbsentImplementationComplete(
+      implementationCompleteValue(priorDate),
+      "TASK-540 metadata self-test"
+    )
+  );
+  expectRejected("newly active prior Completed", () =>
+    requireFinalCompletedForEntry(
+      path,
+      priorDate,
+      {
+        statusByPath: { [path]: RESUME_TASK_STATUS.active },
+        completedByPath: { [path]: null },
+      },
+      "TASK-540 metadata self-test"
+    )
+  );
+  expectRejected("covered Done changed Completed", () =>
+    requireFinalCompletedForEntry(
+      path,
+      RUN_DATE,
+      {
+        statusByPath: { [path]: RESUME_TASK_STATUS.done },
+        completedByPath: { [path]: priorDate },
+      },
+      "TASK-540 metadata self-test"
+    )
+  );
+  return 16;
+}
+
+function assertTask540BoardStateContract() {
+  const expectRejected = (label, source) => {
+    try {
+      readTask540BoardState(source);
+    } catch {
+      return;
+    }
+    throw new Error("TASK-540 board-state self-test failed to reject: " + label);
+  };
+  const row = (notes, extraCell = "") =>
+    "| TASK-540 | Synthetic title | High | Large | " +
+    notes +
+    (extraCell ? " | " + extraCell : "") +
+    " |";
+  const source = (bucket, taskRow, duplicate = false) => {
+    const stats = "- **To Do:** 1 tasks\n- **In Progress:** 2 tasks\n- **Done:** 3 tasks\n\n";
+    const rowsByBucket = {
+      toDo: bucket === "toDo" ? taskRow : "",
+      inProgress: bucket === "inProgress" ? taskRow : "",
+      done: bucket === "done" ? taskRow : "",
+    };
+    if (duplicate) rowsByBucket[bucket] += "\n" + taskRow;
+    return (
+      stats +
+      "## To Do\n" +
+      rowsByBucket.toDo +
+      "\n\n## In Progress\n" +
+      rowsByBucket.inProgress +
+      "\n\n## Done\n" +
+      rowsByBucket.done +
+      "\n"
+    );
+  };
+  const valid = [
+    ["toDo", row("⏳ To Do synthetic")],
+    ["inProgress", row("🚧 In progress synthetic")],
+    ["done", row("✅ Done synthetic")],
+  ];
+  for (const [bucket, taskRow] of valid) {
+    const state = readTask540BoardState(source(bucket, taskRow));
+    if (state.bucket !== bucket || state.cells.length !== 5) {
+      throw new Error("TASK-540 board-state self-test rejected canonical " + bucket + " row");
+    }
+  }
+  expectRejected(
+    "marker merely later in Notes",
+    source("inProgress", row("Repair pending; 🚧 In progress synthetic"))
+  );
+  expectRejected("wrong bucket marker", source("toDo", row("🚧 In progress synthetic")));
+  expectRejected("six cells", source("inProgress", row("🚧 In progress synthetic", "unexpected")));
+  expectRejected("duplicate row", source("inProgress", row("🚧 In progress synthetic"), true));
+  expectRejected("non-boundary marker prefix", source("done", row("✅ Donex synthetic")));
+  return 8;
+}
 let closureGeneration = 0;
 let closureBoardBaseline = null;
 let closureLeafGateReceipt = null;
@@ -7616,31 +7606,30 @@ function seedClosureGeneration(resumeState) {
   }
 }
 
-async function verifySourceDescendantsDone() {
-  const rootState = await readCanonicalTaskStatus(ROOT_TASK_PATH);
-  for (const relativePath of SOURCE_DESCENDANT_TASK_PATHS) {
-    const { source, status } = await readCanonicalTaskStatus(relativePath);
-    const hasClosureReceipt = [
-      "Closure Pending",
-      "Closure Evidence SHA-256",
-      "Closure Generation",
-      "Closure Board Baseline",
-      CLOSURE_CHANGELOG_PATH_FIELD,
-    ].some((field) => readTaskMetadataField(source, field));
-    if (
-      status !== RESUME_TASK_STATUS.done ||
-      !readTaskMetadataField(source, "Completed") ||
-      hasClosureReceipt
-    ) {
-      throw new Error("TASK-540 source descendant is not complete: " + relativePath);
-    }
+async function verifyClosureEntryGraph(label) {
+  const resumeState = await resolveLeafResumeState();
+  const changelogState = await resolveChangelogResumeState(resumeState);
+  const graph = await validateResumeGraphCoverage(
+    resumeState,
+    changelogState,
+    "TASK-540 closure entry " + label
+  );
+  const closureLeaf = resumeState.leafStates.find(({ id }) => id === "540-06-L01");
+  if (
+    resumeState.mode !== "initial" ||
+    resumeState.repair ||
+    resumeState.startIndex !== LEAVES.length ||
+    graph.leafSummary.landedCount !== LEAVES.length ||
+    !closureLeaf ||
+    closureLeaf.status !== RESUME_TASK_STATUS.active ||
+    Number(Boolean(closureLeaf.targetedGate)) + Number(Boolean(closureLeaf.revalidation)) !== 1 ||
+    !closureLeaf.implementationComplete ||
+    !graph.activePaths.includes(ROOT_TASK_PATH) ||
+    !CLOSURE_TASK_PATHS.every((relativePath) => graph.activePaths.includes(relativePath))
+  ) {
+    throw new Error("TASK-540 closure entry graph is not fully landed and active at its frontier");
   }
-  for (const leaf of LEAVES.filter(({ id }) => id !== "540-06-L01")) {
-    const group = LEAF_STATUS_GROUPS[leaf.id];
-    const childState = await readCanonicalTaskStatus(group.childPath);
-    requireTableStatus(childState.source, leaf.id, RESUME_TASK_STATUS.done, "TASK-540 child");
-    requireTableStatus(rootState.source, group.childId, RESUME_TASK_STATUS.done, "TASK-540 root");
-  }
+  return Object.freeze({ resumeState, changelogState, graph });
 }
 
 async function pinClosureControlFromActiveGraph(generation) {
@@ -7654,10 +7643,15 @@ async function pinClosureControlFromActiveGraph(generation) {
   }
   closureBoardBaseline = boardBaseline;
   const leafState = await readCanonicalTaskStatus(LEAF_STATUS_GROUPS["540-06-L01"].leafPath);
-  if (
-    leafState.status !== RESUME_TASK_STATUS.active ||
-    readTaskMetadataField(leafState.source, "Completed")
-  ) {
+  requireAbsentCompleted(
+    readTaskMetadataField(leafState.source, "Completed"),
+    "TASK-540 closure control leaf"
+  );
+  requireCanonicalImplementationComplete(
+    readTaskMetadataField(leafState.source, "Implementation Complete"),
+    "TASK-540 closure control leaf"
+  );
+  if (leafState.status !== RESUME_TASK_STATUS.active) {
     throw new Error("TASK-540 closure leaf is not active while pinning closure control");
   }
   const gateReceipt = readClosureLeafGateReceipt(leafState.source, "TASK-540 closure control pin");
@@ -7684,6 +7678,21 @@ async function setClosurePendingState(label, generation = closureGeneration) {
   }
   const closureLeafBefore = await readCanonicalTaskStatus(
     LEAF_STATUS_GROUPS["540-06-L01"].leafPath
+  );
+  if (closureLeafBefore.status === RESUME_TASK_STATUS.done) {
+    requireCanonicalCompleted(
+      readTaskMetadataField(closureLeafBefore.source, "Completed"),
+      "TASK-540 closure-pending prior leaf"
+    );
+  } else {
+    requireAbsentCompleted(
+      readTaskMetadataField(closureLeafBefore.source, "Completed"),
+      "TASK-540 closure-pending prior leaf"
+    );
+  }
+  requireCanonicalImplementationComplete(
+    readTaskMetadataField(closureLeafBefore.source, "Implementation Complete"),
+    "TASK-540 closure-pending prior leaf"
   );
   const gateReceiptBefore = readClosureLeafGateReceipt(
     closureLeafBefore.source,
@@ -7731,7 +7740,7 @@ async function setClosurePendingState(label, generation = closureGeneration) {
         ". TASK-540 closure-pending transition for " +
         label +
         ". Read all 17 physical task files and the board fresh, but edit only " +
-        JSON.stringify(closureStatusOwner.allowedFiles) +
+        JSON.stringify(closurePendingStatusOwner.allowedFiles) +
         ". In one mutation touch exactly the root, TASK-540-06 parent, and TASK-540-06-L01 leaf; " +
         "set those three statuses to 🚧 In Progress, synchronize only their root/child rows, and " +
         "add/update exact field `**Closure Pending:** " +
@@ -7742,18 +7751,20 @@ async function setClosurePendingState(label, generation = closureGeneration) {
         CLOSURE_CHANGELOG_PATH_FIELD +
         ":** " +
         CHANGELOG_REL +
-        "`. Remove Completed from those three active closure contracts. Move only TASK-540's " +
-        "board row to 🚧 In progress and restore the exact pinned baseline statistics. Preserve " +
+        "`. Remove Completed from those three active closure contracts. Preserve canonical " +
+        "Implementation Complete on the closure parent and leaf and keep it absent on the root. " +
+        "Move only TASK-540's board row to 🚧 In progress and restore the exact pinned baseline " +
+        "statistics. Preserve " +
         "every prior Closure Evidence SHA-256 and Closure Generation value byte-identically. " +
         "Preserve the exact closure-leaf gate receipt `**" +
         closureLeafGateReceipt.field +
         ":** " +
         closureLeafGateReceipt.value +
         "` and do not add the other gate field. Preserve every TASK-540-01 through TASK-540-05 " +
-        "source descendant byte-identically, including Done, Completed, and gate evidence. Never " +
+        "source descendant byte-identically, including its exact current status, Completed state, and gate evidence. Never " +
         "edit changelog/source/tests/product docs/workflow, stage, or commit.",
       { label: "closure-pending:540:" + label + ":" + token, phase: "Closure" },
-      closureStatusOwner
+      closurePendingStatusOwner
     );
   } catch (error) {
     mutationError = error;
@@ -7770,6 +7781,23 @@ async function setClosurePendingState(label, generation = closureGeneration) {
       CLOSURE_TASK_PATHS.map(readCanonicalTaskStatus)
     );
     const states = [rootState, childState, leafState];
+    for (const [index, state] of states.entries()) {
+      requireAbsentCompleted(
+        readTaskMetadataField(state.source, "Completed"),
+        "TASK-540 closure-pending contract " + index
+      );
+      if (index === 0) {
+        requireAbsentImplementationComplete(
+          readTaskMetadataField(state.source, "Implementation Complete"),
+          "TASK-540 closure-pending root"
+        );
+      } else {
+        requireCanonicalImplementationComplete(
+          readTaskMetadataField(state.source, "Implementation Complete"),
+          "TASK-540 closure-pending contract " + index
+        );
+      }
+    }
     const receiptsAfter = await captureClosureContractReceipts();
     for (let index = 0; index < CLOSURE_TASK_PATHS.length; index += 1) {
       const relativePath = CLOSURE_TASK_PATHS[index];
@@ -7781,7 +7809,6 @@ async function setClosurePendingState(label, generation = closureGeneration) {
         readTaskMetadataField(state.source, "Closure Pending") !== pendingValue ||
         readTaskMetadataField(state.source, "Closure Board Baseline") !== boardBaselineValue ||
         readTaskMetadataField(state.source, CLOSURE_CHANGELOG_PATH_FIELD) !== CHANGELOG_REL ||
-        readTaskMetadataField(state.source, "Completed") ||
         beforeReceipt.receipts["Closure Evidence SHA-256"] !==
           afterReceipt.receipts["Closure Evidence SHA-256"] ||
         beforeReceipt.receipts["Closure Generation"] !==
@@ -7857,15 +7884,7 @@ function readExactTaskTableRow(source, taskId, label) {
 }
 
 function requireBoardRowMarker(board, label) {
-  const marker =
-    board.bucket === "inProgress"
-      ? "🚧 In progress"
-      : board.bucket === "done"
-        ? "✅ Done"
-        : "⏳ To Do";
-  if (!board.row.includes(marker)) {
-    throw new Error(label + ": TASK-540 board row marker does not match its bucket");
-  }
+  requireTask540BoardNotesMarker(board.notes, board.bucket, label);
 }
 
 async function captureExactClosureStatusProjection(label, { requirePending = false } = {}) {
@@ -7914,13 +7933,23 @@ async function captureExactClosureStatusProjection(label, { requirePending = fal
   requireTableStatus(contractSources[0], "540-06", contracts[1].status, label + " root");
   requireTableStatus(contractSources[1], "540-06-L01", contracts[2].status, label + " child");
   if (requirePending) {
-    if (
-      contracts.some(
-        (contract) =>
-          contract.status !== RESUME_TASK_STATUS.active || contract.metadata.Completed !== null
-      )
-    ) {
-      throw new Error(label + ": pre-final-status contracts are not exactly active");
+    for (let index = 0; index < contracts.length; index += 1) {
+      const contract = contracts[index];
+      if (contract.status !== RESUME_TASK_STATUS.active) {
+        throw new Error(label + ": pre-final-status contracts are not exactly active");
+      }
+      requireAbsentCompleted(contract.metadata.Completed, label + " pending contract " + index);
+      if (index === 0) {
+        requireAbsentImplementationComplete(
+          contract.metadata["Implementation Complete"],
+          label + " pending root"
+        );
+      } else {
+        requireCanonicalImplementationComplete(
+          contract.metadata["Implementation Complete"],
+          label + " pending contract " + index
+        );
+      }
     }
   }
   const boardSource = requireExactRollbackSnapshotUtf8(
@@ -7986,24 +8015,35 @@ async function restoreExactPendingClosureProjection(projection, label) {
   return restoreExactClosureStatusProjection(projection, label);
 }
 
-async function verifyClosureState(evidenceHash, generation) {
+async function verifyClosureState(evidenceHash, generation, entryGraph = null) {
   if (!closureBoardBaseline || !closureLeafGateReceipt) {
     throw new Error("TASK-540 closure verifier is missing its pinned baseline or gate receipt");
   }
+  const leafPathSet = new Set(LEAF_TASK_PATHS);
+  const childPathSet = new Set(CHILD_TASK_PATHS);
   for (const relativePath of TASK_PATHS) {
     const { source, status } = await readCanonicalTaskStatus(relativePath);
-    if (
-      status !== RESUME_TASK_STATUS.done ||
-      !readTaskMetadataField(source, "Completed") ||
-      readTaskMetadataField(source, "Repair Pending")
-    ) {
+    const completed = readTaskMetadataField(source, "Completed");
+    const implementationComplete = readTaskMetadataField(source, "Implementation Complete");
+    requireFinalCompletedForEntry(relativePath, completed, entryGraph, "TASK-540 closed");
+    if (leafPathSet.has(relativePath) || childPathSet.has(relativePath)) {
+      requireCanonicalImplementationComplete(
+        implementationComplete,
+        "TASK-540 closed " + relativePath
+      );
+    } else {
+      requireAbsentImplementationComplete(implementationComplete, "TASK-540 closed root");
+    }
+    if (status !== RESUME_TASK_STATUS.done || readTaskMetadataField(source, "Repair Pending")) {
       throw new Error("TASK-540 incomplete closure state: " + relativePath);
     }
-    if (
-      (relativePath === ROOT_TASK_PATH || relativePath === CLOSURE_TASK_PATHS[1]) &&
-      CLOSURE_GATE_FIELDS.some((field) => readTaskMetadataField(source, field))
-    ) {
-      throw new Error("TASK-540 closure root/parent retained a leaf-only gate: " + relativePath);
+    const gateReceipts = readTaskGateReceipts(source);
+    if (leafPathSet.has(relativePath)) {
+      if (gateReceipts.length !== 1) {
+        throw new Error("TASK-540 closed leaf lacks its unique landed receipt: " + relativePath);
+      }
+    } else if (gateReceipts.length !== 0) {
+      throw new Error("TASK-540 closed non-leaf retained a leaf-only gate: " + relativePath);
     }
   }
   for (const relativePath of SOURCE_DESCENDANT_TASK_PATHS) {
@@ -8094,8 +8134,14 @@ async function runClosure(smoke, fullValidation, label, findings = []) {
   const generation = closureGeneration;
   let pendingEstablished = false;
   let durablePendingProjection = null;
+  let fullStatusRollbackCompleted = false;
   try {
-    await verifySourceDescendantsDone();
+    const closureEntry = await verifyClosureEntryGraph(label);
+    const entryGraphDescription = closureEntry.graph.allActive
+      ? "All 17 physical TASK-540 contracts remain In Progress with no Completed field"
+      : "Only the validated active frontier remains In Progress: " +
+        JSON.stringify(closureEntry.graph.activePaths) +
+        "; every other physical contract is covered Done with Completed under the independently validated changelog 1252 authority";
     const pendingBeforeEvidence = await readSharedClosurePending();
     const evidenceSnapshot = await captureClosureAnchorSnapshot(
       "TASK-540 pre-evidence " + label,
@@ -8137,12 +8183,13 @@ async function runClosure(smoke, fullValidation, label, findings = []) {
           "respectively.` Preserve every other pinned number. Immediately after the exact `## Index` " +
           "heading write exactly one standalone control line, followed by one blank line, byte-identical to `" +
           closureAnchorLine +
-          "`; remove any prior TASK-540 closure-anchor line. The root and TASK-540-06 closure " +
-          "contracts remain In " +
-          "Progress and every TASK-540-01 through TASK-540-05 source descendant remains Done. Replace any " +
+          "`; remove any prior TASK-540 closure-anchor line. " +
+          entryGraphDescription +
+          "; every landed implementation leaf retains " +
+          "exactly one current Targeted Gate Passed or Revalidation Passed receipt. Replace any " +
           "prior evidence region with the exact byte sequence below; keep one BEGIN/END marker and " +
           "self-read it byte-for-byte. Record truthful prior validation, seven flows, " +
-          SCREENSHOT_PATHS.length +
+          smoke.finalization.screenshots.length +
           " PNGs, " +
           "zero browser channels, exact cleanup, and generation " +
           generation +
@@ -8201,6 +8248,12 @@ async function runClosure(smoke, fullValidation, label, findings = []) {
       "Final validation"
     );
 
+    const finalStatusEntry = await verifyClosureEntryGraph("pre-final-status:" + label);
+    const closureStatusOwner = buildClosureStatusOwner(finalStatusEntry.graph);
+    const finalStatusSnapshot = await captureExactRollbackFiles(
+      FULL_STATUS_ROLLBACK_PATHS,
+      "TASK-540 final-status pre-dispatch " + label
+    );
     let statusClosureMutationError = null;
     try {
       await runMutatingAgent(
@@ -8208,11 +8261,19 @@ async function runClosure(smoke, fullValidation, label, findings = []) {
           ROOT +
           ". TASK-540 atomic status closure " +
           label +
-          ". Canonical evidence and the complete full validation have passed while only the three " +
-          "closure contracts were In Progress. Read all 17 TASK-540 files and the board fresh. Edit only " +
+          ". Canonical evidence and the complete full validation have passed. The independently " +
+          "validated active frontier is " +
+          JSON.stringify(finalStatusEntry.graph.activePaths) +
+          "; all omitted contracts are already covered Done and must remain byte-identical. Read all " +
+          "17 TASK-540 files and the board fresh. Edit only " +
           JSON.stringify(closureStatusOwner.allowedFiles) +
-          ". Preserve every TASK-540-01 through TASK-540-05 source descendant byte-identically. In " +
-          "one mutation update only TASK-540-06-L01, TASK-540-06, and the root with exact " +
+          ". In one atomic mutation follow the exact owner order (active leaves, then active direct " +
+          "children, then root, then board), preserve every leaf's exact sole current gate receipt, " +
+          "and add exact `**Completed:** " +
+          RUN_DATE +
+          "` only to those newly active contracts. Preserve every covered Done contract and its " +
+          "canonical historical Completed date byte-identically. Update only TASK-540-06-L01, " +
+          "TASK-540-06, and the root with exact " +
           "`**Closure Evidence SHA-256:** " +
           evidenceHash +
           "` and `**Closure Generation:** " +
@@ -8226,8 +8287,8 @@ async function runClosure(smoke, fullValidation, label, findings = []) {
           closureLeafGateReceipt.field +
           ":** " +
           closureLeafGateReceipt.value +
-          "` without adding the other gate field, and mark the closure leaf " +
-          "then closure parent then root Done with Completed, synchronize their tables, move only " +
+          "` without adding the other gate field. The resulting graph must have every physical " +
+          "TASK-540 contract Done. Synchronize only the owned active child/root rows, move only " +
           "TASK-540's board row to ✅ Done, and recalculate " +
           "statistics. Apply closure-metadata findings " +
           JSON.stringify(findings) +
@@ -8240,28 +8301,44 @@ async function runClosure(smoke, fullValidation, label, findings = []) {
     }
     let statusClosureVerificationError = null;
     try {
-      await verifyClosureState(evidenceHash, generation);
+      await verifyClosureState(evidenceHash, generation, finalStatusEntry.graph);
       await verifyChangelogEvidence(smoke, closureControl);
     } catch (error) {
       statusClosureVerificationError = error;
     }
-    if (statusClosureMutationError && statusClosureVerificationError) {
-      throw new AggregateError(
-        [statusClosureMutationError, statusClosureVerificationError],
-        "TASK-540 final-status dispatch and semantic verification both failed"
-      );
+    const finalStatusError =
+      statusClosureMutationError && statusClosureVerificationError
+        ? new AggregateError(
+            [statusClosureMutationError, statusClosureVerificationError],
+            "TASK-540 final-status dispatch and semantic verification both failed"
+          )
+        : (statusClosureMutationError ?? statusClosureVerificationError);
+    if (finalStatusError) {
+      try {
+        await restoreExactRollbackFiles(
+          finalStatusSnapshot,
+          closureStatusRollbackOwner,
+          "TASK-540 final-status rollback " + label
+        );
+        fullStatusRollbackCompleted = true;
+      } catch (rollbackError) {
+        throw new AggregateError(
+          [finalStatusError, rollbackError],
+          "TASK-540 final-status failure and complete family rollback both failed"
+        );
+      }
+      throw finalStatusError;
     }
-    if (statusClosureMutationError) throw statusClosureMutationError;
-    if (statusClosureVerificationError) throw statusClosureVerificationError;
     const mechanicalGate = await runReadOnlyAgent(
       "Read-only TASK-540 post-status mechanical graph gate at " +
         ROOT +
         ". Verify all 17 statuses/tables are Done, the evidence hash/generation exists exactly on " +
         "TASK-540-06-L01, TASK-540-06, and the root with identical board-baseline/changelog-path " +
         "pins and a strict matching independent closureControl. Verify board row/statistics, " +
-        "changelog 1252/index, no staged files/commit, and run exactly: node --check " +
-        WORKFLOW_REL +
-        " && git diff --check. Do not edit.",
+        "changelog 1252/index, the exact initial Git index baseline remains unchanged with no " +
+        "agent index write or commit, and run exactly: " +
+        WORKFLOW_MECHANICAL_GATE_COMMAND +
+        ". Do not edit.",
       {
         label: "closure-mechanical:540:" + generation + ":" + label,
         phase: "Closure",
@@ -8282,6 +8359,7 @@ async function runClosure(smoke, fullValidation, label, findings = []) {
     return closureValidation;
   } catch (error) {
     if (!pendingEstablished) throw error;
+    if (fullStatusRollbackCompleted) throw error;
     try {
       await restoreExactPendingClosureProjection(durablePendingProjection, "rollback:" + label);
     } catch (rollbackError) {
@@ -8305,13 +8383,282 @@ const FINAL_LENSES = Object.freeze([
   ],
   [
     "scope-tests-docs",
-    "Single-writer code/tests and product/cache/API/user docs match implementation; screenshots are real/distinct; forbidden Page/widget paths and commits/staging are absent.",
+    "Single-writer code/tests and product/cache/API/user docs match implementation; screenshots are real/distinct; forbidden Page/widget paths, commits, and agent index writes are absent, and the exact initial Git index baseline is unchanged.",
   ],
   [
     "preference-identity-recovery",
     "The final implementation/tests/evidence prove hook-mount-local no-user in-memory fallback with zero isolated GET/PATCH requests, zero browser storage, and remount reset; direct provider A→B has no transitional null while explicit sign-out/null/provider-unmount remain valid null boundaries; malformed GET/PATCH responses are rejected, and malformed PATCH retains the exact optimistic intent as unsynced with no automatic replay; the live route matrix proves the same sole first A PATCH hit before and after release, zero queued-A dispatch, and B default unchanged after release and before unroute.",
   ],
 ]);
+
+function classifyFinalDriftFindings(findings) {
+  const sourceFindings = findings.filter((finding) => finding.owner !== "orchestrator");
+  const runtimeFindings = findings.filter(
+    (finding) => finding.owner === "orchestrator" && finding.area === "runtime-evidence"
+  );
+  const metadataFindings = findings.filter(
+    (finding) => finding.owner === "orchestrator" && finding.area === "closure-metadata"
+  );
+  const invalidOrchestratorFindings = findings.filter(
+    (finding) =>
+      finding.owner === "orchestrator" &&
+      finding.area !== "runtime-evidence" &&
+      finding.area !== "closure-metadata"
+  );
+  if (invalidOrchestratorFindings.length > 0) {
+    throw new Error("TASK-540 final audit returned an invalid orchestrator finding area");
+  }
+  return Object.freeze({
+    sourceFindings: Object.freeze(sourceFindings),
+    runtimeFindings: Object.freeze(runtimeFindings),
+    metadataFindings: Object.freeze(metadataFindings),
+  });
+}
+
+function planFinalDriftRound(round, classification) {
+  if (![1, 2].includes(round)) throw new Error("TASK-540 final drift round is invalid");
+  const hasSource = classification.sourceFindings.length > 0;
+  const hasRuntime = classification.runtimeFindings.length > 0;
+  const requiresFreshTopLevelSmoke = hasSource || hasRuntime;
+  const actions = ["establish-closure-pending"];
+  if (hasSource) actions.push("reopen-fix-regate-source", "full-validation");
+  if (round === 2 || requiresFreshTopLevelSmoke) {
+    if (hasSource) actions.push("recapture-pending-after-source");
+    actions.push("stop-pending");
+    return Object.freeze({
+      actions: Object.freeze(actions),
+      repairSourceBeforeStop: hasSource,
+      requiresFreshTopLevelSmoke,
+      reuseSealedEvidence: false,
+      runReclosure: false,
+      stopPending: true,
+      sourceStatusAtStop: hasSource ? RESUME_TASK_STATUS.active : null,
+    });
+  }
+  actions.push("reclosure-same-evidence");
+  return Object.freeze({
+    actions: Object.freeze(actions),
+    repairSourceBeforeStop: false,
+    requiresFreshTopLevelSmoke: false,
+    reuseSealedEvidence: true,
+    runReclosure: true,
+    stopPending: false,
+    sourceStatusAtStop: null,
+  });
+}
+
+function invalidatePreRepairPendingProjectionAfterFreshGate(roundPlan, projection) {
+  if (!roundPlan || typeof roundPlan.repairSourceBeforeStop !== "boolean") {
+    throw new Error("TASK-540 final-drift Pending invalidation plan is invalid");
+  }
+  return roundPlan.repairSourceBeforeStop ? null : projection;
+}
+
+async function reacquireCurrentPendingProjection(
+  label,
+  {
+    capturePending = captureExactPendingClosureProjection,
+    establishPending = setClosurePendingState,
+  } = {}
+) {
+  if (
+    typeof label !== "string" ||
+    label.length === 0 ||
+    typeof capturePending !== "function" ||
+    typeof establishPending !== "function"
+  ) {
+    throw new Error("TASK-540 durable pending reacquisition contract is invalid");
+  }
+  let captureError;
+  try {
+    return Object.freeze({
+      projection: await capturePending(label),
+      captureError: null,
+    });
+  } catch (error) {
+    captureError = error;
+  }
+  try {
+    return Object.freeze({
+      projection: await establishPending(label + ":recapture-recovery"),
+      captureError,
+    });
+  } catch (establishError) {
+    throw new AggregateError(
+      [captureError, establishError],
+      "TASK-540 current durable Pending recapture and recovery both failed"
+    );
+  }
+}
+
+async function assertTask540FinalDriftRoundContract() {
+  const source = Object.freeze([
+    Object.freeze({ owner: "540-04-L03", area: "scope", finding: "synthetic source drift" }),
+  ]);
+  const runtime = Object.freeze([
+    Object.freeze({
+      owner: "orchestrator",
+      area: "runtime-evidence",
+      finding: "synthetic runtime drift",
+    }),
+  ]);
+  const metadata = Object.freeze([
+    Object.freeze({
+      owner: "orchestrator",
+      area: "closure-metadata",
+      finding: "synthetic metadata drift",
+    }),
+  ]);
+  const roundTwoSource = planFinalDriftRound(2, classifyFinalDriftFindings(source));
+  const roundTwoRuntime = planFinalDriftRound(2, classifyFinalDriftFindings(runtime));
+  const roundOneMixed = planFinalDriftRound(
+    1,
+    classifyFinalDriftFindings([...source, ...runtime, ...metadata])
+  );
+  const roundOneMetadata = planFinalDriftRound(1, classifyFinalDriftFindings(metadata));
+  const staleProjection = Object.freeze({ generation: "stale" });
+  const currentProjection = Object.freeze({ generation: "current" });
+  const syntheticCaptureError = new Error("synthetic pending recapture failure");
+  let durableProjection = staleProjection;
+  let captureCalls = 0;
+  let establishCalls = 0;
+  durableProjection = null;
+  const recoveredRecapture = await reacquireCurrentPendingProjection(
+    "TASK-540 final-drift self-test",
+    {
+      capturePending: async () => {
+        captureCalls += 1;
+        throw syntheticCaptureError;
+      },
+      establishPending: async () => {
+        establishCalls += 1;
+        return currentProjection;
+      },
+    }
+  );
+  durableProjection = recoveredRecapture.projection;
+  let successEstablishCalls = 0;
+  const directRecapture = await reacquireCurrentPendingProjection(
+    "TASK-540 final-drift direct recapture self-test",
+    {
+      capturePending: async () => currentProjection,
+      establishPending: async () => {
+        successEstablishCalls += 1;
+        return staleProjection;
+      },
+    }
+  );
+  let aggregateFailure = null;
+  try {
+    await reacquireCurrentPendingProjection("TASK-540 final-drift double-failure self-test", {
+      capturePending: async () => {
+        throw syntheticCaptureError;
+      },
+      establishPending: async () => {
+        throw new Error("synthetic pending recovery failure");
+      },
+    });
+  } catch (error) {
+    aggregateFailure = error;
+  }
+  const projectionObservedBySyntheticFailure = async (stage) => {
+    let pendingProjection = staleProjection;
+    pendingProjection = invalidatePreRepairPendingProjectionAfterFreshGate(
+      roundOneMixed,
+      pendingProjection
+    );
+    try {
+      throw new Error("synthetic " + stage + " failure");
+    } catch {
+      return pendingProjection;
+    }
+  };
+  const pendingAtValidationFailure = await projectionObservedBySyntheticFailure("validation");
+  const pendingAtPostGateFailure = await projectionObservedBySyntheticFailure("post-gate");
+  const cases = [
+    {
+      label: "round-two source is repaired and validated before stop",
+      pass:
+        JSON.stringify(roundTwoSource.actions) ===
+        JSON.stringify([
+          "establish-closure-pending",
+          "reopen-fix-regate-source",
+          "full-validation",
+          "recapture-pending-after-source",
+          "stop-pending",
+        ]),
+    },
+    {
+      label: "round-two source cannot remain Done",
+      pass:
+        roundTwoSource.repairSourceBeforeStop &&
+        roundTwoSource.sourceStatusAtStop === RESUME_TASK_STATUS.active,
+    },
+    {
+      label: "round-two residual requires no in-process smoke or reclosure",
+      pass:
+        roundTwoSource.requiresFreshTopLevelSmoke &&
+        !roundTwoSource.runReclosure &&
+        roundTwoRuntime.requiresFreshTopLevelSmoke &&
+        !roundTwoRuntime.runReclosure,
+    },
+    {
+      label: "round-one source/runtime drift stops under Pending for a fresh top-level smoke",
+      pass:
+        roundOneMixed.repairSourceBeforeStop &&
+        roundOneMixed.requiresFreshTopLevelSmoke &&
+        !roundOneMixed.reuseSealedEvidence &&
+        !roundOneMixed.runReclosure &&
+        roundOneMixed.stopPending,
+    },
+    {
+      label: "round-one metadata-only drift recloses with the same sealed evidence",
+      pass:
+        !roundOneMetadata.repairSourceBeforeStop &&
+        !roundOneMetadata.requiresFreshTopLevelSmoke &&
+        roundOneMetadata.reuseSealedEvidence &&
+        roundOneMetadata.runReclosure &&
+        !roundOneMetadata.stopPending,
+    },
+    {
+      label: "failed recapture invalidates the stale projection and retains current Pending",
+      pass:
+        durableProjection === currentProjection &&
+        durableProjection !== staleProjection &&
+        recoveredRecapture.captureError === syntheticCaptureError &&
+        captureCalls === 1 &&
+        establishCalls === 1,
+    },
+    {
+      label: "successful recapture never establishes a replacement Pending",
+      pass:
+        directRecapture.projection === currentProjection &&
+        directRecapture.captureError === null &&
+        successEstablishCalls === 0,
+    },
+    {
+      label: "failed recapture and failed recovery preserve both causes",
+      pass:
+        aggregateFailure instanceof AggregateError &&
+        aggregateFailure.errors.length === 2 &&
+        aggregateFailure.errors[0] === syntheticCaptureError,
+    },
+    {
+      label: "fresh source gate invalidates stale Pending before full validation can fail",
+      pass: pendingAtValidationFailure === null,
+    },
+    {
+      label: "fresh source gate keeps stale Pending invalid through later failure",
+      pass: pendingAtPostGateFailure === null,
+    },
+  ];
+  for (const testCase of cases) {
+    if (!testCase.pass) {
+      throw new Error("TASK-540 final-drift self-test failed: " + testCase.label);
+    }
+  }
+  return cases.length;
+}
 
 async function runFinalAudit(round) {
   phase("Final drift");
@@ -8377,6 +8724,256 @@ function equalHashMaps(left, right) {
   );
 }
 
+async function assertTask540SmokeExecutionOnceContract() {
+  const nonce = "0123456789ab";
+  const empty = Object.freeze([]);
+  const screenshots = Object.freeze(
+    Array.from({ length: 13 }, (_, index) =>
+      Object.freeze({
+        path: `_docs/_workflows/_smoke/task-540-self-test-${index + 1}.png`,
+        size: index + 1,
+        sha256: String(index).padStart(64, "0"),
+      })
+    )
+  );
+  const evidence = Object.freeze({
+    schemaVersion: 1,
+    pass: true,
+    prefix: "wf540-" + nonce,
+    manifestSha256: "0".repeat(64),
+    browserReceipts: empty,
+    runtimeReceipts: empty,
+    fixtureSubjects: empty,
+    cleanupReceipts: empty,
+    finalization: Object.freeze({ screenshots }),
+    captureProjection: empty,
+  });
+  const plan = Object.freeze({
+    requiredScreenshotPaths: Object.freeze(screenshots.map(({ path }) => path)),
+  });
+  const snapshotRepository = async () => Object.freeze({ paths: empty, hashes: Object.freeze({}) });
+  const cleanAuditRunner = async () => Object.freeze({ findings: empty });
+  const phaseReporter = () => {};
+  const validation = Object.freeze({ pass: true });
+
+  let successExecutions = 0;
+  const successController = createSmokeExecutionController(async (input) => {
+    successExecutions += 1;
+    await input.snapshotRepository();
+    input.assertSafeEvidence(evidence, "TASK-540 smoke once self-test");
+    return evidence;
+  });
+  const success = await executeAndAuditSmokeEvidenceOnce({
+    label: "self-test-success",
+    validation,
+    nonce,
+    plan,
+    controller: successController,
+    snapshotRepository,
+    auditRunner: cleanAuditRunner,
+    phaseReporter,
+  });
+  let duplicateRejected = false;
+  try {
+    await successController.execute({});
+  } catch {
+    duplicateRejected = true;
+  }
+
+  let failedExecutions = 0;
+  let failedAuditCalls = 0;
+  const failureController = createSmokeExecutionController(async () => {
+    failedExecutions += 1;
+    throw new Error("synthetic executor failure");
+  });
+  let executorFailureRejected = false;
+  try {
+    await executeAndAuditSmokeEvidenceOnce({
+      label: "self-test-executor-failure",
+      validation,
+      nonce,
+      plan,
+      controller: failureController,
+      snapshotRepository,
+      auditRunner: async () => {
+        failedAuditCalls += 1;
+        return Object.freeze({ findings: empty });
+      },
+      phaseReporter,
+    });
+  } catch {
+    executorFailureRejected = true;
+  }
+
+  let findingExecutions = 0;
+  let findingAuditCalls = 0;
+  const findingController = createSmokeExecutionController(async () => {
+    findingExecutions += 1;
+    return evidence;
+  });
+  let findingRejected = false;
+  try {
+    await executeAndAuditSmokeEvidenceOnce({
+      label: "self-test-audit-finding",
+      validation,
+      nonce,
+      plan,
+      controller: findingController,
+      snapshotRepository,
+      auditRunner: async () => {
+        findingAuditCalls += 1;
+        return Object.freeze({
+          findings: Object.freeze([
+            Object.freeze({ owner: "orchestrator", area: "runtime-evidence" }),
+          ]),
+        });
+      },
+      phaseReporter,
+    });
+  } catch {
+    findingRejected = true;
+  }
+
+  const cases = [
+    {
+      label: "successful executor is called exactly once",
+      pass:
+        successExecutions === 1 &&
+        successController.hasExecuted() &&
+        success.smoke === evidence &&
+        duplicateRejected,
+    },
+    {
+      label: "executor failure is never retried and never reaches audit",
+      pass: executorFailureRejected && failedExecutions === 1 && failedAuditCalls === 0,
+    },
+    {
+      label: "evidence audit finding stops without a second execution",
+      pass:
+        findingRejected &&
+        findingExecutions === 1 &&
+        findingAuditCalls === 1 &&
+        findingController.hasExecuted(),
+    },
+    {
+      label: "canonical metadata reuses the same sealed evidence identity",
+      pass:
+        canonicalSmokeEvidence(evidence) === evidence &&
+        canonicalSmokeEvidence(success.smoke) === success.smoke,
+    },
+  ];
+  for (const testCase of cases) {
+    if (!testCase.pass) {
+      throw new Error("TASK-540 one-shot smoke self-test failed: " + testCase.label);
+    }
+  }
+  return cases.length;
+}
+
+if (process.argv.includes("--self-test-repair-siblings")) {
+  const cases = assertTask540RepairSiblingStateContract();
+  const l03RepairCases = assertTask540L03RepairSiblingContract();
+  const effectiveRepairOwnerCases = assertTask540L03EffectiveRepairOwnerContract();
+  const namedFileIsolationCases = assertTask540L03GateIsolationContract();
+  const smokeExecutionOnceCases = await assertTask540SmokeExecutionOnceContract();
+  const atomicClosureCases = assertTask540AtomicClosureContract();
+  const coverageCases = assertTask540CoverageContract();
+  const completionMetadataCases = assertTask540CompletionMetadataContract();
+  const boardStateCases = assertTask540BoardStateContract();
+  const finalDriftRoundCases = await assertTask540FinalDriftRoundContract();
+  const gitIndexBaselineCases = await assertTask540GitIndexBaselineContract();
+  process.stdout.write(
+    JSON.stringify({
+      pass: true,
+      cases,
+      l03RepairCases,
+      effectiveRepairOwnerCases,
+      namedFileIsolationCases,
+      smokeExecutionOnceCases,
+      atomicClosureCases,
+      coverageCases,
+      completionMetadataCases,
+      boardStateCases,
+      finalDriftRoundCases,
+      gitIndexBaselineCases,
+    })
+  );
+  process.exit(0);
+}
+
+const currentResumeSelfTest = process.argv.find((value) =>
+  value.startsWith("--self-test-current-resume=")
+);
+if (currentResumeSelfTest) {
+  const expectedMode = currentResumeSelfTest.slice("--self-test-current-resume=".length);
+  if (!new Set(["initial", "repair", "terminal"]).has(expectedMode)) {
+    throw new Error("TASK-540 current-resume self-test mode is invalid");
+  }
+  const currentResume = await resolveLeafResumeState();
+  const currentChangelog = await resolveChangelogResumeState(currentResume);
+  await validateResumeGraphCoverage(
+    currentResume,
+    currentChangelog,
+    "TASK-540 current-resume self-test"
+  );
+  if (currentResume.mode !== expectedMode) {
+    throw new Error(
+      "TASK-540 current-resume self-test expected " + expectedMode + ", got " + currentResume.mode
+    );
+  }
+  if (
+    expectedMode === "repair" &&
+    (currentResume.startLeafId !== "540-04-L03" ||
+      currentResume.repair?.id !== "540-04-L03" ||
+      JSON.stringify(currentResume.remainingLeafIds) !== JSON.stringify(["540-04-L03"]) ||
+      JSON.stringify(currentResume.landedLeafIds) !==
+        JSON.stringify([
+          "540-01-L01",
+          "540-02-L01",
+          "540-03-L01",
+          "540-04-L01",
+          "540-04-L02",
+          "540-04-L04",
+          "540-05-L01",
+          "540-05-L02",
+        ]))
+  ) {
+    throw new Error("TASK-540 current-resume repair cursor is not exact");
+  }
+  if (
+    expectedMode === "initial" &&
+    (currentResume.startIndex !== LEAVES.length - 1 ||
+      currentResume.startLeafId !== "540-06-L01" ||
+      currentResume.repair !== null ||
+      JSON.stringify(currentResume.landedLeafIds) !==
+        JSON.stringify([
+          "540-01-L01",
+          "540-02-L01",
+          "540-03-L01",
+          "540-04-L01",
+          "540-04-L02",
+          "540-04-L03",
+          "540-04-L04",
+          "540-05-L01",
+          "540-05-L02",
+        ]) ||
+      JSON.stringify(currentResume.remainingLeafIds) !== JSON.stringify(["540-06-L01"]))
+  ) {
+    throw new Error("TASK-540 current-resume initial cursor is not exact");
+  }
+  process.stdout.write(
+    JSON.stringify({
+      pass: true,
+      mode: currentResume.mode,
+      startLeafId: currentResume.startLeafId,
+      landedLeafIds: currentResume.landedLeafIds,
+      remainingLeafIds: currentResume.remainingLeafIds,
+    })
+  );
+  process.exit(0);
+}
+
+await captureInitialGitIndexBaseline("TASK-540 workflow initial Git index baseline");
 const workflowBranch = (await git(["branch", "--show-current"])).trim();
 if (workflowBranch !== EXPECTED_BRANCH) {
   throw new Error(
@@ -8386,6 +8983,7 @@ if (workflowBranch !== EXPECTED_BRANCH) {
 phase("Start gate");
 const resumeState = await resolveLeafResumeState();
 const changelogResumeState = await resolveChangelogResumeState(resumeState);
+await validateResumeGraphCoverage(resumeState, changelogResumeState, "TASK-540 startup");
 seedClosureGeneration(changelogResumeState);
 const startGate = await runReadOnlyAgent(
   "Read-only TASK-540 start gate at " +
@@ -8400,14 +8998,17 @@ const startGate = await runReadOnlyAgent(
     "changelog path, the closure leaf preserves one exact gate field/value, and the single " +
     "changelog block hashes to that receipt with a strict matching closureControl. Startup will " +
     "scoped-reopen only closure/root before rerunning " +
-    "post-audit, full validation, smoke, closure, and final gates. In initial mode verify every " +
-    "landed earlier leaf is either canonical Done with exact Completed evidence " +
-    "or In Progress with an exact Targeted Gate Passed/Revalidation Passed field; verify the " +
-    "latter historical source-leaf state will be normalized to Done immediately after this gate " +
-    "without rerunning or inventing evidence. In repair mode require exactly the named active " +
+    "post-audit, full validation, smoke, closure, and final gates. In initial mode before independent " +
+    "changelog 1252 authority, require every landed leaf to remain In Progress with no Completed, " +
+    "canonical Implementation Complete, and exactly one Targeted Gate Passed/Revalidation Passed " +
+    "field. Accept Done only in a closure-restart graph whose consumed anchor and strict " +
+    "closureControl independently cover it. No startup normalization may manufacture or rerun " +
+    "landed evidence. In repair mode require exactly the named active " +
     "Repair Pending owner using exact `generation <32 lowercase hex> / token <32 lowercase hex>`, " +
     "no Completed or old gate receipt on any active repair root/child/owner/closure sibling, every " +
-    "other source leaf Done, and the closure leaf active; only that exact owner will be repaired/" +
+    "other source leaf either gated In Progress before family closure or Done with Completed after " +
+    "a validated family closure, and the closure leaf active with no gate before closure or its one " +
+    "pinned gate plus durable Closure Pending after closure; only that exact owner will be repaired/" +
     "re-gated. A closure-leaf repair without Closure Pending is valid only for a consumed " +
     "evidence-before-pending anchor whose exact repairAuthorization binds the pending hash, prior " +
     "control gate, and successor Revalidation hash. A reserved/no-anchor closure remediation stays " +
@@ -8421,7 +9022,8 @@ const startGate = await runReadOnlyAgent(
     "receipts; duplicates are forbidden. TASK-543 is complete, HEAD " +
     "is current, branch is exactly `" +
     EXPECTED_BRANCH +
-    "`, and no staged files exist. task-540-implement.mjs is the canonical remaining " +
+    "`, and the exact initial Git index baseline is unchanged with no agent index write. " +
+    "task-540-implement.mjs is the canonical remaining " +
     "program owner. The current mutable task-540-fix.mjs is completed evidence only for the " +
     "R01-before-R03 URL-control correction and is not an active or conflicting owner. Earlier " +
     "five-owner corrective work, including R04/R05, is durable only in the affected task files' " +
@@ -8433,6 +9035,11 @@ if (!resultPassed(startGate)) throw new Error("TASK-540 start gate failed");
 
 const verifiedResumeState = await resolveLeafResumeState();
 const verifiedChangelogResumeState = await resolveChangelogResumeState(verifiedResumeState);
+await validateResumeGraphCoverage(
+  verifiedResumeState,
+  verifiedChangelogResumeState,
+  "TASK-540 verified startup"
+);
 if (
   JSON.stringify(verifiedResumeState) !== JSON.stringify(resumeState) ||
   JSON.stringify(verifiedChangelogResumeState) !== JSON.stringify(changelogResumeState)
@@ -8453,17 +9060,6 @@ if (verifiedResumeState.mode === "repair") {
   await resumeInterruptedRepair(verifiedResumeState);
 } else if (verifiedResumeState.mode === "terminal") {
   await setClosurePendingState("startup-reopen:terminal", closureGeneration);
-} else {
-  for (const state of verifiedResumeState.leafStates) {
-    const leaf = LEAF_BY_ID.get(state.id);
-    if (
-      state.landed &&
-      state.status === RESUME_TASK_STATUS.active &&
-      !LEAF_STATUS_GROUPS[state.id].holdUntilClosure
-    ) {
-      await transitionLeafStatus(leaf, "complete", "resume-existing-gate");
-    }
-  }
 }
 const executionResumeState = await resolveLeafResumeState();
 if (executionResumeState.mode !== "initial") {
@@ -8473,6 +9069,11 @@ if (verifiedResumeState.mode === "terminal" && executionResumeState.startIndex !
   throw new Error("TASK-540 terminal reopen changed the fully landed leaf cursor");
 }
 const executionChangelogResumeState = await resolveChangelogResumeState(executionResumeState);
+await validateResumeGraphCoverage(
+  executionResumeState,
+  executionChangelogResumeState,
+  "TASK-540 execution resume"
+);
 seedClosureGeneration(executionChangelogResumeState);
 if (
   (verifiedResumeState.mode === "initial" &&
@@ -8480,7 +9081,7 @@ if (
   (verifiedResumeState.mode === "initial" &&
     executionResumeState.startLeafId !== verifiedResumeState.startLeafId)
 ) {
-  throw new Error("TASK-540 resume cursor changed while normalizing landed source statuses");
+  throw new Error("TASK-540 resume cursor changed during the read-only startup boundary");
 }
 
 for (const leaf of LEAVES.slice(executionResumeState.startIndex)) {
@@ -8504,8 +9105,8 @@ await runPostAudit();
 phase("Full validation");
 let fullValidation = await runFullValidation("full-validation:post-audit", "Full validation");
 
-let smokeCycle = await runSmokeEvidenceCycle("initial", fullValidation);
-let smoke = smokeCycle.smoke;
+const smokeCycle = await runSmokeEvidenceOnce("initial", fullValidation);
+const smoke = smokeCycle.smoke;
 fullValidation = smokeCycle.fullValidation;
 
 fullValidation = await runClosure(smoke, fullValidation, "initial");
@@ -8520,6 +9121,9 @@ try {
       finalDriftClean = true;
       break;
     }
+    const classification = classifyFinalDriftFindings(findings);
+    const roundPlan = planFinalDriftRound(round, classification);
+    const { sourceFindings, metadataFindings } = classification;
 
     // A non-clean final audit reopens only the closure contracts. Exact source
     // owners are reopened later, after findings have been classified.
@@ -8529,48 +9133,70 @@ try {
       finalPendingTransitionSelfRestored = true;
       throw error;
     }
-    if (round === 2) {
-      throw new Error("TASK-540 final closure drift remained non-clean after two fresh rounds");
-    }
 
-    const sourceFindings = findings.filter((finding) => finding.owner !== "orchestrator");
-    const runtimeFindings = findings.filter(
-      (finding) => finding.owner === "orchestrator" && finding.area === "runtime-evidence"
-    );
-    const metadataFindings = findings.filter(
-      (finding) => finding.owner === "orchestrator" && finding.area === "closure-metadata"
-    );
-    const invalidOrchestratorFindings = findings.filter(
-      (finding) =>
-        finding.owner === "orchestrator" &&
-        finding.area !== "runtime-evidence" &&
-        finding.area !== "closure-metadata"
-    );
-    if (invalidOrchestratorFindings.length > 0) {
-      throw new Error("TASK-540 final audit returned an invalid orchestrator finding area");
-    }
-
-    if (sourceFindings.length > 0) {
+    if (roundPlan.repairSourceBeforeStop) {
       await fixAuditFindings(sourceFindings, "final-drift-" + round, "Final drift", {
         afterClosure: true,
       });
+      // The successful fixer includes the fresh owner gate/completion transition.
+      // From this point onward a pre-repair closure snapshot is never rollback
+      // authority, including if full validation fails before recapture.
+      finalDurablePendingProjection = invalidatePreRepairPendingProjectionAfterFreshGate(
+        roundPlan,
+        finalDurablePendingProjection
+      );
       fullValidation = await runFullValidation(
         "full-validation:after-final-source-fix:" + round,
         "Final validation"
       );
     }
 
-    if (sourceFindings.length > 0 || runtimeFindings.length > 0) {
-      smokeCycle = await runSmokeEvidenceCycle("final-remediation-" + round, fullValidation, {
-        afterClosure: true,
-      });
-      smoke = smokeCycle.smoke;
-      fullValidation = smokeCycle.fullValidation;
+    if (roundPlan.stopPending) {
+      let pendingRecaptureError = null;
+      if (roundPlan.repairSourceBeforeStop) {
+        // The pre-repair projection is no longer rollback authority once the
+        // repaired source owner has a fresh gate/completion receipt.
+        finalDurablePendingProjection = null;
+        const reacquiredPending = await reacquireCurrentPendingProjection(
+          "TASK-540 repaired-source durable pending " + round
+        );
+        finalDurablePendingProjection = reacquiredPending.projection;
+        pendingRecaptureError = reacquiredPending.captureError;
+      }
+      const stopError = new Error(
+        sourceFindings.length > 0
+          ? "TASK-540 source drift was repaired/re-gated and fully validated; workflow stopped under durable Closure Pending and requires a fresh top-level one-shot smoke"
+          : roundPlan.requiresFreshTopLevelSmoke
+            ? "TASK-540 runtime evidence drift requires a fresh top-level invocation; workflow stopped under durable Closure Pending without retry"
+            : "TASK-540 round-two closure metadata drift remained; workflow stopped under durable Closure Pending"
+      );
+      if (pendingRecaptureError) {
+        throw new AggregateError(
+          [stopError, pendingRecaptureError],
+          "TASK-540 repaired-source recapture failed after fresh Pending recovery"
+        );
+      }
+      throw stopError;
     }
 
-    finalDurablePendingProjection = await captureExactPendingClosureProjection(
+    if (!roundPlan.runReclosure) {
+      throw new Error("TASK-540 final drift plan unexpectedly omitted reclosure");
+    }
+    if (!roundPlan.reuseSealedEvidence || canonicalSmokeEvidence(smoke) !== smoke) {
+      throw new Error("TASK-540 metadata-only reclosure did not retain the same sealed evidence");
+    }
+
+    finalDurablePendingProjection = null;
+    const preReclosurePending = await reacquireCurrentPendingProjection(
       "TASK-540 final-remediation durable pending " + round
     );
+    finalDurablePendingProjection = preReclosurePending.projection;
+    if (preReclosurePending.captureError) {
+      throw new AggregateError(
+        [preReclosurePending.captureError],
+        "TASK-540 final remediation recapture failed after fresh Pending recovery"
+      );
+    }
     try {
       fullValidation = await runClosure(
         smoke,
@@ -8581,9 +9207,17 @@ try {
       finalDurablePendingProjection = null;
     } catch (error) {
       try {
-        finalDurablePendingProjection = await captureExactPendingClosureProjection(
+        finalDurablePendingProjection = null;
+        const failedReclosurePending = await reacquireCurrentPendingProjection(
           "TASK-540 failed final-remediation durable pending " + round
         );
+        finalDurablePendingProjection = failedReclosurePending.projection;
+        if (failedReclosurePending.captureError) {
+          throw new AggregateError(
+            [error, failedReclosurePending.captureError],
+            "TASK-540 final remediation failed and fresh Pending required recovery"
+          );
+        }
       } catch (captureError) {
         throw new AggregateError(
           [error, captureError],
@@ -8601,11 +9235,12 @@ try {
   const finalGate = await runReadOnlyAgent(
     "Read-only final TASK-540 mechanical gate at " +
       ROOT +
-      ". Run exactly: node --check " +
-      WORKFLOW_REL +
-      " && git diff --check. Confirm the full task graph/changelog evidence remains closed, " +
+      ". Run exactly: " +
+      WORKFLOW_MECHANICAL_GATE_COMMAND +
+      ". Confirm the full task graph/changelog evidence remains closed, " +
       "including identical changelog-path pins and strict closureControl binding. Confirm HEAD/" +
-      "branch unchanged, no staged files and no agent commit. Do not edit.",
+      "branch and exact initial Git index baseline unchanged, with no agent index write or " +
+      "commit. Do not edit.",
     { label: "final-gate:540", phase: "Final gate", schema: RESULT_SCHEMA }
   );
   if (!resultPassed(finalGate)) throw new Error("TASK-540 final mechanical gate failed");

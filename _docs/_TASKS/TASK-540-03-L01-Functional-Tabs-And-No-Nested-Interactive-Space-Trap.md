@@ -8,10 +8,10 @@
 **Category:** Custom Screens / Runtime UI / Accessibility
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-01-L01, TASK-540-02-L01
-**Status:** ✅ Done
+**Status:** 🚧 In Progress
 **Started:** 2026-07-13
-**Completed:** 2026-07-14
-**Revalidation:** 2026-07-14 — `core lint:types`, `core lint`, the exact renderer/interaction/image Vitest matrix (89/89), and `git diff --check`
+**Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Revalidation Passed:** 2026-07-14 — `core lint:types`, `core lint`, the exact renderer/interaction/image Vitest matrix (89/89), and `git diff --check`
 **Post-Audit:** 2026-07-14 — PASS; zero HIGH, MEDIUM, or LOW findings for the five-value final Button/Image DOM-sink regression matrix
 **Fix Started:** 2026-07-14
 **Fix Reason:** Final closure audit requires explicit Button and Image final-sink regressions for TAB/LF/CR protocol-relative confusion and the remaining ASCII-control boundary.
@@ -31,18 +31,28 @@
   `tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx`,
   `tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
 
-For the current correction, R03 writes only
+For the historical 2026-07-14 R03 correction, R03 wrote only
 `tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx`. It consumes the
 R01 Screen wrapper read-only and adds final DOM-sink regressions; it need not edit
 `ScreenRuntimeRenderer.tsx` when the wrapper fix alone makes the existing renderer fail
 closed. `custom-screen-record-interactions.test.tsx` and
 `screen-document-image-src.test.ts` remain read-only prerequisites in this gate.
 
+That correction is landed and gated. This leaf is not a current repair owner: it remains
+`🚧 In Progress` with `Implementation Complete` only because canonical `✅ Done` awaits
+family changelog 1252. While the exact later L03 repair receipt exists,
+TASK-540-04-L03 alone carries `Repair Pending` and family closure remains paused.
+
 Do not edit `InlineEditWrapper.tsx`, `CustomScreenEntryCanvas.tsx`, schemas,
 inspector, or shared selection helpers. Fix the ancestor semantics at the owning
 renderer and update the named behavior expectations before its gate.
 
-## Grounded anchors
+## Historical pre-implementation grounded anchors
+
+These 2026-07-13 line snapshots are retained as audit provenance. They describe the
+pre-implementation source layout; current ownership and validation are anchored by the
+named files, symbols, and regression suites above and below rather than mutable line
+numbers.
 
 - Composite block wrapper selection: `ScreenRuntimeRenderer.tsx:594-631,670-727`.
 - Button DOM sink: `:1229-1255`.
