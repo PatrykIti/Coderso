@@ -8,7 +8,7 @@
 **Dependencies:** TASK-496, TASK-498, TASK-500, TASK-503, TASK-505, TASK-543 (program order)
 **Status:** 🚧 In Progress
 **Started:** 2026-07-13
-**Modularity Repair Started:** 2026-07-16 — the verified pre-family baseline is `e5f15a5675b58df85e573f760df4429af735400f`, not the current HEAD. Its history-through-working-tree scope contains 91 currently owned human-authored production/test paths before the remaining planned splits and exactly 15 current files above the repository-wide 1,000-physical-line maximum. The eight existing source owners must land their cohesive module/test repairs in the exact order below; every pre-split receipt is historical until the 64-Vitest/18-Bun matrix, 347-name preservation proof, hard family line gate, fresh post-audit, and runtime smoke pass.
+**Modularity Repair Started:** 2026-07-16 — the verified pre-family baseline is `e5f15a5675b58df85e573f760df4429af735400f`, not the current HEAD. Its history-through-working-tree scope freezes 91 owned human-authored production/test paths and the initial pre-split inventory of 15 files above the repository-wide 1,000-physical-line maximum. R01 and TASK-540-02-L01 have resolved the first three blockers; the mechanical gate now reports exactly 12, with TASK-540-03-L01 next. The remaining source owners must land in the exact order below; every pre-split receipt is historical until the 64-Vitest/18-Bun matrix, 347-name preservation proof, hard family line gate, fresh post-audit, and runtime smoke pass.
 **Repair Started:** 2026-07-16
 **Repair Reason:** The final sequential post-audit stopped before smoke on evidence-backed drift. R01 owns scoped malformed-binding recovery, one-pass legacy orphan filtering, collision-safe id-less legacy generation, explicit-ID-only Assistant composition, stored duplicate-ID fail-closed proof, and metadata-PATCH preservation. L03 owns single-media override eligibility across service and Entry Editor plus canonical import placement. L01 requires every Canvas region name, L02 completes both sides of the authenticated A/B self-scope proof, and L04 owns the binding-flow expectation that now consumes the shared binding-ID helper. Earlier R01/L02/R03 strict-ID, Tab-label, and zero-Tabs repairs remain durable.
 **Repair Revalidated:** 2026-07-16 — against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus the exact dirty paths recorded by each leaf, core/root static gates passed; expanded R01 changed suites passed 81/81, six-file Vitest 176/176, route/Assistant Bun 93/93 with 576 expectations, isolated route 20/20 with 118 expectations, and document ops 11/11; L03 retains Vitest 258/258, cacheBus 22/22, and the current pre-split routes 20/20 with 118; L04 passed isolated 3/3 and its ten-file matrix 98/98; TASK-540-05-L01 retains 16/16; TASK-540-05-L02 retains Vitest 66/66, Bun 27/27 with 165, and user-settings 10/10 with 64; DB preflight, workflow self-tests, and diff checks passed. R01/L03 route evidence is pre-modularity-split only. This targeted receipt claims no fresh post-audit, full validation, live smoke, changelog 1252, or atomic closure.
@@ -50,23 +50,15 @@ the permanent TASK-9999 eligibility contract:
 
 - TASK-9999-01-L01 at
   `_docs/_TASKS/TASK-9999-01-L01-Decouple-Actor-And-Media-Uuid-Domain-Naming.md`.
-  TASK-9999-01-L01 approved evidence: core/services/customScreens/screenMediaIdentity.ts:4; core/services/customScreens/screenEntryPresentationOverrideContract.ts:194; core/services/customScreens/screenEntryPresentationOverrideContract.ts:231; core/services/customScreens/screenEntryPresentationOverrides.ts:421.
+  TASK-9999-01-L01 approved evidence: core/services/customScreens/screenMediaIdentity.ts:4; core/services/customScreens/screenEntryPresentationOverrideContract.ts:192; core/services/customScreens/screenEntryPresentationOverrideContract.ts:229; core/services/customScreens/screenEntryPresentationOverrides.ts:421.
   Before R01 creates that exact six-line owner, the workflow verifies the equivalent
   pre-split function at `customScreenSchemas.ts:548` only as transitional audit evidence;
   it can never satisfy final closure after the pending marker is removed.
   TASK-9999-01-L01 approved rationale: the shared UUID predicate already accepts and rejects the intended actor/media UUID grammar and preserves exact input bytes; deferral changes no UI/UX/accessibility, data, security/privacy/auth/RBAC, API, persistence/migration, performance/reliability, or test-integrity behavior.
 - TASK-9999-01-L02 at
   `_docs/_TASKS/TASK-9999-01-L02-Remove-Unread-Screen-Tab-Label-Draft-State.md`.
-  Before TASK-540-02-L01's Inspector split, the conditional evidence is
-  `core/admin/ui/custom-screens/ScreenBlockInspector.tsx:524,525,538,542,553,559,563`
-  at SHA-256 `eb49d21a99cd5fbf8dedfd502c727ba890dd455552a8259b9e9b45eb4b11d4df`.
-  After that split, the same `ScreenTabLabelDraft` and `TabLabelInput` assignments must
-  be re-anchored to their exact final lines and SHA-256 in
-  `core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx`; the old symbol must be
-  absent from the facade. The workflow accepts exactly one of those mutually exclusive
-  pre/post layouts and closure records the post-split evidence. Both layouts must retain
-  normalized AST contract SHA-256
-  `15897646098bfeb9f653b940c0782e3b3f999a811b9cbc3d9bf46a01cae5df9a`, proving one
+  TASK-9999-01-L02 approved evidence: core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx:24; core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx:25; core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx:38; core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx:42; core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx:53; core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx:59; core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx:63; normalized AST SHA-256 15897646098bfeb9f653b940c0782e3b3f999a811b9cbc3d9bf46a01cae5df9a; source SHA-256 03cbeb962f40a87085d11403c15f9b69b482302322c5fc85ad224df9a52e16d4.
+  The workflow proves the deferred symbols are absent from the facade, with one
   `baseLabel` type member, exactly four writes, the sole `draft.value` read, and no
   `baseLabel` or whole-draft read.
   TASK-9999-01-L02 approved rationale: baseLabel is assigned but never read; deferral changes no rendered UI, keyboard/blur/commit behavior, accessibility, saved data, security/privacy/auth/RBAC, API, persistence/migration, performance/reliability, or test-integrity behavior.
@@ -221,9 +213,12 @@ or narrow the scope. This family authorizes no deletion or rename of a touched m
 every authority path must remain a regular non-symlink file in the final tree, while
 each cohesive split adds its explicit replacement owners.
 
-The current blocking inventory is exactly:
+The historical pre-split blocker inventory was exactly 15 files. It remains frozen as
+provenance for baseline-to-final scope; the first three rows are now resolved by the
+R01 and TASK-540-02-L01 splits, and the current gate reports exactly the remaining 12
+rows beginning with TASK-540-03-L01:
 
-| Leaf owner | Current blocker | Physical lines | Current SHA-256 |
+| Leaf owner | Pre-split blocker | Physical lines | Pre-split SHA-256 |
 |---|---|---:|---|
 | TASK-540-01-L01 | `core/services/customScreens/screenDocumentOps.ts` | 1,030 | `dc20fc963c6fcc6e4c7ef647284fd0ee3ee174302f9ba196e869f40eaae0b69b` |
 | TASK-540-01-L01 | `tests/unit/assistant/actionExecutorService.test.ts` | 6,577 | `41bd0ec9f0a0042ca87bc7f688206b391671788176b13bac0b525ce677f6c62b` |
@@ -249,11 +244,12 @@ Generated artifacts, lockfiles, vendored code, database snapshots, and generated
 migration metadata alone retain the AGENTS.md exemption. This gate is blocking and no
 violation may become a LOW or TASK-9999 deferral.
 
-The remaining repair land order is exactly:
+The remaining repair land order after the completed R01 and TASK-540-02-L01 splits is
+exactly:
 
 ```text
-TASK-540-01-L01 → TASK-540-02-L01 → TASK-540-03-L01 →
-TASK-540-04-L01 → TASK-540-04-L03 → TASK-540-04-L04 →
+TASK-540-03-L01 → TASK-540-04-L01 → TASK-540-04-L03 →
+TASK-540-04-L04 →
 TASK-540-05-L01 boundary → TASK-540-05-L02 → TASK-540-06-L01 closure
 ```
 

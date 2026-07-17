@@ -13,8 +13,8 @@
 **Implementation Complete:** 2026-07-13 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Repair Started:** 2026-07-16
 **Repair Reason:** R01 centralized binding-ID generation in `buildScreenFieldBindingId`; L02 must consume that domain helper from its existing Inspector binding factory and prove maximum-length tuples stay distinct and bounded. L02 also owns the visible behavior correction that restores a blank or over-120 Tab-label draft to the latest committed label on blur or Enter without calling `onPatchBlock`.
-**Modularity Repair Pending:** 2026-07-17 — measured from family baseline `e5f15a567`, the touched `ScreenBlockInspector.tsx` grew from 1,078 to 1,194 physical lines and therefore blocks closure under the hard 1,000-line gate. The exact stable-facade split below must land without changing Inspector behavior or public imports.
-**Current Repair State:** The behavior repair is implemented and its recorded `Revalidation Passed` remains historical pre-split evidence only. After all five production paths pass the exact static, two-file 33/33 Vitest, line-count, and drift gates, remove the single `Modularity Repair Pending` field and replace it with one `Modularity Repair Revalidated` receipt; the two fields must never coexist.
+**Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
+**Current Repair State:** The historical behavior receipt remains truthful pre-split evidence. The final production graph is facade 561, model 209, controls 215, Tabs 176, and Section 79 lines; the two tests are 787 and 454. Exact exports/reference identity, acyclic imports, root/core static checks, 33/33 behavior, 16/16 additional consumers, the post-split AST evidence, and the corrected-contract audit pass. The canonical modularity receipt records only this owner gate; no family post-audit, smoke, changelog, or closure is claimed.
 **Revalidation Passed:** 2026-07-16 — historical pre-modularity evidence: `core lint:types` and `core lint` passed; the exact two-file L02 Vitest gate passed 33/33 on the final shared schema state, including the domain-builder consumer and invalid blur/Enter restore regressions; and `git diff --check` passed. This receipt cannot validate the extracted modules and claims no full-suite, post-audit, smoke, changelog, or closure result.
 **Changelog:** 1252 (pinned; closure only)
 
@@ -270,9 +270,10 @@ all parallel modularity owners land.
 Implemented Button `href` binding and its exact clear sentinel, Link-only action
 authoring, deterministic slot-locked Tabs controls, buffered Unicode-aware label
 editing, exact slot arming, and the canonical Screen media-URL wrapper. The historical
-Unicode/React-state correction and its 31/31 gate remain valid evidence. The current
-2026-07-16 domain-builder consumer and visible invalid-label restore corrections were
-revalidated by the historical exact 33/33 gate above; the modular split still requires
-the fresh independent/combined 33/33 gate, line counts, and replacement
-`Modularity Repair Revalidated` receipt. No new post-audit or smoke is claimed.
+Unicode/React-state correction and its 31/31 gate remain valid evidence. The 2026-07-16
+domain-builder consumer and visible invalid-label restore corrections remain intact.
+The modular split now passes fresh independent 15/15 and 18/18 tests, combined 33/33,
+additional consumer 16/16, exact line/export/import checks, static gates, and the
+finalized TASK-9999 evidence transition. Its canonical `Modularity Repair Revalidated`
+receipt is recorded; no family post-audit or smoke is claimed.
 Aggregate persistence and live browser flows remain closure-owned.

@@ -22,16 +22,15 @@ later replaces the two-field object with the value-only state shape while preser
 the final TASK-540 tab-label contract exactly, including Unicode bounds, commit,
 Escape, invalid input, external rerender, focus, and accessibility behavior.
 
-The source-task backlink uses a conditional evidence transition. Before the split, the
-symbol is at `ScreenBlockInspector.tsx:524,525,538,542,553,559,563` with SHA-256
-`eb49d21a99cd5fbf8dedfd502c727ba890dd455552a8259b9e9b45eb4b11d4df`. After the
-split, TASK-540 closure must record the exact final line anchors and SHA-256 for the
-same type/assignments in `ScreenBlockInspectorTabs.tsx` and prove them absent from the
-facade. Both layouts must retain normalized AST contract SHA-256
-`15897646098bfeb9f653b940c0782e3b3f999a811b9cbc3d9bf46a01cae5df9a`, proving one
-`baseLabel` type member, exactly four writes, the sole `draft.value` read, and no
-`baseLabel` or whole-draft read. Exactly one layout may validate at a time; this leaf
-may be implemented only from the final post-split evidence.
+The source-task backlink now carries the final post-split evidence:
+`ScreenBlockInspectorTabs.tsx:24,25,38,42,53,59,63`, source SHA-256
+`03cbeb962f40a87085d11403c15f9b69b482302322c5fc85ad224df9a52e16d4`, and
+normalized AST contract SHA-256
+`15897646098bfeb9f653b940c0782e3b3f999a811b9cbc3d9bf46a01cae5df9a`.
+The workflow also proves `ScreenTabLabelDraft`, `TabLabelInput`, and `baseLabel` are
+absent from the facade, with one `baseLabel` type member, exactly four writes, the sole
+`draft.value` read, and no `baseLabel` or whole-draft read. This final evidence is the
+only layout authorized for later implementation of this still-open leaf.
 
 ## Exclusive Ownership
 

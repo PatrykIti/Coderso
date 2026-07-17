@@ -243,7 +243,7 @@ test.each(["//evil.example/image.png", "https:\\\\evil.example\\image.png"])(
 
 test("the Image URL row uses the canonical Screen authoring URL wrapper", () => {
   const source = readFileSync(
-    resolve(process.cwd(), "core/admin/ui/custom-screens/ScreenBlockInspector.tsx"),
+    resolve(process.cwd(), "core/admin/ui/custom-screens/ScreenBlockInspectorControls.tsx"),
     "utf8"
   );
   expect(source).toContain('sanitizeScreenAuthoringUrl(raw, "media")');

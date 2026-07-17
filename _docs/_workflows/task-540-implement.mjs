@@ -997,8 +997,8 @@ const DEFERRED_LOW_FOLLOW_UPS = deepFreezeExact({
     finding: "Actor UUID validation reuses the media-named UUID predicate without behavior change.",
     evidenceAnchors: [
       "core/services/customScreens/screenMediaIdentity.ts:4",
-      "core/services/customScreens/screenEntryPresentationOverrideContract.ts:194",
-      "core/services/customScreens/screenEntryPresentationOverrideContract.ts:231",
+      "core/services/customScreens/screenEntryPresentationOverrideContract.ts:192",
+      "core/services/customScreens/screenEntryPresentationOverrideContract.ts:229",
       "core/services/customScreens/screenEntryPresentationOverrides.ts:421",
     ],
     preImplementationAnchor: Object.freeze({
@@ -1020,7 +1020,7 @@ const DEFERRED_LOW_FOLLOW_UPS = deepFreezeExact({
       "screenEntryPresentationOverrides.ts",
     ],
     approvedEvidenceLanguage:
-      "TASK-9999-01-L01 approved evidence: core/services/customScreens/screenMediaIdentity.ts:4; core/services/customScreens/screenEntryPresentationOverrideContract.ts:194; core/services/customScreens/screenEntryPresentationOverrideContract.ts:231; core/services/customScreens/screenEntryPresentationOverrides.ts:421.",
+      "TASK-9999-01-L01 approved evidence: core/services/customScreens/screenMediaIdentity.ts:4; core/services/customScreens/screenEntryPresentationOverrideContract.ts:192; core/services/customScreens/screenEntryPresentationOverrideContract.ts:229; core/services/customScreens/screenEntryPresentationOverrides.ts:421.",
     approvedRationaleLanguage:
       "TASK-9999-01-L01 approved rationale: the shared UUID predicate already accepts and rejects the intended actor/media UUID grammar and preserves exact input bytes; deferral changes no UI/UX/accessibility, data, security/privacy/auth/RBAC, API, persistence/migration, performance/reliability, or test-integrity behavior.",
   },
