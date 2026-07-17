@@ -10,9 +10,11 @@
 **Status:** 🚧 In Progress
 **Started:** 2026-07-14
 **Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
-**Corrective Revalidation:** 2026-07-14 — L02 exact Vitest matrix 65/65, exact Bun matrix 27/27 after reachable DB preflight, core/root static gates green, and fresh post-audit zero findings
+**Repair Reason:** Final post-audit closed two proof gaps without changing product behavior: L01 makes the labelled Canvas region name a required prop, and L02 re-reads both authenticated users after distinct writes and asserts both exact DB rows.
+**Corrective Revalidation:** 2026-07-16 — against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus the dirty owner paths named by L01/L02, core/root static gates passed; L01 exact Vitest passed 16/16; L02 exact Vitest passed 66/66; reachable DB preflight and the exact Bun matrix passed 27/27 with 165 expectations; isolated user-settings routes passed 10/10 with 64 expectations; and `git diff --check` passed.
+**Modularity Repair Pending:** 2026-07-16 — after TASK-540-04-L03/L04 land their extracted editor owners, L01 must extend the sole authoring-boundary test to the final module graph. L02 owns the two remaining over-limit tests in this child: 1,064-line `userSettings.test.ts` and 1,506-line `assistant-panel-interaction.test.tsx`. Verified scope begins at pre-family baseline `e5f15a5675b58df85e573f760df4429af735400f`; the exact boundary → L02 order and fresh hard gates are required before changelog 1252 may close this child.
 **Previous Completion:** 2026-07-14
-**Reopened:** 2026-07-14
+**Reopened:** 2026-07-16
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -38,7 +40,61 @@ work with both default and already-persisted security settings.
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
 | TASK-540-05-L01 | Keep Screen canvas usable and ARIA-valid | `ScreenAuthoringCanvas.tsx`, `CanvasEditor.tsx` | 🚧 In Progress |
-| TASK-540-05-L02 | Scope Screen preferences through user settings | exact Bun-free preference/auth-identity contracts + route-persistent auth provider + user-settings service/client/route + Screen hook + narrow central HTTP error mapping | 🚧 In Progress |
+| TASK-540-05-L02 | Scope Screen preferences through user settings | exact Bun-free preference/auth-identity contracts + route-persistent auth provider + user-settings service/client/route + Screen hook + narrow central HTTP error mapping + cohesive Bun access-log and Assistant-panel test splits/support | 🚧 In Progress |
+
+## Mandatory child modularity sequence
+
+TASK-540-05-L01 has no over-limit file; it is nevertheless a blocking boundary owner.
+After TASK-540-04-L03 and L04 land, it alone updates
+`custom-screen-authoring-boundary.test.ts` to enumerate the final Entry Editor and
+Screen Builder modules and proves their forbidden-import contract. Only then may L02
+split its tests.
+
+The current exact L02 blocker evidence is:
+
+| Path | Lines | SHA-256 |
+|---|---:|---|
+| `tests/integration/routes/userSettings.test.ts` | 1,064 | `c3f70ae3d795367dae66b503d618a8c16587a49114883ba455000074c3c86601` |
+| `tests/vitest/ui/assistant-panel-interaction.test.tsx` | 1,506 | `bae04840eb4aa25cbaa02a6c59d8cee121afff8d817ff30136b746313c325095` |
+
+The final L02 receipt covers the retained and extracted test/support paths as
+`{ path, owner, lines, sha256 }`, with every human-authored file `<= 1000`; the full
+baseline history survives staging and intermediate commits. The user-settings pair
+preserves exactly 10 expanded names, while the Assistant panel pair preserves exactly
+13. Both families run each suite independently and join the protected global 347-name
+multiset. Neither a line failure nor missing/changed test proof is a LOW/TASK-9999
+candidate.
+
+## Mandatory L02 modularization gate
+
+Before closure, L02 splits its over-limit Bun route suite by responsibility:
+
+- `tests/integration/routes/support/userSettingsAccessLogHarness.ts` owns the stateless
+  access-log signatures, ownership predicate, stable inventory/drain/cleanup state
+  machine, and `trackedFetch`; it owns no module-global fixture state.
+- `tests/integration/routes/userSettingsAccessLogHarness.test.ts` owns the existing
+  eight deterministic injected-clock/in-memory harness regressions and no DB fixture.
+- `tests/integration/routes/userSettings.test.ts` retains only route registration and
+  the real `startHttpServer`/DB flow, including the corrected two-user reads and exact
+  A/B stored-row proof.
+
+Both `.test.ts` files remain independently runnable in Bun and preserve all ten current
+user-settings cases. The real suite keeps one execution-local marker/ledger and unique
+user/session UUIDs; it deletes access logs only by observed exact UUID, then settings,
+sessions, and users only for its exact synthetic UUID scope after quiet absence. No
+singleton tracker, truncation, table-wide cleanup, prefix delete, or predicate-wide
+access-log delete is allowed.
+
+The workflow adds the new harness test to L02's exact Bun command, targeted matrix,
+source-owner hashes, named-file isolation, and 10-name before/after proof. The required
+Assistant support/conversation split similarly joins L02's Vitest command and exact
+13-name proof. Reconciled with every owner split, the final family matrix is exactly 64
+Vitest + 18 Bun = 82 target files, 81 source-owner/read-only tests and one closure-owner
+test. New untracked test/support paths must be explicitly owner-allowlisted rather than
+discovered broadly.
+Every added or modified production/test file receives a hard `<=1000` physical-line
+check; an over-limit result fails closure and is not eligible for TASK-9999. Changelog
+1252 must record the final split and line-count evidence.
 
 ## Security Contract
 
@@ -156,13 +212,14 @@ or storage operation, and resets to OFF on a fresh hook remount.
   fresh GET, no-user OFF→toggle→remount-reset with zero transport/storage, a single
   identity event/epoch for provider A→B with no transitional null, and malformed PATCH
   retaining only the normalized local unsynced intent until an explicit setter retry.
-- The real `startHttpServer` suite owns session/CSRF/rate-limit/error-boundary proof
-  and task-scoped access-log ledger/acquisition/quiescence/cleanup. Its deterministic
-  helper tests cover exact success plus missing, extra/duplicate, wrong signature or
-  marker/identity, late UUID, post-dispatch fetch rejection, and post-delete
-  reappearance failures. They also pin the tracked-request ledger behavior and prove
-  each failure path still drains all exact owned UUIDs before rethrowing while an
-  out-of-scope row is never deleted.
+- The retained real `startHttpServer` suite owns
+  session/CSRF/rate-limit/error-boundary proof and task-scoped access-log
+  ledger/acquisition/quiescence/cleanup. The independently runnable Bun harness suite
+  owns exact success plus missing, extra/duplicate, wrong signature or marker/identity,
+  late UUID, post-dispatch fetch rejection, and post-delete reappearance failures. It
+  also pins the tracked-request ledger behavior and proves each failure path still
+  drains all exact owned UUIDs before rethrowing while an out-of-scope row is never
+  deleted. Across the two files all ten current user-settings tests remain present.
   Runtime HTTP behavior remains in Bun; the pure transport/coordinator/UI contract
   remains in Vitest.
 
@@ -173,4 +230,27 @@ the root TypeScript contract explicitly with:
 
 ```bash
 ./node_modules/.bin/tsc -p tsconfig.json --noEmit
+
+set -a && source .env && set +a
+bun test tests/integration/routes/userSettings.test.ts \
+  tests/integration/routes/userSettingsAccessLogHarness.test.ts
+bun test tests/integration/routes/userSettings.test.ts
+bun test tests/integration/routes/userSettingsAccessLogHarness.test.ts
+
+for file in \
+  tests/integration/routes/support/userSettingsAccessLogHarness.ts \
+  tests/integration/routes/userSettingsAccessLogHarness.test.ts \
+  tests/integration/routes/userSettings.test.ts; do
+  lines="$(awk 'END { print NR }' "$file")"
+  if [ "$lines" -gt 1000 ]; then
+    echo "$file exceeds 1000 physical lines: $lines" >&2
+    exit 1
+  fi
+done
+
+node _docs/_workflows/task-540-implement.mjs --check-task-family-line-limit
 ```
+
+The combined and isolated Bun runs must preserve the same ten cases, and the hard
+line-count loop must exit non-zero for any result above 1,000. Record all three final
+counts in family changelog 1252.

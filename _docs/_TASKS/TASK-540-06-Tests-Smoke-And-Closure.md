@@ -10,7 +10,9 @@
 **Status:** 🚧 In Progress
 **Started:** 2026-07-14
 **Fix Started:** 2026-07-15
+**Modularity Repair Pending:** 2026-07-16 — closure is paused on the family scope derived from verified pre-family baseline `e5f15a5675b58df85e573f760df4429af735400f`: 91 current owned production/test paths before planned splits and exactly 15 current over-limit blockers. The final contract is 64 Vitest + 18 Bun = 82 exact test files (81 source-owner/read-only plus one closure aggregate), preservation of 347 protected expanded names, a passing hard history/current line gate, fresh post-audit, full validation, and helper-started `playwright-cli` smoke. Earlier receipts remain historical only.
 **Implementation Complete:** 2026-07-16 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Source Repair Revalidated:** 2026-07-16 — expanded R01 composer/stored-duplicate work and the L04 compatibility correction now have their exact current receipts alongside L03 and TASK-540-05. Fresh post-audit, full validation, live smoke, changelog, and closure remain pending.
 **Changelog:** 1252 (pinned; closure only)
 **Changelog File:** `_docs/_CHANGELOG/1252-2026-07-14-task-540-custom-screens-functional-and-data-integrity-remediation.md`
 
@@ -19,9 +21,11 @@
 ## Scope
 
 Create one cross-leaf aggregate regression suite for TASK-540, run every source-owner
-suite read-only, update Custom Screen/cache/API documentation, execute seven real
-browser flows, and close the family only after every descendant and required gate is
-green. Exactly five fresh post-audit lenses, in their contract order, must cover schema/URL compatibility,
+suite read-only, update `_docs/CONTENT_TYPES_SPEC.md`, `_docs/CMS_SPEC.md`, the narrow
+unsafe-method wording in `_docs/SECURITY_SPEC.md`, both admin-cache docs, and the declared
+Custom Screens guides; validate the already-landed `_docs/CMS_API.md` correction
+read-only. Execute seven real browser flows and close the family only after every
+descendant and required gate is green. Exactly five fresh post-audit lenses, in their contract order, must cover schema/URL compatibility,
 Tabs/accessibility, async/dirty/cache safety, per-user responsive behavior, and
 test/docs/smoke-feasibility/task-graph integrity before runtime starts; the separate
 smoke-evidence audit runs only after the live flows. The pre-smoke lenses run strictly
@@ -49,6 +53,25 @@ TASK-540-06-L01 deliberately retains the historical physical filename
 `TASK-540-06-L01-Six-Builder-Save-Entry-Flows-And-Closure.md` from the original
 six-flow contract. The row uses the current seven-flow title, and no rename is part of
 TASK-540.
+
+## Family modularity prerequisite
+
+Closure must consume the exact source-owner sequence
+`540-01-L01 → 540-02-L01 → 540-03-L01 → 540-04-L01 → 540-04-L03 →
+540-04-L04 → 540-05-L01 boundary → 540-05-L02` before this leaf begins. The
+TASK-540 root owns the canonical 15-row pre-split evidence table. No owner, count, or
+SHA-256 may be dropped; every final production, test, and test-support record is emitted
+as `{ path, owner, lines, sha256 }` from the full baseline history plus current tracked
+and untracked state. Staging/current-HEAD changes cannot narrow that authority.
+
+Every human-authored result must be `<= 1000` physical lines under the exact AGENTS.md
+exemptions. A violation is blocking and cannot become a LOW or TASK-9999 item. Each of
+the ten split test families runs every resulting suite alone, runs the family together,
+and preserves the exact sorted multiset of all 347 expanded pre-split names. Only then
+may closure run the exact 64-Vitest/18-Bun matrix, whose sole mutable test is
+`tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx`. Changelog 1252 stays
+pinned and is created only after these gates, post-audit, full validation, and runtime
+smoke succeed.
 
 ## Orchestrator-only smoke helpers
 
@@ -431,7 +454,7 @@ files), and all root `.env*` projection at every command,
 agent, smoke, and terminal workflow boundary; `.env*` means every root name beginning
 `.env`, with a 64-entry bound. The smoke executor is dynamically loaded
 once only after exact canonical-file identity and SHA-256
-`255f0eaa6f1ce5b20cb18ec3c040e2461c2192d13e2e7a9bc8870075bdafb74b` pass; the same
+`83efa92cf4c9d9d40c207e707cbaca19e8ce30c5f87f30c7c6e54c7bd7f0ffdd` pass; the same
 authority must match after import, after full validation, and immediately before the
 one-shot call.
 Before any closure status mutation, the evidence owner writes and byte-verifies one
@@ -446,8 +469,11 @@ must compare their status-owner state against that independent control rather th
 recapturing it. Sibling status authority is phase-derived, not inferred from current
 repair prose. While changelog 1252 and its exact sealed 17-ID Tasks line are absent,
 the pre-1252 authority requires all 17 physical contracts to remain In Progress; each
-landed implementation leaf has exactly one matching targeted/revalidation gate receipt
-and no `Completed` field. The evidence owner must create and byte-verify changelog 1252
+landed implementation leaf has its matching behavior receipt and, for each of the eight
+modularity owners, exactly one `Modularity Repair Revalidated` receipt with no remaining
+`Modularity Repair Pending`; no leaf has a `Completed` field. While any modularity
+pending field remains, closure authority cannot be created. The evidence owner must
+create and byte-verify changelog 1252
 and that exact Tasks line before one status transaction prepares ten leaves, then six
 children, then root and atomically publishes all 17 Done/Completed transitions with the
 board delta against the same evidence hash. After that atomic transition, the

@@ -13,14 +13,18 @@
 **Implementation Complete:** 2026-07-13 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Repair Started:** 2026-07-16
 **Repair Reason:** R01 centralized binding-ID generation in `buildScreenFieldBindingId`; L02 must consume that domain helper from its existing Inspector binding factory and prove maximum-length tuples stay distinct and bounded. L02 also owns the visible behavior correction that restores a blank or over-120 Tab-label draft to the latest committed label on blur or Enter without calling `onPatchBlock`.
-**Revalidation Passed:** 2026-07-16 — `core lint:types` and `core lint` passed; the exact two-file L02 Vitest gate passed 33/33 on the final shared schema state, including the domain-builder consumer and invalid blur/Enter restore regressions; and `git diff --check` passed. This receipt claims no full-suite, post-audit, smoke, changelog, or closure result.
+**Modularity Repair Pending:** 2026-07-17 — measured from family baseline `e5f15a567`, the touched `ScreenBlockInspector.tsx` grew from 1,078 to 1,194 physical lines and therefore blocks closure under the hard 1,000-line gate. The exact stable-facade split below must land without changing Inspector behavior or public imports.
+**Current Repair State:** The behavior repair is implemented and its recorded `Revalidation Passed` remains historical pre-split evidence only. After all five production paths pass the exact static, two-file 33/33 Vitest, line-count, and drift gates, remove the single `Modularity Repair Pending` field and replace it with one `Modularity Repair Revalidated` receipt; the two fields must never coexist.
+**Revalidation Passed:** 2026-07-16 — historical pre-modularity evidence: `core lint:types` and `core lint` passed; the exact two-file L02 Vitest gate passed 33/33 on the final shared schema state, including the domain-builder consumer and invalid blur/Enter restore regressions; and `git diff --check` passed. This receipt cannot validate the extracted modules and claims no full-suite, post-audit, smoke, changelog, or closure result.
 **Changelog:** 1252 (pinned; closure only)
 
 ---
 
 ## Exclusive ownership
 
-- `core/admin/ui/custom-screens/ScreenBlockInspector.tsx`
+- the stable `core/admin/ui/custom-screens/ScreenBlockInspector.tsx` facade plus
+  `screenBlockInspectorModel.ts`, `ScreenBlockInspectorControls.tsx`,
+  `ScreenBlockInspectorTabs.tsx`, and `ScreenBlockInspectorSection.tsx`
 - compatibility updates required by this source gate in
   `tests/vitest/ui/custom-screen-binding-panel.test.tsx`,
   `tests/vitest/ui-integration/custom-screen-image-inspector.test.tsx`
@@ -33,6 +37,70 @@ later aggregate additions.
 `tests/vitest/customScreens/screenDocumentOps.test.ts` remain R01-owned. This leaf owns
 only the Inspector import/call site that consumes `buildScreenFieldBindingId`; it must
 not duplicate, alter, or re-export the domain builder.
+
+## Mandatory Inspector module split
+
+The split is measured from verified family baseline `e5f15a567` through the final
+working tree; staging or intermediate commits do not reset touched-file scope. Verified
+baseline→pre-split counts are Inspector 1,078→1,194, binding-panel suite 286→787, and
+image-inspector suite 423→454. All three original paths plus every new owner remain in
+the byte-based final gate. Preserve the existing import seam and exact public surface:
+seven runtime exports
+`createScreenFieldBinding`, `SCREEN_ALIGN_DEFAULT_OPTION`, `buildStylePatch`,
+`SCREEN_SECTION_COLUMNS_DEFAULT_OPTION`, `buildSectionLayoutPatch`,
+`ScreenSectionInspector`, and `ScreenBlockInspector`, plus type exports
+`ScreenBlockStyleEdit` and `ScreenSectionStyleEdit`. The facade must explicitly
+re-export the same references; `export *`, wrappers, duplicate constants, and local
+schema mirrors are forbidden.
+
+| Owner | Sole responsibility | Post-format budget |
+|---|---|---:|
+| `screenBlockInspectorModel.ts` | Inspector prop/value types, field-option de-duplication, `createScreenFieldBinding`, alignment/section-column sentinel constants, clamps, and the two pure style/layout patch builders | `<=320` |
+| `ScreenBlockInspectorControls.tsx` | reusable `InspectorRow`, bound-field/enum/box-spacing rows, clear affordance, and Image URL row; no Tabs draft or section state | `<=320` |
+| `ScreenBlockInspectorTabs.tsx` | `nextTabId`, Unicode code-point length, `ScreenTabLabelDraft`, `TabLabelInput`, and `TabsEditor`, including add/remove/arm/commit/restore behavior | `<=280` |
+| `ScreenBlockInspectorSection.tsx` | section-column options and the exported `ScreenSectionInspector`; consumes model patch helpers and shared controls | `<=360` |
+| `ScreenBlockInspector.tsx` | block-kind orchestration and explicit compatibility re-exports only; imports the focused owners and retains the exported `ScreenBlockInspector` component | `<=700` |
+
+The acyclic import graph is:
+
+```text
+customScreenSchemas -> screenBlockInspectorModel
+screenBlockInspectorModel -> ScreenBlockInspectorControls
+screenBlockInspectorModel + ScreenBlockInspectorControls
+  -> {ScreenBlockInspectorTabs, ScreenBlockInspectorSection}
+model + controls + tabs + section -> explicit ScreenBlockInspector facade
+```
+
+The model is Bun-free and has no React state. Controls never import Tabs, Section, or
+the facade. Tabs and Section are siblings and never import one another. Preserve the
+single binding-ID builder call, eligible-field policy, exact clear sentinel, Unicode
+trim/code-point validation, latest-committed draft restoration, Escape semantics,
+parent-rerender invalidation, tab/slot identity, min/max guards, event propagation,
+image URL fail-closed behavior, exported reference identity, and every existing
+accessible name.
+
+The split must carry `ScreenTabLabelDraft.baseLabel` unchanged into
+`ScreenBlockInspectorTabs.tsx`. It must not opportunistically execute deferred
+`TASK-9999-01-L02`. Once extraction makes the old path/line evidence stale, the
+TASK-540 closure/docs owner must re-anchor TASK-9999-01 and TASK-9999-01-L02 to the new
+symbol path and exact final lines while preserving their `⏳ To Do` states and
+behavior-neutral rationale. This is an evidence follow-up only, not a new LOW and not
+permission to close or widen the deferred leaf.
+
+No modularity blocker is eligible for TASK-9999: leaving a touched source above 1,000
+would violate a hard verification gate. Any behavior/assertion drift discovered during
+the split is likewise repaired here according to its actual impact, never hidden as a
+line-limit LOW.
+
+Land in this exact order: `screenBlockInspectorModel.ts`,
+`ScreenBlockInspectorControls.tsx`, `ScreenBlockInspectorTabs.tsx`,
+`ScreenBlockInspectorSection.tsx`, then the stable `ScreenBlockInspector.tsx` facade.
+After the source gate, run the two test files independently and combined, perform the
+TASK-9999 evidence-path follow-up, then run the targeted static/test/line gate before
+writing `Modularity Repair Revalidated`. That receipt does not claim the later mandatory
+family post-audit or runtime smoke. A downstream
+module may consume only already-landed owners and must never import the facade back into
+an internal owner.
 
 ## Historical pre-implementation grounded anchors
 
@@ -50,6 +118,13 @@ named symbols and regression suites in this contract rather than mutable line nu
 ## Implementation Pseudocode
 
 ```tsx
+// ScreenBlockInspector.tsx — stable seam and block orchestration
+export { createScreenFieldBinding, buildStylePatch, buildSectionLayoutPatch } from
+  "./screenBlockInspectorModel";
+export type { ScreenBlockStyleEdit, ScreenSectionStyleEdit } from
+  "./screenBlockInspectorModel";
+export { ScreenSectionInspector } from "./ScreenBlockInspectorSection";
+
 // Import ScreenTabItem, SCREEN_TABS_MIN, SCREEN_TABS_MAX, and
 // SCREEN_TAB_LABEL_MAX from customScreenSchemas; no local mirror.
 function nextTabId(tabs: ScreenTabItem[]): string {
@@ -178,9 +253,17 @@ bun --cwd core lint:types
 bun --cwd core lint
 bunx vitest run tests/vitest/ui/custom-screen-binding-panel.test.tsx \
   tests/vitest/ui-integration/custom-screen-image-inspector.test.tsx
+node _docs/_workflows/task-540-implement.mjs --check-task-family-line-limit
 ```
 
-Rerun any named failure once in isolation. No route, DB, or runtime Bun change.
+Run each Vitest file independently first (15/15 binding-panel and 18/18 image-inspector),
+then together for 33/33. Rerun any named failure once in isolation. Count complete
+physical files from the family baseline, including both modified test files, blanks/
+comments, and a final unterminated line; every result must be at most 1,000. No route,
+DB, or runtime Bun change. The orchestrator's `runLeafGate` performs the same byte-based
+check over this leaf's exact `allowedFiles` before and after commands; the displayed
+global command is the final cross-family assertion and is expected to pass only after
+all parallel modularity owners land.
 
 ## Completion
 
@@ -188,6 +271,8 @@ Implemented Button `href` binding and its exact clear sentinel, Link-only action
 authoring, deterministic slot-locked Tabs controls, buffered Unicode-aware label
 editing, exact slot arming, and the canonical Screen media-URL wrapper. The historical
 Unicode/React-state correction and its 31/31 gate remain valid evidence. The current
-2026-07-16 domain-builder consumer and visible invalid-label restore corrections are
-revalidated by the exact 33/33 gate above; no new post-audit or smoke is claimed.
+2026-07-16 domain-builder consumer and visible invalid-label restore corrections were
+revalidated by the historical exact 33/33 gate above; the modular split still requires
+the fresh independent/combined 33/33 gate, line counts, and replacement
+`Modularity Repair Revalidated` receipt. No new post-audit or smoke is claimed.
 Aggregate persistence and live browser flows remain closure-owned.

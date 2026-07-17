@@ -66,6 +66,7 @@ import {
   type ScreenFieldBinding,
 } from "../../../services/customScreens/customScreenSchemas";
 import {
+  isScreenEntryPresentationSingleMediaField,
   screenEntryPresentationTextEmphasisValues,
   screenEntryPresentationTextSizes,
   screenEntryPresentationToneValues,
@@ -307,9 +308,32 @@ const resolvePresentationTarget = (input: {
     block,
     label: resolveBlockLabel(block, fields),
     supportsText: true,
-    mediaField: field?.type === "media" ? field : null,
+    mediaField: isScreenEntryPresentationSingleMediaField(field) ? field : null,
     supportsDirectImage: false,
   };
+};
+
+export const filterRenderableScreenEntryPresentationOverrides = (input: {
+  document: ScreenDocumentV1;
+  bindings: ScreenFieldBinding[];
+  fields: ContentField[];
+  overrides: readonly CustomScreenEntryPresentationOverride[];
+}): CustomScreenEntryPresentationOverride[] => {
+  const multipleMediaBlockIds = new Set<string>();
+  for (const block of collectScreenDocumentBlocks(input.document)) {
+    if (block.type !== "field") continue;
+    const fieldName = resolveFieldBlockFieldName(block, input.bindings);
+    const field = fieldName ? findContentField(input.fields, fieldName) : null;
+    if (field?.type === "media" && !isScreenEntryPresentationSingleMediaField(field)) {
+      multipleMediaBlockIds.add(block.id);
+    }
+  }
+
+  return input.overrides.filter(
+    (override) =>
+      !multipleMediaBlockIds.has(override.blockId) ||
+      (override.propPath !== "mediaAssetId" && override.propPath !== "image")
+  );
 };
 
 const upsertPresentationOverride = (
@@ -794,6 +818,16 @@ function CustomScreenEntryRouteSession({
   const canEditInScreen = screenCapabilities.supportsDedicatedEditor;
   const runtimeDocument = useMemo(() => resolveRuntimeDocument(currentScreen), [currentScreen]);
   const runtimeBindings = useMemo(() => resolveRuntimeBindings(currentScreen), [currentScreen]);
+  const renderablePresentationOverrides = useMemo(
+    () =>
+      filterRenderableScreenEntryPresentationOverrides({
+        document: runtimeDocument,
+        bindings: runtimeBindings,
+        fields: currentFields,
+        overrides: currentDraftOverrides,
+      }),
+    [currentDraftOverrides, currentFields, runtimeBindings, runtimeDocument]
+  );
   const selectedRuntimeBlock = useMemo(
     () =>
       selectedRuntimeBlockId ? findScreenBlockById(runtimeDocument, selectedRuntimeBlockId) : null,
@@ -1229,9 +1263,15 @@ function CustomScreenEntryRouteSession({
         document: runtimeDocument,
         bindings: runtimeBindings,
         values: entryRouteReady ? canvasFieldValues : emptyFieldValues,
-        overrides: currentDraftOverrides,
+        overrides: renderablePresentationOverrides,
       }),
-    [canvasFieldValues, currentDraftOverrides, entryRouteReady, runtimeBindings, runtimeDocument]
+    [
+      canvasFieldValues,
+      entryRouteReady,
+      renderablePresentationOverrides,
+      runtimeBindings,
+      runtimeDocument,
+    ]
   );
   const mediaRequestKey = buildPresentationMediaRequestKey(routeKey, requestedIdsPlan);
   const [mediaMachine, dispatchMediaAttempt] = useReducer(
@@ -2157,7 +2197,7 @@ function CustomScreenEntryRouteSession({
                       onFieldChange={handleFieldChange}
                       onTitleChange={handleTitleChange}
                       onSlugChange={handleSlugChange}
-                      presentationOverrides={currentDraftOverrides}
+                      presentationOverrides={renderablePresentationOverrides}
                       presentationMediaUrlsById={presentationMediaState.urlsById}
                       selectedBlockId={selectedRuntimeBlockId}
                       onSelectBlock={setSelectedRuntimeBlockId}
@@ -2177,7 +2217,7 @@ function CustomScreenEntryRouteSession({
                 data={buildPayloadData()}
                 fields={currentFields}
                 relatedEntries={relatedEntries}
-                presentationOverrides={currentDraftOverrides}
+                presentationOverrides={renderablePresentationOverrides}
                 presentationMediaUrlsById={presentationMediaState.urlsById}
                 emptyTitle="Editor upgrade required"
                 emptyMessage="Add writable screen blocks and bindings in the builder before using this route as the dedicated record editor."

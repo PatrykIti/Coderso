@@ -16,18 +16,32 @@
 ## Overview
 
 `ScreenTabLabelDraft.baseLabel` is written in every draft-state update but never read.
-Replace the two-field object with the value-only state shape while preserving the final
-TASK-540 tab-label contract exactly, including Unicode bounds, commit, Escape, invalid
-input, external rerender, focus, and accessibility behavior.
+TASK-540-02-L01 is first extracting that exact state into
+`ScreenBlockInspectorTabs.tsx`; it deliberately preserves the unread member. This leaf
+later replaces the two-field object with the value-only state shape while preserving
+the final TASK-540 tab-label contract exactly, including Unicode bounds, commit,
+Escape, invalid input, external rerender, focus, and accessibility behavior.
+
+The source-task backlink uses a conditional evidence transition. Before the split, the
+symbol is at `ScreenBlockInspector.tsx:524,525,538,542,553,559,563` with SHA-256
+`eb49d21a99cd5fbf8dedfd502c727ba890dd455552a8259b9e9b45eb4b11d4df`. After the
+split, TASK-540 closure must record the exact final line anchors and SHA-256 for the
+same type/assignments in `ScreenBlockInspectorTabs.tsx` and prove them absent from the
+facade. Both layouts must retain normalized AST contract SHA-256
+`15897646098bfeb9f653b940c0782e3b3f999a811b9cbc3d9bf46a01cae5df9a`, proving one
+`baseLabel` type member, exactly four writes, the sole `draft.value` read, and no
+`baseLabel` or whole-draft read. Exactly one layout may validate at a time; this leaf
+may be implemented only from the final post-split evidence.
 
 ## Exclusive Ownership
 
-- `core/admin/ui/custom-screens/ScreenBlockInspector.tsx`, only
+- `core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx`, only
   `ScreenTabLabelDraft` / `TabLabelInput` local state
 - `tests/vitest/ui/custom-screen-binding-panel.test.tsx`, behavior-regression coverage
   only if an additive assertion is needed; never weaken or rebaseline existing cases
 
-Do not change Tabs schemas, stored-read repair, slots, runtime tablist rendering, blur
+The stable `ScreenBlockInspector.tsx` facade and the model/controls/section sibling
+modules are read-only. Do not change Tabs schemas, stored-read repair, slots, runtime tablist rendering, blur
 policy, labels/copy, ARIA, keys, event propagation, or any Button behavior. In particular,
 the separately tracked invalid-blur finding is not part of this deferred cleanup.
 

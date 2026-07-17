@@ -843,6 +843,17 @@ testIfDb(
           identityB
         );
 
+        const readA = await request(
+          url,
+          { method: "GET", headers: headers(createdA.token) },
+          200,
+          identityA
+        );
+        expect(await readA.json()).toEqual({
+          key: "customScreens.entry.preferences",
+          value: { version: 1, showFieldMetadata: true },
+        });
+
         const mismatch = await request(
           url,
           {
@@ -869,6 +880,19 @@ testIfDb(
         expect(await readB.json()).toEqual({
           key: "customScreens.entry.preferences",
           value: { version: 1, showFieldMetadata: false },
+        });
+        const [storedA] = await db
+          .select({ value: userSettings.value })
+          .from(userSettings)
+          .where(
+            and(
+              eq(userSettings.userId, userA),
+              eq(userSettings.key, "customScreens.entry.preferences")
+            )
+          );
+        expect(storedA?.value).toEqual({
+          version: 1,
+          showFieldMetadata: true,
         });
         const [storedB] = await db
           .select({ value: userSettings.value })

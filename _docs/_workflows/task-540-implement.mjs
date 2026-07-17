@@ -39,6 +39,7 @@ import {
   unlink,
 } from "node:fs/promises";
 import { parseEnv, promisify } from "node:util";
+import { default as ts } from "typescript";
 
 import { buildTask540SmokePlan } from "./task-540-smoke-contract.mjs";
 
@@ -286,10 +287,177 @@ const VALIDATION_LAUNCHER_SOURCE =
 const LOCAL_COMMAND_AUTHORITY = new WeakMap();
 const GROUNDED_CONTEXT_AUTHORITY = new WeakMap();
 let workflowSensitiveEnvBaseline = null;
+// These TASK-540-owned tests are part of the frozen matrix before the owner stages
+// them. Union only their exact paths; unrelated untracked tests never gain command
+// authority through broad worktree discovery.
+const PLANNED_TASK_540_TEST_FILES = Object.freeze([
+  "tests/integration/routes/userSettingsAccessLogHarness.test.ts",
+  "tests/integration/routes/customScreensDefinitionIntegrityRoutes.test.ts",
+  "tests/unit/assistant/actionExecutorAutomationBlueprints.test.ts",
+  "tests/unit/assistant/actionExecutorCatalogBlueprints.test.ts",
+  "tests/unit/assistant/actionExecutorContentUpdates.test.ts",
+  "tests/unit/assistant/actionExecutorCustomScreens.test.ts",
+  "tests/unit/assistant/actionExecutorDetailPages.test.ts",
+  "tests/unit/assistant/actionExecutorForms.test.ts",
+  "tests/unit/assistant/actionExecutorIdempotencyAndSiteKit.test.ts",
+  "tests/unit/assistant/actionExecutorListingsAndWidgets.test.ts",
+  "tests/unit/assistant/actionExecutorMenusAndSeo.test.ts",
+  "tests/unit/assistant/actionExecutorPages.test.ts",
+  "tests/unit/assistant/actionExecutorSupportingPageLinks.test.ts",
+  "tests/vitest/admin/custom-screen-binding-contract.test.ts",
+  "tests/vitest/admin/custom-screen-block-style.test.ts",
+  "tests/vitest/admin/custom-screen-document-contract.test.ts",
+  "tests/vitest/admin/custom-screen-fixed-block-contract.test.ts",
+  "tests/vitest/admin/custom-screen-section-style-and-binding-gc.test.ts",
+  "tests/vitest/admin/custom-screen-stored-read-repair.test.ts",
+  "tests/vitest/admin/cacheBusCorrelation.test.ts",
+  "tests/vitest/admin/cacheBusHardening.test.ts",
+  "tests/vitest/admin/customScreensEntryOverridesClient.test.ts",
+  "tests/vitest/admin/entriesClientMutationReconciliation.test.ts",
+  "tests/vitest/admin/entriesClientReadAuthority.test.ts",
+  "tests/vitest/ui/assistant-panel-conversation.test.tsx",
+  "tests/vitest/ui/custom-screen-editor-draft-and-save.test.tsx",
+  "tests/vitest/ui/custom-screen-editor-hydration-authority.test.tsx",
+  "tests/vitest/ui/custom-screen-editor-visit-authority.test.tsx",
+  "tests/vitest/ui/custom-screen-entry-navigation-authority.test.tsx",
+  "tests/vitest/ui/custom-screen-entry-presentation-media.test.ts",
+  "tests/vitest/ui-integration/custom-screen-runtime-interactions.test.tsx",
+  "tests/vitest/ui-integration/custom-screen-runtime-layout.test.tsx",
+  "tests/vitest/ui-integration/custom-screen-runtime-presentation.test.tsx",
+]);
+const HUMAN_AUTHORED_MODULE_LINE_LIMIT = 1_000;
+const HUMAN_AUTHORED_MODULE_PATTERN = /\.[cm]?[jt]sx?$/u;
+const TASK_540_PRE_FAMILY_BASELINE = "e5f15a5675b58df85e573f760df4429af735400f";
+const TASK_540_FIRST_FAMILY_COMMIT = "cf6a40334d76b98a9bef45e0a816429f836b142f";
+const TASK_540_FROZEN_PRE_SPLIT_MODULE_PATHS = Object.freeze(
+  `core/admin/services/adminAuthIdentity.ts
+core/admin/services/customScreensClient.ts
+core/admin/services/entriesClient.ts
+core/admin/services/mediaClient.ts
+core/admin/services/userSettingsClient.ts
+core/admin/ui/contexts/AdminAuthContext.tsx
+core/admin/ui/custom-screens/CustomScreenEditorPage.tsx
+core/admin/ui/custom-screens/CustomScreenEntryCanvas.tsx
+core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx
+core/admin/ui/custom-screens/CustomScreenPreview.tsx
+core/admin/ui/custom-screens/CustomScreenWorkspacePreviewDialog.tsx
+core/admin/ui/custom-screens/ScreenAuthoringCanvas.tsx
+core/admin/ui/custom-screens/ScreenBlockInspector.tsx
+core/admin/ui/custom-screens/ScreenRuntimeRenderer.tsx
+core/admin/ui/custom-screens/hooks/useScreenEntryPreferences.ts
+core/admin/ui/custom-screens/hooks/useScreenRelatedEntries.ts
+core/admin/ui/custom-screens/routeParams.ts
+core/admin/ui/shared/CanvasEditor.tsx
+core/admin/utils/cacheBus.ts
+core/server/httpServer.ts
+core/server/middleware/cors.ts
+core/server/routes/customScreenRoutes.ts
+core/server/routes/userSettingsRoutes.ts
+core/services/assistant/blueprints/blueprintBindingComposer.ts
+core/services/customScreens/bindingResolver.ts
+core/services/customScreens/customScreenBindingNormalizer.ts
+core/services/customScreens/customScreenContracts.ts
+core/services/customScreens/customScreenDefinitionNormalizer.ts
+core/services/customScreens/customScreenEditorViewNormalizer.ts
+core/services/customScreens/customScreenJsonSchemas.ts
+core/services/customScreens/customScreenLegacyAdapters.ts
+core/services/customScreens/customScreenListViewNormalizer.ts
+core/services/customScreens/customScreenNormalizationPrimitives.ts
+core/services/customScreens/customScreenSchemas.ts
+core/services/customScreens/customScreenService.ts
+core/services/customScreens/screenDocumentDataNormalizer.ts
+core/services/customScreens/screenDocumentNormalizer.ts
+core/services/customScreens/screenDocumentOps.ts
+core/services/customScreens/screenDocumentReadNormalizer.ts
+core/services/customScreens/screenEntryPresentationOverrideContract.ts
+core/services/customScreens/screenEntryPresentationOverrides.ts
+core/services/customScreens/screenMediaIdentity.ts
+core/services/settings/screenEntryPreferencesContract.ts
+core/services/settings/securitySettings.ts
+core/services/settings/userSettingsService.ts
+tests/integration/routes/cors.test.ts
+tests/integration/routes/customScreensDefinitionIntegrityRoutes.test.ts
+tests/integration/routes/customScreensRoutes.test.ts
+tests/integration/routes/support/customScreensRouteHarness.ts
+tests/integration/routes/userSettings.test.ts
+tests/unit/assistant/actionExecutorService.test.ts
+tests/unit/settings/userSettingsService.test.ts
+tests/vitest/admin/cacheBus.test.ts
+tests/vitest/admin/custom-screen-binding-contract.test.ts
+tests/vitest/admin/custom-screen-block-style.test.ts
+tests/vitest/admin/custom-screen-document-contract.test.ts
+tests/vitest/admin/custom-screen-fixed-block-contract.test.ts
+tests/vitest/admin/custom-screen-schema-fixtures.ts
+tests/vitest/admin/custom-screen-schemas.test.ts
+tests/vitest/admin/custom-screen-section-style-and-binding-gc.test.ts
+tests/vitest/admin/custom-screen-stored-read-repair.test.ts
+tests/vitest/admin/customScreensClient.test.ts
+tests/vitest/admin/entriesClient.test.ts
+tests/vitest/admin/mediaClient.test.ts
+tests/vitest/admin/userSettingsClient.test.ts
+tests/vitest/assistant/blueprint-binding-composer.test.ts
+tests/vitest/customScreens/screen-document-image-src.test.ts
+tests/vitest/customScreens/screenDocumentOps.test.ts
+tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts
+tests/vitest/ui-integration/canvas-editor-panel-toggle-dedupe.test.tsx
+tests/vitest/ui-integration/canvas-editor/canvas-editor.test.tsx
+tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx
+tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx
+tests/vitest/ui-integration/custom-screen-entry-preferences-persistence.test.tsx
+tests/vitest/ui-integration/custom-screen-image-inspector.test.tsx
+tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx
+tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx
+tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx
+tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx
+tests/vitest/ui-integration/screen-editor-sections.test.tsx
+tests/vitest/ui/admin-auth-identity.test.tsx
+tests/vitest/ui/assistant-panel-interaction.test.tsx
+tests/vitest/ui/custom-screen-authoring-boundary.test.ts
+tests/vitest/ui/custom-screen-binding-panel.test.tsx
+tests/vitest/ui/custom-screen-entry-draft.test.ts
+tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx
+tests/vitest/ui/custom-screen-route-params.test.ts
+tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx
+tests/vitest/ui/custom-screens-page.test.tsx
+tests/vitest/ui/use-screen-entry-preferences.test.ts
+tests/vitest/ui/use-screen-related-entries.test.tsx`.split("\n")
+);
+const TASK_540_FROZEN_PRE_SPLIT_PATHS_SHA256 =
+  "c779ceb383259b56c31afc1b15f42a95e2f4076121118c16e29ffddbdddea388";
+const TASK_540_FROZEN_PRE_SPLIT_OWNERS_SHA256 =
+  "7cecbf2970bdb9fb57cc87c6509f6a2c1f9474c970648928230830963f0a696c";
+const R01_DOCUMENT_OPS_FACADE_TEST_NAME =
+  "screenDocumentOps facade preserves the exact public manifest and owner reference identity";
+const R01_DOCUMENT_OPS_FINAL_NAMES_SHA256 =
+  "e269c9a28e82b530a593d50be5919f91c9ae269338e16694061c2ef9a797f087";
+const PENDING_MODULARITY_REPAIR_TASK_FILES = Object.freeze([
+  "TASK-540-01-L01-Reject-Unknown-Sanitize-Urls-Unique-Tabs-And-Prune-Ghosts.md",
+  "TASK-540-02-L01-Expose-Link-Binding-And-Complete-Tab-Slot-Editing.md",
+  "TASK-540-03-L01-Functional-Tabs-And-No-Nested-Interactive-Space-Trap.md",
+  "TASK-540-04-L01-Make-Related-Entry-Promise-Caches-Retryable.md",
+  "TASK-540-04-L03-Guard-Entry-Drafts-And-Subscribe-Related-Caches.md",
+  "TASK-540-04-L04-Guard-Screen-Builder-Drafts.md",
+  "TASK-540-05-L01-Keep-Screen-Canvas-Usable-And-Aria-Valid.md",
+  "TASK-540-05-L02-Scope-Screen-Preferences-Through-User-Settings.md",
+]);
+const MODULARITY_REPAIR_LEAF_IDS = Object.freeze([
+  "540-01-L01",
+  "540-02-L01",
+  "540-03-L01",
+  "540-04-L01",
+  "540-04-L03",
+  "540-04-L04",
+  "540-05-L01",
+  "540-05-L02",
+]);
 const TRACKED_TEST_FILES = Object.freeze(
-  (await git(["ls-files", "tests"]))
-    .split("\n")
-    .filter((file) => /\.test\.[cm]?[jt]sx?$/.test(file))
+  [
+    ...(await git(["ls-files", "tests"]))
+      .split("\n")
+      .filter((file) => /\.test\.[cm]?[jt]sx?$/.test(file)),
+    ...PLANNED_TASK_540_TEST_FILES,
+  ]
+    .filter((file, index, files) => files.indexOf(file) === index)
     .sort()
 );
 // Parse the repo environment privately instead of process.loadEnvFile(), which
@@ -299,6 +467,7 @@ const TRACKED_TEST_FILES = Object.freeze(
 const INHERITED_ENV_FOR_REDACTION = Object.freeze({ ...process.env });
 const HERMETIC_SELF_TEST_MODE =
   process.argv.includes("--self-test-repair-siblings") ||
+  process.argv.includes("--self-test-file-line-limit") ||
   process.argv.some((value) => value.startsWith("--self-test-current-resume="));
 const HERMETIC_SELF_TEST_SENSITIVE_ENV_PROJECTION = Object.freeze(
   Object.assign(Object.create(null), {
@@ -506,9 +675,10 @@ const WORKFLOW = ROOT + "/" + WORKFLOW_REL;
 const SMOKE_CONTRACT_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-contract.mjs";
 const SMOKE_EXECUTOR_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-executor.mjs";
 const FROZEN_SMOKE_EXECUTOR_SHA256 =
-  "255f0eaa6f1ce5b20cb18ec3c040e2461c2192d13e2e7a9bc8870075bdafb74b";
+  "83efa92cf4c9d9d40c207e707cbaca19e8ce30c5f87f30c7c6e54c7bd7f0ffdd";
 const SMOKE_HOST_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-host.mjs";
 const LOCAL_ORCHESTRATOR_WORKFLOW_REL = "_docs/_workflows/task-540-local-orchestrator.mjs";
+const TEST_NAME_CONTRACT_WORKFLOW_REL = "_docs/_workflows/task-540-test-name-contract.mjs";
 async function captureFrozenSmokeExecutorAuthority(label) {
   const absolutePath = ROOT + "/" + SMOKE_EXECUTOR_WORKFLOW_REL;
   const resolvedPath = await realpath(absolutePath);
@@ -602,6 +772,18 @@ const WORKFLOW_MECHANICAL_GATE_COMMANDS = Object.freeze([
     command: "node " + LOCAL_ORCHESTRATOR_WORKFLOW_REL + " --self-test",
   }),
   Object.freeze({ id: "workflowSyntax", command: "node --check " + WORKFLOW_REL }),
+  Object.freeze({
+    id: "testNameContractSyntax",
+    command: "node --check " + TEST_NAME_CONTRACT_WORKFLOW_REL,
+  }),
+  Object.freeze({
+    id: "testNameContractSelfTest",
+    command: "node " + TEST_NAME_CONTRACT_WORKFLOW_REL + " --mode=self-test",
+  }),
+  Object.freeze({
+    id: "testNameContractCurrent",
+    command: "node " + TEST_NAME_CONTRACT_WORKFLOW_REL + " --mode=current --family=all",
+  }),
   Object.freeze({
     id: "workflowRepairResumeSelfTest",
     command: "node " + WORKFLOW_REL + " --self-test-repair-siblings",
@@ -814,25 +996,31 @@ const DEFERRED_LOW_FOLLOW_UPS = deepFreezeExact({
     allowedOwners: ["540-01-L01", "540-04-L03"],
     finding: "Actor UUID validation reuses the media-named UUID predicate without behavior change.",
     evidenceAnchors: [
-      "core/services/customScreens/customScreenSchemas.ts:548",
-      "core/services/customScreens/screenEntryPresentationOverrideContract.ts:171",
-      "core/services/customScreens/screenEntryPresentationOverrideContract.ts:206",
-      "core/services/customScreens/screenEntryPresentationOverrides.ts:426",
+      "core/services/customScreens/screenMediaIdentity.ts:4",
+      "core/services/customScreens/screenEntryPresentationOverrideContract.ts:194",
+      "core/services/customScreens/screenEntryPresentationOverrideContract.ts:231",
+      "core/services/customScreens/screenEntryPresentationOverrides.ts:421",
     ],
+    preImplementationAnchor: Object.freeze({
+      anchor: "core/services/customScreens/customScreenSchemas.ts:548",
+      lineIncludes: "export function isScreenMediaAssetUuid",
+      pendingTaskPath:
+        "_docs/_TASKS/TASK-540-01-L01-Reject-Unknown-Sanitize-Urls-Unique-Tabs-And-Prune-Ghosts.md",
+    }),
     anchorLineIncludes: [
       "export function isScreenMediaAssetUuid",
       "if (!isScreenMediaAssetUuid(value))",
-      "const normalizeUpdatedBy",
+      "return normalizeCanonicalMediaUuid(value);",
       "if (!isScreenMediaAssetUuid(value))",
     ],
     leafEvidenceTokens: [
-      "customScreenSchemas.ts",
+      "screenMediaIdentity.ts",
       "isScreenMediaAssetUuid",
       "screenEntryPresentationOverrideContract.ts",
       "screenEntryPresentationOverrides.ts",
     ],
     approvedEvidenceLanguage:
-      "TASK-9999-01-L01 approved evidence: core/services/customScreens/customScreenSchemas.ts:548; core/services/customScreens/screenEntryPresentationOverrideContract.ts:171; core/services/customScreens/screenEntryPresentationOverrideContract.ts:206; core/services/customScreens/screenEntryPresentationOverrides.ts:426.",
+      "TASK-9999-01-L01 approved evidence: core/services/customScreens/screenMediaIdentity.ts:4; core/services/customScreens/screenEntryPresentationOverrideContract.ts:194; core/services/customScreens/screenEntryPresentationOverrideContract.ts:231; core/services/customScreens/screenEntryPresentationOverrides.ts:421.",
     approvedRationaleLanguage:
       "TASK-9999-01-L01 approved rationale: the shared UUID predicate already accepts and rejects the intended actor/media UUID grammar and preserves exact input bytes; deferral changes no UI/UX/accessibility, data, security/privacy/auth/RBAC, API, persistence/migration, performance/reliability, or test-integrity behavior.",
   },
@@ -859,9 +1047,26 @@ const DEFERRED_LOW_FOLLOW_UPS = deepFreezeExact({
       "value={draft.value}",
       "setDraft({ baseLabel:",
     ],
-    leafEvidenceTokens: ["ScreenBlockInspector.tsx", "ScreenTabLabelDraft", "baseLabel"],
-    approvedEvidenceLanguage:
-      "TASK-9999-01-L02 approved evidence: core/admin/ui/custom-screens/ScreenBlockInspector.tsx:524; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:525; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:538; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:542; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:553; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:559; core/admin/ui/custom-screens/ScreenBlockInspector.tsx:563.",
+    anchorTransition: {
+      preSha256: "eb49d21a99cd5fbf8dedfd502c727ba890dd455552a8259b9e9b45eb4b11d4df",
+      draftContractSha256: "15897646098bfeb9f653b940c0782e3b3f999a811b9cbc3d9bf46a01cae5df9a",
+      draftContractCanonicalBytes: 12_166,
+      postPath: "core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx",
+      facadePath: "core/admin/ui/custom-screens/ScreenBlockInspector.tsx",
+      facadeForbiddenSymbols: ["ScreenTabLabelDraft", "TabLabelInput", "baseLabel"],
+    },
+    conditionalEvidenceTokens: [
+      "ScreenBlockInspector.tsx:524,525,538,542,553,559,563",
+      "eb49d21a99cd5fbf8dedfd502c727ba890dd455552a8259b9e9b45eb4b11d4df",
+      "15897646098bfeb9f653b940c0782e3b3f999a811b9cbc3d9bf46a01cae5df9a",
+      "ScreenBlockInspectorTabs.tsx",
+    ],
+    leafEvidenceTokens: [
+      "ScreenBlockInspectorTabs.tsx",
+      "ScreenTabLabelDraft",
+      "baseLabel",
+      "15897646098bfeb9f653b940c0782e3b3f999a811b9cbc3d9bf46a01cae5df9a",
+    ],
     approvedRationaleLanguage:
       "TASK-9999-01-L02 approved rationale: baseLabel is assigned but never read; deferral changes no rendered UI, keyboard/blur/commit behavior, accessibility, saved data, security/privacy/auth/RBAC, API, persistence/migration, performance/reliability, or test-integrity behavior.",
   },
@@ -870,32 +1075,465 @@ const DEFERRED_LOW_SOURCE_LINK_PATHS = Object.freeze([
   ROOT_TASK_PATH,
   LEAF_STATUS_GROUPS["540-06-L01"].leafPath,
 ]);
+const DEFERRED_LOW_DRAFT_AREA = "deferred-low:unread-screen-tab-label-draft-state";
+
+function deferredLowSourceLine(sourceFile, node, relativePath) {
+  return (
+    relativePath +
+    ":" +
+    (sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1)
+  );
+}
+
+function isIdentifierText(node, value) {
+  return ts.isIdentifier(node) && node.text === value;
+}
+
+function isTabLabelAccess(node) {
+  return (
+    ts.isPropertyAccessExpression(node) &&
+    isIdentifierText(node.expression, "tab") &&
+    node.name.text === "label"
+  );
+}
+
+function deferredLowStructuralAstShape(node, sourceFile) {
+  const children = node.getChildren(sourceFile);
+  return children.length === 0
+    ? [ts.SyntaxKind[node.kind], node.getText(sourceFile)]
+    : [
+        ts.SyntaxKind[node.kind],
+        children.map((child) => deferredLowStructuralAstShape(child, sourceFile)),
+      ];
+}
+
+function analyzeDeferredLowDraftContract(source, relativePath, transition, label) {
+  const sourceFile = ts.createSourceFile(
+    relativePath,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX
+  );
+  if ((sourceFile.parseDiagnostics ?? []).length > 0) {
+    throw new Error(label + ": deferred LOW owner has TypeScript parse diagnostics");
+  }
+  const draftTypes = sourceFile.statements.filter(
+    (node) => ts.isTypeAliasDeclaration(node) && node.name.text === "ScreenTabLabelDraft"
+  );
+  const inputFunctions = sourceFile.statements.filter(
+    (node) => ts.isFunctionDeclaration(node) && node.name?.text === "TabLabelInput"
+  );
+  if (draftTypes.length !== 1 || inputFunctions.length !== 1) {
+    throw new Error(label + ": deferred LOW draft type/function cardinality drifted");
+  }
+  const [draftType] = draftTypes;
+  const [inputFunction] = inputFunctions;
+  if (
+    [draftType, inputFunction].some((node) =>
+      node.modifiers?.some(
+        ({ kind }) => kind === ts.SyntaxKind.ExportKeyword || kind === ts.SyntaxKind.DefaultKeyword
+      )
+    )
+  ) {
+    throw new Error(label + ": deferred LOW draft contract unexpectedly became exported");
+  }
+  const canonicalContract = JSON.stringify(
+    [draftType, inputFunction].map((node) => deferredLowStructuralAstShape(node, sourceFile))
+  );
+  const draftContractSha256 = createHash("sha256").update(canonicalContract).digest("hex");
+  if (
+    Buffer.byteLength(canonicalContract) !== transition.draftContractCanonicalBytes ||
+    draftContractSha256 !== transition.draftContractSha256
+  ) {
+    throw new Error(label + ": deferred LOW normalized draft contract drifted");
+  }
+
+  const identifiers = [];
+  const baseLabelStrings = [];
+  const variableDeclarations = [];
+  const visit = (node) => {
+    if (ts.isIdentifier(node)) identifiers.push(node);
+    if (
+      (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) &&
+      node.text === "baseLabel"
+    ) {
+      baseLabelStrings.push(node);
+    }
+    if (ts.isVariableDeclaration(node)) variableDeclarations.push(node);
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+
+  const baseLabelIdentifiers = identifiers.filter(({ text }) => text === "baseLabel");
+  const baseLabelTypeMembers = baseLabelIdentifiers.filter(
+    (node) =>
+      ts.isPropertySignature(node.parent) &&
+      node.parent.name === node &&
+      node.parent.type?.kind === ts.SyntaxKind.StringKeyword
+  );
+  const baseLabelWrites = baseLabelIdentifiers.filter(
+    (node) =>
+      ts.isPropertyAssignment(node.parent) &&
+      node.parent.name === node &&
+      isTabLabelAccess(node.parent.initializer)
+  );
+  if (
+    baseLabelStrings.length !== 0 ||
+    baseLabelIdentifiers.length !== 5 ||
+    baseLabelTypeMembers.length !== 1 ||
+    baseLabelWrites.length !== 4
+  ) {
+    throw new Error(
+      label + ": deferred LOW baseLabel is not exactly one type member and four writes"
+    );
+  }
+
+  const stateDeclarations = variableDeclarations.filter((declaration) => {
+    if (!ts.isArrayBindingPattern(declaration.name)) return false;
+    const names = declaration.name.elements.map((element) =>
+      ts.isBindingElement(element) && ts.isIdentifier(element.name) ? element.name.text : null
+    );
+    const initializer = declaration.initializer;
+    return (
+      names.length === 2 &&
+      names[0] === "draft" &&
+      names[1] === "setDraft" &&
+      initializer !== undefined &&
+      ts.isCallExpression(initializer) &&
+      isIdentifierText(initializer.expression, "useState") &&
+      initializer.typeArguments?.length === 1 &&
+      ts.isTypeReferenceNode(initializer.typeArguments[0]) &&
+      isIdentifierText(initializer.typeArguments[0].typeName, "ScreenTabLabelDraft")
+    );
+  });
+  if (stateDeclarations.length !== 1) {
+    throw new Error(label + ": deferred LOW draft state tuple cardinality drifted");
+  }
+  const [stateDeclaration] = stateDeclarations;
+  const stateInitializer = stateDeclaration.initializer;
+  if (
+    !stateInitializer ||
+    !ts.isCallExpression(stateInitializer) ||
+    !isIdentifierText(stateInitializer.expression, "useState") ||
+    stateInitializer.typeArguments?.length !== 1 ||
+    !ts.isTypeReferenceNode(stateInitializer.typeArguments[0]) ||
+    !isIdentifierText(stateInitializer.typeArguments[0].typeName, "ScreenTabLabelDraft")
+  ) {
+    throw new Error(label + ": deferred LOW draft useState contract drifted");
+  }
+
+  const inputIdentifiers = identifiers.filter(
+    (node) =>
+      node.getStart(sourceFile) >= inputFunction.getStart(sourceFile) &&
+      node.end <= inputFunction.end
+  );
+  const draftIdentifiers = inputIdentifiers.filter(({ text }) => text === "draft");
+  const draftBindings = draftIdentifiers.filter(
+    (node) => ts.isBindingElement(node.parent) && node.parent.name === node
+  );
+  const draftValueReads = draftIdentifiers.filter(
+    (node) =>
+      ts.isPropertyAccessExpression(node.parent) &&
+      node.parent.expression === node &&
+      node.parent.name.text === "value"
+  );
+  if (draftIdentifiers.length !== 2 || draftBindings.length !== 1 || draftValueReads.length !== 1) {
+    throw new Error(label + ": deferred LOW draft acquired a whole-object or baseLabel read");
+  }
+
+  const setDraftIdentifiers = inputIdentifiers.filter(({ text }) => text === "setDraft");
+  const setDraftBindings = setDraftIdentifiers.filter(
+    (node) => ts.isBindingElement(node.parent) && node.parent.name === node
+  );
+  const setDraftCalls = setDraftIdentifiers
+    .filter((node) => ts.isCallExpression(node.parent) && node.parent.expression === node)
+    .map((node) => node.parent)
+    .sort((left, right) => left.getStart(sourceFile) - right.getStart(sourceFile));
+  if (
+    setDraftIdentifiers.length !== 4 ||
+    setDraftBindings.length !== 1 ||
+    setDraftCalls.length !== 3
+  ) {
+    throw new Error(label + ": deferred LOW setDraft call contract drifted");
+  }
+
+  const anchorNodes = [
+    draftType,
+    baseLabelTypeMembers[0],
+    stateDeclaration,
+    setDraftCalls[0],
+    setDraftCalls[1],
+    draftValueReads[0],
+    setDraftCalls[2],
+  ];
+  if (
+    anchorNodes.some(
+      (node, index) =>
+        index > 0 && node.getStart(sourceFile) <= anchorNodes[index - 1].getStart(sourceFile)
+    )
+  ) {
+    throw new Error(label + ": deferred LOW semantic anchor order drifted");
+  }
+  return Object.freeze({
+    evidenceAnchors: Object.freeze(
+      anchorNodes.map((node) => deferredLowSourceLine(sourceFile, node, relativePath))
+    ),
+    draftContractSha256,
+  });
+}
+
+function requireDeferredLowDraftContractAbsent(source, relativePath, transition, label) {
+  const sourceFile = ts.createSourceFile(
+    relativePath,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX
+  );
+  if ((sourceFile.parseDiagnostics ?? []).length > 0) {
+    throw new Error(label + ": deferred LOW facade has TypeScript parse diagnostics");
+  }
+  const forbidden = new Set(transition.facadeForbiddenSymbols);
+  const matches = [];
+  const visit = (node) => {
+    if (
+      (ts.isIdentifier(node) ||
+        ts.isStringLiteral(node) ||
+        ts.isNoSubstitutionTemplateLiteral(node)) &&
+      forbidden.has(node.text)
+    ) {
+      matches.push(node.text);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  if (matches.length > 0) {
+    throw new Error(label + ": deferred LOW post-split symbols remain in the facade");
+  }
+}
+
+async function resolveDeferredLowFollowUps(label) {
+  const resolved = {};
+  for (const [area, spec] of Object.entries(DEFERRED_LOW_FOLLOW_UPS)) {
+    if (area !== DEFERRED_LOW_DRAFT_AREA) {
+      resolved[area] = spec;
+      continue;
+    }
+    const transition = spec.anchorTransition;
+    let postBytes = null;
+    try {
+      ({ bytes: postBytes } = await readStableRegularFile(
+        ROOT + "/" + transition.postPath,
+        label + " deferred LOW post-split owner",
+        1024 * 1024
+      ));
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+    }
+    if (postBytes === null) {
+      const { bytes } = await readStableRegularFile(
+        ROOT + "/" + transition.facadePath,
+        label + " deferred LOW pre-split owner",
+        1024 * 1024
+      );
+      const sha256 = createHash("sha256").update(bytes).digest("hex");
+      if (sha256 !== transition.preSha256) {
+        throw new Error(label + ": deferred LOW pre-split owner bytes drifted");
+      }
+      const draftContract = analyzeDeferredLowDraftContract(
+        bytes.toString("utf8"),
+        transition.facadePath,
+        transition,
+        label + " pre-split"
+      );
+      if (JSON.stringify(draftContract.evidenceAnchors) !== JSON.stringify(spec.evidenceAnchors)) {
+        throw new Error(label + ": deferred LOW pre-split semantic anchors drifted");
+      }
+      resolved[area] = Object.freeze({
+        ...spec,
+        evidenceState: "pre",
+        evidenceAnchors: draftContract.evidenceAnchors,
+        sourceSha256: sha256,
+        approvedEvidenceLanguage:
+          "TASK-9999-01-L02 approved evidence: " +
+          spec.evidenceAnchors.join("; ") +
+          "; normalized AST SHA-256 " +
+          draftContract.draftContractSha256 +
+          "; source SHA-256 " +
+          sha256 +
+          ".",
+      });
+      continue;
+    }
+    const source = postBytes.toString("utf8");
+    const draftContract = analyzeDeferredLowDraftContract(
+      source,
+      transition.postPath,
+      transition,
+      label + " post-split"
+    );
+    const evidenceAnchors = draftContract.evidenceAnchors;
+    const { bytes: facadeBytes } = await readStableRegularFile(
+      ROOT + "/" + transition.facadePath,
+      label + " deferred LOW post-split facade",
+      1024 * 1024
+    );
+    const facadeSource = facadeBytes.toString("utf8");
+    requireDeferredLowDraftContractAbsent(
+      facadeSource,
+      transition.facadePath,
+      transition,
+      label + " post-split facade"
+    );
+    const sha256 = createHash("sha256").update(postBytes).digest("hex");
+    resolved[area] = Object.freeze({
+      ...spec,
+      evidenceState: "post",
+      evidenceAnchors,
+      sourceSha256: sha256,
+      approvedEvidenceLanguage:
+        "TASK-9999-01-L02 approved evidence: " +
+        evidenceAnchors.join("; ") +
+        "; normalized AST SHA-256 " +
+        draftContract.draftContractSha256 +
+        "; source SHA-256 " +
+        sha256 +
+        ".",
+    });
+  }
+  return deepFreezeExact(resolved);
+}
+
+const ACTION_EXECUTOR_BUN_FILES = Object.freeze([
+  "tests/unit/assistant/actionExecutorService.test.ts",
+  "tests/unit/assistant/actionExecutorCustomScreens.test.ts",
+  "tests/unit/assistant/actionExecutorPages.test.ts",
+  "tests/unit/assistant/actionExecutorListingsAndWidgets.test.ts",
+  "tests/unit/assistant/actionExecutorForms.test.ts",
+  "tests/unit/assistant/actionExecutorMenusAndSeo.test.ts",
+  "tests/unit/assistant/actionExecutorContentUpdates.test.ts",
+  "tests/unit/assistant/actionExecutorAutomationBlueprints.test.ts",
+  "tests/unit/assistant/actionExecutorIdempotencyAndSiteKit.test.ts",
+  "tests/unit/assistant/actionExecutorCatalogBlueprints.test.ts",
+  "tests/unit/assistant/actionExecutorSupportingPageLinks.test.ts",
+  "tests/unit/assistant/actionExecutorDetailPages.test.ts",
+]);
+const SCREEN_RUNTIME_VITEST_FILES = Object.freeze([
+  "tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx",
+  "tests/vitest/ui-integration/custom-screen-runtime-interactions.test.tsx",
+  "tests/vitest/ui-integration/custom-screen-runtime-presentation.test.tsx",
+  "tests/vitest/ui-integration/custom-screen-runtime-layout.test.tsx",
+]);
+const SCREEN_EDITOR_PAGE_VITEST_FILES = Object.freeze([
+  "tests/vitest/ui/custom-screens-page.test.tsx",
+  "tests/vitest/ui/custom-screen-editor-draft-and-save.test.tsx",
+  "tests/vitest/ui/custom-screen-editor-hydration-authority.test.tsx",
+  "tests/vitest/ui/custom-screen-editor-visit-authority.test.tsx",
+]);
+const ENTRIES_CLIENT_VITEST_FILES = Object.freeze([
+  "tests/vitest/admin/entriesClient.test.ts",
+  "tests/vitest/admin/entriesClientReadAuthority.test.ts",
+  "tests/vitest/admin/entriesClientMutationReconciliation.test.ts",
+]);
+const ASSISTANT_PANEL_VITEST_FILES = Object.freeze([
+  "tests/vitest/ui/assistant-panel-interaction.test.tsx",
+  "tests/vitest/ui/assistant-panel-conversation.test.tsx",
+]);
+const CUSTOM_SCREENS_CLIENT_VITEST_FILES = Object.freeze([
+  "tests/vitest/admin/customScreensClient.test.ts",
+  "tests/vitest/admin/customScreensEntryOverridesClient.test.ts",
+]);
+const CACHE_BUS_VITEST_FILES = Object.freeze([
+  "tests/vitest/admin/cacheBus.test.ts",
+  "tests/vitest/admin/cacheBusCorrelation.test.ts",
+  "tests/vitest/admin/cacheBusHardening.test.ts",
+]);
+const ENTRY_NAVIGATION_VITEST_FILES = Object.freeze([
+  "tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx",
+  "tests/vitest/ui/custom-screen-entry-navigation-authority.test.tsx",
+]);
+const ENTRY_RESTYLE_VITEST_FILES = Object.freeze([
+  "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
+  "tests/vitest/ui/custom-screen-entry-presentation-media.test.ts",
+]);
+const USER_SETTINGS_ROUTE_BUN_FILES = Object.freeze([
+  "tests/integration/routes/userSettings.test.ts",
+  "tests/integration/routes/userSettingsAccessLogHarness.test.ts",
+]);
+const R01_SCHEMA_VITEST_FILES = Object.freeze([
+  "tests/vitest/admin/custom-screen-schemas.test.ts",
+  "tests/vitest/admin/custom-screen-document-contract.test.ts",
+  "tests/vitest/admin/custom-screen-block-style.test.ts",
+  "tests/vitest/admin/custom-screen-section-style-and-binding-gc.test.ts",
+  "tests/vitest/admin/custom-screen-fixed-block-contract.test.ts",
+  "tests/vitest/admin/custom-screen-binding-contract.test.ts",
+  "tests/vitest/admin/custom-screen-stored-read-repair.test.ts",
+]);
+const R01_DOCUMENT_OPS_VITEST_FILES = Object.freeze([
+  "tests/vitest/customScreens/screenDocumentOps.test.ts",
+  "tests/vitest/customScreens/screen-document-insertion.test.ts",
+  "tests/vitest/customScreens/screen-document-sections.test.ts",
+]);
+const R01_ROUTE_BUN_FILES = Object.freeze([
+  "tests/integration/routes/customScreensRoutes.test.ts",
+  "tests/integration/routes/customScreensDefinitionIntegrityRoutes.test.ts",
+]);
+const TEST_SPLIT_FAMILY_COUNTS = deepFreezeExact({
+  actionExecutor: { files: ACTION_EXECUTOR_BUN_FILES, tests: 73 },
+  screenRuntime: { files: SCREEN_RUNTIME_VITEST_FILES, tests: 72 },
+  screenEditorPage: { files: SCREEN_EDITOR_PAGE_VITEST_FILES, tests: 36 },
+  entriesClient: { files: ENTRIES_CLIENT_VITEST_FILES, tests: 42 },
+  assistantPanel: { files: ASSISTANT_PANEL_VITEST_FILES, tests: 13 },
+  customScreensClient: { files: CUSTOM_SCREENS_CLIENT_VITEST_FILES, tests: 40 },
+  cacheBus: { files: CACHE_BUS_VITEST_FILES, tests: 22 },
+  entryRestyle: { files: ENTRY_RESTYLE_VITEST_FILES, tests: 17 },
+  entryNavigation: { files: ENTRY_NAVIGATION_VITEST_FILES, tests: 22 },
+  userSettingsRoutes: { files: USER_SETTINGS_ROUTE_BUN_FILES, tests: 10 },
+});
 
 const TARGET_VITEST_FILES = Object.freeze([
   "tests/vitest/admin/cacheBus.test.ts",
+  "tests/vitest/admin/cacheBusCorrelation.test.ts",
+  "tests/vitest/admin/cacheBusHardening.test.ts",
+  "tests/vitest/admin/custom-screen-binding-contract.test.ts",
+  "tests/vitest/admin/custom-screen-block-style.test.ts",
+  "tests/vitest/admin/custom-screen-document-contract.test.ts",
+  "tests/vitest/admin/custom-screen-fixed-block-contract.test.ts",
   "tests/vitest/admin/custom-screen-schemas.test.ts",
+  "tests/vitest/admin/custom-screen-section-style-and-binding-gc.test.ts",
+  "tests/vitest/admin/custom-screen-stored-read-repair.test.ts",
   "tests/vitest/admin/customScreensClient.test.ts",
+  "tests/vitest/admin/customScreensEntryOverridesClient.test.ts",
   "tests/vitest/customScreens/screenDocumentOps.test.ts",
   "tests/vitest/customScreens/screen-document-image-src.test.ts",
   "tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts",
   "tests/vitest/customScreens/customScreenService.test.ts",
   "tests/vitest/customScreens/relatedEntryResolver.test.ts",
   "tests/vitest/admin/entriesClient.test.ts",
+  "tests/vitest/admin/entriesClientReadAuthority.test.ts",
+  "tests/vitest/admin/entriesClientMutationReconciliation.test.ts",
   "tests/vitest/admin/mediaClient.test.ts",
   "tests/vitest/admin/userSettingsClient.test.ts",
   "tests/vitest/assistant/action-plan-schema.test.ts",
+  "tests/vitest/assistant/blueprint-binding-composer.test.ts",
   "tests/vitest/assistant/catalogBlueprintEngine.test.ts",
   "tests/vitest/ui/admin-auth-identity.test.tsx",
   "tests/vitest/ui/assistant-panel-interaction.test.tsx",
+  "tests/vitest/ui/assistant-panel-conversation.test.tsx",
   "tests/vitest/ui/use-screen-entry-preferences.test.ts",
   "tests/vitest/ui/use-screen-related-entries.test.tsx",
   "tests/vitest/ui/custom-screen-entry-draft.test.ts",
+  "tests/vitest/ui/custom-screen-entry-presentation-media.test.ts",
   "tests/vitest/ui/custom-screen-binding-panel.test.tsx",
   "tests/vitest/ui-integration/custom-screen-image-inspector.test.tsx",
   "tests/vitest/ui/custom-screen-authoring-boundary.test.ts",
   "tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx",
   "tests/vitest/ui/custom-screen-records.test.tsx",
   "tests/vitest/ui/custom-screens-page.test.tsx",
+  "tests/vitest/ui/custom-screen-editor-draft-and-save.test.tsx",
+  "tests/vitest/ui/custom-screen-editor-hydration-authority.test.tsx",
+  "tests/vitest/ui/custom-screen-editor-visit-authority.test.tsx",
   "tests/vitest/ui/custom-screen-list-view-canvas.test.tsx",
   "tests/vitest/ui/custom-screen-route-params.test.ts",
   "tests/vitest/ui-integration/canvas-editor-panel-toggle-dedupe.test.tsx",
@@ -911,7 +1549,11 @@ const TARGET_VITEST_FILES = Object.freeze([
   "tests/vitest/ui-integration/custom-screen-entry-preferences-persistence.test.tsx",
   "tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx",
   "tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx",
+  "tests/vitest/ui/custom-screen-entry-navigation-authority.test.tsx",
   "tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx",
+  "tests/vitest/ui-integration/custom-screen-runtime-interactions.test.tsx",
+  "tests/vitest/ui-integration/custom-screen-runtime-presentation.test.tsx",
+  "tests/vitest/ui-integration/custom-screen-runtime-layout.test.tsx",
   "tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx",
   "tests/vitest/widgets/screenWidgets.test.tsx",
   "tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx",
@@ -919,9 +1561,22 @@ const TARGET_VITEST_FILES = Object.freeze([
 const TARGET_BUN_FILES = Object.freeze([
   "tests/unit/settings/userSettingsService.test.ts",
   "tests/integration/routes/userSettings.test.ts",
+  "tests/integration/routes/userSettingsAccessLogHarness.test.ts",
   "tests/integration/routes/cors.test.ts",
   "tests/integration/routes/customScreensRoutes.test.ts",
+  "tests/integration/routes/customScreensDefinitionIntegrityRoutes.test.ts",
   "tests/unit/assistant/actionExecutorService.test.ts",
+  "tests/unit/assistant/actionExecutorCustomScreens.test.ts",
+  "tests/unit/assistant/actionExecutorPages.test.ts",
+  "tests/unit/assistant/actionExecutorListingsAndWidgets.test.ts",
+  "tests/unit/assistant/actionExecutorForms.test.ts",
+  "tests/unit/assistant/actionExecutorMenusAndSeo.test.ts",
+  "tests/unit/assistant/actionExecutorContentUpdates.test.ts",
+  "tests/unit/assistant/actionExecutorAutomationBlueprints.test.ts",
+  "tests/unit/assistant/actionExecutorIdempotencyAndSiteKit.test.ts",
+  "tests/unit/assistant/actionExecutorCatalogBlueprints.test.ts",
+  "tests/unit/assistant/actionExecutorSupportingPageLinks.test.ts",
+  "tests/unit/assistant/actionExecutorDetailPages.test.ts",
 ]);
 const SOURCE_OWNER_TEST_FILES = Object.freeze([
   ...TARGET_VITEST_FILES.filter(
@@ -933,13 +1588,26 @@ const CLOSURE_OWNER_TEST_FILES = Object.freeze([
   "tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx",
 ]);
 if (
-  TARGET_VITEST_FILES.length !== 43 ||
-  TARGET_BUN_FILES.length !== 5 ||
-  SOURCE_OWNER_TEST_FILES.length !== 47 ||
+  TARGET_VITEST_FILES.length !== 64 ||
+  TARGET_BUN_FILES.length !== 18 ||
+  SOURCE_OWNER_TEST_FILES.length !== 81 ||
   CLOSURE_OWNER_TEST_FILES.length !== 1 ||
-  new Set([...TARGET_VITEST_FILES, ...TARGET_BUN_FILES]).size !== 48
+  new Set([...TARGET_VITEST_FILES, ...TARGET_BUN_FILES]).size !== 82
 ) {
   throw new Error("TASK-540 test matrix cardinality drift");
+}
+const TEST_SPLIT_FAMILY_FILES = Object.freeze(
+  Object.values(TEST_SPLIT_FAMILY_COUNTS).flatMap(({ files }) => files)
+);
+if (
+  Object.values(TEST_SPLIT_FAMILY_COUNTS).reduce((total, { tests }) => total + tests, 0) !== 347 ||
+  TEST_SPLIT_FAMILY_FILES.length !== 36 ||
+  new Set(TEST_SPLIT_FAMILY_FILES).size !== TEST_SPLIT_FAMILY_FILES.length ||
+  TEST_SPLIT_FAMILY_FILES.some(
+    (file) => !TARGET_VITEST_FILES.includes(file) && !TARGET_BUN_FILES.includes(file)
+  )
+) {
+  throw new Error("TASK-540 split-family test-name/count contract drift");
 }
 let sourceOwnerTestHashesAtClosureBoundary = null;
 
@@ -1028,6 +1696,18 @@ const FULL_GATE_COMMANDS = Object.freeze([
   {
     id: "localOrchestratorSelfTest",
     command: "node _docs/_workflows/task-540-local-orchestrator.mjs --self-test",
+  },
+  {
+    id: "testNameContractSyntax",
+    command: "node --check _docs/_workflows/task-540-test-name-contract.mjs",
+  },
+  {
+    id: "testNameContractSelfTest",
+    command: "node _docs/_workflows/task-540-test-name-contract.mjs --mode=self-test",
+  },
+  {
+    id: "testNameContractFinal",
+    command: "node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=all",
   },
   { id: "workflowSyntax", command: "node --check _docs/_workflows/task-540-implement.mjs" },
   {
@@ -2105,6 +2785,273 @@ async function worktreeSnapshot(
     paths,
     hashes,
   };
+}
+
+function isLineLimitedHumanAuthoredModule(relativePath) {
+  if (!HUMAN_AUTHORED_MODULE_PATTERN.test(relativePath)) return false;
+  const productionRoot = /^(?:core|packages|store)\//u.test(relativePath);
+  const testRoot = relativePath.startsWith("tests/");
+  if (!productionRoot && !testRoot) return false;
+  if (
+    /(?:^|\/)(?:node_modules|vendor|dist|build|coverage)(?:\/|$)/u.test(relativePath) ||
+    /(?:^|\/)migrations\/meta(?:\/|$)/u.test(relativePath) ||
+    /(?:^|\/)[^/]+\.generated\.[cm]?[jt]sx?$/u.test(relativePath)
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function physicalLineCount(bytes) {
+  if (bytes.length === 0) return 0;
+  let count = 0;
+  for (let index = 0; index < bytes.length; index += 1) {
+    if (bytes[index] === 0x0d) {
+      count += 1;
+      if (bytes[index + 1] === 0x0a) index += 1;
+      continue;
+    }
+    if (bytes[index] === 0x0a) {
+      count += 1;
+      continue;
+    }
+    if (
+      bytes[index] === 0xe2 &&
+      bytes[index + 1] === 0x80 &&
+      (bytes[index + 2] === 0xa8 || bytes[index + 2] === 0xa9)
+    ) {
+      count += 1;
+      index += 2;
+    }
+  }
+  const last = bytes.length - 1;
+  const endsWithLineTerminator =
+    bytes[last] === 0x0a ||
+    bytes[last] === 0x0d ||
+    (last >= 2 &&
+      bytes[last - 2] === 0xe2 &&
+      bytes[last - 1] === 0x80 &&
+      (bytes[last] === 0xa8 || bytes[last] === 0xa9));
+  return count + (endsWithLineTerminator ? 0 : 1);
+}
+
+function requireTask540FamilyBaselineProjection(projection, label) {
+  const firstCommitLine = projection.firstCommitLine.trim().split(/\s+/u);
+  if (
+    firstCommitLine.length !== 2 ||
+    firstCommitLine[0] !== TASK_540_FIRST_FAMILY_COMMIT ||
+    firstCommitLine[1] !== TASK_540_PRE_FAMILY_BASELINE ||
+    projection.baselineMergeBase.trim() !== TASK_540_PRE_FAMILY_BASELINE ||
+    projection.firstCommitMergeBase.trim() !== TASK_540_FIRST_FAMILY_COMMIT
+  ) {
+    throw new Error(label + ": TASK-540 family baseline/ancestry drifted");
+  }
+}
+
+async function requireTask540FamilyBaseline(label) {
+  const [firstCommitLine, baselineMergeBase, firstCommitMergeBase] = await Promise.all([
+    git(["rev-list", "--parents", "-n", "1", TASK_540_FIRST_FAMILY_COMMIT]),
+    git(["merge-base", TASK_540_PRE_FAMILY_BASELINE, "HEAD"]),
+    git(["merge-base", TASK_540_FIRST_FAMILY_COMMIT, "HEAD"]),
+  ]);
+  requireTask540FamilyBaselineProjection(
+    { firstCommitLine, baselineMergeBase, firstCommitMergeBase },
+    label
+  );
+}
+
+function requireTask540FrozenModulePathAuthority(label) {
+  const sorted = [...TASK_540_FROZEN_PRE_SPLIT_MODULE_PATHS].sort();
+  const owners = TASK_540_FROZEN_PRE_SPLIT_MODULE_PATHS.map((path) => {
+    const matches = LEAVES.filter((leaf) => leaf.allowedFiles.includes(path)).map(({ id }) => id);
+    if (matches.length !== 1) {
+      throw new Error(label + ": frozen TASK-540 path must have exactly one owner: " + path);
+    }
+    return Object.freeze({ path, owner: matches[0] });
+  });
+  if (
+    TASK_540_FROZEN_PRE_SPLIT_MODULE_PATHS.length !== 91 ||
+    new Set(TASK_540_FROZEN_PRE_SPLIT_MODULE_PATHS).size !== 91 ||
+    JSON.stringify(TASK_540_FROZEN_PRE_SPLIT_MODULE_PATHS) !== JSON.stringify(sorted) ||
+    TASK_540_FROZEN_PRE_SPLIT_MODULE_PATHS.some(
+      (path) => !isLineLimitedHumanAuthoredModule(path)
+    ) ||
+    createHash("sha256").update(JSON.stringify(sorted)).digest("hex") !==
+      TASK_540_FROZEN_PRE_SPLIT_PATHS_SHA256 ||
+    createHash("sha256").update(JSON.stringify(owners)).digest("hex") !==
+      TASK_540_FROZEN_PRE_SPLIT_OWNERS_SHA256
+  ) {
+    throw new Error(label + ": frozen TASK-540 module path authority drifted");
+  }
+  return TASK_540_FROZEN_PRE_SPLIT_MODULE_PATHS;
+}
+
+function buildTask540TouchedModulePathAuthority(
+  committedHistory,
+  currentTracked,
+  untracked,
+  label
+) {
+  if (
+    [committedHistory, currentTracked, untracked].some(
+      (paths) =>
+        !Array.isArray(paths) || paths.some((path) => typeof path !== "string" || path.length === 0)
+    )
+  ) {
+    throw new Error(label + ": dynamic TASK-540 module path authority is invalid");
+  }
+  const frozen = requireTask540FrozenModulePathAuthority(label);
+  const trackedPaths = [...new Set([...frozen, ...committedHistory, ...currentTracked])].sort();
+  const trackedSet = new Set(trackedPaths);
+  const untrackedPaths = [...new Set(untracked)].filter((path) => !trackedSet.has(path)).sort();
+  return Object.freeze({
+    trackedPaths: Object.freeze(trackedPaths),
+    untrackedPaths: Object.freeze(untrackedPaths),
+  });
+}
+
+async function task540TouchedModulePathAuthority(label) {
+  await requireTask540FamilyBaseline(label);
+  const [committedHistory, currentTracked, untracked] = await Promise.all([
+    git([
+      "log",
+      "--format=",
+      "--name-only",
+      "--no-renames",
+      "-z",
+      TASK_540_PRE_FAMILY_BASELINE + "..HEAD",
+      "--",
+      "core",
+      "packages",
+      "store",
+      "tests",
+    ]).then(splitNul),
+    git(["diff", "--name-only", "-z", "HEAD"]).then(splitNul),
+    git(["ls-files", "--others", "--exclude-standard", "-z"]).then(splitNul),
+  ]);
+  return buildTask540TouchedModulePathAuthority(committedHistory, currentTracked, untracked, label);
+}
+
+async function requireTask540TouchedModuleLineLimit(
+  label,
+  ownedPaths = null,
+  selfTestAuthority = null
+) {
+  if (
+    ownedPaths !== null &&
+    (!Array.isArray(ownedPaths) ||
+      new Set(ownedPaths).size !== ownedPaths.length ||
+      ownedPaths.some((path) => typeof path !== "string" || path.length === 0))
+  ) {
+    throw new Error(label + ": invalid scoped line-limit paths");
+  }
+  if (selfTestAuthority !== null) {
+    const keys =
+      selfTestAuthority && typeof selfTestAuthority === "object"
+        ? Object.keys(selfTestAuthority).sort()
+        : [];
+    if (
+      !HERMETIC_SELF_TEST_MODE ||
+      keys.join(",") !== "fileBytesByPath,trackedPaths,untrackedPaths" ||
+      !Array.isArray(selfTestAuthority.trackedPaths) ||
+      !Array.isArray(selfTestAuthority.untrackedPaths) ||
+      !selfTestAuthority.fileBytesByPath ||
+      typeof selfTestAuthority.fileBytesByPath !== "object"
+    ) {
+      throw new Error(label + ": invalid hermetic line-limit self-test authority");
+    }
+    const authorityPaths = [...selfTestAuthority.trackedPaths, ...selfTestAuthority.untrackedPaths];
+    if (
+      new Set(authorityPaths).size !== authorityPaths.length ||
+      authorityPaths.some((path) => typeof path !== "string" || path.length === 0) ||
+      Object.keys(selfTestAuthority.fileBytesByPath).sort().join("\0") !==
+        [...authorityPaths].sort().join("\0") ||
+      authorityPaths.some((path) => !Buffer.isBuffer(selfTestAuthority.fileBytesByPath[path]))
+    ) {
+      throw new Error(label + ": invalid hermetic line-limit path projection");
+    }
+  }
+  const ownedPathSet = ownedPaths === null ? null : new Set(ownedPaths);
+  const [trackedPaths, untrackedPaths] =
+    selfTestAuthority === null
+      ? await task540TouchedModulePathAuthority(label).then((authority) => [
+          authority.trackedPaths,
+          authority.untrackedPaths,
+        ])
+      : [selfTestAuthority.trackedPaths, selfTestAuthority.untrackedPaths];
+  const paths = [...new Set([...trackedPaths, ...untrackedPaths])]
+    .filter(isLineLimitedHumanAuthoredModule)
+    .filter((relativePath) => ownedPathSet === null || ownedPathSet.has(relativePath))
+    .sort();
+  const violations = [];
+  const evidence = [];
+  for (const relativePath of paths) {
+    if (
+      relativePath.startsWith("/") ||
+      relativePath.includes("\0") ||
+      relativePath.split("/").includes("..")
+    ) {
+      throw new Error(label + ": unsafe line-limit path");
+    }
+    let owner = null;
+    if (selfTestAuthority === null) {
+      const owners = LEAVES.filter((leaf) => leaf.allowedFiles.includes(relativePath)).map(
+        ({ id }) => id
+      );
+      if (owners.length !== 1) {
+        throw new Error(
+          label +
+            ": task-family line-limit path must have exactly one leaf owner: " +
+            relativePath +
+            "=" +
+            JSON.stringify(owners)
+        );
+      }
+      [owner] = owners;
+    }
+    let bytes;
+    if (selfTestAuthority !== null) {
+      bytes = selfTestAuthority.fileBytesByPath[relativePath];
+    } else {
+      let entry;
+      try {
+        entry = await lstat(ROOT + "/" + relativePath);
+      } catch (error) {
+        if (error?.code === "ENOENT") {
+          throw new Error(label + ": touched historical module is missing: " + relativePath);
+        }
+        throw error;
+      }
+      if (!entry.isFile() || entry.isSymbolicLink()) {
+        throw new Error(label + ": line-limited path is not a regular file: " + relativePath);
+      }
+      ({ bytes } = await readStableRegularFile(
+        ROOT + "/" + relativePath,
+        label + ":" + relativePath,
+        8 * 1024 * 1024
+      ));
+    }
+    const lines = physicalLineCount(bytes);
+    evidence.push(
+      Object.freeze({
+        path: relativePath,
+        lines,
+        ...(owner ? { owner } : {}),
+        sha256: createHash("sha256").update(bytes).digest("hex"),
+      })
+    );
+    if (lines > HUMAN_AUTHORED_MODULE_LINE_LIMIT) {
+      violations.push(relativePath + "=" + lines);
+    }
+  }
+  if (violations.length > 0) {
+    throw new Error(
+      label +
+        ": touched human-authored production/test module exceeds 1000 physical lines: " +
+        violations.join(", ")
+    );
+  }
+  return Object.freeze(evidence);
 }
 
 function snapshotDelta(before, after) {
@@ -3222,6 +4169,10 @@ async function restoreExactRollbackEntry(entry, label) {
   }
 }
 
+function isAuthorizedExactRollbackResidual(relativePath, rollbackOwnedPathSet, residualPathSet) {
+  return rollbackOwnedPathSet.has(relativePath) || residualPathSet.has(relativePath);
+}
+
 async function restoreExactRollbackFiles(
   snapshot,
   owner,
@@ -3303,12 +4254,18 @@ async function restoreExactRollbackFiles(
       worktreeSnapshot(label + " after exact rollback restore"),
       hashSensitiveEnvProjection(),
     ]);
+    await verifyExactRollbackFiles(snapshot, label + " after authority snapshot");
     const residualDelta = snapshotDelta(snapshot.authority, after);
+    // Exact bytes, existence, length, SHA-256, and mode were verified above. Atomic
+    // replacement intentionally changes inode/mtime/ctime for rollback-owned paths.
+    const rollbackOwnedPathSet = new Set(owner.allowedFiles);
     const authorityRestored =
       after.head === snapshot.authority.head &&
       after.branch === snapshot.authority.branch &&
       sameGitIndexAuthority(after.indexAuthority, snapshot.authority.indexAuthority) &&
-      residualDelta.every((relativePath) => residualPathSet.has(relativePath));
+      residualDelta.every((relativePath) =>
+        isAuthorizedExactRollbackResidual(relativePath, rollbackOwnedPathSet, residualPathSet)
+      );
     if (!authorityRestored || !equalHashMaps(snapshot.sensitiveEnv, sensitiveEnvAfter)) {
       throw new Error(
         residualPathSet.size === 0
@@ -3327,6 +4284,345 @@ async function restoreExactRollbackFiles(
   }
   if (mutationError) throw mutationError;
   if (verificationError) throw verificationError;
+}
+
+function assertTask540ExactRollbackResidualContract() {
+  const bytes = Buffer.from("same rollback bytes", "utf8");
+  const beforeStat = Object.freeze({
+    dev: 1n,
+    ino: 10n,
+    mode: 0o100644n,
+    nlink: 1n,
+    size: BigInt(bytes.length),
+    mtimeNs: 100n,
+    ctimeNs: 100n,
+  });
+  const afterAtomicRenameStat = Object.freeze({
+    ...beforeStat,
+    ino: 11n,
+    mtimeNs: 101n,
+    ctimeNs: 101n,
+  });
+  if (
+    hashStableRegularFileAuthority(bytes, beforeStat) ===
+    hashStableRegularFileAuthority(bytes, afterAtomicRenameStat)
+  ) {
+    throw new Error("TASK-540 exact rollback self-test lost metadata-sensitive authority");
+  }
+
+  const rollbackOwnedPathSet = new Set(["owned/task.md", "owned/board.md"]);
+  const residualPathSet = new Set(["allowed/source.ts"]);
+  const cases = Object.freeze([
+    Object.freeze({ path: "owned/task.md", expected: true }),
+    Object.freeze({ path: "owned/board.md", expected: true }),
+    Object.freeze({ path: "allowed/source.ts", expected: true }),
+    Object.freeze({ path: "owned/task.md.extra", expected: false }),
+    Object.freeze({ path: "owned", expected: false }),
+    Object.freeze({ path: "unrelated/task.md", expected: false }),
+  ]);
+  for (const testCase of cases) {
+    if (
+      isAuthorizedExactRollbackResidual(testCase.path, rollbackOwnedPathSet, residualPathSet) !==
+      testCase.expected
+    ) {
+      throw new Error("TASK-540 exact rollback residual self-test failed: " + testCase.path);
+    }
+  }
+  return cases.length + 1;
+}
+
+async function assertTask540TouchedModuleLineLimitContract() {
+  const pathCases = Object.freeze([
+    Object.freeze({ path: "core/services/example.ts", expected: true }),
+    Object.freeze({ path: "packages/sdk/src/example.tsx", expected: true }),
+    Object.freeze({ path: "store/src/example.mjs", expected: true }),
+    Object.freeze({ path: "tests/integration/support/example.ts", expected: true }),
+    Object.freeze({
+      path: "tests/integration/routes/customScreensDefinitionIntegrityRoutes.test.ts",
+      expected: true,
+    }),
+    Object.freeze({ path: "_docs/_workflows/example.mjs", expected: false }),
+    Object.freeze({ path: "core/db/migrations/meta/0001_snapshot.ts", expected: false }),
+    Object.freeze({ path: "core/services/example.generated.ts", expected: false }),
+  ]);
+  for (const testCase of pathCases) {
+    if (isLineLimitedHumanAuthoredModule(testCase.path) !== testCase.expected) {
+      throw new Error("TASK-540 line-limit path self-test failed: " + testCase.path);
+    }
+  }
+  const lineCases = Object.freeze([
+    Object.freeze({ bytes: Buffer.alloc(0), expected: 0 }),
+    Object.freeze({ bytes: Buffer.from("one"), expected: 1 }),
+    Object.freeze({ bytes: Buffer.from("one\n"), expected: 1 }),
+    Object.freeze({ bytes: Buffer.from("one\ntwo"), expected: 2 }),
+    Object.freeze({ bytes: Buffer.from("one\ntwo\n"), expected: 2 }),
+    Object.freeze({ bytes: Buffer.from("one\rtwo"), expected: 2 }),
+    Object.freeze({ bytes: Buffer.from("one\rtwo\r"), expected: 2 }),
+    Object.freeze({ bytes: Buffer.from("one\r\ntwo\r\n"), expected: 2 }),
+    Object.freeze({ bytes: Buffer.from("one\rtwo\nthree\r\n"), expected: 3 }),
+    Object.freeze({ bytes: Buffer.from("one\u2028two\u2029"), expected: 2 }),
+    Object.freeze({ bytes: Buffer.from("x\n".repeat(1_000)), expected: 1_000 }),
+    Object.freeze({ bytes: Buffer.from("x\n".repeat(1_001)), expected: 1_001 }),
+  ]);
+  for (const testCase of lineCases) {
+    if (physicalLineCount(testCase.bytes) !== testCase.expected) {
+      throw new Error("TASK-540 physical-line-count self-test failed");
+    }
+  }
+  if (HUMAN_AUTHORED_MODULE_LINE_LIMIT !== 1_000) {
+    throw new Error("TASK-540 human-authored module line limit drifted");
+  }
+  const emptyDynamicAuthority = buildTask540TouchedModulePathAuthority(
+    [],
+    [],
+    [],
+    "TASK-540 hermetic frozen authority self-test"
+  );
+  const dynamicTrackedPath = "core/services/customScreens/newTrackedContract.ts";
+  const dynamicUntrackedPath = "tests/vitest/admin/new-untracked-contract.test.ts";
+  const expandedAuthority = buildTask540TouchedModulePathAuthority(
+    [dynamicTrackedPath],
+    [dynamicTrackedPath, TASK_540_FROZEN_PRE_SPLIT_MODULE_PATHS[0]],
+    [dynamicTrackedPath, dynamicUntrackedPath, dynamicUntrackedPath],
+    "TASK-540 hermetic expanded authority self-test"
+  );
+  if (
+    emptyDynamicAuthority.trackedPaths.length !== 91 ||
+    emptyDynamicAuthority.untrackedPaths.length !== 0 ||
+    !expandedAuthority.trackedPaths.includes(dynamicTrackedPath) ||
+    expandedAuthority.trackedPaths.filter((path) => path === dynamicTrackedPath).length !== 1 ||
+    expandedAuthority.untrackedPaths.join("\n") !== dynamicUntrackedPath
+  ) {
+    throw new Error("TASK-540 frozen/dynamic path union self-test failed");
+  }
+  const validAncestryProjection = Object.freeze({
+    firstCommitLine: TASK_540_FIRST_FAMILY_COMMIT + " " + TASK_540_PRE_FAMILY_BASELINE,
+    baselineMergeBase: TASK_540_PRE_FAMILY_BASELINE,
+    firstCommitMergeBase: TASK_540_FIRST_FAMILY_COMMIT,
+  });
+  requireTask540FamilyBaselineProjection(
+    validAncestryProjection,
+    "TASK-540 valid ancestry self-test"
+  );
+  for (const invalidProjection of [
+    { ...validAncestryProjection, firstCommitLine: TASK_540_FIRST_FAMILY_COMMIT + " bad-parent" },
+    { ...validAncestryProjection, baselineMergeBase: "bad-baseline" },
+    { ...validAncestryProjection, firstCommitMergeBase: "bad-first-commit" },
+  ]) {
+    let rejected = false;
+    try {
+      requireTask540FamilyBaselineProjection(
+        invalidProjection,
+        "TASK-540 invalid ancestry self-test"
+      );
+    } catch {
+      rejected = true;
+    }
+    if (!rejected) throw new Error("TASK-540 invalid ancestry projection self-test failed");
+  }
+  const plannedUntrackedPath =
+    "tests/integration/routes/customScreensDefinitionIntegrityRoutes.test.ts";
+  if (
+    physicalLineCount(Buffer.from("x\n".repeat(1_000))) > HUMAN_AUTHORED_MODULE_LINE_LIMIT ||
+    physicalLineCount(Buffer.from("x\n".repeat(1_001))) <= HUMAN_AUTHORED_MODULE_LINE_LIMIT ||
+    !PLANNED_TASK_540_TEST_FILES.includes(plannedUntrackedPath) ||
+    !TRACKED_TEST_FILES.includes(plannedUntrackedPath)
+  ) {
+    throw new Error("TASK-540 line-limit threshold/untracked authority self-test failed");
+  }
+  const atLimitEvidence = await requireTask540TouchedModuleLineLimit(
+    "TASK-540 hermetic untracked at-limit self-test",
+    [plannedUntrackedPath],
+    Object.freeze({
+      trackedPaths: Object.freeze([]),
+      untrackedPaths: Object.freeze([plannedUntrackedPath]),
+      fileBytesByPath: Object.freeze({
+        [plannedUntrackedPath]: Buffer.from("x\n".repeat(1_000)),
+      }),
+    })
+  );
+  if (
+    atLimitEvidence.length !== 1 ||
+    atLimitEvidence[0].path !== plannedUntrackedPath ||
+    atLimitEvidence[0].lines !== 1_000 ||
+    atLimitEvidence[0].sha256 !==
+      createHash("sha256")
+        .update(Buffer.from("x\n".repeat(1_000)))
+        .digest("hex")
+  ) {
+    throw new Error("TASK-540 untracked at-limit evidence self-test failed");
+  }
+  const historicalPath = "core/services/example.ts";
+  const historicalEvidence = await requireTask540TouchedModuleLineLimit(
+    "TASK-540 hermetic committed-history self-test",
+    [historicalPath],
+    Object.freeze({
+      trackedPaths: Object.freeze([historicalPath]),
+      untrackedPaths: Object.freeze([]),
+      fileBytesByPath: Object.freeze({
+        [historicalPath]: Buffer.from("history\n"),
+      }),
+    })
+  );
+  if (
+    historicalEvidence.length !== 1 ||
+    historicalEvidence[0].path !== historicalPath ||
+    historicalEvidence[0].lines !== 1
+  ) {
+    throw new Error("TASK-540 committed-history evidence self-test failed");
+  }
+  let overLimitRejected = false;
+  try {
+    await requireTask540TouchedModuleLineLimit(
+      "TASK-540 hermetic untracked over-limit self-test",
+      [plannedUntrackedPath],
+      Object.freeze({
+        trackedPaths: Object.freeze([]),
+        untrackedPaths: Object.freeze([plannedUntrackedPath]),
+        fileBytesByPath: Object.freeze({
+          [plannedUntrackedPath]: Buffer.from("x\n".repeat(1_001)),
+        }),
+      })
+    );
+  } catch (error) {
+    overLimitRejected =
+      error instanceof Error && error.message.includes(plannedUntrackedPath + "=1001");
+  }
+  if (!overLimitRejected) {
+    throw new Error("TASK-540 untracked over-limit rejection self-test failed");
+  }
+  let duplicateAuthorityRejected = false;
+  try {
+    await requireTask540TouchedModuleLineLimit(
+      "TASK-540 hermetic duplicate history/untracked self-test",
+      [historicalPath],
+      Object.freeze({
+        trackedPaths: Object.freeze([historicalPath]),
+        untrackedPaths: Object.freeze([historicalPath]),
+        fileBytesByPath: Object.freeze({
+          [historicalPath]: Buffer.from("history\n"),
+        }),
+      })
+    );
+  } catch (error) {
+    duplicateAuthorityRejected =
+      error instanceof Error &&
+      error.message.includes("invalid hermetic line-limit path projection");
+  }
+  if (!duplicateAuthorityRejected) {
+    throw new Error("TASK-540 duplicate history/untracked authority self-test failed");
+  }
+  return pathCases.length + lineCases.length + 10;
+}
+
+async function requireNoPendingTask540ModularityRepairs(label) {
+  const pending = [];
+  for (const file of PENDING_MODULARITY_REPAIR_TASK_FILES) {
+    const source = await readFile(TASKS + "/" + file, "utf8");
+    const matches = source.match(/^\*\*Modularity Repair Pending:\*\*/gmu) ?? [];
+    if (matches.length > 1) {
+      throw new Error(label + ": duplicate modularity repair field in " + file);
+    }
+    if (matches.length === 1) pending.push(file);
+  }
+  if (pending.length > 0) {
+    throw new Error(
+      label +
+        ": source-owner modularity repairs require sequential implementation and fresh gates: " +
+        pending.join(", ")
+    );
+  }
+}
+
+const MODULARITY_FAMILY_REVALIDATED_VALUE =
+  RUN_DATE + " — eight source-owner modularity repairs and exact gates passed.";
+
+function pendingTask540ModularityFamilyStates(states) {
+  return states.filter(
+    ({ source, staleField }) =>
+      Boolean(readTaskMetadataField(source, staleField)) ||
+      readTaskMetadataField(source, "Modularity Repair Revalidated") !==
+        MODULARITY_FAMILY_REVALIDATED_VALUE
+  );
+}
+
+async function synchronizeTask540ModularityFamilyMetadata() {
+  const closureParentPath = LEAF_STATUS_GROUPS["540-06-L01"].childPath;
+  const closureLeafPath = LEAF_STATUS_GROUPS["540-06-L01"].leafPath;
+  const specs = Object.freeze([
+    Object.freeze({
+      relativePath: ROOT_TASK_PATH,
+      staleField: "Modularity Repair Started",
+    }),
+    Object.freeze({
+      relativePath: closureParentPath,
+      staleField: "Modularity Repair Pending",
+    }),
+    Object.freeze({
+      relativePath: closureLeafPath,
+      staleField: "Modularity Repair Pending",
+    }),
+  ]);
+  const states = await Promise.all(
+    specs.map(async (spec) =>
+      Object.freeze({ ...spec, ...(await readCanonicalTaskStatus(spec.relativePath)) })
+    )
+  );
+  const pendingStates = pendingTask540ModularityFamilyStates(states);
+  if (pendingStates.length === 0) return;
+  const owner = Object.freeze({
+    id: "task-540-modularity-family-metadata",
+    allowedFiles: Object.freeze(pendingStates.map(({ relativePath }) => relativePath)),
+    requiredFiles: Object.freeze(pendingStates.map(({ relativePath }) => relativePath)),
+    taskContractMutations: Object.freeze(
+      pendingStates.map(({ relativePath, staleField }) =>
+        Object.freeze({
+          relativePath,
+          tableTaskIds: [],
+          mutableFields: Object.freeze([staleField, "Modularity Repair Revalidated"]),
+        })
+      )
+    ),
+  });
+  await runMutatingAgent(
+    "Repository " +
+      ROOT +
+      ". Synchronize TASK-540 modularity metadata after all " +
+      MODULARITY_REPAIR_LEAF_IDS.length +
+      " sequential source-owner gates. " +
+      "Edit only " +
+      JSON.stringify(owner.allowedFiles) +
+      ". Preserve every status, table row, historical receipt, closure receipt, task body, board, " +
+      "changelog, source, test, workflow, stage, and commit byte-identically except these exact " +
+      "metadata fields. For every listed path remove its Modularity Repair Started or Modularity " +
+      "Repair Pending field, whichever is present. On every listed path write exact `**Modularity Repair Revalidated:** " +
+      MODULARITY_FAMILY_REVALIDATED_VALUE +
+      "`. Never stage or commit.",
+    { label: "task-540-modularity-family-metadata", phase: "Start gate" },
+    owner
+  );
+  await requireTask540ModularityFamilyMetadata(
+    "TASK-540 modularity family metadata synchronization"
+  );
+}
+
+async function requireTask540ModularityFamilyMetadata(label) {
+  const paths = [
+    ROOT_TASK_PATH,
+    LEAF_STATUS_GROUPS["540-06-L01"].childPath,
+    LEAF_STATUS_GROUPS["540-06-L01"].leafPath,
+  ];
+  for (const relativePath of paths) {
+    const { source } = await readCanonicalTaskStatus(relativePath);
+    if (
+      readTaskMetadataField(source, "Modularity Repair Pending") ||
+      readTaskMetadataField(source, "Modularity Repair Started") ||
+      readTaskMetadataField(source, "Modularity Repair Revalidated") !==
+        MODULARITY_FAMILY_REVALIDATED_VALUE
+    ) {
+      throw new Error(label + ": TASK-540 modularity family metadata is not revalidated");
+    }
+  }
 }
 
 async function taskStatusState() {
@@ -3639,9 +4935,9 @@ async function runReadOnlyAgent(prompt, options) {
   return result;
 }
 
-const ASSISTANT_FIXTURE_ONLY_PATH = "tests/vitest/ui/assistant-panel-interaction.test.tsx";
+const ASSISTANT_FIXTURE_ONLY_PATH = "tests/vitest/ui/support/assistantPanelInteractionHarness.tsx";
 const ASSISTANT_ACTION_EXECUTOR_FIXTURE_ONLY_PATH =
-  "tests/unit/assistant/actionExecutorService.test.ts";
+  "tests/unit/assistant/actionExecutorCustomScreens.test.ts";
 const SCREEN_EDITOR_SECTIONS_FIXTURE_ONLY_PATH =
   "tests/vitest/ui-integration/screen-editor-sections.test.tsx";
 const ASSISTANT_PREFERENCE_PROPERTY_FORMS = Object.freeze([
@@ -4071,7 +5367,11 @@ async function verifySharedMutationProjections(owner, before, label) {
         label
       );
       if (after !== before.taskContracts[mutation.relativePath]) {
-        throw new Error(label + ": status mutation changed unrelated task-contract bytes");
+        throw new Error(
+          label +
+            ": status mutation changed unrelated task-contract bytes: " +
+            mutation.relativePath
+        );
       }
     }
   }
@@ -4171,45 +5471,208 @@ function vitestCommand(files) {
   return "bunx vitest run --config vitest.config.ts " + files.join(" ");
 }
 
+function isolatedTestCommands(idPrefix, files, lane) {
+  if (
+    typeof idPrefix !== "string" ||
+    idPrefix.length === 0 ||
+    !Array.isArray(files) ||
+    files.length === 0 ||
+    new Set(files).size !== files.length ||
+    !["vitest", "bun"].includes(lane)
+  ) {
+    throw new Error("TASK-540 isolated test command authority is invalid");
+  }
+  return Object.freeze(
+    files.map((file, index) =>
+      command(
+        idPrefix + String(index + 1).padStart(2, "0"),
+        lane === "vitest" ? vitestCommand([file]) : "bun test " + file
+      )
+    )
+  );
+}
+
+function directStaticTestNames(source, relativePath) {
+  const sourceFile = ts.createSourceFile(
+    relativePath,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    relativePath.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS
+  );
+  if ((sourceFile.parseDiagnostics ?? []).length > 0) {
+    throw new Error("TASK-540 direct test-name owner has parse diagnostics: " + relativePath);
+  }
+  const names = [];
+  const visit = (node) => {
+    if (ts.isCallExpression(node)) {
+      if (
+        ts.isPropertyAccessExpression(node.expression) &&
+        isIdentifierText(node.expression.expression, "test")
+      ) {
+        throw new Error("TASK-540 R01 document-ops test modifiers are forbidden");
+      }
+      if (ts.isIdentifier(node.expression) && ["test", "it"].includes(node.expression.text)) {
+        const name = node.arguments[0];
+        if (!name || !ts.isStringLiteralLike(name)) {
+          throw new Error("TASK-540 R01 document-ops test name is not static");
+        }
+        names.push(name.text);
+        return;
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return Object.freeze(names);
+}
+
+async function requireR01DocumentOpsFacadeTestContract(label) {
+  const relativePath = "tests/vitest/customScreens/screenDocumentOps.test.ts";
+  const source = await readFile(ROOT + "/" + relativePath, "utf8");
+  const names = directStaticTestNames(source, relativePath);
+  const sha256 = createHash("sha256")
+    .update(JSON.stringify([...names].sort()))
+    .digest("hex");
+  if (
+    names.length !== 12 ||
+    names.filter((name) => name === R01_DOCUMENT_OPS_FACADE_TEST_NAME).length !== 1 ||
+    sha256 !== R01_DOCUMENT_OPS_FINAL_NAMES_SHA256
+  ) {
+    throw new Error(label + ": R01 document-ops 12/12 facade regression drifted");
+  }
+  return Object.freeze({ path: relativePath, tests: names.length, sha256 });
+}
+
 const LEAVES = Object.freeze(
   [
     {
       id: "540-01-L01",
       taskFile: "TASK-540-01-L01-Reject-Unknown-Sanitize-Urls-Unique-Tabs-And-Prune-Ghosts.md",
       allowedFiles: Object.freeze([
+        "core/services/assistant/blueprints/blueprintBindingComposer.ts",
+        "core/services/customScreens/bindingResolver.ts",
+        "core/services/customScreens/customScreenBindingNormalizer.ts",
+        "core/services/customScreens/customScreenContracts.ts",
+        "core/services/customScreens/customScreenDefinitionNormalizer.ts",
+        "core/services/customScreens/customScreenEditorViewNormalizer.ts",
+        "core/services/customScreens/customScreenJsonSchemas.ts",
+        "core/services/customScreens/customScreenLegacyAdapters.ts",
+        "core/services/customScreens/customScreenListViewNormalizer.ts",
+        "core/services/customScreens/customScreenNormalizationPrimitives.ts",
         "core/services/customScreens/customScreenSchemas.ts",
+        "core/services/customScreens/screenDocumentDataNormalizer.ts",
+        "core/services/customScreens/screenDocumentBindingOps.ts",
+        "core/services/customScreens/screenDocumentContracts.ts",
+        "core/services/customScreens/screenDocumentFactories.ts",
+        "core/services/customScreens/screenDocumentMutations.ts",
+        "core/services/customScreens/screenDocumentNormalizer.ts",
+        "core/services/customScreens/screenDocumentReadNormalizer.ts",
+        "core/services/customScreens/screenDocumentTree.ts",
+        "core/services/customScreens/screenMediaIdentity.ts",
         "core/services/customScreens/screenDocumentOps.ts",
         "core/services/customScreens/customScreenService.ts",
         "core/server/routes/customScreenRoutes.ts",
         "tests/unit/assistant/actionExecutorService.test.ts",
+        "tests/unit/assistant/actionExecutorAutomationBlueprints.test.ts",
+        "tests/unit/assistant/actionExecutorCatalogBlueprints.test.ts",
+        "tests/unit/assistant/actionExecutorContentUpdates.test.ts",
+        "tests/unit/assistant/actionExecutorCustomScreens.test.ts",
+        "tests/unit/assistant/actionExecutorDetailPages.test.ts",
+        "tests/unit/assistant/actionExecutorForms.test.ts",
+        "tests/unit/assistant/actionExecutorIdempotencyAndSiteKit.test.ts",
+        "tests/unit/assistant/actionExecutorListingsAndWidgets.test.ts",
+        "tests/unit/assistant/actionExecutorMenusAndSeo.test.ts",
+        "tests/unit/assistant/actionExecutorPages.test.ts",
+        "tests/unit/assistant/actionExecutorSupportingPageLinks.test.ts",
+        "tests/unit/assistant/support/actionExecutorContentDeps.ts",
+        "tests/unit/assistant/support/actionExecutorEngagementDeps.ts",
+        "tests/unit/assistant/support/actionExecutorFixtures.ts",
+        "tests/unit/assistant/support/actionExecutorTestDeps.ts",
+        "tests/unit/assistant/support/actionExecutorTestState.ts",
+        "tests/vitest/admin/custom-screen-binding-contract.test.ts",
+        "tests/vitest/admin/custom-screen-block-style.test.ts",
+        "tests/vitest/admin/custom-screen-document-contract.test.ts",
+        "tests/vitest/admin/custom-screen-fixed-block-contract.test.ts",
+        "tests/vitest/admin/custom-screen-schema-fixtures.ts",
         "tests/vitest/admin/custom-screen-schemas.test.ts",
+        "tests/vitest/admin/custom-screen-section-style-and-binding-gc.test.ts",
+        "tests/vitest/admin/custom-screen-stored-read-repair.test.ts",
+        "tests/vitest/assistant/blueprint-binding-composer.test.ts",
         "tests/vitest/customScreens/screenDocumentOps.test.ts",
         "tests/vitest/customScreens/screen-document-image-src.test.ts",
         "tests/integration/routes/customScreensRoutes.test.ts",
+        "tests/integration/routes/customScreensDefinitionIntegrityRoutes.test.ts",
+        "tests/integration/routes/support/customScreensRouteHarness.ts",
       ]),
       readOnlyConsumerFiles: Object.freeze([
         "tests/vitest/assistant/action-plan-schema.test.ts",
         "tests/vitest/assistant/catalogBlueprintEngine.test.ts",
+        "tests/vitest/customScreens/screen-document-insertion.test.ts",
+        "tests/vitest/customScreens/screen-document-sections.test.ts",
       ]),
-      fixtureOnlyFiles: Object.freeze(["tests/unit/assistant/actionExecutorService.test.ts"]),
+      fixtureOnlyFiles: Object.freeze(["tests/unit/assistant/actionExecutorCustomScreens.test.ts"]),
       commands: Object.freeze([
         command("lintTypes", LINT_TYPES),
         command("lint", LINT),
+        ...isolatedTestCommands("schemaPartitionIsolated", R01_SCHEMA_VITEST_FILES, "vitest"),
+        ...isolatedTestCommands(
+          "screenDocumentOpsIsolated",
+          R01_DOCUMENT_OPS_VITEST_FILES,
+          "vitest"
+        ),
+        command(
+          "r01DocumentOpsFacadeContract",
+          "node _docs/_workflows/task-540-implement.mjs --check-r01-document-ops-facade"
+        ),
         command(
           "vitest",
           vitestCommand([
+            "tests/vitest/admin/custom-screen-binding-contract.test.ts",
+            "tests/vitest/admin/custom-screen-block-style.test.ts",
+            "tests/vitest/admin/custom-screen-document-contract.test.ts",
+            "tests/vitest/admin/custom-screen-fixed-block-contract.test.ts",
             "tests/vitest/admin/custom-screen-schemas.test.ts",
+            "tests/vitest/admin/custom-screen-section-style-and-binding-gc.test.ts",
+            "tests/vitest/admin/custom-screen-stored-read-repair.test.ts",
             "tests/vitest/assistant/action-plan-schema.test.ts",
+            "tests/vitest/assistant/blueprint-binding-composer.test.ts",
             "tests/vitest/assistant/catalogBlueprintEngine.test.ts",
             "tests/vitest/customScreens/screen-document-image-src.test.ts",
             "tests/vitest/customScreens/screenDocumentOps.test.ts",
+            "tests/vitest/customScreens/screen-document-insertion.test.ts",
+            "tests/vitest/customScreens/screen-document-sections.test.ts",
           ])
         ),
+        command(
+          "r01SchemaTestNames",
+          "node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=r01Schema"
+        ),
+        command(
+          "r01LineLimitSelfTest",
+          "node _docs/_workflows/task-540-implement.mjs --self-test-file-line-limit"
+        ),
+        command(
+          "r01LineLimit",
+          "node _docs/_workflows/task-540-implement.mjs --check-r01-line-limit"
+        ),
         command("dbPreflight", DB_PREFLIGHT),
+        ...isolatedTestCommands("customScreensRouteIsolated", R01_ROUTE_BUN_FILES, "bun"),
+        ...isolatedTestCommands("actionExecutorIsolated", ACTION_EXECUTOR_BUN_FILES, "bun"),
+        command("actionExecutorFamily", "bun test " + ACTION_EXECUTOR_BUN_FILES.join(" ")),
         command(
           "bun",
           "bun test tests/integration/routes/customScreensRoutes.test.ts " +
-            "tests/unit/assistant/actionExecutorService.test.ts"
+            "tests/integration/routes/customScreensDefinitionIntegrityRoutes.test.ts " +
+            ACTION_EXECUTOR_BUN_FILES.join(" ")
+        ),
+        command(
+          "r01RouteTestNames",
+          "node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=r01Routes"
+        ),
+        command(
+          "actionExecutorTestNames",
+          "node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=actionExecutor"
         ),
         command("workflowSyntax", "node --check _docs/_workflows/task-540-implement.mjs"),
         command(
@@ -4224,18 +5687,34 @@ const LEAVES = Object.freeze(
       taskFile: "TASK-540-02-L01-Expose-Link-Binding-And-Complete-Tab-Slot-Editing.md",
       allowedFiles: Object.freeze([
         "core/admin/ui/custom-screens/ScreenBlockInspector.tsx",
+        "core/admin/ui/custom-screens/ScreenBlockInspectorControls.tsx",
+        "core/admin/ui/custom-screens/ScreenBlockInspectorSection.tsx",
+        "core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx",
+        "core/admin/ui/custom-screens/screenBlockInspectorModel.ts",
         "tests/vitest/ui/custom-screen-binding-panel.test.tsx",
         "tests/vitest/ui-integration/custom-screen-image-inspector.test.tsx",
       ]),
       commands: Object.freeze([
         command("lintTypes", LINT_TYPES),
         command("lint", LINT),
+        ...isolatedTestCommands(
+          "screenInspectorIsolated",
+          [
+            "tests/vitest/ui/custom-screen-binding-panel.test.tsx",
+            "tests/vitest/ui-integration/custom-screen-image-inspector.test.tsx",
+          ],
+          "vitest"
+        ),
         command(
           "vitest",
           vitestCommand([
             "tests/vitest/ui/custom-screen-binding-panel.test.tsx",
             "tests/vitest/ui-integration/custom-screen-image-inspector.test.tsx",
           ])
+        ),
+        command(
+          "deferredLowDraftContract",
+          "node _docs/_workflows/task-540-implement.mjs --check-deferred-low-draft-contract"
         ),
       ]),
     },
@@ -4244,19 +5723,34 @@ const LEAVES = Object.freeze(
       taskFile: "TASK-540-03-L01-Functional-Tabs-And-No-Nested-Interactive-Space-Trap.md",
       allowedFiles: Object.freeze([
         "core/admin/ui/custom-screens/ScreenRuntimeRenderer.tsx",
+        "core/admin/ui/custom-screens/ScreenRuntimeBlockFrame.tsx",
+        "core/admin/ui/custom-screens/ScreenRuntimeContainerBlocks.tsx",
+        "core/admin/ui/custom-screens/ScreenRuntimeLeafBlocks.tsx",
+        "core/admin/ui/custom-screens/ScreenRuntimeSectionList.tsx",
+        "core/admin/ui/custom-screens/screenRuntimeRendererModel.ts",
+        "core/admin/ui/custom-screens/useScreenRuntimeInteractions.ts",
         "tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx",
+        "tests/vitest/ui-integration/custom-screen-runtime-interactions.test.tsx",
+        "tests/vitest/ui-integration/custom-screen-runtime-layout.test.tsx",
+        "tests/vitest/ui-integration/custom-screen-runtime-presentation.test.tsx",
+        "tests/vitest/ui-integration/support/customScreenRuntimeRendererHarness.tsx",
         "tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx",
       ]),
       commands: Object.freeze([
         command("lintTypes", LINT_TYPES),
         command("lint", LINT),
+        ...isolatedTestCommands("screenRuntimeIsolated", SCREEN_RUNTIME_VITEST_FILES, "vitest"),
         command(
           "vitest",
           vitestCommand([
-            "tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx",
+            ...SCREEN_RUNTIME_VITEST_FILES,
             "tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx",
             "tests/vitest/customScreens/screen-document-image-src.test.ts",
           ])
+        ),
+        command(
+          "screenRuntimeTestNames",
+          "node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=screenRuntime"
         ),
       ]),
     },
@@ -4267,17 +5761,22 @@ const LEAVES = Object.freeze(
         "core/admin/services/entriesClient.ts",
         "core/admin/services/mediaClient.ts",
         "tests/vitest/admin/entriesClient.test.ts",
+        "tests/vitest/admin/entriesClientMutationReconciliation.test.ts",
+        "tests/vitest/admin/entriesClientReadAuthority.test.ts",
+        "tests/vitest/admin/support/entriesClientTestHarness.ts",
         "tests/vitest/admin/mediaClient.test.ts",
       ]),
       commands: Object.freeze([
         command("lintTypes", LINT_TYPES),
         command("lint", LINT),
+        ...isolatedTestCommands("entriesClientIsolated", ENTRIES_CLIENT_VITEST_FILES, "vitest"),
         command(
           "vitest",
-          vitestCommand([
-            "tests/vitest/admin/entriesClient.test.ts",
-            "tests/vitest/admin/mediaClient.test.ts",
-          ])
+          vitestCommand([...ENTRIES_CLIENT_VITEST_FILES, "tests/vitest/admin/mediaClient.test.ts"])
+        ),
+        command(
+          "entriesClientTestNames",
+          "node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=entriesClient"
         ),
       ]),
     },
@@ -4307,34 +5806,84 @@ const LEAVES = Object.freeze(
       taskFile: "TASK-540-04-L03-Guard-Entry-Drafts-And-Subscribe-Related-Caches.md",
       allowedFiles: Object.freeze([
         "core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx",
+        "core/admin/ui/custom-screens/CustomScreenEntryEditorLayout.tsx",
+        "core/admin/ui/custom-screens/CustomScreenEntryPresentationPanel.tsx",
+        "core/admin/ui/custom-screens/CustomScreenEntryRouteSession.tsx",
         "core/admin/ui/custom-screens/CustomScreenEntryCanvas.tsx",
         "core/admin/ui/custom-screens/CustomScreenPreview.tsx",
+        "core/admin/ui/custom-screens/customScreenEntryPresentation.ts",
+        "core/admin/ui/custom-screens/customScreenEntryPresentationMedia.ts",
+        "core/admin/ui/custom-screens/customScreenEntryRuntime.ts",
+        "core/admin/ui/custom-screens/hooks/useScreenEntryHydration.ts",
+        "core/admin/ui/custom-screens/hooks/useScreenEntryPresentationMedia.ts",
         "core/services/customScreens/screenEntryPresentationOverrides.ts",
         "core/services/customScreens/screenEntryPresentationOverrideContract.ts",
         "core/admin/services/customScreensClient.ts",
         "core/admin/utils/cacheBus.ts",
         "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
         "tests/vitest/ui/custom-screen-entry-draft.test.ts",
+        "tests/vitest/ui/custom-screen-entry-presentation-media.test.ts",
         "tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx",
+        "tests/vitest/ui/custom-screen-entry-navigation-authority.test.tsx",
         "tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts",
         "tests/vitest/admin/customScreensClient.test.ts",
+        "tests/vitest/admin/customScreensEntryOverridesClient.test.ts",
         "tests/vitest/admin/cacheBus.test.ts",
+        "tests/vitest/admin/cacheBusCorrelation.test.ts",
+        "tests/vitest/admin/cacheBusHardening.test.ts",
+        "tests/vitest/admin/support/cacheBusTestHarness.ts",
+        "tests/vitest/admin/support/customScreensClientTestHarness.ts",
+        "tests/vitest/ui/support/customScreenEntryNavigationHarness.tsx",
       ]),
       commands: Object.freeze([
         command("lintTypes", LINT_TYPES),
         command("lint", LINT),
         command("rootTsc", ROOT_TSC),
-        command("isolatedCacheBus", vitestCommand(["tests/vitest/admin/cacheBus.test.ts"])),
+        ...isolatedTestCommands("cacheBusPartitionIsolated", CACHE_BUS_VITEST_FILES, "vitest"),
+        ...isolatedTestCommands(
+          "customScreensClientIsolated",
+          CUSTOM_SCREENS_CLIENT_VITEST_FILES,
+          "vitest"
+        ),
+        ...isolatedTestCommands("entryNavigationIsolated", ENTRY_NAVIGATION_VITEST_FILES, "vitest"),
+        command("isolatedCacheBus", vitestCommand(CACHE_BUS_VITEST_FILES)),
+        command("customScreensClientFamily", vitestCommand(CUSTOM_SCREENS_CLIENT_VITEST_FILES)),
+        command("entryNavigationFamily", vitestCommand(ENTRY_NAVIGATION_VITEST_FILES)),
+        command(
+          "entryRestyleIsolated",
+          vitestCommand(["tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx"])
+        ),
+        command(
+          "entryPresentationMediaIsolated",
+          vitestCommand(["tests/vitest/ui/custom-screen-entry-presentation-media.test.ts"])
+        ),
+        command("entryRestyleFamily", vitestCommand(ENTRY_RESTYLE_VITEST_FILES)),
+        command(
+          "l03TestNames",
+          "node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=customScreensClient"
+        ),
+        command(
+          "cacheBusTestNames",
+          "node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=cacheBus"
+        ),
+        command(
+          "entryRestyleTestNames",
+          "node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=entryRestyle"
+        ),
+        command(
+          "entryNavigationTestNames",
+          "node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=entryNavigation"
+        ),
         command(
           "expandedL03Vitest",
           vitestCommand([
-            "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
+            ...ENTRY_RESTYLE_VITEST_FILES,
             "tests/vitest/ui/custom-screen-entry-draft.test.ts",
-            "tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx",
+            ...ENTRY_NAVIGATION_VITEST_FILES,
             "tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts",
-            "tests/vitest/admin/customScreensClient.test.ts",
-            "tests/vitest/admin/cacheBus.test.ts",
-            "tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx",
+            ...CUSTOM_SCREENS_CLIENT_VITEST_FILES,
+            ...CACHE_BUS_VITEST_FILES,
+            ...SCREEN_RUNTIME_VITEST_FILES,
             "tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx",
             "tests/vitest/widgets/screenWidgets.test.tsx",
             "tests/vitest/ui/use-screen-related-entries.test.tsx",
@@ -4347,7 +5896,7 @@ const LEAVES = Object.freeze(
         command(
           "l04ReadOnlyConsumerVitest",
           vitestCommand([
-            "tests/vitest/ui/custom-screens-page.test.tsx",
+            ...SCREEN_EDITOR_PAGE_VITEST_FILES,
             "tests/vitest/ui/custom-screen-route-params.test.ts",
             "tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx",
             "tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx",
@@ -4356,7 +5905,7 @@ const LEAVES = Object.freeze(
             "tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx",
             "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
             "tests/vitest/ui/custom-screen-list-view-canvas.test.tsx",
-            "tests/vitest/admin/cacheBus.test.ts",
+            ...CACHE_BUS_VITEST_FILES,
           ])
         ),
         command("dbPreflight", DB_PREFLIGHT),
@@ -4377,8 +5926,19 @@ const LEAVES = Object.freeze(
       taskFile: "TASK-540-04-L04-Guard-Screen-Builder-Drafts.md",
       allowedFiles: Object.freeze([
         "core/admin/ui/custom-screens/CustomScreenEditorPage.tsx",
+        "core/admin/ui/custom-screens/CustomScreenEditorLayout.tsx",
+        "core/admin/ui/custom-screens/CustomScreenEditorPreviewOwner.tsx",
+        "core/admin/ui/custom-screens/CustomScreenEditorRouteSession.tsx",
+        "core/admin/ui/custom-screens/CustomScreenEditorSettingsPanel.tsx",
+        "core/admin/ui/custom-screens/customScreenEditorModel.ts",
+        "core/admin/ui/custom-screens/hooks/useCustomScreenDocumentActions.ts",
+        "core/admin/ui/custom-screens/hooks/useCustomScreenEditorPersistence.ts",
         "core/admin/ui/custom-screens/routeParams.ts",
         "tests/vitest/ui/custom-screens-page.test.tsx",
+        "tests/vitest/ui/custom-screen-editor-draft-and-save.test.tsx",
+        "tests/vitest/ui/custom-screen-editor-hydration-authority.test.tsx",
+        "tests/vitest/ui/custom-screen-editor-visit-authority.test.tsx",
+        "tests/vitest/ui/support/customScreenEditorPageHarness.tsx",
         "tests/vitest/ui/custom-screen-route-params.test.ts",
         "tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx",
         "tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx",
@@ -4391,10 +5951,15 @@ const LEAVES = Object.freeze(
         command("lintTypes", LINT_TYPES),
         command("lint", LINT),
         command("rootTsc", ROOT_TSC),
+        ...isolatedTestCommands(
+          "screenEditorPageIsolated",
+          SCREEN_EDITOR_PAGE_VITEST_FILES,
+          "vitest"
+        ),
         command(
           "vitest",
           vitestCommand([
-            "tests/vitest/ui/custom-screens-page.test.tsx",
+            ...SCREEN_EDITOR_PAGE_VITEST_FILES,
             "tests/vitest/ui/custom-screen-route-params.test.ts",
             "tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx",
             "tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx",
@@ -4403,8 +5968,12 @@ const LEAVES = Object.freeze(
             "tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx",
             "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
             "tests/vitest/ui/custom-screen-list-view-canvas.test.tsx",
-            "tests/vitest/admin/cacheBus.test.ts",
+            ...CACHE_BUS_VITEST_FILES,
           ])
+        ),
+        command(
+          "screenEditorPageTestNames",
+          "node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=screenEditorPage"
         ),
         command("workflowSyntax", "node --check _docs/_workflows/task-540-implement.mjs"),
         command(
@@ -4427,6 +5996,10 @@ const LEAVES = Object.freeze(
       commands: Object.freeze([
         command("lintTypes", LINT_TYPES),
         command("lint", LINT),
+        command(
+          "entryAuthoringBoundaryIsolated",
+          vitestCommand(["tests/vitest/ui/custom-screen-authoring-boundary.test.ts"])
+        ),
         command(
           "vitest",
           vitestCommand([
@@ -4456,21 +6029,28 @@ const LEAVES = Object.freeze(
         "tests/vitest/admin/userSettingsClient.test.ts",
         "tests/vitest/ui/admin-auth-identity.test.tsx",
         "tests/vitest/ui/assistant-panel-interaction.test.tsx",
+        "tests/vitest/ui/assistant-panel-conversation.test.tsx",
+        "tests/vitest/ui/support/assistantPanelInteractionHarness.tsx",
         "tests/vitest/ui/use-screen-entry-preferences.test.ts",
         "tests/vitest/ui-integration/custom-screen-entry-preferences-persistence.test.tsx",
         "tests/integration/routes/userSettings.test.ts",
+        "tests/integration/routes/userSettingsAccessLogHarness.test.ts",
+        "tests/integration/routes/support/userSettingsAccessLogHarness.ts",
         "tests/integration/routes/cors.test.ts",
       ]),
-      fixtureOnlyFiles: Object.freeze(["tests/vitest/ui/assistant-panel-interaction.test.tsx"]),
+      fixtureOnlyFiles: Object.freeze([
+        "tests/vitest/ui/support/assistantPanelInteractionHarness.tsx",
+      ]),
       commands: Object.freeze([
         command("lintTypes", LINT_TYPES),
         command("lint", LINT),
+        ...isolatedTestCommands("assistantPanelIsolated", ASSISTANT_PANEL_VITEST_FILES, "vitest"),
         command(
           "vitest",
           vitestCommand([
             "tests/vitest/admin/userSettingsClient.test.ts",
             "tests/vitest/ui/admin-auth-identity.test.tsx",
-            "tests/vitest/ui/assistant-panel-interaction.test.tsx",
+            ...ASSISTANT_PANEL_VITEST_FILES,
             "tests/vitest/ui/use-screen-entry-preferences.test.ts",
             "tests/vitest/ui-integration/custom-screen-entry-preferences-persistence.test.tsx",
             "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
@@ -4479,10 +6059,27 @@ const LEAVES = Object.freeze(
         command("rootTsc", ROOT_TSC),
         command("dbPreflight", DB_PREFLIGHT),
         command(
+          "userSettingsRoutesIsolated",
+          "bun test tests/integration/routes/userSettings.test.ts"
+        ),
+        command(
+          "userSettingsHarnessIsolated",
+          "bun test tests/integration/routes/userSettingsAccessLogHarness.test.ts"
+        ),
+        command(
           "bun",
           "bun test tests/unit/settings/userSettingsService.test.ts " +
             "tests/integration/routes/userSettings.test.ts " +
+            "tests/integration/routes/userSettingsAccessLogHarness.test.ts " +
             "tests/integration/routes/cors.test.ts"
+        ),
+        command(
+          "assistantPanelTestNames",
+          "node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=assistantPanel"
+        ),
+        command(
+          "userSettingsRouteTestNames",
+          "node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=userSettingsRoutes"
         ),
       ]),
     },
@@ -4494,7 +6091,6 @@ const LEAVES = Object.freeze(
         "tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx",
         "_docs/CONTENT_TYPES_SPEC.md",
         "_docs/CMS_SPEC.md",
-        "_docs/CMS_API.md",
         "_docs/SECURITY_SPEC.md",
         "_docs/ADMIN_CACHE.md",
         "_docs/ADMIN_CACHE_MAP.md",
@@ -4509,6 +6105,10 @@ const LEAVES = Object.freeze(
         command("vitest", TARGETED_VITEST),
         command("dbPreflight", DB_PREFLIGHT),
         command("bun", TARGETED_BUN),
+        command(
+          "testNameContractFinal",
+          "node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=all"
+        ),
         command("smokeContractSyntax", "node --check _docs/_workflows/task-540-smoke-contract.mjs"),
         command(
           "smokeContractSelfTest",
@@ -4606,6 +6206,189 @@ const VALIDATION_COMMAND_AUTHORITY = (() => {
 
 const LEAF_BY_ID = new Map(LEAVES.map((leaf) => [leaf.id, leaf]));
 
+const MODULARITY_REPAIR_ALLOWED_FILES = deepFreezeExact({
+  "540-01-L01": [
+    "core/services/customScreens/bindingResolver.ts",
+    "core/services/customScreens/customScreenBindingNormalizer.ts",
+    "core/services/customScreens/customScreenContracts.ts",
+    "core/services/customScreens/customScreenDefinitionNormalizer.ts",
+    "core/services/customScreens/customScreenEditorViewNormalizer.ts",
+    "core/services/customScreens/customScreenJsonSchemas.ts",
+    "core/services/customScreens/customScreenLegacyAdapters.ts",
+    "core/services/customScreens/customScreenListViewNormalizer.ts",
+    "core/services/customScreens/customScreenNormalizationPrimitives.ts",
+    "core/services/customScreens/customScreenSchemas.ts",
+    "core/services/customScreens/screenDocumentDataNormalizer.ts",
+    "core/services/customScreens/screenDocumentBindingOps.ts",
+    "core/services/customScreens/screenDocumentContracts.ts",
+    "core/services/customScreens/screenDocumentFactories.ts",
+    "core/services/customScreens/screenDocumentMutations.ts",
+    "core/services/customScreens/screenDocumentNormalizer.ts",
+    "core/services/customScreens/screenDocumentReadNormalizer.ts",
+    "core/services/customScreens/screenDocumentTree.ts",
+    "core/services/customScreens/screenMediaIdentity.ts",
+    "core/services/customScreens/screenDocumentOps.ts",
+    "tests/vitest/customScreens/screenDocumentOps.test.ts",
+    "tests/unit/assistant/actionExecutorService.test.ts",
+    "tests/unit/assistant/actionExecutorAutomationBlueprints.test.ts",
+    "tests/unit/assistant/actionExecutorCatalogBlueprints.test.ts",
+    "tests/unit/assistant/actionExecutorContentUpdates.test.ts",
+    "tests/unit/assistant/actionExecutorCustomScreens.test.ts",
+    "tests/unit/assistant/actionExecutorDetailPages.test.ts",
+    "tests/unit/assistant/actionExecutorForms.test.ts",
+    "tests/unit/assistant/actionExecutorIdempotencyAndSiteKit.test.ts",
+    "tests/unit/assistant/actionExecutorListingsAndWidgets.test.ts",
+    "tests/unit/assistant/actionExecutorMenusAndSeo.test.ts",
+    "tests/unit/assistant/actionExecutorPages.test.ts",
+    "tests/unit/assistant/actionExecutorSupportingPageLinks.test.ts",
+    "tests/unit/assistant/support/actionExecutorContentDeps.ts",
+    "tests/unit/assistant/support/actionExecutorEngagementDeps.ts",
+    "tests/unit/assistant/support/actionExecutorFixtures.ts",
+    "tests/unit/assistant/support/actionExecutorTestDeps.ts",
+    "tests/unit/assistant/support/actionExecutorTestState.ts",
+    "tests/vitest/admin/custom-screen-binding-contract.test.ts",
+    "tests/vitest/admin/custom-screen-block-style.test.ts",
+    "tests/vitest/admin/custom-screen-document-contract.test.ts",
+    "tests/vitest/admin/custom-screen-fixed-block-contract.test.ts",
+    "tests/vitest/admin/custom-screen-schema-fixtures.ts",
+    "tests/vitest/admin/custom-screen-schemas.test.ts",
+    "tests/vitest/admin/custom-screen-section-style-and-binding-gc.test.ts",
+    "tests/vitest/admin/custom-screen-stored-read-repair.test.ts",
+    "tests/integration/routes/customScreensRoutes.test.ts",
+    "tests/integration/routes/customScreensDefinitionIntegrityRoutes.test.ts",
+    "tests/integration/routes/support/customScreensRouteHarness.ts",
+  ],
+  "540-02-L01": [
+    "core/admin/ui/custom-screens/ScreenBlockInspector.tsx",
+    "core/admin/ui/custom-screens/ScreenBlockInspectorControls.tsx",
+    "core/admin/ui/custom-screens/ScreenBlockInspectorSection.tsx",
+    "core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx",
+    "core/admin/ui/custom-screens/screenBlockInspectorModel.ts",
+  ],
+  "540-03-L01": [
+    "core/admin/ui/custom-screens/ScreenRuntimeRenderer.tsx",
+    "core/admin/ui/custom-screens/ScreenRuntimeBlockFrame.tsx",
+    "core/admin/ui/custom-screens/ScreenRuntimeContainerBlocks.tsx",
+    "core/admin/ui/custom-screens/ScreenRuntimeLeafBlocks.tsx",
+    "core/admin/ui/custom-screens/ScreenRuntimeSectionList.tsx",
+    "core/admin/ui/custom-screens/screenRuntimeRendererModel.ts",
+    "core/admin/ui/custom-screens/useScreenRuntimeInteractions.ts",
+    "tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx",
+    "tests/vitest/ui-integration/custom-screen-runtime-interactions.test.tsx",
+    "tests/vitest/ui-integration/custom-screen-runtime-layout.test.tsx",
+    "tests/vitest/ui-integration/custom-screen-runtime-presentation.test.tsx",
+    "tests/vitest/ui-integration/support/customScreenRuntimeRendererHarness.tsx",
+  ],
+  "540-04-L01": [
+    "tests/vitest/admin/entriesClient.test.ts",
+    "tests/vitest/admin/entriesClientMutationReconciliation.test.ts",
+    "tests/vitest/admin/entriesClientReadAuthority.test.ts",
+    "tests/vitest/admin/support/entriesClientTestHarness.ts",
+  ],
+  "540-04-L03": [
+    "core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx",
+    "core/admin/ui/custom-screens/CustomScreenEntryEditorLayout.tsx",
+    "core/admin/ui/custom-screens/CustomScreenEntryPresentationPanel.tsx",
+    "core/admin/ui/custom-screens/CustomScreenEntryRouteSession.tsx",
+    "core/admin/ui/custom-screens/customScreenEntryPresentation.ts",
+    "core/admin/ui/custom-screens/customScreenEntryPresentationMedia.ts",
+    "core/admin/ui/custom-screens/customScreenEntryRuntime.ts",
+    "core/admin/ui/custom-screens/hooks/useScreenEntryHydration.ts",
+    "core/admin/ui/custom-screens/hooks/useScreenEntryPresentationMedia.ts",
+    "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
+    "tests/vitest/ui/custom-screen-entry-draft.test.ts",
+    "tests/vitest/ui/custom-screen-entry-presentation-media.test.ts",
+    "tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx",
+    "tests/vitest/ui/custom-screen-entry-navigation-authority.test.tsx",
+    "tests/vitest/ui/support/customScreenEntryNavigationHarness.tsx",
+    "tests/vitest/admin/customScreensClient.test.ts",
+    "tests/vitest/admin/customScreensEntryOverridesClient.test.ts",
+    "tests/vitest/admin/cacheBus.test.ts",
+    "tests/vitest/admin/cacheBusCorrelation.test.ts",
+    "tests/vitest/admin/cacheBusHardening.test.ts",
+    "tests/vitest/admin/support/cacheBusTestHarness.ts",
+    "tests/vitest/admin/support/customScreensClientTestHarness.ts",
+  ],
+  "540-04-L04": [
+    "core/admin/ui/custom-screens/CustomScreenEditorPage.tsx",
+    "core/admin/ui/custom-screens/CustomScreenEditorLayout.tsx",
+    "core/admin/ui/custom-screens/CustomScreenEditorPreviewOwner.tsx",
+    "core/admin/ui/custom-screens/CustomScreenEditorRouteSession.tsx",
+    "core/admin/ui/custom-screens/CustomScreenEditorSettingsPanel.tsx",
+    "core/admin/ui/custom-screens/customScreenEditorModel.ts",
+    "core/admin/ui/custom-screens/hooks/useCustomScreenDocumentActions.ts",
+    "core/admin/ui/custom-screens/hooks/useCustomScreenEditorPersistence.ts",
+    "tests/vitest/ui/custom-screens-page.test.tsx",
+    "tests/vitest/ui/custom-screen-editor-draft-and-save.test.tsx",
+    "tests/vitest/ui/custom-screen-editor-hydration-authority.test.tsx",
+    "tests/vitest/ui/custom-screen-editor-visit-authority.test.tsx",
+    "tests/vitest/ui/support/customScreenEditorPageHarness.tsx",
+  ],
+  "540-05-L01": ["tests/vitest/ui/custom-screen-authoring-boundary.test.ts"],
+  "540-05-L02": [
+    "tests/integration/routes/userSettings.test.ts",
+    "tests/integration/routes/userSettingsAccessLogHarness.test.ts",
+    "tests/integration/routes/support/userSettingsAccessLogHarness.ts",
+    "tests/vitest/ui/assistant-panel-interaction.test.tsx",
+    "tests/vitest/ui/assistant-panel-conversation.test.tsx",
+    "tests/vitest/ui/support/assistantPanelInteractionHarness.tsx",
+  ],
+});
+
+function modularityRepairMutationOwner(leaf) {
+  const allowedFiles = MODULARITY_REPAIR_ALLOWED_FILES[leaf.id];
+  if (
+    !Array.isArray(allowedFiles) ||
+    allowedFiles.length === 0 ||
+    new Set(allowedFiles).size !== allowedFiles.length ||
+    allowedFiles.some((file) => !leaf.allowedFiles.includes(file))
+  ) {
+    throw new Error("TASK-540 modularity repair authority drifted: " + leaf.id);
+  }
+  return Object.freeze({
+    ...leaf,
+    allowedFiles,
+    // Repair can resume after an intermediate commit or a partially landed split;
+    // final line-count/import/test gates prove completeness without forcing a no-op
+    // rewrite of every already-correct owner path.
+    requiredFiles: Object.freeze([]),
+    fixtureOnlyFiles: Object.freeze([]),
+  });
+}
+
+function modularityRepairCompletenessErrors(leaf, lineCounts) {
+  const plannedFiles = MODULARITY_REPAIR_ALLOWED_FILES[leaf.id];
+  if (!Array.isArray(plannedFiles) || plannedFiles.length === 0) {
+    return [leaf.id + ": modularity repair has no planned file authority"];
+  }
+  const evidencePaths = new Set(lineCounts.map(({ path }) => path));
+  const invalidPlannedFiles = plannedFiles.filter(
+    (path) => !isLineLimitedHumanAuthoredModule(path)
+  );
+  const missingFiles = plannedFiles.filter((path) => !evidencePaths.has(path));
+  const wrongOwnerFiles = lineCounts
+    .filter(({ path }) => plannedFiles.includes(path))
+    .filter(({ owner }) => owner !== leaf.id)
+    .map(({ path }) => path);
+  const errors = [];
+  if (invalidPlannedFiles.length > 0) {
+    errors.push(
+      leaf.id +
+        ": modularity planned paths are not line-limited modules: " +
+        invalidPlannedFiles.join(", ")
+    );
+  }
+  if (missingFiles.length > 0) {
+    errors.push(leaf.id + ": modularity split files are missing: " + missingFiles.join(", "));
+  }
+  if (wrongOwnerFiles.length > 0) {
+    errors.push(
+      leaf.id + ": modularity line evidence has wrong owner: " + wrongOwnerFiles.join(", ")
+    );
+  }
+  return Object.freeze(errors);
+}
+
 function effectiveRepairMutationOwner(leaf, { afterClosure = false } = {}) {
   const repairFiles = leaf.allowedFiles;
   const group = LEAF_STATUS_GROUPS[leaf.id];
@@ -4624,7 +6407,7 @@ function effectiveRepairMutationOwner(leaf, { afterClosure = false } = {}) {
   });
 }
 
-const leafRestrictionPrompt = (leaf) => {
+const leafRestrictionPrompt = (leaf, { modularityRepair = false } = {}) => {
   const restrictions = [];
   if (leaf.readOnlyConsumerFiles?.length) {
     restrictions.push(
@@ -4634,12 +6417,28 @@ const leafRestrictionPrompt = (leaf) => {
         "re-baseline, or add them to allowedFiles, repair authority, or closure authority."
     );
   }
-  if (leaf.id === "540-01-L01" && leaf.fixtureOnlyFiles?.length) {
+  if (modularityRepair && leaf.id === "540-01-L01") {
+    restrictions.push(
+      " This modularity pass owns the complete cohesive Action Executor test-family split, " +
+        "so its newly created suites/support modules are not fixture-only. Preserve all 73 test " +
+        "names and assertions exactly. Keep the already-approved canonical heading/text fixture " +
+        "change only in the moved custom-screen.block.patch test inside " +
+        "actionExecutorCustomScreens.test.ts; do not loosen schemas or add compatibility kinds."
+    );
+  } else if (modularityRepair && leaf.id === "540-05-L02") {
+    restrictions.push(
+      " This modularity pass owns the complete behavior-preserving Assistant Panel test/harness " +
+        "split, so assistantPanelInteractionHarness.tsx is not fixture-only during extraction. " +
+        "Move shared setup without changing any of the 13 test names, mocks, or assertions, and " +
+        'preserve the exact typed `"customScreens.entry.preferences": { version: 1, ' +
+        "showFieldMetadata: false }` property inside makeUserSettings."
+    );
+  } else if (leaf.id === "540-01-L01" && leaf.fixtureOnlyFiles?.length) {
     restrictions.push(
       " This leaf's full declared owner set is available only for the exact verified finding. " +
-        "Its Assistant path remains a fixture-only compatibility seam: " +
+        "Its historical Assistant executor path remains a fixture-only compatibility seam: " +
         JSON.stringify(leaf.fixtureOnlyFiles) +
-        ". Touch that path only when the verified finding requires it; if touched, change only the " +
+        ". Touch that listed path only when the verified finding requires it; if touched, change only the " +
         "existing custom-screen.block.patch test from unsupported fresh-write hero/rich-text-section " +
         "fixtures to canonical heading/text blocks, patch heading.data.text, and preserve the heading " +
         "label plus sibling text content. Do not loosen the Screen schema, add compatibility kinds, " +
@@ -4662,7 +6461,7 @@ const leafRestrictionPrompt = (leaf) => {
     restrictions.push(
       " These owned paths are fixture-only compatibility seams: " +
         JSON.stringify(leaf.fixtureOnlyFiles) +
-        ". In assistant-panel-interaction.test.tsx add/preserve only the exact typed " +
+        ". In assistantPanelInteractionHarness.tsx add/preserve only the exact typed " +
         '`"customScreens.entry.preferences": { version: 1, showFieldMetadata: false }` ' +
         "property inside makeUserSettings; every import, mock, test, and behavior assertion must " +
         "remain byte-identical. The orchestrator mechanically verifies this projection."
@@ -5035,7 +6834,10 @@ function assertTask540R01EffectiveRepairOwnerContract() {
   const readOnlyConsumers = [
     "tests/vitest/assistant/action-plan-schema.test.ts",
     "tests/vitest/assistant/catalogBlueprintEngine.test.ts",
+    "tests/vitest/customScreens/screen-document-insertion.test.ts",
+    "tests/vitest/customScreens/screen-document-sections.test.ts",
   ];
+  const fullMatrixReadOnlyConsumers = readOnlyConsumers.slice(0, 2);
   const namedR01CommandFiles = leaf.commands.flatMap(({ command: value }) =>
     namedTestFilesForCommand(value)
   );
@@ -5048,11 +6850,24 @@ function assertTask540R01EffectiveRepairOwnerContract() {
         JSON.stringify(preClosure.allowedFiles) === JSON.stringify(leaf.allowedFiles),
     },
     {
-      label: "R01 schema, document-op, and route regressions retain mutation authority",
+      label: "R01 schema, composer, document-op, and route regressions retain mutation authority",
       pass:
+        preClosure.allowedFiles.includes(
+          "core/services/assistant/blueprints/blueprintBindingComposer.ts"
+        ) &&
         preClosure.allowedFiles.includes("tests/vitest/admin/custom-screen-schemas.test.ts") &&
+        preClosure.allowedFiles.includes(
+          "tests/vitest/assistant/blueprint-binding-composer.test.ts"
+        ) &&
         preClosure.allowedFiles.includes("core/services/customScreens/screenDocumentOps.ts") &&
         preClosure.allowedFiles.includes("tests/vitest/customScreens/screenDocumentOps.test.ts") &&
+        namedR01CommandFiles.includes(
+          "tests/vitest/assistant/blueprint-binding-composer.test.ts"
+        ) &&
+        TARGET_VITEST_FILES.includes("tests/vitest/assistant/blueprint-binding-composer.test.ts") &&
+        SOURCE_OWNER_TEST_FILES.includes(
+          "tests/vitest/assistant/blueprint-binding-composer.test.ts"
+        ) &&
         namedR01CommandFiles.includes("tests/vitest/customScreens/screenDocumentOps.test.ts") &&
         preClosure.allowedFiles.includes("tests/integration/routes/customScreensRoutes.test.ts"),
     },
@@ -5069,8 +6884,8 @@ function assertTask540R01EffectiveRepairOwnerContract() {
       label: "R01 read-only consumers remain targeted-command and aggregate covered",
       pass:
         readOnlyConsumers.every((file) => namedR01CommandFiles.includes(file)) &&
-        readOnlyConsumers.every((file) => TARGET_VITEST_FILES.includes(file)) &&
-        readOnlyConsumers.every((file) => SOURCE_OWNER_TEST_FILES.includes(file)),
+        fullMatrixReadOnlyConsumers.every((file) => TARGET_VITEST_FILES.includes(file)) &&
+        fullMatrixReadOnlyConsumers.every((file) => SOURCE_OWNER_TEST_FILES.includes(file)),
     },
     {
       label: "R01 after-closure audit fixer adds only its three task contracts",
@@ -5079,15 +6894,15 @@ function assertTask540R01EffectiveRepairOwnerContract() {
         JSON.stringify([...leaf.allowedFiles, ...taskContracts]),
     },
     {
-      label: "R01 Assistant path retains its exact fixture-only verifier",
+      label: "R01 historical Assistant executor path retains its exact fixture-only verifier",
       pass:
         JSON.stringify(leaf.fixtureOnlyFiles) ===
-        JSON.stringify(["tests/unit/assistant/actionExecutorService.test.ts"]),
+        JSON.stringify(["tests/unit/assistant/actionExecutorCustomScreens.test.ts"]),
     },
     {
       label: "R01 restriction is conditional instead of globally fixture-only",
       pass:
-        restriction.includes("Touch that path only when the verified finding requires it") &&
+        restriction.includes("Touch that listed path only when the verified finding requires it") &&
         restriction.includes("full declared owner set") &&
         restriction.includes("dependency-shaped consumer gates are read-only") &&
         readOnlyConsumers.every((file) => restriction.includes(file)) &&
@@ -5160,16 +6975,31 @@ function assertTask540L03GateIsolationContract() {
   const leaf = LEAF_BY_ID.get("540-04-L03");
   if (!leaf) throw new Error("TASK-540 L03 isolation owner is missing");
   const cases = [
+    { id: "isolatedCacheBus", files: [...CACHE_BUS_VITEST_FILES] },
+    {
+      id: "customScreensClientFamily",
+      files: [...CUSTOM_SCREENS_CLIENT_VITEST_FILES],
+    },
+    { id: "entryNavigationFamily", files: [...ENTRY_NAVIGATION_VITEST_FILES] },
+    {
+      id: "entryRestyleIsolated",
+      files: ["tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx"],
+    },
+    {
+      id: "entryPresentationMediaIsolated",
+      files: ["tests/vitest/ui/custom-screen-entry-presentation-media.test.ts"],
+    },
+    { id: "entryRestyleFamily", files: [...ENTRY_RESTYLE_VITEST_FILES] },
     {
       id: "expandedL03Vitest",
       files: [
-        "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
+        ...ENTRY_RESTYLE_VITEST_FILES,
         "tests/vitest/ui/custom-screen-entry-draft.test.ts",
-        "tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx",
+        ...ENTRY_NAVIGATION_VITEST_FILES,
         "tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts",
-        "tests/vitest/admin/customScreensClient.test.ts",
-        "tests/vitest/admin/cacheBus.test.ts",
-        "tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx",
+        ...CUSTOM_SCREENS_CLIENT_VITEST_FILES,
+        ...CACHE_BUS_VITEST_FILES,
+        ...SCREEN_RUNTIME_VITEST_FILES,
         "tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx",
         "tests/vitest/widgets/screenWidgets.test.tsx",
         "tests/vitest/ui/use-screen-related-entries.test.tsx",
@@ -5182,7 +7012,7 @@ function assertTask540L03GateIsolationContract() {
     {
       id: "l04ReadOnlyConsumerVitest",
       files: [
-        "tests/vitest/ui/custom-screens-page.test.tsx",
+        ...SCREEN_EDITOR_PAGE_VITEST_FILES,
         "tests/vitest/ui/custom-screen-route-params.test.ts",
         "tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx",
         "tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx",
@@ -5191,7 +7021,7 @@ function assertTask540L03GateIsolationContract() {
         "tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx",
         "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
         "tests/vitest/ui/custom-screen-list-view-canvas.test.tsx",
-        "tests/vitest/admin/cacheBus.test.ts",
+        ...CACHE_BUS_VITEST_FILES,
       ],
     },
     {
@@ -5250,6 +7080,243 @@ function readTaskMetadataField(source, field) {
   const value = lines[0].slice(prefix.length).trim();
   if (!value) throw new Error("TASK-540 empty metadata field: " + field);
   return value;
+}
+
+function assertTask540ModularityRepairContract() {
+  const leafFiles = MODULARITY_REPAIR_LEAF_IDS.map((leafId) => LEAF_BY_ID.get(leafId)?.taskFile);
+  const cases = [
+    {
+      label: "modularity repairs keep exact dependency order",
+      pass:
+        JSON.stringify(MODULARITY_REPAIR_LEAF_IDS) ===
+          JSON.stringify([
+            "540-01-L01",
+            "540-02-L01",
+            "540-03-L01",
+            "540-04-L01",
+            "540-04-L03",
+            "540-04-L04",
+            "540-05-L01",
+            "540-05-L02",
+          ]) && JSON.stringify(leafFiles) === JSON.stringify(PENDING_MODULARITY_REPAIR_TASK_FILES),
+    },
+    {
+      label: "L02 modularity mutation authority is exact for both test splits",
+      pass:
+        JSON.stringify(MODULARITY_REPAIR_ALLOWED_FILES["540-05-L02"]) ===
+        JSON.stringify([
+          "tests/integration/routes/userSettings.test.ts",
+          "tests/integration/routes/userSettingsAccessLogHarness.test.ts",
+          "tests/integration/routes/support/userSettingsAccessLogHarness.ts",
+          "tests/vitest/ui/assistant-panel-interaction.test.tsx",
+          "tests/vitest/ui/assistant-panel-conversation.test.tsx",
+          "tests/vitest/ui/support/assistantPanelInteractionHarness.tsx",
+        ]),
+    },
+    {
+      label: "every modularity owner is a strict subset of its ordinary repair authority",
+      pass: MODULARITY_REPAIR_LEAF_IDS.every((leafId) => {
+        const leaf = LEAF_BY_ID.get(leafId);
+        const files = MODULARITY_REPAIR_ALLOWED_FILES[leafId];
+        return leaf && files.every((file) => leaf.allowedFiles.includes(file));
+      }),
+    },
+    {
+      label: "R01 modularity owns the promised document-ops facade regression",
+      pass: MODULARITY_REPAIR_ALLOWED_FILES["540-01-L01"].includes(
+        "tests/vitest/customScreens/screenDocumentOps.test.ts"
+      ),
+    },
+    {
+      label: "partition A split suites always run independently before combined gates",
+      pass: [
+        ["540-01-L01", "schemaPartitionIsolated", 7, "vitest"],
+        ["540-01-L01", "screenDocumentOpsIsolated", 3, "vitest"],
+        ["540-01-L01", "customScreensRouteIsolated", 2, "bun"],
+        ["540-01-L01", "actionExecutorIsolated", 12, "actionExecutorFamily"],
+        ["540-02-L01", "screenInspectorIsolated", 2, "vitest"],
+        ["540-03-L01", "screenRuntimeIsolated", 4, "vitest"],
+        ["540-04-L01", "entriesClientIsolated", 3, "vitest"],
+        ["540-04-L03", "cacheBusPartitionIsolated", 3, "isolatedCacheBus"],
+        ["540-04-L03", "customScreensClientIsolated", 2, "customScreensClientFamily"],
+        ["540-04-L03", "entryNavigationIsolated", 2, "entryNavigationFamily"],
+        ["540-04-L04", "screenEditorPageIsolated", 4, "vitest"],
+        ["540-05-L02", "assistantPanelIsolated", 2, "vitest"],
+      ].every(([leafId, prefix, expected, combinedId]) => {
+        const commands = LEAF_BY_ID.get(leafId).commands;
+        const isolatedIndices = commands
+          .map(({ id, command: value }, index) => ({ id, value, index }))
+          .filter(({ id }) => id.startsWith(prefix));
+        const combinedIndex = commands.findIndex(({ id }) => id === combinedId);
+        return (
+          isolatedIndices.length === expected &&
+          combinedIndex >= 0 &&
+          isolatedIndices.every(
+            ({ value, index }) =>
+              namedTestFilesForCommand(value).length === 1 && index < combinedIndex
+          )
+        );
+      }),
+    },
+    {
+      label: "L04 dependency-shaped gate pins all 15 files and three cache-bus partitions",
+      pass: (() => {
+        const gate = LEAF_BY_ID.get("540-04-L04").commands.find(({ id }) => id === "vitest");
+        const files = gate ? namedTestFilesForCommand(gate.command) : [];
+        return files.length === 15 && CACHE_BUS_VITEST_FILES.every((file) => files.includes(file));
+      })(),
+    },
+    {
+      label: "clean sequential owner selects reopen",
+      pass:
+        task540ModularityRepairAction({
+          leafId: "540-01-L01",
+          modularityPending: "pending",
+          repairPending: null,
+          resumeState: null,
+        }) === "reopen",
+    },
+    {
+      label: "interruption after reopen selects exact resume",
+      pass:
+        task540ModularityRepairAction({
+          leafId: "540-04-L03",
+          modularityPending: "pending",
+          repairPending: "generation exact / token exact",
+          resumeState: {
+            mode: "repair",
+            repair: { id: "540-04-L03", pending: "generation exact / token exact" },
+          },
+        }) === "resume",
+    },
+    {
+      label: "completed modularity owner selects skip",
+      pass:
+        task540ModularityRepairAction({
+          leafId: "540-05-L01",
+          modularityPending: null,
+          repairPending: null,
+          resumeState: null,
+        }) === "skip",
+    },
+    {
+      label: "closure metadata clean state needs no mutation",
+      pass:
+        pendingTask540ModularityFamilyStates([
+          {
+            source: "**Modularity Repair Revalidated:** " + MODULARITY_FAMILY_REVALIDATED_VALUE,
+            staleField: "Modularity Repair Started",
+          },
+        ]).length === 0,
+    },
+    {
+      label: "partial closure sync selects only the stale path",
+      pass:
+        pendingTask540ModularityFamilyStates([
+          {
+            source:
+              "**Modularity Repair Started:** old\n**Modularity Repair Revalidated:** " +
+              MODULARITY_FAMILY_REVALIDATED_VALUE,
+            staleField: "Modularity Repair Started",
+          },
+          {
+            source: "**Modularity Repair Revalidated:** " + MODULARITY_FAMILY_REVALIDATED_VALUE,
+            staleField: "Modularity Repair Pending",
+          },
+        ]).length === 1,
+    },
+    {
+      label: "closure Pending survives no exact Revalidated marker",
+      pass:
+        pendingTask540ModularityFamilyStates([
+          {
+            source:
+              "**Modularity Repair Pending:** old\n**Modularity Repair Revalidated:** " +
+              MODULARITY_FAMILY_REVALIDATED_VALUE,
+            staleField: "Modularity Repair Pending",
+          },
+        ]).length === 1,
+    },
+    {
+      label: "new split tests have exact tracked target authority",
+      pass: PLANNED_TASK_540_TEST_FILES.every(
+        (file) =>
+          TRACKED_TEST_FILES.includes(file) &&
+          [...TARGET_VITEST_FILES, ...TARGET_BUN_FILES].includes(file) &&
+          SOURCE_OWNER_TEST_FILES.includes(file)
+      ),
+    },
+    {
+      label: "modularity repair resumes never force no-op rewrites or fixture projections",
+      pass: MODULARITY_REPAIR_LEAF_IDS.every((leafId) => {
+        const owner = modularityRepairMutationOwner(LEAF_BY_ID.get(leafId));
+        return owner.requiredFiles.length === 0 && owner.fixtureOnlyFiles.length === 0;
+      }),
+    },
+    {
+      label: "modularity repair completeness rejects every missing planned path",
+      pass: MODULARITY_REPAIR_LEAF_IDS.every((leafId) => {
+        const leaf = LEAF_BY_ID.get(leafId);
+        const files = MODULARITY_REPAIR_ALLOWED_FILES[leafId];
+        const completeEvidence = files.map((path) => ({ path, owner: leafId }));
+        return (
+          modularityRepairCompletenessErrors(leaf, completeEvidence).length === 0 &&
+          modularityRepairCompletenessErrors(leaf, completeEvidence.slice(1)).some((error) =>
+            error.includes(files[0])
+          ) &&
+          modularityRepairCompletenessErrors(leaf, [
+            { ...completeEvidence[0], owner: "wrong-owner" },
+            ...completeEvidence.slice(1),
+          ]).some((error) => error.includes("wrong owner"))
+        );
+      }),
+    },
+    {
+      label: "modularity split prompts supersede only the two moved fixture seams",
+      pass:
+        leafRestrictionPrompt(LEAF_BY_ID.get("540-01-L01"), {
+          modularityRepair: true,
+        }).includes("complete cohesive Action Executor test-family split") &&
+        leafRestrictionPrompt(LEAF_BY_ID.get("540-05-L02"), {
+          modularityRepair: true,
+        }).includes("complete behavior-preserving Assistant Panel test/harness split") &&
+        leafRestrictionPrompt(LEAF_BY_ID.get("540-04-L04"), {
+          modularityRepair: true,
+        }).includes("Every other byte") &&
+        leafRestrictionPrompt(LEAF_BY_ID.get("540-01-L01")).includes(
+          "fixture-only compatibility seam"
+        ),
+    },
+    {
+      label: "full task-family baseline and split test multiset stay pinned",
+      pass:
+        TASK_540_PRE_FAMILY_BASELINE === "e5f15a5675b58df85e573f760df4429af735400f" &&
+        TASK_540_FIRST_FAMILY_COMMIT === "cf6a40334d76b98a9bef45e0a816429f836b142f" &&
+        Object.values(TEST_SPLIT_FAMILY_COUNTS).reduce((total, { tests }) => total + tests, 0) ===
+          347,
+    },
+  ];
+  let mismatchRejected = false;
+  try {
+    task540ModularityRepairAction({
+      leafId: "540-05-L02",
+      modularityPending: "pending",
+      repairPending: "generation exact / token exact",
+      resumeState: {
+        mode: "repair",
+        repair: { id: "540-05-L01", pending: "generation exact / token exact" },
+      },
+    });
+  } catch (error) {
+    mismatchRejected = error instanceof Error && error.message.includes("owner/token drifted");
+  }
+  cases.push({ label: "mismatched pending owner/token fails closed", pass: mismatchRejected });
+  for (const testCase of cases) {
+    if (!testCase.pass) {
+      throw new Error("TASK-540 modularity repair self-test failed: " + testCase.label);
+    }
+  }
+  return cases.length;
 }
 
 function isCanonicalIsoDate(value) {
@@ -7050,6 +9117,9 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
   if (!group) throw new Error("Missing status group for " + leaf.id);
   const closureReceiptsBefore = await captureClosureContractReceipts();
   const repairCompletion = transition === "complete" && Boolean(repairPending);
+  const modularityCompletion = repairCompletion && reason.includes("modularity-repair");
+  const modularityRevalidatedValue =
+    RUN_DATE + " — cohesive <=1,000-line split and exact owner gate passed.";
   const expectedLeafStatus = RESUME_TASK_STATUS.active;
   const siblingStates = await Promise.all(
     group.leafIds.map(async (leafId) => {
@@ -7067,6 +9137,7 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
           siblingState.status === RESUME_TASK_STATUS.done ||
           (siblingState.status === RESUME_TASK_STATUS.active &&
             !readTaskMetadataField(siblingState.source, "Repair Pending") &&
+            !readTaskMetadataField(siblingState.source, "Modularity Repair Pending") &&
             Boolean(targetedGate) !== Boolean(revalidation)),
       };
     })
@@ -7079,13 +9150,19 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
     transition === "start"
       ? [startMetadataField]
       : childImplementationComplete
-        ? ["Implementation Complete"]
+        ? [
+            "Implementation Complete",
+            ...(modularityCompletion
+              ? ["Modularity Repair Pending", "Modularity Repair Revalidated"]
+              : []),
+          ]
         : [];
   const leafGateMutableFields = [
     "Implementation Complete",
     "Targeted Gate Passed",
     "Revalidation Passed",
     "Repair Pending",
+    ...(modularityCompletion ? ["Modularity Repair Pending", "Modularity Repair Revalidated"] : []),
   ];
   const leafMutableFields = transition === "start" ? [startMetadataField] : leafGateMutableFields;
   const owner = Object.freeze({
@@ -7185,6 +9262,14 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
               preClosureGateValue +
               "` from the persisted matching child/leaf Fix Started date. A different date or value is invalid."
             : "") +
+        (modularityCompletion
+          ? " Remove the exact leaf's Modularity Repair Pending field and write exact `**Modularity Repair Revalidated:** " +
+            modularityRevalidatedValue +
+            "`. " +
+            (childImplementationComplete
+              ? "All direct-child leaves now have current gates, so remove the child's Modularity Repair Pending field and write the same exact Modularity Repair Revalidated value there."
+              : "Other direct-child modularity work remains, so preserve the child's Modularity Repair Pending field and do not add Modularity Repair Revalidated there.")
+          : "") +
         " Synchronize the child leaf-status table and root subtask-status " +
         "table. Keep TASK-540's board row/statistics byte-identical and In Progress. Preserve every " +
         "unrelated descendant status byte-identically. Use canonical " +
@@ -7289,6 +9374,20 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
         );
       }
       if (
+        modularityCompletion &&
+        (readTaskMetadataField(leafState.source, "Modularity Repair Pending") ||
+          readTaskMetadataField(leafState.source, "Modularity Repair Revalidated") !==
+            modularityRevalidatedValue ||
+          (childImplementationComplete
+            ? readTaskMetadataField(childState.source, "Modularity Repair Pending") ||
+              readTaskMetadataField(childState.source, "Modularity Repair Revalidated") !==
+                modularityRevalidatedValue
+            : !readTaskMetadataField(childState.source, "Modularity Repair Pending") ||
+              readTaskMetadataField(childState.source, "Modularity Repair Revalidated")))
+      ) {
+        throw new Error("TASK-540 modularity repair metadata did not close for " + leaf.id);
+      }
+      if (
         preClosureGateValue &&
         (readTaskMetadataField(leafState.source, "Repair Pending") ||
           readTaskMetadataField(leafState.source, "Targeted Gate Passed"))
@@ -7360,15 +9459,29 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
   }
 }
 
-async function runLeafGate(leaf, attempt, phaseName = leaf.phase) {
+async function runLeafGate(
+  leaf,
+  attempt,
+  phaseName = leaf.phase,
+  { requireModularityCompleteness = false } = {}
+) {
   void phaseName;
   const label = "gate:" + leaf.id + ":" + attempt;
+  await requireTask540TouchedModuleLineLimit(label + ":before-commands", leaf.allowedFiles);
   const execution = await runLocalCommandSequence(leaf.commands, { label });
+  const lineCounts = await requireTask540TouchedModuleLineLimit(
+    label + ":after-commands",
+    leaf.allowedFiles
+  );
+  const completenessErrors = requireModularityCompleteness
+    ? modularityRepairCompletenessErrors(leaf, lineCounts)
+    : [];
   const failed = execution.failedReceipt;
   const pass =
     failed === null &&
     execution.receipts.length === leaf.commands.length &&
-    execution.authority.unchanged;
+    execution.authority.unchanged &&
+    completenessErrors.length === 0;
   const result = Object.freeze({
     pass,
     summary: pass
@@ -7377,16 +9490,22 @@ async function runLeafGate(leaf, attempt, phaseName = leaf.phase) {
     errors: pass
       ? []
       : [
-          leaf.id +
-            ": orchestrator-local command failed: " +
-            (failed?.id ?? "repositoryFingerprint") +
-            " status=" +
-            (failed?.status ?? 1),
+          ...completenessErrors,
+          ...(failed === null
+            ? []
+            : [
+                leaf.id +
+                  ": orchestrator-local command failed: " +
+                  (failed?.id ?? "repositoryFingerprint") +
+                  " status=" +
+                  (failed?.status ?? 1),
+              ]),
         ],
-    failureKind: pass ? "none" : localFailureKind(failed),
-    failedCommand: pass ? null : failed.command,
+    failureKind: pass ? "none" : failed === null ? "behavior" : localFailureKind(failed),
+    failedCommand: pass ? null : (failed?.command ?? "modularityCompleteness"),
     commands: execution.receipts,
     isolationCommands: execution.isolationReceipts,
+    lineCounts,
     authority: execution.authority,
   });
   if (pass && result.commands.some((receipt) => receipt.status !== 0)) {
@@ -7490,7 +9609,13 @@ async function resumeInterruptedRepair(resumeState) {
   const repair = resumeState.repair;
   const leaf = repair ? LEAF_BY_ID.get(repair.id) : null;
   if (!repair || !leaf) throw new Error("TASK-540 repair resume owner is missing");
-  const repairOwner = effectiveRepairMutationOwner(leaf);
+  const persistedLeafState = await readCanonicalTaskStatus(LEAF_STATUS_GROUPS[leaf.id].leafPath);
+  const modularityRepair = Boolean(
+    readTaskMetadataField(persistedLeafState.source, "Modularity Repair Pending")
+  );
+  const repairOwner = modularityRepair
+    ? modularityRepairMutationOwner(leaf)
+    : effectiveRepairMutationOwner(leaf);
   const repairInvariant = await capturePersistedRepairInvariant(leaf, repair.pending);
   phase(leaf.phase);
   await runRepairMutationWithInvariant(
@@ -7500,20 +9625,26 @@ async function resumeInterruptedRepair(resumeState) {
       " with exact `Repair Pending` receipt " +
       repair.pending +
       ". Re-read the entire exact leaf contract, current owned source/tests/docs and full diff, " +
-      "then complete every still-missing behavior in that owner's contract. Old gate receipts " +
+      "then complete every still-missing behavior in that owner's contract." +
+      (modularityRepair
+        ? " This is the mandatory cohesive <=1,000-line modularity repair; preserve public contracts, test cardinality, and independently runnable lanes exactly."
+        : "") +
+      " Old gate receipts " +
       "were invalidated and may not be recreated here. Edit only " +
       JSON.stringify(repairOwner.allowedFiles) +
-      leafRestrictionPrompt(leaf) +
+      leafRestrictionPrompt(leaf, { modularityRepair }) +
       ". Preserve every later Done leaf byte-identically. Return exact touchedFiles; no task, " +
       "board, changelog, workflow, stage, or commit changes.",
     { label: "repair-resume:" + leaf.id, phase: leaf.phase },
     repairOwner,
     leaf,
     repairInvariant,
-    false
+    modularityRepair
   );
 
-  let gate = await runLeafGate(leaf, 1, leaf.phase);
+  let gate = await runLeafGate(leaf, 1, leaf.phase, {
+    requireModularityCompleteness: modularityRepair,
+  });
   for (let attempt = 1; !gate.pass && attempt <= 3; attempt += 1) {
     if (gate.failureKind === "infrastructure") {
       throw new Error(leaf.id + ": repair-resume infrastructure failure");
@@ -7522,7 +9653,7 @@ async function resumeInterruptedRepair(resumeState) {
       COMMON +
         "\n\nFix only the persisted repair owner's verified gate defect within " +
         JSON.stringify(repairOwner.allowedFiles) +
-        leafRestrictionPrompt(leaf) +
+        leafRestrictionPrompt(leaf, { modularityRepair }) +
         ". Do not weaken an assertion. Failures:\n- " +
         gateFailurePrompt(gate),
       { label: "repair-resume-fix:" + leaf.id + ":" + attempt, phase: leaf.phase },
@@ -7531,10 +9662,145 @@ async function resumeInterruptedRepair(resumeState) {
       repairInvariant,
       false
     );
-    gate = await runLeafGate(leaf, attempt + 1, leaf.phase);
+    gate = await runLeafGate(leaf, attempt + 1, leaf.phase, {
+      requireModularityCompleteness: modularityRepair,
+    });
   }
   if (!gate.pass) throw new Error(leaf.id + ": interrupted repair re-gate remained red");
-  await transitionLeafStatus(leaf, "complete", "repair-resume-regate-green", repair.pending);
+  await transitionLeafStatus(
+    leaf,
+    "complete",
+    modularityRepair ? "modularity-repair-resume-regate-green" : "repair-resume-regate-green",
+    repair.pending
+  );
+}
+
+function task540ModularityRepairAction({ leafId, modularityPending, repairPending, resumeState }) {
+  if (!modularityPending) return "skip";
+  if (!repairPending) return "reopen";
+  if (
+    resumeState?.mode !== "repair" ||
+    resumeState.repair?.id !== leafId ||
+    resumeState.repair?.pending !== repairPending
+  ) {
+    throw new Error("TASK-540 modularity repair pending owner/token drifted: " + leafId);
+  }
+  return "resume";
+}
+
+async function pendingTask540ModularityRepairLeafIds() {
+  const pending = [];
+  for (const leafId of MODULARITY_REPAIR_LEAF_IDS) {
+    const group = LEAF_STATUS_GROUPS[leafId];
+    const { source } = await readCanonicalTaskStatus(group.leafPath);
+    if (readTaskMetadataField(source, "Modularity Repair Pending")) pending.push(leafId);
+  }
+  return Object.freeze(pending);
+}
+
+async function runTask540ModularityStartGate() {
+  const pendingLeafIds = await pendingTask540ModularityRepairLeafIds();
+  if (pendingLeafIds.length === 0) return;
+  const result = await runReadOnlyAgent(
+    "Read-only TASK-540 modularity-repair start gate at " +
+      ROOT +
+      ". Current pending owners in exact dependency order: " +
+      JSON.stringify(pendingLeafIds) +
+      ". Read root AGENTS.md, all " +
+      PENDING_MODULARITY_REPAIR_TASK_FILES.length +
+      " affected leaf contracts and every direct parent, TASK-540 root and closure contracts, " +
+      "TASK-9999-01/L01/L02, the complete current source/tests, workflow, HEAD, status, " +
+      "staged/unstaged diff, and target matrix fresh. Verify exact single-writer paths, public " +
+      "facades, dependency directions, test no-loss/cardinality, line-count enforcement, restart " +
+      "authority, security/cleanup invariants, and 540-01-L01 -> 540-02-L01 -> 540-03-L01 -> " +
+      "540-04-L01 -> 540-04-L03 -> 540-04-L04 -> 540-05-L01 -> 540-05-L02 order. Pass only when " +
+      "the contracts are implementation-ready with no HIGH/MEDIUM contradiction. Do not edit, " +
+      "stage, commit, or run a mutating command.",
+    { label: "start-gate:task-540-modularity", phase: "Start gate", schema: RESULT_SCHEMA }
+  );
+  if (!resultPassed(result)) {
+    throw new Error("TASK-540 modularity start gate failed: " + result.errors.join("; "));
+  }
+}
+
+async function runPendingTask540ModularityRepairs() {
+  if (
+    MODULARITY_REPAIR_LEAF_IDS.length !== PENDING_MODULARITY_REPAIR_TASK_FILES.length ||
+    new Set(MODULARITY_REPAIR_LEAF_IDS).size !== MODULARITY_REPAIR_LEAF_IDS.length
+  ) {
+    throw new Error("TASK-540 modularity repair order is invalid");
+  }
+  const pendingLeafIds = await pendingTask540ModularityRepairLeafIds();
+  if (pendingLeafIds.length > 0) {
+    const initialResumeState = await resolveLeafResumeState();
+    if (initialResumeState.mode === "repair") {
+      await resumeInterruptedRepair(initialResumeState);
+    }
+  }
+  for (let index = 0; index < MODULARITY_REPAIR_LEAF_IDS.length; index += 1) {
+    const leafId = MODULARITY_REPAIR_LEAF_IDS[index];
+    const leaf = LEAF_BY_ID.get(leafId);
+    const expectedTaskFile = PENDING_MODULARITY_REPAIR_TASK_FILES[index];
+    if (!leaf || leaf.taskFile !== expectedTaskFile) {
+      throw new Error("TASK-540 modularity repair owner mapping drifted: " + leafId);
+    }
+    const leafState = await readCanonicalTaskStatus(LEAF_STATUS_GROUPS[leafId].leafPath);
+    const modularityPending = readTaskMetadataField(leafState.source, "Modularity Repair Pending");
+    const persistedRepairPending = readTaskMetadataField(leafState.source, "Repair Pending");
+    const persistedResumeState = persistedRepairPending ? await resolveLeafResumeState() : null;
+    const action = task540ModularityRepairAction({
+      leafId,
+      modularityPending,
+      repairPending: persistedRepairPending,
+      resumeState: persistedResumeState,
+    });
+    if (action === "skip") continue;
+    if (action === "resume") {
+      await resumeInterruptedRepair(persistedResumeState);
+      continue;
+    }
+    await reopenLeafForRepair(leaf, "mandatory <=1,000-line modularity repair", leaf.phase);
+    const resumeState = await resolveLeafResumeState();
+    if (resumeState.mode !== "repair" || resumeState.repair?.id !== leafId) {
+      throw new Error("TASK-540 modularity repair did not establish exact resume state: " + leafId);
+    }
+    await resumeInterruptedRepair(resumeState);
+  }
+  await requireNoPendingTask540ModularityRepairs("TASK-540 modularity repair phase");
+  await synchronizeTask540ModularityFamilyMetadata();
+  await requireTask540ModularityFamilyMetadata("TASK-540 modularity repair phase");
+}
+
+function requireTask540LineCountEvidence(lineCounts, label) {
+  if (
+    !Array.isArray(lineCounts) ||
+    lineCounts.length === 0 ||
+    new Set(lineCounts.map(({ path }) => path)).size !== lineCounts.length ||
+    lineCounts.some(
+      ({ path, lines, owner, sha256 }) =>
+        typeof path !== "string" ||
+        !isLineLimitedHumanAuthoredModule(path) ||
+        !Number.isInteger(lines) ||
+        lines < 0 ||
+        lines > HUMAN_AUTHORED_MODULE_LINE_LIMIT ||
+        !LEAF_ORDER.includes(owner) ||
+        typeof sha256 !== "string" ||
+        !/^[0-9a-f]{64}$/u.test(sha256)
+    ) ||
+    lineCounts.map(({ path }) => path).join("\n") !==
+      [...lineCounts.map(({ path }) => path)].sort().join("\n")
+  ) {
+    throw new Error(label + ": physical-line evidence is invalid");
+  }
+  const requiredPaths = [
+    ...new Set(
+      Object.values(MODULARITY_REPAIR_ALLOWED_FILES).flat().filter(isLineLimitedHumanAuthoredModule)
+    ),
+  ];
+  if (requiredPaths.some((path) => !lineCounts.some((entry) => entry.path === path))) {
+    throw new Error(label + ": physical-line evidence omits a modularity owner path");
+  }
+  return lineCounts;
 }
 
 function requireFullValidation(result, label) {
@@ -7556,6 +9822,7 @@ function requireFullValidation(result, label) {
   ) {
     throw new Error(label + ": full command receipt mismatch");
   }
+  requireTask540LineCountEvidence(result.lineCounts, label);
   const findings = result.strictScan.externalFindings;
   const finding = findings[0];
   if (
@@ -7579,10 +9846,14 @@ function requireFullValidation(result, label) {
 
 async function runFullValidation(label, phaseName) {
   void phaseName;
+  await requireNoPendingTask540ModularityRepairs(label + ":modularity-repairs");
+  await requireTask540ModularityFamilyMetadata(label + ":modularity-family-metadata");
+  await requireTask540TouchedModuleLineLimit(label + ":before-commands");
   const execution = await runLocalCommandSequence(FULL_GATE_COMMANDS, {
     label,
     allowStrictScan: true,
   });
+  const lineCounts = await requireTask540TouchedModuleLineLimit(label + ":after-commands");
   const dbReceipt = execution.receipts.find(({ id }) => id === "dbPreflight");
   const database = dbReceipt
     ? parseDatabasePreflightReceipt(dbReceipt, label + ":dbPreflight")
@@ -7605,6 +9876,7 @@ async function runFullValidation(label, phaseName) {
         ],
     commands: execution.receipts,
     isolationCommands: execution.isolationReceipts,
+    lineCounts,
     database,
     strictScan:
       execution.strictScan ??
@@ -8004,7 +10276,9 @@ async function reopenLeafForRepair(leaf, label, phaseName) {
         "entire board byte-identically, including statistics. Preserve every root metadata field " +
         "byte-identically. On only the exact child and leaf add/update a dedicated Fix Started field dated " +
         RUN_DATE +
-        ". On the exact leaf write `**Repair Pending:** " +
+        ". `Fix Started` is a separate field: preserve every existing `Repair Started`, " +
+        "`Repair Reason`, `Repair Revalidated`, and `Reopened` field byte-identically. " +
+        "On the exact leaf write `**Repair Pending:** " +
         repairPending +
         "`; remove its Completed, Targeted Gate Passed, and Revalidation Passed fields so no old " +
         "gate can satisfy this repair. Remove Implementation Complete from the active leaf and remove " +
@@ -8312,9 +10586,9 @@ function parseDeferredLowEvidenceAnchors(value) {
   return Object.freeze(anchors);
 }
 
-async function requireDeferredLowAnchorLines(label) {
+async function requireDeferredLowAnchorLines(label, followUps) {
   const sources = new Map();
-  for (const spec of Object.values(DEFERRED_LOW_FOLLOW_UPS)) {
+  for (const spec of Object.values(followUps)) {
     if (
       spec.evidenceAnchors.length === 0 ||
       spec.evidenceAnchors.length !== spec.anchorLineIncludes.length ||
@@ -8328,9 +10602,37 @@ async function requireDeferredLowAnchorLines(label) {
       const relativePath = anchor.slice(0, separator);
       const lineNumber = Number(anchor.slice(separator + 1));
       if (!sources.has(relativePath)) {
-        sources.set(relativePath, await readFile(ROOT + "/" + relativePath, "utf8"));
+        try {
+          sources.set(relativePath, await readFile(ROOT + "/" + relativePath, "utf8"));
+        } catch (error) {
+          const transition = spec.preImplementationAnchor;
+          if (
+            error?.code !== "ENOENT" ||
+            !transition ||
+            anchor !== spec.evidenceAnchors[0] ||
+            relativePath !== "core/services/customScreens/screenMediaIdentity.ts"
+          ) {
+            throw error;
+          }
+          const pendingSource = await readFile(ROOT + "/" + transition.pendingTaskPath, "utf8");
+          if (!readTaskMetadataField(pendingSource, "Modularity Repair Pending")) {
+            throw new Error(label + ": post-split deferred LOW owner is missing: " + anchor);
+          }
+          const transitionSeparator = transition.anchor.lastIndexOf(":");
+          const transitionPath = transition.anchor.slice(0, transitionSeparator);
+          const transitionLine = Number(transition.anchor.slice(transitionSeparator + 1));
+          const transitionSource = await readFile(ROOT + "/" + transitionPath, "utf8");
+          if (
+            !transitionSource.split("\n")[transitionLine - 1]?.includes(transition.lineIncludes)
+          ) {
+            throw new Error(label + ": pre-implementation deferred LOW transition anchor drifted");
+          }
+          sources.set(relativePath, null);
+        }
       }
-      const line = sources.get(relativePath).split("\n")[lineNumber - 1];
+      const source = sources.get(relativePath);
+      if (source === null) continue;
+      const line = source.split("\n")[lineNumber - 1];
       if (typeof line !== "string" || !line.includes(spec.anchorLineIncludes[index])) {
         throw new Error(label + ": deferred LOW approved source anchor drifted: " + anchor);
       }
@@ -8338,7 +10640,12 @@ async function requireDeferredLowAnchorLines(label) {
   }
 }
 
-function requireDeferredLowSourceLinkLanguage(sourceLinks, label) {
+function requireDeferredLowSourceLinkLanguage(
+  sourceLinks,
+  label,
+  followUps,
+  { requireFinalEvidence = false } = {}
+) {
   if (
     !Array.isArray(sourceLinks) ||
     sourceLinks.length !== DEFERRED_LOW_SOURCE_LINK_PATHS.length ||
@@ -8353,12 +10660,23 @@ function requireDeferredLowSourceLinkLanguage(sourceLinks, label) {
     if (typeof source !== "string") {
       throw new Error(label + ": TASK-540 deferred LOW source contract is invalid");
     }
-    for (const spec of Object.values(DEFERRED_LOW_FOLLOW_UPS)) {
+    for (const [area, spec] of Object.entries(followUps)) {
+      const commonLanguageIsExact =
+        source.includes(spec.followUpTask) &&
+        source.includes(spec.taskPath) &&
+        source.split(spec.approvedRationaleLanguage).length - 1 === 1;
+      const evidenceIsExact = source.split(spec.approvedEvidenceLanguage).length - 1 === 1;
+      const conditionalEvidenceIsExact =
+        area === DEFERRED_LOW_DRAFT_AREA &&
+        spec.conditionalEvidenceTokens.every((token) => source.includes(token));
+      const staleConditionalEvidenceRemains =
+        area === DEFERRED_LOW_DRAFT_AREA &&
+        spec.conditionalEvidenceTokens.slice(0, 2).some((token) => source.includes(token));
       if (
-        !source.includes(spec.followUpTask) ||
-        !source.includes(spec.taskPath) ||
-        source.split(spec.approvedEvidenceLanguage).length - 1 !== 1 ||
-        source.split(spec.approvedRationaleLanguage).length - 1 !== 1
+        !commonLanguageIsExact ||
+        (requireFinalEvidence
+          ? spec.evidenceState !== "post" || !evidenceIsExact || staleConditionalEvidenceRemains
+          : !evidenceIsExact && !conditionalEvidenceIsExact)
       ) {
         throw new Error(
           label + ": TASK-540 deferred LOW evidence/rationale drifted in " + relativePath
@@ -8368,14 +10686,14 @@ function requireDeferredLowSourceLinkLanguage(sourceLinks, label) {
   }
 }
 
-function deferredLowAuditPrompt() {
+function deferredLowAuditPrompt(followUps) {
   return (
     " The only findings eligible for non-blocking deferral are the two already-authored " +
     "TASK-9999 leaves below. Report either one only when the current evidence still proves " +
     "the exact behavior-neutral finding, using the fixed severity/area/finding/" +
     "recommendation literally and one exact owner from ownerOneOf: " +
     JSON.stringify(
-      Object.entries(DEFERRED_LOW_FOLLOW_UPS).map(([area, spec]) => ({
+      Object.entries(followUps).map(([area, spec]) => ({
         severity: "low",
         ownerOneOf: spec.allowedOwners,
         area,
@@ -8390,14 +10708,14 @@ function deferredLowAuditPrompt() {
   );
 }
 
-function partitionDeferredLowFindings(findings) {
+function partitionDeferredLowFindings(findings, followUps) {
   if (!Array.isArray(findings)) {
     throw new Error("TASK-540 deferred LOW finding projection is invalid");
   }
   const blockingFindings = [];
   const deferredFindings = [];
   for (const finding of findings) {
-    const spec = DEFERRED_LOW_FOLLOW_UPS[finding?.area];
+    const spec = followUps[finding?.area];
     const evidenceAnchors = parseDeferredLowEvidenceAnchors(finding?.evidence);
     const accepted =
       spec !== undefined &&
@@ -8412,10 +10730,14 @@ function partitionDeferredLowFindings(findings) {
   return deepFreezeExact({ blockingFindings, deferredFindings });
 }
 
-async function requireDeferredLowFollowUpContracts(label) {
+async function requireDeferredLowFollowUpContracts(
+  label,
+  { followUps = null, requireFinalEvidence = false } = {}
+) {
   if (typeof label !== "string" || label.length === 0) {
     throw new Error("TASK-540 deferred LOW contract check input is invalid");
   }
+  const resolvedFollowUps = followUps ?? (await resolveDeferredLowFollowUps(label));
   const [sourceLinks, parent, child, board] = await Promise.all([
     Promise.all(
       DEFERRED_LOW_SOURCE_LINK_PATHS.map(async (relativePath) => ({
@@ -8430,12 +10752,14 @@ async function requireDeferredLowFollowUpContracts(label) {
     readFile(ROOT + "/_docs/_TASKS/TASK-9999-01-Task-540-Deferred-Non-User-Facing-Lows.md", "utf8"),
     readFile(TASKS + "/README.md", "utf8"),
   ]);
-  await requireDeferredLowAnchorLines(label);
+  await requireDeferredLowAnchorLines(label, resolvedFollowUps);
   const inProgressSection = board.slice(board.indexOf("## In Progress"), board.indexOf("## Done"));
   const inProgressTaskRows = [...inProgressSection.matchAll(/^\| TASK-[^\n]+$/gm)].map(
     (match) => match[0]
   );
-  requireDeferredLowSourceLinkLanguage(sourceLinks, label);
+  requireDeferredLowSourceLinkLanguage(sourceLinks, label, resolvedFollowUps, {
+    requireFinalEvidence,
+  });
   if (
     !parent.includes("**Status:** 🚧 In Progress") ||
     !child.includes("**Status:** ⏳ To Do") ||
@@ -8446,7 +10770,7 @@ async function requireDeferredLowFollowUpContracts(label) {
       label + ": TASK-9999 parent/child or permanent final board-row contract drifted"
     );
   }
-  for (const spec of Object.values(DEFERRED_LOW_FOLLOW_UPS)) {
+  for (const spec of Object.values(resolvedFollowUps)) {
     const leaf = await readFile(ROOT + "/" + spec.taskPath, "utf8");
     if (
       !leaf.includes("**Parent Task:** TASK-9999") ||
@@ -8458,6 +10782,132 @@ async function requireDeferredLowFollowUpContracts(label) {
       throw new Error(label + ": deferred LOW follow-up contract or TASK-540 backlink drifted");
     }
   }
+}
+
+function finalizedDeferredLowSource(source, finalEvidenceLanguage, label) {
+  const finalCount = source.split(finalEvidenceLanguage).length - 1;
+  if (finalCount === 1) return source;
+  if (finalCount !== 0) {
+    throw new Error(label + ": final deferred LOW evidence is duplicated");
+  }
+  const startMarkers = [
+    "  Before TASK-540-02-L01's Inspector split, the conditional evidence is\n",
+    "  Conditional pre-split evidence is\n",
+  ];
+  const matches = startMarkers
+    .map((marker) => ({ marker, index: source.indexOf(marker) }))
+    .filter(({ index }) => index >= 0);
+  if (matches.length !== 1) {
+    throw new Error(label + ": conditional deferred LOW evidence block is not unique");
+  }
+  const rationale =
+    "  " + DEFERRED_LOW_FOLLOW_UPS[DEFERRED_LOW_DRAFT_AREA].approvedRationaleLanguage;
+  const rationaleIndex = source.indexOf(rationale, matches[0].index + matches[0].marker.length);
+  if (rationaleIndex < 0) {
+    throw new Error(label + ": deferred LOW rationale boundary is missing");
+  }
+  return (
+    source.slice(0, matches[0].index) +
+    "  " +
+    finalEvidenceLanguage +
+    "\n" +
+    source.slice(rationaleIndex)
+  );
+}
+
+async function finalizeDeferredLowSourceEvidence(label) {
+  const followUps = await resolveDeferredLowFollowUps(label + " resolve");
+  const draftSpec = followUps[DEFERRED_LOW_DRAFT_AREA];
+  if (draftSpec.evidenceState !== "post") {
+    throw new Error(label + ": deferred LOW source evidence cannot finalize before the split");
+  }
+  const beforeEntries = await Promise.all(
+    DEFERRED_LOW_SOURCE_LINK_PATHS.map(async (relativePath) => {
+      const source = await readFile(ROOT + "/" + relativePath, "utf8");
+      return Object.freeze({
+        relativePath,
+        source,
+        expected: finalizedDeferredLowSource(
+          source,
+          draftSpec.approvedEvidenceLanguage,
+          label + ":" + relativePath
+        ),
+      });
+    })
+  );
+  const pending = beforeEntries.filter(({ source, expected }) => source !== expected);
+  if (pending.length === 0) {
+    await requireDeferredLowFollowUpContracts(label + " already finalized", {
+      followUps,
+      requireFinalEvidence: true,
+    });
+    return followUps;
+  }
+  const owner = Object.freeze({
+    id: "540-06-L01-deferred-low-evidence",
+    allowedFiles: DEFERRED_LOW_SOURCE_LINK_PATHS,
+    requiredFiles: Object.freeze(pending.map(({ relativePath }) => relativePath)),
+  });
+  const rollbackOwner = Object.freeze({
+    ...owner,
+    id: owner.id + "-rollback",
+    requiredFiles: Object.freeze([]),
+  });
+  const snapshot = await captureExactRollbackFiles(owner.allowedFiles, label + " pre-finalization");
+  let mutationError = null;
+  try {
+    await runMutatingAgent(
+      "Repository " +
+        ROOT +
+        ". Finalize only TASK-540's two source backlinks for TASK-9999-01-L02 after the " +
+        "validated Inspector split. Edit only " +
+        JSON.stringify(owner.allowedFiles) +
+        ". In each still-conditional file replace only its conditional pre/post evidence " +
+        "paragraph with this exact single line (including punctuation): `" +
+        draftSpec.approvedEvidenceLanguage +
+        "`. Preserve every other byte, including the rationale, statuses, metadata, tables, " +
+        "and TASK-9999 references. Never edit TASK-9999 itself, source, tests, board, changelog, " +
+        "workflow, stage, or commit. Return exact touchedFiles.",
+      { label: "deferred-low-finalize:540:" + label, phase: "Closure" },
+      owner
+    );
+  } catch (error) {
+    mutationError = error;
+  }
+  let verificationError = null;
+  try {
+    for (const entry of beforeEntries) {
+      const after = await readFile(ROOT + "/" + entry.relativePath, "utf8");
+      if (after !== entry.expected) {
+        throw new Error(label + ": deferred LOW finalization changed unrelated bytes");
+      }
+    }
+    await requireDeferredLowFollowUpContracts(label + " finalized", {
+      followUps,
+      requireFinalEvidence: true,
+    });
+  } catch (error) {
+    verificationError = error;
+  }
+  if (mutationError || verificationError) {
+    const primaryError =
+      mutationError && verificationError
+        ? new AggregateError(
+            [mutationError, verificationError],
+            label + ": deferred LOW mutation and verification failed"
+          )
+        : (mutationError ?? verificationError);
+    try {
+      await restoreExactRollbackFiles(snapshot, rollbackOwner, label + " rollback");
+    } catch (rollbackError) {
+      throw new AggregateError(
+        [primaryError, rollbackError],
+        label + ": deferred LOW failure and rollback failed"
+      );
+    }
+    throw primaryError;
+  }
+  return followUps;
 }
 
 function auditFindingsDiagnosticError(findings, message) {
@@ -8579,6 +11029,9 @@ async function runSequentialAuditLenses(lenses, runLens) {
 async function runPostAudit() {
   phase("Post-audit");
   for (let round = 1; round <= 2; round += 1) {
+    const deferredLowFollowUps = await resolveDeferredLowFollowUps(
+      "TASK-540 post-audit round " + round
+    );
     const results = await runSequentialAuditLenses(
       POST_AUDIT_LENSES,
       async (id, lens) =>
@@ -8594,7 +11047,7 @@ async function runPostAudit() {
             "the exact sole owner leaf; use owner=orchestrator only for immutable task/workflow " +
             "drift. This pre-smoke pass checks source/tests/docs and smoke feasibility only and " +
             "must not claim runtime receipts, screenshots, or browser evidence. No edits." +
-            deferredLowAuditPrompt(),
+            deferredLowAuditPrompt(deferredLowFollowUps),
           {
             label: "post-audit:" + id + ":" + round,
             phase: "Post-audit",
@@ -8608,8 +11061,10 @@ async function runPostAudit() {
       "TASK-540 post-audit round " + round
     );
     const findings = projectSequentialAuditFindings(results, "TASK-540 post-audit round " + round);
-    const partition = partitionDeferredLowFindings(findings);
-    await requireDeferredLowFollowUpContracts("TASK-540 post-audit round " + round);
+    const partition = partitionDeferredLowFindings(findings, deferredLowFollowUps);
+    await requireDeferredLowFollowUpContracts("TASK-540 post-audit round " + round, {
+      followUps: deferredLowFollowUps,
+    });
     const decision = decidePostAuditRound(partition.blockingFindings, round);
     if (decision.action === "clean") return;
     if (decision.action === "stop") throw decision.error;
@@ -8858,7 +11313,94 @@ function assertTask540AuditInterventionContract() {
 }
 
 async function assertTask540DeferredLowContract() {
-  const [actorSpec, draftSpec] = Object.values(DEFERRED_LOW_FOLLOW_UPS);
+  const deferredLowFollowUps = await resolveDeferredLowFollowUps("TASK-540 deferred LOW self-test");
+  const [actorSpec, draftSpec] = Object.values(deferredLowFollowUps);
+  const activeDraftPath =
+    draftSpec.evidenceState === "post"
+      ? draftSpec.anchorTransition.postPath
+      : draftSpec.anchorTransition.facadePath;
+  const activeDraftSource = await readFile(ROOT + "/" + activeDraftPath, "utf8");
+  const activeDraftAnalysis = analyzeDeferredLowDraftContract(
+    activeDraftSource,
+    activeDraftPath,
+    draftSpec.anchorTransition,
+    "TASK-540 deferred LOW active-layout self-test"
+  );
+  const rejectedDraftMutations = [
+    activeDraftSource.replace("value={draft.value}", "value={draft.baseLabel || draft.value}"),
+    activeDraftSource.replace("value={draft.value}", 'value={draft["baseLabel"] || draft.value}'),
+    activeDraftSource.replace(
+      "  };\n\n  return (\n    <Input",
+      "  };\n\n  void draft;\n\n  return (\n    <Input"
+    ),
+    activeDraftSource.replace("baseLabel: tab.label", "baseLabel: draft.value"),
+    activeDraftSource +
+      "\ntype ScreenTabLabelDraft = never;\nfunction TabLabelInput() { return null; }\n",
+  ];
+  let rejectedDraftMutationCount = 0;
+  for (const [index, mutatedSource] of rejectedDraftMutations.entries()) {
+    if (mutatedSource === activeDraftSource) {
+      throw new Error("TASK-540 deferred LOW mutation fixture did not mutate: " + index);
+    }
+    try {
+      analyzeDeferredLowDraftContract(
+        mutatedSource,
+        activeDraftPath,
+        draftSpec.anchorTransition,
+        "TASK-540 deferred LOW mutation self-test " + index
+      );
+    } catch {
+      rejectedDraftMutationCount += 1;
+    }
+  }
+  const commentOnlyDraftAnalysis = analyzeDeferredLowDraftContract(
+    "// ScreenTabLabelDraft TabLabelInput baseLabel draft.baseLabel\n" + activeDraftSource,
+    activeDraftPath,
+    draftSpec.anchorTransition,
+    "TASK-540 deferred LOW comment self-test"
+  );
+  requireDeferredLowDraftContractAbsent(
+    "// ScreenTabLabelDraft TabLabelInput baseLabel\nexport { TabsEditor } from './tabs';\n",
+    draftSpec.anchorTransition.facadePath,
+    draftSpec.anchorTransition,
+    "TASK-540 deferred LOW facade-comment self-test"
+  );
+  let facadeSymbolRejected = false;
+  try {
+    requireDeferredLowDraftContractAbsent(
+      "const baseLabel = '';\n",
+      draftSpec.anchorTransition.facadePath,
+      draftSpec.anchorTransition,
+      "TASK-540 deferred LOW facade-symbol self-test"
+    );
+  } catch {
+    facadeSymbolRejected = true;
+  }
+  const conditionalEvidenceFixture = [
+    "fixture prefix",
+    "  Conditional pre-split evidence is",
+    "  fixture transition",
+    "  " + DEFERRED_LOW_FOLLOW_UPS[DEFERRED_LOW_DRAFT_AREA].approvedRationaleLanguage,
+    "fixture suffix",
+  ].join("\n");
+  const finalizedEvidenceFixture = finalizedDeferredLowSource(
+    conditionalEvidenceFixture,
+    draftSpec.approvedEvidenceLanguage,
+    "TASK-540 deferred LOW finalization self-test"
+  );
+  let mutatedFinalAstHashRejected = false;
+  try {
+    finalizedDeferredLowSource(
+      finalizedEvidenceFixture.replace(
+        draftSpec.anchorTransition.draftContractSha256,
+        "0".repeat(64)
+      ),
+      draftSpec.approvedEvidenceLanguage,
+      "TASK-540 deferred LOW final AST mutation self-test"
+    );
+  } catch {
+    mutatedFinalAstHashRejected = true;
+  }
   const findingFor = (area, spec, overrides = {}) =>
     Object.freeze({
       lensId: "fixture-lens",
@@ -8872,8 +11414,10 @@ async function assertTask540DeferredLowContract() {
     });
   const actorFinding = findingFor("deferred-low:actor-media-uuid-domain-naming", actorSpec);
   const draftFinding = findingFor("deferred-low:unread-screen-tab-label-draft-state", draftSpec);
-  const accepted = partitionDeferredLowFindings([actorFinding, draftFinding]);
-  await requireDeferredLowFollowUpContracts("TASK-540 deferred LOW self-test");
+  const accepted = partitionDeferredLowFindings([actorFinding, draftFinding], deferredLowFollowUps);
+  await requireDeferredLowFollowUpContracts("TASK-540 deferred LOW self-test", {
+    followUps: deferredLowFollowUps,
+  });
   const sourceLinks = await Promise.all(
     DEFERRED_LOW_SOURCE_LINK_PATHS.map(async (relativePath) => ({
       relativePath,
@@ -8891,48 +11435,69 @@ async function assertTask540DeferredLowContract() {
             })
           : entry
       ),
-      "TASK-540 missing-rationale self-test"
+      "TASK-540 missing-rationale self-test",
+      deferredLowFollowUps
     );
   } catch {
     missingRationaleRejected = true;
   }
-  const high = partitionDeferredLowFindings([
-    findingFor("deferred-low:actor-media-uuid-domain-naming", actorSpec, {
-      severity: "high",
-    }),
-  ]);
-  const wrongTask = partitionDeferredLowFindings([
-    findingFor("deferred-low:actor-media-uuid-domain-naming", actorSpec, {
-      recommendation: "TASK-9999-01-L02",
-    }),
-  ]);
-  const missingLine = partitionDeferredLowFindings([
-    findingFor("deferred-low:unread-screen-tab-label-draft-state", draftSpec, {
-      evidence: draftSpec.evidenceAnchors
-        .map((anchor, index) => (index === 0 ? anchor.replace(/:[0-9]+$/u, "") : anchor))
-        .join("; "),
-    }),
-  ]);
-  const missingPath = partitionDeferredLowFindings([
-    findingFor("deferred-low:unread-screen-tab-label-draft-state", draftSpec, {
-      evidence: draftSpec.evidenceAnchors
-        .map((anchor, index) => (index === 0 ? anchor.slice(anchor.lastIndexOf(":") + 1) : anchor))
-        .join("; "),
-    }),
-  ]);
-  const fabricatedSubstrings = partitionDeferredLowFindings([
-    findingFor("deferred-low:actor-media-uuid-domain-naming", actorSpec, {
-      evidence: actorSpec.evidenceAnchors.map((anchor) => anchor + "-fabricated").join("; "),
-    }),
-  ]);
-  const excludedImpact = partitionDeferredLowFindings([
-    Object.freeze({
-      ...draftFinding,
-      area: "accessibility",
-      finding: "An empty tablist has no accessible tab.",
-      evidence: "ScreenRuntimeRenderer.tsx:1",
-    }),
-  ]);
+  const high = partitionDeferredLowFindings(
+    [
+      findingFor("deferred-low:actor-media-uuid-domain-naming", actorSpec, {
+        severity: "high",
+      }),
+    ],
+    deferredLowFollowUps
+  );
+  const wrongTask = partitionDeferredLowFindings(
+    [
+      findingFor("deferred-low:actor-media-uuid-domain-naming", actorSpec, {
+        recommendation: "TASK-9999-01-L02",
+      }),
+    ],
+    deferredLowFollowUps
+  );
+  const missingLine = partitionDeferredLowFindings(
+    [
+      findingFor("deferred-low:unread-screen-tab-label-draft-state", draftSpec, {
+        evidence: draftSpec.evidenceAnchors
+          .map((anchor, index) => (index === 0 ? anchor.replace(/:[0-9]+$/u, "") : anchor))
+          .join("; "),
+      }),
+    ],
+    deferredLowFollowUps
+  );
+  const missingPath = partitionDeferredLowFindings(
+    [
+      findingFor("deferred-low:unread-screen-tab-label-draft-state", draftSpec, {
+        evidence: draftSpec.evidenceAnchors
+          .map((anchor, index) =>
+            index === 0 ? anchor.slice(anchor.lastIndexOf(":") + 1) : anchor
+          )
+          .join("; "),
+      }),
+    ],
+    deferredLowFollowUps
+  );
+  const fabricatedSubstrings = partitionDeferredLowFindings(
+    [
+      findingFor("deferred-low:actor-media-uuid-domain-naming", actorSpec, {
+        evidence: actorSpec.evidenceAnchors.map((anchor) => anchor + "-fabricated").join("; "),
+      }),
+    ],
+    deferredLowFollowUps
+  );
+  const excludedImpact = partitionDeferredLowFindings(
+    [
+      Object.freeze({
+        ...draftFinding,
+        area: "accessibility",
+        finding: "An empty tablist has no accessible tab.",
+        evidence: "ScreenRuntimeRenderer.tsx:1",
+      }),
+    ],
+    deferredLowFollowUps
+  );
   const cases = [
     {
       label: "only both exact authored LOW follow-ups are non-blocking",
@@ -8969,6 +11534,25 @@ async function assertTask540DeferredLowContract() {
       pass:
         excludedImpact.blockingFindings.length === 1 &&
         excludedImpact.deferredFindings.length === 0,
+    },
+    {
+      label: "AST proof rejects every draft read/write/cardinality mutation",
+      pass: rejectedDraftMutationCount === rejectedDraftMutations.length,
+    },
+    {
+      label: "AST proof ignores comments but rejects live facade symbols",
+      pass:
+        activeDraftAnalysis.draftContractSha256 ===
+          draftSpec.anchorTransition.draftContractSha256 &&
+        commentOnlyDraftAnalysis.draftContractSha256 ===
+          draftSpec.anchorTransition.draftContractSha256 &&
+        facadeSymbolRejected,
+    },
+    {
+      label: "closure evidence retains the exact AST hash and rejects mutation",
+      pass:
+        finalizedEvidenceFixture.includes(draftSpec.anchorTransition.draftContractSha256) &&
+        mutatedFinalAstHashRejected,
     },
   ];
   for (const testCase of cases) {
@@ -9147,10 +11731,11 @@ function parseClosureControlFromEvidenceBlock(block, label) {
   if (sealedSmokeEvidenceKeys !== null) {
     requireExactObjectKeys(
       evidence,
-      [...sealedSmokeEvidenceKeys, "closureControl"],
+      [...sealedSmokeEvidenceKeys, "lineCounts", "closureControl"],
       label + " evidence"
     );
   }
+  requireTask540LineCountEvidence(evidence.lineCounts, label + " evidence");
   return validateClosureControl(evidence.closureControl, label + " closureControl");
 }
 
@@ -9341,15 +11926,21 @@ async function restoreClosureAnchorSnapshot(snapshot, label) {
   if (verificationError) throw verificationError;
 }
 
-function smokeEvidenceBlock(smoke, closureControl) {
-  const evidence = { ...canonicalSmokeEvidence(smoke), closureControl };
+function smokeEvidenceBlock(smoke, closureControl, lineCounts) {
+  const evidence = {
+    ...canonicalSmokeEvidence(smoke),
+    lineCounts: requireTask540LineCountEvidence(lineCounts, "TASK-540 closure evidence"),
+    closureControl,
+  };
   return (
     EVIDENCE_BEGIN + "\n```json\n" + JSON.stringify(evidence, null, 2) + "\n```\n" + EVIDENCE_END
   );
 }
 
-function smokeEvidenceHash(smoke, closureControl) {
-  return createHash("sha256").update(smokeEvidenceBlock(smoke, closureControl)).digest("hex");
+function smokeEvidenceHash(smoke, closureControl, lineCounts) {
+  return createHash("sha256")
+    .update(smokeEvidenceBlock(smoke, closureControl, lineCounts))
+    .digest("hex");
 }
 
 async function readChangelogEvidenceControl(relativePath, label) {
@@ -9370,12 +11961,12 @@ async function readChangelogEvidenceControl(relativePath, label) {
   );
 }
 
-async function verifyChangelogEvidence(smoke, closureControl) {
+async function verifyChangelogEvidence(smoke, closureControl, lineCounts) {
   const source = await readFile(ROOT + "/" + CHANGELOG_REL, "utf8");
   if (hasSensitiveEvidenceDeep(source)) {
     throw new Error("TASK-540 changelog failed value-aware redaction");
   }
-  const expected = smokeEvidenceBlock(smoke, closureControl);
+  const expected = smokeEvidenceBlock(smoke, closureControl, lineCounts);
   const beginCount = source.split(EVIDENCE_BEGIN).length - 1;
   const endCount = source.split(EVIDENCE_END).length - 1;
   const start = source.indexOf(EVIDENCE_BEGIN);
@@ -10385,7 +12976,8 @@ async function setClosurePendingState(label, generation = closureGeneration) {
       throw new Error("TASK-540 closure-pending board row/statistics mismatch");
     }
     await requireDeferredLowFollowUpContracts(
-      "TASK-540 closure-pending board verification " + label
+      "TASK-540 closure-pending board verification " + label,
+      { requireFinalEvidence: true }
     );
     await readSharedClosurePending({ required: true });
     persistedPendingProjection = await captureExactPendingClosureProjection(
@@ -10659,13 +13251,22 @@ async function verifyClosureState(evidenceHash, generation, entryGraph = null) {
   ) {
     throw new Error("TASK-540 board row/statistics mismatch after closure");
   }
-  await requireDeferredLowFollowUpContracts("TASK-540 closed board verification");
+  await requireDeferredLowFollowUpContracts("TASK-540 closed board verification", {
+    requireFinalEvidence: true,
+  });
   await requireTask540ChangelogIndex();
 }
 
 async function runClosure(smoke, fullValidation, label, findings = []) {
   phase("Closure");
   await requireDeferredLowFollowUpContracts("TASK-540 closure entry " + label);
+  const finalizedDeferredLowFollowUps = await finalizeDeferredLowSourceEvidence(
+    "TASK-540 closure entry " + label
+  );
+  await requireDeferredLowFollowUpContracts("TASK-540 finalized closure entry " + label, {
+    followUps: finalizedDeferredLowFollowUps,
+    requireFinalEvidence: true,
+  });
   const sourceOwnerTestHashesBefore = requireSourceOwnerTestHashBoundary(
     "TASK-540 closure " + label
   );
@@ -10695,8 +13296,8 @@ async function runClosure(smoke, fullValidation, label, findings = []) {
       throw new Error("TASK-540 pending reclosure has no exact consumed evidence snapshot");
     }
     const closureControl = await pinClosureControlFromActiveGraph(generation);
-    const evidenceBlock = smokeEvidenceBlock(smoke, closureControl);
-    const evidenceHash = smokeEvidenceHash(smoke, closureControl);
+    const evidenceBlock = smokeEvidenceBlock(smoke, closureControl, fullValidation.lineCounts);
+    const evidenceHash = smokeEvidenceHash(smoke, closureControl, fullValidation.lineCounts);
     const closureAnchor = buildClosureAnchor(evidenceHash, closureControl, null);
     const closureAnchorLine = formatClosureAnchor(closureAnchor);
     let evidenceMutationError = null;
@@ -10731,7 +13332,9 @@ async function runClosure(smoke, fullValidation, label, findings = []) {
           "; every landed implementation leaf retains " +
           "exactly one current Targeted Gate Passed or Revalidation Passed receipt. Replace any " +
           "prior evidence region with the exact byte sequence below; keep one BEGIN/END marker and " +
-          "self-read it byte-for-byte. Record truthful prior validation, seven flows, " +
+          "self-read it byte-for-byte. Record truthful prior validation, the exact sorted " +
+          "`lineCounts` path/count array from the validated receipt (including all three L02 " +
+          "user-settings split paths), seven flows, " +
           smoke.finalization.screenshots.length +
           " PNGs, " +
           "zero browser channels, exact cleanup, and generation " +
@@ -10758,7 +13361,7 @@ async function runClosure(smoke, fullValidation, label, findings = []) {
     }
     let evidenceVerificationError = null;
     try {
-      await verifyChangelogEvidence(smoke, closureControl);
+      await verifyChangelogEvidence(smoke, closureControl, fullValidation.lineCounts);
       await requireTask540ChangelogIndex();
     } catch (error) {
       evidenceVerificationError = error;
@@ -10846,7 +13449,7 @@ async function runClosure(smoke, fullValidation, label, findings = []) {
     let statusClosureVerificationError = null;
     try {
       await verifyClosureState(evidenceHash, generation, finalStatusEntry.graph);
-      await verifyChangelogEvidence(smoke, closureControl);
+      await verifyChangelogEvidence(smoke, closureControl, fullValidation.lineCounts);
     } catch (error) {
       statusClosureVerificationError = error;
     }
@@ -11210,6 +13813,9 @@ async function assertTask540FinalDriftRoundContract() {
 
 async function runFinalAudit(round) {
   phase("Final drift");
+  const deferredLowFollowUps = await resolveDeferredLowFollowUps(
+    "TASK-540 final drift round " + round
+  );
   const results = await runSequentialAuditLenses(
     FINAL_LENSES,
     async (id, lens) =>
@@ -11227,7 +13833,7 @@ async function runFinalAudit(round) {
           "owner even when the defect is task metadata. Assign only TASK-540-06/root/changelog/" +
           "index/board defects to owner=orchestrator and area exactly closure-metadata. Do not " +
           "edit or start runtime." +
-          deferredLowAuditPrompt(),
+          deferredLowAuditPrompt(deferredLowFollowUps),
         {
           label: "final-drift:" + id + ":" + round,
           phase: "Final drift",
@@ -11241,8 +13847,11 @@ async function runFinalAudit(round) {
     "TASK-540 final drift round " + round
   );
   const findings = projectSequentialAuditFindings(results, "TASK-540 final drift round " + round);
-  const partition = partitionDeferredLowFindings(findings);
-  await requireDeferredLowFollowUpContracts("TASK-540 final drift round " + round);
+  const partition = partitionDeferredLowFindings(findings, deferredLowFollowUps);
+  await requireDeferredLowFollowUpContracts("TASK-540 final drift round " + round, {
+    followUps: deferredLowFollowUps,
+    requireFinalEvidence: true,
+  });
   return partition.blockingFindings;
 }
 
@@ -11933,6 +14542,7 @@ const TASK540_LOCAL_ORCHESTRATOR_IMPORTS = Object.freeze([
   "node:fs",
   "node:fs/promises",
   "node:util",
+  "typescript",
   "./task-540-smoke-contract.mjs",
 ]);
 const TASK540_LOCAL_ORCHESTRATOR_IMPORT_BINDINGS = Object.freeze([
@@ -11941,6 +14551,7 @@ const TASK540_LOCAL_ORCHESTRATOR_IMPORT_BINDINGS = Object.freeze([
   "{constantsasFS_CONSTANTS}",
   "{lstat,open,readFile,readdir,readlink,realpath,rename,unlink,}",
   "{parseEnv,promisify}",
+  "{defaultasts}",
   "{buildTask540SmokePlan}",
 ]);
 
@@ -12032,6 +14643,56 @@ async function assertTask540LocalOrchestratorEntrypointContract() {
   return mutations.length + 1;
 }
 
+if (process.argv.includes("--self-test-file-line-limit")) {
+  const cases = await assertTask540TouchedModuleLineLimitContract();
+  process.stdout.write(JSON.stringify({ pass: true, cases }));
+  process.exit(0);
+}
+
+if (process.argv.includes("--check-deferred-low-draft-contract")) {
+  const followUps = await resolveDeferredLowFollowUps("TASK-540 deferred LOW draft gate");
+  const draft = followUps[DEFERRED_LOW_DRAFT_AREA];
+  if (!draft) throw new Error("TASK-540 deferred LOW draft gate has no resolved authority");
+  process.stdout.write(
+    JSON.stringify({
+      pass: true,
+      state: draft.evidenceState,
+      path: draft.evidenceAnchors[0].replace(/:[0-9]+$/u, ""),
+      anchors: draft.evidenceAnchors,
+      sourceSha256: draft.sourceSha256,
+      draftContractSha256: draft.anchorTransition.draftContractSha256,
+    })
+  );
+  process.exit(0);
+}
+
+if (process.argv.includes("--check-r01-document-ops-facade")) {
+  const evidence = await requireR01DocumentOpsFacadeTestContract(
+    "TASK-540 R01 document-ops facade gate"
+  );
+  process.stdout.write(JSON.stringify({ pass: true, ...evidence }));
+  process.exit(0);
+}
+
+if (process.argv.includes("--check-r01-line-limit")) {
+  const leaf = LEAF_BY_ID.get("540-01-L01");
+  if (!leaf) throw new Error("TASK-540 R01 line-limit owner is missing");
+  const evidence = await requireTask540TouchedModuleLineLimit(
+    "TASK-540 R01 physical-line gate",
+    leaf.allowedFiles
+  );
+  process.stdout.write(JSON.stringify(evidence));
+  process.exit(0);
+}
+
+if (process.argv.includes("--check-task-family-line-limit")) {
+  const evidence = await requireTask540TouchedModuleLineLimit(
+    "TASK-540 full-family physical-line gate"
+  );
+  process.stdout.write(JSON.stringify(evidence));
+  process.exit(0);
+}
+
 if (process.argv.includes("--self-test-repair-siblings")) {
   await captureInitialGitIndexBaseline("TASK-540 repair self-test initial Git index baseline");
   const localOrchestratorEntrypointCases = await assertTask540LocalOrchestratorEntrypointContract();
@@ -12051,6 +14712,9 @@ if (process.argv.includes("--self-test-repair-siblings")) {
   const boardStateCases = assertTask540BoardStateContract();
   const finalDriftRoundCases = await assertTask540FinalDriftRoundContract();
   const gitIndexBaselineCases = await assertTask540GitIndexBaselineContract();
+  const exactRollbackResidualCases = assertTask540ExactRollbackResidualContract();
+  const touchedModuleLineLimitCases = await assertTask540TouchedModuleLineLimitContract();
+  const modularityRepairCases = assertTask540ModularityRepairContract();
   const sequentialAuditDispatchCases = await assertTask540SequentialAuditDispatchContract();
   const auditInterventionCases = assertTask540AuditInterventionContract();
   const deferredLowCases = await assertTask540DeferredLowContract();
@@ -12073,6 +14737,9 @@ if (process.argv.includes("--self-test-repair-siblings")) {
       boardStateCases,
       finalDriftRoundCases,
       gitIndexBaselineCases,
+      exactRollbackResidualCases,
+      touchedModuleLineLimitCases,
+      modularityRepairCases,
       sequentialAuditDispatchCases,
       auditInterventionCases,
       deferredLowCases,
@@ -12179,6 +14846,11 @@ try {
       "TASK-540 workflow requires exact branch " + EXPECTED_BRANCH + ", got " + workflowBranch
     );
   }
+  phase("Start gate");
+  await runTask540ModularityStartGate();
+  await runPendingTask540ModularityRepairs();
+  await requireNoPendingTask540ModularityRepairs("TASK-540 workflow startup");
+  await requireTask540ModularityFamilyMetadata("TASK-540 workflow startup");
   await requireDeferredLowFollowUpContracts("TASK-540 workflow startup");
   phase("Start gate");
   const resumeState = await resolveLeafResumeState();

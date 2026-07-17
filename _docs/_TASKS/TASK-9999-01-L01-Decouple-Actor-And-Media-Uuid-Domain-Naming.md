@@ -23,10 +23,12 @@ error codes, storage, or transport bytes.
 
 ## Exclusive Ownership
 
-- `core/services/customScreens/customScreenSchemas.ts`
+- `core/services/customScreens/screenMediaIdentity.ts`
+- `core/services/customScreens/customScreenSchemas.ts`, only for the explicit public
+  compatibility re-export
 - `core/services/customScreens/screenEntryPresentationOverrideContract.ts`
 - `core/services/customScreens/screenEntryPresentationOverrides.ts`
-- `tests/vitest/admin/custom-screen-schemas.test.ts`
+- `tests/vitest/admin/custom-screen-stored-read-repair.test.ts`
 - `tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts`
 
 Do not change routes, database schemas, migrations, payload fields, UUID canonicalization,
@@ -92,7 +94,7 @@ round-trip exactly and the same invalid values still fail with the same domain e
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
 - `tsc -p tsconfig.json --noEmit`
-- `bunx vitest run --config vitest.config.ts tests/vitest/admin/custom-screen-schemas.test.ts tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts`
+- `bunx vitest run --config vitest.config.ts tests/vitest/admin/custom-screen-stored-read-repair.test.ts tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts`
 - `git diff --check`
 
 ## Documentation Updates Required

@@ -13,7 +13,9 @@
 **Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Repair Started:** 2026-07-16
 **Repair Reason:** The defensive zero-item Tabs branch rendered an empty `tablist` with no usable tab. R03 owns the accessible fail-safe renderer state: no empty tablist/tab/panel and visible exact `role="status"` text `No tabs available.`.
-**Revalidation Passed:** 2026-07-16 — `core lint:types`, `core lint`, the exact renderer/interaction/image Vitest matrix (89/89), and `git diff --check` independently passed on the final shared source. This current receipt claims no new post-audit, live smoke, changelog, or closure result.
+**Modularity Repair Pending:** 2026-07-17 — from family baseline `e5f15a567`, the touched renderer grew from 1,822 to 1,983 physical lines and its touched runtime-renderer suite grew from 1,536 to 2,415. Both block closure under the hard 1,000-line gate and require the exact stable-facade/source plus harness/four-suite partitions below.
+**Current Repair State:** The accessible/URL/media behavior repair is implemented, but the recorded `Revalidation Passed` is historical pre-split evidence. After all seven production paths, five renderer-test split paths, and the touched record-interaction/image-source dependency paths pass line, static, exact-count, drift, and runtime gates, remove the single `Modularity Repair Pending` field and replace it with one `Modularity Repair Revalidated` receipt; the two fields must never coexist.
+**Revalidation Passed:** 2026-07-16 — historical pre-modularity evidence: `core lint:types`, `core lint`, the exact renderer/interaction/image Vitest matrix (89/89), and `git diff --check` independently passed on the then-final shared source. This receipt does not validate extracted modules and claims no new post-audit, live smoke, changelog, or closure result.
 **Historical Corrective Revalidation:** 2026-07-14 — `core lint:types`, `core lint`, the then-current exact renderer/interaction/image Vitest matrix (89/89), and `git diff --check`
 **Historical Post-Audit:** 2026-07-14 — PASS; zero HIGH, MEDIUM, or LOW findings for the five-value final Button/Image DOM-sink regression matrix
 **Fix Started:** 2026-07-14
@@ -29,9 +31,16 @@
 
 ## Exclusive ownership
 
-- `core/admin/ui/custom-screens/ScreenRuntimeRenderer.tsx`
+- the stable `core/admin/ui/custom-screens/ScreenRuntimeRenderer.tsx` facade plus
+  `screenRuntimeRendererModel.ts`, `useScreenRuntimeInteractions.ts`,
+  `ScreenRuntimeBlockFrame.tsx`, `ScreenRuntimeLeafBlocks.tsx`,
+  `ScreenRuntimeContainerBlocks.tsx`, and `ScreenRuntimeSectionList.tsx`
 - compatibility-expectation updates required before this source gate in
   `tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx`,
+  `tests/vitest/ui-integration/custom-screen-runtime-interactions.test.tsx`,
+  `tests/vitest/ui-integration/custom-screen-runtime-presentation.test.tsx`,
+  `tests/vitest/ui-integration/custom-screen-runtime-layout.test.tsx`,
+  `tests/vitest/ui-integration/support/customScreenRuntimeRendererHarness.tsx`,
   `tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
 
 For the historical 2026-07-14 R03 correction, R03 wrote only
@@ -45,14 +54,93 @@ That historical correction remains landed and gated. This leaf is now the curren
 repair owner only for the accessible zero-item Tabs branch and its renderer regression;
 the current exact 89/89 gate plus lint/typecheck/diff passed independently. It remains
 `🚧 In Progress` with `Implementation Complete` because canonical `✅ Done` awaits family
-changelog 1252. TASK-540-04-L03 is not a current repair owner: its attempted current
-`screenEntryPresentationOverrideContract.ts` import-only diff was reverted and that file
-is clean. Its older cache/entry repair receipt remains historical evidence, not current
-TASK-540 source-repair authority.
+changelog 1252. At the time of this R03 repair, L03's attempted import-only diff had been
+reverted and its older cache/entry receipt was historical. The later final sequential
+post-audit separately reopened L03 for the single-versus-multiple media override
+contract; that later L03 receipt does not change this renderer owner's 89/89 evidence.
 
 Do not edit `InlineEditWrapper.tsx`, `CustomScreenEntryCanvas.tsx`, schemas,
 inspector, or shared selection helpers. Fix the ancestor semantics at the owning
 renderer and update the named behavior expectations before its gate.
+
+## Mandatory renderer source split
+
+Touched-file scope is measured from verified family baseline `e5f15a567` through the
+final working tree. Staging and intermediate commits do not reset it. Verified
+baseline→pre-split counts are Renderer 1,822→1,983, renderer suite 1,536→2,415,
+record-interactions suite 607→657, and image-source suite 119→232. All original and new
+paths remain in the byte-based final gate. The existing `ScreenRuntimeRenderer.tsx`
+import remains stable and exposes the exact same
+`ScreenRuntimeRenderer` function reference; the facade may not use `export *`, wrap the
+component, or introduce import-time side effects.
+
+| Owner | Sole responsibility | Post-format budget |
+|---|---|---:|
+| `screenRuntimeRendererModel.ts` | renderer props/context types, system-field maps, presentation/style maps, value/text/stat/time/media helpers, selection-origin predicate, tab ancestry/index helpers, and insert-target equality; pure and state-free | `<=450` |
+| `useScreenRuntimeInteractions.ts` | one renderer-root ref/`useId` namespace, local tab state, builder slot derivation, activation, root-scoped focus transfer, roving-key handling, and selection/drag callbacks | `<=350` |
+| `ScreenRuntimeBlockFrame.tsx` | passive block frame, selection handle, drag handle, selection ring, metadata badges, style/class composition, and before/after drop targets | `<=350` |
+| `ScreenRuntimeLeafBlocks.tsx` | field/header/heading/text/stat/divider/image/button/related-list/unknown leaf rendering, final URL/media provenance, inline-edit sinks, and placeholders | `<=850` |
+| `ScreenRuntimeContainerBlocks.tsx` | recursive field-group/columns/Tabs children and named slots, active-panel visibility, empty Tabs status, container drop zones, and delegation to leaf/frame owners | `<=750` |
+| `ScreenRuntimeSectionList.tsx` | exported root implementation plus section layout/grid, section selection chrome, full-row gap/drop-zone rules, and source-order section/block traversal | `<=500` |
+| `ScreenRuntimeRenderer.tsx` | explicit compatibility re-export only | `<=80` |
+
+The allowed import graph is:
+
+```text
+screenRuntimeRendererModel -> useScreenRuntimeInteractions
+screenRuntimeRendererModel -> {ScreenRuntimeBlockFrame, ScreenRuntimeLeafBlocks}
+model + interactions + frame + leaf -> ScreenRuntimeContainerBlocks
+model + interactions + frame + container -> ScreenRuntimeSectionList
+ScreenRuntimeSectionList -> explicit ScreenRuntimeRenderer facade
+```
+
+`ScreenRuntimeContainerBlocks.tsx` may recurse into its own internal block dispatcher;
+LeafBlocks never imports ContainerBlocks. SectionList is the sole owner of root/section
+iteration and never imports the facade. Preserve the exact prop contract, one root-local
+interaction namespace, builder-vs-entry state isolation, nested Tabs ancestry,
+focus/keyboard behavior, passive ancestor semantics, drag/drop contracts, inline edits,
+final URL sanitization, override→binding→static media precedence with no lower fallback,
+UUID-to-URL resolution boundaries, byte-identical unauthored styling, grid geometry,
+DOM order, ARIA relationships, and zero-item accessible state.
+
+## Mandatory runtime-renderer test split
+
+The 2,415-line suite currently collects exactly 72 Vitest cases. Move complete test
+declarations and preserve their exact expanded names/assertions in source order. One
+stateless harness owns shared mount/document/render/field/media constants; it may expose
+builders but no tests, mutable singleton, `beforeEach`, or cross-file cleanup authority.
+
+| Test owner | Exact expanded pre-split positions | Count | Post-format budget |
+|---|---:|---:|---:|
+| retained `custom-screen-runtime-renderer.test.tsx` | current `:102-716`, positions 1-22: basic leaves, media/Button provenance, five expanded ASCII-control sinks | 22 | `<=800` |
+| `custom-screen-runtime-interactions.test.tsx` | current `:717-1317`, positions 23-35: passive selection and all expanded Tabs interaction/isolation cases | 13 | `<=800` |
+| `custom-screen-runtime-presentation.test.tsx` | current `:1336-2156`, positions 36-59: related rows, field/header fallback, presentation/style/metadata/drag/image-ratio behavior | 24 | `<=950` |
+| `custom-screen-runtime-layout.test.tsx` | current `:2157-2415`, positions 60-72: section-grid/drop-zone parity plus final image placeholder/static-src checks | 13 | `<=500` |
+| `support/customScreenRuntimeRendererHarness.tsx` | `mount`, cleanup, canonical fields/document/render helpers, reusable typed blocks/bindings/media IDs only | 0 | `<=450` |
+
+Every suite creates and cleans its own root and is independently runnable in happy-dom.
+The harness must not register tests or rely on suite evaluation order. The expanded
+72-name multiset—not merely 66 lexical `test` calls—must match before/after: five
+ASCII-control `test.each` cases and both mode-switch scenarios remain distinct names.
+Its JSON-serialized sorted expanded-name SHA-256 at the verified pre-split tree is
+`f35643b91c5b59ebf5e3445535d3e3ba0628782cae860126e2062176f5abfcbb`.
+The unchanged dependency suites retain 8/8 record-interaction tests and 9/9
+image-source tests, for the exact R03 combined total `22 + 13 + 24 + 13 + 8 + 9 = 89`.
+
+These line-limit blockers are never LOW/TASK-9999 candidates. A missing assertion,
+changed expanded name, cross-file state dependency, accessibility drift, URL/media
+fallback, or visual behavior regression is blocking according to its actual impact.
+
+Land in this exact order: `screenRuntimeRendererModel.ts`,
+`useScreenRuntimeInteractions.ts`, `ScreenRuntimeBlockFrame.tsx`,
+`ScreenRuntimeLeafBlocks.tsx`, `ScreenRuntimeContainerBlocks.tsx`,
+`ScreenRuntimeSectionList.tsx`, then the explicit `ScreenRuntimeRenderer.tsx` facade.
+Next land the stateless harness and move the retained, interactions, presentation, and
+layout suites in that order. Gate each production boundary before its consumer and each
+suite independently before the combined 89/89 run and owner-scoped line gate, then write
+`Modularity Repair Revalidated` as targeted static/test/line evidence only. The fresh
+family post-audit and browser smoke run after every source owner lands and remain
+mandatory before closure.
 
 ## Historical pre-implementation grounded anchors
 
@@ -71,6 +159,17 @@ numbers.
 ## Implementation Pseudocode
 
 ```tsx
+// ScreenRuntimeRenderer.tsx — stable public seam, no wrapper/export *
+export { ScreenRuntimeRenderer } from "./ScreenRuntimeSectionList";
+
+// Root implementation creates one interaction owner and passes typed context down.
+const interactions = useScreenRuntimeInteractions({ mode, insertPoint, onSetInsertPoint });
+return (
+  <div ref={interactions.rendererRootRef}>
+    <ScreenRuntimeSectionList context={context} interactions={interactions} />
+  </div>
+);
+
 // Import ScreenTabItem from customScreenSchemas; do not mirror its shape.
 // Add optional renderer prop:
 // presentationMediaUrlsById?: Readonly<Record<string, string>>;
@@ -328,14 +427,14 @@ selection handle remains the keyboard path. Drag/drop handlers stay intact.
 
 ## Gate regressions owned here; aggregate additions owned by TASK-540-06
 
-- `custom-screen-runtime-renderer.test.tsx`: click/Arrow/Home/End, one panel
+- `custom-screen-runtime-interactions.test.tsx`: click/Arrow/Home/End, one panel
   visible, ARIA relationships, nested Tabs isolation in entry and builder (including a
   nested activation inside a non-first outer panel), preview/entry→builder mode-switch
   isolation, removal fallback, a safe Button
   remaining a non-anchor/non-navigating affordance in builder, that same safe Button
   becoming an anchor in preview/entry, unsafe/absent disabled Button behavior, and
   unique tab/panel IDs plus root-scoped focus across two concurrent renderers.
-- The same renderer suite passes a defensive zero-item Tabs value and asserts visible
+- The same interactions suite passes a defensive zero-item Tabs value and asserts visible
   exact `role="status"` text `No tabs available.` together with the absence of an empty
   `tablist`, every `tab`, and every `tabpanel`.
 - The same existing renderer test owns the final-sink control corpus. Parameterize the
@@ -347,7 +446,7 @@ selection handle remains the keyboard path. Drag/drop handlers stay intact.
   those in `screen-document-image-src.test.ts`.
 - `screen-document-image-src.test.ts` is read-only here but remains in this leaf's gate
   to pin the shared URL corpus and final-consumer migration.
-- `custom-screen-runtime-renderer.test.tsx` passes real UUID-keyed resolved URL maps and
+- The retained `custom-screen-runtime-renderer.test.tsx` passes real UUID-keyed resolved URL maps and
   proves direct-image precedence with an override UUID, a scalar bound UUID, and the
   first valid UUID from a bound array. Dedicated cases cover malformed and URL-shaped
   bound values, a present binding with no usable value/UUID, a valid UUID missing from
@@ -358,7 +457,7 @@ selection handle remains the keyboard path. Drag/drop handlers stay intact.
   behavior.
 - `custom-screen-record-interactions.test.tsx`: contenteditable Space is not
   canceled; links/inputs do not select wrapper; selection handle works by keyboard.
-- The renderer suite supplies both block and section selection callbacks while
+- The interactions suite supplies both block and section selection callbacks while
   activating a nested builder input, an entry link, and a nested builder Tabs control.
   The Tabs case must prove its own visible panel change, exact slot-end `insertPoint`,
   and root-scoped focus while both ancestor callbacks remain unchanged; input and link
@@ -375,11 +474,25 @@ not re-baseline these interaction, URL, or UUID assertions.
 bun --cwd core lint:types
 bun --cwd core lint
 bunx vitest run tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx \
+  tests/vitest/ui-integration/custom-screen-runtime-interactions.test.tsx \
+  tests/vitest/ui-integration/custom-screen-runtime-presentation.test.tsx \
+  tests/vitest/ui-integration/custom-screen-runtime-layout.test.tsx \
   tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx \
   tests/vitest/customScreens/screen-document-image-src.test.ts
+node _docs/_workflows/task-540-implement.mjs --check-task-family-line-limit
 ```
 
-Rerun any named failing file once in isolation. No Bun runtime route is touched.
+Run each of the four renderer partitions independently for exact counts 22/22,
+13/13, 24/24, and 13/13, then run the six-file matrix for 89/89. Run a complete
+physical-line count over the seven production paths, harness/four suites, modified
+record-interaction suite, and family-touched image-source suite; reject every result
+above 1,000 without changing their ownership. Rerun any named failing file once in
+isolation. No Bun runtime route is touched. Because this is UI/editor code, its source gate also requires the
+family stream also requires the task-scoped helper-restarted `playwright-cli` smoke
+specified by TASK-540-06 after all source owners land; source movement does not reuse the
+historical browser receipt. `runLeafGate` byte-counts this
+leaf's exact `allowedFiles` before and after its commands; the displayed global command
+is the final family assertion after all modular streams land.
 
 ## Corrective repair completed
 
@@ -387,6 +500,7 @@ The accessible Tabs, passive-selection, URL/UUID sink implementation, length-del
 DOM identity, and 83/83 gate remain historical metadata. After R01 landed, this leaf
 added the explicit final Button/Image control-character DOM regressions and historically
 passed the then-current exact 89/89 gate plus a zero-finding post-audit. The current
-2026-07-16 accessible zero-item Tabs repair independently passed the exact 89/89 gate,
-lint/typecheck, and diff check; no new post-audit or smoke is claimed, and closure remains
-pending.
+2026-07-16 accessible zero-item Tabs repair independently passed the historical exact
+89/89 gate, lint/typecheck, and diff check. The modular split still requires the fresh
+independent/combined 89/89 gate, line counts, post-audit, runtime smoke, and replacement
+`Modularity Repair Revalidated` receipt; closure remains pending.

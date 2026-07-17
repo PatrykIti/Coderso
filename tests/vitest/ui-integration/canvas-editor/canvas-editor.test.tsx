@@ -53,6 +53,7 @@ test("(a) emits the header slot, the separated card + sub-toolbar and the device
       canvas={<div>canvas-slot</div>}
       panel={<div>panel-slot</div>}
       panelOpen={false}
+      panelAriaLabel="Canvas tools"
       onPanelOpenChange={noop}
     />
   );
@@ -74,6 +75,7 @@ test("(a) omits the device-context strip when `deviceContext` is absent", () => 
       title="Page builder"
       canvas={<div>c</div>}
       panelOpen={false}
+      panelAriaLabel="Canvas tools"
       onPanelOpenChange={noop}
     />
   );
@@ -88,6 +90,7 @@ test("(b) panelOpen=false hides the panel and renders the reopen affordance", ()
       panel={<div>panel-body</div>}
       reopenAffordance={<button type="button">Show panel</button>}
       panelOpen={false}
+      panelAriaLabel="Canvas tools"
       onPanelOpenChange={noop}
     />
   );
@@ -103,6 +106,7 @@ test("(b) panelOpen=true shows the panel and hides the reopen affordance", () =>
       panel={<div>panel-body</div>}
       reopenAffordance={<button type="button">Show panel</button>}
       panelOpen={true}
+      panelAriaLabel="Canvas tools"
       onPanelOpenChange={noop}
     />
   );
@@ -118,6 +122,7 @@ test("(c) panelPosition='right' yields the 280px right-rail container", () => {
       panel={<div>panel-body</div>}
       panelOpen={true}
       panelPosition="right"
+      panelAriaLabel="Canvas tools"
       onPanelOpenChange={noop}
     />
   );
@@ -134,6 +139,7 @@ test("(c) panelPosition='bottom' yields the centered-bottom container", () => {
       panel={<div>panel-body</div>}
       panelOpen={true}
       panelPosition="bottom"
+      panelAriaLabel="Canvas tools"
       onPanelOpenChange={noop}
     />
   );
@@ -182,6 +188,7 @@ test("the shell never toggles its own panel state (controlled read-only)", () =>
       canvas={<div>c</div>}
       panel={<div>panel-body</div>}
       panelOpen={true}
+      panelAriaLabel="Canvas tools"
       onPanelOpenChange={noop}
     />
   );

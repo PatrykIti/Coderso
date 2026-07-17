@@ -11,11 +11,13 @@
 **Status:** 🚧 In Progress
 **Started:** 2026-07-14
 **Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
-**Revalidation Passed:** 2026-07-14 — `core` lint/typecheck, root typecheck, exact six-file Vitest matrix 65/65, DB preflight, exact three-file Bun matrix 27/27 (162 expectations), and `git diff --check` all green
-**Post-Audit:** 2026-07-14 — PASS; zero HIGH, MEDIUM, or LOW findings on the corrected working tree
+**Repair Reason:** Final post-audit found the A/B self-scope route proof re-read only user B after the two sessions wrote different values. The existing real-HTTP test now re-reads A with A's authenticated identity and asserts A's exact DB row alongside B, preserving the exact access-log inventory.
+**Revalidation Passed:** 2026-07-16 — validated against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` with dirty owner path `tests/integration/routes/userSettings.test.ts` and the current L03 Entry Editor suite as a read-only dependency: core/root static gates passed; the exact six-file Vitest matrix passed 66/66; DB preflight returned configured/reachable/select-one; the exact three-file Bun matrix passed 27/27 with 165 expectations; isolated user-settings routes passed 10/10 with 64 expectations; and `git diff --check` passed. No full-suite, smoke, changelog, or closure result is claimed.
+**Modularity Repair Pending:** 2026-07-17 — baseline-to-final history from `e5f15a567` includes the current dirty 1,064-line `tests/integration/routes/userSettings.test.ts` and, conditionally through the required typed aggregate fixture, the 1,506-line `tests/vitest/ui/assistant-panel-interaction.test.tsx`. The hard `AGENTS.md` **File Size and Modularity** gate requires both cohesive splits below before closure while that fixture delta remains; the preceding revalidation is pre-split history only.
+**Historical Post-Audit:** 2026-07-14 — PASS at that revision; superseded by the 2026-07-16 owner-test repair, so a fresh sequential post-audit remains pending
 **Previous Completion:** 2026-07-14
 **Previous Targeted Gate:** 2026-07-14 — `core lint:types`, `core lint`, root `tsc`, the exact six-file Vitest matrix (64/64), the exact two-file Bun/DB matrix (20/20), and `git diff --check`
-**Reopened:** 2026-07-14 (trusted cross-origin Admin preflight must allow the expected-user header)
+**Reopened:** 2026-07-16 (complete two-session self-scope read and DB proof)
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -47,23 +49,32 @@
 - compatibility-expectation updates required before this source gate in
   `tests/unit/settings/userSettingsService.test.ts`,
   `tests/vitest/admin/userSettingsClient.test.ts`,
-  `tests/vitest/ui/use-screen-entry-preferences.test.ts`, and
-  `tests/integration/routes/userSettings.test.ts`
+  `tests/vitest/ui/use-screen-entry-preferences.test.ts`, and the retained
+  `tests/integration/routes/userSettings.test.ts`, which after the mandatory
+  split owns only route registration plus the real HTTP/DB flow
+- new test-only Bun support module
+  `tests/integration/routes/support/userSettingsAccessLogHarness.ts`
+- new Bun regression suite
+  `tests/integration/routes/userSettingsAccessLogHarness.test.ts`
 - new sole-owner UI integration suite
   `tests/vitest/ui-integration/custom-screen-entry-preferences-persistence.test.tsx`
 - new `tests/vitest/ui/admin-auth-identity.test.tsx`, limited to the
   route-persistent provider publisher's A/B/null/unmount and stale-cleanup
   semantics
-- `tests/vitest/ui/assistant-panel-interaction.test.tsx`, limited to adding the new
-  required `UserSettings` key to its typed aggregate fixture; its Assistant behavior
-  assertions remain read-only
+- conditional fixture-only modularity group:
+  `tests/vitest/ui/assistant-panel-interaction.test.tsx`, new
+  `tests/vitest/ui/assistant-panel-conversation.test.tsx`, and new
+  `tests/vitest/ui/support/assistantPanelInteractionHarness.tsx`; this group is writable
+  only while the new required `UserSettings` key is present in its typed aggregate
+  fixture, and every Assistant behavior assertion/name remains read-only
 
 `tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx` is a
 read-only compatibility gate here. TASK-540-04-L03 is its sole writer and removes
 the stale localStorage-specific assertion before this leaf starts; this leaf must
 not edit it. The new persistence suite remains the only UI integration test this leaf
-creates or edits; the reopened correction additionally owns only the narrow CORS route
-test named above.
+creates or edits. The earlier reopened behavior correction additionally owned only the
+narrow CORS route test named above; the later mandatory file-size repair owns exactly
+the retained user-settings route suite plus the two new test-only paths listed above.
 
 No new user-settings endpoint or DB schema edit is needed. The existing PATCH route
 compares the optional expected-owner header with its already authenticated
@@ -75,6 +86,277 @@ allowed headers case-insensitively at response time, so already-persisted settin
 and the default settings include it for new/default configurations. Update the named
 behavior tests before this leaf's gate; TASK-540-06 owns source-of-truth docs and only
 aggregate test additions.
+
+## Mandatory <=1,000-line Bun test split before closure
+
+The `AGENTS.md` **File Size and Modularity** rule counts the complete human-authored
+file, including blank lines and comments, caps every production module and test file at
+1,000 physical lines, and makes an over-limit result a failed closure gate rather than a
+LOW or `TASK-9999` candidate. Family changelog 1252 must record this behavior-neutral
+test modularization and its final line-count evidence. Do not mark this leaf or its
+parent done until all three paths below pass the hard count independently.
+
+The following current dirty-file ranges are audit anchors for responsibility, not
+instructions to move arbitrary line spans:
+
+- `userSettings.test.ts:53-354` owns the stateless access-log types, comparison and
+  signature helpers, stable inventory/drain/cleanup state machine, and `trackedFetch`.
+- `userSettings.test.ts:355-634` owns eight deterministic injected-clock/in-memory
+  harness regressions.
+- `userSettings.test.ts:20-51,635-1064` owns route registration and the single real
+  `startHttpServer`/DB scenario, including the corrected authenticated A/B re-reads and
+  exact A/B stored-row assertions.
+
+Split by those cohesive responsibilities as follows:
+
+| Bun test/support file | Expected physical lines | Hard maximum |
+|---|---:|---:|
+| `tests/integration/routes/support/userSettingsAccessLogHarness.ts` | 320–390 | 1,000 |
+| `tests/integration/routes/userSettingsAccessLogHarness.test.ts` | 280–360 | 1,000 |
+| `tests/integration/routes/userSettings.test.ts` | 470–620 | 1,000 |
+
+1. `tests/integration/routes/support/userSettingsAccessLogHarness.ts` is a test-only,
+   stateless support module. It owns `AccessLogIdentity`, `ExpectedAccessLog`,
+   `AccessLogCandidate`, `PollDeps`, `AccessLogScope`, `StableAccessLogInventory`, the
+   four timing constants, `accessLogSignature`, `expectedAccessLogSignature`,
+   `isOwnedAccessLogCandidate`, `observeStableAccessLogInventory`,
+   `drainExactAccessLogs`, `validateAndCleanupAccessLogs`, and `trackedFetch`. It may
+   import Bun's assertion helper because it is test-only, but it must not own a global
+   marker, request ledger, UUID set, DB client, server, timer, or mutable fixture.
+2. `tests/integration/routes/userSettingsAccessLogHarness.test.ts` owns the local
+   `makeCandidate`, `createFakePollDeps`, and `fakeScope` fixtures plus exactly the
+   existing eight deterministic regressions: convergence before exact equality;
+   compound missing/duplicate-extra/wrong-path/wrong-identity/late/out-of-scope
+   classification; late exact-UUID drain including reappearance after initial empty
+   polls; two fresh quiet windows whose accumulator includes only the intervals from a
+   completed qualifying observation to the start of the next query, with all
+   delete/query latency excluded;
+   deterministic ordered errors; post-dispatch rejection ownership;
+   deadline-crossing final deletion with ordered scope+late+delete/absence signals; and
+   declaration/status drift in `trackedFetch`.
+   It imports only the support contract, uses no DB, and must run independently in Bun.
+3. `tests/integration/routes/userSettings.test.ts` retains the route-registration test
+   and the real HTTP/DB test. It imports the support types/functions instead of
+   duplicating them. Its marker, completed-request ledger, user UUIDs, session UUIDs,
+   server, polling dependencies, behavior errors, and fallback cleanup errors remain
+   local to that one real-flow test so running either suite alone cannot inherit state
+   from the other.
+
+The split must preserve all ten current user-settings test cases: two in the retained
+route suite and eight in the harness suite. Preserve the eight harness test names/count,
+but extend their compound fixtures/assertions to cover the complete matrix above; do not
+weaken, merge, skip, or re-baseline any existing behavior assertion. Both
+`.test.ts` files remain Bun-owned. Do not migrate the deterministic harness tests to
+Vitest merely because their dependencies are injected; they are executable proof for
+the Bun HTTP/access-log teardown contract and must remain beside that runtime suite.
+
+### Split pseudocode
+
+```ts
+// support/userSettingsAccessLogHarness.ts — no module-global fixture state.
+export type AccessLogIdentity = Readonly<{
+  userId: string | null;
+  sessionId: string | null;
+}>;
+export type ExpectedAccessLog = Readonly<{
+  method: string;
+  path: string;
+  status: number;
+  identity: AccessLogIdentity;
+}>;
+export type AccessLogCandidate = Readonly<{
+  id: string;
+  userAgent: string | null;
+  method: string;
+  path: string;
+  status: number;
+  userId: string | null;
+  sessionId: string | null;
+}>;
+export type PollDeps = Readonly<{
+  query: () => Promise<readonly AccessLogCandidate[]>;
+  deleteExactIds: (ids: readonly string[]) => Promise<void>;
+  now: () => number;
+  wait: (ms: number) => Promise<void>;
+}>;
+export type AccessLogScope = Readonly<{
+  marker: string;
+  userIds: ReadonlySet<string>;
+  sessionIds: ReadonlySet<string>;
+}>;
+export type StableAccessLogInventory = Readonly<{
+  ids: readonly string[];
+  behaviorError:
+    | "access_log_missing"
+    | "access_log_extra"
+    | "access_log_late"
+    | "access_log_unstable"
+    | null;
+  scopeInvalid: boolean;
+}>;
+
+export const ACCESS_LOG_POLL_CADENCE_MS = 50;
+export const ACCESS_LOG_MIN_QUIET_MS = 250;
+export const ACCESS_LOG_POLL_TIMEOUT_MS = 5_000;
+export const ACCESS_LOG_REQUIRED_STABLE_POLLS = 3;
+
+export function accessLogSignature(value: AccessLogCandidate): string;
+export function expectedAccessLogSignature(value: ExpectedAccessLog): string;
+export function isOwnedAccessLogCandidate(
+  row: AccessLogCandidate,
+  scope: AccessLogScope
+): boolean;
+export async function observeStableAccessLogInventory(
+  deps: PollDeps,
+  scope: AccessLogScope,
+  expectedSignatures: readonly string[]
+): Promise<StableAccessLogInventory>;
+export async function drainExactAccessLogs(
+  deps: PollDeps,
+  scope: AccessLogScope,
+  initialIds: readonly string[]
+): Promise<{
+  lateAfterDelete: boolean;
+  scopeInvalid: boolean;
+  cleanupError: Error | null;
+}>;
+export async function validateAndCleanupAccessLogs(
+  deps: PollDeps,
+  scope: AccessLogScope,
+  expectedSignatures: readonly string[],
+  cleanupExactSettingsSessionsAndUsers: () => Promise<void>
+): Promise<void>;
+export async function trackedFetch(
+  input: string | URL,
+  init: RequestInit,
+  expected: ExpectedAccessLog,
+  marker: string,
+  ledger: ExpectedAccessLog[],
+  transport?: typeof fetch
+): Promise<Response>;
+
+// userSettingsAccessLogHarness.test.ts — in-memory fixtures stay local here.
+const makeCandidate = (...): AccessLogCandidate => ...;
+const createFakePollDeps = (...): PollDeps & FakePollInspection => ...;
+const fakeScope: AccessLogScope = ...;
+// Keep the existing eight test names/count independently runnable; extend their
+// compound inputs/assertions where the final cleanup matrix below requires it.
+
+// userSettings.test.ts — registration + one real server/DB flow only.
+test("registerUserSettingsRoutes wires endpoints", ...);
+testIfDb("real HTTP user-settings routes preserve self-scope, CSRF, buckets, errors, and exact log ownership", async () => {
+  const marker = `wf540-user-settings-${randomUUID()}`;
+  const userIds = [randomUUID(), randomUUID()] as const;
+  const ledger: ExpectedAccessLog[] = [];
+  // Import and call the stateless harness with this suite's exact local scope.
+});
+```
+
+### Fixture and cleanup invariant
+
+- The real route suite creates unique user and session UUIDs and one unique non-secret
+  marker per execution. Candidate queries may use only the exact marker OR those exact
+  synthetic user/session UUIDs; every selected row is rechecked by
+  `isOwnedAccessLogCandidate`.
+- Access-log cleanup deletes only the observed owned access-log UUIDs. It never deletes
+  by marker, path, prefix, user/session predicate, or table-wide condition. A mixed
+  candidate set leaves every out-of-scope row untouched and fails closed.
+- Only after the second quiet-owned-absence window may the route suite delete settings
+  rows for its exact synthetic user UUIDs, sessions by their exact session UUIDs, and
+  users by their exact user UUIDs. No suite truncates a table or deletes another
+  suite's fixtures.
+- The harness regression suite is DB-free and cleans only its in-memory local fake
+  state. No singleton tracker or mutable support-module state may couple the two test
+  files when Bun executes them together.
+
+### Workflow and matrix impact
+
+- Add `tests/integration/routes/userSettingsAccessLogHarness.test.ts` to
+  `TARGET_BUN_FILES`, source-owner hashing, named-file isolation metadata, and L02's
+  exact Bun command. The support module is an L02 required/allowed file but is not a
+  second test target.
+- Add both new paths to L02's exclusive `allowedFiles`/`requiredFiles`; retain
+  `tests/integration/routes/userSettings.test.ts` under this same sole writer.
+- Before the owner stages the new test, the workflow must explicitly union its exact
+  path into `TRACKED_TEST_FILES`; do not broaden discovery to every unrelated untracked
+  test in the shared tree. Preserve uniqueness/existence checks.
+- The reconciled TASK-540 family aggregate is exactly 64 Vitest + 18 Bun = 82 target
+  files: 81 source-owner/read-only dependency files and one closure-owned aggregate
+  file. This supersedes all earlier partial 51+7 calculations. Update exact cardinality,
+  command/isolation self-tests, receipts, and the frozen workflow hash consistently.
+- Add a hard physical-line gate for every added or modified production/test file. For
+  this split it must inspect all three paths above and fail on `>1000`; a printed count
+  without a non-zero failure is not a gate. This failure is not deferrable to
+  TASK-9999.
+
+The touched-file set is measured from verified pre-family baseline `e5f15a567` through
+the final working tree, including every intermediate commit/checkpoint. Staging or
+committing cannot reset or narrow either modularity gate.
+
+## Conditional Assistant interaction test split
+
+The complete `UserSettings` fixture in `assistant-panel-interaction.test.tsx` must include
+the required exact key:
+
+```ts
+"customScreens.entry.preferences": {
+  version: 1,
+  showFieldMetadata: false,
+},
+```
+
+That four-line semantic fixture delta touches a 1,506-line baseline file, so the current
+branch resolves the conditional modularity group to **required**. Split it cohesively:
+
+| File | Exact responsibility and final test count | Expected physical lines | Hard maximum |
+|---|---|---:|---:|
+| `tests/vitest/ui/support/assistantPanelInteractionHarness.tsx` | Shared Assistant status/plan/execute response builders, complete typed `UserSettings` fixture, panel mount/event/flush helpers, and deterministic per-test reset | 130–230 | 1,000 |
+| `tests/vitest/ui/assistant-panel-interaction.test.tsx` | Retain the first seven CTA, dry-run/execute, needs-input, inspection, Basic intake, Advanced switch, and validation-error tests | 760–900 | 1,000 |
+| `tests/vitest/ui/assistant-panel-conversation.test.tsx` | Retain the final six docs/LLM modes, prior inspection candidates, new conversation, and SPA remount restoration tests | 520–680 | 1,000 |
+
+The exact `makeUserSettings` helper and its complete typed defaults move to
+`tests/vitest/ui/support/assistantPanelInteractionHarness.tsx`; neither retained test
+suite may own or duplicate that aggregate fixture. Both suites consume the same exported
+factory so the required key is proven once at its type boundary.
+
+Both suites import `AssistantPanel` directly and only the dedicated harness; neither
+imports the other suite. The harness registers no tests, performs no mount/fetch at
+module import, exposes no shared mutable conversation/settings state, and provides a
+fresh fixture/reset boundary to each caller. It may centralize repeated data and typed
+builders, but not expectations or behavior branches.
+
+Fixture-only ownership is conditional and fail-closed:
+
+- If the final production type still requires the exact key above (the current branch),
+  all three paths are required/allowed, the split is mandatory, and the only semantic
+  difference from the `e5f15a567` Assistant test contract is that exact fixture member;
+  imports/extractions are behavior-neutral.
+- If later source work proves the key is no longer required before this leaf lands, the
+  workflow forbids the two new paths and requires the original Assistant test file to be
+  byte-identical to `e5f15a567`; an untouched legacy over-limit file then falls outside
+  this task's touched-file gate. It may not retain an arbitrary formatting/assertion
+  edit merely to force ownership.
+- In either branch, L02 has no authority to alter Assistant UI behavior, mocks unrelated
+  to the typed setting, expected payloads, snapshots, assertions, or test names.
+
+Before extraction, seal the current fully expanded 13-name multiset. The required split
+must preserve exact names/multiplicity and run combined for 13 plus independently for
+7 and 6. The workflow isolation/fixture-only self-test rejects a missing/duplicate/
+renamed/skipped test, cross-suite test registration, any non-extraction semantic diff
+other than the exact fixture member, or inconsistent conditional required/allowed path
+sets. Add `assistant-panel-conversation.test.tsx` to `TARGET_VITEST_FILES`, owner hashing,
+the L02 command, and named isolation metadata; the harness is required but is not a test
+target.
+
+During the normal modularity-repair phase, temporarily disable the legacy single-file
+fixture-only projection for `assistant-panel-interaction.test.tsx`: the fixture has moved
+to the harness, so applying the old projection would either reject the required
+extraction or accidentally ignore it. The split-specific verifier replaces that check
+for the phase by sealing the exact 13-name/assertion multiset and the exact
+`makeUserSettings` fixture member in the harness. Once the split lands, the conditional
+three-path fixture-only verifier becomes canonical; never run both projections against
+different fixture owners or treat a disabled projection as permission to change an
+Assistant assertion.
 
 ## Historical pre-implementation grounded anchors
 
@@ -1017,7 +1299,9 @@ hook call site remains source-compatible.
 ## Security Contract
 
 - Existing internal user-settings route family; authenticated session and
-  server-derived `ctx.user.id` scope every read/write.
+  server-derived `ctx.user.id` scope every read/write. This self-service preference
+  scope requires no additional RBAC permission beyond the authenticated Admin session;
+  there is no API-key mode or API-key scope for this route family.
 - PATCH retains CSRF and resolves to the existing `admin_write` rate-limit bucket;
   GET resolves to `admin_read`. Schema rejects unknown envelope keys and service
   rejects unknown setting keys plus unknown value keys/version/type.
@@ -1029,7 +1313,9 @@ hook call site remains source-compatible.
   exact `user_settings_key_invalid` and `user_settings_value_invalid` codes; it
   returns status 409 for exact `user_setting_identity_changed`. It does not expose
   a stack or turn any of those client errors into 500.
-- No public mode, nonce/captcha, secret, entry content, or migration.
+- No public mode, nonce, signature/HMAC, CAPTCHA, secret, entry content, or migration.
+  Those anonymous-write anti-abuse controls are inapplicable because this task adds no
+  public write; it does not weaken the internal session/CSRF/rate-limit boundary.
 - With no authenticated identity, the hook's OFF→toggle behavior is strictly
   hook-mount-local: it makes no user-settings request, browser-storage write, or
   module-scoped publication and resets to OFF on a fresh remount.
@@ -1134,9 +1420,12 @@ hook call site remains source-compatible.
   publication for an actual null prop, provider-unmount cleanup, and a stale old
   provider cleanup that cannot clear a newer publisher token. This suite tests only
   the boundary and does not duplicate the Screen coordinator.
-- `tests/vitest/ui/assistant-panel-interaction.test.tsx`: add only
-  `"customScreens.entry.preferences": {version:1, showFieldMetadata:false}` to its
-  typed complete-`UserSettings` fixture. Do not alter Assistant behavior assertions.
+- The conditional 7+6 `tests/vitest/ui/assistant-panel-interaction.test.tsx` and
+  `tests/vitest/ui/assistant-panel-conversation.test.tsx` pair: preserve the exact
+  13-name Assistant behavior multiset and add only
+  `"customScreens.entry.preferences": {version:1, showFieldMetadata:false}` to the
+  harness-owned typed complete-`UserSettings` fixture. Do not alter Assistant behavior
+  assertions, payloads, or mocks.
 - `tests/vitest/ui/use-screen-entry-preferences.test.ts` owns the coordinator matrix:
   async hydrate; no localStorage; no-user mount-local OFF→toggle behavior with zero
   GET/PATCH/storage calls and reset to OFF after full remount; public-view normalization
@@ -1224,75 +1513,38 @@ hook call site remains source-compatible.
   `user_setting_identity_changed`/409, then GET as B and query B's exact settings row to
   prove no write occurred. Omit the header in one legacy PATCH and prove it retains its
   existing authenticated self-scope.
+- `tests/integration/routes/userSettingsAccessLogHarness.test.ts`: the eight existing
+  deterministic injected-clock/in-memory tests for the stateless support module. This
+  suite owns no server or DB fixture and is independently runnable; the retained route
+  suite consumes the same helpers in the real HTTP flow without importing this test
+  file or causing its tests to execute twice.
 - Every HTTP request in this suite goes through one `trackedFetch` helper. The helper
   appends exactly one completed-request expectation only after receiving a response;
   no test may call `fetch` directly. Use this executable shape (names may differ, values
   and invariants may not):
 
 ```ts
-type AccessLogIdentity = Readonly<{
-  userId: string | null;
-  sessionId: string | null;
-}>;
-type ExpectedAccessLog = Readonly<{
-  method: string;
-  path: string;
-  status: number;
-  identity: AccessLogIdentity;
-}>;
+import {
+  expectedAccessLogSignature,
+  trackedFetch,
+  type ExpectedAccessLog,
+} from "./support/userSettingsAccessLogHarness";
 
-const ACCESS_LOG_POLL_CADENCE_MS = 50;
-const ACCESS_LOG_MIN_QUIET_MS = 250;
-const ACCESS_LOG_POLL_TIMEOUT_MS = 5_000;
-const ACCESS_LOG_REQUIRED_STABLE_POLLS = 3;
-const accessLogMarker = `wf540-user-settings-${crypto.randomUUID()}`;
-const completedRequestLedger: ExpectedAccessLog[] = [];
-
-async function trackedFetch(
-  input: string | URL,
-  init: RequestInit,
-  expected: ExpectedAccessLog
-): Promise<Response> {
-  const request = new Request(input, init);
-  if (
-    request.method.toUpperCase() !== expected.method ||
-    new URL(request.url).pathname !== expected.path ||
-    request.headers.get("user-agent") !== accessLogMarker
-  ) throw new Error("access_log_request_ledger_invalid");
-  const response = await fetch(request);
-  // Record the declared expectation after the request completes but before its
-  // response assertion, so a wrong response status is still represented in
-  // cleanup and fails the DB multiset comparison rather than becoming unowned.
-  completedRequestLedger.push(expected);
+testIfDb("real HTTP user-settings routes ...", async () => {
+  // Marker and ledger are local to this one real-flow test, never support globals.
+  const marker = `wf540-user-settings-${crypto.randomUUID()}`;
+  const completedRequestLedger: ExpectedAccessLog[] = [];
+  const response = await trackedFetch(
+    url,
+    requestInit,
+    expected,
+    marker,
+    completedRequestLedger
+  );
   expect(response.status).toBe(expected.status);
-  return response;
-}
-
-function accessLogSignature(value: {
-  method: string;
-  path: string;
-  status: number;
-  userId: string | null;
-  sessionId: string | null;
-}): string {
-  return JSON.stringify([
-    value.method,
-    value.path,
-    value.status,
-    value.userId,
-    value.sessionId,
-  ]);
-}
-
-function expectedAccessLogSignature(value: ExpectedAccessLog): string {
-  return accessLogSignature({
-    method: value.method,
-    path: value.path,
-    status: value.status,
-    userId: value.identity.userId,
-    sessionId: value.identity.sessionId,
-  });
-}
+  const expectedSignatures = completedRequestLedger.map(expectedAccessLogSignature);
+  // Pass the same local marker/ledger-derived signatures into cleanup.
+});
 ```
 
 The polling helper is dependency-injected for deterministic failure tests and follows
@@ -1368,14 +1620,22 @@ async function observeStableAccessLogInventory(
   const deadline = deps.now() + ACCESS_LOG_POLL_TIMEOUT_MS;
   const expected = [...expectedSignatures].sort();
   let stableIds: readonly string[] | null = null;
-  let stableSince = 0;
+  let stableSignatures: readonly string[] | null = null;
+  let stableQuietMs = 0;
   let stablePolls = 0;
+  let previousObservationCompletedAt: number | null = null;
   let everExact = false;
   let changedAfterExact = false;
   let scopeInvalid = false;
 
   while (deps.now() <= deadline) {
+    const queryStartedAt = deps.now();
+    const candidateQuietMs =
+      previousObservationCompletedAt === null
+        ? 0
+        : Math.max(0, queryStartedAt - previousObservationCompletedAt);
     const rows = await deps.query();
+    const observationCompletedAt = deps.now();
     const ownedRows = rows.filter((row) => isOwnedAccessLogCandidate(row, scope));
     scopeInvalid ||= ownedRows.length !== rows.length;
     const rawIds = ownedRows.map((row) => row.id);
@@ -1384,22 +1644,28 @@ async function observeStableAccessLogInventory(
     const actual = ownedRows.map(accessLogSignature).sort();
     const exact = ownedRows.length === expected.length && sameArray(actual, expected);
 
-    if (!stableIds) {
+    if (!stableIds || !stableSignatures) {
       stableIds = ids;
-      stableSince = deps.now();
+      stableSignatures = actual;
+      stableQuietMs = 0;
       stablePolls = 1;
-    } else if (!sameArray(ids, stableIds)) {
+    } else if (!sameArray(ids, stableIds) || !sameArray(actual, stableSignatures)) {
       if (everExact) changedAfterExact = true;
       stableIds = ids;
-      stableSince = deps.now();
+      stableSignatures = actual;
+      stableQuietMs = 0;
       stablePolls = 1;
     } else {
       stablePolls += 1;
+      // Count only the observed inter-poll interval. Time spent inside query()
+      // is intentionally excluded and cannot satisfy the quiet window.
+      stableQuietMs += candidateQuietMs;
     }
     if (exact) everExact = true;
     if (
       stablePolls >= ACCESS_LOG_REQUIRED_STABLE_POLLS &&
-      deps.now() - stableSince >= ACCESS_LOG_MIN_QUIET_MS
+      stableQuietMs >= ACCESS_LOG_MIN_QUIET_MS &&
+      observationCompletedAt <= deadline
     ) {
       return {
         ids: stableIds,
@@ -1413,7 +1679,8 @@ async function observeStableAccessLogInventory(
         scopeInvalid,
       };
     }
-    if (deps.now() >= deadline) {
+    previousObservationCompletedAt = observationCompletedAt;
+    if (observationCompletedAt >= deadline) {
       return {
         ids: stableIds ?? [],
         behaviorError: "access_log_unstable",
@@ -1445,7 +1712,8 @@ async function drainExactAccessLogs(
 }> {
   const deadline = deps.now() + ACCESS_LOG_POLL_TIMEOUT_MS;
   let pendingIds = [...initialIds];
-  let quietSince = deps.now();
+  let quietElapsedMs = 0;
+  let previousEmptyObservationCompletedAt: number | null = null;
   let emptyPolls = 0;
   let lateAfterDelete = false;
   let scopeInvalid = false;
@@ -1455,8 +1723,18 @@ async function drainExactAccessLogs(
       if (pendingIds.length > 0) {
         await deps.deleteExactIds(pendingIds);
         pendingIds = [];
+        // Deletion time never counts as observed quiet absence.
+        quietElapsedMs = 0;
+        previousEmptyObservationCompletedAt = null;
+        emptyPolls = 0;
       }
+      const queryStartedAt = deps.now();
+      const candidateQuietMs =
+        previousEmptyObservationCompletedAt === null
+          ? 0
+          : Math.max(0, queryStartedAt - previousEmptyObservationCompletedAt);
       const rows = await deps.query();
+      const observationCompletedAt = deps.now();
       const ownedRows = rows.filter((row) => isOwnedAccessLogCandidate(row, scope));
       scopeInvalid ||= ownedRows.length !== rows.length;
       const rawIds = ownedRows.map((row) => row.id);
@@ -1467,16 +1745,20 @@ async function drainExactAccessLogs(
         // exact owned UUIDs before proving absence.
         lateAfterDelete = true;
         pendingIds = ids;
-        quietSince = deps.now();
+        quietElapsedMs = 0;
+        previousEmptyObservationCompletedAt = null;
         emptyPolls = 0;
         continue;
       }
+      quietElapsedMs += candidateQuietMs;
       emptyPolls += 1;
       if (
         emptyPolls >= ACCESS_LOG_REQUIRED_STABLE_POLLS &&
-        deps.now() - quietSince >= ACCESS_LOG_MIN_QUIET_MS
+        quietElapsedMs >= ACCESS_LOG_MIN_QUIET_MS &&
+        observationCompletedAt <= deadline
       ) return { lateAfterDelete, scopeInvalid, cleanupError: null };
-      if (deps.now() >= deadline) {
+      previousEmptyObservationCompletedAt = observationCompletedAt;
+      if (observationCompletedAt >= deadline) {
         break;
       }
       await deps.wait(
@@ -1612,7 +1894,8 @@ async function validateAndCleanupAccessLogs(
   late-after-delete alongside that cleanup error. A drain or exact-fixture cleanup
   failure is appended after those retained errors; it is never masked. Exact settings,
   session, and user cleanup runs only after the drain proves quiet owned-row absence.
-- The integration file owns deterministic helper tests with injected query/clock/wait:
+- The dedicated `userSettingsAccessLogHarness.test.ts` suite owns deterministic helper
+  tests with injected query/clock/wait:
   an initially incomplete multiset followed by exact rows and a stable UUID ledger
   passes; stable missing, duplicate/extra signature, wrong status/path/identity, changed
   or late UUID, post-dispatch fetch rejection, and a row appearing during the absence
@@ -1624,7 +1907,18 @@ async function validateAndCleanupAccessLogs(
   late, and absence/deletion cleanup signals. A `trackedFetch` test rejects a declared method/path/marker mismatch
   before transport and proves a wrong response status still leaves its declared
   completed expectation in the validation ledger. Passing and failing cleanup tests
-  assert at least three cadence-separated observations plus the 250 ms quiet window,
+  assert at least three cadence-separated observations plus a fresh 250 ms quiet
+  accumulator. Both inventory and drain add only time from a completed unchanged/empty
+  observation to the start of the next query, and commit that interval only when the
+  next result remains unchanged/empty. They reset on any UUID/signature change or
+  post-delete reappearance. Delayed delete/query work exceeding 250 ms by itself cannot
+  consume either window. One compound injected-clock case proves this independently
+  for inventory and drain before advancing enough cadence-only time, then introduces a
+  same-ID signature change and a post-empty reappearance to prove both accumulators
+  reset. The same compound case makes a final unchanged inventory query and a final
+  empty drain query cross the absolute deadline after starting in time; neither may
+  return success even when its poll count and cadence-only accumulator would otherwise
+  qualify,
   zero remaining exact-scope rows, and no broad delete.
 
 TASK-540-04-L03 removes the stale global-localStorage assertion from its sole-owned
@@ -1646,6 +1940,7 @@ bun --cwd core lint
   tests/vitest/admin/userSettingsClient.test.ts \
   tests/vitest/ui/admin-auth-identity.test.tsx \
   tests/vitest/ui/assistant-panel-interaction.test.tsx \
+  tests/vitest/ui/assistant-panel-conversation.test.tsx \
   tests/vitest/ui/use-screen-entry-preferences.test.ts \
   tests/vitest/ui-integration/custom-screen-entry-preferences-persistence.test.tsx \
   tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx
@@ -1653,7 +1948,37 @@ bun --cwd core lint
 set -a && source .env && set +a
 bun test tests/unit/settings/userSettingsService.test.ts \
   tests/integration/routes/userSettings.test.ts \
+  tests/integration/routes/userSettingsAccessLogHarness.test.ts \
   tests/integration/routes/cors.test.ts
+
+# Both Bun suites must also pass independently.
+bun test tests/integration/routes/userSettingsAccessLogHarness.test.ts
+bun test tests/integration/routes/userSettings.test.ts
+
+# Conditional Assistant split: both suites must pass independently at 7 and 6 tests.
+./node_modules/.bin/vitest run --config vitest.config.ts \
+  tests/vitest/ui/assistant-panel-interaction.test.tsx
+./node_modules/.bin/vitest run --config vitest.config.ts \
+  tests/vitest/ui/assistant-panel-conversation.test.tsx
+
+# Hard AGENTS.md physical-line gate; every listed file must be <= 1,000.
+for file in \
+  tests/integration/routes/support/userSettingsAccessLogHarness.ts \
+  tests/integration/routes/userSettingsAccessLogHarness.test.ts \
+  tests/integration/routes/userSettings.test.ts \
+  tests/vitest/ui/support/assistantPanelInteractionHarness.tsx \
+  tests/vitest/ui/assistant-panel-interaction.test.tsx \
+  tests/vitest/ui/assistant-panel-conversation.test.tsx; do
+  lines="$(awk 'END { print NR }' "$file")"
+  if [ "$lines" -gt 1000 ]; then
+    echo "$file exceeds 1000 physical lines: $lines" >&2
+    exit 1
+  fi
+done
 ```
 
-Verify DB reachability before DB-backed tests; rerun a named failure once.
+Verify DB reachability before DB-backed tests; rerun a named failure once. The
+dependency-shaped combined Bun command must retain all ten user-settings cases across
+the two suites. The combined Assistant command must retain all 13 cases across its two
+suites. Family changelog 1252 records the three Bun split line counts and, while the
+fixture condition is active, all three Assistant split line counts.

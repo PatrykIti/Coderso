@@ -5,7 +5,7 @@ import {
 } from "../../customScreens/customScreenSchemas";
 
 export type BlueprintBindingContribution = {
-  id?: string | null;
+  id: string;
   widgetId: string;
   propPath: string;
   field: string;
@@ -44,8 +44,9 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "");
 
-const normalizeStableId = (value: unknown, fallback: string) => {
-  const id = slugify(normalizeText(value) ?? fallback);
+const normalizeStableId = (value: unknown) => {
+  const explicit = normalizeText(value) ?? fail();
+  const id = slugify(explicit);
   if (!id || !stableKeyPattern.test(id)) fail();
   return id;
 };
@@ -97,7 +98,7 @@ export const composeBindings = (input: BlueprintBindingCompositionInput): Custom
     assertKnownField(field, knownFields);
     assertNoSecretBinding({ field, propPath });
 
-    const id = normalizeStableId(binding.id, `${widgetId}-${propPath}`);
+    const id = normalizeStableId(binding.id);
     const next = { id, widgetId, propPath, field, mode };
     const existing = byId.get(id);
     if (existing) {

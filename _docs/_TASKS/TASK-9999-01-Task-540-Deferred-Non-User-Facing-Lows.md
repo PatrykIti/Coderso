@@ -27,15 +27,14 @@ destination record, not a substitute for that required source-task backlink.
 
 | Leaf | Evidence | Why deferral is currently safe |
 |---|---|---|
-| TASK-9999-01-L01 | `customScreenSchemas.ts` exports `isScreenMediaAssetUuid`; `screenEntryPresentationOverrideContract.ts::normalizeUpdatedBy` reaches it through `normalizeCanonicalMediaUuid`, while `screenEntryPresentationOverrides.ts::normalizeActorId` calls it directly for actor identity | The predicate already accepts/rejects the intended UUID shape and preserves the value; only domain naming/coupling is wrong. There is no payload, persistence, auth, RBAC, or runtime behavior change. |
-| TASK-9999-01-L02 | `ScreenBlockInspector.tsx::ScreenTabLabelDraft.baseLabel` is assigned in initialization, restore, commit, and change handlers, while rendering and commit logic read only `draft.value` | The unread property cannot affect rendered UI, keyboard/blur behavior, saved data, or accessibility. Removing it is state-shape cleanup only. |
+| TASK-9999-01-L01 | `screenMediaIdentity.ts:4` solely defines `isScreenMediaAssetUuid` and `customScreenSchemas.ts` explicitly re-exports it; `screenEntryPresentationOverrideContract.ts:194,231` reaches it through `normalizeCanonicalMediaUuid`, while `screenEntryPresentationOverrides.ts:421` calls it directly for actor identity. Before the pending split lands, workflow self-test verifies the equivalent pre-split definition only as transitional evidence. | The predicate already accepts/rejects the intended UUID shape and preserves the value; only domain naming/coupling is wrong. There is no payload, persistence, auth, RBAC, or runtime behavior change. |
+| TASK-9999-01-L02 | Conditional intake evidence: before TASK-540-02-L01's split, `ScreenBlockInspector.tsx:524,525,538,542,553,559,563` at SHA-256 `eb49d21a99cd5fbf8dedfd502c727ba890dd455552a8259b9e9b45eb4b11d4df`; after the split, the same `ScreenTabLabelDraft.baseLabel` assignments must be anchored by exact final lines and SHA-256 in `ScreenBlockInspectorTabs.tsx`, with the symbol absent from the facade. Exactly one layout is valid, and execution requires the post-split evidence. | The unread property cannot affect rendered UI, keyboard/blur behavior, saved data, or accessibility. Removing it is state-shape cleanup only. |
 
 ## Explicit Non-Deferrals
 
-The following current TASK-540 findings are not accepted by TASK-9999 and must be fixed
-or otherwise resolved inside the active source task:
+The following historical TASK-540 findings were never eligible for TASK-9999 and
+remained blocking until they were fixed or otherwise resolved inside the source task:
 
-- the current import-order finding is trivial to fix now and is not deferred;
 - invalid tab-label blur behavior is user-visible UX;
 - a destructive Tabs stored-read fallback can change persisted/read data semantics;
 - an empty `tablist` is an accessibility issue;
@@ -69,7 +68,8 @@ shared Custom Screens validation context, so each leaf keeps its own gate and ev
 
 - L01: core lint/typecheck, root typecheck, and the exact Bun-free schema/override Vitest
   suites named in the leaf.
-- L02: core lint/typecheck, root typecheck, and the existing Custom Screen binding-panel
+- L02: core lint/typecheck, root typecheck, the extracted
+  `ScreenBlockInspectorTabs.tsx` owner, and the existing Custom Screen binding-panel
   Vitest behavior suite without weakening its invalid-input, Escape, Unicode, or
   parent-rerender assertions.
 - Run `git diff --check` after each leaf.

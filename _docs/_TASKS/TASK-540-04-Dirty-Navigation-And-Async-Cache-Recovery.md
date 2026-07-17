@@ -10,8 +10,13 @@
 **Status:** 🚧 In Progress
 **Started:** 2026-07-13
 **Fix Started:** 2026-07-15
-**Implementation Complete:** 2026-07-15 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
-**Repair Reason:** Closure validation reproduced duplicate remote invalidation when the canonical and legacy cache transports delivered the same serialized event, and contract audit required direct-image route-boundary coverage at the strict write seam. The phase-neutral repair state machine designated L03 as the sole repair owner with exactly three writable paths: `core/admin/utils/cacheBus.ts`, `tests/vitest/admin/cacheBus.test.ts`, and additive direct-image regressions in `tests/integration/routes/customScreensRoutes.test.ts`. No production route file changed. L03 completed the focused cache-bus gate, expanded owner/dependency gate, L04 read-only consumer gate, direct-image Bun/DB route gate, core lint/typecheck, root typecheck, workflow self-tests, and diff check; its exact `Repair Pending` receipt was replaced by the matching `Revalidation Passed` successor. L03 and TASK-540-04 remain `🚧 In Progress` with `Implementation Complete` until changelog 1252; L01, L02, and L04 follow the same closure-waiting status, and every other L03 UI/client/service/route production consumer stays read-only.
+**Implementation Complete:** 2026-07-16 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Historical Implementation Complete:** 2026-07-15 — the earlier cacheBus/mock repair phase completed before the current L03/L04 corrections.
+**Repair Reason:** Final post-audit reopened L03 after proving a scalar media presentation override could replace a `media.multiple` field's UUID array and make a later pick truncate gallery data; that scoped source repair is complete. A later provenance audit also reopened L04 because its owned binding-flow suite changed to consume the shared generated binding-ID helper without a fresh owner receipt.
+**Repair Revalidated:** 2026-07-16 — L03 retains its exact five-path media override receipt; L04 now has its separate HEAD/dirty-path-bound receipt after post-change static gates, isolated binding-flow 3/3, the exact ten-file matrix 98/98, workflow self-tests, and diff checks. No post-audit, full validation, smoke, changelog, or closure pass is claimed.
+**Current L03 Revalidation:** 2026-07-16 — against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus L03's five dirty owner paths, core/root static gates passed; expanded L03 Vitest passed 258/258, isolated cacheBus 22/22, L04 read-only consumers 98/98, DB preflight was reachable, and the current pre-split registered Custom Screens routes passed 20/20 with 118 expectations; `git diff --check` passed. This is pre-modularity-split evidence only. L04's separate current receipt remains independently required and is now present.
+**Modularity Repair Pending:** 2026-07-16 — measured from verified pre-family baseline `e5f15a5675b58df85e573f760df4429af735400f`, this child owns eight of the family's exact 15 current over-limit files: one under L01, five under L03, and two under L04. They must land sequentially as L01 → L03 → L04, followed by TASK-540-05-L01's final authoring-boundary handoff. Historical behavior receipts remain evidence only for their pre-split shapes; every production/test/support path must pass the hard 1,000-line, exact-name, targeted, isolation, and drift gates before closure.
+**Historical Cache Repair Reason:** Closure validation reproduced duplicate remote invalidation when canonical and legacy cache transports delivered the same serialized event. That scoped 2026-07-15 cacheBus/test plus additive route-evidence repair remains durable historical evidence.
 **Historical L04 Fix Started:** 2026-07-15
 **Historical L04 Repair Reason:** Mandatory repository-wide `bun run test` confirmed that the legacy `screen-editor-sections.test.tsx` Save flow lacked the fresh-symbol cacheBus factory required by the L04-owned `CustomScreenEditorPage`. L04 added only that mock export and passed its exact six-file re-gate; L01 through L03 remained historically Done, and closure resumed.
 **Historical L04 Completion:** 2026-07-15
@@ -37,10 +42,35 @@ when the user edits after a background request has already started.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-540-04-L01 | Make related-entry and media promise caches retryable | `entriesClient.ts`, `mediaClient.ts`, and their admin Vitest suites | 🚧 In Progress |
+| TASK-540-04-L01 | Make related-entry and media promise caches retryable | `entriesClient.ts`, `mediaClient.ts`, Entries harness/three-suite split, and Media suite | 🚧 In Progress |
 | TASK-540-04-L02 | Cancel and retry related-entry loads | shared Screen hook, Preview dialog, and hook/Preview tests | 🚧 In Progress |
-| TASK-540-04-L03 | Guard entry drafts, expand direct-image presentation targets, resolve presentation media UUIDs, and correlate mutation cache events | entry editor/canvas/read-only Preview, `customScreensClient.ts`, cache-bus substrate, the Bun-free override contract + service, and assigned suites | 🚧 In Progress |
-| TASK-540-04-L04 | Guard Screen builder drafts | Screen editor page, additive editor-path helper, route/Page/binding-flow tests, and the recovery-suite plus screen-editor-sections cacheBus mock seams; read-only cache-bus/client production seams | 🚧 In Progress |
+| TASK-540-04-L03 | Guard entry drafts, expand direct-image presentation targets, resolve presentation media UUIDs, and correlate mutation cache events | stable Entry Editor facade/eight extracted owners, canvas/read-only Preview, `customScreensClient.ts`, cache-bus substrate, override contract/service, four split test families/support, and assigned suites | 🚧 In Progress |
+| TASK-540-04-L04 | Guard Screen builder drafts | stable Screen Builder facade/seven extracted owners, additive editor-path helper, Page harness/four-suite split, route/binding/recovery seams, and read-only cache-bus/client production seams | 🚧 In Progress |
+
+## Mandatory parent modularity sequence
+
+The current exact blockers and immutable pre-split evidence are:
+
+| Leaf | Path | Lines | SHA-256 |
+|---|---|---:|---|
+| TASK-540-04-L01 | `tests/vitest/admin/entriesClient.test.ts` | 1,893 | `011bdef52770f4943daf9f33fcf25a5597e537c386ae3347102020875c17c9a5` |
+| TASK-540-04-L03 | `core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx` | 2,235 | `9d1c59d48e9c5de8f81d3acaa01583ea04efeab8438bb837af1db392cdd17001` |
+| TASK-540-04-L03 | `tests/vitest/admin/cacheBus.test.ts` | 1,165 | `301c51a4725dca5ef159ab18e21ea5afda1a457730c616f4e08dc1c0d82de024` |
+| TASK-540-04-L03 | `tests/vitest/admin/customScreensClient.test.ts` | 1,359 | `3e529d58401b62b3cc097d9ddfd51df1b6247b75c9ff8fc2043caecd57aecdda` |
+| TASK-540-04-L03 | `tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx` | 1,141 | `b336092db65daf52c6d9c381d7e5fc5cbb22206095aae719d98de274de7ebb86` |
+| TASK-540-04-L03 | `tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx` | 1,079 | `ded6ce43edb92875c1af0787aa66c010049328de3cf701eb4003d25b9d2b92b6` |
+| TASK-540-04-L04 | `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx` | 1,594 | `66c399215f25a00b123869a56a709e5a02bd53606c72db1966b2477eb24c0ba7` |
+| TASK-540-04-L04 | `tests/vitest/ui/custom-screens-page.test.tsx` | 2,313 | `79734548b7374ae24fae034acda989bf5c66d29aa94cd882e933400f8596766f` |
+
+Each leaf's final receipt covers every extant history/current/untracked production,
+test, and test-support owner path as `{ path, owner, lines, sha256 }`; all must be
+`<= 1000`.
+Staging or intermediate commits cannot reset the full baseline scope. L01 preserves its
+exact 42-name Entries family, L03 preserves the exact 40-name Custom Screens client,
+22-name cacheBus, 17-name Entry-restyle, and 22-name navigation families, and L04
+preserves the exact 36-name Page family. Every resulting suite remains independently
+runnable. These names join the global protected 347-name multiset; no line or
+test-integrity violation is eligible for TASK-9999.
 
 ## Corrective workflow
 
@@ -63,9 +93,11 @@ read-only. The focused cache-bus gate, expanded L03 owner/dependency gate, L04 r
 consumer gate, direct-image Bun/DB route gate, core lint/typecheck, root typecheck,
 workflow self-tests, and diff check all passed, and the exact `Repair Pending` receipt
 was replaced by its matching `Revalidation Passed` successor. L03 and TASK-540-04
-remain `🚧 In Progress` with `Implementation Complete` until changelog 1252; L01, L02,
-and L04 follow the same closure-waiting status. All ten leaves are landed, so closure
-continues from the prepared pre-closure boundary with no remaining leaf cursor.
+remain `🚧 In Progress` with `Implementation Complete` until changelog 1252. L04 is
+later reopened and revalidated for its binding-ID compatibility test. Before the hard
+line rule was introduced, those receipts would have returned the graph to the prepared
+pre-closure boundary; they do not authorize that transition now. The L01/L03/L04
+modularity sequence and downstream L01 boundary remain blocking.
 
 ## Shared contract
 
@@ -230,16 +262,29 @@ continues from the prepared pre-closure boundary with no remaining leaf cursor.
   `custom-screen-runtime-renderer.test.tsx` and
   `custom-screen-record-interactions.test.tsx`; TASK-540-04 leaves may run them
   read-only but never edit them.
-- TASK-540-04-L01 exclusively owns `entriesClient.test.ts` and `mediaClient.test.ts`.
+- TASK-540-04-L01 exclusively owns `entriesClient.test.ts`,
+  `entriesClientReadAuthority.test.ts`, `entriesClientMutationReconciliation.test.ts`,
+  `support/entriesClientTestHarness.ts`, and `mediaClient.test.ts`.
 - TASK-540-04-L02 exclusively owns its new hook suite plus the Preview dialog suite;
   the existing related resolver suite is read-only for this leaf.
 - TASK-540-04-L03 exclusively owns `custom-screen-entry-editor-restyle.test.tsx`,
-  `custom-screen-entry-draft.test.ts`, the new
-  `custom-screen-entry-navigation-guard.test.tsx`, and
-  `screenEntryPresentationOverrides.test.ts`, plus `customScreensClient.test.ts` and
-  `cacheBus.test.ts` for strict UUID response/cache normalization and exact
-  same-context operation correlation. Its exclusive source ownership includes
-  `customScreensClient.ts`, `cacheBus.ts`,
+  `custom-screen-entry-presentation-media.test.ts`,
+  `custom-screen-entry-draft.test.ts`,
+  `custom-screen-entry-navigation-guard.test.tsx`,
+  `custom-screen-entry-navigation-authority.test.tsx`,
+  `support/customScreenEntryNavigationHarness.tsx`, and
+  `screenEntryPresentationOverrides.test.ts`; the admin families are
+  `customScreensClient.test.ts` + `customScreensEntryOverridesClient.test.ts` + their
+  support harness and `cacheBus.test.ts` + `cacheBusCorrelation.test.ts` +
+  `cacheBusHardening.test.ts` + their support harness. They preserve strict UUID
+  response/cache normalization and exact same-context operation correlation. Its
+  exclusive source ownership includes
+  `CustomScreenEntryEditor.tsx`, `CustomScreenEntryRouteSession.tsx`,
+  `CustomScreenEntryEditorLayout.tsx`,
+  `CustomScreenEntryPresentationPanel.tsx`, `customScreenEntryRuntime.ts`,
+  `customScreenEntryPresentation.ts`, `customScreenEntryPresentationMedia.ts`,
+  `hooks/useScreenEntryHydration.ts`,
+  `hooks/useScreenEntryPresentationMedia.ts`, `customScreensClient.ts`, `cacheBus.ts`,
   `screenEntryPresentationOverrideContract.ts`, and
   `screenEntryPresentationOverrides.ts` in addition to the entry editor/canvas.
   `CustomScreenPreview.tsx` is also owned only to add optional pass-through props; absent
@@ -256,8 +301,15 @@ continues from the prepared pre-closure boundary with no remaining leaf cursor.
   exact finding prompt plus post-agent `touchedFiles` verification. After closure it may
   add only the TASK-540 root, TASK-540-04 child, and exact L03 task contracts for
   evidenced contract findings; task-state transitions remain separate.
-- TASK-540-04-L04 exclusively owns `CustomScreenEditorPage.tsx`, the additive
-  `buildCustomScreenEditorPath` seam in `routeParams.ts`, `custom-screens-page.test.tsx`,
+- TASK-540-04-L04 exclusively owns the stable `CustomScreenEditorPage.tsx` facade,
+  `customScreenEditorModel.ts`, `hooks/useCustomScreenEditorPersistence.ts`,
+  `hooks/useCustomScreenDocumentActions.ts`, `CustomScreenEditorPreviewOwner.tsx`,
+  `CustomScreenEditorSettingsPanel.tsx`, `CustomScreenEditorLayout.tsx`, and
+  `CustomScreenEditorRouteSession.tsx`; the additive `buildCustomScreenEditorPath`
+  seam in `routeParams.ts`; `custom-screens-page.test.tsx`,
+  `custom-screen-editor-draft-and-save.test.tsx`,
+  `custom-screen-editor-hydration-authority.test.tsx`,
+  `custom-screen-editor-visit-authority.test.tsx`, their page harness,
   `custom-screen-route-params.test.ts`, and
   `custom-screen-editor-binding-flow.test.tsx`. It also owns only the additive
   `createCacheEventOperationToken: () => Symbol()` mock export in
@@ -274,6 +326,51 @@ continues from the prepared pre-closure boundary with no remaining leaf cursor.
   its production and owned test paths. The `screen-editor-sections.test.tsx` seam remains
   fixture-only and is touched only when the finding requires it; the exact finding prompt
   plus post-agent `touchedFiles` verification bound every mutation.
+
+## Mandatory Entry Editor modularity handoff
+
+The root `AGENTS.md` line-limit rule is a blocking closure gate, not a non-blocking LOW
+and not a `TASK-9999` candidate. L03 owns the cohesive split of its Entry Editor source
+and restyle test. It must preserve the public import path and every currently exported
+helper while moving implementation behind one-way dependencies:
+
+```text
+CustomScreenEntryEditor.tsx
+└── CustomScreenEntryRouteSession.tsx
+    ├── customScreenEntryRuntime.ts
+    ├── customScreenEntryPresentation.ts
+    ├── hooks/useScreenEntryHydration.ts
+    ├── hooks/useScreenEntryPresentationMedia.ts
+    │   └── customScreenEntryPresentationMedia.ts
+    └── CustomScreenEntryEditorLayout.tsx
+        └── CustomScreenEntryPresentationPanel.tsx
+```
+
+The wrapper may import the route session and re-export pure helpers. The route session
+may compose hooks, pure helpers, and views. Hooks must not import views; views must not
+import the route session or hooks; pure modules must not import React, admin clients,
+runtime/server adapters, DB modules, or Bun APIs. No generic helper dumping ground is
+allowed. The detailed file budgets, pseudocode, compatibility surface, test partition,
+and targeted gates are authoritative in TASK-540-04-L03.
+
+`tests/vitest/ui/custom-screen-authoring-boundary.test.ts` remains exclusively owned by
+TASK-540-05-L01. L03 must not edit it. After the L03 split lands, L01 must add every new
+Entry Editor production module above to its forbidden-import coverage and run that suite
+read-only against the final module graph. This handoff is ordered L03 split/target gate →
+L04 split/target gate → TASK-540-05-L01 boundary update/gate → TASK-540-05-L02
+split/target gate → family-wide post-audit/smoke/closure. The boundary update runs only
+after both L03 and L04 final module graphs exist. TASK-540-04 and L03 cannot close while
+that handoff or the physical-line gate is outstanding.
+
+Before closure, count complete physical lines, including blanks/comments and an
+unterminated final line, for every family-scoped human-authored production, test, and
+support module derived from the verified pre-family history rather than the current
+HEAD diff. Every file must report `<= 1000`; only AGENTS.md exemptions apply. After all
+ten protected test families are split, their exact 347-name multiset is unchanged and
+the authoritative family matrix is 64 Vitest + 18 Bun = 82 files, comprising 81
+source-owner/read-only dependency files and one closure-owned aggregate. Workflow and
+TASK-540-06 must pin those totals and independently runnable suite paths before the full
+gate without changing pinned changelog 1252.
 
 ## Security Contract
 
@@ -322,9 +419,9 @@ check, and a zero-finding fresh post-audit. Those receipts remain historical. Th
 phase-neutral repair state machine designated L03 as the sole repair owner. Its exact
 three writable paths and full required re-gate are defined above and are now complete.
 The former `Repair Pending` receipt has been replaced by the exact successor
-`Revalidation Passed`; L03 and TASK-540-04 remain `🚧 In Progress` with
-`Implementation Complete` until changelog 1252, while L01, L02, and L04 follow the same
-closure-waiting status. L04's narrow 2026-07-15 mock repair passed its
-six-file/66-test gate and five zero-finding post-audit lenses. TASK-540-06 retains
+`Revalidation Passed`; L03 remains `🚧 In Progress` with `Implementation Complete` until
+changelog 1252. L04 is separately revalidated for its current binding-ID compatibility
+test and provenance gate. L04's narrow 2026-07-15 mock repair
+and six-file/66-test gate remain historical evidence only. TASK-540-06 retains
 ownership of the fresh family-wide audit, aggregate gates, runtime smoke, and final
 changelog/board closure.

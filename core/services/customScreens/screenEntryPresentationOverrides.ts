@@ -10,6 +10,7 @@ import {
 } from "./customScreenSchemas";
 import {
   customScreenOverrideErrorCodes,
+  isScreenEntryPresentationSingleMediaSchemaDefinition,
   normalizeScreenEntryPresentationOverrideList,
   normalizeScreenEntryPresentationOverrideReplacePayload,
   normalizeScreenEntryPresentationScopeId,
@@ -22,6 +23,8 @@ import { collectScreenDocumentBlocks } from "./screenDocumentOps";
 
 export {
   customScreenOverrideErrorCodes,
+  isScreenEntryPresentationSingleMediaField,
+  isScreenEntryPresentationSingleMediaSchemaDefinition,
   normalizeScreenEntryPresentationOverrideDraft as normalizeScreenEntryPresentationOverride,
   normalizeScreenEntryPresentationOverrideList,
   normalizeScreenEntryPresentationOverrideReplacePayload,
@@ -150,18 +153,10 @@ const isFieldResolvable = (field: string, properties: Record<string, unknown>) =
   return systemFieldRoots.has(root) || Object.prototype.hasOwnProperty.call(properties, root);
 };
 
-const isMediaFieldDefinition = (definition: unknown) => {
-  if (!isRecord(definition)) return false;
-  if (definition.xFieldType === "media") return true;
-  const fieldConfig = definition.xFieldConfig;
-  if (isRecord(fieldConfig) && isRecord(fieldConfig.media)) return true;
-  return false;
-};
-
-const isMediaFieldResolvable = (field: string, properties: Record<string, unknown>) => {
+const isSingleMediaFieldResolvable = (field: string, properties: Record<string, unknown>) => {
   const root = readFieldRoot(field);
   if (!Object.prototype.hasOwnProperty.call(properties, root)) return false;
-  return isMediaFieldDefinition(properties[root]);
+  return isScreenEntryPresentationSingleMediaSchemaDefinition(properties[root]);
 };
 
 const findBlockFieldBinding = (
@@ -206,7 +201,7 @@ const isOverrideTargetActive = (
     if (block.type === "image") return true;
     if (block.type !== "field") return false;
     const field = resolveFieldBlockField(block, bindings);
-    return field ? isMediaFieldResolvable(field, properties) : false;
+    return field ? isSingleMediaFieldResolvable(field, properties) : false;
   }
 
   if (!textPresentationPropPathSet.has(override.propPath)) return false;

@@ -13,6 +13,7 @@
 **Repair Started:** 2026-07-16
 **Repair Reason:** The Inspector's binding factory must consume R01's schema-domain `buildScreenFieldBindingId` and prove maximum-length tuples remain distinct and max-120 without taking ownership of schema or document operations. The same current repair also restores visible blank or over-120 Tab-label drafts to the latest committed label on blur and Enter without emitting a document patch.
 **Repair Revalidated:** 2026-07-16 — TASK-540-02-L01 passed `core lint:types`, `core lint`, its exact two-file Vitest gate 33/33 on the final shared schema state, including the domain-builder consumer and invalid blur/Enter restore regressions, and `git diff --check`; no full-suite, post-audit, smoke, changelog, or closure pass is claimed.
+**Modularity Repair Pending:** 2026-07-17 — verified history from pre-family baseline `e5f15a5675b58df85e573f760df4429af735400f` includes the touched 1,194-line `ScreenBlockInspector.tsx`. TASK-540-02-L01 must land the exact stable-facade/four-owner split below, re-anchor TASK-9999-01-L02 without executing it, and replace this historical pre-split receipt only after its static, 33/33 behavior, boundary, line, and drift gates pass.
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -32,7 +33,32 @@ or runtime renderer in this subtask.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-540-02-L01 | Expose link binding and complete tab-slot editing | `core/admin/ui/custom-screens/ScreenBlockInspector.tsx` | 🚧 In Progress |
+| TASK-540-02-L01 | Expose link binding and complete tab-slot editing | stable `ScreenBlockInspector.tsx` facade; `screenBlockInspectorModel.ts`; `ScreenBlockInspectorControls.tsx`; `ScreenBlockInspectorTabs.tsx`; `ScreenBlockInspectorSection.tsx`; binding-panel/image-inspector suites | 🚧 In Progress |
+
+## Mandatory Inspector modularity gate
+
+The current blocker evidence is TASK-540-02-L01-owned
+`core/admin/ui/custom-screens/ScreenBlockInspector.tsx` = 1,194 physical lines at
+SHA-256 `eb49d21a99cd5fbf8dedfd502c727ba890dd455552a8259b9e9b45eb4b11d4df`.
+Split it by cohesive responsibility into the five exact production paths named in the
+leaf row while preserving the stable facade's exact runtime/type exports and reference
+identity. Every original, extracted, test, and support path touched since the verified
+baseline remains in the byte-based `{ path, owner, lines, sha256 }` receipt and must be
+`<= 1000`; staging or committing cannot reset the gate. An over-limit result is neither
+a LOW nor a TASK-9999 candidate.
+
+`ScreenTabLabelDraft.baseLabel` remains intentionally present and behavior-neutral in
+`ScreenBlockInspectorTabs.tsx`. The split must not execute TASK-9999-01-L02. Before the
+split, its conditional evidence is the facade's current lines
+`524,525,538,542,553,559,563` at the SHA-256 above. After the split, the closure/docs
+owner records the exact final lines and SHA-256 for the same assignments in
+`ScreenBlockInspectorTabs.tsx` and proves the symbol absent from the facade. Exactly one
+layout may satisfy the workflow at a time.
+
+This leaf lands after TASK-540-01-L01 and before TASK-540-03-L01. Its two behavior
+suites remain independently runnable and preserve their existing 33 tests. The family
+aggregate remains exactly 64 Vitest + 18 Bun = 82 targets, with 81 source-owner/read-only
+files and one closure aggregate; pinned changelog 1252 is unchanged.
 
 ## Acceptance
 
@@ -84,7 +110,8 @@ normalizer.
 ## Completion
 
 The sole leaf remains `🚧 In Progress` with implementation and the 2026-07-16
-domain-builder consumer plus invalid Tab-label restore correction revalidated. Its exact
-33/33 targeted UI gate, typecheck, lint, and diff check are green; no new post-audit or
-smoke is claimed. Aggregate persistence and live browser flows remain owned by
-TASK-540-06 after TASK-540-04 consumes the clear sentinel.
+domain-builder consumer plus invalid Tab-label restore behavior implemented. Its exact
+33/33 targeted UI gate, typecheck, lint, and diff check are historical pre-split
+evidence; `Modularity Repair Pending` remains blocking until the five-owner graph and
+TASK-9999 evidence transition are freshly gated. Aggregate persistence and live browser
+flows remain owned by TASK-540-06 after TASK-540-04 consumes the clear sentinel.

@@ -1,3 +1,5 @@
+import { isScreenMediaAssetUuid } from "./customScreenSchemas";
+
 export const customScreenOverrideErrorCodes = [
   "custom_screen_override_invalid",
   "custom_screen_override_not_found",
@@ -124,6 +126,25 @@ const invalidOverride = () => new Error("custom_screen_override_invalid");
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+export const isScreenEntryPresentationSingleMediaField = (value: unknown): boolean => {
+  if (!isRecord(value) || value.type !== "media") return false;
+  if (value.media === undefined) return true;
+  return isRecord(value.media) && value.media.multiple !== true;
+};
+
+export const isScreenEntryPresentationSingleMediaSchemaDefinition = (value: unknown): boolean => {
+  if (!isRecord(value)) return false;
+  const fieldConfig = isRecord(value.xFieldConfig) ? value.xFieldConfig : null;
+  const mediaConfig =
+    fieldConfig && isRecord(fieldConfig.media)
+      ? fieldConfig.media
+      : value.xFieldType === "media"
+        ? fieldConfig
+        : null;
+  if (value.xFieldType !== "media" && mediaConfig === null) return false;
+  return value.type !== "array" && mediaConfig?.multiple !== true;
+};
 
 const expectOverrideRecord = (value: unknown): Record<string, unknown> => {
   if (!isRecord(value)) throw invalidOverride();
@@ -297,4 +318,3 @@ export function normalizeScreenEntryPresentationOverrideReplacePayload(
     }),
   };
 }
-import { isScreenMediaAssetUuid } from "./customScreenSchemas";

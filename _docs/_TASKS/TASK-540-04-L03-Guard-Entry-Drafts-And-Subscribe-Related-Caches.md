@@ -10,10 +10,14 @@
 **Dependencies:** TASK-540-03-L01, TASK-540-04-L02
 **Status:** 🚧 In Progress
 **Started:** 2026-07-13
-**Fix Started:** 2026-07-15
+**Repair Started:** 2026-07-16
 **Implementation Complete:** 2026-07-15 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
-**Revalidation Passed:** generation ff397af11ad9b309d5244372b0705637 / token 191e7db6acd8e2cf36016f821d2f6b88 / gate green
-**Repair Reason:** Closure validation reproduced one logical remote cache event twice when the canonical and legacy BroadcastChannel/storage transports delivered the same serialized event. The repair-contract audit also found that the at-capacity state-neutral corpus did not exercise every declared malformed channel/storage class and that the direct-image override contract lacked a DB-backed PATCH→GET route-boundary proof. The scoped 2026-07-15 repair reopened only the exact L03 cache-bus source/test pair plus one additive Custom Screens route test so the logical-occurrence fix, bounded-state invariants, persistence round trip, and mapped invalid-target failure were executable without changing another production contract.
+**Revalidation Passed:** 2026-07-16 — validated against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` with dirty L03 owner paths `core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx`, `core/services/customScreens/screenEntryPresentationOverrideContract.ts`, `core/services/customScreens/screenEntryPresentationOverrides.ts`, `tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts`, and `tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx`: core/root static gates passed; the expanded fourteen-file L03 Vitest gate passed 258/258; isolated cacheBus passed 22/22; the L04 read-only consumer matrix passed 98/98; DB preflight was reachable; the current pre-split registered Custom Screens route suite passed 20/20 with 118 expectations; and `git diff --check` passed. This is pre-modularity-split evidence only. No full-suite, live-smoke, changelog, or closure result is claimed.
+**Repair Reason:** Final post-audit proved a scalar presentation override could replace a `media.multiple` field's UUID array before `MediaPicker`, emptying the visible selection and allowing a later pick to truncate stored gallery data. L03 now makes single-media eligibility one shared Bun-free contract: service writes reject multiple-media targets, stored legacy rows are inactive and cleanup-eligible, and Entry Editor filters them before Canvas/Preview while preserving the exact bound array. The same repair moves the shared UUID import to the canonical module header.
+**Modularity Repair Pending:** 2026-07-17 — the root `AGENTS.md` `File Size and Modularity` hard gate applies to the currently touched 2,235-line `CustomScreenEntryEditor.tsx`, 1,359-line `customScreensClient.test.ts`, 1,165-line `cacheBus.test.ts`, 1,079-line `custom-screen-entry-navigation-guard.test.tsx`, and 1,141-line `custom-screen-entry-editor-restyle.test.tsx`. The exact production and test splits below are required before closure; they preserve all behavior receipts as history but require fresh static, targeted, isolation, test-name-multiset, boundary, line-count, post-audit, and runtime evidence after files move.
+**Historical Cache Repair Started:** 2026-07-15
+**Historical Cache Revalidation:** generation ff397af11ad9b309d5244372b0705637 / token 191e7db6acd8e2cf36016f821d2f6b88 / gate green
+**Historical Cache Repair Reason:** Closure validation reproduced one logical remote cache event twice when canonical and legacy transports delivered the same serialized event; the scoped repair owned cacheBus source/test plus additive registered-route override evidence and remains durable historical evidence.
 **Historical Completion:** 2026-07-14
 **Historical Reopen:** 2026-07-14 (final post-audit: cross-channel Screen list/detail reconciliation and complete fallback-list publication)
 **Historical Revalidation:** 2026-07-14 — focused `customScreensClient` 40/40; exact nine-file L03 Vitest matrix 181/181; `core` lint/typecheck, root typecheck, and `git diff --check` all green
@@ -27,6 +31,14 @@
 ## Exclusive ownership
 
 - `core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx`
+- new `core/admin/ui/custom-screens/CustomScreenEntryRouteSession.tsx`
+- new `core/admin/ui/custom-screens/CustomScreenEntryEditorLayout.tsx`
+- new `core/admin/ui/custom-screens/CustomScreenEntryPresentationPanel.tsx`
+- new `core/admin/ui/custom-screens/customScreenEntryRuntime.ts`
+- new `core/admin/ui/custom-screens/customScreenEntryPresentation.ts`
+- new `core/admin/ui/custom-screens/customScreenEntryPresentationMedia.ts`
+- new `core/admin/ui/custom-screens/hooks/useScreenEntryHydration.ts`
+- new `core/admin/ui/custom-screens/hooks/useScreenEntryPresentationMedia.ts`
 - `core/admin/ui/custom-screens/CustomScreenEntryCanvas.tsx`
 - `core/admin/ui/custom-screens/CustomScreenPreview.tsx`
 - `core/admin/services/customScreensClient.ts`
@@ -34,10 +46,18 @@
 - `core/services/customScreens/screenEntryPresentationOverrideContract.ts`
 - `core/services/customScreens/screenEntryPresentationOverrides.ts`
 - `tests/vitest/admin/customScreensClient.test.ts`
+- new `tests/vitest/admin/customScreensEntryOverridesClient.test.ts`
+- new `tests/vitest/admin/support/customScreensClientTestHarness.ts`
 - `tests/vitest/admin/cacheBus.test.ts` (sole repair-test writer)
+- new `tests/vitest/admin/cacheBusCorrelation.test.ts`
+- new `tests/vitest/admin/cacheBusHardening.test.ts`
+- new `tests/vitest/admin/support/cacheBusTestHarness.ts`
 - `tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx`
+- new `tests/vitest/ui/custom-screen-entry-presentation-media.test.ts`
 - `tests/vitest/ui/custom-screen-entry-draft.test.ts`
 - new `tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx`
+- new `tests/vitest/ui/custom-screen-entry-navigation-authority.test.tsx`
+- new `tests/vitest/ui/support/customScreenEntryNavigationHarness.tsx`
 - `tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts`
 
 The completed 2026-07-15 repair's mutation authority was a separate exact historical set:
@@ -53,8 +73,8 @@ No other TASK-540 leaf edits these paths. TASK-540-03-L01 exclusively owns
 `custom-screen-record-interactions.test.tsx`; this leaf consumes and may run that
 landed renderer contract read-only. The retained
 `tests/vitest/widgets/screenWidgets.test.tsx` Preview compatibility suite is also a
-read-only gate. TASK-540-06 owns the corresponding
-`_docs/CMS_API.md` correction at closure.
+read-only gate. The corresponding `_docs/CMS_API.md` correction is already landed at
+the current HEAD; TASK-540-06 validates it read-only and does not own another edit.
 L03 landed the cache-bus substrate and mutation-client forwarding before L04. The
 2026-07-15 repair reopened exactly
 `cacheBus.ts`, `cacheBus.test.ts`, and the additive
@@ -73,40 +93,449 @@ The later cache-authority correction edited only `customScreensClient.ts` plus i
 test; the already-gated cacheBus/editor/service seams stayed read-only. Its durable
 evidence is the Historical Revalidation/Historical Post-Audit metadata above, not
 the mutable `_docs/_workflows/task-540-fix.mjs`, which now records only the completed
-R01→R03 URL-control correction. With L03 `🚧 In Progress`, canonical
-`Implementation Complete`, one `Revalidation Passed`, and no `Repair Pending`, the
-`_docs/_workflows/task-540-implement.mjs` resolver treats L03 as landed and resumes at
-the prepared pre-closure boundary with all ten leaves landed and no remaining leaf
-cursor.
+R01→R03 URL-control correction. The earlier prepared-boundary resolver state is
+historical only. The current `Modularity Repair Pending` field blocks L03 from being
+treated as landed despite its prior `Implementation Complete` and `Revalidation Passed`
+receipts. Only the completed cohesive split, fresh targeted gate, and replacement
+`Modularity Repair Revalidated` receipt restore landed status; that targeted receipt
+still never substitutes for either sibling owner gate or the later family post-audit,
+smoke, and closure gates.
 
 ## Grounded anchors
+
+The line references below describe the pre-split staged implementation and remain
+historical behavior anchors. The modularity implementation must relocate, not reinterpret,
+those exact responsibilities; its final receipt records the replacement file/symbol
+anchors.
 
 - Entry content/presentation state and dirty authority:
   `CustomScreenEntryEditor.tsx:671-780,1380-1446`.
 - Entry/override hydration, refresh, and cache subscriptions:
-  `CustomScreenEntryEditor.tsx:882-1131,1355-1378`.
-- Related-entry hook consumption: `CustomScreenEntryEditor.tsx:1217-1224`.
+  `CustomScreenEntryEditor.tsx:916-1165,1395-1418`.
+- Related-entry hook consumption: `CustomScreenEntryEditor.tsx:1251-1258`.
 - Save/create navigation authority: `CustomScreenEntryEditor.tsx:1415-1713`.
 - Direct-image presentation target and winning UUID collection:
   `CustomScreenEntryEditor.tsx:256-342,539-567`.
 - Direct-image/media-field active-target validation:
   `screenEntryPresentationOverrides.ts:145-220`.
 - Admin override response/cache normalization:
-  `customScreensClient.ts:109-129,235-255`.
+  `customScreensClient.ts:109-129,369-389`.
 - Same-context-only cache-event origin/operation delivery, canonical/legacy transport
   constants, storage emission, strict parsing, broadcast, and subscription teardown:
   `cacheBus.ts:10-39,42-48,57-237`.
 - Cache-bus transport/token, twin correlation, descriptor hardening, and bounds regressions:
-  `cacheBus.test.ts:184-1180`.
+  `cacheBus.test.ts:184-1165`.
 - Read-only historical provenance for the registered-route direct-image override
   fixtures, PATCH→GET round trip, and bounded invalid-target mapping:
   `customScreensRoutes.test.ts:313-463`. Any new finding on this shared suite is assigned
   to R01, not L03.
 - Optional Custom Screen mutation token forwarding across both local list/detail events:
-  `customScreensClient.ts:100-102,399-453`.
+  `customScreensClient.ts:100-102,590-644`.
 - Bun-free override schema/type owner:
   `screenEntryPresentationOverrideContract.ts:1-300`.
 - Shared guard: `AdminDirtyNavigationGuard.tsx:17-106`.
+
+## Mandatory L03 file-size remediation
+
+### Hard gate and exact physical ownership
+
+The root `AGENTS.md` `File Size and Modularity` section is authoritative: every touched
+human-authored production module or test file must contain at most 1,000 complete
+physical lines after this leaf closes, counting blank lines and comments. Exceeding the
+limit fails the gate and cannot be deferred to TASK-9999. This remediation changes no
+route, payload, cache key, schema, persistence behavior, component contract, intended
+UI/UX, security boundary, or pinned changelog number 1252.
+
+The touched-file set is measured from verified pre-family baseline `e5f15a567` through
+the final working tree. That history includes every intermediate commit and checkpoint:
+staging or committing cannot remove a path from the gate or make a newly over-limit file
+eligible for LOW/TASK-9999 deferral.
+
+Split the current Entry Editor only along the following cohesive boundaries. The line
+budgets are post-format ceilings with deliberate headroom; `1,000` remains the absolute
+limit even if an estimate is missed.
+
+| File | Sole responsibility | Expected physical lines | Hard maximum |
+|---|---|---:|---:|
+| `CustomScreenEntryEditor.tsx` | Public route wrapper, canonical route-key construction, keyed session mount, compatibility re-exports | 40–60 | 1,000 |
+| `CustomScreenEntryRouteSession.tsx` | Route-scoped state/refs, dirty and save authority, content mutations, assistant context, navigation guard, related-entry composition | 820–930 | 1,000 |
+| `customScreenEntryRuntime.ts` | Empty runtime values, opaque route-visit/message types, definition normalization, document/binding resolution, selected-block preservation | 65–100 | 1,000 |
+| `customScreenEntryPresentation.ts` | Presentation target/label/binding rules, sort/serialize/upsert/remove, dirty transition, multiple-media render filtering | 250–300 | 1,000 |
+| `customScreenEntryPresentationMedia.ts` | Route/request codecs, attempt types/reducer, winning direct-image UUID planning, exact URL projection | 265–310 | 1,000 |
+| `hooks/useScreenEntryHydration.ts` | Entry/override load tokens, hydration, refresh, authority checks, initial queued loads, relevant cache subscriptions | 280–350 | 1,000 |
+| `hooks/useScreenEntryPresentationMedia.ts` | Reducer wiring, pending-promise reuse, media cache subscription, force/retry, generation/unmount guarded commits | 190–240 | 1,000 |
+| `CustomScreenEntryPresentationPanel.tsx` | Presentation controls and button/MediaPicker rendering only | 230–280 | 1,000 |
+| `CustomScreenEntryEditorLayout.tsx` | EditorShell, alerts, header/toolbar, CanvasEditor and read-only Preview branches | 390–500 | 1,000 |
+| `custom-screen-entry-editor-restyle.test.tsx` | Mounted Entry Editor layout, dirty UI, metadata, direct/multiple-media and async media lifecycle flows | 945–955 | 1,000 |
+| `custom-screen-entry-presentation-media.test.ts` | Bun-free codec/reducer/planning/projection unit contract | 205–240 | 1,000 |
+
+The source move follows the current staged line responsibilities:
+
+- current lines `101–143` move to `customScreenEntryRuntime.ts`;
+- current lines `145–367` move to `customScreenEntryPresentation.ts`;
+- current lines `368–390` and `403–614` move to
+  `customScreenEntryPresentationMedia.ts`; the hook-owned `MediaCommit` at `391–397`
+  moves to `hooks/useScreenEntryPresentationMedia.ts`, while opaque `RouteVisit`,
+  `RouteMessageCommit`, and `PresentationErrorCommit` at `399–401` move to
+  `customScreenEntryRuntime.ts`;
+- current lines `615–631` remain the public wrapper shape;
+- current load-token/hydration block `916–1165` and entry/override cache subscription
+  `1395–1418` move to `hooks/useScreenEntryHydration.ts`;
+- the related-entry target/composition effect at current `1167–1173` remains in
+  `CustomScreenEntryRouteSession.tsx`; it is not hydration-hook ownership;
+- current media orchestration `1260–1394`, its pending/generation refs, and its matching
+  cleanup/discard invalidation move together to
+  `hooks/useScreenEntryPresentationMedia.ts`;
+- current presentation-panel JSX `1773–1947` moves to
+  `CustomScreenEntryPresentationPanel.tsx`;
+- current shell/alert/canvas/preview JSX `1948–2235` moves to
+  `CustomScreenEntryEditorLayout.tsx`;
+- the remaining route-session logic moves to `CustomScreenEntryRouteSession.tsx`.
+
+Line numbers are extraction anchors for the staged 2,235-line input, not permission to
+cut arbitrary ranges. Imports, local types, and callbacks move with the responsibility
+that owns them. Do not compress readable code, delete assertions/comments merely to
+meet the limit, duplicate helpers, or create a generic state/fixture dumping ground.
+
+### Exact client, cache-bus, and navigation test splits
+
+The same hard gate requires cohesive splits of the three other over-limit L03 suites.
+Their harnesses contain reusable fixtures/factories only, hold no tests, and expose no
+module-global mutable state that can leak between independently executed suites.
+
+| Existing/new file | Exact responsibility and final test count | Expected physical lines | Hard maximum |
+|---|---|---:|---:|
+| `tests/vitest/admin/support/customScreensClientTestHarness.ts` | `jsonResponse`, local-storage/deferred factories, Screen/override builders, and per-test cleanup helpers | 90–150 | 1,000 |
+| `tests/vitest/admin/customScreensClient.test.ts` | Screen list/detail cache, fallback, mutation, CSRF, and operation-token cases; retain the first 29 expanded tests | 820–930 | 1,000 |
+| `tests/vitest/admin/customScreensEntryOverridesClient.test.ts` | Entry-override storage/transport normalization, promise authority, UUID round trip, PATCH revocation, and rejection cases; retain the final 11 expanded tests | 430–520 | 1,000 |
+| `tests/vitest/admin/support/cacheBusTestHarness.ts` | BroadcastChannel/storage harnesses, remote-event builders, sequence emitter, and exact restoration helpers | 150–220 | 1,000 |
+| `tests/vitest/admin/cacheBus.test.ts` | The first six broadcast/local-delivery/token tests through same-tab notification | 240–330 | 1,000 |
+| `tests/vitest/admin/cacheBusCorrelation.test.ts` | The next eleven storage/remote-origin and canonical/legacy correlation tests through storage rearm | 430–540 | 1,000 |
+| `tests/vitest/admin/cacheBusHardening.test.ts` | The final five reentrancy, 128-entry LRU, malformed/unknown input, capacity-state-neutrality, and exact-byte-boundary tests | 420–520 | 1,000 |
+| `tests/vitest/ui/support/customScreenEntryNavigationHarness.tsx` | Happy-dom route/editor fixture, service mocks, deferred controls, mount/flush/event helpers, and deterministic cleanup | 380–470 | 1,000 |
+| `tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx` | The first nine clean/content/presentation dirty, save failure, stale-create, route-gating, and shared-discard tests | 300–390 | 1,000 |
+| `tests/vitest/ui/custom-screen-entry-navigation-authority.test.tsx` | The remaining thirteen expanded hydration-order, dirty timing, discard, create retry, A→B→A, and visit-scoped background-work tests | 370–470 | 1,000 |
+
+`customScreensClient.test.ts` and `customScreensEntryOverridesClient.test.ts` import
+their SUT exports directly plus only the dedicated client harness. Neither imports the
+other suite. The cache-bus suites import `cacheBus.ts` directly plus only
+`cacheBusTestHarness.ts`; the harness receives the subscribe function where a type or
+callback is needed rather than re-exporting production behavior. The navigation suites
+import the stable Entry facade directly plus only `customScreenEntryNavigationHarness`;
+the harness owns mounting and fixtures, never expectations or hidden test registration.
+No harness imports a `.test.*` file, and no suite imports another suite.
+
+The pre-split expanded test-name multisets are immutable behavior receipts:
+`customScreensClient` remains exactly 40 names split 29+11, `cacheBus` remains exactly
+22 names split 6+11+5, and Entry navigation remains exactly 22 names split 9+13. Before
+moving tests, the workflow seals each current pre-modularity fully expanded Vitest name
+multiset (including `test.each` suffixes). After moving them, it compares the combined
+multiset with exact multiplicity, rejects missing/renamed/duplicated/skipped tests, and
+runs every final suite by itself. Its isolation self-test must fail when any named suite
+is omitted, duplicated, or made dependent on another suite's registration/global state.
+Line-range movement alone is not permission to weaken an assertion or change a name.
+
+### Dependency direction and compatibility
+
+The only valid production dependency direction is:
+
+```text
+CustomScreenEntryEditor.tsx
+├── customScreenEntryPresentation.ts (explicit compatibility re-exports only)
+├── customScreenEntryPresentationMedia.ts (route-key helper + explicit compatibility re-exports)
+└── CustomScreenEntryRouteSession.tsx
+    ├── customScreenEntryRuntime.ts
+    ├── customScreenEntryPresentation.ts
+    ├── hooks/useScreenEntryHydration.ts
+    ├── hooks/useScreenEntryPresentationMedia.ts
+    │   └── customScreenEntryPresentationMedia.ts
+    └── CustomScreenEntryEditorLayout.tsx
+        └── CustomScreenEntryPresentationPanel.tsx
+```
+
+- Pure modules import no React, admin API/cache client, DB, server/runtime adapter, or
+  `Bun.*` API.
+- Pure modules also may not import `customScreensClient.ts`, `mediaClient.ts`, or the
+  UI-owned `SchemaBuilder.tsx`. `customScreenEntryRuntime.ts` declares a narrow
+  `ScreenDefinitionCarrier` structural input containing exactly the four values the
+  current read normalizer consumes: optional `definition`, `schemaVersion`, `blocks`,
+  and `bindings`, each typed as `unknown` at this pure boundary. It passes those exact
+  values to `normalizeCustomScreenDefinitionForRead`, preserving the legacy fallback.
+  `customScreenEntryPresentation.ts` imports
+  `ScreenEntryPresentationOverrideDraft` from the service-owned override contract and
+  declares a narrow field shape containing only `name`, `label`, `type`, `multiple`, and
+  `media.multiple` plus `media.accept`; the latter remains the exact MediaPicker accept
+  filter when the target crosses into the presentation panel.
+  `customScreenEntryPresentationMedia.ts` declares a narrow media
+  projection record containing only `id`, `type`, and `url`. Admin records are
+  structurally assignable at the route-session/hook boundary; no pure helper needs an
+  admin-client type import or copied normalization algorithm.
+- `customScreenEntryRuntime.ts` owns the shared opaque `RouteVisit`, route-message, and
+  presentation-error value types so both hooks and the route session can import them
+  without a hook-to-hook or hook-to-component cycle.
+- Hooks may import pure modules and existing admin clients but never layout/panel or the
+  route-session component.
+- Layout/panel receive typed values and callbacks; they never import hooks, mutate
+  caches, persist data, or own a second draft authority.
+- The route session composes hooks and views and remains the sole owner of cross-channel
+  content/presentation dirty and save authority.
+- No module imports the public wrapper, preventing a barrel cycle.
+- The wrapper may import React plus the existing admin-router/route-parameter helpers as
+  external dependencies. Among these nine split modules its only outgoing edges are the route
+  session plus the two pure compatibility owners shown above; all reverse edges into
+  the wrapper are forbidden.
+
+`CustomScreenEntryEditor.tsx` keeps the existing lazy-route/component API and re-exports
+every currently exported helper/type from its new owner so existing imports remain
+compatible: `resolvePresentationDraftTransition`, `isDraftAuthorityClean`,
+`filterRenderableScreenEntryPresentationOverrides`, `MediaAttemptCause`, `MediaAttempt`,
+`MediaMachineState`, `MediaAttemptInput`, `MediaAttemptAction`,
+`PRESENTATION_MEDIA_LOAD_ERROR`, `buildEntryRouteKey`,
+`buildPresentationMediaRequestKey`, `decodeAndValidatePresentationMediaRequestKey`,
+`readRequestedIdsFromMediaRequestKey`, `allocateMediaAttempt`, `mediaAttemptReducer`,
+`initializeMediaMachineState`, `collectWinningDirectImageAssetIds`, and
+`projectExactRequestedMediaUrls`. Internal consumers and pure tests import the owning
+module directly; the wrapper re-exports are compatibility, not ownership.
+
+### Authority-preserving implementation pseudocode
+
+```ts
+// customScreenEntryRuntime.ts — pure structural carrier, no admin-client import.
+export type ScreenDefinitionCarrier = Readonly<{
+  definition?: unknown;
+  schemaVersion?: unknown;
+  blocks?: unknown;
+  bindings?: unknown;
+}>;
+
+// customScreenEntryPresentation.ts — only fields consumed by presentation UI.
+export type ScreenEntryPresentationField = Readonly<{
+  name: string;
+  label: string;
+  type: string;
+  multiple?: boolean;
+  media?: Readonly<{ multiple?: boolean; accept?: string[] }>;
+}>;
+```
+
+```tsx
+// CustomScreenEntryEditor.tsx
+export {
+  filterRenderableScreenEntryPresentationOverrides,
+  isDraftAuthorityClean,
+  resolvePresentationDraftTransition,
+} from "./customScreenEntryPresentation";
+export {
+  PRESENTATION_MEDIA_LOAD_ERROR,
+  allocateMediaAttempt,
+  buildEntryRouteKey,
+  buildPresentationMediaRequestKey,
+  collectWinningDirectImageAssetIds,
+  decodeAndValidatePresentationMediaRequestKey,
+  initializeMediaMachineState,
+  mediaAttemptReducer,
+  projectExactRequestedMediaUrls,
+  readRequestedIdsFromMediaRequestKey,
+} from "./customScreenEntryPresentationMedia";
+export type {
+  MediaAttempt,
+  MediaAttemptAction,
+  MediaAttemptCause,
+  MediaAttemptInput,
+  MediaMachineState,
+} from "./customScreenEntryPresentationMedia";
+
+export function CustomScreenEntryEditor() {
+  const { path } = useAdminRouter();
+  const { screenId, entryId } = resolveCustomScreenEntryParams(path);
+  const isCreateMode = entryId === "new";
+  const routeKey = buildEntryRouteKey({ screenId, entryId, isCreateMode });
+  return (
+    <CustomScreenEntryRouteSession
+      key={routeKey}
+      screenId={screenId}
+      entryId={entryId}
+      isCreateMode={isCreateMode}
+      routeKey={routeKey}
+    />
+  );
+}
+```
+
+The explicit list above is the complete pre-split public surface. Do not use `export *`
+or accidentally expose private sort/update helpers.
+
+```ts
+// hooks/useScreenEntryHydration.ts
+function useScreenEntryHydration(input: {
+  identity: { screenId; entryId; isCreateMode; routeKey; routeVisit };
+  authority: {
+    mountedRef; routeGenerationRef; draftMutationGenerationRef;
+    entryLoadGenerationRef; overrideLoadGenerationRef;
+    contentDirtyRef; presentationDirtyRef;
+  };
+  commit: { applyEntry; applyOverrides; reportEntry; reportOverrides };
+}) {
+  // Capture the unchanged channel/route/visit/load/draft token before each await.
+  // Commit only when mounted + route + visit + channel generation are exact.
+  // Replace a draft only when generation and both dirty refs remain clean.
+  // A dirty rejection uses the bounded local-changes-unchanged message.
+  // Return stable refreshEntry/refreshPresentation callbacks.
+}
+
+// hooks/useScreenEntryPresentationMedia.ts
+function useScreenEntryPresentationMedia(input: {
+  routeKey; routeVisit; document; bindings; values; overrides; mountedRef;
+}) {
+  // Derive the canonical sorted request key with the existing pure helper.
+  // Preserve reducer attempt identity and the exact pending promise in StrictMode.
+  // Cache retry and manual retry remain force:true; inherited ID-set attempts retain force.
+  // Guard every success/error/finalization by request, token, generation, visit, and unmount.
+  // Return { state, retry, invalidate } without exposing mutable refs.
+}
+```
+
+The opaque `RouteVisit` is still allocated once inside the keyed route session. It must
+not become a memoized/global key. The hydration hook receives the existing authority
+refs rather than creating competing refs. The media hook may encapsulate media-only refs,
+but its `invalidate` is called by confirmed discard and route cleanup before navigation.
+Content, presentation, load, save, stale-create, media, assistant-context, and cache-event
+invariants described elsewhere in this task remain byte-for-behavior identical.
+
+The route session calculates the already-landed
+`filterRenderableScreenEntryPresentationOverrides` result before both direct-image media
+planning and layout props. Canvas and Preview receive that same filtered array, while the
+unfiltered draft remains the exact persistence/dirty authority. A scalar legacy override
+therefore cannot replace a `media.multiple` array, but no stored draft is silently
+rewritten by the view extraction.
+
+`CustomScreenEntryPresentationPanel.tsx` receives the resolved target, selected values,
+dirty/loading/saving flags, and typed save/reload/clear/change callbacks. It renders no
+control for a multiple-media target. `CustomScreenEntryEditorLayout.tsx` receives grouped
+status/content/presentation/media/action props and owns rendering only. Neither component
+calls a service or derives a second save/dirty baseline.
+
+### Pure test split and boundary-owner handoff
+
+Keep all mounted UI/runtime scenarios through the current unmounted-attempt regression in
+`custom-screen-entry-editor-restyle.test.tsx`. Move only the current final four Bun-free
+tests (pre-split lines `957–1141`) to
+`tests/vitest/ui/custom-screen-entry-presentation-media.test.ts`:
+
+1. route-scoped canonical key codec and malformed-snapshot rejection;
+2. reducer identity, monotonic/frozen attempts, inherited force, and stale settlements;
+3. direct-image override/binding winner planning and media-field exclusion;
+4. exact requested UUID casing and canonical media-record projection.
+
+The new file imports `customScreenEntryPresentationMedia.ts` directly, uses no happy-dom,
+component mount, client mock, or copied UI fixture, and remains independently runnable.
+The restyle suite retains the new `media.multiple` array-preservation scenario and all
+StrictMode/cache/force/unmount visible-flow assertions. Its mounted single-media target
+case changes the fixture to the non-default ordered value
+`media.accept: ["image/png", "image/webp"]` and proves that exact array reaches the
+mounted `MediaPicker` as `data-accept="image/png,image/webp"`; an assertion that sees
+only the fallback `["image/*"]` is insufficient. The separate direct-image fallback
+remains `["image/*"]`. Do not duplicate its 457-line
+mock harness in another test file. `custom-screen-entry-draft.test.ts` stays in place and
+imports its two presentation authority helpers from `customScreenEntryPresentation.ts`.
+
+`tests/vitest/ui/custom-screen-authoring-boundary.test.ts` belongs exclusively to
+TASK-540-05-L01. L03 must not edit it. After this split, L01 ensures all nine Entry
+Editor production files named in the budget table are covered by the existing forbidden
+page-builder/widget import check (the wrapper is already listed, so eight paths are
+additive). The same suite must enforce the exact one-way import graph above, forbid
+React/admin-client/`SchemaBuilder` imports from the three pure modules, forbid every
+module from importing the wrapper, and source-pin the wrapper's complete existing
+value/type compatibility re-export list. A compile-only consumer is insufficient because
+the pure tests intentionally move to their owning modules. Land order is L03 split →
+L03 target gate and immediate L03 `Modularity Repair Revalidated` receipt → L04
+split/gate and immediate L04 receipt → L01 additive boundary update/gate → family
+post-audit/smoke/closure; a passing check that still reads only the thin wrapper is
+insufficient evidence.
+
+### Required workflow and targeted validation changes
+
+Before implementation, add every new production, test, and dedicated harness path above
+to L03's workflow `allowedFiles`/`requiredFiles`. Add the five net-new Vitest suites
+(`customScreensEntryOverridesClient`, two cacheBus suites, Entry navigation authority,
+and Entry presentation media) to `TARGET_VITEST_FILES`, the expanded L03 command, the
+sealed test-name-multiset verifier, and the exact named-file isolation self-test. Harness
+modules are required source-owner paths but are not test targets. This leaf contributes
+exactly +5 Vitest files while preserving 84 existing expanded tests across the first
+three pre-split suites (40 client + 22 cache-bus + 22 navigation), plus the existing 17
+Entry restyle/pure tests split 13+4.
+
+After reconciling every TASK-540 modularity repair from baseline `e5f15a567`, the
+authoritative family aggregate is 64 Vitest + 18 Bun = 82 target files: 81
+source-owner/read-only dependency files and 1 closure-owned aggregate file. These totals
+supersede the earlier partial 51+7 calculation. TASK-540-06 and workflow assertions must
+use 64+18 consistently before closure; changelog remains 1252.
+
+Run, at minimum, after the final split and formatting:
+
+```bash
+for file in \
+  core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx \
+  core/admin/ui/custom-screens/CustomScreenEntryRouteSession.tsx \
+  core/admin/ui/custom-screens/CustomScreenEntryEditorLayout.tsx \
+  core/admin/ui/custom-screens/CustomScreenEntryPresentationPanel.tsx \
+  core/admin/ui/custom-screens/customScreenEntryRuntime.ts \
+  core/admin/ui/custom-screens/customScreenEntryPresentation.ts \
+  core/admin/ui/custom-screens/customScreenEntryPresentationMedia.ts \
+  core/admin/ui/custom-screens/hooks/useScreenEntryHydration.ts \
+  core/admin/ui/custom-screens/hooks/useScreenEntryPresentationMedia.ts \
+  tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx \
+  tests/vitest/ui/custom-screen-entry-presentation-media.test.ts \
+  tests/vitest/ui/custom-screen-entry-draft.test.ts \
+  tests/vitest/ui/support/customScreenEntryNavigationHarness.tsx \
+  tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx \
+  tests/vitest/ui/custom-screen-entry-navigation-authority.test.tsx \
+  tests/vitest/admin/support/customScreensClientTestHarness.ts \
+  tests/vitest/admin/customScreensClient.test.ts \
+  tests/vitest/admin/customScreensEntryOverridesClient.test.ts \
+  tests/vitest/admin/support/cacheBusTestHarness.ts \
+  tests/vitest/admin/cacheBus.test.ts \
+  tests/vitest/admin/cacheBusCorrelation.test.ts \
+  tests/vitest/admin/cacheBusHardening.test.ts; do
+  lines="$(awk 'END { print NR }' "$file")"
+  if [ "$lines" -gt 1000 ]; then
+    echo "$file exceeds 1000 physical lines: $lines" >&2
+    exit 1
+  fi
+done
+
+bun --cwd core lint:types
+bun --cwd core lint
+./node_modules/.bin/tsc -p tsconfig.json --noEmit
+bunx vitest run \
+  tests/vitest/ui/custom-screen-entry-presentation-media.test.ts \
+  tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx \
+  tests/vitest/ui/custom-screen-entry-draft.test.ts \
+  tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx \
+  tests/vitest/ui/custom-screen-entry-navigation-authority.test.tsx \
+  tests/vitest/admin/customScreensClient.test.ts \
+  tests/vitest/admin/customScreensEntryOverridesClient.test.ts \
+  tests/vitest/admin/cacheBus.test.ts \
+  tests/vitest/admin/cacheBusCorrelation.test.ts \
+  tests/vitest/admin/cacheBusHardening.test.ts \
+  tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts
+# After TASK-540-05-L01 performs its owned additive handoff:
+bunx vitest run tests/vitest/ui/custom-screen-authoring-boundary.test.ts
+git diff --check
+```
+
+Strict land order is L03 → L04 → L01. Immediately after L03 and before L04 may edit its
+Page family, run the transient L04 read-only consumer gate with the single current
+`custom-screens-page.test.tsx`, the other eight unchanged L04 consumers, and all three
+post-L03 cache-bus suites: 12 files total. That phase must not reference the three future
+L04 Page test paths. Once L04 lands, supersede it with the final 15-file consumer gate
+listed in Validation below. Then run the registered Custom Screens Bun/DB route gate and
+workflow self-tests. A source/test move invalidates the current L03 modularity receipt;
+immediately after the green L03 split gate, replace only `Modularity Repair Pending`
+with the matching HEAD/dirty-path-bound `Modularity Repair Revalidated` receipt while
+preserving the historical behavior receipt. The later L04 and L01 gates receive their
+own receipts and do not delay the L03 transition. Fresh post-audit lenses and the
+mandatory TASK-540 runtime smoke run only after every modularity owner lands.
 
 ## Canonical/legacy remote-event repair contract
 
@@ -275,7 +704,9 @@ function emitStorageEvent(event: CacheEvent): void {
 
 ### Repair regression matrix
 
-`cacheBus.test.ts` must retain every existing assertion and add deterministic proof for:
+The combined `cacheBus.test.ts`, `cacheBusCorrelation.test.ts`, and
+`cacheBusHardening.test.ts` family must retain every existing assertion and add
+deterministic proof for:
 
 1. One canonical plus one legacy twin delivers once in both `canonical→legacy` and
    `legacy→canonical` order.
@@ -490,7 +921,7 @@ function isMediaOverrideTargetActive(override, block, bindings, properties) {
   if (block.type === "image") return true;
   if (block.type !== "field") return false;
   const field = resolveFieldBlockField(block, bindings);
-  return field ? isMediaFieldResolvable(field, properties) : false;
+  return field ? isSingleMediaFieldResolvable(field, properties) : false;
 }
 
 // Entry UI uses the same target distinction.
@@ -498,7 +929,11 @@ function resolvePresentationTarget(block, field) {
   if (block.type === "image") {
     return { kind: "direct-image", blockId: block.id, propPath: "mediaAssetId" };
   }
-  if (block.type === "field" && field?.type === "media") {
+  if (
+    block.type === "field" &&
+    field?.type === "media" &&
+    field.media?.multiple !== true
+  ) {
     return { kind: "media-field", blockId: block.id, propPath: "mediaAssetId" };
   }
   return existingTextTargetOrNull(block, field);
@@ -545,15 +980,19 @@ No DB, server, settings, or Bun runtime adapter may enter the contract module.
 
 The strict override envelope and shared UUID normalizer remain authoritative. Extend
 only the service's target-activity rule so `image` blocks accept the existing
-`mediaAssetId`/legacy `image` prop paths. Field blocks remain accepted only when
-bound to a schema-declared media field. Non-media fields and all other block kinds
+`mediaAssetId`/legacy `image` prop paths. Field blocks remain accepted only when bound
+to a schema-declared single-media field. A `media.multiple` field is never a scalar
+presentation-override target: new writes fail closed, stored legacy rows are inactive
+and cleanup-eligible, and the Entry Editor omits them before Canvas/Preview so the bound
+UUID array reaches `MediaPicker` unchanged. Non-media fields and all other block kinds
 remain fail-closed. No URL is persisted: replacement, repository round trip, active
 read, and cleanup all preserve the exact normalized UUID.
 
 For a direct image, collect the one winning asset identity: authored presentation
 override first, otherwise the bound media value. Multiple blocks sharing a UUID produce
-one requested ID. Media-field override/bound UUIDs never enter the URL map and continue
-unchanged to MediaPicker. Static URL fallback requires no media lookup. If an authored
+one requested ID. Single-media field override/bound UUIDs never enter the URL map and
+continue unchanged to MediaPicker; multiple-media fields accept no scalar override and
+retain their exact bound array. Static URL fallback requires no media lookup. If an authored
 direct-image UUID wins but has no safe resolved record, the renderer's already-landed
 TASK-540-03-L01 contract renders a placeholder without falling back.
 
@@ -1056,10 +1495,12 @@ const presentationMediaState =
 ```
 
 The route/media key codec, media state initializer, allocator, and reducer are Bun-free
-module-level exports from the already owned `CustomScreenEntryEditor.tsx`. They exist so
-the owned Vitest suite can directly prove exact object identity, monotonic token
-allocation, frozen snapshots, exhaustive stale-action no-ops, and route-key round trips;
-the component consumes those same exports and no test-only production fallback is added.
+exports owned by `customScreenEntryPresentationMedia.ts`. The public
+`CustomScreenEntryEditor.tsx` wrapper compatibility-re-exports their pre-split names,
+while the dedicated pure Vitest suite imports the owner directly to prove exact object
+identity, monotonic token allocation, frozen snapshots, exhaustive stale-action no-ops,
+and route-key round trips. The component hook consumes the same owner and no test-only
+production fallback is added.
 
 Initial media resolution is non-force. The visible Retry button and
 `cacheKeys.mediaList` events use explicit `force:true` attempts. Every attempt uses
@@ -1105,10 +1546,12 @@ preference source in this leaf. TASK-540-05-L02 later owns the dedicated
 per-user persistence and absence of localStorage, and runs this restyle suite read-only
 after that transport switch.
 
-This leaf is also the sole writer of `CustomScreenEntryEditor.tsx`. At its existing hook
-call, replace the stale TASK-503/localStorage source comment with the transport-neutral
+Before the mandatory modularity split, this leaf was the sole writer of
+`CustomScreenEntryEditor.tsx`; it remains the sole writer of the wrapper and every new
+Entry Editor module listed in Exclusive ownership. The already-landed transport-neutral
 English comment `Entry-view badge preferences are owned by the dedicated hook (default
-OFF).` No executable line changes. Later leaves consume that call site read-only.
+OFF).` moves with the hook call into `CustomScreenEntryRouteSession.tsx` without changing
+the executable preference behavior. Later leaves consume that call site read-only.
 
 ### Dirty hydration and navigation contract
 
@@ -1848,35 +2291,45 @@ here and obey the commit-time generation contract.
 - `custom-screen-entry-editor-restyle.test.tsx` proves the UI offers the direct-image
   media target, sends the UUID-valued existing route envelope, consumes its returned
   UUID, resolves override-or-bound direct-image winners, and never URL-converts a media
-  field. It also proves the non-editor/read-only entry branch forwards the same override
-  and URL map through optional `CustomScreenPreview` props.
+  field. It also proves a scalar legacy override cannot replace a multiple-media field's
+  bound UUID array and that a subsequent pick/save preserves the complete array. The
+  non-editor/read-only entry branch forwards the same filtered override contract and URL
+  map through optional `CustomScreenPreview` props.
+- `custom-screen-entry-presentation-media.test.ts` directly proves the extracted
+  Bun-free route/media codec, attempt reducer, winning direct-image UUID planner, and
+  exact media-record projection without importing or mounting the React component.
 - TASK-540-03-L01's exclusively owned
   `custom-screen-runtime-renderer.test.tsx` is a read-only prerequisite proving safe
   URL-map consumption and missing/unsafe winner behavior. This leaf must not edit it.
-- TASK-540-06 closure updates `_docs/CMS_API.md` from field-only wording to the
-  validated direct-image-or-media-field contract and records the existing route
-  registration/security evidence.
+- TASK-540-06 closure validates the already-landed `_docs/CMS_API.md`
+  direct-image-or-media-field wording read-only and records the existing route
+  registration/security evidence without editing that file.
 
 ## Gate tests owned here; aggregate additions owned by TASK-540-06
 
 - `custom-screen-entry-editor-restyle.test.tsx`: direct-image target/payload;
   override and bound-value UUID collection; exact URL-map forwarding; media-field UUID
-  preservation; missing record; first rejection then forced retry; cache-event force;
+  preservation; multiple-media scalar-override exclusion and array-preserving save;
+  missing record; first rejection then forced retry; cache-event force;
   request/attempt mismatch; stale generation and unmount; semantically identical fresh
   render inputs during a forced attempt issue one read/subscription; the frozen ID
   snapshot survives later array mutation/reordering; settlement preserves exact attempt
   object identity and stale settled actions allocate no retry; ID-set change during pending force
   inherits force with a fresh monotonic token; Screen A -> Screen B with identical entry/
-  UUID inputs allocates a new route-scoped attempt; the exported key codec, initializer,
-  allocator, and reducer have direct `toBe`/monotonic/frozen-snapshot assertions; replace only the stale
-  localStorage persistence assertion with transport-neutral metadata-toggle
-  `aria-checked` plus visible-badge behavior.
+  UUID inputs allocates a new route-scoped attempt; transport-neutral metadata-toggle
+  `aria-checked` plus visible-badge behavior remains mounted here.
+- New `custom-screen-entry-presentation-media.test.ts`: the extracted key codec,
+  initializer, allocator, reducer, UUID winner planner, and exact URL projection retain
+  their direct `toBe`, monotonic-token, frozen-snapshot, malformed-input, deduplication,
+  field-exclusion, and canonical/mixed-case record assertions. It is a Bun-free Vitest
+  file and must run independently.
 - `custom-screen-entry-draft.test.ts`: pure draft initialization/hydration, create/update
   payload boundaries, validation/error projection, presentation change→revert authority,
   and exact-generation plus both-dirty-ref replacement barriers. Observable route,
   effect, blocker, and async continuation behavior stays in the mounted component suite
   below rather than being simulated in a helper-only test.
-- New `custom-screen-entry-navigation-guard.test.tsx`: clean, content dirty,
+- The 9+13 `custom-screen-entry-navigation-guard.test.tsx` and
+  `custom-screen-entry-navigation-authority.test.tsx` pair: clean, content dirty,
   presentation dirty, both dirty, cancel, confirm, beforeunload, save failure, and
   successful create-save navigation bypass only after persistence; stale first create
   captures one ID without navigation, the next exact retry performs PATCH (no second
@@ -1897,7 +2350,8 @@ here and obey the commit-time generation contract.
   through active filtering and route output, and transport-response validates exact ISO
   metadata then projects strict drafts for the client cache; repository-backed
   save/get/cleanup round trip described above.
-- `customScreensClient.test.ts`: exact-envelope reject-unknown behavior; strict safe
+- The 29+11 `customScreensClient.test.ts` and
+  `customScreensEntryOverridesClient.test.ts` pair: exact-envelope reject-unknown behavior; strict safe
   block ID, enum, and media UUID validation; one bad response row rejects the whole
   request with `custom_screen_override_invalid` and writes no cache; one bad cached row
   evicts the whole scoped cache and falls through to a network response; no partial-row
@@ -1915,7 +2369,8 @@ here and obey the commit-time generation contract.
   rejection, and invalidate every captured publisher on explicit clear. A fallback-list
   racing a regular forced list in both orders obeys exact committed full-list authority;
   complete publication evicts an omitted stale detail unless a newer replace/delete owns it.
-- `cacheBus.test.ts`: the complete canonical/legacy remote-event repair matrix above;
+- The 6+11+5 `cacheBus.test.ts`, `cacheBusCorrelation.test.ts`, and
+  `cacheBusHardening.test.ts` family: the complete canonical/legacy remote-event repair matrix above;
   distinct operation-symbol identities; exact same-context token delivery; remote
   token absence; own-source filtering; strict bounded parsing; per-subscription state;
   bounded LRU fail-open behavior; exact teardown; remove-before-set storage re-arming;
@@ -1951,18 +2406,34 @@ deduplication state to suppress a valid invalidation.
 bun --cwd core lint:types
 bun --cwd core lint
 ./node_modules/.bin/tsc -p tsconfig.json --noEmit
-bunx vitest run tests/vitest/admin/cacheBus.test.ts
+bunx vitest run tests/vitest/admin/cacheBus.test.ts \
+  tests/vitest/admin/cacheBusCorrelation.test.ts \
+  tests/vitest/admin/cacheBusHardening.test.ts
+# Every split suite is independently runnable with its pinned expanded count.
+bunx vitest run tests/vitest/admin/customScreensClient.test.ts # 29
+bunx vitest run tests/vitest/admin/customScreensEntryOverridesClient.test.ts # 11
+bunx vitest run tests/vitest/admin/cacheBus.test.ts # 6
+bunx vitest run tests/vitest/admin/cacheBusCorrelation.test.ts # 11
+bunx vitest run tests/vitest/admin/cacheBusHardening.test.ts # 5
+bunx vitest run tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx # 9
+bunx vitest run tests/vitest/ui/custom-screen-entry-navigation-authority.test.tsx # 13
+bunx vitest run tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx # 13
+bunx vitest run tests/vitest/ui/custom-screen-entry-presentation-media.test.ts # 4
 # DB preflight and exact Bun route gate; customScreensRoutes.test.ts is additive-only.
 set -a && source .env && set +a && bun --eval 'import { canConnect } from "./tests/utils/db"; const configured = Boolean(process.env.DATABASE_URL?.trim()); const reachable = configured && await canConnect(); process.stdout.write(JSON.stringify({ configured, reachable, selectOne: reachable ? 1 : 0 })); if (!reachable) process.exit(1); process.exit(0)'
 set -a && source .env && set +a && bun test tests/integration/routes/customScreensRoutes.test.ts
-# Exact expanded L03 owner/dependency gate; within it only cacheBus.test.ts is writable.
-# The current gate covers 14 files: 11 prior owner/dependencies plus the three direct
-# Entry/Preview behavior consumers added by the final dependency-shape audit.
+# Exact expanded L03 owner/dependency gate after the modular split.
+# It covers 19 files: the prior 14 plus five net-new focused suites.
 bunx vitest run tests/vitest/admin/cacheBus.test.ts \
+  tests/vitest/admin/cacheBusCorrelation.test.ts \
+  tests/vitest/admin/cacheBusHardening.test.ts \
   tests/vitest/admin/customScreensClient.test.ts \
+  tests/vitest/admin/customScreensEntryOverridesClient.test.ts \
   tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx \
+  tests/vitest/ui/custom-screen-entry-presentation-media.test.ts \
   tests/vitest/ui/custom-screen-entry-draft.test.ts \
   tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx \
+  tests/vitest/ui/custom-screen-entry-navigation-authority.test.tsx \
   tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts \
   tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx \
   tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx \
@@ -1972,9 +2443,12 @@ bunx vitest run tests/vitest/admin/cacheBus.test.ts \
   tests/vitest/ui/custom-screen-records.test.tsx \
   tests/vitest/ui-integration/custom-screen-entries-restyle.test.tsx \
   tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx
-# Exact L04 read-only consumer gate; do not edit or re-baseline these files.
-# The current gate covers 10 files, including every direct EditorPage behavior consumer.
+# Exact post-split L04 read-only consumer gate; do not edit or re-baseline these files.
+# It covers 15 files after the Page and cache-bus suite splits.
 bunx vitest run tests/vitest/ui/custom-screens-page.test.tsx \
+  tests/vitest/ui/custom-screen-editor-draft-and-save.test.tsx \
+  tests/vitest/ui/custom-screen-editor-hydration-authority.test.tsx \
+  tests/vitest/ui/custom-screen-editor-visit-authority.test.tsx \
   tests/vitest/ui/custom-screen-route-params.test.ts \
   tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx \
   tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx \
@@ -1983,7 +2457,9 @@ bunx vitest run tests/vitest/ui/custom-screens-page.test.tsx \
   tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx \
   tests/vitest/ui-integration/screen-editor-sections.test.tsx \
   tests/vitest/ui/custom-screen-list-view-canvas.test.tsx \
-  tests/vitest/admin/cacheBus.test.ts
+  tests/vitest/admin/cacheBus.test.ts \
+  tests/vitest/admin/cacheBusCorrelation.test.ts \
+  tests/vitest/admin/cacheBusHardening.test.ts
 node --check _docs/_workflows/task-540-implement.mjs
 node _docs/_workflows/task-540-implement.mjs --self-test-repair-siblings
 git diff --check
@@ -1993,6 +2469,10 @@ The workflow derives named-file isolation metadata from the actual Vitest/Bun co
 shape, not the command ID. `expandedL03Vitest`, `l04ReadOnlyConsumerVitest`, and
 `directImageOverrideRouteBun` must enumerate every named file above exactly so any
 identified failure is rerun once in isolation. The DB preflight owns no isolation file.
+The same workflow self-test seals and compares the four pre/post split test-name
+multisets, validates the 29+11, 6+11+5, 9+13, and 13+4 distributions, and rejects a
+false-clean when any independently named suite is missing, duplicated, or registered by
+another test file.
 The permanent repair-sibling self-test preserves sibling-state safety while the
 effective-owner self-test pins full original L03 authority for a new verified finding,
 keeps `screenEntryPresentationOverrideContract.ts` writable, excludes the historical

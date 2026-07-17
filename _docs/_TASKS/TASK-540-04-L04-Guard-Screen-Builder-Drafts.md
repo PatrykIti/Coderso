@@ -11,11 +11,18 @@
 **Status:** 🚧 In Progress
 **Started:** 2026-07-14
 **Fix Started:** 2026-07-15
-**Repair Reason:** Mandatory repository-wide `bun run test` confirmed that `tests/vitest/ui-integration/screen-editor-sections.test.tsx` had fully mocked `@/utils/cacheBus` without the L04-required `createCacheEventOperationToken` export. Its Save path rejected before `updateCustomScreen`, producing an unhandled rejection and zero mutation calls; the repair added only the missing fresh-symbol factory and re-gated the owning leaf.
-**Implementation Complete:** 2026-07-15 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
-**Revalidation Passed:** generation 57974d94b81d8f4afbf85a22ebe32bf4 / token 1e62523100e412eaf5611d3f3b152f24 / gate green
+**Repair Started:** 2026-07-16
+**Repair Reason:** The final post-audit found the L04-owned binding-flow suite still pinned the retired unhashed generated binding ID. The test-only correction imports `buildScreenFieldBindingId` and consumes its exact output in the existing expectations; no source behavior or assertion strength changes.
+**Modularity Repair Pending:** 2026-07-17 — baseline-to-final history from `e5f15a567` includes the touched 1,594-line `CustomScreenEditorPage.tsx` and 2,313-line `custom-screens-page.test.tsx`. The exact facade/model/hooks/views/session and harness/four-suite splits below are mandatory before closure. The current revalidation is pre-split history only; fresh static, targeted, isolation, name-multiset, boundary, line-count, post-audit, and runtime evidence remains required.
+**Revalidation Passed:** 2026-07-16 — validated against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus exact dirty owner path `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`: post-change core lint/types and root `tsc` passed; isolated binding-flow passed 3/3; the exact ten-file L04 consumer matrix passed 98/98; workflow syntax/self-tests and `git diff --check` passed. No post-audit, full validation, smoke, changelog, or closure result is claimed.
+**Implementation Complete:** 2026-07-16 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Historical CacheBus Implementation Complete:** 2026-07-15 — the earlier one-property repair completed before the current compatibility correction.
+**Prior Compatibility Validation:** 2026-07-16 — against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus dirty owner path `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`, isolated Vitest passed 3/3, the exact ten-file L04 consumer matrix passed 98/98, and `git diff --check` passed; static checks predated the test-only change and therefore do not complete the current owner gate.
+**Historical CacheBus Repair Reason:** Mandatory repository-wide `bun run test` confirmed that `tests/vitest/ui-integration/screen-editor-sections.test.tsx` had fully mocked `@/utils/cacheBus` without the L04-required `createCacheEventOperationToken` export. Its Save path rejected before `updateCustomScreen`, producing an unhandled rejection and zero mutation calls; the repair added only the missing fresh-symbol factory and re-gated the owning leaf.
+**Historical CacheBus Revalidation:** generation 57974d94b81d8f4afbf85a22ebe32bf4 / token 1e62523100e412eaf5611d3f3b152f24 / gate green
 **Historical Completion:** 2026-07-14
 **Historical Revalidation:** 2026-07-14 — `core lint:types`, `core lint`, root `tsc`, and the exact five-file Vitest matrix (57/57)
+**Reopened:** 2026-07-16 (binding-flow generated-ID compatibility expectation and owner provenance)
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -23,8 +30,19 @@
 ## Exclusive ownership
 
 - `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`
+- new `core/admin/ui/custom-screens/customScreenEditorModel.ts`
+- new `core/admin/ui/custom-screens/hooks/useCustomScreenEditorPersistence.ts`
+- new `core/admin/ui/custom-screens/hooks/useCustomScreenDocumentActions.ts`
+- new `core/admin/ui/custom-screens/CustomScreenEditorPreviewOwner.tsx`
+- new `core/admin/ui/custom-screens/CustomScreenEditorSettingsPanel.tsx`
+- new `core/admin/ui/custom-screens/CustomScreenEditorLayout.tsx`
+- new `core/admin/ui/custom-screens/CustomScreenEditorRouteSession.tsx`
 - `core/admin/ui/custom-screens/routeParams.ts`
 - `tests/vitest/ui/custom-screens-page.test.tsx`
+- new `tests/vitest/ui/custom-screen-editor-draft-and-save.test.tsx`
+- new `tests/vitest/ui/custom-screen-editor-hydration-authority.test.tsx`
+- new `tests/vitest/ui/custom-screen-editor-visit-authority.test.tsx`
+- new `tests/vitest/ui/support/customScreenEditorPageHarness.tsx`
 - `tests/vitest/ui/custom-screen-route-params.test.ts`
 - `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
 - `tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx` (only the additive
@@ -71,18 +89,18 @@ one-argument subscribers remain valid. The optional symbol token is same-context
 metadata only; no cache key, serialized event field, storage key, network payload, or
 broadcast transport changes.
 The earlier corrective pass ran only after its L03 substrate/client phase and gate
-passed. Its durable evidence is the affected task metadata and current gates, not the
+passed. Its durable evidence is the affected task metadata and historical gates, not the
 mutable `_docs/_workflows/task-540-fix.mjs`, which now records only the completed
 R01→R03 URL-control correction. That completion evidence remains historical. The
 2026-07-15 one-property L04 repair and fresh six-file gate completed without rerunning
 the then-completed sibling leaves. At that historical phase L04 and TASK-540-04 were
 Done and closure resumed. The later TASK-540-04-L03 duplicate-delivery finding paused
 closure again, then its scoped repair completed and passed the required re-gate. In the
-current pre-1252 landed state L04 and TASK-540-04 remain `🚧 In Progress` with
-`Implementation Complete`; L03 has one canonical `Revalidation Passed` successor and
-no `Repair Pending`. TASK-540-06-L01 also remains active but is landed with its exact
-pre-closure `Revalidation Passed`; all ten leaves await family changelog 1252, full
-validation, and live smoke.
+current pre-1252 state L04 and TASK-540-04 remain `🚧 In Progress`; L04 carries its
+exact current `Revalidation Passed` for the generated-ID compatibility test. L03 has
+one canonical `Revalidation Passed` successor and no
+`Repair Pending`. TASK-540-06-L01 also remains active; fresh post-audit, full
+validation, live smoke, family changelog 1252, and closure remain pending.
 
 ## Historical pre-implementation grounded anchors
 
@@ -105,6 +123,210 @@ numbers.
   `CustomScreenEditorPage.tsx:1391-1513,1581-1591`.
 - Shared guard: `AdminDirtyNavigationGuard.tsx:17-106`.
 - Cache-event local/remote/operation delivery: `cacheBus.ts:73-138`.
+
+## Mandatory Screen Builder modularity remediation
+
+The root `AGENTS.md` file-size gate applies to every human-authored production module
+and test touched anywhere from verified baseline `e5f15a567` through the final working
+tree, including paths committed at intermediate checkpoints. Staging or committing does
+not reset that history. A result above 1,000 physical lines is a failed gate and is never
+eligible for LOW/TASK-9999 deferral.
+
+### Exact production split and line budgets
+
+Split the current Screen builder by responsibility into exactly these eight production
+files. The public facade and its five compatibility exports remain stable; no route,
+payload, cache key, persistence shape, visible behavior, accessibility behavior, or
+security boundary changes as part of the extraction.
+
+| File | Sole responsibility | Expected physical lines | Hard maximum |
+|---|---|---:|---:|
+| `CustomScreenEditorPage.tsx` | Public routed facade, canonical Screen route identity/key, keyed session mount, explicit compatibility re-exports | 30–55 | 1,000 |
+| `customScreenEditorModel.ts` | Bun-free tokens/shapes and pure route-key, draft generation, refresh guard, external-revision error, definition/selection, binding-orphan, and unique-field helpers | 180–270 | 1,000 |
+| `hooks/useCustomScreenEditorPersistence.ts` | Initial/cache hydration, exact visit/load/save tokens, persisted baseline, dirty/external-revision authority, cache subscriptions, refresh/discard, save/create/update, and bounded diagnostics | 500–650 | 1,000 |
+| `hooks/useCustomScreenDocumentActions.ts` | Selection/insert targeting and all section/block/binding document actions through the one injected definition/dirty transition | 300–430 | 1,000 |
+| `CustomScreenEditorPreviewOwner.tsx` | Preview-record hook ownership, loading/notice projection, and render-prop handoff only | 70–120 | 1,000 |
+| `CustomScreenEditorSettingsPanel.tsx` | Name/content type/status/sidebar settings controls and orphan-binding recovery presentation only | 150–240 | 1,000 |
+| `CustomScreenEditorLayout.tsx` | Header, toolbar, alerts, Screen shell/canvas, preview dialog, discard dialog, and dirty-navigation dialog composition only | 280–410 | 1,000 |
+| `CustomScreenEditorRouteSession.tsx` | Route-scoped state/refs, assistant context, hook composition, derived props, and one authority handoff into preview/layout | 390–550 | 1,000 |
+
+The pre-split extraction anchors are responsibility guides, not arbitrary cut ranges:
+
+- current token/types and pure helpers at `98–243` move to
+  `customScreenEditorModel.ts`;
+- current routed facade at `281–296` remains in `CustomScreenEditorPage.tsx`, with the
+  route session beginning at current `297` moved to `CustomScreenEditorRouteSession.tsx`;
+- preview notice/owner at `244–279` moves to `CustomScreenEditorPreviewOwner.tsx`;
+- persisted apply, hydration/cache subscription, refresh/discard, save tokens,
+  validation, create/update, and settlement authority at current `538–762` and
+  `1094–1277` move together to `useCustomScreenEditorPersistence.ts`;
+- selection, insertion, section/block/binding mutations at current `763–1093` move to
+  `useCustomScreenDocumentActions.ts`; the hook receives the single definition updater
+  and may not create a second draft-generation or dirty ref;
+- settings/recovery JSX at current `1278–1380` moves to
+  `CustomScreenEditorSettingsPanel.tsx`;
+- shell/header/alert/canvas/dialog JSX at current `1381–1594` moves to
+  `CustomScreenEditorLayout.tsx`;
+- all remaining route-scoped composition and derived values stay in
+  `CustomScreenEditorRouteSession.tsx`.
+
+Imports, types, callbacks, and cleanup move with their owning responsibility. Do not
+compress readable code, copy persistence logic into a view, or create a generic state
+or props dumping ground merely to satisfy the line count.
+
+The only allowed dependency direction among these files is:
+
+```text
+CustomScreenEditorPage.tsx
+├── customScreenEditorModel.ts (route-key helper + explicit compatibility exports)
+└── CustomScreenEditorRouteSession.tsx
+    ├── customScreenEditorModel.ts
+    ├── hooks/useCustomScreenEditorPersistence.ts
+    │   └── customScreenEditorModel.ts
+    ├── hooks/useCustomScreenDocumentActions.ts
+    │   └── customScreenEditorModel.ts
+    ├── CustomScreenEditorPreviewOwner.tsx
+    └── CustomScreenEditorLayout.tsx
+        └── CustomScreenEditorSettingsPanel.tsx
+```
+
+- `customScreenEditorModel.ts` is Bun-free and React-free. It may import the pure
+  Custom Screens schema/operation types it consumes, but no admin client, cache bus,
+  DB/server adapter, UI component, hook, or `Bun.*` API.
+- Hooks may import the pure model and their existing service/cache dependencies. They
+  never import a view, route session, or public facade, and never import each other.
+- Preview/settings/layout components receive typed values and callbacks. They do not
+  call mutation clients, subscribe to cache events, own draft refs, or persist data.
+- The route session composes the hooks/views and remains the only route-scoped owner.
+  No extracted module imports `CustomScreenEditorPage.tsx`, so a barrel cycle is
+  impossible.
+- The facade explicitly re-exports exactly the five pre-split helper values from the
+  model — `advanceBuilderDraftGeneration`, `runBuilderManualRefresh`,
+  `getBuilderExternalRevisionSaveError`, `detectScreenBindingOrphans`, and
+  `uniqueFieldNames` — and exports `CustomScreenEditorPage`. It does not use `export *`
+  or widen the public API.
+
+Authority-preserving shape:
+
+```tsx
+// CustomScreenEditorPage.tsx
+export {
+  advanceBuilderDraftGeneration,
+  detectScreenBindingOrphans,
+  getBuilderExternalRevisionSaveError,
+  runBuilderManualRefresh,
+  uniqueFieldNames,
+} from "./customScreenEditorModel";
+
+export function CustomScreenEditorPage() {
+  const { path } = useAdminRouter();
+  const screenId = resolveCustomScreenId(path);
+  const isCreateMode = !screenId || screenId === "new";
+  const routeKey = buildCustomScreenEditorRouteKey({ screenId, isCreateMode });
+  return (
+    <CustomScreenEditorRouteSession
+      key={routeKey}
+      screenId={screenId}
+      isCreateMode={isCreateMode}
+      routeKey={routeKey}
+    />
+  );
+}
+```
+
+```ts
+// hooks/useCustomScreenEditorPersistence.ts
+export function useCustomScreenEditorPersistence(input: {
+  identity: { screenId: string | null; isCreateMode: boolean; routeKey: string };
+  draft: { definition; name; contentTypeId; status; showInSidebar; sidebarLabel };
+  authority: { mountedRef; routeVisit; routeGenerationRef; draftGenerationRef; dirtyRef };
+  commit: { applyPersisted; updatePersistedBaselineOnly; report; navigateAfterCreate };
+}) {
+  // Capture exact route/visit/generation tokens before every await.
+  // Hydration replaces a draft only while the captured generation stays clean.
+  // Save suppresses only its exact same-context operation token.
+  // An edit-superseded save advances only the safe persisted baseline.
+  // Confirmed discard invalidates load/save continuations before refresh/navigation.
+}
+
+// hooks/useCustomScreenDocumentActions.ts
+export function useCustomScreenDocumentActions(input: {
+  definition;
+  selection;
+  updateDefinition: (next) => void; // sole injected dirty transition
+}) {
+  // Preserve semantic no-op behavior and one exact transition for every real mutation.
+  // Return typed selection/section/block/binding callbacks; never persist here.
+}
+```
+
+All existing dirty/cache invariants survive extraction: query/hash-only navigation keeps
+the keyed visit; A→B→A allocates a fresh opaque visit; stale load/save success, failure,
+warning, notice, and `finally` cannot commit; exact self-token events alone are ignored;
+remote/distinct/tokenless local events remain external; dirty hydration never replaces
+the draft; confirmed discard synchronously revokes authority; failed or edit-superseded
+saves never bypass blockers; exact create navigates only after persistence. Views render
+those states but do not derive a competing baseline.
+
+### Exact Page test split
+
+Extract the current shared mocks/fixtures/deferred controls/mount and event helpers into
+`tests/vitest/ui/support/customScreenEditorPageHarness.tsx`. The harness registers no
+tests, starts no work at import time, owns no mutable singleton shared across suites, and
+returns a fresh locally cleaned fixture per caller. Each suite imports the production
+facade/model it exercises plus the harness; no suite imports another `.test.tsx` file.
+
+| Test/harness file | Expected physical lines | Hard maximum |
+|---|---:|---:|
+| `tests/vitest/ui/support/customScreenEditorPageHarness.tsx` | 430–700 | 1,000 |
+| `tests/vitest/ui/custom-screens-page.test.tsx` | 180–280 | 1,000 |
+| `tests/vitest/ui/custom-screen-editor-draft-and-save.test.tsx` | 500–700 | 1,000 |
+| `tests/vitest/ui/custom-screen-editor-hydration-authority.test.tsx` | 480–650 | 1,000 |
+| `tests/vitest/ui/custom-screen-editor-visit-authority.test.tsx` | 500–700 | 1,000 |
+
+Preserve the exact fully expanded 36-name pre-modularity multiset and distribute it as:
+
+1. `custom-screens-page.test.tsx` retains exactly the first six basic List/Editor render,
+   cached-list, stale-binding-read, canvas, and create-mode cases.
+2. `custom-screen-editor-draft-and-save.test.tsx` owns exactly 13 cases: the three pure
+   generation/refresh/external-revision checks; block-boundary move behavior; clean/dirty
+   and query/hash navigation; update failure/retry; exact create; edit-during-update;
+   stale-create PATCH retry and its failure; and the dirty hydration resolve/reject pair.
+3. `custom-screen-editor-hydration-authority.test.tsx` owns exactly eight cases: dirty
+   external Refresh; uncached not-found; clean load errors; synchronous validation over
+   older hydration; older hydration versus a newer save error; pre-existing hydration
+   settlements around exact save; exact self-token suppression/external-event survival;
+   and generic list-event non-authority.
+4. `custom-screen-editor-visit-authority.test.tsx` owns exactly nine cases: unresolved
+   current revision; A→B→A opaque visits; first-A update reaching second A only through
+   hydration; cancel/confirm with pending hydration and save; old create isolation;
+   cache-event and promise-settlement render→passive-cleanup windows; and late unmount
+   settlements.
+
+Before moving tests, seal the current fully expanded Vitest test-name multiset (including
+parameterized suffixes). After the split, compare the four-suite combined multiset with
+exact multiplicity and reject renamed, missing, duplicated, skipped, or weakened cases.
+Run all four suites combined for exactly 36 tests and each one independently for exactly
+6, 13, 8, and 9 tests. The workflow isolation self-test must fail if a suite is omitted,
+duplicated, imports another suite, or depends on mutable state registered by a prior
+suite.
+
+Add every new production/test/harness path to L04 `allowedFiles`/`requiredFiles`, add
+the three net-new suites to `TARGET_VITEST_FILES`, source-owner hashing, commands,
+isolation metadata, and the hard line-count gate. Harnesses are required paths but not
+test targets. The reconciled TASK-540 final aggregate is exactly 64 Vitest + 18 Bun =
+82 target files (81 source-owner/read-only dependency files plus one closure-owned
+aggregate file); earlier partial totals are obsolete. Pinned changelog 1252 is unchanged.
+
+TASK-540-05-L01 exclusively owns the additive authoring-boundary update after this L04
+source gate. It must inspect all eight production paths above, enforce the import graph
+and pure-model restrictions, and pin the five explicit compatibility re-exports. L04
+must not edit that boundary suite.
+
+This modularity repair changes no API route. Existing internal Admin session auth, RBAC,
+CSRF, rate-limit, strict validation, and cache-event boundaries remain read-only. No
+public write, nonce/captcha policy, schema, persistence, secret handling, or external
+payload is introduced.
 
 ## Implementation Pseudocode
 
@@ -173,6 +395,7 @@ export function advanceBuilderDraftGeneration(current: number) {
   return current + 1;
 }
 
+// customScreenEditorModel.ts
 export function runBuilderManualRefresh(input: {
   saveActive: boolean;
   refresh: () => void;
@@ -196,7 +419,7 @@ export function CustomScreenEditorPage() {
   const { path } = useAdminRouter();
   const screenId = useMemo(() => resolveCustomScreenId(path), [path]);
   const isCreateMode = !screenId || screenId === "new";
-  const routeKey = `${screenId ?? ""}\u0000${isCreateMode}`;
+  const routeKey = buildCustomScreenEditorRouteKey({ screenId, isCreateMode });
   return (
     <CustomScreenEditorRouteSession
       key={routeKey}
@@ -207,7 +430,8 @@ export function CustomScreenEditorPage() {
   );
 }
 
-function CustomScreenEditorRouteSession({
+// CustomScreenEditorRouteSession.tsx
+export function CustomScreenEditorRouteSession({
   routeKey,
   screenId,
   isCreateMode,
@@ -993,7 +1217,10 @@ edit-superseded result without a false newer-local-changes notice.
 
 ## L04-owned tests and read-only prerequisite gate suites
 
-- `custom-screens-page.test.tsx`: clean navigation; dirty internal navigation;
+- The 6+13+8+9 `custom-screens-page.test.tsx`,
+  `custom-screen-editor-draft-and-save.test.tsx`,
+  `custom-screen-editor-hydration-authority.test.tsx`, and
+  `custom-screen-editor-visit-authority.test.tsx` family: clean navigation; dirty internal navigation;
   beforeunload; cancel/confirm; save error; successful create-save navigation with no
   dialog to the Screen editor via `buildCustomScreenEditorPath({screenId})`; successful
   existing update;
@@ -1028,7 +1255,7 @@ edit-superseded result without a false newer-local-changes notice.
   current clean loads can commit; an uncached current visit first renders its loading
   state, then a visible not-found/API/generic error without any old/default builder
   content; a clean existing-Screen save suppresses only cache events carrying its exact
-  operation token. The Page suite injects all three independent variants: remote origin,
+  operation token. The Page suite family injects all three independent variants: remote origin,
   local origin with a distinct `Symbol()`, and local origin with no token. Both nonmatching
   local variants and the remote event remain external during pending-save success and
   rejection; none starts a load, rejection preserves the exact save error/dirty draft/
@@ -1048,7 +1275,7 @@ edit-superseded result without a false newer-local-changes notice.
   pre-existing pending refresh resolving or rejecting before/after the mutation
   continuation cannot advance the draft generation, create a false error/warning/notice,
   or replace the draft;
-  the owned Page suite asserts the complete bounded save-error description and complete
+  the owned Page suite family asserts the complete bounded save-error description and complete
   `binding_field_removed` save-notice description, rather than partial substrings;
   Every deferred promise first proves consumption by its owning call before settlement:
   hydration defers pin the exact `{screenId, force:true}` call increment, while create/update
@@ -1083,7 +1310,7 @@ edit-superseded result without a false newer-local-changes notice.
   binding list; the repair supplies the production-required opaque token instead of
   catching the rejection or weakening those assertions.
 
-The owned Page suite directly tests the production-used pure
+The owned Page suite family directly tests the production-used pure
 `advanceBuilderDraftGeneration(current)` transition. Per-handler exact-one ownership is
 then proven by static source audit: direct metadata handlers call `markDirty` once,
 document/binding handlers call only `updateDefinition -> markDirty`, and no handler calls
@@ -1102,16 +1329,22 @@ isolation. Five fresh post-implementation audit lenses returned zero HIGH, MEDIU
 findings. The effective-owner self-test separately pins full original L04 authority for
 a new verified finding, retains the exact conditional fixture-only verifier, and adds
 only the three task contracts after closure.
-The current dependency-shaped gate below intentionally expands to 10 read-only consumer
-files after the final audit identified four additional direct `CustomScreenEditorPage`
-behavior suites. The historical 6-file/66-test receipt above remains unchanged evidence
+The final dependency-shaped gate below contains 15 read-only/owner consumer files after
+the Page family expands from one to four suites and the cache-bus family from one to
+three. The historical 6-file/66-test receipt above remains unchanged evidence
 of the completed 2026-07-15 repair, not the current gate cardinality.
+The current 2026-07-16 compatibility repair passed post-change core/root static gates,
+isolated binding-flow 3/3, the exact 10-file/98-test matrix, workflow self-tests, and
+diff checks before receiving the current receipt above.
 
 ```bash
 bun --cwd core lint:types
 bun --cwd core lint
 ./node_modules/.bin/tsc -p tsconfig.json --noEmit
 bunx vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx \
+  tests/vitest/ui/custom-screen-editor-draft-and-save.test.tsx \
+  tests/vitest/ui/custom-screen-editor-hydration-authority.test.tsx \
+  tests/vitest/ui/custom-screen-editor-visit-authority.test.tsx \
   tests/vitest/ui/custom-screen-route-params.test.ts \
   tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx \
   tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx \
@@ -1120,11 +1353,48 @@ bunx vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.te
   tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx \
   tests/vitest/ui-integration/screen-editor-sections.test.tsx \
   tests/vitest/ui/custom-screen-list-view-canvas.test.tsx \
-  tests/vitest/admin/cacheBus.test.ts
+  tests/vitest/admin/cacheBus.test.ts \
+  tests/vitest/admin/cacheBusCorrelation.test.ts \
+  tests/vitest/admin/cacheBusHardening.test.ts
+# Exact independent Page-family gates and counts.
+bunx vitest run --config vitest.config.ts tests/vitest/ui/custom-screens-page.test.tsx # 6
+bunx vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-editor-draft-and-save.test.tsx # 13
+bunx vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-editor-hydration-authority.test.tsx # 8
+bunx vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-editor-visit-authority.test.tsx # 9
+# Hard baseline-history line gate: every reported production/test/harness file <= 1000.
+for file in \
+  core/admin/ui/custom-screens/CustomScreenEditorPage.tsx \
+  core/admin/ui/custom-screens/customScreenEditorModel.ts \
+  core/admin/ui/custom-screens/hooks/useCustomScreenEditorPersistence.ts \
+  core/admin/ui/custom-screens/hooks/useCustomScreenDocumentActions.ts \
+  core/admin/ui/custom-screens/CustomScreenEditorPreviewOwner.tsx \
+  core/admin/ui/custom-screens/CustomScreenEditorSettingsPanel.tsx \
+  core/admin/ui/custom-screens/CustomScreenEditorLayout.tsx \
+  core/admin/ui/custom-screens/CustomScreenEditorRouteSession.tsx \
+  tests/vitest/ui/support/customScreenEditorPageHarness.tsx \
+  tests/vitest/ui/custom-screens-page.test.tsx \
+  tests/vitest/ui/custom-screen-editor-draft-and-save.test.tsx \
+  tests/vitest/ui/custom-screen-editor-hydration-authority.test.tsx \
+  tests/vitest/ui/custom-screen-editor-visit-authority.test.tsx; do
+  lines="$(awk 'END { print NR }' "$file")"
+  if [ "$lines" -gt 1000 ]; then
+    echo "$file exceeds 1000 physical lines: $lines" >&2
+    exit 1
+  fi
+done
 node --check _docs/_workflows/task-540-implement.mjs
 node _docs/_workflows/task-540-implement.mjs --self-test-repair-siblings
 git diff --check
 ```
+
+The workflow must seal and compare the exact 36-name Page-family multiset, pin the
+6+13+8+9 distribution, derive one isolation command per named final suite, and reject
+missing/duplicate targets or cross-suite registration. After the green L04 split gate,
+immediately replace only L04's `Modularity Repair Pending` field with its matching
+`Modularity Repair Revalidated` receipt while preserving the historical behavior
+receipt. Then run the TASK-540-05-L01-owned boundary suite against all eight production
+modules; that later owner receives its own receipt and does not delay L04's transition.
+Every pre-split receipt above remains historical only.
 
 ## Historical completion evidence
 

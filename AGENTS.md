@@ -10,6 +10,31 @@ Follow these rules when working in this repo:
 - Fix lint/typecheck warnings (e.g., `any`) instead of ignoring; treat as potential security risks.
 - Documentation may be in Polish, but code, code comments, and coding style must be in English.
 
+## File Size and Modularity
+
+- A human-authored production module or test file must contain at most 1,000
+  physical lines after a task closes. Count the complete file, including blank
+  lines and comments, because they still contribute to review and verification
+  cost.
+- Do not create, merge, or close work that leaves a touched production module or
+  test file above this limit. If a legacy file already exceeds 1,000 lines,
+  split it by cohesive responsibility as part of the same substantive change
+  before adding further behavior; keep imports and public contracts stable where
+  backward compatibility requires it.
+- Extract domain logic, fixtures, builders, and focused suites into clearly named
+  files instead of moving arbitrary line ranges or creating generic dumping-ground
+  helpers. Every extracted test file must remain independently runnable in its
+  owning test lane.
+- Generated artifacts, lockfiles, vendored code, database snapshots, and generated
+  migration metadata are exempt. A file is not exempt merely because splitting it
+  is inconvenient.
+- Before task closure, run a line-count check over every added or modified
+  production module and test file. Treat any result above 1,000 as a failed gate,
+  not as a non-blocking LOW or a `TASK-9999` candidate.
+- Measure that touched-file scope from the verified pre-task or pre-family baseline
+  through the final working tree, including files committed during intermediate
+  checkpoints. Staging or committing work must never reset or narrow the gate.
+
 ## Repo Index
 
 Start here for contributor and agent context.

@@ -175,6 +175,7 @@ const clientFixture = makeFixture({
 
 const BOUND_MEDIA_ID = "11111111-1111-4111-8111-111111111111";
 const OVERRIDE_MEDIA_ID = "22222222-2222-4222-8222-222222222222";
+const ADDITIONAL_MEDIA_ID = "33333333-3333-4333-8333-333333333333";
 const imageFixture = (() => {
   const base = makeFixture({
     screenId: "image-catalog",
@@ -254,6 +255,36 @@ const imageFixture = (() => {
   };
 })();
 
+const multipleMediaFixture: EntryEditorFixture = {
+  ...imageFixture,
+  contentType: {
+    ...imageFixture.contentType,
+    schema: {
+      ...imageFixture.contentType.schema,
+      properties: {
+        ...imageFixture.contentType.schema.properties,
+        cover: {
+          type: "array",
+          items: { type: "string" },
+          maxItems: 3,
+          title: "Gallery",
+          xFieldType: "media",
+          xFieldConfig: {
+            media: { multiple: true, accept: ["image/*"], maxItems: 3 },
+          },
+        },
+      },
+    },
+  },
+  entry: {
+    ...imageFixture.entry,
+    data: {
+      ...imageFixture.entry.data,
+      cover: [BOUND_MEDIA_ID, OVERRIDE_MEDIA_ID],
+    },
+  },
+};
+
 let current = projectFixture;
 let currentOverrides: Array<{ blockId: string; propPath: "mediaAssetId"; value: string }> = [];
 let cacheListeners: Array<(event: { key: string; action?: string }) => void> = [];
@@ -309,19 +340,35 @@ vi.mock("@/services/mediaClient", () => ({
 vi.mock("@/ui/media/MediaPicker", () => ({
   MediaPicker: ({
     accept,
+    maxItems,
+    multiple = false,
     value,
     onChange,
   }: {
     accept?: string[];
+    maxItems?: number;
+    multiple?: boolean;
     value: unknown;
     onChange: (value: unknown) => void;
   }) => (
     <div
       data-media-picker
       data-accept={(accept ?? []).join(",")}
+      data-max-items={maxItems ?? ""}
+      data-multiple={String(multiple)}
       data-value={typeof value === "string" ? value : JSON.stringify(value)}
     >
-      <button type="button" data-media-picker-choose onClick={() => onChange(BOUND_MEDIA_ID)}>
+      <button
+        type="button"
+        data-media-picker-choose
+        onClick={() =>
+          onChange(
+            multiple
+              ? [...(Array.isArray(value) ? value : []), ADDITIONAL_MEDIA_ID]
+              : BOUND_MEDIA_ID
+          )
+        }
+      >
         Choose bound media
       </button>
     </div>
@@ -559,6 +606,59 @@ test("direct-image presentation exposes media authoring and renders the winning 
     expect(replaceScreenEntryOverrides).toHaveBeenCalledWith("image-catalog", "1", [
       { blockId: "image-1", propPath: "mediaAssetId", value: BOUND_MEDIA_ID },
     ]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("multiple-media fields ignore scalar presentation overrides and preserve array edits", async () => {
+  current = multipleMediaFixture;
+  currentOverrides = [
+    { blockId: "media-field", propPath: "mediaAssetId", value: ADDITIONAL_MEDIA_ID },
+  ];
+  vi.mocked(updateEntry).mockResolvedValue(multipleMediaFixture.entry);
+  const view = mount("/admin/advanced/custom-screens/image-catalog/entries/1");
+  try {
+    await flush();
+
+    const mediaFieldBlock = view.container.querySelector('[data-screen-block-id="media-field"]');
+    const fieldPicker = mediaFieldBlock?.querySelector("[data-media-picker]");
+    expect(fieldPicker?.getAttribute("data-value")).toBe(
+      JSON.stringify([BOUND_MEDIA_ID, OVERRIDE_MEDIA_ID])
+    );
+    expect(fieldPicker?.getAttribute("data-value")).not.toBe(ADDITIONAL_MEDIA_ID);
+    expect(fieldPicker?.getAttribute("data-multiple")).toBe("true");
+    expect(fieldPicker?.getAttribute("data-max-items")).toBe("3");
+
+    React.act(() => {
+      mediaFieldBlock?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+    expect(view.container.querySelector('[data-presentation-control="mediaAssetId"]')).toBeNull();
+
+    React.act(() => {
+      fieldPicker
+        ?.querySelector("[data-media-picker-choose]")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+    expect(mediaFieldBlock?.querySelector("[data-media-picker]")?.getAttribute("data-value")).toBe(
+      JSON.stringify([BOUND_MEDIA_ID, OVERRIDE_MEDIA_ID, ADDITIONAL_MEDIA_ID])
+    );
+
+    React.act(() => {
+      findButton(view.container, "Save")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+    expect(updateEntry).toHaveBeenCalledWith(
+      "images",
+      "1",
+      expect.objectContaining({
+        data: expect.objectContaining({
+          cover: [BOUND_MEDIA_ID, OVERRIDE_MEDIA_ID, ADDITIONAL_MEDIA_ID],
+        }),
+      })
+    );
   } finally {
     view.cleanup();
   }

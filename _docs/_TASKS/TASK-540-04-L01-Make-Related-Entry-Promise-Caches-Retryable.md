@@ -13,7 +13,9 @@
 **Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Fix Started:** 2026-07-14
 **Fix Reason:** Final post-audit found that independent list/detail authority can let an older detail shrink or stale a newer full entry list.
-**Revalidation Passed:** 2026-07-14 — `core lint:types`, `core lint`, the exact Entries/Media client Vitest matrix (65/65), and `git diff --check`
+**Modularity Repair Pending:** 2026-07-17 — measured from family baseline `e5f15a567`, the touched `entriesClient.test.ts` grew from 758 to 1,893 physical lines. The hard 1,000-line gate requires the exact harness plus three-suite partition below before closure; the production clients and media suite remain below the limit.
+**Current Repair State:** Cache behavior is implemented and its recorded `Revalidation Passed` remains historical pre-split evidence. After the harness and all three Entries suites pass independent counts, combined 42/42, the unchanged Media 23/23, static, line, and drift gates, remove the single `Modularity Repair Pending` field and replace it with one `Modularity Repair Revalidated` receipt; the fields must never coexist.
+**Revalidation Passed:** 2026-07-14 — historical pre-modularity evidence: `core lint:types`, `core lint`, the exact Entries/Media client Vitest matrix (65/65), and `git diff --check`
 **Post-Audit:** 2026-07-14 — PASS; zero HIGH, MEDIUM, or LOW findings on the corrected working tree
 **Previous Revalidation:** 2026-07-14 — `core lint:types`, `core lint`, and the exact entries/media client Vitest matrix (57/57)
 **Previous Completion:** 2026-07-14
@@ -27,6 +29,9 @@
 - `core/admin/services/entriesClient.ts`
 - `core/admin/services/mediaClient.ts`
 - `tests/vitest/admin/entriesClient.test.ts`
+- `tests/vitest/admin/entriesClientReadAuthority.test.ts`
+- `tests/vitest/admin/entriesClientMutationReconciliation.test.ts`
+- `tests/vitest/admin/support/entriesClientTestHarness.ts`
 - `tests/vitest/admin/mediaClient.test.ts`
 
 No other TASK-540 leaf edits these four paths. Value priming, explicit invalidation,
@@ -34,6 +39,51 @@ mutation payloads, and broadcast ordering outside the pending-read authority cor
 remain unchanged. Entry writes revoke the matching pending detail and record a typed
 reconciliation change while preserving the pending full list; media writes retain their
 list-only revocation. Both apply even when the value cache is absent.
+
+## Mandatory Entries test split
+
+The full-task line gate is anchored at `e5f15a567` and follows every touched path
+through the final working tree; staging and intermediate commits do not reset it. The
+verified baseline→current line evidence is `entriesClient.ts` 463→751,
+`mediaClient.ts` 266→278, `entriesClient.test.ts` 758→1,893, and
+`mediaClient.test.ts` 563→935. Only the Entries suite is over the hard limit, but all
+four touched files remain in the final count.
+
+Move complete test declarations into these exact independently runnable Vitest owners:
+
+| Owner | Exact expanded pre-split positions and responsibility | Count | Post-format budget |
+|---|---|---:|---:|
+| retained `entriesClient.test.ts` | current `:113-819`, positions 1-19: transport methods, CSRF/payloads/events, local cache reads, metadata/password redaction, and raw all-entry priming | 19 | `<=850` |
+| `entriesClientReadAuthority.test.ts` | current `:820-1336`, positions 20-34: two expanded detail A/B orders, detail retry/mutation authority, four expanded list/detail orders, rejected-list/scoped-clear, list promise identity, A/B replacement, and rejection retry | 15 | `<=700` |
+| `entriesClientMutationReconciliation.test.ts` | current `:1337-1893`, positions 35-42: upsert/status/delete replay, newer rejected detail, replace→status composition, rejected mutation, and per-type/all-entry A/B/C→D authority | 8 | `<=750` |
+| `support/entriesClientTestHarness.ts` | current helpers `:35-112`: JSON response, isolated localStorage install/restore, scoped cache reset, deferred promise, and typed entry/all-entry fixture builders only | 0 | `<=150` |
+
+The exact expanded Entries name multiset stays 42: lexical `test.each` declarations
+expand to two detail-order names and four cross-channel order names. Its sorted
+JSON-serialized sorted expanded-name SHA-256 at the verified pre-split tree is
+`4ac0a985562db074992ca7af1ec9e3b7030eb5de9ae4e5ec1de94cf263249ae8`.
+The media suite retains 23 unchanged tests, so this leaf's independent/combined result remains
+`19 + 15 + 8 + 23 = 65`. The harness contains no test, hooks, global fetch mutation,
+or singleton state. Each test owns and restores fetch/localStorage/CSRF/cache state in
+`try/finally`; no suite relies on another suite's evaluation or cleanup order.
+
+The retained suite may import the harness, and both new suites import it directly; no
+test file imports another test file. Shared helpers move exactly once, while helpers
+used by one partition remain local. Preserve caller-visible promise identity, request
+version ordering, typed replace/status/delete authority, complete-list reconciliation,
+present/absent-cache variants, exact cache keys and broadcasts, rejection propagation,
+retryability, and the existing production client API. Moving tests is not permission to
+re-baseline timing/order assertions or change production fallbacks.
+
+This modularity failure is never a LOW/TASK-9999 candidate, and test-name/assertion or
+isolation loss is test-integrity impact. Any such drift blocks this leaf until repaired.
+
+Land in this exact order: `support/entriesClientTestHarness.ts`, retained
+`entriesClient.test.ts`, `entriesClientReadAuthority.test.ts`, then
+`entriesClientMutationReconciliation.test.ts`. Run each suite immediately after its
+move, then the unchanged Media suite and combined 65/65 gate. Production clients remain
+read-only during this test-only partition unless a fresh evidence-backed behavior drift
+is verified at their sole owner.
 
 ## Historical pre-implementation grounded anchors
 
@@ -52,6 +102,18 @@ numbers.
 ## Implementation Pseudocode
 
 ```ts
+// support/entriesClientTestHarness.ts — stateless helper factory/functions only
+export function installEntriesTestLocalStorage() {
+  const original = globalThis.localStorage;
+  const storage = createIsolatedStorage();
+  globalThis.localStorage = storage;
+  return { storage, restore: () => restoreExactOriginal(original) };
+}
+
+export function createDeferred<T>() {
+  // one promise/resolve/reject tuple owned by the calling test
+}
+
 // Value priming helpers never read or mutate a pending-request slot.
 function primeEntriesCacheInternal(typeSlug, items) {
   cachedEntries.set(typeSlug, items);
@@ -335,10 +397,19 @@ publication, or identity assertions.
 bun --cwd core lint:types
 bun --cwd core lint
 bunx vitest run tests/vitest/admin/entriesClient.test.ts \
+  tests/vitest/admin/entriesClientReadAuthority.test.ts \
+  tests/vitest/admin/entriesClientMutationReconciliation.test.ts \
   tests/vitest/admin/mediaClient.test.ts
+node _docs/_workflows/task-540-implement.mjs --check-task-family-line-limit
 ```
 
-Rerun the named failing file once in isolation before classifying failure.
+Run the three Entries files independently for 19/19, 15/15, and 8/8, and Media for
+23/23, before the combined 65/65 command. Count complete physical lines for both
+clients, all four suites, and the support harness, including blanks/comments and an
+unterminated final line; reject every result above 1,000. Rerun the named failing file
+once in isolation before classifying failure. `runLeafGate` applies this byte-based
+count to the leaf's exact `allowedFiles` before and after commands; the displayed global
+command runs after all modular streams are present.
 
 ## Completion
 
@@ -358,4 +429,7 @@ gate to 57/57. The fresh cross-channel audit then reproduced list/detail start-o
 loss of unrelated rows. The corrected client now uses atomic versioned list/detail
 requests and replayable typed per-item authority, including replacement-to-status
 composition. The complete cross-channel/mutation/clear matrix passed 65/65, static gates
-and diff check are green, and a fresh read-only post-audit reported zero findings.
+and diff check were green, and a fresh read-only post-audit reported zero findings for
+the pre-split tree. The modular split still requires fresh isolated/combined 65/65,
+line-count and drift evidence plus a replacement `Modularity Repair Revalidated`
+receipt.

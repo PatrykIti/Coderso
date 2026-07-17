@@ -19,7 +19,10 @@ import { BlockSettings } from "../../../core/admin/ui/pages/builder/BlockSetting
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../core/admin/components/ui/tabs";
 import { getRegisteredWidget } from "../../../core/admin/ui/widgets/registry";
 import type { Block, WidgetEditorContext } from "../../../core/admin/ui/pages/builder/types";
-import type { CustomScreenBinding } from "../../../core/services/customScreens/customScreenSchemas";
+import {
+  buildScreenFieldBindingId,
+  type CustomScreenBinding,
+} from "../../../core/services/customScreens/customScreenSchemas";
 
 vi.mock("@/services/solutionKitsClient", () => ({
   getCachedSolutionKits: vi.fn(() => []),
@@ -242,6 +245,7 @@ const unrelatedBinding = {
   field: "title",
   mode: "readwrite" as const,
 };
+const buttonHrefBindingId = buildScreenFieldBindingId("button-1", "href");
 
 const createEditorScreen = (): CustomScreenRecord => ({
   id: "screen-binding-flow",
@@ -432,7 +436,7 @@ describe("CustomScreenEditorPage Button href binding flow", () => {
       expect(firstPayload?.definition.editorView.bindings).toEqual([
         unrelatedBinding,
         {
-          id: "button-1-href",
+          id: buttonHrefBindingId,
           blockId: "button-1",
           propPath: "href",
           source: "entry",
@@ -461,7 +465,7 @@ describe("CustomScreenEditorPage Button href binding flow", () => {
       expect(secondPayload?.definition.editorView.bindings).toEqual([
         unrelatedBinding,
         {
-          id: "button-1-href",
+          id: buttonHrefBindingId,
           blockId: "button-1",
           propPath: "href",
           source: "entry",
@@ -560,7 +564,7 @@ describe("CustomScreenEditorPage Button href binding flow", () => {
       expect(fourthPayload?.definition.editorView.bindings).toEqual([
         unrelatedBinding,
         {
-          id: "button-1-href",
+          id: buttonHrefBindingId,
           blockId: "button-1",
           propPath: "href",
           source: "entry",
