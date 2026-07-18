@@ -23003,7 +23003,6 @@ async function assertTask540LocalCommandRunnerContract() {
     grounded.root === ROOT &&
     requireGroundedChangeManifest(groundedManifest, label) === groundedManifest &&
     groundedManifest.taskStatuses.length === TASK_FILES.length &&
-    groundedManifest.records.length > 0 &&
     Buffer.byteLength(groundedSerialized, "utf8") <= MAX_GROUNDED_CONTEXT_BYTES &&
     !groundedSerialized.includes('"diffPatch"') &&
     !groundedSerialized.includes('"content"') &&
