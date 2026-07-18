@@ -8,7 +8,7 @@
 **Dependencies:** None
 **Status:** 🚧 In Progress
 **Started:** 2026-07-16
-**Last Triaged:** 2026-07-16
+**Last Triaged:** 2026-07-18
 **Next Quarterly Triage:** 2026-10-01
 
 ---
@@ -76,7 +76,13 @@ ineligible and must move to an active task with its own complete Security Contra
 
 | ID | Source family | Leaves | Status |
 |---|---|---|---|
-| TASK-9999-01 | TASK-540 Custom Screens | TASK-9999-01-L01, TASK-9999-01-L02 | ⏳ To Do |
+| TASK-9999-01 | TASK-540 Custom Screens | TASK-9999-01-L01 (`⏳ To Do`), TASK-9999-01-L02 (`⏭️ Superseded`) | ⏳ To Do |
+
+The 2026-07-18 evidence-triggered re-triage removed L02 from the eligible backlog:
+active TASK-540-02-L01 now reads `baseLabel` to preserve focus while invalidating stale
+drafts, so the old removal would have a user-visible UX/accessibility effect. Changelog
+1258 records the terminal supersession. L01 is the only open finding in this child; the
+child remains `⏳ To Do`, and this sentinel parent remains `🚧 In Progress`.
 
 Future source-family children use the next unused `NN`; retired numbers are never
 reused. Adding a child does not change the parent status or move its board row.

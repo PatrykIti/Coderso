@@ -10,12 +10,12 @@
 **Dependencies:** TASK-540-01-L01
 **Status:** 🚧 In Progress
 **Started:** 2026-07-13
-**Implementation Complete:** 2026-07-13 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Repair Started:** 2026-07-16
-**Repair Reason:** R01 centralized binding-ID generation in `buildScreenFieldBindingId`; L02 must consume that domain helper from its existing Inspector binding factory and prove maximum-length tuples stay distinct and bounded. L02 also owns the visible behavior correction that restores a blank or over-120 Tab-label draft to the latest committed label on blur or Enter without calling `onPatchBlock`.
+**Fix Started:** 2026-07-18
+**Repair Pending:** generation cd3f59606d3e4141ad2cd11849e936c7 / token 822ee5dc177d4868b21147aaffb6232c
+**Repair Reason:** R01 centralized binding-ID generation in `buildScreenFieldBindingId`; this leaf consumes that domain helper from its existing Inspector binding factory and proves maximum-length tuples stay distinct and bounded. The current repair also restores invalid Tab-label drafts, preserves focus on the same commit-stable input after Enter while using `baseLabel` for stale-draft invalidation, and clears bindings for every nested block removed with a Tab slot.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
-**Current Repair State:** The historical behavior receipt remains truthful pre-split evidence. The final production graph is facade 561, model 209, controls 215, Tabs 176, and Section 79 lines; the two tests are 787 and 454. Exact exports/reference identity, acyclic imports, root/core static checks, 33/33 behavior, 16/16 additional consumers, the post-split AST evidence, and the corrected-contract audit pass. The canonical modularity receipt records only this owner gate; no family post-audit, smoke, changelog, or closure is claimed.
-**Revalidation Passed:** 2026-07-16 — historical pre-modularity evidence: `core lint:types` and `core lint` passed; the exact two-file L02 Vitest gate passed 33/33 on the final shared schema state, including the domain-builder consumer and invalid blur/Enter restore regressions; and `git diff --check` passed. This receipt cannot validate the extracted modules and claims no full-suite, post-audit, smoke, changelog, or closure result.
+**Current Repair State:** The historical 33/33 modularity receipt remains truthful pre-current-repair evidence. The current production graph is facade 560, model 209, controls 215, Tabs 204, and Section 79 lines; the two tests are 902 and 454. The current focus-preserving stale-draft and removed-slot binding-GC repair remains governed by the exact `Repair Pending` receipt above and requires a fresh 17+18 targeted gate; no family post-audit, smoke, changelog, or closure is claimed.
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -79,13 +79,14 @@ parent-rerender invalidation, tab/slot identity, min/max guards, event propagati
 image URL fail-closed behavior, exported reference identity, and every existing
 accessible name.
 
-The split must carry `ScreenTabLabelDraft.baseLabel` unchanged into
-`ScreenBlockInspectorTabs.tsx`. It must not opportunistically execute deferred
-`TASK-9999-01-L02`. Once extraction makes the old path/line evidence stale, the
-TASK-540 closure/docs owner must re-anchor TASK-9999-01 and TASK-9999-01-L02 to the new
-symbol path and exact final lines while preserving their `⏳ To Do` states and
-behavior-neutral rationale. This is an evidence follow-up only, not a new LOW and not
-permission to close or widen the deferred leaf.
+The current repair makes `ScreenTabLabelDraft.baseLabel` behavior-owning state in
+`ScreenBlockInspectorTabs.tsx`. Keep the input keyed only by `block.id:tab.id` so an
+Enter commit does not remount or drop keyboard focus, then compare
+`draft.baseLabel !== tab.label` to reset a stale draft when a later committed value
+arrives. This new read disproves the deferred cleanup premise: TASK-9999-01-L02 is
+re-triaged on 2026-07-18 and `⏭️ Superseded` by this active leaf. Do not implement
+that historical removal contract; doing so would regress visible focus and stale-draft
+behavior.
 
 No modularity blocker is eligible for TASK-9999: leaving a touched source above 1,000
 would violate a hard verification gate. Any behavior/assertion drift discovered during
@@ -95,8 +96,8 @@ line-limit LOW.
 Land in this exact order: `screenBlockInspectorModel.ts`,
 `ScreenBlockInspectorControls.tsx`, `ScreenBlockInspectorTabs.tsx`,
 `ScreenBlockInspectorSection.tsx`, then the stable `ScreenBlockInspector.tsx` facade.
-After the source gate, run the two test files independently and combined, perform the
-TASK-9999 evidence-path follow-up, then run the targeted static/test/line gate before
+After the source gate, run the two test files independently and combined, verify the
+TASK-9999 supersession records, then run the targeted static/test/line gate before
 writing `Modularity Repair Revalidated`. That receipt does not claim the later mandatory
 family post-audit or runtime smoke. A downstream
 module may consume only already-landed owners and must never import the facade back into
@@ -182,11 +183,15 @@ export const createScreenFieldBinding = (input): ScreenFieldBinding => ({
 // commits only draft.trim() when non-empty and Array.from(trimmed).length is <= the
 // shared SCREEN_TAB_LABEL_MAX. On blur or Enter, invalid transient text immediately
 // restores the visible input to the latest committed label and never calls onPatchBlock.
-// A parent prop refresh invalidates a draft based on an older label, and Escape restores
-// that same latest committed value. ID/slot identity stays stable.
+// Keep the input key commit-stable at block+tab identity so a valid Enter commit retains
+// focus. Read draft.baseLabel during render: a parent prop refresh invalidates a draft
+// based on an older committed label, and Escape restores that same latest value.
+// ID/slot identity stays stable.
 // Remove is disabled/hidden when tabs.length <= SCREEN_TABS_MIN. Its event handler
 // also returns the original draft at that boundary. Otherwise it deletes exactly its
-// slot and arms the nearest remaining tab.
+// slot, clears bindings for every nested block in the deleted slot subtree through the
+// existing empty-field sentinel, leaves surviving-slot bindings untouched, and arms the
+// nearest remaining tab.
 
 // ImageSrcRow completes the handoff from TASK-540-01's compatibility alias:
 const safe = sanitizeScreenAuthoringUrl(raw, "media");
@@ -217,6 +222,10 @@ and named.
    `onArmSlotInsert(block.id, tabId)`. The Inspector never keeps a second active-tab
    state. TASK-540-03 derives the builder's visible active panel from this same
    `insertPoint` and tab activation writes the same slot-end target.
+6. A successful Tab removal collects every nested block ID from the deleted slot and
+   emits the existing `{field:""}` sentinel for bindings targeting that subtree only.
+   The same gesture preserves bindings from surviving slots; the minimum-tab guard
+   performs no document or binding mutation.
 
 ## Gate regressions owned here; aggregate additions owned by TASK-540-06
 
@@ -228,7 +237,8 @@ and named.
   and a stateful parent rerender that proves the 120-code-point Unicode boundary,
   surrounding-whitespace trim, blank/over-120 blur and Enter restoring the visible
   latest committed value with no patch, Escape restore, and stale-draft invalidation,
-  remove-slot cleanup, exact active slot arm, and shared minimum/maximum UI: the last
+  focus preservation after a valid Enter commit, remove-slot cleanup plus nested binding
+  GC, exact active slot arm, and shared minimum/maximum UI: the last
   tab cannot be removed or lose its slot, and no 25th tab or orphan slot can be
   created. The same suite pins the Inspector's builder handoff: two valid maximum-
   length block/prop-path tuples produce distinct canonical IDs of at most 120
@@ -253,11 +263,12 @@ bun --cwd core lint:types
 bun --cwd core lint
 bunx vitest run tests/vitest/ui/custom-screen-binding-panel.test.tsx \
   tests/vitest/ui-integration/custom-screen-image-inspector.test.tsx
+node _docs/_workflows/task-540-implement.mjs --check-screen-tab-label-draft-contract
 node _docs/_workflows/task-540-implement.mjs --check-task-family-line-limit
 ```
 
-Run each Vitest file independently first (15/15 binding-panel and 18/18 image-inspector),
-then together for 33/33. Rerun any named failure once in isolation. Count complete
+Run each Vitest file independently first (17 binding-panel and 18 image-inspector tests),
+then together for 35. Rerun any named failure once in isolation. Count complete
 physical files from the family baseline, including both modified test files, blanks/
 comments, and a final unterminated line; every result must be at most 1,000. No route,
 DB, or runtime Bun change. The orchestrator's `runLeafGate` performs the same byte-based
@@ -272,8 +283,9 @@ authoring, deterministic slot-locked Tabs controls, buffered Unicode-aware label
 editing, exact slot arming, and the canonical Screen media-URL wrapper. The historical
 Unicode/React-state correction and its 31/31 gate remain valid evidence. The 2026-07-16
 domain-builder consumer and visible invalid-label restore corrections remain intact.
-The modular split now passes fresh independent 15/15 and 18/18 tests, combined 33/33,
-additional consumer 16/16, exact line/export/import checks, static gates, and the
-finalized TASK-9999 evidence transition. Its canonical `Modularity Repair Revalidated`
-receipt is recorded; no family post-audit or smoke is claimed.
+The historical modular split passed its then-current 15/15 and 18/18 tests, combined
+33/33, additional consumer 16/16, exact line/export/import checks, and static gates. The
+current focus-preserving and nested-binding-GC repair expands the targeted matrix to
+17+18 tests and remains `Repair Pending` until its fresh gate passes. TASK-9999-01-L02
+is superseded by this active behavior owner; no family post-audit or smoke is claimed.
 Aggregate persistence and live browser flows remain closure-owned.

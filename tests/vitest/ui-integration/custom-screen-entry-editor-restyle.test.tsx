@@ -13,17 +13,8 @@ import {
 import type { ContentTypeSummary } from "@/services/contentTypesClient";
 import type { CustomScreenDefinition } from "../../../core/services/customScreens/customScreenSchemas";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
-import {
-  allocateMediaAttempt,
-  buildEntryRouteKey,
-  buildPresentationMediaRequestKey,
-  collectWinningDirectImageAssetIds,
-  CustomScreenEntryEditor,
-  decodeAndValidatePresentationMediaRequestKey,
-  initializeMediaMachineState,
-  mediaAttemptReducer,
-  projectExactRequestedMediaUrls,
-} from "../../../core/admin/ui/custom-screens/CustomScreenEntryEditor";
+import { PRESENTATION_MEDIA_OVERFLOW_ERROR } from "../../../core/admin/ui/custom-screens/customScreenEntryPresentationMedia";
+import { CustomScreenEntryEditor } from "../../../core/admin/ui/custom-screens/CustomScreenEntryEditor";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 
@@ -828,6 +819,50 @@ test("bound direct-image UUID resolves in the read-only entry Preview branch", a
 });
 
 test("presentation media failure is visible and manual/cache retries force authoritative reads", async () => {
+  const overflowIds = Array.from(
+    { length: 200 },
+    (_, index) => `00000000-0000-4000-8000-${(index + 1).toString(16).padStart(12, "0")}`
+  );
+  const overflowFixture = structuredClone(imageFixture);
+  overflowFixture.screen.definition.editorView.document.sections[0]!.blocks.push(
+    ...overflowIds.map((_, index) => ({
+      id: `overflow-image-${index}`,
+      type: "image" as const,
+      data: { label: `Overflow image ${index}` },
+    }))
+  );
+  current = overflowFixture;
+  currentOverrides = overflowIds.map((value, index) => ({
+    blockId: `overflow-image-${index}`,
+    propPath: "mediaAssetId",
+    value,
+  }));
+  const overflowView = mount("/admin/advanced/custom-screens/image-catalog/entries/1");
+  try {
+    await flush();
+    expect(
+      overflowView.container.querySelector("[data-custom-screen-entry-document]")
+    ).not.toBeNull();
+    const overflowAlert = overflowView.container.querySelector(
+      '[data-custom-screen-media-error="overflow"]'
+    );
+    expect(overflowAlert?.textContent).toContain("Presentation image unavailable");
+    expect(overflowAlert?.textContent).toContain(PRESENTATION_MEDIA_OVERFLOW_ERROR);
+    expect(overflowView.container.textContent).not.toContain(
+      "Presentation image could not be loaded."
+    );
+    expect(listMediaCached).not.toHaveBeenCalled();
+    React.act(() => {
+      cacheListeners.forEach((listener) =>
+        listener({ key: cacheKeys.mediaList, action: "update" })
+      );
+    });
+    await flush();
+    expect(listMediaCached).not.toHaveBeenCalled();
+    expect(overflowAlert?.querySelector("button")).toBeNull();
+  } finally {
+    overflowView.cleanup();
+  }
   const blocks = imageFixture.screen.definition.editorView.document.sections[0]!.blocks;
   current = {
     ...imageFixture,
@@ -851,36 +886,48 @@ test("presentation media failure is visible and manual/cache retries force autho
     },
   };
   currentOverrides = [{ blockId: "image-1", propPath: "mediaAssetId", value: OVERRIDE_MEDIA_ID }];
+  const refreshedMediaRecords = structuredClone(mediaRecords);
+  refreshedMediaRecords[1]!.url = "/media/override-refreshed.jpg";
   vi.mocked(listMediaCached)
+    .mockResolvedValueOnce(mediaRecords)
     .mockRejectedValueOnce(new Error("media unavailable"))
-    .mockResolvedValue(mediaRecords);
+    .mockResolvedValue(refreshedMediaRecords);
   const view = mount("/admin/advanced/custom-screens/image-catalog/entries/1");
   try {
     await flush();
     await flush();
-    expect(view.container.textContent).toContain("Presentation image unavailable");
-    expect(vi.mocked(listMediaCached).mock.calls[0]?.[0]).toEqual({ force: false });
-
-    React.act(() => {
-      findButton(view.container, "Retry")?.dispatchEvent(
-        new MouseEvent("click", { bubbles: true })
-      );
-    });
-    await flush();
     expect(view.container.querySelector('img[alt="Cover"]')?.getAttribute("src")).toBe(
       "/media/override.jpg"
     );
-    expect(vi.mocked(listMediaCached).mock.calls.at(-1)?.[0]).toEqual({ force: true });
-
-    const beforeCacheEvent = vi.mocked(listMediaCached).mock.calls.length;
+    expect(vi.mocked(listMediaCached).mock.calls[0]?.[0]).toEqual({ force: false });
     React.act(() => {
       cacheListeners.forEach((listener) =>
         listener({ key: cacheKeys.mediaList, action: "update" })
       );
     });
     await flush();
-    expect(vi.mocked(listMediaCached).mock.calls.length).toBeGreaterThan(beforeCacheEvent);
+    expect(view.container.querySelector('img[alt="Cover"]')?.getAttribute("src")).toBe(
+      "/media/override.jpg"
+    );
+    expect(view.container.querySelector('[data-custom-screen-media-error="load"]')).not.toBeNull();
+    expect(view.container.textContent).toContain("Presentation image unavailable");
+    expect(view.container.textContent).toContain("Presentation image could not be loaded.");
+    expect(findButton(view.container, "Retry")).not.toBeNull();
     expect(vi.mocked(listMediaCached).mock.calls.at(-1)?.[0]).toEqual({ force: true });
+    const callsBeforeRetry = vi.mocked(listMediaCached).mock.calls.length;
+    React.act(() => {
+      findButton(view.container, "Retry")?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true })
+      );
+    });
+    await flush();
+    expect(listMediaCached).toHaveBeenCalledTimes(callsBeforeRetry + 1);
+    expect(view.container.querySelector('img[alt="Cover"]')?.getAttribute("src")).toBe(
+      "/media/override-refreshed.jpg"
+    );
+    expect(vi.mocked(listMediaCached).mock.calls.at(-1)?.[0]).toEqual({ force: true });
+    expect(view.container.querySelector('[data-custom-screen-media-error="load"]')).toBeNull();
+    expect(findButton(view.container, "Retry")).toBeNull();
   } finally {
     view.cleanup();
   }
@@ -950,190 +997,4 @@ test("an unmounted media attempt cannot commit or report a React update error", 
   await Promise.resolve();
   expect(consoleError).not.toHaveBeenCalled();
   consoleError.mockRestore();
-});
-
-test("presentation media key codec is route-scoped, canonical, and rejects malformed snapshots", () => {
-  const mediaA = "11111111-1111-4111-8111-111111111111";
-  const mediaB = "22222222-2222-4222-8222-222222222222";
-  const routeA = buildEntryRouteKey({
-    screenId: "screen-a",
-    entryId: "entry-1",
-    isCreateMode: false,
-  });
-  const routeB = buildEntryRouteKey({
-    screenId: "screen-b",
-    entryId: "entry-1",
-    isCreateMode: false,
-  });
-  const keyA = buildPresentationMediaRequestKey(routeA, [mediaB, mediaA, mediaA]);
-  const keyB = buildPresentationMediaRequestKey(routeB, [mediaA, mediaB]);
-
-  expect(keyB).not.toBe(keyA);
-  expect(decodeAndValidatePresentationMediaRequestKey(keyA)).toEqual({
-    routeKey: routeA,
-    requestedIds: [mediaA, mediaB],
-  });
-  expect(() =>
-    decodeAndValidatePresentationMediaRequestKey(JSON.stringify([routeA, [mediaB, mediaA]]))
-  ).toThrow("custom_screen_presentation_media_invalid");
-  expect(() =>
-    decodeAndValidatePresentationMediaRequestKey(JSON.stringify([routeA, [mediaA, mediaA]]))
-  ).toThrow("custom_screen_presentation_media_invalid");
-  expect(() => buildPresentationMediaRequestKey(routeA, ["not-a-uuid"])).toThrow(
-    "custom_screen_presentation_media_invalid"
-  );
-});
-
-test("media attempt reducer preserves identity for semantic no-ops and allocates frozen monotonic attempts", () => {
-  const mediaA = "11111111-1111-4111-8111-111111111111";
-  const routeA = buildEntryRouteKey({
-    screenId: "screen-a",
-    entryId: "entry-1",
-    isCreateMode: false,
-  });
-  const routeB = buildEntryRouteKey({
-    screenId: "screen-b",
-    entryId: "entry-1",
-    isCreateMode: false,
-  });
-  const keyA = buildPresentationMediaRequestKey(routeA, [mediaA]);
-  const keyB = buildPresentationMediaRequestKey(routeB, [mediaA]);
-  const sourceIds = [mediaA];
-  const initial = initializeMediaMachineState({ requestKey: keyA, requestedIds: sourceIds });
-  sourceIds.length = 0;
-
-  expect(initial.attempt?.token).toBe(1);
-  expect(initial.attempt?.force).toBe(false);
-  expect(initial.attempt?.requestedIds).toEqual([mediaA]);
-  expect(Object.isFrozen(initial.attempt?.requestedIds)).toBe(true);
-  expect(
-    mediaAttemptReducer(initial, {
-      type: "sync-request",
-      requestKey: keyA,
-      requestedIds: [mediaA],
-    })
-  ).toBe(initial);
-
-  const forced = mediaAttemptReducer(initial, {
-    type: "retry",
-    requestKey: keyA,
-    cause: "manual-retry",
-  });
-  expect(forced.attempt).not.toBe(initial.attempt);
-  expect(forced.attempt).toMatchObject({ token: 2, force: true, cause: "manual-retry" });
-  const inherited = mediaAttemptReducer(forced, {
-    type: "sync-request",
-    requestKey: keyB,
-    requestedIds: [mediaA],
-  });
-  expect(inherited.attempt).toMatchObject({ token: 3, force: true, cause: "manual-retry" });
-
-  const staleSettlement = mediaAttemptReducer(inherited, {
-    type: "settled",
-    requestKey: keyA,
-    token: 2,
-  });
-  expect(staleSettlement).toBe(inherited);
-  const settled = mediaAttemptReducer(inherited, {
-    type: "settled",
-    requestKey: keyB,
-    token: 3,
-  });
-  expect(settled.attempt).toBe(inherited.attempt);
-  expect(mediaAttemptReducer(settled, { type: "settled", requestKey: keyB, token: 3 })).toBe(
-    settled
-  );
-
-  const manuallyAllocated = allocateMediaAttempt(
-    settled,
-    { requestKey: keyB, requestedIds: [mediaA] },
-    "cache-event",
-    true
-  );
-  expect(manuallyAllocated.attempt?.token).toBe(4);
-});
-
-test("direct-image media planning chooses override then binding, deduplicates, and ignores media fields", () => {
-  const overrideId = "11111111-1111-4111-8111-111111111111";
-  const boundId = "22222222-2222-4222-8222-222222222222";
-  const document = {
-    schemaVersion: 1 as const,
-    sections: [
-      {
-        id: "section-1",
-        type: "section" as const,
-        data: {},
-        blocks: [
-          { id: "image-a", type: "image" as const, data: {} },
-          { id: "image-b", type: "image" as const, data: {} },
-          { id: "media-field", type: "field" as const, data: { field: "hero" } },
-        ],
-      },
-    ],
-  };
-  const bindings = [
-    {
-      id: "image-a-src",
-      blockId: "image-a",
-      propPath: "src",
-      source: "entry" as const,
-      field: "cover",
-      mode: "read" as const,
-    },
-    {
-      id: "image-b-src",
-      blockId: "image-b",
-      propPath: "src",
-      source: "entry" as const,
-      field: "gallery",
-      mode: "read" as const,
-    },
-    {
-      id: "media-field-value",
-      blockId: "media-field",
-      propPath: "value",
-      source: "entry" as const,
-      field: "hero",
-      mode: "readwrite" as const,
-    },
-  ];
-
-  expect(
-    collectWinningDirectImageAssetIds({
-      document,
-      bindings,
-      values: { cover: boundId, gallery: [boundId], hero: overrideId },
-      overrides: [{ blockId: "image-a", propPath: "mediaAssetId", value: overrideId }],
-    })
-  ).toEqual([overrideId, boundId].sort());
-
-  expect(
-    collectWinningDirectImageAssetIds({
-      document,
-      bindings,
-      values: { cover: boundId, gallery: null, hero: overrideId },
-      overrides: [
-        { blockId: "image-a", propPath: "image", value: boundId },
-        { blockId: "image-a", propPath: "mediaAssetId", value: overrideId },
-      ],
-    })
-  ).toEqual([overrideId]);
-});
-
-test("presentation media projection preserves requested UUID casing while matching canonical records", () => {
-  const canonicalId = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
-  const requestedId = canonicalId.toUpperCase();
-  const record = {
-    ...mediaRecords[0]!,
-    id: canonicalId,
-    url: "/media/canonical.jpg",
-  };
-
-  expect(projectExactRequestedMediaUrls([record], [requestedId])).toEqual({
-    [requestedId]: "/media/canonical.jpg",
-  });
-  expect(projectExactRequestedMediaUrls([record], [requestedId, canonicalId])).toEqual({
-    [requestedId]: "/media/canonical.jpg",
-    [canonicalId]: "/media/canonical.jpg",
-  });
 });

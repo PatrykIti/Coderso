@@ -13,8 +13,10 @@
 **Fix Started:** 2026-07-15
 **Repair Started:** 2026-07-16
 **Repair Reason:** The final post-audit found the L04-owned binding-flow suite still pinned the retired unhashed generated binding ID. The test-only correction imports `buildScreenFieldBindingId` and consumes its exact output in the existing expectations; no source behavior or assertion strength changes.
-**Modularity Repair Pending:** 2026-07-17 — baseline-to-final history from `e5f15a567` includes the touched 1,594-line `CustomScreenEditorPage.tsx` and 2,313-line `custom-screens-page.test.tsx`. The exact facade/model/hooks/views/session and harness/four-suite splits below are mandatory before closure. The current revalidation is pre-split history only; fresh static, targeted, isolation, name-multiset, boundary, line-count, post-audit, and runtime evidence remains required.
-**Revalidation Passed:** 2026-07-16 — validated against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus exact dirty owner path `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`: post-change core lint/types and root `tsc` passed; isolated binding-flow passed 3/3; the exact ten-file L04 consumer matrix passed 98/98; workflow syntax/self-tests and `git diff --check` passed. No post-audit, full validation, smoke, changelog, or closure result is claimed.
+**Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
+**Post-Audit Integrity Repair:** 2026-07-17 — the third one-shot post-audit stopped before full validation and smoke after proving `custom-screen-editor-draft-and-save.test.tsx` consumed a harness-generated projection instead of the real production modules and after identifying the missing Page-family module-boundary verifier. The test now reads the three production owners directly through `node:fs`; the harness projection surface is removed; and the workflow pins exact imports, exports, canonical full-module hashes, and the 36-declaration body fingerprint for all four Page suites plus their harness.
+**Post-Audit Integrity Revalidated:** 2026-07-17 — the Page scanner passed 36/36 with the exact 6+13+8+9 partition and declaration SHA-256 `2bd33166dfd768b089caf437b5263413d24e033eb18b9a92d152321525a898bb`; the five-module verifier and its three bypass mutations passed; workflow self-tests, core/root static checks, the focused eight-file Vitest matrix 65/65, the family line gate, and two fresh scoped audits reported 0 HIGH/MEDIUM/LOW findings. No repository-wide test, live-smoke, changelog, or closure result is claimed.
+**Revalidation Passed:** 2026-07-17 — current post-split owner gate: the four Page suites passed independently at 6/13/8/9 and together at 36/36; the final fifteen-file L04 consumer matrix passed 98/98; exact name/declaration fingerprints, the five-module structural verifier, core/root static checks, export/import/line/workflow gates, and `git diff --check` passed. No clean family post-audit, full validation, smoke, changelog, or closure result is claimed.
 **Implementation Complete:** 2026-07-16 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Historical CacheBus Implementation Complete:** 2026-07-15 — the earlier one-property repair completed before the current compatibility correction.
 **Prior Compatibility Validation:** 2026-07-16 — against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus dirty owner path `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`, isolated Vitest passed 3/3, the exact ten-file L04 consumer matrix passed 98/98, and `git diff --check` passed; static checks predated the test-only change and therefore do not complete the current owner gate.
@@ -318,10 +320,10 @@ test targets. The reconciled TASK-540 final aggregate is exactly 64 Vitest + 18 
 82 target files (81 source-owner/read-only dependency files plus one closure-owned
 aggregate file); earlier partial totals are obsolete. Pinned changelog 1252 is unchanged.
 
-TASK-540-05-L01 exclusively owns the additive authoring-boundary update after this L04
-source gate. It must inspect all eight production paths above, enforce the import graph
-and pure-model restrictions, and pin the five explicit compatibility re-exports. L04
-must not edit that boundary suite.
+TASK-540-05-L01 exclusively owned and completed the additive authoring-boundary update
+after this L04 source gate. It inspected all eight production paths above, enforced the
+import graph and pure-model restrictions, pinned the five explicit compatibility
+re-exports, and passed its exact boundary gate. L04 did not edit that boundary suite.
 
 This modularity repair changes no API route. Existing internal Admin session auth, RBAC,
 CSRF, rate-limit, strict validation, and cache-event boundaries remain read-only. No
@@ -1329,13 +1331,14 @@ isolation. Five fresh post-implementation audit lenses returned zero HIGH, MEDIU
 findings. The effective-owner self-test separately pins full original L04 authority for
 a new verified finding, retains the exact conditional fixture-only verifier, and adds
 only the three task contracts after closure.
-The final dependency-shaped gate below contains 15 read-only/owner consumer files after
-the Page family expands from one to four suites and the cache-bus family from one to
-three. The historical 6-file/66-test receipt above remains unchanged evidence
+The final dependency-shaped gate below contains exactly 15 read-only/owner consumer
+files and 98 collected tests after the Page family expands from one to four suites and
+the cache-bus family from one to three. The historical 6-file/66-test receipt above remains unchanged evidence
 of the completed 2026-07-15 repair, not the current gate cardinality.
-The current 2026-07-16 compatibility repair passed post-change core/root static gates,
-isolated binding-flow 3/3, the exact 10-file/98-test matrix, workflow self-tests, and
-diff checks before receiving the current receipt above.
+The historical 2026-07-16 compatibility repair passed post-change core/root static
+gates, isolated binding-flow 3/3, and the then-current 10-file/98-test matrix before the
+Page/cache-bus split. That receipt is superseded and never governs current or repeated
+validation; only the final 15-file/98-test matrix and current receipt above do.
 
 ```bash
 bun --cwd core lint:types
@@ -1382,19 +1385,21 @@ for file in \
     exit 1
   fi
 done
+node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=screenEditorPage
+node _docs/_workflows/task-540-implement.mjs --check-l04-page-split
 node --check _docs/_workflows/task-540-implement.mjs
 node _docs/_workflows/task-540-implement.mjs --self-test-repair-siblings
 git diff --check
 ```
 
-The workflow must seal and compare the exact 36-name Page-family multiset, pin the
-6+13+8+9 distribution, derive one isolation command per named final suite, and reject
+The workflow sealed and compared the exact 36-name Page-family multiset, pinned the
+6+13+8+9 distribution, derived one isolation command per named final suite, and rejected
 missing/duplicate targets or cross-suite registration. After the green L04 split gate,
-immediately replace only L04's `Modularity Repair Pending` field with its matching
-`Modularity Repair Revalidated` receipt while preserving the historical behavior
-receipt. Then run the TASK-540-05-L01-owned boundary suite against all eight production
-modules; that later owner receives its own receipt and does not delay L04's transition.
-Every pre-split receipt above remains historical only.
+the completed transition replaced only L04's `Modularity Repair Pending` field with its
+matching `Modularity Repair Revalidated` receipt while preserving the historical behavior
+receipt. TASK-540-05-L01 subsequently ran and passed its owned boundary suite against all
+eight production modules and received its own canonical receipt. Every pre-split receipt
+above remains historical only.
 
 ## Historical completion evidence
 

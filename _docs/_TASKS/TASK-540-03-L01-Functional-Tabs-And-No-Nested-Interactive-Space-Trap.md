@@ -13,8 +13,12 @@
 **Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Repair Started:** 2026-07-16
 **Repair Reason:** The defensive zero-item Tabs branch rendered an empty `tablist` with no usable tab. R03 owns the accessible fail-safe renderer state: no empty tablist/tab/panel and visible exact `role="status"` text `No tabs available.`.
-**Modularity Repair Pending:** 2026-07-17 — from family baseline `e5f15a567`, the touched renderer grew from 1,822 to 1,983 physical lines and its touched runtime-renderer suite grew from 1,536 to 2,415. Both block closure under the hard 1,000-line gate and require the exact stable-facade/source plus harness/four-suite partitions below.
-**Current Repair State:** The accessible/URL/media behavior repair is implemented, but the recorded `Revalidation Passed` is historical pre-split evidence. After all seven production paths, five renderer-test split paths, and the touched record-interaction/image-source dependency paths pass line, static, exact-count, drift, and runtime gates, remove the single `Modularity Repair Pending` field and replace it with one `Modularity Repair Revalidated` receipt; the two fields must never coexist.
+**Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
+**Post-Audit Fixture Integrity Repair:** 2026-07-17 — the subsequent five-lens post-audit stopped before full validation and smoke after proving the extracted renderer harness had replaced the pre-split compile-time fixture annotations with `as` and `as unknown as` assertions. The shared `fields`, `headingBlock`, `headingBinding`, and `staticImageBlock` fixtures again use direct production-contract annotations with unchanged values and exports. The same scoped documentation correction now maps the production and test/support line-count receipts to their declared land orders.
+**Post-Audit Fixture Integrity Revalidated:** 2026-07-17 — core lint/types, root `tsc`, the four independent renderer partitions 22/22 + 13/13 + 24/24 + 13/13, the exact six-file dependency-shaped gate 89/89, the unchanged 72-name/67-declaration fingerprint, the family physical-line gate, and `git diff --check` passed. No repository-wide test, clean five-lens rerun, live smoke, changelog, or closure result is claimed.
+**Post-Audit Fixture Immutability Repair:** 2026-07-17 — a fresh scoped audit found that removing the unsafe fixture assertions had also removed the harness's shallow runtime freezes, making shared module fixtures mutable across suites. The directly annotated fields array and each field, heading block and data, heading binding, and static image block and data are again frozen without `as`, `satisfies`, or a TypeScript suppression.
+**Post-Audit Fixture Immutability Revalidated:** 2026-07-17 — freeze depth and fixture bytes match the prior stateless-harness contract; the exact six-file gate passed 89/89 with unchanged 72-name/67-declaration fingerprints, core/root static checks, Prettier, the family line gate, full diff check, and a fresh read-only audit with 0 HIGH/MEDIUM/LOW findings passed. No repository-wide test, clean five-lens rerun, live smoke, changelog, or closure result is claimed.
+**Current Repair State:** The accessible/URL/media behavior repair and cohesive split are implemented. All seven production paths, five renderer-test split paths, and the touched record-interaction/image-source dependency paths passed line, static, exact-count, code-drift, and cross-contract gates. The current modularity receipt covers this targeted owner gate; full family post-audit and runtime smoke remain later closure gates.
 **Revalidation Passed:** 2026-07-16 — historical pre-modularity evidence: `core lint:types`, `core lint`, the exact renderer/interaction/image Vitest matrix (89/89), and `git diff --check` independently passed on the then-final shared source. This receipt does not validate extracted modules and claims no new post-audit, live smoke, changelog, or closure result.
 **Historical Corrective Revalidation:** 2026-07-14 — `core lint:types`, `core lint`, the then-current exact renderer/interaction/image Vitest matrix (89/89), and `git diff --check`
 **Historical Post-Audit:** 2026-07-14 — PASS; zero HIGH, MEDIUM, or LOW findings for the five-value final Button/Image DOM-sink regression matrix
@@ -67,10 +71,11 @@ renderer and update the named behavior expectations before its gate.
 
 Touched-file scope is measured from verified family baseline `e5f15a567` through the
 final working tree. Staging and intermediate commits do not reset it. Verified
-baseline→pre-split counts are Renderer 1,822→1,983, renderer suite 1,536→2,415,
+baseline→pre-split counts were Renderer 1,822→1,983, renderer suite 1,536→2,415,
 record-interactions suite 607→657, and image-source suite 119→232. All original and new
-paths remain in the byte-based final gate. The existing `ScreenRuntimeRenderer.tsx`
-import remains stable and exposes the exact same
+paths remain in the byte-based final gate. The completed production split has final
+line counts 395/188/177/635/420/284/1 in declared owner order. The existing
+`ScreenRuntimeRenderer.tsx` import remains stable and exposes the exact same
 `ScreenRuntimeRenderer` function reference; the facade may not use `export *`, wrap the
 component, or introduce import-time side effects.
 
@@ -105,9 +110,9 @@ DOM order, ARIA relationships, and zero-item accessible state.
 
 ## Mandatory runtime-renderer test split
 
-The 2,415-line suite currently collects exactly 72 Vitest cases. Move complete test
-declarations and preserve their exact expanded names/assertions in source order. One
-stateless harness owns shared mount/document/render/field/media constants; it may expose
+The historical 2,415-line suite collected exactly 72 Vitest cases. Complete test
+declarations moved with their exact expanded names/assertions in source order. One
+stateless harness owns shared mount/document/render/field/media constants and exposes
 builders but no tests, mutable singleton, `beforeEach`, or cross-file cleanup authority.
 
 | Test owner | Exact expanded pre-split positions | Count | Post-format budget |
@@ -131,14 +136,15 @@ These line-limit blockers are never LOW/TASK-9999 candidates. A missing assertio
 changed expanded name, cross-file state dependency, accessibility drift, URL/media
 fallback, or visual behavior regression is blocking according to its actual impact.
 
-Land in this exact order: `screenRuntimeRendererModel.ts`,
+The production split landed in this exact order: `screenRuntimeRendererModel.ts`,
 `useScreenRuntimeInteractions.ts`, `ScreenRuntimeBlockFrame.tsx`,
 `ScreenRuntimeLeafBlocks.tsx`, `ScreenRuntimeContainerBlocks.tsx`,
 `ScreenRuntimeSectionList.tsx`, then the explicit `ScreenRuntimeRenderer.tsx` facade.
-Next land the stateless harness and move the retained, interactions, presentation, and
-layout suites in that order. Gate each production boundary before its consumer and each
-suite independently before the combined 89/89 run and owner-scoped line gate, then write
-`Modularity Repair Revalidated` as targeted static/test/line evidence only. The fresh
+The stateless harness and retained, interactions, presentation, and layout suites then
+landed in that order. Each suite passed independently at 22/22, 13/13, 24/24, and 13/13;
+the combined dependency-shaped gate passed 89/89, the 72-name and 67-declaration hashes
+matched, and all five test/support paths finished at 95/638/611/798/343 lines in that
+declared land order. The fresh
 family post-audit and browser smoke run after every source owner lands and remain
 mandatory before closure.
 
@@ -487,8 +493,8 @@ Run each of the four renderer partitions independently for exact counts 22/22,
 physical-line count over the seven production paths, harness/four suites, modified
 record-interaction suite, and family-touched image-source suite; reject every result
 above 1,000 without changing their ownership. Rerun any named failing file once in
-isolation. No Bun runtime route is touched. Because this is UI/editor code, its source gate also requires the
-family stream also requires the task-scoped helper-restarted `playwright-cli` smoke
+isolation. No Bun runtime route is touched. Because this is UI/editor code, the family
+stream also requires the task-scoped helper-restarted `playwright-cli` smoke
 specified by TASK-540-06 after all source owners land; source movement does not reuse the
 historical browser receipt. `runLeafGate` byte-counts this
 leaf's exact `allowedFiles` before and after its commands; the displayed global command
@@ -501,6 +507,7 @@ DOM identity, and 83/83 gate remain historical metadata. After R01 landed, this 
 added the explicit final Button/Image control-character DOM regressions and historically
 passed the then-current exact 89/89 gate plus a zero-finding post-audit. The current
 2026-07-16 accessible zero-item Tabs repair independently passed the historical exact
-89/89 gate, lint/typecheck, and diff check. The modular split still requires the fresh
-independent/combined 89/89 gate, line counts, post-audit, runtime smoke, and replacement
-`Modularity Repair Revalidated` receipt; closure remains pending.
+89/89 gate, lint/typecheck, and diff check. The modular split passed the fresh
+independent/combined 89/89 gate, exact fingerprints, line counts, static gates, and
+zero-finding code and cross-contract audits. Its exact modularity receipt is current;
+family post-audit, runtime smoke, and closure remain pending.

@@ -16,7 +16,7 @@ const AGENT_LAUNCHER_SOURCE =
   "process.exit(Number.isInteger(number)&&number>0?128+number:255);}" +
   "process.exit(code??128);" +
   "});";
-const MAX_PROMPT_BYTES = 32 * 1024 * 1024;
+const MAX_PROMPT_BYTES = 128 * 1024;
 const MAX_RESULT_BYTES = 8 * 1024 * 1024;
 const AGENT_TIMEOUT_MS = 60 * 60 * 1000;
 const TERMINATION_GRACE_MS = 5_000;
@@ -84,13 +84,15 @@ const AGENT_EDIT_ONLY_DENIED_PATH_PATTERNS = Object.freeze([
   "//home/coder/project/Coderso/node_modules",
   "//home/coder/project/Coderso/node_modules/**",
 ]);
+const AGENT_PATH_TAKING_TOOLS = Object.freeze(["Read", "Grep", "Glob", "Edit", "Write"]);
 const AGENT_DENIED_TOOL_RULES = Object.freeze(
   [
-    ...AGENT_DENIED_PATH_PATTERNS.flatMap((pattern) => [
-      "Read(" + pattern + ")",
-      "Edit(" + pattern + ")",
-    ]),
-    ...AGENT_EDIT_ONLY_DENIED_PATH_PATTERNS.map((pattern) => "Edit(" + pattern + ")"),
+    ...AGENT_DENIED_PATH_PATTERNS.flatMap((pattern) =>
+      AGENT_PATH_TAKING_TOOLS.map((tool) => tool + "(" + pattern + ")")
+    ),
+    ...AGENT_EDIT_ONLY_DENIED_PATH_PATTERNS.flatMap((pattern) =>
+      ["Edit", "Write"].map((tool) => tool + "(" + pattern + ")")
+    ),
   ].sort()
 );
 const AGENT_SYSTEM_PROMPT =
@@ -416,11 +418,7 @@ async function authorizeAndResumeStoppedAgentChild({ label, authorize, resume, c
 }
 
 async function runAgent(prompt, options) {
-  invariant(typeof prompt === "string" && prompt.length > 0, "TASK-540 agent prompt is missing");
-  invariant(
-    Buffer.byteLength(prompt) <= MAX_PROMPT_BYTES,
-    "TASK-540 agent prompt exceeds the bounded input"
-  );
+  requireBoundedPrompt(prompt);
   const child = spawn(
     AGENT_LAUNCHER,
     ["--eval", AGENT_LAUNCHER_SOURCE, CLAUDE, ...buildClaudeArgs(options)],
@@ -523,6 +521,15 @@ async function runAgent(prompt, options) {
     "TASK-540 agent process failed; details discarded"
   );
   return parseStructuredAgentOutput(Buffer.concat(stdout, stdoutBytes));
+}
+
+function requireBoundedPrompt(prompt) {
+  invariant(typeof prompt === "string" && prompt.length > 0, "TASK-540 agent prompt is missing");
+  invariant(
+    Buffer.byteLength(prompt, "utf8") <= MAX_PROMPT_BYTES,
+    "TASK-540 agent prompt exceeds the bounded input"
+  );
+  return prompt;
 }
 
 function reportPhase(title) {
@@ -728,6 +735,19 @@ async function runSelfTest() {
   };
   const readOnlyCli = buildClaudeArgs({ label: "start-gate:540", schema: readOnlySchema });
   const mutationCli = buildClaudeArgs({ label: "closure-fix:540", schema: mutationSchema });
+  const expectedDeniedToolRules = [
+    ...AGENT_DENIED_PATH_PATTERNS.flatMap((pattern) =>
+      AGENT_PATH_TAKING_TOOLS.map((tool) => tool + "(" + pattern + ")")
+    ),
+    ...AGENT_EDIT_ONLY_DENIED_PATH_PATTERNS.flatMap((pattern) =>
+      ["Edit", "Write"].map((tool) => tool + "(" + pattern + ")")
+    ),
+  ].sort();
+  invariant(
+    JSON.stringify(AGENT_DENIED_TOOL_RULES) === JSON.stringify(expectedDeniedToolRules) &&
+      new Set(AGENT_DENIED_TOOL_RULES).size === AGENT_DENIED_TOOL_RULES.length,
+    "TASK-540 host deny-tool projection is incomplete or duplicated"
+  );
   for (const cli of [readOnlyCli, mutationCli]) {
     invariant(cli[0] === "-p", "TASK-540 host self-test lost print mode");
     invariant(cli.includes("--json-schema"), "TASK-540 host self-test lost schema mode");
@@ -764,6 +784,19 @@ async function runSelfTest() {
   invariant(
     !READ_ONLY_AGENT_TOOLS.includes("Bash") && !MUTATING_AGENT_TOOLS.includes("Bash"),
     "TASK-540 host exposed shell execution"
+  );
+  invariant(
+    AGENT_DENIED_PATH_PATTERNS.every((pattern) =>
+      AGENT_PATH_TAKING_TOOLS.every((tool) =>
+        AGENT_DENIED_TOOL_RULES.includes(tool + "(" + pattern + ")")
+      )
+    ) &&
+      AGENT_EDIT_ONLY_DENIED_PATH_PATTERNS.every((pattern) =>
+        ["Edit", "Write"].every((tool) =>
+          AGENT_DENIED_TOOL_RULES.includes(tool + "(" + pattern + ")")
+        )
+      ),
+    "TASK-540 host lost exact enabled path-tool denial coverage"
   );
   invariant(
     [
@@ -893,6 +926,17 @@ async function runSelfTest() {
     }
   }
   invariant(rejected === 3, "TASK-540 host self-test accepted an invalid CLI");
+  requireBoundedPrompt("a".repeat(MAX_PROMPT_BYTES));
+  requireBoundedPrompt("ą".repeat(MAX_PROMPT_BYTES / 2));
+  let promptBoundRejections = 0;
+  for (const prompt of ["a".repeat(MAX_PROMPT_BYTES + 1), "a".repeat(MAX_PROMPT_BYTES - 1) + "ą"]) {
+    try {
+      requireBoundedPrompt(prompt);
+    } catch {
+      promptBoundRejections += 1;
+    }
+  }
+  invariant(promptBoundRejections === 2, "TASK-540 host prompt byte cap is not exact");
   invariant(
     AGENT_LAUNCHER === process.execPath &&
       AGENT_LAUNCHER_SOURCE.startsWith('process.kill(process.pid,"SIGSTOP");') &&
@@ -917,6 +961,7 @@ async function runSelfTest() {
     editOnlyDeniedPathPatterns: AGENT_EDIT_ONLY_DENIED_PATH_PATTERNS.length,
     deniedToolRules: AGENT_DENIED_TOOL_RULES.length,
     processAuthorityCases: 6,
+    promptBoundaryCases: 4,
     preResumeCases,
     launcherCases,
     structuredOutputCases: 1,

@@ -11,10 +11,20 @@
 **Status:** 🚧 In Progress
 **Started:** 2026-07-13
 **Repair Started:** 2026-07-16
-**Implementation Complete:** 2026-07-15 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
-**Revalidation Passed:** 2026-07-16 — validated against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` with dirty L03 owner paths `core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx`, `core/services/customScreens/screenEntryPresentationOverrideContract.ts`, `core/services/customScreens/screenEntryPresentationOverrides.ts`, `tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts`, and `tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx`: core/root static gates passed; the expanded fourteen-file L03 Vitest gate passed 258/258; isolated cacheBus passed 22/22; the L04 read-only consumer matrix passed 98/98; DB preflight was reachable; the current pre-split registered Custom Screens route suite passed 20/20 with 118 expectations; and `git diff --check` passed. This is pre-modularity-split evidence only. No full-suite, live-smoke, changelog, or closure result is claimed.
-**Repair Reason:** Final post-audit proved a scalar presentation override could replace a `media.multiple` field's UUID array before `MediaPicker`, emptying the visible selection and allowing a later pick to truncate stored gallery data. L03 now makes single-media eligibility one shared Bun-free contract: service writes reject multiple-media targets, stored legacy rows are inactive and cleanup-eligible, and Entry Editor filters them before Canvas/Preview while preserving the exact bound array. The same repair moves the shared UUID import to the canonical module header.
-**Modularity Repair Pending:** 2026-07-17 — the root `AGENTS.md` `File Size and Modularity` hard gate applies to the currently touched 2,235-line `CustomScreenEntryEditor.tsx`, 1,359-line `customScreensClient.test.ts`, 1,165-line `cacheBus.test.ts`, 1,079-line `custom-screen-entry-navigation-guard.test.tsx`, and 1,141-line `custom-screen-entry-editor-restyle.test.tsx`. The exact production and test splits below are required before closure; they preserve all behavior receipts as history but require fresh static, targeted, isolation, test-name-multiset, boundary, line-count, post-audit, and runtime evidence after files move.
+**Fix Started:** 2026-07-17
+**Implementation Complete:** 2026-07-18 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Revalidation Passed:** generation 71b1c73b899a4ab4be94690ce387f28e / token ff99adec779348e796d56df5dbda3627 / gate green
+**Repair Reason:** A fresh post-audit proved the bounded 201-direct-image path reused the transient load-error message and rendered a `Retry` action that could never recover because the structural overflow produces an empty request plan and zero media reads. L03 now carries an explicit `load | overflow` error kind, keeps transient failures retryable, and renders the bounded overflow as a distinct non-retryable visible error without disabling entry editing.
+**Post-Audit Overflow Retry Repair:** 2026-07-17 — four source modules and two existing owner tests distinguish structural bounded overflow from a transient media read failure. The overflow retains the editor and visible error, performs zero media reads, and exposes no dead-end `Retry`. The closure orchestrator re-pins only the changed declaration-body SHA and corrects the current repair-resume self-test to retain its already-regated closure sibling; the exact owner revalidation passed and a fresh clean post-audit remains pending.
+**Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
+**Historical Pre-Overflow Post-Audit Hygiene Repair:** 2026-07-17 — the third one-shot post-audit stopped before full validation and smoke after finding a dead `_editorView` fixture plus tautological captured request-key/token comparisons in the presentation-media continuation. The fixture was removed, and settlement retained the pre-attempt request-key check plus active, mounted, and generation authority without self-comparisons.
+**Historical Pre-Overflow Post-Audit Hygiene Revalidated:** 2026-07-17 — core lint/types, root `tsc`, the focused eight-file Vitest matrix 65/65, the full TASK-540 physical-line gate, and a fresh scoped code/test audit with 0 HIGH/MEDIUM/LOW findings passed at that checkpoint. The current L03 overflow repair supersedes that behavior gate.
+**Historical Pre-Overflow Post-Audit Content-Type Read Repair:** 2026-07-17 — an isolated mounted regression first reproduced two concurrent `listContentTypesCached({ force: true })` calls for one Entry visit: one unguarded relation-target effect and one entry hydration. The relation-target effect was removed; hydration then passed its actual `force` value and carried the returned full content-type list through the existing route/load/draft-authority barrier before atomically committing both the Entry draft and relation targets.
+**Historical Pre-Overflow Post-Audit Content-Type Read Revalidated:** 2026-07-17 — the focused regression changed from the reproduced 2-call failure to exactly one forced call per initial visit; the exact twenty-two-file expanded L03 Vitest gate passed 258/258; core lint/types, root `tsc`, the touched-file physical-line gate, and `git diff --check` passed. The protected 22-name navigation multiset and 9+13 partition were byte-identical; the intentional assertion changes then changed only the declaration fingerprint to `16e197de4e6a8713696cbc68f643a5e13dfc53cff66c84b7b6c0d8f75629899f`. The current L03 overflow repair supersedes that behavior gate.
+**Historical Pre-Overflow Post-Audit Media Bound Repair:** 2026-07-17 — the same five-lens pass proved a schema-valid Entry document with 201 winning direct-image UUIDs could throw while building its request key during render. The strict builder and untrusted decoder still reject more than 200 IDs, while the then-new bounded trusted plan converted that overflow into the existing visible media-load error, an empty URL map, and zero media API calls without unmounting the editor.
+**Historical Pre-Overflow Post-Audit Media Bound Revalidated:** 2026-07-17 — the pre-fix 201-ID throw was reproduced; the corrected pure contract passed 4/4, the Entry editor integration passed 13/13, the family passed 17/17, and the full twenty-two-file L03 gate passed 258/258. Core lint/types, root `tsc`, the family line gate (largest touched suite 974 lines), the unchanged 17-name multiset, then-current declaration SHA-256 `26783b88328023f0eb1761381082f7a311334ad4856b2964e8fbcc7f0419c8cb`, and `git diff --check` passed. This evidence predates and is superseded for the behavior gate by the current overflow-error classification repair.
+**Historical Pre-Overflow Post-Audit Final-Gate Contract Repair:** 2026-07-17 — a workflow audit found that the then-landed L03 task still phrased its historical transient 12-file handoff as a current executable instruction, contradicting the final workflow. The paragraph then superseded that handoff and made the final 15-file, 98-test matrix the sole repeat-validation authority.
+**Historical Pre-Overflow Post-Audit Final-Gate Contract Revalidated:** 2026-07-17 — the then-live L03 gate, L04 gate, isolation metadata, and exact-matrix self-test all used `L04_FINAL_CONSUMER_VITEST_FILES`; then-prepared resume, workflow self-tests, line/diff checks, and a fresh read-only audit reported 0 HIGH/MEDIUM/LOW findings. The current overflow repair supersedes that behavior gate and prepared-resume state; no repository-wide test, clean five-lens rerun, live smoke, changelog, or closure result is claimed.
 **Historical Cache Repair Started:** 2026-07-15
 **Historical Cache Revalidation:** generation ff397af11ad9b309d5244372b0705637 / token 191e7db6acd8e2cf36016f821d2f6b88 / gate green
 **Historical Cache Repair Reason:** Closure validation reproduced one logical remote cache event twice when canonical and legacy transports delivered the same serialized event; the scoped repair owned cacheBus source/test plus additive registered-route override evidence and remains durable historical evidence.
@@ -69,7 +79,10 @@ file for every new TASK-540 route assertion or future finding; L03 may not reuse
 historical additive exception without a newly reconciled owner contract.
 
 No other TASK-540 leaf edits these paths. TASK-540-03-L01 exclusively owns
-`ScreenRuntimeRenderer.tsx`, `custom-screen-runtime-renderer.test.tsx`, and
+`ScreenRuntimeRenderer.tsx`, the retained `custom-screen-runtime-renderer.test.tsx`,
+the split `custom-screen-runtime-interactions.test.tsx`,
+`custom-screen-runtime-presentation.test.tsx`, and
+`custom-screen-runtime-layout.test.tsx` suites, plus
 `custom-screen-record-interactions.test.tsx`; this leaf consumes and may run that
 landed renderer contract read-only. The retained
 `tests/vitest/widgets/screenWidgets.test.tsx` Preview compatibility suite is also a
@@ -94,12 +107,15 @@ test; the already-gated cacheBus/editor/service seams stayed read-only. Its dura
 evidence is the Historical Revalidation/Historical Post-Audit metadata above, not
 the mutable `_docs/_workflows/task-540-fix.mjs`, which now records only the completed
 R01→R03 URL-control correction. The earlier prepared-boundary resolver state is
-historical only. The current `Modularity Repair Pending` field blocks L03 from being
-treated as landed despite its prior `Implementation Complete` and `Revalidation Passed`
-receipts. Only the completed cohesive split, fresh targeted gate, and replacement
-`Modularity Repair Revalidated` receipt restore landed status; that targeted receipt
-still never substitutes for either sibling owner gate or the later family post-audit,
-smoke, and closure gates.
+historical only. L05 boundary preparation invalidated the immediately prior modularity
+receipt after proving the extracted layout still carried two type-only admin-client edges.
+The narrow structural breadcrumb types remove those compile-time view/client edges without
+changing runtime bytes or props. The full exact L03 re-gate then passed: all four test
+fingerprints, static and line checks, expanded L03 258/258, final fifteen-file L04
+98/98, DB
+preflight, Bun routes 13/13, workflow/diff checks, and a fresh zero-finding audit. The
+restored canonical receipt still never substitutes for either sibling owner gate or the
+later family post-audit, smoke, and closure gates.
 
 ## Grounded anchors
 
@@ -419,7 +435,7 @@ calls a service or derives a second save/dirty baseline.
 
 Keep all mounted UI/runtime scenarios through the current unmounted-attempt regression in
 `custom-screen-entry-editor-restyle.test.tsx`. Move only the current final four Bun-free
-tests (pre-split lines `957–1141`) to
+tests (pre-split lines `955–1139`) to
 `tests/vitest/ui/custom-screen-entry-presentation-media.test.ts`:
 
 1. route-scoped canonical key codec and malformed-snapshot rejection;
@@ -447,11 +463,12 @@ additive). The same suite must enforce the exact one-way import graph above, for
 React/admin-client/`SchemaBuilder` imports from the three pure modules, forbid every
 module from importing the wrapper, and source-pin the wrapper's complete existing
 value/type compatibility re-export list. A compile-only consumer is insufficient because
-the pure tests intentionally move to their owning modules. Land order is L03 split →
-L03 target gate and immediate L03 `Modularity Repair Revalidated` receipt → L04
-split/gate and immediate L04 receipt → L01 additive boundary update/gate → family
-post-audit/smoke/closure; a passing check that still reads only the thin wrapper is
-insufficient evidence.
+the pure tests intentionally move to their owning modules. The historical modularity land
+order was L03 split → L03 target gate and immediate L03
+`Modularity Repair Revalidated` receipt → L04 split/gate and immediate L04 receipt → L01
+additive boundary update/gate. That split is durable, and the current remaining order is
+fresh five-lens post-audit → full validation → runtime smoke → reserved L01 closure; a passing check
+that still reads only the thin wrapper is insufficient evidence.
 
 ### Required workflow and targeted validation changes
 
@@ -524,18 +541,20 @@ bunx vitest run tests/vitest/ui/custom-screen-authoring-boundary.test.ts
 git diff --check
 ```
 
-Strict land order is L03 → L04 → L01. Immediately after L03 and before L04 may edit its
-Page family, run the transient L04 read-only consumer gate with the single current
-`custom-screens-page.test.tsx`, the other eight unchanged L04 consumers, and all three
-post-L03 cache-bus suites: 12 files total. That phase must not reference the three future
-L04 Page test paths. Once L04 lands, supersede it with the final 15-file consumer gate
-listed in Validation below. Then run the registered Custom Screens Bun/DB route gate and
-workflow self-tests. A source/test move invalidates the current L03 modularity receipt;
-immediately after the green L03 split gate, replace only `Modularity Repair Pending`
-with the matching HEAD/dirty-path-bound `Modularity Repair Revalidated` receipt while
-preserving the historical behavior receipt. The later L04 and L01 gates receive their
-own receipts and do not delay the L03 transition. Fresh post-audit lenses and the
-mandatory TASK-540 runtime smoke run only after every modularity owner lands.
+The historical modularity land order was L03 → L04 → L01, and all three owners landed
+at that checkpoint. The overflow repair reopened and then passed L03's behavior gate, so
+L03 is now landed and the durable modularity split remains in place. The
+between-leaf transient consumer handoff is superseded and is not a current validation
+instruction. Every current or repeated validation must use exclusively the final
+15-file, 98-test L04 consumer gate listed in Validation below and represented by
+`L04_FINAL_CONSUMER_VITEST_FILES` in the workflow; no narrower projection is valid.
+Then run the registered Custom Screens Bun/DB route gate and workflow self-tests. The
+current source/test move has passed the family line gate and L03 behavior gate. The
+historical green L03 split gate replaced only `Modularity Repair Pending` with the
+matching HEAD/dirty-path-bound `Modularity Repair Revalidated` receipt while preserving
+the historical behavior receipt. The later L04 and L01 gates receive their own receipts
+and do not replace the current L03 revalidation. The mandatory TASK-540 runtime smoke
+runs only after the fresh post-audit, now that the current L03 behavior gate has landed.
 
 ## Canonical/legacy remote-event repair contract
 
@@ -1216,7 +1235,6 @@ type MediaCommit = {
   urlsById: Readonly<Record<string, string>>;
   error: string | null;
 };
-const PRESENTATION_MEDIA_LOAD_ERROR = "Presentation image could not be loaded.";
 
 export function buildEntryRouteKey(input: {
   screenId: string | null;
@@ -1285,6 +1303,41 @@ export function decodeAndValidatePresentationMediaRequestKey(key: string): {
 // JSON tuple decoding validates every member and rejects extra tuple positions.
 const routeKey = buildEntryRouteKey({ screenId, entryId, isCreateMode });
 
+export const PRESENTATION_MEDIA_LOAD_ERROR =
+  "Presentation image could not be loaded.";
+export const PRESENTATION_MEDIA_OVERFLOW_ERROR =
+  "Too many presentation images to display. This record references more than 200 direct images.";
+
+export function buildBoundedPresentationMediaRequestPlan(
+  routeKey: string,
+  requestedIds: readonly string[]
+): Readonly<{
+  requestKey: string;
+  requestedIds: readonly string[];
+  error: string | null;
+  errorKind: "overflow" | null;
+}> {
+  const emptyRequestKey = buildPresentationMediaRequestKey(routeKey, []);
+  try {
+    const requestKey = buildPresentationMediaRequestKey(routeKey, requestedIds);
+    return Object.freeze({
+      requestKey,
+      requestedIds: readRequestedIdsFromMediaRequestKey(requestKey),
+      error: null,
+      errorKind: null,
+    });
+  } catch {
+    // Trusted render input can exceed the bounded key even though each UUID is valid.
+    // This structural path is visible but non-retryable and performs zero media reads.
+    return Object.freeze({
+      requestKey: emptyRequestKey,
+      requestedIds: Object.freeze([]),
+      error: PRESENTATION_MEDIA_OVERFLOW_ERROR,
+      errorKind: "overflow",
+    });
+  }
+}
+
 // In the implementation, declare the route-scoped committed-state aliases shown in the
 // Dirty hydration section below before deriving this plan. They are presented later only
 // to keep the contract grouped by responsibility; no const is consumed before declaration.
@@ -1298,7 +1351,11 @@ const requestedIdsPlan = useMemo(
   }),
   [currentRuntimeDocument, currentRuntimeBindings, currentCanvasFieldValues, currentDraftOverrides]
 );
-const mediaRequestKey = buildPresentationMediaRequestKey(routeKey, requestedIdsPlan);
+const boundedRequestPlan = useMemo(
+  () => buildBoundedPresentationMediaRequestPlan(routeKey, requestedIdsPlan),
+  [requestedIdsPlan, routeKey]
+);
+const mediaRequestKey = boundedRequestPlan.requestKey;
 // The memory-only canonical key losslessly encodes the full route identity plus the
 // sorted/deduplicated UUID list. The decoder validates the route tuple and revalidates
 // every UUID with isScreenMediaAssetUuid.
@@ -1380,7 +1437,7 @@ export function initializeMediaMachineState(input: MediaAttemptInput): MediaMach
 
 const [mediaMachine, dispatchMediaAttempt] = useReducer(
   mediaAttemptReducer,
-  { requestKey: mediaRequestKey, requestedIds: requestedIdsPlan },
+  { requestKey: mediaRequestKey, requestedIds: boundedRequestPlan.requestedIds },
   initializeMediaMachineState
 );
 
@@ -1420,7 +1477,7 @@ const beginMediaAttempt = useCallback((cause: "manual-retry" | "cache-event") =>
   dispatchMediaAttempt({ type: "retry", requestKey: mediaRequestKey, cause });
 }, [mediaRequestKey]);
 
-const hasRequestedMediaIds = requestedIdsPlan.length > 0;
+const hasRequestedMediaIds = boundedRequestPlan.requestedIds.length > 0;
 useEffect(() => subscribeCacheEvents((event) => {
   if (event.key === cacheKeys.mediaList && hasRequestedMediaIds) {
     beginMediaAttempt("cache-event");
@@ -1481,8 +1538,16 @@ useEffect(() => {
 const mediaMatchesRequest =
   mediaCommit.routeVisit === routeVisit && mediaCommit.requestKey === mediaRequestKey;
 const presentationMediaState =
-  requestedIdsPlan.length === 0
-    ? { urlsById: {}, loading: false, refreshing: false, error: null }
+  boundedRequestPlan.error !== null
+    ? {
+        urlsById: {},
+        loading: false,
+        refreshing: false,
+        error: boundedRequestPlan.error,
+        errorKind: boundedRequestPlan.errorKind,
+      }
+    : boundedRequestPlan.requestedIds.length === 0
+    ? { urlsById: {}, loading: false, refreshing: false, error: null, errorKind: null }
     : mediaMatchesRequest
       ? {
           urlsById: mediaCommit.urlsById,
@@ -1490,8 +1555,12 @@ const presentationMediaState =
           refreshing: mediaCommit.attemptToken !== attemptToken,
           error:
             mediaCommit.attemptToken === attemptToken ? mediaCommit.error : null,
+          errorKind:
+            mediaCommit.attemptToken === attemptToken && mediaCommit.error !== null
+              ? "load"
+              : null,
         }
-      : { urlsById: {}, loading: true, refreshing: false, error: null };
+      : { urlsById: {}, loading: true, refreshing: false, error: null, errorKind: null };
 ```
 
 The route/media key codec, media state initializer, allocator, and reducer are Bun-free
@@ -1507,10 +1576,13 @@ Initial media resolution is non-force. The visible Retry button and
 L01's authoritative media cache and guards request key, globally monotonic attempt
 token, generation, and
 unmount before commit. Same-request refresh retains URLs and exposes refreshing;
-request mismatch exposes an empty map/loading. A settled bounded error is visible and
-retryable as title `Presentation image unavailable`, description
-`Presentation image could not be loaded.`, and button `Retry`; it is hidden during
-loading/refreshing and does not disable entry editing. `CustomScreenEntryCanvas` and
+request mismatch exposes an empty map/loading. A settled transient read error is visible
+and retryable as title `Presentation image unavailable`, description
+`Presentation image could not be loaded.`, and button `Retry`. A bounded structural
+overflow uses the same visible title plus its distinct overflow description, carries
+`errorKind:"overflow"`, and renders no `Retry` because another read cannot change the
+request cardinality. Both errors are hidden during loading/refreshing and do not disable
+entry editing. `CustomScreenEntryCanvas` and
 the existing read-only `CustomScreenPreview` branch forward only `urlsById` to the
 renderer; neither resolves nor sanitizes URLs. The Preview props remain optional so
 builder/list previews and retained compatibility consumers are byte-identical when no
@@ -2262,8 +2334,9 @@ here and obey the commit-time generation contract.
 
 ## Error/compatibility flow
 
-- Related and presentation-media failures are visible and independently retryable;
-  neither disables entry editing.
+- Related-entry and transient presentation-media read failures are visible and
+  independently retryable; structural presentation-media overflow is visible but
+  non-retryable because it performs zero reads. None disables entry editing.
 - Late results from a prior entry, override set, attempt, cache event, or unmounted
   editor cannot commit.
 - Dirty content, dirty presentation, or both protect the complete local draft.
@@ -2298,9 +2371,9 @@ here and obey the commit-time generation contract.
 - `custom-screen-entry-presentation-media.test.ts` directly proves the extracted
   Bun-free route/media codec, attempt reducer, winning direct-image UUID planner, and
   exact media-record projection without importing or mounting the React component.
-- TASK-540-03-L01's exclusively owned
-  `custom-screen-runtime-renderer.test.tsx` is a read-only prerequisite proving safe
-  URL-map consumption and missing/unsafe winner behavior. This leaf must not edit it.
+- TASK-540-03-L01's exclusively owned retained renderer suite plus its interactions,
+  presentation, and layout partitions are read-only prerequisites proving safe URL-map
+  consumption and missing/unsafe winner behavior. This leaf must not edit them.
 - TASK-540-06 closure validates the already-landed `_docs/CMS_API.md`
   direct-image-or-media-field wording read-only and records the existing route
   registration/security evidence without editing that file.
@@ -2378,9 +2451,9 @@ here and obey the commit-time generation contract.
 
 TASK-540-06 runs the declared owner/dependency suites read-only and must not re-baseline
 the assertions.
-`custom-screen-record-interactions.test.tsx` and
-`custom-screen-runtime-renderer.test.tsx` remain exclusively owned by
-TASK-540-03-L01.
+`custom-screen-record-interactions.test.tsx` and all four
+`custom-screen-runtime-{renderer,interactions,presentation,layout}.test.tsx` partitions
+remain exclusively owned by TASK-540-03-L01.
 
 ## Security Contract
 
@@ -2423,7 +2496,7 @@ bunx vitest run tests/vitest/ui/custom-screen-entry-presentation-media.test.ts #
 set -a && source .env && set +a && bun --eval 'import { canConnect } from "./tests/utils/db"; const configured = Boolean(process.env.DATABASE_URL?.trim()); const reachable = configured && await canConnect(); process.stdout.write(JSON.stringify({ configured, reachable, selectOne: reachable ? 1 : 0 })); if (!reachable) process.exit(1); process.exit(0)'
 set -a && source .env && set +a && bun test tests/integration/routes/customScreensRoutes.test.ts
 # Exact expanded L03 owner/dependency gate after the modular split.
-# It covers 19 files: the prior 14 plus five net-new focused suites.
+# It covers 22 files after consuming all four R03 renderer partitions read-only.
 bunx vitest run tests/vitest/admin/cacheBus.test.ts \
   tests/vitest/admin/cacheBusCorrelation.test.ts \
   tests/vitest/admin/cacheBusHardening.test.ts \
@@ -2436,6 +2509,9 @@ bunx vitest run tests/vitest/admin/cacheBus.test.ts \
   tests/vitest/ui/custom-screen-entry-navigation-authority.test.tsx \
   tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts \
   tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx \
+  tests/vitest/ui-integration/custom-screen-runtime-interactions.test.tsx \
+  tests/vitest/ui-integration/custom-screen-runtime-presentation.test.tsx \
+  tests/vitest/ui-integration/custom-screen-runtime-layout.test.tsx \
   tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx \
   tests/vitest/widgets/screenWidgets.test.tsx \
   tests/vitest/ui/use-screen-related-entries.test.tsx \

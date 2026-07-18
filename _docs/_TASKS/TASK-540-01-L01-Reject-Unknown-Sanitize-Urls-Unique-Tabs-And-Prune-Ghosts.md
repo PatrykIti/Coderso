@@ -13,7 +13,7 @@
 **Implementation Complete:** 2026-07-16 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Historical Implementation Complete:** 2026-07-14 — original assigned work completed before the later repair cycles.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
-**Current Repair State:** The two verified MEDIUM repairs and three verified test-integrity LOW regressions described below are implemented in the current dirty tree. The recorded `Revalidation Passed` remains historical evidence for the pre-split shape; source/test extraction changes that contract, so a fresh exact R01 gate and final receipt are pending. After the split gate passes, remove this leaf's single `Modularity Repair Pending` field and replace it with one `Modularity Repair Revalidated` receipt; the two fields must never coexist. No post-split post-audit, full validation, smoke, changelog, or closure pass is claimed.
+**Current Repair State:** The two verified MEDIUM repairs and three verified test-integrity LOW regressions described below are implemented in the current dirty tree. The recorded `Revalidation Passed` remains historical evidence for the pre-split shape; the final cohesive source/test extraction, exact R01 owner gate, and canonical `Modularity Repair Revalidated` receipt above have now passed. No fresh family post-audit, full validation, smoke, changelog, or closure pass is claimed.
 **Repair Started:** 2026-07-16
 **Repair Reason:** The final TASK-540 workflow audits reproduced strict identity drift plus three data-integrity gaps: one malformed stored binding could collapse a whole V4 editor before a metadata-only PATCH; id-less V1/V2/V3 bindings used an ambiguous local slug seed; and the pre-V4 Assistant composer still exposed an optional ID plus the same ambiguous fallback while feeding `custom-screen.upsert`. R01 owns per-binding stored-read rejection with document/sibling preservation, one V4 legacy membership pass, the shared framed-tuple binding-ID builder, and an explicit-ID-only Assistant composer boundary. The registered metadata PATCH proves repaired document persistence; the stored-read duplicate-ID regression keeps uniqueness fail-closed outside the per-item catch.
 **Revalidation Passed:** 2026-07-16 — validated against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` with exact dirty R01 owner paths `core/services/assistant/blueprints/blueprintBindingComposer.ts`, `core/services/customScreens/customScreenSchemas.ts`, `tests/vitest/assistant/blueprint-binding-composer.test.ts`, `tests/vitest/admin/custom-screen-schemas.test.ts`, and `tests/integration/routes/customScreensRoutes.test.ts`: core lint/types and root `tsc` passed; the two changed Vitest suites passed 81/81; the exact six-file R01 Vitest gate passed 176/176; DB preflight returned configured/reachable/select-one; Custom Screens route plus Assistant executor Bun passed 93/93 with 576 expectations; isolated route passed 20/20 with 118 expectations; isolated document ops passed 11/11; workflow syntax/self-tests and `git diff --check` passed. No post-audit, full-suite, smoke, changelog, or closure result is claimed. This receipt is pre-modularity-split evidence only and cannot serve as the post-split owner gate.
@@ -122,8 +122,8 @@ TASK-540-04-L03 has completed its sole scoped repair and now carries one canonic
 `Revalidation Passed` successor with no `Repair Pending`, while TASK-540-06-L01 remains
 the active closure leaf and is now landed with its one exact pre-closure
 `Revalidation Passed`. R01's recorded `Revalidation Passed` is now historical for the
-pre-split identity/composer/duplicate-proof shape; the modularity repair must replace it
-with one fresh exact receipt and must not alter or duplicate the closure leaf's
+pre-split identity/composer/duplicate-proof shape; the completed modularity repair now
+has one fresh exact canonical receipt and did not alter or duplicate the closure leaf's
 persisted gate evidence. `_docs/_workflows/task-540-implement.mjs`
 owns this phase-aware restart invariant and exposes `--self-test-repair-siblings` as
 its executable projection.
@@ -146,12 +146,12 @@ move persistence assertions into that Vitest suite. Create/update response and s
 row behavior are proved in the existing Bun route integration lane with uniquely scoped
 fixtures and owned-row cleanup.
 
-## Current verified audit repair and pending receipt
+## Current verified audit repair and revalidated receipt
 
 The following five findings are repaired in the current dirty implementation. They
-remain part of R01 while the mandatory split lands, and the post-split gate must prove
-them again from the extracted owners. Symbol and test names are authoritative; mutable
-pre-split line numbers are intentionally not used.
+remain part of R01, and the completed post-split gate proved them again from the
+extracted owners. Symbol and test names are authoritative; mutable pre-split line
+numbers are intentionally not used.
 
 1. **MEDIUM — legacy whole-array binding failure.** Stored V1/V2/V3 binding
    normalization previously retried/fell back at whole-array scope, so one malformed
@@ -185,14 +185,16 @@ pre-split line numbers are intentionally not used.
 
 None of these findings is eligible for TASK-9999: the MEDIUM findings affect persisted
 data and reliability, while the three LOW findings are explicitly test-integrity gaps.
-The current pre-split receipt above is retained as history, but cannot be promoted into
-the final receipt after files, imports, test ownership, or route harnesses change.
+The pre-split receipt above is retained as history and was not promoted into the final
+receipt after files, imports, test ownership, and route harnesses changed; the separate
+canonical post-split receipt records the completed owner gate.
 
-## Mandatory production-module split (maximum 1,000 physical lines)
+## Completed production-module split (historical plan; maximum 1,000 physical lines)
 
-`core/services/customScreens/customScreenSchemas.ts` currently contains 3,539 physical
-lines. It becomes an explicit public facade. External production and test consumers
-continue to import that path. The facade must explicitly re-export the same 62 runtime
+At the verified pre-split baseline,
+`core/services/customScreens/customScreenSchemas.ts` contained 3,539 physical lines. The
+completed repair converted it to an explicit public facade. External production and test
+consumers continue to import that path. The facade must explicitly re-export the same 62 runtime
 members and the same 39-member type surface; `export *` is forbidden because it could
 expose cross-module implementation helpers. The split uses this exact responsibility
 map:
@@ -258,11 +260,12 @@ and TASK-9999-01-L01 evidence must be re-anchored to that symbol after extractio
 stale `customScreenSchemas.ts` line number cannot remain authoritative. This is an
 evidence-path update only and does not execute, close, or expand the deferred leaf.
 
-## Mandatory schema-test split (75 tests preserved + one facade regression)
+## Completed schema-test split (historical plan; 75 tests preserved + one facade regression)
 
-The current 3,436-line Vitest file is partitioned by behavior. No assertion or test name
-may be weakened or silently omitted. The 75 existing tests remain exact and one new
-facade regression is added, for final cardinality
+At the verified pre-split baseline, the Vitest file contained 3,436 lines. The completed
+repair partitioned it by behavior without weakening or silently omitting an assertion or
+test name. The 75 existing tests remain exact and one new facade regression was added,
+for final cardinality
 `18 + 9 + 10 + 13 + 11 + 5 + 10 = 76`. Shared builders move only to the named fixture
 module; every `.test.ts` remains independently runnable in the existing Vitest lane.
 
@@ -338,14 +341,13 @@ ScreenDocumentV1, ScreenFieldBinding, ScreenImageRatio, ScreenSectionColumnPrese
 ScreenSectionStyleV1, ScreenSectionV1, ScreenTabItem
 ```
 
-## Mandatory Custom Screens route-test split and exact cleanup
+## Completed Custom Screens route-test split and exact cleanup (historical plan)
 
-The current 1,239-line `customScreensRoutes.test.ts` has 20 Bun/DB tests. Preserve all
-20 and add one cleanup fault-path regression. Move the
-existing definition-integrity region (pre-split support/test range `:729-1218`)
-without weakening its assertions into
-`customScreensDefinitionIntegrityRoutes.test.ts`. That new R01 suite owns these eight
-tests:
+At the verified pre-split baseline, the 1,239-line `customScreensRoutes.test.ts` had 20
+Bun/DB tests. The completed split preserved all 20, added one cleanup fault-path
+regression, and moved the existing definition-integrity region (pre-split support/test
+range `:729-1218`) without weakening its assertions into
+`customScreensDefinitionIntegrityRoutes.test.ts`. That R01 suite owns these eight tests:
 
 1. metadata-only V4 Tabs/overlong-ID repair;
 2. metadata-only legacy V3 sibling preservation with malformed-binding drop;
@@ -421,10 +423,10 @@ scope. `core/services/assistant/actionExecutorService.ts` is byte-identical to t
 baseline and remains read-only, so this task does not refactor that unrelated legacy
 production monolith.
 
-## Mandatory document-operations module split
+## Completed document-operations module split (historical plan)
 
-The touched 1,030-line `screenDocumentOps.ts` becomes the stable explicit facade over
-five cohesive owners. Existing production/test consumers retain their import path.
+The historical touched 1,030-line `screenDocumentOps.ts` became the stable explicit
+facade over five cohesive owners. Existing production/test consumers retain their import path.
 The facade exports the exact existing 26 runtime members and six type members as the
 same references; `export *`, wrappers, renamed exports, and duplicate implementations
 are forbidden.
@@ -489,10 +491,10 @@ It imports every focused owner plus the facade, rejects `export *`, compares the
 reference rather than a wrapper or clone. The unchanged insertion and section suites
 remain 19/19 and 12/12; the three-file document-operations gate is therefore 43/43.
 
-## Mandatory Assistant executor Bun-test split
+## Completed Assistant executor Bun-test split (historical plan)
 
-The production executor remains read-only. The touched 6,577-line Bun suite is split
-into five focused support modules plus 12 independently runnable suites. The exact 73
+The production executor remains read-only. The historical touched 6,577-line Bun suite
+was split into five focused support modules plus 12 independently runnable suites. The exact 73
 test names are preserved with no additions, removals, renames, or assertion weakening;
 their JSON-serialized sorted pre-split name multiset has SHA-256
 `4502969fecf5a82f5da3b1b1e648fa435d6b79a4dc070cf73e853eb9d31ef48c` at both
@@ -537,7 +539,7 @@ with its setup and assertions. The already-approved Custom Screen fixed-kind fix
 position 14 and therefore lands in `actionExecutorCustomScreens.test.ts`; all other
 assertion bodies remain behaviorally read-only.
 
-## Split implementation pseudocode
+## Completed split implementation pseudocode
 
 ```ts
 // customScreenSchemas.ts — stable public seam, no implementation and no export *
@@ -1490,7 +1492,7 @@ fields, limits, enums, and URL/action policy.
 source-owned gate here. It may continue to run in the repository-wide suite, but the
 leaf makes no new claim that the DB-importing service is Bun-free.
 
-Apply all expectation changes above before running this leaf's validation. TASK-540-06
+The expectation changes above were applied before the final leaf validation. TASK-540-06
 may add cross-leaf flows after source gates are green; it must preserve these exact
 write-versus-stored-read assertions.
 
@@ -1504,22 +1506,22 @@ TASK-540 family matrix is exactly
 files and one closure-owner flow. Newly created unstaged test paths are explicitly
 pinned into tracked-test authority; broad discovery of all untracked files is forbidden.
 
-## Exact R01 modularity land order
+## Completed exact R01 modularity land order
 
-1. Finish and gate the schema-domain production owners plus the stable schema facade.
-2. Land `screenDocumentContracts` → `screenDocumentFactories` → `screenDocumentTree`
+1. Finished and gated the schema-domain production owners plus the stable schema facade.
+2. Landed `screenDocumentContracts` → `screenDocumentFactories` → `screenDocumentTree`
    → `screenDocumentMutations` → `screenDocumentBindingOps` → the explicit ops facade.
-3. Partition and independently gate the seven schema suites.
-4. Land the route harness, retained route suite, and definition-integrity route suite.
-5. Land Assistant support in the declared import order, then move suites in the exact
+3. Partitioned and independently gated the seven schema suites.
+4. Landed the route harness, retained route suite, and definition-integrity route suite.
+5. Landed Assistant support in the declared import order, then moved suites in the exact
    1-73 partition order from retained through Detail Pages.
-6. Run every isolated count, the combined R01 gates, and the hard owner-scoped line gate
-   before writing `Modularity Repair Revalidated`. That receipt proves only the targeted
-   static/test/line contract; the mandatory fresh family post-audit and runtime smoke run
-   after all source owners land and remain prerequisites for closure.
+6. Ran every isolated count, the combined R01 gates, and the hard owner-scoped line gate
+   before writing the canonical `Modularity Repair Revalidated` receipt. That receipt
+   proves only the targeted static/test/line contract; the mandatory fresh family
+   post-audit and runtime smoke remain prerequisites for closure.
 
-No later step may edit a preceding source owner merely to make a moved test pass; fix a
-real source drift at its sole owner, rerun its gate, and then resume downstream.
+No later closure step may edit a preceding source owner merely to make a moved test pass;
+fix a real source drift at its sole owner, rerun its gate, and then resume downstream.
 
 ## Validation
 
@@ -1593,9 +1595,10 @@ also passed the exact schema/image Vitest, Custom Screens route, Assistant Bun, 
 and diff gates before its then-current repair ownership ended. That repair and its Done
 transition are historical. The current 2026-07-16 R01 correction remains
 `🚧 In Progress` with `Implementation Complete`; its recorded pre-split
-`Revalidation Passed` is historical and must be replaced by one fresh receipt after the
-module, schema-test, and route-test splits pass their exact gates. Workflow/final audit
-and closure are not claimed.
+`Revalidation Passed` is historical, while the completed module, schema-test, route-test,
+document-operations, and Assistant splits have passed their exact owner gate and now
+carry the canonical `Modularity Repair Revalidated` receipt. Workflow/final audit and
+closure are not claimed.
 TASK-540-04-L03 keeps
 one canonical `Revalidation Passed` successor and no `Repair Pending`; the closure leaf
 remains landed with its exact pre-closure evidence and must not be duplicated. Family

@@ -1559,7 +1559,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
   [
     "bi-009-bound-secondary",
     "p1/0",
-    'click(S.fieldOption("Secondary URL","text"))',
+    'click(S.fieldOption("Secondary Url","text"))',
     "menu open -> selected label -> Secondary URL bound",
     "bi-008 / absent -> absent",
   ],
@@ -1839,7 +1839,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
   [
     "bi-049-image-bound-media",
     "p1/0",
-    'click(S.fieldOption("Media asset","media"))',
+    'click(S.fieldOption("Media Asset","media"))',
     "menu open -> exact option -> palette Image media-bound",
     "bi-048 / absent -> absent",
   ],
@@ -1874,7 +1874,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
   [
     "bi-054-field-bound-media",
     "p1/0",
-    'click(S.fieldOption("Media asset","media"))',
+    'click(S.fieldOption("Media Asset","media"))',
     "menu open -> exact option -> palette Field media-bound",
     "bi-053 / absent -> absent",
   ],
@@ -9356,6 +9356,27 @@ export function runTask540SmokeContractSelfTest() {
       .filter(({ op }) => op === "secret")
       .every(({ name }) => ["ADMIN_EMAIL", "ADMIN_PASSWORD"].includes(name)),
     "self-test secret Ref allowlist drift"
+  );
+  const mediaFieldOptionActions = plan.actionManifest.filter(({ id }) =>
+    ["bi-049-image-bound-media", "bi-054-field-bound-media"].includes(id)
+  );
+  invariant(
+    mediaFieldOptionActions.length === 2 &&
+      mediaFieldOptionActions.every(
+        ({ executable }) =>
+          executable.type === "browser-run-code" &&
+          executable.refs.length === 1 &&
+          JSON.stringify(executable.refs[0]) ===
+            JSON.stringify({
+              op: "selector",
+              templateId: "fieldOption",
+              args: [
+                { op: "literal", value: "Media Asset" },
+                { op: "literal", value: "media" },
+              ],
+            })
+      ),
+    "self-test media field-option rendered label drift"
   );
   const mutationPaths = plan.actionManifest.flatMap(({ repositoryMutationPolicy }) => {
     invariant(

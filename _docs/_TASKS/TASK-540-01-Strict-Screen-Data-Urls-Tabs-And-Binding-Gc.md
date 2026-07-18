@@ -12,7 +12,7 @@
 **Implementation Complete:** 2026-07-16 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Historical Implementation Complete:** 2026-07-14 — original assigned work completed before later repair cycles.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
-**Current Repair State:** The verified R01 audit set of two MEDIUM behavior defects and three test-integrity LOW gaps is implemented in the current working tree. Its previously recorded gate remains historical evidence for that implementation shape; the mandatory module/test split changes the contract and therefore requires a fresh final R01 receipt. No final split gate, post-audit, full validation, smoke, changelog, or closure pass is claimed yet.
+**Current Repair State:** The verified R01 audit set of two MEDIUM behavior defects and three test-integrity LOW gaps is implemented in the current working tree. Its previously recorded pre-split gate remains historical evidence for that implementation shape; the final cohesive module/test split, exact R01 owner gate, and canonical `Modularity Repair Revalidated` receipt above have now passed. No fresh family post-audit, full validation, smoke, changelog, or closure pass is claimed yet.
 **Repair Started:** 2026-07-16
 **Repair Reason:** The final TASK-540 workflow audits reproduced route/direct-normalizer identity drift, ambiguous legacy ID generation, whole-document stored-read collapse when one binding was malformed, and an optional-ID Assistant composer with its own ambiguous tuple fallback. TASK-540-01-L01 owns the strict three-mode contract, per-binding stored-read rejection, one V4 legacy membership pass, the shared framed-tuple ID builder, explicit-ID-only composer input, duplicate stored-ID fail-closed proof, and registered metadata-PATCH preservation.
 **Repair Revalidated:** 2026-07-16 — against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus the five dirty R01 owner paths named by the leaf, core/root static gates passed; changed Vitest passed 81/81; exact six-file R01 Vitest passed 176/176; DB preflight was reachable; route/Assistant Bun passed 93/93 with 576 expectations; isolated route passed 20/20 with 118 expectations; document ops passed 11/11; workflow self-tests and diff checks passed. This is pre-modularity-split evidence only. No post-audit, full validation, smoke, changelog, or closure pass is claimed.
@@ -74,29 +74,29 @@ It also closes three verified test-integrity LOW gaps: the full write-versus-leg
 separator/case collision matrix for generated binding IDs, malformed row-template
 binding recovery without document/sibling loss, and the Assistant composer conflict
 case where distinct inputs normalize to the same explicit ID and must retain
-`assistant_blueprint_binding_duplicate_id`. These are implemented claims awaiting the
-fresh post-split receipt, not a substitute for that receipt. None is eligible for
+`assistant_blueprint_binding_duplicate_id`. These implemented claims were revalidated by
+the final post-split owner gate and its canonical receipt. None is eligible for
 TASK-9999 because each protects persistence, reliability, or test-integrity behavior.
 
-The current R01 over-limit evidence is exactly
+The historical pre-split R01 over-limit evidence was exactly
 `screenDocumentOps.ts` = 1,030 lines / SHA-256
 `dc20fc963c6fcc6e4c7ef647284fd0ee3ee174302f9ba196e869f40eaae0b69b` and
 `actionExecutorService.test.ts` = 6,577 lines / SHA-256
 `41bd0ec9f0a0042ca87bc7f688206b391671788176b13bac0b525ce677f6c62b`, both owned
-by TASK-540-01-L01. The leaf's final receipt must also include every extant extracted
-schema, schema-test, route-test, document-operation, Assistant suite, and support path as
+by TASK-540-01-L01. The leaf's final receipt covers every extant extracted schema,
+schema-test, route-test, document-operation, Assistant suite, and support path as
 `{ path, owner, lines, sha256 }`, with every human-authored file at `<= 1000`.
 
-TASK-540-01-L01 must now preserve those behaviors while replacing the 3,539-line
+TASK-540-01-L01 preserved those behaviors while replacing the historical 3,539-line
 `customScreenSchemas.ts` implementation with an explicit-export facade over cohesive
-submodules, and partitioning the 3,436-line schema suite without dropping or weakening
-any of its 75 existing tests; one exact public-facade export/identity regression is
-added. The Bun route gate moves the seven existing TASK-540-01 definition-integrity
-cases out of the 1,239-line mixed route suite and adds one injected cleanup fault-path
-regression there. Each resulting production
-module and test file, including both route suites and their support harness, must be
-independently measured at no more than 1,000 physical lines before this child can
-return to a closure-ready state.
+submodules and partitioning the historical 3,436-line schema suite without dropping or
+weakening any of its 75 existing tests; one exact public-facade export/identity regression
+was added. The Bun route split moved the seven existing TASK-540-01
+definition-integrity cases out of the historical 1,239-line mixed route suite and added
+one injected cleanup fault-path regression there. The final gate independently measured
+each resulting production module and test file, including both route suites and their
+support harness, at no more than 1,000 physical lines and returned this child to the
+source-owner-complete closure frontier.
 
 External production consumers continue to import `customScreenSchemas.ts`; only the
 cycle-breaking type-only import in `bindingResolver.ts` targets the extracted contract
@@ -254,10 +254,14 @@ or schema fallback was permitted. Its leaf passed the expanded exact gate includ
 `tests/unit/assistant/actionExecutorService.test.ts`, and that repair/Done transition is
 historical. The current 2026-07-16 expanded identity/binding-ID correction keeps this
 subtask `🚧 In Progress` with `Implementation Complete`; the leaf's pre-split receipt is
-historical until the mandatory schema, document-operations, route, and Assistant
-executor source/test/support splits receive one fresh exact gate receipt.
-Workflow/final audit and closure remain separate.
-TASK-540-04-L03 keeps its canonical
-historical `Revalidation Passed`; the closure leaf's own pre-modularity evidence is
-likewise historical while its `Modularity Repair Pending` field is active. Family
-changelog 1252, full validation, and live smoke remain closure-owned.
+historical, while the mandatory schema, document-operations, route, and Assistant
+executor source/test/support splits have passed one fresh exact owner gate and now carry
+the canonical `Modularity Repair Revalidated` receipt above. Workflow/final audit and
+closure remain separate.
+TASK-540-04-L03 keeps its canonical historical `Revalidation Passed`; the closure leaf
+retains the exact deterministic `Revalidation Passed` value `pre-closure remediation /
+fix-started 2026-07-15 / gate green`. That value represents the current
+`reserved-pre-closure-regated` state with every implementation leaf landed and no
+remaining leaf, while all eight source owners carry their canonical modularity receipts.
+The family frontier is TASK-540-06-L01 closure; changelog 1252, full validation, and live
+smoke remain closure-owned.

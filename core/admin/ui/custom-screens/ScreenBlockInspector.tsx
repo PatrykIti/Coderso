@@ -425,7 +425,9 @@ export function ScreenBlockInspector({
       {selectedBlock.type === "tabs" ? (
         <TabsEditor
           block={selectedBlock}
+          bindings={bindings}
           onPatchBlock={onPatchBlock}
+          onPatchBinding={onPatchBinding}
           onArmSlotInsert={onArmSlotInsert}
           armedInsertSlotId={armedInsertSlotId}
         />

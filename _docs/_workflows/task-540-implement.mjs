@@ -36,6 +36,7 @@ import {
   readlink,
   realpath,
   rename,
+  statfs,
   unlink,
 } from "node:fs/promises";
 import { parseEnv, promisify } from "node:util";
@@ -271,6 +272,8 @@ const MAX_VALIDATION_STREAM_BYTES = 4 * 1024 * 1024;
 const MAX_GROUNDED_DIFF_BYTES = 20 * 1024 * 1024;
 const MAX_GROUNDED_UNTRACKED_BYTES = 8 * 1024 * 1024;
 const MAX_GROUNDED_UNTRACKED_FILE_BYTES = 32 * 1024 * 1024;
+const MAX_GROUNDED_CONTEXT_BYTES = 96 * 1024;
+const MAX_GROUNDED_PROMPT_BYTES = 128 * 1024;
 const VALIDATION_COMMAND_TIMEOUT_MS = 45 * 60 * 1000;
 const VALIDATION_TERMINATION_GRACE_MS = 5_000;
 const VALIDATION_ABSENCE_TIMEOUT_MS = 5_000;
@@ -287,6 +290,7 @@ const VALIDATION_LAUNCHER_SOURCE =
 const LOCAL_COMMAND_AUTHORITY = new WeakMap();
 const GROUNDED_CONTEXT_AUTHORITY = new WeakMap();
 let workflowSensitiveEnvBaseline = null;
+let groundedManifestSelfTestDiagnostic = null;
 // These TASK-540-owned tests are part of the frozen matrix before the owner stages
 // them. Union only their exact paths; unrelated untracked tests never gain command
 // authority through broad worktree discovery.
@@ -675,7 +679,7 @@ const WORKFLOW = ROOT + "/" + WORKFLOW_REL;
 const SMOKE_CONTRACT_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-contract.mjs";
 const SMOKE_EXECUTOR_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-executor.mjs";
 const FROZEN_SMOKE_EXECUTOR_SHA256 =
-  "83efa92cf4c9d9d40c207e707cbaca19e8ce30c5f87f30c7c6e54c7bd7f0ffdd";
+  "ad38f3ece885bc4479e2e53e0dbc2806c77648b9a18c1366ec8a7fc0993ea688";
 const SMOKE_HOST_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-host.mjs";
 const LOCAL_ORCHESTRATOR_WORKFLOW_REL = "_docs/_workflows/task-540-local-orchestrator.mjs";
 const TEST_NAME_CONTRACT_WORKFLOW_REL = "_docs/_workflows/task-540-test-name-contract.mjs";
@@ -1024,60 +1028,73 @@ const DEFERRED_LOW_FOLLOW_UPS = deepFreezeExact({
     approvedRationaleLanguage:
       "TASK-9999-01-L01 approved rationale: the shared UUID predicate already accepts and rejects the intended actor/media UUID grammar and preserves exact input bytes; deferral changes no UI/UX/accessibility, data, security/privacy/auth/RBAC, API, persistence/migration, performance/reliability, or test-integrity behavior.",
   },
-  "deferred-low:unread-screen-tab-label-draft-state": {
-    followUpTask: "TASK-9999-01-L02",
-    taskPath: "_docs/_TASKS/TASK-9999-01-L02-Remove-Unread-Screen-Tab-Label-Draft-State.md",
-    allowedOwners: ["540-02-L01"],
-    finding: "ScreenTabLabelDraft.baseLabel is written but never read and has no behavior effect.",
-    evidenceAnchors: [
-      "core/admin/ui/custom-screens/ScreenBlockInspector.tsx:524",
-      "core/admin/ui/custom-screens/ScreenBlockInspector.tsx:525",
-      "core/admin/ui/custom-screens/ScreenBlockInspector.tsx:538",
-      "core/admin/ui/custom-screens/ScreenBlockInspector.tsx:542",
-      "core/admin/ui/custom-screens/ScreenBlockInspector.tsx:553",
-      "core/admin/ui/custom-screens/ScreenBlockInspector.tsx:559",
-      "core/admin/ui/custom-screens/ScreenBlockInspector.tsx:563",
-    ],
-    anchorLineIncludes: [
-      "type ScreenTabLabelDraft",
-      "baseLabel: string;",
-      "const [draft, setDraft] = useState<ScreenTabLabelDraft>",
-      "const restoreCommitted = () => setDraft({ baseLabel:",
-      "setDraft({ baseLabel:",
-      "value={draft.value}",
-      "setDraft({ baseLabel:",
-    ],
-    anchorTransition: {
-      preSha256: "eb49d21a99cd5fbf8dedfd502c727ba890dd455552a8259b9e9b45eb4b11d4df",
-      draftContractSha256: "15897646098bfeb9f653b940c0782e3b3f999a811b9cbc3d9bf46a01cae5df9a",
-      draftContractCanonicalBytes: 12_166,
-      postPath: "core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx",
-      facadePath: "core/admin/ui/custom-screens/ScreenBlockInspector.tsx",
-      facadeForbiddenSymbols: ["ScreenTabLabelDraft", "TabLabelInput", "baseLabel"],
-    },
-    conditionalEvidenceTokens: [
-      "ScreenBlockInspector.tsx:524,525,538,542,553,559,563",
-      "eb49d21a99cd5fbf8dedfd502c727ba890dd455552a8259b9e9b45eb4b11d4df",
-      "15897646098bfeb9f653b940c0782e3b3f999a811b9cbc3d9bf46a01cae5df9a",
-      "ScreenBlockInspectorTabs.tsx",
-    ],
-    leafEvidenceTokens: [
-      "ScreenBlockInspectorTabs.tsx",
-      "ScreenTabLabelDraft",
-      "baseLabel",
-      "15897646098bfeb9f653b940c0782e3b3f999a811b9cbc3d9bf46a01cae5df9a",
-    ],
-    approvedRationaleLanguage:
-      "TASK-9999-01-L02 approved rationale: baseLabel is assigned but never read; deferral changes no rendered UI, keyboard/blur/commit behavior, accessibility, saved data, security/privacy/auth/RBAC, API, persistence/migration, performance/reliability, or test-integrity behavior.",
-  },
 });
 const DEFERRED_LOW_SOURCE_LINK_PATHS = Object.freeze([
   ROOT_TASK_PATH,
   LEAF_STATUS_GROUPS["540-06-L01"].leafPath,
 ]);
-const DEFERRED_LOW_DRAFT_AREA = "deferred-low:unread-screen-tab-label-draft-state";
+const SUPERSEDED_TAB_LABEL_DRAFT_FOLLOW_UP = deepFreezeExact({
+  followUpTask: "TASK-9999-01-L02",
+  taskPath: "_docs/_TASKS/TASK-9999-01-L02-Remove-Unread-Screen-Tab-Label-Draft-State.md",
+  changelogPath:
+    "_docs/_CHANGELOG/1258-2026-07-18-task-9999-01-l02-superseded-by-task-540-02-l01.md",
+  supersededBy: "TASK-540-02-L01",
+  reTriaged: "2026-07-18",
+  sourceLinkLanguage:
+    "TASK-9999-01-L02 was re-triaged on 2026-07-18 and is `⏭️ Superseded` by active `TASK-540-02-L01`; removing `baseLabel` would regress focus-preserving stale-draft invalidation, so it is not eligible for TASK-9999 deferral.",
+  staleSourceLanguage: [
+    "TASK-9999-01-L02 approved evidence:",
+    "TASK-9999-01-L02 approved rationale:",
+    "baseLabel is assigned but never read",
+  ],
+  historicalFinding: {
+    lensId: "fixture-lens",
+    severity: "low",
+    owner: "540-02-L01",
+    area: "deferred-low:unread-screen-tab-label-draft-state",
+    finding: "ScreenTabLabelDraft.baseLabel is written but never read and has no behavior effect.",
+    evidence:
+      "core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx:25; core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx:26",
+    recommendation: "TASK-9999-01-L02",
+  },
+});
+const SCREEN_TAB_LABEL_DRAFT_CONTRACT = deepFreezeExact({
+  ownerPath: "core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx",
+  facadePath: "core/admin/ui/custom-screens/ScreenBlockInspector.tsx",
+  testPath: "tests/vitest/ui/custom-screen-binding-panel.test.tsx",
+  companionTestPath: "tests/vitest/ui-integration/custom-screen-image-inspector.test.tsx",
+  ownerSha256: "35e87c59e5f3590e5d8919826f03047469ea3c93666b22108f1c4016fac3e953",
+  facadeSha256: "910116fba09a36dc75a7e49c862ea6e8c8efc29059e5040db6bd67e54738c9cd",
+  testSha256: "8159b5877711aedba1fd71b63c390b3374e1f684754ae4f27e223cdc3eeea876",
+  companionTestSha256: "899be111c885780aaec92b5036b2826e937eeb3e7e32d21583bc0596249c75d3",
+  vitestImportNames: ["afterEach", "expect", "test", "vi"],
+  facadeForbiddenSymbols: ["ScreenTabLabelDraft", "TabLabelInput", "baseLabel"],
+  draftContractSha256: "b8e6cc6ddaed8e27305ebe03bb7b5543902254e49acf4e44451ca668bf8b72cc",
+  draftContractCanonicalBytes: 13_177,
+  tabsEditorContractSha256: "3ee0439a6c63e0d9a5f6bb3056366d1d03e4221b136aa42ff64f256012d0dea4",
+  tabsEditorContractCanonicalBytes: 28_486,
+  expectedExpandedTestCount: 17,
+  expectedCompanionExpandedTestCount: 18,
+  requiredTests: [
+    {
+      name: "Tabs use Unicode boundaries and invalidate stale label drafts across parent rerenders",
+      callbackCanonicalBytes: 29_537,
+      callbackSha256: "b173e694ae8bcdff8e4c5fb402ebc37ab67b04eedb2be16f233409f593e57012",
+    },
+    {
+      name: "A valid Enter rename keeps keyboard focus on the same Tab label input",
+      callbackCanonicalBytes: 9_533,
+      callbackSha256: "f77ecbaca9d89761030a0df49ab8007956a6e8678796ae146b8f9598296758e2",
+    },
+    {
+      name: "Removing a Tab garbage-collects the bindings inside its slot subtree",
+      callbackCanonicalBytes: 14_399,
+      callbackSha256: "1fdbc13b495cdee7ca43c4a0af7aecc3497dec31e481afec6274b9085c0a1e60",
+    },
+  ],
+});
 
-function deferredLowSourceLine(sourceFile, node, relativePath) {
+function screenTabLabelSourceLine(sourceFile, node, relativePath) {
   return (
     relativePath +
     ":" +
@@ -1089,25 +1106,25 @@ function isIdentifierText(node, value) {
   return ts.isIdentifier(node) && node.text === value;
 }
 
-function isTabLabelAccess(node) {
+function isNamedPropertyAccess(node, expressionName, propertyName) {
   return (
     ts.isPropertyAccessExpression(node) &&
-    isIdentifierText(node.expression, "tab") &&
-    node.name.text === "label"
+    isIdentifierText(node.expression, expressionName) &&
+    node.name.text === propertyName
   );
 }
 
-function deferredLowStructuralAstShape(node, sourceFile) {
+function screenTabLabelStructuralAstShape(node, sourceFile) {
   const children = node.getChildren(sourceFile);
   return children.length === 0
     ? [ts.SyntaxKind[node.kind], node.getText(sourceFile)]
     : [
         ts.SyntaxKind[node.kind],
-        children.map((child) => deferredLowStructuralAstShape(child, sourceFile)),
+        children.map((child) => screenTabLabelStructuralAstShape(child, sourceFile)),
       ];
 }
 
-function analyzeDeferredLowDraftContract(source, relativePath, transition, label) {
+function analyzeScreenTabLabelDraftContract(source, relativePath, contract, label) {
   const sourceFile = ts.createSourceFile(
     relativePath,
     source,
@@ -1116,7 +1133,7 @@ function analyzeDeferredLowDraftContract(source, relativePath, transition, label
     ts.ScriptKind.TSX
   );
   if ((sourceFile.parseDiagnostics ?? []).length > 0) {
-    throw new Error(label + ": deferred LOW owner has TypeScript parse diagnostics");
+    throw new Error(label + ": Screen Tab label owner has TypeScript parse diagnostics");
   }
   const draftTypes = sourceFile.statements.filter(
     (node) => ts.isTypeAliasDeclaration(node) && node.name.text === "ScreenTabLabelDraft"
@@ -1124,11 +1141,15 @@ function analyzeDeferredLowDraftContract(source, relativePath, transition, label
   const inputFunctions = sourceFile.statements.filter(
     (node) => ts.isFunctionDeclaration(node) && node.name?.text === "TabLabelInput"
   );
-  if (draftTypes.length !== 1 || inputFunctions.length !== 1) {
-    throw new Error(label + ": deferred LOW draft type/function cardinality drifted");
+  const tabsEditorFunctions = sourceFile.statements.filter(
+    (node) => ts.isFunctionDeclaration(node) && node.name?.text === "TabsEditor"
+  );
+  if (draftTypes.length !== 1 || inputFunctions.length !== 1 || tabsEditorFunctions.length !== 1) {
+    throw new Error(label + ": Screen Tab label owner type/function cardinality drifted");
   }
   const [draftType] = draftTypes;
   const [inputFunction] = inputFunctions;
+  const [tabsEditorFunction] = tabsEditorFunctions;
   if (
     [draftType, inputFunction].some((node) =>
       node.modifiers?.some(
@@ -1136,17 +1157,29 @@ function analyzeDeferredLowDraftContract(source, relativePath, transition, label
       )
     )
   ) {
-    throw new Error(label + ": deferred LOW draft contract unexpectedly became exported");
+    throw new Error(label + ": Screen Tab label draft contract unexpectedly became exported");
   }
   const canonicalContract = JSON.stringify(
-    [draftType, inputFunction].map((node) => deferredLowStructuralAstShape(node, sourceFile))
+    [draftType, inputFunction].map((node) => screenTabLabelStructuralAstShape(node, sourceFile))
   );
   const draftContractSha256 = createHash("sha256").update(canonicalContract).digest("hex");
   if (
-    Buffer.byteLength(canonicalContract) !== transition.draftContractCanonicalBytes ||
-    draftContractSha256 !== transition.draftContractSha256
+    Buffer.byteLength(canonicalContract) !== contract.draftContractCanonicalBytes ||
+    draftContractSha256 !== contract.draftContractSha256
   ) {
-    throw new Error(label + ": deferred LOW normalized draft contract drifted");
+    throw new Error(label + ": Screen Tab label normalized draft contract drifted");
+  }
+  const canonicalTabsEditorContract = JSON.stringify(
+    screenTabLabelStructuralAstShape(tabsEditorFunction, sourceFile)
+  );
+  const tabsEditorContractSha256 = createHash("sha256")
+    .update(canonicalTabsEditorContract)
+    .digest("hex");
+  if (
+    Buffer.byteLength(canonicalTabsEditorContract) !== contract.tabsEditorContractCanonicalBytes ||
+    tabsEditorContractSha256 !== contract.tabsEditorContractSha256
+  ) {
+    throw new Error(label + ": TabsEditor binding-GC contract drifted");
   }
 
   const identifiers = [];
@@ -1176,16 +1209,24 @@ function analyzeDeferredLowDraftContract(source, relativePath, transition, label
     (node) =>
       ts.isPropertyAssignment(node.parent) &&
       node.parent.name === node &&
-      isTabLabelAccess(node.parent.initializer)
+      isNamedPropertyAccess(node.parent.initializer, "tab", "label")
+  );
+  const baseLabelReads = baseLabelIdentifiers.filter(
+    (node) =>
+      ts.isPropertyAccessExpression(node.parent) &&
+      node.parent.name === node &&
+      isIdentifierText(node.parent.expression, "draft")
   );
   if (
     baseLabelStrings.length !== 0 ||
-    baseLabelIdentifiers.length !== 5 ||
+    baseLabelIdentifiers.length !== 7 ||
     baseLabelTypeMembers.length !== 1 ||
-    baseLabelWrites.length !== 4
+    baseLabelWrites.length !== 5 ||
+    baseLabelReads.length !== 1
   ) {
     throw new Error(
-      label + ": deferred LOW baseLabel is not exactly one type member and four writes"
+      label +
+        ": Screen Tab label baseLabel is not exactly one type member, five writes, and one read"
     );
   }
 
@@ -1208,7 +1249,7 @@ function analyzeDeferredLowDraftContract(source, relativePath, transition, label
     );
   });
   if (stateDeclarations.length !== 1) {
-    throw new Error(label + ": deferred LOW draft state tuple cardinality drifted");
+    throw new Error(label + ": Screen Tab label draft state tuple cardinality drifted");
   }
   const [stateDeclaration] = stateDeclarations;
   const stateInitializer = stateDeclaration.initializer;
@@ -1220,7 +1261,7 @@ function analyzeDeferredLowDraftContract(source, relativePath, transition, label
     !ts.isTypeReferenceNode(stateInitializer.typeArguments[0]) ||
     !isIdentifierText(stateInitializer.typeArguments[0].typeName, "ScreenTabLabelDraft")
   ) {
-    throw new Error(label + ": deferred LOW draft useState contract drifted");
+    throw new Error(label + ": Screen Tab label draft useState contract drifted");
   }
 
   const inputIdentifiers = identifiers.filter(
@@ -1238,8 +1279,19 @@ function analyzeDeferredLowDraftContract(source, relativePath, transition, label
       node.parent.expression === node &&
       node.parent.name.text === "value"
   );
-  if (draftIdentifiers.length !== 2 || draftBindings.length !== 1 || draftValueReads.length !== 1) {
-    throw new Error(label + ": deferred LOW draft acquired a whole-object or baseLabel read");
+  const draftBaseLabelReads = draftIdentifiers.filter(
+    (node) =>
+      ts.isPropertyAccessExpression(node.parent) &&
+      node.parent.expression === node &&
+      node.parent.name.text === "baseLabel"
+  );
+  if (
+    draftIdentifiers.length !== 3 ||
+    draftBindings.length !== 1 ||
+    draftValueReads.length !== 1 ||
+    draftBaseLabelReads.length !== 1
+  ) {
+    throw new Error(label + ": Screen Tab label draft read authority drifted");
   }
 
   const setDraftIdentifiers = inputIdentifiers.filter(({ text }) => text === "setDraft");
@@ -1251,21 +1303,55 @@ function analyzeDeferredLowDraftContract(source, relativePath, transition, label
     .map((node) => node.parent)
     .sort((left, right) => left.getStart(sourceFile) - right.getStart(sourceFile));
   if (
-    setDraftIdentifiers.length !== 4 ||
+    setDraftIdentifiers.length !== 5 ||
     setDraftBindings.length !== 1 ||
-    setDraftCalls.length !== 3
+    setDraftCalls.length !== 4
   ) {
-    throw new Error(label + ": deferred LOW setDraft call contract drifted");
+    throw new Error(label + ": Screen Tab label setDraft call contract drifted");
+  }
+
+  const staleDraftIfs = [];
+  const tabLabelInputs = [];
+  const collectActiveContract = (node) => {
+    if (
+      ts.isIfStatement(node) &&
+      ts.isBinaryExpression(node.expression) &&
+      node.expression.operatorToken.kind === ts.SyntaxKind.ExclamationEqualsEqualsToken &&
+      isNamedPropertyAccess(node.expression.left, "draft", "baseLabel") &&
+      isNamedPropertyAccess(node.expression.right, "tab", "label")
+    ) {
+      staleDraftIfs.push(node);
+    }
+    if (ts.isJsxSelfClosingElement(node) && isIdentifierText(node.tagName, "TabLabelInput")) {
+      tabLabelInputs.push(node);
+    }
+    ts.forEachChild(node, collectActiveContract);
+  };
+  collectActiveContract(sourceFile);
+  if (staleDraftIfs.length !== 1 || tabLabelInputs.length !== 1) {
+    throw new Error(label + ": Screen Tab label stale-reset or input cardinality drifted");
+  }
+  const keyAttributes = tabLabelInputs[0].attributes.properties.filter(
+    (property) => ts.isJsxAttribute(property) && property.name.getText(sourceFile) === "key"
+  );
+  const keyExpression = keyAttributes[0]?.initializer;
+  if (
+    keyAttributes.length !== 1 ||
+    !keyExpression ||
+    !ts.isJsxExpression(keyExpression) ||
+    keyExpression.expression?.getText(sourceFile) !== "`${block.id}:${tab.id}`"
+  ) {
+    throw new Error(label + ": Screen Tab label input key is not commit-stable");
   }
 
   const anchorNodes = [
     draftType,
     baseLabelTypeMembers[0],
     stateDeclaration,
-    setDraftCalls[0],
-    setDraftCalls[1],
+    staleDraftIfs[0],
+    baseLabelReads[0],
     draftValueReads[0],
-    setDraftCalls[2],
+    keyAttributes[0],
   ];
   if (
     anchorNodes.some(
@@ -1273,17 +1359,18 @@ function analyzeDeferredLowDraftContract(source, relativePath, transition, label
         index > 0 && node.getStart(sourceFile) <= anchorNodes[index - 1].getStart(sourceFile)
     )
   ) {
-    throw new Error(label + ": deferred LOW semantic anchor order drifted");
+    throw new Error(label + ": Screen Tab label semantic anchor order drifted");
   }
   return Object.freeze({
     evidenceAnchors: Object.freeze(
-      anchorNodes.map((node) => deferredLowSourceLine(sourceFile, node, relativePath))
+      anchorNodes.map((node) => screenTabLabelSourceLine(sourceFile, node, relativePath))
     ),
     draftContractSha256,
+    tabsEditorContractSha256,
   });
 }
 
-function requireDeferredLowDraftContractAbsent(source, relativePath, transition, label) {
+function requireScreenTabLabelDraftContractAbsent(source, relativePath, contract, label) {
   const sourceFile = ts.createSourceFile(
     relativePath,
     source,
@@ -1292,10 +1379,11 @@ function requireDeferredLowDraftContractAbsent(source, relativePath, transition,
     ts.ScriptKind.TSX
   );
   if ((sourceFile.parseDiagnostics ?? []).length > 0) {
-    throw new Error(label + ": deferred LOW facade has TypeScript parse diagnostics");
+    throw new Error(label + ": Screen Tab label facade has TypeScript parse diagnostics");
   }
-  const forbidden = new Set(transition.facadeForbiddenSymbols);
+  const forbidden = new Set(contract.facadeForbiddenSymbols);
   const matches = [];
+  const tabsEditorElements = [];
   const visit = (node) => {
     if (
       (ts.isIdentifier(node) ||
@@ -1305,104 +1393,324 @@ function requireDeferredLowDraftContractAbsent(source, relativePath, transition,
     ) {
       matches.push(node.text);
     }
+    if (ts.isJsxSelfClosingElement(node) && isIdentifierText(node.tagName, "TabsEditor")) {
+      tabsEditorElements.push(node);
+    }
     ts.forEachChild(node, visit);
   };
   visit(sourceFile);
   if (matches.length > 0) {
-    throw new Error(label + ": deferred LOW post-split symbols remain in the facade");
+    throw new Error(label + ": Screen Tab label owner symbols remain in the facade");
+  }
+  if (tabsEditorElements.length !== 1) {
+    throw new Error(label + ": TabsEditor facade wiring cardinality drifted");
+  }
+  const expectedAttributes = new Map([
+    ["block", "selectedBlock"],
+    ["bindings", "bindings"],
+    ["onPatchBlock", "onPatchBlock"],
+    ["onPatchBinding", "onPatchBinding"],
+    ["onArmSlotInsert", "onArmSlotInsert"],
+    ["armedInsertSlotId", "armedInsertSlotId"],
+  ]);
+  const attributes = tabsEditorElements[0].attributes.properties.filter(ts.isJsxAttribute);
+  for (const [attributeName, expressionText] of expectedAttributes) {
+    const matching = attributes.filter(
+      (attribute) => attribute.name.getText(sourceFile) === attributeName
+    );
+    const initializer = matching[0]?.initializer;
+    if (
+      matching.length !== 1 ||
+      !initializer ||
+      !ts.isJsxExpression(initializer) ||
+      initializer.expression?.getText(sourceFile) !== expressionText
+    ) {
+      throw new Error(label + ": TabsEditor facade wiring drifted at " + attributeName);
+    }
   }
 }
 
-async function resolveDeferredLowFollowUps(label) {
-  const resolved = {};
-  for (const [area, spec] of Object.entries(DEFERRED_LOW_FOLLOW_UPS)) {
-    if (area !== DEFERRED_LOW_DRAFT_AREA) {
-      resolved[area] = spec;
-      continue;
-    }
-    const transition = spec.anchorTransition;
-    let postBytes = null;
-    try {
-      ({ bytes: postBytes } = await readStableRegularFile(
-        ROOT + "/" + transition.postPath,
-        label + " deferred LOW post-split owner",
-        1024 * 1024
-      ));
-    } catch (error) {
-      if (error?.code !== "ENOENT") throw error;
-    }
-    if (postBytes === null) {
-      const { bytes } = await readStableRegularFile(
-        ROOT + "/" + transition.facadePath,
-        label + " deferred LOW pre-split owner",
-        1024 * 1024
-      );
-      const sha256 = createHash("sha256").update(bytes).digest("hex");
-      if (sha256 !== transition.preSha256) {
-        throw new Error(label + ": deferred LOW pre-split owner bytes drifted");
-      }
-      const draftContract = analyzeDeferredLowDraftContract(
-        bytes.toString("utf8"),
-        transition.facadePath,
-        transition,
-        label + " pre-split"
-      );
-      if (JSON.stringify(draftContract.evidenceAnchors) !== JSON.stringify(spec.evidenceAnchors)) {
-        throw new Error(label + ": deferred LOW pre-split semantic anchors drifted");
-      }
-      resolved[area] = Object.freeze({
-        ...spec,
-        evidenceState: "pre",
-        evidenceAnchors: draftContract.evidenceAnchors,
-        sourceSha256: sha256,
-        approvedEvidenceLanguage:
-          "TASK-9999-01-L02 approved evidence: " +
-          spec.evidenceAnchors.join("; ") +
-          "; normalized AST SHA-256 " +
-          draftContract.draftContractSha256 +
-          "; source SHA-256 " +
-          sha256 +
-          ".",
-      });
-      continue;
-    }
-    const source = postBytes.toString("utf8");
-    const draftContract = analyzeDeferredLowDraftContract(
-      source,
-      transition.postPath,
-      transition,
-      label + " post-split"
-    );
-    const evidenceAnchors = draftContract.evidenceAnchors;
-    const { bytes: facadeBytes } = await readStableRegularFile(
-      ROOT + "/" + transition.facadePath,
-      label + " deferred LOW post-split facade",
-      1024 * 1024
-    );
-    const facadeSource = facadeBytes.toString("utf8");
-    requireDeferredLowDraftContractAbsent(
-      facadeSource,
-      transition.facadePath,
-      transition,
-      label + " post-split facade"
-    );
-    const sha256 = createHash("sha256").update(postBytes).digest("hex");
-    resolved[area] = Object.freeze({
-      ...spec,
-      evidenceState: "post",
-      evidenceAnchors,
-      sourceSha256: sha256,
-      approvedEvidenceLanguage:
-        "TASK-9999-01-L02 approved evidence: " +
-        evidenceAnchors.join("; ") +
-        "; normalized AST SHA-256 " +
-        draftContract.draftContractSha256 +
-        "; source SHA-256 " +
-        sha256 +
-        ".",
-    });
+function isTopLevelVitestDeclaration(node) {
+  return ts.isExpressionStatement(node.parent) && ts.isSourceFile(node.parent.parent);
+}
+
+function isRuntimeBindingIdentifier(node) {
+  const parent = node.parent;
+  return (
+    (ts.isVariableDeclaration(parent) && parent.name === node) ||
+    (ts.isBindingElement(parent) && parent.name === node) ||
+    (ts.isParameter(parent) && parent.name === node) ||
+    ((ts.isFunctionDeclaration(parent) || ts.isFunctionExpression(parent)) &&
+      parent.name === node) ||
+    ((ts.isClassDeclaration(parent) || ts.isClassExpression(parent)) && parent.name === node) ||
+    (ts.isEnumDeclaration(parent) && parent.name === node) ||
+    (ts.isModuleDeclaration(parent) && parent.name === node) ||
+    (ts.isImportSpecifier(parent) && parent.name === node) ||
+    (ts.isImportClause(parent) && parent.name === node) ||
+    (ts.isNamespaceImport(parent) && parent.name === node) ||
+    (ts.isImportEqualsDeclaration(parent) && parent.name === node)
+  );
+}
+
+function requireCanonicalVitestImportAuthority(sourceFile, contract, label) {
+  const vitestImports = sourceFile.statements.filter(
+    (statement) =>
+      ts.isImportDeclaration(statement) &&
+      ts.isStringLiteral(statement.moduleSpecifier) &&
+      statement.moduleSpecifier.text === "vitest"
+  );
+  if (vitestImports.length !== 1) {
+    throw new Error(label + ": Vitest import authority cardinality drifted");
   }
-  return deepFreezeExact(resolved);
+  const clause = vitestImports[0].importClause;
+  if (
+    !clause ||
+    clause.isTypeOnly ||
+    clause.name ||
+    !clause.namedBindings ||
+    !ts.isNamedImports(clause.namedBindings)
+  ) {
+    throw new Error(label + ": Vitest import authority must use named runtime imports");
+  }
+  const elements = [...clause.namedBindings.elements];
+  if (
+    elements.some((element) => element.isTypeOnly || element.propertyName) ||
+    JSON.stringify(elements.map((element) => element.name.text)) !==
+      JSON.stringify(contract.vitestImportNames)
+  ) {
+    throw new Error(label + ": Vitest import authority names or aliases drifted");
+  }
+  const allowedBindings = new Set(elements.map((element) => element.name));
+  const authorityNames = new Set(contract.vitestImportNames);
+  const shadowBindings = [];
+  const visitBindings = (node) => {
+    if (
+      ts.isIdentifier(node) &&
+      authorityNames.has(node.text) &&
+      isRuntimeBindingIdentifier(node) &&
+      !allowedBindings.has(node)
+    ) {
+      shadowBindings.push(node);
+    }
+    ts.forEachChild(node, visitBindings);
+  };
+  visitBindings(sourceFile);
+  if (shadowBindings.length > 0) {
+    throw new Error(label + ": Vitest import authority is shadowed by a runtime binding");
+  }
+}
+
+function analyzeVitestExpandedTestCardinality(source, relativePath, label) {
+  if (typeof source !== "string") {
+    throw new Error(label + ": Vitest source is invalid");
+  }
+  const sourceFile = ts.createSourceFile(
+    relativePath,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX
+  );
+  if ((sourceFile.parseDiagnostics ?? []).length > 0) {
+    throw new Error(label + ": Vitest file has TypeScript parse diagnostics");
+  }
+  requireCanonicalVitestImportAuthority(sourceFile, SCREEN_TAB_LABEL_DRAFT_CONTRACT, label);
+  let expandedTestCount = 0;
+  const forbiddenDecorators = [];
+  const nestedDeclarations = [];
+  const visit = (node) => {
+    if (ts.isCallExpression(node)) {
+      if (isIdentifierText(node.expression, "test")) {
+        if (!isTopLevelVitestDeclaration(node)) {
+          nestedDeclarations.push(node);
+          ts.forEachChild(node, visit);
+          return;
+        }
+        const nameNode = node.arguments[0];
+        const callback = node.arguments[1];
+        if (
+          !nameNode ||
+          !ts.isStringLiteral(nameNode) ||
+          !callback ||
+          (!ts.isArrowFunction(callback) && !ts.isFunctionExpression(callback))
+        ) {
+          throw new Error(label + ": non-canonical plain Vitest declaration");
+        }
+        expandedTestCount += 1;
+      } else if (
+        ts.isCallExpression(node.expression) &&
+        ts.isPropertyAccessExpression(node.expression.expression) &&
+        isIdentifierText(node.expression.expression.expression, "test") &&
+        node.expression.expression.name.text === "each"
+      ) {
+        if (!isTopLevelVitestDeclaration(node)) {
+          nestedDeclarations.push(node);
+          ts.forEachChild(node, visit);
+          return;
+        }
+        const cases = node.expression.arguments[0];
+        const nameNode = node.arguments[0];
+        const callback = node.arguments[1];
+        if (
+          !cases ||
+          !ts.isArrayLiteralExpression(cases) ||
+          cases.elements.length === 0 ||
+          !nameNode ||
+          !ts.isStringLiteral(nameNode) ||
+          !callback ||
+          (!ts.isArrowFunction(callback) && !ts.isFunctionExpression(callback))
+        ) {
+          throw new Error(label + ": non-canonical test.each declaration");
+        }
+        expandedTestCount += cases.elements.length;
+      } else if (
+        ts.isPropertyAccessExpression(node.expression) &&
+        isIdentifierText(node.expression.expression, "test") &&
+        node.expression.name.text !== "each"
+      ) {
+        forbiddenDecorators.push(node.expression.name.text);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  if (forbiddenDecorators.length > 0 || nestedDeclarations.length > 0) {
+    throw new Error(label + ": skipped/isolated/decorated/nested Vitest declaration is forbidden");
+  }
+  return Object.freeze({ sourceFile, expandedTestCount });
+}
+
+function requireScreenTabLabelDraftTestContract(source, label) {
+  const contract = SCREEN_TAB_LABEL_DRAFT_CONTRACT;
+  const { sourceFile, expandedTestCount } = analyzeVitestExpandedTestCardinality(
+    source,
+    contract.testPath,
+    label
+  );
+  if (expandedTestCount !== contract.expectedExpandedTestCount) {
+    throw new Error(label + ": Screen Tab label test cardinality drifted");
+  }
+  const requiredByName = new Map(contract.requiredTests.map((spec) => [spec.name, spec]));
+  const runnableCalls = new Map(contract.requiredTests.map((spec) => [spec.name, []]));
+  const nonCanonicalCalls = new Map(contract.requiredTests.map((spec) => [spec.name, []]));
+  const visitRequired = (node) => {
+    if (ts.isCallExpression(node)) {
+      const nameNode = node.arguments[0];
+      const testName = nameNode && ts.isStringLiteral(nameNode) ? nameNode.text : null;
+      if (testName !== null && requiredByName.has(testName)) {
+        if (isIdentifierText(node.expression, "test") && isTopLevelVitestDeclaration(node)) {
+          runnableCalls.get(testName).push(node);
+        } else {
+          nonCanonicalCalls.get(testName).push(node);
+        }
+      }
+    }
+    ts.forEachChild(node, visitRequired);
+  };
+  visitRequired(sourceFile);
+  for (const spec of contract.requiredTests) {
+    const calls = runnableCalls.get(spec.name);
+    if (calls.length !== 1 || nonCanonicalCalls.get(spec.name).length !== 0) {
+      throw new Error(label + ": Screen Tab label runnable test cardinality drifted: " + spec.name);
+    }
+    const callback = calls[0].arguments[1];
+    if (!callback || (!ts.isArrowFunction(callback) && !ts.isFunctionExpression(callback))) {
+      throw new Error(label + ": Screen Tab label test callback drifted: " + spec.name);
+    }
+    const canonicalCallback = JSON.stringify(
+      screenTabLabelStructuralAstShape(callback, sourceFile)
+    );
+    if (
+      Buffer.byteLength(canonicalCallback) !== spec.callbackCanonicalBytes ||
+      createHash("sha256").update(canonicalCallback).digest("hex") !== spec.callbackSha256
+    ) {
+      throw new Error(label + ": Screen Tab label test behavior AST drifted: " + spec.name);
+    }
+  }
+  return expandedTestCount;
+}
+
+function requireScreenTabLabelCompanionTestContract(source, label) {
+  const contract = SCREEN_TAB_LABEL_DRAFT_CONTRACT;
+  const { expandedTestCount } = analyzeVitestExpandedTestCardinality(
+    source,
+    contract.companionTestPath,
+    label
+  );
+  if (expandedTestCount !== contract.expectedCompanionExpandedTestCount) {
+    throw new Error(label + ": Screen Image Inspector test cardinality drifted");
+  }
+  return expandedTestCount;
+}
+
+async function requireScreenTabLabelDraftContract(label) {
+  const contract = SCREEN_TAB_LABEL_DRAFT_CONTRACT;
+  const [ownerBytes, facadeBytes, testBytes, companionTestBytes] = await Promise.all([
+    readStableRegularFile(ROOT + "/" + contract.ownerPath, label + " owner", 1024 * 1024),
+    readStableRegularFile(ROOT + "/" + contract.facadePath, label + " facade", 1024 * 1024),
+    readStableRegularFile(ROOT + "/" + contract.testPath, label + " tests", 2 * 1024 * 1024),
+    readStableRegularFile(
+      ROOT + "/" + contract.companionTestPath,
+      label + " companion tests",
+      2 * 1024 * 1024
+    ),
+  ]);
+  const fileSha256 = Object.freeze({
+    owner: createHash("sha256").update(ownerBytes.bytes).digest("hex"),
+    facade: createHash("sha256").update(facadeBytes.bytes).digest("hex"),
+    test: createHash("sha256").update(testBytes.bytes).digest("hex"),
+    companionTest: createHash("sha256").update(companionTestBytes.bytes).digest("hex"),
+  });
+  if (
+    fileSha256.owner !== contract.ownerSha256 ||
+    fileSha256.facade !== contract.facadeSha256 ||
+    fileSha256.test !== contract.testSha256 ||
+    fileSha256.companionTest !== contract.companionTestSha256
+  ) {
+    throw new Error(label + ": Screen Tab label evidence file SHA-256 drifted");
+  }
+  const analysis = analyzeScreenTabLabelDraftContract(
+    ownerBytes.bytes.toString("utf8"),
+    contract.ownerPath,
+    contract,
+    label
+  );
+  requireScreenTabLabelDraftContractAbsent(
+    facadeBytes.bytes.toString("utf8"),
+    contract.facadePath,
+    contract,
+    label
+  );
+  const expandedTestCount = requireScreenTabLabelDraftTestContract(
+    testBytes.bytes.toString("utf8"),
+    label
+  );
+  const companionExpandedTestCount = requireScreenTabLabelCompanionTestContract(
+    companionTestBytes.bytes.toString("utf8"),
+    label
+  );
+  return Object.freeze({
+    path: contract.ownerPath,
+    anchors: analysis.evidenceAnchors,
+    sourceSha256: fileSha256.owner,
+    facadeSha256: fileSha256.facade,
+    testSha256: fileSha256.test,
+    companionTestSha256: fileSha256.companionTest,
+    draftContractSha256: analysis.draftContractSha256,
+    draftContractCanonicalBytes: contract.draftContractCanonicalBytes,
+    tabsEditorContractSha256: analysis.tabsEditorContractSha256,
+    tabsEditorContractCanonicalBytes: contract.tabsEditorContractCanonicalBytes,
+    expandedTestCount,
+    companionExpandedTestCount,
+    requiredTestNames: Object.freeze(contract.requiredTests.map(({ name }) => name)),
+  });
+}
+
+async function resolveDeferredLowFollowUps(label) {
+  if (typeof label !== "string" || label.length === 0) {
+    throw new Error("TASK-540 deferred LOW resolver requires a label");
+  }
+  return DEFERRED_LOW_FOLLOW_UPS;
 }
 
 const ACTION_EXECUTOR_BUN_FILES = Object.freeze([
@@ -1425,8 +1733,9 @@ const SCREEN_RUNTIME_VITEST_FILES = Object.freeze([
   "tests/vitest/ui-integration/custom-screen-runtime-presentation.test.tsx",
   "tests/vitest/ui-integration/custom-screen-runtime-layout.test.tsx",
 ]);
+const SCREEN_EDITOR_PAGE_RETAINED_VITEST_FILE = "tests/vitest/ui/custom-screens-page.test.tsx";
 const SCREEN_EDITOR_PAGE_VITEST_FILES = Object.freeze([
-  "tests/vitest/ui/custom-screens-page.test.tsx",
+  SCREEN_EDITOR_PAGE_RETAINED_VITEST_FILE,
   "tests/vitest/ui/custom-screen-editor-draft-and-save.test.tsx",
   "tests/vitest/ui/custom-screen-editor-hydration-authority.test.tsx",
   "tests/vitest/ui/custom-screen-editor-visit-authority.test.tsx",
@@ -1448,6 +1757,21 @@ const CACHE_BUS_VITEST_FILES = Object.freeze([
   "tests/vitest/admin/cacheBus.test.ts",
   "tests/vitest/admin/cacheBusCorrelation.test.ts",
   "tests/vitest/admin/cacheBusHardening.test.ts",
+]);
+const L04_SHARED_CONSUMER_VITEST_FILES = Object.freeze([
+  "tests/vitest/ui/custom-screen-route-params.test.ts",
+  "tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx",
+  "tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx",
+  "tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx",
+  "tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx",
+  "tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx",
+  "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
+  "tests/vitest/ui/custom-screen-list-view-canvas.test.tsx",
+]);
+const L04_FINAL_CONSUMER_VITEST_FILES = Object.freeze([
+  ...SCREEN_EDITOR_PAGE_VITEST_FILES,
+  ...L04_SHARED_CONSUMER_VITEST_FILES,
+  ...CACHE_BUS_VITEST_FILES,
 ]);
 const ENTRY_NAVIGATION_VITEST_FILES = Object.freeze([
   "tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx",
@@ -1617,6 +1941,20 @@ const DB_PREFLIGHT =
   "const reachable = configured && await canConnect(); " +
   "process.stdout.write(JSON.stringify({ configured, reachable, selectOne: reachable ? 1 : 0 })); " +
   "if (!reachable) process.exit(1); process.exit(0)'";
+const SMOKE_BASELINE_PROBE =
+  'bun --cwd core --eval \'import { createHash } from "node:crypto"; ' +
+  'import { inArray } from "drizzle-orm"; ' +
+  'import { db } from "./db/client.ts"; ' +
+  'import { settings } from "./db/schema.ts"; ' +
+  'import { getStorageSettingsInternal, resetStorageSettingsCache } from "./services/settings/storageSettings.ts"; ' +
+  'const keys = ["setup.completed", "storage.driver", "storage.local.dir"]; ' +
+  "const rows = await db.select({ key: settings.key, value: settings.value, updatedAt: settings.updatedAt }).from(settings).where(inArray(settings.key, keys)).orderBy(settings.key); " +
+  "const byKey = new Map(rows.map((row) => [row.key, row])); " +
+  'if (rows.length !== 3 || byKey.get("setup.completed")?.value !== true || byKey.get("storage.driver")?.value !== "local" || typeof byKey.get("storage.local.dir")?.value !== "string" || byKey.get("storage.local.dir").value.length === 0 || Object.hasOwn(process.env, "MEDIA_STORAGE") || Object.hasOwn(process.env, "MEDIA_DIR")) process.exit(2); ' +
+  "resetStorageSettingsCache(); const storage = await getStorageSettingsInternal(); " +
+  'if (storage.driver !== byKey.get("storage.driver").value || storage.localDir !== byKey.get("storage.local.dir").value) process.exit(2); ' +
+  "const baseline = rows.map((row) => ({ key: row.key, value: row.value, updatedAt: row.updatedAt.toISOString() })); " +
+  'process.stdout.write(JSON.stringify({ baselineSha256: createHash("sha256").update(JSON.stringify(baseline)).digest("hex") })); process.exit(0)\'';
 const LINT_TYPES = "bun --cwd core lint:types";
 const LINT = "bun --cwd core lint";
 const ROOT_TSC = "./node_modules/.bin/tsc -p tsconfig.json --noEmit";
@@ -1654,6 +1992,7 @@ const FULL_GATE_COMMANDS = Object.freeze([
     command: TARGETED_BUN,
     isolationCommands: isolationMetadata(TARGET_BUN_FILES),
   },
+  { id: "smokeBaselineBeforeFullTest", command: SMOKE_BASELINE_PROBE },
   {
     id: "fullTest",
     command: "bun run test",
@@ -1709,12 +2048,21 @@ const FULL_GATE_COMMANDS = Object.freeze([
     id: "testNameContractFinal",
     command: "node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=all",
   },
+  {
+    id: "l02AssistantSplitContract",
+    command: "node _docs/_workflows/task-540-implement.mjs --check-l02-assistant-split",
+  },
+  {
+    id: "l04PageSplitContract",
+    command: "node _docs/_workflows/task-540-implement.mjs --check-l04-page-split",
+  },
   { id: "workflowSyntax", command: "node --check _docs/_workflows/task-540-implement.mjs" },
   {
     id: "workflowRepairResumeSelfTest",
     command: "node _docs/_workflows/task-540-implement.mjs --self-test-repair-siblings",
   },
   { id: "diffCheck", command: "git diff --check" },
+  { id: "smokeBaselineAfterFullGate", command: SMOKE_BASELINE_PROBE },
 ]);
 
 const KNOWN_STRICT_FINDING = Object.freeze({
@@ -1827,6 +2175,53 @@ function parseDatabasePreflightReceipt(receipt, label) {
   return Object.freeze(parsed);
 }
 
+function parseSmokeBaselineProbeReceipt(receipt, label) {
+  const authority = localCommandAuthority(receipt, label);
+  const output = authority.stdout.toString("utf8").trim();
+  if (receipt.status !== 0 || authority.stderr.length !== 0) {
+    throw new Error(label + ": smoke baseline probe did not complete cleanly");
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(output);
+  } catch {
+    throw new Error(label + ": smoke baseline probe emitted invalid JSON");
+  }
+  requireExactObjectKeys(parsed, ["baselineSha256"], label);
+  if (typeof parsed.baselineSha256 !== "string" || !/^[a-f0-9]{64}$/u.test(parsed.baselineSha256)) {
+    throw new Error(label + ": smoke baseline probe emitted an invalid hash");
+  }
+  return parsed.baselineSha256;
+}
+
+function smokeBaselinePairUnchanged(receipts, label, beforeId, afterId) {
+  const before = receipts.find(({ id }) => id === beforeId);
+  const after = receipts.find(({ id }) => id === afterId);
+  if (!before || !after || before.status !== 0 || after.status !== 0) return false;
+  return (
+    parseSmokeBaselineProbeReceipt(before, label + ":" + beforeId) ===
+    parseSmokeBaselineProbeReceipt(after, label + ":" + afterId)
+  );
+}
+
+function smokeBaselineUnchanged(receipts, label) {
+  return smokeBaselinePairUnchanged(
+    receipts,
+    label,
+    "smokeBaselineBeforeFullTest",
+    "smokeBaselineAfterFullGate"
+  );
+}
+
+function settingsHygieneBaselineUnchanged(receipts, label) {
+  return smokeBaselinePairUnchanged(
+    receipts,
+    label,
+    "settingsBaselineBeforeHygiene",
+    "settingsBaselineAfterHygiene"
+  );
+}
+
 const FORBIDDEN_PATHS = Object.freeze([
   "core/admin/ui/pages/**",
   "core/services/pages/**",
@@ -1851,7 +2246,7 @@ const FORBIDDEN_PATHS = Object.freeze([
   "_docs/_TASKS/TASK-539*",
   "_docs/_TASKS/TASK-542*",
   "_docs/_TASKS/TASK-545*",
-  "all task/changelog files outside TASK-540 and pinned changelog 1252",
+  "all task/changelog files outside TASK-540, the verified TASK-9999-01/L02 supersession records, changelog 1258, and pinned changelog 1252",
 ]);
 
 const RESULT_SCHEMA = {
@@ -2180,6 +2575,7 @@ async function dispatchAgentSafely(grounded, options) {
   ) {
     throw new Error(options.label + ": grounded agent prompt is invalid");
   }
+  requireGroundedPromptBytes(grounded.text, options.label);
   await requireWorkflowSensitiveEnvBaseline(options.label + " before agent dispatch");
   await requireInitialGitIndexBaseline(options.label + " before agent dispatch");
   await requireGroundedContextCurrent(
@@ -2680,6 +3076,26 @@ function hashStableRegularFileAuthority(bytes, stat) {
 async function hashPath(relativePath) {
   const absolute = ROOT + "/" + relativePath;
   try {
+    const before = await lstat(absolute, { bigint: true });
+    if (before.isSymbolicLink()) {
+      const linkBytes = await readlink(absolute, { encoding: "buffer" });
+      const after = await lstat(absolute, { bigint: true });
+      if (
+        !Buffer.isBuffer(linkBytes) ||
+        !after.isSymbolicLink() ||
+        !sameGitIndexStat(before, after)
+      ) {
+        throw new Error("TASK-540 worktree symlink changed during snapshot");
+      }
+      const hash = createHash("sha256");
+      hash.update("stable-symlink-v1\0");
+      for (const key of ["dev", "ino", "mode", "nlink", "size", "mtimeNs", "ctimeNs"]) {
+        hash.update(key + "\0" + after[key].toString() + "\0");
+      }
+      hash.update(linkBytes);
+      return hash.digest("hex");
+    }
+    if (!before.isFile()) throw new Error("TASK-540 worktree snapshot path is unsupported");
     const { bytes, stat } = await readStableRegularFile(
       absolute,
       "TASK-540 worktree file snapshot",
@@ -2766,15 +3182,24 @@ async function worktreeSnapshot(
   ) {
     throw new Error(label + ": repository snapshot additional paths are invalid");
   }
-  const [head, branch, tracked, untracked, indexAuthority] = await Promise.all([
-    git(["rev-parse", "HEAD"]),
-    git(["branch", "--show-current"]),
-    git(["diff", "--name-only", "-z", "HEAD"]),
-    git(["ls-files", "--others", "--exclude-standard", "-z"]),
-    requireInitialGitIndexBaseline(label + " index authority"),
-  ]);
+  const [head, branch, headTracked, stagedTracked, unstagedTracked, untracked, indexAuthority] =
+    await Promise.all([
+      git(["rev-parse", "HEAD"]),
+      git(["branch", "--show-current"]),
+      git(["diff", "--name-only", "-z", "HEAD"]),
+      git(["diff", "--cached", "--name-only", "-z", "HEAD"]),
+      git(["diff", "--name-only", "-z"]),
+      git(["ls-files", "--others", "--exclude-standard", "-z"]),
+      requireInitialGitIndexBaseline(label + " index authority"),
+    ]);
   const paths = [
-    ...new Set([...splitNul(tracked), ...splitNul(untracked), ...additionalPaths]),
+    ...new Set([
+      ...splitNul(headTracked),
+      ...splitNul(stagedTracked),
+      ...splitNul(unstagedTracked),
+      ...splitNul(untracked),
+      ...additionalPaths,
+    ]),
   ].sort();
   const hashes = Object.create(null);
   for (const path of paths) hashes[path] = await hashPath(path);
@@ -3707,6 +4132,58 @@ function localFailureKind(receipt) {
   return "code-test";
 }
 
+function fullValidationMismatchDetail(result) {
+  const receipts = Array.isArray(result?.commands) ? result.commands : [];
+  for (let index = 0; index < FULL_GATE_COMMANDS.length; index += 1) {
+    const expected = FULL_GATE_COMMANDS[index];
+    const receipt = receipts[index];
+    if (!receipt) {
+      return "id=" + expected.id + ",receipt=missing";
+    }
+    const expectedStatus = expected.id === "strictScan" ? 1 : 0;
+    if (
+      receipt.id !== expected.id ||
+      receipt.command !== expected.command ||
+      receipt.status !== expectedStatus
+    ) {
+      const status = Number.isInteger(receipt.status) ? receipt.status : -1;
+      return (
+        "id=" +
+        expected.id +
+        ",status=" +
+        status +
+        ",timedOut=" +
+        String(receipt.timedOut === true) +
+        ",outputLimitExceeded=" +
+        String(receipt.outputLimitExceeded === true) +
+        ",repositoryUnchanged=" +
+        String(receipt.repository?.unchanged === true)
+      );
+    }
+  }
+  if (receipts.length !== FULL_GATE_COMMANDS.length) {
+    return "id=command-matrix,receipt=extra";
+  }
+  const baselineBefore = receipts.find(({ id }) => id === "smokeBaselineBeforeFullTest");
+  const baselineAfter = receipts.find(({ id }) => id === "smokeBaselineAfterFullGate");
+  if (
+    !baselineBefore ||
+    !baselineAfter ||
+    baselineBefore.stdoutSha256 !== baselineAfter.stdoutSha256 ||
+    baselineBefore.stdoutBytes !== baselineAfter.stdoutBytes
+  ) {
+    return "id=smokeBaseline,unchanged=false";
+  }
+  if (
+    result?.database?.configured !== true ||
+    result?.database?.reachable !== true ||
+    result?.database?.selectOne !== 1
+  ) {
+    return "id=dbPreflight,databaseReceipt=invalid";
+  }
+  return "id=aggregate,receipt=non-passing";
+}
+
 async function runNamedIsolationCommands(spec, receipt, label) {
   const metadata = spec.isolationCommands ?? [];
   if (metadata.length === 0) return Object.freeze([]);
@@ -3904,48 +4381,501 @@ function exactBytesSha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
+const EXACT_TRANSACTION_STABLE_OBSERVATIONS = 3;
+const EXACT_TRANSACTION_MAX_OBSERVATIONS = 24;
+const EXACT_TRANSACTION_OBSERVATION_DELAYS_MS = Object.freeze([0, 1, 2, 4, 8, 16, 25]);
+const EXACT_TRANSACTION_MOUNT_CLASS = "fakeowner-handle-observation-v1";
+const EXACT_TRANSACTION_FAKEOWNER_FS_TYPE = 0x6a656a63n;
+const EXACT_TRANSACTION_FAKEOWNER_BACKING_MODE = 0o600;
+const EXACT_TRANSACTION_MAX_FILE_BYTES = 64n * 1024n * 1024n;
+const EXACT_ROLLBACK_FAKEOWNER_MODE_EVIDENCE = Symbol(
+  "task-540-exact-rollback-fakeowner-mode-evidence"
+);
+const COMMITTED_RENAME_FAKEOWNER_CONVERGENCE_AUTHORITY = Symbol(
+  "task-540-committed-rename-fakeowner-convergence-authority"
+);
+
+class ExactRollbackReadRaceError extends Error {}
+class ExactTransactionCollisionError extends Error {
+  constructor(message, relativePath) {
+    super(message);
+    this.relativePath = relativePath;
+  }
+}
+class ExactTransactionVisibilityError extends Error {}
+
+function exactRollbackEntrySafeDiagnostic(entry) {
+  return Object.freeze({
+    relativePath: entry.relativePath,
+    exists: entry.exists,
+    byteLength: entry.byteLength,
+    sha256: entry.sha256,
+    mode: entry.mode === null ? null : "0" + entry.mode.toString(8),
+    mountClass: EXACT_TRANSACTION_MOUNT_CLASS,
+  });
+}
+
+function freezeExactRollbackObservedEntry(entry, fakeownerModeEvidence = false) {
+  if (!entry || typeof entry !== "object" || typeof fakeownerModeEvidence !== "boolean") {
+    throw new Error("TASK-540 exact-rollback observed entry evidence is malformed");
+  }
+  if (fakeownerModeEvidence) {
+    Object.defineProperty(entry, EXACT_ROLLBACK_FAKEOWNER_MODE_EVIDENCE, {
+      configurable: false,
+      enumerable: false,
+      writable: false,
+      value: true,
+    });
+  }
+  return Object.freeze(entry);
+}
+
+function hasExactRollbackFakeownerModeEvidence(entry) {
+  return entry?.[EXACT_ROLLBACK_FAKEOWNER_MODE_EVIDENCE] === true;
+}
+
+function exactTransactionObservationDelay(attempt) {
+  return EXACT_TRANSACTION_OBSERVATION_DELAYS_MS[
+    Math.min(attempt, EXACT_TRANSACTION_OBSERVATION_DELAYS_MS.length - 1)
+  ];
+}
+
+async function waitForExactTransactionObservation(milliseconds) {
+  if (milliseconds <= 0) {
+    await Promise.resolve();
+    return;
+  }
+  await new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function sameExactRollbackCrossViewIdentity(left, right) {
+  return (
+    left.dev === right.dev &&
+    left.ino === right.ino &&
+    left.nlink === right.nlink &&
+    left.size === right.size
+  );
+}
+
+function requireExactRollbackStableFileView(view, relativePath, label) {
+  if (
+    !view?.isFile() ||
+    view.isSymbolicLink() ||
+    view.nlink !== 1n ||
+    typeof view.size !== "bigint" ||
+    view.size < 0n ||
+    view.size > EXACT_TRANSACTION_MAX_FILE_BYTES
+  ) {
+    throw new ExactTransactionCollisionError(
+      label + ": exact-rollback stable view is not one bounded regular file: " + relativePath,
+      relativePath
+    );
+  }
+  return view;
+}
+
+function classifyExactRollbackDualView(
+  { pathBefore, handleBefore, handleAfter, pathAfter, fsTypeBefore, fsTypeAfter },
+  relativePath,
+  label
+) {
+  if (
+    typeof fsTypeBefore !== "bigint" ||
+    typeof fsTypeAfter !== "bigint" ||
+    fsTypeBefore !== fsTypeAfter ||
+    !sameGitIndexStat(pathBefore, pathAfter) ||
+    !sameGitIndexStat(handleBefore, handleAfter)
+  ) {
+    throw new ExactRollbackReadRaceError(
+      label + ": exact-rollback path or handle view changed while read: " + relativePath
+    );
+  }
+  for (const view of [pathBefore, handleBefore, handleAfter, pathAfter]) {
+    requireExactRollbackStableFileView(view, relativePath, label);
+  }
+  if (
+    !sameExactRollbackCrossViewIdentity(pathBefore, handleBefore) ||
+    !sameExactRollbackCrossViewIdentity(pathAfter, handleAfter)
+  ) {
+    throw new ExactTransactionCollisionError(
+      label + ": exact-rollback stable path and handle identities differ: " + relativePath,
+      relativePath
+    );
+  }
+  const pathMode = Number(pathAfter.mode & 0o7777n);
+  const handleMode = Number(handleAfter.mode & 0o7777n);
+  if (pathMode === handleMode) return pathMode;
+  if (
+    fsTypeAfter === EXACT_TRANSACTION_FAKEOWNER_FS_TYPE &&
+    handleMode === EXACT_TRANSACTION_FAKEOWNER_BACKING_MODE
+  ) {
+    return pathMode;
+  }
+  throw new ExactTransactionCollisionError(
+    label + ": exact-rollback stable path and handle modes disagree: " + relativePath,
+    relativePath
+  );
+}
+
+function isExactRollbackFakeownerBackingModeView({
+  pathBefore,
+  handleBefore,
+  handleAfter,
+  pathAfter,
+  fsTypeBefore,
+  fsTypeAfter,
+}) {
+  const views = [pathBefore, handleBefore, handleAfter, pathAfter];
+  return Boolean(
+    fsTypeBefore === EXACT_TRANSACTION_FAKEOWNER_FS_TYPE &&
+    fsTypeAfter === EXACT_TRANSACTION_FAKEOWNER_FS_TYPE &&
+    views.every(
+      (view) =>
+        view?.isFile() &&
+        !view.isSymbolicLink() &&
+        view.nlink === 1n &&
+        typeof view.size === "bigint" &&
+        view.size >= 0n &&
+        view.size <= EXACT_TRANSACTION_MAX_FILE_BYTES &&
+        Number(view.mode & 0o7777n) === EXACT_TRANSACTION_FAKEOWNER_BACKING_MODE
+    ) &&
+    sameGitIndexStat(pathBefore, pathAfter) &&
+    sameGitIndexStat(handleBefore, handleAfter) &&
+    sameExactRollbackCrossViewIdentity(pathBefore, handleBefore) &&
+    sameExactRollbackCrossViewIdentity(pathAfter, handleAfter)
+  );
+}
+
+function combineExactRollbackReadAndCloseErrors(readError, closeError, label) {
+  if (readError && closeError) {
+    return new AggregateError(
+      [readError, closeError],
+      label + ": exact-rollback read/classification and handle close both failed"
+    );
+  }
+  return readError ?? closeError ?? null;
+}
+
 async function readOptionalRollbackFile(relativePath, label) {
   const { absolutePath } = await requireCanonicalRollbackParent(relativePath, label);
+  let pathBefore;
+  let result = null;
+  let readError = null;
   try {
-    const before = await lstat(absolutePath);
-    if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1) {
-      throw new Error(label + ": exact-rollback target is not a regular file: " + relativePath);
-    }
-    const bytes = await readFile(absolutePath);
-    const after = await lstat(absolutePath);
-    if (
-      !after.isFile() ||
-      after.isSymbolicLink() ||
-      after.nlink !== 1 ||
-      before.dev !== after.dev ||
-      before.ino !== after.ino ||
-      before.size !== after.size ||
-      bytes.length !== after.size ||
-      (before.mode & 0o7777) !== (after.mode & 0o7777)
-    ) {
-      throw new Error(label + ": exact-rollback target changed while it was read: " + relativePath);
-    }
-    return Object.freeze({
-      relativePath,
-      exists: true,
-      bytesBase64: bytes.toString("base64"),
-      byteLength: bytes.length,
-      sha256: exactBytesSha256(bytes),
-      mode: after.mode & 0o7777,
-    });
+    pathBefore = await lstat(absolutePath, { bigint: true });
   } catch (error) {
     if (error?.code === "ENOENT") {
-      return Object.freeze({
-        relativePath,
-        exists: false,
-        bytesBase64: null,
-        byteLength: null,
-        sha256: null,
-        mode: null,
-      });
+      try {
+        await lstat(absolutePath, { bigint: true });
+      } catch (confirmationError) {
+        if (confirmationError?.code === "ENOENT") {
+          return Object.freeze({
+            relativePath,
+            exists: false,
+            bytesBase64: null,
+            byteLength: null,
+            sha256: null,
+            mode: null,
+          });
+        }
+        throw confirmationError;
+      }
+      throw new ExactRollbackReadRaceError(
+        label + ": exact-rollback missing path appeared during read: " + relativePath
+      );
     }
     throw error;
   }
+  requireExactRollbackStableFileView(pathBefore, relativePath, label);
+  let fsTypeBefore;
+  try {
+    fsTypeBefore = (await statfs(absolutePath, { bigint: true })).type;
+  } catch (error) {
+    if (["ENOENT", "ENOTDIR", "ELOOP"].includes(error?.code)) {
+      throw new ExactRollbackReadRaceError(
+        label + ": exact-rollback path changed before open: " + relativePath
+      );
+    }
+    throw error;
+  }
+  let handle;
+  try {
+    handle = await open(
+      absolutePath,
+      FS_CONSTANTS.O_RDONLY | FS_CONSTANTS.O_NOFOLLOW | FS_CONSTANTS.O_CLOEXEC
+    );
+  } catch (error) {
+    if (["ENOENT", "ENOTDIR", "ELOOP"].includes(error?.code)) {
+      throw new ExactRollbackReadRaceError(
+        label + ": exact-rollback path disappeared before open: " + relativePath
+      );
+    }
+    throw error;
+  }
+  try {
+    const before = await handle.stat({ bigint: true });
+    requireExactRollbackStableFileView(before, relativePath, label);
+    const bytes = await handle.readFile();
+    const after = await handle.stat({ bigint: true });
+    let pathAfter;
+    let fsTypeAfter;
+    try {
+      pathAfter = await lstat(absolutePath, { bigint: true });
+      fsTypeAfter = (await statfs(absolutePath, { bigint: true })).type;
+    } catch (error) {
+      if (["ENOENT", "ENOTDIR", "ELOOP"].includes(error?.code)) {
+        throw new ExactRollbackReadRaceError(
+          label + ": exact-rollback path changed after handle read: " + relativePath
+        );
+      }
+      throw error;
+    }
+    const mode = classifyExactRollbackDualView(
+      {
+        pathBefore,
+        handleBefore: before,
+        handleAfter: after,
+        pathAfter,
+        fsTypeBefore,
+        fsTypeAfter,
+      },
+      relativePath,
+      label
+    );
+    if (BigInt(bytes.length) !== after.size) {
+      throw new ExactRollbackReadRaceError(
+        label + ": exact-rollback handle changed while it was read: " + relativePath
+      );
+    }
+    const fakeownerModeEvidence = isExactRollbackFakeownerBackingModeView({
+      pathBefore,
+      handleBefore: before,
+      handleAfter: after,
+      pathAfter,
+      fsTypeBefore,
+      fsTypeAfter,
+    });
+    result = freezeExactRollbackObservedEntry(
+      {
+        relativePath,
+        exists: true,
+        bytesBase64: bytes.toString("base64"),
+        byteLength: bytes.length,
+        sha256: exactBytesSha256(bytes),
+        mode,
+      },
+      fakeownerModeEvidence
+    );
+  } catch (error) {
+    readError = error;
+  }
+  let closeError = null;
+  try {
+    await handle.close();
+  } catch (error) {
+    closeError = error;
+  }
+  const terminalError = combineExactRollbackReadAndCloseErrors(readError, closeError, label);
+  if (terminalError) throw terminalError;
+  return result;
+}
+
+function sameExactRollbackSemanticState(left, right) {
+  return Boolean(
+    left &&
+    right &&
+    left.relativePath === right.relativePath &&
+    left.exists === right.exists &&
+    left.bytesBase64 === right.bytesBase64 &&
+    left.byteLength === right.byteLength &&
+    left.sha256 === right.sha256 &&
+    left.mode === right.mode
+  );
+}
+
+function exactRollbackFakeownerModeCandidate(current, terminalStates) {
+  if (
+    !hasExactRollbackFakeownerModeEvidence(current) ||
+    current?.exists !== true ||
+    current.mode !== EXACT_TRANSACTION_FAKEOWNER_BACKING_MODE
+  ) {
+    return null;
+  }
+  return (
+    terminalStates.find(
+      (terminal) =>
+        terminal?.exists === true &&
+        terminal.relativePath === current.relativePath &&
+        terminal.bytesBase64 === current.bytesBase64 &&
+        terminal.byteLength === current.byteLength &&
+        terminal.sha256 === current.sha256 &&
+        Number.isSafeInteger(terminal.mode) &&
+        terminal.mode !== EXACT_TRANSACTION_FAKEOWNER_BACKING_MODE
+    ) ?? null
+  );
+}
+
+function exactRollbackCommittedConvergenceCollision(label, relativePath, reason) {
+  return new ExactTransactionCollisionError(
+    label + ": committed fakeowner convergence collided: " + reason + ": " + relativePath,
+    relativePath
+  );
+}
+
+async function observeExactRollbackSemanticState(
+  relativePath,
+  terminalStates,
+  transitionalStates,
+  label,
+  {
+    readEntry = readOptionalRollbackFile,
+    wait = waitForExactTransactionObservation,
+    maxObservations = EXACT_TRANSACTION_MAX_OBSERVATIONS,
+    stableObservations = EXACT_TRANSACTION_STABLE_OBSERVATIONS,
+    committedRenameFakeownerConvergenceAuthority = null,
+  } = {}
+) {
+  const allowCommittedFakeownerConvergence =
+    committedRenameFakeownerConvergenceAuthority ===
+    COMMITTED_RENAME_FAKEOWNER_CONVERGENCE_AUTHORITY;
+  if (
+    !Array.isArray(terminalStates) ||
+    terminalStates.length === 0 ||
+    new Set(terminalStates.map(({ relativePath: path }) => path)).size !== 1 ||
+    terminalStates.some(({ relativePath: path }) => path !== relativePath) ||
+    !Array.isArray(transitionalStates) ||
+    transitionalStates.some(({ relativePath: path }) => path !== relativePath) ||
+    !Number.isSafeInteger(maxObservations) ||
+    maxObservations < stableObservations ||
+    !Number.isSafeInteger(stableObservations) ||
+    stableObservations < 1 ||
+    (committedRenameFakeownerConvergenceAuthority !== null && !allowCommittedFakeownerConvergence)
+  ) {
+    throw new Error(label + ": exact observation authority is malformed");
+  }
+  let stableState = null;
+  let stableCount = 0;
+  let transientReadErrors = 0;
+  let sawFakeownerModeCandidate = false;
+  for (let attempt = 0; attempt < maxObservations; attempt += 1) {
+    let current;
+    try {
+      current = await readEntry(relativePath, label + " observation " + (attempt + 1));
+    } catch (error) {
+      if (!(error instanceof ExactRollbackReadRaceError)) throw error;
+      if (allowCommittedFakeownerConvergence && stableCount > 0) {
+        throw exactRollbackCommittedConvergenceCollision(
+          label,
+          relativePath,
+          "read race after terminal confirmation began"
+        );
+      }
+      stableState = null;
+      stableCount = 0;
+      transientReadErrors += 1;
+      await wait(exactTransactionObservationDelay(attempt));
+      continue;
+    }
+    const terminal = terminalStates.find((entry) => sameExactRollbackSemanticState(current, entry));
+    const fakeownerModeCandidate = allowCommittedFakeownerConvergence
+      ? exactRollbackFakeownerModeCandidate(current, terminalStates)
+      : null;
+    if (terminal) {
+      if (stableState && sameExactRollbackSemanticState(stableState, terminal)) {
+        stableCount += 1;
+      } else {
+        stableState = terminal;
+        stableCount = 1;
+      }
+      if (stableCount === stableObservations) {
+        return Object.freeze({
+          state: terminal,
+          observations: attempt + 1,
+          transientReadErrors,
+          diagnostic: exactRollbackEntrySafeDiagnostic(terminal),
+        });
+      }
+    } else if (fakeownerModeCandidate) {
+      if (stableCount > 0) {
+        throw exactRollbackCommittedConvergenceCollision(
+          label,
+          relativePath,
+          "backing mode returned after terminal confirmation began"
+        );
+      }
+      sawFakeownerModeCandidate = true;
+      stableState = null;
+      stableCount = 0;
+    } else if (transitionalStates.some((entry) => sameExactRollbackSemanticState(current, entry))) {
+      if (allowCommittedFakeownerConvergence && stableCount > 0) {
+        throw exactRollbackCommittedConvergenceCollision(
+          label,
+          relativePath,
+          "transitional state returned after terminal confirmation began"
+        );
+      }
+      stableState = null;
+      stableCount = 0;
+    } else {
+      throw new ExactTransactionCollisionError(
+        label +
+          ": exact observation found a third state: " +
+          JSON.stringify({
+            path: relativePath,
+            current: exactRollbackEntrySafeDiagnostic(current),
+            terminals: terminalStates.map(exactRollbackEntrySafeDiagnostic),
+            mountClass: EXACT_TRANSACTION_MOUNT_CLASS,
+          }),
+        relativePath
+      );
+    }
+    await wait(exactTransactionObservationDelay(attempt));
+  }
+  if (allowCommittedFakeownerConvergence && (sawFakeownerModeCandidate || stableCount > 0)) {
+    throw exactRollbackCommittedConvergenceCollision(
+      label,
+      relativePath,
+      "bounded observation ended before three terminal confirmations"
+    );
+  }
+  throw new ExactTransactionVisibilityError(
+    label +
+      ": exact observation did not converge: " +
+      JSON.stringify({
+        path: relativePath,
+        maxObservations,
+        stableObservations,
+        transientReadErrors,
+        terminals: terminalStates.map(exactRollbackEntrySafeDiagnostic),
+        mountClass: EXACT_TRANSACTION_MOUNT_CLASS,
+      })
+  );
+}
+
+async function observeExactRollbackSnapshot(
+  expectedSnapshot,
+  label,
+  { transitionalSnapshot = null, observationOptions = undefined } = {}
+) {
+  const transitionalByPath = new Map(
+    (transitionalSnapshot?.entries ?? []).map((entry) => [entry.relativePath, entry])
+  );
+  const observations = [];
+  for (const expected of expectedSnapshot.entries) {
+    const transitional = transitionalByPath.get(expected.relativePath);
+    observations.push(
+      await observeExactRollbackSemanticState(
+        expected.relativePath,
+        [expected],
+        transitional && !sameExactRollbackSemanticState(transitional, expected)
+          ? [transitional]
+          : [],
+        label,
+        observationOptions
+      )
+    );
+  }
+  return Object.freeze(observations);
 }
 
 function freezeWorktreeAuthority(snapshot) {
@@ -4028,6 +4958,18 @@ async function verifyExactRollbackFiles(snapshot, label) {
   }
 }
 
+async function verifyExactRollbackFileSubset(snapshot, relativePaths, label) {
+  const requested = new Set(relativePaths);
+  if (requested.size !== relativePaths.length) {
+    throw new Error(label + ": exact snapshot subset paths are duplicated");
+  }
+  const entries = snapshot.entries.filter(({ relativePath }) => requested.has(relativePath));
+  if (entries.length !== requested.size) {
+    throw new Error(label + ": exact snapshot subset is incomplete");
+  }
+  await verifyExactRollbackFiles(Object.freeze({ entries: Object.freeze(entries) }), label);
+}
+
 function exactRollbackEntryBytes(entry, label) {
   if (
     !entry.exists ||
@@ -4090,11 +5032,12 @@ async function readRollbackTargetInfo(absolutePath) {
 
 async function unlinkSafeRollbackTarget(absolutePath, relativePath, label) {
   const info = await readRollbackTargetInfo(absolutePath);
-  if (!info) return;
+  if (!info) return false;
   if (!info.isFile() && !info.isSymbolicLink()) {
     throw new Error(label + ": rollback target became a non-file: " + relativePath);
   }
   await unlink(absolutePath);
+  return true;
 }
 
 async function requireReplaceableRollbackTarget(absolutePath, relativePath, label) {
@@ -4104,12 +5047,191 @@ async function requireReplaceableRollbackTarget(absolutePath, relativePath, labe
   }
 }
 
-async function restoreExactRollbackEntry(entry, label) {
+async function syncCanonicalRollbackParent(parentAbsolutePath, label) {
+  const handle = await open(
+    parentAbsolutePath,
+    FS_CONSTANTS.O_RDONLY | FS_CONSTANTS.O_DIRECTORY | FS_CONSTANTS.O_CLOEXEC
+  );
+  let syncError = null;
+  try {
+    await handle.sync();
+  } catch (error) {
+    syncError = error;
+  }
+  let closeError = null;
+  try {
+    await handle.close();
+  } catch (error) {
+    closeError = error;
+  }
+  if (syncError && closeError) {
+    throw new AggregateError(
+      [syncError, closeError],
+      label + ": parent-directory sync and close both failed"
+    );
+  }
+  if (syncError) throw syncError;
+  if (closeError) throw closeError;
+}
+
+function exactWriteReceipt(relativePath, operation, beforeEntry, afterEntry, parentSynced) {
+  return Object.freeze({
+    relativePath,
+    operation,
+    committed: true,
+    parentSynced,
+    before: exactRollbackEntrySafeDiagnostic(beforeEntry),
+    after: exactRollbackEntrySafeDiagnostic(afterEntry),
+    mountClass: EXACT_TRANSACTION_MOUNT_CLASS,
+  });
+}
+
+function wrapCommittedExactWriteError(error, receipt, label) {
+  const wrapped = new Error(label + ": committed exact write did not finish verification", {
+    cause: error,
+  });
+  Object.defineProperty(wrapped, "exactWriteReceipt", {
+    configurable: false,
+    enumerable: false,
+    writable: false,
+    value: receipt,
+  });
+  return wrapped;
+}
+
+function exactWriteReceiptFromError(error) {
+  return error?.exactWriteReceipt ?? null;
+}
+
+function wrapAccumulatedExactRollbackError(error, receipts, label) {
+  if (!Array.isArray(receipts) || receipts.length === 0) return error;
+  const wrapped = new Error(label + ": reverse rollback stopped after committed receipts", {
+    cause: error,
+  });
+  Object.defineProperty(wrapped, "exactRollbackReceipts", {
+    configurable: false,
+    enumerable: false,
+    writable: false,
+    value: Object.freeze([...receipts]),
+  });
+  return wrapped;
+}
+
+function exactRollbackReceiptsFromError(error) {
+  if (Array.isArray(error?.exactRollbackReceipts)) return error.exactRollbackReceipts;
+  if (error instanceof AggregateError) {
+    for (const nested of error.errors) {
+      const receipts = exactRollbackReceiptsFromError(nested);
+      if (receipts.length > 0) return receipts;
+    }
+  }
+  return error?.cause ? exactRollbackReceiptsFromError(error.cause) : Object.freeze([]);
+}
+
+function exactTransactionErrorContains(error, ErrorType) {
+  if (error instanceof ErrorType) return true;
+  if (error instanceof AggregateError) {
+    return error.errors.some((nested) => exactTransactionErrorContains(nested, ErrorType));
+  }
+  return error?.cause ? exactTransactionErrorContains(error.cause, ErrorType) : false;
+}
+
+const COMMITTED_UNLINK_SEQUENCE_IO = Object.freeze({
+  unlinkTarget: unlinkSafeRollbackTarget,
+  resolveLocation: requireCanonicalRollbackParent,
+  syncParent: syncCanonicalRollbackParent,
+  observeState: observeExactRollbackSemanticState,
+});
+
+function requireCommittedUnlinkSequenceIo(io, label) {
+  const keys = ["observeState", "resolveLocation", "syncParent", "unlinkTarget"];
+  if (
+    io !== COMMITTED_UNLINK_SEQUENCE_IO &&
+    (!HERMETIC_SELF_TEST_MODE ||
+      JSON.stringify(Object.keys(io ?? {}).sort()) !== JSON.stringify(keys))
+  ) {
+    throw new Error(label + ": committed-unlink sequencing I/O lacks hermetic authority");
+  }
+  for (const key of keys) {
+    if (typeof io?.[key] !== "function") {
+      throw new Error(label + ": committed-unlink sequencing I/O is missing " + key);
+    }
+  }
+  return io;
+}
+
+async function commitExactUnlinkBoundary(
+  entry,
+  expectedCurrentEntry,
+  location,
+  label,
+  { observeCommitted, observationOptions, sequenceIo = COMMITTED_UNLINK_SEQUENCE_IO }
+) {
+  requireCommittedUnlinkSequenceIo(sequenceIo, label);
+  const unlinked = await sequenceIo.unlinkTarget(location.absolutePath, entry.relativePath, label);
+  if (!unlinked) return null;
+
+  // The receipt is intentionally synchronous with successful unlink completion.
+  // No post-commit await may occur before this recoverable boundary exists.
+  let committedReceipt = exactWriteReceipt(
+    entry.relativePath,
+    "unlink",
+    expectedCurrentEntry ?? entry,
+    entry,
+    false
+  );
+  try {
+    location = await sequenceIo.resolveLocation(entry.relativePath, label);
+    await sequenceIo.syncParent(location.parentAbsolutePath, label + " committed unlink");
+    committedReceipt = exactWriteReceipt(
+      entry.relativePath,
+      "unlink",
+      expectedCurrentEntry ?? entry,
+      entry,
+      true
+    );
+    if (observeCommitted) {
+      await sequenceIo.observeState(
+        entry.relativePath,
+        [entry],
+        expectedCurrentEntry ? [expectedCurrentEntry] : [],
+        label + " committed unlink visibility",
+        observationOptions
+      );
+    }
+  } catch (error) {
+    throw wrapCommittedExactWriteError(error, committedReceipt, label);
+  }
+  return committedReceipt;
+}
+
+async function restoreExactRollbackEntry(
+  entry,
+  label,
+  {
+    expectedCurrentEntry = null,
+    observeCommitted = expectedCurrentEntry !== null,
+    observationOptions = undefined,
+    unlinkSequenceIo = COMMITTED_UNLINK_SEQUENCE_IO,
+  } = {}
+) {
   let location = await requireCanonicalRollbackParent(entry.relativePath, label);
+  let committedReceipt = null;
   if (!entry.exists) {
-    await unlinkSafeRollbackTarget(location.absolutePath, entry.relativePath, label);
-    await requireCanonicalRollbackParent(entry.relativePath, label);
-    return;
+    if (expectedCurrentEntry) {
+      await observeExactRollbackSemanticState(
+        entry.relativePath,
+        [expectedCurrentEntry],
+        [],
+        label + " immediate pre-unlink guard",
+        observationOptions
+      );
+    }
+    return commitExactUnlinkBoundary(entry, expectedCurrentEntry, location, label, {
+      observeCommitted,
+      observationOptions,
+      sequenceIo: unlinkSequenceIo,
+    });
   }
   const bytes = exactRollbackEntryBytes(entry, label);
 
@@ -4135,9 +5257,46 @@ async function restoreExactRollbackEntry(entry, label) {
     location = await requireCanonicalRollbackParent(entry.relativePath, label);
     await requireReplaceableRollbackTarget(location.absolutePath, entry.relativePath, label);
     location = await requireCanonicalRollbackParent(entry.relativePath, label);
+    if (expectedCurrentEntry) {
+      await observeExactRollbackSemanticState(
+        entry.relativePath,
+        [expectedCurrentEntry],
+        [],
+        label + " immediate pre-rename guard",
+        observationOptions
+      );
+    }
     await rename(temporaryPath, location.absolutePath);
     temporaryExists = false;
-    await requireCanonicalRollbackParent(entry.relativePath, label);
+    committedReceipt = exactWriteReceipt(
+      entry.relativePath,
+      "rename",
+      expectedCurrentEntry ?? entry,
+      entry,
+      false
+    );
+    location = await requireCanonicalRollbackParent(entry.relativePath, label);
+    await syncCanonicalRollbackParent(location.parentAbsolutePath, label + " committed rename");
+    committedReceipt = exactWriteReceipt(
+      entry.relativePath,
+      "rename",
+      expectedCurrentEntry ?? entry,
+      entry,
+      true
+    );
+    if (observeCommitted) {
+      await observeExactRollbackSemanticState(
+        entry.relativePath,
+        [entry],
+        expectedCurrentEntry ? [expectedCurrentEntry] : [],
+        label + " committed rename visibility",
+        {
+          ...observationOptions,
+          committedRenameFakeownerConvergenceAuthority:
+            COMMITTED_RENAME_FAKEOWNER_CONVERGENCE_AUTHORITY,
+        }
+      );
+    }
   } catch (error) {
     mutationError = error;
   }
@@ -4153,20 +5312,32 @@ async function restoreExactRollbackEntry(entry, label) {
   if (temporaryExists) {
     try {
       await unlink(temporaryPath);
+      await syncCanonicalRollbackParent(
+        location.parentAbsolutePath,
+        label + " temporary cleanup unlink"
+      );
     } catch (error) {
       if (error?.code !== "ENOENT") cleanupErrors.push(error);
     }
   }
   if (mutationError && cleanupErrors.length > 0) {
-    throw new AggregateError(
+    const combined = new AggregateError(
       [mutationError, ...cleanupErrors],
       label + ": exact rollback write and temporary cleanup both failed"
     );
+    throw committedReceipt
+      ? wrapCommittedExactWriteError(combined, committedReceipt, label)
+      : combined;
   }
-  if (mutationError) throw mutationError;
+  if (mutationError) {
+    throw committedReceipt
+      ? wrapCommittedExactWriteError(mutationError, committedReceipt, label)
+      : mutationError;
+  }
   if (cleanupErrors.length > 0) {
     throw new AggregateError(cleanupErrors, label + ": exact rollback temporary cleanup failed");
   }
+  return committedReceipt;
 }
 
 function isAuthorizedExactRollbackResidual(relativePath, rollbackOwnedPathSet, residualPathSet) {
@@ -4536,13 +5707,32 @@ async function requireNoPendingTask540ModularityRepairs(label) {
 
 const MODULARITY_FAMILY_REVALIDATED_VALUE =
   RUN_DATE + " — eight source-owner modularity repairs and exact gates passed.";
+const MODULARITY_FAMILY_REVALIDATED_SUFFIXES = Object.freeze([
+  "eight source-owner modularity repairs and exact gates passed.",
+  "eight source-owner modularity repairs and their then-exact gates passed. This remains split/line evidence only and does not gate the current L03 overflow repair.",
+]);
+
+function isCanonicalModularityFamilyRevalidation(value) {
+  if (typeof value !== "string") return false;
+  const separator = value.indexOf(" — ");
+  if (separator < 0) return false;
+  const date = value.slice(0, separator);
+  const evidence = value.slice(separator + 3);
+  try {
+    requireCanonicalReceiptDate(date, "TASK-540 modularity family revalidation");
+  } catch {
+    return false;
+  }
+  return MODULARITY_FAMILY_REVALIDATED_SUFFIXES.includes(evidence);
+}
 
 function pendingTask540ModularityFamilyStates(states) {
   return states.filter(
     ({ source, staleField }) =>
       Boolean(readTaskMetadataField(source, staleField)) ||
-      readTaskMetadataField(source, "Modularity Repair Revalidated") !==
-        MODULARITY_FAMILY_REVALIDATED_VALUE
+      !isCanonicalModularityFamilyRevalidation(
+        readTaskMetadataField(source, "Modularity Repair Revalidated")
+      )
   );
 }
 
@@ -4617,8 +5807,9 @@ async function requireTask540ModularityFamilyMetadata(label) {
     if (
       readTaskMetadataField(source, "Modularity Repair Pending") ||
       readTaskMetadataField(source, "Modularity Repair Started") ||
-      readTaskMetadataField(source, "Modularity Repair Revalidated") !==
-        MODULARITY_FAMILY_REVALIDATED_VALUE
+      !isCanonicalModularityFamilyRevalidation(
+        readTaskMetadataField(source, "Modularity Repair Revalidated")
+      )
     ) {
       throw new Error(label + ": TASK-540 modularity family metadata is not revalidated");
     }
@@ -4635,9 +5826,16 @@ async function taskStatusState() {
     );
     const source = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     const status = source.match(/^\*\*Status:\*\*\s*(.+)$/m)?.[1] ?? "<missing>";
-    rows.push({ file, status });
+    rows.push(
+      Object.freeze({
+        file,
+        status,
+        byteLength: bytes.length,
+        sha256: createHash("sha256").update(bytes).digest("hex"),
+      })
+    );
   }
-  return rows;
+  return Object.freeze(rows);
 }
 
 const GROUNDED_TASK_STATUS_PATHS = Object.freeze(TASK_FILES.map((file) => "_docs/_TASKS/" + file));
@@ -4653,130 +5851,718 @@ function sameGroundedFileStat(left, right) {
   );
 }
 
-function isSensitiveGroundedPath(relativePath) {
+function isNonNegotiableSensitiveGroundedPath(relativePath) {
   return (
     /(?:^|\/)\.env[^/]*(?:\/|$)/iu.test(relativePath) ||
     /(?:^|\/)\.git(?:\/|$)/u.test(relativePath) ||
-    /(?:credential|password|private[_-]?key|secret|session|token)/iu.test(relativePath) ||
     SENSITIVE_ENV_KEY_PATTERN.test(relativePath) ||
     hasSensitiveEvidence(relativePath)
   );
 }
 
-async function groundedUntrackedFiles() {
-  const paths = splitNul(await git(["ls-files", "--others", "--exclude-standard", "-z"]));
-  if (paths.length > 256) {
-    throw new Error("TASK-540 grounded untracked file count exceeds its bound");
+function hasSensitiveGroundedFilenameHeuristic(relativePath) {
+  return /(?:credential|password|private[_-]?key|secret|session|token)/iu.test(relativePath);
+}
+
+function isSensitiveGroundedPath(relativePath) {
+  return (
+    isNonNegotiableSensitiveGroundedPath(relativePath) ||
+    hasSensitiveGroundedFilenameHeuristic(relativePath)
+  );
+}
+
+function isDeclaredTask540GroundedPath(relativePath) {
+  return LEAVES.some(({ allowedFiles }) => allowedFiles.includes(relativePath));
+}
+
+function isDeclaredRouteSessionComponentFalsePositive(relativePath, declared) {
+  return declared && /(?:^|\/)CustomScreen(?:Entry|Editor)RouteSession\.tsx$/u.test(relativePath);
+}
+
+function isUnsafeGroundedRepositoryPathWithDeclaration(relativePath, declared) {
+  return (
+    isNonNegotiableSensitiveGroundedPath(relativePath) ||
+    (hasSensitiveGroundedFilenameHeuristic(relativePath) &&
+      !isDeclaredRouteSessionComponentFalsePositive(relativePath, declared))
+  );
+}
+
+function isUnsafeGroundedRepositoryPath(relativePath) {
+  return isUnsafeGroundedRepositoryPathWithDeclaration(
+    relativePath,
+    isDeclaredTask540GroundedPath(relativePath)
+  );
+}
+
+function canonicalGroundedJson(value) {
+  if (value === null || typeof value === "string" || typeof value === "boolean") {
+    return JSON.stringify(value);
   }
-  const entries = [];
-  let retainedTextBytes = 0;
-  for (const relativePath of paths.sort()) {
+  if (typeof value === "number") {
+    if (!Number.isSafeInteger(value)) {
+      throw new Error("TASK-540 grounded manifest contains a non-canonical number");
+    }
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) return "[" + value.map(canonicalGroundedJson).join(",") + "]";
+  if (!value || typeof value !== "object" || Object.getPrototypeOf(value) !== Object.prototype) {
+    throw new Error("TASK-540 grounded manifest contains a non-canonical value");
+  }
+  return (
+    "{" +
+    Object.keys(value)
+      .sort()
+      .map((key) => JSON.stringify(key) + ":" + canonicalGroundedJson(value[key]))
+      .join(",") +
+    "}"
+  );
+}
+
+function groundedProjectionSha256(value) {
+  return createHash("sha256").update(canonicalGroundedJson(value)).digest("hex");
+}
+
+function decodeGroundedNulProjection(bytes, label) {
+  if (!Buffer.isBuffer(bytes)) throw new Error(label + ": Git projection is not bytes");
+  if (bytes.length === 0) return Object.freeze([]);
+  if (bytes.at(-1) !== 0) throw new Error(label + ": Git projection is not NUL terminated");
+  let source;
+  try {
+    source = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    throw new Error(label + ": Git projection is not canonical UTF-8");
+  }
+  const tokens = source.split("\0");
+  if (tokens.pop() !== "" || tokens.some((token) => token.length === 0)) {
+    throw new Error(label + ": Git projection contains an ambiguous empty record");
+  }
+  return Object.freeze(tokens);
+}
+
+function requireGroundedRepositoryPath(relativePath, label) {
+  if (
+    typeof relativePath !== "string" ||
+    relativePath.length === 0 ||
+    Buffer.byteLength(relativePath, "utf8") > 4096 ||
+    relativePath.startsWith("/") ||
+    relativePath.trim() !== relativePath ||
+    relativePath.normalize("NFC") !== relativePath ||
+    /[\u0000-\u001f\u007f\\]/u.test(relativePath) ||
+    relativePath.split("/").some((part) => part.length === 0 || part === "." || part === "..") ||
+    isUnsafeGroundedRepositoryPath(relativePath)
+  ) {
+    throw new Error(label + ": grounded repository path is unsafe or ambiguous");
+  }
+  return relativePath;
+}
+
+function splitGroundedPorcelainFields(record, count, label) {
+  const fields = [];
+  let rest = record;
+  for (let index = 0; index < count; index += 1) {
+    const separator = rest.indexOf(" ");
+    if (separator <= 0) throw new Error(label + ": porcelain record is truncated");
+    fields.push(rest.slice(0, separator));
+    rest = rest.slice(separator + 1);
+  }
+  if (rest.length === 0) throw new Error(label + ": porcelain path is missing");
+  return Object.freeze({ fields: Object.freeze(fields), rest });
+}
+
+function parseGroundedPorcelain(bytes, label) {
+  const entries = new Map();
+  for (const token of decodeGroundedNulProjection(bytes, label)) {
+    if (token.startsWith("? ")) {
+      const path = requireGroundedRepositoryPath(token.slice(2), label);
+      const previous = entries.get(path);
+      if (previous?.untracked) throw new Error(label + ": duplicate untracked porcelain path");
+      entries.set(path, Object.freeze({ tracked: previous?.tracked ?? null, untracked: true }));
+      continue;
+    }
+    if (!token.startsWith("1 ")) {
+      throw new Error(label + ": unsupported rename, conflict, ignored, or unknown porcelain row");
+    }
+    const { fields, rest: rawPath } = splitGroundedPorcelainFields(token.slice(2), 7, label);
+    const [xy, sub, headMode, indexMode, worktreeMode, headBlob, indexBlob] = fields;
+    const path = requireGroundedRepositoryPath(rawPath, label);
+    const previous = entries.get(path);
     if (
-      relativePath.length === 0 ||
-      relativePath.startsWith("/") ||
-      relativePath.includes("\0") ||
-      relativePath.split("/").includes("..") ||
-      isSensitiveGroundedPath(relativePath)
+      previous?.tracked ||
+      !/^[MADT.]{2}$/u.test(xy) ||
+      !/^[A-Z.]{4}$/u.test(sub) ||
+      !/^[0-7]{6}$/u.test(headMode) ||
+      !/^[0-7]{6}$/u.test(indexMode) ||
+      !/^[0-7]{6}$/u.test(worktreeMode) ||
+      !/^[0-9a-f]{40,64}$/u.test(headBlob) ||
+      !/^[0-9a-f]{40,64}$/u.test(indexBlob)
     ) {
-      throw new Error("TASK-540 grounded untracked path is unsafe");
+      throw new Error(label + ": malformed or duplicate ordinary porcelain row");
     }
-    const absolutePath = ROOT + "/" + relativePath;
-    const before = await lstat(absolutePath, { bigint: true });
-    if (before.isSymbolicLink()) {
-      const target = await readlink(absolutePath);
-      const after = await lstat(absolutePath, { bigint: true });
-      if (
-        !sameGroundedFileStat(before, after) ||
-        target.startsWith("/") ||
-        target.includes("\0") ||
-        target.split("/").includes("..") ||
-        isSensitiveGroundedPath(target)
-      ) {
-        throw new Error("TASK-540 grounded untracked symlink changed or is sensitive");
-      }
-      entries.push(
-        Object.freeze({
-          path: relativePath,
-          kind: "symlink",
-          target,
-          byteLength: Buffer.byteLength(target),
-          sha256: createHash("sha256").update(target).digest("hex"),
-        })
-      );
-      continue;
-    }
-    if (!before.isFile() || before.size > BigInt(MAX_GROUNDED_UNTRACKED_FILE_BYTES)) {
-      throw new Error("TASK-540 grounded untracked entry is unsupported or too large");
-    }
-    const handle = await open(absolutePath, "r");
-    let bytes;
-    try {
-      const handleBefore = await handle.stat({ bigint: true });
-      if (!handleBefore.isFile() || !sameGroundedFileStat(before, handleBefore)) {
-        throw new Error("TASK-540 grounded untracked file identity changed before read");
-      }
-      const chunks = [];
-      let totalBytes = 0;
-      let position = 0;
-      while (totalBytes <= MAX_GROUNDED_UNTRACKED_FILE_BYTES) {
-        const capacity = Math.min(64 * 1024, MAX_GROUNDED_UNTRACKED_FILE_BYTES + 1 - totalBytes);
-        const chunk = Buffer.allocUnsafe(capacity);
-        const { bytesRead } = await handle.read(chunk, 0, capacity, position);
-        if (bytesRead === 0) break;
-        chunks.push(chunk.subarray(0, bytesRead));
-        totalBytes += bytesRead;
-        position += bytesRead;
-      }
-      if (totalBytes > MAX_GROUNDED_UNTRACKED_FILE_BYTES) {
-        throw new Error("TASK-540 grounded untracked file exceeded its read bound");
-      }
-      bytes = Buffer.concat(chunks, totalBytes);
-      const [handleAfter, pathAfter] = await Promise.all([
-        handle.stat({ bigint: true }),
-        lstat(absolutePath, { bigint: true }),
-      ]);
-      if (
-        !sameGroundedFileStat(handleBefore, handleAfter) ||
-        !sameGroundedFileStat(before, pathAfter) ||
-        BigInt(bytes.length) !== handleAfter.size
-      ) {
-        throw new Error("TASK-540 grounded untracked file changed while read");
-      }
-    } finally {
-      await handle.close();
-    }
-    const sha256 = createHash("sha256").update(bytes).digest("hex");
-    const textContent = bytes.toString("utf8");
-    const isText = !bytes.includes(0) && Buffer.from(textContent, "utf8").equals(bytes);
-    if (!isText) {
-      entries.push(
-        Object.freeze({
-          path: relativePath,
-          kind: "binary",
-          byteLength: bytes.length,
-          sha256,
-        })
-      );
-      continue;
-    }
-    retainedTextBytes += bytes.length;
-    if (retainedTextBytes > MAX_GROUNDED_UNTRACKED_BYTES) {
-      throw new Error("TASK-540 grounded untracked text exceeds its bounded prompt budget");
-    }
-    if (hasSensitiveEvidence(textContent)) {
-      throw new Error("TASK-540 grounded untracked text failed value-aware redaction");
-    }
-    entries.push(
+    entries.set(
+      path,
       Object.freeze({
-        path: relativePath,
-        kind: "text",
-        byteLength: bytes.length,
-        sha256,
-        content: textContent,
+        tracked: Object.freeze({
+          stagedStatus: xy[0] === "." ? null : xy[0],
+          unstagedStatus: xy[1] === "." ? null : xy[1],
+          sub,
+          headMode,
+          indexMode,
+          worktreeMode,
+          headBlob,
+          indexBlob,
+        }),
+        untracked: previous?.untracked ?? false,
       })
     );
   }
-  return Object.freeze(entries);
+  return entries;
+}
+
+function parseGroundedNameStatus(bytes, label) {
+  const tokens = decodeGroundedNulProjection(bytes, label);
+  if (tokens.length % 2 !== 0) throw new Error(label + ": name/status projection is truncated");
+  const entries = new Map();
+  for (let index = 0; index < tokens.length; index += 2) {
+    const status = tokens[index];
+    const path = requireGroundedRepositoryPath(tokens[index + 1], label);
+    if (!/^[MADT]$/u.test(status) || entries.has(path)) {
+      throw new Error(label + ": name/status projection is unsupported or duplicated");
+    }
+    entries.set(path, status);
+  }
+  return entries;
+}
+
+function parseGroundedNumstat(bytes, label) {
+  const entries = new Map();
+  for (const token of decodeGroundedNulProjection(bytes, label)) {
+    const first = token.indexOf("\t");
+    const second = first < 0 ? -1 : token.indexOf("\t", first + 1);
+    const added = first < 0 ? "" : token.slice(0, first);
+    const deleted = second < 0 ? "" : token.slice(first + 1, second);
+    const path = requireGroundedRepositoryPath(second < 0 ? "" : token.slice(second + 1), label);
+    if (
+      !/^(?:[0-9]+|-)$/u.test(added) ||
+      !/^(?:[0-9]+|-)$/u.test(deleted) ||
+      (added === "-") !== (deleted === "-") ||
+      entries.has(path)
+    ) {
+      throw new Error(label + ": numstat projection is malformed or duplicated");
+    }
+    entries.set(path, Object.freeze({ added, deleted }));
+  }
+  return entries;
+}
+
+function parseGroundedHeadIdentity(bytes, wantedPaths, label) {
+  const identities = new Map();
+  for (const token of decodeGroundedNulProjection(bytes, label)) {
+    const tab = token.indexOf("\t");
+    const metadata = tab < 0 ? [] : token.slice(0, tab).split(" ");
+    if (
+      metadata.length !== 3 ||
+      !/^[0-7]{6}$/u.test(metadata[0]) ||
+      !/^(?:blob|commit)$/u.test(metadata[1]) ||
+      !/^[0-9a-f]{40,64}$/u.test(metadata[2])
+    ) {
+      throw new Error(label + ": HEAD tree projection is malformed");
+    }
+    const path = token.slice(tab + 1);
+    if (!wantedPaths.has(path)) continue;
+    requireGroundedRepositoryPath(path, label);
+    if (identities.has(path)) throw new Error(label + ": HEAD identity is duplicated");
+    identities.set(path, Object.freeze({ mode: metadata[0], blob: metadata[2] }));
+  }
+  return identities;
+}
+
+function parseGroundedIndexIdentity(bytes, wantedPaths, label) {
+  const identities = new Map();
+  for (const token of decodeGroundedNulProjection(bytes, label)) {
+    const tab = token.indexOf("\t");
+    const metadata = tab < 0 ? [] : token.slice(0, tab).split(" ");
+    if (
+      metadata.length !== 3 ||
+      !/^[0-7]{6}$/u.test(metadata[0]) ||
+      !/^[0-9a-f]{40,64}$/u.test(metadata[1]) ||
+      !/^[0-3]$/u.test(metadata[2])
+    ) {
+      throw new Error(label + ": index stage projection is malformed");
+    }
+    const path = token.slice(tab + 1);
+    if (!wantedPaths.has(path)) continue;
+    requireGroundedRepositoryPath(path, label);
+    if (metadata[2] !== "0" || identities.has(path)) {
+      throw new Error(label + ": index identity is conflicted or duplicated");
+    }
+    identities.set(path, Object.freeze({ mode: metadata[0], blob: metadata[1] }));
+  }
+  return identities;
+}
+
+function sameGroundedIdentity(left, right) {
+  return left === null
+    ? right === null
+    : right !== null && left.mode === right.mode && left.blob === right.blob;
+}
+
+function groundedGitMode(worktree) {
+  if (worktree.kind === "missing") return "000000";
+  if (worktree.kind === "symlink") return "120000";
+  return (worktree.mode & 0o111) === 0 ? "100644" : "100755";
+}
+
+function requireSameGroundedPathSet(left, right, label) {
+  const leftPaths = [...left].sort();
+  const rightPaths = [...right].sort();
+  if (JSON.stringify(leftPaths) !== JSON.stringify(rightPaths)) {
+    throw new Error(label + ": independent path projections disagree");
+  }
+}
+
+function safeGroundedLaneProjection(lane, path, status, numstat, patch, head, index, worktree) {
+  return Object.freeze({
+    status,
+    numstat,
+    safePatchSha256: groundedProjectionSha256({
+      lane,
+      path,
+      status,
+      numstat,
+      wholePatchSha256: patch.sha256,
+      head,
+      index,
+      worktree,
+    }),
+  });
+}
+
+function reconcileGroundedChangeRecords(projection, label) {
+  const {
+    porcelain,
+    stagedNames,
+    stagedNumstat,
+    unstagedNames,
+    unstagedNumstat,
+    untrackedPaths,
+    snapshotPaths,
+    headIdentities,
+    indexIdentities,
+    worktreeEntries,
+    patches,
+  } = projection;
+  requireSameGroundedPathSet(stagedNames.keys(), stagedNumstat.keys(), label + " staged");
+  requireSameGroundedPathSet(unstagedNames.keys(), unstagedNumstat.keys(), label + " unstaged");
+  const porcelainStaged = [...porcelain]
+    .filter(([, entry]) => entry.tracked?.stagedStatus)
+    .map(([path]) => path);
+  const porcelainUnstaged = [...porcelain]
+    .filter(([, entry]) => entry.tracked?.unstagedStatus)
+    .map(([path]) => path);
+  const porcelainUntracked = [...porcelain]
+    .filter(([, entry]) => entry.untracked)
+    .map(([path]) => path);
+  requireSameGroundedPathSet(porcelainStaged, stagedNames.keys(), label + " staged status");
+  requireSameGroundedPathSet(porcelainUnstaged, unstagedNames.keys(), label + " unstaged status");
+  requireSameGroundedPathSet(porcelainUntracked, untrackedPaths, label + " untracked status");
+  const completeUnion = new Set([
+    ...porcelain.keys(),
+    ...stagedNames.keys(),
+    ...unstagedNames.keys(),
+    ...untrackedPaths,
+    ...snapshotPaths,
+  ]);
+  requireSameGroundedPathSet(completeUnion, porcelain.keys(), label + " complete union");
+  requireSameGroundedPathSet(completeUnion, worktreeEntries.keys(), label + " worktree union");
+  const records = [];
+  for (const path of [...completeUnion].sort()) {
+    const state = porcelain.get(path);
+    const tracked = state.tracked;
+    const head = headIdentities.get(path) ?? null;
+    const index = indexIdentities.get(path) ?? null;
+    const worktree = worktreeEntries.get(path);
+    if (
+      !state ||
+      !worktree ||
+      (tracked && (stagedNames.get(path) ?? null) !== tracked.stagedStatus) ||
+      (tracked && (unstagedNames.get(path) ?? null) !== tracked.unstagedStatus)
+    ) {
+      throw new Error(label + ": status projection disagrees at " + path);
+    }
+    if (tracked) {
+      const porcelainHead = /^0+$/u.test(tracked.headMode)
+        ? null
+        : Object.freeze({ mode: tracked.headMode, blob: tracked.headBlob });
+      const porcelainIndex = /^0+$/u.test(tracked.indexMode)
+        ? null
+        : Object.freeze({ mode: tracked.indexMode, blob: tracked.indexBlob });
+      if (
+        !sameGroundedIdentity(head, porcelainHead) ||
+        !sameGroundedIdentity(index, porcelainIndex) ||
+        (!state.untracked && groundedGitMode(worktree) !== tracked.worktreeMode) ||
+        (state.untracked && tracked.worktreeMode !== "000000")
+      ) {
+        throw new Error(label + ": HEAD/index/worktree identity disagrees at " + path);
+      }
+    } else if (head !== null || index !== null) {
+      throw new Error(label + ": untracked path unexpectedly has a HEAD/index identity");
+    }
+    const staged = tracked?.stagedStatus
+      ? safeGroundedLaneProjection(
+          "staged",
+          path,
+          tracked.stagedStatus,
+          stagedNumstat.get(path),
+          patches.headToIndex,
+          head,
+          index,
+          worktree
+        )
+      : null;
+    const unstaged = tracked?.unstagedStatus
+      ? safeGroundedLaneProjection(
+          "unstaged",
+          path,
+          tracked.unstagedStatus,
+          unstagedNumstat.get(path),
+          patches.indexToWorktree,
+          head,
+          index,
+          worktree
+        )
+      : null;
+    const untracked = state.untracked
+      ? Object.freeze({
+          kind: worktree.kind,
+          safePatchSha256: groundedProjectionSha256({
+            lane: "untracked",
+            path,
+            worktree,
+            wholePatchSha256: patches.headToWorktree.sha256,
+          }),
+        })
+      : null;
+    records.push(Object.freeze({ path, staged, unstaged, untracked, head, index, worktree }));
+  }
+  return Object.freeze(records);
+}
+
+function projectSanitizedGroundedPatch(bytes, label) {
+  if (!Buffer.isBuffer(bytes) || bytes.length > MAX_GROUNDED_DIFF_BYTES) {
+    throw new Error(label + ": raw patch exceeds its scan bound");
+  }
+  let source;
+  try {
+    source = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    throw new Error(label + ": raw patch is not canonical UTF-8");
+  }
+  const sanitized = sanitizeSensitiveEvidence(source);
+  const safeBytes = Buffer.from(sanitized, "utf8");
+  return Object.freeze({
+    byteLength: safeBytes.length,
+    sha256: createHash("sha256").update(safeBytes).digest("hex"),
+  });
+}
+
+function groundedPhysicalMode(info) {
+  return Number(info.mode & 0o7777n);
+}
+
+async function captureGroundedWorktreeEntries(paths, untrackedPaths, label) {
+  const entries = new Map();
+  let untrackedTextBytes = 0;
+  for (const relativePath of [...paths].sort()) {
+    const absolutePath = ROOT + "/" + relativePath;
+    let before;
+    try {
+      before = await lstat(absolutePath, { bigint: true });
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+      entries.set(
+        relativePath,
+        Object.freeze({ kind: "missing", mode: null, byteLength: 0, sha256: null })
+      );
+      continue;
+    }
+    if (before.isSymbolicLink()) {
+      const linkValue = await readlink(absolutePath);
+      const after = await lstat(absolutePath, { bigint: true });
+      if (
+        !sameGroundedFileStat(before, after) ||
+        linkValue.startsWith("/") ||
+        linkValue.includes("\0") ||
+        linkValue.split("/").includes("..") ||
+        isSensitiveGroundedPath(linkValue) ||
+        hasSensitiveEvidence(linkValue)
+      ) {
+        throw new Error(label + ": grounded symlink changed or is unsafe");
+      }
+      const linkBytes = Buffer.from(linkValue, "utf8");
+      entries.set(
+        relativePath,
+        Object.freeze({
+          kind: "symlink",
+          mode: groundedPhysicalMode(after),
+          byteLength: linkBytes.length,
+          sha256: createHash("sha256").update(linkBytes).digest("hex"),
+        })
+      );
+      continue;
+    }
+    if (!before.isFile()) throw new Error(label + ": grounded worktree entry is unsupported");
+    const maxBytes = untrackedPaths.has(relativePath)
+      ? MAX_GROUNDED_UNTRACKED_FILE_BYTES
+      : 64 * 1024 * 1024;
+    const { bytes, stat } = await readStableRegularFile(absolutePath, label, maxBytes);
+    let text = null;
+    try {
+      text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+      if (bytes.includes(0)) text = null;
+    } catch {
+      text = null;
+    }
+    if (untrackedPaths.has(relativePath) && text !== null) {
+      untrackedTextBytes += bytes.length;
+      if (untrackedTextBytes > MAX_GROUNDED_UNTRACKED_BYTES || hasSensitiveEvidence(text)) {
+        throw new Error(label + ": grounded untracked text is excessive or sensitive");
+      }
+    }
+    entries.set(
+      relativePath,
+      Object.freeze({
+        kind: text === null ? "binary" : "text",
+        mode: groundedPhysicalMode(stat),
+        byteLength: bytes.length,
+        sha256: createHash("sha256").update(bytes).digest("hex"),
+      })
+    );
+  }
+  return entries;
+}
+
+function safeGroundedIndexProjection(indexAuthority) {
+  return Object.freeze({
+    indexFile: Object.freeze({ ...indexAuthority.indexFile }),
+    stageProjection: Object.freeze({ ...indexAuthority.stageProjection }),
+  });
+}
+
+function requireGroundedChangeManifest(manifest, label) {
+  const keys = [
+    "kind",
+    "version",
+    "head",
+    "branch",
+    "patches",
+    "indexProjection",
+    "worktreeFingerprint",
+    "taskStatuses",
+    "records",
+    "manifestSha256",
+  ];
+  if (
+    !hasExactOwnStringKeys(manifest, keys) ||
+    manifest.kind !== "GroundedChangeManifest" ||
+    manifest.version !== 1 ||
+    !/^[0-9a-f]{40,64}$/u.test(manifest.head) ||
+    typeof manifest.branch !== "string" ||
+    !Array.isArray(manifest.taskStatuses) ||
+    manifest.taskStatuses.length !== TASK_FILES.length ||
+    !Array.isArray(manifest.records) ||
+    !/^[0-9a-f]{64}$/u.test(manifest.manifestSha256)
+  ) {
+    throw new Error(label + ": grounded change manifest shape is invalid");
+  }
+  const paths = manifest.records.map((record) => record?.path);
+  if (
+    paths.some((path) => {
+      try {
+        requireGroundedRepositoryPath(path, label);
+        return false;
+      } catch {
+        return true;
+      }
+    }) ||
+    JSON.stringify(paths) !== JSON.stringify([...new Set(paths)].sort()) ||
+    manifest.taskStatuses.some(
+      (row, index) =>
+        row?.file !== TASK_FILES[index] ||
+        typeof row.status !== "string" ||
+        !Number.isSafeInteger(row.byteLength) ||
+        row.byteLength < 0 ||
+        !/^[0-9a-f]{64}$/u.test(row.sha256)
+    )
+  ) {
+    throw new Error(label + ": grounded manifest paths or task statuses are non-canonical");
+  }
+  const { manifestSha256, ...payload } = manifest;
+  if (groundedProjectionSha256(payload) !== manifestSha256) {
+    throw new Error(label + ": grounded manifest hash is invalid");
+  }
+  return manifest;
+}
+
+async function buildLiveGroundedChangeManifest(snapshot, label) {
+  const [
+    headBytes,
+    branchBytes,
+    porcelainBytes,
+    stagedNameBytes,
+    stagedNumstatBytes,
+    unstagedNameBytes,
+    unstagedNumstatBytes,
+    untrackedBytes,
+    snapshotNameBytes,
+    headTreeBytes,
+    indexStageBytes,
+    headPatchBytes,
+    stagedPatchBytes,
+    unstagedPatchBytes,
+    taskStatuses,
+  ] = await Promise.all([
+    gitBytes(["rev-parse", "HEAD"]),
+    gitBytes(["branch", "--show-current"]),
+    gitBytes(["status", "--porcelain=v2", "-z", "--untracked-files=all", "--no-renames"]),
+    gitBytes(["diff", "--cached", "--name-status", "-z", "--no-renames", "HEAD", "--"]),
+    gitBytes(["diff", "--cached", "--numstat", "-z", "--no-renames", "HEAD", "--"]),
+    gitBytes(["diff", "--name-status", "-z", "--no-renames", "--"]),
+    gitBytes(["diff", "--numstat", "-z", "--no-renames", "--"]),
+    gitBytes(["ls-files", "--others", "--exclude-standard", "-z"]),
+    gitBytes(["diff", "--name-only", "-z", "--no-renames", "HEAD", "--"]),
+    gitBytes(["ls-tree", "-r", "-z", "--full-tree", "HEAD"]),
+    gitBytes(["ls-files", "--stage", "-z"]),
+    gitBytes(["diff", "--no-renames", "--text", "--unified=3", "HEAD", "--"]),
+    gitBytes(["diff", "--cached", "--no-renames", "--text", "--unified=3", "HEAD", "--"]),
+    gitBytes(["diff", "--no-renames", "--text", "--unified=3", "--"]),
+    taskStatusState(),
+  ]);
+  const decodeLine = (bytes, description) => {
+    let value;
+    try {
+      value = new TextDecoder("utf-8", { fatal: true }).decode(bytes).trim();
+    } catch {
+      throw new Error(label + ": " + description + " is not canonical UTF-8");
+    }
+    return value;
+  };
+  const head = decodeLine(headBytes, "HEAD");
+  const branch = decodeLine(branchBytes, "branch");
+  if (
+    head !== snapshot.head ||
+    branch !== snapshot.branch ||
+    sanitizeSensitiveEvidence(branch) !== branch
+  ) {
+    throw new Error(label + ": HEAD or branch disagrees with repository authority");
+  }
+  const porcelain = parseGroundedPorcelain(porcelainBytes, label + " porcelain");
+  const stagedNames = parseGroundedNameStatus(stagedNameBytes, label + " staged names");
+  const stagedNumstat = parseGroundedNumstat(stagedNumstatBytes, label + " staged numstat");
+  const unstagedNames = parseGroundedNameStatus(unstagedNameBytes, label + " unstaged names");
+  const unstagedNumstat = parseGroundedNumstat(unstagedNumstatBytes, label + " unstaged numstat");
+  const untrackedList = decodeGroundedNulProjection(untrackedBytes, label + " untracked").map(
+    (path) => requireGroundedRepositoryPath(path, label + " untracked")
+  );
+  if (untrackedList.length > 256 || new Set(untrackedList).size !== untrackedList.length) {
+    throw new Error(label + ": untracked projection is excessive or duplicated");
+  }
+  const untrackedPaths = new Set(untrackedList);
+  const snapshotPathList = decodeGroundedNulProjection(
+    snapshotNameBytes,
+    label + " snapshot names"
+  ).map((path) => requireGroundedRepositoryPath(path, label + " snapshot names"));
+  const snapshotPaths = new Set(snapshotPathList);
+  if (snapshotPaths.size !== snapshotPathList.length) {
+    throw new Error(label + ": snapshot path projection is duplicated");
+  }
+  const completeUnion = new Set([
+    ...porcelain.keys(),
+    ...stagedNames.keys(),
+    ...unstagedNames.keys(),
+    ...untrackedPaths,
+    ...snapshotPaths,
+  ]);
+  const headIdentities = parseGroundedHeadIdentity(
+    headTreeBytes,
+    completeUnion,
+    label + " HEAD identities"
+  );
+  const indexIdentities = parseGroundedIndexIdentity(
+    indexStageBytes,
+    completeUnion,
+    label + " index identities"
+  );
+  const stageProjection = Object.freeze({
+    byteLength: indexStageBytes.length,
+    sha256: createHash("sha256").update(indexStageBytes).digest("hex"),
+  });
+  if (
+    stageProjection.byteLength !== snapshot.indexAuthority.stageProjection.byteLength ||
+    stageProjection.sha256 !== snapshot.indexAuthority.stageProjection.sha256
+  ) {
+    throw new Error(label + ": exact index projection changed during manifest assembly");
+  }
+  const worktreeEntries = await captureGroundedWorktreeEntries(
+    completeUnion,
+    untrackedPaths,
+    label + " worktree projection"
+  );
+  const patches = Object.freeze({
+    headToWorktree: projectSanitizedGroundedPatch(headPatchBytes, label + " HEAD patch"),
+    headToIndex: projectSanitizedGroundedPatch(stagedPatchBytes, label + " staged patch"),
+    indexToWorktree: projectSanitizedGroundedPatch(unstagedPatchBytes, label + " unstaged patch"),
+  });
+  const records = reconcileGroundedChangeRecords(
+    {
+      porcelain,
+      stagedNames,
+      stagedNumstat,
+      unstagedNames,
+      unstagedNumstat,
+      untrackedPaths,
+      snapshotPaths,
+      headIdentities,
+      indexIdentities,
+      worktreeEntries,
+      patches,
+    },
+    label
+  );
+  const fingerprint = canonicalRepositoryFingerprint(snapshot);
+  const payload = {
+    kind: "GroundedChangeManifest",
+    version: 1,
+    head,
+    branch,
+    patches,
+    indexProjection: safeGroundedIndexProjection(snapshot.indexAuthority),
+    worktreeFingerprint: Object.freeze({
+      pathCount: snapshot.paths.length,
+      sha256: fingerprint.worktreeSha256,
+    }),
+    taskStatuses,
+    records,
+  };
+  return deepFreezeExact({ ...payload, manifestSha256: groundedProjectionSha256(payload) });
+}
+
+function requireGroundedContextProjection(context, authority, label) {
+  if (!hasExactOwnStringKeys(context, ["root", "changeManifest"]) || context.root !== ROOT) {
+    throw new Error(label + ": grounded context shape is invalid");
+  }
+  const manifest = requireGroundedChangeManifest(context.changeManifest, label);
+  const serialized = JSON.stringify(context);
+  if (
+    Buffer.byteLength(serialized, "utf8") > MAX_GROUNDED_CONTEXT_BYTES ||
+    groundedProjectionSha256(context) !== authority.contextSha256 ||
+    manifest.manifestSha256 !== authority.manifestSha256 ||
+    manifest.indexProjection.indexFile.sha256 !== authority.indexFileSha256 ||
+    manifest.indexProjection.stageProjection.sha256 !== authority.stageProjectionSha256 ||
+    manifest.worktreeFingerprint.sha256 !== authority.fingerprint.worktreeSha256
+  ) {
+    throw new Error(label + ": grounded context projection or authority is invalid");
+  }
+  return serialized;
 }
 
 async function repoContext() {
@@ -4785,63 +6571,8 @@ async function repoContext() {
     hashSensitiveEnvProjection(),
   ]);
   const beforeFingerprint = canonicalRepositoryFingerprint(before);
-  const [
-    head,
-    branch,
-    status,
-    diffStat,
-    diffNames,
-    diffPatch,
-    staged,
-    taskStatuses,
-    untrackedFiles,
-  ] = await Promise.all([
-    git(["rev-parse", "HEAD"]),
-    git(["branch", "--show-current"]),
-    git(["status", "--short", "--untracked-files=all", "--no-renames"]),
-    git(["diff", "--stat", "--no-renames", "HEAD"]),
-    git(["diff", "--name-only", "--no-renames", "HEAD"]),
-    git([
-      "diff",
-      "--no-ext-diff",
-      "--no-textconv",
-      "--no-renames",
-      "--text",
-      "--unified=3",
-      "HEAD",
-      "--",
-    ]),
-    git(["diff", "--cached", "--name-only"]),
-    taskStatusState(),
-    groundedUntrackedFiles(),
-  ]);
-  if (Buffer.byteLength(diffPatch) > MAX_GROUNDED_DIFF_BYTES) {
-    throw new Error("TASK-540 grounded diff exceeds its bounded prompt budget");
-  }
-  for (const relativePath of diffNames.split("\n").filter(Boolean)) {
-    if (
-      relativePath.startsWith("/") ||
-      relativePath.includes("\0") ||
-      relativePath.split("/").includes("..") ||
-      isSensitiveGroundedPath(relativePath)
-    ) {
-      throw new Error("TASK-540 grounded tracked path is unsafe");
-    }
-  }
-  const groundedDiffPatch = sanitizeSensitiveEvidence(diffPatch);
-  const sanitizeMetadata = (value) => sanitizeSensitiveEvidence(value.trim());
-  const context = deepFreezeExact({
-    root: ROOT,
-    head: head.trim(),
-    branch: sanitizeMetadata(branch),
-    status: sanitizeMetadata(status),
-    diffStat: sanitizeMetadata(diffStat),
-    diffNames: sanitizeMetadata(diffNames),
-    diffPatch: groundedDiffPatch,
-    stagedNamesForContext: sanitizeMetadata(staged),
-    untrackedFiles,
-    taskStatuses,
-  });
+  const changeManifest = await buildLiveGroundedChangeManifest(before, "TASK-540 grounded context");
+  const context = deepFreezeExact({ root: ROOT, changeManifest });
   if (hasSensitiveEvidenceDeep(context)) {
     throw new Error("TASK-540 grounded context failed value-aware redaction");
   }
@@ -4856,39 +6587,543 @@ async function repoContext() {
   ) {
     throw new Error("TASK-540 grounded context changed while it was assembled");
   }
-  GROUNDED_CONTEXT_AUTHORITY.set(
-    context,
-    Object.freeze({ fingerprint: afterFingerprint, sensitiveEnv: sensitiveEnvAfter })
-  );
+  const authority = Object.freeze({
+    fingerprint: afterFingerprint,
+    sensitiveEnv: sensitiveEnvAfter,
+    contextSha256: groundedProjectionSha256(context),
+    manifestSha256: changeManifest.manifestSha256,
+    indexFileSha256: after.indexAuthority.indexFile.sha256,
+    stageProjectionSha256: after.indexAuthority.stageProjection.sha256,
+  });
+  requireGroundedContextProjection(context, authority, "TASK-540 grounded context");
+  GROUNDED_CONTEXT_AUTHORITY.set(context, authority);
   return context;
+}
+
+function requireGroundedPromptBytes(prompt, label) {
+  if (
+    typeof prompt !== "string" ||
+    prompt.length === 0 ||
+    Buffer.byteLength(prompt, "utf8") > MAX_GROUNDED_PROMPT_BYTES
+  ) {
+    throw new Error(label + ": grounded agent prompt exceeds 128 KiB");
+  }
+  return prompt;
+}
+
+const READ_ONLY_AGENT_SHARED_CONTRACT =
+  "Read-only authority contract: the bounded tool set intentionally provides " +
+  "Read/Grep/Glob and no shell, Bash, or direct git command. Use the exact " +
+  "GroundedChangeManifest below for repository identity evidence; the local orchestrator " +
+  "independently revalidates HEAD, branch, index, and worktree authority. Never report the " +
+  "intentional lack of a shell as a finding or error. The physical-line limit is inclusive: " +
+  "a file at exactly 1,000 lines passes, and only a file above 1,000 lines is a defect.";
+const READ_ONLY_AGENT_RESULT_CONTRACT =
+  READ_ONLY_AGENT_SHARED_CONTRACT +
+  " Result-schema contract: reserve errors[] exclusively for verified blocking " +
+  "contract defects. Every verified blocking defect must be listed in errors[] and requires " +
+  "pass=false; never hide a blocker only in summary. When no blocking defect exists, return " +
+  "pass=true with errors=[] and put non-blocking limitations or observations in summary. " +
+  "Return only the pass, summary, and errors fields required by the result schema.";
+const READ_ONLY_AGENT_AUDIT_CONTRACT =
+  READ_ONLY_AGENT_SHARED_CONTRACT +
+  " Audit-schema contract: return only findings[]. Every verified HIGH, MEDIUM, or LOW defect " +
+  "must be a separate findings[] item with its required owner, area, evidence, and recommendation; " +
+  "never hide a defect outside findings[]. When no defect exists, return findings=[]. Do not " +
+  "return pass, errors, or summary fields because the audit schema forbids them.";
+
+function composeReadOnlyAgentPrompt(body, label, schema) {
+  if (typeof body !== "string" || body.length === 0 || typeof label !== "string") {
+    throw new Error(label + ": read-only agent prompt body is invalid");
+  }
+  const contract =
+    schema === RESULT_SCHEMA
+      ? READ_ONLY_AGENT_RESULT_CONTRACT
+      : schema === AUDIT_SCHEMA
+        ? READ_ONLY_AGENT_AUDIT_CONTRACT
+        : null;
+  if (contract === null) {
+    throw new Error(label + ": read-only agent schema has no exact prompt contract");
+  }
+  return contract + "\n\n" + body;
+}
+
+function composeGroundedPrompt(body, serializedContext, label) {
+  if (
+    typeof serializedContext !== "string" ||
+    Buffer.byteLength(serializedContext, "utf8") > MAX_GROUNDED_CONTEXT_BYTES
+  ) {
+    throw new Error(label + ": serialized grounded context exceeds 96 KiB");
+  }
+  return requireGroundedPromptBytes(
+    body +
+      "\n\nRoot-local GroundedChangeManifest captured immediately before dispatch is exact dirty " +
+      "evidence, not permission to alter unrelated work. It intentionally contains no raw patch " +
+      "or file bytes. Read current semantic state with Read/Grep/Glob and verify every claim:\n" +
+      serializedContext,
+    label
+  );
 }
 
 async function groundedPrompt(body) {
   const context = await repoContext();
-  return Object.freeze({
+  const authority = GROUNDED_CONTEXT_AUTHORITY.get(context);
+  const serialized = requireGroundedContextProjection(
     context,
-    text:
-      body +
-      "\n\nRoot-local state captured immediately before dispatch, including the tracked " +
-      "HEAD patch and bounded complete untracked-file projections (verify it yourself; " +
-      "do not treat it as permission to alter unrelated work):\n" +
-      JSON.stringify(context),
-  });
+    authority,
+    "TASK-540 grounded prompt"
+  );
+  const text = composeGroundedPrompt(body, serialized, "TASK-540 grounded prompt");
+  return Object.freeze({ context, text });
 }
 
 async function requireGroundedContextCurrent(context, label) {
   const authority = GROUNDED_CONTEXT_AUTHORITY.get(context);
   if (!authority) throw new Error(label + ": grounded context authority is missing");
+  requireGroundedContextProjection(context, authority, label);
   const [snapshot, sensitiveEnv] = await Promise.all([
     worktreeSnapshot(label + " repository snapshot", GROUNDED_TASK_STATUS_PATHS),
     hashSensitiveEnvProjection(),
   ]);
   if (
     !sameRepositoryFingerprint(authority.fingerprint, canonicalRepositoryFingerprint(snapshot)) ||
+    !sameGitIndexAuthority(snapshot.indexAuthority, {
+      ...snapshot.indexAuthority,
+      indexFile: context.changeManifest.indexProjection.indexFile,
+      stageProjection: context.changeManifest.indexProjection.stageProjection,
+    }) ||
     !equalHashMaps(authority.sensitiveEnv, sensitiveEnv)
   ) {
     throw new Error(label + ": grounded context authority changed before dispatch");
   }
+}
+
+function nulFixtureBytes(tokens) {
+  return Buffer.from(tokens.map((token) => token + "\0").join(""), "utf8");
+}
+
+function groundedFixtureWorktree(kind, seed, mode = 0o644) {
+  if (kind === "missing") {
+    return Object.freeze({ kind, mode: null, byteLength: 0, sha256: null });
+  }
+  const bytes = Buffer.from(seed, "utf8");
+  return Object.freeze({
+    kind,
+    mode,
+    byteLength: bytes.length,
+    sha256: createHash("sha256").update(bytes).digest("hex"),
+  });
+}
+
+function buildGroundedProjectionFixture() {
+  const zeroBlob = "0".repeat(40);
+  const blob = (character) => character.repeat(40);
+  const text = (seed) => groundedFixtureWorktree("text", seed);
+  const trackedRows = [
+    {
+      path: "fixture/add.ts",
+      x: "A",
+      y: ".",
+      head: null,
+      index: { mode: "100644", blob: blob("1") },
+      worktree: text("add"),
+      snapshot: true,
+    },
+    {
+      path: "fixture/cancellation.ts",
+      x: "A",
+      y: "D",
+      head: null,
+      index: { mode: "100644", blob: blob("2") },
+      worktree: groundedFixtureWorktree("missing", ""),
+      snapshot: false,
+    },
+    {
+      path: "fixture/delete.ts",
+      x: "D",
+      y: ".",
+      head: { mode: "100644", blob: blob("3") },
+      index: null,
+      worktree: groundedFixtureWorktree("missing", ""),
+      snapshot: true,
+    },
+    {
+      path: "fixture/mm.ts",
+      x: "M",
+      y: "M",
+      head: { mode: "100644", blob: blob("4") },
+      index: { mode: "100644", blob: blob("5") },
+      worktree: text("mm"),
+      snapshot: true,
+    },
+    {
+      path: "fixture/staged-only.ts",
+      x: "M",
+      y: ".",
+      head: { mode: "100644", blob: blob("6") },
+      index: { mode: "100644", blob: blob("7") },
+      worktree: text("staged"),
+      snapshot: true,
+    },
+    {
+      path: "fixture/type.ts",
+      x: "T",
+      y: ".",
+      head: { mode: "100644", blob: blob("8") },
+      index: { mode: "120000", blob: blob("9") },
+      worktree: groundedFixtureWorktree("symlink", "relative-module.ts", 0o777),
+      snapshot: true,
+    },
+    {
+      path: "fixture/unstaged-only.ts",
+      x: ".",
+      y: "M",
+      head: { mode: "100644", blob: blob("a") },
+      index: { mode: "100644", blob: blob("a") },
+      worktree: text("unstaged"),
+      snapshot: true,
+    },
+  ];
+  const untrackedRows = [
+    ["fixture/untracked-binary.bin", groundedFixtureWorktree("binary", "binary\0fixture")],
+    ["fixture/untracked-link", groundedFixtureWorktree("symlink", "relative-target", 0o777)],
+    ["fixture/untracked-text.ts", text("untracked text")],
+  ];
+  const porcelainTokens = trackedRows.map(({ path, x, y, head, index, worktree }) =>
+    [
+      "1",
+      x + y,
+      "N...",
+      head?.mode ?? "000000",
+      index?.mode ?? "000000",
+      groundedGitMode(worktree),
+      head?.blob ?? zeroBlob,
+      index?.blob ?? zeroBlob,
+      path,
+    ].join(" ")
+  );
+  porcelainTokens.push(...untrackedRows.map(([path]) => "? " + path));
+  const laneTokens = (lane) =>
+    trackedRows.filter((row) => row[lane] !== ".").flatMap((row) => [row[lane], row.path]);
+  const numstatTokens = (lane) =>
+    trackedRows
+      .filter((row) => row[lane] !== ".")
+      .map((row) => (row.worktree.kind === "binary" ? "-\t-\t" : "1\t1\t") + row.path);
+  const completePaths = new Set([
+    ...trackedRows.map(({ path }) => path),
+    ...untrackedRows.map(([path]) => path),
+  ]);
+  const headTreeTokens = trackedRows
+    .filter(({ head }) => head)
+    .map(({ path, head }) => head.mode + " blob " + head.blob + "\t" + path);
+  const indexTokens = trackedRows
+    .filter(({ index }) => index)
+    .map(({ path, index }) => index.mode + " " + index.blob + " 0\t" + path);
+  const porcelain = parseGroundedPorcelain(
+    nulFixtureBytes(porcelainTokens),
+    "TASK-540 grounded porcelain fixture"
+  );
+  const stagedNames = parseGroundedNameStatus(
+    nulFixtureBytes(laneTokens("x")),
+    "TASK-540 grounded staged fixture"
+  );
+  const stagedNumstat = parseGroundedNumstat(
+    nulFixtureBytes(numstatTokens("x")),
+    "TASK-540 grounded staged numstat fixture"
+  );
+  const unstagedNames = parseGroundedNameStatus(
+    nulFixtureBytes(laneTokens("y")),
+    "TASK-540 grounded unstaged fixture"
+  );
+  const unstagedNumstat = parseGroundedNumstat(
+    nulFixtureBytes(numstatTokens("y")),
+    "TASK-540 grounded unstaged numstat fixture"
+  );
+  const untrackedPaths = new Set(untrackedRows.map(([path]) => path));
+  const snapshotPaths = new Set(
+    trackedRows.filter(({ snapshot }) => snapshot).map(({ path }) => path)
+  );
+  const headIdentities = parseGroundedHeadIdentity(
+    nulFixtureBytes(headTreeTokens),
+    completePaths,
+    "TASK-540 grounded HEAD fixture"
+  );
+  const indexIdentities = parseGroundedIndexIdentity(
+    nulFixtureBytes(indexTokens),
+    completePaths,
+    "TASK-540 grounded index fixture"
+  );
+  const worktreeEntries = new Map([
+    ...trackedRows.map(({ path, worktree }) => [path, worktree]),
+    ...untrackedRows,
+  ]);
+  const patches = Object.freeze({
+    headToWorktree: projectSanitizedGroundedPatch(
+      Buffer.from("fixture HEAD patch\n"),
+      "TASK-540 grounded fixture"
+    ),
+    headToIndex: projectSanitizedGroundedPatch(
+      Buffer.from("fixture staged patch\n"),
+      "TASK-540 grounded fixture"
+    ),
+    indexToWorktree: projectSanitizedGroundedPatch(
+      Buffer.from("fixture unstaged patch\n"),
+      "TASK-540 grounded fixture"
+    ),
+  });
+  return Object.freeze({
+    projection: {
+      porcelain,
+      stagedNames,
+      stagedNumstat,
+      unstagedNames,
+      unstagedNumstat,
+      untrackedPaths,
+      snapshotPaths,
+      headIdentities,
+      indexIdentities,
+      worktreeEntries,
+      patches,
+    },
+    records: reconcileGroundedChangeRecords(
+      {
+        porcelain,
+        stagedNames,
+        stagedNumstat,
+        unstagedNames,
+        unstagedNumstat,
+        untrackedPaths,
+        snapshotPaths,
+        headIdentities,
+        indexIdentities,
+        worktreeEntries,
+        patches,
+      },
+      "TASK-540 grounded projection fixture"
+    ),
+  });
+}
+
+async function assertGroundedChangeManifestContract(context) {
+  const label = "TASK-540 grounded manifest self-test";
+  const authority = GROUNDED_CONTEXT_AUTHORITY.get(context);
+  if (!authority) throw new Error(label + ": live authority is missing");
+  const manifest = requireGroundedChangeManifest(context.changeManifest, label);
+  const serialized = requireGroundedContextProjection(context, authority, label);
+  const readOnlyResultPrompt = composeReadOnlyAgentPrompt(
+    "Read-only live TASK-540 grounded-manifest diagnostic.",
+    label,
+    RESULT_SCHEMA
+  );
+  const prompt = composeGroundedPrompt(readOnlyResultPrompt, serialized, label);
+  const readOnlyResultContractPass =
+    readOnlyResultPrompt.startsWith(READ_ONLY_AGENT_RESULT_CONTRACT + "\n\n") &&
+    readOnlyResultPrompt.endsWith("Read-only live TASK-540 grounded-manifest diagnostic.") &&
+    readOnlyResultPrompt.includes("pass=true with errors=[]") &&
+    readOnlyResultPrompt.includes("requires pass=false") &&
+    readOnlyResultPrompt.includes("never hide a blocker only in summary") &&
+    readOnlyResultPrompt.includes("exactly 1,000 lines passes") &&
+    readOnlyResultPrompt.includes("no shell, Bash, or direct git command");
+  const readOnlyAuditPrompt = composeReadOnlyAgentPrompt(
+    "Read-only audit-contract fixture body.",
+    label,
+    AUDIT_SCHEMA
+  );
+  const readOnlyAuditGroundedPrompt = composeGroundedPrompt(readOnlyAuditPrompt, serialized, label);
+  const readOnlyAuditContractPass =
+    readOnlyAuditPrompt.startsWith(READ_ONLY_AGENT_AUDIT_CONTRACT + "\n\n") &&
+    readOnlyAuditPrompt.endsWith("Read-only audit-contract fixture body.") &&
+    readOnlyAuditPrompt.includes("Every verified HIGH, MEDIUM, or LOW defect") &&
+    readOnlyAuditPrompt.includes("return findings=[]") &&
+    readOnlyAuditPrompt.includes("Do not return pass, errors, or summary fields") &&
+    !readOnlyAuditPrompt.includes("pass=true with errors=[]") &&
+    Buffer.byteLength(readOnlyAuditGroundedPrompt, "utf8") < MAX_GROUNDED_PROMPT_BYTES;
+  let unknownReadOnlySchemaRejected = false;
+  try {
+    composeReadOnlyAgentPrompt("unknown-schema fixture", label, Object.freeze({}));
+  } catch {
+    unknownReadOnlySchemaRejected = true;
+  }
+  const readOnlyResultMatrixPass =
+    resultPassed({ pass: true, summary: "warning only", errors: [] }) &&
+    !resultPassed({ pass: true, summary: "incoherent blocker", errors: ["blocking defect"] }) &&
+    !resultPassed({ pass: false, summary: "blocking", errors: ["blocking defect"] }) &&
+    !resultPassed({ pass: false, summary: "incoherent empty failure", errors: [] });
+  const fixture = buildGroundedProjectionFixture();
+  const byPath = new Map(fixture.records.map((record) => [record.path, record]));
+  const fixturePass =
+    byPath.get("fixture/staged-only.ts")?.staged !== null &&
+    byPath.get("fixture/staged-only.ts")?.unstaged === null &&
+    byPath.get("fixture/unstaged-only.ts")?.staged === null &&
+    byPath.get("fixture/unstaged-only.ts")?.unstaged !== null &&
+    byPath.get("fixture/mm.ts")?.staged !== null &&
+    byPath.get("fixture/mm.ts")?.unstaged !== null &&
+    byPath.get("fixture/cancellation.ts")?.staged?.status === "A" &&
+    byPath.get("fixture/cancellation.ts")?.unstaged?.status === "D" &&
+    byPath.get("fixture/add.ts")?.head === null &&
+    byPath.get("fixture/delete.ts")?.index === null &&
+    byPath.get("fixture/type.ts")?.index?.mode === "120000" &&
+    byPath.get("fixture/untracked-text.ts")?.untracked?.kind === "text" &&
+    byPath.get("fixture/untracked-binary.bin")?.untracked?.kind === "binary" &&
+    byPath.get("fixture/untracked-link")?.untracked?.kind === "symlink";
+  if (!fixturePass) throw new Error(label + ": pure staged/unstaged/kind fixtures failed");
+
+  const fixtureMutations = [
+    {
+      name: "staged numstat omission",
+      mutate(projection) {
+        projection.stagedNumstat = new Map(projection.stagedNumstat);
+        projection.stagedNumstat.delete("fixture/add.ts");
+      },
+    },
+    {
+      name: "unstaged status disagreement",
+      mutate(projection) {
+        projection.unstagedNames = new Map(projection.unstagedNames);
+        projection.unstagedNames.set("fixture/mm.ts", "D");
+      },
+    },
+    {
+      name: "snapshot path omission from porcelain",
+      mutate(projection) {
+        projection.porcelain = new Map(projection.porcelain);
+        projection.porcelain.delete("fixture/type.ts");
+      },
+    },
+  ];
+  let fixtureMutationRejections = 0;
+  for (const { name, mutate } of fixtureMutations) {
+    const projection = { ...fixture.projection };
+    mutate(projection);
+    try {
+      reconcileGroundedChangeRecords(projection, label + " " + name);
+    } catch {
+      fixtureMutationRejections += 1;
+    }
+  }
+  let duplicateProjectionRejected = false;
+  try {
+    parseGroundedNameStatus(
+      nulFixtureBytes(["M", "fixture/duplicate.ts", "M", "fixture/duplicate.ts"]),
+      label + " duplicate"
+    );
+  } catch {
+    duplicateProjectionRejected = true;
+  }
+  if (fixtureMutationRejections !== fixtureMutations.length || !duplicateProjectionRejected) {
+    throw new Error(label + ": projection disagreement mutation escaped");
+  }
+
+  const manifestMutations = [
+    ["omission", (copy) => copy.changeManifest.records.pop()],
+    ["duplicate", (copy) => copy.changeManifest.records.push(copy.changeManifest.records.at(-1))],
+    ["reorder", (copy) => copy.changeManifest.records.reverse()],
+    [
+      "stage swap",
+      (copy) => {
+        const record = copy.changeManifest.records.find((row) => row.staged && row.unstaged);
+        if (!record) throw new Error(label + ": live MM record is missing");
+        [record.staged, record.unstaged] = [record.unstaged, record.staged];
+      },
+    ],
+    ["manifest hash", (copy) => (copy.changeManifest.manifestSha256 = "0".repeat(64))],
+    ["task status", (copy) => (copy.changeManifest.taskStatuses[0].status += " tampered")],
+    [
+      "index projection",
+      (copy) => (copy.changeManifest.indexProjection.stageProjection.sha256 = "0".repeat(64)),
+    ],
+    [
+      "worktree fingerprint",
+      (copy) => (copy.changeManifest.worktreeFingerprint.sha256 = "0".repeat(64)),
+    ],
+  ];
+  let manifestMutationRejections = 0;
+  for (const [name, mutate] of manifestMutations) {
+    const copy = JSON.parse(JSON.stringify(context));
+    mutate(copy);
+    try {
+      requireGroundedContextProjection(copy, authority, label + " " + name);
+    } catch {
+      manifestMutationRejections += 1;
+    }
+  }
+  if (manifestMutationRejections !== manifestMutations.length) {
+    throw new Error(label + ": manifest tamper mutation escaped");
+  }
+  let missingOpaqueAuthorityRejected = false;
+  try {
+    await requireGroundedContextCurrent(JSON.parse(JSON.stringify(context)), label);
+  } catch {
+    missingOpaqueAuthorityRejected = true;
+  }
+  if (!missingOpaqueAuthorityRejected) {
+    throw new Error(label + ": copied context acquired opaque dispatch authority");
+  }
+
+  const { manifestSha256, ...payload } = manifest;
+  const reversedPayload = Object.fromEntries(Object.entries(payload).reverse());
+  const canonicalHashPass =
+    groundedProjectionSha256(payload) === manifestSha256 &&
+    groundedProjectionSha256(reversedPayload) === manifestSha256;
+  const secretPatch = Buffer.from('+password="grounded omitted fixture secret"\n', "utf8");
+  const secretProjection = projectSanitizedGroundedPatch(secretPatch, label + " secret patch");
+  const sanitizedSecret = Buffer.from(sanitizeSensitiveEvidence(secretPatch.toString("utf8")));
+  const secretProjectionPass =
+    secretProjection.sha256 === createHash("sha256").update(sanitizedSecret).digest("hex") &&
+    secretProjection.sha256 !== createHash("sha256").update(secretPatch).digest("hex") &&
+    !JSON.stringify(secretProjection).includes("grounded omitted fixture secret");
+  requireGroundedPromptBytes("a".repeat(MAX_GROUNDED_PROMPT_BYTES), label);
+  requireGroundedPromptBytes("ą".repeat(MAX_GROUNDED_PROMPT_BYTES / 2), label);
+  let promptCapRejections = 0;
+  for (const value of [
+    "a".repeat(MAX_GROUNDED_PROMPT_BYTES + 1),
+    "a".repeat(MAX_GROUNDED_PROMPT_BYTES - 1) + "ą",
+  ]) {
+    try {
+      requireGroundedPromptBytes(value, label);
+    } catch {
+      promptCapRejections += 1;
+    }
+  }
+  let contextCapRejected = false;
+  try {
+    composeGroundedPrompt("fixture", "a".repeat(MAX_GROUNDED_CONTEXT_BYTES + 1), label);
+  } catch {
+    contextCapRejected = true;
+  }
+  const paths = manifest.records.map(({ path }) => path);
+  const liveProjectionPass =
+    paths.length === new Set(paths).size &&
+    JSON.stringify(paths) === JSON.stringify([...paths].sort()) &&
+    Buffer.byteLength(serialized, "utf8") < MAX_GROUNDED_CONTEXT_BYTES &&
+    Buffer.byteLength(prompt, "utf8") < MAX_GROUNDED_PROMPT_BYTES &&
+    manifest.patches.headToWorktree.byteLength > 1024 * 1024 &&
+    !serialized.includes('"diffPatch"') &&
+    !serialized.includes('"content"') &&
+    !serialized.includes('"target"') &&
+    !hasSensitiveEvidenceDeep(context);
+  if (
+    !canonicalHashPass ||
+    !readOnlyResultContractPass ||
+    !readOnlyAuditContractPass ||
+    !unknownReadOnlySchemaRejected ||
+    !readOnlyResultMatrixPass ||
+    !secretProjectionPass ||
+    promptCapRejections !== 2 ||
+    !contextCapRejected ||
+    !liveProjectionPass
+  ) {
+    throw new Error(label + ": canonical hash, secret scan, cap, or live projection failed");
+  }
+  return Object.freeze({
+    cases: 35,
+    contextBytes: Buffer.byteLength(serialized, "utf8"),
+    promptBytes: Buffer.byteLength(prompt, "utf8"),
+    rawHeadPatchSafeBytes: manifest.patches.headToWorktree.byteLength,
+    changedPaths: manifest.records.length,
+    manifestMutationRejections,
+    fixtureMutationRejections: fixtureMutationRejections + 1,
+  });
 }
 
 async function runReadOnlyAgent(prompt, options) {
@@ -4899,7 +7134,10 @@ async function runReadOnlyAgent(prompt, options) {
   let result = null;
   let dispatchError = null;
   try {
-    result = await dispatchAgentSafely(await groundedPrompt(prompt), options);
+    result = await dispatchAgentSafely(
+      await groundedPrompt(composeReadOnlyAgentPrompt(prompt, options.label, options.schema)),
+      options
+    );
   } catch (error) {
     dispatchError = error;
   }
@@ -4947,6 +7185,810 @@ const ASSISTANT_PREFERENCE_PROPERTY_FORMS = Object.freeze([
     "      showFieldMetadata: false,\n" +
     "    },\n",
 ]);
+const L02_ASSISTANT_HARNESS_PATH = "tests/vitest/ui/support/assistantPanelInteractionHarness.tsx";
+const L02_ASSISTANT_SUITE_PATHS = Object.freeze([
+  "tests/vitest/ui/assistant-panel-interaction.test.tsx",
+  "tests/vitest/ui/assistant-panel-conversation.test.tsx",
+]);
+const L02_ASSISTANT_HARNESS_MODULE = "./support/assistantPanelInteractionHarness";
+const L02_ASSISTANT_PANEL_MODULE = "../../../core/admin/ui/assistant/AssistantPanel";
+const L02_ASSISTANT_INTERACTION_USER_SETTINGS_CLIENT_TOKEN =
+  "../../../core/admin/services/userSettingsClient|namespace|*|userSettingsClient|type:false";
+const L02_ASSISTANT_HARNESS_EXPORTS = Object.freeze([
+  "basicIntakeSession",
+  "findButton",
+  "flush",
+  "makeUserSettings",
+  "mockUserSettings",
+  "mount",
+  "resetAssistantPanelTestState",
+  "setInputValue",
+  "setTextareaValue",
+]);
+const L02_ASSISTANT_DECLARATION_SHA256 =
+  "7c4545631fd23c811b5639bc4c27496a18e70d874431df5b8c895757a794eb4e";
+const L02_ASSISTANT_PRE_SPLIT_REVISION = "d803bbcfa5b52cb1e5036836592bd92ee2c03b6f";
+const L02_ASSISTANT_PRE_SPLIT_PATH = "tests/vitest/ui/assistant-panel-interaction.test.tsx";
+const L02_ASSISTANT_REACT_ACT_STATEMENT_SHA256 =
+  "028bf59ba7feb085bc2bedc18b1c4ff999b1b52f5b7c23bb97f1fd3aa98c856f";
+const L02_ASSISTANT_HELPER_INITIALIZER_SHA256 = Object.freeze({
+  basicIntakeSession: "7bf2de347646a344deb377d40805ea11988c63e34f0bba83450895c200418aeb",
+  findButton: "77bfd1b4d9fbc79d701725eb1237ebc15aa24e78b62e4598cd445dbae0b577e0",
+  flush: "7e94e45c0ce9ca18a36114888674a1b1c5bbab1d3d92fc1efe48647977f1b260",
+  makeUserSettings: "7082645253d69626a3ce0ae38b36a4ed0e0e4caaee6d8380759580c71ca7387b",
+  mockUserSettings: "470061ac277853be2618d2bab195557c423fa4edd7bbbafd309d7337c072f84b",
+  mount: "28355d8f0d1c335e2015e8cc96ac0e65a6fe8d25ecc97faaf7b20f930fcf3643",
+  resetAssistantPanelTestState: "084294adbdc620d12f40720d151c70693211995acd886a917325ee3968b07a7e",
+  setInputValue: "a3d4f565d557f907bf9f34aa69c1a81f550234b6edfe1ea1f0fb52888c74bbab",
+  setTextareaValue: "cfb156c632959086a5282117bcdcdc354f4f5f4cfe3bd9622ae37b7a585b909f",
+});
+const L02_ASSISTANT_HARNESS_IMPORT_TOKENS = Object.freeze([
+  "react|default|React|React|type:false",
+  "react-dom/client|named|createRoot|createRoot|type:false",
+  "vitest|named|vi|vi|type:false",
+  "../../../../core/admin/services/userSettingsClient|namespace|*|userSettingsClient|type:false",
+  "../../../../core/admin/services/userSettingsClient|named|UserSettings|UserSettings|type:true",
+  "../../../../core/admin/ui/assistant/AssistantPanel|named|clearAssistantRuntimeStateCache|clearAssistantRuntimeStateCache|type:false",
+  "../../../../core/admin/ui/assistant/assistantConversationState|named|clearAssistantConversationState|clearAssistantConversationState|type:false",
+  "../../../../core/services/assistant/assistantSiteBuilderIntakeTypes|named|ASSISTANT_SITE_BUILDER_INTAKE_VERSION|ASSISTANT_SITE_BUILDER_INTAKE_VERSION|type:false",
+  "../../../../core/services/assistant/assistantSiteBuilderIntakeTypes|named|AssistantSiteBuilderIntakeSession|AssistantSiteBuilderIntakeSession|type:true",
+]);
+const L02_ASSISTANT_SUITE_ALLOWED_IMPORT_TOKENS = Object.freeze([
+  "react|default|React|React|type:false",
+  "vitest|named|afterEach|afterEach|type:false",
+  "vitest|named|expect|expect|type:false",
+  "vitest|named|test|test|type:false",
+  "vitest|named|vi|vi|type:false",
+  "../../../core/admin/services/assistantClient|namespace|*|assistantClient|type:false",
+  "../../../core/admin/services/assistantStatusClient|namespace|*|assistantStatusClient|type:false",
+  L02_ASSISTANT_INTERACTION_USER_SETTINGS_CLIENT_TOKEN,
+  "../../../core/admin/ui/assistant/AssistantPanel|named|AssistantPanel|AssistantPanel|type:false",
+  "../../../core/admin/ui/assistant/assistantPanelEvents|named|openAssistantPanel|openAssistantPanel|type:false",
+  "../../../core/admin/ui/contexts/AdminAssistantConfigContext|named|AdminAssistantConfigProvider|AdminAssistantConfigProvider|type:false",
+  "../../../core/admin/ui/contexts/AdminRouterContext|named|AdminRouterProvider|AdminRouterProvider|type:false",
+  "../../../core/services/assistant/assistantSiteBuilderIntakeAdvancedFlow|named|buildAdvancedSiteBuilderNeedsInputPlan|buildAdvancedSiteBuilderNeedsInputPlan|type:false",
+  "../../../core/services/assistant/assistantSiteBuilderIntakeBasicFlow|named|buildBasicSiteBuilderNeedsInputPlan|buildBasicSiteBuilderNeedsInputPlan|type:false",
+  "../../../core/services/assistant/assistantSiteBuilderIntakeTypes|named|ASSISTANT_SITE_BUILDER_INTAKE_VERSION|ASSISTANT_SITE_BUILDER_INTAKE_VERSION|type:false",
+  "../../../core/services/assistant/assistantSiteBuilderIntakeTypes|named|AssistantSiteBuilderIntakeSession|AssistantSiteBuilderIntakeSession|type:true",
+  ...L02_ASSISTANT_HARNESS_EXPORTS.map(
+    (name) => `${L02_ASSISTANT_HARNESS_MODULE}|named|${name}|${name}|type:false`
+  ),
+]);
+
+const L04_PAGE_HARNESS_PATH = "tests/vitest/ui/support/customScreenEditorPageHarness.tsx";
+const L04_PAGE_DECLARATION_SHA256 =
+  "2bd33166dfd768b089caf437b5263413d24e033eb18b9a92d152321525a898bb";
+const L04_PAGE_PROTECTED_HARNESS_EXPORTS = Object.freeze([
+  "Buffer",
+  "fetch",
+  "globalThis",
+  "process",
+  "readFile",
+  "readFileSync",
+  "require",
+  "resolve",
+  "writeFile",
+  "writeFileSync",
+]);
+const L04_PAGE_MODULE_CONTRACTS = Object.freeze({
+  "tests/vitest/ui/custom-screens-page.test.tsx": Object.freeze({
+    moduleSha256: "e11e53c9e39afac26b006cb316b0234fcd61c50c825f08a1285c6c1595601851",
+    exports: Object.freeze([]),
+    importTokens: Object.freeze([
+      "../../../core/admin/services/cachePolicy|named|cacheKeys|cacheKeys|type:false",
+      "../../../core/admin/ui/custom-screens/CustomScreenEditorPage|named|CustomScreenEditorPage|CustomScreenEditorPage|type:false",
+      "../../../core/admin/ui/custom-screens/CustomScreenListPage|named|CustomScreenListPage|CustomScreenListPage|type:false",
+      "../../utils/adminRouterRender|named|renderAdminUi|renderAdminUi|type:false",
+      "vitest|named|expect|expect|type:false",
+      "vitest|named|test|test|type:false",
+      "vitest|named|vi|vi|type:false",
+    ]),
+  }),
+  "tests/vitest/ui/custom-screen-editor-draft-and-save.test.tsx": Object.freeze({
+    moduleSha256: "2da8260b778f7a1f900c2a717716bd27f5ff582e1812e74ea029588b110d00e4",
+    exports: Object.freeze([]),
+    importTokens: Object.freeze([
+      "../../../core/admin/services/apiClient|named|ApiClientError|ApiClientError|type:false",
+      "../../../core/admin/services/customScreensClient|named|CustomScreenRecord|CustomScreenRecord|type:true",
+      "../../../core/admin/ui/custom-screens/CustomScreenEditorPage|named|advanceBuilderDraftGeneration|advanceBuilderDraftGeneration|type:false",
+      "../../../core/admin/ui/custom-screens/CustomScreenEditorPage|named|getBuilderExternalRevisionSaveError|getBuilderExternalRevisionSaveError|type:false",
+      "../../../core/admin/ui/custom-screens/CustomScreenEditorPage|named|runBuilderManualRefresh|runBuilderManualRefresh|type:false",
+      "./support/customScreenEditorPageHarness|named|createCustomScreenEditorPageHarness|createCustomScreenEditorPageHarness|type:false",
+      "node:fs|named|readFileSync|readFileSync|type:false",
+      "node:path|named|resolve|resolve|type:false",
+      "vitest|named|afterEach|afterEach|type:false",
+      "vitest|named|beforeEach|beforeEach|type:false",
+      "vitest|named|describe|describe|type:false",
+      "vitest|named|expect|expect|type:false",
+      "vitest|named|test|test|type:false",
+      "vitest|named|vi|vi|type:false",
+    ]),
+  }),
+  "tests/vitest/ui/custom-screen-editor-hydration-authority.test.tsx": Object.freeze({
+    moduleSha256: "e2091daa8669394f89d3aa9afd5a6f18baf38d8c9a959aeaf804ede0e67bc7a3",
+    exports: Object.freeze([]),
+    importTokens: Object.freeze([
+      "../../../core/admin/services/apiClient|named|ApiClientError|ApiClientError|type:false",
+      "../../../core/admin/services/cachePolicy|named|cacheKeys|cacheKeys|type:false",
+      "../../../core/admin/services/customScreensClient|named|CustomScreenRecord|CustomScreenRecord|type:true",
+      "../../../core/admin/ui/custom-screens/CustomScreenEditorPage|named|runBuilderManualRefresh|runBuilderManualRefresh|type:false",
+      "../../../core/admin/utils/cacheBus|named|broadcastCacheEvent|broadcastCacheEvent|type:false",
+      "../../../core/admin/utils/cacheBus|named|createCacheEventOperationToken|createCacheEventOperationToken|type:false",
+      "./support/customScreenEditorPageHarness|named|createCustomScreenEditorPageHarness|createCustomScreenEditorPageHarness|type:false",
+      "react|default|React|React|type:false",
+      "vitest|named|afterEach|afterEach|type:false",
+      "vitest|named|beforeEach|beforeEach|type:false",
+      "vitest|named|describe|describe|type:false",
+      "vitest|named|expect|expect|type:false",
+      "vitest|named|test|test|type:false",
+      "vitest|named|vi|vi|type:false",
+    ]),
+  }),
+  "tests/vitest/ui/custom-screen-editor-visit-authority.test.tsx": Object.freeze({
+    moduleSha256: "5d5a6e9506f3adc57fb6a12a535cbe6af29d15095be619004633fce1bdda43fd",
+    exports: Object.freeze([]),
+    importTokens: Object.freeze([
+      "../../../core/admin/services/cachePolicy|named|cacheKeys|cacheKeys|type:false",
+      "../../../core/admin/services/customScreensClient|named|CustomScreenRecord|CustomScreenRecord|type:true",
+      "../../../core/admin/services/customScreensClient|namespace|*|customScreensClient|type:false",
+      "../../../core/admin/ui/custom-screens/CustomScreenEditorPage|named|getBuilderExternalRevisionSaveError|getBuilderExternalRevisionSaveError|type:false",
+      "../../../core/admin/utils/cacheBus|named|subscribeCacheEvents|subscribeCacheEvents|type:false",
+      "./support/customScreenEditorPageHarness|named|createCustomScreenEditorPageHarness|createCustomScreenEditorPageHarness|type:false",
+      "vitest|named|afterEach|afterEach|type:false",
+      "vitest|named|beforeEach|beforeEach|type:false",
+      "vitest|named|describe|describe|type:false",
+      "vitest|named|expect|expect|type:false",
+      "vitest|named|test|test|type:false",
+      "vitest|named|vi|vi|type:false",
+    ]),
+  }),
+  [L04_PAGE_HARNESS_PATH]: Object.freeze({
+    moduleSha256: "597e8b4bdacc87e03764b1e9bf3c8f2bc032762a5f644dc95faff16b52e50f34",
+    exports: Object.freeze(["Deferred", "createCustomScreenEditorPageHarness"]),
+    importTokens: Object.freeze([
+      "../../../../core/admin/services/cachePolicy|named|cacheKeys|cacheKeys|type:false",
+      "../../../../core/admin/services/contentTypesClient|namespace|*|contentTypesClient|type:false",
+      "../../../../core/admin/services/customScreensClient|named|CustomScreenRecord|CustomScreenRecord|type:true",
+      "../../../../core/admin/services/customScreensClient|namespace|*|customScreensClient|type:false",
+      "../../../../core/admin/services/entriesClient|namespace|*|entriesClient|type:false",
+      "../../../../core/admin/ui/assistant/activeSurfaceContext|namespace|*|assistantSurface|type:false",
+      "../../../../core/admin/ui/contexts/AdminRouterContext|named|AdminRouterProvider|AdminRouterProvider|type:false",
+      "../../../../core/admin/ui/contexts/AdminRouterContext|named|useAdminRouter|useAdminRouter|type:false",
+      "../../../../core/admin/ui/custom-screens/CustomScreenEditorPage|named|CustomScreenEditorPage|CustomScreenEditorPage|type:false",
+      "../../../../core/admin/utils/cacheBus|named|CacheEventOperationToken|CacheEventOperationToken|type:true",
+      "../../../../core/admin/utils/cacheBus|named|broadcastCacheEvent|broadcastCacheEvent|type:false",
+      "react-dom/client|named|createRoot|createRoot|type:false",
+      "react|default|React|React|type:false",
+      "vitest|named|expect|expect|type:false",
+      "vitest|named|vi|vi|type:false",
+    ]),
+  }),
+});
+
+function parseTask540TsxSource(source, relativePath, label) {
+  const sourceFile = ts.createSourceFile(
+    relativePath,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX
+  );
+  if ((sourceFile.parseDiagnostics ?? []).length > 0) {
+    throw new Error(label + ": parse diagnostics in " + relativePath);
+  }
+  return sourceFile;
+}
+
+function parseL02AssistantSource(source, relativePath) {
+  return parseTask540TsxSource(source, relativePath, "TASK-540 L02 Assistant split");
+}
+
+function task540ImportTokens(statement, label) {
+  if (!ts.isStringLiteral(statement.moduleSpecifier) || !statement.importClause) {
+    throw new Error(label + ": side-effect or invalid import is forbidden");
+  }
+  const moduleName = statement.moduleSpecifier.text;
+  const clause = statement.importClause;
+  const tokens = [];
+  if (clause.name) {
+    tokens.push(
+      `${moduleName}|default|${clause.name.text}|${clause.name.text}|type:${clause.isTypeOnly}`
+    );
+  }
+  if (clause.namedBindings && ts.isNamespaceImport(clause.namedBindings)) {
+    tokens.push(
+      `${moduleName}|namespace|*|${clause.namedBindings.name.text}|type:${clause.isTypeOnly}`
+    );
+  }
+  if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
+    for (const element of clause.namedBindings.elements) {
+      tokens.push(
+        `${moduleName}|named|${element.propertyName?.text ?? element.name.text}|${element.name.text}|type:${clause.isTypeOnly || element.isTypeOnly}`
+      );
+    }
+  }
+  if (tokens.length === 0) throw new Error(label + ": empty import clause is forbidden");
+  return Object.freeze(tokens);
+}
+
+function requireExactTask540ImportTokens(actual, expected, label) {
+  if (
+    new Set(actual).size !== actual.length ||
+    JSON.stringify([...actual].sort()) !== JSON.stringify([...expected].sort())
+  ) {
+    throw new Error(label + ": import allowlist drifted");
+  }
+}
+
+function l02AssistantSourceImportTokens(source, relativePath, label) {
+  const sourceFile = parseL02AssistantSource(source, relativePath);
+  return Object.freeze(
+    sourceFile.statements.flatMap((statement) =>
+      ts.isImportDeclaration(statement) ? task540ImportTokens(statement, label) : []
+    )
+  );
+}
+
+function l02AssistantExpressionSha256(node, sourceFile, printer) {
+  return createHash("sha256")
+    .update(printer.printNode(ts.EmitHint.Expression, node, sourceFile))
+    .digest("hex");
+}
+
+function l02AssistantPreSplitHelperHashes(source) {
+  const sourceFile = parseL02AssistantSource(source, L02_ASSISTANT_PRE_SPLIT_PATH);
+  const printer = ts.createPrinter({ removeComments: true, newLine: ts.NewLineKind.LineFeed });
+  const hashes = {};
+  for (const statement of sourceFile.statements) {
+    if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        if (
+          ts.isIdentifier(declaration.name) &&
+          L02_ASSISTANT_HARNESS_EXPORTS.includes(declaration.name.text) &&
+          declaration.name.text !== "resetAssistantPanelTestState" &&
+          declaration.initializer
+        ) {
+          hashes[declaration.name.text] = l02AssistantExpressionSha256(
+            declaration.initializer,
+            sourceFile,
+            printer
+          );
+        }
+      }
+    }
+    if (
+      ts.isExpressionStatement(statement) &&
+      ts.isCallExpression(statement.expression) &&
+      ts.isIdentifier(statement.expression.expression) &&
+      statement.expression.expression.text === "afterEach" &&
+      statement.expression.arguments.length === 1 &&
+      (ts.isArrowFunction(statement.expression.arguments[0]) ||
+        ts.isFunctionExpression(statement.expression.arguments[0]))
+    ) {
+      hashes.resetAssistantPanelTestState = l02AssistantExpressionSha256(
+        statement.expression.arguments[0],
+        sourceFile,
+        printer
+      );
+    }
+  }
+  return Object.freeze(hashes);
+}
+
+function requireL02AssistantHarnessSourceContract(source) {
+  const sourceFile = parseL02AssistantSource(source, L02_ASSISTANT_HARNESS_PATH);
+  const printer = ts.createPrinter({ removeComments: true, newLine: ts.NewLineKind.LineFeed });
+  const importTokens = [];
+  const valueExports = [];
+  const initializerSha256 = {};
+  for (const statement of sourceFile.statements) {
+    if (ts.isImportDeclaration(statement)) {
+      importTokens.push(...task540ImportTokens(statement, "TASK-540 L02 Assistant harness"));
+      continue;
+    }
+    if (!ts.isVariableStatement(statement)) {
+      throw new Error("TASK-540 L02 Assistant harness has import-time executable or mutable state");
+    }
+    const exported = statement.modifiers?.some(({ kind }) => kind === ts.SyntaxKind.ExportKeyword);
+    if (
+      !exported ||
+      (statement.declarationList.flags & ts.NodeFlags.Const) === 0 ||
+      statement.declarationList.declarations.length !== 1
+    ) {
+      throw new Error(
+        "TASK-540 L02 Assistant harness values must be single exported const helpers"
+      );
+    }
+    const [declaration] = statement.declarationList.declarations;
+    if (
+      !ts.isIdentifier(declaration.name) ||
+      !declaration.initializer ||
+      (!ts.isArrowFunction(declaration.initializer) &&
+        !ts.isFunctionExpression(declaration.initializer))
+    ) {
+      throw new Error("TASK-540 L02 Assistant harness owns only function-valued helpers");
+    }
+    valueExports.push(declaration.name.text);
+    initializerSha256[declaration.name.text] = l02AssistantExpressionSha256(
+      declaration.initializer,
+      sourceFile,
+      printer
+    );
+  }
+  requireExactTask540ImportTokens(
+    importTokens,
+    L02_ASSISTANT_HARNESS_IMPORT_TOKENS,
+    "TASK-540 L02 Assistant harness"
+  );
+  if (
+    JSON.stringify([...valueExports].sort()) !==
+      JSON.stringify([...L02_ASSISTANT_HARNESS_EXPORTS].sort()) ||
+    JSON.stringify(
+      Object.fromEntries(
+        Object.entries(initializerSha256).sort(([left], [right]) => left.localeCompare(right))
+      )
+    ) !==
+      JSON.stringify(
+        Object.fromEntries(
+          Object.entries(L02_ASSISTANT_HELPER_INITIALIZER_SHA256).sort(([left], [right]) =>
+            left.localeCompare(right)
+          )
+        )
+      )
+  ) {
+    throw new Error("TASK-540 L02 Assistant harness helper/reset/typed-fixture body drifted");
+  }
+  return Object.freeze({
+    exports: Object.freeze([...valueExports].sort()),
+    importTokens: Object.freeze([...importTokens].sort()),
+    initializerSha256: Object.freeze({ ...initializerSha256 }),
+  });
+}
+
+function requireL02AssistantSuiteSourceContract(source, relativePath) {
+  const sourceFile = parseL02AssistantSource(source, relativePath);
+  const printer = ts.createPrinter({ removeComments: true, newLine: ts.NewLineKind.LineFeed });
+  const importTokens = [];
+  let reactActStatements = 0;
+  let resetRegistrations = 0;
+  let testRegistrations = 0;
+  for (const statement of sourceFile.statements) {
+    if (ts.isImportDeclaration(statement)) {
+      importTokens.push(
+        ...task540ImportTokens(statement, "TASK-540 L02 Assistant suite " + relativePath)
+      );
+      continue;
+    }
+    if (!ts.isExpressionStatement(statement)) {
+      throw new Error(
+        "TASK-540 L02 Assistant suite owns unexpected top-level state: " + relativePath
+      );
+    }
+    const statementSha256 = createHash("sha256")
+      .update(printer.printNode(ts.EmitHint.Unspecified, statement, sourceFile))
+      .digest("hex");
+    if (statementSha256 === L02_ASSISTANT_REACT_ACT_STATEMENT_SHA256) {
+      reactActStatements += 1;
+      continue;
+    }
+    if (
+      ts.isCallExpression(statement.expression) &&
+      ts.isIdentifier(statement.expression.expression) &&
+      statement.expression.expression.text === "afterEach" &&
+      statement.expression.arguments.length === 1 &&
+      ts.isIdentifier(statement.expression.arguments[0]) &&
+      statement.expression.arguments[0].text === "resetAssistantPanelTestState"
+    ) {
+      resetRegistrations += 1;
+      continue;
+    }
+    if (
+      ts.isCallExpression(statement.expression) &&
+      ts.isIdentifier(statement.expression.expression) &&
+      statement.expression.expression.text === "test" &&
+      statement.expression.arguments.some(
+        (argument) => ts.isArrowFunction(argument) || ts.isFunctionExpression(argument)
+      )
+    ) {
+      testRegistrations += 1;
+      continue;
+    }
+    throw new Error(
+      "TASK-540 L02 Assistant suite has an extra hook/global/helper statement: " + relativePath
+    );
+  }
+  const allowedImports = new Set(L02_ASSISTANT_SUITE_ALLOWED_IMPORT_TOKENS);
+  const mandatoryImports = [
+    "react|default|React|React|type:false",
+    "vitest|named|afterEach|afterEach|type:false",
+    "vitest|named|expect|expect|type:false",
+    "vitest|named|test|test|type:false",
+    "vitest|named|vi|vi|type:false",
+    `${L02_ASSISTANT_PANEL_MODULE}|named|AssistantPanel|AssistantPanel|type:false`,
+    `${L02_ASSISTANT_HARNESS_MODULE}|named|resetAssistantPanelTestState|resetAssistantPanelTestState|type:false`,
+  ];
+  const isInteractionSuite = relativePath === L02_ASSISTANT_SUITE_PATHS[0];
+  if (isInteractionSuite) {
+    mandatoryImports.push(L02_ASSISTANT_INTERACTION_USER_SETTINGS_CLIENT_TOKEN);
+  }
+  if (
+    new Set(importTokens).size !== importTokens.length ||
+    importTokens.some((token) => !allowedImports.has(token)) ||
+    mandatoryImports.some((token) => !importTokens.includes(token)) ||
+    (!isInteractionSuite &&
+      importTokens.includes(L02_ASSISTANT_INTERACTION_USER_SETTINGS_CLIENT_TOKEN)) ||
+    reactActStatements !== 1 ||
+    resetRegistrations !== 1 ||
+    testRegistrations < 1
+  ) {
+    throw new Error(
+      "TASK-540 L02 Assistant suite import/reset/test boundary drifted: " + relativePath
+    );
+  }
+  return Object.freeze({
+    relativePath,
+    importTokens: Object.freeze([...importTokens].sort()),
+    testRegistrations,
+  });
+}
+
+async function requireL02AssistantSplitContract(label) {
+  const [harnessSource, ...suiteSources] = await Promise.all([
+    readFile(ROOT + "/" + L02_ASSISTANT_HARNESS_PATH, "utf8"),
+    ...L02_ASSISTANT_SUITE_PATHS.map((relativePath) => readFile(ROOT + "/" + relativePath, "utf8")),
+  ]);
+  const harness = requireL02AssistantHarnessSourceContract(harnessSource);
+  const suites = suiteSources.map((source, index) =>
+    requireL02AssistantSuiteSourceContract(source, L02_ASSISTANT_SUITE_PATHS[index])
+  );
+  const { stdout, stderr } = await execFileAsync(
+    "/usr/bin/node",
+    [ROOT + "/" + TEST_NAME_CONTRACT_WORKFLOW_REL, "--mode=final", "--family=assistantPanel"],
+    { cwd: ROOT, encoding: "utf8", maxBuffer: 8 * 1024 * 1024 }
+  );
+  if (stderr.trim()) {
+    throw new Error(label + ": Assistant name/body scanner emitted stderr");
+  }
+  let scanner;
+  try {
+    scanner = JSON.parse(stdout);
+  } catch {
+    throw new Error(label + ": Assistant name/body scanner output is invalid");
+  }
+  const evidence = scanner?.evidence?.[0];
+  if (
+    scanner?.pass !== true ||
+    evidence?.family !== "assistantPanel" ||
+    evidence.tests !== 13 ||
+    evidence.declarations !== 13 ||
+    evidence.declarationSha256 !== L02_ASSISTANT_DECLARATION_SHA256 ||
+    JSON.stringify(evidence.fileEvidence?.map(({ tests }) => tests)) !== JSON.stringify([7, 6])
+  ) {
+    throw new Error(label + ": exact 13-body / 7+6 Assistant partition drifted");
+  }
+  return Object.freeze({
+    pass: true,
+    harness,
+    suites,
+    declarationSha256: evidence.declarationSha256,
+  });
+}
+
+async function assertL02AssistantSplitVerifierContract() {
+  const { stdout: baselineSource, stderr } = await execFileAsync(
+    GIT_EXECUTABLE,
+    ["show", L02_ASSISTANT_PRE_SPLIT_REVISION + ":" + L02_ASSISTANT_PRE_SPLIT_PATH],
+    { cwd: ROOT, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }
+  );
+  if (stderr.trim()) {
+    throw new Error("TASK-540 L02 Assistant verifier baseline emitted stderr");
+  }
+  if (
+    JSON.stringify(
+      Object.entries(l02AssistantPreSplitHelperHashes(baselineSource)).sort(([left], [right]) =>
+        left.localeCompare(right)
+      )
+    ) !==
+    JSON.stringify(
+      Object.entries(L02_ASSISTANT_HELPER_INITIALIZER_SHA256).sort(([left], [right]) =>
+        left.localeCompare(right)
+      )
+    )
+  ) {
+    throw new Error("TASK-540 L02 Assistant verifier baseline helper hashes drifted");
+  }
+  const harnessImportSource = `
+import React from "react";
+import { createRoot } from "react-dom/client";
+import { vi } from "vitest";
+import * as userSettingsClient from "../../../../core/admin/services/userSettingsClient";
+import type { UserSettings } from "../../../../core/admin/services/userSettingsClient";
+import { clearAssistantRuntimeStateCache } from "../../../../core/admin/ui/assistant/AssistantPanel";
+import { clearAssistantConversationState } from "../../../../core/admin/ui/assistant/assistantConversationState";
+import {
+  ASSISTANT_SITE_BUILDER_INTAKE_VERSION,
+  type AssistantSiteBuilderIntakeSession,
+} from "../../../../core/services/assistant/assistantSiteBuilderIntakeTypes";
+`;
+  requireExactTask540ImportTokens(
+    l02AssistantSourceImportTokens(
+      harnessImportSource,
+      L02_ASSISTANT_HARNESS_PATH,
+      "TASK-540 L02 Assistant harness import self-test"
+    ),
+    L02_ASSISTANT_HARNESS_IMPORT_TOKENS,
+    "TASK-540 L02 Assistant harness import self-test"
+  );
+  const suiteSource = `
+import React from "react";
+import { afterEach, expect, test, vi } from "vitest";
+import * as userSettingsClient from "../../../core/admin/services/userSettingsClient";
+import { AssistantPanel } from "${L02_ASSISTANT_PANEL_MODULE}";
+import { resetAssistantPanelTestState } from "${L02_ASSISTANT_HARNESS_MODULE}";
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+afterEach(resetAssistantPanelTestState);
+test("synthetic", () => {
+  expect(AssistantPanel).toBeDefined();
+  void userSettingsClient;
+  void React;
+  void vi;
+});
+`;
+  requireL02AssistantSuiteSourceContract(suiteSource, L02_ASSISTANT_SUITE_PATHS[0]);
+  const rejected = [
+    () => {
+      const mutated = harnessImportSource + '\nimport "./side-effect";\n';
+      requireExactTask540ImportTokens(
+        l02AssistantSourceImportTokens(
+          mutated,
+          L02_ASSISTANT_HARNESS_PATH,
+          "TASK-540 L02 Assistant side-effect import self-test"
+        ),
+        L02_ASSISTANT_HARNESS_IMPORT_TOKENS,
+        "TASK-540 L02 Assistant side-effect import self-test"
+      );
+    },
+    () =>
+      requireL02AssistantSuiteSourceContract(
+        suiteSource + "\nbeforeEach(() => undefined);\n",
+        L02_ASSISTANT_SUITE_PATHS[0]
+      ),
+    () =>
+      requireL02AssistantSuiteSourceContract(
+        suiteSource +
+          `\nimport { clearAssistantRuntimeStateCache } from "${L02_ASSISTANT_PANEL_MODULE}";\n`,
+        L02_ASSISTANT_SUITE_PATHS[0]
+      ),
+    () =>
+      requireL02AssistantSuiteSourceContract(
+        suiteSource.replace(
+          'import * as userSettingsClient from "../../../core/admin/services/userSettingsClient";',
+          'import * as aliasedUserSettingsClient from "../../../core/admin/services/userSettingsClient";'
+        ),
+        L02_ASSISTANT_SUITE_PATHS[0]
+      ),
+    () =>
+      requireL02AssistantSuiteSourceContract(
+        suiteSource.replace(
+          'import * as userSettingsClient from "../../../core/admin/services/userSettingsClient";',
+          'import * as userSettingsClient from "../../../core/admin/services/assistantClient";'
+        ),
+        L02_ASSISTANT_SUITE_PATHS[0]
+      ),
+    () =>
+      requireL02AssistantSuiteSourceContract(
+        suiteSource.replace(
+          'import * as userSettingsClient from "../../../core/admin/services/userSettingsClient";\n',
+          ""
+        ),
+        L02_ASSISTANT_SUITE_PATHS[0]
+      ),
+    () => requireL02AssistantSuiteSourceContract(suiteSource, L02_ASSISTANT_SUITE_PATHS[1]),
+    () => {
+      const mutatedHashes = l02AssistantPreSplitHelperHashes(
+        baselineSource.replace(
+          "  vi.restoreAllMocks();",
+          "  vi.restoreAllMocks();\n  unexpectedResetSideEffect();"
+        )
+      );
+      if (
+        mutatedHashes.resetAssistantPanelTestState !==
+        L02_ASSISTANT_HELPER_INITIALIZER_SHA256.resetAssistantPanelTestState
+      ) {
+        throw new Error("expected reset hash mutation");
+      }
+    },
+  ].filter((mutation) => {
+    try {
+      mutation();
+      return false;
+    } catch {
+      return true;
+    }
+  }).length;
+  if (rejected !== 8) {
+    throw new Error("TASK-540 L02 Assistant split verifier mutation self-test failed");
+  }
+  return 11;
+}
+
+function task540HasModifier(node, kind) {
+  return Boolean(node.modifiers?.some((modifier) => modifier.kind === kind));
+}
+
+function task540ExportedDeclarationNames(sourceFile, label) {
+  const names = [];
+  for (const statement of sourceFile.statements) {
+    if (ts.isExportAssignment(statement) || ts.isExportDeclaration(statement)) {
+      throw new Error(label + ": re-exports and export assignments are forbidden");
+    }
+    if (!task540HasModifier(statement, ts.SyntaxKind.ExportKeyword)) continue;
+    if (task540HasModifier(statement, ts.SyntaxKind.DefaultKeyword)) {
+      throw new Error(label + ": default exports are forbidden");
+    }
+    if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        if (!ts.isIdentifier(declaration.name)) {
+          throw new Error(label + ": destructured exports are forbidden");
+        }
+        names.push(declaration.name.text);
+      }
+      continue;
+    }
+    if (
+      ts.isFunctionDeclaration(statement) ||
+      ts.isClassDeclaration(statement) ||
+      ts.isInterfaceDeclaration(statement) ||
+      ts.isTypeAliasDeclaration(statement) ||
+      ts.isEnumDeclaration(statement)
+    ) {
+      if (!statement.name) throw new Error(label + ": anonymous exports are forbidden");
+      names.push(statement.name.text);
+      continue;
+    }
+    throw new Error(label + ": unsupported exported declaration");
+  }
+  if (new Set(names).size !== names.length) {
+    throw new Error(label + ": duplicate exported declaration");
+  }
+  return Object.freeze([...names].sort());
+}
+
+function task540CanonicalModuleSha256(sourceFile) {
+  const printer = ts.createPrinter({ removeComments: true, newLine: ts.NewLineKind.LineFeed });
+  return createHash("sha256").update(printer.printFile(sourceFile)).digest("hex");
+}
+
+function task540IdentifierNames(sourceFile) {
+  const names = new Set();
+  const visit = (node) => {
+    if (ts.isIdentifier(node)) names.add(node.text);
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return names;
+}
+
+function requireL04PageModuleSourceContract(source, relativePath) {
+  const contract = L04_PAGE_MODULE_CONTRACTS[relativePath];
+  const label = "TASK-540 L04 page module " + relativePath;
+  if (!contract) throw new Error(label + ": module is outside the exact allowlist");
+  const sourceFile = parseTask540TsxSource(source, relativePath, label);
+  const importTokens = sourceFile.statements.flatMap((statement) =>
+    ts.isImportDeclaration(statement) ? task540ImportTokens(statement, label) : []
+  );
+  requireExactTask540ImportTokens(importTokens, contract.importTokens, label);
+  const exports = task540ExportedDeclarationNames(sourceFile, label);
+  if (JSON.stringify(exports) !== JSON.stringify([...contract.exports].sort())) {
+    throw new Error(label + ": export allowlist drifted");
+  }
+  const moduleSha256 = task540CanonicalModuleSha256(sourceFile);
+  if (moduleSha256 !== contract.moduleSha256) {
+    throw new Error(label + ": canonical module body drifted");
+  }
+  if (relativePath === L04_PAGE_HARNESS_PATH) {
+    const identifierNames = task540IdentifierNames(sourceFile);
+    const forbiddenIdentifiers = [
+      "readCustomScreenEditorSourceProjection",
+      "readNodeFileSync",
+      "readOwner",
+      "resolveNodePath",
+      "sliceOwner",
+    ];
+    if (forbiddenIdentifiers.some((name) => identifierNames.has(name))) {
+      throw new Error(label + ": synthetic source projection helper is forbidden");
+    }
+    if (exports.some((name) => L04_PAGE_PROTECTED_HARNESS_EXPORTS.includes(name))) {
+      throw new Error(label + ": protected runtime or filesystem export is forbidden");
+    }
+  }
+  return Object.freeze({
+    relativePath,
+    importTokens: Object.freeze([...importTokens].sort()),
+    exports,
+    moduleSha256,
+  });
+}
+
+async function requireL04PageSplitContract(label) {
+  const relativePaths = Object.keys(L04_PAGE_MODULE_CONTRACTS);
+  const sources = await Promise.all(
+    relativePaths.map((relativePath) => readFile(ROOT + "/" + relativePath, "utf8"))
+  );
+  const modules = sources.map((source, index) =>
+    requireL04PageModuleSourceContract(source, relativePaths[index])
+  );
+  const { stdout, stderr } = await execFileAsync(
+    "/usr/bin/node",
+    [ROOT + "/" + TEST_NAME_CONTRACT_WORKFLOW_REL, "--mode=final", "--family=screenEditorPage"],
+    { cwd: ROOT, encoding: "utf8", maxBuffer: 8 * 1024 * 1024 }
+  );
+  if (stderr.trim()) throw new Error(label + ": page name/body scanner emitted stderr");
+  let scanner;
+  try {
+    scanner = JSON.parse(stdout);
+  } catch {
+    throw new Error(label + ": page name/body scanner output is invalid");
+  }
+  const evidence = scanner?.evidence?.[0];
+  if (
+    scanner?.pass !== true ||
+    evidence?.family !== "screenEditorPage" ||
+    evidence.tests !== 36 ||
+    evidence.declarations !== 36 ||
+    evidence.declarationSha256 !== L04_PAGE_DECLARATION_SHA256 ||
+    JSON.stringify(evidence.fileEvidence?.map(({ tests }) => tests)) !==
+      JSON.stringify([6, 13, 8, 9])
+  ) {
+    throw new Error(label + ": exact 36-body / 6+13+8+9 page partition drifted");
+  }
+  return Object.freeze({
+    pass: true,
+    modules: Object.freeze(modules),
+    declarationSha256: evidence.declarationSha256,
+  });
+}
+
+async function assertL04PageSplitVerifierContract() {
+  const baseline = await requireL04PageSplitContract("TASK-540 L04 page split verifier baseline");
+  const draftPath = "tests/vitest/ui/custom-screen-editor-draft-and-save.test.tsx";
+  const [draftSource, harnessSource] = await Promise.all([
+    readFile(ROOT + "/" + draftPath, "utf8"),
+    readFile(ROOT + "/" + L04_PAGE_HARNESS_PATH, "utf8"),
+  ]);
+  const mutations = [
+    () =>
+      requireL04PageModuleSourceContract(
+        draftSource.replace(
+          'import { readFileSync } from "node:fs";',
+          'import { readCustomScreenEditorSourceProjection as readFileSync } from "./support/customScreenEditorPageHarness";'
+        ),
+        draftPath
+      ),
+    () =>
+      requireL04PageModuleSourceContract(
+        harnessSource + '\nexport const readFileSync = () => "synthetic source";\n',
+        L04_PAGE_HARNESS_PATH
+      ),
+    () =>
+      requireL04PageModuleSourceContract(
+        harnessSource + '\nconst syntheticSourceProjection = "synthetic source";\n',
+        L04_PAGE_HARNESS_PATH
+      ),
+  ];
+  const rejected = mutations.filter((mutation) => {
+    try {
+      mutation();
+      return false;
+    } catch {
+      return true;
+    }
+  }).length;
+  if (rejected !== mutations.length) {
+    throw new Error("TASK-540 L04 page split verifier mutation self-test failed");
+  }
+  return baseline.modules.length + mutations.length;
+}
 
 function projectAssistantFixtureOnlySource(source) {
   const fixtureStart = source.indexOf("const makeUserSettings =");
@@ -5142,12 +8184,25 @@ const TASK_STATUS_MUTABLE_METADATA_FIELDS = Object.freeze([
   CLOSURE_CHANGELOG_PATH_FIELD,
 ]);
 
+function projectTaskStatusTableCell(row, taskId, label) {
+  const match = row.line.match(/^(.*\|)([ \t]*)([^|]*?)([ \t]*)(\|[ \t]*)$/u);
+  if (!match || (match[2] + match[3] + match[4]).trim() !== row.cells.at(-1)) {
+    throw new Error(label + ": cannot isolate canonical status cell for TASK-" + taskId);
+  }
+  return (
+    match[1] + match[2] + "<TASK-540-MUTABLE-STATUS-CELL:" + taskId + ">" + match[4] + match[5]
+  );
+}
+
 function projectTaskContractUnrelatedBytes(source, mutation, label) {
   const statusLines = [...source.matchAll(/^\*\*Status:\*\*.*$/gm)];
   if (statusLines.length !== 1) {
     throw new Error(label + ": task-contract projection requires one Status field");
   }
-  let projected = source.replace(/^\*\*Status:\*\*.*$/m, "<TASK-540-MUTABLE-STATUS>");
+  let projected =
+    mutation.mutableStatus === false
+      ? source
+      : source.replace(/^\*\*Status:\*\*.*$/m, "<TASK-540-MUTABLE-STATUS>");
   for (const field of mutation.mutableFields ?? []) {
     const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const pattern = new RegExp("^\\*\\*" + escaped + ":\\*\\*.*(?:\\n|$)", "gm");
@@ -5157,13 +8212,25 @@ function projectTaskContractUnrelatedBytes(source, mutation, label) {
     }
     projected = projected.replace(pattern, "");
   }
-  for (const taskId of mutation.tableTaskIds ?? []) {
-    const pattern = new RegExp("^\\| TASK-" + taskId + " \\|.*$", "gm");
-    const matches = [...projected.matchAll(pattern)];
-    if (matches.length !== 1) {
-      throw new Error(label + ": task-contract projection requires one TASK-" + taskId + " row");
+  const tableRows = (mutation.tableTaskIds ?? []).map((taskId) =>
+    Object.freeze({ taskId, row: readCanonicalTaskStatusTableRow(projected, taskId, label) })
+  );
+  const tableStatusRows = (mutation.tableStatusTaskIds ?? []).map((taskId) =>
+    Object.freeze({ taskId, row: readCanonicalTaskStatusTableRow(projected, taskId, label) })
+  );
+  const allProjectedRows = [...tableRows, ...tableStatusRows];
+  if (new Set(allProjectedRows.map(({ row }) => row.lineIndex)).size !== allProjectedRows.length) {
+    throw new Error(label + ": duplicate canonical task status row projection");
+  }
+  if (allProjectedRows.length > 0) {
+    const lines = projected.split("\n");
+    for (const { taskId, row } of tableRows) {
+      lines[row.lineIndex] = "<TASK-540-MUTABLE-ROW:" + taskId + ">";
     }
-    projected = projected.replace(pattern, "<TASK-540-MUTABLE-ROW:" + taskId + ">");
+    for (const { taskId, row } of tableStatusRows) {
+      lines[row.lineIndex] = projectTaskStatusTableCell(row, taskId, label);
+    }
+    projected = lines.join("\n");
   }
   return projected;
 }
@@ -5713,8 +8780,8 @@ const LEAVES = Object.freeze(
           ])
         ),
         command(
-          "deferredLowDraftContract",
-          "node _docs/_workflows/task-540-implement.mjs --check-deferred-low-draft-contract"
+          "screenTabLabelDraftContract",
+          "node _docs/_workflows/task-540-implement.mjs --check-screen-tab-label-draft-contract"
         ),
       ]),
     },
@@ -5770,6 +8837,7 @@ const LEAVES = Object.freeze(
         command("lintTypes", LINT_TYPES),
         command("lint", LINT),
         ...isolatedTestCommands("entriesClientIsolated", ENTRIES_CLIENT_VITEST_FILES, "vitest"),
+        command("mediaClientIsolated", vitestCommand(["tests/vitest/admin/mediaClient.test.ts"])),
         command(
           "vitest",
           vitestCommand([...ENTRIES_CLIENT_VITEST_FILES, "tests/vitest/admin/mediaClient.test.ts"])
@@ -5893,21 +8961,7 @@ const LEAVES = Object.freeze(
             "tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx",
           ])
         ),
-        command(
-          "l04ReadOnlyConsumerVitest",
-          vitestCommand([
-            ...SCREEN_EDITOR_PAGE_VITEST_FILES,
-            "tests/vitest/ui/custom-screen-route-params.test.ts",
-            "tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx",
-            "tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx",
-            "tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx",
-            "tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx",
-            "tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx",
-            "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
-            "tests/vitest/ui/custom-screen-list-view-canvas.test.tsx",
-            ...CACHE_BUS_VITEST_FILES,
-          ])
-        ),
+        command("l04ReadOnlyConsumerVitest", vitestCommand(L04_FINAL_CONSUMER_VITEST_FILES)),
         command("dbPreflight", DB_PREFLIGHT),
         command(
           "directImageOverrideRouteBun",
@@ -5956,24 +9010,14 @@ const LEAVES = Object.freeze(
           SCREEN_EDITOR_PAGE_VITEST_FILES,
           "vitest"
         ),
-        command(
-          "vitest",
-          vitestCommand([
-            ...SCREEN_EDITOR_PAGE_VITEST_FILES,
-            "tests/vitest/ui/custom-screen-route-params.test.ts",
-            "tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx",
-            "tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx",
-            "tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx",
-            "tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx",
-            "tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx",
-            "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
-            "tests/vitest/ui/custom-screen-list-view-canvas.test.tsx",
-            ...CACHE_BUS_VITEST_FILES,
-          ])
-        ),
+        command("vitest", vitestCommand(L04_FINAL_CONSUMER_VITEST_FILES)),
         command(
           "screenEditorPageTestNames",
           "node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=screenEditorPage"
+        ),
+        command(
+          "l04PageSplitContract",
+          "node _docs/_workflows/task-540-implement.mjs --check-l04-page-split"
         ),
         command("workflowSyntax", "node --check _docs/_workflows/task-540-implement.mjs"),
         command(
@@ -6078,6 +9122,10 @@ const LEAVES = Object.freeze(
           "node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=assistantPanel"
         ),
         command(
+          "assistantPanelSplitContract",
+          "node _docs/_workflows/task-540-implement.mjs --check-l02-assistant-split"
+        ),
+        command(
           "userSettingsRouteTestNames",
           "node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=userSettingsRoutes"
         ),
@@ -6089,6 +9137,8 @@ const LEAVES = Object.freeze(
       taskFile: "TASK-540-06-L01-Six-Builder-Save-Entry-Flows-And-Closure.md",
       allowedFiles: Object.freeze([
         "tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx",
+        "tests/unit/settings/settingsService.test.ts",
+        "tests/unit/settings/storageSettings.test.ts",
         "_docs/CONTENT_TYPES_SPEC.md",
         "_docs/CMS_SPEC.md",
         "_docs/SECURITY_SPEC.md",
@@ -6105,9 +9155,25 @@ const LEAVES = Object.freeze(
         command("vitest", TARGETED_VITEST),
         command("dbPreflight", DB_PREFLIGHT),
         command("bun", TARGETED_BUN),
+        command("settingsBaselineBeforeHygiene", SMOKE_BASELINE_PROBE),
+        command(
+          "settingsBaselineHygiene",
+          "bun test --parallel=1 --timeout=15000 " +
+            "tests/unit/settings/settingsService.test.ts " +
+            "tests/unit/settings/storageSettings.test.ts"
+        ),
+        command("settingsBaselineAfterHygiene", SMOKE_BASELINE_PROBE),
         command(
           "testNameContractFinal",
           "node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=all"
+        ),
+        command(
+          "l02AssistantSplitContract",
+          "node _docs/_workflows/task-540-implement.mjs --check-l02-assistant-split"
+        ),
+        command(
+          "l04PageSplitContract",
+          "node _docs/_workflows/task-540-implement.mjs --check-l04-page-split"
         ),
         command("smokeContractSyntax", "node --check _docs/_workflows/task-540-smoke-contract.mjs"),
         command(
@@ -6481,7 +9547,11 @@ const COMMON =
   "forbidden: " +
   JSON.stringify(FORBIDDEN_PATHS) +
   ". Add changed-behavior tests with the sole source owner; never weaken assertions. " +
-  "Re-run a named failing file alone before classifying it. Never print .env values, " +
+  "The local orchestrator, not this mutation agent, owns every shell gate and named-file " +
+  "rerun immediately after the mutation returns. No shell tool is expected here; its absence " +
+  "is never a validation error. Return pass=true when the requested static inspection/mutation " +
+  "is complete, including a verified no-op. A file at exactly 1,000 physical lines passes the " +
+  "inclusive repository limit; only a result above 1,000 fails it. Never print .env values, " +
   "credentials, cookies, tokens, hashes, or raw user data.";
 
 function parseCanonicalTaskStatusSource(source, relativePath) {
@@ -6502,9 +9572,88 @@ async function readCanonicalTaskStatus(relativePath) {
   );
 }
 
+function parseMarkdownTableCells(line) {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) return null;
+  const cells = [];
+  let cell = "";
+  for (let index = 1; index < trimmed.length - 1; index += 1) {
+    const character = trimmed[index];
+    if (character === "|") {
+      let precedingBackslashes = 0;
+      for (let cursor = index - 1; cursor >= 1 && trimmed[cursor] === "\\"; cursor -= 1) {
+        precedingBackslashes += 1;
+      }
+      if (precedingBackslashes % 2 === 0) {
+        cells.push(cell.trim());
+        cell = "";
+        continue;
+      }
+    }
+    cell += character;
+  }
+  cells.push(cell.trim());
+  return Object.freeze(cells);
+}
+
+function isMarkdownTableDividerCell(cell) {
+  return /^:?-{3,}:?$/u.test(cell);
+}
+
+function readCanonicalTaskStatusTableRow(source, taskId, label) {
+  const lines = source.split("\n");
+  const targetId = "TASK-" + taskId;
+  const matches = [];
+  for (let headerIndex = 0; headerIndex < lines.length - 1; headerIndex += 1) {
+    const header = parseMarkdownTableCells(lines[headerIndex]);
+    if (!header || header[0] !== "ID" || header.at(-1) !== "Status") continue;
+    if (
+      header.filter((cell) => cell === "ID").length !== 1 ||
+      header.filter((cell) => cell === "Status").length !== 1
+    ) {
+      throw new Error(label + ": duplicated canonical task status table column");
+    }
+    const divider = parseMarkdownTableCells(lines[headerIndex + 1]);
+    if (
+      !divider ||
+      divider.length !== header.length ||
+      !divider.every(isMarkdownTableDividerCell)
+    ) {
+      throw new Error(label + ": malformed canonical task status table divider");
+    }
+    for (let rowIndex = headerIndex + 2; rowIndex < lines.length; rowIndex += 1) {
+      const trimmedRow = lines[rowIndex].trim();
+      if (trimmedRow === "") break;
+      const cells = parseMarkdownTableCells(lines[rowIndex]);
+      if (!cells) {
+        if (trimmedRow.startsWith("|") || trimmedRow.endsWith("|")) {
+          throw new Error(label + ": malformed canonical task status table row");
+        }
+        break;
+      }
+      if (cells.length !== header.length) {
+        throw new Error(label + ": malformed canonical task status table row");
+      }
+      if (cells[0] === targetId) {
+        matches.push(
+          Object.freeze({
+            cells,
+            line: lines[rowIndex],
+            lineIndex: rowIndex,
+          })
+        );
+      }
+    }
+  }
+  if (matches.length !== 1) {
+    throw new Error(label + ": expected one canonical status row for " + targetId);
+  }
+  return matches[0];
+}
+
 function requireTableStatus(source, taskId, status, label) {
-  const rows = source.split("\n").filter((line) => line.startsWith("| TASK-" + taskId + " |"));
-  if (rows.length !== 1 || !rows[0].trimEnd().endsWith("| " + status + " |")) {
+  const row = readCanonicalTaskStatusTableRow(source, taskId, label);
+  if (row.cells.at(-1) !== status) {
     throw new Error(label + ": stale status table row for TASK-" + taskId);
   }
 }
@@ -6514,6 +9663,271 @@ const RESUME_TASK_STATUS = Object.freeze({
   active: "🚧 In Progress",
   done: "✅ Done",
 });
+
+function assertTask540TaskStatusTableContract() {
+  const taskId = "540-04-L01";
+  const secondaryTaskId = "540-04-L03";
+  const header = "| ID | Title | Exclusive source ownership | Status |";
+  const divider = "|---|---|---|---|";
+  const activeRow = "| TASK-540-04-L01 | Retry caches | entries/media clients | 🚧 In Progress |";
+  const secondaryActiveRow =
+    "| TASK-540-04-L03 | Guard drafts | entry/cache owners | 🚧 In Progress |";
+  const doneRow = "| TASK-540-04-L01 | Retry caches | entries/media clients | ✅ Done |";
+  const escapedPipeRow = String.raw`| TASK-540-04-L01 | Retry \| caches | entries/media clients | 🚧 In Progress |`;
+  const evenBackslashDelimiterRow = String.raw`| TASK-540-04-L01 | Retry \\| entries/media clients | 🚧 In Progress |`;
+  const evidenceBlock = [
+    "| Leaf owner | Pre-split blocker | Physical lines | Pre-split SHA-256 |",
+    "|---|---|---:|---|",
+    "| TASK-540-04-L01 | `entriesClient.test.ts` | 1,893 | `fixture-sha` |",
+    "| TASK-540-04-L01 | `mediaClient.test.ts` | 935 | `fixture-sha-2` |",
+  ].join("\n");
+  const sourceWithRows = (rows, suffix = "") =>
+    [
+      "**Status:** 🚧 In Progress",
+      "",
+      header,
+      divider,
+      ...rows,
+      ...(suffix ? ["", suffix] : []),
+      "",
+    ].join("\n");
+  const rejects = (callback) => {
+    try {
+      callback();
+      return false;
+    } catch {
+      return true;
+    }
+  };
+  const validSource = sourceWithRows([activeRow]);
+  const evidenceSource = sourceWithRows([activeRow, secondaryActiveRow], evidenceBlock);
+  const expectedProjectedSource = sourceWithRows(
+    ["<TASK-540-MUTABLE-ROW:" + taskId + ">", "<TASK-540-MUTABLE-ROW:" + secondaryTaskId + ">"],
+    evidenceBlock
+  ).replace("**Status:** 🚧 In Progress", "<TASK-540-MUTABLE-STATUS>");
+  const projected = projectTaskContractUnrelatedBytes(
+    evidenceSource,
+    Object.freeze({
+      mutableFields: Object.freeze([]),
+      tableTaskIds: Object.freeze([taskId, secondaryTaskId]),
+    }),
+    "TASK-540 status-table projection self-test"
+  );
+  const secondStatusTable = [header, divider, activeRow].join("\n");
+  const evidenceEndingInStatus = [
+    "**Status:** 🚧 In Progress",
+    "",
+    "| Leaf owner | Evidence | Result |",
+    "|---|---|---|",
+    "| TASK-540-04-L01 | historical | 🚧 In Progress |",
+    "",
+  ].join("\n");
+  const cases = [
+    {
+      label: "one canonical status row passes",
+      pass: (() => {
+        requireTableStatus(validSource, taskId, RESUME_TASK_STATUS.active, "status self-test");
+        return true;
+      })(),
+    },
+    {
+      label: "same-ID provenance rows do not collide",
+      pass: (() => {
+        requireTableStatus(evidenceSource, taskId, RESUME_TASK_STATUS.active, "status self-test");
+        return true;
+      })(),
+    },
+    {
+      label: "projection masks every requested status row and only those rows",
+      pass: projected === expectedProjectedSource,
+    },
+    {
+      label: "escaped pipes stay inside their canonical table cell",
+      pass:
+        readCanonicalTaskStatusTableRow(
+          sourceWithRows([escapedPipeRow]),
+          taskId,
+          "status self-test"
+        ).cells[1] === String.raw`Retry \| caches`,
+    },
+    {
+      label: "even backslashes leave the following pipe as a delimiter",
+      pass:
+        readCanonicalTaskStatusTableRow(
+          sourceWithRows([evenBackslashDelimiterRow]),
+          taskId,
+          "status self-test"
+        ).cells[1] === String.raw`Retry \\`,
+    },
+    {
+      label: "provenance without a status table is rejected",
+      pass: rejects(() =>
+        requireTableStatus(
+          "**Status:** 🚧 In Progress\n\n" + evidenceBlock + "\n",
+          taskId,
+          RESUME_TASK_STATUS.active,
+          "status self-test"
+        )
+      ),
+    },
+    {
+      label: "wrong canonical status is rejected",
+      pass: rejects(() =>
+        requireTableStatus(
+          sourceWithRows([doneRow]),
+          taskId,
+          RESUME_TASK_STATUS.active,
+          "status self-test"
+        )
+      ),
+    },
+    {
+      label: "duplicate rows in one status table are rejected",
+      pass: rejects(() =>
+        requireTableStatus(
+          sourceWithRows([activeRow, activeRow]),
+          taskId,
+          RESUME_TASK_STATUS.active,
+          "status self-test"
+        )
+      ),
+    },
+    {
+      label: "duplicate rows across status tables are rejected",
+      pass: rejects(() =>
+        requireTableStatus(
+          sourceWithRows([activeRow], secondStatusTable),
+          taskId,
+          RESUME_TASK_STATUS.active,
+          "status self-test"
+        )
+      ),
+    },
+    {
+      label: "one target across two canonical status tables passes",
+      pass: (() => {
+        requireTableStatus(
+          sourceWithRows([activeRow], [header, divider, secondaryActiveRow].join("\n")),
+          taskId,
+          RESUME_TASK_STATUS.active,
+          "status self-test"
+        );
+        return true;
+      })(),
+    },
+    {
+      label: "duplicate ID header columns are rejected",
+      pass: rejects(() =>
+        requireTableStatus(
+          [
+            "**Status:** 🚧 In Progress",
+            "",
+            "| ID | ID | Status |",
+            "|---|---|---|",
+            "| TASK-540-04-L01 | duplicate | 🚧 In Progress |",
+            "",
+          ].join("\n"),
+          taskId,
+          RESUME_TASK_STATUS.active,
+          "status self-test"
+        )
+      ),
+    },
+    {
+      label: "duplicate Status header columns are rejected",
+      pass: rejects(() =>
+        requireTableStatus(
+          [
+            "**Status:** 🚧 In Progress",
+            "",
+            "| ID | Status | Status |",
+            "|---|---|---|",
+            "| TASK-540-04-L01 | ✅ Done | 🚧 In Progress |",
+            "",
+          ].join("\n"),
+          taskId,
+          RESUME_TASK_STATUS.active,
+          "status self-test"
+        )
+      ),
+    },
+    {
+      label: "invalid divider cells are rejected",
+      pass: rejects(() =>
+        requireTableStatus(
+          [
+            "**Status:** 🚧 In Progress",
+            "",
+            header,
+            "|---|not-a-divider|---|---|",
+            activeRow,
+            "",
+          ].join("\n"),
+          taskId,
+          RESUME_TASK_STATUS.active,
+          "status self-test"
+        )
+      ),
+    },
+    {
+      label: "wrong divider cell counts are rejected",
+      pass: rejects(() =>
+        requireTableStatus(
+          ["**Status:** 🚧 In Progress", "", header, "|---|---|---|", activeRow, ""].join("\n"),
+          taskId,
+          RESUME_TASK_STATUS.active,
+          "status self-test"
+        )
+      ),
+    },
+    {
+      label: "pipe-shaped malformed rows are rejected",
+      pass: rejects(() =>
+        requireTableStatus(
+          sourceWithRows([activeRow]).trimEnd() +
+            "\n| TASK-540-04-L01 | duplicate | entries/media clients | ✅ Done\n",
+          taskId,
+          RESUME_TASK_STATUS.active,
+          "status self-test"
+        )
+      ),
+    },
+    {
+      label: "extra-cell target status row is rejected",
+      pass: rejects(() =>
+        requireTableStatus(
+          sourceWithRows([
+            "| TASK-540-04-L01 | Retry caches | entries/media clients | extra | 🚧 In Progress |",
+          ]),
+          taskId,
+          RESUME_TASK_STATUS.active,
+          "status self-test"
+        )
+      ),
+    },
+    {
+      label: "status-looking evidence cannot replace the canonical table",
+      pass: rejects(() =>
+        requireTableStatus(
+          evidenceEndingInStatus,
+          taskId,
+          RESUME_TASK_STATUS.active,
+          "status self-test"
+        )
+      ),
+    },
+    {
+      label: "exact row reader selects status rather than provenance",
+      pass: readExactTaskTableRow(evidenceSource, taskId, "status self-test") === activeRow,
+    },
+  ];
+  for (const testCase of cases) {
+    if (!testCase.pass) {
+      throw new Error("TASK-540 task status-table self-test failed: " + testCase.label);
+    }
+  }
+  return cases.length;
+}
 
 function isTask540RepairSiblingStateAllowed(
   state,
@@ -7011,18 +10425,7 @@ function assertTask540L03GateIsolationContract() {
     },
     {
       id: "l04ReadOnlyConsumerVitest",
-      files: [
-        ...SCREEN_EDITOR_PAGE_VITEST_FILES,
-        "tests/vitest/ui/custom-screen-route-params.test.ts",
-        "tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx",
-        "tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx",
-        "tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx",
-        "tests/vitest/ui-integration/custom-screen-section-recovery.test.tsx",
-        "tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx",
-        "tests/vitest/ui-integration/screen-editor-sections.test.tsx",
-        "tests/vitest/ui/custom-screen-list-view-canvas.test.tsx",
-        ...CACHE_BUS_VITEST_FILES,
-      ],
+      files: [...L04_FINAL_CONSUMER_VITEST_FILES],
     },
     {
       id: "directImageOverrideRouteBun",
@@ -7114,6 +10517,49 @@ function assertTask540ModularityRepairContract() {
         ]),
     },
     {
+      label: "L02 Assistant split keeps a mechanically invoked final structural verifier",
+      pass: (() => {
+        const expected = "node _docs/_workflows/task-540-implement.mjs --check-l02-assistant-split";
+        const l02Commands = LEAF_BY_ID.get("540-05-L02").commands;
+        const closureCommands = LEAF_BY_ID.get("540-06-L01").commands;
+        const l02Index = l02Commands.findIndex(
+          ({ id, command: value }) => id === "assistantPanelSplitContract" && value === expected
+        );
+        const nameIndex = l02Commands.findIndex(({ id }) => id === "assistantPanelTestNames");
+        return (
+          l02Index > nameIndex &&
+          closureCommands.some(
+            ({ id, command: value }) => id === "l02AssistantSplitContract" && value === expected
+          ) &&
+          FULL_GATE_COMMANDS.some(
+            ({ id, command: value }) => id === "l02AssistantSplitContract" && value === expected
+          ) &&
+          modularityRepairMutationOwner(LEAF_BY_ID.get("540-05-L02")).fixtureOnlyFiles.length === 0
+        );
+      })(),
+    },
+    {
+      label: "L04 page split keeps a mechanically invoked final structural verifier",
+      pass: (() => {
+        const expected = "node _docs/_workflows/task-540-implement.mjs --check-l04-page-split";
+        const l04Commands = LEAF_BY_ID.get("540-04-L04").commands;
+        const closureCommands = LEAF_BY_ID.get("540-06-L01").commands;
+        const l04Index = l04Commands.findIndex(
+          ({ id, command: value }) => id === "l04PageSplitContract" && value === expected
+        );
+        const nameIndex = l04Commands.findIndex(({ id }) => id === "screenEditorPageTestNames");
+        return (
+          l04Index > nameIndex &&
+          closureCommands.some(
+            ({ id, command: value }) => id === "l04PageSplitContract" && value === expected
+          ) &&
+          FULL_GATE_COMMANDS.some(
+            ({ id, command: value }) => id === "l04PageSplitContract" && value === expected
+          )
+        );
+      })(),
+    },
+    {
       label: "every modularity owner is a strict subset of its ordinary repair authority",
       pass: MODULARITY_REPAIR_LEAF_IDS.every((leafId) => {
         const leaf = LEAF_BY_ID.get(leafId);
@@ -7137,6 +10583,7 @@ function assertTask540ModularityRepairContract() {
         ["540-02-L01", "screenInspectorIsolated", 2, "vitest"],
         ["540-03-L01", "screenRuntimeIsolated", 4, "vitest"],
         ["540-04-L01", "entriesClientIsolated", 3, "vitest"],
+        ["540-04-L01", "mediaClientIsolated", 1, "vitest"],
         ["540-04-L03", "cacheBusPartitionIsolated", 3, "isolatedCacheBus"],
         ["540-04-L03", "customScreensClientIsolated", 2, "customScreensClientFamily"],
         ["540-04-L03", "entryNavigationIsolated", 2, "entryNavigationFamily"],
@@ -7159,11 +10606,11 @@ function assertTask540ModularityRepairContract() {
       }),
     },
     {
-      label: "L04 dependency-shaped gate pins all 15 files and three cache-bus partitions",
+      label: "L04 dependency-shaped gate pins the exact final 15-file matrix",
       pass: (() => {
         const gate = LEAF_BY_ID.get("540-04-L04").commands.find(({ id }) => id === "vitest");
         const files = gate ? namedTestFilesForCommand(gate.command) : [];
-        return files.length === 15 && CACHE_BUS_VITEST_FILES.every((file) => files.includes(file));
+        return JSON.stringify(files) === JSON.stringify(L04_FINAL_CONSUMER_VITEST_FILES);
       })(),
     },
     {
@@ -7208,6 +10655,33 @@ function assertTask540ModularityRepairContract() {
             staleField: "Modularity Repair Started",
           },
         ]).length === 0,
+    },
+    {
+      label: "historical closure metadata date remains byte-stable across reruns",
+      pass:
+        pendingTask540ModularityFamilyStates([
+          {
+            source:
+              "**Modularity Repair Revalidated:** 2026-07-17 — eight source-owner modularity repairs and exact gates passed.",
+            staleField: "Modularity Repair Started",
+          },
+          {
+            source:
+              "**Modularity Repair Revalidated:** 2026-07-17 — eight source-owner modularity repairs and their then-exact gates passed. This remains split/line evidence only and does not gate the current L03 overflow repair.",
+            staleField: "Modularity Repair Pending",
+          },
+        ]).length === 0,
+    },
+    {
+      label: "future closure metadata date cannot authorize a rerun",
+      pass:
+        pendingTask540ModularityFamilyStates([
+          {
+            source:
+              "**Modularity Repair Revalidated:** 2099-01-01 — eight source-owner modularity repairs and exact gates passed.",
+            staleField: "Modularity Repair Started",
+          },
+        ]).length === 1,
     },
     {
       label: "partial closure sync selects only the stale path",
@@ -7523,24 +10997,42 @@ function equalClosureGateReceipts(left, right) {
   return Boolean(left && right && left.field === right.field && left.value === right.value);
 }
 
+function closureContractReceiptProjection(relativePath, source) {
+  parseCanonicalTaskStatusSource(source, relativePath);
+  return Object.freeze({
+    relativePath,
+    receipts: Object.freeze(
+      Object.fromEntries(
+        CLOSURE_RECEIPT_FIELDS.map((field) => [field, readTaskMetadataField(source, field)])
+      )
+    ),
+    gates: Object.freeze(
+      Object.fromEntries(
+        CLOSURE_GATE_FIELDS.map((field) => [field, readTaskMetadataField(source, field)])
+      )
+    ),
+  });
+}
+
+function captureClosureContractReceiptsFromSnapshot(snapshot, label) {
+  return Object.freeze(
+    closureContractPaths().map((relativePath) =>
+      closureContractReceiptProjection(
+        relativePath,
+        requireExactRollbackSnapshotUtf8(snapshot, relativePath, label)
+      )
+    )
+  );
+}
+
 async function captureClosureContractReceipts() {
   return Promise.all(
-    closureContractPaths().map(async (relativePath) => {
-      const { source } = await readCanonicalTaskStatus(relativePath);
-      return Object.freeze({
+    closureContractPaths().map(async (relativePath) =>
+      closureContractReceiptProjection(
         relativePath,
-        receipts: Object.freeze(
-          Object.fromEntries(
-            CLOSURE_RECEIPT_FIELDS.map((field) => [field, readTaskMetadataField(source, field)])
-          )
-        ),
-        gates: Object.freeze(
-          Object.fromEntries(
-            CLOSURE_GATE_FIELDS.map((field) => [field, readTaskMetadataField(source, field)])
-          )
-        ),
-      });
-    })
+        (await readCanonicalTaskStatus(relativePath)).source
+      )
+    )
   );
 }
 
@@ -8110,12 +11602,23 @@ async function validateTerminalResumeState() {
   });
 }
 
-async function resolveLeafResumeState() {
+async function resolveLeafResumeState({
+  readTaskStatus = readCanonicalTaskStatus,
+  readBoardSource = () => readFile(TASKS + "/README.md", "utf8"),
+  validateTerminal = validateTerminalResumeState,
+} = {}) {
+  if (
+    typeof readTaskStatus !== "function" ||
+    typeof readBoardSource !== "function" ||
+    typeof validateTerminal !== "function"
+  ) {
+    throw new Error("TASK-540 resume reader authority is malformed");
+  }
   if ((await hashPath(HISTORICAL_FIX_WORKFLOW_REL)) === "<missing>") {
     throw new Error("TASK-540 historical corrective workflow evidence is missing");
   }
 
-  const rootState = await readCanonicalTaskStatus(ROOT_TASK_PATH);
+  const rootState = await readTaskStatus(ROOT_TASK_PATH);
   const terminalCandidate = rootState.status === RESUME_TASK_STATUS.done;
   if (!terminalCandidate && rootState.status !== RESUME_TASK_STATUS.active) {
     throw new Error("TASK-540 resumable workflow requires the root In Progress or terminal Done");
@@ -8136,9 +11639,7 @@ async function resolveLeafResumeState() {
   const allContractStates = await Promise.all(
     TASK_PATHS.map(async (relativePath) => ({
       relativePath,
-      ...(relativePath === ROOT_TASK_PATH
-        ? rootState
-        : await readCanonicalTaskStatus(relativePath)),
+      ...(relativePath === ROOT_TASK_PATH ? rootState : await readTaskStatus(relativePath)),
     }))
   );
   for (const state of allContractStates) {
@@ -8160,7 +11661,7 @@ async function resolveLeafResumeState() {
   const leafStates = [];
   for (const leaf of LEAVES) {
     const group = LEAF_STATUS_GROUPS[leaf.id];
-    const state = await readCanonicalTaskStatus(group.leafPath);
+    const state = await readTaskStatus(group.leafPath);
     if (!Object.values(RESUME_TASK_STATUS).includes(state.status)) {
       throw new Error("TASK-" + leaf.id + ": non-resumable status " + state.status);
     }
@@ -8314,7 +11815,7 @@ async function resolveLeafResumeState() {
       (state) => LEAF_STATUS_GROUPS[state.id].childId === childId
     );
     const group = LEAF_STATUS_GROUPS[childLeaves[0].id];
-    const childState = await readCanonicalTaskStatus(group.childPath);
+    const childState = await readTaskStatus(group.childPath);
     const expectedChildStatus = childLeaves.every(
       (state) => state.status === RESUME_TASK_STATUS.done
     )
@@ -8353,12 +11854,12 @@ async function resolveLeafResumeState() {
     requireTableStatus(rootState.source, childId, expectedChildStatus, "TASK-540 resumable root");
   }
 
-  const boardState = readTask540BoardState(await readFile(TASKS + "/README.md", "utf8"));
+  const boardState = readTask540BoardState(await readBoardSource());
   const expectedBoardBucket = terminalCandidate ? "done" : "inProgress";
   if (boardState.bucket !== expectedBoardBucket) {
     throw new Error("TASK-540 resumable workflow requires board bucket " + expectedBoardBucket);
   }
-  const terminal = terminalCandidate ? await validateTerminalResumeState() : null;
+  const terminal = terminalCandidate ? await validateTerminal() : null;
 
   return Object.freeze({
     mode,
@@ -9112,43 +12613,571 @@ function requireFinalCompletedForEntry(relativePath, value, entryGraph, label) {
   throw new Error(label + ": final entry status is not active or covered Done");
 }
 
-async function transitionLeafStatus(leaf, transition, reason, repairPending = null) {
+const STATUS_TRANSITION_FROZEN_TASK_INVARIANT =
+  " The task board, non-target closure parent/leaf, sibling task files, every existing " +
+  "metadata date, and every existing Modularity Repair Revalidated field are read-only " +
+  "and must remain byte-identical. The root task is also byte-identical except for the exact " +
+  "To-Do to In-Progress status cell of this direct child during a cold start. RUN_DATE applies " +
+  "only to a newly inserted field whose " +
+  "exact value is explicitly required by this transition. Never normalize, refresh, or " +
+  "rewrite historical dates, receipts, prose, or already-correct active status rows.";
+
+function statusTransitionAllowedFiles(group, { includeRoot = false } = {}) {
+  if (
+    !group ||
+    typeof group.childPath !== "string" ||
+    typeof group.leafPath !== "string" ||
+    group.childPath === group.leafPath ||
+    group.childPath === ROOT_TASK_PATH ||
+    group.leafPath === ROOT_TASK_PATH
+  ) {
+    throw new Error("TASK-540 status transition file authority is invalid");
+  }
+  return Object.freeze([...(includeRoot ? [ROOT_TASK_PATH] : []), group.childPath, group.leafPath]);
+}
+
+function requireStatusTransitionStartField(beforeSource, afterSource, field, label) {
+  const beforeValue = readTaskMetadataField(beforeSource, field);
+  const afterValue = readTaskMetadataField(afterSource, field);
+  if (beforeValue === null) {
+    if (afterValue !== RUN_DATE) {
+      throw new Error(label + ": newly inserted " + field + " must equal " + RUN_DATE);
+    }
+    return afterValue;
+  }
+  if (afterValue !== beforeValue) {
+    throw new Error(label + ": existing " + field + " must remain byte-identical");
+  }
+  return afterValue;
+}
+
+const ORDINARY_GATE_RECEIPT_PREFIX = "orchestrator-local-v1 sha256 ";
+const ORDINARY_GATE_RECEIPT_SUFFIX = " / gate green";
+
+function requireOrdinaryGateReceiptValue(value, label) {
+  if (
+    typeof value !== "string" ||
+    !/^orchestrator-local-v1 sha256 [0-9a-f]{64} \/ gate green$/u.test(value)
+  ) {
+    throw new Error(label + ": ordinary gate receipt is not canonical");
+  }
+  return value;
+}
+
+function transitionGateReceiptValue(gate, label) {
+  if (
+    !gate?.pass ||
+    !Array.isArray(gate.commands) ||
+    gate.commands.length === 0 ||
+    gate.commands.some(
+      (receipt) =>
+        typeof receipt.id !== "string" ||
+        typeof receipt.command !== "string" ||
+        receipt.status !== 0 ||
+        typeof receipt.stdoutSha256 !== "string" ||
+        !/^[0-9a-f]{64}$/u.test(receipt.stdoutSha256) ||
+        typeof receipt.stderrSha256 !== "string" ||
+        !/^[0-9a-f]{64}$/u.test(receipt.stderrSha256) ||
+        receipt.repository?.unchanged !== true
+    ) ||
+    gate.authority?.unchanged !== true
+  ) {
+    throw new Error(label + ": cannot issue a receipt for a non-green gate");
+  }
+  const projection = {
+    commands: gate.commands.map((receipt) => ({
+      id: receipt.id,
+      command: receipt.command,
+      status: receipt.status,
+      stdoutSha256: receipt.stdoutSha256,
+      stderrSha256: receipt.stderrSha256,
+      repositoryUnchanged: receipt.repository.unchanged,
+    })),
+    lineCounts: (gate.lineCounts ?? []).map(({ path, lines, owner, sha256 }) => ({
+      path,
+      lines,
+      owner,
+      sha256,
+    })),
+  };
+  return requireOrdinaryGateReceiptValue(
+    ORDINARY_GATE_RECEIPT_PREFIX +
+      createHash("sha256").update(JSON.stringify(projection)).digest("hex") +
+      ORDINARY_GATE_RECEIPT_SUFFIX,
+    label
+  );
+}
+
+function snapshotRepairTransitionAuthority(
+  leafSource,
+  transition,
+  reason,
+  suppliedRepairPending,
+  label
+) {
+  const repairPending = readTaskMetadataField(leafSource, "Repair Pending");
+  const modularityRepairPending = readTaskMetadataField(leafSource, "Modularity Repair Pending");
+  const modularityRequested = reason.includes("modularity-repair");
+  if (suppliedRepairPending !== repairPending) {
+    throw new Error(label + ": supplied Repair Pending differs from the transaction snapshot");
+  }
+  if (
+    (repairPending !== null && transition !== "complete") ||
+    (modularityRepairPending !== null && repairPending === null) ||
+    modularityRequested !== (modularityRepairPending !== null)
+  ) {
+    throw new Error(label + ": repair/modularity transition authority is stale or inconsistent");
+  }
+  if (repairPending !== null) parseRepairPending(repairPending, label);
+  return Object.freeze({
+    repairPending,
+    modularityRepairPending,
+    repairCompletion: transition === "complete" && repairPending !== null,
+    modularityCompletion:
+      transition === "complete" && repairPending !== null && modularityRepairPending !== null,
+  });
+}
+
+function assertTask540StatusTransitionIsolationContract() {
+  const group = LEAF_STATUS_GROUPS["540-04-L03"];
+  const allowedFiles = statusTransitionAllowedFiles(group);
+  const closureGroup = LEAF_STATUS_GROUPS["540-06-L01"];
+  const existingStartSource =
+    "**Status:** 🚧 In Progress\n" +
+    "**Started:** 2026-07-17\n\n" +
+    "| ID | Title | Status |\n" +
+    "| --- | --- | --- |\n" +
+    "| TASK-540-04-L03 | Entry guard | 🚧 In Progress |\n";
+  const absentStartSource = existingStartSource.replace("**Started:** 2026-07-17\n", "");
+  const frozenMutation = Object.freeze({
+    mutableStatus: false,
+    tableTaskIds: Object.freeze([]),
+    tableStatusTaskIds: Object.freeze([]),
+    mutableFields: Object.freeze([]),
+  });
+  const insertStartMutation = Object.freeze({
+    mutableStatus: false,
+    tableTaskIds: Object.freeze([]),
+    tableStatusTaskIds: Object.freeze([]),
+    mutableFields: Object.freeze(["Started"]),
+  });
+  const frozenProjection = projectTaskContractUnrelatedBytes(
+    existingStartSource,
+    frozenMutation,
+    "TASK-540 status isolation fixture"
+  );
+  const insertedStartSource = absentStartSource.replace(
+    "\n\n| ID |",
+    "\n**Started:** " + RUN_DATE + "\n\n| ID |"
+  );
+  const coldTodoSource = absentStartSource.replaceAll(
+    RESUME_TASK_STATUS.active,
+    RESUME_TASK_STATUS.todo
+  );
+  const coldActiveSource = insertedStartSource;
+  const coldActivationMutation = Object.freeze({
+    mutableStatus: true,
+    tableTaskIds: Object.freeze([]),
+    tableStatusTaskIds: Object.freeze(["540-04-L03"]),
+    mutableFields: Object.freeze(["Started"]),
+  });
+  const gateHash = "a".repeat(64);
+  const ordinaryGateValue = transitionGateReceiptValue(
+    Object.freeze({
+      pass: true,
+      commands: Object.freeze([
+        Object.freeze({
+          id: "fixture",
+          command: "node --check fixture.mjs",
+          status: 0,
+          stdoutSha256: gateHash,
+          stderrSha256: gateHash,
+          repository: Object.freeze({ unchanged: true }),
+        }),
+      ]),
+      lineCounts: Object.freeze([]),
+      authority: Object.freeze({ unchanged: true }),
+    }),
+    "TASK-540 status isolation fixture gate"
+  );
+  const repairPendingFixture = "generation " + "1".repeat(32) + " / token " + "2".repeat(32);
+  const otherRepairPendingFixture = "generation " + "3".repeat(32) + " / token " + "4".repeat(32);
+  const repairLeafSource = absentStartSource.replace(
+    "\n\n| ID |",
+    "\n**Repair Pending:** " + repairPendingFixture + "\n\n| ID |"
+  );
+  const modularityRepairLeafSource = repairLeafSource.replace(
+    "\n\n| ID |",
+    "\n**Modularity Repair Pending:** cohesive split\n\n| ID |"
+  );
+  const rejectsStartField = (beforeSource, afterSource, expectedFragment) => {
+    try {
+      requireStatusTransitionStartField(
+        beforeSource,
+        afterSource,
+        "Started",
+        "TASK-540 status isolation fixture"
+      );
+      return false;
+    } catch (error) {
+      return error instanceof Error && error.message.includes(expectedFragment);
+    }
+  };
+  const rejectsRepairAuthority = (source, reason, supplied, expectedFragment) => {
+    try {
+      snapshotRepairTransitionAuthority(
+        source,
+        "complete",
+        reason,
+        supplied,
+        "TASK-540 status isolation repair fixture"
+      );
+      return false;
+    } catch (error) {
+      return error instanceof Error && error.message.includes(expectedFragment);
+    }
+  };
+  const cases = [
+    {
+      label: "status transition owns only its direct parent and leaf",
+      pass: sameUniqueSet(allowedFiles, [group.childPath, group.leafPath]),
+    },
+    {
+      label: "status transition freezes the root task",
+      pass: !allowedFiles.includes(ROOT_TASK_PATH),
+    },
+    {
+      label: "source status transition freezes closure task contracts",
+      pass:
+        !allowedFiles.includes(closureGroup.childPath) &&
+        !allowedFiles.includes(closureGroup.leafPath),
+    },
+    {
+      label: "cold child activation conditionally owns the root table",
+      pass: sameUniqueSet(statusTransitionAllowedFiles(group, { includeRoot: true }), [
+        ROOT_TASK_PATH,
+        group.childPath,
+        group.leafPath,
+      ]),
+    },
+    {
+      label: "status rollback snapshots the complete task family and board",
+      pass: sameUniqueSet(FULL_STATUS_ROLLBACK_PATHS, [...TASK_PATHS, "_docs/_TASKS/README.md"]),
+    },
+    {
+      label: "status prompt freezes existing metadata dates",
+      pass:
+        STATUS_TRANSITION_FROZEN_TASK_INVARIANT.includes("every existing metadata date") &&
+        STATUS_TRANSITION_FROZEN_TASK_INVARIANT.includes("remain byte-identical"),
+    },
+    {
+      label: "status prompt forbids historical receipt normalization",
+      pass:
+        STATUS_TRANSITION_FROZEN_TASK_INVARIANT.includes("Never normalize") &&
+        STATUS_TRANSITION_FROZEN_TASK_INVARIANT.includes("Modularity Repair Revalidated"),
+    },
+    {
+      label: "frozen status-line mutation is detected",
+      pass:
+        projectTaskContractUnrelatedBytes(
+          existingStartSource.replace("🚧 In Progress", "✅ Done"),
+          frozenMutation,
+          "TASK-540 status isolation fixture"
+        ) !== frozenProjection,
+    },
+    {
+      label: "frozen non-status table-cell mutation is detected",
+      pass:
+        projectTaskContractUnrelatedBytes(
+          existingStartSource.replace("Entry guard", "Changed title"),
+          frozenMutation,
+          "TASK-540 status isolation fixture"
+        ) !== frozenProjection,
+    },
+    {
+      label: "existing start-date mutation is detected by projection",
+      pass:
+        projectTaskContractUnrelatedBytes(
+          existingStartSource.replace("2026-07-17", RUN_DATE),
+          frozenMutation,
+          "TASK-540 status isolation fixture"
+        ) !== frozenProjection,
+    },
+    {
+      label: "absent start field permits only its projected insertion",
+      pass:
+        projectTaskContractUnrelatedBytes(
+          absentStartSource,
+          insertStartMutation,
+          "TASK-540 status isolation fixture"
+        ) ===
+        projectTaskContractUnrelatedBytes(
+          insertedStartSource,
+          insertStartMutation,
+          "TASK-540 status isolation fixture"
+        ),
+    },
+    {
+      label: "cold To-Do activation projects only exact status cells and start insertion",
+      pass:
+        projectTaskContractUnrelatedBytes(
+          coldTodoSource,
+          coldActivationMutation,
+          "TASK-540 cold activation fixture"
+        ) ===
+        projectTaskContractUnrelatedBytes(
+          coldActiveSource,
+          coldActivationMutation,
+          "TASK-540 cold activation fixture"
+        ),
+    },
+    {
+      label: "cold activation still detects unrelated table-cell edits",
+      pass:
+        projectTaskContractUnrelatedBytes(
+          coldTodoSource,
+          coldActivationMutation,
+          "TASK-540 cold activation fixture"
+        ) !==
+        projectTaskContractUnrelatedBytes(
+          coldActiveSource.replace("Entry guard", "Changed title"),
+          coldActivationMutation,
+          "TASK-540 cold activation fixture"
+        ),
+    },
+    {
+      label: "exact required start insertion is accepted",
+      pass:
+        requireStatusTransitionStartField(
+          absentStartSource,
+          insertedStartSource,
+          "Started",
+          "TASK-540 status isolation fixture"
+        ) === RUN_DATE,
+    },
+    {
+      label: "missing required start insertion is rejected",
+      pass: rejectsStartField(absentStartSource, absentStartSource, "must equal"),
+    },
+    {
+      label: "wrong required start insertion is rejected",
+      pass: rejectsStartField(
+        absentStartSource,
+        insertedStartSource.replace(RUN_DATE, "2026-07-16"),
+        "must equal"
+      ),
+    },
+    {
+      label: "existing start date rewrite is rejected explicitly",
+      pass: rejectsStartField(
+        existingStartSource,
+        existingStartSource.replace("2026-07-17", RUN_DATE),
+        "remain byte-identical"
+      ),
+    },
+    {
+      label: "ordinary completion gate receipt is byte-canonical",
+      pass:
+        requireOrdinaryGateReceiptValue(
+          ordinaryGateValue,
+          "TASK-540 status isolation fixture gate"
+        ) === ordinaryGateValue,
+    },
+    {
+      label: "arbitrary ordinary completion gate receipt is rejected",
+      pass: (() => {
+        try {
+          requireOrdinaryGateReceiptValue("bogus", "TASK-540 status isolation fixture gate");
+          return false;
+        } catch (error) {
+          return error instanceof Error && error.message.includes("not canonical");
+        }
+      })(),
+    },
+    {
+      label: "non-green gate cannot issue a completion receipt",
+      pass: (() => {
+        try {
+          transitionGateReceiptValue(
+            Object.freeze({ pass: false, commands: Object.freeze([]) }),
+            "TASK-540 status isolation fixture gate"
+          );
+          return false;
+        } catch (error) {
+          return error instanceof Error && error.message.includes("non-green gate");
+        }
+      })(),
+    },
+    {
+      label: "snapshot repair token authorizes only its exact completion",
+      pass:
+        snapshotRepairTransitionAuthority(
+          repairLeafSource,
+          "complete",
+          "repair-resume-regate-green",
+          repairPendingFixture,
+          "TASK-540 status isolation repair fixture"
+        ).repairPending === repairPendingFixture,
+    },
+    {
+      label: "stale-null repair authority is rejected",
+      pass: rejectsRepairAuthority(
+        repairLeafSource,
+        "repair-resume-regate-green",
+        null,
+        "differs from the transaction snapshot"
+      ),
+    },
+    {
+      label: "stale-token repair authority is rejected",
+      pass: rejectsRepairAuthority(
+        repairLeafSource,
+        "repair-resume-regate-green",
+        otherRepairPendingFixture,
+        "differs from the transaction snapshot"
+      ),
+    },
+    {
+      label: "stale modularity omission is rejected",
+      pass: rejectsRepairAuthority(
+        modularityRepairLeafSource,
+        "repair-resume-regate-green",
+        repairPendingFixture,
+        "stale or inconsistent"
+      ),
+    },
+    {
+      label: "stale modularity request is rejected",
+      pass: rejectsRepairAuthority(
+        repairLeafSource,
+        "modularity-repair-resume-regate-green",
+        repairPendingFixture,
+        "stale or inconsistent"
+      ),
+    },
+  ];
+  for (const testCase of cases) {
+    if (!testCase.pass) {
+      throw new Error("TASK-540 status transition isolation self-test failed: " + testCase.label);
+    }
+  }
+  return cases.length;
+}
+
+async function transitionLeafStatus(
+  leaf,
+  transition,
+  reason,
+  suppliedRepairPending = null,
+  exactGateReceiptValue = null
+) {
   const group = LEAF_STATUS_GROUPS[leaf.id];
   if (!group) throw new Error("Missing status group for " + leaf.id);
-  const closureReceiptsBefore = await captureClosureContractReceipts();
-  const repairCompletion = transition === "complete" && Boolean(repairPending);
-  const modularityCompletion = repairCompletion && reason.includes("modularity-repair");
+  const expectedLeafStatus = RESUME_TASK_STATUS.active;
+  const expectedChildStatus = RESUME_TASK_STATUS.active;
+  const rollbackOwner = Object.freeze({
+    id: "status-" + leaf.id + "-rollback",
+    allowedFiles: FULL_STATUS_ROLLBACK_PATHS,
+    requiredFiles: Object.freeze([]),
+  });
+  const transactionSnapshot = await captureExactRollbackFiles(
+    rollbackOwner.allowedFiles,
+    "TASK-540 transition pre-dispatch " + leaf.id + ":" + transition
+  );
+  const childSourceBefore = requireExactRollbackSnapshotUtf8(
+    transactionSnapshot,
+    group.childPath,
+    "TASK-540 status transition child prestate"
+  );
+  const leafSourceBefore = requireExactRollbackSnapshotUtf8(
+    transactionSnapshot,
+    group.leafPath,
+    "TASK-540 status transition leaf prestate"
+  );
+  const rootSourceBefore = requireExactRollbackSnapshotUtf8(
+    transactionSnapshot,
+    ROOT_TASK_PATH,
+    "TASK-540 status transition root prestate"
+  );
+  const childStatusBefore = parseCanonicalTaskStatusSource(
+    childSourceBefore,
+    group.childPath
+  ).status;
+  const leafStatusBefore = parseCanonicalTaskStatusSource(leafSourceBefore, group.leafPath).status;
+  const childTableRowBefore = readCanonicalTaskStatusTableRow(
+    childSourceBefore,
+    leaf.id,
+    "TASK-540 status transition child prestate"
+  );
+  const leafTableStatusBefore = childTableRowBefore.cells.at(-1);
+  const rootStatusBefore = parseCanonicalTaskStatusSource(rootSourceBefore, ROOT_TASK_PATH).status;
+  const childTableStatusBefore = readCanonicalTaskStatusTableRow(
+    rootSourceBefore,
+    group.childId,
+    "TASK-540 status transition root prestate"
+  ).cells.at(-1);
+  const validPreStatus = (status) =>
+    status === RESUME_TASK_STATUS.active ||
+    (transition === "start" && status === RESUME_TASK_STATUS.todo);
+  if (
+    rootStatusBefore !== RESUME_TASK_STATUS.active ||
+    !validPreStatus(childStatusBefore) ||
+    !validPreStatus(leafStatusBefore) ||
+    leafTableStatusBefore !== leafStatusBefore ||
+    childTableStatusBefore !== childStatusBefore
+  ) {
+    throw new Error("TASK-540 status transition prestate is not an exact active/To-Do frontier");
+  }
+  const closureReceiptsBefore = captureClosureContractReceiptsFromSnapshot(
+    transactionSnapshot,
+    "TASK-540 status transition closure prestate"
+  );
+  const repairAuthority = snapshotRepairTransitionAuthority(
+    leafSourceBefore,
+    transition,
+    reason,
+    suppliedRepairPending,
+    "TASK-540 status transition " + leaf.id
+  );
+  const repairPending = repairAuthority.repairPending;
+  const repairCompletion = repairAuthority.repairCompletion;
+  const modularityCompletion = repairAuthority.modularityCompletion;
   const modularityRevalidatedValue =
     RUN_DATE + " — cohesive <=1,000-line split and exact owner gate passed.";
-  const expectedLeafStatus = RESUME_TASK_STATUS.active;
-  const siblingStates = await Promise.all(
-    group.leafIds.map(async (leafId) => {
-      if (leafId === leaf.id) {
-        return { id: leafId, status: expectedLeafStatus, landed: transition === "complete" };
-      }
-      const siblingGroup = LEAF_STATUS_GROUPS[leafId];
-      const siblingState = await readCanonicalTaskStatus(siblingGroup.leafPath);
-      const targetedGate = readTaskMetadataField(siblingState.source, "Targeted Gate Passed");
-      const revalidation = readTaskMetadataField(siblingState.source, "Revalidation Passed");
-      return {
-        id: leafId,
-        status: siblingState.status,
-        landed:
-          siblingState.status === RESUME_TASK_STATUS.done ||
-          (siblingState.status === RESUME_TASK_STATUS.active &&
-            !readTaskMetadataField(siblingState.source, "Repair Pending") &&
-            !readTaskMetadataField(siblingState.source, "Modularity Repair Pending") &&
-            Boolean(targetedGate) !== Boolean(revalidation)),
-      };
-    })
-  );
-  const expectedChildStatus = RESUME_TASK_STATUS.active;
+  const siblingStates = group.leafIds.map((leafId) => {
+    if (leafId === leaf.id) {
+      return { id: leafId, status: expectedLeafStatus, landed: transition === "complete" };
+    }
+    const siblingGroup = LEAF_STATUS_GROUPS[leafId];
+    const siblingState = parseCanonicalTaskStatusSource(
+      requireExactRollbackSnapshotUtf8(
+        transactionSnapshot,
+        siblingGroup.leafPath,
+        "TASK-540 status transition sibling prestate"
+      ),
+      siblingGroup.leafPath
+    );
+    const targetedGate = readTaskMetadataField(siblingState.source, "Targeted Gate Passed");
+    const revalidation = readTaskMetadataField(siblingState.source, "Revalidation Passed");
+    return {
+      id: leafId,
+      status: siblingState.status,
+      landed:
+        siblingState.status === RESUME_TASK_STATUS.done ||
+        (siblingState.status === RESUME_TASK_STATUS.active &&
+          !readTaskMetadataField(siblingState.source, "Repair Pending") &&
+          !readTaskMetadataField(siblingState.source, "Modularity Repair Pending") &&
+          Boolean(targetedGate) !== Boolean(revalidation)),
+    };
+  });
   const childImplementationComplete = siblingStates.every(({ landed }) => landed);
   const exactImplementationComplete = implementationCompleteValue();
   const startMetadataField = reason.includes("repair") ? "Fix Started" : "Started";
   const childMutableFields =
     transition === "start"
-      ? [startMetadataField]
+      ? readTaskMetadataField(childSourceBefore, startMetadataField) === null
+        ? [startMetadataField]
+        : []
       : childImplementationComplete
         ? [
             "Implementation Complete",
@@ -9164,37 +13193,79 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
     "Repair Pending",
     ...(modularityCompletion ? ["Modularity Repair Pending", "Modularity Repair Revalidated"] : []),
   ];
-  const leafMutableFields = transition === "start" ? [startMetadataField] : leafGateMutableFields;
+  const leafMutableFields =
+    transition === "start"
+      ? readTaskMetadataField(leafSourceBefore, startMetadataField) === null
+        ? [startMetadataField]
+        : []
+      : leafGateMutableFields;
   const owner = Object.freeze({
     id: "status-" + leaf.id,
-    allowedFiles: Object.freeze([ROOT_TASK_PATH, group.childPath, group.leafPath]),
+    allowedFiles: statusTransitionAllowedFiles(group, {
+      includeRoot: childTableStatusBefore !== expectedChildStatus,
+    }),
     requiredFiles: Object.freeze([]),
     taskContractMutations: Object.freeze([
-      Object.freeze({
-        relativePath: ROOT_TASK_PATH,
-        tableTaskIds: [group.childId],
-        mutableFields: [],
-      }),
+      ...(childTableStatusBefore === expectedChildStatus
+        ? []
+        : [
+            Object.freeze({
+              relativePath: ROOT_TASK_PATH,
+              mutableStatus: false,
+              tableTaskIds: [],
+              tableStatusTaskIds: Object.freeze([group.childId]),
+              mutableFields: Object.freeze([]),
+            }),
+          ]),
       Object.freeze({
         relativePath: group.childPath,
-        tableTaskIds: [leaf.id],
+        mutableStatus: childStatusBefore !== expectedChildStatus,
+        tableTaskIds: [],
+        tableStatusTaskIds:
+          leafTableStatusBefore === expectedLeafStatus ? [] : Object.freeze([leaf.id]),
         mutableFields: Object.freeze([...new Set(childMutableFields)]),
       }),
       Object.freeze({
         relativePath: group.leafPath,
+        mutableStatus: leafStatusBefore !== expectedLeafStatus,
         tableTaskIds: [],
+        tableStatusTaskIds: [],
         mutableFields: Object.freeze([...new Set(leafMutableFields)]),
       }),
     ]),
   });
-  const rollbackOwner = Object.freeze({
-    id: owner.id + "-rollback",
-    allowedFiles: Object.freeze([...owner.allowedFiles, "_docs/_TASKS/README.md"]),
-    requiredFiles: Object.freeze([]),
-  });
-  const transactionSnapshot = await captureExactRollbackFiles(
-    rollbackOwner.allowedFiles,
-    "TASK-540 transition pre-dispatch " + leaf.id + ":" + transition
+  const statusTransitionProjectionBefore = Object.freeze(
+    Object.fromEntries(
+      owner.taskContractMutations.map((mutation) => [
+        mutation.relativePath,
+        projectTaskContractUnrelatedBytes(
+          requireExactRollbackSnapshotUtf8(
+            transactionSnapshot,
+            mutation.relativePath,
+            "TASK-540 status transition owned projection prestate"
+          ),
+          mutation,
+          "TASK-540 status transition owned projection prestate"
+        ),
+      ])
+    )
+  );
+  const verifyOwnedStatusTransitionProjections = async (label) => {
+    for (const mutation of owner.taskContractMutations) {
+      const actual = projectTaskContractUnrelatedBytes(
+        await readFile(ROOT + "/" + mutation.relativePath, "utf8"),
+        mutation,
+        label
+      );
+      if (actual !== statusTransitionProjectionBefore[mutation.relativePath]) {
+        throw new Error(
+          label + ": owned task contract changed outside its snapshot-derived authority"
+        );
+      }
+    }
+  };
+  const frozenStatusTransitionPaths = rollbackOwner.allowedFiles.filter(
+    (relativePath) => !owner.allowedFiles.includes(relativePath)
   );
   const preClosureFixStartedDate =
     transition === "complete" &&
@@ -9218,9 +13289,32 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
   const preClosureGateValue = preClosureFixStartedDate
     ? preClosureRegateValue(preClosureFixStartedDate)
     : null;
+  const requiredGateReceiptValue =
+    transition !== "complete"
+      ? null
+      : repairCompletion
+        ? repairGateValue(repairPending)
+        : (preClosureGateValue ??
+          requireOrdinaryGateReceiptValue(
+            exactGateReceiptValue,
+            "TASK-540 status transition " + leaf.id
+          ));
+  if (
+    (transition === "start" && exactGateReceiptValue !== null) ||
+    (transition === "complete" && exactGateReceiptValue !== requiredGateReceiptValue)
+  ) {
+    throw new Error("TASK-540 status transition gate receipt authority mismatch for " + leaf.id);
+  }
+  const requiresColdActivation =
+    childStatusBefore !== expectedChildStatus ||
+    leafStatusBefore !== expectedLeafStatus ||
+    childTableStatusBefore !== expectedChildStatus ||
+    leafTableStatusBefore !== expectedLeafStatus;
   const action =
     transition === "start"
-      ? "Set the exact leaf and its child In Progress before implementation/fix; add Started for first implementation or Fix Started for a verified repair."
+      ? requiresColdActivation
+        ? "Activate only the exact To-Do leaf/direct-child status fields and their exact parent-table status cells as In Progress; add Started for first implementation or Fix Started for a verified repair only when that field is currently absent."
+        : "Keep the exact leaf and its child In Progress before implementation/fix; add Started for first implementation or Fix Started for a verified repair only when that field is currently absent."
       : repairCompletion
         ? "Keep the exact repaired leaf and its child In Progress, remove the leaf's exact Repair Pending and old gate receipts, and record its canonical Implementation Complete plus one fresh matching Revalidation Passed receipt for this repair generation/token."
         : reason.includes("regate")
@@ -9229,12 +13323,17 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
 
   let transitionMutationError = null;
   try {
+    await verifyExactRollbackFiles(
+      transactionSnapshot,
+      "TASK-540 status transition exact pre-dispatch state " + leaf.id
+    );
     await runMutatingAgent(
       "Repository " +
         ROOT +
         ". TASK-540 task-state transition only. " +
         action +
         " Read the root parent, exact child, exact leaf, and _docs/_TASKS/README.md fresh. " +
+        STATUS_TRANSITION_FROZEN_TASK_INVARIANT +
         "Edit only " +
         JSON.stringify(owner.allowedFiles) +
         ". The required exact post-transition statuses are leaf=" +
@@ -9242,6 +13341,15 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
         ", child=" +
         expectedChildStatus +
         ", root=🚧 In Progress." +
+        (transition === "start"
+          ? " For the child and leaf independently, preserve any existing exact `**" +
+            startMetadataField +
+            ":**` value; only where absent, insert exact `**" +
+            startMetadataField +
+            ":** " +
+            RUN_DATE +
+            "`."
+          : "") +
         (transition === "complete"
           ? " Write exact leaf field `**Implementation Complete:** " +
             exactImplementationComplete +
@@ -9254,14 +13362,19 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
           ? " The leaf's exact current `**Repair Pending:** " +
             repairPending +
             "` must be removed atomically only now, after the green gate. Remove any Targeted Gate Passed value and write `**Revalidation Passed:** " +
-            repairPending +
-            " / gate green" +
+            requiredGateReceiptValue +
             "` exactly; a different or stale generation/token is invalid."
           : preClosureGateValue
             ? " Remove any Targeted Gate Passed and Repair Pending value and write exact `**Revalidation Passed:** " +
-              preClosureGateValue +
+              requiredGateReceiptValue +
               "` from the persisted matching child/leaf Fix Started date. A different date or value is invalid."
-            : "") +
+            : transition === "complete"
+              ? " Write exact `**" +
+                (reason.includes("regate") ? "Revalidation Passed" : "Targeted Gate Passed") +
+                ":** " +
+                requiredGateReceiptValue +
+                "`; missing, arbitrary, or stale evidence is invalid."
+              : "") +
         (modularityCompletion
           ? " Remove the exact leaf's Modularity Repair Pending field and write exact `**Modularity Repair Revalidated:** " +
             modularityRevalidatedValue +
@@ -9270,13 +13383,14 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
               ? "All direct-child leaves now have current gates, so remove the child's Modularity Repair Pending field and write the same exact Modularity Repair Revalidated value there."
               : "Other direct-child modularity work remains, so preserve the child's Modularity Repair Pending field and do not add Modularity Repair Revalidated there.")
           : "") +
-        " Synchronize the child leaf-status table and root subtask-status " +
-        "table. Keep TASK-540's board row/statistics byte-identical and In Progress. Preserve every " +
+        (requiresColdActivation
+          ? " Change only the exact To-Do status cells required above; every non-status table cell and every already-active status cell must remain byte-identical."
+          : " The child leaf-status table and root subtask-status table already have the required active values and must remain byte-identical.") +
+        " Keep TASK-540's board " +
+        "row/statistics byte-identical and In Progress. Preserve every " +
         "unrelated descendant status byte-identically. Use canonical " +
         "status fields and dedicated Started/Fix Started/Implementation Complete/Targeted Gate Passed/Revalidation Passed fields " +
-        "dated " +
-        RUN_DATE +
-        "; do not put dates in **Status:**. Do not edit source, tests, docs outside these task " +
+        "with only the exact new values stated above; do not put dates in **Status:**. Do not edit source, tests, docs outside these task " +
         "files, board, workflow, changelog, or another task. Never stage or commit. Transition " +
         "reason: " +
         reason +
@@ -9285,6 +13399,14 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
       owner,
       false
     );
+    await verifyOwnedStatusTransitionProjections(
+      "TASK-540 status transition owned post-dispatch state " + leaf.id
+    );
+    await verifyExactRollbackFileSubset(
+      transactionSnapshot,
+      frozenStatusTransitionPaths,
+      "TASK-540 status transition frozen post-dispatch state " + leaf.id
+    );
   } catch (error) {
     transitionMutationError = error;
   }
@@ -9292,6 +13414,14 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
   let transitionVerificationError = null;
   let verifiedClosureGateReceipt = null;
   try {
+    await verifyOwnedStatusTransitionProjections(
+      "TASK-540 status transition owned verification state " + leaf.id
+    );
+    await verifyExactRollbackFileSubset(
+      transactionSnapshot,
+      frozenStatusTransitionPaths,
+      "TASK-540 status transition frozen verification state " + leaf.id
+    );
     const [rootState, childState, leafState, boardSource] = await Promise.all([
       readCanonicalTaskStatus(ROOT_TASK_PATH),
       readCanonicalTaskStatus(group.childPath),
@@ -9333,11 +13463,8 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
           : "Targeted Gate Passed";
       const expectedGateValue = repairCompletion
         ? repairGateValue(repairPending)
-        : (preClosureGateValue ?? null);
-      if (
-        gateReceipt.field !== expectedGateField ||
-        (expectedGateValue !== null && gateReceipt.value !== expectedGateValue)
-      ) {
+        : requiredGateReceiptValue;
+      if (gateReceipt.field !== expectedGateField || gateReceipt.value !== expectedGateValue) {
         throw new Error("TASK-540 missing gate evidence field for " + leaf.id);
       }
       if (
@@ -9402,6 +13529,18 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
         throw new Error("TASK-540 landed leaf retained Repair Pending: " + leaf.id);
       }
     } else {
+      requireStatusTransitionStartField(
+        leafSourceBefore,
+        leafState.source,
+        startMetadataField,
+        "TASK-540 starting leaf " + leaf.id
+      );
+      requireStatusTransitionStartField(
+        childSourceBefore,
+        childState.source,
+        startMetadataField,
+        "TASK-540 starting child " + group.childId
+      );
       requireAbsentImplementationComplete(
         readTaskMetadataField(leafState.source, "Implementation Complete"),
         "TASK-540 starting leaf " + leaf.id
@@ -9427,6 +13566,14 @@ async function transitionLeafStatus(leaf, transition, reason, repairPending = nu
       closureReceiptsBefore,
       "TASK-540 task transition " + leaf.id,
       { allowGateChange: transition === "complete" && leaf.id === "540-06-L01" }
+    );
+    await verifyExactRollbackFileSubset(
+      transactionSnapshot,
+      frozenStatusTransitionPaths,
+      "TASK-540 status transition frozen final state " + leaf.id
+    );
+    await verifyOwnedStatusTransitionProjections(
+      "TASK-540 status transition owned final state " + leaf.id
     );
   } catch (error) {
     transitionVerificationError = error;
@@ -9476,12 +13623,17 @@ async function runLeafGate(
   const completenessErrors = requireModularityCompleteness
     ? modularityRepairCompletenessErrors(leaf, lineCounts)
     : [];
+  const settingsBaselineErrors =
+    leaf.id === "540-06-L01" && !settingsHygieneBaselineUnchanged(execution.receipts, label)
+      ? [leaf.id + ": settings hygiene changed the required smoke baseline"]
+      : [];
   const failed = execution.failedReceipt;
   const pass =
     failed === null &&
     execution.receipts.length === leaf.commands.length &&
     execution.authority.unchanged &&
-    completenessErrors.length === 0;
+    completenessErrors.length === 0 &&
+    settingsBaselineErrors.length === 0;
   const result = Object.freeze({
     pass,
     summary: pass
@@ -9491,6 +13643,7 @@ async function runLeafGate(
       ? []
       : [
           ...completenessErrors,
+          ...settingsBaselineErrors,
           ...(failed === null
             ? []
             : [
@@ -9502,7 +13655,10 @@ async function runLeafGate(
               ]),
         ],
     failureKind: pass ? "none" : failed === null ? "behavior" : localFailureKind(failed),
-    failedCommand: pass ? null : (failed?.command ?? "modularityCompleteness"),
+    failedCommand: pass
+      ? null
+      : (failed?.command ??
+        (settingsBaselineErrors.length > 0 ? "settingsBaselineHygiene" : "modularityCompleteness")),
     commands: execution.receipts,
     isolationCommands: execution.isolationReceipts,
     lineCounts,
@@ -9560,7 +13716,13 @@ async function implementAndGate(leaf) {
     gate = await runLeafGate(leaf, attempt + 1);
   }
   if (!gate.pass) throw new Error(leaf.id + ": targeted gate remained red");
-  await transitionLeafStatus(leaf, "complete", "targeted-gate-green");
+  await transitionLeafStatus(
+    leaf,
+    "complete",
+    "targeted-gate-green",
+    null,
+    transitionGateReceiptValue(gate, "TASK-540 targeted gate " + leaf.id)
+  );
 }
 
 async function resumeActiveUngatedLeaf(leaf) {
@@ -9594,6 +13756,9 @@ async function resumeActiveUngatedLeaf(leaf) {
     gate = await runLeafGate(leaf, attempt + 1, leaf.phase);
   }
   if (!gate.pass) throw new Error(leaf.id + ": active/no-gate resume remained red");
+  const exactGateReceiptValue = preClosureFixStartedDate
+    ? preClosureRegateValue(preClosureFixStartedDate)
+    : transitionGateReceiptValue(gate, "TASK-540 active resume gate " + leaf.id);
   await transitionLeafStatus(
     leaf,
     "complete",
@@ -9601,7 +13766,9 @@ async function resumeActiveUngatedLeaf(leaf) {
       ? "resume-pre-closure-regate-green"
       : behaviorFixRan
         ? "resume-regate-green"
-        : "targeted-gate-green"
+        : "targeted-gate-green",
+    null,
+    exactGateReceiptValue
   );
 }
 
@@ -9671,7 +13838,8 @@ async function resumeInterruptedRepair(resumeState) {
     leaf,
     "complete",
     modularityRepair ? "modularity-repair-resume-regate-green" : "repair-resume-regate-green",
-    repair.pending
+    repair.pending,
+    repairGateValue(repair.pending)
   );
 }
 
@@ -9709,7 +13877,8 @@ async function runTask540ModularityStartGate() {
       ". Read root AGENTS.md, all " +
       PENDING_MODULARITY_REPAIR_TASK_FILES.length +
       " affected leaf contracts and every direct parent, TASK-540 root and closure contracts, " +
-      "TASK-9999-01/L01/L02, the complete current source/tests, workflow, HEAD, status, " +
+      "TASK-9999-01/L01 plus superseded L02, the complete current source/tests, workflow, " +
+      "HEAD, status, " +
       "staged/unstaged diff, and target matrix fresh. Verify exact single-writer paths, public " +
       "facades, dependency directions, test no-loss/cardinality, line-count enforcement, restart " +
       "authority, security/cleanup invariants, and 540-01-L01 -> 540-02-L01 -> 540-03-L01 -> " +
@@ -9816,11 +13985,14 @@ function requireFullValidation(result, label) {
         receipt.status !== expectedStatus
       );
     }) ||
+    !smokeBaselineUnchanged(result.commands, label) ||
     result.database.configured !== true ||
     result.database.reachable !== true ||
     result.database.selectOne !== 1
   ) {
-    throw new Error(label + ": full command receipt mismatch");
+    throw new Error(
+      label + ": full command receipt mismatch (" + fullValidationMismatchDetail(result) + ")"
+    );
   }
   requireTask540LineCountEvidence(result.lineCounts, label);
   const findings = result.strictScan.externalFindings;
@@ -9858,10 +14030,12 @@ async function runFullValidation(label, phaseName) {
   const database = dbReceipt
     ? parseDatabasePreflightReceipt(dbReceipt, label + ":dbPreflight")
     : Object.freeze({ configured: false, reachable: false, selectOne: 0 });
+  const baselineUnchanged = smokeBaselineUnchanged(execution.receipts, label);
   const pass =
     execution.failedReceipt === null &&
     execution.receipts.length === FULL_GATE_COMMANDS.length &&
     execution.authority.unchanged &&
+    baselineUnchanged &&
     execution.strictScan?.accepted === true;
   const result = Object.freeze({
     pass,
@@ -9926,15 +14100,21 @@ const POST_AUDIT_LENSES = Object.freeze([
   ],
 ]);
 
-async function authorizeClosureLeafRepair(repairPending, priorGate, label) {
-  const anchorSnapshot = await captureClosureAnchorSnapshot(
-    "TASK-540 closure-leaf repair pre-authorization",
-    "anchor-only"
+function authorizeClosureLeafRepair(snapshot, repairPending, priorGate, label) {
+  const relativePath = "_docs/_CHANGELOG/README.md";
+  const source = requireExactRollbackSnapshotUtf8(
+    snapshot,
+    relativePath,
+    "TASK-540 closure-leaf repair authorization"
   );
-  const anchor = await readClosureAnchor({
-    required: true,
-    label: "TASK-540 closure-leaf repair authorization",
-  });
+  const indexState = classifyClosureEvidenceIndex(
+    source,
+    "TASK-540 closure-leaf repair authorization"
+  );
+  if (indexState.kind !== "consumed" || !indexState.anchor) {
+    throw new Error("TASK-540 closure-leaf repair requires exact consumed anchor authority");
+  }
+  const anchor = indexState.anchor;
   const priorGateHash = hashedGateReceipt(priorGate);
   if (!equalHashedGateReceipts(anchor.closureControl.gateReceipt, priorGateHash)) {
     throw new Error("TASK-540 closure-leaf repair prior gate differs from durable control");
@@ -9953,52 +14133,43 @@ async function authorizeClosureLeafRepair(repairPending, priorGate, label) {
     anchor.closureControl,
     repairAuthorization
   );
+  const priorAnchorLine = formatClosureAnchor(anchor);
   const anchorLine = formatClosureAnchor(authorizedAnchor);
-  let mutationError = null;
-  try {
-    await runMutatingAgent(
-      "Repository " +
-        ROOT +
-        ". Authorize only the exact TASK-540 closure-leaf gate repair before task-state reopen. " +
-        "Edit only _docs/_CHANGELOG/README.md. Replace the single TASK-540 closure anchor with this " +
-        "exact standalone line: `" +
-        anchorLine +
-        "`. Preserve every other byte, row, reservation, task, changelog file, source, test, stage, " +
-        "and commit. Authorization label: " +
-        label +
-        ".",
-      { label: "closure-repair-authorization:540:" + label, phase: "Final drift" },
-      closureRepairAuthorizationOwner,
-      false
-    );
-  } catch (error) {
-    mutationError = error;
+  const exactPriorAnchorLines = source.split("\n").filter((line) => line === priorAnchorLine);
+  if (exactPriorAnchorLines.length !== 1 || priorAnchorLine === anchorLine) {
+    throw new Error("TASK-540 closure-leaf repair anchor line is not uniquely replaceable");
   }
-  let verificationError = null;
-  try {
-    await verifyClosureAnchor(authorizedAnchor, "TASK-540 closure-leaf repair authorization");
-  } catch (error) {
-    verificationError = error;
+  const afterSource = source.replace(priorAnchorLine, anchorLine);
+  if (
+    projectTask540IndexUnrelatedBytes(
+      source,
+      "anchor-only",
+      "TASK-540 closure-leaf repair authorization before"
+    ) !==
+      projectTask540IndexUnrelatedBytes(
+        afterSource,
+        "anchor-only",
+        "TASK-540 closure-leaf repair authorization after"
+      ) ||
+    JSON.stringify(
+      parseClosureAnchor(afterSource, "TASK-540 closure-leaf repair authorization after", {
+        required: true,
+      })
+    ) !== JSON.stringify(authorizedAnchor)
+  ) {
+    throw new Error("TASK-540 closure-leaf repair changed bytes outside the exact anchor line");
   }
-  if (mutationError || verificationError) {
-    const primaryError =
-      mutationError && verificationError
-        ? new AggregateError(
-            [mutationError, verificationError],
-            "TASK-540 repair authorization mutation and verification both failed"
-          )
-        : (mutationError ?? verificationError);
-    try {
-      await restoreClosureAnchorSnapshot(anchorSnapshot, "repair-authorization:" + label);
-    } catch (rollbackError) {
-      throw new AggregateError(
-        [primaryError, rollbackError],
-        "TASK-540 repair authorization and exact anchor rollback both failed"
-      );
-    }
-    throw primaryError;
-  }
-  return Object.freeze({ authorizedAnchor, successorGate });
+  return Object.freeze({
+    authorizedAnchor,
+    successorGate,
+    entry: Object.freeze({
+      relativePath,
+      beforeSource: source,
+      afterSource,
+      changed: true,
+    }),
+    label,
+  });
 }
 
 async function reopenClosureLeafUngated(leaf, label, phaseName) {
@@ -10016,42 +14187,29 @@ async function reopenClosureLeafUngated(leaf, label, phaseName) {
   if (indexState.kind !== "reserved" || EXISTING_CHANGELOG_REL) {
     throw new Error("TASK-540 ungated closure remediation requires reserved/no-anchor authority");
   }
+  const taskContractMutations = ungatedClosureReopenTaskContractMutations(group, leaf.id);
   const owner = Object.freeze({
     id: "reopen-ungated-" + leaf.id,
     allowedFiles: Object.freeze([ROOT_TASK_PATH, group.childPath, group.leafPath]),
     requiredFiles: Object.freeze([]),
-    taskContractMutations: Object.freeze([
-      Object.freeze({
-        relativePath: ROOT_TASK_PATH,
-        tableTaskIds: [group.childId],
-        mutableFields: [],
-      }),
-      Object.freeze({
-        relativePath: group.childPath,
-        tableTaskIds: [leaf.id],
-        mutableFields: Object.freeze(["Fix Started", "Implementation Complete"]),
-      }),
-      Object.freeze({
-        relativePath: group.leafPath,
-        tableTaskIds: [],
-        mutableFields: Object.freeze([
-          "Fix Started",
-          "Implementation Complete",
-          "Targeted Gate Passed",
-          "Revalidation Passed",
-        ]),
-      }),
-    ]),
+    taskContractMutations,
   });
   const rollbackOwner = Object.freeze({
     id: owner.id + "-rollback",
-    allowedFiles: Object.freeze([...owner.allowedFiles, "_docs/_TASKS/README.md"]),
+    allowedFiles: Object.freeze([
+      ...owner.allowedFiles,
+      "_docs/_TASKS/README.md",
+      "_docs/_CHANGELOG/README.md",
+    ]),
     requiredFiles: Object.freeze([]),
   });
   const transactionSnapshot = await captureExactRollbackFiles(
     rollbackOwner.allowedFiles,
-    "TASK-540 ungated closure repair pre-dispatch"
+    "TASK-540 ungated closure repair pre-transaction"
   );
+  if ((await readSharedClosurePending()) !== null) {
+    throw new Error("TASK-540 ungated closure repair snapshot gained Closure Pending");
+  }
   const boardBefore = requireExactRollbackSnapshotUtf8(
     transactionSnapshot,
     "_docs/_TASKS/README.md",
@@ -10060,114 +14218,4305 @@ async function reopenClosureLeafUngated(leaf, label, phaseName) {
   if (readTask540BoardState(boardBefore).bucket !== "inProgress") {
     throw new Error("TASK-540 ungated closure remediation requires an active board row");
   }
-  const closureReceiptsBefore = await captureClosureContractReceipts();
+  const changelogIndexBefore = requireExactRollbackSnapshotUtf8(
+    transactionSnapshot,
+    "_docs/_CHANGELOG/README.md",
+    "TASK-540 ungated closure repair"
+  );
+  if (
+    classifyClosureEvidenceIndex(
+      changelogIndexBefore,
+      "TASK-540 ungated closure repair snapshot authority"
+    ).kind !== "reserved"
+  ) {
+    throw new Error("TASK-540 ungated closure repair snapshot lost reserved index authority");
+  }
+  const closureReceiptsBefore = captureClosureContractReceiptsFromSnapshot(
+    transactionSnapshot,
+    "TASK-540 ungated closure repair receipts"
+  );
   const closureLeafSnapshot = requireExactRollbackSnapshotEntry(
     transactionSnapshot,
     group.leafPath,
     "TASK-540 ungated closure repair"
   );
+  const taskSources = Object.freeze({
+    root: requireExactRollbackSnapshotUtf8(
+      transactionSnapshot,
+      ROOT_TASK_PATH,
+      "TASK-540 ungated closure repair root snapshot"
+    ),
+    child: requireExactRollbackSnapshotUtf8(
+      transactionSnapshot,
+      group.childPath,
+      "TASK-540 ungated closure repair child snapshot"
+    ),
+    leaf: exactRollbackEntryUtf8(
+      closureLeafSnapshot,
+      "TASK-540 ungated closure repair leaf snapshot"
+    ),
+  });
+  for (const [taskLabel, source] of Object.entries(taskSources)) {
+    requireAbsentCompleted(
+      readTaskMetadataField(source, "Completed"),
+      "TASK-540 ungated closure repair snapshot " + taskLabel
+    );
+    if (readTaskMetadataField(source, "Repair Pending") !== null) {
+      throw new Error(
+        "TASK-540 ungated closure repair snapshot retained Repair Pending at " + taskLabel
+      );
+    }
+  }
   const oldGate = readClosureLeafGateReceipt(
-    parseCanonicalTaskStatusSource(
-      exactRollbackEntryUtf8(closureLeafSnapshot, "TASK-540 ungated closure repair"),
-      group.leafPath
-    ).source,
+    parseCanonicalTaskStatusSource(taskSources.leaf, group.leafPath).source,
     "TASK-540 ungated closure repair"
   );
+  if (readTaskMetadataField(taskSources.leaf, oldGate.field) !== oldGate.value) {
+    throw new Error("TASK-540 ungated closure repair old gate is not snapshot-exact");
+  }
+  const entries = buildRepairReopenTaskContractSources(
+    taskSources,
+    group,
+    leaf.id,
+    null,
+    taskContractMutations,
+    "TASK-540 ungated closure repair source projection"
+  );
+  await runSnapshotDerivedExactTransaction(
+    transactionSnapshot,
+    rollbackOwner,
+    entries,
+    "TASK-540 ungated closure repair " + phaseName + ":" + label,
+    async () => {
+      const [rootState, childState, leafState, boardSource] = await Promise.all([
+        readCanonicalTaskStatus(ROOT_TASK_PATH),
+        readCanonicalTaskStatus(group.childPath),
+        readCanonicalTaskStatus(group.leafPath),
+        readFile(TASKS + "/README.md", "utf8"),
+      ]);
+      for (const [index, state] of [rootState, childState, leafState].entries()) {
+        requireAbsentCompleted(
+          readTaskMetadataField(state.source, "Completed"),
+          "TASK-540 ungated closure repair contract " + index
+        );
+        requireAbsentImplementationComplete(
+          readTaskMetadataField(state.source, "Implementation Complete"),
+          "TASK-540 ungated closure repair contract " + index
+        );
+      }
+      if (
+        [rootState, childState, leafState].some(
+          ({ status, source }) =>
+            status !== RESUME_TASK_STATUS.active || readTaskMetadataField(source, "Repair Pending")
+        ) ||
+        readTaskMetadataField(childState.source, "Fix Started") !== RUN_DATE ||
+        readTaskMetadataField(leafState.source, "Fix Started") !== RUN_DATE ||
+        CLOSURE_GATE_FIELDS.some((field) => readTaskMetadataField(leafState.source, field))
+      ) {
+        throw new Error("TASK-540 pre-closure ungated repair state is not exact");
+      }
+      requireTableStatus(childState.source, leaf.id, RESUME_TASK_STATUS.active, "TASK-540 child");
+      requireTableStatus(
+        rootState.source,
+        group.childId,
+        RESUME_TASK_STATUS.active,
+        "TASK-540 root"
+      );
+      if (boardSource !== boardBefore) {
+        throw new Error("TASK-540 ungated closure repair changed the board or statistics");
+      }
+      if ((await readFile(ROOT + "/_docs/_CHANGELOG/README.md", "utf8")) !== changelogIndexBefore) {
+        throw new Error("TASK-540 ungated closure repair changed the changelog index");
+      }
+      await verifyClosureContractReceipts(
+        closureReceiptsBefore,
+        "TASK-540 pre-closure ungated repair",
+        { allowGateChange: true }
+      );
+    }
+  );
+  return Object.freeze({ mode: "ungated-closure", repairPending: null });
+}
 
+function repairReopenTaskContractMutations(group, leafId) {
+  if (typeof leafId !== "string" || leafId.length === 0) {
+    throw new Error("TASK-540 repair-reopen leaf authority is invalid");
+  }
+  return Object.freeze([
+    Object.freeze({
+      relativePath: ROOT_TASK_PATH,
+      mutableStatus: true,
+      tableTaskIds: Object.freeze([]),
+      tableStatusTaskIds: Object.freeze([group.childId]),
+      mutableFields: Object.freeze([]),
+    }),
+    Object.freeze({
+      relativePath: group.childPath,
+      mutableStatus: true,
+      tableTaskIds: Object.freeze([]),
+      tableStatusTaskIds: Object.freeze([leafId]),
+      mutableFields: Object.freeze(["Fix Started", "Implementation Complete", "Completed"]),
+    }),
+    Object.freeze({
+      relativePath: group.leafPath,
+      mutableStatus: true,
+      tableTaskIds: Object.freeze([]),
+      tableStatusTaskIds: Object.freeze([]),
+      mutableFields: Object.freeze([
+        "Fix Started",
+        "Implementation Complete",
+        "Completed",
+        "Targeted Gate Passed",
+        "Revalidation Passed",
+        "Repair Pending",
+      ]),
+    }),
+  ]);
+}
+
+function ungatedClosureReopenTaskContractMutations(group, leafId) {
+  if (leafId !== "540-06-L01") {
+    throw new Error("TASK-540 ungated repair-reopen authority requires the closure leaf");
+  }
+  return Object.freeze([
+    Object.freeze({
+      relativePath: ROOT_TASK_PATH,
+      mutableStatus: true,
+      tableTaskIds: Object.freeze([]),
+      tableStatusTaskIds: Object.freeze([group.childId]),
+      mutableFields: Object.freeze([]),
+    }),
+    Object.freeze({
+      relativePath: group.childPath,
+      mutableStatus: true,
+      tableTaskIds: Object.freeze([]),
+      tableStatusTaskIds: Object.freeze([leafId]),
+      mutableFields: Object.freeze(["Fix Started", "Implementation Complete"]),
+    }),
+    Object.freeze({
+      relativePath: group.leafPath,
+      mutableStatus: true,
+      tableTaskIds: Object.freeze([]),
+      tableStatusTaskIds: Object.freeze([]),
+      mutableFields: Object.freeze([
+        "Fix Started",
+        "Implementation Complete",
+        "Targeted Gate Passed",
+        "Revalidation Passed",
+      ]),
+    }),
+  ]);
+}
+
+function setCanonicalTaskStatus(source, status, label) {
+  const current = parseCanonicalTaskStatusSource(source, label).status;
+  if (current === status) return source;
+  return source.replace(/^\*\*Status:\*\*.*$/m, "**Status:** " + status);
+}
+
+function setCanonicalTaskTableStatus(source, taskId, status, label) {
+  const row = readCanonicalTaskStatusTableRow(source, taskId, label);
+  if (row.cells.at(-1) === status) return source;
+  const marker = "<TASK-540-MUTABLE-STATUS-CELL:" + taskId + ">";
+  const projected = projectTaskStatusTableCell(row, taskId, label);
+  if (projected.split(marker).length !== 2) {
+    throw new Error(label + ": canonical task status-cell marker is not unique");
+  }
+  const lines = source.split("\n");
+  lines[row.lineIndex] = projected.replace(marker, status);
+  return lines.join("\n");
+}
+
+function taskMetadataLineIndex(lines, field, label) {
+  const prefix = "**" + field + ":**";
+  const matches = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    if (lines[index].startsWith(prefix)) matches.push(index);
+  }
+  if (matches.length > 1) {
+    throw new Error(label + ": duplicated mutable task metadata field " + field);
+  }
+  return matches[0] ?? -1;
+}
+
+function removeCanonicalTaskMetadataFields(source, fields, label) {
+  const lines = source.split("\n");
+  for (const field of fields) {
+    const index = taskMetadataLineIndex(lines, field, label);
+    if (index >= 0) lines.splice(index, 1);
+  }
+  return lines.join("\n");
+}
+
+function setCanonicalTaskMetadataField(source, field, value, insertAfterFields, label) {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    value.includes("\n") ||
+    value.includes("\r")
+  ) {
+    throw new Error(label + ": invalid task metadata value for " + field);
+  }
+  const lines = source.split("\n");
+  const existingIndex = taskMetadataLineIndex(lines, field, label);
+  const exactLine = "**" + field + ":** " + value;
+  if (existingIndex >= 0) {
+    lines[existingIndex] = exactLine;
+    return lines.join("\n");
+  }
+  let anchorIndex = -1;
+  for (const anchorField of insertAfterFields) {
+    anchorIndex = taskMetadataLineIndex(lines, anchorField, label);
+    if (anchorIndex >= 0) break;
+  }
+  if (anchorIndex < 0) {
+    throw new Error(label + ": task metadata insertion anchor is missing for " + field);
+  }
+  lines.splice(anchorIndex + 1, 0, exactLine);
+  return lines.join("\n");
+}
+
+function buildRepairReopenTaskContractSources(
+  sources,
+  group,
+  leafId,
+  repairPending,
+  mutations,
+  label
+) {
+  if (repairPending !== null) {
+    parseRepairPending(repairPending, label + " Repair Pending");
+  }
+  const sourceByPath = new Map([
+    [ROOT_TASK_PATH, sources.root],
+    [group.childPath, sources.child],
+    [group.leafPath, sources.leaf],
+  ]);
+  if (
+    new Set(sourceByPath.keys()).size !== 3 ||
+    [...sourceByPath.values()].some((source) => typeof source !== "string")
+  ) {
+    throw new Error(label + ": repair-reopen source authority is invalid");
+  }
+
+  let root = setCanonicalTaskStatus(sources.root, RESUME_TASK_STATUS.active, label + " root");
+  root = setCanonicalTaskTableStatus(
+    root,
+    group.childId,
+    RESUME_TASK_STATUS.active,
+    label + " root"
+  );
+
+  let child = setCanonicalTaskStatus(sources.child, RESUME_TASK_STATUS.active, label + " child");
+  child = setCanonicalTaskTableStatus(child, leafId, RESUME_TASK_STATUS.active, label + " child");
+  child = removeCanonicalTaskMetadataFields(
+    child,
+    repairPending === null ? ["Implementation Complete"] : ["Implementation Complete", "Completed"],
+    label + " child"
+  );
+  child = setCanonicalTaskMetadataField(
+    child,
+    "Fix Started",
+    RUN_DATE,
+    ["Repair Started", "Started", "Status"],
+    label + " child"
+  );
+
+  let leaf = setCanonicalTaskStatus(sources.leaf, RESUME_TASK_STATUS.active, label + " leaf");
+  leaf = removeCanonicalTaskMetadataFields(
+    leaf,
+    repairPending === null
+      ? ["Implementation Complete", "Targeted Gate Passed", "Revalidation Passed"]
+      : [
+          "Implementation Complete",
+          "Completed",
+          "Targeted Gate Passed",
+          "Revalidation Passed",
+          "Repair Pending",
+        ],
+    label + " leaf"
+  );
+  leaf = setCanonicalTaskMetadataField(
+    leaf,
+    "Fix Started",
+    RUN_DATE,
+    ["Repair Started", "Started", "Status"],
+    label + " leaf"
+  );
+  if (repairPending !== null) {
+    leaf = setCanonicalTaskMetadataField(
+      leaf,
+      "Repair Pending",
+      repairPending,
+      ["Fix Started"],
+      label + " leaf"
+    );
+  }
+
+  const expectedByPath = new Map([
+    [ROOT_TASK_PATH, root],
+    [group.childPath, child],
+    [group.leafPath, leaf],
+  ]);
+  const entries = mutations.map((mutation) => {
+    const beforeSource = sourceByPath.get(mutation.relativePath);
+    const afterSource = expectedByPath.get(mutation.relativePath);
+    if (typeof beforeSource !== "string" || typeof afterSource !== "string") {
+      throw new Error(label + ": repair-reopen mutation path is not source-backed");
+    }
+    if (
+      projectTaskContractUnrelatedBytes(beforeSource, mutation, label + " before") !==
+      projectTaskContractUnrelatedBytes(afterSource, mutation, label + " after")
+    ) {
+      throw new Error(label + ": repair-reopen changed bytes outside exact status authority");
+    }
+    return Object.freeze({
+      relativePath: mutation.relativePath,
+      beforeSource,
+      afterSource,
+      changed: beforeSource !== afterSource,
+    });
+  });
+  return Object.freeze(entries);
+}
+
+function exactRollbackEntryWithUtf8Source(entry, source, label) {
+  exactRollbackEntryUtf8(entry, label);
+  if (typeof source !== "string") {
+    throw new Error(label + ": snapshot-derived task source is invalid");
+  }
+  const bytes = Buffer.from(source, "utf8");
+  return Object.freeze({
+    ...entry,
+    bytesBase64: bytes.toString("base64"),
+    byteLength: bytes.length,
+    sha256: exactBytesSha256(bytes),
+  });
+}
+
+function buildSnapshotDerivedExactTransaction(snapshot, entries, label) {
+  if (!snapshot || !Array.isArray(snapshot.entries) || !Array.isArray(entries)) {
+    throw new Error(label + ": snapshot-derived exact transaction is malformed");
+  }
+  const mutationByPath = new Map();
+  for (const entry of entries) {
+    if (
+      !entry ||
+      typeof entry.relativePath !== "string" ||
+      typeof entry.beforeSource !== "string" ||
+      typeof entry.afterSource !== "string" ||
+      typeof entry.changed !== "boolean" ||
+      entry.changed !== (entry.beforeSource !== entry.afterSource) ||
+      mutationByPath.has(entry.relativePath)
+    ) {
+      throw new Error(label + ": snapshot-derived source mutation is invalid or duplicated");
+    }
+    const snapshotEntry = requireExactRollbackSnapshotEntry(snapshot, entry.relativePath, label);
+    if (exactRollbackEntryUtf8(snapshotEntry, label) !== entry.beforeSource) {
+      throw new Error(label + ": source mutation differs from its exact transaction snapshot");
+    }
+    mutationByPath.set(entry.relativePath, entry);
+  }
+  const expectedEntries = snapshot.entries.map((snapshotEntry) => {
+    const mutation = mutationByPath.get(snapshotEntry.relativePath);
+    return mutation
+      ? exactRollbackEntryWithUtf8Source(snapshotEntry, mutation.afterSource, label)
+      : snapshotEntry;
+  });
+  if (mutationByPath.size !== entries.length) {
+    throw new Error(label + ": snapshot-derived transaction omitted a source mutation");
+  }
+  const changedPaths = entries
+    .filter(({ changed }) => changed)
+    .map(({ relativePath }) => relativePath);
+  const expectedByPath = new Map(expectedEntries.map((entry) => [entry.relativePath, entry]));
+  return Object.freeze({
+    expectedSnapshot: Object.freeze({
+      ...snapshot,
+      entries: Object.freeze(expectedEntries),
+    }),
+    changedEntries: Object.freeze(changedPaths.map((path) => expectedByPath.get(path))),
+    changedPaths: Object.freeze(changedPaths),
+  });
+}
+
+async function snapshotDerivedTransactionAuthority(label, allowedDeltaPaths) {
+  const allowed = new Set(allowedDeltaPaths);
+  const [head, branch, tracked, untracked, indexAuthority] = await Promise.all([
+    git(["rev-parse", "HEAD"]),
+    git(["branch", "--show-current"]),
+    git(["diff", "--name-only", "-z", "HEAD"]),
+    git(["ls-files", "--others", "--exclude-standard", "-z"]),
+    requireInitialGitIndexBaseline(label + " index authority"),
+  ]);
+  const paths = [...new Set([...splitNul(tracked), ...splitNul(untracked)])].sort();
+  const hashes = Object.create(null);
+  for (const path of paths) {
+    // Exact transaction paths are observed through independent FileHandle samples.
+    // Their post-rename inode/ctime visibility is not repository authority.
+    if (!allowed.has(path)) hashes[path] = await hashPath(path);
+  }
+  return Object.freeze({
+    head: head.trim(),
+    branch: branch.trim(),
+    indexAuthority,
+    paths: Object.freeze(paths),
+    hashes: Object.freeze(hashes),
+  });
+}
+
+async function requireSnapshotDerivedExactAuthority(snapshot, allowedDeltaPaths, label) {
+  if (new Set(allowedDeltaPaths).size !== allowedDeltaPaths.length) {
+    throw new Error(label + ": exact transaction authority paths are duplicated");
+  }
+  const [current, sensitiveEnv] = await Promise.all([
+    snapshotDerivedTransactionAuthority(label + " repository snapshot", allowedDeltaPaths),
+    hashSensitiveEnvProjection(),
+  ]);
+  const allowed = new Set(allowedDeltaPaths);
+  const authorityPaths = [...new Set([...snapshot.authority.paths, ...current.paths])].sort();
+  const unrelatedDelta = authorityPaths.filter(
+    (relativePath) =>
+      !allowed.has(relativePath) &&
+      (snapshot.authority.hashes[relativePath] ?? "<clean>") !==
+        (current.hashes[relativePath] ?? "<clean>")
+  );
+  if (
+    current.head !== snapshot.authority.head ||
+    current.branch !== snapshot.authority.branch ||
+    !sameGitIndexAuthority(current.indexAuthority, snapshot.authority.indexAuthority) ||
+    !equalHashMaps(sensitiveEnv, snapshot.sensitiveEnv) ||
+    unrelatedDelta.length > 0
+  ) {
+    throw new Error(label + ": snapshot-derived exact transaction authority changed");
+  }
+}
+
+function equalExactRollbackEntryState(left, right) {
+  return Boolean(
+    left &&
+    right &&
+    left.relativePath === right.relativePath &&
+    left.exists === right.exists &&
+    left.bytesBase64 === right.bytesBase64 &&
+    left.byteLength === right.byteLength &&
+    left.sha256 === right.sha256 &&
+    left.mode === right.mode
+  );
+}
+
+function sequenceExactWriteReceipt(receipt, sequence, beforeEntry, afterEntry, label) {
+  if (
+    !receipt ||
+    receipt.committed !== true ||
+    !["rename", "unlink"].includes(receipt.operation) ||
+    receipt.relativePath !== beforeEntry.relativePath ||
+    receipt.relativePath !== afterEntry.relativePath ||
+    JSON.stringify(receipt.before) !==
+      JSON.stringify(exactRollbackEntrySafeDiagnostic(beforeEntry)) ||
+    JSON.stringify(receipt.after) !==
+      JSON.stringify(exactRollbackEntrySafeDiagnostic(afterEntry)) ||
+    receipt.mountClass !== EXACT_TRANSACTION_MOUNT_CLASS ||
+    !Number.isSafeInteger(sequence) ||
+    sequence < 1
+  ) {
+    throw new Error(label + ": committed exact-write receipt is malformed");
+  }
+  return Object.freeze({ ...receipt, sequence });
+}
+
+async function verifySnapshotDerivedExactSnapshot(expectedSnapshot, label, options = {}) {
+  return observeExactRollbackSnapshot(expectedSnapshot, label, options);
+}
+
+async function writeSnapshotDerivedExactEntry(beforeEntry, afterEntry, label, options = {}) {
+  if (beforeEntry.relativePath !== afterEntry.relativePath) {
+    throw new Error(label + ": exact write boundary paths differ");
+  }
+  return restoreExactRollbackEntry(afterEntry, label, {
+    expectedCurrentEntry: beforeEntry,
+    observeCommitted: true,
+    ...options,
+  });
+}
+
+async function restoreSnapshotDerivedExactReceipts(
+  snapshot,
+  expectedSnapshot,
+  receipts,
+  owner,
+  label,
+  { observationOptions = undefined, requireAuthority = requireSnapshotDerivedExactAuthority } = {}
+) {
+  const expectedByPath = new Map(
+    expectedSnapshot.entries.map((entry) => [entry.relativePath, entry])
+  );
+  if (
+    expectedByPath.size !== expectedSnapshot.entries.length ||
+    expectedByPath.size !== snapshot.entries.length ||
+    !sameUniqueSet(
+      snapshot.entries.map(({ relativePath }) => relativePath),
+      owner.allowedFiles
+    ) ||
+    !Array.isArray(receipts) ||
+    new Set(receipts.map(({ relativePath }) => relativePath)).size !== receipts.length ||
+    typeof requireAuthority !== "function"
+  ) {
+    throw new Error(label + ": receipt rollback authority is malformed");
+  }
+  const beforeByPath = new Map(snapshot.entries.map((entry) => [entry.relativePath, entry]));
+  const receiptPaths = Object.freeze(receipts.map(({ relativePath }) => relativePath));
+  const rollbackWrites = [];
+  const alreadyBefore = [];
+  try {
+    for (const receipt of [...receipts].reverse()) {
+      const beforeEntry = beforeByPath.get(receipt.relativePath);
+      const afterEntry = expectedByPath.get(receipt.relativePath);
+      if (!beforeEntry || !afterEntry) {
+        throw new Error(label + ": receipt rollback path escaped its snapshot authority");
+      }
+      sequenceExactWriteReceipt(receipt, receipt.sequence, beforeEntry, afterEntry, label);
+      const boundary = await observeExactRollbackSemanticState(
+        beforeEntry.relativePath,
+        [beforeEntry, afterEntry],
+        [],
+        label + " stable rollback boundary",
+        observationOptions
+      );
+      await requireAuthority(
+        snapshot,
+        receiptPaths,
+        label + " authority after rollback boundary " + beforeEntry.relativePath
+      );
+      if (sameExactRollbackSemanticState(boundary.state, beforeEntry)) {
+        alreadyBefore.push(beforeEntry.relativePath);
+        continue;
+      }
+      let rollbackReceipt = null;
+      try {
+        rollbackReceipt = await restoreExactRollbackEntry(
+          beforeEntry,
+          label + " one-shot reverse rollback",
+          {
+            expectedCurrentEntry: afterEntry,
+            observeCommitted: true,
+            observationOptions,
+          }
+        );
+      } catch (error) {
+        const committed = exactWriteReceiptFromError(error);
+        if (committed) {
+          rollbackWrites.push(
+            sequenceExactWriteReceipt(
+              committed,
+              rollbackWrites.length + 1,
+              afterEntry,
+              beforeEntry,
+              label + " failed rollback receipt"
+            )
+          );
+        }
+        throw error;
+      }
+      rollbackWrites.push(
+        sequenceExactWriteReceipt(
+          rollbackReceipt,
+          rollbackWrites.length + 1,
+          afterEntry,
+          beforeEntry,
+          label + " rollback receipt"
+        )
+      );
+      await requireAuthority(
+        snapshot,
+        receiptPaths,
+        label + " authority after rollback write observation " + beforeEntry.relativePath
+      );
+    }
+    await requireAuthority(
+      snapshot,
+      receiptPaths,
+      label + " authority before final rollback state"
+    );
+    await observeExactRollbackSnapshot(snapshot, label + " stable receipt rollback", {
+      transitionalSnapshot: expectedSnapshot,
+      observationOptions,
+    });
+    await requireAuthority(snapshot, receiptPaths, label + " authority after final rollback state");
+  } catch (error) {
+    throw wrapAccumulatedExactRollbackError(error, rollbackWrites, label);
+  }
+  return Object.freeze({
+    rollbackWrites: Object.freeze(rollbackWrites),
+    alreadyBefore: Object.freeze(alreadyBefore),
+  });
+}
+
+const SNAPSHOT_DERIVED_EXACT_TRANSACTION_IO = Object.freeze({
+  requireAuthority: requireSnapshotDerivedExactAuthority,
+  verifySnapshot: verifySnapshotDerivedExactSnapshot,
+  writeEntry: writeSnapshotDerivedExactEntry,
+  restoreReceipts: restoreSnapshotDerivedExactReceipts,
+});
+
+function requireSnapshotDerivedExactTransactionIo(io, label) {
+  const keys = ["requireAuthority", "verifySnapshot", "writeEntry", "restoreReceipts"];
+  if (
+    io !== SNAPSHOT_DERIVED_EXACT_TRANSACTION_IO &&
+    (!HERMETIC_SELF_TEST_MODE ||
+      JSON.stringify(Object.keys(io ?? {}).sort()) !== JSON.stringify([...keys].sort()))
+  ) {
+    throw new Error(label + ": non-production exact transaction I/O lacks hermetic authority");
+  }
+  for (const key of keys) {
+    if (typeof io?.[key] !== "function") {
+      throw new Error(label + ": exact transaction I/O is missing " + key);
+    }
+  }
+  return io;
+}
+
+async function persistSnapshotDerivedExactSources(
+  snapshot,
+  entries,
+  label,
+  io = SNAPSHOT_DERIVED_EXACT_TRANSACTION_IO,
+  preparedTransaction = null,
+  committedReceipts = []
+) {
+  requireSnapshotDerivedExactTransactionIo(io, label);
+  if (!Array.isArray(committedReceipts) || committedReceipts.length !== 0) {
+    throw new Error(label + ": committed receipt sink must begin empty");
+  }
+  const transaction =
+    preparedTransaction ?? buildSnapshotDerivedExactTransaction(snapshot, entries, label);
+  const beforeByPath = new Map(snapshot.entries.map((entry) => [entry.relativePath, entry]));
+  const committedPaths = () => committedReceipts.map(({ relativePath }) => relativePath);
+  await io.requireAuthority(snapshot, [], label + " pre-mutation authority");
+  await io.verifySnapshot(snapshot, label + " pre-mutation exact snapshot");
+  await io.requireAuthority(snapshot, [], label + " authority after pre-mutation exact snapshot");
+  for (const afterEntry of transaction.changedEntries) {
+    const beforeEntry = beforeByPath.get(afterEntry.relativePath);
+    await io.requireAuthority(
+      snapshot,
+      committedPaths(),
+      label + " authority immediately before forward write " + afterEntry.relativePath
+    );
+    let receipt = null;
+    try {
+      receipt = await io.writeEntry(beforeEntry, afterEntry, label + " one-shot atomic mutation");
+    } catch (error) {
+      const committed = exactWriteReceiptFromError(error);
+      if (committed) {
+        committedReceipts.push(
+          sequenceExactWriteReceipt(
+            committed,
+            committedReceipts.length + 1,
+            beforeEntry,
+            afterEntry,
+            label
+          )
+        );
+      }
+      if (committed) {
+        try {
+          await io.requireAuthority(
+            snapshot,
+            committedPaths(),
+            label +
+              " authority after failed committed forward observation " +
+              afterEntry.relativePath
+          );
+        } catch (authorityError) {
+          throw new AggregateError(
+            [error, authorityError],
+            label + ": committed forward failure and closing authority both failed"
+          );
+        }
+      }
+      throw error;
+    }
+    committedReceipts.push(
+      sequenceExactWriteReceipt(
+        receipt,
+        committedReceipts.length + 1,
+        beforeEntry,
+        afterEntry,
+        label
+      )
+    );
+    await io.requireAuthority(
+      snapshot,
+      committedPaths(),
+      label + " authority after committed forward observation " + afterEntry.relativePath
+    );
+  }
+  await io.requireAuthority(
+    snapshot,
+    committedPaths(),
+    label + " authority before full exact state"
+  );
+  await io.verifySnapshot(transaction.expectedSnapshot, label + " persisted exact mutation", {
+    transitionalSnapshot: snapshot,
+  });
+  await io.requireAuthority(
+    snapshot,
+    committedPaths(),
+    label + " authority after full exact state"
+  );
+  return Object.freeze({ transaction, committedReceipts: Object.freeze([...committedReceipts]) });
+}
+
+async function runSnapshotDerivedExactTransaction(
+  snapshot,
+  owner,
+  entries,
+  label,
+  verifyMutation,
+  io = SNAPSHOT_DERIVED_EXACT_TRANSACTION_IO
+) {
+  requireSnapshotDerivedExactTransactionIo(io, label);
+  if (typeof verifyMutation !== "function") {
+    throw new Error(label + ": exact transaction verifier is missing");
+  }
+  const transaction = buildSnapshotDerivedExactTransaction(snapshot, entries, label);
+  const committedReceipts = [];
   let mutationError = null;
   try {
-    await runMutatingAgent(
-      "Repository " +
-        ROOT +
-        ". Prepare only TASK-540-06-L01 for pre-closure ungated remediation. Edit only " +
-        JSON.stringify(owner.allowedFiles) +
-        ". Keep root, TASK-540-06, and TASK-540-06-L01 canonically 🚧 In Progress and synchronize " +
-        "only their existing root/child table rows. Preserve every root metadata field. On only the " +
-        "closure parent and leaf write `**Fix Started:** " +
-        RUN_DATE +
-        "`. Remove the leaf's exact old gate `**" +
-        oldGate.field +
-        ":** " +
-        oldGate.value +
-        "`; remove Implementation Complete from the active closure parent and leaf, and do not write Targeted Gate Passed, Revalidation Passed, Repair Pending, Completed, " +
-        "or any closure receipt. Preserve the task board and every unrelated byte. Never edit the " +
-        "changelog, source, tests, product docs, workflow, stage, or commit. Reason: " +
-        label +
-        ".",
-      { label: "reopen-ungated:" + leaf.id + ":" + label, phase: phaseName },
-      owner,
-      false
+    await persistSnapshotDerivedExactSources(
+      snapshot,
+      entries,
+      label,
+      io,
+      transaction,
+      committedReceipts
     );
   } catch (error) {
     mutationError = error;
   }
-
   let verificationError = null;
-  try {
-    const [rootState, childState, leafState, boardSource] = await Promise.all([
-      readCanonicalTaskStatus(ROOT_TASK_PATH),
-      readCanonicalTaskStatus(group.childPath),
-      readCanonicalTaskStatus(group.leafPath),
-      readFile(TASKS + "/README.md", "utf8"),
-    ]);
-    for (const [index, state] of [rootState, childState, leafState].entries()) {
-      requireAbsentCompleted(
-        readTaskMetadataField(state.source, "Completed"),
-        "TASK-540 ungated closure repair contract " + index
+  if (!mutationError) {
+    const receiptPaths = committedReceipts.map(({ relativePath }) => relativePath);
+    try {
+      await io.requireAuthority(
+        snapshot,
+        receiptPaths,
+        label + " authority immediately before semantic verification"
       );
-      requireAbsentImplementationComplete(
-        readTaskMetadataField(state.source, "Implementation Complete"),
-        "TASK-540 ungated closure repair contract " + index
-      );
+    } catch (error) {
+      verificationError = error;
     }
-    if (
-      [rootState, childState, leafState].some(
-        ({ status, source }) =>
-          status !== RESUME_TASK_STATUS.active || readTaskMetadataField(source, "Repair Pending")
-      ) ||
-      readTaskMetadataField(childState.source, "Fix Started") !== RUN_DATE ||
-      readTaskMetadataField(leafState.source, "Fix Started") !== RUN_DATE ||
-      CLOSURE_GATE_FIELDS.some((field) => readTaskMetadataField(leafState.source, field))
-    ) {
-      throw new Error("TASK-540 pre-closure ungated repair state is not exact");
+    if (!verificationError) {
+      const semanticErrors = [];
+      try {
+        await verifyMutation(transaction.expectedSnapshot);
+      } catch (error) {
+        semanticErrors.push(error);
+      }
+      try {
+        await io.verifySnapshot(
+          transaction.expectedSnapshot,
+          label + " exact state after semantic verification",
+          { transitionalSnapshot: snapshot }
+        );
+      } catch (error) {
+        semanticErrors.push(error);
+      }
+      try {
+        await io.requireAuthority(
+          snapshot,
+          receiptPaths,
+          label + " authority after semantic exact state"
+        );
+      } catch (error) {
+        semanticErrors.push(error);
+      }
+      verificationError =
+        semanticErrors.length === 0
+          ? null
+          : semanticErrors.length === 1
+            ? semanticErrors[0]
+            : new AggregateError(
+                semanticErrors,
+                label + ": semantic exact-state authority sandwich failed"
+              );
     }
-    requireTableStatus(childState.source, leaf.id, RESUME_TASK_STATUS.active, "TASK-540 child");
-    requireTableStatus(rootState.source, group.childId, RESUME_TASK_STATUS.active, "TASK-540 root");
-    if (boardSource !== boardBefore) {
-      throw new Error("TASK-540 ungated closure repair changed the board or statistics");
-    }
-    await verifyClosureContractReceipts(
-      closureReceiptsBefore,
-      "TASK-540 pre-closure ungated repair",
-      { allowGateChange: true }
-    );
-  } catch (error) {
-    verificationError = error;
   }
-
   if (mutationError || verificationError) {
     const primaryError =
       mutationError && verificationError
         ? new AggregateError(
             [mutationError, verificationError],
-            "TASK-540 ungated repair mutation and verification both failed"
+            label + ": exact mutation and verification both failed"
           )
         : (mutationError ?? verificationError);
+    if (
+      committedReceipts.length === 0 ||
+      exactTransactionErrorContains(primaryError, ExactTransactionCollisionError)
+    ) {
+      throw primaryError;
+    }
+    const receiptPaths = committedReceipts.map(({ relativePath }) => relativePath);
     try {
-      await restoreExactRollbackFiles(
-        transactionSnapshot,
-        rollbackOwner,
-        "TASK-540 ungated closure repair rollback"
+      await io.requireAuthority(
+        snapshot,
+        receiptPaths,
+        label + " pre-rollback repository authority"
+      );
+      await io.restoreReceipts(
+        snapshot,
+        transaction.expectedSnapshot,
+        Object.freeze([...committedReceipts]),
+        owner,
+        label + " one-shot receipt rollback",
+        { requireAuthority: io.requireAuthority }
+      );
+      await io.requireAuthority(
+        snapshot,
+        receiptPaths,
+        label + " authority before final rollback verification"
+      );
+      await io.verifySnapshot(snapshot, label + " exact state after one-shot rollback", {
+        transitionalSnapshot: transaction.expectedSnapshot,
+      });
+      await io.requireAuthority(
+        snapshot,
+        receiptPaths,
+        label + " authority after final rollback verification"
       );
     } catch (rollbackError) {
       throw new AggregateError(
         [primaryError, rollbackError],
-        "TASK-540 ungated repair failure and exact transaction rollback both failed"
+        label + ": exact transaction and one-shot rollback both failed"
       );
     }
     throw primaryError;
   }
-  return Object.freeze({ mode: "ungated-closure", repairPending: null });
+  return transaction;
+}
+
+const INTERRUPTED_REOPEN_RECOVERY_ARGUMENT = "--recover-interrupted-reopen=540-01-L01";
+const INTERRUPTED_REOPEN_RECOVERY_PINS = deepFreezeExact({
+  relativePath: "_docs/_TASKS/TASK-540-01-Strict-Screen-Data-Urls-Tabs-And-Binding-Gc.md",
+  head: "d803bbcfa5b52cb1e5036836592bd92ee2c03b6f",
+  branch: "feature/tasks-fixes",
+  stagedDiffSha256: "76ab9281213b1f39ebe90865b5e26de67c3178bbd7b2e570757c0324756d280f",
+  stageProjectionSha256: "43ffd83de864b933ec9890aff30d0b74d580a3165df3ddcc2111d633f440d996",
+  indexMode: "100644",
+  indexBlob: "7ecf425f97469b71de7eac1d91d032f2d6ad5678",
+  indexByteLength: 21_005,
+  indexSha256: "c1acb5fae33783b1bc330cf8b36c4ceac5750f2eb886037a226f0f8ac839dd8a",
+  partialByteLength: 20_898,
+  partialSha256: "36d0a688bb700a216cca68ef1c937fe305a3aec01dd42c1dacfbb68f07e6fcbf",
+  worktreeMode: 0o644,
+  fixStartedDate: "2026-07-18",
+});
+
+function parseInterruptedReopenRecoveryArgv(argv) {
+  if (
+    !Array.isArray(argv) ||
+    argv.length !== 1 ||
+    argv[0] !== INTERRUPTED_REOPEN_RECOVERY_ARGUMENT
+  ) {
+    throw new Error("TASK-540 interrupted-reopen recovery requires its one exact argument");
+  }
+  return argv[0];
+}
+
+function requireInterruptedReopenRecoveryPins(pins, label) {
+  const keys = Object.keys(INTERRUPTED_REOPEN_RECOVERY_PINS);
+  if (
+    !pins ||
+    Object.getPrototypeOf(pins) !== Object.prototype ||
+    JSON.stringify(Object.keys(pins).sort()) !== JSON.stringify([...keys].sort()) ||
+    typeof pins.relativePath !== "string" ||
+    !pins.relativePath.startsWith("_docs/_TASKS/") ||
+    !/^[0-9a-f]{40}$/u.test(pins.head) ||
+    typeof pins.branch !== "string" ||
+    !/^[0-9a-f]{64}$/u.test(pins.stagedDiffSha256) ||
+    !/^[0-9a-f]{64}$/u.test(pins.stageProjectionSha256) ||
+    !/^[0-7]{6}$/u.test(pins.indexMode) ||
+    !/^[0-9a-f]{40}$/u.test(pins.indexBlob) ||
+    !Number.isSafeInteger(pins.indexByteLength) ||
+    pins.indexByteLength <= 0 ||
+    !/^[0-9a-f]{64}$/u.test(pins.indexSha256) ||
+    !Number.isSafeInteger(pins.partialByteLength) ||
+    pins.partialByteLength <= 0 ||
+    !/^[0-9a-f]{64}$/u.test(pins.partialSha256) ||
+    pins.worktreeMode !== 0o644 ||
+    !isCanonicalIsoDate(pins.fixStartedDate)
+  ) {
+    throw new Error(label + ": interrupted-reopen recovery pins are malformed");
+  }
+  return pins;
+}
+
+function interruptedReopenRecoveryMutation(relativePath) {
+  return Object.freeze({
+    relativePath,
+    mutableStatus: false,
+    tableTaskIds: Object.freeze([]),
+    tableStatusTaskIds: Object.freeze([]),
+    mutableFields: Object.freeze(["Fix Started", "Implementation Complete"]),
+  });
+}
+
+function deriveInterruptedReopenPartialSource(indexSource, pins, label) {
+  let partial = removeCanonicalTaskMetadataFields(indexSource, ["Implementation Complete"], label);
+  partial = setCanonicalTaskMetadataField(
+    partial,
+    "Fix Started",
+    pins.fixStartedDate,
+    ["Repair Started", "Started", "Status"],
+    label
+  );
+  return partial;
+}
+
+function buildInterruptedReopenRecoveryPlan(
+  { pins, authority, indexSource, currentEntry, siblingsPrepared },
+  label
+) {
+  requireInterruptedReopenRecoveryPins(pins, label);
+  if (
+    !authority ||
+    Object.getPrototypeOf(authority) !== Object.prototype ||
+    authority.head !== pins.head ||
+    authority.branch !== pins.branch ||
+    authority.stagedDiffSha256 !== pins.stagedDiffSha256 ||
+    authority.stageProjectionSha256 !== pins.stageProjectionSha256 ||
+    authority.indexMode !== pins.indexMode ||
+    authority.indexBlob !== pins.indexBlob ||
+    authority.indexByteLength !== pins.indexByteLength ||
+    authority.indexSha256 !== pins.indexSha256
+  ) {
+    throw new Error(label + ": interrupted-reopen authority pins changed");
+  }
+  if (siblingsPrepared !== true || typeof indexSource !== "string") {
+    throw new Error(label + ": interrupted-reopen prepared sibling authority is absent");
+  }
+  const indexBytes = Buffer.from(indexSource, "utf8");
+  if (
+    indexBytes.length !== pins.indexByteLength ||
+    exactBytesSha256(indexBytes) !== pins.indexSha256
+  ) {
+    throw new Error(label + ": interrupted-reopen index source differs from its exact pin");
+  }
+  const partialSource = deriveInterruptedReopenPartialSource(indexSource, pins, label);
+  const partialBytes = Buffer.from(partialSource, "utf8");
+  if (
+    partialBytes.length !== pins.partialByteLength ||
+    exactBytesSha256(partialBytes) !== pins.partialSha256
+  ) {
+    throw new Error(label + ": interrupted-reopen partial source is not snapshot-derived");
+  }
+  const mutation = interruptedReopenRecoveryMutation(pins.relativePath);
+  if (
+    projectTaskContractUnrelatedBytes(indexSource, mutation, label + " index projection") !==
+    projectTaskContractUnrelatedBytes(partialSource, mutation, label + " partial projection")
+  ) {
+    throw new Error(label + ": interrupted-reopen partial projection escaped authority");
+  }
+  const currentSource = exactRollbackEntryUtf8(currentEntry, label);
+  if (currentEntry.relativePath !== pins.relativePath || currentEntry.mode !== pins.worktreeMode) {
+    throw new Error(label + ": interrupted-reopen worktree path or mode changed");
+  }
+  const state =
+    currentEntry.byteLength === pins.partialByteLength &&
+    currentEntry.sha256 === pins.partialSha256 &&
+    currentSource === partialSource
+      ? "partial"
+      : currentEntry.byteLength === pins.indexByteLength &&
+          currentEntry.sha256 === pins.indexSha256 &&
+          currentSource === indexSource
+        ? "prior"
+        : null;
+  if (!state) {
+    throw new Error(label + ": interrupted-reopen worktree is neither exact partial nor prior");
+  }
+  return Object.freeze({
+    state,
+    entries: Object.freeze([
+      Object.freeze({
+        relativePath: pins.relativePath,
+        beforeSource: currentSource,
+        afterSource: indexSource,
+        changed: state === "partial",
+      }),
+    ]),
+  });
+}
+
+function requireInterruptedReopenPreparedState(resumeState, changelogState, label) {
+  if (
+    resumeState.mode !== "initial" ||
+    resumeState.startIndex !== LEAVES.length ||
+    resumeState.startLeafId !== null ||
+    resumeState.repair !== null ||
+    JSON.stringify(resumeState.landedLeafIds) !== JSON.stringify(LEAF_ORDER) ||
+    resumeState.remainingLeafIds.length !== 0 ||
+    changelogState.mode !== "reserved-pre-closure-regated"
+  ) {
+    throw new Error(label + ": interrupted-reopen siblings are not exact prepared state");
+  }
+  return Object.freeze({ resumeState, changelogState });
+}
+
+async function validateInterruptedReopenPreparedSiblings(indexSource, pins, label) {
+  const resumeState = await resolveLeafResumeState({
+    async readTaskStatus(relativePath) {
+      return relativePath === pins.relativePath
+        ? parseCanonicalTaskStatusSource(indexSource, relativePath)
+        : readCanonicalTaskStatus(relativePath);
+    },
+  });
+  const changelogState = await resolveChangelogResumeState(resumeState);
+  return requireInterruptedReopenPreparedState(resumeState, changelogState, label);
+}
+
+function parseInterruptedReopenIndexStage(bytes, pins, label) {
+  const records = decodeGroundedNulProjection(bytes, label);
+  if (records.length !== 1) {
+    throw new Error(label + ": interrupted-reopen index stage entry is missing or duplicated");
+  }
+  const separator = records[0].indexOf("\t");
+  const metadata = separator < 0 ? "" : records[0].slice(0, separator);
+  const relativePath = separator < 0 ? "" : records[0].slice(separator + 1);
+  const match = metadata.match(/^([0-7]{6}) ([0-9a-f]{40}) 0$/u);
+  if (!match || relativePath !== pins.relativePath) {
+    throw new Error(label + ": interrupted-reopen index stage entry is malformed");
+  }
+  return Object.freeze({ indexMode: match[1], indexBlob: match[2] });
+}
+
+async function captureInterruptedReopenRecoveryAuthority(pins, indexAuthority, label) {
+  const [head, branch, stagedDiff, stageEntry, indexBytes] = await Promise.all([
+    git(["rev-parse", "HEAD"]),
+    git(["branch", "--show-current"]),
+    gitBytes(["diff", "--cached", "--binary"]),
+    gitBytes(["ls-files", "--stage", "-z", "--", pins.relativePath]),
+    gitBytes(["cat-file", "blob", ":" + pins.relativePath]),
+  ]);
+  const parsedStage = parseInterruptedReopenIndexStage(stageEntry, pins, label);
+  let indexSource;
+  try {
+    indexSource = new TextDecoder("utf-8", { fatal: true }).decode(indexBytes);
+  } catch {
+    throw new Error(label + ": interrupted-reopen index source is not canonical UTF-8");
+  }
+  const authority = Object.freeze({
+    head: head.trim(),
+    branch: branch.trim(),
+    stagedDiffSha256: exactBytesSha256(stagedDiff),
+    stageProjectionSha256: indexAuthority.stageProjection.sha256,
+    ...parsedStage,
+    indexByteLength: indexBytes.length,
+    indexSha256: exactBytesSha256(indexBytes),
+  });
+  return Object.freeze({ authority, indexSource });
+}
+
+const INTERRUPTED_REOPEN_RECOVERY_OUTPUT_KEYS = Object.freeze([
+  "mode",
+  "recovered",
+  "stagedDiffSha256",
+  "stageProjectionSha256",
+  "worktreeSha256",
+]);
+
+function buildInterruptedReopenRecoveryOutput(recovered, authority, freshEntry, label) {
+  const output = {
+    recovered,
+    stagedDiffSha256: authority?.stagedDiffSha256,
+    stageProjectionSha256: authority?.stageProjectionSha256,
+    worktreeSha256: freshEntry?.sha256,
+    mode:
+      Number.isSafeInteger(freshEntry?.mode) && freshEntry.mode >= 0
+        ? "0" + freshEntry.mode.toString(8)
+        : null,
+  };
+  if (
+    typeof output.recovered !== "boolean" ||
+    !/^[0-9a-f]{64}$/u.test(output.stagedDiffSha256 ?? "") ||
+    !/^[0-9a-f]{64}$/u.test(output.stageProjectionSha256 ?? "") ||
+    !/^[0-9a-f]{64}$/u.test(output.worktreeSha256 ?? "") ||
+    !/^0[0-7]{3,4}$/u.test(output.mode ?? "") ||
+    JSON.stringify(Object.keys(output).sort()) !==
+      JSON.stringify([...INTERRUPTED_REOPEN_RECOVERY_OUTPUT_KEYS].sort())
+  ) {
+    throw new Error(label + ": interrupted-reopen safe output projection is invalid");
+  }
+  return Object.freeze(output);
+}
+
+const INTERRUPTED_REOPEN_RECOVERY_COORDINATOR_IO = Object.freeze({
+  captureInitialIndex: captureInitialGitIndexBaseline,
+  captureRecoveryAuthority: captureInterruptedReopenRecoveryAuthority,
+  captureSnapshot: captureExactRollbackFiles,
+  validatePrepared: validateInterruptedReopenPreparedSiblings,
+  validateCoverage: validateResumeGraphCoverage,
+  runTransaction: runSnapshotDerivedExactTransaction,
+  requireInitialIndex: requireInitialGitIndexBaseline,
+  requireSnapshotAuthority: requireSnapshotDerivedExactAuthority,
+  observeFinal: observeExactRollbackSemanticState,
+});
+
+function requireInterruptedReopenRecoveryCoordinatorIo(io, label) {
+  const keys = [
+    "captureInitialIndex",
+    "captureRecoveryAuthority",
+    "captureSnapshot",
+    "observeFinal",
+    "requireInitialIndex",
+    "requireSnapshotAuthority",
+    "runTransaction",
+    "validateCoverage",
+    "validatePrepared",
+  ];
+  if (
+    io !== INTERRUPTED_REOPEN_RECOVERY_COORDINATOR_IO &&
+    (!HERMETIC_SELF_TEST_MODE ||
+      JSON.stringify(Object.keys(io ?? {}).sort()) !== JSON.stringify(keys))
+  ) {
+    throw new Error(label + ": interrupted-reopen coordinator I/O lacks hermetic authority");
+  }
+  for (const key of keys) {
+    if (typeof io?.[key] !== "function") {
+      throw new Error(label + ": interrupted-reopen coordinator I/O is missing " + key);
+    }
+  }
+  return io;
+}
+
+function requireSameInterruptedReopenAuthority(current, initial, label) {
+  if (JSON.stringify(current?.authority) !== JSON.stringify(initial?.authority)) {
+    throw new Error(label + ": interrupted-reopen staged authority changed");
+  }
+  return current;
+}
+
+function requireInterruptedReopenFreshPriorEntry(entry, pins, label) {
+  if (
+    entry?.relativePath !== pins.relativePath ||
+    entry.exists !== true ||
+    entry.sha256 !== pins.indexSha256 ||
+    entry.byteLength !== pins.indexByteLength ||
+    entry.mode !== pins.worktreeMode
+  ) {
+    throw new Error(label + ": interrupted-reopen final worktree state is not exact prior");
+  }
+  return entry;
+}
+
+async function runInterruptedReopenRecoveryCoordinator(
+  pins,
+  io = INTERRUPTED_REOPEN_RECOVERY_COORDINATOR_IO,
+  label = "TASK-540 interrupted-reopen recovery"
+) {
+  requireInterruptedReopenRecoveryPins(pins, label);
+  requireInterruptedReopenRecoveryCoordinatorIo(io, label);
+  const initialIndex = await io.captureInitialIndex(label + " initial Git index");
+  const captured = await io.captureRecoveryAuthority(pins, initialIndex, label + " preflight");
+  const snapshot = await io.captureSnapshot([pins.relativePath], label + " exact current snapshot");
+  const prepared = await io.validatePrepared(captured.indexSource, pins, label + " preflight");
+  const plan = buildInterruptedReopenRecoveryPlan(
+    {
+      pins,
+      authority: captured.authority,
+      indexSource: captured.indexSource,
+      currentEntry: snapshot.entries[0],
+      siblingsPrepared: Boolean(prepared),
+    },
+    label
+  );
+  const owner = Object.freeze({
+    id: "recover-interrupted-reopen-540-01-L01",
+    allowedFiles: Object.freeze([pins.relativePath]),
+    requiredFiles: Object.freeze([]),
+  });
+  const transaction = await io.runTransaction(
+    snapshot,
+    owner,
+    plan.entries,
+    label + " one-shot transaction",
+    async () => {
+      const state = await io.validatePrepared(
+        captured.indexSource,
+        pins,
+        label + " semantic verification"
+      );
+      await io.validateCoverage(
+        state.resumeState,
+        state.changelogState,
+        label + " semantic verification"
+      );
+    }
+  );
+  const expectedPriorEntry = requireInterruptedReopenFreshPriorEntry(
+    transaction.expectedSnapshot.entries.find(
+      ({ relativePath }) => relativePath === pins.relativePath
+    ),
+    pins,
+    label + " expected transaction state"
+  );
+
+  const checkpointIndex = await io.requireInitialIndex(label + " checkpoint Git index");
+  requireSameInterruptedReopenAuthority(
+    await io.captureRecoveryAuthority(pins, checkpointIndex, label + " checkpoint authority"),
+    captured,
+    label + " checkpoint authority"
+  );
+  await io.requireSnapshotAuthority(
+    snapshot,
+    [pins.relativePath],
+    label + " authority before final prepared resolver"
+  );
+  const finalPrepared = await io.validatePrepared(
+    captured.indexSource,
+    pins,
+    label + " final prepared resolver"
+  );
+  await io.validateCoverage(
+    finalPrepared.resumeState,
+    finalPrepared.changelogState,
+    label + " final prepared resolver"
+  );
+  await io.requireSnapshotAuthority(
+    snapshot,
+    [pins.relativePath],
+    label + " authority after final prepared resolver"
+  );
+
+  const firstFinalObservation = await io.observeFinal(
+    pins.relativePath,
+    [expectedPriorEntry],
+    [],
+    label + " final exact prior observation"
+  );
+  requireInterruptedReopenFreshPriorEntry(
+    firstFinalObservation.state,
+    pins,
+    label + " final exact prior observation"
+  );
+  await io.requireSnapshotAuthority(
+    snapshot,
+    [pins.relativePath],
+    label + " authority after final exact prior observation"
+  );
+  const finalIndex = await io.requireInitialIndex(label + " final Git index");
+  const finalAuthority = requireSameInterruptedReopenAuthority(
+    await io.captureRecoveryAuthority(pins, finalIndex, label + " final authority"),
+    captured,
+    label + " final authority"
+  );
+  const outputObservation = await io.observeFinal(
+    pins.relativePath,
+    [expectedPriorEntry],
+    [],
+    label + " output exact prior observation"
+  );
+  const freshEntry = requireInterruptedReopenFreshPriorEntry(
+    outputObservation.state,
+    pins,
+    label + " output exact prior observation"
+  );
+  return buildInterruptedReopenRecoveryOutput(
+    plan.state === "partial",
+    finalAuthority.authority,
+    freshEntry,
+    label
+  );
+}
+
+async function recoverInterruptedReopen54001L01() {
+  return runInterruptedReopenRecoveryCoordinator(INTERRUPTED_REOPEN_RECOVERY_PINS);
+}
+
+function assertTask540RepairReopenIsolationContract() {
+  const leafId = "540-01-L01";
+  const group = Object.freeze({
+    childId: "540-01",
+    childPath: "fixture/TASK-540-01.md",
+    leafPath: "fixture/TASK-540-01-L01.md",
+  });
+  const mutations = repairReopenTaskContractMutations(group, leafId);
+  const repairPending = "generation " + "5".repeat(32) + " / token " + "6".repeat(32);
+  const sources = Object.freeze({
+    root: [
+      "**Status:** 🚧 In Progress",
+      "**Root Sentinel:** root-prose-byte-sentinel",
+      "",
+      "| ID | Title | Ownership | Status |",
+      "| --- | --- | --- | --- |",
+      "| TASK-540-01 | Parent-title-sentinel | Parent-owner-sentinel | 🚧 In Progress |",
+      "",
+      "Root narrative byte sentinel.",
+      "",
+    ].join("\n"),
+    child: [
+      "**Status:** 🚧 In Progress",
+      "**Started:** 2026-07-13",
+      "**Implementation Complete:** 2026-07-17 — landed",
+      "**Current Repair State:** parent-prose-byte-sentinel",
+      "",
+      "| ID | Title | Ownership | Status |",
+      "| --- | --- | --- | --- |",
+      "| TASK-540-01-L01 | Leaf-title-sentinel | Leaf-owner-sentinel | 🚧 In Progress |",
+      "",
+      "Parent narrative byte sentinel.",
+      "",
+    ].join("\n"),
+    leaf: [
+      "**Status:** 🚧 In Progress",
+      "**Started:** 2026-07-13",
+      "**Implementation Complete:** 2026-07-17 — landed",
+      "**Revalidation Passed:** old gate",
+      "**Current Repair State:** leaf-prose-byte-sentinel",
+      "",
+      "Leaf narrative byte sentinel.",
+      "",
+    ].join("\n"),
+  });
+  const entries = buildRepairReopenTaskContractSources(
+    sources,
+    group,
+    leafId,
+    repairPending,
+    mutations,
+    "TASK-540 repair-reopen isolation fixture"
+  );
+  const repeatedEntries = buildRepairReopenTaskContractSources(
+    sources,
+    group,
+    leafId,
+    repairPending,
+    mutations,
+    "TASK-540 repeated repair-reopen isolation fixture"
+  );
+  const terminalSources = Object.freeze({
+    root: sources.root.replace(
+      "Parent-owner-sentinel | 🚧 In Progress |",
+      "Parent-owner-sentinel | ✅ Done |"
+    ),
+    child: sources.child
+      .replaceAll("🚧 In Progress", "✅ Done")
+      .replace(
+        "**Implementation Complete:** 2026-07-17 — landed\n",
+        "**Implementation Complete:** 2026-07-17 — landed\n**Completed:** 2026-07-17\n**Fix Started:** 2026-07-16\n"
+      ),
+    leaf: sources.leaf
+      .replace("🚧 In Progress", "✅ Done")
+      .replace("**Revalidation Passed:** old gate", "**Targeted Gate Passed:** old target gate")
+      .replace(
+        "**Implementation Complete:** 2026-07-17 — landed\n",
+        "**Implementation Complete:** 2026-07-17 — landed\n**Completed:** 2026-07-17\n**Fix Started:** 2026-07-16\n"
+      ),
+  });
+  const terminalEntries = buildRepairReopenTaskContractSources(
+    terminalSources,
+    group,
+    leafId,
+    repairPending,
+    mutations,
+    "TASK-540 terminal repair-reopen isolation fixture"
+  );
+  const terminalByPath = new Map(
+    terminalEntries.map((entry) => [entry.relativePath, entry.afterSource])
+  );
+  const byPath = new Map(entries.map((entry) => [entry.relativePath, entry]));
+  const root = byPath.get(ROOT_TASK_PATH);
+  const child = byPath.get(group.childPath);
+  const leaf = byPath.get(group.leafPath);
+  const cases = [
+    {
+      label: "repair reopen projects only final status cells",
+      pass:
+        mutations.every(({ tableTaskIds }) => tableTaskIds.length === 0) &&
+        mutations.every(({ mutableStatus }) => mutableStatus === true) &&
+        mutations[0].tableStatusTaskIds[0] === group.childId &&
+        mutations[1].tableStatusTaskIds[0] === leafId &&
+        JSON.stringify(mutations.map(({ mutableFields }) => mutableFields)) ===
+          JSON.stringify([
+            [],
+            ["Fix Started", "Implementation Complete", "Completed"],
+            [
+              "Fix Started",
+              "Implementation Complete",
+              "Completed",
+              "Targeted Gate Passed",
+              "Revalidation Passed",
+              "Repair Pending",
+            ],
+          ]),
+    },
+    {
+      label: "prepared repair reopen leaves the root byte-identical",
+      pass: root?.changed === false && root.afterSource === sources.root,
+    },
+    {
+      label: "repair reopen preserves parent prose and non-status cells",
+      pass:
+        child?.afterSource.includes("parent-prose-byte-sentinel") &&
+        child.afterSource.includes("Parent narrative byte sentinel.") &&
+        child.afterSource.includes("Leaf-title-sentinel | Leaf-owner-sentinel"),
+    },
+    {
+      label: "repair reopen writes only exact parent metadata",
+      pass:
+        readTaskMetadataField(child.afterSource, "Fix Started") === RUN_DATE &&
+        readTaskMetadataField(child.afterSource, "Implementation Complete") === null &&
+        readTaskMetadataField(child.afterSource, "Completed") === null,
+    },
+    {
+      label: "repair reopen preserves leaf prose while replacing exact gate state",
+      pass:
+        leaf?.afterSource.includes("leaf-prose-byte-sentinel") &&
+        leaf.afterSource.includes("Leaf narrative byte sentinel.") &&
+        readTaskMetadataField(leaf.afterSource, "Fix Started") === RUN_DATE &&
+        readTaskMetadataField(leaf.afterSource, "Repair Pending") === repairPending &&
+        readTaskMetadataField(leaf.afterSource, "Implementation Complete") === null &&
+        readTaskMetadataField(leaf.afterSource, "Revalidation Passed") === null,
+    },
+    {
+      label: "repair reopen changed-file projection excludes unchanged root",
+      pass:
+        JSON.stringify(
+          entries.filter(({ changed }) => changed).map(({ relativePath }) => relativePath)
+        ) === JSON.stringify([group.childPath, group.leafPath]),
+    },
+    {
+      label: "repair reopen is deterministic for identical snapshot authority",
+      pass: JSON.stringify(repeatedEntries) === JSON.stringify(entries),
+    },
+    {
+      label: "repair reopen status transaction has no semantic mutation dispatch",
+      pass:
+        [
+          reopenLeafForRepair,
+          reopenClosureLeafUngated,
+          authorizeClosureLeafRepair,
+          runSnapshotDerivedExactTransaction,
+          persistSnapshotDerivedExactSources,
+        ].every((fn) => !fn.toString().includes("runMutatingAgent")) &&
+        reopenLeafForRepair.toString().includes("await runSnapshotDerivedExactTransaction") &&
+        reopenClosureLeafUngated.toString().includes("await runSnapshotDerivedExactTransaction"),
+    },
+    {
+      label: "repair reopen projection rejects parent prose drift",
+      pass:
+        projectTaskContractUnrelatedBytes(
+          sources.child,
+          mutations[1],
+          "TASK-540 repair-reopen isolation fixture"
+        ) !==
+        projectTaskContractUnrelatedBytes(
+          child.afterSource.replace("parent-prose-byte-sentinel", "changed-prose"),
+          mutations[1],
+          "TASK-540 repair-reopen isolation fixture"
+        ),
+    },
+    {
+      label: "repair reopen projection rejects non-status table-cell drift",
+      pass:
+        projectTaskContractUnrelatedBytes(
+          sources.child,
+          mutations[1],
+          "TASK-540 repair-reopen isolation fixture"
+        ) !==
+        projectTaskContractUnrelatedBytes(
+          child.afterSource.replace("Leaf-owner-sentinel", "changed-owner"),
+          mutations[1],
+          "TASK-540 repair-reopen isolation fixture"
+        ),
+    },
+    {
+      label: "terminal repair reopen mutates only required status fields and cells",
+      pass:
+        parseCanonicalTaskStatusSource(
+          terminalByPath.get(ROOT_TASK_PATH),
+          "TASK-540 terminal repair-reopen root fixture"
+        ).status === RESUME_TASK_STATUS.active &&
+        parseCanonicalTaskStatusSource(
+          terminalByPath.get(group.childPath),
+          "TASK-540 terminal repair-reopen child fixture"
+        ).status === RESUME_TASK_STATUS.active &&
+        parseCanonicalTaskStatusSource(
+          terminalByPath.get(group.leafPath),
+          "TASK-540 terminal repair-reopen leaf fixture"
+        ).status === RESUME_TASK_STATUS.active &&
+        readCanonicalTaskStatusTableRow(
+          terminalByPath.get(ROOT_TASK_PATH),
+          group.childId,
+          "TASK-540 terminal repair-reopen root fixture"
+        ).cells.at(-1) === RESUME_TASK_STATUS.active &&
+        readCanonicalTaskStatusTableRow(
+          terminalByPath.get(group.childPath),
+          leafId,
+          "TASK-540 terminal repair-reopen child fixture"
+        ).cells.at(-1) === RESUME_TASK_STATUS.active,
+    },
+    {
+      label: "terminal repair reopen preserves sentinels and refreshes only declared metadata",
+      pass:
+        terminalByPath.get(ROOT_TASK_PATH).includes("root-prose-byte-sentinel") &&
+        terminalByPath
+          .get(ROOT_TASK_PATH)
+          .includes("Parent-title-sentinel | Parent-owner-sentinel") &&
+        terminalByPath.get(group.childPath).includes("parent-prose-byte-sentinel") &&
+        terminalByPath.get(group.childPath).includes("Leaf-title-sentinel | Leaf-owner-sentinel") &&
+        terminalByPath.get(group.leafPath).includes("leaf-prose-byte-sentinel") &&
+        readTaskMetadataField(terminalByPath.get(group.childPath), "Fix Started") === RUN_DATE &&
+        readTaskMetadataField(terminalByPath.get(group.childPath), "Completed") === null &&
+        readTaskMetadataField(terminalByPath.get(group.leafPath), "Fix Started") === RUN_DATE &&
+        readTaskMetadataField(terminalByPath.get(group.leafPath), "Completed") === null &&
+        readTaskMetadataField(terminalByPath.get(group.leafPath), "Targeted Gate Passed") ===
+          null &&
+        readTaskMetadataField(terminalByPath.get(group.leafPath), "Repair Pending") ===
+          repairPending,
+    },
+  ];
+  for (const testCase of cases) {
+    if (!testCase.pass) {
+      throw new Error("TASK-540 repair-reopen isolation self-test failed: " + testCase.label);
+    }
+  }
+  return cases.length;
+}
+
+function exactTransactionFixtureEntry(relativePath, source, mode) {
+  const bytes = Buffer.from(source, "utf8");
+  return Object.freeze({
+    relativePath,
+    exists: true,
+    bytesBase64: bytes.toString("base64"),
+    byteLength: bytes.length,
+    sha256: exactBytesSha256(bytes),
+    mode,
+  });
+}
+
+function exactTransactionFixtureSnapshot(files) {
+  const entries = files.map(({ relativePath, source, mode }) =>
+    exactTransactionFixtureEntry(relativePath, source, mode)
+  );
+  return Object.freeze({
+    authority: Object.freeze({
+      head: "fixture-head",
+      branch: "fixture-branch",
+      indexAuthority: Object.freeze({ sha256: "fixture-staged-index" }),
+      paths: Object.freeze(entries.map(({ relativePath }) => relativePath)),
+      hashes: Object.freeze(
+        Object.fromEntries(entries.map(({ relativePath, sha256 }) => [relativePath, sha256]))
+      ),
+    }),
+    sensitiveEnv: Object.freeze({ fixture: "fixture-sensitive-env" }),
+    entries: Object.freeze(entries),
+  });
+}
+
+function createHermeticExactObservationSequence(
+  beforeEntry,
+  afterEntry,
+  sequence,
+  { onThirdState = null } = {}
+) {
+  if (!Array.isArray(sequence) || sequence.length === 0) {
+    throw new Error("TASK-540 hermetic exact observation sequence is empty");
+  }
+  let reads = 0;
+  let waits = 0;
+  const thirdState = (() => {
+    const collisionBytes = Buffer.concat([
+      exactRollbackEntryBytes(afterEntry, "TASK-540 hermetic observation third state"),
+      Buffer.from("\nhermetic-third-state", "utf8"),
+    ]);
+    return Object.freeze({
+      ...afterEntry,
+      bytesBase64: collisionBytes.toString("base64"),
+      byteLength: collisionBytes.length,
+      sha256: exactBytesSha256(collisionBytes),
+    });
+  })();
+  const materialize = (item) => {
+    const descriptor = typeof item === "string" ? { state: item } : item;
+    if (!descriptor || typeof descriptor.state !== "string") {
+      throw new Error("TASK-540 hermetic exact observation descriptor is invalid");
+    }
+    if (descriptor.state === "race") {
+      throw new ExactRollbackReadRaceError("injected handle-bound read race");
+    }
+    const entry =
+      descriptor.state === "before"
+        ? beforeEntry
+        : descriptor.state === "after"
+          ? afterEntry
+          : descriptor.state === "third"
+            ? thirdState
+            : null;
+    if (!entry) throw new Error("TASK-540 hermetic exact observation state is unknown");
+    if (descriptor.state === "third" && onThirdState) onThirdState(thirdState);
+    return Object.freeze({ ...entry, observationInode: descriptor.inode ?? null });
+  };
+  return Object.freeze({
+    options: Object.freeze({
+      async readEntry(relativePath) {
+        if (relativePath !== beforeEntry.relativePath || relativePath !== afterEntry.relativePath) {
+          throw new Error("TASK-540 hermetic exact observation path escaped authority");
+        }
+        const item = sequence[Math.min(reads, sequence.length - 1)];
+        reads += 1;
+        return materialize(item);
+      },
+      async wait() {
+        waits += 1;
+      },
+    }),
+    inspect() {
+      return Object.freeze({ reads, waits, thirdState });
+    },
+  });
+}
+
+function createHermeticExactTransactionIo(
+  snapshot,
+  {
+    failAfterWrite = null,
+    collideAfterWrite = null,
+    collideBeforeWrite = null,
+    collideBeforeRollbackPath = null,
+    authorityDrift = false,
+    authorityDriftAfterWrite = false,
+    headDrift = false,
+    environmentDrift = false,
+    failRollback = false,
+    failSyncAfterWrite = null,
+    failObservationAfterWrite = null,
+    committedObservationError = null,
+    alreadyBeforeRollbackPaths = [],
+    postWriteVisibilitySequence = null,
+    authorityDriftAtCalls = [],
+    authorityDriftFromCall = null,
+    authorityDriftLabelIncludes = null,
+    initialStateSnapshot = snapshot,
+  } = {}
+) {
+  if (
+    !initialStateSnapshot ||
+    !sameUniqueSet(
+      snapshot.entries.map(({ relativePath }) => relativePath),
+      initialStateSnapshot.entries.map(({ relativePath }) => relativePath)
+    ) ||
+    !Array.isArray(authorityDriftAtCalls) ||
+    authorityDriftAtCalls.some((value) => !Number.isSafeInteger(value) || value < 1) ||
+    (authorityDriftFromCall !== null &&
+      (!Number.isSafeInteger(authorityDriftFromCall) || authorityDriftFromCall < 1)) ||
+    (authorityDriftLabelIncludes !== null && typeof authorityDriftLabelIncludes !== "string") ||
+    (committedObservationError !== null &&
+      (!(committedObservationError instanceof Error) ||
+        !exactTransactionErrorContains(committedObservationError, ExactTransactionCollisionError)))
+  ) {
+    throw new Error("TASK-540 hermetic exact transaction options are malformed");
+  }
+  const state = new Map(
+    initialStateSnapshot.entries.map((entry) => [entry.relativePath, { ...entry }])
+  );
+  const capturedStagedIndex = JSON.stringify(snapshot.authority.indexAuthority);
+  const stagedIndex = authorityDrift ? capturedStagedIndex + ":drift" : capturedStagedIndex;
+  const writePaths = [];
+  const rollbackWritePaths = [];
+  const parentSyncPaths = [];
+  const authorityCalls = [];
+  const events = [];
+  const rollbackReceipts = [];
+  let restoreCalls = 0;
+  let collisionPath = null;
+  let semanticVerificationCalls = 0;
+  let visibilityReads = 0;
+
+  const collisionEntry = (entry, label) => {
+    const collisionBytes = Buffer.concat([
+      exactRollbackEntryBytes(entry, label),
+      Buffer.from("\nthird-party-collision", "utf8"),
+    ]);
+    return {
+      ...entry,
+      bytesBase64: collisionBytes.toString("base64"),
+      byteLength: collisionBytes.length,
+      sha256: exactBytesSha256(collisionBytes),
+    };
+  };
+
+  const requireExactState = (expectedSnapshot, label) => {
+    if (state.size !== expectedSnapshot.entries.length) {
+      throw new ExactTransactionCollisionError(
+        label + ": hermetic exact snapshot path count mismatch",
+        "<path-count>"
+      );
+    }
+    for (const entry of expectedSnapshot.entries) {
+      if (!equalExactRollbackEntryState(state.get(entry.relativePath), entry)) {
+        throw new ExactTransactionCollisionError(
+          label + ": hermetic exact snapshot mismatch at " + entry.relativePath,
+          entry.relativePath
+        );
+      }
+    }
+  };
+  const changedPathsFrom = (capturedSnapshot) =>
+    capturedSnapshot.entries
+      .filter((entry) => !equalExactRollbackEntryState(state.get(entry.relativePath), entry))
+      .map(({ relativePath }) => relativePath);
+  const assertStagedIndex = (capturedSnapshot, label) => {
+    if (JSON.stringify(capturedSnapshot.authority.indexAuthority) !== stagedIndex) {
+      throw new Error(label + ": hermetic staged-index authority changed");
+    }
+  };
+  const io = Object.freeze({
+    async requireAuthority(capturedSnapshot, allowedDeltaPaths, label) {
+      const call = authorityCalls.length + 1;
+      authorityCalls.push(
+        Object.freeze({ call, label, allowedDeltaPaths: Object.freeze([...allowedDeltaPaths]) })
+      );
+      events.push("authority:" + label);
+      assertStagedIndex(capturedSnapshot, label);
+      if (headDrift) throw new Error(label + ": hermetic HEAD authority changed");
+      if (environmentDrift) {
+        throw new Error(label + ": hermetic sensitive-environment authority changed");
+      }
+      if (authorityDriftAfterWrite && writePaths.length > 0) {
+        throw new Error(label + ": hermetic post-write repository authority changed");
+      }
+      if (
+        authorityDriftAtCalls.includes(call) ||
+        (authorityDriftFromCall !== null && call >= authorityDriftFromCall) ||
+        (authorityDriftLabelIncludes !== null && label.includes(authorityDriftLabelIncludes))
+      ) {
+        throw new Error(label + ": injected hermetic authority drift at call " + call);
+      }
+      const allowed = new Set(allowedDeltaPaths);
+      if (changedPathsFrom(capturedSnapshot).some((path) => !allowed.has(path))) {
+        throw new Error(label + ": hermetic repository authority changed");
+      }
+    },
+    async verifySnapshot(expectedSnapshot, label, _options = {}) {
+      events.push("observe:" + label);
+      requireExactState(expectedSnapshot, label);
+    },
+    async writeEntry(beforeEntry, afterEntry, label) {
+      const writeNumber = writePaths.length + 1;
+      events.push("guard:" + afterEntry.relativePath);
+      if (!equalExactRollbackEntryState(state.get(beforeEntry.relativePath), beforeEntry)) {
+        throw new ExactTransactionCollisionError(
+          label + ": hermetic pre-write guard found a third state",
+          beforeEntry.relativePath
+        );
+      }
+      if (collideBeforeWrite === writeNumber) {
+        state.set(beforeEntry.relativePath, collisionEntry(beforeEntry, label));
+        collisionPath = beforeEntry.relativePath;
+        throw new ExactTransactionCollisionError(
+          label + ": injected collision before local write " + writeNumber,
+          beforeEntry.relativePath
+        );
+      }
+      state.set(afterEntry.relativePath, { ...afterEntry });
+      writePaths.push(afterEntry.relativePath);
+      events.push("mutate:" + afterEntry.relativePath);
+      let receipt = exactWriteReceipt(
+        afterEntry.relativePath,
+        afterEntry.exists ? "rename" : "unlink",
+        beforeEntry,
+        afterEntry,
+        false
+      );
+      if (failSyncAfterWrite === writeNumber) {
+        throw wrapCommittedExactWriteError(
+          new Error(label + ": injected parent sync failure after write " + writeNumber),
+          receipt,
+          label
+        );
+      }
+      parentSyncPaths.push(afterEntry.relativePath);
+      events.push("sync:" + afterEntry.relativePath);
+      receipt = exactWriteReceipt(
+        afterEntry.relativePath,
+        afterEntry.exists ? "rename" : "unlink",
+        beforeEntry,
+        afterEntry,
+        true
+      );
+      if (committedObservationError && writeNumber === 1) {
+        throw wrapCommittedExactWriteError(committedObservationError, receipt, label);
+      }
+      if (postWriteVisibilitySequence && writeNumber === 1) {
+        const visibility = createHermeticExactObservationSequence(
+          beforeEntry,
+          afterEntry,
+          postWriteVisibilitySequence,
+          {
+            onThirdState(thirdState) {
+              state.set(afterEntry.relativePath, { ...thirdState });
+              collisionPath = afterEntry.relativePath;
+            },
+          }
+        );
+        try {
+          await observeExactRollbackSemanticState(
+            afterEntry.relativePath,
+            [afterEntry],
+            [beforeEntry],
+            label + " hermetic post-write visibility",
+            afterEntry.exists
+              ? {
+                  ...visibility.options,
+                  committedRenameFakeownerConvergenceAuthority:
+                    COMMITTED_RENAME_FAKEOWNER_CONVERGENCE_AUTHORITY,
+                }
+              : visibility.options
+          );
+        } catch (error) {
+          visibilityReads += visibility.inspect().reads;
+          throw wrapCommittedExactWriteError(error, receipt, label);
+        }
+        visibilityReads += visibility.inspect().reads;
+      }
+      if (collideAfterWrite === writeNumber) {
+        state.set(afterEntry.relativePath, collisionEntry(afterEntry, label));
+        collisionPath = afterEntry.relativePath;
+      }
+      if (failObservationAfterWrite === writeNumber) {
+        throw wrapCommittedExactWriteError(
+          new ExactTransactionVisibilityError(
+            label + ": injected post-write visibility timeout " + writeNumber
+          ),
+          receipt,
+          label
+        );
+      }
+      if (failAfterWrite === writeNumber) {
+        throw wrapCommittedExactWriteError(
+          new Error(label + ": injected failure after local write " + writeNumber),
+          receipt,
+          label
+        );
+      }
+      return receipt;
+    },
+    async restoreReceipts(
+      capturedSnapshot,
+      expectedSnapshot,
+      receipts,
+      owner,
+      label,
+      { requireAuthority }
+    ) {
+      assertStagedIndex(capturedSnapshot, label);
+      if (
+        !sameUniqueSet(
+          capturedSnapshot.entries.map(({ relativePath }) => relativePath),
+          owner.allowedFiles
+        ) ||
+        typeof requireAuthority !== "function"
+      ) {
+        throw new Error(label + ": hermetic rollback owner is incomplete");
+      }
+      restoreCalls += 1;
+      if (restoreCalls !== 1) {
+        throw new Error(label + ": hermetic rollback retried");
+      }
+      if (failRollback) {
+        throw new Error(label + ": injected rollback failure");
+      }
+      const expectedByPath = new Map(
+        expectedSnapshot.entries.map((entry) => [entry.relativePath, entry])
+      );
+      const beforeByPath = new Map(
+        capturedSnapshot.entries.map((entry) => [entry.relativePath, entry])
+      );
+      const receiptPaths = Object.freeze(receipts.map(({ relativePath }) => relativePath));
+      for (const path of alreadyBeforeRollbackPaths) {
+        const beforeEntry = beforeByPath.get(path);
+        if (!beforeEntry) throw new Error(label + ": unknown already-before rollback path");
+        state.set(path, { ...beforeEntry });
+      }
+      try {
+        for (const receipt of [...receipts].reverse()) {
+          const beforeEntry = beforeByPath.get(receipt.relativePath);
+          const afterEntry = expectedByPath.get(receipt.relativePath);
+          if (!beforeEntry || !afterEntry) {
+            throw new Error(label + ": hermetic rollback receipt escaped authority");
+          }
+          events.push("rollback-boundary:" + receipt.relativePath);
+          if (collideBeforeRollbackPath === receipt.relativePath) {
+            state.set(receipt.relativePath, collisionEntry(afterEntry, label));
+            collisionPath = receipt.relativePath;
+            throw new ExactTransactionCollisionError(
+              label + ": injected collision before rollback guard",
+              receipt.relativePath
+            );
+          }
+          const currentEntry = state.get(beforeEntry.relativePath);
+          if (
+            !equalExactRollbackEntryState(currentEntry, beforeEntry) &&
+            !equalExactRollbackEntryState(currentEntry, afterEntry)
+          ) {
+            throw new ExactTransactionCollisionError(
+              label + ": hermetic rollback refused third-party state",
+              receipt.relativePath
+            );
+          }
+          await requireAuthority(
+            capturedSnapshot,
+            receiptPaths,
+            label + " authority after rollback boundary " + receipt.relativePath
+          );
+          if (equalExactRollbackEntryState(currentEntry, beforeEntry)) continue;
+          events.push("rollback-guard:" + receipt.relativePath);
+          state.set(beforeEntry.relativePath, { ...beforeEntry });
+          rollbackWritePaths.push(beforeEntry.relativePath);
+          parentSyncPaths.push(beforeEntry.relativePath);
+          events.push("rollback-mutate:" + receipt.relativePath);
+          const rollbackReceipt = sequenceExactWriteReceipt(
+            exactWriteReceipt(receipt.relativePath, "rename", afterEntry, beforeEntry, true),
+            rollbackReceipts.length + 1,
+            afterEntry,
+            beforeEntry,
+            label + " hermetic rollback receipt"
+          );
+          rollbackReceipts.push(rollbackReceipt);
+          await requireAuthority(
+            capturedSnapshot,
+            receiptPaths,
+            label + " authority after rollback write observation " + receipt.relativePath
+          );
+        }
+        await requireAuthority(
+          capturedSnapshot,
+          receiptPaths,
+          label + " authority before final rollback state"
+        );
+        events.push("rollback-observe-final");
+        requireExactState(capturedSnapshot, label + " restored snapshot");
+        await requireAuthority(
+          capturedSnapshot,
+          receiptPaths,
+          label + " authority after final rollback state"
+        );
+      } catch (error) {
+        throw wrapAccumulatedExactRollbackError(error, rollbackReceipts, label);
+      }
+    },
+  });
+  return Object.freeze({
+    io,
+    noteSemanticVerification() {
+      semanticVerificationCalls += 1;
+      events.push("semantic-verifier");
+    },
+    inspect(expectedSnapshot = snapshot) {
+      let exact = true;
+      try {
+        requireExactState(expectedSnapshot, "TASK-540 hermetic inspection");
+      } catch {
+        exact = false;
+      }
+      return Object.freeze({
+        exact,
+        stagedIndexPreserved: stagedIndex === capturedStagedIndex,
+        writePaths: Object.freeze([...writePaths]),
+        rollbackWritePaths: Object.freeze([...rollbackWritePaths]),
+        parentSyncPaths: Object.freeze([...parentSyncPaths]),
+        authorityCalls: Object.freeze([...authorityCalls]),
+        events: Object.freeze([...events]),
+        rollbackReceipts: Object.freeze([...rollbackReceipts]),
+        restoreCalls,
+        semanticVerificationCalls,
+        visibilityReads,
+        collisionPath,
+        collisionPreserved:
+          collisionPath !== null &&
+          !equalExactRollbackEntryState(
+            state.get(collisionPath),
+            snapshot.entries.find(({ relativePath }) => relativePath === collisionPath)
+          ),
+      });
+    },
+  });
+}
+
+async function assertTask540InterruptedReopenRecoveryContract() {
+  if (!HERMETIC_SELF_TEST_MODE) {
+    throw new Error("TASK-540 interrupted-reopen recovery tests require hermetic authority");
+  }
+  const relativePath = "_docs/_TASKS/TASK-540-01-recovery-fixture.md";
+  const indexSource = [
+    "# TASK-540-01 recovery fixture",
+    "",
+    "**Status:** 🚧 In Progress",
+    "**Started:** 2026-07-13",
+    "**Implementation Complete:** 2026-07-16 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.",
+    "**Historical Implementation Complete:** 2026-07-14 — fixture",
+    "**Repair Started:** 2026-07-16",
+    "",
+    "Prepared sibling narrative.",
+    "",
+  ].join("\n");
+  const provisionalPins = {
+    relativePath,
+    head: "1".repeat(40),
+    branch: "fixture-branch",
+    stagedDiffSha256: "2".repeat(64),
+    stageProjectionSha256: "3".repeat(64),
+    indexMode: "100644",
+    indexBlob: "4".repeat(40),
+    indexByteLength: Buffer.byteLength(indexSource),
+    indexSha256: exactBytesSha256(Buffer.from(indexSource)),
+    partialByteLength: 1,
+    partialSha256: "5".repeat(64),
+    worktreeMode: 0o644,
+    fixStartedDate: "2026-07-18",
+  };
+  const partialSource = deriveInterruptedReopenPartialSource(
+    indexSource,
+    provisionalPins,
+    "TASK-540 interrupted-reopen fixture"
+  );
+  const pins = Object.freeze({
+    ...provisionalPins,
+    partialByteLength: Buffer.byteLength(partialSource),
+    partialSha256: exactBytesSha256(Buffer.from(partialSource)),
+  });
+  const authority = Object.freeze({
+    head: pins.head,
+    branch: pins.branch,
+    stagedDiffSha256: pins.stagedDiffSha256,
+    stageProjectionSha256: pins.stageProjectionSha256,
+    indexMode: pins.indexMode,
+    indexBlob: pins.indexBlob,
+    indexByteLength: pins.indexByteLength,
+    indexSha256: pins.indexSha256,
+  });
+  const partialEntry = exactTransactionFixtureEntry(relativePath, partialSource, pins.worktreeMode);
+  const priorEntry = exactTransactionFixtureEntry(relativePath, indexSource, pins.worktreeMode);
+  const planFor = (currentEntry, overrides = {}) =>
+    buildInterruptedReopenRecoveryPlan(
+      {
+        pins,
+        authority,
+        indexSource,
+        currentEntry,
+        siblingsPrepared: true,
+        ...overrides,
+      },
+      "TASK-540 interrupted-reopen fixture"
+    );
+  const cases = [];
+  const partialPlan = planFor(partialEntry);
+  const priorPlan = planFor(priorEntry);
+  cases.push({
+    label: "exact partial plans one index-derived recovery",
+    pass: partialPlan.state === "partial" && partialPlan.entries[0].changed === true,
+  });
+  cases.push({
+    label: "exact prior plans an idempotent no-op",
+    pass: priorPlan.state === "prior" && priorPlan.entries[0].changed === false,
+  });
+  const rejects = (execute) => {
+    try {
+      execute();
+      return false;
+    } catch {
+      return true;
+    }
+  };
+  const thirdEntry = exactTransactionFixtureEntry(
+    relativePath,
+    partialSource + "third-state\n",
+    pins.worktreeMode
+  );
+  cases.push({
+    label: "third worktree state fails before transaction I/O",
+    pass: rejects(() => planFor(thirdEntry)),
+  });
+  const authorityMutations = [
+    { head: "6".repeat(40) },
+    { branch: "different-branch" },
+    { stagedDiffSha256: "7".repeat(64) },
+    { stageProjectionSha256: "8".repeat(64) },
+    { indexMode: "100600" },
+    { indexBlob: "9".repeat(40) },
+    { indexByteLength: pins.indexByteLength + 1 },
+    { indexSha256: "a".repeat(64) },
+  ];
+  cases.push({
+    label: "every HEAD branch staged and index authority pin fails closed",
+    pass: authorityMutations.every((mutation) =>
+      rejects(() => planFor(partialEntry, { authority: { ...authority, ...mutation } }))
+    ),
+  });
+  cases.push({
+    label: "prepared sibling drift fails before transaction I/O",
+    pass: rejects(() => planFor(partialEntry, { siblingsPrepared: false })),
+  });
+  cases.push({
+    label: "non-metadata partial projection drift cannot roll forward",
+    pass: rejects(() =>
+      planFor(
+        exactTransactionFixtureEntry(
+          relativePath,
+          partialSource.replace("Prepared sibling narrative.", "Changed narrative."),
+          pins.worktreeMode
+        )
+      )
+    ),
+  });
+  const owner = Object.freeze({
+    id: "interrupted-reopen-fixture",
+    allowedFiles: Object.freeze([relativePath]),
+    requiredFiles: Object.freeze([]),
+  });
+  const partialSnapshot = exactTransactionFixtureSnapshot([
+    { relativePath, source: partialSource, mode: pins.worktreeMode },
+  ]);
+  const partialHarness = createHermeticExactTransactionIo(partialSnapshot);
+  const partialTransaction = await runSnapshotDerivedExactTransaction(
+    partialSnapshot,
+    owner,
+    partialPlan.entries,
+    "TASK-540 interrupted-reopen exact-one-write fixture",
+    async () => partialHarness.noteSemanticVerification(),
+    partialHarness.io
+  );
+  const partialInspection = partialHarness.inspect(partialTransaction.expectedSnapshot);
+  cases.push({
+    label: "partial recovery performs exactly one durable transaction write",
+    pass:
+      partialInspection.exact &&
+      JSON.stringify(partialInspection.writePaths) === JSON.stringify([relativePath]) &&
+      partialInspection.parentSyncPaths.length === 1 &&
+      partialInspection.restoreCalls === 0,
+  });
+  const priorSnapshot = exactTransactionFixtureSnapshot([
+    { relativePath, source: indexSource, mode: pins.worktreeMode },
+  ]);
+  const priorHarness = createHermeticExactTransactionIo(priorSnapshot);
+  await runSnapshotDerivedExactTransaction(
+    priorSnapshot,
+    owner,
+    priorPlan.entries,
+    "TASK-540 interrupted-reopen prior no-op fixture",
+    async () => priorHarness.noteSemanticVerification(),
+    priorHarness.io
+  );
+  const priorInspection = priorHarness.inspect();
+  cases.push({
+    label: "prior recovery performs zero writes",
+    pass:
+      priorInspection.exact &&
+      priorInspection.writePaths.length === 0 &&
+      priorInspection.parentSyncPaths.length === 0 &&
+      priorInspection.restoreCalls === 0,
+  });
+  const idempotentPlan = planFor(priorEntry);
+  const idempotentHarness = createHermeticExactTransactionIo(priorSnapshot);
+  await runSnapshotDerivedExactTransaction(
+    priorSnapshot,
+    owner,
+    idempotentPlan.entries,
+    "TASK-540 interrupted-reopen idempotency fixture",
+    async () => idempotentHarness.noteSemanticVerification(),
+    idempotentHarness.io
+  );
+  cases.push({
+    label: "repeated exact recovery remains a zero-write no-op",
+    pass: idempotentHarness.inspect().writePaths.length === 0,
+  });
+  const createRecoveryCoordinatorHarness = ({
+    driftTargetDuringFinalResolver = false,
+    driftTargetAfterFirstObservation = false,
+    driftIndexAtFinalCheck = false,
+    driftStagedAuthorityAtFinalCapture = false,
+    failFinalPrepared = false,
+    failFinalCoverage = false,
+  } = {}) => {
+    const events = [];
+    const initialIndex = Object.freeze({ fixture: "initial-index" });
+    const prepared = Object.freeze({
+      resumeState: Object.freeze({ fixture: "resume" }),
+      changelogState: Object.freeze({ fixture: "changelog" }),
+    });
+    let currentEntry = partialEntry;
+    let recoveryAuthorityCalls = 0;
+    let finalObservationCalls = 0;
+    const note = (method, label) => events.push(Object.freeze({ method, label }));
+    const io = Object.freeze({
+      async captureInitialIndex(label) {
+        note("captureInitialIndex", label);
+        return initialIndex;
+      },
+      async captureRecoveryAuthority(pinsArgument, indexArgument, label) {
+        note("captureRecoveryAuthority", label);
+        recoveryAuthorityCalls += 1;
+        if (pinsArgument !== pins || indexArgument !== initialIndex) {
+          throw new Error("TASK-540 recovery coordinator fixture authority input changed");
+        }
+        return Object.freeze({
+          authority:
+            driftStagedAuthorityAtFinalCapture && recoveryAuthorityCalls === 3
+              ? Object.freeze({ ...authority, stagedDiffSha256: "b".repeat(64) })
+              : authority,
+          indexSource,
+        });
+      },
+      async captureSnapshot(paths, label) {
+        note("captureSnapshot", label);
+        if (JSON.stringify(paths) !== JSON.stringify([relativePath])) {
+          throw new Error("TASK-540 recovery coordinator fixture snapshot scope changed");
+        }
+        return partialSnapshot;
+      },
+      async observeFinal(path, terminalEntries, transitionalEntries, label) {
+        note("observeFinal", label);
+        finalObservationCalls += 1;
+        if (
+          path !== relativePath ||
+          terminalEntries.length !== 1 ||
+          transitionalEntries.length !== 0 ||
+          !equalExactRollbackEntryState(terminalEntries[0], priorEntry)
+        ) {
+          throw new Error("TASK-540 recovery coordinator fixture observation scope changed");
+        }
+        if (!equalExactRollbackEntryState(currentEntry, terminalEntries[0])) {
+          throw new ExactTransactionCollisionError(
+            "TASK-540 recovery coordinator fixture observed target drift",
+            path
+          );
+        }
+        return Object.freeze({ state: currentEntry });
+      },
+      async requireInitialIndex(label) {
+        note("requireInitialIndex", label);
+        if (driftIndexAtFinalCheck && label.endsWith("final Git index")) {
+          throw new Error("TASK-540 recovery coordinator fixture final Git index drift");
+        }
+        return initialIndex;
+      },
+      async requireSnapshotAuthority(snapshotArgument, paths, label) {
+        note("requireSnapshotAuthority", label);
+        if (
+          snapshotArgument !== partialSnapshot ||
+          JSON.stringify(paths) !== JSON.stringify([relativePath])
+        ) {
+          throw new Error("TASK-540 recovery coordinator fixture snapshot authority changed");
+        }
+        if (
+          driftTargetAfterFirstObservation &&
+          label.endsWith("authority after final exact prior observation")
+        ) {
+          currentEntry = thirdEntry;
+        }
+      },
+      async runTransaction(snapshotArgument, ownerArgument, entries, label, verify) {
+        note("runTransaction", label);
+        if (
+          snapshotArgument !== partialSnapshot ||
+          ownerArgument.id !== "recover-interrupted-reopen-540-01-L01" ||
+          JSON.stringify(ownerArgument.allowedFiles) !== JSON.stringify([relativePath])
+        ) {
+          throw new Error("TASK-540 recovery coordinator fixture transaction scope changed");
+        }
+        const transaction = buildSnapshotDerivedExactTransaction(snapshotArgument, entries, label);
+        currentEntry = transaction.expectedSnapshot.entries[0];
+        await verify(transaction.expectedSnapshot);
+        return transaction;
+      },
+      async validateCoverage(resumeState, changelogState, label) {
+        note("validateCoverage", label);
+        if (resumeState !== prepared.resumeState || changelogState !== prepared.changelogState) {
+          throw new Error("TASK-540 recovery coordinator fixture coverage input changed");
+        }
+        if (failFinalCoverage && label.endsWith("final prepared resolver")) {
+          throw new Error("TASK-540 recovery coordinator fixture final coverage drift");
+        }
+      },
+      async validatePrepared(source, pinsArgument, label) {
+        note("validatePrepared", label);
+        if (source !== indexSource || pinsArgument !== pins) {
+          throw new Error("TASK-540 recovery coordinator fixture prepared input changed");
+        }
+        if (label.endsWith("final prepared resolver")) {
+          if (driftTargetDuringFinalResolver) currentEntry = thirdEntry;
+          if (failFinalPrepared) {
+            throw new Error("TASK-540 recovery coordinator fixture final prepared drift");
+          }
+        }
+        return prepared;
+      },
+    });
+    return Object.freeze({
+      io,
+      inspect() {
+        return Object.freeze({
+          events: Object.freeze([...events]),
+          finalObservationCalls,
+          recoveryAuthorityCalls,
+        });
+      },
+    });
+  };
+  const captureAsyncError = async (execute) => {
+    try {
+      await execute();
+      return null;
+    } catch (error) {
+      return error;
+    }
+  };
+  const successCoordinator = createRecoveryCoordinatorHarness();
+  const successOutput = await runInterruptedReopenRecoveryCoordinator(
+    pins,
+    successCoordinator.io,
+    "TASK-540 interrupted-reopen coordinator fixture"
+  );
+  const successInspection = successCoordinator.inspect();
+  const expectedCoordinatorOrder = [
+    "captureInitialIndex",
+    "captureRecoveryAuthority",
+    "captureSnapshot",
+    "validatePrepared",
+    "runTransaction",
+    "validatePrepared",
+    "validateCoverage",
+    "requireInitialIndex",
+    "captureRecoveryAuthority",
+    "requireSnapshotAuthority",
+    "validatePrepared",
+    "validateCoverage",
+    "requireSnapshotAuthority",
+    "observeFinal",
+    "requireSnapshotAuthority",
+    "requireInitialIndex",
+    "captureRecoveryAuthority",
+    "observeFinal",
+  ];
+  cases.push({
+    label: "coordinator orders every recovery boundary and emits only fresh safe output",
+    pass:
+      JSON.stringify(successInspection.events.map(({ method }) => method)) ===
+        JSON.stringify(expectedCoordinatorOrder) &&
+      successInspection.finalObservationCalls === 2 &&
+      successInspection.recoveryAuthorityCalls === 3 &&
+      Object.isFrozen(successOutput) &&
+      JSON.stringify(Object.keys(successOutput).sort()) ===
+        JSON.stringify([...INTERRUPTED_REOPEN_RECOVERY_OUTPUT_KEYS].sort()) &&
+      successOutput.recovered === true &&
+      successOutput.stagedDiffSha256 === pins.stagedDiffSha256 &&
+      successOutput.stageProjectionSha256 === pins.stageProjectionSha256 &&
+      successOutput.worktreeSha256 === pins.indexSha256 &&
+      successOutput.mode === "0644" &&
+      rejects(() =>
+        buildInterruptedReopenRecoveryOutput(
+          true,
+          { ...authority, stageProjectionSha256: "invalid" },
+          priorEntry,
+          "TASK-540 interrupted-reopen malformed output fixture"
+        )
+      ),
+  });
+  const resolverTargetDriftHarness = createRecoveryCoordinatorHarness({
+    driftTargetDuringFinalResolver: true,
+  });
+  const resolverTargetDriftError = await captureAsyncError(() =>
+    runInterruptedReopenRecoveryCoordinator(
+      pins,
+      resolverTargetDriftHarness.io,
+      "TASK-540 interrupted-reopen resolver target drift fixture"
+    )
+  );
+  cases.push({
+    label: "target drift during the final resolver fails the first exact observation",
+    pass:
+      resolverTargetDriftError instanceof ExactTransactionCollisionError &&
+      resolverTargetDriftError.relativePath === relativePath &&
+      resolverTargetDriftHarness.inspect().finalObservationCalls === 1,
+  });
+  const outputTargetDriftHarness = createRecoveryCoordinatorHarness({
+    driftTargetAfterFirstObservation: true,
+  });
+  const outputTargetDriftError = await captureAsyncError(() =>
+    runInterruptedReopenRecoveryCoordinator(
+      pins,
+      outputTargetDriftHarness.io,
+      "TASK-540 interrupted-reopen output target drift fixture"
+    )
+  );
+  cases.push({
+    label: "target drift after the first observation fails the fresh output observation",
+    pass:
+      outputTargetDriftError instanceof ExactTransactionCollisionError &&
+      outputTargetDriftError.relativePath === relativePath &&
+      outputTargetDriftHarness.inspect().finalObservationCalls === 2,
+  });
+  const finalIndexDriftHarness = createRecoveryCoordinatorHarness({
+    driftIndexAtFinalCheck: true,
+  });
+  const finalIndexDriftError = await captureAsyncError(() =>
+    runInterruptedReopenRecoveryCoordinator(
+      pins,
+      finalIndexDriftHarness.io,
+      "TASK-540 interrupted-reopen final index drift fixture"
+    )
+  );
+  cases.push({
+    label: "final Git index drift fails before safe output",
+    pass:
+      finalIndexDriftError?.message.includes("final Git index drift") &&
+      finalIndexDriftHarness.inspect().finalObservationCalls === 1,
+  });
+  const finalAuthorityDriftHarness = createRecoveryCoordinatorHarness({
+    driftStagedAuthorityAtFinalCapture: true,
+  });
+  const finalAuthorityDriftError = await captureAsyncError(() =>
+    runInterruptedReopenRecoveryCoordinator(
+      pins,
+      finalAuthorityDriftHarness.io,
+      "TASK-540 interrupted-reopen final authority drift fixture"
+    )
+  );
+  cases.push({
+    label: "final staged authority drift fails before safe output",
+    pass:
+      finalAuthorityDriftError?.message.includes("staged authority changed") &&
+      finalAuthorityDriftHarness.inspect().finalObservationCalls === 1 &&
+      finalAuthorityDriftHarness.inspect().recoveryAuthorityCalls === 3,
+  });
+  const finalResolverDriftErrors = await Promise.all(
+    [
+      createRecoveryCoordinatorHarness({ failFinalPrepared: true }),
+      createRecoveryCoordinatorHarness({ failFinalCoverage: true }),
+    ].map(async (harness) =>
+      captureAsyncError(() =>
+        runInterruptedReopenRecoveryCoordinator(
+          pins,
+          harness.io,
+          "TASK-540 interrupted-reopen final resolver drift fixture"
+        )
+      )
+    )
+  );
+  cases.push({
+    label: "final prepared and coverage drift both fail before observation and output",
+    pass:
+      finalResolverDriftErrors.every((error) => error?.message.includes("final")) &&
+      finalResolverDriftErrors.length === 2,
+  });
+  cases.push({
+    label: "recovery CLI accepts only its one exact argument",
+    pass:
+      parseInterruptedReopenRecoveryArgv([INTERRUPTED_REOPEN_RECOVERY_ARGUMENT]) ===
+        INTERRUPTED_REOPEN_RECOVERY_ARGUMENT &&
+      rejects(() => parseInterruptedReopenRecoveryArgv([])) &&
+      rejects(() =>
+        parseInterruptedReopenRecoveryArgv([
+          INTERRUPTED_REOPEN_RECOVERY_ARGUMENT,
+          "--self-test-repair-siblings",
+        ])
+      ) &&
+      rejects(() => parseInterruptedReopenRecoveryArgv(["--recover-interrupted-reopen=other"])),
+  });
+  for (const testCase of cases) {
+    if (!testCase.pass) {
+      throw new Error("TASK-540 interrupted-reopen recovery self-test failed: " + testCase.label);
+    }
+  }
+  return cases.length;
+}
+
+function repairReopenTransactionFixtureSources(group, leafId, gateReceipt) {
+  return Object.freeze({
+    root: [
+      "**Status:** 🚧 In Progress",
+      "**Root Transaction Sentinel:** root-prose",
+      "",
+      "| ID | Title | Ownership | Status |",
+      "| --- | --- | --- | --- |",
+      "| TASK-" + group.childId + " | Parent-title | Parent-owner-sentinel | 🚧 In Progress |",
+      "",
+      "Root transaction narrative.",
+      "",
+    ].join("\n"),
+    child: [
+      "**Status:** 🚧 In Progress",
+      "**Started:** 2026-07-13",
+      "**Implementation Complete:** 2026-07-17 — landed",
+      "**Parent Transaction Sentinel:** parent-prose",
+      "",
+      "| ID | Title | Ownership | Status |",
+      "| --- | --- | --- | --- |",
+      "| TASK-" + leafId + " | Leaf-title | Leaf-owner-sentinel | 🚧 In Progress |",
+      "",
+      "Parent transaction narrative.",
+      "",
+    ].join("\n"),
+    leaf: [
+      "**Status:** 🚧 In Progress",
+      "**Started:** 2026-07-13",
+      "**Implementation Complete:** 2026-07-17 — landed",
+      "**" + gateReceipt.field + ":** " + gateReceipt.value,
+      "**Leaf Transaction Sentinel:** leaf-prose",
+      "",
+      "Leaf transaction narrative.",
+      "",
+    ].join("\n"),
+  });
+}
+
+function closureIndexTransactionFixture(anchor) {
+  return [
+    "# Changelog index fixture",
+    "",
+    "## Index",
+    formatClosureAnchor(anchor),
+    "",
+    TASK_540_CONSUMED_PROSE,
+    "",
+    TASK_540_REMAINING_RESERVED_PROSE,
+    "",
+    TASK_540_INDEX_SLOT_END,
+    "",
+    "| No. | Date | Title | Type |",
+    "|-----|------|-------|------|",
+    "| 1252 | 2026-07-14 | " +
+      CHANGELOG_TITLE_PREFIX +
+      " — transaction fixture | " +
+      CHANGELOG_TYPE +
+      " |",
+    "",
+  ].join("\n");
+}
+
+function reservedClosureIndexTransactionFixture() {
+  return [
+    "# Changelog index fixture",
+    "",
+    "## Index",
+    "",
+    TASK_540_RESERVED_PROSE,
+    "",
+    TASK_540_INDEX_SLOT_END,
+    "",
+    "| No. | Date | Title | Type |",
+    "|-----|------|-------|------|",
+    "",
+  ].join("\n");
+}
+
+async function assertTask540RepairReopenTransactionContract() {
+  if (!HERMETIC_SELF_TEST_MODE) {
+    throw new Error("TASK-540 repair-reopen transaction tests require hermetic authority");
+  }
+  const repairPending = "generation " + "7".repeat(32) + " / token " + "8".repeat(32);
+  const boardPath = "_docs/_TASKS/README.md";
+  const indexPath = "_docs/_CHANGELOG/README.md";
+  const boardSource = "board-byte-sentinel\nstatistics-byte-sentinel\n";
+  const modes = Object.freeze({
+    root: 0o640,
+    child: 0o600,
+    leaf: 0o644,
+    board: 0o664,
+    index: 0o640,
+  });
+  const makeSnapshot = (group, sources, indexSource = null) =>
+    exactTransactionFixtureSnapshot([
+      { relativePath: ROOT_TASK_PATH, source: sources.root, mode: modes.root },
+      { relativePath: group.childPath, source: sources.child, mode: modes.child },
+      { relativePath: group.leafPath, source: sources.leaf, mode: modes.leaf },
+      { relativePath: boardPath, source: boardSource, mode: modes.board },
+      ...(indexSource === null
+        ? []
+        : [{ relativePath: indexPath, source: indexSource, mode: modes.index }]),
+    ]);
+  const makeOwner = (id, snapshot) =>
+    Object.freeze({
+      id,
+      allowedFiles: Object.freeze(snapshot.entries.map(({ relativePath }) => relativePath)),
+      requiredFiles: Object.freeze([]),
+    });
+
+  const normalLeafId = "540-01-L01";
+  const normalGroup = LEAF_STATUS_GROUPS[normalLeafId];
+  const normalGate = Object.freeze({ field: "Revalidation Passed", value: "normal-old-gate" });
+  const normalSources = repairReopenTransactionFixtureSources(
+    normalGroup,
+    normalLeafId,
+    normalGate
+  );
+  const normalSnapshot = makeSnapshot(normalGroup, normalSources);
+  const normalEntries = buildRepairReopenTaskContractSources(
+    normalSources,
+    normalGroup,
+    normalLeafId,
+    repairPending,
+    repairReopenTaskContractMutations(normalGroup, normalLeafId),
+    "TASK-540 normal repair transaction fixture"
+  );
+
+  const closureLeafId = "540-06-L01";
+  const closureGroup = LEAF_STATUS_GROUPS[closureLeafId];
+  const closureGate = Object.freeze({
+    field: "Revalidation Passed",
+    value: "consumed-closure-old-gate",
+  });
+  const closureSources = repairReopenTransactionFixtureSources(
+    closureGroup,
+    closureLeafId,
+    closureGate
+  );
+  const closureControl = Object.freeze({
+    schemaVersion: 1,
+    generation: 1,
+    boardBaseline: "toDo 0 / inProgress 1 / done 539",
+    changelogPath: CHANGELOG_REL,
+    gateReceipt: hashedGateReceipt(closureGate),
+  });
+  const closureAnchor = buildClosureAnchor("a".repeat(64), closureControl, null);
+  const closureSnapshot = makeSnapshot(
+    closureGroup,
+    closureSources,
+    closureIndexTransactionFixture(closureAnchor)
+  );
+  const closureAuthorization = authorizeClosureLeafRepair(
+    closureSnapshot,
+    repairPending,
+    closureGate,
+    "TASK-540 consumed closure transaction fixture"
+  );
+  const closureEntries = Object.freeze([
+    closureAuthorization.entry,
+    ...buildRepairReopenTaskContractSources(
+      closureSources,
+      closureGroup,
+      closureLeafId,
+      repairPending,
+      repairReopenTaskContractMutations(closureGroup, closureLeafId),
+      "TASK-540 consumed closure task transaction fixture"
+    ),
+  ]);
+
+  const ungatedGate = Object.freeze({
+    field: "Targeted Gate Passed",
+    value: "ungated-closure-old-gate",
+  });
+  const ungatedSources = repairReopenTransactionFixtureSources(
+    closureGroup,
+    closureLeafId,
+    ungatedGate
+  );
+  const ungatedIndexSource = reservedClosureIndexTransactionFixture();
+  if (
+    classifyClosureEvidenceIndex(ungatedIndexSource, "TASK-540 ungated closure transaction fixture")
+      .kind !== "reserved"
+  ) {
+    throw new Error("TASK-540 ungated closure transaction fixture is not reserved");
+  }
+  const ungatedSnapshot = makeSnapshot(closureGroup, ungatedSources, ungatedIndexSource);
+  const ungatedMutations = ungatedClosureReopenTaskContractMutations(closureGroup, closureLeafId);
+  const ungatedEntries = buildRepairReopenTaskContractSources(
+    ungatedSources,
+    closureGroup,
+    closureLeafId,
+    null,
+    ungatedMutations,
+    "TASK-540 ungated closure task transaction fixture"
+  );
+
+  const scenarios = Object.freeze([
+    Object.freeze({
+      label: "normal repair",
+      snapshot: normalSnapshot,
+      entries: normalEntries,
+      owner: makeOwner("normal-repair-fixture", normalSnapshot),
+    }),
+    Object.freeze({
+      label: "consumed closure repair",
+      snapshot: closureSnapshot,
+      entries: closureEntries,
+      owner: makeOwner("consumed-closure-fixture", closureSnapshot),
+    }),
+    Object.freeze({
+      label: "ungated closure repair",
+      snapshot: ungatedSnapshot,
+      entries: ungatedEntries,
+      owner: makeOwner("ungated-closure-fixture", ungatedSnapshot),
+    }),
+  ]);
+  const cases = [];
+  const requireRejected = async (execute, label) => {
+    try {
+      await execute();
+    } catch {
+      return;
+    }
+    throw new Error("TASK-540 repair transaction self-test did not reject " + label);
+  };
+  const captureRejected = async (execute, label) => {
+    try {
+      await execute();
+    } catch (error) {
+      return error;
+    }
+    throw new Error("TASK-540 repair transaction self-test did not capture " + label);
+  };
+  const dualViewStat = ({
+    mode,
+    inode = 91n,
+    size = 8n,
+    linkCount = 1n,
+    kindBits = 0o100000,
+    file = true,
+    symbolicLink = false,
+  }) =>
+    Object.freeze({
+      dev: 17n,
+      ino: inode,
+      mode: BigInt(kindBits | mode),
+      nlink: linkCount,
+      size,
+      mtimeNs: 101n,
+      ctimeNs: 102n,
+      isFile: () => file,
+      isSymbolicLink: () => symbolicLink,
+    });
+  const classifyDualView = ({
+    pathMode = 0o644,
+    handleMode = 0o600,
+    handleInode = 91n,
+    pathAfterMode = pathMode,
+    fsType = EXACT_TRANSACTION_FAKEOWNER_FS_TYPE,
+    pathView = {},
+    handleView = {},
+    pathAfterView = pathView,
+  } = {}) =>
+    classifyExactRollbackDualView(
+      {
+        pathBefore: dualViewStat({ mode: pathMode, ...pathView }),
+        handleBefore: dualViewStat({ mode: handleMode, inode: handleInode, ...handleView }),
+        handleAfter: dualViewStat({ mode: handleMode, inode: handleInode, ...handleView }),
+        pathAfter: dualViewStat({ mode: pathAfterMode, ...pathAfterView }),
+        fsTypeBefore: fsType,
+        fsTypeAfter: fsType,
+      },
+      "_docs/_TASKS/fakeowner-reader-fixture.md",
+      "TASK-540 fakeowner reader fixture"
+    );
+  cases.push({
+    label: "fakeowner path 0644 and backing handle 0600 use the stable path semantic mode",
+    pass: classifyDualView() === 0o644,
+  });
+  cases.push({
+    label: "matching path and handle 0600 remain semantic 0600",
+    pass: classifyDualView({ pathMode: 0o600, handleMode: 0o600 }) === 0o600,
+  });
+  const fakeownerBackingEvidenceFixture = ({
+    fsType = EXACT_TRANSACTION_FAKEOWNER_FS_TYPE,
+    pathMode = 0o600,
+    handleMode = 0o600,
+    handleInode = 91n,
+    pathView = {},
+    handleView = {},
+  } = {}) => {
+    const pathBefore = dualViewStat({ mode: pathMode, ...pathView });
+    const handleBefore = dualViewStat({
+      mode: handleMode,
+      inode: handleInode,
+      ...handleView,
+    });
+    return Object.freeze({
+      pathBefore,
+      handleBefore,
+      handleAfter: handleBefore,
+      pathAfter: pathBefore,
+      fsTypeBefore: fsType,
+      fsTypeAfter: fsType,
+    });
+  };
+  cases.push({
+    label:
+      "fakeowner backing evidence requires exact filesystem shape identity and four 0600 views",
+    pass:
+      isExactRollbackFakeownerBackingModeView(fakeownerBackingEvidenceFixture()) &&
+      !isExactRollbackFakeownerBackingModeView(
+        fakeownerBackingEvidenceFixture({ fsType: 0x01021994n })
+      ) &&
+      !isExactRollbackFakeownerBackingModeView(
+        fakeownerBackingEvidenceFixture({ pathMode: 0o644 })
+      ) &&
+      !isExactRollbackFakeownerBackingModeView(
+        fakeownerBackingEvidenceFixture({ handleInode: 92n })
+      ) &&
+      !isExactRollbackFakeownerBackingModeView(
+        fakeownerBackingEvidenceFixture({
+          pathView: { kindBits: 0o040000, file: false },
+          handleView: { kindBits: 0o040000, file: false },
+        })
+      ),
+  });
+  const classifierCollisionCases = [
+    ["fakeowner backing mode other than 0600", { handleMode: 0o620 }],
+    ["non-fakeowner mode mismatch", { fsType: 0x01021994n }],
+    ["stable cross-view inode mismatch", { handleInode: 92n }],
+    [
+      "stable non-file view",
+      {
+        pathView: { kindBits: 0o040000, file: false },
+        handleView: { kindBits: 0o040000, file: false },
+      },
+    ],
+    [
+      "stable symbolic-link view",
+      {
+        pathView: { kindBits: 0o120000, file: false, symbolicLink: true },
+        handleView: { kindBits: 0o120000, file: false, symbolicLink: true },
+      },
+    ],
+    ["stable multi-link view", { pathView: { linkCount: 2n }, handleView: { linkCount: 2n } }],
+    [
+      "stable over-bound view",
+      {
+        pathView: { size: EXACT_TRANSACTION_MAX_FILE_BYTES + 1n },
+        handleView: { size: EXACT_TRANSACTION_MAX_FILE_BYTES + 1n },
+      },
+    ],
+  ];
+  const committedClassifierCollisions = [];
+  for (const [caseLabel, options] of classifierCollisionCases) {
+    let collision = null;
+    try {
+      classifyDualView(options);
+    } catch (error) {
+      collision = error;
+    }
+    committedClassifierCollisions.push(Object.freeze({ caseLabel, collision }));
+    cases.push({
+      label: caseLabel + " is a path-scoped collision",
+      pass:
+        collision instanceof ExactTransactionCollisionError &&
+        collision.relativePath === "_docs/_TASKS/fakeowner-reader-fixture.md",
+    });
+  }
+  let pathChangeWasRace = false;
+  let pathTypeChangeWasRace = false;
+  try {
+    classifyDualView({ pathAfterMode: 0o640 });
+  } catch (error) {
+    pathChangeWasRace = error instanceof ExactRollbackReadRaceError;
+  }
+  try {
+    classifyDualView({
+      pathAfterView: { kindBits: 0o040000, file: false },
+    });
+  } catch (error) {
+    pathTypeChangeWasRace = error instanceof ExactRollbackReadRaceError;
+  }
+  const readerExpected = exactTransactionFixtureEntry(
+    "_docs/_TASKS/fakeowner-reader-fixture.md",
+    "expected",
+    0o644
+  );
+  let readerAttempts = 0;
+  const recoveredPathRace = await observeExactRollbackSemanticState(
+    readerExpected.relativePath,
+    [readerExpected],
+    [],
+    "TASK-540 fakeowner path-race retry fixture",
+    {
+      async readEntry() {
+        readerAttempts += 1;
+        if (readerAttempts === 1) {
+          classifyDualView({ pathAfterMode: 0o640 });
+        }
+        return readerExpected;
+      },
+      async wait() {},
+      maxObservations: 4,
+      stableObservations: 3,
+    }
+  );
+  cases.push({
+    label: "path-view changes are read races and retry to three exact terminal observations",
+    pass:
+      pathChangeWasRace &&
+      pathTypeChangeWasRace &&
+      readerAttempts === 4 &&
+      recoveredPathRace.transientReadErrors === 1 &&
+      recoveredPathRace.state === readerExpected,
+  });
+  const semanticMode600 = Object.freeze({ ...readerExpected, mode: 0o600 });
+  const modeCollision = await captureRejected(
+    () =>
+      observeExactRollbackSemanticState(
+        readerExpected.relativePath,
+        [readerExpected],
+        [],
+        "TASK-540 fakeowner semantic mode fixture",
+        {
+          async readEntry() {
+            return semanticMode600;
+          },
+          async wait() {},
+        }
+      ),
+    "stable semantic mode 0600 collision"
+  );
+  cases.push({
+    label: "stable path mode 0600 remains a third-state collision against terminal 0644",
+    pass: modeCollision instanceof ExactTransactionCollisionError,
+  });
+  const fakeownerMode600 = freezeExactRollbackObservedEntry(
+    { ...readerExpected, mode: EXACT_TRANSACTION_FAKEOWNER_BACKING_MODE },
+    true
+  );
+  cases.push({
+    label: "fakeowner mode evidence is internal and leaves rollback entry JSON byte-identical",
+    pass:
+      hasExactRollbackFakeownerModeEvidence(fakeownerMode600) &&
+      Object.getOwnPropertyDescriptor(fakeownerMode600, EXACT_ROLLBACK_FAKEOWNER_MODE_EVIDENCE)
+        ?.enumerable === false &&
+      Object.getOwnPropertySymbols(fakeownerMode600).length === 1 &&
+      JSON.stringify(fakeownerMode600) === JSON.stringify(semanticMode600),
+  });
+  const observeCommittedSequence = async (
+    sequence,
+    {
+      terminal = readerExpected,
+      maxObservations = sequence.length,
+      stableObservations = 3,
+      label = "TASK-540 committed fakeowner sequence fixture",
+    } = {}
+  ) => {
+    let attempts = 0;
+    const observation = await observeExactRollbackSemanticState(
+      terminal.relativePath,
+      [terminal],
+      [],
+      label,
+      {
+        async readEntry() {
+          const next = sequence[Math.min(attempts, sequence.length - 1)];
+          attempts += 1;
+          if (next instanceof Error) throw next;
+          return next;
+        },
+        async wait() {},
+        maxObservations,
+        stableObservations,
+        committedRenameFakeownerConvergenceAuthority:
+          COMMITTED_RENAME_FAKEOWNER_CONVERGENCE_AUTHORITY,
+      }
+    );
+    return Object.freeze({ observation, attempts });
+  };
+  const convergedFakeownerMode = await observeCommittedSequence(
+    [
+      new ExactRollbackReadRaceError("injected pre-terminal read race"),
+      fakeownerMode600,
+      fakeownerMode600,
+      readerExpected,
+      readerExpected,
+      readerExpected,
+    ],
+    { label: "TASK-540 committed fakeowner convergence fixture" }
+  );
+  cases.push({
+    label: "pre-terminal races and provisional 0600 require three fresh 0644 confirmations",
+    pass:
+      convergedFakeownerMode.attempts === 6 &&
+      convergedFakeownerMode.observation.state === readerExpected &&
+      convergedFakeownerMode.observation.transientReadErrors === 1,
+  });
+  const unscopedFakeownerModeError = await captureRejected(
+    () =>
+      observeExactRollbackSemanticState(
+        readerExpected.relativePath,
+        [readerExpected],
+        [],
+        "TASK-540 unscoped fakeowner mode fixture",
+        {
+          async readEntry() {
+            return fakeownerMode600;
+          },
+          async wait() {},
+        }
+      ),
+    "unscoped fakeowner mode evidence"
+  );
+  cases.push({
+    label: "fakeowner mode evidence remains an immediate collision outside committed rename",
+    pass: unscopedFakeownerModeError instanceof ExactTransactionCollisionError,
+  });
+  const fakeownerBackslideError = await captureRejected(
+    () =>
+      observeCommittedSequence([fakeownerMode600, readerExpected, fakeownerMode600], {
+        label: "TASK-540 committed fakeowner backslide fixture",
+      }),
+    "fakeowner backslide after terminal confirmation"
+  );
+  cases.push({
+    label: "provisional 0600 backslide after 0644 confirmation is a path collision",
+    pass:
+      fakeownerBackslideError instanceof ExactTransactionCollisionError &&
+      fakeownerBackslideError.relativePath === readerExpected.relativePath,
+  });
+  const fakeownerPostTerminalRaceError = await captureRejected(
+    () =>
+      observeCommittedSequence(
+        [
+          fakeownerMode600,
+          readerExpected,
+          new ExactRollbackReadRaceError("injected post-terminal read race"),
+        ],
+        { label: "TASK-540 committed fakeowner post-terminal race fixture" }
+      ),
+    "fakeowner read race after terminal confirmation"
+  );
+  cases.push({
+    label: "read race after 0644 confirmation is a path collision",
+    pass:
+      fakeownerPostTerminalRaceError instanceof ExactTransactionCollisionError &&
+      fakeownerPostTerminalRaceError.relativePath === readerExpected.relativePath,
+  });
+  const persistentFakeownerModeError = await captureRejected(
+    () =>
+      observeCommittedSequence(Array(4).fill(fakeownerMode600), {
+        maxObservations: 4,
+        label: "TASK-540 committed persistent fakeowner mode fixture",
+      }),
+    "persistent fakeowner mode"
+  );
+  cases.push({
+    label: "persistent provisional 0600 exhausts as collision rather than visibility",
+    pass:
+      persistentFakeownerModeError instanceof ExactTransactionCollisionError &&
+      persistentFakeownerModeError.relativePath === readerExpected.relativePath,
+  });
+  const insufficientFakeownerConfirmationError = await captureRejected(
+    () =>
+      observeCommittedSequence([fakeownerMode600, readerExpected, readerExpected], {
+        label: "TASK-540 committed insufficient fakeowner confirmation fixture",
+      }),
+    "insufficient fakeowner terminal confirmations"
+  );
+  cases.push({
+    label: "fewer than three final 0644 confirmations exhaust as collision",
+    pass:
+      insufficientFakeownerConfirmationError instanceof ExactTransactionCollisionError &&
+      insufficientFakeownerConfirmationError.relativePath === readerExpected.relativePath,
+  });
+  const expectedMode600 = Object.freeze({ ...readerExpected, mode: 0o600 });
+  const expectedMode600Result = await observeCommittedSequence(
+    [expectedMode600, expectedMode600, expectedMode600],
+    {
+      terminal: expectedMode600,
+      label: "TASK-540 expected terminal mode 0600 fixture",
+    }
+  );
+  cases.push({
+    label: "an authored terminal mode 0600 remains an ordinary exact terminal",
+    pass:
+      expectedMode600Result.attempts === 3 &&
+      expectedMode600Result.observation.state === expectedMode600,
+  });
+  const wrongBytes = exactTransactionFixtureEntry(
+    readerExpected.relativePath,
+    "wrong bytes",
+    0o644
+  );
+  const byteCollision = await captureRejected(
+    () =>
+      observeExactRollbackSemanticState(
+        readerExpected.relativePath,
+        [readerExpected],
+        [],
+        "TASK-540 fakeowner wrong-byte fixture",
+        {
+          async readEntry() {
+            return wrongBytes;
+          },
+          async wait() {},
+        }
+      ),
+    "stable wrong-byte collision"
+  );
+  cases.push({
+    label: "stable wrong bytes remain a third-state collision",
+    pass: byteCollision instanceof ExactTransactionCollisionError,
+  });
+  const wrongBytesFakeownerMode = freezeExactRollbackObservedEntry(
+    { ...wrongBytes, mode: EXACT_TRANSACTION_FAKEOWNER_BACKING_MODE },
+    true
+  );
+  const wrongBytesFakeownerError = await captureRejected(
+    () =>
+      observeCommittedSequence([wrongBytesFakeownerMode], {
+        maxObservations: 3,
+        label: "TASK-540 committed wrong-byte fakeowner mode fixture",
+      }),
+    "wrong-byte fakeowner mode evidence"
+  );
+  cases.push({
+    label: "fakeowner evidence cannot make wrong target bytes provisional",
+    pass: wrongBytesFakeownerError instanceof ExactTransactionCollisionError,
+  });
+  for (const scenario of scenarios) {
+    const prepared = buildSnapshotDerivedExactTransaction(
+      scenario.snapshot,
+      scenario.entries,
+      "TASK-540 " + scenario.label + " prepared transaction fixture"
+    );
+    const successHarness = createHermeticExactTransactionIo(scenario.snapshot);
+    await runSnapshotDerivedExactTransaction(
+      scenario.snapshot,
+      scenario.owner,
+      scenario.entries,
+      "TASK-540 " + scenario.label + " success fixture",
+      async () => successHarness.noteSemanticVerification(),
+      successHarness.io
+    );
+    const success = successHarness.inspect(prepared.expectedSnapshot);
+    cases.push({
+      label: scenario.label + " succeeds with exact bytes modes and staged index",
+      pass:
+        success.exact &&
+        success.restoreCalls === 0 &&
+        success.stagedIndexPreserved &&
+        success.semanticVerificationCalls === 1 &&
+        success.parentSyncPaths.length === prepared.changedPaths.length &&
+        JSON.stringify(success.writePaths) === JSON.stringify(prepared.changedPaths),
+    });
+
+    for (let writeNumber = 1; writeNumber <= prepared.changedEntries.length; writeNumber += 1) {
+      const failureHarness = createHermeticExactTransactionIo(scenario.snapshot, {
+        failAfterWrite: writeNumber,
+      });
+      await requireRejected(
+        () =>
+          runSnapshotDerivedExactTransaction(
+            scenario.snapshot,
+            scenario.owner,
+            scenario.entries,
+            "TASK-540 " + scenario.label + " write failure " + writeNumber,
+            async () => failureHarness.noteSemanticVerification(),
+            failureHarness.io
+          ),
+        scenario.label + " write failure " + writeNumber
+      );
+      const failure = failureHarness.inspect();
+      cases.push({
+        label: scenario.label + " failure after write " + writeNumber + " rolls back once",
+        pass:
+          failure.exact &&
+          failure.restoreCalls === 1 &&
+          failure.stagedIndexPreserved &&
+          failure.semanticVerificationCalls === 0 &&
+          failure.writePaths.length === writeNumber &&
+          JSON.stringify(failure.rollbackWritePaths) ===
+            JSON.stringify(prepared.changedPaths.slice(0, writeNumber).reverse()),
+      });
+    }
+
+    const semanticHarness = createHermeticExactTransactionIo(scenario.snapshot);
+    await requireRejected(
+      () =>
+        runSnapshotDerivedExactTransaction(
+          scenario.snapshot,
+          scenario.owner,
+          scenario.entries,
+          "TASK-540 " + scenario.label + " semantic failure",
+          async () => {
+            semanticHarness.noteSemanticVerification();
+            throw new Error("injected semantic verification failure");
+          },
+          semanticHarness.io
+        ),
+      scenario.label + " semantic verification failure"
+    );
+    const semanticFailure = semanticHarness.inspect();
+    cases.push({
+      label: scenario.label + " semantic failure restores exact snapshot once",
+      pass:
+        semanticFailure.exact &&
+        semanticFailure.restoreCalls === 1 &&
+        semanticFailure.stagedIndexPreserved &&
+        semanticFailure.semanticVerificationCalls === 1 &&
+        JSON.stringify(semanticFailure.rollbackWritePaths) ===
+          JSON.stringify([...prepared.changedPaths].reverse()) &&
+        semanticFailure.rollbackWritePaths.every((path) => prepared.changedPaths.includes(path)),
+    });
+
+    const collisionHarness = createHermeticExactTransactionIo(scenario.snapshot, {
+      collideAfterWrite: prepared.changedEntries.length,
+    });
+    await requireRejected(
+      () =>
+        runSnapshotDerivedExactTransaction(
+          scenario.snapshot,
+          scenario.owner,
+          scenario.entries,
+          "TASK-540 " + scenario.label + " post-rename collision",
+          async () => collisionHarness.noteSemanticVerification(),
+          collisionHarness.io
+        ),
+      scenario.label + " post-rename collision"
+    );
+    const collision = collisionHarness.inspect();
+    cases.push({
+      label: scenario.label + " post-rename collision refuses rollback without retry",
+      pass:
+        collision.restoreCalls === 0 &&
+        collision.collisionPreserved &&
+        collision.stagedIndexPreserved &&
+        collision.semanticVerificationCalls === 0 &&
+        collision.writePaths.length === prepared.changedEntries.length,
+    });
+  }
+
+  const firstNormalMutation = normalEntries.find(({ changed }) => changed);
+  if (!firstNormalMutation) {
+    throw new Error("TASK-540 fakeowner transaction fixture has no changed entry");
+  }
+  const oneEntry = Object.freeze([firstNormalMutation]);
+  const onePrepared = buildSnapshotDerivedExactTransaction(
+    normalSnapshot,
+    oneEntry,
+    "TASK-540 one-entry fakeowner transaction fixture"
+  );
+  const onePath = onePrepared.changedPaths[0];
+  const oneOwner = scenarios[0].owner;
+
+  const persistentModeHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    committedObservationError: persistentFakeownerModeError,
+  });
+  const persistentModeTransactionError = await captureRejected(
+    () =>
+      runSnapshotDerivedExactTransaction(
+        normalSnapshot,
+        oneOwner,
+        oneEntry,
+        "TASK-540 committed persistent fakeowner mode transaction fixture",
+        async () => persistentModeHarness.noteSemanticVerification(),
+        persistentModeHarness.io
+      ),
+    "committed persistent fakeowner mode transaction"
+  );
+  const persistentModeState = persistentModeHarness.inspect(onePrepared.expectedSnapshot);
+  cases.push({
+    label: "persistent committed fakeowner mode preserves receipt state without rollback",
+    pass:
+      exactTransactionErrorContains(
+        persistentModeTransactionError,
+        ExactTransactionCollisionError
+      ) &&
+      exactWriteReceiptFromError(persistentModeTransactionError)?.relativePath === onePath &&
+      persistentModeState.exact &&
+      persistentModeState.writePaths.length === 1 &&
+      persistentModeState.restoreCalls === 0 &&
+      persistentModeState.rollbackWritePaths.length === 0 &&
+      persistentModeState.semanticVerificationCalls === 0,
+  });
+
+  for (const { caseLabel, collision } of committedClassifierCollisions) {
+    const collisionHarness = createHermeticExactTransactionIo(normalSnapshot, {
+      committedObservationError: collision,
+    });
+    const collisionError = await captureRejected(
+      () =>
+        runSnapshotDerivedExactTransaction(
+          normalSnapshot,
+          oneOwner,
+          oneEntry,
+          "TASK-540 committed classifier collision " + caseLabel,
+          async () => collisionHarness.noteSemanticVerification(),
+          collisionHarness.io
+        ),
+      "committed classifier collision " + caseLabel
+    );
+    const collisionState = collisionHarness.inspect(onePrepared.expectedSnapshot);
+    cases.push({
+      label: "committed " + caseLabel + " preserves post-commit state without reverse mutation",
+      pass:
+        exactTransactionErrorContains(collisionError, ExactTransactionCollisionError) &&
+        exactWriteReceiptFromError(collisionError)?.relativePath === onePath &&
+        collisionState.exact &&
+        collisionState.writePaths.length === 1 &&
+        collisionState.restoreCalls === 0 &&
+        collisionState.rollbackWritePaths.length === 0 &&
+        collisionState.semanticVerificationCalls === 0,
+    });
+  }
+
+  const collisionAndCloseError = combineExactRollbackReadAndCloseErrors(
+    committedClassifierCollisions[0].collision,
+    new Error("injected exact-rollback handle close failure"),
+    "TASK-540 collision plus close fixture"
+  );
+  const collisionCloseHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    committedObservationError: collisionAndCloseError,
+  });
+  const collisionCloseFailure = await captureRejected(
+    () =>
+      runSnapshotDerivedExactTransaction(
+        normalSnapshot,
+        oneOwner,
+        oneEntry,
+        "TASK-540 committed collision plus close fixture",
+        async () => collisionCloseHarness.noteSemanticVerification(),
+        collisionCloseHarness.io
+      ),
+    "committed collision plus close failure"
+  );
+  const collisionCloseMessages = [];
+  const collectErrorMessages = (error) => {
+    if (error?.message) collisionCloseMessages.push(error.message);
+    if (error instanceof AggregateError) {
+      for (const nested of error.errors) collectErrorMessages(nested);
+    }
+    if (error?.cause) collectErrorMessages(error.cause);
+  };
+  collectErrorMessages(collisionCloseFailure);
+  const collisionCloseState = collisionCloseHarness.inspect(onePrepared.expectedSnapshot);
+  cases.push({
+    label: "collision plus close failure retains both errors and still suppresses rollback",
+    pass:
+      exactTransactionErrorContains(collisionCloseFailure, ExactTransactionCollisionError) &&
+      collisionCloseMessages.some((message) => message.includes("stable path and handle modes")) &&
+      collisionCloseMessages.some((message) => message.includes("handle close failure")) &&
+      collisionCloseState.exact &&
+      collisionCloseState.restoreCalls === 0 &&
+      collisionCloseState.rollbackWritePaths.length === 0 &&
+      collisionCloseState.writePaths.length === 1,
+  });
+
+  const staleVisibilityHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    postWriteVisibilitySequence: ["before", "before", "after", "after", "after"],
+  });
+  await runSnapshotDerivedExactTransaction(
+    normalSnapshot,
+    oneOwner,
+    oneEntry,
+    "TASK-540 fakeowner stale visibility fixture",
+    async () => staleVisibilityHarness.noteSemanticVerification(),
+    staleVisibilityHarness.io
+  );
+  const staleVisibility = staleVisibilityHarness.inspect(onePrepared.expectedSnapshot);
+  cases.push({
+    label: "fakeowner stale before-before visibility converges after three expected reopens",
+    pass:
+      staleVisibility.exact &&
+      staleVisibility.visibilityReads === 5 &&
+      staleVisibility.writePaths.length === 1 &&
+      staleVisibility.restoreCalls === 0 &&
+      staleVisibility.semanticVerificationCalls === 1 &&
+      JSON.stringify(staleVisibility.parentSyncPaths) === JSON.stringify([onePath]),
+  });
+
+  const currentFailureHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    postWriteVisibilitySequence: ["race", "before", "after", "after", "after"],
+  });
+  await runSnapshotDerivedExactTransaction(
+    normalSnapshot,
+    oneOwner,
+    oneEntry,
+    "TASK-540 current fakeowner inode-race regression fixture",
+    async () => currentFailureHarness.noteSemanticVerification(),
+    currentFailureHarness.io
+  );
+  const currentFailure = currentFailureHarness.inspect(onePrepared.expectedSnapshot);
+  cases.push({
+    label: "current post-rename inode-race failure becomes a read-only observation retry",
+    pass:
+      currentFailure.exact &&
+      currentFailure.visibilityReads === 5 &&
+      currentFailure.writePaths.length === 1 &&
+      currentFailure.rollbackWritePaths.length === 0 &&
+      currentFailure.semanticVerificationCalls === 1,
+  });
+
+  const flappingSuccessHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    postWriteVisibilitySequence: ["after", "after", "before", "after", "after", "after"],
+  });
+  const flappingVisibilityError = await captureRejected(
+    () =>
+      runSnapshotDerivedExactTransaction(
+        normalSnapshot,
+        oneOwner,
+        oneEntry,
+        "TASK-540 flapping visibility convergence fixture",
+        async () => flappingSuccessHarness.noteSemanticVerification(),
+        flappingSuccessHarness.io
+      ),
+    "flapping visibility after terminal confirmation"
+  );
+  const flappingSuccess = flappingSuccessHarness.inspect(onePrepared.expectedSnapshot);
+  cases.push({
+    label: "transitional backslide after terminal confirmation preserves committed state",
+    pass:
+      exactTransactionErrorContains(flappingVisibilityError, ExactTransactionCollisionError) &&
+      exactWriteReceiptFromError(flappingVisibilityError)?.relativePath === onePath &&
+      flappingSuccess.exact &&
+      flappingSuccess.visibilityReads === 3 &&
+      flappingSuccess.writePaths.length === 1 &&
+      flappingSuccess.restoreCalls === 0 &&
+      flappingSuccess.rollbackWritePaths.length === 0 &&
+      flappingSuccess.semanticVerificationCalls === 0,
+  });
+
+  const visibilityTimeoutHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    postWriteVisibilitySequence: ["after", "before"],
+  });
+  const visibilityTimeoutError = await captureRejected(
+    () =>
+      runSnapshotDerivedExactTransaction(
+        normalSnapshot,
+        oneOwner,
+        oneEntry,
+        "TASK-540 bounded visibility timeout fixture",
+        async () => visibilityTimeoutHarness.noteSemanticVerification(),
+        visibilityTimeoutHarness.io
+      ),
+    "terminal visibility backslide"
+  );
+  const visibilityTimeout = visibilityTimeoutHarness.inspect(onePrepared.expectedSnapshot);
+  cases.push({
+    label: "terminal visibility backslide is collision and never reverses committed rename",
+    pass:
+      exactTransactionErrorContains(visibilityTimeoutError, ExactTransactionCollisionError) &&
+      exactWriteReceiptFromError(visibilityTimeoutError)?.relativePath === onePath &&
+      visibilityTimeout.exact &&
+      visibilityTimeout.visibilityReads === 2 &&
+      JSON.stringify(visibilityTimeout.writePaths) === JSON.stringify([onePath]) &&
+      visibilityTimeout.rollbackWritePaths.length === 0 &&
+      visibilityTimeout.restoreCalls === 0 &&
+      visibilityTimeout.semanticVerificationCalls === 0,
+  });
+
+  const thirdStateHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    postWriteVisibilitySequence: ["before", "third"],
+  });
+  await requireRejected(
+    () =>
+      runSnapshotDerivedExactTransaction(
+        normalSnapshot,
+        oneOwner,
+        oneEntry,
+        "TASK-540 third-state visibility collision fixture",
+        async () => thirdStateHarness.noteSemanticVerification(),
+        thirdStateHarness.io
+      ),
+    "third-state visibility collision"
+  );
+  const thirdState = thirdStateHarness.inspect();
+  cases.push({
+    label: "third semantic state latches collision and preserves third-party bytes",
+    pass:
+      thirdState.visibilityReads === 2 &&
+      thirdState.writePaths.length === 1 &&
+      thirdState.restoreCalls === 0 &&
+      thirdState.collisionPreserved &&
+      thirdState.semanticVerificationCalls === 0,
+  });
+
+  const inodeChurnHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    postWriteVisibilitySequence: [
+      { state: "after", inode: "101" },
+      { state: "after", inode: "202" },
+      { state: "after", inode: "303" },
+    ],
+  });
+  await runSnapshotDerivedExactTransaction(
+    normalSnapshot,
+    oneOwner,
+    oneEntry,
+    "TASK-540 inode-churn semantic-state fixture",
+    async () => inodeChurnHarness.noteSemanticVerification(),
+    inodeChurnHarness.io
+  );
+  const inodeChurn = inodeChurnHarness.inspect(onePrepared.expectedSnapshot);
+  cases.push({
+    label: "cross-reopen inode churn with identical semantic state is accepted",
+    pass:
+      inodeChurn.exact &&
+      inodeChurn.visibilityReads === 3 &&
+      inodeChurn.writePaths.length === 1 &&
+      inodeChurn.restoreCalls === 0,
+  });
+
+  const sameInodeCollisionHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    postWriteVisibilitySequence: [
+      { state: "after", inode: "707" },
+      { state: "third", inode: "707" },
+    ],
+  });
+  await requireRejected(
+    () =>
+      runSnapshotDerivedExactTransaction(
+        normalSnapshot,
+        oneOwner,
+        oneEntry,
+        "TASK-540 same-inode changed-bytes fixture",
+        async () => sameInodeCollisionHarness.noteSemanticVerification(),
+        sameInodeCollisionHarness.io
+      ),
+    "same-inode changed bytes"
+  );
+  const sameInodeCollision = sameInodeCollisionHarness.inspect();
+  cases.push({
+    label: "same-inode changed bytes are rejected as a collision",
+    pass:
+      sameInodeCollision.visibilityReads === 2 &&
+      sameInodeCollision.restoreCalls === 0 &&
+      sameInodeCollision.collisionPreserved,
+  });
+
+  const syncFailureHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    failSyncAfterWrite: 1,
+  });
+  await requireRejected(
+    () =>
+      runSnapshotDerivedExactTransaction(
+        normalSnapshot,
+        oneOwner,
+        oneEntry,
+        "TASK-540 directory-sync failure fixture",
+        async () => syncFailureHarness.noteSemanticVerification(),
+        syncFailureHarness.io
+      ),
+    "directory sync failure"
+  );
+  const syncFailure = syncFailureHarness.inspect();
+  cases.push({
+    label: "directory-sync failure records committed rename and rolls back without retry",
+    pass:
+      syncFailure.exact &&
+      syncFailure.writePaths.length === 1 &&
+      syncFailure.rollbackWritePaths.length === 1 &&
+      syncFailure.parentSyncPaths.length === 1 &&
+      syncFailure.restoreCalls === 1 &&
+      syncFailure.semanticVerificationCalls === 0,
+  });
+
+  const observationFailureHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    failObservationAfterWrite: 1,
+  });
+  await requireRejected(
+    () =>
+      runSnapshotDerivedExactTransaction(
+        normalSnapshot,
+        oneOwner,
+        oneEntry,
+        "TASK-540 committed observation failure fixture",
+        async () => observationFailureHarness.noteSemanticVerification(),
+        observationFailureHarness.io
+      ),
+    "committed observation failure"
+  );
+  const observationFailure = observationFailureHarness.inspect();
+  cases.push({
+    label: "post-sync observation failure does not retry either rename",
+    pass:
+      observationFailure.exact &&
+      observationFailure.writePaths.length === 1 &&
+      observationFailure.rollbackWritePaths.length === 1 &&
+      observationFailure.parentSyncPaths.length === 2 &&
+      observationFailure.restoreCalls === 1 &&
+      observationFailure.semanticVerificationCalls === 0,
+  });
+
+  const alreadyBeforeHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    alreadyBeforeRollbackPaths: [onePath],
+  });
+  await requireRejected(
+    () =>
+      runSnapshotDerivedExactTransaction(
+        normalSnapshot,
+        oneOwner,
+        oneEntry,
+        "TASK-540 already-before rollback fixture",
+        async () => {
+          alreadyBeforeHarness.noteSemanticVerification();
+          throw new Error("injected semantic failure for already-before rollback");
+        },
+        alreadyBeforeHarness.io
+      ),
+    "already-before rollback"
+  );
+  const alreadyBefore = alreadyBeforeHarness.inspect();
+  cases.push({
+    label: "rollback path already at exact before state is a zero-write no-op",
+    pass:
+      alreadyBefore.exact &&
+      alreadyBefore.writePaths.length === 1 &&
+      alreadyBefore.rollbackWritePaths.length === 0 &&
+      alreadyBefore.parentSyncPaths.length === 1 &&
+      alreadyBefore.restoreCalls === 1,
+  });
+
+  const rollbackCollisionHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    collideBeforeRollbackPath: onePath,
+  });
+  await requireRejected(
+    () =>
+      runSnapshotDerivedExactTransaction(
+        normalSnapshot,
+        oneOwner,
+        oneEntry,
+        "TASK-540 per-path rollback collision fixture",
+        async () => {
+          rollbackCollisionHarness.noteSemanticVerification();
+          throw new Error("injected semantic failure before rollback collision");
+        },
+        rollbackCollisionHarness.io
+      ),
+    "per-path rollback collision"
+  );
+  const rollbackCollision = rollbackCollisionHarness.inspect();
+  cases.push({
+    label: "third state immediately before rollback guard receives zero rollback writes",
+    pass:
+      rollbackCollision.writePaths.length === 1 &&
+      rollbackCollision.rollbackWritePaths.length === 0 &&
+      rollbackCollision.restoreCalls === 1 &&
+      rollbackCollision.collisionPreserved &&
+      rollbackCollision.semanticVerificationCalls === 1,
+  });
+
+  const forwardGuardCollisionHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    collideBeforeWrite: 1,
+  });
+  await requireRejected(
+    () =>
+      runSnapshotDerivedExactTransaction(
+        normalSnapshot,
+        oneOwner,
+        oneEntry,
+        "TASK-540 forward expected-current collision fixture",
+        async () => forwardGuardCollisionHarness.noteSemanticVerification(),
+        forwardGuardCollisionHarness.io
+      ),
+    "forward expected-current collision"
+  );
+  const forwardGuardCollision = forwardGuardCollisionHarness.inspect();
+  cases.push({
+    label: "forward expected-current guard preserves third state before rename",
+    pass:
+      forwardGuardCollision.writePaths.length === 0 &&
+      forwardGuardCollision.rollbackWritePaths.length === 0 &&
+      forwardGuardCollision.restoreCalls === 0 &&
+      forwardGuardCollision.collisionPreserved &&
+      forwardGuardCollision.semanticVerificationCalls === 0,
+  });
+
+  const receiptScopeHarness = createHermeticExactTransactionIo(normalSnapshot);
+  await requireRejected(
+    () =>
+      runSnapshotDerivedExactTransaction(
+        normalSnapshot,
+        oneOwner,
+        normalEntries,
+        "TASK-540 changed-only reverse receipt fixture",
+        async () => {
+          receiptScopeHarness.noteSemanticVerification();
+          throw new Error("injected semantic failure for receipt scope");
+        },
+        receiptScopeHarness.io
+      ),
+    "changed-only reverse receipt rollback"
+  );
+  const receiptScope = receiptScopeHarness.inspect();
+  const normalPrepared = buildSnapshotDerivedExactTransaction(
+    normalSnapshot,
+    normalEntries,
+    "TASK-540 changed-only reverse receipt projection"
+  );
+  const unchangedPaths = normalSnapshot.entries
+    .map(({ relativePath }) => relativePath)
+    .filter((path) => !normalPrepared.changedPaths.includes(path));
+  cases.push({
+    label: "reverse rollback writes only committed changed paths and never root board or index",
+    pass:
+      receiptScope.exact &&
+      JSON.stringify(receiptScope.rollbackWritePaths) ===
+        JSON.stringify([...normalPrepared.changedPaths].reverse()) &&
+      unchangedPaths.every((path) => !receiptScope.rollbackWritePaths.includes(path)),
+  });
+
+  for (const authorityCase of [
+    { label: "HEAD", options: { headDrift: true } },
+    { label: "sensitive environment", options: { environmentDrift: true } },
+  ]) {
+    const harness = createHermeticExactTransactionIo(normalSnapshot, authorityCase.options);
+    await requireRejected(
+      () =>
+        runSnapshotDerivedExactTransaction(
+          normalSnapshot,
+          oneOwner,
+          oneEntry,
+          "TASK-540 pre-mutation " + authorityCase.label + " drift fixture",
+          async () => harness.noteSemanticVerification(),
+          harness.io
+        ),
+      "pre-mutation " + authorityCase.label + " drift"
+    );
+    const inspection = harness.inspect();
+    cases.push({
+      label: "pre-mutation " + authorityCase.label + " drift performs zero writes",
+      pass:
+        inspection.exact &&
+        inspection.writePaths.length === 0 &&
+        inspection.rollbackWritePaths.length === 0 &&
+        inspection.restoreCalls === 0 &&
+        inspection.semanticVerificationCalls === 0,
+    });
+  }
+
+  const postWriteAuthorityHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    authorityDriftAfterWrite: true,
+  });
+  await requireRejected(
+    () =>
+      runSnapshotDerivedExactTransaction(
+        normalSnapshot,
+        oneOwner,
+        oneEntry,
+        "TASK-540 post-write authority drift fixture",
+        async () => postWriteAuthorityHarness.noteSemanticVerification(),
+        postWriteAuthorityHarness.io
+      ),
+    "post-write authority drift"
+  );
+  const postWriteAuthority = postWriteAuthorityHarness.inspect(onePrepared.expectedSnapshot);
+  cases.push({
+    label: "post-write authority drift prevents verifier and rollback writes",
+    pass:
+      postWriteAuthority.exact &&
+      postWriteAuthority.writePaths.length === 1 &&
+      postWriteAuthority.rollbackWritePaths.length === 0 &&
+      postWriteAuthority.restoreCalls === 0 &&
+      postWriteAuthority.semanticVerificationCalls === 0,
+  });
+
+  const safeReceipt = exactWriteReceipt(
+    onePath,
+    "rename",
+    normalSnapshot.entries.find(({ relativePath }) => relativePath === onePath),
+    onePrepared.expectedSnapshot.entries.find(({ relativePath }) => relativePath === onePath),
+    true
+  );
+  const safeReceiptJson = JSON.stringify(safeReceipt);
+  cases.push({
+    label: "write receipts expose only hashes mode existence and mount classification",
+    pass:
+      safeReceiptJson.includes('"sha256"') &&
+      safeReceiptJson.includes('"mode"') &&
+      safeReceiptJson.includes('"exists"') &&
+      safeReceiptJson.includes(EXACT_TRANSACTION_MOUNT_CLASS) &&
+      !safeReceiptJson.includes("bytesBase64") &&
+      !safeReceiptJson.includes("bytes"),
+  });
+
+  const orderedAuthority = staleVisibility.authorityCalls;
+  const orderedEvents = staleVisibility.events;
+  const eventIndex = (fragment) => orderedEvents.findIndex((event) => event.includes(fragment));
+  cases.push({
+    label: "forward and semantic observations are closed by exact authority sandwiches",
+    pass:
+      orderedAuthority.length === 8 &&
+      orderedAuthority[0].label.includes("pre-mutation authority") &&
+      orderedAuthority[1].label.includes("authority after pre-mutation exact snapshot") &&
+      orderedAuthority[2].label.includes("authority immediately before forward write") &&
+      orderedAuthority[3].label.includes("authority after committed forward observation") &&
+      orderedAuthority[4].label.includes("authority before full exact state") &&
+      orderedAuthority[5].label.includes("authority after full exact state") &&
+      orderedAuthority[6].label.includes("authority immediately before semantic verification") &&
+      orderedAuthority[7].label.includes("authority after semantic exact state") &&
+      orderedAuthority
+        .slice(0, 3)
+        .every(({ allowedDeltaPaths }) => allowedDeltaPaths.length === 0) &&
+      orderedAuthority
+        .slice(3)
+        .every(
+          ({ allowedDeltaPaths }) => JSON.stringify(allowedDeltaPaths) === JSON.stringify([onePath])
+        ) &&
+      eventIndex("pre-mutation authority") < eventIndex("pre-mutation exact snapshot") &&
+      eventIndex("pre-mutation exact snapshot") <
+        eventIndex("authority after pre-mutation exact snapshot") &&
+      eventIndex("authority immediately before forward write") < eventIndex("guard:" + onePath) &&
+      eventIndex("guard:" + onePath) < eventIndex("mutate:" + onePath) &&
+      eventIndex("sync:" + onePath) < eventIndex("authority after committed forward observation") &&
+      eventIndex("authority before full exact state") < eventIndex("persisted exact mutation") &&
+      eventIndex("persisted exact mutation") < eventIndex("authority after full exact state") &&
+      eventIndex("authority immediately before semantic verification") <
+        eventIndex("semantic-verifier") &&
+      eventIndex("semantic-verifier") < eventIndex("exact state after semantic verification") &&
+      eventIndex("exact state after semantic verification") <
+        eventIndex("authority after semantic exact state"),
+  });
+
+  const preObservationDriftHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    authorityDriftAtCalls: [2],
+  });
+  await requireRejected(
+    () =>
+      runSnapshotDerivedExactTransaction(
+        normalSnapshot,
+        oneOwner,
+        oneEntry,
+        "TASK-540 drift during pre-snapshot observation fixture",
+        async () => preObservationDriftHarness.noteSemanticVerification(),
+        preObservationDriftHarness.io
+      ),
+    "drift during pre-snapshot observation"
+  );
+  const preObservationDrift = preObservationDriftHarness.inspect();
+  cases.push({
+    label: "authority drift during pre-mutation observation performs zero writes",
+    pass:
+      preObservationDrift.exact &&
+      preObservationDrift.authorityCalls.length === 2 &&
+      preObservationDrift.writePaths.length === 0 &&
+      preObservationDrift.rollbackWritePaths.length === 0 &&
+      preObservationDrift.semanticVerificationCalls === 0,
+  });
+
+  const betweenWritesDriftHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    authorityDriftAtCalls: [5],
+  });
+  await requireRejected(
+    () =>
+      runSnapshotDerivedExactTransaction(
+        normalSnapshot,
+        oneOwner,
+        normalEntries,
+        "TASK-540 drift between forward writes fixture",
+        async () => betweenWritesDriftHarness.noteSemanticVerification(),
+        betweenWritesDriftHarness.io
+      ),
+    "drift between forward writes"
+  );
+  const betweenWritesDrift = betweenWritesDriftHarness.inspect();
+  cases.push({
+    label:
+      "authority drift between multi-file writes blocks the next write and safely reverses one",
+    pass:
+      betweenWritesDrift.exact &&
+      JSON.stringify(betweenWritesDrift.writePaths) ===
+        JSON.stringify([normalPrepared.changedPaths[0]]) &&
+      JSON.stringify(betweenWritesDrift.rollbackWritePaths) ===
+        JSON.stringify([normalPrepared.changedPaths[0]]) &&
+      betweenWritesDrift.semanticVerificationCalls === 0 &&
+      betweenWritesDrift.restoreCalls === 1,
+  });
+
+  const closingForwardDriftHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    authorityDriftFromCall: 4,
+  });
+  await requireRejected(
+    () =>
+      runSnapshotDerivedExactTransaction(
+        normalSnapshot,
+        oneOwner,
+        oneEntry,
+        "TASK-540 closing post-write authority drift fixture",
+        async () => closingForwardDriftHarness.noteSemanticVerification(),
+        closingForwardDriftHarness.io
+      ),
+    "closing post-write authority drift"
+  );
+  const closingForwardDrift = closingForwardDriftHarness.inspect(onePrepared.expectedSnapshot);
+  cases.push({
+    label: "persistent drift closing post-write observation skips verifier and unsafe rollback",
+    pass:
+      closingForwardDrift.exact &&
+      closingForwardDrift.writePaths.length === 1 &&
+      closingForwardDrift.rollbackWritePaths.length === 0 &&
+      closingForwardDrift.restoreCalls === 0 &&
+      closingForwardDrift.semanticVerificationCalls === 0,
+  });
+
+  const rollbackBoundaryDriftHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    authorityDriftLabelIncludes: "authority after rollback boundary",
+  });
+  await requireRejected(
+    () =>
+      runSnapshotDerivedExactTransaction(
+        normalSnapshot,
+        oneOwner,
+        normalEntries,
+        "TASK-540 rollback-boundary authority drift fixture",
+        async () => {
+          rollbackBoundaryDriftHarness.noteSemanticVerification();
+          throw new Error("injected semantic failure before rollback-boundary drift");
+        },
+        rollbackBoundaryDriftHarness.io
+      ),
+    "rollback-boundary authority drift"
+  );
+  const rollbackBoundaryDrift = rollbackBoundaryDriftHarness.inspect(
+    normalPrepared.expectedSnapshot
+  );
+  cases.push({
+    label: "authority drift after rollback boundary prevents the first reverse mutation",
+    pass:
+      rollbackBoundaryDrift.exact &&
+      rollbackBoundaryDrift.writePaths.length === normalPrepared.changedPaths.length &&
+      rollbackBoundaryDrift.rollbackWritePaths.length === 0 &&
+      rollbackBoundaryDrift.restoreCalls === 1 &&
+      rollbackBoundaryDrift.semanticVerificationCalls === 1,
+  });
+
+  const rollbackObservationDriftHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    authorityDriftLabelIncludes: "authority after rollback write observation",
+  });
+  const rollbackObservationError = await captureRejected(
+    () =>
+      runSnapshotDerivedExactTransaction(
+        normalSnapshot,
+        oneOwner,
+        normalEntries,
+        "TASK-540 rollback-observation authority drift fixture",
+        async () => {
+          rollbackObservationDriftHarness.noteSemanticVerification();
+          throw new Error("injected semantic failure before rollback-observation drift");
+        },
+        rollbackObservationDriftHarness.io
+      ),
+    "rollback-observation authority drift"
+  );
+  const rollbackObservationDrift = rollbackObservationDriftHarness.inspect();
+  const rollbackObservationReceipts = exactRollbackReceiptsFromError(rollbackObservationError);
+  cases.push({
+    label:
+      "authority drift closing a reverse observation stops the next reverse write with receipt",
+    pass:
+      rollbackObservationDrift.writePaths.length === normalPrepared.changedPaths.length &&
+      rollbackObservationDrift.rollbackWritePaths.length === 1 &&
+      rollbackObservationDrift.restoreCalls === 1 &&
+      rollbackObservationReceipts.length === 1 &&
+      rollbackObservationReceipts[0].relativePath === normalPrepared.changedPaths.at(-1) &&
+      !Object.keys(rollbackObservationError).includes("exactRollbackReceipts"),
+  });
+
+  const accumulatedCollisionPath = normalPrepared.changedPaths[0];
+  const accumulatedCollisionHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    collideBeforeRollbackPath: accumulatedCollisionPath,
+  });
+  const accumulatedCollisionError = await captureRejected(
+    () =>
+      runSnapshotDerivedExactTransaction(
+        normalSnapshot,
+        oneOwner,
+        normalEntries,
+        "TASK-540 accumulated reverse receipt collision fixture",
+        async () => {
+          accumulatedCollisionHarness.noteSemanticVerification();
+          throw new Error("injected semantic failure before accumulated collision");
+        },
+        accumulatedCollisionHarness.io
+      ),
+    "accumulated reverse receipt collision"
+  );
+  const accumulatedCollision = accumulatedCollisionHarness.inspect();
+  const accumulatedReceipts = exactRollbackReceiptsFromError(accumulatedCollisionError);
+  cases.push({
+    label: "earlier reverse receipt survives a later collision without retrying or overwriting it",
+    pass:
+      accumulatedCollision.rollbackWritePaths.length === 1 &&
+      accumulatedCollision.rollbackWritePaths[0] === normalPrepared.changedPaths.at(-1) &&
+      accumulatedCollision.restoreCalls === 1 &&
+      accumulatedCollision.collisionPath === accumulatedCollisionPath &&
+      accumulatedCollision.collisionPreserved &&
+      accumulatedReceipts.length === 1 &&
+      accumulatedReceipts[0].relativePath === normalPrepared.changedPaths.at(-1) &&
+      !JSON.stringify(accumulatedCollisionError).includes("exactRollbackReceipts"),
+  });
+
+  const unlinkBefore = normalSnapshot.entries.find(({ relativePath }) => relativePath === onePath);
+  const unlinkAfter = Object.freeze({
+    relativePath: onePath,
+    exists: false,
+    bytesBase64: null,
+    byteLength: null,
+    sha256: null,
+    mode: null,
+  });
+  const unlinkExpectedSnapshot = Object.freeze({
+    ...normalSnapshot,
+    entries: Object.freeze(
+      normalSnapshot.entries.map((entry) => (entry.relativePath === onePath ? unlinkAfter : entry))
+    ),
+  });
+  const unlinkLocation = Object.freeze({
+    absolutePath: "/hermetic/task-540-unlink.md",
+    parentAbsolutePath: "/hermetic",
+  });
+  let immediateUnlinkCalls = 0;
+  let immediateResolveCalls = 0;
+  let immediateSyncCalls = 0;
+  const immediateUnlinkError = await captureRejected(
+    () =>
+      commitExactUnlinkBoundary(
+        unlinkAfter,
+        unlinkBefore,
+        unlinkLocation,
+        "TASK-540 unlink receipt",
+        {
+          observeCommitted: true,
+          observationOptions: undefined,
+          sequenceIo: Object.freeze({
+            async unlinkTarget() {
+              immediateUnlinkCalls += 1;
+              return true;
+            },
+            async resolveLocation() {
+              immediateResolveCalls += 1;
+              throw new Error("injected first post-unlink await failure");
+            },
+            async syncParent() {
+              immediateSyncCalls += 1;
+            },
+            async observeState() {
+              throw new Error("post-unlink observation must not run after resolve failure");
+            },
+          }),
+        }
+      ),
+    "first post-unlink await failure"
+  );
+  const immediateUnlinkReceipt = exactWriteReceiptFromError(immediateUnlinkError);
+  const sequencedUnlinkReceipt = sequenceExactWriteReceipt(
+    immediateUnlinkReceipt,
+    1,
+    unlinkBefore,
+    unlinkAfter,
+    "TASK-540 immediate unlink receipt fixture"
+  );
+  const unlinkReverseHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    initialStateSnapshot: unlinkExpectedSnapshot,
+  });
+  await unlinkReverseHarness.io.restoreReceipts(
+    normalSnapshot,
+    unlinkExpectedSnapshot,
+    Object.freeze([sequencedUnlinkReceipt]),
+    oneOwner,
+    "TASK-540 immediate unlink receipt reverse fixture",
+    { requireAuthority: unlinkReverseHarness.io.requireAuthority }
+  );
+  const unlinkReverse = unlinkReverseHarness.inspect();
+  cases.push({
+    label:
+      "successful unlink captures receipt before its first post-commit await and remains reversible",
+    pass:
+      immediateUnlinkCalls === 1 &&
+      immediateResolveCalls === 1 &&
+      immediateSyncCalls === 0 &&
+      immediateUnlinkReceipt?.operation === "unlink" &&
+      immediateUnlinkReceipt.parentSynced === false &&
+      unlinkReverse.exact &&
+      JSON.stringify(unlinkReverse.rollbackWritePaths) === JSON.stringify([onePath]) &&
+      !Object.keys(immediateUnlinkError).includes("exactWriteReceipt"),
+  });
+
+  let syncUnlinkCalls = 0;
+  let syncResolveCalls = 0;
+  let syncAttemptCalls = 0;
+  const syncUnlinkError = await captureRejected(
+    () =>
+      commitExactUnlinkBoundary(
+        unlinkAfter,
+        unlinkBefore,
+        unlinkLocation,
+        "TASK-540 unlink sync receipt",
+        {
+          observeCommitted: true,
+          observationOptions: undefined,
+          sequenceIo: Object.freeze({
+            async unlinkTarget() {
+              syncUnlinkCalls += 1;
+              return true;
+            },
+            async resolveLocation() {
+              syncResolveCalls += 1;
+              return unlinkLocation;
+            },
+            async syncParent() {
+              syncAttemptCalls += 1;
+              throw new Error("injected committed-unlink sync failure");
+            },
+            async observeState() {
+              throw new Error("post-unlink observation must not run after sync failure");
+            },
+          }),
+        }
+      ),
+    "committed unlink sync failure"
+  );
+  const syncUnlinkReceipt = exactWriteReceiptFromError(syncUnlinkError);
+  cases.push({
+    label:
+      "committed unlink sync failure is receipt-covered with one mutation and one sync attempt",
+    pass:
+      syncUnlinkCalls === 1 &&
+      syncResolveCalls === 1 &&
+      syncAttemptCalls === 1 &&
+      syncUnlinkReceipt?.operation === "unlink" &&
+      syncUnlinkReceipt.parentSynced === false,
+  });
+
+  const authorityDriftHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    authorityDrift: true,
+  });
+  await requireRejected(
+    () =>
+      runSnapshotDerivedExactTransaction(
+        normalSnapshot,
+        scenarios[0].owner,
+        normalEntries,
+        "TASK-540 pre-mutation authority drift fixture",
+        async () => {},
+        authorityDriftHarness.io
+      ),
+    "pre-mutation authority drift"
+  );
+  const authorityDrift = authorityDriftHarness.inspect();
+  cases.push({
+    label: "pre-mutation index drift writes nothing and is never overwritten by rollback",
+    pass:
+      authorityDrift.exact &&
+      authorityDrift.writePaths.length === 0 &&
+      authorityDrift.restoreCalls === 0 &&
+      !authorityDrift.stagedIndexPreserved,
+  });
+
+  const rollbackFailureHarness = createHermeticExactTransactionIo(normalSnapshot, {
+    failAfterWrite: 1,
+    failRollback: true,
+  });
+  let rollbackFailure = null;
+  try {
+    await runSnapshotDerivedExactTransaction(
+      normalSnapshot,
+      scenarios[0].owner,
+      normalEntries,
+      "TASK-540 injected rollback failure fixture",
+      async () => {},
+      rollbackFailureHarness.io
+    );
+  } catch (error) {
+    rollbackFailure = error;
+  }
+  const rollbackFailureState = rollbackFailureHarness.inspect();
+  cases.push({
+    label: "rollback failure preserves primary and rollback errors without retry",
+    pass:
+      rollbackFailure instanceof AggregateError &&
+      rollbackFailure.errors.length === 2 &&
+      rollbackFailure.errors[1]?.message.includes("injected rollback failure") &&
+      rollbackFailureState.restoreCalls === 1 &&
+      rollbackFailureState.writePaths.length === 1 &&
+      rollbackFailureState.stagedIndexPreserved,
+  });
+
+  const assertAuthorizationRejectedBeforeIo = (snapshot, gateReceipt, caseLabel) => {
+    const harness = createHermeticExactTransactionIo(snapshot);
+    let rejected = false;
+    try {
+      authorizeClosureLeafRepair(snapshot, repairPending, gateReceipt, caseLabel);
+    } catch {
+      rejected = true;
+    }
+    const inspection = harness.inspect();
+    cases.push({
+      label: caseLabel + " rejects before transaction I/O",
+      pass:
+        rejected &&
+        inspection.exact &&
+        inspection.writePaths.length === 0 &&
+        inspection.restoreCalls === 0 &&
+        inspection.stagedIndexPreserved,
+    });
+  };
+  assertAuthorizationRejectedBeforeIo(
+    closureSnapshot,
+    Object.freeze({ field: closureGate.field, value: "different-prior-gate" }),
+    "prior-gate mismatch"
+  );
+  const canonicalClosureIndex = closureIndexTransactionFixture(closureAnchor);
+  const malformedAnchorSnapshot = makeSnapshot(
+    closureGroup,
+    closureSources,
+    canonicalClosureIndex.replace(
+      formatClosureAnchor(closureAnchor),
+      CLOSURE_ANCHOR_PREFIX + "{malformed-json}" + CLOSURE_ANCHOR_SUFFIX
+    )
+  );
+  assertAuthorizationRejectedBeforeIo(
+    malformedAnchorSnapshot,
+    closureGate,
+    "malformed closure anchor"
+  );
+  const duplicateAnchorLine = formatClosureAnchor(closureAnchor);
+  const duplicateAnchorSnapshot = makeSnapshot(
+    closureGroup,
+    closureSources,
+    canonicalClosureIndex.replace(
+      duplicateAnchorLine,
+      duplicateAnchorLine + "\n" + duplicateAnchorLine
+    )
+  );
+  assertAuthorizationRejectedBeforeIo(
+    duplicateAnchorSnapshot,
+    closureGate,
+    "duplicate closure anchor"
+  );
+
+  const noOpSnapshot = normalSnapshot;
+  const noOpOwner = makeOwner("repair-no-op-fixture", noOpSnapshot);
+  const noOpHarness = createHermeticExactTransactionIo(noOpSnapshot);
+  await runSnapshotDerivedExactTransaction(
+    noOpSnapshot,
+    noOpOwner,
+    Object.freeze([]),
+    "TASK-540 repair no-op transaction fixture",
+    async () => {},
+    noOpHarness.io
+  );
+  const noOp = noOpHarness.inspect();
+  cases.push({
+    label: "repair no-op transaction writes nothing and preserves authority",
+    pass:
+      noOp.exact &&
+      noOp.writePaths.length === 0 &&
+      noOp.restoreCalls === 0 &&
+      noOp.stagedIndexPreserved,
+  });
+
+  cases.push({
+    label: "ungated closure projection owns only final status cells and prior metadata contract",
+    pass:
+      ungatedMutations.every(({ tableTaskIds }) => tableTaskIds.length === 0) &&
+      JSON.stringify(ungatedMutations.map(({ mutableFields }) => mutableFields)) ===
+        JSON.stringify([
+          [],
+          ["Fix Started", "Implementation Complete"],
+          ["Fix Started", "Implementation Complete", "Targeted Gate Passed", "Revalidation Passed"],
+        ]),
+  });
+
+  for (const testCase of cases) {
+    if (!testCase.pass) {
+      throw new Error("TASK-540 repair transaction self-test failed: " + testCase.label);
+    }
+  }
+  return cases.length;
 }
 
 async function reopenLeafForRepair(leaf, label, phaseName) {
@@ -10186,34 +18535,12 @@ async function reopenLeafForRepair(leaf, label, phaseName) {
       return reopenClosureLeafUngated(leaf, label, phaseName);
     }
   }
+  const taskContractMutations = repairReopenTaskContractMutations(group, leaf.id);
   const owner = Object.freeze({
     id: "reopen-" + leaf.id,
     allowedFiles: Object.freeze([ROOT_TASK_PATH, group.childPath, group.leafPath]),
     requiredFiles: Object.freeze([]),
-    taskContractMutations: Object.freeze([
-      Object.freeze({
-        relativePath: ROOT_TASK_PATH,
-        tableTaskIds: [group.childId],
-        mutableFields: [],
-      }),
-      Object.freeze({
-        relativePath: group.childPath,
-        tableTaskIds: [leaf.id],
-        mutableFields: Object.freeze(["Fix Started", "Implementation Complete", "Completed"]),
-      }),
-      Object.freeze({
-        relativePath: group.leafPath,
-        tableTaskIds: [],
-        mutableFields: Object.freeze([
-          "Fix Started",
-          "Implementation Complete",
-          "Completed",
-          "Targeted Gate Passed",
-          "Revalidation Passed",
-          "Repair Pending",
-        ]),
-      }),
-    ]),
+    taskContractMutations,
   });
   const rollbackOwner = Object.freeze({
     id: owner.id + "-rollback",
@@ -10228,6 +18555,9 @@ async function reopenLeafForRepair(leaf, label, phaseName) {
     rollbackOwner.allowedFiles,
     "TASK-540 source repair pre-authorization " + leaf.id
   );
+  if (isClosureLeaf && !(await readSharedClosurePending())) {
+    throw new Error("TASK-540 consumed closure repair snapshot lost Closure Pending");
+  }
   const boardSourceBefore = requireExactRollbackSnapshotUtf8(
     transactionSnapshot,
     "_docs/_TASKS/README.md",
@@ -10236,7 +18566,12 @@ async function reopenLeafForRepair(leaf, label, phaseName) {
   if (readTask540BoardState(boardSourceBefore).bucket !== "inProgress") {
     throw new Error("TASK-540 source repair requires the board already In Progress");
   }
-  const closureReceiptsBefore = await captureClosureContractReceipts();
+  const closureReceiptsBefore = isClosureLeaf
+    ? captureClosureContractReceiptsFromSnapshot(
+        transactionSnapshot,
+        "TASK-540 closure source repair receipts"
+      )
+    : await captureClosureContractReceipts();
   const repairPending =
     "generation " +
     randomUUID().replaceAll("-", "") +
@@ -10244,156 +18579,132 @@ async function reopenLeafForRepair(leaf, label, phaseName) {
     randomUUID().replaceAll("-", "");
   parseRepairPending(repairPending, "TASK-" + leaf.id + " generated repair");
   let closureAuthorization = null;
-  let reopenMutationError = null;
-  try {
-    if (isClosureLeaf) {
-      const closureLeafSnapshot = requireExactRollbackSnapshotEntry(
+  if (isClosureLeaf) {
+    const closureLeafSnapshot = requireExactRollbackSnapshotEntry(
+      transactionSnapshot,
+      group.leafPath,
+      "TASK-540 closure-leaf repair"
+    );
+    closureAuthorization = authorizeClosureLeafRepair(
+      transactionSnapshot,
+      repairPending,
+      readClosureLeafGateReceipt(
+        parseCanonicalTaskStatusSource(
+          exactRollbackEntryUtf8(closureLeafSnapshot, "TASK-540 closure-leaf repair"),
+          group.leafPath
+        ).source,
+        "TASK-540 closure-leaf repair"
+      ),
+      label
+    );
+  }
+  const taskEntries = buildRepairReopenTaskContractSources(
+    Object.freeze({
+      root: requireExactRollbackSnapshotUtf8(
+        transactionSnapshot,
+        ROOT_TASK_PATH,
+        "TASK-540 source repair root snapshot"
+      ),
+      child: requireExactRollbackSnapshotUtf8(
+        transactionSnapshot,
+        group.childPath,
+        "TASK-540 source repair child snapshot"
+      ),
+      leaf: requireExactRollbackSnapshotUtf8(
         transactionSnapshot,
         group.leafPath,
-        "TASK-540 closure-leaf repair"
-      );
-      closureAuthorization = await authorizeClosureLeafRepair(
-        repairPending,
-        readClosureLeafGateReceipt(
-          parseCanonicalTaskStatusSource(
-            exactRollbackEntryUtf8(closureLeafSnapshot, "TASK-540 closure-leaf repair"),
-            group.leafPath
-          ).source,
-          "TASK-540 closure-leaf repair"
-        ),
-        label
-      );
-    }
-    await runMutatingAgent(
-      "Repository " +
-        ROOT +
-        ". Reopen only the verified TASK-540 final-drift source owner " +
-        leaf.id +
-        " for repair. Read the root, exact child/leaf and task board fresh. Edit only " +
-        JSON.stringify(owner.allowedFiles) +
-        ". Set the exact leaf, its child and root TASK-540 to 🚧 In Progress; synchronize their " +
-        "status tables; require TASK-540's board row to already be 🚧 In progress and preserve the " +
-        "entire board byte-identically, including statistics. Preserve every root metadata field " +
-        "byte-identically. On only the exact child and leaf add/update a dedicated Fix Started field dated " +
-        RUN_DATE +
-        ". `Fix Started` is a separate field: preserve every existing `Repair Started`, " +
-        "`Repair Reason`, `Repair Revalidated`, and `Reopened` field byte-identically. " +
-        "On the exact leaf write `**Repair Pending:** " +
-        repairPending +
-        "`; remove its Completed, Targeted Gate Passed, and Revalidation Passed fields so no old " +
-        "gate can satisfy this repair. Remove Implementation Complete from the active leaf and remove " +
-        "Completed plus Implementation Complete from the active direct child. Keep unrelated " +
-        "task/changelog state byte-identical. Never edit source/tests here, stage, " +
-        "or commit. Reason: " +
-        label +
-        ".",
-      { label: "reopen:" + leaf.id + ":" + label, phase: phaseName },
-      owner,
-      false
-    );
-  } catch (error) {
-    reopenMutationError = error;
-  }
-
-  let reopenVerificationError = null;
-  try {
-    const [rootState, childState, leafState, boardSource] = await Promise.all([
-      readCanonicalTaskStatus(ROOT_TASK_PATH),
-      readCanonicalTaskStatus(group.childPath),
-      readCanonicalTaskStatus(group.leafPath),
-      readFile(TASKS + "/README.md", "utf8"),
-    ]);
-    if (
-      rootState.status !== "🚧 In Progress" ||
-      childState.status !== "🚧 In Progress" ||
-      leafState.status !== "🚧 In Progress"
-    ) {
-      throw new Error("TASK-540 failed to reopen source owner " + leaf.id);
-    }
-    requireTableStatus(childState.source, leaf.id, "🚧 In Progress", "TASK-540 child");
-    requireTableStatus(rootState.source, group.childId, "🚧 In Progress", "TASK-540 root");
-    requireAbsentCompleted(
-      readTaskMetadataField(rootState.source, "Completed"),
-      "TASK-540 reopened root"
-    );
-    requireAbsentCompleted(
-      readTaskMetadataField(childState.source, "Completed"),
-      "TASK-540 reopened child " + group.childId
-    );
-    requireAbsentCompleted(
-      readTaskMetadataField(leafState.source, "Completed"),
-      "TASK-540 reopened leaf " + leaf.id
-    );
-    requireAbsentImplementationComplete(
-      readTaskMetadataField(rootState.source, "Implementation Complete"),
-      "TASK-540 reopened root"
-    );
-    requireAbsentImplementationComplete(
-      readTaskMetadataField(childState.source, "Implementation Complete"),
-      "TASK-540 reopened child " + group.childId
-    );
-    requireAbsentImplementationComplete(
-      readTaskMetadataField(leafState.source, "Implementation Complete"),
-      "TASK-540 reopened leaf " + leaf.id
-    );
-    if (
-      readTaskMetadataField(leafState.source, "Repair Pending") !== repairPending ||
-      readTaskMetadataField(leafState.source, "Targeted Gate Passed") ||
-      readTaskMetadataField(leafState.source, "Revalidation Passed") ||
-      readTaskMetadataField(rootState.source, "Repair Pending") ||
-      readTaskMetadataField(childState.source, "Repair Pending") ||
-      readTaskMetadataField(childState.source, "Fix Started") !== RUN_DATE ||
-      readTaskMetadataField(leafState.source, "Fix Started") !== RUN_DATE
-    ) {
-      throw new Error("TASK-540 invalid persisted repair state for " + leaf.id);
-    }
-    if (boardSource !== boardSourceBefore) {
-      throw new Error("TASK-540 source repair changed the board or its statistics");
-    }
-    const boardState = readTask540BoardState(boardSource);
-    if (boardState.bucket !== "inProgress") {
-      throw new Error("TASK-540 board was not reopened for source repair");
-    }
-    await verifyClosureContractReceipts(
-      closureReceiptsBefore,
-      "TASK-540 source repair reopen " + leaf.id,
-      { allowGateChange: isClosureLeaf }
-    );
-    if (isClosureLeaf) {
-      if (!closureAuthorization) {
-        throw new Error("TASK-540 closure-leaf repair lost its prior authorization");
+        "TASK-540 source repair leaf snapshot"
+      ),
+    }),
+    group,
+    leaf.id,
+    repairPending,
+    taskContractMutations,
+    "TASK-540 source repair reopen " + leaf.id
+  );
+  const transactionEntries = Object.freeze([
+    ...(closureAuthorization ? [closureAuthorization.entry] : []),
+    ...taskEntries,
+  ]);
+  await runSnapshotDerivedExactTransaction(
+    transactionSnapshot,
+    rollbackOwner,
+    transactionEntries,
+    "TASK-540 source repair reopen " + leaf.id + ":" + phaseName + ":" + label,
+    async () => {
+      const [rootState, childState, leafState, boardSource] = await Promise.all([
+        readCanonicalTaskStatus(ROOT_TASK_PATH),
+        readCanonicalTaskStatus(group.childPath),
+        readCanonicalTaskStatus(group.leafPath),
+        readFile(TASKS + "/README.md", "utf8"),
+      ]);
+      if (
+        rootState.status !== "🚧 In Progress" ||
+        childState.status !== "🚧 In Progress" ||
+        leafState.status !== "🚧 In Progress"
+      ) {
+        throw new Error("TASK-540 failed to reopen source owner " + leaf.id);
       }
-      await verifyClosureAnchor(
-        closureAuthorization.authorizedAnchor,
-        "TASK-540 closure-leaf repair persisted authorization"
+      requireTableStatus(childState.source, leaf.id, "🚧 In Progress", "TASK-540 child");
+      requireTableStatus(rootState.source, group.childId, "🚧 In Progress", "TASK-540 root");
+      requireAbsentCompleted(
+        readTaskMetadataField(rootState.source, "Completed"),
+        "TASK-540 reopened root"
       );
+      requireAbsentCompleted(
+        readTaskMetadataField(childState.source, "Completed"),
+        "TASK-540 reopened child " + group.childId
+      );
+      requireAbsentCompleted(
+        readTaskMetadataField(leafState.source, "Completed"),
+        "TASK-540 reopened leaf " + leaf.id
+      );
+      requireAbsentImplementationComplete(
+        readTaskMetadataField(rootState.source, "Implementation Complete"),
+        "TASK-540 reopened root"
+      );
+      requireAbsentImplementationComplete(
+        readTaskMetadataField(childState.source, "Implementation Complete"),
+        "TASK-540 reopened child " + group.childId
+      );
+      requireAbsentImplementationComplete(
+        readTaskMetadataField(leafState.source, "Implementation Complete"),
+        "TASK-540 reopened leaf " + leaf.id
+      );
+      if (
+        readTaskMetadataField(leafState.source, "Repair Pending") !== repairPending ||
+        readTaskMetadataField(leafState.source, "Targeted Gate Passed") ||
+        readTaskMetadataField(leafState.source, "Revalidation Passed") ||
+        readTaskMetadataField(rootState.source, "Repair Pending") ||
+        readTaskMetadataField(childState.source, "Repair Pending") ||
+        readTaskMetadataField(childState.source, "Fix Started") !== RUN_DATE ||
+        readTaskMetadataField(leafState.source, "Fix Started") !== RUN_DATE
+      ) {
+        throw new Error("TASK-540 invalid persisted repair state for " + leaf.id);
+      }
+      if (boardSource !== boardSourceBefore) {
+        throw new Error("TASK-540 source repair changed the board or its statistics");
+      }
+      const boardState = readTask540BoardState(boardSource);
+      if (boardState.bucket !== "inProgress") {
+        throw new Error("TASK-540 board was not reopened for source repair");
+      }
+      await verifyClosureContractReceipts(
+        closureReceiptsBefore,
+        "TASK-540 source repair reopen " + leaf.id,
+        { allowGateChange: isClosureLeaf }
+      );
+      if (isClosureLeaf) {
+        if (!closureAuthorization) {
+          throw new Error("TASK-540 closure-leaf repair lost its prior authorization");
+        }
+        await verifyClosureAnchor(
+          closureAuthorization.authorizedAnchor,
+          "TASK-540 closure-leaf repair persisted authorization"
+        );
+      }
     }
-  } catch (error) {
-    reopenVerificationError = error;
-  }
-
-  if (reopenMutationError || reopenVerificationError) {
-    const primaryError =
-      reopenMutationError && reopenVerificationError
-        ? new AggregateError(
-            [reopenMutationError, reopenVerificationError],
-            "TASK-540 source repair reopen dispatch and persisted-state verification both failed"
-          )
-        : (reopenMutationError ?? reopenVerificationError);
-    try {
-      await restoreExactRollbackFiles(
-        transactionSnapshot,
-        rollbackOwner,
-        "TASK-540 source repair rollback " + leaf.id
-      );
-    } catch (rollbackError) {
-      throw new AggregateError(
-        [primaryError, rollbackError],
-        "TASK-540 source repair failure and exact transaction rollback both failed"
-      );
-    }
-    throw primaryError;
-  }
+  );
   return Object.freeze({ mode: "repair-pending", repairPending });
 }
 
@@ -10640,12 +18951,7 @@ async function requireDeferredLowAnchorLines(label, followUps) {
   }
 }
 
-function requireDeferredLowSourceLinkLanguage(
-  sourceLinks,
-  label,
-  followUps,
-  { requireFinalEvidence = false } = {}
-) {
+function requireDeferredLowSourceLinkLanguage(sourceLinks, label, followUps) {
   if (
     !Array.isArray(sourceLinks) ||
     sourceLinks.length !== DEFERRED_LOW_SOURCE_LINK_PATHS.length ||
@@ -10660,36 +18966,35 @@ function requireDeferredLowSourceLinkLanguage(
     if (typeof source !== "string") {
       throw new Error(label + ": TASK-540 deferred LOW source contract is invalid");
     }
-    for (const [area, spec] of Object.entries(followUps)) {
+    for (const spec of Object.values(followUps)) {
       const commonLanguageIsExact =
         source.includes(spec.followUpTask) &&
         source.includes(spec.taskPath) &&
         source.split(spec.approvedRationaleLanguage).length - 1 === 1;
       const evidenceIsExact = source.split(spec.approvedEvidenceLanguage).length - 1 === 1;
-      const conditionalEvidenceIsExact =
-        area === DEFERRED_LOW_DRAFT_AREA &&
-        spec.conditionalEvidenceTokens.every((token) => source.includes(token));
-      const staleConditionalEvidenceRemains =
-        area === DEFERRED_LOW_DRAFT_AREA &&
-        spec.conditionalEvidenceTokens.slice(0, 2).some((token) => source.includes(token));
-      if (
-        !commonLanguageIsExact ||
-        (requireFinalEvidence
-          ? spec.evidenceState !== "post" || !evidenceIsExact || staleConditionalEvidenceRemains
-          : !evidenceIsExact && !conditionalEvidenceIsExact)
-      ) {
+      if (!commonLanguageIsExact || !evidenceIsExact) {
         throw new Error(
           label + ": TASK-540 deferred LOW evidence/rationale drifted in " + relativePath
         );
       }
+    }
+    if (
+      source.split(SUPERSEDED_TAB_LABEL_DRAFT_FOLLOW_UP.sourceLinkLanguage).length - 1 !== 1 ||
+      SUPERSEDED_TAB_LABEL_DRAFT_FOLLOW_UP.staleSourceLanguage.some((token) =>
+        source.includes(token)
+      )
+    ) {
+      throw new Error(
+        label + ": superseded TASK-9999-01-L02 source backlink drifted in " + relativePath
+      );
     }
   }
 }
 
 function deferredLowAuditPrompt(followUps) {
   return (
-    " The only findings eligible for non-blocking deferral are the two already-authored " +
-    "TASK-9999 leaves below. Report either one only when the current evidence still proves " +
+    " The only finding eligible for non-blocking deferral is the one already-authored " +
+    "TASK-9999 leaf below. Report it only when the current evidence still proves " +
     "the exact behavior-neutral finding, using the fixed severity/area/finding/" +
     "recommendation literally and one exact owner from ownerOneOf: " +
     JSON.stringify(
@@ -10702,7 +19007,8 @@ function deferredLowAuditPrompt(followUps) {
         recommendation: spec.followUpTask,
       }))
     ) +
-    ". HIGH/MEDIUM and every UI/UX/accessibility/data/security/privacy/auth/RBAC/API/" +
+    ". Historical TASK-9999-01-L02 is superseded and always blocking if reported as a " +
+    "deferred finding. HIGH/MEDIUM and every UI/UX/accessibility/data/security/privacy/auth/RBAC/API/" +
     "persistence/migration/performance/reliability/test-integrity finding remain active. " +
     "Do not use a TASK-9999 recommendation or deferred-low area for any other finding."
   );
@@ -10730,46 +19036,53 @@ function partitionDeferredLowFindings(findings, followUps) {
   return deepFreezeExact({ blockingFindings, deferredFindings });
 }
 
-async function requireDeferredLowFollowUpContracts(
-  label,
-  { followUps = null, requireFinalEvidence = false } = {}
-) {
+async function requireDeferredLowFollowUpContracts(label, { followUps = null } = {}) {
   if (typeof label !== "string" || label.length === 0) {
     throw new Error("TASK-540 deferred LOW contract check input is invalid");
   }
   const resolvedFollowUps = followUps ?? (await resolveDeferredLowFollowUps(label));
-  const [sourceLinks, parent, child, board] = await Promise.all([
-    Promise.all(
-      DEFERRED_LOW_SOURCE_LINK_PATHS.map(async (relativePath) => ({
-        relativePath,
-        source: await readFile(ROOT + "/" + relativePath, "utf8"),
-      }))
-    ),
-    readFile(
-      ROOT + "/_docs/_TASKS/TASK-9999_Permanent_Deferred_Non_User_Facing_Low_Severity_Backlog.md",
-      "utf8"
-    ),
-    readFile(ROOT + "/_docs/_TASKS/TASK-9999-01-Task-540-Deferred-Non-User-Facing-Lows.md", "utf8"),
-    readFile(TASKS + "/README.md", "utf8"),
-  ]);
+  const [sourceLinks, parent, child, supersededLeaf, board, changelogIndex, changelog] =
+    await Promise.all([
+      Promise.all(
+        DEFERRED_LOW_SOURCE_LINK_PATHS.map(async (relativePath) => ({
+          relativePath,
+          source: await readFile(ROOT + "/" + relativePath, "utf8"),
+        }))
+      ),
+      readFile(
+        ROOT + "/_docs/_TASKS/TASK-9999_Permanent_Deferred_Non_User_Facing_Low_Severity_Backlog.md",
+        "utf8"
+      ),
+      readFile(
+        ROOT + "/_docs/_TASKS/TASK-9999-01-Task-540-Deferred-Non-User-Facing-Lows.md",
+        "utf8"
+      ),
+      readFile(ROOT + "/" + SUPERSEDED_TAB_LABEL_DRAFT_FOLLOW_UP.taskPath, "utf8"),
+      readFile(TASKS + "/README.md", "utf8"),
+      readFile(ROOT + "/_docs/_CHANGELOG/README.md", "utf8"),
+      readFile(ROOT + "/" + SUPERSEDED_TAB_LABEL_DRAFT_FOLLOW_UP.changelogPath, "utf8"),
+    ]);
   await requireDeferredLowAnchorLines(label, resolvedFollowUps);
   const inProgressSection = board.slice(board.indexOf("## In Progress"), board.indexOf("## Done"));
   const inProgressTaskRows = [...inProgressSection.matchAll(/^\| TASK-[^\n]+$/gm)].map(
     (match) => match[0]
   );
-  requireDeferredLowSourceLinkLanguage(sourceLinks, label, resolvedFollowUps, {
-    requireFinalEvidence,
-  });
+  requireDeferredLowSourceLinkLanguage(sourceLinks, label, resolvedFollowUps);
   if (
     !parent.includes("**Status:** 🚧 In Progress") ||
+    !parent.includes("**Last Triaged:** 2026-07-18") ||
     !child.includes("**Status:** ⏳ To Do") ||
     inProgressTaskRows.filter((row) => row.startsWith("| TASK-9999 |")).length !== 1 ||
-    !inProgressTaskRows.at(-1)?.startsWith("| TASK-9999 |")
+    !inProgressTaskRows.at(-1)?.startsWith("| TASK-9999 |") ||
+    !inProgressTaskRows.at(-1)?.includes("1 open leaf and 1 superseded leaf")
   ) {
     throw new Error(
       label + ": TASK-9999 parent/child or permanent final board-row contract drifted"
     );
   }
+  requireTableStatus(child, "9999-01-L01", RESUME_TASK_STATUS.todo, label + " child");
+  requireTableStatus(child, "9999-01-L02", "⏭️ Superseded", label + " child");
+  requireTableStatus(parent, "9999-01", RESUME_TASK_STATUS.todo, label + " parent");
   for (const spec of Object.values(resolvedFollowUps)) {
     const leaf = await readFile(ROOT + "/" + spec.taskPath, "utf8");
     if (
@@ -10782,132 +19095,29 @@ async function requireDeferredLowFollowUpContracts(
       throw new Error(label + ": deferred LOW follow-up contract or TASK-540 backlink drifted");
     }
   }
-}
-
-function finalizedDeferredLowSource(source, finalEvidenceLanguage, label) {
-  const finalCount = source.split(finalEvidenceLanguage).length - 1;
-  if (finalCount === 1) return source;
-  if (finalCount !== 0) {
-    throw new Error(label + ": final deferred LOW evidence is duplicated");
+  if (
+    !supersededLeaf.includes("**Parent Task:** TASK-9999") ||
+    !supersededLeaf.includes("**Parent Subtask:** TASK-9999-01") ||
+    !supersededLeaf.includes("**Source Task:** TASK-540") ||
+    !supersededLeaf.includes("**Status:** ⏭️ Superseded") ||
+    !supersededLeaf.includes(
+      "**Superseded By:** " + SUPERSEDED_TAB_LABEL_DRAFT_FOLLOW_UP.supersededBy
+    ) ||
+    !supersededLeaf.includes("**Re-triaged:** " + SUPERSEDED_TAB_LABEL_DRAFT_FOLLOW_UP.reTriaged) ||
+    !supersededLeaf.includes("DO NOT IMPLEMENT")
+  ) {
+    throw new Error(label + ": superseded TASK-9999-01-L02 contract drifted");
   }
-  const startMarkers = [
-    "  Before TASK-540-02-L01's Inspector split, the conditional evidence is\n",
-    "  Conditional pre-split evidence is\n",
-  ];
-  const matches = startMarkers
-    .map((marker) => ({ marker, index: source.indexOf(marker) }))
-    .filter(({ index }) => index >= 0);
-  if (matches.length !== 1) {
-    throw new Error(label + ": conditional deferred LOW evidence block is not unique");
+  const changelogRows = changelogIndex.match(/^\| 1258 \|.*$/gm) ?? [];
+  if (
+    changelogRows.length !== 1 ||
+    !changelogIndex.includes("Use 1259 for the next unreserved changelog entry.") ||
+    !changelog.includes("TASK-9999-01-L02") ||
+    !changelog.includes("TASK-540-02-L01") ||
+    !changelog.includes("Superseded")
+  ) {
+    throw new Error(label + ": superseded TASK-9999-01-L02 changelog authority drifted");
   }
-  const rationale =
-    "  " + DEFERRED_LOW_FOLLOW_UPS[DEFERRED_LOW_DRAFT_AREA].approvedRationaleLanguage;
-  const rationaleIndex = source.indexOf(rationale, matches[0].index + matches[0].marker.length);
-  if (rationaleIndex < 0) {
-    throw new Error(label + ": deferred LOW rationale boundary is missing");
-  }
-  return (
-    source.slice(0, matches[0].index) +
-    "  " +
-    finalEvidenceLanguage +
-    "\n" +
-    source.slice(rationaleIndex)
-  );
-}
-
-async function finalizeDeferredLowSourceEvidence(label) {
-  const followUps = await resolveDeferredLowFollowUps(label + " resolve");
-  const draftSpec = followUps[DEFERRED_LOW_DRAFT_AREA];
-  if (draftSpec.evidenceState !== "post") {
-    throw new Error(label + ": deferred LOW source evidence cannot finalize before the split");
-  }
-  const beforeEntries = await Promise.all(
-    DEFERRED_LOW_SOURCE_LINK_PATHS.map(async (relativePath) => {
-      const source = await readFile(ROOT + "/" + relativePath, "utf8");
-      return Object.freeze({
-        relativePath,
-        source,
-        expected: finalizedDeferredLowSource(
-          source,
-          draftSpec.approvedEvidenceLanguage,
-          label + ":" + relativePath
-        ),
-      });
-    })
-  );
-  const pending = beforeEntries.filter(({ source, expected }) => source !== expected);
-  if (pending.length === 0) {
-    await requireDeferredLowFollowUpContracts(label + " already finalized", {
-      followUps,
-      requireFinalEvidence: true,
-    });
-    return followUps;
-  }
-  const owner = Object.freeze({
-    id: "540-06-L01-deferred-low-evidence",
-    allowedFiles: DEFERRED_LOW_SOURCE_LINK_PATHS,
-    requiredFiles: Object.freeze(pending.map(({ relativePath }) => relativePath)),
-  });
-  const rollbackOwner = Object.freeze({
-    ...owner,
-    id: owner.id + "-rollback",
-    requiredFiles: Object.freeze([]),
-  });
-  const snapshot = await captureExactRollbackFiles(owner.allowedFiles, label + " pre-finalization");
-  let mutationError = null;
-  try {
-    await runMutatingAgent(
-      "Repository " +
-        ROOT +
-        ". Finalize only TASK-540's two source backlinks for TASK-9999-01-L02 after the " +
-        "validated Inspector split. Edit only " +
-        JSON.stringify(owner.allowedFiles) +
-        ". In each still-conditional file replace only its conditional pre/post evidence " +
-        "paragraph with this exact single line (including punctuation): `" +
-        draftSpec.approvedEvidenceLanguage +
-        "`. Preserve every other byte, including the rationale, statuses, metadata, tables, " +
-        "and TASK-9999 references. Never edit TASK-9999 itself, source, tests, board, changelog, " +
-        "workflow, stage, or commit. Return exact touchedFiles.",
-      { label: "deferred-low-finalize:540:" + label, phase: "Closure" },
-      owner
-    );
-  } catch (error) {
-    mutationError = error;
-  }
-  let verificationError = null;
-  try {
-    for (const entry of beforeEntries) {
-      const after = await readFile(ROOT + "/" + entry.relativePath, "utf8");
-      if (after !== entry.expected) {
-        throw new Error(label + ": deferred LOW finalization changed unrelated bytes");
-      }
-    }
-    await requireDeferredLowFollowUpContracts(label + " finalized", {
-      followUps,
-      requireFinalEvidence: true,
-    });
-  } catch (error) {
-    verificationError = error;
-  }
-  if (mutationError || verificationError) {
-    const primaryError =
-      mutationError && verificationError
-        ? new AggregateError(
-            [mutationError, verificationError],
-            label + ": deferred LOW mutation and verification failed"
-          )
-        : (mutationError ?? verificationError);
-    try {
-      await restoreExactRollbackFiles(snapshot, rollbackOwner, label + " rollback");
-    } catch (rollbackError) {
-      throw new AggregateError(
-        [primaryError, rollbackError],
-        label + ": deferred LOW failure and rollback failed"
-      );
-    }
-    throw primaryError;
-  }
-  return followUps;
 }
 
 function auditFindingsDiagnosticError(findings, message) {
@@ -11006,11 +19216,25 @@ async function fixAuditFindings(findings, label, phaseName, { afterClosure = fal
     }
     const gate = await runLeafGate(leaf, label, phaseName);
     if (!gate.pass) throw new Error(label + ": owner re-gate failed for " + ownerId);
+    const preClosureFixStartedDate =
+      remediation.mode === "ungated-closure"
+        ? await readPersistedPreClosureFixStartedDate(
+            leaf,
+            "TASK-540 post-audit pre-closure re-gate"
+          )
+        : null;
+    const exactGateReceiptValue =
+      remediation.mode === "repair-pending"
+        ? repairGateValue(remediation.repairPending)
+        : preClosureFixStartedDate
+          ? preClosureRegateValue(preClosureFixStartedDate)
+          : transitionGateReceiptValue(gate, "TASK-540 post-audit gate " + ownerId);
     await transitionLeafStatus(
       leaf,
       "complete",
       label + "-regate-green",
-      remediation.mode === "repair-pending" ? remediation.repairPending : null
+      remediation.mode === "repair-pending" ? remediation.repairPending : null,
+      exactGateReceiptValue
     );
     if (ownerId !== "540-06-L01" && sourceOwnerTestHashesAtClosureBoundary !== null) {
       await captureSourceOwnerTestHashBoundary(label + ":source-regate:" + ownerId);
@@ -11314,93 +19538,11 @@ function assertTask540AuditInterventionContract() {
 
 async function assertTask540DeferredLowContract() {
   const deferredLowFollowUps = await resolveDeferredLowFollowUps("TASK-540 deferred LOW self-test");
-  const [actorSpec, draftSpec] = Object.values(deferredLowFollowUps);
-  const activeDraftPath =
-    draftSpec.evidenceState === "post"
-      ? draftSpec.anchorTransition.postPath
-      : draftSpec.anchorTransition.facadePath;
-  const activeDraftSource = await readFile(ROOT + "/" + activeDraftPath, "utf8");
-  const activeDraftAnalysis = analyzeDeferredLowDraftContract(
-    activeDraftSource,
-    activeDraftPath,
-    draftSpec.anchorTransition,
-    "TASK-540 deferred LOW active-layout self-test"
-  );
-  const rejectedDraftMutations = [
-    activeDraftSource.replace("value={draft.value}", "value={draft.baseLabel || draft.value}"),
-    activeDraftSource.replace("value={draft.value}", 'value={draft["baseLabel"] || draft.value}'),
-    activeDraftSource.replace(
-      "  };\n\n  return (\n    <Input",
-      "  };\n\n  void draft;\n\n  return (\n    <Input"
-    ),
-    activeDraftSource.replace("baseLabel: tab.label", "baseLabel: draft.value"),
-    activeDraftSource +
-      "\ntype ScreenTabLabelDraft = never;\nfunction TabLabelInput() { return null; }\n",
-  ];
-  let rejectedDraftMutationCount = 0;
-  for (const [index, mutatedSource] of rejectedDraftMutations.entries()) {
-    if (mutatedSource === activeDraftSource) {
-      throw new Error("TASK-540 deferred LOW mutation fixture did not mutate: " + index);
-    }
-    try {
-      analyzeDeferredLowDraftContract(
-        mutatedSource,
-        activeDraftPath,
-        draftSpec.anchorTransition,
-        "TASK-540 deferred LOW mutation self-test " + index
-      );
-    } catch {
-      rejectedDraftMutationCount += 1;
-    }
+  const entries = Object.entries(deferredLowFollowUps);
+  if (entries.length !== 1 || entries[0][0] !== "deferred-low:actor-media-uuid-domain-naming") {
+    throw new Error("TASK-540 deferred LOW self-test expected one actor/media authority");
   }
-  const commentOnlyDraftAnalysis = analyzeDeferredLowDraftContract(
-    "// ScreenTabLabelDraft TabLabelInput baseLabel draft.baseLabel\n" + activeDraftSource,
-    activeDraftPath,
-    draftSpec.anchorTransition,
-    "TASK-540 deferred LOW comment self-test"
-  );
-  requireDeferredLowDraftContractAbsent(
-    "// ScreenTabLabelDraft TabLabelInput baseLabel\nexport { TabsEditor } from './tabs';\n",
-    draftSpec.anchorTransition.facadePath,
-    draftSpec.anchorTransition,
-    "TASK-540 deferred LOW facade-comment self-test"
-  );
-  let facadeSymbolRejected = false;
-  try {
-    requireDeferredLowDraftContractAbsent(
-      "const baseLabel = '';\n",
-      draftSpec.anchorTransition.facadePath,
-      draftSpec.anchorTransition,
-      "TASK-540 deferred LOW facade-symbol self-test"
-    );
-  } catch {
-    facadeSymbolRejected = true;
-  }
-  const conditionalEvidenceFixture = [
-    "fixture prefix",
-    "  Conditional pre-split evidence is",
-    "  fixture transition",
-    "  " + DEFERRED_LOW_FOLLOW_UPS[DEFERRED_LOW_DRAFT_AREA].approvedRationaleLanguage,
-    "fixture suffix",
-  ].join("\n");
-  const finalizedEvidenceFixture = finalizedDeferredLowSource(
-    conditionalEvidenceFixture,
-    draftSpec.approvedEvidenceLanguage,
-    "TASK-540 deferred LOW finalization self-test"
-  );
-  let mutatedFinalAstHashRejected = false;
-  try {
-    finalizedDeferredLowSource(
-      finalizedEvidenceFixture.replace(
-        draftSpec.anchorTransition.draftContractSha256,
-        "0".repeat(64)
-      ),
-      draftSpec.approvedEvidenceLanguage,
-      "TASK-540 deferred LOW final AST mutation self-test"
-    );
-  } catch {
-    mutatedFinalAstHashRejected = true;
-  }
+  const [actorArea, actorSpec] = entries[0];
   const findingFor = (area, spec, overrides = {}) =>
     Object.freeze({
       lensId: "fixture-lens",
@@ -11412,9 +19554,12 @@ async function assertTask540DeferredLowContract() {
       recommendation: spec.followUpTask,
       ...overrides,
     });
-  const actorFinding = findingFor("deferred-low:actor-media-uuid-domain-naming", actorSpec);
-  const draftFinding = findingFor("deferred-low:unread-screen-tab-label-draft-state", draftSpec);
-  const accepted = partitionDeferredLowFindings([actorFinding, draftFinding], deferredLowFollowUps);
+  const actorFinding = findingFor(actorArea, actorSpec);
+  const accepted = partitionDeferredLowFindings([actorFinding], deferredLowFollowUps);
+  const supersededDraft = partitionDeferredLowFindings(
+    [SUPERSEDED_TAB_LABEL_DRAFT_FOLLOW_UP.historicalFinding],
+    deferredLowFollowUps
+  );
   await requireDeferredLowFollowUpContracts("TASK-540 deferred LOW self-test", {
     followUps: deferredLowFollowUps,
   });
@@ -11441,9 +19586,29 @@ async function assertTask540DeferredLowContract() {
   } catch {
     missingRationaleRejected = true;
   }
+  let staleDraftDeferralRejected = false;
+  try {
+    requireDeferredLowSourceLinkLanguage(
+      sourceLinks.map((entry, index) =>
+        index === 0
+          ? Object.freeze({
+              ...entry,
+              source: entry.source.replace(
+                SUPERSEDED_TAB_LABEL_DRAFT_FOLLOW_UP.sourceLinkLanguage,
+                "TASK-9999-01-L02 approved rationale: baseLabel is assigned but never read."
+              ),
+            })
+          : entry
+      ),
+      "TASK-540 stale-draft-deferral self-test",
+      deferredLowFollowUps
+    );
+  } catch {
+    staleDraftDeferralRejected = true;
+  }
   const high = partitionDeferredLowFindings(
     [
-      findingFor("deferred-low:actor-media-uuid-domain-naming", actorSpec, {
+      findingFor(actorArea, actorSpec, {
         severity: "high",
       }),
     ],
@@ -11451,7 +19616,7 @@ async function assertTask540DeferredLowContract() {
   );
   const wrongTask = partitionDeferredLowFindings(
     [
-      findingFor("deferred-low:actor-media-uuid-domain-naming", actorSpec, {
+      findingFor(actorArea, actorSpec, {
         recommendation: "TASK-9999-01-L02",
       }),
     ],
@@ -11459,8 +19624,8 @@ async function assertTask540DeferredLowContract() {
   );
   const missingLine = partitionDeferredLowFindings(
     [
-      findingFor("deferred-low:unread-screen-tab-label-draft-state", draftSpec, {
-        evidence: draftSpec.evidenceAnchors
+      findingFor(actorArea, actorSpec, {
+        evidence: actorSpec.evidenceAnchors
           .map((anchor, index) => (index === 0 ? anchor.replace(/:[0-9]+$/u, "") : anchor))
           .join("; "),
       }),
@@ -11469,8 +19634,8 @@ async function assertTask540DeferredLowContract() {
   );
   const missingPath = partitionDeferredLowFindings(
     [
-      findingFor("deferred-low:unread-screen-tab-label-draft-state", draftSpec, {
-        evidence: draftSpec.evidenceAnchors
+      findingFor(actorArea, actorSpec, {
+        evidence: actorSpec.evidenceAnchors
           .map((anchor, index) =>
             index === 0 ? anchor.slice(anchor.lastIndexOf(":") + 1) : anchor
           )
@@ -11481,7 +19646,7 @@ async function assertTask540DeferredLowContract() {
   );
   const fabricatedSubstrings = partitionDeferredLowFindings(
     [
-      findingFor("deferred-low:actor-media-uuid-domain-naming", actorSpec, {
+      findingFor(actorArea, actorSpec, {
         evidence: actorSpec.evidenceAnchors.map((anchor) => anchor + "-fabricated").join("; "),
       }),
     ],
@@ -11490,7 +19655,7 @@ async function assertTask540DeferredLowContract() {
   const excludedImpact = partitionDeferredLowFindings(
     [
       Object.freeze({
-        ...draftFinding,
+        ...actorFinding,
         area: "accessibility",
         finding: "An empty tablist has no accessible tab.",
         evidence: "ScreenRuntimeRenderer.tsx:1",
@@ -11500,8 +19665,14 @@ async function assertTask540DeferredLowContract() {
   );
   const cases = [
     {
-      label: "only both exact authored LOW follow-ups are non-blocking",
-      pass: accepted.blockingFindings.length === 0 && accepted.deferredFindings.length === 2,
+      label: "only the exact actor/media authored LOW follow-up is non-blocking",
+      pass: accepted.blockingFindings.length === 0 && accepted.deferredFindings.length === 1,
+    },
+    {
+      label: "historical TASK-9999-01-L02 always remains blocking",
+      pass:
+        supersededDraft.blockingFindings.length === 1 &&
+        supersededDraft.deferredFindings.length === 0,
     },
     {
       label: "HIGH cannot use the deferred path",
@@ -11530,34 +19701,315 @@ async function assertTask540DeferredLowContract() {
       pass: missingRationaleRejected,
     },
     {
+      label: "stale TASK-9999-01-L02 approved language fails closed",
+      pass: staleDraftDeferralRejected,
+    },
+    {
       label: "accessibility LOW remains blocking",
       pass:
         excludedImpact.blockingFindings.length === 1 &&
         excludedImpact.deferredFindings.length === 0,
     },
-    {
-      label: "AST proof rejects every draft read/write/cardinality mutation",
-      pass: rejectedDraftMutationCount === rejectedDraftMutations.length,
-    },
-    {
-      label: "AST proof ignores comments but rejects live facade symbols",
-      pass:
-        activeDraftAnalysis.draftContractSha256 ===
-          draftSpec.anchorTransition.draftContractSha256 &&
-        commentOnlyDraftAnalysis.draftContractSha256 ===
-          draftSpec.anchorTransition.draftContractSha256 &&
-        facadeSymbolRejected,
-    },
-    {
-      label: "closure evidence retains the exact AST hash and rejects mutation",
-      pass:
-        finalizedEvidenceFixture.includes(draftSpec.anchorTransition.draftContractSha256) &&
-        mutatedFinalAstHashRejected,
-    },
   ];
   for (const testCase of cases) {
     if (!testCase.pass) {
       throw new Error("TASK-540 deferred LOW self-test failed: " + testCase.label);
+    }
+  }
+  return cases.length;
+}
+
+async function assertScreenTabLabelDraftContract() {
+  const contract = SCREEN_TAB_LABEL_DRAFT_CONTRACT;
+  const evidence = await requireScreenTabLabelDraftContract(
+    "TASK-540 Screen Tab label active-contract self-test"
+  );
+  const [ownerSource, facadeSource, testSource, companionTestSource] = await Promise.all([
+    readFile(ROOT + "/" + contract.ownerPath, "utf8"),
+    readFile(ROOT + "/" + contract.facadePath, "utf8"),
+    readFile(ROOT + "/" + contract.testPath, "utf8"),
+    readFile(ROOT + "/" + contract.companionTestPath, "utf8"),
+  ]);
+  const rejectedOwnerMutations = [
+    ownerSource.replace("draft.baseLabel !== tab.label", "draft.value !== tab.label"),
+    ownerSource.replace("    setDraft({ baseLabel: tab.label, value: tab.label });\n", ""),
+    ownerSource.replace(
+      "key={`${block.id}:${tab.id}`}",
+      "key={`${block.id}:${tab.id}:${tab.label}`}"
+    ),
+    ownerSource.replace("baseLabel: tab.label,\n    value: tab.label", "value: tab.label"),
+    ownerSource.replace(
+      "if (commit(nextTabs, nextSlots)) clearBindingsForSlot(tab.id);",
+      "commit(nextTabs, nextSlots);"
+    ),
+    ownerSource.replace('{ field: "" }', '{ field: "title" }'),
+  ];
+  let rejectedOwnerMutationCount = 0;
+  for (const [index, mutatedSource] of rejectedOwnerMutations.entries()) {
+    if (mutatedSource === ownerSource) {
+      throw new Error("TASK-540 Screen Tab label mutation fixture did not mutate: " + index);
+    }
+    try {
+      analyzeScreenTabLabelDraftContract(
+        mutatedSource,
+        contract.ownerPath,
+        contract,
+        "TASK-540 Screen Tab label mutation self-test " + index
+      );
+    } catch {
+      rejectedOwnerMutationCount += 1;
+    }
+  }
+  let rejectedTestMutationCount = 0;
+  for (const [index, spec] of contract.requiredTests.entries()) {
+    const mutatedTestSource = testSource.replace(spec.name, spec.name + " removed");
+    if (mutatedTestSource === testSource) {
+      throw new Error("TASK-540 Screen Tab label test mutation fixture did not mutate: " + index);
+    }
+    try {
+      requireScreenTabLabelDraftTestContract(
+        mutatedTestSource,
+        "TASK-540 Screen Tab label test mutation self-test " + index
+      );
+    } catch {
+      rejectedTestMutationCount += 1;
+    }
+  }
+  const focusTest = contract.requiredTests[1];
+  const shadowSkipSource =
+    testSource.replace('test("' + focusTest.name + '"', 'test("' + focusTest.name + ' disabled"') +
+    '\n// test("' +
+    focusTest.name +
+    '"\ntest.skip("' +
+    focusTest.name +
+    '", () => {});\n';
+  let shadowSkipRejected = false;
+  try {
+    requireScreenTabLabelDraftTestContract(
+      shadowSkipSource,
+      "TASK-540 Screen Tab label comment-shadow/skip self-test"
+    );
+  } catch {
+    shadowSkipRejected = true;
+  }
+  const shadowedImportSource = testSource.replace(
+    'import { afterEach, expect, test, vi } from "vitest";',
+    'import { afterEach, expect, test as vitestTest, vi } from "vitest";\n' +
+      "const test = vitestTest.skip;"
+  );
+  if (shadowedImportSource === testSource) {
+    throw new Error("TASK-540 Screen Tab label import-authority fixture did not mutate");
+  }
+  let shadowedImportRejected = false;
+  try {
+    requireScreenTabLabelDraftTestContract(
+      shadowedImportSource,
+      "TASK-540 Screen Tab label import-authority self-test"
+    );
+  } catch {
+    shadowedImportRejected = true;
+  }
+  const gcTest = contract.requiredTests[2];
+  const deadConditionalSource = testSource.replace(
+    'test("' + gcTest.name + '"',
+    'false && test("' + gcTest.name + '"'
+  );
+  if (deadConditionalSource === testSource) {
+    throw new Error("TASK-540 Screen Tab label dead-test mutation fixture did not mutate");
+  }
+  let deadConditionalRejected = false;
+  try {
+    requireScreenTabLabelDraftTestContract(
+      deadConditionalSource,
+      "TASK-540 Screen Tab label false-and-test self-test"
+    );
+  } catch {
+    deadConditionalRejected = true;
+  }
+  const testSourceFile = ts.createSourceFile(
+    contract.testPath,
+    testSource,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX
+  );
+  let focusStatement = null;
+  const findFocusStatement = (node) => {
+    if (
+      focusStatement === null &&
+      ts.isCallExpression(node) &&
+      isIdentifierText(node.expression, "test") &&
+      isTopLevelVitestDeclaration(node) &&
+      node.arguments[0] &&
+      ts.isStringLiteral(node.arguments[0]) &&
+      node.arguments[0].text === focusTest.name
+    ) {
+      focusStatement = node.parent;
+    }
+    ts.forEachChild(node, findFocusStatement);
+  };
+  findFocusStatement(testSourceFile);
+  if (focusStatement === null) {
+    throw new Error("TASK-540 Screen Tab label skipped-describe fixture lacks focus test");
+  }
+  const focusStatementStart = focusStatement.getStart(testSourceFile);
+  const skippedDescribeSource =
+    testSource.slice(0, focusStatementStart) +
+    'describe.skip("fixture", () => {\n' +
+    testSource.slice(focusStatementStart, focusStatement.end) +
+    "\n});" +
+    testSource.slice(focusStatement.end);
+  let skippedDescribeRejected = false;
+  try {
+    requireScreenTabLabelDraftTestContract(
+      skippedDescribeSource,
+      "TASK-540 Screen Tab label describe-skip self-test"
+    );
+  } catch {
+    skippedDescribeRejected = true;
+  }
+  const callbackMutationSource = testSource.replace(
+    'expect(inputAfter?.getAttribute("aria-label")).toBe("Label for Renamed by keyboard");',
+    'expect(inputAfter?.getAttribute("aria-label")).toBeTruthy();'
+  );
+  if (callbackMutationSource === testSource) {
+    throw new Error("TASK-540 Screen Tab label callback mutation fixture did not mutate");
+  }
+  let callbackMutationRejected = false;
+  try {
+    requireScreenTabLabelDraftTestContract(
+      callbackMutationSource,
+      "TASK-540 Screen Tab label callback AST mutation self-test"
+    );
+  } catch {
+    callbackMutationRejected = true;
+  }
+  const unrelatedCardinalitySource = testSource.replace(
+    'test("createScreenFieldBinding emits bounded, distinct IDs for valid maximum-length block IDs"',
+    'it("createScreenFieldBinding emits bounded, distinct IDs for valid maximum-length block IDs"'
+  );
+  const companionCardinalitySource = companionTestSource.replace(
+    'test("typing in the Image URL row patches data.src"',
+    'it("typing in the Image URL row patches data.src"'
+  );
+  if (
+    unrelatedCardinalitySource === testSource ||
+    companionCardinalitySource === companionTestSource
+  ) {
+    throw new Error("TASK-540 Screen Inspector cardinality mutation fixture did not mutate");
+  }
+  let cardinalityMutationsRejected = 0;
+  try {
+    requireScreenTabLabelDraftTestContract(
+      unrelatedCardinalitySource,
+      "TASK-540 Screen Tab label unrelated-cardinality self-test"
+    );
+  } catch {
+    cardinalityMutationsRejected += 1;
+  }
+  try {
+    requireScreenTabLabelCompanionTestContract(
+      companionCardinalitySource,
+      "TASK-540 Screen Image Inspector cardinality self-test"
+    );
+  } catch {
+    cardinalityMutationsRejected += 1;
+  }
+  const commentOnlyAnalysis = analyzeScreenTabLabelDraftContract(
+    "// ScreenTabLabelDraft TabLabelInput baseLabel draft.baseLabel\n" + ownerSource,
+    contract.ownerPath,
+    contract,
+    "TASK-540 Screen Tab label comment self-test"
+  );
+  requireScreenTabLabelDraftContractAbsent(
+    "// ScreenTabLabelDraft TabLabelInput baseLabel\n" + facadeSource,
+    contract.facadePath,
+    contract,
+    "TASK-540 Screen Tab label facade-comment self-test"
+  );
+  let facadeSymbolRejected = false;
+  try {
+    requireScreenTabLabelDraftContractAbsent(
+      facadeSource + "\nconst baseLabel = '';\n",
+      contract.facadePath,
+      contract,
+      "TASK-540 Screen Tab label facade-symbol self-test"
+    );
+  } catch {
+    facadeSymbolRejected = true;
+  }
+  const facadeWiringMutation = facadeSource.replace("\n          bindings={bindings}", "");
+  if (facadeWiringMutation === facadeSource) {
+    throw new Error("TASK-540 TabsEditor facade-wiring mutation fixture did not mutate");
+  }
+  let facadeWiringRejected = false;
+  try {
+    requireScreenTabLabelDraftContractAbsent(
+      facadeWiringMutation,
+      contract.facadePath,
+      contract,
+      "TASK-540 TabsEditor facade-wiring self-test"
+    );
+  } catch {
+    facadeWiringRejected = true;
+  }
+  const cases = [
+    {
+      label: "active Screen Tab label AST and test evidence is exact",
+      pass:
+        evidence.sourceSha256 === contract.ownerSha256 &&
+        evidence.facadeSha256 === contract.facadeSha256 &&
+        evidence.testSha256 === contract.testSha256 &&
+        evidence.companionTestSha256 === contract.companionTestSha256 &&
+        evidence.draftContractSha256 === contract.draftContractSha256 &&
+        evidence.draftContractCanonicalBytes === contract.draftContractCanonicalBytes &&
+        evidence.tabsEditorContractSha256 === contract.tabsEditorContractSha256 &&
+        evidence.expandedTestCount === contract.expectedExpandedTestCount &&
+        evidence.companionExpandedTestCount === contract.expectedCompanionExpandedTestCount,
+    },
+    {
+      label: "active proof rejects reset, read, key, and state-shape mutations",
+      pass: rejectedOwnerMutationCount === rejectedOwnerMutations.length,
+    },
+    {
+      label: "active proof requires all three behavior test names",
+      pass: rejectedTestMutationCount === contract.requiredTests.length,
+    },
+    {
+      label: "active proof rejects comment-shadowed skipped tests",
+      pass: shadowSkipRejected,
+    },
+    {
+      label: "active proof binds Vitest authority to exact unaliased runtime imports",
+      pass: shadowedImportRejected,
+    },
+    {
+      label: "active proof rejects false-and-test and describe-skip registration bypasses",
+      pass: deadConditionalRejected && skippedDescribeRejected,
+    },
+    {
+      label: "active proof pins all runnable callback behavior ASTs",
+      pass: callbackMutationRejected,
+    },
+    {
+      label: "active proof pins exact 17 plus 18 expanded test cardinality",
+      pass: cardinalityMutationsRejected === 2,
+    },
+    {
+      label: "active proof pins TabsEditor facade binding-GC wiring",
+      pass: facadeWiringRejected,
+    },
+    {
+      label: "active proof ignores comments but rejects live facade symbols",
+      pass:
+        commentOnlyAnalysis.draftContractSha256 === contract.draftContractSha256 &&
+        commentOnlyAnalysis.tabsEditorContractSha256 === contract.tabsEditorContractSha256 &&
+        facadeSymbolRejected,
+    },
+  ];
+  for (const testCase of cases) {
+    if (!testCase.pass) {
+      throw new Error("TASK-540 Screen Tab label self-test failed: " + testCase.label);
     }
   }
   return cases.length;
@@ -12166,12 +20618,6 @@ const closureEvidenceOwner = Object.freeze({
   allowedFiles: Object.freeze(["_docs/_CHANGELOG/README.md", CHANGELOG_REL]),
   requiredFiles: Object.freeze([]),
   changelogIndexMutation: "evidence",
-});
-const closureRepairAuthorizationOwner = Object.freeze({
-  id: "540-06-L01-repair-authorization",
-  allowedFiles: Object.freeze(["_docs/_CHANGELOG/README.md"]),
-  requiredFiles: Object.freeze([]),
-  changelogIndexMutation: "anchor-only",
 });
 const closureAnchorRollbackOwner = Object.freeze({
   id: "540-06-L01-anchor-rollback",
@@ -12976,8 +21422,7 @@ async function setClosurePendingState(label, generation = closureGeneration) {
       throw new Error("TASK-540 closure-pending board row/statistics mismatch");
     }
     await requireDeferredLowFollowUpContracts(
-      "TASK-540 closure-pending board verification " + label,
-      { requireFinalEvidence: true }
+      "TASK-540 closure-pending board verification " + label
     );
     await readSharedClosurePending({ required: true });
     persistedPendingProjection = await captureExactPendingClosureProjection(
@@ -13011,9 +21456,7 @@ async function setClosurePendingState(label, generation = closureGeneration) {
 }
 
 function readExactTaskTableRow(source, taskId, label) {
-  const rows = source.split("\n").filter((line) => line.startsWith("| TASK-" + taskId + " |"));
-  if (rows.length !== 1) throw new Error(label + ": expected one TASK-" + taskId + " row");
-  return rows[0];
+  return readCanonicalTaskStatusTableRow(source, taskId, label).line;
 }
 
 function requireBoardRowMarker(board, label) {
@@ -13251,22 +21694,13 @@ async function verifyClosureState(evidenceHash, generation, entryGraph = null) {
   ) {
     throw new Error("TASK-540 board row/statistics mismatch after closure");
   }
-  await requireDeferredLowFollowUpContracts("TASK-540 closed board verification", {
-    requireFinalEvidence: true,
-  });
+  await requireDeferredLowFollowUpContracts("TASK-540 closed board verification");
   await requireTask540ChangelogIndex();
 }
 
 async function runClosure(smoke, fullValidation, label, findings = []) {
   phase("Closure");
   await requireDeferredLowFollowUpContracts("TASK-540 closure entry " + label);
-  const finalizedDeferredLowFollowUps = await finalizeDeferredLowSourceEvidence(
-    "TASK-540 closure entry " + label
-  );
-  await requireDeferredLowFollowUpContracts("TASK-540 finalized closure entry " + label, {
-    followUps: finalizedDeferredLowFollowUps,
-    requireFinalEvidence: true,
-  });
   const sourceOwnerTestHashesBefore = requireSourceOwnerTestHashBoundary(
     "TASK-540 closure " + label
   );
@@ -13850,7 +22284,6 @@ async function runFinalAudit(round) {
   const partition = partitionDeferredLowFindings(findings, deferredLowFollowUps);
   await requireDeferredLowFollowUpContracts("TASK-540 final drift round " + round, {
     followUps: deferredLowFollowUps,
-    requireFinalEvidence: true,
   });
   return partition.blockingFindings;
 }
@@ -14346,6 +22779,160 @@ async function assertTask540LocalCommandRunnerContract() {
     JSON.stringify(observedBunEnvironment.parent) === JSON.stringify(expectedLiveEnvironmentKeys) &&
     JSON.stringify(observedBunEnvironment.child) === JSON.stringify(expectedLiveEnvironmentKeys);
 
+  const makeSmokeBaselineSelfTestReceipt = ({
+    authorityLabel,
+    id,
+    status = 0,
+    stderrText = "",
+    stdoutText,
+  }) => {
+    const stdout = Buffer.from(stdoutText, "utf8");
+    const stderr = Buffer.from(stderrText, "utf8");
+    const receipt = {
+      id,
+      status,
+      stdoutBytes: stdout.length,
+      stderrBytes: stderr.length,
+      stdoutSha256: createHash("sha256").update(stdout).digest("hex"),
+      stderrSha256: createHash("sha256").update(stderr).digest("hex"),
+      stdoutTruncated: false,
+      stderrTruncated: false,
+    };
+    LOCAL_COMMAND_AUTHORITY.set(
+      receipt,
+      Object.freeze({
+        label: authorityLabel,
+        stdout,
+        stderr,
+        containsSensitiveOutput: false,
+        spawnError: false,
+      })
+    );
+    return Object.freeze(receipt);
+  };
+  const smokeBaselineSelfTestLabel = label + ":smoke-baseline";
+  const smokeBaselineHash = "a".repeat(64);
+  const smokeBaselineOtherHash = "b".repeat(64);
+  const smokeBaselineStdout = JSON.stringify({ baselineSha256: smokeBaselineHash });
+  const makeSmokeBaselinePairReceipt = (id, stdoutText = smokeBaselineStdout) =>
+    makeSmokeBaselineSelfTestReceipt({
+      authorityLabel: smokeBaselineSelfTestLabel + ":" + id,
+      id,
+      stdoutText,
+    });
+  const smokeBaselineBeforeReceipt = makeSmokeBaselinePairReceipt("smokeBaselineBeforeFullTest");
+  const smokeBaselineAfterReceipt = makeSmokeBaselinePairReceipt("smokeBaselineAfterFullGate");
+  const settingsBaselineBeforeReceipt = makeSmokeBaselinePairReceipt(
+    "settingsBaselineBeforeHygiene"
+  );
+  const settingsBaselineAfterReceipt = makeSmokeBaselinePairReceipt("settingsBaselineAfterHygiene");
+  const smokeBaselinePositivePass =
+    parseSmokeBaselineProbeReceipt(
+      smokeBaselineBeforeReceipt,
+      smokeBaselineSelfTestLabel + ":smokeBaselineBeforeFullTest"
+    ) === smokeBaselineHash &&
+    smokeBaselineUnchanged(
+      [smokeBaselineBeforeReceipt, smokeBaselineAfterReceipt],
+      smokeBaselineSelfTestLabel
+    ) &&
+    settingsHygieneBaselineUnchanged(
+      [settingsBaselineBeforeReceipt, settingsBaselineAfterReceipt],
+      smokeBaselineSelfTestLabel
+    );
+  const smokeBaselineMismatchPass =
+    smokeBaselineUnchanged(
+      [
+        smokeBaselineBeforeReceipt,
+        makeSmokeBaselinePairReceipt(
+          "smokeBaselineAfterFullGate",
+          JSON.stringify({ baselineSha256: smokeBaselineOtherHash })
+        ),
+      ],
+      smokeBaselineSelfTestLabel
+    ) === false &&
+    smokeBaselineUnchanged([smokeBaselineBeforeReceipt], smokeBaselineSelfTestLabel) === false &&
+    settingsHygieneBaselineUnchanged(
+      [
+        settingsBaselineBeforeReceipt,
+        makeSmokeBaselinePairReceipt(
+          "settingsBaselineAfterHygiene",
+          JSON.stringify({ baselineSha256: smokeBaselineOtherHash })
+        ),
+      ],
+      smokeBaselineSelfTestLabel
+    ) === false;
+  const smokeBaselineRejects = (authorityLabel, options) => {
+    let rejected = false;
+    try {
+      parseSmokeBaselineProbeReceipt(
+        makeSmokeBaselineSelfTestReceipt({
+          authorityLabel,
+          id: "smokeBaselineBeforeFullTest",
+          ...options,
+        }),
+        authorityLabel
+      );
+    } catch {
+      rejected = true;
+    }
+    return rejected;
+  };
+  const smokeBaselineNegativePass = [
+    smokeBaselineRejects(smokeBaselineSelfTestLabel + ":invalid-json", {
+      stdoutText: "not-json",
+    }),
+    smokeBaselineRejects(smokeBaselineSelfTestLabel + ":unknown-field", {
+      stdoutText: JSON.stringify({ baselineSha256: smokeBaselineHash, unexpected: true }),
+    }),
+    smokeBaselineRejects(smokeBaselineSelfTestLabel + ":invalid-hash", {
+      stdoutText: JSON.stringify({ baselineSha256: "not-a-hash" }),
+    }),
+    smokeBaselineRejects(smokeBaselineSelfTestLabel + ":stderr", {
+      stderrText: "unexpected stderr",
+      stdoutText: smokeBaselineStdout,
+    }),
+    smokeBaselineRejects(smokeBaselineSelfTestLabel + ":status", {
+      status: 1,
+      stdoutText: smokeBaselineStdout,
+    }),
+  ].every(Boolean);
+  const smokeBaselineProbeContractPass =
+    smokeBaselinePositivePass && smokeBaselineMismatchPass && smokeBaselineNegativePass;
+
+  const fullTestIndex = FULL_GATE_COMMANDS.findIndex(({ id }) => id === "fullTest");
+  const fullValidationOutputLimitFixture = Object.freeze({
+    pass: false,
+    summary: "synthetic full-validation output limit",
+    errors: Object.freeze(["synthetic full-validation output limit"]),
+    commands: FULL_GATE_COMMANDS.slice(0, fullTestIndex + 1).map((spec) =>
+      Object.freeze({
+        id: spec.id === "fullTest" ? "untrusted-receipt-id" : spec.id,
+        command: spec.command,
+        status: spec.id === "fullTest" ? 125 : 0,
+        timedOut: false,
+        outputLimitExceeded: spec.id === "fullTest",
+        repository: Object.freeze({ unchanged: true }),
+      })
+    ),
+    database: Object.freeze({ configured: true, reachable: true, selectOne: 1 }),
+  });
+  const expectedFullValidationFailureDetail =
+    "id=fullTest,status=125,timedOut=false,outputLimitExceeded=true,repositoryUnchanged=true";
+  let fullValidationFailureMessagePass = false;
+  try {
+    requireFullValidation(fullValidationOutputLimitFixture, "synthetic-full-validation");
+  } catch (error) {
+    fullValidationFailureMessagePass =
+      error instanceof Error &&
+      error.message ===
+        "synthetic-full-validation: full command receipt mismatch (" +
+          expectedFullValidationFailureDetail +
+          ")";
+  }
+  const fullValidationFailureDetailPass =
+    fullValidationMismatchDetail(fullValidationOutputLimitFixture) ===
+      expectedFullValidationFailureDetail && fullValidationFailureMessagePass;
+
   const source = await readFile(WORKFLOW, "utf8");
   const noAgentOutputProjection = [
     "failure" + "Projection",
@@ -14353,33 +22940,46 @@ async function assertTask540LocalCommandRunnerContract() {
     "stderr" + "Excerpt",
   ].every((token) => !source.includes(token));
   const grounded = await repoContext();
+  const groundedSerialized = JSON.stringify(grounded);
+  const groundedManifest = grounded.changeManifest;
   const groundedContextPass =
-    typeof grounded.diffPatch === "string" &&
-    Array.isArray(grounded.taskStatuses) &&
-    grounded.taskStatuses.length === TASK_FILES.length &&
-    grounded.taskStatuses.every(
-      ({ file, status }) => TASK_FILES.includes(file) && typeof status === "string"
-    ) &&
-    Array.isArray(grounded.untrackedFiles) &&
-    grounded.untrackedFiles.every((entry) => {
-      if (
-        typeof entry.path !== "string" ||
-        typeof entry.kind !== "string" ||
-        !Number.isSafeInteger(entry.byteLength) ||
-        !/^[0-9a-f]{64}$/.test(entry.sha256)
-      ) {
-        return false;
-      }
-      if (entry.kind === "text") return typeof entry.content === "string";
-      if (entry.kind === "binary") return !Object.hasOwn(entry, "content");
-      if (entry.kind === "symlink") return typeof entry.target === "string";
-      return false;
-    });
+    grounded.root === ROOT &&
+    requireGroundedChangeManifest(groundedManifest, label) === groundedManifest &&
+    groundedManifest.taskStatuses.length === TASK_FILES.length &&
+    groundedManifest.records.length > 0 &&
+    Buffer.byteLength(groundedSerialized, "utf8") <= MAX_GROUNDED_CONTEXT_BYTES &&
+    !groundedSerialized.includes('"diffPatch"') &&
+    !groundedSerialized.includes('"content"') &&
+    !groundedSerialized.includes('"target"');
+  groundedManifestSelfTestDiagnostic = await assertGroundedChangeManifestContract(grounded);
   const sensitiveGroundedPathPass =
     isSensitiveGroundedPath(".envrc") &&
     isSensitiveGroundedPath("nested/.git/config") &&
     isSensitiveGroundedPath("artifacts/session-token.bin") &&
     !isSensitiveGroundedPath("_docs/_workflows/task-540-local-orchestrator.mjs");
+  const declaredSensitiveGroundedPathPass =
+    isDeclaredTask540GroundedPath(
+      "core/admin/ui/custom-screens/CustomScreenEntryRouteSession.tsx"
+    ) &&
+    isDeclaredTask540GroundedPath(
+      "core/admin/ui/custom-screens/CustomScreenEditorRouteSession.tsx"
+    ) &&
+    isSensitiveGroundedPath("core/admin/ui/custom-screens/CustomScreenEntryRouteSession.tsx") &&
+    !isUnsafeGroundedRepositoryPath(
+      "core/admin/ui/custom-screens/CustomScreenEntryRouteSession.tsx"
+    ) &&
+    !isUnsafeGroundedRepositoryPath(
+      "core/admin/ui/custom-screens/CustomScreenEditorRouteSession.tsx"
+    ) &&
+    isUnsafeGroundedRepositoryPathWithDeclaration(
+      "core/admin/ui/custom-screens/CustomScreenEntryRouteSession.tsx",
+      false
+    ) &&
+    isUnsafeGroundedRepositoryPathWithDeclaration(".env.local", true) &&
+    isUnsafeGroundedRepositoryPathWithDeclaration("nested/.git/config", true) &&
+    isUnsafeGroundedRepositoryPathWithDeclaration("artifacts/session-token.bin", true) &&
+    isUnsafeGroundedRepositoryPath("artifacts/session-token.bin") &&
+    !isDeclaredTask540GroundedPath("artifacts/session-token.bin");
   const rootSensitiveEnvironmentNamePass =
     [
       ".env",
@@ -14517,9 +23117,13 @@ async function assertTask540LocalCommandRunnerContract() {
       liveEnvironmentPass,
     ],
     ["live-nested-bun-environment", liveNestedBunEnvironmentPass],
+    ["smoke-baseline-probe-contract", smokeBaselineProbeContractPass],
+    ["full-validation-failure-detail", fullValidationFailureDetailPass],
     ["no-agent-output", noAgentOutputProjection],
     ["grounded-context", groundedContextPass],
+    ["grounded-manifest-regressions", groundedManifestSelfTestDiagnostic.cases === 35],
     ["sensitive-grounded-path", sensitiveGroundedPathPass],
+    ["declared-sensitive-grounded-path", declaredSensitiveGroundedPathPass],
     ["root-sensitive-environment-name", rootSensitiveEnvironmentNamePass],
     ["unsafe-root-sensitive-environment-name", unsafeRootSensitiveEnvironmentNameRejected],
     [
@@ -14538,28 +23142,20 @@ async function assertTask540LocalCommandRunnerContract() {
 
 const TASK540_LOCAL_ORCHESTRATOR_IMPORTS = Object.freeze([
   "node:child_process",
-  "node:crypto",
-  "node:fs",
   "node:fs/promises",
-  "node:util",
-  "typescript",
-  "./task-540-smoke-contract.mjs",
+  "node:url",
 ]);
 const TASK540_LOCAL_ORCHESTRATOR_IMPORT_BINDINGS = Object.freeze([
-  "{execFile,spawn}",
-  "{createHash,randomUUID}",
-  "{constantsasFS_CONSTANTS}",
-  "{lstat,open,readFile,readdir,readlink,realpath,rename,unlink,}",
-  "{parseEnv,promisify}",
-  "{defaultasts}",
-  "{buildTask540SmokePlan}",
+  "{spawn}",
+  "{readFile,readdir}",
+  "{pathToFileURL}",
 ]);
 
 function requireTask540LocalOrchestratorEntrypointSource(source, label) {
-  if (!source.startsWith("export const meta = {")) {
-    throw new Error(label + ": meta must remain the first local-orchestrator statement");
+  if (!source.startsWith('import { spawn } from "node:child_process";')) {
+    throw new Error(label + ": imports must remain the first local-orchestrator statements");
   }
-  const entrypointEnd = source.indexOf("const execFileAsync = promisify(execFile);");
+  const entrypointEnd = source.indexOf('const ROOT = "/home/coder/project/Coderso";');
   if (entrypointEnd <= 0) {
     throw new Error(label + ": local-orchestrator entrypoint boundary is missing");
   }
@@ -14577,51 +23173,42 @@ function requireTask540LocalOrchestratorEntrypointSource(source, label) {
   ) {
     throw new Error(label + ": local-orchestrator static import contract drifted");
   }
-  const runtimeBoundaryEnd = source.indexOf(
-    "const TASK540_LOCAL_ORCHESTRATOR_IMPORTS = Object.freeze(["
-  );
-  const runtimePrefix = source.slice(entrypointEnd, runtimeBoundaryEnd);
-  const dynamicImports = [...runtimePrefix.matchAll(/\bimport\s*\(\s*["']([^"']+)["']\s*\)/g)].map(
-    (match) => match[1]
-  );
+  const dynamicImports = source.match(/\bimport\s*\(/gu) ?? [];
   if (
-    runtimeBoundaryEnd <= entrypointEnd ||
-    JSON.stringify(dynamicImports) !== JSON.stringify(["./task-540-smoke-executor.mjs"])
+    dynamicImports.length !== 1 ||
+    source.split("await import(pathToFileURL(IMPLEMENTER).href);").length - 1 !== 1
   ) {
-    throw new Error(label + ": frozen smoke executor dynamic import contract drifted");
+    throw new Error(label + ": frozen implementer dynamic import contract drifted");
   }
 }
 
 async function assertTask540LocalOrchestratorEntrypointContract() {
-  const source = await readFile(WORKFLOW, "utf8");
+  const source = await readFile(ROOT + "/" + LOCAL_ORCHESTRATOR_WORKFLOW_REL, "utf8");
   requireTask540LocalOrchestratorEntrypointSource(source, "TASK-540 local entrypoint");
   const mutations = [
     source.replace(
-      'import { execFile, spawn } from "node:child_process";',
-      'import { execFile, spawn } from "node:path";'
+      'import { spawn } from "node:child_process";',
+      'import { spawn } from "node:path";'
     ),
     source.replace(
-      "const execFileAsync = promisify(execFile);",
-      'import { resolve } from "node:path";\nconst execFileAsync = promisify(execFile);'
+      'const ROOT = "/home/coder/project/Coderso";',
+      'import { resolve } from "node:path";\nconst ROOT = "/home/coder/project/Coderso";'
     ),
     source.replace(
-      "const execFileAsync = promisify(execFile);",
-      'await import ("node:path");\nconst execFileAsync = promisify(execFile);'
+      'const ROOT = "/home/coder/project/Coderso";',
+      'await import ("node:path");\nconst ROOT = "/home/coder/project/Coderso";'
     ),
     source.replace(
-      "const execFileAsync = promisify(execFile);",
-      'const seventh = import("node:path");\nconst execFileAsync = promisify(execFile);'
+      'const ROOT = "/home/coder/project/Coderso";',
+      'const fourth = import("node:path");\nconst ROOT = "/home/coder/project/Coderso";'
+    ),
+    source.replace('from "node:url";', 'from "node:url-copy";'),
+    source.replace(
+      "await import(pathToFileURL(IMPLEMENTER).href);",
+      "await import(pathToFileURL(IMPLEMENTER + '-copy').href);"
     ),
     source.replace(
-      'from "./task-540-smoke-contract.mjs";',
-      'from "./task-540-smoke-contract-copy.mjs";'
-    ),
-    source.replace(
-      'await import("./task-540-smoke-executor.mjs")',
-      'await import("./task-540-smoke-executor-copy.mjs")'
-    ),
-    source.replace(
-      'import { execFile, spawn } from "node:child_process";',
+      'import { spawn } from "node:child_process";',
       'import { execFile } from "node:child_process";'
     ),
     "\n" + source,
@@ -14643,26 +23230,25 @@ async function assertTask540LocalOrchestratorEntrypointContract() {
   return mutations.length + 1;
 }
 
+const interruptedReopenRecoveryRequested = process.argv
+  .slice(2)
+  .some((value) => value.startsWith("--recover-interrupted-reopen"));
+if (interruptedReopenRecoveryRequested) {
+  parseInterruptedReopenRecoveryArgv(process.argv.slice(2));
+  const recovery = await recoverInterruptedReopen54001L01();
+  process.stdout.write(JSON.stringify(recovery));
+  process.exit(0);
+}
+
 if (process.argv.includes("--self-test-file-line-limit")) {
   const cases = await assertTask540TouchedModuleLineLimitContract();
   process.stdout.write(JSON.stringify({ pass: true, cases }));
   process.exit(0);
 }
 
-if (process.argv.includes("--check-deferred-low-draft-contract")) {
-  const followUps = await resolveDeferredLowFollowUps("TASK-540 deferred LOW draft gate");
-  const draft = followUps[DEFERRED_LOW_DRAFT_AREA];
-  if (!draft) throw new Error("TASK-540 deferred LOW draft gate has no resolved authority");
-  process.stdout.write(
-    JSON.stringify({
-      pass: true,
-      state: draft.evidenceState,
-      path: draft.evidenceAnchors[0].replace(/:[0-9]+$/u, ""),
-      anchors: draft.evidenceAnchors,
-      sourceSha256: draft.sourceSha256,
-      draftContractSha256: draft.anchorTransition.draftContractSha256,
-    })
-  );
+if (process.argv.includes("--check-screen-tab-label-draft-contract")) {
+  const evidence = await requireScreenTabLabelDraftContract("TASK-540 Screen Tab label draft gate");
+  process.stdout.write(JSON.stringify({ pass: true, ...evidence }));
   process.exit(0);
 }
 
@@ -14693,10 +23279,27 @@ if (process.argv.includes("--check-task-family-line-limit")) {
   process.exit(0);
 }
 
+if (process.argv.includes("--check-l02-assistant-split")) {
+  const evidence = await requireL02AssistantSplitContract("TASK-540 L02 Assistant split gate");
+  process.stdout.write(JSON.stringify(evidence));
+  process.exit(0);
+}
+
+if (process.argv.includes("--check-l04-page-split")) {
+  const evidence = await requireL04PageSplitContract("TASK-540 L04 page split gate");
+  process.stdout.write(JSON.stringify(evidence));
+  process.exit(0);
+}
+
 if (process.argv.includes("--self-test-repair-siblings")) {
   await captureInitialGitIndexBaseline("TASK-540 repair self-test initial Git index baseline");
   const localOrchestratorEntrypointCases = await assertTask540LocalOrchestratorEntrypointContract();
   const localCommandRunnerCases = await assertTask540LocalCommandRunnerContract();
+  const taskStatusTableCases = assertTask540TaskStatusTableContract();
+  const statusTransitionIsolationCases = assertTask540StatusTransitionIsolationContract();
+  const repairReopenIsolationCases = assertTask540RepairReopenIsolationContract();
+  const interruptedReopenRecoveryCases = await assertTask540InterruptedReopenRecoveryContract();
+  const repairReopenTransactionCases = await assertTask540RepairReopenTransactionContract();
   const cases = assertTask540RepairSiblingStateContract();
   const reservedPreClosureSourceRepairCases =
     assertTask540ReservedPreClosureRegatedSourceRepairContract();
@@ -14715,14 +23318,23 @@ if (process.argv.includes("--self-test-repair-siblings")) {
   const exactRollbackResidualCases = assertTask540ExactRollbackResidualContract();
   const touchedModuleLineLimitCases = await assertTask540TouchedModuleLineLimitContract();
   const modularityRepairCases = assertTask540ModularityRepairContract();
+  const l02AssistantSplitVerifierCases = await assertL02AssistantSplitVerifierContract();
+  const l04PageSplitVerifierCases = await assertL04PageSplitVerifierContract();
   const sequentialAuditDispatchCases = await assertTask540SequentialAuditDispatchContract();
   const auditInterventionCases = assertTask540AuditInterventionContract();
   const deferredLowCases = await assertTask540DeferredLowContract();
+  const screenTabLabelDraftCases = await assertScreenTabLabelDraftContract();
   process.stdout.write(
     JSON.stringify({
       pass: true,
       localOrchestratorEntrypointCases,
       localCommandRunnerCases,
+      groundedManifestSelfTestDiagnostic,
+      taskStatusTableCases,
+      statusTransitionIsolationCases,
+      repairReopenIsolationCases,
+      interruptedReopenRecoveryCases,
+      repairReopenTransactionCases,
       cases,
       reservedPreClosureSourceRepairCases,
       l03RepairCases,
@@ -14740,9 +23352,12 @@ if (process.argv.includes("--self-test-repair-siblings")) {
       exactRollbackResidualCases,
       touchedModuleLineLimitCases,
       modularityRepairCases,
+      l02AssistantSplitVerifierCases,
+      l04PageSplitVerifierCases,
       sequentialAuditDispatchCases,
       auditInterventionCases,
       deferredLowCases,
+      screenTabLabelDraftCases,
     })
   );
   process.exit(0);
@@ -14774,20 +23389,20 @@ if (currentResumeSelfTest) {
   }
   if (
     expectedMode === "repair" &&
-    (currentResume.startLeafId !== "540-04-L03" ||
-      currentResume.repair?.id !== "540-04-L03" ||
-      JSON.stringify(currentResume.remainingLeafIds) !== JSON.stringify(["540-04-L03"]) ||
-      JSON.stringify(currentResume.landedLeafIds) !==
-        JSON.stringify([
-          "540-01-L01",
-          "540-02-L01",
-          "540-03-L01",
-          "540-04-L01",
-          "540-04-L02",
-          "540-04-L04",
-          "540-05-L01",
-          "540-05-L02",
-        ]))
+    (() => {
+      const repairId = currentResume.repair?.id ?? null;
+      const reservedSibling = currentResume.reservedPreClosureRegatedSibling;
+      return (
+        repairId === null ||
+        currentResume.startLeafId !== repairId ||
+        JSON.stringify(currentResume.remainingLeafIds) !== JSON.stringify([repairId]) ||
+        JSON.stringify(currentResume.landedLeafIds) !==
+          JSON.stringify(LEAF_ORDER.filter((leafId) => leafId !== repairId)) ||
+        (repairId !== "540-06-L01" &&
+          (reservedSibling === null ||
+            reservedSibling.gateValue !== preClosureRegateValue(reservedSibling.fixStartedDate)))
+      );
+    })()
   ) {
     throw new Error("TASK-540 current-resume repair cursor is not exact");
   }
@@ -14909,7 +23524,9 @@ try {
       "Do not edit.",
     { label: "start-gate:540", phase: "Start gate", schema: RESULT_SCHEMA }
   );
-  if (!resultPassed(startGate)) throw new Error("TASK-540 start gate failed");
+  if (!resultPassed(startGate)) {
+    throw new Error("TASK-540 start gate failed: " + startGate.errors.join("; "));
+  }
 
   const verifiedResumeState = await resolveLeafResumeState();
   const verifiedChangelogResumeState = await resolveChangelogResumeState(verifiedResumeState);

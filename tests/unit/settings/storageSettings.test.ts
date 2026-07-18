@@ -3,16 +3,19 @@ import { inArray, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
 import { settings } from "../../../core/db/schema";
+import { resetMediaStorageAdapterCache } from "../../../core/services/media/storage";
 import {
   getStorageSettingRecord,
   getStorageSettings,
   getStorageSettingsInternal,
+  resetStorageSettingsCache,
   setStorageSettings,
 } from "../../../core/services/settings/storageSettings";
 import { isEncryptedSecret } from "../../../core/services/security/secretStore";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
+const dbTestTimeoutMs = 15_000;
 
 async function canConnect() {
   try {
@@ -44,20 +47,51 @@ const storageKeys = [
   "storage.azure.connectionString",
 ];
 
+type SettingRow = typeof settings.$inferSelect;
+
+let storageRowsBeforeSuite: SettingRow[] = [];
+let storageRowsSnapshotCaptured = false;
+
 beforeAll(async () => {
+  if (hasDb) {
+    const rows = await db.select().from(settings).where(inArray(settings.key, storageKeys));
+    storageRowsBeforeSuite = rows.map((row) => ({
+      ...row,
+      value: structuredClone(row.value),
+      updatedAt: new Date(row.updatedAt.getTime()),
+    }));
+    storageRowsSnapshotCaptured = true;
+  }
+
   process.env.MEDIA_SECRET_MASTER_KEY = testKey;
-});
+  resetStorageSettingsCache();
+  resetMediaStorageAdapterCache();
+}, dbTestTimeoutMs);
 
 afterAll(async () => {
-  if (hasDb) {
-    await db.delete(settings).where(inArray(settings.key, storageKeys));
+  try {
+    if (hasDb && storageRowsSnapshotCaptured) {
+      try {
+        await db.transaction(async (tx) => {
+          await tx.delete(settings).where(inArray(settings.key, storageKeys));
+          if (storageRowsBeforeSuite.length > 0) {
+            await tx.insert(settings).values(storageRowsBeforeSuite);
+          }
+        });
+      } catch {
+        throw new Error("storage_settings_test_restore_failed");
+      }
+    }
+  } finally {
+    if (previousKey === undefined) {
+      delete process.env.MEDIA_SECRET_MASTER_KEY;
+    } else {
+      process.env.MEDIA_SECRET_MASTER_KEY = previousKey;
+    }
+    resetStorageSettingsCache();
+    resetMediaStorageAdapterCache();
   }
-  if (previousKey === undefined) {
-    delete process.env.MEDIA_SECRET_MASTER_KEY;
-  } else {
-    process.env.MEDIA_SECRET_MASTER_KEY = previousKey;
-  }
-});
+}, dbTestTimeoutMs);
 
 testIfDb("setStorageSettings encrypts secrets and returns masked values", async () => {
   await setStorageSettings({

@@ -485,7 +485,7 @@ describe("TASK-540 aggregate builder, persistence, and entry seams", () => {
       );
       expect(hrefBindings).toEqual([
         {
-          id: "button-1-href",
+          id: "button-1-href-0fithhb61p0wq",
           blockId: "button-1",
           propPath: "href",
           source: "entry",

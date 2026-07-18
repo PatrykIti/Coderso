@@ -12,7 +12,7 @@
 **Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Repair Reason:** Final post-audit closed two proof gaps without changing product behavior: L01 makes the labelled Canvas region name a required prop, and L02 re-reads both authenticated users after distinct writes and asserts both exact DB rows.
 **Corrective Revalidation:** 2026-07-16 — against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus the dirty owner paths named by L01/L02, core/root static gates passed; L01 exact Vitest passed 16/16; L02 exact Vitest passed 66/66; reachable DB preflight and the exact Bun matrix passed 27/27 with 165 expectations; isolated user-settings routes passed 10/10 with 64 expectations; and `git diff --check` passed.
-**Modularity Repair Pending:** 2026-07-16 — after TASK-540-04-L03/L04 land their extracted editor owners, L01 must extend the sole authoring-boundary test to the final module graph. L02 owns the two remaining over-limit tests in this child: 1,064-line `userSettings.test.ts` and 1,506-line `assistant-panel-interaction.test.tsx`. Verified scope begins at pre-family baseline `e5f15a5675b58df85e573f760df4429af735400f`; the exact boundary → L02 order and fresh hard gates are required before changelog 1252 may close this child.
+**Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
 **Previous Completion:** 2026-07-14
 **Reopened:** 2026-07-16
 **Changelog:** 1252 (pinned; closure only)
@@ -42,22 +42,22 @@ work with both default and already-persisted security settings.
 | TASK-540-05-L01 | Keep Screen canvas usable and ARIA-valid | `ScreenAuthoringCanvas.tsx`, `CanvasEditor.tsx` | 🚧 In Progress |
 | TASK-540-05-L02 | Scope Screen preferences through user settings | exact Bun-free preference/auth-identity contracts + route-persistent auth provider + user-settings service/client/route + Screen hook + narrow central HTTP error mapping + cohesive Bun access-log and Assistant-panel test splits/support | 🚧 In Progress |
 
-## Mandatory child modularity sequence
+## Completed child modularity sequence
 
-TASK-540-05-L01 has no over-limit file; it is nevertheless a blocking boundary owner.
-After TASK-540-04-L03 and L04 land, it alone updates
+TASK-540-05-L01 had no over-limit file but remained the blocking boundary owner. After
+TASK-540-04-L03 and L04 landed, it alone updated
 `custom-screen-authoring-boundary.test.ts` to enumerate the final Entry Editor and
-Screen Builder modules and proves their forbidden-import contract. Only then may L02
-split its tests.
+Screen Builder modules and proved their forbidden-import contract. L02 then split and
+gated its tests, preserving the required L01 → L02 dependency order.
 
-The current exact L02 blocker evidence is:
+The exact historical pre-split L02 blocker evidence remains provenance:
 
 | Path | Lines | SHA-256 |
 |---|---:|---|
 | `tests/integration/routes/userSettings.test.ts` | 1,064 | `c3f70ae3d795367dae66b503d618a8c16587a49114883ba455000074c3c86601` |
 | `tests/vitest/ui/assistant-panel-interaction.test.tsx` | 1,506 | `bae04840eb4aa25cbaa02a6c59d8cee121afff8d817ff30136b746313c325095` |
 
-The final L02 receipt covers the retained and extracted test/support paths as
+The current L02 receipt covers the retained and extracted test/support paths as
 `{ path, owner, lines, sha256 }`, with every human-authored file `<= 1000`; the full
 baseline history survives staging and intermediate commits. The user-settings pair
 preserves exactly 10 expanded names, while the Assistant panel pair preserves exactly
@@ -65,9 +65,10 @@ preserves exactly 10 expanded names, while the Assistant panel pair preserves ex
 multiset. Neither a line failure nor missing/changed test proof is a LOW/TASK-9999
 candidate.
 
-## Mandatory L02 modularization gate
+## Completed L02 modularization gate
 
-Before closure, L02 splits its over-limit Bun route suite by responsibility:
+Before the closure frontier, L02 completed its over-limit Bun route-suite split by
+responsibility:
 
 - `tests/integration/routes/support/userSettingsAccessLogHarness.ts` owns the stateless
   access-log signatures, ownership predicate, stable inventory/drain/cleanup state
@@ -85,16 +86,17 @@ sessions, and users only for its exact synthetic UUID scope after quiet absence.
 singleton tracker, truncation, table-wide cleanup, prefix delete, or predicate-wide
 access-log delete is allowed.
 
-The workflow adds the new harness test to L02's exact Bun command, targeted matrix,
+The workflow added the new harness test to L02's exact Bun command, targeted matrix,
 source-owner hashes, named-file isolation, and 10-name before/after proof. The required
-Assistant support/conversation split similarly joins L02's Vitest command and exact
+Assistant support/conversation split similarly joined L02's Vitest command and exact
 13-name proof. Reconciled with every owner split, the final family matrix is exactly 64
 Vitest + 18 Bun = 82 target files, 81 source-owner/read-only tests and one closure-owner
 test. New untracked test/support paths must be explicitly owner-allowlisted rather than
 discovered broadly.
-Every added or modified production/test file receives a hard `<=1000` physical-line
-check; an over-limit result fails closure and is not eligible for TASK-9999. Changelog
-1252 must record the final split and line-count evidence.
+The final owner receipt proves every added or modified production/test file passed the
+hard `<=1000` physical-line check; closure reruns the family gate, and an over-limit
+result remains ineligible for TASK-9999. Changelog 1252 must record the final split and
+line-count evidence.
 
 ## Security Contract
 

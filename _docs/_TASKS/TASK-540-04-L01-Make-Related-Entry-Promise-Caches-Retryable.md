@@ -13,8 +13,8 @@
 **Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Fix Started:** 2026-07-14
 **Fix Reason:** Final post-audit found that independent list/detail authority can let an older detail shrink or stale a newer full entry list.
-**Modularity Repair Pending:** 2026-07-17 — measured from family baseline `e5f15a567`, the touched `entriesClient.test.ts` grew from 758 to 1,893 physical lines. The hard 1,000-line gate requires the exact harness plus three-suite partition below before closure; the production clients and media suite remain below the limit.
-**Current Repair State:** Cache behavior is implemented and its recorded `Revalidation Passed` remains historical pre-split evidence. After the harness and all three Entries suites pass independent counts, combined 42/42, the unchanged Media 23/23, static, line, and drift gates, remove the single `Modularity Repair Pending` field and replace it with one `Modularity Repair Revalidated` receipt; the fields must never coexist.
+**Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
+**Current Repair State:** Cache behavior and the test-only cohesive split are implemented. The harness and three Entries suites passed independently at 19/19, 15/15, and 8/8; unchanged Media passed 23/23; the combined gate passed 65/65; and exact fingerprints, static, line, isolation, and drift gates passed. Full family post-audit and runtime smoke remain later closure gates.
 **Revalidation Passed:** 2026-07-14 — historical pre-modularity evidence: `core lint:types`, `core lint`, the exact Entries/Media client Vitest matrix (65/65), and `git diff --check`
 **Post-Audit:** 2026-07-14 — PASS; zero HIGH, MEDIUM, or LOW findings on the corrected working tree
 **Previous Revalidation:** 2026-07-14 — `core lint:types`, `core lint`, and the exact entries/media client Vitest matrix (57/57)
@@ -44,12 +44,14 @@ list-only revocation. Both apply even when the value cache is absent.
 
 The full-task line gate is anchored at `e5f15a567` and follows every touched path
 through the final working tree; staging and intermediate commits do not reset it. The
-verified baseline→current line evidence is `entriesClient.ts` 463→751,
+verified baseline→pre-split line evidence was `entriesClient.ts` 463→751,
 `mediaClient.ts` 266→278, `entriesClient.test.ts` 758→1,893, and
-`mediaClient.test.ts` 563→935. Only the Entries suite is over the hard limit, but all
-four touched files remain in the final count.
+`mediaClient.test.ts` 563→935. The completed split finishes at 734/542/588/99 lines for
+the retained/read-authority/mutation/harness owners, while the read-only production
+clients and Media suite remain 751/278/935. Every owned path is below its declared
+budget and the hard limit.
 
-Move complete test declarations into these exact independently runnable Vitest owners:
+Complete test declarations moved into these exact independently runnable Vitest owners:
 
 | Owner | Exact expanded pre-split positions and responsibility | Count | Post-format budget |
 |---|---|---:|---:|
@@ -78,10 +80,10 @@ re-baseline timing/order assertions or change production fallbacks.
 This modularity failure is never a LOW/TASK-9999 candidate, and test-name/assertion or
 isolation loss is test-integrity impact. Any such drift blocks this leaf until repaired.
 
-Land in this exact order: `support/entriesClientTestHarness.ts`, retained
+The split landed in this exact order: `support/entriesClientTestHarness.ts`, retained
 `entriesClient.test.ts`, `entriesClientReadAuthority.test.ts`, then
-`entriesClientMutationReconciliation.test.ts`. Run each suite immediately after its
-move, then the unchanged Media suite and combined 65/65 gate. Production clients remain
+`entriesClientMutationReconciliation.test.ts`. Each suite passed immediately after its
+move, followed by the unchanged Media suite and combined 65/65 gate. Production clients remain
 read-only during this test-only partition unless a fresh evidence-backed behavior drift
 is verified at their sole owner.
 
@@ -430,6 +432,7 @@ loss of unrelated rows. The corrected client now uses atomic versioned list/deta
 requests and replayable typed per-item authority, including replacement-to-status
 composition. The complete cross-channel/mutation/clear matrix passed 65/65, static gates
 and diff check were green, and a fresh read-only post-audit reported zero findings for
-the pre-split tree. The modular split still requires fresh isolated/combined 65/65,
-line-count and drift evidence plus a replacement `Modularity Repair Revalidated`
-receipt.
+the pre-split tree. The modular split then preserved all 42 expanded names and 38
+declarations, passed isolated 19/15/8 plus Media 23 and combined 65/65, finished every
+owner below 1,000 lines, and passed fresh zero-finding code audits. Its exact modularity
+receipt is current; family post-audit, smoke, and closure remain pending.

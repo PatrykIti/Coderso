@@ -751,6 +751,121 @@ test("Tabs remove exactly one slot, arm the nearest remaining slot, and protect 
   }
 });
 
+test("A valid Enter rename keeps keyboard focus on the same Tab label input", () => {
+  const view = mountStatefulTabsInspector({
+    id: "tabs-1",
+    type: "tabs",
+    data: { tabs: [{ id: "tab-1", label: "Original" }] },
+    slots: { "tab-1": [] },
+  });
+  const readInput = () =>
+    view.container.querySelector('[data-screen-tab-label="tab-1"]') as HTMLInputElement | null;
+  try {
+    const inputBefore = readInput();
+    expect(inputBefore).not.toBeNull();
+    setInputValue(inputBefore!, "Renamed by keyboard");
+    expect(document.activeElement).toBe(inputBefore);
+
+    React.act(() => {
+      inputBefore?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+    expect(view.onPatchBlock).toHaveBeenLastCalledWith("tabs-1", {
+      data: { tabs: [{ id: "tab-1", label: "Renamed by keyboard" }] },
+      slots: { "tab-1": [] },
+    });
+    const inputAfter = readInput();
+    expect(inputAfter).toBe(inputBefore);
+    expect(inputAfter?.value).toBe("Renamed by keyboard");
+    // The commit-driven parent patch must not remount the focused input: a
+    // keyboard-only author keeps their place instead of being dropped to the body.
+    expect(document.activeElement).toBe(inputBefore);
+    expect(inputAfter?.getAttribute("aria-label")).toBe("Label for Renamed by keyboard");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Removing a Tab garbage-collects the bindings inside its slot subtree", () => {
+  const onPatchBlock = vi.fn();
+  const onPatchBinding = vi.fn();
+  const onArmSlotInsert = vi.fn();
+  const nestedHeading: ScreenBlockV1 = {
+    id: "nested-heading",
+    type: "heading",
+    data: { text: "Nested", level: 2, align: "left" },
+  };
+  const removedGroup: ScreenBlockV1 = {
+    id: "removed-group",
+    type: "field-group",
+    data: {},
+    slots: { content: [nestedHeading] },
+  };
+  const keptField: ScreenBlockV1 = {
+    id: "kept-field",
+    type: "field",
+    data: { label: "Kept", field: "title" },
+  };
+  const view = mountInspector({
+    selectedBlock: {
+      id: "tabs-1",
+      type: "tabs",
+      data: {
+        tabs: [
+          { id: "tab-1", label: "First" },
+          { id: "tab-2", label: "Second" },
+        ],
+      },
+      slots: { "tab-1": [removedGroup], "tab-2": [keptField] },
+    },
+    bindings: [
+      {
+        id: "binding-removed-group",
+        blockId: "removed-group",
+        propPath: "value",
+        source: "entry",
+        field: "title",
+        mode: "readwrite",
+      },
+      {
+        id: "binding-nested-heading",
+        blockId: "nested-heading",
+        propPath: "text",
+        source: "entry",
+        field: "title",
+        mode: "read",
+      },
+      {
+        id: "binding-kept-field",
+        blockId: "kept-field",
+        propPath: "value",
+        source: "entry",
+        field: "title",
+        mode: "readwrite",
+      },
+    ],
+    onPatchBlock,
+    onPatchBinding,
+    onArmSlotInsert,
+  });
+  try {
+    clickButton(view.container, "Remove First");
+    expect(onPatchBlock).toHaveBeenCalledWith("tabs-1", {
+      data: { tabs: [{ id: "tab-2", label: "Second" }] },
+      slots: { "tab-2": [keptField] },
+    });
+    // Deleting the tab deletes its whole slot subtree, so every binding pointing into
+    // it is cleared with the exact empty-field sentinel on the same gesture — no
+    // orphan binding survives for the author to resolve. Nested slot children count.
+    expect(onPatchBinding).toHaveBeenCalledWith("removed-group", "value", { field: "" });
+    expect(onPatchBinding).toHaveBeenCalledWith("nested-heading", "text", { field: "" });
+    // The surviving tab's binding is untouched.
+    expect(onPatchBinding).toHaveBeenCalledTimes(2);
+    expect(onArmSlotInsert).toHaveBeenCalledWith("tabs-1", "tab-2");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("Tabs edit-content controls arm exact slots and the maximum prevents a 25th tab", () => {
   const onPatchBlock = vi.fn();
   const onArmSlotInsert = vi.fn();

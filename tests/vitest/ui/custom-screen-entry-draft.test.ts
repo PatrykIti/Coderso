@@ -14,7 +14,7 @@ import {
 import {
   isDraftAuthorityClean,
   resolvePresentationDraftTransition,
-} from "../../../core/admin/ui/custom-screens/CustomScreenEntryEditor";
+} from "../../../core/admin/ui/custom-screens/customScreenEntryPresentation";
 import type {
   CustomScreenEditorViewDefinition,
   CustomScreenEditorViewDefinitionV4,
@@ -56,46 +56,6 @@ const contentType: ContentTypeSummary = {
   },
   createdAt: "2026-05-01T00:00:00.000Z",
   updatedAt: "2026-05-01T00:00:00.000Z",
-};
-
-const editorView: CustomScreenEditorViewDefinition = {
-  saveMode: "entry",
-  interactionMode: "inline",
-  blocks: [
-    {
-      id: "field-project-status",
-      type: "screen-field-value",
-      data: {},
-    },
-    {
-      id: "field-budget",
-      type: "screen-field-value",
-      data: {},
-    },
-  ],
-  bindings: [
-    {
-      id: "project-status-value",
-      widgetId: "field-project-status",
-      propPath: "value",
-      field: "projectStatus",
-      mode: "readwrite",
-    },
-    {
-      id: "budget-value",
-      widgetId: "field-budget",
-      propPath: "value",
-      field: "budget",
-      mode: "write",
-    },
-    {
-      id: "notes-value",
-      widgetId: "field-notes",
-      propPath: "value",
-      field: "internalNotes",
-      mode: "read",
-    },
-  ],
 };
 
 const readOnlyEditorView: CustomScreenEditorViewDefinition = {

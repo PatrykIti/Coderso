@@ -13,12 +13,26 @@
 **Status:** 🚧 In Progress
 **Started:** 2026-07-14
 **Fix Started:** 2026-07-15
-**Modularity Repair Pending:** 2026-07-16 — the AGENTS.md 1,000-physical-line hard gate invalidates the current-HEAD-only/pre-split matrix receipt. Closure consumes all eight modularity owners from verified pre-family baseline `e5f15a5675b58df85e573f760df4429af735400f`, covering the frozen 91-path manifest and historical initial inventory of 15 blockers. R01 and TASK-540-02-L01 have resolved the first three; the current mechanical gate reports exactly 12 with TASK-540-03-L01 next. Closure must still prove the 347-name split contract and exact 64-Vitest/18-Bun matrix below. Every scoped production/test/support module must be at most 1,000 lines before fresh family post-audit, full gates, runtime smoke, changelog 1252, or any Done transition.
+**Modularity Repair Revalidated:** 2026-07-17 — eight source-owner modularity repairs and their then-exact gates passed. This remains split/line evidence only and does not gate the current L03 overflow repair.
 **Implementation Complete:** 2026-07-16 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Revalidation Passed:** pre-closure remediation / fix-started 2026-07-15 / gate green
-**Source Repair Revalidated:** 2026-07-16 — the final sequential post-audit stopped before smoke on R01 whole-document stored-read collapse and ambiguous legacy IDs, L03 scalar override loss for `media.multiple`, an optional Canvas region name, incomplete A/B self-scope evidence, and one stale L04 binding-ID expectation. A fresh contract audit also found the optional-ID Assistant composer, missing stored-duplicate regression, and stale L04 provenance. All scoped source/test repairs now have exact current leaf receipts; this does not replace the next clean post-audit, full validation, final audit, or live smoke.
-**Source Repair Owner:** TASK-540-01-L01 owns its schema normalizer and regressions, registered metadata-PATCH proof, `blueprintBindingComposer.ts` plus its focused suite, and read-only action-plan/catalog consumers. TASK-540-04-L03 owns Entry Editor filtering, shared override-contract eligibility, override service activity, and its domain/UI regressions. TASK-540-04-L04 exclusively owns the test-only `custom-screen-editor-binding-flow.test.tsx` shared-helper expectation and its receipt. TASK-540-05-L01 owns only the shared Canvas semantic-panel prop and named-region suite; TASK-540-05-L02 owns only the user-settings route proof. Earlier L02/R03 repairs remain durable and unchanged.
-**Source Repair Gate Contract:** Every owner remains `🚧 In Progress`. The prior behavior owners have `Implementation Complete` and exact historical receipts. R01 and TASK-540-02-L01 have their canonical `Modularity Repair Revalidated` receipts; the six later modularity owners retain `Modularity Repair Pending`. Expanded R01's final split gate includes 76 schema, 12 document-operations, 73 Assistant-executor, and 21 route tests plus its exact static/name/line checks. TASK-540-02-L01 passes independent 15/15 and 18/18 tests, combined 33/33, 16/16 additional consumers, static/export/import/line checks, final deferred-LOW AST evidence, and its corrected-contract audit. L04 previously passed isolated binding-flow 3/3 and its ten-file matrix 98/98; L03 retains historical 258/258 and cacheBus 22/22; TASK-540-05-L01 retains 16/16; TASK-540-05-L02 retains historical Vitest 66/66, Bun 27/27, and user-settings 10/10. None of the historical pre-split receipts validates the final family graph. The closure leaf remains `🚧 In Progress`; no clean family post-audit, full validation, live smoke, changelog 1252, or atomic Done transition is claimed.
+**Historical Source Repair Revalidated (superseded by current L03 overflow revalidation):** 2026-07-16 — the final sequential post-audit stopped before smoke on R01 whole-document stored-read collapse and ambiguous legacy IDs, L03 scalar override loss for `media.multiple`, an optional Canvas region name, incomplete A/B self-scope evidence, and one stale L04 binding-ID expectation. A fresh contract audit also found the optional-ID Assistant composer, missing stored-duplicate regression, and stale L04 provenance. Those scoped repairs had matching receipts before the current overflow repair; this does not replace the next clean post-audit, full validation, final audit, or live smoke.
+**Historical Source Repair Ownership (superseded for current L03):** TASK-540-01-L01 owned its schema normalizer and regressions, registered metadata-PATCH proof, `blueprintBindingComposer.ts` plus its focused suite, and read-only action-plan/catalog consumers. TASK-540-04-L03 owned Entry Editor filtering, shared override-contract eligibility, override service activity, and its domain/UI regressions. TASK-540-04-L04 exclusively owned the test-only `custom-screen-editor-binding-flow.test.tsx` shared-helper expectation and its receipt. TASK-540-05-L01 owned only the shared Canvas semantic-panel prop and named-region suite; TASK-540-05-L02 owned only the user-settings route proof. This describes the pre-overflow checkpoint; the current L03 owner and state are recorded below.
+**Historical Source Repair Gate Contract (superseded by current L03 overflow revalidation):** Every owner remains `🚧 In Progress`. The prior behavior owners had `Implementation Complete` and exact receipts when this gate was recorded. Its L03 258/258, L04 98/98, Bun route, static, line, name, workflow, and audit results are historical for the pre-overflow-repair bytes. TASK-540-04-L03 now carries canonical `Implementation Complete` and its exact `Revalidation Passed` receipt with no `Repair Pending`; TASK-540-06-L01 remains the exact pre-closure gate owner. No clean family post-audit, full validation, live smoke, changelog 1252, or atomic Done transition is claimed.
+**Historical Pre-Overflow Post-Audit Orchestrator Repair:** 2026-07-17 — the third one-shot post-audit stopped before full validation and smoke. In addition to the L03/L04 owner fixes, closure then pinned the aggregate expected binding ID as a literal, narrowed the grounded-path exception to the two exact declared RouteSession component basenames, and invoked the L04 five-module structural verifier from the owner, closure, and full gates. These durable hardening changes did not authorize closure.
+**Historical Pre-Overflow Post-Audit Orchestrator Revalidated:** 2026-07-17 — workflow syntax and repair self-tests passed, including 33 local-runner/security cases and 8 L04 verifier cases; the aggregate/focused eight-file Vitest matrix passed 65/65; core/root static checks, the full family line gate, both split verifiers, the all-family name contract, and `git diff --check` passed; two fresh scoped audits reported 0 HIGH/MEDIUM/LOW findings. The current L03 overflow repair supersedes that prepared closure state.
+**Historical Pre-Overflow Subsequent Post-Audit Repair:** 2026-07-17 — a complete five-lens run then stopped before full validation and smoke on a narrowed 12-file L03 read-only consumer gate, compile-time type erasure in the R03 shared harness, one duplicate forced content-type read, a 201-media-ID render throw, and one receipt-order sentence. R03 and L03 then owned their source/test corrections; the orchestrator removed the obsolete transient consumer list and pinned the final 15-file L04 matrix in both the executable owner gate and its isolation self-test.
+**Historical Pre-Overflow Subsequent Post-Audit Repair Revalidated:** 2026-07-17 — core lint/types and root `tsc` passed; R03 passed the exact six-file 89/89 gate with unchanged 72-name/67-declaration fingerprints; L03 passed its then-exact twenty-two-file 258/258 gate with final navigation/restyle fingerprints; the repaired fifteen-file L04 matrix passed 98/98; and the all-family name/body contract, workflow self-tests, family line gate, and `git diff --check` passed. The current L03 overflow repair supersedes that behavior gate.
+**Historical Pre-Overflow Scoped Audit Follow-up Revalidated:** 2026-07-17 — two fresh repair audits found and closed the then-remaining contract drift: R03 restored shallow runtime immutability without type assertions, and L03 removed the executable ambiguity around the obsolete 12-file handoff. R03 passed 89/89 plus static/name/line/format/diff checks; the then-prepared-resume workflow, final 15-file authority checks, and both fresh read-only audits passed with 0 HIGH/MEDIUM/LOW findings. That checkpoint still required a clean five-lens run and all later closure gates; the current L03 overflow repair supersedes its prepared state.
+**Historical Pre-Overflow Start-Gate Semantic Repair:** 2026-07-17 — the next canonical run stopped before post-audit because the historical `task-540-fix.mjs` still executed as a conflicting then-current owner, then-current gate prose retained stale 10/12-file and pre-split counts, the R03 receipt still said 88 harness lines after its freeze repair, follow-up dates preceded the modularity receipt, and two root descriptions mislabeled the deterministic reserved closure gate. The fix workflow then became inert archived evidence, the final 15-file/98-test authority and then-current L04/Canvas/User Settings receipts became explicit, the harness receipt said 95 lines, chronology and reserved-pre-closure prose were corrected, and start-gate failures preserved their safe structured `errors[]`. That checkpoint did not authorize closure.
+**Historical Pre-Overflow Start-Gate Semantic Repair Mechanical Revalidation:** 2026-07-17 — archived-fix syntax/import/inertness, implementation syntax and repair self-tests, exact then-prepared resume, family line gate, local helper self-test, Prettier, and full HEAD diff check passed. That checkpoint still required a semantic start audit and all later closure gates; the current L03 overflow repair supersedes its prepared state.
+**Historical Pre-Overflow Full-Validation Receipt Observability Repair:** 2026-07-17 — a canonical full-validation attempt returned only the generic `full command receipt mismatch` after the full sequential Bun lane completed and the Vitest child ran; the exact full Vitest rerun passed 861/861 files and 7,183/7,183 tests, but the opaque receipt prevented safe classification. The orchestrator now reports only its closed expected command ID plus normalized status, timeout, output-limit, and unchanged-repository booleans after the existing fail-closed predicate rejects. It never projects raw output, received IDs, paths, environment values, or secrets. At that checkpoint the real failure path self-test, syntax, formatting, then-prepared resume, family line gate, and a fresh focused security audit passed with 0 HIGH/MEDIUM/LOW findings; the current L03 overflow repair supersedes its prepared state.
+**Historical Pre-Overflow Targeted Vitest Under-Load Repair:** 2026-07-17 — the next fresh Start gate and all five read-only post-audit lenses passed without a fixer, after which the new receipt identified `targetedVitest,status=1,timedOut=false,outputLimitExceeded=false,repositoryUnchanged=true`. Two exact 64-file reproductions isolated the same 5,008 ms timeout in the CPU-bound Entry Editor AST/import boundary test while the other 63 files and 706 tests passed; its isolated 7/7 rerun passed. TASK-540-05-L01 added a local bounded 15-second timeout without changing assertions, and revalidation passed isolated 7/7, exact owner 19/19, and exact TASK-540 64-file/707-test matrices plus root static, line, workflow, formatting, and diff gates. Because this test changed after the clean five-lens run, that checkpoint still required a new Start gate and all later closure gates.
+**Historical Pre-Overflow Runtime Smoke Preflight Repair (preflight-only call):** the subsequent fresh Start gate, all five post-audit lenses, and the complete full-validation matrix passed, but the one-shot executor call returned only its required fixed failure before helper or browser launch. A bounded read-only DB projection proved `setup.completed` was no longer true and the persisted storage rows were absent. Source inspection then proved the repository-wide Bun lane had deterministically removed those shared rows in two settings-suite teardowns; the next storage step also resolved the relative local root from repo root instead of the bridge's real `core` cwd. The settings suites then added exact row snapshot/restore, the closure/full gates added baseline hashes, and the smoke bridge required canonical persisted storage; a separate audit corrected `Secondary URL`. This consumed call produced no live helper/browser evidence and did not authorize closure.
+**Historical Pre-Overflow Post-Audit Selector/Scope Repair:** the next fresh five-lens post-audit stopped before full validation and smoke. It proved the exact media field option is rendered as `Media Asset (media)`, while the action contract still targeted `Media asset (media)`, and it found that the settings-suite isolation repair had also restructured an unrelated legacy-key behavior test outside this leaf's narrow exception. The two media actions and their contract self-test then pinned `Media Asset`; the legacy-key test was restored to its prior behavior shape while exact shared-row snapshot/restore remained. That checkpoint did not authorize closure.
+**Historical Pre-Overflow Runtime Smoke Failure-Action Observability Repair:** the next canonical Start gate and all five post-audit lenses passed, followed by green core/root static checks, targeted Bun/Vitest tests, full `bun run test`, exact pre/post settings baseline proof, `precommit:check`, Admin build/boundary/bundle checks, `gates:coderso`, the strict security scan with only its pinned TASK-545-owned finding, and final workflow checks. The one-shot smoke then started the repo-owned helper and returned only `{code:"task540_smoke_failed"}` before any provable successful bootstrap login. Its deterministic cleanup restored settings baseline SHA-256 `7e453af480fe040a55d81ad0ee6c168ef8295a820b4eec2c1ee3331e18ab665b`, removed all task browser/session/listener/screenshot state, and preserved staged snapshot SHA-256 `c5a339b8c5a8d0f639067ae630b8c81c158d8cb519c87445b9416072206c9f0f`. The old generic-only boundary intentionally destroyed the failing action identity, so no exact action or smoke pass was claimed. The executor then added only the bounded allowlisted active-action diagnostic; that checkpoint did not authorize closure.
+**Historical Pre-Overflow Failure-Action Diagnostic Self-Test:** at that checkpoint the final executor self-test passed 490 actions and 196 negative cases with caught synchronous stderr writes, including `EPIPE`, `EBADF`, and partial-write containment. The current L03 overflow repair supersedes the prepared closure state, not this durable diagnostic behavior.
+**Current L03 Overflow Repair Revalidated:** 2026-07-18 — TASK-540-04-L03 has no `Repair Pending` and carries canonical `Implementation Complete` plus `Revalidation Passed: generation 71b1c73b899a4ab4be94690ce387f28e / token ff99adec779348e796d56df5dbda3627 / gate green`. This closure leaf retains its exact `pre-closure remediation / fix-started 2026-07-15 / gate green` receipt and returns as the closure frontier after a fresh clean five-lens post-audit; no later full-validation or smoke result is claimed.
 **Historical L03 Source Repair Required:** On 2026-07-15 the live-smoke feasibility audit proved duplicate canonical/legacy cacheBus transport delivery made the exact-one `related-a-refresh` route contract impossible; the scoped repair landed and was revalidated.
 **Historical L03 Source Repair Owner:** TASK-540-04-L03 was the sole repair owner for the generic per-subscription cacheBus transport dedupe in `core/admin/utils/cacheBus.ts`, its regressions in `tests/vitest/admin/cacheBus.test.ts`, and additive direct-image route-boundary regressions in `tests/integration/routes/customScreensRoutes.test.ts`. No production route file changed.
 **Historical L03 Source Repair Gate:** TASK-540-04-L03 alone held the exact three-path repair authority, ran its required gates, and atomically replaced its matching `Repair Pending` receipt with one `Revalidation Passed` successor plus canonical `Implementation Complete`. That durable evidence remains valid but does not substitute for any later source-repair receipt or closure gate.
@@ -35,8 +49,12 @@
 ## Exclusive ownership
 
 - new aggregate suite
-  `tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx`; this is the
-  only test file closure may create or edit
+  `tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx`; this is the only
+  test file closure may create and the only behavior suite it may extend
+- verified full-gate state-isolation repairs in exactly
+  `tests/unit/settings/settingsService.test.ts` and
+  `tests/unit/settings/storageSettings.test.ts`; these two suites may change only their
+  shared-row snapshot/restore and cache/environment teardown boundaries
 - every other Vitest/Bun path in the required matrix is read-only here and remains
   owned by its source leaf, including the image-inspector, Custom Screens client,
   entry-preference persistence, and navigation-guard suites
@@ -50,28 +68,22 @@
 - task-prefixed screenshots named `_docs/_workflows/_smoke/task-540-*`
 - TASK-540 descendant statuses, board row/statistics, changelog 1252 at closure
 
-Do not reopen production source or re-baseline/edit a source-owner test. If a source
+Do not reopen production source or re-baseline/edit a source-owner test outside the two
+exact state-isolation repairs above. If a source
 defect or missing source-owner assertion remains, return it to its owning leaf/fix
 workflow, re-run that leaf's gate, then resume closure.
 
 ### Accepted non-blocking LOW follow-ups
 
-Closure may treat only these two concrete, execution-ready TASK-9999 leaves as
-non-blocking:
+Closure may treat only this concrete, execution-ready TASK-9999 leaf as non-blocking:
 
 - TASK-9999-01-L01:
   `_docs/_TASKS/TASK-9999-01-L01-Decouple-Actor-And-Media-Uuid-Domain-Naming.md`.
   TASK-9999-01-L01 approved evidence: core/services/customScreens/screenMediaIdentity.ts:4; core/services/customScreens/screenEntryPresentationOverrideContract.ts:192; core/services/customScreens/screenEntryPresentationOverrideContract.ts:229; core/services/customScreens/screenEntryPresentationOverrides.ts:421.
   TASK-9999-01-L01 approved rationale: the shared UUID predicate already accepts and rejects the intended actor/media UUID grammar and preserves exact input bytes; deferral changes no UI/UX/accessibility, data, security/privacy/auth/RBAC, API, persistence/migration, performance/reliability, or test-integrity behavior.
-- TASK-9999-01-L02:
-  `_docs/_TASKS/TASK-9999-01-L02-Remove-Unread-Screen-Tab-Label-Draft-State.md`.
-  TASK-9999-01-L02 approved evidence: core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx:24; core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx:25; core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx:38; core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx:42; core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx:53; core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx:59; core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx:63; normalized AST SHA-256 15897646098bfeb9f653b940c0782e3b3f999a811b9cbc3d9bf46a01cae5df9a; source SHA-256 03cbeb962f40a87085d11403c15f9b69b482302322c5fc85ad224df9a52e16d4.
-  The workflow proves the deferred symbols are absent from the facade, with one
-  `baseLabel` type member, exactly four writes, the sole `draft.value` read, and no
-  `baseLabel` or whole-draft read.
-  TASK-9999-01-L02 approved rationale: baseLabel is assigned but never read; deferral changes no rendered UI, keyboard/blur/commit behavior, accessibility, saved data, security/privacy/auth/RBAC, API, persistence/migration, performance/reliability, or test-integrity behavior.
+TASK-9999-01-L02 was re-triaged on 2026-07-18 and is `⏭️ Superseded` by active `TASK-540-02-L01`; removing `baseLabel` would regress focus-preserving stale-draft invalidation, so it is not eligible for TASK-9999 deferral.
 
-The workflow verifies both leaf contracts and both backlinks before excluding an exact
+The workflow verifies the L01 leaf contract and both source-task backlinks before excluding an exact
 matching LOW from the blocking audit set. Any mismatch, different finding, HIGH/MEDIUM,
 or LOW involving UI/UX/accessibility/data/security/privacy/auth/RBAC/API/persistence/
 migration/performance/reliability/test integrity remains blocking.
@@ -276,10 +288,17 @@ CSRF values, session tokens/hashes/handles, DB/storage details, and live process
 remain in executor-private `WeakMap` authority. No callback, error, log, audit prompt,
 or returned object may receive them. Success crosses the module boundary only as one
 strict reject-unknown, recursively frozen `CanonicalSmokeEvidence` whose hashes were
-computed from the private observations. Every failure from exact input validation, plan
-construction, partial or complete capability construction, core execution, or cleanup
-crosses only as the frozen exact sanitized projection
-`{code:"task540_smoke_failed"}`. The one private authority performs bounded idempotent
+computed from the private observations. After cleanup, a failure inside an active
+manifest action may additionally write one synthesized canonical stderr line containing
+exactly `{code:"task540_smoke_failed",failedActionId:<allowlisted manifest ID>}` through
+a caught synchronous full write to stderr file descriptor `2`; `EPIPE`, `EBADF`, a
+partial write, or any other write failure remains private and cannot replace the fixed
+thrown failure. The line is not captured command stderr and contains no cause or
+observation. Every failure from
+exact input validation, plan construction, partial or complete capability construction,
+core execution, or cleanup still throws only the frozen exact sanitized projection
+`{code:"task540_smoke_failed"}`. Construction, cleanup-only, unknown, and cleared-action
+failures emit no line. The one private authority performs bounded idempotent
 cleanup of exactly the handles/resources acquired so far; a core cleanup attempt and the
 public wrapper's failure cleanup share the same once-state, so they cannot double-close
 or double-delete. Raw causes and cleanup diagnostics remain private, and a cleanup error
@@ -287,7 +306,8 @@ cannot replace or escape beside the fixed public failure. The executor self-test
 only hermetic fakes and covers success, construction-authority creation failure while the
 slot remains null, reject-unknown input, plan-build failure, failure after each
 partial-construction acquisition, duplicate/corrupt actions, exactly-once cleanup on core
-and cleanup failure, private-value non-egress, fixed failure shape, and the prohibition
+and cleanup failure, private-value non-egress, fixed failure shape, once-only exact-byte
+diagnostic output, contained synchronous `EPIPE`/`EBADF` and partial-write failures, and the prohibition
 on agent/command/receipt/hash injection. Its successful-loop case proves that after
 `end-007-session-absence` phase 1 issues zero browser CLI invocations and zero browser
 receipts, then identity-safely removes only the already-acquired private root. Its early-
@@ -519,7 +539,7 @@ aggregate matrix, and closure hash set must name these exact paths identically.
 The earlier import-only L03 attempt was reverted before the first prepared-state pass.
 The later final sequential post-audit independently reopened L03 for the substantive
 single-versus-multiple media override contract and included canonical import placement
-inside that current receipt. Historical cache ownership remains separate evidence.
+inside that then-current receipt. Historical cache ownership remains separate evidence.
 TASK-540-05-L02 additionally owns the exact auth-identity contract/provider/route paths,
 the stateless access-log harness, its eight-test Bun suite, and the retained two-test
 user-settings route suite, plus the Assistant panel harness and 7+6 suite partition and
@@ -613,7 +633,8 @@ weaken, or re-baseline any source-owner proof.
 ```text
 verify every source owner leaf is landed and its behavior tests plus targeted gate are green
 create only tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx for declared
-cross-leaf regressions; keep every other named test byte-identical during closure
+cross-leaf regressions; keep every other named behavior test byte-identical during closure
+except the exact settingsService/storageSettings shared-row snapshot/restore repair
 run each named lane; on failure rerun the named file once and route real defects
 back to the single owning source leaf
 when resuming an active no-gate implementation leaf after an interrupted writer, run its
@@ -713,15 +734,27 @@ a source repair owner requires the board to be already In Progress and preserves
 board byte-identically; only the dedicated closure-pending and closure-status transitions
 may move TASK-540 or change the board statistics.
 
-The current modularity phase is a stricter predecessor to that ordinary status flow.
-Each of the eight owners starts with exactly one `Modularity Repair Pending` field and
-its historical behavior receipt. Its successful post-split gate atomically removes only
-that modularity-pending field and writes one byte-pinned
-`Modularity Repair Revalidated` receipt; it does not erase the historical behavior
-receipt, add `Completed`, or move status. A restart accepts either that exact pending
-state or that exact revalidated state, never both. TASK-540-06-L01 cannot enter closure
-preparation until all eight revalidated receipts exist in the mandatory order and the
-family line/name/matrix gates pass.
+The completed modularity phase was a stricter predecessor to that ordinary status flow.
+Each of the eight owners started with exactly one `Modularity Repair Pending` field and
+its historical behavior receipt. Each successful post-split gate atomically removed only
+that modularity-pending field and wrote one byte-pinned
+`Modularity Repair Revalidated` receipt; it did not erase the historical behavior
+receipt, add `Completed`, or move status. The restart invariant still accepts either an
+exact pending state or an exact revalidated state, never both. All eight revalidated
+receipts now exist in the mandatory order, and the family line/name/matrix gates passed,
+so TASK-540-06-L01 reached—but did not complete—the closure-preparation frontier at
+that historical checkpoint. The overflow repair reopened and revalidated L03; this
+closure leaf is again the active closure frontier after a fresh clean post-audit.
+
+The verified pre-run Start-gate repair made that then-prepared resume executable. Its
+structural Markdown status-table reader selects only a table with one unique leading
+`ID` column and one unique trailing `Status` column, so same-ID historical evidence
+tables remain byte-identical instead of colliding with status authority. Resume
+validation, unrelated-byte projection, and exact rollback use the same reader; all 18
+selection/mutation cases and the then-current prepared-resume gate passed. This is
+historical workflow-authority evidence only. The current prepared resolver resolves to
+`initial` mode with `startLeafId:null`, all ten leaves landed, and no remaining leaf;
+closure work resumes after a fresh clean five-lens post-audit.
 
 During an earlier source-owner `Repair Pending`, every landed sibling remains
 `🚧 In Progress`; each completed implementation sibling retains exactly one current
@@ -923,7 +956,8 @@ A later fresh top-level run may execute its one smoke plus evidence audit and re
 changelog evidence block before re-closing; the repairing invocation never executes a
 second smoke. Runtime/evidence-only findings are
 owned by the executor boundary: the current invocation completes deterministic cleanup,
-returns only the fixed sanitized failure, and stops. After a verified contract fix and
+emits at most the exact post-cleanup allowlisted action-ID line, returns the unchanged
+fixed sanitized failure, and stops. After a verified contract fix and
 fresh clean-baseline proof, a later top-level closure run may invoke the executor once;
 the failed call itself has no retry, recovery, or second smoke attempt and findings are
 never routed to TASK-540-06 tests/docs. Closure/task/changelog-only findings use
@@ -932,7 +966,7 @@ fresh final audit. Only a residual from the second fresh round blocks closure.
 
 ### 2026-07-15 smoke-contract correction and failed-attempt audit
 
-Two live attempts were fail-closed and are diagnostic evidence only; neither is a
+Two browser-reaching attempts were fail-closed and are diagnostic evidence only; neither is a
 smoke pass. Attempt 1 (`wf540-62a9e9a41951`) reached the media flow, but its delayed
 `route.fetch()` reused the browser hostname, which the Playwright Node route worker
 could not resolve (`ENOTFOUND coderso-a.localhost`). Attempt 2
@@ -961,15 +995,18 @@ and does not claim a new smoke attempt or pass.
 A same-date round-2 audit additionally bound the typed media-race fixture/absence
 receipts, closure-backed instrumentation, exact visible-effect commands/outputs, and
 the two source-labelled real retries. It likewise records contract correction only,
-not a third live attempt or smoke pass.
+not a third browser-reaching attempt or smoke pass.
 A same-date round-3 audit found that agent-returned command receipts, lexical
 observation-token checks, page-local logging, and hit-count-only delay latches were not
 independent execution evidence. The contract below therefore makes the local workflow
 process the sole execution/evidence authority, replaces free-form browser commands with
 positive registries and fixture-expanded builders, instruments every BrowserContext
 page, and binds every delayed result to response capture plus fulfillment/UI settlement.
-This is another contract-only correction: the two failed attempts remain the only live
-attempts, and their screenshots or partial observations remain ineligible.
+This is another contract-only correction: those two failed attempts remain the only
+browser-reaching attempts, and their screenshots or partial observations remain ineligible.
+A later one-shot executor call consumed its call latch but failed during the storage/setup
+preflight before helper or browser launch; it is the separately recorded preflight-only call
+above, produced no runtime screenshot evidence, and is not a third browser-reaching attempt.
 
 ### Private deterministic fixture blueprint
 
@@ -2148,8 +2185,8 @@ absent. Each DB-coupled immutable source awaits its final query/transaction and 
 stdout drain, then terminates the one-shot process without leaving its connection pool or
 another handle alive; it may never keep a pool for the next operation. Spawn error or the
 fixed 30-second timeout follows bounded same-identity group
-TERM, conditional KILL, and stable absence proof before the fixed sanitized failure may
-return. Reuse, a persistent DB worker, an orphaned descendant, unbounded waiting, and
+TERM, conditional KILL, and stable absence proof before the optional exact active-action
+diagnostic and fixed sanitized failure may return. Reuse, a persistent DB worker, an orphaned descendant, unbounded waiting, and
 PID-only cleanup are forbidden.
 
 Executor self-test derives the declared bridge-operation set independently from the
@@ -2729,7 +2766,7 @@ or rename rows.
 | `bi-006-bound-open-primary` | p1/0 | `click(S.boundField)` | Button selected -> menu visible -> bound-field menu open | `bi-005 / absent -> absent` |
 | `bi-007-bound-primary` | p1/0 | `click(S.fieldOption("Primary Url","text"))` | menu open -> visible Primary Url option -> semantic `primaryUrl` field bound | `bi-006 / absent -> absent` |
 | `bi-008-bound-open-secondary` | p1/0 | `click(S.boundField)` | Primary bound -> menu visible -> menu open | `bi-007 / absent -> absent` |
-| `bi-009-bound-secondary` | p1/0 | `click(S.fieldOption("Secondary URL","text"))` | menu open -> selected label -> Secondary URL bound | `bi-008 / absent -> absent` |
+| `bi-009-bound-secondary` | p1/0 | `click(S.fieldOption("Secondary Url","text"))` | menu open -> selected label -> Secondary URL bound | `bi-008 / absent -> absent` |
 | `bi-010-use-static` | p1/0 | `click(S.staticLink)` | Secondary bound -> inspector transition -> binding removed/static input visible | `bi-009 / absent -> absent` |
 | `bi-011-fill-static` | p1/0 | `fill(S.staticLinkInput,paths.nestedHash)` | static input visible -> value -> static link authored | `bi-010 / absent -> absent` |
 | `bi-012-bound-open-final` | p1/0 | `click(S.boundField)` | static link authored -> menu visible -> menu open | `bi-011 / absent -> absent` |
@@ -2769,12 +2806,12 @@ or rename rows.
 | `bi-046-image-click` | p1/0 | `click(S.palette("Image"))` | baseline -> click -> one Image inserted | `bi-045 / absent -> absent` |
 | `bi-047-image-capture` | p1/0 | `captureNew(palette.image,"image",bi-045)` | insertion settled -> one new ID -> palette Image frozen | `bi-045,bi-046 / absent -> absent` |
 | `bi-048-image-bound-open` | p1/0 | `click(S.boundField)` | Image selected -> menu -> menu open | `bi-047 / absent -> absent` |
-| `bi-049-image-bound-media` | p1/0 | `click(S.fieldOption("Media asset","media"))` | menu open -> exact option -> palette Image media-bound | `bi-048 / absent -> absent` |
+| `bi-049-image-bound-media` | p1/0 | `click(S.fieldOption("Media Asset","media"))` | menu open -> exact option -> palette Image media-bound | `bi-048 / absent -> absent` |
 | `bi-050-field-before` | p1/0 | `blocksBefore(palette.mediaField)` | canvas visible -> ID set -> Field baseline captured | `bi-049 / absent -> absent` |
 | `bi-051-field-click` | p1/0 | `click(S.palette("Field"))` | baseline/Insert palette remains visible -> click -> one Field inserted | `bi-050 / absent -> absent` |
 | `bi-052-field-capture` | p1/0 | `captureNew(palette.mediaField,"field",bi-050)` | insertion settled -> one new ID -> palette Field frozen | `bi-050,bi-051 / absent -> absent` |
 | `bi-053-field-bound-open` | p1/0 | `click(S.boundField)` | Field selected -> menu -> menu open | `bi-052 / absent -> absent` |
-| `bi-054-field-bound-media` | p1/0 | `click(S.fieldOption("Media asset","media"))` | menu open -> exact option -> palette Field media-bound | `bi-053 / absent -> absent` |
+| `bi-054-field-bound-media` | p1/0 | `click(S.fieldOption("Media Asset","media"))` | menu open -> exact option -> palette Field media-bound | `bi-053 / absent -> absent` |
 | `bi-055-save-palette-media` | p1/0 | `click(S.builderSave)` | palette media blocks dirty -> save settlement -> builder clean | `bi-054 / absent -> absent` |
 | `bi-056-entry-return` | p1/0 | `goto(paths.entry)` | builder clean -> URL/document marker -> entry visible | `bi-055 / absent -> absent` |
 | `bi-056a-safe-link-observe` | p1/0 | `observe(safe-link-anchor-before-activation)` | entry visible -> tag/href/rect -> safe anchor sample frozen | `bi-056 / absent -> absent` |
@@ -4446,7 +4483,8 @@ export async function executeTask540SmokePlan(input): Promise<CanonicalSmokeEvid
   } catch (cause) {
     if (constructionCleanupAuthority === null) {
       // Constructor failure acquired nothing. The pre-existing non-acquiring module sink
-      // never throws and exposes no cause or diagnostic outside executor-private memory.
+      // never throws and exposes no cause outside executor-private memory. With no
+      // active allowlisted manifest action it emits no action diagnostic.
       retainOrDiscardPreAuthorityCauseInModuleSinkNeverThrow(cause);
     } else {
       // Internally catches/aggregates cleanup errors and returns the same frozen private
@@ -4457,6 +4495,10 @@ export async function executeTask540SmokePlan(input): Promise<CanonicalSmokeEvid
         cause,
         cleanupDiagnostics,
       );
+      // Real execution only: after cleanup, write at most one canonical bounded line
+      // containing exactly the fixed code and the still-active ID validated against
+      // this frozen manifest. The sink is injected for hermetic tests and never throws.
+      constructionCleanupAuthority.emitSafeFailureActionOnceNeverThrow();
     }
     throw TASK_540_SMOKE_FAILURE;
   }
@@ -4502,6 +4544,8 @@ async function executeSmokePlanCore(
   validateSmokeFixtureBlueprint(plan.fixtureBlueprint);
   validateManifestSetEqualityStateMachineAndPartition(plan.actionManifest);
   for (const action of plan.actionManifest) {
+    // Module-private tracker rejects unknown/duplicate IDs and owns no cause/output.
+    failureActionTracker.begin(action.id, plan.actionManifest);
     assert(action.ordinal === completedActionIds.size + 1);
     assertEveryDependencyCompleted(action, completedActionIds);
     assert(!completedActionIds.has(action.id));
@@ -4548,7 +4592,10 @@ async function executeSmokePlanCore(
     assert(!actionReceipts.has(action.ordinal));
     actionReceipts.set(action.ordinal, receipt);
     completedActionIds.add(action.id);
+    // Clear only after receipt, resource, capture, and completion bookkeeping passes.
+    failureActionTracker.complete(action.id);
   }
+  assert(failureActionTracker.activeId() === null);
   assertExactOneLoopManifestExecution(
     plan.actionManifest,
     completedActionIds,
@@ -4802,7 +4849,15 @@ The canonical reverse-dependency sort is: the main override; setting A/B; the ma
 retry Screens; the editable entry and five related entries; the composite media-row-key;
 the four content types; stable-polled task-UA audit logs; stable-polled task-UA access
 logs; every acquired `session-task`; then users A/B. Cleanup failure is retained privately; the public
-wrapper emits only the fixed sanitized failure and never starts another attempt.
+wrapper may emit only the exact two-key active-action diagnostic after cleanup, then
+throws the unchanged fixed sanitized failure and never starts another attempt.
+The diagnostic sink is module-private and injectable only for hermetic executor tests.
+Those tests prove exact canonical bytes and one emission, reject an ID outside the
+frozen manifest without emission, emit nothing for construction/no-active-action or
+cleanup-only failure, clear a successfully completed action so cleanup cannot be
+misattributed to it, and prove a private marker from the retained cause never appears.
+The real sink is bounded and wrapped so an output failure cannot replace the primary
+fixed failure.
 
 
 ## Real browser smoke
@@ -4845,7 +4900,8 @@ that group until the repo-owned runner and every descendant are absent, and prov
 `3000`, `5173`, and `5174` have no listeners. The thrown error carries
 `hostAbsenceProven:true` only after all of those observations pass. An occupied-port
 preflight or incomplete absence proof is non-retryable: the executor returns only its
-fixed sanitized failure after its one bounded cleanup path and never starts a
+optional exact active-action diagnostic plus fixed sanitized failure after its one
+bounded cleanup path and never starts a
 replacement fixture prefix/host runner or browser authority in that invocation.
 
 The host's own bounded shutdown path is deliberately narrower: after revalidating
@@ -5981,7 +6037,8 @@ records the real bounded operations under exact receipt labels
 `executor-discovery`, `executor-identifier-validation`, `executor-exact-delete`,
 `executor-absence`, `executor-host-runner-stop`, and `executor-port-probe`. On success those
 receipts join canonical evidence; on failure they remain private and only
-`{code:"task540_smoke_failed"}` leaves the module. Primary, cleanup, and host-stop
+the optional exact post-cleanup active-action line plus the unchanged thrown
+`{code:"task540_smoke_failed"}` may leave the module. Primary, cleanup, and host-stop
 failures are retained together privately rather than masking one another. The failed
 invocation never starts another prefix, host runner, browser session, or smoke attempt and
 never delegates recovery to an agent or outer orchestrator.
@@ -6642,12 +6699,22 @@ command.
 
 Before importing the smoke executor, the implementation orchestrator opens the one
 canonical regular module with no-follow identity checks and requires SHA-256
-`83efa92cf4c9d9d40c207e707cbaca19e8ce30c5f87f30c7c6e54c7bd7f0ffdd`. It performs
+`ad38f3ece885bc4479e2e53e0dbc2806c77648b9a18c1366ec8a7fc0993ea688`. It performs
 exactly one literal dynamic import, requires the exact two-export surface, and repeats
 the byte/identity check after import. Full validation binds that same executor authority
 to its result; immediately before the single smoke call the current, imported, and
 validated identities/hashes must all match. A mismatch fails before the one-shot latch
 and never selects an alternate executor.
+
+Immediately before the closure leaf's isolated settings-hygiene command and immediately
+after it, then again immediately before the repository-wide test and after the last ordinary
+full-gate command, identical baseline probes require exact persisted
+`setup.completed:true`, `storage.driver:"local"`, and one non-empty
+`storage.local.dir` row whose values equal the internal storage service. Each emits only
+one SHA-256 over the sorted three `{key,value,updatedAt}` rows. The local authority
+strictly parses each one-key JSON receipt and requires each bracketing pair to match; a missing,
+malformed, non-zero, extra-key, or changed receipt fails before smoke without exposing a
+setting value or path.
 
 The same 4 MiB-per-stream bound applies to this exception. Raw output and bounded
 excerpts remain private, are scanned against the in-memory inherited/repo secret corpus,
@@ -6747,8 +6814,11 @@ bun test tests/unit/settings/userSettingsService.test.ts \
   tests/unit/assistant/actionExecutorSupportingPageLinks.test.ts \
   tests/unit/assistant/actionExecutorDetailPages.test.ts
 node --check _docs/_workflows/task-540-test-name-contract.mjs
+node _docs/_workflows/task-540-test-name-contract.mjs --mode=self-test
 node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=all
-node _docs/_workflows/task-540-implement.mjs --check-task-family-line-limit
+node _docs/_workflows/task-540-implement.mjs --check-l02-assistant-split
+node _docs/_workflows/task-540-implement.mjs --check-l04-page-split
+bun --cwd core --eval 'import { createHash } from "node:crypto"; import { inArray } from "drizzle-orm"; import { db } from "./db/client.ts"; import { settings } from "./db/schema.ts"; import { getStorageSettingsInternal, resetStorageSettingsCache } from "./services/settings/storageSettings.ts"; const keys = ["setup.completed", "storage.driver", "storage.local.dir"]; const rows = await db.select({ key: settings.key, value: settings.value, updatedAt: settings.updatedAt }).from(settings).where(inArray(settings.key, keys)).orderBy(settings.key); const byKey = new Map(rows.map((row) => [row.key, row])); if (rows.length !== 3 || byKey.get("setup.completed")?.value !== true || byKey.get("storage.driver")?.value !== "local" || typeof byKey.get("storage.local.dir")?.value !== "string" || byKey.get("storage.local.dir").value.length === 0 || Object.hasOwn(process.env, "MEDIA_STORAGE") || Object.hasOwn(process.env, "MEDIA_DIR")) process.exit(2); resetStorageSettingsCache(); const storage = await getStorageSettingsInternal(); if (storage.driver !== byKey.get("storage.driver").value || storage.localDir !== byKey.get("storage.local.dir").value) process.exit(2); const baseline = rows.map((row) => ({ key: row.key, value: row.value, updatedAt: row.updatedAt.toISOString() })); process.stdout.write(JSON.stringify({ baselineSha256: createHash("sha256").update(JSON.stringify(baseline)).digest("hex") })); process.exit(0)'
 bun run test
 bun run precommit:check
 bun --cwd core build:admin
@@ -6769,6 +6839,7 @@ node _docs/_workflows/task-540-local-orchestrator.mjs --self-test
 node --check _docs/_workflows/task-540-implement.mjs
 node _docs/_workflows/task-540-implement.mjs --self-test-repair-siblings
 git diff --check
+bun --cwd core --eval 'import { createHash } from "node:crypto"; import { inArray } from "drizzle-orm"; import { db } from "./db/client.ts"; import { settings } from "./db/schema.ts"; import { getStorageSettingsInternal, resetStorageSettingsCache } from "./services/settings/storageSettings.ts"; const keys = ["setup.completed", "storage.driver", "storage.local.dir"]; const rows = await db.select({ key: settings.key, value: settings.value, updatedAt: settings.updatedAt }).from(settings).where(inArray(settings.key, keys)).orderBy(settings.key); const byKey = new Map(rows.map((row) => [row.key, row])); if (rows.length !== 3 || byKey.get("setup.completed")?.value !== true || byKey.get("storage.driver")?.value !== "local" || typeof byKey.get("storage.local.dir")?.value !== "string" || byKey.get("storage.local.dir").value.length === 0 || Object.hasOwn(process.env, "MEDIA_STORAGE") || Object.hasOwn(process.env, "MEDIA_DIR")) process.exit(2); resetStorageSettingsCache(); const storage = await getStorageSettingsInternal(); if (storage.driver !== byKey.get("storage.driver").value || storage.localDir !== byKey.get("storage.local.dir").value) process.exit(2); const baseline = rows.map((row) => ({ key: row.key, value: row.value, updatedAt: row.updatedAt.toISOString() })); process.stdout.write(JSON.stringify({ baselineSha256: createHash("sha256").update(JSON.stringify(baseline)).digest("hex") })); process.exit(0)'
 ```
 
 The `canConnect` command is a mandatory `select 1` preflight and its explicit
@@ -6789,7 +6860,9 @@ source-owner repair passes its matching re-gate, then compare the retained map a
 closure; every hash must be byte-identical. Hash the closure-owned aggregate suite
 separately at `runClosure` entry and compare it after status closure. The
 closure-attributable test patch may contain only
-`tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx`; earlier
+`tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx` plus the exact
+state-isolation-only changes in `tests/unit/settings/settingsService.test.ts` and
+`tests/unit/settings/storageSettings.test.ts`; earlier
 source-leaf changes can still appear in the overall working-tree diff and are not
 misclassified as closure edits. While changelog 1252 is absent, preserve every landed
 descendant as In Progress with its current exact leaf gate receipt and no Completed

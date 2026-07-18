@@ -10,9 +10,18 @@
 **Status:** 🚧 In Progress
 **Started:** 2026-07-14
 **Fix Started:** 2026-07-15
-**Modularity Repair Pending:** 2026-07-16 — closure is paused on the family scope derived from verified pre-family baseline `e5f15a5675b58df85e573f760df4429af735400f`: the frozen 91-path authority and historical initial inventory of 15 over-limit blockers. R01 and TASK-540-02-L01 have resolved the first three, so the current mechanical gate reports exactly 12 with TASK-540-03-L01 next. The final contract is 64 Vitest + 18 Bun = 82 exact test files (81 source-owner/read-only plus one closure aggregate), preservation of 347 protected expanded names, a passing hard history/current line gate, fresh post-audit, full validation, and helper-started `playwright-cli` smoke. Earlier receipts remain historical only.
+**Modularity Repair Revalidated:** 2026-07-17 — eight source-owner modularity repairs and exact gates passed.
 **Implementation Complete:** 2026-07-16 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
-**Source Repair Revalidated:** 2026-07-16 — expanded R01 composer/stored-duplicate work and the L04 compatibility correction now have their exact current receipts alongside L03 and TASK-540-05. Fresh post-audit, full validation, live smoke, changelog, and closure remain pending.
+**Historical Source Repair Revalidated (superseded for L03):** 2026-07-16 — expanded R01 composer/stored-duplicate work and the L04 compatibility correction received their then-exact receipts alongside L03 and TASK-540-05. The later overflow repair now has L03's canonical `Implementation Complete` and exact successor gate; this historical receipt still does not authorize closure. L03 revalidation is complete; fresh post-audit, full validation, live smoke, changelog, and closure remain pending.
+**Historical Pre-Overflow Post-Audit Orchestrator Revalidated:** 2026-07-17 — the real-source L04 test repair, L03 hygiene fixes, independently pinned aggregate expectation, fail-closed grounded-path exception, and mechanically invoked five-module L04 verifier passed focused static/test/line/self-test gates and two scoped zero-finding audits. The current L03 overflow repair supersedes that prepared closure state.
+**Historical Pre-Overflow Subsequent Post-Audit Repair Revalidated:** 2026-07-17 — the final L04 consumer gate then enumerated all 15 files and passed 98/98; R03 fixture typing and receipt order passed 89/89; L03 single-read and bounded-media repairs passed 258/258; static, name/body, line, workflow, and diff gates were green at that checkpoint. The current L03 overflow repair supersedes that behavior gate.
+**Historical Pre-Overflow Scoped Audit Follow-up Revalidated:** 2026-07-17 — R03 restored assertion-free shallow fixture freezes and L03 made the final 15-file/98-test consumer gate exclusively authoritative; exact focused checks and two fresh zero-finding audits passed. The current L03 overflow repair supersedes that prepared closure state.
+**Historical Pre-Overflow Start-Gate Semantic Repair Mechanical Revalidation:** 2026-07-17 — closure then had one implementation owner, then-current final gate/count receipts and chronology, exact reserved-pre-closure prose, and actionable safe start-gate errors; syntax/inertness/workflow/prepare/line/helper/format/diff checks passed. The current L03 gate is now exact; a fresh clean five-lens audit and all later closure gates remain pending.
+**Historical Pre-Overflow Runtime Smoke Preflight Repair (preflight-only call):** after the complete full gate passed, the one-shot executor call stopped before helper or browser launch because full-test teardown had removed the shared persisted setup and storage rows. The closure lane added and retains exact pre-suite restore, safe baseline hashes, the canonical `core` storage root, and the corrected field-option selector. The consumed call produced no live browser evidence and did not authorize closure.
+**Historical Pre-Overflow Post-Audit Selector/Scope Repair:** the next five-lens post-audit stopped before full validation and smoke on the exact `Media asset`/rendered `Media Asset` selector mismatch and an unrelated legacy-key test refactor outside the shared-settings isolation exception. L01 then pinned `Media Asset` in both media-binding actions and self-test, restored the legacy behavior test shape, and retained only the exact snapshot/restore hygiene changes. That checkpoint did not authorize closure.
+**Historical Pre-Overflow Runtime Smoke Failure-Action Observability Repair:** the subsequent canonical Start gate, all five post-audit lenses, complete repository-wide validation, strict scan, and final workflow checks passed before the one-shot smoke returned the fixed generic failure. Cleanup restored the exact settings baseline SHA-256 `7e453af480fe040a55d81ad0ee6c168ef8295a820b4eec2c1ee3331e18ab665b`, left no browser/session/listener or screenshot, and preserved the user-owned staged snapshot; the old generic-only boundary intentionally erased the failing action, so it is diagnostic evidence rather than a smoke pass. L01 then added the bounded allowlisted failure-action line; that checkpoint did not authorize closure.
+**Historical Pre-Overflow Failure-Action Diagnostic Self-Test:** at that checkpoint the final executor self-test passed 490 actions and 196 negative cases with a caught synchronous stderr write, including `EPIPE`, `EBADF`, and partial-write containment. The current L03 overflow repair supersedes the prepared closure state, not this durable diagnostic behavior.
+**Current L03 Overflow Repair Revalidated:** 2026-07-18 — TASK-540-04-L03 has no `Repair Pending` and carries canonical `Implementation Complete` plus `Revalidation Passed: generation 71b1c73b899a4ab4be94690ce387f28e / token ff99adec779348e796d56df5dbda3627 / gate green`. All implementation leaves are landed; a fresh clean five-lens post-audit must pass before full validation or smoke.
 **Changelog:** 1252 (pinned; closure only)
 **Changelog File:** `_docs/_CHANGELOG/1252-2026-07-14-task-540-custom-screens-functional-and-data-integrity-remediation.md`
 
@@ -33,7 +42,10 @@ sequentially, and the first dispatch/transport/schema failure stops later lens l
 no same-invocation retry; final closure-drift lenses use the same boundary. A missing lens
 result is not a pass. Every verified HIGH, MEDIUM, or LOW finding blocks this task's
 closure unless it is explicitly split into a non-blocking follow-up with rationale. This
-subtask owns no production source and may not edit shared/source-owner test suites.
+subtask owns no production source. Its only shared-suite exception is the verified
+full-gate state-isolation repair in `tests/unit/settings/settingsService.test.ts` and
+`tests/unit/settings/storageSettings.test.ts`; no source-owner behavior assertion may be
+weakened or re-baselined.
 Flow 6 freezes the complete persisted reset draft at `rc-002`, then the complete
 post-intentional-edit current draft at `rc-017`; `rc-032` derives relation before
 values only from `rc-002`, exhaustively enumerates each current picker DOM option, and
@@ -47,7 +59,7 @@ baseline while the local presentation bytes remain preserved and dirty; no
 
 | ID | Title | Ownership | Status |
 |---|---|---|---|
-| TASK-540-06-L01 | Seven builder-save-entry flows and closure | one new aggregate test, docs, smoke evidence, TASK-540 closure metadata | 🚧 In Progress |
+| TASK-540-06-L01 | Seven builder-save-entry flows and closure | one new aggregate test, two exact shared-settings hygiene repairs, docs, smoke evidence, TASK-540 closure metadata | 🚧 In Progress |
 
 TASK-540-06-L01 deliberately retains the historical physical filename
 `TASK-540-06-L01-Six-Builder-Save-Entry-Flows-And-Closure.md` from the original
@@ -56,9 +68,11 @@ TASK-540.
 
 ## Family modularity prerequisite
 
-Closure must consume the exact source-owner sequence
+Before the current overflow repair, closure consumed the exact source-owner sequence
 `540-01-L01 → 540-02-L01 → 540-03-L01 → 540-04-L01 → 540-04-L03 →
-540-04-L04 → 540-05-L01 boundary → 540-05-L02` before this leaf begins. The
+540-04-L04 → 540-05-L01 boundary → 540-05-L02`. The current prepared resolver has all
+ten leaves landed and no remaining leaf; TASK-540-06-L01 is again the closure frontier.
+After a fresh clean post-audit, closure proceeds to full validation and smoke. The
 TASK-540 root owns the canonical 15-row pre-split evidence table. No owner, count, or
 SHA-256 may be dropped; every final production, test, and test-support record is emitted
 as `{ path, owner, lines, sha256 }` from the full baseline history plus current tracked
@@ -67,9 +81,12 @@ and untracked state. Staging/current-HEAD changes cannot narrow that authority.
 Every human-authored result must be `<= 1000` physical lines under the exact AGENTS.md
 exemptions. A violation is blocking and cannot become a LOW or TASK-9999 item. Each of
 the ten split test families runs every resulting suite alone, runs the family together,
-and preserves the exact sorted multiset of all 347 expanded pre-split names. Only then
-may closure run the exact 64-Vitest/18-Bun matrix, whose sole mutable test is
-`tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx`. Changelog 1252 stays
+and preserves the exact sorted multiset of all 347 expanded pre-split names. Those
+modularity prerequisites remain durable. With the current L03 gate exact, closure runs
+the exact 64-Vitest/18-Bun matrix only after a fresh clean five-lens post-audit. Its ordinary closure-owned test is
+`tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx`; the later verified
+pre-smoke repair additionally owns only the two exact shared-settings hygiene suites named
+above. Changelog 1252 stays
 pinned and is created only after these gates, post-audit, full validation, and runtime
 smoke succeed.
 
@@ -184,8 +201,14 @@ receipts, callbacks, errors, and logs.
 
 The orchestrator integration replaces and removes the old agent-executed smoke and
 cleanup path; the execution models may not coexist, even as fallback or recovery.
-Only strict canonical evidence or the fixed sanitized failure may leave the executor;
-raw bytes, cookies, CSRF values, and session material remain private. Each invocation
+Only strict canonical evidence or, after failure cleanup, one exact two-key diagnostic
+line containing the fixed failure code plus the active action ID from the frozen
+manifest may leave the executor before its unchanged fixed one-key thrown failure.
+The action ID is validated against that invocation's manifest and is cleared after a
+fully recorded action; no line is emitted for construction, cleanup-only, unknown, or
+already-cleared state. Raw causes/messages/codes, bytes, cookies, CSRF values, command
+output, paths, PIDs, environment data, secrets, and session material remain private.
+Each invocation
 starts browser authority at most once and keeps deterministic route, browser, resource,
 access-log, process, and port cleanup plus absence proof inside the executor; a failed
 call cannot launch an outer recovery, replacement prefix/host runner, or second smoke attempt.
@@ -454,7 +477,7 @@ files), and all root `.env*` projection at every command,
 agent, smoke, and terminal workflow boundary; `.env*` means every root name beginning
 `.env`, with a 64-entry bound. The smoke executor is dynamically loaded
 once only after exact canonical-file identity and SHA-256
-`83efa92cf4c9d9d40c207e707cbaca19e8ce30c5f87f30c7c6e54c7bd7f0ffdd` pass; the same
+`ad38f3ece885bc4479e2e53e0dbc2806c77648b9a18c1366ec8a7fc0993ea688` pass; the same
 authority must match after import, after full validation, and immediately before the
 one-shot call.
 Before any closure status mutation, the evidence owner writes and byte-verifies one

@@ -10,6 +10,7 @@ import {
   type ScreenBlockV1,
   type ScreenTabItem,
 } from "../../../services/customScreens/customScreenSchemas";
+import { collectScreenBlockIds } from "../../../services/customScreens/screenDocumentOps";
 import { InspectorRow } from "./ScreenBlockInspectorControls";
 import type { ScreenBlockInspectorProps } from "./screenBlockInspectorModel";
 
@@ -39,6 +40,14 @@ function TabLabelInput({
     baseLabel: tab.label,
     value: tab.label,
   }));
+  // The input keeps a commit-stable key so a keyboard commit never remounts (and so
+  // never drops focus). Stale-draft invalidation therefore happens here: whenever the
+  // committed label moves away from the one this draft was based on, the draft resets
+  // during render.
+  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  if (draft.baseLabel !== tab.label) {
+    setDraft({ baseLabel: tab.label, value: tab.label });
+  }
   const restoreCommitted = () => setDraft({ baseLabel: tab.label, value: tab.label });
   const commitDraft = (raw: string) => {
     const label = raw.trim();
@@ -81,24 +90,43 @@ function TabLabelInput({
 /** Tabs authoring keeps labels buffered and data.tabs / slots in lockstep. */
 export function TabsEditor({
   block,
+  bindings,
   onPatchBlock,
+  onPatchBinding,
   onArmSlotInsert,
   armedInsertSlotId,
 }: {
   block: ScreenBlockV1;
+  bindings: ScreenBlockInspectorProps["bindings"];
   onPatchBlock: ScreenBlockInspectorProps["onPatchBlock"];
+  onPatchBinding: ScreenBlockInspectorProps["onPatchBinding"];
   onArmSlotInsert?: ScreenBlockInspectorProps["onArmSlotInsert"];
   armedInsertSlotId: string | null;
 }) {
   const tabs = Array.isArray(block.data.tabs) ? (block.data.tabs as ScreenTabItem[]) : [];
-  const slots = block.slots ?? {};
+  const slots: Record<string, ScreenBlockV1[]> = block.slots ?? {};
 
   const commit = (nextTabs: ScreenTabItem[], nextSlots: Record<string, ScreenBlockV1[]>) => {
-    if (nextTabs.length < SCREEN_TABS_MIN || nextTabs.length > SCREEN_TABS_MAX) return;
+    if (nextTabs.length < SCREEN_TABS_MIN || nextTabs.length > SCREEN_TABS_MAX) return false;
     onPatchBlock(block.id, {
       data: { ...block.data, tabs: nextTabs },
       slots: nextSlots,
     });
+    return true;
+  };
+
+  // Removing a tab deletes its whole slot subtree, so the bindings that pointed into
+  // it must be collected on the same gesture. Block and section deletion already do
+  // this on the host; the generic block patch does not, which would otherwise leave
+  // this one deletion path raising the orphan-bindings alert.
+  const clearBindingsForSlot = (slotId: string) => {
+    const removedBlockIds = new Set((slots[slotId] ?? []).flatMap(collectScreenBlockIds));
+    if (removedBlockIds.size === 0) return;
+    for (const binding of bindings) {
+      if (removedBlockIds.has(binding.blockId)) {
+        onPatchBinding(binding.blockId, binding.propPath, { field: "" });
+      }
+    }
   };
 
   const commitLabel = (tab: ScreenTabItem, label: string) => {
@@ -114,7 +142,7 @@ export function TabsEditor({
         {tabs.map((tab, index) => (
           <div key={tab.id} className="flex flex-wrap items-center gap-2">
             <TabLabelInput
-              key={`${block.id}:${tab.id}:${tab.label}`}
+              key={`${block.id}:${tab.id}`}
               tab={tab}
               index={index}
               onCommit={(label) => commitLabel(tab, label)}
@@ -145,7 +173,7 @@ export function TabsEditor({
                 const nextSlots = Object.fromEntries(
                   Object.entries(slots).filter(([slotId]) => slotId !== tab.id)
                 );
-                commit(nextTabs, nextSlots);
+                if (commit(nextTabs, nextSlots)) clearBindingsForSlot(tab.id);
                 const nearestTab = nextTabs[Math.min(index, nextTabs.length - 1)];
                 if (nearestTab) onArmSlotInsert?.(block.id, nearestTab.id);
               }}

@@ -9,28 +9,36 @@
 **Category:** Custom Screens / Admin State Cleanup
 **Estimated Effort:** Small
 **Dependencies:** TASK-540 closure, TASK-9999-01-L01
-**Status:** ⏳ To Do
+**Status:** ⏭️ Superseded
+**Superseded By:** TASK-540-02-L01
+**Re-triaged:** 2026-07-18
+**Changelog:** 1258
+**Supersession Reason:** The active TASK-540-02-L01 repair now reads `baseLabel` to invalidate stale drafts while preserving focus on the commit-stable Tab-label input. Removing it would regress visible keyboard/focus and stale-draft behavior, so the original behavior-neutral premise is false and no TASK-9999-eligible implementation remains.
 
 ---
 
 ## Overview
 
-`ScreenTabLabelDraft.baseLabel` is written in every draft-state update but never read.
-TASK-540-02-L01 is first extracting that exact state into
-`ScreenBlockInspectorTabs.tsx`; it deliberately preserves the unread member. This leaf
-later replaces the two-field object with the value-only state shape while preserving
-the final TASK-540 tab-label contract exactly, including Unicode bounds, commit,
-Escape, invalid input, external rerender, focus, and accessibility behavior.
+This leaf is terminal and must not be implemented. TASK-540-02-L01 keeps the Tab-label
+input keyed by stable block and Tab identity so an Enter commit preserves keyboard
+focus, then reads `draft.baseLabel` to detect when a later committed label invalidates
+the local draft. The resulting visible UX and accessibility responsibility makes the
+old value-only cleanup unsafe and ineligible for TASK-9999.
 
-The source-task backlink now carries the final post-split evidence:
-`ScreenBlockInspectorTabs.tsx:24,25,38,42,53,59,63`, source SHA-256
-`03cbeb962f40a87085d11403c15f9b69b482302322c5fc85ad224df9a52e16d4`, and
-normalized AST contract SHA-256
-`15897646098bfeb9f653b940c0782e3b3f999a811b9cbc3d9bf46a01cae5df9a`.
-The workflow also proves `ScreenTabLabelDraft`, `TabLabelInput`, and `baseLabel` are
-absent from the facade, with one `baseLabel` type member, exactly four writes, the sole
-`draft.value` read, and no `baseLabel` or whole-draft read. This final evidence is the
-only layout authorized for later implementation of this still-open leaf.
+Re-triage evidence is `ScreenBlockInspectorTabs.tsx:25-28,39-49,51,62,68,72,145`:
+the state has one `baseLabel` member, the current behavior reads it at line 48, and the
+input uses the commit-stable key at line 145. The stateful regression at
+`custom-screen-binding-panel.test.tsx:614-696` proves same-Tab and block-identity stale
+draft invalidation; the keyboard regression at `:754-782` proves Enter retains focus on
+the same input while updating its accessible label. The source SHA-256 at re-triage was
+`35e87c59e5f3590e5d8919826f03047469ea3c93666b22108f1c4016fac3e953`.
+
+## Historical Superseded Contract — DO NOT IMPLEMENT
+
+The sections below preserve the previously execution-ready proposal as audit provenance
+only. They describe removing an allegedly unread property. New evidence disproved that
+premise, so none of the ownership, pseudocode, checklist, or smoke instructions below
+authorize source or test changes.
 
 ## Exclusive Ownership
 
@@ -53,12 +61,11 @@ TASK-9999 eligibility.
 
 ## Sub-Tasks
 
-- [ ] Remove the unread `baseLabel` member and object-state allocations.
-- [ ] Preserve the keyed remount and every final TASK-540 commit/restore condition.
-- [ ] Run the existing full tab-label behavior regression in the correct Vitest lane.
-- [ ] Run static checks and diff validation.
+- [x] Re-triage the finding against current behavior and focus evidence.
+- [x] Supersede the unsafe removal through active TASK-540-02-L01.
+- [x] Record standalone changelog and task-board closure evidence.
 
-## Implementation Pseudocode
+## Historical Implementation Pseudocode — DO NOT IMPLEMENT
 
 ```tsx
 function TabLabelInput({ tab, index, onCommit }: TabLabelInputProps) {
@@ -107,7 +114,7 @@ same-tab remote label refresh, block-identity change, and no unintended patch. E
 only visible behavior coverage that TASK-540 has not already pinned; never assert the
 removed implementation detail instead of behavior.
 
-## Testing Requirements
+## Historical Testing Requirements — DO NOT IMPLEMENT
 
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
@@ -139,7 +146,6 @@ implementation that must be repaired before closure.
 
 ## Documentation Updates Required
 
-- Record validation results and completion metadata in this leaf.
-- Add this physical ID to the TASK-9999-01 closure changelog.
-- Mark TASK-9999-01 terminal only after both leaves are terminal; leave TASK-9999 In
-  Progress.
+- Changelog 1258 records why this leaf is superseded without claiming implementation.
+- TASK-9999-01 remains `⏳ To Do` because L01 remains open; TASK-9999 remains
+  `🚧 In Progress` permanently.

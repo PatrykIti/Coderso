@@ -9,9 +9,9 @@
 **Dependencies:** TASK-540-01
 **Status:** 🚧 In Progress
 **Started:** 2026-07-13
-**Implementation Complete:** 2026-07-13 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Repair Started:** 2026-07-16
-**Repair Reason:** The Inspector's binding factory must consume R01's schema-domain `buildScreenFieldBindingId` and prove maximum-length tuples remain distinct and max-120 without taking ownership of schema or document operations. The same current repair also restores visible blank or over-120 Tab-label drafts to the latest committed label on blur and Enter without emitting a document patch.
+**Fix Started:** 2026-07-18
+**Repair Reason:** The Inspector's binding factory must consume R01's schema-domain `buildScreenFieldBindingId` and prove maximum-length tuples remain distinct and max-120 without taking ownership of schema or document operations. The current repair also restores invalid Tab-label drafts, keeps keyboard focus on the same input after an Enter commit while invalidating stale drafts through the now-read `baseLabel`, and garbage-collects bindings owned by a removed Tab slot subtree.
 **Repair Revalidated:** 2026-07-16 — TASK-540-02-L01 passed `core lint:types`, `core lint`, its exact two-file Vitest gate 33/33 on the final shared schema state, including the domain-builder consumer and invalid blur/Enter restore regressions, and `git diff --check`; no full-suite, post-audit, smoke, changelog, or closure pass is claimed.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
 **Changelog:** 1252 (pinned; closure only)
@@ -41,21 +41,23 @@ The historical blocker evidence was the TASK-540-02-L01-owned
 `core/admin/ui/custom-screens/ScreenBlockInspector.tsx` at 1,194 physical lines and
 SHA-256 `eb49d21a99cd5fbf8dedfd502c727ba890dd455552a8259b9e9b45eb4b11d4df`.
 The completed cohesive split preserves the stable facade and exact reference identity;
-the final production line counts are facade 561, model 209, controls 215, Tabs 176, and
-Section 79. The two owned tests remain 787 and 454 lines. Every original, extracted,
+the current production line counts are facade 560, model 209, controls 215, Tabs 204, and
+Section 79. The two owned tests are 902 and 454 lines. Every original, extracted,
 test, and support path touched since the verified baseline remains in the byte-based
 `{ path, owner, lines, sha256 }` receipt and is `<= 1000`; staging or committing never
 resets the gate. An over-limit result is neither a LOW nor a TASK-9999 candidate.
 
-`ScreenTabLabelDraft.baseLabel` remains intentionally present and behavior-neutral in
-`ScreenBlockInspectorTabs.tsx`; TASK-9999-01-L02 was not executed and remains `⏳ To
-Do`. The final evidence is lines `24,25,38,42,53,59,63`, source SHA-256
-`03cbeb962f40a87085d11403c15f9b69b482302322c5fc85ad224df9a52e16d4`, and normalized
-AST SHA-256 `15897646098bfeb9f653b940c0782e3b3f999a811b9cbc3d9bf46a01cae5df9a`;
-the workflow proves the deferred symbols are absent from the facade.
+`ScreenTabLabelDraft.baseLabel` is now behavior-owning state in
+`ScreenBlockInspectorTabs.tsx`: the commit-stable `block.id:tab.id` key preserves keyboard
+focus after Enter, while the `draft.baseLabel !== tab.label` read invalidates a stale
+draft when the committed label changes. New evidence therefore disproved the premise of
+TASK-9999-01-L02; that leaf was re-triaged on 2026-07-18 and is `⏭️ Superseded` by
+the active TASK-540-02-L01 repair. Removing `baseLabel` would regress visible focus and
+stale-draft behavior and is not eligible for deferred LOW treatment.
 
 This leaf lands after TASK-540-01-L01 and before TASK-540-03-L01. Its two behavior
-suites remain independently runnable and preserve their existing 33 tests. The family
+suites remain independently runnable and now cover 17 binding-panel plus 18
+image-inspector tests (35 total). The family
 aggregate remains exactly 64 Vitest + 18 Bun = 82 targets, with 81 source-owner/read-only
 files and one closure aggregate; pinned changelog 1252 is unchanged.
 
@@ -76,10 +78,16 @@ files and one closure aggregate; pinned changelog 1252 is unchanged.
   committed label on either blur or Enter and emits no patch; Escape does the same after
   parent rerenders. The draft input must not use native `maxLength=120`, because HTML counts
   pre-trim UTF-16 units and would reject schema-valid emoji or surrounding whitespace.
+  A successful Enter commit keeps the same input mounted and focused; the buffered draft
+  records the committed label it was based on and resets only when a later parent value
+  differs from that `baseLabel`.
   The inspector imports the shared
   minimum/maximum constants, cannot remove the final tab, and cannot create a draft
   rejected by the write schema. “Edit content” arms that tab's exact slot-end insertion
   target; the renderer consumes the same host identity in TASK-540-03.
+- Removing a Tab removes its exact slot and clears bindings for every block in that
+  slot's nested subtree through the existing empty-field sentinel. Bindings owned by
+  surviving slots remain untouched, and the final-tab guard performs neither mutation.
 - The image URL control calls `sanitizeScreenAuthoringUrl(..., "media")`; it no
   longer imports the compatibility `normalizeScreenImageSrc` alias. This subtask owns
   the existing `custom-screen-image-inspector.test.tsx` expectations and runs that suite
@@ -108,10 +116,11 @@ normalizer.
 
 ## Completion
 
-The sole leaf remains `🚧 In Progress`. Its five-owner graph and TASK-9999 evidence
-transition are implemented; final line counts are 561/209/215/176/79 for production and
-787/454 for the tests. Independent 15/15 and 18/18 runs, combined 33/33, additional
-facade/Section consumers 16/16, static gates, exact export/reference checks, and the
-post-split AST proof and corrected-contract audit pass. The canonical modularity receipt
-is recorded, while the deferred LOW remains `⏳ To Do`. Aggregate persistence and live
-browser flows remain owned by TASK-540-06 after TASK-540-04 consumes the clear sentinel.
+The sole leaf remains `🚧 In Progress` with its exact `Repair Pending` receipt in the
+leaf contract. The current graph is 560/209/215/204/79 lines for production and 902/454
+for the tests; its targeted matrix is 17 binding-panel plus 18 image-inspector tests.
+Historical 33/33 modularity evidence remains provenance only. Current focus preservation,
+stale-draft invalidation, and removed-slot binding GC require the fresh leaf gate before
+this repair can replace `Repair Pending`. TASK-9999-01-L02 is superseded, not deferred.
+Aggregate persistence and live browser flows remain owned by TASK-540-06 after
+TASK-540-04 consumes the clear sentinel.

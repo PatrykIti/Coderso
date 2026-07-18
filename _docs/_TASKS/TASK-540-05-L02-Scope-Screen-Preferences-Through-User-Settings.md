@@ -12,8 +12,8 @@
 **Started:** 2026-07-14
 **Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Repair Reason:** Final post-audit found the A/B self-scope route proof re-read only user B after the two sessions wrote different values. The existing real-HTTP test now re-reads A with A's authenticated identity and asserts A's exact DB row alongside B, preserving the exact access-log inventory.
-**Revalidation Passed:** 2026-07-16 — validated against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` with dirty owner path `tests/integration/routes/userSettings.test.ts` and the current L03 Entry Editor suite as a read-only dependency: core/root static gates passed; the exact six-file Vitest matrix passed 66/66; DB preflight returned configured/reachable/select-one; the exact three-file Bun matrix passed 27/27 with 165 expectations; isolated user-settings routes passed 10/10 with 64 expectations; and `git diff --check` passed. No full-suite, smoke, changelog, or closure result is claimed.
-**Modularity Repair Pending:** 2026-07-17 — baseline-to-final history from `e5f15a567` includes the current dirty 1,064-line `tests/integration/routes/userSettings.test.ts` and, conditionally through the required typed aggregate fixture, the 1,506-line `tests/vitest/ui/assistant-panel-interaction.test.tsx`. The hard `AGENTS.md` **File Size and Modularity** gate requires both cohesive splits below before closure while that fixture delta remains; the preceding revalidation is pre-split history only.
+**Revalidation Passed:** 2026-07-17 — current post-split owner gate: the exact seven-file Vitest matrix passed 62/62; the exact four-file Bun matrix passed 27/27 with 190 assertions; isolated User Settings route and access-log harness suites passed 2/2 and 8/8; all 39 scanner self-test cases, core/root static checks, split/name/line/workflow gates, and `git diff --check` passed. No clean family post-audit, full validation, smoke, changelog, or closure result is claimed.
+**Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
 **Historical Post-Audit:** 2026-07-14 — PASS at that revision; superseded by the 2026-07-16 owner-test repair, so a fresh sequential post-audit remains pending
 **Previous Completion:** 2026-07-14
 **Previous Targeted Gate:** 2026-07-14 — `core lint:types`, `core lint`, root `tsc`, the exact six-file Vitest matrix (64/64), the exact two-file Bun/DB matrix (20/20), and `git diff --check`
@@ -96,7 +96,7 @@ LOW or `TASK-9999` candidate. Family changelog 1252 must record this behavior-ne
 test modularization and its final line-count evidence. Do not mark this leaf or its
 parent done until all three paths below pass the hard count independently.
 
-The following current dirty-file ranges are audit anchors for responsibility, not
+The following historical pre-split dirty-file ranges are audit anchors for responsibility, not
 instructions to move arbitrary line spans:
 
 - `userSettings.test.ts:53-354` owns the stateless access-log types, comparison and
@@ -109,11 +109,11 @@ instructions to move arbitrary line spans:
 
 Split by those cohesive responsibilities as follows:
 
-| Bun test/support file | Expected physical lines | Hard maximum |
+| Bun test/support file | Final physical lines | Hard maximum |
 |---|---:|---:|
-| `tests/integration/routes/support/userSettingsAccessLogHarness.ts` | 320–390 | 1,000 |
-| `tests/integration/routes/userSettingsAccessLogHarness.test.ts` | 280–360 | 1,000 |
-| `tests/integration/routes/userSettings.test.ts` | 470–620 | 1,000 |
+| `tests/integration/routes/support/userSettingsAccessLogHarness.ts` | 323 | 1,000 |
+| `tests/integration/routes/userSettingsAccessLogHarness.test.ts` | 447 | 1,000 |
+| `tests/integration/routes/userSettings.test.ts` | 494 | 1,000 |
 
 1. `tests/integration/routes/support/userSettingsAccessLogHarness.ts` is a test-only,
    stateless support module. It owns `AccessLogIdentity`, `ExpectedAccessLog`,
@@ -123,6 +123,14 @@ Split by those cohesive responsibilities as follows:
    `drainExactAccessLogs`, `validateAndCleanupAccessLogs`, and `trackedFetch`. It may
    import Bun's assertion helper because it is test-only, but it must not own a global
    marker, request ledger, UUID set, DB client, server, timer, or mutable fixture.
+   Those named symbols are also its exact export allowlist. The only private runtime
+   declarations are the pure `sameArray` and `isSubmultiset` function declarations;
+   private types/interfaces remain allowed. Every top-level variable is one of the four
+   exported constants and uses `const`; no private/mutable state, expression statement,
+   class, enum, side-effect import, or other top-level behavior is allowed. The only
+   optional import is the exact same-name value `{ expect }` assertion helper from
+   `bun:test`. The module may not export a default, re-export through an indirect
+   declaration, or expose an additional value/type such as `mock`.
 2. `tests/integration/routes/userSettingsAccessLogHarness.test.ts` owns the local
    `makeCandidate`, `createFakePollDeps`, and `fakeScope` fixtures plus exactly the
    existing eight deterministic regressions: convergence before exact equality;
@@ -149,6 +157,78 @@ weaken, merge, skip, or re-baseline any existing behavior assertion. Both
 `.test.ts` files remain Bun-owned. Do not migrate the deterministic harness tests to
 Vitest merely because their dependencies are injected; they are executable proof for
 the Bun HTTP/access-log teardown contract and must remain beside that runtime suite.
+
+The executable name/body oracle is intentionally asymmetric so the additive requirements
+above do not contradict assertion preservation:
+
+- Pre-split/current mode pins all ten declarations at revision
+  `d803bbcfa5b52cb1e5036836592bd92ee2c03b6f` with declaration SHA-256
+  `a83b8e25d4a8b06a1591a0f15faf565f562a0b1a6d5fb07dc2c548bba7979996`.
+- Final mode pins the two retained route declarations byte-semantically at SHA-256
+  `dc303e17e132938d2556ddcba832b913f6a3bacbde3bb04089b3887ab85c5399`.
+- For each of the eight harness callbacks, every normalized top-level callback statement
+  from that same pinned revision must remain, in the same order, as an exact AST
+  prefix. Final mode may append statements after that prefix, but it may not insert a
+  bypass before it or edit, replace, reorder, or remove a baseline statement/assertion.
+- The additive statements must bind the actual helper result/promise under the exact
+  identifiers below and assert that binding through `expect(...)`. These are executable
+  result bindings, not comments, string labels, or no-op evidence markers:
+
+| Existing test callback | Required additive result binding → producer → assertion |
+|---|---|
+| `access-log inventory distinguishes missing, extra, late, and out-of-scope rows` | `duplicateExtraInventory`, `wrongPathInventory`, and `wrongIdentityInventory` → `observeStableAccessLogInventory` → `expect(binding.behaviorError).toBe("access_log_extra")`; `signatureChangedInventory` → the same producer → `expect(binding.behaviorError).toBe("access_log_late")` |
+| `exact access-log cleanup drains late owned UUIDs without deleting outsiders` | `postEmptyReappearanceDrain` → `drainExactAccessLogs` → `expect(binding.lateAfterDelete).toBe(true)` |
+| `validateAndCleanupAccessLogs proves both quiet windows before fixture cleanup` | `queryLatencyInventory` → `observeStableAccessLogInventory` → `expect(binding.behaviorError).toBe(null)`; `deleteLatencyDrain` → `drainExactAccessLogs` → `expect(binding.cleanupError).toBe(null)` |
+| `validateAndCleanupAccessLogs preserves deterministic error ordering while draining exact IDs` | `compoundValidationPromise` → `validateAndCleanupAccessLogs` → `await expect(binding).rejects.toMatchObject(...)`, whose expected object contains the ordered messages `access_log_extra`, `access_log_scope_invalid`, `access_log_late_after_delete`, `access_log_absence_unstable` |
+| `deadline-crossing cleanup makes one final exact delete and retains absence failure` | `deadlineCrossingInventory` → `observeStableAccessLogInventory` → `expect(binding.behaviorError).toBe("access_log_unstable")`; `deadlineCrossingDrain` → `drainExactAccessLogs` → `expect(binding.cleanupError?.message).toBe("access_log_absence_unstable")` |
+
+Every result binding and its matcher are direct top-level statements appended after the
+exact baseline prefix. A resolved result initializer is exactly
+`await producer(...)`; `compoundValidationPromise` is exactly the unawaited
+`validateAndCleanupAccessLogs(...)` call consumed by the direct awaited `rejects`
+assertion. Each result binding is immutable from its declaration through that assertion:
+no intervening reference, alias, assignment/property write, increment/decrement,
+`delete`, or call receiver/argument is allowed. Every `toBe` receives exactly one direct
+required string/`true`/`null` literal. `toMatchObject` receives exactly one object whose
+sole `errors` property is an array of the four exact single-`message` objects in the
+required order; extra properties/elements, computed values, and spreads fail closed.
+Comma expressions, fabricated object projections, matchers rooted anywhere except the
+named binding/property chain, nested functions/control flow, and unreachable `if (false)`
+evidence fail the scanner. An early/conditional callback `return` and any
+local/module-scope shadow or assignment of the producer names fail too; the three
+producers must be exact same-name value imports from
+`./support/userSettingsAccessLogHarness`. Independently, the scanner derives a protected
+name set from every identifier in the eight pinned baseline callbacks and rejects an
+appended callback-scope function, class, enum, direct variable/destructuring binding, or
+function-scoped `var` binding from a nested statement when its name intersects that set.
+This fail-closed rule protects `expect` plus every imported/module fixture or helper name
+used by the retained baseline from declaration hoisting or a temporal-dead-zone shadow.
+Its mutation self-test proves each bypass, including hoisted `function expect` and
+`function makeCandidate`, `var`, class, and destructuring shadows,
+`Object.assign(binding, ...)` before the assertion, a tautological
+`toBe({ required: literal, actual: binding.property }.actual)`, and an unawaited
+`.rejects` assertion are rejected; `toBeDefined()` is never sufficient evidence for
+this additive contract.
+
+The final DB-free harness suite has a closed module boundary. Its imports are exactly:
+value `expect`/`test` from `bun:test`; value `accessLogSignature`,
+`drainExactAccessLogs`, `observeStableAccessLogInventory`, `trackedFetch`, and
+`validateAndCleanupAccessLogs`; and type-only `AccessLogCandidate`, `AccessLogScope`,
+`ExpectedAccessLog`, and `PollDeps` from the support module. Every support import is a
+same-name named import. Module-scope runtime values are exactly `makeCandidate`,
+`createFakePollDeps`, and `fakeScope`; the remaining declarations are types/interfaces
+and the eight direct `test(...)` registrations. The scanner also checks the support
+module's exact export allowlist from the split ownership above. Unknown imports or
+exports, aliases, `mock`, extra hooks/helpers, mutable fixtures, or module-scope producer
+replacement fail before execution; the mutation self-test specifically adds a
+synthetic support `mock` import/export and proves both boundaries reject it. Separate
+mutations prove that a private top-level `let`, an `export let` timing constant, and a
+side-effect import also fail the stateless support-module gate.
+
+The remaining three harness callbacks still pass the same exact-prefix proof even when
+they need no new binding. The scanner continues to pin the exact ten-name multiset and
+the exact `2 + 8` file partition, so this additive exception cannot create a new test,
+rename one, or move a route test into the DB-free harness.
 
 ### Split pseudocode
 
@@ -240,7 +320,12 @@ const makeCandidate = (...): AccessLogCandidate => ...;
 const createFakePollDeps = (...): PollDeps & FakePollInspection => ...;
 const fakeScope: AccessLogScope = ...;
 // Keep the existing eight test names/count independently runnable; extend their
-// compound inputs/assertions where the final cleanup matrix below requires it.
+// compound inputs/assertions where the final cleanup matrix below requires it. Bind
+// actual helper results with the exact additive identifiers from the table above, e.g.
+// const signatureChangedInventory = await observeStableAccessLogInventory(...);
+// expect(signatureChangedInventory.behaviorError).toBe("access_log_late");
+// const compoundValidationPromise = validateAndCleanupAccessLogs(...);
+// await expect(compoundValidationPromise).rejects.toMatchObject({ errors: [...] });
 
 // userSettings.test.ts — registration + one real server/DB flow only.
 test("registerUserSettingsRoutes wires endpoints", ...);
@@ -306,24 +391,85 @@ the required exact key:
 ```
 
 That four-line semantic fixture delta touches a 1,506-line baseline file, so the current
-branch resolves the conditional modularity group to **required**. Split it cohesively:
+branch resolves the conditional modularity group to **required**. The cohesive split
+landed as follows:
 
-| File | Exact responsibility and final test count | Expected physical lines | Hard maximum |
+| File | Exact responsibility and final test count | Final physical lines | Hard maximum |
 |---|---|---:|---:|
-| `tests/vitest/ui/support/assistantPanelInteractionHarness.tsx` | Shared Assistant status/plan/execute response builders, complete typed `UserSettings` fixture, panel mount/event/flush helpers, and deterministic per-test reset | 130–230 | 1,000 |
-| `tests/vitest/ui/assistant-panel-interaction.test.tsx` | Retain the first seven CTA, dry-run/execute, needs-input, inspection, Basic intake, Advanced switch, and validation-error tests | 760–900 | 1,000 |
-| `tests/vitest/ui/assistant-panel-conversation.test.tsx` | Retain the final six docs/LLM modes, prior inspection candidates, new conversation, and SPA remount restoration tests | 520–680 | 1,000 |
+| `tests/vitest/ui/support/assistantPanelInteractionHarness.tsx` | Existing shared `mount`, input, `flush`, `findButton`, `basicIntakeSession`, `makeUserSettings`/`mockUserSettings`, and deterministic reset scaffolding only; no Assistant status/plan/execute response builders | 107 | 1,000 |
+| `tests/vitest/ui/assistant-panel-interaction.test.tsx` | Retain the first seven CTA, dry-run/execute, needs-input, inspection, Basic intake, Advanced switch, and validation-error tests | 825 | 1,000 |
+| `tests/vitest/ui/assistant-panel-conversation.test.tsx` | Retain the final six docs/LLM modes, prior inspection candidates, new conversation, and SPA remount restoration tests | 614 | 1,000 |
 
 The exact `makeUserSettings` helper and its complete typed defaults move to
 `tests/vitest/ui/support/assistantPanelInteractionHarness.tsx`; neither retained test
 suite may own or duplicate that aggregate fixture. Both suites consume the same exported
 factory so the required key is proven once at its type boundary.
 
+The harness owns exactly these function-valued exports:
+`basicIntakeSession`, `findButton`, `flush`, `makeUserSettings`, `mockUserSettings`,
+`mount`, `resetAssistantPanelTestState`, `setInputValue`, and `setTextareaValue`.
+Preserve their existing function-valued `export const` shape during extraction; do not
+add runtime module-scope values or a generic helper registry.
+`resetAssistantPanelTestState` owns the existing
+`clearAssistantRuntimeStateCache()`, `clearAssistantConversationState()`,
+`document.body.innerHTML = ""`, and `vi.restoreAllMocks()` teardown. Each suite registers
+that imported function directly with `afterEach(resetAssistantPanelTestState)`.
+
+The verifier hashes the normalized initializer AST for the eight existing helpers and
+the existing `afterEach` callback at pinned pre-split revision
+`d803bbcfa5b52cb1e5036836592bd92ee2c03b6f`; the moved initializers must match those
+fixed hashes exactly, with the callback renamed only by its exported binding. This pins
+the complete typed `makeUserSettings(overrides: Partial<UserSettings>): UserSettings`
+fixture and every default/property, not a raw substring or comment marker, and pins the
+reset body exactly rather than checking only that four calls happen somewhere.
+
+The harness import projection is also exact and side-effect-import-free: `React`,
+`createRoot`, `vi`, the `userSettingsClient` namespace plus `UserSettings` type,
+`clearAssistantRuntimeStateCache`, `clearAssistantConversationState`, and the intake
+version/session type from their direct source modules at the correct `../../../../core`
+relative depth. No barrel, default substitute, response client, extra import, or
+side-effect-only import is accepted.
+
+The interaction partition separately retains the exact same-name namespace import
+`* as userSettingsClient` from
+`../../../core/admin/services/userSettingsClient` because its existing dry-run/execute
+callback directly spies on `setUserSetting`. That token is required only in
+`assistant-panel-interaction.test.tsx` and forbidden in the conversation partition.
+This is distinct from fixture ownership: the harness namespace import remains the sole
+owner of the shared `makeUserSettings`/`mockUserSettings` aggregate fixture and its
+`getUserSettings` spy. An alias, barrel/different module, omitted interaction import, or
+conversation-side duplicate fails the split verifier.
+
+The current status, plan, execute, inspection, and docs response mocks are inline inside
+the 13 existing test callbacks. They stay inline and byte-semantically unchanged; the
+harness must not import `assistantStatusClient`/`assistantClient`, build those responses,
+or centralize their behavior branches. Moving one would contradict the exact callback
+body oracle even if the resulting test happened to pass.
+
 Both suites import `AssistantPanel` directly and only the dedicated harness; neither
 imports the other suite. The harness registers no tests, performs no mount/fetch at
 module import, exposes no shared mutable conversation/settings state, and provides a
 fresh fixture/reset boundary to each caller. It may centralize repeated data and typed
 builders, but not expectations or behavior branches.
+
+Each split suite's module scope is closed to: its allowlisted direct imports, the exact
+pinned `IS_REACT_ACT_ENVIRONMENT = true` statement, exactly one direct
+`afterEach(resetAssistantPanelTestState)`, and its direct `test(...)` registrations.
+Unknown/side-effect imports, a second hook, helper declaration, mock/reset call, or any
+other top-level executable statement fail the verifier. This keeps response mocks inside
+the exact callback-body SHA instead of moving semantic setup just outside that hash.
+
+The mechanically invoked final split verifier enforces that boundary independently of
+`fixtureOnlyFiles` (which is intentionally empty during a resumed modularity mutation).
+It requires the exact preference property once inside the harness `makeUserSettings`,
+rejects either suite duplicating the fixture, pins the exact helper/export and reset
+ownership above, rejects test registration/import-time execution/shared mutable state in
+the harness, and requires both suites to import `AssistantPanel` and the harness directly
+without importing each other. It also invokes the Assistant name/body oracle and requires
+the existing declaration SHA-256
+`7c4545631fd23c811b5639bc4c27496a18e70d874431df5b8c895757a794eb4e`,
+exact 13-name multiset, and exact `7 + 6` partition. A cleared fixture-only projection
+therefore cannot turn into a missing split verifier.
 
 Fixture-only ownership is conditional and fail-closed:
 
@@ -352,11 +498,10 @@ During the normal modularity-repair phase, temporarily disable the legacy single
 fixture-only projection for `assistant-panel-interaction.test.tsx`: the fixture has moved
 to the harness, so applying the old projection would either reject the required
 extraction or accidentally ignore it. The split-specific verifier replaces that check
-for the phase by sealing the exact 13-name/assertion multiset and the exact
-`makeUserSettings` fixture member in the harness. Once the split lands, the conditional
-three-path fixture-only verifier becomes canonical; never run both projections against
-different fixture owners or treat a disabled projection as permission to change an
-Assistant assertion.
+for the phase and remains a named L02, closure, and full-validation gate after the split,
+sealing the exact 13-name/assertion multiset, helper/reset/import boundary, and exact
+`makeUserSettings` fixture member in the harness. Never treat a disabled legacy
+projection as permission to change an Assistant assertion.
 
 ## Historical pre-implementation grounded anchors
 
@@ -1955,11 +2100,24 @@ bun test tests/unit/settings/userSettingsService.test.ts \
 bun test tests/integration/routes/userSettingsAccessLogHarness.test.ts
 bun test tests/integration/routes/userSettings.test.ts
 
+# Before the split (while the new files are absent), current mode pins the original
+# all-10 declaration body. After the split, final mode applies the retained-route hash,
+# per-callback AST-prefix proof, additive result bindings, and exact 2+8 partition.
+node _docs/_workflows/task-540-test-name-contract.mjs \
+  --mode=final --family=userSettingsRoutes
+
 # Conditional Assistant split: both suites must pass independently at 7 and 6 tests.
 ./node_modules/.bin/vitest run --config vitest.config.ts \
   tests/vitest/ui/assistant-panel-interaction.test.tsx
 ./node_modules/.bin/vitest run --config vitest.config.ts \
   tests/vitest/ui/assistant-panel-conversation.test.tsx
+node _docs/_workflows/task-540-test-name-contract.mjs \
+  --mode=final --family=assistantPanel
+node _docs/_workflows/task-540-implement.mjs --check-l02-assistant-split
+
+# Scanner/workflow mutation self-tests remain green before and after extraction.
+node _docs/_workflows/task-540-test-name-contract.mjs --mode=self-test
+node _docs/_workflows/task-540-implement.mjs --self-test-repair-siblings
 
 # Hard AGENTS.md physical-line gate; every listed file must be <= 1,000.
 for file in \

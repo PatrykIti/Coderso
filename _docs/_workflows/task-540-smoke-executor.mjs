@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { constants as fsConstants } from "node:fs";
+import { constants as fsConstants, writeSync } from "node:fs";
 import {
   chmod,
   lstat,
@@ -31,6 +31,7 @@ const MAX_SESSION_LIST_LINE_BYTES = 4096;
 const MAX_NATURAL_KEY_CANDIDATES = 64;
 const MAX_TASK_TRAFFIC_ROWS = 4096;
 const MAX_COMPLETE_SESSION_ROWS = 4096;
+const MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES = 256;
 const BUN_BRIDGE_EXECUTION_AUTHORITY = deepFreezeExact({
   argvShape: ["--no-env-file", "--cwd", "<canonical-core>", "--eval", "<immutable-source>"],
   cwdShape: { bun: "<canonical-core>", spawn: "<canonical-root>" },
@@ -58,6 +59,8 @@ const PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY = new WeakMap();
 const PRIVATE_BUN_EXECUTABLE_AUTHORITY = new WeakMap();
 const PRIVATE_BUN_RESOURCE_DESCRIPTORS = new WeakMap();
 const PRIVATE_BUN_OPERATION_DESCRIPTORS = new WeakMap();
+const PRIVATE_FAILURE_ACTION_TRACKERS = new WeakMap();
+const PRIVATE_FAILURE_ACTION_DIAGNOSTIC_SINKS = new WeakMap();
 let PRE_AUTHORITY_FAILURE_COUNT = 0;
 const SAFE_IDENTIFIER_PATTERN = /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/u;
 const SAFE_PATH_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/u;
@@ -1703,9 +1706,12 @@ function responseLostStorageRoot(state) {
     typeof state.storageRootBaseline === "string" && state.storageRootBaseline.length > 0,
     "storage root baseline is absent"
   );
-  const absolute = path.isAbsolute(state.storageRootBaseline)
-    ? path.resolve(state.storageRootBaseline)
-    : path.resolve(state.root, state.storageRootBaseline);
+  invariant(
+    path.isAbsolute(state.storageRootBaseline) &&
+      path.resolve(state.storageRootBaseline) === state.storageRootBaseline,
+    "storage root baseline is not a canonical absolute path"
+  );
+  const absolute = state.storageRootBaseline;
   invariant(
     absolute !== state.root && absolute !== path.parse(absolute).root,
     "storage root resolution drift"
@@ -3420,6 +3426,162 @@ function assertRecursivelyFrozen(value, seen = new WeakSet()) {
   seen.add(value);
   invariant(Object.isFrozen(value), "plan contains mutable state");
   for (const key of Reflect.ownKeys(value)) assertRecursivelyFrozen(value[key], seen);
+}
+
+function createPrivateFailureActionTracker(plan) {
+  assertRecursivelyFrozen(plan);
+  invariant(
+    Array.isArray(plan.actionManifest) && plan.actionManifest.length > 0,
+    "failure action tracker manifest is absent"
+  );
+  const actionById = new Map();
+  for (const [index, action] of plan.actionManifest.entries()) {
+    invariant(
+      action &&
+        typeof action === "object" &&
+        Object.isFrozen(action) &&
+        typeof action.id === "string" &&
+        SAFE_IDENTIFIER_PATTERN.test(action.id) &&
+        action.ordinal === index + 1 &&
+        !actionById.has(action.id),
+      "failure action tracker manifest identity drift"
+    );
+    actionById.set(action.id, action);
+  }
+  const tracker = Object.freeze({});
+  PRIVATE_FAILURE_ACTION_TRACKERS.set(tracker, {
+    actionManifest: plan.actionManifest,
+    actionById,
+    currentActionId: null,
+    nextIndex: 0,
+    sealed: false,
+  });
+  return tracker;
+}
+
+function beginPrivateFailureAction(tracker, action) {
+  const state = PRIVATE_FAILURE_ACTION_TRACKERS.get(tracker);
+  invariant(state !== undefined, "failure action tracker is invalid");
+  invariant(
+    state.sealed === false && state.currentActionId === null,
+    "failure action tracker is not ready"
+  );
+  const expected = state.actionManifest[state.nextIndex];
+  invariant(
+    expected === action && state.actionById.get(action.id) === action,
+    "failure action tracker rejected an unregistered action"
+  );
+  state.currentActionId = action.id;
+}
+
+function completePrivateFailureAction(tracker, action) {
+  const state = PRIVATE_FAILURE_ACTION_TRACKERS.get(tracker);
+  invariant(state !== undefined, "failure action tracker is invalid");
+  invariant(
+    state.sealed === false &&
+      state.currentActionId === action.id &&
+      state.actionManifest[state.nextIndex] === action &&
+      state.actionById.get(action.id) === action,
+    "failure action tracker completion drift"
+  );
+  state.nextIndex += 1;
+  state.currentActionId = null;
+}
+
+function sealPrivateFailureActionTracker(tracker) {
+  const state = PRIVATE_FAILURE_ACTION_TRACKERS.get(tracker);
+  invariant(state !== undefined, "failure action tracker is invalid");
+  invariant(
+    state.sealed === false &&
+      state.currentActionId === null &&
+      state.nextIndex === state.actionManifest.length,
+    "failure action tracker manifest completion drift"
+  );
+  state.sealed = true;
+}
+
+function currentPrivateFailureActionIdNeverThrow(tracker) {
+  try {
+    const state = PRIVATE_FAILURE_ACTION_TRACKERS.get(tracker);
+    if (
+      state === undefined ||
+      state.sealed !== false ||
+      typeof state.currentActionId !== "string"
+    ) {
+      return null;
+    }
+    const action = state.actionById.get(state.currentActionId);
+    if (
+      action === undefined ||
+      action !== state.actionManifest[state.nextIndex] ||
+      action.id !== state.currentActionId
+    ) {
+      return null;
+    }
+    return state.currentActionId;
+  } catch {
+    return null;
+  }
+}
+
+function createPrivateBoundedFailureActionDiagnosticSink(write) {
+  invariant(typeof write === "function", "failure action diagnostic writer is invalid");
+  const sink = Object.freeze({});
+  PRIVATE_FAILURE_ACTION_DIAGNOSTIC_SINKS.set(sink, { attempted: false, write });
+  return sink;
+}
+
+function writePrivateFailureActionDiagnosticOnceNeverThrow(sink, line) {
+  try {
+    const state = PRIVATE_FAILURE_ACTION_DIAGNOSTIC_SINKS.get(sink);
+    if (
+      state === undefined ||
+      state.attempted ||
+      typeof line !== "string" ||
+      Buffer.byteLength(line) > MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES ||
+      !line.endsWith("\n") ||
+      line.slice(0, -1).includes("\n") ||
+      line.includes("\0")
+    ) {
+      return false;
+    }
+    state.attempted = true;
+    state.write(line);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function emitPrivateFailureActionDiagnosticNeverThrow(tracker, sink) {
+  try {
+    const failedActionId = currentPrivateFailureActionIdNeverThrow(tracker);
+    if (failedActionId === null) return false;
+    const line = canonicalJson({ code: TASK_FAILURE.code, failedActionId }) + "\n";
+    return writePrivateFailureActionDiagnosticOnceNeverThrow(sink, line);
+  } catch {
+    return false;
+  }
+}
+
+function createPrivateSynchronousFailureActionDiagnosticSink(fileDescriptor, synchronousWrite) {
+  invariant(
+    Number.isSafeInteger(fileDescriptor) && fileDescriptor >= 0,
+    "failure action diagnostic file descriptor is invalid"
+  );
+  invariant(
+    typeof synchronousWrite === "function",
+    "failure action diagnostic synchronous writer is invalid"
+  );
+  return createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    const bytes = Buffer.from(line, "utf8");
+    const written = synchronousWrite(fileDescriptor, bytes, 0, bytes.length, null);
+    invariant(written === bytes.length, "failure action diagnostic write was incomplete");
+  });
+}
+
+function createRealFailureActionDiagnosticSink() {
+  return createPrivateSynchronousFailureActionDiagnosticSink(2, writeSync);
 }
 
 function assertRegisteredExecutable(plan, action) {
@@ -6236,7 +6398,12 @@ function buildCanonicalScenarioEvidence(plan, actionReceiptPairs, finalization) 
   return deepFreezeExact(scenarios);
 }
 
-async function executeSmokePlanCore(plan, capabilities, constructionCleanupAuthority = null) {
+async function executeSmokePlanCore(
+  plan,
+  capabilities,
+  constructionCleanupAuthority = null,
+  failureActionTracker = null
+) {
   assertRecursivelyFrozen(plan);
   const captures = new SingleAssignmentCaptureMap();
   const resourceLedger = new ResourceLedgerBuilder();
@@ -6259,6 +6426,7 @@ async function executeSmokePlanCore(plan, capabilities, constructionCleanupAutho
   });
   try {
     for (const action of plan.actionManifest) {
+      if (failureActionTracker !== null) beginPrivateFailureAction(failureActionTracker, action);
       const executable = assertRegisteredExecutable(plan, action);
       invariant(
         action.assertionDependencies.every((dependency) => completed.has(dependency)),
@@ -6293,7 +6461,11 @@ async function executeSmokePlanCore(plan, capabilities, constructionCleanupAutho
         browserReceipts.push(result.receipt);
         actionReceiptPairs.push({ action, receipt: result.receipt, lane: "browser" });
       }
+      if (failureActionTracker !== null) {
+        completePrivateFailureAction(failureActionTracker, action);
+      }
     }
+    if (failureActionTracker !== null) sealPrivateFailureActionTracker(failureActionTracker);
     invariant(state.route === "absent", "static manifest left an active route");
     invariant(
       completed.size === 490 && browserReceipts.length === 414 && runtimeReceipts.length === 76,
@@ -9144,6 +9316,20 @@ function ownString(source, key, { required = false } = {}) {
   return descriptor.value;
 }
 
+function assertStorageFallbackEnvironmentAbsent(repoEnvironment, inheritedEnvironment) {
+  invariant(
+    repoEnvironment !== null &&
+      typeof repoEnvironment === "object" &&
+      inheritedEnvironment !== null &&
+      typeof inheritedEnvironment === "object" &&
+      !Object.hasOwn(repoEnvironment, "MEDIA_STORAGE") &&
+      !Object.hasOwn(repoEnvironment, "MEDIA_DIR") &&
+      ownString(inheritedEnvironment, "MEDIA_STORAGE") === null &&
+      ownString(inheritedEnvironment, "MEDIA_DIR") === null,
+    "storage fallback environment must be absent"
+  );
+}
+
 async function readStrictRepoEnvironment(root, expectedIdentity) {
   const bytes = await readOwnedRegularFileNoFollow(
     path.join(root, ".env"),
@@ -11417,15 +11603,20 @@ const STORAGE_PREFLIGHT_BRIDGE_SOURCE =
   BRIDGE_INPUT_READER +
   bridgeInputSchemaGuard("user-agents-input-v1") +
   String.raw`
+import path from "node:path";
 import { eq, inArray, or, sql } from "drizzle-orm";
 import { db } from "./db/client.ts";
 import { accessLogs, auditLogs, roles, sessions, settings, userRoles, users } from "./db/schema.ts";
-import { getSetting } from "./services/settings/settingsService.ts";
 import { getStorageSettingsInternal } from "./services/settings/storageSettings.ts";
 import { decryptEmail, hashEmail, isEncryptedEmail, normalizeEmail } from "./services/security/piiEmail.ts";
 if (Object.keys(input).join(",") !== "userAgents" || !Array.isArray(input.userAgents) || input.userAgents.length !== 4 || new Set(input.userAgents).size !== 4) throw new Error("wf540_input");
-const setup = await getSetting("setup.completed"); const storage = await getStorageSettingsInternal();
-if (setup !== true || storage.driver !== "local" || !storage.localDir) throw new Error("wf540_preflight");
+const setupRows = await db.select({ key:settings.key,value:settings.value,updatedAt:settings.updatedAt }).from(settings).where(eq(settings.key,"setup.completed")).limit(2);
+const driverRows = await db.select({ key:settings.key,value:settings.value,updatedAt:settings.updatedAt }).from(settings).where(eq(settings.key,"storage.driver")).limit(2);
+const localDirRows = await db.select({ key:settings.key,value:settings.value,updatedAt:settings.updatedAt }).from(settings).where(eq(settings.key,"storage.local.dir")).limit(2);
+if (setupRows.length !== 1 || setupRows[0].value !== true || driverRows.length !== 1 || driverRows[0].value !== "local" || localDirRows.length !== 1 || typeof localDirRows[0].value !== "string" || localDirRows[0].value.length === 0 || Object.hasOwn(process.env,"MEDIA_STORAGE") || Object.hasOwn(process.env,"MEDIA_DIR")) throw new Error("wf540_preflight");
+const storage = await getStorageSettingsInternal();
+if (storage.driver !== driverRows[0].value || storage.localDir !== localDirRows[0].value) throw new Error("wf540_preflight");
+const storageRoot = path.resolve(process.cwd(),localDirRows[0].value);
 const normalizedEmail = normalizeEmail(process.env.ADMIN_EMAIL);
 const bootstrapEmailHash = hashEmail(normalizedEmail);
 const bootstrapRows = await db.select().from(users).where(or(eq(users.emailHash,bootstrapEmailHash),inArray(users.email,[bootstrapEmailHash,normalizedEmail]))).limit(2);
@@ -11464,8 +11655,13 @@ const output = {
   },
   contentRoutes: contentRoutes ? { exists: true, value: contentRoutes.value, updatedAt: contentRoutes.updatedAt.toISOString() } : { exists: false, value: null, updatedAt: null },
   local: true,
+  requiredSettings: {
+    setup: { ...setupRows[0], updatedAt: setupRows[0].updatedAt.toISOString() },
+    driver: { ...driverRows[0], updatedAt: driverRows[0].updatedAt.toISOString() },
+    localDir: { ...localDirRows[0], updatedAt: localDirRows[0].updatedAt.toISOString() },
+  },
   setupComplete: true,
-  storageRoot: storage.localDir,
+  storageRoot,
   taskTrafficBaseline: { auditIds:auditRows.map((row)=>row.id), accessIds:accessRows.map((row)=>row.id), sessionIds:sessionRows.map((row)=>row.id) },
 };` +
   BRIDGE_OUTPUT_WRITER;
@@ -12383,16 +12579,51 @@ function validateBoundedCandidatesBridgeOutput(state, descriptor, input, value) 
   return value;
 }
 
-function validateStoragePreflightBridgeOutput(_state, descriptor, _input, value) {
+function validateRequiredSmokeSettingsProjection(value, label) {
+  validateExactBridgeKeys(value, ["driver", "localDir", "setup"], label);
+  const expected = {
+    driver: ["storage.driver", "local"],
+    localDir: ["storage.local.dir", null],
+    setup: ["setup.completed", true],
+  };
+  for (const [name, row] of Object.entries(value)) {
+    validateExactBridgeKeys(row, ["key", "updatedAt", "value"], label + " " + name);
+    const [expectedKey, expectedValue] = expected[name];
+    invariant(
+      row.key === expectedKey &&
+        isNullableIsoTimestamp(row.updatedAt) &&
+        row.updatedAt !== null &&
+        (expectedValue === null
+          ? typeof row.value === "string" && row.value.length > 0
+          : row.value === expectedValue),
+      label + " " + name + " row drift"
+    );
+  }
+  return value;
+}
+
+function validateStoragePreflightBridgeOutput(state, descriptor, _input, value) {
   validateExactBridgeKeys(
     value,
-    ["bootstrap", "contentRoutes", "local", "setupComplete", "storageRoot", "taskTrafficBaseline"],
+    [
+      "bootstrap",
+      "contentRoutes",
+      "local",
+      "requiredSettings",
+      "setupComplete",
+      "storageRoot",
+      "taskTrafficBaseline",
+    ],
     descriptor.operationId + " output"
   );
   validateBootstrapPrivateBaseline(value.bootstrap, descriptor.operationId + " bootstrap");
   validateContentRoutesBridgeProjection(
     value.contentRoutes,
     descriptor.operationId + " content routes"
+  );
+  validateRequiredSmokeSettingsProjection(
+    value.requiredSettings,
+    descriptor.operationId + " required settings"
   );
   validateExactBridgeKeys(
     value.taskTrafficBaseline,
@@ -12404,6 +12635,10 @@ function validateStoragePreflightBridgeOutput(_state, descriptor, _input, value)
       value.setupComplete === true &&
       typeof value.storageRoot === "string" &&
       value.storageRoot.length > 0 &&
+      path.isAbsolute(value.storageRoot) &&
+      path.resolve(value.storageRoot) === value.storageRoot &&
+      value.storageRoot ===
+        path.resolve(state.root, "core", value.requiredSettings.localDir.value) &&
       [
         value.taskTrafficBaseline.accessIds,
         value.taskTrafficBaseline.auditIds,
@@ -14303,7 +14538,15 @@ async function runtimeStoragePreflight({ state, plan }) {
   assertRecordIdentity(proof, { local: true, setupComplete: true }, "storage preflight");
   exactOwnKeys(
     proof,
-    ["bootstrap", "contentRoutes", "local", "setupComplete", "storageRoot", "taskTrafficBaseline"],
+    [
+      "bootstrap",
+      "contentRoutes",
+      "local",
+      "requiredSettings",
+      "setupComplete",
+      "storageRoot",
+      "taskTrafficBaseline",
+    ],
     "storage preflight proof",
     { plain: true }
   );
@@ -14331,6 +14574,7 @@ async function runtimeStoragePreflight({ state, plan }) {
   state.bootstrapBaseline = deepFreezeExact(proof.bootstrap);
   initializeBootstrapLoginAuthority(state, state.bootstrapBaseline);
   state.contentRoutesBaseline = deepFreezeExact(proof.contentRoutes);
+  state.requiredSettingsBaseline = deepFreezeExact(proof.requiredSettings);
   state.storageRootBaseline = proof.storageRoot;
   state.taskTrafficBaseline = deepFreezeExact(proof.taskTrafficBaseline);
   const storageRoot = responseLostStorageRoot(state);
@@ -17096,6 +17340,20 @@ async function validateSuccessfulScreenshotSet(state) {
   return deepFreezeExact(paths);
 }
 
+function assertFinalStorageDatabaseBaseline(state, proof, secondProof) {
+  invariant(
+    deepEqualJson(proof, secondProof) &&
+      proof.local === true &&
+      proof.setupComplete === true &&
+      proof.storageRoot === state.storageRootBaseline &&
+      deepEqualJson(proof.bootstrap, state.bootstrapBaseline) &&
+      deepEqualJson(proof.contentRoutes, state.contentRoutesBaseline) &&
+      deepEqualJson(proof.requiredSettings, state.requiredSettingsBaseline) &&
+      deepEqualJson(proof.taskTrafficBaseline, state.taskTrafficBaseline),
+    "final storage/database baseline drift"
+  );
+}
+
 async function proveFinalStorageAndDatabaseBaselines(state, onPoll = null) {
   invariant(
     onPoll === null || typeof onPoll === "function",
@@ -17107,7 +17365,15 @@ async function proveFinalStorageAndDatabaseBaselines(state, onPoll = null) {
   const proof = await runBunBridgeOperation(state, "resource/storage-final-preflight", input);
   exactOwnKeys(
     proof,
-    ["bootstrap", "contentRoutes", "local", "setupComplete", "storageRoot", "taskTrafficBaseline"],
+    [
+      "bootstrap",
+      "contentRoutes",
+      "local",
+      "requiredSettings",
+      "setupComplete",
+      "storageRoot",
+      "taskTrafficBaseline",
+    ],
     "final storage/database proof poll 1",
     { plain: true }
   );
@@ -17128,7 +17394,15 @@ async function proveFinalStorageAndDatabaseBaselines(state, onPoll = null) {
   const secondProof = await runBunBridgeOperation(state, "resource/storage-final-preflight", input);
   exactOwnKeys(
     secondProof,
-    ["bootstrap", "contentRoutes", "local", "setupComplete", "storageRoot", "taskTrafficBaseline"],
+    [
+      "bootstrap",
+      "contentRoutes",
+      "local",
+      "requiredSettings",
+      "setupComplete",
+      "storageRoot",
+      "taskTrafficBaseline",
+    ],
     "final storage/database proof poll 2",
     { plain: true }
   );
@@ -17145,16 +17419,7 @@ async function proveFinalStorageAndDatabaseBaselines(state, onPoll = null) {
       session: secondProof.taskTrafficBaseline.sessionIds,
     });
   }
-  invariant(
-    deepEqualJson(proof, secondProof) &&
-      proof.local === true &&
-      proof.setupComplete === true &&
-      proof.storageRoot === state.storageRootBaseline &&
-      deepEqualJson(proof.bootstrap, state.bootstrapBaseline) &&
-      deepEqualJson(proof.contentRoutes, state.contentRoutesBaseline) &&
-      deepEqualJson(proof.taskTrafficBaseline, state.taskTrafficBaseline),
-    "final storage/database baseline drift"
-  );
+  assertFinalStorageDatabaseBaseline(state, proof, secondProof);
   const contentRoutesAfterCleanup = await runBunBridgeOperation(
     state,
     "resource/content-routes-exact",
@@ -17406,6 +17671,7 @@ async function createRealCapabilities(
   const envPath = path.join(root, ".env");
   const envIdentity = await readStableArtifactIdentity(envPath, { expectedType: "file" });
   const repoEnvironment = await readStrictRepoEnvironment(root, envIdentity);
+  assertStorageFallbackEnvironmentAbsent(repoEnvironment, process.env);
   const browserWorkspace = await createPrivateBrowserWorkspace(
     root,
     plan,
@@ -17471,6 +17737,7 @@ async function createRealCapabilities(
     bootstrapBaseline: null,
     bootstrapRestored: false,
     contentRoutesBaseline: null,
+    requiredSettingsBaseline: null,
     storageRootBaseline: null,
     taskTrafficBaseline: null,
     taskTrafficDeltaCounts: null,
@@ -18451,9 +18718,12 @@ async function createRealCapabilities(
 
 async function executeTask540SmokePlanWithAuthorityFactory(
   input,
-  authorityFactory = createPrivateConstructionCleanupAuthority
+  authorityFactory = createPrivateConstructionCleanupAuthority,
+  capabilitiesFactory = createRealCapabilities,
+  failureActionDiagnosticSink = createRealFailureActionDiagnosticSink()
 ) {
   let constructionCleanupAuthority = null;
+  let failureActionTracker = null;
   try {
     constructionCleanupAuthority = authorityFactory();
     invariant(
@@ -18462,9 +18732,15 @@ async function executeTask540SmokePlanWithAuthorityFactory(
     );
     assertExecutionInput(input);
     const plan = buildTask540SmokePlan({ nonce: input.nonce });
-    const capabilities = await createRealCapabilities(input, plan, constructionCleanupAuthority);
+    failureActionTracker = createPrivateFailureActionTracker(plan);
+    const capabilities = await capabilitiesFactory(input, plan, constructionCleanupAuthority);
     constructionCleanupAuthority.bindCompleteCapabilities(capabilities);
-    const evidence = await executeSmokePlanCore(plan, capabilities, constructionCleanupAuthority);
+    const evidence = await executeSmokePlanCore(
+      plan,
+      capabilities,
+      constructionCleanupAuthority,
+      failureActionTracker
+    );
     input.assertSafeEvidence(evidence, "TASK-540 canonical smoke evidence");
     return evidence;
   } catch (cause) {
@@ -18476,6 +18752,10 @@ async function executeTask540SmokePlanWithAuthorityFactory(
       constructionCleanupAuthority.retainFailureAndCleanupDiagnosticsNeverThrow(
         cause,
         cleanupDiagnostics
+      );
+      emitPrivateFailureActionDiagnosticNeverThrow(
+        failureActionTracker,
+        failureActionDiagnosticSink
       );
     }
     throw TASK_FAILURE;
@@ -19122,6 +19402,182 @@ export async function runTask540SmokeExecutorSelfTest() {
   };
   const plan = buildTask540SmokePlan({ nonce: "0123456789ab" });
 
+  const diagnosticPrivateMarker = "TASK540_PRIVATE_DIAGNOSTIC_DO_NOT_EGRESS";
+  const diagnosticFailureAction = plan.actionManifest[24];
+  const diagnosticCapabilities = buildFakeCapabilities();
+  const diagnosticExecuteAction = diagnosticCapabilities.executeAction.bind(diagnosticCapabilities);
+  diagnosticCapabilities.executeAction = async (context) => {
+    if (context.action.id === diagnosticFailureAction.id) throw new Error(diagnosticPrivateMarker);
+    return diagnosticExecuteAction(context);
+  };
+  const diagnosticLines = [];
+  const diagnosticSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    invariant(
+      diagnosticCapabilities.cleaned && diagnosticCapabilities.calls.at(-1) === "failure-cleanup",
+      "failure action diagnostic preceded cleanup"
+    );
+    diagnosticLines.push(line);
+    throw new Error("private diagnostic sink failure");
+  });
+  const diagnosticInput = {
+    root: "/task540-self-test-root",
+    nonce: "0123456789ab",
+    assertSafeEvidence() {},
+    snapshotRepository() {},
+  };
+  let diagnosticFailure = null;
+  try {
+    await executeTask540SmokePlanWithAuthorityFactory(
+      diagnosticInput,
+      createPrivateConstructionCleanupAuthority,
+      async () => diagnosticCapabilities,
+      diagnosticSink
+    );
+  } catch (error) {
+    diagnosticFailure = error;
+  }
+  const expectedDiagnosticLine =
+    '{"code":"task540_smoke_failed","failedActionId":"' + diagnosticFailureAction.id + '"}\n';
+  invariant(diagnosticFailure === TASK_FAILURE, "failure action diagnostic changed public error");
+  invariant(diagnosticLines.length === 1, "failure action diagnostic write cardinality drift");
+  invariant(
+    diagnosticLines[0] === expectedDiagnosticLine,
+    "failure action diagnostic exact bytes drift"
+  );
+  invariant(
+    !diagnosticLines[0].includes(diagnosticPrivateMarker),
+    "failure action diagnostic leaked a private marker"
+  );
+  negativeCases += 1;
+
+  const onceTracker = createPrivateFailureActionTracker(plan);
+  beginPrivateFailureAction(onceTracker, plan.actionManifest[0]);
+  const firstActionDiagnosticLine =
+    '{"code":"task540_smoke_failed","failedActionId":"' + plan.actionManifest[0].id + '"}\n';
+  const onceLines = [];
+  const onceSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    onceLines.push(line);
+  });
+  invariant(
+    emitPrivateFailureActionDiagnosticNeverThrow(onceTracker, onceSink) === true &&
+      emitPrivateFailureActionDiagnosticNeverThrow(onceTracker, onceSink) === false &&
+      onceLines.length === 1 &&
+      onceLines[0] === firstActionDiagnosticLine,
+    "failure action diagnostic once-only contract drift"
+  );
+
+  for (const synchronousFailureCode of ["EPIPE", "EBADF"]) {
+    const synchronousFailureTracker = createPrivateFailureActionTracker(plan);
+    beginPrivateFailureAction(synchronousFailureTracker, plan.actionManifest[0]);
+    const synchronousFailureWrites = [];
+    const synchronousFailureSink = createPrivateSynchronousFailureActionDiagnosticSink(
+      2,
+      (fileDescriptor, bytes, offset, length, position) => {
+        synchronousFailureWrites.push({
+          fileDescriptor,
+          bytes: Buffer.from(bytes),
+          offset,
+          length,
+          position,
+        });
+        const error = new Error(diagnosticPrivateMarker);
+        error.code = synchronousFailureCode;
+        throw error;
+      }
+    );
+    const firstSynchronousFailure = emitPrivateFailureActionDiagnosticNeverThrow(
+      synchronousFailureTracker,
+      synchronousFailureSink
+    );
+    const repeatedSynchronousFailure = emitPrivateFailureActionDiagnosticNeverThrow(
+      synchronousFailureTracker,
+      synchronousFailureSink
+    );
+    const [synchronousFailureWrite] = synchronousFailureWrites;
+    assertNegative(
+      firstSynchronousFailure === false &&
+        repeatedSynchronousFailure === false &&
+        synchronousFailureWrites.length === 1 &&
+        synchronousFailureWrite.fileDescriptor === 2 &&
+        synchronousFailureWrite.offset === 0 &&
+        synchronousFailureWrite.length === Buffer.byteLength(firstActionDiagnosticLine) &&
+        synchronousFailureWrite.position === null &&
+        synchronousFailureWrite.bytes.toString("utf8") === firstActionDiagnosticLine &&
+        !synchronousFailureWrite.bytes.includes(diagnosticPrivateMarker),
+      synchronousFailureCode + " synchronous failure action diagnostic"
+    );
+  }
+
+  const partialWriteTracker = createPrivateFailureActionTracker(plan);
+  beginPrivateFailureAction(partialWriteTracker, plan.actionManifest[0]);
+  const partialWrites = [];
+  const partialWriteSink = createPrivateSynchronousFailureActionDiagnosticSink(
+    2,
+    (fileDescriptor, bytes, offset, length, position) => {
+      partialWrites.push({
+        fileDescriptor,
+        bytes: Buffer.from(bytes),
+        offset,
+        length,
+        position,
+      });
+      return length - 1;
+    }
+  );
+  const firstPartialWrite = emitPrivateFailureActionDiagnosticNeverThrow(
+    partialWriteTracker,
+    partialWriteSink
+  );
+  const repeatedPartialWrite = emitPrivateFailureActionDiagnosticNeverThrow(
+    partialWriteTracker,
+    partialWriteSink
+  );
+  const [partialWrite] = partialWrites;
+  assertNegative(
+    firstPartialWrite === false &&
+      repeatedPartialWrite === false &&
+      partialWrites.length === 1 &&
+      partialWrite.fileDescriptor === 2 &&
+      partialWrite.offset === 0 &&
+      partialWrite.length === Buffer.byteLength(firstActionDiagnosticLine) &&
+      partialWrite.position === null &&
+      partialWrite.bytes.toString("utf8") === firstActionDiagnosticLine &&
+      !partialWrite.bytes.includes(diagnosticPrivateMarker),
+    "partial synchronous failure action diagnostic"
+  );
+
+  const unknownTracker = createPrivateFailureActionTracker(plan);
+  const unknownAction = deepFreezeExact({
+    ...plan.actionManifest[0],
+    id: "unregistered-action",
+  });
+  await expectAsyncFailure(
+    async () => beginPrivateFailureAction(unknownTracker, unknownAction),
+    "unregistered diagnostic action"
+  );
+  PRIVATE_FAILURE_ACTION_TRACKERS.get(unknownTracker).currentActionId = unknownAction.id;
+  const unknownLines = [];
+  const unknownSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    unknownLines.push(line);
+  });
+  assertNegative(
+    emitPrivateFailureActionDiagnosticNeverThrow(unknownTracker, unknownSink) === false &&
+      unknownLines.length === 0,
+    "unknown failure action diagnostic"
+  );
+
+  const idleTracker = createPrivateFailureActionTracker(plan);
+  const idleLines = [];
+  const idleSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    idleLines.push(line);
+  });
+  assertNegative(
+    emitPrivateFailureActionDiagnosticNeverThrow(null, idleSink) === false &&
+      emitPrivateFailureActionDiagnosticNeverThrow(idleTracker, idleSink) === false &&
+      idleLines.length === 0,
+    "inactive failure action diagnostic"
+  );
+
   const inheritedSecretCorpus = configuredSensitiveValues(
     { DATABASE_URL: "postgres://wf540:p%40ssword@localhost/example" },
     { INHERITED_SECRET: "sixteen-private", STORE_PUBLIC_KEY: "public-value" }
@@ -19335,18 +19791,37 @@ export async function runTask540SmokeExecutorSelfTest() {
 
   const cleanupFailureCapabilities = buildFakeCapabilities({ failCleanupLifecycle: true });
   const cleanupFailureAuthority = createPrivateConstructionCleanupAuthority();
+  const cleanupFailureTracker = createPrivateFailureActionTracker(plan);
   cleanupFailureAuthority.bindCompleteCapabilities(cleanupFailureCapabilities);
   let sealedCleanupFailure = null;
   try {
-    await executeSmokePlanCore(plan, cleanupFailureCapabilities, cleanupFailureAuthority);
+    await executeSmokePlanCore(
+      plan,
+      cleanupFailureCapabilities,
+      cleanupFailureAuthority,
+      cleanupFailureTracker
+    );
   } catch (error) {
     sealedCleanupFailure = error;
   }
   await cleanupFailureAuthority.cleanupWhateverWasAcquiredOnceNeverThrow();
+  const cleanupAttributionLines = [];
+  const cleanupAttributionSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    cleanupAttributionLines.push(line);
+  });
+  const cleanupTrackerState = PRIVATE_FAILURE_ACTION_TRACKERS.get(cleanupFailureTracker);
   invariant(
     sealedCleanupFailure === TASK_FAILURE &&
       cleanupFailureCapabilities.cleanupExecutions === 1 &&
-      privateConstructionAuthorityProjection(cleanupFailureAuthority).cleanupCalls === 3,
+      privateConstructionAuthorityProjection(cleanupFailureAuthority).cleanupCalls === 3 &&
+      cleanupTrackerState.currentActionId === null &&
+      cleanupTrackerState.nextIndex === plan.actionManifest.length &&
+      cleanupTrackerState.sealed === true &&
+      emitPrivateFailureActionDiagnosticNeverThrow(
+        cleanupFailureTracker,
+        cleanupAttributionSink
+      ) === false &&
+      cleanupAttributionLines.length === 0,
     "cleanup lifecycle failure/public cleanup once-state drift"
   );
   negativeCases += 1;
@@ -19366,18 +19841,30 @@ export async function runTask540SmokeExecutorSelfTest() {
     }
   );
   const preAuthorityFailuresBefore = PRE_AUTHORITY_FAILURE_COUNT;
+  const constructorDiagnosticLines = [];
+  const constructorDiagnosticSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    constructorDiagnosticLines.push(line);
+  });
   let constructorFailure = null;
   try {
-    await executeTask540SmokePlanWithAuthorityFactory(trappedInput, () => {
-      throw new Error("private authority constructor failure");
-    });
+    await executeTask540SmokePlanWithAuthorityFactory(
+      trappedInput,
+      () => {
+        throw new Error("private authority constructor failure");
+      },
+      async () => {
+        throw new Error("private unreachable capability factory");
+      },
+      constructorDiagnosticSink
+    );
   } catch (error) {
     constructorFailure = error;
   }
   invariant(
     constructorFailure === TASK_FAILURE &&
       inputTrapCalls === 0 &&
-      PRE_AUTHORITY_FAILURE_COUNT === preAuthorityFailuresBefore + 1,
+      PRE_AUTHORITY_FAILURE_COUNT === preAuthorityFailuresBefore + 1 &&
+      constructorDiagnosticLines.length === 0,
     "construction authority was not created before input inspection"
   );
   negativeCases += 1;
@@ -20226,6 +20713,239 @@ export async function runTask540SmokeExecutorSelfTest() {
         BUN_BRIDGE_EXECUTION_AUTHORITY.maxStdinBytes
       ),
     "over-limit Bun descriptor input frame"
+  );
+  const storageContractRoot = "/task540-self-test-root";
+  const storageContractTimestamp = "2026-07-16T00:00:00.000Z";
+  const storageContractRequiredSettings = deepFreezeExact({
+    driver: {
+      key: "storage.driver",
+      updatedAt: storageContractTimestamp,
+      value: "local",
+    },
+    localDir: {
+      key: "storage.local.dir",
+      updatedAt: storageContractTimestamp,
+      value: "./storage/media",
+    },
+    setup: {
+      key: "setup.completed",
+      updatedAt: storageContractTimestamp,
+      value: true,
+    },
+  });
+  const storageContractOutput = deepFreezeExact({
+    bootstrap: selfTestBunBridgeInputForSchema("bootstrap-restore-input-v1").baseline,
+    contentRoutes: { exists: false, updatedAt: null, value: null },
+    local: true,
+    requiredSettings: storageContractRequiredSettings,
+    setupComplete: true,
+    storageRoot: path.resolve(storageContractRoot, "core", "./storage/media"),
+    taskTrafficBaseline: { accessIds: [], auditIds: [], sessionIds: [] },
+  });
+  const storageContractState = { root: storageContractRoot };
+  invariant(
+    validateBunBridgeOutput(storageContractState, guardedDescriptor, {}, storageContractOutput) ===
+      storageContractOutput,
+    "storage preflight exact positive contract drift"
+  );
+  invariant(
+    responseLostStorageRoot({
+      root: storageContractRoot,
+      storageRootBaseline: storageContractOutput.storageRoot,
+    }) === storageContractOutput.storageRoot,
+    "storage response-lost absolute root guard drift"
+  );
+  const storageOutputWithoutSetting = structuredClone(storageContractOutput);
+  delete storageOutputWithoutSetting.requiredSettings.localDir;
+  await expectAsyncFailure(
+    async () =>
+      validateBunBridgeOutput(
+        storageContractState,
+        guardedDescriptor,
+        {},
+        storageOutputWithoutSetting
+      ),
+    "storage preflight missing required setting"
+  );
+  const storageOutputWithUnknownSetting = structuredClone(storageContractOutput);
+  storageOutputWithUnknownSetting.requiredSettings.unexpected = {
+    key: "unexpected",
+    updatedAt: storageContractTimestamp,
+    value: "unexpected",
+  };
+  await expectAsyncFailure(
+    async () =>
+      validateBunBridgeOutput(
+        storageContractState,
+        guardedDescriptor,
+        {},
+        storageOutputWithUnknownSetting
+      ),
+    "storage preflight unknown required setting"
+  );
+  const storageOutputWithoutNestedField = structuredClone(storageContractOutput);
+  delete storageOutputWithoutNestedField.requiredSettings.localDir.updatedAt;
+  await expectAsyncFailure(
+    async () =>
+      validateBunBridgeOutput(
+        storageContractState,
+        guardedDescriptor,
+        {},
+        storageOutputWithoutNestedField
+      ),
+    "storage preflight missing nested required-setting field"
+  );
+  const storageOutputWithUnknownNestedField = structuredClone(storageContractOutput);
+  storageOutputWithUnknownNestedField.requiredSettings.localDir.unexpected = true;
+  await expectAsyncFailure(
+    async () =>
+      validateBunBridgeOutput(
+        storageContractState,
+        guardedDescriptor,
+        {},
+        storageOutputWithUnknownNestedField
+      ),
+    "storage preflight unknown nested required-setting field"
+  );
+  const storageOutputWithWrongKey = structuredClone(storageContractOutput);
+  storageOutputWithWrongKey.requiredSettings.localDir.key = "storage.local.directory";
+  await expectAsyncFailure(
+    async () =>
+      validateBunBridgeOutput(
+        storageContractState,
+        guardedDescriptor,
+        {},
+        storageOutputWithWrongKey
+      ),
+    "storage preflight wrong required setting key"
+  );
+  const storageOutputWithWrongValue = structuredClone(storageContractOutput);
+  storageOutputWithWrongValue.requiredSettings.driver.value = "s3";
+  await expectAsyncFailure(
+    async () =>
+      validateBunBridgeOutput(
+        storageContractState,
+        guardedDescriptor,
+        {},
+        storageOutputWithWrongValue
+      ),
+    "storage preflight wrong required setting value"
+  );
+  const storageOutputWithEmptyLocalDir = structuredClone(storageContractOutput);
+  storageOutputWithEmptyLocalDir.requiredSettings.localDir.value = "";
+  await expectAsyncFailure(
+    async () =>
+      validateBunBridgeOutput(
+        storageContractState,
+        guardedDescriptor,
+        {},
+        storageOutputWithEmptyLocalDir
+      ),
+    "storage preflight empty local directory"
+  );
+  const storageOutputWithWrongTimestamp = structuredClone(storageContractOutput);
+  storageOutputWithWrongTimestamp.requiredSettings.setup.updatedAt = null;
+  await expectAsyncFailure(
+    async () =>
+      validateBunBridgeOutput(
+        storageContractState,
+        guardedDescriptor,
+        {},
+        storageOutputWithWrongTimestamp
+      ),
+    "storage preflight missing required setting timestamp"
+  );
+  const storageOutputWithMalformedTimestamp = structuredClone(storageContractOutput);
+  storageOutputWithMalformedTimestamp.requiredSettings.setup.updatedAt = "not-an-iso-timestamp";
+  await expectAsyncFailure(
+    async () =>
+      validateBunBridgeOutput(
+        storageContractState,
+        guardedDescriptor,
+        {},
+        storageOutputWithMalformedTimestamp
+      ),
+    "storage preflight malformed required setting timestamp"
+  );
+  for (const [label, storageRoot] of [
+    ["wrong core", path.resolve(storageContractRoot, "storage/media")],
+    ["relative", "./storage/media"],
+    ["noncanonical", storageContractRoot + "/core/storage/../storage/media"],
+  ]) {
+    const invalidStorageRootOutput = structuredClone(storageContractOutput);
+    invalidStorageRootOutput.storageRoot = storageRoot;
+    await expectAsyncFailure(
+      async () =>
+        validateBunBridgeOutput(
+          storageContractState,
+          guardedDescriptor,
+          {},
+          invalidStorageRootOutput
+        ),
+      "storage preflight " + label + " root"
+    );
+  }
+  await expectAsyncFailure(
+    async () =>
+      responseLostStorageRoot({
+        root: storageContractRoot,
+        storageRootBaseline: "./storage/media",
+      }),
+    "response-lost relative storage root"
+  );
+  const emptyStorageEnvironment = Object.create(null);
+  assertStorageFallbackEnvironmentAbsent(emptyStorageEnvironment, emptyStorageEnvironment);
+  for (const key of ["MEDIA_STORAGE", "MEDIA_DIR"]) {
+    await expectAsyncFailure(
+      async () =>
+        assertStorageFallbackEnvironmentAbsent(
+          Object.assign(Object.create(null), { [key]: "" }),
+          emptyStorageEnvironment
+        ),
+      "repo storage fallback presence " + key
+    );
+    await expectAsyncFailure(
+      async () =>
+        assertStorageFallbackEnvironmentAbsent(
+          emptyStorageEnvironment,
+          Object.assign(Object.create(null), { [key]: "" })
+        ),
+      "inherited storage fallback presence " + key
+    );
+  }
+  const finalStorageContractState = {
+    bootstrapBaseline: storageContractOutput.bootstrap,
+    contentRoutesBaseline: storageContractOutput.contentRoutes,
+    requiredSettingsBaseline: storageContractOutput.requiredSettings,
+    storageRootBaseline: storageContractOutput.storageRoot,
+    taskTrafficBaseline: storageContractOutput.taskTrafficBaseline,
+  };
+  assertFinalStorageDatabaseBaseline(
+    finalStorageContractState,
+    storageContractOutput,
+    structuredClone(storageContractOutput)
+  );
+  const finalStorageTimestampDrift = structuredClone(storageContractOutput);
+  finalStorageTimestampDrift.requiredSettings.localDir.updatedAt = "2026-07-16T00:00:00.001Z";
+  await expectAsyncFailure(
+    async () =>
+      assertFinalStorageDatabaseBaseline(
+        finalStorageContractState,
+        finalStorageTimestampDrift,
+        structuredClone(finalStorageTimestampDrift)
+      ),
+    "final storage required-setting timestamp drift"
+  );
+  const finalStorageByteDrift = structuredClone(storageContractOutput);
+  finalStorageByteDrift.requiredSettings.localDir.value = "./storage/medib";
+  await expectAsyncFailure(
+    async () =>
+      assertFinalStorageDatabaseBaseline(
+        finalStorageContractState,
+        finalStorageByteDrift,
+        structuredClone(finalStorageByteDrift)
+      ),
+    "final storage required-setting byte drift"
   );
   const preferenceOutputDescriptor =
     BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS["runtime/set-042-preference-a-proof"];
