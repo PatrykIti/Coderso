@@ -7105,9 +7105,14 @@ function buildLoggerInstallSource(plan) {
   })`;
 }
 
-function buildBlockBaselineSource(action, selector) {
+function buildBlockBaselineSource(
+  action,
+  canvasSelector,
+  insertPanelSelector,
+  blockLibrarySelector
+) {
   return `(async (page) => {
-    const canvas = page.locator(${JSON.stringify(selector)});
+    const canvas = page.locator(${JSON.stringify(canvasSelector)});
     await canvas.waitFor({ state: "visible", timeout: 10000 });
     if (await canvas.count() !== 1 || !(await canvas.isVisible())) throw new Error("wf540_canvas_count");
     const blockIds = await canvas.locator("[data-screen-block-id][data-screen-block-type]").evaluateAll((nodes) => {
@@ -7117,6 +7122,18 @@ function buildBlockBaselineSource(action, selector) {
       if (new Set(ids).size !== ids.length) throw new Error("wf540_block_duplicate");
       return ids.sort();
     });
+    const insertPanel = page.locator(${JSON.stringify(insertPanelSelector)});
+    await insertPanel.waitFor({ state: "visible", timeout: 10000 });
+    if (await insertPanel.count() !== 1 || !(await insertPanel.isVisible()) || !(await insertPanel.isEnabled())) throw new Error("wf540_insert_panel_count");
+    await insertPanel.click();
+    const deadline = Date.now() + 10000;
+    while (Date.now() < deadline && (await insertPanel.getAttribute("aria-pressed")) !== "true") {
+      await page.waitForTimeout(25);
+    }
+    if ((await insertPanel.getAttribute("aria-pressed")) !== "true") throw new Error("wf540_insert_panel_state");
+    const blockLibrary = page.locator(${JSON.stringify(blockLibrarySelector)});
+    await blockLibrary.waitFor({ state: "visible", timeout: 10000 });
+    if (await blockLibrary.count() !== 1 || !(await blockLibrary.isVisible())) throw new Error("wf540_block_library_count");
     page.context().__wf540Remember(${JSON.stringify("block-baseline:" + action.id)}, { blockIds });
     return { blockIds };
   })`;
@@ -9094,7 +9111,14 @@ function buildAdvancedBrowserInvocation(
   if (action.kind === "blocksBefore") {
     invariant(parsed.args.length === 1, "blocksBefore arity");
     return {
-      args: runCode(buildBlockBaselineSource(action, registeredSelector(plan, "canvas"))),
+      args: runCode(
+        buildBlockBaselineSource(
+          action,
+          registeredSelector(plan, "canvas"),
+          registeredSelector(plan, "insertPanel"),
+          registeredSelector(plan, "blockLibrary")
+        )
+      ),
       displayArgs: null,
     };
   }
@@ -19975,6 +19999,7 @@ export async function runTask540SmokeExecutorSelfTest() {
   let compiledRunCodeSources = 0;
   const authArmSourceActionIds = [];
   const authCloseSourceActionIds = [];
+  const blockBaselineSourceActionIds = [];
   const recordEntryMenuSourceActionIds = [];
   const recordsWorkspaceSourceActionIds = [];
   for (const action of plan.actionManifest) {
@@ -20002,6 +20027,22 @@ export async function runTask540SmokeExecutorSelfTest() {
     }
     if (invocation.args[sourceIndex].includes("context.__wf540CloseExpectedAuthChallenge({")) {
       authCloseSourceActionIds.push(action.id);
+    }
+    if (action.kind === "blocksBefore") {
+      blockBaselineSourceActionIds.push(action.id);
+      invariant(
+        invocation.args[sourceIndex].includes(
+          JSON.stringify(registeredSelector(plan, "insertPanel"))
+        ) &&
+          invocation.args[sourceIndex].includes(
+            JSON.stringify(registeredSelector(plan, "blockLibrary"))
+          ) &&
+          invocation.args[sourceIndex].includes("await insertPanel.click()") &&
+          invocation.args[sourceIndex].includes('getAttribute("aria-pressed")') &&
+          invocation.args[sourceIndex].includes("wf540_insert_panel_state") &&
+          invocation.args[sourceIndex].includes("wf540_block_library_count"),
+        action.id + " Insert-panel preparation source contract drift"
+      );
     }
     if (invocation.args[sourceIndex].includes("wf540_record_actions_target")) {
       recordEntryMenuSourceActionIds.push(action.id);
@@ -20047,6 +20088,14 @@ export async function runTask540SmokeExecutorSelfTest() {
       EXPECTED_AUTH_CHALLENGE_PHASES.map(({ closeActionId }) => closeActionId).sort()
     ),
     "expected auth close source ownership drift"
+  );
+  invariant(
+    blockBaselineSourceActionIds.length === 9 &&
+      deepEqualJson(
+        blockBaselineSourceActionIds,
+        plan.actionManifest.filter(({ kind }) => kind === "blocksBefore").map(({ id }) => id)
+      ),
+    "block baseline Insert-panel source ownership drift"
   );
   invariant(
     deepEqualJson(recordEntryMenuSourceActionIds.sort(), [...RECORD_ENTRY_MENU_ACTION_IDS].sort()),

@@ -1518,7 +1518,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "bi-003-button-before",
     "p1/0",
     "blocksBefore(palette.button)",
-    "canvas visible -> exact block-ID set -> Button baseline captured",
+    "canvas visible -> exact block-ID set + Insert selected -> Button baseline captured",
     "bi-002 / absent -> absent",
   ],
   [
@@ -1812,7 +1812,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "bi-045-image-before",
     "p1/0",
     "blocksBefore(palette.image)",
-    "canvas visible -> ID set -> Image baseline captured",
+    "canvas visible -> ID set + Insert selected -> Image baseline captured",
     "bi-044 / absent -> absent",
   ],
   [
@@ -1847,7 +1847,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "bi-050-field-before",
     "p1/0",
     "blocksBefore(palette.mediaField)",
-    "canvas visible -> ID set -> Field baseline captured",
+    "canvas visible -> ID set + Insert selected -> Field baseline captured",
     "bi-049 / absent -> absent",
   ],
   [
@@ -2064,7 +2064,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "tc-007-tabs-before",
     "p1/0",
     "blocksBefore(palette.outerTabs)",
-    "canvas visible -> ID set -> Tabs baseline captured",
+    "canvas visible -> ID set + Insert selected -> Tabs baseline captured",
     "tc-006 / absent -> absent",
   ],
   [
@@ -2120,7 +2120,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "tc-015-text-one-before",
     "p1/0",
     "blocksBefore(palette.tabOneText)",
-    "tab-1 armed -> ID set -> Text baseline captured",
+    "tab-1 armed -> ID set + Insert selected -> Text baseline captured",
     "tc-014 / absent -> absent",
   ],
   [
@@ -2162,7 +2162,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "tc-021-text-two-before",
     "p1/0",
     "blocksBefore(palette.tabTwoText)",
-    "tab-2 armed -> ID set -> Text baseline captured",
+    "tab-2 armed -> ID set + Insert selected -> Text baseline captured",
     "tc-020 / absent -> absent",
   ],
   [
@@ -2204,7 +2204,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "tc-027-text-three-before",
     "p1/0",
     "blocksBefore(palette.tabThreeText)",
-    "tab-3 armed -> ID set -> Text baseline captured",
+    "tab-3 armed -> ID set + Insert selected -> Text baseline captured",
     "tc-026 / absent -> absent",
   ],
   [
@@ -2393,7 +2393,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "tk-006-inner-before",
     "p1/0",
     "blocksBefore(palette.innerTabs)",
-    "tab-1 armed -> ID set -> nested Tabs baseline",
+    "tab-1 armed -> ID set + Insert selected -> nested Tabs baseline",
     "tk-005 / absent -> absent",
   ],
   [
@@ -2890,7 +2890,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "dg-007-dirty-before",
     "p1/0",
     "blocksBefore(palette.dirtyText)",
-    "canvas visible -> ID set -> dirty Text baseline",
+    "canvas visible -> ID set + Insert selected -> dirty Text baseline",
     "dg-006 / absent -> absent",
   ],
   [
@@ -7465,6 +7465,8 @@ function createSelectorRegistry() {
     loginPassword: staticSelector('input#password[name="password"][type="password"]'),
     loginSubmit: staticSelector('button[type="submit"]:text-is("Sign in")'),
     canvas: staticSelector('[data-screen-authoring-canvas="true"]'),
+    insertPanel: staticSelector('button[data-screen-toolbar-panel="insert"][aria-label="Insert"]'),
+    blockLibrary: staticSelector('[data-screen-block-library="true"]'),
     palette: selectorTemplate(
       ['div[data-screen-block-library="true"] button:text-is("', '")'],
       [slot(0)]
