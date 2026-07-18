@@ -10,11 +10,12 @@
 **Dependencies:** TASK-540-04-L04
 **Status:** 🚧 In Progress
 **Started:** 2026-07-14
-**Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Fix Started:** 2026-07-18
+**Implementation Complete:** 2026-07-18 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Revalidation Passed:** generation eeb29960e5784a47ad38fb056c30d9a8 / token cabb94f2a2894d9fa5130e6256ae6442 / gate green
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
-**Repair Reason:** Final post-audit confirmed every production caller supplies a panel label but the shared prop remained optional, allowing an unnamed `region` landmark for future callers. The semantic shell now requires `panelAriaLabel: string`; all existing named-region behavior remains unchanged.
-**Revalidation Passed:** 2026-07-17 — current post-split owner gate: the 857-line exact 17-path AST graph/export verifier, isolated 7/7 and exact three-file 19/19 Vitest matrices, core/root static checks, mutation coverage, the family line gate, and `git diff --check` passed. No clean family post-audit, full validation, smoke, changelog, or closure result is claimed.
-**Under-Load Timeout Revalidated:** 2026-07-17 — two exact 64-file TASK-540 matrices reproduced only the CPU-bound Entry Editor AST/import boundary test at 5,008 ms against Vitest's default 5,000 ms timeout while the other 63 files and 706 tests passed. The test now has a local bounded 15-second timeout; no assertion, mutation case, import, or production behavior changed. The isolated suite passed 7/7, the exact owner matrix passed 19/19, and the exact 64-file matrix passed 707/707. Root `tsc`, Prettier, the unchanged 857-line family limit, workflow self-tests, and `git diff --check` passed. A fresh family post-audit, full validation, live smoke, changelog, and closure remain pending.
+**Repair Reason:** Final post-audit confirmed every production caller supplies a panel label but the shared prop remained optional, allowing an unnamed `region` landmark for future callers. The semantic shell now requires `panelAriaLabel: string`. A later post-audit also proved caller-supplied `panelDataProps` could override the shell's canonical `role` and accessible name because the spread came last; the semantic attributes now take final precedence while caller `data-*` hooks and refs remain intact. The same re-gate corrected a stale boundary-test edge: `CustomScreenEntryRouteSession` consumes presentation media through `useScreenEntryPresentationMedia`, while only that hook imports the pure media owner, exactly as TASK-540-04-L03 specifies.
+**Historical Under-Load Gate:** 2026-07-17 — two 64-file TASK-540 runs established that the Entry Editor AST/import boundary needed its local bounded 15-second timeout under load. This receipt is not current final-byte evidence: a later isolated rerun exposed a stale direct Session→media-owner edge expectation (6/7 isolated, 18/19 owner matrix) even though the production graph correctly followed TASK-540-04-L03 through the media hook. The expectation is now corrected without adding a dummy production import; the fresh exact `Revalidation Passed` receipt after the current repair is the sole owner-gate authority. No assertion weakening, production import change, or timeout widening belongs to this repair.
 **Historical Targeted Gate:** 2026-07-14 — `core lint:types`, `core lint`, root `tsc`, and the exact three-file Vitest matrix (16/16)
 **Changelog:** 1252 (pinned; closure only)
 
@@ -45,6 +46,10 @@ three pure modules import neither React nor `customScreensClient.ts`, `mediaClie
 or `SchemaBuilder.tsx`. The structural suite also source-pins the wrapper's exact 18
 pre-split value/type exports named in TASK-540-04-L03, so moving direct tests to the
 owners cannot conceal a missing compatibility export.
+The exact Entry graph keeps `CustomScreenEntryRouteSession ->
+hooks/useScreenEntryPresentationMedia -> customScreenEntryPresentationMedia`; requiring
+a second direct Session-to-media-owner edge is stale test drift and must not be satisfied
+with a dummy production import.
 
 It must also inspect the stable `CustomScreenEditorPage.tsx` facade plus
 `customScreenEditorModel.ts`, `hooks/useCustomScreenEditorPersistence.ts`,
@@ -100,6 +105,7 @@ named symbols and regression suites in this contract rather than mutable line nu
 
 // CanvasEditor panel container
 <div
+  {...panelDataProps}
   ref={panelRef}
   role="region"
   aria-label={panelAriaLabel}
@@ -171,13 +177,17 @@ and reopen control unchanged.
 
 No async/error path. Closed and narrow computed gutters remain equivalent to the
 current `p-6 lg:p-8` layout; only the wide open state gains the 300 px reserve.
-Existing panel `data-*` hooks and drag/drop behavior stay.
+Caller `panelDataProps` are spread before the shell-owned ref, `role="region"`, class,
+and `aria-label`, so hostile or accidental semantic overrides fail closed while
+existing panel `data-*` hooks, forwarded ref behavior, and drag/drop behavior stay.
 
 ## Gate tests owned here; aggregate additions owned by TASK-540-06
 
 - Structural test rejects inline `paddingRight:300`, preserves `p-6 lg:p-8`, and
   pins the conditional `lg:pr-[332px]` class.
-- UI render asserts `role=region` plus accessible name.
+- UI render supplies hostile `role`/`aria-label` values through `panelDataProps` and
+  asserts the shell still exposes its canonical named `region`, retains the caller's
+  `data-*` hook, and assigns the forwarded panel ref.
 - Boundary coverage enumerates all 17 Entry Editor and Screen Builder production files
   after the sequential L03 then L04 splits, rejects every forbidden
   Page-builder/widget/import-direction/cycle edge, enforces pure-owner restrictions, and

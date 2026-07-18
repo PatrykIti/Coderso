@@ -9,8 +9,9 @@
 **Dependencies:** TASK-540-04
 **Status:** 🚧 In Progress
 **Started:** 2026-07-14
-**Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
-**Repair Reason:** Final post-audit closed two proof gaps without changing product behavior: L01 makes the labelled Canvas region name a required prop, and L02 re-reads both authenticated users after distinct writes and asserts both exact DB rows.
+**Fix Started:** 2026-07-18
+**Implementation Complete:** 2026-07-18 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Repair Reason:** Final post-audit closed proof gaps without changing product behavior: L01 makes the labelled Canvas region name a required prop, prevents caller data props from overriding the canonical named-region semantics, and corrects its boundary test to preserve the contracted Session→media-hook→pure-media dependency; L02 re-reads both authenticated users after distinct writes and asserts both exact DB rows.
 **Corrective Revalidation:** 2026-07-16 — against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus the dirty owner paths named by L01/L02, core/root static gates passed; L01 exact Vitest passed 16/16; L02 exact Vitest passed 66/66; reachable DB preflight and the exact Bun matrix passed 27/27 with 165 expectations; isolated user-settings routes passed 10/10 with 64 expectations; and `git diff --check` passed.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
 **Previous Completion:** 2026-07-14
@@ -144,7 +145,8 @@ or storage operation, and resets to OFF on a fresh hook remount.
 - At 1024 px and wider the closed right padding is `32px`; the open class is
   `lg:pr-[332px]`, so the border-box stays fixed and the content box loses
   exactly `300px` (within 1 CSS px) when the panel opens.
-- The panel's accessible name is attached to `role="region"`.
+- The panel's accessible name is attached to `role="region"`; caller data props cannot
+  override either semantic attribute and continue to preserve supported `data-*` hooks.
 - Preference state follows the authenticated server user; switching users cannot
   inherit another user's flag. Returning to the same user in one mounted session
   may reuse only that user's keyed in-memory value while authoritative revalidation

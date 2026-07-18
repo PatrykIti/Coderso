@@ -25,12 +25,15 @@ focus, then reads `draft.baseLabel` to detect when a later committed label inval
 the local draft. The resulting visible UX and accessibility responsibility makes the
 old value-only cleanup unsafe and ineligible for TASK-9999.
 
-Re-triage evidence is `ScreenBlockInspectorTabs.tsx:25-28,39-49,51,62,68,72,145`:
-the state has one `baseLabel` member, the current behavior reads it at line 48, and the
-input uses the commit-stable key at line 145. The stateful regression at
-`custom-screen-binding-panel.test.tsx:614-696` proves same-Tab and block-identity stale
-draft invalidation; the keyboard regression at `:754-782` proves Enter retains focus on
-the same input while updating its accessible label. The source SHA-256 at re-triage was
+Re-triage evidence is the `ScreenTabLabelDraft.baseLabel` member and its
+`draft.baseLabel !== tab.label` invalidation branch in `TabLabelInput`, plus the
+`block.id:tab.id` key at the `TabLabelInput` call site; these named code anchors remain
+stable when formatting moves line numbers. The stateful regression named
+`Tabs use Unicode boundaries and invalidate stale label drafts across parent rerenders`
+proves same-Tab and block-identity stale-draft invalidation; the keyboard regression
+named `A valid Enter rename keeps keyboard focus on the same Tab label input` proves
+Enter retains focus on the same input while updating its accessible label. The source
+SHA-256 at re-triage was
 `35e87c59e5f3590e5d8919826f03047469ea3c93666b22108f1c4016fac3e953`.
 
 ## Historical Superseded Contract — DO NOT IMPLEMENT

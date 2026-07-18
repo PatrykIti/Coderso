@@ -20,6 +20,13 @@ const nextTabId = (tabs: readonly ScreenTabItem[]) => {
   return `tab-${suffix}`;
 };
 
+const nextTabLabel = (tabs: readonly ScreenTabItem[]) => {
+  const labels = new Set(tabs.map((tab) => tab.label));
+  let suffix = tabs.length + 1;
+  while (labels.has(`Tab ${suffix}`)) suffix += 1;
+  return `Tab ${suffix}`;
+};
+
 const screenLabelLength = (value: string) => Array.from(value).length;
 
 type ScreenTabLabelDraft = Readonly<{
@@ -59,8 +66,11 @@ function TabLabelInput({
       restoreCommitted();
       return;
     }
-    setDraft({ baseLabel: tab.label, value: label });
     onCommit(label);
+    // The parent owns committed state and may reject/drop this patch. Restore the
+    // controlled input to the current committed label; an accepting parent rerender
+    // then advances it through the baseLabel invalidation path without remounting.
+    restoreCommitted();
   };
 
   return (
@@ -191,7 +201,7 @@ export function TabsEditor({
             event.stopPropagation();
             if (tabs.length >= SCREEN_TABS_MAX) return;
             const nextId = nextTabId(tabs);
-            const nextTabs = [...tabs, { id: nextId, label: `Tab ${tabs.length + 1}` }];
+            const nextTabs = [...tabs, { id: nextId, label: nextTabLabel(tabs) }];
             commit(nextTabs, { ...slots, [nextId]: [] });
             onArmSlotInsert?.(block.id, nextId);
           }}

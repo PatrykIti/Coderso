@@ -64,6 +64,7 @@ export function ScreenSectionInspector({
           max={SCREEN_SECTION_COLUMN_GAP_CLAMP.max}
           value={section.style?.columnGap ?? ""}
           placeholder="16"
+          aria-label="Column gap"
           data-screen-section-gap="true"
           // Gap only takes visible effect once columns is set. Authoring it
           // while stacked is harmless, so the control remains enabled.

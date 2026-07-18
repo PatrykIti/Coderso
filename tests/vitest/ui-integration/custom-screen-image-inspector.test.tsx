@@ -9,39 +9,25 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import React from "react";
-import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import {
   buildStylePatch,
   SCREEN_ALIGN_DEFAULT_OPTION,
-  ScreenBlockInspector,
 } from "../../../core/admin/ui/custom-screens/ScreenBlockInspector";
 import type {
   ScreenBlockV1,
   ScreenFieldBinding,
 } from "../../../core/services/customScreens/customScreenSchemas";
 import type { ContentField } from "../../../core/admin/ui/content-types/SchemaBuilder";
+import {
+  chooseOption,
+  mountScreenBlockInspector,
+  mountStatefulScreenBlockInspector,
+  setInputValue,
+} from "../ui/support/screenBlockInspectorTestHarness";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-
-const mount = (node: React.ReactNode) => {
-  const container = document.createElement("div");
-  document.body.appendChild(container);
-  const root = createRoot(container);
-  React.act(() => {
-    root.render(node);
-  });
-  return {
-    container,
-    cleanup: () => {
-      React.act(() => {
-        root.unmount();
-      });
-      container.remove();
-    },
-  };
-};
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -57,21 +43,14 @@ const renderInspector = (
 ) => ({
   onPatchBlockData,
   onPatchBlock,
-  ...mount(
-    <ScreenBlockInspector
-      selectedBlock={selectedBlock}
-      bindings={bindings}
-      fields={fields}
-      panel="all"
-      showBlockActions={false}
-      onPatchBlock={onPatchBlock}
-      onPatchBlockData={onPatchBlockData}
-      onPatchBinding={vi.fn()}
-      onMove={vi.fn()}
-      onDuplicate={vi.fn()}
-      onDelete={vi.fn()}
-    />
-  ),
+  ...mountScreenBlockInspector({
+    selectedBlock,
+    bindings,
+    fields,
+    onPatchBlock,
+    onPatchBlockData,
+    onPatchBinding: vi.fn(),
+  }),
 });
 
 const findImageUrlInput = (container: HTMLElement) =>
@@ -79,38 +58,12 @@ const findImageUrlInput = (container: HTMLElement) =>
     'input[placeholder="https://… or /media/… — used when no field is bound"]'
   ) as HTMLInputElement | null;
 
-const setInputValue = (input: HTMLInputElement, next: string) => {
-  React.act(() => {
-    input.focus();
-    const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), "value")?.set;
-    setter?.call(input, next);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-};
-
 // Radix Select trigger for a given InspectorRow label (the label span + trigger
 // are siblings in the same InspectorRow div).
 const triggerForLabel = (container: HTMLElement, label: string) =>
   (Array.from(container.querySelectorAll("span"))
     .find((span) => span.textContent === label)
     ?.parentElement?.querySelector('[role="combobox"]') ?? null) as HTMLElement | null;
-
-// Open a Radix Select and click the option whose text matches — the same
-// pointerdown → click / pointerup → click sequence Radix listens for; verified
-// to fire onValueChange in happy-dom.
-const chooseOption = (trigger: HTMLElement, optionText: string) => {
-  React.act(() => {
-    trigger.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0 }));
-    trigger.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  });
-  const option = Array.from(document.querySelectorAll('[role="option"]')).find(
-    (node) => node.textContent === optionText
-  ) as HTMLElement | undefined;
-  React.act(() => {
-    option?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
-    option?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  });
-};
 
 test("typing in the Image URL row patches data.src", () => {
   const view = renderInspector({
@@ -123,6 +76,17 @@ test("typing in the Image URL row patches data.src", () => {
     const input = findImageUrlInput(view.container);
     expect(input).not.toBeNull();
     expect(input?.value).toBe("/media/logo.png");
+    const comboboxNames = Array.from(view.container.querySelectorAll('[role="combobox"]')).map(
+      (combobox) => combobox.getAttribute("aria-label")
+    );
+    expect(comboboxNames).toEqual([
+      "Bound field",
+      "Fit",
+      "Ratio",
+      "Width",
+      "Block layout alignment",
+    ]);
+    expect(comboboxNames.every((name) => Boolean(name?.trim()))).toBe(true);
 
     React.act(() => {
       input?.focus();
@@ -182,19 +146,44 @@ test("a bound field and the static src control coexist in the image inspector", 
 // --- TASK-503-03 / TASK-540: Image URL src filter (draft + canonical Screen URL write) ---
 
 test('typing an unsafe scheme keeps the draft visible but commits src: ""', () => {
-  const view = renderInspector({
+  const onPatchBlockData = vi.fn();
+  const originalBlock: ScreenBlockV1 = {
     id: "image-1",
     type: "image",
-    data: { fit: "cover", src: "" },
+    data: { fit: "cover", src: "/media/original.png" },
+  };
+  const view = mountStatefulScreenBlockInspector({
+    initialBlock: originalBlock,
+    fields,
+    onPatchBlockData,
   });
+  const readInput = () => findImageUrlInput(view.container);
   try {
-    const input = findImageUrlInput(view.container);
+    const input = readInput();
     expect(input).not.toBeNull();
     setInputValue(input!, "javascript:alert(1)");
     // The document only ever receives the filtered value…
-    expect(view.onPatchBlockData).toHaveBeenLastCalledWith("image-1", { src: "" });
+    expect(onPatchBlockData).toHaveBeenLastCalledWith("image-1", { src: "" });
     // …while the raw draft stays visible in the input (no focus loss / destruction).
     expect(input!.value).toBe("javascript:alert(1)");
+
+    view.refresh({
+      id: "image-2",
+      type: "image",
+      data: { fit: "contain", src: "/media/second.png" },
+    });
+    expect(readInput()?.value).toBe("/media/second.png");
+    view.refresh(originalBlock);
+    expect(readInput()?.value).toBe("/media/original.png");
+
+    setInputValue(readInput()!, "javascript:stale-again()");
+    expect(onPatchBlockData).toHaveBeenLastCalledWith("image-1", { src: "" });
+    expect(readInput()?.value).toBe("javascript:stale-again()");
+    view.refresh({
+      ...view.currentBlock(),
+      data: { ...view.currentBlock().data, src: "/media/remote.png" },
+    });
+    expect(readInput()?.value).toBe("/media/remote.png");
   } finally {
     view.cleanup();
   }

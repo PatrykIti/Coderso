@@ -587,7 +587,6 @@ describe("custom screen authoring boundaries", () => {
         [
           entryAuthoringModules.hydrationHook,
           entryAuthoringModules.layout,
-          entryAuthoringModules.media,
           entryAuthoringModules.mediaHook,
           entryAuthoringModules.presentation,
           entryAuthoringModules.runtime,

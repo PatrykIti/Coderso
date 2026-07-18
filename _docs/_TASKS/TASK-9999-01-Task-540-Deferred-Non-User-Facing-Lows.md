@@ -35,7 +35,7 @@ a substitute for the required source-task backlink.
 
 | Leaf | Current evidence | Outcome |
 |---|---|---|
-| TASK-9999-01-L02 | `ScreenBlockInspectorTabs.tsx:48` reads `draft.baseLabel`; its stable input key at `:145` preserves focus across a commit. `custom-screen-binding-panel.test.tsx:614-696` proves stale-draft invalidation and `:754-782` proves focus remains on the same input after Enter. | `⏭️ Superseded` by active TASK-540-02-L01. Removing the state would regress visible keyboard/focus and stale-draft behavior, so the old cleanup is no longer TASK-9999-eligible. Changelog 1258 records the terminal decision. |
+| TASK-9999-01-L02 | The `ScreenTabLabelDraft.baseLabel` member and `draft.baseLabel !== tab.label` branch invalidate stale drafts, while the `block.id:tab.id` `TabLabelInput` key preserves focus across a commit. The regressions named `Tabs use Unicode boundaries and invalidate stale label drafts across parent rerenders` and `A valid Enter rename keeps keyboard focus on the same Tab label input` prove both behaviors without relying on mutable source/test line ranges. | `⏭️ Superseded` by active TASK-540-02-L01. Removing the state would regress visible keyboard/focus and stale-draft behavior, so the old cleanup is no longer TASK-9999-eligible. Changelog 1258 records the terminal decision. |
 
 ## Explicit Non-Deferrals
 

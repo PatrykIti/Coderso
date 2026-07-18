@@ -230,6 +230,7 @@ export function ScreenBlockInspector({
           />
           <EnumRow
             label="Align"
+            accessibleName="Heading text alignment"
             value={readEnum(selectedBlock.data.align, "left")}
             options={[
               { value: "left", label: "Left" },
@@ -409,6 +410,7 @@ export function ScreenBlockInspector({
           <InspectorRow label="Limit">
             <Input
               type="number"
+              aria-label="Limit"
               value={String(
                 typeof selectedBlock.data.limit === "number" ? selectedBlock.data.limit : 5
               )}
@@ -482,7 +484,7 @@ export function ScreenBlockInspector({
             value={armedInsertSlotId ?? undefined}
             onValueChange={(slotId) => onArmSlotInsert(selectedBlock.id, slotId)}
           >
-            <SelectTrigger data-screen-insert-into="true">
+            <SelectTrigger data-screen-insert-into="true" aria-label="Insert into">
               <SelectValue placeholder="Choose a slot" />
             </SelectTrigger>
             <SelectContent>
@@ -521,6 +523,7 @@ export function ScreenBlockInspector({
         />
         <EnumRow
           label="Align"
+          accessibleName="Block layout alignment"
           value={selectedBlock.style?.align ?? SCREEN_ALIGN_DEFAULT_OPTION}
           options={[
             { value: SCREEN_ALIGN_DEFAULT_OPTION, label: "Default" },
@@ -535,6 +538,7 @@ export function ScreenBlockInspector({
           <Input
             type="number"
             inputMode="numeric"
+            aria-label="Min height"
             min={SCREEN_BLOCK_MIN_HEIGHT_CLAMP.min}
             max={SCREEN_BLOCK_MIN_HEIGHT_CLAMP.max}
             value={selectedBlock.style?.minHeight ?? ""}

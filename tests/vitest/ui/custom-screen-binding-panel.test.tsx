@@ -1,12 +1,11 @@
 // @vitest-environment happy-dom
 
 import React from "react";
-import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import {
   createScreenFieldBinding,
-  ScreenBlockInspector,
+  ScreenSectionInspector,
 } from "../../../core/admin/ui/custom-screens/ScreenBlockInspector";
 import {
   buildDefaultListViewDefinition,
@@ -14,10 +13,17 @@ import {
   customScreenDefinitionSchema,
   normalizeCustomScreenDefinitionForWrite,
   type ScreenBlockV1,
-  type ScreenFieldBinding,
 } from "../../../core/services/customScreens/customScreenSchemas";
 import { validate } from "../../../core/server/validation/schemaValidator";
-import type { ContentField } from "../../../core/admin/ui/content-types/SchemaBuilder";
+import {
+  clickButton,
+  mountReactNode,
+  mountScreenBlockInspector as mountInspector,
+  mountStatefulScreenBlockInspector,
+  openSelectForLabel,
+  selectBoundField,
+  setInputValue,
+} from "./support/screenBlockInspectorTestHarness";
 
 /**
  * TASK-496-02: the standalone `FieldBindingPanel` (a 0-production-importer
@@ -32,48 +38,6 @@ import type { ContentField } from "../../../core/admin/ui/content-types/SchemaBu
  * `ScreenBlockInspector`'s own `buildFieldOptions` and is asserted below.
  */
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-
-const noop = () => undefined;
-
-const mount = (node: React.ReactNode) => {
-  const container = document.createElement("div");
-  document.body.appendChild(container);
-  const root = createRoot(container);
-  React.act(() => {
-    root.render(node);
-  });
-  return {
-    container,
-    cleanup: () => {
-      React.act(() => {
-        root.unmount();
-      });
-      container.remove();
-    },
-  };
-};
-
-const renderInspector = (props: {
-  selectedBlock: ScreenBlockV1 | null;
-  bindings?: ScreenFieldBinding[];
-  fields?: ContentField[];
-  onPatchBlock?: React.ComponentProps<typeof ScreenBlockInspector>["onPatchBlock"];
-}) =>
-  mount(
-    <ScreenBlockInspector
-      selectedBlock={props.selectedBlock}
-      bindings={props.bindings ?? []}
-      fields={props.fields ?? []}
-      panel="all"
-      showBlockActions={false}
-      onPatchBlock={props.onPatchBlock ?? noop}
-      onPatchBlockData={noop}
-      onPatchBinding={noop}
-      onMove={noop}
-      onDuplicate={noop}
-      onDelete={noop}
-    />
-  );
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -124,7 +88,7 @@ test("createScreenFieldBinding emits bounded, distinct IDs for valid maximum-len
 
 test("ScreenBlockInspector restores the latest committed Tab label after an invalid blur", () => {
   const onPatchBlock = vi.fn();
-  const view = renderInspector({
+  const view = mountInspector({
     selectedBlock: {
       id: "tabs-1",
       type: "tabs",
@@ -159,152 +123,11 @@ test("ScreenBlockInspector restores the latest committed Tab label after an inva
   }
 });
 
-// TASK-498-02 B4: open the flat "Bound field" Select and pick the option whose text
-// contains `optionText`, firing the kind-specific onPatchBinding / onPatchBlockData wiring.
-const selectBoundField = (container: ParentNode, optionText: string) => {
-  const trigger = container.querySelector('[data-screen-bound-field="true"]') as HTMLElement | null;
-  expect(trigger).not.toBeNull();
-  React.act(() => {
-    trigger?.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0 }));
-    trigger?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    trigger?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-  });
-  const option = Array.from(document.body.querySelectorAll('[role="option"]')).find((item) =>
-    item.textContent?.includes(optionText)
-  ) as HTMLElement | undefined;
-  expect(option).toBeTruthy();
-  React.act(() => {
-    option?.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0 }));
-    option?.dispatchEvent(new MouseEvent("pointerup", { bubbles: true, button: 0 }));
-    option?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  });
-};
-
-const setInputValue = (input: HTMLInputElement, next: string) => {
-  React.act(() => {
-    input.focus();
-    const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), "value")?.set;
-    setter?.call(input, next);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-};
-
-const clickButton = (container: ParentNode, accessibleName: string) => {
-  const button = Array.from(container.querySelectorAll("button")).find(
-    (candidate) =>
-      candidate.getAttribute("aria-label") === accessibleName ||
-      candidate.textContent?.trim() === accessibleName
-  ) as HTMLButtonElement | undefined;
-  expect(button).toBeTruthy();
-  React.act(() => {
-    button?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  });
-  return button;
-};
-
-const openSelectForLabel = (container: ParentNode, label: string) => {
-  const trigger = (Array.from(container.querySelectorAll("span"))
-    .find((span) => span.textContent === label)
-    ?.parentElement?.querySelector('[role="combobox"]') ?? null) as HTMLElement | null;
-  expect(trigger).not.toBeNull();
-  React.act(() => {
-    trigger?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0 }));
-    trigger?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  });
-  return trigger;
-};
-
-const mountInspector = (props: {
-  selectedBlock: ScreenBlockV1;
-  bindings?: ScreenFieldBinding[];
-  fields?: ContentField[];
-  onPatchBinding?: (...args: unknown[]) => void;
-  onPatchBlockData?: (...args: unknown[]) => void;
-  onPatchBlock?: (...args: unknown[]) => void;
-  onArmSlotInsert?: (...args: unknown[]) => void;
-  armedInsertSlotId?: string | null;
-}) =>
-  mount(
-    <ScreenBlockInspector
-      selectedBlock={props.selectedBlock}
-      bindings={props.bindings ?? []}
-      fields={props.fields ?? []}
-      panel="all"
-      showBlockActions={false}
-      onPatchBlock={props.onPatchBlock ?? noop}
-      onPatchBlockData={props.onPatchBlockData ?? noop}
-      onPatchBinding={props.onPatchBinding ?? noop}
-      onArmSlotInsert={props.onArmSlotInsert}
-      armedInsertSlotId={props.armedInsertSlotId}
-      onMove={noop}
-      onDuplicate={noop}
-      onDelete={noop}
-    />
-  );
-
-type StatefulTabsInspectorHarnessProps = {
-  initialBlock: ScreenBlockV1;
-  onPatchBlock: (blockId: string, patch: Partial<ScreenBlockV1>) => void;
-};
-
-class StatefulTabsInspectorHarness extends React.Component<
-  StatefulTabsInspectorHarnessProps,
-  { block: ScreenBlockV1 }
-> {
-  state = { block: this.props.initialBlock };
-
-  refresh = (block: ScreenBlockV1) => this.setState({ block });
-  currentBlock = () => this.state.block;
-
-  render() {
-    return (
-      <ScreenBlockInspector
-        selectedBlock={this.state.block}
-        bindings={[]}
-        fields={[]}
-        panel="all"
-        showBlockActions={false}
-        onPatchBlock={(blockId, patch) => {
-          this.props.onPatchBlock(blockId, patch);
-          this.setState((current) => ({ block: { ...current.block, ...patch } }));
-        }}
-        onPatchBlockData={noop}
-        onPatchBinding={noop}
-        onMove={noop}
-        onDuplicate={noop}
-        onDelete={noop}
-      />
-    );
-  }
-}
-
 const mountStatefulTabsInspector = (initialBlock: ScreenBlockV1) => {
-  const container = document.createElement("div");
-  document.body.appendChild(container);
-  const root = createRoot(container);
-  const controller = React.createRef<StatefulTabsInspectorHarness>();
   const onPatchBlock = vi.fn<(blockId: string, patch: Partial<ScreenBlockV1>) => void>();
-
-  React.act(() => {
-    root.render(
-      <StatefulTabsInspectorHarness
-        ref={controller}
-        initialBlock={initialBlock}
-        onPatchBlock={onPatchBlock}
-      />
-    );
-  });
   return {
-    container,
     onPatchBlock,
-    currentBlock: () => controller.current?.currentBlock() ?? initialBlock,
-    refresh: (nextBlock: ScreenBlockV1) => {
-      React.act(() => controller.current?.refresh(nextBlock));
-    },
-    cleanup: () => {
-      React.act(() => root.unmount());
-      container.remove();
-    },
+    ...mountStatefulScreenBlockInspector({ initialBlock, onPatchBlock }),
   };
 };
 
@@ -383,13 +206,16 @@ test("ScreenBlockInspector binds related-list on propPath 'items' and syncs data
     // handlePatchBinding never auto-syncs data for the `items` propPath, so the control
     // itself must mirror the relation target into data.target.
     expect(onPatchBlockData).toHaveBeenCalledWith("related-1", { target: "task" });
+    expect(view.container.querySelector('input[type="number"]')?.getAttribute("aria-label")).toBe(
+      "Limit"
+    );
   } finally {
     view.cleanup();
   }
 });
 
 test("ScreenBlockInspector renders the empty binding state without a selected block", () => {
-  const view = renderInspector({ selectedBlock: null });
+  const view = mountInspector({ selectedBlock: null });
   try {
     expect(view.container.textContent).toContain(
       "Select a block on the canvas to edit its shared layout and field binding."
@@ -400,7 +226,7 @@ test("ScreenBlockInspector renders the empty binding state without a selected bl
 });
 
 test("ScreenBlockInspector renders the bound-field control for a selected block", () => {
-  const view = renderInspector({
+  const view = mountInspector({
     selectedBlock: {
       id: "field-1",
       type: "field",
@@ -425,13 +251,41 @@ test("ScreenBlockInspector renders the bound-field control for a selected block"
     expect(view.container.textContent).toContain("Bound field");
     // The binding surface drives onPatchBinding through a field Select.
     expect(view.container.querySelector('[role="combobox"]')).not.toBeNull();
+    const accessibleNames = Array.from(view.container.querySelectorAll('[role="combobox"]')).map(
+      (combobox) => combobox.getAttribute("aria-label")
+    );
+    expect(accessibleNames).toEqual(["Bound field", "Width", "Block layout alignment"]);
+    expect(accessibleNames.every((name) => Boolean(name?.trim()))).toBe(true);
+    expect(
+      view.container.querySelector('input[aria-label="Min height"]')?.getAttribute("type")
+    ).toBe("number");
   } finally {
     view.cleanup();
+  }
+
+  const sectionView = mountReactNode(
+    <ScreenSectionInspector
+      section={{ id: "section-1", type: "section", data: {}, blocks: [] }}
+      onPatchSection={vi.fn()}
+    />
+  );
+  try {
+    const columnGap = sectionView.container.querySelector<HTMLInputElement>(
+      "[data-screen-section-gap]"
+    );
+    expect(columnGap?.getAttribute("aria-label")).toBe("Column gap");
+    expect(
+      Array.from(sectionView.container.querySelectorAll('[role="combobox"]')).map((combobox) =>
+        combobox.getAttribute("aria-label")
+      )
+    ).toEqual(["Columns"]);
+  } finally {
+    sectionView.cleanup();
   }
 });
 
 test("ScreenBlockInspector binding options dedupe system and schema fields with the same name", () => {
-  const view = renderInspector({
+  const view = mountInspector({
     selectedBlock: {
       id: "header-1",
       type: "record-header",
@@ -527,6 +381,96 @@ test("Button exposes the href binding and clears only an existing exact binding"
   }
 });
 
+test("the unbound Button binding row stays named and selectable from its first option", () => {
+  const onPatchBinding = vi.fn();
+  const view = mountInspector({
+    selectedBlock: {
+      id: "button-unbound",
+      type: "button",
+      data: { action: "link", variant: "primary", href: "/fallback" },
+    },
+    fields: [{ id: "f-destination", name: "destination", type: "text", label: "Destination" }],
+    onPatchBinding,
+  });
+  try {
+    const trigger = view.container.querySelector(
+      '[data-screen-bound-field="true"]'
+    ) as HTMLElement | null;
+    expect(trigger).not.toBeNull();
+    // An unbound Button must not render a blank, unnamed combobox: the control keeps a
+    // programmatic accessible name and shows the explicit unbound placeholder.
+    expect(trigger?.getAttribute("aria-label")).toBe("Bound field");
+    expect(trigger?.textContent).toContain("Not bound");
+
+    React.act(() => {
+      trigger?.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0 }));
+      trigger?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      trigger?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+    const options = Array.from(document.body.querySelectorAll('[role="option"]'));
+    // The first eligible option is the leading system field, and it stays selectable
+    // even though the unbound control value is the empty string.
+    expect(options[0]?.textContent?.trim()).toBe("Title (system)");
+    React.act(() => {
+      options[0]?.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0 }));
+      options[0]?.dispatchEvent(new MouseEvent("pointerup", { bubbles: true, button: 0 }));
+      options[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onPatchBinding).toHaveBeenCalledTimes(1);
+    expect(onPatchBinding).toHaveBeenCalledWith("button-unbound", "href", {
+      field: "title",
+      mode: "read",
+    });
+  } finally {
+    view.cleanup();
+  }
+
+  const authoredFieldBlock: ScreenBlockV1 = {
+    id: "field-precedence",
+    type: "field",
+    data: { label: "Destination", field: "destination" },
+  };
+  const authoredView = mountInspector({
+    selectedBlock: authoredFieldBlock,
+    fields: [{ id: "f-destination", name: "destination", type: "text", label: "Destination" }],
+    onPatchBinding,
+  });
+  try {
+    const trigger = authoredView.container.querySelector(
+      '[data-screen-bound-field="true"]'
+    ) as HTMLElement | null;
+    expect(trigger?.textContent).toContain("Destination");
+  } finally {
+    authoredView.cleanup();
+  }
+
+  const boundView = mountInspector({
+    selectedBlock: authoredFieldBlock,
+    bindings: [
+      {
+        id: "field-precedence-value",
+        blockId: authoredFieldBlock.id,
+        propPath: "value",
+        source: "entry",
+        field: "title",
+        mode: "readwrite",
+      },
+    ],
+    fields: [{ id: "f-destination", name: "destination", type: "text", label: "Destination" }],
+    onPatchBinding,
+  });
+  try {
+    const trigger = boundView.container.querySelector(
+      '[data-screen-bound-field="true"]'
+    ) as HTMLElement | null;
+    expect(trigger?.textContent).toContain("Title");
+    expect(trigger?.textContent).not.toContain("Destination");
+    expect(onPatchBinding).toHaveBeenCalledTimes(1);
+  } finally {
+    boundView.cleanup();
+  }
+});
+
 test("link-specific clear copy is absent from unrelated binding rows", () => {
   const view = mountInspector({
     selectedBlock: {
@@ -547,6 +491,18 @@ test("link-specific clear copy is absent from unrelated binding rows", () => {
   });
   try {
     expect(view.container.textContent).not.toContain("Use static link");
+    const accessibleNames = Array.from(view.container.querySelectorAll('[role="combobox"]')).map(
+      (combobox) => combobox.getAttribute("aria-label")
+    );
+    expect(accessibleNames).toEqual([
+      "Bound field",
+      "Level",
+      "Heading text alignment",
+      "Width",
+      "Block layout alignment",
+    ]);
+    expect(new Set(accessibleNames).size).toBe(accessibleNames.length);
+    expect(accessibleNames.every((name) => Boolean(name?.trim()))).toBe(true);
   } finally {
     view.cleanup();
   }
@@ -594,6 +550,9 @@ test("Tabs add a deterministic collision-free slot and arm that exact target", (
     onArmSlotInsert,
   });
   try {
+    expect(
+      view.container.querySelector('[data-screen-insert-into="true"]')?.getAttribute("aria-label")
+    ).toBe("Insert into");
     clickButton(view.container, "Add tab");
     expect(onPatchBlock).toHaveBeenCalledWith("tabs-1", {
       data: {
@@ -608,6 +567,43 @@ test("Tabs add a deterministic collision-free slot and arm that exact target", (
     expect(onArmSlotInsert).toHaveBeenCalledWith("tabs-1", "tab-4");
   } finally {
     view.cleanup();
+  }
+
+  const removeThenAddView = mountStatefulTabsInspector({
+    id: "tabs-default-labels",
+    type: "tabs",
+    data: {
+      tabs: [
+        { id: "tab-1", label: "Tab 1" },
+        { id: "tab-2", label: "Tab 2" },
+        { id: "tab-3", label: "Tab 3" },
+      ],
+    },
+    slots: { "tab-1": [], "tab-2": [], "tab-3": [] },
+  });
+  try {
+    clickButton(removeThenAddView.container, "Remove Tab 2");
+    clickButton(removeThenAddView.container, "Add tab");
+    expect(removeThenAddView.currentBlock().data.tabs).toEqual([
+      { id: "tab-1", label: "Tab 1" },
+      { id: "tab-3", label: "Tab 3" },
+      { id: "tab-4", label: "Tab 4" },
+    ]);
+    expect(removeThenAddView.currentBlock().slots).toEqual({
+      "tab-1": [],
+      "tab-3": [],
+      "tab-4": [],
+    });
+    const tabActionNames = Array.from(
+      removeThenAddView.container.querySelectorAll<HTMLButtonElement>(
+        'button[aria-label^="Edit content for"], button[aria-label^="Remove"]'
+      )
+    ).map((button) => button.getAttribute("aria-label"));
+    expect(tabActionNames).toContain("Edit content for Tab 4");
+    expect(tabActionNames).toContain("Remove Tab 4");
+    expect(new Set(tabActionNames).size).toBe(tabActionNames.length);
+  } finally {
+    removeThenAddView.cleanup();
   }
 });
 
@@ -782,6 +778,40 @@ test("A valid Enter rename keeps keyboard focus on the same Tab label input", ()
     expect(inputAfter?.getAttribute("aria-label")).toBe("Label for Renamed by keyboard");
   } finally {
     view.cleanup();
+  }
+
+  const droppedPatch = vi.fn();
+  const droppedView = mountInspector({
+    selectedBlock: {
+      id: "tabs-dropped-patch",
+      type: "tabs",
+      data: { tabs: [{ id: "tab-1", label: "Committed" }] },
+      slots: { "tab-1": [] },
+    },
+    onPatchBlock: droppedPatch,
+  });
+  const droppedInput = droppedView.container.querySelector<HTMLInputElement>(
+    '[data-screen-tab-label="tab-1"]'
+  );
+  try {
+    expect(droppedInput).not.toBeNull();
+    setInputValue(droppedInput!, "Rejected rename");
+    expect(document.activeElement).toBe(droppedInput);
+    React.act(() => {
+      droppedInput?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+    expect(droppedPatch).toHaveBeenCalledWith("tabs-dropped-patch", {
+      data: { tabs: [{ id: "tab-1", label: "Rejected rename" }] },
+      slots: { "tab-1": [] },
+    });
+    expect(droppedView.container.querySelector('[data-screen-tab-label="tab-1"]')).toBe(
+      droppedInput
+    );
+    expect(droppedInput?.value).toBe("Committed");
+    expect(droppedInput?.getAttribute("aria-label")).toBe("Label for Committed");
+    expect(document.activeElement).toBe(droppedInput);
+  } finally {
+    droppedView.cleanup();
   }
 });
 

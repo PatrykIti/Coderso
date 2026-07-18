@@ -158,6 +158,8 @@ test("(d) panelRef / region role / panelAriaLabel / panelDataProps land on the s
       panelRef={ref}
       panelAriaLabel="Section tools"
       panelDataProps={{
+        role: "dialog",
+        "aria-label": "Overridden tools",
         "data-page-editor-floating-toolbar": "true",
         "data-page-editor-toolbar-collapsed": "false",
       }}
@@ -173,6 +175,8 @@ test("(d) panelRef / region role / panelAriaLabel / panelDataProps land on the s
     expect(rail.getAttribute("data-page-editor-toolbar-collapsed")).toBe("false");
     expect(rail.getAttribute("role")).toBe("region");
     expect(rail.getAttribute("aria-label")).toBe("Section tools");
+    expect(view.container.querySelector('[role="dialog"]')).toBeNull();
+    expect(view.container.querySelector('[aria-label="Overridden tools"]')).toBeNull();
     expect(view.container.querySelector('[role="region"][aria-label="Section tools"]')).toBe(rail);
   } finally {
     view.cleanup();

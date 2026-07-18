@@ -144,11 +144,11 @@ export function CanvasEditor({
           {canvas}
           {panelOpen && panel ? (
             <div
+              {...panelDataProps}
               ref={panelRef}
               role="region"
               className={PANEL_POSITION_CLASS[panelPosition ?? "right"]}
               aria-label={panelAriaLabel}
-              {...panelDataProps}
             >
               {panel}
             </div>

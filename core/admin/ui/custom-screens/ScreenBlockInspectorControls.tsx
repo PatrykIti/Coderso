@@ -71,11 +71,10 @@ export function BoundFieldRow({
   const fieldOptions = filterTypes
     ? allOptions.filter((option) => filterTypes.includes(option.type))
     : allOptions;
-  const selectedField =
-    binding?.field ??
-    readScreenInspectorString(block.data.field) ??
-    fieldOptions[0]?.value ??
-    "title";
+  // An exact binding wins, an authored `data.field` is the unbound fallback, and the
+  // empty string is the real "not bound" state Radix renders as the named placeholder.
+  // `readScreenInspectorString` already normalizes to a string, so no further arm can run.
+  const selectedField = binding?.field || readScreenInspectorString(block.data.field);
 
   return (
     <InspectorRow label="Bound field">
@@ -89,8 +88,8 @@ export function BoundFieldRow({
             onFieldSelected?.(field);
           }}
         >
-          <SelectTrigger data-screen-bound-field="true">
-            <SelectValue />
+          <SelectTrigger data-screen-bound-field="true" aria-label="Bound field">
+            <SelectValue placeholder="Not bound" />
           </SelectTrigger>
           <SelectContent>
             {fieldOptions.map((field) => (
@@ -121,11 +120,13 @@ export function BoundFieldRow({
 /** Flat enum Select row shared by the per-kind inspector controls. */
 export function EnumRow({
   label,
+  accessibleName = label,
   value,
   options,
   onChange,
 }: {
   label: string;
+  accessibleName?: string;
   value: string;
   options: ReadonlyArray<{ value: string; label: string }>;
   onChange: (value: string) => void;
@@ -133,7 +134,7 @@ export function EnumRow({
   return (
     <InspectorRow label={label}>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger>
+        <SelectTrigger aria-label={accessibleName}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -187,6 +188,13 @@ export function BoxSpacingRow({
   );
 }
 
+type ImageSrcDraft = Readonly<{
+  blockId: string;
+  baseSrc: string;
+  acceptedSrc: string;
+  value: string;
+}>;
+
 // The raw text lives in local state so typing a URL is not destroyed, while
 // data.src only receives a value accepted by the Screen-owned media policy.
 export function ImageSrcRow({
@@ -197,17 +205,32 @@ export function ImageSrcRow({
   onPatchBlockData: ScreenBlockInspectorProps["onPatchBlockData"];
 }) {
   const committed = readScreenInspectorString(block.data.src);
-  const [draft, setDraft] = useState<{ blockId: string; value: string } | null>(null);
-  const value = draft && draft.blockId === block.id ? draft.value : committed;
+  const [draft, setDraft] = useState<ImageSrcDraft | null>(null);
+  const activeDraft =
+    draft &&
+    draft.blockId === block.id &&
+    (committed === draft.baseSrc || committed === draft.acceptedSrc)
+      ? draft
+      : null;
+
+  // A draft may survive the parent accepting this control's sanitized write, but it
+  // must not survive a block identity change or an unrelated committed-src refresh.
+  // Resetting conditional render state follows the React previous-props pattern and
+  // avoids an effect-body state update under the Hooks Compiler rules.
+  if (draft && !activeDraft) {
+    setDraft(null);
+  }
+
   return (
     <InspectorRow label="Image URL">
       <Input
-        value={value}
+        value={activeDraft?.value ?? committed}
         placeholder="https://… or /media/… — used when no field is bound"
         onChange={(event) => {
           const raw = event.target.value;
-          setDraft({ blockId: block.id, value: raw });
-          onPatchBlockData(block.id, { src: sanitizeScreenAuthoringUrl(raw, "media") ?? "" });
+          const acceptedSrc = sanitizeScreenAuthoringUrl(raw, "media") ?? "";
+          setDraft({ blockId: block.id, baseSrc: committed, acceptedSrc, value: raw });
+          onPatchBlockData(block.id, { src: acceptedSrc });
         }}
       />
     </InspectorRow>

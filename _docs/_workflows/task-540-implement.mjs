@@ -44,6 +44,11 @@ import { default as ts } from "typescript";
 
 import { buildTask540SmokePlan } from "./task-540-smoke-contract.mjs";
 
+// The workflow host injects a phase reporter; direct maintenance/self-test CLI modes
+// intentionally degrade to a no-op reporter instead of failing before their first gate.
+const phase =
+  typeof globalThis.phase === "function" ? globalThis.phase.bind(globalThis) : () => undefined;
+
 function deepFreezeExact(value) {
   if (value === null || typeof value !== "object" || Object.isFrozen(value)) return value;
   for (const key of Reflect.ownKeys(value)) deepFreezeExact(value[key]);
@@ -1063,17 +1068,19 @@ const SCREEN_TAB_LABEL_DRAFT_CONTRACT = deepFreezeExact({
   facadePath: "core/admin/ui/custom-screens/ScreenBlockInspector.tsx",
   testPath: "tests/vitest/ui/custom-screen-binding-panel.test.tsx",
   companionTestPath: "tests/vitest/ui-integration/custom-screen-image-inspector.test.tsx",
-  ownerSha256: "35e87c59e5f3590e5d8919826f03047469ea3c93666b22108f1c4016fac3e953",
-  facadeSha256: "910116fba09a36dc75a7e49c862ea6e8c8efc29059e5040db6bd67e54738c9cd",
-  testSha256: "8159b5877711aedba1fd71b63c390b3374e1f684754ae4f27e223cdc3eeea876",
-  companionTestSha256: "899be111c885780aaec92b5036b2826e937eeb3e7e32d21583bc0596249c75d3",
+  harnessPath: "tests/vitest/ui/support/screenBlockInspectorTestHarness.tsx",
+  ownerSha256: "523df5e314384856865563692a1b737885ae7c7737069c8ebb5adbf912b22880",
+  facadeSha256: "3a2703d2b9995e55b034eb80416d5e562354981fb6b6248b20d25fdebe29a232",
+  testSha256: "3b7de253b3eb2c285fa85084e50611f225b9bca550b18d28fbfa68eb919882db",
+  companionTestSha256: "924a7ee35a1b9f7b7260bc0bce3efab51b1a26dd6edb30c5f5f16628fe84ad66",
+  harnessSha256: "209601aa4cfb5998da8ce71127c0a8b87ccd78bf8012368c3e1294490a5980a4",
   vitestImportNames: ["afterEach", "expect", "test", "vi"],
   facadeForbiddenSymbols: ["ScreenTabLabelDraft", "TabLabelInput", "baseLabel"],
-  draftContractSha256: "b8e6cc6ddaed8e27305ebe03bb7b5543902254e49acf4e44451ca668bf8b72cc",
-  draftContractCanonicalBytes: 13_177,
-  tabsEditorContractSha256: "3ee0439a6c63e0d9a5f6bb3056366d1d03e4221b136aa42ff64f256012d0dea4",
-  tabsEditorContractCanonicalBytes: 28_486,
-  expectedExpandedTestCount: 17,
+  draftContractSha256: "f7e3fc53c42b0d41029eaa7645c64673c9651a917a319e061567fd9c1c1b73c1",
+  draftContractCanonicalBytes: 12_818,
+  tabsEditorContractSha256: "1bf03fd0b27d20ef0707309c4248aa1c8916f3bb8cf65fe2913765c3f85250c4",
+  tabsEditorContractCanonicalBytes: 28_347,
+  expectedExpandedTestCount: 18,
   expectedCompanionExpandedTestCount: 18,
   requiredTests: [
     {
@@ -1083,8 +1090,8 @@ const SCREEN_TAB_LABEL_DRAFT_CONTRACT = deepFreezeExact({
     },
     {
       name: "A valid Enter rename keeps keyboard focus on the same Tab label input",
-      callbackCanonicalBytes: 9_533,
-      callbackSha256: "f77ecbaca9d89761030a0df49ab8007956a6e8678796ae146b8f9598296758e2",
+      callbackCanonicalBytes: 19_005,
+      callbackSha256: "5a4c6223094813d1ef0eb89e0a4a7f90e81c13dded54fd5b293818c3d0213a02",
     },
     {
       name: "Removing a Tab garbage-collects the bindings inside its slot subtree",
@@ -1219,14 +1226,14 @@ function analyzeScreenTabLabelDraftContract(source, relativePath, contract, labe
   );
   if (
     baseLabelStrings.length !== 0 ||
-    baseLabelIdentifiers.length !== 7 ||
+    baseLabelIdentifiers.length !== 6 ||
     baseLabelTypeMembers.length !== 1 ||
-    baseLabelWrites.length !== 5 ||
+    baseLabelWrites.length !== 4 ||
     baseLabelReads.length !== 1
   ) {
     throw new Error(
       label +
-        ": Screen Tab label baseLabel is not exactly one type member, five writes, and one read"
+        ": Screen Tab label baseLabel is not exactly one type member, four writes, and one read"
     );
   }
 
@@ -1303,9 +1310,9 @@ function analyzeScreenTabLabelDraftContract(source, relativePath, contract, labe
     .map((node) => node.parent)
     .sort((left, right) => left.getStart(sourceFile) - right.getStart(sourceFile));
   if (
-    setDraftIdentifiers.length !== 5 ||
+    setDraftIdentifiers.length !== 4 ||
     setDraftBindings.length !== 1 ||
-    setDraftCalls.length !== 4
+    setDraftCalls.length !== 3
   ) {
     throw new Error(label + ": Screen Tab label setDraft call contract drifted");
   }
@@ -1643,9 +1650,31 @@ function requireScreenTabLabelCompanionTestContract(source, label) {
   return expandedTestCount;
 }
 
+function requireScreenTabLabelEvidenceFileHashes(fileSha256, contract, label) {
+  const expected = Object.freeze({
+    owner: contract.ownerSha256,
+    facade: contract.facadeSha256,
+    test: contract.testSha256,
+    companionTest: contract.companionTestSha256,
+    harness: contract.harnessSha256,
+  });
+  if (
+    !fileSha256 ||
+    Object.getPrototypeOf(fileSha256) !== Object.prototype ||
+    JSON.stringify(Object.keys(fileSha256)) !== JSON.stringify(Object.keys(expected)) ||
+    Object.entries(expected).some(
+      ([key, expectedSha256]) =>
+        !/^[0-9a-f]{64}$/u.test(expectedSha256) || fileSha256[key] !== expectedSha256
+    )
+  ) {
+    throw new Error(label + ": Screen Tab label evidence file SHA-256 drifted");
+  }
+  return fileSha256;
+}
+
 async function requireScreenTabLabelDraftContract(label) {
   const contract = SCREEN_TAB_LABEL_DRAFT_CONTRACT;
-  const [ownerBytes, facadeBytes, testBytes, companionTestBytes] = await Promise.all([
+  const [ownerBytes, facadeBytes, testBytes, companionTestBytes, harnessBytes] = await Promise.all([
     readStableRegularFile(ROOT + "/" + contract.ownerPath, label + " owner", 1024 * 1024),
     readStableRegularFile(ROOT + "/" + contract.facadePath, label + " facade", 1024 * 1024),
     readStableRegularFile(ROOT + "/" + contract.testPath, label + " tests", 2 * 1024 * 1024),
@@ -1654,21 +1683,19 @@ async function requireScreenTabLabelDraftContract(label) {
       label + " companion tests",
       2 * 1024 * 1024
     ),
+    readStableRegularFile(ROOT + "/" + contract.harnessPath, label + " test harness", 1024 * 1024),
   ]);
-  const fileSha256 = Object.freeze({
-    owner: createHash("sha256").update(ownerBytes.bytes).digest("hex"),
-    facade: createHash("sha256").update(facadeBytes.bytes).digest("hex"),
-    test: createHash("sha256").update(testBytes.bytes).digest("hex"),
-    companionTest: createHash("sha256").update(companionTestBytes.bytes).digest("hex"),
-  });
-  if (
-    fileSha256.owner !== contract.ownerSha256 ||
-    fileSha256.facade !== contract.facadeSha256 ||
-    fileSha256.test !== contract.testSha256 ||
-    fileSha256.companionTest !== contract.companionTestSha256
-  ) {
-    throw new Error(label + ": Screen Tab label evidence file SHA-256 drifted");
-  }
+  const fileSha256 = requireScreenTabLabelEvidenceFileHashes(
+    {
+      owner: createHash("sha256").update(ownerBytes.bytes).digest("hex"),
+      facade: createHash("sha256").update(facadeBytes.bytes).digest("hex"),
+      test: createHash("sha256").update(testBytes.bytes).digest("hex"),
+      companionTest: createHash("sha256").update(companionTestBytes.bytes).digest("hex"),
+      harness: createHash("sha256").update(harnessBytes.bytes).digest("hex"),
+    },
+    contract,
+    label
+  );
   const analysis = analyzeScreenTabLabelDraftContract(
     ownerBytes.bytes.toString("utf8"),
     contract.ownerPath,
@@ -1696,6 +1723,7 @@ async function requireScreenTabLabelDraftContract(label) {
     facadeSha256: fileSha256.facade,
     testSha256: fileSha256.test,
     companionTestSha256: fileSha256.companionTest,
+    harnessSha256: fileSha256.harness,
     draftContractSha256: analysis.draftContractSha256,
     draftContractCanonicalBytes: contract.draftContractCanonicalBytes,
     tabsEditorContractSha256: analysis.tabsEditorContractSha256,
@@ -7015,17 +7043,13 @@ async function assertGroundedChangeManifestContract(context) {
   }
 
   const manifestMutations = [
-    ["omission", (copy) => copy.changeManifest.records.pop()],
-    ["duplicate", (copy) => copy.changeManifest.records.push(copy.changeManifest.records.at(-1))],
-    ["reorder", (copy) => copy.changeManifest.records.reverse()],
+    ["record collection type", (copy) => (copy.changeManifest.records = {})],
     [
-      "stage swap",
-      (copy) => {
-        const record = copy.changeManifest.records.find((row) => row.staged && row.unstaged);
-        if (!record) throw new Error(label + ": live MM record is missing");
-        [record.staged, record.unstaged] = [record.unstaged, record.staged];
-      },
+      "task status duplicate",
+      (copy) => copy.changeManifest.taskStatuses.push(copy.changeManifest.taskStatuses[0]),
     ],
+    ["task status reorder", (copy) => copy.changeManifest.taskStatuses.reverse()],
+    ["patch byte length", (copy) => (copy.changeManifest.patches.headToWorktree.byteLength += 1)],
     ["manifest hash", (copy) => (copy.changeManifest.manifestSha256 = "0".repeat(64))],
     ["task status", (copy) => (copy.changeManifest.taskStatuses[0].status += " tampered")],
     [
@@ -7072,6 +7096,14 @@ async function assertGroundedChangeManifestContract(context) {
     secretProjection.sha256 === createHash("sha256").update(sanitizedSecret).digest("hex") &&
     secretProjection.sha256 !== createHash("sha256").update(secretPatch).digest("hex") &&
     !JSON.stringify(secretProjection).includes("grounded omitted fixture secret");
+  const largePatchBytes = Buffer.alloc(1024 * 1024 + 1, 0x61);
+  const largePatchProjection = projectSanitizedGroundedPatch(
+    largePatchBytes,
+    label + " large patch"
+  );
+  const largePatchProjectionPass =
+    largePatchProjection.byteLength === largePatchBytes.length &&
+    largePatchProjection.sha256 === createHash("sha256").update(largePatchBytes).digest("hex");
   requireGroundedPromptBytes("a".repeat(MAX_GROUNDED_PROMPT_BYTES), label);
   requireGroundedPromptBytes("ą".repeat(MAX_GROUNDED_PROMPT_BYTES / 2), label);
   let promptCapRejections = 0;
@@ -7097,7 +7129,8 @@ async function assertGroundedChangeManifestContract(context) {
     JSON.stringify(paths) === JSON.stringify([...paths].sort()) &&
     Buffer.byteLength(serialized, "utf8") < MAX_GROUNDED_CONTEXT_BYTES &&
     Buffer.byteLength(prompt, "utf8") < MAX_GROUNDED_PROMPT_BYTES &&
-    manifest.patches.headToWorktree.byteLength > 1024 * 1024 &&
+    Number.isSafeInteger(manifest.patches.headToWorktree.byteLength) &&
+    manifest.patches.headToWorktree.byteLength >= 0 &&
     !serialized.includes('"diffPatch"') &&
     !serialized.includes('"content"') &&
     !serialized.includes('"target"') &&
@@ -7109,6 +7142,7 @@ async function assertGroundedChangeManifestContract(context) {
     !unknownReadOnlySchemaRejected ||
     !readOnlyResultMatrixPass ||
     !secretProjectionPass ||
+    !largePatchProjectionPass ||
     promptCapRejections !== 2 ||
     !contextCapRejected ||
     !liveProjectionPass
@@ -8760,6 +8794,7 @@ const LEAVES = Object.freeze(
         "core/admin/ui/custom-screens/screenBlockInspectorModel.ts",
         "tests/vitest/ui/custom-screen-binding-panel.test.tsx",
         "tests/vitest/ui-integration/custom-screen-image-inspector.test.tsx",
+        "tests/vitest/ui/support/screenBlockInspectorTestHarness.tsx",
       ]),
       commands: Object.freeze([
         command("lintTypes", LINT_TYPES),
@@ -9330,6 +9365,7 @@ const MODULARITY_REPAIR_ALLOWED_FILES = deepFreezeExact({
     "core/admin/ui/custom-screens/ScreenBlockInspectorSection.tsx",
     "core/admin/ui/custom-screens/ScreenBlockInspectorTabs.tsx",
     "core/admin/ui/custom-screens/screenBlockInspectorModel.ts",
+    "tests/vitest/ui/support/screenBlockInspectorTestHarness.tsx",
   ],
   "540-03-L01": [
     "core/admin/ui/custom-screens/ScreenRuntimeRenderer.tsx",
@@ -19953,6 +19989,22 @@ async function assertScreenTabLabelDraftContract() {
   } catch {
     facadeWiringRejected = true;
   }
+  let harnessHashMutationRejected = false;
+  try {
+    requireScreenTabLabelEvidenceFileHashes(
+      {
+        owner: contract.ownerSha256,
+        facade: contract.facadeSha256,
+        test: contract.testSha256,
+        companionTest: contract.companionTestSha256,
+        harness: "0".repeat(64),
+      },
+      contract,
+      "TASK-540 Screen Inspector harness-hash self-test"
+    );
+  } catch {
+    harnessHashMutationRejected = true;
+  }
   const cases = [
     {
       label: "active Screen Tab label AST and test evidence is exact",
@@ -19961,6 +20013,7 @@ async function assertScreenTabLabelDraftContract() {
         evidence.facadeSha256 === contract.facadeSha256 &&
         evidence.testSha256 === contract.testSha256 &&
         evidence.companionTestSha256 === contract.companionTestSha256 &&
+        evidence.harnessSha256 === contract.harnessSha256 &&
         evidence.draftContractSha256 === contract.draftContractSha256 &&
         evidence.draftContractCanonicalBytes === contract.draftContractCanonicalBytes &&
         evidence.tabsEditorContractSha256 === contract.tabsEditorContractSha256 &&
@@ -19992,8 +20045,12 @@ async function assertScreenTabLabelDraftContract() {
       pass: callbackMutationRejected,
     },
     {
-      label: "active proof pins exact 17 plus 18 expanded test cardinality",
+      label: "active proof pins exact 18 plus 18 expanded test cardinality",
       pass: cardinalityMutationsRejected === 2,
+    },
+    {
+      label: "active proof pins the extracted Inspector harness by full SHA-256",
+      pass: harnessHashMutationRejected,
     },
     {
       label: "active proof pins TabsEditor facade binding-GC wiring",
