@@ -15962,7 +15962,16 @@ function decodeExactNativeUtf8(bytes, label) {
   return text;
 }
 
-async function registerPrivateNativeSnapshot(state, token, label) {
+function privateNativeSnapshotSizeIsValid(size, allowEmpty) {
+  return (
+    Number.isSafeInteger(size) &&
+    typeof allowEmpty === "boolean" &&
+    size >= (allowEmpty ? 0 : 1) &&
+    size <= MAX_STREAM_BYTES
+  );
+}
+
+async function registerPrivateNativeSnapshot(state, token, label, { allowEmpty = false } = {}) {
   invariant(
     /^\.\.\/output\/page-[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{3}Z\.yml$/u.test(
       token
@@ -15982,7 +15991,7 @@ async function registerPrivateNativeSnapshot(state, token, label) {
     expectedDev: PRIVATE_WORKSPACE_LEDGER.get(state.browserWorkspace.ledger).rootIdentity.dev,
   });
   invariant(
-    identity.size > 0 && identity.size <= MAX_STREAM_BYTES,
+    privateNativeSnapshotSizeIsValid(identity.size, allowEmpty),
     label + " snapshot size is invalid"
   );
   registerWorkspaceArtifact(state.browserWorkspace.ledger, absolute, identity);
@@ -16064,7 +16073,7 @@ const NATIVE_OUTPUT_DESCRIPTOR_REGISTRY = deepFreezeExact({
       const pid = Number(pidText);
       invariant(Number.isSafeInteger(pid) && pid > 1, action.id + " browser PID is invalid");
       const snapshot = text.slice(middleIndex + middle.length, -2);
-      await registerPrivateNativeSnapshot(state, snapshot, action.id);
+      await registerPrivateNativeSnapshot(state, snapshot, action.id, { allowEmpty: true });
       const identity = await readProcIdentity(pid);
       const environmentBytes = await readFile(`/proc/${pid}/environ`);
       invariant(
@@ -22690,6 +22699,15 @@ export async function runTask540SmokeExecutorSelfTest() {
         shadowContext
       ),
     "Predicate variable shadowing"
+  );
+
+  invariant(
+    privateNativeSnapshotSizeIsValid(0, true) && privateNativeSnapshotSizeIsValid(1, false),
+    "native snapshot size acceptance drift"
+  );
+  assertNegative(
+    !privateNativeSnapshotSizeIsValid(0, false),
+    "empty non-initial native snapshot rejection"
   );
 
   const sessionAbsenceContract = {
