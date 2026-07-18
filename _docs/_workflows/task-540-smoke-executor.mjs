@@ -2779,6 +2779,61 @@ function createExpectedAuthChallengeAuthority(options) {
     return Object.freeze(value);
   };
   const integer = (value) => Number.isSafeInteger(value) && value >= 0;
+  const parseHttpUrl = (value) => {
+    if (typeof value !== "string" || value.length === 0 || value.length > 4096) return null;
+    const match =
+      /^(https?):\/\/([A-Za-z0-9.-]+|\[[0-9A-Fa-f:.]+\])(?::([0-9]{1,5}))?(\/[^?#\s\\]*)?(\?[^#\s\\]*)?(#[^\s\\]*)?$/u.exec(
+        value
+      );
+    if (match === null) return null;
+    const protocol = match[1].toLowerCase();
+    const rawHostname = match[2];
+    const bracketed = rawHostname.startsWith("[");
+    if (bracketed) {
+      const address = rawHostname.slice(1, -1);
+      if (!address.includes(":") || !/^[0-9A-Fa-f:.]+$/u.test(address)) return null;
+    } else {
+      const labels = rawHostname.split(".");
+      if (
+        rawHostname.length > 253 ||
+        labels.some(
+          (label) =>
+            label.length === 0 ||
+            label.length > 63 ||
+            !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/u.test(label)
+        )
+      ) {
+        return null;
+      }
+    }
+    const suppliedPort = match[3] ?? "";
+    const portNumber = suppliedPort === "" ? null : Number(suppliedPort);
+    if (
+      portNumber !== null &&
+      (!Number.isSafeInteger(portNumber) || portNumber < 1 || portNumber > 65535)
+    ) {
+      return null;
+    }
+    const port =
+      portNumber === null ||
+      (protocol === "http" && portNumber === 80) ||
+      (protocol === "https" && portNumber === 443)
+        ? ""
+        : String(portNumber);
+    const hostname = rawHostname.toLowerCase();
+    const origin = protocol + "://" + hostname + (port === "" ? "" : ":" + port);
+    const pathname = match[4] ?? "/";
+    const search = match[5] ?? "";
+    const hash = match[6] ?? "";
+    return freeze({
+      hash,
+      href: origin + pathname + search + hash,
+      origin,
+      pathname,
+      port,
+      search,
+    });
+  };
   const pageIdPattern = /^wf540-page-[1-9][0-9]*$/u;
   const safeTokenPattern = /^[a-z0-9][a-z0-9-]{0,95}$/u;
   if (
@@ -2813,14 +2868,9 @@ function createExpectedAuthChallengeAuthority(options) {
     options.phases.length !== 6
   )
     fail("options_value");
-  let expectedUrl;
-  let loginUrl;
-  try {
-    expectedUrl = new URL(options.expectedUrl);
-    loginUrl = new URL(options.loginUrl);
-  } catch {
-    fail("options_url");
-  }
+  const expectedUrl = parseHttpUrl(options.expectedUrl);
+  const loginUrl = parseHttpUrl(options.loginUrl);
+  if (expectedUrl === null || loginUrl === null) fail("options_url");
   if (
     expectedUrl.href !== options.expectedUrl ||
     expectedUrl.search !== "" ||
@@ -2905,12 +2955,8 @@ function createExpectedAuthChallengeAuthority(options) {
     return row;
   };
   const classifyUrl = (value) => {
-    let parsed;
-    try {
-      parsed = new URL(value);
-    } catch {
-      return "invalid_url";
-    }
+    const parsed = parseHttpUrl(value);
+    if (parsed === null) return "invalid_url";
     if (parsed.origin === expectedUrl.origin && parsed.pathname.startsWith("/admin/api/"))
       return "admin_api";
     if (parsed.pathname.startsWith("/media/")) return "media_delivery";
@@ -19041,6 +19087,17 @@ async function runExpectedAuthChallengeSelfTest({ expectNegative, assertNegative
     ...overrides,
   });
   const authority = (overrides = {}) => createExpectedAuthChallengeAuthority(options(overrides));
+  const [isolatedUrlType, isolatedAuthorityFactory] = new Script(
+    `[typeof URL, (${createExpectedAuthChallengeAuthority.toString()})]`,
+    { filename: "task-540-auth-authority-no-url.self-test.js" }
+  ).runInNewContext({ URL: undefined }, { timeout: 5_000 });
+  const isolatedProjection = isolatedAuthorityFactory(options()).reconcile(pageRecords);
+  invariant(
+    isolatedUrlType === "undefined" &&
+      isolatedProjection.firstUnexpected === null &&
+      isolatedProjection.aggregate.consoleErrors.length === 0,
+    "expected auth authority retained a run-code URL global dependency"
+  );
   const response = (subject, overrides = {}) =>
     subject.recordResponse({
       pageId,
