@@ -12,10 +12,11 @@
 **Started:** 2026-07-13
 **Repair Started:** 2026-07-16
 **Fix Started:** 2026-07-18
-**Repair Pending:** generation cd3f59606d3e4141ad2cd11849e936c7 / token 822ee5dc177d4868b21147aaffb6232c
+**Implementation Complete:** 2026-07-18 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Revalidation Passed:** generation cd3f59606d3e4141ad2cd11849e936c7 / token 822ee5dc177d4868b21147aaffb6232c / gate green
 **Repair Reason:** R01 centralized binding-ID generation in `buildScreenFieldBindingId`; this leaf consumes that domain helper from its existing Inspector binding factory and proves maximum-length tuples stay distinct and bounded. The current repair also restores invalid Tab-label drafts, preserves focus on the same commit-stable input after Enter while using `baseLabel` for stale-draft invalidation, and clears bindings for every nested block removed with a Tab slot.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
-**Current Repair State:** The historical 33/33 modularity receipt remains truthful pre-current-repair evidence. The current production graph is facade 560, model 209, controls 215, Tabs 204, and Section 79 lines; the two tests are 902 and 454. The current focus-preserving stale-draft and removed-slot binding-GC repair remains governed by the exact `Repair Pending` receipt above and requires a fresh 17+18 targeted gate; no family post-audit, smoke, changelog, or closure is claimed.
+**Current Repair State:** The historical 33/33 modularity receipt remains truthful pre-current-repair evidence. The current production graph is facade 560, model 209, controls 215, Tabs 204, and Section 79 lines; the two tests are 902 and 454. The current focus-preserving stale-draft and removed-slot binding-GC repair passed its fresh 17+18 targeted gate under the exact `Revalidation Passed` receipt above; no family post-audit, smoke, changelog, or closure is claimed.
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -285,7 +286,7 @@ Unicode/React-state correction and its 31/31 gate remain valid evidence. The 202
 domain-builder consumer and visible invalid-label restore corrections remain intact.
 The historical modular split passed its then-current 15/15 and 18/18 tests, combined
 33/33, additional consumer 16/16, exact line/export/import checks, and static gates. The
-current focus-preserving and nested-binding-GC repair expands the targeted matrix to
-17+18 tests and remains `Repair Pending` until its fresh gate passes. TASK-9999-01-L02
-is superseded by this active behavior owner; no family post-audit or smoke is claimed.
+current focus-preserving and nested-binding-GC repair expanded the targeted matrix to
+17+18 tests and passed its fresh gate. TASK-9999-01-L02 is superseded by this active
+behavior owner; no family post-audit or smoke is claimed.
 Aggregate persistence and live browser flows remain closure-owned.

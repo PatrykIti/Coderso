@@ -11,6 +11,7 @@
 **Started:** 2026-07-13
 **Repair Started:** 2026-07-16
 **Fix Started:** 2026-07-18
+**Implementation Complete:** 2026-07-18 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Repair Reason:** The Inspector's binding factory must consume R01's schema-domain `buildScreenFieldBindingId` and prove maximum-length tuples remain distinct and max-120 without taking ownership of schema or document operations. The current repair also restores invalid Tab-label drafts, keeps keyboard focus on the same input after an Enter commit while invalidating stale drafts through the now-read `baseLabel`, and garbage-collects bindings owned by a removed Tab slot subtree.
 **Repair Revalidated:** 2026-07-16 — TASK-540-02-L01 passed `core lint:types`, `core lint`, its exact two-file Vitest gate 33/33 on the final shared schema state, including the domain-builder consumer and invalid blur/Enter restore regressions, and `git diff --check`; no full-suite, post-audit, smoke, changelog, or closure pass is claimed.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
@@ -116,11 +117,11 @@ normalizer.
 
 ## Completion
 
-The sole leaf remains `🚧 In Progress` with its exact `Repair Pending` receipt in the
-leaf contract. The current graph is 560/209/215/204/79 lines for production and 902/454
-for the tests; its targeted matrix is 17 binding-panel plus 18 image-inspector tests.
-Historical 33/33 modularity evidence remains provenance only. Current focus preservation,
-stale-draft invalidation, and removed-slot binding GC require the fresh leaf gate before
-this repair can replace `Repair Pending`. TASK-9999-01-L02 is superseded, not deferred.
-Aggregate persistence and live browser flows remain owned by TASK-540-06 after
-TASK-540-04 consumes the clear sentinel.
+The sole leaf remains `🚧 In Progress` with its exact `Revalidation Passed` receipt in the
+leaf contract while canonical `✅ Done` awaits family closure. The current graph is
+560/209/215/204/79 lines for production and 902/454 for the tests; its targeted matrix of
+17 binding-panel plus 18 image-inspector tests passed. Historical 33/33 modularity evidence
+remains provenance only. Current focus preservation, stale-draft invalidation, and
+removed-slot binding GC passed the fresh leaf gate. TASK-9999-01-L02 is superseded, not
+deferred. Aggregate persistence and live browser flows remain owned by TASK-540-06 after
+TASK-540-04 consumes the clear sentinel; no family post-audit, smoke, or closure is claimed.
