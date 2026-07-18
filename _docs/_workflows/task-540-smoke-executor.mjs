@@ -14204,6 +14204,26 @@ function assertRecordIdentity(value, expected, label) {
   }
 }
 
+function readExactEntryAuthorId(value, expectedAuthorId, label) {
+  invariant(
+    value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      typeof expectedAuthorId === "string" &&
+      /^[0-9a-f-]{36}$/u.test(expectedAuthorId),
+    label + " authority is invalid"
+  );
+  const author = value.author;
+  exactOwnKeys(author, ["id", "name", "email"], label + " author", { plain: true });
+  invariant(
+    author.id === expectedAuthorId &&
+      (author.name === null || typeof author.name === "string") &&
+      typeof author.email === "string",
+    label + " author identity drift"
+  );
+  return author.id;
+}
+
 function bootstrapApiSession(state) {
   const session = state.sessions.get("bootstrap");
   const record = session && privateApiContextRecord(state, session, "bootstrap");
@@ -14980,11 +15000,12 @@ async function runtimeProveRelatedEntry({ state, captures }, entryKey, captureNa
     b2: "related-entry-b2",
     failure1: "related-entry-failure1",
   };
-  invariant(
-    response.value.authorId === null || typeof response.value.authorId === "string",
-    "related entry owner drift"
+  const authorId = readExactEntryAuthorId(
+    response.value,
+    state.bootstrapBaseline.id,
+    "related entry proof"
   );
-  state.resourceOwners.set(semanticByEntryKey[entryKey], response.value.authorId ?? null);
+  state.resourceOwners.set(semanticByEntryKey[entryKey], authorId);
   return runtimeSafeProjection({
     id,
     title: body.title,
@@ -15359,11 +15380,12 @@ async function runtimeProveEditableEntry({ state, plan, captures }) {
     { csrf: false, retainAuthoritativeBytes: true }
   );
   assertRecordIdentity(response.value, { id, ...state.editableEntryBody }, "editable entry proof");
-  invariant(
-    response.value.authorId === null || typeof response.value.authorId === "string",
-    "editable entry owner drift"
+  const authorId = readExactEntryAuthorId(
+    response.value,
+    state.bootstrapBaseline.id,
+    "editable entry proof"
   );
-  state.resourceOwners.set("editable-entry", response.value.authorId ?? null);
+  state.resourceOwners.set("editable-entry", authorId);
   state.mediaRaceAdminEvidence.entry = response.authoritativeBytes;
   return runtimeSafeProjection({
     id,
@@ -22765,6 +22787,20 @@ export async function runTask540SmokeExecutorSelfTest() {
   assertNegative(
     !privateNativeSnapshotSizeIsValid(0, false),
     "empty non-initial native snapshot rejection"
+  );
+  const entryAuthorId = "54000000-0000-4000-8000-000000000001";
+  invariant(
+    readExactEntryAuthorId(
+      { author: { id: entryAuthorId, name: "Smoke Owner", email: "smoke@example.invalid" } },
+      entryAuthorId,
+      "self-test entry"
+    ) === entryAuthorId,
+    "entry author projection drift"
+  );
+  await expectAsyncFailure(
+    async () =>
+      readExactEntryAuthorId({ authorId: entryAuthorId }, entryAuthorId, "legacy self-test entry"),
+    "legacy entry authorId projection"
   );
 
   const sessionAbsenceContract = {
