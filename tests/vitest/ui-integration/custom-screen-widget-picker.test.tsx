@@ -147,7 +147,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-test("entry-view builder palette exposes screen blocks without page widgets", async () => {
+test("entry-view builder palette exposes screen blocks and opens the inserted block inspector", async () => {
   const view = mount("/admin/advanced/custom-screens/screen-1");
 
   try {
@@ -174,6 +174,17 @@ test("entry-view builder palette exposes screen blocks without page widgets", as
     expect(view.container.textContent).toContain("Related list");
     expect(view.container.textContent).not.toContain("Hero");
     expect(view.container.textContent).not.toContain("Feature Grid");
+
+    const buttonChip = [...view.container.querySelectorAll("button")].find(
+      (button) => button.textContent?.trim() === "Button"
+    );
+    expect(buttonChip).toBeDefined();
+    React.act(() => {
+      buttonChip?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+
+    expect(view.container.querySelector('[data-screen-bound-field="true"]')).not.toBeNull();
   } finally {
     view.cleanup();
   }
