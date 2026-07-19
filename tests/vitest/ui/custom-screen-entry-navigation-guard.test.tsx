@@ -84,6 +84,17 @@ afterEach(() => {
 });
 
 test("clean navigation proceeds without a dialog, while a content draft supports cancel and confirm", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const routeSessionSource = await readFile(
+    "core/admin/ui/custom-screens/CustomScreenEntryRouteSession.tsx",
+    "utf8"
+  );
+  expect(routeSessionSource).toContain(
+    'import { buildCustomScreenWorkspacePath } from "./routeParams";'
+  );
+  expect(routeSessionSource).toContain("buildCustomScreenWorkspacePath({ screenId })");
+  expect(routeSessionSource).not.toContain("encodeURIComponent(screenId)");
+
   const clean = mount("/admin/advanced/custom-screens/screen-1/entries/1");
   try {
     await flush();

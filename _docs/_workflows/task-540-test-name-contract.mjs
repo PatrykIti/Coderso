@@ -310,7 +310,7 @@ const families = Object.freeze({
       "b932d8833667fc0e08733720fa10856c720b1c6a69524e5b728bff063ffc0948",
     ]),
     declarations: 17,
-    declarationSha256: "a4fdbf1301ea0fffae79cd743d5de85d25b43f87437cd6019964ab76c8db10b9",
+    declarationSha256: "b1a78f0995fdb95fa263de4a750c36686ee8a2655bec79e57fb6764190765bf7",
     files: Object.freeze([
       "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
       "tests/vitest/ui/custom-screen-entry-presentation-media.test.ts",
@@ -326,7 +326,7 @@ const families = Object.freeze({
       "ecbaef1ee377bc23b6fc36a2fcd533e3a86c306555b666a664dc831d7a10db60",
     ]),
     declarations: 18,
-    declarationSha256: "16e197de4e6a8713696cbc68f643a5e13dfc53cff66c84b7b6c0d8f75629899f",
+    declarationSha256: "9cc879ba2b8816aa4e3432dfb2fffec1322aacecef3deee2b15ac6c66af11cae",
     files: Object.freeze([
       "tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx",
       "tests/vitest/ui/custom-screen-entry-navigation-authority.test.tsx",

@@ -1,9 +1,12 @@
-import {
-  isScreenMediaAssetUuid,
-  type ScreenDocumentV1,
-  type ScreenFieldBinding,
+import type {
+  ScreenDocumentV1,
+  ScreenFieldBinding,
 } from "../../../services/customScreens/customScreenSchemas";
 import type { ScreenEntryPresentationOverrideDraft } from "../../../services/customScreens/screenEntryPresentationOverrideContract";
+import {
+  firstScreenMediaAssetUuid,
+  isScreenMediaAssetUuid,
+} from "../../../services/customScreens/screenMediaIdentity";
 import { collectScreenDocumentBlocks } from "../../../services/customScreens/screenDocumentOps";
 import { readBindingPathValue } from "../../../services/utils/bindingPath";
 
@@ -229,11 +232,6 @@ export function initializeMediaMachineState(input: MediaAttemptInput): MediaMach
     : allocateMediaAttempt(empty, input, "initial", false);
 }
 
-const firstMediaAssetUuid = (value: unknown): string | null => {
-  const values = Array.isArray(value) ? value : [value];
-  return values.find(isScreenMediaAssetUuid) ?? null;
-};
-
 export function collectWinningDirectImageAssetIds(input: {
   document: ScreenDocumentV1;
   bindings: readonly ScreenFieldBinding[];
@@ -258,7 +256,7 @@ export function collectWinningDirectImageAssetIds(input: {
       (candidate) => candidate.blockId === block.id && candidate.propPath === "src"
     );
     const boundId = binding
-      ? firstMediaAssetUuid(readBindingPathValue(input.values, binding.field))
+      ? firstScreenMediaAssetUuid(readBindingPathValue(input.values, binding.field))
       : null;
     if (boundId) ids.add(boundId);
   }

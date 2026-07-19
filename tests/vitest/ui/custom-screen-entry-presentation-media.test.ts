@@ -210,6 +210,20 @@ test("direct-image media planning chooses override then binding, deduplicates, a
       ],
     })
   ).toEqual([overrideId]);
+
+  const mixedCaseId = "33333333-3333-4333-8333-333333333ABC";
+  expect(
+    collectWinningDirectImageAssetIds({
+      document,
+      bindings,
+      values: {
+        cover: ["not-a-uuid", mixedCaseId],
+        gallery: ["", null, 42],
+        hero: overrideId,
+      },
+      overrides: [],
+    })
+  ).toEqual([mixedCaseId]);
 });
 
 test("presentation media projection preserves requested UUID casing while matching canonical records", () => {

@@ -790,7 +790,7 @@ export function CustomScreenEntryRouteSession({
   };
 
   const screenRecordsHref = screenId
-    ? `/advanced/custom-screens/${encodeURIComponent(screenId)}/entries`
+    ? buildCustomScreenWorkspacePath({ screenId })
     : "/advanced/custom-screens";
   const presentationPanel =
     currentScreen &&

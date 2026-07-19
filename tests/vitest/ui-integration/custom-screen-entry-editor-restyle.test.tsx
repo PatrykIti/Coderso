@@ -482,20 +482,21 @@ test("layout is data-driven by the per-screen definition (not a hardcoded screen
 test("an inline content edit surfaces the unsaved-changes affordance", async () => {
   current = projectFixture;
   const view = mount("/admin/advanced/custom-screens/project-catalog/entries/1");
-
   try {
     await flush();
     expect(view.container.textContent).not.toContain("Unsaved changes");
-
+    expect(
+      view.container.querySelector('[role="combobox"][aria-label="Text size"]')
+    ).not.toBeNull();
+    expect(view.container.querySelector('[role="combobox"][aria-label="Emphasis"]')).not.toBeNull();
+    expect(view.container.querySelector('[role="combobox"][aria-label="Tone"]')).not.toBeNull();
     const textbox = view.container.querySelector('[role="textbox"][aria-label="Headline"]');
     expect(textbox).not.toBeNull();
-
     React.act(() => {
       (textbox as HTMLElement).textContent = "Aurora updated";
       textbox?.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
     });
     await flush();
-
     expect(view.container.textContent).toContain("Unsaved changes");
   } finally {
     view.cleanup();
@@ -566,7 +567,6 @@ test("direct-image presentation exposes media authoring and renders the winning 
     expect(
       view.container.querySelector(`[data-media-picker][data-value="${BOUND_MEDIA_ID}"]`)
     ).not.toBeNull();
-
     const imageBlock = view.container.querySelector('[data-screen-block-id="image-1"]');
     React.act(() => {
       imageBlock?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -576,23 +576,23 @@ test("direct-image presentation exposes media authoring and renders the winning 
       view.container.querySelector('[data-presentation-control="mediaAssetId"]')
     ).not.toBeNull();
     expect(view.container.textContent).toContain("Media override");
+    const mediaOverrideGroup = view.container.querySelector('[role="group"][aria-labelledby]');
+    const mediaOverrideCaption = mediaOverrideGroup?.querySelector("span[id]");
+    expect(mediaOverrideGroup?.getAttribute("aria-labelledby")).toBe(
+      mediaOverrideCaption?.getAttribute("id")
+    );
+    expect(mediaOverrideCaption?.textContent).toBe("Media override");
     const presentationMediaControl = view.container.querySelector(
       '[data-presentation-control="mediaAssetId"]'
     );
     expect(
       presentationMediaControl?.querySelector("[data-media-picker]")?.getAttribute("data-accept")
     ).toBe("image/*");
-    React.act(() => {
-      presentationMediaControl
-        ?.querySelector("[data-media-picker-choose]")
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
+    // prettier-ignore
+    React.act(() => { presentationMediaControl?.querySelector("[data-media-picker-choose]")?.dispatchEvent(new MouseEvent("click", { bubbles: true })); });
     await flush();
-    React.act(() => {
-      findButton(view.container, "Save presentation")?.dispatchEvent(
-        new MouseEvent("click", { bubbles: true })
-      );
-    });
+    // prettier-ignore
+    React.act(() => { findButton(view.container, "Save presentation")?.dispatchEvent(new MouseEvent("click", { bubbles: true })); });
     await flush();
     expect(replaceScreenEntryOverrides).toHaveBeenCalledWith("image-catalog", "1", [
       { blockId: "image-1", propPath: "mediaAssetId", value: BOUND_MEDIA_ID },

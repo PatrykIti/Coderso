@@ -1,4 +1,5 @@
 import { RefreshCw, Save, Trash2 } from "lucide-react";
+import { useId } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,7 @@ export function CustomScreenEntryPresentationPanel({
   onClear,
   onChange,
 }: CustomScreenEntryPresentationPanelProps) {
+  const mediaOverrideCaptionId = useId();
   const selectedOverrides = overrides.filter((override) => override.blockId === target.block.id);
   const readOverride = (propPath: ScreenEntryPresentationOverridePropPath) =>
     selectedOverrides.find((override) => override.propPath === propPath)?.value ?? null;
@@ -116,16 +118,16 @@ export function CustomScreenEntryPresentationPanel({
         {target.supportsText ? (
           <>
             <div className="space-y-1" data-presentation-control="textSize">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Text size
-              </label>
+              </span>
               <Select
                 value={selectedTextSize}
                 onValueChange={(next) =>
                   onChange("textSize", next === inheritPresentationValue ? null : next)
                 }
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full" aria-label="Text size">
                   <SelectValue placeholder="Inherit" />
                 </SelectTrigger>
                 <SelectContent>
@@ -139,16 +141,16 @@ export function CustomScreenEntryPresentationPanel({
               </Select>
             </div>
             <div className="space-y-1" data-presentation-control="textEmphasis">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Emphasis
-              </label>
+              </span>
               <Select
                 value={selectedTextEmphasis}
                 onValueChange={(next) =>
                   onChange("textEmphasis", next === inheritPresentationValue ? null : next)
                 }
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full" aria-label="Emphasis">
                   <SelectValue placeholder="Inherit" />
                 </SelectTrigger>
                 <SelectContent>
@@ -162,16 +164,16 @@ export function CustomScreenEntryPresentationPanel({
               </Select>
             </div>
             <div className="space-y-1" data-presentation-control="tone">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Tone
-              </label>
+              </span>
               <Select
                 value={selectedTone}
                 onValueChange={(next) =>
                   onChange("tone", next === inheritPresentationValue ? null : next)
                 }
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full" aria-label="Tone">
                   <SelectValue placeholder="Inherit" />
                 </SelectTrigger>
                 <SelectContent>
@@ -189,10 +191,18 @@ export function CustomScreenEntryPresentationPanel({
       </div>
 
       {target.mediaField || target.supportsDirectImage ? (
-        <div className="mt-4" data-presentation-control="mediaAssetId">
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <div
+          className="mt-4"
+          data-presentation-control="mediaAssetId"
+          role="group"
+          aria-labelledby={mediaOverrideCaptionId}
+        >
+          <span
+            id={mediaOverrideCaptionId}
+            className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+          >
             Media override
-          </label>
+          </span>
           <MediaPicker
             value={selectedMediaAssetId}
             onChange={(next) =>
