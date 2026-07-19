@@ -813,7 +813,7 @@ function validateResourceCoreInput(core, expectedOrdinal) {
     core.sourceActionOrdinal === null ||
       (Number.isSafeInteger(core.sourceActionOrdinal) &&
         core.sourceActionOrdinal > 0 &&
-        core.sourceActionOrdinal <= 490),
+        core.sourceActionOrdinal <= 495),
     "resource source ordinal is invalid"
   );
   invariant(
@@ -5549,8 +5549,8 @@ function buildFakeCapabilities({
           }),
           browserSession: deepFreezeExact({
             name: SESSION_NAME,
-            closeReceiptSequence: 413,
-            absenceReceiptSequence: 414,
+            closeReceiptSequence: 418,
+            absenceReceiptSequence: 419,
             terminalListSha256: hashBytes(Buffer.from("  (no browsers)\n")),
             closed: true,
             absent: true,
@@ -6004,8 +6004,8 @@ function assertCanonicalFinalization(finalization, plan) {
       finalization.apiContexts.closed === true &&
       finalization.apiContexts.absenceProven === true &&
       finalization.browserSession.name === SESSION_NAME &&
-      finalization.browserSession.closeReceiptSequence === 413 &&
-      finalization.browserSession.absenceReceiptSequence === 414 &&
+      finalization.browserSession.closeReceiptSequence === 418 &&
+      finalization.browserSession.absenceReceiptSequence === 419 &&
       finalization.browserSession.terminalListSha256 ===
         hashBytes(Buffer.from("  (no browsers)\n")) &&
       finalization.browserSession.closed === true &&
@@ -6514,7 +6514,7 @@ async function executeSmokePlanCore(
     if (failureActionTracker !== null) sealPrivateFailureActionTracker(failureActionTracker);
     invariant(state.route === "absent", "static manifest left an active route");
     invariant(
-      completed.size === 490 && browserReceipts.length === 414 && runtimeReceipts.length === 76,
+      completed.size === 495 && browserReceipts.length === 419 && runtimeReceipts.length === 76,
       "manifest receipt partition cardinality drift"
     );
     invariant(
@@ -6525,7 +6525,7 @@ async function executeSmokePlanCore(
     invariant(
       browserReceipts[0].operation === "open" &&
         browserReceipts[1].operation === "logger-install" &&
-        browserReceipts.at(-1).sequence === 414 &&
+        browserReceipts.at(-1).sequence === 419 &&
         browserReceipts.at(-1).operation === "cleanup-session-absence",
       "browser receipt terminal anchors drift"
     );
@@ -9246,6 +9246,41 @@ function buildSimpleBrowserInvocation(
   }
 }
 
+function buildAuthRateWindowBarrierSource(policy, plan) {
+  const waitMs = policy.enabled ? policy.windowSeconds * 1000 + 1000 : 0;
+  const authOrigin = JSON.stringify(plan.fixtureBlueprint.origins.admin);
+  return `async (page) => {
+    const context = page.context();
+    const sample = async () => {
+      const root = page.locator("html");
+      if (await root.count() !== 1 || !(await root.isVisible())) throw new Error("wf540_barrier_root");
+      const rect = await root.boundingBox();
+      if (!rect || !Number.isFinite(rect.x) || !Number.isFinite(rect.y) || !Number.isFinite(rect.width) || !Number.isFinite(rect.height) || rect.width <= 0 || rect.height <= 0) throw new Error("wf540_barrier_geometry");
+      const rawUrl = page.url();
+      const url = new URL(rawUrl);
+      if (url.origin !== ${authOrigin} || !url.pathname.startsWith("/admin/")) throw new Error("wf540_barrier_url");
+      const navigationCount = page.__wf540ReadNavigationCount();
+      if (!Number.isSafeInteger(navigationCount) || navigationCount < 0) throw new Error("wf540_barrier_navigation_count");
+      return { url: rawUrl, navigationCount };
+    };
+    const before = await sample();
+    let authRequests = 0;
+    const onRequest = (request) => {
+      const url = new URL(request.url());
+      if (url.origin === ${authOrigin} && url.pathname.startsWith("/admin/api/auth/")) authRequests += 1;
+    };
+    context.on("request", onRequest);
+    try {
+      if (${waitMs} > 0) await page.waitForTimeout(${waitMs});
+      const after = await sample();
+      if (authRequests !== 0 || before.url !== after.url || before.navigationCount !== after.navigationCount) throw new Error("wf540_barrier_realm_drift");
+    } finally {
+      context.off("request", onRequest);
+    }
+    return { barrierSatisfied: true };
+  }`;
+}
+
 function buildAdvancedBrowserInvocation(
   action,
   executionSpec,
@@ -9344,10 +9379,9 @@ function buildAdvancedBrowserInvocation(
   }
   if (action.kind === "authRateWindowBarrier") {
     invariant(parsed.args.length === 0, "auth rate barrier arity");
+    const policy = normalizeAuthRatePolicy(runtimeConfig.authRatePolicy, plan.requiredAuthRatePlan);
     return {
-      args: runCode(
-        'async (page) => { await page.waitForTimeout(61000); if (!page.url()) throw new Error("wf540_barrier_page"); return { barrierSatisfied: true }; }'
-      ),
+      args: runCode(buildAuthRateWindowBarrierSource(policy, plan)),
       displayArgs: null,
     };
   }
@@ -14962,7 +14996,37 @@ async function runtimeBotProtection({ state, plan }) {
   return runtimeSafeProjection({ enabled: false });
 }
 
-async function runtimeSecurity({ state }, mode, operationId) {
+function normalizeAuthRatePolicy(value, requiredPlan) {
+  invariant(
+    value !== null && typeof value === "object" && !Array.isArray(value),
+    "auth rate policy is absent or invalid"
+  );
+  exactOwnKeys(value, ["enabled", "maxRequests", "windowSeconds"], "auth rate policy", {
+    plain: true,
+  });
+  invariant(
+    requiredPlan !== null &&
+      typeof requiredPlan === "object" &&
+      Number.isSafeInteger(requiredPlan.requiredEnabledMaxRequests) &&
+      Number.isSafeInteger(requiredPlan.requiredEnabledWindowSecondsMin) &&
+      Number.isSafeInteger(requiredPlan.requiredEnabledWindowSecondsMax) &&
+      typeof value.enabled === "boolean" &&
+      Number.isSafeInteger(value.maxRequests) &&
+      Number.isSafeInteger(value.windowSeconds) &&
+      (!value.enabled ||
+        (value.maxRequests >= requiredPlan.requiredEnabledMaxRequests &&
+          value.windowSeconds >= requiredPlan.requiredEnabledWindowSecondsMin &&
+          value.windowSeconds <= requiredPlan.requiredEnabledWindowSecondsMax)),
+    "auth rate policy is absent or invalid"
+  );
+  return deepFreezeExact({
+    enabled: value.enabled,
+    maxRequests: value.maxRequests,
+    windowSeconds: value.windowSeconds,
+  });
+}
+
+async function runtimeSecurity({ state, plan }, mode, operationId) {
   invariant(
     (mode === "session" && operationId === "runtime/set-004b-session-policy-preflight") ||
       (mode === "rate" && operationId === "runtime/set-004c-auth-rate-budget-preflight"),
@@ -14985,13 +15049,10 @@ async function runtimeSecurity({ state }, mode, operationId) {
       effectiveMaxPerUserAtLeast2: true,
     });
   } else {
-    invariant(
-      typeof value.enabled === "boolean" &&
-        Number.isSafeInteger(value.maxRequests) &&
-        Number.isSafeInteger(value.windowSeconds) &&
-        (!value.enabled || value.maxRequests >= 10),
-      "auth rate budget is incompatible with the smoke"
-    );
+    const policy = normalizeAuthRatePolicy(value, plan.requiredAuthRatePlan);
+    const runtime = PRIVATE_RUNTIME.get(state);
+    invariant(runtime.authRatePolicy === null, "auth rate policy may be assigned only once");
+    runtime.authRatePolicy = policy;
   }
   return runtimeSafeProjection(value);
 }
@@ -17782,8 +17843,8 @@ function buildCanonicalFinalization(
     }),
     browserSession: deepFreezeExact({
       name: SESSION_NAME,
-      closeReceiptSequence: 413,
-      absenceReceiptSequence: 414,
+      closeReceiptSequence: 418,
+      absenceReceiptSequence: 419,
       terminalListSha256: state.terminalSessionAbsenceSha256,
       closed: true,
       absent: true,
@@ -18030,7 +18091,7 @@ async function createRealCapabilities(
   constructionCleanupAuthority.registerCapabilityState(state);
   validateStaticBunBridgeDescriptorRegistries();
   initializeBunBridgeOperationAuthority(state);
-  PRIVATE_RUNTIME.set(state, { repoEnvironment, csrfHeaderName: null });
+  PRIVATE_RUNTIME.set(state, { repoEnvironment, csrfHeaderName: null, authRatePolicy: null });
   const authority = new LocalCommandAuthority({
     root,
     assertSafeEvidence,
@@ -19667,6 +19728,39 @@ export async function runTask540SmokeExecutorSelfTest() {
   };
   const plan = buildTask540SmokePlan({ nonce: "0123456789ab" });
 
+  const enabledAuthRatePolicy = normalizeAuthRatePolicy(
+    { enabled: true, maxRequests: 10, windowSeconds: 60 },
+    plan.requiredAuthRatePlan
+  );
+  invariant(
+    Object.isFrozen(enabledAuthRatePolicy) &&
+      deepEqualJson(enabledAuthRatePolicy, {
+        enabled: true,
+        maxRequests: 10,
+        windowSeconds: 60,
+      }),
+    "enabled auth rate policy normalization drift"
+  );
+  const disabledAuthRatePolicy = normalizeAuthRatePolicy(
+    { enabled: false, maxRequests: 1, windowSeconds: 61 },
+    plan.requiredAuthRatePlan
+  );
+  invariant(
+    Object.isFrozen(disabledAuthRatePolicy) && disabledAuthRatePolicy.enabled === false,
+    "disabled auth rate policy normalization drift"
+  );
+  for (const [label, policy] of [
+    ["auth max below plan", { enabled: true, maxRequests: 9, windowSeconds: 60 }],
+    ["auth window below plan", { enabled: true, maxRequests: 10, windowSeconds: 0 }],
+    ["auth window above plan", { enabled: true, maxRequests: 10, windowSeconds: 61 }],
+    ["auth policy unknown key", { enabled: true, maxRequests: 10, windowSeconds: 60, extra: true }],
+  ]) {
+    await expectAsyncFailure(
+      async () => normalizeAuthRatePolicy(policy, plan.requiredAuthRatePlan),
+      label
+    );
+  }
+
   const diagnosticPrivateMarker = "TASK540_PRIVATE_DIAGNOSTIC_DO_NOT_EGRESS";
   const diagnosticFailureAction = plan.actionManifest[24];
   const diagnosticCapabilities = buildFakeCapabilities();
@@ -20257,6 +20351,7 @@ export async function runTask540SmokeExecutorSelfTest() {
   let compiledRunCodeSources = 0;
   const authArmSourceActionIds = [];
   const authCloseSourceActionIds = [];
+  const authRateBarrierSourceActionIds = [];
   const blockBaselineSourceActionIds = [];
   const mediaIsolationSourceActionIds = [];
   const recordEntryMenuSourceActionIds = [];
@@ -20272,7 +20367,14 @@ export async function runTask540SmokeExecutorSelfTest() {
       "/task540-self-test-root/private",
       plan,
       { ...sourceContext, actionId: action.id },
-      { csrfHeaderName: "x-self-test-csrf" }
+      {
+        csrfHeaderName: "x-self-test-csrf",
+        authRatePolicy: {
+          enabled: true,
+          maxRequests: 10,
+          windowSeconds: 60,
+        },
+      }
     );
     if (action.executable.type !== "browser-run-code") continue;
     const sourceIndex = invocation.args.indexOf("run-code") + 1;
@@ -20286,6 +20388,19 @@ export async function runTask540SmokeExecutorSelfTest() {
     }
     if (invocation.args[sourceIndex].includes("context.__wf540CloseExpectedAuthChallenge({")) {
       authCloseSourceActionIds.push(action.id);
+    }
+    if (action.kind === "authRateWindowBarrier") {
+      authRateBarrierSourceActionIds.push(action.id);
+      invariant(
+        invocation.args[sourceIndex].includes("if (61000 > 0)") &&
+          invocation.args[sourceIndex].includes('context.on("request", onRequest)') &&
+          invocation.args[sourceIndex].includes('context.off("request", onRequest)') &&
+          invocation.args[sourceIndex].includes('url.pathname.startsWith("/admin/api/auth/")') &&
+          invocation.args[sourceIndex].indexOf("const after = await sample()") <
+            invocation.args[sourceIndex].indexOf('context.off("request", onRequest)') &&
+          invocation.args[sourceIndex].includes("before.navigationCount !== after.navigationCount"),
+        action.id + " auth rate barrier source contract drift"
+      );
     }
     if (action.kind === "blocksBefore") {
       blockBaselineSourceActionIds.push(action.id);
@@ -20349,7 +20464,180 @@ export async function runTask540SmokeExecutorSelfTest() {
     }
     compiledRunCodeSources += 1;
   }
-  invariant(compiledRunCodeSources === 386, "generated run-code source count drift");
+  invariant(compiledRunCodeSources === 391, "generated run-code source count drift");
+  const requiredAuthRateBarrierIds = plan.requiredAuthRatePlan.epochs.flatMap(
+    ({ endsAtBarrierActionId }) => (endsAtBarrierActionId === null ? [] : [endsAtBarrierActionId])
+  );
+  invariant(
+    deepEqualJson(authRateBarrierSourceActionIds, requiredAuthRateBarrierIds),
+    "auth rate barrier source ownership drift"
+  );
+  const disabledBarrierAction = plan.actionManifest.find(
+    ({ id }) => id === requiredAuthRateBarrierIds[0]
+  );
+  invariant(disabledBarrierAction !== undefined, "disabled auth rate barrier fixture is absent");
+  const disabledBarrierInvocation = buildBrowserInvocation(
+    disabledBarrierAction,
+    compileActionExecutionSpec(disabledBarrierAction),
+    sourceCaptures,
+    "/task540-self-test-root",
+    "/task540-self-test-root/private",
+    plan,
+    { ...sourceContext, actionId: disabledBarrierAction.id },
+    {
+      csrfHeaderName: "x-self-test-csrf",
+      authRatePolicy: disabledAuthRatePolicy,
+    }
+  );
+  const disabledBarrierSource =
+    disabledBarrierInvocation.args[disabledBarrierInvocation.args.indexOf("run-code") + 1];
+  invariant(
+    typeof disabledBarrierSource === "string" &&
+      disabledBarrierSource.includes("if (0 > 0)") &&
+      !disabledBarrierSource.includes("if (61000 > 0)"),
+    "disabled auth rate barrier fast path drift"
+  );
+  const compileBarrierFunction = (policy, label) => {
+    const source = buildAuthRateWindowBarrierSource(policy, plan);
+    return new Script("(" + source + ")", { filename: label + ".self-test.js" }).runInThisContext();
+  };
+  const createBarrierHarness = (options = {}) => {
+    const requestListeners = new Set();
+    const waits = [];
+    let rawUrl = plan.fixtureBlueprint.origins.admin + "/admin/custom-screens";
+    let navigationCount = 4;
+    let sampleIndex = 0;
+    let onCalls = 0;
+    let offCalls = 0;
+    const rects = options.rects ?? [
+      { x: 0, y: 0, width: 1280, height: 900 },
+      { x: 0, y: 0, width: 1280, height: 900 },
+    ];
+    const harness = {
+      emitAuthRequest() {
+        for (const listener of requestListeners) {
+          listener({
+            url: () => plan.fixtureBlueprint.origins.admin + "/admin/api/auth/install/status",
+          });
+        }
+      },
+      setUrl(value) {
+        rawUrl = value;
+      },
+      incrementNavigation() {
+        navigationCount += 1;
+      },
+      get state() {
+        return {
+          listeners: requestListeners.size,
+          offCalls,
+          onCalls,
+          sampleIndex,
+          waits: [...waits],
+        };
+      },
+    };
+    const context = {
+      on(event, listener) {
+        invariant(event === "request" && typeof listener === "function", "barrier fake on drift");
+        onCalls += 1;
+        requestListeners.add(listener);
+      },
+      off(event, listener) {
+        invariant(event === "request" && requestListeners.has(listener), "barrier fake off drift");
+        offCalls += 1;
+        requestListeners.delete(listener);
+      },
+    };
+    const page = {
+      context: () => context,
+      locator(selector) {
+        invariant(selector === "html", "barrier fake selector drift");
+        const index = sampleIndex;
+        return {
+          count: async () => options.rootCount ?? 1,
+          isVisible: async () => options.rootVisible ?? true,
+          boundingBox: async () => {
+            sampleIndex += 1;
+            return rects[index] ?? rects.at(-1);
+          },
+        };
+      },
+      url: () => rawUrl,
+      __wf540ReadNavigationCount: () => navigationCount,
+      async waitForTimeout(milliseconds) {
+        waits.push(milliseconds);
+        if (options.onWait) await options.onWait(harness);
+      },
+    };
+    return { harness, page };
+  };
+  const enabledBarrierFunction = compileBarrierFunction(
+    enabledAuthRatePolicy,
+    "enabled-auth-rate-barrier"
+  );
+  const enabledBarrierHarness = createBarrierHarness();
+  const enabledBarrierOutput = await enabledBarrierFunction(enabledBarrierHarness.page);
+  invariant(
+    deepEqualJson(enabledBarrierOutput, { barrierSatisfied: true }) &&
+      deepEqualJson(enabledBarrierHarness.harness.state.waits, [61_000]) &&
+      enabledBarrierHarness.harness.state.sampleIndex === 2 &&
+      enabledBarrierHarness.harness.state.onCalls === 1 &&
+      enabledBarrierHarness.harness.state.offCalls === 1 &&
+      enabledBarrierHarness.harness.state.listeners === 0,
+    "enabled auth rate barrier execution drift"
+  );
+  const disabledBarrierFunction = compileBarrierFunction(
+    disabledAuthRatePolicy,
+    "disabled-auth-rate-barrier"
+  );
+  const disabledExecutionHarness = createBarrierHarness();
+  invariant(
+    deepEqualJson(await disabledBarrierFunction(disabledExecutionHarness.page), {
+      barrierSatisfied: true,
+    }) &&
+      disabledExecutionHarness.harness.state.waits.length === 0 &&
+      disabledExecutionHarness.harness.state.sampleIndex === 2 &&
+      disabledExecutionHarness.harness.state.listeners === 0,
+    "disabled auth rate barrier execution drift"
+  );
+  for (const [label, options] of [
+    ["barrier auth traffic", { onWait: async (harness) => harness.emitAuthRequest() }],
+    [
+      "barrier URL drift",
+      {
+        onWait: async (harness) =>
+          harness.setUrl(plan.fixtureBlueprint.origins.admin + "/admin/custom-screens/changed"),
+      },
+    ],
+    ["barrier navigation drift", { onWait: async (harness) => harness.incrementNavigation() }],
+    [
+      "barrier after geometry",
+      {
+        rects: [
+          { x: 0, y: 0, width: 1280, height: 900 },
+          { x: 0, y: 0, width: 0, height: 900 },
+        ],
+      },
+    ],
+    [
+      "barrier wait failure",
+      {
+        onWait: async () => {
+          throw new Error("self-test wait");
+        },
+      },
+    ],
+  ]) {
+    const failureHarness = createBarrierHarness(options);
+    await expectAsyncFailure(async () => enabledBarrierFunction(failureHarness.page), label);
+    invariant(
+      failureHarness.harness.state.listeners === 0 &&
+        failureHarness.harness.state.onCalls === 1 &&
+        failureHarness.harness.state.offCalls === 1,
+      label + " listener cleanup drift"
+    );
+  }
   invariant(
     deepEqualJson(
       authArmSourceActionIds.sort(),
@@ -20387,10 +20675,10 @@ export async function runTask540SmokeExecutorSelfTest() {
   const successCapabilities = buildFakeCapabilities();
   const evidence = await executeSmokePlanCore(plan, successCapabilities);
   invariant(evidence.pass === true, "fake success evidence failed");
-  invariant(successCapabilities.calls.slice(0, 490).length === 490, "one action per row drift");
+  invariant(successCapabilities.calls.slice(0, 495).length === 495, "one action per row drift");
   invariant(
     deepEqualJson(
-      successCapabilities.calls.slice(490, -1),
+      successCapabilities.calls.slice(495, -1),
       successCapabilities.lastFinalPlan.actionTuples.map(
         ([resourceKey, operationKind]) => operationKind + ":" + resourceKey
       )

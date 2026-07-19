@@ -32,7 +32,7 @@ const EXECUTABLE_KEYS_BY_TYPE = deepFreezeExact({
 
 const REQUIRED_EXECUTABLE_TYPE_COUNTS = deepFreezeExact({
   "runtime-operation": 76,
-  "browser-run-code": 386,
+  "browser-run-code": 391,
   "browser-native": 14,
   "browser-screenshot": 13,
   "browser-global-list": 1,
@@ -78,19 +78,19 @@ const REQUIRED_SCENARIOS = Object.freeze([
 ]);
 
 const REQUIRED_FLOW_ACTION_COUNTS = Object.freeze({
-  "button-image": 74,
-  "tabs-content": 48,
+  "button-image": 76,
+  "tabs-content": 49,
   "tabs-keyboard-aria": 35,
   "space-selection": 35,
   "dirty-guards": 49,
-  "related-retry-cache": 53,
-  "responsive-users": 134,
+  "related-retry-cache": 54,
+  "responsive-users": 135,
 });
 
 const REQUIRED_SETUP_ACTION_COUNT = 55;
-const REQUIRED_FLOW_ACTION_COUNT = 428;
+const REQUIRED_FLOW_ACTION_COUNT = 433;
 const REQUIRED_TERMINAL_ACTION_COUNT = 7;
-const REQUIRED_ACTION_COUNT = 490;
+const REQUIRED_ACTION_COUNT = 495;
 
 const REQUIRED_FIXTURE_SUBJECT_KEYS = Object.freeze([
   "user-a",
@@ -208,24 +208,147 @@ const REQUIRED_METADATA_STATE_VALUES = deepFreezeExact({
 
 const MAX_PREFERENCE_UNMOUNT_WINDOW_MS = 20_000;
 const SCREEN_PREFERENCE_SETTLED_RETENTION_MS = 30_000;
+const AUTH_RATE_ALWAYS_PRODUCER_KINDS = Object.freeze([
+  "goto",
+  "tab-new",
+  "isolatedApiSessionLogin",
+  "isolatedApiSessionCsrfCapture",
+]);
+const AUTH_RATE_ALWAYS_PRODUCER_BUILDERS = Object.freeze([
+  "apiPublicRead(auth-bot-protection)",
+  "click(S.loginSubmit)",
+  "click(S.signOut)",
+  "click(S.builderSave)",
+  "click(S.presentationSave)",
+  "click(S.secondTabSave)",
+]);
+const AUTH_RATE_CONDITIONAL_CSRF_ACTIONS = deepFreezeExact({
+  producers: {
+    "dg-029-save-click": "click(S.entrySave)",
+    "ru-046-a-metadata-enable": "click(S.metadata)",
+    "ru-084-first-a-toggle": "click(S.metadata)",
+    "ru-107-fresh-a-toggle": "click(S.metadata)",
+  },
+  cached: {
+    "dg-035-real-retry": "click(S.entrySave)",
+    "ru-053a-a-nondefault-toggle": "click(S.metadata)",
+    "ru-059-new-local-toggle": "click(S.metadata)",
+    "ru-086-second-a-toggle": "click(S.metadata)",
+  },
+});
+const AUTH_RATE_COSTS_BY_ACTION = deepFreezeExact({
+  "set-004a-bot-protection-preflight": { publicPreflight: 1 },
+  "set-007-goto-login": { browserUnauthenticatedNoIdentifier: 5 },
+  "set-011-login-submit": { browserLoginBootstrapEmail: 1, bootstrapUser: 3 },
+  "set-011b-bootstrap-api-login": { isolatedBootstrapLogin: 1 },
+  "set-011c-bootstrap-csrf-capture": { bootstrapUser: 1 },
+  "set-045-builder-cold": { bootstrapUser: 2 },
+  "bi-014-builder-save": { bootstrapUser: 1 },
+  "bi-016-list": { bootstrapUser: 2 },
+  "bi-017-reopen": { bootstrapUser: 2 },
+  "bi-042-save-presentation": { bootstrapUser: 1 },
+  "bi-044-builder-return": { bootstrapUser: 2 },
+  "bi-055-save-palette-media": { bootstrapUser: 1 },
+  "bi-056-entry-return": { bootstrapUser: 2 },
+  "bi-059-entry-after-front": { bootstrapUser: 2 },
+  "bi-062-entry-unsafe-reload": { bootstrapUser: 2 },
+  "bi-066-final-entry": { bootstrapUser: 2 },
+  "tc-003-builder": { bootstrapUser: 2 },
+  "tc-031-save": { bootstrapUser: 1 },
+  "tc-032-list": { bootstrapUser: 2 },
+  "tc-033-reopen": { bootstrapUser: 2 },
+  "tk-009-save": { bootstrapUser: 1 },
+  "ss-007-entry": { bootstrapUser: 2 },
+  "dg-003-builder": { bootstrapUser: 2 },
+  "dg-029-save-click": { bootstrapUser: 1 },
+  "rc-006-entry-link": { bootstrapUser: 2 },
+  "rc-019-related-tab-new": { bootstrapUser: 2 },
+  "rc-021-related-tab-save": { bootstrapUser: 1 },
+  "ru-007-builder": { bootstrapUser: 2 },
+  "ru-038-entry": { bootstrapUser: 2 },
+  "ru-040-bootstrap-signout": {
+    bootstrapUser: 2,
+    browserUnauthenticatedNoIdentifier: 3,
+  },
+  "ru-043-a-submit": { browserLoginUserA: 1, userA: 3 },
+  "ru-043b-a-api-login": { isolatedUserALogin: 1 },
+  "ru-043c-a-api-csrf-capture": { userA: 1 },
+  "ru-044-a-entry": { userA: 2 },
+  "ru-046-a-metadata-enable": { userA: 1 },
+  "ru-066-a-signout": { userA: 1, browserUnauthenticatedNoIdentifier: 3 },
+  "ru-069-b-submit": { browserLoginUserB: 1, userB: 3 },
+  "ru-070-b-entry": { userB: 2 },
+  "ru-076-b-signout": { userB: 2, browserUnauthenticatedNoIdentifier: 3 },
+  "ru-079-a2-submit": { browserLoginUserA: 1, userA: 3 },
+  "ru-080-a2-entry": { userA: 2 },
+  "ru-084-first-a-toggle": { userA: 1 },
+  "ru-090-a-exit-signout": { userA: 1, browserUnauthenticatedNoIdentifier: 3 },
+  "ru-093-b2-submit": { browserLoginUserB: 1, userB: 3 },
+  "ru-094-b2-entry": { userB: 2 },
+  "ru-102-b2-signout": { userB: 2, browserUnauthenticatedNoIdentifier: 3 },
+  "ru-105-a3-submit": { browserLoginUserA: 1, userA: 3 },
+  "ru-106-a3-entry": { userA: 2 },
+  "ru-107-fresh-a-toggle": { userA: 1 },
+});
 const REQUIRED_AUTH_RATE_PLAN = deepFreezeExact({
-  beforeBarrier: {
-    browserUnauthenticatedNoIdentifier: 10,
-    browserLoginPerEmail: 2,
-    bootstrapUser: 5,
-    userA: 9,
-    userB: 8,
-    publicPreflight: 1,
-    isolatedBootstrapLogin: 1,
-    isolatedUserALogin: 1,
-  },
-  afterBarrier: {
-    browserUnauthenticatedNoIdentifier: 2,
-    browserLoginUserA: 1,
-    userA: 3,
-    userB: 1,
-  },
+  epochs: [
+    {
+      endsAtBarrierActionId: "bi-016a-auth-rate-window-barrier",
+      maximumRequestsByIdentity: {
+        bootstrapUser: 9,
+        browserUnauthenticatedNoIdentifier: 5,
+        browserLoginBootstrapEmail: 1,
+        publicPreflight: 1,
+        isolatedBootstrapLogin: 1,
+      },
+    },
+    {
+      endsAtBarrierActionId: "bi-061a-auth-rate-window-barrier",
+      maximumRequestsByIdentity: { bootstrapUser: 10 },
+    },
+    {
+      endsAtBarrierActionId: "tc-032a-auth-rate-window-barrier",
+      maximumRequestsByIdentity: { bootstrapUser: 9 },
+    },
+    {
+      endsAtBarrierActionId: "rc-017b-auth-rate-window-barrier",
+      maximumRequestsByIdentity: { bootstrapUser: 10 },
+    },
+    {
+      endsAtBarrierActionId: "ru-076b-auth-rate-window-barrier",
+      maximumRequestsByIdentity: {
+        bootstrapUser: 9,
+        browserUnauthenticatedNoIdentifier: 9,
+        userA: 8,
+        userB: 7,
+        browserLoginUserA: 1,
+        browserLoginUserB: 1,
+        isolatedUserALogin: 1,
+      },
+    },
+    {
+      endsAtBarrierActionId: "ru-100a-auth-rate-window-barrier",
+      maximumRequestsByIdentity: {
+        browserUnauthenticatedNoIdentifier: 3,
+        userA: 7,
+        userB: 5,
+        browserLoginUserA: 1,
+        browserLoginUserB: 1,
+      },
+    },
+    {
+      endsAtBarrierActionId: null,
+      maximumRequestsByIdentity: {
+        browserUnauthenticatedNoIdentifier: 3,
+        userA: 6,
+        userB: 2,
+        browserLoginUserA: 1,
+      },
+    },
+  ],
   requiredEnabledMaxRequests: 10,
+  requiredEnabledWindowSecondsMin: 1,
+  requiredEnabledWindowSecondsMax: 60,
 });
 
 const REQUIRED_ROUTE_KEYS = Object.freeze([
@@ -273,7 +396,7 @@ const REQUIRED_BUILDER_KIND_COUNTS = deepFreezeExact({
   "tab-close": 1,
   isolatedApiSessionApiReadAs: 3,
   isolatedApiSessionApiAs: 1,
-  authRateWindowBarrier: 1,
+  authRateWindowBarrier: 6,
   "cleanup-release-unroute": 1,
   "cleanup-route-list": 1,
   "cleanup-console-errors": 1,
@@ -1009,7 +1132,7 @@ const SCREENSHOT_DESCRIPTOR_BY_ACTION_ID = deepFreezeExact({
 
 const EXECUTABLE_REGISTRY_KEY_SHA256 = deepFreezeExact({
   runtimeOperations: "29040b4ce9625fe454bfea8f2d68c169800cdf2fcbb3e15761f151254f9ac447",
-  browserRunCodeSources: "a82cb36885a8cef710d347c415cfb50479b8230f3b0093fed98c8878850e4dc0",
+  browserRunCodeSources: "d9a54e7b982c0dbc061a6f46b9ce91bd4794d0b961bd2c4cb48df07640a84ed9",
 });
 
 const SCENARIO_BY_PREFIX = Object.freeze({
@@ -1175,7 +1298,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "set-006-logger",
     "p1/0",
     "logger-install",
-    "blank original -> exact unique browser User-Agent applied before network + `true` -> immutable context logger/auth budget tracker",
+    "blank original -> exact unique browser User-Agent applied before network + `true` -> immutable context logger/navigation/auth-challenge tracker",
     "set-005 / absent -> absent",
   ],
   [
@@ -1613,11 +1736,18 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "bi-015 / absent -> absent",
   ],
   [
+    "bi-016a-auth-rate-window-barrier",
+    "p1/0",
+    "authRateWindowBarrier()",
+    'Screen list stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}`',
+    "bi-016 / absent -> absent",
+  ],
+  [
     "bi-017-reopen",
     "p1/0",
     "goto(paths.builder)",
     "Screen list -> URL/canvas marker -> saved builder reopened",
-    "bi-016 / absent -> absent",
+    "bi-016a-auth-rate-window-barrier / absent -> absent",
   ],
   [
     "bi-018-reopen-proof",
@@ -1935,11 +2065,18 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "bi-060 / absent -> absent",
   ],
   [
+    "bi-061a-auth-rate-window-barrier",
+    "p1/0",
+    "authRateWindowBarrier()",
+    'unsafe fixture proven/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}`',
+    "bi-061 / absent -> absent",
+  ],
+  [
     "bi-062-entry-unsafe-reload",
     "p1/0",
     "goto(paths.entry)",
     "unsafe fixture proven -> URL/document -> entry rerendered",
-    "bi-061 / absent -> absent",
+    "bi-061a-auth-rate-window-barrier / absent -> absent",
   ],
   [
     "bi-063-unsafe-disabled",
@@ -2243,11 +2380,18 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "tc-031 / absent -> absent",
   ],
   [
+    "tc-032a-auth-rate-window-barrier",
+    "p1/0",
+    "authRateWindowBarrier()",
+    'Screen list stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}`',
+    "tc-032 / absent -> absent",
+  ],
+  [
     "tc-033-reopen",
     "p1/0",
     "goto(paths.builder)",
     "list -> URL/canvas -> builder reopened",
-    "tc-032 / absent -> absent",
+    "tc-032a-auth-rate-window-barrier / absent -> absent",
   ],
   [
     "tc-034-three-tabs",
@@ -3335,11 +3479,18 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "rc-017 / absent -> absent",
   ],
   [
+    "rc-017b-auth-rate-window-barrier",
+    "p1/0",
+    "authRateWindowBarrier()",
+    'entry baseline stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}`',
+    "rc-017a-pre-route-a-baseline / absent -> absent",
+  ],
+  [
     "rc-018-refresh-route-setup",
     "p1/0",
     "route(related-a-refresh,route-setup)",
     "first failure recovered/drafts and A baseline held -> tuple -> delayed A route installed",
-    "rc-017a-pre-route-a-baseline / absent -> installed",
+    "rc-017b-auth-rate-window-barrier / absent -> installed",
   ],
   [
     "rc-019-related-tab-new",
@@ -4175,11 +4326,18 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "ru-076 / absent -> absent",
   ],
   [
+    "ru-076b-auth-rate-window-barrier",
+    "p1/0",
+    "authRateWindowBarrier()",
+    'login realm stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}`',
+    "ru-076a-b-signout-settled / absent -> absent",
+  ],
+  [
     "ru-077-a2-email",
     "p1/0",
     "fill(S.loginEmail,$WF540_USER_A_EMAIL)",
     "settled login form -> discarded -> A email filled",
-    "ru-076a-b-signout-settled / absent -> absent",
+    "ru-076b-auth-rate-window-barrier / absent -> absent",
   ],
   [
     "ru-078-a2-password",
@@ -4367,7 +4525,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "ru-100a-auth-rate-window-barrier",
     "p1/0",
     "authRateWindowBarrier()",
-    'routes absent/B active -> local monotonic browser-unauth and user-A auth bucket epochs naturally expired when enabled, no limiter mutation -> exact `{"barrierSatisfied":true}`; B realm remains visible',
+    'routes absent/B active/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}`; `ru-099`/`ru-101` compose the exact B proof',
     "ru-100 / absent -> absent",
   ],
   [
@@ -8353,8 +8511,124 @@ function validateExecutableShape(action) {
   );
 }
 
+function canonicalContractJson(value) {
+  const normalize = (candidate) => {
+    if (candidate === null || typeof candidate !== "object") return candidate;
+    if (Array.isArray(candidate)) return candidate.map(normalize);
+    return Object.fromEntries(
+      Object.keys(candidate)
+        .sort()
+        .map((key) => [key, normalize(candidate[key])])
+    );
+  };
+  return JSON.stringify(normalize(value));
+}
+
+function deriveAuthRateProducerActionIds(manifest) {
+  const conditionalProducerIds = new Set(Object.keys(AUTH_RATE_CONDITIONAL_CSRF_ACTIONS.producers));
+  const conditionalCachedIds = new Set(Object.keys(AUTH_RATE_CONDITIONAL_CSRF_ACTIONS.cached));
+  const conditionalIds = new Set([...conditionalProducerIds, ...conditionalCachedIds]);
+  invariant(
+    conditionalIds.size === conditionalProducerIds.size + conditionalCachedIds.size,
+    "conditional CSRF classifications must be disjoint"
+  );
+
+  const manifestIds = new Set(manifest.map(({ id }) => id));
+  invariant(
+    conditionalIds.size > 0 && [...conditionalIds].every((id) => manifestIds.has(id)),
+    "conditional CSRF classification/manifest drift"
+  );
+
+  const producerIds = new Set();
+  const seenConditionalIds = new Set();
+  for (const action of manifest) {
+    const conditionalBuilder =
+      AUTH_RATE_CONDITIONAL_CSRF_ACTIONS.producers[action.id] ??
+      AUTH_RATE_CONDITIONAL_CSRF_ACTIONS.cached[action.id];
+    if (conditionalBuilder !== undefined) {
+      invariant(
+        action.kind === "click" && action.builder === conditionalBuilder,
+        action.id + " conditional CSRF signature drift"
+      );
+      seenConditionalIds.add(action.id);
+    }
+    if (action.builder === "click(S.entrySave)" || action.builder === "click(S.metadata)") {
+      invariant(
+        conditionalBuilder !== undefined,
+        action.id + " lacks an explicit conditional CSRF classification"
+      );
+    }
+    if (
+      AUTH_RATE_ALWAYS_PRODUCER_KINDS.includes(action.kind) ||
+      AUTH_RATE_ALWAYS_PRODUCER_BUILDERS.includes(action.builder) ||
+      conditionalProducerIds.has(action.id)
+    ) {
+      producerIds.add(action.id);
+    }
+  }
+  invariant(
+    seenConditionalIds.size === conditionalIds.size,
+    "conditional CSRF classification coverage drift"
+  );
+  return producerIds;
+}
+
+function assertAuthRateProducerCoverage(manifest, costsByAction) {
+  const producerActionIds = deriveAuthRateProducerActionIds(manifest);
+  const costActionIds = new Set(Object.keys(costsByAction));
+  invariant(
+    sameSet([...producerActionIds], [...costActionIds]),
+    "auth rate producer classification/cost ledger drift"
+  );
+}
+
+function computeAuthRatePlan(manifest, costsByAction = AUTH_RATE_COSTS_BY_ACTION) {
+  assertAuthRateProducerCoverage(manifest, costsByAction);
+  const costActionIds = new Set(Object.keys(costsByAction));
+  const seenCostActionIds = new Set();
+  const epochs = [];
+  let current = new Map();
+  const closeEpoch = (endsAtBarrierActionId) => {
+    const maximumRequestsByIdentity = Object.fromEntries(
+      [...current.entries()].sort(([left], [right]) => left.localeCompare(right))
+    );
+    invariant(
+      Object.keys(maximumRequestsByIdentity).length > 0,
+      "auth rate epoch may not be empty"
+    );
+    epochs.push({ endsAtBarrierActionId, maximumRequestsByIdentity });
+    current = new Map();
+  };
+  for (const action of manifest) {
+    const costs = costsByAction[action.id];
+    if (costs !== undefined) {
+      seenCostActionIds.add(action.id);
+      for (const [identity, count] of Object.entries(costs)) {
+        invariant(
+          Number.isSafeInteger(count) && count >= 1,
+          action.id + " auth rate action cost drift"
+        );
+        current.set(identity, (current.get(identity) ?? 0) + count);
+      }
+    }
+    if (action.kind === "authRateWindowBarrier") closeEpoch(action.id);
+  }
+  closeEpoch(null);
+  invariant(
+    costActionIds.size === seenCostActionIds.size &&
+      [...costActionIds].every((id) => seenCostActionIds.has(id)),
+    "auth rate action cost registry/manifest drift"
+  );
+  return deepFreezeExact({
+    epochs,
+    requiredEnabledMaxRequests: 10,
+    requiredEnabledWindowSecondsMin: 1,
+    requiredEnabledWindowSecondsMax: 60,
+  });
+}
+
 function validateManifest(manifest) {
-  invariant(manifest.length === REQUIRED_ACTION_COUNT, "expected 490 actions");
+  invariant(manifest.length === REQUIRED_ACTION_COUNT, "expected 495 actions");
   const ids = manifest.map(({ id }) => id);
   invariant(new Set(ids).size === ids.length, "action IDs must be unique");
   const seen = new Set();
@@ -8391,6 +8665,11 @@ function validateManifest(manifest) {
     }
   }
   invariant(routeState === "absent", "route state must terminate absent");
+  invariant(
+    canonicalContractJson(computeAuthRatePlan(manifest)) ===
+      canonicalContractJson(REQUIRED_AUTH_RATE_PLAN),
+    "auth rate action ledger/epoch plan drift"
+  );
   invariant(scenarioCounts.setup === REQUIRED_SETUP_ACTION_COUNT, "setup count drift");
   invariant(scenarioCounts.cleanup === REQUIRED_TERMINAL_ACTION_COUNT, "cleanup count drift");
   for (const scenario of REQUIRED_SCENARIOS) {
@@ -8447,6 +8726,28 @@ function validateManifest(manifest) {
   }
   assertOrderedActionIds(manifest, REQUIRED_ISOLATED_API_ACTION_IDS, "isolated API");
   assertOrderedActionIds(manifest, REQUIRED_SIGNOUT_SETTLEMENT_IDS, "sign-out settlement");
+  const authRateBarrierIds = REQUIRED_AUTH_RATE_PLAN.epochs.flatMap(({ endsAtBarrierActionId }) =>
+    endsAtBarrierActionId === null ? [] : [endsAtBarrierActionId]
+  );
+  assertOrderedActionIds(manifest, authRateBarrierIds, "auth rate barrier");
+  invariant(
+    authRateBarrierIds.every(
+      (id) => manifest.find((action) => action.id === id)?.kind === "authRateWindowBarrier"
+    ) &&
+      REQUIRED_AUTH_RATE_PLAN.epochs.at(-1)?.endsAtBarrierActionId === null &&
+      REQUIRED_AUTH_RATE_PLAN.epochs
+        .slice(0, -1)
+        .every(({ endsAtBarrierActionId }) => typeof endsAtBarrierActionId === "string") &&
+      REQUIRED_AUTH_RATE_PLAN.epochs.every(({ maximumRequestsByIdentity }) =>
+        Object.values(maximumRequestsByIdentity).every(
+          (count) =>
+            Number.isSafeInteger(count) &&
+            count >= 1 &&
+            count <= REQUIRED_AUTH_RATE_PLAN.requiredEnabledMaxRequests
+        )
+      ),
+    "auth rate barrier action kind drift"
+  );
   for (const [id, expectedValue] of Object.entries(REQUIRED_METADATA_STATE_VALUES)) {
     const action = manifest.find((candidate) => candidate.id === id);
     invariant(action !== undefined, "metadata-state action is missing: " + id);
@@ -8790,7 +9091,7 @@ function createExecutableRegistries(manifest) {
   }
   invariant(Object.keys(runtimeOperations).length === 76, "runtime registry cardinality drift");
   invariant(
-    Object.keys(browserRunCodeSources).length === 386,
+    Object.keys(browserRunCodeSources).length === 391,
     "run-code registry cardinality drift"
   );
   invariant(Object.keys(browserNativeOperations).length === 7, "native registry cardinality drift");
@@ -9244,11 +9545,11 @@ function runHermeticOneLoopExecutorSelfTest(plan) {
       deepFreezeExact({
         ordinal: action.ordinal,
         actionId: action.id,
-        partition: action.ordinal <= 55 ? "setup" : action.ordinal <= 483 ? "flow" : "terminal",
+        partition: action.ordinal <= 55 ? "setup" : action.ordinal <= 488 ? "flow" : "terminal",
       })
     );
   }
-  invariant(completed.size === 490, "one-loop completion drift");
+  invariant(completed.size === 495, "one-loop completion drift");
   invariant(captures.size === 26, "one-loop capture binding drift");
   return deepFreezeExact({ actionDispatches, actionReceipts });
 }
@@ -9290,7 +9591,7 @@ export function runTask540SmokeContractSelfTest() {
     negativeCases += 1;
     expectContractFailure(callback, label);
   };
-  invariant(plan.actionManifest.length === 490, "self-test action cardinality");
+  invariant(plan.actionManifest.length === 495, "self-test action cardinality");
   invariant(plan.requiredFixtureSubjectKeys.length === 15, "self-test fixture cardinality");
   invariant(plan.requiredCaptureNames.length === 17, "self-test capture cardinality");
   invariant(
@@ -9405,15 +9706,15 @@ export function runTask540SmokeContractSelfTest() {
   );
   invariant(
     Object.keys(plan.registries.runtimeOperations).length === 76 &&
-      Object.keys(plan.registries.browserRunCodeSources).length === 386 &&
+      Object.keys(plan.registries.browserRunCodeSources).length === 391 &&
       Object.keys(plan.registries.browserNativeOperations).length === 7 &&
       Object.keys(plan.registries.screenshotPaths).length === 13,
     "self-test executable registry cardinality drift"
   );
   const oneLoopTrace = runHermeticOneLoopExecutorSelfTest(plan);
   invariant(
-    oneLoopTrace.actionDispatches.length === 490 &&
-      oneLoopTrace.actionReceipts.length === 490 &&
+    oneLoopTrace.actionDispatches.length === 495 &&
+      oneLoopTrace.actionReceipts.length === 495 &&
       oneLoopTrace.actionReceipts.every(
         (receipt, index) =>
           receipt.ordinal === index + 1 && receipt.actionId === plan.actionManifest[index].id
@@ -9422,7 +9723,7 @@ export function runTask540SmokeContractSelfTest() {
   );
   invariant(
     oneLoopTrace.actionReceipts.filter(({ partition }) => partition === "setup").length === 55 &&
-      oneLoopTrace.actionReceipts.filter(({ partition }) => partition === "flow").length === 428 &&
+      oneLoopTrace.actionReceipts.filter(({ partition }) => partition === "flow").length === 433 &&
       oneLoopTrace.actionReceipts.filter(({ partition }) => partition === "terminal").length === 7,
     "self-test one-loop receipt partition drift"
   );
@@ -9433,6 +9734,24 @@ export function runTask540SmokeContractSelfTest() {
   const cleanup = expandCleanupActions(acquiredSubjects);
   invariant(cleanup.length === acquiredSubjects.length * 3, "dynamic cleanup cardinality");
   invariant(new Set(cleanup.map(({ id }) => id)).size === cleanup.length, "dynamic cleanup IDs");
+  const incompleteAuthRateCosts = { ...AUTH_RATE_COSTS_BY_ACTION };
+  delete incompleteAuthRateCosts["dg-029-save-click"];
+  negative(
+    () => computeAuthRatePlan(plan.actionManifest, incompleteAuthRateCosts),
+    "missing auth rate producer cost"
+  );
+  const conditionalCsrfIndex = plan.actionManifest.findIndex(
+    ({ id }) => id === "ru-046-a-metadata-enable"
+  );
+  negative(
+    () =>
+      validateManifest(
+        replaceManifestAction(plan.actionManifest, conditionalCsrfIndex, {
+          builder: "click(S.metadata-unknown)",
+        })
+      ),
+    "conditional CSRF producer signature drift"
+  );
   negative(() => buildTask540SmokePlan({ nonce: "bad" }), "invalid nonce");
   negative(
     () => buildTask540SmokePlan({ nonce: "0123456789ab", unknown: true }),
@@ -9589,7 +9908,7 @@ export function runTask540SmokeContractSelfTest() {
   }
   negative(
     () => validateManifest(Object.freeze(plan.actionManifest.slice(0, -1))),
-    "incomplete 489-action mapping"
+    "incomplete 494-action mapping"
   );
   const firstActionWithoutOrdinal = { ...plan.actionManifest[0] };
   delete firstActionWithoutOrdinal.ordinal;

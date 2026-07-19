@@ -198,22 +198,22 @@ runTask540SmokeContractSelfTest()
 The module is import-side-effect-free and performs no environment, filesystem,
 database, network, or `process.env` access. `buildTask540SmokePlan` accepts an exact
 reject-unknown one-key object with the canonical 12-lower-hex nonce and owns the
-`SMOKE_FIXTURE_BLUEPRINT`, the source tuples and compiler for all 490 ordered action
+`SMOKE_FIXTURE_BLUEPRINT`, the source tuples and compiler for all 495 ordered action
 rows, every recursive strict schema, the selector/builder/command/output registry,
 cardinality/set/dependency validation, single-assignment capture validation, and the
 route/page/auth/theme/top-level state machines. It returns one recursively deep-frozen
-plan whose sole action collection is the complete 490-row `actionManifest`; there is no
+plan whose sole action collection is the complete 495-row `actionManifest`; there is no
 second setup collection or setup execution prepass. Its compiler requires every source
 row to have exactly five Markdown-equivalent columns and its transition tuple to have
 exactly three explicit clauses (`precondition -> captured output -> postcondition`);
 it performs no prose inference and leaves capture/fixture refs symbolic for lazy
 resolution at their exact action ordinal. The fixed scope remains exactly 55 setup
-rows + 428 flow rows + 7 terminal browser rows = 490, 15 fixture subjects, exactly 17
+rows + 433 flow rows + 7 terminal browser rows = 495, 15 fixture subjects, exactly 17
 public capture names, 13 screenshots, and 55 unique visible assertions.
 `runTask540SmokeContractSelfTest()` is hermetic and deterministically checks those
 counts, strict unknown-key rejection, registries, dependency/capture closure, state
-transitions, recursive freezing, the exact disjoint `55/428/7` action-set partition,
-dense ordinals `1..490`, and one fake execution plus one receipt for each action exactly
+transitions, recursive freezing, the exact disjoint `55/433/7` action-set partition,
+dense ordinals `1..495`, and one fake execution plus one receipt for each action exactly
 once through an independent contract-model loop. The executor self-test separately
 exercises the real executor loop with hermetic capabilities; the two loops do not share
 execution authority. Direct `--self-test` execution calls that export, while importing
@@ -371,7 +371,7 @@ current shared `checkRateLimit()` contract deliberately returns without consumin
 either counter when `isAuthenticated` is true. Therefore the smoke must not budget or
 claim authenticated Admin read/write counter hits. Only the exact enumerated `/auth/*`
 calls consume the `auth` bucket and join `REQUIRED_AUTH_RATE_PLAN`; its capacity
-preflight and one bounded natural-window barrier remain authoritative. No limiter
+preflight and six bounded natural-window barriers remain authoritative. No limiter
 state or security setting is reset or mutated.
 
 Every fixed request envelope and nested Screen section/block/tab/binding object,
@@ -1867,7 +1867,7 @@ captured ID fails closed.
 ### Workflow-owned ordered smoke action manifest
 
 `_docs/_workflows/task-540-smoke-contract.mjs` also owns the frozen
-`SMOKE_ACTION_MANIFEST`. Its compiler produces all 490 action objects before any
+`SMOKE_ACTION_MANIFEST`. Its compiler produces all 495 action objects before any
 capability starts; it does not execute setup, resolve a capture value, recompile, or
 expand a second manifest after setup. Each row below becomes one exact object with the
 reject-unknown keys
@@ -2215,7 +2215,7 @@ cleanup, and private-byte egress. Trap fakes require zero process, filesystem, D
 network, environment, or clock capability calls; they also prove the Node executor has
 no application/core TypeScript import outside the immutable source-string constants.
 
-`BROWSER_RUN_CODE_SOURCES` has exactly the 386 literal
+`BROWSER_RUN_CODE_SOURCES` has exactly the 391 literal
 `run-code/<exact-action-id>` keys from the run-code partition and owns each complete
 immutable `(page) => ...` source builder, required non-secret ref signature, target
 page contract, and result-key order. Common safe serializer/locator primitives may be
@@ -2238,13 +2238,13 @@ Switching on `action.id`, `kind`, `builder`, scenario, action-name prefixes, ref
 values, output schema, or prose is forbidden; an ID-specific special case must instead
 be an explicit registry entry validated by bidirectional set equality.
 
-The current 490 rows have been mechanically recounted from their exact builders and
+The current 495 rows have been mechanically recounted from their exact builders and
 must compile to this exhaustive disjoint partition:
 
 ```ts
 const REQUIRED_EXECUTABLE_TYPE_COUNTS = deepFreezeExact({
   "runtime-operation": 76,
-  "browser-run-code": 386,
+  "browser-run-code": 391,
   "browser-native": 14,
   "browser-screenshot": 13,
   "browser-global-list": 1,
@@ -2268,11 +2268,11 @@ observations, assertions, log reads, and browser cleanup observations are run-co
 The four native tab actions, one open, one route-list, one close, and seven secret
 fills total 14. The 13 screenshot action IDs are set-equal to the blueprint screenshot
 registry; `end-007-session-absence` alone is global-list. The 76 runtime IDs are
-set-equal to the runtime table below. The run-code set is the exact 490-ID set minus
+set-equal to the runtime table below. The run-code set is the exact 495-ID set minus
 those four disjoint sets, not a permissive fallback. Startup asserts per-type counts,
-per-source/per-operation counts, full 490-ID union equality, empty intersections,
+per-source/per-operation counts, full 495-ID union equality, empty intersections,
 descriptor/registry bidirectional set equality, ref closure, and the independent
-ordinal partition `setup=1..55`, `flow=56..483`, `terminal=484..490`. This validation
+ordinal partition `setup=1..55`, `flow=56..488`, `terminal=489..495`. This validation
 does not execute an action or resolve a ref.
 
 The two helper self-tests must include named hermetic negative cases for: one missing
@@ -2290,13 +2290,13 @@ LF, and any nonempty global browser listing). JSON negatives cover zero/two laye
 `JSON.stringify(...)` string output, LF-only/undefined, duplicate keys, noncanonical
 bytes, trailing whitespace, and unknown result keys. The positive executor self-test
 runs the sole real executor loop with hermetic fake capabilities and requires its first
-490 capability calls to cover the 490 action rows before cleanup. It then validates the
+495 capability calls to cover the 495 action rows before cleanup. It then validates the
 executor's separate browser/runtime receipt lanes, cleanup order, and finalization; it
-does not manufacture a global 490-receipt executor trace. Independently, the contract
-self-test's model loop proves 490 model dispatches and receipts, manifest-ID equality,
-dense ordinals `1..490`, exact-once counts, and the disjoint `55/428/7` partition.
+does not manufacture a global 495-receipt executor trace. Independently, the contract
+self-test's model loop proves 495 model dispatches and receipts, manifest-ID equality,
+dense ordinals `1..495`, exact-once counts, and the disjoint `55/433/7` partition.
 The executor self-test separately proves the derived executable partition
-`76/386/14/13/1`, every declared
+`76/391/14/13/1`, every declared
 top-level/page/route/auth/theme transition in order, rejection of an undeclared,
 duplicate, delayed, or stale-page route transition, and assignment of each validated
 next `RunState` before the following precondition is checked. Its fake successful-create
@@ -2322,7 +2322,7 @@ extra ledger core/edge, wrong acquisition owner, recompilation/re-expansion afte
 is frozen, or cleanup-set drift fails. No real process, filesystem, DB, network, browser,
 caller callback, or environment capability is touched.
 
-The same self-test runs both phase-1 branches. A complete 490-row success trace ending
+The same self-test runs both phase-1 branches. A complete 495-row success trace ending
 in `end-007-session-absence` must retain its browser invocation/receipt counts unchanged
 through cleanup while only the acquired private-root identity is removed. Every sampled
 early-failure ordinal derives and executes the exact missing subset of release/unroute,
@@ -2654,10 +2654,11 @@ the browser+isolated session pair from the revocation behavior in
 `sessionService.ts:112-153`; a failing policy aborts before browser or isolated login,
 without changing it.
 
-The same read-only settings authority projects only
-`{enabled,buckets:{auth:{windowSeconds,maxRequests}}}` for the rate preflight; no other
-security setting may egress. Every HTTP context uses its exact unique blueprint
-User-Agent, and direct source `run-code/set-006-logger` sets the browser context User-Agent before the
+The same read-only settings authority reads only the active auth bucket from
+`{enabled,buckets:{auth:{windowSeconds,maxRequests}}}` and the private bridge returns
+the flat exact projection `{enabled,maxRequests,windowSeconds}`; no other security
+setting may egress. Every HTTP context uses its exact unique blueprint User-Agent, and
+direct source `run-code/set-006-logger` sets the browser context User-Agent before the
 first application request. The frozen planner mirrors `resolveRateLimitBucket`,
 `resolveRateLimitIdentifier`, and the authenticated-user precedence in
 `rateLimit.ts`: internal domain calls are classified `admin_read`/`admin_write`, but
@@ -2666,16 +2667,18 @@ for those two buckets when `isAuthenticated` is true. They are excluded from the
 plan. Among the exact enumerated `/auth/*` calls, unauthenticated login uses
 IP+UA+lowercased email, unauthenticated `/auth/me` and bot-protection use IP+UA, and
 authenticated auth calls use user ID.
-It counts source-required login calls (`login` then forced `me` plus post-assign `me`),
-bot-protection/login-page reads, CSRF acquisitions, and logouts. Before the explicit
-window barrier, the exact worst-case maxima are browser unauthenticated/no-identifier
-`10`, browser login-email identity `2`, bootstrap user `5`, user A `9`, user B `8`,
-and each isolated/public-preflight identity `1`; after the barrier the maxima are `2`,
-`1`, `3`, and `1` for the identities used again. If rate limiting is enabled, require
-safe integer `1 <= windowSeconds <= 60` and `maxRequests >= 10`; otherwise the smoke is
-an infrastructure failure before login. Disabled rate limiting needs no barrier but
-still records the exact projected bucket. The workflow never resets limiter state or
-mutates settings.
+It counts source-required login calls (`login` then forced `me` plus post-assign
+`me`/install-status), bot-protection/login-page reads, first-document CSRF
+acquisitions, logouts, every deliberate full Admin reload, and the related-entry
+second tab. Six explicit barriers split those calls into seven fixed-window epochs:
+`bi-016a`, `bi-061a`, `tc-032a`, `rc-017b`, `ru-076b`, and `ru-100a`. The exact
+maximum request count for any one limiter identity in those epochs is respectively
+`9`, `10`, `9`, `10`, `9`, `7`, and `6`. The detailed frozen epoch plan also pins
+bootstrap/user-A/user-B, browser-anonymous, browser-login-email, isolated-login, and
+public-preflight identities separately. If rate limiting is enabled, require safe
+integer `1 <= windowSeconds <= 60` and `maxRequests >= 10`; otherwise the smoke is an
+infrastructure failure before login. Disabled rate limiting still records the exact
+projected bucket. The workflow never resets limiter state or mutates settings.
 
 `dispatchAndCaptureSelectionHandle()` is one registered
 `playwright-cli --raw run-code` invocation. Within it, the builder attaches one
@@ -2695,13 +2698,19 @@ only then may credential fill begin. `ru-090a` additionally requires the exact c
 preference Request object's bounded `net::ERR_ABORTED` latch. A click receipt alone,
 generic login text, redirect start, or old-realm DOM cannot satisfy settlement.
 
-`authRateWindowBarrier()` is the sole registered rate wait. Using logger-captured local
-monotonic timestamps, it waits only until the task-owned browser unauthenticated and
-user-A authenticated fixed windows have naturally expired, bounded by the proven auth
-`windowSeconds <= 60`; disabled limiting returns immediately. It proves B's exact
-topbar/entry geometry before and after, emits only `{"barrierSatisfied":true}`, and
-does not inspect, prune, reset, or claim anything about preference coordinator state.
-No hidden sleep or limiter reset is permitted.
+Each `authRateWindowBarrier()` is an explicit registered rate wait. With limiting
+enabled it waits exactly one configured fixed window plus one second, which
+conservatively expires every task-owned identity bucket from the preceding epoch;
+disabled limiting skips the timer but performs the same bounded realm-stability proof.
+A context-wide request listener remains active through the after-sample and requires
+zero `/admin/api/auth/*` traffic during the barrier. The before/after samples require
+the exact Admin URL and navigation count to remain byte-identical and the document root
+to have positive finite geometry in both samples. Only
+`{"barrierSatisfied":true}` may egress. For `ru-100a`, B continuity is compositional:
+`ru-099` proves B immediately before the barrier and `ru-101` targets the exact B user
+menu immediately after it. A barrier never inspects or prunes limiter state, resets a
+bucket, mutates settings, holds a delayed route, or claims anything about preference
+coordinator state. No hidden sleep or limiter reset is permitted.
 
 The following tables are the exhaustive ordered source of `SMOKE_ACTION_MANIFEST`;
 the implementation may generate ordinals but may not insert, remove, merge, reorder,
@@ -2719,7 +2728,7 @@ or rename rows.
 | `set-004b-session-policy-preflight` | runtime | `settingsRead(session-policy)` | bot protection disabled -> WeakMap-private session policy + validated exact `security.csrf.headerName` -> sanitized exact `{"singleSession":false,"effectiveMaxPerUserAtLeast2":true}` or infrastructure fail | `set-004a-bot-protection-preflight / absent -> absent` |
 | `set-004c-auth-rate-budget-preflight` | runtime | `settingsRead(auth-rate-budget)` | session policy proven -> exact active auth bucket projection + frozen identity/window budget computation -> capacity proven or infrastructure fail | `set-004b-session-policy-preflight / absent -> absent` |
 | `set-005-open` | p1/0 | `open(about:blank)` | auth/session/rate preflights proven -> page identity -> original page open | `set-004c-auth-rate-budget-preflight / absent -> absent` |
-| `set-006-logger` | p1/0 | `logger-install` | blank original -> exact unique browser User-Agent applied before network + `true` -> immutable context logger/auth budget tracker | `set-005 / absent -> absent` |
+| `set-006-logger` | p1/0 | `logger-install` | blank original -> exact unique browser User-Agent applied before network + `true` -> immutable context logger/navigation/auth-challenge tracker | `set-005 / absent -> absent` |
 | `set-007-goto-login` | p1/0 | `goto(paths.screens)` | logger installed + setup preflight proven -> URL -> login only; wizard is forbidden | `set-006 / absent -> absent` |
 | `set-008-resize` | p1/0 | `resize(1280,900)` | login visible/wizard absent -> viewport -> 1280x900 | `set-007 / absent -> absent` |
 | `set-009-login-email` | p1/0 | `fill(S.loginEmail,$ADMIN_EMAIL)` | login visible -> discarded -> email filled | `set-008 / absent -> absent` |
@@ -2787,7 +2796,8 @@ or rename rows.
 | `bi-014-builder-save` | p1/0 | `click(S.builderSave)` | dirty builder -> save settlement -> builder clean | `bi-013 / absent -> absent` |
 | `bi-015-persisted-binding` | p1/0 | `observe(binding-after-save)` | save settled -> strict persisted read -> post-Save binding sample frozen | `bi-014 / absent -> absent` |
 | `bi-016-list` | p1/0 | `goto(paths.screens)` | builder clean -> URL -> Screen list | `bi-015 / absent -> absent` |
-| `bi-017-reopen` | p1/0 | `goto(paths.builder)` | Screen list -> URL/canvas marker -> saved builder reopened | `bi-016 / absent -> absent` |
+| `bi-016a-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | Screen list stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + realm stability proof -> exact `{"barrierSatisfied":true}` | `bi-016 / absent -> absent` |
+| `bi-017-reopen` | p1/0 | `goto(paths.builder)` | Screen list -> URL/canvas marker -> saved builder reopened | `bi-016a-auth-rate-window-barrier / absent -> absent` |
 | `bi-018-reopen-proof` | p1/0 | `assert(persisted-no-empty-binding)` | reopened -> strict observation -> binding still exact | `bi-017 / absent -> absent` |
 | `bi-019-cache-cold` | p1/0 | `assert(media-cache-cold-before-route)` | no prior entry/media consumer -> exact aggregate count -> media GET count 0 | `bi-018 / absent -> absent` |
 | `bi-020-media-route-setup` | p1/0 | `route(media-prior-resolution,route-setup)` | cache cold -> registered task-owned media tuple -> delayed isolating route installed | `bi-019 / absent -> installed` |
@@ -2833,7 +2843,8 @@ or rename rows.
 | `bi-059-entry-after-front` | p1/0 | `goto(paths.entry)` | front assertion complete -> URL -> entry visible | `bi-058 / absent -> absent` |
 | `bi-060-unsafe-patch` | runtime | `api(patch-screen-button-binding-secondary-url)` | entry baseline already holds unsafe Secondary URL -> one Screen PATCH -> Button rebound | `bi-059 / absent -> absent` |
 | `bi-061-unsafe-proof-read` | runtime | `apiRead(screen-button-binding-secondary-url)` | PATCH settled -> exact binding + baseline entry capture -> unsafe fixture proven | `bi-060 / absent -> absent` |
-| `bi-062-entry-unsafe-reload` | p1/0 | `goto(paths.entry)` | unsafe fixture proven -> URL/document -> entry rerendered | `bi-061 / absent -> absent` |
+| `bi-061a-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | unsafe fixture proven/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + realm stability proof -> exact `{"barrierSatisfied":true}` | `bi-061 / absent -> absent` |
+| `bi-062-entry-unsafe-reload` | p1/0 | `goto(paths.entry)` | unsafe fixture proven -> URL/document -> entry rerendered | `bi-061a-auth-rate-window-barrier / absent -> absent` |
 | `bi-063-unsafe-disabled` | p1/0 | `assert(unsafe-link-disabled)` | entry rerendered -> span/ARIA/anchor count -> unsafe URL inert | `bi-062 / absent -> absent` |
 | `bi-064-baseline-restore` | runtime | `api(reset-screen-baseline)` | unsafe assertion complete -> one Screen PATCH -> baseline restored | `bi-063 / absent -> absent` |
 | `bi-065-baseline-proof` | runtime | `apiRead(screen-baseline)` | restore settled -> exact baseline document -> reset proven | `bi-064 / absent -> absent` |
@@ -2882,7 +2893,8 @@ or rename rows.
 | `tc-030-text-three-fill` | p1/0 | `fill(S.paragraph,tabs.text.tab-3)` | Text selected -> value -> History text authored | `tc-029 / absent -> absent` |
 | `tc-031-save` | p1/0 | `click(S.builderSave)` | three tabs/text dirty -> save settlement -> builder clean | `tc-030 / absent -> absent` |
 | `tc-032-list` | p1/0 | `goto(paths.screens)` | builder clean -> URL -> Screen list | `tc-031 / absent -> absent` |
-| `tc-033-reopen` | p1/0 | `goto(paths.builder)` | list -> URL/canvas -> builder reopened | `tc-032 / absent -> absent` |
+| `tc-032a-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | Screen list stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + realm stability proof -> exact `{"barrierSatisfied":true}` | `tc-032 / absent -> absent` |
+| `tc-033-reopen` | p1/0 | `goto(paths.builder)` | list -> URL/canvas -> builder reopened | `tc-032a-auth-rate-window-barrier / absent -> absent` |
 | `tc-034-three-tabs` | p1/0 | `assert(three-tabs-persisted)` | reopened -> tab/slot/nested DOM + read -> exact persisted structure | `tc-033 / absent -> absent` |
 | `tc-035-click-details` | p1/0 | `click(S.scopedRuntimeTab(palette.outerTabs,"Details"))` | Overview active -> selected state -> Details active | `tc-034 / absent -> absent` |
 | `tc-036-details-state` | p1/0 | `observe(outer-tabs-details-state)` | Details active -> geometry/hidden/armed -> Details sample frozen | `tc-035 / absent -> absent` |
@@ -3058,7 +3070,8 @@ or rename rows.
 | `rc-016-tone-muted` | p1/0 | `click(S.muted)` | menu open -> selected value -> unrelated presentation dirty | `rc-015 / absent -> absent` |
 | `rc-017-unrelated-before` | p1/0 | `observe(related-unrelated-drafts-before)` | both unrelated channels dirty -> bytes -> before sample frozen | `rc-016 / absent -> absent` |
 | `rc-017a-pre-route-a-baseline` | p1/0 | `observe(related-a-visible-baseline)` | main entry/pickers settled -> exact main-A-list-root row IDs/text/positive rects and zero skeleton/empty geometry + current p1 `navigationCount` -> pre-route visible/navigation baseline frozen | `rc-017 / absent -> absent` |
-| `rc-018-refresh-route-setup` | p1/0 | `route(related-a-refresh,route-setup)` | first failure recovered/drafts and A baseline held -> tuple -> delayed A route installed | `rc-017a-pre-route-a-baseline / absent -> installed` |
+| `rc-017b-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | entry baseline stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + realm stability proof -> exact `{"barrierSatisfied":true}` | `rc-017a-pre-route-a-baseline / absent -> absent` |
+| `rc-018-refresh-route-setup` | p1/0 | `route(related-a-refresh,route-setup)` | first failure recovered/drafts and A baseline held -> tuple -> delayed A route installed | `rc-017b-auth-rate-window-barrier / absent -> installed` |
 | `rc-019-related-tab-new` | p2/1 | `tab-new(paths.relatedEntryA1Editor)` | route installed/context logger active -> identity/URL -> p2 related-A editor | `rc-018 / installed -> installed` |
 | `rc-020-related-tab-edit` | p2/1 | `fill(S.secondTabTitle,relatedEntries.a1.updatedTitle)` | p2 editor visible -> value -> harmless A1 draft | `rc-019 / installed -> installed` |
 | `rc-021-related-tab-save` | p2/1 | `click(S.secondTabSave)` | p2 dirty -> real Save draft click/request begins -> A mutation in flight | `rc-020 / installed -> installed` |
@@ -3218,7 +3231,8 @@ no click and stores the sample executor-locally for the three final geometry ass
 | `ru-075-b-menu` | p1/0 | `click(S.userMenu(users.b.displayName))` | B entry -> menu -> menu open | `ru-074 / absent -> absent` |
 | `ru-076-b-signout` | p1/0 | `click(S.signOut)` | menu open -> real logout click/navigation initiated -> B realm leaving | `ru-075 / absent -> absent` |
 | `ru-076a-b-signout-settled` | p1/0 | `observe(signout-settled-user-b)` | logout initiated -> exact canonical `paths.login` URL + positive-geometry exact login form -> login realm settled | `ru-076 / absent -> absent` |
-| `ru-077-a2-email` | p1/0 | `fill(S.loginEmail,$WF540_USER_A_EMAIL)` | settled login form -> discarded -> A email filled | `ru-076a-b-signout-settled / absent -> absent` |
+| `ru-076b-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | login realm stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + realm stability proof -> exact `{"barrierSatisfied":true}` | `ru-076a-b-signout-settled / absent -> absent` |
+| `ru-077-a2-email` | p1/0 | `fill(S.loginEmail,$WF540_USER_A_EMAIL)` | settled login form -> discarded -> A email filled | `ru-076b-auth-rate-window-barrier / absent -> absent` |
 | `ru-078-a2-password` | p1/0 | `fill(S.loginPassword,$ADMIN_PASSWORD)` | A email filled -> discarded -> password filled | `ru-077 / absent -> absent` |
 | `ru-079-a2-submit` | p1/0 | `click(S.loginSubmit)` | credentials filled -> auth navigation -> A authenticated | `ru-078 / absent -> absent` |
 | `ru-079a-a2-identity-settled` | p1/0 | `observe(auth-identity-settled-users-a)` | submit navigation started -> post-login Admin URL + exact A trigger -> A realm settled | `ru-079 / absent -> absent` |
@@ -3245,7 +3259,7 @@ no click and stores the sample executor-locally for the three final geometry ass
 | `ru-098-queued-zero` | p1/0 | `assert(queued-a-write-zero-dispatch)` | old realm destroyed -> derived dispatch count -> exact 0 | `ru-097 / released -> released` |
 | `ru-099-b-unchanged` | p1/0 | `assert(user-b-default-unchanged)` | strict B `{key,value}` reads before/after release + false badge geometry -> exact false/false -> B unchanged | `ru-095,ru-096 / released -> released` |
 | `ru-100-write-unroute` | p1/0 | `route(preference-a-write-exit,unroute)` | hit/queue/B proven -> `true` -> delayed PATCH absent and exact bounded `requestfailed` listener removed | `ru-097,ru-098,ru-099 / released -> absent` |
-| `ru-100a-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | routes absent/B active -> local monotonic browser-unauth and user-A auth bucket epochs naturally expired when enabled, no limiter mutation -> exact `{"barrierSatisfied":true}`; B realm remains visible | `ru-100 / absent -> absent` |
+| `ru-100a-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | routes absent/B active/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + realm stability proof -> exact `{"barrierSatisfied":true}`; `ru-099`/`ru-101` compose the exact B proof | `ru-100 / absent -> absent` |
 | `ru-101-b2-menu` | p1/0 | `click(S.userMenu(users.b.displayName))` | auth budget barrier/B entry -> menu -> menu open | `ru-100a-auth-rate-window-barrier / absent -> absent` |
 | `ru-102-b2-signout` | p1/0 | `click(S.signOut)` | menu open -> real logout click/navigation initiated -> B realm leaving | `ru-101 / absent -> absent` |
 | `ru-102a-b2-signout-settled` | p1/0 | `observe(signout-settled-user-b)` | logout initiated -> exact canonical `paths.login` URL + positive-geometry exact login form -> login realm settled | `ru-102 / absent -> absent` |
@@ -3302,7 +3316,7 @@ stage dependency graph while retaining the already-frozen persistent and termina
 action plans by object identity. No abbreviated fixture object or receipt may stand in
 for a compiled record:
 
-The sole 490-row ordinal loop is the only writer for successful action-bound
+The sole 495-row ordinal loop is the only writer for successful action-bound
 acquisitions. Immediately after strict result, receipt, and independent provenance
 validation, and before that action may transition state or become completed, the
 executor takes exactly one private action-bound acquisition delta. The delta is a strict
@@ -4087,13 +4101,13 @@ const REQUIRED_SMOKE_ASSERTIONS = deepFreezeExact({
   ],
 });
 const REQUIRED_FLOW_ACTION_COUNTS = Object.freeze({
-  "button-image": 74,
-  "tabs-content": 48,
+  "button-image": 76,
+  "tabs-content": 49,
   "tabs-keyboard-aria": 35,
   "space-selection": 35,
   "dirty-guards": 49,
-  "related-retry-cache": 53,
-  "responsive-users": 134,
+  "related-retry-cache": 54,
+  "responsive-users": 135,
 });
 const REQUIRED_SETUP_ACTION_COUNT = 55;
 const REQUIRED_TERMINAL_BROWSER_ACTION_COUNT = 7;
@@ -4141,24 +4155,26 @@ const REQUIRED_METADATA_STATE_VALUES = deepFreezeExact({
 });
 const MAX_PREFERENCE_UNMOUNT_WINDOW_MS = 20_000;
 const REQUIRED_AUTH_RATE_PLAN = deepFreezeExact({
-  beforeBarrier: {
-    browserUnauthenticatedNoIdentifier: 10,
-    browserLoginPerEmail: 2,
-    bootstrapUser: 5,
-    userA: 9,
-    userB: 8,
-    publicPreflight: 1,
-    isolatedBootstrapLogin: 1,
-    isolatedUserALogin: 1,
-  },
-  afterBarrier: {
-    browserUnauthenticatedNoIdentifier: 2,
-    browserLoginUserA: 1,
-    userA: 3,
-    userB: 1,
-  },
+  epochs: [
+    { endsAtBarrierActionId: "bi-016a-auth-rate-window-barrier", maximum: 9 },
+    { endsAtBarrierActionId: "bi-061a-auth-rate-window-barrier", maximum: 10 },
+    { endsAtBarrierActionId: "tc-032a-auth-rate-window-barrier", maximum: 9 },
+    { endsAtBarrierActionId: "rc-017b-auth-rate-window-barrier", maximum: 10 },
+    { endsAtBarrierActionId: "ru-076b-auth-rate-window-barrier", maximum: 9 },
+    { endsAtBarrierActionId: "ru-100a-auth-rate-window-barrier", maximum: 7 },
+    { endsAtBarrierActionId: null, maximum: 6 },
+  ],
   requiredEnabledMaxRequests: 10,
+  requiredEnabledWindowSecondsMin: 1,
+  requiredEnabledWindowSecondsMax: 60,
 });
+// The executable contract expands every `maximum` above to its exact
+// `maximumRequestsByIdentity` object and mechanically recomputes it from the frozen
+// per-action auth-cost ledger. An independent producer classifier covers every full
+// navigation, auth operation, and conditionally cached CSRF writer, then requires exact
+// set equality with that ledger. A missing/moved barrier, unclassified sensitive writer,
+// changed producer signature, or missing producer cost therefore fails contract
+// construction instead of relying on prose counts.
 const REQUIRED_RUNTIME_BLOCK_CAPTURES = Object.freeze([
   "palette.button",
   "palette.image",
@@ -4172,20 +4188,20 @@ const REQUIRED_RUNTIME_BLOCK_CAPTURES = Object.freeze([
 ]);
 
 assertSetEqual(manifestScenarios(SMOKE_ACTION_MANIFEST), REQUIRED_SCENARIOS);
-assertCardinality(SMOKE_ACTION_MANIFEST, 490);
+assertCardinality(SMOKE_ACTION_MANIFEST, 495);
 assertEverySourceTupleHasExactlyFiveColumns();
 assertEveryTransitionTupleHasExactlyThreeClauses();
 assertCardinality(setupActions(), REQUIRED_SETUP_ACTION_COUNT);
 for (const scenario of REQUIRED_SCENARIOS) {
   assertCardinality(actionsFor(scenario), REQUIRED_FLOW_ACTION_COUNTS[scenario]);
 }
-assertCardinality(flowActions(), 428);
+assertCardinality(flowActions(), 433);
 assertCardinality(terminalBrowserActions(), REQUIRED_TERMINAL_BROWSER_ACTION_COUNT);
 assertDeepEqual(setupActions().map(({ ordinal }) => ordinal), integerRange(1, 55));
-assertDeepEqual(flowActions().map(({ ordinal }) => ordinal), integerRange(56, 483));
+assertDeepEqual(flowActions().map(({ ordinal }) => ordinal), integerRange(56, 488));
 assertDeepEqual(
   terminalBrowserActions().map(({ ordinal }) => ordinal),
-  integerRange(484, 490),
+  integerRange(489, 495),
 );
 assertPairwiseDisjointActionIdSets([
   setupActions(), flowActions(), terminalBrowserActions(),
@@ -4196,7 +4212,7 @@ assertSetEqual(
 );
 assertDeepEqual(
   SMOKE_ACTION_MANIFEST.map(({ ordinal }) => ordinal),
-  integerRange(1, 490),
+  integerRange(1, 495),
 );
 assertUnique(SMOKE_ACTION_MANIFEST.map(({ id }) => id));
 assertEveryRowHasExactKeys(ACTION_MANIFEST_SCHEMA);
@@ -4243,15 +4259,15 @@ assertDeepEqual(browserCleanupActionIds(), [
 ]);
 
 const oneLoopSelfTestTrace = runHermeticOneLoopExecutorSelfTest();
-assertCardinality(oneLoopSelfTestTrace.actionDispatches, 490);
-assertCardinality(oneLoopSelfTestTrace.actionReceipts, 490);
+assertCardinality(oneLoopSelfTestTrace.actionDispatches, 495);
+assertCardinality(oneLoopSelfTestTrace.actionReceipts, 495);
 assertDeepEqual(
   oneLoopSelfTestTrace.actionDispatches.map(({ ordinal }) => ordinal),
-  integerRange(1, 490),
+  integerRange(1, 495),
 );
 assertDeepEqual(
   oneLoopSelfTestTrace.actionReceipts.map(({ ordinal }) => ordinal),
-  integerRange(1, 490),
+  integerRange(1, 495),
 );
 assertSetEqual(
   oneLoopSelfTestTrace.actionReceipts.map(({ actionId }) => actionId),
@@ -4613,7 +4629,7 @@ async function executeSmokePlanCore(
     plan.actionManifest,
     completedActionIds,
     actionReceipts,
-    { setup: 55, flow: 428, terminal: 7 },
+    { setup: 55, flow: 433, terminal: 7 },
   );
   const cleanupResult =
     await constructionCleanupAuthority.cleanupWhateverWasAcquiredOnceNeverThrow();
@@ -4840,8 +4856,8 @@ identity-substituted, cloned, recompiled, and re-expanded plans/graphs at each b
 including the cross-stage terminal-child-to-user guard.
 
 That `for (const action of plan.actionManifest)` statement is the only static-action
-execution loop. It executes setup ordinals `1..55`, flow ordinals `56..483`, and
-terminal browser ordinals `484..490` once each and records one matching receipt before
+execution loop. It executes setup ordinals `1..55`, flow ordinals `56..488`, and
+terminal browser ordinals `489..495` once each and records one matching receipt before
 the next ordinal. Cleanup expansion is separately ledger-derived failure/success
 cleanup authority; it cannot contain a manifest action ID, satisfy a missing manifest
 receipt, or replay setup. Neither the real path nor the hermetic self-test has an

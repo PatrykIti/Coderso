@@ -102,10 +102,10 @@ not production/source files and not closure-owned tests or docs. The contract he
 exports only `buildTask540SmokePlan({nonce})` and
 `runTask540SmokeContractSelfTest()`; it is import-side-effect-free, uses no environment,
 filesystem, database, network, or `process.env`, and owns the blueprint plus the strict
-compiler/validation for exactly 490 action rows, 15 fixture subjects, exactly 17 public
+compiler/validation for exactly 495 action rows, 15 fixture subjects, exactly 17 public
 capture names, 13 screenshots, and 55 visible assertions. The plan has one complete
-`actionManifest` and no second setup collection: all 55 setup rows, 428 flow rows, and
-7 terminal browser rows execute exactly once through one dense ordinal `1..490` loop.
+`actionManifest` and no second setup collection: all 55 setup rows, 433 flow rows, and
+7 terminal browser rows execute exactly once through one dense ordinal `1..495` loop.
 Refs remain symbolic in the frozen plan and resolve lazily only for the current action,
 after its dependencies and capture producers have completed. The executor exports only
 `executeTask540SmokePlan({root,nonce,assertSafeEvidence,snapshotRepository})` and
@@ -172,7 +172,7 @@ legal.
 
 Each action has one exact reject-unknown `executable` descriptor; deprecated
 `templateId/sourceAuthority/transport/stdoutPolicy` execution authority is forbidden.
-The mechanically recounted disjoint partition is exactly 76 runtime operations, 386
+The mechanically recounted disjoint partition is exactly 76 runtime operations, 391
 browser run-code sources, 14 browser-native operations, 13 screenshots, and one global
 browser list. Runtime operation IDs and run-code source IDs are direct per-action
 registry keys with bidirectional set equality, not generic `api`/`observation`/
@@ -182,12 +182,27 @@ the names `ADMIN_EMAIL` or `ADMIN_PASSWORD` and are legal solely in the seven ex
 native credential fills. All ordinary goto/resize/click/non-secret fill/press/type/
 focus operations are one-layer-JSON run-code. The executor self-test uses the real
 executor loop with hermetic fakes and proves one capability dispatch for each of the
-490 action rows before cleanup, plus the executor's lane-specific runtime/browser
+495 action rows before cleanup, plus the executor's lane-specific runtime/browser
 receipts and deterministic cleanup. Independently, the contract self-test's model loop
-mechanically proves 490 model dispatches, 490 model receipts, receipt ordinals
-`1..490`, manifest-ID set equality, the exact disjoint `55/428/7` receipt partition,
+mechanically proves 495 model dispatches, 495 model receipts, receipt ordinals
+`1..495`, manifest-ID set equality, the exact disjoint `55/433/7` receipt partition,
 and exactly one model dispatch plus receipt per action. Neither self-test starts a real
 capability.
+
+The rate-limit preflight freezes the exact active auth policy and accepts enabled
+limiting only for `maxRequests >= 10` and `1 <= windowSeconds <= 60`. Six explicit
+`authRateWindowBarrier()` rows split the complete auth-request plan into seven epochs
+whose per-identity maxima are `9, 10, 9, 10, 9, 7, 6`. An independent producer
+classifier covers full navigations, auth operations, and conditionally cached CSRF
+writers and requires exact set equality with the frozen per-action cost ledger. It
+rejects an unclassified sensitive writer, changed producer signature, or missing
+producer cost. An enabled barrier waits one complete configured fixed window plus one
+second; a disabled barrier skips the timer but performs the same bounded realm proof.
+Each barrier keeps a context-wide
+`/admin/api/auth/*` request listener active through its after-sample and fails if auth
+traffic or URL/navigation identity changes, or if root geometry is not finite and
+positive before or after. It never resets the limiter, mutates settings, mocks
+an auth route, or weakens the deliberate cold-load/persistence navigations.
 
 The editable content-type detail projection is not an eighteenth public capture. Only
 the exact `set-017-editable-type-proof` four-key output `{id,slug,name,schema}` may bind
