@@ -481,7 +481,7 @@ export function ScreenBlockInspector({
         // and gaps stay the primary insertion surface.
         <InspectorRow label="Insert into">
           <Select
-            value={armedInsertSlotId ?? undefined}
+            value={armedInsertSlotId ?? ""}
             onValueChange={(slotId) => onArmSlotInsert(selectedBlock.id, slotId)}
           >
             <SelectTrigger data-screen-insert-into="true" aria-label="Insert into">

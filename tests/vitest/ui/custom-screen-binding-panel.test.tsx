@@ -5,6 +5,7 @@ import { afterEach, expect, test, vi } from "vitest";
 
 import {
   createScreenFieldBinding,
+  ScreenBlockInspector,
   ScreenSectionInspector,
 } from "../../../core/admin/ui/custom-screens/ScreenBlockInspector";
 import {
@@ -604,6 +605,47 @@ test("Tabs add a deterministic collision-free slot and arm that exact target", (
     expect(new Set(tabActionNames).size).toBe(tabActionNames.length);
   } finally {
     removeThenAddView.cleanup();
+  }
+});
+
+test("Tabs keep the insert-slot Select controlled while arming a newly added tab", () => {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  const initialBlock: ScreenBlockV1 = {
+    id: "tabs-controlled-slot",
+    type: "tabs",
+    data: { tabs: [{ id: "tab-1", label: "First" }] },
+    slots: { "tab-1": [] },
+  };
+  const Harness = () => {
+    const [block, setBlock] = React.useState(initialBlock);
+    const [armedSlotId, setArmedSlotId] = React.useState<string | null>(null);
+    return (
+      <ScreenBlockInspector
+        selectedBlock={block}
+        bindings={[]}
+        fields={[]}
+        showBlockActions={false}
+        armedInsertSlotId={armedSlotId}
+        onArmSlotInsert={(_blockId, slotId) => setArmedSlotId(slotId)}
+        onPatchBlock={(_blockId, patch) => setBlock((current) => ({ ...current, ...patch }))}
+        onPatchBlockData={() => undefined}
+        onPatchBinding={() => undefined}
+        onMove={() => undefined}
+        onDuplicate={() => undefined}
+        onDelete={() => undefined}
+      />
+    );
+  };
+  const view = mountReactNode(<Harness />);
+  try {
+    clickButton(view.container, "Add tab");
+    expect(view.container.querySelector('[data-screen-insert-into="true"]')?.textContent).toContain(
+      "tab-2"
+    );
+    expect(warn).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+    warn.mockRestore();
   }
 });
 
