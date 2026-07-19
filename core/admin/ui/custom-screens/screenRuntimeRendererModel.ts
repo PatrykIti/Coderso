@@ -2,7 +2,6 @@ import type { CSSProperties, ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 import {
-  isScreenMediaAssetUuid,
   type ScreenBlockStyleV1,
   type ScreenBlockV1,
   type ScreenDocumentV1,
@@ -19,6 +18,7 @@ import type {
   ScreenEntryPresentationOverrideDraft,
   ScreenEntryPresentationOverridePropPath,
 } from "../../../services/customScreens/screenEntryPresentationOverrideContract";
+import { isScreenMediaAssetUuid } from "../../../services/customScreens/screenMediaIdentity";
 import type { ContentField } from "../content-types/SchemaBuilder";
 
 export type ScreenRuntimeRendererProps = {
@@ -273,12 +273,6 @@ export const relatedInitials = (title: string): string => {
   if (parts.length === 0) return "?";
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-};
-
-export const firstMediaAssetUuid = (value: unknown): string | null => {
-  if (isScreenMediaAssetUuid(value)) return value;
-  if (!Array.isArray(value)) return null;
-  return value.find(isScreenMediaAssetUuid) ?? null;
 };
 
 const selectionInteractiveOriginSelector =

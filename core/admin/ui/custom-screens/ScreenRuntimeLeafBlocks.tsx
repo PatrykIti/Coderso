@@ -11,6 +11,7 @@ import {
   type ScreenBlockV1,
   type ScreenFieldBinding,
 } from "../../../services/customScreens/customScreenSchemas";
+import { firstScreenMediaAssetUuid } from "../../../services/customScreens/screenMediaIdentity";
 import { readBindingPathValue } from "../../../services/utils/bindingPath";
 import type { ContentField } from "../content-types/SchemaBuilder";
 import {
@@ -18,7 +19,6 @@ import {
   editableTextValue,
   fieldTypeLabels,
   findField,
-  firstMediaAssetUuid,
   formatRelatedTime,
   formatStatValue,
   isInlineEditableField,
@@ -401,7 +401,9 @@ export function ScreenRuntimeLeafBlock({ block, context }: ScreenRuntimeLeafBloc
         ? (context.presentationMediaUrlsById?.[presentationSource.assetId] ?? null)
         : null;
     } else if (binding) {
-      const boundAssetId = firstMediaAssetUuid(readBindingPathValue(context.values, binding.field));
+      const boundAssetId = firstScreenMediaAssetUuid(
+        readBindingPathValue(context.values, binding.field)
+      );
       rawImageSrc = boundAssetId
         ? (context.presentationMediaUrlsById?.[boundAssetId] ?? null)
         : null;
