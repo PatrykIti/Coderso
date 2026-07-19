@@ -10,7 +10,10 @@
 **Status:** 🚧 In Progress
 **Started:** 2026-07-14
 **Fix Started:** 2026-07-18
-**Implementation Complete:** 2026-07-18 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Implementation Complete:** 2026-07-19 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Current L01 Compatibility Implementation Evidence:** 2026-07-19 — commit `7a393dcc7aaf454fee582ce7745073768e0e131b` reopens the one-shot Insert palette before the second existing insertion assertion after `ScreenAuthoringCanvas` begins inspecting a newly inserted block; commit `204fd1de0f129f73976f577f420acbdac5316dea` preserves the exact TASK-540-05-L01 ownership mapping. The insertion target and ordering assertions remain unchanged.
+**Current L01 Compatibility Validation Evidence:** 2026-07-19 — the authoring-boundary isolation passed 7/7, insertion targeting passed 10/10, the exact four-file owner matrix passed 29/29, and static, family-line, prepared-resume, and diff checks passed.
+**Current L01 Receipt State:** TASK-540-05-L01 carries one current `Revalidation Passed` for the compatibility-test commit; its earlier generation/token receipt is preserved under a dedicated historical field. The gate ran after L04 and claims no clean family post-audit, full validation, smoke, changelog, or closure result.
 **Repair Reason:** Final post-audit closed proof gaps without changing product behavior: L01 makes the labelled Canvas region name a required prop, prevents caller data props from overriding the canonical named-region semantics, and corrects its boundary test to preserve the contracted Session→media-hook→pure-media dependency; L02 re-reads both authenticated users after distinct writes and asserts both exact DB rows.
 **Corrective Revalidation:** 2026-07-16 — against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus the dirty owner paths named by L01/L02, core/root static gates passed; L01 exact Vitest passed 16/16; L02 exact Vitest passed 66/66; reachable DB preflight and the exact Bun matrix passed 27/27 with 165 expectations; isolated user-settings routes passed 10/10 with 64 expectations; and `git diff --check` passed.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.

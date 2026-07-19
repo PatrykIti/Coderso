@@ -12,19 +12,23 @@
 **Started:** 2026-07-13
 **Repair Started:** 2026-07-16
 **Fix Started:** 2026-07-17
-**Implementation Complete:** 2026-07-18 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
-**Revalidation Passed:** generation 71b1c73b899a4ab4be94690ce387f28e / token ff99adec779348e796d56df5dbda3627 / gate green
+**Implementation Complete:** 2026-07-19 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Historical Overflow Revalidation:** generation 71b1c73b899a4ab4be94690ce387f28e / token ff99adec779348e796d56df5dbda3627 / gate green
+**Revalidation Passed:** 2026-07-19 — evidence-backed manual checkpoint receipt for the current Entry-correction L03 owner gate after R01 and R03: core lint/types and root TypeScript checks; cacheBus 22/22, Custom Screens client 40/40, Entry navigation 22/22, Entry restyle/presentation media 17/17; expanded twenty-two-file dependency-shaped matrix 258/258; final fifteen-file L04 read-only consumer matrix 98/98; reachable DB preflight; registered Custom Screens routes 13/13; protected-name/module, physical-line, workflow, and diff checks. This is not a transition-generated generation/token or hash receipt and claims no clean family post-audit, full validation, smoke, changelog, or closure result.
+**Current Entry-Correction Implementation Evidence:** 2026-07-19 — commit `46759bcea211c39a708ed424f749efe2343a56b3` directly consumes R01's media selector, adds distinct names for the three Entry Presentation selects and the media group, and replaces the hand-built records-workspace path with the canonical helper. This commit is implementation provenance, not a generation/token receipt.
+**Current Entry-Correction Validation Evidence:** 2026-07-19 — core lint/types and root TypeScript checks passed; cacheBus passed its 22-test family, the Custom Screens client passed its 40-test family, Entry navigation passed its 22-test family, Entry restyle/presentation media passed its 17-test family, the expanded dependency-shaped L03 matrix passed 258/258 across 22 files, DB-backed Custom Screens routes passed 13/13, and the family line/name/workflow/diff gates passed.
+**Current Entry-Correction Receipt State:** The exact L03 owner gate passed on 2026-07-19 after R01/R03 and commit `46759bcea211c39a708ed424f749efe2343a56b3`; the current `Revalidation Passed` field above is the sole active owner-gate receipt. The prior generation/token value remains historical overflow evidence only.
 **Repair Reason:** A fresh post-audit proved the bounded 201-direct-image path reused the transient load-error message and rendered a `Retry` action that could never recover because the structural overflow produces an empty request plan and zero media reads. L03 now carries an explicit `load | overflow` error kind, keeps transient failures retryable, and renders the bounded overflow as a distinct non-retryable visible error without disabling entry editing.
 **Post-Audit Overflow Retry Repair:** 2026-07-17 — four source modules and two existing owner tests distinguish structural bounded overflow from a transient media read failure. The overflow retains the editor and visible error, performs zero media reads, and exposes no dead-end `Retry`. The closure orchestrator re-pins only the changed declaration-body SHA and corrects the current repair-resume self-test to retain its already-regated closure sibling; the exact owner revalidation passed and a fresh clean post-audit remains pending.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
 **Historical Pre-Overflow Post-Audit Hygiene Repair:** 2026-07-17 — the third one-shot post-audit stopped before full validation and smoke after finding a dead `_editorView` fixture plus tautological captured request-key/token comparisons in the presentation-media continuation. The fixture was removed, and settlement retained the pre-attempt request-key check plus active, mounted, and generation authority without self-comparisons.
-**Historical Pre-Overflow Post-Audit Hygiene Revalidated:** 2026-07-17 — core lint/types, root `tsc`, the focused eight-file Vitest matrix 65/65, the full TASK-540 physical-line gate, and a fresh scoped code/test audit with 0 HIGH/MEDIUM/LOW findings passed at that checkpoint. The current L03 overflow repair supersedes that behavior gate.
+**Historical Pre-Overflow Post-Audit Hygiene Revalidated:** 2026-07-17 — core lint/types, root `tsc`, the focused eight-file Vitest matrix 65/65, the full TASK-540 physical-line gate, and a fresh scoped code/test audit with 0 HIGH/MEDIUM/LOW findings passed at that checkpoint. The later L03 overflow repair superseded that behavior gate.
 **Historical Pre-Overflow Post-Audit Content-Type Read Repair:** 2026-07-17 — an isolated mounted regression first reproduced two concurrent `listContentTypesCached({ force: true })` calls for one Entry visit: one unguarded relation-target effect and one entry hydration. The relation-target effect was removed; hydration then passed its actual `force` value and carried the returned full content-type list through the existing route/load/draft-authority barrier before atomically committing both the Entry draft and relation targets.
-**Historical Pre-Overflow Post-Audit Content-Type Read Revalidated:** 2026-07-17 — the focused regression changed from the reproduced 2-call failure to exactly one forced call per initial visit; the exact twenty-two-file expanded L03 Vitest gate passed 258/258; core lint/types, root `tsc`, the touched-file physical-line gate, and `git diff --check` passed. The protected 22-name navigation multiset and 9+13 partition were byte-identical; the intentional assertion changes then changed only the declaration fingerprint to `16e197de4e6a8713696cbc68f643a5e13dfc53cff66c84b7b6c0d8f75629899f`. The current L03 overflow repair supersedes that behavior gate.
+**Historical Pre-Overflow Post-Audit Content-Type Read Revalidated:** 2026-07-17 — the focused regression changed from the reproduced 2-call failure to exactly one forced call per initial visit; the exact twenty-two-file expanded L03 Vitest gate passed 258/258; core lint/types, root `tsc`, the touched-file physical-line gate, and `git diff --check` passed. The protected 22-name navigation multiset and 9+13 partition were byte-identical; the intentional assertion changes then changed only the declaration fingerprint to `16e197de4e6a8713696cbc68f643a5e13dfc53cff66c84b7b6c0d8f75629899f`. The later L03 overflow repair superseded that behavior gate.
 **Historical Pre-Overflow Post-Audit Media Bound Repair:** 2026-07-17 — the same five-lens pass proved a schema-valid Entry document with 201 winning direct-image UUIDs could throw while building its request key during render. The strict builder and untrusted decoder still reject more than 200 IDs, while the then-new bounded trusted plan converted that overflow into the existing visible media-load error, an empty URL map, and zero media API calls without unmounting the editor.
-**Historical Pre-Overflow Post-Audit Media Bound Revalidated:** 2026-07-17 — the pre-fix 201-ID throw was reproduced; the corrected pure contract passed 4/4, the Entry editor integration passed 13/13, the family passed 17/17, and the full twenty-two-file L03 gate passed 258/258. Core lint/types, root `tsc`, the family line gate (largest touched suite 974 lines), the unchanged 17-name multiset, then-current declaration SHA-256 `26783b88328023f0eb1761381082f7a311334ad4856b2964e8fbcc7f0419c8cb`, and `git diff --check` passed. This evidence predates and is superseded for the behavior gate by the current overflow-error classification repair.
+**Historical Pre-Overflow Post-Audit Media Bound Revalidated:** 2026-07-17 — the pre-fix 201-ID throw was reproduced; the corrected pure contract passed 4/4, the Entry editor integration passed 13/13, the family passed 17/17, and the full twenty-two-file L03 gate passed 258/258. Core lint/types, root `tsc`, the family line gate (largest touched suite 974 lines), the unchanged 17-name multiset, then-current declaration SHA-256 `26783b88328023f0eb1761381082f7a311334ad4856b2964e8fbcc7f0419c8cb`, and `git diff --check` passed. This evidence predates and was superseded for the behavior gate by the later overflow-error classification repair.
 **Historical Pre-Overflow Post-Audit Final-Gate Contract Repair:** 2026-07-17 — a workflow audit found that the then-landed L03 task still phrased its historical transient 12-file handoff as a current executable instruction, contradicting the final workflow. The paragraph then superseded that handoff and made the final 15-file, 98-test matrix the sole repeat-validation authority.
-**Historical Pre-Overflow Post-Audit Final-Gate Contract Revalidated:** 2026-07-17 — the then-live L03 gate, L04 gate, isolation metadata, and exact-matrix self-test all used `L04_FINAL_CONSUMER_VITEST_FILES`; then-prepared resume, workflow self-tests, line/diff checks, and a fresh read-only audit reported 0 HIGH/MEDIUM/LOW findings. The current overflow repair supersedes that behavior gate and prepared-resume state; no repository-wide test, clean five-lens rerun, live smoke, changelog, or closure result is claimed.
+**Historical Pre-Overflow Post-Audit Final-Gate Contract Revalidated:** 2026-07-17 — the then-live L03 gate, L04 gate, isolation metadata, and exact-matrix self-test all used `L04_FINAL_CONSUMER_VITEST_FILES`; then-prepared resume, workflow self-tests, line/diff checks, and a fresh read-only audit reported 0 HIGH/MEDIUM/LOW findings. The later overflow repair superseded that behavior gate and prepared-resume state; no repository-wide test, clean five-lens rerun, live smoke, changelog, or closure result is claimed.
 **Historical Cache Repair Started:** 2026-07-15
 **Historical Cache Revalidation:** generation ff397af11ad9b309d5244372b0705637 / token 191e7db6acd8e2cf36016f821d2f6b88 / gate green
 **Historical Cache Repair Reason:** Closure validation reproduced one logical remote cache event twice when canonical and legacy transports delivered the same serialized event; the scoped repair owned cacheBus source/test plus additive registered-route override evidence and remains durable historical evidence.
@@ -117,40 +121,41 @@ preflight, Bun routes 13/13, workflow/diff checks, and a fresh zero-finding audi
 restored canonical receipt still never substitutes for either sibling owner gate or the
 later family post-audit, smoke, and closure gates.
 
-## Pending 2026-07-19 selector, accessibility, and workspace correction
+## Landed 2026-07-19 selector, accessibility, and workspace correction
 
-L03 starts only after R01 and R03 have passed their exact gates. In
-`customScreenEntryPresentationMedia.ts`, import R01's
-`firstScreenMediaAssetUuid` directly from the Bun-free `screenMediaIdentity.ts` owner,
-delete the local `firstMediaAssetUuid`, and keep existing override-first, bound-value,
-deduplication, 200-ID, byte-casing, and fail-closed behavior unchanged. Extend the
-existing `direct-image media planning chooses override then binding, deduplicates, and
-ignores media fields` declaration; do not add a fifth presentation-media test.
+L03 commit `46759bcea211c39a708ed424f749efe2343a56b3` landed after the R01 and
+R03 implementation commits. In `customScreenEntryPresentationMedia.ts`, it imports
+R01's `firstScreenMediaAssetUuid` directly from the Bun-free
+`screenMediaIdentity.ts` owner, deletes the local `firstMediaAssetUuid`, and keeps
+existing override-first, bound-value, deduplication, 200-ID, byte-casing, and fail-closed
+behavior unchanged. The existing `direct-image media planning chooses override then
+binding, deduplicates, and ignores media fields` declaration carries the regression;
+no fifth presentation-media test was added.
 
-In `CustomScreenEntryPresentationPanel.tsx`, preserve the visible captions and give the
-`Text size`, `Emphasis`, and `Tone` combobox triggers distinct programmatic names. Give
-the composite Media override surface one named `role="group"` using a React `useId`
-caption relationship; do not leave a `<label>` that targets no form control and do not
-modify `MediaPicker` outside this leaf. Extend the existing `an inline content edit
-surfaces the unsaved-changes affordance` declaration for the three text-control names
-and the existing `direct-image presentation exposes media authoring and renders the
-winning override URL` declaration for the named media group. Keep the already
-1,000-line restyle suite at or below 1,000 by replacing/compressing local prose rather
-than creating another suite or declaration.
+In `CustomScreenEntryPresentationPanel.tsx`, the visible captions remain unchanged and
+the `Text size`, `Emphasis`, and `Tone` combobox triggers now have distinct programmatic
+names. The composite Media override surface is one named `role="group"` using a React
+`useId` caption relationship; no inert label or `MediaPicker` change was introduced.
+The existing `an inline content edit surfaces the unsaved-changes affordance`
+declaration covers the three text-control names, and the existing `direct-image
+presentation exposes media authoring and renders the winning override URL` declaration
+covers the named media group. The restyle suite remains exactly 1,000 physical lines,
+with no new suite or declaration.
 
-In `CustomScreenEntryRouteSession.tsx`, replace the dynamic hand-built records path
-with `buildCustomScreenWorkspacePath({ screenId })`; keep the no-screen fallback and
-admin-base resolution behavior unchanged. Extend the existing `clean navigation
+In `CustomScreenEntryRouteSession.tsx`, the dynamic hand-built records path was replaced
+with `buildCustomScreenWorkspacePath({ screenId })`; the no-screen fallback and
+admin-base resolution behavior remain unchanged. The existing `clean navigation
 proceeds without a dialog, while a content draft supports cancel and confirm`
-declaration with a structural assertion that this consumer imports/calls the canonical
-builder. Use a callback-local dynamic Node import for that source assertion so the test
-module's imports and every byte outside the named declaration remain unchanged. Do not
-add or rename a navigation test: the immutable family remains exactly 9 guard + 13
-authority names. No source in R01, R03, L04, `routeParams.ts`,
+declaration now structurally asserts that this consumer imports/calls the canonical
+builder through a callback-local dynamic Node import. No navigation test was added or
+renamed: the immutable family remains exactly 9 guard + 13 authority names. No source
+in R01, R03, L04, `routeParams.ts`,
 `MediaPicker`, or the protected workflow is writable in this leaf. Core lint/types,
 the unchanged name/body contract with intentionally re-pinned declaration bodies, the
-exact L03 dependency-shaped gate, and the touched-file line gate must pass before L04
-starts. This section is an implementation contract, not a repair receipt.
+exact L03 dependency-shaped gate, and the touched-file line gate passed as focused
+evidence before L04 landed. The exact L03 owner re-gate then passed and is recorded by
+the current receipt above. This section records landed implementation and focused
+evidence, not a clean family post-audit, full validation, smoke, or closure result.
 
 The declaration re-pin is an orchestrator-only exact transaction immediately before
 the owner gate. Capture mode must retain all 17 Entry-restyle names/declarations in
@@ -511,12 +516,13 @@ value/type compatibility re-export list. A compile-only consumer is insufficient
 the pure tests intentionally move to their owning modules. The historical modularity land
 order was L03 split → L03 target gate and immediate L03
 `Modularity Repair Revalidated` receipt → L04 split/gate and immediate L04 receipt → L01
-additive boundary update/gate. That split is durable. For the pending 2026-07-19
-correction, the current remaining order is task-contract corrections → discovery five-lens
-post-audit → R01 shared selector/gate → R03 renderer consumer/gate → L03 Entry
-consumer/accessibility/workspace-helper gate → L04 Screen Settings accessibility/gate →
-fresh clean five-lens post-audit → full validation → runtime smoke → reserved L01
-closure; a passing check that still reads only the thin wrapper is insufficient evidence.
+additive boundary update/gate. That split is durable. For the landed 2026-07-19
+correction, source commit order was R01 shared selector → R03 renderer consumer → L03
+Entry consumer/accessibility/workspace helper → L04 Screen Settings accessibility. The
+current five-owner re-gates completed in order R01 → R03 → L03 → L04 → L01. The
+remaining order is clean five-lens post-audit → full validation → runtime smoke →
+closure; a passing check that still reads only the thin
+wrapper is insufficient evidence.
 
 ### Required workflow and targeted validation changes
 

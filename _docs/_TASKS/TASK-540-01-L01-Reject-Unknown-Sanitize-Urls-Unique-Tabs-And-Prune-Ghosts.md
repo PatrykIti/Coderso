@@ -12,12 +12,15 @@
 **Started:** 2026-07-13
 **Historical Implementation Complete:** 2026-07-14 — original assigned work completed before the later repair cycles.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
-**Current Repair State:** The two verified MEDIUM repairs and three verified test-integrity LOW regressions described below are implemented at the validated HEAD. The separate 2026-07-19 stored-read hardening named in `Fix Reason` passed the exact R01 owner gate and is represented by the matching `Revalidation Passed` generation/token below. The earlier pre-split receipts remain historical evidence only. A later five-lens family post-audit stopped before full validation and smoke; its verified follow-up now reopens R01 first for the shared selector required by the dependent R03/L03 UI corrections. That selector work is contracted below but not yet implemented or re-gated, and no changelog or closure pass is claimed.
+**Current Repair State:** The two verified MEDIUM repairs and three verified test-integrity LOW regressions described below are implemented at the validated HEAD. The separate 2026-07-19 stored-read hardening named in `Fix Reason` and the later shared-selector follow-up in commit `f8e916b9255677352a2ed2fef9bd73093dec5683` are both covered by the current selector-inclusive R01 revalidation below. Earlier generation/token and pre-split receipts remain historical evidence only. The clean family post-audit, full validation, smoke, changelog, and closure remain pending.
+**Current Selector Implementation Evidence:** 2026-07-19 — the Bun-free owner now exports `firstScreenMediaAssetUuid`, and the existing protected media-identity declaration covers scalar/array, first-valid, malformed, and exact-casing behavior without changing the 77-name partition. Commit `f8e916b9255677352a2ed2fef9bd73093dec5683` is implementation provenance, not a generation/token receipt.
+**Current Selector Receipt State:** The exact selector-inclusive R01 owner gate passed on 2026-07-19 after commit `f8e916b9255677352a2ed2fef9bd73093dec5683`; the current `Revalidation Passed` field below is the sole active owner-gate receipt. It claims no clean family post-audit, full validation, smoke, changelog, or closure result.
 **Repair Started:** 2026-07-16
 **Fix Started:** 2026-07-19
 **Fix Reason:** Post-audit reproduced that the stored-read legacy block-type alias map was consulted with a bare index read, so a stored `type` equal to an inherited `Object.prototype` member name resolved to a function and collapsed the whole `editorView` read into the empty fallback. R01 owns the runtime-frozen, own-property-only alias map that keeps all twelve inherited names as unrepaired legacy placeholders with byte-stable `data` and surviving bindings. R01 also removes the duplicated `publish`/`custom` Button rewrite from the read-repair pass so `screenDocumentDataNormalizer.ts` remains the sole owner: write rejects a present non-`link` action, while stored-read coerces it to `link` and drops `href`. No schema is loosened, no compatibility kind is added, and no assertion is weakened.
 **Implementation Complete:** 2026-07-19 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
-**Revalidation Passed:** generation 28bd5c90c7fd485eabc0c611d5e34752 / token 0237fd1a85b54c7e80e46c0eaac5477d / gate green
+**Historical Stored-Read Revalidation:** generation 28bd5c90c7fd485eabc0c611d5e34752 / token 0237fd1a85b54c7e80e46c0eaac5477d / gate green
+**Revalidation Passed:** 2026-07-19 — evidence-backed manual checkpoint receipt for the current selector-inclusive R01 owner gate: core lint/types and root TypeScript checks; schema partitions 18+9+10+13+11+5+11 = 77/77; document-operation partitions 12+19+12 = 43/43; exact fourteen-file Vitest matrix 210/210; reachable DB preflight; registered route partitions 13+8 = 21/21; Assistant family 73/73; combined route/Assistant Bun matrix 94/94; document-facade, schema/test-name, route/action-name, physical-line, workflow, and diff checks. This is not a transition-generated generation/token or hash receipt and claims no clean family post-audit, full validation, smoke, changelog, or closure result.
 **Contract Correction:** 2026-07-19 — the orchestrator independently verified and adopted this execution contract after rejecting the fixer's unauthorized task-prose edits; the exact repair token remained unchanged through the matching successful `Revalidation Passed` transition.
 **Repair Reason:** The final TASK-540 workflow audits reproduced strict identity drift plus three data-integrity gaps: one malformed stored binding could collapse a whole V4 editor before a metadata-only PATCH; id-less V1/V2/V3 bindings used an ambiguous local slug seed; and the pre-V4 Assistant composer still exposed an optional ID plus the same ambiguous fallback while feeding `custom-screen.upsert`. R01 owns per-binding stored-read rejection with document/sibling preservation, one V4 legacy membership pass, the shared framed-tuple binding-ID builder, and an explicit-ID-only Assistant composer boundary. The registered metadata PATCH proves repaired document persistence; the stored-read duplicate-ID regression keeps uniqueness fail-closed outside the per-item catch.
 **Prior R01 Revalidation:** 2026-07-16 — before the Assistant composer and stored-read duplicate-test findings, HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus the then-three dirty R01 owner paths passed core/root static gates, five-file Vitest 168/168, reachable DB preflight, Custom Screens route plus Assistant executor Bun 92/92 with 568 expectations, isolated route 19/19 with 110, document-op 11/11, and `git diff --check`. This evidence is historical for the expanded contract.
@@ -94,14 +97,15 @@
   mandatory no-loss partition of its exact 73-test name multiset into the 12 named Bun
   suites and five support modules below
 
-### Current selector-owner correction (must land before R03)
+### Current selector-owner correction (landed before R03; revalidated)
 
 The 2026-07-19 post-audit found equivalent `firstMediaAssetUuid` implementations in the
 R03 renderer model and L03 Entry presentation-media owner. The earlier L03-only attempt
 was reverted after correctly proving that a pure L03 module may not import an admin/UI
 renderer model. R01 therefore owns the shared implementation in
-`screenMediaIdentity.ts`; R03 and L03 consume it only after this leaf passes its exact
-gate.
+`screenMediaIdentity.ts`; commit `f8e916b9255677352a2ed2fef9bd73093dec5683`
+landed it before the R03 and L03 consumer commits. The exact selector-inclusive R01
+owner gate then passed and is recorded by the current receipt above.
 
 Implementation shape:
 
@@ -163,15 +167,13 @@ multiset must remain byte-identical.
 Status authority is phase-aware: before changelog 1252 covers the family, a landed,
 gated source sibling remains `🚧 In Progress` with its `Implementation Complete`
 receipt; after 1252 covers that physical ID, it may be `✅ Done` with `Completed`.
-R01 now carries canonical `Implementation Complete` plus the exact 2026-07-19
-`Revalidation Passed: generation 28bd5c90c7fd485eabc0c611d5e34752 / token
-0237fd1a85b54c7e80e46c0eaac5477d / gate green`; only its earlier pre-split receipts are
-historical. TASK-540-04-L03's prior scoped receipt and TASK-540-06-L01's exact
-pre-closure receipt remain preserved, but the later five-lens intervention requires
-discovery audit → R01 shared selector → R03 renderer consumer → L03 Entry consumer →
-L04 Screen Settings accessibility, with each implementation leaf reopened and exactly
-gated before the clean post-audit. No receipt is duplicated or treated as smoke/closure
-evidence. `_docs/_workflows/task-540-implement.mjs`
+R01 now carries canonical `Implementation Complete` plus one current selector-inclusive
+`Revalidation Passed`; its prior generation/token receipt remains preserved under the
+dedicated historical field. TASK-540-04-L03's prior scoped receipt and
+TASK-540-06-L01's exact pre-closure receipt also remain preserved as historical or
+reserved evidence. The five-owner corrective chain was re-gated in dependency order
+R01 → R03 → L03 → L04 → L01 before the clean post-audit. No receipt is duplicated or
+treated as smoke/closure evidence. `_docs/_workflows/task-540-implement.mjs`
 owns this phase-aware restart invariant and exposes `--self-test-repair-siblings` as
 its executable projection.
 
@@ -1681,9 +1683,10 @@ transitions are historical. The current 2026-07-19 stored-read hardening remains
 route-test, document-operations, and Assistant splits retain their separate canonical
 `Modularity Repair Revalidated` evidence. The later five-lens audit found no defect in
 the already-landed stored-read repair, but it did find the missing shared selector now
-owned by R01. The executable order is discovery audit → R01 → R03 → L03 → L04 →
-clean post-audit → full gates → smoke → closure; none of those later results is claimed
-here.
+owned by R01. That selector and its R03/L03 consumers are landed, and the exact owner
+re-gates completed in dependency order R01 → R03 → L03 → L04 → L01. The executable
+remaining order is clean post-audit → full gates → smoke → closure; none of those later
+results is claimed here.
 TASK-540-04-L03 keeps
 one canonical `Revalidation Passed` successor and no `Repair Pending`; the closure leaf
 remains landed with its exact pre-closure evidence and must not be duplicated. Family

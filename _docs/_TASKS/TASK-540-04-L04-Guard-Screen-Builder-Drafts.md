@@ -16,8 +16,12 @@
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
 **Post-Audit Integrity Repair:** 2026-07-17 — the third one-shot post-audit stopped before full validation and smoke after proving `custom-screen-editor-draft-and-save.test.tsx` consumed a harness-generated projection instead of the real production modules and after identifying the missing Page-family module-boundary verifier. The test now reads the three production owners directly through `node:fs`; the harness projection surface is removed; and the workflow pins exact imports, exports, canonical full-module hashes, and the 36-declaration body fingerprint for all four Page suites plus their harness.
 **Post-Audit Integrity Revalidated:** 2026-07-17 — the Page scanner passed 36/36 with the exact 6+13+8+9 partition and declaration SHA-256 `2bd33166dfd768b089caf437b5263413d24e033eb18b9a92d152321525a898bb`; the five-module verifier and its three bypass mutations passed; workflow self-tests, core/root static checks, the focused eight-file Vitest matrix 65/65, the family line gate, and two fresh scoped audits reported 0 HIGH/MEDIUM/LOW findings. No repository-wide test, live-smoke, changelog, or closure result is claimed.
-**Revalidation Passed:** 2026-07-17 — current post-split owner gate: the four Page suites passed independently at 6/13/8/9 and together at 36/36; the final fifteen-file L04 consumer matrix passed 98/98; exact name/declaration fingerprints, the five-module structural verifier, core/root static checks, export/import/line/workflow gates, and `git diff --check` passed. No clean family post-audit, full validation, smoke, changelog, or closure result is claimed.
-**Implementation Complete:** 2026-07-16 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Historical Post-Split Revalidation:** 2026-07-17 — the four Page suites passed independently at 6/13/8/9 and together at 36/36; the then-current fifteen-file L04 consumer matrix passed 98/98; exact name/declaration fingerprints, the five-module structural verifier, core/root static checks, export/import/line/workflow gates, and `git diff --check` passed. This evidence predates the later Settings correction.
+**Revalidation Passed:** 2026-07-19 — evidence-backed manual checkpoint receipt for the current Settings-correction L04 owner gate after L03: core lint/types and root TypeScript checks; Page suites independently 6/6, 13/13, 8/8, and 9/9; exact fifteen-file consumer matrix 98/98; protected name/declaration, five-module structural, physical-line, workflow, repair-resume, and diff checks. This is not a transition-generated generation/token or hash receipt and claims no clean family post-audit, full validation, smoke, changelog, or closure result.
+**Implementation Complete:** 2026-07-19 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Current Settings-Correction Implementation Evidence:** 2026-07-19 — commit `204fd1de0f129f73976f577f420acbdac5316dea` gives all five Screen Settings controls their contracted programmatic names and extends the existing create/save declaration. This commit is implementation provenance, not a generation/token receipt.
+**Current Settings-Correction Validation Evidence:** 2026-07-19 — core lint/types and root TypeScript checks passed; the four Page suites retained 6+13+8+9 = 36 declarations, the final 15-file L04 consumer matrix passed 98/98, and protected-name/module, family line, workflow, and diff checks passed.
+**Current Settings-Correction Receipt State:** The exact L04 owner gate passed on 2026-07-19 after L03 and commit `204fd1de0f129f73976f577f420acbdac5316dea`; the current `Revalidation Passed` field above is the sole active owner-gate receipt. It claims no clean family post-audit, full validation, smoke, changelog, or closure result.
 **Historical CacheBus Implementation Complete:** 2026-07-15 — the earlier one-property repair completed before the current compatibility correction.
 **Prior Compatibility Validation:** 2026-07-16 — against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus dirty owner path `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`, isolated Vitest passed 3/3, the exact ten-file L04 consumer matrix passed 98/98, and `git diff --check` passed; static checks predated the test-only change and therefore do not complete the current owner gate.
 **Historical CacheBus Repair Reason:** Mandatory repository-wide `bun run test` confirmed that `tests/vitest/ui-integration/screen-editor-sections.test.tsx` had fully mocked `@/utils/cacheBus` without the L04-required `createCacheEventOperationToken` export. Its Save path rejected before `updateCustomScreen`, producing an unhandled rejection and zero mutation calls; the repair added only the missing fresh-symbol factory and re-gated the owning leaf.
@@ -77,27 +81,28 @@ post-agent `touchedFiles` verification constrain all such mutations. An after-cl
 fixer adds only the TASK-540 root, TASK-540-04 child, and this L04 leaf task contracts;
 task-state transitions remain separate authority.
 
-### Pending 2026-07-19 Screen Settings accessibility correction
+### Landed 2026-07-19 Screen Settings accessibility correction
 
-L04 starts only after the current R01 → R03 → L03 chain has passed its exact gates.
-In `CustomScreenEditorSettingsPanel.tsx`, preserve all visible copy and behavior while
-giving the five interactive settings distinct programmatic names matching the visible
-intent: `Screen name` input, `Content type` combobox, `Status` combobox,
-`Show records workflow in left menu` switch, and `Sidebar label` input. Use direct
-`aria-label` values or stable `aria-labelledby` relationships; do not add inert
-`<label>` elements, change values/defaults, or alter dirty/save/cache behavior.
+L04 commit `204fd1de0f129f73976f577f420acbdac5316dea` landed after the current
+R01 → R03 → L03 implementation commits. In `CustomScreenEditorSettingsPanel.tsx`, all
+visible copy and behavior remain unchanged while the five interactive settings now have
+distinct programmatic names matching the visible intent: `Screen name` input, `Content
+type` combobox, `Status` combobox, `Show records workflow in left menu` switch, and
+`Sidebar label` input. No inert label, value/default, dirty/save, or cache change was
+introduced.
 
-Extend the existing `exact create saves once and opens the canonical encoded Screen
+The existing `exact create saves once and opens the canonical encoded Screen
 editor without a discard prompt` declaration in
-`custom-screen-editor-draft-and-save.test.tsx` to assert all five names before its
-existing mutation/save flow. Add or rename no test declaration: the four protected Page
+`custom-screen-editor-draft-and-save.test.tsx` now asserts all five names before its
+existing mutation/save flow. No test declaration was added or renamed: the four protected Page
 suites remain exactly 6+13+8+9 = 36, and each remains independently runnable. L04 does
 not edit R01/R03/L03 source, route helpers, task status fields, or workflow files. Core
 lint/types, the intentionally re-pinned declaration body, exact 36-test Page family,
-final 15-file/98-test consumer gate, and touched-file line gate must pass before the
-fresh family post-audit. This section is required work, not implementation completion.
+final 15-file/98-test consumer gate, and touched-file line gate passed as focused
+evidence. The exact L04 owner re-gate then passed before the L01 boundary. This section
+and the current receipt claim focused revalidation only, not the family post-audit.
 
-Immediately before the owner gate, the orchestrator alone re-pins the protected Page
+Immediately before the focused owner gate, the orchestrator re-pinned the protected Page
 declaration SHA after capture proves the unchanged 36 names/declarations, `6+13+8+9`
 partition, global name hash, and per-file name hashes/indexes. Because the existing
 draft/save declaration is also covered by the L04 canonical-module verifier, that same
@@ -128,10 +133,11 @@ R01→R03 URL-control correction. That completion evidence remains historical. T
 the then-completed sibling leaves. At that historical phase L04 and TASK-540-04 were
 Done and closure resumed. The later TASK-540-04-L03 duplicate-delivery finding paused
 closure again, then its scoped repair completed and passed the required re-gate. In the
-current pre-1252 state L04 and TASK-540-04 remain `🚧 In Progress`; L04 carries its
-exact current `Revalidation Passed` for the generated-ID compatibility test. L03 has
-one canonical `Revalidation Passed` successor and no
-`Repair Pending`. TASK-540-06-L01 also remains active; fresh post-audit, full
+current pre-1252 state L04 and TASK-540-04 remain `🚧 In Progress`; L04 carries one
+current `Revalidation Passed` for the Settings correction, while its earlier post-split
+evidence is historical. L03 likewise carries one current `Revalidation Passed` and no
+`Repair Pending`. The exact R01 → R03 → L03 → L04 → L01 re-gates completed in order.
+TASK-540-06-L01 remains active; fresh post-audit, full
 validation, live smoke, family changelog 1252, and closure remain pending.
 
 ## Historical pre-implementation grounded anchors

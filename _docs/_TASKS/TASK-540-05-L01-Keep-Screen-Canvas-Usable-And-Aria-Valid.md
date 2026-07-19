@@ -11,8 +11,11 @@
 **Status:** 🚧 In Progress
 **Started:** 2026-07-14
 **Fix Started:** 2026-07-18
-**Implementation Complete:** 2026-07-18 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
-**Revalidation Passed:** generation eeb29960e5784a47ad38fb056c30d9a8 / token cabb94f2a2894d9fa5130e6256ae6442 / gate green
+**Implementation Complete:** 2026-07-19 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Historical Boundary Revalidation:** generation eeb29960e5784a47ad38fb056c30d9a8 / token cabb94f2a2894d9fa5130e6256ae6442 / gate green
+**Revalidation Passed:** 2026-07-19 — evidence-backed manual checkpoint receipt for the current L01 compatibility owner gate after L04: core lint/types and root TypeScript checks; authoring-boundary isolation 7/7; insertion-targeting isolation 10/10; exact four-file owner matrix 29/29; full-family physical-line, prepared-resume, and diff checks. This is not a transition-generated generation/token or hash receipt and claims no clean family post-audit, full validation, smoke, changelog, or closure result.
+**Current Insertion Compatibility Evidence:** 2026-07-19 — commit `7a393dcc7aaf454fee582ce7745073768e0e131b` reopens the one-shot Insert palette before the existing second insertion assertion after `ScreenAuthoringCanvas` begins inspecting a newly inserted block. The insertion target and ordering assertions remain unchanged, and commit `204fd1de0f129f73976f577f420acbdac5316dea` assigns the test exclusively to this leaf.
+**Current Insertion Receipt State:** The exact L01 compatibility owner gate passed on 2026-07-19 after L04 and commit `7a393dcc7aaf454fee582ce7745073768e0e131b`; the current `Revalidation Passed` field above is the sole active owner-gate receipt. It claims no clean family post-audit, full validation, smoke, changelog, or closure result.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
 **Repair Reason:** Final post-audit confirmed every production caller supplies a panel label but the shared prop remained optional, allowing an unnamed `region` landmark for future callers. The semantic shell now requires `panelAriaLabel: string`. A later post-audit also proved caller-supplied `panelDataProps` could override the shell's canonical `role` and accessible name because the spread came last; the semantic attributes now take final precedence while caller `data-*` hooks and refs remain intact. The same re-gate corrected a stale boundary-test edge: `CustomScreenEntryRouteSession` consumes presentation media through `useScreenEntryPresentationMedia`, while only that hook imports the pure media owner, exactly as TASK-540-04-L03 specifies.
 **Historical Under-Load Gate:** 2026-07-17 — two 64-file TASK-540 runs established that the Entry Editor AST/import boundary needed its local bounded 15-second timeout under load. This receipt is not current final-byte evidence: a later isolated rerun exposed a stale direct Session→media-owner edge expectation (6/7 isolated, 18/19 owner matrix) even though the production graph correctly followed TASK-540-04-L03 through the media hook. The expectation is now corrected without adding a dummy production import; the fresh exact `Revalidation Passed` receipt after the current repair is the sole owner-gate authority. No assertion weakening, production import change, or timeout widening belongs to this repair.
@@ -208,9 +211,11 @@ TASK-540-06 owns real-browser aggregation but must not re-baseline these asserti
 ```bash
 bun --cwd core lint:types
 bun --cwd core lint
+bunx vitest run tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx
 bunx vitest run tests/vitest/ui-integration/canvas-editor-panel-toggle-dedupe.test.tsx \
   tests/vitest/ui/custom-screen-authoring-boundary.test.ts \
-  tests/vitest/ui-integration/canvas-editor/canvas-editor.test.tsx
+  tests/vitest/ui-integration/canvas-editor/canvas-editor.test.tsx \
+  tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx
 ./node_modules/.bin/tsc -p tsconfig.json --noEmit
 lines="$(awk 'END { print NR }' tests/vitest/ui/custom-screen-authoring-boundary.test.ts)"
 if [ "$lines" -gt 1000 ]; then
@@ -219,6 +224,8 @@ if [ "$lines" -gt 1000 ]; then
 fi
 ```
 
+The insertion-targeting isolation must pass exactly 10/10 tests before the exact
+four-file combined matrix passes 29/29 tests.
 The semantic role belongs to the shared shell, so the adjacent component suite is part
 of the same mandatory source gate above.
 Run this additive boundary update only after the L03 and L04 source/test gates pass. A

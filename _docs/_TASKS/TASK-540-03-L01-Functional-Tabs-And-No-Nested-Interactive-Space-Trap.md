@@ -10,7 +10,9 @@
 **Dependencies:** TASK-540-01-L01, TASK-540-02-L01
 **Status:** 🚧 In Progress
 **Started:** 2026-07-13
-**Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Implementation Complete:** 2026-07-19 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Current Selector-Consumer Implementation Evidence:** 2026-07-19 — commit `596ede31d17c65168510baf6b478696e3d345377` removed the renderer-local selector, imported R01's Bun-free owner directly in `ScreenRuntimeLeafBlocks.tsx`, and kept the model predicate import on that same owner. This commit is implementation provenance, not a generation/token receipt.
+**Current Selector-Consumer Receipt State:** The exact R03 owner gate passed on 2026-07-19 after R01 and commit `596ede31d17c65168510baf6b478696e3d345377`; the current `Revalidation Passed` field below is the sole active owner-gate receipt. It claims no clean family post-audit, full validation, smoke, changelog, or closure result.
 **Repair Started:** 2026-07-16
 **Repair Reason:** The defensive zero-item Tabs branch rendered an empty `tablist` with no usable tab. R03 owns the accessible fail-safe renderer state: no empty tablist/tab/panel and visible exact `role="status"` text `No tabs available.`.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
@@ -18,8 +20,9 @@
 **Post-Audit Fixture Integrity Revalidated:** 2026-07-17 — core lint/types, root `tsc`, the four independent renderer partitions 22/22 + 13/13 + 24/24 + 13/13, the exact six-file dependency-shaped gate 89/89, the unchanged 72-name/67-declaration fingerprint, the family physical-line gate, and `git diff --check` passed. No repository-wide test, clean five-lens rerun, live smoke, changelog, or closure result is claimed.
 **Post-Audit Fixture Immutability Repair:** 2026-07-17 — a fresh scoped audit found that removing the unsafe fixture assertions had also removed the harness's shallow runtime freezes, making shared module fixtures mutable across suites. The directly annotated fields array and each field, heading block and data, heading binding, and static image block and data are again frozen without `as`, `satisfies`, or a TypeScript suppression.
 **Post-Audit Fixture Immutability Revalidated:** 2026-07-17 — freeze depth and fixture bytes match the prior stateless-harness contract; the exact six-file gate passed 89/89 with unchanged 72-name/67-declaration fingerprints, core/root static checks, Prettier, the family line gate, full diff check, and a fresh read-only audit with 0 HIGH/MEDIUM/LOW findings passed. No repository-wide test, clean five-lens rerun, live smoke, changelog, or closure result is claimed.
-**Current Repair State:** The accessible/URL/media behavior repair and cohesive split are implemented. All seven production paths, five renderer-test split paths, and the touched record-interaction/image-source dependency paths passed line, static, exact-count, code-drift, and cross-contract gates. The current modularity receipt covers this targeted owner gate; full family post-audit and runtime smoke remain later closure gates.
-**Revalidation Passed:** 2026-07-16 — historical pre-modularity evidence: `core lint:types`, `core lint`, the exact renderer/interaction/image Vitest matrix (89/89), and `git diff --check` independently passed on the then-final shared source. This receipt does not validate extracted modules and claims no new post-audit, live smoke, changelog, or closure result.
+**Current Repair State:** The accessible/URL/media behavior repair, cohesive split, and selector-consumer correction are implemented. All seven production paths, five renderer-test split paths, and the touched record-interaction/image-source dependency paths passed line, static, exact-count, code-drift, and cross-contract gates. The 2026-07-19 selector-consumer receipt is the sole current owner-gate authority; modularity and zero-Tab receipts are historical. Full family post-audit and runtime smoke remain later closure gates.
+**Historical Pre-Modularity Revalidation:** 2026-07-16 — `core lint:types`, `core lint`, the exact renderer/interaction/image Vitest matrix (89/89), and `git diff --check` independently passed on the then-final shared source. This evidence does not validate the later extracted modules or selector-consumer commit.
+**Revalidation Passed:** 2026-07-19 — evidence-backed manual checkpoint receipt for the current selector-consumer R03 owner gate after R01: core lint/types and root TypeScript checks; independent renderer partitions 22/22, 13/13, 24/24, and 13/13; exact six-file dependency-shaped matrix 89/89; protected name/declaration, source/module, physical-line, workflow, and diff checks. This is not a transition-generated generation/token or hash receipt and claims no clean family post-audit, full validation, smoke, changelog, or closure result.
 **Historical Corrective Revalidation:** 2026-07-14 — `core lint:types`, `core lint`, the then-current exact renderer/interaction/image Vitest matrix (89/89), and `git diff --check`
 **Historical Post-Audit:** 2026-07-14 — PASS; zero HIGH, MEDIUM, or LOW findings for the five-value final Button/Image DOM-sink regression matrix
 **Fix Started:** 2026-07-14
@@ -54,20 +57,21 @@ R01 Screen wrapper read-only and adds final DOM-sink regressions; it need not ed
 closed. `custom-screen-record-interactions.test.tsx` and
 `screen-document-image-src.test.ts` remain read-only prerequisites in this gate.
 
-That historical correction remains landed and gated. This leaf is now the current R03
-repair owner only for the accessible zero-item Tabs branch and its renderer regression;
-the current exact 89/89 gate plus lint/typecheck/diff passed independently. It remains
+That historical correction remains landed and gated. This leaf was subsequently the R03
+repair owner for the accessible zero-item Tabs branch and its renderer regression;
+that exact 89/89 gate plus lint/typecheck/diff passed independently. It remains
 `🚧 In Progress` with `Implementation Complete` because canonical `✅ Done` awaits family
 changelog 1252. At the time of this R03 repair, L03's attempted import-only diff had been
 reverted and its older cache/entry receipt was historical. The later final sequential
 post-audit separately reopened L03 for the single-versus-multiple media override
-contract; that later L03 receipt does not change this renderer owner's 89/89 evidence.
+contract; that later L03 receipt does not change this historical renderer evidence. The
+2026-07-19 selector-consumer receipt above is the current R03 owner authority.
 
-### Pending 2026-07-19 shared-selector consumer correction
+### Landed 2026-07-19 shared-selector consumer correction
 
-Canonical workflow must reopen and gate R01 first. Only after R01 exports
-`firstScreenMediaAssetUuid` from the Bun-free
-`core/services/customScreens/screenMediaIdentity.ts` owner may R03:
+R01 landed `firstScreenMediaAssetUuid` in the Bun-free
+`core/services/customScreens/screenMediaIdentity.ts` owner before R03 commit
+`596ede31d17c65168510baf6b478696e3d345377`:
 
 1. import `firstScreenMediaAssetUuid` directly into `ScreenRuntimeLeafBlocks.tsx`;
 2. remove the renderer-local `firstMediaAssetUuid` implementation and its model export;
@@ -81,8 +85,9 @@ The selected UUID must retain its exact input casing and bytes. Invalid scalars,
 non-arrays, and arrays without a valid UUID return `null`; no URL, empty value, or later
 fallback becomes eligible. R03 does not edit `screenMediaIdentity.ts`, L03 modules, task
 status fields, or the protected test-name inventory. Its four suite counts remain
-22+13+24+13, and the exact 89-test gate must pass before L03 starts. This is executable
-repair scope, not a new completion receipt.
+22+13+24+13. The source dependency order was preserved before L03 landed, and the exact
+89-test R03 owner gate subsequently passed. This section and the current receipt record
+landed repair provenance and focused revalidation, not a family post-audit or closure.
 
 Do not edit `InlineEditWrapper.tsx`, `CustomScreenEntryCanvas.tsx`, schemas,
 inspector, or shared selection helpers. Fix the ancestor semantics at the owning
@@ -522,9 +527,10 @@ is the final family assertion after all modular streams land.
 The accessible Tabs, passive-selection, URL/UUID sink implementation, length-delimited
 DOM identity, and 83/83 gate remain historical metadata. After R01 landed, this leaf
 added the explicit final Button/Image control-character DOM regressions and historically
-passed the then-current exact 89/89 gate plus a zero-finding post-audit. The current
-2026-07-16 accessible zero-item Tabs repair independently passed the historical exact
+passed the then-current exact 89/89 gate plus a zero-finding post-audit. The historical
+2026-07-16 accessible zero-item Tabs repair independently passed the then-current exact
 89/89 gate, lint/typecheck, and diff check. The modular split passed the fresh
 independent/combined 89/89 gate, exact fingerprints, line counts, static gates, and
-zero-finding code and cross-contract audits. Its exact modularity receipt is current;
-family post-audit, runtime smoke, and closure remain pending.
+zero-finding code and cross-contract audits. Its modularity receipt is historical; the
+2026-07-19 selector-consumer receipt is current. Family post-audit, runtime smoke, and
+closure remain pending.

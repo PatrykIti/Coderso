@@ -9450,11 +9450,16 @@ const LEAVES = Object.freeze(
           vitestCommand(["tests/vitest/ui/custom-screen-authoring-boundary.test.ts"])
         ),
         command(
+          "screenEditorInsertionTargetingIsolated",
+          vitestCommand(["tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx"])
+        ),
+        command(
           "vitest",
           vitestCommand([
             "tests/vitest/ui-integration/canvas-editor-panel-toggle-dedupe.test.tsx",
             "tests/vitest/ui/custom-screen-authoring-boundary.test.ts",
             "tests/vitest/ui-integration/canvas-editor/canvas-editor.test.tsx",
+            "tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx",
           ])
         ),
         command("rootTsc", ROOT_TSC),

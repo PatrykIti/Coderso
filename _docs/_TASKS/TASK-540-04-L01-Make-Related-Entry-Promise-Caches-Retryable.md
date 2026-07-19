@@ -10,12 +10,12 @@
 **Dependencies:** TASK-540-01-L01
 **Status:** 🚧 In Progress
 **Started:** 2026-07-13
-**Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
-**Fix Started:** 2026-07-14
+**Fix Started:** 2026-07-19
+**Implementation Complete:** 2026-07-19 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Revalidation Passed:** generation 364843f21cdb421d8ad4811e05de5232 / token 0a2dd86ff46e4ddaafb707facbaf2c74 / gate green
 **Fix Reason:** Final post-audit found that independent list/detail authority can let an older detail shrink or stale a newer full entry list.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
 **Current Repair State:** Cache behavior and the test-only cohesive split are implemented. The harness and three Entries suites passed independently at 19/19, 15/15, and 8/8; unchanged Media passed 23/23; the combined gate passed 65/65; and exact fingerprints, static, line, isolation, and drift gates passed. Full family post-audit and runtime smoke remain later closure gates.
-**Revalidation Passed:** 2026-07-14 — historical pre-modularity evidence: `core lint:types`, `core lint`, the exact Entries/Media client Vitest matrix (65/65), and `git diff --check`
 **Post-Audit:** 2026-07-14 — PASS; zero HIGH, MEDIUM, or LOW findings on the corrected working tree
 **Previous Revalidation:** 2026-07-14 — `core lint:types`, `core lint`, and the exact entries/media client Vitest matrix (57/57)
 **Previous Completion:** 2026-07-14
