@@ -10280,6 +10280,29 @@ async function assertTask540R01EffectiveRepairOwnerContract() {
   const taskContracts = [ROOT_TASK_PATH, group.childPath, group.leafPath];
   const preClosure = effectiveRepairMutationOwner(leaf);
   const afterClosure = effectiveRepairMutationOwner(leaf, { afterClosure: true });
+  const preClosureRollback = repairMutationRollbackPlan(
+    preClosure,
+    taskContracts,
+    "TASK-540 R01 pre-closure rollback self-test"
+  );
+  const afterClosureRollback = repairMutationRollbackPlan(
+    afterClosure,
+    taskContracts,
+    "TASK-540 R01 after-closure rollback self-test"
+  );
+  let partialTaskAuthorityRejected = false;
+  try {
+    repairMutationRollbackPlan(
+      Object.freeze({
+        ...preClosure,
+        allowedFiles: Object.freeze([...preClosure.allowedFiles, taskContracts[0]]),
+      }),
+      taskContracts,
+      "TASK-540 R01 partial rollback self-test"
+    );
+  } catch {
+    partialTaskAuthorityRejected = true;
+  }
   const restriction = leafRestrictionPrompt(leaf);
   const readOnlyConsumers = [
     "tests/vitest/assistant/action-plan-schema.test.ts",
@@ -10358,6 +10381,26 @@ async function assertTask540R01EffectiveRepairOwnerContract() {
       pass:
         JSON.stringify(afterClosure.allowedFiles) ===
         JSON.stringify([...leaf.allowedFiles, ...taskContracts]),
+    },
+    {
+      label: "R01 pre-closure rollback protects all task authority files",
+      pass:
+        JSON.stringify(preClosureRollback.rollbackAuthorityPaths) ===
+          JSON.stringify([...taskContracts, "_docs/_TASKS/README.md"]) &&
+        JSON.stringify(preClosureRollback.allowedResidualPaths) ===
+          JSON.stringify(preClosure.allowedFiles),
+    },
+    {
+      label: "R01 after-closure rollback preserves only non-task owner residuals",
+      pass:
+        JSON.stringify(afterClosureRollback.rollbackAuthorityPaths) ===
+          JSON.stringify([...taskContracts, "_docs/_TASKS/README.md"]) &&
+        JSON.stringify(afterClosureRollback.allowedResidualPaths) ===
+          JSON.stringify(leaf.allowedFiles),
+    },
+    {
+      label: "R01 rollback rejects partial task authority",
+      pass: partialTaskAuthorityRejected,
     },
     {
       label: "R01 historical Assistant executor path retains its exact fixture-only verifier",
@@ -18820,36 +18863,18 @@ async function runRepairMutationWithInvariant(
   const group = LEAF_STATUS_GROUPS[leaf.id];
   if (!group) throw new Error(options.label + ": repair rollback status group is missing");
   const taskAuthorityPaths = [ROOT_TASK_PATH, group.childPath, group.leafPath];
-  const ownedTaskAuthorityPaths = taskAuthorityPaths.filter((relativePath) =>
-    owner.allowedFiles.includes(relativePath)
+  const rollbackPlan = repairMutationRollbackPlan(owner, taskAuthorityPaths, options.label);
+  const rollbackAuthorityPaths = rollbackPlan.rollbackAuthorityPaths;
+  const rollbackOwner = Object.freeze({
+    id: options.label + "-task-authority-rollback",
+    allowedFiles: rollbackAuthorityPaths,
+    requiredFiles: Object.freeze([]),
+  });
+  const authoritySnapshot = await captureExactRollbackFiles(
+    rollbackAuthorityPaths,
+    options.label + " task-authority pre-fixer"
   );
-  if (
-    ownedTaskAuthorityPaths.length > 0 &&
-    ownedTaskAuthorityPaths.length !== taskAuthorityPaths.length
-  ) {
-    throw new Error(options.label + ": repair fixer has only partial task authority");
-  }
-  const protectsTaskAuthority = ownedTaskAuthorityPaths.length === taskAuthorityPaths.length;
-  const rollbackAuthorityPaths = protectsTaskAuthority
-    ? [...taskAuthorityPaths, "_docs/_TASKS/README.md"]
-    : [];
-  const rollbackOwner = protectsTaskAuthority
-    ? Object.freeze({
-        id: options.label + "-task-authority-rollback",
-        allowedFiles: Object.freeze(rollbackAuthorityPaths),
-        requiredFiles: Object.freeze([]),
-      })
-    : null;
-  const authoritySnapshot = protectsTaskAuthority
-    ? await captureExactRollbackFiles(
-        rollbackAuthorityPaths,
-        options.label + " task-authority pre-fixer"
-      )
-    : null;
-  const authorityPathSet = new Set(rollbackAuthorityPaths);
-  const allowedResidualPaths = protectsTaskAuthority
-    ? owner.allowedFiles.filter((relativePath) => !authorityPathSet.has(relativePath))
-    : [];
+  const allowedResidualPaths = rollbackPlan.allowedResidualPaths;
   let mutationResult = null;
   let mutationError = null;
   try {
@@ -18873,24 +18898,42 @@ async function runRepairMutationWithInvariant(
         )
       : (mutationError ?? invariantError);
   if (primaryError) {
-    if (authoritySnapshot && rollbackOwner) {
-      try {
-        await restoreExactRollbackFiles(
-          authoritySnapshot,
-          rollbackOwner,
-          options.label + " task-authority rollback",
-          { allowedResidualPaths }
-        );
-      } catch (rollbackError) {
-        throw new AggregateError(
-          [primaryError, rollbackError],
-          options.label + ": repair failure and task-authority rollback both failed"
-        );
-      }
+    try {
+      await restoreExactRollbackFiles(
+        authoritySnapshot,
+        rollbackOwner,
+        options.label + " task-authority rollback",
+        { allowedResidualPaths }
+      );
+    } catch (rollbackError) {
+      throw new AggregateError(
+        [primaryError, rollbackError],
+        options.label + ": repair failure and task-authority rollback both failed"
+      );
     }
     throw primaryError;
   }
   return mutationResult;
+}
+
+function repairMutationRollbackPlan(owner, taskAuthorityPaths, label) {
+  const ownedTaskAuthorityPaths = taskAuthorityPaths.filter((relativePath) =>
+    owner.allowedFiles.includes(relativePath)
+  );
+  if (
+    ownedTaskAuthorityPaths.length > 0 &&
+    ownedTaskAuthorityPaths.length !== taskAuthorityPaths.length
+  ) {
+    throw new Error(label + ": repair fixer has only partial task authority");
+  }
+  const rollbackAuthorityPaths = Object.freeze([...taskAuthorityPaths, "_docs/_TASKS/README.md"]);
+  const authorityPathSet = new Set(rollbackAuthorityPaths);
+  return Object.freeze({
+    rollbackAuthorityPaths,
+    allowedResidualPaths: Object.freeze(
+      owner.allowedFiles.filter((relativePath) => !authorityPathSet.has(relativePath))
+    ),
+  });
 }
 
 const AUDIT_INTERVENTION_FINDINGS_MARKER = "; findings=";
