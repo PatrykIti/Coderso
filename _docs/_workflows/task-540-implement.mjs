@@ -684,7 +684,7 @@ const WORKFLOW = ROOT + "/" + WORKFLOW_REL;
 const SMOKE_CONTRACT_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-contract.mjs";
 const SMOKE_EXECUTOR_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-executor.mjs";
 const FROZEN_SMOKE_EXECUTOR_SHA256 =
-  "ad38f3ece885bc4479e2e53e0dbc2806c77648b9a18c1366ec8a7fc0993ea688";
+  "1a1a0aacbc28a237ccd9712e8e85c91f39bf993487de44543538b0fc93382139";
 const SMOKE_HOST_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-host.mjs";
 const LOCAL_ORCHESTRATOR_WORKFLOW_REL = "_docs/_workflows/task-540-local-orchestrator.mjs";
 const TEST_NAME_CONTRACT_WORKFLOW_REL = "_docs/_workflows/task-540-test-name-contract.mjs";
@@ -1070,8 +1070,8 @@ const SCREEN_TAB_LABEL_DRAFT_CONTRACT = deepFreezeExact({
   companionTestPath: "tests/vitest/ui-integration/custom-screen-image-inspector.test.tsx",
   harnessPath: "tests/vitest/ui/support/screenBlockInspectorTestHarness.tsx",
   ownerSha256: "523df5e314384856865563692a1b737885ae7c7737069c8ebb5adbf912b22880",
-  facadeSha256: "3a2703d2b9995e55b034eb80416d5e562354981fb6b6248b20d25fdebe29a232",
-  testSha256: "3b7de253b3eb2c285fa85084e50611f225b9bca550b18d28fbfa68eb919882db",
+  facadeSha256: "70e324b5621cf8aae7a2586f25741a096d354a8aa2fd74a71bfeadaa8c9f27b1",
+  testSha256: "b172c72e0eceefb35b4653dacda8e68ca7cb65d9f19f95ced274eea0ce440181",
   companionTestSha256: "924a7ee35a1b9f7b7260bc0bce3efab51b1a26dd6edb30c5f5f16628fe84ad66",
   harnessSha256: "209601aa4cfb5998da8ce71127c0a8b87ccd78bf8012368c3e1294490a5980a4",
   vitestImportNames: ["afterEach", "expect", "test", "vi"],
@@ -1080,7 +1080,7 @@ const SCREEN_TAB_LABEL_DRAFT_CONTRACT = deepFreezeExact({
   draftContractCanonicalBytes: 12_818,
   tabsEditorContractSha256: "1bf03fd0b27d20ef0707309c4248aa1c8916f3bb8cf65fe2913765c3f85250c4",
   tabsEditorContractCanonicalBytes: 28_347,
-  expectedExpandedTestCount: 18,
+  expectedExpandedTestCount: 19,
   expectedCompanionExpandedTestCount: 18,
   requiredTests: [
     {

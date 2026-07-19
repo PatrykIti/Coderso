@@ -496,7 +496,7 @@ files), and all root `.env*` projection at every command,
 agent, smoke, and terminal workflow boundary; `.env*` means every root name beginning
 `.env`, with a 64-entry bound. The smoke executor is dynamically loaded
 once only after exact canonical-file identity and SHA-256
-`ad38f3ece885bc4479e2e53e0dbc2806c77648b9a18c1366ec8a7fc0993ea688` pass; the same
+`1a1a0aacbc28a237ccd9712e8e85c91f39bf993487de44543538b0fc93382139` pass; the same
 authority must match after import, after full validation, and immediately before the
 one-shot call.
 Before any closure status mutation, the evidence owner writes and byte-verifies one

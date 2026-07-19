@@ -2,11 +2,12 @@ import { spawn } from "node:child_process";
 import { constants as fsConstants } from "node:fs";
 import { access, lstat, readFile, readdir, readlink, realpath, stat } from "node:fs/promises";
 import path from "node:path";
+import { performance } from "node:perf_hooks";
 import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 
 const PORTS = Object.freeze([3000, 5173, 5174]);
-const READY_TIMEOUT_MS = 60_000;
+const READY_TIMEOUT_MS = 120_000;
 const STOP_TIMEOUT_MS = 5_000;
 const MAX_CHILD_STREAM_BYTES = 4 * 1024 * 1024;
 const CHILD_READY_MARKERS = Object.freeze({
@@ -209,6 +210,249 @@ async function settleViteReadiness(server, readinessUrls, failureCode) {
 
 const VITE_READINESS_SOURCE = Function.prototype.toString.call(settleViteReadiness);
 
+function requireExactViteOptionsClone(owner, candidate, failureCode) {
+  const fail = () => {
+    throw new Error(
+      typeof failureCode === "string" && failureCode.length > 0
+        ? failureCode
+        : "vite_options_clone_invalid"
+    );
+  };
+  const requireExactDataObject = (value, expectedKeys) => {
+    if (
+      !value ||
+      typeof value !== "object" ||
+      Array.isArray(value) ||
+      Object.getPrototypeOf(value) !== Object.prototype ||
+      Reflect.ownKeys(value).length !== expectedKeys.length ||
+      !expectedKeys.every((key, index) => Reflect.ownKeys(value)[index] === key)
+    ) {
+      fail();
+    }
+    const descriptors = Object.getOwnPropertyDescriptors(value);
+    for (const key of expectedKeys) {
+      const descriptor = descriptors[key];
+      if (
+        !descriptor ||
+        !Object.hasOwn(descriptor, "value") ||
+        Object.hasOwn(descriptor, "get") ||
+        Object.hasOwn(descriptor, "set") ||
+        descriptor.enumerable !== true
+      ) {
+        fail();
+      }
+    }
+  };
+  const rootKeys = [
+    "configFile",
+    "configLoader",
+    "cacheDir",
+    "envDir",
+    "clearScreen",
+    "logLevel",
+    "server",
+  ];
+  const serverKeys = ["host", "port", "strictPort", "open"];
+  requireExactDataObject(owner, rootKeys);
+  requireExactDataObject(owner.server, serverKeys);
+  requireExactDataObject(candidate, rootKeys);
+  requireExactDataObject(candidate.server, serverKeys);
+  if (
+    !Object.isFrozen(owner) ||
+    !Object.isFrozen(owner.server) ||
+    Object.isFrozen(candidate) ||
+    Object.isFrozen(candidate.server) ||
+    candidate === owner ||
+    candidate.server === owner.server ||
+    rootKeys.some((key) => key !== "server" && !Object.is(candidate[key], owner[key])) ||
+    serverKeys.some((key) => !Object.is(candidate.server[key], owner.server[key]))
+  ) {
+    fail();
+  }
+  return candidate;
+}
+
+const VITE_OPTIONS_CLONE_VALIDATOR_SOURCE = Function.prototype.toString.call(
+  requireExactViteOptionsClone
+);
+
+async function startViteWithWarmRestart(
+  createServer,
+  options,
+  readinessUrls,
+  expectedCacheDir,
+  failureCode
+) {
+  const fail = () => {
+    throw new Error(failureCode);
+  };
+  let currentServer = null;
+  let currentCloseAttempted = false;
+  const closeCurrentOnce = async () => {
+    if (currentServer === null || currentCloseAttempted) return;
+    currentCloseAttempted = true;
+    if (typeof currentServer.close !== "function") fail();
+    await currentServer.close();
+  };
+  const requireExactDataObject = (value, expectedKeys) => {
+    if (
+      !value ||
+      typeof value !== "object" ||
+      Array.isArray(value) ||
+      Object.getPrototypeOf(value) !== Object.prototype ||
+      Reflect.ownKeys(value).length !== expectedKeys.length ||
+      !expectedKeys.every((key, index) => Reflect.ownKeys(value)[index] === key)
+    ) {
+      fail();
+    }
+    const descriptors = Object.getOwnPropertyDescriptors(value);
+    for (const key of expectedKeys) {
+      const descriptor = descriptors[key];
+      if (
+        !descriptor ||
+        !Object.hasOwn(descriptor, "value") ||
+        Object.hasOwn(descriptor, "get") ||
+        Object.hasOwn(descriptor, "set") ||
+        descriptor.enumerable !== true
+      ) {
+        fail();
+      }
+    }
+  };
+  const validateOwner = () => {
+    requireExactDataObject(options, [
+      "configFile",
+      "configLoader",
+      "cacheDir",
+      "envDir",
+      "clearScreen",
+      "logLevel",
+      "server",
+    ]);
+    requireExactDataObject(options.server, ["host", "port", "strictPort", "open"]);
+    if (!Object.isFrozen(options) || !Object.isFrozen(options.server)) fail();
+    const commonValid =
+      options.configLoader === "native" &&
+      options.envDir === false &&
+      options.clearScreen === false &&
+      options.logLevel === "silent" &&
+      options.server.host === "127.0.0.1" &&
+      options.server.strictPort === true &&
+      options.server.open === false;
+    const adminValid =
+      options.configFile === "./vite.config.ts" &&
+      options.cacheDir === "../node_modules/.vite/wf540-admin" &&
+      options.server.port === 5173 &&
+      expectedCacheDir === process.cwd() + "/node_modules/.vite/wf540-admin";
+    const siteValid =
+      options.configFile === "./vite.site.config.ts" &&
+      options.cacheDir === "../node_modules/.vite/wf540-site" &&
+      options.server.port === 5174 &&
+      expectedCacheDir === process.cwd() + "/node_modules/.vite/wf540-site";
+    if (!commonValid || (!adminValid && !siteValid)) fail();
+  };
+  const cloneOptions = () => ({
+    configFile: options.configFile,
+    configLoader: options.configLoader,
+    cacheDir: options.cacheDir,
+    envDir: options.envDir,
+    clearScreen: options.clearScreen,
+    logLevel: options.logLevel,
+    server: {
+      host: options.server.host,
+      port: options.server.port,
+      strictPort: options.server.strictPort,
+      open: options.server.open,
+    },
+  });
+
+  try {
+    if (
+      typeof createServer !== "function" ||
+      typeof expectedCacheDir !== "string" ||
+      expectedCacheDir.length === 0 ||
+      typeof failureCode !== "string" ||
+      failureCode.length === 0
+    ) {
+      fail();
+    }
+    validateOwner();
+    let previousClone = null;
+    let previousServer = null;
+    for (let start = 0; start < 2; start += 1) {
+      validateOwner();
+      const inlineConfig = cloneOptions();
+      requireExactDataObject(inlineConfig, [
+        "configFile",
+        "configLoader",
+        "cacheDir",
+        "envDir",
+        "clearScreen",
+        "logLevel",
+        "server",
+      ]);
+      requireExactDataObject(inlineConfig.server, ["host", "port", "strictPort", "open"]);
+      if (
+        Object.isFrozen(inlineConfig) ||
+        Object.isFrozen(inlineConfig.server) ||
+        inlineConfig === options ||
+        inlineConfig.server === options.server ||
+        (previousClone !== null &&
+          (inlineConfig === previousClone || inlineConfig.server === previousClone.server))
+      ) {
+        fail();
+      }
+      requireExactViteOptionsClone(options, inlineConfig, failureCode);
+      previousClone = inlineConfig;
+      const createdServer = await createServer(inlineConfig);
+      if (previousServer !== null && createdServer === previousServer) fail();
+      currentServer = createdServer;
+      currentCloseAttempted = false;
+      if (
+        !currentServer ||
+        (typeof currentServer !== "object" && typeof currentServer !== "function") ||
+        typeof currentServer.listen !== "function" ||
+        typeof currentServer.close !== "function" ||
+        !currentServer.config ||
+        typeof currentServer.config !== "object"
+      ) {
+        fail();
+      }
+      const cacheDescriptor = Object.getOwnPropertyDescriptor(currentServer.config, "cacheDir");
+      if (
+        !cacheDescriptor ||
+        !Object.hasOwn(cacheDescriptor, "value") ||
+        Object.hasOwn(cacheDescriptor, "get") ||
+        Object.hasOwn(cacheDescriptor, "set") ||
+        cacheDescriptor.value !== expectedCacheDir
+      ) {
+        fail();
+      }
+      await currentServer.listen();
+      await settleViteReadiness(currentServer, readinessUrls, failureCode);
+      if (start === 0) {
+        previousServer = currentServer;
+        await closeCurrentOnce();
+        currentServer = null;
+      }
+    }
+    return currentServer;
+  } catch {
+    try {
+      await closeCurrentOnce();
+    } catch {
+      // A failed close remains a single bounded cleanup attempt.
+    }
+    throw new Error(
+      typeof failureCode === "string" && failureCode.length > 0
+        ? failureCode
+        : "vite_warm_restart_failed"
+    );
+  }
+}
+
+const VITE_WARM_RESTART_SOURCE = Function.prototype.toString.call(startViteWithWarmRestart);
+
 const BACKEND_SOURCE = String.raw`import { startHttpServer } from "./server/httpServer";
 const server = startHttpServer({ port: 3000, adminDevUrl: process.env.VITE_DEV_SERVER_URL });
 let stopping = false;
@@ -224,21 +468,23 @@ await new Promise(() => {});`;
 
 const ADMIN_VITE_SOURCE = String.raw`import { createServer } from "vite";
 ${VITE_READINESS_SOURCE}
-const server = await createServer({
+${VITE_OPTIONS_CLONE_VALIDATOR_SOURCE}
+${VITE_WARM_RESTART_SOURCE}
+const options = Object.freeze({
   configFile: "./vite.config.ts",
   configLoader: "native",
+  cacheDir: "../node_modules/.vite/wf540-admin",
   envDir: false,
   clearScreen: false,
   logLevel: "silent",
-  server: { host: "127.0.0.1", port: 5173, strictPort: true, open: false },
+  server: Object.freeze({ host: "127.0.0.1", port: 5173, strictPort: true, open: false }),
 });
-await server.listen();
-await settleViteReadiness(server, [
+const server = await startViteWithWarmRestart(createServer, options, [
   "/main.tsx",
   "/app/AdminApp.tsx",
   "/app/adminRouteComponents.tsx",
   "/ui/custom-screens/CustomScreenListPage.tsx",
-], "admin_vite_readiness_failed");
+], process.cwd() + "/node_modules/.vite/wf540-admin", "admin_vite_readiness_failed");
 let stopping = false;
 const stop = async () => {
   if (stopping) return;
@@ -252,16 +498,18 @@ await new Promise(() => {});`;
 
 const SITE_VITE_SOURCE = String.raw`import { createServer } from "vite";
 ${VITE_READINESS_SOURCE}
-const server = await createServer({
+${VITE_OPTIONS_CLONE_VALIDATOR_SOURCE}
+${VITE_WARM_RESTART_SOURCE}
+const options = Object.freeze({
   configFile: "./vite.site.config.ts",
   configLoader: "native",
+  cacheDir: "../node_modules/.vite/wf540-site",
   envDir: false,
   clearScreen: false,
   logLevel: "silent",
-  server: { host: "127.0.0.1", port: 5174, strictPort: true, open: false },
+  server: Object.freeze({ host: "127.0.0.1", port: 5174, strictPort: true, open: false }),
 });
-await server.listen();
-await settleViteReadiness(server, ["/main.ts"], "site_vite_readiness_failed");
+const server = await startViteWithWarmRestart(createServer, options, ["/main.ts"], process.cwd() + "/node_modules/.vite/wf540-site", "site_vite_readiness_failed");
 let stopping = false;
 const stop = async () => {
   if (stopping) return;
@@ -405,21 +653,256 @@ async function settleViteReadiness(server, readinessUrls, failureCode) {
     );
   }
 }
-const server = await createServer({
+function requireExactViteOptionsClone(owner, candidate, failureCode) {
+  const fail = () => {
+    throw new Error(
+      typeof failureCode === "string" && failureCode.length > 0
+        ? failureCode
+        : "vite_options_clone_invalid"
+    );
+  };
+  const requireExactDataObject = (value, expectedKeys) => {
+    if (
+      !value ||
+      typeof value !== "object" ||
+      Array.isArray(value) ||
+      Object.getPrototypeOf(value) !== Object.prototype ||
+      Reflect.ownKeys(value).length !== expectedKeys.length ||
+      !expectedKeys.every((key, index) => Reflect.ownKeys(value)[index] === key)
+    ) {
+      fail();
+    }
+    const descriptors = Object.getOwnPropertyDescriptors(value);
+    for (const key of expectedKeys) {
+      const descriptor = descriptors[key];
+      if (
+        !descriptor ||
+        !Object.hasOwn(descriptor, "value") ||
+        Object.hasOwn(descriptor, "get") ||
+        Object.hasOwn(descriptor, "set") ||
+        descriptor.enumerable !== true
+      ) {
+        fail();
+      }
+    }
+  };
+  const rootKeys = [
+    "configFile",
+    "configLoader",
+    "cacheDir",
+    "envDir",
+    "clearScreen",
+    "logLevel",
+    "server",
+  ];
+  const serverKeys = ["host", "port", "strictPort", "open"];
+  requireExactDataObject(owner, rootKeys);
+  requireExactDataObject(owner.server, serverKeys);
+  requireExactDataObject(candidate, rootKeys);
+  requireExactDataObject(candidate.server, serverKeys);
+  if (
+    !Object.isFrozen(owner) ||
+    !Object.isFrozen(owner.server) ||
+    Object.isFrozen(candidate) ||
+    Object.isFrozen(candidate.server) ||
+    candidate === owner ||
+    candidate.server === owner.server ||
+    rootKeys.some((key) => key !== "server" && !Object.is(candidate[key], owner[key])) ||
+    serverKeys.some((key) => !Object.is(candidate.server[key], owner.server[key]))
+  ) {
+    fail();
+  }
+  return candidate;
+}
+async function startViteWithWarmRestart(
+  createServer,
+  options,
+  readinessUrls,
+  expectedCacheDir,
+  failureCode
+) {
+  const fail = () => {
+    throw new Error(failureCode);
+  };
+  let currentServer = null;
+  let currentCloseAttempted = false;
+  const closeCurrentOnce = async () => {
+    if (currentServer === null || currentCloseAttempted) return;
+    currentCloseAttempted = true;
+    if (typeof currentServer.close !== "function") fail();
+    await currentServer.close();
+  };
+  const requireExactDataObject = (value, expectedKeys) => {
+    if (
+      !value ||
+      typeof value !== "object" ||
+      Array.isArray(value) ||
+      Object.getPrototypeOf(value) !== Object.prototype ||
+      Reflect.ownKeys(value).length !== expectedKeys.length ||
+      !expectedKeys.every((key, index) => Reflect.ownKeys(value)[index] === key)
+    ) {
+      fail();
+    }
+    const descriptors = Object.getOwnPropertyDescriptors(value);
+    for (const key of expectedKeys) {
+      const descriptor = descriptors[key];
+      if (
+        !descriptor ||
+        !Object.hasOwn(descriptor, "value") ||
+        Object.hasOwn(descriptor, "get") ||
+        Object.hasOwn(descriptor, "set") ||
+        descriptor.enumerable !== true
+      ) {
+        fail();
+      }
+    }
+  };
+  const validateOwner = () => {
+    requireExactDataObject(options, [
+      "configFile",
+      "configLoader",
+      "cacheDir",
+      "envDir",
+      "clearScreen",
+      "logLevel",
+      "server",
+    ]);
+    requireExactDataObject(options.server, ["host", "port", "strictPort", "open"]);
+    if (!Object.isFrozen(options) || !Object.isFrozen(options.server)) fail();
+    const commonValid =
+      options.configLoader === "native" &&
+      options.envDir === false &&
+      options.clearScreen === false &&
+      options.logLevel === "silent" &&
+      options.server.host === "127.0.0.1" &&
+      options.server.strictPort === true &&
+      options.server.open === false;
+    const adminValid =
+      options.configFile === "./vite.config.ts" &&
+      options.cacheDir === "../node_modules/.vite/wf540-admin" &&
+      options.server.port === 5173 &&
+      expectedCacheDir === process.cwd() + "/node_modules/.vite/wf540-admin";
+    const siteValid =
+      options.configFile === "./vite.site.config.ts" &&
+      options.cacheDir === "../node_modules/.vite/wf540-site" &&
+      options.server.port === 5174 &&
+      expectedCacheDir === process.cwd() + "/node_modules/.vite/wf540-site";
+    if (!commonValid || (!adminValid && !siteValid)) fail();
+  };
+  const cloneOptions = () => ({
+    configFile: options.configFile,
+    configLoader: options.configLoader,
+    cacheDir: options.cacheDir,
+    envDir: options.envDir,
+    clearScreen: options.clearScreen,
+    logLevel: options.logLevel,
+    server: {
+      host: options.server.host,
+      port: options.server.port,
+      strictPort: options.server.strictPort,
+      open: options.server.open,
+    },
+  });
+
+  try {
+    if (
+      typeof createServer !== "function" ||
+      typeof expectedCacheDir !== "string" ||
+      expectedCacheDir.length === 0 ||
+      typeof failureCode !== "string" ||
+      failureCode.length === 0
+    ) {
+      fail();
+    }
+    validateOwner();
+    let previousClone = null;
+    let previousServer = null;
+    for (let start = 0; start < 2; start += 1) {
+      validateOwner();
+      const inlineConfig = cloneOptions();
+      requireExactDataObject(inlineConfig, [
+        "configFile",
+        "configLoader",
+        "cacheDir",
+        "envDir",
+        "clearScreen",
+        "logLevel",
+        "server",
+      ]);
+      requireExactDataObject(inlineConfig.server, ["host", "port", "strictPort", "open"]);
+      if (
+        Object.isFrozen(inlineConfig) ||
+        Object.isFrozen(inlineConfig.server) ||
+        inlineConfig === options ||
+        inlineConfig.server === options.server ||
+        (previousClone !== null &&
+          (inlineConfig === previousClone || inlineConfig.server === previousClone.server))
+      ) {
+        fail();
+      }
+      requireExactViteOptionsClone(options, inlineConfig, failureCode);
+      previousClone = inlineConfig;
+      const createdServer = await createServer(inlineConfig);
+      if (previousServer !== null && createdServer === previousServer) fail();
+      currentServer = createdServer;
+      currentCloseAttempted = false;
+      if (
+        !currentServer ||
+        (typeof currentServer !== "object" && typeof currentServer !== "function") ||
+        typeof currentServer.listen !== "function" ||
+        typeof currentServer.close !== "function" ||
+        !currentServer.config ||
+        typeof currentServer.config !== "object"
+      ) {
+        fail();
+      }
+      const cacheDescriptor = Object.getOwnPropertyDescriptor(currentServer.config, "cacheDir");
+      if (
+        !cacheDescriptor ||
+        !Object.hasOwn(cacheDescriptor, "value") ||
+        Object.hasOwn(cacheDescriptor, "get") ||
+        Object.hasOwn(cacheDescriptor, "set") ||
+        cacheDescriptor.value !== expectedCacheDir
+      ) {
+        fail();
+      }
+      await currentServer.listen();
+      await settleViteReadiness(currentServer, readinessUrls, failureCode);
+      if (start === 0) {
+        previousServer = currentServer;
+        await closeCurrentOnce();
+        currentServer = null;
+      }
+    }
+    return currentServer;
+  } catch {
+    try {
+      await closeCurrentOnce();
+    } catch {
+      // A failed close remains a single bounded cleanup attempt.
+    }
+    throw new Error(
+      typeof failureCode === "string" && failureCode.length > 0
+        ? failureCode
+        : "vite_warm_restart_failed"
+    );
+  }
+}
+const options = Object.freeze({
   configFile: "./vite.config.ts",
   configLoader: "native",
+  cacheDir: "../node_modules/.vite/wf540-admin",
   envDir: false,
   clearScreen: false,
   logLevel: "silent",
-  server: { host: "127.0.0.1", port: 5173, strictPort: true, open: false },
+  server: Object.freeze({ host: "127.0.0.1", port: 5173, strictPort: true, open: false }),
 });
-await server.listen();
-await settleViteReadiness(server, [
+const server = await startViteWithWarmRestart(createServer, options, [
   "/main.tsx",
   "/app/AdminApp.tsx",
   "/app/adminRouteComponents.tsx",
   "/ui/custom-screens/CustomScreenListPage.tsx",
-], "admin_vite_readiness_failed");
+], process.cwd() + "/node_modules/.vite/wf540-admin", "admin_vite_readiness_failed");
 let stopping = false;
 const stop = async () => {
   if (stopping) return;
@@ -547,16 +1030,251 @@ async function settleViteReadiness(server, readinessUrls, failureCode) {
     );
   }
 }
-const server = await createServer({
+function requireExactViteOptionsClone(owner, candidate, failureCode) {
+  const fail = () => {
+    throw new Error(
+      typeof failureCode === "string" && failureCode.length > 0
+        ? failureCode
+        : "vite_options_clone_invalid"
+    );
+  };
+  const requireExactDataObject = (value, expectedKeys) => {
+    if (
+      !value ||
+      typeof value !== "object" ||
+      Array.isArray(value) ||
+      Object.getPrototypeOf(value) !== Object.prototype ||
+      Reflect.ownKeys(value).length !== expectedKeys.length ||
+      !expectedKeys.every((key, index) => Reflect.ownKeys(value)[index] === key)
+    ) {
+      fail();
+    }
+    const descriptors = Object.getOwnPropertyDescriptors(value);
+    for (const key of expectedKeys) {
+      const descriptor = descriptors[key];
+      if (
+        !descriptor ||
+        !Object.hasOwn(descriptor, "value") ||
+        Object.hasOwn(descriptor, "get") ||
+        Object.hasOwn(descriptor, "set") ||
+        descriptor.enumerable !== true
+      ) {
+        fail();
+      }
+    }
+  };
+  const rootKeys = [
+    "configFile",
+    "configLoader",
+    "cacheDir",
+    "envDir",
+    "clearScreen",
+    "logLevel",
+    "server",
+  ];
+  const serverKeys = ["host", "port", "strictPort", "open"];
+  requireExactDataObject(owner, rootKeys);
+  requireExactDataObject(owner.server, serverKeys);
+  requireExactDataObject(candidate, rootKeys);
+  requireExactDataObject(candidate.server, serverKeys);
+  if (
+    !Object.isFrozen(owner) ||
+    !Object.isFrozen(owner.server) ||
+    Object.isFrozen(candidate) ||
+    Object.isFrozen(candidate.server) ||
+    candidate === owner ||
+    candidate.server === owner.server ||
+    rootKeys.some((key) => key !== "server" && !Object.is(candidate[key], owner[key])) ||
+    serverKeys.some((key) => !Object.is(candidate.server[key], owner.server[key]))
+  ) {
+    fail();
+  }
+  return candidate;
+}
+async function startViteWithWarmRestart(
+  createServer,
+  options,
+  readinessUrls,
+  expectedCacheDir,
+  failureCode
+) {
+  const fail = () => {
+    throw new Error(failureCode);
+  };
+  let currentServer = null;
+  let currentCloseAttempted = false;
+  const closeCurrentOnce = async () => {
+    if (currentServer === null || currentCloseAttempted) return;
+    currentCloseAttempted = true;
+    if (typeof currentServer.close !== "function") fail();
+    await currentServer.close();
+  };
+  const requireExactDataObject = (value, expectedKeys) => {
+    if (
+      !value ||
+      typeof value !== "object" ||
+      Array.isArray(value) ||
+      Object.getPrototypeOf(value) !== Object.prototype ||
+      Reflect.ownKeys(value).length !== expectedKeys.length ||
+      !expectedKeys.every((key, index) => Reflect.ownKeys(value)[index] === key)
+    ) {
+      fail();
+    }
+    const descriptors = Object.getOwnPropertyDescriptors(value);
+    for (const key of expectedKeys) {
+      const descriptor = descriptors[key];
+      if (
+        !descriptor ||
+        !Object.hasOwn(descriptor, "value") ||
+        Object.hasOwn(descriptor, "get") ||
+        Object.hasOwn(descriptor, "set") ||
+        descriptor.enumerable !== true
+      ) {
+        fail();
+      }
+    }
+  };
+  const validateOwner = () => {
+    requireExactDataObject(options, [
+      "configFile",
+      "configLoader",
+      "cacheDir",
+      "envDir",
+      "clearScreen",
+      "logLevel",
+      "server",
+    ]);
+    requireExactDataObject(options.server, ["host", "port", "strictPort", "open"]);
+    if (!Object.isFrozen(options) || !Object.isFrozen(options.server)) fail();
+    const commonValid =
+      options.configLoader === "native" &&
+      options.envDir === false &&
+      options.clearScreen === false &&
+      options.logLevel === "silent" &&
+      options.server.host === "127.0.0.1" &&
+      options.server.strictPort === true &&
+      options.server.open === false;
+    const adminValid =
+      options.configFile === "./vite.config.ts" &&
+      options.cacheDir === "../node_modules/.vite/wf540-admin" &&
+      options.server.port === 5173 &&
+      expectedCacheDir === process.cwd() + "/node_modules/.vite/wf540-admin";
+    const siteValid =
+      options.configFile === "./vite.site.config.ts" &&
+      options.cacheDir === "../node_modules/.vite/wf540-site" &&
+      options.server.port === 5174 &&
+      expectedCacheDir === process.cwd() + "/node_modules/.vite/wf540-site";
+    if (!commonValid || (!adminValid && !siteValid)) fail();
+  };
+  const cloneOptions = () => ({
+    configFile: options.configFile,
+    configLoader: options.configLoader,
+    cacheDir: options.cacheDir,
+    envDir: options.envDir,
+    clearScreen: options.clearScreen,
+    logLevel: options.logLevel,
+    server: {
+      host: options.server.host,
+      port: options.server.port,
+      strictPort: options.server.strictPort,
+      open: options.server.open,
+    },
+  });
+
+  try {
+    if (
+      typeof createServer !== "function" ||
+      typeof expectedCacheDir !== "string" ||
+      expectedCacheDir.length === 0 ||
+      typeof failureCode !== "string" ||
+      failureCode.length === 0
+    ) {
+      fail();
+    }
+    validateOwner();
+    let previousClone = null;
+    let previousServer = null;
+    for (let start = 0; start < 2; start += 1) {
+      validateOwner();
+      const inlineConfig = cloneOptions();
+      requireExactDataObject(inlineConfig, [
+        "configFile",
+        "configLoader",
+        "cacheDir",
+        "envDir",
+        "clearScreen",
+        "logLevel",
+        "server",
+      ]);
+      requireExactDataObject(inlineConfig.server, ["host", "port", "strictPort", "open"]);
+      if (
+        Object.isFrozen(inlineConfig) ||
+        Object.isFrozen(inlineConfig.server) ||
+        inlineConfig === options ||
+        inlineConfig.server === options.server ||
+        (previousClone !== null &&
+          (inlineConfig === previousClone || inlineConfig.server === previousClone.server))
+      ) {
+        fail();
+      }
+      requireExactViteOptionsClone(options, inlineConfig, failureCode);
+      previousClone = inlineConfig;
+      const createdServer = await createServer(inlineConfig);
+      if (previousServer !== null && createdServer === previousServer) fail();
+      currentServer = createdServer;
+      currentCloseAttempted = false;
+      if (
+        !currentServer ||
+        (typeof currentServer !== "object" && typeof currentServer !== "function") ||
+        typeof currentServer.listen !== "function" ||
+        typeof currentServer.close !== "function" ||
+        !currentServer.config ||
+        typeof currentServer.config !== "object"
+      ) {
+        fail();
+      }
+      const cacheDescriptor = Object.getOwnPropertyDescriptor(currentServer.config, "cacheDir");
+      if (
+        !cacheDescriptor ||
+        !Object.hasOwn(cacheDescriptor, "value") ||
+        Object.hasOwn(cacheDescriptor, "get") ||
+        Object.hasOwn(cacheDescriptor, "set") ||
+        cacheDescriptor.value !== expectedCacheDir
+      ) {
+        fail();
+      }
+      await currentServer.listen();
+      await settleViteReadiness(currentServer, readinessUrls, failureCode);
+      if (start === 0) {
+        previousServer = currentServer;
+        await closeCurrentOnce();
+        currentServer = null;
+      }
+    }
+    return currentServer;
+  } catch {
+    try {
+      await closeCurrentOnce();
+    } catch {
+      // A failed close remains a single bounded cleanup attempt.
+    }
+    throw new Error(
+      typeof failureCode === "string" && failureCode.length > 0
+        ? failureCode
+        : "vite_warm_restart_failed"
+    );
+  }
+}
+const options = Object.freeze({
   configFile: "./vite.site.config.ts",
   configLoader: "native",
+  cacheDir: "../node_modules/.vite/wf540-site",
   envDir: false,
   clearScreen: false,
   logLevel: "silent",
-  server: { host: "127.0.0.1", port: 5174, strictPort: true, open: false },
+  server: Object.freeze({ host: "127.0.0.1", port: 5174, strictPort: true, open: false }),
 });
-await server.listen();
-await settleViteReadiness(server, ["/main.ts"], "site_vite_readiness_failed");
+const server = await startViteWithWarmRestart(createServer, options, ["/main.ts"], process.cwd() + "/node_modules/.vite/wf540-site", "site_vite_readiness_failed");
 let stopping = false;
 const stop = async () => {
   if (stopping) return;
@@ -1422,6 +2140,144 @@ async function requireDirectoryIdentity(target, deps, label) {
   invariant((await deps.realpath(target)) === target, label + " directory is not canonical");
 }
 
+function viteCacheAuthorityTargets(root) {
+  const nodeModules = path.join(root, "core", "node_modules");
+  const base = path.join(nodeModules, ".vite");
+  const targets = [
+    {
+      kind: "admin",
+      cache: path.join(base, "wf540-admin"),
+      deps: path.join(base, "wf540-admin", "deps"),
+    },
+    {
+      kind: "site",
+      cache: path.join(base, "wf540-site"),
+      deps: path.join(base, "wf540-site", "deps"),
+    },
+  ];
+  invariant(
+    path.relative(base, targets[0].cache) === "wf540-admin" &&
+      path.relative(base, targets[1].cache) === "wf540-site" &&
+      targets[0].cache !== targets[1].cache &&
+      targets.every(({ cache, deps }) => path.relative(cache, deps) === "deps"),
+    "Vite cache lexical authority drift"
+  );
+  return deepFreezeExact({ nodeModules, base, targets });
+}
+
+async function inspectCanonicalDirectory(target, deps, label, required) {
+  let targetLstat;
+  try {
+    targetLstat = await deps.lstat(target);
+  } catch (error) {
+    invariant(
+      !required && error && typeof error === "object" && error.code === "ENOENT",
+      label + " is missing"
+    );
+    return null;
+  }
+  invariant(
+    targetLstat.isDirectory() && !targetLstat.isSymbolicLink(),
+    label + " directory identity drift"
+  );
+  const resolved = await deps.realpath(target);
+  invariant(resolved === target, label + " directory is not canonical");
+  return resolved;
+}
+
+async function validateViteCacheAuthorities(root, deps, required) {
+  invariant(typeof required === "boolean", "Vite cache required-mode drift");
+  const authority = viteCacheAuthorityTargets(root);
+  const nodeModulesRealpath = await inspectCanonicalDirectory(
+    authority.nodeModules,
+    deps,
+    "core node_modules cache ancestor",
+    true
+  );
+  const baseRealpath = await inspectCanonicalDirectory(
+    authority.base,
+    deps,
+    "Vite cache authority base",
+    required
+  );
+  invariant(
+    baseRealpath === null || nodeModulesRealpath !== null,
+    "Vite cache authority base exists without its core node_modules ancestor"
+  );
+  if (baseRealpath !== null) {
+    invariant(
+      path.relative(nodeModulesRealpath, baseRealpath) === ".vite",
+      "Vite cache authority base escaped core node_modules"
+    );
+  }
+  const observed = [];
+  for (const target of authority.targets) {
+    const cacheRealpath = await inspectCanonicalDirectory(
+      target.cache,
+      deps,
+      target.kind + " Vite cache",
+      required
+    );
+    const depsRealpath = await inspectCanonicalDirectory(
+      target.deps,
+      deps,
+      target.kind + " Vite optimizer deps",
+      required
+    );
+    invariant(
+      depsRealpath === null || cacheRealpath !== null,
+      target.kind + " Vite optimizer exists without its cache parent"
+    );
+    invariant(
+      cacheRealpath === null || baseRealpath !== null,
+      target.kind + " Vite cache exists without its authority base"
+    );
+    if (cacheRealpath !== null) {
+      invariant(
+        path.relative(baseRealpath, cacheRealpath) === path.basename(target.cache),
+        target.kind + " Vite cache escaped its authority base"
+      );
+    }
+    if (depsRealpath !== null) {
+      invariant(
+        path.relative(cacheRealpath, depsRealpath) === "deps",
+        target.kind + " Vite optimizer escaped its cache parent"
+      );
+    }
+    observed.push({ kind: target.kind, cacheRealpath, depsRealpath });
+  }
+  const presentCaches = observed.flatMap(({ cacheRealpath }) =>
+    cacheRealpath === null ? [] : [cacheRealpath]
+  );
+  const presentDeps = observed.flatMap(({ depsRealpath }) =>
+    depsRealpath === null ? [] : [depsRealpath]
+  );
+  invariant(
+    new Set(presentCaches).size === presentCaches.length,
+    "Admin and site Vite caches share a realpath"
+  );
+  invariant(
+    new Set(presentDeps).size === presentDeps.length,
+    "Admin and site Vite optimizer directories share a realpath"
+  );
+  if (required) {
+    invariant(
+      baseRealpath === authority.base &&
+        nodeModulesRealpath === authority.nodeModules &&
+        presentCaches.length === 2 &&
+        presentDeps.length === 2,
+      "post-ready Vite cache authority is incomplete"
+    );
+  }
+  return deepFreezeExact({
+    nodeModules: authority.nodeModules,
+    nodeModulesRealpath,
+    base: authority.base,
+    baseRealpath,
+    observed,
+  });
+}
+
 async function requireRegularFileIdentity(target, deps, label) {
   const targetLstat = await deps.lstat(target);
   invariant(targetLstat.isFile() && !targetLstat.isSymbolicLink(), label + " file identity drift");
@@ -1489,6 +2345,7 @@ async function validateCanonicalRootAndToolchain(root, environment, deps) {
   await requireDirectoryIdentity(root, deps, "repository root");
   const coreRoot = path.join(root, "core");
   await requireDirectoryIdentity(coreRoot, deps, "core root");
+  await validateViteCacheAuthorities(root, deps, false);
   await requireDirectoryIdentity(path.join(root, "node_modules"), deps, "root node_modules");
   await requireDirectoryIdentity(path.join(root, "node_modules/vite"), deps, "installed Vite root");
   await requirePathAbsent(
@@ -1595,6 +2452,9 @@ function createRuntimeDependencies() {
     realpath,
     stat,
     delay,
+    monotonicNow() {
+      return performance.now();
+    },
     signalPid(pid, signal) {
       process.kill(pid, signal);
     },
@@ -1631,8 +2491,57 @@ function isDirectModuleExecution(moduleUrl, argvEntry, cwd) {
   return pathToFileURL(path.resolve(cwd, argvEntry)).href === moduleUrl;
 }
 
-async function waitForDirectChildIdentity(child, runnerIdentity, deps) {
+function createStartupDeadline(deps) {
+  invariant(
+    typeof deps.monotonicNow === "function" && typeof deps.delay === "function",
+    "startup monotonic clock dependencies drift"
+  );
+  const startedAt = deps.monotonicNow();
+  invariant(
+    typeof startedAt === "number" && Number.isFinite(startedAt) && startedAt >= 0,
+    "startup monotonic epoch drift"
+  );
+  const expiresAt = startedAt + READY_TIMEOUT_MS;
+  invariant(Number.isFinite(expiresAt), "startup monotonic deadline overflow");
+  let lastObservedAt = startedAt;
+  const read = () => {
+    const observedAt = deps.monotonicNow();
+    invariant(
+      typeof observedAt === "number" && Number.isFinite(observedAt) && observedAt >= lastObservedAt,
+      "startup monotonic clock regressed"
+    );
+    lastObservedAt = observedAt;
+    return observedAt;
+  };
+  return Object.freeze({
+    assertActive(boundary) {
+      invariant(
+        typeof boundary === "string" && boundary.length > 0 && read() < expiresAt,
+        "startup deadline expired at " + boundary
+      );
+    },
+    async boundedDelay(requestedMs, boundary) {
+      invariant(
+        Number.isSafeInteger(requestedMs) &&
+          requestedMs > 0 &&
+          typeof boundary === "string" &&
+          boundary.length > 0,
+        "startup bounded-delay contract drift"
+      );
+      const before = read();
+      const remaining = expiresAt - before;
+      invariant(remaining > 0, "startup deadline expired before " + boundary);
+      await deps.delay(Math.min(requestedMs, remaining));
+      const after = read();
+      invariant(after <= expiresAt, "startup delay crossed its monotonic deadline");
+      return after < expiresAt;
+    },
+  });
+}
+
+async function waitForDirectChildIdentity(child, runnerIdentity, deps, startupDeadline) {
   for (let attempt = 0; attempt < 50; attempt += 1) {
+    startupDeadline.assertActive(child.kind + " identity attempt");
     invariant(!child.spawnFailed, child.kind + " failed to spawn");
     invariant(
       child.process.exitCode === null && child.process.signalCode === null,
@@ -1647,7 +2556,9 @@ async function waitForDirectChildIdentity(child, runnerIdentity, deps) {
       return cloneIdentity(identity);
     } catch {
       if (attempt === 49) break;
-      await deps.delay(20);
+      if (!(await startupDeadline.boundedDelay(20, child.kind + " identity retry delay"))) {
+        break;
+      }
     }
   }
   invariant(false, child.kind + " identity retention timed out");
@@ -1661,9 +2572,16 @@ async function serve(root, deps) {
     runnerIdentity.pid === runnerIdentity.pgid,
     "host runner is not its process-group leader"
   );
+  const startupDeadline = createStartupDeadline(deps);
+  startupDeadline.assertActive("initial port-absence proof");
   invariant(await provePortsAbsent(deps), "one or more smoke ports are already owned");
-  await deps.delay(100);
+  startupDeadline.assertActive("first port-absence proof");
+  invariant(
+    await startupDeadline.boundedDelay(100, "stable port-absence delay"),
+    "host readiness timed out before stable port proof"
+  );
   invariant(await provePortsAbsent(deps), "smoke port absence is not stable");
+  startupDeadline.assertActive("stable port-absence proof");
   const descriptors = childDescriptors(root);
   validateChildDescriptors(descriptors, root);
   const children = [];
@@ -1699,6 +2617,7 @@ async function serve(root, deps) {
   };
   const assertStartupActive = (boundary) => {
     invariant(requestedReason === null, "host stopped at startup boundary " + boundary);
+    startupDeadline.assertActive(boundary);
   };
   deps.onceSignal("SIGTERM", () => requestStop("signal"));
   deps.onceSignal("SIGINT", () => requestStop("signal"));
@@ -1730,15 +2649,12 @@ async function serve(root, deps) {
       });
       child.once("exit", () => requestStop("child_exit"));
       assertStartupActive("before-" + descriptor.kind + "-identity");
-      row.identity = await waitForDirectChildIdentity(row, runnerIdentity, deps);
+      row.identity = await waitForDirectChildIdentity(row, runnerIdentity, deps, startupDeadline);
       assertStartupActive("after-" + descriptor.kind + "-identity");
     }
     let proof = null;
-    for (
-      let attempt = 0;
-      attempt < READY_TIMEOUT_MS / 200 && requestedReason === null;
-      attempt += 1
-    ) {
+    while (proof === null && requestedReason === null) {
+      assertStartupActive("ready-proof attempt");
       invariant(
         children.every(
           (child) =>
@@ -1752,7 +2668,9 @@ async function serve(root, deps) {
         assertStartupActive("before-first-ready-proof");
         const first = await stableStartupProof(children, runnerIdentity, deps);
         assertStartupActive("after-first-ready-proof");
-        await deps.delay(200);
+        if (!(await startupDeadline.boundedDelay(200, "stable startup proof observation delay"))) {
+          break;
+        }
         assertStartupActive("before-second-ready-proof");
         const second = await stableStartupProof(children, runnerIdentity, deps);
         assertStartupActive("after-second-ready-proof");
@@ -1761,7 +2679,9 @@ async function serve(root, deps) {
         break;
       } catch (error) {
         if (requestedReason !== null) throw error;
-        await deps.delay(200);
+        if (!(await startupDeadline.boundedDelay(200, "startup proof retry delay"))) {
+          break;
+        }
       }
     }
     invariant(proof !== null, "host readiness timed out");
@@ -1772,6 +2692,8 @@ async function serve(root, deps) {
       ),
       "child output exceeded the private bound"
     );
+    await validateViteCacheAuthorities(root, deps, true);
+    assertStartupActive("after-cache-authority-proof");
     const ready = freezeReadyProjection({
       schemaVersion: 1,
       runnerPid: proof.runner.pid,
@@ -1832,12 +2754,55 @@ function buildSelfTestEnvironment() {
 
 function createPreflightFake(root, options = {}) {
   const coreRoot = path.join(root, "core");
+  const cacheAuthority = viteCacheAuthorityTargets(root);
+  const [adminCache, siteCache] = cacheAuthority.targets;
   const directories = new Set([
     root,
     coreRoot,
+    cacheAuthority.nodeModules,
     path.join(root, "node_modules"),
     path.join(root, "node_modules/vite"),
+    cacheAuthority.base,
+    adminCache.cache,
+    adminCache.deps,
+    siteCache.cache,
+    siteCache.deps,
   ]);
+  const removeTaskCacheChildren = () => {
+    directories.delete(adminCache.cache);
+    directories.delete(adminCache.deps);
+    directories.delete(siteCache.cache);
+    directories.delete(siteCache.deps);
+  };
+  if (options.cacheFault === "missing-base") {
+    directories.delete(cacheAuthority.base);
+    removeTaskCacheChildren();
+  }
+  if (options.cacheFault === "missing-base-with-children") {
+    directories.delete(cacheAuthority.base);
+  }
+  if (["base-symlink", "base-noncanonical", "base-escape"].includes(options.cacheFault)) {
+    removeTaskCacheChildren();
+  }
+  if (options.cacheFault === "node-modules-symlink") {
+    directories.delete(cacheAuthority.base);
+    removeTaskCacheChildren();
+  }
+  if (options.cacheFault === "missing-node-modules") {
+    directories.delete(cacheAuthority.nodeModules);
+    directories.delete(cacheAuthority.base);
+    removeTaskCacheChildren();
+  }
+  if (options.cacheFault === "missing-admin-cache") {
+    directories.delete(adminCache.cache);
+    directories.delete(adminCache.deps);
+  }
+  if (options.cacheFault === "missing-admin-deps") directories.delete(adminCache.deps);
+  if (options.cacheFault === "missing-site-cache") {
+    directories.delete(siteCache.cache);
+    directories.delete(siteCache.deps);
+  }
+  if (options.cacheFault === "missing-site-deps") directories.delete(siteCache.deps);
   if (options.viteShadow) directories.add(path.join(coreRoot, "node_modules/vite"));
   const files = new Map([
     [path.join(root, "package.json"), JSON.stringify({ devDependencies: { vite: "^8.0.16" } })],
@@ -1876,7 +2841,18 @@ function createPreflightFake(root, options = {}) {
       return {
         isDirectory: () => true,
         isFile: () => false,
-        isSymbolicLink: () => Boolean(lstatMode && options.symlinkRoot && target === root),
+        isSymbolicLink: () =>
+          Boolean(
+            lstatMode &&
+            ((options.symlinkRoot && target === root) ||
+              (options.cacheFault === "node-modules-symlink" &&
+                target === cacheAuthority.nodeModules) ||
+              (options.cacheFault === "base-symlink" && target === cacheAuthority.base) ||
+              (options.cacheFault === "admin-cache-symlink" && target === adminCache.cache) ||
+              (options.cacheFault === "site-cache-symlink" && target === siteCache.cache) ||
+              (options.cacheFault === "admin-deps-symlink" && target === adminCache.deps) ||
+              (options.cacheFault === "site-deps-symlink" && target === siteCache.deps))
+          ),
       };
     }
     if (files.has(target)) {
@@ -1907,6 +2883,27 @@ function createPreflightFake(root, options = {}) {
       calls += 1;
       if (!files.has(target) && !directories.has(target)) throw missing();
       if (options.nonCanonicalRoot && target === root) return root + "-elsewhere";
+      if (options.cacheFault === "base-noncanonical" && target === cacheAuthority.base) {
+        return path.join(cacheAuthority.nodeModules, ".vite-elsewhere");
+      }
+      if (options.cacheFault === "base-escape" && target === cacheAuthority.base) {
+        return path.join(root, "escaped-vite-authority");
+      }
+      if (options.cacheFault === "admin-cache-noncanonical" && target === adminCache.cache) {
+        return path.join(cacheAuthority.base, "elsewhere-admin");
+      }
+      if (options.cacheFault === "admin-cache-escape" && target === adminCache.cache) {
+        return path.join(root, "escaped-vite-cache");
+      }
+      if (options.cacheFault === "shared-cache-realpath" && target === siteCache.cache) {
+        return adminCache.cache;
+      }
+      if (options.cacheFault === "admin-deps-escape" && target === adminCache.deps) {
+        return path.join(cacheAuthority.base, "escaped-deps");
+      }
+      if (options.cacheFault === "shared-deps-realpath" && target === siteCache.deps) {
+        return adminCache.deps;
+      }
       return target;
     },
     async stat(target) {
@@ -1968,9 +2965,15 @@ function createStopSelfTestHarness(mode) {
 function createServeSelfTestHarness(
   root,
   environment,
-  { listenerFault = null, shutdownAfterFirstSpawn = false } = {}
+  {
+    listenerFault = null,
+    shutdownAfterFirstSpawn = false,
+    cacheFault = null,
+    startupTimeout = false,
+    alternatingSecondProofDrift = false,
+  } = {}
 ) {
-  const preflight = createPreflightFake(root);
+  const preflight = createPreflightFake(root, { cacheFault });
   const identities = [
     { pid: 100, ppid: 1, pgid: 100, startTicks: "1000" },
     { pid: 101, ppid: 100, pgid: 100, startTicks: "1001" },
@@ -1985,6 +2988,20 @@ function createServeSelfTestHarness(
   const spawnCalls = [];
   const signals = [];
   const output = [];
+  const delayRequests = [];
+  const proofCycles = {
+    calls: 0,
+    successfulFirst: 0,
+    failedSecond: 0,
+    recoveredFirst: 0,
+    observationDelays: [],
+    recoveryDelays: [],
+  };
+  let lastFirstProofAt = null;
+  let lastFailedSecondAt = null;
+  let inventoryStatReadsRemaining = 0;
+  let monotonicMs = 0;
+  let firstCleanupSignalAt = null;
   let spawnedEnvironment = null;
   const signalHandlers = new Map();
   const inodes = new Map([
@@ -2041,7 +3058,9 @@ function createServeSelfTestHarness(
   const makeStream = (kind, isStdout) => ({
     on(event, callback) {
       invariant(event === "data", "fake child stream event drift");
-      if (isStdout) callback(Buffer.from(CHILD_READY_MARKERS[kind]));
+      if (isStdout && !(startupTimeout && kind === "admin")) {
+        callback(Buffer.from(CHILD_READY_MARKERS[kind]));
+      }
     },
   });
   const makeChild = (kind, pid) => {
@@ -2121,8 +3140,33 @@ function createServeSelfTestHarness(
       if (target === "/proc/net/tcp6") return tcpTable().split("\n")[0] + "\n";
       const statMatch = /^\/proc\/([1-9][0-9]*)\/stat$/u.exec(target);
       if (statMatch) {
-        const identity = live.get(Number(statMatch[1]));
+        const pid = Number(statMatch[1]);
+        const identity = live.get(pid);
         if (!identity) throw Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+        const inventoryRead = inventoryStatReadsRemaining > 0;
+        if (inventoryRead) inventoryStatReadsRemaining -= 1;
+        if (
+          alternatingSecondProofDrift &&
+          !inventoryRead &&
+          pid === 100 &&
+          spawnCalls.length === 3 &&
+          monotonicMs < READY_TIMEOUT_MS
+        ) {
+          proofCycles.calls += 1;
+          if (proofCycles.calls % 2 === 1) {
+            if (proofCycles.calls > 1) {
+              proofCycles.recoveredFirst += 1;
+              proofCycles.recoveryDelays.push(monotonicMs - lastFailedSecondAt);
+            }
+            lastFirstProofAt = monotonicMs;
+          } else {
+            proofCycles.successfulFirst += 1;
+            proofCycles.failedSecond += 1;
+            proofCycles.observationDelays.push(monotonicMs - lastFirstProofAt);
+            lastFailedSecondAt = monotonicMs;
+            return procStat({ ...identity, startTicks: "9999" });
+          }
+        }
         return procStat(identity);
       }
       return preflight.dependencies.readFile(target, encoding);
@@ -2130,10 +3174,12 @@ function createServeSelfTestHarness(
     async readdir(target, options) {
       if (target === "/proc") {
         invariant(options?.withFileTypes === true, "fake /proc enumeration options drift");
-        return [...live.keys()].map((pid) => ({
+        const entries = [...live.keys()].map((pid) => ({
           name: String(pid),
           isDirectory: () => true,
         }));
+        inventoryStatReadsRemaining = entries.length;
+        return entries;
       }
       const fdMatch = /^\/proc\/([1-9][0-9]*)\/fd$/u.exec(target);
       if (fdMatch) {
@@ -2163,8 +3209,19 @@ function createServeSelfTestHarness(
     },
     realpath: preflight.dependencies.realpath,
     stat: preflight.dependencies.stat,
-    async delay() {},
+    monotonicNow() {
+      return monotonicMs;
+    },
+    async delay(requestedMs) {
+      invariant(
+        typeof requestedMs === "number" && Number.isFinite(requestedMs) && requestedMs > 0,
+        "fake monotonic delay drift"
+      );
+      delayRequests.push(requestedMs);
+      monotonicMs += requestedMs;
+    },
     signalPid(pid, signal) {
+      if (firstCleanupSignalAt === null) firstCleanupSignalAt = monotonicMs;
       signals.push({ pid, signal });
       if (pid === 105 && live.has(pid)) {
         live.delete(pid);
@@ -2182,6 +3239,12 @@ function createServeSelfTestHarness(
     signals,
     output,
     preflightCalls: preflight.calls,
+    clock: {
+      now: () => monotonicMs,
+      firstCleanupSignalAt: () => firstCleanupSignalAt,
+      delayRequests,
+    },
+    proofCycles,
   };
 }
 
@@ -2216,6 +3279,12 @@ export async function runTask540SmokeHostSelfTest() {
       value[2].args[4] = value[2].args[4].replace("envDir: false", "envDir: true");
     },
     (value) => {
+      value[1].args[4] = value[1].args[4].replaceAll("wf540-admin", "wf540-site");
+    },
+    (value) => {
+      value[2].args[4] = value[2].args[4].replaceAll("wf540-site", "wf540-admin");
+    },
+    (value) => {
       value[0].args.push("extra");
     },
     (value) => {
@@ -2240,34 +3309,61 @@ export async function runTask540SmokeHostSelfTest() {
     BACKEND_SOURCE.includes("server.stop();") && !BACKEND_SOURCE.includes("server.stop(true)"),
     "backend graceful-stop source drift"
   );
+  invariant(READY_TIMEOUT_MS === 120_000, "host warm-restart timeout drift");
+  invariant(
+    VITE_WARM_RESTART_SOURCE.includes("for (let start = 0; start < 2; start += 1)") &&
+      (VITE_WARM_RESTART_SOURCE.match(/await createServer\(inlineConfig\)/gu) ?? []).length === 1 &&
+      VITE_WARM_RESTART_SOURCE.indexOf(
+        "requireExactViteOptionsClone(options, inlineConfig, failureCode);"
+      ) < VITE_WARM_RESTART_SOURCE.indexOf("await createServer(inlineConfig)") &&
+      VITE_WARM_RESTART_SOURCE.includes("createdServer === previousServer") &&
+      !VITE_WARM_RESTART_SOURCE.includes("start < 3"),
+    "Vite warm-restart start cardinality drift"
+  );
   invariant(
     ADMIN_VITE_SOURCE.includes('configFile: "./vite.config.ts"') &&
       ADMIN_VITE_SOURCE.includes('configLoader: "native"') &&
+      ADMIN_VITE_SOURCE.includes('cacheDir: "../node_modules/.vite/wf540-admin"') &&
       ADMIN_VITE_SOURCE.includes("envDir: false") &&
       ADMIN_VITE_SOURCE.includes('host: "127.0.0.1"') &&
       !ADMIN_VITE_SOURCE.includes('host: "localhost"') &&
       ADMIN_VITE_SOURCE.includes("port: 5173") &&
       ADMIN_VITE_SOURCE.includes(VITE_READINESS_SOURCE) &&
+      ADMIN_VITE_SOURCE.includes(VITE_OPTIONS_CLONE_VALIDATOR_SOURCE) &&
+      ADMIN_VITE_SOURCE.split(VITE_OPTIONS_CLONE_VALIDATOR_SOURCE).length === 2 &&
+      ADMIN_VITE_SOURCE.includes(VITE_WARM_RESTART_SOURCE) &&
+      ADMIN_VITE_SOURCE.split(VITE_WARM_RESTART_SOURCE).length === 2 &&
+      ADMIN_VITE_SOURCE.includes("const options = Object.freeze({") &&
+      ADMIN_VITE_SOURCE.includes("server: Object.freeze({") &&
       ADMIN_VITE_SOURCE.includes(
-        'await settleViteReadiness(server, [\n  "/main.tsx",\n  "/app/AdminApp.tsx",\n  "/app/adminRouteComponents.tsx",\n  "/ui/custom-screens/CustomScreenListPage.tsx",\n], "admin_vite_readiness_failed");'
+        '], process.cwd() + "/node_modules/.vite/wf540-admin", "admin_vite_readiness_failed");'
       ) &&
-      ADMIN_VITE_SOURCE.indexOf("await settleViteReadiness(server, [") <
-        ADMIN_VITE_SOURCE.indexOf('process.stdout.write("WF540_ADMIN_READY_V1\\n")'),
+      ADMIN_VITE_SOURCE.indexOf(
+        "const server = await startViteWithWarmRestart(createServer, options, ["
+      ) < ADMIN_VITE_SOURCE.indexOf('process.stdout.write("WF540_ADMIN_READY_V1\\n")'),
     "Admin Vite source drift"
   );
   invariant(
     SITE_VITE_SOURCE.includes('configFile: "./vite.site.config.ts"') &&
       SITE_VITE_SOURCE.includes('configLoader: "native"') &&
+      SITE_VITE_SOURCE.includes('cacheDir: "../node_modules/.vite/wf540-site"') &&
       SITE_VITE_SOURCE.includes("envDir: false") &&
       SITE_VITE_SOURCE.includes('host: "127.0.0.1"') &&
       !SITE_VITE_SOURCE.includes('host: "localhost"') &&
       SITE_VITE_SOURCE.includes("port: 5174") &&
       SITE_VITE_SOURCE.includes(VITE_READINESS_SOURCE) &&
+      SITE_VITE_SOURCE.includes(VITE_OPTIONS_CLONE_VALIDATOR_SOURCE) &&
+      SITE_VITE_SOURCE.split(VITE_OPTIONS_CLONE_VALIDATOR_SOURCE).length === 2 &&
+      SITE_VITE_SOURCE.includes(VITE_WARM_RESTART_SOURCE) &&
+      SITE_VITE_SOURCE.split(VITE_WARM_RESTART_SOURCE).length === 2 &&
+      SITE_VITE_SOURCE.includes("const options = Object.freeze({") &&
+      SITE_VITE_SOURCE.includes("server: Object.freeze({") &&
       SITE_VITE_SOURCE.includes(
-        'await settleViteReadiness(server, ["/main.ts"], "site_vite_readiness_failed");'
+        '["/main.ts"], process.cwd() + "/node_modules/.vite/wf540-site", "site_vite_readiness_failed");'
       ) &&
-      SITE_VITE_SOURCE.indexOf('await settleViteReadiness(server, ["/main.ts"]') <
-        SITE_VITE_SOURCE.indexOf('process.stdout.write("WF540_SITE_READY_V1\\n")'),
+      SITE_VITE_SOURCE.indexOf(
+        'const server = await startViteWithWarmRestart(createServer, options, ["/main.ts"]'
+      ) < SITE_VITE_SOURCE.indexOf('process.stdout.write("WF540_SITE_READY_V1\\n")'),
     "site Vite source drift"
   );
 
@@ -2459,6 +3555,362 @@ export async function runTask540SmokeHostSelfTest() {
     "Vite readiness non-convergence bound drift"
   );
 
+  const makeViteOptionsOwner = (kind) => {
+    const admin = kind === "admin";
+    return Object.freeze({
+      configFile: admin ? "./vite.config.ts" : "./vite.site.config.ts",
+      configLoader: "native",
+      cacheDir: admin ? "../node_modules/.vite/wf540-admin" : "../node_modules/.vite/wf540-site",
+      envDir: false,
+      clearScreen: false,
+      logLevel: "silent",
+      server: Object.freeze({
+        host: "127.0.0.1",
+        port: admin ? 5173 : 5174,
+        strictPort: true,
+        open: false,
+      }),
+    });
+  };
+  const expectedViteCache = (kind) => process.cwd() + "/node_modules/.vite/wf540-" + kind;
+  const warmRestartPositive = async (kind, readinessUrls) => {
+    const options = makeViteOptionsOwner(kind);
+    const expectedCacheDir = expectedViteCache(kind);
+    const failureCode = kind + "_vite_readiness_failed";
+    const calls = [];
+    const clones = [];
+    const optionProjections = [];
+    const closes = [0, 0];
+    let starts = 0;
+    const createServerFake = async (inlineConfig) => {
+      const index = starts;
+      starts += 1;
+      calls.push("create:" + (index + 1));
+      clones.push(inlineConfig);
+      optionProjections.push(clonePlain(inlineConfig));
+      if (index === 0) {
+        inlineConfig.cacheDir = "vite-mutated-cache";
+        inlineConfig.server.port = 1;
+      }
+      const configTarget = {};
+      Object.defineProperty(configTarget, "cacheDir", {
+        value: expectedCacheDir,
+        enumerable: true,
+        writable: true,
+        configurable: true,
+      });
+      const config = new Proxy(configTarget, {
+        getOwnPropertyDescriptor(target, property) {
+          if (property === "cacheDir") calls.push("cache:" + (index + 1));
+          return Reflect.getOwnPropertyDescriptor(target, property);
+        },
+      });
+      const optimizer = { metadata: readinessMetadata(kind + "-" + index) };
+      return {
+        config,
+        environments: { client: { depsOptimizer: optimizer } },
+        async listen() {
+          calls.push("listen:" + (index + 1));
+        },
+        async transformRequest(url) {
+          calls.push("transform:" + (index + 1) + ":" + url);
+          return { code: "export {};" };
+        },
+        async waitForRequestsIdle() {
+          calls.push("idle:" + (index + 1));
+        },
+        async close() {
+          closes[index] += 1;
+          calls.push("close:" + (index + 1));
+        },
+        instance: index + 1,
+      };
+    };
+    const finalServer = await startViteWithWarmRestart(
+      createServerFake,
+      options,
+      readinessUrls,
+      expectedCacheDir,
+      failureCode
+    );
+    calls.push("ready");
+    const expectedCalls = [];
+    for (let index = 1; index <= 2; index += 1) {
+      expectedCalls.push("create:" + index, "cache:" + index, "listen:" + index);
+      for (let round = 0; round < 2; round += 1) {
+        expectedCalls.push(
+          ...readinessUrls.map((url) => "transform:" + index + ":" + url),
+          "idle:" + index
+        );
+      }
+      if (index === 1) expectedCalls.push("close:1");
+    }
+    expectedCalls.push("ready");
+    invariant(
+      starts === 2 &&
+        finalServer.instance === 2 &&
+        JSON.stringify(closes) === JSON.stringify([1, 0]) &&
+        JSON.stringify(calls) === JSON.stringify(expectedCalls),
+      kind + " warm-restart lifecycle order drift"
+    );
+    invariant(
+      clones.length === 2 &&
+        clones[0] !== clones[1] &&
+        clones[0].server !== clones[1].server &&
+        clones.every(
+          (clone) =>
+            clone !== options &&
+            clone.server !== options.server &&
+            !Object.isFrozen(clone) &&
+            !Object.isFrozen(clone.server)
+        ) &&
+        JSON.stringify(optionProjections) ===
+          JSON.stringify([clonePlain(options), clonePlain(options)]) &&
+        options.cacheDir === "../node_modules/.vite/wf540-" + kind &&
+        options.server.port === (kind === "admin" ? 5173 : 5174),
+      kind + " warm-restart clone isolation drift"
+    );
+    return { options, expectedCacheDir };
+  };
+  const adminWarmRestart = await warmRestartPositive("admin", adminUrls);
+  const siteWarmRestart = await warmRestartPositive("site", ["/main.ts"]);
+
+  const warmRestartFailure = async (stage) => {
+    const options = makeViteOptionsOwner("site");
+    const expectedCacheDir = expectedViteCache("site");
+    const closes = [0, 0];
+    const listens = [0, 0];
+    let starts = 0;
+    const createServerFake = async () => {
+      const index = starts;
+      starts += 1;
+      if (stage === "create-" + (index + 1)) throw new Error("private create failure");
+      const cacheDir =
+        stage === "cache-" + (index + 1) ? expectedCacheDir + "-wrong" : expectedCacheDir;
+      const optimizer = { metadata: readinessMetadata("failure-" + index) };
+      return {
+        config: { cacheDir },
+        environments: { client: { depsOptimizer: optimizer } },
+        async listen() {
+          listens[index] += 1;
+          if (stage === "listen-" + (index + 1)) {
+            throw new Error("private listen failure");
+          }
+        },
+        async transformRequest() {
+          if (
+            stage === "readiness-" + (index + 1) ||
+            (stage === "readiness-2-close-failure" && index === 1)
+          ) {
+            return null;
+          }
+          return { code: "export {};" };
+        },
+        async waitForRequestsIdle() {},
+        async close() {
+          closes[index] += 1;
+          if (
+            stage === "close-" + (index + 1) ||
+            (stage === "readiness-2-close-failure" && index === 1)
+          ) {
+            throw new Error("private close failure");
+          }
+        },
+      };
+    };
+    let observedCode = null;
+    try {
+      await startViteWithWarmRestart(
+        createServerFake,
+        options,
+        ["/main.ts"],
+        expectedCacheDir,
+        "site_vite_readiness_failed"
+      );
+    } catch (error) {
+      observedCode = error instanceof Error ? error.message : null;
+    }
+    invariant(observedCode === "site_vite_readiness_failed", stage + " failure-code drift");
+    const expected = {
+      "create-1": { starts: 1, closes: [0, 0], listens: [0, 0] },
+      "cache-1": { starts: 1, closes: [1, 0], listens: [0, 0] },
+      "listen-1": { starts: 1, closes: [1, 0], listens: [1, 0] },
+      "readiness-1": { starts: 1, closes: [1, 0], listens: [1, 0] },
+      "close-1": { starts: 1, closes: [1, 0], listens: [1, 0] },
+      "create-2": { starts: 2, closes: [1, 0], listens: [1, 0] },
+      "cache-2": { starts: 2, closes: [1, 1], listens: [1, 0] },
+      "listen-2": { starts: 2, closes: [1, 1], listens: [1, 1] },
+      "readiness-2": { starts: 2, closes: [1, 1], listens: [1, 1] },
+      "readiness-2-close-failure": { starts: 2, closes: [1, 1], listens: [1, 1] },
+    }[stage];
+    invariant(
+      expected &&
+        starts === expected.starts &&
+        JSON.stringify(closes) === JSON.stringify(expected.closes) &&
+        JSON.stringify(listens) === JSON.stringify(expected.listens) &&
+        closes.every((count) => count <= 1),
+      stage + " warm-restart cleanup drift"
+    );
+  };
+  const warmRestartFailureStages = [
+    "create-1",
+    "cache-1",
+    "listen-1",
+    "readiness-1",
+    "close-1",
+    "create-2",
+    "cache-2",
+    "listen-2",
+    "readiness-2",
+    "readiness-2-close-failure",
+  ];
+  for (const stage of warmRestartFailureStages) await warmRestartFailure(stage);
+
+  const warmRestartOwnerNegatives = [
+    () => ({ ...clonePlain(siteWarmRestart.options), extra: true }),
+    () => {
+      const value = clonePlain(siteWarmRestart.options);
+      delete value.cacheDir;
+      return value;
+    },
+    () => clonePlain(siteWarmRestart.options),
+    () => {
+      const value = clonePlain(siteWarmRestart.options);
+      Object.freeze(value);
+      return value;
+    },
+    () => {
+      const value = clonePlain(siteWarmRestart.options);
+      value.cacheDir = "../node_modules/.vite/wf540-admin";
+      return value;
+    },
+  ];
+  for (const [index, buildOwner] of warmRestartOwnerNegatives.entries()) {
+    const candidate = buildOwner();
+    if (index !== 2 && index !== 3) {
+      Object.freeze(candidate.server);
+      Object.freeze(candidate);
+    }
+    let createCalls = 0;
+    await expectAsyncFailure(
+      () =>
+        startViteWithWarmRestart(
+          async () => {
+            createCalls += 1;
+            throw new Error("owner validation escaped");
+          },
+          candidate,
+          ["/main.ts"],
+          siteWarmRestart.expectedCacheDir,
+          "site_vite_readiness_failed"
+        ),
+      "warm-restart owner negative " + index
+    );
+    invariant(createCalls === 0, "invalid warm-restart owner reached Vite");
+  }
+  const cloneValidatorNegatives = [
+    {
+      label: "root value drift",
+      build() {
+        const candidate = clonePlain(siteWarmRestart.options);
+        candidate.configLoader = "bundle";
+        return candidate;
+      },
+    },
+    {
+      label: "nested value drift",
+      build() {
+        const candidate = clonePlain(siteWarmRestart.options);
+        candidate.server.port = 5173;
+        return candidate;
+      },
+    },
+    {
+      label: "shared root identity",
+      build() {
+        return siteWarmRestart.options;
+      },
+    },
+    {
+      label: "shared nested server identity",
+      build() {
+        const candidate = clonePlain(siteWarmRestart.options);
+        candidate.server = siteWarmRestart.options.server;
+        return candidate;
+      },
+    },
+  ];
+  for (const { label, build } of cloneValidatorNegatives) {
+    const candidate = build();
+    let observedCode = null;
+    let createCalls = 0;
+    let readyContinuations = 0;
+    try {
+      requireExactViteOptionsClone(
+        siteWarmRestart.options,
+        candidate,
+        "site_vite_readiness_failed"
+      );
+      createCalls += 1;
+      readyContinuations += 1;
+    } catch (error) {
+      observedCode = error instanceof Error ? error.message : null;
+    }
+    invariant(
+      observedCode === "site_vite_readiness_failed" &&
+        createCalls === 0 &&
+        readyContinuations === 0,
+      "pre-create Vite clone negative: " + label
+    );
+  }
+
+  let sameServerCreates = 0;
+  let sameServerListens = 0;
+  let sameServerCloses = 0;
+  let sameServerReadyContinuations = 0;
+  const sameServerExpectedCache = expectedViteCache("site");
+  const sameServer = {
+    ...stableReadinessServer([], { metadata: readinessMetadata("same-server") }),
+    config: { cacheDir: sameServerExpectedCache },
+    async listen() {
+      sameServerListens += 1;
+    },
+    async close() {
+      sameServerCloses += 1;
+    },
+  };
+  let sameServerFailureCode = null;
+  try {
+    await startViteWithWarmRestart(
+      async () => {
+        sameServerCreates += 1;
+        return sameServer;
+      },
+      makeViteOptionsOwner("site"),
+      ["/main.ts"],
+      sameServerExpectedCache,
+      "site_vite_readiness_failed"
+    );
+    sameServerReadyContinuations += 1;
+  } catch (error) {
+    sameServerFailureCode = error instanceof Error ? error.message : null;
+  }
+  invariant(
+    sameServerFailureCode === "site_vite_readiness_failed" &&
+      sameServerCreates === 2 &&
+      sameServerListens === 1 &&
+      sameServerCloses === 1 &&
+      sameServerReadyContinuations === 0,
+    "same Vite server instance was reused after the warm close"
+  );
+  invariant(
+    Object.isFrozen(adminWarmRestart.options) &&
+      Object.isFrozen(adminWarmRestart.options.server) &&
+      Object.isFrozen(siteWarmRestart.options) &&
+      Object.isFrozen(siteWarmRestart.options.server),
+    "warm-restart exact owners are not recursively frozen"
+  );
+
   let drainData = null;
   const drainState = createBoundedDrain(
     {
@@ -2645,6 +4097,79 @@ export async function runTask540SmokeHostSelfTest() {
       validPreflight.calls() > 0,
     "toolchain preflight projection drift"
   );
+  const cacheAuthority = await validateViteCacheAuthorities(
+    root,
+    validPreflight.dependencies,
+    true
+  );
+  invariant(
+    Object.isFrozen(cacheAuthority) &&
+      Object.isFrozen(cacheAuthority.observed) &&
+      cacheAuthority.nodeModulesRealpath === path.join(root, "core/node_modules") &&
+      cacheAuthority.baseRealpath === path.join(root, "core/node_modules/.vite") &&
+      cacheAuthority.observed.length === 2 &&
+      cacheAuthority.observed[0].cacheRealpath ===
+        path.join(root, "core/node_modules/.vite/wf540-admin") &&
+      cacheAuthority.observed[0].depsRealpath ===
+        path.join(root, "core/node_modules/.vite/wf540-admin/deps") &&
+      cacheAuthority.observed[1].cacheRealpath ===
+        path.join(root, "core/node_modules/.vite/wf540-site") &&
+      cacheAuthority.observed[1].depsRealpath ===
+        path.join(root, "core/node_modules/.vite/wf540-site/deps"),
+    "Vite cache authority projection drift"
+  );
+  const optionalMissingBase = createPreflightFake(root, {
+    cacheFault: "missing-base",
+  });
+  await validateCanonicalRootAndToolchain(root, environment, optionalMissingBase.dependencies);
+  await expectAsyncFailure(
+    () => validateViteCacheAuthorities(root, optionalMissingBase.dependencies, true),
+    "missing post-ready Vite authority base"
+  );
+  const optionalMissingCache = createPreflightFake(root, {
+    cacheFault: "missing-admin-cache",
+  });
+  await validateCanonicalRootAndToolchain(root, environment, optionalMissingCache.dependencies);
+  await expectAsyncFailure(
+    () => validateViteCacheAuthorities(root, optionalMissingCache.dependencies, true),
+    "missing post-ready Vite cache"
+  );
+  const optionalMissingDeps = createPreflightFake(root, {
+    cacheFault: "missing-site-deps",
+  });
+  await validateCanonicalRootAndToolchain(root, environment, optionalMissingDeps.dependencies);
+  await expectAsyncFailure(
+    () => validateViteCacheAuthorities(root, optionalMissingDeps.dependencies, true),
+    "missing post-ready Vite optimizer"
+  );
+  const cacheAuthorityFaults = [
+    "missing-base-with-children",
+    "base-symlink",
+    "base-noncanonical",
+    "base-escape",
+    "node-modules-symlink",
+    "missing-node-modules",
+    "admin-cache-symlink",
+    "site-cache-symlink",
+    "admin-cache-noncanonical",
+    "admin-cache-escape",
+    "shared-cache-realpath",
+    "admin-deps-symlink",
+    "site-deps-symlink",
+    "admin-deps-escape",
+    "shared-deps-realpath",
+  ];
+  for (const fault of cacheAuthorityFaults) {
+    const fake = createPreflightFake(root, { cacheFault: fault });
+    await expectAsyncFailure(
+      () => validateCanonicalRootAndToolchain(root, environment, fake.dependencies),
+      "Vite cache preflight " + fault
+    );
+    await expectAsyncFailure(
+      () => validateViteCacheAuthorities(root, fake.dependencies, true),
+      "Vite cache post-ready " + fault
+    );
+  }
   const preflightNegatives = [
     { nonCanonicalRoot: true },
     { symlinkRoot: true },
@@ -2988,6 +4513,103 @@ export async function runTask540SmokeHostSelfTest() {
   );
   const serveReady = JSON.parse(serveHarness.output[0]);
   validateReadyProjection(serveReady);
+  const missingPostReadyCache = createServeSelfTestHarness(root, environment, {
+    cacheFault: "missing-admin-cache",
+  });
+  await expectAsyncFailure(
+    () => serve(root, missingPostReadyCache.dependencies),
+    "fully injected serve missing post-ready cache"
+  );
+  invariant(
+    missingPostReadyCache.spawnCalls.length === 3 &&
+      missingPostReadyCache.output.length === 0 &&
+      missingPostReadyCache.signals.length === 3,
+    "missing post-ready cache did not fail before public readiness"
+  );
+  const missingPostReadyBase = createServeSelfTestHarness(root, environment, {
+    cacheFault: "missing-base",
+  });
+  await expectAsyncFailure(
+    () => serve(root, missingPostReadyBase.dependencies),
+    "fully injected serve missing post-ready cache base"
+  );
+  invariant(
+    missingPostReadyBase.spawnCalls.length === 3 &&
+      missingPostReadyBase.output.length === 0 &&
+      missingPostReadyBase.signals.length === 3,
+    "missing post-ready cache base did not fail before public readiness"
+  );
+  const cachePreflightFaults = [
+    "missing-base-with-children",
+    "base-symlink",
+    "base-noncanonical",
+    "base-escape",
+    "node-modules-symlink",
+    "missing-node-modules",
+  ];
+  for (const cacheFault of cachePreflightFaults) {
+    const harness = createServeSelfTestHarness(root, environment, { cacheFault });
+    await expectAsyncFailure(
+      () => serve(root, harness.dependencies),
+      "fully injected serve cache preflight " + cacheFault
+    );
+    invariant(
+      harness.spawnCalls.length === 0 &&
+        harness.output.length === 0 &&
+        harness.signals.length === 0,
+      cacheFault + " escaped cache preflight before spawn"
+    );
+  }
+  const startupTimeoutHarness = createServeSelfTestHarness(root, environment, {
+    startupTimeout: true,
+  });
+  await expectAsyncFailure(
+    () => serve(root, startupTimeoutHarness.dependencies),
+    "fully injected serve monotonic startup timeout"
+  );
+  invariant(
+    startupTimeoutHarness.spawnCalls.length === 3 &&
+      startupTimeoutHarness.output.length === 0 &&
+      startupTimeoutHarness.signals.length === 3 &&
+      startupTimeoutHarness.clock.firstCleanupSignalAt() === READY_TIMEOUT_MS &&
+      startupTimeoutHarness.clock.delayRequests.every(
+        (requestedMs) => requestedMs > 0 && requestedMs <= 200
+      ) &&
+      !Function.prototype.toString.call(serve).includes("READY_TIMEOUT_MS / 200") &&
+      startupTimeoutHarness.clock.firstCleanupSignalAt() < 240_000,
+    "monotonic startup timeout boundary or cleanup drift"
+  );
+  const twoObservationTimeoutHarness = createServeSelfTestHarness(root, environment, {
+    alternatingSecondProofDrift: true,
+  });
+  await expectAsyncFailure(
+    () => serve(root, twoObservationTimeoutHarness.dependencies),
+    "fully injected serve second-observation monotonic timeout"
+  );
+  invariant(
+    twoObservationTimeoutHarness.spawnCalls.length === 3 &&
+      twoObservationTimeoutHarness.output.length === 0 &&
+      twoObservationTimeoutHarness.signals.length === 3 &&
+      twoObservationTimeoutHarness.clock.firstCleanupSignalAt() === READY_TIMEOUT_MS &&
+      twoObservationTimeoutHarness.proofCycles.successfulFirst > 0 &&
+      twoObservationTimeoutHarness.proofCycles.failedSecond > 0 &&
+      twoObservationTimeoutHarness.proofCycles.recoveredFirst > 0 &&
+      twoObservationTimeoutHarness.proofCycles.successfulFirst ===
+        twoObservationTimeoutHarness.proofCycles.failedSecond &&
+      twoObservationTimeoutHarness.proofCycles.observationDelays.length ===
+        twoObservationTimeoutHarness.proofCycles.failedSecond &&
+      twoObservationTimeoutHarness.proofCycles.observationDelays.every(
+        (elapsedMs) => elapsedMs === 200
+      ) &&
+      twoObservationTimeoutHarness.proofCycles.recoveryDelays.length ===
+        twoObservationTimeoutHarness.proofCycles.recoveredFirst &&
+      twoObservationTimeoutHarness.proofCycles.recoveryDelays.every(
+        (elapsedMs) => elapsedMs === 200
+      ) &&
+      twoObservationTimeoutHarness.signals.every(({ signal }) => signal === "SIGTERM") &&
+      twoObservationTimeoutHarness.clock.firstCleanupSignalAt() < 240_000,
+    "second-observation timeout did not cover the prior two-delay regression"
+  );
   for (const listenerFault of [
     "missing",
     "duplicate",
@@ -3048,7 +4670,16 @@ export async function runTask540SmokeHostSelfTest() {
     descriptorNegativeCases: descriptorNegatives.length,
     viteReadinessPositiveCases: 2,
     viteReadinessNegativeCases: readinessNegatives.length + 1,
-    injectedServeCases: 9,
+    viteWarmRestartPositiveCases: 2,
+    viteWarmRestartNegativeCases:
+      warmRestartFailureStages.length +
+      warmRestartOwnerNegatives.length +
+      cloneValidatorNegatives.length +
+      1,
+    viteCacheAuthorityNegativeCases: cacheAuthorityFaults.length + 3,
+    startupDeadlineCases: 2,
+    secondObservationCycles: twoObservationTimeoutHarness.proofCycles.failedSecond,
+    injectedServeCases: 19,
     runtimeTrapCalls,
     directEntryCases: 4,
     serveRuntimeFactoryCalls,

@@ -5266,12 +5266,14 @@ Bun HTTP backend with exact
 bounded SIGTERM/SIGINT handlers that call `server.stop()` once. It performs no Vite
 spawn, `.env` read, or environment mutation. The two Vite sources import `createServer`
 from the locally installed Vite 8 package and call it with these exact closed options,
-changing only `configFile` and `port`, then `await server.listen()`:
+changing only `configFile`, `cacheDir`, and `port`; each lifecycle instance awaits
+`server.listen()` through the bounded restart helper below:
 
 ```ts
 const ADMIN_VITE_OPTIONS = deepFreezeExact({
   configFile: "./vite.config.ts",
   configLoader: "native",
+  cacheDir: "../node_modules/.vite/wf540-admin",
   envDir: false,
   clearScreen: false,
   logLevel: "silent",
@@ -5281,6 +5283,7 @@ const ADMIN_VITE_OPTIONS = deepFreezeExact({
 const SITE_VITE_OPTIONS = deepFreezeExact({
   configFile: "./vite.site.config.ts",
   configLoader: "native",
+  cacheDir: "../node_modules/.vite/wf540-site",
   envDir: false,
   clearScreen: false,
   logLevel: "silent",
@@ -5290,6 +5293,11 @@ const SITE_VITE_OPTIONS = deepFreezeExact({
 
 The inline `envDir:false` must override both loaded configs so Vite neither loads nor
 watches `.env`/`.env.*`; `configLoader:"native"` prevents bundle-loader temp output.
+The two exact relative cache paths resolve from the configured `core/admin` and
+`core/site` roots to the disjoint canonical directories
+`core/node_modules/.vite/wf540-admin` and
+`core/node_modules/.vite/wf540-site`. Admin and Site must never share or alias an
+optimizer `deps` directory.
 The runner validates that the local Vite package and checked-in lock both resolve to
 exactly Vite `8.1.3` before spawn and never permits `bunx`, package installation,
 network resolution, a CLI Vite wrapper, or an installed helper. The exact pin is part of
@@ -5357,6 +5365,58 @@ metadata-identity/hash/dependency observations around fresh exact re-transforms.
 missing optimizer API, rejected scan/processing promise, malformed metadata, empty/null
 transform, non-convergence, or ready marker emitted while an initial request can still
 receive `504 Outdated Optimize Dep` fails the host contract.
+
+Each Vite child then performs exactly one bounded warm restart through the same private,
+serialized
+`startViteWithWarmRestart(createServer, options, readinessUrls, expectedCacheDir, failureCode)`
+helper. The Admin caller passes exactly
+`process.cwd() + "/node_modules/.vite/wf540-admin"`; the Site caller passes exactly
+`process.cwd() + "/node_modules/.vite/wf540-site"`. Canonical preflight and the fixed
+`--cwd <canonical-core>` descriptor make those independent expected authorities exact;
+the helper never derives expected authority from received Vite state. The options
+argument is the recursively frozen exact owner shown above; it is never passed directly
+to Vite because Vite 8.1.3 mutates its inline config during resolution. Before each
+create, the helper validates that owner and constructs a fresh mutable plain-data clone,
+including a fresh nested `server` object. The two dispatched clones must be deep/byte
+equal to the frozen owner at their call boundary while both root and nested identities
+are distinct; Vite mutation of one clone cannot affect the owner or the next start.
+
+The helper creates the first server from clone 1, validates its resolved cache, listens,
+passes `settleViteReadiness`, closes that server completely, creates a fresh second
+server from clone 2, validates the same resolved cache, listens, passes the same
+readiness barrier again, and returns only that second live server. The first server can
+never emit READY; no third start or retry loop is allowed. Any option-clone,
+create/listen/barrier/close failure closes the currently acquired server once where
+possible and fails with the fixed child failure code. The host allows 120 seconds for
+this two-start lifecycle, while its per-step optimizer loop remains eight rounds. This
+codifies the observed local `coderso-dev-core-host` cold-start requirement without
+delegating authority to that installed helper or accepting a white Admin document as
+ready.
+
+Every first and second server instance verifies its resolved `server.config.cacheDir`
+equals its child-specific canonical directory before listening. The host validates the
+two lexical authorities are distinct and remain beneath canonical
+`core/node_modules/.vite`; any already-existing cache directory must be a canonical
+non-symlink directory. The same rule applies independently to each exact optimizer
+directory `<cacheDir>/deps`: when present before spawn it must be a canonical
+non-symlink directory whose realpath remains under its own exact cache parent. After
+both final children emit their private markers and before the public ready projection,
+the host requires both cache and both nested `deps` directories to exist as canonical
+non-symlink directories, with correct-parent real containment and distinct cache and
+optimizer realpaths. A missing post-ready directory, cross-child cache literal,
+parent/nested alias or symlink, shared realpath, escaped containment, or resolved-config
+mismatch fails startup. The first and second start of one child intentionally retain
+that child's own cache, while neither child can remove, rename, or publish into the
+other's optimizer directory.
+
+The executor owns the outer host-ready deadline as the exact private constant
+`HOST_READY_TIMEOUT_MS = 130_000`, providing a fixed ten-second margin beyond the
+host's 120-second lifecycle for spawn and final process/listener proof. The production
+`readHostReadyLine()` call has no caller-controlled timeout override. Its hermetic fake-
+timer self-test proves the registered delay is exactly 130,000 ms, a valid bounded ready
+line before expiry settles once and clears the timer, expiry rejects once, and the stale
+70,000-ms deadline is absent. The executor must never time out a still-valid host before
+the host's own bounded two-start lifecycle can finish.
 
 ```ts
 const HOST_CHILD_DESCRIPTORS = deepFreezeExact([
@@ -5447,6 +5507,30 @@ ordered transforms of all four Admin URLs and two transforms of the one Site URL
 Negatives cover a missing optimizer API, malformed metadata, non-native processing
 thenables, rejected scan and processing promises, null/empty transforms, and eight
 non-convergent rounds; every negative emits zero READY continuations.
+
+The self-test invokes the exact same serialized `startViteWithWarmRestart` helper with
+fake Vite factories and each exact child-specific `expectedCacheDir`, and pins this order
+for both Admin and Site: create 1 -> cache-authority check 1 -> listen 1 -> two stable
+readiness transforms -> close 1 -> create 2 -> cache-authority check 2 -> listen 2 -> two
+stable readiness transforms -> return final server -> READY continuation. It proves the
+final server is not closed before the continuation and covers first/second create,
+resolved-cache mismatch, listen, readiness, and close failures with exactly-once cleanup
+of the acquired instance. Source assertions and independent full byte pins prove both
+real child programs pass their exact expected authority and await this helper before
+their ready markers, and contain neither a third start nor an alternate retry path.
+The factory fake retains both pre-call option projections and proves they equal the exact
+frozen owner while the dispatched root/server identities differ; mutations applied by
+create 1 cannot appear in clone 2. Unknown/missing owner keys, an unfrozen owner or
+nested server, shared clone identity, and clone value drift fail before READY.
+
+The preflight and final-ready fakes additionally prove the two exact resolved cache
+authorities, reject either child carrying the other child's cache literal, and reject a
+missing post-ready directory, symlink, non-canonical path, shared realpath, or directory
+outside `core/node_modules/.vite`. They separately reject distinct cache parents whose
+nested `deps` paths are symlinks, escape their owning cache realpath, or resolve to one
+shared optimizer directory. The serialized restart helper rejects a resolved
+`server.config.cacheDir` mismatch on either first or second instance before that
+instance can listen.
 
 The host child receives only the union of the required, optional-present, and fixed host
 contracts above; the browser uses the separate exact private contract and never receives
@@ -6857,7 +6941,7 @@ command.
 
 Before importing the smoke executor, the implementation orchestrator opens the one
 canonical regular module with no-follow identity checks and requires SHA-256
-`ad38f3ece885bc4479e2e53e0dbc2806c77648b9a18c1366ec8a7fc0993ea688`. It performs
+`1a1a0aacbc28a237ccd9712e8e85c91f39bf993487de44543538b0fc93382139`. It performs
 exactly one literal dynamic import, requires the exact two-export surface, and repeats
 the byte/identity check after import. Full validation binds that same executor authority
 to its result; immediately before the single smoke call the current, imported, and

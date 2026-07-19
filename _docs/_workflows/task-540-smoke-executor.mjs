@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
+import { EventEmitter } from "node:events";
 import { constants as fsConstants, writeSync } from "node:fs";
 import {
   chmod,
@@ -42,6 +43,7 @@ const BUN_BRIDGE_EXECUTION_AUTHORITY = deepFreezeExact({
   timeoutMs: 30_000,
 });
 const COMMAND_TIMEOUT_MS = 120_000;
+const HOST_READY_TIMEOUT_MS = 130_000;
 const ORCHESTRATOR_EVIDENCE_RUNNER_VERSION = 1;
 const SESSION_NAME = "wf540smoke";
 const TASK_FAILURE = deepFreezeExact({ code: "task540_smoke_failed" });
@@ -11224,35 +11226,51 @@ async function proveExactHostListenerMappingTwice(children) {
   return first;
 }
 
-async function readHostReadyLine(child) {
+function readHostReadyLineWithTimerAuthority(child, timerAuthority) {
   return new Promise((resolve, reject) => {
     let bytes = Buffer.alloc(0);
-    const timer = setTimeout(() => reject(new Error("host ready timeout")), 70_000);
-    const fail = () => {
-      clearTimeout(timer);
-      reject(new Error("host exited before ready"));
+    let settled = false;
+    let timer = null;
+    const settle = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      bytes = null;
+      if (timer !== null) timerAuthority.clearTimer(timer);
+      child.off("exit", fail);
+      child.stdout.off("data", receive);
+      callback(value);
     };
-    child.once("exit", fail);
-    child.stdout.on("data", (chunk) => {
-      if (bytes === null) return;
+    const fail = () => settle(reject, new Error("host exited before ready"));
+    const receive = (chunk) => {
+      if (settled) return;
       bytes = Buffer.concat([bytes, Buffer.from(chunk)]);
       if (bytes.length > 64 * 1024) {
-        clearTimeout(timer);
-        reject(new Error("host ready output exceeded bound"));
+        settle(reject, new Error("host ready output exceeded bound"));
         return;
       }
       const newline = bytes.indexOf(10);
       if (newline === -1) return;
       const line = bytes.subarray(0, newline).toString("utf8");
-      bytes = null;
-      clearTimeout(timer);
-      child.off("exit", fail);
       try {
-        resolve(JSON.parse(line));
+        settle(resolve, JSON.parse(line));
       } catch {
-        reject(new Error("host ready output is malformed"));
+        settle(reject, new Error("host ready output is malformed"));
       }
-    });
+    };
+    child.once("exit", fail);
+    child.stdout.on("data", receive);
+    timer = timerAuthority.setTimer(
+      () => settle(reject, new Error("host ready timeout")),
+      HOST_READY_TIMEOUT_MS
+    );
+    if (settled) timerAuthority.clearTimer(timer);
+  });
+}
+
+function readHostReadyLine(child) {
+  return readHostReadyLineWithTimerAuthority(child, {
+    setTimer: (callback, timeoutMs) => setTimeout(callback, timeoutMs),
+    clearTimer: (timer) => clearTimeout(timer),
   });
 }
 
@@ -20610,6 +20628,116 @@ export async function runTask540SmokeExecutorSelfTest() {
     negativeCases += 1;
   };
   const plan = buildTask540SmokePlan({ nonce: "0123456789ab" });
+  const createHostReadySelfTestChild = () =>
+    Object.assign(new EventEmitter(), { stdout: new EventEmitter() });
+  const createHostReadySelfTestTimers = () => {
+    const registrations = [];
+    let clearCalls = 0;
+    return {
+      authority: {
+        setTimer(callback, timeoutMs) {
+          const handle = { callback, timeoutMs, cleared: false };
+          registrations.push(handle);
+          return handle;
+        },
+        clearTimer(handle) {
+          invariant(registrations.includes(handle), "host ready self-test timer identity drift");
+          invariant(!handle.cleared, "host ready self-test timer cleared more than once");
+          handle.cleared = true;
+          clearCalls += 1;
+        },
+      },
+      registrations,
+      readClearCalls: () => clearCalls,
+    };
+  };
+  invariant(
+    HOST_READY_TIMEOUT_MS === 130_000 && readHostReadyLine.length === 1,
+    "host ready production timeout contract drift"
+  );
+  const readyProjection = {
+    schemaVersion: 1,
+    runnerPid: 540,
+    children: [],
+    ports: [3000, 5173, 5174],
+  };
+  const readyChild = createHostReadySelfTestChild();
+  const readyTimers = createHostReadySelfTestTimers();
+  let readyFulfillments = 0;
+  let readyRejections = 0;
+  const readyPromise = readHostReadyLineWithTimerAuthority(readyChild, readyTimers.authority).then(
+    (value) => {
+      readyFulfillments += 1;
+      return value;
+    },
+    (error) => {
+      readyRejections += 1;
+      throw error;
+    }
+  );
+  invariant(
+    readyTimers.registrations.length === 1 &&
+      readyTimers.registrations[0].timeoutMs === HOST_READY_TIMEOUT_MS,
+    "host ready valid-line timer registration drift"
+  );
+  readyChild.stdout.emit("data", Buffer.from(canonicalJson(readyProjection) + "\n"));
+  const parsedReadyProjection = await readyPromise;
+  readyChild.stdout.emit("data", Buffer.from("{}\n"));
+  readyChild.emit("exit");
+  readyTimers.registrations[0].callback();
+  await Promise.resolve();
+  invariant(
+    deepEqualJson(parsedReadyProjection, readyProjection) &&
+      readyFulfillments === 1 &&
+      readyRejections === 0 &&
+      readyTimers.readClearCalls() === 1 &&
+      readyTimers.registrations[0].cleared &&
+      readyChild.listenerCount("exit") === 0 &&
+      readyChild.stdout.listenerCount("data") === 0,
+    "host ready valid-line settlement drift"
+  );
+
+  const timeoutPrivateMarker = "TASK540_HOST_READY_PRIVATE_DO_NOT_EGRESS";
+  const timeoutChild = createHostReadySelfTestChild();
+  const timeoutTimers = createHostReadySelfTestTimers();
+  let timeoutSettlements = 0;
+  let timeoutFailure = null;
+  const timeoutPromise = readHostReadyLineWithTimerAuthority(
+    timeoutChild,
+    timeoutTimers.authority
+  ).then(
+    () => {
+      timeoutSettlements += 1;
+    },
+    (error) => {
+      timeoutSettlements += 1;
+      timeoutFailure = error;
+    }
+  );
+  invariant(
+    timeoutTimers.registrations.length === 1 &&
+      timeoutTimers.registrations[0].timeoutMs === HOST_READY_TIMEOUT_MS,
+    "host ready expiry timer registration drift"
+  );
+  timeoutChild.stdout.emit("data", Buffer.from(timeoutPrivateMarker));
+  timeoutTimers.registrations[0].callback();
+  timeoutTimers.registrations[0].callback();
+  timeoutChild.stdout.emit("data", Buffer.from(canonicalJson(readyProjection) + "\n"));
+  timeoutChild.emit("exit");
+  await timeoutPromise;
+  await Promise.resolve();
+  invariant(
+    timeoutSettlements === 1 &&
+      timeoutFailure instanceof Error &&
+      timeoutFailure.message === "host ready timeout" &&
+      !String(timeoutFailure).includes(timeoutPrivateMarker) &&
+      timeoutTimers.readClearCalls() === 1 &&
+      timeoutTimers.registrations[0].cleared &&
+      timeoutChild.listenerCount("exit") === 0 &&
+      timeoutChild.stdout.listenerCount("data") === 0,
+    "host ready expiry settlement drift"
+  );
+  negativeCases += 1;
   const previewShellContract = plan.registries.observations["preview-shell-desktop"];
   const previewShellOutput = {
     shellVisible: true,
