@@ -649,6 +649,8 @@ browser work; preseed the acquired-media override plus distinct missing bound UU
 through the existing authenticated Admin flow/API without opening Media Library,
 MediaPicker, or an entry surface; while still on the builder
 prove the naturally cold `media:list` state, then install `media-prior-resolution`
+which validates the authoritative HTTP 200 JSON media list plus the exact acquired
+TASK-540 row and stages only that verified row for the browser without mutating DB/storage,
 before consecutive `records-workspace-navigation` and `first-entry-mount` clicks
 execute the seven synthetic builder -> save -> entry flows, save task-540-prefixed
 screenshots, and record visible scenario evidence in closeout; for the first media
@@ -1007,6 +1009,17 @@ browser-reaching attempts, and their screenshots or partial observations remain 
 A later one-shot executor call consumed its call latch but failed during the storage/setup
 preflight before helper or browser launch; it is the separately recorded preflight-only call
 above, produced no runtime screenshot evidence, and is not a third browser-reaching attempt.
+
+### 2026-07-18 ambient-media isolation correction
+
+A later finite, redacted runtime diagnostic classified the remaining aggregate console
+failure as a missing media-delivery response. Local DB/storage comparison then proved that
+the acquired TASK-540 PNG had both its exact row and storage object, while unrelated
+pre-existing media rows referenced absent storage objects. Those ambient rows are not owned
+by this task and must not be deleted, consumed, or accepted as task evidence. The corrected
+route therefore validates the real backing list and exact acquired row, then exposes only a
+one-row copy of that verified fixture to the browser cache. This is a contract correction,
+not a smoke pass; a fresh canonical smoke remains required.
 
 ### Private deterministic fixture blueprint
 
@@ -2777,27 +2790,27 @@ or rename rows.
 | `bi-017-reopen` | p1/0 | `goto(paths.builder)` | Screen list -> URL/canvas marker -> saved builder reopened | `bi-016 / absent -> absent` |
 | `bi-018-reopen-proof` | p1/0 | `assert(persisted-no-empty-binding)` | reopened -> strict observation -> binding still exact | `bi-017 / absent -> absent` |
 | `bi-019-cache-cold` | p1/0 | `assert(media-cache-cold-before-route)` | no prior entry/media consumer -> exact aggregate count -> media GET count 0 | `bi-018 / absent -> absent` |
-| `bi-020-media-route-setup` | p1/0 | `route(media-prior-resolution,route-setup)` | cache cold -> registered tuple -> delayed route installed | `bi-019 / absent -> installed` |
+| `bi-020-media-route-setup` | p1/0 | `route(media-prior-resolution,route-setup)` | cache cold -> registered task-owned media tuple -> delayed isolating route installed | `bi-019 / absent -> installed` |
 | `bi-021-records-link` | p1/0 | `click(S.recordsLink(screen.id))` | delayed route installed/builder -> URL + exact visible Record actions control -> records workspace ready | `bi-020 / installed -> installed` |
 | `bi-022-entry-link` | p1/0 | `click(S.recordActions,S.editRecord)` | records workspace ready -> open exact Record actions menu then click exact Edit record item -> entry navigation started | `bi-021 / installed -> installed` |
-| `bi-023-media-route-hit` | p1/0 | `route(media-prior-resolution,route-hit-read)` | entry mounting -> captured request -> route hit exactly 1/pending | `bi-022 / installed -> hit` |
+| `bi-023-media-route-hit` | p1/0 | `route(media-prior-resolution,route-hit-read)` | entry mounting -> backing list validated + exact acquired fixture projected -> route hit exactly 1/pending | `bi-022 / installed -> hit` |
 | `bi-024-prior-resolution` | p1/0 | `assert(prior-media-resolution-pending)` | hit pending -> selected target + pending source -> prior protected value visible | `bi-023 / hit -> hit` |
 | `bi-025-select-race-image` | p1/0 | `click(S.selectBlock(screen.blockIds.raceImage))` | entry visible -> selection state -> race Image selected | `bi-024 / hit -> hit` |
 | `bi-026-clear-presentation` | p1/0 | `click(S.presentationClear)` | direct override selected -> dirty override -> newer local clear visible | `bi-025 / hit -> hit` |
 | `bi-027-newer-presentation` | p1/0 | `assert(newer-media-winner-selected-pending)` | clear applied/hit pending -> DOM source state -> missing-field placeholder wins | `bi-026 / hit -> hit` |
 | `bi-028-media-pending-shot` | p1/0 | `screen(media-prior-pending)` | newer state visible -> PNG -> pending-race screenshot created | `bi-027 / hit -> hit` |
 | `bi-029-media-count-before` | p1/0 | `media-count-before-release` | route pending -> exact count -> count 1 | `bi-023 / hit -> hit` |
-| `bi-030-media-release` | p1/0 | `route(media-prior-resolution,route-release)` | captured response held -> fulfillment receipt -> response released/UI settled | `bi-023,bi-029 / hit -> released` |
+| `bi-030-media-release` | p1/0 | `route(media-prior-resolution,route-release)` | validated task-owned projection held -> fulfillment receipt -> isolated response released/UI settled | `bi-023,bi-029 / hit -> released` |
 | `bi-031-stale-protected` | p1/0 | `assert(stale-media-result-ignored)` | released/settled -> DOM source state -> stale result cannot overwrite clear | `bi-026,bi-030 / released -> released` |
 | `bi-032-media-count-after` | p1/0 | `media-count-after-release` | settlement complete -> exact count -> still 1 | `bi-030 / released -> released` |
 | `bi-033-media-unroute` | p1/0 | `route(media-prior-resolution,unroute)` | released and count proven -> `true` -> route absent | `bi-031,bi-032 / released -> absent` |
-| `bi-034-browse-direct` | p1/0 | `click(S.browseMedia)` | race Image selected -> dialog -> Media library visible | `bi-033 / absent -> absent` |
+| `bi-034-browse-direct` | p1/0 | `click(S.browseMedia)` | race Image selected + task-owned cache -> dialog -> Media library visible with exact fixture | `bi-033 / absent -> absent` |
 | `bi-035-select-direct-media` | p1/0 | `click(S.mediaCard(media.title))` | exact media card visible -> selected ID -> direct override uses acquired media | `bi-034 / absent -> absent` |
 | `bi-036-direct-safe` | p1/0 | `assert(direct-image-safe-url)` | media resolved -> DOM img/url -> acquired safe URL rendered | `bi-035 / absent -> absent` |
 | `bi-037-clear-direct` | p1/0 | `click(S.presentationClear)` | direct media visible -> override clear -> missing binding restored | `bi-036 / absent -> absent` |
 | `bi-038-direct-missing` | p1/0 | `assert(missing-or-unsafe-placeholder)` | clear settled -> placeholder/URL state -> no unsafe image emitted | `bi-037 / absent -> absent` |
 | `bi-039-select-media-field` | p1/0 | `click(S.selectBlock(screen.blockIds.mediaField))` | entry visible -> selected state -> preseed Media field selected | `bi-038 / absent -> absent` |
-| `bi-040-browse-field` | p1/0 | `click(S.browseMedia)` | Media field selected -> dialog -> Media library visible | `bi-039 / absent -> absent` |
+| `bi-040-browse-field` | p1/0 | `click(S.browseMedia)` | Media field selected + task-owned cache -> dialog -> Media library visible with exact fixture | `bi-039 / absent -> absent` |
 | `bi-041-select-field-media` | p1/0 | `click(S.mediaCard(media.title))` | exact media card visible -> selected ID -> UUID draft selected | `bi-040 / absent -> absent` |
 | `bi-042-save-presentation` | p1/0 | `click(S.presentationSave)` | presentation dirty -> exact PATCH success + `Saving...` absent + clean-disabled Save presentation control -> override clean | `bi-041 / absent -> absent` |
 | `bi-043-media-uuid` | p1/0 | `assert(media-field-keeps-uuid)` | save settled -> unique visible fixture display title + canonical rendered image source mapped to the captured media fixture, plus authenticated persisted read -> captured UUID retained/no resolved URL persisted | `bi-042 / absent -> absent` |
@@ -5767,7 +5780,10 @@ The specialized exact outputs remain binding: the cold/cache, three critical-med
 and two media-count outputs declared below; `preference-a-write-hit-before-release =>
 1`, `preference-a-write-hit-after-release => 1`, and
 `queued-a-write-zero-dispatch => 0`; plus the two strict user-B response/effect objects
-in the table.
+in the table. Media-list transport/fixture validation and one-row isolation remain
+executor-private, source-bound preconditions of `bi-020-media-route-setup`; they add no
+egress field to the generic route-hit/release receipts, which are accepted only after
+those private checks have succeeded.
 Unknown assertion names, missing/extra fields, wrong scalar types, target mismatch,
 unregistered commands, or a failed negative predicate fail closed. Lexical token
 presence is never observation authority.
@@ -5853,6 +5869,10 @@ at setup and cleanup. Both Screens are active and sidebar-visible; the main Scre
 the visible records-workspace Admin link used to reach the first entry surface by real
 Admin UI clicks after interception.
 Neither fixture acquisition nor provenance may populate browser `media:list`.
+The intercepted backing list may contain unrelated rows, but it must be bounded, carry
+unique IDs, and contain exactly one strict row matching the acquired fixture. The browser
+receives exactly `[acquiredRow]`; unrelated rows remain untouched in DB/storage and cannot
+cause browser media fetches or count as smoke evidence.
 
 Canonical evidence carries one strict, reject-unknown media-race projection:
 
@@ -6052,8 +6072,11 @@ the expanded command in closeout evidence. A deliberate application failure uses
 HTTP 200 with malformed JSON (`"{"`) so it exercises the parser/retry path without
 creating an expected browser resource-console error. A delayed stale-success
 handler captures `await route.fetch()`, resolves its single response-captured signal,
-and waits on its named release latch. Media, related-refresh, and preference-read
-routes then fulfill that captured response and expose UI settlement. The
+and waits on its named release latch. Related-refresh and preference-read routes fulfill
+that captured response unchanged and expose UI settlement. The media route first requires
+HTTP `200` with exact JSON media type, validates the bounded/unique backing list and strict
+task-owned row, and fulfills the inherited response with only that row as a JSON body
+override. The
 `preference-a-write-exit` route instead uses the abort-aware terminal described below
 because real sign-out destroys the requesting realm. Count every matching request; an
 unexpected duplicate fails the scenario rather than continuing to the backend. Every delayed-
@@ -6062,10 +6085,12 @@ success handler rewrites only the backing fetch origin to
 method, headers, postData/body, and application-visible browser URL. Every delayed
 `route.fetch` explicitly receives the original `request.method()`,
 `request.headers()`, and `request.postData() ?? undefined`. It must not ask the Node
-route worker to fetch `coderso-a.localhost`, synthesize a response, or change route
-semantics. This loopback rewrite is required because attempt 1 proved that Node cannot
-resolve the browser-only hostname. The exact media list has no query, so its expanded
-backing URL is `http://127.0.0.1:5173/admin/api/media`.
+route worker to fetch `coderso-a.localhost` or change the backing request semantics.
+Non-media success payloads remain byte-for-byte inherited. The media route's sole allowed
+response delta is the strict one-row task-owned list projection above; it may not fabricate
+or repair that row. This loopback rewrite is required because attempt 1 proved that Node
+cannot resolve the browser-only hostname. The exact media list has no query, so its
+expanded backing URL is `http://127.0.0.1:5173/admin/api/media`.
 
 Malformed-JSON handlers are strictly one-shot: read and assert their hit count as
 `1`, then remove the handler in a separate full CLI invocation **before** clicking
@@ -6077,7 +6102,10 @@ write latch instead has exactly `readHits()`, `captured`, `backingSettled`, and
 A delayed `route-hit-read`
 bounded-waits for `captured`, rejects timeout/duplicate signal/hit count other than one,
 and outputs exactly `{"hits":1,"captured":true}` except for the two stricter
-preference projections declared below. A delayed `route-release` invokes
+preference projections declared below. For media this generic output is valid only after
+the private transport, fixture-cardinality, exact-row, and isolation checks have passed;
+no raw response, row list, URL, or diagnostic text leaves that authority boundary. A
+delayed `route-release` invokes
 the release function, awaits `fulfilled`, awaits `uiSettled`, and crosses a real
 two-`requestAnimationFrame` rendered commit boundary before outputting exactly
 `{"released":true,"fulfilled":true,"uiSettled":true}`. Only then may a
@@ -6160,7 +6188,7 @@ The required intercepted attempts are:
 
 | Key | Method and expanded path | Mode / visible boundary |
 |---|---|---|
-| `media-prior-resolution` | exact pathname `GET /admin/api/media`, routed by `**/admin/api/media`; backing fetch `http://127.0.0.1:5173/admin/api/media` | after natural cold proof, delay the acquired-media response from exactly one non-forced first entry mount; clearing the override exposes the distinct missing bound UUID, and that newer winner must survive release |
+| `media-prior-resolution` | exact pathname `GET /admin/api/media`, routed by `**/admin/api/media`; backing fetch `http://127.0.0.1:5173/admin/api/media` | after natural cold proof, validate the bounded backing list and exact acquired media row, project only that task-owned row into the UI cache, then delay the response from exactly one non-forced first entry mount; clearing the override exposes the distinct missing bound UUID, and that newer winner must survive release |
 | `entry-save-failure` | `PATCH **/admin/api/content/<TYPE_SLUG>/entries/<ENTRY_ID>` | one malformed-JSON failure; dirty guard remains until real retry |
 | `related-first-failure` | `GET **/admin/api/content/<RELATED_FAILURE_SLUG>/entries` | one malformed-JSON failure on the cold retry-only Screen; visible scoped related Retry |
 | `related-a-refresh` | same exact A path | delayed captured success; the already rendered A rows and their geometry remain visible while the route is pending |
@@ -6183,6 +6211,17 @@ the context logger. Its exact fixture-expanded output is
   "mediaGetCount": 0
 }
 ```
+
+The intercepted backing response must be HTTP `200` JSON with a bounded, unique-ID
+array containing exactly one row for the acquired TASK-540 media ID. That row must
+match the captured canonical storage key and `/media/<key>` projection, upload title
+and filename, PNG MIME/size/dimensions, empty optional metadata, and valid timestamp
+and owner shapes. The route then fulfills the pending browser request with a
+one-element copy containing only that verified row. This isolates the task-owned
+MediaPicker cache from unrelated pre-existing media rows without allowing, consuming,
+or suppressing any `/media/*` failure: the acquired PNG still loads through the real
+backend delivery and storage path, and any failure of that task-owned URL remains a
+zero-console-error smoke failure.
 
 The URL must equal the canonical fixture Screen builder URL byte-for-byte and the real
 builder marker must have positive geometry and visible computed display/visibility. A
@@ -6212,8 +6251,9 @@ builders rather than merely contain the route key. The setup keeps the exact met
 pathname guards, duplicate guard, static loopback backing URL, original
 `request.method()` / `request.headers()` / `request.postData()` forwarding,
 non-configurable shared registry entries, and the four-member delayed latch. It captures
-the response and resolves `captured` exactly once before waiting for release; after
-release it awaits `route.fulfill({ response })`, resolves `fulfilled`, and permits the
+the response, privately validates/isolate its media payload, and resolves `captured`
+exactly once before waiting for release; after release it awaits the inherited-response
+fulfillment with the exact one-row JSON body override, resolves `fulfilled`, and permits the
 release builder to establish `uiSettled` plus the rendered commit boundary. Duplicate
 registry/setup/capture/fulfillment signals fail.
 
@@ -6353,7 +6393,9 @@ function/name/key switch exists in executor dispatch. The exact source/output ta
 The generic visible-success hit shape applies only to `media-prior-resolution`; related
 A and the preference GET use their stricter hit projections. All three own
 the ordinary four-member latch and follow the fulfillment/rendered-state boundary
-described above. `preference-a-write-exit` owns
+described above. The media shape does not expose its verified row: its source-bound setup
+must already have accepted the real backing transport and exact task-owned projection.
+`preference-a-write-exit` owns
 the separate abort-aware latch and never projects the old A response into B's realm.
 All handlers guard exact method/pathname, reject a second hit, and retain the captured
 backing response only in local authority state.
@@ -6389,7 +6431,9 @@ empty array from only the active/original page is never sufficient.
    the visible records-workspace link with operation `records-workspace-navigation`,
    and mount the entry with the one receipted `first-entry-mount` click. The first
    non-forced media GET resolves the pre-seeded
-   acquired-media override but stays held. Read hit `1`; select that direct image and
+   acquired-media override but stays held. The backing response is real and may contain
+   ambient rows, while the browser/cache receives only the strictly verified acquired
+   fixture row. Read hit `1`; select that direct image and
    use visible `Clear selected presentation` to expose its distinct canonical-but-
    missing bound UUID. While held, prove the new winner's visible placeholder,
    absent override marker/`img`, dirty state, and exact

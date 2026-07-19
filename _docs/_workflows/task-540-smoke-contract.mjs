@@ -1637,7 +1637,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "bi-020-media-route-setup",
     "p1/0",
     "route(media-prior-resolution,route-setup)",
-    "cache cold -> registered tuple -> delayed route installed",
+    "cache cold -> registered task-owned media tuple -> delayed isolating route installed",
     "bi-019 / absent -> installed",
   ],
   [
@@ -1658,7 +1658,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "bi-023-media-route-hit",
     "p1/0",
     "route(media-prior-resolution,route-hit-read)",
-    "entry mounting -> captured request -> route hit exactly 1/pending",
+    "entry mounting -> backing list validated + exact acquired fixture projected -> route hit exactly 1/pending",
     "bi-022 / installed -> hit",
   ],
   [
@@ -1707,7 +1707,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "bi-030-media-release",
     "p1/0",
     "route(media-prior-resolution,route-release)",
-    "captured response held -> fulfillment receipt -> response released/UI settled",
+    "validated task-owned projection held -> fulfillment receipt -> isolated response released/UI settled",
     "bi-023,bi-029 / hit -> released",
   ],
   [
@@ -1735,7 +1735,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "bi-034-browse-direct",
     "p1/0",
     "click(S.browseMedia)",
-    "race Image selected -> dialog -> Media library visible",
+    "race Image selected + task-owned cache -> dialog -> Media library visible with exact fixture",
     "bi-033 / absent -> absent",
   ],
   [
@@ -1777,7 +1777,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "bi-040-browse-field",
     "p1/0",
     "click(S.browseMedia)",
-    "Media field selected -> dialog -> Media library visible",
+    "Media field selected + task-owned cache -> dialog -> Media library visible with exact fixture",
     "bi-039 / absent -> absent",
   ],
   [

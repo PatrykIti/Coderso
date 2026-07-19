@@ -5144,7 +5144,7 @@ function parseRegisteredOutput(schema, bytes, label, context = null) {
 function fixtureCaptureValue(name, plan) {
   const numeric = String(plan.requiredCaptureNames.indexOf(name) + 1).padStart(12, "0");
   if (name === "media.resolved-url")
-    return plan.fixtureBlueprint.origins.front + "/media/" + plan.prefix;
+    return plan.fixtureBlueprint.origins.front + "/media/task-540/" + plan.prefix + ".png";
   if (name === "media.storage-key") return "task-540/" + plan.prefix + ".png";
   return "54000000-0000-4000-8000-" + numeric;
 }
@@ -7243,6 +7243,16 @@ function expandedRoute(plan, key, captures, runtimeConfig) {
   const pathname = rawPattern.startsWith("/") ? rawPattern : new URL(rawPattern).pathname;
   invariant(pathname.startsWith("/admin/api/"), "route pathname must remain Admin-internal");
   const pattern = "**" + pathname;
+  const expectedMediaUrl =
+    key === "media-prior-resolution" ? new URL(captures.get("media.resolved-url")) : null;
+  if (expectedMediaUrl !== null) {
+    invariant(
+      expectedMediaUrl.pathname === "/media/" + captures.get("media.storage-key") &&
+        expectedMediaUrl.search === "" &&
+        expectedMediaUrl.hash === "",
+      "media route fixture URL drift"
+    );
+  }
   return deepFreezeExact({
     key,
     method: route.method,
@@ -7251,6 +7261,18 @@ function expandedRoute(plan, key, captures, runtimeConfig) {
     pattern,
     expectedUserId: key === "preference-a-write-exit" ? captures.get("user-a.id") : null,
     csrfHeaderName: key === "preference-a-write-exit" ? runtimeConfig.csrfHeaderName : null,
+    expectedMedia:
+      key === "media-prior-resolution"
+        ? {
+            id: captures.get("media.id"),
+            key: captures.get("media.storage-key"),
+            url: expectedMediaUrl.pathname,
+            title: plan.fixtureBlueprint.media.title,
+            originalName: plan.fixtureBlueprint.media.originalName,
+            mimeType: plan.fixtureBlueprint.media.mimeType,
+            size: plan.fixtureBlueprint.media.uploadFixture.decodedSizeBytes,
+          }
+        : null,
     expectedRows:
       key === "related-a-refresh"
         ? [
@@ -7269,10 +7291,123 @@ function expandedRoute(plan, key, captures, runtimeConfig) {
   });
 }
 
+function assertTaskOwnedMediaListTransport(status, contentType) {
+  const mediaType =
+    typeof contentType === "string" ? contentType.split(";", 1)[0].trim().toLowerCase() : "";
+  if (status !== 200 || mediaType !== "application/json") {
+    throw new Error("wf540_media_route_response_transport");
+  }
+  return true;
+}
+
+function isolateTaskOwnedMediaList(payload, expected) {
+  const fail = (code) => {
+    throw new Error("wf540_media_route_" + code);
+  };
+  const exactKeys = (value, keys) =>
+    Boolean(
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      Object.keys(value).length === keys.length &&
+      keys.every((key) => Object.prototype.hasOwnProperty.call(value, key))
+    );
+  const expectedKeys = ["id", "key", "url", "title", "originalName", "mimeType", "size"];
+  if (
+    !exactKeys(expected, expectedKeys) ||
+    typeof expected.id !== "string" ||
+    !/^[0-9a-f-]{36}$/u.test(expected.id) ||
+    typeof expected.key !== "string" ||
+    expected.key.length === 0 ||
+    typeof expected.url !== "string" ||
+    expected.url !== "/media/" + expected.key ||
+    typeof expected.title !== "string" ||
+    expected.title.length === 0 ||
+    typeof expected.originalName !== "string" ||
+    expected.originalName.length === 0 ||
+    expected.mimeType !== "image/png" ||
+    !Number.isSafeInteger(expected.size) ||
+    expected.size <= 0
+  ) {
+    fail("expected_shape");
+  }
+  if (!Array.isArray(payload) || payload.length === 0 || payload.length > 10_000) {
+    fail("response_shape");
+  }
+  const ids = payload.map((row) =>
+    row && typeof row === "object" && !Array.isArray(row) && typeof row.id === "string"
+      ? row.id
+      : null
+  );
+  if (ids.some((id) => id === null) || new Set(ids).size !== ids.length) {
+    fail("response_identity");
+  }
+  const matching = payload.filter((row) => row.id === expected.id);
+  if (matching.length !== 1) fail("fixture_cardinality");
+  const [row] = matching;
+  const mediaRowKeys = [
+    "id",
+    "key",
+    "url",
+    "originalName",
+    "type",
+    "mimeType",
+    "size",
+    "width",
+    "height",
+    "alt",
+    "title",
+    "caption",
+    "folderId",
+    "tags",
+    "focalX",
+    "focalY",
+    "description",
+    "credit",
+    "createdAt",
+    "createdBy",
+  ];
+  if (!exactKeys(row, mediaRowKeys)) fail("fixture_shape");
+  if (
+    row.id !== expected.id ||
+    row.key !== expected.key ||
+    row.url !== expected.url ||
+    row.originalName !== expected.originalName ||
+    row.type !== "image" ||
+    row.mimeType !== expected.mimeType ||
+    row.size !== expected.size ||
+    row.width !== 1 ||
+    row.height !== 1 ||
+    row.title !== expected.title
+  ) {
+    fail("fixture_identity");
+  }
+  if (
+    row.alt !== null ||
+    row.caption !== null ||
+    row.folderId !== null ||
+    !Array.isArray(row.tags) ||
+    row.tags.length !== 0 ||
+    row.focalX !== null ||
+    row.focalY !== null ||
+    row.description !== null ||
+    row.credit !== null ||
+    typeof row.createdAt !== "string" ||
+    !Number.isFinite(Date.parse(row.createdAt)) ||
+    (row.createdBy !== null &&
+      (typeof row.createdBy !== "string" || !/^[0-9a-f-]{36}$/u.test(row.createdBy)))
+  ) {
+    fail("fixture_metadata");
+  }
+  return Object.freeze([Object.freeze({ ...row })]);
+}
+
 function buildRouteSetupSource(route) {
   const descriptor = JSON.stringify(route);
   return `(async (page) => {
     const descriptor = ${descriptor};
+    const assertTaskOwnedMediaListTransport = ${assertTaskOwnedMediaListTransport.toString()};
+    const isolateTaskOwnedMediaList = ${isolateTaskOwnedMediaList.toString()};
     const context = page.context();
     if (context.__wf540RouteHas(descriptor.key)) throw new Error("wf540_duplicate_route");
     let active = true;
@@ -7302,6 +7437,7 @@ function buildRouteSetupSource(route) {
     let rowIdsMatch = null;
     let uniqueIds = null;
     let updatedA1Matches = null;
+    let responseBodyOverride = null;
     let handlerFailure = null;
     if (descriptor.mode === "abort-aware-preference-write") {
       if (typeof descriptor.expectedUserId !== "string" || !/^[0-9a-f-]{36}$/u.test(descriptor.expectedUserId) ||
@@ -7358,6 +7494,12 @@ function buildRouteSetupSource(route) {
       });
       backingStatus = response.status();
       handlerStage = "backing_validation";
+      if (descriptor.key === "media-prior-resolution") {
+        const responseContentType = response.headers()["content-type"] ?? "";
+        assertTaskOwnedMediaListTransport(backingStatus, responseContentType);
+        const isolatedPayload = isolateTaskOwnedMediaList(await response.json(), descriptor.expectedMedia);
+        responseBodyOverride = JSON.stringify(isolatedPayload);
+      }
       if (descriptor.mode === "delayed-preference-read") {
         const payload = await response.json();
         if (!payload || typeof payload !== "object" || Array.isArray(payload) || Object.keys(payload).length !== 2 || payload.key !== "customScreens.entry.preferences" || !payload.value || typeof payload.value !== "object" || Array.isArray(payload.value) || Object.keys(payload.value).length !== 2 || payload.value.version !== 1 || typeof payload.value.showFieldMetadata !== "boolean") throw new Error("wf540_preference_route_response_shape");
@@ -7401,7 +7543,9 @@ function buildRouteSetupSource(route) {
       await releaseGate;
       if (descriptor.mode === "abort-aware-preference-write") return;
       handlerStage = "fulfill";
-      await route.fulfill({ response });
+      await route.fulfill(responseBodyOverride === null
+        ? { response }
+        : { response, body: responseBodyOverride, contentType: "application/json" });
       fulfilledResolve(true);
       handlerStage = "ui_settlement";
       await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -19996,6 +20140,111 @@ export async function runTask540SmokeExecutorSelfTest() {
   for (const name of plan.requiredRuntimeBlockCaptures) {
     sourceCaptures.bind(name, plan.prefix + "-" + name.replaceAll(".", "-"));
   }
+  const mediaIsolationExpected = {
+    id: sourceCaptures.get("media.id"),
+    key: sourceCaptures.get("media.storage-key"),
+    url: new URL(sourceCaptures.get("media.resolved-url")).pathname,
+    title: plan.fixtureBlueprint.media.title,
+    originalName: plan.fixtureBlueprint.media.originalName,
+    mimeType: plan.fixtureBlueprint.media.mimeType,
+    size: plan.fixtureBlueprint.media.uploadFixture.decodedSizeBytes,
+  };
+  const mediaIsolationRow = {
+    id: mediaIsolationExpected.id,
+    key: mediaIsolationExpected.key,
+    url: mediaIsolationExpected.url,
+    originalName: mediaIsolationExpected.originalName,
+    type: "image",
+    mimeType: mediaIsolationExpected.mimeType,
+    size: mediaIsolationExpected.size,
+    width: 1,
+    height: 1,
+    alt: null,
+    title: mediaIsolationExpected.title,
+    caption: null,
+    folderId: null,
+    tags: [],
+    focalX: null,
+    focalY: null,
+    description: null,
+    credit: null,
+    createdAt: "2026-07-18T00:00:00.000Z",
+    createdBy: null,
+  };
+  const ambientMediaRow = {
+    ...mediaIsolationRow,
+    id: "54000000-0000-4000-8000-999999999999",
+    key: "ambient/example.png",
+    url: "/media/ambient/example.png",
+    title: "Ambient image",
+  };
+  const isolatedMediaRows = isolateTaskOwnedMediaList(
+    [ambientMediaRow, mediaIsolationRow],
+    mediaIsolationExpected
+  );
+  invariant(
+    isolatedMediaRows.length === 1 &&
+      isolatedMediaRows[0].id === mediaIsolationExpected.id &&
+      Object.isFrozen(isolatedMediaRows) &&
+      Object.isFrozen(isolatedMediaRows[0]),
+    "task-owned media isolation success drift"
+  );
+  const mediaIsolationFails = (payload, expected = mediaIsolationExpected) => {
+    try {
+      isolateTaskOwnedMediaList(payload, expected);
+      return false;
+    } catch {
+      return true;
+    }
+  };
+  invariant(
+    assertTaskOwnedMediaListTransport(200, "application/json; charset=utf-8") === true,
+    "task-owned media transport success drift"
+  );
+  const mediaTransportFails = (status, contentType) => {
+    try {
+      assertTaskOwnedMediaListTransport(status, contentType);
+      return false;
+    } catch {
+      return true;
+    }
+  };
+  assertNegative(mediaTransportFails(500, "application/json"), "media isolation status");
+  assertNegative(mediaTransportFails(200, ""), "media isolation absent content type");
+  assertNegative(mediaTransportFails(200, "text/html"), "media isolation HTML content type");
+  assertNegative(
+    mediaTransportFails(200, "application/jsonp"),
+    "media isolation JSONP content type"
+  );
+  assertNegative(
+    mediaIsolationFails([ambientMediaRow]),
+    "task-owned media isolation missing fixture"
+  );
+  assertNegative(
+    mediaIsolationFails([mediaIsolationRow, { ...mediaIsolationRow }]),
+    "task-owned media isolation duplicate fixture"
+  );
+  assertNegative(
+    mediaIsolationFails([{ ...mediaIsolationRow, url: "/media/wrong.png" }]),
+    "task-owned media isolation wrong fixture URL"
+  );
+  assertNegative(mediaIsolationFails(null), "task-owned media isolation non-array payload");
+  assertNegative(
+    mediaIsolationFails([{ ...mediaIsolationRow, unknown: true }]),
+    "task-owned media isolation unknown fixture field"
+  );
+  assertNegative(
+    mediaIsolationFails([{ ...mediaIsolationRow, tags: ["ambient"] }]),
+    "task-owned media isolation metadata drift"
+  );
+  assertNegative(
+    mediaIsolationFails([{ ...mediaIsolationRow, createdAt: "not-a-date" }]),
+    "task-owned media isolation timestamp drift"
+  );
+  assertNegative(
+    mediaIsolationFails([ambientMediaRow, { ...ambientMediaRow }, mediaIsolationRow]),
+    "task-owned media isolation duplicate ambient ID"
+  );
   const sourceContext = {
     plan,
     captures: sourceCaptures,
@@ -20009,6 +20258,7 @@ export async function runTask540SmokeExecutorSelfTest() {
   const authArmSourceActionIds = [];
   const authCloseSourceActionIds = [];
   const blockBaselineSourceActionIds = [];
+  const mediaIsolationSourceActionIds = [];
   const recordEntryMenuSourceActionIds = [];
   const recordsWorkspaceSourceActionIds = [];
   for (const action of plan.actionManifest) {
@@ -20051,6 +20301,22 @@ export async function runTask540SmokeExecutorSelfTest() {
           invocation.args[sourceIndex].includes("wf540_insert_panel_state") &&
           invocation.args[sourceIndex].includes("wf540_block_library_count"),
         action.id + " Insert-panel preparation source contract drift"
+      );
+    }
+    if (action.id === "bi-020-media-route-setup") {
+      mediaIsolationSourceActionIds.push(action.id);
+      invariant(
+        invocation.args[sourceIndex].includes("function assertTaskOwnedMediaListTransport") &&
+          invocation.args[sourceIndex].includes("function isolateTaskOwnedMediaList") &&
+          invocation.args[sourceIndex].includes('mediaType !== "application/json"') &&
+          invocation.args[sourceIndex].includes('fail("fixture_cardinality")') &&
+          invocation.args[sourceIndex].includes("responseBodyOverride") &&
+          invocation.args[sourceIndex].includes('contentType: "application/json"') &&
+          invocation.args[sourceIndex].includes(JSON.stringify(sourceCaptures.get("media.id"))) &&
+          invocation.args[sourceIndex].includes(
+            JSON.stringify(sourceCaptures.get("media.storage-key"))
+          ),
+        action.id + " task-owned media isolation source contract drift"
       );
     }
     if (invocation.args[sourceIndex].includes("wf540_record_actions_target")) {
@@ -20105,6 +20371,10 @@ export async function runTask540SmokeExecutorSelfTest() {
         plan.actionManifest.filter(({ kind }) => kind === "blocksBefore").map(({ id }) => id)
       ),
     "block baseline Insert-panel source ownership drift"
+  );
+  invariant(
+    deepEqualJson(mediaIsolationSourceActionIds, ["bi-020-media-route-setup"]),
+    "task-owned media isolation source ownership drift"
   );
   invariant(
     deepEqualJson(recordEntryMenuSourceActionIds.sort(), [...RECORD_ENTRY_MENU_ACTION_IDS].sort()),
