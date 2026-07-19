@@ -201,7 +201,11 @@ second; a disabled barrier skips the timer but performs the same bounded realm p
 Each barrier keeps a context-wide
 `/admin/api/auth/*` request listener active through its after-sample and fails if auth
 traffic or URL/navigation identity changes, or if root geometry is not finite and
-positive before or after. It never resets the limiter, mutates settings, mocks
+positive before or after. Its generated `playwright-cli` source uses a local,
+fail-closed parser for canonical lowercase-HTTP(S) browser URLs with DNS/IPv4
+authorities and bounded numeric ports. Unsupported or malformed authorities are
+rejected rather than treated as harmless cross-origin traffic; the callback never uses
+the host-global `URL` constructor that the CLI sandbox does not expose. It never resets the limiter, mutates settings, mocks
 an auth route, or weakens the deliberate cold-load/persistence navigations.
 
 The editable content-type detail projection is not an eighteenth public capture. Only

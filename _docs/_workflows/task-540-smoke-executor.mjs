@@ -9251,29 +9251,75 @@ function buildAuthRateWindowBarrierSource(policy, plan) {
   const authOrigin = JSON.stringify(plan.fixtureBlueprint.origins.admin);
   return `async (page) => {
     const context = page.context();
+    const parseHttpUrl = (value) => {
+      if (typeof value !== "string" || value.length === 0 || /[\\u0000-\\u0020\\u007f\\\\]/u.test(value)) return null;
+      const schemeEnd = value.indexOf("://");
+      if (schemeEnd <= 0) return null;
+      const scheme = value.slice(0, schemeEnd);
+      if (scheme !== "http" && scheme !== "https") return null;
+      const authorityStart = schemeEnd + 3;
+      let boundary = value.length;
+      for (const delimiter of ["/", "?", "#"]) {
+        const index = value.indexOf(delimiter, authorityStart);
+        if (index !== -1 && index < boundary) boundary = index;
+      }
+      const authority = value.slice(authorityStart, boundary);
+      if (authority.length === 0 || authority.includes("@") || authority.includes("[")) return null;
+      const firstColon = authority.indexOf(":");
+      if (firstColon !== authority.lastIndexOf(":")) return null;
+      const host = firstColon === -1 ? authority : authority.slice(0, firstColon);
+      const portText = firstColon === -1 ? null : authority.slice(firstColon + 1);
+      if (host.length === 0 || host.length > 253 || host !== host.toLowerCase()) return null;
+      if (portText !== null) {
+        if (!/^(?:0|[1-9][0-9]{0,4})$/u.test(portText)) return null;
+        const port = Number(portText);
+        if (!Number.isSafeInteger(port) || port > 65535) return null;
+      }
+      const numericHost = /^[0-9.]+$/u.test(host);
+      if (numericHost) {
+        const octets = host.split(".");
+        if (octets.length !== 4 || octets.some((part) => !/^(?:0|[1-9][0-9]{0,2})$/u.test(part) || Number(part) > 255)) return null;
+      } else {
+        const labels = host.split(".");
+        if (labels.some((label) => !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/u.test(label))) return null;
+      }
+      const origin = value.slice(0, boundary);
+      let pathname = "/";
+      if (value[boundary] === "/") {
+        let pathnameEnd = value.length;
+        for (const delimiter of ["?", "#"]) {
+          const index = value.indexOf(delimiter, boundary);
+          if (index !== -1 && index < pathnameEnd) pathnameEnd = index;
+        }
+        pathname = value.slice(boundary, pathnameEnd);
+      }
+      return pathname.startsWith("/") ? { origin, pathname } : null;
+    };
     const sample = async () => {
       const root = page.locator("html");
       if (await root.count() !== 1 || !(await root.isVisible())) throw new Error("wf540_barrier_root");
       const rect = await root.boundingBox();
       if (!rect || !Number.isFinite(rect.x) || !Number.isFinite(rect.y) || !Number.isFinite(rect.width) || !Number.isFinite(rect.height) || rect.width <= 0 || rect.height <= 0) throw new Error("wf540_barrier_geometry");
       const rawUrl = page.url();
-      const url = new URL(rawUrl);
-      if (url.origin !== ${authOrigin} || !url.pathname.startsWith("/admin/")) throw new Error("wf540_barrier_url");
+      const parsedUrl = parseHttpUrl(rawUrl);
+      if (parsedUrl === null || parsedUrl.origin !== ${authOrigin} || !parsedUrl.pathname.startsWith("/admin/")) throw new Error("wf540_barrier_url");
       const navigationCount = page.__wf540ReadNavigationCount();
       if (!Number.isSafeInteger(navigationCount) || navigationCount < 0) throw new Error("wf540_barrier_navigation_count");
       return { url: rawUrl, navigationCount };
     };
     const before = await sample();
     let authRequests = 0;
+    let invalidRequestUrl = false;
     const onRequest = (request) => {
-      const url = new URL(request.url());
-      if (url.origin === ${authOrigin} && url.pathname.startsWith("/admin/api/auth/")) authRequests += 1;
+      const parsedUrl = parseHttpUrl(request.url());
+      if (parsedUrl === null) invalidRequestUrl = true;
+      else if (parsedUrl.origin === ${authOrigin} && parsedUrl.pathname.startsWith("/admin/api/auth/")) authRequests += 1;
     };
     context.on("request", onRequest);
     try {
       if (${waitMs} > 0) await page.waitForTimeout(${waitMs});
       const after = await sample();
-      if (authRequests !== 0 || before.url !== after.url || before.navigationCount !== after.navigationCount) throw new Error("wf540_barrier_realm_drift");
+      if (invalidRequestUrl || authRequests !== 0 || before.url !== after.url || before.navigationCount !== after.navigationCount) throw new Error("wf540_barrier_realm_drift");
     } finally {
       context.off("request", onRequest);
     }
@@ -20395,7 +20441,12 @@ export async function runTask540SmokeExecutorSelfTest() {
         invocation.args[sourceIndex].includes("if (61000 > 0)") &&
           invocation.args[sourceIndex].includes('context.on("request", onRequest)') &&
           invocation.args[sourceIndex].includes('context.off("request", onRequest)') &&
-          invocation.args[sourceIndex].includes('url.pathname.startsWith("/admin/api/auth/")') &&
+          invocation.args[sourceIndex].includes("const parseHttpUrl = (value) =>") &&
+          invocation.args[sourceIndex].includes(
+            'parsedUrl.pathname.startsWith("/admin/api/auth/")'
+          ) &&
+          invocation.args[sourceIndex].includes("invalidRequestUrl") &&
+          !invocation.args[sourceIndex].includes("new URL(") &&
           invocation.args[sourceIndex].indexOf("const after = await sample()") <
             invocation.args[sourceIndex].indexOf('context.off("request", onRequest)') &&
           invocation.args[sourceIndex].includes("before.navigationCount !== after.navigationCount"),
@@ -20515,9 +20566,12 @@ export async function runTask540SmokeExecutorSelfTest() {
     ];
     const harness = {
       emitAuthRequest() {
+        this.emitRequestUrl(plan.fixtureBlueprint.origins.admin + "/admin/api/auth/install/status");
+      },
+      emitRequestUrl(value) {
         for (const listener of requestListeners) {
           listener({
-            url: () => plan.fixtureBlueprint.origins.admin + "/admin/api/auth/install/status",
+            url: () => value,
           });
         }
       },
@@ -20587,6 +20641,19 @@ export async function runTask540SmokeExecutorSelfTest() {
       enabledBarrierHarness.harness.state.listeners === 0,
     "enabled auth rate barrier execution drift"
   );
+  const crossOriginBarrierHarness = createBarrierHarness({
+    onWait: async (harness) =>
+      harness.emitRequestUrl("https://assets.example.test:8443/app.js?theme=dark#bundle"),
+  });
+  invariant(
+    deepEqualJson(await enabledBarrierFunction(crossOriginBarrierHarness.page), {
+      barrierSatisfied: true,
+    }) &&
+      deepEqualJson(crossOriginBarrierHarness.harness.state.waits, [61_000]) &&
+      crossOriginBarrierHarness.harness.state.listeners === 0 &&
+      crossOriginBarrierHarness.harness.state.offCalls === 1,
+    "valid cross-origin auth rate barrier request drift"
+  );
   const disabledBarrierFunction = compileBarrierFunction(
     disabledAuthRatePolicy,
     "disabled-auth-rate-barrier"
@@ -20603,12 +20670,27 @@ export async function runTask540SmokeExecutorSelfTest() {
   );
   for (const [label, options] of [
     ["barrier auth traffic", { onWait: async (harness) => harness.emitAuthRequest() }],
+    ...[
+      "not-an-http-url",
+      "http://%/x",
+      "http://[::1/x",
+      "http://:80/x",
+      "http://host:bad/x",
+      "http://host:99999/x",
+    ].map((value, index) => [
+      "barrier invalid request URL " + (index + 1),
+      { onWait: async (harness) => harness.emitRequestUrl(value) },
+    ]),
     [
       "barrier URL drift",
       {
         onWait: async (harness) =>
           harness.setUrl(plan.fixtureBlueprint.origins.admin + "/admin/custom-screens/changed"),
       },
+    ],
+    [
+      "barrier malformed page URL",
+      { onWait: async (harness) => harness.setUrl("not-an-http-url") },
     ],
     ["barrier navigation drift", { onWait: async (harness) => harness.incrementNavigation() }],
     [

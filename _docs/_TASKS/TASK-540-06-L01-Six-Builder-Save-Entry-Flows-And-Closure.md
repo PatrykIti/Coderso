@@ -2705,7 +2705,12 @@ disabled limiting skips the timer but performs the same bounded realm-stability 
 A context-wide request listener remains active through the after-sample and requires
 zero `/admin/api/auth/*` traffic during the barrier. The before/after samples require
 the exact Admin URL and navigation count to remain byte-identical and the document root
-to have positive finite geometry in both samples. Only
+to have positive finite geometry in both samples. The generated `playwright-cli`
+callback parses origins and pathnames with its own fail-closed parser for canonical
+lowercase-HTTP(S) browser URLs with DNS/IPv4 authorities and bounded numeric ports; it
+must not depend on the unavailable host-global `URL` constructor. Unsupported or
+malformed page/request authorities fail closed rather than becoming harmless
+cross-origin traffic, and listener cleanup remains exact. Only
 `{"barrierSatisfied":true}` may egress. For `ru-100a`, B continuity is compositional:
 `ru-099` proves B immediately before the barrier and `ru-101` targets the exact B user
 menu immediately after it. A barrier never inspects or prunes limiter state, resets a
