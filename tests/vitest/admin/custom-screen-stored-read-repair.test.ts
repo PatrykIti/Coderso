@@ -628,7 +628,9 @@ test("TASK-540-01 fresh PATCH schema validation and direct writes reject every u
   }
 });
 
-test("TASK-540-01 media identity predicate has one exact UUID contract", () => {
+test("TASK-540-01 media identity predicate has one exact UUID contract", async () => {
+  const { firstScreenMediaAssetUuid } =
+    await import("../../../core/services/customScreens/screenMediaIdentity");
   for (const value of [
     "123e4567-e89b-12d3-a456-426614174000",
     "123E4567-E89B-12D3-A456-426614174ABC",
@@ -645,4 +647,15 @@ test("TASK-540-01 media identity predicate has one exact UUID contract", () => {
   ]) {
     expect(isScreenMediaAssetUuid(value)).toBe(false);
   }
+
+  const lowercaseUuid = "123e4567-e89b-12d3-a456-426614174000";
+  const uppercaseUuid = "123E4567-E89B-12D3-A456-426614174ABC";
+  expect(firstScreenMediaAssetUuid(lowercaseUuid)).toBe(lowercaseUuid);
+  expect(firstScreenMediaAssetUuid(42)).toBeNull();
+  expect(firstScreenMediaAssetUuid(["not-a-uuid", 42, null, uppercaseUuid, lowercaseUuid])).toBe(
+    uppercaseUuid
+  );
+  expect(firstScreenMediaAssetUuid([lowercaseUuid, uppercaseUuid])).toBe(lowercaseUuid);
+  expect(firstScreenMediaAssetUuid(["", 42, null, "/media/not-a-uuid"])).toBeNull();
+  expect(firstScreenMediaAssetUuid(uppercaseUuid)).toBe(uppercaseUuid);
 });

@@ -370,7 +370,7 @@ const auxiliaryFamilies = Object.freeze({
       "2999367a7d6209104a11564b88cdcdf269040bd2c4913fb07e9baceb6cd5e0a9",
     ]),
     declarations: 77,
-    declarationSha256: "b449c23cd2a77a99e14d58fec23cec8a25a45d1c36178d6328b75203957f83c2",
+    declarationSha256: "4135e76b63ee4bf1432b46402dfe06b279d52da8aa4e74664f24d0b82f802d36",
     files: Object.freeze([
       "tests/vitest/admin/custom-screen-schemas.test.ts",
       "tests/vitest/admin/custom-screen-document-contract.test.ts",
