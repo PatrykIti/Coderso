@@ -239,6 +239,7 @@ export function MediaPicker({
           {selectedItems.map((item) => (
             <div
               key={item.id}
+              data-media-picker-selected-id={item.id}
               className="flex items-center gap-3 rounded-xl border bg-muted/10 p-3"
             >
               {(() => {

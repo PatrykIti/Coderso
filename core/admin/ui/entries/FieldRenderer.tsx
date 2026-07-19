@@ -167,6 +167,7 @@ function RelationSelect({
               <button
                 key={entry.id}
                 type="button"
+                data-screen-relation-option-id={entry.id}
                 aria-pressed={multiple ? isSelected : undefined}
                 onClick={() => handleToggle(entry.id)}
                 className={`flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition ${

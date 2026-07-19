@@ -198,22 +198,22 @@ runTask540SmokeContractSelfTest()
 The module is import-side-effect-free and performs no environment, filesystem,
 database, network, or `process.env` access. `buildTask540SmokePlan` accepts an exact
 reject-unknown one-key object with the canonical 12-lower-hex nonce and owns the
-`SMOKE_FIXTURE_BLUEPRINT`, the source tuples and compiler for all 495 ordered action
+`SMOKE_FIXTURE_BLUEPRINT`, the source tuples and compiler for all 496 ordered action
 rows, every recursive strict schema, the selector/builder/command/output registry,
 cardinality/set/dependency validation, single-assignment capture validation, and the
 route/page/auth/theme/top-level state machines. It returns one recursively deep-frozen
-plan whose sole action collection is the complete 495-row `actionManifest`; there is no
+plan whose sole action collection is the complete 496-row `actionManifest`; there is no
 second setup collection or setup execution prepass. Its compiler requires every source
 row to have exactly five Markdown-equivalent columns and its transition tuple to have
 exactly three explicit clauses (`precondition -> captured output -> postcondition`);
 it performs no prose inference and leaves capture/fixture refs symbolic for lazy
 resolution at their exact action ordinal. The fixed scope remains exactly 55 setup
-rows + 433 flow rows + 7 terminal browser rows = 495, 15 fixture subjects, exactly 17
+rows + 434 flow rows + 7 terminal browser rows = 496, 15 fixture subjects, exactly 17
 public capture names, 13 screenshots, and 55 unique visible assertions.
 `runTask540SmokeContractSelfTest()` is hermetic and deterministically checks those
 counts, strict unknown-key rejection, registries, dependency/capture closure, state
-transitions, recursive freezing, the exact disjoint `55/433/7` action-set partition,
-dense ordinals `1..495`, and one fake execution plus one receipt for each action exactly
+transitions, recursive freezing, the exact disjoint `55/434/7` action-set partition,
+dense ordinals `1..496`, and one fake execution plus one receipt for each action exactly
 once through an independent contract-model loop. The executor self-test separately
 exercises the real executor loop with hermetic capabilities; the two loops do not share
 execution authority. Direct `--self-test` execution calls that export, while importing
@@ -1867,7 +1867,7 @@ captured ID fails closed.
 ### Workflow-owned ordered smoke action manifest
 
 `_docs/_workflows/task-540-smoke-contract.mjs` also owns the frozen
-`SMOKE_ACTION_MANIFEST`. Its compiler produces all 495 action objects before any
+`SMOKE_ACTION_MANIFEST`. Its compiler produces all 496 action objects before any
 capability starts; it does not execute setup, resolve a capture value, recompile, or
 expand a second manifest after setup. Each row below becomes one exact object with the
 reject-unknown keys
@@ -2215,7 +2215,7 @@ cleanup, and private-byte egress. Trap fakes require zero process, filesystem, D
 network, environment, or clock capability calls; they also prove the Node executor has
 no application/core TypeScript import outside the immutable source-string constants.
 
-`BROWSER_RUN_CODE_SOURCES` has exactly the 391 literal
+`BROWSER_RUN_CODE_SOURCES` has exactly the 392 literal
 `run-code/<exact-action-id>` keys from the run-code partition and owns each complete
 immutable `(page) => ...` source builder, required non-secret ref signature, target
 page contract, and result-key order. Common safe serializer/locator primitives may be
@@ -2238,13 +2238,13 @@ Switching on `action.id`, `kind`, `builder`, scenario, action-name prefixes, ref
 values, output schema, or prose is forbidden; an ID-specific special case must instead
 be an explicit registry entry validated by bidirectional set equality.
 
-The current 495 rows have been mechanically recounted from their exact builders and
+The current 496 rows have been mechanically recounted from their exact builders and
 must compile to this exhaustive disjoint partition:
 
 ```ts
 const REQUIRED_EXECUTABLE_TYPE_COUNTS = deepFreezeExact({
   "runtime-operation": 76,
-  "browser-run-code": 391,
+  "browser-run-code": 392,
   "browser-native": 14,
   "browser-screenshot": 13,
   "browser-global-list": 1,
@@ -2263,23 +2263,23 @@ const REQUIRED_GLOBAL_LIST_ACTION_IDS = Object.freeze([
 ```
 
 The seven credential fills above are the only native fills. The other 16 fills, all
-124 clicks, all 22 gotos, all 11 resizes, all presses/types/focus operations, routes,
+125 clicks, all 22 gotos, all 11 resizes, all presses/types/focus operations, routes,
 observations, assertions, log reads, and browser cleanup observations are run-code.
 The four native tab actions, one open, one route-list, one close, and seven secret
 fills total 14. The 13 screenshot action IDs are set-equal to the blueprint screenshot
 registry; `end-007-session-absence` alone is global-list. The 76 runtime IDs are
-set-equal to the runtime table below. The run-code set is the exact 495-ID set minus
+set-equal to the runtime table below. The run-code set is the exact 496-ID set minus
 those four disjoint sets, not a permissive fallback. Startup asserts per-type counts,
-per-source/per-operation counts, full 495-ID union equality, empty intersections,
+per-source/per-operation counts, full 496-ID union equality, empty intersections,
 descriptor/registry bidirectional set equality, ref closure, and the independent
-ordinal partition `setup=1..55`, `flow=56..488`, `terminal=489..495`. This validation
+ordinal partition `setup=1..55`, `flow=56..489`, `terminal=490..496`. This validation
 does not execute an action or resolve a ref.
 
 The two helper self-tests must include named hermetic negative cases for: one missing
 and one extra key at the action and every executable-union variant; unknown
 `runtime/<action-id>`, unknown `run-code/<action-id>`, unknown native operation,
 unknown screenshot ID, missing/extra registry entry, duplicate registry key, and an
-incomplete 489-action mapping; every unsupported/ref-misspelled discriminant; a
+incomplete 495-action mapping; every unsupported/ref-misspelled discriminant; a
 `SecretNameRef` in run-code/runtime/screenshot/nested-selector position and a raw
 secret value disguised as literal/capture/fixture data; output schema/parser mismatch;
 and all native grammar mutations (missing/extra LF, CRLF, BOM/NUL, nonempty stderr,
@@ -2290,13 +2290,13 @@ LF, and any nonempty global browser listing). JSON negatives cover zero/two laye
 `JSON.stringify(...)` string output, LF-only/undefined, duplicate keys, noncanonical
 bytes, trailing whitespace, and unknown result keys. The positive executor self-test
 runs the sole real executor loop with hermetic fake capabilities and requires its first
-495 capability calls to cover the 495 action rows before cleanup. It then validates the
+496 capability calls to cover the 496 action rows before cleanup. It then validates the
 executor's separate browser/runtime receipt lanes, cleanup order, and finalization; it
-does not manufacture a global 495-receipt executor trace. Independently, the contract
-self-test's model loop proves 495 model dispatches and receipts, manifest-ID equality,
-dense ordinals `1..495`, exact-once counts, and the disjoint `55/433/7` partition.
+does not manufacture a global 496-receipt executor trace. Independently, the contract
+self-test's model loop proves 496 model dispatches and receipts, manifest-ID equality,
+dense ordinals `1..496`, exact-once counts, and the disjoint `55/434/7` partition.
 The executor self-test separately proves the derived executable partition
-`76/391/14/13/1`, every declared
+`76/392/14/13/1`, every declared
 top-level/page/route/auth/theme transition in order, rejection of an undeclared,
 duplicate, delayed, or stale-page route transition, and assignment of each validated
 next `RunState` before the following precondition is checked. Its fake successful-create
@@ -2322,7 +2322,7 @@ extra ledger core/edge, wrong acquisition owner, recompilation/re-expansion afte
 is frozen, or cleanup-set drift fails. No real process, filesystem, DB, network, browser,
 caller callback, or environment capability is touched.
 
-The same self-test runs both phase-1 branches. A complete 495-row success trace ending
+The same self-test runs both phase-1 branches. A complete 496-row success trace ending
 in `end-007-session-absence` must retain its browser invocation/receipt counts unchanged
 through cleanup while only the acquired private-root identity is removed. Every sampled
 early-failure ordinal derives and executes the exact missing subset of release/unroute,
@@ -2384,6 +2384,7 @@ const S = deepFreezeExact({
   loginPassword: 'input#password[name="password"][type="password"]',
   loginSubmit: 'button[type="submit"]:text-is("Sign in")',
   canvas: '[data-screen-authoring-canvas="true"]',
+  blockRoot: (id: string) => `[data-screen-block-id="${id}"]`,
   palette: (label: "Button" | "Tabs" | "Text" | "Field" | "Image") =>
     `div[data-screen-block-library="true"] button:text-is("${label}")`,
   selectBlock: (id: string) => `button[data-screen-select-block="${id}"]`,
@@ -2401,6 +2402,8 @@ const S = deepFreezeExact({
   runtimeTab: (label: string) => `[role="tab"]:text-is("${label}")`,
   scopedRuntimeTab: (blockId: string, label: string, scope = "") =>
     `${scope} [data-screen-block-id="${blockId}"] [role="tab"]:text-is("${label}")`.trim(),
+  previewRuntimeTab: (blockId: string, label: string) =>
+    `[data-preview-shell="roomy"] [data-preview-device="desktop"] [data-screen-block-id="${blockId}"] [role="tab"]:text-is("${label}")`,
   runtimePanel: (id: string) => `[role="tabpanel"][data-screen-runtime-tab="${id}"]`,
   builderSave: 'button:text-is("Save")',
   preview: 'button:text-is("Preview")',
@@ -2452,6 +2455,19 @@ const S = deepFreezeExact({
   secondTabSave: 'button:text-is("Save draft")',
 });
 ```
+
+The runtime renderer intentionally owns focus scoping through its React root ref and
+does not emit a `[data-screen-runtime-root]` DOM marker. Smoke code must not add or
+depend on that legacy selector. `observe(preview-shell-desktop)` waits for the exact
+desktop preview shell and proves the captured outer and nested Tabs roots are each
+unique, visible, and positive-geometry below it. Entry-draft readers scope editable
+content below the exact `S.canvasScroller` surface and its rendered sections. The
+cross-renderer ID proof resolves the captured outer Tabs root independently below the
+builder `S.canvas` and desktop `S.previewShell`, then concatenates only the tab/panel
+IDs owned by the exact outer `3 + 3` and nested `2 + 2` tab/panel shapes from both
+roots (`10` IDs per realm, `20` total); it never queries the global document or a
+production-only test hook. All captured block-root selectors are rendered through the
+canonical CSS-string encoder before browser execution.
 
 `expandPath()` requires exact `PathTemplate` keys, substitutes every declared capture
 once, percent-encodes path segments, rejects unresolved/extra braces, and joins Admin
@@ -2787,7 +2803,7 @@ or rename rows.
 |---|---|---|---|---|
 | `bi-001-light-proof` | p1/0 | `observe(theme-light)` | cold builder -> `aria-pressed=false` + computed colors -> light proven | `set-045 / absent -> absent` |
 | `bi-002-resize` | p1/0 | `resize(1280,900)` | light builder -> viewport -> 1280x900 | `bi-001 / absent -> absent` |
-| `bi-003-button-before` | p1/0 | `blocksBefore(palette.button)` | canvas visible -> exact block-ID set -> Button baseline captured | `bi-002 / absent -> absent` |
+| `bi-003-button-before` | p1/0 | `blocksBefore(palette.button)` | canvas visible -> exact block-ID set + Insert selected -> Button baseline captured | `bi-002 / absent -> absent` |
 | `bi-004-button-click` | p1/0 | `click(S.palette("Button"))` | Button baseline -> click receipt -> one Button inserted/selected | `bi-003 / absent -> absent` |
 | `bi-005-button-capture` | p1/0 | `captureNew(palette.button,"button",bi-003)` | insertion settled -> one new ID -> `palette.button` frozen | `bi-003,bi-004 / absent -> absent` |
 | `bi-006-bound-open-primary` | p1/0 | `click(S.boundField)` | Button selected -> menu visible -> bound-field menu open | `bi-005 / absent -> absent` |
@@ -2801,7 +2817,7 @@ or rename rows.
 | `bi-014-builder-save` | p1/0 | `click(S.builderSave)` | dirty builder -> save settlement -> builder clean | `bi-013 / absent -> absent` |
 | `bi-015-persisted-binding` | p1/0 | `observe(binding-after-save)` | save settled -> strict persisted read -> post-Save binding sample frozen | `bi-014 / absent -> absent` |
 | `bi-016-list` | p1/0 | `goto(paths.screens)` | builder clean -> URL -> Screen list | `bi-015 / absent -> absent` |
-| `bi-016a-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | Screen list stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + realm stability proof -> exact `{"barrierSatisfied":true}` | `bi-016 / absent -> absent` |
+| `bi-016a-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | Screen list stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}` | `bi-016 / absent -> absent` |
 | `bi-017-reopen` | p1/0 | `goto(paths.builder)` | Screen list -> URL/canvas marker -> saved builder reopened | `bi-016a-auth-rate-window-barrier / absent -> absent` |
 | `bi-018-reopen-proof` | p1/0 | `assert(persisted-no-empty-binding)` | reopened -> strict observation -> binding still exact | `bi-017 / absent -> absent` |
 | `bi-019-cache-cold` | p1/0 | `assert(media-cache-cold-before-route)` | no prior entry/media consumer -> exact aggregate count -> media GET count 0 | `bi-018 / absent -> absent` |
@@ -2830,12 +2846,12 @@ or rename rows.
 | `bi-042-save-presentation` | p1/0 | `click(S.presentationSave)` | presentation dirty -> exact PATCH success + `Saving...` absent + clean-disabled Save presentation control -> override clean | `bi-041 / absent -> absent` |
 | `bi-043-media-uuid` | p1/0 | `assert(media-field-keeps-uuid)` | save settled -> unique visible fixture display title + canonical rendered image source mapped to the captured media fixture, plus authenticated persisted read -> captured UUID retained/no resolved URL persisted | `bi-042 / absent -> absent` |
 | `bi-044-builder-return` | p1/0 | `goto(paths.builder)` | entry clean -> URL/canvas -> builder visible | `bi-043 / absent -> absent` |
-| `bi-045-image-before` | p1/0 | `blocksBefore(palette.image)` | canvas visible -> ID set -> Image baseline captured | `bi-044 / absent -> absent` |
+| `bi-045-image-before` | p1/0 | `blocksBefore(palette.image)` | canvas visible -> ID set + Insert selected -> Image baseline captured | `bi-044 / absent -> absent` |
 | `bi-046-image-click` | p1/0 | `click(S.palette("Image"))` | baseline -> click -> one Image inserted | `bi-045 / absent -> absent` |
 | `bi-047-image-capture` | p1/0 | `captureNew(palette.image,"image",bi-045)` | insertion settled -> one new ID -> palette Image frozen | `bi-045,bi-046 / absent -> absent` |
 | `bi-048-image-bound-open` | p1/0 | `click(S.boundField)` | Image selected -> menu -> menu open | `bi-047 / absent -> absent` |
 | `bi-049-image-bound-media` | p1/0 | `click(S.fieldOption("Media Asset","media"))` | menu open -> exact option -> palette Image media-bound | `bi-048 / absent -> absent` |
-| `bi-050-field-before` | p1/0 | `blocksBefore(palette.mediaField)` | canvas visible -> ID set -> Field baseline captured | `bi-049 / absent -> absent` |
+| `bi-050-field-before` | p1/0 | `blocksBefore(palette.mediaField)` | canvas visible -> ID set + Insert selected -> Field baseline captured | `bi-049 / absent -> absent` |
 | `bi-051-field-click` | p1/0 | `click(S.palette("Field"))` | baseline/Insert palette remains visible -> click -> one Field inserted | `bi-050 / absent -> absent` |
 | `bi-052-field-capture` | p1/0 | `captureNew(palette.mediaField,"field",bi-050)` | insertion settled -> one new ID -> palette Field frozen | `bi-050,bi-051 / absent -> absent` |
 | `bi-053-field-bound-open` | p1/0 | `click(S.boundField)` | Field selected -> menu -> menu open | `bi-052 / absent -> absent` |
@@ -2848,7 +2864,7 @@ or rename rows.
 | `bi-059-entry-after-front` | p1/0 | `goto(paths.entry)` | front assertion complete -> URL -> entry visible | `bi-058 / absent -> absent` |
 | `bi-060-unsafe-patch` | runtime | `api(patch-screen-button-binding-secondary-url)` | entry baseline already holds unsafe Secondary URL -> one Screen PATCH -> Button rebound | `bi-059 / absent -> absent` |
 | `bi-061-unsafe-proof-read` | runtime | `apiRead(screen-button-binding-secondary-url)` | PATCH settled -> exact binding + baseline entry capture -> unsafe fixture proven | `bi-060 / absent -> absent` |
-| `bi-061a-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | unsafe fixture proven/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + realm stability proof -> exact `{"barrierSatisfied":true}` | `bi-061 / absent -> absent` |
+| `bi-061a-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | unsafe fixture proven/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}` | `bi-061 / absent -> absent` |
 | `bi-062-entry-unsafe-reload` | p1/0 | `goto(paths.entry)` | unsafe fixture proven -> URL/document -> entry rerendered | `bi-061a-auth-rate-window-barrier / absent -> absent` |
 | `bi-063-unsafe-disabled` | p1/0 | `assert(unsafe-link-disabled)` | entry rerendered -> span/ARIA/anchor count -> unsafe URL inert | `bi-062 / absent -> absent` |
 | `bi-064-baseline-restore` | runtime | `api(reset-screen-baseline)` | unsafe assertion complete -> one Screen PATCH -> baseline restored | `bi-063 / absent -> absent` |
@@ -2872,7 +2888,7 @@ or rename rows.
 | `tc-004-dark-toggle` | p1/0 | `click(S.colorMode)` | light proven -> aria state -> dark selected | `bi-001,tc-003 / absent -> absent` |
 | `tc-005-dark-proof` | p1/0 | `observe(theme-dark)` | toggle settled -> computed colors/aria -> dark proven | `tc-004 / absent -> absent` |
 | `tc-006-resize` | p1/0 | `resize(1280,900)` | dark builder -> viewport -> 1280x900 | `tc-005 / absent -> absent` |
-| `tc-007-tabs-before` | p1/0 | `blocksBefore(palette.outerTabs)` | canvas visible -> ID set -> Tabs baseline captured | `tc-006 / absent -> absent` |
+| `tc-007-tabs-before` | p1/0 | `blocksBefore(palette.outerTabs)` | canvas visible -> ID set + Insert selected -> Tabs baseline captured | `tc-006 / absent -> absent` |
 | `tc-008-tabs-click` | p1/0 | `click(S.palette("Tabs"))` | baseline -> click -> one Tabs inserted | `tc-007 / absent -> absent` |
 | `tc-009-tabs-capture` | p1/0 | `captureNew(palette.outerTabs,"tabs",tc-007)` | insertion settled -> one new ID + defaults -> outer Tabs frozen | `tc-007,tc-008 / absent -> absent` |
 | `tc-010-label-one` | p1/0 | `fill(S.tabLabel("tab-1"),"Overview")` | defaults exact -> value -> tab-1 renamed | `tc-009 / absent -> absent` |
@@ -2880,25 +2896,25 @@ or rename rows.
 | `tc-012-add-tab` | p1/0 | `click(S.addTab)` | only tab-1/tab-2 -> UI mutation -> exact tab-3 added | `tc-011 / absent -> absent` |
 | `tc-013-label-three` | p1/0 | `fill(S.tabLabel("tab-3"),"History")` | tab-3 exact -> value -> tab-3 renamed | `tc-012 / absent -> absent` |
 | `tc-014-edit-overview` | p1/0 | `click(S.editTab("Overview"))` | outer selected -> active slot -> tab-1 insertion armed | `tc-013 / absent -> absent` |
-| `tc-015-text-one-before` | p1/0 | `blocksBefore(palette.tabOneText)` | tab-1 armed -> ID set -> Text baseline captured | `tc-014 / absent -> absent` |
+| `tc-015-text-one-before` | p1/0 | `blocksBefore(palette.tabOneText)` | tab-1 armed -> ID set + Insert selected -> Text baseline captured | `tc-014 / absent -> absent` |
 | `tc-016-text-one-click` | p1/0 | `click(S.palette("Text"))` | baseline -> click -> Text inserted in tab-1 | `tc-015 / absent -> absent` |
 | `tc-017-text-one-capture` | p1/0 | `captureNew(palette.tabOneText,"text",tc-015)` | insertion settled -> one ID -> tab-1 Text frozen | `tc-015,tc-016 / absent -> absent` |
 | `tc-018-text-one-fill` | p1/0 | `fill(S.paragraph,tabs.text.tab-1)` | Text selected -> value -> Overview text authored | `tc-017 / absent -> absent` |
 | `tc-019-reselect-outer-one` | p1/0 | `click(S.selectBlock(palette.outerTabs))` | child authored -> selected state -> outer Tabs selected | `tc-018 / absent -> absent` |
 | `tc-020-edit-details` | p1/0 | `click(S.editTab("Details"))` | outer selected -> active slot -> tab-2 armed | `tc-019 / absent -> absent` |
-| `tc-021-text-two-before` | p1/0 | `blocksBefore(palette.tabTwoText)` | tab-2 armed -> ID set -> Text baseline captured | `tc-020 / absent -> absent` |
+| `tc-021-text-two-before` | p1/0 | `blocksBefore(palette.tabTwoText)` | tab-2 armed -> ID set + Insert selected -> Text baseline captured | `tc-020 / absent -> absent` |
 | `tc-022-text-two-click` | p1/0 | `click(S.palette("Text"))` | baseline -> click -> Text inserted in tab-2 | `tc-021 / absent -> absent` |
 | `tc-023-text-two-capture` | p1/0 | `captureNew(palette.tabTwoText,"text",tc-021)` | insertion settled -> one ID -> tab-2 Text frozen | `tc-021,tc-022 / absent -> absent` |
 | `tc-024-text-two-fill` | p1/0 | `fill(S.paragraph,tabs.text.tab-2)` | Text selected -> value -> Details text authored | `tc-023 / absent -> absent` |
 | `tc-025-reselect-outer-two` | p1/0 | `click(S.selectBlock(palette.outerTabs))` | child authored -> selected state -> outer selected | `tc-024 / absent -> absent` |
 | `tc-026-edit-history` | p1/0 | `click(S.editTab("History"))` | outer selected -> active slot -> tab-3 armed | `tc-025 / absent -> absent` |
-| `tc-027-text-three-before` | p1/0 | `blocksBefore(palette.tabThreeText)` | tab-3 armed -> ID set -> Text baseline captured | `tc-026 / absent -> absent` |
+| `tc-027-text-three-before` | p1/0 | `blocksBefore(palette.tabThreeText)` | tab-3 armed -> ID set + Insert selected -> Text baseline captured | `tc-026 / absent -> absent` |
 | `tc-028-text-three-click` | p1/0 | `click(S.palette("Text"))` | baseline -> click -> Text inserted in tab-3 | `tc-027 / absent -> absent` |
 | `tc-029-text-three-capture` | p1/0 | `captureNew(palette.tabThreeText,"text",tc-027)` | insertion settled -> one ID -> tab-3 Text frozen | `tc-027,tc-028 / absent -> absent` |
 | `tc-030-text-three-fill` | p1/0 | `fill(S.paragraph,tabs.text.tab-3)` | Text selected -> value -> History text authored | `tc-029 / absent -> absent` |
 | `tc-031-save` | p1/0 | `click(S.builderSave)` | three tabs/text dirty -> save settlement -> builder clean | `tc-030 / absent -> absent` |
 | `tc-032-list` | p1/0 | `goto(paths.screens)` | builder clean -> URL -> Screen list | `tc-031 / absent -> absent` |
-| `tc-032a-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | Screen list stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + realm stability proof -> exact `{"barrierSatisfied":true}` | `tc-032 / absent -> absent` |
+| `tc-032a-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | Screen list stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}` | `tc-032 / absent -> absent` |
 | `tc-033-reopen` | p1/0 | `goto(paths.builder)` | list -> URL/canvas -> builder reopened | `tc-032a-auth-rate-window-barrier / absent -> absent` |
 | `tc-034-three-tabs` | p1/0 | `assert(three-tabs-persisted)` | reopened -> tab/slot/nested DOM + read -> exact persisted structure | `tc-033 / absent -> absent` |
 | `tc-035-click-details` | p1/0 | `click(S.scopedRuntimeTab(palette.outerTabs,"Details"))` | Overview active -> selected state -> Details active | `tc-034 / absent -> absent` |
@@ -2925,28 +2941,29 @@ or rename rows.
 | `tk-003-resize` | p1/0 | `resize(1024,900)` | light builder -> viewport -> 1024x900 | `tk-002 / absent -> absent` |
 | `tk-004-select-outer` | p1/0 | `click(S.selectBlock(palette.outerTabs))` | saved outer exists -> selected state -> outer selected | `tk-003 / absent -> absent` |
 | `tk-005-edit-overview` | p1/0 | `click(S.editTab("Overview"))` | outer selected -> insertion state -> tab-1 armed | `tk-004 / absent -> absent` |
-| `tk-006-inner-before` | p1/0 | `blocksBefore(palette.innerTabs)` | tab-1 armed -> ID set -> nested Tabs baseline | `tk-005 / absent -> absent` |
+| `tk-006-inner-before` | p1/0 | `blocksBefore(palette.innerTabs)` | tab-1 armed -> ID set + Insert selected -> nested Tabs baseline | `tk-005 / absent -> absent` |
 | `tk-007-inner-click` | p1/0 | `click(S.palette("Tabs"))` | baseline -> click -> nested Tabs inserted | `tk-006 / absent -> absent` |
 | `tk-008-inner-capture` | p1/0 | `captureNew(palette.innerTabs,"tabs",tk-006)` | insertion settled -> one ID/default tabs -> inner Tabs frozen | `tk-006,tk-007 / absent -> absent` |
 | `tk-009-save` | p1/0 | `click(S.builderSave)` | nested Tabs dirty -> save settlement -> builder clean | `tk-008 / absent -> absent` |
 | `tk-010-preview` | p1/0 | `click(S.preview)` | builder clean -> dialog -> Editor View Preview open | `tk-009 / absent -> absent` |
-| `tk-011-preview-proof` | p1/0 | `observe(preview-shell-desktop)` | dialog open -> shell/device/renderer -> second renderer visible | `tk-010 / absent -> absent` |
-| `tk-012-focus-overview` | p1/0 | `focus(S.scopedRuntimeTab(palette.outerTabs,"Overview",S.previewShell))` | preview visible -> focus state -> outer Overview focused | `tk-011 / absent -> absent` |
-| `tk-013-arrow-left` | p1/0 | `press(S.scopedRuntimeTab(palette.outerTabs,"Overview",S.previewShell),"ArrowLeft")` | Overview focused -> key -> History focused/selected | `tk-012 / absent -> absent` |
+| `tk-011-preview-proof` | p1/0 | `observe(preview-shell-desktop)` | dialog open -> exact desktop shell + unique visible outer/nested Tabs roots -> second renderer visibly proven | `tk-010 / absent -> absent` |
+| `tk-012-focus-overview` | p1/0 | `focus(S.previewRuntimeTab(palette.outerTabs,"Overview"))` | preview visible -> focus state -> outer Overview focused | `tk-011 / absent -> absent` |
+| `tk-013-arrow-left` | p1/0 | `press(S.previewRuntimeTab(palette.outerTabs,"Overview"),"ArrowLeft")` | Overview focused -> key -> History focused/selected | `tk-012 / absent -> absent` |
 | `tk-014-observe-left` | p1/0 | `observe(key-step-arrow-left)` | key settled -> text/IDs/tabIndex -> Left step frozen | `tk-013 / absent -> absent` |
-| `tk-015-arrow-right` | p1/0 | `press(S.scopedRuntimeTab(palette.outerTabs,"History",S.previewShell),"ArrowRight")` | History focused -> key -> Overview focused/selected | `tk-014 / absent -> absent` |
+| `tk-015-arrow-right` | p1/0 | `press(S.previewRuntimeTab(palette.outerTabs,"History"),"ArrowRight")` | History focused -> key -> Overview focused/selected | `tk-014 / absent -> absent` |
 | `tk-016-observe-right` | p1/0 | `observe(key-step-arrow-right)` | key settled -> text/IDs/tabIndex -> Right step frozen | `tk-015 / absent -> absent` |
-| `tk-017-home` | p1/0 | `press(S.scopedRuntimeTab(palette.outerTabs,"Overview",S.previewShell),"Home")` | Overview focused -> key -> Overview remains focused/selected | `tk-016 / absent -> absent` |
+| `tk-017-home` | p1/0 | `press(S.previewRuntimeTab(palette.outerTabs,"Overview"),"Home")` | Overview focused -> key -> Overview remains focused/selected | `tk-016 / absent -> absent` |
 | `tk-018-observe-home` | p1/0 | `observe(key-step-home)` | key settled -> text/IDs/tabIndex -> Home step frozen | `tk-017 / absent -> absent` |
-| `tk-019-end` | p1/0 | `press(S.scopedRuntimeTab(palette.outerTabs,"Overview",S.previewShell),"End")` | Overview focused -> key -> History focused/selected | `tk-018 / absent -> absent` |
+| `tk-019-end` | p1/0 | `press(S.previewRuntimeTab(palette.outerTabs,"Overview"),"End")` | Overview focused -> key -> History focused/selected | `tk-018 / absent -> absent` |
 | `tk-020-observe-end` | p1/0 | `observe(key-step-end)` | key settled -> text/IDs/tabIndex -> End step frozen | `tk-019 / absent -> absent` |
 | `tk-021-keyboard-proof` | p1/0 | `assert(arrow-home-end-focus)` | four key samples/current DOM -> Left/Right/Home/End steps -> roving focus exact | `tk-014,tk-016,tk-018,tk-020 / absent -> absent` |
 | `tk-022-aria-proof` | p1/0 | `assert(aria-reciprocal)` | preview DOM -> exact tab/panel IDs -> reciprocal ARIA/visibility | `tk-020 / absent -> absent` |
-| `tk-023-inner-second` | p1/0 | `click(S.scopedRuntimeTab(palette.innerTabs,"Tab 2",S.previewShell))` | outer Overview active -> click -> inner Tab 2 selected only | `tk-022 / absent -> absent` |
-| `tk-024-outer-details` | p1/0 | `click(S.scopedRuntimeTab(palette.outerTabs,"Details",S.previewShell))` | inner Tab 2 selected -> click -> outer Details selected | `tk-023 / absent -> absent` |
-| `tk-025-outer-overview` | p1/0 | `click(S.scopedRuntimeTab(palette.outerTabs,"Overview",S.previewShell))` | outer Details selected -> click -> outer Overview restored | `tk-024 / absent -> absent` |
+| `tk-022a-restore-overview` | p1/0 | `click(S.previewRuntimeTab(palette.outerTabs,"Overview"))` | ARIA proof settled with History active -> click -> outer Overview restored and inner controls visible | `tk-022 / absent -> absent` |
+| `tk-023-inner-second` | p1/0 | `click(S.previewRuntimeTab(palette.innerTabs,"Tab 2"))` | outer Overview active -> click -> inner Tab 2 selected only | `tk-022a / absent -> absent` |
+| `tk-024-outer-details` | p1/0 | `click(S.previewRuntimeTab(palette.outerTabs,"Details"))` | inner Tab 2 selected -> click -> outer Details selected | `tk-023 / absent -> absent` |
+| `tk-025-outer-overview` | p1/0 | `click(S.previewRuntimeTab(palette.outerTabs,"Overview"))` | outer Details selected -> click -> outer Overview restored | `tk-024 / absent -> absent` |
 | `tk-026-nested-proof` | p1/0 | `assert(nested-tabs-isolated)` | both roots visible -> scoped IDs/selections -> independent state | `tk-023,tk-025 / absent -> absent` |
-| `tk-027-ids-proof` | p1/0 | `assert(renderer-ids-unique)` | builder + dialog renderers -> all DOM IDs -> global uniqueness | `tk-011 / absent -> absent` |
+| `tk-027-ids-proof` | p1/0 | `assert(renderer-ids-unique)` | builder + dialog outer/nested roots -> exact 10 tab/panel IDs per realm -> 20 globally unique | `tk-011 / absent -> absent` |
 | `tk-028-shot` | p1/0 | `screen(tabs-keyboard-light)` | assertions pass -> PNG -> keyboard screenshot created | `tk-021,tk-022,tk-026,tk-027 / absent -> absent` |
 | `tk-029-preview-close` | p1/0 | `click(S.previewClose)` | screenshot captured -> dialog state -> preview closed | `tk-028 / absent -> absent` |
 | `tk-030-log-agg-errors` | p1/0 | `logs(aggregate,console-errors)` | flow complete -> `[]` -> aggregate clean | `tk-029 / absent -> absent` |
@@ -3006,7 +3023,7 @@ or rename rows.
 | `dg-004-light-toggle` | p1/0 | `click(S.colorMode)` | flow 4 dark -> aria state -> light selected | `dg-003 / absent -> absent` |
 | `dg-005-light-proof` | p1/0 | `observe(theme-light)` | toggle settled -> colors/aria -> light proven | `dg-004 / absent -> absent` |
 | `dg-006-resize` | p1/0 | `resize(1280,900)` | light builder -> viewport -> 1280x900 | `dg-005 / absent -> absent` |
-| `dg-007-dirty-before` | p1/0 | `blocksBefore(palette.dirtyText)` | canvas visible -> ID set -> dirty Text baseline | `dg-006 / absent -> absent` |
+| `dg-007-dirty-before` | p1/0 | `blocksBefore(palette.dirtyText)` | canvas visible -> ID set + Insert selected -> dirty Text baseline | `dg-006 / absent -> absent` |
 | `dg-008-dirty-click` | p1/0 | `click(S.palette("Text"))` | baseline -> click -> Text inserted | `dg-007 / absent -> absent` |
 | `dg-009-dirty-capture` | p1/0 | `captureNew(palette.dirtyText,"text",dg-007)` | insertion settled -> one ID -> dirty Text frozen | `dg-007,dg-008 / absent -> absent` |
 | `dg-010-dirty-fill` | p1/0 | `fill(S.paragraph,entry.contentDraft)` | Text selected -> value -> builder dirty draft authored | `dg-009 / absent -> absent` |
@@ -3036,7 +3053,7 @@ or rename rows.
 | `dg-033-failure-shot` | p1/0 | `screen(dirty-save-failure)` | visible error/drafts -> PNG -> failure screenshot created | `dg-031,dg-032 / hit -> hit` |
 | `dg-034-save-unroute` | p1/0 | `route(entry-save-failure,unroute)` | hit read and shot complete -> `true` -> route absent | `dg-030,dg-033 / hit -> absent` |
 | `dg-035-real-retry` | p1/0 | `click(S.entrySave)` | route absent/error visible -> real Save -> content request succeeds | `dg-034 / absent -> absent` |
-| `dg-036-retry-proof` | p1/0 | `assert(successful-retry-clears-persisted-channel)` | content Save settled -> persisted content plus the `ss-006` proven empty server-presentation baseline, `dg-023` local presentation bytes, and current dirty states captured -> content matches and is clean while the server presentation remains unchanged and the local presentation remains byte-identical and dirty | `ss-006,dg-023,dg-035 / absent -> absent` |
+| `dg-036-retry-proof` | p1/0 | `assert(successful-retry-clears-persisted-channel)` | content Save settled -> persisted content plus the ss-006 proven empty server-presentation baseline, dg-023 local presentation bytes, and current dirty states captured -> content matches and is clean while the server presentation remains unchanged and the local presentation remains byte-identical and dirty | `ss-006,dg-023,dg-035 / absent -> absent` |
 | `dg-037-entry-nav-confirm` | p1/0 | `click(S.recordsLink(screen.id))` | presentation still dirty -> dialog -> navigation suspended | `dg-036 / absent -> absent` |
 | `dg-038-entry-discard` | p1/0 | `click(S.discard)` | dialog visible -> navigation -> records workspace | `dg-037 / absent -> absent` |
 | `dg-039-entry-confirm-proof` | p1/0 | `assert(entry-confirm-navigates-once)` | records loaded -> URL/count -> one navigation | `dg-038 / absent -> absent` |
@@ -3075,7 +3092,7 @@ or rename rows.
 | `rc-016-tone-muted` | p1/0 | `click(S.muted)` | menu open -> selected value -> unrelated presentation dirty | `rc-015 / absent -> absent` |
 | `rc-017-unrelated-before` | p1/0 | `observe(related-unrelated-drafts-before)` | both unrelated channels dirty -> bytes -> before sample frozen | `rc-016 / absent -> absent` |
 | `rc-017a-pre-route-a-baseline` | p1/0 | `observe(related-a-visible-baseline)` | main entry/pickers settled -> exact main-A-list-root row IDs/text/positive rects and zero skeleton/empty geometry + current p1 `navigationCount` -> pre-route visible/navigation baseline frozen | `rc-017 / absent -> absent` |
-| `rc-017b-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | entry baseline stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + realm stability proof -> exact `{"barrierSatisfied":true}` | `rc-017a-pre-route-a-baseline / absent -> absent` |
+| `rc-017b-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | entry baseline stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}` | `rc-017a-pre-route-a-baseline / absent -> absent` |
 | `rc-018-refresh-route-setup` | p1/0 | `route(related-a-refresh,route-setup)` | first failure recovered/drafts and A baseline held -> tuple -> delayed A route installed | `rc-017b-auth-rate-window-barrier / absent -> installed` |
 | `rc-019-related-tab-new` | p2/1 | `tab-new(paths.relatedEntryA1Editor)` | route installed/context logger active -> identity/URL -> p2 related-A editor | `rc-018 / installed -> installed` |
 | `rc-020-related-tab-edit` | p2/1 | `fill(S.secondTabTitle,relatedEntries.a1.updatedTitle)` | p2 editor visible -> value -> harmless A1 draft | `rc-019 / installed -> installed` |
@@ -3236,7 +3253,7 @@ no click and stores the sample executor-locally for the three final geometry ass
 | `ru-075-b-menu` | p1/0 | `click(S.userMenu(users.b.displayName))` | B entry -> menu -> menu open | `ru-074 / absent -> absent` |
 | `ru-076-b-signout` | p1/0 | `click(S.signOut)` | menu open -> real logout click/navigation initiated -> B realm leaving | `ru-075 / absent -> absent` |
 | `ru-076a-b-signout-settled` | p1/0 | `observe(signout-settled-user-b)` | logout initiated -> exact canonical `paths.login` URL + positive-geometry exact login form -> login realm settled | `ru-076 / absent -> absent` |
-| `ru-076b-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | login realm stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + realm stability proof -> exact `{"barrierSatisfied":true}` | `ru-076a-b-signout-settled / absent -> absent` |
+| `ru-076b-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | login realm stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}` | `ru-076a-b-signout-settled / absent -> absent` |
 | `ru-077-a2-email` | p1/0 | `fill(S.loginEmail,$WF540_USER_A_EMAIL)` | settled login form -> discarded -> A email filled | `ru-076b-auth-rate-window-barrier / absent -> absent` |
 | `ru-078-a2-password` | p1/0 | `fill(S.loginPassword,$ADMIN_PASSWORD)` | A email filled -> discarded -> password filled | `ru-077 / absent -> absent` |
 | `ru-079-a2-submit` | p1/0 | `click(S.loginSubmit)` | credentials filled -> auth navigation -> A authenticated | `ru-078 / absent -> absent` |
@@ -3264,7 +3281,7 @@ no click and stores the sample executor-locally for the three final geometry ass
 | `ru-098-queued-zero` | p1/0 | `assert(queued-a-write-zero-dispatch)` | old realm destroyed -> derived dispatch count -> exact 0 | `ru-097 / released -> released` |
 | `ru-099-b-unchanged` | p1/0 | `assert(user-b-default-unchanged)` | strict B `{key,value}` reads before/after release + false badge geometry -> exact false/false -> B unchanged | `ru-095,ru-096 / released -> released` |
 | `ru-100-write-unroute` | p1/0 | `route(preference-a-write-exit,unroute)` | hit/queue/B proven -> `true` -> delayed PATCH absent and exact bounded `requestfailed` listener removed | `ru-097,ru-098,ru-099 / released -> absent` |
-| `ru-100a-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | routes absent/B active/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + realm stability proof -> exact `{"barrierSatisfied":true}`; `ru-099`/`ru-101` compose the exact B proof | `ru-100 / absent -> absent` |
+| `ru-100a-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | routes absent/B active/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}`; `ru-099`/`ru-101` compose the exact B proof | `ru-100 / absent -> absent` |
 | `ru-101-b2-menu` | p1/0 | `click(S.userMenu(users.b.displayName))` | auth budget barrier/B entry -> menu -> menu open | `ru-100a-auth-rate-window-barrier / absent -> absent` |
 | `ru-102-b2-signout` | p1/0 | `click(S.signOut)` | menu open -> real logout click/navigation initiated -> B realm leaving | `ru-101 / absent -> absent` |
 | `ru-102a-b2-signout-settled` | p1/0 | `observe(signout-settled-user-b)` | logout initiated -> exact canonical `paths.login` URL + positive-geometry exact login form -> login realm settled | `ru-102 / absent -> absent` |
@@ -3321,7 +3338,7 @@ stage dependency graph while retaining the already-frozen persistent and termina
 action plans by object identity. No abbreviated fixture object or receipt may stand in
 for a compiled record:
 
-The sole 495-row ordinal loop is the only writer for successful action-bound
+The sole 496-row ordinal loop is the only writer for successful action-bound
 acquisitions. Immediately after strict result, receipt, and independent provenance
 validation, and before that action may transition state or become completed, the
 executor takes exactly one private action-bound acquisition delta. The delta is a strict
@@ -4108,7 +4125,7 @@ const REQUIRED_SMOKE_ASSERTIONS = deepFreezeExact({
 const REQUIRED_FLOW_ACTION_COUNTS = Object.freeze({
   "button-image": 76,
   "tabs-content": 49,
-  "tabs-keyboard-aria": 35,
+  "tabs-keyboard-aria": 36,
   "space-selection": 35,
   "dirty-guards": 49,
   "related-retry-cache": 54,
@@ -4193,20 +4210,20 @@ const REQUIRED_RUNTIME_BLOCK_CAPTURES = Object.freeze([
 ]);
 
 assertSetEqual(manifestScenarios(SMOKE_ACTION_MANIFEST), REQUIRED_SCENARIOS);
-assertCardinality(SMOKE_ACTION_MANIFEST, 495);
+assertCardinality(SMOKE_ACTION_MANIFEST, 496);
 assertEverySourceTupleHasExactlyFiveColumns();
 assertEveryTransitionTupleHasExactlyThreeClauses();
 assertCardinality(setupActions(), REQUIRED_SETUP_ACTION_COUNT);
 for (const scenario of REQUIRED_SCENARIOS) {
   assertCardinality(actionsFor(scenario), REQUIRED_FLOW_ACTION_COUNTS[scenario]);
 }
-assertCardinality(flowActions(), 433);
+assertCardinality(flowActions(), 434);
 assertCardinality(terminalBrowserActions(), REQUIRED_TERMINAL_BROWSER_ACTION_COUNT);
 assertDeepEqual(setupActions().map(({ ordinal }) => ordinal), integerRange(1, 55));
-assertDeepEqual(flowActions().map(({ ordinal }) => ordinal), integerRange(56, 488));
+assertDeepEqual(flowActions().map(({ ordinal }) => ordinal), integerRange(56, 489));
 assertDeepEqual(
   terminalBrowserActions().map(({ ordinal }) => ordinal),
-  integerRange(489, 495),
+  integerRange(490, 496),
 );
 assertPairwiseDisjointActionIdSets([
   setupActions(), flowActions(), terminalBrowserActions(),
@@ -4217,7 +4234,7 @@ assertSetEqual(
 );
 assertDeepEqual(
   SMOKE_ACTION_MANIFEST.map(({ ordinal }) => ordinal),
-  integerRange(1, 495),
+  integerRange(1, 496),
 );
 assertUnique(SMOKE_ACTION_MANIFEST.map(({ id }) => id));
 assertEveryRowHasExactKeys(ACTION_MANIFEST_SCHEMA);
@@ -4264,15 +4281,15 @@ assertDeepEqual(browserCleanupActionIds(), [
 ]);
 
 const oneLoopSelfTestTrace = runHermeticOneLoopExecutorSelfTest();
-assertCardinality(oneLoopSelfTestTrace.actionDispatches, 495);
-assertCardinality(oneLoopSelfTestTrace.actionReceipts, 495);
+assertCardinality(oneLoopSelfTestTrace.actionDispatches, 496);
+assertCardinality(oneLoopSelfTestTrace.actionReceipts, 496);
 assertDeepEqual(
   oneLoopSelfTestTrace.actionDispatches.map(({ ordinal }) => ordinal),
-  integerRange(1, 495),
+  integerRange(1, 496),
 );
 assertDeepEqual(
   oneLoopSelfTestTrace.actionReceipts.map(({ ordinal }) => ordinal),
-  integerRange(1, 495),
+  integerRange(1, 496),
 );
 assertSetEqual(
   oneLoopSelfTestTrace.actionReceipts.map(({ actionId }) => actionId),
@@ -4634,7 +4651,7 @@ async function executeSmokePlanCore(
     plan.actionManifest,
     completedActionIds,
     actionReceipts,
-    { setup: 55, flow: 433, terminal: 7 },
+    { setup: 55, flow: 434, terminal: 7 },
   );
   const cleanupResult =
     await constructionCleanupAuthority.cleanupWhateverWasAcquiredOnceNeverThrow();
@@ -4861,8 +4878,8 @@ identity-substituted, cloned, recompiled, and re-expanded plans/graphs at each b
 including the cross-stage terminal-child-to-user guard.
 
 That `for (const action of plan.actionManifest)` statement is the only static-action
-execution loop. It executes setup ordinals `1..55`, flow ordinals `56..488`, and
-terminal browser ordinals `489..495` once each and records one matching receipt before
+execution loop. It executes setup ordinals `1..55`, flow ordinals `56..489`, and
+terminal browser ordinals `490..496` once each and records one matching receipt before
 the next ordinal. Cleanup expansion is separately ledger-derived failure/success
 cleanup authority; it cannot contain a manifest action ID, satisfy a missing manifest
 receipt, or replay setup. Neither the real path nor the hermetic self-test has an
@@ -5760,8 +5777,8 @@ preconditions reuse the immediately preceding state sample.
 | `tabs-content` / `armed-slot-equals-active-tab` | `activeTabId`, `armedSlotId`, `selectedTabId`; all three byte-identical in both activation directions. |
 | `tabs-keyboard-aria` / `arrow-home-end-focus` | `steps`; exact ordered ArrowLeft/ArrowRight/Home/End objects with `key`, `focusedTabText`, `focusedTabId`, `selectedTabId`, and `tabIndex`, each matching the expected roving result. |
 | `tabs-keyboard-aria` / `aria-reciprocal` | `pairs`, `visiblePanelId`, `hiddenPanelIds`; every exact tab/panel pair has reciprocal IDs, one visible expected panel, all others hidden. |
-| `tabs-keyboard-aria` / `nested-tabs-isolated` | `outerRootId`, `innerRootId`, `outerSelectedId`, `innerSelectedId`; roots/selection are distinct and each fixture identity remains in its root. |
-| `tabs-keyboard-aria` / `renderer-ids-unique` | `ids`, `uniqueCount`; non-empty ID array and `uniqueCount === ids.length` across both renderer instances. |
+| `tabs-keyboard-aria` / `nested-tabs-isolated` | `outerRootId`, `innerRootId`, `outerSelectedId`, `innerSelectedId`; roots are distinct, outer is exact Overview/default[0], and inner is exact Tab 2/default[1] after the away/back isolation cycle. |
+| `tabs-keyboard-aria` / `renderer-ids-unique` | `ids`, `uniqueCount`; exact 20-item unique ID array (`3 + 3` outer and `2 + 2` inner per realm) and `uniqueCount === ids.length` across builder and preview. |
 | `space-selection` / `space-text-preserved` | `text`, `expectedText`; exact multi-word text including real Spaces is byte-identical. |
 | `space-selection` / `nested-controls-do-not-select` | `linkActivated`, `inputFocused`, `selectedBefore`, `selectedAfter`; real nested controls work and selection identity is unchanged. |
 | `space-selection` / `selection-handle-independent` | `handleFocused`, `ariaPressed`, `selectedBlockId`, `defaultPrevented`; exact handle independently focuses/selects the fixture block and `defaultPrevented` is exact `false` because the source handler stops propagation but does not prevent default. |

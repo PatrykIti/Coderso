@@ -32,7 +32,7 @@ const EXECUTABLE_KEYS_BY_TYPE = deepFreezeExact({
 
 const REQUIRED_EXECUTABLE_TYPE_COUNTS = deepFreezeExact({
   "runtime-operation": 76,
-  "browser-run-code": 391,
+  "browser-run-code": 392,
   "browser-native": 14,
   "browser-screenshot": 13,
   "browser-global-list": 1,
@@ -80,7 +80,7 @@ const REQUIRED_SCENARIOS = Object.freeze([
 const REQUIRED_FLOW_ACTION_COUNTS = Object.freeze({
   "button-image": 76,
   "tabs-content": 49,
-  "tabs-keyboard-aria": 35,
+  "tabs-keyboard-aria": 36,
   "space-selection": 35,
   "dirty-guards": 49,
   "related-retry-cache": 54,
@@ -88,9 +88,9 @@ const REQUIRED_FLOW_ACTION_COUNTS = Object.freeze({
 });
 
 const REQUIRED_SETUP_ACTION_COUNT = 55;
-const REQUIRED_FLOW_ACTION_COUNT = 433;
+const REQUIRED_FLOW_ACTION_COUNT = 434;
 const REQUIRED_TERMINAL_ACTION_COUNT = 7;
-const REQUIRED_ACTION_COUNT = 495;
+const REQUIRED_ACTION_COUNT = 496;
 
 const REQUIRED_FIXTURE_SUBJECT_KEYS = Object.freeze([
   "user-a",
@@ -371,7 +371,7 @@ const REQUIRED_BUILDER_KIND_COUNTS = deepFreezeExact({
   goto: 22,
   resize: 11,
   fill: 23,
-  click: 124,
+  click: 125,
   observe: 53,
   isolatedApiSessionLogin: 2,
   isolatedApiSessionCsrfCapture: 2,
@@ -863,7 +863,7 @@ const OBSERVATION_OUTPUT_FIELDS = deepFreezeExact({
     "armedSlotId",
     "rects",
   ],
-  "preview-shell-desktop": ["shellVisible", "device", "rendererCount"],
+  "preview-shell-desktop": ["shellVisible", "device", "outerTabsVisible", "innerTabsVisible"],
   "key-step-arrow-left": ["key", "focusedTabText", "focusedTabId", "selectedTabId", "tabIndex"],
   "key-step-arrow-right": ["key", "focusedTabText", "focusedTabId", "selectedTabId", "tabIndex"],
   "key-step-home": ["key", "focusedTabText", "focusedTabId", "selectedTabId", "tabIndex"],
@@ -1132,7 +1132,7 @@ const SCREENSHOT_DESCRIPTOR_BY_ACTION_ID = deepFreezeExact({
 
 const EXECUTABLE_REGISTRY_KEY_SHA256 = deepFreezeExact({
   runtimeOperations: "29040b4ce9625fe454bfea8f2d68c169800cdf2fcbb3e15761f151254f9ac447",
-  browserRunCodeSources: "d9a54e7b982c0dbc061a6f46b9ce91bd4794d0b961bd2c4cb48df07640a84ed9",
+  browserRunCodeSources: "62f56b099d2dfcec21d68479fedc55b728525df7f022a0bbe7520647d1ba3e3f",
 });
 
 const SCENARIO_BY_PREFIX = Object.freeze({
@@ -1515,7 +1515,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "set-030-media-upload",
     "runtime",
     "api(upload-fixture-png)",
-    "local snapshot held -> media ID/URL/key -> media acquired",
+    "local snapshot held + exact deep-frozen blueprint base64/68-byte/PNG-signature/SHA-256 authority -> one real multipart upload + media ID/URL/key -> media acquired",
     "set-029b-related-failure1-proof / absent -> absent",
   ],
   [
@@ -1921,7 +1921,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "bi-042-save-presentation",
     "p1/0",
     "click(S.presentationSave)",
-    "presentation dirty -> save settlement -> override clean",
+    "presentation dirty -> exact PATCH success + `Saving...` absent + clean-disabled Save presentation control -> override clean",
     "bi-041 / absent -> absent",
   ],
   [
@@ -2572,20 +2572,20 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "tk-011-preview-proof",
     "p1/0",
     "observe(preview-shell-desktop)",
-    "dialog open -> shell/device/renderer -> second renderer visible",
+    "dialog open -> exact desktop shell + unique visible outer/nested Tabs roots -> second renderer visibly proven",
     "tk-010 / absent -> absent",
   ],
   [
     "tk-012-focus-overview",
     "p1/0",
-    'focus(S.scopedRuntimeTab(palette.outerTabs,"Overview",S.previewShell))',
+    'focus(S.previewRuntimeTab(palette.outerTabs,"Overview"))',
     "preview visible -> focus state -> outer Overview focused",
     "tk-011 / absent -> absent",
   ],
   [
     "tk-013-arrow-left",
     "p1/0",
-    'press(S.scopedRuntimeTab(palette.outerTabs,"Overview",S.previewShell),"ArrowLeft")',
+    'press(S.previewRuntimeTab(palette.outerTabs,"Overview"),"ArrowLeft")',
     "Overview focused -> key -> History focused/selected",
     "tk-012 / absent -> absent",
   ],
@@ -2599,7 +2599,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
   [
     "tk-015-arrow-right",
     "p1/0",
-    'press(S.scopedRuntimeTab(palette.outerTabs,"History",S.previewShell),"ArrowRight")',
+    'press(S.previewRuntimeTab(palette.outerTabs,"History"),"ArrowRight")',
     "History focused -> key -> Overview focused/selected",
     "tk-014 / absent -> absent",
   ],
@@ -2613,7 +2613,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
   [
     "tk-017-home",
     "p1/0",
-    'press(S.scopedRuntimeTab(palette.outerTabs,"Overview",S.previewShell),"Home")',
+    'press(S.previewRuntimeTab(palette.outerTabs,"Overview"),"Home")',
     "Overview focused -> key -> Overview remains focused/selected",
     "tk-016 / absent -> absent",
   ],
@@ -2627,7 +2627,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
   [
     "tk-019-end",
     "p1/0",
-    'press(S.scopedRuntimeTab(palette.outerTabs,"Overview",S.previewShell),"End")',
+    'press(S.previewRuntimeTab(palette.outerTabs,"Overview"),"End")',
     "Overview focused -> key -> History focused/selected",
     "tk-018 / absent -> absent",
   ],
@@ -2653,23 +2653,30 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "tk-020 / absent -> absent",
   ],
   [
+    "tk-022a-restore-overview",
+    "p1/0",
+    'click(S.previewRuntimeTab(palette.outerTabs,"Overview"))',
+    "ARIA proof settled with History active -> click -> outer Overview restored and inner controls visible",
+    "tk-022 / absent -> absent",
+  ],
+  [
     "tk-023-inner-second",
     "p1/0",
-    'click(S.scopedRuntimeTab(palette.innerTabs,"Tab 2",S.previewShell))',
+    'click(S.previewRuntimeTab(palette.innerTabs,"Tab 2"))',
     "outer Overview active -> click -> inner Tab 2 selected only",
-    "tk-022 / absent -> absent",
+    "tk-022a / absent -> absent",
   ],
   [
     "tk-024-outer-details",
     "p1/0",
-    'click(S.scopedRuntimeTab(palette.outerTabs,"Details",S.previewShell))',
+    'click(S.previewRuntimeTab(palette.outerTabs,"Details"))',
     "inner Tab 2 selected -> click -> outer Details selected",
     "tk-023 / absent -> absent",
   ],
   [
     "tk-025-outer-overview",
     "p1/0",
-    'click(S.scopedRuntimeTab(palette.outerTabs,"Overview",S.previewShell))',
+    'click(S.previewRuntimeTab(palette.outerTabs,"Overview"))',
     "outer Details selected -> click -> outer Overview restored",
     "tk-024 / absent -> absent",
   ],
@@ -2684,7 +2691,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "tk-027-ids-proof",
     "p1/0",
     "assert(renderer-ids-unique)",
-    "builder + dialog renderers -> all DOM IDs -> global uniqueness",
+    "builder + dialog outer/nested roots -> exact 10 tab/panel IDs per realm -> 20 globally unique",
     "tk-011 / absent -> absent",
   ],
   [
@@ -3594,8 +3601,8 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "rc-032-diff-proof",
     "p1/0",
     "assert(relation-diff-exact)",
-    "current root-scoped A/B picker pressed states + complete current draft against frozen `rc-002` baseline -> A/B/other paths -> only A cleared+B selected and every other existing-path diff reported",
-    "rc-002,rc-030 / hit -> hit",
+    "current root-scoped A/B picker pressed states + relation paths from frozen exact-reset `rc-002` baseline + exhaustive non-relation current-draft diff against frozen post-unrelated-edits `rc-017` sample -> A/B/other paths -> only A cleared+B selected and no post-`rc-017` non-relation path changed",
+    "rc-002,rc-017,rc-030,rc-031 / hit -> hit",
   ],
   [
     "rc-033-stale-shot",
@@ -5324,6 +5331,8 @@ function createObservationFieldSchema(name, field) {
     "loginPasswordVisible",
     "loginSubmitVisible",
     "metadataEffect",
+    "innerTabsVisible",
+    "outerTabsVisible",
     "saveEnabled",
     "savingAbsent",
     "shellVisible",
@@ -5335,7 +5344,6 @@ function createObservationFieldSchema(name, field) {
   const integers = new Set([
     "bListGetCount",
     "navigationCount",
-    "rendererCount",
     "sequence",
     "skeletonCount",
     "status",
@@ -5530,7 +5538,8 @@ function createObservationPredicate(name) {
     return andPredicate([
       outputEquals(["shellVisible"], true),
       outputEquals(["device"], "desktop"),
-      comparePredicate("gt", outputRef(["rendererCount"]), literalPredicateRef(0)),
+      outputEquals(["outerTabsVisible"], true),
+      outputEquals(["innerTabsVisible"], true),
     ]);
   }
   if (name.startsWith("key-step-")) {
@@ -6175,8 +6184,8 @@ function createVisibleAssertionSchemas() {
       innerSelectedId: id,
     }),
     "renderer-ids-unique": schemaObject({
-      ids: visibleIdArraySchema({ minItems: 1, maxItems: 512 }),
-      uniqueCount: schemaInteger({ minimum: 1, maximum: 512 }),
+      ids: visibleIdArraySchema({ minItems: 20, maxItems: 20 }),
+      uniqueCount: schemaInteger({ minimum: 20, maximum: 20 }),
     }),
     "space-text-preserved": schemaObject({
       text: visibleStringSchema(),
@@ -6696,9 +6705,8 @@ function createVisibleAssertionPredicate(name, targetRef) {
       notPredicate(
         deepEqualPredicate(observationRef(["outerRootId"]), observationRef(["innerRootId"]))
       ),
-      exactRef("outerSelectedId", priorPredicateRef("tk-020-observe-end", ["selectedTabId"])),
-      exactRef("outerSelectedId", fixturePredicateRef(["tabs", "added", "id"])),
-      exactRef("innerSelectedId", fixturePredicateRef(["tabs", "defaults", "0", "id"])),
+      exactRef("outerSelectedId", fixturePredicateRef(["tabs", "defaults", "0", "id"])),
+      exactRef("innerSelectedId", fixturePredicateRef(["tabs", "defaults", "1", "id"])),
       notPredicate(
         deepEqualPredicate(observationRef(["outerSelectedId"]), observationRef(["innerSelectedId"]))
       ),
@@ -7623,6 +7631,7 @@ function createSelectorRegistry() {
     loginPassword: staticSelector('input#password[name="password"][type="password"]'),
     loginSubmit: staticSelector('button[type="submit"]:text-is("Sign in")'),
     canvas: staticSelector('[data-screen-authoring-canvas="true"]'),
+    blockRoot: selectorTemplate(['[data-screen-block-id="', '"]'], [slot(0)]),
     insertPanel: staticSelector('button[data-screen-toolbar-panel="insert"][aria-label="Insert"]'),
     blockLibrary: staticSelector('[data-screen-block-library="true"]'),
     palette: selectorTemplate(
@@ -7650,6 +7659,14 @@ function createSelectorRegistry() {
       ["", ' [data-screen-block-id="', '"] [role="tab"]:text-is("', '")'],
       [slot(2), slot(0), slot(1)],
       { 2: "" }
+    ),
+    previewRuntimeTab: selectorTemplate(
+      [
+        '[data-preview-shell="roomy"] [data-preview-device="desktop"] [data-screen-block-id="',
+        '"] [role="tab"]:text-is("',
+        '")',
+      ],
+      [slot(0), slot(1)]
     ),
     runtimePanel: selectorTemplate(
       ['[role="tabpanel"][data-screen-runtime-tab="', '"]'],
@@ -8628,7 +8645,7 @@ function computeAuthRatePlan(manifest, costsByAction = AUTH_RATE_COSTS_BY_ACTION
 }
 
 function validateManifest(manifest) {
-  invariant(manifest.length === REQUIRED_ACTION_COUNT, "expected 495 actions");
+  invariant(manifest.length === REQUIRED_ACTION_COUNT, "expected 496 actions");
   const ids = manifest.map(({ id }) => id);
   invariant(new Set(ids).size === ids.length, "action IDs must be unique");
   const seen = new Set();
@@ -8955,10 +8972,10 @@ function validateExecutableRegistryProjection(registries, manifest) {
   for (const registryName of ["runtimeOperations", "browserRunCodeSources"]) {
     const keys = Object.keys(registries[registryName]);
     invariant(sameSet(keys, expectedKeys[registryName]), registryName + " manifest set drift");
+    const keySha256 = createHash("sha256").update(JSON.stringify(keys)).digest("hex");
     invariant(
-      createHash("sha256").update(JSON.stringify(keys)).digest("hex") ===
-        EXECUTABLE_REGISTRY_KEY_SHA256[registryName],
-      registryName + " physical key drift"
+      keySha256 === EXECUTABLE_REGISTRY_KEY_SHA256[registryName],
+      registryName + " physical key drift: " + keySha256
     );
   }
   for (const action of manifest) {
@@ -9091,7 +9108,7 @@ function createExecutableRegistries(manifest) {
   }
   invariant(Object.keys(runtimeOperations).length === 76, "runtime registry cardinality drift");
   invariant(
-    Object.keys(browserRunCodeSources).length === 391,
+    Object.keys(browserRunCodeSources).length === 392,
     "run-code registry cardinality drift"
   );
   invariant(Object.keys(browserNativeOperations).length === 7, "native registry cardinality drift");
@@ -9545,11 +9562,11 @@ function runHermeticOneLoopExecutorSelfTest(plan) {
       deepFreezeExact({
         ordinal: action.ordinal,
         actionId: action.id,
-        partition: action.ordinal <= 55 ? "setup" : action.ordinal <= 488 ? "flow" : "terminal",
+        partition: action.ordinal <= 55 ? "setup" : action.ordinal <= 489 ? "flow" : "terminal",
       })
     );
   }
-  invariant(completed.size === 495, "one-loop completion drift");
+  invariant(completed.size === 496, "one-loop completion drift");
   invariant(captures.size === 26, "one-loop capture binding drift");
   return deepFreezeExact({ actionDispatches, actionReceipts });
 }
@@ -9591,7 +9608,7 @@ export function runTask540SmokeContractSelfTest() {
     negativeCases += 1;
     expectContractFailure(callback, label);
   };
-  invariant(plan.actionManifest.length === 495, "self-test action cardinality");
+  invariant(plan.actionManifest.length === 496, "self-test action cardinality");
   invariant(plan.requiredFixtureSubjectKeys.length === 15, "self-test fixture cardinality");
   invariant(plan.requiredCaptureNames.length === 17, "self-test capture cardinality");
   invariant(
@@ -9706,15 +9723,15 @@ export function runTask540SmokeContractSelfTest() {
   );
   invariant(
     Object.keys(plan.registries.runtimeOperations).length === 76 &&
-      Object.keys(plan.registries.browserRunCodeSources).length === 391 &&
+      Object.keys(plan.registries.browserRunCodeSources).length === 392 &&
       Object.keys(plan.registries.browserNativeOperations).length === 7 &&
       Object.keys(plan.registries.screenshotPaths).length === 13,
     "self-test executable registry cardinality drift"
   );
   const oneLoopTrace = runHermeticOneLoopExecutorSelfTest(plan);
   invariant(
-    oneLoopTrace.actionDispatches.length === 495 &&
-      oneLoopTrace.actionReceipts.length === 495 &&
+    oneLoopTrace.actionDispatches.length === 496 &&
+      oneLoopTrace.actionReceipts.length === 496 &&
       oneLoopTrace.actionReceipts.every(
         (receipt, index) =>
           receipt.ordinal === index + 1 && receipt.actionId === plan.actionManifest[index].id
@@ -9723,7 +9740,7 @@ export function runTask540SmokeContractSelfTest() {
   );
   invariant(
     oneLoopTrace.actionReceipts.filter(({ partition }) => partition === "setup").length === 55 &&
-      oneLoopTrace.actionReceipts.filter(({ partition }) => partition === "flow").length === 433 &&
+      oneLoopTrace.actionReceipts.filter(({ partition }) => partition === "flow").length === 434 &&
       oneLoopTrace.actionReceipts.filter(({ partition }) => partition === "terminal").length === 7,
     "self-test one-loop receipt partition drift"
   );
@@ -9908,7 +9925,7 @@ export function runTask540SmokeContractSelfTest() {
   }
   negative(
     () => validateManifest(Object.freeze(plan.actionManifest.slice(0, -1))),
-    "incomplete 494-action mapping"
+    "incomplete 495-action mapping"
   );
   const firstActionWithoutOrdinal = { ...plan.actionManifest[0] };
   delete firstActionWithoutOrdinal.ordinal;

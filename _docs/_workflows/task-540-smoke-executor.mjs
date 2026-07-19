@@ -813,7 +813,7 @@ function validateResourceCoreInput(core, expectedOrdinal) {
     core.sourceActionOrdinal === null ||
       (Number.isSafeInteger(core.sourceActionOrdinal) &&
         core.sourceActionOrdinal > 0 &&
-        core.sourceActionOrdinal <= 495),
+        core.sourceActionOrdinal <= 496),
     "resource source ordinal is invalid"
   );
   invariant(
@@ -4092,6 +4092,366 @@ function deepEqualJson(left, right) {
   );
 }
 
+function freezeJsonTreeExact(value, seen = new WeakSet()) {
+  if (value === null || typeof value !== "object" || seen.has(value)) return value;
+  seen.add(value);
+  for (const child of Object.values(value)) freezeJsonTreeExact(child, seen);
+  return Object.freeze(value);
+}
+
+function changedJsonPointersExact(before, after) {
+  const changed = [];
+  const leaves = (value, pointer) => {
+    if (value === null || typeof value !== "object" || Object.keys(value).length === 0) {
+      return [pointer];
+    }
+    return Object.keys(value)
+      .sort()
+      .flatMap((key) =>
+        leaves(value[key], pointer + "/" + key.replaceAll("~", "~0").replaceAll("/", "~1"))
+      );
+  };
+  const visit = (left, right, pointer) => {
+    if (JSON.stringify(left) === JSON.stringify(right)) return;
+    const leftComposite = left !== null && typeof left === "object";
+    const rightComposite = right !== null && typeof right === "object";
+    if (!leftComposite || !rightComposite || Array.isArray(left) !== Array.isArray(right)) {
+      changed.push(...leaves(left, pointer), ...leaves(right, pointer));
+      return;
+    }
+    const keys = [...new Set([...Object.keys(left), ...Object.keys(right)])].sort();
+    for (const key of keys) {
+      const child = pointer + "/" + key.replaceAll("~", "~0").replaceAll("/", "~1");
+      if (!Object.prototype.hasOwnProperty.call(left, key))
+        changed.push(...leaves(right[key], child));
+      else if (!Object.prototype.hasOwnProperty.call(right, key))
+        changed.push(...leaves(left[key], child));
+      else visit(left[key], right[key], child);
+    }
+  };
+  visit(before, after, "");
+  return [...new Set(changed)].sort();
+}
+
+function normalizeRelationEnumerationExact(fields, expectedFields) {
+  const fail = (code) => {
+    throw new Error("wf540_relation_enumeration_" + code);
+  };
+  const exactKeys = (value, keys) =>
+    Boolean(
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      Object.keys(value).length === keys.length &&
+      keys.every((key) => Object.prototype.hasOwnProperty.call(value, key))
+    );
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+  if (
+    !Array.isArray(fields) ||
+    !Array.isArray(expectedFields) ||
+    fields.length !== 2 ||
+    expectedFields.length !== 2
+  )
+    fail("field_count");
+  const fieldKeys = ["relationA", "relationB"];
+  if (
+    fields.map(({ field }) => field).join("\u0000") !== fieldKeys.join("\u0000") ||
+    expectedFields.map(({ field }) => field).join("\u0000") !== fieldKeys.join("\u0000")
+  )
+    fail("field_order");
+  const selected = { relationA: [], relationB: [] };
+  const observedIds = { relationA: [], relationB: [] };
+  const observedTitles = { relationA: [], relationB: [] };
+  const allRootIds = [];
+  const allOptionIds = [];
+  for (let fieldIndex = 0; fieldIndex < fields.length; fieldIndex += 1) {
+    const field = fields[fieldIndex];
+    const expected = expectedFields[fieldIndex];
+    if (
+      !exactKeys(field, ["field", "rootId", "options"]) ||
+      !exactKeys(expected, ["field", "rootId", "options"]) ||
+      field.field !== expected.field ||
+      field.rootId !== expected.rootId ||
+      typeof field.rootId !== "string" ||
+      field.rootId.length === 0 ||
+      !Array.isArray(field.options) ||
+      !Array.isArray(expected.options) ||
+      field.options.length !== expected.options.length
+    )
+      fail("field_shape");
+    allRootIds.push(field.rootId);
+    if (
+      expected.options.some(
+        (option) =>
+          !exactKeys(option, ["id", "title"]) ||
+          typeof option.id !== "string" ||
+          !uuid.test(option.id) ||
+          typeof option.title !== "string" ||
+          option.title.length === 0
+      )
+    )
+      fail("expected_option_shape");
+    const expectedIds = expected.options.map(({ id }) => id);
+    if (new Set(expectedIds).size !== expectedIds.length) fail("expected_duplicate_option");
+    const expectedById = new Map(expected.options.map((option) => [option.id, option]));
+    const selectedIds = new Set();
+    const titleById = new Map();
+    const observedFieldIds = [];
+    for (let optionIndex = 0; optionIndex < field.options.length; optionIndex += 1) {
+      const option = field.options[optionIndex];
+      const expectedOption = expectedById.get(option.id);
+      if (
+        !exactKeys(option, [
+          "id",
+          "title",
+          "tagName",
+          "ariaPressed",
+          "indicatorCount",
+          "indicatorAriaHidden",
+          "indicatorState",
+          "nestedControlCount",
+          "visible",
+          "enabled",
+        ]) ||
+        typeof option.id !== "string" ||
+        !uuid.test(option.id) ||
+        expectedOption === undefined ||
+        option.title !== expectedOption.title ||
+        option.tagName !== "BUTTON" ||
+        (option.ariaPressed !== "true" && option.ariaPressed !== "false") ||
+        option.indicatorCount !== 1 ||
+        option.indicatorAriaHidden !== "true" ||
+        (option.indicatorState !== "checked" && option.indicatorState !== "unchecked") ||
+        (option.ariaPressed === "true") !== (option.indicatorState === "checked") ||
+        option.nestedControlCount !== 0 ||
+        option.visible !== true ||
+        option.enabled !== true
+      )
+        fail("option_shape");
+      allOptionIds.push(option.id);
+      observedFieldIds.push(option.id);
+      titleById.set(option.id, option.title);
+      if (option.ariaPressed === "true") selectedIds.add(option.id);
+    }
+    if (
+      new Set(observedFieldIds).size !== observedFieldIds.length ||
+      observedFieldIds.length !== expectedIds.length ||
+      expectedIds.some((id) => !observedFieldIds.includes(id))
+    )
+      fail("missing_or_unknown");
+    observedIds[field.field].push(...expectedIds);
+    observedTitles[field.field].push(...expectedIds.map((id) => titleById.get(id)));
+    selected[field.field].push(...expectedIds.filter((id) => selectedIds.has(id)));
+  }
+  if (new Set(allRootIds).size !== allRootIds.length) fail("duplicate_root");
+  if (new Set(allOptionIds).size !== allOptionIds.length) fail("duplicate_option");
+  return {
+    relationA: selected.relationA,
+    relationB: selected.relationB,
+    observedIds,
+    observedTitles,
+  };
+}
+
+function validateResetDraftAuthorityExact(authority, expected) {
+  const fail = (code) => {
+    throw new Error("wf540_reset_draft_authority_" + code);
+  };
+  const exactKeys = (value, keys) =>
+    Boolean(
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      Object.keys(value).length === keys.length &&
+      keys.every((key) => Object.prototype.hasOwnProperty.call(value, key))
+    );
+  const equal = (left, right) => {
+    if (Object.is(left, right)) return true;
+    if (typeof left !== typeof right || left === null || right === null || typeof left !== "object")
+      return false;
+    if (Array.isArray(left) || Array.isArray(right))
+      return (
+        Array.isArray(left) &&
+        Array.isArray(right) &&
+        left.length === right.length &&
+        left.every((value, index) => equal(value, right[index]))
+      );
+    const leftKeys = Object.keys(left).sort();
+    const rightKeys = Object.keys(right).sort();
+    return (
+      leftKeys.length === rightKeys.length &&
+      leftKeys.every((key, index) => key === rightKeys[index] && equal(left[key], right[key]))
+    );
+  };
+  const deeplyFrozen = (value, seen = new Set()) => {
+    if (value === null || typeof value !== "object") return true;
+    if (seen.has(value)) return true;
+    if (!Object.isFrozen(value)) return false;
+    seen.add(value);
+    return Object.values(value).every((child) => deeplyFrozen(child, seen));
+  };
+  if (
+    !deeplyFrozen(authority) ||
+    !exactKeys(authority, [
+      "authorityVersion",
+      "sourceActionId",
+      "capturedAtActionId",
+      "persisted",
+      "draft",
+      "observedRelationIds",
+      "proof",
+    ]) ||
+    authority.authorityVersion !== 1 ||
+    authority.sourceActionId !== expected.sourceActionId ||
+    authority.capturedAtActionId !== expected.capturedAtActionId ||
+    !exactKeys(authority.persisted, ["data", "overrides"]) ||
+    !exactKeys(authority.draft, ["controls", "presentation", "relations"]) ||
+    !exactKeys(authority.draft.controls, ["headline", "mediaAssetIds", "unrelatedNote"]) ||
+    !exactKeys(authority.draft.presentation, ["tone"]) ||
+    !exactKeys(authority.draft.relations, ["relationA", "relationB"]) ||
+    !exactKeys(authority.observedRelationIds, ["relationA", "relationB"]) ||
+    !exactKeys(authority.proof, [
+      "persistedFixtureMatches",
+      "persistedOverridesEmpty",
+      "draftMatchesPersisted",
+      "completeWritableControls",
+      "relationEnumerationComplete",
+    ]) ||
+    Object.values(authority.proof).some((value) => value !== true) ||
+    !equal(authority.persisted.data, expected.persistedData) ||
+    !equal(authority.persisted.overrides, []) ||
+    !equal(authority.draft, expected.resetDraft) ||
+    !equal(authority.observedRelationIds, expected.observedRelationIds)
+  )
+    fail("shape_or_value");
+  return true;
+}
+
+function validateCurrentDraftAuthorityExact(authority, expected) {
+  const fail = (code) => {
+    throw new Error("wf540_current_draft_authority_" + code);
+  };
+  const exactKeys = (value, keys) =>
+    Boolean(
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      Object.keys(value).length === keys.length &&
+      keys.every((key) => Object.prototype.hasOwnProperty.call(value, key))
+    );
+  const equal = (left, right) => {
+    if (Object.is(left, right)) return true;
+    if (typeof left !== typeof right || left === null || right === null || typeof left !== "object")
+      return false;
+    if (Array.isArray(left) || Array.isArray(right))
+      return (
+        Array.isArray(left) &&
+        Array.isArray(right) &&
+        left.length === right.length &&
+        left.every((value, index) => equal(value, right[index]))
+      );
+    const leftKeys = Object.keys(left).sort();
+    const rightKeys = Object.keys(right).sort();
+    return (
+      leftKeys.length === rightKeys.length &&
+      leftKeys.every((key, index) => key === rightKeys[index] && equal(left[key], right[key]))
+    );
+  };
+  const deeplyFrozen = (value, seen = new Set()) => {
+    if (value === null || typeof value !== "object") return true;
+    if (seen.has(value)) return true;
+    if (!Object.isFrozen(value)) return false;
+    seen.add(value);
+    return Object.values(value).every((child) => deeplyFrozen(child, seen));
+  };
+  if (
+    !deeplyFrozen(authority) ||
+    !exactKeys(authority, [
+      "authorityVersion",
+      "sourceActionId",
+      "capturedAtActionId",
+      "resetAuthority",
+      "draft",
+      "observedRelationIds",
+      "diffFromReset",
+      "proof",
+    ]) ||
+    authority.authorityVersion !== 1 ||
+    authority.sourceActionId !== expected.sourceActionId ||
+    authority.capturedAtActionId !== expected.capturedAtActionId ||
+    authority.resetAuthority?.sourceActionId !== expected.resetSourceActionId ||
+    !exactKeys(authority.draft, ["controls", "presentation", "relations"]) ||
+    !exactKeys(authority.draft.controls, ["headline", "mediaAssetIds", "unrelatedNote"]) ||
+    !exactKeys(authority.draft.presentation, ["tone"]) ||
+    !exactKeys(authority.draft.relations, ["relationA", "relationB"]) ||
+    !exactKeys(authority.observedRelationIds, ["relationA", "relationB"]) ||
+    !Array.isArray(authority.diffFromReset) ||
+    !exactKeys(authority.proof, [
+      "resetAuthorityValid",
+      "exactTwoLeafDiff",
+      "unrelatedNoteMatches",
+      "toneMatches",
+      "relationsUnchanged",
+      "completeWritableControls",
+    ]) ||
+    Object.values(authority.proof).some((value) => value !== true) ||
+    !equal(authority.draft, expected.currentDraft) ||
+    !equal(authority.observedRelationIds, expected.observedRelationIds) ||
+    !equal(authority.diffFromReset, expected.diffFromReset)
+  )
+    fail("shape_or_value");
+  return true;
+}
+
+function collectRendererIdsExact(realms) {
+  const fail = (code) => {
+    throw new Error("wf540_renderer_ids_" + code);
+  };
+  if (!Array.isArray(realms) || realms.length !== 2) fail("realm_count");
+  const allIds = [];
+  for (const realm of realms) {
+    if (!realm || typeof realm !== "object" || Array.isArray(realm) || !realm.outer || !realm.inner)
+      fail("realm_shape");
+    const { outer, inner } = realm;
+    if (
+      !Array.isArray(outer.tabs) ||
+      !Array.isArray(outer.panels) ||
+      !Array.isArray(inner.tabs) ||
+      !Array.isArray(inner.panels) ||
+      outer.tabs.length !== 3 ||
+      outer.panels.length !== 3 ||
+      inner.tabs.length !== 2 ||
+      inner.panels.length !== 2
+    )
+      fail("tab_panel_shape");
+    const ids = [
+      ...outer.tabs.map(({ domTabId }) => domTabId),
+      ...outer.panels.map(({ domPanelId }) => domPanelId),
+      ...inner.tabs.map(({ domTabId }) => domTabId),
+      ...inner.panels.map(({ domPanelId }) => domPanelId),
+    ];
+    if (
+      ids.length !== 10 ||
+      ids.some((id) => typeof id !== "string" || id.length === 0) ||
+      new Set(ids).size !== ids.length
+    )
+      fail("realm_identity");
+    allIds.push(...ids);
+  }
+  if (allIds.length !== 20 || new Set(allIds).size !== allIds.length) fail("global_identity");
+  return allIds;
+}
+
+function assertOrderedManifestCallsExact(calls, expectedIds) {
+  if (!Array.isArray(calls) || !Array.isArray(expectedIds) || calls.length !== expectedIds.length)
+    throw new Error("wf540_manifest_call_cardinality");
+  for (let index = 0; index < expectedIds.length; index += 1) {
+    if (calls[index] !== expectedIds[index])
+      throw new Error("wf540_manifest_call_order_" + String(index + 1));
+  }
+  return true;
+}
+
 function assertNullableBound(value, label, { integer = false } = {}) {
   if (value === null) return;
   invariant(
@@ -5549,8 +5909,8 @@ function buildFakeCapabilities({
           }),
           browserSession: deepFreezeExact({
             name: SESSION_NAME,
-            closeReceiptSequence: 418,
-            absenceReceiptSequence: 419,
+            closeReceiptSequence: 419,
+            absenceReceiptSequence: 420,
             terminalListSha256: hashBytes(Buffer.from("  (no browsers)\n")),
             closed: true,
             absent: true,
@@ -6004,8 +6364,8 @@ function assertCanonicalFinalization(finalization, plan) {
       finalization.apiContexts.closed === true &&
       finalization.apiContexts.absenceProven === true &&
       finalization.browserSession.name === SESSION_NAME &&
-      finalization.browserSession.closeReceiptSequence === 418 &&
-      finalization.browserSession.absenceReceiptSequence === 419 &&
+      finalization.browserSession.closeReceiptSequence === 419 &&
+      finalization.browserSession.absenceReceiptSequence === 420 &&
       finalization.browserSession.terminalListSha256 ===
         hashBytes(Buffer.from("  (no browsers)\n")) &&
       finalization.browserSession.closed === true &&
@@ -6514,7 +6874,7 @@ async function executeSmokePlanCore(
     if (failureActionTracker !== null) sealPrivateFailureActionTracker(failureActionTracker);
     invariant(state.route === "absent", "static manifest left an active route");
     invariant(
-      completed.size === 495 && browserReceipts.length === 419 && runtimeReceipts.length === 76,
+      completed.size === 496 && browserReceipts.length === 420 && runtimeReceipts.length === 76,
       "manifest receipt partition cardinality drift"
     );
     invariant(
@@ -6525,7 +6885,7 @@ async function executeSmokePlanCore(
     invariant(
       browserReceipts[0].operation === "open" &&
         browserReceipts[1].operation === "logger-install" &&
-        browserReceipts.at(-1).sequence === 419 &&
+        browserReceipts.at(-1).sequence === 420 &&
         browserReceipts.at(-1).operation === "cleanup-session-absence",
       "browser receipt terminal anchors drift"
     );
@@ -6835,9 +7195,14 @@ function playwrightArgs(...args) {
   return ["-s=" + SESSION_NAME, "--raw", ...args.map(String)];
 }
 
+const LEGACY_SCREEN_RUNTIME_ROOT_SELECTOR = "[data-screen-runtime-root]";
+
 function runCode(source) {
   invariant(
-    typeof source === "string" && source.length > 0 && !source.includes("\0"),
+    typeof source === "string" &&
+      source.length > 0 &&
+      !source.includes("\0") &&
+      !source.includes(LEGACY_SCREEN_RUNTIME_ROOT_SELECTOR),
     "run-code invalid"
   );
   const wrapped = `(async (page) => {
@@ -6910,7 +7275,8 @@ function buildLoggerInstallSource(plan) {
     let nextPageNumber = 1;
     let nextPreferenceReadSequence = 1;
     let nextPreferenceWriteSequence = 1;
-    const frozenCopy = (value) => Object.freeze(JSON.parse(JSON.stringify(value)));
+    const freezeTree = ${freezeJsonTreeExact.toString()};
+    const frozenCopy = (value) => freezeTree(JSON.parse(JSON.stringify(value)));
     const exactKeys = (value, keys) => Boolean(
       value && typeof value === "object" && !Array.isArray(value) &&
       Object.keys(value).length === keys.length && keys.every((key) => Object.prototype.hasOwnProperty.call(value, key))
@@ -7683,6 +8049,70 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
   );
   const screenId = captures.has("screen.id") ? captures.get("screen.id") : null;
   const entryId = captures.has("entry.id") ? captures.get("entry.id") : null;
+  const capturedBlockSelector = (captureName) =>
+    captures.has(captureName)
+      ? registeredSelector(plan, "blockRoot", [captures.get(captureName)])
+      : null;
+  const resolvedEntryBaseline = resolveFixtureValue(plan.fixtureBlueprint.entry.baseline, captures);
+  const relationFields = [
+    {
+      field: "relationA",
+      rootId: plan.fixtureBlueprint.screen.blockIds.relationAField,
+      rootSelector: registeredSelector(plan, "blockRoot", [
+        plan.fixtureBlueprint.screen.blockIds.relationAField,
+      ]),
+      options: [
+        {
+          id: captures.has("related-entry-a1.id") ? captures.get("related-entry-a1.id") : null,
+          title: plan.fixtureBlueprint.relatedEntries.a1.title,
+        },
+        {
+          id: captures.has("related-entry-a2.id") ? captures.get("related-entry-a2.id") : null,
+          title: plan.fixtureBlueprint.relatedEntries.a2.title,
+        },
+      ],
+    },
+    {
+      field: "relationB",
+      rootId: plan.fixtureBlueprint.screen.blockIds.relationBField,
+      rootSelector: registeredSelector(plan, "blockRoot", [
+        plan.fixtureBlueprint.screen.blockIds.relationBField,
+      ]),
+      options: [
+        {
+          id: captures.has("related-entry-b1.id") ? captures.get("related-entry-b1.id") : null,
+          title: plan.fixtureBlueprint.relatedEntries.b1.title,
+        },
+        {
+          id: captures.has("related-entry-b2.id") ? captures.get("related-entry-b2.id") : null,
+          title: plan.fixtureBlueprint.relatedEntries.b2.title,
+        },
+      ],
+    },
+  ];
+  const expectedResetDraft = {
+    controls: {
+      headline: resolvedEntryBaseline.headline,
+      mediaAssetIds: [resolvedEntryBaseline.mediaAsset],
+      unrelatedNote: resolvedEntryBaseline.unrelatedNote,
+    },
+    presentation: { tone: "inherit" },
+    relations: {
+      relationA: [...resolvedEntryBaseline.relationA],
+      relationB: [...resolvedEntryBaseline.relationB],
+    },
+  };
+  const expectedRc017Draft = {
+    controls: {
+      ...expectedResetDraft.controls,
+      unrelatedNote: plan.fixtureBlueprint.entry.relatedUnrelatedDraft,
+    },
+    presentation: { tone: plan.fixtureBlueprint.entry.presentationDraft.tone },
+    relations: {
+      relationA: [...expectedResetDraft.relations.relationA],
+      relationB: [...expectedResetDraft.relations.relationB],
+    },
+  };
   const config = {
     name,
     actionId: action.id,
@@ -7690,13 +8120,38 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
     loginUrl: plan.fixtureBlueprint.origins.admin + plan.fixtureBlueprint.paths.login,
     screenId,
     entryId,
+    typeSlug: plan.fixtureBlueprint.contentTypes.editable.slug,
     screenBlockIds: plan.fixtureBlueprint.screen.blockIds,
-    paletteButtonId: captures.has("palette.button") ? captures.get("palette.button") : null,
     retryBlockId: plan.fixtureBlueprint.retryScreen.relatedListBlockId,
     userAId: captures.has("user-a.id") ? captures.get("user-a.id") : null,
     userAName: plan.fixtureBlueprint.users.a.displayName,
     userBId: captures.has("user-b.id") ? captures.get("user-b.id") : null,
     userBName: plan.fixtureBlueprint.users.b.displayName,
+    paletteSelectors: {
+      button: capturedBlockSelector("palette.button"),
+      outerTabs: capturedBlockSelector("palette.outer-tabs"),
+      innerTabs: capturedBlockSelector("palette.inner-tabs"),
+    },
+    draftSelectors: {
+      headline: registeredSelector(plan, "blockRoot", [
+        plan.fixtureBlueprint.screen.blockIds.headlineField,
+      ]),
+      media: registeredSelector(plan, "blockRoot", [
+        plan.fixtureBlueprint.screen.blockIds.mediaField,
+      ]),
+      unrelatedNote: registeredSelector(plan, "blockRoot", [
+        plan.fixtureBlueprint.screen.blockIds.spaceNoteField,
+      ]),
+    },
+    relationFields,
+    entryIdentity: {
+      id: entryId,
+      title: plan.fixtureBlueprint.entry.title,
+      slug: plan.fixtureBlueprint.entry.slug,
+    },
+    entryBaseline: resolvedEntryBaseline,
+    expectedResetDraft,
+    expectedRc017Draft,
     outputFields: Object.keys(outputContract.schema.properties),
     preferencePath: "/admin/api/user-settings/customScreens.entry.preferences",
     relatedListPaths: {
@@ -7769,27 +8224,15 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
         plan.fixtureBlueprint.screen.blockIds.readOnlyField,
         "Text",
       ]),
-      relationA1: registeredSelector(plan, "relationEntry", [
-        plan.fixtureBlueprint.screen.blockIds.relationAField,
-        plan.fixtureBlueprint.relatedEntries.a1.title,
-      ]),
-      relationA2: registeredSelector(plan, "relationEntry", [
-        plan.fixtureBlueprint.screen.blockIds.relationAField,
-        plan.fixtureBlueprint.relatedEntries.a2.title,
-      ]),
-      relationB1: registeredSelector(plan, "relationEntry", [
-        plan.fixtureBlueprint.screen.blockIds.relationBField,
-        plan.fixtureBlueprint.relatedEntries.b1.title,
-      ]),
-      relationB2: registeredSelector(plan, "relationEntry", [
-        plan.fixtureBlueprint.screen.blockIds.relationBField,
-        plan.fixtureBlueprint.relatedEntries.b2.title,
-      ]),
     },
   };
   return `(async (page) => {
     const config = ${JSON.stringify(config)};
     const context = page.context();
+    const changedJsonPointers = ${changedJsonPointersExact.toString()};
+    const normalizeRelationEnumeration = ${normalizeRelationEnumerationExact.toString()};
+    const validateResetDraftAuthority = ${validateResetDraftAuthorityExact.toString()};
+    const validateCurrentDraftAuthority = ${validateCurrentDraftAuthorityExact.toString()};
     const finiteRect = (value) => {
       if (!value) return null;
       const result = { left: value.x, right: value.x + value.width, width: value.width, height: value.height };
@@ -7824,6 +8267,25 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
         await page.waitForTimeout(25);
       }
       throw new Error("wf540_observation_timeout");
+    };
+    const exactVisibleWithin = async (scope, selector, code) => {
+      if (typeof selector !== "string" || selector.length === 0) throw new Error(code + "_selector");
+      const locator = scope.locator(selector);
+      return waitFor(async () => {
+        if (await locator.count() !== 1) return null;
+        const rect = finiteRect(await locator.boundingBox());
+        return positive(rect) && await locator.isVisible() ? locator : null;
+      });
+    };
+    const safeGet = async (pathname) => {
+      const response = await page.evaluate(async (target) => {
+        const result = await fetch(target, { credentials: "same-origin", headers: { Accept: "application/json" } });
+        return { status: result.status, text: await result.text() };
+      }, pathname);
+      if (response.status !== 200 || response.text.length === 0 || response.text.length > 1048576) throw new Error("wf540_observation_api_read");
+      const value = JSON.parse(response.text);
+      if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("wf540_observation_api_shape");
+      return value;
     };
     const preferenceEffect = async () => {
       const toggle = await one(config.selectors.metadata);
@@ -7926,8 +8388,8 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
       return (await selected.getAttribute("data-screen-select-block")) ?? "";
     };
     const entryDraftSample = async () => {
-      const runtime = await one('[data-screen-runtime-root]');
-      const content = await runtime.locator('[role="textbox"]').evaluateAll((nodes) => nodes.map((node) => ({
+      const runtime = await one(config.selectors.canvasScroller);
+      const content = await runtime.locator('[data-screen-section-id] [role="textbox"]').evaluateAll((nodes) => nodes.map((node) => ({
         blockId: node.closest('[data-screen-block-id]')?.getAttribute('data-screen-block-id') ?? "",
         label: node.getAttribute("aria-label"),
         text: node.textContent ?? "",
@@ -7938,27 +8400,73 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
       return { contentBytes: JSON.stringify(content), presentationBytes: JSON.stringify(presentation), url: page.url(), navigationCount: page.__wf540ReadNavigationCount() };
     };
     const relationSelections = async () => {
-      const rows = [
-        { selector: config.selectors.relationA1, id: config.related.a1.id, field: "relationA" },
-        { selector: config.selectors.relationA2, id: config.related.a2.id, field: "relationA" },
-        { selector: config.selectors.relationB1, id: config.related.b1.id, field: "relationB" },
-        { selector: config.selectors.relationB2, id: config.related.b2.id, field: "relationB" },
-      ];
-      const selected = { relationA: [], relationB: [] };
-      for (const row of rows) {
-        if (typeof row.id !== "string") throw new Error("wf540_relation_fixture_id");
-        const button = await one(row.selector);
-        const ariaPressed = await button.getAttribute("aria-pressed");
-        if (ariaPressed !== "true" && ariaPressed !== "false") throw new Error("wf540_relation_pressed_state");
-        const indicator = button.locator('[data-relation-selection-indicator="true"][aria-hidden="true"]');
-        if (await indicator.count() !== 1) throw new Error("wf540_relation_indicator_count");
-        const dataState = await indicator.getAttribute("data-state");
-        if (dataState !== "checked" && dataState !== "unchecked") throw new Error("wf540_relation_indicator_state");
-        if ((ariaPressed === "true") !== (dataState === "checked")) throw new Error("wf540_relation_state_mismatch");
-        if (await button.locator('button, [role="checkbox"]').count() !== 0) throw new Error("wf540_relation_nested_control");
-        if (ariaPressed === "true") selected[row.field].push(row.id);
+      const fields = [];
+      for (const expectedField of config.relationFields) {
+        const root = await exactVisibleWithin(page, expectedField.rootSelector, "wf540_relation_field_root");
+        const rootId = (await root.getAttribute("data-screen-block-id")) ?? "";
+        const buttons = root.locator("[data-screen-relation-option-id]");
+        await waitFor(async () => {
+          const count = await buttons.count();
+          if (count > expectedField.options.length) throw new Error("wf540_relation_option_extra");
+          return count === expectedField.options.length ? true : null;
+        });
+        const options = [];
+        for (let index = 0; index < await buttons.count(); index += 1) {
+          const button = buttons.nth(index);
+          const indicator = button.locator('[data-relation-selection-indicator="true"]');
+          const title = button.locator("p.text-sm.font-medium");
+          const rect = finiteRect(await button.boundingBox());
+          options.push({
+            id: (await button.getAttribute("data-screen-relation-option-id")) ?? "",
+            title: await title.count() === 1 ? ((await title.textContent()) ?? "").trim() : "",
+            tagName: await button.evaluate((element) => element.tagName),
+            ariaPressed: (await button.getAttribute("aria-pressed")) ?? "",
+            indicatorCount: await indicator.count(),
+            indicatorAriaHidden: await indicator.count() === 1 ? ((await indicator.getAttribute("aria-hidden")) ?? "") : "",
+            indicatorState: await indicator.count() === 1 ? ((await indicator.getAttribute("data-state")) ?? "") : "",
+            nestedControlCount: await button.locator('button, [role="checkbox"]').count(),
+            visible: positive(rect) && await button.isVisible(),
+            enabled: await button.isEnabled(),
+          });
+        }
+        fields.push({ field: expectedField.field, rootId, options });
       }
-      return selected;
+      return normalizeRelationEnumeration(fields, config.relationFields.map(({ field, rootId, options }) => ({ field, rootId, options })));
+    };
+    const readFullDraftSnapshot = async (tone, relations = null) => {
+      if (typeof tone !== "string" || !["inherit", "muted"].includes(tone)) throw new Error("wf540_draft_tone");
+      const runtime = await one(config.selectors.canvasScroller);
+      const readTextbox = async (rootSelector, label) => {
+        const root = runtime.locator(rootSelector);
+        if (await root.count() !== 1) throw new Error("wf540_draft_control_root");
+        const textbox = root.locator('[role="textbox"]');
+        if (await textbox.count() !== 1 || (await textbox.getAttribute("aria-label")) !== label) throw new Error("wf540_draft_textbox");
+        const value = await textbox.evaluate((node) => "value" in node ? node.value : node.textContent ?? "");
+        if (typeof value !== "string") throw new Error("wf540_draft_textbox_value");
+        return value;
+      };
+      const mediaRoot = runtime.locator(config.draftSelectors.media);
+      if (await mediaRoot.count() !== 1) throw new Error("wf540_draft_media_root");
+      const selectedMedia = mediaRoot.locator("[data-media-picker-selected-id]");
+      await waitFor(async () => {
+        const count = await selectedMedia.count();
+        if (count > 1) throw new Error("wf540_draft_media_extra");
+        if (count !== 1) return null;
+        const rect = finiteRect(await selectedMedia.boundingBox());
+        return positive(rect) && await selectedMedia.isVisible() ? true : null;
+      });
+      const mediaAssetIds = await selectedMedia.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-media-picker-selected-id") ?? ""));
+      if (mediaAssetIds.length !== 1 || mediaAssetIds.some((id) => !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(id)) || new Set(mediaAssetIds).size !== mediaAssetIds.length) throw new Error("wf540_draft_media_ids");
+      const relationState = relations ?? await relationSelections();
+      return {
+        controls: {
+          headline: await readTextbox(config.draftSelectors.headline, "Headline"),
+          mediaAssetIds,
+          unrelatedNote: await readTextbox(config.draftSelectors.unrelatedNote, "Unrelated note"),
+        },
+        presentation: { tone },
+        relations: { relationA: [...relationState.relationA], relationB: [...relationState.relationB] },
+      };
     };
     const ownedTabs = async (root) => root.evaluate((element) => {
       const owns = (node) => node.closest('[data-screen-block-id]') === element;
@@ -8028,13 +8536,12 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
       const payload = JSON.parse(response.text);
       output = { screenId: payload.id, bindings: payload.definition?.editorView?.bindings ?? payload.bindings ?? [] };
     } else if (config.name === "safe-link-anchor-before-activation") {
-      if (typeof config.paletteButtonId !== "string" || config.paletteButtonId.length === 0) {
-        throw new Error("wf540_safe_link_capture");
-      }
-      const locator = await one('[data-screen-block-id="' + config.paletteButtonId + '"] [data-screen-button-affordance="true"]');
+      const root = await exactVisibleWithin(page, config.paletteSelectors.button, "wf540_safe_link_capture");
+      const locator = root.locator('[data-screen-button-affordance="true"]');
+      if (await locator.count() !== 1) throw new Error("wf540_safe_link_affordance_count");
       output = { tagName: await locator.evaluate((element) => element.tagName), href: await locator.getAttribute("href"), rect: finiteRect(await locator.boundingBox()) };
     } else if (config.name === "outer-tabs-details-state" || config.name === "outer-tabs-history-state") {
-      const root = await one('[data-screen-block-id="' + context.__wf540Recall("capture:palette.outer-tabs") + '"]');
+      const root = await exactVisibleWithin(page, config.paletteSelectors.outerTabs, "wf540_outer_tabs");
       const owned = await ownedTabs(root);
       const selected = owned.tabs.filter(({ selected }) => selected);
       if (selected.length !== 1 || owned.tabs.length !== 3 || owned.panels.length !== 3) throw new Error("wf540_owned_tabs_shape");
@@ -8044,8 +8551,12 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
       const rects = owned.panels.map(({ rect }) => rect);
       output = { activeTabId, visiblePanelIds, hiddenPanelIds, armedSlotId: activeTabId, rects };
     } else if (config.name === "preview-shell-desktop") {
-      const shell = await one(config.selectors.previewShell);
-      output = { shellVisible: positive(finiteRect(await shell.boundingBox())) && await shell.isVisible(), device: (await shell.getAttribute("data-preview-device")) ?? "", rendererCount: await shell.locator('[data-screen-runtime-root]').count() };
+      const shell = await exactVisibleWithin(page, config.selectors.previewShell, "wf540_preview_shell");
+      const outer = await exactVisibleWithin(shell, config.paletteSelectors.outerTabs, "wf540_preview_outer_tabs");
+      await exactVisibleWithin(outer, config.paletteSelectors.innerTabs, "wf540_preview_inner_tabs");
+      const device = (await shell.getAttribute("data-preview-device")) ?? "";
+      if (device !== "desktop") throw new Error("wf540_preview_device");
+      output = { shellVisible: true, device, outerTabsVisible: true, innerTabsVisible: true };
     } else if (config.name.startsWith("key-step-")) {
       const keyByName = { "key-step-arrow-left": "ArrowLeft", "key-step-arrow-right": "ArrowRight", "key-step-home": "Home", "key-step-end": "End" };
       output = await page.evaluate((key) => {
@@ -8087,25 +8598,93 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
           : null;
       });
     } else if (config.name === "relation-pickers-a-b-warm") {
-      const readPickerTitles = async (blockId, expectedTitles) => {
-        const root = await one('[data-screen-block-id="' + blockId + '"]');
-        const values = [];
-        for (const expectedTitle of expectedTitles) {
-          const button = root.locator('button:has(p:text-is("' + expectedTitle + '"))');
-          if (await button.count() !== 1 || !(await button.isVisible()) || !positive(finiteRect(await button.boundingBox()))) throw new Error("wf540_relation_picker");
-          const titleNode = button.locator('p:text-is("' + expectedTitle + '")');
-          values.push((await titleNode.textContent())?.trim() ?? "");
-        }
-        return values;
-      };
-      const aButtons = await readPickerTitles(config.screenBlockIds.relationAField, [config.related.a1.title, config.related.a2.title]);
-      const bButtons = await readPickerTitles(config.screenBlockIds.relationBField, [config.related.b1.title, config.related.b2.title]);
+      const relations = await relationSelections();
+      const persisted = await safeGet("/admin/api/content/" + encodeURIComponent(config.typeSlug) + "/entries/" + encodeURIComponent(config.entryId));
+      if (persisted.id !== config.entryIdentity.id || persisted.title !== config.entryIdentity.title || persisted.slug !== config.entryIdentity.slug || !persisted.data || typeof persisted.data !== "object" || Array.isArray(persisted.data) || changedJsonPointers(config.entryBaseline, persisted.data).length !== 0) throw new Error("wf540_rc002_persisted_entry");
+      const persistedOverrides = await safeGet("/admin/api/custom-screens/" + encodeURIComponent(config.screenId) + "/entries/" + encodeURIComponent(config.entryId) + "/overrides");
+      if (Object.keys(persistedOverrides).length !== 1 || !Array.isArray(persistedOverrides.overrides) || persistedOverrides.overrides.length !== 0) throw new Error("wf540_rc002_persisted_overrides");
+      const resetDraft = await readFullDraftSnapshot("inherit", relations);
+      if (changedJsonPointers(config.expectedResetDraft, resetDraft).length !== 0) throw new Error("wf540_rc002_reset_draft");
+      context.__wf540Remember("rc-002-private-authority", {
+        authorityVersion: 1,
+        sourceActionId: "rc-002-entry-proof",
+        capturedAtActionId: config.actionId,
+        persisted: { data: persisted.data, overrides: persistedOverrides.overrides },
+        draft: resetDraft,
+        observedRelationIds: relations.observedIds,
+        proof: {
+          persistedFixtureMatches: true,
+          persistedOverridesEmpty: true,
+          draftMatchesPersisted: true,
+          completeWritableControls: true,
+          relationEnumerationComplete: true,
+        },
+      });
+      const resetAuthority = context.__wf540Recall("rc-002-private-authority");
+      validateResetDraftAuthority(resetAuthority, {
+        sourceActionId: "rc-002-entry-proof",
+        capturedAtActionId: config.actionId,
+        persistedData: config.entryBaseline,
+        resetDraft: config.expectedResetDraft,
+        observedRelationIds: {
+          relationA: config.relationFields[0].options.map(({ id }) => id),
+          relationB: config.relationFields[1].options.map(({ id }) => id),
+        },
+      });
+      const aButtons = relations.observedTitles.relationA;
+      const bButtons = relations.observedTitles.relationB;
       const aRows = (await relatedRootSample(config.screenBlockIds.relatedListA)).rowIds;
       const relatedCounts = context.__wf540ReadRelatedListGetCounts();
       output = { aButtons, bButtons, aRows, bListGetCount: relatedCounts[config.relatedListPaths.b] };
     } else if (config.name === "related-unrelated-drafts-before") {
       const sample = await entryDraftSample();
-      context.__wf540Remember(config.actionId + ":relations", await relationSelections());
+      const resetExpected = {
+        sourceActionId: "rc-002-entry-proof",
+        capturedAtActionId: "rc-012c-picker-warm-proof",
+        persistedData: config.entryBaseline,
+        resetDraft: config.expectedResetDraft,
+        observedRelationIds: {
+          relationA: config.relationFields[0].options.map(({ id }) => id),
+          relationB: config.relationFields[1].options.map(({ id }) => id),
+        },
+      };
+      const resetAuthority = context.__wf540Recall("rc-002-private-authority");
+      validateResetDraftAuthority(resetAuthority, resetExpected);
+      const relations = await relationSelections();
+      const tone = page.locator('[data-custom-screen-entry-presentation-panel="true"] [data-presentation-control="tone"] button[role="combobox"]');
+      if (await tone.count() !== 1) throw new Error("wf540_rc017_tone_count");
+      const toneValue = ((await tone.textContent()) ?? "").trim().toLowerCase();
+      const currentDraft = await readFullDraftSnapshot(toneValue, relations);
+      const diffFromReset = changedJsonPointers(resetAuthority.draft, currentDraft);
+      const expectedDiff = ["/controls/unrelatedNote", "/presentation/tone"];
+      if (changedJsonPointers(config.expectedRc017Draft, currentDraft).length !== 0 || JSON.stringify(diffFromReset) !== JSON.stringify(expectedDiff)) throw new Error("wf540_rc017_exact_union_leaf_diff");
+      context.__wf540Remember("rc-017-private-authority", {
+        authorityVersion: 1,
+        sourceActionId: config.actionId,
+        capturedAtActionId: config.actionId,
+        resetAuthority,
+        draft: currentDraft,
+        observedRelationIds: relations.observedIds,
+        diffFromReset,
+        proof: {
+          resetAuthorityValid: true,
+          exactTwoLeafDiff: true,
+          unrelatedNoteMatches: true,
+          toneMatches: true,
+          relationsUnchanged: true,
+          completeWritableControls: true,
+        },
+      });
+      const currentAuthority = context.__wf540Recall("rc-017-private-authority");
+      validateResetDraftAuthority(currentAuthority.resetAuthority, resetExpected);
+      validateCurrentDraftAuthority(currentAuthority, {
+        sourceActionId: config.actionId,
+        capturedAtActionId: config.actionId,
+        resetSourceActionId: "rc-002-entry-proof",
+        currentDraft: config.expectedRc017Draft,
+        observedRelationIds: resetExpected.observedRelationIds,
+        diffFromReset: expectedDiff,
+      });
       output = { contentBytes: sample.contentBytes, presentationBytes: sample.presentationBytes };
     } else if (config.name === "related-a-visible-baseline") {
       output = await relatedRootSample(config.screenBlockIds.relatedListA);
@@ -8204,6 +8783,70 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
     Object.hasOwn(assertion.schema.properties ?? {}, "assertion");
   const captureValue = (captureName) =>
     captures.has(captureName) ? captures.get(captureName) : null;
+  const capturedBlockSelector = (captureName) => {
+    const value = captureValue(captureName);
+    return value === null ? null : registeredSelector(plan, "blockRoot", [value]);
+  };
+  const resolvedEntryBaseline = resolveFixtureValue(plan.fixtureBlueprint.entry.baseline, captures);
+  const relationFields = [
+    {
+      field: "relationA",
+      rootId: plan.fixtureBlueprint.screen.blockIds.relationAField,
+      rootSelector: registeredSelector(plan, "blockRoot", [
+        plan.fixtureBlueprint.screen.blockIds.relationAField,
+      ]),
+      options: [
+        {
+          id: captureValue("related-entry-a1.id"),
+          title: plan.fixtureBlueprint.relatedEntries.a1.title,
+        },
+        {
+          id: captureValue("related-entry-a2.id"),
+          title: plan.fixtureBlueprint.relatedEntries.a2.title,
+        },
+      ],
+    },
+    {
+      field: "relationB",
+      rootId: plan.fixtureBlueprint.screen.blockIds.relationBField,
+      rootSelector: registeredSelector(plan, "blockRoot", [
+        plan.fixtureBlueprint.screen.blockIds.relationBField,
+      ]),
+      options: [
+        {
+          id: captureValue("related-entry-b1.id"),
+          title: plan.fixtureBlueprint.relatedEntries.b1.title,
+        },
+        {
+          id: captureValue("related-entry-b2.id"),
+          title: plan.fixtureBlueprint.relatedEntries.b2.title,
+        },
+      ],
+    },
+  ];
+  const expectedResetDraft = {
+    controls: {
+      headline: resolvedEntryBaseline.headline,
+      mediaAssetIds: [resolvedEntryBaseline.mediaAsset],
+      unrelatedNote: resolvedEntryBaseline.unrelatedNote,
+    },
+    presentation: { tone: "inherit" },
+    relations: {
+      relationA: [...resolvedEntryBaseline.relationA],
+      relationB: [...resolvedEntryBaseline.relationB],
+    },
+  };
+  const expectedRc017Draft = {
+    controls: {
+      ...expectedResetDraft.controls,
+      unrelatedNote: plan.fixtureBlueprint.entry.relatedUnrelatedDraft,
+    },
+    presentation: { tone: plan.fixtureBlueprint.entry.presentationDraft.tone },
+    relations: {
+      relationA: [...expectedResetDraft.relations.relationA],
+      relationB: [...expectedResetDraft.relations.relationB],
+    },
+  };
   const config = {
     name,
     actionId: action.id,
@@ -8231,6 +8874,23 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
       innerTabs: captureValue("palette.inner-tabs"),
       dirtyText: captureValue("palette.dirty-text"),
     },
+    paletteSelectors: {
+      button: capturedBlockSelector("palette.button"),
+      outerTabs: capturedBlockSelector("palette.outer-tabs"),
+      innerTabs: capturedBlockSelector("palette.inner-tabs"),
+    },
+    draftSelectors: {
+      headline: registeredSelector(plan, "blockRoot", [
+        plan.fixtureBlueprint.screen.blockIds.headlineField,
+      ]),
+      media: registeredSelector(plan, "blockRoot", [
+        plan.fixtureBlueprint.screen.blockIds.mediaField,
+      ]),
+      unrelatedNote: registeredSelector(plan, "blockRoot", [
+        plan.fixtureBlueprint.screen.blockIds.spaceNoteField,
+      ]),
+    },
+    relationFields,
     blockIds: plan.fixtureBlueprint.screen.blockIds,
     retryBlockId: plan.fixtureBlueprint.retryScreen.relatedListBlockId,
     typeSlug: plan.fixtureBlueprint.contentTypes.editable.slug,
@@ -8243,6 +8903,9 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
         "/admin/api/content/" + plan.fixtureBlueprint.contentTypes.relatedFailure.slug + "/entries",
     },
     entry: plan.fixtureBlueprint.entry,
+    entryBaseline: resolvedEntryBaseline,
+    expectedResetDraft,
+    expectedRc017Draft,
     tabs: plan.fixtureBlueprint.tabs,
     users: {
       a: { id: captureValue("user-a.id"), name: plan.fixtureBlueprint.users.a.displayName },
@@ -8273,6 +8936,7 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
     },
     selectors: {
       canvas: registeredSelector(plan, "canvas"),
+      previewShell: registeredSelector(plan, "previewShell"),
       metadata: registeredSelector(plan, "metadata"),
       relatedAlert: registeredSelector(plan, "relatedAlert"),
       relatedRetry: registeredSelector(plan, "relatedRetry"),
@@ -8281,22 +8945,6 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
       colorMode: registeredSelector(plan, "colorMode"),
       userA: registeredSelector(plan, "userMenu", [plan.fixtureBlueprint.users.a.displayName]),
       userB: registeredSelector(plan, "userMenu", [plan.fixtureBlueprint.users.b.displayName]),
-      relationA1: registeredSelector(plan, "relationEntry", [
-        plan.fixtureBlueprint.screen.blockIds.relationAField,
-        plan.fixtureBlueprint.relatedEntries.a1.title,
-      ]),
-      relationA2: registeredSelector(plan, "relationEntry", [
-        plan.fixtureBlueprint.screen.blockIds.relationAField,
-        plan.fixtureBlueprint.relatedEntries.a2.title,
-      ]),
-      relationB1: registeredSelector(plan, "relationEntry", [
-        plan.fixtureBlueprint.screen.blockIds.relationBField,
-        plan.fixtureBlueprint.relatedEntries.b1.title,
-      ]),
-      relationB2: registeredSelector(plan, "relationEntry", [
-        plan.fixtureBlueprint.screen.blockIds.relationBField,
-        plan.fixtureBlueprint.relatedEntries.b2.title,
-      ]),
       headlineEditableBadge: registeredSelector(plan, "fieldBadge", [
         plan.fixtureBlueprint.screen.blockIds.headlineField,
         "Editable",
@@ -8318,6 +8966,11 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
   return `(async (page) => {
     const config = ${JSON.stringify(config)};
     const context = page.context();
+    const changedJsonPointers = ${changedJsonPointersExact.toString()};
+    const normalizeRelationEnumeration = ${normalizeRelationEnumerationExact.toString()};
+    const validateResetDraftAuthority = ${validateResetDraftAuthorityExact.toString()};
+    const validateCurrentDraftAuthority = ${validateCurrentDraftAuthorityExact.toString()};
+    const collectRendererIds = ${collectRendererIdsExact.toString()};
     const finiteRect = (value) => {
       if (!value) return null;
       const result = { left: value.x, right: value.x + value.width, width: value.width, height: value.height };
@@ -8344,6 +8997,21 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
         await page.waitForTimeout(25);
       }
       throw new Error("wf540_assertion_timeout");
+    };
+    const exactVisibleWithin = async (scope, selector, code) => {
+      if (typeof selector !== "string" || selector.length === 0) throw new Error(code + "_selector");
+      const locator = scope.locator(selector);
+      return waitFor(async () => {
+        if (await locator.count() !== 1) return null;
+        const rect = finiteRect(await locator.boundingBox());
+        return positive(rect) && await locator.isVisible() ? locator : null;
+      });
+    };
+    const deeplyFrozen = (value, seen = new Set()) => {
+      if (value === null || typeof value !== "object") return true;
+      if (seen.has(value) || !Object.isFrozen(value)) return false;
+      seen.add(value);
+      return Object.values(value).every((child) => deeplyFrozen(child, seen));
     };
     const finalizeOutput = (value) => {
       if (["preference-a-write-hit-before-release", "preference-a-write-hit-after-release", "queued-a-write-zero-dispatch"].includes(config.name)) {
@@ -8401,8 +9069,8 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
       return { rootId: blockId, rowIds, rowText, rects, skeletonChipCount: await skeletons.count(), skeletonRects, emptyVisible: await empty.count() > 0 && await empty.first().isVisible() };
     };
     const entryDraft = async () => {
-      const runtime = await one('[data-screen-runtime-root]');
-      const content = await runtime.locator('[role="textbox"]').evaluateAll((nodes) => nodes.map((node) => ({
+      const runtime = await one(config.selectors.canvasScroller);
+      const content = await runtime.locator('[data-screen-section-id] [role="textbox"]').evaluateAll((nodes) => nodes.map((node) => ({
         blockId: node.closest('[data-screen-block-id]')?.getAttribute('data-screen-block-id') ?? "",
         label: node.getAttribute("aria-label"),
         text: node.textContent ?? "",
@@ -8440,27 +9108,73 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
       return { visibleValue, metadataEffect: visibleValue && visibleBadges === badgeSelectors.length };
     };
     const relationSelections = async () => {
-      const rows = [
-        { selector: config.selectors.relationA1, id: config.related.a1.id },
-        { selector: config.selectors.relationA2, id: config.related.a2.id },
-        { selector: config.selectors.relationB1, id: config.related.b1.id },
-        { selector: config.selectors.relationB2, id: config.related.b2.id },
-      ];
-      const selected = { relationA: [], relationB: [] };
-      for (const [index, row] of rows.entries()) {
-        const button = await one(row.selector);
-        const ariaPressed = await button.getAttribute("aria-pressed");
-        if (ariaPressed !== "true" && ariaPressed !== "false") throw new Error("wf540_relation_pressed_state");
-        const indicator = button.locator('[data-relation-selection-indicator="true"][aria-hidden="true"]');
-        if (await indicator.count() !== 1) throw new Error("wf540_relation_indicator_count");
-        const dataState = await indicator.getAttribute("data-state");
-        if (dataState !== "checked" && dataState !== "unchecked") throw new Error("wf540_relation_indicator_state");
-        const checked = ariaPressed === "true";
-        if (checked !== (dataState === "checked")) throw new Error("wf540_relation_state_mismatch");
-        if (await button.locator('button, [role="checkbox"]').count() !== 0) throw new Error("wf540_relation_nested_control");
-        if (checked) selected[index < 2 ? "relationA" : "relationB"].push(row.id);
+      const fields = [];
+      for (const expectedField of config.relationFields) {
+        const root = await exactVisibleWithin(page, expectedField.rootSelector, "wf540_relation_field_root");
+        const rootId = (await root.getAttribute("data-screen-block-id")) ?? "";
+        const buttons = root.locator("[data-screen-relation-option-id]");
+        await waitFor(async () => {
+          const count = await buttons.count();
+          if (count > expectedField.options.length) throw new Error("wf540_relation_option_extra");
+          return count === expectedField.options.length ? true : null;
+        });
+        const options = [];
+        for (let index = 0; index < await buttons.count(); index += 1) {
+          const button = buttons.nth(index);
+          const indicator = button.locator('[data-relation-selection-indicator="true"]');
+          const title = button.locator("p.text-sm.font-medium");
+          const rect = finiteRect(await button.boundingBox());
+          options.push({
+            id: (await button.getAttribute("data-screen-relation-option-id")) ?? "",
+            title: await title.count() === 1 ? ((await title.textContent()) ?? "").trim() : "",
+            tagName: await button.evaluate((element) => element.tagName),
+            ariaPressed: (await button.getAttribute("aria-pressed")) ?? "",
+            indicatorCount: await indicator.count(),
+            indicatorAriaHidden: await indicator.count() === 1 ? ((await indicator.getAttribute("aria-hidden")) ?? "") : "",
+            indicatorState: await indicator.count() === 1 ? ((await indicator.getAttribute("data-state")) ?? "") : "",
+            nestedControlCount: await button.locator('button, [role="checkbox"]').count(),
+            visible: positive(rect) && await button.isVisible(),
+            enabled: await button.isEnabled(),
+          });
+        }
+        fields.push({ field: expectedField.field, rootId, options });
       }
-      return selected;
+      return normalizeRelationEnumeration(fields, config.relationFields.map(({ field, rootId, options }) => ({ field, rootId, options })));
+    };
+    const readFullDraftSnapshot = async (tone, relations = null) => {
+      if (typeof tone !== "string" || !["inherit", "muted"].includes(tone)) throw new Error("wf540_draft_tone");
+      const runtime = await one(config.selectors.canvasScroller);
+      const readTextbox = async (rootSelector, label) => {
+        const root = runtime.locator(rootSelector);
+        if (await root.count() !== 1) throw new Error("wf540_draft_control_root");
+        const textbox = root.locator('[role="textbox"]');
+        if (await textbox.count() !== 1 || (await textbox.getAttribute("aria-label")) !== label) throw new Error("wf540_draft_textbox");
+        const value = await textbox.evaluate((node) => "value" in node ? node.value : node.textContent ?? "");
+        if (typeof value !== "string") throw new Error("wf540_draft_textbox_value");
+        return value;
+      };
+      const mediaRoot = runtime.locator(config.draftSelectors.media);
+      if (await mediaRoot.count() !== 1) throw new Error("wf540_draft_media_root");
+      const selectedMedia = mediaRoot.locator("[data-media-picker-selected-id]");
+      await waitFor(async () => {
+        const count = await selectedMedia.count();
+        if (count > 1) throw new Error("wf540_draft_media_extra");
+        if (count !== 1) return null;
+        const rect = finiteRect(await selectedMedia.boundingBox());
+        return positive(rect) && await selectedMedia.isVisible() ? true : null;
+      });
+      const mediaAssetIds = await selectedMedia.evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-media-picker-selected-id") ?? ""));
+      if (mediaAssetIds.length !== 1 || mediaAssetIds.some((id) => !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(id)) || new Set(mediaAssetIds).size !== mediaAssetIds.length) throw new Error("wf540_draft_media_ids");
+      const relationState = relations ?? await relationSelections();
+      return {
+        controls: {
+          headline: await readTextbox(config.draftSelectors.headline, "Headline"),
+          mediaAssetIds,
+          unrelatedNote: await readTextbox(config.draftSelectors.unrelatedNote, "Unrelated note"),
+        },
+        presentation: { tone },
+        relations: { relationA: [...relationState.relationA], relationB: [...relationState.relationB] },
+      };
     };
     const ownedTabs = async (root) => root.evaluate((element) => {
       const owns = (node) => node.closest('[data-screen-block-id]') === element;
@@ -8512,8 +9226,9 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
       const sample = context.__wf540Recall("bi-056a-safe-link-observe");
       output = ordinary({ tagName: sample.tagName, href: sample.href, pageUrl: page.url() });
     } else if (config.name === "unsafe-link-disabled") {
-      const root = await one('[data-screen-block-id="' + config.palette.button + '"]');
-      const affordance = await one('[data-screen-block-id="' + config.palette.button + '"] [data-screen-button-affordance="true"]');
+      const root = await exactVisibleWithin(page, config.paletteSelectors.button, "wf540_button_root");
+      const affordance = root.locator('[data-screen-button-affordance="true"]');
+      if (await affordance.count() !== 1) throw new Error("wf540_button_affordance_count");
       output = ordinary({ tagName: await affordance.evaluate((element) => element.tagName), ariaDisabled: await affordance.getAttribute("aria-disabled"), href: await affordance.getAttribute("href"), anchorCount: await root.locator("a").count() });
     } else if (config.name === "direct-image-safe-url") {
       const root = await one('[data-screen-block-id="' + config.target + '"]');
@@ -8559,7 +9274,8 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
       output = ordinary({ selectedMediaTitle, selectedImageSrc, persistedMediaId, persistedResolvedUrlPresent: JSON.stringify(persistedMediaId).includes(config.mediaUrl) });
     } else if (config.name === "three-tabs-persisted") {
       const persisted = await screen();
-      const root = await one('[data-screen-block-id="' + config.palette.outerTabs + '"]');
+      const canvas = await one(config.selectors.canvas);
+      const root = await exactVisibleWithin(canvas, config.paletteSelectors.outerTabs, "wf540_builder_outer_tabs");
       const owned = await ownedTabs(root);
       const tabIds = owned.tabs.map(({ tabId }) => tabId);
       const labels = owned.tabs.map(({ label }) => label);
@@ -8582,14 +9298,16 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
     } else if (config.name === "armed-slot-equals-active-tab") {
       const samples = [context.__wf540Recall("tc-036-details-state"), context.__wf540Recall("tc-038-history-state")];
       const selectedTabId = [];
-      const root = await one('[data-screen-block-id="' + config.palette.outerTabs + '"]');
+      const canvas = await one(config.selectors.canvas);
+      const root = await exactVisibleWithin(canvas, config.paletteSelectors.outerTabs, "wf540_armed_outer_tabs");
       const current = await ownedTabs(root);
       selectedTabId.push(samples[0].activeTabId, current.tabs.find(({ selected }) => selected)?.tabId ?? "");
       output = ordinary({ activeTabId: samples.map((item) => item.activeTabId), armedSlotId: samples.map((item) => item.armedSlotId), selectedTabId });
     } else if (config.name === "arrow-home-end-focus") {
       output = ordinary({ steps: ["tk-014-observe-left", "tk-016-observe-right", "tk-018-observe-home", "tk-020-observe-end"].map((id) => context.__wf540Recall(id)) });
     } else if (config.name === "aria-reciprocal") {
-      const root = await one('[data-screen-block-id="' + config.palette.outerTabs + '"]');
+      const previewShell = await exactVisibleWithin(page, config.selectors.previewShell, "wf540_aria_preview_shell");
+      const root = await exactVisibleWithin(previewShell, config.paletteSelectors.outerTabs, "wf540_aria_outer_tabs");
       const owned = await ownedTabs(root);
       const pairs = owned.tabs.map((tab) => {
         const panel = owned.panels.find(({ domPanelId }) => domPanelId === tab.ariaControls);
@@ -8601,13 +9319,22 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
       const hiddenPanelIds = owned.panels.filter(({ hidden }) => hidden).map(({ panelId }) => panelId);
       output = ordinary({ pairs, visiblePanelId, hiddenPanelIds });
     } else if (config.name === "nested-tabs-isolated") {
-      const outer = await one('[data-screen-block-id="' + config.palette.outerTabs + '"]');
-      const inner = await one('[data-screen-block-id="' + config.palette.innerTabs + '"]');
+      const previewShell = await exactVisibleWithin(page, config.selectors.previewShell, "wf540_nested_preview_shell");
+      const outer = await exactVisibleWithin(previewShell, config.paletteSelectors.outerTabs, "wf540_nested_outer_tabs");
+      const inner = await exactVisibleWithin(outer, config.paletteSelectors.innerTabs, "wf540_nested_inner_tabs");
       const outerOwned = await ownedTabs(outer);
       const innerOwned = await ownedTabs(inner);
       output = ordinary({ outerRootId: await outer.getAttribute("data-screen-block-id"), innerRootId: await inner.getAttribute("data-screen-block-id"), outerSelectedId: outerOwned.tabs.find(({ selected }) => selected)?.tabId ?? "", innerSelectedId: innerOwned.tabs.find(({ selected }) => selected)?.tabId ?? "" });
     } else if (config.name === "renderer-ids-unique") {
-      const ids = await page.locator('[data-screen-runtime-root] [id]').evaluateAll((nodes) => nodes.map((node) => node.id));
+      const readRendererRealm = async (surfaceSelector) => {
+        const surface = await exactVisibleWithin(page, surfaceSelector, "wf540_renderer_surface");
+        const outer = await exactVisibleWithin(surface, config.paletteSelectors.outerTabs, "wf540_renderer_outer_tabs");
+        const inner = await exactVisibleWithin(outer, config.paletteSelectors.innerTabs, "wf540_renderer_inner_tabs");
+        return { outer: await ownedTabs(outer), inner: await ownedTabs(inner) };
+      };
+      const builderRealm = await readRendererRealm(config.selectors.canvas);
+      const previewRealm = await readRendererRealm(config.selectors.previewShell);
+      const ids = collectRendererIds([builderRealm, previewRealm]);
       output = ordinary({ ids, uniqueCount: new Set(ids).size });
     } else if (config.name === "space-text-preserved") {
       const editor = await one('[data-screen-block-id="' + config.blockIds.spaceNoteField + '"] [role="textbox"]');
@@ -8699,14 +9426,39 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
       const after = await entryDraft();
       output = ordinary({ contentBefore: before.contentBytes, contentAfter: after.content, presentationBefore: before.presentationBytes, presentationAfter: after.presentation });
     } else if (config.name === "relation-diff-exact") {
-      const before = context.__wf540Recall("rc-017-unrelated-before:relations");
+      const before = context.__wf540Recall("rc-017-private-authority");
+      const observedRelationIds = {
+        relationA: config.relationFields[0].options.map(({ id }) => id),
+        relationB: config.relationFields[1].options.map(({ id }) => id),
+      };
+      const resetExpected = {
+        sourceActionId: "rc-002-entry-proof",
+        capturedAtActionId: "rc-012c-picker-warm-proof",
+        persistedData: config.entryBaseline,
+        resetDraft: config.expectedResetDraft,
+        observedRelationIds,
+      };
+      validateResetDraftAuthority(before.resetAuthority, resetExpected);
+      validateCurrentDraftAuthority(before, {
+        sourceActionId: "rc-017-unrelated-before",
+        capturedAtActionId: "rc-017-unrelated-before",
+        resetSourceActionId: "rc-002-entry-proof",
+        currentDraft: config.expectedRc017Draft,
+        observedRelationIds,
+        diffFromReset: ["/controls/unrelatedNote", "/presentation/tone"],
+      });
       const after = await relationSelections();
-      const unrelatedBefore = context.__wf540Recall("rc-017-unrelated-before");
-      const unrelatedAfter = await entryDraft();
-      const otherDiffPaths = [];
-      if (unrelatedBefore.contentBytes !== unrelatedAfter.content) otherDiffPaths.push("/content");
-      if (unrelatedBefore.presentationBytes !== unrelatedAfter.presentation) otherDiffPaths.push("/presentation");
-      output = ordinary({ relationABefore: before.relationA, relationAAfter: after.relationA, relationBBefore: before.relationB, relationBAfter: after.relationB, otherDiffPaths: otherDiffPaths.sort() });
+      const tone = page.locator('[data-custom-screen-entry-presentation-panel="true"] [data-presentation-control="tone"] button[role="combobox"]');
+      if (await tone.count() !== 1) throw new Error("wf540_rc032_tone_count");
+      const currentDraft = await readFullDraftSnapshot(((await tone.textContent()) ?? "").trim().toLowerCase(), after);
+      const allDiffPaths = changedJsonPointers(before.draft, currentDraft);
+      const relationRoots = ["/relations/relationA", "/relations/relationB"];
+      const isRelationPath = (pointer) => relationRoots.some((root) => pointer === root || pointer.startsWith(root + "/"));
+      const relationDiffPaths = allDiffPaths.filter(isRelationPath);
+      const otherDiffPaths = allDiffPaths.filter((pointer) => !isRelationPath(pointer));
+      if (relationDiffPaths.length === 0 || allDiffPaths.length !== relationDiffPaths.length || otherDiffPaths.length !== 0) throw new Error("wf540_rc032_union_leaf_scope");
+      const relationBefore = before.resetAuthority.draft.relations;
+      output = ordinary({ relationABefore: [...relationBefore.relationA], relationAAfter: after.relationA, relationBBefore: [...relationBefore.relationB], relationBAfter: after.relationB, otherDiffPaths });
     } else if (config.name === "stale-a-cannot-commit") {
       const a = await relatedRoot(config.blockIds.relatedListA);
       const b = await relatedRoot(config.blockIds.relatedListB);
@@ -15298,22 +16050,73 @@ async function runtimeProveRelatedEntry({ state, captures }, entryKey, captureNa
   });
 }
 
-async function runtimeUploadMedia({ state, plan, action }) {
-  const media = plan.fixtureBlueprint.media;
-  const bytes = Buffer.from(media.uploadFixture.data, media.uploadFixture.encoding);
-  invariant(state.responseLostIntents.has(action.id), "media upload lacks its pre-write intent");
-  invariant(
-    bytes.length === media.uploadFixture.decodedSizeBytes &&
-      hashBytes(bytes) === media.uploadFixture.sha256,
-    "media fixture bytes drift"
+const TASK540_MEDIA_UPLOAD_SHA256 =
+  "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460";
+const TASK540_PNG_SIGNATURE_HEX = "89504e470d0a1a0a";
+
+function decodeCanonicalMediaUploadFixtureExact(uploadFixture) {
+  exactOwnKeys(
+    uploadFixture,
+    ["encoding", "data", "decodedSizeBytes", "sha256"],
+    "media upload fixture",
+    { plain: true }
   );
+  invariant(Object.isFrozen(uploadFixture), "media upload fixture must be frozen");
+  const descriptors = Object.getOwnPropertyDescriptors(uploadFixture);
+  invariant(
+    Object.values(descriptors).every(
+      (descriptor) =>
+        Object.hasOwn(descriptor, "value") &&
+        descriptor.enumerable === true &&
+        descriptor.configurable === false &&
+        descriptor.writable === false
+    ),
+    "media upload fixture must contain frozen data properties"
+  );
+  invariant(
+    uploadFixture.encoding === "base64" &&
+      typeof uploadFixture.data === "string" &&
+      uploadFixture.data.length > 0 &&
+      uploadFixture.decodedSizeBytes === 68 &&
+      uploadFixture.sha256 === TASK540_MEDIA_UPLOAD_SHA256,
+    "media upload fixture authority drift"
+  );
+  const bytes = Buffer.from(uploadFixture.data, "base64");
+  invariant(
+    bytes.toString("base64") === uploadFixture.data,
+    "media upload fixture base64 is not canonical"
+  );
+  invariant(bytes.length === 68, "media upload fixture decoded size drift");
+  invariant(
+    bytes.subarray(0, 8).toString("hex") === TASK540_PNG_SIGNATURE_HEX,
+    "media upload fixture PNG signature drift"
+  );
+  invariant(hashBytes(bytes) === uploadFixture.sha256, "media upload fixture SHA-256 drift");
+  return bytes;
+}
+
+async function sendCanonicalMediaMultipart({ state, multipart }) {
+  return adminApiRequest(state, bootstrapApiSession(state), "POST", "/media", { multipart });
+}
+
+async function runtimeUploadMedia(
+  { state, plan, action },
+  mediaMultipartSink,
+  uploadFixtureAuthority
+) {
+  const media = plan.fixtureBlueprint.media;
+  invariant(
+    media.uploadFixture === uploadFixtureAuthority,
+    "media upload fixture identity authority drift"
+  );
+  const bytes = decodeCanonicalMediaUploadFixtureExact(uploadFixtureAuthority);
+  invariant(state.responseLostIntents.has(action.id), "media upload lacks its pre-write intent");
+  invariant(typeof mediaMultipartSink === "function", "media multipart sink is invalid");
   const multipart = {
     file: { name: media.originalName, mimeType: media.mimeType, buffer: bytes },
     title: media.title,
   };
-  const response = await adminApiRequest(state, bootstrapApiSession(state), "POST", "/media", {
-    multipart,
-  });
+  const response = await mediaMultipartSink({ state, multipart });
   invariant(
     /^[0-9a-f-]{36}$/u.test(response.value.id) &&
       typeof response.value.key === "string" &&
@@ -16181,7 +16984,38 @@ async function runtimeUserAPreferenceFalse({ state }) {
   return runtimeSafeProjection({ showFieldMetadata: false });
 }
 
-function buildRuntimeOperationHandlers() {
+function buildRuntimeOperationHandlers(planAuthority, dependencies = {}) {
+  invariant(
+    arguments.length >= 1 &&
+      arguments.length <= 2 &&
+      planAuthority !== null &&
+      typeof planAuthority === "object" &&
+      !Array.isArray(planAuthority) &&
+      Object.isFrozen(planAuthority) &&
+      dependencies !== null &&
+      typeof dependencies === "object" &&
+      !Array.isArray(dependencies) &&
+      Object.getPrototypeOf(dependencies) === Object.prototype,
+    "runtime handler authority and dependencies are invalid"
+  );
+  const mediaUploadFixtureAuthority = planAuthority.fixtureBlueprint?.media?.uploadFixture;
+  decodeCanonicalMediaUploadFixtureExact(mediaUploadFixtureAuthority);
+  const dependencyKeys = Reflect.ownKeys(dependencies);
+  invariant(
+    dependencyKeys.length <= 1 && dependencyKeys.every((key) => key === "mediaMultipartSink"),
+    "runtime handler dependencies have non-canonical keys"
+  );
+  if (dependencyKeys.length === 1) {
+    const descriptor = Object.getOwnPropertyDescriptor(dependencies, "mediaMultipartSink");
+    invariant(
+      descriptor &&
+        Object.hasOwn(descriptor, "value") &&
+        descriptor.enumerable === true &&
+        typeof descriptor.value === "function",
+      "runtime media multipart dependency is invalid"
+    );
+  }
+  const mediaMultipartSink = dependencies.mediaMultipartSink ?? sendCanonicalMediaMultipart;
   const resetScreen = (context) => runtimeResetScreen(context);
   const proveScreen = (context) => runtimeProveScreenBaseline(context);
   const resetEntry = (context) => runtimeResetEntry(context);
@@ -16244,7 +17078,10 @@ function buildRuntimeOperationHandlers() {
       runtimeCreateRelatedEntry(context, "failure1", "relatedFailure", "related-entry-failure1.id"),
     "runtime/set-029b-related-failure1-proof": (context) =>
       runtimeProveRelatedEntry(context, "failure1", "related-entry-failure1.id"),
-    "runtime/set-030-media-upload": runtimeUploadMedia,
+    "runtime/set-030-media-upload": (context) => {
+      invariant(context?.plan === planAuthority, "runtime media plan identity authority drift");
+      return runtimeUploadMedia(context, mediaMultipartSink, mediaUploadFixtureAuthority);
+    },
     "runtime/set-031-media-proof": runtimeProveMedia,
     "runtime/set-032-storage-post-setup": runtimeStoragePostSetup,
     "runtime/set-033-entry-create": runtimeCreateEditableEntry,
@@ -17889,8 +18726,8 @@ function buildCanonicalFinalization(
     }),
     browserSession: deepFreezeExact({
       name: SESSION_NAME,
-      closeReceiptSequence: 418,
-      absenceReceiptSequence: 419,
+      closeReceiptSequence: 419,
+      absenceReceiptSequence: 420,
       terminalListSha256: state.terminalSessionAbsenceSha256,
       closed: true,
       absent: true,
@@ -18144,7 +18981,7 @@ async function createRealCapabilities(
     snapshotRepository,
     sensitiveValues: configuredSensitiveValues(repoEnvironment, process.env),
   });
-  const runtimeHandlers = buildRuntimeOperationHandlers();
+  const runtimeHandlers = buildRuntimeOperationHandlers(plan);
   validateNativeDescriptorRegistry(plan);
   invariant(
     deepEqualJson(
@@ -19773,6 +20610,42 @@ export async function runTask540SmokeExecutorSelfTest() {
     negativeCases += 1;
   };
   const plan = buildTask540SmokePlan({ nonce: "0123456789ab" });
+  const previewShellContract = plan.registries.observations["preview-shell-desktop"];
+  const previewShellOutput = {
+    shellVisible: true,
+    device: "desktop",
+    outerTabsVisible: true,
+    innerTabsVisible: true,
+  };
+  invariant(
+    deepEqualJson(
+      parseRegisteredOutput(
+        previewShellContract,
+        Buffer.from(canonicalJson(previewShellOutput) + "\n"),
+        "preview-shell-positive",
+        selfTestContext(plan, "tk-011-preview-proof")
+      ),
+      previewShellOutput
+    ),
+    "preview shell visible proof drift"
+  );
+  for (const [label, patch] of [
+    ["preview shell hidden", { shellVisible: false }],
+    ["preview shell wrong device", { device: "tablet" }],
+    ["preview outer Tabs hidden", { outerTabsVisible: false }],
+    ["preview inner Tabs hidden", { innerTabsVisible: false }],
+  ]) {
+    await expectAsyncFailure(
+      async () =>
+        parseRegisteredOutput(
+          previewShellContract,
+          Buffer.from(canonicalJson({ ...previewShellOutput, ...patch }) + "\n"),
+          label,
+          selfTestContext(plan, "tk-011-preview-proof")
+        ),
+      label
+    );
+  }
 
   const enabledAuthRatePolicy = normalizeAuthRatePolicy(
     { enabled: true, maxRequests: 10, windowSeconds: 60 },
@@ -20280,6 +21153,598 @@ export async function runTask540SmokeExecutorSelfTest() {
   for (const name of plan.requiredRuntimeBlockCaptures) {
     sourceCaptures.bind(name, plan.prefix + "-" + name.replaceAll(".", "-"));
   }
+  const hostileBlockId = 'outer"\\realm';
+  const hostileTabLabel = 'Tab "quoted"\\tail';
+  const hostilePreviewSelector = registeredSelector(plan, "previewRuntimeTab", [
+    hostileBlockId,
+    hostileTabLabel,
+  ]);
+  invariant(
+    hostilePreviewSelector ===
+      '[data-preview-shell="roomy"] [data-preview-device="desktop"] [data-screen-block-id="outer\\"\\\\realm"] [role="tab"]:text-is("Tab \\"quoted\\"\\\\tail")' &&
+      !hostilePreviewSelector.includes('outer\\\\\\"') &&
+      !hostilePreviewSelector.includes("realm\\\\\\\\tail"),
+    "preview runtime selector exact escaping drift"
+  );
+
+  const relationExpected = [
+    {
+      field: "relationA",
+      rootId: plan.fixtureBlueprint.screen.blockIds.relationAField,
+      options: [
+        {
+          id: sourceCaptures.get("related-entry-a1.id"),
+          title: plan.fixtureBlueprint.relatedEntries.a1.title,
+        },
+        {
+          id: sourceCaptures.get("related-entry-a2.id"),
+          title: plan.fixtureBlueprint.relatedEntries.a2.title,
+        },
+      ],
+    },
+    {
+      field: "relationB",
+      rootId: plan.fixtureBlueprint.screen.blockIds.relationBField,
+      options: [
+        {
+          id: sourceCaptures.get("related-entry-b1.id"),
+          title: plan.fixtureBlueprint.relatedEntries.b1.title,
+        },
+        {
+          id: sourceCaptures.get("related-entry-b2.id"),
+          title: plan.fixtureBlueprint.relatedEntries.b2.title,
+        },
+      ],
+    },
+  ];
+  const relationOption = (option, selected) => ({
+    id: option.id,
+    title: option.title,
+    tagName: "BUTTON",
+    ariaPressed: selected ? "true" : "false",
+    indicatorCount: 1,
+    indicatorAriaHidden: "true",
+    indicatorState: selected ? "checked" : "unchecked",
+    nestedControlCount: 0,
+    visible: true,
+    enabled: true,
+  });
+  const relationFields = [
+    {
+      field: "relationA",
+      rootId: relationExpected[0].rootId,
+      options: [
+        relationOption(relationExpected[0].options[1], true),
+        relationOption(relationExpected[0].options[0], true),
+      ],
+    },
+    {
+      field: "relationB",
+      rootId: relationExpected[1].rootId,
+      options: [
+        relationOption(relationExpected[1].options[1], false),
+        relationOption(relationExpected[1].options[0], false),
+      ],
+    },
+  ];
+  const normalizedRelation = normalizeRelationEnumerationExact(relationFields, relationExpected);
+  invariant(
+    deepEqualJson(normalizedRelation, {
+      relationA: relationExpected[0].options.map(({ id }) => id),
+      relationB: [],
+      observedIds: {
+        relationA: relationExpected[0].options.map(({ id }) => id),
+        relationB: relationExpected[1].options.map(({ id }) => id),
+      },
+      observedTitles: {
+        relationA: relationExpected[0].options.map(({ title }) => title),
+        relationB: relationExpected[1].options.map(({ title }) => title),
+      },
+    }),
+    "relation enumeration order-independent normalization drift"
+  );
+  for (const [label, mutate] of [
+    [
+      "relation blank ID",
+      (rows) => {
+        rows[0].options[0].id = "";
+      },
+    ],
+    [
+      "relation non UUID",
+      (rows) => {
+        rows[0].options[0].id = "not-a-uuid";
+      },
+    ],
+    [
+      "relation unknown ID",
+      (rows) => {
+        rows[0].options[0].id = "54000000-0000-4000-8000-999999999991";
+      },
+    ],
+    [
+      "relation duplicate ID",
+      (rows) => {
+        rows[0].options[1].id = rows[0].options[0].id;
+      },
+    ],
+    [
+      "relation missing option",
+      (rows) => {
+        rows[0].options.pop();
+      },
+    ],
+    [
+      "relation ARIA indicator mismatch",
+      (rows) => {
+        rows[0].options[0].indicatorState = "unchecked";
+      },
+    ],
+    [
+      "relation indicator missing",
+      (rows) => {
+        rows[0].options[0].indicatorCount = 0;
+      },
+    ],
+    [
+      "relation duplicate root",
+      (rows) => {
+        rows[1].rootId = rows[0].rootId;
+      },
+    ],
+  ]) {
+    await expectAsyncFailure(async () => {
+      const rows = structuredClone(relationFields);
+      mutate(rows);
+      normalizeRelationEnumerationExact(rows, relationExpected);
+    }, label);
+  }
+
+  invariant(
+    deepEqualJson(
+      changedJsonPointersExact(
+        { stable: true, nested: { removed: "old", kept: 1 }, list: ["a"] },
+        { stable: true, nested: { added: "new", kept: 1 }, list: ["a", "b"] }
+      ),
+      ["/list/1", "/nested/added", "/nested/removed"]
+    ),
+    "union-leaf added/removed diff drift"
+  );
+
+  const resetDraftFixture = {
+    controls: {
+      headline: plan.fixtureBlueprint.entry.baseline.headline,
+      mediaAssetIds: [sourceCaptures.get("media.id")],
+      unrelatedNote: plan.fixtureBlueprint.entry.baseline.unrelatedNote,
+    },
+    presentation: { tone: "inherit" },
+    relations: {
+      relationA: relationExpected[0].options.map(({ id }) => id),
+      relationB: [],
+    },
+  };
+  const resetPersistedFixture = resolveFixtureValue(
+    plan.fixtureBlueprint.entry.baseline,
+    sourceCaptures
+  );
+  const resetAuthorityExpected = {
+    sourceActionId: "rc-002-entry-proof",
+    capturedAtActionId: "rc-012c-picker-warm-proof",
+    persistedData: resetPersistedFixture,
+    resetDraft: resetDraftFixture,
+    observedRelationIds: normalizedRelation.observedIds,
+  };
+  const resetAuthorityFixture = freezeJsonTreeExact({
+    authorityVersion: 1,
+    sourceActionId: resetAuthorityExpected.sourceActionId,
+    capturedAtActionId: resetAuthorityExpected.capturedAtActionId,
+    persisted: { data: resetPersistedFixture, overrides: [] },
+    draft: resetDraftFixture,
+    observedRelationIds: normalizedRelation.observedIds,
+    proof: {
+      persistedFixtureMatches: true,
+      persistedOverridesEmpty: true,
+      draftMatchesPersisted: true,
+      completeWritableControls: true,
+      relationEnumerationComplete: true,
+    },
+  });
+  invariant(
+    validateResetDraftAuthorityExact(resetAuthorityFixture, resetAuthorityExpected) === true,
+    "reset private draft authority success drift"
+  );
+  await expectAsyncFailure(
+    async () =>
+      validateResetDraftAuthorityExact(
+        {
+          ...structuredClone(resetAuthorityFixture),
+          draft: structuredClone(resetAuthorityFixture.draft),
+        },
+        resetAuthorityExpected
+      ),
+    "reset authority mutable copy"
+  );
+  await expectAsyncFailure(async () => {
+    const incomplete = structuredClone(resetAuthorityFixture);
+    delete incomplete.draft.controls.mediaAssetIds;
+    validateResetDraftAuthorityExact(freezeJsonTreeExact(incomplete), resetAuthorityExpected);
+  }, "reset authority incomplete writable controls");
+
+  const currentDraftFixture = structuredClone(resetDraftFixture);
+  currentDraftFixture.controls.unrelatedNote = plan.fixtureBlueprint.entry.relatedUnrelatedDraft;
+  currentDraftFixture.presentation.tone = plan.fixtureBlueprint.entry.presentationDraft.tone;
+  const currentAuthorityExpected = {
+    sourceActionId: "rc-017-unrelated-before",
+    capturedAtActionId: "rc-017-unrelated-before",
+    resetSourceActionId: "rc-002-entry-proof",
+    currentDraft: currentDraftFixture,
+    observedRelationIds: normalizedRelation.observedIds,
+    diffFromReset: ["/controls/unrelatedNote", "/presentation/tone"],
+  };
+  const currentAuthorityFixture = freezeJsonTreeExact({
+    authorityVersion: 1,
+    sourceActionId: currentAuthorityExpected.sourceActionId,
+    capturedAtActionId: currentAuthorityExpected.capturedAtActionId,
+    resetAuthority: resetAuthorityFixture,
+    draft: currentDraftFixture,
+    observedRelationIds: normalizedRelation.observedIds,
+    diffFromReset: changedJsonPointersExact(resetDraftFixture, currentDraftFixture),
+    proof: {
+      resetAuthorityValid: true,
+      exactTwoLeafDiff: true,
+      unrelatedNoteMatches: true,
+      toneMatches: true,
+      relationsUnchanged: true,
+      completeWritableControls: true,
+    },
+  });
+  invariant(
+    validateCurrentDraftAuthorityExact(currentAuthorityFixture, currentAuthorityExpected) === true,
+    "current private draft authority success drift"
+  );
+  await expectAsyncFailure(async () => {
+    const thirdPath = structuredClone(currentAuthorityFixture);
+    thirdPath.draft.controls.headline = "unexpected third-path mutation";
+    validateCurrentDraftAuthorityExact(freezeJsonTreeExact(thirdPath), currentAuthorityExpected);
+  }, "current authority third path");
+  await expectAsyncFailure(async () => {
+    const relationDrift = structuredClone(currentAuthorityFixture);
+    relationDrift.draft.relations.relationA = [];
+    validateCurrentDraftAuthorityExact(
+      freezeJsonTreeExact(relationDrift),
+      currentAuthorityExpected
+    );
+  }, "current authority relation drift");
+
+  const rc032DraftFixture = structuredClone(currentDraftFixture);
+  rc032DraftFixture.relations.relationA = [];
+  rc032DraftFixture.relations.relationB = relationExpected[1].options.map(({ id }) => id);
+  const rc032DiffPaths = changedJsonPointersExact(currentDraftFixture, rc032DraftFixture);
+  const rc032RelationRoots = ["/relations/relationA", "/relations/relationB"];
+  invariant(
+    rc032DiffPaths.length > 0 &&
+      rc032DiffPaths.every((pointer) =>
+        rc032RelationRoots.some((root) => pointer === root || pointer.startsWith(root + "/"))
+      ),
+    "rc032 relation-only union-leaf diff drift"
+  );
+
+  const rendererRealm = (prefix) => ({
+    outer: {
+      tabs: [1, 2, 3].map((index) => ({ domTabId: prefix + "-ot" + index })),
+      panels: [1, 2, 3].map((index) => ({ domPanelId: prefix + "-op" + index })),
+    },
+    inner: {
+      tabs: [1, 2].map((index) => ({ domTabId: prefix + "-it" + index })),
+      panels: [1, 2].map((index) => ({ domPanelId: prefix + "-ip" + index })),
+    },
+  });
+  const rendererIds = collectRendererIdsExact([rendererRealm("builder"), rendererRealm("preview")]);
+  invariant(
+    rendererIds.length === 20 && new Set(rendererIds).size === 20,
+    "renderer ID union drift"
+  );
+  await expectAsyncFailure(async () => {
+    const missingInner = rendererRealm("preview");
+    missingInner.inner.panels.pop();
+    collectRendererIdsExact([rendererRealm("builder"), missingInner]);
+  }, "renderer missing inner panel");
+  await expectAsyncFailure(async () => {
+    const duplicateRealm = rendererRealm("preview");
+    duplicateRealm.inner.tabs[0].domTabId = "builder-ot1";
+    collectRendererIdsExact([rendererRealm("builder"), duplicateRealm]);
+  }, "renderer cross-realm duplicate ID");
+
+  const mediaUploadAction = plan.actionManifest.find(({ id }) => id === "set-030-media-upload");
+  invariant(
+    mediaUploadAction?.executable.type === "runtime-operation" &&
+      mediaUploadAction.executable.operationId === "runtime/set-030-media-upload",
+    "media upload runtime registry action drift"
+  );
+  const mediaUploadOperationId = mediaUploadAction.executable.operationId;
+  const mediaBlueprint = plan.fixtureBlueprint.media;
+  const canonicalUploadBytes = decodeCanonicalMediaUploadFixtureExact(mediaBlueprint.uploadFixture);
+  invariant(
+    canonicalUploadBytes.length === 68 &&
+      canonicalUploadBytes.subarray(0, 8).toString("hex") === TASK540_PNG_SIGNATURE_HEX &&
+      hashBytes(canonicalUploadBytes) === TASK540_MEDIA_UPLOAD_SHA256,
+    "canonical media upload helper drift"
+  );
+  const fakeMediaResponse = {
+    id: sourceCaptures.get("media.id"),
+    key: sourceCaptures.get("media.storage-key"),
+    url: new URL(sourceCaptures.get("media.resolved-url")).pathname,
+    mimeType: mediaBlueprint.mimeType,
+    size: mediaBlueprint.uploadFixture.decodedSizeBytes,
+  };
+  const makeMediaUploadState = () => {
+    let forbiddenReads = 0;
+    const target = {
+      responseLostIntents: new Map([[mediaUploadAction.id, true]]),
+      mediaRecord: null,
+    };
+    const forbidden = new Set([
+      "fixturePath",
+      "generatedBytes",
+      "callerBytes",
+      "environmentBytes",
+      "capturedBytes",
+      "env",
+    ]);
+    return {
+      state: new Proxy(target, {
+        get(value, key, receiver) {
+          if (forbidden.has(key)) {
+            forbiddenReads += 1;
+            throw new Error("forbidden media byte authority read");
+          }
+          return Reflect.get(value, key, receiver);
+        },
+      }),
+      target,
+      forbiddenReadCount: () => forbiddenReads,
+    };
+  };
+  const dispatchMediaUploadOnce = async (registry, context, dispatched) => {
+    invariant(dispatched instanceof Set, "media upload dispatch ledger drift");
+    invariant(!dispatched.has(mediaUploadOperationId), "duplicate media upload dispatch");
+    const handler = registry?.[mediaUploadOperationId];
+    invariant(typeof handler === "function", "media upload registry handler is absent");
+    dispatched.add(mediaUploadOperationId);
+    return handler(context);
+  };
+  const canonicalUploadState = makeMediaUploadState();
+  let fakeMultipartCalls = 0;
+  const fakeMediaMultipartSink = async (input) => {
+    fakeMultipartCalls += 1;
+    exactOwnKeys(input, ["state", "multipart"], "fake media multipart input", {
+      plain: true,
+    });
+    invariant(input.state === canonicalUploadState.state, "fake media multipart state drift");
+    exactOwnKeys(input.multipart, ["file", "title"], "fake media multipart", {
+      plain: true,
+    });
+    exactOwnKeys(
+      input.multipart.file,
+      ["name", "mimeType", "buffer"],
+      "fake media multipart file",
+      { plain: true }
+    );
+    const received = input.multipart.file.buffer;
+    invariant(
+      Buffer.isBuffer(received) &&
+        received.length === 68 &&
+        received.subarray(0, 8).toString("hex") === TASK540_PNG_SIGNATURE_HEX &&
+        hashBytes(received) === TASK540_MEDIA_UPLOAD_SHA256 &&
+        received.toString("base64") === mediaBlueprint.uploadFixture.data &&
+        input.multipart.file.name === mediaBlueprint.originalName &&
+        input.multipart.file.mimeType === mediaBlueprint.mimeType &&
+        input.multipart.title === mediaBlueprint.title,
+      "fake media multipart payload drift"
+    );
+    return { value: fakeMediaResponse };
+  };
+  const mediaRuntimeRegistry = buildRuntimeOperationHandlers(plan, {
+    mediaMultipartSink: fakeMediaMultipartSink,
+  });
+  invariant(
+    Object.keys(mediaRuntimeRegistry).filter((key) => key === mediaUploadOperationId).length === 1,
+    "media upload registry key cardinality drift"
+  );
+  const canonicalDispatchLedger = new Set();
+  const mediaUploadResult = await dispatchMediaUploadOnce(
+    mediaRuntimeRegistry,
+    {
+      state: canonicalUploadState.state,
+      plan,
+      action: mediaUploadAction,
+      executable: mediaUploadAction.executable,
+      captures: sourceCaptures,
+    },
+    canonicalDispatchLedger
+  );
+  const expectedResolvedMediaUrl = new URL(
+    fakeMediaResponse.url,
+    plan.fixtureBlueprint.origins.admin
+  ).href;
+  invariant(
+    fakeMultipartCalls === 1 &&
+      canonicalDispatchLedger.size === 1 &&
+      canonicalUploadState.forbiddenReadCount() === 0 &&
+      canonicalUploadState.target.mediaRecord === fakeMediaResponse &&
+      deepEqualJson(mediaUploadResult.captureBindings, {
+        "media.id": fakeMediaResponse.id,
+        "media.resolved-url": expectedResolvedMediaUrl,
+        "media.storage-key": fakeMediaResponse.key,
+      }) &&
+      mediaUploadResult.observationSha256 ===
+        hashBytes(
+          Buffer.from(
+            canonicalJson({
+              id: fakeMediaResponse.id,
+              key: fakeMediaResponse.key,
+              resolvedUrl: expectedResolvedMediaUrl,
+            })
+          )
+        ),
+    "media upload registry dispatch proof drift"
+  );
+  await expectAsyncFailure(
+    async () =>
+      dispatchMediaUploadOnce(
+        mediaRuntimeRegistry,
+        {
+          state: canonicalUploadState.state,
+          plan,
+          action: mediaUploadAction,
+          executable: mediaUploadAction.executable,
+          captures: sourceCaptures,
+        },
+        canonicalDispatchLedger
+      ),
+    "duplicate media upload registry dispatch"
+  );
+  await expectAsyncFailure(
+    async () =>
+      dispatchMediaUploadOnce(
+        {},
+        {
+          state: makeMediaUploadState().state,
+          plan,
+          action: mediaUploadAction,
+          executable: mediaUploadAction.executable,
+          captures: sourceCaptures,
+        },
+        new Set()
+      ),
+    "missing media upload registry handler"
+  );
+  await expectAsyncFailure(
+    async () => buildRuntimeOperationHandlers(plan, { mediaMultipartSink: null }),
+    "invalid media multipart dependency"
+  );
+  await expectAsyncFailure(
+    async () =>
+      buildRuntimeOperationHandlers(plan, {
+        mediaMultipartSink: fakeMediaMultipartSink,
+        unknown: true,
+      }),
+    "unknown media multipart dependency"
+  );
+
+  for (const [label, authorityKey] of [
+    ["path media authority trap", "fixturePath"],
+    ["generated media authority trap", "generatedBytes"],
+    ["caller media authority trap", "callerBytes"],
+    ["environment media authority trap", "environmentBytes"],
+    ["captured media authority trap", "capturedBytes"],
+  ]) {
+    let alternateSinkCalls = 0;
+    const canonicalRegistry = buildRuntimeOperationHandlers(plan, {
+      mediaMultipartSink: async () => {
+        alternateSinkCalls += 1;
+        return { value: fakeMediaResponse };
+      },
+    });
+    const trapState = makeMediaUploadState();
+    const mutantRegistry = Object.freeze({
+      ...canonicalRegistry,
+      [mediaUploadOperationId]: async (context) => {
+        void context.state[authorityKey];
+        return canonicalRegistry[mediaUploadOperationId](context);
+      },
+    });
+    await expectAsyncFailure(
+      async () =>
+        dispatchMediaUploadOnce(
+          mutantRegistry,
+          {
+            state: trapState.state,
+            plan,
+            action: mediaUploadAction,
+            executable: mediaUploadAction.executable,
+            captures: sourceCaptures,
+          },
+          new Set()
+        ),
+      label
+    );
+    invariant(
+      trapState.forbiddenReadCount() === 1 && alternateSinkCalls === 0,
+      label + " did not fail before the multipart sink"
+    );
+  }
+
+  const canonicalFixture = mediaBlueprint.uploadFixture;
+  const canonicalFixtureBytes = Buffer.from(canonicalFixture.data, "base64");
+  const alteredFixtureBytes = Buffer.from(canonicalFixtureBytes);
+  alteredFixtureBytes[alteredFixtureBytes.length - 1] ^= 0x01;
+  const alteredSignatureBytes = Buffer.from(canonicalFixtureBytes);
+  alteredSignatureBytes[0] ^= 0x01;
+  const frozenFixture = (changes = {}, extras = {}) =>
+    deepFreezeExact({ ...canonicalFixture, ...changes, ...extras });
+  const mediaFixtureMutants = [
+    ["cloned media fixture authority", frozenFixture(), false],
+    ["altered media bytes", frozenFixture({ data: alteredFixtureBytes.toString("base64") }), true],
+    ["noncanonical media base64", frozenFixture({ data: canonicalFixture.data + "=" }), true],
+    ["altered media decoded size", frozenFixture({ decodedSizeBytes: 67 }), true],
+    ["altered media digest", frozenFixture({ sha256: "0".repeat(64) }), true],
+    ["altered media encoding", frozenFixture({ encoding: "hex" }), true],
+    [
+      "altered media PNG signature",
+      frozenFixture({ data: alteredSignatureBytes.toString("base64") }),
+      true,
+    ],
+    ["media fixture path authority", frozenFixture({}, { path: "fixture.png" }), true],
+    ["generated media byte authority", frozenFixture({}, { generatedBytes: "generated" }), true],
+    ["caller media byte authority", frozenFixture({}, { callerBytes: "caller" }), true],
+    ["environment media byte authority", frozenFixture({}, { environmentBytes: "env" }), true],
+    ["mutable media fixture authority", { ...canonicalFixture }, true],
+  ];
+  for (const [label, uploadFixture, helperMustReject] of mediaFixtureMutants) {
+    if (helperMustReject) {
+      await expectAsyncFailure(
+        async () => decodeCanonicalMediaUploadFixtureExact(uploadFixture),
+        label + " helper"
+      );
+    } else {
+      invariant(
+        decodeCanonicalMediaUploadFixtureExact(uploadFixture).length === 68,
+        label + " helper value drift"
+      );
+    }
+    let rejectedSinkCalls = 0;
+    const rejectingRegistry = buildRuntimeOperationHandlers(plan, {
+      mediaMultipartSink: async () => {
+        rejectedSinkCalls += 1;
+        return { value: fakeMediaResponse };
+      },
+    });
+    const mutantState = makeMediaUploadState();
+    const mutantPlan = {
+      fixtureBlueprint: {
+        media: { ...mediaBlueprint, uploadFixture },
+        origins: plan.fixtureBlueprint.origins,
+      },
+    };
+    await expectAsyncFailure(
+      async () =>
+        dispatchMediaUploadOnce(
+          rejectingRegistry,
+          {
+            state: mutantState.state,
+            plan: mutantPlan,
+            action: mediaUploadAction,
+            executable: mediaUploadAction.executable,
+            captures: sourceCaptures,
+          },
+          new Set()
+        ),
+      label
+    );
+    invariant(rejectedSinkCalls === 0, label + " reached the multipart sink");
+  }
+
   const mediaIsolationExpected = {
     id: sourceCaptures.get("media.id"),
     key: sourceCaptures.get("media.storage-key"),
@@ -20394,6 +21859,13 @@ export async function runTask540SmokeExecutorSelfTest() {
     root: "/task540-self-test-root",
     actionId: "source-compile",
   };
+  let legacyRuntimeRootRejected = false;
+  try {
+    runCode(`(page) => page.locator(${JSON.stringify(LEGACY_SCREEN_RUNTIME_ROOT_SELECTOR)})`);
+  } catch {
+    legacyRuntimeRootRejected = true;
+  }
+  assertNegative(legacyRuntimeRootRejected, "legacy runtime-root selector compile rejection");
   let compiledRunCodeSources = 0;
   const authArmSourceActionIds = [];
   const authCloseSourceActionIds = [];
@@ -20402,6 +21874,35 @@ export async function runTask540SmokeExecutorSelfTest() {
   const mediaIsolationSourceActionIds = [];
   const recordEntryMenuSourceActionIds = [];
   const recordsWorkspaceSourceActionIds = [];
+  const encodedPaletteSelectors = JSON.stringify({
+    button: registeredSelector(plan, "blockRoot", [sourceCaptures.get("palette.button")]),
+    outerTabs: registeredSelector(plan, "blockRoot", [sourceCaptures.get("palette.outer-tabs")]),
+    innerTabs: registeredSelector(plan, "blockRoot", [sourceCaptures.get("palette.inner-tabs")]),
+  });
+  const previewRuntimeActionSelectors = new Map(
+    [
+      ["tk-012-focus-overview", "palette.outer-tabs", "Overview"],
+      ["tk-013-arrow-left", "palette.outer-tabs", "Overview"],
+      ["tk-015-arrow-right", "palette.outer-tabs", "History"],
+      ["tk-017-home", "palette.outer-tabs", "Overview"],
+      ["tk-019-end", "palette.outer-tabs", "Overview"],
+      ["tk-022a-restore-overview", "palette.outer-tabs", "Overview"],
+      ["tk-023-inner-second", "palette.inner-tabs", "Tab 2"],
+      ["tk-024-outer-details", "palette.outer-tabs", "Details"],
+      ["tk-025-outer-overview", "palette.outer-tabs", "Overview"],
+    ].map(([actionId, captureName, label]) => [
+      actionId,
+      registeredSelector(plan, "previewRuntimeTab", [sourceCaptures.get(captureName), label]),
+    ])
+  );
+  const observedPreviewRuntimeActionIds = [];
+  const assertSourceMutantsRejected = (source, validator, tokens, label) => {
+    for (const [index, token] of tokens.entries()) {
+      invariant(source.includes(token), label + " mutant anchor " + index + " drift");
+      const mutant = source.replaceAll(token, "__WF540_SOURCE_MUTANT_" + index + "__");
+      assertNegative(!validator(mutant), label + " mutant " + index);
+    }
+  };
   for (const action of plan.actionManifest) {
     if (action.executable.type === "runtime-operation") continue;
     const executionSpec = compileActionExecutionSpec(action);
@@ -20428,28 +21929,166 @@ export async function runTask540SmokeExecutorSelfTest() {
       sourceIndex > 0 && typeof invocation.args[sourceIndex] === "string",
       action.id + " run-code source is absent"
     );
-    new Script("(" + invocation.args[sourceIndex] + ")", { filename: action.id + ".self-test.js" });
-    if (invocation.args[sourceIndex].includes("context.__wf540ArmExpectedAuthChallenge({")) {
+    const compiledSource = invocation.args[sourceIndex];
+    invariant(
+      !compiledSource.includes(LEGACY_SCREEN_RUNTIME_ROOT_SELECTOR),
+      action.id + " retained the legacy runtime-root selector"
+    );
+    new Script("(" + compiledSource + ")", { filename: action.id + ".self-test.js" });
+    if (previewRuntimeActionSelectors.has(action.id)) {
+      const expectedSelector = previewRuntimeActionSelectors.get(action.id);
+      invariant(
+        compiledSource.includes("page.locator(" + JSON.stringify(expectedSelector) + ")") &&
+          !compiledSource.includes("scopedRuntimeTab") &&
+          !compiledSource.includes("previewRuntimeTab"),
+        action.id + " preview runtime selector exact bytes drift"
+      );
+      observedPreviewRuntimeActionIds.push(action.id);
+    }
+    if (action.id === "tk-011-preview-proof") {
+      const required = [
+        '"paletteSelectors":' + encodedPaletteSelectors,
+        "const shell = await exactVisibleWithin(page, config.selectors.previewShell",
+        "const outer = await exactVisibleWithin(shell, config.paletteSelectors.outerTabs",
+        "await exactVisibleWithin(outer, config.paletteSelectors.innerTabs",
+        "if (await locator.count() !== 1) return null",
+        "return positive(rect) && await locator.isVisible() ? locator : null",
+        "output = { shellVisible: true, device, outerTabsVisible: true, innerTabsVisible: true }",
+      ];
+      const validates = (source) =>
+        required.every((token) => source.includes(token)) &&
+        source.includes(JSON.stringify(registeredSelector(plan, "previewShell"))) &&
+        source.includes(JSON.stringify(registeredSelector(plan, "canvasScroller"))) &&
+        !source.includes("config.palette.outerTabs") &&
+        !source.includes("config.palette.innerTabs");
+      invariant(validates(compiledSource), "tk-011 preview/entry observation scope drift");
+      assertSourceMutantsRejected(compiledSource, validates, required.slice(0, 6), "tk-011");
+    }
+    if (action.id === "tk-027-ids-proof") {
+      const required = [
+        '"paletteSelectors":' + encodedPaletteSelectors,
+        "const surface = await exactVisibleWithin(page, surfaceSelector",
+        "const outer = await exactVisibleWithin(surface, config.paletteSelectors.outerTabs",
+        "const inner = await exactVisibleWithin(outer, config.paletteSelectors.innerTabs",
+        "return { outer: await ownedTabs(outer), inner: await ownedTabs(inner) }",
+        "const builderRealm = await readRendererRealm(config.selectors.canvas)",
+        "const previewRealm = await readRendererRealm(config.selectors.previewShell)",
+        "const ids = collectRendererIds([builderRealm, previewRealm])",
+        "function collectRendererIdsExact(realms)",
+      ];
+      const validates = (source) =>
+        required.every((token) => source.includes(token)) &&
+        source.includes(JSON.stringify(registeredSelector(plan, "canvas"))) &&
+        source.includes(JSON.stringify(registeredSelector(plan, "previewShell"))) &&
+        !source.includes("config.palette.outerTabs") &&
+        !source.includes("config.palette.innerTabs");
+      invariant(validates(compiledSource), "tk-027 renderer/entry assertion scope drift");
+      assertSourceMutantsRejected(compiledSource, validates, required.slice(1, 4), "tk-027");
+    }
+    if (action.id === "tc-041-armed-slot") {
+      invariant(
+        compiledSource.includes('"name":"armed-slot-equals-active-tab"') &&
+          compiledSource.includes("const canvas = await one(config.selectors.canvas)") &&
+          compiledSource.includes("exactVisibleWithin(canvas, config.paletteSelectors.outerTabs"),
+        "tc-041 canvas-only armed-slot scope drift"
+      );
+    }
+    if (action.id === "tk-022-aria-proof") {
+      invariant(
+        compiledSource.includes('"name":"aria-reciprocal"') &&
+          compiledSource.includes("exactVisibleWithin(page, config.selectors.previewShell") &&
+          compiledSource.includes(
+            "exactVisibleWithin(previewShell, config.paletteSelectors.outerTabs"
+          ),
+        "tk-022 preview-only ARIA scope drift"
+      );
+    }
+    if (action.id === "tk-026-nested-proof") {
+      invariant(
+        compiledSource.includes('"name":"nested-tabs-isolated"') &&
+          compiledSource.includes("exactVisibleWithin(page, config.selectors.previewShell") &&
+          compiledSource.includes(
+            "exactVisibleWithin(previewShell, config.paletteSelectors.outerTabs"
+          ) &&
+          compiledSource.includes("exactVisibleWithin(outer, config.paletteSelectors.innerTabs"),
+        "tk-026 preview-only nested scope drift"
+      );
+    }
+    if (action.id === "set-006-logger") {
+      invariant(
+        compiledSource.includes(
+          "const freezeTree = function freezeJsonTreeExact(value, seen = new WeakSet())"
+        ) &&
+          compiledSource.includes(
+            "for (const child of Object.values(value)) freezeJsonTreeExact(child, seen)"
+          ) &&
+          compiledSource.includes(
+            "const frozenCopy = (value) => freezeTree(JSON.parse(JSON.stringify(value)))"
+          ),
+        "private sample deep-freeze authority drift"
+      );
+    }
+    if (action.id === "rc-012c-picker-warm-proof") {
+      invariant(
+        compiledSource.includes('root.locator("[data-screen-relation-option-id]")') &&
+          compiledSource.includes('mediaRoot.locator("[data-media-picker-selected-id]")') &&
+          compiledSource.includes('context.__wf540Remember("rc-002-private-authority"') &&
+          compiledSource.includes("validateResetDraftAuthority(resetAuthority") &&
+          compiledSource.includes("changedJsonPointers(config.entryBaseline, persisted.data)") &&
+          !compiledSource.includes("config.selectors.relationA1") &&
+          !compiledSource.includes("config.selectors.relationB2"),
+        "rc-012c exhaustive reset authority source drift"
+      );
+    }
+    if (action.id === "rc-017-unrelated-before") {
+      invariant(
+        compiledSource.includes('context.__wf540Recall("rc-002-private-authority")') &&
+          compiledSource.includes('context.__wf540Remember("rc-017-private-authority"') &&
+          compiledSource.includes(
+            'const expectedDiff = ["/controls/unrelatedNote", "/presentation/tone"]'
+          ) &&
+          compiledSource.includes("changedJsonPointers(resetAuthority.draft, currentDraft)") &&
+          compiledSource.includes("validateCurrentDraftAuthority(currentAuthority") &&
+          compiledSource.includes('root.locator("[data-screen-relation-option-id]")') &&
+          compiledSource.includes('mediaRoot.locator("[data-media-picker-selected-id]")'),
+        "rc-017 private full-draft authority drift"
+      );
+    }
+    if (action.id === "rc-032-diff-proof") {
+      invariant(
+        compiledSource.includes('context.__wf540Recall("rc-017-private-authority")') &&
+          compiledSource.includes("validateResetDraftAuthority(before.resetAuthority") &&
+          compiledSource.includes("validateCurrentDraftAuthority(before") &&
+          compiledSource.includes("changedJsonPointers(before.draft, currentDraft)") &&
+          compiledSource.includes(
+            'const relationRoots = ["/relations/relationA", "/relations/relationB"]'
+          ) &&
+          compiledSource.includes("const relationBefore = before.resetAuthority.draft.relations") &&
+          compiledSource.includes('root.locator("[data-screen-relation-option-id]")') &&
+          compiledSource.includes('mediaRoot.locator("[data-media-picker-selected-id]")') &&
+          !compiledSource.includes('context.__wf540Recall("rc-002-private-authority")'),
+        "rc-032 exact reset/current union-leaf authority drift"
+      );
+    }
+    if (compiledSource.includes("context.__wf540ArmExpectedAuthChallenge({")) {
       authArmSourceActionIds.push(action.id);
     }
-    if (invocation.args[sourceIndex].includes("context.__wf540CloseExpectedAuthChallenge({")) {
+    if (compiledSource.includes("context.__wf540CloseExpectedAuthChallenge({")) {
       authCloseSourceActionIds.push(action.id);
     }
     if (action.kind === "authRateWindowBarrier") {
       authRateBarrierSourceActionIds.push(action.id);
       invariant(
-        invocation.args[sourceIndex].includes("if (61000 > 0)") &&
-          invocation.args[sourceIndex].includes('context.on("request", onRequest)') &&
-          invocation.args[sourceIndex].includes('context.off("request", onRequest)') &&
-          invocation.args[sourceIndex].includes("const parseHttpUrl = (value) =>") &&
-          invocation.args[sourceIndex].includes(
-            'parsedUrl.pathname.startsWith("/admin/api/auth/")'
-          ) &&
-          invocation.args[sourceIndex].includes("invalidRequestUrl") &&
-          !invocation.args[sourceIndex].includes("new URL(") &&
-          invocation.args[sourceIndex].indexOf("const after = await sample()") <
-            invocation.args[sourceIndex].indexOf('context.off("request", onRequest)') &&
-          invocation.args[sourceIndex].includes("before.navigationCount !== after.navigationCount"),
+        compiledSource.includes("if (61000 > 0)") &&
+          compiledSource.includes('context.on("request", onRequest)') &&
+          compiledSource.includes('context.off("request", onRequest)') &&
+          compiledSource.includes("const parseHttpUrl = (value) =>") &&
+          compiledSource.includes('parsedUrl.pathname.startsWith("/admin/api/auth/")') &&
+          compiledSource.includes("invalidRequestUrl") &&
+          !compiledSource.includes("new URL(") &&
+          compiledSource.indexOf("const after = await sample()") <
+            compiledSource.indexOf('context.off("request", onRequest)') &&
+          compiledSource.includes("before.navigationCount !== after.navigationCount"),
         action.id + " auth rate barrier source contract drift"
       );
     }
@@ -20515,7 +22154,11 @@ export async function runTask540SmokeExecutorSelfTest() {
     }
     compiledRunCodeSources += 1;
   }
-  invariant(compiledRunCodeSources === 391, "generated run-code source count drift");
+  invariant(compiledRunCodeSources === 392, "generated run-code source count drift");
+  invariant(
+    deepEqualJson(observedPreviewRuntimeActionIds, [...previewRuntimeActionSelectors.keys()]),
+    "nine preview runtime selector actions drift"
+  );
   const requiredAuthRateBarrierIds = plan.requiredAuthRatePlan.epochs.flatMap(
     ({ endsAtBarrierActionId }) => (endsAtBarrierActionId === null ? [] : [endsAtBarrierActionId])
   );
@@ -20757,10 +22400,31 @@ export async function runTask540SmokeExecutorSelfTest() {
   const successCapabilities = buildFakeCapabilities();
   const evidence = await executeSmokePlanCore(plan, successCapabilities);
   invariant(evidence.pass === true, "fake success evidence failed");
-  invariant(successCapabilities.calls.slice(0, 495).length === 495, "one action per row drift");
+  const expectedManifestCallIds = plan.actionManifest.map(({ id }) => id);
+  const observedManifestCallIds = successCapabilities.calls.slice(0, 496);
+  invariant(
+    assertOrderedManifestCallsExact(observedManifestCallIds, expectedManifestCallIds) === true,
+    "one exact ordered action call per manifest row drift"
+  );
+  for (const [label, mutate] of [
+    ["manifest call omission", (calls) => calls.splice(124, 1)],
+    ["manifest call duplicate", (calls) => calls.splice(124, 0, calls[124])],
+    [
+      "manifest call reorder",
+      (calls) => {
+        [calls[124], calls[125]] = [calls[125], calls[124]];
+      },
+    ],
+  ]) {
+    await expectAsyncFailure(async () => {
+      const calls = [...observedManifestCallIds];
+      mutate(calls);
+      assertOrderedManifestCallsExact(calls, expectedManifestCallIds);
+    }, label);
+  }
   invariant(
     deepEqualJson(
-      successCapabilities.calls.slice(495, -1),
+      successCapabilities.calls.slice(496, -1),
       successCapabilities.lastFinalPlan.actionTuples.map(
         ([resourceKey, operationKind]) => operationKind + ":" + resourceKey
       )
