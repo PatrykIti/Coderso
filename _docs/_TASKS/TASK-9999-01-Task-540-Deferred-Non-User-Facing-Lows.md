@@ -29,7 +29,7 @@ a substitute for the required source-task backlink.
 
 | Leaf | Evidence | Why deferral is currently safe |
 |---|---|---|
-| TASK-9999-01-L01 | `screenMediaIdentity.ts:4` solely defines `isScreenMediaAssetUuid` and `customScreenSchemas.ts` explicitly re-exports it; `screenEntryPresentationOverrideContract.ts:192,229` reaches it through `normalizeCanonicalMediaUuid`, while `screenEntryPresentationOverrides.ts:421` calls it directly for actor identity. Before the pending split lands, workflow self-test verifies the equivalent pre-split definition only as transitional evidence. | The predicate already accepts/rejects the intended UUID shape and preserves the value; only domain naming/coupling is wrong. There is no payload, persistence, auth, RBAC, or runtime behavior change. |
+| TASK-9999-01-L01 | `screenMediaIdentity.ts:4` currently defines only `isScreenMediaAssetUuid`; the pending TASK-540 R01 contract requires the same owner module to append the shared first-valid scalar/array selector, while `customScreenSchemas.ts` continues to re-export only the predicate. `screenEntryPresentationOverrideContract.ts:192,229` reaches the predicate through `normalizeCanonicalMediaUuid`, while `screenEntryPresentationOverrides.ts:421` calls it directly for actor identity. | The predicate already accepts/rejects the intended UUID shape and preserves the value; only domain naming/coupling is wrong. After TASK-540 R01 lands, the later neutral rename must also preserve the selector's scalar/array choice and exact casing. There is no payload, persistence, auth, RBAC, or runtime behavior change. |
 
 ## Re-triaged Findings
 

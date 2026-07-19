@@ -1326,11 +1326,12 @@ function actualFileEvidence(rows, family) {
 
 function requireFamilyEvidenceContract(name, family, evidence, mode) {
   if (mode === "capture") return;
-  const additiveUserSettingsFinal = name === "userSettingsRoutes" && mode === "final";
+  const additiveUserSettingsContract =
+    name === "userSettingsRoutes" && ["current", "final"].includes(mode);
   if (
     evidence.tests !== family.tests ||
     evidence.sha256 !== family.sha256 ||
-    (!additiveUserSettingsFinal && evidence.declarationSha256 !== family.declarationSha256) ||
+    (!additiveUserSettingsContract && evidence.declarationSha256 !== family.declarationSha256) ||
     evidence.declarations !== family.declarations ||
     evidence.fileEvidence.length !== family.files.length ||
     evidence.fileEvidence.some(
@@ -1812,7 +1813,7 @@ for (const [name, family] of selectedFamilies) {
     mode
   );
   const callbackContract =
-    name === "userSettingsRoutes" && mode === "final"
+    name === "userSettingsRoutes" && ["current", "final"].includes(mode)
       ? await requireFinalUserSettingsCallbackContract(files)
       : null;
   evidence.push(

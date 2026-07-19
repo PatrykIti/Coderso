@@ -21,7 +21,7 @@
 **Historical Pre-Overflow Post-Audit Selector/Scope Repair:** the next five-lens post-audit stopped before full validation and smoke on the exact `Media asset`/rendered `Media Asset` selector mismatch and an unrelated legacy-key test refactor outside the shared-settings isolation exception. L01 then pinned `Media Asset` in both media-binding actions and self-test, restored the legacy behavior test shape, and retained only the exact snapshot/restore hygiene changes. That checkpoint did not authorize closure.
 **Historical Pre-Overflow Runtime Smoke Failure-Action Observability Repair:** the subsequent canonical Start gate, all five post-audit lenses, complete repository-wide validation, strict scan, and final workflow checks passed before the one-shot smoke returned the fixed generic failure. Cleanup restored the exact settings baseline SHA-256 `7e453af480fe040a55d81ad0ee6c168ef8295a820b4eec2c1ee3331e18ab665b`, left no browser/session/listener or screenshot, and preserved the user-owned staged snapshot; the old generic-only boundary intentionally erased the failing action, so it is diagnostic evidence rather than a smoke pass. L01 then added the bounded allowlisted failure-action line; that checkpoint did not authorize closure.
 **Historical Pre-Overflow Failure-Action Diagnostic Self-Test:** at that checkpoint the final executor self-test passed 490 actions and 196 negative cases with a caught synchronous stderr write, including `EPIPE`, `EBADF`, and partial-write containment. The current L03 overflow repair supersedes the prepared closure state, not this durable diagnostic behavior.
-**Current L03 Overflow Repair Revalidated:** 2026-07-18 — TASK-540-04-L03 has no `Repair Pending` and carries canonical `Implementation Complete` plus `Revalidation Passed: generation 71b1c73b899a4ab4be94690ce387f28e / token ff99adec779348e796d56df5dbda3627 / gate green`. All implementation leaves are landed; a fresh clean five-lens post-audit must pass before full validation or smoke.
+**Current L03 Overflow Repair Revalidated:** 2026-07-18 — TASK-540-04-L03 has no `Repair Pending` and carries canonical `Implementation Complete` plus `Revalidation Passed: generation 71b1c73b899a4ab4be94690ce387f28e / token ff99adec779348e796d56df5dbda3627 / gate green`. That historical repair receipt remains valid, but the current frontier is discovery audit → R01 → R03 → L03 → L04 with an exact owner gate after every leaf; only its successful completion permits the fresh clean five-lens post-audit, full validation, smoke, and closure.
 **Changelog:** 1252 (pinned; closure only)
 **Changelog File:** `_docs/_CHANGELOG/1252-2026-07-14-task-540-custom-screens-functional-and-data-integrity-remediation.md`
 
@@ -68,11 +68,12 @@ TASK-540.
 
 ## Family modularity prerequisite
 
-Before the current overflow repair, closure consumed the exact source-owner sequence
+Before the current corrective chain, closure consumed the exact source-owner sequence
 `540-01-L01 → 540-02-L01 → 540-03-L01 → 540-04-L01 → 540-04-L03 →
-540-04-L04 → 540-05-L01 boundary → 540-05-L02`. The current prepared resolver has all
-ten leaves landed and no remaining leaf; TASK-540-06-L01 is again the closure frontier.
-After a fresh clean post-audit, closure proceeds to full validation and smoke. The
+540-04-L04 → 540-05-L01 boundary → 540-05-L02`. The prepared resolver's ten-landed-leaf
+state is historical evidence, not current closure authority. The executable frontier is
+discovery audit → R01 → R03 → L03 → L04, with an exact owner gate after every
+leaf; only a subsequent fresh clean post-audit permits full validation and smoke. The
 TASK-540 root owns the canonical 15-row pre-split evidence table. No owner, count, or
 SHA-256 may be dropped; every final production, test, and test-support record is emitted
 as `{ path, owner, lines, sha256 }` from the full baseline history plus current tracked
@@ -82,8 +83,8 @@ Every human-authored result must be `<= 1000` physical lines under the exact AGE
 exemptions. A violation is blocking and cannot become a LOW or TASK-9999 item. Each of
 the ten split test families runs every resulting suite alone, runs the family together,
 and preserves the exact sorted multiset of all 347 expanded pre-split names. Those
-modularity prerequisites remain durable. With the current L03 gate exact, closure runs
-the exact 64-Vitest/18-Bun matrix only after a fresh clean five-lens post-audit. Its ordinary closure-owned test is
+modularity prerequisites remain durable. After the corrective chain and its fresh clean
+five-lens post-audit, closure runs the exact 64-Vitest/18-Bun matrix. Its ordinary closure-owned test is
 `tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx`; the later verified
 pre-smoke repair additionally owns only the two exact shared-settings hygiene suites named
 above. Changelog 1252 stays

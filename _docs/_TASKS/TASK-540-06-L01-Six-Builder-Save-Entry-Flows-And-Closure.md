@@ -32,7 +32,7 @@
 **Historical Pre-Overflow Post-Audit Selector/Scope Repair:** the next fresh five-lens post-audit stopped before full validation and smoke. It proved the exact media field option is rendered as `Media Asset (media)`, while the action contract still targeted `Media asset (media)`, and it found that the settings-suite isolation repair had also restructured an unrelated legacy-key behavior test outside this leaf's narrow exception. The two media actions and their contract self-test then pinned `Media Asset`; the legacy-key test was restored to its prior behavior shape while exact shared-row snapshot/restore remained. That checkpoint did not authorize closure.
 **Historical Pre-Overflow Runtime Smoke Failure-Action Observability Repair:** the next canonical Start gate and all five post-audit lenses passed, followed by green core/root static checks, targeted Bun/Vitest tests, full `bun run test`, exact pre/post settings baseline proof, `precommit:check`, Admin build/boundary/bundle checks, `gates:coderso`, the strict security scan with only its pinned TASK-545-owned finding, and final workflow checks. The one-shot smoke then started the repo-owned helper and returned only `{code:"task540_smoke_failed"}` before any provable successful bootstrap login. Its deterministic cleanup restored settings baseline SHA-256 `7e453af480fe040a55d81ad0ee6c168ef8295a820b4eec2c1ee3331e18ab665b`, removed all task browser/session/listener/screenshot state, and preserved staged snapshot SHA-256 `c5a339b8c5a8d0f639067ae630b8c81c158d8cb519c87445b9416072206c9f0f`. The old generic-only boundary intentionally destroyed the failing action identity, so no exact action or smoke pass was claimed. The executor then added only the bounded allowlisted active-action diagnostic; that checkpoint did not authorize closure.
 **Historical Pre-Overflow Failure-Action Diagnostic Self-Test:** at that checkpoint the final executor self-test passed 490 actions and 196 negative cases with caught synchronous stderr writes, including `EPIPE`, `EBADF`, and partial-write containment. The current L03 overflow repair supersedes the prepared closure state, not this durable diagnostic behavior.
-**Current L03 Overflow Repair Revalidated:** 2026-07-18 — TASK-540-04-L03 has no `Repair Pending` and carries canonical `Implementation Complete` plus `Revalidation Passed: generation 71b1c73b899a4ab4be94690ce387f28e / token ff99adec779348e796d56df5dbda3627 / gate green`. This closure leaf retains its exact `pre-closure remediation / fix-started 2026-07-15 / gate green` receipt and returns as the closure frontier after a fresh clean five-lens post-audit; no later full-validation or smoke result is claimed.
+**Current L03 Overflow Repair Revalidated:** 2026-07-18 — TASK-540-04-L03 has no `Repair Pending` and carries canonical `Implementation Complete` plus `Revalidation Passed: generation 71b1c73b899a4ab4be94690ce387f28e / token ff99adec779348e796d56df5dbda3627 / gate green`. This closure leaf retains its exact `pre-closure remediation / fix-started 2026-07-15 / gate green` receipt, but current closure authority requires discovery audit → R01 → R03 → L03 → L04 with an exact owner gate after every leaf, followed by a fresh clean five-lens post-audit; no later full-validation or smoke result is claimed.
 **Historical L03 Source Repair Required:** On 2026-07-15 the live-smoke feasibility audit proved duplicate canonical/legacy cacheBus transport delivery made the exact-one `related-a-refresh` route contract impossible; the scoped repair landed and was revalidated.
 **Historical L03 Source Repair Owner:** TASK-540-04-L03 was the sole repair owner for the generic per-subscription cacheBus transport dedupe in `core/admin/utils/cacheBus.ts`, its regressions in `tests/vitest/admin/cacheBus.test.ts`, and additive direct-image route-boundary regressions in `tests/integration/routes/customScreensRoutes.test.ts`. No production route file changed.
 **Historical L03 Source Repair Gate:** TASK-540-04-L03 alone held the exact three-path repair authority, ran its required gates, and atomically replaced its matching `Repair Pending` receipt with one `Revalidation Passed` successor plus canonical `Implementation Complete`. That durable evidence remains valid but does not substitute for any later source-repair receipt or closure gate.
@@ -510,7 +510,10 @@ route-suite partition, the narrow shared-builder replacement in `screenDocumentO
 the cohesive document-operation facade/five-owner split, the explicit-ID Assistant
 composer plus its focused regression, and the twelve-suite/73-name Assistant executor
 family plus five support owners, while the Assistant action-plan/catalog Vitest files
-remain read-only consumers. TASK-540-02-L01 solely owns the stable
+remain read-only consumers. R01's Bun-free `screenMediaIdentity.ts` also owns the sole
+first-valid scalar/array media-UUID selector; R03's runtime leaf renderer and L03's
+Entry presentation-media planner import it directly and remain read-only to one another.
+TASK-540-02-L01 solely owns the stable
 `ScreenBlockInspector.tsx` facade, `screenBlockInspectorModel.ts`,
 `ScreenBlockInspectorControls.tsx`, `ScreenBlockInspectorTabs.tsx`, and
 `ScreenBlockInspectorSection.tsx` plus its binding-panel/image-inspector UI gate;
@@ -745,8 +748,10 @@ receipt, add `Completed`, or move status. The restart invariant still accepts ei
 exact pending state or an exact revalidated state, never both. All eight revalidated
 receipts now exist in the mandatory order, and the family line/name/matrix gates passed,
 so TASK-540-06-L01 reached—but did not complete—the closure-preparation frontier at
-that historical checkpoint. The overflow repair reopened and revalidated L03; this
-closure leaf is again the active closure frontier after a fresh clean post-audit.
+that historical checkpoint. The overflow repair reopened and revalidated L03. Current
+execution must still complete discovery audit → R01 → R03 → L03 → L04 with an
+exact owner gate after every leaf before this closure leaf can resume after a fresh clean
+post-audit.
 
 The verified pre-run Start-gate repair made that then-prepared resume executable. Its
 structural Markdown status-table reader selects only a table with one unique leading
@@ -754,9 +759,9 @@ structural Markdown status-table reader selects only a table with one unique lea
 tables remain byte-identical instead of colliding with status authority. Resume
 validation, unrelated-byte projection, and exact rollback use the same reader; all 18
 selection/mutation cases and the then-current prepared-resume gate passed. This is
-historical workflow-authority evidence only. The current prepared resolver resolves to
-`initial` mode with `startLeafId:null`, all ten leaves landed, and no remaining leaf;
-closure work resumes after a fresh clean five-lens post-audit.
+historical workflow-authority evidence only. The current corrective chain is discovery
+audit → R01 → R03 → L03 → L04, each followed by its exact owner gate; closure
+work resumes only after the subsequent fresh clean five-lens post-audit.
 
 During an earlier source-owner `Repair Pending`, every landed sibling remains
 `🚧 In Progress`; each completed implementation sibling retains exactly one current

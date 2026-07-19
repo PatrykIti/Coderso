@@ -117,6 +117,51 @@ preflight, Bun routes 13/13, workflow/diff checks, and a fresh zero-finding audi
 restored canonical receipt still never substitutes for either sibling owner gate or the
 later family post-audit, smoke, and closure gates.
 
+## Pending 2026-07-19 selector, accessibility, and workspace correction
+
+L03 starts only after R01 and R03 have passed their exact gates. In
+`customScreenEntryPresentationMedia.ts`, import R01's
+`firstScreenMediaAssetUuid` directly from the Bun-free `screenMediaIdentity.ts` owner,
+delete the local `firstMediaAssetUuid`, and keep existing override-first, bound-value,
+deduplication, 200-ID, byte-casing, and fail-closed behavior unchanged. Extend the
+existing `direct-image media planning chooses override then binding, deduplicates, and
+ignores media fields` declaration; do not add a fifth presentation-media test.
+
+In `CustomScreenEntryPresentationPanel.tsx`, preserve the visible captions and give the
+`Text size`, `Emphasis`, and `Tone` combobox triggers distinct programmatic names. Give
+the composite Media override surface one named `role="group"` using a React `useId`
+caption relationship; do not leave a `<label>` that targets no form control and do not
+modify `MediaPicker` outside this leaf. Extend the existing `an inline content edit
+surfaces the unsaved-changes affordance` declaration for the three text-control names
+and the existing `direct-image presentation exposes media authoring and renders the
+winning override URL` declaration for the named media group. Keep the already
+1,000-line restyle suite at or below 1,000 by replacing/compressing local prose rather
+than creating another suite or declaration.
+
+In `CustomScreenEntryRouteSession.tsx`, replace the dynamic hand-built records path
+with `buildCustomScreenWorkspacePath({ screenId })`; keep the no-screen fallback and
+admin-base resolution behavior unchanged. Extend the existing `clean navigation
+proceeds without a dialog, while a content draft supports cancel and confirm`
+declaration with a structural assertion that this consumer imports/calls the canonical
+builder. Use a callback-local dynamic Node import for that source assertion so the test
+module's imports and every byte outside the named declaration remain unchanged. Do not
+add or rename a navigation test: the immutable family remains exactly 9 guard + 13
+authority names. No source in R01, R03, L04, `routeParams.ts`,
+`MediaPicker`, or the protected workflow is writable in this leaf. Core lint/types,
+the unchanged name/body contract with intentionally re-pinned declaration bodies, the
+exact L03 dependency-shaped gate, and the touched-file line gate must pass before L04
+starts. This section is an implementation contract, not a repair receipt.
+
+The declaration re-pin is an orchestrator-only exact transaction immediately before
+the owner gate. Capture mode must retain all 17 Entry-restyle names/declarations in
+partition `13+4`, all 22 Entry-navigation names and 18 declarations in partition
+`9+13`, both global name hashes, and every per-file name hash/index. The workflow
+normalizes only the four allowlisted corrective SHA literals against `HEAD`; the L03
+agent has no workflow mutation authority. A whole-file projection permits differences
+only inside the four named test calls and requires every pre-existing callback statement
+to remain an ordered subsequence, so the re-pin cannot bless an unrelated or weakened
+assertion.
+
 ## Grounded anchors
 
 The line references below describe the pre-split staged implementation and remain
@@ -466,9 +511,12 @@ value/type compatibility re-export list. A compile-only consumer is insufficient
 the pure tests intentionally move to their owning modules. The historical modularity land
 order was L03 split → L03 target gate and immediate L03
 `Modularity Repair Revalidated` receipt → L04 split/gate and immediate L04 receipt → L01
-additive boundary update/gate. That split is durable, and the current remaining order is
-fresh five-lens post-audit → full validation → runtime smoke → reserved L01 closure; a passing check
-that still reads only the thin wrapper is insufficient evidence.
+additive boundary update/gate. That split is durable. For the pending 2026-07-19
+correction, the current remaining order is task-contract corrections → discovery five-lens
+post-audit → R01 shared selector/gate → R03 renderer consumer/gate → L03 Entry
+consumer/accessibility/workspace-helper gate → L04 Screen Settings accessibility/gate →
+fresh clean five-lens post-audit → full validation → runtime smoke → reserved L01
+closure; a passing check that still reads only the thin wrapper is insufficient evidence.
 
 ### Required workflow and targeted validation changes
 

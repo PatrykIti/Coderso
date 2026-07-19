@@ -22,7 +22,8 @@
 **Historical Pre-Overflow Failure-Action Diagnostic Self-Test:** at that checkpoint the final executor self-test passed 490 actions and 196 negative cases with a caught synchronous stderr write, including `EPIPE`, `EBADF`, and partial-write containment. The current L03 overflow repair supersedes the prepared closure state, not this durable diagnostic behavior.
 **Prior L03 Overflow Repair Revalidated:** 2026-07-18 — TASK-540-04-L03 restored canonical `Implementation Complete` and replaced its exact `Repair Pending` with `Revalidation Passed: generation 71b1c73b899a4ab4be94690ce387f28e / token ff99adec779348e796d56df5dbda3627 / gate green`. At that checkpoint the canonical resolver was prepared with all ten leaves landed and no remaining implementation leaf; TASK-540-06-L01 retained its exact `reserved-pre-closure-regated` receipt. Later R01 and post-audit work supersede only that prepared-resume claim, not the recorded L03 gate.
 **Current R01 Stored-Read Repair Revalidated:** 2026-07-19 — TASK-540-01-L01 replaced `Repair Pending: generation 28bd5c90c7fd485eabc0c611d5e34752 / token 0237fd1a85b54c7e80e46c0eaac5477d` with the exact matching `Revalidation Passed` successor and restored canonical `Implementation Complete`; TASK-540-01 mirrors that completion state. The exact R01 owner gate passed before the fresh family post-audit.
-**Current Post-Audit Intervention:** 2026-07-19 — one complete five-lens round stopped before full validation and smoke. Deduplicated actionable groups are stale schema/binding-panel counts and root repair-state prose (orchestrator correction), missing programmatic control names in the L03 Entry Presentation and L04 Screen Settings panels, plus L03 reuse of the canonical media-UUID selector and admin workspace path helper. The orchestrator corrects only task contracts first; a fresh round must rediscover any remaining owner findings, reopen L03/L04 through canonical `Repair Pending`, run their exact gates, and then produce a fresh clean round. No full validation, smoke, changelog, or closure result is claimed.
+**Current Post-Audit Intervention:** 2026-07-19 — one complete five-lens round stopped before full validation and smoke. The verified correction is a four-owner dependency chain: R01 appends one Bun-free, precisely returning first-media-UUID selector to `screenMediaIdentity.ts` and extends its existing UUID test declaration; R03 consumes that selector in the runtime renderer; L03 consumes it in Entry presentation media, gives every Entry Presentation control a programmatic name, and replaces its hand-built records-workspace href with the canonical helper; L04 gives every Screen Settings control a programmatic name. The failed L03-only attempt was fully reverted and is diagnostic evidence that a pure L03 owner must not import the R03 admin/UI model. Canonical workflow transitions must reopen and gate R01 → R03 → L03 → L04 sequentially; this contract edit creates no `Repair Pending` and claims no implementation, full validation, smoke, changelog, or closure result.
+**Current Mechanical-Gate Correction:** the protected-name `current` mode now applies the same exact additive callback-preservation contract as `final` mode for `userSettingsRoutes`; it still preserves all names, partitions, retained statements, producer/result assertions, and support-module boundaries. This removes the deterministic current-mode false failure without weakening or re-baselining the changed body SHA.
 **Prior Repair Revalidation:** 2026-07-16 — before the composer and L04 provenance findings, HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus the then-recorded dirty paths passed core/root static gates; R01 Vitest 168/168, route/Assistant Bun 92/92 with 568 expectations, route 19/19 with 110, and ops 11/11; L03 Vitest 258/258, cacheBus 22/22, and L04 consumer matrix 98/98; L01 16/16; L02 Vitest 66/66 and Bun 27/27 with 165 expectations; user-settings 10/10 with 64; DB preflight; binding-flow 3/3; workflow self-tests; and diff checks. This evidence is historical for the expanded contract.
 **Historical L03 Repair Started:** 2026-07-15
 **Historical L03 Repair Reason:** Closure validation reproduced one logical remote cache event twice when canonical and legacy BroadcastChannel/storage transports delivered the same serialized event, and contract audit required direct-image route-boundary coverage at the strict write seam. TASK-540-04/L03 was the sole scoped repair owner with exactly three writable paths: `core/admin/utils/cacheBus.ts`, `tests/vitest/admin/cacheBus.test.ts`, and additive direct-image regressions in `tests/integration/routes/customScreensRoutes.test.ts`; `core/server/routes/customScreenRoutes.ts` and every other production route/UI/client/service file remained read-only. That repair passed its focused and dependency-shaped gates on 2026-07-15, and its exact `Repair Pending` receipt was replaced by the matching `Revalidation Passed` successor. L03 and every other then-landed source leaf remained `🚧 In Progress` with `Implementation Complete` awaiting family changelog 1252, while post-audit, full validation, live smoke, and atomic closure remained pending.
@@ -62,9 +63,10 @@ under the permanent TASK-9999 eligibility contract:
 - TASK-9999-01-L01 at
   `_docs/_TASKS/TASK-9999-01-L01-Decouple-Actor-And-Media-Uuid-Domain-Naming.md`.
   TASK-9999-01-L01 approved evidence: core/services/customScreens/screenMediaIdentity.ts:4; core/services/customScreens/screenEntryPresentationOverrideContract.ts:192; core/services/customScreens/screenEntryPresentationOverrideContract.ts:229; core/services/customScreens/screenEntryPresentationOverrides.ts:421.
-  Before R01 creates that exact six-line owner, the workflow verifies the equivalent
-  pre-split function at `customScreenSchemas.ts:548` only as transitional audit evidence;
-  it can never satisfy final closure after the pending marker is removed.
+  R01 keeps the predicate at `screenMediaIdentity.ts:4` while appending the shared
+  selector below it. Deferred evidence is anchored to the predicate symbol and line,
+  not to an exact file length; the retired pre-split location in
+  `customScreenSchemas.ts` cannot satisfy final closure.
   TASK-9999-01-L01 approved rationale: the shared UUID predicate already accepts and rejects the intended actor/media UUID grammar and preserves exact input bytes; deferral changes no UI/UX/accessibility, data, security/privacy/auth/RBAC, API, persistence/migration, performance/reliability, or test-integrity behavior.
 TASK-9999-01-L02 was re-triaged on 2026-07-18 and is `⏭️ Superseded` by active `TASK-540-02-L01`; removing `baseLabel` would regress focus-preserving stale-draft invalidation, so it is not eligible for TASK-9999 deferral.
 
@@ -100,7 +102,12 @@ migration, performance, reliability, or test-integrity impact remain blocking.
   blocks bound to media retain scalar/array UUID identity required by MediaPicker.
   `screenMediaIdentity.ts` owns one Bun-free `isScreenMediaAssetUuid` predicate,
   explicitly re-exported by the stable `customScreenSchemas.ts` facade and used by the
-  renderer and later strict override contract; no consumer mirrors its regex.
+  renderer and later strict override contract; it also owns the single
+  `firstScreenMediaAssetUuid(value: unknown): string | null` selector used by R03 and
+  L03. The `unknown` input is an untrusted value boundary that is narrowed immediately;
+  no `any`, assertion cast, duplicated regex, or consumer-local selector is allowed.
+  The new selector remains internal to this owner and does not widen the stable facade's
+  pinned public export manifest.
 - Binding GC prunes every missing block, including when the live block set is
   empty, and reports the existing warning shape.
 - Fresh V4 section/block IDs and binding `blockId`/`propPath`/`field` values share one
@@ -260,7 +267,7 @@ TASK-540-06-L01 closure
 The current remaining order is exactly:
 
 ```text
-task-contract corrections → fresh five-lens post-audit → scoped L03/L04 repair + owner gates when findings persist → fresh clean five-lens post-audit → full validation → runtime smoke → TASK-540-06-L01 closure
+task-contract corrections → discovery five-lens post-audit → R01 shared selector + orchestrator-only protected-body re-pin + exact owner gate → R03 renderer consumer + exact owner gate → L03 Entry consumer/accessibility/workspace helper + orchestrator-only protected-body re-pin + exact owner gate → L04 Screen Settings accessibility + orchestrator-only protected-body/module re-pin + exact owner gate → fresh clean five-lens post-audit → full validation → runtime smoke → TASK-540-06-L01 closure
 ```
 
 The ten protected pre-split test families preserve the exact sorted multiset of all
@@ -281,6 +288,7 @@ independently runnable. The closure target is exactly 64 Vitest + 18 Bun = 82 fi
 | II-M-06 rejected promise; II-M-07 missing target subscription | 540-04/L01..L03 | fail→retry and cacheBus refresh without dirty overwrite |
 | II-M-12 empty-doc ghost binding | 540-01/L01 | zero-block prune warning/round-trip test |
 | II-M-01 fixed Screen rail; invalid ARIA role; global prefs | 540-05/L01 + L02 | narrow geometry, role/name checks, two authenticated-user isolation |
+| 2026-07-19 post-audit selector/accessibility/navigation drift | 540-01/L01 → 540-03/L01 → 540-04/L03 → 540-04/L04 | one service-owned scalar/array UUID selector consumed by both renderer paths; distinct Entry Presentation and Screen Settings programmatic names; canonical Entry records-workspace helper; extend existing protected test declarations without changing R01 77 or Entry navigation 9+13 counts |
 
 ## Ownership, order, and collision guards
 
@@ -375,9 +383,10 @@ fix-started 2026-07-15 / gate green`, representing the
 gate did not make L03 landed or satisfy its pending owner gate; L03's own 2026-07-18
 revalidation now does. The prior
 modularity receipt remains historical split evidence, TASK-540-06-L01 has no `Completed`,
-and closure resumes only after a fresh clean post-audit. The pre-fix
-repository-wide `bun run test` command still requires a fresh parent rerun; no
-full-suite or live-smoke pass is claimed here.
+and closure resumes only after discovery audit → R01 → R03 → L03 → L04 with an
+exact owner gate after every leaf, followed by a fresh clean post-audit. The pre-fix
+repository-wide `bun run test` command still requires a fresh parent rerun; no full-suite
+or live-smoke pass is claimed here.
 Leaves have exclusive source ownership; any shared block data/action/DOM-id
 shape is defined by 540-01 and consumed verbatim. TASK-540-03 owns the pure renderer's
 optional UUID→URL map prop; TASK-540-04-L03 exclusively threads and populates it through
@@ -407,9 +416,9 @@ The historical L03 cache-bus repair and the earlier R01/L02/R03 corrections rema
 validated. Before the later overflow repair, the later L03, TASK-540-05-L01, and
 TASK-540-05-L02 repairs had matching receipts; expanded R01 and L04 retain theirs. After
 the later R01 stored-read repair gate, the resolver again reported all ten leaves landed;
-the subsequent five-lens intervention now requires any still-evidenced L03/L04 owner
-findings to reopen and re-gate before the already-regated closure leaf can return as the
-closure frontier. L03's scoped overflow
+the subsequent five-lens intervention now requires R01 → R03 → L03 → L04 to reopen
+and re-gate in dependency order before a fresh clean post-audit can return the
+already-regated closure leaf to the closure frontier. L03's scoped overflow
 source/test diff carries its exact current `Revalidation Passed` receipt; its earlier
 single-versus-multiple media receipt is historical. The matching
 `_docs/CMS_API.md` update is already landed and remains read-only while closure validates

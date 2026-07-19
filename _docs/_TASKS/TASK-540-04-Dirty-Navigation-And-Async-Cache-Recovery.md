@@ -51,6 +51,16 @@ when the user edits after a background request has already started.
 | TASK-540-04-L03 | Guard entry drafts, expand direct-image presentation targets, resolve presentation media UUIDs, and correlate mutation cache events | stable Entry Editor facade/eight extracted owners, canvas/read-only Preview, `customScreensClient.ts`, cache-bus substrate, override contract/service, four split test families/support, and assigned suites | 🚧 In Progress |
 | TASK-540-04-L04 | Guard Screen builder drafts | stable Screen Builder facade/seven extracted owners, additive editor-path helper, Page harness/four-suite split, route/binding/recovery seams, and read-only cache-bus/client production seams | 🚧 In Progress |
 
+### Pending 2026-07-19 post-audit correction
+
+This child resumes only after the separately gated R01 → R03 selector-owner handoff.
+L03 then removes its local media-UUID selector in favor of R01's Bun-free helper, names
+all Entry Presentation controls, and uses `buildCustomScreenWorkspacePath` for the
+records workspace. L04 lands last and names all Screen Settings controls. Each leaf
+extends existing test declarations only: Entry navigation remains exactly 9+13 and the
+L04 Page family remains exactly 6+13+8+9 = 36. Canonical workflow reopens and gates L03
+before L04; this task-contract edit does not create a repair receipt or claim completion.
+
 ## Mandatory parent modularity sequence
 
 The immutable historical pre-split evidence is below. L01, L03, and L04 have resolved
@@ -105,8 +115,10 @@ line rule was introduced, those receipts would have returned the graph to the pr
 pre-closure boundary. The later L01/L03/L04 modularity sequence, downstream L01
 authoring-boundary handoff, and L02 test splits all passed their exact gates; all eight
 receipts and the zero-blocker line gate placed the family at the closure frontier at
-that historical checkpoint. The L03 overflow repair has since passed its fresh gate;
-a fresh clean five-lens post-audit is the next closure gate.
+that historical checkpoint. The L03 overflow repair has since passed its fresh gate,
+but the current corrective chain is discovery audit → R01 → R03 → L03 → L04,
+with an exact owner gate after each implementation leaf. Only then may a fresh clean
+five-lens post-audit begin the full-validation, smoke, and closure sequence.
 
 ## Shared contract
 

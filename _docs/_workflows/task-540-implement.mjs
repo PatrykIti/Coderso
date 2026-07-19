@@ -1809,10 +1809,6 @@ const ENTRY_RESTYLE_VITEST_FILES = Object.freeze([
   "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
   "tests/vitest/ui/custom-screen-entry-presentation-media.test.ts",
 ]);
-const USER_SETTINGS_ROUTE_BUN_FILES = Object.freeze([
-  "tests/integration/routes/userSettings.test.ts",
-  "tests/integration/routes/userSettingsAccessLogHarness.test.ts",
-]);
 const R01_SCHEMA_VITEST_FILES = Object.freeze([
   "tests/vitest/admin/custom-screen-schemas.test.ts",
   "tests/vitest/admin/custom-screen-document-contract.test.ts",
@@ -1821,6 +1817,141 @@ const R01_SCHEMA_VITEST_FILES = Object.freeze([
   "tests/vitest/admin/custom-screen-fixed-block-contract.test.ts",
   "tests/vitest/admin/custom-screen-binding-contract.test.ts",
   "tests/vitest/admin/custom-screen-stored-read-repair.test.ts",
+]);
+const CORRECTIVE_DECLARATION_REPIN_FAMILIES = deepFreezeExact({
+  "540-01-L01": ["r01Schema"],
+  "540-04-L03": ["entryRestyle", "entryNavigation"],
+  "540-04-L04": ["screenEditorPage"],
+});
+const CORRECTIVE_TEST_DECLARATIONS = deepFreezeExact({
+  "540-01-L01": [
+    {
+      file: "tests/vitest/admin/custom-screen-stored-read-repair.test.ts",
+      name: "TASK-540-01 media identity predicate has one exact UUID contract",
+    },
+  ],
+  "540-04-L03": [
+    {
+      file: "tests/vitest/ui/custom-screen-entry-presentation-media.test.ts",
+      name: "direct-image media planning chooses override then binding, deduplicates, and ignores media fields",
+    },
+    {
+      file: "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
+      name: "an inline content edit surfaces the unsaved-changes affordance",
+    },
+    {
+      file: "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
+      name: "direct-image presentation exposes media authoring and renders the winning override URL",
+    },
+    {
+      file: "tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx",
+      name: "clean navigation proceeds without a dialog, while a content draft supports cancel and confirm",
+    },
+  ],
+  "540-04-L04": [
+    {
+      file: "tests/vitest/ui/custom-screen-editor-draft-and-save.test.tsx",
+      name: "exact create saves once and opens the canonical encoded Screen editor without a discard prompt",
+    },
+  ],
+});
+const CORRECTIVE_ADDITIVE_CALL_POLICIES = deepFreezeExact({
+  "TASK-540-01 media identity predicate has one exact UUID contract": {
+    roots: ["<import>", "expect", "firstScreenMediaAssetUuid"],
+    methods: [],
+    imports: ["../../../core/services/customScreens/screenMediaIdentity"],
+  },
+  "direct-image media planning chooses override then binding, deduplicates, and ignores media fields":
+    {
+      roots: ["collectWinningDirectImageAssetIds", "expect"],
+      methods: [],
+      imports: [],
+    },
+  "an inline content edit surfaces the unsaved-changes affordance": {
+    roots: ["expect"],
+    methods: ["getAttribute", "querySelector"],
+    imports: [],
+  },
+  "direct-image presentation exposes media authoring and renders the winning override URL": {
+    roots: ["expect"],
+    methods: ["getAttribute", "querySelector"],
+    imports: [],
+  },
+  "clean navigation proceeds without a dialog, while a content draft supports cancel and confirm": {
+    roots: ["<import>", "expect", "readFile", "URL"],
+    methods: [],
+    imports: ["node:fs/promises"],
+  },
+  "exact create saves once and opens the canonical encoded Screen editor without a discard prompt":
+    {
+      roots: ["expect"],
+      methods: ["getAttribute", "querySelector"],
+      imports: [],
+    },
+});
+const CORRECTIVE_TEST_PREDECESSOR_LEAVES = deepFreezeExact({
+  "540-01-L01": ["540-01-L01"],
+  "540-04-L03": ["540-01-L01", "540-04-L03"],
+  "540-04-L04": ["540-01-L01", "540-04-L03", "540-04-L04"],
+});
+const CORRECTIVE_REPIN_FAMILY_AUTHORITY = deepFreezeExact({
+  r01Schema: {
+    files: R01_SCHEMA_VITEST_FILES,
+    tests: 77,
+    sha256: "021b5bd353cf7cf775ae7a06b1477f6b0c5e6933c64518a6aaa36bbbf3f2ebc2",
+    declarations: 77,
+    fileTests: [18, 9, 10, 13, 11, 5, 11],
+    fileNameSha256: [
+      "3bc33544c8750ea721ccd30993d5000a2525e6f5096555ec786a8128c5fc9a01",
+      "892e8a43828f3730c4681e56c15f561005e2554abdf16bdf8725e901c129fb8e",
+      "8fd2a42d86edf83cb445dd6f0afca3febe3fbda50b83b192337a651a0689df9b",
+      "99fabc38404bc71bbb1687dec945d4ebc5d3b3d95843bfa70e795a79b1677073",
+      "1cd5e7af104b451a364a40a3d623040e495ef609a8ea0e6720bfc677f14bc47c",
+      "b46512e7ddea5aedb4eb6cac33943ea906fce30f05522f0b589174b8b5694221",
+      "2999367a7d6209104a11564b88cdcdf269040bd2c4913fb07e9baceb6cd5e0a9",
+    ],
+  },
+  entryRestyle: {
+    files: ENTRY_RESTYLE_VITEST_FILES,
+    tests: 17,
+    sha256: "219111fd536cf6005e754820d0ad61680add470725defa358a75c021cb7065a4",
+    declarations: 17,
+    fileTests: [13, 4],
+    fileNameSha256: [
+      "ebfefcdf8167a927dcbfe5f3159a892e34124f98f27e691b6a1888138e436076",
+      "b932d8833667fc0e08733720fa10856c720b1c6a69524e5b728bff063ffc0948",
+    ],
+  },
+  entryNavigation: {
+    files: ENTRY_NAVIGATION_VITEST_FILES,
+    tests: 22,
+    sha256: "ebc4626c3bffd12fabef6b1696900972b3a9eb71b643d8840332a55fc1fd237f",
+    declarations: 18,
+    fileTests: [9, 13],
+    fileNameSha256: [
+      "a36f8c2baa63f488a687b7ebaa016603f6b3f61501715ccfb3d09d7603fa9ba7",
+      "ecbaef1ee377bc23b6fc36a2fcd533e3a86c306555b666a664dc831d7a10db60",
+    ],
+  },
+  screenEditorPage: {
+    files: SCREEN_EDITOR_PAGE_VITEST_FILES,
+    tests: 36,
+    sha256: "869d5a6156fabfccb222f1206df8781bc22ceaf167d03023d5e6178ab7b8ea3d",
+    declarations: 36,
+    fileTests: [6, 13, 8, 9],
+    fileNameSha256: [
+      "b1f5b418e6377942688c3304fba6a7719c01c41e6e6e0ac53d4ce428285f7848",
+      "1cd9999fc2b70308e90454908567b8273289bedbf24e6ad91efec3122a630f22",
+      "a6bd4e264c802620ec2e10bd10a6a0f80de3bf2ea5ca86f8a6c477b18735e307",
+      "ef2f79b268f403d3d55e719f0556336f6cbe0cfc308d5f933c2583ed408eff21",
+    ],
+  },
+});
+const CORRECTIVE_L04_MODULE_REPIN_PATH =
+  "tests/vitest/ui/custom-screen-editor-draft-and-save.test.tsx";
+const USER_SETTINGS_ROUTE_BUN_FILES = Object.freeze([
+  "tests/integration/routes/userSettings.test.ts",
+  "tests/integration/routes/userSettingsAccessLogHarness.test.ts",
 ]);
 const R01_DOCUMENT_OPS_VITEST_FILES = Object.freeze([
   "tests/vitest/customScreens/screenDocumentOps.test.ts",
@@ -3301,6 +3432,16 @@ function requireTask540FamilyBaselineProjection(projection, label) {
   }
 }
 
+function task540LineLimitOwnerIds(relativePath) {
+  const writableOwners = LEAVES.filter(({ allowedFiles }) =>
+    allowedFiles.includes(relativePath)
+  ).map(({ id }) => id);
+  const readOnlyOwners = TASK_540_READ_ONLY_CONSUMER_OWNERS.filter(
+    ({ path }) => path === relativePath
+  ).map(({ owner }) => owner);
+  return [...writableOwners, ...readOnlyOwners];
+}
+
 async function requireTask540FamilyBaseline(label) {
   const [firstCommitLine, baselineMergeBase, firstCommitMergeBase] = await Promise.all([
     git(["rev-list", "--parents", "-n", "1", TASK_540_FIRST_FAMILY_COMMIT]),
@@ -3316,7 +3457,7 @@ async function requireTask540FamilyBaseline(label) {
 function requireTask540FrozenModulePathAuthority(label) {
   const sorted = [...TASK_540_FROZEN_PRE_SPLIT_MODULE_PATHS].sort();
   const owners = TASK_540_FROZEN_PRE_SPLIT_MODULE_PATHS.map((path) => {
-    const matches = LEAVES.filter((leaf) => leaf.allowedFiles.includes(path)).map(({ id }) => id);
+    const matches = task540LineLimitOwnerIds(path);
     if (matches.length !== 1) {
       throw new Error(label + ": frozen TASK-540 path must have exactly one owner: " + path);
     }
@@ -3448,9 +3589,7 @@ async function requireTask540TouchedModuleLineLimit(
     }
     let owner = null;
     if (selfTestAuthority === null) {
-      const owners = LEAVES.filter((leaf) => leaf.allowedFiles.includes(relativePath)).map(
-        ({ id }) => id
-      );
+      const owners = task540LineLimitOwnerIds(relativePath);
       if (owners.length !== 1) {
         throw new Error(
           label +
@@ -5372,6 +5511,106 @@ function isAuthorizedExactRollbackResidual(relativePath, rollbackOwnedPathSet, r
   return rollbackOwnedPathSet.has(relativePath) || residualPathSet.has(relativePath);
 }
 
+function buildExactRollbackRestorePlan(targetSnapshot, currentSnapshot, label) {
+  const targetPaths = targetSnapshot.entries.map(({ relativePath }) => relativePath);
+  const currentPaths = currentSnapshot.entries.map(({ relativePath }) => relativePath);
+  if (!sameUniqueSet(targetPaths, currentPaths)) {
+    throw new Error(label + ": current exact snapshot does not cover rollback authority");
+  }
+  const currentByPath = new Map(
+    currentSnapshot.entries.map((entry) => [entry.relativePath, entry])
+  );
+  return Object.freeze(
+    targetSnapshot.entries.flatMap((targetEntry) => {
+      const currentEntry = currentByPath.get(targetEntry.relativePath);
+      if (!currentEntry) {
+        throw new Error(label + ": current exact snapshot omitted " + targetEntry.relativePath);
+      }
+      return sameExactRollbackSemanticState(targetEntry, currentEntry)
+        ? []
+        : [Object.freeze({ targetEntry, currentEntry })];
+    })
+  );
+}
+
+async function executeExactRollbackRestorePlan(
+  targetSnapshot,
+  currentSnapshot,
+  restorePlan,
+  label,
+  io = SNAPSHOT_DERIVED_EXACT_TRANSACTION_IO
+) {
+  requireSnapshotDerivedExactTransactionIo(io, label);
+  const receipts = [];
+  const committedPaths = () => receipts.map(({ relativePath }) => relativePath);
+  try {
+    await io.requireAuthority(currentSnapshot, [], label + " initial authority");
+    for (const { targetEntry, currentEntry } of restorePlan) {
+      await io.requireAuthority(
+        currentSnapshot,
+        committedPaths(),
+        label + " authority before " + targetEntry.relativePath
+      );
+      let receipt = null;
+      try {
+        receipt = await io.writeEntry(
+          currentEntry,
+          targetEntry,
+          label + " guarded restore " + targetEntry.relativePath
+        );
+      } catch (error) {
+        const committed = exactWriteReceiptFromError(error);
+        if (committed) {
+          receipts.push(
+            sequenceExactWriteReceipt(
+              committed,
+              receipts.length + 1,
+              currentEntry,
+              targetEntry,
+              label
+            )
+          );
+          try {
+            await io.requireAuthority(
+              currentSnapshot,
+              committedPaths(),
+              label + " authority after failed write " + targetEntry.relativePath
+            );
+          } catch (authorityError) {
+            throw new AggregateError(
+              [error, authorityError],
+              label + ": exact rollback write and closing authority both failed"
+            );
+          }
+        }
+        throw error;
+      }
+      receipts.push(
+        sequenceExactWriteReceipt(receipt, receipts.length + 1, currentEntry, targetEntry, label)
+      );
+      await io.requireAuthority(
+        currentSnapshot,
+        committedPaths(),
+        label + " authority after " + targetEntry.relativePath
+      );
+    }
+    await io.verifySnapshot(targetSnapshot, label + " stable restored target", {
+      transitionalSnapshot: currentSnapshot,
+    });
+    await io.requireAuthority(
+      currentSnapshot,
+      committedPaths(),
+      label + " authority after restored target"
+    );
+    await io.verifySnapshot(targetSnapshot, label + " target after closing authority", {
+      transitionalSnapshot: currentSnapshot,
+    });
+  } catch (error) {
+    throw wrapAccumulatedExactRollbackError(error, receipts, label);
+  }
+  return Object.freeze([...receipts]);
+}
+
 async function restoreExactRollbackFiles(
   snapshot,
   owner,
@@ -5432,60 +5671,22 @@ async function restoreExactRollbackFiles(
       label + ": unrelated worktree state changed before rollback: " + preRestoreDelta.join(", ")
     );
   }
-
-  const mutationErrors = [];
-  for (const entry of snapshot.entries) {
-    try {
-      await restoreExactRollbackEntry(entry, label);
-    } catch (error) {
-      mutationErrors.push(error);
-    }
+  const currentSnapshot = await captureExactRollbackFiles(
+    owner.allowedFiles,
+    label + " current exact rollback state",
+    { allowMissing: owner.allowedFiles }
+  );
+  if (
+    !equalWorktreeAuthority(currentAuthority, currentSnapshot.authority) ||
+    !equalHashMaps(currentSensitiveEnv, currentSnapshot.sensitiveEnv)
+  ) {
+    throw new Error(label + ": repository authority changed during current rollback capture");
   }
-  const mutationError =
-    mutationErrors.length > 0
-      ? new AggregateError(mutationErrors, label + ": exact rollback mutation failed")
-      : null;
-
-  let verificationError = null;
-  try {
-    await verifyExactRollbackFiles(snapshot, label);
-    const [after, sensitiveEnvAfter] = await Promise.all([
-      worktreeSnapshot(label + " after exact rollback restore"),
-      hashSensitiveEnvProjection(),
-    ]);
-    await verifyExactRollbackFiles(snapshot, label + " after authority snapshot");
-    const residualDelta = snapshotDelta(snapshot.authority, after);
-    // Exact bytes, existence, length, SHA-256, and mode were verified above. Atomic
-    // replacement intentionally changes inode/mtime/ctime for rollback-owned paths.
-    const rollbackOwnedPathSet = new Set(owner.allowedFiles);
-    const authorityRestored =
-      after.head === snapshot.authority.head &&
-      after.branch === snapshot.authority.branch &&
-      sameGitIndexAuthority(after.indexAuthority, snapshot.authority.indexAuthority) &&
-      residualDelta.every((relativePath) =>
-        isAuthorizedExactRollbackResidual(relativePath, rollbackOwnedPathSet, residualPathSet)
-      );
-    if (!authorityRestored || !equalHashMaps(snapshot.sensitiveEnv, sensitiveEnvAfter)) {
-      throw new Error(
-        residualPathSet.size === 0
-          ? label + ": exact rollback did not restore its complete captured authority"
-          : label + ": scoped rollback changed authority outside its declared residual paths"
-      );
-    }
-  } catch (error) {
-    verificationError = error;
-  }
-  if (mutationError && verificationError) {
-    throw new AggregateError(
-      [mutationError, verificationError],
-      label + ": rollback mutation and exact persisted verification both failed"
-    );
-  }
-  if (mutationError) throw mutationError;
-  if (verificationError) throw verificationError;
+  const restorePlan = buildExactRollbackRestorePlan(snapshot, currentSnapshot, label);
+  await executeExactRollbackRestorePlan(snapshot, currentSnapshot, restorePlan, label);
 }
 
-function assertTask540ExactRollbackResidualContract() {
+async function assertTask540ExactRollbackResidualContract() {
   const bytes = Buffer.from("same rollback bytes", "utf8");
   const beforeStat = Object.freeze({
     dev: 1n,
@@ -5527,7 +5728,142 @@ function assertTask540ExactRollbackResidualContract() {
       throw new Error("TASK-540 exact rollback residual self-test failed: " + testCase.path);
     }
   }
-  return cases.length + 1;
+
+  const restoreEntry = (relativePath, token) =>
+    Object.freeze({
+      relativePath,
+      exists: true,
+      bytesBase64: token,
+      byteLength: token.length,
+      sha256: token.padEnd(64, "0"),
+      mode: 0o644,
+    });
+  const targetEntries = Object.freeze([
+    restoreEntry("owned/root.md", "1"),
+    restoreEntry("owned/child.md", "2"),
+    restoreEntry("owned/leaf.md", "3"),
+    restoreEntry("owned/board.md", "4"),
+  ]);
+  const plannerTargetSnapshot = Object.freeze({ entries: targetEntries });
+  const noOpPlan = buildExactRollbackRestorePlan(
+    plannerTargetSnapshot,
+    plannerTargetSnapshot,
+    "fixture no-op"
+  );
+  const changedChild = restoreEntry("owned/child.md", "5");
+  const changedPlan = buildExactRollbackRestorePlan(
+    plannerTargetSnapshot,
+    Object.freeze({
+      entries: Object.freeze([targetEntries[0], changedChild, targetEntries[2], targetEntries[3]]),
+    }),
+    "fixture changed child"
+  );
+  let incompleteRejected = false;
+  try {
+    buildExactRollbackRestorePlan(
+      plannerTargetSnapshot,
+      Object.freeze({ entries: targetEntries.slice(0, 3) }),
+      "fixture incomplete"
+    );
+  } catch {
+    incompleteRejected = true;
+  }
+  if (
+    noOpPlan.length !== 0 ||
+    changedPlan.length !== 1 ||
+    changedPlan[0].targetEntry !== targetEntries[1] ||
+    changedPlan[0].currentEntry !== changedChild ||
+    !incompleteRejected
+  ) {
+    throw new Error("TASK-540 exact rollback restore-plan self-test failed");
+  }
+
+  const targetSnapshot = exactTransactionFixtureSnapshot([
+    { relativePath: "owned/root.md", source: "root target", mode: 0o644 },
+    { relativePath: "owned/board.md", source: "board target", mode: 0o644 },
+  ]);
+  const noOpHarness = createHermeticExactTransactionIo(targetSnapshot);
+  await executeExactRollbackRestorePlan(
+    targetSnapshot,
+    targetSnapshot,
+    buildExactRollbackRestorePlan(targetSnapshot, targetSnapshot, "fixture exact no-op"),
+    "fixture exact no-op",
+    noOpHarness.io
+  );
+  const noOp = noOpHarness.inspect(targetSnapshot);
+
+  const currentSnapshot = exactTransactionFixtureSnapshot([
+    { relativePath: "owned/root.md", source: "root target", mode: 0o644 },
+    { relativePath: "owned/board.md", source: "board current", mode: 0o644 },
+  ]);
+  const changedHarness = createHermeticExactTransactionIo(currentSnapshot, {
+    postWriteVisibilitySequence: ["before", "after", "after", "after"],
+  });
+  await executeExactRollbackRestorePlan(
+    targetSnapshot,
+    currentSnapshot,
+    buildExactRollbackRestorePlan(targetSnapshot, currentSnapshot, "fixture exact changed"),
+    "fixture exact changed",
+    changedHarness.io
+  );
+  const changed = changedHarness.inspect(targetSnapshot);
+
+  const bothChangedSnapshot = exactTransactionFixtureSnapshot([
+    { relativePath: "owned/root.md", source: "root current", mode: 0o644 },
+    { relativePath: "owned/board.md", source: "board current", mode: 0o644 },
+  ]);
+  const collisionHarness = createHermeticExactTransactionIo(bothChangedSnapshot, {
+    collideBeforeWrite: 1,
+  });
+  let collisionRejected = false;
+  try {
+    await executeExactRollbackRestorePlan(
+      targetSnapshot,
+      bothChangedSnapshot,
+      buildExactRollbackRestorePlan(targetSnapshot, bothChangedSnapshot, "fixture exact collision"),
+      "fixture exact collision",
+      collisionHarness.io
+    );
+  } catch (error) {
+    collisionRejected = exactTransactionErrorContains(error, ExactTransactionCollisionError);
+  }
+  const collision = collisionHarness.inspect();
+
+  const driftHarness = createHermeticExactTransactionIo(bothChangedSnapshot, {
+    authorityDriftAtCalls: [3],
+  });
+  let authorityDriftRejected = false;
+  try {
+    await executeExactRollbackRestorePlan(
+      targetSnapshot,
+      bothChangedSnapshot,
+      buildExactRollbackRestorePlan(
+        targetSnapshot,
+        bothChangedSnapshot,
+        "fixture exact authority drift"
+      ),
+      "fixture exact authority drift",
+      driftHarness.io
+    );
+  } catch {
+    authorityDriftRejected = true;
+  }
+  const drift = driftHarness.inspect();
+  if (
+    !noOp.exact ||
+    noOp.writePaths.length !== 0 ||
+    !changed.exact ||
+    JSON.stringify(changed.writePaths) !== JSON.stringify(["owned/board.md"]) ||
+    changed.visibilityReads !== 4 ||
+    !collisionRejected ||
+    collision.writePaths.length !== 0 ||
+    !collision.collisionPreserved ||
+    !authorityDriftRejected ||
+    JSON.stringify(drift.writePaths) !== JSON.stringify(["owned/root.md"])
+  ) {
+    throw new Error("TASK-540 exact rollback execution self-test failed");
+  }
+  return cases.length + 8;
 }
 
 async function assertTask540TouchedModuleLineLimitContract() {
@@ -5570,6 +5906,38 @@ async function assertTask540TouchedModuleLineLimitContract() {
   }
   if (HUMAN_AUTHORED_MODULE_LINE_LIMIT !== 1_000) {
     throw new Error("TASK-540 human-authored module line limit drifted");
+  }
+  const readOnlyOwnerCases = Object.freeze([
+    Object.freeze({
+      path: "tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx",
+      owner: "540-05-L01",
+    }),
+    Object.freeze({
+      path: "core/admin/ui/entries/FieldRenderer.tsx",
+      owner: "540-06-L01",
+    }),
+    Object.freeze({
+      path: "core/admin/ui/media/MediaPicker.tsx",
+      owner: "540-06-L01",
+    }),
+    Object.freeze({
+      path: "tests/vitest/ui/entry-field-relation-interaction.test.tsx",
+      owner: "540-06-L01",
+    }),
+    Object.freeze({
+      path: "tests/vitest/ui/entry-field-relation-option-identity.test.tsx",
+      owner: "540-06-L01",
+    }),
+  ]);
+  if (
+    readOnlyOwnerCases.some(
+      ({ path, owner }) =>
+        !isLineLimitedHumanAuthoredModule(path) ||
+        JSON.stringify(task540LineLimitOwnerIds(path)) !== JSON.stringify([owner]) ||
+        LEAVES.some(({ allowedFiles }) => allowedFiles.includes(path))
+    )
+  ) {
+    throw new Error("TASK-540 read-only line-limit owner self-test failed");
   }
   const emptyDynamicAuthority = buildTask540TouchedModulePathAuthority(
     [],
@@ -5711,7 +6079,7 @@ async function assertTask540TouchedModuleLineLimitContract() {
   if (!duplicateAuthorityRejected) {
     throw new Error("TASK-540 duplicate history/untracked authority self-test failed");
   }
-  return pathCases.length + lineCases.length + 10;
+  return pathCases.length + lineCases.length + readOnlyOwnerCases.length + 10;
 }
 
 async function requireNoPendingTask540ModularityRepairs(label) {
@@ -7290,8 +7658,6 @@ const L02_ASSISTANT_SUITE_ALLOWED_IMPORT_TOKENS = Object.freeze([
 ]);
 
 const L04_PAGE_HARNESS_PATH = "tests/vitest/ui/support/customScreenEditorPageHarness.tsx";
-const L04_PAGE_DECLARATION_SHA256 =
-  "2bd33166dfd768b089caf437b5263413d24e033eb18b9a92d152321525a898bb";
 const L04_PAGE_PROTECTED_HARNESS_EXPORTS = Object.freeze([
   "Buffer",
   "fetch",
@@ -7970,7 +8336,7 @@ async function requireL04PageSplitContract(label) {
     evidence?.family !== "screenEditorPage" ||
     evidence.tests !== 36 ||
     evidence.declarations !== 36 ||
-    evidence.declarationSha256 !== L04_PAGE_DECLARATION_SHA256 ||
+    !/^[0-9a-f]{64}$/u.test(evidence.declarationSha256) ||
     JSON.stringify(evidence.fileEvidence?.map(({ tests }) => tests)) !==
       JSON.stringify([6, 13, 8, 9])
   ) {
@@ -9072,6 +9438,9 @@ const LEAVES = Object.freeze(
         "tests/vitest/ui/custom-screen-authoring-boundary.test.ts",
         "tests/vitest/ui-integration/canvas-editor/canvas-editor.test.tsx",
       ]),
+      readOnlyConsumerFiles: Object.freeze([
+        "tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx",
+      ]),
       commands: Object.freeze([
         command("lintTypes", LINT_TYPES),
         command("lint", LINT),
@@ -9183,6 +9552,12 @@ const LEAVES = Object.freeze(
         "docs/guide/coderso/custom-screens-list-and-builder.md",
         "docs/develop/content-and-widgets.md",
       ]),
+      readOnlyConsumerFiles: Object.freeze([
+        "core/admin/ui/entries/FieldRenderer.tsx",
+        "core/admin/ui/media/MediaPicker.tsx",
+        "tests/vitest/ui/entry-field-relation-interaction.test.tsx",
+        "tests/vitest/ui/entry-field-relation-option-identity.test.tsx",
+      ]),
       commands: Object.freeze([
         command("lintTypes", LINT_TYPES),
         command("lint", LINT),
@@ -9254,6 +9629,21 @@ const LEAVES = Object.freeze(
     });
   })
 );
+
+const TASK_540_READ_ONLY_CONSUMER_OWNERS = Object.freeze(
+  LEAVES.flatMap(({ id: owner, readOnlyConsumerFiles }) =>
+    readOnlyConsumerFiles.map((path) => Object.freeze({ path, owner }))
+  )
+);
+const task540ReadOnlyConsumerPaths = TASK_540_READ_ONLY_CONSUMER_OWNERS.map(({ path }) => path);
+if (
+  new Set(task540ReadOnlyConsumerPaths).size !== task540ReadOnlyConsumerPaths.length ||
+  task540ReadOnlyConsumerPaths.some((path) =>
+    LEAVES.some(({ allowedFiles }) => allowedFiles.includes(path))
+  )
+) {
+  throw new Error("TASK-540 read-only consumer ownership collides with another leaf");
+}
 
 const VALIDATION_EXECUTABLE_ALLOWLIST = Object.freeze([
   "bun",
@@ -13713,6 +14103,7 @@ async function runLeafGate(
 ) {
   void phaseName;
   const label = "gate:" + leaf.id + ":" + attempt;
+  await rePinCorrectiveProtectedTests(leaf, label + ":protected-tests");
   await requireTask540TouchedModuleLineLimit(label + ":before-commands", leaf.allowedFiles);
   const execution = await runLocalCommandSequence(leaf.commands, { label });
   const lineCounts = await requireTask540TouchedModuleLineLimit(
@@ -19260,6 +19651,737 @@ function decidePostAuditRound(findings, round) {
   return Object.freeze({ action: "repair", error: null });
 }
 
+function exactCorrectiveObjectBlock(source, anchor, label) {
+  const start = source.indexOf(anchor);
+  const close = "\n  }),";
+  const end = start < 0 ? -1 : source.indexOf(close, start + anchor.length);
+  if (start < 0 || end < 0 || source.indexOf(anchor, start + anchor.length) >= 0) {
+    throw new Error(label + ": corrective fingerprint block is missing or duplicated");
+  }
+  return Object.freeze({ start, end: end + close.length });
+}
+
+function replaceCorrectiveShaPin(source, anchor, field, nextSha256, label) {
+  if (!/^[0-9a-f]{64}$/u.test(nextSha256)) {
+    throw new Error(label + ": corrective fingerprint is invalid");
+  }
+  const block = exactCorrectiveObjectBlock(source, anchor, label);
+  const body = source.slice(block.start, block.end);
+  const pattern = new RegExp("^    " + field + ': "([0-9a-f]{64})",$', "gmu");
+  const matches = [...body.matchAll(pattern)];
+  if (matches.length !== 1) {
+    throw new Error(label + ": corrective fingerprint field is missing or duplicated");
+  }
+  const previousSha256 = matches[0][1];
+  const before = "    " + field + ': "' + previousSha256 + '",';
+  const after = "    " + field + ': "' + nextSha256 + '",';
+  const nextBody = body.replace(before, after);
+  const nextSource = source.slice(0, block.start) + nextBody + source.slice(block.end);
+  return Object.freeze({ source: nextSource, previousSha256 });
+}
+
+function replaceCorrectiveFamilyPin(source, family, nextSha256, label) {
+  return replaceCorrectiveShaPin(
+    source,
+    "  " + family + ": Object.freeze({\n",
+    "declarationSha256",
+    nextSha256,
+    label + ":" + family
+  );
+}
+
+function neutralizeCorrectiveDeclarationPins(source, label) {
+  const families = [...new Set(Object.values(CORRECTIVE_DECLARATION_REPIN_FAMILIES).flat())].sort();
+  let normalized = source;
+  for (const family of families) {
+    normalized = replaceCorrectiveFamilyPin(normalized, family, "0".repeat(64), label).source;
+  }
+  return normalized;
+}
+
+function replaceCorrectiveL04ModulePin(source, nextSha256, label) {
+  return replaceCorrectiveShaPin(
+    source,
+    '  "' + CORRECTIVE_L04_MODULE_REPIN_PATH + '": Object.freeze({\n',
+    "moduleSha256",
+    nextSha256,
+    label
+  );
+}
+
+function requireCorrectiveFamilyEvidence(evidence, family, label) {
+  const authority = CORRECTIVE_REPIN_FAMILY_AUTHORITY[family];
+  if (!authority) throw new Error(label + ": corrective family is outside authority");
+  const actual = {
+    family: evidence?.family,
+    files: evidence?.files,
+    tests: evidence?.tests,
+    sha256: evidence?.sha256,
+    declarations: evidence?.declarations,
+    fileEvidence: evidence?.fileEvidence?.map(({ file, tests, sha256, index }) => ({
+      file,
+      tests,
+      sha256,
+      index,
+    })),
+  };
+  const expected = {
+    family,
+    files: authority.files,
+    tests: authority.tests,
+    sha256: authority.sha256,
+    declarations: authority.declarations,
+    fileEvidence: authority.files.map((file, index) => ({
+      file,
+      tests: authority.fileTests[index],
+      sha256: authority.fileNameSha256[index],
+      index,
+    })),
+  };
+  if (
+    !/^[0-9a-f]{64}$/u.test(evidence?.declarationSha256) ||
+    JSON.stringify(actual) !== JSON.stringify(expected)
+  ) {
+    throw new Error(label + ": corrective family names/count/partition drifted: " + family);
+  }
+  return evidence.declarationSha256;
+}
+
+async function captureCorrectiveFamilyEvidence(family, mode, label) {
+  const { stdout, stderr } = await execFileAsync(
+    "/usr/bin/node",
+    [ROOT + "/" + TEST_NAME_CONTRACT_WORKFLOW_REL, "--mode=" + mode, "--family=" + family],
+    { cwd: ROOT, encoding: "utf8", maxBuffer: 8 * 1024 * 1024 }
+  );
+  if (stderr.trim()) throw new Error(label + ": corrective family scanner emitted stderr");
+  let result;
+  try {
+    result = JSON.parse(stdout);
+  } catch {
+    throw new Error(label + ": corrective family scanner output is invalid");
+  }
+  if (
+    result?.pass !== true ||
+    result.mode !== mode ||
+    !Array.isArray(result.evidence) ||
+    result.evidence.length !== 1
+  ) {
+    throw new Error(label + ": corrective family scanner result is malformed");
+  }
+  return result.evidence[0];
+}
+
+function correctiveTestRoot(expression) {
+  if (ts.isIdentifier(expression)) {
+    return ["test", "it", "testIfDb"].includes(expression.text) ? expression.text : null;
+  }
+  if (ts.isPropertyAccessExpression(expression)) {
+    return expression.name.text === "each" ? correctiveTestRoot(expression.expression) : null;
+  }
+  return ts.isCallExpression(expression) ? correctiveTestRoot(expression.expression) : null;
+}
+
+function collectCorrectiveBindingNames(name, names) {
+  if (ts.isIdentifier(name)) {
+    names.add(name.text);
+    return;
+  }
+  for (const element of name.elements) {
+    if (ts.isBindingElement(element)) collectCorrectiveBindingNames(element.name, names);
+  }
+}
+
+function correctiveMutationRootName(expression) {
+  let current = expression;
+  while (
+    ts.isParenthesizedExpression(current) ||
+    ts.isAsExpression(current) ||
+    ts.isTypeAssertionExpression(current) ||
+    ts.isNonNullExpression(current) ||
+    ts.isSatisfiesExpression(current) ||
+    ts.isPropertyAccessExpression(current) ||
+    ts.isElementAccessExpression(current)
+  ) {
+    current = current.expression;
+  }
+  return ts.isIdentifier(current) ? current.text : null;
+}
+
+const CORRECTIVE_MUTATOR_METHODS = new Set([
+  "add",
+  "append",
+  "clear",
+  "copyWithin",
+  "delete",
+  "dispatchEvent",
+  "fill",
+  "pop",
+  "prepend",
+  "push",
+  "remove",
+  "removeAttribute",
+  "replaceWith",
+  "reverse",
+  "set",
+  "setAttribute",
+  "shift",
+  "sort",
+  "splice",
+  "toggleAttribute",
+  "unshift",
+]);
+
+const CORRECTIVE_STATIC_MUTATORS = deepFreezeExact({
+  Object: ["assign", "defineProperties", "defineProperty", "freeze", "seal", "setPrototypeOf"],
+  Reflect: ["defineProperty", "deleteProperty", "set", "setPrototypeOf"],
+});
+
+function correctiveCallShape(expression, construct = false) {
+  if (expression.kind === ts.SyntaxKind.ImportKeyword) {
+    return Object.freeze({ root: "<import>", method: null, construct });
+  }
+  let current = expression;
+  let method = null;
+  while (true) {
+    if (
+      ts.isParenthesizedExpression(current) ||
+      ts.isAsExpression(current) ||
+      ts.isTypeAssertionExpression(current) ||
+      ts.isNonNullExpression(current) ||
+      ts.isSatisfiesExpression(current)
+    ) {
+      current = current.expression;
+      continue;
+    }
+    if (ts.isPropertyAccessExpression(current)) {
+      method ??= current.name.text;
+      current = current.expression;
+      continue;
+    }
+    if (ts.isElementAccessExpression(current)) {
+      method ??= "<element>";
+      current = current.expression;
+      continue;
+    }
+    if (ts.isCallExpression(current)) {
+      current = current.expression;
+      continue;
+    }
+    break;
+  }
+  return Object.freeze({
+    root: ts.isIdentifier(current) ? current.text : null,
+    method,
+    construct,
+  });
+}
+
+function correctiveStatementFacts(statement, sourceFile, printer, expressionBody = false) {
+  const declaredNames = new Set();
+  if (ts.isVariableStatement(statement)) {
+    for (const declaration of statement.declarationList.declarations) {
+      collectCorrectiveBindingNames(declaration.name, declaredNames);
+    }
+  }
+  const assignedNames = new Set();
+  const identifiers = new Set();
+  const calls = [];
+  const imports = [];
+  const recordMutationRoot = (expression) => {
+    const rootName = correctiveMutationRootName(expression);
+    if (rootName) assignedNames.add(rootName);
+  };
+  const visit = (node) => {
+    if (ts.isIdentifier(node)) identifiers.add(node.text);
+    if (ts.isCallExpression(node)) {
+      calls.push(correctiveCallShape(node.expression));
+      if (
+        node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+        node.arguments.length === 1 &&
+        ts.isStringLiteralLike(node.arguments[0])
+      ) {
+        imports.push(node.arguments[0].text);
+      }
+    }
+    if (ts.isNewExpression(node)) calls.push(correctiveCallShape(node.expression, true));
+    if (
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+      node.operatorToken.kind <= ts.SyntaxKind.LastAssignment
+    ) {
+      recordMutationRoot(node.left);
+    }
+    if (
+      (ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) &&
+      [ts.SyntaxKind.PlusPlusToken, ts.SyntaxKind.MinusMinusToken].includes(node.operator)
+    ) {
+      recordMutationRoot(node.operand);
+    }
+    if (ts.isDeleteExpression(node)) {
+      recordMutationRoot(node.expression);
+    }
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
+      const receiver = node.expression.expression;
+      const method = node.expression.name.text;
+      const receiverRoot = correctiveMutationRootName(receiver);
+      if (receiverRoot && CORRECTIVE_MUTATOR_METHODS.has(method)) {
+        assignedNames.add(receiverRoot);
+      }
+      if (
+        ts.isIdentifier(receiver) &&
+        CORRECTIVE_STATIC_MUTATORS[receiver.text]?.includes(method) &&
+        node.arguments[0]
+      ) {
+        recordMutationRoot(node.arguments[0]);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(statement);
+  const variableFlags = ts.isVariableStatement(statement)
+    ? statement.declarationList.flags
+    : ts.NodeFlags.None;
+  return Object.freeze({
+    text: printer.printNode(
+      expressionBody ? ts.EmitHint.Expression : ts.EmitHint.Unspecified,
+      statement,
+      sourceFile
+    ),
+    safeAdditiveShape:
+      ts.isExpressionStatement(statement) ||
+      (ts.isVariableStatement(statement) &&
+        Boolean(variableFlags & (ts.NodeFlags.Const | ts.NodeFlags.Let))),
+    declaredNames: Object.freeze([...declaredNames].sort()),
+    assignedNames: Object.freeze([...assignedNames].sort()),
+    identifiers: Object.freeze([...identifiers].sort()),
+    calls: Object.freeze(calls),
+    imports: Object.freeze(imports.sort()),
+  });
+}
+
+function correctiveTestDeclarationRanges(source, relativePath, label) {
+  const sourceFile = ts.createSourceFile(
+    relativePath,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    relativePath.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS
+  );
+  if ((sourceFile.parseDiagnostics ?? []).length > 0) {
+    throw new Error(label + ": corrective test source has parse diagnostics: " + relativePath);
+  }
+  const printer = ts.createPrinter({ removeComments: true, newLine: ts.NewLineKind.LineFeed });
+  const records = [];
+  const visit = (node) => {
+    if (ts.isCallExpression(node) && correctiveTestRoot(node.expression)) {
+      const callback = node.arguments.find(
+        (argument) => ts.isArrowFunction(argument) || ts.isFunctionExpression(argument)
+      );
+      const nameNode = node.arguments[0];
+      if (callback && nameNode && ts.isStringLiteralLike(nameNode)) {
+        const callbackStatements = ts.isBlock(callback.body)
+          ? [...callback.body.statements]
+          : [callback.body];
+        const statementFacts = callbackStatements.map((statement) =>
+          correctiveStatementFacts(statement, sourceFile, printer, !ts.isBlock(callback.body))
+        );
+        records.push(
+          Object.freeze({
+            name: nameNode.text,
+            start: node.getStart(sourceFile),
+            end: node.end,
+            statements: Object.freeze(statementFacts.map(({ text }) => text)),
+            statementFacts: Object.freeze(statementFacts),
+          })
+        );
+        return;
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  if (new Set(records.map(({ name }) => name)).size !== records.length) {
+    throw new Error(label + ": corrective test names are duplicated: " + relativePath);
+  }
+  return Object.freeze(records);
+}
+
+function isOrderedCorrectiveStatementSubsequence(baseline, candidate) {
+  let candidateIndex = 0;
+  for (const statement of baseline) {
+    while (candidateIndex < candidate.length && candidate[candidateIndex] !== statement) {
+      candidateIndex += 1;
+    }
+    if (candidateIndex === candidate.length) return false;
+    candidateIndex += 1;
+  }
+  return true;
+}
+
+function correctiveInsertedStatementIndexes(baseline, candidate) {
+  let baselineIndex = 0;
+  const inserted = [];
+  for (let candidateIndex = 0; candidateIndex < candidate.length; candidateIndex += 1) {
+    if (baselineIndex < baseline.length && candidate[candidateIndex] === baseline[baselineIndex]) {
+      baselineIndex += 1;
+    } else {
+      inserted.push(candidateIndex);
+    }
+  }
+  return baselineIndex === baseline.length ? Object.freeze(inserted) : null;
+}
+
+function isSafeCorrectiveStatementExtension(
+  baselineRecord,
+  candidateRecord,
+  policyOverride = null
+) {
+  const insertedIndexes = correctiveInsertedStatementIndexes(
+    baselineRecord.statements,
+    candidateRecord.statements
+  );
+  if (insertedIndexes === null) return false;
+  const policy = policyOverride ?? CORRECTIVE_ADDITIVE_CALL_POLICIES[candidateRecord.name];
+  if (!policy) return false;
+  const insertedFacts = insertedIndexes.map((index) => candidateRecord.statementFacts[index]);
+  const actualImports = insertedFacts.flatMap(({ imports }) => imports).sort();
+  if (JSON.stringify(actualImports) !== JSON.stringify([...policy.imports].sort())) return false;
+  const protectedNames = new Set(
+    baselineRecord.statementFacts.flatMap(({ identifiers }) => identifiers)
+  );
+  for (const facts of insertedFacts) {
+    const safe =
+      facts?.safeAdditiveShape === true &&
+      facts.declaredNames.every((name) => !protectedNames.has(name)) &&
+      facts.assignedNames.every(
+        (name) => !protectedNames.has(name) && !facts.declaredNames.includes(name)
+      ) &&
+      facts.calls.every(
+        ({ root, method }) =>
+          typeof root === "string" &&
+          (policy.roots.includes(root) ||
+            (typeof method === "string" && policy.methods.includes(method)))
+      );
+    if (!safe) return false;
+    if (facts.identifiers.some((name) => protectedNames.has(name))) {
+      for (const name of facts.declaredNames) protectedNames.add(name);
+    }
+  }
+  return true;
+}
+
+function projectCorrectiveTestSource(source, relativePath, allowedNames, label) {
+  const allowed = new Set(allowedNames);
+  const records = correctiveTestDeclarationRanges(source, relativePath, label);
+  const selected = records.filter(({ name }) => allowed.has(name));
+  if (selected.length !== allowed.size) {
+    throw new Error(label + ": authorized corrective declaration is missing: " + relativePath);
+  }
+  let projected = source;
+  for (const record of [...selected].sort((left, right) => right.start - left.start)) {
+    projected =
+      projected.slice(0, record.start) +
+      'test("<TASK-540-CORRECTIVE:' +
+      record.name +
+      '>", () => undefined)' +
+      projected.slice(record.end);
+  }
+  return projected;
+}
+
+async function requireCorrectiveTestSourceProjection(leafId, label) {
+  const predecessorLeaves = CORRECTIVE_TEST_PREDECESSOR_LEAVES[leafId];
+  if (!predecessorLeaves) throw new Error(label + ": corrective predecessor order is missing");
+  const allowedDeclarations = predecessorLeaves.flatMap(
+    (predecessorId) => CORRECTIVE_TEST_DECLARATIONS[predecessorId]
+  );
+  const allFiles = [
+    ...new Set(
+      Object.values(CORRECTIVE_TEST_DECLARATIONS)
+        .flat()
+        .map(({ file }) => file)
+    ),
+  ].sort();
+  for (const relativePath of allFiles) {
+    const names = allowedDeclarations
+      .filter(({ file }) => file === relativePath)
+      .map(({ name }) => name);
+    const [current, head] = await Promise.all([
+      readFile(ROOT + "/" + relativePath, "utf8"),
+      git(["show", "HEAD:" + relativePath]),
+    ]);
+    const currentByName = new Map(
+      correctiveTestDeclarationRanges(current, relativePath, label).map((record) => [
+        record.name,
+        record,
+      ])
+    );
+    const headByName = new Map(
+      correctiveTestDeclarationRanges(head, relativePath, label + ":HEAD").map((record) => [
+        record.name,
+        record,
+      ])
+    );
+    if (
+      names.some(
+        (name) =>
+          !currentByName.has(name) ||
+          !headByName.has(name) ||
+          !isSafeCorrectiveStatementExtension(headByName.get(name), currentByName.get(name))
+      )
+    ) {
+      throw new Error(label + ": corrective declaration weakened an existing statement");
+    }
+    if (
+      projectCorrectiveTestSource(current, relativePath, names, label) !==
+      projectCorrectiveTestSource(head, relativePath, names, label + ":HEAD")
+    ) {
+      throw new Error(
+        label + ": test bytes changed outside authorized declarations: " + relativePath
+      );
+    }
+  }
+}
+
+function assertTask540CorrectiveProtectedTestRepinContract() {
+  const sha = (token) => token.repeat(64);
+  const source = [
+    "const families = Object.freeze({",
+    "  fixture: Object.freeze({",
+    '    declarationSha256: "' + sha("1") + '",',
+    "  }),",
+    "});",
+    "",
+  ].join("\n");
+  const changed = replaceCorrectiveFamilyPin(source, "fixture", sha("2"), "fixture");
+  const restored = replaceCorrectiveFamilyPin(changed.source, "fixture", sha("1"), "fixture");
+  let duplicateRejected = false;
+  let evidenceRejected = false;
+  try {
+    replaceCorrectiveFamilyPin(source + source, "fixture", sha("2"), "duplicate");
+  } catch {
+    duplicateRejected = true;
+  }
+  try {
+    requireCorrectiveFamilyEvidence(
+      { family: "r01Schema", declarationSha256: sha("3") },
+      "r01Schema",
+      "fixture"
+    );
+  } catch {
+    evidenceRejected = true;
+  }
+  const testBefore = 'test("allowed", () => { const value = 1; expect(value).toBe(1); });\n';
+  const testAfter =
+    'test("allowed", () => { const value = 1; expect(value).toBe(1); expect(value).toBeGreaterThan(0); });\n';
+  const earlyReturn =
+    'test("allowed", () => { return; const value = 1; expect(value).toBe(1); });\n';
+  const shadowedAssertion =
+    'test("allowed", () => { const expect = () => ({ toBe: () => undefined }); const value = 1; expect(value).toBe(1); });\n';
+  const reassignedBinding =
+    'test("allowed", () => { const value = 1; value = 1; expect(value).toBe(1); });\n';
+  const conditionalInsertion =
+    'test("allowed", () => { if (false) throw new Error("inert"); const value = 1; expect(value).toBe(1); });\n';
+  const propertyMutation =
+    'test("allowed", () => { const value = 1; value.current = 1; expect(value).toBe(1); });\n';
+  const propertyUpdate =
+    'test("allowed", () => { const value = 1; value.current++; expect(value).toBe(1); });\n';
+  const propertyDelete =
+    'test("allowed", () => { const value = 1; delete value.current; expect(value).toBe(1); });\n';
+  const objectAssignment =
+    'test("allowed", () => { const value = 1; Object.assign(value, { current: 1 }); expect(value).toBe(1); });\n';
+  const protectedCallBefore =
+    'test("allowed", () => { const createSpy = () => undefined; expect(createSpy).toBeDefined(); });\n';
+  const protectedCallAfter =
+    'test("allowed", () => { const createSpy = () => undefined; createSpy(); expect(createSpy).toBeDefined(); });\n';
+  const fixturePolicy = deepFreezeExact({ roots: ["expect"], methods: [], imports: [] });
+  const beforeRecord = correctiveTestDeclarationRanges(
+    testBefore,
+    "tests/vitest/fixture.test.ts",
+    "fixture"
+  )[0];
+  const afterRecord = correctiveTestDeclarationRanges(
+    testAfter,
+    "tests/vitest/fixture.test.ts",
+    "fixture"
+  )[0];
+  const protectedCallRecords = [protectedCallBefore, protectedCallAfter].map(
+    (testSource) =>
+      correctiveTestDeclarationRanges(testSource, "tests/vitest/fixture.test.ts", "fixture")[0]
+  );
+  const unsafeRecords = [
+    earlyReturn,
+    shadowedAssertion,
+    reassignedBinding,
+    conditionalInsertion,
+    propertyMutation,
+    propertyUpdate,
+    propertyDelete,
+    objectAssignment,
+  ].map(
+    (testSource) =>
+      correctiveTestDeclarationRanges(testSource, "tests/vitest/fixture.test.ts", "fixture")[0]
+  );
+  if (
+    changed.previousSha256 !== sha("1") ||
+    restored.source !== source ||
+    !duplicateRejected ||
+    !evidenceRejected ||
+    projectCorrectiveTestSource(
+      testBefore,
+      "tests/vitest/fixture.test.ts",
+      ["allowed"],
+      "fixture"
+    ) !==
+      projectCorrectiveTestSource(
+        testAfter,
+        "tests/vitest/fixture.test.ts",
+        ["allowed"],
+        "fixture"
+      ) ||
+    !isOrderedCorrectiveStatementSubsequence(beforeRecord.statements, afterRecord.statements) ||
+    isOrderedCorrectiveStatementSubsequence(afterRecord.statements, beforeRecord.statements) ||
+    !isSafeCorrectiveStatementExtension(beforeRecord, afterRecord, fixturePolicy) ||
+    unsafeRecords.some((record) =>
+      isSafeCorrectiveStatementExtension(beforeRecord, record, fixturePolicy)
+    ) ||
+    isSafeCorrectiveStatementExtension(
+      protectedCallRecords[0],
+      protectedCallRecords[1],
+      fixturePolicy
+    )
+  ) {
+    throw new Error("TASK-540 corrective protected-test re-pin self-test failed");
+  }
+  return 17;
+}
+
+async function rePinCorrectiveProtectedTests(leaf, label) {
+  const families = CORRECTIVE_DECLARATION_REPIN_FAMILIES[leaf.id] ?? Object.freeze([]);
+  if (families.length === 0) return Object.freeze([]);
+  const allFamilies = [
+    ...new Set(Object.values(CORRECTIVE_DECLARATION_REPIN_FAMILIES).flat()),
+  ].sort();
+  const ownedPaths = Object.freeze([
+    TEST_NAME_CONTRACT_WORKFLOW_REL,
+    ...(leaf.id === "540-04-L04" ? [WORKFLOW_REL] : []),
+  ]);
+  const snapshot = await captureExactRollbackFiles(ownedPaths, label + " exact re-pin snapshot");
+  const beforeTestSource = requireExactRollbackSnapshotUtf8(
+    snapshot,
+    TEST_NAME_CONTRACT_WORKFLOW_REL,
+    label
+  );
+  const headTestSource = await git(["show", "HEAD:" + TEST_NAME_CONTRACT_WORKFLOW_REL]);
+  if (
+    neutralizeCorrectiveDeclarationPins(beforeTestSource, label) !==
+    neutralizeCorrectiveDeclarationPins(headTestSource, label + ":HEAD")
+  ) {
+    throw new Error(label + ": test-name workflow differs from HEAD outside corrective pins");
+  }
+  await requireCorrectiveTestSourceProjection(leaf.id, label + ":test-projection");
+
+  const captures = await Promise.all(
+    allFamilies.map(async (family) => {
+      const evidence = await captureCorrectiveFamilyEvidence(family, "capture", label);
+      return Object.freeze({
+        family,
+        declarationSha256: requireCorrectiveFamilyEvidence(evidence, family, label),
+      });
+    })
+  );
+  for (const capture of captures) {
+    const pinned = replaceCorrectiveFamilyPin(
+      beforeTestSource,
+      capture.family,
+      capture.declarationSha256,
+      label + ":existing-pin"
+    ).previousSha256;
+    if (!families.includes(capture.family) && pinned !== capture.declarationSha256) {
+      throw new Error(label + ": non-current corrective family pin differs from its body");
+    }
+  }
+  let afterTestSource = beforeTestSource;
+  for (const capture of captures.filter(({ family }) => families.includes(family))) {
+    afterTestSource = replaceCorrectiveFamilyPin(
+      afterTestSource,
+      capture.family,
+      capture.declarationSha256,
+      label
+    ).source;
+  }
+  const mutations = [
+    Object.freeze({
+      relativePath: TEST_NAME_CONTRACT_WORKFLOW_REL,
+      beforeSource: beforeTestSource,
+      afterSource: afterTestSource,
+      changed: beforeTestSource !== afterTestSource,
+    }),
+  ];
+
+  if (leaf.id === "540-04-L04") {
+    const beforeWorkflowSource = requireExactRollbackSnapshotUtf8(snapshot, WORKFLOW_REL, label);
+    const headWorkflowSource = await git(["show", "HEAD:" + WORKFLOW_REL]);
+    if (
+      replaceCorrectiveL04ModulePin(beforeWorkflowSource, "0".repeat(64), label).source !==
+      replaceCorrectiveL04ModulePin(headWorkflowSource, "0".repeat(64), label + ":HEAD").source
+    ) {
+      throw new Error(label + ": implementation workflow differs from HEAD outside the L04 pin");
+    }
+    const moduleSource = await readFile(ROOT + "/" + CORRECTIVE_L04_MODULE_REPIN_PATH, "utf8");
+    const moduleSha256 = task540CanonicalModuleSha256(
+      parseTask540TsxSource(moduleSource, CORRECTIVE_L04_MODULE_REPIN_PATH, label)
+    );
+    const afterWorkflowSource = replaceCorrectiveL04ModulePin(
+      beforeWorkflowSource,
+      moduleSha256,
+      label
+    ).source;
+    mutations.push(
+      Object.freeze({
+        relativePath: WORKFLOW_REL,
+        beforeSource: beforeWorkflowSource,
+        afterSource: afterWorkflowSource,
+        changed: beforeWorkflowSource !== afterWorkflowSource,
+      })
+    );
+  }
+
+  const changedPaths = mutations
+    .filter(({ changed }) => changed)
+    .map(({ relativePath }) => relativePath);
+  await runSnapshotDerivedExactTransaction(
+    snapshot,
+    Object.freeze({
+      id: "corrective-protected-test-repin:" + leaf.id,
+      allowedFiles: ownedPaths,
+      requiredFiles: Object.freeze([]),
+    }),
+    mutations,
+    label + " exact corrective re-pin",
+    async () => {
+      for (const capture of captures) {
+        const evidence = await captureCorrectiveFamilyEvidence(capture.family, "final", label);
+        if (
+          requireCorrectiveFamilyEvidence(evidence, capture.family, label) !==
+          capture.declarationSha256
+        ) {
+          throw new Error(label + ": final declaration pin differs from capture");
+        }
+      }
+      if (leaf.id === "540-04-L04") {
+        const { stderr } = await execFileAsync(
+          "/usr/bin/node",
+          [ROOT + "/" + WORKFLOW_REL, "--check-l04-page-split"],
+          { cwd: ROOT, encoding: "utf8", maxBuffer: 8 * 1024 * 1024 }
+        );
+        if (stderr.trim()) throw new Error(label + ": L04 split verifier emitted stderr");
+      }
+    }
+  );
+  return Object.freeze(changedPaths);
+}
+
 async function fixAuditFindings(findings, label, phaseName, { afterClosure = false } = {}) {
   const interventionError = auditInterventionError(findings, label);
   if (interventionError) throw interventionError;
@@ -19368,7 +20490,10 @@ async function runPostAudit() {
             lens +
             " Return every evidence-backed HIGH/MEDIUM/LOW with concrete file:line and assign " +
             "the exact sole owner leaf; use owner=orchestrator only for immutable task/workflow " +
-            "drift. This pre-smoke pass checks source/tests/docs and smoke feasibility only and " +
+            "drift. Split a cross-owner extraction into one producer finding and one finding " +
+            "per consumer so fixers land independently in LEAF_ORDER; never tell one owner to " +
+            "edit another owner's file. This pre-smoke pass checks source/tests/docs and smoke " +
+            "feasibility only and " +
             "must not claim runtime receipts, screenshots, or browser evidence. No edits." +
             deferredLowAuditPrompt(deferredLowFollowUps),
           {
@@ -22383,6 +23508,8 @@ async function runFinalAudit(round) {
           " Report every H/M/L with concrete file:line. Assign a source/test/product-doc defect " +
           "to its exact source-owning 540 leaf. Assign browser/runtime/receipt/screenshot/fixture/" +
           "cleanup evidence defects to owner=orchestrator and area exactly runtime-evidence. " +
+          "Split cross-owner source work into one finding per exact owner in dependency order; " +
+          "never authorize one owner to edit another owner's file. " +
           "Assign a defect in a TASK-540-01 through TASK-540-05 source contract to its exact leaf " +
           "owner even when the defect is task metadata. Assign only TASK-540-06/root/changelog/" +
           "index/board defects to owner=orchestrator and area exactly closure-metadata. Do not " +
@@ -23434,7 +24561,8 @@ if (process.argv.includes("--self-test-repair-siblings")) {
   const boardStateCases = assertTask540BoardStateContract();
   const finalDriftRoundCases = await assertTask540FinalDriftRoundContract();
   const gitIndexBaselineCases = await assertTask540GitIndexBaselineContract();
-  const exactRollbackResidualCases = assertTask540ExactRollbackResidualContract();
+  const exactRollbackResidualCases = await assertTask540ExactRollbackResidualContract();
+  const correctiveProtectedTestRepinCases = assertTask540CorrectiveProtectedTestRepinContract();
   const touchedModuleLineLimitCases = await assertTask540TouchedModuleLineLimitContract();
   const modularityRepairCases = assertTask540ModularityRepairContract();
   const l02AssistantSplitVerifierCases = await assertL02AssistantSplitVerifierContract();
@@ -23469,6 +24597,7 @@ if (process.argv.includes("--self-test-repair-siblings")) {
       finalDriftRoundCases,
       gitIndexBaselineCases,
       exactRollbackResidualCases,
+      correctiveProtectedTestRepinCases,
       touchedModuleLineLimitCases,
       modularityRepairCases,
       l02AssistantSplitVerifierCases,

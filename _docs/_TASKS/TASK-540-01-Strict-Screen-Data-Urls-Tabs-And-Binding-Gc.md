@@ -11,7 +11,7 @@
 **Started:** 2026-07-13
 **Historical Implementation Complete:** 2026-07-14 — original assigned work completed before later repair cycles.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
-**Current Repair State:** The verified R01 audit set of two MEDIUM behavior defects and three test-integrity LOW gaps is implemented at the validated HEAD. The separate 2026-07-19 stored-read hardening named in `Fix Reason` passed the exact R01 owner gate and is represented by the leaf's matching `Revalidation Passed` generation/token plus this child's canonical `Implementation Complete`. Its previously recorded pre-split gate remains historical evidence only. The later five-lens family post-audit stopped before full validation and smoke on non-R01 UI/accessibility and cross-contract findings; no changelog or closure pass is claimed yet.
+**Current Repair State:** The verified R01 audit set of two MEDIUM behavior defects and three test-integrity LOW gaps is implemented at the validated HEAD. The separate 2026-07-19 stored-read hardening named in `Fix Reason` passed the exact R01 owner gate and is represented by the leaf's matching `Revalidation Passed` generation/token plus this child's canonical `Implementation Complete`. Its previously recorded pre-split gate remains historical evidence only. A later five-lens family post-audit stopped before full validation and smoke; its verified follow-up now reopens the R01 leaf first for the shared selector required by dependent R03/L03 corrections. That selector is contracted but not yet implemented or re-gated, and no changelog or closure pass is claimed.
 **Repair Started:** 2026-07-16
 **Fix Started:** 2026-07-19
 **Fix Reason:** A stored-read post-audit reproduced that the legacy block-type alias map was read by bare indexing, so a stored `type` equal to an inherited `Object.prototype` member name resolved to a function and collapsed the entire `editorView` read into the empty fallback. TASK-540-01-L01 owns the runtime-frozen, own-property-only alias map; the pinned prototype-named-type read outcome (unrepaired legacy placeholder, byte-stable `data`, surviving bindings); and removal of the duplicated `publish`/`custom` Button rewrite from the read-repair pass. `screenDocumentDataNormalizer.ts` remains the sole owner: write rejects a present non-`link` Button action, while stored-read coerces it to `link` and drops `href`.
@@ -64,6 +64,26 @@ blocking gate and cannot be deferred to TASK-9999.
 | TASK-540-01-L01 | Reject unknown, sanitize URLs, unique Tabs, and prune ghosts | strict Screen schema/service/route owner; cohesive schema facade; seven schema suites/fixture; isolated definition-integrity route suite/harness; stable document-ops facade plus five owners; explicit-ID composer; twelve-suite/73-name Assistant executor family plus five support owners; read-only Assistant plan/catalog consumers | 🚧 In Progress |
 
 ## Current audit and modularity closure contract
+
+### Pending 2026-07-19 selector-owner correction
+
+The latest family post-audit assigns the first step of the corrective chain to R01.
+After a canonical workflow reopen, `screenMediaIdentity.ts` appends the sole Bun-free
+`firstScreenMediaAssetUuid(value: unknown): string | null` implementation below the
+existing predicate. It accepts a scalar UUID or returns the first valid UUID from an
+array, preserves the selected UUID bytes and casing, and returns `null` for every other
+shape. The parameter is an untrusted-value boundary and must be narrowed immediately;
+production and tests may not introduce `any`, an assertion cast, or a second selector.
+
+The existing `TASK-540-01 media identity predicate has one exact UUID contract` test in
+`custom-screen-stored-read-repair.test.ts` gains the scalar/array/first-valid/malformed
+selector assertions inside that same declaration. No new test declaration is allowed:
+the seven schema suites remain exactly
+`18+9+10+13+11+5+11 = 77`. The stable facade continues to re-export
+`isScreenMediaAssetUuid` exactly as before; the new internal selector is imported
+directly by R03 and L03 and does not change the pinned 62-runtime/39-type facade
+manifest. R01 must pass its exact gate before R03 may edit either consumer. This
+paragraph is an execution contract, not an implementation or completion receipt.
 
 The current R01 implementation resolves two verified MEDIUM findings. First, stored
 V1/V2/V3 binding normalization no longer treats one malformed binding as a whole-array
@@ -261,11 +281,13 @@ subtask `🚧 In Progress` with canonical `Implementation Complete`; its leaf ca
 matching exact `Revalidation Passed` generation/token recorded above. The mandatory
 schema, document-operations, route, and Assistant executor splits retain their separate
 canonical `Modularity Repair Revalidated` receipt. The later five-lens audit found no
-new R01 source defect but stopped on other owner/contract findings before full
-validation, smoke, changelog, or closure.
+defect in the already-landed stored-read repair, but it did find the missing shared
+selector now owned by R01. The executable order is discovery audit → R01 → R03 →
+L03 → L04 → clean post-audit → full gates → smoke → closure; none of those later
+results is claimed here.
 TASK-540-04-L03 retains its prior canonical `Revalidation Passed`; the closure leaf
 retains the exact deterministic `Revalidation Passed` value `pre-closure remediation /
 fix-started 2026-07-15 / gate green`. The post-audit intervention requires remaining
-L03/L04 findings to reopen and re-gate before that reserved closure state can authorize
-the family frontier. Changelog 1252, full validation, and live smoke remain
-closure-owned.
+R01/R03/L03/L04 findings to reopen and re-gate in that dependency order before the
+clean post-audit can authorize that reserved closure state. Changelog 1252, full
+validation, and live smoke remain closure-owned.

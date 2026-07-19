@@ -63,6 +63,27 @@ reverted and its older cache/entry receipt was historical. The later final seque
 post-audit separately reopened L03 for the single-versus-multiple media override
 contract; that later L03 receipt does not change this renderer owner's 89/89 evidence.
 
+### Pending 2026-07-19 shared-selector consumer correction
+
+Canonical workflow must reopen and gate R01 first. Only after R01 exports
+`firstScreenMediaAssetUuid` from the Bun-free
+`core/services/customScreens/screenMediaIdentity.ts` owner may R03:
+
+1. import `firstScreenMediaAssetUuid` directly into `ScreenRuntimeLeafBlocks.tsx`;
+2. remove the renderer-local `firstMediaAssetUuid` implementation and its model export;
+3. import `isScreenMediaAssetUuid` directly into `screenRuntimeRendererModel.ts` from
+   the same domain owner; and
+4. run the existing `bound direct image uses the first valid UUID in an array and fails
+   closed for malformed, empty, missing, and unsafe values` declaration unchanged as
+   the scalar/array byte-preservation regression.
+
+The selected UUID must retain its exact input casing and bytes. Invalid scalars,
+non-arrays, and arrays without a valid UUID return `null`; no URL, empty value, or later
+fallback becomes eligible. R03 does not edit `screenMediaIdentity.ts`, L03 modules, task
+status fields, or the protected test-name inventory. Its four suite counts remain
+22+13+24+13, and the exact 89-test gate must pass before L03 starts. This is executable
+repair scope, not a new completion receipt.
+
 Do not edit `InlineEditWrapper.tsx`, `CustomScreenEntryCanvas.tsx`, schemas,
 inspector, or shared selection helpers. Fix the ancestor semantics at the owning
 renderer and update the named behavior expectations before its gate.
@@ -301,11 +322,7 @@ return canNavigate
 // preview/entry may navigate. Missing, unsafe, or legacy-disabled href is aria-disabled
 // in every mode.
 
-function firstMediaAssetUuid(value: unknown): string | null {
-  if (isScreenMediaAssetUuid(value)) return value;
-  if (!Array.isArray(value)) return null;
-  return value.find(isScreenMediaAssetUuid) ?? null;
-}
+import { firstScreenMediaAssetUuid } from "../../../services/customScreens/screenMediaIdentity";
 
 // Direct image block: provenance is explicit and this sink accepts only a resolved URL.
 if (block.type === "image") {
@@ -320,7 +337,7 @@ if (block.type === "image") {
   } else if (srcBinding !== undefined) {
     // Binding presence is also absolute. Accept a scalar UUID or the first valid UUID
     // in an array; never reinterpret any bound string as a URL or fall back to data.src.
-    const boundAssetId = firstMediaAssetUuid(
+    const boundAssetId = firstScreenMediaAssetUuid(
       readBindingPathValue(values, srcBinding.field)
     );
     rawImageSrc = boundAssetId === null

@@ -12,7 +12,7 @@
 **Started:** 2026-07-13
 **Historical Implementation Complete:** 2026-07-14 — original assigned work completed before the later repair cycles.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
-**Current Repair State:** The two verified MEDIUM repairs and three verified test-integrity LOW regressions described below are implemented at the validated HEAD. The separate 2026-07-19 stored-read hardening named in `Fix Reason` passed the exact R01 owner gate and is represented by the matching `Revalidation Passed` generation/token below. The earlier pre-split receipts remain historical evidence only. The later five-lens family post-audit stopped before full validation and smoke on non-R01 UI/accessibility and cross-contract findings; no changelog or closure pass is claimed.
+**Current Repair State:** The two verified MEDIUM repairs and three verified test-integrity LOW regressions described below are implemented at the validated HEAD. The separate 2026-07-19 stored-read hardening named in `Fix Reason` passed the exact R01 owner gate and is represented by the matching `Revalidation Passed` generation/token below. The earlier pre-split receipts remain historical evidence only. A later five-lens family post-audit stopped before full validation and smoke; its verified follow-up now reopens R01 first for the shared selector required by the dependent R03/L03 UI corrections. That selector work is contracted below but not yet implemented or re-gated, and no changelog or closure pass is claimed.
 **Repair Started:** 2026-07-16
 **Fix Started:** 2026-07-19
 **Fix Reason:** Post-audit reproduced that the stored-read legacy block-type alias map was consulted with a bare index read, so a stored `type` equal to an inherited `Object.prototype` member name resolved to a function and collapsed the whole `editorView` read into the empty fallback. R01 owns the runtime-frozen, own-property-only alias map that keeps all twelve inherited names as unrepaired legacy placeholders with byte-stable `data` and surviving bindings. R01 also removes the duplicated `publish`/`custom` Button rewrite from the read-repair pass so `screenDocumentDataNormalizer.ts` remains the sole owner: write rejects a present non-`link` action, while stored-read coerces it to `link` and drops `href`. No schema is loosened, no compatibility kind is added, and no assertion is weakened.
@@ -94,6 +94,48 @@
   mandatory no-loss partition of its exact 73-test name multiset into the 12 named Bun
   suites and five support modules below
 
+### Current selector-owner correction (must land before R03)
+
+The 2026-07-19 post-audit found equivalent `firstMediaAssetUuid` implementations in the
+R03 renderer model and L03 Entry presentation-media owner. The earlier L03-only attempt
+was reverted after correctly proving that a pure L03 module may not import an admin/UI
+renderer model. R01 therefore owns the shared implementation in
+`screenMediaIdentity.ts`; R03 and L03 consume it only after this leaf passes its exact
+gate.
+
+Implementation shape:
+
+```ts
+// Keep isScreenMediaAssetUuid at line 4 for the existing TASK-9999 evidence anchor.
+const isUnknownArray = (value: unknown): value is readonly unknown[] => Array.isArray(value);
+
+export function firstScreenMediaAssetUuid(value: unknown): string | null {
+  if (isScreenMediaAssetUuid(value)) return value;
+  if (!isUnknownArray(value)) return null;
+  return value.find(isScreenMediaAssetUuid) ?? null;
+}
+```
+
+`unknown` is permitted only at this untrusted value boundary and is narrowed before
+use. Do not add `any`, an assertion cast, normalization, lower-casing, or a fallback.
+Do not re-export this internal selector from `customScreenSchemas.ts`: its pinned public
+manifest and the existing predicate export stay byte-compatible. Extend the existing
+`TASK-540-01 media identity predicate has one exact UUID contract` declaration in
+`custom-screen-stored-read-repair.test.ts` with scalar, mixed scalar/array, first-valid,
+all-invalid, and exact-casing selector assertions. Add no test declaration; the R01
+schema family remains exactly 77 in partition `18+9+10+13+11+5+11`. The task workflow,
+not this prose edit, creates and consumes the canonical repair receipt.
+Load the internal selector with a callback-local dynamic import inside that existing
+test; do not change module-scope imports or any other declaration.
+Immediately before the owner gate, the orchestrator alone may re-pin the changed
+declaration-body SHA in `task-540-test-name-contract.mjs`. Its capture must prove the
+same files/order, 77 names/declarations, global name hash, partition counts, and
+per-file name hashes; normalization against `HEAD` must prove that no byte outside the
+four explicitly allowlisted corrective SHA fields changed. Its test-source projection
+permits only this named call expression to differ from `HEAD` and requires every
+pre-existing callback statement to remain an ordered subsequence. The leaf agent never
+owns or edits that workflow file.
+
 For the completed control-character correction, the exact writable implementation set was
 `core/services/customScreens/customScreenSchemas.ts` plus
 `tests/vitest/customScreens/screen-document-image-src.test.ts`. The other historical
@@ -126,8 +168,10 @@ R01 now carries canonical `Implementation Complete` plus the exact 2026-07-19
 0237fd1a85b54c7e80e46c0eaac5477d / gate green`; only its earlier pre-split receipts are
 historical. TASK-540-04-L03's prior scoped receipt and TASK-540-06-L01's exact
 pre-closure receipt remain preserved, but the later five-lens intervention requires
-still-evidenced L03/L04 findings to reopen and re-gate before closure. No receipt is
-duplicated or treated as smoke/closure evidence. `_docs/_workflows/task-540-implement.mjs`
+discovery audit → R01 shared selector → R03 renderer consumer → L03 Entry consumer →
+L04 Screen Settings accessibility, with each implementation leaf reopened and exactly
+gated before the clean post-audit. No receipt is duplicated or treated as smoke/closure
+evidence. `_docs/_workflows/task-540-implement.mjs`
 owns this phase-aware restart invariant and exposes `--self-test-repair-siblings` as
 its executable projection.
 
@@ -206,7 +250,7 @@ map:
 |---|---|---:|
 | `customScreenContracts.ts` | public enums/types (`:17-206`); `defaultScreenSectionId` (`:227`); the sole `screenBlockDataAllowedKeys` / `compatibilityScreenBlockTypes` / `FixedScreenBlockType` descriptors (`:512-532`); Tabs/document constants (`:534-540`); block-style values/types/allowed keys (`:567-585`); section-style values/types/template/allowed keys (`:641-684`); warning contracts (`:710-725`) | `<=1000` |
 | `customScreenNormalizationPrimitives.ts` | version/path/hash/context/error primitives (`:208-451`, excluding contract-owned `defaultScreenSectionId` at `:227` and including the sole generic `normalizeJsonValue`) plus the extracted `normalizeUniqueIds` (`:2058-2065`); sole `CustomScreenDefinitionError` and `buildScreenFieldBindingId` definitions | `<=1000` |
-| `screenMediaIdentity.ts` | private UUID pattern (`:541`) and public `isScreenMediaAssetUuid` (`:548-550`), formatted as the pinned six content lines below | `<=1000` |
+| `screenMediaIdentity.ts` | private UUID pattern (`:541`), public `isScreenMediaAssetUuid` (`:548-550`) retained at final line 4, and the internal first-valid scalar/array selector appended below it | `<=1000` |
 | `screenDocumentDataNormalizer.ts` | screen-data/style/URL/fixed-kind/Tabs normalization and slot equality (`:505-510`, `:543-546`, `:552-561`, `:587-635`, `:686-708`, `:727-997`); imports generic `normalizeJsonValue` and every contract-owned descriptor/value | `<=1000` |
 | `screenDocumentNormalizer.ts` | strict recursive block/section/document writes (`:1030-1217`) plus the sole shared `visitScreenBlocks`, `collectScreenDocumentBlockIds`, and `assertScreenFieldBindingsTargetDocument` implementations consolidated from `:2067-2097` and `:2275-2300` | `<=1000` |
 | `screenDocumentReadNormalizer.ts` | Tabs/actions repair, structural provenance, generated-ID repair, unsupported-Button collection, and stored document reads (`:1227-1546`) | `<=1000` |
@@ -1236,10 +1280,10 @@ write-time omission forms.
 
 The Bun-free `screenMediaIdentity.ts` owner defines `isScreenMediaAssetUuid` from one
 private UUID pattern, and the stable facade explicitly re-exports it. Tests pin valid
-mixed-case UUIDs and reject malformed, URL-shaped, blank, and non-string values.
-For stable deferred-LOW evidence this tiny owner has exactly the following six content
-lines (plus the normal final newline); the exported function therefore begins at
-`screenMediaIdentity.ts:4` and formatting must not insert a header/comment above it:
+mixed-case UUIDs and reject malformed, URL-shaped, blank, and non-string values. Keep
+the predicate's existing prefix exactly as follows so deferred-LOW evidence remains
+anchored at `screenMediaIdentity.ts:4`; file length is no longer exclusive because the
+shared selector is appended after this prefix:
 
 ```ts
 const SCREEN_MEDIA_ASSET_UUID: RegExp =
@@ -1250,9 +1294,9 @@ export function isScreenMediaAssetUuid(value: unknown): value is string {
 }
 ```
 
-TASK-540-03 imports the predicate for direct-image binding
-resolution; TASK-540-04's strict override normalizer imports it rather than mirroring
-the regex.
+TASK-540-03 imports the predicate and the direct internal selector for direct-image
+binding resolution; TASK-540-04's strict override normalizer imports the predicate and
+L03 imports the selector rather than mirroring the regex or selection algorithm.
 
 Select the matching fixed schema through exact-`const` type branches inside one
 recursive `$defs` graph per validation root. The shared validator owns one global Ajv
@@ -1635,9 +1679,11 @@ transitions are historical. The current 2026-07-19 stored-read hardening remains
 `🚧 In Progress` with canonical `Implementation Complete` and the matching exact
 `Revalidation Passed` generation/token recorded above. The earlier module, schema-test,
 route-test, document-operations, and Assistant splits retain their separate canonical
-`Modularity Repair Revalidated` evidence. The later five-lens audit found no new R01
-source defect but stopped on other owner/contract findings before full validation,
-smoke, changelog, or closure.
+`Modularity Repair Revalidated` evidence. The later five-lens audit found no defect in
+the already-landed stored-read repair, but it did find the missing shared selector now
+owned by R01. The executable order is discovery audit → R01 → R03 → L03 → L04 →
+clean post-audit → full gates → smoke → closure; none of those later results is claimed
+here.
 TASK-540-04-L03 keeps
 one canonical `Revalidation Passed` successor and no `Repair Pending`; the closure leaf
 remains landed with its exact pre-closure evidence and must not be duplicated. Family

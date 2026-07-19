@@ -19,7 +19,7 @@ Actor identity validation currently calls `isScreenMediaAssetUuid`, although the
 UUID grammar is correct for both domains. Introduce a neutrally named UUID-shape owner,
 retain the media-specific predicate as a delegating compatibility API, and point actor
 and `updatedBy` validation at the neutral predicate without changing accepted values,
-error codes, storage, or transport bytes.
+error codes, storage, transport bytes, or the shared first-valid media selector.
 
 ## Exclusive Ownership
 
@@ -46,6 +46,7 @@ differently.
 
 - [ ] Add one neutral UUID-shape predicate while retaining the media-named API.
 - [ ] Move actor and `updatedBy` call sites to the neutral predicate.
+- [ ] Preserve `firstScreenMediaAssetUuid` scalar/array selection and exact casing.
 - [ ] Pin exact acceptance/rejection and byte-preservation parity in existing Vitest lanes.
 - [ ] Run static checks, targeted tests, and diff validation.
 
@@ -53,6 +54,7 @@ differently.
 
 ```ts
 const SCREEN_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUnknownArray = (value: unknown): value is readonly unknown[] => Array.isArray(value);
 
 export function isScreenUuid(value: unknown): value is string {
   return typeof value === "string" && SCREEN_UUID.test(value);
@@ -61,6 +63,13 @@ export function isScreenUuid(value: unknown): value is string {
 // Compatibility/domain wrapper: media consumers retain their expressive API.
 export function isScreenMediaAssetUuid(value: unknown): value is string {
   return isScreenUuid(value);
+}
+
+// Existing selector behavior and public name stay unchanged.
+export function firstScreenMediaAssetUuid(value: unknown): string | null {
+  if (isScreenMediaAssetUuid(value)) return value;
+  if (!isUnknownArray(value)) return null;
+  return value.find(isScreenMediaAssetUuid) ?? null;
 }
 
 const normalizeUpdatedBy = (value: unknown): string | null => {
@@ -86,7 +95,8 @@ exact input case. Do not broaden accepted primitives or introduce coercion.
 
 **Regression-test shape:** use one valid lowercase UUID, one valid uppercase UUID, and
 the existing invalid corpus to prove `isScreenUuid` and `isScreenMediaAssetUuid` have
-identical truth tables. In the override suite, prove valid actor and `updatedBy` values
+identical truth tables. Prove the first-valid selector retains scalar/array choice and
+exact casing before and after the neutral rename. In the override suite, prove valid actor and `updatedBy` values
 round-trip exactly and the same invalid values still fail with the same domain error.
 
 ## Testing Requirements

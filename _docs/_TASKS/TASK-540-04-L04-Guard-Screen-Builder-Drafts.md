@@ -77,6 +77,36 @@ post-agent `touchedFiles` verification constrain all such mutations. An after-cl
 fixer adds only the TASK-540 root, TASK-540-04 child, and this L04 leaf task contracts;
 task-state transitions remain separate authority.
 
+### Pending 2026-07-19 Screen Settings accessibility correction
+
+L04 starts only after the current R01 → R03 → L03 chain has passed its exact gates.
+In `CustomScreenEditorSettingsPanel.tsx`, preserve all visible copy and behavior while
+giving the five interactive settings distinct programmatic names matching the visible
+intent: `Screen name` input, `Content type` combobox, `Status` combobox,
+`Show records workflow in left menu` switch, and `Sidebar label` input. Use direct
+`aria-label` values or stable `aria-labelledby` relationships; do not add inert
+`<label>` elements, change values/defaults, or alter dirty/save/cache behavior.
+
+Extend the existing `exact create saves once and opens the canonical encoded Screen
+editor without a discard prompt` declaration in
+`custom-screen-editor-draft-and-save.test.tsx` to assert all five names before its
+existing mutation/save flow. Add or rename no test declaration: the four protected Page
+suites remain exactly 6+13+8+9 = 36, and each remains independently runnable. L04 does
+not edit R01/R03/L03 source, route helpers, task status fields, or workflow files. Core
+lint/types, the intentionally re-pinned declaration body, exact 36-test Page family,
+final 15-file/98-test consumer gate, and touched-file line gate must pass before the
+fresh family post-audit. This section is required work, not implementation completion.
+
+Immediately before the owner gate, the orchestrator alone re-pins the protected Page
+declaration SHA after capture proves the unchanged 36 names/declarations, `6+13+8+9`
+partition, global name hash, and per-file name hashes/indexes. Because the existing
+draft/save declaration is also covered by the L04 canonical-module verifier, that same
+exact transaction re-pins only its canonical module SHA in `task-540-implement.mjs`.
+Both workflow sources must otherwise normalize byte-identically to `HEAD`; the L04
+agent does not edit either workflow file. The test-source projection permits differences
+only inside this one named call and requires every pre-existing callback statement to
+remain an ordered subsequence before the whole-module SHA may be re-pinned.
+
 Four other focused suites intentionally keep their current partial cacheBus mocks:
 `canvas-editor-panel-toggle-dedupe.test.tsx`, `custom-screen-editor-restyle.test.tsx`,
 `custom-screen-widget-picker.test.tsx`, and

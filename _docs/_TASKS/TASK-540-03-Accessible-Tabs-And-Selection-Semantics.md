@@ -64,6 +64,17 @@ TASK-9999-eligible. This leaf lands after TASK-540-02-L01 and before TASK-540-04
 the reconciled family matrix remains 64 Vitest + 18 Bun = 82 files (81 source-owner/
 read-only plus one closure aggregate) under pinned changelog 1252.
 
+The pending 2026-07-19 post-audit correction adds one dependency-ordered consumer step:
+after R01's exact gate, R03 removes its local `firstMediaAssetUuid` from
+`screenRuntimeRendererModel.ts`; `ScreenRuntimeLeafBlocks.tsx` imports R01's internal
+`firstScreenMediaAssetUuid` directly from `screenMediaIdentity.ts`, while the model
+imports the predicate from that same owner. The existing `bound direct image uses the
+first valid UUID in an array and fails closed for malformed, empty, missing, and unsafe
+values` declaration remains the mandatory behavior regression; do not add or rename a test. The four
+R03 partitions and 72-name multiset remain unchanged, and the exact 89-test owner gate
+must pass before L03 consumes the same helper. This paragraph records required work,
+not implementation completion.
+
 ## Acceptance
 
 - Tabs expose `tablist`, `tab`, `tabpanel`, unique relationships, roving
