@@ -224,7 +224,7 @@ const families = Object.freeze({
       "ef2f79b268f403d3d55e719f0556336f6cbe0cfc308d5f933c2583ed408eff21",
     ]),
     declarations: 36,
-    declarationSha256: "2bd33166dfd768b089caf437b5263413d24e033eb18b9a92d152321525a898bb",
+    declarationSha256: "a9c270751d51e38b255b0152e195d591edc709995581ddefa3e0ca0d02f607e6",
     files: Object.freeze([
       "tests/vitest/ui/custom-screens-page.test.tsx",
       "tests/vitest/ui/custom-screen-editor-draft-and-save.test.tsx",

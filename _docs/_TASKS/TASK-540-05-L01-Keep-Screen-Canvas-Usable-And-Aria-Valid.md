@@ -29,6 +29,10 @@
   `tests/vitest/ui-integration/canvas-editor-panel-toggle-dedupe.test.tsx`,
   `tests/vitest/ui/custom-screen-authoring-boundary.test.ts`, and, only for the shared
   role assertion, `tests/vitest/ui-integration/canvas-editor/canvas-editor.test.tsx`
+- `tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx` only for the
+  compatibility step that reopens the Insert panel before its second one-shot insertion
+  assertion after `ScreenAuthoringCanvas` began selecting and inspecting newly inserted
+  blocks; the insertion target and ordering assertions remain unchanged
 
 The boundary suite must inspect the stable wrapper plus
 `CustomScreenEntryRouteSession.tsx`, `CustomScreenEntryEditorLayout.tsx`,

@@ -7685,7 +7685,7 @@ const L04_PAGE_MODULE_CONTRACTS = Object.freeze({
     ]),
   }),
   "tests/vitest/ui/custom-screen-editor-draft-and-save.test.tsx": Object.freeze({
-    moduleSha256: "2da8260b778f7a1f900c2a717716bd27f5ff582e1812e74ea029588b110d00e4",
+    moduleSha256: "6cee81d0f34865f1909b3a8e37d381fdd0822976e3c8dd1942cbd210e5d56b56",
     exports: Object.freeze([]),
     importTokens: Object.freeze([
       "../../../core/admin/services/apiClient|named|ApiClientError|ApiClientError|type:false",
@@ -9437,6 +9437,7 @@ const LEAVES = Object.freeze(
         "tests/vitest/ui-integration/canvas-editor-panel-toggle-dedupe.test.tsx",
         "tests/vitest/ui/custom-screen-authoring-boundary.test.ts",
         "tests/vitest/ui-integration/canvas-editor/canvas-editor.test.tsx",
+        "tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx",
       ]),
       readOnlyConsumerFiles: Object.freeze([
         "tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx",

@@ -78,6 +78,7 @@ export function CustomScreenEditorSettingsPanel({
           Screen name
         </p>
         <Input
+          aria-label="Screen name"
           value={values.name}
           onChange={(event) => actions.onNameChange(event.target.value)}
           placeholder="Custom screen name"
@@ -88,7 +89,7 @@ export function CustomScreenEditorSettingsPanel({
           Content type
         </p>
         <Select value={values.contentTypeId} onValueChange={actions.onContentTypeChange}>
-          <SelectTrigger>
+          <SelectTrigger aria-label="Content type">
             <SelectValue placeholder="Select content type" />
           </SelectTrigger>
           <SelectContent>
@@ -114,7 +115,7 @@ export function CustomScreenEditorSettingsPanel({
           value={values.status}
           onValueChange={(value) => actions.onStatusChange(value as "draft" | "active")}
         >
-          <SelectTrigger>
+          <SelectTrigger aria-label="Status">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -130,6 +131,7 @@ export function CustomScreenEditorSettingsPanel({
         <div className="flex h-10 items-center justify-between rounded-md border px-3">
           <span className="text-sm text-muted-foreground">Show records workflow in left menu</span>
           <Switch
+            aria-label="Show records workflow in left menu"
             checked={values.showInSidebar}
             onCheckedChange={(checked) => actions.onShowInSidebarChange(checked === true)}
           />
@@ -140,6 +142,7 @@ export function CustomScreenEditorSettingsPanel({
           Sidebar label
         </p>
         <Input
+          aria-label="Sidebar label"
           value={values.sidebarLabel}
           onChange={(event) => actions.onSidebarLabelChange(event.target.value)}
           placeholder={values.name.trim() || "Use screen name"}

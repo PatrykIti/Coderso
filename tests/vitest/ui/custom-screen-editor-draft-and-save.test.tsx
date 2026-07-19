@@ -450,6 +450,17 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
     try {
       await flushMountedEditor();
       await editScreenName(view.container, "Created Screen");
+      expect(view.container.querySelector('input[aria-label="Screen name"]')).not.toBeNull();
+      expect(
+        view.container.querySelector('[role="combobox"][aria-label="Content type"]')
+      ).not.toBeNull();
+      expect(view.container.querySelector('[role="combobox"][aria-label="Status"]')).not.toBeNull();
+      expect(
+        view.container.querySelector(
+          '[role="switch"][aria-label="Show records workflow in left menu"]'
+        )
+      ).not.toBeNull();
+      expect(view.container.querySelector('input[aria-label="Sidebar label"]')).not.toBeNull();
       await chooseScreenContentType(view.container);
       expect(view.container.textContent).toContain("Unsaved changes");
 
