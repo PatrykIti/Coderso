@@ -11,11 +11,12 @@
 **Started:** 2026-07-13
 **Historical Implementation Complete:** 2026-07-14 — original assigned work completed before later repair cycles.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
-**Current Repair State:** The verified R01 audit set of two MEDIUM behavior defects and three test-integrity LOW gaps is implemented at the validated HEAD. The separate 2026-07-19 stored-read hardening named in `Fix Reason` is implemented in the current working tree and pending revalidation; every recorded receipt predates it. Its previously recorded pre-split gate remains historical evidence for that implementation shape; the final cohesive module/test split, exact R01 owner gate, and canonical `Modularity Repair Revalidated` receipt above have now passed. No fresh family post-audit, full validation, smoke, changelog, or closure pass is claimed yet.
+**Current Repair State:** The verified R01 audit set of two MEDIUM behavior defects and three test-integrity LOW gaps is implemented at the validated HEAD. The separate 2026-07-19 stored-read hardening named in `Fix Reason` passed the exact R01 owner gate and is represented by the leaf's matching `Revalidation Passed` generation/token plus this child's canonical `Implementation Complete`. Its previously recorded pre-split gate remains historical evidence only. The later five-lens family post-audit stopped before full validation and smoke on non-R01 UI/accessibility and cross-contract findings; no changelog or closure pass is claimed yet.
 **Repair Started:** 2026-07-16
 **Fix Started:** 2026-07-19
-**Fix Reason:** A stored-read post-audit reproduced that the legacy block-type alias map was read by bare indexing, so a stored `type` equal to an inherited `Object.prototype` member name resolved to a function and collapsed the entire `editorView` read into the empty fallback. TASK-540-01-L01 owns the runtime-frozen, own-property-only alias map; the pinned prototype-named-type read outcome (unrepaired legacy placeholder, byte-stable `data`, surviving bindings); and removal of the duplicated `publish`/`custom` Button rewrite from the read-repair pass. `screenDocumentDataNormalizer.ts` remains the sole owner: write rejects a present non-`link` Button action, while stored-read coerces it to `link` and drops `href`. No revalidation receipt is claimed for this cycle yet.
-**Contract Correction:** 2026-07-19 — the orchestrator independently verified and adopted this minimal post-audit contract after rejecting the fixer's unauthorized task-prose edits; the exact active repair metadata is preserved and no gate receipt is claimed.
+**Fix Reason:** A stored-read post-audit reproduced that the legacy block-type alias map was read by bare indexing, so a stored `type` equal to an inherited `Object.prototype` member name resolved to a function and collapsed the entire `editorView` read into the empty fallback. TASK-540-01-L01 owns the runtime-frozen, own-property-only alias map; the pinned prototype-named-type read outcome (unrepaired legacy placeholder, byte-stable `data`, surviving bindings); and removal of the duplicated `publish`/`custom` Button rewrite from the read-repair pass. `screenDocumentDataNormalizer.ts` remains the sole owner: write rejects a present non-`link` Button action, while stored-read coerces it to `link` and drops `href`.
+**Implementation Complete:** 2026-07-19 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Contract Correction:** 2026-07-19 — the orchestrator independently verified and adopted this minimal post-audit contract after rejecting the fixer's unauthorized task-prose edits; the exact active repair metadata was preserved through the matching successful owner gate.
 **Repair Reason:** The final TASK-540 workflow audits reproduced route/direct-normalizer identity drift, ambiguous legacy ID generation, whole-document stored-read collapse when one binding was malformed, and an optional-ID Assistant composer with its own ambiguous tuple fallback. TASK-540-01-L01 owns the strict three-mode contract, per-binding stored-read rejection, one V4 legacy membership pass, the shared framed-tuple ID builder, explicit-ID-only composer input, duplicate stored-ID fail-closed proof, and registered metadata-PATCH preservation.
 **Repair Revalidated:** 2026-07-16 — against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus the five dirty R01 owner paths named by the leaf, core/root static gates passed; changed Vitest passed 81/81; exact six-file R01 Vitest passed 176/176; DB preflight was reachable; route/Assistant Bun passed 93/93 with 576 expectations; isolated route passed 20/20 with 118 expectations; document ops passed 11/11; workflow self-tests and diff checks passed. This is pre-modularity-split evidence only. No post-audit, full validation, smoke, changelog, or closure pass is claimed.
 **Prior R01 Revalidation:** 2026-07-16 — before the composer and duplicate stored-read test findings, the then-three dirty R01 owner paths passed core/root static gates, five-file Vitest 168/168, reachable DB preflight, route/Assistant Bun 92/92 with 568 expectations, isolated route 19/19 with 110, document-op 11/11, and `git diff --check` against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77`.
@@ -92,8 +93,8 @@ schema-test, route-test, document-operation, Assistant suite, and support path a
 TASK-540-01-L01 preserved those behaviors while replacing the historical 3,539-line
 `customScreenSchemas.ts` implementation with an explicit-export facade over cohesive
 submodules and partitioning the historical 3,436-line schema suite without dropping or
-weakening any of its 75 existing tests; one exact public-facade export/identity regression
-was added. The Bun route split moved the seven existing TASK-540-01
+weakening any of its 75 existing tests; exact public-facade export/identity and
+prototype-safe stored-read alias regressions were added. The Bun route split moved the seven existing TASK-540-01
 definition-integrity cases out of the historical 1,239-line mixed route suite and added
 one injected cleanup fault-path regression there. The final gate independently measured
 each resulting production module and test file, including both route suites and their
@@ -115,9 +116,10 @@ An injected-dependency regression must prove cleanup continues through every lat
 independent exact resource after earlier failures and then propagates the failure.
 
 For workflow reconciliation, the seven schema suites preserve 75 existing names plus
-one facade regression, the two route suites preserve their 13+8 partition, and the
-twelve Assistant executor suites preserve exactly 73 fully expanded names. The schema
-76 and route 21 are separately count-protected by their owner gates; only the Assistant
+the facade and prototype-safe alias regressions in the exact
+`18+9+10+13+11+5+11` partition, the two route suites preserve their 13+8 partition,
+and the twelve Assistant executor suites preserve exactly 73 fully expanded names. The
+schema 77 and route 21 are separately count-protected by their owner gates; only the Assistant
 Executor's 73 names from this child participate in the protected ten-monolith global
 347-name multiset. After every owner split is reconciled, the family target is exactly
 64 Vitest plus 18 Bun = 82 distinct test files: 81 source-owner/read-only paths and one
@@ -253,17 +255,17 @@ The later historical reopen changed only the stale Assistant block-patch fixture
 canonical `heading.data.text` plus an independent `text.data.content` sibling and
 retained explicit same-block and sibling-block preservation assertions. No production
 or schema fallback was permitted. Its leaf passed the expanded exact gate including
-`tests/unit/assistant/actionExecutorService.test.ts`, and that repair/Done transition is
-historical. The current 2026-07-16 expanded identity/binding-ID correction keeps this
-subtask `🚧 In Progress` with `Implementation Complete`; the leaf's pre-split receipt is
-historical, while the mandatory schema, document-operations, route, and Assistant
-executor source/test/support splits have passed one fresh exact owner gate and now carry
-the canonical `Modularity Repair Revalidated` receipt above. Workflow/final audit and
-closure remain separate.
-TASK-540-04-L03 keeps its canonical historical `Revalidation Passed`; the closure leaf
+`tests/unit/assistant/actionExecutorService.test.ts`, and that pre-split repair/Done
+transition is historical. The current 2026-07-19 stored-read hardening keeps this
+subtask `🚧 In Progress` with canonical `Implementation Complete`; its leaf carries the
+matching exact `Revalidation Passed` generation/token recorded above. The mandatory
+schema, document-operations, route, and Assistant executor splits retain their separate
+canonical `Modularity Repair Revalidated` receipt. The later five-lens audit found no
+new R01 source defect but stopped on other owner/contract findings before full
+validation, smoke, changelog, or closure.
+TASK-540-04-L03 retains its prior canonical `Revalidation Passed`; the closure leaf
 retains the exact deterministic `Revalidation Passed` value `pre-closure remediation /
-fix-started 2026-07-15 / gate green`. That value represents the current
-`reserved-pre-closure-regated` state with every implementation leaf landed and no
-remaining leaf, while all eight source owners carry their canonical modularity receipts.
-The family frontier is TASK-540-06-L01 closure; changelog 1252, full validation, and live
-smoke remain closure-owned.
+fix-started 2026-07-15 / gate green`. The post-audit intervention requires remaining
+L03/L04 findings to reopen and re-gate before that reserved closure state can authorize
+the family frontier. Changelog 1252, full validation, and live smoke remain
+closure-owned.

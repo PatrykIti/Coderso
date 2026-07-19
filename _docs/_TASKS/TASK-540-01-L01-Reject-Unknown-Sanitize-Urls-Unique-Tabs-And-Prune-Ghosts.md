@@ -12,12 +12,13 @@
 **Started:** 2026-07-13
 **Historical Implementation Complete:** 2026-07-14 — original assigned work completed before the later repair cycles.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
-**Current Repair State:** The two verified MEDIUM repairs and three verified test-integrity LOW regressions described below are implemented at the validated HEAD. The separate 2026-07-19 stored-read hardening named in `Fix Reason` is implemented in the current working tree and pending revalidation; every recorded receipt predates it. The recorded `Revalidation Passed` remains historical evidence for the pre-split shape; the final cohesive source/test extraction, exact R01 owner gate, and canonical `Modularity Repair Revalidated` receipt above have now passed. No fresh family post-audit, full validation, smoke, changelog, or closure pass is claimed.
+**Current Repair State:** The two verified MEDIUM repairs and three verified test-integrity LOW regressions described below are implemented at the validated HEAD. The separate 2026-07-19 stored-read hardening named in `Fix Reason` passed the exact R01 owner gate and is represented by the matching `Revalidation Passed` generation/token below. The earlier pre-split receipts remain historical evidence only. The later five-lens family post-audit stopped before full validation and smoke on non-R01 UI/accessibility and cross-contract findings; no changelog or closure pass is claimed.
 **Repair Started:** 2026-07-16
 **Fix Started:** 2026-07-19
 **Fix Reason:** Post-audit reproduced that the stored-read legacy block-type alias map was consulted with a bare index read, so a stored `type` equal to an inherited `Object.prototype` member name resolved to a function and collapsed the whole `editorView` read into the empty fallback. R01 owns the runtime-frozen, own-property-only alias map that keeps all twelve inherited names as unrepaired legacy placeholders with byte-stable `data` and surviving bindings. R01 also removes the duplicated `publish`/`custom` Button rewrite from the read-repair pass so `screenDocumentDataNormalizer.ts` remains the sole owner: write rejects a present non-`link` action, while stored-read coerces it to `link` and drops `href`. No schema is loosened, no compatibility kind is added, and no assertion is weakened.
-**Repair Pending:** generation 28bd5c90c7fd485eabc0c611d5e34752 / token 0237fd1a85b54c7e80e46c0eaac5477d
-**Contract Correction:** 2026-07-19 — the orchestrator independently verified and adopted this execution contract after rejecting the fixer's unauthorized task-prose edits; the exact active repair token remains unchanged and no revalidation receipt is claimed.
+**Implementation Complete:** 2026-07-19 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Revalidation Passed:** generation 28bd5c90c7fd485eabc0c611d5e34752 / token 0237fd1a85b54c7e80e46c0eaac5477d / gate green
+**Contract Correction:** 2026-07-19 — the orchestrator independently verified and adopted this execution contract after rejecting the fixer's unauthorized task-prose edits; the exact repair token remained unchanged through the matching successful `Revalidation Passed` transition.
 **Repair Reason:** The final TASK-540 workflow audits reproduced strict identity drift plus three data-integrity gaps: one malformed stored binding could collapse a whole V4 editor before a metadata-only PATCH; id-less V1/V2/V3 bindings used an ambiguous local slug seed; and the pre-V4 Assistant composer still exposed an optional ID plus the same ambiguous fallback while feeding `custom-screen.upsert`. R01 owns per-binding stored-read rejection with document/sibling preservation, one V4 legacy membership pass, the shared framed-tuple binding-ID builder, and an explicit-ID-only Assistant composer boundary. The registered metadata PATCH proves repaired document persistence; the stored-read duplicate-ID regression keeps uniqueness fail-closed outside the per-item catch.
 **Prior R01 Revalidation:** 2026-07-16 — before the Assistant composer and stored-read duplicate-test findings, HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus the then-three dirty R01 owner paths passed core/root static gates, five-file Vitest 168/168, reachable DB preflight, Custom Screens route plus Assistant executor Bun 92/92 with 568 expectations, isolated route 19/19 with 110, document-op 11/11, and `git diff --check`. This evidence is historical for the expanded contract.
 **Previous Assistant Repair Started:** 2026-07-14
@@ -120,13 +121,13 @@ multiset must remain byte-identical.
 Status authority is phase-aware: before changelog 1252 covers the family, a landed,
 gated source sibling remains `🚧 In Progress` with its `Implementation Complete`
 receipt; after 1252 covers that physical ID, it may be `✅ Done` with `Completed`.
-TASK-540-04-L03 has completed its sole scoped repair and now carries one canonical
-`Revalidation Passed` successor with no `Repair Pending`, while TASK-540-06-L01 remains
-the active closure leaf and is now landed with its one exact pre-closure
-`Revalidation Passed`. R01's recorded `Revalidation Passed` is now historical for the
-pre-split identity/composer/duplicate-proof shape; the completed modularity repair now
-has one fresh exact canonical receipt and did not alter or duplicate the closure leaf's
-persisted gate evidence. `_docs/_workflows/task-540-implement.mjs`
+R01 now carries canonical `Implementation Complete` plus the exact 2026-07-19
+`Revalidation Passed: generation 28bd5c90c7fd485eabc0c611d5e34752 / token
+0237fd1a85b54c7e80e46c0eaac5477d / gate green`; only its earlier pre-split receipts are
+historical. TASK-540-04-L03's prior scoped receipt and TASK-540-06-L01's exact
+pre-closure receipt remain preserved, but the later five-lens intervention requires
+still-evidenced L03/L04 findings to reopen and re-gate before closure. No receipt is
+duplicated or treated as smoke/closure evidence. `_docs/_workflows/task-540-implement.mjs`
 owns this phase-aware restart invariant and exposes `--self-test-repair-siblings` as
 its executable projection.
 
@@ -1629,13 +1630,14 @@ then passed the final 75/75 Vitest and 15/15 DB route gates plus a fresh zero-fi
 post-audit before this leaf returned to Done. That evidence remains historical and is
 not invalidated as schema/source evidence. The later narrow Assistant fixture repair
 also passed the exact schema/image Vitest, Custom Screens route, Assistant Bun, static,
-and diff gates before its then-current repair ownership ended. That repair and its Done
-transition are historical. The current 2026-07-16 R01 correction remains
-`🚧 In Progress` with `Implementation Complete`; its recorded pre-split
-`Revalidation Passed` is historical, while the completed module, schema-test, route-test,
-document-operations, and Assistant splits have passed their exact owner gate and now
-carry the canonical `Modularity Repair Revalidated` receipt. Workflow/final audit and
-closure are not claimed.
+and diff gates before its then-current repair ownership ended. Those pre-split repair
+transitions are historical. The current 2026-07-19 stored-read hardening remains
+`🚧 In Progress` with canonical `Implementation Complete` and the matching exact
+`Revalidation Passed` generation/token recorded above. The earlier module, schema-test,
+route-test, document-operations, and Assistant splits retain their separate canonical
+`Modularity Repair Revalidated` evidence. The later five-lens audit found no new R01
+source defect but stopped on other owner/contract findings before full validation,
+smoke, changelog, or closure.
 TASK-540-04-L03 keeps
 one canonical `Revalidation Passed` successor and no `Repair Pending`; the closure leaf
 remains landed with its exact pre-closure evidence and must not be duplicated. Family

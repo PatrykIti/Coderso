@@ -492,7 +492,7 @@ The ten protected split families must preserve the exact sorted multiset of all 
 fully expanded pre-split test names. Every final suite runs independently, each family
 runs as one combined command, and the before/after name contract must pass; matching
 only a count is insufficient. Outside that 347 total, R01's seven schema suites retain
-their exact 76-name `18+9+10+13+11+5+10` partition and its two route suites retain exact
+their exact 77-name `18+9+10+13+11+5+11` partition and its two route suites retain exact
 13+8 names; the same executable name/body/partition helper protects both auxiliary
 families in R01 and final closure.
 

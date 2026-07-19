@@ -16,7 +16,7 @@
 **Revalidation Passed:** generation 901f3d0de7774955ba401e69e85ddd31 / token 239a28062f734c28a6927f1cc49b5bd9 / gate green
 **Repair Reason:** R01 centralized binding-ID generation in `buildScreenFieldBindingId`; this leaf consumes that domain helper from its existing Inspector binding factory and proves maximum-length tuples stay distinct and bounded. The current repair also restores invalid Tab-label drafts, preserves focus on the same commit-stable input after Enter while using `baseLabel` for stale-draft invalidation, restores the committed value when the host rejects the patch, creates collision-free default labels, clears bindings for every nested block removed with a Tab slot, invalidates stale Image URL drafts, and gives every Inspector select/number control a distinct accessible name. The unbound trigger exposes the named `Not bound` placeholder instead of falling through to an unauthored first option.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
-**Current Repair State:** The historical 33/33 modularity receipt remains truthful pre-current-repair evidence. The current production graph is facade 564, model 209, controls 238, Tabs 214, and Section 80 lines; the two tests are 932 and 443, plus a cohesive 194-line shared Inspector test harness. The current repair uses an 18+18 targeted gate; the exact active metadata receipt above is the sole authority for its gate state, and no family post-audit, smoke, changelog, or closure is claimed.
+**Current Repair State:** The historical 33/33 modularity receipt remains truthful pre-current-repair evidence. The current production graph is facade 564, model 209, controls 238, Tabs 214, and Section 80 lines; the two tests are 974 and 443, plus a cohesive 194-line shared Inspector test harness. The current repair uses a 19+18 targeted gate; the exact active metadata receipt above is the sole authority for its gate state, and no clean family post-audit, smoke, changelog, or closure is claimed.
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -300,8 +300,8 @@ node _docs/_workflows/task-540-implement.mjs --check-screen-tab-label-draft-cont
 node _docs/_workflows/task-540-implement.mjs --check-task-family-line-limit
 ```
 
-Run each Vitest file independently first (18 binding-panel and 18 image-inspector tests),
-then together for 36. Rerun any named failure once in isolation. Count complete
+Run each Vitest file independently first (19 binding-panel and 18 image-inspector tests),
+then together for 37. Rerun any named failure once in isolation. Count complete
 physical files from the family baseline, including both modified test files and the
 shared Inspector harness, blanks/comments, and a final unterminated line; every result
 must be at most 1,000. No route,
@@ -320,7 +320,7 @@ domain-builder consumer and visible invalid-label restore corrections remain int
 The historical modular split passed its then-current 15/15 and 18/18 tests, combined
 33/33, additional consumer 16/16, exact line/export/import checks, and static gates. The
 current focus-preserving, rejected-commit, collision-free-label, nested-binding-GC,
-Image-draft, and accessible-name repair keeps the targeted matrix at 18+18 tests while
+Image-draft, and accessible-name repair keeps the targeted matrix at 19+18 tests while
 moving cohesive mount/interaction helpers into a 194-line support module. The exact
 active metadata receipt above is the sole authority for its gate state.
 TASK-9999-01-L02 is superseded by this active behavior owner; no family post-audit or

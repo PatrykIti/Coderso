@@ -43,7 +43,7 @@ The historical blocker evidence was the TASK-540-02-L01-owned
 SHA-256 `eb49d21a99cd5fbf8dedfd502c727ba890dd455552a8259b9e9b45eb4b11d4df`.
 The completed cohesive split preserves the stable facade and exact reference identity;
 the current production line counts are facade 564, model 209, controls 238, Tabs 214, and
-Section 80. The two owned tests are 932 and 443 lines, with a cohesive 194-line shared
+Section 80. The two owned tests are 974 and 443 lines, with a cohesive 194-line shared
 Inspector test harness. Every original, extracted, test, and support path touched since
 the verified baseline remains in the byte-based
 `{ path, owner, lines, sha256 }` receipt and is `<= 1000`; staging or committing never
@@ -58,8 +58,8 @@ the active TASK-540-02-L01 repair. Removing `baseLabel` would regress visible fo
 stale-draft behavior and is not eligible for deferred LOW treatment.
 
 This leaf lands after TASK-540-01-L01 and before TASK-540-03-L01. Its two behavior
-suites remain independently runnable and now cover 18 binding-panel plus 18
-image-inspector tests (36 total). The family
+suites remain independently runnable and now cover 19 binding-panel plus 18
+image-inspector tests (37 total). The family
 aggregate remains exactly 64 Vitest + 18 Bun = 82 targets, with 81 source-owner/read-only
 files and one closure aggregate; pinned changelog 1252 is unchanged.
 
@@ -130,9 +130,9 @@ normalizer.
 
 The sole leaf remains `🚧 In Progress`; the exact active metadata receipt in the leaf
 contract is the sole authority for its current gate state while canonical `✅ Done` awaits
-family closure. The current graph is 564/209/238/214/80 lines for production, 932/443
-for the tests, and 194 for their cohesive Inspector harness; its targeted matrix is 18
-binding-panel plus 18 image-inspector tests. Historical 33/33 modularity evidence remains
+family closure. The current graph is 564/209/238/214/80 lines for production, 974/443
+for the tests, and 194 for their cohesive Inspector harness; its targeted matrix is 19
+binding-panel plus 18 image-inspector tests (37 total). Historical 33/33 modularity evidence remains
 provenance only. Current focus preservation, stale-draft and rejected-commit restoration,
 collision-free labels, removed-slot binding GC, Image draft invalidation, and distinct
 accessible control names remain owned by this leaf. TASK-9999-01-L02 is superseded, not
