@@ -10,13 +10,15 @@
 **Dependencies:** None inside TASK-540
 **Status:** 🚧 In Progress
 **Started:** 2026-07-13
-**Implementation Complete:** 2026-07-16 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Historical Implementation Complete:** 2026-07-14 — original assigned work completed before the later repair cycles.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
-**Current Repair State:** The two verified MEDIUM repairs and three verified test-integrity LOW regressions described below are implemented in the current dirty tree. The recorded `Revalidation Passed` remains historical evidence for the pre-split shape; the final cohesive source/test extraction, exact R01 owner gate, and canonical `Modularity Repair Revalidated` receipt above have now passed. No fresh family post-audit, full validation, smoke, changelog, or closure pass is claimed.
+**Current Repair State:** The two verified MEDIUM repairs and three verified test-integrity LOW regressions described below are implemented at the validated HEAD. The separate 2026-07-19 stored-read hardening named in `Fix Reason` is implemented in the current working tree and pending revalidation; every recorded receipt predates it. The recorded `Revalidation Passed` remains historical evidence for the pre-split shape; the final cohesive source/test extraction, exact R01 owner gate, and canonical `Modularity Repair Revalidated` receipt above have now passed. No fresh family post-audit, full validation, smoke, changelog, or closure pass is claimed.
 **Repair Started:** 2026-07-16
+**Fix Started:** 2026-07-19
+**Fix Reason:** Post-audit reproduced that the stored-read legacy block-type alias map was consulted with a bare index read, so a stored `type` equal to an inherited `Object.prototype` member name resolved to a function and collapsed the whole `editorView` read into the empty fallback. R01 owns the runtime-frozen, own-property-only alias map that keeps all twelve inherited names as unrepaired legacy placeholders with byte-stable `data` and surviving bindings. R01 also removes the duplicated `publish`/`custom` Button rewrite from the read-repair pass so `screenDocumentDataNormalizer.ts` remains the sole owner: write rejects a present non-`link` action, while stored-read coerces it to `link` and drops `href`. No schema is loosened, no compatibility kind is added, and no assertion is weakened.
+**Repair Pending:** generation 28bd5c90c7fd485eabc0c611d5e34752 / token 0237fd1a85b54c7e80e46c0eaac5477d
+**Contract Correction:** 2026-07-19 — the orchestrator independently verified and adopted this execution contract after rejecting the fixer's unauthorized task-prose edits; the exact active repair token remains unchanged and no revalidation receipt is claimed.
 **Repair Reason:** The final TASK-540 workflow audits reproduced strict identity drift plus three data-integrity gaps: one malformed stored binding could collapse a whole V4 editor before a metadata-only PATCH; id-less V1/V2/V3 bindings used an ambiguous local slug seed; and the pre-V4 Assistant composer still exposed an optional ID plus the same ambiguous fallback while feeding `custom-screen.upsert`. R01 owns per-binding stored-read rejection with document/sibling preservation, one V4 legacy membership pass, the shared framed-tuple binding-ID builder, and an explicit-ID-only Assistant composer boundary. The registered metadata PATCH proves repaired document persistence; the stored-read duplicate-ID regression keeps uniqueness fail-closed outside the per-item catch.
-**Revalidation Passed:** 2026-07-16 — validated against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` with exact dirty R01 owner paths `core/services/assistant/blueprints/blueprintBindingComposer.ts`, `core/services/customScreens/customScreenSchemas.ts`, `tests/vitest/assistant/blueprint-binding-composer.test.ts`, `tests/vitest/admin/custom-screen-schemas.test.ts`, and `tests/integration/routes/customScreensRoutes.test.ts`: core lint/types and root `tsc` passed; the two changed Vitest suites passed 81/81; the exact six-file R01 Vitest gate passed 176/176; DB preflight returned configured/reachable/select-one; Custom Screens route plus Assistant executor Bun passed 93/93 with 576 expectations; isolated route passed 20/20 with 118 expectations; isolated document ops passed 11/11; workflow syntax/self-tests and `git diff --check` passed. No post-audit, full-suite, smoke, changelog, or closure result is claimed. This receipt is pre-modularity-split evidence only and cannot serve as the post-split owner gate.
 **Prior R01 Revalidation:** 2026-07-16 — before the Assistant composer and stored-read duplicate-test findings, HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus the then-three dirty R01 owner paths passed core/root static gates, five-file Vitest 168/168, reachable DB preflight, Custom Screens route plus Assistant executor Bun 92/92 with 568 expectations, isolated route 19/19 with 110, document-op 11/11, and `git diff --check`. This evidence is historical for the expanded contract.
 **Previous Assistant Repair Started:** 2026-07-14
 **Historical Assistant Repair Reason:** Repository-wide Bun validation confirmed that the Assistant Custom Screen block-patch test still constructed unsupported `hero` and `rich-text-section` blocks at the strict V4 write boundary. R01 owned a fixture-only update to canonical fixed kinds and data paths while preserving the selected block's sibling data and the untouched sibling block; production/schema behavior did not loosen.
@@ -148,7 +150,7 @@ fixtures and owned-row cleanup.
 
 ## Current verified audit repair and revalidated receipt
 
-The following five findings are repaired in the current dirty implementation. They
+The following five findings are repaired in the landed implementation. They
 remain part of R01, and the completed post-split gate proved them again from the
 extracted owners. Symbol and test names are authoritative; mutable pre-split line
 numbers are intentionally not used.
@@ -260,13 +262,13 @@ and TASK-9999-01-L01 evidence must be re-anchored to that symbol after extractio
 stale `customScreenSchemas.ts` line number cannot remain authoritative. This is an
 evidence-path update only and does not execute, close, or expand the deferred leaf.
 
-## Completed schema-test split (historical plan; 75 tests preserved + one facade regression)
+## Completed schema-test split (historical plan; 75 tests preserved + two regressions)
 
 At the verified pre-split baseline, the Vitest file contained 3,436 lines. The completed
 repair partitioned it by behavior without weakening or silently omitting an assertion or
-test name. The 75 existing tests remain exact and one new facade regression was added,
+test name. The 75 existing tests remain exact and two focused regressions were added,
 for final cardinality
-`18 + 9 + 10 + 13 + 11 + 5 + 10 = 76`. Shared builders move only to the named fixture
+`18 + 9 + 10 + 13 + 11 + 5 + 11 = 77`. Shared builders move only to the named fixture
 module; every `.test.ts` remains independently runnable in the existing Vitest lane.
 
 | Test owner | Pre-split tests | Count | Result bound |
@@ -277,7 +279,7 @@ module; every `.test.ts` remains independently runnable in the existing Vitest l
 | `custom-screen-section-style-and-binding-gc.test.ts` | current `:1405-1696`; section style and binding-GC/warning behavior | 13 | `<=1000` |
 | `custom-screen-fixed-block-contract.test.ts` | current `:1749-2201`; exact fixed kinds, recursion, bounds, Tabs and local stored repair | 11 | `<=1000` |
 | `custom-screen-binding-contract.test.ts` | current `:2202-2914`; strict/compatibility/stored binding identity and the current repair matrix | 5 | `<=1000` |
-| `custom-screen-stored-read-repair.test.ts` | current `:2915-3436`; Button/Tabs provenance, ghosts, byte identity, Ajv order and media identity | 10 | `<=1000` |
+| `custom-screen-stored-read-repair.test.ts` | current `:2915-3436`; Button/Tabs provenance, ghosts, byte identity, Ajv order, media identity and prototype-safe aliases | 11 | `<=1000` |
 
 `custom-screen-schema-fixtures.ts` owns only `buildV4WithBlocks`,
 `fixedKindDataCases`, and `fixedKindBlock`. It contains no test and no mutable shared
@@ -1093,10 +1095,29 @@ function normalizeImageData(
   });
 }
 
+// The exported legacy alias map is runtime-frozen and consulted by own-property lookup only, so an
+// inherited `Object.prototype` member name can never resolve to a function.
+export const READ_REPAIR_BLOCK_TYPE = Object.freeze({ actions: "button" } as const) satisfies Readonly<
+  Record<string, string>
+>;
+
+const isReadRepairBlockType = (value: string): value is keyof typeof READ_REPAIR_BLOCK_TYPE =>
+  Object.prototype.hasOwnProperty.call(READ_REPAIR_BLOCK_TYPE, value);
+
+// Inside repairLegacyScreenRecordForRead, the alias is resolved through that predicate.
+// A stored `constructor`/`toString`/`hasOwnProperty`/`valueOf` type is NOT an alias: it
+// stays unrepaired and falls through to the neutral legacy placeholder arm.
+const repairedType =
+  typeof node.type === "string" && isReadRepairBlockType(node.type)
+    ? READ_REPAIR_BLOCK_TYPE[node.type]
+    : undefined;
+
 function repairDocumentAndBindingsForRead(rawDocument, rawBindings) {
   // One repair context follows the exact recursive objects that survive Tabs repair.
   // Mark any button/repaired-actions node with an own, present action !== exact "link"
-  // before action/type coercion. Do not flatten the unrepaired raw tree.
+  // before action/type coercion. Do not flatten the unrepaired raw tree. The repair pass
+  // marks provenance and repairs type/Tabs identity only; Button action/href coercion
+  // belongs solely to `normalizeScreenBlockData` and is never duplicated here.
   const context = { unsupportedButtonNodes: new WeakSet<object>() };
   const repaired = repairLegacyScreenRecordForRead(rawDocument, context);
   const document = normalizeRepairedDocumentForRead(repaired);
@@ -1369,6 +1390,17 @@ fields, limits, enums, and URL/action policy.
   key names never enter the error. Zero fields omits `details`.
 - Stored-read repair is deterministic and non-destructive. Unrepairable malformed
   documents continue through the existing fail-closed legacy path.
+- The legacy block-type alias map (`READ_REPAIR_BLOCK_TYPE`, exactly `{ actions: "button" }`)
+  is exported as a runtime-frozen object and resolved by own-property lookup only. A stored
+  `type` equal to any of the twelve own names on `Object.prototype` is not an alias: it reads
+  back as an unrepaired legacy placeholder of that same type with byte-stable `data`, its
+  bindings survive, and it must never resolve to an inherited function that collapses the
+  whole document read into the empty-editor fallback.
+- Button `action`/`href` policy has exactly one owner, `normalizeScreenBlockData` in
+  `screenDocumentDataNormalizer.ts`: write rejects every present non-`link` action, while
+  stored-read coerces it to `link` and drops `href`. The read-repair pass must not restate that
+  policy for any action literal; it only marks unsupported-Button provenance and repairs
+  legacy type/Tabs identity.
 - A non-empty unsafe URL on a write throws `custom_screen_definition_invalid` with the
   exact `.href` or `.src` path before persistence. Only stored-read compatibility may
   omit that URL; it never substitutes an executable fallback. Error details never
@@ -1389,7 +1421,7 @@ fields, limits, enums, and URL/action policy.
 ## Gate regressions owned here; aggregate additions owned by TASK-540-06
 
 - The seven schema partitions named in the split table collectively retain all 75
-  existing tests and add the exact facade regression for 76 total.
+  existing tests and add the facade plus prototype-safe alias regressions for 77 total.
   `custom-screen-fixed-block-contract.test.ts` owns exact schema and
   one unknown-key rejection/valid round-trip for every fixed data kind, including the same rejection
   at root, two-level `children`, and two-level named-slot positions; preserve sections
@@ -1407,7 +1439,12 @@ fields, limits, enums, and URL/action policy.
   reverses traversal order; it must not transfer provenance to a safe Button or preserve
   the generated unsupported Button's bound href. Both results re-read and write-normalize
   deterministically. `custom-screen-stored-read-repair.test.ts` owns the compositional
-  Button/Tabs provenance cases, byte identity, fresh-validator order, and media identity.
+  Button/Tabs provenance cases, byte identity, fresh-validator order, media identity, and
+  the prototype-member alias regression. That regression stores one block for each of the
+  twelve inherited `Object.prototype` names beside a repairable `actions` block in both editor and
+  row documents. It pins the frozen alias-map contract, exact unchanged legacy type/data and
+  binding values, promotion of only `actions` to `button`, serialized input byte identity,
+  deterministic re-read, and strict write/schema rejection of the legacy placeholders.
   Using fresh module instances of the real shared `schemaValidator`, validate valid
   create then update payloads and, in a second fresh instance, update then create; both
   orders must compile and pass, proving there is no duplicate schema-ID registration.

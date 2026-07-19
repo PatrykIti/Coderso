@@ -357,9 +357,9 @@ const families = Object.freeze({
 const auxiliaryFamilies = Object.freeze({
   r01Schema: Object.freeze({
     lane: "vitest",
-    tests: 76,
-    sha256: "f57c7c52c3b827d1801abe138eee209e45d2b64f1ac3902cae21f11c901a13b5",
-    fileTests: Object.freeze([18, 9, 10, 13, 11, 5, 10]),
+    tests: 77,
+    sha256: "021b5bd353cf7cf775ae7a06b1477f6b0c5e6933c64518a6aaa36bbbf3f2ebc2",
+    fileTests: Object.freeze([18, 9, 10, 13, 11, 5, 11]),
     fileNameSha256: Object.freeze([
       "3bc33544c8750ea721ccd30993d5000a2525e6f5096555ec786a8128c5fc9a01",
       "892e8a43828f3730c4681e56c15f561005e2554abdf16bdf8725e901c129fb8e",
@@ -367,10 +367,10 @@ const auxiliaryFamilies = Object.freeze({
       "99fabc38404bc71bbb1687dec945d4ebc5d3b3d95843bfa70e795a79b1677073",
       "1cd5e7af104b451a364a40a3d623040e495ef609a8ea0e6720bfc677f14bc47c",
       "b46512e7ddea5aedb4eb6cac33943ea906fce30f05522f0b589174b8b5694221",
-      "c97fb1dbbb0fd076ec317289109e947c3114b2203090399ddda7d8a5801addbe",
+      "2999367a7d6209104a11564b88cdcdf269040bd2c4913fb07e9baceb6cd5e0a9",
     ]),
-    declarations: 76,
-    declarationSha256: "0b5b011fece7fba19140f00cc1862ef3f40c612b913da9736b33413aea2bda47",
+    declarations: 77,
+    declarationSha256: "b449c23cd2a77a99e14d58fec23cec8a25a45d1c36178d6328b75203957f83c2",
     files: Object.freeze([
       "tests/vitest/admin/custom-screen-schemas.test.ts",
       "tests/vitest/admin/custom-screen-document-contract.test.ts",
@@ -409,7 +409,7 @@ if (
   protectedFamilyEntries.reduce((total, [, family]) => total + family.tests, 0) !== 347 ||
   protectedFamilyEntries.flatMap(([, family]) => family.files).length !== 36 ||
   auxiliaryFamilyEntries.length !== 2 ||
-  auxiliaryFamilyEntries.reduce((total, [, family]) => total + family.tests, 0) !== 97 ||
+  auxiliaryFamilyEntries.reduce((total, [, family]) => total + family.tests, 0) !== 98 ||
   auxiliaryFamilyEntries.flatMap(([, family]) => family.files).length !== 9 ||
   familyFiles.length !== 45 ||
   new Set(familyFiles).size !== familyFiles.length ||

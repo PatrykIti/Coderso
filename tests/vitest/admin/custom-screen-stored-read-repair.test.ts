@@ -17,6 +17,7 @@ import {
   fixedKindBlock,
   fixedKindDataCases,
 } from "./custom-screen-schema-fixtures";
+import { READ_REPAIR_BLOCK_TYPE } from "../../../core/services/customScreens/screenDocumentReadNormalizer";
 
 test("TASK-540-01 legacy unsupported Buttons are independently disabled in editor and row documents", () => {
   const unsupportedBlock = (type: "button" | "actions") => ({
@@ -235,6 +236,111 @@ test("TASK-540-01 generated stored-read Button IDs cannot retain unsupported hre
   ]);
   expect(normalizeCustomScreenDefinitionForRead({ definition: read })).toEqual(read);
   expect(normalizeCustomScreenDefinitionForWrite({ definition: read })).toEqual(read);
+});
+
+test("TASK-540-01 Object.prototype type names never become stored-read aliases", () => {
+  const inheritedTypeNames = [
+    "__defineGetter__",
+    "__defineSetter__",
+    "__lookupGetter__",
+    "__lookupSetter__",
+    "__proto__",
+    "constructor",
+    "hasOwnProperty",
+    "isPrototypeOf",
+    "propertyIsEnumerable",
+    "toLocaleString",
+    "toString",
+    "valueOf",
+  ] as const;
+  const blocksFor = (scope: "editor" | "row") => [
+    ...inheritedTypeNames.map((type, index) => ({
+      id: `${scope}-prototype-${index + 1}`,
+      type,
+      data: { legacyLabel: type },
+    })),
+    {
+      id: `${scope}-legacy-actions`,
+      type: "actions",
+      data: { label: "Legacy", action: "link", href: "/safe", legacyOnly: true },
+    },
+  ];
+  const bindingsFor = (scope: "editor" | "row") =>
+    [
+      {
+        id: `${scope}-prototype-binding`,
+        blockId: `${scope}-prototype-1`,
+        propPath: "legacyLabel",
+        source: "entry",
+        field: "title",
+        mode: "read",
+      },
+    ] satisfies ScreenFieldBinding[];
+  const editorBlocks = blocksFor("editor");
+  const rowBlocks = blocksFor("row");
+  const base = buildV4WithBlocks(editorBlocks);
+  const definition = {
+    ...base,
+    listView: {
+      ...base.listView,
+      rowTemplate: {
+        document: {
+          schemaVersion: 1,
+          sections: [{ id: "row", type: "section", data: {}, blocks: rowBlocks }],
+        },
+        bindings: bindingsFor("row"),
+      },
+    },
+    editorView: { ...base.editorView, bindings: bindingsFor("editor") },
+  };
+  const before = JSON.stringify(definition);
+
+  const read = normalizeCustomScreenDefinitionForRead({ definition });
+
+  expect(Object.getOwnPropertyNames(Object.prototype).sort()).toEqual(
+    [...inheritedTypeNames].sort()
+  );
+  expect(Object.isFrozen(READ_REPAIR_BLOCK_TYPE)).toBe(true);
+  expect(Object.isExtensible(READ_REPAIR_BLOCK_TYPE)).toBe(false);
+  expect(READ_REPAIR_BLOCK_TYPE).toEqual({ actions: "button" });
+  expect(
+    Reflect.set(
+      READ_REPAIR_BLOCK_TYPE as unknown as Record<string, string>,
+      "constructor",
+      "button"
+    )
+  ).toBe(false);
+  expect(JSON.stringify(definition)).toBe(before);
+
+  const repairedViews = [
+    {
+      blocks: read.editorView.document.sections[0]?.blocks ?? [],
+      bindings: read.editorView.bindings,
+      sourceBlocks: editorBlocks,
+      expectedBindings: bindingsFor("editor"),
+    },
+    {
+      blocks: read.listView.rowTemplate?.document.sections[0]?.blocks ?? [],
+      bindings: read.listView.rowTemplate?.bindings ?? [],
+      sourceBlocks: rowBlocks,
+      expectedBindings: bindingsFor("row"),
+    },
+  ];
+  for (const { blocks, bindings, sourceBlocks, expectedBindings } of repairedViews) {
+    expect(blocks.map((block) => block.type)).toEqual([...inheritedTypeNames, "button"]);
+    expect(
+      blocks.slice(0, inheritedTypeNames.length).map((block) => JSON.stringify(block.data))
+    ).toEqual(
+      sourceBlocks.slice(0, inheritedTypeNames.length).map((block) => JSON.stringify(block.data))
+    );
+    expect(blocks.at(-1)?.data).toEqual({ label: "Legacy", action: "link", href: "/safe" });
+    expect(bindings).toEqual(expectedBindings);
+  }
+  expect(normalizeCustomScreenDefinitionForRead({ definition: read })).toEqual(read);
+  expect(() => normalizeCustomScreenDefinitionForWrite({ definition: read })).toThrow(
+    "custom_screen_definition_invalid"
+  );
+  expect(() => validate(customScreenDefinitionSchema, read)).toThrow();
 });
 
 test("TASK-540-01 removed orphan Tabs slots preserve both stored-read documents", () => {

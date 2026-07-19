@@ -36,7 +36,15 @@ import type { ScreenFieldPathSegment } from "./customScreenNormalizationPrimitiv
 // intersected with the button allow-list so the per-kind reject-unknown normalizer cannot throw
 // on a stray legacy `actions` data key — the block reads back usable instead of falling through
 // to the neutral legacy placeholder. Non-`actions` records pass through byte-stable.
-export const READ_REPAIR_BLOCK_TYPE: Record<string, string> = { actions: "button" };
+export const READ_REPAIR_BLOCK_TYPE = Object.freeze({
+  actions: "button",
+} as const) satisfies Readonly<Record<string, string>>;
+
+// Own-property lookup only: a stored `type` equal to an Object.prototype member name
+// (`constructor`, `toString`, ...) must stay an unrepaired legacy placeholder instead of
+// resolving to an inherited function and failing the whole document read.
+const isReadRepairBlockType = (value: string): value is keyof typeof READ_REPAIR_BLOCK_TYPE =>
+  Object.prototype.hasOwnProperty.call(READ_REPAIR_BLOCK_TYPE, value);
 
 export const nextRepairedTabId = (index: number, used: ReadonlySet<string>) => {
   const base = `tab-${index + 1}`;
@@ -162,7 +170,9 @@ export const repairLegacyScreenRecordForRead = (
   const next: Record<string, unknown> = { ...node };
   let changed = false;
   const repairedType =
-    typeof node.type === "string" ? READ_REPAIR_BLOCK_TYPE[node.type] : undefined;
+    typeof node.type === "string" && isReadRepairBlockType(node.type)
+      ? READ_REPAIR_BLOCK_TYPE[node.type]
+      : undefined;
   if (repairedType) {
     next.type = repairedType;
     const allowed = isFixedScreenBlockType(repairedType)
@@ -182,13 +192,6 @@ export const repairLegacyScreenRecordForRead = (
     isRecord(node.data) &&
     Object.prototype.hasOwnProperty.call(node.data, "action") &&
     node.data.action !== "link";
-  if (effectiveType === "button" && isRecord(next.data)) {
-    if (next.data.action === "publish" || next.data.action === "custom") {
-      next.data = { ...next.data, action: "link" };
-      delete (next.data as Record<string, unknown>).href;
-      changed = true;
-    }
-  }
   if (effectiveType === "tabs") {
     const repairedTabs = repairStoredTabsForRead(isRecord(next.data) ? next.data : {}, node.slots);
     if (repairedTabs.repaired) {
