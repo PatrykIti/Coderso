@@ -5290,9 +5290,73 @@ const SITE_VITE_OPTIONS = deepFreezeExact({
 
 The inline `envDir:false` must override both loaded configs so Vite neither loads nor
 watches `.env`/`.env.*`; `configLoader:"native"` prevents bundle-loader temp output.
-The runner validates that the local Vite package matches the checked-in lock before
-spawn and never permits `bunx`, package installation, network resolution, a CLI Vite
-wrapper, or an installed helper.
+The runner validates that the local Vite package and checked-in lock both resolve to
+exactly Vite `8.1.3` before spawn and never permits `bunx`, package installation,
+network resolution, a CLI Vite wrapper, or an installed helper. The exact pin is part of
+the readiness contract because the publication barrier below consumes the typed Vite
+`depsOptimizer` shape and must be re-audited before a Vite upgrade.
+
+Before either Vite child emits its ready marker, it must pass the fail-closed
+`settleViteReadiness(server, readinessUrls, failureCode)` barrier below. For Admin the
+exact ordered URL set is `/main.tsx`, `/app/AdminApp.tsx`,
+`/app/adminRouteComponents.tsx`, and
+`/ui/custom-screens/CustomScreenListPage.tsx`; for Site it is `/main.ts`.
+`server.waitForRequestsIdle()` proves only completion of the static-import crawl; it
+does not by itself prove that the asynchronous dependency scan and optimizer commit
+have published the browser hash and optimized files.
+
+```ts
+async function settleViteReadiness(server, readinessUrls, failureCode) {
+  const optimizer = requireExactVite813ClientOptimizer(server, failureCode);
+  let previousStableMetadata = null;
+
+  for (let round = 0; round < 8; round += 1) {
+    await transformExactNonEmptySet(server, readinessUrls, failureCode);
+    await server.waitForRequestsIdle();
+    await requirePromiseOrAbsent(optimizer.scanProcessing, failureCode);
+
+    const processing = uniquePresentProcessingPromises(
+      requireExactMetadata(optimizer.metadata, failureCode).depInfoList,
+      failureCode,
+    );
+    await Promise.all(processing);
+    await new Promise((resolve) => setImmediate(resolve));
+
+    const metadata = requireExactMetadata(optimizer.metadata, failureCode);
+    const remaining = uniquePresentProcessingPromises(
+      metadata.depInfoList,
+      failureCode,
+    );
+    if (optimizer.scanProcessing !== undefined || remaining.length !== 0) continue;
+
+    const stableMetadata = {
+      identity: metadata,
+      browserHash: metadata.browserHash,
+      depIdentity: exactSortedDepIdentity(metadata.depInfoList),
+    };
+    if (
+      previousStableMetadata !== null &&
+      previousStableMetadata.identity === stableMetadata.identity &&
+      previousStableMetadata.browserHash === stableMetadata.browserHash &&
+      previousStableMetadata.depIdentity === stableMetadata.depIdentity
+    ) {
+      return;
+    }
+    previousStableMetadata = stableMetadata;
+  }
+
+  throw new Error(failureCode);
+}
+```
+
+The helper validates required method/object/array/string shapes without coercion,
+rejects unknown or malformed processing thenables, awaits every unique present
+`OptimizedDepInfo.processing` promise, yields one event-loop turn so optimizer commit
+continuations and module-graph invalidation finish, and requires two consecutive stable
+metadata-identity/hash/dependency observations around fresh exact re-transforms. A
+missing optimizer API, rejected scan/processing promise, malformed metadata, empty/null
+transform, non-convergence, or ready marker emitted while an initial request can still
+receive `504 Outdated Optimize Dep` fails the host contract.
 
 ```ts
 const HOST_CHILD_DESCRIPTORS = deepFreezeExact([
@@ -5371,6 +5435,18 @@ persistent port, and concurrent-cleanup idempotence; and strict unknown-key plus
 recursive-freeze checks for every proof shape. Its trap dependencies throw if
 environment, filesystem, `/proc`, spawn, signal, port, or network capability is invoked,
 and the self-test requires zero such calls.
+
+The self-test also invokes the exact same private `settleViteReadiness` function whose
+`Function.prototype.toString()` bytes are embedded into both Vite child sources; the
+independent complete child-source byte pins remain literal and do not reuse that
+serialization. Controlled deferred promises prove the continuation that writes READY
+has not run before `scanProcessing`, has still not run before every
+`OptimizedDepInfo.processing` publication, and runs exactly once only after the
+event-loop yield and two stable fresh re-transform rounds. The positive cases pin two
+ordered transforms of all four Admin URLs and two transforms of the one Site URL.
+Negatives cover a missing optimizer API, malformed metadata, non-native processing
+thenables, rejected scan and processing promises, null/empty transforms, and eight
+non-convergent rounds; every negative emits zero READY continuations.
 
 The host child receives only the union of the required, optional-present, and fixed host
 contracts above; the browser uses the separate exact private contract and never receives

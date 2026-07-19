@@ -90,6 +90,125 @@ const ALLOWED_ENV_KEYS = Object.freeze([
   ...Object.keys(FIXED_ENV),
 ]);
 
+async function settleViteReadiness(server, readinessUrls, failureCode) {
+  const fail = () => {
+    throw new Error(failureCode);
+  };
+  try {
+    if (
+      (typeof server !== "object" && typeof server !== "function") ||
+      server === null ||
+      typeof server.transformRequest !== "function" ||
+      typeof server.waitForRequestsIdle !== "function" ||
+      !Array.isArray(readinessUrls) ||
+      Object.getPrototypeOf(readinessUrls) !== Array.prototype ||
+      readinessUrls.length === 0 ||
+      new Set(readinessUrls).size !== readinessUrls.length ||
+      readinessUrls.some(
+        (url) => typeof url !== "string" || url.length < 2 || !url.startsWith("/")
+      ) ||
+      typeof failureCode !== "string" ||
+      failureCode.length === 0
+    ) {
+      fail();
+    }
+
+    const optimizer = server.environments?.client?.depsOptimizer;
+    if (!optimizer || typeof optimizer !== "object") fail();
+
+    const inspectMetadata = () => {
+      const metadata = optimizer.metadata;
+      if (
+        !metadata ||
+        typeof metadata !== "object" ||
+        typeof metadata.browserHash !== "string" ||
+        metadata.browserHash.length === 0 ||
+        !Array.isArray(metadata.depInfoList) ||
+        Object.getPrototypeOf(metadata.depInfoList) !== Array.prototype
+      ) {
+        fail();
+      }
+      const ids = new Set();
+      const processing = new Set();
+      const depIdentity = [];
+      for (const dep of metadata.depInfoList) {
+        if (
+          !dep ||
+          typeof dep !== "object" ||
+          typeof dep.id !== "string" ||
+          dep.id.length === 0 ||
+          typeof dep.file !== "string" ||
+          dep.file.length === 0 ||
+          ids.has(dep.id) ||
+          (dep.browserHash !== undefined &&
+            (typeof dep.browserHash !== "string" || dep.browserHash.length === 0)) ||
+          (dep.fileHash !== undefined &&
+            (typeof dep.fileHash !== "string" || dep.fileHash.length === 0))
+        ) {
+          fail();
+        }
+        ids.add(dep.id);
+        if (dep.processing !== undefined) {
+          if (!(dep.processing instanceof Promise)) fail();
+          processing.add(dep.processing);
+        }
+        depIdentity.push([dep.id, dep.file, dep.browserHash ?? null, dep.fileHash ?? null]);
+      }
+      depIdentity.sort((left, right) => {
+        const leftKey = JSON.stringify(left);
+        const rightKey = JSON.stringify(right);
+        return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
+      });
+      return {
+        identity: metadata,
+        browserHash: metadata.browserHash,
+        depIdentity: JSON.stringify(depIdentity),
+        processing: [...processing],
+      };
+    };
+
+    let previousStableMetadata = null;
+    for (let round = 0; round < 8; round += 1) {
+      for (const url of readinessUrls) {
+        const transformed = await server.transformRequest(url);
+        if (!transformed || typeof transformed.code !== "string" || transformed.code.length === 0) {
+          fail();
+        }
+      }
+      await server.waitForRequestsIdle();
+      const scanProcessing = optimizer.scanProcessing;
+      if (scanProcessing !== undefined) {
+        if (!(scanProcessing instanceof Promise)) fail();
+        await scanProcessing;
+      }
+
+      let current = inspectMetadata();
+      await Promise.all(current.processing);
+      await new Promise((resolve) => setImmediate(resolve));
+      current = inspectMetadata();
+      if (optimizer.scanProcessing !== undefined || current.processing.length !== 0) continue;
+      if (
+        previousStableMetadata !== null &&
+        previousStableMetadata.identity === current.identity &&
+        previousStableMetadata.browserHash === current.browserHash &&
+        previousStableMetadata.depIdentity === current.depIdentity
+      ) {
+        return;
+      }
+      previousStableMetadata = current;
+    }
+    fail();
+  } catch {
+    throw new Error(
+      typeof failureCode === "string" && failureCode.length > 0
+        ? failureCode
+        : "vite_readiness_failed"
+    );
+  }
+}
+
+const VITE_READINESS_SOURCE = Function.prototype.toString.call(settleViteReadiness);
+
 const BACKEND_SOURCE = String.raw`import { startHttpServer } from "./server/httpServer";
 const server = startHttpServer({ port: 3000, adminDevUrl: process.env.VITE_DEV_SERVER_URL });
 let stopping = false;
@@ -104,6 +223,7 @@ process.stdout.write("WF540_BACKEND_READY_V1\n");
 await new Promise(() => {});`;
 
 const ADMIN_VITE_SOURCE = String.raw`import { createServer } from "vite";
+${VITE_READINESS_SOURCE}
 const server = await createServer({
   configFile: "./vite.config.ts",
   configLoader: "native",
@@ -113,17 +233,12 @@ const server = await createServer({
   server: { host: "127.0.0.1", port: 5173, strictPort: true, open: false },
 });
 await server.listen();
-for (const url of [
+await settleViteReadiness(server, [
   "/main.tsx",
   "/app/AdminApp.tsx",
   "/app/adminRouteComponents.tsx",
   "/ui/custom-screens/CustomScreenListPage.tsx",
-]) {
-  const transformed = await server.transformRequest(url);
-  if (!transformed || typeof transformed.code !== "string" || transformed.code.length === 0) {
-    throw new Error("admin_vite_readiness_failed");
-  }
-}
+], "admin_vite_readiness_failed");
 let stopping = false;
 const stop = async () => {
   if (stopping) return;
@@ -136,6 +251,7 @@ process.stdout.write("WF540_ADMIN_READY_V1\n");
 await new Promise(() => {});`;
 
 const SITE_VITE_SOURCE = String.raw`import { createServer } from "vite";
+${VITE_READINESS_SOURCE}
 const server = await createServer({
   configFile: "./vite.site.config.ts",
   configLoader: "native",
@@ -145,10 +261,7 @@ const server = await createServer({
   server: { host: "127.0.0.1", port: 5174, strictPort: true, open: false },
 });
 await server.listen();
-const transformed = await server.transformRequest("/main.ts");
-if (!transformed || typeof transformed.code !== "string" || transformed.code.length === 0) {
-  throw new Error("site_vite_readiness_failed");
-}
+await settleViteReadiness(server, ["/main.ts"], "site_vite_readiness_failed");
 let stopping = false;
 const stop = async () => {
   if (stopping) return;
@@ -176,6 +289,122 @@ process.once("SIGINT", stop);
 process.stdout.write("WF540_BACKEND_READY_V1\n");
 await new Promise(() => {});`,
   admin: String.raw`import { createServer } from "vite";
+async function settleViteReadiness(server, readinessUrls, failureCode) {
+  const fail = () => {
+    throw new Error(failureCode);
+  };
+  try {
+    if (
+      (typeof server !== "object" && typeof server !== "function") ||
+      server === null ||
+      typeof server.transformRequest !== "function" ||
+      typeof server.waitForRequestsIdle !== "function" ||
+      !Array.isArray(readinessUrls) ||
+      Object.getPrototypeOf(readinessUrls) !== Array.prototype ||
+      readinessUrls.length === 0 ||
+      new Set(readinessUrls).size !== readinessUrls.length ||
+      readinessUrls.some(
+        (url) => typeof url !== "string" || url.length < 2 || !url.startsWith("/")
+      ) ||
+      typeof failureCode !== "string" ||
+      failureCode.length === 0
+    ) {
+      fail();
+    }
+
+    const optimizer = server.environments?.client?.depsOptimizer;
+    if (!optimizer || typeof optimizer !== "object") fail();
+
+    const inspectMetadata = () => {
+      const metadata = optimizer.metadata;
+      if (
+        !metadata ||
+        typeof metadata !== "object" ||
+        typeof metadata.browserHash !== "string" ||
+        metadata.browserHash.length === 0 ||
+        !Array.isArray(metadata.depInfoList) ||
+        Object.getPrototypeOf(metadata.depInfoList) !== Array.prototype
+      ) {
+        fail();
+      }
+      const ids = new Set();
+      const processing = new Set();
+      const depIdentity = [];
+      for (const dep of metadata.depInfoList) {
+        if (
+          !dep ||
+          typeof dep !== "object" ||
+          typeof dep.id !== "string" ||
+          dep.id.length === 0 ||
+          typeof dep.file !== "string" ||
+          dep.file.length === 0 ||
+          ids.has(dep.id) ||
+          (dep.browserHash !== undefined &&
+            (typeof dep.browserHash !== "string" || dep.browserHash.length === 0)) ||
+          (dep.fileHash !== undefined &&
+            (typeof dep.fileHash !== "string" || dep.fileHash.length === 0))
+        ) {
+          fail();
+        }
+        ids.add(dep.id);
+        if (dep.processing !== undefined) {
+          if (!(dep.processing instanceof Promise)) fail();
+          processing.add(dep.processing);
+        }
+        depIdentity.push([dep.id, dep.file, dep.browserHash ?? null, dep.fileHash ?? null]);
+      }
+      depIdentity.sort((left, right) => {
+        const leftKey = JSON.stringify(left);
+        const rightKey = JSON.stringify(right);
+        return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
+      });
+      return {
+        identity: metadata,
+        browserHash: metadata.browserHash,
+        depIdentity: JSON.stringify(depIdentity),
+        processing: [...processing],
+      };
+    };
+
+    let previousStableMetadata = null;
+    for (let round = 0; round < 8; round += 1) {
+      for (const url of readinessUrls) {
+        const transformed = await server.transformRequest(url);
+        if (!transformed || typeof transformed.code !== "string" || transformed.code.length === 0) {
+          fail();
+        }
+      }
+      await server.waitForRequestsIdle();
+      const scanProcessing = optimizer.scanProcessing;
+      if (scanProcessing !== undefined) {
+        if (!(scanProcessing instanceof Promise)) fail();
+        await scanProcessing;
+      }
+
+      let current = inspectMetadata();
+      await Promise.all(current.processing);
+      await new Promise((resolve) => setImmediate(resolve));
+      current = inspectMetadata();
+      if (optimizer.scanProcessing !== undefined || current.processing.length !== 0) continue;
+      if (
+        previousStableMetadata !== null &&
+        previousStableMetadata.identity === current.identity &&
+        previousStableMetadata.browserHash === current.browserHash &&
+        previousStableMetadata.depIdentity === current.depIdentity
+      ) {
+        return;
+      }
+      previousStableMetadata = current;
+    }
+    fail();
+  } catch {
+    throw new Error(
+      typeof failureCode === "string" && failureCode.length > 0
+        ? failureCode
+        : "vite_readiness_failed"
+    );
+  }
+}
 const server = await createServer({
   configFile: "./vite.config.ts",
   configLoader: "native",
@@ -185,17 +414,12 @@ const server = await createServer({
   server: { host: "127.0.0.1", port: 5173, strictPort: true, open: false },
 });
 await server.listen();
-for (const url of [
+await settleViteReadiness(server, [
   "/main.tsx",
   "/app/AdminApp.tsx",
   "/app/adminRouteComponents.tsx",
   "/ui/custom-screens/CustomScreenListPage.tsx",
-]) {
-  const transformed = await server.transformRequest(url);
-  if (!transformed || typeof transformed.code !== "string" || transformed.code.length === 0) {
-    throw new Error("admin_vite_readiness_failed");
-  }
-}
+], "admin_vite_readiness_failed");
 let stopping = false;
 const stop = async () => {
   if (stopping) return;
@@ -207,6 +431,122 @@ process.once("SIGINT", stop);
 process.stdout.write("WF540_ADMIN_READY_V1\n");
 await new Promise(() => {});`,
   site: String.raw`import { createServer } from "vite";
+async function settleViteReadiness(server, readinessUrls, failureCode) {
+  const fail = () => {
+    throw new Error(failureCode);
+  };
+  try {
+    if (
+      (typeof server !== "object" && typeof server !== "function") ||
+      server === null ||
+      typeof server.transformRequest !== "function" ||
+      typeof server.waitForRequestsIdle !== "function" ||
+      !Array.isArray(readinessUrls) ||
+      Object.getPrototypeOf(readinessUrls) !== Array.prototype ||
+      readinessUrls.length === 0 ||
+      new Set(readinessUrls).size !== readinessUrls.length ||
+      readinessUrls.some(
+        (url) => typeof url !== "string" || url.length < 2 || !url.startsWith("/")
+      ) ||
+      typeof failureCode !== "string" ||
+      failureCode.length === 0
+    ) {
+      fail();
+    }
+
+    const optimizer = server.environments?.client?.depsOptimizer;
+    if (!optimizer || typeof optimizer !== "object") fail();
+
+    const inspectMetadata = () => {
+      const metadata = optimizer.metadata;
+      if (
+        !metadata ||
+        typeof metadata !== "object" ||
+        typeof metadata.browserHash !== "string" ||
+        metadata.browserHash.length === 0 ||
+        !Array.isArray(metadata.depInfoList) ||
+        Object.getPrototypeOf(metadata.depInfoList) !== Array.prototype
+      ) {
+        fail();
+      }
+      const ids = new Set();
+      const processing = new Set();
+      const depIdentity = [];
+      for (const dep of metadata.depInfoList) {
+        if (
+          !dep ||
+          typeof dep !== "object" ||
+          typeof dep.id !== "string" ||
+          dep.id.length === 0 ||
+          typeof dep.file !== "string" ||
+          dep.file.length === 0 ||
+          ids.has(dep.id) ||
+          (dep.browserHash !== undefined &&
+            (typeof dep.browserHash !== "string" || dep.browserHash.length === 0)) ||
+          (dep.fileHash !== undefined &&
+            (typeof dep.fileHash !== "string" || dep.fileHash.length === 0))
+        ) {
+          fail();
+        }
+        ids.add(dep.id);
+        if (dep.processing !== undefined) {
+          if (!(dep.processing instanceof Promise)) fail();
+          processing.add(dep.processing);
+        }
+        depIdentity.push([dep.id, dep.file, dep.browserHash ?? null, dep.fileHash ?? null]);
+      }
+      depIdentity.sort((left, right) => {
+        const leftKey = JSON.stringify(left);
+        const rightKey = JSON.stringify(right);
+        return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
+      });
+      return {
+        identity: metadata,
+        browserHash: metadata.browserHash,
+        depIdentity: JSON.stringify(depIdentity),
+        processing: [...processing],
+      };
+    };
+
+    let previousStableMetadata = null;
+    for (let round = 0; round < 8; round += 1) {
+      for (const url of readinessUrls) {
+        const transformed = await server.transformRequest(url);
+        if (!transformed || typeof transformed.code !== "string" || transformed.code.length === 0) {
+          fail();
+        }
+      }
+      await server.waitForRequestsIdle();
+      const scanProcessing = optimizer.scanProcessing;
+      if (scanProcessing !== undefined) {
+        if (!(scanProcessing instanceof Promise)) fail();
+        await scanProcessing;
+      }
+
+      let current = inspectMetadata();
+      await Promise.all(current.processing);
+      await new Promise((resolve) => setImmediate(resolve));
+      current = inspectMetadata();
+      if (optimizer.scanProcessing !== undefined || current.processing.length !== 0) continue;
+      if (
+        previousStableMetadata !== null &&
+        previousStableMetadata.identity === current.identity &&
+        previousStableMetadata.browserHash === current.browserHash &&
+        previousStableMetadata.depIdentity === current.depIdentity
+      ) {
+        return;
+      }
+      previousStableMetadata = current;
+    }
+    fail();
+  } catch {
+    throw new Error(
+      typeof failureCode === "string" && failureCode.length > 0
+        ? failureCode
+        : "vite_readiness_failed"
+    );
+  }
+}
 const server = await createServer({
   configFile: "./vite.site.config.ts",
   configLoader: "native",
@@ -216,10 +556,7 @@ const server = await createServer({
   server: { host: "127.0.0.1", port: 5174, strictPort: true, open: false },
 });
 await server.listen();
-const transformed = await server.transformRequest("/main.ts");
-if (!transformed || typeof transformed.code !== "string" || transformed.code.length === 0) {
-  throw new Error("site_vite_readiness_failed");
-}
+await settleViteReadiness(server, ["/main.ts"], "site_vite_readiness_failed");
 let stopping = false;
 const stop = async () => {
   if (stopping) return;
@@ -1187,10 +1524,7 @@ async function validateCanonicalRootAndToolchain(root, environment, deps) {
   const vitePackage = parseJsonObject(vitePackageText, "installed Vite package");
   const lock = parseJsonObject(lockText, "Bun lock", { trailingCommas: true });
   invariant(vitePackage.name === "vite", "installed Vite package name drift");
-  invariant(
-    /^8\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$/u.test(vitePackage.version),
-    "installed Vite major/version drift"
-  );
+  invariant(vitePackage.version === "8.1.3", "installed Vite exact version drift");
   invariant(lock.lockfileVersion === 1, "Bun lock version drift");
   invariant(
     rootPackage.devDependencies?.vite === lock.workspaces?.[""]?.devDependencies?.vite,
@@ -1913,7 +2247,12 @@ export async function runTask540SmokeHostSelfTest() {
       ADMIN_VITE_SOURCE.includes('host: "127.0.0.1"') &&
       !ADMIN_VITE_SOURCE.includes('host: "localhost"') &&
       ADMIN_VITE_SOURCE.includes("port: 5173") &&
-      ADMIN_VITE_SOURCE.includes("server.transformRequest(url)"),
+      ADMIN_VITE_SOURCE.includes(VITE_READINESS_SOURCE) &&
+      ADMIN_VITE_SOURCE.includes(
+        'await settleViteReadiness(server, [\n  "/main.tsx",\n  "/app/AdminApp.tsx",\n  "/app/adminRouteComponents.tsx",\n  "/ui/custom-screens/CustomScreenListPage.tsx",\n], "admin_vite_readiness_failed");'
+      ) &&
+      ADMIN_VITE_SOURCE.indexOf("await settleViteReadiness(server, [") <
+        ADMIN_VITE_SOURCE.indexOf('process.stdout.write("WF540_ADMIN_READY_V1\\n")'),
     "Admin Vite source drift"
   );
   invariant(
@@ -1923,9 +2262,203 @@ export async function runTask540SmokeHostSelfTest() {
       SITE_VITE_SOURCE.includes('host: "127.0.0.1"') &&
       !SITE_VITE_SOURCE.includes('host: "localhost"') &&
       SITE_VITE_SOURCE.includes("port: 5174") &&
-      SITE_VITE_SOURCE.includes('server.transformRequest("/main.ts")'),
+      SITE_VITE_SOURCE.includes(VITE_READINESS_SOURCE) &&
+      SITE_VITE_SOURCE.includes(
+        'await settleViteReadiness(server, ["/main.ts"], "site_vite_readiness_failed");'
+      ) &&
+      SITE_VITE_SOURCE.indexOf('await settleViteReadiness(server, ["/main.ts"]') <
+        SITE_VITE_SOURCE.indexOf('process.stdout.write("WF540_SITE_READY_V1\\n")'),
     "site Vite source drift"
   );
+
+  const deferred = () => {
+    let resolve;
+    let reject;
+    const promise = new Promise((resolvePromise, rejectPromise) => {
+      resolve = resolvePromise;
+      reject = rejectPromise;
+    });
+    return { promise, resolve, reject };
+  };
+  const readinessMetadata = (suffix, processing) => ({
+    browserHash: "browser-" + suffix,
+    depInfoList: [
+      {
+        id: "react",
+        file: "/deps/react-" + suffix + ".js",
+        browserHash: "dep-browser-" + suffix,
+        fileHash: "file-" + suffix,
+        ...(processing === undefined ? {} : { processing }),
+      },
+    ],
+  });
+  const stableReadinessServer = (calls, optimizer) => ({
+    environments: { client: { depsOptimizer: optimizer } },
+    async transformRequest(url) {
+      calls.push("transform:" + url);
+      return { code: "export {};" };
+    },
+    async waitForRequestsIdle() {
+      calls.push("idle");
+    },
+  });
+  const rejectedReadinessPromise = (message) => {
+    const promise = Promise.reject(new Error(message));
+    void promise.catch(() => {});
+    return promise;
+  };
+
+  const adminUrls = [
+    "/main.tsx",
+    "/app/AdminApp.tsx",
+    "/app/adminRouteComponents.tsx",
+    "/ui/custom-screens/CustomScreenListPage.tsx",
+  ];
+  const adminCalls = [];
+  const adminScan = deferred();
+  const adminProcessing = deferred();
+  const adminOptimizer = {
+    metadata: readinessMetadata("pending", adminProcessing.promise),
+    scanProcessing: adminScan.promise,
+  };
+  const adminServer = stableReadinessServer(adminCalls, adminOptimizer);
+  let adminReadyContinuations = 0;
+  const adminReadiness = (async () => {
+    await settleViteReadiness(adminServer, adminUrls, "admin_vite_readiness_failed");
+    adminCalls.push("ready");
+    adminReadyContinuations += 1;
+  })();
+  await new Promise((resolve) => setImmediate(resolve));
+  invariant(adminReadyContinuations === 0, "Admin readiness escaped before scan completion");
+  adminCalls.push("scan");
+  adminOptimizer.scanProcessing = undefined;
+  adminScan.resolve();
+  await new Promise((resolve) => setImmediate(resolve));
+  invariant(adminReadyContinuations === 0, "Admin readiness escaped before dependency publication");
+  adminCalls.push("publish");
+  adminOptimizer.metadata = readinessMetadata("stable");
+  adminProcessing.resolve();
+  await adminReadiness;
+  invariant(
+    adminReadyContinuations === 1 &&
+      JSON.stringify(adminCalls) ===
+        JSON.stringify([
+          ...adminUrls.map((url) => "transform:" + url),
+          "idle",
+          "scan",
+          "publish",
+          ...adminUrls.map((url) => "transform:" + url),
+          "idle",
+          "ready",
+        ]),
+    "Admin readiness publication order drift"
+  );
+
+  const siteCalls = [];
+  const siteOptimizer = { metadata: readinessMetadata("site") };
+  const siteServer = stableReadinessServer(siteCalls, siteOptimizer);
+  let siteReadyContinuations = 0;
+  await settleViteReadiness(siteServer, ["/main.ts"], "site_vite_readiness_failed");
+  siteCalls.push("ready");
+  siteReadyContinuations += 1;
+  invariant(
+    siteReadyContinuations === 1 &&
+      JSON.stringify(siteCalls) ===
+        JSON.stringify(["transform:/main.ts", "idle", "transform:/main.ts", "idle", "ready"]),
+    "site readiness stable-transform order drift"
+  );
+
+  const readinessNegatives = [
+    {
+      label: "missing optimizer",
+      server: {
+        environments: { client: {} },
+        async transformRequest() {
+          return { code: "export {};" };
+        },
+        async waitForRequestsIdle() {},
+      },
+    },
+    {
+      label: "malformed metadata",
+      server: stableReadinessServer([], {
+        metadata: { browserHash: "browser-malformed", depInfoList: {} },
+      }),
+    },
+    {
+      label: "non-native processing thenable",
+      server: stableReadinessServer([], {
+        metadata: readinessMetadata("thenable", { then() {} }),
+      }),
+    },
+    {
+      label: "non-native scan thenable",
+      server: stableReadinessServer([], {
+        metadata: readinessMetadata("scan-thenable"),
+        scanProcessing: { then() {} },
+      }),
+    },
+    {
+      label: "rejected scan",
+      server: stableReadinessServer([], {
+        metadata: readinessMetadata("rejected-scan"),
+        scanProcessing: rejectedReadinessPromise("private scan failure"),
+      }),
+    },
+    {
+      label: "rejected processing",
+      server: stableReadinessServer([], {
+        metadata: readinessMetadata(
+          "rejected-processing",
+          rejectedReadinessPromise("private processing failure")
+        ),
+      }),
+    },
+    {
+      label: "null transform",
+      server: {
+        ...stableReadinessServer([], { metadata: readinessMetadata("null-transform") }),
+        async transformRequest() {
+          return null;
+        },
+      },
+    },
+    {
+      label: "empty transform",
+      server: {
+        ...stableReadinessServer([], { metadata: readinessMetadata("empty-transform") }),
+        async transformRequest() {
+          return { code: "" };
+        },
+      },
+    },
+  ];
+  for (const { label, server } of readinessNegatives) {
+    let readyContinuations = 0;
+    await expectAsyncFailure(async () => {
+      await settleViteReadiness(server, ["/main.ts"], "site_vite_readiness_failed");
+      readyContinuations += 1;
+    }, "Vite readiness " + label);
+    invariant(readyContinuations === 0, label + " emitted a READY continuation");
+  }
+  let unstableTransforms = 0;
+  const unstableOptimizer = { metadata: readinessMetadata("unstable-0") };
+  const unstableServer = stableReadinessServer([], unstableOptimizer);
+  unstableServer.transformRequest = async () => {
+    unstableTransforms += 1;
+    unstableOptimizer.metadata = readinessMetadata("unstable-" + unstableTransforms);
+    return { code: "export {};" };
+  };
+  let unstableReadyContinuations = 0;
+  await expectAsyncFailure(async () => {
+    await settleViteReadiness(unstableServer, ["/main.ts"], "site_vite_readiness_failed");
+    unstableReadyContinuations += 1;
+  }, "Vite readiness non-convergence");
+  invariant(
+    unstableTransforms === 8 && unstableReadyContinuations === 0,
+    "Vite readiness non-convergence bound drift"
+  );
+
   let drainData = null;
   const drainState = createBoundedDrain(
     {
@@ -2117,6 +2650,7 @@ export async function runTask540SmokeHostSelfTest() {
     { symlinkRoot: true },
     { missingPath: path.join(root, "node_modules/vite/dist/node/index.js") },
     { lockViteVersion: "8.1.2" },
+    { lockViteVersion: "8.1.4", installedViteVersion: "8.1.4" },
     { installedViteVersion: "9.0.0" },
     { bunUnavailable: true },
     { viteShadow: true },
@@ -2512,6 +3046,8 @@ export async function runTask540SmokeHostSelfTest() {
     shutdownCases: 6,
     stopProofNegativeCases: stopProofNegatives.length,
     descriptorNegativeCases: descriptorNegatives.length,
+    viteReadinessPositiveCases: 2,
+    viteReadinessNegativeCases: readinessNegatives.length + 1,
     injectedServeCases: 9,
     runtimeTrapCalls,
     directEntryCases: 4,
