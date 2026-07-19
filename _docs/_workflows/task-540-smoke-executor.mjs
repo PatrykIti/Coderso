@@ -7804,12 +7804,15 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
       for (const row of rows) {
         if (typeof row.id !== "string") throw new Error("wf540_relation_fixture_id");
         const button = await one(row.selector);
-        const checkbox = button.locator('[role="checkbox"]');
-        if (await checkbox.count() !== 1) throw new Error("wf540_relation_checkbox_count");
-        const ariaChecked = await checkbox.getAttribute("aria-checked");
-        const dataState = await checkbox.getAttribute("data-state");
-        if (ariaChecked !== "true" && ariaChecked !== "false" && dataState !== "checked" && dataState !== "unchecked") throw new Error("wf540_relation_checkbox_state");
-        if (ariaChecked === "true" || dataState === "checked") selected[row.field].push(row.id);
+        const ariaPressed = await button.getAttribute("aria-pressed");
+        if (ariaPressed !== "true" && ariaPressed !== "false") throw new Error("wf540_relation_pressed_state");
+        const indicator = button.locator('[data-relation-selection-indicator="true"][aria-hidden="true"]');
+        if (await indicator.count() !== 1) throw new Error("wf540_relation_indicator_count");
+        const dataState = await indicator.getAttribute("data-state");
+        if (dataState !== "checked" && dataState !== "unchecked") throw new Error("wf540_relation_indicator_state");
+        if ((ariaPressed === "true") !== (dataState === "checked")) throw new Error("wf540_relation_state_mismatch");
+        if (await button.locator('button, [role="checkbox"]').count() !== 0) throw new Error("wf540_relation_nested_control");
+        if (ariaPressed === "true") selected[row.field].push(row.id);
       }
       return selected;
     };
@@ -8302,9 +8305,15 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
       const selected = { relationA: [], relationB: [] };
       for (const [index, row] of rows.entries()) {
         const button = await one(row.selector);
-        const checkbox = button.locator('[role="checkbox"]');
-        if (await checkbox.count() !== 1) throw new Error("wf540_relation_checkbox_count");
-        const checked = (await checkbox.getAttribute("aria-checked")) === "true" || (await checkbox.getAttribute("data-state")) === "checked";
+        const ariaPressed = await button.getAttribute("aria-pressed");
+        if (ariaPressed !== "true" && ariaPressed !== "false") throw new Error("wf540_relation_pressed_state");
+        const indicator = button.locator('[data-relation-selection-indicator="true"][aria-hidden="true"]');
+        if (await indicator.count() !== 1) throw new Error("wf540_relation_indicator_count");
+        const dataState = await indicator.getAttribute("data-state");
+        if (dataState !== "checked" && dataState !== "unchecked") throw new Error("wf540_relation_indicator_state");
+        const checked = ariaPressed === "true";
+        if (checked !== (dataState === "checked")) throw new Error("wf540_relation_state_mismatch");
+        if (await button.locator('button, [role="checkbox"]').count() !== 0) throw new Error("wf540_relation_nested_control");
         if (checked) selected[index < 2 ? "relationA" : "relationB"].push(row.id);
       }
       return selected;

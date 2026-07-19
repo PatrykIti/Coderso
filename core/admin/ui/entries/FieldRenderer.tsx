@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { CheckIcon } from "lucide-react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -59,6 +60,23 @@ type RelationSelectProps = {
   helpText?: string;
   compact?: boolean;
 };
+
+function RelationSelectionIndicator({ selected }: { selected: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      data-relation-selection-indicator="true"
+      data-state={selected ? "checked" : "unchecked"}
+      className={`grid size-4 shrink-0 place-content-center rounded-md border shadow-xs ${
+        selected
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-[var(--admin-input-border)] bg-[var(--admin-input-bg)]"
+      }`}
+    >
+      {selected ? <CheckIcon className="size-3.5" data-relation-selection-check="true" /> : null}
+    </span>
+  );
+}
 
 function RelationSelect({
   targetSlug,
@@ -149,6 +167,7 @@ function RelationSelect({
               <button
                 key={entry.id}
                 type="button"
+                aria-pressed={multiple ? isSelected : undefined}
                 onClick={() => handleToggle(entry.id)}
                 className={`flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition ${
                   isSelected
@@ -160,7 +179,7 @@ function RelationSelect({
                   <p className="text-sm font-medium">{entry.title}</p>
                   <p className="text-xs text-muted-foreground">/{entry.slug}</p>
                 </div>
-                {multiple ? <Checkbox checked={isSelected} aria-label="Select relation" /> : null}
+                {multiple ? <RelationSelectionIndicator selected={isSelected} /> : null}
               </button>
             );
           })

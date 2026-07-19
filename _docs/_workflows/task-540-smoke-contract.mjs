@@ -3443,7 +3443,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "rc-032-diff-proof",
     "p1/0",
     "assert(relation-diff-exact)",
-    "current root-scoped A/B picker checked states + complete current draft against frozen `rc-002` baseline -> A/B/other paths -> only A cleared+B selected and every other existing-path diff reported",
+    "current root-scoped A/B picker pressed states + complete current draft against frozen `rc-002` baseline -> A/B/other paths -> only A cleared+B selected and every other existing-path diff reported",
     "rc-002,rc-030 / hit -> hit",
   ],
   [
