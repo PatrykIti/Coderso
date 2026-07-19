@@ -8094,11 +8094,11 @@ const CUSTOM_SCREEN_PATCH_FIXTURE_REPLACEMENTS = Object.freeze([
 function canonicalizeCustomScreenPatchFixtureSource(source) {
   const startMarker =
     'test("executeAssistantActionPlan patches custom screen block data", async () => {';
-  const endMarker =
-    '\ntest("executeAssistantActionPlan deletes pages through explicit delete actions"';
   const start = source.indexOf(startMarker);
-  const end = source.indexOf(endMarker, start);
-  if (start < 0 || end < 0) {
+  const duplicateStart = source.indexOf(startMarker, start + startMarker.length);
+  const nextTest = source.indexOf("\ntest(", start + startMarker.length);
+  const end = nextTest < 0 ? source.length : nextTest;
+  if (start < 0 || duplicateStart >= 0 || end <= start) {
     throw new Error("TASK-540 assistant action fixture boundary is missing");
   }
   let body = source.slice(start, end);
@@ -10273,7 +10273,7 @@ function assertTask540L03EffectiveRepairOwnerContract() {
   return cases.length;
 }
 
-function assertTask540R01EffectiveRepairOwnerContract() {
+async function assertTask540R01EffectiveRepairOwnerContract() {
   const leaf = LEAF_BY_ID.get("540-01-L01");
   const group = LEAF_STATUS_GROUPS["540-01-L01"];
   if (!leaf || !group) throw new Error("TASK-540 R01 effective repair owner is missing");
@@ -10291,6 +10291,22 @@ function assertTask540R01EffectiveRepairOwnerContract() {
   const namedR01CommandFiles = leaf.commands.flatMap(({ command: value }) =>
     namedTestFilesForCommand(value)
   );
+  const splitFixtureSource = await readFile(
+    ROOT + "/" + ASSISTANT_ACTION_EXECUTOR_FIXTURE_ONLY_PATH,
+    "utf8"
+  );
+  const legacySplitFixtureSource = CUSTOM_SCREEN_PATCH_FIXTURE_REPLACEMENTS.reduce(
+    (source, [legacy, canonical]) => {
+      const canonicalCount = source.split(canonical).length - 1;
+      if (canonicalCount !== 1) return "";
+      return source.replace(canonical, legacy);
+    },
+    splitFixtureSource
+  );
+  const splitFixtureProjectionPass =
+    legacySplitFixtureSource.length > 0 &&
+    canonicalizeCustomScreenPatchFixtureSource(splitFixtureSource) === splitFixtureSource &&
+    canonicalizeCustomScreenPatchFixtureSource(legacySplitFixtureSource) === splitFixtureSource;
   const allWorkflowWritableFiles = LEAVES.flatMap(({ allowedFiles }) => allowedFiles);
   const cases = [
     {
@@ -10348,6 +10364,10 @@ function assertTask540R01EffectiveRepairOwnerContract() {
       pass:
         JSON.stringify(leaf.fixtureOnlyFiles) ===
         JSON.stringify(["tests/unit/assistant/actionExecutorCustomScreens.test.ts"]),
+    },
+    {
+      label: "R01 split Assistant fixture projection supports a final test at EOF",
+      pass: splitFixtureProjectionPass,
     },
     {
       label: "R01 restriction is conditional instead of globally fixture-only",
@@ -23361,7 +23381,7 @@ if (process.argv.includes("--self-test-repair-siblings")) {
     assertTask540ReservedPreClosureRegatedSourceRepairContract();
   const l03RepairCases = assertTask540L03RepairSiblingContract();
   const effectiveRepairOwnerCases = assertTask540L03EffectiveRepairOwnerContract();
-  const r01EffectiveRepairOwnerCases = assertTask540R01EffectiveRepairOwnerContract();
+  const r01EffectiveRepairOwnerCases = await assertTask540R01EffectiveRepairOwnerContract();
   const l04EffectiveRepairOwnerCases = assertTask540L04EffectiveRepairOwnerContract();
   const namedFileIsolationCases = assertTask540L03GateIsolationContract();
   const smokeExecutionOnceCases = await assertTask540SmokeExecutionOnceContract();
