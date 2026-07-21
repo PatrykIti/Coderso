@@ -1107,7 +1107,7 @@ describe("field normalization identity and safe patterns", () => {
     expect(isSafeFormFieldPattern("^[~-\u00a0]+$")).toBe(false);
     expect(isSafeFormFieldPattern("^a+aa+$")).toBe(false);
     expect(isSafeFormFieldPattern("^a+a{2}a+$")).toBe(false);
-    expect(isSafeFormFieldPattern("^(a|aa)+$")).toBe(false);
+    expect(isSafeFormFieldPattern("^(a|a{2})+$")).toBe(false);
     expect(isSafeFormFieldPattern("^a+?a+$")).toBe(false);
     expect(isSafeFormFieldPattern("^(a+|b+)a+$")).toBe(false);
     expect(isSafeFormFieldPattern("^(a+|)a+$")).toBe(false);
