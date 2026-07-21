@@ -9,18 +9,18 @@
 **Dependencies:** TASK-540-01, TASK-540-02
 **Status:** 🚧 In Progress
 **Started:** 2026-07-13
-**Implementation Complete:** 2026-07-19 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
-**Current Selector-Consumer Implementation Evidence:** 2026-07-19 — commit `596ede31d17c65168510baf6b478696e3d345377` removed the renderer-local selector, imported R01's Bun-free owner directly in the leaf renderer, and kept the predicate import on that same owner. This commit is implementation provenance, not a generation/token receipt.
-**Current Selector-Consumer Receipt State:** The leaf's exact R03 owner gate passed on 2026-07-19 after R01 and commit `596ede31d17c65168510baf6b478696e3d345377`. Its current `Revalidation Passed` is the sole active R03 owner-gate receipt and claims no clean family post-audit, full validation, smoke, changelog, or closure result.
+**Implementation Complete:** 2026-07-20 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Historical Selector-Consumer Implementation Evidence:** 2026-07-19 — commit `596ede31d17c65168510baf6b478696e3d345377` removed the renderer-local selector, imported R01's Bun-free owner directly in the leaf renderer, and kept the predicate import on that same owner. This commit remains implementation provenance, not a generation/token receipt.
+**Current Post-Audit Repair State:** The 2026-07-19 selector-consumer receipt became historical when the fresh family post-audit changed R03 source and tests. The selected-block Tabs visibility repair has a fresh exact 89/89 behavior gate and zero-finding focused re-audit. A later repository-wide full-load flake repair assigns the unchanged six-test TASK-496 dead-code guard to this leaf as an auxiliary gate outside the frozen product matrix; its 6/6 gate, sole-writer line check, workflow self-test, and unchanged renderer fingerprints passed. A clean family post-audit, full validation, smoke, changelog, and closure remain pending.
 **Repair Started:** 2026-07-16
 **Repair Reason:** Current final-source revalidation reproduced an accessibility defect in the defensive zero-item Tabs renderer: an empty `tablist` exposed no usable `tab`. TASK-540-03-L01 owns the visible fail-safe empty state and must emit no tablist, tab, or panel when there are zero tabs.
-**Historical Zero-Tab Repair Revalidated:** 2026-07-16 — TASK-540-03-L01 independently passed `core lint:types`, `core lint`, its exact renderer/interaction/image Vitest gate 89/89, and `git diff --check` on the then-final shared source. The 2026-07-19 selector-consumer receipt is the sole current R03 owner authority.
+**Historical Zero-Tab Repair Revalidated:** 2026-07-16 — TASK-540-03-L01 independently passed `core lint:types`, `core lint`, its exact renderer/interaction/image Vitest gate 89/89, and `git diff --check` on the then-final shared source. The later 2026-07-19 selector-consumer receipt is also historical after the current repair changed source and tests.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
 **Post-Audit Fixture Integrity Revalidated:** 2026-07-17 — L01 restored direct compile-time typing for all shared renderer fixtures, corrected the receipt ordering, and passed core/root static checks, the exact dependency-shaped 89/89 gate, unchanged 72-name/67-declaration fingerprints, the family line gate, and `git diff --check`. The required clean family post-audit, repository-wide validation, smoke, changelog, and closure remain pending.
 **Post-Audit Fixture Immutability Revalidated:** 2026-07-17 — L01 restored the prior shallow runtime-freeze depth without reintroducing fixture assertions; the exact 89/89 gate, static/name/line/format/diff checks, and a fresh zero-finding audit passed. The clean family post-audit, repository-wide validation, smoke, changelog, and closure remain pending.
 **Historical Corrective Revalidation:** 2026-07-14 — TASK-540-03-L01 passed the then-current exact 89/89 renderer/interaction/image Vitest matrix, core lint/typecheck, `git diff --check`, and a fresh zero-finding post-audit
-**Fix Started:** 2026-07-14
-**Fix Reason:** TASK-540-03-L01 must pin final Button and Image DOM-sink behavior for ASCII-control-confused URLs after the R01 wrapper correction.
+**Fix Started:** 2026-07-20
+**Fix Reason:** A fresh family post-audit proved that builder selection could remain inside a hidden non-first Tabs panel when no insert point selected that panel. TASK-540-03-L01 must derive the visible builder panel from the selected block as a lower-priority fallback, while an explicit insert point remains authoritative.
 **Prior Corrective Revalidation:** 2026-07-14 — TASK-540-03-L01 passed `core lint:types`, `core lint`, the exact 83/83 renderer/interaction/image Vitest gate, `git diff --check`, and a fresh read-only post-audit with zero findings before the control-character corpus was added
 **Previous Revalidation:** 2026-07-14 — TASK-540-03-L01 passed its exact core static and 83/83 renderer/interaction/image Vitest gate
 **Previous Completion:** 2026-07-14
@@ -40,7 +40,7 @@ authoring controls without swallowing Space or link/input activation.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-540-03-L01 | Functional Tabs and no nested-interactive Space trap | stable renderer facade plus six focused production owners; runtime harness and four independently runnable renderer suites | 🚧 In Progress |
+| TASK-540-03-L01 | Functional Tabs and no nested-interactive Space trap | stable renderer facade plus six focused production owners; runtime harness, four independently runnable renderer suites, and the auxiliary dead-code guard | 🚧 In Progress |
 
 ## Mandatory renderer modularity gate
 
@@ -53,18 +53,26 @@ The completed split owns the stable facade plus `screenRuntimeRendererModel.ts`,
 `useScreenRuntimeInteractions.ts`, `ScreenRuntimeBlockFrame.tsx`,
 `ScreenRuntimeLeafBlocks.tsx`, `ScreenRuntimeContainerBlocks.tsx`, and
 `ScreenRuntimeSectionList.tsx`; the test family owns its stateless harness and exact
-22+13+24+13 suite partition. Their final physical-line counts are respectively
-1/395/188/177/635/420/284 for production and 638/611/798/343/95 for the four suites
+22+13+24+13 suite partition, while the separately gated
+`tests/vitest/ui/editor-surface-dead-code.test.ts` auxiliary guard is 153 lines. Their
+current physical-line counts are respectively
+1/405/190/177/637/420/284 for production and 638/683/798/343/95 for the four suites
 plus harness, so every R03 owner is below its declared budget and the hard maximum.
 
-The owner gate byte-counted every original/extracted/dependency test/support path touched
-since the full verified baseline as `{ path, owner, lines, sha256 }`. The four suites
-passed alone at 22/22, 13/13, 24/24, and 13/13 and together with their two dependencies
-at 89/89 while preserving the exact sorted multiset of all 72 expanded names. Neither
+The owner gate byte-counts every original/extracted/dependency test/support path touched
+since the full verified baseline as `{ path, owner, lines, sha256 }`. Before the current
+post-audit repair, the four suites passed alone at 22/22, 13/13, 24/24, and 13/13 and
+together with their two dependencies at 89/89 while preserving the exact sorted multiset
+of all 72 expanded names. The current repair adds three interaction scenarios to one
+existing declaration and broadens that declaration's protected name, so the required
+partition remains 22/13/24/13, its fingerprint covers 72 names and 67 declarations,
+and the dependency-shaped matrix remains 89/89. Neither
 line drift nor test-name/assertion drift is
 TASK-9999-eligible. This leaf lands after TASK-540-02-L01 and before TASK-540-04-L01;
 the reconciled family matrix remains 64 Vitest + 18 Bun = 82 files (81 source-owner/
-read-only plus one closure aggregate) under pinned changelog 1252.
+read-only plus one closure aggregate) under pinned changelog 1252. The tracked
+TASK-496 dead-code guard is an auxiliary R03 leaf gate and mandatory full-suite test,
+not an added member of that frozen product matrix.
 
 The landed 2026-07-19 post-audit correction added one dependency-ordered consumer step:
 after R01's implementation commit, R03 removed its local `firstMediaAssetUuid` from
@@ -72,11 +80,12 @@ after R01's implementation commit, R03 removed its local `firstMediaAssetUuid` f
 `firstScreenMediaAssetUuid` directly from `screenMediaIdentity.ts`, while the model
 imports the predicate from that same owner. The existing `bound direct image uses the
 first valid UUID in an array and fails closed for malformed, empty, missing, and unsafe
-values` declaration remains the mandatory behavior regression; do not add or rename a test. The four
-R03 partitions and 72-name multiset remain unchanged. The source commit landed before
-L03 consumed the same helper, and the exact 89-test R03 owner gate subsequently passed.
-This paragraph records implementation provenance and focused revalidation, not a clean
-family post-audit or closure result.
+values` declaration remains the mandatory behavior regression. Its 72-name/89-test
+receipt is historical. The 2026-07-20 repair adds a pure selected-block-to-tab-slot
+resolver, validates direct slot membership, and adds three scenarios to the existing
+host-state interaction declaration to prove absent/stale-target fallback visibility and
+valid insert-point precedence. The current name/declaration contract is 72/67
+and the exact dependency-shaped gate remains 89 tests.
 
 ## Acceptance
 
@@ -92,6 +101,10 @@ family post-audit or closure result.
   nested Tab inside a non-first outer panel must therefore keep every ancestor panel
   visible. Builder never consults preview/entry local state; preview and entry modes
   use renderer-instance local state only.
+- When no builder insert point resolves a tab slot, selecting a block inside a Tabs
+  panel reveals the owning panel. A stale direct `slotId` does not suppress this
+  fallback. A valid explicit insert point always outranks a selection located in
+  another panel.
 - Block/section composite roots have no `role=button`, focusability, or blanket
   Enter/Space cancellation. Real authoring selection buttons are siblings of
   interactive content, not ancestors.
@@ -122,7 +135,7 @@ TASK-540-01 normalization, and URL policy is repeated at the final DOM sink.
 Static DOM IDs derive only from validated block/tab IDs. No HTML injection or
 dynamic script is added.
 
-## Corrective repair completed
+## Current corrective repair
 
 The renderer behavior, collision correction, and 83/83 gate remain historical evidence.
 After R01 tightened the shared Screen wrapper, R03 added the final Button/Image
@@ -131,6 +144,10 @@ control-character DOM-sink regressions in its existing renderer test. That histo
 adds the visible accessible zero-item Tabs state. The 2026-07-17 modular split then
 passed the exact independent and combined 89/89 gate, preserved the 72-name fingerprint,
 passed lint/typecheck/diff plus zero-finding code and cross-contract audits, and reduced
-the family gate to 10 blockers. The 2026-07-19 selector-inclusive 89/89 owner receipt is
-now current; full family
-post-audit, live smoke, changelog 1252, and closure remain pending.
+the family gate to 10 blockers. The 2026-07-19 selector-inclusive receipt became
+historical when the 2026-07-20 post-audit repair changed source and tests. The current
+repair passed the 72-name/67-declaration contract, exact 89/89 behavior gate, line gate,
+and focused zero-finding re-audit. The later auxiliary dead-code guard rewrite preserves
+its six assertions while replacing 107 synchronous recursive greps with one source
+index; its independent 6/6 leaf gate does not change the 64+18 closure matrix. Fresh
+family post-audit, live smoke, changelog 1252, and closure remain pending.

@@ -195,16 +195,16 @@ const families = Object.freeze({
   screenRuntime: Object.freeze({
     lane: "vitest",
     tests: 72,
-    sha256: "f35643b91c5b59ebf5e3445535d3e3ba0628782cae860126e2062176f5abfcbb",
+    sha256: "d19082024331559ee4d4bc15c2e3d95917dea67cb12b2b2a8d832421a52b5f02",
     fileTests: Object.freeze([22, 13, 24, 13]),
     fileNameSha256: Object.freeze([
       "549d546341ff0a8cd41def11c022dd83792526214a4b3741c1da50b439aefa49",
-      "016a52df5c08e20b57094acd81e8342303b54ac25a4022e81179d159cd6e941f",
+      "70f94ae4cd0a53442ddfff577f589a55c34051b6ad5db6b7e09738a2e395034b",
       "5d10f961ede7f2d4207e3d744b0bc636f101fa82d46870639ab42cac2c68e023",
       "95d614a88db6711cb115831b4c8425889e94ff9ccf5b20f6b6f7a368e1e127ba",
     ]),
     declarations: 67,
-    declarationSha256: "c48c2596b0f3931bddee7d84c811013c128091aa93d3553f2766e9c5acd6fbaf",
+    declarationSha256: "9333823591499bf77a76bc44fb8ba086f3928231881fa43225c89ba94226e172",
     files: Object.freeze([
       "tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx",
       "tests/vitest/ui-integration/custom-screen-runtime-interactions.test.tsx",

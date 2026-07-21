@@ -2992,28 +2992,28 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "ss-035-log-pages-page-errors",
     "p1/0",
     "logs(per-page,page-errors)",
-    "logger stable -> every page `[]` -> flow 4 clean",
+    "logger stable with inline entry draft dirty -> every page `[]` -> flow 4 logs clean and browser draft remains dirty",
     "ss-034 / absent -> absent",
   ],
   [
     "dg-001-entry-reset",
     "runtime",
     "api(reset-entry-baseline)",
-    "flow 4 clean -> one PATCH -> entry baseline restored",
+    "flow 4 logs clean with browser draft dirty -> one PATCH -> backend entry baseline restored and browser draft remains dirty",
     "ss-035 / absent -> absent",
   ],
   [
     "dg-002-entry-proof",
     "runtime",
     "apiRead(entry-baseline)",
-    "PATCH settled -> exact values -> entry reset proven",
+    "backend PATCH settled with browser draft dirty -> exact values -> backend entry reset proven and browser draft remains dirty",
     "dg-001 / absent -> absent",
   ],
   [
     "dg-003-builder",
     "p1/0",
     "goto(paths.builder)",
-    "reset proven -> URL/canvas -> builder visible",
+    "backend reset proven with browser draft dirty -> exactly one accepted beforeunload plus exact URL/canvas -> builder visible and Playwright dialog listener restored",
     "dg-002 / absent -> absent",
   ],
   [
@@ -3139,14 +3139,14 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "dg-021-tone-open",
     "p1/0",
     "click(S.toneTrigger)",
-    "selected target supports tone -> menu -> tone menu open",
+    "selected target supports tone -> exact selected target and baseline color -> one visible positive-geometry tone menu linked by aria-controls with one visible Muted option",
     "dg-020 / absent -> absent",
   ],
   [
     "dg-022-tone-muted",
     "p1/0",
     "click(S.muted)",
-    "menu open -> selected value -> presentation dirty muted",
+    "owned tone menu open -> selected value and closed menu -> content plus presentation dirty, selection retained, override marker present, and target computed color visibly changed to the muted token",
     "dg-021 / absent -> absent",
   ],
   [
@@ -3461,14 +3461,14 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "rc-015-tone-open",
     "p1/0",
     "click(S.toneTrigger)",
-    "selected field supports tone -> menu -> tone menu open",
+    "selected field supports tone -> exact selected target and baseline color -> one visible positive-geometry tone menu linked by aria-controls with one visible Muted option",
     "rc-014 / absent -> absent",
   ],
   [
     "rc-016-tone-muted",
     "p1/0",
     "click(S.muted)",
-    "menu open -> selected value -> unrelated presentation dirty",
+    "owned tone menu open -> selected value and closed menu -> unrelated content plus presentation dirty, selection retained, override marker present, and target computed color visibly changed to the muted token",
     "rc-015 / absent -> absent",
   ],
   [
@@ -5457,12 +5457,12 @@ function successfulStatusPredicate(path = ["status"]) {
   ]);
 }
 
-function createObservationPredicate(name) {
+function createObservationPredicate(name, canonicalAdminRootUrl) {
   if (name === "bootstrap-auth-identity-settled" || name.startsWith("auth-identity-settled-")) {
     return andPredicate([
+      outputEquals(["url"], canonicalAdminRootUrl),
       outputEquals(["userMenuVisible"], true),
       outputNonEmpty(["userName"]),
-      outputNonEmpty(["url"]),
     ]);
   }
   if (
@@ -7300,7 +7300,7 @@ function createVisibleAssertionRegistry(targets) {
   return deepFreezeExact(registry);
 }
 
-function createObservationRegistry(manifest) {
+function createObservationRegistry(manifest, fixtureBlueprint) {
   const names = [
     ...new Set(
       manifest
@@ -7311,6 +7311,11 @@ function createObservationRegistry(manifest) {
   invariant(
     sameSet(names, Object.keys(OBSERVATION_OUTPUT_FIELDS)),
     "observation registry set drift"
+  );
+  const canonicalAdminRootUrl = fixtureBlueprint.origins.admin + "/admin/";
+  invariant(
+    canonicalAdminRootUrl === "http://coderso-a.localhost:5173/admin/",
+    "canonical Admin root URL drift"
   );
   return deepFreezeExact(
     Object.fromEntries(
@@ -7326,7 +7331,7 @@ function createObservationRegistry(manifest) {
               ])
             )
           ),
-          predicate: createObservationPredicate(name),
+          predicate: createObservationPredicate(name, canonicalAdminRootUrl),
         }),
       ])
     )
@@ -9128,7 +9133,7 @@ function createExecutableRegistries(manifest) {
 }
 
 function createRegistries(manifest, fixtureBlueprint) {
-  const privateObservations = createObservationRegistry(manifest);
+  const privateObservations = createObservationRegistry(manifest, fixtureBlueprint);
   const visibleAssertionTargets = createVisibleAssertionTargetRegistry();
   const privateVisibleAssertions = createVisibleAssertionRegistry(visibleAssertionTargets);
   const privateOutputs = createOutputRegistry(
@@ -9616,6 +9621,14 @@ export function runTask540SmokeContractSelfTest() {
     "self-test runtime capture cardinality"
   );
   invariant(plan.requiredScreenshotPaths.length === 13, "self-test screenshot cardinality");
+  const dirtyFlowHandoff = plan.actionManifest.find(({ id }) => id === "dg-003-builder");
+  invariant(
+    dirtyFlowHandoff?.precondition === "backend reset proven with browser draft dirty" &&
+      dirtyFlowHandoff.captureOutput ===
+        "exactly one accepted beforeunload plus exact URL/canvas" &&
+      dirtyFlowHandoff.postcondition === "builder visible and Playwright dialog listener restored",
+    "self-test dirty-flow beforeunload handoff drift"
+  );
   invariant(
     RAW_VISIBLE_ASSERTION_ROWS.length === 48 &&
       RAW_VISIBLE_ASSERTION_ROWS.every((row) => row.length === 3),
@@ -9642,6 +9655,37 @@ export function runTask540SmokeContractSelfTest() {
     assertionContracts.filter(({ schema }) => schema.properties?.assertion !== undefined).length ===
       48,
     "self-test ordinary assertion OutputContract cardinality"
+  );
+  const canonicalAdminRootUrl = plan.fixtureBlueprint.origins.admin + "/admin/";
+  const expectedAuthObservationPredicate = andPredicate([
+    outputEquals(["url"], canonicalAdminRootUrl),
+    outputEquals(["userMenuVisible"], true),
+    outputNonEmpty(["userName"]),
+  ]);
+  const assertExactAuthObservationPredicate = (predicate, label) => {
+    invariant(
+      JSON.stringify(predicate) === JSON.stringify(expectedAuthObservationPredicate),
+      label + " exact canonical Admin-root predicate drift"
+    );
+  };
+  for (const name of [
+    "bootstrap-auth-identity-settled",
+    "auth-identity-settled-users-a",
+    "auth-identity-settled-users-b",
+  ]) {
+    assertExactAuthObservationPredicate(plan.registries.observations[name].predicate, name);
+  }
+  const missingAuthUrlPredicate = structuredClone(expectedAuthObservationPredicate);
+  missingAuthUrlPredicate.items.shift();
+  negative(
+    () => assertExactAuthObservationPredicate(missingAuthUrlPredicate, "missing URL"),
+    "auth observation missing exact Admin-root URL"
+  );
+  const wrongAuthUrlPredicate = structuredClone(expectedAuthObservationPredicate);
+  wrongAuthUrlPredicate.items[0].right.value = plan.fixtureBlueprint.origins.admin + "/admin";
+  negative(
+    () => assertExactAuthObservationPredicate(wrongAuthUrlPredicate, "wrong URL"),
+    "auth observation wrong canonical Admin-root URL"
   );
   const expectedUnitContract = outputContract({
     grammar: jsonTransport(),

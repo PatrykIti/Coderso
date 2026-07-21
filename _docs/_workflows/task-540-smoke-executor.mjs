@@ -33,6 +33,33 @@ const MAX_NATURAL_KEY_CANDIDATES = 64;
 const MAX_TASK_TRAFFIC_ROWS = 4096;
 const MAX_COMPLETE_SESSION_ROWS = 4096;
 const MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES = 256;
+const PHASE_THREE_CLEANUP_FAILURE_CLASSES = deepFreezeExact([
+  "admin_api_failed",
+  "persistent_plan_failed",
+  "persistent_stage_failed",
+  "persistent_dependency_blocked",
+  "persistent_provenance_failed",
+  "persistent_delete_failed",
+  "persistent_absence_failed",
+]);
+const CLEANUP_FAILURE_CLASSES = deepFreezeExact([
+  ...PHASE_THREE_CLEANUP_FAILURE_CLASSES,
+  "phase_failed",
+  "cleanup_boundary_failed",
+  "construction_cleanup_failed",
+]);
+const CLEANUP_FAILURE_CLASS_PRIORITY = deepFreezeExact([
+  "persistent_plan_failed",
+  "admin_api_failed",
+  "persistent_provenance_failed",
+  "persistent_delete_failed",
+  "persistent_absence_failed",
+  "persistent_stage_failed",
+  "persistent_dependency_blocked",
+  "phase_failed",
+  "construction_cleanup_failed",
+  "cleanup_boundary_failed",
+]);
 const BUN_BRIDGE_EXECUTION_AUTHORITY = deepFreezeExact({
   argvShape: ["--no-env-file", "--cwd", "<canonical-core>", "--eval", "<immutable-source>"],
   cwdShape: { bun: "<canonical-core>", spawn: "<canonical-root>" },
@@ -47,6 +74,58 @@ const HOST_READY_TIMEOUT_MS = 130_000;
 const ORCHESTRATOR_EVIDENCE_RUNNER_VERSION = 1;
 const SESSION_NAME = "wf540smoke";
 const TASK_FAILURE = deepFreezeExact({ code: "task540_smoke_failed" });
+const AUTH_SETTLEMENT_ACTION_IDS = deepFreezeExact([
+  "set-011a-bootstrap-auth-settled",
+  "ru-043a-a-identity-settled",
+  "ru-069a-b-identity-settled",
+  "ru-079a-a2-identity-settled",
+  "ru-093a-b2-identity-settled",
+  "ru-105a-a3-identity-settled",
+]);
+const AUTH_SETTLEMENT_BROWSER_FAILURE_CLASSES = deepFreezeExact([
+  "dom_read_failed",
+  "geometry_absent",
+  "geometry_nonfinite",
+  "geometry_nonpositive",
+  "label_absent",
+  "label_duplicate",
+  "loading_view",
+  "login_route",
+  "menu_absent",
+  "menu_duplicate",
+  "menu_hidden",
+  "name_empty",
+  "name_mismatch",
+  "noncanonical_route",
+  "page_closed",
+  "runtime_failure",
+  "url_unstable",
+]);
+const AUTH_SETTLEMENT_EXECUTOR_FAILURE_CLASSES = deepFreezeExact([
+  "invocation_boundary_failed",
+  "repository_boundary_failed",
+  "process_runner_failed",
+  "process_timeout",
+  "process_exit_failed",
+  "process_stderr_rejected",
+  "process_output_limit",
+  "browser_error_frame",
+  "receipt_boundary_failed",
+  "output_normalization_failed",
+  "success_contract_failed",
+]);
+const AUTH_SETTLEMENT_DIAGNOSTIC_FAILURE_CLASSES = deepFreezeExact([
+  ...AUTH_SETTLEMENT_BROWSER_FAILURE_CLASSES,
+  ...AUTH_SETTLEMENT_EXECUTOR_FAILURE_CLASSES,
+]);
+const AUTH_SETTLEMENT_FAILURE_FRAMES = deepFreezeExact(
+  Object.fromEntries(
+    AUTH_SETTLEMENT_BROWSER_FAILURE_CLASSES.map((failureClass) => [
+      failureClass,
+      canonicalJson({ failureClass, settled: false }) + "\n",
+    ])
+  )
+);
 const PRIVATE_AUTHORITY = new WeakMap();
 const PRIVATE_CAPTURES = new WeakMap();
 const PRIVATE_CORE = new WeakMap();
@@ -63,6 +142,15 @@ const PRIVATE_BUN_RESOURCE_DESCRIPTORS = new WeakMap();
 const PRIVATE_BUN_OPERATION_DESCRIPTORS = new WeakMap();
 const PRIVATE_FAILURE_ACTION_TRACKERS = new WeakMap();
 const PRIVATE_FAILURE_ACTION_DIAGNOSTIC_SINKS = new WeakMap();
+const PRIVATE_CLEANUP_FAILURE_DIAGNOSTICS = new WeakMap();
+const PRIVATE_CLEANUP_OUTCOME_DIAGNOSTICS = new WeakMap();
+const PRIVATE_AUTH_SETTLEMENT_FAILURE_CLASSES = new WeakMap();
+const PRIVATE_AUTH_SETTLEMENT_FAILURE_DETAILS = new WeakMap();
+const PRIVATE_TONE_OPEN_FAILURE_CLASSES = new WeakMap();
+const PRIVATE_TONE_OPEN_FAILURE_DETAILS = new WeakMap();
+const PRIVATE_TONE_SELECT_FAILURE_CLASSES = new WeakMap();
+const PRIVATE_DIRTY_NAVIGATION_FAILURE_CLASSES = new WeakMap();
+const PRIVATE_DIRTY_NAVIGATION_FAILURE_DETAILS = new WeakMap();
 let PRE_AUTHORITY_FAILURE_COUNT = 0;
 const SAFE_IDENTIFIER_PATTERN = /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/u;
 const SAFE_PATH_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/u;
@@ -120,6 +208,180 @@ const RECORDS_WORKSPACE_ACTION_IDS = Object.freeze([
   "ru-049-a-away",
   "ru-054-a-away-again",
 ]);
+const TASK_FIXTURE_ENTRY_SEMANTICS = Object.freeze([
+  "editable-entry",
+  "related-entry-a1",
+  "related-entry-a2",
+  "related-entry-b1",
+  "related-entry-b2",
+  "related-entry-failure1",
+]);
+
+function seoDocumentResourceSemantic(entrySemantic) {
+  invariant(
+    TASK_FIXTURE_ENTRY_SEMANTICS.includes(entrySemantic),
+    "SEO document entry semantic drift"
+  );
+  return "seo-document-entry:" + entrySemantic;
+}
+const DIRTY_NAVIGATION_REQUEST_ACTION_CONFIG = deepFreezeExact({
+  "dg-012-builder-nav-cancel": {
+    dialogDescription: "The Screen document or bindings have local changes.",
+    dialogTitle: "Discard unsaved Screen changes?",
+    realm: "builder",
+  },
+  "dg-015-builder-nav-confirm": {
+    dialogDescription: "The Screen document or bindings have local changes.",
+    dialogTitle: "Discard unsaved Screen changes?",
+    realm: "builder",
+  },
+  "dg-024-entry-nav-cancel": {
+    dialogDescription: "Content or presentation changes have not been saved.",
+    dialogTitle: "Discard unsaved entry changes?",
+    realm: "entry",
+  },
+  "dg-037-entry-nav-confirm": {
+    dialogDescription: "Content or presentation changes have not been saved.",
+    dialogTitle: "Discard unsaved entry changes?",
+    realm: "entry",
+  },
+  "rc-037a-exit-navigation": {
+    dialogDescription: "Content or presentation changes have not been saved.",
+    dialogTitle: "Discard unsaved entry changes?",
+    realm: "entry",
+  },
+});
+const DIRTY_NAVIGATION_REQUEST_ACTION_IDS = Object.freeze(
+  Object.keys(DIRTY_NAVIGATION_REQUEST_ACTION_CONFIG)
+);
+const DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES = deepFreezeExact([
+  "target_bound",
+  "target_duplicate",
+  "target_missing",
+  "source_url",
+  "scroll_locked",
+  "inline_pointer_locked",
+  "computed_pointer_locked",
+  "target_intercepted",
+  "click_failed",
+  "dialog_duplicate",
+  "not_suspended",
+  "dialog_settlement",
+]);
+const DIRTY_NAVIGATION_EXECUTOR_FAILURE_CLASSES = deepFreezeExact([
+  ...AUTH_SETTLEMENT_EXECUTOR_FAILURE_CLASSES,
+]);
+const DIRTY_NAVIGATION_DIAGNOSTIC_FAILURE_CLASSES = deepFreezeExact([
+  ...DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES,
+  ...DIRTY_NAVIGATION_EXECUTOR_FAILURE_CLASSES,
+]);
+const DIRTY_NAVIGATION_FAILURE_FRAMES = deepFreezeExact(
+  Object.fromEntries(
+    DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES.map((failureClass) => [
+      failureClass,
+      canonicalJson({ failureClass, settled: false }) + "\n",
+    ])
+  )
+);
+const DIRTY_NAVIGATION_TARGET_POLL_FAILURE_CLASSES = Object.freeze([
+  "target_missing",
+  "scroll_locked",
+  "inline_pointer_locked",
+  "computed_pointer_locked",
+  "target_intercepted",
+]);
+function resolveDirtyNavigationTargetTimeline(observations) {
+  invariant(Array.isArray(observations), "dirty-navigation target timeline drift");
+  let latest = "target_missing";
+  for (const observation of observations) {
+    invariant(
+      observation === "hittable" ||
+        DIRTY_NAVIGATION_TARGET_POLL_FAILURE_CLASSES.includes(observation),
+      "dirty-navigation target observation drift"
+    );
+    if (observation === "hittable") return "click";
+    latest = observation;
+  }
+  return latest;
+}
+const OPEN_SELECT_CONTENT_SELECTOR = '[data-slot="select-content"][data-state="open"]';
+const ALL_SELECT_CONTENT_SELECTOR = '[data-slot="select-content"]';
+const TONE_MENU_OPEN_ACTION_IDS = Object.freeze(["dg-021-tone-open", "rc-015-tone-open"]);
+const TONE_MUTED_ACTION_IDS = Object.freeze(["dg-022-tone-muted", "rc-016-tone-muted"]);
+const TONE_CONTENT_FILL_ACTION_CONFIG = deepFreezeExact({
+  "dg-020-headline-fill": {
+    expectedDraftKey: "contentDraft",
+    fieldLabel: "Headline",
+    targetBlockKey: "headlineField",
+  },
+  "rc-014-unrelated-fill": {
+    expectedDraftKey: "relatedUnrelatedDraft",
+    fieldLabel: "Unrelated note",
+    targetBlockKey: "spaceNoteField",
+  },
+});
+const TONE_CONTENT_FILL_ACTION_IDS = Object.freeze(Object.keys(TONE_CONTENT_FILL_ACTION_CONFIG));
+const TONE_OPEN_BROWSER_FAILURE_CLASSES = deepFreezeExact([
+  "tone_target_precondition",
+  "tone_draft_dirty_precondition",
+  "tone_trigger_open",
+  "tone_portal_settlement",
+]);
+const TONE_OPEN_FAILURE_FRAMES = deepFreezeExact(
+  Object.fromEntries(
+    TONE_OPEN_BROWSER_FAILURE_CLASSES.map((failureClass) => [
+      failureClass,
+      canonicalJson({ failureClass, settled: false }) + "\n",
+    ])
+  )
+);
+const TONE_SELECT_BROWSER_FAILURE_CLASSES = deepFreezeExact([
+  "tone_select_authority_option_precondition",
+  "tone_select_menu_close",
+  "tone_select_interaction_handoff",
+  "tone_select_dirty_badges",
+  "tone_select_selection_override",
+  "tone_select_muted_class",
+  "tone_select_computed_color_delta",
+]);
+const TONE_SELECT_FAILURE_FRAMES = deepFreezeExact(
+  Object.fromEntries(
+    TONE_SELECT_BROWSER_FAILURE_CLASSES.map((failureClass) => [
+      failureClass,
+      canonicalJson({ failureClass, settled: false }) + "\n",
+    ])
+  )
+);
+const TONE_FLOW_ACTION_CONFIG = deepFreezeExact({
+  "dg-021-tone-open": {
+    expectedDraftKey: "contentDraft",
+    fieldLabel: "Headline",
+    phase: "open",
+    stateKey: "dg-tone-selection-authority",
+    targetBlockKey: "headlineField",
+  },
+  "dg-022-tone-muted": {
+    expectedDraftKey: "contentDraft",
+    fieldLabel: "Headline",
+    phase: "select",
+    stateKey: "dg-tone-selection-authority",
+    targetBlockKey: "headlineField",
+  },
+  "rc-015-tone-open": {
+    expectedDraftKey: "relatedUnrelatedDraft",
+    fieldLabel: "Unrelated note",
+    phase: "open",
+    stateKey: "rc-tone-selection-authority",
+    targetBlockKey: "spaceNoteField",
+  },
+  "rc-016-tone-muted": {
+    expectedDraftKey: "relatedUnrelatedDraft",
+    fieldLabel: "Unrelated note",
+    phase: "select",
+    stateKey: "rc-tone-selection-authority",
+    targetBlockKey: "spaceNoteField",
+  },
+});
 const PRIMARY_RUNTIME_OPERATION_BY_ACTION_ID = deepFreezeExact({
   "set-001-storage-preflight": "fixture-setup",
   "set-002-helper-launch": "host-runner-launch",
@@ -201,6 +463,11 @@ const TERMINAL_RESOURCE_KINDS = new Set([
   "access-log-task-ua",
   "session-task",
 ]);
+const INTENTIONAL_PRESENTATION_OVERRIDE_ABSENCE_ACTIONS = deepFreezeExact({
+  acquisition: "set-040-override-proof",
+  proof: "ss-006-overrides-proof",
+  reset: "ss-005-overrides-reset",
+});
 
 function resourceKindContract({
   className,
@@ -248,6 +515,17 @@ const RESOURCE_KIND_CONTRACTS = deepFreezeExact({
     identifierType: "db-composite",
     identifierArity: 4,
     acquisitions: ADMIN_OR_FAILURE_DB,
+    cleanupAdapterId: "db-exact",
+    absenceAdapterId: "db-exact",
+    phase: { success: 3, failure: 3 },
+    policy: "delete-and-prove-absent",
+    deleteAuthority: true,
+  }),
+  "seo-document-entry": resourceKindContract({
+    className: "delete",
+    identifierType: "seo-document-target",
+    identifierArity: 3,
+    acquisitions: { "cleanup-discovery": "db-exact" },
     cleanupAdapterId: "db-exact",
     absenceAdapterId: "db-exact",
     phase: { success: 3, failure: 3 },
@@ -544,6 +822,11 @@ const RESOURCE_BUN_BRIDGE_PARTICIPATION = deepFreezeExact({
     cleanup: DATABASE_BUN_ONE_SHOT,
     absence: DATABASE_BUN_ONE_SHOT,
   },
+  "seo-document-entry": {
+    provenance: { "cleanup-discovery": DATABASE_BUN_ONE_SHOT },
+    cleanup: DATABASE_BUN_ONE_SHOT,
+    absence: DATABASE_BUN_ONE_SHOT,
+  },
   "setting-user-a": {
     provenance: {
       service: bunParticipation("bound-runtime-bridge", null, "runtime/set-041-preference-a"),
@@ -751,6 +1034,7 @@ function assertResourceBunParticipationExhaustive() {
 const RESOURCE_IDENTIFIER_TYPES = deepFreezeExact({
   "db-id": 1,
   "db-composite": 4,
+  "seo-document-target": 3,
   "media-id-and-storage-key": 2,
   "setting-row": 2,
   "filesystem-path": 1,
@@ -1054,19 +1338,20 @@ function assertExactCleanupTupleSet(actual, resourceKeys, label) {
 function createCleanupActionPlan(records, stage) {
   const priority = {
     "presentation-override": 0,
-    "setting-user-a": 1,
-    "setting-user-b": 2,
-    "screen-main": 3,
-    "screen-retry": 4,
-    "entry-editable": 5,
-    "entry-related": 6,
-    "media-row-key": 7,
-    "content-type": 8,
-    "audit-log-task-ua": 9,
-    "access-log-task-ua": 10,
-    "session-task": 11,
-    "user-a": 12,
-    "user-b": 13,
+    "seo-document-entry": 1,
+    "setting-user-a": 2,
+    "setting-user-b": 3,
+    "screen-main": 4,
+    "screen-retry": 5,
+    "entry-editable": 6,
+    "entry-related": 7,
+    "media-row-key": 8,
+    "content-type": 9,
+    "audit-log-task-ua": 10,
+    "access-log-task-ua": 11,
+    "session-task": 12,
+    "user-a": 13,
+    "user-b": 14,
   };
   const resourceKeys = records
     .filter(
@@ -2663,6 +2948,183 @@ function registerSuccessfulActionResourcesAfterLedgerAppend(state, action, delta
   }
 }
 
+function isPrivateCleanupFailureDiagnostic(value) {
+  try {
+    if (
+      value === null ||
+      typeof value !== "object" ||
+      Object.getPrototypeOf(value) !== Object.prototype ||
+      !Object.isFrozen(value) ||
+      !deepEqualJson(Object.keys(value).sort(), ["cleanupFailureClass", "cleanupPhase"])
+    ) {
+      return false;
+    }
+    const { cleanupFailureClass, cleanupPhase } = value;
+    if (
+      !Number.isSafeInteger(cleanupPhase) ||
+      cleanupPhase < 0 ||
+      cleanupPhase > 10 ||
+      !CLEANUP_FAILURE_CLASSES.includes(cleanupFailureClass)
+    ) {
+      return false;
+    }
+    if (cleanupPhase === 0) {
+      return ["cleanup_boundary_failed", "construction_cleanup_failed"].includes(
+        cleanupFailureClass
+      );
+    }
+    if (cleanupFailureClass === "phase_failed") return true;
+    return cleanupPhase === 3 && PHASE_THREE_CLEANUP_FAILURE_CLASSES.includes(cleanupFailureClass);
+  } catch {
+    return false;
+  }
+}
+
+function createPrivateCleanupFailureDiagnostic(cleanupPhase, cleanupFailureClass) {
+  const diagnostic = deepFreezeExact({ cleanupPhase, cleanupFailureClass });
+  invariant(
+    isPrivateCleanupFailureDiagnostic(diagnostic),
+    "private cleanup failure diagnostic is invalid"
+  );
+  return diagnostic;
+}
+
+function privateCleanupFailureDiagnosticNeverThrow(cause) {
+  try {
+    const diagnostic = PRIVATE_CLEANUP_FAILURE_DIAGNOSTICS.get(cause);
+    return isPrivateCleanupFailureDiagnostic(diagnostic) ? diagnostic : null;
+  } catch {
+    return null;
+  }
+}
+
+function retainPrivateCleanupFailureDiagnosticNeverThrow(cause, cleanupPhase, cleanupFailureClass) {
+  try {
+    const failure =
+      (typeof cause === "object" && cause !== null) || typeof cause === "function"
+        ? cause
+        : new Error("TASK-540 cleanup failed");
+    const existing = privateCleanupFailureDiagnosticNeverThrow(failure);
+    if (existing === null) {
+      PRIVATE_CLEANUP_FAILURE_DIAGNOSTICS.set(
+        failure,
+        createPrivateCleanupFailureDiagnostic(cleanupPhase, cleanupFailureClass)
+      );
+    }
+    return failure;
+  } catch {
+    const failure = new Error("TASK-540 cleanup failed");
+    PRIVATE_CLEANUP_FAILURE_DIAGNOSTICS.set(
+      failure,
+      createPrivateCleanupFailureDiagnostic(0, "cleanup_boundary_failed")
+    );
+    return failure;
+  }
+}
+
+function selectPrivateCleanupFailureDiagnosticNeverThrow(failures, fallbackPhase = null) {
+  try {
+    const diagnostics = Array.isArray(failures)
+      ? failures
+          .map((failure) => privateCleanupFailureDiagnosticNeverThrow(failure))
+          .filter((diagnostic) => diagnostic !== null)
+      : [];
+    if (diagnostics.length === 0) {
+      return fallbackPhase === null
+        ? null
+        : createPrivateCleanupFailureDiagnostic(
+            fallbackPhase,
+            fallbackPhase === 0 ? "cleanup_boundary_failed" : "phase_failed"
+          );
+    }
+    diagnostics.sort((left, right) => {
+      const phaseOrder = left.cleanupPhase - right.cleanupPhase;
+      if (phaseOrder !== 0) return phaseOrder;
+      return (
+        CLEANUP_FAILURE_CLASS_PRIORITY.indexOf(left.cleanupFailureClass) -
+        CLEANUP_FAILURE_CLASS_PRIORITY.indexOf(right.cleanupFailureClass)
+      );
+    });
+    return diagnostics[0];
+  } catch {
+    return fallbackPhase === null
+      ? null
+      : createPrivateCleanupFailureDiagnostic(
+          fallbackPhase,
+          fallbackPhase === 0 ? "cleanup_boundary_failed" : "phase_failed"
+        );
+  }
+}
+
+function retainPrivateCleanupAggregateDiagnosticNeverThrow(error, failures, fallbackPhase) {
+  const diagnostic = selectPrivateCleanupFailureDiagnosticNeverThrow(failures, fallbackPhase);
+  return retainPrivateCleanupFailureDiagnosticNeverThrow(
+    error,
+    diagnostic.cleanupPhase,
+    diagnostic.cleanupFailureClass
+  );
+}
+
+function retainPrivateCleanupOutcomeDiagnosticNeverThrow(outcome, diagnostic) {
+  try {
+    if (!isPrivateCleanupFailureDiagnostic(diagnostic)) return false;
+    PRIVATE_CLEANUP_OUTCOME_DIAGNOSTICS.set(outcome, diagnostic);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function privateCleanupOutcomeDiagnosticNeverThrow(outcome) {
+  try {
+    const diagnostic = PRIVATE_CLEANUP_OUTCOME_DIAGNOSTICS.get(outcome);
+    return isPrivateCleanupFailureDiagnostic(diagnostic) ? diagnostic : null;
+  } catch {
+    return null;
+  }
+}
+
+function retainPrivateConstructionCleanupDiagnosticNeverThrow(
+  state,
+  outcome,
+  fallbackFailureClass
+) {
+  try {
+    if (isPrivateCleanupFailureDiagnostic(state.cleanupDiagnostic)) return true;
+    const outcomeDiagnostic = privateCleanupOutcomeDiagnosticNeverThrow(outcome);
+    if (outcomeDiagnostic !== null) {
+      state.cleanupDiagnostic = outcomeDiagnostic;
+      return true;
+    }
+    if (outcome?.absenceProven !== false) return false;
+    state.cleanupDiagnostic = createPrivateCleanupFailureDiagnostic(0, fallbackFailureClass);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function retainPrivateConstructionCleanupCauseNeverThrow(state, cause, fallbackFailureClass) {
+  try {
+    if (isPrivateCleanupFailureDiagnostic(state.cleanupDiagnostic)) return true;
+    state.cleanupDiagnostic =
+      privateCleanupFailureDiagnosticNeverThrow(cause) ??
+      createPrivateCleanupFailureDiagnostic(0, fallbackFailureClass);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function currentPrivateConstructionCleanupDiagnosticNeverThrow(authority) {
+  try {
+    const diagnostic = PRIVATE_CONSTRUCTION_AUTHORITY.get(authority)?.cleanupDiagnostic;
+    return isPrivateCleanupFailureDiagnostic(diagnostic) ? diagnostic : null;
+  } catch {
+    return null;
+  }
+}
+
 class PrivateConstructionCleanupAuthority {
   constructor() {
     PRIVATE_CONSTRUCTION_AUTHORITY.set(this, {
@@ -2672,6 +3134,7 @@ class PrivateConstructionCleanupAuthority {
       cleanupPromise: null,
       cleanupRequest: null,
       cleanupCalls: 0,
+      cleanupDiagnostic: null,
       failures: [],
     });
   }
@@ -2704,20 +3167,32 @@ class PrivateConstructionCleanupAuthority {
     if (state.cleanupPromise === null) {
       state.cleanupRequest = request;
       state.cleanupPromise = (async () => {
+        const fallbackFailureClass =
+          state.capabilities === null ? "construction_cleanup_failed" : "cleanup_boundary_failed";
         try {
+          let outcome;
           if (state.capabilities !== null) {
-            return await state.capabilities.cleanup(request);
-          }
-          if (state.capabilityState !== null) {
-            return await cleanupConstructionStateOnce(state.capabilityState, request);
-          }
-          if (state.workspaceLedger !== null) {
+            outcome = await state.capabilities.cleanup(request);
+          } else if (state.capabilityState !== null) {
+            outcome = await cleanupConstructionStateOnce(state.capabilityState, request);
+          } else if (state.workspaceLedger !== null) {
             await removePrivateWorkspaceLedger(state.workspaceLedger);
+            outcome = deepFreezeExact({ absenceProven: true, lifecycle: null });
+          } else {
+            outcome = deepFreezeExact({ absenceProven: true, lifecycle: null });
           }
-          return deepFreezeExact({ absenceProven: true, lifecycle: null });
+          retainPrivateConstructionCleanupDiagnosticNeverThrow(
+            state,
+            outcome,
+            fallbackFailureClass
+          );
+          return outcome;
         } catch (error) {
           state.failures.push(error);
-          return deepFreezeExact({ absenceProven: false, lifecycle: null });
+          retainPrivateConstructionCleanupCauseNeverThrow(state, error, fallbackFailureClass);
+          const outcome = deepFreezeExact({ absenceProven: false, lifecycle: null });
+          retainPrivateCleanupOutcomeDiagnosticNeverThrow(outcome, state.cleanupDiagnostic);
+          return outcome;
         }
       })();
     }
@@ -3476,6 +3951,246 @@ function assertRecursivelyFrozen(value, seen = new WeakSet()) {
   for (const key of Reflect.ownKeys(value)) assertRecursivelyFrozen(value[key], seen);
 }
 
+function createPrivateAuthSettlementFailure(failureClass, privateDetails = null) {
+  invariant(
+    AUTH_SETTLEMENT_DIAGNOSTIC_FAILURE_CLASSES.includes(failureClass),
+    "auth settlement failure class is invalid"
+  );
+  const failure = new Error("TASK-540 auth settlement failed");
+  PRIVATE_AUTH_SETTLEMENT_FAILURE_CLASSES.set(failure, failureClass);
+  if (privateDetails !== null) {
+    PRIVATE_AUTH_SETTLEMENT_FAILURE_DETAILS.set(failure, privateDetails);
+  }
+  return failure;
+}
+
+function failPrivateAuthSettlementStage(action, failureClass, privateDetails, fallbackMessage) {
+  invariant(
+    typeof fallbackMessage === "string" && fallbackMessage.length > 0,
+    "auth settlement fallback message is invalid"
+  );
+  if (AUTH_SETTLEMENT_ACTION_IDS.includes(action?.id)) {
+    throw createPrivateAuthSettlementFailure(failureClass, privateDetails);
+  }
+  if (
+    DIRTY_NAVIGATION_REQUEST_ACTION_IDS.includes(action?.id) &&
+    DIRTY_NAVIGATION_EXECUTOR_FAILURE_CLASSES.includes(failureClass)
+  ) {
+    throw createPrivateDirtyNavigationFailure(failureClass, privateDetails);
+  }
+  throw new Error(fallbackMessage);
+}
+
+function classifyPrivateAuthSettlementFailureFrame(actionId, bytes) {
+  if (
+    !AUTH_SETTLEMENT_ACTION_IDS.includes(actionId) ||
+    !Buffer.isBuffer(bytes) ||
+    bytes.length > MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES
+  ) {
+    return null;
+  }
+  for (const failureClass of AUTH_SETTLEMENT_BROWSER_FAILURE_CLASSES) {
+    if (bytes.equals(Buffer.from(AUTH_SETTLEMENT_FAILURE_FRAMES[failureClass], "utf8"))) {
+      return failureClass;
+    }
+  }
+  return null;
+}
+
+function createPrivateToneOpenFailure(failureClass, privateDetails = null) {
+  invariant(
+    TONE_OPEN_BROWSER_FAILURE_CLASSES.includes(failureClass),
+    "tone-open failure class is invalid"
+  );
+  const failure = new Error("TASK-540 tone-open settlement failed");
+  PRIVATE_TONE_OPEN_FAILURE_CLASSES.set(failure, failureClass);
+  if (privateDetails !== null) {
+    PRIVATE_TONE_OPEN_FAILURE_DETAILS.set(failure, privateDetails);
+  }
+  return failure;
+}
+
+function classifyPrivateToneOpenFailureFrame(actionId, bytes) {
+  if (
+    !TONE_MENU_OPEN_ACTION_IDS.includes(actionId) ||
+    !Buffer.isBuffer(bytes) ||
+    bytes.length > MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES
+  ) {
+    return null;
+  }
+  for (const failureClass of TONE_OPEN_BROWSER_FAILURE_CLASSES) {
+    if (bytes.equals(Buffer.from(TONE_OPEN_FAILURE_FRAMES[failureClass], "utf8"))) {
+      return failureClass;
+    }
+  }
+  return null;
+}
+
+function createPrivateToneSelectFailure(failureClass) {
+  invariant(
+    TONE_SELECT_BROWSER_FAILURE_CLASSES.includes(failureClass),
+    "tone-select failure class is invalid"
+  );
+  const failure = new Error("TASK-540 tone-select settlement failed");
+  PRIVATE_TONE_SELECT_FAILURE_CLASSES.set(failure, failureClass);
+  return failure;
+}
+
+function classifyPrivateToneSelectFailureFrame(actionId, bytes) {
+  if (
+    !TONE_MUTED_ACTION_IDS.includes(actionId) ||
+    !Buffer.isBuffer(bytes) ||
+    bytes.length > MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES
+  ) {
+    return null;
+  }
+  for (const failureClass of TONE_SELECT_BROWSER_FAILURE_CLASSES) {
+    if (bytes.equals(Buffer.from(TONE_SELECT_FAILURE_FRAMES[failureClass], "utf8"))) {
+      return failureClass;
+    }
+  }
+  return null;
+}
+
+function createPrivateDirtyNavigationFailure(failureClass, privateDetails = null) {
+  invariant(
+    DIRTY_NAVIGATION_DIAGNOSTIC_FAILURE_CLASSES.includes(failureClass),
+    "dirty-navigation failure class is invalid"
+  );
+  const failure = new Error("TASK-540 dirty-navigation settlement failed");
+  PRIVATE_DIRTY_NAVIGATION_FAILURE_CLASSES.set(failure, failureClass);
+  if (privateDetails !== null) {
+    PRIVATE_DIRTY_NAVIGATION_FAILURE_DETAILS.set(failure, privateDetails);
+  }
+  return failure;
+}
+
+function classifyPrivateDirtyNavigationFailureFrame(actionId, bytes) {
+  if (
+    !DIRTY_NAVIGATION_REQUEST_ACTION_IDS.includes(actionId) ||
+    !Buffer.isBuffer(bytes) ||
+    bytes.length > MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES
+  ) {
+    return null;
+  }
+  for (const failureClass of DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES) {
+    if (bytes.equals(Buffer.from(DIRTY_NAVIGATION_FAILURE_FRAMES[failureClass], "utf8"))) {
+      return failureClass;
+    }
+  }
+  return null;
+}
+
+function isExactAuthSettlementSuccessFrame(action, normalizedBytes) {
+  if (!AUTH_SETTLEMENT_ACTION_IDS.includes(action?.id) || !Buffer.isBuffer(normalizedBytes)) {
+    return false;
+  }
+  try {
+    const text = decodeExactNativeUtf8(normalizedBytes, "auth settlement success frame");
+    if (
+      !text.endsWith("\n") ||
+      text.length <= 1 ||
+      text.slice(0, -1).includes("\n") ||
+      text.slice(0, -1).includes("\r") ||
+      text.includes("\0")
+    ) {
+      return false;
+    }
+    const body = text.slice(0, -1);
+    const value = JSON.parse(body);
+    if (
+      value === null ||
+      typeof value !== "object" ||
+      Array.isArray(value) ||
+      Object.getPrototypeOf(value) !== Object.prototype ||
+      !deepEqualJson(Object.keys(value), ["url", "userMenuVisible", "userName"])
+    ) {
+      return false;
+    }
+    return (
+      canonicalJson(value) === body &&
+      typeof value.url === "string" &&
+      typeof value.userMenuVisible === "boolean" &&
+      typeof value.userName === "string"
+    );
+  } catch {
+    return false;
+  }
+}
+
+function buildPrivateBrowserInvocationWithAuthSettlementBoundary(action, buildInvocation) {
+  try {
+    return buildInvocation();
+  } catch (cause) {
+    failPrivateAuthSettlementStage(
+      action,
+      "invocation_boundary_failed",
+      { cause },
+      "browser invocation failed"
+    );
+  }
+}
+
+async function normalizePrivateBrowserOutputWithAuthSettlementBoundary(
+  action,
+  commandResult,
+  normalizeOutput
+) {
+  try {
+    return await normalizeOutput();
+  } catch (cause) {
+    failPrivateAuthSettlementStage(
+      action,
+      "output_normalization_failed",
+      { cause, commandResult },
+      "browser output normalization failed"
+    );
+  }
+}
+
+function parsePrivateBrowserSuccessWithAuthSettlementBoundary(
+  action,
+  commandResult,
+  normalizedBytes,
+  parseOutput
+) {
+  const successContractEligible = isExactAuthSettlementSuccessFrame(action, normalizedBytes);
+  try {
+    return parseOutput();
+  } catch (cause) {
+    if (successContractEligible) {
+      failPrivateAuthSettlementStage(
+        action,
+        "success_contract_failed",
+        { cause, commandResult },
+        "browser success contract failed"
+      );
+    }
+    throw cause;
+  }
+}
+
+function finalizePrivateBrowserResultWithAuthSettlementBoundary(
+  action,
+  executable,
+  plan,
+  commandResult,
+  buildResult
+) {
+  try {
+    const result = buildResult();
+    validateCapabilityResult(result, action, executable, plan);
+    return result;
+  } catch (cause) {
+    failPrivateAuthSettlementStage(
+      action,
+      "receipt_boundary_failed",
+      { cause, commandResult },
+      "browser result boundary failed"
+    );
+  }
+}
+
 function createPrivateFailureActionTracker(plan) {
   assertRecursivelyFrozen(plan);
   invariant(
@@ -3501,6 +4216,7 @@ function createPrivateFailureActionTracker(plan) {
     actionManifest: plan.actionManifest,
     actionById,
     currentActionId: null,
+    failureClass: null,
     nextIndex: 0,
     sealed: false,
   });
@@ -3522,12 +4238,97 @@ function beginPrivateFailureAction(tracker, action) {
   state.currentActionId = action.id;
 }
 
+function retainPrivateAuthSettlementFailureClassNeverThrow(tracker, cause) {
+  try {
+    const state = PRIVATE_FAILURE_ACTION_TRACKERS.get(tracker);
+    const failureClass = PRIVATE_AUTH_SETTLEMENT_FAILURE_CLASSES.get(cause);
+    if (
+      state === undefined ||
+      state.sealed !== false ||
+      typeof state.currentActionId !== "string" ||
+      state.failureClass !== null ||
+      !AUTH_SETTLEMENT_ACTION_IDS.includes(state.currentActionId) ||
+      !AUTH_SETTLEMENT_DIAGNOSTIC_FAILURE_CLASSES.includes(failureClass)
+    ) {
+      return false;
+    }
+    state.failureClass = failureClass;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function retainPrivateToneOpenFailureClassNeverThrow(tracker, cause) {
+  try {
+    const state = PRIVATE_FAILURE_ACTION_TRACKERS.get(tracker);
+    const failureClass = PRIVATE_TONE_OPEN_FAILURE_CLASSES.get(cause);
+    if (
+      state === undefined ||
+      state.sealed !== false ||
+      typeof state.currentActionId !== "string" ||
+      state.failureClass !== null ||
+      !TONE_MENU_OPEN_ACTION_IDS.includes(state.currentActionId) ||
+      !TONE_OPEN_BROWSER_FAILURE_CLASSES.includes(failureClass)
+    ) {
+      return false;
+    }
+    state.failureClass = failureClass;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function retainPrivateToneSelectFailureClassNeverThrow(tracker, cause) {
+  try {
+    const state = PRIVATE_FAILURE_ACTION_TRACKERS.get(tracker);
+    const failureClass = PRIVATE_TONE_SELECT_FAILURE_CLASSES.get(cause);
+    if (
+      state === undefined ||
+      state.sealed !== false ||
+      typeof state.currentActionId !== "string" ||
+      state.failureClass !== null ||
+      !TONE_MUTED_ACTION_IDS.includes(state.currentActionId) ||
+      !TONE_SELECT_BROWSER_FAILURE_CLASSES.includes(failureClass)
+    ) {
+      return false;
+    }
+    state.failureClass = failureClass;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function retainPrivateDirtyNavigationFailureClassNeverThrow(tracker, cause) {
+  try {
+    const state = PRIVATE_FAILURE_ACTION_TRACKERS.get(tracker);
+    const failureClass = PRIVATE_DIRTY_NAVIGATION_FAILURE_CLASSES.get(cause);
+    if (
+      state === undefined ||
+      state.sealed !== false ||
+      typeof state.currentActionId !== "string" ||
+      state.failureClass !== null ||
+      !DIRTY_NAVIGATION_REQUEST_ACTION_IDS.includes(state.currentActionId) ||
+      !DIRTY_NAVIGATION_DIAGNOSTIC_FAILURE_CLASSES.includes(failureClass)
+    ) {
+      return false;
+    }
+    state.failureClass = failureClass;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function completePrivateFailureAction(tracker, action) {
   const state = PRIVATE_FAILURE_ACTION_TRACKERS.get(tracker);
   invariant(state !== undefined, "failure action tracker is invalid");
   invariant(
     state.sealed === false &&
       state.currentActionId === action.id &&
+      state.failureClass === null &&
       state.actionManifest[state.nextIndex] === action &&
       state.actionById.get(action.id) === action,
     "failure action tracker completion drift"
@@ -3542,6 +4343,7 @@ function sealPrivateFailureActionTracker(tracker) {
   invariant(
     state.sealed === false &&
       state.currentActionId === null &&
+      state.failureClass === null &&
       state.nextIndex === state.actionManifest.length,
     "failure action tracker manifest completion drift"
   );
@@ -3567,6 +4369,78 @@ function currentPrivateFailureActionIdNeverThrow(tracker) {
       return null;
     }
     return state.currentActionId;
+  } catch {
+    return null;
+  }
+}
+
+function currentPrivateAuthSettlementFailureClassNeverThrow(tracker) {
+  try {
+    const state = PRIVATE_FAILURE_ACTION_TRACKERS.get(tracker);
+    if (
+      state === undefined ||
+      state.sealed !== false ||
+      typeof state.currentActionId !== "string" ||
+      !AUTH_SETTLEMENT_ACTION_IDS.includes(state.currentActionId) ||
+      !AUTH_SETTLEMENT_DIAGNOSTIC_FAILURE_CLASSES.includes(state.failureClass)
+    ) {
+      return null;
+    }
+    return state.failureClass;
+  } catch {
+    return null;
+  }
+}
+
+function currentPrivateToneOpenFailureClassNeverThrow(tracker) {
+  try {
+    const state = PRIVATE_FAILURE_ACTION_TRACKERS.get(tracker);
+    if (
+      state === undefined ||
+      state.sealed !== false ||
+      typeof state.currentActionId !== "string" ||
+      !TONE_MENU_OPEN_ACTION_IDS.includes(state.currentActionId) ||
+      !TONE_OPEN_BROWSER_FAILURE_CLASSES.includes(state.failureClass)
+    ) {
+      return null;
+    }
+    return state.failureClass;
+  } catch {
+    return null;
+  }
+}
+
+function currentPrivateToneSelectFailureClassNeverThrow(tracker) {
+  try {
+    const state = PRIVATE_FAILURE_ACTION_TRACKERS.get(tracker);
+    if (
+      state === undefined ||
+      state.sealed !== false ||
+      typeof state.currentActionId !== "string" ||
+      !TONE_MUTED_ACTION_IDS.includes(state.currentActionId) ||
+      !TONE_SELECT_BROWSER_FAILURE_CLASSES.includes(state.failureClass)
+    ) {
+      return null;
+    }
+    return state.failureClass;
+  } catch {
+    return null;
+  }
+}
+
+function currentPrivateDirtyNavigationFailureClassNeverThrow(tracker) {
+  try {
+    const state = PRIVATE_FAILURE_ACTION_TRACKERS.get(tracker);
+    if (
+      state === undefined ||
+      state.sealed !== false ||
+      typeof state.currentActionId !== "string" ||
+      !DIRTY_NAVIGATION_REQUEST_ACTION_IDS.includes(state.currentActionId) ||
+      !DIRTY_NAVIGATION_DIAGNOSTIC_FAILURE_CLASSES.includes(state.failureClass)
+    ) {
+      return null;
+    }
+    return state.failureClass;
   } catch {
     return null;
   }
@@ -3601,11 +4475,29 @@ function writePrivateFailureActionDiagnosticOnceNeverThrow(sink, line) {
   }
 }
 
-function emitPrivateFailureActionDiagnosticNeverThrow(tracker, sink) {
+function emitPrivateFailureActionDiagnosticNeverThrow(
+  tracker,
+  sink,
+  constructionCleanupAuthority = null
+) {
   try {
     const failedActionId = currentPrivateFailureActionIdNeverThrow(tracker);
-    if (failedActionId === null) return false;
-    const line = canonicalJson({ code: TASK_FAILURE.code, failedActionId }) + "\n";
+    const cleanupDiagnostic = currentPrivateConstructionCleanupDiagnosticNeverThrow(
+      constructionCleanupAuthority
+    );
+    if (failedActionId === null && cleanupDiagnostic === null) return false;
+    const failureClass =
+      currentPrivateAuthSettlementFailureClassNeverThrow(tracker) ??
+      currentPrivateToneOpenFailureClassNeverThrow(tracker) ??
+      currentPrivateToneSelectFailureClassNeverThrow(tracker) ??
+      currentPrivateDirtyNavigationFailureClassNeverThrow(tracker);
+    const diagnostic = {
+      code: TASK_FAILURE.code,
+      ...(failedActionId === null ? {} : { failedActionId }),
+      ...(failureClass === null ? {} : { failureClass }),
+      ...(cleanupDiagnostic === null ? {} : cleanupDiagnostic),
+    };
+    const line = canonicalJson(diagnostic) + "\n";
     return writePrivateFailureActionDiagnosticOnceNeverThrow(sink, line);
   } catch {
     return false;
@@ -3805,6 +4697,110 @@ function assertRepositoryMutationPolicy(action, before, after) {
   );
 }
 
+function inspectRetainedProcessOutcome(execution, program) {
+  const safeRead = (read) => {
+    try {
+      return { ok: true, value: read() };
+    } catch {
+      return { ok: false, value: undefined };
+    }
+  };
+  const executionIsObject = execution !== null && typeof execution === "object";
+  const stdoutRecord = safeRead(() => (executionIsObject ? execution.stdout : undefined));
+  const stderrRecord = safeRead(() => (executionIsObject ? execution.stderr : undefined));
+  const completionRecord = safeRead(() => (executionIsObject ? execution.completion : undefined));
+  const terminationRecord = safeRead(() => (executionIsObject ? execution.termination : undefined));
+  const timedOutRecord = safeRead(() => (executionIsObject ? execution.timedOut : undefined));
+  const spawnErrorRecord = safeRead(() => (executionIsObject ? execution.spawnError : undefined));
+  const stdoutBytesRecord = safeRead(() => stdoutRecord.value?.bytes);
+  const stderrBytesRecord = safeRead(() => stderrRecord.value?.bytes);
+  const stdoutExceededRecord = safeRead(() => stdoutRecord.value?.exceeded);
+  const stderrExceededRecord = safeRead(() => stderrRecord.value?.exceeded);
+  const completionCodeRecord = safeRead(() => completionRecord.value?.code);
+  const terminationAbsentRecord = safeRead(() => terminationRecord.value?.absent);
+  const stdoutBytes =
+    stdoutBytesRecord.ok && Buffer.isBuffer(stdoutBytesRecord.value)
+      ? stdoutBytesRecord.value
+      : null;
+  const stderrBytes =
+    stderrBytesRecord.ok && Buffer.isBuffer(stderrBytesRecord.value)
+      ? stderrBytesRecord.value
+      : null;
+  const shapeIsCanonical =
+    executionIsObject &&
+    stdoutRecord.ok &&
+    stderrRecord.ok &&
+    completionRecord.ok &&
+    terminationRecord.ok &&
+    timedOutRecord.ok &&
+    spawnErrorRecord.ok &&
+    stdoutBytesRecord.ok &&
+    stderrBytesRecord.ok &&
+    stdoutExceededRecord.ok &&
+    stderrExceededRecord.ok &&
+    completionCodeRecord.ok &&
+    terminationAbsentRecord.ok &&
+    stdoutRecord.value !== null &&
+    typeof stdoutRecord.value === "object" &&
+    stderrRecord.value !== null &&
+    typeof stderrRecord.value === "object" &&
+    completionRecord.value !== null &&
+    typeof completionRecord.value === "object" &&
+    terminationRecord.value !== null &&
+    typeof terminationRecord.value === "object" &&
+    stdoutBytes !== null &&
+    stderrBytes !== null &&
+    typeof stdoutExceededRecord.value === "boolean" &&
+    typeof stderrExceededRecord.value === "boolean" &&
+    typeof timedOutRecord.value === "boolean" &&
+    typeof spawnErrorRecord.value === "boolean" &&
+    (completionCodeRecord.value === null || Number.isInteger(completionCodeRecord.value)) &&
+    typeof terminationAbsentRecord.value === "boolean";
+  const outputExceeded =
+    stdoutExceededRecord.value === true ||
+    stderrExceededRecord.value === true ||
+    (stdoutBytes !== null && stdoutBytes.length > MAX_STREAM_BYTES) ||
+    (stderrBytes !== null && stderrBytes.length > MAX_STREAM_BYTES);
+  const timedOut = timedOutRecord.value === true;
+  const runnerAnomaly =
+    shapeIsCanonical && (spawnErrorRecord.value === true || terminationAbsentRecord.value !== true);
+  const browserErrorMarker =
+    program === "playwright-cli" &&
+    stdoutBytes !== null &&
+    stdoutBytes.includes(Buffer.from("### Error\n"));
+  const stderrRejected = stderrBytes !== null && stderrBytes.length !== 0;
+  const exitFailed = completionCodeRecord.value !== 0;
+  return Object.freeze({
+    stdoutBytes,
+    stderrBytes,
+    shapeIsCanonical,
+    outputExceeded,
+    timedOut,
+    runnerAnomaly,
+    browserErrorMarker,
+    stderrRejected,
+    exitFailed,
+    successfulBoundedAndAbsent:
+      shapeIsCanonical &&
+      !outputExceeded &&
+      !timedOut &&
+      !runnerAnomaly &&
+      !browserErrorMarker &&
+      !stderrRejected &&
+      !exitFailed,
+  });
+}
+
+function classifySafeRetainedProcessOutcome(outcome) {
+  if (outcome.outputExceeded) return "process_output_limit";
+  if (outcome.timedOut) return "process_timeout";
+  if (outcome.runnerAnomaly) return "process_runner_failed";
+  if (outcome.browserErrorMarker) return "browser_error_frame";
+  if (outcome.stderrRejected) return "process_stderr_rejected";
+  if (outcome.exitFailed) return "process_exit_failed";
+  return null;
+}
+
 class SingleAssignmentCaptureMap {
   constructor() {
     PRIVATE_CAPTURES.set(this, new Map());
@@ -3841,12 +4837,17 @@ class SingleAssignmentCaptureMap {
 }
 
 class LocalCommandAuthority {
-  constructor({ root, assertSafeEvidence, snapshotRepository, sensitiveValues }) {
+  constructor(
+    { root, assertSafeEvidence, snapshotRepository, sensitiveValues },
+    processRunner = runRetainedProcessGroup
+  ) {
+    invariant(typeof processRunner === "function", "private process runner is invalid");
     PRIVATE_AUTHORITY.set(this, {
       root,
       assertSafeEvidence,
       snapshotRepository,
       sensitiveValues,
+      processRunner,
       rawByReceipt: new WeakMap(),
     });
   }
@@ -3876,7 +4877,6 @@ class LocalCommandAuthority {
       "display argv invalid"
     );
     const state = PRIVATE_AUTHORITY.get(this);
-    const before = await state.snapshotRepository();
     invariant(
       stdinBytes === null || (Buffer.isBuffer(stdinBytes) && stdinBytes.length <= 1024 * 1024),
       "stdin frame is invalid"
@@ -3885,65 +4885,156 @@ class LocalCommandAuthority {
       Number.isSafeInteger(timeoutMs) && timeoutMs > 0 && timeoutMs <= COMMAND_TIMEOUT_MS,
       "command timeout is invalid"
     );
-    const execution = await runRetainedProcessGroup({
-      file: program,
-      args,
-      cwd,
-      env,
-      stdinBytes,
-      timeoutMs,
-    });
-    const completion = execution.completion;
-    const stdoutResult = execution.stdout;
-    const stderrResult = execution.stderr;
-    const after = await state.snapshotRepository();
-    assertRepositoryMutationPolicy(action, before, after);
-    invariant(!stdoutResult.exceeded && !stderrResult.exceeded, "command output exceeded 4 MiB");
-    const browserErrorMarker =
-      program === "playwright-cli" && stdoutResult.bytes.includes(Buffer.from("### Error\n"));
-    const sensitiveOutput =
-      rawBytesAreSensitive(stdoutResult.bytes, state.sensitiveValues) ||
-      rawBytesAreSensitive(stderrResult.bytes, state.sensitiveValues);
+    let before;
+    try {
+      before = await state.snapshotRepository();
+    } catch (cause) {
+      failPrivateAuthSettlementStage(
+        action,
+        "repository_boundary_failed",
+        { cause },
+        "repository snapshot failed"
+      );
+    }
+    let execution;
+    try {
+      execution = await state.processRunner({
+        file: program,
+        args,
+        cwd,
+        env,
+        stdinBytes,
+        timeoutMs,
+      });
+    } catch (cause) {
+      failPrivateAuthSettlementStage(
+        action,
+        "process_runner_failed",
+        { cause },
+        "local command runner failed"
+      );
+    }
+    let after = null;
+    let repositoryFailure = null;
+    try {
+      after = await state.snapshotRepository();
+      assertRepositoryMutationPolicy(action, before, after);
+    } catch (cause) {
+      repositoryFailure = cause;
+    }
+    const outcome = inspectRetainedProcessOutcome(execution, program);
+    const exactAuthFailureClass =
+      program === "playwright-cli" &&
+      repositoryFailure === null &&
+      outcome.successfulBoundedAndAbsent
+        ? classifyPrivateAuthSettlementFailureFrame(action.id, outcome.stdoutBytes)
+        : null;
+    const exactToneOpenFailureClass =
+      program === "playwright-cli" &&
+      repositoryFailure === null &&
+      outcome.successfulBoundedAndAbsent
+        ? classifyPrivateToneOpenFailureFrame(action.id, outcome.stdoutBytes)
+        : null;
+    const exactToneSelectFailureClass =
+      program === "playwright-cli" &&
+      repositoryFailure === null &&
+      outcome.successfulBoundedAndAbsent
+        ? classifyPrivateToneSelectFailureFrame(action.id, outcome.stdoutBytes)
+        : null;
+    const exactDirtyNavigationFailureClass =
+      program === "playwright-cli" &&
+      repositoryFailure === null &&
+      outcome.successfulBoundedAndAbsent
+        ? classifyPrivateDirtyNavigationFailureFrame(action.id, outcome.stdoutBytes)
+        : null;
     invariant(
-      !execution.timedOut &&
-        !execution.spawnError &&
-        completion.code === 0 &&
-        stderrResult.bytes.length === 0 &&
-        execution.termination.absent === true,
-      "local command failed"
+      [
+        exactAuthFailureClass,
+        exactToneOpenFailureClass,
+        exactToneSelectFailureClass,
+        exactDirtyNavigationFailureClass,
+      ].filter((failureClass) => failureClass !== null).length <= 1,
+      "classified browser failure frame overlap"
     );
-    invariant(!browserErrorMarker, "browser command reported an error");
+    if (exactAuthFailureClass !== null) {
+      throw createPrivateAuthSettlementFailure(exactAuthFailureClass, { execution });
+    }
+    if (exactToneOpenFailureClass !== null) {
+      throw createPrivateToneOpenFailure(exactToneOpenFailureClass, { execution });
+    }
+    if (exactToneSelectFailureClass !== null) {
+      throw createPrivateToneSelectFailure(exactToneSelectFailureClass);
+    }
+    if (exactDirtyNavigationFailureClass !== null) {
+      throw createPrivateDirtyNavigationFailure(exactDirtyNavigationFailureClass, { execution });
+    }
+    const sensitiveOutput =
+      (outcome.stdoutBytes !== null &&
+        rawBytesAreSensitive(outcome.stdoutBytes, state.sensitiveValues)) ||
+      (outcome.stderrBytes !== null &&
+        rawBytesAreSensitive(outcome.stderrBytes, state.sensitiveValues));
     invariant(!sensitiveOutput, "local command emitted sensitive bytes");
-    const displayCommand = shellDisplay(program, displayArgs);
-    const receipt = {
-      runnerVersion: ORCHESTRATOR_EVIDENCE_RUNNER_VERSION,
-      sequence,
-      kind: action.kind,
-      scenario: action.scenario,
-      operation,
-      routeKey,
-      assertionName,
-      command: displayCommand,
-      status: 0,
-      stdoutBytes: stdoutResult.bytes.length,
-      stderrBytes: stderrResult.bytes.length,
-      stdoutSha256: hashBytes(stdoutResult.bytes),
-      stderrSha256: hashBytes(stderrResult.bytes),
-      stdoutTruncated: false,
-      stderrTruncated: false,
-      sanitizedOutput: stdoutDiscarded ? "[discarded]" : "",
-      stdoutDiscarded,
-      pageId: action.pageId,
-      tabIndex: action.tabIndex,
-    };
-    state.rawByReceipt.set(receipt, {
-      stdout: stdoutResult.bytes,
-      stderr: stderrResult.bytes,
-      before,
-      after,
-    });
-    state.assertSafeEvidence(receipt, "TASK-540 local command receipt");
-    return { receipt, stdout: stdoutResult.bytes, stderr: stderrResult.bytes };
+    invariant(outcome.shapeIsCanonical, "retained process result shape is invalid");
+    if (repositoryFailure !== null) {
+      failPrivateAuthSettlementStage(
+        action,
+        "repository_boundary_failed",
+        { cause: repositoryFailure, execution },
+        "repository boundary failed"
+      );
+    }
+    const processFailureClass = classifySafeRetainedProcessOutcome(outcome);
+    if (processFailureClass !== null) {
+      failPrivateAuthSettlementStage(
+        action,
+        processFailureClass,
+        { execution },
+        "local command failed"
+      );
+    }
+    try {
+      invariant(
+        outcome.stdoutBytes !== null && outcome.stderrBytes !== null,
+        "local command buffers are absent"
+      );
+      const displayCommand = shellDisplay(program, displayArgs);
+      const receipt = {
+        runnerVersion: ORCHESTRATOR_EVIDENCE_RUNNER_VERSION,
+        sequence,
+        kind: action.kind,
+        scenario: action.scenario,
+        operation,
+        routeKey,
+        assertionName,
+        command: displayCommand,
+        status: 0,
+        stdoutBytes: outcome.stdoutBytes.length,
+        stderrBytes: outcome.stderrBytes.length,
+        stdoutSha256: hashBytes(outcome.stdoutBytes),
+        stderrSha256: hashBytes(outcome.stderrBytes),
+        stdoutTruncated: false,
+        stderrTruncated: false,
+        sanitizedOutput: stdoutDiscarded ? "[discarded]" : "",
+        stdoutDiscarded,
+        pageId: action.pageId,
+        tabIndex: action.tabIndex,
+      };
+      state.rawByReceipt.set(receipt, {
+        stdout: outcome.stdoutBytes,
+        stderr: outcome.stderrBytes,
+        before,
+        after,
+      });
+      state.assertSafeEvidence(receipt, "TASK-540 local command receipt");
+      return { receipt, stdout: outcome.stdoutBytes, stderr: outcome.stderrBytes };
+    } catch (cause) {
+      failPrivateAuthSettlementStage(
+        action,
+        "receipt_boundary_failed",
+        { cause, execution },
+        "local command receipt failed"
+      );
+    }
   }
 
   async executeLocal({
@@ -5521,7 +6612,13 @@ function buildFakeCapabilities({
   failOrdinal = null,
   terminalMatrix = false,
   failCleanupLifecycle = false,
+  failFailureCleanup = false,
+  cleanupFailureClass = "persistent_plan_failed",
 } = {}) {
+  invariant(
+    PHASE_THREE_CLEANUP_FAILURE_CLASSES.includes(cleanupFailureClass),
+    "fake cleanup failure class drift"
+  );
   const calls = [];
   let cleaned = false;
   let browserSequence = 0;
@@ -5578,10 +6675,12 @@ function buildFakeCapabilities({
           bootstrapBaseline: { id: "54000000-0000-4000-8000-000000009999" },
           host: { identity: { pgid: 54000 } },
           browserWorkspace: { root: "/tmp/wf540-self-test-private" },
+          fixtureIds: new Map(),
           resourceKeys: new Map(),
           resourceOwners: new Map(),
           syntheticOwnerEdgeKeys: new Set(),
         };
+        initializeBunBridgeOperationAuthority(fakeState);
       }
       const captureBindings = {};
       for (const name of plan.fixtureCaptureBindings[action.id] ?? []) {
@@ -5674,7 +6773,47 @@ function buildFakeCapabilities({
       });
     },
     async executeCleanupLifecycle({ plan, resourceLedger, cleanupPlanner }) {
-      if (failCleanupLifecycle) throw new Error("private fake cleanup lifecycle failure");
+      if (failCleanupLifecycle) {
+        throw retainPrivateCleanupFailureDiagnosticNeverThrow(
+          new Error("private fake cleanup lifecycle failure"),
+          3,
+          cleanupFailureClass
+        );
+      }
+      for (const entrySemantic of TASK_FIXTURE_ENTRY_SEMANTICS) {
+        const targetId = fixtureCaptureValue(plan.fixtureSubjectCapture[entrySemantic], plan);
+        invariant(
+          typeof fakeState.resourceKeys.get(entrySemantic) === "string",
+          "fake SEO parent entry is absent"
+        );
+        fakeState.fixtureIds.set(entrySemantic, targetId);
+      }
+      const fakeSeoCandidates = deepFreezeExact(
+        TASK_FIXTURE_ENTRY_SEMANTICS.map((entrySemantic, index) => ({
+          id: `54000000-0000-4000-8000-${String(8004 + index).padStart(12, "0")}`,
+          targetId: fakeState.fixtureIds.get(entrySemantic),
+          targetType: "entry",
+        })).sort(
+          (left, right) =>
+            left.targetId.localeCompare(right.targetId) || left.id.localeCompare(right.id)
+        )
+      );
+      const fakeSeoTargetIds = TASK_FIXTURE_ENTRY_SEMANTICS.map((entrySemantic) =>
+        fakeState.fixtureIds.get(entrySemantic)
+      );
+      const fakeSeoCores = await discoverExactSeoEntryResources(
+        fakeState,
+        resourceLedger,
+        async (targetIds) => {
+          invariant(
+            deepEqualJson(targetIds, fakeSeoTargetIds),
+            "fake SEO exact target inventory drift"
+          );
+          return deepFreezeExact({ candidates: fakeSeoCandidates });
+        },
+        async () => {}
+      );
+      invariant(fakeSeoCores.length === 6, "fake SEO cleanup inventory drift");
       const persistentLedger = resourceLedger.compileResourceRecords("persistent");
       const persistentPlan = cleanupPlanner.freezePersistent(persistentLedger, []);
       lastPersistentPlan = persistentPlan;
@@ -6011,6 +7150,13 @@ function buildFakeCapabilities({
           cleaned = true;
           if (request?.failure === true) {
             calls.push("failure-cleanup");
+            if (failFailureCleanup) {
+              throw retainPrivateCleanupFailureDiagnosticNeverThrow(
+                new Error("private fake failure cleanup detail"),
+                3,
+                cleanupFailureClass
+              );
+            }
             return deepFreezeExact({ absenceProven: true, lifecycle: null });
           }
           const lifecycle = await capabilities.executeCleanupLifecycle(request);
@@ -7028,6 +8174,12 @@ async function executeSmokePlanCore(
     return evidence;
   } catch (cause) {
     PRIVATE_CORE.get(state).cause = cause;
+    if (failureActionTracker !== null) {
+      retainPrivateAuthSettlementFailureClassNeverThrow(failureActionTracker, cause);
+      retainPrivateToneOpenFailureClassNeverThrow(failureActionTracker, cause);
+      retainPrivateToneSelectFailureClassNeverThrow(failureActionTracker, cause);
+      retainPrivateDirtyNavigationFailureClassNeverThrow(failureActionTracker, cause);
+    }
     if (typeof capabilities.retainPrimaryFailureObservation === "function") {
       capabilities.retainPrimaryFailureObservation(cause);
     }
@@ -8055,7 +9207,11 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
     captures.has(captureName)
       ? registeredSelector(plan, "blockRoot", [captures.get(captureName)])
       : null;
-  const resolvedEntryBaseline = resolveFixtureValue(plan.fixtureBlueprint.entry.baseline, captures);
+  const requiresEntryBaseline =
+    name === "relation-pickers-a-b-warm" || name === "related-unrelated-drafts-before";
+  const resolvedEntryBaseline = requiresEntryBaseline
+    ? resolveFixtureValue(plan.fixtureBlueprint.entry.baseline, captures)
+    : null;
   const relationFields = [
     {
       field: "relationA",
@@ -8092,33 +9248,39 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
       ],
     },
   ];
-  const expectedResetDraft = {
-    controls: {
-      headline: resolvedEntryBaseline.headline,
-      mediaAssetIds: [resolvedEntryBaseline.mediaAsset],
-      unrelatedNote: resolvedEntryBaseline.unrelatedNote,
-    },
-    presentation: { tone: "inherit" },
-    relations: {
-      relationA: [...resolvedEntryBaseline.relationA],
-      relationB: [...resolvedEntryBaseline.relationB],
-    },
-  };
-  const expectedRc017Draft = {
-    controls: {
-      ...expectedResetDraft.controls,
-      unrelatedNote: plan.fixtureBlueprint.entry.relatedUnrelatedDraft,
-    },
-    presentation: { tone: plan.fixtureBlueprint.entry.presentationDraft.tone },
-    relations: {
-      relationA: [...expectedResetDraft.relations.relationA],
-      relationB: [...expectedResetDraft.relations.relationB],
-    },
-  };
+  const expectedResetDraft =
+    resolvedEntryBaseline === null
+      ? null
+      : {
+          controls: {
+            headline: resolvedEntryBaseline.headline,
+            mediaAssetIds: [resolvedEntryBaseline.mediaAsset],
+            unrelatedNote: resolvedEntryBaseline.unrelatedNote,
+          },
+          presentation: { tone: "inherit" },
+          relations: {
+            relationA: [...resolvedEntryBaseline.relationA],
+            relationB: [...resolvedEntryBaseline.relationB],
+          },
+        };
+  const expectedRc017Draft =
+    name !== "related-unrelated-drafts-before"
+      ? null
+      : {
+          controls: {
+            ...expectedResetDraft.controls,
+            unrelatedNote: plan.fixtureBlueprint.entry.relatedUnrelatedDraft,
+          },
+          presentation: { tone: plan.fixtureBlueprint.entry.presentationDraft.tone },
+          relations: {
+            relationA: [...expectedResetDraft.relations.relationA],
+            relationB: [...expectedResetDraft.relations.relationB],
+          },
+        };
   const config = {
     name,
     actionId: action.id,
-    adminOrigin: plan.fixtureBlueprint.origins.admin,
+    adminRootUrl: plan.fixtureBlueprint.origins.admin + "/admin/",
     loginUrl: plan.fixtureBlueprint.origins.admin + plan.fixtureBlueprint.paths.login,
     screenId,
     entryId,
@@ -8261,6 +9423,19 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
       if (keys.length !== config.outputFields.length || !config.outputFields.every((key) => Object.prototype.hasOwnProperty.call(value, key))) throw new Error("wf540_observation_output_keys");
       return value;
     };
+    const exactAuthSettlementFailureOutput = (value) => {
+      const observationNames = [
+        "bootstrap-auth-identity-settled",
+        "auth-identity-settled-users-a",
+        "auth-identity-settled-users-b",
+      ];
+      const failureClasses = ${JSON.stringify(AUTH_SETTLEMENT_BROWSER_FAILURE_CLASSES)};
+      if (!observationNames.includes(config.name) || !value || typeof value !== "object" || Array.isArray(value)) return null;
+      const keys = Object.keys(value);
+      if (keys.length !== 2 || !keys.includes("failureClass") || !keys.includes("settled")) return null;
+      if (value.settled !== false || !failureClasses.includes(value.failureClass)) return null;
+      return { failureClass: value.failureClass, settled: false };
+    };
     const waitFor = async (read) => {
       const deadline = Date.now() + 10000;
       while (Date.now() < deadline) {
@@ -8346,16 +9521,89 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
       if (result.url !== config.loginUrl) throw new Error("wf540_login_url");
       return clientAborted === undefined ? result : { ...result, clientAborted };
     };
-    const authSample = async (selector, expectedName, userId = null) => {
-      const menu = await one(selector);
-      const label = menu.locator("span.block.text-sm");
-      if (await label.count() !== 1) throw new Error("wf540_user_menu_label_count");
-      const userName = (await label.textContent())?.trim() ?? "";
-      const menuRect = finiteRect(await menu.boundingBox());
-      const userMenuVisible = positive(menuRect) && await menu.isVisible();
-      if (!userMenuVisible || userName !== expectedName) throw new Error("wf540_user_menu_identity");
-      if (userId !== null) context.__wf540BindActiveUser(page.__wf540PageIdentity.pageId, userId);
-      return { url: page.url(), userMenuVisible, userName };
+    const settleAuthRealm = async (selector, expectedName = null, userId = null) => {
+      const deadline = Date.now() + 60000;
+      const remainingAuthTime = () => {
+        return Math.max(1, deadline - Date.now());
+      };
+      const menu = page.locator(selector);
+      let failureClass = "dom_read_failed";
+      while (Date.now() < deadline) {
+        try {
+          if (page.isClosed()) {
+            failureClass = "page_closed";
+            break;
+          }
+          const candidateUrl = page.url();
+          if (candidateUrl !== config.adminRootUrl) {
+            failureClass = candidateUrl === config.loginUrl ? "login_route" : "noncanonical_route";
+          } else {
+            const menuCount = await menu.count();
+            if (menuCount === 0) {
+              const loading = page.getByText("Loading...", { exact: true });
+              failureClass = await loading.count() > 0 && await loading.first().isVisible()
+                ? "loading_view"
+                : "menu_absent";
+            } else if (menuCount > 1) {
+              failureClass = "menu_duplicate";
+            } else {
+              const label = menu.locator("span.block.text-sm");
+              const labelCount = await label.count();
+              if (labelCount === 0) {
+                failureClass = "label_absent";
+              } else if (labelCount > 1) {
+                failureClass = "label_duplicate";
+              } else {
+                const userName = (await label.textContent({ timeout: remainingAuthTime() }))?.trim() ?? "";
+                const rawMenuRect = await menu.boundingBox({ timeout: remainingAuthTime() });
+                const geometryIsFinite = rawMenuRect === null ||
+                  [rawMenuRect.x, rawMenuRect.y, rawMenuRect.width, rawMenuRect.height]
+                    .every((item) => Number.isFinite(item));
+                const menuRect = geometryIsFinite ? finiteRect(rawMenuRect) : null;
+                const userMenuVisible = await menu.isVisible();
+                const nameMatches = expectedName === null ? userName.length > 0 : userName === expectedName;
+                if (userName.length === 0) {
+                  failureClass = "name_empty";
+                } else if (!nameMatches) {
+                  failureClass = "name_mismatch";
+                } else if (rawMenuRect === null) {
+                  failureClass = "geometry_absent";
+                } else if (!geometryIsFinite) {
+                  failureClass = "geometry_nonfinite";
+                } else if (!positive(menuRect)) {
+                  failureClass = "geometry_nonpositive";
+                } else if (!userMenuVisible) {
+                  failureClass = "menu_hidden";
+                } else {
+                  const observedUrl = page.url();
+                  if (observedUrl !== config.adminRootUrl) {
+                    failureClass = "url_unstable";
+                  } else {
+                    if (userId !== null) context.__wf540BindActiveUser(page.__wf540PageIdentity.pageId, userId);
+                    return { url: observedUrl, userMenuVisible, userName };
+                  }
+                }
+              }
+            }
+          }
+        } catch {
+          failureClass = page.isClosed() ? "page_closed" : "dom_read_failed";
+        }
+        const waitMs = deadline - Date.now();
+        if (waitMs > 0) {
+          try {
+            await page.waitForTimeout(Math.min(25, waitMs));
+          } catch {
+            failureClass = page.isClosed() ? "page_closed" : "dom_read_failed";
+            break;
+          }
+        }
+      }
+      try {
+        const projection = context.__wf540ReadLogProjection();
+        if (projection.firstUnexpected !== null) failureClass = "runtime_failure";
+      } catch {}
+      return { settled: false, failureClass };
     };
     const geometrySample = async () => {
       const match = /^geometry-(320|390|480|1024|1280)-(open|closed)$/.exec(config.name);
@@ -8510,17 +9758,12 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
     if (["theme-light", "theme-dark", "theme-light-user-a-candidate", "user-a-light-computed", "user-b-dark-computed"].includes(config.name)) {
       output = await themeSample(config.name === "user-b-dark-computed");
     } else if (config.name === "bootstrap-auth-identity-settled") {
-      const menu = await one(config.selectors.bootstrapUserMenu);
-      const label = menu.locator("span.block.text-sm");
-      if (await label.count() !== 1) throw new Error("wf540_bootstrap_menu_label_count");
-      const userName = (await label.textContent())?.trim() ?? "";
-      const rect = finiteRect(await menu.boundingBox());
-      output = { url: page.url(), userMenuVisible: positive(rect) && await menu.isVisible(), userName };
+      output = await settleAuthRealm(config.selectors.bootstrapUserMenu);
     } else if (config.name === "auth-identity-settled-users-a") {
-      output = await authSample(config.selectors.userA, config.userAName, config.userAId);
+      output = await settleAuthRealm(config.selectors.userA, config.userAName, config.userAId);
       context.__wf540Remember(config.actionId + ":preference-read-baseline", context.__wf540ReadPreferenceReads().length);
     } else if (config.name === "auth-identity-settled-users-b") {
-      output = await authSample(config.selectors.userB, config.userBName, config.userBId);
+      output = await settleAuthRealm(config.selectors.userB, config.userBName, config.userBId);
     } else if (["signout-settled-bootstrap", "signout-settled-user-a", "signout-settled-user-b"].includes(config.name)) {
       output = await loginSample();
     } else if (config.name === "signout-settled-user-a-with-abort") {
@@ -8749,6 +9992,8 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
     `
         : ""
     }
+    const authSettlementFailureOutput = exactAuthSettlementFailureOutput(output);
+    if (authSettlementFailureOutput !== null) return authSettlementFailureOutput;
     output = exactOutput(output);
     context.__wf540Remember(config.actionId, output);
     return output;
@@ -8789,7 +10034,10 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
     const value = captureValue(captureName);
     return value === null ? null : registeredSelector(plan, "blockRoot", [value]);
   };
-  const resolvedEntryBaseline = resolveFixtureValue(plan.fixtureBlueprint.entry.baseline, captures);
+  const resolvedEntryBaseline =
+    name === "relation-diff-exact"
+      ? resolveFixtureValue(plan.fixtureBlueprint.entry.baseline, captures)
+      : null;
   const relationFields = [
     {
       field: "relationA",
@@ -8826,29 +10074,35 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
       ],
     },
   ];
-  const expectedResetDraft = {
-    controls: {
-      headline: resolvedEntryBaseline.headline,
-      mediaAssetIds: [resolvedEntryBaseline.mediaAsset],
-      unrelatedNote: resolvedEntryBaseline.unrelatedNote,
-    },
-    presentation: { tone: "inherit" },
-    relations: {
-      relationA: [...resolvedEntryBaseline.relationA],
-      relationB: [...resolvedEntryBaseline.relationB],
-    },
-  };
-  const expectedRc017Draft = {
-    controls: {
-      ...expectedResetDraft.controls,
-      unrelatedNote: plan.fixtureBlueprint.entry.relatedUnrelatedDraft,
-    },
-    presentation: { tone: plan.fixtureBlueprint.entry.presentationDraft.tone },
-    relations: {
-      relationA: [...expectedResetDraft.relations.relationA],
-      relationB: [...expectedResetDraft.relations.relationB],
-    },
-  };
+  const expectedResetDraft =
+    resolvedEntryBaseline === null
+      ? null
+      : {
+          controls: {
+            headline: resolvedEntryBaseline.headline,
+            mediaAssetIds: [resolvedEntryBaseline.mediaAsset],
+            unrelatedNote: resolvedEntryBaseline.unrelatedNote,
+          },
+          presentation: { tone: "inherit" },
+          relations: {
+            relationA: [...resolvedEntryBaseline.relationA],
+            relationB: [...resolvedEntryBaseline.relationB],
+          },
+        };
+  const expectedRc017Draft =
+    expectedResetDraft === null
+      ? null
+      : {
+          controls: {
+            ...expectedResetDraft.controls,
+            unrelatedNote: plan.fixtureBlueprint.entry.relatedUnrelatedDraft,
+          },
+          presentation: { tone: plan.fixtureBlueprint.entry.presentationDraft.tone },
+          relations: {
+            relationA: [...expectedResetDraft.relations.relationA],
+            relationB: [...expectedResetDraft.relations.relationB],
+          },
+        };
   const config = {
     name,
     actionId: action.id,
@@ -8858,6 +10112,7 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
       ? Object.keys(assertion.schema.properties.observations.properties)
       : null,
     adminOrigin: plan.fixtureBlueprint.origins.admin,
+    recordsUrl: expandRegisteredPath(plan, "records", captures),
     frontSafeUrl: plan.fixtureBlueprint.paths.safeFront,
     nestedHash: plan.fixtureBlueprint.paths.nestedHash,
     screenId: captureValue("screen.id"),
@@ -8939,6 +10194,7 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
     selectors: {
       canvas: registeredSelector(plan, "canvas"),
       previewShell: registeredSelector(plan, "previewShell"),
+      recordActions: registeredSelector(plan, "recordActions"),
       metadata: registeredSelector(plan, "metadata"),
       relatedAlert: registeredSelector(plan, "relatedAlert"),
       relatedRetry: registeredSelector(plan, "relatedRetry"),
@@ -9354,7 +10610,28 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
       output = ordinary({ draftBefore: before.draftBytes, draftAfter, urlBefore: before.url, urlAfter: page.url() });
     } else if (config.name === "builder-confirm-navigates-once") {
       const before = context.__wf540Recall("dg-011-builder-before-cancel");
-      output = ordinary({ urlBefore: before.url, urlAfter: page.url(), navigationCount: page.__wf540ReadNavigationCount() - before.navigationCount, draftDiscarded: !page.url().includes(config.screenId) });
+      const expectedRecordsUrl = config.recordsUrl;
+      const recordActions = page.locator(config.selectors.recordActions);
+      const builderCanvas = page.locator(config.selectors.canvas);
+      const builderDirtyBadge = page.getByText("Unsaved changes", { exact: true });
+      const deadline = Date.now() + 30000;
+      while (Date.now() < deadline) {
+        const count = await recordActions.count();
+        const rect = count === 1 ? finiteRect(await recordActions.boundingBox()) : null;
+        const builderCanvasCount = await builderCanvas.count();
+        const builderDirtyBadgeCount = await builderDirtyBadge.count();
+        if (page.url() === expectedRecordsUrl && count === 1 && await recordActions.isVisible() && positive(rect) && builderCanvasCount === 0 && builderDirtyBadgeCount === 0) break;
+        if (count > 1) throw new Error("wf540_builder_confirm_record_actions_duplicate");
+        await page.waitForTimeout(25);
+      }
+      const recordActionsCount = await recordActions.count();
+      const recordActionsRect = recordActionsCount === 1 ? finiteRect(await recordActions.boundingBox()) : null;
+      const builderCanvasCount = await builderCanvas.count();
+      const builderDirtyBadgeCount = await builderDirtyBadge.count();
+      if (page.url() !== expectedRecordsUrl) throw new Error("wf540_builder_confirm_records_url");
+      if (recordActionsCount !== 1 || !(await recordActions.isVisible()) || !positive(recordActionsRect)) throw new Error("wf540_builder_confirm_records_workspace");
+      if (builderCanvasCount !== 0 || builderDirtyBadgeCount !== 0) throw new Error("wf540_builder_confirm_draft_retained");
+      output = ordinary({ urlBefore: before.url, urlAfter: page.url(), navigationCount: page.__wf540ReadNavigationCount() - before.navigationCount, draftDiscarded: builderCanvasCount === 0 && builderDirtyBadgeCount === 0 });
     } else if (config.name === "entry-cancel-byte-identical" || config.name === "entry-cancel-url-stable") {
       const before = context.__wf540Recall("dg-023-entry-before-cancel");
       const after = await entryDraft();
@@ -9658,6 +10935,54 @@ function buildSimpleBrowserInvocation(
       }
       if (resolvedArgs[0] === expandRegisteredPath(plan, "builder", captures)) {
         const canvas = JSON.stringify(registeredSelector(plan, "canvas"));
+        if (action.id === "dg-003-builder") {
+          return {
+            args: runCode(`async (page) => {
+              const dirtyIndicator = page.getByText("Unsaved changes", { exact: true });
+              await dirtyIndicator.waitFor({ state: "visible", timeout: 10000 });
+              if (await dirtyIndicator.count() !== 1) throw new Error("wf540_dg003_dirty_count");
+              const retainedDialogListeners = page.listeners("dialog");
+              if (retainedDialogListeners.length !== 1) throw new Error("wf540_dg003_listener_count");
+              for (const listener of retainedDialogListeners) page.off("dialog", listener);
+              const dialogTypes = [];
+              const dialogSettlements = [];
+              const handleDialog = (dialog) => {
+                const type = dialog.type();
+                dialogTypes.push(type);
+                dialogSettlements.push(type === "beforeunload" ? dialog.accept() : dialog.dismiss());
+              };
+              page.on("dialog", handleDialog);
+              let navigationFailed = false;
+              let dialogSettlementFailed = false;
+              try {
+                await page.goto(${url});
+              } catch {
+                navigationFailed = true;
+              } finally {
+                const settlements = await Promise.allSettled(dialogSettlements);
+                dialogSettlementFailed = settlements.some(({ status }) => status !== "fulfilled");
+                page.off("dialog", handleDialog);
+                for (const listener of retainedDialogListeners) page.on("dialog", listener);
+              }
+              const restoredDialogListeners = page.listeners("dialog");
+              if (
+                restoredDialogListeners.length !== retainedDialogListeners.length ||
+                restoredDialogListeners.some((listener, index) => listener !== retainedDialogListeners[index])
+              ) throw new Error("wf540_dg003_listener_restore");
+              if (navigationFailed) throw new Error("wf540_dg003_navigation");
+              if (dialogSettlementFailed) throw new Error("wf540_dg003_dialog_settlement");
+              if (dialogTypes.length !== 1 || dialogTypes[0] !== "beforeunload") {
+                throw new Error("wf540_dg003_beforeunload_cardinality");
+              }
+              if (page.url() !== ${url}) throw new Error("wf540_dg003_builder_url");
+              const marker = page.locator(${canvas});
+              await marker.waitFor({ state: "visible", timeout: 30000 });
+              if (await marker.count() !== 1) throw new Error("wf540_dg003_builder_marker_count");
+              return true;
+            }`),
+            displayArgs: null,
+          };
+        }
         return {
           args: runCode(`async (page) => {
             await page.goto(${url});
@@ -9728,6 +11053,342 @@ function buildSimpleBrowserInvocation(
             }
             if (page.url() !== ${expectedEntryUrl}) throw new Error("wf540_entry_navigation_url");
             throw new Error("wf540_entry_navigation_realm");
+          }`),
+          displayArgs: null,
+        };
+      }
+      const toneFlowConfig = TONE_FLOW_ACTION_CONFIG[action.id];
+      if (toneFlowConfig !== undefined) {
+        const panelSelector = '[data-custom-screen-entry-presentation-panel="true"]';
+        const allContentSelector = JSON.stringify(ALL_SELECT_CONTENT_SELECTOR);
+        const openContentSelector = JSON.stringify(OPEN_SELECT_CONTENT_SELECTOR);
+        const mutedSelector = JSON.stringify(registeredSelector(plan, "muted"));
+        const triggerSelector = JSON.stringify(registeredSelector(plan, "toneTrigger"));
+        const targetBlockId = plan.fixtureBlueprint.screen.blockIds[toneFlowConfig.targetBlockKey];
+        invariant(
+          typeof targetBlockId === "string" && targetBlockId.length > 0,
+          "tone target drift"
+        );
+        const targetRootSelector = JSON.stringify(
+          registeredSelector(plan, "blockRoot", [targetBlockId])
+        );
+        const selectionHandleSelector = JSON.stringify(
+          registeredSelector(plan, "selectBlock", [targetBlockId])
+        );
+        const textboxSelector = JSON.stringify(
+          registeredSelector(plan, "contentEditable", [targetBlockId, toneFlowConfig.fieldLabel])
+        );
+        const expectedDraft = plan.fixtureBlueprint.entry[toneFlowConfig.expectedDraftKey];
+        invariant(
+          typeof expectedDraft === "string" && expectedDraft.length > 0,
+          "tone expected draft drift"
+        );
+        const stateKey = JSON.stringify(toneFlowConfig.stateKey);
+        if (toneFlowConfig.phase === "open") {
+          invariant(TONE_MENU_OPEN_ACTION_IDS.includes(action.id), "tone-open ownership drift");
+          return {
+            args: runCode(`async (page) => {
+              const positive = (rect) => rect !== null && [rect.x, rect.y, rect.width, rect.height].every(Number.isFinite) && rect.width > 0 && rect.height > 0;
+              const fail = (failureClass) => ({ failureClass, settled: false });
+              let failureClass = ${JSON.stringify(TONE_OPEN_BROWSER_FAILURE_CLASSES[0])};
+              try {
+                const initialPanel = page.locator(${JSON.stringify(panelSelector)});
+                await initialPanel.waitFor({ state: "visible", timeout: 10000 });
+                const initialTargetRoot = page.locator(${targetRootSelector});
+                const initialSelectionHandle = page.locator(${selectionHandleSelector});
+                const initialTextbox = page.locator(${textboxSelector});
+                const targetPreconditionFailed =
+                  await initialPanel.count() !== 1 ||
+                  await initialTargetRoot.count() !== 1 ||
+                  await initialTargetRoot.getAttribute("data-selected") !== "true" ||
+                  await initialSelectionHandle.count() !== 1 ||
+                  await initialSelectionHandle.getAttribute("aria-pressed") !== "true" ||
+                  await initialTextbox.count() !== 1;
+                if (targetPreconditionFailed) return fail(failureClass);
+                failureClass = ${JSON.stringify(TONE_OPEN_BROWSER_FAILURE_CLASSES[1])};
+                let baselineColor = null;
+                const preconditionDeadline = Date.now() + 10000;
+                while (Date.now() < preconditionDeadline) {
+                  const settledPanel = page.locator(${JSON.stringify(panelSelector)});
+                  const settledTargetRoot = page.locator(${targetRootSelector});
+                  const settledSelectionHandle = page.locator(${selectionHandleSelector});
+                  const settledTextbox = page.locator(${textboxSelector});
+                  const contentDirty = page.getByText("Unsaved changes", { exact: true });
+                  const settledPanelRect = await settledPanel.count() === 1 ? await settledPanel.boundingBox() : null;
+                  const settledTargetRootRect = await settledTargetRoot.count() === 1 ? await settledTargetRoot.boundingBox() : null;
+                  const settledSelectionHandleRect = await settledSelectionHandle.count() === 1 ? await settledSelectionHandle.boundingBox() : null;
+                  const settledTextboxRect = await settledTextbox.count() === 1 ? await settledTextbox.boundingBox() : null;
+                  const contentDirtyRect = await contentDirty.count() === 1 ? await contentDirty.boundingBox() : null;
+                  const settledTextboxText = await settledTextbox.count() === 1 ? await settledTextbox.textContent() : null;
+                  const settledTextboxFocused = await settledTextbox.count() === 1 ? await settledTextbox.evaluate((node) => node === document.activeElement) : true;
+                  if (
+                    await settledPanel.count() === 1 &&
+                    await settledPanel.isVisible() &&
+                    positive(settledPanelRect) &&
+                    await settledTargetRoot.count() === 1 &&
+                    await settledTargetRoot.isVisible() &&
+                    positive(settledTargetRootRect) &&
+                    await settledTargetRoot.getAttribute("data-selected") === "true" &&
+                    await settledSelectionHandle.count() === 1 &&
+                    await settledSelectionHandle.isVisible() &&
+                    positive(settledSelectionHandleRect) &&
+                    await settledSelectionHandle.getAttribute("aria-pressed") === "true" &&
+                    await settledTextbox.count() === 1 &&
+                    await settledTextbox.isVisible() &&
+                    positive(settledTextboxRect) &&
+                    settledTextboxText === ${JSON.stringify(expectedDraft)} &&
+                    settledTextboxFocused === false &&
+                    await contentDirty.count() === 1 &&
+                    await contentDirty.isVisible() &&
+                    positive(contentDirtyRect)
+                  ) {
+                    baselineColor = await settledTextbox.evaluate((node) => getComputedStyle(node).color);
+                    if (baselineColor.length > 0) break;
+                  }
+                  await page.waitForTimeout(25);
+                }
+                if (typeof baselineColor !== "string" || baselineColor.length === 0) return fail(failureClass);
+                failureClass = ${JSON.stringify(TONE_OPEN_BROWSER_FAILURE_CLASSES[2])};
+                const panel = page.locator(${JSON.stringify(panelSelector)});
+                const trigger = panel.locator(${triggerSelector});
+                const triggerRect = await trigger.count() === 1 ? await trigger.boundingBox() : null;
+                if (await panel.count() !== 1 || await trigger.count() !== 1 || !(await trigger.isVisible()) || !positive(triggerRect)) return fail(failureClass);
+                await trigger.click({ timeout: 10000 });
+                failureClass = ${JSON.stringify(TONE_OPEN_BROWSER_FAILURE_CLASSES[3])};
+                const deadline = Date.now() + 10000;
+                while (Date.now() < deadline) {
+                  const openContent = page.locator(${openContentSelector});
+                  const contentCount = await openContent.count();
+                  if (contentCount > 1) return fail(failureClass);
+                  if (contentCount === 1) {
+                    const option = openContent.locator(${mutedSelector});
+                    const optionCount = await option.count();
+                    if (optionCount > 1) return fail(failureClass);
+                    const contentRect = await openContent.boundingBox();
+                    const optionRect = optionCount === 1 ? await option.boundingBox() : null;
+                    const menuId = await openContent.getAttribute("id");
+                    const controls = await trigger.getAttribute("aria-controls");
+                    if (
+                      optionCount === 1 &&
+                      await openContent.isVisible() &&
+                      await option.isVisible() &&
+                      positive(contentRect) &&
+                      positive(optionRect) &&
+                      typeof menuId === "string" &&
+                      menuId.length > 0 &&
+                      controls === menuId &&
+                      await trigger.getAttribute("aria-expanded") === "true"
+                    ) {
+                      page.context().__wf540Remember(${stateKey}, { baselineColor, menuId });
+                      return true;
+                    }
+                  }
+                  await page.waitForTimeout(25);
+                }
+                return fail(failureClass);
+              } catch {
+                return fail(failureClass);
+              }
+            }`),
+            displayArgs: null,
+          };
+        }
+        invariant(
+          toneFlowConfig.phase === "select" && TONE_MUTED_ACTION_IDS.includes(action.id),
+          "tone-muted ownership drift"
+        );
+        return {
+          args: runCode(`async (page) => {
+            const positive = (rect) => rect !== null && [rect.x, rect.y, rect.width, rect.height].every(Number.isFinite) && rect.width > 0 && rect.height > 0;
+            const fail = (failureClass) => ({ failureClass, settled: false });
+            let failureClass = ${JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[0])};
+            const sampleAtomicTeardown = () => page.evaluate(
+              ({ allContentSelector, panelSelector, triggerSelector }) => {
+                const exactElement = (root, selector) => {
+                  const matches = root.querySelectorAll(selector);
+                  return matches.length === 1 ? matches[0] : null;
+                };
+                const visiblePositive = (node) => {
+                  if (node === null) return false;
+                  const rect = node.getBoundingClientRect();
+                  const style = getComputedStyle(node);
+                  return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden" && style.visibility !== "collapse";
+                };
+                const panel = exactElement(document, panelSelector);
+                const trigger = panel === null ? null : exactElement(panel, triggerSelector);
+                const body = document.body;
+                const structuralClosed =
+                  visiblePositive(panel) &&
+                  visiblePositive(trigger) &&
+                  trigger.textContent.trim() === "Muted" &&
+                  trigger.getAttribute("aria-expanded") === "false" &&
+                  document.querySelectorAll(allContentSelector).length === 0;
+                const interactionHandoff =
+                  body !== null &&
+                  !body.hasAttribute("data-scroll-locked") &&
+                  body.style.pointerEvents !== "none" &&
+                  getComputedStyle(body).pointerEvents !== "none";
+                return { interactionHandoff, structuralClosed };
+              },
+              {
+                allContentSelector: ${allContentSelector},
+                panelSelector: ${JSON.stringify(panelSelector)},
+                triggerSelector: ${triggerSelector},
+              }
+            );
+            try {
+              const authority = page.context().__wf540Recall(${stateKey});
+              const panel = page.locator(${JSON.stringify(panelSelector)});
+              const trigger = panel.locator(${triggerSelector});
+              const openContent = page.locator(${openContentSelector});
+              const option = openContent.locator(${selector});
+              const panelRect = await panel.count() === 1 ? await panel.boundingBox() : null;
+              const triggerRect = await trigger.count() === 1 ? await trigger.boundingBox() : null;
+              const contentRect = await openContent.count() === 1 ? await openContent.boundingBox() : null;
+              const optionRect = await option.count() === 1 ? await option.boundingBox() : null;
+              const menuId = await openContent.count() === 1 ? await openContent.getAttribute("id") : null;
+              const authorityOptionPreconditionFailed =
+                authority === null ||
+                typeof authority !== "object" ||
+                typeof authority.baselineColor !== "string" ||
+                authority.baselineColor.length === 0 ||
+                typeof authority.menuId !== "string" ||
+                authority.menuId.length === 0 ||
+                await panel.count() !== 1 ||
+                !(await panel.isVisible()) ||
+                !positive(panelRect) ||
+                await trigger.count() !== 1 ||
+                !(await trigger.isVisible()) ||
+                !positive(triggerRect) ||
+                await openContent.count() !== 1 ||
+                !(await openContent.isVisible()) ||
+                !positive(contentRect) ||
+                await option.count() !== 1 ||
+                !(await option.isVisible()) ||
+                !positive(optionRect) ||
+                menuId !== authority.menuId ||
+                await trigger.getAttribute("aria-controls") !== authority.menuId ||
+                await trigger.getAttribute("aria-expanded") !== "true";
+              if (authorityOptionPreconditionFailed) return fail(failureClass);
+              await option.click({ timeout: 10000 });
+              failureClass = ${JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[1])};
+              const stabilityHorizonMs = 600;
+              let settledSince = null;
+              let settledSampleCount = 0;
+              const resetSettlement = () => {
+                settledSince = null;
+                settledSampleCount = 0;
+              };
+              const deadline = Date.now() + 10000;
+              while (Date.now() < deadline) {
+                const currentPanel = page.locator(${JSON.stringify(panelSelector)});
+                failureClass = ${JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[1])};
+                const teardownSample = await sampleAtomicTeardown();
+                if (!teardownSample.structuralClosed) {
+                  resetSettlement();
+                  await page.waitForTimeout(25);
+                  continue;
+                }
+                failureClass = ${JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[2])};
+                if (!teardownSample.interactionHandoff) {
+                  resetSettlement();
+                  await page.waitForTimeout(25);
+                  continue;
+                }
+                failureClass = ${JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[3])};
+                const presentationDirty = currentPanel.getByText("Unsaved presentation", { exact: true });
+                const contentDirty = page.getByText("Unsaved changes", { exact: true });
+                const presentationDirtyRect = await presentationDirty.count() === 1 ? await presentationDirty.boundingBox() : null;
+                const contentDirtyRect = await contentDirty.count() === 1 ? await contentDirty.boundingBox() : null;
+                const dirtyBadges =
+                  await presentationDirty.count() === 1 &&
+                  await presentationDirty.isVisible() &&
+                  positive(presentationDirtyRect) &&
+                  await contentDirty.count() === 1 &&
+                  await contentDirty.isVisible() &&
+                  positive(contentDirtyRect);
+                if (!dirtyBadges) {
+                  resetSettlement();
+                  await page.waitForTimeout(25);
+                  continue;
+                }
+                failureClass = ${JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[4])};
+                const targetRoot = page.locator(${targetRootSelector});
+                const selectionHandle = page.locator(${selectionHandleSelector});
+                const textbox = page.locator(${textboxSelector});
+                const targetRootRect = await targetRoot.count() === 1 ? await targetRoot.boundingBox() : null;
+                const selectionHandleRect = await selectionHandle.count() === 1 ? await selectionHandle.boundingBox() : null;
+                const textboxRect = await textbox.count() === 1 ? await textbox.boundingBox() : null;
+                const textboxText = await textbox.count() === 1 ? await textbox.textContent() : null;
+                const textboxFocused = await textbox.count() === 1 ? await textbox.evaluate((node) => node === document.activeElement) : true;
+                const selectionOverride =
+                  await targetRoot.count() === 1 &&
+                  await targetRoot.isVisible() &&
+                  positive(targetRootRect) &&
+                  await targetRoot.getAttribute("data-selected") === "true" &&
+                  await targetRoot.getAttribute("data-screen-presentation-override") === "true" &&
+                  await selectionHandle.count() === 1 &&
+                  await selectionHandle.isVisible() &&
+                  positive(selectionHandleRect) &&
+                  await selectionHandle.getAttribute("aria-pressed") === "true" &&
+                  await textbox.count() === 1 &&
+                  await textbox.isVisible() &&
+                  positive(textboxRect) &&
+                  textboxText === ${JSON.stringify(expectedDraft)} &&
+                  textboxFocused === false;
+                if (!selectionOverride) {
+                  resetSettlement();
+                  await page.waitForTimeout(25);
+                  continue;
+                }
+                failureClass = ${JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[5])};
+                const textboxClassName = (await textbox.getAttribute("class")) ?? "";
+                const mutedClass = textboxClassName.split(/\\s+/u).includes("text-muted-foreground");
+                if (!mutedClass) {
+                  resetSettlement();
+                  await page.waitForTimeout(25);
+                  continue;
+                }
+                failureClass = ${JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[6])};
+                const currentColor = await textbox.evaluate((node) => getComputedStyle(node).color);
+                const completePostcondition =
+                  typeof currentColor === "string" &&
+                  currentColor.length > 0 &&
+                  currentColor !== authority.baselineColor;
+                if (!completePostcondition) {
+                  resetSettlement();
+                  await page.waitForTimeout(25);
+                  continue;
+                }
+                const sampledAt = Date.now();
+                if (settledSince === null) settledSince = sampledAt;
+                settledSampleCount += 1;
+                if (
+                  sampledAt - settledSince < stabilityHorizonMs ||
+                  settledSampleCount < 2
+                ) {
+                  await page.waitForTimeout(25);
+                  continue;
+                }
+                const finalAtomicTeardownSample = await sampleAtomicTeardown();
+                if (!finalAtomicTeardownSample.structuralClosed) {
+                  failureClass = ${JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[1])};
+                  resetSettlement();
+                  await page.waitForTimeout(25);
+                  continue;
+                }
+                if (!finalAtomicTeardownSample.interactionHandoff) {
+                  failureClass = ${JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[2])};
+                  resetSettlement();
+                  await page.waitForTimeout(25);
+                  continue;
+                }
+                return true;
+              }
+              return fail(failureClass);
+            } catch {
+              return fail(failureClass);
+            }
           }`),
           displayArgs: null,
         };
@@ -9847,6 +11508,138 @@ function buildSimpleBrowserInvocation(
           displayArgs: null,
         };
       }
+      const dirtyNavigationConfig = DIRTY_NAVIGATION_REQUEST_ACTION_CONFIG[action.id];
+      if (dirtyNavigationConfig !== undefined) {
+        const expectedCurrentUrl = JSON.stringify(
+          expandRegisteredPath(plan, dirtyNavigationConfig.realm, captures)
+        );
+        const dialogDescription = JSON.stringify(dirtyNavigationConfig.dialogDescription);
+        const dialogTitle = JSON.stringify(dirtyNavigationConfig.dialogTitle);
+        return {
+          args: runCode(`async (page) => {
+            const positive = (rect) => rect !== null && [rect.x, rect.y, rect.width, rect.height].every(Number.isFinite) && rect.width > 0 && rect.height > 0;
+            const fail = (failureClass) => ({ failureClass, settled: false });
+            const dialog = page.getByRole("dialog", { name: ${dialogTitle}, exact: true });
+            const dialogMultiplicityFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[9])};
+            const links = page.locator(${selector});
+            let visibleLinkIndex = -1;
+            let latestTargetFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[2])};
+            const targetDeadline = Date.now() + 10000;
+            while (Date.now() < targetDeadline) {
+              let pollTargetFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[2])};
+              const count = await links.count();
+              if (count > 8) return fail(${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[0])});
+              let nextVisibleLinkIndex = -1;
+              let visibleCount = 0;
+              for (let index = 0; index < count; index += 1) {
+                const candidate = links.nth(index);
+                const rect = await candidate.boundingBox();
+                if (await candidate.isVisible() && positive(rect)) {
+                  nextVisibleLinkIndex = index;
+                  visibleCount += 1;
+                }
+              }
+              if (visibleCount > 1) return fail(${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[1])});
+              if (visibleCount === 1) {
+                const candidate = links.nth(nextVisibleLinkIndex);
+                const rect = await candidate.boundingBox();
+                const candidateStillVisible = await candidate.isVisible();
+                if (candidateStillVisible && positive(rect)) {
+                  const body = page.locator("body");
+                  const bodyInteraction = await body.count() === 1
+                    ? await body.evaluate((node) => ({
+                        computedPointerEvents: getComputedStyle(node).pointerEvents,
+                        inlinePointerEvents: node.style.pointerEvents,
+                        scrollLocked: node.hasAttribute("data-scroll-locked"),
+                      }))
+                    : null;
+                  if (bodyInteraction !== null) {
+                    if (bodyInteraction.scrollLocked === true) {
+                      pollTargetFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[4])};
+                    } else if (bodyInteraction.inlinePointerEvents === "none") {
+                      pollTargetFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[5])};
+                    } else if (bodyInteraction.computedPointerEvents === "none") {
+                      pollTargetFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[6])};
+                    } else {
+                      const receivesPointerAtCenter = await candidate.evaluate((node, box) => {
+                        const receiver = document.elementFromPoint(
+                          box.x + box.width / 2,
+                          box.y + box.height / 2
+                        );
+                        return receiver !== null && (receiver === node || node.contains(receiver));
+                      }, rect);
+                      if (receivesPointerAtCenter) {
+                        visibleLinkIndex = nextVisibleLinkIndex;
+                        break;
+                      }
+                      pollTargetFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[7])};
+                    }
+                  }
+                }
+              }
+              latestTargetFailureClass = pollTargetFailureClass;
+              await page.waitForTimeout(25);
+            }
+            if (visibleLinkIndex < 0) return fail(latestTargetFailureClass);
+            const urlBefore = page.url();
+            const navigationCountBefore = page.__wf540ReadNavigationCount();
+            if (urlBefore !== ${expectedCurrentUrl}) return fail(${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[3])});
+            if (await dialog.count() !== 0) return fail(dialogMultiplicityFailureClass);
+            let clickFailed = false;
+            try {
+              await links.nth(visibleLinkIndex).click({ timeout: 10000, noWaitAfter: true });
+            } catch {
+              clickFailed = true;
+            }
+            let namedDialogObserved = false;
+            const dialogDeadline = Date.now() + 10000;
+            while (Date.now() < dialogDeadline) {
+              const heading = dialog.getByRole("heading", { name: ${dialogTitle}, exact: true });
+              const description = dialog.getByText(${dialogDescription}, { exact: true });
+              const keepEditing = dialog.getByRole("button", { name: "Keep editing", exact: true });
+              const discard = dialog.getByRole("button", { name: "Discard and continue", exact: true });
+              const dialogCount = await dialog.count();
+              const headingCount = await heading.count();
+              const descriptionCount = await description.count();
+              const keepEditingCount = await keepEditing.count();
+              const discardCount = await discard.count();
+              if (dialogCount > 1 || headingCount > 1 || descriptionCount > 1 || keepEditingCount > 1 || discardCount > 1) {
+                return fail(dialogMultiplicityFailureClass);
+              }
+              if (dialogCount === 1) namedDialogObserved = true;
+              const dialogRect = dialogCount === 1 ? await dialog.boundingBox() : null;
+              const headingRect = headingCount === 1 ? await heading.boundingBox() : null;
+              const descriptionRect = descriptionCount === 1 ? await description.boundingBox() : null;
+              const keepEditingRect = keepEditingCount === 1 ? await keepEditing.boundingBox() : null;
+              const discardRect = discardCount === 1 ? await discard.boundingBox() : null;
+              const urlStable = page.url() === urlBefore;
+              const navigationStable = page.__wf540ReadNavigationCount() === navigationCountBefore;
+              if (!urlStable || !navigationStable) return fail(${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[10])});
+              if (
+                dialogCount === 1 &&
+                await dialog.isVisible() &&
+                positive(dialogRect) &&
+                headingCount === 1 &&
+                await heading.isVisible() &&
+                positive(headingRect) &&
+                descriptionCount === 1 &&
+                await description.isVisible() &&
+                positive(descriptionRect) &&
+                keepEditingCount === 1 &&
+                await keepEditing.isVisible() &&
+                positive(keepEditingRect) &&
+                discardCount === 1 &&
+                await discard.isVisible() &&
+                positive(discardRect)
+              ) return true;
+              await page.waitForTimeout(25);
+            }
+            if (clickFailed && !namedDialogObserved) return fail(${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[8])});
+            return fail(${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[11])});
+          }`),
+          displayArgs: null,
+        };
+      }
       if (RECORDS_WORKSPACE_ACTION_IDS.includes(action.id)) {
         const recordActionsSelector = JSON.stringify(registeredSelector(plan, "recordActions"));
         const expectedRecordsUrl = JSON.stringify(expandRegisteredPath(plan, "records", captures));
@@ -9919,6 +11712,91 @@ function buildSimpleBrowserInvocation(
       invariant(parsed.args.length === 2, "fill arity");
       const selector = resolvedArgs[0];
       const value = resolvedArgs[1];
+      const toneContentFillConfig = TONE_CONTENT_FILL_ACTION_CONFIG[action.id];
+      if (toneContentFillConfig !== undefined) {
+        const targetBlockId =
+          plan.fixtureBlueprint.screen.blockIds[toneContentFillConfig.targetBlockKey];
+        const expectedDraft = plan.fixtureBlueprint.entry[toneContentFillConfig.expectedDraftKey];
+        invariant(
+          typeof targetBlockId === "string" &&
+            targetBlockId.length > 0 &&
+            typeof expectedDraft === "string" &&
+            expectedDraft.length > 0 &&
+            value === expectedDraft &&
+            selector ===
+              registeredSelector(plan, "contentEditable", [
+                targetBlockId,
+                toneContentFillConfig.fieldLabel,
+              ]),
+          "tone content fill contract drift"
+        );
+        const targetRootSelector = registeredSelector(plan, "blockRoot", [targetBlockId]);
+        const selectionHandleSelector = registeredSelector(plan, "selectBlock", [targetBlockId]);
+        return {
+          args: runCode(`async (page) => {
+            const positive = (rect) => rect !== null && [rect.x, rect.y, rect.width, rect.height].every(Number.isFinite) && rect.width > 0 && rect.height > 0;
+            const textbox = page.locator(${JSON.stringify(selector)});
+            const targetRoot = page.locator(${JSON.stringify(targetRootSelector)});
+            const selectionHandle = page.locator(${JSON.stringify(selectionHandleSelector)});
+            await textbox.waitFor({ state: "visible", timeout: 10000 });
+            const textboxRect = await textbox.count() === 1 ? await textbox.boundingBox() : null;
+            const targetRootRect = await targetRoot.count() === 1 ? await targetRoot.boundingBox() : null;
+            const selectionHandleRect = await selectionHandle.count() === 1 ? await selectionHandle.boundingBox() : null;
+            if (
+              await textbox.count() !== 1 ||
+              !(await textbox.isVisible()) ||
+              !positive(textboxRect) ||
+              await targetRoot.count() !== 1 ||
+              !(await targetRoot.isVisible()) ||
+              !positive(targetRootRect) ||
+              await targetRoot.getAttribute("data-selected") !== "true" ||
+              await selectionHandle.count() !== 1 ||
+              !(await selectionHandle.isVisible()) ||
+              !positive(selectionHandleRect) ||
+              await selectionHandle.getAttribute("aria-pressed") !== "true"
+            ) throw new Error("wf540_tone_fill_precondition");
+            await textbox.fill(${JSON.stringify(expectedDraft)});
+            const filledText = await textbox.textContent();
+            const filledTextboxFocused = await textbox.evaluate((node) => node === document.activeElement);
+            if (filledText !== ${JSON.stringify(expectedDraft)} || filledTextboxFocused !== true) throw new Error("wf540_tone_fill_focus");
+            await textbox.blur();
+            const deadline = Date.now() + 10000;
+            while (Date.now() < deadline) {
+              const settledTextbox = page.locator(${JSON.stringify(selector)});
+              const settledTargetRoot = page.locator(${JSON.stringify(targetRootSelector)});
+              const settledSelectionHandle = page.locator(${JSON.stringify(selectionHandleSelector)});
+              const contentDirty = page.getByText("Unsaved changes", { exact: true });
+              const settledTextboxRect = await settledTextbox.count() === 1 ? await settledTextbox.boundingBox() : null;
+              const settledTargetRootRect = await settledTargetRoot.count() === 1 ? await settledTargetRoot.boundingBox() : null;
+              const settledSelectionHandleRect = await settledSelectionHandle.count() === 1 ? await settledSelectionHandle.boundingBox() : null;
+              const contentDirtyRect = await contentDirty.count() === 1 ? await contentDirty.boundingBox() : null;
+              const settledText = await settledTextbox.count() === 1 ? await settledTextbox.textContent() : null;
+              const settledTextboxFocused = await settledTextbox.count() === 1 ? await settledTextbox.evaluate((node) => node === document.activeElement) : true;
+              if (
+                await settledTextbox.count() === 1 &&
+                await settledTextbox.isVisible() &&
+                positive(settledTextboxRect) &&
+                settledText === ${JSON.stringify(expectedDraft)} &&
+                settledTextboxFocused === false &&
+                await settledTargetRoot.count() === 1 &&
+                await settledTargetRoot.isVisible() &&
+                positive(settledTargetRootRect) &&
+                await settledTargetRoot.getAttribute("data-selected") === "true" &&
+                await settledSelectionHandle.count() === 1 &&
+                await settledSelectionHandle.isVisible() &&
+                positive(settledSelectionHandleRect) &&
+                await settledSelectionHandle.getAttribute("aria-pressed") === "true" &&
+                await contentDirty.count() === 1 &&
+                await contentDirty.isVisible() &&
+                positive(contentDirtyRect)
+              ) return true;
+              await page.waitForTimeout(25);
+            }
+            throw new Error("wf540_tone_fill_dirty_settlement");
+          }`),
+          displayArgs: null,
+        };
+      }
       const credential =
         action.executable.type === "browser-native" &&
         action.executable.operationId === "fill-secret";
@@ -10244,7 +12122,16 @@ function buildBrowserInvocation(
       sourceIndex > 0 && typeof invocation.args[sourceIndex] === "string",
       action.id + " unit run-code source is absent"
     );
-    const unitSource = `(async (page) => { await (${invocation.args[sourceIndex]})(page); return { ok: true }; })`;
+    const unitSource = DIRTY_NAVIGATION_REQUEST_ACTION_IDS.includes(action.id)
+      ? `(async (page) => {
+          const result = await (${invocation.args[sourceIndex]})(page);
+          if (result === true) return { ok: true };
+          const failureClasses = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES)};
+          const keys = result !== null && typeof result === "object" && !Array.isArray(result) && Object.getPrototypeOf(result) === Object.prototype ? Object.keys(result) : [];
+          if (keys.length === 2 && keys.includes("failureClass") && keys.includes("settled") && result.settled === false && failureClasses.includes(result.failureClass)) return result;
+          throw new Error("wf540_dirty_navigation_result");
+        })`
+      : `(async (page) => { await (${invocation.args[sourceIndex]})(page); return { ok: true }; })`;
     const args = [...invocation.args];
     args[sourceIndex] = unitSource;
     invocation = { ...invocation, args };
@@ -12388,10 +14275,12 @@ const validateInput = (schemaId, value) => {
   if (schemaId === "media-natural-input-v1") { exact("mimeType","originalName","size"); inputString(value.mimeType,128); inputString(value.originalName,512); if (!Number.isSafeInteger(value.size) || value.size <= 0 || value.size > 4194304) throw new Error("wf540_input_size"); return value; }
   if (schemaId === "override-discovery-input-v1") { exact("blockId","entryId","propPath","screenId"); inputUuid(value.entryId); inputUuid(value.screenId); inputString(value.blockId,256); if (value.propPath !== "mediaAssetId") throw new Error("wf540_input_prop"); return value; }
   if (schemaId === "override-preflight-input-v1") { exact("blockId","contentTypeSlug","entrySlug","propPath","screenName"); ["blockId","contentTypeSlug","entrySlug","screenName"].forEach((key)=>inputString(value[key],256)); if (value.propPath !== "mediaAssetId") throw new Error("wf540_input_prop"); return value; }
-  if (schemaId === "resource-owner-input-v1") { exact("entryIds","mediaId","override"); if (!Array.isArray(value.entryIds) || value.entryIds.length !== 6 || new Set(value.entryIds).size !== 6) throw new Error("wf540_input_entries"); value.entryIds.forEach(inputUuid); inputUuid(value.mediaId); inputKeys(value.override,["blockId","entryId","propPath","screenId"]); inputUuid(value.override.entryId); inputUuid(value.override.screenId); inputString(value.override.blockId,256); if (value.override.propPath !== "mediaAssetId") throw new Error("wf540_input_prop"); return value; }
+  if (schemaId === "resource-owner-input-v2") { exact("entryIds","mediaId","override","overrideExpectedPresent"); if (!Array.isArray(value.entryIds) || value.entryIds.length !== 6 || new Set(value.entryIds).size !== 6) throw new Error("wf540_input_entries"); value.entryIds.forEach(inputUuid); inputUuid(value.mediaId); inputKeys(value.override,["blockId","entryId","propPath","screenId"]); inputUuid(value.override.entryId); inputUuid(value.override.screenId); inputString(value.override.blockId,256); if (value.override.propPath !== "mediaAssetId" || typeof value.overrideExpectedPresent !== "boolean") throw new Error("wf540_input_prop"); return value; }
+  if (schemaId === "seo-entry-targets-input-v1") { exact("targetIds"); if (!Array.isArray(value.targetIds) || value.targetIds.length !== 6 || new Set(value.targetIds).size !== 6) throw new Error("wf540_input_seo_targets"); value.targetIds.forEach(inputUuid); return value; }
   if (schemaId === "identifier-uuid-input-v1") { exact("identifier"); inputUuid(inputTuple(value.identifier,1)[0]); return value; }
   if (schemaId === "identifier-setting-input-v1") { exact("identifier"); const tuple=inputTuple(value.identifier,2); inputUuid(tuple[0]); if (tuple[1] !== "customScreens.entry.preferences") throw new Error("wf540_input_setting_key"); return value; }
   if (schemaId === "identifier-override-input-v1") { exact("identifier"); const tuple=inputTuple(value.identifier,4); inputUuid(tuple[0]); inputUuid(tuple[1]); inputString(tuple[2],256); if (tuple[3] !== "mediaAssetId") throw new Error("wf540_input_prop"); return value; }
+  if (schemaId === "identifier-seo-entry-input-v1") { exact("identifier"); const tuple=inputTuple(value.identifier,3); inputUuid(tuple[0]); if (tuple[1] !== "entry") throw new Error("wf540_input_target_type"); inputUuid(tuple[2]); return value; }
   if (schemaId === "identifier-media-input-v1") { exact("identifier"); const tuple=inputTuple(value.identifier,2); inputUuid(tuple[0]); if (!/^\d{4}\/(?:0[1-9]|1[0-2])\/[0-9a-f-]{36}\.png$/.test(tuple[1])) throw new Error("wf540_input_storage_key"); return value; }
   if (schemaId === "screen-materialize-input-v1") { exact("bodyWithoutDefinition","contentType","definitionWithoutListView"); inputKeys(value.bodyWithoutDefinition,["contentTypeId","name","showInSidebar","sidebarLabel","status"]); inputUuid(value.bodyWithoutDefinition.contentTypeId); inputString(value.bodyWithoutDefinition.name,256); inputString(value.bodyWithoutDefinition.sidebarLabel,256); if (value.bodyWithoutDefinition.status !== "active" || typeof value.bodyWithoutDefinition.showInSidebar !== "boolean") throw new Error("wf540_input_screen_body"); inputKeys(value.contentType,["id","name","schema","slug"]); inputUuid(value.contentType.id); inputString(value.contentType.name,256); inputString(value.contentType.slug,256); inputObject(value.contentType.schema); inputKeys(value.definitionWithoutListView,["editorView","schemaVersion"]); inputObject(value.definitionWithoutListView.editorView); if (value.definitionWithoutListView.schemaVersion !== 4) throw new Error("wf540_input_screen_definition"); return value; }
   if (schemaId === "bootstrap-restore-input-v1") { exact("baseline","newestOwnedPair","userId"); inputKeys(value.baseline,["id","lastLoginAt","updatedAt","normalizedEmailProof","emailHashProof","encryptedEmailProof","decryptEmailProof","rawUserRow","roleTuples"]); inputKeys(value.baseline.rawUserRow,["id","email","emailHash","emailEncrypted","passwordHash","name","status","createdAt","updatedAt","lastLoginAt"]); if (typeof value.baseline.id !== "string" || !/^[0-9a-f-]{36}$/.test(value.baseline.id) || value.baseline.rawUserRow.id !== value.baseline.id || value.baseline.rawUserRow.lastLoginAt !== value.baseline.lastLoginAt || value.baseline.rawUserRow.updatedAt !== value.baseline.updatedAt || !inputIso(value.baseline.lastLoginAt) || !inputIso(value.baseline.updatedAt) || !inputIso(value.baseline.rawUserRow.createdAt) || value.baseline.rawUserRow.status !== "active" || ![value.baseline.normalizedEmailProof,value.baseline.emailHashProof,value.baseline.encryptedEmailProof,value.baseline.decryptEmailProof].every((proof)=>proof === true)) throw new Error("wf540_input_bootstrap_identity"); if (!Array.isArray(value.baseline.roleTuples) || value.baseline.roleTuples.length !== 1) throw new Error("wf540_input_bootstrap_roles"); inputKeys(value.baseline.roleTuples[0],["userId","roleId","roleName","roleDescription","rolePermissions","roleCreatedAt"]); if (value.baseline.roleTuples[0].userId !== value.baseline.id || typeof value.baseline.roleTuples[0].roleId !== "string" || !/^[0-9a-f-]{36}$/.test(value.baseline.roleTuples[0].roleId) || value.baseline.roleTuples[0].roleName !== "admin" || !Array.isArray(value.baseline.roleTuples[0].rolePermissions) || canonical([...new Set(value.baseline.roleTuples[0].rolePermissions)].sort()) !== canonical(["*"]) || !inputIso(value.baseline.roleTuples[0].roleCreatedAt)) throw new Error("wf540_input_bootstrap_role"); inputKeys(value.newestOwnedPair,["lastLoginAt","updatedAt"]); if (value.userId !== value.baseline.id || !inputIso(value.newestOwnedPair.lastLoginAt) || !inputIso(value.newestOwnedPair.updatedAt)) throw new Error("wf540_input_bootstrap_pair"); return value; }
@@ -12657,21 +14546,72 @@ if (rows.length > 1) throw new Error("wf540_content_routes_cardinality");
 const [row] = rows;
 const output = row ? { exists:true,value:row.value,updatedAt:row.updatedAt.toISOString() } : { exists:false,value:null,updatedAt:null };` +
   BRIDGE_OUTPUT_WRITER;
+const SEO_ENTRY_DISCOVERY_BRIDGE_SOURCE =
+  BRIDGE_INPUT_READER +
+  bridgeInputSchemaGuard("seo-entry-targets-input-v1") +
+  String.raw`
+import { and, eq, inArray } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { seoDocuments } from "./db/schema.ts";
+if (Object.keys(input).join(",") !== "targetIds" || !Array.isArray(input.targetIds) || input.targetIds.length !== 6 || new Set(input.targetIds).size !== 6) throw new Error("wf540_input");
+const candidates = await db.select({ id:seoDocuments.id,targetId:seoDocuments.targetId,targetType:seoDocuments.targetType }).from(seoDocuments).where(and(eq(seoDocuments.targetType,"entry"),inArray(seoDocuments.targetId,input.targetIds))).orderBy(seoDocuments.targetId,seoDocuments.id).limit(7);
+const output = { candidates };` +
+  BRIDGE_OUTPUT_WRITER;
+
+function assertSeoEntryDiscoveryBridgeFailClosedSource(source = SEO_ENTRY_DISCOVERY_BRIDGE_SOURCE) {
+  invariant(typeof source === "string", "SEO discovery bridge source authority drift");
+  const required = [
+    'validateInput("seo-entry-targets-input-v1",input);/*wf540-bound-input*/',
+    'Object.keys(input).join(",") !== "targetIds"',
+    "input.targetIds.length !== 6",
+    "new Set(input.targetIds).size !== 6",
+    "db.select({ id:seoDocuments.id,targetId:seoDocuments.targetId,targetType:seoDocuments.targetType })",
+    'where(and(eq(seoDocuments.targetType,"entry"),inArray(seoDocuments.targetId,input.targetIds)))',
+    ".orderBy(seoDocuments.targetId,seoDocuments.id).limit(7)",
+    "const output = { candidates };",
+  ];
+  invariant(
+    required.every((token) => source.includes(token)) &&
+      !source.includes("like(") &&
+      !source.includes("ilike(") &&
+      !source.includes("ownerSubjectIdentifier"),
+    "SEO discovery bridge lost exact bounded entry-target authority"
+  );
+  return true;
+}
 const CURRENT_RESOURCE_OWNER_QUERY_BRIDGE_SOURCE =
   BRIDGE_INPUT_READER +
-  bridgeInputSchemaGuard("resource-owner-input-v1") +
+  bridgeInputSchemaGuard("resource-owner-input-v2") +
   String.raw`
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "./db/client.ts";
 import { contentEntries, customScreenEntryPresentationOverrides, media } from "./db/schema.ts";
-if (Object.keys(input).sort().join(",") !== "entryIds,mediaId,override" || !Array.isArray(input.entryIds) || input.entryIds.length !== 6 || new Set(input.entryIds).size !== 6 || Object.keys(input.override).sort().join(",") !== "blockId,entryId,propPath,screenId") throw new Error("wf540_input");
+if (Object.keys(input).sort().join(",") !== "entryIds,mediaId,override,overrideExpectedPresent" || !Array.isArray(input.entryIds) || input.entryIds.length !== 6 || new Set(input.entryIds).size !== 6 || Object.keys(input.override).sort().join(",") !== "blockId,entryId,propPath,screenId" || typeof input.overrideExpectedPresent !== "boolean") throw new Error("wf540_input");
 const entries = (await db.select({ id:contentEntries.id,ownerSubjectIdentifier:contentEntries.authorId }).from(contentEntries).where(inArray(contentEntries.id,input.entryIds)).limit(7)).sort((a,b)=>a.id.localeCompare(b.id));
 const mediaRows = await db.select({ id:media.id,ownerSubjectIdentifier:media.createdBy }).from(media).where(eq(media.id,input.mediaId)).limit(2);
 const overrideRows = await db.select({ ownerSubjectIdentifier:customScreenEntryPresentationOverrides.updatedBy }).from(customScreenEntryPresentationOverrides).where(and(eq(customScreenEntryPresentationOverrides.screenId,input.override.screenId),eq(customScreenEntryPresentationOverrides.entryId,input.override.entryId),eq(customScreenEntryPresentationOverrides.blockId,input.override.blockId),eq(customScreenEntryPresentationOverrides.propPath,input.override.propPath))).limit(2);
-if (entries.length !== 6 || mediaRows.length !== 1 || overrideRows.length !== 1) throw new Error("wf540_owner_rows");
-const [mediaRow] = mediaRows; const [override] = overrideRows;
-const output = { entries, media:mediaRow, override };` +
+if (entries.length !== 6 || mediaRows.length !== 1 || (input.overrideExpectedPresent ? overrideRows.length !== 1 : overrideRows.length !== 0)) throw new Error("wf540_owner_rows");
+const [mediaRow] = mediaRows; const override = overrideRows[0] ?? null;
+const output = { entries, media:mediaRow, override, overrideAbsent:override === null };` +
   BRIDGE_OUTPUT_WRITER;
+
+function assertCurrentResourceOwnerBridgeFailClosedSource(
+  source = CURRENT_RESOURCE_OWNER_QUERY_BRIDGE_SOURCE
+) {
+  invariant(typeof source === "string", "current owner bridge source authority drift");
+  const required = [
+    'validateInput("resource-owner-input-v2",input);/*wf540-bound-input*/',
+    ".limit(7)).sort((a,b)=>a.id.localeCompare(b.id));",
+    ".limit(2);\nif (entries.length !== 6 || mediaRows.length !== 1 || (input.overrideExpectedPresent ? overrideRows.length !== 1 : overrideRows.length !== 0))",
+    "const [mediaRow] = mediaRows; const override = overrideRows[0] ?? null;",
+    "overrideAbsent:override === null",
+  ];
+  invariant(
+    required.every((token) => source.includes(token)),
+    "current owner bridge lost exact present/authorized-absence cardinality"
+  );
+  return true;
+}
 const STORAGE_PREFLIGHT_BRIDGE_SOURCE =
   BRIDGE_INPUT_READER +
   bridgeInputSchemaGuard("user-agents-input-v1") +
@@ -12816,6 +14756,97 @@ const PRESENTATION_OVERRIDE_EXACT_BRIDGE_SOURCES = deepFreezeExact(
     ])
   )
 );
+
+function seoEntryDocumentExactBridgeSource(operation) {
+  invariant(CLEANUP_OPERATION_KINDS.includes(operation), "SEO entry bridge operation drift");
+  const mutation =
+    operation === "delete"
+      ? "const affected = (await db.delete(seoDocuments).where(predicate).returning({ id: seoDocuments.id })).length;"
+      : "const affected = 0;";
+  const assertion =
+    operation === "provenance"
+      ? 'if (before.length !== 1) throw new Error("wf540_seo_provenance");'
+      : operation === "delete"
+        ? 'if (affected !== 1 || after.length !== 0) throw new Error("wf540_seo_delete");'
+        : 'if (after.length !== 0) throw new Error("wf540_seo_absence");';
+  return (
+    BRIDGE_INPUT_READER +
+    bridgeInputSchemaGuard("identifier-seo-entry-input-v1") +
+    String.raw`
+import { and, eq } from "drizzle-orm";
+import { db } from "./db/client.ts";
+import { seoDocuments } from "./db/schema.ts";
+if (Object.keys(input).join(",") !== "identifier" || !Array.isArray(input.identifier) || input.identifier.length !== 3) throw new Error("wf540_input");
+const [id,targetType,targetId] = input.identifier;
+if (targetType !== "entry") throw new Error("wf540_target_type");
+const predicate = and(eq(seoDocuments.id,id),eq(seoDocuments.targetType,targetType),eq(seoDocuments.targetId,targetId));
+const before = await db.select({ id:seoDocuments.id,targetId:seoDocuments.targetId,targetType:seoDocuments.targetType }).from(seoDocuments).where(predicate).limit(2);
+` +
+    mutation +
+    String.raw`
+const after = await db.select({ id:seoDocuments.id,targetId:seoDocuments.targetId,targetType:seoDocuments.targetType }).from(seoDocuments).where(predicate).limit(2);
+` +
+    assertion +
+    String.raw`
+const output = { absent:after.length === 0,affected,present:before.length === 1 };` +
+    BRIDGE_OUTPUT_WRITER
+  );
+}
+const SEO_ENTRY_DOCUMENT_EXACT_BRIDGE_SOURCES = deepFreezeExact(
+  Object.fromEntries(
+    CLEANUP_OPERATION_KINDS.map((operation) => [
+      operation,
+      seoEntryDocumentExactBridgeSource(operation),
+    ])
+  )
+);
+
+function assertSeoEntryDocumentExactBridgeSourcesFailClosed(
+  sources = SEO_ENTRY_DOCUMENT_EXACT_BRIDGE_SOURCES
+) {
+  exactOwnKeys(sources, CLEANUP_OPERATION_KINDS, "SEO entry P/C/A source registry", {
+    plain: true,
+  });
+  const exactPredicate =
+    "const predicate = and(eq(seoDocuments.id,id),eq(seoDocuments.targetType,targetType),eq(seoDocuments.targetId,targetId));";
+  const sharedRequired = [
+    'validateInput("identifier-seo-entry-input-v1",input);/*wf540-bound-input*/',
+    'if (targetType !== "entry") throw new Error("wf540_target_type");',
+    exactPredicate,
+    "const before = await db.select({ id:seoDocuments.id,targetId:seoDocuments.targetId,targetType:seoDocuments.targetType }).from(seoDocuments).where(predicate).limit(2);",
+    "const after = await db.select({ id:seoDocuments.id,targetId:seoDocuments.targetId,targetType:seoDocuments.targetType }).from(seoDocuments).where(predicate).limit(2);",
+    "const output = { absent:after.length === 0,affected,present:before.length === 1 };",
+  ];
+  const operationRequired = {
+    provenance: [
+      "const affected = 0;",
+      'if (before.length !== 1) throw new Error("wf540_seo_provenance");',
+    ],
+    delete: [
+      "const affected = (await db.delete(seoDocuments).where(predicate).returning({ id: seoDocuments.id })).length;",
+      'if (affected !== 1 || after.length !== 0) throw new Error("wf540_seo_delete");',
+    ],
+    absence: [
+      "const affected = 0;",
+      'if (after.length !== 0) throw new Error("wf540_seo_absence");',
+    ],
+  };
+  const expectedPredicateUses = { provenance: 2, delete: 3, absence: 2 };
+  for (const operation of CLEANUP_OPERATION_KINDS) {
+    const source = sources[operation];
+    invariant(typeof source === "string", "SEO entry " + operation + " source is absent");
+    invariant(
+      [...sharedRequired, ...operationRequired[operation]].every((token) =>
+        source.includes(token)
+      ) &&
+        source.split(".where(predicate)").length - 1 === expectedPredicateUses[operation] &&
+        !source.includes("like(") &&
+        !source.includes("ilike("),
+      "SEO entry " + operation + " source lost exact ID/type/target predicate authority"
+    );
+  }
+  return true;
+}
 
 function userSettingExactBridgeSource(operation) {
   invariant(CLEANUP_OPERATION_KINDS.includes(operation), "user setting bridge operation drift");
@@ -13799,6 +15830,7 @@ function validateStrictResourceBridgeOutput(state, descriptor, input, value) {
   if (
     [
       ...Object.values(PRESENTATION_OVERRIDE_EXACT_BRIDGE_SOURCES),
+      ...Object.values(SEO_ENTRY_DOCUMENT_EXACT_BRIDGE_SOURCES),
       ...Object.values(USER_SETTING_EXACT_BRIDGE_SOURCES),
       ...Object.values(USER_EXACT_BRIDGE_SOURCES),
       ...Object.values(TASK_TRAFFIC_EXACT_BRIDGE_SOURCES).flatMap((sources) =>
@@ -13907,10 +15939,10 @@ const BUN_BRIDGE_OUTPUT_VALIDATORS = deepFreezeExact({
     validateBooleanBridgeProjection(value, "showFieldMetadata", descriptor.operationId + " output"),
   "preference-write-private-v1": (_state, descriptor, _input, value) =>
     validateBooleanBridgeProjection(value, "ok", descriptor.operationId + " output"),
-  "resource-owner-private-v1": (_state, descriptor, _input, value) => {
+  "resource-owner-private-v2": (_state, descriptor, input, value) => {
     validateExactBridgeKeys(
       value,
-      ["entries", "media", "override"],
+      ["entries", "media", "override", "overrideAbsent"],
       descriptor.operationId + " output"
     );
     invariant(Array.isArray(value.entries), descriptor.operationId + " owner entries drift");
@@ -13925,11 +15957,50 @@ const BUN_BRIDGE_OUTPUT_VALIDATORS = deepFreezeExact({
       ["id", "ownerSubjectIdentifier"],
       descriptor.operationId + " media owner"
     );
-    validateExactBridgeKeys(
-      value.override,
-      ["ownerSubjectIdentifier"],
-      descriptor.operationId + " override owner"
+    invariant(
+      typeof value.overrideAbsent === "boolean" &&
+        value.overrideAbsent === !input.overrideExpectedPresent,
+      descriptor.operationId + " override absence drift"
     );
+    if (input.overrideExpectedPresent) {
+      validateExactBridgeKeys(
+        value.override,
+        ["ownerSubjectIdentifier"],
+        descriptor.operationId + " override owner"
+      );
+    } else invariant(value.override === null, descriptor.operationId + " absent override drift");
+    return value;
+  },
+  "seo-entry-discovery-private-v1": (_state, descriptor, input, value) => {
+    validateExactBridgeKeys(value, ["candidates"], descriptor.operationId + " output");
+    invariant(
+      Array.isArray(value.candidates) && value.candidates.length <= 6,
+      descriptor.operationId + " SEO candidate bound drift"
+    );
+    const documentIds = new Set();
+    const targetIds = new Set();
+    let previousCorrelation = null;
+    for (const candidate of value.candidates) {
+      validateExactBridgeKeys(
+        candidate,
+        ["id", "targetId", "targetType"],
+        descriptor.operationId + " SEO candidate"
+      );
+      requireBridgeUuid(candidate.id, descriptor.operationId + " SEO document ID");
+      requireBridgeUuid(candidate.targetId, descriptor.operationId + " SEO target ID");
+      const correlation = candidate.targetId + "\0" + candidate.id;
+      invariant(
+        candidate.targetType === "entry" &&
+          input.targetIds.includes(candidate.targetId) &&
+          !documentIds.has(candidate.id) &&
+          !targetIds.has(candidate.targetId) &&
+          (previousCorrelation === null || previousCorrelation < correlation),
+        descriptor.operationId + " SEO target correlation drift"
+      );
+      documentIds.add(candidate.id);
+      targetIds.add(candidate.targetId);
+      previousCorrelation = correlation;
+    }
     return value;
   },
   "screen-materialize-private-v1": (_state, descriptor, input, value) => {
@@ -14157,8 +16228,8 @@ const BUN_BRIDGE_INPUT_VALIDATORS = deepFreezeExact({
       invariant(typeof input.showFieldMetadata === "boolean", "Bun preference boolean drift");
     }
   ),
-  "resource-owner-input-v1": bunBridgeInputSchema(
-    ["entryIds", "mediaId", "override"],
+  "resource-owner-input-v2": bunBridgeInputSchema(
+    ["entryIds", "mediaId", "override", "overrideExpectedPresent"],
     (_state, _descriptor, input) => {
       invariant(
         Array.isArray(input.entryIds) &&
@@ -14177,7 +16248,36 @@ const BUN_BRIDGE_INPUT_VALIDATORS = deepFreezeExact({
       requireBridgeUuid(input.override.entryId, "Bun owner override entry ID");
       requireBridgeUuid(input.override.screenId, "Bun owner override Screen ID");
       requireBoundedBridgeString(input.override.blockId, "Bun owner override block ID", 256);
-      invariant(input.override.propPath === "mediaAssetId", "Bun owner override propPath drift");
+      invariant(
+        input.override.propPath === "mediaAssetId" &&
+          typeof input.overrideExpectedPresent === "boolean",
+        "Bun owner override expectation drift"
+      );
+    }
+  ),
+  "seo-entry-targets-input-v1": bunBridgeInputSchema(
+    ["targetIds"],
+    (_state, _descriptor, input) => {
+      invariant(
+        Array.isArray(input.targetIds) &&
+          input.targetIds.length === 6 &&
+          new Set(input.targetIds).size === 6,
+        "Bun SEO entry target tuple drift"
+      );
+      input.targetIds.forEach((targetId) => requireBridgeUuid(targetId, "Bun SEO entry target ID"));
+    }
+  ),
+  "identifier-seo-entry-input-v1": bunBridgeInputSchema(
+    ["identifier"],
+    (_state, _descriptor, input) => {
+      const [id, targetType, targetId] = validateBridgeIdentifierTuple(
+        input,
+        3,
+        "Bun SEO entry identifier"
+      );
+      requireBridgeUuid(id, "Bun SEO document ID");
+      invariant(targetType === "entry", "Bun SEO target type drift");
+      requireBridgeUuid(targetId, "Bun SEO target ID");
     }
   ),
   "screen-discovery-input-v1": bunBridgeInputSchema(
@@ -14319,7 +16419,7 @@ function bunBridgeInputSchemaId(source, inputKeys) {
     email: "email-input-v1",
     "email,name": "user-provision-input-v1",
     "email,userId": "user-identity-input-v1",
-    "entryIds,mediaId,override": "resource-owner-input-v1",
+    "entryIds,mediaId,override,overrideExpectedPresent": "resource-owner-input-v2",
     "entrySlug,typeSlug": "entry-preflight-input-v1",
     mediaId: "media-id-input-v1",
     "mimeType,originalName,size": "media-natural-input-v1",
@@ -14329,11 +16429,14 @@ function bunBridgeInputSchemaId(source, inputKeys) {
     "userAgent,userId": "user-session-observation-input-v1",
     userAgents: "user-agents-input-v1",
     userId: "user-id-input-v1",
+    targetIds: "seo-entry-targets-input-v1",
   }[signature];
   if (direct) return direct;
   invariant(signature === "identifier", "Bun bridge input signature is unregistered: " + signature);
   if (Object.values(PRESENTATION_OVERRIDE_EXACT_BRIDGE_SOURCES).includes(source))
     return "identifier-override-input-v1";
+  if (Object.values(SEO_ENTRY_DOCUMENT_EXACT_BRIDGE_SOURCES).includes(source))
+    return "identifier-seo-entry-input-v1";
   if (Object.values(USER_SETTING_EXACT_BRIDGE_SOURCES).includes(source))
     return "identifier-setting-input-v1";
   if (Object.values(MEDIA_EXACT_BRIDGE_SOURCES).includes(source))
@@ -14765,8 +16868,15 @@ const BUN_BRIDGE_AUXILIARY_OPERATION_DESCRIPTORS = deepFreezeExact({
     "resource/current-owner-exact",
     CURRENT_RESOURCE_OWNER_QUERY_BRIDGE_SOURCE,
     "database",
-    ["entryIds", "mediaId", "override"],
-    "resource-owner-private-v1"
+    ["entryIds", "mediaId", "override", "overrideExpectedPresent"],
+    "resource-owner-private-v2"
+  ),
+  "resource/seo-entry-discovery": bunBridgeOperationDescriptor(
+    "resource/seo-entry-discovery",
+    SEO_ENTRY_DISCOVERY_BRIDGE_SOURCE,
+    "database",
+    ["targetIds"],
+    "seo-entry-discovery-private-v1"
   ),
   "resource/api-session-observation": bunBridgeOperationDescriptor(
     "resource/api-session-observation",
@@ -14843,6 +16953,12 @@ function buildResourceBunSourceSpecs() {
   );
   add("presentation-override/cleanup", PRESENTATION_OVERRIDE_EXACT_BRIDGE_SOURCES.delete);
   add("presentation-override/absence", PRESENTATION_OVERRIDE_EXACT_BRIDGE_SOURCES.absence);
+  add(
+    "seo-document-entry/provenance/cleanup-discovery",
+    SEO_ENTRY_DOCUMENT_EXACT_BRIDGE_SOURCES.provenance
+  );
+  add("seo-document-entry/cleanup", SEO_ENTRY_DOCUMENT_EXACT_BRIDGE_SOURCES.delete);
+  add("seo-document-entry/absence", SEO_ENTRY_DOCUMENT_EXACT_BRIDGE_SOURCES.absence);
   for (const kind of ["setting-user-a", "setting-user-b"]) {
     add(kind + "/provenance/failure-discovery", USER_SETTING_EXACT_BRIDGE_SOURCES.provenance);
     add(kind + "/cleanup", USER_SETTING_EXACT_BRIDGE_SOURCES.delete);
@@ -15067,6 +17183,9 @@ function validateStaticBunBridgeDescriptorRegistries({
   runtimeRegistry = BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS,
   operationRegistry = BUN_BRIDGE_OPERATION_DESCRIPTORS,
 } = {}) {
+  assertCurrentResourceOwnerBridgeFailClosedSource();
+  assertSeoEntryDiscoveryBridgeFailClosedSource();
+  assertSeoEntryDocumentExactBridgeSourcesFailClosed();
   assertResourceBunParticipationExhaustive();
   const requiredRuntimeIds = Object.values(
     REQUIRED_BUN_BRIDGE_RUNTIME_OPERATION_IDS_BY_ENV_PROFILE
@@ -16604,7 +18723,11 @@ async function runtimeReplaceOverrides({ state, plan, action, captures }, empty)
       "/entries/" +
       encodeURIComponent(entryId) +
       "/overrides",
-    { json: { overrides } }
+    {
+      json: { overrides },
+      retainAuthoritativeBytes:
+        action.id === INTENTIONAL_PRESENTATION_OVERRIDE_ABSENCE_ACTIONS.reset,
+    }
   );
   invariant(
     deepEqualJson(
@@ -16617,6 +18740,14 @@ async function runtimeReplaceOverrides({ state, plan, action, captures }, empty)
     ),
     "override write drift"
   );
+  if (action.id === INTENTIONAL_PRESENTATION_OVERRIDE_ABSENCE_ACTIONS.reset) {
+    stageIntentionalPresentationOverrideObservation(
+      state,
+      action,
+      captures,
+      response.authoritativeBytes
+    );
+  }
   state.expectedOverrides = overrides;
   return runtimeSafeProjection({ count: overrides.length });
 }
@@ -16728,7 +18859,165 @@ function parseMediaRaceAuthoritativeAdminEvidence(state) {
   return deepFreezeExact({ evidenceSha256, projection });
 }
 
-async function runtimeProveOverrides({ state, captures }, empty) {
+function exactPresentationOverrideIdentifier(state, captures) {
+  return deepFreezeExact([
+    captures.get("screen.id"),
+    captures.get("entry.id"),
+    state.plan.fixtureBlueprint.screen.blockIds.raceImage,
+    "mediaAssetId",
+  ]);
+}
+
+function stageIntentionalPresentationOverrideObservation(
+  state,
+  action,
+  captures,
+  authoritativeBytes,
+  ownerSubjectIdentifier = null
+) {
+  if (!Object.values(INTENTIONAL_PRESENTATION_OVERRIDE_ABSENCE_ACTIONS).includes(action.id)) return;
+  invariant(
+    Buffer.isBuffer(authoritativeBytes) &&
+      authoritativeBytes.length > 0 &&
+      authoritativeBytes.length <= MAX_STREAM_BYTES &&
+      (ownerSubjectIdentifier === null || typeof ownerSubjectIdentifier === "string") &&
+      !state.intentionalPresentationOverrideObservations.has(action.id),
+    action.id + " intentional override observation drift"
+  );
+  state.intentionalPresentationOverrideObservations.set(
+    action.id,
+    deepFreezeExact({
+      actionId: action.id,
+      identifier: exactPresentationOverrideIdentifier(state, captures),
+      ownerSubjectIdentifier,
+      responseSha256: hashBytes(authoritativeBytes),
+    })
+  );
+}
+
+function stageIntentionalPresentationOverrideActionReceipt(state, action, receipt) {
+  if (!Object.values(INTENTIONAL_PRESENTATION_OVERRIDE_ABSENCE_ACTIONS).includes(action.id)) return;
+  const observation = state.intentionalPresentationOverrideObservations.get(action.id);
+  exactOwnKeys(receipt, RUNTIME_RECEIPT_KEYS, action.id + " intentional override receipt", {
+    plain: true,
+  });
+  invariant(
+    observation !== undefined &&
+      receipt.status === 0 &&
+      Number.isSafeInteger(receipt.sequence) &&
+      receipt.sequence > 0 &&
+      typeof receipt.evidenceSha256 === "string" &&
+      /^[a-f0-9]{64}$/u.test(receipt.evidenceSha256) &&
+      !state.pendingIntentionalPresentationOverrideReceipts.has(action.id),
+    action.id + " intentional override receipt staging drift"
+  );
+  state.pendingIntentionalPresentationOverrideReceipts.set(
+    action.id,
+    deepFreezeExact({
+      ...observation,
+      actionOrdinal: action.ordinal,
+      receiptEvidenceSha256: receipt.evidenceSha256,
+      receiptSequence: receipt.sequence,
+    })
+  );
+}
+
+function commitIntentionalPresentationOverrideActionAfterLedgerAppend(state, action, delta) {
+  if (!Object.values(INTENTIONAL_PRESENTATION_OVERRIDE_ABSENCE_ACTIONS).includes(action.id)) return;
+  const staged = state.pendingIntentionalPresentationOverrideReceipts.get(action.id);
+  invariant(staged !== undefined, action.id + " intentional override receipt is not staged");
+  state.pendingIntentionalPresentationOverrideReceipts.delete(action.id);
+  const actions = INTENTIONAL_PRESENTATION_OVERRIDE_ABSENCE_ACTIONS;
+  if (action.id === actions.acquisition) {
+    const cores = delta.cores.filter(({ kind }) => kind === "presentation-override");
+    invariant(
+      state.intentionalPresentationOverrideAuthority === null &&
+        delta.cores.length === 1 &&
+        cores.length === 1 &&
+        deepEqualJson(cores[0].identifier, staged.identifier) &&
+        cores[0].ownerSubjectIdentifier === staged.ownerSubjectIdentifier &&
+        state.resourceKeys.get("presentation-override") === cores[0].resourceKey,
+      "intentional override acquisition authority drift"
+    );
+    state.intentionalPresentationOverrideAuthority = deepFreezeExact({
+      acquisition: deepFreezeExact({ ...staged, resourceKey: cores[0].resourceKey }),
+      proof: null,
+      reset: null,
+    });
+    return;
+  }
+  invariant(delta.cores.length === 0, action.id + " unexpectedly acquired a resource");
+  const current = state.intentionalPresentationOverrideAuthority;
+  invariant(
+    current !== null &&
+      deepEqualJson(current.acquisition.identifier, staged.identifier) &&
+      current.acquisition.receiptSequence < staged.receiptSequence,
+    action.id + " intentional override authority lineage drift"
+  );
+  if (action.id === actions.reset) {
+    invariant(
+      current.reset === null && current.proof === null,
+      "override reset authority repeated"
+    );
+    state.intentionalPresentationOverrideAuthority = deepFreezeExact({
+      acquisition: current.acquisition,
+      proof: null,
+      reset: staged,
+    });
+    return;
+  }
+  invariant(
+    action.id === actions.proof &&
+      current.reset !== null &&
+      current.proof === null &&
+      current.reset.receiptSequence < staged.receiptSequence,
+    "override absence proof authority order drift"
+  );
+  state.intentionalPresentationOverrideAuthority = deepFreezeExact({
+    acquisition: current.acquisition,
+    proof: staged,
+    reset: current.reset,
+  });
+}
+
+function completeIntentionalPresentationOverrideAbsenceAuthority(state, record = null) {
+  const authority = state.intentionalPresentationOverrideAuthority;
+  if (authority === null || authority.reset === null || authority.proof === null) return null;
+  exactOwnKeys(
+    authority,
+    ["acquisition", "proof", "reset"],
+    "intentional presentation override absence authority",
+    { plain: true }
+  );
+  const actions = INTENTIONAL_PRESENTATION_OVERRIDE_ABSENCE_ACTIONS;
+  invariant(
+    authority.acquisition.actionId === actions.acquisition &&
+      authority.reset.actionId === actions.reset &&
+      authority.proof.actionId === actions.proof &&
+      deepEqualJson(authority.acquisition.identifier, authority.reset.identifier) &&
+      deepEqualJson(authority.reset.identifier, authority.proof.identifier) &&
+      authority.acquisition.receiptSequence < authority.reset.receiptSequence &&
+      authority.reset.receiptSequence < authority.proof.receiptSequence &&
+      authority.acquisition.resourceKey === state.resourceKeys.get("presentation-override") &&
+      [authority.acquisition, authority.reset, authority.proof].every(
+        ({ receiptEvidenceSha256, responseSha256 }) =>
+          /^[a-f0-9]{64}$/u.test(receiptEvidenceSha256) && /^[a-f0-9]{64}$/u.test(responseSha256)
+      ),
+    "intentional presentation override absence authority is incomplete"
+  );
+  if (record !== null) {
+    invariant(
+      record.kind === "presentation-override" &&
+        record.resourceKey === authority.acquisition.resourceKey &&
+        deepEqualJson(record.identifier, authority.acquisition.identifier) &&
+        record.ownerSubjectIdentifier === authority.acquisition.ownerSubjectIdentifier,
+      "intentional presentation override cleanup record drift"
+    );
+  }
+  return authority;
+}
+
+async function runtimeProveOverrides({ state, action, captures }, empty) {
   const response = await adminApiRequest(
     state,
     bootstrapApiSession(state),
@@ -16738,7 +19027,11 @@ async function runtimeProveOverrides({ state, captures }, empty) {
       "/entries/" +
       encodeURIComponent(captures.get("entry.id")) +
       "/overrides",
-    { csrf: false, retainAuthoritativeBytes: !empty }
+    {
+      csrf: false,
+      retainAuthoritativeBytes:
+        !empty || action.id === INTENTIONAL_PRESENTATION_OVERRIDE_ABSENCE_ACTIONS.proof,
+    }
   );
   const overrideRows = response.value?.overrides;
   const overrides = overrideRows?.map(({ blockId, propPath, value }) => ({
@@ -16760,6 +19053,13 @@ async function runtimeProveOverrides({ state, captures }, empty) {
     const row = overrideRows[0];
     invariant(row.updatedBy === null || typeof row.updatedBy === "string", "override owner drift");
     state.resourceOwners.set("presentation-override", row.updatedBy ?? null);
+    stageIntentionalPresentationOverrideObservation(
+      state,
+      action,
+      captures,
+      response.authoritativeBytes,
+      row.updatedBy ?? null
+    );
     const retryResponse = await adminApiRequest(
       state,
       bootstrapApiSession(state),
@@ -16839,6 +19139,13 @@ async function runtimeProveOverrides({ state, captures }, empty) {
     const authoritative = parseMediaRaceAuthoritativeAdminEvidence(state);
     state.mediaRaceProjection = projection;
     state.mediaRaceReceiptHash = authoritative.evidenceSha256;
+  } else if (action.id === INTENTIONAL_PRESENTATION_OVERRIDE_ABSENCE_ACTIONS.proof) {
+    stageIntentionalPresentationOverrideObservation(
+      state,
+      action,
+      captures,
+      response.authoritativeBytes
+    );
   }
   return runtimeSafeProjection({ count: overrides.length });
 }
@@ -17536,48 +19843,82 @@ function cleanupSubjectRoute(state, subject) {
   return null;
 }
 
+async function runPrivateCleanupAdminApiBoundary(operation) {
+  try {
+    invariant(typeof operation === "function", "cleanup admin API operation is absent");
+    return await operation();
+  } catch (error) {
+    throw retainPrivateCleanupFailureDiagnosticNeverThrow(error, 3, "admin_api_failed");
+  }
+}
+
+function hashCleanupAuthoritativeBytes(authoritativeBytes, label) {
+  invariant(
+    Buffer.isBuffer(authoritativeBytes) &&
+      authoritativeBytes.length > 0 &&
+      authoritativeBytes.length <= MAX_STREAM_BYTES,
+    label + " authoritative response bytes drift"
+  );
+  return hashBytes(authoritativeBytes);
+}
+
 async function deleteCleanupSubject(state, subject) {
-  if (state.deletedSubjects.has(subject.kind)) return deepFreezeExact({ authoritativeBytes: null });
-  let authoritativeBytes = null;
+  if (state.deletedSubjects.has(subject.kind))
+    return deepFreezeExact({ observedBytesSha256: null });
+  let observedBytesSha256 = null;
   if (subject.kind === "user-a" || subject.kind === "user-b") {
     const result = await runBunBridgeOperation(state, "legacy/user-delete-exact", {
       userId: subject.id,
     });
     invariant(result.ok === true, subject.kind + " cleanup failed");
   } else {
-    const route = cleanupSubjectRoute(state, subject);
-    invariant(route !== null, "cleanup subject route is unknown: " + subject.kind);
-    const response = await adminApiRequest(state, bootstrapApiSession(state), "DELETE", route, {
-      retainAuthoritativeBytes: true,
+    const response = await runPrivateCleanupAdminApiBoundary(async () => {
+      const route = cleanupSubjectRoute(state, subject);
+      invariant(route !== null, "cleanup subject route is unknown: " + subject.kind);
+      const result = await adminApiRequest(state, bootstrapApiSession(state), "DELETE", route, {
+        retainAuthoritativeBytes: true,
+      });
+      const responseSha256 = hashCleanupAuthoritativeBytes(
+        result.authoritativeBytes,
+        subject.kind + " cleanup delete"
+      );
+      invariant(result.value?.ok === true, subject.kind + " delete response drift");
+      return { observedBytesSha256: responseSha256 };
     });
-    invariant(response.value?.ok === true, subject.kind + " delete response drift");
-    authoritativeBytes = response.authoritativeBytes;
+    observedBytesSha256 = response.observedBytesSha256;
   }
   state.deletedSubjects.add(subject.kind);
-  return deepFreezeExact({ authoritativeBytes });
+  return deepFreezeExact({ observedBytesSha256 });
 }
 
 async function proveCleanupSubjectPresent(state, subject) {
-  const route = cleanupSubjectRoute(state, subject);
-  invariant(route !== null, "cleanup provenance subject route is unknown: " + subject.kind);
-  const response = await adminApiRequest(state, bootstrapApiSession(state), "GET", route, {
-    csrf: false,
-    retainAuthoritativeBytes: true,
-  });
-  invariant(
-    response.status === 200 && response.value?.id === subject.id,
-    subject.kind + " cleanup provenance identity drift"
-  );
-  if (subject.kind === "media") {
-    invariant(
-      response.value.key === subject.storageKey &&
-        response.value.url === "/media/" + subject.storageKey,
-      "media cleanup provenance storage identity drift"
+  const response = await runPrivateCleanupAdminApiBoundary(async () => {
+    const route = cleanupSubjectRoute(state, subject);
+    invariant(route !== null, "cleanup provenance subject route is unknown: " + subject.kind);
+    const result = await adminApiRequest(state, bootstrapApiSession(state), "GET", route, {
+      csrf: false,
+      retainAuthoritativeBytes: true,
+    });
+    const observedBytesSha256 = hashCleanupAuthoritativeBytes(
+      result.authoritativeBytes,
+      subject.kind + " cleanup provenance"
     );
-  }
+    invariant(
+      result.status === 200 && result.value?.id === subject.id,
+      subject.kind + " cleanup provenance identity drift"
+    );
+    if (subject.kind === "media") {
+      invariant(
+        result.value.key === subject.storageKey &&
+          result.value.url === "/media/" + subject.storageKey,
+        "media cleanup provenance storage identity drift"
+      );
+    }
+    return { observedBytesSha256 };
+  });
   return deepFreezeExact({
     output: deepFreezeExact({ present: true }),
-    authoritativeBytes: response.authoritativeBytes,
+    observedBytesSha256: response.observedBytesSha256,
   });
 }
 
@@ -17587,15 +19928,23 @@ async function proveCleanupSubjectAbsent(state, subject) {
       userId: subject.id,
     });
     invariant(result.absent === true, subject.kind + " remains present");
-    return deepFreezeExact({ authoritativeBytes: null });
+    return deepFreezeExact({ observedBytesSha256: null });
   }
-  const route = cleanupSubjectRoute(state, subject);
-  const response = await adminApiRequest(state, bootstrapApiSession(state), "GET", route, {
-    csrf: false,
-    allowedStatus: [404],
-    retainAuthoritativeBytes: true,
+  const response = await runPrivateCleanupAdminApiBoundary(async () => {
+    const route = cleanupSubjectRoute(state, subject);
+    invariant(route !== null, "cleanup absence subject route is unknown: " + subject.kind);
+    const result = await adminApiRequest(state, bootstrapApiSession(state), "GET", route, {
+      csrf: false,
+      allowedStatus: [404],
+      retainAuthoritativeBytes: true,
+    });
+    const observedBytesSha256 = hashCleanupAuthoritativeBytes(
+      result.authoritativeBytes,
+      subject.kind + " cleanup absence"
+    );
+    invariant(result.status === 404, subject.kind + " remains present");
+    return { observedBytesSha256 };
   });
-  invariant(response.status === 404, subject.kind + " remains present");
   if (subject.kind === "media") {
     const storageKey = subject.storageKey;
     invariant(
@@ -17621,7 +19970,7 @@ async function proveCleanupSubjectAbsent(state, subject) {
       "media cleanup storage root identity drift"
     );
   }
-  return deepFreezeExact({ authoritativeBytes: response.authoritativeBytes });
+  return deepFreezeExact({ observedBytesSha256: response.observedBytesSha256 });
 }
 
 async function closeBrowserIfPresent(state) {
@@ -17961,6 +20310,10 @@ function assertExactFinalResourceDependencyGraph(state, finalLedger, dependencyG
     ["content-type-related-b", "related-entry-b1"],
     ["content-type-related-b", "related-entry-b2"],
     ["content-type-related-failure", "related-entry-failure1"],
+    ...TASK_FIXTURE_ENTRY_SEMANTICS.map((entrySemantic) => [
+      entrySemantic,
+      seoDocumentResourceSemantic(entrySemantic),
+    ]),
     ["screen", "presentation-override"],
     ["editable-entry", "presentation-override"],
     ["media", "presentation-override"],
@@ -18037,15 +20390,100 @@ function assertExactFinalResourceDependencyGraph(state, finalLedger, dependencyG
   return true;
 }
 
+async function discoverExactSeoEntryResources(
+  state,
+  resourceLedger,
+  query = (targetIds) =>
+    runBunBridgeOperation(state, "resource/seo-entry-discovery", { targetIds }),
+  stabilityBarrier = () => delayMilliseconds(PROCESS_ABSENCE_STABILITY_MS)
+) {
+  invariant(
+    typeof query === "function" && typeof stabilityBarrier === "function",
+    "SEO entry discovery authority drift"
+  );
+  const targets = TASK_FIXTURE_ENTRY_SEMANTICS.map((entrySemantic) => ({
+    entrySemantic,
+    parentKey: state.resourceKeys.get(entrySemantic),
+    resourceSemantic: seoDocumentResourceSemantic(entrySemantic),
+    targetId: state.fixtureIds.get(entrySemantic),
+  }));
+  invariant(
+    targets.length === 6 &&
+      targets.every(
+        ({ parentKey, resourceSemantic, targetId }) =>
+          typeof targetId === "string" &&
+          typeof parentKey === "string" &&
+          !state.resourceKeys.has(resourceSemantic)
+      ) &&
+      new Set(targets.map(({ targetId }) => targetId)).size === 6 &&
+      new Set(targets.map(({ parentKey }) => parentKey)).size === 6,
+    "SEO entry discovery exact parent authority is absent"
+  );
+  const targetIds = deepFreezeExact(targets.map(({ targetId }) => targetId));
+  const targetById = new Map(targets.map((target) => [target.targetId, target]));
+  const validatePoll = (poll, label) => {
+    exactOwnKeys(poll, ["candidates"], label, { plain: true });
+    invariant(
+      Array.isArray(poll.candidates) && poll.candidates.length <= 6,
+      label + " cardinality drift"
+    );
+    const documentIds = new Set();
+    const candidateTargetIds = new Set();
+    let previousCorrelation = null;
+    for (const candidate of poll.candidates) {
+      exactOwnKeys(candidate, ["id", "targetId", "targetType"], label + " candidate", {
+        plain: true,
+      });
+      requireBridgeUuid(candidate.id, label + " SEO document ID");
+      requireBridgeUuid(candidate.targetId, label + " SEO target ID");
+      const correlation = candidate.targetId + "\0" + candidate.id;
+      invariant(
+        candidate.targetType === "entry" &&
+          targetById.has(candidate.targetId) &&
+          !documentIds.has(candidate.id) &&
+          !candidateTargetIds.has(candidate.targetId) &&
+          (previousCorrelation === null || previousCorrelation < correlation),
+        label + " target correlation drift"
+      );
+      documentIds.add(candidate.id);
+      candidateTargetIds.add(candidate.targetId);
+      previousCorrelation = correlation;
+    }
+    return poll;
+  };
+  const first = validatePoll(await query(targetIds), "SEO entry discovery first poll");
+  await stabilityBarrier();
+  const second = validatePoll(await query(targetIds), "SEO entry discovery second poll");
+  invariant(deepEqualJson(first, second), "SEO entry discovery did not reach a stable boundary");
+  if (second.candidates.length === 0) return deepFreezeExact([]);
+  const cores = second.candidates.map((candidate) =>
+    createResourceCore({
+      kind: "seo-document-entry",
+      identifier: [candidate.id, candidate.targetType, candidate.targetId],
+      acquisitionSourceId: "cleanup-seo-entry-discovery",
+      sourceActionOrdinal: null,
+      acquisitionChannel: "cleanup-discovery",
+    })
+  );
+  const delta = deepFreezeExact({
+    cores: deepFreezeExact(cores),
+    dependencyEdges: deepFreezeExact(
+      cores.map((core) =>
+        destructiveResourceEdge(targetById.get(core.identifier[2]).parentKey, core.resourceKey)
+      )
+    ),
+  });
+  resourceLedger.appendValidatedDelta(delta);
+  promoteResourceBunDescriptorsAfterLedgerAppend(state, delta);
+  for (const core of cores) {
+    const target = targetById.get(core.identifier[2]);
+    state.resourceKeys.set(target.resourceSemantic, core.resourceKey);
+  }
+  return deepFreezeExact(cores);
+}
+
 async function refreshCurrentSyntheticOwnerDependencyEdges(state, resourceLedger) {
-  const entryKinds = [
-    "editable-entry",
-    "related-entry-a1",
-    "related-entry-a2",
-    "related-entry-b1",
-    "related-entry-b2",
-    "related-entry-failure1",
-  ];
+  const entryKinds = TASK_FIXTURE_ENTRY_SEMANTICS;
   const entryIds = entryKinds.map((kind) => state.fixtureIds.get(kind));
   invariant(
     entryIds.every((id) => typeof id === "string"),
@@ -18060,15 +20498,39 @@ async function refreshCurrentSyntheticOwnerDependencyEdges(state, resourceLedger
       blockId: state.plan.fixtureBlueprint.screen.blockIds.raceImage,
       propPath: "mediaAssetId",
     },
+    overrideExpectedPresent:
+      completeIntentionalPresentationOverrideAbsenceAuthority(state) === null,
   };
   const proof = await runBunBridgeOperation(state, "resource/current-owner-exact", input);
-  exactOwnKeys(proof, ["entries", "media", "override"], "current resource owner proof", {
-    plain: true,
-  });
+  exactOwnKeys(
+    proof,
+    ["entries", "media", "override", "overrideAbsent"],
+    "current resource owner proof",
+    { plain: true }
+  );
   invariant(
     Array.isArray(proof.entries) && proof.entries.length === 6,
     "current entry owner proof drift"
   );
+  const absenceAuthority = completeIntentionalPresentationOverrideAbsenceAuthority(state);
+  invariant(
+    proof.overrideAbsent === (absenceAuthority !== null) &&
+      (absenceAuthority === null ? proof.override !== null : proof.override === null),
+    "current override owner/absence expectation drift"
+  );
+  if (absenceAuthority !== null) {
+    invariant(
+      state.intentionalPresentationOverrideCleanupProof === null,
+      "intentional override cleanup proof was assigned twice"
+    );
+    state.intentionalPresentationOverrideCleanupProof = deepFreezeExact({
+      absenceOutputSha256: hashBytes(Buffer.from(canonicalJson(proof))),
+      identifier: absenceAuthority.acquisition.identifier,
+      operationDescriptor: "resource/current-owner-exact",
+      proofActionReceiptSha256: absenceAuthority.proof.receiptEvidenceSha256,
+      resetActionReceiptSha256: absenceAuthority.reset.receiptEvidenceSha256,
+    });
+  }
   const semanticById = new Map(entryKinds.map((kind) => [state.fixtureIds.get(kind), kind]));
   const owned = [
     ...proof.entries.map((row) => ({
@@ -18076,7 +20538,13 @@ async function refreshCurrentSyntheticOwnerDependencyEdges(state, resourceLedger
       owner: row.ownerSubjectIdentifier,
     })),
     { semantic: "media", owner: proof.media.ownerSubjectIdentifier },
-    { semantic: "presentation-override", owner: proof.override.ownerSubjectIdentifier },
+    {
+      semantic: "presentation-override",
+      owner:
+        absenceAuthority === null
+          ? proof.override.ownerSubjectIdentifier
+          : absenceAuthority.acquisition.ownerSubjectIdentifier,
+    },
   ];
   const dependencyEdges = [];
   const appendedCorrelations = [];
@@ -18128,12 +20596,12 @@ function cleanupRuntimeReceipt(
   operationDescriptor,
   record,
   output,
-  observedBytes = null
+  observedBytesSha256 = null
 ) {
   invariant(
-    observedBytes === null ||
-      (Buffer.isBuffer(observedBytes) && observedBytes.length <= MAX_STREAM_BYTES),
-    "cleanup authoritative observation bytes drift"
+    observedBytesSha256 === null ||
+      (typeof observedBytesSha256 === "string" && /^[a-f0-9]{64}$/u.test(observedBytesSha256)),
+    "cleanup authoritative observation hash drift"
   );
   const subjectKind = record?.kind ?? null;
   const subjectIdentifier =
@@ -18148,7 +20616,7 @@ function cleanupRuntimeReceipt(
       operationDescriptor,
       subjectKind,
       subjectIdentifier,
-      observedBytesSha256: observedBytes === null ? null : hashBytes(observedBytes),
+      observedBytesSha256,
       output,
     }) + "\n"
   );
@@ -18223,7 +20691,9 @@ function createCleanupPhaseScheduler(failures, phaseTrace) {
         await operation();
         completed = true;
       } catch (error) {
-        failures.push(error);
+        failures.push(
+          retainPrivateCleanupFailureDiagnosticNeverThrow(error, phase, "phase_failed")
+        );
       }
       phaseTrace.push(deepFreezeExact({ phase, completed }));
       nextPhase += 1;
@@ -18255,13 +20725,99 @@ async function runIndependentCleanupStepsNeverSkip(steps, label) {
   if (failures.length > 0) throw new AggregateError(failures, label + " cleanup branches failed");
 }
 
+async function executeIntentionalPresentationOverrideAlreadyAbsentCleanup(
+  state,
+  record,
+  operationKind,
+  proveFreshAbsence = (currentState, currentRecord) =>
+    runBoundResourceBunOperation(currentState, currentRecord, "absence")
+) {
+  invariant(
+    CLEANUP_OPERATION_KINDS.includes(operationKind) && typeof proveFreshAbsence === "function",
+    "intentional override cleanup operation authority drift"
+  );
+  const authority = completeIntentionalPresentationOverrideAbsenceAuthority(state, record);
+  invariant(authority !== null, "intentional override cleanup lacks complete authority");
+  const cleanupProof = state.intentionalPresentationOverrideCleanupProof;
+  exactOwnKeys(
+    cleanupProof,
+    [
+      "absenceOutputSha256",
+      "identifier",
+      "operationDescriptor",
+      "proofActionReceiptSha256",
+      "resetActionReceiptSha256",
+    ],
+    "intentional override fresh cleanup proof",
+    { plain: true }
+  );
+  invariant(
+    deepEqualJson(cleanupProof.identifier, record.identifier) &&
+      cleanupProof.operationDescriptor === "resource/current-owner-exact" &&
+      cleanupProof.proofActionReceiptSha256 === authority.proof.receiptEvidenceSha256 &&
+      cleanupProof.resetActionReceiptSha256 === authority.reset.receiptEvidenceSha256,
+    "intentional override fresh cleanup proof lineage drift"
+  );
+  const freshAbsence = await proveFreshAbsence(state, record);
+  invariant(
+    deepEqualJson(freshAbsence, { absent: true, affected: 0, present: false }),
+    "intentional override cleanup absence drift"
+  );
+  const actionAuthority =
+    operationKind === "provenance"
+      ? authority.acquisition
+      : operationKind === "delete"
+        ? authority.reset
+        : authority.proof;
+  const output = {
+    actionId: actionAuthority.actionId,
+    actionReceiptSha256: actionAuthority.receiptEvidenceSha256,
+    actionResponseSha256: actionAuthority.responseSha256,
+    alreadyDeletedByExactReset: true,
+    freshAbsence,
+    freshOwnerRefreshAbsenceSha256: cleanupProof.absenceOutputSha256,
+    proofOperationDescriptor: record.absenceOpId,
+  };
+  const observedBytesSha256 = hashBytes(
+    Buffer.from(
+      canonicalJson({
+        identifier: record.identifier,
+        operationDescriptor: record.absenceOpId,
+        result: freshAbsence,
+      }) + "\n"
+    )
+  );
+  if (operationKind === "delete") state.overridesCleared = true;
+  return cleanupRuntimeReceipt(
+    state,
+    "cleanup-" + operationKind,
+    record[
+      operationKind === "provenance"
+        ? "provenanceOpId"
+        : operationKind === "delete"
+          ? "cleanupOpId"
+          : "absenceOpId"
+    ],
+    record,
+    output,
+    observedBytesSha256
+  );
+}
+
 async function executeResourceCleanupOperation(state, record, operationKind) {
   invariant(
     CLEANUP_OPERATION_KINDS.includes(operationKind),
     "resource cleanup operation is invalid"
   );
   let output;
-  let observedBytes = null;
+  let observedBytesSha256 = null;
+  const intentionalOverrideAbsenceAuthority =
+    record.kind === "presentation-override"
+      ? completeIntentionalPresentationOverrideAbsenceAuthority(state, record)
+      : null;
+  if (intentionalOverrideAbsenceAuthority !== null) {
+    return executeIntentionalPresentationOverrideAlreadyAbsentCleanup(state, record, operationKind);
+  }
   const slot =
     operationKind === "provenance"
       ? "provenance"
@@ -18295,30 +20851,37 @@ async function executeResourceCleanupOperation(state, record, operationKind) {
         "presentation override Node operation drift"
       );
       const [screenId, entryId, blockId, propPath] = record.identifier;
-      const response = await adminApiRequest(
-        state,
-        bootstrapApiSession(state),
-        "GET",
-        "/custom-screens/" +
-          encodeURIComponent(screenId) +
-          "/entries/" +
-          encodeURIComponent(entryId) +
-          "/overrides",
-        { csrf: false, retainAuthoritativeBytes: true }
-      );
-      const matches = response.value?.overrides?.filter(
-        (row) =>
-          row.screenId === screenId &&
-          row.entryId === entryId &&
-          row.blockId === blockId &&
-          row.propPath === propPath
-      );
-      invariant(
-        Array.isArray(matches) && matches.length === 1,
-        "presentation override Node provenance drift"
-      );
+      const response = await runPrivateCleanupAdminApiBoundary(async () => {
+        const result = await adminApiRequest(
+          state,
+          bootstrapApiSession(state),
+          "GET",
+          "/custom-screens/" +
+            encodeURIComponent(screenId) +
+            "/entries/" +
+            encodeURIComponent(entryId) +
+            "/overrides",
+          { csrf: false, retainAuthoritativeBytes: true }
+        );
+        const responseSha256 = hashCleanupAuthoritativeBytes(
+          result.authoritativeBytes,
+          "presentation override cleanup provenance"
+        );
+        const matches = result.value?.overrides?.filter(
+          (row) =>
+            row.screenId === screenId &&
+            row.entryId === entryId &&
+            row.blockId === blockId &&
+            row.propPath === propPath
+        );
+        invariant(
+          Array.isArray(matches) && matches.length === 1,
+          "presentation override Node provenance drift"
+        );
+        return { observedBytesSha256: responseSha256 };
+      });
       output = { present: true };
-      observedBytes = response.authoritativeBytes;
+      observedBytesSha256 = response.observedBytesSha256;
     } else {
       const subject = legacySubjectForResource(state, record);
       if (operationKind === "provenance") {
@@ -18328,17 +20891,17 @@ async function executeResourceCleanupOperation(state, record, operationKind) {
         );
         const proof = await proveCleanupSubjectPresent(state, subject);
         output = proof.output;
-        observedBytes = proof.authoritativeBytes;
+        observedBytesSha256 = proof.observedBytesSha256;
       } else if (operationKind === "delete") {
         if (record.kind === "content-type") {
           await proveContentRoutesBaselineIdentity(state, "before content-type delete");
         }
         const deleted = await deleteCleanupSubject(state, subject);
-        observedBytes = deleted.authoritativeBytes;
+        observedBytesSha256 = deleted.observedBytesSha256;
         output = { deleted: true };
       } else {
         const absent = await proveCleanupSubjectAbsent(state, subject);
-        observedBytes = absent.authoritativeBytes;
+        observedBytesSha256 = absent.observedBytesSha256;
         output = { absent: true };
       }
     }
@@ -18362,7 +20925,7 @@ async function executeResourceCleanupOperation(state, record, operationKind) {
     ],
     record,
     output,
-    observedBytes
+    observedBytesSha256
   );
 }
 
@@ -18375,16 +20938,33 @@ async function executeCleanupPlanStage(
   actionPlan,
   finalPlan,
   allowedKinds,
+  cleanupPhase,
   executeOperation = executeResourceCleanupOperation
 ) {
-  invariant(typeof executeOperation === "function", "cleanup stage operation authority is absent");
+  invariant(
+    [3, 6, 7].includes(cleanupPhase) && typeof executeOperation === "function",
+    "cleanup stage phase/operation authority is absent"
+  );
   const records = finalRecordByKey(finalPlan.ledger);
   const receipts = [];
   const failures = [];
+  const retainStageFailure = (error, phaseThreeFailureClass = "persistent_stage_failed") => {
+    invariant(
+      PHASE_THREE_CLEANUP_FAILURE_CLASSES.includes(phaseThreeFailureClass),
+      "phase 3 cleanup failure class drift"
+    );
+    const failure = retainPrivateCleanupFailureDiagnosticNeverThrow(
+      error,
+      cleanupPhase,
+      cleanupPhase === 3 ? phaseThreeFailureClass : "phase_failed"
+    );
+    failures.push(failure);
+    return failure;
+  };
   for (const resourceKey of actionPlan.resourceKeys) {
     const record = records.get(resourceKey);
     if (record === undefined) {
-      failures.push(new Error("cleanup stage resource drift"));
+      retainStageFailure(new Error("cleanup stage resource drift"));
       state.cleanupFailedKeys.add(resourceKey);
       continue;
     }
@@ -18397,7 +20977,10 @@ async function executeCleanupPlanStage(
           !state.cleanupAbsenceKeys.has(childKey) || state.cleanupFailedKeys.has(childKey)
       )
     ) {
-      failures.push(new Error("destructive parent was blocked by an unproved child"));
+      retainStageFailure(
+        new Error("destructive parent was blocked by an unproved child"),
+        "persistent_dependency_blocked"
+      );
       state.cleanupFailedKeys.add(resourceKey);
       continue;
     }
@@ -18406,7 +20989,7 @@ async function executeCleanupPlanStage(
       receipts.push(await executeOperation(state, record, "provenance"));
       provenancePassed = true;
     } catch (error) {
-      failures.push(error);
+      retainStageFailure(error, "persistent_provenance_failed");
       state.cleanupFailedKeys.add(resourceKey);
     }
     if (!provenancePassed) continue;
@@ -18415,14 +20998,14 @@ async function executeCleanupPlanStage(
       receipts.push(await executeOperation(state, record, "delete"));
       deletePassed = true;
     } catch (error) {
-      failures.push(error);
+      retainStageFailure(error, "persistent_delete_failed");
       state.cleanupFailedKeys.add(resourceKey);
     }
     try {
       receipts.push(await executeOperation(state, record, "absence"));
       state.cleanupAbsenceKeys.add(resourceKey);
     } catch (error) {
-      failures.push(error);
+      retainStageFailure(error, "persistent_absence_failed");
       state.cleanupFailedKeys.add(resourceKey);
     }
     if (!deletePassed) {
@@ -18940,6 +21523,10 @@ async function createRealCapabilities(
     latestUnsafeDefinition: null,
     expectedOverrides: [],
     overridesCleared: false,
+    intentionalPresentationOverrideAuthority: null,
+    intentionalPresentationOverrideCleanupProof: null,
+    intentionalPresentationOverrideObservations: new Map(),
+    pendingIntentionalPresentationOverrideReceipts: new Map(),
     browserOpened: false,
     browserClosed: false,
     browserMayExist: false,
@@ -19047,6 +21634,7 @@ async function createRealCapabilities(
     registerActionResourcesAfterLedgerAppend(action, delta) {
       promoteResourceBunDescriptorsAfterLedgerAppend(state, delta);
       registerSuccessfulActionResourcesAfterLedgerAppend(state, action, delta);
+      commitIntentionalPresentationOverrideActionAfterLedgerAppend(state, action, delta);
     },
     settleResponseLostCreateAfterLedgerAppend(actionId) {
       invariant(
@@ -19139,6 +21727,7 @@ async function createRealCapabilities(
             }),
           });
         }
+        stageIntentionalPresentationOverrideActionReceipt(state, action, receipt);
         assertSafeEvidence(receipt, "TASK-540 parsed runtime receipt");
         const acquisitionDelta = deriveActionResourceDelta(
           state,
@@ -19155,24 +21744,31 @@ async function createRealCapabilities(
         });
       }
 
-      const executionSpec = compileActionExecutionSpec(action);
-      const routeMetadata = routeReceiptMetadata(
-        action,
-        executionSpec,
-        plan,
-        captures,
-        PRIVATE_RUNTIME.get(state)
-      );
-      const invocation = buildBrowserInvocation(
-        action,
-        executionSpec,
-        captures,
-        root,
-        browserWorkspace.cwd,
-        plan,
-        outputContext(action, captures),
-        PRIVATE_RUNTIME.get(state)
-      );
+      let executionSpec;
+      let routeMetadata;
+      let invocation;
+      ({ executionSpec, routeMetadata, invocation } =
+        buildPrivateBrowserInvocationWithAuthSettlementBoundary(action, () => {
+          executionSpec = compileActionExecutionSpec(action);
+          routeMetadata = routeReceiptMetadata(
+            action,
+            executionSpec,
+            plan,
+            captures,
+            PRIVATE_RUNTIME.get(state)
+          );
+          invocation = buildBrowserInvocation(
+            action,
+            executionSpec,
+            captures,
+            root,
+            browserWorkspace.cwd,
+            plan,
+            outputContext(action, captures),
+            PRIVATE_RUNTIME.get(state)
+          );
+          return { executionSpec, routeMetadata, invocation };
+        }));
       let commandResult;
       if (executable.type === "browser-native" && executable.operationId === "open-about-blank") {
         state.browserMayExist = true;
@@ -19229,54 +21825,96 @@ async function createRealCapabilities(
       if (executable.type === "browser-screenshot") {
         await acquireScreenshotIdentity(state, action, plan);
       }
-      let normalizedBytes;
-      normalizedBytes = await normalizeBrowserCommandOutput(
-        state,
+      const normalizedBytes = await normalizePrivateBrowserOutputWithAuthSettlementBoundary(
+        action,
+        commandResult,
+        () =>
+          normalizeBrowserCommandOutput(state, action, executable, commandResult.stdout, invocation)
+      );
+      const authSettlementFailureClass = classifyPrivateAuthSettlementFailureFrame(
+        action.id,
+        normalizedBytes
+      );
+      if (authSettlementFailureClass !== null) {
+        throw createPrivateAuthSettlementFailure(authSettlementFailureClass);
+      }
+      const toneOpenFailureClass = classifyPrivateToneOpenFailureFrame(action.id, normalizedBytes);
+      if (toneOpenFailureClass !== null) {
+        throw createPrivateToneOpenFailure(toneOpenFailureClass);
+      }
+      const toneSelectFailureClass = classifyPrivateToneSelectFailureFrame(
+        action.id,
+        normalizedBytes
+      );
+      if (toneSelectFailureClass !== null) {
+        throw createPrivateToneSelectFailure(toneSelectFailureClass);
+      }
+      const dirtyNavigationFailureClass = classifyPrivateDirtyNavigationFailureFrame(
+        action.id,
+        normalizedBytes
+      );
+      if (dirtyNavigationFailureClass !== null) {
+        throw createPrivateDirtyNavigationFailure(dirtyNavigationFailureClass);
+      }
+      const parsedOutput = parsePrivateBrowserSuccessWithAuthSettlementBoundary(
+        action,
+        commandResult,
+        normalizedBytes,
+        () =>
+          parseRegisteredOutput(
+            plan.registries.outputs[action.outputSchemaId],
+            normalizedBytes,
+            action.id,
+            outputContext(action, captures)
+          )
+      );
+      return finalizePrivateBrowserResultWithAuthSettlementBoundary(
         action,
         executable,
-        commandResult.stdout,
-        invocation
+        plan,
+        commandResult,
+        () => {
+          if (
+            executable.type === "browser-native" &&
+            executable.operationId === "open-about-blank"
+          ) {
+            state.browserOpened = true;
+          }
+          if (executable.type === "browser-native" && executable.operationId === "close") {
+            state.browserClosed = true;
+          }
+          const receipt = {
+            ...commandResult.receipt,
+            method: routeMetadata.method,
+            pattern: routeMetadata.pattern,
+            sanitizedOutput: executionSpec.discardOutput
+              ? "[discarded]"
+              : canonicalJson(parsedOutput),
+          };
+          const captureBindings = {};
+          for (const name of plan.runtimeCaptureBindings[action.id] ?? []) {
+            invariant(
+              action.kind === "captureNew" && typeof parsedOutput?.id === "string",
+              action.id + " capture output drift"
+            );
+            captureBindings[name] = parsedOutput.id;
+          }
+          assertSafeEvidence(receipt, "TASK-540 parsed browser receipt");
+          const acquisitionDelta = deriveActionResourceDelta(
+            state,
+            action,
+            { captureBindings },
+            captures
+          );
+          const result = deepFreezeExact({
+            receipt: deepFreezeExact(receipt),
+            captureBindings,
+            acquisitionDelta,
+            settledCreateOrigin: null,
+          });
+          return result;
+        }
       );
-      let parsedOutput;
-      parsedOutput = parseRegisteredOutput(
-        plan.registries.outputs[action.outputSchemaId],
-        normalizedBytes,
-        action.id,
-        outputContext(action, captures)
-      );
-      if (executable.type === "browser-native" && executable.operationId === "open-about-blank") {
-        state.browserOpened = true;
-      }
-      if (executable.type === "browser-native" && executable.operationId === "close") {
-        state.browserClosed = true;
-      }
-      const receipt = {
-        ...commandResult.receipt,
-        method: routeMetadata.method,
-        pattern: routeMetadata.pattern,
-        sanitizedOutput: executionSpec.discardOutput ? "[discarded]" : canonicalJson(parsedOutput),
-      };
-      const captureBindings = {};
-      for (const name of plan.runtimeCaptureBindings[action.id] ?? []) {
-        invariant(
-          action.kind === "captureNew" && typeof parsedOutput?.id === "string",
-          action.id + " capture output drift"
-        );
-        captureBindings[name] = parsedOutput.id;
-      }
-      assertSafeEvidence(receipt, "TASK-540 parsed browser receipt");
-      const acquisitionDelta = deriveActionResourceDelta(
-        state,
-        action,
-        { captureBindings },
-        captures
-      );
-      return deepFreezeExact({
-        receipt: deepFreezeExact(receipt),
-        captureBindings,
-        acquisitionDelta,
-        settledCreateOrigin: null,
-      });
     },
     async executeCleanupLifecycleCore({ resourceLedger, cleanupPlanner, failure = false }) {
       invariant(
@@ -19359,6 +21997,8 @@ async function createRealCapabilities(
       });
       await runPhase(3, async () => {
         const phaseFailures = [];
+        const retainPersistentStageFailure = (error) =>
+          retainPrivateCleanupFailureDiagnosticNeverThrow(error, 3, "persistent_stage_failed");
         let pendingAttempts = deepFreezeExact([]);
         let attemptResults = deepFreezeExact([]);
         const blockerRoots = new Set();
@@ -19375,7 +22015,7 @@ async function createRealCapabilities(
           );
           attemptResults = discoveryBatch.attemptResults;
         } catch (error) {
-          phaseFailures.push(error);
+          phaseFailures.push(retainPersistentStageFailure(error));
           discoveryRegistryUnavailable = pendingAttempts.length === 0;
           for (const attempt of pendingAttempts) {
             for (const parentKey of attempt.intendedParentBlockerKeys) blockerRoots.add(parentKey);
@@ -19393,19 +22033,49 @@ async function createRealCapabilities(
             promoteResourceBunDescriptorsAfterLedgerAppend(state, result.safeDelta);
             registerFailureDiscoveredResourceAfterLedgerAppend(state, attempt, result.safeDelta);
           } catch (error) {
-            phaseFailures.push(error);
+            phaseFailures.push(retainPersistentStageFailure(error));
             for (const parentKey of attempt.intendedParentBlockerKeys) blockerRoots.add(parentKey);
           }
           if (result.failure !== null) {
-            phaseFailures.push(new Error("response-lost resource discovery remained ambiguous"));
+            phaseFailures.push(
+              retainPersistentStageFailure(
+                new Error("response-lost resource discovery remained ambiguous")
+              )
+            );
             for (const parentKey of result.intendedParentBlockerKeys) blockerRoots.add(parentKey);
+          }
+        }
+        const acquiredSeoEntryParentSemantics = TASK_FIXTURE_ENTRY_SEMANTICS.filter(
+          (entrySemantic) => state.resourceKeys.has(entrySemantic)
+        );
+        const exactSeoEntryInventoryReady = TASK_FIXTURE_ENTRY_SEMANTICS.every(
+          (entrySemantic) =>
+            state.fixtureIds.has(entrySemantic) && state.resourceKeys.has(entrySemantic)
+        );
+        if (exactSeoEntryInventoryReady) {
+          try {
+            await discoverExactSeoEntryResources(state, resourceLedger);
+          } catch (error) {
+            phaseFailures.push(retainPersistentStageFailure(error));
+            for (const entrySemantic of TASK_FIXTURE_ENTRY_SEMANTICS) {
+              blockerRoots.add(state.resourceKeys.get(entrySemantic));
+            }
+          }
+        } else if (acquiredSeoEntryParentSemantics.length > 0) {
+          phaseFailures.push(
+            retainPersistentStageFailure(
+              new Error("SEO entry discovery fixture inventory is incomplete")
+            )
+          );
+          for (const entrySemantic of acquiredSeoEntryParentSemantics) {
+            blockerRoots.add(state.resourceKeys.get(entrySemantic));
           }
         }
         if (plan.requiredFixtureSubjectKeys.every((kind) => state.fixtureIds.has(kind))) {
           try {
             await refreshCurrentSyntheticOwnerDependencyEdges(state, resourceLedger);
           } catch (error) {
-            phaseFailures.push(error);
+            phaseFailures.push(retainPersistentStageFailure(error));
             for (const semantic of ["user-a", "user-b"]) {
               const userKey = state.resourceKeys.get(semantic);
               if (userKey) blockerRoots.add(userKey);
@@ -19422,7 +22092,9 @@ async function createRealCapabilities(
           }
           persistentPlan = cleanupPlanner.freezePersistent(persistentLedger, [...blockerRoots]);
         } catch (error) {
-          phaseFailures.push(error);
+          phaseFailures.push(
+            retainPrivateCleanupFailureDiagnosticNeverThrow(error, 3, "persistent_plan_failed")
+          );
         }
         if (persistentLedger !== null && persistentPlan !== null) {
           const nonUserPersistentKinds = new Set(
@@ -19444,18 +22116,20 @@ async function createRealCapabilities(
               state,
               persistentPlan,
               phase3View,
-              nonUserPersistentKinds
+              nonUserPersistentKinds,
+              3
             );
             cleanupReceipts.push(...stageResult.receipts);
             phaseFailures.push(...stageResult.failures);
           } catch (error) {
-            phaseFailures.push(error);
+            phaseFailures.push(retainPersistentStageFailure(error));
           }
         }
         if (phaseFailures.length > 0) {
-          throw new AggregateError(
+          throw retainPrivateCleanupAggregateDiagnosticNeverThrow(
+            new AggregateError(phaseFailures, "phase 3 response-lost/persistent cleanup failed"),
             phaseFailures,
-            "phase 3 response-lost/persistent cleanup failed"
+            3
           );
         }
       });
@@ -19708,7 +22382,8 @@ async function createRealCapabilities(
           state,
           terminalPlan,
           finalPlan,
-          TERMINAL_RESOURCE_KINDS
+          TERMINAL_RESOURCE_KINDS,
+          6
         );
         cleanupReceipts.push(...stageResult.receipts);
         failures.push(...stageResult.failures);
@@ -19719,7 +22394,8 @@ async function createRealCapabilities(
           state,
           persistentPlan,
           finalPlan,
-          new Set(["user-a", "user-b"])
+          new Set(["user-a", "user-b"]),
+          7
         );
         cleanupReceipts.push(...stageResult.receipts);
         failures.push(...stageResult.failures);
@@ -19855,8 +22531,13 @@ async function createRealCapabilities(
       });
 
       phaseScheduler.seal();
-      if (failures.length > 0)
-        throw new AggregateError(failures, "TASK-540 deterministic cleanup failed");
+      if (failures.length > 0) {
+        throw retainPrivateCleanupAggregateDiagnosticNeverThrow(
+          new AggregateError(failures, "TASK-540 deterministic cleanup failed"),
+          failures,
+          0
+        );
+      }
       invariant(
         persistentLedger !== null &&
           persistentPlan !== null &&
@@ -19922,7 +22603,12 @@ async function createRealCapabilities(
           } catch (error) {
             state.cleanupFailures += 1;
             PRIVATE_RUNTIME.get(state).cleanupFailure = error;
-            return deepFreezeExact({ absenceProven: false, lifecycle: null });
+            const outcome = deepFreezeExact({ absenceProven: false, lifecycle: null });
+            const diagnostic =
+              privateCleanupFailureDiagnosticNeverThrow(error) ??
+              createPrivateCleanupFailureDiagnostic(0, "cleanup_boundary_failed");
+            retainPrivateCleanupOutcomeDiagnosticNeverThrow(outcome, diagnostic);
+            return outcome;
           }
         })();
       }
@@ -19971,7 +22657,8 @@ async function executeTask540SmokePlanWithAuthorityFactory(
       );
       emitPrivateFailureActionDiagnosticNeverThrow(
         failureActionTracker,
-        failureActionDiagnosticSink
+        failureActionDiagnosticSink,
+        constructionCleanupAuthority
       );
     }
     throw TASK_FAILURE;
@@ -20105,6 +22792,9 @@ function selfTestBunBridgeInputForSchema(schemaId) {
     "identifier-override-input-v1": {
       identifier: [uuid(7504), uuid(7505), "task-540-block", "mediaAssetId"],
     },
+    "identifier-seo-entry-input-v1": {
+      identifier: [uuid(7533), "entry", uuid(7534)],
+    },
     "identifier-setting-input-v1": {
       identifier: [uuid(7506), "customScreens.entry.preferences"],
     },
@@ -20132,7 +22822,7 @@ function selfTestBunBridgeInputForSchema(schemaId) {
       showFieldMetadata: true,
       userId: uuid(7511),
     },
-    "resource-owner-input-v1": {
+    "resource-owner-input-v2": {
       entryIds: Array.from({ length: 6 }, (_value, index) => uuid(7520 + index)),
       mediaId: uuid(7526),
       override: {
@@ -20141,6 +22831,10 @@ function selfTestBunBridgeInputForSchema(schemaId) {
         propPath: "mediaAssetId",
         screenId: uuid(7527),
       },
+      overrideExpectedPresent: true,
+    },
+    "seo-entry-targets-input-v1": {
+      targetIds: Array.from({ length: 6 }, (_value, index) => uuid(7535 + index)),
     },
     "screen-discovery-input-v1": {
       contentTypeId: uuid(7528),
@@ -20856,6 +23550,511 @@ export async function runTask540SmokeExecutorSelfTest() {
   );
   negativeCases += 1;
 
+  const classifiedFailureActionId = AUTH_SETTLEMENT_ACTION_IDS[0];
+  const classifiedCapabilities = buildFakeCapabilities();
+  const classifiedExecuteAction = classifiedCapabilities.executeAction.bind(classifiedCapabilities);
+  classifiedCapabilities.executeAction = async (context) => {
+    if (context.action.id === classifiedFailureActionId) {
+      throw createPrivateAuthSettlementFailure("login_route");
+    }
+    return classifiedExecuteAction(context);
+  };
+  const classifiedExecutionLines = [];
+  const classifiedExecutionSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    invariant(
+      classifiedCapabilities.cleaned && classifiedCapabilities.calls.at(-1) === "failure-cleanup",
+      "classified failure diagnostic preceded cleanup"
+    );
+    classifiedExecutionLines.push(line);
+  });
+  let classifiedPublicFailure = null;
+  try {
+    await executeTask540SmokePlanWithAuthorityFactory(
+      diagnosticInput,
+      createPrivateConstructionCleanupAuthority,
+      async () => classifiedCapabilities,
+      classifiedExecutionSink
+    );
+  } catch (error) {
+    classifiedPublicFailure = error;
+  }
+  const expectedClassifiedLine =
+    '{"code":"task540_smoke_failed","failedActionId":"' +
+    classifiedFailureActionId +
+    '","failureClass":"login_route"}\n';
+  invariant(
+    classifiedPublicFailure === TASK_FAILURE &&
+      classifiedExecutionLines.length === 1 &&
+      classifiedExecutionLines[0] === expectedClassifiedLine,
+    "classified auth settlement execution diagnostic drift"
+  );
+  negativeCases += 1;
+
+  const toneOpenFailureAction = plan.actionManifest.find(
+    ({ id }) => id === TONE_MENU_OPEN_ACTION_IDS[0]
+  );
+  invariant(toneOpenFailureAction !== undefined, "classified tone-open action is absent");
+  const toneOpenPrivateMarker = "TASK540_TONE_OPEN_PRIVATE_DO_NOT_EGRESS";
+  const classifiedToneCapabilities = buildFakeCapabilities();
+  const classifiedToneExecuteAction = classifiedToneCapabilities.executeAction.bind(
+    classifiedToneCapabilities
+  );
+  classifiedToneCapabilities.executeAction = async (context) => {
+    if (context.action.id === toneOpenFailureAction.id) {
+      throw createPrivateToneOpenFailure(TONE_OPEN_BROWSER_FAILURE_CLASSES[1], {
+        cause: new Error(toneOpenPrivateMarker),
+      });
+    }
+    return classifiedToneExecuteAction(context);
+  };
+  const classifiedToneLines = [];
+  const classifiedToneSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    invariant(
+      classifiedToneCapabilities.cleaned &&
+        classifiedToneCapabilities.calls.at(-1) === "failure-cleanup",
+      "classified tone-open diagnostic preceded cleanup"
+    );
+    classifiedToneLines.push(line);
+  });
+  let classifiedTonePublicFailure = null;
+  try {
+    await executeTask540SmokePlanWithAuthorityFactory(
+      diagnosticInput,
+      createPrivateConstructionCleanupAuthority,
+      async () => classifiedToneCapabilities,
+      classifiedToneSink
+    );
+  } catch (error) {
+    classifiedTonePublicFailure = error;
+  }
+  const expectedClassifiedToneLine =
+    canonicalJson({
+      code: TASK_FAILURE.code,
+      failedActionId: toneOpenFailureAction.id,
+      failureClass: TONE_OPEN_BROWSER_FAILURE_CLASSES[1],
+    }) + "\n";
+  invariant(
+    classifiedTonePublicFailure === TASK_FAILURE &&
+      classifiedToneCapabilities.cleanupExecutions === 1 &&
+      classifiedToneLines.length === 1 &&
+      classifiedToneLines[0] === expectedClassifiedToneLine &&
+      !classifiedToneLines[0].includes(toneOpenPrivateMarker),
+    "classified tone-open execution diagnostic drift"
+  );
+  negativeCases += 1;
+
+  const toneSelectFailureAction = plan.actionManifest.find(
+    ({ id }) => id === TONE_MUTED_ACTION_IDS[0]
+  );
+  invariant(toneSelectFailureAction !== undefined, "classified tone-select action is absent");
+  const toneSelectPrivateMarker = "TASK540_TONE_SELECT_PRIVATE_DO_NOT_EGRESS";
+  const classifiedToneSelectCapabilities = buildFakeCapabilities();
+  const classifiedToneSelectExecuteAction = classifiedToneSelectCapabilities.executeAction.bind(
+    classifiedToneSelectCapabilities
+  );
+  classifiedToneSelectCapabilities.executeAction = async (context) => {
+    if (context.action.id === toneSelectFailureAction.id) {
+      throw createPrivateToneSelectFailure(TONE_SELECT_BROWSER_FAILURE_CLASSES[2]);
+    }
+    return classifiedToneSelectExecuteAction(context);
+  };
+  const classifiedToneSelectLines = [];
+  const classifiedToneSelectSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    invariant(
+      classifiedToneSelectCapabilities.cleaned &&
+        classifiedToneSelectCapabilities.calls.at(-1) === "failure-cleanup",
+      "classified tone-select diagnostic preceded cleanup"
+    );
+    classifiedToneSelectLines.push(line);
+  });
+  let classifiedToneSelectPublicFailure = null;
+  try {
+    await executeTask540SmokePlanWithAuthorityFactory(
+      diagnosticInput,
+      createPrivateConstructionCleanupAuthority,
+      async () => classifiedToneSelectCapabilities,
+      classifiedToneSelectSink
+    );
+  } catch (error) {
+    classifiedToneSelectPublicFailure = error;
+  }
+  const expectedClassifiedToneSelectLine =
+    canonicalJson({
+      code: TASK_FAILURE.code,
+      failedActionId: toneSelectFailureAction.id,
+      failureClass: TONE_SELECT_BROWSER_FAILURE_CLASSES[2],
+    }) + "\n";
+  invariant(
+    classifiedToneSelectPublicFailure === TASK_FAILURE &&
+      classifiedToneSelectCapabilities.cleanupExecutions === 1 &&
+      classifiedToneSelectLines.length === 1 &&
+      classifiedToneSelectLines[0] === expectedClassifiedToneSelectLine &&
+      !classifiedToneSelectLines[0].includes(toneSelectPrivateMarker),
+    "classified tone-select execution diagnostic drift"
+  );
+  negativeCases += 1;
+
+  const dirtyNavigationFailureAction = plan.actionManifest.find(
+    ({ id }) => id === "dg-024-entry-nav-cancel"
+  );
+  invariant(
+    dirtyNavigationFailureAction !== undefined,
+    "classified dirty-navigation action is absent"
+  );
+  const dirtyNavigationPrivateMarker = "TASK540_DIRTY_NAVIGATION_PRIVATE_DO_NOT_EGRESS";
+  const classifiedDirtyNavigationCapabilities = buildFakeCapabilities();
+  const classifiedDirtyNavigationExecuteAction =
+    classifiedDirtyNavigationCapabilities.executeAction.bind(classifiedDirtyNavigationCapabilities);
+  classifiedDirtyNavigationCapabilities.executeAction = async (context) => {
+    if (context.action.id === dirtyNavigationFailureAction.id) {
+      throw createPrivateDirtyNavigationFailure(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[7], {
+        cause: new Error(dirtyNavigationPrivateMarker),
+      });
+    }
+    return classifiedDirtyNavigationExecuteAction(context);
+  };
+  const classifiedDirtyNavigationLines = [];
+  const classifiedDirtyNavigationSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    invariant(
+      classifiedDirtyNavigationCapabilities.cleaned &&
+        classifiedDirtyNavigationCapabilities.calls.at(-1) === "failure-cleanup",
+      "classified dirty-navigation diagnostic preceded cleanup"
+    );
+    classifiedDirtyNavigationLines.push(line);
+  });
+  let classifiedDirtyNavigationPublicFailure = null;
+  try {
+    await executeTask540SmokePlanWithAuthorityFactory(
+      diagnosticInput,
+      createPrivateConstructionCleanupAuthority,
+      async () => classifiedDirtyNavigationCapabilities,
+      classifiedDirtyNavigationSink
+    );
+  } catch (error) {
+    classifiedDirtyNavigationPublicFailure = error;
+  }
+  const expectedClassifiedDirtyNavigationLine =
+    canonicalJson({
+      code: TASK_FAILURE.code,
+      failedActionId: dirtyNavigationFailureAction.id,
+      failureClass: DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[7],
+    }) + "\n";
+  invariant(
+    classifiedDirtyNavigationPublicFailure === TASK_FAILURE &&
+      classifiedDirtyNavigationCapabilities.cleanupExecutions === 1 &&
+      classifiedDirtyNavigationLines.length === 1 &&
+      classifiedDirtyNavigationLines[0] === expectedClassifiedDirtyNavigationLine &&
+      !classifiedDirtyNavigationLines[0].includes(dirtyNavigationPrivateMarker),
+    "classified dirty-navigation execution diagnostic drift"
+  );
+  negativeCases += 1;
+
+  const trackerAtAction = (actionId) => {
+    const tracker = createPrivateFailureActionTracker(plan);
+    for (const action of plan.actionManifest) {
+      beginPrivateFailureAction(tracker, action);
+      if (action.id === actionId) return tracker;
+      completePrivateFailureAction(tracker, action);
+    }
+    throw new Error("TASK-540 smoke executor: classified diagnostic action is absent");
+  };
+  const classifiedTracker = trackerAtAction(classifiedFailureActionId);
+  const classifiedCause = createPrivateAuthSettlementFailure("login_route");
+  invariant(
+    retainPrivateAuthSettlementFailureClassNeverThrow(classifiedTracker, classifiedCause) ===
+      true &&
+      retainPrivateAuthSettlementFailureClassNeverThrow(classifiedTracker, classifiedCause) ===
+        false,
+    "classified auth settlement failure retention drift"
+  );
+  const classifiedLines = [];
+  const classifiedSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    classifiedLines.push(line);
+  });
+  invariant(
+    emitPrivateFailureActionDiagnosticNeverThrow(classifiedTracker, classifiedSink) === true &&
+      classifiedLines.length === 1 &&
+      classifiedLines[0] === expectedClassifiedLine,
+    "classified auth settlement diagnostic exact bytes drift"
+  );
+  const unclassifiedTracker = trackerAtAction(classifiedFailureActionId);
+  invariant(
+    retainPrivateAuthSettlementFailureClassNeverThrow(
+      unclassifiedTracker,
+      new Error(diagnosticPrivateMarker)
+    ) === false,
+    "unbranded auth settlement failure was classified"
+  );
+  const unclassifiedLines = [];
+  const unclassifiedSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    unclassifiedLines.push(line);
+  });
+  invariant(
+    emitPrivateFailureActionDiagnosticNeverThrow(unclassifiedTracker, unclassifiedSink) === true &&
+      unclassifiedLines.length === 1 &&
+      unclassifiedLines[0] ===
+        '{"code":"task540_smoke_failed","failedActionId":"' + classifiedFailureActionId + '"}\n' &&
+      !unclassifiedLines[0].includes(diagnosticPrivateMarker),
+    "unclassified auth settlement diagnostic containment drift"
+  );
+  let invalidFailureClassRejected = false;
+  try {
+    createPrivateAuthSettlementFailure("TASK540_PRIVATE_CLASS_DO_NOT_EGRESS");
+  } catch {
+    invalidFailureClassRejected = true;
+  }
+  assertNegative(invalidFailureClassRejected, "invalid auth settlement failure class");
+  negativeCases += 2;
+
+  const classifiedToneTracker = trackerAtAction(toneOpenFailureAction.id);
+  const classifiedToneCause = createPrivateToneOpenFailure(TONE_OPEN_BROWSER_FAILURE_CLASSES[2], {
+    cause: new Error(toneOpenPrivateMarker),
+  });
+  invariant(
+    PRIVATE_TONE_OPEN_FAILURE_DETAILS.get(classifiedToneCause)?.cause?.message ===
+      toneOpenPrivateMarker &&
+      retainPrivateToneOpenFailureClassNeverThrow(classifiedToneTracker, classifiedToneCause) ===
+        true &&
+      retainPrivateToneOpenFailureClassNeverThrow(classifiedToneTracker, classifiedToneCause) ===
+        false,
+    "classified tone-open failure retention drift"
+  );
+  const retainedToneLines = [];
+  const retainedToneSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    retainedToneLines.push(line);
+  });
+  const expectedRetainedToneLine =
+    canonicalJson({
+      code: TASK_FAILURE.code,
+      failedActionId: toneOpenFailureAction.id,
+      failureClass: TONE_OPEN_BROWSER_FAILURE_CLASSES[2],
+    }) + "\n";
+  invariant(
+    emitPrivateFailureActionDiagnosticNeverThrow(classifiedToneTracker, retainedToneSink) ===
+      true &&
+      retainedToneLines.length === 1 &&
+      retainedToneLines[0] === expectedRetainedToneLine &&
+      !retainedToneLines[0].includes(toneOpenPrivateMarker),
+    "classified tone-open diagnostic exact bytes drift"
+  );
+  const unclassifiedToneTracker = trackerAtAction(toneOpenFailureAction.id);
+  invariant(
+    retainPrivateToneOpenFailureClassNeverThrow(
+      unclassifiedToneTracker,
+      new Error(toneOpenPrivateMarker)
+    ) === false &&
+      retainPrivateAuthSettlementFailureClassNeverThrow(
+        unclassifiedToneTracker,
+        createPrivateAuthSettlementFailure("login_route")
+      ) === false,
+    "unclassified tone-open failure was classified"
+  );
+  const unclassifiedToneLines = [];
+  const unclassifiedToneSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    unclassifiedToneLines.push(line);
+  });
+  invariant(
+    emitPrivateFailureActionDiagnosticNeverThrow(unclassifiedToneTracker, unclassifiedToneSink) ===
+      true &&
+      unclassifiedToneLines.length === 1 &&
+      unclassifiedToneLines[0] ===
+        canonicalJson({
+          code: TASK_FAILURE.code,
+          failedActionId: toneOpenFailureAction.id,
+        }) +
+          "\n" &&
+      !unclassifiedToneLines[0].includes(toneOpenPrivateMarker),
+    "unclassified tone-open diagnostic containment drift"
+  );
+  let invalidToneFailureClassRejected = false;
+  try {
+    createPrivateToneOpenFailure(toneOpenPrivateMarker);
+  } catch {
+    invalidToneFailureClassRejected = true;
+  }
+  assertNegative(invalidToneFailureClassRejected, "invalid tone-open failure class");
+  negativeCases += 2;
+
+  const classifiedToneSelectTracker = trackerAtAction(toneSelectFailureAction.id);
+  const classifiedToneSelectCause = createPrivateToneSelectFailure(
+    TONE_SELECT_BROWSER_FAILURE_CLASSES[4]
+  );
+  invariant(
+    PRIVATE_TONE_SELECT_FAILURE_CLASSES.get(classifiedToneSelectCause) ===
+      TONE_SELECT_BROWSER_FAILURE_CLASSES[4] &&
+      retainPrivateToneSelectFailureClassNeverThrow(
+        classifiedToneSelectTracker,
+        classifiedToneSelectCause
+      ) === true &&
+      retainPrivateToneSelectFailureClassNeverThrow(
+        classifiedToneSelectTracker,
+        classifiedToneSelectCause
+      ) === false,
+    "classified tone-select failure retention drift"
+  );
+  const retainedToneSelectLines = [];
+  const retainedToneSelectSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    retainedToneSelectLines.push(line);
+  });
+  const expectedRetainedToneSelectLine =
+    canonicalJson({
+      code: TASK_FAILURE.code,
+      failedActionId: toneSelectFailureAction.id,
+      failureClass: TONE_SELECT_BROWSER_FAILURE_CLASSES[4],
+    }) + "\n";
+  invariant(
+    emitPrivateFailureActionDiagnosticNeverThrow(
+      classifiedToneSelectTracker,
+      retainedToneSelectSink
+    ) === true &&
+      retainedToneSelectLines.length === 1 &&
+      retainedToneSelectLines[0] === expectedRetainedToneSelectLine &&
+      !retainedToneSelectLines[0].includes(toneSelectPrivateMarker),
+    "classified tone-select diagnostic exact bytes drift"
+  );
+  const unclassifiedToneSelectTracker = trackerAtAction(toneSelectFailureAction.id);
+  invariant(
+    retainPrivateToneSelectFailureClassNeverThrow(
+      unclassifiedToneSelectTracker,
+      new Error(toneSelectPrivateMarker)
+    ) === false &&
+      retainPrivateToneOpenFailureClassNeverThrow(
+        unclassifiedToneSelectTracker,
+        createPrivateToneOpenFailure(TONE_OPEN_BROWSER_FAILURE_CLASSES[0])
+      ) === false &&
+      retainPrivateAuthSettlementFailureClassNeverThrow(
+        unclassifiedToneSelectTracker,
+        createPrivateAuthSettlementFailure("login_route")
+      ) === false &&
+      retainPrivateToneSelectFailureClassNeverThrow(
+        trackerAtAction(toneOpenFailureAction.id),
+        createPrivateToneSelectFailure(TONE_SELECT_BROWSER_FAILURE_CLASSES[0])
+      ) === false,
+    "unclassified tone-select failure was classified"
+  );
+  const unclassifiedToneSelectLines = [];
+  const unclassifiedToneSelectSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    unclassifiedToneSelectLines.push(line);
+  });
+  invariant(
+    emitPrivateFailureActionDiagnosticNeverThrow(
+      unclassifiedToneSelectTracker,
+      unclassifiedToneSelectSink
+    ) === true &&
+      unclassifiedToneSelectLines.length === 1 &&
+      unclassifiedToneSelectLines[0] ===
+        canonicalJson({
+          code: TASK_FAILURE.code,
+          failedActionId: toneSelectFailureAction.id,
+        }) +
+          "\n" &&
+      !unclassifiedToneSelectLines[0].includes(toneSelectPrivateMarker),
+    "unclassified tone-select diagnostic containment drift"
+  );
+  let invalidToneSelectFailureClassRejected = false;
+  try {
+    createPrivateToneSelectFailure(toneSelectPrivateMarker);
+  } catch {
+    invalidToneSelectFailureClassRejected = true;
+  }
+  assertNegative(invalidToneSelectFailureClassRejected, "invalid tone-select failure class");
+  negativeCases += 2;
+
+  const classifiedDirtyNavigationTracker = trackerAtAction(dirtyNavigationFailureAction.id);
+  const classifiedDirtyNavigationCause = createPrivateDirtyNavigationFailure(
+    DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[8],
+    { cause: new Error(dirtyNavigationPrivateMarker) }
+  );
+  invariant(
+    PRIVATE_DIRTY_NAVIGATION_FAILURE_DETAILS.get(classifiedDirtyNavigationCause)?.cause?.message ===
+      dirtyNavigationPrivateMarker &&
+      retainPrivateDirtyNavigationFailureClassNeverThrow(
+        classifiedDirtyNavigationTracker,
+        classifiedDirtyNavigationCause
+      ) === true &&
+      retainPrivateDirtyNavigationFailureClassNeverThrow(
+        classifiedDirtyNavigationTracker,
+        classifiedDirtyNavigationCause
+      ) === false,
+    "classified dirty-navigation failure retention drift"
+  );
+  const retainedDirtyNavigationLines = [];
+  const retainedDirtyNavigationSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    retainedDirtyNavigationLines.push(line);
+  });
+  const expectedRetainedDirtyNavigationLine =
+    canonicalJson({
+      code: TASK_FAILURE.code,
+      failedActionId: dirtyNavigationFailureAction.id,
+      failureClass: DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[8],
+    }) + "\n";
+  invariant(
+    emitPrivateFailureActionDiagnosticNeverThrow(
+      classifiedDirtyNavigationTracker,
+      retainedDirtyNavigationSink
+    ) === true &&
+      retainedDirtyNavigationLines.length === 1 &&
+      retainedDirtyNavigationLines[0] === expectedRetainedDirtyNavigationLine &&
+      !retainedDirtyNavigationLines[0].includes(dirtyNavigationPrivateMarker),
+    "classified dirty-navigation diagnostic exact bytes drift"
+  );
+  const unclassifiedDirtyNavigationTracker = trackerAtAction(dirtyNavigationFailureAction.id);
+  invariant(
+    retainPrivateDirtyNavigationFailureClassNeverThrow(
+      unclassifiedDirtyNavigationTracker,
+      new Error(dirtyNavigationPrivateMarker)
+    ) === false &&
+      retainPrivateToneOpenFailureClassNeverThrow(
+        unclassifiedDirtyNavigationTracker,
+        createPrivateToneOpenFailure(TONE_OPEN_BROWSER_FAILURE_CLASSES[0])
+      ) === false &&
+      retainPrivateToneSelectFailureClassNeverThrow(
+        unclassifiedDirtyNavigationTracker,
+        createPrivateToneSelectFailure(TONE_SELECT_BROWSER_FAILURE_CLASSES[0])
+      ) === false &&
+      retainPrivateAuthSettlementFailureClassNeverThrow(
+        unclassifiedDirtyNavigationTracker,
+        createPrivateAuthSettlementFailure("login_route")
+      ) === false &&
+      retainPrivateDirtyNavigationFailureClassNeverThrow(
+        trackerAtAction(toneOpenFailureAction.id),
+        createPrivateDirtyNavigationFailure(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[0])
+      ) === false,
+    "unclassified dirty-navigation failure was classified"
+  );
+  const unclassifiedDirtyNavigationLines = [];
+  const unclassifiedDirtyNavigationSink = createPrivateBoundedFailureActionDiagnosticSink(
+    (line) => {
+      unclassifiedDirtyNavigationLines.push(line);
+    }
+  );
+  invariant(
+    emitPrivateFailureActionDiagnosticNeverThrow(
+      unclassifiedDirtyNavigationTracker,
+      unclassifiedDirtyNavigationSink
+    ) === true &&
+      unclassifiedDirtyNavigationLines.length === 1 &&
+      unclassifiedDirtyNavigationLines[0] ===
+        canonicalJson({
+          code: TASK_FAILURE.code,
+          failedActionId: dirtyNavigationFailureAction.id,
+        }) +
+          "\n" &&
+      !unclassifiedDirtyNavigationLines[0].includes(dirtyNavigationPrivateMarker),
+    "unclassified dirty-navigation diagnostic containment drift"
+  );
+  let invalidDirtyNavigationFailureClassRejected = false;
+  try {
+    createPrivateDirtyNavigationFailure(dirtyNavigationPrivateMarker);
+  } catch {
+    invalidDirtyNavigationFailureClassRejected = true;
+  }
+  assertNegative(
+    invalidDirtyNavigationFailureClassRejected,
+    "invalid dirty-navigation failure class"
+  );
+  negativeCases += 2;
+
   const onceTracker = createPrivateFailureActionTracker(plan);
   beginPrivateFailureAction(onceTracker, plan.actionManifest[0]);
   const firstActionDiagnosticLine =
@@ -21151,13 +24350,36 @@ export async function runTask540SmokeExecutorSelfTest() {
     await failingConstructionAuthority.cleanupWhateverWasAcquiredOnceNeverThrow();
   const repeatedFailedConstructionCleanup =
     await failingConstructionAuthority.cleanupWhateverWasAcquiredOnceNeverThrow();
+  const failingConstructionDiagnostic = currentPrivateConstructionCleanupDiagnosticNeverThrow(
+    failingConstructionAuthority
+  );
   invariant(
     failedConstructionCleanup === repeatedFailedConstructionCleanup &&
       failedConstructionCleanup.absenceProven === false &&
-      failingConstructionCleanupCalls === 1,
+      failingConstructionCleanupCalls === 1 &&
+      deepEqualJson(failingConstructionDiagnostic, {
+        cleanupPhase: 0,
+        cleanupFailureClass: "cleanup_boundary_failed",
+      }),
     "construction cleanup failure once-state drift"
   );
-  negativeCases += 1;
+
+  const partialConstructionAuthority = createPrivateConstructionCleanupAuthority();
+  partialConstructionAuthority.registerWorkspaceLedger(Object.freeze({}));
+  const partialConstructionCleanup =
+    await partialConstructionAuthority.cleanupWhateverWasAcquiredOnceNeverThrow();
+  const partialConstructionDiagnostic = currentPrivateConstructionCleanupDiagnosticNeverThrow(
+    partialConstructionAuthority
+  );
+  invariant(
+    partialConstructionCleanup.absenceProven === false &&
+      deepEqualJson(partialConstructionDiagnostic, {
+        cleanupPhase: 0,
+        cleanupFailureClass: "construction_cleanup_failed",
+      }),
+    "partial-construction cleanup failure attribution drift"
+  );
+  negativeCases += 2;
 
   const coreSuccessCapabilities = buildFakeCapabilities();
   const coreSuccessAuthority = createPrivateConstructionCleanupAuthority();
@@ -21216,6 +24438,14 @@ export async function runTask540SmokeExecutorSelfTest() {
     cleanupAttributionLines.push(line);
   });
   const cleanupTrackerState = PRIVATE_FAILURE_ACTION_TRACKERS.get(cleanupFailureTracker);
+  const cleanupOnlyDiagnosticLine =
+    canonicalJson({
+      code: TASK_FAILURE.code,
+      cleanupPhase: 3,
+      cleanupFailureClass: "persistent_plan_failed",
+    }) + "\n";
+  const malformedCleanupDiagnosticLine = cleanupOnlyDiagnosticLine + "{}\n";
+  const overflowCleanupDiagnosticLine = "x".repeat(MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES) + "\n";
   invariant(
     sealedCleanupFailure === TASK_FAILURE &&
       cleanupFailureCapabilities.cleanupExecutions === 1 &&
@@ -21223,14 +24453,191 @@ export async function runTask540SmokeExecutorSelfTest() {
       cleanupTrackerState.currentActionId === null &&
       cleanupTrackerState.nextIndex === plan.actionManifest.length &&
       cleanupTrackerState.sealed === true &&
+      writePrivateFailureActionDiagnosticOnceNeverThrow(
+        cleanupAttributionSink,
+        malformedCleanupDiagnosticLine
+      ) === false &&
+      writePrivateFailureActionDiagnosticOnceNeverThrow(
+        cleanupAttributionSink,
+        overflowCleanupDiagnosticLine
+      ) === false &&
       emitPrivateFailureActionDiagnosticNeverThrow(
         cleanupFailureTracker,
-        cleanupAttributionSink
+        cleanupAttributionSink,
+        cleanupFailureAuthority
+      ) === true &&
+      emitPrivateFailureActionDiagnosticNeverThrow(
+        cleanupFailureTracker,
+        cleanupAttributionSink,
+        cleanupFailureAuthority
       ) === false &&
-      cleanupAttributionLines.length === 0,
+      cleanupAttributionLines.length === 1 &&
+      cleanupAttributionLines[0] === cleanupOnlyDiagnosticLine &&
+      Buffer.byteLength(cleanupAttributionLines[0]) <= MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES &&
+      !cleanupAttributionLines[0].includes("private fake cleanup lifecycle failure"),
     "cleanup lifecycle failure/public cleanup once-state drift"
   );
-  negativeCases += 1;
+
+  const malformedCleanupAuthority = createPrivateConstructionCleanupAuthority();
+  PRIVATE_CONSTRUCTION_AUTHORITY.get(malformedCleanupAuthority).cleanupDiagnostic = deepFreezeExact(
+    {
+      cleanupPhase: 3,
+      cleanupFailureClass: diagnosticPrivateMarker,
+    }
+  );
+  const malformedCleanupLines = [];
+  const malformedCleanupSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    malformedCleanupLines.push(line);
+  });
+  assertNegative(
+    emitPrivateFailureActionDiagnosticNeverThrow(
+      cleanupFailureTracker,
+      malformedCleanupSink,
+      malformedCleanupAuthority
+    ) === false && malformedCleanupLines.length === 0,
+    "malformed cleanup diagnostic"
+  );
+
+  const combinedCleanupCapabilities = buildFakeCapabilities({
+    failFailureCleanup: true,
+    cleanupFailureClass: "admin_api_failed",
+  });
+  const combinedCleanupExecuteAction = combinedCleanupCapabilities.executeAction.bind(
+    combinedCleanupCapabilities
+  );
+  combinedCleanupCapabilities.executeAction = async (context) => {
+    if (context.action.id === dirtyNavigationFailureAction.id) {
+      throw createPrivateDirtyNavigationFailure(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[7], {
+        cause: new Error(dirtyNavigationPrivateMarker),
+      });
+    }
+    return combinedCleanupExecuteAction(context);
+  };
+  const combinedCleanupLines = [];
+  const combinedCleanupSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    invariant(
+      combinedCleanupCapabilities.cleaned &&
+        combinedCleanupCapabilities.calls.at(-1) === "failure-cleanup",
+      "combined primary/cleanup diagnostic preceded cleanup"
+    );
+    combinedCleanupLines.push(line);
+  });
+  let combinedCleanupFailure = null;
+  try {
+    await executeTask540SmokePlanWithAuthorityFactory(
+      diagnosticInput,
+      createPrivateConstructionCleanupAuthority,
+      async () => combinedCleanupCapabilities,
+      combinedCleanupSink
+    );
+  } catch (error) {
+    combinedCleanupFailure = error;
+  }
+  const combinedCleanupDiagnosticLine =
+    canonicalJson({
+      code: TASK_FAILURE.code,
+      failedActionId: dirtyNavigationFailureAction.id,
+      failureClass: DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[7],
+      cleanupPhase: 3,
+      cleanupFailureClass: "admin_api_failed",
+    }) + "\n";
+  invariant(
+    combinedCleanupFailure === TASK_FAILURE &&
+      combinedCleanupCapabilities.cleanupExecutions === 1 &&
+      combinedCleanupLines.length === 1 &&
+      combinedCleanupLines[0] === combinedCleanupDiagnosticLine &&
+      Buffer.byteLength(combinedCleanupLines[0]) <= MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES &&
+      !combinedCleanupLines[0].includes(dirtyNavigationPrivateMarker) &&
+      !combinedCleanupLines[0].includes("private fake failure cleanup detail"),
+    "combined primary/cleanup diagnostic drift"
+  );
+
+  const phaseThreeCleanupPrivateMarker = "TASK540_PHASE3_CLEANUP_PRIVATE_DO_NOT_EGRESS";
+  const emitTaggedCleanupDiagnostic = async (cleanupFailureClass, tracker = null) => {
+    const authority = createPrivateConstructionCleanupAuthority();
+    authority.bindCompleteCapabilities({
+      async cleanup() {
+        throw retainPrivateCleanupFailureDiagnosticNeverThrow(
+          new Error(phaseThreeCleanupPrivateMarker),
+          3,
+          cleanupFailureClass
+        );
+      },
+    });
+    const outcome = await authority.cleanupWhateverWasAcquiredOnceNeverThrow();
+    const lines = [];
+    const sink = createPrivateBoundedFailureActionDiagnosticSink((line) => lines.push(line));
+    invariant(
+      outcome.absenceProven === false &&
+        emitPrivateFailureActionDiagnosticNeverThrow(tracker, sink, authority) === true &&
+        lines.length === 1 &&
+        Buffer.byteLength(lines[0]) <= MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES &&
+        !lines[0].includes(phaseThreeCleanupPrivateMarker),
+      cleanupFailureClass + " bounded cleanup diagnostic drift"
+    );
+    return lines[0];
+  };
+  const persistentStageCleanupOnlyLine =
+    await emitTaggedCleanupDiagnostic("persistent_stage_failed");
+  const persistentStageCleanupOnlyExpected =
+    canonicalJson({
+      code: TASK_FAILURE.code,
+      cleanupPhase: 3,
+      cleanupFailureClass: "persistent_stage_failed",
+    }) + "\n";
+  const operationCleanupOnlyLines = [];
+  for (const cleanupFailureClass of [
+    "persistent_provenance_failed",
+    "persistent_delete_failed",
+    "persistent_absence_failed",
+  ]) {
+    const line = await emitTaggedCleanupDiagnostic(cleanupFailureClass);
+    const expected =
+      canonicalJson({
+        code: TASK_FAILURE.code,
+        cleanupPhase: 3,
+        cleanupFailureClass,
+      }) + "\n";
+    invariant(
+      line === expected && Buffer.byteLength(line) <= MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES,
+      cleanupFailureClass + " exact cleanup-only diagnostic bytes drift"
+    );
+    operationCleanupOnlyLines.push(line);
+  }
+  const persistentDependencyCombinedTracker = trackerAtAction(dirtyNavigationFailureAction.id);
+  const persistentDependencyCombinedCause = createPrivateDirtyNavigationFailure(
+    DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[5],
+    { cause: new Error(dirtyNavigationPrivateMarker) }
+  );
+  invariant(
+    retainPrivateDirtyNavigationFailureClassNeverThrow(
+      persistentDependencyCombinedTracker,
+      persistentDependencyCombinedCause
+    ) === true,
+    "persistent dependency combined primary classification drift"
+  );
+  const persistentDependencyCombinedLine = await emitTaggedCleanupDiagnostic(
+    "persistent_dependency_blocked",
+    persistentDependencyCombinedTracker
+  );
+  const persistentDependencyCombinedExpected =
+    canonicalJson({
+      code: TASK_FAILURE.code,
+      failedActionId: dirtyNavigationFailureAction.id,
+      failureClass: DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[5],
+      cleanupPhase: 3,
+      cleanupFailureClass: "persistent_dependency_blocked",
+    }) + "\n";
+  invariant(
+    persistentStageCleanupOnlyLine === persistentStageCleanupOnlyExpected &&
+      operationCleanupOnlyLines.length === 3 &&
+      persistentDependencyCombinedLine === persistentDependencyCombinedExpected &&
+      Buffer.byteLength(persistentStageCleanupOnlyLine) <= MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES &&
+      Buffer.byteLength(persistentDependencyCombinedLine) <= MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES &&
+      !persistentDependencyCombinedLine.includes(dirtyNavigationPrivateMarker),
+    "phase 3 cleanup exact diagnostic bytes drift"
+  );
+  negativeCases += 9;
 
   let inputTrapCalls = 0;
   const trappedInput = new Proxy(
@@ -21274,6 +24681,141 @@ export async function runTask540SmokeExecutorSelfTest() {
     "construction authority was not created before input inspection"
   );
   negativeCases += 1;
+
+  const compileBrowserInvocationAtCaptureFrontier = (action, captures) => {
+    const executionSpec = compileActionExecutionSpec(action);
+    return buildBrowserInvocation(
+      action,
+      executionSpec,
+      captures,
+      "/task540-self-test-root",
+      "/task540-self-test-root/private",
+      plan,
+      {
+        plan,
+        captures,
+        priorOutputs: new Map(),
+        variables: new Map(),
+        currentOutput: null,
+        root: "/task540-self-test-root",
+        actionId: action.id,
+      },
+      {
+        csrfHeaderName: "x-self-test-csrf",
+        authRatePolicy: {
+          enabled: true,
+          maxRequests: 10,
+          windowSeconds: 60,
+        },
+      }
+    );
+  };
+  const bootstrapCaptureFrontierAction = plan.actionManifest.find(
+    ({ id }) => id === "set-011a-bootstrap-auth-settled"
+  );
+  const entryBaselineCaptureFrontierAction = plan.actionManifest.find(
+    ({ id }) => id === "rc-012c-picker-warm-proof"
+  );
+  invariant(
+    bootstrapCaptureFrontierAction?.builder === "observe(bootstrap-auth-identity-settled)" &&
+      entryBaselineCaptureFrontierAction?.builder === "observe(relation-pickers-a-b-warm)",
+    "capture-frontier observation actions drift"
+  );
+  const emptyCaptureFrontier = new SingleAssignmentCaptureMap();
+  const emptyFrontierInvocation = compileBrowserInvocationAtCaptureFrontier(
+    bootstrapCaptureFrontierAction,
+    emptyCaptureFrontier
+  );
+  const partialCaptureFrontier = new SingleAssignmentCaptureMap();
+  partialCaptureFrontier.bind("media.id", fixtureCaptureValue("media.id", plan));
+  const partialFrontierInvocation = compileBrowserInvocationAtCaptureFrontier(
+    bootstrapCaptureFrontierAction,
+    partialCaptureFrontier
+  );
+  invariant(
+    deepEqualJson(emptyFrontierInvocation.args.slice(0, 3), [
+      "-s=wf540smoke",
+      "--raw",
+      "run-code",
+    ]) &&
+      emptyFrontierInvocation.args.length === 4 &&
+      emptyFrontierInvocation.args[3] === partialFrontierInvocation.args[3] &&
+      emptyFrontierInvocation.args[3].includes('"entryBaseline":null') &&
+      emptyFrontierInvocation.args[3].includes('"expectedResetDraft":null') &&
+      emptyFrontierInvocation.args[3].includes('"expectedRc017Draft":null'),
+    "bootstrap auth invocation depends on future capture state"
+  );
+  new Script("(" + emptyFrontierInvocation.args[3] + ")", {
+    filename: bootstrapCaptureFrontierAction.id + ".capture-frontier.self-test.js",
+  });
+  await expectAsyncFailure(
+    async () =>
+      compileBrowserInvocationAtCaptureFrontier(
+        entryBaselineCaptureFrontierAction,
+        new SingleAssignmentCaptureMap()
+      ),
+    "entry-baseline observation missing capture frontier"
+  );
+
+  const nonEntryAssertionCaptureFrontierAction = plan.actionManifest.find(
+    ({ id }) => id === "bi-018-reopen-proof"
+  );
+  const entryAssertionCaptureFrontierAction = plan.actionManifest.find(
+    ({ id }) => id === "rc-032-diff-proof"
+  );
+  invariant(
+    nonEntryAssertionCaptureFrontierAction?.builder === "assert(persisted-no-empty-binding)" &&
+      entryAssertionCaptureFrontierAction?.builder === "assert(relation-diff-exact)",
+    "capture-frontier assertion actions drift"
+  );
+  const entryBaselineCaptureNames = new Set([
+    "media.id",
+    "related-entry-a1.id",
+    "related-entry-a2.id",
+    "related-entry-failure1.id",
+  ]);
+  const buildAssertionCaptureFrontier = ({ partialEntryBaseline = false } = {}) => {
+    const captures = new SingleAssignmentCaptureMap();
+    for (const name of plan.requiredCaptureNames) {
+      if (!entryBaselineCaptureNames.has(name) || (partialEntryBaseline && name === "media.id")) {
+        captures.bind(name, fixtureCaptureValue(name, plan));
+      }
+    }
+    for (const name of plan.requiredRuntimeBlockCaptures) {
+      captures.bind(name, plan.prefix + "-" + name.replaceAll(".", "-"));
+    }
+    return captures;
+  };
+  const emptyEntryAssertionInvocation = compileBrowserInvocationAtCaptureFrontier(
+    nonEntryAssertionCaptureFrontierAction,
+    buildAssertionCaptureFrontier()
+  );
+  const partialEntryAssertionInvocation = compileBrowserInvocationAtCaptureFrontier(
+    nonEntryAssertionCaptureFrontierAction,
+    buildAssertionCaptureFrontier({ partialEntryBaseline: true })
+  );
+  invariant(
+    emptyEntryAssertionInvocation.args.length === 4 &&
+      partialEntryAssertionInvocation.args.length === 4 &&
+      emptyEntryAssertionInvocation.args[3].includes('"entryBaseline":null') &&
+      emptyEntryAssertionInvocation.args[3].includes('"expectedResetDraft":null') &&
+      emptyEntryAssertionInvocation.args[3].includes('"expectedRc017Draft":null') &&
+      partialEntryAssertionInvocation.args[3].includes('"entryBaseline":null') &&
+      partialEntryAssertionInvocation.args[3].includes('"expectedResetDraft":null') &&
+      partialEntryAssertionInvocation.args[3].includes('"expectedRc017Draft":null'),
+    "non-entry assertion depends on the entry capture frontier"
+  );
+  new Script("(" + emptyEntryAssertionInvocation.args[3] + ")", {
+    filename: nonEntryAssertionCaptureFrontierAction.id + ".capture-frontier.self-test.js",
+  });
+  await expectAsyncFailure(
+    async () =>
+      compileBrowserInvocationAtCaptureFrontier(
+        entryAssertionCaptureFrontierAction,
+        buildAssertionCaptureFrontier()
+      ),
+    "entry-baseline assertion missing capture frontier"
+  );
 
   const sourceCaptures = new SingleAssignmentCaptureMap();
   for (const name of plan.requiredCaptureNames)
@@ -22002,6 +25544,105 @@ export async function runTask540SmokeExecutorSelfTest() {
   const mediaIsolationSourceActionIds = [];
   const recordEntryMenuSourceActionIds = [];
   const recordsWorkspaceSourceActionIds = [];
+  const observedDirtyNavigationRequestActionIds = [];
+  const observedToneContentFillActionIds = [];
+  const observedToneMenuOpenActionIds = [];
+  const observedToneMutedActionIds = [];
+  const expectedDirtyNavigationRequestActionConfig = deepFreezeExact({
+    "dg-012-builder-nav-cancel": {
+      dialogDescription: "The Screen document or bindings have local changes.",
+      dialogTitle: "Discard unsaved Screen changes?",
+      realm: "builder",
+    },
+    "dg-015-builder-nav-confirm": {
+      dialogDescription: "The Screen document or bindings have local changes.",
+      dialogTitle: "Discard unsaved Screen changes?",
+      realm: "builder",
+    },
+    "dg-024-entry-nav-cancel": {
+      dialogDescription: "Content or presentation changes have not been saved.",
+      dialogTitle: "Discard unsaved entry changes?",
+      realm: "entry",
+    },
+    "dg-037-entry-nav-confirm": {
+      dialogDescription: "Content or presentation changes have not been saved.",
+      dialogTitle: "Discard unsaved entry changes?",
+      realm: "entry",
+    },
+    "rc-037a-exit-navigation": {
+      dialogDescription: "Content or presentation changes have not been saved.",
+      dialogTitle: "Discard unsaved entry changes?",
+      realm: "entry",
+    },
+  });
+  const validatesDirtyNavigationRequestActionConfig = (candidate) =>
+    deepEqualJson(candidate, expectedDirtyNavigationRequestActionConfig);
+  invariant(
+    validatesDirtyNavigationRequestActionConfig(DIRTY_NAVIGATION_REQUEST_ACTION_CONFIG),
+    "dirty-navigation literal config drift"
+  );
+  for (const actionId of Object.keys(expectedDirtyNavigationRequestActionConfig)) {
+    const removed = { ...DIRTY_NAVIGATION_REQUEST_ACTION_CONFIG };
+    delete removed[actionId];
+    assertNegative(
+      !validatesDirtyNavigationRequestActionConfig(removed),
+      actionId + " dirty-navigation missing literal mapping"
+    );
+  }
+  assertNegative(
+    !validatesDirtyNavigationRequestActionConfig({
+      ...DIRTY_NAVIGATION_REQUEST_ACTION_CONFIG,
+      "zz-999-unowned-dirty-navigation": {
+        dialogDescription: "Content or presentation changes have not been saved.",
+        dialogTitle: "Discard unsaved entry changes?",
+        realm: "entry",
+      },
+    }),
+    "dirty-navigation sixth action mutant"
+  );
+  for (const [field, value] of [
+    ["realm", "builder"],
+    ["dialogTitle", "Wrong dirty-navigation title"],
+    ["dialogDescription", "Wrong dirty-navigation description"],
+  ]) {
+    assertNegative(
+      !validatesDirtyNavigationRequestActionConfig({
+        ...DIRTY_NAVIGATION_REQUEST_ACTION_CONFIG,
+        "dg-024-entry-nav-cancel": {
+          ...DIRTY_NAVIGATION_REQUEST_ACTION_CONFIG["dg-024-entry-nav-cancel"],
+          [field]: value,
+        },
+      }),
+      "dirty-navigation wrong " + field + " mutant"
+    );
+  }
+  const authSettlementSourceSpecs = new Map(
+    plan.stateMachines.auth.transitions
+      .filter(({ to }) => to !== "anonymous")
+      .map(({ actionId, to }) => {
+        const sourceSpec = {
+          bootstrap: {
+            observationName: "bootstrap-auth-identity-settled",
+            invocationToken: "output = await settleAuthRealm(config.selectors.bootstrapUserMenu);",
+          },
+          "user-a": {
+            observationName: "auth-identity-settled-users-a",
+            invocationToken:
+              "output = await settleAuthRealm(config.selectors.userA, config.userAName, config.userAId);",
+          },
+          "user-b": {
+            observationName: "auth-identity-settled-users-b",
+            invocationToken:
+              "output = await settleAuthRealm(config.selectors.userB, config.userBName, config.userBId);",
+          },
+        }[to];
+        invariant(sourceSpec !== undefined, actionId + " auth settlement target drift");
+        return [actionId, sourceSpec];
+      })
+  );
+  const authSettlementActionIds = [...authSettlementSourceSpecs.keys()];
+  const observedAuthSettlementActionIds = [];
+  const authSettlementCompiledSources = new Map();
   const encodedPaletteSelectors = JSON.stringify({
     button: registeredSelector(plan, "blockRoot", [sourceCaptures.get("palette.button")]),
     outerTabs: registeredSelector(plan, "blockRoot", [sourceCaptures.get("palette.outer-tabs")]),
@@ -22063,6 +25704,141 @@ export async function runTask540SmokeExecutorSelfTest() {
       action.id + " retained the legacy runtime-root selector"
     );
     new Script("(" + compiledSource + ")", { filename: action.id + ".self-test.js" });
+    const authSettlementSourceSpec = authSettlementSourceSpecs.get(action.id);
+    if (authSettlementSourceSpec !== undefined) {
+      const expectedConfigNameToken =
+        '"name":' + JSON.stringify(authSettlementSourceSpec.observationName);
+      const finalUrlReadToken = "const observedUrl = page.url();";
+      const labelTextReadToken = "await label.textContent({ timeout: remainingAuthTime() })";
+      const menuBoxReadToken = "await menu.boundingBox({ timeout: remainingAuthTime() })";
+      const menuVisibilityReadToken = "await menu.isVisible()";
+      const urlGuardToken = "if (observedUrl !== config.adminRootUrl) {";
+      const bindToken = "if (userId !== null) context.__wf540BindActiveUser";
+      const returnToken = "return { url: observedUrl, userMenuVisible, userName };";
+      const required = [
+        '"adminRootUrl":"http://coderso-a.localhost:5173/admin/"',
+        expectedConfigNameToken,
+        "const deadline = Date.now() + 60000;",
+        "const remainingAuthTime = () => {",
+        "return Math.max(1, deadline - Date.now());",
+        'let failureClass = "dom_read_failed";',
+        "while (Date.now() < deadline)",
+        "if (page.isClosed())",
+        "const candidateUrl = page.url();",
+        'candidateUrl === config.loginUrl ? "login_route" : "noncanonical_route"',
+        "const menuCount = await menu.count();",
+        'page.getByText("Loading...", { exact: true })',
+        'failureClass = "menu_duplicate";',
+        "const labelCount = await label.count();",
+        'failureClass = "label_absent";',
+        'failureClass = "label_duplicate";',
+        "if (Object.values(result).some((item) => !Number.isFinite(item)))",
+        labelTextReadToken,
+        "const rawMenuRect = " + menuBoxReadToken + ";",
+        "const menuRect = geometryIsFinite ? finiteRect(rawMenuRect) : null;",
+        "const userMenuVisible = " + menuVisibilityReadToken + ";",
+        "expectedName === null ? userName.length > 0 : userName === expectedName",
+        'failureClass = "name_empty";',
+        'failureClass = "name_mismatch";',
+        'failureClass = "geometry_absent";',
+        'failureClass = "geometry_nonfinite";',
+        'failureClass = "geometry_nonpositive";',
+        'failureClass = "menu_hidden";',
+        finalUrlReadToken,
+        urlGuardToken,
+        'failureClass = "url_unstable";',
+        bindToken,
+        returnToken,
+        "await page.waitForTimeout(Math.min(25, waitMs));",
+        'failureClass = page.isClosed() ? "page_closed" : "dom_read_failed";',
+        "break;",
+        "const projection = context.__wf540ReadLogProjection();",
+        'if (projection.firstUnexpected !== null) failureClass = "runtime_failure";',
+        "return { settled: false, failureClass };",
+        "const authSettlementFailureOutput = exactAuthSettlementFailureOutput(output);",
+        "return { failureClass: value.failureClass, settled: false };",
+        "if (authSettlementFailureOutput !== null) return authSettlementFailureOutput;",
+        "output = exactOutput(output);",
+        authSettlementSourceSpec.invocationToken,
+      ];
+      const validates = (source) => {
+        const labelTextReadIndex = source.indexOf(labelTextReadToken);
+        const menuBoxReadIndex = source.indexOf(menuBoxReadToken);
+        const menuVisibilityReadIndex = source.indexOf(menuVisibilityReadToken);
+        const finalUrlReadIndex = source.indexOf(finalUrlReadToken);
+        const urlGuardIndex = source.indexOf(urlGuardToken);
+        const bindIndex = source.indexOf(bindToken);
+        const returnIndex = source.indexOf(returnToken);
+        const failureEpilogIndex = source.indexOf(
+          "if (authSettlementFailureOutput !== null) return authSettlementFailureOutput;"
+        );
+        const successEpilogIndex = source.indexOf("output = exactOutput(output);");
+        const finalSettlementSource =
+          finalUrlReadIndex >= 0 && returnIndex > finalUrlReadIndex
+            ? source.slice(finalUrlReadIndex, returnIndex)
+            : "";
+        return (
+          required.every((token) => source.includes(token)) &&
+          !source.includes("const menu = await one(selector);") &&
+          !source.includes("return { url: config.adminRootUrl, userMenuVisible, userName };") &&
+          !source.includes(
+            "const settled = { url: config.adminRootUrl, userMenuVisible, userName };"
+          ) &&
+          finalUrlReadIndex > labelTextReadIndex &&
+          finalUrlReadIndex > menuBoxReadIndex &&
+          finalUrlReadIndex > menuVisibilityReadIndex &&
+          urlGuardIndex > finalUrlReadIndex &&
+          bindIndex > urlGuardIndex &&
+          returnIndex > bindIndex &&
+          failureEpilogIndex > returnIndex &&
+          successEpilogIndex > failureEpilogIndex &&
+          !finalSettlementSource.includes("await ")
+        );
+      };
+      invariant(validates(compiledSource), action.id + " auth settlement source contract drift");
+      assertSourceMutantsRejected(
+        compiledSource,
+        validates,
+        required,
+        action.id + " auth settlement"
+      );
+      const constantUrlMutant = compiledSource.replace(
+        returnToken,
+        "return { url: config.adminRootUrl, userMenuVisible, userName };"
+      );
+      assertNegative(
+        !validates(constantUrlMutant),
+        action.id + " auth settlement constant URL return"
+      );
+      const missingFinalUrlReadMutant = compiledSource.replace(finalUrlReadToken, "");
+      assertNegative(
+        !validates(missingFinalUrlReadMutant),
+        action.id + " auth settlement missing final URL read"
+      );
+      const earlyFinalUrlReadMutant = compiledSource
+        .replace(finalUrlReadToken, "")
+        .replace(labelTextReadToken, finalUrlReadToken + "\n            " + labelTextReadToken);
+      assertNegative(
+        !validates(earlyFinalUrlReadMutant),
+        action.id + " auth settlement final URL read ordering"
+      );
+      const awaitedAfterFinalUrlReadMutant = compiledSource.replace(
+        finalUrlReadToken,
+        finalUrlReadToken + "\n              await page.waitForTimeout(0);"
+      );
+      assertNegative(
+        !validates(awaitedAfterFinalUrlReadMutant),
+        action.id + " auth settlement await after final URL read"
+      );
+      assertSourceMutantsRejected(
+        compiledSource,
+        validates,
+        [expectedConfigNameToken, authSettlementSourceSpec.invocationToken],
+        action.id + " auth settlement exact branch invocation"
+      );
+      observedAuthSettlementActionIds.push(action.id);
+      authSettlementCompiledSources.set(action.id, compiledSource);
+    }
     if (previewRuntimeActionSelectors.has(action.id)) {
       const expectedSelector = previewRuntimeActionSelectors.get(action.id);
       invariant(
@@ -22072,6 +25848,1052 @@ export async function runTask540SmokeExecutorSelfTest() {
         action.id + " preview runtime selector exact bytes drift"
       );
       observedPreviewRuntimeActionIds.push(action.id);
+    }
+    const dirtyNavigationConfig = DIRTY_NAVIGATION_REQUEST_ACTION_CONFIG[action.id];
+    if (dirtyNavigationConfig !== undefined) {
+      const expectedDirtyNavigationConfig = expectedDirtyNavigationRequestActionConfig[action.id];
+      invariant(
+        expectedDirtyNavigationConfig !== undefined &&
+          deepEqualJson(dirtyNavigationConfig, expectedDirtyNavigationConfig),
+        action.id + " dirty-navigation literal mapping drift"
+      );
+      const expectedSelector = registeredSelector(plan, "recordsLink", [
+        sourceCaptures.get("screen.id"),
+      ]);
+      const expectedCurrentUrl = expandRegisteredPath(
+        plan,
+        expectedDirtyNavigationConfig.realm,
+        sourceCaptures
+      );
+      const namedDialogLocatorToken =
+        'const dialog = page.getByRole("dialog", { name: ' +
+        JSON.stringify(expectedDirtyNavigationConfig.dialogTitle) +
+        ", exact: true });";
+      const dialogMultiplicityFailureClassToken =
+        "const dialogMultiplicityFailureClass = " +
+        JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[9]) +
+        ";";
+      const latestTargetFailureAssignmentBlock =
+        "\n              latestTargetFailureClass = pollTargetFailureClass;" +
+        "\n              await page.waitForTimeout(25);";
+      const required = [
+        "const positive = (rect) => rect !== null && [rect.x, rect.y, rect.width, rect.height].every(Number.isFinite) && rect.width > 0 && rect.height > 0;",
+        "const fail = (failureClass) => ({ failureClass, settled: false });",
+        namedDialogLocatorToken,
+        dialogMultiplicityFailureClassToken,
+        "const links = page.locator(" + JSON.stringify(expectedSelector) + ");",
+        "let visibleLinkIndex = -1;",
+        "let latestTargetFailureClass = " +
+          JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[2]) +
+          ";",
+        "const targetDeadline = Date.now() + 10000;",
+        "while (Date.now() < targetDeadline)",
+        "let pollTargetFailureClass = " +
+          JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[2]) +
+          ";",
+        "const count = await links.count();",
+        "if (count > 8) return fail(" +
+          JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[0]) +
+          ");",
+        "let nextVisibleLinkIndex = -1;",
+        "let visibleCount = 0;",
+        "for (let index = 0; index < count; index += 1)",
+        "const candidate = links.nth(index);",
+        "const rect = await candidate.boundingBox();",
+        "if (await candidate.isVisible() && positive(rect))",
+        "nextVisibleLinkIndex = index;",
+        "visibleCount += 1;",
+        "if (visibleCount > 1) return fail(" +
+          JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[1]) +
+          ");",
+        "if (visibleCount === 1)",
+        "const candidate = links.nth(nextVisibleLinkIndex);",
+        "const candidateStillVisible = await candidate.isVisible();",
+        "if (candidateStillVisible && positive(rect))",
+        'const body = page.locator("body");',
+        "const bodyInteraction = await body.count() === 1",
+        "computedPointerEvents: getComputedStyle(node).pointerEvents,",
+        "inlinePointerEvents: node.style.pointerEvents,",
+        'scrollLocked: node.hasAttribute("data-scroll-locked"),',
+        "if (bodyInteraction !== null)",
+        "if (bodyInteraction.scrollLocked === true)",
+        "pollTargetFailureClass = " +
+          JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[4]) +
+          ";",
+        'else if (bodyInteraction.inlinePointerEvents === "none")',
+        "pollTargetFailureClass = " +
+          JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[5]) +
+          ";",
+        'else if (bodyInteraction.computedPointerEvents === "none")',
+        "pollTargetFailureClass = " +
+          JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[6]) +
+          ";",
+        "const receivesPointerAtCenter = await candidate.evaluate((node, box) =>",
+        "const receiver = document.elementFromPoint(",
+        "box.x + box.width / 2,",
+        "box.y + box.height / 2",
+        "receiver !== null && (receiver === node || node.contains(receiver))",
+        "if (receivesPointerAtCenter)",
+        "visibleLinkIndex = nextVisibleLinkIndex;",
+        "pollTargetFailureClass = " +
+          JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[7]) +
+          ";",
+        latestTargetFailureAssignmentBlock,
+        "if (visibleLinkIndex < 0) return fail(latestTargetFailureClass);",
+        "const urlBefore = page.url();",
+        "const navigationCountBefore = page.__wf540ReadNavigationCount();",
+        "if (urlBefore !== " +
+          JSON.stringify(expectedCurrentUrl) +
+          ") return fail(" +
+          JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[3]) +
+          ");",
+        "if (await dialog.count() !== 0) return fail(dialogMultiplicityFailureClass);",
+        "let clickFailed = false;",
+        "try {",
+        "await links.nth(visibleLinkIndex).click({ timeout: 10000, noWaitAfter: true });",
+        "} catch {",
+        "clickFailed = true;",
+        "let namedDialogObserved = false;",
+        "const dialogDeadline = Date.now() + 10000;",
+        "while (Date.now() < dialogDeadline)",
+        'const heading = dialog.getByRole("heading", { name: ' +
+          JSON.stringify(expectedDirtyNavigationConfig.dialogTitle) +
+          ", exact: true });",
+        "const description = dialog.getByText(" +
+          JSON.stringify(expectedDirtyNavigationConfig.dialogDescription) +
+          ", { exact: true });",
+        'const keepEditing = dialog.getByRole("button", { name: "Keep editing", exact: true });',
+        'const discard = dialog.getByRole("button", { name: "Discard and continue", exact: true });',
+        "const dialogCount = await dialog.count();",
+        "const headingCount = await heading.count();",
+        "const descriptionCount = await description.count();",
+        "const keepEditingCount = await keepEditing.count();",
+        "const discardCount = await discard.count();",
+        "return fail(dialogMultiplicityFailureClass);",
+        "if (dialogCount === 1) namedDialogObserved = true;",
+        "const dialogRect = dialogCount === 1 ? await dialog.boundingBox() : null;",
+        "const headingRect = headingCount === 1 ? await heading.boundingBox() : null;",
+        "const descriptionRect = descriptionCount === 1 ? await description.boundingBox() : null;",
+        "const keepEditingRect = keepEditingCount === 1 ? await keepEditing.boundingBox() : null;",
+        "const discardRect = discardCount === 1 ? await discard.boundingBox() : null;",
+        "const urlStable = page.url() === urlBefore;",
+        "const navigationStable = page.__wf540ReadNavigationCount() === navigationCountBefore;",
+        "if (!urlStable || !navigationStable) return fail(" +
+          JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[10]) +
+          ");",
+        "dialogCount === 1 &&",
+        "await dialog.isVisible() &&",
+        "positive(dialogRect) &&",
+        "headingCount === 1 &&",
+        "await heading.isVisible() &&",
+        "positive(headingRect) &&",
+        "descriptionCount === 1 &&",
+        "await description.isVisible() &&",
+        "positive(descriptionRect) &&",
+        "keepEditingCount === 1 &&",
+        "await keepEditing.isVisible() &&",
+        "positive(keepEditingRect) &&",
+        "discardCount === 1 &&",
+        "await discard.isVisible() &&",
+        "positive(discardRect)",
+        ") return true;",
+        "if (clickFailed && !namedDialogObserved) return fail(" +
+          JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[8]) +
+          ");",
+        "return fail(" + JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[11]) + ");",
+        "if (result === true) return { ok: true };",
+        "const failureClasses = " + JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES) + ";",
+        'keys.length === 2 && keys.includes("failureClass") && keys.includes("settled")',
+        "result.settled === false",
+        "failureClasses.includes(result.failureClass)",
+        "return result;",
+        'throw new Error("wf540_dirty_navigation_result");',
+      ];
+      const orderedTokens = [
+        "const fail = (failureClass) =>",
+        namedDialogLocatorToken,
+        dialogMultiplicityFailureClassToken,
+        "const links = page.locator(",
+        "let visibleLinkIndex = -1;",
+        "let latestTargetFailureClass = " +
+          JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[2]) +
+          ";",
+        "const targetDeadline = Date.now() + 10000;",
+        "let pollTargetFailureClass = " +
+          JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[2]) +
+          ";",
+        "const count = await links.count();",
+        "if (count > 8) return fail(" +
+          JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[0]) +
+          ");",
+        "let visibleCount = 0;",
+        "if (await candidate.isVisible() && positive(rect))",
+        "if (visibleCount > 1) return fail(" +
+          JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[1]) +
+          ");",
+        "if (visibleCount === 1)",
+        "const candidate = links.nth(nextVisibleLinkIndex);",
+        "const candidateStillVisible = await candidate.isVisible();",
+        "if (candidateStillVisible && positive(rect))",
+        'const body = page.locator("body");',
+        "const bodyInteraction = await body.count() === 1",
+        "if (bodyInteraction !== null)",
+        "if (bodyInteraction.scrollLocked === true)",
+        "pollTargetFailureClass = " +
+          JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[4]) +
+          ";",
+        'else if (bodyInteraction.inlinePointerEvents === "none")',
+        "pollTargetFailureClass = " +
+          JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[5]) +
+          ";",
+        'else if (bodyInteraction.computedPointerEvents === "none")',
+        "pollTargetFailureClass = " +
+          JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[6]) +
+          ";",
+        "const receivesPointerAtCenter = await candidate.evaluate(",
+        "const receiver = document.elementFromPoint(",
+        "if (receivesPointerAtCenter)",
+        "visibleLinkIndex = nextVisibleLinkIndex;",
+        "pollTargetFailureClass = " +
+          JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[7]) +
+          ";",
+        "latestTargetFailureClass = pollTargetFailureClass;",
+        "if (visibleLinkIndex < 0) return fail(latestTargetFailureClass);",
+        "const urlBefore = page.url();",
+        "const navigationCountBefore = page.__wf540ReadNavigationCount();",
+        "return fail(" + JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[3]) + ");",
+        "if (await dialog.count() !== 0) return fail(dialogMultiplicityFailureClass);",
+        "let clickFailed = false;",
+        "await links.nth(visibleLinkIndex).click({ timeout: 10000, noWaitAfter: true });",
+        "clickFailed = true;",
+        "let namedDialogObserved = false;",
+        "const dialogDeadline = Date.now() + 10000;",
+        "const heading = dialog.getByRole(",
+        "const description = dialog.getByText(",
+        "const keepEditing = dialog.getByRole(",
+        "const discard = dialog.getByRole(",
+        "return fail(dialogMultiplicityFailureClass);",
+        "if (dialogCount === 1) namedDialogObserved = true;",
+        "const urlStable = page.url() === urlBefore;",
+        "const navigationStable = page.__wf540ReadNavigationCount() === navigationCountBefore;",
+        "return fail(" + JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[10]) + ");",
+        "dialogCount === 1 &&",
+        "positive(discardRect)",
+        ") return true;",
+        "return fail(" + JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[8]) + ");",
+        "return fail(" + JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[11]) + ");",
+        "if (result === true) return { ok: true };",
+        "const failureClasses = ",
+        "result.settled === false",
+        "return result;",
+      ];
+      const validates = (source) => {
+        if (
+          !required.every((token) => source.includes(token)) ||
+          source.includes("while (Date.now() < deadline && await locator.count() !== 1)") ||
+          source.includes("if (count !== 1)") ||
+          source.includes('const dialog = page.getByRole("dialog");') ||
+          source.includes("targetBlocker") ||
+          source.includes("pointerUnlocked") ||
+          source.includes('"pointer_locked"') ||
+          source.split(latestTargetFailureAssignmentBlock).length - 1 !== 1 ||
+          source.split(".click({ timeout: 10000, noWaitAfter: true });").length - 1 !== 1 ||
+          source.split("return fail(").length - 1 !== 9 ||
+          source.split("} catch {").length - 1 !== 1 ||
+          source.includes("catch (") ||
+          source.includes("error.message") ||
+          source.includes("String(error") ||
+          !DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES.every(
+            (failureClass) =>
+              source.split(JSON.stringify(failureClass)).length - 1 ===
+              (failureClass === "target_missing" ? 3 : 2)
+          )
+        ) {
+          return false;
+        }
+        let previousIndex = -1;
+        for (const token of orderedTokens) {
+          const tokenIndex = source.indexOf(token, previousIndex + 1);
+          if (tokenIndex <= previousIndex) return false;
+          previousIndex = tokenIndex;
+        }
+        return true;
+      };
+      invariant(validates(compiledSource), action.id + " dirty-navigation source drift");
+      assertSourceMutantsRejected(
+        compiledSource,
+        validates,
+        required,
+        action.id + " dirty-navigation settlement"
+      );
+      for (const [label, replacement] of [
+        ["global dialog", 'const dialog = page.getByRole("dialog");'],
+        ["inexact dialog", namedDialogLocatorToken.replace("exact: true", "exact: false")],
+        [
+          "wrong-name dialog",
+          namedDialogLocatorToken.replace(
+            JSON.stringify(expectedDirtyNavigationConfig.dialogTitle),
+            JSON.stringify("Wrong dirty-navigation dialog")
+          ),
+        ],
+      ]) {
+        assertNegative(
+          !validates(compiledSource.replace(namedDialogLocatorToken, replacement)),
+          action.id + " dirty-navigation " + label + " mutant"
+        );
+      }
+      const stickyBlockerMutant = compiledSource.replace(
+        latestTargetFailureAssignmentBlock,
+        "\n              if (visibleCount === 1) latestTargetFailureClass = pollTargetFailureClass;" +
+          "\n              await page.waitForTimeout(25);"
+      );
+      assertNegative(
+        !validates(stickyBlockerMutant),
+        action.id + " dirty-navigation sticky blocker mutant"
+      );
+      for (let index = 1; index < orderedTokens.length; index += 1) {
+        const left = orderedTokens[index - 1];
+        const right = orderedTokens[index];
+        const marker = "__WF540_DIRTY_NAV_ORDER_MUTANT_" + index + "__";
+        const mutant = compiledSource
+          .replace(left, marker)
+          .replace(right, left)
+          .replace(marker, right);
+        assertNegative(!validates(mutant), action.id + " dirty-navigation order mutant " + index);
+      }
+      observedDirtyNavigationRequestActionIds.push(action.id);
+    }
+    const toneContentFillConfig = TONE_CONTENT_FILL_ACTION_CONFIG[action.id];
+    if (toneContentFillConfig !== undefined) {
+      const targetBlockId =
+        plan.fixtureBlueprint.screen.blockIds[toneContentFillConfig.targetBlockKey];
+      const expectedDraft = plan.fixtureBlueprint.entry[toneContentFillConfig.expectedDraftKey];
+      invariant(
+        typeof targetBlockId === "string" &&
+          typeof expectedDraft === "string" &&
+          expectedDraft.length > 0,
+        action.id + " tone content fill fixture drift"
+      );
+      const textboxSelector = registeredSelector(plan, "contentEditable", [
+        targetBlockId,
+        toneContentFillConfig.fieldLabel,
+      ]);
+      const targetRootSelector = registeredSelector(plan, "blockRoot", [targetBlockId]);
+      const selectionHandleSelector = registeredSelector(plan, "selectBlock", [targetBlockId]);
+      const required = [
+        "const positive = (rect) => rect !== null && [rect.x, rect.y, rect.width, rect.height].every(Number.isFinite) && rect.width > 0 && rect.height > 0;",
+        "const textbox = page.locator(" + JSON.stringify(textboxSelector) + ");",
+        "const targetRoot = page.locator(" + JSON.stringify(targetRootSelector) + ");",
+        "const selectionHandle = page.locator(" + JSON.stringify(selectionHandleSelector) + ");",
+        'await textbox.waitFor({ state: "visible", timeout: 10000 });',
+        "const textboxRect = await textbox.count() === 1 ? await textbox.boundingBox() : null;",
+        "const targetRootRect = await targetRoot.count() === 1 ? await targetRoot.boundingBox() : null;",
+        "const selectionHandleRect = await selectionHandle.count() === 1 ? await selectionHandle.boundingBox() : null;",
+        "await textbox.count() !== 1",
+        "!(await textbox.isVisible())",
+        "!positive(textboxRect)",
+        "await targetRoot.count() !== 1",
+        "!(await targetRoot.isVisible())",
+        "!positive(targetRootRect)",
+        'await targetRoot.getAttribute("data-selected") !== "true"',
+        "await selectionHandle.count() !== 1",
+        "!(await selectionHandle.isVisible())",
+        "!positive(selectionHandleRect)",
+        'await selectionHandle.getAttribute("aria-pressed") !== "true"',
+        "await textbox.fill(" + JSON.stringify(expectedDraft) + ");",
+        "const filledText = await textbox.textContent();",
+        "const filledTextboxFocused = await textbox.evaluate((node) => node === document.activeElement);",
+        "if (filledText !== " +
+          JSON.stringify(expectedDraft) +
+          " || filledTextboxFocused !== true)",
+        "await textbox.blur();",
+        "const deadline = Date.now() + 10000;",
+        "while (Date.now() < deadline)",
+        "const settledTextbox = page.locator(" + JSON.stringify(textboxSelector) + ");",
+        "const settledTargetRoot = page.locator(" + JSON.stringify(targetRootSelector) + ");",
+        "const settledSelectionHandle = page.locator(" +
+          JSON.stringify(selectionHandleSelector) +
+          ");",
+        'const contentDirty = page.getByText("Unsaved changes", { exact: true });',
+        "const settledTextboxRect = await settledTextbox.count() === 1 ? await settledTextbox.boundingBox() : null;",
+        "const settledTargetRootRect = await settledTargetRoot.count() === 1 ? await settledTargetRoot.boundingBox() : null;",
+        "const settledSelectionHandleRect = await settledSelectionHandle.count() === 1 ? await settledSelectionHandle.boundingBox() : null;",
+        "const contentDirtyRect = await contentDirty.count() === 1 ? await contentDirty.boundingBox() : null;",
+        "const settledText = await settledTextbox.count() === 1 ? await settledTextbox.textContent() : null;",
+        "const settledTextboxFocused = await settledTextbox.count() === 1 ? await settledTextbox.evaluate((node) => node === document.activeElement) : true;",
+        "await settledTextbox.count() === 1",
+        "await settledTextbox.isVisible()",
+        "positive(settledTextboxRect)",
+        "settledText === " + JSON.stringify(expectedDraft),
+        "settledTextboxFocused === false",
+        "await settledTargetRoot.count() === 1",
+        "await settledTargetRoot.isVisible()",
+        "positive(settledTargetRootRect)",
+        'await settledTargetRoot.getAttribute("data-selected") === "true"',
+        "await settledSelectionHandle.count() === 1",
+        "await settledSelectionHandle.isVisible()",
+        "positive(settledSelectionHandleRect)",
+        'await settledSelectionHandle.getAttribute("aria-pressed") === "true"',
+        "await contentDirty.count() === 1 &&",
+        "await contentDirty.isVisible() &&",
+        "positive(contentDirtyRect)",
+        ") return true;",
+        'throw new Error("wf540_tone_fill_dirty_settlement");',
+      ];
+      const orderedTokens = [
+        "await textbox.fill(" + JSON.stringify(expectedDraft) + ");",
+        "const filledText = await textbox.textContent();",
+        "const filledTextboxFocused = await textbox.evaluate((node) => node === document.activeElement);",
+        "if (filledText !== " +
+          JSON.stringify(expectedDraft) +
+          " || filledTextboxFocused !== true)",
+        "await textbox.blur();",
+        "const deadline = Date.now() + 10000;",
+        "const settledTextbox = page.locator(" + JSON.stringify(textboxSelector) + ");",
+        'const contentDirty = page.getByText("Unsaved changes", { exact: true });',
+        "const settledText = await settledTextbox.count() === 1 ? await settledTextbox.textContent() : null;",
+        "const settledTextboxFocused = await settledTextbox.count() === 1 ? await settledTextbox.evaluate((node) => node === document.activeElement) : true;",
+        "settledText === " + JSON.stringify(expectedDraft),
+        "settledTextboxFocused === false",
+        'await settledTargetRoot.getAttribute("data-selected") === "true"',
+        'await settledSelectionHandle.getAttribute("aria-pressed") === "true"',
+        "await contentDirty.count() === 1 &&",
+        "await contentDirty.isVisible() &&",
+        "positive(contentDirtyRect)",
+        ") return true;",
+      ];
+      const validates = (source) => {
+        if (
+          !required.every((token) => source.includes(token)) ||
+          source.includes("const locator=page.locator") ||
+          source.split(".fill(").length - 1 !== 1 ||
+          source.split(".blur(").length - 1 !== 1
+        ) {
+          return false;
+        }
+        let previousIndex = -1;
+        for (const token of orderedTokens) {
+          const tokenIndex = source.indexOf(token, previousIndex + 1);
+          if (tokenIndex <= previousIndex) return false;
+          previousIndex = tokenIndex;
+        }
+        return true;
+      };
+      invariant(validates(compiledSource), action.id + " tone content fill source drift");
+      assertSourceMutantsRejected(
+        compiledSource,
+        validates,
+        required,
+        action.id + " tone content fill settlement"
+      );
+      for (let index = 1; index < orderedTokens.length; index += 1) {
+        const left = orderedTokens[index - 1];
+        const right = orderedTokens[index];
+        const marker = "__WF540_TONE_FILL_ORDER_MUTANT_" + index + "__";
+        const mutant = compiledSource
+          .replace(left, marker)
+          .replace(right, left)
+          .replace(marker, right);
+        assertNegative(!validates(mutant), action.id + " tone content fill order mutant " + index);
+      }
+      observedToneContentFillActionIds.push(action.id);
+    }
+    const toneFlowConfig = TONE_FLOW_ACTION_CONFIG[action.id];
+    if (toneFlowConfig !== undefined) {
+      const toneSelectPanelGeometryToken = "visiblePositive(panel) &&";
+      const toneSelectTriggerGeometryToken = "visiblePositive(trigger) &&";
+      const toneSelectUnlockedScrollToken = '!body.hasAttribute("data-scroll-locked")';
+      const toneSelectResetSettlementBlock = [
+        "const resetSettlement = () => {",
+        "                settledSince = null;",
+        "                settledSampleCount = 0;",
+        "              };",
+      ].join("\n");
+      const commonRequired = [
+        JSON.stringify('[data-custom-screen-entry-presentation-panel="true"]'),
+        JSON.stringify(OPEN_SELECT_CONTENT_SELECTOR),
+        JSON.stringify(registeredSelector(plan, "toneTrigger")),
+        JSON.stringify(
+          registeredSelector(plan, "blockRoot", [
+            plan.fixtureBlueprint.screen.blockIds[toneFlowConfig.targetBlockKey],
+          ])
+        ),
+        JSON.stringify(
+          registeredSelector(plan, "selectBlock", [
+            plan.fixtureBlueprint.screen.blockIds[toneFlowConfig.targetBlockKey],
+          ])
+        ),
+        JSON.stringify(
+          registeredSelector(plan, "contentEditable", [
+            plan.fixtureBlueprint.screen.blockIds[toneFlowConfig.targetBlockKey],
+            toneFlowConfig.fieldLabel,
+          ])
+        ),
+        "rect.width > 0 && rect.height > 0",
+      ];
+      const phaseRequired =
+        toneFlowConfig.phase === "open"
+          ? [
+              "const fail = (failureClass) => ({ failureClass, settled: false });",
+              "let failureClass = " + JSON.stringify(TONE_OPEN_BROWSER_FAILURE_CLASSES[0]) + ";",
+              "try {",
+              "const initialPanel = page.locator(" +
+                JSON.stringify('[data-custom-screen-entry-presentation-panel="true"]') +
+                ");",
+              'await initialPanel.waitFor({ state: "visible", timeout: 10000 });',
+              "const initialTargetRoot = page.locator(" +
+                JSON.stringify(
+                  registeredSelector(plan, "blockRoot", [
+                    plan.fixtureBlueprint.screen.blockIds[toneFlowConfig.targetBlockKey],
+                  ])
+                ) +
+                ");",
+              "const initialSelectionHandle = page.locator(" +
+                JSON.stringify(
+                  registeredSelector(plan, "selectBlock", [
+                    plan.fixtureBlueprint.screen.blockIds[toneFlowConfig.targetBlockKey],
+                  ])
+                ) +
+                ");",
+              "const initialTextbox = page.locator(" +
+                JSON.stringify(
+                  registeredSelector(plan, "contentEditable", [
+                    plan.fixtureBlueprint.screen.blockIds[toneFlowConfig.targetBlockKey],
+                    toneFlowConfig.fieldLabel,
+                  ])
+                ) +
+                ");",
+              "const targetPreconditionFailed =",
+              "await initialPanel.count() !== 1",
+              "await initialTargetRoot.count() !== 1",
+              'await initialTargetRoot.getAttribute("data-selected") !== "true"',
+              "await initialSelectionHandle.count() !== 1",
+              'await initialSelectionHandle.getAttribute("aria-pressed") !== "true"',
+              "await initialTextbox.count() !== 1",
+              "if (targetPreconditionFailed) return fail(failureClass);",
+              "return fail(failureClass);",
+              "failureClass = " + JSON.stringify(TONE_OPEN_BROWSER_FAILURE_CLASSES[1]) + ";",
+              "const preconditionDeadline = Date.now() + 10000;",
+              "while (Date.now() < preconditionDeadline)",
+              "const settledPanel = page.locator(" +
+                JSON.stringify('[data-custom-screen-entry-presentation-panel="true"]') +
+                ");",
+              "const settledTargetRoot = page.locator(" +
+                JSON.stringify(
+                  registeredSelector(plan, "blockRoot", [
+                    plan.fixtureBlueprint.screen.blockIds[toneFlowConfig.targetBlockKey],
+                  ])
+                ) +
+                ");",
+              "const settledSelectionHandle = page.locator(" +
+                JSON.stringify(
+                  registeredSelector(plan, "selectBlock", [
+                    plan.fixtureBlueprint.screen.blockIds[toneFlowConfig.targetBlockKey],
+                  ])
+                ) +
+                ");",
+              "const settledTextbox = page.locator(" +
+                JSON.stringify(
+                  registeredSelector(plan, "contentEditable", [
+                    plan.fixtureBlueprint.screen.blockIds[toneFlowConfig.targetBlockKey],
+                    toneFlowConfig.fieldLabel,
+                  ])
+                ) +
+                ");",
+              'const contentDirty = page.getByText("Unsaved changes", { exact: true });',
+              "const settledPanelRect = await settledPanel.count() === 1 ? await settledPanel.boundingBox() : null;",
+              "const settledTargetRootRect = await settledTargetRoot.count() === 1 ? await settledTargetRoot.boundingBox() : null;",
+              "const settledSelectionHandleRect = await settledSelectionHandle.count() === 1 ? await settledSelectionHandle.boundingBox() : null;",
+              "const settledTextboxRect = await settledTextbox.count() === 1 ? await settledTextbox.boundingBox() : null;",
+              "const contentDirtyRect = await contentDirty.count() === 1 ? await contentDirty.boundingBox() : null;",
+              "const settledTextboxText = await settledTextbox.count() === 1 ? await settledTextbox.textContent() : null;",
+              "const settledTextboxFocused = await settledTextbox.count() === 1 ? await settledTextbox.evaluate((node) => node === document.activeElement) : true;",
+              "await settledPanel.count() === 1",
+              "await settledPanel.isVisible()",
+              "positive(settledPanelRect)",
+              "await settledTargetRoot.count() === 1",
+              "await settledTargetRoot.isVisible()",
+              "positive(settledTargetRootRect)",
+              'await settledTargetRoot.getAttribute("data-selected") === "true"',
+              "await settledSelectionHandle.count() === 1",
+              "await settledSelectionHandle.isVisible()",
+              "positive(settledSelectionHandleRect)",
+              'await settledSelectionHandle.getAttribute("aria-pressed") === "true"',
+              "await settledTextbox.count() === 1",
+              "await settledTextbox.isVisible()",
+              "positive(settledTextboxRect)",
+              "settledTextboxText === " +
+                JSON.stringify(plan.fixtureBlueprint.entry[toneFlowConfig.expectedDraftKey]),
+              "settledTextboxFocused === false",
+              "await contentDirty.count() === 1 &&",
+              "await contentDirty.isVisible() &&",
+              "positive(contentDirtyRect)",
+              "baselineColor = await settledTextbox.evaluate((node) => getComputedStyle(node).color);",
+              "if (baselineColor.length > 0) break;",
+              'if (typeof baselineColor !== "string" || baselineColor.length === 0)',
+              "failureClass = " + JSON.stringify(TONE_OPEN_BROWSER_FAILURE_CLASSES[2]) + ";",
+              "const panel = page.locator(" +
+                JSON.stringify('[data-custom-screen-entry-presentation-panel="true"]') +
+                ");",
+              "const trigger = panel.locator(" +
+                JSON.stringify(registeredSelector(plan, "toneTrigger")) +
+                ");",
+              "const triggerRect = await trigger.count() === 1 ? await trigger.boundingBox() : null;",
+              "await panel.count() !== 1 || await trigger.count() !== 1 || !(await trigger.isVisible()) || !positive(triggerRect)",
+              "await trigger.click({ timeout: 10000 });",
+              "failureClass = " + JSON.stringify(TONE_OPEN_BROWSER_FAILURE_CLASSES[3]) + ";",
+              "const contentCount = await openContent.count();",
+              "if (contentCount > 1)",
+              "const option = openContent.locator(" +
+                JSON.stringify(registeredSelector(plan, "muted")) +
+                ");",
+              "const optionCount = await option.count();",
+              "if (optionCount > 1)",
+              "const contentRect = await openContent.boundingBox();",
+              "const optionRect = optionCount === 1 ? await option.boundingBox() : null;",
+              'const menuId = await openContent.getAttribute("id");',
+              'const controls = await trigger.getAttribute("aria-controls");',
+              "optionCount === 1 &&",
+              "await openContent.isVisible() &&",
+              "await option.isVisible() &&",
+              "positive(contentRect) &&",
+              "positive(optionRect) &&",
+              'typeof menuId === "string"',
+              "menuId.length > 0 &&",
+              "controls === menuId &&",
+              'await trigger.getAttribute("aria-expanded") === "true"',
+              "page.context().__wf540Remember(" + JSON.stringify(toneFlowConfig.stateKey),
+              "{ baselineColor, menuId }",
+              "} catch {",
+            ]
+          : [
+              "const fail = (failureClass) => ({ failureClass, settled: false });",
+              "let failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[0]) + ";",
+              "const sampleAtomicTeardown = () => page.evaluate(",
+              "const exactElement = (root, selector) => {",
+              "const matches = root.querySelectorAll(selector);",
+              "return matches.length === 1 ? matches[0] : null;",
+              "const visiblePositive = (node) => {",
+              "const rect = node.getBoundingClientRect();",
+              "const style = getComputedStyle(node);",
+              "const structuralClosed =",
+              toneSelectPanelGeometryToken,
+              toneSelectTriggerGeometryToken,
+              'trigger.textContent.trim() === "Muted"',
+              'trigger.getAttribute("aria-expanded") === "false"',
+              "document.querySelectorAll(allContentSelector).length === 0",
+              "const interactionHandoff =",
+              toneSelectUnlockedScrollToken,
+              'body.style.pointerEvents !== "none"',
+              'getComputedStyle(body).pointerEvents !== "none"',
+              "return { interactionHandoff, structuralClosed };",
+              "try {",
+              "const authority = page.context().__wf540Recall(" +
+                JSON.stringify(toneFlowConfig.stateKey),
+              "const panel = page.locator(" +
+                JSON.stringify('[data-custom-screen-entry-presentation-panel="true"]') +
+                ");",
+              "const trigger = panel.locator(" +
+                JSON.stringify(registeredSelector(plan, "toneTrigger")) +
+                ");",
+              "const openContent = page.locator(" +
+                JSON.stringify(OPEN_SELECT_CONTENT_SELECTOR) +
+                ");",
+              "const option = openContent.locator(" +
+                JSON.stringify(registeredSelector(plan, "muted")) +
+                ");",
+              "const panelRect = await panel.count() === 1 ? await panel.boundingBox() : null;",
+              "const triggerRect = await trigger.count() === 1 ? await trigger.boundingBox() : null;",
+              "const contentRect = await openContent.count() === 1 ? await openContent.boundingBox() : null;",
+              "const optionRect = await option.count() === 1 ? await option.boundingBox() : null;",
+              'const menuId = await openContent.count() === 1 ? await openContent.getAttribute("id") : null;',
+              "const authorityOptionPreconditionFailed =",
+              'typeof authority.baselineColor !== "string"',
+              "authority.baselineColor.length === 0",
+              'typeof authority.menuId !== "string"',
+              "authority.menuId.length === 0",
+              "await panel.count() !== 1",
+              "!(await panel.isVisible())",
+              "!positive(panelRect)",
+              "await trigger.count() !== 1",
+              "!(await trigger.isVisible())",
+              "!positive(triggerRect)",
+              "await openContent.count() !== 1",
+              "!(await openContent.isVisible())",
+              "!positive(contentRect)",
+              "await option.count() !== 1",
+              "!(await option.isVisible())",
+              "!positive(optionRect)",
+              "menuId !== authority.menuId",
+              'await trigger.getAttribute("aria-controls") !== authority.menuId',
+              'await trigger.getAttribute("aria-expanded") !== "true"',
+              "if (authorityOptionPreconditionFailed) return fail(failureClass);",
+              "await option.click({ timeout: 10000 });",
+              "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[1]) + ";",
+              "const stabilityHorizonMs = 600;",
+              "let settledSince = null;",
+              "let settledSampleCount = 0;",
+              toneSelectResetSettlementBlock,
+              "const deadline = Date.now() + 10000;",
+              "while (Date.now() < deadline)",
+              "const currentPanel = page.locator(" +
+                JSON.stringify('[data-custom-screen-entry-presentation-panel="true"]') +
+                ");",
+              "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[1]) + ";",
+              "const teardownSample = await sampleAtomicTeardown();",
+              "if (!teardownSample.structuralClosed)",
+              "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[2]) + ";",
+              "if (!teardownSample.interactionHandoff)",
+              "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[3]) + ";",
+              'const presentationDirty = currentPanel.getByText("Unsaved presentation", { exact: true });',
+              'const contentDirty = page.getByText("Unsaved changes", { exact: true });',
+              "const presentationDirtyRect = await presentationDirty.count() === 1 ? await presentationDirty.boundingBox() : null;",
+              "const contentDirtyRect = await contentDirty.count() === 1 ? await contentDirty.boundingBox() : null;",
+              "const dirtyBadges =",
+              "await presentationDirty.count() === 1",
+              "await presentationDirty.isVisible()",
+              "positive(presentationDirtyRect)",
+              "await contentDirty.count() === 1",
+              "await contentDirty.isVisible()",
+              "positive(contentDirtyRect)",
+              "if (!dirtyBadges)",
+              "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[4]) + ";",
+              "const targetRoot = page.locator(" +
+                JSON.stringify(
+                  registeredSelector(plan, "blockRoot", [
+                    plan.fixtureBlueprint.screen.blockIds[toneFlowConfig.targetBlockKey],
+                  ])
+                ) +
+                ");",
+              "const selectionHandle = page.locator(" +
+                JSON.stringify(
+                  registeredSelector(plan, "selectBlock", [
+                    plan.fixtureBlueprint.screen.blockIds[toneFlowConfig.targetBlockKey],
+                  ])
+                ) +
+                ");",
+              "const textbox = page.locator(" +
+                JSON.stringify(
+                  registeredSelector(plan, "contentEditable", [
+                    plan.fixtureBlueprint.screen.blockIds[toneFlowConfig.targetBlockKey],
+                    toneFlowConfig.fieldLabel,
+                  ])
+                ) +
+                ");",
+              "const targetRootRect = await targetRoot.count() === 1 ? await targetRoot.boundingBox() : null;",
+              "const selectionHandleRect = await selectionHandle.count() === 1 ? await selectionHandle.boundingBox() : null;",
+              "const textboxRect = await textbox.count() === 1 ? await textbox.boundingBox() : null;",
+              "const textboxText = await textbox.count() === 1 ? await textbox.textContent() : null;",
+              "const textboxFocused = await textbox.count() === 1 ? await textbox.evaluate((node) => node === document.activeElement) : true;",
+              "const selectionOverride =",
+              "await targetRoot.count() === 1",
+              "await targetRoot.isVisible()",
+              "positive(targetRootRect)",
+              'await targetRoot.getAttribute("data-selected") === "true"',
+              'await targetRoot.getAttribute("data-screen-presentation-override") === "true"',
+              "await selectionHandle.count() === 1",
+              "await selectionHandle.isVisible()",
+              "positive(selectionHandleRect)",
+              'await selectionHandle.getAttribute("aria-pressed") === "true"',
+              "await textbox.count() === 1",
+              "await textbox.isVisible()",
+              "positive(textboxRect)",
+              "textboxText === " +
+                JSON.stringify(plan.fixtureBlueprint.entry[toneFlowConfig.expectedDraftKey]),
+              "textboxFocused === false",
+              "if (!selectionOverride)",
+              "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[5]) + ";",
+              'const textboxClassName = (await textbox.getAttribute("class")) ?? "";',
+              'const mutedClass = textboxClassName.split(/\\s+/u).includes("text-muted-foreground");',
+              "if (!mutedClass)",
+              "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[6]) + ";",
+              "const currentColor = await textbox.evaluate((node) => getComputedStyle(node).color);",
+              "const completePostcondition =",
+              'typeof currentColor === "string"',
+              "currentColor.length > 0",
+              "currentColor !== authority.baselineColor",
+              "if (!completePostcondition)",
+              "const sampledAt = Date.now();",
+              "if (settledSince === null) settledSince = sampledAt;",
+              "settledSampleCount += 1;",
+              "sampledAt - settledSince < stabilityHorizonMs",
+              "settledSampleCount < 2",
+              "const finalAtomicTeardownSample = await sampleAtomicTeardown();",
+              "!finalAtomicTeardownSample.structuralClosed",
+              "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[1]) + ";",
+              "!finalAtomicTeardownSample.interactionHandoff",
+              "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[2]) + ";",
+              "return true;",
+              "return fail(failureClass);",
+              "} catch {",
+            ];
+      const required = [...commonRequired, ...phaseRequired];
+      const orderedTokens =
+        toneFlowConfig.phase === "open"
+          ? [
+              "let failureClass = " + JSON.stringify(TONE_OPEN_BROWSER_FAILURE_CLASSES[0]) + ";",
+              "const initialPanel = page.locator(",
+              "const targetPreconditionFailed =",
+              "if (targetPreconditionFailed) return fail(failureClass);",
+              "failureClass = " + JSON.stringify(TONE_OPEN_BROWSER_FAILURE_CLASSES[1]) + ";",
+              "const preconditionDeadline = Date.now() + 10000;",
+              "const settledPanel = page.locator(",
+              'const contentDirty = page.getByText("Unsaved changes", { exact: true });',
+              "const contentDirtyRect = await contentDirty.count() === 1 ? await contentDirty.boundingBox() : null;",
+              "const settledTextboxText = await settledTextbox.count() === 1 ? await settledTextbox.textContent() : null;",
+              "const settledTextboxFocused = await settledTextbox.count() === 1 ? await settledTextbox.evaluate((node) => node === document.activeElement) : true;",
+              "await settledTargetRoot.isVisible() &&",
+              "positive(settledTargetRootRect) &&",
+              "await settledSelectionHandle.isVisible() &&",
+              "positive(settledSelectionHandleRect) &&",
+              "settledTextboxText === " +
+                JSON.stringify(plan.fixtureBlueprint.entry[toneFlowConfig.expectedDraftKey]),
+              "settledTextboxFocused === false",
+              "await contentDirty.count() === 1 &&",
+              "await contentDirty.isVisible() &&",
+              "positive(contentDirtyRect)",
+              "baselineColor = await settledTextbox.evaluate((node) => getComputedStyle(node).color);",
+              'if (typeof baselineColor !== "string" || baselineColor.length === 0) return fail(failureClass);',
+              "failureClass = " + JSON.stringify(TONE_OPEN_BROWSER_FAILURE_CLASSES[2]) + ";",
+              "const panel = page.locator(",
+              "if (await panel.count() !== 1 || await trigger.count() !== 1 || !(await trigger.isVisible()) || !positive(triggerRect)) return fail(failureClass);",
+              "await trigger.click({ timeout: 10000 });",
+              "failureClass = " + JSON.stringify(TONE_OPEN_BROWSER_FAILURE_CLASSES[3]) + ";",
+              "const openContent = page.locator(",
+              "page.context().__wf540Remember(",
+            ]
+          : [
+              "let failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[0]) + ";",
+              "const sampleAtomicTeardown = () => page.evaluate(",
+              "const structuralClosed =",
+              "const interactionHandoff =",
+              "return { interactionHandoff, structuralClosed };",
+              "const authority = page.context().__wf540Recall(",
+              "const panel = page.locator(",
+              "const trigger = panel.locator(",
+              "const openContent = page.locator(",
+              "const option = openContent.locator(",
+              "const panelRect =",
+              "const triggerRect =",
+              "const contentRect =",
+              "const optionRect =",
+              "const authorityOptionPreconditionFailed =",
+              "if (authorityOptionPreconditionFailed) return fail(failureClass);",
+              "await option.click({ timeout: 10000 });",
+              "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[1]) + ";",
+              "const stabilityHorizonMs = 600;",
+              "let settledSince = null;",
+              "let settledSampleCount = 0;",
+              "const resetSettlement = () => {",
+              "const deadline = Date.now() + 10000;",
+              "while (Date.now() < deadline)",
+              "const currentPanel = page.locator(",
+              "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[1]) + ";",
+              "const teardownSample = await sampleAtomicTeardown();",
+              "if (!teardownSample.structuralClosed)",
+              "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[2]) + ";",
+              "if (!teardownSample.interactionHandoff)",
+              "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[3]) + ";",
+              "const presentationDirty =",
+              "const contentDirty =",
+              "const presentationDirtyRect =",
+              "const contentDirtyRect =",
+              "const dirtyBadges =",
+              "if (!dirtyBadges)",
+              "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[4]) + ";",
+              "const targetRoot = page.locator(",
+              "const selectionHandle = page.locator(",
+              "const textbox = page.locator(",
+              "const targetRootRect =",
+              "const selectionHandleRect =",
+              "const textboxRect =",
+              "const textboxText =",
+              "const textboxFocused =",
+              "const selectionOverride =",
+              "if (!selectionOverride)",
+              "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[5]) + ";",
+              "const textboxClassName =",
+              "const mutedClass =",
+              "if (!mutedClass)",
+              "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[6]) + ";",
+              "const currentColor =",
+              "const completePostcondition =",
+              "currentColor !== authority.baselineColor",
+              "if (!completePostcondition)",
+              "const sampledAt = Date.now();",
+              "if (settledSince === null) settledSince = sampledAt;",
+              "settledSampleCount += 1;",
+              "sampledAt - settledSince < stabilityHorizonMs",
+              "settledSampleCount < 2",
+              "const finalAtomicTeardownSample = await sampleAtomicTeardown();",
+              "!finalAtomicTeardownSample.structuralClosed",
+              "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[1]) + ";",
+              "!finalAtomicTeardownSample.interactionHandoff",
+              "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[2]) + ";",
+              "return true;",
+              "return fail(failureClass);",
+              "} catch {",
+            ];
+      const validates = (source) => {
+        if (!required.every((token) => source.includes(token))) return false;
+        if (
+          source.split("return fail(failureClass);").length - 1 !==
+            (toneFlowConfig.phase === "open" ? 7 : 3) ||
+          source.includes('throw new Error("wf540_tone_') ||
+          source.includes(".fill(") ||
+          source.includes(".blur(") ||
+          source.includes("catch (") ||
+          source.includes("error.message") ||
+          source.includes("String(error") ||
+          (toneFlowConfig.phase === "select" &&
+            (source.split("const deadline = Date.now() + 10000;").length - 1 !== 1 ||
+              source.split("while (Date.now() < deadline)").length - 1 !== 1 ||
+              source.includes("failureStage") ||
+              source.includes("advance(") ||
+              source.includes("nextFailureClass") ||
+              source.split("sampleAtomicTeardown();").length - 1 !== 2 ||
+              source.split("resetSettlement();").length - 1 !== 8 ||
+              source.split("const stabilityHorizonMs = 600;").length - 1 !== 1 ||
+              source.includes("const menuClosed =") ||
+              source.includes("const bodyInteraction =") ||
+              source.includes("currentSelectContent") ||
+              source.includes("currentTrigger") ||
+              source.includes("page.keyboard") ||
+              source.includes('press("Escape")') ||
+              !TONE_SELECT_BROWSER_FAILURE_CLASSES.every(
+                (currentFailureClass, index) =>
+                  source.split(JSON.stringify(currentFailureClass)).length - 1 ===
+                  (index === 1 ? 3 : index === 2 ? 2 : 1)
+              )))
+        ) {
+          return false;
+        }
+        let previousIndex = -1;
+        for (const token of orderedTokens) {
+          const tokenIndex = source.indexOf(token, previousIndex + 1);
+          if (tokenIndex <= previousIndex) return false;
+          previousIndex = tokenIndex;
+        }
+        return true;
+      };
+      if (!validates(compiledSource)) {
+        const missingRequired = required.flatMap((token, index) =>
+          compiledSource.includes(token) ? [] : [index]
+        );
+        let previousIndex = -1;
+        const brokenOrder = [];
+        for (const [index, token] of orderedTokens.entries()) {
+          const tokenIndex = compiledSource.indexOf(token, previousIndex + 1);
+          if (tokenIndex <= previousIndex) brokenOrder.push(index);
+          else previousIndex = tokenIndex;
+        }
+        throw new Error(
+          action.id +
+            " tone flow source contract drift required=" +
+            missingRequired.join(",") +
+            " order=" +
+            brokenOrder.join(",")
+        );
+      }
+      assertSourceMutantsRejected(
+        compiledSource,
+        validates,
+        required,
+        action.id + " tone flow settlement"
+      );
+      for (let index = 1; index < orderedTokens.length; index += 1) {
+        const left = orderedTokens[index - 1];
+        const right = orderedTokens[index];
+        const marker = "__WF540_TONE_ORDER_MUTANT_" + index + "__";
+        const mutant = compiledSource
+          .replace(left, marker)
+          .replace(right, left)
+          .replace(marker, right);
+        assertNegative(!validates(mutant), action.id + " tone flow order mutant " + index);
+      }
+      const boundCatchMutant = compiledSource.replace("} catch {", "} catch (error) {");
+      assertNegative(!validates(boundCatchMutant), action.id + " tone flow bound catch mutant");
+      if (toneFlowConfig.phase === "open") observedToneMenuOpenActionIds.push(action.id);
+      else {
+        for (const [label, mutant] of [
+          [
+            "short stability horizon",
+            compiledSource.replace(
+              "const stabilityHorizonMs = 600;",
+              "const stabilityHorizonMs = 0;"
+            ),
+          ],
+          [
+            "missing final atomic teardown",
+            compiledSource.replace(
+              "const finalAtomicTeardownSample = await sampleAtomicTeardown();",
+              "const finalAtomicTeardownSample = teardownSample;"
+            ),
+          ],
+          [
+            "missing failed-condition reset",
+            compiledSource.replace("resetSettlement();", "void 0;"),
+          ],
+          [
+            "no-op reset helper",
+            compiledSource.replace(
+              toneSelectResetSettlementBlock,
+              [
+                "const resetSettlement = () => {",
+                "                void settledSince;",
+                "                void settledSampleCount;",
+                "              };",
+              ].join("\n")
+            ),
+          ],
+          [
+            "scroll-lock negation flip",
+            compiledSource.replace(
+              toneSelectUnlockedScrollToken,
+              'body.hasAttribute("data-scroll-locked")'
+            ),
+          ],
+          [
+            "missing panel positive geometry",
+            compiledSource.replace(toneSelectPanelGeometryToken, "true &&"),
+          ],
+          [
+            "missing trigger positive geometry",
+            compiledSource.replace(toneSelectTriggerGeometryToken, "true &&"),
+          ],
+          [
+            "restored monotonic failure stage",
+            compiledSource.replace(
+              "let failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[0]) + ";",
+              "let failureClass = " +
+                JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[0]) +
+                "; let failureStage = 0;"
+            ),
+          ],
+          [
+            "stale unlock-to-relock classification",
+            (() => {
+              const exactHandoffAssignment =
+                "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[2]) + ";";
+              const finalAssignmentIndex = compiledSource.lastIndexOf(exactHandoffAssignment);
+              invariant(
+                finalAssignmentIndex >= 0,
+                action.id + " tone-select final handoff assignment anchor drift"
+              );
+              return (
+                compiledSource.slice(0, finalAssignmentIndex) +
+                "failureClass = " +
+                JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[6]) +
+                ";" +
+                compiledSource.slice(finalAssignmentIndex + exactHandoffAssignment.length)
+              );
+            })(),
+          ],
+        ]) {
+          assertNegative(!validates(mutant), action.id + " tone-select " + label + " mutant");
+        }
+        observedToneMutedActionIds.push(action.id);
+      }
     }
     if (action.id === "tk-011-preview-proof") {
       const required = [
@@ -22121,6 +26943,73 @@ export async function runTask540SmokeExecutorSelfTest() {
         "tc-041 canvas-only armed-slot scope drift"
       );
     }
+    if (action.id === "dg-003-builder") {
+      const builderUrl = expandRegisteredPath(plan, "builder", sourceCaptures);
+      const navigationToken = "await page.goto(" + JSON.stringify(builderUrl) + ");";
+      const exactUrlToken = "if (page.url() !== " + JSON.stringify(builderUrl) + ")";
+      const required = [
+        'const dirtyIndicator = page.getByText("Unsaved changes", { exact: true });',
+        'await dirtyIndicator.waitFor({ state: "visible", timeout: 10000 });',
+        "if (await dirtyIndicator.count() !== 1)",
+        'const retainedDialogListeners = page.listeners("dialog");',
+        "if (retainedDialogListeners.length !== 1)",
+        'for (const listener of retainedDialogListeners) page.off("dialog", listener);',
+        'page.on("dialog", handleDialog);',
+        'dialogSettlements.push(type === "beforeunload" ? dialog.accept() : dialog.dismiss());',
+        "let navigationFailed = false;",
+        navigationToken,
+        "} finally {",
+        "const settlements = await Promise.allSettled(dialogSettlements);",
+        'dialogSettlementFailed = settlements.some(({ status }) => status !== "fulfilled");',
+        'page.off("dialog", handleDialog);',
+        'for (const listener of retainedDialogListeners) page.on("dialog", listener);',
+        'const restoredDialogListeners = page.listeners("dialog");',
+        "restoredDialogListeners.length !== retainedDialogListeners.length",
+        "listener !== retainedDialogListeners[index]",
+        'if (navigationFailed) throw new Error("wf540_dg003_navigation");',
+        'if (dialogSettlementFailed) throw new Error("wf540_dg003_dialog_settlement");',
+        'if (dialogTypes.length !== 1 || dialogTypes[0] !== "beforeunload")',
+        exactUrlToken,
+        'await marker.waitFor({ state: "visible", timeout: 30000 });',
+        "if (await marker.count() !== 1)",
+      ];
+      const validates = (source) => {
+        const dirtyReadIndex = source.indexOf(required[0]);
+        const listenerReadIndex = source.indexOf(required[3]);
+        const listenerRemoveIndex = source.indexOf(required[5]);
+        const handlerInstallIndex = source.indexOf(required[6]);
+        const navigationIndex = source.indexOf(navigationToken);
+        const finallyIndex = source.indexOf(required[10], navigationIndex);
+        const handlerRemoveIndex = source.indexOf(required[13]);
+        const listenerRestoreIndex = source.indexOf(required[14]);
+        const restoredListenerReadIndex = source.indexOf(required[15]);
+        const navigationFailureIndex = source.indexOf(required[18]);
+        const dialogCardinalityIndex = source.indexOf(required[20]);
+        const markerWaitIndex = source.indexOf(required[22]);
+        return (
+          required.every((token) => source.includes(token)) &&
+          dirtyReadIndex >= 0 &&
+          listenerReadIndex > dirtyReadIndex &&
+          listenerRemoveIndex > listenerReadIndex &&
+          handlerInstallIndex > listenerRemoveIndex &&
+          navigationIndex > handlerInstallIndex &&
+          finallyIndex > navigationIndex &&
+          handlerRemoveIndex > navigationIndex &&
+          listenerRestoreIndex > handlerRemoveIndex &&
+          restoredListenerReadIndex > listenerRestoreIndex &&
+          navigationFailureIndex > restoredListenerReadIndex &&
+          dialogCardinalityIndex > navigationFailureIndex &&
+          markerWaitIndex > dialogCardinalityIndex
+        );
+      };
+      invariant(validates(compiledSource), "dg-003 exact beforeunload handoff source drift");
+      assertSourceMutantsRejected(
+        compiledSource,
+        validates,
+        required,
+        "dg-003 exact beforeunload handoff"
+      );
+    }
     if (action.id === "tk-022-aria-proof") {
       invariant(
         compiledSource.includes('"name":"aria-reciprocal"') &&
@@ -22129,6 +27018,22 @@ export async function runTask540SmokeExecutorSelfTest() {
             "exactVisibleWithin(previewShell, config.paletteSelectors.outerTabs"
           ),
         "tk-022 preview-only ARIA scope drift"
+      );
+    }
+    if (action.id === "dg-017-builder-confirm-proof") {
+      invariant(
+        compiledSource.includes(
+          JSON.stringify(expandRegisteredPath(plan, "records", sourceCaptures))
+        ) &&
+          compiledSource.includes(JSON.stringify(registeredSelector(plan, "recordActions"))) &&
+          compiledSource.includes("const deadline = Date.now() + 30000") &&
+          compiledSource.includes("page.url() === expectedRecordsUrl") &&
+          compiledSource.includes("await recordActions.isVisible()") &&
+          compiledSource.includes("positive(recordActionsRect)") &&
+          compiledSource.includes("builderCanvasCount === 0") &&
+          compiledSource.includes("builderDirtyBadgeCount === 0") &&
+          !compiledSource.includes("!page.url().includes(config.screenId)"),
+        "dg-017 settled records-workspace proof source drift"
       );
     }
     if (action.id === "tk-026-nested-proof") {
@@ -22283,6 +27188,1386 @@ export async function runTask540SmokeExecutorSelfTest() {
     compiledRunCodeSources += 1;
   }
   invariant(compiledRunCodeSources === 392, "generated run-code source count drift");
+  invariant(
+    deepEqualJson(
+      observedDirtyNavigationRequestActionIds,
+      Object.keys(expectedDirtyNavigationRequestActionConfig)
+    ),
+    "dirty-navigation specialization ownership drift"
+  );
+  for (const actionId of DIRTY_NAVIGATION_REQUEST_ACTION_IDS) {
+    invariant(
+      resolveDirtyNavigationTargetTimeline(["scroll_locked", "target_missing"]) ===
+        "target_missing" &&
+        resolveDirtyNavigationTargetTimeline(["scroll_locked", "target_intercepted"]) ===
+          "target_intercepted" &&
+        resolveDirtyNavigationTargetTimeline(["target_intercepted", "inline_pointer_locked"]) ===
+          "inline_pointer_locked" &&
+        resolveDirtyNavigationTargetTimeline(["computed_pointer_locked", "hittable"]) === "click",
+      actionId + " dirty-navigation latest-poll timeline drift"
+    );
+  }
+  invariant(
+    deepEqualJson(observedToneContentFillActionIds, TONE_CONTENT_FILL_ACTION_IDS),
+    "tone content-fill specialization ownership drift"
+  );
+  invariant(
+    deepEqualJson(observedToneMenuOpenActionIds, TONE_MENU_OPEN_ACTION_IDS),
+    "tone-open specialization ownership drift"
+  );
+  invariant(
+    deepEqualJson(observedToneMutedActionIds, TONE_MUTED_ACTION_IDS),
+    "tone-muted specialization ownership drift"
+  );
+  invariant(
+    deepEqualJson(observedAuthSettlementActionIds, authSettlementActionIds),
+    "auth realm settlement action ownership drift"
+  );
+  invariant(
+    deepEqualJson(AUTH_SETTLEMENT_ACTION_IDS, authSettlementActionIds),
+    "classified auth settlement action ownership drift"
+  );
+  const bootstrapSettlementAction = plan.actionManifest.find(
+    ({ id }) => id === AUTH_SETTLEMENT_ACTION_IDS[0]
+  );
+  const bootstrapSettlementSource = authSettlementCompiledSources.get(
+    AUTH_SETTLEMENT_ACTION_IDS[0]
+  );
+  invariant(
+    bootstrapSettlementAction !== undefined && typeof bootstrapSettlementSource === "string",
+    "bootstrap auth settlement behavioral source is absent"
+  );
+  const runGeneratedBootstrapSettlement = async ({
+    url = plan.fixtureBlueprint.origins.admin + "/admin/",
+    menuCount = 0,
+    loadingVisible = false,
+    labelCount = 1,
+    userName = "Bootstrap Admin",
+    menuRect = { x: 10, y: 10, width: 120, height: 36 },
+    menuVisible = true,
+    runtimeFailure = false,
+    domReadFailure = false,
+    closeDuringWait = false,
+  } = {}) => {
+    let clock = 0;
+    let closed = false;
+    const context = {
+      __wf540ReadLogProjection: () => ({
+        firstUnexpected: runtimeFailure ? { channel: "pageErrors", code: "page_other" } : null,
+      }),
+      __wf540Remember: () => true,
+    };
+    const label = {
+      count: async () => labelCount,
+      textContent: async () => userName,
+    };
+    const menu = {
+      count: async () => {
+        if (domReadFailure) throw new Error("TASK540_PRIVATE_DOM_FAILURE_DO_NOT_EGRESS");
+        return menuCount;
+      },
+      locator: () => label,
+      boundingBox: async () => menuRect,
+      isVisible: async () => menuVisible,
+    };
+    const loading = {
+      count: async () => (loadingVisible ? 1 : 0),
+      first: () => ({ isVisible: async () => loadingVisible }),
+    };
+    const page = {
+      context: () => context,
+      getByText: () => loading,
+      isClosed: () => closed,
+      locator: () => menu,
+      url: () => url,
+      waitForTimeout: async () => {
+        clock = 60000;
+        if (closeDuringWait) {
+          closed = true;
+          throw new Error("TASK540_PRIVATE_PAGE_CLOSE_DO_NOT_EGRESS");
+        }
+      },
+    };
+    const executableSource = new Script("(" + bootstrapSettlementSource + ")", {
+      filename: "task-540-bootstrap-auth-settlement.behavioral-self-test.js",
+    }).runInNewContext({ Date: Object.freeze({ now: () => clock }) });
+    return executableSource(page);
+  };
+  const successfulGeneratedSettlement = await runGeneratedBootstrapSettlement({ menuCount: 1 });
+  const successfulGeneratedFrame = Buffer.from(
+    JSON.stringify(successfulGeneratedSettlement) + "\n"
+  );
+  invariant(
+    deepEqualJson(successfulGeneratedSettlement, {
+      url: plan.fixtureBlueprint.origins.admin + "/admin/",
+      userMenuVisible: true,
+      userName: "Bootstrap Admin",
+    }) &&
+      classifyPrivateAuthSettlementFailureFrame(
+        bootstrapSettlementAction.id,
+        successfulGeneratedFrame
+      ) === null,
+    "generated bootstrap auth settlement success behavior drift"
+  );
+  parseRegisteredOutput(
+    plan.registries.outputs[bootstrapSettlementAction.outputSchemaId],
+    successfulGeneratedFrame,
+    bootstrapSettlementAction.id,
+    selfTestContext(plan, bootstrapSettlementAction.id)
+  );
+  const generatedFailureCases = [
+    [
+      "login_route",
+      { url: plan.fixtureBlueprint.origins.admin + plan.fixtureBlueprint.paths.login },
+    ],
+    ["loading_view", { loadingVisible: true }],
+    ["menu_absent", {}],
+    ["runtime_failure", { runtimeFailure: true }],
+    ["dom_read_failed", { domReadFailure: true }],
+    [
+      "page_closed",
+      {
+        closeDuringWait: true,
+        url: plan.fixtureBlueprint.origins.admin + plan.fixtureBlueprint.paths.login,
+      },
+    ],
+  ];
+  const generatedFailureFrames = new Map();
+  for (const [expectedFailureClass, options] of generatedFailureCases) {
+    const generatedOutput = await runGeneratedBootstrapSettlement(options);
+    const frame = Buffer.from(JSON.stringify(generatedOutput) + "\n");
+    invariant(
+      deepEqualJson(generatedOutput, { settled: false, failureClass: expectedFailureClass }) &&
+        frame.equals(Buffer.from(AUTH_SETTLEMENT_FAILURE_FRAMES[expectedFailureClass], "utf8")) &&
+        classifyPrivateAuthSettlementFailureFrame(bootstrapSettlementAction.id, frame) ===
+          expectedFailureClass,
+      expectedFailureClass + " generated auth settlement behavior drift"
+    );
+    generatedFailureFrames.set(expectedFailureClass, frame);
+  }
+  const generatedDiagnosticCapabilities = buildFakeCapabilities();
+  const generatedDiagnosticExecuteAction = generatedDiagnosticCapabilities.executeAction.bind(
+    generatedDiagnosticCapabilities
+  );
+  generatedDiagnosticCapabilities.executeAction = async (context) => {
+    if (context.action.id !== bootstrapSettlementAction.id) {
+      return generatedDiagnosticExecuteAction(context);
+    }
+    const normalizedFrame = await normalizeBrowserCommandOutput(
+      {},
+      context.action,
+      context.action.executable,
+      generatedFailureFrames.get("login_route"),
+      {}
+    );
+    const failureClass = classifyPrivateAuthSettlementFailureFrame(
+      context.action.id,
+      normalizedFrame
+    );
+    invariant(failureClass !== null, "generated auth settlement frame was not classified");
+    throw createPrivateAuthSettlementFailure(failureClass);
+  };
+  const generatedDiagnosticLines = [];
+  const generatedDiagnosticSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    invariant(
+      generatedDiagnosticCapabilities.cleaned &&
+        generatedDiagnosticCapabilities.calls.at(-1) === "failure-cleanup",
+      "generated auth settlement diagnostic preceded cleanup"
+    );
+    generatedDiagnosticLines.push(line);
+  });
+  let generatedPublicFailure = null;
+  try {
+    await executeTask540SmokePlanWithAuthorityFactory(
+      diagnosticInput,
+      createPrivateConstructionCleanupAuthority,
+      async () => generatedDiagnosticCapabilities,
+      generatedDiagnosticSink
+    );
+  } catch (error) {
+    generatedPublicFailure = error;
+  }
+  invariant(
+    generatedPublicFailure === TASK_FAILURE &&
+      generatedDiagnosticLines.length === 1 &&
+      generatedDiagnosticLines[0] === expectedClassifiedLine,
+    "generated auth settlement frame-to-diagnostic pipeline drift"
+  );
+  negativeCases += generatedFailureCases.length + 1;
+  for (const actionId of AUTH_SETTLEMENT_ACTION_IDS) {
+    for (const failureClass of AUTH_SETTLEMENT_BROWSER_FAILURE_CLASSES) {
+      invariant(
+        classifyPrivateAuthSettlementFailureFrame(
+          actionId,
+          Buffer.from(AUTH_SETTLEMENT_FAILURE_FRAMES[failureClass], "utf8")
+        ) === failureClass,
+        actionId + " " + failureClass + " classified frame drift"
+      );
+    }
+  }
+  const untrustedAuthSettlementFrames = [
+    canonicalJson({ failureClass: "not_allowlisted", settled: false }) + "\n",
+    canonicalJson({
+      failureClass: AUTH_SETTLEMENT_BROWSER_FAILURE_CLASSES[0],
+      rawUrl: "TASK540_PRIVATE_URL_DO_NOT_EGRESS",
+      settled: false,
+    }) + "\n",
+    canonicalJson({
+      body: "TASK540_PRIVATE_BODY_DO_NOT_EGRESS",
+      failureClass: AUTH_SETTLEMENT_BROWSER_FAILURE_CLASSES[0],
+      settled: false,
+    }) + "\n",
+    canonicalJson({ failureClass: AUTH_SETTLEMENT_BROWSER_FAILURE_CLASSES[0], settled: true }) +
+      "\n",
+  ];
+  for (const frame of untrustedAuthSettlementFrames) {
+    invariant(
+      classifyPrivateAuthSettlementFailureFrame(
+        AUTH_SETTLEMENT_ACTION_IDS[0],
+        Buffer.from(frame, "utf8")
+      ) === null,
+      "untrusted auth settlement frame was classified"
+    );
+  }
+  invariant(
+    classifyPrivateAuthSettlementFailureFrame(
+      "set-011-login-submit",
+      Buffer.from(AUTH_SETTLEMENT_FAILURE_FRAMES.login_route, "utf8")
+    ) === null,
+    "non-settlement action accepted a classified frame"
+  );
+  negativeCases += untrustedAuthSettlementFrames.length + 1;
+
+  invariant(
+    deepEqualJson(TONE_OPEN_BROWSER_FAILURE_CLASSES, [
+      "tone_target_precondition",
+      "tone_draft_dirty_precondition",
+      "tone_trigger_open",
+      "tone_portal_settlement",
+    ]) &&
+      TONE_MENU_OPEN_ACTION_IDS.length === 2 &&
+      new Set(TONE_MENU_OPEN_ACTION_IDS).size === TONE_MENU_OPEN_ACTION_IDS.length &&
+      TONE_OPEN_BROWSER_FAILURE_CLASSES.length === 4 &&
+      new Set(TONE_OPEN_BROWSER_FAILURE_CLASSES).size ===
+        TONE_OPEN_BROWSER_FAILURE_CLASSES.length &&
+      TONE_MENU_OPEN_ACTION_IDS.every(
+        (actionId) => !AUTH_SETTLEMENT_ACTION_IDS.includes(actionId)
+      ) &&
+      TONE_OPEN_BROWSER_FAILURE_CLASSES.every(
+        (failureClass) =>
+          SAFE_IDENTIFIER_PATTERN.test(failureClass) &&
+          !AUTH_SETTLEMENT_DIAGNOSTIC_FAILURE_CLASSES.includes(failureClass) &&
+          Buffer.byteLength(TONE_OPEN_FAILURE_FRAMES[failureClass]) <=
+            MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES
+      ),
+    "tone-open diagnostic allowlist drift"
+  );
+  for (const actionId of TONE_MENU_OPEN_ACTION_IDS) {
+    for (const failureClass of TONE_OPEN_BROWSER_FAILURE_CLASSES) {
+      invariant(
+        classifyPrivateToneOpenFailureFrame(
+          actionId,
+          Buffer.from(TONE_OPEN_FAILURE_FRAMES[failureClass], "utf8")
+        ) === failureClass,
+        actionId + " " + failureClass + " classified frame drift"
+      );
+    }
+  }
+  const untrustedToneOpenFrames = [
+    canonicalJson({ failureClass: "not_allowlisted", settled: false }) + "\n",
+    canonicalJson({
+      failureClass: TONE_OPEN_BROWSER_FAILURE_CLASSES[0],
+      privateMarker: toneOpenPrivateMarker,
+      settled: false,
+    }) + "\n",
+    canonicalJson({
+      failureClass: TONE_OPEN_BROWSER_FAILURE_CLASSES[0],
+      settled: true,
+    }) + "\n",
+    TONE_OPEN_FAILURE_FRAMES[TONE_OPEN_BROWSER_FAILURE_CLASSES[0]] + "{}\n",
+  ];
+  for (const frame of untrustedToneOpenFrames) {
+    invariant(
+      classifyPrivateToneOpenFailureFrame(toneOpenFailureAction.id, Buffer.from(frame, "utf8")) ===
+        null,
+      "untrusted tone-open frame was classified"
+    );
+  }
+  invariant(
+    classifyPrivateToneOpenFailureFrame(
+      TONE_MUTED_ACTION_IDS[0],
+      Buffer.from(TONE_OPEN_FAILURE_FRAMES[TONE_OPEN_BROWSER_FAILURE_CLASSES[0]], "utf8")
+    ) === null &&
+      classifyPrivateToneOpenFailureFrame(
+        AUTH_SETTLEMENT_ACTION_IDS[0],
+        Buffer.from(TONE_OPEN_FAILURE_FRAMES[TONE_OPEN_BROWSER_FAILURE_CLASSES[0]], "utf8")
+      ) === null &&
+      classifyPrivateToneOpenFailureFrame(
+        toneOpenFailureAction.id,
+        Buffer.alloc(MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES + 1, 0x61)
+      ) === null &&
+      classifyPrivateToneOpenFailureFrame(toneOpenFailureAction.id, "not-a-buffer") === null &&
+      classifyPrivateAuthSettlementFailureFrame(
+        toneOpenFailureAction.id,
+        Buffer.from(AUTH_SETTLEMENT_FAILURE_FRAMES.login_route, "utf8")
+      ) === null,
+    "tone-open classified frame boundary drift"
+  );
+  negativeCases +=
+    TONE_MENU_OPEN_ACTION_IDS.length * TONE_OPEN_BROWSER_FAILURE_CLASSES.length +
+    untrustedToneOpenFrames.length +
+    5;
+
+  invariant(
+    deepEqualJson(TONE_MUTED_ACTION_IDS, ["dg-022-tone-muted", "rc-016-tone-muted"]) &&
+      deepEqualJson(TONE_SELECT_BROWSER_FAILURE_CLASSES, [
+        "tone_select_authority_option_precondition",
+        "tone_select_menu_close",
+        "tone_select_interaction_handoff",
+        "tone_select_dirty_badges",
+        "tone_select_selection_override",
+        "tone_select_muted_class",
+        "tone_select_computed_color_delta",
+      ]) &&
+      new Set(TONE_MUTED_ACTION_IDS).size === 2 &&
+      new Set(TONE_SELECT_BROWSER_FAILURE_CLASSES).size === 7 &&
+      TONE_MUTED_ACTION_IDS.every(
+        (actionId) =>
+          !AUTH_SETTLEMENT_ACTION_IDS.includes(actionId) &&
+          !TONE_MENU_OPEN_ACTION_IDS.includes(actionId)
+      ) &&
+      TONE_SELECT_BROWSER_FAILURE_CLASSES.every(
+        (failureClass) =>
+          SAFE_IDENTIFIER_PATTERN.test(failureClass) &&
+          !AUTH_SETTLEMENT_DIAGNOSTIC_FAILURE_CLASSES.includes(failureClass) &&
+          !TONE_OPEN_BROWSER_FAILURE_CLASSES.includes(failureClass) &&
+          Buffer.byteLength(TONE_SELECT_FAILURE_FRAMES[failureClass]) <=
+            MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES
+      ),
+    "tone-select diagnostic allowlist drift"
+  );
+  let classifiedToneSelectFramePairs = 0;
+  for (const actionId of TONE_MUTED_ACTION_IDS) {
+    for (const failureClass of TONE_SELECT_BROWSER_FAILURE_CLASSES) {
+      invariant(
+        classifyPrivateToneSelectFailureFrame(
+          actionId,
+          Buffer.from(TONE_SELECT_FAILURE_FRAMES[failureClass], "utf8")
+        ) === failureClass,
+        actionId + " " + failureClass + " classified frame drift"
+      );
+      classifiedToneSelectFramePairs += 1;
+    }
+  }
+  invariant(classifiedToneSelectFramePairs === 14, "tone-select 2x7 frame matrix drift");
+  const firstToneSelectFailureClass = TONE_SELECT_BROWSER_FAILURE_CLASSES[0];
+  const untrustedToneSelectFrames = [
+    canonicalJson({ failureClass: "not_allowlisted", settled: false }) + "\n",
+    canonicalJson({
+      failureClass: firstToneSelectFailureClass,
+      privateMarker: toneSelectPrivateMarker,
+      settled: false,
+    }) + "\n",
+    canonicalJson({ failureClass: firstToneSelectFailureClass, settled: true }) + "\n",
+    '{"settled":false,"failureClass":' + JSON.stringify(firstToneSelectFailureClass) + "}\n",
+    TONE_SELECT_FAILURE_FRAMES[firstToneSelectFailureClass] + "{}\n",
+  ];
+  for (const frame of untrustedToneSelectFrames) {
+    invariant(
+      classifyPrivateToneSelectFailureFrame(
+        toneSelectFailureAction.id,
+        Buffer.from(frame, "utf8")
+      ) === null,
+      "untrusted tone-select frame was classified"
+    );
+  }
+  invariant(
+    classifyPrivateToneSelectFailureFrame(
+      TONE_MENU_OPEN_ACTION_IDS[0],
+      Buffer.from(TONE_SELECT_FAILURE_FRAMES[firstToneSelectFailureClass], "utf8")
+    ) === null &&
+      classifyPrivateToneSelectFailureFrame(
+        AUTH_SETTLEMENT_ACTION_IDS[0],
+        Buffer.from(TONE_SELECT_FAILURE_FRAMES[firstToneSelectFailureClass], "utf8")
+      ) === null &&
+      classifyPrivateToneSelectFailureFrame(
+        toneSelectFailureAction.id,
+        Buffer.alloc(MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES + 1, 0x61)
+      ) === null &&
+      classifyPrivateToneSelectFailureFrame(toneSelectFailureAction.id, "not-a-buffer") === null &&
+      classifyPrivateToneOpenFailureFrame(
+        toneSelectFailureAction.id,
+        Buffer.from(TONE_OPEN_FAILURE_FRAMES[TONE_OPEN_BROWSER_FAILURE_CLASSES[0]], "utf8")
+      ) === null &&
+      classifyPrivateAuthSettlementFailureFrame(
+        toneSelectFailureAction.id,
+        Buffer.from(AUTH_SETTLEMENT_FAILURE_FRAMES.login_route, "utf8")
+      ) === null,
+    "tone-select classified frame boundary drift"
+  );
+  negativeCases += classifiedToneSelectFramePairs + untrustedToneSelectFrames.length + 6;
+
+  invariant(
+    deepEqualJson(DIRTY_NAVIGATION_REQUEST_ACTION_IDS, [
+      "dg-012-builder-nav-cancel",
+      "dg-015-builder-nav-confirm",
+      "dg-024-entry-nav-cancel",
+      "dg-037-entry-nav-confirm",
+      "rc-037a-exit-navigation",
+    ]) &&
+      deepEqualJson(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES, [
+        "target_bound",
+        "target_duplicate",
+        "target_missing",
+        "source_url",
+        "scroll_locked",
+        "inline_pointer_locked",
+        "computed_pointer_locked",
+        "target_intercepted",
+        "click_failed",
+        "dialog_duplicate",
+        "not_suspended",
+        "dialog_settlement",
+      ]) &&
+      deepEqualJson(
+        DIRTY_NAVIGATION_EXECUTOR_FAILURE_CLASSES,
+        AUTH_SETTLEMENT_EXECUTOR_FAILURE_CLASSES
+      ) &&
+      new Set(DIRTY_NAVIGATION_REQUEST_ACTION_IDS).size === 5 &&
+      new Set(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES).size === 12 &&
+      new Set(DIRTY_NAVIGATION_DIAGNOSTIC_FAILURE_CLASSES).size ===
+        DIRTY_NAVIGATION_DIAGNOSTIC_FAILURE_CLASSES.length &&
+      DIRTY_NAVIGATION_REQUEST_ACTION_IDS.every(
+        (actionId) =>
+          !AUTH_SETTLEMENT_ACTION_IDS.includes(actionId) &&
+          !TONE_MENU_OPEN_ACTION_IDS.includes(actionId) &&
+          !TONE_MUTED_ACTION_IDS.includes(actionId)
+      ) &&
+      DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES.every(
+        (failureClass) =>
+          SAFE_IDENTIFIER_PATTERN.test(failureClass) &&
+          !AUTH_SETTLEMENT_DIAGNOSTIC_FAILURE_CLASSES.includes(failureClass) &&
+          !TONE_OPEN_BROWSER_FAILURE_CLASSES.includes(failureClass) &&
+          !TONE_SELECT_BROWSER_FAILURE_CLASSES.includes(failureClass) &&
+          Buffer.byteLength(DIRTY_NAVIGATION_FAILURE_FRAMES[failureClass]) <=
+            MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES
+      ),
+    "dirty-navigation diagnostic allowlist drift"
+  );
+  let classifiedDirtyNavigationFramePairs = 0;
+  for (const actionId of DIRTY_NAVIGATION_REQUEST_ACTION_IDS) {
+    for (const failureClass of DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES) {
+      invariant(
+        classifyPrivateDirtyNavigationFailureFrame(
+          actionId,
+          Buffer.from(DIRTY_NAVIGATION_FAILURE_FRAMES[failureClass], "utf8")
+        ) === failureClass,
+        actionId + " " + failureClass + " classified frame drift"
+      );
+      classifiedDirtyNavigationFramePairs += 1;
+    }
+  }
+  invariant(classifiedDirtyNavigationFramePairs === 60, "dirty-navigation 5x12 frame matrix drift");
+  const firstDirtyNavigationFailureClass = DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[0];
+  const untrustedDirtyNavigationFrames = [
+    canonicalJson({ failureClass: "not_allowlisted", settled: false }) + "\n",
+    canonicalJson({
+      failureClass: firstDirtyNavigationFailureClass,
+      privateMarker: dirtyNavigationPrivateMarker,
+      settled: false,
+    }) + "\n",
+    canonicalJson({ failureClass: firstDirtyNavigationFailureClass, settled: true }) + "\n",
+    '{"settled":false,"failureClass":' + JSON.stringify(firstDirtyNavigationFailureClass) + "}\n",
+    DIRTY_NAVIGATION_FAILURE_FRAMES[firstDirtyNavigationFailureClass] + "{}\n",
+  ];
+  for (const frame of untrustedDirtyNavigationFrames) {
+    invariant(
+      classifyPrivateDirtyNavigationFailureFrame(
+        dirtyNavigationFailureAction.id,
+        Buffer.from(frame, "utf8")
+      ) === null,
+      "untrusted dirty-navigation frame was classified"
+    );
+  }
+  invariant(
+    classifyPrivateDirtyNavigationFailureFrame(
+      TONE_MENU_OPEN_ACTION_IDS[0],
+      Buffer.from(DIRTY_NAVIGATION_FAILURE_FRAMES[firstDirtyNavigationFailureClass], "utf8")
+    ) === null &&
+      classifyPrivateDirtyNavigationFailureFrame(
+        AUTH_SETTLEMENT_ACTION_IDS[0],
+        Buffer.from(DIRTY_NAVIGATION_FAILURE_FRAMES[firstDirtyNavigationFailureClass], "utf8")
+      ) === null &&
+      classifyPrivateDirtyNavigationFailureFrame(
+        dirtyNavigationFailureAction.id,
+        Buffer.alloc(MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES + 1, 0x61)
+      ) === null &&
+      classifyPrivateDirtyNavigationFailureFrame(
+        dirtyNavigationFailureAction.id,
+        "not-a-buffer"
+      ) === null &&
+      classifyPrivateToneOpenFailureFrame(
+        dirtyNavigationFailureAction.id,
+        Buffer.from(TONE_OPEN_FAILURE_FRAMES[TONE_OPEN_BROWSER_FAILURE_CLASSES[0]], "utf8")
+      ) === null &&
+      classifyPrivateToneSelectFailureFrame(
+        dirtyNavigationFailureAction.id,
+        Buffer.from(TONE_SELECT_FAILURE_FRAMES[TONE_SELECT_BROWSER_FAILURE_CLASSES[0]], "utf8")
+      ) === null &&
+      classifyPrivateAuthSettlementFailureFrame(
+        dirtyNavigationFailureAction.id,
+        Buffer.from(AUTH_SETTLEMENT_FAILURE_FRAMES.login_route, "utf8")
+      ) === null,
+    "dirty-navigation classified frame boundary drift"
+  );
+  negativeCases += classifiedDirtyNavigationFramePairs + untrustedDirtyNavigationFrames.length + 7;
+
+  invariant(
+    new Set(AUTH_SETTLEMENT_DIAGNOSTIC_FAILURE_CLASSES).size ===
+      AUTH_SETTLEMENT_DIAGNOSTIC_FAILURE_CLASSES.length &&
+      AUTH_SETTLEMENT_BROWSER_FAILURE_CLASSES.every(
+        (failureClass) => !AUTH_SETTLEMENT_EXECUTOR_FAILURE_CLASSES.includes(failureClass)
+      ),
+    "auth settlement diagnostic class partitions overlap"
+  );
+  const settlementTwinAction = plan.actionManifest.find(({ id }) => id === "set-011-login-submit");
+  invariant(settlementTwinAction !== undefined, "auth settlement non-auth twin is absent");
+  const settlementPrivateMarker = "TASK540_SETTLEMENT_PRIVATE_DO_NOT_EGRESS";
+  const createSensitiveScanProbe = (...values) => {
+    let calls = 0;
+    const sensitiveValues = [...values];
+    Object.defineProperty(sensitiveValues, "some", {
+      value(predicate, thisArg) {
+        calls += 1;
+        return Array.prototype.some.call(values, predicate, thisArg);
+      },
+    });
+    return Object.freeze({
+      sensitiveValues,
+      calls: () => calls,
+    });
+  };
+  const runSettlementDiagnosticCase = async ({
+    label,
+    actionId = bootstrapSettlementAction.id,
+    expectedFailureClass = null,
+    operationMustReject = true,
+    operation,
+  }) => {
+    const capabilities = buildFakeCapabilities();
+    const executeAction = capabilities.executeAction.bind(capabilities);
+    let operationCalls = 0;
+    let operationRejected = false;
+    capabilities.executeAction = async (context) => {
+      if (context.action.id !== actionId) return executeAction(context);
+      operationCalls += 1;
+      try {
+        await operation(context);
+      } catch (error) {
+        operationRejected = true;
+        throw error;
+      }
+      throw new Error(settlementPrivateMarker);
+    };
+    const lines = [];
+    const sink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+      invariant(
+        capabilities.cleaned && capabilities.calls.at(-1) === "failure-cleanup",
+        label + " diagnostic preceded cleanup"
+      );
+      lines.push(line);
+    });
+    let publicFailure = null;
+    try {
+      await executeTask540SmokePlanWithAuthorityFactory(
+        diagnosticInput,
+        createPrivateConstructionCleanupAuthority,
+        async () => capabilities,
+        sink
+      );
+    } catch (error) {
+      publicFailure = error;
+    }
+    const expectedLine =
+      canonicalJson({
+        code: TASK_FAILURE.code,
+        failedActionId: actionId,
+        ...(expectedFailureClass === null ? {} : { failureClass: expectedFailureClass }),
+      }) + "\n";
+    invariant(
+      publicFailure === TASK_FAILURE &&
+        operationCalls === 1 &&
+        operationRejected === operationMustReject &&
+        capabilities.cleanupExecutions === 1 &&
+        lines.length === 1 &&
+        lines[0] === expectedLine &&
+        !lines[0].includes(settlementPrivateMarker),
+      label + " settlement diagnostic pipeline drift"
+    );
+    negativeCases += 1;
+  };
+  const cleanRepositorySnapshot = deepFreezeExact({ paths: [], hashes: {} });
+  const changedRepositorySnapshot = deepFreezeExact({
+    paths: ["private-stage-change"],
+    hashes: { "private-stage-change": "changed" },
+  });
+  const createRetainedExecution = ({
+    stdout = Buffer.from('{"ok":true}\n'),
+    stderr = Buffer.alloc(0),
+    stdoutExceeded = false,
+    stderrExceeded = false,
+    timedOut = false,
+    spawnError = false,
+    code = 0,
+    terminationAbsent = true,
+  } = {}) =>
+    Object.freeze({
+      completion: Object.freeze({ code, signal: null }),
+      timedOut,
+      spawnError,
+      stdout: Object.freeze({ bytes: Buffer.from(stdout), exceeded: stdoutExceeded }),
+      stderr: Object.freeze({ bytes: Buffer.from(stderr), exceeded: stderrExceeded }),
+      termination: Object.freeze({ absent: terminationAbsent }),
+    });
+  const runLocalAuthority = async (
+    { action },
+    {
+      program = "playwright-cli",
+      execution = createRetainedExecution(),
+      runnerThrows = false,
+      preSnapshotThrows = false,
+      postSnapshotThrows = false,
+      changedRepository = false,
+      sensitiveValues = [settlementPrivateMarker],
+      receiptThrows = false,
+      assertAfter = null,
+    } = {}
+  ) => {
+    let snapshotCalls = 0;
+    let runnerCalls = 0;
+    const authority = new LocalCommandAuthority(
+      {
+        root: "/task540-self-test-root",
+        assertSafeEvidence() {
+          if (receiptThrows) throw new Error(settlementPrivateMarker);
+        },
+        async snapshotRepository() {
+          snapshotCalls += 1;
+          if (preSnapshotThrows && snapshotCalls === 1) {
+            throw new Error(settlementPrivateMarker);
+          }
+          if (postSnapshotThrows && snapshotCalls === 2) {
+            throw new Error(settlementPrivateMarker);
+          }
+          return changedRepository && snapshotCalls === 2
+            ? changedRepositorySnapshot
+            : cleanRepositorySnapshot;
+        },
+        sensitiveValues,
+      },
+      async () => {
+        runnerCalls += 1;
+        if (runnerThrows) throw new Error(settlementPrivateMarker);
+        return execution;
+      }
+    );
+    try {
+      return await authority.executeProgram({
+        action,
+        program,
+        args: ["--raw", "self-test"],
+        sequence: 1,
+        operation: compileActionExecutionSpec(action).operation,
+        routeKey: null,
+        assertionName: null,
+        cwd: "/task540-self-test-root",
+        env: Object.freeze({}),
+      });
+    } finally {
+      if (assertAfter !== null) assertAfter({ snapshotCalls, runnerCalls });
+    }
+  };
+  const exactLoginFrame = Buffer.from(AUTH_SETTLEMENT_FAILURE_FRAMES.login_route, "utf8");
+  await runSettlementDiagnosticCase({
+    label: "exact browser frame before secret scan",
+    expectedFailureClass: "login_route",
+    operation: (context) =>
+      runLocalAuthority(context, {
+        execution: createRetainedExecution({ stdout: exactLoginFrame }),
+        sensitiveValues: ["login_route"],
+      }),
+  });
+  const exactToneOpenFrame = Buffer.from(
+    TONE_OPEN_FAILURE_FRAMES[TONE_OPEN_BROWSER_FAILURE_CLASSES[0]],
+    "utf8"
+  );
+  await runSettlementDiagnosticCase({
+    label: "exact tone-open frame before secret scan",
+    actionId: toneOpenFailureAction.id,
+    expectedFailureClass: TONE_OPEN_BROWSER_FAILURE_CLASSES[0],
+    operation: (context) =>
+      runLocalAuthority(context, {
+        execution: createRetainedExecution({ stdout: exactToneOpenFrame }),
+        sensitiveValues: [TONE_OPEN_BROWSER_FAILURE_CLASSES[0]],
+      }),
+  });
+  const exactToneSelectFrame = Buffer.from(
+    TONE_SELECT_FAILURE_FRAMES[TONE_SELECT_BROWSER_FAILURE_CLASSES[0]],
+    "utf8"
+  );
+  await runSettlementDiagnosticCase({
+    label: "exact tone-select frame before secret scan",
+    actionId: toneSelectFailureAction.id,
+    expectedFailureClass: TONE_SELECT_BROWSER_FAILURE_CLASSES[0],
+    operation: (context) =>
+      runLocalAuthority(context, {
+        execution: createRetainedExecution({ stdout: exactToneSelectFrame }),
+        sensitiveValues: [TONE_SELECT_BROWSER_FAILURE_CLASSES[0]],
+      }),
+  });
+  const exactDirtyNavigationFrame = Buffer.from(
+    DIRTY_NAVIGATION_FAILURE_FRAMES[DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[0]],
+    "utf8"
+  );
+  await runSettlementDiagnosticCase({
+    label: "exact dirty-navigation frame before secret scan",
+    actionId: dirtyNavigationFailureAction.id,
+    expectedFailureClass: DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[0],
+    operation: (context) =>
+      runLocalAuthority(context, {
+        execution: createRetainedExecution({ stdout: exactDirtyNavigationFrame }),
+        sensitiveValues: [DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[0]],
+      }),
+  });
+  const executeProgramSource = LocalCommandAuthority.prototype.executeProgram.toString();
+  const dirtyClassifierStart = executeProgramSource.indexOf(
+    "const exactDirtyNavigationFailureClass ="
+  );
+  const dirtyClassifierEnd = executeProgramSource.indexOf(
+    "const sensitiveOutput =",
+    dirtyClassifierStart
+  );
+  invariant(
+    dirtyClassifierStart >= 0 && dirtyClassifierEnd > dirtyClassifierStart,
+    "dirty-navigation process classifier source boundary drift"
+  );
+  const dirtyClassifierSource = executeProgramSource.slice(
+    dirtyClassifierStart,
+    dirtyClassifierEnd
+  );
+  const dirtyClassifierGuardTokens = [
+    'program === "playwright-cli" &&',
+    "repositoryFailure === null &&",
+    "outcome.successfulBoundedAndAbsent",
+  ];
+  const validatesDirtyClassifierSource = (source) => {
+    const required = [
+      "const exactDirtyNavigationFailureClass =",
+      ...dirtyClassifierGuardTokens,
+      "? classifyPrivateDirtyNavigationFailureFrame(action.id, outcome.stdoutBytes)",
+      ": null;",
+    ];
+    let previousIndex = -1;
+    for (const token of required) {
+      const tokenIndex = source.indexOf(token, previousIndex + 1);
+      if (tokenIndex <= previousIndex) return false;
+      previousIndex = tokenIndex;
+    }
+    return (
+      source.split("classifyPrivateDirtyNavigationFailureFrame").length - 1 === 1 &&
+      dirtyClassifierGuardTokens.every((token) => source.split(token).length - 1 === 1)
+    );
+  };
+  invariant(
+    validatesDirtyClassifierSource(dirtyClassifierSource),
+    "dirty-navigation exact-frame classifier guard drift"
+  );
+  for (const [index, guardToken] of dirtyClassifierGuardTokens.entries()) {
+    const mutant = dirtyClassifierSource.replace(
+      guardToken,
+      index === dirtyClassifierGuardTokens.length - 1 ? "true" : ""
+    );
+    assertNegative(
+      !validatesDirtyClassifierSource(mutant),
+      "dirty-navigation classifier removed guard mutant " + index
+    );
+  }
+  negativeCases += dirtyClassifierGuardTokens.length;
+
+  await runSettlementDiagnosticCase({
+    label: "non-playwright exact dirty-navigation frame remains generic",
+    actionId: dirtyNavigationFailureAction.id,
+    operationMustReject: false,
+    operation: (context) =>
+      runLocalAuthority(context, {
+        program: "bun",
+        execution: createRetainedExecution({ stdout: exactDirtyNavigationFrame }),
+      }),
+  });
+  await runSettlementDiagnosticCase({
+    label: "exact dirty-navigation frame repository boundary precedence",
+    actionId: dirtyNavigationFailureAction.id,
+    expectedFailureClass: "repository_boundary_failed",
+    operation: (context) =>
+      runLocalAuthority(context, {
+        execution: createRetainedExecution({ stdout: exactDirtyNavigationFrame }),
+        postSnapshotThrows: true,
+      }),
+  });
+  await runSettlementDiagnosticCase({
+    label: "tone-open frame repository boundary precedence",
+    actionId: toneOpenFailureAction.id,
+    operation: (context) =>
+      runLocalAuthority(context, {
+        execution: createRetainedExecution({ stdout: exactToneOpenFrame }),
+        postSnapshotThrows: true,
+      }),
+  });
+  await runSettlementDiagnosticCase({
+    label: "tone-open process failure remains unclassified",
+    actionId: toneOpenFailureAction.id,
+    operation: (context) =>
+      runLocalAuthority(context, {
+        execution: createRetainedExecution({ stdout: Buffer.from("### Error\nsafe\n"), code: 1 }),
+      }),
+  });
+  await runSettlementDiagnosticCase({
+    label: "tone-select frame repository boundary precedence",
+    actionId: toneSelectFailureAction.id,
+    operation: (context) =>
+      runLocalAuthority(context, {
+        execution: createRetainedExecution({ stdout: exactToneSelectFrame }),
+        postSnapshotThrows: true,
+      }),
+  });
+  await runSettlementDiagnosticCase({
+    label: "tone-select process failure remains unclassified",
+    actionId: toneSelectFailureAction.id,
+    operation: (context) =>
+      runLocalAuthority(context, {
+        execution: createRetainedExecution({ stdout: exactToneSelectFrame, code: 1 }),
+      }),
+  });
+  for (const [label, stdout] of [
+    ["non-playwright exact browser frame", exactLoginFrame],
+    ["non-playwright browser marker", Buffer.from("### Error\nsafe\n")],
+  ]) {
+    await runSettlementDiagnosticCase({
+      label,
+      operationMustReject: false,
+      operation: (context) =>
+        runLocalAuthority(context, {
+          program: "bun",
+          execution: createRetainedExecution({ stdout }),
+        }),
+    });
+  }
+  for (const [label, stdout, collidingSecret] of [
+    ["non-playwright exact browser frame secret scan", exactLoginFrame, "login_route"],
+    ["non-playwright browser marker secret scan", Buffer.from("### Error\nsafe\n"), "### Error"],
+  ]) {
+    const scanProbe = createSensitiveScanProbe(collidingSecret);
+    await runSettlementDiagnosticCase({
+      label,
+      operation: (context) =>
+        runLocalAuthority(context, {
+          program: "bun",
+          execution: createRetainedExecution({ stdout }),
+          sensitiveValues: scanProbe.sensitiveValues,
+        }),
+    });
+    invariant(scanProbe.calls() === 1, label + " did not execute the secret scan");
+  }
+  const processCases = [
+    [
+      "process output precedence",
+      "process_output_limit",
+      { stdoutExceeded: true, timedOut: true, spawnError: true, terminationAbsent: false },
+    ],
+    [
+      "process timeout precedence",
+      "process_timeout",
+      { timedOut: true, spawnError: true, terminationAbsent: false },
+    ],
+    ["process spawn anomaly", "process_runner_failed", { spawnError: true }],
+    ["process runner anomaly", "process_runner_failed", { terminationAbsent: false }],
+    [
+      "browser error precedence",
+      "browser_error_frame",
+      { stdout: Buffer.from("### Error\nsafe\n"), stderr: Buffer.from("safe stderr"), code: 1 },
+    ],
+    ["process stderr precedence", "process_stderr_rejected", { stderr: Buffer.from("safe") }],
+    ["process exit precedence", "process_exit_failed", { code: 1 }],
+  ];
+  const exactDirtyNavigationProcessCases = [
+    ["stdout output bound", "process_output_limit", { stdoutExceeded: true }],
+    ["stderr output bound", "process_output_limit", { stderrExceeded: true }],
+    ["timeout", "process_timeout", { timedOut: true }],
+    ["spawn anomaly", "process_runner_failed", { spawnError: true }],
+    ["termination anomaly", "process_runner_failed", { terminationAbsent: false }],
+    ["stderr rejection", "process_stderr_rejected", { stderr: Buffer.from("safe") }],
+    ["exit failure", "process_exit_failed", { code: 1 }],
+    [
+      "overlapping process flags",
+      "process_output_limit",
+      {
+        stdoutExceeded: true,
+        stderrExceeded: true,
+        timedOut: true,
+        spawnError: true,
+        terminationAbsent: false,
+        stderr: Buffer.from("safe"),
+        code: 1,
+      },
+    ],
+  ];
+  for (const [label, expectedFailureClass, executionOptions] of exactDirtyNavigationProcessCases) {
+    await runSettlementDiagnosticCase({
+      label: "exact dirty-navigation frame plus " + label,
+      actionId: dirtyNavigationFailureAction.id,
+      expectedFailureClass,
+      operation: (context) =>
+        runLocalAuthority(context, {
+          execution: createRetainedExecution({
+            ...executionOptions,
+            stdout: exactDirtyNavigationFrame,
+          }),
+        }),
+    });
+  }
+  for (const [label, failureClass, executionOptions] of processCases) {
+    for (const [actionId, expectedFailureClass] of [
+      [bootstrapSettlementAction.id, failureClass],
+      [dirtyNavigationFailureAction.id, failureClass],
+      [settlementTwinAction.id, null],
+    ]) {
+      await runSettlementDiagnosticCase({
+        label:
+          label +
+          (expectedFailureClass === null
+            ? " non-auth"
+            : actionId === dirtyNavigationFailureAction.id
+              ? " dirty-navigation"
+              : " auth"),
+        actionId,
+        expectedFailureClass,
+        operation: (context) =>
+          runLocalAuthority(context, {
+            execution: createRetainedExecution(executionOptions),
+          }),
+      });
+    }
+  }
+  for (const [actionId, expectedFailureClass] of [
+    [bootstrapSettlementAction.id, "process_runner_failed"],
+    [dirtyNavigationFailureAction.id, "process_runner_failed"],
+    [settlementTwinAction.id, null],
+  ]) {
+    await runSettlementDiagnosticCase({
+      label:
+        "runner throw " +
+        (expectedFailureClass === null
+          ? "non-auth"
+          : actionId === dirtyNavigationFailureAction.id
+            ? "dirty-navigation"
+            : "auth"),
+      actionId,
+      expectedFailureClass,
+      operation: (context) => runLocalAuthority(context, { runnerThrows: true }),
+    });
+  }
+  const cleanMalformedExecution = Object.freeze({
+    ...createRetainedExecution(),
+    completion: undefined,
+  });
+  const secretGetterMalformedExecution = Object.freeze({
+    timedOut: false,
+    spawnError: false,
+    stdout: Object.freeze({
+      bytes: Buffer.from(settlementPrivateMarker + "\n"),
+      exceeded: false,
+    }),
+    stderr: Object.freeze({ bytes: Buffer.alloc(0), exceeded: false }),
+    get completion() {
+      throw new Error(settlementPrivateMarker);
+    },
+    termination: Object.freeze({ absent: true }),
+  });
+  for (const [label, execution, postSnapshotThrows] of [
+    ["clean malformed process result", cleanMalformedExecution, false],
+    ["secret getter malformed process result", secretGetterMalformedExecution, true],
+  ]) {
+    for (const actionId of [bootstrapSettlementAction.id, settlementTwinAction.id]) {
+      const scanProbe =
+        execution === secretGetterMalformedExecution
+          ? createSensitiveScanProbe(settlementPrivateMarker)
+          : null;
+      await runSettlementDiagnosticCase({
+        label: label + (actionId === settlementTwinAction.id ? " non-auth" : " auth"),
+        actionId,
+        operation: (context) =>
+          runLocalAuthority(context, {
+            execution,
+            postSnapshotThrows,
+            ...(scanProbe === null ? {} : { sensitiveValues: scanProbe.sensitiveValues }),
+          }),
+      });
+      if (scanProbe !== null) {
+        invariant(scanProbe.calls() === 1, label + " did not scan the retained secret buffer");
+      }
+    }
+  }
+  const overlappingProcessOptions = {
+    stdoutExceeded: true,
+    timedOut: true,
+    spawnError: true,
+    terminationAbsent: false,
+    stderr: Buffer.from("safe"),
+    code: 1,
+  };
+  const repositoryCases = [
+    ["repository exact frame", { stdout: exactLoginFrame }],
+    ...processCases.map(([label, , options]) => ["repository plus " + label, options]),
+    ["repository plus overlapping process flags", overlappingProcessOptions],
+  ];
+  for (const [label, executionOptions] of repositoryCases) {
+    for (const [actionId, expectedFailureClass] of [
+      [bootstrapSettlementAction.id, "repository_boundary_failed"],
+      [dirtyNavigationFailureAction.id, "repository_boundary_failed"],
+      [settlementTwinAction.id, null],
+    ]) {
+      await runSettlementDiagnosticCase({
+        label:
+          label +
+          (expectedFailureClass === null
+            ? " non-auth"
+            : actionId === dirtyNavigationFailureAction.id
+              ? " dirty-navigation"
+              : " auth"),
+        actionId,
+        expectedFailureClass,
+        operation: (context) =>
+          runLocalAuthority(context, {
+            execution: createRetainedExecution(executionOptions),
+            postSnapshotThrows: true,
+          }),
+      });
+    }
+  }
+  for (const [actionId, expectedFailureClass] of [
+    [bootstrapSettlementAction.id, "repository_boundary_failed"],
+    [dirtyNavigationFailureAction.id, "repository_boundary_failed"],
+    [settlementTwinAction.id, null],
+  ]) {
+    await runSettlementDiagnosticCase({
+      label:
+        "pre-snapshot failure " +
+        (expectedFailureClass === null
+          ? "non-auth"
+          : actionId === dirtyNavigationFailureAction.id
+            ? "dirty-navigation"
+            : "auth"),
+      actionId,
+      expectedFailureClass,
+      operation: (context) =>
+        runLocalAuthority(context, {
+          preSnapshotThrows: true,
+          assertAfter: ({ runnerCalls }) =>
+            invariant(runnerCalls === 0, "pre-snapshot failure invoked process runner"),
+        }),
+    });
+  }
+  for (const [label, executionOptions] of [
+    ...processCases.map(([caseLabel, , options]) => [caseLabel, options]),
+    ["overlapping process flags", overlappingProcessOptions],
+  ]) {
+    for (const secretChannel of ["stdout", "stderr"]) {
+      const secretExecutionOptions = {
+        ...executionOptions,
+        [secretChannel]: Buffer.from(settlementPrivateMarker + "\n"),
+      };
+      await runSettlementDiagnosticCase({
+        label: label + " secret " + secretChannel,
+        operation: (context) =>
+          runLocalAuthority(context, {
+            execution: createRetainedExecution(secretExecutionOptions),
+          }),
+      });
+      await runSettlementDiagnosticCase({
+        label: "repository plus " + label + " secret " + secretChannel,
+        operation: (context) =>
+          runLocalAuthority(context, {
+            execution: createRetainedExecution(secretExecutionOptions),
+            postSnapshotThrows: true,
+          }),
+      });
+    }
+  }
+  for (const [actionId, expectedFailureClass] of [
+    [bootstrapSettlementAction.id, "receipt_boundary_failed"],
+    [dirtyNavigationFailureAction.id, "receipt_boundary_failed"],
+    [settlementTwinAction.id, null],
+  ]) {
+    await runSettlementDiagnosticCase({
+      label:
+        "command receipt " +
+        (expectedFailureClass === null
+          ? "non-auth"
+          : actionId === dirtyNavigationFailureAction.id
+            ? "dirty-navigation"
+            : "auth"),
+      actionId,
+      expectedFailureClass,
+      operation: (context) => runLocalAuthority(context, { receiptThrows: true }),
+    });
+  }
+
+  const runBrowserOutputPipeline = async (
+    context,
+    bytes,
+    {
+      outputContract = plan.registries.outputs[context.action.outputSchemaId],
+      onParseAttempt = () => {},
+    } = {}
+  ) => {
+    const commandResult = Object.freeze({ stdout: bytes });
+    const normalizedBytes = await normalizePrivateBrowserOutputWithAuthSettlementBoundary(
+      context.action,
+      commandResult,
+      () => normalizeBrowserCommandOutput({}, context.action, context.action.executable, bytes, {})
+    );
+    const failureClass = classifyPrivateAuthSettlementFailureFrame(
+      context.action.id,
+      normalizedBytes
+    );
+    if (failureClass !== null) throw createPrivateAuthSettlementFailure(failureClass);
+    const toneOpenFailureClass = classifyPrivateToneOpenFailureFrame(
+      context.action.id,
+      normalizedBytes
+    );
+    if (toneOpenFailureClass !== null) {
+      throw createPrivateToneOpenFailure(toneOpenFailureClass);
+    }
+    const toneSelectFailureClass = classifyPrivateToneSelectFailureFrame(
+      context.action.id,
+      normalizedBytes
+    );
+    if (toneSelectFailureClass !== null) {
+      throw createPrivateToneSelectFailure(toneSelectFailureClass);
+    }
+    const dirtyNavigationFailureClass = classifyPrivateDirtyNavigationFailureFrame(
+      context.action.id,
+      normalizedBytes
+    );
+    if (dirtyNavigationFailureClass !== null) {
+      throw createPrivateDirtyNavigationFailure(dirtyNavigationFailureClass);
+    }
+    return parsePrivateBrowserSuccessWithAuthSettlementBoundary(
+      context.action,
+      commandResult,
+      normalizedBytes,
+      () => {
+        onParseAttempt();
+        return parseRegisteredOutput(
+          outputContract,
+          normalizedBytes,
+          context.action.id,
+          selfTestContext(plan, context.action.id)
+        );
+      }
+    );
+  };
+  await runSettlementDiagnosticCase({
+    label: "normalized tone-open frame pipeline",
+    actionId: toneOpenFailureAction.id,
+    expectedFailureClass: TONE_OPEN_BROWSER_FAILURE_CLASSES[3],
+    operation: (context) =>
+      runBrowserOutputPipeline(
+        context,
+        Buffer.from(TONE_OPEN_FAILURE_FRAMES[TONE_OPEN_BROWSER_FAILURE_CLASSES[3]], "utf8")
+      ),
+  });
+  await runSettlementDiagnosticCase({
+    label: "normalized tone-select frame pipeline",
+    actionId: toneSelectFailureAction.id,
+    expectedFailureClass: TONE_SELECT_BROWSER_FAILURE_CLASSES[5],
+    operation: (context) =>
+      runBrowserOutputPipeline(
+        context,
+        Buffer.from(TONE_SELECT_FAILURE_FRAMES[TONE_SELECT_BROWSER_FAILURE_CLASSES[5]], "utf8")
+      ),
+  });
+  await runSettlementDiagnosticCase({
+    label: "normalized dirty-navigation frame pipeline",
+    actionId: dirtyNavigationFailureAction.id,
+    expectedFailureClass: DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[9],
+    operation: (context) =>
+      runBrowserOutputPipeline(
+        context,
+        Buffer.from(
+          DIRTY_NAVIGATION_FAILURE_FRAMES[DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[9]],
+          "utf8"
+        )
+      ),
+  });
+  for (const [label, bytes] of [
+    ["invalid UTF-8", Buffer.from([0xc3, 0x28])],
+    ["empty framing", Buffer.alloc(0)],
+    ["multiline framing", Buffer.from("{}\n{}\n")],
+  ]) {
+    for (const [actionId, expectedFailureClass] of [
+      [bootstrapSettlementAction.id, "output_normalization_failed"],
+      [dirtyNavigationFailureAction.id, "output_normalization_failed"],
+      [settlementTwinAction.id, null],
+    ]) {
+      await runSettlementDiagnosticCase({
+        label:
+          label +
+          (expectedFailureClass === null
+            ? " non-auth"
+            : actionId === dirtyNavigationFailureAction.id
+              ? " dirty-navigation"
+              : " auth"),
+        actionId,
+        expectedFailureClass,
+        operation: (context) => runBrowserOutputPipeline(context, bytes),
+      });
+    }
+  }
+  const genericSuccessFrames = [
+    Buffer.from("{\n"),
+    Buffer.from(
+      canonicalJson({
+        url: plan.fixtureBlueprint.origins.admin + "/admin/",
+        userMenuVisible: "true",
+        userName: "Bootstrap Admin",
+      }) + "\n"
+    ),
+    Buffer.from(
+      canonicalJson({
+        rawUrl: "safe-value",
+        url: plan.fixtureBlueprint.origins.admin + "/admin/",
+        userMenuVisible: true,
+        userName: "Bootstrap Admin",
+      }) + "\n"
+    ),
+    Buffer.from(canonicalJson({ failureClass: "unknown", settled: false }) + "\n"),
+    Buffer.from(canonicalJson({ failureClass: "process_timeout", settled: false }) + "\n"),
+  ];
+  for (const [index, bytes] of genericSuccessFrames.entries()) {
+    await runSettlementDiagnosticCase({
+      label: "ineligible success frame " + index,
+      operation: (context) => runBrowserOutputPipeline(context, bytes),
+    });
+  }
+  const semanticSuccessFrames = [
+    {
+      url: plan.fixtureBlueprint.origins.admin + "/admin/wrong",
+      userMenuVisible: true,
+      userName: "Bootstrap Admin",
+    },
+    {
+      url: plan.fixtureBlueprint.origins.admin + "/admin/",
+      userMenuVisible: false,
+      userName: "Bootstrap Admin",
+    },
+    {
+      url: plan.fixtureBlueprint.origins.admin + "/admin/",
+      userMenuVisible: true,
+      userName: "",
+    },
+  ];
+  const authSettlementOutputContract =
+    plan.registries.outputs[bootstrapSettlementAction.outputSchemaId];
+  for (const [index, value] of semanticSuccessFrames.entries()) {
+    for (const [actionId, expectedFailureClass] of [
+      [bootstrapSettlementAction.id, "success_contract_failed"],
+      [settlementTwinAction.id, null],
+    ]) {
+      let parseAttempts = 0;
+      await runSettlementDiagnosticCase({
+        label:
+          "eligible semantic success failure " +
+          index +
+          (expectedFailureClass === null ? " non-auth" : " auth"),
+        actionId,
+        expectedFailureClass,
+        operation: (context) =>
+          runBrowserOutputPipeline(context, Buffer.from(canonicalJson(value) + "\n"), {
+            outputContract: authSettlementOutputContract,
+            onParseAttempt: () => {
+              parseAttempts += 1;
+            },
+          }),
+      });
+      invariant(parseAttempts === 1, "semantic success twin did not reach the auth parser");
+    }
+  }
+  invariant(
+    isExactAuthSettlementSuccessFrame(bootstrapSettlementAction, successfulGeneratedFrame) &&
+      !isExactAuthSettlementSuccessFrame(settlementTwinAction, successfulGeneratedFrame),
+    "auth settlement exact success eligibility drift"
+  );
+  for (const [actionId, expectedFailureClass] of [
+    [bootstrapSettlementAction.id, "invocation_boundary_failed"],
+    [dirtyNavigationFailureAction.id, "invocation_boundary_failed"],
+    [settlementTwinAction.id, null],
+  ]) {
+    await runSettlementDiagnosticCase({
+      label:
+        "invocation boundary " +
+        (expectedFailureClass === null
+          ? "non-auth"
+          : actionId === dirtyNavigationFailureAction.id
+            ? "dirty-navigation"
+            : "auth"),
+      actionId,
+      expectedFailureClass,
+      operation: ({ action }) =>
+        buildPrivateBrowserInvocationWithAuthSettlementBoundary(action, () =>
+          compileActionExecutionSpec({ ...action, builder: "observe(" })
+        ),
+    });
+  }
+  for (const [actionId, expectedFailureClass] of [
+    [bootstrapSettlementAction.id, "receipt_boundary_failed"],
+    [dirtyNavigationFailureAction.id, "receipt_boundary_failed"],
+    [settlementTwinAction.id, null],
+  ]) {
+    await runSettlementDiagnosticCase({
+      label:
+        "final result validator " +
+        (expectedFailureClass === null
+          ? "non-auth"
+          : actionId === dirtyNavigationFailureAction.id
+            ? "dirty-navigation"
+            : "auth"),
+      actionId,
+      expectedFailureClass,
+      operation: async (context) => {
+        const commandResult = await runLocalAuthority(context);
+        const receipt = deepFreezeExact({
+          ...commandResult.receipt,
+          method: null,
+          pattern: null,
+          sanitizedOutput: "{}",
+        });
+        return finalizePrivateBrowserResultWithAuthSettlementBoundary(
+          context.action,
+          context.action.executable,
+          plan,
+          commandResult,
+          () =>
+            deepFreezeExact({
+              receipt,
+              captureBindings: { unauthorized: "safe" },
+              acquisitionDelta: emptyResourceDelta(),
+              settledCreateOrigin: null,
+            })
+        );
+      },
+    });
+  }
   invariant(
     deepEqualJson(observedPreviewRuntimeActionIds, [...previewRuntimeActionSelectors.keys()]),
     "nine preview runtime selector actions drift"
@@ -22564,7 +28849,7 @@ export async function runTask540SmokeExecutorSelfTest() {
     "contract fixture cleanup cardinality drift"
   );
   invariant(
-    evidence.cleanupReceipts.length === 54 &&
+    evidence.cleanupReceipts.length === 72 &&
       evidence.cleanupReceipts.length ===
         evidence.resources.filter(
           ({ class: className, kind }) =>
@@ -22572,6 +28857,23 @@ export async function runTask540SmokeExecutorSelfTest() {
         ).length *
           3,
     "ledger-derived persistent cleanup cardinality drift"
+  );
+  const lifecycleSeoRecords = successCapabilities.lastFinalPlan.ledger.filter(
+    ({ kind }) => kind === "seo-document-entry"
+  );
+  const lifecycleSeoTargetIds = TASK_FIXTURE_ENTRY_SEMANTICS.map((entrySemantic) =>
+    fixtureCaptureValue(plan.fixtureSubjectCapture[entrySemantic], plan)
+  ).sort();
+  invariant(
+    lifecycleSeoRecords.length === 6 &&
+      deepEqualJson(
+        lifecycleSeoRecords.map(({ identifier }) => identifier[2]).sort(),
+        lifecycleSeoTargetIds
+      ) &&
+      evidence.resources.filter(({ kind }) => kind === "seo-document-entry").length === 6 &&
+      evidence.cleanupReceipts.filter(({ subjectKind }) => subjectKind === "seo-document-entry")
+        .length === 18,
+    "full cleanup lifecycle did not cover all six exact SEO entry documents"
   );
   invariant(
     deepEqualJson(
@@ -23030,7 +29332,7 @@ export async function runTask540SmokeExecutorSelfTest() {
 
   validateStaticBunBridgeDescriptorRegistries();
   const exactChildInputSchemaIds = Object.keys(BUN_BRIDGE_INPUT_VALIDATORS).sort();
-  invariant(exactChildInputSchemaIds.length === 24, "Bun child input schema count drift");
+  invariant(exactChildInputSchemaIds.length === 26, "Bun child input schema count drift");
   for (const schemaId of exactChildInputSchemaIds) {
     const input = selfTestBunBridgeInputForSchema(schemaId);
     invariant(
@@ -23046,6 +29348,7 @@ export async function runTask540SmokeExecutorSelfTest() {
       "failure-discovery",
       [dryResourceUuid(1), dryResourceUuid(2), "task-540-block", "mediaAssetId"],
     ],
+    ["seo-document-entry", "cleanup-discovery", [dryResourceUuid(19), "entry", dryResourceUuid(7)]],
     [
       "setting-user-a",
       "failure-discovery",
@@ -23097,7 +29400,7 @@ export async function runTask540SmokeExecutorSelfTest() {
   const dryPersistentResourceRecords = dryResourceLedger.compileResourceRecords("persistent");
   const dryTerminalResourceRecords = dryResourceLedger.compileResourceRecords("terminal");
   invariant(
-    dryPersistentResourceRecords.length === 16 &&
+    dryPersistentResourceRecords.length === 17 &&
       dryTerminalResourceRecords.length === 3 &&
       new Set(
         [...dryPersistentResourceRecords, ...dryTerminalResourceRecords].map(
@@ -23122,10 +29425,10 @@ export async function runTask540SmokeExecutorSelfTest() {
     )
   );
   invariant(
-    staticDryDescriptors.length === 60 &&
-      resourceDryDescriptors.length === 40 &&
-      seenResourceSpecKeys.size === 38 &&
-      Object.keys(RESOURCE_BUN_SOURCE_SPECS).length === 38 &&
+    staticDryDescriptors.length === 61 &&
+      resourceDryDescriptors.length === 43 &&
+      seenResourceSpecKeys.size === 41 &&
+      Object.keys(RESOURCE_BUN_SOURCE_SPECS).length === 41 &&
       deepEqualJson(
         [...seenResourceSpecKeys].sort(),
         Object.keys(RESOURCE_BUN_SOURCE_SPECS).sort()
@@ -23196,9 +29499,9 @@ export async function runTask540SmokeExecutorSelfTest() {
     );
   }
   invariant(
-    dryExternalExecutionTrapCalls === 100 &&
-      dryDispatchProjections.length === 100 &&
-      new Set(dryDispatchProjections.map(({ operationId }) => operationId)).size === 100,
+    dryExternalExecutionTrapCalls === 104 &&
+      dryDispatchProjections.length === 104 &&
+      new Set(dryDispatchProjections.map(({ operationId }) => operationId)).size === 104,
     "Bun static/resource dry-dispatch coverage drift"
   );
   const missingRuntimeRegistry = { ...BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS };
@@ -24098,6 +30401,7 @@ export async function runTask540SmokeExecutorSelfTest() {
       propPath: "mediaAssetId",
       screenId: "54000000-0000-4000-8000-000000007417",
     },
+    overrideExpectedPresent: true,
   };
   invariant(
     validateBunBridgeInput(
@@ -24484,7 +30788,7 @@ export async function runTask540SmokeExecutorSelfTest() {
     "pending attempt batch double consumption"
   );
   invariant(
-    Object.keys(RESOURCE_KIND_CONTRACTS).length === 25 &&
+    Object.keys(RESOURCE_KIND_CONTRACTS).length === 26 &&
       Object.keys(RESOURCE_KIND_CONTRACTS).every(
         (kind) =>
           RESOURCE_KIND_CONTRACTS[kind].identifierArity ===
@@ -24585,7 +30889,7 @@ export async function runTask540SmokeExecutorSelfTest() {
   );
   const terminalCount = terminalRecords.length;
   invariant(
-    terminalCount === 3 && terminalEvidence.cleanupReceipts.length === 54 + 3 * terminalCount,
+    terminalCount === 3 && terminalEvidence.cleanupReceipts.length === 72 + 3 * terminalCount,
     "dynamic terminal cleanup cardinality drift"
   );
   const terminalFinalPlan = terminalCapabilities.lastFinalPlan;
@@ -24742,6 +31046,1273 @@ export async function runTask540SmokeExecutorSelfTest() {
     "non-owner record owner injection"
   );
 
+  const makeCleanupAdminProbe = (responseFrames) => {
+    const userId = "54000000-0000-4000-8000-000000007540";
+    const sessionId = "54000000-0000-4000-8000-000000007541";
+    const capability = Object.freeze({
+      key: "bootstrap",
+      userAgent: "TASK-540/cleanup-hash-self-test",
+      userId,
+    });
+    const requests = [];
+    const runtimeReceipts = [];
+    let responseIndex = 0;
+    const context = {
+      async fetch(url, options) {
+        requests.push(
+          deepFreezeExact({
+            method: options.method,
+            pathname: new URL(url).pathname,
+          })
+        );
+        invariant(responseIndex < responseFrames.length, "cleanup hash probe response underflow");
+        const frame = responseFrames[responseIndex++];
+        return {
+          async dispose() {},
+          status: () => frame.status,
+          text: async () => frame.body,
+        };
+      },
+    };
+    const state = {
+      assertSafeEvidence() {},
+      bootstrapBaseline: { id: userId },
+      deletedSubjects: new Set(),
+      earlyApiSessionTuples: new Map([["bootstrap", { id: sessionId }]]),
+      fixtureIds: new Map(),
+      plan,
+      runtimeReceiptSequence: 0,
+      sessions: new Map([["bootstrap", capability]]),
+    };
+    PRIVATE_API_REQUEST_CONTEXT.set(
+      state,
+      new Map([
+        [
+          "bootstrap",
+          {
+            capability,
+            context,
+            csrf: "[redacted]",
+            disposeProof: null,
+            key: "bootstrap",
+            sessionId,
+            userAgent: capability.userAgent,
+          },
+        ],
+      ])
+    );
+    PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY.set(state, { restorationStarted: false });
+    PRIVATE_RUNTIME.set(state, {
+      authRatePolicy: null,
+      csrfHeaderName: "x-coderso-csrf",
+      repoEnvironment: null,
+    });
+    return {
+      assertConsumed() {
+        invariant(responseIndex === responseFrames.length, "cleanup hash probe response overflow");
+      },
+      requests,
+      runtimeReceipts,
+      state,
+    };
+  };
+  for (const [label, byteLength] of [
+    ["one-byte Buffer", 1],
+    ["maximum-size Buffer", MAX_STREAM_BYTES],
+  ]) {
+    const authoritativeBytes = Buffer.alloc(byteLength, 0x61);
+    invariant(
+      hashCleanupAuthoritativeBytes(authoritativeBytes, "cleanup hash " + label) ===
+        hashBytes(authoritativeBytes),
+      "cleanup hash " + label + " acceptance drift"
+    );
+  }
+  for (const [label, authoritativeBytes] of [
+    ["non-Buffer", "not-authoritative-bytes"],
+    ["empty Buffer", Buffer.alloc(0)],
+    ["oversized Buffer", Buffer.alloc(MAX_STREAM_BYTES + 1)],
+  ]) {
+    await expectAsyncFailure(
+      async () => hashCleanupAuthoritativeBytes(authoritativeBytes, "cleanup hash " + label),
+      "cleanup hash " + label + " rejection"
+    );
+  }
+  const cleanupAuthoritativeHashSource = hashCleanupAuthoritativeBytes.toString();
+  const cleanupPositiveByteLengthToken = "authoritativeBytes.length > 0";
+  const cleanupMaximumByteLengthToken = "authoritativeBytes.length <= MAX_STREAM_BYTES";
+  const validatesCleanupAuthoritativeHashBounds = (source) =>
+    source.split(cleanupPositiveByteLengthToken).length - 1 === 1 &&
+    source.split(cleanupMaximumByteLengthToken).length - 1 === 1 &&
+    !source.includes("authoritativeBytes.length > 1") &&
+    !source.includes("authoritativeBytes.length < MAX_STREAM_BYTES");
+  invariant(
+    validatesCleanupAuthoritativeHashBounds(cleanupAuthoritativeHashSource),
+    "cleanup authoritative hash boundary source drift"
+  );
+  for (const [label, token, replacement] of [
+    ["positive byte length", cleanupPositiveByteLengthToken, "authoritativeBytes.length > 1"],
+    [
+      "maximum byte length",
+      cleanupMaximumByteLengthToken,
+      "authoritativeBytes.length < MAX_STREAM_BYTES",
+    ],
+  ]) {
+    assertNegative(
+      !validatesCleanupAuthoritativeHashBounds(
+        cleanupAuthoritativeHashSource.replace(token, replacement)
+      ),
+      "cleanup hash " + label + " boundary mutant"
+    );
+  }
+  const cleanupScreenId = sourceCaptures.get("screen.id");
+  const cleanupEntryId = sourceCaptures.get("entry.id");
+  const cleanupScreenPresentBody = JSON.stringify({
+    id: cleanupScreenId,
+    legalRepresentationDrift: { layout: "screen-vNext" },
+  });
+  const cleanupDeleteBody = JSON.stringify({ ok: true });
+  const cleanupAbsentBody = JSON.stringify({ code: "not_found", representation: "vNext" });
+  const cleanupPcaProbe = makeCleanupAdminProbe([
+    { body: cleanupScreenPresentBody, status: 200 },
+    { body: cleanupDeleteBody, status: 200 },
+    { body: cleanupAbsentBody, status: 404 },
+  ]);
+  const cleanupScreenSubject = { kind: "screen", id: cleanupScreenId, storageKey: null };
+  const cleanupPresentProof = await proveCleanupSubjectPresent(
+    cleanupPcaProbe.state,
+    cleanupScreenSubject
+  );
+  const cleanupDeleteProof = await deleteCleanupSubject(
+    cleanupPcaProbe.state,
+    cleanupScreenSubject
+  );
+  const cleanupAbsentProof = await proveCleanupSubjectAbsent(
+    cleanupPcaProbe.state,
+    cleanupScreenSubject
+  );
+  cleanupPcaProbe.assertConsumed();
+  const cleanupPcaHashes = [cleanupScreenPresentBody, cleanupDeleteBody, cleanupAbsentBody].map(
+    (body) => hashBytes(Buffer.from(body))
+  );
+  invariant(
+    deepEqualJson(cleanupPresentProof, {
+      observedBytesSha256: cleanupPcaHashes[0],
+      output: { present: true },
+    }) &&
+      deepEqualJson(cleanupDeleteProof, { observedBytesSha256: cleanupPcaHashes[1] }) &&
+      deepEqualJson(cleanupAbsentProof, { observedBytesSha256: cleanupPcaHashes[2] }) &&
+      deepEqualJson(
+        cleanupPcaProbe.requests.map(({ method }) => method),
+        ["GET", "DELETE", "GET"]
+      ) &&
+      cleanupPcaProbe.requests.every(({ pathname }) => pathname.endsWith("/" + cleanupScreenId)),
+    "cleanup production P/C/A authoritative hash drift"
+  );
+  assertRecursivelyFrozen(cleanupPresentProof);
+  assertRecursivelyFrozen(cleanupDeleteProof);
+  assertRecursivelyFrozen(cleanupAbsentProof);
+  const cleanupReceiptRecord = {
+    identifier: [cleanupScreenId],
+    kind: "custom-screen",
+  };
+  const cleanupReceiptOutputs = [{ present: true }, { deleted: true }, { absent: true }];
+  const cleanupHashReceipts = cleanupPcaHashes.map((observedBytesSha256, index) => {
+    const operation = "cleanup-" + CLEANUP_OPERATION_KINDS[index];
+    const operationDescriptor = "cleanup-hash-self-test-" + CLEANUP_OPERATION_KINDS[index];
+    const output = cleanupReceiptOutputs[index];
+    const receipt = cleanupRuntimeReceipt(
+      cleanupPcaProbe.state,
+      operation,
+      operationDescriptor,
+      cleanupReceiptRecord,
+      output,
+      observedBytesSha256
+    );
+    const expectedEvidenceSha256 = hashBytes(
+      Buffer.from(
+        canonicalJson({
+          observedBytesSha256,
+          operation,
+          operationDescriptor,
+          output,
+          subjectIdentifier: cleanupScreenId,
+          subjectKind: cleanupReceiptRecord.kind,
+        }) + "\n"
+      )
+    );
+    invariant(
+      receipt.evidenceSha256 === expectedEvidenceSha256,
+      CLEANUP_OPERATION_KINDS[index] + " cleanup receipt observed hash drift"
+    );
+    return receipt;
+  });
+  invariant(
+    new Set(cleanupHashReceipts.map(({ evidenceSha256 }) => evidenceSha256)).size === 3,
+    "cleanup receipt hashes did not bind exact authoritative observations"
+  );
+  await expectAsyncFailure(
+    async () =>
+      cleanupRuntimeReceipt(
+        cleanupPcaProbe.state,
+        "cleanup-provenance",
+        "cleanup-hash-buffer-mutant",
+        cleanupReceiptRecord,
+        { present: true },
+        Buffer.from("nonempty-authoritative-response")
+      ),
+    "cleanup receipt raw Buffer rejection"
+  );
+  await expectAsyncFailure(
+    async () =>
+      cleanupRuntimeReceipt(
+        cleanupPcaProbe.state,
+        "cleanup-provenance",
+        "cleanup-hash-uppercase-mutant",
+        cleanupReceiptRecord,
+        { present: true },
+        cleanupPcaHashes[0].toUpperCase()
+      ),
+    "cleanup receipt noncanonical hash rejection"
+  );
+
+  const cleanupEntryPresentBody = JSON.stringify({
+    data: { legalRepresentationDrift: true },
+    id: cleanupEntryId,
+  });
+  const cleanupEntryProbe = makeCleanupAdminProbe([{ body: cleanupEntryPresentBody, status: 200 }]);
+  const cleanupEntryProof = await proveCleanupSubjectPresent(cleanupEntryProbe.state, {
+    kind: "editable-entry",
+    id: cleanupEntryId,
+    storageKey: null,
+  });
+  cleanupEntryProbe.assertConsumed();
+  invariant(
+    cleanupEntryProof.observedBytesSha256 === hashBytes(Buffer.from(cleanupEntryPresentBody)) &&
+      cleanupEntryProbe.requests[0]?.method === "GET",
+    "cleanup legal Entry representation drift was rejected"
+  );
+
+  const runCleanupPcaOperationChain = async (
+    probe,
+    record,
+    fixtureSemantic,
+    fixtureId,
+    executeOperation = executeResourceCleanupOperation
+  ) => {
+    probe.state.fixtureIds.set(fixtureSemantic, fixtureId);
+    for (const operationKind of CLEANUP_OPERATION_KINDS) {
+      probe.runtimeReceipts.push(await executeOperation(probe.state, record, operationKind));
+    }
+  };
+  const cleanupPcaRejectionIsMutationFree = (probe) =>
+    probe.requests.length === 1 &&
+    probe.requests.every(({ method }) => method === "GET") &&
+    probe.state.deletedSubjects.size === 0 &&
+    probe.state.runtimeReceiptSequence === 0 &&
+    probe.runtimeReceipts.length === 0;
+  const cleanupScreenResourceRecord = successCapabilities.lastFinalPlan.ledger.find(
+    ({ identifier, kind }) => kind === "screen-main" && identifier[0] === cleanupScreenId
+  );
+  invariant(cleanupScreenResourceRecord !== undefined, "cleanup Screen ledger record is absent");
+
+  const wrongCleanupIdProbe = makeCleanupAdminProbe([
+    {
+      body: JSON.stringify({ id: "54000000-0000-4000-8000-000000007599" }),
+      status: 200,
+    },
+  ]);
+  await expectAsyncFailure(
+    () =>
+      runCleanupPcaOperationChain(
+        wrongCleanupIdProbe,
+        cleanupScreenResourceRecord,
+        "screen",
+        cleanupScreenId
+      ),
+    "cleanup wrong Screen ID rejection"
+  );
+  wrongCleanupIdProbe.assertConsumed();
+  invariant(
+    cleanupPcaRejectionIsMutationFree(wrongCleanupIdProbe),
+    "cleanup wrong Screen ID crossed the mutation boundary"
+  );
+  const receiptBeforeFailureProbe = makeCleanupAdminProbe([
+    {
+      body: JSON.stringify({ id: "54000000-0000-4000-8000-000000007598" }),
+      status: 200,
+    },
+  ]);
+  await expectAsyncFailure(
+    () =>
+      runCleanupPcaOperationChain(
+        receiptBeforeFailureProbe,
+        cleanupScreenResourceRecord,
+        "screen",
+        cleanupScreenId,
+        async (state, record, operationKind) => {
+          receiptBeforeFailureProbe.runtimeReceipts.push(
+            cleanupRuntimeReceipt(
+              state,
+              "cleanup-" + operationKind,
+              "cleanup-pre-failure-receipt-mutant",
+              record,
+              { mutant: "receipt-before-failure" }
+            )
+          );
+          return executeResourceCleanupOperation(state, record, operationKind);
+        }
+      ),
+    "cleanup pre-failure receipt mutant execution"
+  );
+  receiptBeforeFailureProbe.assertConsumed();
+  assertNegative(
+    !cleanupPcaRejectionIsMutationFree(receiptBeforeFailureProbe),
+    "cleanup pre-failure receipt mutant"
+  );
+  const cleanupMediaId = sourceCaptures.get("media.id");
+  const cleanupMediaKey = sourceCaptures.get("media.storage-key");
+  const cleanupMediaResourceRecord = successCapabilities.lastFinalPlan.ledger.find(
+    ({ identifier, kind }) =>
+      kind === "media-row-key" &&
+      identifier[0] === cleanupMediaId &&
+      identifier[1] === cleanupMediaKey
+  );
+  invariant(cleanupMediaResourceRecord !== undefined, "cleanup media ledger record is absent");
+  for (const [label, value] of [
+    [
+      "wrong media key",
+      { id: cleanupMediaId, key: cleanupMediaKey + ".wrong", url: "/media/" + cleanupMediaKey },
+    ],
+    [
+      "wrong media URL",
+      { id: cleanupMediaId, key: cleanupMediaKey, url: "/media/wrong/" + cleanupMediaKey },
+    ],
+  ]) {
+    const probe = makeCleanupAdminProbe([{ body: JSON.stringify(value), status: 200 }]);
+    await expectAsyncFailure(
+      () => runCleanupPcaOperationChain(probe, cleanupMediaResourceRecord, "media", cleanupMediaId),
+      "cleanup " + label + " rejection"
+    );
+    probe.assertConsumed();
+    invariant(
+      cleanupPcaRejectionIsMutationFree(probe),
+      "cleanup " + label + " crossed the mutation boundary"
+    );
+  }
+
+  const cleanupSubjectHashSourceContracts = [
+    {
+      label: "delete",
+      source: deleteCleanupSubject.toString(),
+      token: "return deepFreezeExact({ observedBytesSha256 });",
+    },
+    {
+      label: "provenance",
+      source: proveCleanupSubjectPresent.toString(),
+      token: "observedBytesSha256: response.observedBytesSha256,",
+    },
+    {
+      label: "absence",
+      source: proveCleanupSubjectAbsent.toString(),
+      token: "return deepFreezeExact({ observedBytesSha256: response.observedBytesSha256 });",
+    },
+  ];
+  const validatesCleanupSubjectHashSource = (source, token) =>
+    source.includes(token) &&
+    source.includes("hashCleanupAuthoritativeBytes(") &&
+    !source.includes("deepFreezeExact({ authoritativeBytes") &&
+    !source.includes("authoritativeBytes: response.authoritativeBytes");
+  for (const { label, source, token } of cleanupSubjectHashSourceContracts) {
+    invariant(
+      validatesCleanupSubjectHashSource(source, token),
+      "cleanup " + label + " observed-hash source drift"
+    );
+    const mutant = source.replace(
+      token,
+      label === "absence"
+        ? "return deepFreezeExact({ authoritativeBytes: response.authoritativeBytes });"
+        : label === "provenance"
+          ? "authoritativeBytes: response.authoritativeBytes,"
+          : 'return deepFreezeExact({ authoritativeBytes: Buffer.from("mutant") });'
+    );
+    assertNegative(
+      !validatesCleanupSubjectHashSource(mutant, token),
+      "cleanup " + label + " raw-authoritative-bytes source mutant"
+    );
+  }
+  const cleanupReceiptHashSource = cleanupRuntimeReceipt.toString();
+  const cleanupReceiptObservedHashToken = "observedBytesSha256,\n      output,";
+  const validatesCleanupReceiptHashSource = (source) =>
+    source.includes(cleanupReceiptObservedHashToken) &&
+    source.includes(
+      'typeof observedBytesSha256 === "string" && /^[a-f0-9]{64}$/u.test(observedBytesSha256)'
+    ) &&
+    !source.includes("Buffer.isBuffer(observedBytesSha256)");
+  invariant(
+    validatesCleanupReceiptHashSource(cleanupReceiptHashSource),
+    "cleanup receipt observed-hash source drift"
+  );
+  for (const [label, replacement] of [
+    ["dropped", "observedBytesSha256: null,\n      output,"],
+    ["changed", "observedBytesSha256: hashBytes(Buffer.from(observedBytesSha256)),\n      output,"],
+  ]) {
+    assertNegative(
+      !validatesCleanupReceiptHashSource(
+        cleanupReceiptHashSource.replace(cleanupReceiptObservedHashToken, replacement)
+      ),
+      "cleanup receipt " + label + " observed-hash source mutant"
+    );
+  }
+  const presentationCleanupHashSource = executeResourceCleanupOperation.toString();
+  const presentationCleanupHashToken = '"presentation override cleanup provenance"';
+  const validatesPresentationCleanupHashSource = (source) =>
+    source.includes(presentationCleanupHashToken) &&
+    source.includes("observedBytesSha256 = response.observedBytesSha256;") &&
+    !source.includes("observedBytes = response.authoritativeBytes;");
+  invariant(
+    validatesPresentationCleanupHashSource(presentationCleanupHashSource),
+    "presentation override cleanup observed-hash source drift"
+  );
+  assertNegative(
+    !validatesPresentationCleanupHashSource(
+      presentationCleanupHashSource.replace(
+        "observedBytesSha256 = response.observedBytesSha256;",
+        "observedBytes = response.authoritativeBytes;"
+      )
+    ),
+    "presentation override raw-authoritative-bytes source mutant"
+  );
+  const intentionalCleanupHashSource =
+    executeIntentionalPresentationOverrideAlreadyAbsentCleanup.toString();
+  const intentionalCleanupHashToken = "const observedBytesSha256 = hashBytes(";
+  const validatesIntentionalCleanupHashSource = (source) =>
+    source.includes(intentionalCleanupHashToken) &&
+    source.includes("output,\n    observedBytesSha256\n  );");
+  invariant(
+    validatesIntentionalCleanupHashSource(intentionalCleanupHashSource),
+    "intentional override cleanup observed-hash source drift"
+  );
+  assertNegative(
+    !validatesIntentionalCleanupHashSource(
+      intentionalCleanupHashSource.replace(
+        "output,\n    observedBytesSha256\n  );",
+        "output,\n    null\n  );"
+      )
+    ),
+    "intentional override dropped observed-hash source mutant"
+  );
+  negativeCases += 12;
+
+  const overrideAuthorityActions = Object.fromEntries(
+    Object.entries(INTENTIONAL_PRESENTATION_OVERRIDE_ABSENCE_ACTIONS).map(([key, actionId]) => [
+      key,
+      plan.actionManifest.find(({ id }) => id === actionId),
+    ])
+  );
+  invariant(
+    Object.values(overrideAuthorityActions).every((action) => action !== undefined) &&
+      overrideAuthorityActions.acquisition.ordinal < overrideAuthorityActions.reset.ordinal &&
+      overrideAuthorityActions.reset.ordinal < overrideAuthorityActions.proof.ordinal &&
+      overrideAuthorityActions.proof.ordinal <
+        plan.actionManifest.find(({ id }) => id === "dg-003-builder").ordinal,
+    "dg-003 intentional override reset/proof order drift"
+  );
+  const overrideAuthorityCaptures = new SingleAssignmentCaptureMap();
+  overrideAuthorityCaptures.bind("screen.id", "54000000-0000-4000-8000-000000007501");
+  overrideAuthorityCaptures.bind("entry.id", "54000000-0000-4000-8000-000000007502");
+  const overrideAuthorityState = {
+    assertSafeEvidence() {},
+    intentionalPresentationOverrideAuthority: null,
+    intentionalPresentationOverrideCleanupProof: null,
+    intentionalPresentationOverrideObservations: new Map(),
+    pendingIntentionalPresentationOverrideReceipts: new Map(),
+    plan,
+    resourceKeys: new Map(),
+    runtimeReceiptSequence: 3,
+    overridesCleared: false,
+  };
+  const makeAuthorityReceipt = (action, sequence) =>
+    deepFreezeExact({
+      runnerVersion: ORCHESTRATOR_EVIDENCE_RUNNER_VERSION,
+      sequence,
+      operation: canonicalManifestRuntimeOperation(action),
+      operationDescriptor: action.executable.operationId,
+      status: 0,
+      evidenceSha256: hashBytes(Buffer.from("override-authority-receipt:" + action.id)),
+      subjectKind: null,
+      subjectIdentifier: null,
+      sanitizedOutput: "{}",
+    });
+  const overrideIdentifier = exactPresentationOverrideIdentifier(
+    overrideAuthorityState,
+    overrideAuthorityCaptures
+  );
+  const overrideCore = createResourceCore({
+    kind: "presentation-override",
+    identifier: overrideIdentifier,
+    ownerSubjectIdentifier: null,
+    acquisitionSourceId: "set-039-override-create",
+    sourceActionOrdinal: actionOrdinal(plan, "set-039-override-create"),
+    acquisitionChannel: "admin-api",
+  });
+  const overrideDelta = deepFreezeExact({
+    cores: deepFreezeExact([overrideCore]),
+    dependencyEdges: deepFreezeExact([]),
+  });
+  const emptyDelta = emptyResourceDelta();
+  const stageAuthorityAction = (key, sequence) => {
+    const action = overrideAuthorityActions[key];
+    stageIntentionalPresentationOverrideObservation(
+      overrideAuthorityState,
+      action,
+      overrideAuthorityCaptures,
+      Buffer.from("override-authority-response:" + action.id)
+    );
+    stageIntentionalPresentationOverrideActionReceipt(
+      overrideAuthorityState,
+      action,
+      makeAuthorityReceipt(action, sequence)
+    );
+    if (key === "acquisition") {
+      overrideAuthorityState.resourceKeys.set("presentation-override", overrideCore.resourceKey);
+    }
+    commitIntentionalPresentationOverrideActionAfterLedgerAppend(
+      overrideAuthorityState,
+      action,
+      key === "acquisition" ? overrideDelta : emptyDelta
+    );
+  };
+  stageAuthorityAction("acquisition", 1);
+  stageAuthorityAction("reset", 2);
+  invariant(
+    completeIntentionalPresentationOverrideAbsenceAuthority(overrideAuthorityState) === null,
+    "override reset without ss-006 proof authorized absence"
+  );
+  stageAuthorityAction("proof", 3);
+  const completeOverrideAuthority =
+    completeIntentionalPresentationOverrideAbsenceAuthority(overrideAuthorityState);
+  invariant(completeOverrideAuthority !== null, "complete override absence authority was rejected");
+  const overrideLedger = new ResourceLedgerBuilder();
+  overrideLedger.appendValidatedDelta(overrideDelta);
+  const [overrideRecord] = overrideLedger.compileResourceRecords("persistent");
+  overrideAuthorityState.intentionalPresentationOverrideCleanupProof = deepFreezeExact({
+    absenceOutputSha256: hashBytes(Buffer.from("fresh-current-owner-absence")),
+    identifier: overrideIdentifier,
+    operationDescriptor: "resource/current-owner-exact",
+    proofActionReceiptSha256: completeOverrideAuthority.proof.receiptEvidenceSha256,
+    resetActionReceiptSha256: completeOverrideAuthority.reset.receiptEvidenceSha256,
+  });
+  let freshOverrideAbsenceCalls = 0;
+  const overrideCleanupReceipts = [];
+  for (const operationKind of CLEANUP_OPERATION_KINDS) {
+    overrideCleanupReceipts.push(
+      await executeIntentionalPresentationOverrideAlreadyAbsentCleanup(
+        overrideAuthorityState,
+        overrideRecord,
+        operationKind,
+        async () => {
+          freshOverrideAbsenceCalls += 1;
+          return deepFreezeExact({ absent: true, affected: 0, present: false });
+        }
+      )
+    );
+  }
+  const overrideOnlyPlan = deepFreezeExact({
+    actionTuples: deepFreezeExact(cartesianCleanupTuples([overrideRecord.resourceKey])),
+    ledger: deepFreezeExact([overrideRecord]),
+  });
+  assertCleanupReceiptBijection(overrideOnlyPlan, overrideCleanupReceipts);
+  const intentionalOverrideObservedBytesSha256 = hashBytes(
+    Buffer.from(
+      canonicalJson({
+        identifier: overrideRecord.identifier,
+        operationDescriptor: overrideRecord.absenceOpId,
+        result: { absent: true, affected: 0, present: false },
+      }) + "\n"
+    )
+  );
+  for (const [index, receipt] of overrideCleanupReceipts.entries()) {
+    const operationKind = CLEANUP_OPERATION_KINDS[index];
+    const output = JSON.parse(receipt.sanitizedOutput);
+    const operationDescriptor =
+      operationKind === "provenance"
+        ? overrideRecord.provenanceOpId
+        : operationKind === "delete"
+          ? overrideRecord.cleanupOpId
+          : overrideRecord.absenceOpId;
+    invariant(
+      receipt.evidenceSha256 ===
+        hashBytes(
+          Buffer.from(
+            canonicalJson({
+              observedBytesSha256: intentionalOverrideObservedBytesSha256,
+              operation: "cleanup-" + operationKind,
+              operationDescriptor,
+              output,
+              subjectIdentifier: lengthPrefixedTuple(overrideRecord.identifier),
+              subjectKind: overrideRecord.kind,
+            }) + "\n"
+          )
+        ),
+      operationKind + " intentional override observed-hash receipt drift"
+    );
+  }
+  invariant(
+    freshOverrideAbsenceCalls === 3 &&
+      overrideAuthorityState.overridesCleared === true &&
+      overrideCleanupReceipts.every(({ sanitizedOutput }) =>
+        sanitizedOutput.includes('"alreadyDeletedByExactReset":true')
+      ),
+    "dg-003 failure cleanup did not preserve exact override P/C/A receipts"
+  );
+  await expectAsyncFailure(
+    async () =>
+      executeIntentionalPresentationOverrideAlreadyAbsentCleanup(
+        { ...overrideAuthorityState, intentionalPresentationOverrideCleanupProof: null },
+        overrideRecord,
+        "delete",
+        async () => deepFreezeExact({ absent: true, affected: 0, present: false })
+      ),
+    "override cleanup without fresh exact absence proof"
+  );
+  await expectAsyncFailure(
+    async () =>
+      executeIntentionalPresentationOverrideAlreadyAbsentCleanup(
+        overrideAuthorityState,
+        overrideRecord,
+        "delete",
+        async () => deepFreezeExact({ absent: false, affected: 0, present: true })
+      ),
+    "override cleanup contradictory fresh absence proof"
+  );
+  for (const [label, mutant] of [
+    [
+      "current owner missing authorized-absence cardinality",
+      CURRENT_RESOURCE_OWNER_QUERY_BRIDGE_SOURCE.replace(
+        "overrideRows.length !== 0",
+        "overrideRows.length > 1"
+      ),
+    ],
+    [
+      "current owner ambiguous override bound",
+      CURRENT_RESOURCE_OWNER_QUERY_BRIDGE_SOURCE.replace(
+        "overrideRows.length !== 1",
+        "overrideRows.length < 1"
+      ),
+    ],
+    [
+      "current owner nullable override projection",
+      CURRENT_RESOURCE_OWNER_QUERY_BRIDGE_SOURCE.replace(
+        "overrideRows[0] ?? null",
+        "overrideRows[0]"
+      ),
+    ],
+  ]) {
+    await expectAsyncFailure(
+      async () => assertCurrentResourceOwnerBridgeFailClosedSource(mutant),
+      label
+    );
+  }
+  negativeCases += 5;
+
+  for (const [label, mutant] of [
+    [
+      "SEO discovery missing entry target-type boundary",
+      SEO_ENTRY_DISCOVERY_BRIDGE_SOURCE.replace('eq(seoDocuments.targetType,"entry"),', ""),
+    ],
+    [
+      "SEO discovery missing exact target-ID boundary",
+      SEO_ENTRY_DISCOVERY_BRIDGE_SOURCE.replace(
+        "inArray(seoDocuments.targetId,input.targetIds)",
+        "eq(seoDocuments.targetId,input.targetIds[0])"
+      ),
+    ],
+    [
+      "SEO discovery accepts missing target IDs",
+      SEO_ENTRY_DISCOVERY_BRIDGE_SOURCE.replaceAll(
+        "targetIds.length !== 6",
+        "targetIds.length > 6"
+      ),
+    ],
+    [
+      "SEO discovery accepts duplicate target IDs",
+      SEO_ENTRY_DISCOVERY_BRIDGE_SOURCE.replaceAll(
+        "new Set(input.targetIds).size !== 6",
+        "new Set(input.targetIds).size > 6"
+      ),
+    ],
+    [
+      "SEO discovery loses overflow sentinel",
+      SEO_ENTRY_DISCOVERY_BRIDGE_SOURCE.replace(".limit(7)", ".limit(6)"),
+    ],
+  ]) {
+    await expectAsyncFailure(
+      async () => assertSeoEntryDiscoveryBridgeFailClosedSource(mutant),
+      label
+    );
+  }
+
+  const exactSeoEntryPredicate =
+    "const predicate = and(eq(seoDocuments.id,id),eq(seoDocuments.targetType,targetType),eq(seoDocuments.targetId,targetId));";
+  const seoPcaPredicateMutants = [
+    [
+      "SEO provenance predicate without exact document ID",
+      "provenance",
+      SEO_ENTRY_DOCUMENT_EXACT_BRIDGE_SOURCES.provenance.replace(
+        exactSeoEntryPredicate,
+        "const predicate = and(eq(seoDocuments.targetType,targetType),eq(seoDocuments.targetId,targetId));"
+      ),
+    ],
+    [
+      "SEO cleanup predicate without exact target type",
+      "delete",
+      SEO_ENTRY_DOCUMENT_EXACT_BRIDGE_SOURCES.delete.replace(
+        exactSeoEntryPredicate,
+        "const predicate = and(eq(seoDocuments.id,id),eq(seoDocuments.targetId,targetId));"
+      ),
+    ],
+    [
+      "SEO absence predicate without exact target ID",
+      "absence",
+      SEO_ENTRY_DOCUMENT_EXACT_BRIDGE_SOURCES.absence.replace(
+        exactSeoEntryPredicate,
+        "const predicate = and(eq(seoDocuments.id,id),eq(seoDocuments.targetType,targetType));"
+      ),
+    ],
+    [
+      "SEO provenance before-read bypasses exact predicate",
+      "provenance",
+      SEO_ENTRY_DOCUMENT_EXACT_BRIDGE_SOURCES.provenance.replace(
+        ".from(seoDocuments).where(predicate).limit(2);",
+        ".from(seoDocuments).where(eq(seoDocuments.id,id)).limit(2);"
+      ),
+    ],
+    [
+      "SEO cleanup delete bypasses exact predicate",
+      "delete",
+      SEO_ENTRY_DOCUMENT_EXACT_BRIDGE_SOURCES.delete.replace(
+        "db.delete(seoDocuments).where(predicate).returning",
+        "db.delete(seoDocuments).where(eq(seoDocuments.id,id)).returning"
+      ),
+    ],
+    [
+      "SEO absence after-read bypasses exact predicate",
+      "absence",
+      SEO_ENTRY_DOCUMENT_EXACT_BRIDGE_SOURCES.absence.replace(
+        "const after = await db.select({ id:seoDocuments.id,targetId:seoDocuments.targetId,targetType:seoDocuments.targetType }).from(seoDocuments).where(predicate).limit(2);",
+        "const after = await db.select({ id:seoDocuments.id,targetId:seoDocuments.targetId,targetType:seoDocuments.targetType }).from(seoDocuments).where(eq(seoDocuments.id,id)).limit(2);"
+      ),
+    ],
+  ];
+  for (const [label, operation, mutantSource] of seoPcaPredicateMutants) {
+    invariant(
+      mutantSource !== SEO_ENTRY_DOCUMENT_EXACT_BRIDGE_SOURCES[operation],
+      label + " mutant anchor drift"
+    );
+    const mutantSources = deepFreezeExact({
+      ...SEO_ENTRY_DOCUMENT_EXACT_BRIDGE_SOURCES,
+      [operation]: mutantSource,
+    });
+    await expectAsyncFailure(
+      async () => assertSeoEntryDocumentExactBridgeSourcesFailClosed(mutantSources),
+      label
+    );
+  }
+  negativeCases += seoPcaPredicateMutants.length;
+
+  const seoEntryOriginBySemantic = deepFreezeExact({
+    "editable-entry": "set-033-entry-create",
+    "related-entry-a1": "set-022-related-a1-create",
+    "related-entry-a2": "set-024-related-a2-create",
+    "related-entry-b1": "set-026-related-b1-create",
+    "related-entry-b2": "set-028-related-b2-create",
+    "related-entry-failure1": "set-029a-related-failure1-create",
+  });
+  const makeSeoDiscoveryHarness = () => {
+    const targetIds = TASK_FIXTURE_ENTRY_SEMANTICS.map(
+      (_entrySemantic, index) => `54000000-0000-4000-8000-${String(7601 + index).padStart(12, "0")}`
+    );
+    const entryCores = TASK_FIXTURE_ENTRY_SEMANTICS.map((entrySemantic, index) => {
+      const origin = seoEntryOriginBySemantic[entrySemantic];
+      return createResourceCore({
+        kind: entrySemantic === "editable-entry" ? "entry-editable" : "entry-related",
+        identifier: [targetIds[index]],
+        ownerSubjectIdentifier: null,
+        acquisitionSourceId: origin,
+        sourceActionOrdinal: actionOrdinal(plan, origin),
+        acquisitionChannel: "admin-api",
+      });
+    });
+    const ledger = new ResourceLedgerBuilder();
+    ledger.appendValidatedDelta(
+      deepFreezeExact({ cores: deepFreezeExact(entryCores), dependencyEdges: deepFreezeExact([]) })
+    );
+    const state = {
+      fixtureIds: new Map(
+        TASK_FIXTURE_ENTRY_SEMANTICS.map((entrySemantic, index) => [
+          entrySemantic,
+          targetIds[index],
+        ])
+      ),
+      resourceKeys: new Map(
+        TASK_FIXTURE_ENTRY_SEMANTICS.map((entrySemantic, index) => [
+          entrySemantic,
+          entryCores[index].resourceKey,
+        ])
+      ),
+    };
+    initializeBunBridgeOperationAuthority(state);
+    return { entryCores, ledger, state, targetIds };
+  };
+  const seoHarness = makeSeoDiscoveryHarness();
+  const seoCandidates = deepFreezeExact(
+    seoHarness.targetIds
+      .map((targetId, index) => ({
+        id: `54000000-0000-4000-8000-${String(7611 + index).padStart(12, "0")}`,
+        targetId,
+        targetType: "entry",
+      }))
+      .sort(
+        (left, right) =>
+          left.targetId.localeCompare(right.targetId) || left.id.localeCompare(right.id)
+      )
+  );
+  const seoPoll = deepFreezeExact({ candidates: seoCandidates });
+  const nominalQueryTargets = [];
+  const discoveredSeo = await discoverExactSeoEntryResources(
+    seoHarness.state,
+    seoHarness.ledger,
+    async (targetIds) => {
+      nominalQueryTargets.push([...targetIds]);
+      return seoPoll;
+    },
+    async () => {}
+  );
+  const seoRecords = seoHarness.ledger.compileResourceRecords("persistent");
+  const seoDocumentRecords = seoRecords.filter(({ kind }) => kind === "seo-document-entry");
+  const seoEntryRecords = seoRecords.filter(({ kind }) =>
+    ["entry-editable", "entry-related"].includes(kind)
+  );
+  const seoRecordByTargetId = new Map(
+    seoDocumentRecords.map((record) => [record.identifier[2], record])
+  );
+  const seoEntryRecordByTargetId = new Map(
+    seoEntryRecords.map((record) => [record.identifier[0], record])
+  );
+  const seoPlan = new ResourceCleanupPlanner().freezePersistent(seoRecords, []);
+  invariant(
+    discoveredSeo.length === 6 &&
+      seoDocumentRecords.length === 6 &&
+      seoEntryRecords.length === 6 &&
+      nominalQueryTargets.length === 2 &&
+      nominalQueryTargets.every((targetIds) => deepEqualJson(targetIds, seoHarness.targetIds)) &&
+      new Set(discoveredSeo.map(({ resourceKey }) => resourceKey)).size === 6 &&
+      seoHarness.targetIds.every((targetId) =>
+        seoEntryRecordByTargetId
+          .get(targetId)
+          .dependsOn.includes(seoRecordByTargetId.get(targetId).resourceKey)
+      ) &&
+      deepEqualJson(
+        seoPlan.resourceKeys.slice(0, 6),
+        seoDocumentRecords.map(({ resourceKey }) => resourceKey)
+      ) &&
+      TASK_FIXTURE_ENTRY_SEMANTICS.every(
+        (entrySemantic) =>
+          seoHarness.state.resourceKeys.get(seoDocumentResourceSemantic(entrySemantic)) ===
+          seoRecordByTargetId.get(seoHarness.state.fixtureIds.get(entrySemantic)).resourceKey
+      ) &&
+      RESOURCE_KIND_CONTRACTS["seo-document-entry"].cleanupPhase.success === 3 &&
+      RESOURCE_KIND_CONTRACTS["seo-document-entry"].cleanupPhase.failure === 3,
+    "SEO entry cleanup discovery/dependency order drift"
+  );
+  const seoStageState = { cleanupAbsenceKeys: new Set(), cleanupFailedKeys: new Set() };
+  const seoStageCalls = [];
+  const seoStageResult = await executeCleanupPlanStage(
+    seoStageState,
+    seoPlan,
+    cleanupPlanView(seoRecords),
+    new Set(["seo-document-entry", "entry-editable", "entry-related"]),
+    3,
+    async (_state, record, operationKind) => {
+      seoStageCalls.push(record.resourceKey + ":" + operationKind);
+      return deepFreezeExact({ operationKind, resourceKey: record.resourceKey });
+    }
+  );
+  invariant(
+    seoStageResult.failures.length === 0 &&
+      seoDocumentRecords.every((seoRecord) => {
+        const parentRecord = seoEntryRecordByTargetId.get(seoRecord.identifier[2]);
+        const childAbsenceIndex = seoStageCalls.indexOf(seoRecord.resourceKey + ":absence");
+        const parentProvenanceIndex = seoStageCalls.indexOf(
+          parentRecord.resourceKey + ":provenance"
+        );
+        return (
+          seoStageCalls.filter((call) => call === seoRecord.resourceKey + ":delete").length === 1 &&
+          childAbsenceIndex >= 0 &&
+          childAbsenceIndex < parentProvenanceIndex
+        );
+      }),
+    "SEO children were not deleted/proved absent before their exact entry parents"
+  );
+
+  const emptySeoHarness = makeSeoDiscoveryHarness();
+  const emptySeoResources = await discoverExactSeoEntryResources(
+    emptySeoHarness.state,
+    emptySeoHarness.ledger,
+    async () => deepFreezeExact({ candidates: deepFreezeExact([]) }),
+    async () => {}
+  );
+  invariant(
+    emptySeoResources.length === 0 &&
+      TASK_FIXTURE_ENTRY_SEMANTICS.every(
+        (entrySemantic) =>
+          !emptySeoHarness.state.resourceKeys.has(seoDocumentResourceSemantic(entrySemantic))
+      ),
+    "empty stable SEO discovery acquired a resource"
+  );
+
+  const missingSeoHarness = makeSeoDiscoveryHarness();
+  const missingSeoCandidates = deepFreezeExact(seoCandidates.slice(0, 5));
+  const missingSeoResources = await discoverExactSeoEntryResources(
+    missingSeoHarness.state,
+    missingSeoHarness.ledger,
+    async (targetIds) => {
+      invariant(
+        deepEqualJson(targetIds, missingSeoHarness.targetIds),
+        "missing SEO row narrowed the exact target inventory"
+      );
+      return deepFreezeExact({ candidates: missingSeoCandidates });
+    },
+    async () => {}
+  );
+  const missingTargetId = seoCandidates[5].targetId;
+  const missingTargetSemantic = TASK_FIXTURE_ENTRY_SEMANTICS.find(
+    (entrySemantic) => missingSeoHarness.state.fixtureIds.get(entrySemantic) === missingTargetId
+  );
+  invariant(
+    missingSeoResources.length === 5 &&
+      missingSeoHarness.ledger
+        .compileResourceRecords("persistent")
+        .filter(({ kind }) => kind === "seo-document-entry").length === 5 &&
+      !missingSeoHarness.state.resourceKeys.has(seoDocumentResourceSemantic(missingTargetSemantic)),
+    "missing exact SEO row did not preserve bounded authorized absence"
+  );
+
+  const seoDiscoveryDescriptor = BUN_BRIDGE_OPERATION_DESCRIPTORS["resource/seo-entry-discovery"];
+  for (const [label, targetIds] of [
+    ["missing SEO discovery input target", seoHarness.targetIds.slice(0, 5)],
+    [
+      "extra SEO discovery input target",
+      [...seoHarness.targetIds, "54000000-0000-4000-8000-000000007699"],
+    ],
+    [
+      "duplicate SEO discovery input target",
+      [...seoHarness.targetIds.slice(0, 5), seoHarness.targetIds[0]],
+    ],
+  ]) {
+    await expectAsyncFailure(
+      async () =>
+        validateBunBridgeInput(
+          {},
+          seoDiscoveryDescriptor,
+          deepFreezeExact({ targetIds: deepFreezeExact(targetIds) })
+        ),
+      label
+    );
+  }
+
+  const extraSeoCandidate = deepFreezeExact({
+    id: "54000000-0000-4000-8000-000000007699",
+    targetId: seoHarness.targetIds[0],
+    targetType: "entry",
+  });
+  for (const [label, polls] of [
+    [
+      "extra SEO entry discovery",
+      [deepFreezeExact({ candidates: deepFreezeExact([...seoCandidates, extraSeoCandidate]) })],
+    ],
+    [
+      "unstable SEO entry discovery",
+      [deepFreezeExact({ candidates: missingSeoCandidates }), seoPoll],
+    ],
+    [
+      "foreign-target SEO entry discovery",
+      [
+        deepFreezeExact({
+          candidates: deepFreezeExact([
+            deepFreezeExact({
+              ...seoCandidates[0],
+              targetId: "54000000-0000-4000-8000-000000007698",
+            }),
+          ]),
+        }),
+      ],
+    ],
+    [
+      "foreign targetType SEO entry discovery",
+      [
+        deepFreezeExact({
+          candidates: deepFreezeExact([
+            deepFreezeExact({ ...seoCandidates[0], targetType: "page" }),
+          ]),
+        }),
+      ],
+    ],
+    [
+      "duplicate SEO target discovery",
+      [
+        deepFreezeExact({
+          candidates: deepFreezeExact([seoCandidates[0], extraSeoCandidate]),
+        }),
+      ],
+    ],
+    [
+      "duplicate SEO document discovery",
+      [
+        deepFreezeExact({
+          candidates: deepFreezeExact([
+            seoCandidates[0],
+            deepFreezeExact({ ...seoCandidates[1], id: seoCandidates[0].id }),
+          ]),
+        }),
+      ],
+    ],
+    [
+      "nondeterministic SEO discovery ordering",
+      [deepFreezeExact({ candidates: deepFreezeExact([...seoCandidates].reverse()) })],
+    ],
+  ]) {
+    const harness = makeSeoDiscoveryHarness();
+    let pollIndex = 0;
+    await expectAsyncFailure(
+      async () =>
+        discoverExactSeoEntryResources(
+          harness.state,
+          harness.ledger,
+          async () => polls[Math.min(pollIndex++, polls.length - 1)],
+          async () => {}
+        ),
+      label
+    );
+  }
+  negativeCases += 15;
+
+  const mixedPhaseThreeRecords = deepFreezeExact(
+    [
+      ["phase3-override", "presentation-override"],
+      ["phase3-seo", "seo-document-entry"],
+      ["phase3-setting", "setting-user-a"],
+      ["phase3-screen", "screen"],
+    ].map(([resourceKey, kind]) => ({ resourceKey, kind }))
+  );
+  const mixedPhaseThreeResourceKeys = deepFreezeExact(
+    mixedPhaseThreeRecords.map(({ resourceKey }) => resourceKey)
+  );
+  const mixedPhaseThreeGraph = deepFreezeExact(
+    Object.fromEntries(mixedPhaseThreeResourceKeys.map((resourceKey) => [resourceKey, []]))
+  );
+  const mixedPhaseThreePlan = deepFreezeExact({ resourceKeys: mixedPhaseThreeResourceKeys });
+  const mixedPhaseThreeView = deepFreezeExact({
+    ledger: mixedPhaseThreeRecords,
+    dependencyGraph: mixedPhaseThreeGraph,
+    failureDiscoveryBlockedParentKeys: deepFreezeExact([]),
+  });
+  const mixedPhaseThreeKinds = new Set(mixedPhaseThreeRecords.map(({ kind }) => kind));
+  const phaseThreeScreenBoundaryPrivateMarker =
+    "TASK540_PHASE3_SCREEN_BOUNDARY_PRIVATE_DO_NOT_EGRESS";
+  const mixedPhaseThreeState = {
+    cleanupAbsenceKeys: new Set(),
+    cleanupFailedKeys: new Set(),
+  };
+  const mixedPhaseThreeCalls = [];
+  const mixedPhaseThreeResult = await executeCleanupPlanStage(
+    mixedPhaseThreeState,
+    mixedPhaseThreePlan,
+    mixedPhaseThreeView,
+    mixedPhaseThreeKinds,
+    3,
+    async (_state, record, operationKind) => {
+      mixedPhaseThreeCalls.push(record.kind + ":" + operationKind);
+      if (record.kind === "screen" && operationKind === "provenance") {
+        throw new Error(phaseThreeScreenBoundaryPrivateMarker);
+      }
+      return deepFreezeExact({ kind: record.kind, operationKind });
+    }
+  );
+  const mixedPhaseThreeDiagnostic = privateCleanupFailureDiagnosticNeverThrow(
+    mixedPhaseThreeResult.failures[0]
+  );
+  invariant(
+    mixedPhaseThreeResult.failures.length === 1 &&
+      deepEqualJson(mixedPhaseThreeDiagnostic, {
+        cleanupPhase: 3,
+        cleanupFailureClass: "persistent_provenance_failed",
+      }) &&
+      deepEqualJson(mixedPhaseThreeCalls, [
+        "presentation-override:provenance",
+        "presentation-override:delete",
+        "presentation-override:absence",
+        "seo-document-entry:provenance",
+        "seo-document-entry:delete",
+        "seo-document-entry:absence",
+        "setting-user-a:provenance",
+        "setting-user-a:delete",
+        "setting-user-a:absence",
+        "screen:provenance",
+      ]) &&
+      mixedPhaseThreeResourceKeys
+        .slice(0, 3)
+        .every((resourceKey) => mixedPhaseThreeState.cleanupAbsenceKeys.has(resourceKey)) &&
+      mixedPhaseThreeState.cleanupFailedKeys.has("phase3-screen") &&
+      !canonicalJson(mixedPhaseThreeDiagnostic).includes(phaseThreeScreenBoundaryPrivateMarker),
+    "mixed phase 3 early-success/screen-boundary attribution drift"
+  );
+
+  const taggedAdminPhaseThreeState = {
+    cleanupAbsenceKeys: new Set(),
+    cleanupFailedKeys: new Set(),
+  };
+  const taggedAdminPhaseThreeResult = await executeCleanupPlanStage(
+    taggedAdminPhaseThreeState,
+    mixedPhaseThreePlan,
+    mixedPhaseThreeView,
+    mixedPhaseThreeKinds,
+    3,
+    async (_state, record, operationKind) => {
+      if (record.kind === "screen" && operationKind === "provenance") {
+        throw retainPrivateCleanupFailureDiagnosticNeverThrow(
+          new Error(phaseThreeScreenBoundaryPrivateMarker),
+          3,
+          "admin_api_failed"
+        );
+      }
+      return deepFreezeExact({ kind: record.kind, operationKind });
+    }
+  );
+  invariant(
+    taggedAdminPhaseThreeResult.failures.length === 1 &&
+      deepEqualJson(
+        privateCleanupFailureDiagnosticNeverThrow(taggedAdminPhaseThreeResult.failures[0]),
+        { cleanupPhase: 3, cleanupFailureClass: "admin_api_failed" }
+      ),
+    "tagged admin API phase 3 priority drift"
+  );
+
+  const genericOperationRecord = deepFreezeExact({
+    resourceKey: "phase3-generic-operation",
+    kind: "screen",
+  });
+  const genericOperationPlan = deepFreezeExact({
+    resourceKeys: deepFreezeExact([genericOperationRecord.resourceKey]),
+  });
+  const genericOperationView = deepFreezeExact({
+    ledger: deepFreezeExact([genericOperationRecord]),
+    dependencyGraph: deepFreezeExact({ [genericOperationRecord.resourceKey]: [] }),
+    failureDiscoveryBlockedParentKeys: deepFreezeExact([]),
+  });
+  for (const [failedOperation, expectedFailureClass] of [
+    ["provenance", "persistent_provenance_failed"],
+    ["delete", "persistent_delete_failed"],
+    ["absence", "persistent_absence_failed"],
+  ]) {
+    const state = { cleanupAbsenceKeys: new Set(), cleanupFailedKeys: new Set() };
+    const result = await executeCleanupPlanStage(
+      state,
+      genericOperationPlan,
+      genericOperationView,
+      new Set([genericOperationRecord.kind]),
+      3,
+      async (_state, record, operationKind) => {
+        if (operationKind === failedOperation) {
+          throw new Error(phaseThreeScreenBoundaryPrivateMarker);
+        }
+        return deepFreezeExact({ kind: record.kind, operationKind });
+      }
+    );
+    invariant(
+      result.failures.length === 1 &&
+        deepEqualJson(privateCleanupFailureDiagnosticNeverThrow(result.failures[0]), {
+          cleanupPhase: 3,
+          cleanupFailureClass: expectedFailureClass,
+        }),
+      failedOperation + " generic phase 3 operation attribution drift"
+    );
+  }
+
+  const missingPhaseThreeState = {
+    cleanupAbsenceKeys: new Set(),
+    cleanupFailedKeys: new Set(),
+  };
+  const missingPhaseThreeResult = await executeCleanupPlanStage(
+    missingPhaseThreeState,
+    deepFreezeExact({ resourceKeys: deepFreezeExact(["phase3-missing-record"]) }),
+    deepFreezeExact({
+      ledger: deepFreezeExact([]),
+      dependencyGraph: deepFreezeExact({}),
+      failureDiscoveryBlockedParentKeys: deepFreezeExact([]),
+    }),
+    new Set(["screen"]),
+    3,
+    async () => deepFreezeExact({ unreachable: true })
+  );
+  const dependencyPhaseThreeRecord = deepFreezeExact({
+    resourceKey: "phase3-dependent-parent",
+    kind: "screen",
+  });
+  const dependencyPhaseThreeState = {
+    cleanupAbsenceKeys: new Set(),
+    cleanupFailedKeys: new Set(),
+  };
+  const dependencyPhaseThreeResult = await executeCleanupPlanStage(
+    dependencyPhaseThreeState,
+    deepFreezeExact({ resourceKeys: deepFreezeExact([dependencyPhaseThreeRecord.resourceKey]) }),
+    deepFreezeExact({
+      ledger: deepFreezeExact([dependencyPhaseThreeRecord]),
+      dependencyGraph: deepFreezeExact({
+        [dependencyPhaseThreeRecord.resourceKey]: ["phase3-unproved-child"],
+      }),
+      failureDiscoveryBlockedParentKeys: deepFreezeExact([]),
+    }),
+    new Set([dependencyPhaseThreeRecord.kind]),
+    3,
+    async () => deepFreezeExact({ unreachable: true })
+  );
+  invariant(
+    missingPhaseThreeResult.failures.length === 1 &&
+      deepEqualJson(
+        privateCleanupFailureDiagnosticNeverThrow(missingPhaseThreeResult.failures[0]),
+        { cleanupPhase: 3, cleanupFailureClass: "persistent_stage_failed" }
+      ) &&
+      dependencyPhaseThreeResult.failures.length === 1 &&
+      deepEqualJson(
+        privateCleanupFailureDiagnosticNeverThrow(dependencyPhaseThreeResult.failures[0]),
+        { cleanupPhase: 3, cleanupFailureClass: "persistent_dependency_blocked" }
+      ),
+    "phase 3 stage/dependency attribution drift"
+  );
+
+  const cleanupStageSource = executeCleanupPlanStage.toString();
+  const cleanupStageSourceRequired = [
+    'phaseThreeFailureClass = "persistent_stage_failed"',
+    'cleanupPhase === 3 ? phaseThreeFailureClass : "phase_failed"',
+    '"persistent_dependency_blocked"',
+    '"persistent_provenance_failed"',
+    '"persistent_delete_failed"',
+    '"persistent_absence_failed"',
+    "finalPlan.failureDiscoveryBlockedParentKeys.includes(resourceKey)",
+    "!state.cleanupAbsenceKeys.has(childKey) || state.cleanupFailedKeys.has(childKey)",
+  ];
+  const validatesCleanupStageSource = (source) =>
+    cleanupStageSourceRequired.every((token) => source.includes(token));
+  invariant(validatesCleanupStageSource(cleanupStageSource), "cleanup stage source contract drift");
+  assertSourceMutantsRejected(
+    cleanupStageSource,
+    validatesCleanupStageSource,
+    cleanupStageSourceRequired,
+    "cleanup stage guards/classes"
+  );
+  negativeCases += 7;
+
   const branchCleanupState = {
     cleanupAbsenceKeys: new Set(),
     cleanupFailedKeys: new Set(),
@@ -24763,6 +32334,7 @@ export async function runTask540SmokeExecutorSelfTest() {
       failureDiscoveryBlockedParentKeys: deepFreezeExact([]),
     }),
     new Set(["access-log-task-ua", "session-task", "user-a", "content-type"]),
+    6,
     async (_state, record, operationKind) => {
       branchOperationCalls.push(record.resourceKey + ":" + operationKind);
       if (record.resourceKey === graphAccessCore.resourceKey && operationKind === "absence") {
@@ -24773,6 +32345,12 @@ export async function runTask540SmokeExecutorSelfTest() {
   );
   invariant(
     branchResult.failures.length === 3 &&
+      branchResult.failures.every((failure) =>
+        deepEqualJson(privateCleanupFailureDiagnosticNeverThrow(failure), {
+          cleanupPhase: 6,
+          cleanupFailureClass: "phase_failed",
+        })
+      ) &&
       branchOperationCalls.length === 6 &&
       branchCleanupState.cleanupFailedKeys.has(graphAccessCore.resourceKey) &&
       branchCleanupState.cleanupFailedKeys.has(graphSessionCore.resourceKey) &&
@@ -24782,7 +32360,35 @@ export async function runTask540SmokeExecutorSelfTest() {
       !branchOperationCalls.some((value) => value.startsWith(graphUserCore.resourceKey + ":")),
     "cleanup branch/transitive blocker continuation drift"
   );
-  negativeCases += 1;
+
+  const phase7CleanupState = {
+    cleanupAbsenceKeys: new Set(),
+    cleanupFailedKeys: new Set(),
+  };
+  const phase7Result = await executeCleanupPlanStage(
+    phase7CleanupState,
+    deepFreezeExact({ resourceKeys: deepFreezeExact([graphIndependentCore.resourceKey]) }),
+    deepFreezeExact({
+      ledger: exactGraphRecords,
+      dependencyGraph: exactGraph,
+      failureDiscoveryBlockedParentKeys: deepFreezeExact([]),
+    }),
+    new Set(["content-type"]),
+    7,
+    async () => {
+      throw new Error("private phase 7 returned stage failure");
+    }
+  );
+  invariant(
+    phase7Result.failures.length === 1 &&
+      deepEqualJson(privateCleanupFailureDiagnosticNeverThrow(phase7Result.failures[0]), {
+        cleanupPhase: 7,
+        cleanupFailureClass: "phase_failed",
+      }) &&
+      phase7CleanupState.cleanupFailedKeys.has(graphIndependentCore.resourceKey),
+    "phase 7 returned cleanup-stage failure attribution drift"
+  );
+  negativeCases += 2;
 
   const scheduledFailures = [];
   const scheduledTrace = [];
@@ -24798,11 +32404,250 @@ export async function runTask540SmokeExecutorSelfTest() {
   invariant(
     deepEqualJson(scheduledCalls, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) &&
       scheduledFailures.length === 2 &&
+      deepEqualJson(
+        scheduledFailures.map((failure) => privateCleanupFailureDiagnosticNeverThrow(failure)),
+        [
+          { cleanupPhase: 3, cleanupFailureClass: "phase_failed" },
+          { cleanupPhase: 9, cleanupFailureClass: "phase_failed" },
+        ]
+      ) &&
       scheduledTrace[2].completed === false &&
       scheduledTrace[8].completed === false &&
       scheduledTrace[9].completed === true,
     "cleanup scheduler skipped phase 10 after prior failures"
   );
+
+  const cleanupPrecedenceFailures = [
+    retainPrivateCleanupFailureDiagnosticNeverThrow(
+      new Error("private phase 7 failure"),
+      7,
+      "phase_failed"
+    ),
+    retainPrivateCleanupFailureDiagnosticNeverThrow(
+      new Error("private phase 3 generic failure"),
+      3,
+      "phase_failed"
+    ),
+    retainPrivateCleanupFailureDiagnosticNeverThrow(
+      new Error("private phase 3 admin failure"),
+      3,
+      "admin_api_failed"
+    ),
+    retainPrivateCleanupFailureDiagnosticNeverThrow(
+      new Error("private phase 3 provenance failure"),
+      3,
+      "persistent_provenance_failed"
+    ),
+    retainPrivateCleanupFailureDiagnosticNeverThrow(
+      new Error("private phase 3 delete failure"),
+      3,
+      "persistent_delete_failed"
+    ),
+    retainPrivateCleanupFailureDiagnosticNeverThrow(
+      new Error("private phase 3 absence failure"),
+      3,
+      "persistent_absence_failed"
+    ),
+    retainPrivateCleanupFailureDiagnosticNeverThrow(
+      new Error("private phase 3 stage failure"),
+      3,
+      "persistent_stage_failed"
+    ),
+    retainPrivateCleanupFailureDiagnosticNeverThrow(
+      new Error("private phase 3 dependency failure"),
+      3,
+      "persistent_dependency_blocked"
+    ),
+    retainPrivateCleanupFailureDiagnosticNeverThrow(
+      new Error("private phase 3 plan failure"),
+      3,
+      "persistent_plan_failed"
+    ),
+  ];
+  const selectedCleanupPrecedence = selectPrivateCleanupFailureDiagnosticNeverThrow(
+    cleanupPrecedenceFailures,
+    0
+  );
+  const boundaryClassPrecedence = selectPrivateCleanupFailureDiagnosticNeverThrow(
+    [
+      retainPrivateCleanupFailureDiagnosticNeverThrow(
+        new Error("private cleanup boundary failure"),
+        0,
+        "cleanup_boundary_failed"
+      ),
+      retainPrivateCleanupFailureDiagnosticNeverThrow(
+        new Error("private construction cleanup failure"),
+        0,
+        "construction_cleanup_failed"
+      ),
+    ],
+    0
+  );
+  invariant(
+    deepEqualJson(PHASE_THREE_CLEANUP_FAILURE_CLASSES, [
+      "admin_api_failed",
+      "persistent_plan_failed",
+      "persistent_stage_failed",
+      "persistent_dependency_blocked",
+      "persistent_provenance_failed",
+      "persistent_delete_failed",
+      "persistent_absence_failed",
+    ]) &&
+      deepEqualJson(CLEANUP_FAILURE_CLASS_PRIORITY.slice(0, 7), [
+        "persistent_plan_failed",
+        "admin_api_failed",
+        "persistent_provenance_failed",
+        "persistent_delete_failed",
+        "persistent_absence_failed",
+        "persistent_stage_failed",
+        "persistent_dependency_blocked",
+      ]) &&
+      deepEqualJson(selectedCleanupPrecedence, {
+        cleanupPhase: 3,
+        cleanupFailureClass: "persistent_plan_failed",
+      }) &&
+      deepEqualJson(boundaryClassPrecedence, {
+        cleanupPhase: 0,
+        cleanupFailureClass: "construction_cleanup_failed",
+      }),
+    "cleanup phase/class diagnostic precedence drift"
+  );
+
+  const cleanupProductionSeamPrivateMarker =
+    "TASK540_CLEANUP_PRODUCTION_SEAM_PRIVATE_DO_NOT_EGRESS";
+  let cleanupAdminBoundaryFailure = null;
+  try {
+    await runPrivateCleanupAdminApiBoundary(async () => {
+      throw new Error(cleanupProductionSeamPrivateMarker + ":admin");
+    });
+  } catch (error) {
+    cleanupAdminBoundaryFailure = error;
+  }
+  invariant(
+    cleanupAdminBoundaryFailure !== null &&
+      deepEqualJson(privateCleanupFailureDiagnosticNeverThrow(cleanupAdminBoundaryFailure), {
+        cleanupPhase: 3,
+        cleanupFailureClass: "admin_api_failed",
+      }),
+    "cleanup Admin API production boundary attribution drift"
+  );
+
+  const cleanupPlanBoundaryFailure = retainPrivateCleanupFailureDiagnosticNeverThrow(
+    new Error(cleanupProductionSeamPrivateMarker + ":plan"),
+    3,
+    "persistent_plan_failed"
+  );
+  const cleanupPhaseThreeAggregate = retainPrivateCleanupAggregateDiagnosticNeverThrow(
+    new AggregateError(
+      [cleanupAdminBoundaryFailure, cleanupPlanBoundaryFailure],
+      cleanupProductionSeamPrivateMarker + ":phase-three"
+    ),
+    [cleanupAdminBoundaryFailure, cleanupPlanBoundaryFailure],
+    3
+  );
+  const cleanupLaterPhaseFailure = retainPrivateCleanupFailureDiagnosticNeverThrow(
+    new Error(cleanupProductionSeamPrivateMarker + ":later-phase"),
+    7,
+    "phase_failed"
+  );
+  const cleanupFinalAggregate = retainPrivateCleanupAggregateDiagnosticNeverThrow(
+    new AggregateError(
+      [cleanupPhaseThreeAggregate, cleanupLaterPhaseFailure],
+      cleanupProductionSeamPrivateMarker + ":final"
+    ),
+    [cleanupPhaseThreeAggregate, cleanupLaterPhaseFailure],
+    0
+  );
+  const cleanupProductionSeamAuthority = createPrivateConstructionCleanupAuthority();
+  cleanupProductionSeamAuthority.bindCompleteCapabilities({
+    async cleanup() {
+      throw cleanupFinalAggregate;
+    },
+  });
+  const cleanupProductionSeamOutcome =
+    await cleanupProductionSeamAuthority.cleanupWhateverWasAcquiredOnceNeverThrow();
+  const cleanupProductionSeamLines = [];
+  const cleanupProductionSeamSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    cleanupProductionSeamLines.push(line);
+  });
+  const cleanupProductionSeamExpectedLine =
+    canonicalJson({
+      code: TASK_FAILURE.code,
+      cleanupPhase: 3,
+      cleanupFailureClass: "persistent_plan_failed",
+    }) + "\n";
+  invariant(
+    cleanupProductionSeamOutcome.absenceProven === false &&
+      emitPrivateFailureActionDiagnosticNeverThrow(
+        null,
+        cleanupProductionSeamSink,
+        cleanupProductionSeamAuthority
+      ) === true &&
+      emitPrivateFailureActionDiagnosticNeverThrow(
+        null,
+        cleanupProductionSeamSink,
+        cleanupProductionSeamAuthority
+      ) === false &&
+      deepEqualJson(cleanupProductionSeamLines, [cleanupProductionSeamExpectedLine]) &&
+      Buffer.byteLength(cleanupProductionSeamLines[0]) <= MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES &&
+      !cleanupProductionSeamLines[0].includes(cleanupProductionSeamPrivateMarker),
+    "cleanup production seam bounded diagnostic drift"
+  );
+
+  const cleanupAdminBoundarySource = runPrivateCleanupAdminApiBoundary.toString();
+  const realCapabilitiesSource = createRealCapabilities.toString();
+  const assertCleanupProductionSeamMutantRejected = (
+    source,
+    productionToken,
+    mutantToken,
+    label
+  ) => {
+    const validatesProductionSeam = (candidate) => candidate.split(productionToken).length === 2;
+    invariant(validatesProductionSeam(source), label + " production source anchor drift");
+    const mutant = source.replace(productionToken, mutantToken);
+    assertNegative(!validatesProductionSeam(mutant), label + " source mutant");
+  };
+  assertCleanupProductionSeamMutantRejected(
+    cleanupAdminBoundarySource,
+    'retainPrivateCleanupFailureDiagnosticNeverThrow(error, 3, "admin_api_failed")',
+    'retainPrivateCleanupFailureDiagnosticNeverThrow(error, 3, "persistent_provenance_failed")',
+    "cleanup Admin API class"
+  );
+  assertCleanupProductionSeamMutantRejected(
+    realCapabilitiesSource,
+    'retainPrivateCleanupFailureDiagnosticNeverThrow(error, 3, "persistent_plan_failed")',
+    'retainPrivateCleanupFailureDiagnosticNeverThrow(error, 3, "persistent_stage_failed")',
+    "persistent plan class"
+  );
+  assertCleanupProductionSeamMutantRejected(
+    realCapabilitiesSource,
+    `retainPrivateCleanupAggregateDiagnosticNeverThrow(
+            new AggregateError(phaseFailures, "phase 3 response-lost/persistent cleanup failed"),
+            phaseFailures,
+            3
+          )`,
+    `retainPrivateCleanupAggregateDiagnosticNeverThrow(
+            new AggregateError(phaseFailures, "phase 3 response-lost/persistent cleanup failed"),
+            [],
+            3
+          )`,
+    "phase 3 cleanup aggregate input"
+  );
+  assertCleanupProductionSeamMutantRejected(
+    realCapabilitiesSource,
+    `retainPrivateCleanupAggregateDiagnosticNeverThrow(
+          new AggregateError(failures, "TASK-540 deterministic cleanup failed"),
+          failures,
+          0
+        )`,
+    `retainPrivateCleanupAggregateDiagnosticNeverThrow(
+          new AggregateError(failures, "TASK-540 deterministic cleanup failed"),
+          [],
+          0
+        )`,
+    "final cleanup aggregate input"
+  );
+  negativeCases += 2;
   let independentStepMask = 0;
   await expectAsyncFailure(
     async () =>
@@ -25391,7 +33236,7 @@ export async function runTask540SmokeExecutorSelfTest() {
     actions: plan.actionManifest.length,
     runtimeReceipts: evidence.runtimeReceipts.length,
     cleanupActions: evidence.cleanupReceipts.length,
-    nominalPersistentCleanupActions: 54,
+    nominalPersistentCleanupActions: 72,
     terminalMatrixCases: 1,
     captures: evidence.captureProjection.length,
     negativeCases,

@@ -304,18 +304,34 @@ const blockContainsId = (block: ScreenBlockV1, targetId: string): boolean =>
     children.some((child) => blockContainsId(child, targetId))
   );
 
+const tabSlotContainingBlock = (
+  block: ScreenBlockV1,
+  tabs: readonly ScreenTabItem[],
+  targetId: string
+): string | null =>
+  tabs.find((tab) =>
+    (block.slots?.[tab.id] ?? []).some((child) => blockContainsId(child, targetId))
+  )?.id ?? null;
+
 export const builderTabSlot = (
   block: ScreenBlockV1,
   tabs: readonly ScreenTabItem[],
   current: ScreenInsertTarget | null | undefined
 ): string | null => {
   if (!current || (current.kind !== "slot-end" && current.kind !== "slot-index")) return null;
-  if (current.parentId === block.id) return current.slotId;
-  return (
-    tabs.find((tab) =>
-      (block.slots?.[tab.id] ?? []).some((child) => blockContainsId(child, current.parentId))
-    )?.id ?? null
-  );
+  if (current.parentId === block.id) {
+    return tabs.some((tab) => tab.id === current.slotId) ? current.slotId : null;
+  }
+  return tabSlotContainingBlock(block, tabs, current.parentId);
+};
+
+export const builderSelectionTabSlot = (
+  block: ScreenBlockV1,
+  tabs: readonly ScreenTabItem[],
+  selectedBlockId: string | null | undefined
+): string | null => {
+  if (!selectedBlockId || selectedBlockId === block.id) return null;
+  return tabSlotContainingBlock(block, tabs, selectedBlockId);
 };
 
 export const bindingAllowsWrite = (binding: ScreenFieldBinding | null | undefined) =>

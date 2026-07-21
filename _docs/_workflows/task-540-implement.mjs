@@ -684,7 +684,7 @@ const WORKFLOW = ROOT + "/" + WORKFLOW_REL;
 const SMOKE_CONTRACT_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-contract.mjs";
 const SMOKE_EXECUTOR_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-executor.mjs";
 const FROZEN_SMOKE_EXECUTOR_SHA256 =
-  "1a1a0aacbc28a237ccd9712e8e85c91f39bf993487de44543538b0fc93382139";
+  "6accccffc88371978f2c3ad1727dbbf96aa2473802ea583d14cbc0c4ea548001";
 const SMOKE_HOST_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-host.mjs";
 const LOCAL_ORCHESTRATOR_WORKFLOW_REL = "_docs/_workflows/task-540-local-orchestrator.mjs";
 const TEST_NAME_CONTRACT_WORKFLOW_REL = "_docs/_workflows/task-540-test-name-contract.mjs";
@@ -1755,6 +1755,7 @@ const ACTION_EXECUTOR_BUN_FILES = Object.freeze([
   "tests/unit/assistant/actionExecutorSupportingPageLinks.test.ts",
   "tests/unit/assistant/actionExecutorDetailPages.test.ts",
 ]);
+const EDITOR_SURFACE_DEAD_CODE_VITEST_FILE = "tests/vitest/ui/editor-surface-dead-code.test.ts";
 const SCREEN_RUNTIME_VITEST_FILES = Object.freeze([
   "tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx",
   "tests/vitest/ui-integration/custom-screen-runtime-interactions.test.tsx",
@@ -2578,29 +2579,186 @@ function resultPassed(result) {
 }
 
 const SENSITIVE_FIELD_NAME =
-  "password|passwd|secret|api[_\\s.-]*key|private[_\\s.-]*key|csrf(?:[_\\s.-]*token)?|" +
+  "password|passwd|secret|api[_\\s.-]*key|private[_\\s.-]*key|" +
+  "csrf(?:[_\\s.-]*token)?(?:[_\\s.-]*hash)?|" +
   "authorization|cookie|set-cookie|access[_\\s.-]*token|refresh[_\\s.-]*token|" +
   "session[_\\s.-]*(?:token|hash|cookie)|token[_\\s.-]*hash|password[_\\s.-]*hash";
 const SENSITIVE_ASSIGNMENT_PATTERN = new RegExp(
   "(?:^[ \\t]*[+-]?[ \\t]*|[\\r\\n][ \\t]*[+-]?[ \\t]*|[ \\t,{;])" +
     "(?:[\\\"']?(?:" +
     SENSITIVE_FIELD_NAME +
-    ")[\\\"']?)\\s*(?::|=)\\s*" +
-    "(\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'|`(?:\\\\.|[^`\\\\])*`|" +
-    "[|>][+-]?[^\\r\\n]*(?:\\r?\\n[ \\t]+[^\\r\\n]*)*|" +
-    "[\"'`][^,;}\\r\\n]*(?:\\r?\\n[ \\t]+[^\\r\\n]*)*|[^,;}\\r\\n]+)",
+    ")[\\\"']?)\\s*(?::|=)\\s*",
   "gi"
 );
 const RAW_AUTHORIZATION_PATTERN =
-  /\b(?:authorization|proxy-authorization)\s*:\s*(?!\[?redacted\]?|<redacted>)[^\s,;]+/i;
+  /\b(?:authorization|proxy-authorization)\s*:\s*(?!\[?redacted\]?|<redacted>)[^\r\n]+/i;
 const RAW_COOKIE_HEADER_PATTERN =
-  /\b(?:cookie|set-cookie)\s*:\s*(?!\[?redacted\]?|<redacted>)[^\s,;]+/i;
+  /\b(?:cookie|set-cookie)\s*:\s*(?!\[?redacted\]?|<redacted>)[^\r\n]+/i;
 const RAW_BEARER_PATTERN = /\bbearer\s+[a-z0-9._~+\/-]{8,}/i;
 const JWT_VALUE_PATTERN = /\beyJ[a-zA-Z0-9_-]{8,}\.[a-zA-Z0-9_-]{8,}\.[a-zA-Z0-9_-]{8,}\b/;
 const SECRET_BROWSER_ACCESS_PATTERN =
   /\bdocument\.cookie\b|\b(?:localStorage|sessionStorage)\.getItem\(\s*["'][^"']*(?:token|cookie|csrf|secret|password)[^"']*["']/i;
 const SAFE_REDACTED_VALUE_PATTERN =
   /^(?:\$[A-Z][A-Z0-9_]*|\[?(?:discarded|discard-me|redacted)\]?|<redacted>|null|undefined|true|false)$/i;
+
+function scanSensitiveBlockScalarEnd(value, rhsStart) {
+  let end = value.indexOf("\n", rhsStart);
+  if (end < 0) return value.length;
+  if (end > rhsStart && value[end - 1] === "\r") end -= 1;
+  let cursor = value.indexOf("\n", rhsStart);
+  while (cursor >= 0 && cursor + 1 < value.length) {
+    const lineStart = cursor + 1;
+    const nextNewline = value.indexOf("\n", lineStart);
+    const physicalLineEnd = nextNewline < 0 ? value.length : nextNewline;
+    const lineEnd =
+      physicalLineEnd > lineStart && value[physicalLineEnd - 1] === "\r"
+        ? physicalLineEnd - 1
+        : physicalLineEnd;
+    const line = value.slice(lineStart, lineEnd);
+    if (!/^(?:[ \t]+|[+-](?:[ \t]+|$))/.test(line)) break;
+    end = lineEnd;
+    if (nextNewline < 0) break;
+    cursor = nextNewline;
+  }
+  return end;
+}
+
+function slashBeginsSensitiveRegex(value, rhsStart, slashIndex) {
+  let prior = slashIndex - 1;
+  while (prior >= rhsStart && /\s/.test(value[prior])) prior -= 1;
+  if (
+    value[prior] === "<" &&
+    /^\/(?:>|[A-Za-z_$][A-Za-z0-9_$:.-]*[ \t]*>)/.test(value.slice(slashIndex))
+  ) {
+    return false;
+  }
+  return prior < rhsStart || "([{:;,=!?&|+-*%^~<>".includes(value[prior]);
+}
+
+function scanSensitiveAssignmentRhsEnd(value, rhsStart) {
+  if (value[rhsStart] === "|" || value[rhsStart] === ">") {
+    return scanSensitiveBlockScalarEnd(value, rhsStart);
+  }
+
+  const expectedClosers = [];
+  let quote = null;
+  let escaped = false;
+  let blockComment = false;
+  let regexLiteral = false;
+  let regexCharacterClass = false;
+  for (let index = rhsStart; index < value.length; index += 1) {
+    const character = value[index];
+    const next = value[index + 1];
+    if (quote !== null) {
+      if (escaped) {
+        escaped = false;
+      } else if (character === "\\") {
+        escaped = true;
+      } else if (character === quote) {
+        quote = null;
+      }
+      continue;
+    }
+    if (regexLiteral) {
+      if (escaped) {
+        escaped = false;
+      } else if (character === "\\") {
+        escaped = true;
+      } else if (character === "[") {
+        regexCharacterClass = true;
+      } else if (character === "]") {
+        regexCharacterClass = false;
+      } else if (character === "/" && !regexCharacterClass) {
+        regexLiteral = false;
+      } else if (character === "\r" || character === "\n") {
+        return value.length;
+      }
+      continue;
+    }
+    if (blockComment) {
+      if (character === "*" && next === "/") {
+        blockComment = false;
+        index += 1;
+      }
+      continue;
+    }
+    if (character === '"' || character === "'" || character === "`") {
+      quote = character;
+      continue;
+    }
+    if (character === "/" && next === "*") {
+      blockComment = true;
+      index += 1;
+      continue;
+    }
+    if (character === "/" && next === "/") {
+      const lineEnd = value.indexOf("\n", index + 2);
+      if (lineEnd < 0) return value.length;
+      if (expectedClosers.length === 0) return lineEnd;
+      index = lineEnd;
+      continue;
+    }
+    if (character === "/" && slashBeginsSensitiveRegex(value, rhsStart, index)) {
+      regexLiteral = true;
+      regexCharacterClass = false;
+      escaped = false;
+      continue;
+    }
+    if (character === "(") {
+      expectedClosers.push(")");
+      continue;
+    }
+    if (character === "[") {
+      expectedClosers.push("]");
+      continue;
+    }
+    if (character === "{") {
+      expectedClosers.push("}");
+      continue;
+    }
+    if (character === "<") {
+      expectedClosers.push(">");
+      continue;
+    }
+    if (character === ">") {
+      if (expectedClosers.at(-1) === ">") expectedClosers.pop();
+      continue;
+    }
+    if (character === ")" || character === "]" || character === "}") {
+      if (expectedClosers.length === 0) return index;
+      if (expectedClosers.at(-1) !== character) return value.length;
+      expectedClosers.pop();
+      continue;
+    }
+    if (
+      expectedClosers.length === 0 &&
+      (character === "," || character === ";" || character === "\r" || character === "\n")
+    ) {
+      return index;
+    }
+  }
+  return value.length;
+}
+
+function sensitiveAssignmentRanges(value) {
+  const ranges = [];
+  SENSITIVE_ASSIGNMENT_PATTERN.lastIndex = 0;
+  for (let match = SENSITIVE_ASSIGNMENT_PATTERN.exec(value); match !== null; ) {
+    const rhsStart = match.index + match[0].length;
+    const rhsEnd = scanSensitiveAssignmentRhsEnd(value, rhsStart);
+    ranges.push({ rhsEnd, rhsStart });
+    if (rhsEnd > SENSITIVE_ASSIGNMENT_PATTERN.lastIndex) {
+      SENSITIVE_ASSIGNMENT_PATTERN.lastIndex = rhsEnd;
+    }
+    match = SENSITIVE_ASSIGNMENT_PATTERN.exec(value);
+  }
+  return ranges;
+}
+
+function sensitiveAssignedValueIsSafe(value) {
+  const clean = value.trim().replace(/^["'`]|["'`]$/g, "");
+  return SAFE_REDACTED_VALUE_PATTERN.test(clean);
+}
 const SENSITIVE_ENV_KEY_PATTERN =
   /(?:^ADMIN_EMAIL$|PASSWORD|PASSWD|SECRET|(?:^|_)TOKEN(?:_|$)|(?:^|_)KEY(?:_|$)|API[_-]?KEY|PRIVATE[_-]?KEY|ACCESS[_-]?KEY|(?:ENC|HASH)[_-]?KEY|CONNECTION[_-]?STRING|DATABASE_URL|REDIS_URL|DSN)/i;
 const REQUIRED_REDACTION_CREDENTIAL_KEYS = Object.freeze(["ADMIN_EMAIL", "ADMIN_PASSWORD"]);
@@ -2655,10 +2813,8 @@ function hasSensitiveEvidence(value) {
   ) {
     return true;
   }
-  SENSITIVE_ASSIGNMENT_PATTERN.lastIndex = 0;
-  for (const match of value.matchAll(SENSITIVE_ASSIGNMENT_PATTERN)) {
-    const assigned = (match[1] ?? "").trim().replace(/^["'`]|["'`]$/g, "");
-    if (!SAFE_REDACTED_VALUE_PATTERN.test(assigned)) return true;
+  for (const { rhsEnd, rhsStart } of sensitiveAssignmentRanges(value)) {
+    if (!sensitiveAssignedValueIsSafe(value.slice(rhsStart, rhsEnd))) return true;
   }
   return false;
 }
@@ -2683,22 +2839,16 @@ function sanitizeSensitiveEvidence(value) {
       );
     }
   }
-  SENSITIVE_ASSIGNMENT_PATTERN.lastIndex = 0;
-  sanitized = sanitized.replace(SENSITIVE_ASSIGNMENT_PATTERN, (match, assigned) => {
-    const clean = (assigned ?? "").trim().replace(/^["'`]|["'`]$/g, "");
-    if (SAFE_REDACTED_VALUE_PATTERN.test(clean)) return match;
-    const boundary = match.lastIndexOf(assigned);
-    return boundary < 0
-      ? "[redacted-sensitive-assignment]"
-      : match.slice(0, boundary) + "[redacted]";
-  });
-  for (const pattern of [
-    RAW_AUTHORIZATION_PATTERN,
-    RAW_COOKIE_HEADER_PATTERN,
-    RAW_BEARER_PATTERN,
-    JWT_VALUE_PATTERN,
-    SECRET_BROWSER_ACCESS_PATTERN,
-  ]) {
+  for (const pattern of [RAW_AUTHORIZATION_PATTERN, RAW_COOKIE_HEADER_PATTERN]) {
+    sanitized = sanitized.replace(globalPattern(pattern), "[redacted-sensitive-evidence]");
+  }
+  const assignmentRanges = sensitiveAssignmentRanges(sanitized);
+  for (let index = assignmentRanges.length - 1; index >= 0; index -= 1) {
+    const { rhsEnd, rhsStart } = assignmentRanges[index];
+    if (sensitiveAssignedValueIsSafe(sanitized.slice(rhsStart, rhsEnd))) continue;
+    sanitized = sanitized.slice(0, rhsStart) + "[redacted]" + sanitized.slice(rhsEnd);
+  }
+  for (const pattern of [RAW_BEARER_PATTERN, JWT_VALUE_PATTERN, SECRET_BROWSER_ACCESS_PATTERN]) {
     sanitized = sanitized.replace(globalPattern(pattern), "[redacted-sensitive-evidence]");
   }
   if (hasSensitiveEvidence(sanitized)) {
@@ -9203,11 +9353,13 @@ const LEAVES = Object.freeze(
         "tests/vitest/ui-integration/custom-screen-runtime-presentation.test.tsx",
         "tests/vitest/ui-integration/support/customScreenRuntimeRendererHarness.tsx",
         "tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx",
+        EDITOR_SURFACE_DEAD_CODE_VITEST_FILE,
       ]),
       commands: Object.freeze([
         command("lintTypes", LINT_TYPES),
         command("lint", LINT),
         ...isolatedTestCommands("screenRuntimeIsolated", SCREEN_RUNTIME_VITEST_FILES, "vitest"),
+        command("editorSurfaceDeadCode", vitestCommand([EDITOR_SURFACE_DEAD_CODE_VITEST_FILE])),
         command(
           "vitest",
           vitestCommand([
@@ -11069,6 +11221,29 @@ function assertTask540ModularityRepairContract() {
       ),
     },
     {
+      label: "R03 auxiliary dead-code guard has one owner and an independent pre-combined gate",
+      pass: (() => {
+        const leaf = LEAF_BY_ID.get("540-03-L01");
+        if (!leaf) return false;
+        const auxiliaryIndex = leaf.commands.findIndex(({ id }) => id === "editorSurfaceDeadCode");
+        const combinedIndex = leaf.commands.findIndex(({ id }) => id === "vitest");
+        const auxiliaryGate = leaf.commands[auxiliaryIndex];
+        return (
+          JSON.stringify(task540LineLimitOwnerIds(EDITOR_SURFACE_DEAD_CODE_VITEST_FILE)) ===
+            JSON.stringify(["540-03-L01"]) &&
+          !MODULARITY_REPAIR_ALLOWED_FILES["540-03-L01"].includes(
+            EDITOR_SURFACE_DEAD_CODE_VITEST_FILE
+          ) &&
+          TRACKED_TEST_FILES.includes(EDITOR_SURFACE_DEAD_CODE_VITEST_FILE) &&
+          !TARGET_VITEST_FILES.includes(EDITOR_SURFACE_DEAD_CODE_VITEST_FILE) &&
+          auxiliaryIndex >= 0 &&
+          auxiliaryIndex < combinedIndex &&
+          JSON.stringify(namedTestFilesForCommand(auxiliaryGate.command)) ===
+            JSON.stringify([EDITOR_SURFACE_DEAD_CODE_VITEST_FILE])
+        );
+      })(),
+    },
+    {
       label: "partition A split suites always run independently before combined gates",
       pass: [
         ["540-01-L01", "schemaPartitionIsolated", 7, "vitest"],
@@ -11077,6 +11252,7 @@ function assertTask540ModularityRepairContract() {
         ["540-01-L01", "actionExecutorIsolated", 12, "actionExecutorFamily"],
         ["540-02-L01", "screenInspectorIsolated", 2, "vitest"],
         ["540-03-L01", "screenRuntimeIsolated", 4, "vitest"],
+        ["540-03-L01", "editorSurfaceDeadCode", 1, "vitest"],
         ["540-04-L01", "entriesClientIsolated", 3, "vitest"],
         ["540-04-L01", "mediaClientIsolated", 1, "vitest"],
         ["540-04-L03", "cacheBusPartitionIsolated", 3, "isolatedCacheBus"],
@@ -24311,7 +24487,7 @@ async function assertTask540LocalCommandRunnerContract() {
     "\n-password='deleted fixture value'\nnext: true",
     "private_key: |-\n  fixture line one\n  fixture line two\nnext: true",
   ];
-  const sanitizerPass = sanitizerFixtures.every((fixture) => {
+  const basicSanitizerPass = sanitizerFixtures.every((fixture) => {
     const sanitized = sanitizeSensitiveEvidence(fixture);
     return (
       sanitized.includes("[redacted]") &&
@@ -24320,6 +24496,85 @@ async function assertTask540LocalCommandRunnerContract() {
       !hasSensitiveEvidence(sanitized)
     );
   });
+  const sanitizerExpressionMutants = [
+    {
+      source: '+csrfTokenHash: "fixture-added".repeat(64), adjacentAdded: true',
+      expected: "+csrfTokenHash: [redacted], adjacentAdded: true",
+    },
+    {
+      source: "-tokenHash: 'fixture-deleted'.repeat(64); adjacentDeleted = true",
+      expected: "-tokenHash: [redacted]; adjacentDeleted = true",
+    },
+    {
+      source: "  -passwordHash: `fixture-backtick`.repeat(64), adjacentBacktick: true",
+      expected: "  -passwordHash: [redacted], adjacentBacktick: true",
+    },
+    {
+      source: '+passwordHash: hash("alpha", "beta"), adjacentCall: true',
+      expected: "+passwordHash: [redacted], adjacentCall: true",
+    },
+    {
+      source:
+        '  -tokenHash: build(["alpha", "beta"], { nested: verify(1, 2) }); adjacentNested = true',
+      expected: "  -tokenHash: [redacted]; adjacentNested = true",
+    },
+    {
+      source:
+        '+csrfTokenHash: derive({ primary: "alpha,beta", fallback: ["gamma", "delta"] }), adjacentObject: true',
+      expected: "+csrfTokenHash: [redacted], adjacentObject: true",
+    },
+    {
+      source: "+passwordHash = /alpha,beta[},]/gi.source, adjacentRegex = true",
+      expected: "+passwordHash = [redacted], adjacentRegex = true",
+    },
+    {
+      source: '+passwordHash = derive<"alpha", Map<"beta", "gamma">>(), adjacentGeneric = true',
+      expected: "+passwordHash = [redacted], adjacentGeneric = true",
+    },
+    {
+      source: "+passwordHash = <Credential>alpha</Credential>, adjacentPairedJsx = true",
+      expected: "+passwordHash = [redacted], adjacentPairedJsx = true",
+    },
+    {
+      source: '+passwordHash: hash("alpha", "beta", adjacentMalformed: true',
+      expected: "+passwordHash: [redacted]",
+    },
+    {
+      source: '  -tokenHash: { nested: ["alpha", "beta"], adjacentMalformed: true',
+      expected: "  -tokenHash: [redacted]",
+    },
+    {
+      source: '+passwordHash: "alpha,beta, adjacentMalformed: true',
+      expected: "+passwordHash: [redacted]",
+    },
+    {
+      source: "+passwordHash: /alpha,beta, adjacentMalformed: true",
+      expected: "+passwordHash: [redacted]",
+    },
+    {
+      source: '+passwordHash: derive<"alpha", "beta"(), adjacentMalformed: true',
+      expected: "+passwordHash: [redacted]",
+    },
+  ];
+  const sanitizerExpressionPass = sanitizerExpressionMutants.every(({ source, expected }) => {
+    const sanitized = sanitizeSensitiveEvidence(source);
+    return sanitized === expected && !hasSensitiveEvidence(sanitized);
+  });
+  const sanitizerHeaderMutants = [
+    {
+      source: "+Proxy-Authorization: Basic opaqueCredential123",
+      expected: "+[redacted-sensitive-evidence]",
+    },
+    {
+      source: "-Set-Cookie: sid=opaqueCookie123; Path=/; HttpOnly; SameSite=Lax",
+      expected: "-[redacted-sensitive-evidence]",
+    },
+  ];
+  const sanitizerHeaderPass = sanitizerHeaderMutants.every(({ source, expected }) => {
+    const sanitized = sanitizeSensitiveEvidence(source);
+    return sanitized === expected && !hasSensitiveEvidence(sanitized);
+  });
+  const sanitizerPass = basicSanitizerPass && sanitizerExpressionPass && sanitizerHeaderPass;
   let duplicateEnvironmentBaselineRejected = false;
   try {
     await captureWorkflowSensitiveEnvBaseline(label + ": duplicate private environment baseline");

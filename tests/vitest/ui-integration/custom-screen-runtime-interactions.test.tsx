@@ -239,17 +239,19 @@ function BuilderTabsHarness() {
   );
 }
 
-test("builder Tabs derive visibility from slot-index/slot-end host state and activation arms slot-end", () => {
-  const view = mount(<BuilderTabsHarness />);
+test("builder Tabs derive visibility from insert and selection host state while activation arms slot-end", () => {
+  const activationView = mount(<BuilderTabsHarness />);
   try {
-    const { tabs, panels } = getTabs(view.container);
+    const { tabs, panels } = getTabs(activationView.container);
     expect(tabs[1]?.getAttribute("aria-selected")).toBe("true");
     expect(panels[1]?.hidden).toBe(false);
 
     React.act(() => tabs[0]?.click());
     expect(tabs[0]?.getAttribute("aria-selected")).toBe("true");
     expect(panels[0]?.hidden).toBe(false);
-    expect(view.container.querySelector('[data-builder-insert-point="true"]')?.textContent).toBe(
+    expect(
+      activationView.container.querySelector('[data-builder-insert-point="true"]')?.textContent
+    ).toBe(
       JSON.stringify({
         kind: "slot-end",
         sectionId: "section-1",
@@ -258,7 +260,77 @@ test("builder Tabs derive visibility from slot-index/slot-end host state and act
       })
     );
   } finally {
-    view.cleanup();
+    activationView.cleanup();
+  }
+
+  const selectionView = render(
+    [tabsBlock()],
+    "builder",
+    [],
+    {},
+    {
+      selectedBlockId: "tabs-1-activity",
+    }
+  );
+  try {
+    const { tabs, panels } = getTabs(selectionView.container);
+    expect(tabs[1]?.getAttribute("aria-selected")).toBe("true");
+    expect(panels[1]?.hidden).toBe(false);
+    expect(tabs[0]?.getAttribute("aria-selected")).toBe("false");
+    expect(panels[0]?.hidden).toBe(true);
+    expect(panels[1]?.querySelector('[data-screen-block-id="tabs-1-activity"]')).not.toBeNull();
+  } finally {
+    selectionView.cleanup();
+  }
+
+  const precedenceView = render(
+    [tabsBlock()],
+    "builder",
+    [],
+    {},
+    {
+      selectedBlockId: "tabs-1-activity",
+      insertPoint: {
+        kind: "slot-end",
+        sectionId: "section-1",
+        parentId: "tabs-1",
+        slotId: "tab-1",
+      } satisfies ScreenInsertTarget,
+    }
+  );
+  try {
+    const { tabs, panels } = getTabs(precedenceView.container);
+    expect(tabs[0]?.getAttribute("aria-selected")).toBe("true");
+    expect(panels[0]?.hidden).toBe(false);
+    expect(tabs[1]?.getAttribute("aria-selected")).toBe("false");
+    expect(panels[1]?.hidden).toBe(true);
+  } finally {
+    precedenceView.cleanup();
+  }
+
+  const invalidTargetView = render(
+    [tabsBlock()],
+    "builder",
+    [],
+    {},
+    {
+      selectedBlockId: "tabs-1-activity",
+      insertPoint: {
+        kind: "slot-end",
+        sectionId: "section-1",
+        parentId: "tabs-1",
+        slotId: "missing-tab",
+      } satisfies ScreenInsertTarget,
+    }
+  );
+  try {
+    const { tabs, panels } = getTabs(invalidTargetView.container);
+    expect(tabs[1]?.getAttribute("aria-selected")).toBe("true");
+    expect(panels[1]?.hidden).toBe(false);
+    expect(tabs[0]?.getAttribute("aria-selected")).toBe("false");
+    expect(panels[0]?.hidden).toBe(true);
+  } finally {
+    invalidTargetView.cleanup();
   }
 });
 

@@ -13,7 +13,7 @@
 **Status:** 🚧 In Progress
 **Started:** 2026-07-14
 **Fix Started:** 2026-07-15
-**Modularity Repair Revalidated:** 2026-07-17 — eight source-owner modularity repairs and their then-exact gates passed. This remains split/line evidence only and did not gate the later L03 overflow repair.
+**Modularity Repair Revalidated:** 2026-07-19 — eight source-owner modularity repairs and exact gates passed.
 **Implementation Complete:** 2026-07-16 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Revalidation Passed:** pre-closure remediation / fix-started 2026-07-15 / gate green
 **Historical Source Repair Revalidated (superseded by the later L03 overflow revalidation):** 2026-07-16 — the final sequential post-audit stopped before smoke on R01 whole-document stored-read collapse and ambiguous legacy IDs, L03 scalar override loss for `media.multiple`, an optional Canvas region name, incomplete A/B self-scope evidence, and one stale L04 binding-ID expectation. A fresh contract audit also found the optional-ID Assistant composer, missing stored-duplicate regression, and stale L04 provenance. Those scoped repairs had matching receipts before the later overflow repair; this does not replace the next clean post-audit, full validation, final audit, or live smoke.
@@ -33,6 +33,24 @@
 **Historical Pre-Overflow Runtime Smoke Failure-Action Observability Repair:** the next canonical Start gate and all five post-audit lenses passed, followed by green core/root static checks, targeted Bun/Vitest tests, full `bun run test`, exact pre/post settings baseline proof, `precommit:check`, Admin build/boundary/bundle checks, `gates:coderso`, the strict security scan with only its pinned TASK-545-owned finding, and final workflow checks. The one-shot smoke then started the repo-owned helper and returned only `{code:"task540_smoke_failed"}` before any provable successful bootstrap login. Its deterministic cleanup restored settings baseline SHA-256 `7e453af480fe040a55d81ad0ee6c168ef8295a820b4eec2c1ee3331e18ab665b`, removed all task browser/session/listener/screenshot state, and preserved staged snapshot SHA-256 `c5a339b8c5a8d0f639067ae630b8c81c158d8cb519c87445b9416072206c9f0f`. The old generic-only boundary intentionally destroyed the failing action identity, so no exact action or smoke pass was claimed. The executor then added only the bounded allowlisted active-action diagnostic; that checkpoint did not authorize closure.
 **Historical Pre-Overflow Failure-Action Diagnostic Self-Test:** at that checkpoint the final executor self-test passed 490 actions and 196 negative cases with caught synchronous stderr writes, including `EPIPE`, `EBADF`, and partial-write containment. The later L03 overflow repair superseded the prepared closure state, not this durable diagnostic behavior.
 **Current Corrective Implementation State:** 2026-07-19 — the R01 → R03 → L03 → L04 source chain and TASK-540-05-L01 insertion-test compatibility update are landed and re-gated in dependency order. This closure leaf retains its exact `pre-closure remediation / fix-started 2026-07-15 / gate green` receipt, while each source owner now carries one current receipt and preserves older receipts only as historical evidence. Closure authority next requires a clean five-lens post-audit; no later full-validation or smoke result is claimed.
+**Historical Auth-Settlement Diagnostic Repair:** 2026-07-20 — after the strengthened 60-second exact-root/visible-menu settlement helper and Dashboard warm restart, a fresh canonical Start gate, five-lens post-audit, and complete full-validation matrix passed, but the one-shot smoke again stopped at `set-011a-bootstrap-auth-settled`. Cleanup proved no retained helper, browser, server, screenshot, or repository mutation. L01 added exact allowlisted browser failure frames, private `WeakMap` branding, and a post-cleanup class projection. The next canonical run proved that repair incomplete because its generated-source harness began after the real command boundary and therefore could not classify a transport, normalization, or success-contract failure.
+**Historical Auth-Settlement Pre-Classifier Repair Implemented And Target-Revalidated:** 2026-07-20 — the prior canonical Start gate, all five post-audit lenses, full repository test matrix, precommit checks, release gates, strict security scan, and final workflow contracts passed before the helper-backed Playwright CLI smoke stopped at `set-011a-bootstrap-auth-settled` with the exact action-only diagnostic. Deterministic cleanup left no helper, browser, server, session, listener, screenshot, private workspace, or repository mutation. The then-current repo/inherited secret corpus had no substring collision with an allowlisted auth failure frame, so that consumed run proved only a pre-classifier blind spot. The frozen executor separated browser, executor, and diagnostic-union classes; retained raw CLI/error/process details only in a separate write-only private map; applied the exact Playwright-only frame and secret-first process precedence; branded invocation, normalization, eligible success-contract, command-receipt, and validated post-parse result boundaries; and executed the real `LocalCommandAuthority` plus tracker/cleanup/emitter in its hermetic matrix. SHA-256 `70162b648d4f294d61142da3a424b9a7b79a61cf0b30a450307abde8105f503e` passed Prettier, syntax, and the executor self-test with 496 actions, 159 runtime receipts, 54 cleanup actions, and 706 negative cases. Two fresh current-byte implementation post-audits reported 0 HIGH/MEDIUM/LOW findings. The next canonical smoke classified the still-present invocation bug, so this receipt is historical.
+**Historical Capture-Frontier Observation Repair Implemented And Target-Revalidated:** 2026-07-20 — the next fresh Start gate, five post-audit lenses, full repository validation, release gates, strict security scan, and final workflow checks passed before the one-shot helper-backed Playwright CLI smoke stopped at `set-011a-bootstrap-auth-settled` with exact `failureClass:"invocation_boundary_failed"`. Deterministic cleanup left no helper, browser, server, session, listener, screenshot, private workspace, or repository mutation; no TASK-540 fixture-create action had started. Three independent read-only traces and an in-memory call through the production compiler proved the ordinal-15 observation failed before CLI spawn because its generic config eagerly resolved the later `media.id` entry baseline. The strict capture map/resolver remained unchanged and fail-closed. Entry-baseline/reset authority became lazy for its two observation consumers, and executor SHA-256 `bfbc662b94127c486ac5e8057f51f498147e391854bcd8ac50eab1e8e3738f03` passed Prettier, syntax, and the self-test with 707 negative cases. A fresh post-audit then found one sibling LOW: non-consuming visible assertions still eagerly resolved the same baseline, so this receipt is historical.
+**Historical Capture-Frontier Consumer-Isolation Repair Implemented And Target-Revalidated:** 2026-07-20 — the strict capture map and resolver remain unchanged and fail-closed. Entry-baseline/reset authority was materialized only by its three exact consumers: observations `relation-pickers-a-b-warm` and `related-unrelated-drafts-before`, plus assertion `relation-diff-exact`. Exact empty and partial bootstrap-frontier regressions compiled the canonical invocation, a non-entry assertion compiled without baseline captures, and both entry-dependent observation and assertion paths rejected missing captures. Frozen executor SHA-256 `cde2a5924fcef4ecab2ed05b019b0ea1cf6492c77f458e7d716e7cf78950cf25` passed Prettier, syntax, and the self-test with 496 actions, 159 runtime receipts, 54 cleanup actions, and 708 negative cases. The next canonical workflow passed the clean five-lens post-audit and complete full validation before exposing the later dirty-flow handoff defect, so this receipt is historical.
+**Historical Dirty-Flow Beforeunload Handoff Repair Implemented And Target-Revalidated:** 2026-07-20 — the canonical Start gate, clean five-lens post-audit, full `bun run test`, `precommit:check`, Admin build/boundary/bundle checks, `gates:coderso`, strict scan, and final workflow contracts passed before the helper-backed Playwright CLI smoke stopped at `dg-003-builder`. Flow 4 intentionally commits an inline Entry edit and therefore leaves the browser draft dirty; `dg-001/002` reset and verify only the backend. The unchanged 496-action manifest now states that boundary explicitly. Only `dg-003-builder` proves the visible dirty badge, snapshots and temporarily replaces the exact CLI dialog listener set, accepts exactly one `beforeunload`, restores listener identity/order in `finally`, and then proves the exact builder URL plus one visible canvas. Frozen executor SHA-256 `b808b044b1f19d8b4cb7d3a103005b772208ecb6466c4ff1e74f7ea7b806e695` passed Prettier, syntax, the 109-case contract self-test, and the executor self-test with 496 actions, 159 runtime receipts, 54 cleanup actions, and 732 negative cases. The failed call removed its browser/process/port/task-traffic state but left nonce-scoped domain fixtures, so this receipt is historical.
+**Historical Failure-Cleanup Lifecycle Repair Implemented And Target-Revalidated:** 2026-07-20 — exact recovery removed only the failed nonce's one SEO row, two Screens, six Entries, one Media row and its SHA-256-pinned file, four content types, two users, and two role bindings; required settings and the accepted bootstrap recovery baseline remained byte-identical during recovery. Read-only source and DB evidence proved `ss-005/006` had intentionally removed and proved the acquired presentation override absent before failure cleanup incorrectly required it present, and proved Entry cleanup did not own the separately persisted SEO document. The executor now accepts an absent override only with the complete exact create -> `ss-005` reset -> `ss-006` empty-proof authority, emits its real provenance/delete/absence receipts against a fresh exact absence proof, and otherwise fails closed. It also discovers the exact Entry SEO row with bounded cardinality, models it as a child, and deletes/proves it absent before the Entry. Frozen SHA-256 `1073a2d61d05874b6cdc2525d62e346a18049846452d160a30c965abd13bd100` passed Prettier, syntax, diff checks, and the executor self-test with 496 actions, 162 runtime receipts, 57 cleanup actions, and 748 negative cases. The next canonical run passed all gates and setup, then exposed the later `dg-017` settlement-proof race, so this receipt is historical.
+**Historical Builder-Discard Settlement Proof Repair Implemented And Target-Revalidated:** 2026-07-20 — the latest canonical Start gate, clean five-lens post-audit, complete repository validation, release gates, strict scan, and helper-backed Playwright CLI setup passed; four screenshots were captured before the smoke stopped at `dg-017-builder-confirm-proof`, and deterministic cleanup removed every task-owned fixture and screenshot. The action contract already required the records workspace, discarded draft, and exact visible `Record actions` control to be ready, but the executor sampled URL and navigation count immediately after the SPA discard click, omitted the workspace latch, and derived `draftDiscarded` from absence of the Screen ID in a canonical records URL that necessarily contains that ID. `dg-017` now waits up to 30 seconds for the canonical records URL plus exactly one visible positive-geometry control and exact absence of both builder canvas and dirty badge, fails closed on duplicates or timeout, and only then proves the one-navigation discard. Its compiled-source self-test pins those checks and forbids the invalid URL-substring derivation. Frozen SHA-256 `cf821d6604174bd61ab4ca432742ad7c665d56e04a975e3c32c3157863b855e4` passed Prettier, syntax, the 109-case contract self-test, and the executor self-test with 496 actions, 162 runtime receipts, 57 cleanup actions, and 748 negative cases. A fresh read-only audit found no other HIGH/MEDIUM issue in `dg-011`–`dg-018` and verified the product discard path plus regression tests are correct. The next canonical run passed `dg-017` and exposed the later tone-selection proof defect, so this receipt is historical.
+**Current Strict Dependency Audit Blocker Remediated And Target-Revalidated:** 2026-07-20 — closure validation surfaced new HIGH advisories in development-toolchain transitives and blocked completion of the strict security scan. TASK-540 closure validation owns the minimal dependency-only repair: root devDependency `brace-expansion` exact `1.1.16`, plus exact root overrides `js-yaml` `4.3.0`, `shell-quote` `1.9.0`, and `tar` `7.5.19`; the separately required `brace-expansion` 5 line remains `5.0.7`. `bun install --frozen-lockfile` and `bun audit --audit-level high` passed after lock regeneration. No scanner suppression, allowlist, or semantic-release/concurrently/eslint/minimatch/toolchain bump was added. This is only a targeted dependency receipt: the fresh full strict scan, canonical audit and full validation, live smoke, changelog, and closure remain mandatory.
+**Historical Tone-Selection Visible-Effect Proof Repair Implemented And Target-Revalidated:** 2026-07-20 — the next canonical Start gate, all five fresh post-audit lenses, complete repository validation, release gates, and strict security scan passed. The helper-backed Playwright CLI smoke passed the repaired `dg-017`, captured four screenshots, then stopped at `dg-022-tone-muted`; deterministic cleanup removed every task-owned fixture and acquired TASK-540 screenshot. Three independent read-only traces found no product defect: the typed Select -> override draft -> dirty state -> renderer path and its Vitest regressions are intact. The defect was the generic click executor, which neither owned the portaled Radix menu nor waited for its advertised muted/dirty visible effect. Both `dg-021`/`dg-022` and the sibling `rc-015`/`rc-016` became exact specializations requiring the selected target, visible positive-geometry panel/trigger/menu/option, `aria-controls` menu ownership, retained selection, exact content and presentation dirty badges, closed-menu settlement, the presentation-override marker, and a real computed-color transition. Frozen SHA-256 `9400241963457929fad02edcc1c3d841edec2db78a5f2abcc2a65a7b611e5b6d` passed Prettier, syntax, the 109-case contract self-test, and the executor self-test with 496 actions, 162 runtime receipts, 57 cleanup actions, and 916 negative cases. The next canonical smoke exposed the post-fill blur race at `dg-021`, so this receipt is historical.
+**Historical Post-Fill Blur And Portaled Tone Settlement Repair Implemented And Target-Revalidated:** 2026-07-21 — the subsequent canonical Start gate, all five post-audit lenses, complete repository validation, release gates, and strict security scan passed; the helper-backed Playwright CLI smoke passed `dg-017`, captured four screenshots, then stopped at `dg-021-tone-open`, and deterministic cleanup removed every nonce-owned fixture and acquired screenshot. Two independent read-only source traces proved the product Select, override, renderer, and selection contracts correct and identified an executor race: `dg-020` used `fill()`, while `InlineEditWrapper` commits only on blur, so the first Tone interaction both committed the content draft and opened the portaled Radix menu across a rerender. Both `dg-021` and sibling `rc-015` then explicitly blurred the exact selected textbox, waited for the visible dirty settlement, and reacquired the panel, target, handle, textbox, trigger, and portaled menu. Frozen SHA-256 `72e5f16fcc9fa34b4b9acde85d0304c0b947d2ba30f63809fdd55db91ea0a996` passed Prettier, syntax, the 109-case contract self-test, and the executor self-test with 496 actions, 162 runtime receipts, 57 cleanup actions, and 974 negative cases. The following diagnostic helper-backed smoke returned `200` for Admin and front, completed setup, captured five screenshots, again stopped at `dg-021-tone-open`, and completed exact fixture/screenshot/server cleanup. That run proved the commit still belonged to the wrong action, so this receipt is historical.
+**Historical Atomic Content-Commit And Tone Diagnostic Repair Implemented And Target-Revalidated:** 2026-07-21 — source tracing found the remaining contract drift one action earlier: `dg-020-headline-fill` and sibling `rc-014-unrelated-fill` promised `value -> content dirty` but used the generic fill executor and returned while the draft still existed only in the focused DOM node. Because `InlineEditWrapper` commits on blur, the next action could encounter a refreshed or hydrated textbox and never obtain dirty authority. Those exact two fill actions now atomically require unique visible positive-geometry textbox, selected root, and pressed handle; fill the exact expected draft; prove exact text plus active focus; blur; reacquire every locator; and require the exact non-focused draft, retained selection, and one visible positive-geometry `Unsaved changes` badge before returning. `dg-021` and `rc-015` contain neither fill nor blur: they consume that settled draft/dirty authority, capture baseline color, then prove the visible positive-geometry Radix menu, Muted option, reciprocal `aria-controls`/id, and expanded state. A closed four-class diagnostic for only those two open actions distinguishes target, draft/dirty, trigger, and portal settlement through byte-identical frames, a private WeakMap, the existing 256-byte one-shot post-cleanup channel, and no raw error/DOM parsing. Three fresh current-byte audits passed the DOM/runtime, action-ownership/hydration, and diagnostic-security/mutant lenses with no finding. Frozen SHA-256 `c0589a50484357209b506865ca449cf6399654ffb77a1f1c3bfd53dace45b533` passed Prettier, syntax, the 109-case contract self-test, and the executor self-test with 496 actions, 162 runtime receipts, 57 cleanup actions, and 1239 negative cases. The next helper-backed diagnostic smoke passed `dg-020` and `dg-021`, captured five screenshots, then stopped at `dg-022`; exact cleanup removed every fixture, screenshot, helper, browser, and server, so this receipt is historical.
+**Historical Tone-Select Settlement Diagnostic Repair Implemented And Target-Revalidated:** 2026-07-21 — the next frozen executor kept the already-proven atomic content commit and added six monotonic, exact-frame classes for only `dg-022` and sibling `rc-016`: authority/option, menu close, dirty badges, selection/override, muted class, and computed-color delta. Exact frames remained bounded to 256 bytes, mapped to a private WeakMap, and emitted once only after cleanup without raw error or DOM parsing. SHA-256 `a6ecc7cc28c5f28a5aecbb6aa2d264e6ab107c19f11652e389164576ffffa829` passed Prettier, syntax, the 109-case contract self-test, and the executor self-test with 496 actions, 162 runtime receipts, 57 cleanup actions, and 1534 negative cases. Two independent runtime traces found no product defect, and the helper-backed diagnostic smoke then passed `dg-020`, `dg-021`, and all six `dg-022` visible-effect latches before stopping at `dg-024-entry-nav-cancel`; five screenshots were acquired and exact cleanup removed every task-owned resource. A fresh audit also found one MEDIUM mutation-test gap in tone-select process precedence, fixed and revalidated by the successor, so this receipt is historical.
+**Historical Dirty-Navigation Dialog Settlement Repair Implemented And Target-Revalidated:** 2026-07-21 — the `dg-024` terminal boundary proved that the old generic click failed during target acquisition or click before it could own the advertised dialog effect. Source tracing found desktop and hidden mobile SidebarNav instances, while the generic executor incorrectly required total DOM cardinality one. Exactly five contract-identical actions (`dg-012`, `dg-015`, `dg-024`, `dg-037`, and `rc-037a`) now select exactly one visible positive-geometry Records link, freeze the canonical source URL and navigation count, click once, and return only after one visible positive-geometry dialog exposes the exact realm-specific title and description plus one `Keep editing` and one `Discard and continue` button while URL and navigation count remain unchanged. Product source remains untouched; its isolated dirty-navigation suite passed 9/9. Independent literal ownership and mapping pins, per-field/extra-action/deletion/order mutants, and the repaired exact-frame process-precedence test closed both fresh audit findings; two fresh read-only re-audits reported 0 HIGH/MEDIUM/LOW findings. Frozen SHA-256 `214a5fa2d7a3e33a7003ed8c8e2005a921574dbb4be4d471adadfcbb2be7e789` passed Prettier, syntax, the 109-case contract self-test, and the executor self-test with 496 actions, 162 runtime receipts, 57 cleanup actions, and 1968 negative cases. The next helper-backed diagnostic smoke passed the builder siblings `dg-012` and `dg-015`, again acquired five screenshots, then stopped at entry action `dg-024`; exact cleanup removed every task-owned resource. A fresh trace found that the remaining latch incorrectly counted every global dialog surface instead of the exact named dirty-navigation dialog, so this receipt is historical.
+**Historical Exact-Named Dirty-Navigation Dialog Repair Implemented And Target-Revalidated:** 2026-07-21 — the five dirty-navigation actions retain their exact visible-link, canonical URL, navigation-count, realm-title, description, button, and geometry requirements, but dialog cardinality is now scoped to `getByRole("dialog", { name: exact realm title, exact: true })` instead of every unrelated Admin dialog surface. Heading, description, `Keep editing`, and `Discard and continue` remain exact and scoped under that one named dialog; two dialogs with the same owned accessible name still fail closed. The source contract forbids the global locator and adds explicit global, inexact, wrong-name, deletion, and ordering mutants while preserving the independent literal five-action mapping. Two fresh current-byte read-only audits report 0 HIGH/MEDIUM/LOW findings and independently confirm no product change is required; the second live run also disproved the earlier `dg-010` predecessor-race hypothesis by passing both builder cancel/reopen latches. Frozen SHA-256 `4e2995ae56174032b71fa897276009d6b7ef366568ec547d5227e75952f2315b` passes Prettier, syntax, the 109-case contract self-test, the executor self-test with 496 actions, 162 runtime receipts, 57 cleanup actions, and 1983 negative cases, plus the repair-sibling and local-orchestrator self-tests. The next diagnostic run and cleanup audit superseded this receipt.
+**Historical Bounded Dirty-Navigation Diagnostics And Complete Cleanup Coverage Implemented And Target-Revalidated:** 2026-07-21 — a third helper-backed diagnostic smoke again reached `dg-024-entry-nav-cancel` after five screenshots, while an exact manual Playwright point probe and an immediate post-dirty race probe both proved one visible Records target, one exact named dialog with positive geometry, its exact heading/description/buttons, a stable source URL, and zero navigation. This isolated the unresolved boundary to executor diagnostics rather than product UI. An exact residue audit then corrected the prior cleanup claim: eight complete TASK-540 nonce families remained (127 exact DB rows and eight exact media files) because the terminal masked cleanup failure and SEO discovery owned only one of six fixture Entry documents. Every exact leaked row and file was removed with provenance, cardinality, bootstrap-admin, no-follow, inode, size, and SHA-256 guards; the active canonical admin remains intact. The executor emits one post-cleanup, <=256-byte allowlisted diagnostic, preserves the real phase for returned phase-6/7 failures, and discovers all six exact Entry SEO targets with stable child-before-parent cleanup. Frozen SHA-256 `4bae679c630e54533c240fae5e6d76b58254dc109242b91d1ba84b162408f1da` passed Prettier, syntax, and the executor self-test with 496 actions, 177 runtime receipts, 72 cleanup actions, and 2230 negative cases. The next live smoke exposed incomplete Select teardown and insufficient phase-3 attribution, so this receipt is historical.
+**Historical Select-Teardown, Physical Dirty-Navigation, And Phase-3 Attribution Repair Implemented And Target-Revalidated:** 2026-07-21 — the next helper-backed smoke again passed setup and the Tone visible-effect flow, then emitted exact terminal `{failedActionId:"dg-024-entry-nav-cancel",failureClass:"click_failed",cleanupPhase:3,cleanupFailureClass:"phase_failed"}`. Read-only forensics found one exact nonce family with four content types, six Entries, two Screens, one Media row and its 68-byte SHA-256-pinned file; SEO, overrides, revisions, settings, synthetic users, sessions, audit/access rows, and every other task-owned surface were absent, global settings matched baseline, and the sole active canonical admin remained intact. A literal-ID, no-wildcard, no-user-delete, no-follow cleanup removed exactly that `4/6/2/1 + file` family and a fresh dry-run proved `0/0/0/0 + no file`. Source tracing found no product navigation defect: the Tone-select latch could return before Radix released its global pointer/scroll lock, while dirty-navigation visibility/geometry did not prove event delivery and its catch conflated pre-dispatch failure with post-dispatch auto-wait. Exactly two Tone-select actions now require every Select content node absent plus body scroll/pointer unlock; exactly five dirty-navigation actions require body unlock, a center-point physical hit test, no pre-existing named dialog, `noWaitAfter`, and the full stable dialog postcondition even after click throws. Their closed browser union adds only `pointer_locked` and `target_intercepted`. Phase 3 now distinguishes stage, dependency, provenance, delete, and absence failures while preserving higher-priority plan/Admin classes. A fresh cleanup-integrity audit found that four real Admin/plan/phase/final aggregation seams were not mutation-guarded; hermetic production-path evidence and four source mutants now bind those seams through the exact bounded, private-marker-free diagnostic. Frozen SHA-256 `5b0de7a899f17148e23272a83d69a5ce148bf3477adc1aed6db3e80b65d039b4` passes Prettier, syntax, and the executor self-test with 496 actions, 177 runtime receipts, 72 cleanup actions, and 2544 negative cases. Fresh read-only re-audits, one diagnostic helper-backed smoke, then the canonical audit/full-validation/smoke, changelog, and closure remain mandatory.
+**Historical Stable Select Handoff, Latest-Target Diagnostics, And Hash-Only Cleanup Receipts Implemented And Target-Revalidated:** 2026-07-21 — the next helper-backed diagnostic smoke passed setup and the Tone visible-effect flow, then emitted exact terminal `{failedActionId:"dg-024-entry-nav-cancel",failureClass:"pointer_locked",cleanupPhase:3,cleanupFailureClass:"persistent_provenance_failed"}`. Exact nonce `wf540-fb30befde747` residue was four content types, six Entries, two Screens, one Media row, and its exact 68-byte file; a literal-ID, no-wildcard, no-user-delete, no-follow cleanup script with SHA-256 `821fe5d6ecf122edf068d8b051c3ac9c903faecc19f7d84399a244e56dbf2b1e` removed exactly that `4/6/2/1 + file` family, and two consecutive post-apply dry-runs proved `0/0/0/0 + no file` while preserving the canonical admin and proving no FK blocker. No TASK-540 screenshot, browser/server process, or owned port remained. Three independent read-only traces found no product defect: Tone selection used a mixed-time cached teardown sample, dirty-navigation retained a sticky historical blocker instead of the latest poll state, and each successful cleanup Admin GET carried a non-empty `Buffer` into recursive freeze after provenance but before DELETE; the same latent defect also affected DELETE and 404 absence receipts. The executor now requires the full Tone visible-effect and atomic Select/body teardown postcondition continuously for at least 600 ms across at least two samples plus a final atomic handoff sample, reports one of seven exact Tone-select classes, recomputes each target-acquisition poll from the latest one of five blocker classes within the closed twelve-class dirty-navigation action union, and hashes bounded non-empty authoritative response bytes before discarding the raw `Buffer`; only validated lowercase SHA-256 enters frozen cleanup receipts, while exact ID/media key/URL and fresh absence proofs remain unchanged and `deepFreezeExact` is not weakened. Hermetic real Admin P/C/A tests and mutants cover legal Screen/Entry representation drift, wrong ID/key/URL, exact attempted-request/no-DELETE/zero-receipt projection, accepted one-byte/exact-MAX boundaries, non-Buffer/empty/oversized byte rejection, unconditional latest-state assignment, full dwell reset/body/geometry predicates, relock timelines, and raw-Buffer/hash regressions. Product source remains untouched by this repair. Frozen executor SHA-256 `6accccffc88371978f2c3ad1727dbbf96aa2473802ea583d14cbc0c4ea548001` passes Prettier, syntax, diff checks, and the full self-test with 496 actions, 177 runtime receipts, 72 cleanup actions, 26 captures, and 2668 negative cases. Fresh read-only re-audits, one diagnostic helper-backed smoke, then the canonical audit/full-validation/smoke, changelog, and closure remain mandatory.
+**Current Scroll-Lock Ownership And Bootstrap-Restore Uncertainty Repair Required:** 2026-07-21 — the next helper-backed smoke reached the same Entry dirty-navigation boundary and emitted exact terminal `{failedActionId:"dg-024-entry-nav-cancel",failureClass:"scroll_locked",cleanupPhase:8,cleanupFailureClass:"phase_failed"}`. A post-exit read-only absence audit proved every TASK-540 nonce-shaped resource, owned file, screenshot, helper/browser/server process, and owned port absent, but phase 8 did not return accepted restoration evidence before the executor exited; the private preflight bootstrap timestamp baseline and newest smoke-owned pair are no longer available, so the final `lastLoginAt`/`updatedAt` restoration outcome is unprovable. This consumed run must not be recovered by guessed timestamps or any post-exit write and does not authorize closure. Exact source/dependency tracing proved `dg-022` handed off one final atomic unlocked sample after its full 600 ms dwell, `dg-023` performed read-only DOM/URL observations, and `dg-024` reported only its last completed target poll rather than a continuous ten-second lock; no product or Radix reopen path is evidenced before the unperformed navigation click. The repair contract therefore adds bounded cross-CLI lock-owner observation plus phase-8 uncertain-CAS reconciliation and their exact tests/mutants while keeping product source unchanged absent named-owner evidence. The frozen executor SHA-256 is intentionally not advanced by this contract-author turn. Fresh read-only audits, targeted revalidation, one diagnostic helper-backed smoke, then the canonical audit/full-validation/smoke, changelog, and closure remain mandatory.
 **Historical L03 Source Repair Required:** On 2026-07-15 the live-smoke feasibility audit proved duplicate canonical/legacy cacheBus transport delivery made the exact-one `related-a-refresh` route contract impossible; the scoped repair landed and was revalidated.
 **Historical L03 Source Repair Owner:** TASK-540-04-L03 was the sole repair owner for the generic per-subscription cacheBus transport dedupe in `core/admin/utils/cacheBus.ts`, its regressions in `tests/vitest/admin/cacheBus.test.ts`, and additive direct-image route-boundary regressions in `tests/integration/routes/customScreensRoutes.test.ts`. No production route file changed.
 **Historical L03 Source Repair Gate:** TASK-540-04-L03 alone held the exact three-path repair authority, ran its required gates, and atomically replaced its matching `Repair Pending` receipt with one `Revalidation Passed` successor plus canonical `Implementation Complete`. That durable evidence remains valid but does not substitute for any later source-repair receipt or closure gate.
@@ -285,30 +303,204 @@ the filesystem.
 
 Raw environment values, stdout/stderr and HTTP bytes, request/response bodies, cookies,
 CSRF values, session tokens/hashes/handles, DB/storage details, and live process handles
-remain in executor-private `WeakMap` authority. No callback, error, log, audit prompt,
-or returned object may receive them. Success crosses the module boundary only as one
-strict reject-unknown, recursively frozen `CanonicalSmokeEvidence` whose hashes were
-computed from the private observations. After cleanup, a failure inside an active
-manifest action may additionally write one synthesized canonical stderr line containing
-exactly `{code:"task540_smoke_failed",failedActionId:<allowlisted manifest ID>}` through
-a caught synchronous full write to stderr file descriptor `2`; `EPIPE`, `EBADF`, a
+remain in executor-private authority. A separate inaccessible `WeakMap` may retain the
+raw cause, retained stdout/stderr buffers, and process-result metadata for cleanup and
+hermetic non-egress checks; the class map, tracker, and diagnostic emitter cannot read
+that detail map. No callback, public error, log, audit prompt, or returned object may
+receive those private details. Success crosses the module boundary only as one strict
+reject-unknown, recursively frozen `CanonicalSmokeEvidence` whose hashes were computed
+from the private observations.
+
+After cleanup, a failure may write exactly one synthesized canonical stderr line of at
+most 256 bytes through a caught synchronous full write to file descriptor `2`. The line
+always contains `code:"task540_smoke_failed"` and at least one authority: the active
+frozen-manifest `failedActionId`, or the inseparable cleanup pair
+`cleanupPhase`/`cleanupFailureClass`. `failureClass` may accompany only an active action
+in the closed auth-settlement, Tone-open, Tone-select, or dirty-navigation action sets.
+The only exact key shapes are action-only two/three-key, cleanup-only three-key, and
+combined four/five-key diagnostics. Cleanup phase is an integer from 0 through 10;
+phase 0 accepts only `cleanup_boundary_failed` or `construction_cleanup_failed`, phases
+1 through 10 accept `phase_failed`; phase 8 additionally accepts the exact classes
+`bootstrap_reconciliation_failed`, `bootstrap_cas_failed`,
+`bootstrap_uncertain_baseline_failed`, `bootstrap_post_restore_proof_failed`, and
+`bootstrap_restore_receipt_failed`; and phase 3 additionally accepts
+`admin_api_failed`, `persistent_plan_failed`, `persistent_stage_failed`,
+`persistent_dependency_blocked`, `persistent_provenance_failed`,
+`persistent_delete_failed`, and `persistent_absence_failed`. Multiple cleanup failures
+select the earliest phase, then the exact same-phase priority
+`persistent_plan_failed` -> `admin_api_failed` -> `persistent_provenance_failed` ->
+`persistent_delete_failed` -> `persistent_absence_failed` ->
+`persistent_stage_failed` -> `persistent_dependency_blocked` -> `phase_failed` ->
+`construction_cleanup_failed` -> `cleanup_boundary_failed`. `EPIPE`, `EBADF`, a
 partial write, or any other write failure remains private and cannot replace the fixed
-thrown failure. The line is not captured command stderr and contains no cause or
-observation. Every failure from
+thrown failure. No diagnostic contains captured command stderr, a raw cause, or a raw
+observation. Auth-settlement
+browser-observation failure classes remain limited to
+`dom_read_failed`, `geometry_absent`, `geometry_nonfinite`,
+`geometry_nonpositive`, `label_absent`, `label_duplicate`,
+`loading_view`, `login_route`, `menu_absent`, `menu_duplicate`, `menu_hidden`,
+`name_empty`, `name_mismatch`, `noncanonical_route`, `page_closed`,
+`runtime_failure`, or `url_unstable`. Pre-classifier executor failures are separately
+limited to `invocation_boundary_failed`, `repository_boundary_failed`,
+`process_runner_failed`, `process_timeout`, `process_exit_failed`,
+`process_stderr_rejected`, `process_output_limit`, `browser_error_frame`,
+`receipt_boundary_failed`, `output_normalization_failed`, or `success_contract_failed`.
+Tone-open is limited to its four `tone_*` settlement classes. Tone-select is limited to
+the seven exact classes `tone_select_authority_option_precondition`,
+`tone_select_menu_close`, `tone_select_interaction_handoff`,
+`tone_select_dirty_badges`, `tone_select_selection_override`,
+`tone_select_muted_class`, and `tone_select_computed_color_delta`. The four
+dirty-navigation siblings other than `dg-024-entry-nav-cancel` remain limited to the
+twelve exact browser classes `target_bound`, `target_duplicate`, `target_missing`,
+`source_url`, `scroll_locked`, `inline_pointer_locked`, `computed_pointer_locked`,
+`target_intercepted`, `click_failed`, `dialog_duplicate`, `not_suspended`, and
+`dialog_settlement`. `dg-024-entry-nav-cancel` instead has the same eleven non-
+`scroll_locked` classes plus exactly `scroll_locked_select_owned`,
+`scroll_locked_dialog_owned`, `scroll_locked_ownerless`,
+`scroll_locked_malformed_value`, `scroll_locked_owner_ambiguous`,
+`scroll_lock_timeline_missing`, and `scroll_lock_timeline_overflow`; generic
+`scroll_locked` is historical-only for that action. Every browser class may be joined
+only by the executor-stage classes above. Exactly the two Tone-select
+actions settle only after every Select content node is absent, the body has no
+`data-scroll-locked` attribute, and both its inline and computed pointer-event values
+are unlocked continuously for at least 600 ms across at least two complete samples.
+Any failed complete postcondition resets the dwell, and one final atomic teardown
+sample must pass immediately before handoff; their existing selected value,
+dirty-state, selection, and computed-color proofs remain required. Each of the five
+dirty-navigation actions first proves the exact named dialog absent, body pointer and
+scroll state unlocked, and the link physically owns its center-point hit target. It
+then dispatches the physical click with `noWaitAfter` and evaluates the complete exact
+named-dialog, stable-URL, and stable-navigation postcondition even when the click call
+throws.
+
+For the exact `dg-022` -> `dg-023` -> `dg-024` sequence, `dg-022` installs one
+`MutationObserver` on `document.body` atomically inside the same final page evaluation
+that proves its clean teardown sample; installation after that sample is forbidden. The
+observer lives in one executor-private, per-run page slot through the Playwright CLI
+post-callback gaps and retains at most 16 ordered transitions. Each entry is the strict
+allowlisted projection `{ordinal,lockState,selectContentCount,dialogOverlayCount,
+dialogContentCount}`: `lockState` is only `absent`, `positive`, or `malformed`; counts
+are bounded non-negative integers. It records no DOM text, selector result, raw
+attribute value, timestamp, node, HTML, URL, or stack. `dg-023` reads and validates the
+bounded projection while preserving the observer, and `dg-024` consumes its final
+projection and disconnects/removes the private slot in `finally`. A canonical positive
+final value with only Select content is select-owned, only a consistent Dialog
+overlay/content pair is dialog-owned, and zero known owners is ownerless; malformed
+numeric syntax, mixed/inconsistent owners, missing authority, and overflow map to their
+exact classes above. This classification describes only the final completed target poll:
+neither an earlier transition nor the ten-second deadline may be claimed as continuous
+lock evidence. The exact browser failure frame remains only
+`{failureClass,settled:false}`; the timeline stays executor-private and never joins a
+public capture, receipt, diagnostic, or evidence object.
+
+The executor self-test must mutate observer installation after the atomic handoff,
+observer deletion before each consumer, the 16-entry bound, ordinal order, each count,
+each owner mapping, canonical-positive and malformed-value parsing, mixed owners,
+generic `scroll_locked` eligibility for `dg-024`, final-versus-historical selection,
+disconnect-in-`finally`, and every forbidden raw field. Exact-frame deletion,
+substitution, extra-key, extra-action, and class/order mutants must fail. A targeted real-
+browser regression must use the installed Radix Select/RemoveScroll stack and the exact
+product panel: select Muted, prove the 600 ms plus final atomic handoff, execute the
+exact `dg-023` reads across both CLI completion gaps, and prove the body remains unlocked
+with zero live Select/Dialog owner before `dg-024`. Product source remains read-only
+unless this bounded evidence names a live product-owned layer.
+
+The browser-frame set and executor-stage set are disjoint. Their frozen diagnostic union
+is the sole allowlist for private error branding, tracker retention, and the emitter.
+Only the browser-frame set may generate or classify a serialized failure frame; an
+executor-stage class serialized by browser output remains non-exact and generic. Except
+for the explicitly bounded `success_contract_failed` eligibility guard below, stage
+classes are selected only by their owning boundary, already-retained process
+booleans/counts, or the allowlisted browser-error marker after the secret scan. Those
+selectors never parse, hash, excerpt, or project an error message, stderr, URL, body,
+cookie, credential, environment value, session handle, or response payload. After the
+non-exact command buffers have passed the generic secret scan and output normalization,
+the success eligibility guard may privately decode and parse only the complete canonical
+three-field envelope to check its keys, types, and canonical framing. It never selects a
+class from a field value and never stores, returns, logs, hashes, excerpts, or projects a
+field value; the registered parser/schema/predicate remains the sole semantic authority.
+
+The browser helper returns its two-key private failure frame at the bounded deadline, or
+immediately after a proven page-close during polling. The command authority retains a
+post-run repository failure instead of throwing it until output safety is resolved. Only
+when the program is exactly `playwright-cli` and the repository boundary plus every
+bounded successful-process guard are clean may it byte-compare and brand the complete
+exact browser failure frame before the generic substring secret scan. That match is safe
+by construction because the entire stdout is one allowlisted constant and stderr is
+empty. The allowlisted browser-error marker likewise maps to `browser_error_frame` only
+for `playwright-cli`. A different program carrying either an exact browser frame or the
+marker remains generic. Every other returned process outcome first scans all retained
+non-exact stdout/stderr bytes; a secret/corpus match remains generic.
+Only after a clean scan does the closed process precedence apply:
+`process_output_limit` > `process_timeout` > `process_runner_failed` for a returned
+spawn/termination anomaly > `browser_error_frame` > `process_stderr_rejected` >
+`process_exit_failed`. A runner throw with no returned buffers maps directly to
+`process_runner_failed`; a pre-run snapshot failure maps directly to
+`repository_boundary_failed`. A retained post-run repository failure takes precedence
+over the process classes after the non-exact scan. The same browser-frame exact-byte
+check remains after output normalization as defense in depth.
+
+`invocation_boundary_failed` owns only compilation of the registered action execution
+spec, route metadata, and browser invocation before the command starts.
+`output_normalization_failed` owns only command-output normalization.
+`success_contract_failed` owns only the registered success parser/schema/predicate and
+is eligible only after a private no-throw guard proves that the normalized bytes are the
+canonical one-line auth-settlement success envelope with exactly the own keys
+`url`, `userMenuVisible`, and `userName` and the exact types string, boolean, and string.
+One-line invalid JSON, a wrong type, an additional key, an unknown or executor-stage
+failure class, and any other non-success-shaped frame remain unbranded generic failures.
+`receipt_boundary_failed` owns both the command receipt and the complete post-parse
+browser result boundary: receipt construction, safe-evidence validation, capture binding,
+resource-delta derivation, result freeze, and the real `validateCapabilityResult` call
+before `executeAction` returns. The core keeps its existing second
+`validateCapabilityResult` call as defense in depth. Ledger append and post-ledger
+resource registration remain intentionally generic internal invariants because the six
+auth-settlement actions have an empty acquisition delta. Unknown classes, additional
+keys, raw URL/body/cookie/credential content outside the exact eligible canonical
+success envelope, non-settlement actions, secret matches, corrupt internal invariants
+outside those exact scopes, and unbranded failures remain the original action-only
+diagnostic. A non-secret URL with the wrong semantic value inside that exact envelope is
+eligible for the registered predicate and maps to `success_contract_failed`. Every failure from
 exact input validation, plan construction, partial or complete capability construction,
 core execution, or cleanup still throws only the frozen exact sanitized projection
-`{code:"task540_smoke_failed"}`. Construction, cleanup-only, unknown, and cleared-action
-failures emit no line. The one private authority performs bounded idempotent
+`{code:"task540_smoke_failed"}`. Construction, unknown, no-active-action, and
+cleared-action states emit no line when cleanup proves absence; when cleanup itself
+fails they may emit only the exact cleanup-only diagnostic defined above. The one
+private authority performs bounded idempotent
 cleanup of exactly the handles/resources acquired so far; a core cleanup attempt and the
 public wrapper's failure cleanup share the same once-state, so they cannot double-close
-or double-delete. Raw causes and cleanup diagnostics remain private, and a cleanup error
-cannot replace or escape beside the fixed public failure. The executor self-test uses
+or double-delete. Raw causes and raw cleanup observations remain private; only the
+bounded phase/class pair may cross the diagnostic sink, and a cleanup error cannot
+replace the fixed public failure. The executor self-test uses
 only hermetic fakes and covers success, construction-authority creation failure while the
 slot remains null, reject-unknown input, plan-build failure, failure after each
 partial-construction acquisition, duplicate/corrupt actions, exactly-once cleanup on core
 and cleanup failure, private-value non-egress, fixed failure shape, once-only exact-byte
 diagnostic output, contained synchronous `EPIPE`/`EBADF` and partial-write failures, and the prohibition
-on agent/command/receipt/hash injection. Its successful-loop case proves that after
+on agent/command/receipt/hash injection. A hermetic generated-source harness executes
+the real auth helper and common observation epilog for success, login, loading,
+menu-absent, runtime-failure, DOM-read-failure, and page-close-during-wait states. A
+second harness invokes the production `LocalCommandAuthority` with a module-private
+injected fake process runner and immutable fake snapshots. It proves exact browser
+failure frames are branded before the generic secret scan; a serialized executor-stage
+frame and the browser frame/marker under any non-`playwright-cli` program remain generic;
+each clean, non-secret closed invocation, process, repository, normalization,
+success-contract, and both receipt stages map to the exact safe class; invalid-UTF-8,
+empty, or multiline non-secret framing maps only to `output_normalization_failed`; and one-line
+invalid JSON, a wrong success-field type, additional/raw keys, an unknown class, or a
+serialized executor-stage class remains generic. Canonical success-shaped frames with a
+wrong URL, false visibility, or an empty user name map to `success_contract_failed`.
+An invalid browser result that passes command-receipt construction but fails the real
+`validateCapabilityResult` maps to `receipt_boundary_failed` after exactly-once cleanup.
+The same failures on a non-auth action remain generic. Table-driven overlapping process
+outcomes pin the precedence above, with a non-auth generic twin for every row. The
+repository matrix additionally proves that a post-run repository failure beats an exact
+auth frame and every individual or overlapping process flag after a clean scan, that a
+repository failure plus secret-bearing non-exact stdout/stderr remains generic, and that
+a pre-run snapshot failure invokes no runner. Secret-bearing non-exact stdout/stderr
+remains generic in every mixed case. Both harnesses continue
+through the real diagnostic union, tracker, core cleanup, and exact post-cleanup boundary
+without projecting their retained private marker. Its successful-loop case proves that after
 `end-007-session-absence` phase 1 issues zero browser CLI invocations and zero browser
 receipts, then identity-safely removes only the already-acquired private root. Its early-
 failure matrix proves that phase 1 executes exactly the still-missing subset of
@@ -316,6 +508,229 @@ release/unroute, native route-list, close, and global-list absence operations on
 cleanup diagnostics for them, and never replays an already completed terminal browser
 operation. The null-authority case proves zero cleanup attempts and only the module-
 private never-throw sink; every failure case observes the same frozen public failure.
+
+Implementation pseudocode for the pre-classifier repair:
+
+```ts
+const AUTH_SETTLEMENT_BROWSER_FAILURE_CLASSES = deepFreezeExact([
+  // The existing 17 DOM, URL, geometry, identity, and runtime classes.
+]);
+const AUTH_SETTLEMENT_EXECUTOR_FAILURE_CLASSES = deepFreezeExact([
+  "invocation_boundary_failed",
+  "repository_boundary_failed",
+  "process_runner_failed",
+  "process_timeout",
+  "process_exit_failed",
+  "process_stderr_rejected",
+  "process_output_limit",
+  "browser_error_frame",
+  "receipt_boundary_failed",
+  "output_normalization_failed",
+  "success_contract_failed",
+]);
+const AUTH_SETTLEMENT_DIAGNOSTIC_FAILURE_CLASSES = deepFreezeExact([
+  ...AUTH_SETTLEMENT_BROWSER_FAILURE_CLASSES,
+  ...AUTH_SETTLEMENT_EXECUTOR_FAILURE_CLASSES,
+]);
+const AUTH_SETTLEMENT_FAILURE_FRAMES = buildExactFrames(
+  AUTH_SETTLEMENT_BROWSER_FAILURE_CLASSES,
+);
+const PRIVATE_AUTH_SETTLEMENT_FAILURE_CLASSES = new WeakMap();
+const PRIVATE_AUTH_SETTLEMENT_FAILURE_DETAILS = new WeakMap();
+
+function createPrivateAuthSettlementFailure(failureClass, privateDetails = null) {
+  requireMember(AUTH_SETTLEMENT_DIAGNOSTIC_FAILURE_CLASSES, failureClass);
+  const failure = new Error("TASK-540 auth settlement failed");
+  PRIVATE_AUTH_SETTLEMENT_FAILURE_CLASSES.set(failure, failureClass);
+  if (privateDetails !== null) {
+    PRIVATE_AUTH_SETTLEMENT_FAILURE_DETAILS.set(failure, privateDetails);
+  }
+  return failure;
+}
+
+function failAuthSettlementStage(action, failureClass, privateDetails, fallbackMessage): never {
+  if (AUTH_SETTLEMENT_ACTION_IDS.includes(action.id)) {
+    throw createPrivateAuthSettlementFailure(failureClass, privateDetails);
+  }
+  throw new Error(fallbackMessage);
+}
+
+function classifySafeProcessOutcome(program, execution) {
+  // Called only after the retained non-exact buffers pass the secret scan.
+  if (execution.stdout.exceeded || execution.stderr.exceeded) return "process_output_limit";
+  if (execution.timedOut) return "process_timeout";
+  if (execution.spawnError || !execution.termination.absent) return "process_runner_failed";
+  if (
+    program === "playwright-cli" &&
+    hasAllowlistedBrowserErrorMarker(execution.stdout.bytes)
+  ) {
+    return "browser_error_frame";
+  }
+  if (execution.stderr.bytes.length !== 0) return "process_stderr_rejected";
+  if (execution.completion.code !== 0) return "process_exit_failed";
+  return null;
+}
+
+function isExactAuthSettlementSuccessFrame(action, normalizedBytes) {
+  if (!AUTH_SETTLEMENT_ACTION_IDS.includes(action.id)) return false;
+  try {
+    const text = decodeExactNativeUtf8(normalizedBytes, "auth settlement success frame");
+    if (!text.endsWith("\n") || text.length <= 1 || text.slice(0, -1).includes("\n")) {
+      return false;
+    }
+    const body = text.slice(0, -1);
+    const value = JSON.parse(body);
+    if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+    if (Object.getPrototypeOf(value) !== Object.prototype) return false;
+    if (!deepEqualJson(Object.keys(value), ["url", "userMenuVisible", "userName"])) {
+      return false;
+    }
+    return (
+      canonicalJson(value) === body &&
+      typeof value.url === "string" &&
+      typeof value.userMenuVisible === "boolean" &&
+      typeof value.userName === "string"
+    );
+  } catch {
+    return false;
+  }
+}
+
+class LocalCommandAuthority {
+  constructor(input, processRunner = runRetainedProcessGroup) {
+    // The optional runner is module-private and accepted only by hermetic self-tests.
+    bindPrivateAuthority(this, input, processRunner);
+  }
+
+  async executeProgram(input) {
+    let before;
+    try {
+      before = await snapshotRepository();
+    } catch (cause) {
+      failAuthSettlementStage(
+        input.action,
+        "repository_boundary_failed",
+        { cause },
+        "snapshot failed",
+      );
+    }
+
+    let execution;
+    try {
+      execution = await privateProcessRunner(input);
+    } catch (cause) {
+      failAuthSettlementStage(input.action, "process_runner_failed", { cause }, "command failed");
+    }
+
+    let repositoryFailure = null;
+    try {
+      const after = await snapshotRepository();
+      assertRepositoryMutationPolicy(input.action, before, after);
+    } catch (cause) {
+      repositoryFailure = cause;
+    }
+
+    const cleanProcess = processOutcomeIsSuccessfulBoundedAndAbsent(execution);
+    const exactFailureClass =
+      input.program === "playwright-cli" && repositoryFailure === null && cleanProcess
+        ? classifyPrivateAuthSettlementFailureFrame(input.action.id, execution.stdout.bytes)
+        : null;
+    if (exactFailureClass !== null) {
+      throw createPrivateAuthSettlementFailure(exactFailureClass, { execution });
+    }
+
+    // Every non-exact retained stdout/stderr buffer is scanned before a safe stage class.
+    assertCommandOutputContainsNoSensitiveValue(execution);
+    if (repositoryFailure !== null) {
+      failAuthSettlementStage(
+        input.action,
+        "repository_boundary_failed",
+        { cause: repositoryFailure, execution },
+        "repository changed",
+      );
+    }
+    const processFailureClass = classifySafeProcessOutcome(input.program, execution);
+    if (processFailureClass !== null) {
+      failAuthSettlementStage(
+        input.action,
+        processFailureClass,
+        { execution },
+        "local command failed",
+      );
+    }
+
+    try {
+      return buildAndValidateSafeCommandReceipt(execution);
+    } catch (cause) {
+      failAuthSettlementStage(
+        input.action,
+        "receipt_boundary_failed",
+        { cause, execution },
+        "command receipt failed",
+      );
+    }
+  }
+}
+
+async function executeBrowserAction(action) {
+  let invocation;
+  try {
+    invocation = buildRegisteredExecutionSpecRouteMetadataAndInvocation(action);
+  } catch (cause) {
+    failAuthSettlementStage(
+      action,
+      "invocation_boundary_failed",
+      { cause },
+      "browser invocation failed",
+    );
+  }
+  const commandResult = await authority.executeProgram(invocation);
+  let normalizedBytes;
+  try {
+    normalizedBytes = await normalizeBrowserCommandOutput(commandResult.stdout);
+  } catch (cause) {
+    failAuthSettlementStage(
+      action,
+      "output_normalization_failed",
+      { cause, commandResult },
+      "output invalid",
+    );
+  }
+  const exactFailureClass = classifyPrivateAuthSettlementFailureFrame(action.id, normalizedBytes);
+  if (exactFailureClass !== null) throw createPrivateAuthSettlementFailure(exactFailureClass);
+  const successContractEligible = isExactAuthSettlementSuccessFrame(action, normalizedBytes);
+  let parsedOutput;
+  try {
+    parsedOutput = parseRegisteredOutput(normalizedBytes);
+  } catch (cause) {
+    if (successContractEligible) {
+      failAuthSettlementStage(
+        action,
+        "success_contract_failed",
+        { cause, commandResult },
+        "output contract failed",
+      );
+    }
+    throw cause;
+  }
+  try {
+    const result = buildValidateAndFreezeBrowserCapabilityResult(
+      action,
+      commandResult,
+      parsedOutput,
+    );
+    validateCapabilityResult(result, action, executable, plan);
+    return result;
+  } catch (cause) {
+    failAuthSettlementStage(
+      action,
+      "receipt_boundary_failed",
+      { cause, commandResult },
+      "browser result failed",
+    );
+  }
+}
+```
 
 The bridge does not add a fourth smoke module. Its action-specific registry, immutable
 `--eval` source constants, schemas, and one-shot spawn primitive are non-exported
@@ -2644,6 +3059,47 @@ outermost deterministic path whenever any bootstrap login was entered, including
 partial login whose action never returned success. No further login or task HTTP is
 allowed after restoration starts; restoration failure is retained privately and
 blocks canonical evidence without suppressing independent screenshot/process cleanup.
+
+Phase 8 must expose separately classified reconciliation, CAS, uncertain-outcome
+baseline-proof, ordinary post-restore-proof, and runtime-receipt substages. It seals the
+newest smoke-owned timestamp pair before starting exactly one nullable-safe CAS bridge
+write attempt. A validated bridge result retains the existing in-transaction and after-
+commit complete-row/role proof. If bridge completion becomes uncertain after that one
+attempt may have committed, the executor performs exactly one additional read-only,
+ID-scoped complete-user-row plus complete-role-tuple comparison with the immutable
+preflight baseline. Only byte-identical equality may resolve the state as
+`already-restored-after-uncertain-outcome`; that resolution performs zero second CAS or
+other write. A row still at the newest owned pair, unknown-column drift,
+missing/duplicate row, or role drift fails closed without retry, repair, or timestamp
+reconstruction. Receipt construction is a separate substage after restoration state is
+sealed: its failure maps only to `bootstrap_restore_receipt_failed`, cannot erase the
+proven restoration state, and cannot call restoration again. No later process may
+recover an exited run by guessing its destroyed private timestamp baseline.
+
+```ts
+const newestOwnedPair = reconcileAndSealNewestBootstrapPair(attempts);
+const casAttempt = await runBootstrapCasBridgeOnce({ baseline, newestOwnedPair });
+let resolution;
+if (casAttempt.kind === "validated") {
+  resolution = requireValidatedInTransactionAndAfterCommitProof(casAttempt);
+} else if (casAttempt.kind === "outcome-uncertain") {
+  const oneReadOnlyProof = await readCompleteBootstrapRowAndRolesOnce(baseline.id);
+  resolution = requireByteIdenticalBaseline(oneReadOnlyProof)
+    ? "already-restored-after-uncertain-outcome"
+    : failClosed("bootstrap_uncertain_baseline_failed");
+} else {
+  failClosed("bootstrap_cas_failed");
+}
+sealBootstrapRestorationResolution(resolution);
+emitBootstrapRestoreReceiptOnce(resolution); // no restore/write authority
+```
+
+Hermetic production-path tests and source mutants must cover commit plus lost bridge
+output, lost output without commit, newest-pair selection across multiple login attempts,
+stale-pair substitution, unknown column drift, role drift, missing/duplicate row, zero
+or two uncertain-outcome reads, any second CAS/write, acceptance without complete byte
+identity, and receipt failure after a proven restore. They must prove exact substage-
+class mapping and that receipt failure is retained separately from restoration failure.
 `assert(name)` is `expectedVisibleAssertionCommand`; `blocksBefore(name)` and
 `captureNew(name,type,before)` are the two read-only block-set commands around exactly
 one palette click. `route(key,operation)`, `screen(path)`, and `logs(scope,channel)` are
@@ -3042,9 +3498,9 @@ or rename rows.
 | `dg-019-select-headline` | p1/0 | `click(S.selectBlock(screen.blockIds.headlineField))` | entry visible -> selection -> Headline selected | `dg-018 / absent -> absent` |
 | `dg-020-headline-fill` | p1/0 | `fill(S.contentEditable(screen.blockIds.headlineField,"Headline"),entry.contentDraft)` | headline selected -> value -> content dirty | `dg-019 / absent -> absent` |
 | `dg-021-tone-open` | p1/0 | `click(S.toneTrigger)` | selected target supports tone -> menu -> tone menu open | `dg-020 / absent -> absent` |
-| `dg-022-tone-muted` | p1/0 | `click(S.muted)` | menu open -> selected value -> presentation dirty muted | `dg-021 / absent -> absent` |
-| `dg-023-entry-before-cancel` | p1/0 | `observe(entry-drafts-url-before-cancel)` | both channels dirty -> content/presentation/URL -> before sample frozen | `dg-022 / absent -> absent` |
-| `dg-024-entry-nav-cancel` | p1/0 | `click(S.recordsLink(screen.id))` | entry dirty -> dialog -> navigation suspended | `dg-023 / absent -> absent` |
+| `dg-022-tone-muted` | p1/0 | `click(S.muted)` | menu open -> selected value + all Select content absent + body pointer/scroll unlocked continuously for >=600 ms across >=2 complete samples + final atomic teardown sample and bounded lock observer installed atomically -> presentation dirty muted | `dg-021 / absent -> absent` |
+| `dg-023-entry-before-cancel` | p1/0 | `observe(entry-drafts-url-before-cancel)` | both channels dirty -> content/presentation/URL plus validated private bounded lock-owner timeline -> before sample frozen while observer remains active | `dg-022 / absent -> absent` |
+| `dg-024-entry-nav-cancel` | p1/0 | `click(S.recordsLink(screen.id))` | entry dirty + final private lock-owner classification -> unlocked physical target -> dialog -> navigation suspended; observer disconnected in finally | `dg-023 / absent -> absent` |
 | `dg-025-entry-keep` | p1/0 | `click(S.keepEditing)` | dialog visible -> close -> entry retained | `dg-024 / absent -> absent` |
 | `dg-026-entry-cancel-bytes` | p1/0 | `assert(entry-cancel-byte-identical)` | canceled -> both drafts -> byte-identical | `dg-023,dg-025 / absent -> absent` |
 | `dg-027-entry-cancel-url` | p1/0 | `assert(entry-cancel-url-stable)` | canceled -> before/after URL -> byte-identical | `dg-023,dg-025 / absent -> absent` |
@@ -3093,7 +3549,7 @@ or rename rows.
 | `rc-013-select-note` | p1/0 | `click(S.selectBlock(screen.blockIds.spaceNoteField))` | picker warm proof complete -> selection -> unrelated text Field selected | `rc-012c-picker-warm-proof / absent -> absent` |
 | `rc-014-unrelated-fill` | p1/0 | `fill(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"),entry.relatedUnrelatedDraft)` | field selected -> value -> unrelated content dirty | `rc-013 / absent -> absent` |
 | `rc-015-tone-open` | p1/0 | `click(S.toneTrigger)` | selected field supports tone -> menu -> tone menu open | `rc-014 / absent -> absent` |
-| `rc-016-tone-muted` | p1/0 | `click(S.muted)` | menu open -> selected value -> unrelated presentation dirty | `rc-015 / absent -> absent` |
+| `rc-016-tone-muted` | p1/0 | `click(S.muted)` | menu open -> selected value + all Select content absent + body pointer/scroll unlocked continuously for >=600 ms across >=2 complete samples + final atomic teardown sample -> unrelated presentation dirty | `rc-015 / absent -> absent` |
 | `rc-017-unrelated-before` | p1/0 | `observe(related-unrelated-drafts-before)` | both unrelated channels dirty -> bytes -> before sample frozen | `rc-016 / absent -> absent` |
 | `rc-017a-pre-route-a-baseline` | p1/0 | `observe(related-a-visible-baseline)` | main entry/pickers settled -> exact main-A-list-root row IDs/text/positive rects and zero skeleton/empty geometry + current p1 `navigationCount` -> pre-route visible/navigation baseline frozen | `rc-017 / absent -> absent` |
 | `rc-017b-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | entry baseline stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}` | `rc-017a-pre-route-a-baseline / absent -> absent` |
@@ -3374,7 +3830,8 @@ type AcquiredResourceRecord = Readonly<{
   resourceKey: string;
   class: "delete" | "restore" | "runtime" | "retained";
   kind:
-    | "presentation-override" | "setting-user-a" | "setting-user-b"
+    | "presentation-override" | "seo-document-entry"
+    | "setting-user-a" | "setting-user-b"
     | "screen-main" | "screen-retry" | "entry-editable" | "entry-related"
     | "media-row-key" | "content-type" | "audit-log-task-ua"
     | "access-log-task-ua" | "session-task" | "user-a" | "user-b"
@@ -3383,7 +3840,8 @@ type AcquiredResourceRecord = Readonly<{
     | "browser-session" | "route-registry" | "api-context-bootstrap"
     | "api-context-user-a" | "browser-private-root" | "host-process-group";
   identifierType:
-    | "db-id" | "db-composite" | "media-id-and-storage-key"
+    | "db-id" | "db-composite" | "seo-document-target"
+    | "media-id-and-storage-key"
     | "setting-row" | "filesystem-path" | "browser-session-name"
     | "api-context-name" | "process-group-id" | "proof-key";
   identifier: readonly string[];
@@ -3393,7 +3851,8 @@ type AcquiredResourceRecord = Readonly<{
   sourceActionOrdinal: number | null;
   acquisitionChannel:
     | "admin-api" | "service" | "terminal-db-delta" | "filesystem"
-    | "browser" | "process" | "preflight" | "failure-discovery";
+    | "browser" | "process" | "preflight" | "failure-discovery"
+    | "cleanup-discovery";
   dependsOn: readonly string[];
   provenanceAdapterId:
     | "admin-api-exact" | "db-exact" | "db-terminal-delta"
@@ -3436,7 +3895,8 @@ manifest/source ordinal, and is never copied from a failed request. If
 `acquisitionSourceId` names a manifest action, `sourceActionOrdinal` is that exact
 bounded positive manifest ordinal; otherwise it is `null` and the source ID is exactly
 `preflight-baseline`, `failure-resource-discovery`, or
-`terminal-task-ua-discovery`. Response-lost discovery for a known create preserves
+`terminal-task-ua-discovery`, except that bounded Entry SEO discovery uses exactly
+`cleanup-seo-entry-discovery`. Response-lost discovery for a known create preserves
 that create's action ID and manifest ordinal in those two source fields while selecting
 `acquisitionChannel:"failure-discovery"`; the discovery query is represented only by
 the provenance adapter/operation IDs. This removes every source-ordinal overload from
@@ -3454,6 +3914,7 @@ phase, policy, authority, or ID/schema-nullability combination:
 | Kind | Class; identifier type/arity | Allowed acquisition -> P adapter | C adapter / A adapter | S/F | Policy | delete/restore | P/C/A |
 |---|---|---|---|---:|---|---|---|
 | `presentation-override` | delete; `db-composite`/4 | admin-api -> admin-api-exact; failure-discovery -> db-exact | db-exact / db-exact | 3/3 | delete-and-prove-absent | true/false | R/R/R |
+| `seo-document-entry` | delete; `seo-document-target`/3 | cleanup-discovery -> db-exact | db-exact / db-exact | 3/3 | delete-and-prove-absent | true/false | R/R/R |
 | `setting-user-a` | delete; `setting-row`/2 | service -> user-setting-service; failure-discovery -> db-exact | db-exact / db-exact | 3/3 | delete-and-prove-absent | true/false | R/R/R |
 | `setting-user-b` | delete; `setting-row`/2 | service -> user-setting-service; failure-discovery -> db-exact | db-exact / db-exact | 3/3 | delete-and-prove-absent | true/false | R/R/R |
 | `screen-main` | delete; `db-id`/1 | admin-api -> admin-api-exact; failure-discovery -> db-exact | admin-api-exact / admin-api-exact | 3/3 | delete-and-prove-absent | true/false | R/R/R |
@@ -3507,6 +3968,13 @@ const RESOURCE_BUN_BRIDGE_PARTICIPATION = deepFreezeExact({
     provenance: {
       "admin-api": { mode: "node-local" },
       "failure-discovery": { mode: "bun-one-shot", envProfileId: "database" },
+    },
+    cleanup: { mode: "bun-one-shot", envProfileId: "database" },
+    absence: { mode: "bun-one-shot", envProfileId: "database" },
+  },
+  "seo-document-entry": {
+    provenance: {
+      "cleanup-discovery": { mode: "bun-one-shot", envProfileId: "database" },
     },
     cleanup: { mode: "bun-one-shot", envProfileId: "database" },
     absence: { mode: "bun-one-shot", envProfileId: "database" },
@@ -3797,7 +4265,9 @@ reverse-oriented edge, phase-local fallback, or edge inferred from a prefix/owne
 rejects the plan before the affected phase.
 
 Acquisition is registered only from a strict successful create response followed by
-its separate provenance read, or from bounded failure discovery. For the successful
+its separate provenance read, from bounded response-lost failure discovery, or from
+the bounded stable exact-target cleanup discovery reserved for the six fixture Entry
+SEO targets. For the successful
 path, strict raw/result/receipt/provenance validation completes first; the action-bound
 delta is then appended and cross-checked bidirectionally against the action descriptor
 and result before captures, state transition, receipt storage, or completed-action
@@ -3824,7 +4294,16 @@ union, and compiles the persistent plan exactly once. This catches a server-side
 that committed before its response failed while still cleaning every independent known
 resource. Intent, a prefix match, an expected response ID, or an ambiguous candidate is
 never delete authority. That same phase-3 authority also re-queries exact scoped
-override/setting rows and the exact media discriminator plus storage identity.
+override/setting rows and the exact media discriminator plus storage identity. It also
+performs two bounded, stable polls using the six exact fixture Entry IDs in one fixed
+target list. Each result must contain at most six
+`seo_documents(target_type="entry",target_id=<fixture-entry-id>)` rows, at most one per
+exact target, with unique document IDs and stable target-ID/document-ID ordering. Zero
+rows add no resource; one to six stable rows each add an individual
+`seo-document-entry` with identifier `[seo-id,"entry",fixture-entry-id]` and a child
+edge to that exact fixture Entry. A foreign target/type, duplicate target/document,
+overflow, identity drift, incomplete fixture inventory, or unstable polls fail closed
+and block all acquired fixture Entries plus their transitive parents.
 The 13 fixed screenshot paths remain under the separate phase-2 filesystem-identity
 discovery/removal contract and never enter this persistent-create query or writer.
 For a known originating action, its ID and manifest ordinal remain solely in
@@ -3838,8 +4317,9 @@ they are neither cleanup inventory nor cleanup cardinality. After phase-3
 response-lost discovery is complete and before its first delete,
 `compileResourceRecords("persistent")` selects every acquired `class:"delete"` core
 except `terminal-db-delta` records. It maps logical `media` to the single composite
-`media-row-key`, includes the other 14 entity subjects plus the main override and
-settings A/B, and freezes `persistentCleanupSubjectKeys` and
+`media-row-key`, includes the other 14 entity subjects plus the main override, zero to
+six exact cleanup-discovered Entry SEO documents, and settings A/B, and freezes
+`persistentCleanupSubjectKeys` and
 `persistentCleanupSubjectCount`. `expandPersistentRuntimeCleanup()` adds one explicit
 provenance/delete/absence manifest object per exact key—not a loop hidden inside a
 command—and must pass both:
@@ -4022,7 +4502,9 @@ The phase scheduler is closed and identical on success/failure except where note
 7. delete/prove synthetic users using the unchanged persistent action plan plus that
    same final graph and propagated blockers; a failed terminal session/audit/access child
    blocks its exact user and all transitive destructive parents;
-8. attempt the bootstrap CAS and complete-row/role proof;
+8. seal the newest bootstrap pair, attempt the bootstrap CAS write exactly once, resolve
+   an uncertain bridge outcome only through one read-only complete-row/role baseline
+   proof with zero second write, then construct its separate runtime receipt;
 9. prove `site.contentRoutes`, settings, storage/missing-media state, and either
    validate retained success screenshots or prove failure screenshot absence;
 10. TERM/KILL and prove the owned process group, PIDs, and ports absent.
@@ -4032,7 +4514,8 @@ never deletes `P` while any exact key in final `P.dependsOn` lacks successful cl
 and absence, or while `P` is in the transitively propagated failure-discovery blocker
 set; no cleanup action is silently retried through a broader adapter.
 
-The canonical reverse-dependency sort is: the main override; setting A/B; the main and
+The canonical reverse-dependency sort is: the main override; zero to six exact
+cleanup-discovered Entry SEO documents in their frozen stable discovery order; setting A/B; the main and
 retry Screens; the editable entry and five related entries; the composite media-row-key;
 the four content types; stable-polled task-UA audit logs; stable-polled task-UA access
 logs; every acquired `session-task`; then users A/B. Each resource gets separate
@@ -4055,6 +4538,13 @@ branches, bootstrap restoration, failure screenshot cleanup, settings/storage pr
 and process shutdown continue in canonical phase order; all primary, discovery,
 cleanup, blocked-parent, and absence errors are retained together privately. Any one
 error blocks canonical evidence.
+
+Every non-empty authoritative Admin provenance, delete, and absence response is
+validated within its bounded API boundary, SHA-256-hashed immediately, and discarded
+before any recursive freeze. Only the lowercase 64-hex `observedBytesSha256` value may
+enter frozen cleanup state and receipt evidence. The raw `Buffer` never crosses that
+boundary; exact response ID and media key/URL checks plus fresh absence proofs remain
+mandatory, and `deepFreezeExact` is not weakened or special-cased.
 
 The remaining exact runtime suffix is: exact bootstrap `lastLoginAt`/`updatedAt`
 restore plus complete-row/role byte-identity proof; proof-only
@@ -4857,7 +5347,7 @@ async function executeDeterministicCleanup(
       errors,
     );
   });
-  await continuePhase(errors, 8, restoreBootstrapByLockedNullableSafeCas);
+  await continuePhase(errors, 8, restoreBootstrapWithSingleCasAndUncertainOutcomeProof);
   await continuePhase(errors, 9, async () => {
     await proveGlobalStorageAndScreenshotPostconditions(runState);
     runState = transitionCleanupState(runState, "fixtures-and-storage-absent");
@@ -4900,17 +5390,21 @@ diagnostics, then deletes/proves only acquired independent fixtures in canonical
 order, runs the mandatory bootstrap login-state restore/complete-row proof, both stable
 storage/DB absence scans, and finally stops/proves the owned process tree and ports.
 
-The canonical reverse-dependency sort is: the main override; setting A/B; the main and
+The canonical reverse-dependency sort is: the main override; zero to six exact
+cleanup-discovered Entry SEO documents in their frozen stable discovery order; setting A/B; the main and
 retry Screens; the editable entry and five related entries; the composite media-row-key;
 the four content types; stable-polled task-UA audit logs; stable-polled task-UA access
 logs; every acquired `session-task`; then users A/B. Cleanup failure is retained privately; the public
-wrapper may emit only the exact two-key active-action diagnostic after cleanup, then
+wrapper may emit only the exact action-only, cleanup-only, or combined bounded
+diagnostic shapes defined above after cleanup, then
 throws the unchanged fixed sanitized failure and never starts another attempt.
 The diagnostic sink is module-private and injectable only for hermetic executor tests.
 Those tests prove exact canonical bytes and one emission, reject an ID outside the
-frozen manifest without emission, emit nothing for construction/no-active-action or
-cleanup-only failure, clear a successfully completed action so cleanup cannot be
-misattributed to it, and prove a private marker from the retained cause never appears.
+frozen manifest as action authority, emit nothing for construction/no-active-action
+when cleanup proves absence, emit the exact cleanup-only shape when cleanup fails, clear
+a successfully completed action so cleanup cannot be misattributed to it, select the
+earliest cleanup phase and fixed same-phase class precedence, and prove a private marker
+from the retained cause never appears.
 The real sink is bounded and wrapped so an output failure cannot replace the primary
 fixed failure.
 
@@ -6185,7 +6679,8 @@ private cleanup diagnostics. Those diagnostics never become a replacement canoni
 matrix or cross the fixed failure boundary. Exactly one executor cleanup authority
 exists; there is no fallback, alternate runner, or agent path.
 
-The canonical reverse-dependency sort is: the main override; setting A/B; the main and
+The canonical reverse-dependency sort is: the main override; zero to six exact
+cleanup-discovered Entry SEO documents in their frozen stable discovery order; setting A/B; the main and
 retry Screens; the editable entry and five related entries; the composite media-row-key;
 the four content types; stable-polled task-UA audit logs; stable-polled task-UA access
 logs; every acquired `session-task`; then users A/B. Every frozen after-baseline task-UA access-log row is deleted by its
@@ -6199,7 +6694,8 @@ makes the CAS affect zero rows and fails closed. It is never a delete subject an
 not join either staged cleanup-triple cardinality.
 Alongside the entity inventory, keep one redacted cleanup-resource record for every
 terminal-delta `session-task` row, plus `setting-user-a`, `setting-user-b`,
-`presentation-override`, the single composite `media-row-key`, and one
+`presentation-override`, zero to six exact cleanup-discovered `seo-document-entry`
+records (at most one per fixture Entry target), the single composite `media-row-key`, and one
 `audit-log-task-ua` plus `access-log-task-ua` record per corresponding frozen
 after-baseline row. Every `session-task`, audit-log, and access-log record uses
 `identifierType:"db-id"` and its exact row UUID. Audit-log ownership records the exact
@@ -6212,13 +6708,23 @@ storage key plus a bounded sanitized absence-probe result; it must never contain
 cookie, session token/hash, CSRF token, password/hash, raw row, or storage credential.
 Use one record per acquired delete authority, so multiple presentation overrides
 remain separately inventoried while the media lifecycle stays one composite authority.
-Each `presentation-override` cleanup operation is one direct exact DB delete whose
-predicate binds all four columns `(screen_id,entry_id,block_id,prop_path)` from that
-record, requires affected-row count exactly one (or exact prior absence after a
-response-lost cleanup request), and follows with the same four-column absence query.
-Cleanup never calls the scoped replace API with `{overrides:[]}`, never PATCHes an
-empty list, and never relies on Screen/entry/content-type cascade to remove an
-override.
+Each `seo-document-entry` binds the exact tuple
+`(seo_id,"entry",fixture_entry_id)`, is a child of that matching fixture Entry, and
+receives its own exact DB provenance, delete, and absence operations before parent
+cleanup. Zero discovered rows add no resource; a foreign target/type, duplicate,
+overflow, ambiguity, incomplete inventory, or unstable discovery blocks all acquired
+fixture Entries instead of authorizing a delete.
+Each `presentation-override` cleanup selects exactly one of two fail-closed paths. If
+the four-column row is present, cleanup performs one direct exact DB delete, requires
+affected-row count one, and follows with the same four-column absence query. If the
+normal smoke flow already removed it, the no-delete path is authorized only by the
+ordered, identity-matched successful receipts and authoritative response hashes for
+the acquired override, `ss-005-overrides-reset`, and
+`ss-006-overrides-proof`; current-owner refresh must then prove exact zero cardinality.
+Each of that resource's three P/C/A cleanup actions repeats the fresh exact
+four-column absence probe and binds its evidence to those receipts. Cleanup phase 3
+never calls the scoped replace API or relies on Screen/Entry/content-type cascade;
+missing lineage, a surviving row, or ambiguous cardinality fails closed.
 The `media-row-key` record privately binds the captured media
 UUID and its exact captured storage key, has the sole media cleanup delete authority,
 and invokes the real authenticated media DELETE exactly once by media UUID. Its
@@ -6945,7 +7451,7 @@ command.
 
 Before importing the smoke executor, the implementation orchestrator opens the one
 canonical regular module with no-follow identity checks and requires SHA-256
-`1a1a0aacbc28a237ccd9712e8e85c91f39bf993487de44543538b0fc93382139`. It performs
+`6accccffc88371978f2c3ad1727dbbf96aa2473802ea583d14cbc0c4ea548001`. It performs
 exactly one literal dynamic import, requires the exact two-export surface, and repeats
 the byte/identity check after import. Full validation binds that same executor authority
 to its result; immediately before the single smoke call the current, imported, and
@@ -6962,10 +7468,17 @@ strictly parses each one-key JSON receipt and requires each bracketing pair to m
 malformed, non-zero, extra-key, or changed receipt fails before smoke without exposing a
 setting value or path.
 
-The same 4 MiB-per-stream bound applies to this exception. Raw output and bounded
-excerpts remain private, are scanned against the in-memory inherited/repo secret corpus,
-and any matching diagnostic is fully redacted locally before the only permitted generic
-failure label can cross authority; neither raw nor redacted excerpts are agent-visible.
+The same 4 MiB-per-stream bound applies to this exception. Only when the program is
+exactly `playwright-cli`, after the repository and successful-process guards, may one
+complete stdout that byte-equals an allowlisted two-key browser failure frame from the
+closed auth-settlement, Tone-open, Tone-select, or dirty-navigation family be classified
+without reading any field or matching the secret corpus; exact whole-frame equality
+proves that no additional byte can carry a secret. The same bytes under every other
+program remain non-exact and generic.
+Every non-exact raw output and bounded excerpt remains private, is scanned against the
+in-memory inherited/repo secret corpus, and any match is fully redacted locally before
+the only permitted generic failure label can cross authority; neither raw nor redacted
+excerpts are agent-visible.
 No `.env` bytes, environment key/value, selected/unselected key name, map, count, hash,
 corpus match, or environment-derived projection enters a receipt, evidence object,
 prompt, changelog, or screenshot. Numeric command byte counts and locally recomputed

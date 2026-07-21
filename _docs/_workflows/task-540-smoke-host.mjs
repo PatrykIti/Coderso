@@ -483,6 +483,8 @@ const server = await startViteWithWarmRestart(createServer, options, [
   "/main.tsx",
   "/app/AdminApp.tsx",
   "/app/adminRouteComponents.tsx",
+  "/ui/dashboard/DashboardPage.tsx",
+  "/ui/dashboard/DashboardBuilder.tsx",
   "/ui/custom-screens/CustomScreenListPage.tsx",
 ], process.cwd() + "/node_modules/.vite/wf540-admin", "admin_vite_readiness_failed");
 let stopping = false;
@@ -901,6 +903,8 @@ const server = await startViteWithWarmRestart(createServer, options, [
   "/main.tsx",
   "/app/AdminApp.tsx",
   "/app/adminRouteComponents.tsx",
+  "/ui/dashboard/DashboardPage.tsx",
+  "/ui/dashboard/DashboardBuilder.tsx",
   "/ui/custom-screens/CustomScreenListPage.tsx",
 ], process.cwd() + "/node_modules/.vite/wf540-admin", "admin_vite_readiness_failed");
 let stopping = false;
@@ -3282,6 +3286,12 @@ export async function runTask540SmokeHostSelfTest() {
       value[1].args[4] = value[1].args[4].replaceAll("wf540-admin", "wf540-site");
     },
     (value) => {
+      value[1].args[4] = value[1].args[4].replace('  "/ui/dashboard/DashboardPage.tsx",\n', "");
+    },
+    (value) => {
+      value[1].args[4] = value[1].args[4].replace('  "/ui/dashboard/DashboardBuilder.tsx",\n', "");
+    },
+    (value) => {
       value[2].args[4] = value[2].args[4].replaceAll("wf540-site", "wf540-admin");
     },
     (value) => {
@@ -3335,6 +3345,10 @@ export async function runTask540SmokeHostSelfTest() {
       ADMIN_VITE_SOURCE.split(VITE_WARM_RESTART_SOURCE).length === 2 &&
       ADMIN_VITE_SOURCE.includes("const options = Object.freeze({") &&
       ADMIN_VITE_SOURCE.includes("server: Object.freeze({") &&
+      ADMIN_VITE_SOURCE.split('"/ui/dashboard/DashboardPage.tsx"').length === 2 &&
+      ADMIN_VITE_SOURCE.split('"/ui/dashboard/DashboardBuilder.tsx"').length === 2 &&
+      ADMIN_VITE_SOURCE.indexOf('"/ui/dashboard/DashboardPage.tsx"') <
+        ADMIN_VITE_SOURCE.indexOf('"/ui/dashboard/DashboardBuilder.tsx"') &&
       ADMIN_VITE_SOURCE.includes(
         '], process.cwd() + "/node_modules/.vite/wf540-admin", "admin_vite_readiness_failed");'
       ) &&

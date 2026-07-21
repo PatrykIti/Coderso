@@ -12,6 +12,7 @@ import type {
 } from "../../../services/customScreens/customScreenSchemas";
 import type { ScreenInsertTarget } from "../../../services/customScreens/screenDocumentOps";
 import {
+  builderSelectionTabSlot,
   builderTabSlot,
   insertTargetsEqual,
   resolveRovingTabIndex,
@@ -59,7 +60,8 @@ export function useScreenRuntimeInteractions(context: ScreenRuntimeContext) {
   const resolveActiveTab = (block: ScreenBlockV1, tabs: readonly ScreenTabItem[]) => {
     const requested =
       context.mode === "builder"
-        ? builderTabSlot(block, tabs, context.insertPoint)
+        ? (builderTabSlot(block, tabs, context.insertPoint) ??
+          builderSelectionTabSlot(block, tabs, context.selectedBlockId))
         : localActiveTabByBlock[block.id];
     return tabs.some((tab) => tab.id === requested) ? requested : (tabs[0]?.id ?? null);
   };
