@@ -53,10 +53,14 @@ import {
 } from "./pageSectionTemplates";
 import {
   escapeAuthoringCssString,
+  isSafeAuthoringCssBackgroundLayers,
   isSafeAuthoringCssColor,
   isSafeAuthoringCssGradient,
   sanitizeAuthoringMediaUrl,
 } from "./pageAuthoringSanitizers";
+// ── TASK-531: shared pure glow-compose (Bun-free home; NEVER import the render
+// inline path — this module is Vitest-lane / import-side-effect-free).
+import { composeGlowBoxShadow, mergeShadows } from "./pageGlow";
 
 /**
  * Stable per-node attribute hooks. `pageRendererV2.tsx` already emits all
@@ -77,6 +81,18 @@ export const PAGE_BLOCK_ELEMENT_ATTRIBUTE = "data-page-block-element" as const;
  * typography overrides to the same node(s).
  */
 export const PAGE_BLOCK_TEXT_ATTRIBUTE = "data-page-block-text" as const;
+
+/**
+ * TASK-535 — stable hook on the `[data-tilt-parent]` perspective WRAPPER that a
+ * tilt+layer block hoists its layer placement onto (see `splitBlockComposition` /
+ * `renderPageBlockWithFrame` in pageRendererV2). The base `--layer-x/y/z` live on
+ * the wrapper (the consumer of the layered-canvas CSS), NOT the `[data-block-id]`
+ * frame, and CSS custom props inherit DOWNWARD only — so a per-device `--layer-*`
+ * override MUST target the wrapper, not the frame. The renderer stamps the block
+ * id here ONLY when the layer placement was hoisted to the wrapper (tilt+layer);
+ * `collectBlockDeclarations` retargets the responsive layer override at it.
+ */
+export const PAGE_TILT_PARENT_LAYER_ATTRIBUTE = "data-tilt-parent-for" as const;
 
 /**
  * Style-target contract shared with `pageRendererV2.tsx`: block types whose
@@ -154,6 +170,15 @@ const sectionContentSelector = (id: string) =>
 
 const blockSelector = (id: string) => `[${PAGE_BLOCK_ID_ATTRIBUTE}="${escapeCssString(id)}"]`;
 
+/**
+ * TASK-535 — the `[data-tilt-parent]` wrapper carrying a tilt+layer block's
+ * hoisted layer placement (base `--layer-*`). Per-device layer overrides target
+ * this wrapper (custom props inherit downward, so a frame-scoped override cannot
+ * reach the ancestor wrapper that consumes `var(--layer-*)`).
+ */
+const blockTiltLayerWrapperSelector = (id: string) =>
+  `[${PAGE_TILT_PARENT_LAYER_ATTRIBUTE}="${escapeCssString(id)}"]`;
+
 const blockElementSelector = (id: string) =>
   `${blockSelector(id)} [${PAGE_BLOCK_ELEMENT_ATTRIBUTE}="true"]`;
 
@@ -173,10 +198,42 @@ const blockTextSelector = (id: string) =>
 const isSafeCssColor = isSafeAuthoringCssColor;
 
 /**
+ * Mirrors `pageCompositionEffects.isGradientOrUrl`: a gradient/url() tint is
+ * invalid inside `radial-gradient()`'s color slot, so it must not seed the
+ * `--surface-glow`/`--deco-ring`/`--orb-color` custom props (base resolver
+ * leaves it out → CSS falls back to the reference literal). Kept local to avoid
+ * widening the effects module's export surface.
+ */
+const isGradientOrUrlColor = (value: string): boolean => /gradient|url\(/i.test(value);
+
+/**
  * Stricter than the renderer's gradient sniff (`toGradientBackground`): the
  * stylesheet context additionally requires a safe charset and balanced parens.
+ *
+ * SECURITY (TASK-531): this is the SINGLE-LAYER alias. Do NOT re-bind it to the
+ * multi-layer validator. The multi-layer accept lives in
+ * `isSafeCssBackgroundValue` below, which runs the whole-value tripwire pre-pass
+ * (inside `isSafeAuthoringCssBackgroundLayers`) BEFORE allowlisting each layer —
+ * that tripwire is load-bearing because this module emits values RAW (un-escaped)
+ * into a `<style>` string via `dangerouslySetInnerHTML`.
  */
 const isSafeCssGradient = isSafeAuthoringCssGradient;
+
+/**
+ * TASK-531 — the RAW `<style>` per-device gradient allowlist. A background value
+ * is accepted only if it is a safe SINGLE-layer gradient OR passes the
+ * tripwire-bearing multi-layer allowlist (`isSafeAuthoringCssBackgroundLayers`:
+ * whole-value tripwire pre-pass → depth-0 comma split → per-layer safe-color /
+ * safe-gradient check → `PAGE_BG_MAX_LAYERS` cap; fail-closed on anything else).
+ *
+ * FORBIDDEN: do NOT widen `isSafeCssGradient` directly to accept multi-layer, and
+ * do NOT re-implement/bypass the whole-value tripwire here — this value is emitted
+ * un-escaped into the injected `<style>`, so a `url()`/`@import`/`expression(`/
+ * `</style>`-charset value MUST be rejected exactly as the write boundary rejects
+ * it. Keep the multi-layer accept routed through this tripwire-bearing validator.
+ */
+const isSafeCssBackgroundValue = (value: string): boolean =>
+  isSafeCssGradient(value) || isSafeAuthoringCssBackgroundLayers(value);
 
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
@@ -190,6 +247,30 @@ const shadowCssValues: Record<string, string> = {
   md: "0 14px 40px rgba(15, 23, 42, 0.12)",
   lg: "0 22px 60px rgba(15, 23, 42, 0.16)",
 };
+
+/**
+ * TASK-535 — full-bleed predicate + content-cap width formula, mirrored from
+ * `pageRendererV2.tsx` (`isPageSectionFullBleed` / `toPageSectionStyle`). The
+ * renderer owns them but `pageRendererV2.tsx` imports FROM this module, so a
+ * back-import would cycle; per this file's convention (see `shadowCssValues` /
+ * `toBoxSpacingValue`) they are re-declared here with a MUST-stay-in-sync note.
+ *
+ * The 525 model DECOUPLED the bleed box from the content cap: full-bleed content
+ * is ALWAYS capped/centered at `layout.maxWidth` (the pre-525 `max-width:none`
+ * pin is GONE). So a full-bleed content div carries BOTH
+ * `width: min(<max>, calc(100% - 2 * 20px))` AND `max-width: <max>` — which makes
+ * a responsive `layout.maxWidth` override CSS-EXPRESSIBLE (it was falsely marked
+ * `not_css_expressible` while the pin still existed).
+ */
+const isSectionFullBleed = (
+  section: PageSectionV2,
+  template: ReturnType<typeof resolvePageSectionTemplate>
+): boolean => template.variant === "full-width" || section.style.fullBleed === true;
+/** Mirrors `PAGE_SECTION_FULL_BLEED_GUTTER` (the reference `.container` side gutter). */
+const SECTION_FULL_BLEED_GUTTER = "20px";
+/** Mirrors the full-bleed content `width` in `toPageSectionStyle`. */
+const fullBleedContentWidth = (maxWidthPx: string): string =>
+  `min(${maxWidthPx}, calc(100% - 2 * ${SECTION_FULL_BLEED_GUTTER}))`;
 
 /** Mirrors `pageSectionAlignmentClass` (Tailwind `items-*`). */
 const sectionAlignItemsValues: Record<string, string> = {
@@ -308,13 +389,20 @@ const collectSectionDeclarations = (
   const template = resolvePageSectionTemplate(section);
 
   if (layoutOverride.maxWidth !== undefined) {
-    if (template.variant === "full-width") {
-      // The renderer pins `max-width: none` for full-width variants at every
-      // breakpoint, so a maxWidth override can never take effect.
-      diag("layout.maxWidth", "not_css_expressible");
-    } else {
-      const value = pxValue(mergedLayout.maxWidth);
-      if (value) content.push({ property: "max-width", value });
+    const value = pxValue(mergedLayout.maxWidth);
+    if (value) {
+      // TASK-535 — the 525 model DECOUPLED bleed from the content cap: full-bleed
+      // content is ALWAYS capped/centered at `layout.maxWidth` (the pre-525
+      // `max-width:none` pin is GONE — see `toPageSectionStyle`). So a `maxWidth`
+      // override IS CSS-expressible on a full-bleed section: mirror the base
+      // content div, which carries BOTH `width: min(<max>, calc(100% - 40px))`
+      // AND `max-width: <max>`. (The stale branch here reported
+      // `not_css_expressible` under the removed pin.) Non-full-bleed keeps the
+      // plain `max-width` declaration byte-identical.
+      if (isSectionFullBleed(section, template)) {
+        content.push({ property: "width", value: fullBleedContentWidth(value) });
+      }
+      content.push({ property: "max-width", value });
     }
   }
   if (layoutOverride.align !== undefined) {
@@ -360,8 +448,9 @@ const collectSectionDeclarations = (
     styleOverride.backgroundType !== undefined ||
     styleOverride.backgroundImage !== undefined
   ) {
-    // Mirror `toPageSectionStyle`: only `color` and `image` background types
-    // produce paint; everything else clears both channels.
+    // Mirror `toPageSectionStyle`: `color` and `image` background types produce
+    // paint, TASK-531 adds the `gradient` branch (RAW <style> boundary — gated by
+    // the tripwire-bearing multi-layer allowlist), everything else clears.
     if (mergedStyle.backgroundType === "color") {
       if (typeof mergedStyle.background === "string" && isSafeCssColor(mergedStyle.background)) {
         content.push({ property: "background-color", value: mergedStyle.background });
@@ -369,6 +458,21 @@ const collectSectionDeclarations = (
       } else {
         diag("style.background", "unsafe_color_value");
       }
+    } else if (mergedStyle.backgroundType === "gradient" && mergedStyle.background) {
+      // ── TASK-531 REGION: NEW section gradient override (the section had no
+      // gradient branch here — the SSR section branch is added in G-2). CSS
+      // gradients paint via `background-image`; the value is emitted RAW, so it
+      // MUST pass the tripwire-bearing allowlist (see `isSafeCssBackgroundValue`).
+      if (
+        typeof mergedStyle.background === "string" &&
+        isSafeCssBackgroundValue(mergedStyle.background)
+      ) {
+        content.push({ property: "background-image", value: mergedStyle.background });
+        content.push({ property: "background-color", value: "transparent" });
+      } else {
+        diag("style.background", "unsafe_background_value");
+      }
+      // ── END TASK-531 REGION ────────────────────────────────────────────────
     } else if (mergedStyle.backgroundType === "image" && mergedStyle.backgroundImage) {
       const safeBackgroundImage = sanitizeAuthoringMediaUrl(mergedStyle.backgroundImage);
       if (!safeBackgroundImage) {
@@ -389,8 +493,22 @@ const collectSectionDeclarations = (
     const value = pxValue(mergedStyle.radius);
     if (value) content.push({ property: "border-radius", value });
   }
-  if (styleOverride.shadow !== undefined) {
-    const value = shadowCssValues[mergedStyle.shadow];
+  // ── TASK-531 REGION: compose a per-device glow (G-3b). Fire when the device
+  // overrides shadow OR glow; a device-only glow (no enum shadow) still emits.
+  // `composeGlowBoxShadow` re-sanitizes the color + clamps the numbers into a
+  // fixed template, so the RAW <style> glow emit is as safe as the SSR one.
+  // `"none"` is treated as absent for the glow merge (parity with the SSR
+  // `toPageSectionBoxShadow`); an EXPLICIT `shadow` override still resets to
+  // `box-shadow: none` when no glow is present (byte-identical to pre-531).
+  if (styleOverride.shadow !== undefined || styleOverride.glow !== undefined) {
+    const enumShadow =
+      mergedStyle.shadow && mergedStyle.shadow !== "none"
+        ? shadowCssValues[mergedStyle.shadow]
+        : undefined;
+    const glow = composeGlowBoxShadow(mergedStyle.glow);
+    const value =
+      mergeShadows(enumShadow, glow) ??
+      (styleOverride.shadow !== undefined ? shadowCssValues[mergedStyle.shadow] : undefined);
     if (value) content.push({ property: "box-shadow", value });
   }
 
@@ -427,8 +545,17 @@ const collectBlockDeclarations = (
   block: PageBlockV2,
   override: NonNullable<NonNullable<PageBlockV2["responsive"]>["tablet"]>,
   context: CollectorContext
-): { frame: CssDeclaration[]; element: CssDeclaration[]; text: CssDeclaration[] } => {
+): {
+  frame: CssDeclaration[];
+  element: CssDeclaration[];
+  text: CssDeclaration[];
+  wrapper: CssDeclaration[];
+} => {
   const frame: CssDeclaration[] = [];
+  // TASK-535 — declarations that must ride the `[data-tilt-parent]` WRAPPER rather
+  // than the `[data-block-id]` frame (currently only the per-device layer offsets of
+  // a tilt+layer block, whose base `--layer-*` were hoisted onto the wrapper).
+  const wrapper: CssDeclaration[] = [];
   // Visual style keys follow the renderer's style-target contract: for
   // re-routed types they land on the inner visual element, otherwise on the
   // frame. Layout keys (align/width/padding/margin/display) always stay on
@@ -517,7 +644,11 @@ const collectBlockDeclarations = (
         diag("style.background", "unsafe_color_value");
       }
     } else if (mergedStyle.backgroundType === "gradient" && mergedStyle.background) {
-      if (isSafeCssGradient(mergedStyle.background)) {
+      // ── TASK-531: relax the single-layer re-gate to the tripwire-bearing
+      // multi-layer allowlist (the only change to this branch) so a per-device
+      // multi-layer gradient override paints. RAW <style> emit — see the FORBIDDEN
+      // note on `isSafeCssBackgroundValue`; never widen `isSafeCssGradient` here.
+      if (isSafeCssBackgroundValue(mergedStyle.background)) {
         visual.push({ property: "background-image", value: mergedStyle.background });
         visual.push({ property: "background-color", value: "transparent" });
         visual.push({ property: "--coderso-block-surface", value: "initial" });
@@ -551,8 +682,19 @@ const collectBlockDeclarations = (
     const value = pxValue(mergedStyle.radius);
     if (value) visual.push({ property: "border-radius", value });
   }
-  if (styleOverride.shadow !== undefined) {
-    const value = shadowCssValues[mergedStyle.shadow ?? ""];
+  // ── TASK-531 REGION: compose a per-device glow (G-3b), same shape as the
+  // section branch — fire on shadow OR glow; a device-only glow still emits.
+  // `"none"` treated as absent for the glow merge; an EXPLICIT shadow override
+  // still resets to `box-shadow: none` when no glow is present (pre-531 parity).
+  if (styleOverride.shadow !== undefined || styleOverride.glow !== undefined) {
+    const enumShadow =
+      mergedStyle.shadow && mergedStyle.shadow !== "none"
+        ? shadowCssValues[mergedStyle.shadow]
+        : undefined;
+    const glow = composeGlowBoxShadow(mergedStyle.glow);
+    const value =
+      mergeShadows(enumShadow, glow) ??
+      (styleOverride.shadow !== undefined ? shadowCssValues[mergedStyle.shadow ?? ""] : undefined);
     if (value) visual.push({ property: "box-shadow", value });
   }
   if (
@@ -595,6 +737,72 @@ const collectBlockDeclarations = (
     if (value) frame.push({ property: "margin", value });
   }
 
+  // TASK-522-05-L02 — per-device layered-canvas offsets. The 522-01-L04 frame
+  // resolver emits the BASE position as inline --layer-x/y/z custom props; here we
+  // retarget those props per breakpoint. They ride the SAME element that carries
+  // data-layer + the base var + the media query, and every declaration is serialized
+  // with !important, so the delta beats the inline base custom prop (finding-4). Only
+  // x/y/z (the numeric offsets) vary per device; anchor stays base-only.
+  //
+  // TASK-535 — TARGET follows where the renderer put the BASE layer placement:
+  //   - layer-only (no tilt): base `--layer-*` live on the `[data-block-id]` FRAME,
+  //     so the override rides the FRAME (`frame`) — byte-identical to pre-535.
+  //   - tilt + layer: `splitBlockComposition` HOISTED the base `--layer-*` onto the
+  //     `[data-tilt-parent]` WRAPPER (a per-device value on the child frame can NEVER
+  //     inherit UP to the wrapper that consumes `var(--layer-*)`), so the override
+  //     must ride the WRAPPER (`wrapper`, `[data-tilt-parent-for="<id>"]`). The hoist
+  //     is decided from the BASE style (tilt non-none AND base layer present) — the
+  //     wrapper's `data-tilt-parent-for` exists exactly then.
+  if (styleOverride.layer !== undefined) {
+    const baseStyle = block.style ?? {};
+    const baseTiltAndLayer =
+      baseStyle.tilt != null && baseStyle.tilt !== "none" && baseStyle.layer != null;
+    const layerTarget = baseTiltAndLayer ? wrapper : frame;
+    if (isFiniteNumber(mergedStyle.layer?.x)) {
+      layerTarget.push({ property: "--layer-x", value: `${mergedStyle.layer.x}%` });
+    }
+    if (isFiniteNumber(mergedStyle.layer?.y)) {
+      layerTarget.push({ property: "--layer-y", value: `${mergedStyle.layer.y}%` });
+    }
+    if (isFiniteNumber(mergedStyle.layer?.z)) {
+      layerTarget.push({ property: "--layer-z", value: String(mergedStyle.layer.z) });
+    }
+  }
+
+  // TASK-524-02-L03 — per-device glass/glow TINT. The base resolver
+  // (`resolveBlockCompositionAttrs`) seeds `--surface-glow`/`--deco-ring`/
+  // `--orb-color` as inline custom props on the block FRAME (frameVars in
+  // splitBlockComposition), gated on a plain (non-gradient/url) tint and on the
+  // surface/effect actually being active (surfacePreset|hoverEffect|
+  // decoration.motion in {radiate,pulse,drift,float}). We retarget those same
+  // three frame custom props per breakpoint so the control's advertised
+  // per-device tinting is honored: the props ride the SAME block-frame selector
+  // that carries the base var + the media query, and every frame declaration is
+  // serialized with !important, so the delta beats the inline base custom prop
+  // (mirrors the --layer-x/y/z retarget above). Fails closed to a diagnostic on
+  // an unsafe or gradient/url tint (invalid inside radial-gradient()); an
+  // effect-inactive breakpoint emits nothing, matching the base gate.
+  if (styleOverride.surfaceTint !== undefined) {
+    const tint = mergedStyle.surfaceTint;
+    const motion = mergedStyle.decoration?.motion;
+    const glowActive =
+      !!mergedStyle.surfacePreset ||
+      !!mergedStyle.hoverEffect ||
+      motion === "radiate" ||
+      motion === "pulse" ||
+      motion === "drift" ||
+      motion === "float";
+    if (typeof tint === "string" && isSafeCssColor(tint) && !isGradientOrUrlColor(tint)) {
+      if (glowActive) {
+        frame.push({ property: "--surface-glow", value: tint });
+        frame.push({ property: "--deco-ring", value: tint });
+        frame.push({ property: "--orb-color", value: tint });
+      }
+    } else if (tint !== null && tint !== undefined) {
+      diag("style.surfaceTint", "unsafe_color_value");
+    }
+  }
+
   // Typography overrides (TASK-424). Only typography-capable blocks have a
   // painted text target; explicit `null` overrides (clear back to the baked
   // classes at one breakpoint) are not expressible against the inline base
@@ -632,7 +840,7 @@ const collectBlockDeclarations = (
     frame.push({ property: "display", value: "none" });
   }
 
-  return { frame, element: visual === frame ? [] : visual, text };
+  return { frame, element: visual === frame ? [] : visual, text, wrapper };
 };
 
 const hasBlockOverride = (
@@ -656,10 +864,12 @@ const walkBlock = (block: PageBlockV2, context: CollectorContext, markupAbsent: 
     } else if (!id) {
       pushDiagnostic(context, "block", id, "*", "unsafe_scope_id");
     } else {
-      const { frame, element, text } = collectBlockDeclarations(block, override, context);
+      const { frame, element, text, wrapper } = collectBlockDeclarations(block, override, context);
       pushRule(context, blockSelector(id), frame);
       pushRule(context, blockElementSelector(id), element);
       pushRule(context, blockTextSelector(id), text);
+      // TASK-535 — tilt+layer per-device layer offsets ride the hoisted wrapper.
+      pushRule(context, blockTiltLayerWrapperSelector(id), wrapper);
     }
   }
 

@@ -1,5 +1,9 @@
 import type { CSSProperties, ComponentType, ReactNode } from "react";
 
+import {
+  CSS_COLOR_SCHEMA_PATTERNS,
+  CSS_COLOR_VALUE_MAX_LENGTH,
+} from "../../services/theme/cssColorContract";
 import { renderEditorPlaceholder } from "../renderContext";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import { parseRepeatableSlotId, resolveWidgetSlotTargets } from "../slots";
@@ -309,6 +313,24 @@ export const sectionRegionSlot = {
   maxItems: 8,
 };
 
+const sectionColorValueSchema = {
+  anyOf: [
+    { const: "" },
+    {
+      type: "string",
+      maxLength: CSS_COLOR_VALUE_MAX_LENGTH,
+      pattern: CSS_COLOR_SCHEMA_PATTERNS["inherited-render"],
+    },
+  ],
+} as const;
+const sectionNestedColorValueSchema = {
+  ...sectionColorValueSchema,
+  not: {
+    type: "string",
+    pattern: "^[ ]*[iI][nN][hH][eE][rR][iI][tT][ ]*$",
+  },
+} as const;
+
 export const sectionSchema = {
   type: "object",
   additionalProperties: false,
@@ -325,9 +347,9 @@ export const sectionSchema = {
         labelSize: { enum: ["xs", "sm", "md"] },
         titleSize: { enum: ["xl", "2xl", "3xl"] },
         descriptionSize: { enum: ["sm", "base", "lg"] },
-        labelColor: { type: "string" },
-        titleColor: { type: "string" },
-        descriptionColor: { type: "string" },
+        labelColor: sectionColorValueSchema,
+        titleColor: sectionColorValueSchema,
+        descriptionColor: sectionColorValueSchema,
       },
     },
     semantics: {
@@ -373,16 +395,16 @@ export const sectionSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
-        backgroundColor: { type: "string" },
-        gradientFrom: { type: "string" },
-        gradientTo: { type: "string" },
+        backgroundColor: sectionColorValueSchema,
+        gradientFrom: sectionNestedColorValueSchema,
+        gradientTo: sectionNestedColorValueSchema,
         gradientAngle: { type: "number" },
-        borderColor: { type: "string" },
+        borderColor: sectionColorValueSchema,
         borderWidth: { enum: ["0", "1", "2", "3"] },
         radius: { enum: ["none", "lg", "xl", "2xl"] },
         shadow: { enum: ["none", "sm", "md", "lg", "xl"] },
         motion: { enum: ["none", "fade", "slide-up"] },
-        overlayColor: { type: "string" },
+        overlayColor: sectionColorValueSchema,
         overlayOpacity: { type: "number" },
         backgroundMedia: {
           type: "object",
@@ -1054,9 +1076,12 @@ export function normalizeSectionData(data: SectionData): SectionData {
       descriptionSize: resolveSectionDescriptionSize(
         data.heading?.descriptionSize ?? headingDefaults.descriptionSize
       ),
-      labelColor: resolveClearableStyleValue(data.heading?.labelColor),
-      titleColor: resolveClearableStyleValue(data.heading?.titleColor),
-      descriptionColor: resolveClearableStyleValue(data.heading?.descriptionColor),
+      labelColor: resolveClearableCssColorValue(data.heading?.labelColor, "inherited-render"),
+      titleColor: resolveClearableCssColorValue(data.heading?.titleColor, "inherited-render"),
+      descriptionColor: resolveClearableCssColorValue(
+        data.heading?.descriptionColor,
+        "inherited-render"
+      ),
     },
     layout: {
       containerWidth: resolveSectionContainerWidth(
@@ -1089,17 +1114,31 @@ export function normalizeSectionData(data: SectionData): SectionData {
     },
     style: {
       backgroundColor: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.backgroundColor)
+        ? resolveClearableCssColorValue(data.style?.backgroundColor, "inherited-render")
         : styleDefaults.backgroundColor,
-      gradientFrom: data.style?.gradientFrom ?? styleDefaults.gradientFrom,
-      gradientTo: data.style?.gradientTo ?? styleDefaults.gradientTo,
+      gradientFrom: resolveClearableCssColorValue(
+        data.style?.gradientFrom ?? styleDefaults.gradientFrom,
+        "inherited-render",
+        { allowInheritKeyword: false }
+      ),
+      gradientTo: resolveClearableCssColorValue(
+        data.style?.gradientTo ?? styleDefaults.gradientTo,
+        "inherited-render",
+        { allowInheritKeyword: false }
+      ),
       gradientAngle: resolveGradientAngle(data.style?.gradientAngle),
-      borderColor: data.style?.borderColor ?? styleDefaults.borderColor,
+      borderColor: resolveClearableCssColorValue(
+        data.style?.borderColor ?? styleDefaults.borderColor,
+        "inherited-render"
+      ),
       borderWidth: resolveSectionBorderWidth(data.style?.borderWidth),
       radius: resolveSectionRadius(data.style?.radius),
       shadow: resolveOptionalSectionShadow(data.style?.shadow),
       motion: resolveSectionMotion(data.style?.motion ?? styleDefaults.motion),
-      overlayColor: data.style?.overlayColor ?? styleDefaults.overlayColor,
+      overlayColor: resolveClearableCssColorValue(
+        data.style?.overlayColor ?? styleDefaults.overlayColor,
+        "inherited-render"
+      ),
       overlayOpacity: clampOpacity(data.style?.overlayOpacity),
       backgroundMedia: normalizeSectionBackgroundMedia(data.style?.backgroundMedia),
     },
@@ -1129,9 +1168,12 @@ export function SectionBlock({
   );
   const heading = normalized.heading ?? sectionDefaults.heading!;
   const layout = normalized.layout ?? sectionDefaults.layout!;
-  const headingLabelColor = resolveClearableCssColorValue(heading.labelColor);
-  const headingTitleColor = resolveClearableCssColorValue(heading.titleColor);
-  const headingDescriptionColor = resolveClearableCssColorValue(heading.descriptionColor);
+  const headingLabelColor = resolveClearableCssColorValue(heading.labelColor, "inherited-render");
+  const headingTitleColor = resolveClearableCssColorValue(heading.titleColor, "inherited-render");
+  const headingDescriptionColor = resolveClearableCssColorValue(
+    heading.descriptionColor,
+    "inherited-render"
+  );
   const semantics = normalized.semantics ?? sectionDefaults.semantics!;
   const style = normalized.style ?? sectionDefaults.style!;
   const resolvedShadow = resolveRenderedSectionShadow(resolvedVariant, style.shadow);
@@ -1192,8 +1234,12 @@ export function SectionBlock({
   );
   const regionItemClass = regionItemClassMap[layout.regionFlow ?? "stack"];
 
-  const gradientFrom = resolveClearableCssColorValue(style.gradientFrom);
-  const gradientTo = resolveClearableCssColorValue(style.gradientTo);
+  const gradientFrom = resolveClearableCssColorValue(style.gradientFrom, "inherited-render", {
+    allowInheritKeyword: false,
+  });
+  const gradientTo = resolveClearableCssColorValue(style.gradientTo, "inherited-render", {
+    allowInheritKeyword: false,
+  });
   const hasGradient = Boolean(gradientFrom && gradientTo);
   const hasHeading =
     (heading.label ?? "").trim().length > 0 ||
@@ -1231,11 +1277,13 @@ export function SectionBlock({
 
   const surfaceStyle: CSSProperties =
     compactStyle({
-      backgroundColor: resolveClearableCssColorValue(style.backgroundColor),
+      backgroundColor: resolveClearableCssColorValue(style.backgroundColor, "inherited-render"),
       backgroundImage: hasGradient
         ? `linear-gradient(${resolveGradientAngle(style.gradientAngle)}deg, ${gradientFrom}, ${gradientTo})`
         : undefined,
-      borderColor: resolveClearableCssColorValue(style.borderColor) ?? "var(--color-border)",
+      borderColor:
+        resolveClearableCssColorValue(style.borderColor, "inherited-render") ??
+        "var(--color-border)",
       borderStyle: "solid",
       borderWidth: borderWidthValueMap[style.borderWidth ?? "0"] ?? "0px",
     }) ?? {};
@@ -1321,7 +1369,9 @@ export function SectionBlock({
               data-section-background-overlay="true"
               className={overlayLayerClass}
               style={{
-                backgroundColor: resolveClearableCssColorValue(style.overlayColor) ?? "#000000",
+                backgroundColor:
+                  resolveClearableCssColorValue(style.overlayColor, "inherited-render") ??
+                  "#000000",
                 opacity: overlayOpacity / 100,
               }}
             />

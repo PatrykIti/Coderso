@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
+import { parseCssColorValue } from "../../../../services/theme/cssColorContract";
 import {
   normalizeToggleBlockData,
   type ToggleBlockData,
@@ -482,6 +483,7 @@ function ThemeSection({
   const activeTriggerContrastAdvisory = resolveColorContrastAdvisory({
     foreground: normalized.style.accentContrastColor,
     background: normalized.style.accentColor,
+    colorProfile: "inherited-render",
   });
 
   return (
@@ -502,6 +504,7 @@ function ThemeSection({
             placeholder="var(--color-surface)"
             pickerFallback="#ffffff"
             showValueInput={false}
+            colorProfile="inherited-render"
           />
         </div>
         <div {...controlAttributes("toggle-block.theme.borderColor", "style.borderColor")}>
@@ -513,6 +516,7 @@ function ThemeSection({
             placeholder="var(--color-border)"
             pickerFallback="#e2e8f0"
             showValueInput={false}
+            colorProfile="inherited-render"
           />
         </div>
         <div {...controlAttributes("toggle-block.theme.accentColor", "style.accentColor")}>
@@ -524,6 +528,7 @@ function ThemeSection({
             placeholder="var(--color-text)"
             pickerFallback="#0f172a"
             showValueInput={false}
+            colorProfile="inherited-render"
           />
         </div>
         <div
@@ -540,6 +545,7 @@ function ThemeSection({
             placeholder="var(--color-background)"
             pickerFallback="#ffffff"
             showValueInput={false}
+            colorProfile="inherited-render"
           />
         </div>
       </div>
@@ -806,10 +812,11 @@ function formatTokenLabel<T extends string>(
 }
 
 function colorDiagnostic(value: string | undefined): string {
-  const trimmed = value?.trim();
-  if (!trimmed) return "Theme default";
-  if (trimmed.startsWith("var(")) return "Theme token configured";
-  return trimmed;
+  const parsed = parseCssColorValue(value, "inherited-render");
+  if (value === undefined || value === "") return "Theme default";
+  if (!parsed) return "Unsupported saved color";
+  if (parsed.kind === "token") return "Theme token configured";
+  return parsed.normalized;
 }
 
 function paneStyleSummary(style: NormalizedToggleBlockData["style"]["panes"][ToggleBlockStateId]) {

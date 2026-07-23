@@ -10,7 +10,7 @@ type UsePostAutosaveOptions = {
 
 export type UsePostAutosaveResult = {
   cancel: () => void;
-  flush: () => Promise<boolean>;
+  flush: () => Promise<void>;
 };
 
 export function usePostAutosave({
@@ -36,9 +36,8 @@ export function usePostAutosave({
 
   const flush = useCallback(async () => {
     cancel();
-    if (!enabled || !dirty) return false;
+    if (!enabled || !dirty) return;
     await onAutosaveRef.current();
-    return true;
   }, [cancel, dirty, enabled]);
 
   useEffect(() => {
@@ -50,7 +49,7 @@ export function usePostAutosave({
     cancel();
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
-      void onAutosaveRef.current();
+      void onAutosaveRef.current().catch(() => undefined);
     }, delayMs);
 
     return cancel;

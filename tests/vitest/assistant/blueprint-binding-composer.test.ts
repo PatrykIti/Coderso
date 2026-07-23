@@ -1,6 +1,9 @@
 import { expect, test } from "vitest";
 
-import { composeBindings } from "../../../core/services/assistant/blueprints/blueprintBindingComposer";
+import {
+  composeBindings,
+  type BlueprintBindingContribution,
+} from "../../../core/services/assistant/blueprints/blueprintBindingComposer";
 import { buildCatalogFamilyPlan } from "../../../core/services/assistant/blueprints/catalogFamilyBlueprint";
 import { HOUSE_PROJECTS_CATALOG_PRESET } from "../../../core/services/assistant/blueprints/catalogFamilyPresets";
 import type { AssistantCustomScreenUpsertAction } from "../../../core/services/assistant/actionPlanTypes";
@@ -79,12 +82,75 @@ test("composeBindings dedupes identical binding ids", () => {
   expect(bindings[0]?.id).toBe("binding-header-title");
 });
 
+test("composeBindings rejects conflicting contributions with the same normalized id", () => {
+  expect(() =>
+    composeBindings({
+      contentSchema,
+      bindings: [
+        {
+          id: "Binding Header Title",
+          widgetId: "header-1",
+          propPath: "title",
+          field: "title",
+          mode: "read",
+        },
+        {
+          id: "binding-header-title",
+          widgetId: "header-1",
+          propPath: "subtitle",
+          field: "summary",
+          mode: "read",
+        },
+      ],
+    })
+  ).toThrow("assistant_blueprint_binding_duplicate_id");
+});
+
+test("composeBindings rejects missing, null, and blank runtime binding ids", () => {
+  const invalidRuntimeBindings = [
+    {
+      label: "missing",
+      value: {
+        widgetId: "header-1",
+        propPath: "title",
+        field: "title",
+      },
+    },
+    {
+      label: "null",
+      value: {
+        id: null,
+        widgetId: "header-1",
+        propPath: "title",
+        field: "title",
+      },
+    },
+    {
+      label: "blank",
+      value: {
+        id: "   ",
+        widgetId: "header-1",
+        propPath: "title",
+        field: "title",
+      },
+    },
+  ] as const;
+
+  for (const { label, value } of invalidRuntimeBindings) {
+    const binding = value as unknown as BlueprintBindingContribution;
+    expect(() => composeBindings({ contentSchema, bindings: [binding] }), label).toThrow(
+      "assistant_blueprint_binding_invalid"
+    );
+  }
+});
+
 test("composeBindings rejects missing and secret-like field references", () => {
   expect(() =>
     composeBindings({
       contentSchema,
       bindings: [
         {
+          id: "binding-missing-field",
           widgetId: "header-1",
           propPath: "title",
           field: "missing",
@@ -99,6 +165,7 @@ test("composeBindings rejects missing and secret-like field references", () => {
       allowedFields: ["apiToken"],
       bindings: [
         {
+          id: "binding-secret-field",
           widgetId: "header-1",
           propPath: "title",
           field: "apiToken",

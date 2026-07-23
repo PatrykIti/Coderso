@@ -28,12 +28,62 @@ import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
+import { CSS_COLOR_VALUE_MAX_LENGTH } from "../../../core/services/theme/cssColorContract";
 
 const StubGridColumnsEditor: ComponentType<WidgetEditorProps<GridColumnsData>> = () => null;
 const StubHeroEditor: ComponentType<WidgetEditorProps<HeroData>> = () => null;
 type GridColumnsColumn = NonNullable<GridColumnsData["columns"]>[number];
 type GridColumnsLayout = NonNullable<GridColumnsData["layout"]>;
 type GridColumnsStyle = NonNullable<GridColumnsData["style"]>;
+
+test("grid columns keeps authoring-only colors bounded from original bytes", () => {
+  const terminal = "#abc";
+  const exactCap = `${" ".repeat(CSS_COLOR_VALUE_MAX_LENGTH - terminal.length)}${terminal}`;
+  const normalized = normalizeGridColumnsData({
+    ...gridColumnsDefaults,
+    style: { columnBackground: exactCap, columnBorderColor: " RGB(4, 5, 6) " },
+    columns: [
+      {
+        id: "1",
+        label: "One",
+        style: {
+          surface: "on",
+          background: " #AbC ",
+          borderColor: " HSL(210DEG, 50%, 40%) ",
+        },
+      },
+    ],
+  });
+  expect(normalized.style?.columnBackground).toBe("#abc");
+  expect(normalized.style?.columnBorderColor).toBe("rgb(4, 5, 6)");
+  expect(normalized.columns?.[0]?.style?.background).toBe("#abc");
+  expect(normalized.columns?.[0]?.style?.borderColor).toBe("hsl(210, 50%, 40%)");
+  const html = renderToString(<GridColumnsBlock data={normalized} variant="equal" />);
+  expect(html).toContain("background-color:#abc");
+  expect(html).toContain("border-color:hsl(210, 50%, 40%)");
+
+  const rejected = normalizeGridColumnsData({
+    ...gridColumnsDefaults,
+    style: { columnBackground: "currentColor", columnBorderColor: "inherit" },
+    columns: [
+      {
+        id: "1",
+        label: "One",
+        style: { surface: "on", background: " inherit ", borderColor: "\u00a0#fff" },
+      },
+    ],
+  });
+  expect(rejected.style?.columnBackground).toBeUndefined();
+  expect(rejected.style?.columnBorderColor).toBeUndefined();
+  expect(rejected.columns?.[0]?.style?.background).toBeUndefined();
+  expect(rejected.columns?.[0]?.style?.borderColor).toBeUndefined();
+  expect(
+    normalizeGridColumnsData({
+      ...gridColumnsDefaults,
+      style: { columnBackground: ` ${exactCap}` },
+    }).style?.columnBackground
+  ).toBeUndefined();
+});
 
 test("grid columns renders defaults", () => {
   const html = renderToString(<GridColumnsBlock data={gridColumnsDefaults} variant="equal" />);

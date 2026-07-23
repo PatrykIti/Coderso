@@ -4,6 +4,7 @@ import Ajv from "ajv";
 import {
   PAGE_BLOCK_MAX_CHILDREN_PER_SLOT,
   PAGE_BLOCK_MAX_TREE_DEPTH,
+  PAGE_LAYER_Z_CLAMP,
   PAGE_TEXT_MARK_MAX,
   applyBlockTextMark,
   removeBlockTextMark,
@@ -536,6 +537,163 @@ describe("PageDocumentV2", () => {
     }
   });
 
+  // ── TASK-532 typography fidelity (Bundle B) — model + schema round-trip ──
+  test("TASK-532 fluid font-size + text-transform + heavier weights round-trip present-only", () => {
+    const document = buildDocument();
+    document.sections[0]!.blocks[0]!.style = {
+      fontSizeCustom: " clamp(2.6rem,5vw,4.4rem) ",
+      fontSize: "lg",
+      fontWeight: "extrabold",
+      textTransform: "uppercase",
+    } as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+    document.sections[0]!.blocks[1]!.style = {
+      fontWeight: "black",
+      textTransform: "none", // present-only reset ⇒ omitted
+      fontSizeCustom: "expression(1)", // rejected by the grammar ⇒ omitted
+    } as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+
+    const normalized = normalizePageDocumentV2ForWrite(document);
+
+    // Custom size is stored trimmed; the token remains (custom-wins is a render
+    // concern); heavier weight + transform round-trip.
+    expect(normalized.sections[0]?.blocks[0]?.style).toEqual({
+      fontSizeCustom: "clamp(2.6rem,5vw,4.4rem)",
+      fontSize: "lg",
+      fontWeight: "extrabold",
+      textTransform: "uppercase",
+    });
+    // "none" transform + rejected fluid size are both OMITTED (present-only).
+    expect(normalized.sections[0]?.blocks[1]?.style).toEqual({
+      fontWeight: "black",
+    });
+  });
+
+  test("TASK-532 fail-closed enums: bad fontWeight/textTransform throw on write", () => {
+    const badWeight = buildDocument();
+    badWeight.sections[0]!.blocks[0]!.style = {
+      fontWeight: "ultra",
+    } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+    expect(() => normalizePageDocumentV2ForWrite(badWeight)).toThrow(
+      "Invalid sections.0.blocks.0.style.fontWeight."
+    );
+
+    const badTransform = buildDocument();
+    badTransform.sections[0]!.blocks[0]!.style = {
+      textTransform: "rotate",
+    } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+    expect(() => normalizePageDocumentV2ForWrite(badTransform)).toThrow(
+      "Invalid sections.0.blocks.0.style.textTransform."
+    );
+  });
+
+  test("TASK-532 eyebrow divider width/align/gradient round-trip present-only + clamp + fail-closed", () => {
+    const document = buildDocument();
+    document.sections[0]!.blocks[0] = {
+      id: "blk_divider",
+      type: "divider",
+      props: { tone: "accent", thickness: 2, width: 34, align: "left", gradient: true },
+      visibility: { visible: true },
+    };
+    document.sections[0]!.blocks[1] = {
+      id: "blk_divider2",
+      type: "divider",
+      props: { tone: "neutral", thickness: 1, width: 9999, align: "center" },
+      visibility: { visible: true },
+    };
+
+    const normalized = normalizePageDocumentV2ForWrite(document);
+    expect(normalized.sections[0]?.blocks[0]?.props).toEqual({
+      tone: "accent",
+      thickness: 2,
+      width: 34,
+      align: "left",
+      gradient: true,
+    });
+    // width over the cap clamps to 400 (fail-soft); no gradient authored.
+    expect(normalized.sections[0]?.blocks[1]?.props).toEqual({
+      tone: "neutral",
+      thickness: 1,
+      width: 400,
+      align: "center",
+    });
+
+    // align:"skew" is fail-closed.
+    const badAlign = buildDocument();
+    badAlign.sections[0]!.blocks[0] = {
+      id: "blk_divider3",
+      type: "divider",
+      props: { tone: "neutral", thickness: 1, align: "skew" },
+      visibility: { visible: true },
+    };
+    expect(() => normalizePageDocumentV2ForWrite(badAlign)).toThrow();
+  });
+
+  test("TASK-532 legacy divider without new props is byte-identical (present-only)", () => {
+    const document = buildDocument();
+    document.sections[0]!.blocks[0] = {
+      id: "blk_divider",
+      type: "divider",
+      props: { tone: "muted", thickness: 3 },
+      visibility: { visible: true },
+    };
+    const written = normalizePageDocumentV2ForWrite(document);
+    expect(written.sections[0]?.blocks[0]?.props).toEqual({ tone: "muted", thickness: 3 });
+    // No new decorative keys leaked in.
+    expect(written.sections[0]?.blocks[0]?.props).not.toHaveProperty("width");
+    expect(written.sections[0]?.blocks[0]?.props).not.toHaveProperty("align");
+    expect(written.sections[0]?.blocks[0]?.props).not.toHaveProperty("gradient");
+  });
+
+  test(
+    "TASK-532 JSON schema accepts new fields on inline + responsive style, rejects unknown",
+    { timeout: AJV_COMPILE_TEST_TIMEOUT_MS },
+    () => {
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
+
+      const inline = buildDocument();
+      inline.sections[0]!.blocks[0]!.style = {
+        fontSizeCustom: "clamp(2.6rem,5vw,4.4rem)",
+        textTransform: "uppercase",
+        fontWeight: "black",
+      } as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+      expect(validate(inline)).toBe(true);
+
+      // The responsive-override style path is validated by the SAME $ref-shared
+      // schema (no separate partial schema exists).
+      const responsive = buildDocument();
+      responsive.sections[0]!.blocks[0]!.responsive = {
+        tablet: { style: { fontSizeCustom: "1.45rem", textTransform: "capitalize" } },
+      } as PageDocumentV2["sections"][number]["blocks"][number]["responsive"];
+      expect(validate(responsive)).toBe(true);
+
+      // Unknown style key still rejects (additionalProperties:false).
+      const unknownKey = buildDocument();
+      unknownKey.sections[0]!.blocks[0]!.style = {
+        fontSizeThing: "1rem",
+      } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+      expect(validate(unknownKey)).toBe(false);
+
+      // Unknown textTransform enum value rejects at the schema too.
+      const badTransform = buildDocument();
+      badTransform.sections[0]!.blocks[0]!.style = {
+        textTransform: "rotate",
+      } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+      expect(validate(badTransform)).toBe(false);
+    }
+  );
+
+  test("TASK-532 fontSizeThing unknown style key throws PageDocumentError on write", () => {
+    const document = buildDocument();
+    document.sections[0]!.blocks[0]!.style = {
+      fontSizeThing: "1rem",
+    } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+    expect(() => normalizePageDocumentV2ForWrite(document)).toThrow();
+    expect(isPageDocumentError(safeNormalizeError(document), "page_document_unknown_field")).toBe(
+      true
+    );
+  });
+
   test("normalizes text marks with clamped ranges and same-type conflict removal", () => {
     const document = buildDocument();
     document.sections[0]!.blocks[0]!.props = {
@@ -783,7 +941,10 @@ describe("PageDocumentV2", () => {
 
       const unknownToken = buildDocument();
       unknownToken.sections[0]!.blocks[0]!.style = {
-        fontWeight: "black",
+        // TASK-532 (Bundle B): the weight enum grew to include "black" (900), so
+        // the invalid-token fixture is re-baselined to a token that stays OUTSIDE
+        // the 6-member enum, preserving the reject-unknown-token intent.
+        fontWeight: "ultrablack",
       } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["style"];
       expect(validate(unknownToken)).toBe(false);
 
@@ -831,7 +992,20 @@ describe("PageDocumentV2", () => {
     expect(pageDividerTones).toEqual(["neutral", "muted", "accent"]);
     expect(pageColumnDistributions).toEqual(["equal", "auto"]);
     expect(pageGroupDirections).toEqual(["row", "column"]);
-    expect(pageBlockSlotKeys).toEqual(["children", "column:1", "column:2", "column:3", "column:4"]);
+    // ── TASK-534 ── the switcher block adds six panel:N slots (its tab panels).
+    expect(pageBlockSlotKeys).toEqual([
+      "children",
+      "column:1",
+      "column:2",
+      "column:3",
+      "column:4",
+      "panel:1",
+      "panel:2",
+      "panel:3",
+      "panel:4",
+      "panel:5",
+      "panel:6",
+    ]);
 
     const document = buildDocument();
     document.sections[0]!.blocks = [
@@ -1517,13 +1691,16 @@ describe("PageDocumentV2", () => {
       runtimeRenderer: "real",
       slots: [],
     });
+    // TASK-534: gallery is now editor-insertable (filter/layout controls shipped),
+    // clearing its `gallery-editor-controls-pending` reason; still not assistant-
+    // emittable (the assistant does not invent galleries).
     expect(pageBlockCapabilities.gallery).toMatchObject({
-      editorInsertable: false,
-      insertable: false,
+      editorInsertable: true,
+      insertable: true,
       assistantEmittable: false,
       runtimeRenderer: "real",
-      reason: "gallery-editor-controls-pending",
     });
+    expect("reason" in pageBlockCapabilities.gallery).toBe(false);
     expect(pageBlockCapabilities.columns).toMatchObject({
       editorInsertable: true,
       insertable: true,
@@ -1533,7 +1710,16 @@ describe("PageDocumentV2", () => {
       publicDataBinding: "none",
     });
     expect("reason" in pageBlockCapabilities.columns).toBe(false);
-    expect(pageBlockCapabilities.icon.reason).toBe("icon-runtime-renderer-pending");
+    // TASK-521-04: the animated-icon block is real + author-insertable (renderer
+    // case + palette + controls shipped) while staying outside the assistant
+    // emission vocabulary (no decorative-motion invention by the assistant).
+    expect(pageBlockCapabilities.icon).toMatchObject({
+      editorInsertable: true,
+      insertable: true,
+      assistantEmittable: false,
+      runtimeRenderer: "real",
+    });
+    expect("reason" in pageBlockCapabilities.icon).toBe(false);
     // TASK-457: the collection block is author-insertable (controls shipped)
     // while staying outside the assistant emission vocabulary.
     expect(pageBlockCapabilities.collection).toMatchObject({
@@ -2055,6 +2241,1039 @@ describe("collection pagination props and clamp unification (TASK-459-03)", () =
           )
         )
       ).toBe(true);
+    }
+  );
+});
+
+describe("section scroll effect model (TASK-521-01-L01)", () => {
+  const withSectionStyle = (style: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.sections[0]!.style = {
+      ...doc.sections[0]!.style,
+      ...style,
+    } as PageDocumentV2["sections"][number]["style"];
+    return doc;
+  };
+
+  test("round-trips reveal-up + parallaxIntensity (present-only)", () => {
+    const normalized = normalizePageDocumentV2ForWrite(
+      withSectionStyle({ scrollEffect: "reveal-up", parallaxIntensity: 24 })
+    );
+    expect(normalized.sections[0]!.style).toMatchObject({
+      scrollEffect: "reveal-up",
+      parallaxIntensity: 24,
+    });
+    const roundTripped = normalizePageDocumentV2ForWrite(cloneDocument(normalized));
+    expect(roundTripped.sections[0]!.style).toEqual(normalized.sections[0]!.style);
+  });
+
+  test("omits scrollEffect:'none' (present-only)", () => {
+    const normalized = normalizePageDocumentV2ForWrite(withSectionStyle({ scrollEffect: "none" }));
+    expect("scrollEffect" in normalized.sections[0]!.style).toBe(false);
+  });
+
+  test("clamps parallaxIntensity to [0,40] (fail-soft)", () => {
+    const normalized = normalizeStoredPageDocumentV2ForRead(
+      withSectionStyle({ parallaxIntensity: 9999 })
+    );
+    expect(normalized.sections[0]!.style.parallaxIntensity).toBe(40);
+  });
+
+  test("rejects invalid scrollEffect value on write (throws PageDocumentError)", () => {
+    const bad = withSectionStyle({ scrollEffect: "drop-table" });
+    expect(() => normalizePageDocumentV2ForWrite(bad)).toThrow();
+    expect(isPageDocumentError(safeNormalizeError(bad), "page_document_invalid")).toBe(true);
+  });
+
+  test("rejects unknown style key", () => {
+    expect(() => normalizePageDocumentV2ForWrite(withSectionStyle({ wobble: true }))).toThrow(
+      "Unknown page document field: sections.0.style.wobble"
+    );
+  });
+
+  test("legacy section (no effect keys) is byte-identical", () => {
+    const normalized = normalizePageDocumentV2ForWrite(buildDocument());
+    expect("scrollEffect" in normalized.sections[0]!.style).toBe(false);
+    expect("parallaxIntensity" in normalized.sections[0]!.style).toBe(false);
+  });
+
+  test(
+    "responsive[bp].style scroll keys validate + round-trip (partial-schema mirror)",
+    { timeout: 30_000 },
+    () => {
+      const doc = buildDocument();
+      doc.sections[0]!.responsive = {
+        ...doc.sections[0]!.responsive,
+        tablet: {
+          ...doc.sections[0]!.responsive.tablet,
+          style: { scrollEffect: "reveal-fade", parallaxIntensity: 30 },
+        },
+      };
+      const normalized = normalizePageDocumentV2ForWrite(doc);
+      expect(normalized.sections[0]!.responsive.tablet?.style).toMatchObject({
+        scrollEffect: "reveal-fade",
+        parallaxIntensity: 30,
+      });
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
+      expect(validate(normalized)).toBe(true);
+    }
+  );
+});
+
+describe("section full-bleed background model (TASK-525-01-L02)", () => {
+  const withSectionStyle = (style: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.sections[0]!.style = {
+      ...doc.sections[0]!.style,
+      ...style,
+    } as PageDocumentV2["sections"][number]["style"];
+    return doc;
+  };
+
+  test("round-trips fullBleed:true (present-only)", () => {
+    const normalized = normalizePageDocumentV2ForWrite(withSectionStyle({ fullBleed: true }));
+    expect(normalized.sections[0]!.style.fullBleed).toBe(true);
+    const roundTripped = normalizePageDocumentV2ForWrite(cloneDocument(normalized));
+    expect(roundTripped.sections[0]!.style).toEqual(normalized.sections[0]!.style);
+  });
+
+  test("omits fullBleed:false (present-only, byte-identical)", () => {
+    const normalized = normalizePageDocumentV2ForWrite(withSectionStyle({ fullBleed: false }));
+    expect("fullBleed" in normalized.sections[0]!.style).toBe(false);
+  });
+
+  test("legacy section (no fullBleed key) is byte-identical", () => {
+    const normalized = normalizePageDocumentV2ForWrite(buildDocument());
+    expect("fullBleed" in normalized.sections[0]!.style).toBe(false);
+  });
+
+  test("rejects an unknown-shaped fullBleed sibling key", () => {
+    expect(() => normalizePageDocumentV2ForWrite(withSectionStyle({ fullBleedX: true }))).toThrow(
+      "Unknown page document field: sections.0.style.fullBleedX"
+    );
+  });
+
+  // Expensive schema compile ⇒ 30s timeout (sibling AJV tests convention).
+  // TASK-534: bump to the same explicit Ajv-compile timeout the other schema tests
+  // use (the recursive document schema compiles in a few seconds under parallel
+  // suite load; the default 5s ceiling flakes now the schema carries more props).
+  test("fullBleed:true validates against the JSON schema", { timeout: 30_000 }, () => {
+    const normalized = normalizePageDocumentV2ForWrite(withSectionStyle({ fullBleed: true }));
+    const ajv = new Ajv({ allErrors: true, strict: true });
+    const validate = ajv.compile(pageDocumentV2JsonSchema);
+    expect(validate(normalized)).toBe(true);
+  });
+});
+
+describe("page settings effects model (TASK-521-01-L02)", () => {
+  const withEffects = (effects: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.settings = { ...doc.settings, effects } as PageDocumentV2["settings"];
+    return doc;
+  };
+
+  test("round-trips { cursorSpotlight, spotlightColor(alpha), spotlightSize }", () => {
+    const normalized = normalizePageDocumentV2ForWrite(
+      withEffects({ cursorSpotlight: true, spotlightColor: "#0ea5e988", spotlightSize: 420 })
+    );
+    expect(normalized.settings.effects).toEqual({
+      cursorSpotlight: true,
+      spotlightColor: "#0ea5e988",
+      spotlightSize: 420,
+    });
+    const roundTripped = normalizePageDocumentV2ForWrite(cloneDocument(normalized));
+    expect(roundTripped.settings.effects).toEqual(normalized.settings.effects);
+  });
+
+  test("omits empty effects:{} (present-only)", () => {
+    const normalized = normalizePageDocumentV2ForWrite(withEffects({}));
+    expect("effects" in normalized.settings).toBe(false);
+  });
+
+  test("falls back spotlightColor 'url(x)' → var(--primary) (fail-soft)", () => {
+    const normalized = normalizeStoredPageDocumentV2ForRead(
+      withEffects({ spotlightColor: "url(x)" })
+    );
+    expect(normalized.settings.effects?.spotlightColor).toBe("var(--primary)");
+  });
+
+  test("clamps spotlightSize to [120,900] (fail-soft)", () => {
+    const normalized = normalizeStoredPageDocumentV2ForRead(withEffects({ spotlightSize: 99999 }));
+    expect(normalized.settings.effects?.spotlightSize).toBe(900);
+  });
+
+  test("rejects unknown settings.effects key", () => {
+    expect(() => normalizePageDocumentV2ForWrite(withEffects({ glow: true }))).toThrow(
+      "Unknown page document field: settings.effects.glow"
+    );
+  });
+
+  test("legacy settings (no effects) is byte-identical", () => {
+    const normalized = normalizePageDocumentV2ForWrite(buildDocument());
+    expect("effects" in normalized.settings).toBe(false);
+  });
+});
+
+describe("page settings background model (TASK-523-01-L01)", () => {
+  const withBackground = (background: unknown): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.settings = { ...doc.settings, background } as PageDocumentV2["settings"];
+    return doc;
+  };
+
+  test("settings.background: solid color round-trips (normalize→serialize→normalize)", () => {
+    const normalized = normalizePageDocumentV2ForWrite(withBackground("#0ea5e9"));
+    expect(normalized.settings.background).toBe("#0ea5e9");
+    const roundTripped = normalizePageDocumentV2ForWrite(cloneDocument(normalized));
+    expect(roundTripped.settings.background).toBe("#0ea5e9");
+  });
+
+  test("settings.background: safe gradient round-trips verbatim", () => {
+    const gradient = "linear-gradient(120deg,#0ea5e9,#a855f7)";
+    const normalized = normalizePageDocumentV2ForWrite(withBackground(gradient));
+    expect(normalized.settings.background).toBe(gradient);
+    const roundTripped = normalizePageDocumentV2ForWrite(cloneDocument(normalized));
+    expect(roundTripped.settings.background).toBe(gradient);
+  });
+
+  test("settings.background: unknown sibling key rejects (assertKnownKeys, strict mode)", () => {
+    const doc = buildDocument();
+    doc.settings = { ...doc.settings, canvas: "#000" } as PageDocumentV2["settings"];
+    expect(() => normalizePageDocumentV2ForWrite(doc)).toThrow(
+      "Unknown page document field: settings.canvas"
+    );
+  });
+
+  test("settings.background: injection-shaped value fails soft ⇒ key omitted", () => {
+    const normalized = normalizeStoredPageDocumentV2ForRead(
+      withBackground("red;}body{display:none")
+    );
+    expect("background" in normalized.settings).toBe(false);
+  });
+
+  test("settings.background: bare url()/expression() rejected ⇒ key omitted", () => {
+    const url = normalizeStoredPageDocumentV2ForRead(withBackground("url(javascript:alert(1))"));
+    expect("background" in url.settings).toBe(false);
+    const expr = normalizeStoredPageDocumentV2ForRead(withBackground("expression(alert(1))"));
+    expect("background" in expr.settings).toBe(false);
+  });
+
+  test("settings.background: url() NESTED in a gradient is rejected ⇒ key omitted (no url() layer, TASK-523 hardening)", () => {
+    // The gradient sanitizer now rejects ANY url() token, so this malformed nested
+    // form no longer survives — the key is omitted rather than stored verbatim.
+    const malformed = "radial-gradient(circle,url(//x))";
+    const normalized = normalizePageDocumentV2ForWrite(withBackground(malformed));
+    expect("background" in normalized.settings).toBe(false);
+  });
+
+  test("settings.background: gradient head + trailing comma-separated url() LAYER is rejected ⇒ key omitted (TASK-523 outbound-beacon)", () => {
+    // `linear-gradient(...), url(//evil)` is VALID CSS with two background layers, so a
+    // browser would fetch the url() layer on render (outbound tracking beacon). The
+    // sanitizer must reject the multi-layer form even though it starts with a valid head.
+    for (const beacon of [
+      "linear-gradient(red,blue), url(//evil.com/beacon.png)",
+      "conic-gradient(from 0deg,red), url(evil.com/x)",
+      "radial-gradient(circle,red,blue),url(/beacon)",
+    ]) {
+      const write = normalizePageDocumentV2ForWrite(withBackground(beacon));
+      expect("background" in write.settings).toBe(false);
+      const read = normalizeStoredPageDocumentV2ForRead(withBackground(beacon));
+      expect("background" in read.settings).toBe(false);
+    }
+  });
+
+  test("no settings.background ⇒ present-only omit; legacy/post-522 settings byte-identical", () => {
+    const normalized = normalizePageDocumentV2ForWrite(buildDocument());
+    expect("background" in normalized.settings).toBe(false);
+  });
+
+  test(
+    "Ajv: settings.background is a valid string property; unknown settings key rejected by additionalProperties:false",
+    { timeout: 30_000 },
+    () => {
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
+
+      const withBg = buildDocument();
+      withBg.settings = { ...withBg.settings, background: "#0ea5e9" };
+      expect(validate(withBg)).toBe(true);
+
+      const unknownKey = buildDocument();
+      unknownKey.settings = {
+        ...unknownKey.settings,
+        canvas: "#000",
+      } as unknown as PageDocumentV2["settings"];
+      expect(validate(unknownKey)).toBe(false);
+    }
+  );
+});
+
+describe("animated-icon block Ajv lockstep (TASK-521-01-L03)", () => {
+  test(
+    "normalized icon block with numeric speed/size validates; a string speed fails",
+    { timeout: 30_000 },
+    () => {
+      const doc = buildDocument();
+      doc.sections[0]!.blocks = [createPageBlockV2("icon", { id: "blk_icon_ajv" })];
+      const normalized = normalizePageDocumentV2ForWrite(doc);
+      expect(normalized.sections[0]!.blocks[0]!.props).toMatchObject({ speed: 1600, size: 48 });
+
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
+      expect(validate(normalized)).toBe(true);
+
+      // A doc that reached the schema with a STRING speed would fail — proving
+      // blockPropJsonSchemaForType returns numericSchema for icon speed, not the
+      // generic stringSchema.
+      const stringSpeed = cloneDocument(normalized);
+      (stringSpeed.sections[0]!.blocks[0]!.props as Record<string, unknown>).speed = "fast";
+      expect(validate(stringSpeed)).toBe(false);
+
+      // And an out-of-enum animation fails the schema too (enum mirror).
+      const badAnim = cloneDocument(normalized);
+      (badAnim.sections[0]!.blocks[0]!.props as Record<string, unknown>).animation = "explode";
+      expect(validate(badAnim)).toBe(false);
+    }
+  );
+});
+
+// TASK-522-01-L01 — the ONE new customSvg block type + props model.
+describe("customSvg block type + props (TASK-522-01-L01)", () => {
+  const CLEAN_SVG =
+    '<svg viewBox="0 0 10 10"><path d="M0 0 L10 10" stroke="#000" stroke-width="2"/></svg>';
+
+  const docWithCustomSvg = (props: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.sections[0]!.blocks = [
+      { id: "blk_svg", type: "customSvg", props, visibility: { visible: true } },
+    ];
+    return doc;
+  };
+
+  test("pageBlockTypes includes customSvg; propKeys + defaults + capabilities are correct", () => {
+    expect(pageBlockTypes).toContain("customSvg");
+    expect(pageBlockPropKeys.customSvg).toEqual(["svg", "drawIn", "drawSpeed", "label"]);
+    expect(pageBlockDefaultProps.customSvg).toEqual({ svg: "", drawIn: false, label: "" });
+    expect(pageBlockCapabilities.customSvg.editorInsertable).toBe(true);
+    expect(pageBlockCapabilities.customSvg.runtimeRenderer).toBe("real");
+  });
+
+  test("round-trips a clean svg + drawIn + drawSpeed + label", () => {
+    const normalized = normalizePageDocumentV2ForWrite(
+      docWithCustomSvg({ svg: CLEAN_SVG, drawIn: true, drawSpeed: 2400, label: "House" })
+    );
+    const p = normalized.sections[0]!.blocks[0]!.props;
+    expect(p.svg).toContain("<path");
+    expect(p.drawIn).toBe(true);
+    expect(p.drawSpeed).toBe(2400);
+    expect(p.label).toBe("House");
+    // idempotent re-normalize
+    const again = normalizePageDocumentV2ForWrite(cloneDocument(normalized));
+    expect(again.sections[0]!.blocks[0]!.props).toEqual(p);
+  });
+
+  test("svg/drawIn/label serialize WITH defaults when unauthored; drawSpeed is present-only", () => {
+    const normalized = normalizePageDocumentV2ForWrite(
+      docWithCustomSvg({ svg: "", drawIn: false, label: "" })
+    );
+    const p = normalized.sections[0]!.blocks[0]!.props;
+    expect(p.svg).toBe("");
+    expect(p.drawIn).toBe(false);
+    expect(p.label).toBe("");
+    expect(p).not.toHaveProperty("drawSpeed");
+  });
+
+  test("drawSpeed:99999 clamps to 6000", () => {
+    const normalized = normalizePageDocumentV2ForWrite(
+      docWithCustomSvg({ svg: CLEAN_SVG, drawIn: true, drawSpeed: 99999 })
+    );
+    expect(normalized.sections[0]!.blocks[0]!.props.drawSpeed).toBe(6000);
+  });
+
+  test("an svg containing <script> normalizes to svg:'' (sanitizer → default, NOT omitted)", () => {
+    const normalized = normalizePageDocumentV2ForWrite(
+      docWithCustomSvg({ svg: "<svg><script>alert(1)</script></svg>" })
+    );
+    const p = normalized.sections[0]!.blocks[0]!.props;
+    expect(p.svg).toBe("");
+    expect("svg" in p).toBe(true);
+  });
+
+  test("unknown prop customSvg.props.foo throws PageDocumentError", () => {
+    expect(() =>
+      normalizePageDocumentV2ForWrite(docWithCustomSvg({ svg: CLEAN_SVG, foo: "nope" }))
+    ).toThrow("Unknown page document field: sections.0.blocks.0.props.foo");
+  });
+
+  test(
+    "Ajv: a normalized customSvg block validates; an extra prop rejects",
+    { timeout: 30_000 },
+    () => {
+      const normalized = normalizePageDocumentV2ForWrite(
+        docWithCustomSvg({ svg: CLEAN_SVG, drawIn: true, drawSpeed: 2400, label: "x" })
+      );
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
+      expect(validate(normalized)).toBe(true);
+      const extra = cloneDocument(normalized);
+      (extra.sections[0]!.blocks[0]!.props as Record<string, unknown>).evil = 1;
+      expect(validate(extra)).toBe(false);
+    }
+  );
+});
+
+// TASK-525-02-L01 — per-block staggered reveal delay model.
+describe("block reveal-delay model (TASK-525-02-L01)", () => {
+  const docWithBlockStyle = (style: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.sections[0]!.blocks[0]!.style =
+      style as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+    return doc;
+  };
+  const blockStyle = (doc: PageDocumentV2) =>
+    normalizePageDocumentV2ForWrite(doc).sections[0]!.blocks[0]!.style ?? {};
+
+  test("round-trips block.style.revealDelay", () => {
+    expect(blockStyle(docWithBlockStyle({ revealDelay: 120 })).revealDelay).toBe(120);
+    const normalized = normalizePageDocumentV2ForWrite(docWithBlockStyle({ revealDelay: 120 }));
+    const roundTripped = normalizePageDocumentV2ForWrite(cloneDocument(normalized));
+    expect(roundTripped.sections[0]!.blocks[0]!.style).toEqual(
+      normalized.sections[0]!.blocks[0]!.style
+    );
+  });
+
+  test("clamps revealDelay to PAGE_REVEAL_DELAY_CLAMP fail-soft", () => {
+    expect(blockStyle(docWithBlockStyle({ revealDelay: 1e9 })).revealDelay).toBe(4000);
+    expect(blockStyle(docWithBlockStyle({ revealDelay: -500 })).revealDelay).toBe(0);
+    // NaN/Infinity → readNumber fallback (0).
+    expect(blockStyle(docWithBlockStyle({ revealDelay: Number.NaN })).revealDelay).toBe(0);
+    expect(
+      blockStyle(docWithBlockStyle({ revealDelay: Number.POSITIVE_INFINITY })).revealDelay
+    ).toBe(0);
+  });
+
+  test("is present-only: an unset block emits NO revealDelay (byte-identical)", () => {
+    expect("revealDelay" in blockStyle(docWithBlockStyle({}))).toBe(false);
+    // and a block with only OTHER fields carries no revealDelay key.
+    expect("revealDelay" in blockStyle(docWithBlockStyle({ tilt: "subtle" }))).toBe(false);
+  });
+
+  test("rejects an unknown block-style sibling key (reject-unknown)", () => {
+    expect(() => normalizePageDocumentV2ForWrite(docWithBlockStyle({ revealDelayX: 1 }))).toThrow(
+      "Unknown page document field: sections.0.blocks.0.style.revealDelayX"
+    );
+  });
+
+  // Compiling `pageDocumentV2JsonSchema` is expensive; under full-file load the
+  // default 5s timeout can be exceeded (pre-existing latent flake — sibling AJV
+  // tests already use { timeout: 30_000 }). Align this one for stability.
+  test("revealDelay validates against the JSON schema", { timeout: 30_000 }, () => {
+    const normalized = normalizePageDocumentV2ForWrite(docWithBlockStyle({ revealDelay: 240 }));
+    const ajv = new Ajv({ allErrors: true, strict: true });
+    const validate = ajv.compile(pageDocumentV2JsonSchema);
+    expect(validate(normalized)).toBe(true);
+  });
+});
+
+// TASK-522-01-L03 — block + section composition STYLE model.
+describe("composition style model (TASK-522-01-L03)", () => {
+  const docWithBlockStyle = (style: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.sections[0]!.blocks[0]!.style =
+      style as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+    return doc;
+  };
+  const blockStyle = (doc: PageDocumentV2) =>
+    normalizePageDocumentV2ForWrite(doc).sections[0]!.blocks[0]!.style ?? {};
+
+  test("round-trips decoration/tilt/tiltGlare/layer/surfacePreset/hoverEffect/marquee/composition", () => {
+    const style = blockStyle(
+      docWithBlockStyle({
+        decoration: { motion: "float", delay: 200, duration: 8000 },
+        tilt: "subtle",
+        tiltGlare: true,
+        layer: { x: 10, y: -20, z: 5, anchor: "bottom-right" },
+        surfacePreset: "glass",
+        hoverEffect: "lift-glow",
+        marquee: { speed: 18, direction: "right", seamless: true },
+        composition: "layered",
+      })
+    );
+    expect(style).toEqual({
+      decoration: { motion: "float", delay: 200, duration: 8000 },
+      tilt: "subtle",
+      tiltGlare: true,
+      layer: { x: 10, y: -20, z: 5, anchor: "bottom-right" },
+      surfacePreset: "glass",
+      hoverEffect: "lift-glow",
+      marquee: { speed: 18, direction: "right", seamless: true },
+      composition: "layered",
+    });
+  });
+
+  test("radiate decoration round-trips (map-pulse variant)", () => {
+    expect(blockStyle(docWithBlockStyle({ decoration: { motion: "radiate" } }))).toEqual({
+      decoration: { motion: "radiate" },
+    });
+  });
+
+  test("present-only reset members are omitted (none / flow)", () => {
+    expect(
+      blockStyle(
+        docWithBlockStyle({
+          decoration: { motion: "none" },
+          tilt: "none",
+          surfacePreset: "none",
+          hoverEffect: "none",
+          composition: "flow",
+        })
+      )
+    ).toEqual({});
+  });
+
+  test("fail-closed enum VALUES throw PageDocumentError in write mode", () => {
+    const cases: Array<Record<string, unknown>> = [
+      { decoration: { motion: "explode" } },
+      { tilt: "spin" },
+      { surfacePreset: "drop-table" },
+      { hoverEffect: "hack" },
+      { layer: { anchor: "nope" } },
+      { marquee: { direction: "up" } },
+      { composition: "diagonal" },
+    ];
+    for (const style of cases) {
+      expect(() => normalizePageDocumentV2ForWrite(docWithBlockStyle(style))).toThrow();
+    }
+  });
+
+  test("numbers clamp fail-soft (layer.z, marquee.speed, decoration.duration)", () => {
+    // TASK-523-02 — layer.z clamps to the (occlusion-proof) bound, capped below
+    // the cursor-spotlight overlay z-index so a layer can never hide the glow.
+    expect(blockStyle(docWithBlockStyle({ layer: { z: 99999 } })).layer).toEqual({
+      z: PAGE_LAYER_Z_CLAMP.max,
+    });
+    expect(blockStyle(docWithBlockStyle({ marquee: { speed: 0.1 } })).marquee).toEqual({
+      speed: 8,
+    });
+    expect(
+      blockStyle(docWithBlockStyle({ decoration: { motion: "float", duration: 1 } })).decoration
+    ).toEqual({ motion: "float", duration: 2000 });
+  });
+
+  test("unknown NESTED key throws", () => {
+    for (const style of [
+      { decoration: { motion: "float", foo: 1 } },
+      { layer: { x: 0, evil: 1 } },
+      { marquee: { speed: 18, bad: 1 } },
+    ]) {
+      expect(() => normalizePageDocumentV2ForWrite(docWithBlockStyle(style))).toThrow(
+        "Unknown page document field"
+      );
+    }
+  });
+
+  test("unknown top-level style key throws", () => {
+    expect(() => normalizePageDocumentV2ForWrite(docWithBlockStyle({ wobble: 1 }))).toThrow(
+      "Unknown page document field: sections.0.blocks.0.style.wobble"
+    );
+  });
+
+  test(
+    "a responsive.tablet.style.layer round-trips (partial schema mirror)",
+    { timeout: 30_000 },
+    () => {
+      const doc = buildDocument();
+      doc.sections[0]!.blocks[0]!.responsive = {
+        tablet: { style: { layer: { x: 5, y: 5 } } },
+      } as PageDocumentV2["sections"][number]["blocks"][number]["responsive"];
+      const normalized = normalizePageDocumentV2ForWrite(doc);
+      expect(normalized.sections[0]!.blocks[0]!.responsive?.tablet?.style?.layer).toEqual({
+        x: 5,
+        y: 5,
+      });
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      expect(ajv.compile(pageDocumentV2JsonSchema)(normalized)).toBe(true);
+    }
+  );
+
+  test("section surfacePreset/composition round-trip + present-only omission", () => {
+    const doc = buildDocument();
+    doc.sections[0]!.style = {
+      ...doc.sections[0]!.style,
+      surfacePreset: "ambient-orbs",
+      composition: "layered",
+    } as PageDocumentV2["sections"][number]["style"];
+    const normalized = normalizePageDocumentV2ForWrite(doc);
+    expect(normalized.sections[0]!.style.surfacePreset).toBe("ambient-orbs");
+    expect(normalized.sections[0]!.style.composition).toBe("layered");
+
+    const reset = buildDocument();
+    reset.sections[0]!.style = {
+      ...reset.sections[0]!.style,
+      surfacePreset: "none",
+      composition: "flow",
+    } as PageDocumentV2["sections"][number]["style"];
+    const resetNorm = normalizePageDocumentV2ForWrite(reset);
+    expect(resetNorm.sections[0]!.style).not.toHaveProperty("surfacePreset");
+    expect(resetNorm.sections[0]!.style).not.toHaveProperty("composition");
+  });
+
+  test("a legacy block/section (none of the new keys) is byte-identical", () => {
+    const normalized = normalizePageDocumentV2ForWrite(buildDocument());
+    expect(normalized.sections[0]!.blocks[0]!.style).toBeUndefined();
+    expect(normalized.sections[0]!.style).not.toHaveProperty("surfacePreset");
+    expect(normalized.sections[0]!.style).not.toHaveProperty("composition");
+  });
+
+  // TASK-524-02-L04 — independent surfaceTint model (round-trip / present-only /
+  // sanitize fail-soft / reject-unknown intact / JSON schema).
+  test("surfaceTint round-trips (incl. alpha rgba + hex8)", () => {
+    expect(blockStyle(docWithBlockStyle({ surfaceTint: "rgba(142,232,255,.5)" })).surfaceTint).toBe(
+      "rgba(142,232,255,.5)"
+    );
+    expect(blockStyle(docWithBlockStyle({ surfaceTint: "#8ee8ff80" })).surfaceTint).toBe(
+      "#8ee8ff80"
+    );
+  });
+
+  test("surfaceTint present-only: omitted when unset → byte-identical to 522", () => {
+    const style = blockStyle(docWithBlockStyle({ surfacePreset: "glass" }));
+    expect(style).not.toHaveProperty("surfaceTint");
+    expect("surfaceTint" in style).toBe(false);
+  });
+
+  test("surfaceTint fails soft on a bad color (omitted, no throw)", () => {
+    expect(
+      blockStyle(docWithBlockStyle({ surfaceTint: "expression(alert(1))" }))
+    ).not.toHaveProperty("surfaceTint");
+    expect(
+      blockStyle(docWithBlockStyle({ surfaceTint: "url(javascript:alert(1))" }))
+    ).not.toHaveProperty("surfaceTint");
+    expect(blockStyle(docWithBlockStyle({ surfaceTint: "" }))).not.toHaveProperty("surfaceTint");
+  });
+
+  test("surfaceTint is independent of background (both round-trip)", () => {
+    const style = blockStyle(
+      docWithBlockStyle({ background: "#123456", surfaceTint: "rgba(142,232,255,.5)" })
+    );
+    expect(style.background).toBe("#123456");
+    expect(style.surfaceTint).toBe("rgba(142,232,255,.5)");
+  });
+
+  // See the revealDelay AJV test note: expensive schema compile ⇒ 30s timeout.
+  test(
+    "surfaceTint validates against the block-style JSON schema (additionalProperties:false)",
+    { timeout: 30_000 },
+    () => {
+      const doc = docWithBlockStyle({ surfaceTint: "#8ee8ff" });
+      const normalized = normalizePageDocumentV2ForWrite(doc);
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      expect(ajv.compile(pageDocumentV2JsonSchema)(normalized)).toBe(true);
+    }
+  );
+
+  test("unknown block-style key still rejects with surfaceTint in the allowlist", () => {
+    expect(() => normalizePageDocumentV2ForWrite(docWithBlockStyle({ wobble: 1 }))).toThrow(
+      "Unknown page document field: sections.0.blocks.0.style.wobble"
+    );
+  });
+});
+
+// TASK-531-01-L02/L04 — glow model (arbitrary colored box-shadow) + multi-layer
+// background at the WRITE boundary. Present-only, reject-unknown, fail-soft, joins
+// all three additionalProperties:false JSON schemas in lockstep.
+describe("glow model + multi-layer background write boundary (TASK-531-01)", () => {
+  const docWithBlockStyle = (style: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.sections[0]!.blocks[0]!.style =
+      style as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+    return doc;
+  };
+  const docWithSectionStyle = (style: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.sections[0]!.style = {
+      ...doc.sections[0]!.style,
+      ...style,
+    } as PageDocumentV2["sections"][number]["style"];
+    return doc;
+  };
+  const blockStyle = (doc: PageDocumentV2): Record<string, unknown> =>
+    (normalizePageDocumentV2ForWrite(doc).sections[0]!.blocks[0]!.style ?? {}) as Record<
+      string,
+      unknown
+    >;
+  const sectionStyle = (doc: PageDocumentV2): Record<string, unknown> =>
+    normalizePageDocumentV2ForWrite(doc).sections[0]!.style as unknown as Record<string, unknown>;
+
+  const REFERENCE_GLOW = { color: "rgba(142,232,255,.22)", blur: 45, y: 18 } as const;
+
+  // ── Round-trip on BOTH targets ──────────────────────────────────────────────
+  test("round-trips glow on a block (present-only, byte-stable second pass)", () => {
+    const first = normalizePageDocumentV2ForWrite(
+      docWithBlockStyle({ glow: { ...REFERENCE_GLOW } })
+    );
+    expect(first.sections[0]!.blocks[0]!.style).toMatchObject({
+      glow: { color: "rgba(142,232,255,.22)", blur: 45, y: 18 },
+    });
+    // Unset offsets/spread are OMITTED (present-only — not defaulted into storage).
+    const glow = (first.sections[0]!.blocks[0]!.style as Record<string, unknown>).glow as Record<
+      string,
+      unknown
+    >;
+    expect("x" in glow).toBe(false);
+    expect("spread" in glow).toBe(false);
+    // Re-normalizing the stored doc is byte-identical (round-trip stability).
+    const second = normalizePageDocumentV2ForWrite(cloneDocument(first));
+    expect(second.sections[0]!.blocks[0]!.style).toEqual(first.sections[0]!.blocks[0]!.style);
+  });
+
+  test("round-trips glow on a section (present-only, byte-stable second pass)", () => {
+    const first = normalizePageDocumentV2ForWrite(
+      docWithSectionStyle({ glow: { color: "#8ee8ff", blur: 28 } })
+    );
+    expect(sectionStyle(cloneDocument(first))).toMatchObject({
+      glow: { color: "#8ee8ff", blur: 28 },
+    });
+    const second = normalizePageDocumentV2ForWrite(cloneDocument(first));
+    expect(second.sections[0]!.style).toEqual(first.sections[0]!.style);
+  });
+
+  // ── Present-only omit ───────────────────────────────────────────────────────
+  test("glow is present-only — omitted when unauthored on block AND section", () => {
+    expect("glow" in blockStyle(docWithBlockStyle({}))).toBe(false);
+    expect("glow" in sectionStyle(docWithSectionStyle({}))).toBe(false);
+  });
+
+  // ── Reject-unknown nested key (fail-closed READ trap) ───────────────────────
+  test("an unknown nested glow key rejects fail-closed (block AND section)", () => {
+    expect(() =>
+      normalizePageDocumentV2ForWrite(docWithBlockStyle({ glow: { color: "#8ee8ff", wobble: 1 } }))
+    ).toThrow("Unknown page document field: sections.0.blocks.0.style.glow.wobble");
+    expect(() =>
+      normalizePageDocumentV2ForWrite(
+        docWithSectionStyle({ glow: { color: "#8ee8ff", wobble: 1 } })
+      )
+    ).toThrow("Unknown page document field: sections.0.style.glow.wobble");
+  });
+
+  // ── Fail-soft VALUES ────────────────────────────────────────────────────────
+  test("a bad glow color omits the WHOLE glow (fail-soft, color required)", () => {
+    // expression()/url()/named-with-parens are not safe colors ⇒ the whole glow drops.
+    expect(
+      "glow" in blockStyle(docWithBlockStyle({ glow: { color: "expression(alert(1))" } }))
+    ).toBe(false);
+    expect("glow" in blockStyle(docWithBlockStyle({ glow: { color: "url(//evil/x)" } }))).toBe(
+      false
+    );
+    // A glow object with NO color at all ⇒ omitted (color is required).
+    expect("glow" in blockStyle(docWithBlockStyle({ glow: { blur: 40 } }))).toBe(false);
+    expect("glow" in sectionStyle(docWithSectionStyle({ glow: { color: "not a color;}" } }))).toBe(
+      false
+    );
+  });
+
+  test("glow numerics clamp fail-soft to the 531 bounds", () => {
+    const clamped = blockStyle(
+      docWithBlockStyle({ glow: { color: "#8ee8ff", blur: 9999, spread: -999, x: 5000, y: -5000 } })
+    ).glow as Record<string, number>;
+    expect(clamped.blur).toBe(120); // PAGE_GLOW_BLUR_CLAMP.max
+    expect(clamped.spread).toBe(-40); // PAGE_GLOW_SPREAD_CLAMP.min
+    expect(clamped.x).toBe(80); // PAGE_GLOW_OFFSET_CLAMP.max
+    expect(clamped.y).toBe(-80); // PAGE_GLOW_OFFSET_CLAMP.min
+  });
+
+  // ── JSON schema lockstep (all THREE additionalProperties:false style schemas) ─
+  test(
+    "glow validates against the compiled pageDocumentV2JsonSchema on block AND section",
+    { timeout: 30_000 },
+    () => {
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
+      const blockNormalized = normalizePageDocumentV2ForWrite(
+        docWithBlockStyle({ glow: { ...REFERENCE_GLOW } })
+      );
+      expect(validate(blockNormalized)).toBe(true);
+      // Top-level section style is validated by the INLINED section schema (:1827),
+      // separate from the partial — omitting glow there would fail this assertion.
+      const sectionNormalized = normalizePageDocumentV2ForWrite(
+        docWithSectionStyle({ glow: { color: "#8ee8ff", blur: 28 } })
+      );
+      expect(validate(sectionNormalized)).toBe(true);
+
+      // A hand-injected unknown nested glow key fails additionalProperties:false too.
+      const tampered = cloneDocument(blockNormalized);
+      (
+        (tampered.sections[0]!.blocks[0]!.style as Record<string, unknown>).glow as Record<
+          string,
+          unknown
+        >
+      ).wobble = 1;
+      expect(validate(tampered)).toBe(false);
+      // A glow with no color fails required:["color"].
+      const noColor = cloneDocument(blockNormalized);
+      (noColor.sections[0]!.blocks[0]!.style as Record<string, unknown>).glow = { blur: 10 };
+      expect(validate(noColor)).toBe(false);
+    }
+  );
+
+  // ── Multi-layer background at the WRITE boundary (G-1) ───────────────────────
+  test("a safe multi-layer background round-trips through the block AND section write boundary", () => {
+    const ctaCard =
+      "radial-gradient(circle at 82% 10%, rgba(142,232,255,.35), transparent 60%), linear-gradient(145deg,#0f1720,#1b2733)";
+    expect(
+      blockStyle(docWithBlockStyle({ background: ctaCard, backgroundType: "gradient" })).background
+    ).toBe(ctaCard);
+    expect(
+      sectionStyle(docWithSectionStyle({ background: ctaCard, backgroundType: "gradient" }))
+        .background
+    ).toBe(ctaCard);
+  });
+
+  test("a url()-bearing multi-layer background is rejected at the write boundary (no beacon stored)", () => {
+    // The section normalizer sanitizes background via sanitizeAuthoringCssBackground:
+    // the trailing url() layer fails the per-layer allowlist + whole-value tripwire, so
+    // the whole value drops to the default (no verbatim beacon persisted).
+    const beacon = "linear-gradient(#fff,#000), url(//evil/beacon)";
+    expect(
+      sectionStyle(docWithSectionStyle({ background: beacon, backgroundType: "gradient" }))
+        .background
+    ).not.toBe(beacon);
+    // Over-cap (7 layers) also rejected.
+    const overCap = Array.from({ length: 7 }, () => "#000").join(", ");
+    expect(
+      sectionStyle(docWithSectionStyle({ background: overCap, backgroundType: "gradient" }))
+        .background
+    ).not.toBe(overCap);
+  });
+
+  // ── Byte-identity for a no-effect document ──────────────────────────────────
+  test("a doc with no glow / no multi-layer / no section-gradient is byte-identical across two passes", () => {
+    const base = normalizePageDocumentV2ForWrite(buildDocument());
+    expect("glow" in (base.sections[0]!.style as Record<string, unknown>)).toBe(false);
+    const rerun = normalizePageDocumentV2ForWrite(cloneDocument(base));
+    expect(rerun).toEqual(base);
+  });
+});
+
+// TASK-533-01-L04 — block colSpan/rowSpan + section columnTemplate model at the
+// WRITE boundary. Present-only, reject-unknown, fail-soft, joins the allowlist +
+// additionalProperties:false JSON schema in lockstep.
+describe("grid span + asymmetric column ratio write boundary (TASK-533-01)", () => {
+  const docWithBlockStyle = (style: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.sections[0]!.blocks[0]!.style =
+      style as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+    return doc;
+  };
+  const docWithSectionStyle = (style: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.sections[0]!.style = {
+      ...doc.sections[0]!.style,
+      ...style,
+    } as PageDocumentV2["sections"][number]["style"];
+    return doc;
+  };
+  const blockStyle = (doc: PageDocumentV2): Record<string, unknown> =>
+    (normalizePageDocumentV2ForWrite(doc).sections[0]!.blocks[0]!.style ?? {}) as Record<
+      string,
+      unknown
+    >;
+  const sectionStyle = (doc: PageDocumentV2): Record<string, unknown> =>
+    normalizePageDocumentV2ForWrite(doc).sections[0]!.style as unknown as Record<string, unknown>;
+
+  test("block colSpan/rowSpan round-trip present-only + clamp + trunc", () => {
+    expect(blockStyle(docWithBlockStyle({ rowSpan: 2 })).rowSpan).toBe(2);
+    expect(blockStyle(docWithBlockStyle({ colSpan: 2 })).colSpan).toBe(2);
+    // Clamp: out-of-range clamps to the PAGE_BLOCK_SPAN_CLAMP bounds {1,4}.
+    expect(blockStyle(docWithBlockStyle({ rowSpan: 99 })).rowSpan).toBe(4); // clamp max
+    expect(blockStyle(docWithBlockStyle({ colSpan: 0 })).colSpan).toBe(1); // clamp min
+    // Trunc: a fractional span becomes an integer literal for `span N`.
+    expect(blockStyle(docWithBlockStyle({ rowSpan: 2.9 })).rowSpan).toBe(2);
+    // Present-only: unset ⇒ omitted.
+    expect("colSpan" in blockStyle(docWithBlockStyle({}))).toBe(false);
+    expect("rowSpan" in blockStyle(docWithBlockStyle({}))).toBe(false);
+  });
+
+  test("block span is byte-stable across a second normalize pass", () => {
+    const first = normalizePageDocumentV2ForWrite(docWithBlockStyle({ colSpan: 2, rowSpan: 2 }));
+    const second = normalizePageDocumentV2ForWrite(cloneDocument(first));
+    expect(second.sections[0]!.blocks[0]!.style).toEqual(first.sections[0]!.blocks[0]!.style);
+  });
+
+  test("section columnTemplate round-trips a sanitizer-valid ratio, omits an invalid one", () => {
+    expect(
+      sectionStyle(docWithSectionStyle({ columnTemplate: "1.15fr .85fr" })).columnTemplate
+    ).toBe("1.15fr .85fr");
+    expect(sectionStyle(docWithSectionStyle({ columnTemplate: "1fr 1.2fr" })).columnTemplate).toBe(
+      "1fr 1.2fr"
+    );
+    // Rejected by the strict sanitizer ⇒ OMITTED (present-only fail-soft, never raw).
+    expect(
+      "columnTemplate" in sectionStyle(docWithSectionStyle({ columnTemplate: "1fr;}x{}" }))
+    ).toBe(false);
+    expect(
+      "columnTemplate" in sectionStyle(docWithSectionStyle({ columnTemplate: "url(evil)" }))
+    ).toBe(false);
+    // Present-only: unset ⇒ omitted.
+    expect("columnTemplate" in sectionStyle(docWithSectionStyle({}))).toBe(false);
+  });
+
+  test("rejects unknown block/section style keys (fail-closed READ trap)", () => {
+    expect(() => normalizePageDocumentV2ForWrite(docWithBlockStyle({ colSpanX: 2 }))).toThrow(
+      "Unknown page document field: sections.0.blocks.0.style.colSpanX"
+    );
+    expect(() =>
+      normalizePageDocumentV2ForWrite(docWithSectionStyle({ columnTemplateX: "1fr" }))
+    ).toThrow("Unknown page document field: sections.0.style.columnTemplateX");
+  });
+
+  test("no-span / no-columnTemplate doc is byte-identical across two passes", () => {
+    const base = normalizePageDocumentV2ForWrite(buildDocument());
+    expect("colSpan" in (base.sections[0]!.blocks[0]!.style ?? {})).toBe(false);
+    expect("columnTemplate" in (base.sections[0]!.style as Record<string, unknown>)).toBe(false);
+    const rerun = normalizePageDocumentV2ForWrite(cloneDocument(base));
+    expect(rerun).toEqual(base);
+  });
+
+  test(
+    "colSpan/rowSpan/columnTemplate validate against the compiled pageDocumentV2JsonSchema",
+    { timeout: 30_000 },
+    () => {
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
+      const blockNormalized = normalizePageDocumentV2ForWrite(
+        docWithBlockStyle({ colSpan: 2, rowSpan: 2 })
+      );
+      expect(validate(blockNormalized)).toBe(true);
+      // Top-level section style is validated by the INLINED section schema (mirror b),
+      // separate from the partial — omitting columnTemplate there would fail this.
+      const sectionNormalized = normalizePageDocumentV2ForWrite(
+        docWithSectionStyle({ columnTemplate: "1.15fr .85fr" })
+      );
+      expect(validate(sectionNormalized)).toBe(true);
+      // A hand-injected out-of-range span fails the numeric schema.
+      const badSpan = cloneDocument(blockNormalized);
+      (badSpan.sections[0]!.blocks[0]!.style as Record<string, unknown>).rowSpan = 99;
+      expect(validate(badSpan)).toBe(false);
+    }
+  );
+});
+
+// TASK-533-02-L04 — per-edge section border model at the WRITE boundary. Present-only
+// whole-object omit, reject-unknown (edge + prop), fail-soft clamp/bad-color-drop,
+// joins the section-style allowlist + additionalProperties:false JSON schema in lockstep.
+describe("per-edge section border write boundary (TASK-533-02)", () => {
+  const docWithSectionStyle = (style: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.sections[0]!.style = {
+      ...doc.sections[0]!.style,
+      ...style,
+    } as PageDocumentV2["sections"][number]["style"];
+    return doc;
+  };
+  const sectionStyle = (doc: PageDocumentV2): Record<string, unknown> =>
+    normalizePageDocumentV2ForWrite(doc).sections[0]!.style as unknown as Record<string, unknown>;
+  const border = (doc: PageDocumentV2): Record<string, unknown> | undefined =>
+    sectionStyle(doc).border as Record<string, unknown> | undefined;
+
+  test("section border round-trips per-edge present-only (border-block: no left/right)", () => {
+    const b = border(
+      docWithSectionStyle({
+        border: {
+          top: { color: "#ffffff33", width: 1 },
+          bottom: { color: "#ffffff33", width: 1 },
+        },
+      })
+    );
+    // Present-only: `style` is OMITTED when unauthored (the render defaults it to
+    // "solid" — 533-02-L02 — but the stored model stays byte-identical). color + width
+    // round-trip.
+    expect(b?.top).toEqual({ color: "#ffffff33", width: 1 });
+    expect((b?.top as Record<string, unknown>).style).toBeUndefined();
+    expect((b?.bottom as Record<string, unknown>).width).toBe(1);
+    // border-block: only top+bottom authored ⇒ no left/right edges.
+    expect("left" in (b ?? {})).toBe(false);
+    expect("right" in (b ?? {})).toBe(false);
+    // Present-only whole-object omit when unset.
+    expect("border" in sectionStyle(docWithSectionStyle({}))).toBe(false);
+  });
+
+  test("four-edge border round-trips all edges", () => {
+    const b = border(
+      docWithSectionStyle({
+        border: {
+          top: { color: "#fff", width: 2, style: "dashed" },
+          right: { color: "#000", width: 1 },
+          bottom: { width: 3 },
+          left: { color: "#0d9488", width: 1, style: "dotted" },
+        },
+      })
+    );
+    expect((b?.top as Record<string, unknown>).style).toBe("dashed");
+    expect((b?.bottom as Record<string, unknown>).width).toBe(3);
+    expect((b?.left as Record<string, unknown>).color).toBe("#0d9488");
+  });
+
+  test("clamps width and drops a bad color (fail-soft)", () => {
+    // Width over-range clamps to the PAGE_SECTION_BORDER_WIDTH_CLAMP max {16}.
+    const clamped = border(docWithSectionStyle({ border: { top: { width: 99 } } }));
+    expect((clamped?.top as Record<string, unknown>).width).toBe(16);
+    // A hostile color is sanitized away; the width keeps the edge alive.
+    const bad = border(
+      docWithSectionStyle({ border: { top: { color: "javascript:alert(1)", width: 1 } } })
+    );
+    expect((bad?.top as Record<string, unknown>).color).toBeUndefined();
+    expect((bad?.top as Record<string, unknown>).width).toBe(1);
+  });
+
+  test("omits an all-empty border object entirely (present-only whole-object omit)", () => {
+    expect("border" in sectionStyle(docWithSectionStyle({ border: { top: {}, bottom: {} } }))).toBe(
+      false
+    );
+    // An edge with only a bad color / zero width contributes nothing ⇒ whole object omitted.
+    expect(
+      "border" in
+        sectionStyle(docWithSectionStyle({ border: { top: { color: "url(x)", width: 0 } } }))
+    ).toBe(false);
+  });
+
+  test("rejects unknown border edge / prop keys (fail-closed READ trap)", () => {
+    expect(() =>
+      normalizePageDocumentV2ForWrite(docWithSectionStyle({ border: { middle: { width: 1 } } }))
+    ).toThrow("Unknown page document field: sections.0.style.border.middle");
+    expect(() =>
+      normalizePageDocumentV2ForWrite(docWithSectionStyle({ border: { top: { widthX: 1 } } }))
+    ).toThrow("Unknown page document field: sections.0.style.border.top.widthX");
+  });
+
+  test("border is byte-stable across a second normalize pass", () => {
+    const first = normalizePageDocumentV2ForWrite(
+      docWithSectionStyle({ border: { top: { color: "#fff2", width: 1 } } })
+    );
+    const second = normalizePageDocumentV2ForWrite(cloneDocument(first));
+    expect(second.sections[0]!.style).toEqual(first.sections[0]!.style);
+  });
+
+  test(
+    "border validates against the compiled pageDocumentV2JsonSchema (both mirrors)",
+    { timeout: 30_000 },
+    () => {
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
+      const normalized = normalizePageDocumentV2ForWrite(
+        docWithSectionStyle({
+          border: { top: { color: "#fff2", width: 1 }, bottom: { color: "#fff2", width: 1 } },
+        })
+      );
+      expect(validate(normalized)).toBe(true);
+      // A hand-injected unknown nested edge key fails additionalProperties:false too.
+      const tampered = cloneDocument(normalized);
+      (
+        (tampered.sections[0]!.style as unknown as Record<string, Record<string, unknown>>).border!
+          .top as Record<string, unknown>
+      ).wobble = 1;
+      expect(validate(tampered)).toBe(false);
     }
   );
 });

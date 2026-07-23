@@ -2,11 +2,18 @@ import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
+import { cn } from "@/lib/utils";
 import { submitForm, type FormSettings, type FormSubmissionResponse } from "@/services/formsClient";
 import {
   evaluateFormFieldLogic,
@@ -15,6 +22,36 @@ import {
   type FormFieldStyle,
 } from "../../../services/forms/fieldSettings";
 import { normalizeFormStep } from "../../../services/forms/formSettings";
+import {
+  buildFormThemeStyleVars,
+  formThemeAlignClass,
+  formThemeBorderWidthClass,
+  formThemeButtonAlignClass,
+  formThemeColumnsClass,
+  formThemeGapClass,
+  formThemeInputSizeClass,
+  formThemePaddingClass,
+  formThemeRadiusClass,
+  formThemeShadowClass,
+  formThemeTitleSizeClass,
+  formThemeTitleWeightClass,
+  formThemeWidthClass,
+  resolveFormTheme,
+  type FormThemeFontFamily,
+} from "../../../services/forms/formTheme";
+
+// 516-06 owns this tiny LOCAL font-family token→class map (516-01 exports NO
+// `fontFamilyClass` symbol via its resolved-token pattern; formTheme.ts DOES export
+// `formThemeFontFamilyClass`, but the preview keeps its own map per the contract so
+// the embed + preview share the SAME literal shape). "display" is the resolved
+// DEFAULT (FORM_THEME_DEFAULTS.typography.fontFamily) and MUST be present.
+const FORM_THEME_FONT_CLASS: Record<FormThemeFontFamily, string> = {
+  display: "font-display",
+  inherit: "",
+  sans: "font-sans",
+  serif: "font-serif",
+  mono: "font-mono",
+};
 
 type RuntimePreviewField = {
   id: string;
@@ -33,6 +70,9 @@ type RuntimePreviewField = {
     formStep?: number;
     inputStep?: number;
     step?: number;
+    accept?: string[];
+    maxSizeMb?: number;
+    multiple?: boolean;
     logic?: FormFieldLogic;
     style?: FormFieldStyle;
   };
@@ -141,6 +181,66 @@ export function FormRuntimePreviewDialog({
 
   const isLastStep = activeStep >= maxStep;
 
+  // 516-06: apply the FULL resolved form theme to the preview via the SAME
+  // formTheme.ts maps 516-04 uses on the canvas (one path ⇒ preview + canvas +
+  // front cannot drift). An un-themed preview renders FORM_THEME_DEFAULTS.
+  const t = resolveFormTheme(settings.theme);
+  const styleVars = buildFormThemeStyleVars(t);
+  const containerClass = cn(
+    "flex w-full flex-col",
+    formThemeWidthClass[t.layout.width],
+    formThemeAlignClass[t.layout.align],
+    FORM_THEME_FONT_CLASS[t.typography.fontFamily]
+  );
+  const cardClass = cn(
+    "w-full space-y-6",
+    t.surface.card
+      ? cn(
+          formThemeRadiusClass[t.surface.radius],
+          formThemeBorderWidthClass[t.surface.borderWidth],
+          formThemeShadowClass[t.surface.shadow],
+          t.surface.borderColor ? "border-[color:var(--form-border)]" : undefined,
+          t.surface.background ? "bg-[var(--form-surface-bg)]" : "bg-card"
+        )
+      : "border-0 shadow-none bg-transparent",
+    formThemePaddingClass[t.surface.padding]
+  );
+  const titleClass = cn(
+    formThemeTitleSizeClass[t.typography.titleSize],
+    formThemeTitleWeightClass[t.typography.titleWeight],
+    t.typography.titleColor ? "text-[color:var(--form-title)]" : "text-foreground"
+  );
+  const descriptionClass = cn(
+    "text-sm",
+    t.typography.helperColor ? "text-[color:var(--form-helper)]" : "text-muted-foreground"
+  );
+  const gridClass = cn(
+    "grid",
+    formThemeColumnsClass[t.layout.columns],
+    formThemeGapClass[t.layout.fieldGap]
+  );
+  const themedInputClass = cn(
+    formThemeInputSizeClass[t.input.size],
+    formThemeRadiusClass[t.input.radius],
+    t.input.background ? "bg-[var(--form-input-bg)]" : undefined,
+    t.input.borderColor ? "border-[color:var(--form-input-border)]" : undefined,
+    t.input.textColor ? "text-[color:var(--form-input-text)]" : undefined
+  );
+  const labelColorClass = t.typography.labelColor
+    ? "text-[color:var(--form-label)]"
+    : "text-muted-foreground";
+  const helperColorClass = t.typography.helperColor
+    ? "text-[color:var(--form-helper)]"
+    : "text-muted-foreground";
+  const submitFullWidth = t.submit.fullWidth || t.layout.buttonAlignment === "full";
+  const submitClass = cn(
+    formThemeRadiusClass[t.submit.radius],
+    submitFullWidth ? "w-full" : cn("w-auto", formThemeButtonAlignClass[t.layout.buttonAlignment]),
+    t.submit.background ? "bg-[var(--form-submit-bg)]" : undefined,
+    t.submit.textColor ? "text-[color:var(--form-submit-text)]" : undefined
+  );
+  const submitLabel = t.submit.label ?? "Submit preview";
+
   const updateValue = (name: string, value: string | boolean) => {
     setValues((prev) => ({ ...prev, [name]: value }));
     setResult(null);
@@ -199,22 +299,14 @@ export function FormRuntimePreviewDialog({
       >
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>Form Runtime Preview</DialogTitle>
-          <p className="text-xs text-muted-foreground">
+          <DialogDescription className="text-xs text-muted-foreground">
             Interactive preview for test submissions and automation verification.
-          </p>
+          </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="max-h-[calc(90vh-64px)]">
           <div className="space-y-4 px-6 py-6">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h3 className="text-base font-semibold text-foreground">{formName}</h3>
-                <p className="text-xs text-muted-foreground">
-                  {formDescription.trim().length > 0
-                    ? formDescription
-                    : "Use this preview to test action automation and runtime behavior."}
-                </p>
-              </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <Button variant="outline" size="sm" onClick={onOpenLogs}>
                 Open action logs
               </Button>
@@ -258,221 +350,284 @@ export function FormRuntimePreviewDialog({
               </Alert>
             ) : null}
 
-            {activeStepFields.length === 0 ? (
-              <div className="rounded-lg border border-dashed bg-muted/20 p-6 text-sm text-muted-foreground">
-                No visible fields for this step. Update logic conditions or field configuration.
-              </div>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {activeStepFields.map((field) => {
-                  const style = resolveFormFieldStyle(field.settings.style);
-                  const widthClass = style.width === "half" ? "md:col-span-1" : "md:col-span-2";
-                  const labelPositionClass =
-                    style.labelPosition === "inline"
-                      ? "md:grid md:grid-cols-[180px_minmax(0,1fr)] md:items-center md:gap-3"
-                      : "space-y-2";
-                  const value = values[field.name];
+            <div className={containerClass} style={styleVars}>
+              <div className={cardClass}>
+                <div className="space-y-1 border-b border-border/60 pb-4">
+                  <h3 className={titleClass}>
+                    {formName.trim().length > 0 ? formName : "Form title"}
+                  </h3>
+                  <p className={descriptionClass}>
+                    {formDescription.trim().length > 0
+                      ? formDescription
+                      : "Use this preview to test action automation and runtime behavior."}
+                  </p>
+                </div>
 
-                  const labelNode =
-                    style.labelPosition === "hidden" ? null : (
-                      <label
-                        htmlFor={`runtime-field-${field.id}`}
-                        className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                      >
-                        {field.label}
-                        {field.required ? " *" : ""}
-                      </label>
-                    );
+                {activeStepFields.length === 0 ? (
+                  <div className="rounded-lg border border-dashed bg-muted/20 p-6 text-sm text-muted-foreground">
+                    No visible fields for this step. Update logic conditions or field configuration.
+                  </div>
+                ) : (
+                  <div className={gridClass}>
+                    {activeStepFields.map((field) => {
+                      const style = resolveFormFieldStyle(field.settings.style);
+                      const widthClass =
+                        t.layout.columns === 1
+                          ? "col-span-1"
+                          : style.width === "half"
+                            ? "md:col-span-1"
+                            : "md:col-span-2";
+                      const labelPositionClass =
+                        style.labelPosition === "inline"
+                          ? "md:grid md:grid-cols-[180px_minmax(0,1fr)] md:items-center md:gap-3"
+                          : "space-y-2";
+                      const value = values[field.name];
 
-                  return (
-                    <div key={field.id} className={widthClass}>
-                      {field.type === "checkbox" ? (
-                        <label className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm">
-                          <input
-                            id={`runtime-field-${field.id}`}
-                            type="checkbox"
-                            checked={value === true}
-                            onChange={(event) => updateValue(field.name, event.target.checked)}
-                          />
-                          <span>{style.labelPosition === "hidden" ? "Checkbox" : field.label}</span>
-                        </label>
-                      ) : field.type === "textarea" ? (
-                        <div className={labelPositionClass}>
-                          {labelNode}
-                          <div className="space-y-1">
-                            <Textarea
-                              id={`runtime-field-${field.id}`}
-                              value={typeof value === "string" ? value : ""}
-                              placeholder={field.settings.placeholder ?? ""}
-                              onChange={(event) => updateValue(field.name, event.target.value)}
-                            />
-                            {field.settings.helper ? (
-                              <p className="text-xs text-muted-foreground">
-                                {field.settings.helper}
-                              </p>
-                            ) : null}
-                          </div>
-                        </div>
-                      ) : field.type === "select" ? (
-                        <div className={labelPositionClass}>
-                          {labelNode}
-                          <div className="space-y-1">
-                            <select
-                              id={`runtime-field-${field.id}`}
-                              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                              value={typeof value === "string" ? value : ""}
-                              onChange={(event) => updateValue(field.name, event.target.value)}
-                            >
-                              <option value="">Select</option>
-                              {(field.settings.options ?? []).map((option) => (
-                                <option key={`${field.id}-${option}`} value={option}>
-                                  {option}
-                                </option>
-                              ))}
-                            </select>
-                            {field.settings.helper ? (
-                              <p className="text-xs text-muted-foreground">
-                                {field.settings.helper}
-                              </p>
-                            ) : null}
-                          </div>
-                        </div>
-                      ) : field.type === "radio" ? (
-                        <div className={labelPositionClass}>
-                          {labelNode}
-                          <div className="space-y-2">
-                            {(field.settings.options ?? []).map((option) => (
-                              <label
-                                key={`${field.id}-${option}`}
-                                className="flex items-center gap-2 text-sm text-foreground"
-                              >
-                                <input
-                                  type="radio"
-                                  name={field.name}
-                                  value={option}
-                                  checked={value === option}
-                                  onChange={() => updateValue(field.name, option)}
+                      const labelNode =
+                        style.labelPosition === "hidden" ? null : (
+                          <label
+                            htmlFor={`runtime-field-${field.id}`}
+                            className={cn(
+                              "text-xs font-semibold uppercase tracking-wide",
+                              labelColorClass
+                            )}
+                          >
+                            {field.label}
+                            {field.required ? " *" : ""}
+                          </label>
+                        );
+
+                      return (
+                        <div key={field.id} className={widthClass}>
+                          {field.type === "checkbox" ? (
+                            <label className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm">
+                              <input
+                                id={`runtime-field-${field.id}`}
+                                type="checkbox"
+                                checked={value === true}
+                                onChange={(event) => updateValue(field.name, event.target.checked)}
+                              />
+                              <span>
+                                {style.labelPosition === "hidden" ? "Checkbox" : field.label}
+                              </span>
+                            </label>
+                          ) : field.type === "textarea" ? (
+                            <div className={labelPositionClass}>
+                              {labelNode}
+                              <div className="space-y-1">
+                                <Textarea
+                                  id={`runtime-field-${field.id}`}
+                                  className={cn(
+                                    formThemeRadiusClass[t.input.radius],
+                                    t.input.background ? "bg-[var(--form-input-bg)]" : undefined,
+                                    t.input.borderColor
+                                      ? "border-[color:var(--form-input-border)]"
+                                      : undefined,
+                                    t.input.textColor
+                                      ? "text-[color:var(--form-input-text)]"
+                                      : undefined
+                                  )}
+                                  value={typeof value === "string" ? value : ""}
+                                  placeholder={field.settings.placeholder ?? ""}
+                                  onChange={(event) => updateValue(field.name, event.target.value)}
                                 />
-                                <span>{option}</span>
-                              </label>
-                            ))}
-                            {field.settings.helper ? (
-                              <p className="text-xs text-muted-foreground">
-                                {field.settings.helper}
-                              </p>
-                            ) : null}
-                          </div>
-                        </div>
-                      ) : field.type === "rating" ? (
-                        <div className={labelPositionClass}>
-                          {labelNode}
-                          <div className="space-y-2">
-                            {Array.from(
-                              { length: Math.max(1, Number(field.settings.max ?? 5)) },
-                              (_, index) => String(index + 1)
-                            ).map((option) => (
-                              <label
-                                key={`${field.id}-${option}`}
-                                className="flex items-center gap-2 text-sm text-foreground"
-                              >
-                                <input
-                                  type="radio"
-                                  name={field.name}
-                                  value={option}
-                                  checked={value === option}
-                                  onChange={() => updateValue(field.name, option)}
+                                {field.settings.helper ? (
+                                  <p className={cn("text-xs", helperColorClass)}>
+                                    {field.settings.helper}
+                                  </p>
+                                ) : null}
+                              </div>
+                            </div>
+                          ) : field.type === "select" ? (
+                            <div className={labelPositionClass}>
+                              {labelNode}
+                              <div className="space-y-1">
+                                <select
+                                  id={`runtime-field-${field.id}`}
+                                  className={cn(
+                                    "w-full border bg-background px-3",
+                                    themedInputClass
+                                  )}
+                                  value={typeof value === "string" ? value : ""}
+                                  onChange={(event) => updateValue(field.name, event.target.value)}
+                                >
+                                  <option value="">Select</option>
+                                  {(field.settings.options ?? []).map((option) => (
+                                    <option key={`${field.id}-${option}`} value={option}>
+                                      {option}
+                                    </option>
+                                  ))}
+                                </select>
+                                {field.settings.helper ? (
+                                  <p className={cn("text-xs", helperColorClass)}>
+                                    {field.settings.helper}
+                                  </p>
+                                ) : null}
+                              </div>
+                            </div>
+                          ) : field.type === "radio" ? (
+                            <div className={labelPositionClass}>
+                              {labelNode}
+                              <div className="space-y-2">
+                                {(field.settings.options ?? []).map((option) => (
+                                  <label
+                                    key={`${field.id}-${option}`}
+                                    className="flex items-center gap-2 text-sm text-foreground"
+                                  >
+                                    <input
+                                      type="radio"
+                                      name={field.name}
+                                      value={option}
+                                      checked={value === option}
+                                      onChange={() => updateValue(field.name, option)}
+                                    />
+                                    <span>{option}</span>
+                                  </label>
+                                ))}
+                                {field.settings.helper ? (
+                                  <p className={cn("text-xs", helperColorClass)}>
+                                    {field.settings.helper}
+                                  </p>
+                                ) : null}
+                              </div>
+                            </div>
+                          ) : field.type === "rating" ? (
+                            <div className={labelPositionClass}>
+                              {labelNode}
+                              <div className="space-y-2">
+                                {Array.from(
+                                  { length: Math.max(1, Number(field.settings.max ?? 5)) },
+                                  (_, index) => String(index + 1)
+                                ).map((option) => (
+                                  <label
+                                    key={`${field.id}-${option}`}
+                                    className="flex items-center gap-2 text-sm text-foreground"
+                                  >
+                                    <input
+                                      type="radio"
+                                      name={field.name}
+                                      value={option}
+                                      checked={value === option}
+                                      onChange={() => updateValue(field.name, option)}
+                                    />
+                                    <span>{option}</span>
+                                  </label>
+                                ))}
+                                {field.settings.helper ? (
+                                  <p className={cn("text-xs", helperColorClass)}>
+                                    {field.settings.helper}
+                                  </p>
+                                ) : null}
+                              </div>
+                            </div>
+                          ) : field.type === "file" ? (
+                            <div className={labelPositionClass}>
+                              {labelNode}
+                              <div className="space-y-1">
+                                <Input
+                                  id={`runtime-field-${field.id}`}
+                                  className={themedInputClass}
+                                  type="file"
+                                  accept={
+                                    Array.isArray(field.settings.accept) &&
+                                    field.settings.accept.length > 0
+                                      ? field.settings.accept.join(",")
+                                      : undefined
+                                  }
+                                  multiple={field.settings.multiple === true}
                                 />
-                                <span>{option}</span>
-                              </label>
-                            ))}
-                            {field.settings.helper ? (
-                              <p className="text-xs text-muted-foreground">
-                                {field.settings.helper}
-                              </p>
-                            ) : null}
-                          </div>
+                                {field.settings.helper ? (
+                                  <p className={cn("text-xs", helperColorClass)}>
+                                    {field.settings.helper}
+                                  </p>
+                                ) : null}
+                              </div>
+                            </div>
+                          ) : field.type === "hidden" ? (
+                            <div className="rounded-lg border border-dashed bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+                              Hidden field submits trusted value:{" "}
+                              <span className="font-mono">{String(value ?? "")}</span>
+                            </div>
+                          ) : (
+                            <div className={labelPositionClass}>
+                              {labelNode}
+                              <div className="space-y-1">
+                                <Input
+                                  id={`runtime-field-${field.id}`}
+                                  className={themedInputClass}
+                                  type={
+                                    field.type === "email"
+                                      ? "email"
+                                      : field.type === "date"
+                                        ? "date"
+                                        : field.type === "time"
+                                          ? "time"
+                                          : field.type === "number" || field.type === "range"
+                                            ? field.type
+                                            : field.type === "phone"
+                                              ? "tel"
+                                              : "text"
+                                  }
+                                  value={typeof value === "string" ? value : ""}
+                                  placeholder={field.settings.placeholder ?? ""}
+                                  onChange={(event) => updateValue(field.name, event.target.value)}
+                                  min={
+                                    typeof field.settings.min === "number"
+                                      ? String(field.settings.min)
+                                      : undefined
+                                  }
+                                  max={
+                                    typeof field.settings.max === "number"
+                                      ? String(field.settings.max)
+                                      : undefined
+                                  }
+                                  step={
+                                    typeof field.settings.inputStep === "number"
+                                      ? String(field.settings.inputStep)
+                                      : undefined
+                                  }
+                                />
+                                {field.settings.helper ? (
+                                  <p className={cn("text-xs", helperColorClass)}>
+                                    {field.settings.helper}
+                                  </p>
+                                ) : null}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      ) : field.type === "hidden" ? (
-                        <div className="rounded-lg border border-dashed bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-                          Hidden field submits trusted value:{" "}
-                          <span className="font-mono">{String(value ?? "")}</span>
-                        </div>
-                      ) : (
-                        <div className={labelPositionClass}>
-                          {labelNode}
-                          <div className="space-y-1">
-                            <Input
-                              id={`runtime-field-${field.id}`}
-                              type={
-                                field.type === "email"
-                                  ? "email"
-                                  : field.type === "date"
-                                    ? "date"
-                                    : field.type === "time"
-                                      ? "time"
-                                      : field.type === "number" || field.type === "range"
-                                        ? field.type
-                                        : field.type === "phone"
-                                          ? "tel"
-                                          : "text"
-                              }
-                              value={typeof value === "string" ? value : ""}
-                              placeholder={field.settings.placeholder ?? ""}
-                              onChange={(event) => updateValue(field.name, event.target.value)}
-                              min={
-                                typeof field.settings.min === "number"
-                                  ? String(field.settings.min)
-                                  : undefined
-                              }
-                              max={
-                                typeof field.settings.max === "number"
-                                  ? String(field.settings.max)
-                                  : undefined
-                              }
-                              step={
-                                typeof field.settings.inputStep === "number"
-                                  ? String(field.settings.inputStep)
-                                  : undefined
-                              }
-                            />
-                            {field.settings.helper ? (
-                              <p className="text-xs text-muted-foreground">
-                                {field.settings.helper}
-                              </p>
-                            ) : null}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                      );
+                    })}
+                  </div>
+                )}
 
-            <div className="flex flex-wrap justify-between gap-2 border-t pt-4">
-              <div className="flex gap-2">
-                {settings.layoutMode === "multi_step" ? (
-                  <Button variant="outline" onClick={goBack} disabled={currentStep <= 1}>
-                    Back
+                <div className="flex flex-wrap justify-between gap-2 border-t border-border/60 pt-4">
+                  <div className="flex gap-2">
+                    {settings.layoutMode === "multi_step" ? (
+                      <Button variant="outline" onClick={goBack} disabled={currentStep <= 1}>
+                        Back
+                      </Button>
+                    ) : null}
+                    {settings.layoutMode === "multi_step" && !isLastStep ? (
+                      <Button variant="outline" onClick={goNext}>
+                        Next
+                      </Button>
+                    ) : null}
+                  </div>
+                  <Button
+                    className={submitClass}
+                    onClick={submit}
+                    disabled={
+                      !formId ||
+                      hasUnsavedChanges ||
+                      isSubmitting ||
+                      (settings.layoutMode === "multi_step" && !isLastStep)
+                    }
+                  >
+                    {isSubmitting ? "Submitting..." : submitLabel}
                   </Button>
-                ) : null}
-                {settings.layoutMode === "multi_step" && !isLastStep ? (
-                  <Button variant="outline" onClick={goNext}>
-                    Next
-                  </Button>
-                ) : null}
+                </div>
               </div>
-              <Button
-                onClick={submit}
-                disabled={
-                  !formId ||
-                  hasUnsavedChanges ||
-                  isSubmitting ||
-                  (settings.layoutMode === "multi_step" && !isLastStep)
-                }
-              >
-                {isSubmitting ? "Submitting..." : "Submit preview"}
-              </Button>
             </div>
           </div>
         </ScrollArea>

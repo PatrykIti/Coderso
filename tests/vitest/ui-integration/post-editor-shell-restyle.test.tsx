@@ -14,18 +14,35 @@ import {
 // TASK-479-09-L03: presentation guards for the Post editor restyle (TASK-479-09-L02).
 // The shell owns its store (no store prop) and renderAdminUi seeds no cached post,
 // so usePostEditorState starts loading=true and the content region renders
-// "Loading post editor..." instead of PostEditorCanvas. The document-card classes
-// therefore live behind the loading gate and are asserted via the direct
-// PostEditorCanvas render below — NOT on the shell SSR snapshot. The dirty-flag
-// wiring is asserted against the real reducer contract.
+// a fail-closed boundary instead of PostEditorCanvas or either mutating sidebar.
+// The document-card classes therefore live behind the loading gate and are asserted
+// via the direct PostEditorCanvas render below — NOT on the shell SSR snapshot. The
+// dirty-flag wiring is asserted against the real reducer contract.
 
-test("shell renders the restyled inspector sections + Publish action", () => {
+const readButtonTag = (html: string, marker: string) =>
+  (html.match(/<button\b[^>]*>/g) ?? []).find((tag) => tag.includes(marker));
+const hasDisabledAttribute = (tag: string) => /\sdisabled(?:=""|(?=[\s>]))/.test(tag);
+
+test("shell renders a restyled fail-closed loading boundary with inert actions", () => {
   const html = renderAdminUi(<PostBlockEditorShell />, { path: "/admin/posts/post-1" });
-  // TASK-497-02 (B7): the real DocumentInspector renders in the (ungated) details sidebar,
-  // now flattened to the single "Post settings" header (replacing the old "Publishing"
-  // InspectorSection card).
-  expect(html).toContain("Post settings");
-  expect(html).toContain("Featured image");
+  expect(html).toContain("Loading post editor...");
+  expect(html).not.toContain("Post settings");
+  expect(html).not.toContain("Featured image");
+  expect(html).not.toContain("Move to trash");
+  expect(html).not.toContain('data-post-editor-region="secondary-sidebar"');
+  expect(html).not.toContain('data-post-editor-region="sidebar"');
+  expect(html).not.toContain("data-post-editor-left-rail-");
+
+  const closeButton = readButtonTag(html, 'data-post-editor-header-close="true"');
+  expect(closeButton).toBeDefined();
+  expect(hasDisabledAttribute(closeButton ?? "")).toBe(false);
+
+  for (const label of ["Open runtime preview", "Save draft", "Publish post"]) {
+    const actionButton = readButtonTag(html, `aria-label="${label}"`);
+    expect(actionButton).toBeDefined();
+    expect(hasDisabledAttribute(actionButton ?? "")).toBe(true);
+  }
+
   // TASK-497-02 (E3): Preview/Save draft/Publish + the primary-actions cluster relocated from
   // the chrome-bar TopBar into the in-page PageHeader pageActions — now on the full-shell mount
   // (moved here from post-editor-header-workflow / post-editor-writing-canvas-flow TopBar mounts).

@@ -2,7 +2,12 @@
 
 This is the golden path for landing a change in Coderso core. Following it keeps your work aligned with the boundaries the codebase already enforces — schema-first validation, thin routes over rich services, a strict admin cache contract, and the right test lane — so review goes fast and the release gates stay green.
 
-> This page is for changes to **core source** (`core/`, the SDK, services, widgets). Those changes go through CI and a redeploy. Content, settings, themes, security policy, and plugins are configured live from the Admin UI and do not need any of this — see [`./runtime-model.md`](./runtime-model.md) for what is live versus what needs a rebuild.
+> This page is for changes to **core source** (`core/`, the SDK, services,
+> editor-owned blocks/renderers, or Dashboard widgets). Those changes go
+> through CI and a redeploy. Content, settings, themes, security policy, and
+> plugins are configured live from the Admin UI and do not need any of this —
+> see [`./runtime-model.md`](./runtime-model.md) for what is live versus what
+> needs a rebuild.
 
 ## 1. Understand the contract you're touching
 
@@ -18,9 +23,14 @@ The goal: your change should look like it was always there. Match the convention
 
 Validation comes first, and it is **strict by default**: unknown fields are rejected, not silently dropped.
 
-1. **Define or extend the validation schema** for the input. Server input validators live under `core/server/validation/`; widget/content data uses JSON Schema (draft-07, AJV `strict: true`). New content *types* are JSON Schema stored as JSONB — no table migration.
+1. **Define or extend the validation schema** for the input. Server input validators live under `core/server/validation/`; editor-owned section/block documents and Dashboard widget data use their domain schemas with strict reject-unknown validation. New content *types* are JSON Schema stored as JSONB — no table migration.
 2. **Reject unknown fields.** Keep the schema closed so typos and stale clients fail loudly instead of writing garbage.
-3. **Normalize before persistence.** Run input through the domain's `normalize*` helper so saved partial data stays valid and defaults are backfilled. For widgets this is `normalizeWidgetBlock` plus the per-widget `normalize<Name>Data` (see [`./content-and-widgets.md`](./content-and-widgets.md)).
+3. **Normalize before persistence.** Run input through the owning domain's
+   `normalize*` helper so saved partial data stays valid. Pages, Forms, Menus,
+   Posts, Custom Screens, and templates keep their own section/block
+   normalizers; Dashboard widgets use the Dashboard registry contract. Treat
+   `normalizeWidgetBlock` as a legacy read-compatibility seam, not a new
+   authoring pattern (see [`./content-and-widgets.md`](./content-and-widgets.md)).
 
 Only reach for a **database migration** when you're changing the relational schema in `core/db/schema.ts`. Generate and apply it with drizzle-kit:
 
@@ -60,7 +70,7 @@ Skipping invalidation is the classic bug here: the mutation succeeds but the lis
 
 Coderso has two test lanes, chosen by **dependency shape, not folder name** (full detail in [`./testing.md`](./testing.md)):
 
-- **Vitest** (`tests/vitest/**`) — runtime-agnostic logic: domain services without `Bun.*`, validators, DTO mappers, React/admin UI, SDK helpers, widget normalization/render mapping.
+- **Vitest** (`tests/vitest/**`) — runtime-agnostic logic: domain services without `Bun.*`, validators, DTO mappers, React/admin UI, SDK helpers, editor block/render mapping, and Dashboard widget contracts.
 - **Bun** (`tests/{unit,integration,perf,security}/**`) — anything that needs `Bun.serve` / `Bun.file`, real route/integration flows, plugin install/upgrade/rollback, SSR, or a real DB.
 
 A suite is **not** Bun-free if importing its production module triggers DB/settings/runtime coupling — fix the production module with pure seams instead of forcing it into Vitest with brittle mocks. DB-backed suites must create uniquely scoped fixtures and clean up only their own rows; **never truncate whole domain tables** on a shared test DB.
@@ -115,5 +125,5 @@ Say you're adding an optional `subtitle` to a post-like resource.
 - [`_docs/CMS_API.md`](../../_docs/CMS_API.md) — content, page, and post API contracts.
 - [`_docs/ADMIN_CACHE.md`](../../_docs/ADMIN_CACHE.md) — the full admin cache key/TTL/invalidation contract.
 - [`./runtime-model.md`](./runtime-model.md) — what applies live versus what needs a deploy.
-- [`./content-and-widgets.md`](./content-and-widgets.md) — schemas, normalizers, and the widget contract.
+- [`./content-and-widgets.md`](./content-and-widgets.md) — content schemas, editor-owned sections/blocks, compatibility renderers, and the separate Dashboard widget contract.
 - [`./testing.md`](./testing.md) — choosing a lane, fixtures, and the release gates.

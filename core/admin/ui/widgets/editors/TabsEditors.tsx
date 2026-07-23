@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
+import { parseCssColorValue } from "../../../../services/theme/cssColorContract";
 import {
   isLegacyTabsScrollOverflow,
   normalizeTabsData,
@@ -822,10 +823,12 @@ function TabsColorsSection({
   const activeContrast = resolveColorContrastAdvisory({
     foreground: normalized.style?.activeTextColor,
     background: normalized.style?.activeBackgroundColor,
+    colorProfile: "inherited-render",
   });
   const inactiveContrast = resolveColorContrastAdvisory({
     foreground: normalized.style?.inactiveTextColor,
     background: normalized.style?.surfaceColor,
+    colorProfile: "inherited-render",
   });
 
   return (
@@ -851,6 +854,7 @@ function TabsColorsSection({
               onClear={() => clearStyleField(value, onChange, "surfaceColor")}
               pickerFallback="#f8fafc"
               showValueInput={false}
+              colorProfile="inherited-render"
             />
           )}
         </WidgetControlRow>
@@ -869,6 +873,7 @@ function TabsColorsSection({
               onClear={() => clearStyleField(value, onChange, "borderColor")}
               pickerFallback="#cbd5e1"
               showValueInput={false}
+              colorProfile="inherited-render"
             />
           )}
         </WidgetControlRow>
@@ -889,6 +894,7 @@ function TabsColorsSection({
               onClear={() => clearStyleField(value, onChange, "activeBackgroundColor")}
               pickerFallback="#0f172a"
               showValueInput={false}
+              colorProfile="inherited-render"
             />
           )}
         </WidgetControlRow>
@@ -907,6 +913,7 @@ function TabsColorsSection({
               onClear={() => clearStyleField(value, onChange, "activeTextColor")}
               pickerFallback="#ffffff"
               showValueInput={false}
+              colorProfile="inherited-render"
             />
           )}
         </WidgetControlRow>
@@ -925,6 +932,7 @@ function TabsColorsSection({
               onClear={() => clearStyleField(value, onChange, "inactiveTextColor")}
               pickerFallback="#0f172a"
               showValueInput={false}
+              colorProfile="inherited-render"
             />
           )}
         </WidgetControlRow>
@@ -945,6 +953,7 @@ function TabsColorsSection({
               onClear={() => clearStyleField(value, onChange, "panelBackgroundColor")}
               pickerFallback="#f8fafc"
               showValueInput={false}
+              colorProfile="inherited-render"
             />
           )}
         </WidgetControlRow>
@@ -1011,15 +1020,17 @@ export function TabsAdvancedEditor({ value }: WidgetEditorProps<TabsData>) {
   const activeIndex = items.findIndex((item) => item.id === activeId);
   const defaultIndex = items.findIndex((item) => item.id === defaultItemId);
   const colorFieldCount = Object.values(normalized.style ?? {}).filter(
-    (styleValue) => typeof styleValue === "string" && styleValue.trim().length > 0
+    (styleValue) => parseCssColorValue(styleValue, "inherited-render") !== undefined
   ).length;
   const activeContrast = resolveColorContrastAdvisory({
     foreground: normalized.style?.activeTextColor,
     background: normalized.style?.activeBackgroundColor,
+    colorProfile: "inherited-render",
   });
   const inactiveContrast = resolveColorContrastAdvisory({
     foreground: normalized.style?.inactiveTextColor,
     background: normalized.style?.surfaceColor,
+    colorProfile: "inherited-render",
   });
   const readabilitySummary =
     activeContrast.status === "warning" || inactiveContrast.status === "warning"

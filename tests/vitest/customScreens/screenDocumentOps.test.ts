@@ -1,4 +1,29 @@
+import { readFileSync } from "node:fs";
+
 import { expect, test } from "vitest";
+
+import * as screenDocumentBindingOps from "../../../core/services/customScreens/screenDocumentBindingOps";
+import * as screenDocumentContracts from "../../../core/services/customScreens/screenDocumentContracts";
+import * as screenDocumentFactories from "../../../core/services/customScreens/screenDocumentFactories";
+import * as screenDocumentMutations from "../../../core/services/customScreens/screenDocumentMutations";
+import * as screenDocumentFacade from "../../../core/services/customScreens/screenDocumentOps";
+import type {
+  ScreenBindingReconcileResult as FacadeScreenBindingReconcileResult,
+  ScreenBlockKind as FacadeScreenBlockKind,
+  ScreenBlockLocation as FacadeScreenBlockLocation,
+  ScreenBlockPatch as FacadeScreenBlockPatch,
+  ScreenInsertTarget as FacadeScreenInsertTarget,
+  ScreenSectionPatch as FacadeScreenSectionPatch,
+} from "../../../core/services/customScreens/screenDocumentOps";
+import * as screenDocumentTree from "../../../core/services/customScreens/screenDocumentTree";
+import type {
+  ScreenBindingReconcileResult as OwnerScreenBindingReconcileResult,
+  ScreenBlockKind as OwnerScreenBlockKind,
+  ScreenBlockLocation as OwnerScreenBlockLocation,
+  ScreenBlockPatch as OwnerScreenBlockPatch,
+  ScreenInsertTarget as OwnerScreenInsertTarget,
+  ScreenSectionPatch as OwnerScreenSectionPatch,
+} from "../../../core/services/customScreens/screenDocumentContracts";
 
 import {
   createScreenBlock,
@@ -9,10 +34,15 @@ import {
   removeScreenSection,
   updateScreenSection,
 } from "../../../core/services/customScreens/screenDocumentOps";
-import type {
-  ScreenDocumentV1,
-  ScreenFieldBinding,
+import {
+  buildDefaultListViewDefinition,
+  buildScreenFieldBindingId,
+  customScreenDefinitionSchema,
+  normalizeCustomScreenDefinitionForWrite,
+  type ScreenDocumentV1,
+  type ScreenFieldBinding,
 } from "../../../core/services/customScreens/customScreenSchemas";
+import { validate } from "../../../core/server/validation/schemaValidator";
 
 const document: ScreenDocumentV1 = {
   schemaVersion: 1,
@@ -97,6 +127,47 @@ test("createScreenBlock emits typed data + gated read bindings per new kind", ()
   expect(button.bindings[0]).toMatchObject({ propPath: "href", field: "url", mode: "read" });
 });
 
+test("createScreenBlock emits bounded, schema-valid binding IDs for maximum-length block IDs", () => {
+  const prefix = `block-${"b".repeat(153)}`;
+  const created = [
+    createScreenBlock({ type: "field", id: `${prefix}1`, field: "title" }),
+    createScreenBlock({ type: "field", id: `${prefix}2`, field: "summary" }),
+    createScreenBlock({ type: "stat", id: `${prefix}3`, field: "score" }),
+  ];
+  expect(created.every(({ block }) => block.id.length === 160)).toBe(true);
+  const generatedBindings = created.flatMap(({ bindings: nextBindings }) => nextBindings);
+  expect(generatedBindings.every(({ id }) => id.length <= 120)).toBe(true);
+  expect(new Set(generatedBindings.map(({ id }) => id)).size).toBe(generatedBindings.length);
+  for (const binding of generatedBindings) {
+    expect(binding.id).toBe(buildScreenFieldBindingId(binding.blockId, binding.propPath));
+  }
+
+  const definition = {
+    schemaVersion: 4,
+    listView: buildDefaultListViewDefinition(),
+    editorView: {
+      document: {
+        schemaVersion: 1,
+        sections: [
+          {
+            id: "section-default",
+            type: "section",
+            data: {},
+            blocks: created.map(({ block }) => block),
+          },
+        ],
+      },
+      bindings: generatedBindings,
+      saveMode: "entry",
+      interactionMode: "inline",
+    },
+  };
+  expect(() => validate(customScreenDefinitionSchema, definition)).not.toThrow();
+  expect(normalizeCustomScreenDefinitionForWrite({ definition }).editorView.bindings).toEqual(
+    generatedBindings
+  );
+});
+
 test("createScreenBlock related-list binds items + derives target from relationTarget", () => {
   const related = createScreenBlock({
     type: "related-list",
@@ -130,7 +201,12 @@ test("duplicateScreenBlockWithBindings clones nested bindings onto cloned block 
     field: "headline",
     mode: "readwrite",
   });
-  expect(result.bindings[1]?.blockId).not.toBe("field-1");
+  const duplicatedBinding = result.bindings[1]!;
+  expect(duplicatedBinding.blockId).not.toBe("field-1");
+  expect(duplicatedBinding.id).toBe(
+    buildScreenFieldBindingId(duplicatedBinding.blockId, duplicatedBinding.propPath)
+  );
+  expect(duplicatedBinding.id.length).toBeLessThanOrEqual(120);
 });
 
 // ---------------------------------------------------------------------------
@@ -223,4 +299,81 @@ test("TASK-505-01 reconcileScreenBindings after removeScreenSection prunes the w
   const result = reconcileScreenBindings(stripped, reconcileBindings);
   expect(result.bindings).toEqual([]);
   expect(result.removedBlockOrphans).toEqual(["alpha", "beta", "gamma"]);
+});
+
+test("screenDocumentOps facade preserves the exact public manifest and owner reference identity", () => {
+  const runtimeOwners = {
+    addScreenBlock: screenDocumentMutations.addScreenBlock,
+    addScreenBlockAt: screenDocumentMutations.addScreenBlockAt,
+    addScreenSection: screenDocumentMutations.addScreenSection,
+    appendScreenBlockToSection: screenDocumentMutations.appendScreenBlockToSection,
+    collectScreenBlockIds: screenDocumentTree.collectScreenBlockIds,
+    collectScreenDocumentBlocks: screenDocumentTree.collectScreenDocumentBlocks,
+    createScreenBlock: screenDocumentFactories.createScreenBlock,
+    createScreenSection: screenDocumentFactories.createScreenSection,
+    duplicateScreenBlock: screenDocumentMutations.duplicateScreenBlock,
+    duplicateScreenBlockWithBindings: screenDocumentBindingOps.duplicateScreenBlockWithBindings,
+    findScreenBlockById: screenDocumentTree.findScreenBlockById,
+    findScreenBlockLocation: screenDocumentTree.findScreenBlockLocation,
+    findScreenSectionById: screenDocumentTree.findScreenSectionById,
+    getFirstScreenBlockId: screenDocumentTree.getFirstScreenBlockId,
+    moveScreenBlock: screenDocumentMutations.moveScreenBlock,
+    moveScreenBlockTo: screenDocumentMutations.moveScreenBlockTo,
+    moveScreenSection: screenDocumentMutations.moveScreenSection,
+    reconcileScreenBindings: screenDocumentBindingOps.reconcileScreenBindings,
+    removeScreenBindingsForBlock: screenDocumentBindingOps.removeScreenBindingsForBlock,
+    removeScreenBindingsForBlockTree: screenDocumentBindingOps.removeScreenBindingsForBlockTree,
+    removeScreenBlock: screenDocumentMutations.removeScreenBlock,
+    removeScreenSection: screenDocumentMutations.removeScreenSection,
+    renameScreenSection: screenDocumentMutations.renameScreenSection,
+    screenBlockLabels: screenDocumentFactories.screenBlockLabels,
+    updateScreenBlock: screenDocumentMutations.updateScreenBlock,
+    updateScreenSection: screenDocumentMutations.updateScreenSection,
+  };
+  const expectedRuntimeNames = Object.keys(runtimeOwners).sort();
+
+  expect(Object.keys(screenDocumentFacade).sort()).toEqual(expectedRuntimeNames);
+  for (const name of Object.keys(runtimeOwners) as (keyof typeof runtimeOwners)[]) {
+    expect(screenDocumentFacade[name]).toBe(runtimeOwners[name]);
+  }
+
+  type IsExact<Left, Right> =
+    (<Value>() => Value extends Left ? 1 : 2) extends <Value>() => Value extends Right ? 1 : 2
+      ? true
+      : false;
+  const exactOwnerTypes: [
+    IsExact<FacadeScreenBindingReconcileResult, OwnerScreenBindingReconcileResult>,
+    IsExact<FacadeScreenBlockKind, OwnerScreenBlockKind>,
+    IsExact<FacadeScreenBlockLocation, OwnerScreenBlockLocation>,
+    IsExact<FacadeScreenBlockPatch, OwnerScreenBlockPatch>,
+    IsExact<FacadeScreenInsertTarget, OwnerScreenInsertTarget>,
+    IsExact<FacadeScreenSectionPatch, OwnerScreenSectionPatch>,
+  ] = [true, true, true, true, true, true];
+  expect(exactOwnerTypes).toEqual([true, true, true, true, true, true]);
+
+  const facadeSource = readFileSync(
+    new URL("../../../core/services/customScreens/screenDocumentOps.ts", import.meta.url),
+    "utf8"
+  );
+  expect(facadeSource).not.toMatch(/export\s*\*/u);
+  expect(facadeSource).not.toMatch(/export\s*\{[^}]*\btype\b/u);
+  expect(facadeSource.match(/export type/gu)).toHaveLength(1);
+  const typeExport = facadeSource.match(
+    /export type\s*\{([\s\S]*?)\}\s*from\s*"\.\/screenDocumentContracts"/u
+  );
+  expect(
+    typeExport?.[1]
+      ?.split(",")
+      .map((name) => name.trim())
+      .filter(Boolean)
+      .sort()
+  ).toEqual([
+    "ScreenBindingReconcileResult",
+    "ScreenBlockKind",
+    "ScreenBlockLocation",
+    "ScreenBlockPatch",
+    "ScreenInsertTarget",
+    "ScreenSectionPatch",
+  ]);
+  expect(Object.keys(screenDocumentContracts)).toEqual([]);
 });

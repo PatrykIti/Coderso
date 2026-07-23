@@ -34,21 +34,24 @@ test("PostEditorTopBar renders autosave and revisions status", () => {
 });
 
 test("PostEditorTopBar prioritizes saving and unsaved indicators", () => {
-  const savingHtml = renderToString(
-    <PostEditorTopBar
-      {...createBaseProps()}
-      saving
-      dirty
-    />
-  );
+  const savingHtml = renderToString(<PostEditorTopBar {...createBaseProps()} saving dirty />);
   expect(savingHtml).toContain("Saving...");
 
   const dirtyHtml = renderToString(
-    <PostEditorTopBar
-      {...createBaseProps()}
-      saving={false}
-      dirty
-    />
+    <PostEditorTopBar {...createBaseProps()} saving={false} dirty />
   );
   expect(dirtyHtml).toContain("Unsaved changes");
+});
+
+test("PostEditorTopBar exposes a Close-only pending boundary", () => {
+  const html = renderToString(<PostEditorTopBar {...createBaseProps()} closePending />);
+
+  expect(html).toContain('data-post-editor-close-pending="true"');
+  expect(html).toContain('aria-busy="true"');
+  expect(html).toContain("Saving latest changes before closing");
+  const closeButtonTag = (html.match(/<button\b[^>]*>/g) ?? []).find((tag) =>
+    tag.includes('data-post-editor-header-close="true"')
+  );
+  expect(closeButtonTag).toBeDefined();
+  expect(closeButtonTag).toMatch(/\sdisabled(?:=""|(?=[\s>]))/);
 });

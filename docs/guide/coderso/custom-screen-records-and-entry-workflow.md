@@ -20,10 +20,10 @@ as:
 - a read-only screen preview for records,
 - a writable custom record screen.
 
-In the current local UI, the records route is present and shows a
-`Collection-only screen` state when the screen is not editor-ready. Screens that
-provide writable bindings open a canvas-based record editor with a floating
-Value panel for the selected bound field.
+The records route shows `Collection-only screen` when the screen is not
+editor-ready. Screens with writable bindings open the screen-owned record canvas
+and edit eligible values inline. Presentation controls appear only for a selected
+supported block on an existing record.
 
 # Medium
 
@@ -39,11 +39,9 @@ The route family currently includes:
 - `/advanced/custom-screens/:id/entries/:entryId`
   for the screen-bound record editor.
 
-The local runtime currently demonstrates the collection-only branch:
-- `Open builder`
-- `New record`
-- collection-only informational alert
-- records table shell
+The records workspace keeps `Open builder` and `New record` available alongside
+the collection-only notice or the screen-owned editor supported by the saved
+definition.
 
 # Instruction
 
@@ -66,14 +64,20 @@ The local runtime currently demonstrates the collection-only branch:
    layers:
    - breadcrumb path back to Screens,
    - custom screen record canvas,
-   - floating `Value` panel after selecting a bound field,
-   - `Save record`.
+   - inline editing for writable bound values,
+   - selection-scoped presentation controls for supported existing-record blocks,
+   - `Save`.
 8. Use the default Entries editor when the custom screen is read-only or not yet
    complete for full editing.
-9. Use `Save record` only when the custom screen is in a writable mode and the
+9. Use `Save` only when the custom screen is in a writable mode and the
    required bindings exist.
 10. Use the custom screen preview to confirm that mapped record data appears in
     the intended admin-focused layout.
+11. Use `Show field metadata` when you need binding/type badges while reviewing
+    a record. The choice follows your signed-in user and does not affect another
+    administrator.
+12. When a Screen contains Tabs, use mouse or Arrow/Home/End keys to verify that
+    one labelled panel is visible at a time.
 
 Use this safe records workflow when a screen is still maturing:
 1. Open the records route.
@@ -86,7 +90,8 @@ Use this safe records workflow when a screen is still maturing:
 # Advanced
 
 - A custom screen route should not be assumed to be fully editable just because
-  it has a records URL. Capability depends on bindings and widget composition.
+  it has a records URL. Capability depends on bindings and the screen-owned
+  section/block composition.
 - The collection-only mode is a valid product state. It means the screen helps
   navigation and narrowing, but not full record editing yet.
 - The read-only dashboard mode is also a legitimate intermediate state. It can
@@ -100,9 +105,20 @@ Use this safe records workflow when a screen is still maturing:
 - Record mode intentionally does not show builder controls. Add, move,
   duplicate, delete, block library, settings, and right-side Sheet controls
   belong to the screen builder, not the record editor.
-- Record-specific presentation overrides such as custom image choices or
-  text-size/style tweaks are not persisted yet; they require a separate storage
-  contract and are tracked outside this workflow.
+- Record-specific presentation overrides such as a direct image choice or
+  bounded text-size/emphasis/tone are persisted separately from content field
+  values. Saving or clearing them never rewrites the Screen definition or the
+  entry's content data.
+- Direct image choices and media fields keep media-asset identity. If the chosen
+  asset is missing or cannot resolve to a safe image, the canvas shows a
+  placeholder rather than falling back to a different image.
+- Unsaved content and presentation changes are guarded independently. Cancel a
+  navigation prompt to keep the current draft; confirm discard only when those
+  changes should be lost. A failed save leaves the editor and draft available
+  for a visible retry.
+- Related-record blocks retain the last good rows during a same-target refresh,
+  show a Retry action after a failed load, and remove old rows immediately when
+  the relation target changes.
 
 # Troubleshooting
 
@@ -112,9 +128,18 @@ Use this safe records workflow when a screen is still maturing:
   check whether the screen is operating in a read-only/dashboard mode.
 - The custom screen does not show meaningful data:
   review bindings and the underlying content type fields in the builder.
-- You selected a field but cannot find builder controls:
-  that is expected in record mode; use the floating Value panel for record data
-  and return to the builder for layout changes.
+- You selected a value but cannot find builder controls:
+  that is expected in record mode; edit writable values inline and return to the
+  builder for layout changes.
+- A related-record block shows an error:
+  use its visible Retry action. Switching relation targets should not leave the
+  prior target's rows on screen.
+- An image block shows a placeholder:
+  verify the selected media asset still exists and that the Screen's image
+  binding or presentation choice points to that asset.
+- Field metadata appears different after switching accounts:
+  the preference is intentionally per authenticated user. Set it again for the
+  current account if needed.
 - The route exists but work still needs the classic editor:
   use the default Entries editor intentionally instead of forcing edits through
   an incomplete custom surface.
@@ -131,8 +156,8 @@ Use this safe records workflow when a screen is still maturing:
   use builder to improve the screen; use records route to operate the workflow
   the screen already supports.
 - Choose custom record screen vs classic editor:
-  use the custom screen only when bindings and widgets make the task safer or
-  faster; otherwise use the classic editor.
+  use the custom screen only when bindings and its sections/blocks make the
+  task safer or faster; otherwise use the classic editor.
 
 # Checklist
 
@@ -142,7 +167,9 @@ Use this safe records workflow when a screen is still maturing:
    editor.
 4. If writable, confirm bound fields and preview output before trusting it for
    real record work.
-5. Keep `Open builder` as the corrective path whenever the workflow still feels
+5. Confirm Tabs, links, images, and related-record blocks have visible working
+   behavior, not only configured controls.
+6. Keep `Open builder` as the corrective path whenever the workflow still feels
    incomplete.
 
 # Security

@@ -58,6 +58,15 @@ test("status badges render the token-driven soft StatusBadge (no hex map)", () =
   expect(html).toContain("bg-info-soft");
   expect(html).toContain("capitalize");
   expect(html).toContain("rounded-2xl"); // restyled wrapper (was rounded-xl)
+  expect(html).toContain('href="/admin/posts/scheduled-id"');
+  expect(html).toContain('aria-label="Edit post: scheduled-title"');
+  expect(html).toContain('aria-label="Actions for scheduled-title"');
+  expect(html).toContain('data-post-row-metadata="fallback"');
+  expect(html).toContain('class="md:hidden" data-post-row-status-fallback="true"');
+  expect(html).toContain("lg:hidden");
+  expect(html).toContain("hidden md:table-cell");
+  expect(html).toContain("hidden lg:table-cell");
+  expect(html).not.toContain("cursor-pointer");
 });
 
 test("tab selection drives statusFilter (exported filterPosts wiring)", () => {

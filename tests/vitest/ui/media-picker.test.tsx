@@ -138,7 +138,7 @@ test("MediaPicker stays idle while closed without a selection", async () => {
   }
 });
 
-test("MediaPicker dialog has a shared description without Radix warnings across widget fields", async () => {
+test("MediaPicker dialog has a shared description without Radix warnings across editor fields", async () => {
   writeMediaCache([mediaRecord({ title: "Shared media asset" })]);
   const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
   const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -167,7 +167,7 @@ test("MediaPicker dialog has a shared description without Radix warnings across 
       const dialog = document.body.querySelector('[role="dialog"]');
       expect(dialog).toBeInstanceOf(HTMLElement);
       expect(getDialogDescription(dialog!)).toContain(
-        "Choose an existing media asset for this widget field."
+        "Choose an existing media asset for this editor field."
       );
       expect(dialog?.textContent).toContain("Shared media asset");
 
@@ -239,5 +239,121 @@ test("MediaPicker resolves selected media from cache without fetching media", as
   } finally {
     view.cleanup();
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("MediaPicker image wildcard admits only projected passive images", async () => {
+  writeMediaCache([
+    mediaRecord({ id: "png", title: "Passive PNG", type: "image", mimeType: "image/png" }),
+    mediaRecord({
+      id: "svg",
+      key: "icon.svg",
+      url: "/media/icon.svg",
+      title: "Active SVG",
+      originalName: "icon.svg",
+      type: "file",
+      mimeType: "image/svg+xml",
+    }),
+    mediaRecord({
+      id: "mismatched-png",
+      key: "legacy.png",
+      url: "/media/legacy.png",
+      title: "Mismatched PNG file",
+      originalName: "legacy.png",
+      type: "file",
+      mimeType: "image/png",
+    }),
+    mediaRecord({
+      id: "avif",
+      key: "legacy.avif",
+      url: "/media/legacy.avif",
+      title: "Unsupported image",
+      originalName: "legacy.avif",
+      type: "image",
+      mimeType: "image/avif",
+    }),
+  ]);
+
+  const view = mountPicker(
+    <MediaPicker value={null} onChange={() => undefined} accept={["image/*"]} />
+  );
+  try {
+    clickButtonByText(view.container, "Browse media");
+    await flushEffects();
+
+    const dialogText = document.body.querySelector('[role="dialog"]')?.textContent ?? "";
+    expect(dialogText).toContain("Passive PNG");
+    expect(dialogText).not.toContain("Active SVG");
+    expect(dialogText).not.toContain("Mismatched PNG file");
+    expect(dialogText).not.toContain("Unsupported image");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("MediaPicker exact SVG MIME wins alongside the image wildcard without enabling preview", async () => {
+  writeMediaCache([
+    mediaRecord({ id: "png", title: "Passive PNG", type: "image", mimeType: "image/png" }),
+    mediaRecord({
+      id: "svg",
+      key: "icon.svg",
+      url: "/media/icon.svg",
+      title: "Exact SVG attachment",
+      originalName: "icon.svg",
+      type: "file",
+      mimeType: "image/svg+xml",
+    }),
+  ]);
+
+  const view = mountPicker(
+    <MediaPicker value={null} onChange={() => undefined} accept={["image/*", "image/svg+xml"]} />
+  );
+  try {
+    clickButtonByText(view.container, "Browse media");
+    await flushEffects();
+
+    const dialogText = document.body.querySelector('[role="dialog"]')?.textContent ?? "";
+    expect(dialogText).toContain("Exact SVG attachment");
+    expect(dialogText).toContain("Passive PNG");
+    expect(document.body.querySelector('img[src="/media/icon.svg"]')).toBeNull();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("MediaPicker non-image wildcard agrees with the projected document kind", async () => {
+  writeMediaCache([
+    mediaRecord({
+      id: "pdf",
+      key: "guide.pdf",
+      url: "/media/guide.pdf",
+      title: "PDF guide",
+      originalName: "guide.pdf",
+      type: "file",
+      mimeType: "application/pdf",
+    }),
+    mediaRecord({
+      id: "mismatch",
+      key: "mismatch.pdf",
+      url: "/media/mismatch.pdf",
+      title: "Mismatched audio",
+      originalName: "mismatch.pdf",
+      type: "file",
+      mimeType: "audio/mpeg",
+    }),
+  ]);
+
+  const view = mountPicker(
+    <MediaPicker value={null} onChange={() => undefined} accept={["application/*"]} />
+  );
+  try {
+    clickButtonByText(view.container, "Browse media");
+    await flushEffects();
+
+    const dialogText = document.body.querySelector('[role="dialog"]')?.textContent ?? "";
+    expect(dialogText).toContain("PDF guide");
+    expect(dialogText).not.toContain("Mismatched audio");
+  } finally {
+    view.cleanup();
   }
 });

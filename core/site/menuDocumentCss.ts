@@ -5,6 +5,7 @@ import {
   resolveMenuNavChrome,
   resolveMenuSectionAppearanceForDevice,
   type BrandStyle,
+  type MenuBarLayout,
   type MenuDeviceKind,
   type MenuDocumentV2,
   type NavChromeStyle,
@@ -467,6 +468,16 @@ const brandImageDecls = (style: BrandStyle): string[] =>
     style.maxWidth != null ? `max-width:${style.maxWidth}px` : null,
   ].filter((d): d is string => d !== null);
 
+// TASK-520 audit finding 4: brand ICON size must be responsive on the PUBLIC
+// front. The SSR render (siteShell BrandRender) emits the icon <svg> width/height
+// as presentation ATTRIBUTES resolved from a single `breakpoint` (desktop on the
+// front), so a tablet/mobile `iconSize` override would otherwise never apply once
+// the page is rendered. We mirror the `<img>` path: emit per-device `svg{}` CSS —
+// a CSS rule beats width/height presentation attributes, so the media-query delta
+// overrides the inline desktop baseline. Present-only: no `iconSize` ⇒ ZERO bytes.
+const brandIconDecls = (style: BrandStyle): string[] =>
+  style.iconSize != null ? [`width:${style.iconSize}px`, `height:${style.iconSize}px`] : [];
+
 const collectMenuBrandRules = (doc: MenuDocumentV2): string[] => {
   const rules: string[] = [];
   for (const block of doc.sections[0]?.blocks ?? []) {
@@ -479,6 +490,8 @@ const collectMenuBrandRules = (doc: MenuDocumentV2): string[] => {
     if (textDecls.length) rules.push(`${key}{${textDecls.join(";")}}`);
     const imgDecls = brandImageDecls(style);
     if (imgDecls.length) rules.push(`${key} img{${imgDecls.join(";")};width:auto}`);
+    const iconDecls = brandIconDecls(style);
+    if (iconDecls.length) rules.push(`${key} svg{${iconDecls.join(";")}}`);
   }
   return rules;
 };
@@ -897,6 +910,10 @@ const BRAND_STYLE_COMPARE_KEYS: readonly (keyof BrandStyle)[] = [
   "letterSpacing",
   "height",
   "maxWidth",
+  // TASK-520 audit finding 4: without `iconSize` here, a size-only per-device
+  // brand-icon override is treated as "no diff" ⇒ collectBrandDeltaRules emits
+  // nothing ⇒ the front icon stays desktop-sized across viewports.
+  "iconSize",
 ];
 
 const shallowEqualStyle = (resolved: BrandStyle, base: BrandStyle | undefined): boolean => {
@@ -975,6 +992,8 @@ const collectBrandDeltaRules = (doc: MenuDocumentV2, device: MenuDeviceKind): st
     if (textDecls.length) rules.push(`${key}{${textDecls.join(";")}}`);
     const imgDecls = brandImageDecls(resolved);
     if (imgDecls.length) rules.push(`${key} img{${imgDecls.join(";")};width:auto}`);
+    const iconDecls = brandIconDecls(resolved);
+    if (iconDecls.length) rules.push(`${key} svg{${iconDecls.join(";")}}`);
   }
   return rules;
 };
@@ -1158,6 +1177,90 @@ const hideRule = (id: string): string => {
   return `${menuDocScope} [data-menu-block-id="${esc}"],${menuDocScope} [data-block-id="${esc}"]{display:none}`;
 };
 
+/**
+ * TASK-520-02: the EXTRA menu-bar keys (`radius`, `shadowCustom`, and the
+ * `*Scrolled` variants) read off the per-device-resolved `layout`.
+ * `ResolvedMenuAppearance` is `MenuAppearance`-typed, so these keys are STRIPPED
+ * by `collectMenuAppearanceForDevice`'s `{...layout,...navProps}` cast (@136) and
+ * the header-frame `MENU_RULE_GROUPS` CANNOT see them. They are read SEPARATELY
+ * here off `resolveMenuSectionAppearanceForDevice(section, device).layout`
+ * (per-device merged, @1555), mirroring how `levelStyles`/`navChrome` are read
+ * via their own path. Returns `null` when the doc has no first section.
+ */
+const menuBarExtra = (doc: MenuDocumentV2, device: MenuDeviceKind): MenuBarLayout | null => {
+  const section = doc.sections[0];
+  if (!section) return null;
+  return resolveMenuSectionAppearanceForDevice(section, device).layout;
+};
+
+/** Scrolled-state scope — set by 520-04's scroll-state machine on the FRONT header. */
+const scrolledScope = `${menuDocScope}[data-scrolled="true"]` as const;
+
+/**
+ * G2 — floating-card menu bar: `border-radius` + custom `box-shadow`.
+ * `shadowCustom` OVERRIDES the enum `shadow` (Hard Invariant): this block is
+ * appended AFTER the header-frame group (`MENU_RULE_GROUPS[0]`) so its
+ * `box-shadow` wins on source order. Present-only: an unset key emits ZERO bytes
+ * (no-override byte-identity).
+ */
+const menuBarExtraRules = (layout: MenuBarLayout | null): string[] => {
+  if (!layout) return [];
+  const decls: string[] = [];
+  if (layout.radius != null) decls.push(`border-radius:${layout.radius}px`);
+  if (layout.shadowCustom) decls.push(`box-shadow:${layout.shadowCustom}`);
+  return decls.length ? [`${menuDocScope}{${decls.join(";")}}`] : [];
+};
+
+/**
+ * G1 — scrolled/floating-state variants under `[data-scrolled="true"]`. Each
+ * variant falls back to the corresponding BASE key when unset (present-only ⇒
+ * only authored axes emit; an unset scrolled key inherits the base rule already
+ * on `menuDocScope`, which IS the "looks identical scrolled" back-compat). The
+ * border falls back per-axis via longhand so a scrolled colour-only override
+ * keeps the base width and vice versa. `shadowCustomScrolled` overrides
+ * `shadowScrolled` overrides base.
+ */
+const menuBarScrolledRules = (layout: MenuBarLayout | null): string[] => {
+  if (!layout) return [];
+  const decls: string[] = [];
+  if (layout.surfaceColorScrolled) decls.push(`background:${layout.surfaceColorScrolled}`);
+  const w = layout.borderWidthScrolled;
+  const c = layout.borderColorScrolled;
+  if (c != null && w != null) decls.push(`border-bottom:${w}px solid ${c}`);
+  else if (c != null) decls.push(`border-bottom-color:${c}`);
+  else if (w != null) decls.push(`border-bottom-width:${w}px`);
+  if (layout.shadowCustomScrolled) decls.push(`box-shadow:${layout.shadowCustomScrolled}`);
+  else if (layout.shadowScrolled != null)
+    decls.push(`box-shadow:${shadowCss(layout.shadowScrolled)}`);
+  return decls.length ? [`${scrolledScope}{${decls.join(";")}}`] : [];
+};
+
+/**
+ * Per-device delta for the extra + scrolled bar rules (tablet/mobile). Re-emit a
+ * device block ONLY when its resolved rule text DIFFERS from the DESKTOP base
+ * (delta discipline — byte-identity when unchanged, mirroring `collectDeltaRules`).
+ * A device with no override resolves equal to desktop ⇒ nothing emitted; a mobile
+ * `radius`/scrolled override re-emits inside its `@media` (later + gated by the
+ * media query ⇒ wins the unwrapped desktop base rule). Emitted AFTER
+ * `collectDeltaRules` in the device branch so a device `shadowCustom` still beats
+ * a re-emitted enum `shadow` on source order.
+ */
+const collectMenuBarExtraDeltaRules = (
+  doc: MenuDocumentV2,
+  device: Exclude<MenuDeviceKind, "desktop">
+): string[] => {
+  const desktopLayout = menuBarExtra(doc, "desktop");
+  const deviceLayout = menuBarExtra(doc, device);
+  const desktopExtra = menuBarExtraRules(desktopLayout);
+  const deviceExtra = menuBarExtraRules(deviceLayout);
+  const desktopScrolled = menuBarScrolledRules(desktopLayout);
+  const deviceScrolled = menuBarScrolledRules(deviceLayout);
+  const out: string[] = [];
+  if (deviceExtra.join("") !== desktopExtra.join("")) out.push(...deviceExtra);
+  if (deviceScrolled.join("") !== desktopScrolled.join("")) out.push(...deviceScrolled);
+  return out;
+};
+
 /** TOTAL group deltas for a resolved appearance vs the DESKTOP base (tablet OR mobile). */
 const collectDeltaRules = (
   resolved: ResolvedMenuAppearance,
@@ -1191,6 +1294,11 @@ const buildMenuRuleSetsForDocument = (doc: MenuDocumentV2): MenuRuleSets => {
     ...collectMenuDividerRules(doc),
     ...collectMenuBrandRules(doc), // §1 brand — device-independent; per-device via §5
     ...currentPageRule(base), // §4 current-page tint (present-only)
+    // TASK-520-02: menu-bar radius + custom-shadow (AFTER the header-frame group ⇒
+    // `shadowCustom` overrides the enum `shadow`) then the [data-scrolled] variants.
+    // Present-only ⇒ ZERO bytes for a doc with no extra bar keys (byte-identity).
+    ...menuBarExtraRules(menuBarExtra(doc, "desktop")),
+    ...menuBarScrolledRules(menuBarExtra(doc, "desktop")),
   ];
   // Shared >=640 rules (desktop AND tablet): dropdownRule reads the BASE
   // (device-defining), nesting rules are structural. Level chrome/link BASE folds
@@ -1225,6 +1333,8 @@ const buildMenuRuleSetsForDocument = (doc: MenuDocumentV2): MenuRuleSets => {
     // B5: standalone level-2 placement delta — NOT carried by collectLevelDeltaRules
     // (its base rule is outside navLevelRules), so re-emit here (gated on a diff).
     ...(tabletPlacement ? [tabletPlacement] : []),
+    // TASK-520-02: per-device menu-bar extra/scrolled delta (AFTER the frame delta).
+    ...collectMenuBarExtraDeltaRules(doc, "tablet"),
   ];
   const mobileRules = [
     ...mobileModeRules(mobileResolved), // FIRST — overrides win source order after it
@@ -1244,6 +1354,8 @@ const buildMenuRuleSetsForDocument = (doc: MenuDocumentV2): MenuRuleSets => {
     // (mobile inherits desktop); pill/divider/caret are ≥640-only ⇒ linkOnly.
     ...navChromeRules(baseNavChrome, base.orientation, { linkOnly: true }),
     ...collectChromeDeltaRules(doc, "mobile"), // mobile-specific chrome override (linkOnly)
+    // TASK-520-02: per-device menu-bar extra/scrolled delta (AFTER the frame delta).
+    ...collectMenuBarExtraDeltaRules(doc, "mobile"),
   ];
   // Canvas-only sim-open: the front's [open] disclosure rule (same declarations
   // as mobileModeRules :267) so the Mobile canvas previews the OPENED list.

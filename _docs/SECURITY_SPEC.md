@@ -15,13 +15,36 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
     literal `*`; raw request origin casing is not reflected back as the header
     value.
   - Wildcard origins do not emit `Access-Control-Allow-Credentials`.
-- CSRF: token dla POST/PUT/DELETE w admin.
+  - For a trusted origin, the runtime case-insensitively unions the required
+    `X-Coderso-Expected-User-Id` request header into persisted
+    `cors.allowedHeaders`. Existing configured order and spelling are preserved,
+    with duplicate spellings of the required header collapsed to the first, so
+    older persisted settings cannot block the user-settings PATCH preflight.
+- CSRF: token dla kazdej unsafe metody w adminie, w tym POST/PUT/PATCH/DELETE.
   - Token pobierany z `GET /admin/api/auth/csrf`.
   - UI dodaje `X-CSRF-Token` do mutacji.
 - Bot protection (reCAPTCHA v3):
-  - `POST /auth/login`, `POST /auth/reset`, `POST /forms/:id/submissions` (public forms only).
-  - Publiczny submit formularza wymaga dodatkowo HMAC nonce (`__nl_form_nonce`) z `FORM_SUBMIT_NONCE_SECRET` (TTL domyslnie 10 minut).
-  - Internal forms (`submission_access=internal`) require admin session or API key and skip captcha by default.
+  - `POST /auth/login` i `POST /auth/reset` uzywaja wlasnego auth/captcha flow.
+  - Publiczne `POST /forms/:id/uploads` i `POST /forms/:id/submissions` uzywaja
+    tego samego Forms access evaluatora, form-bound HMAC nonce
+    (`__nl_form_nonce`, `FORM_SUBMIT_NONCE_SECRET`, TTL domyslnie 10 minut) i
+    backend-owned captcha policy.
+  - Wspolny verifier nonce dla Forms i publicznego zapisu rezerwacji akceptuje
+    tylko dodatni, skonczony TTL, ktorego przeliczenie na milisekundy nie
+    przekracza `Number.MAX_SAFE_INTEGER`; brak, invalid albo arithmetic-overflow
+    konfiguracji wraca do stalego TTL 10 minut zamiast wylaczac wygasanie nonce.
+    Osobny token odczytu slotow zachowuje wlasny kontrakt.
+  - Cookie zalogowanego admina nie zmienia publicznego URL-a w internal bypass:
+    public mode nadal wymaga nonce, dokladnie jednego naliczenia `public_write` i
+    bezwarunkowej inspekcji bajtow uploadu, ale aktualny evaluator ustawia dla tej
+    uwierzytelnionej publicznej sesji `requireCaptcha=false`. Anonimowe publiczne
+    requesty zachowuja skonfigurowana CAPTCHA policy; public mode nie pobiera admin
+    CSRF tokenu.
+  - Internal forms require an admin session with `forms:write` plus CSRF or an
+    API key with `forms.submit`; captcha is skipped by default.
+  - Kazdy public upload/submission request nalicza bucket `public_write`
+    dokladnie raz. Uploady wielu plikow sa osobnymi requestami; adapter publiczny
+    i route handler nie moga naliczac tego samego requestu ponownie.
   - Score thresholds per action (login/reset/public_write).
   - Moze byc wlaczone w dev (opcja `enforceOnLocalhost`).
   - Konfiguracja reCAPTCHA jest backend-owned i pochodzi z
@@ -50,7 +73,10 @@ Security gate automation is defined in:
 - `tests/security/codersoSecurityGate.test.ts`
 
 Mandatory baseline verified by gate suite:
-- public submission modes (`forms`, `booking`) require captcha path,
+- anonymous public submission modes (`forms`, `booking`) retain their configured
+  captcha path; authenticated public Forms requests retain nonce, exactly-one
+  `public_write`, and upload-byte inspection while the current evaluator sets
+  `requireCaptcha=false`,
 - internal submission modes require session or API key scope,
 - nonce contracts reject missing/tampered tokens,
 - default rate-limit and bot-protection thresholds remain hardened.
@@ -204,6 +230,28 @@ co pozwala egzekwowac TTL bez dodatkowych kolumn w DB.
 - Internal layer nie jest publiczny, ale wciaz wymaga walidacji i RBAC.
 - Brak bezposredniego dostepu z zewnatrz.
 
+### Mutacje metadanych content entries (TASK-537)
+
+- `PATCH /admin/api/content/:type/entries/:id/metadata` pozostaje endpointem
+  internal-only dla sesji Admin. Kazda mutacja wymaga `content:write`, a
+  rzeczywiste przejscie z zablokowanego stanu do `published` dodatkowo
+  `content:publish`. API key, public nonce/HMAC, captcha i public-write mode nie
+  dotycza tego endpointu.
+- Po wczesnym middleware route wykonuje druga, swieza kontrole RBAC po
+  `SELECT ... FOR UPDATE`. Snapshot uprawnien jest jednym minimalnym JOIN
+  `user_roles` -> `roles` przez executor tej samej transakcji, bez pobierania
+  drugiego polaczenia. Mutacja zachowuje shared CSRF, bucket `admin_write` oraz
+  strict reject-unknown dla wszystkich poziomow requestu.
+- Status/revision, taxonomy/tags, visibility/password, schedule i SEO sa
+  zatwierdzane atomowo. Walidacja harmonogramu, wymagania i przygotowanie hasha,
+  membership taxonomy oraz canonical/robots konczy sie przed pierwszym zapisem.
+- `accessPassword` nie nalezy do projekcji update/publish/delete ani locked
+  mutation loadera. Hash pozostaje w DB; jedynym ujawnionym sygnalem stanu jest
+  SQL-derived `hasPassword`, a plaintext istnieje tylko podczas hashowania.
+- Cache jest invalidowany dopiero po commicie. Rollback/no-op nie emituje
+  skutkow; awaria post-commit invalidatora jest raportowana stabilnym,
+  zredagowanym kodem i nie zmienia trwale zapisanego wyniku w blad requestu.
+
 ### Custom Screens admin API (TASK-054-22-02)
 
 - Endpointy (internal):
@@ -249,10 +297,88 @@ co pozwala egzekwowac TTL bez dodatkowych kolumn w DB.
 ## File uploads
 
 - Limit size per file.
-- Dozwolone MIME types.
+- Dozwolone MIME types sa porownywane z kanonicznym typem ustalonym z bajtow,
+  nie z nazwy pliku ani deklarowanego `Content-Type`.
 - Skanowanie antivirus (opcjonalnie; plugin).
 - Sekrety storage (S3/Azure) przechowywane sa zaszyfrowane w DB.
 - Master key do szyfrowania: `MEDIA_SECRET_MASTER_KEY` (ENV, poza DB).
+
+### Form `file` field & public upload route (TASK-516-07)
+
+The `file` form-field type accepts values on the PUBLIC submission path, so it is
+validated as an **owned media reference**, never as a free path/URL/bytes:
+
+- `POST /forms/:id/uploads` is form-scoped and reuses the form's OWN submission
+  access gate. Public mode requires the current server-owned form to remain published,
+  uses the runtime-issued HMAC form nonce and one
+  `public_write` rate-limit charge keyed by form id. Anonymous public requests
+  retain the configured CAPTCHA policy; for an authenticated public session the
+  current evaluator sets `requireCaptcha=false`. Internal mode uses its
+  session/CSRF or API-key contract. Neither grants `media:write`. Byte
+  canonicalization runs for anonymous, cookie-bearing, session, API-key,
+  captcha-on, and captcha-off requests alike; authentication state never disables
+  inspection. Draft/archived runtime projection mints no nonce, including preview. A
+  narrow current status/access read immediately before dispatch is the authorization
+  linearization point: state drift observed there rejects the request; later drift does
+  not retroactively cancel an already authorized in-flight request. Per-field `accept` (MIME
+  allowlist, `image/*` wildcards via the shared `mimeMatchesAccept` leaf) and
+  write-valid `maxSizeMb` (`1..100`) are enforced against the canonical result in
+  `mediaService.uploadMedia` via a `constraints` param.
+- Root and stripped-admin Forms writes share one response boundary. Stable domain errors
+  keep their named code/status; every unmapped executor failure becomes fixed
+  `internal_error`/500 before serialization, so non-production responses cannot expose a
+  dependency message, stack, cause, connection string, or arbitrary details.
+- The submitted value is stored/accepted only as a media ROW id (or id array for
+  `multiple`). `submissionService` normalizes the value to an id/array, then the
+  DB-backed backstop `verifyFileReferences` re-resolves each id via `getMediaById`
+  and rejects unknown/cross-origin ids, wrong MIME, or oversize as
+  `form_payload_invalid` — defence-in-depth even if the upload path was bypassed.
+- Uploaded rows are tracked with a `"submission"` media-usage variant.
+
+The same byte-authoritative create/replace contract selects one of nine canonical
+profiles: PNG/JPEG/GIF/WebP/BMP are passive-inline candidates; PDF, strict UTF-8
+plain text, safe standalone SVG, and explicitly allowed octet-stream are
+attachment-only. Active/ambiguous markup, conflicting/truncated signatures, and
+policy mismatches fail before storage/DB. Original filename remains bounded
+display/download metadata only. Safe SVG and octet-stream each require an exact
+canonical allowlist entry; a wildcard alone cannot authorize them.
+
+Every local/S3/Azure media `GET`/`HEAD` is a final core-proxied response with
+server-owned `Content-Type`, safe `Content-Disposition`,
+`X-Content-Type-Options: nosniff`, and an exact persisted length on `HEAD`.
+Asynchronous GET bodies stay provider-neutral and streamed; Bun may use chunked
+framing, and any runtime-synthesized GET length must equal persisted size. Provider
+URLs and provider response metadata never bypass this boundary. A legacy persisted
+MIME/key mismatch, or a passive-inline byte-prefix mismatch, falls back to an
+octet-stream `.bin` attachment rather than inline. Canonical attachment
+MIME/key pairs remain attachments; delivery does not promote them to inline
+based on a prefix.
+
+Public Forms uploads create media before the final submission. A visitor who
+abandons the flow can therefore leave an unreferenced media row/object. TTL or
+pending-upload cleanup remains the explicit TASK-516-07 residual; TASK-536 does
+not claim it as implemented.
+
+### Form theme colors on the public render path (TASK-516-01)
+
+`forms.settings.theme` color tokens flow through `PATCH /forms/:id` into the
+PUBLIC Form block/section runtime inline `style`. The direct write and
+persisted-read boundaries use the Bun-free canonical parser in
+`core/services/theme/cssColorContract.ts`; the retained Form Embed bridge uses
+that same owner through `resolveClearableCssColorValue`. Form is the explicit
+TASK-516 end-to-end `inherited-render` exception, so canonical `currentColor` and
+`inherit` are accepted together with the ordinary safe color grammar. The
+builder canvas, runtime preview, resolver, and public renderer must keep that
+same profile instead of narrowing or widening it per consumer.
+
+Fixed write objects are strict: unknown keys and out-of-enum values fail route
+validation with `validation_error` before service logic. The schema pattern and
+128-code-unit cap are structural guards, not a semantic CSS parser; the shared
+parser still rejects controls/non-ASCII input, invalid function arity and numeric
+ranges, and dangerous or unknown functions before persistence or inline-style
+emission. Field-by-field fail-soft normalization remains only for
+non-destructive legacy/read defense, never as raw pass-through. Present-only
+emission still omits unauthored keys.
 
 ### Master key (storage secrets)
 
@@ -369,6 +495,12 @@ Rotacja klucza:
   trusted runtime bindings) allow safe relative or `http(s)` values and reject
   script-capable protocols.
 - CSS sinks (`style.background`, `backgroundImage`, block `textColor`,
+  block `style.surfaceTint` (TASK-524-02 — the independent, alpha-capable glass
+  glow tint, sanitized via `sanitizeAuthoringCssColor` at the write boundary,
+  present-only/omitted on a bad value so it fails closed to the reference-literal
+  CSS fallback and is emitted only as the already-validated `--surface-glow`/
+  `--deco-ring`/`--orb-color` custom properties, never a raw declaration — at both
+  the inline base and the per-breakpoint `pageResponsiveCss.ts` retarget),
   block/section accent, block border colors, responsive CSS custom property
   values) are normalized through color/background policies before persistence
   and escaped before `url("...")` emission. Gradient authoring composes
@@ -378,9 +510,19 @@ Rotacja klucza:
   only escaped `url("...")` values. `url(javascript:...)`, expression-like CSS,
   protocol-relative media, and event-handler payloads fail closed to `null` or
   the documented default.
-- CSS color values may be raw safe colors or the explicit allowlisted site
-  tokens `var(--color-primary|secondary|accent|bg|surface|text|border)`.
-  Arbitrary `var()` expressions remain rejected.
+- The supported Page admin color control now commits through the shared
+  canonical `authoring` profile. This browser adapter is not the backend trust
+  boundary: persistence and rendering still re-check through the independent
+  legacy Page sanitizer. That sanitizer allows only
+  `var(--color-primary|secondary|accent|bg|surface|text|border)` for token
+  references and rejects arbitrary `var()` expressions, URLs, delimiters, and
+  unsafe functions. Its separate alphabetic named-value branch still retains
+  current backend compatibility for values including `currentColor` and
+  `inherit`, and its functional branch is not yet the shared parser's semantic
+  range contract. Do not claim server-side shared-parser enforcement from the
+  admin control alone. TASK-539-02-L01 owns importing the shared parser while
+  retaining the exact seven-token filter and Page-specific
+  background/composite rules.
 - Page text marks (`heading`/plain `text`/`quote` `props.marks`) stay as
   bounded JSON ranges, not raw HTML. Color/highlight mark colors normalize
   through the CSS color sanitizer; link mark hrefs normalize through the Page
@@ -401,6 +543,149 @@ Rotacja klucza:
   normalization already ran. New Page v2 render sinks must add regression
   coverage in the Vitest sanitizer/XSS suites and keep local Semgrep/security
   scans clean without scanner suppressions.
+
+## Pages custom-SVG sanitizer and renderer boundary (TASK-522, TASK-538)
+
+- Treat every `customSvg` Page block `svg` value as untrusted author text. The Page
+  write normalizer and renderer both call the same dependency-free sanitizer; the
+  second call is a defence-in-depth boundary for legacy or externally modified rows.
+  A 24 KiB isomorphic byte cap applies before parsing. Invalid, malformed, or
+  over-limit input fails closed to a neutral placeholder rather than partially
+  rendered markup.
+- `svgSanitizerPolicy.ts` is the single immutable, closed policy for accepted tag names,
+  source attribute names, namespaces, and local references. Its exported collections
+  are frozen. Author-controlled `class` and `style` are excluded at every element, and
+  no author-class exception or author-selected attribute expansion is permitted.
+- `buildSafeSvgTree` consumes sanitizer output through a strict parser with no browser
+  error recovery. It rechecks the closed policy, entities, namespaces, and local
+  references; enforces 2,048 element nodes, depth 64, and 8,192 decoded text characters;
+  and returns a deeply frozen plain-data tree. Any sanitizer/parser disagreement also
+  fails closed.
+- The renderer creates React elements only from that tree. A complete, explicit
+  source-attribute-to-React-prop map copies only present safe values, so neither an
+  arbitrary prop spread nor author-data `dangerouslySetInnerHTML` is part of the
+  `customSvg` branch.
+- Before root layout attributes are removed, the renderer snapshots a trusted aspect
+  ratio from an exact finite four-number `viewBox`, with positive finite `width` and
+  `height` as the fallback. It then removes root `x`, `y`, `width`, `height`, and
+  `transform`, sets a renderer-owned `width: 100%`, clamps the ratio to 1/8..8, and
+  caps block size at 1,024 px. Safe descendant drawing geometry remains available.
+- The renderer-owned wrapper clips overflow, applies `contain: layout paint`, and
+  disables pointer events; the root SVG also clips overflow and disables pointer
+  events. These controls are fixed renderer props and cannot be overridden by author
+  markup.
+- Verification covers write-to-render behavior, editor rendering, and the published
+  and preview runtime paths. Closure additionally requires narrow- and wide-viewport
+  browser smoke to confirm contained geometry, click-through behavior outside the
+  complete Page block frame, and zero console errors; test evidence must remain
+  redacted and must not document an actionable reproduction.
+- Decoration/tilt/surface/hover/marquee/composition/layer config values are
+  reject-unknown allowlisted enums (`normalizeEnum`, fail-CLOSED) + `readNumber`
+  clamps; colors run through `readSafeColor`. They reach CSS only as bounded numbers /
+  validated colors / fixed class + data-attribute tokens — never string interpolation.
+  The block-tilt runtime is a STATIC dependency-free IIFE reading only validated DOM
+  `data-*`/CSS custom properties, emitted via static-`__html` `dangerouslySetInnerHTML`,
+  never interpolating stored data.
+
+## Page canvas background color boundary (TASK-523)
+
+- `settings.background` (per-page canvas background) is a CSS sink and reaches the page
+  `<Root>` inline `style.background`. It is validated by the SINGLE color/gradient path
+  `sanitizeAuthoringCssBackground` at BOTH write (`normalizeSettings`) AND render
+  (`PageDocumentRender`, defence in depth — React SSR does not block a `;`-delimited CSS
+  injection in a `style` value). A value that fails the sanitizer returns `null` and the
+  key is dropped (fail-soft); no raw stored string ever reaches a CSS declaration.
+- **Gradient hardening.** `isSafeAuthoringCssGradient` rejects any `url(` token AND is a
+  SINGLE-gradient guard (`isSingleGradientLayer`: exactly one gradient head + its balanced
+  parens, with nothing after the matching close paren). The gradient charset excludes
+  `;`/`{`/`}`/`<`/`>`/`:` (no declaration or `</style>` breakout). This closes the nested
+  `radial-gradient(circle,url(//x))` case and, per-layer, the `url()`-layer fetch surface.
+- **Multi-layer background allowlist (TASK-531 — the one new attack surface).**
+  `sanitizeAuthoringCssBackground` now ACCEPTS a COMMA-SEPARATED list of safe gradient/color
+  layers (glow-over-gradient — the reference `.cta-card`/`art-*` look) via
+  `isSafeAuthoringCssBackgroundLayers`. The relaxation is an **ALLOWLIST applied per
+  top-level comma-split layer** (NOT a loosened regex, NOT a denylist), NOT a widening of
+  `isSingleGradientLayer` (unchanged — still the per-layer guard, now called PER layer):
+  - a **whole-value tripwire pre-pass** runs FIRST and fails closed on any
+    `url(`/`image-set(`/`image(`/`element(`/`cross-fade(`/`@import`/`expression(`/
+    `behavior:`/`-moz-binding`/`javascript:`/`vbscript:`/`data:` anywhere in the value;
+  - the value is split at **depth-0 commas only** (a comma inside a gradient's own parens
+    stays with its layer — never a naive `split(",")`);
+  - EVERY split layer must independently pass `isSafeAuthoringCssColor` OR
+    `isSafeAuthoringCssGradient`, so a `url(...)`/`image-set(...)`/non-color-non-gradient
+    layer fails (a `url()` layer is neither), and the layer count is capped at
+    `PAGE_BG_MAX_LAYERS` (6);
+  - the whole value is length-capped at `PAGE_CSS_VALUE_MAX_LENGTH` (512) BEFORE any regex
+    runs (algorithmic-complexity / ReDoS defence — the `rgb()`/`hsl()` charset patterns also
+    dropped a redundant leading `\s*` that could backtrack); it fails CLOSED on any bad
+    layer / over-cap / tripwire hit. This keeps `linear-gradient(...),
+    url(//evil.example/beacon.png)` and every `url()`/`javascript:`/`@import`/`expression(`
+    layer REJECTED (asserted by the TASK-523 outbound-beacon suite, which stays green). The
+    single-layer fast path is UNCHANGED (byte-identical), so no existing single-layer
+    document changes behavior. The hardening is a single-writer change in
+    `pageAuthoringSanitizers.ts` and applies to EVERY caller of
+    `sanitizeAuthoringCssBackground` (page canvas background + all TASK-522/531 background
+    authoring).
+- **Two render boundaries relax in lockstep on the SAME validator.** A multi-layer value
+  must PAINT, so both render paths re-gate through `isSafeAuthoringCssGradient(safe) ||
+  isSafeAuthoringCssBackgroundLayers(safe)` — never a value the write boundary rejects:
+  1. the SSR inline-style path (`toGradientBackground`, `pageRendererV2.tsx`), whose output
+     lands in a React-escaped `CSSProperties` object; and
+  2. the per-device RAW `<style>` path (`pageResponsiveCss.ts`), which emits declarations
+     UN-escaped via `dangerouslySetInnerHTML` — there the whole-value tripwire baked into
+     `isSafeAuthoringCssBackgroundLayers` is LOAD-BEARING. That module keeps
+     `isSafeCssGradient` as the single-layer alias and routes multi-layer through a separate
+     `isSafeCssBackgroundValue` helper with a code-comment FORBIDDING a naive re-bind of
+     `isSafeCssGradient` to the multi-layer validator without the tripwire pre-pass. Both
+     boundaries reuse the exported validator, so a value one accepts is exactly what the
+     write boundary accepts (a per-device `url()`/`@import`/over-cap override emits NO rule +
+     an `unsafe_background_value` diagnostic).
+- **Colored glow box-shadow (TASK-531) is a STRUCTURED spec, never a raw string.**
+  `PageGlow` (`{ color, blur?, spread?, x?, y? }`) on both `PageBlockStyleV2` and
+  `PageSectionStyleV2` is present-only, reject-unknown (`assertKnownKeys` +
+  `additionalProperties:false` in all three style schemas), and REQUIRES a valid `color`
+  (sanitized via `sanitizeAuthoringCssColor` at write — an invalid/absent color OMITS the
+  whole glow, fail-soft). The numeric fields are clamped at write (`PAGE_GLOW_BLUR_CLAMP`
+  0..120, `PAGE_GLOW_SPREAD_CLAMP` -40..80, `PAGE_GLOW_OFFSET_CLAMP` ±80). At BOTH render
+  boundaries the shared pure `composeGlowBoxShadow` (`pageGlow.ts`) RE-sanitizes the color
+  and RE-clamps the numbers into a FIXED `"<x>px <y>px <blur>px <spread>px <color>"`
+  template (defence in depth) — it NEVER interpolates a raw author string, so no arbitrary
+  `box-shadow` token (which could smuggle a `url()`) can be emitted; a bad color composes to
+  nothing. The editor client mutation guard (`sanitizePageEditorControlValue`) also routes
+  the nested length-3 `style.glow.color` control path through `sanitizeAuthoringCssColor`, so
+  even optimistic client preview state never holds an unsanitized glow color.
+
+## Declarative interactivity boundary (TASK-534)
+
+TASK-534 adds a family of declarative interactivity (switcher/tabs block, filterable
+gallery, scroll-hint block, noise overlay, magnetic button). It introduces **no new
+route, RBAC, HTTP method, DB migration, or `PAGE_DOCUMENT_SCHEMA_VERSION` bump**, and no
+new attacker-authored MARKUP sink (unlike 522's `customSvg`). Every input surface is
+fail-closed:
+
+- **Enums** — `switcher.variant` and `scrollHint.glyph` run through `normalizeEnum`
+  (fail-CLOSED to the default on an out-of-set write). `magnetic`, `noiseOverlay`, and
+  `filterable` are `readBoolean`-coerced present-only flags. `switcher.activeIndex` is
+  clamped to the tab count.
+- **Free-text labels** (switcher tab labels, scrollHint `label`) render as **escaped
+  React TEXT nodes**, never `dangerouslySetInnerHTML` — no markup breakout.
+- **Gallery category tokens** — each `category` is a SPACE-SEPARATED SET of single kebab
+  tokens matched against `^[\w-]{1,48}$`; any out-of-pattern token is DROPPED fail-soft
+  at BOTH write (`normalizeBlockProps`) AND render, so the value emitted into
+  `data-category`/`data-filter` can never break out of the attribute. The runtime match
+  is a `cat.split(" ").indexOf(f)` token compare — no substring false positive, no
+  `innerHTML`/`eval`.
+- **Noise overlay** paints a STATIC self-generated SVG-turbulence data-URI
+  (`pageInteractivityGlyphs.tsx`) — no author color, no asset fetch, no relaxation of
+  `sanitizeAuthoringCssBackground`.
+- **Runtime** — all three interactivity clauses live in the SINGLE
+  `PAGE_EFFECTS_RUNTIME_SOURCE` static, dependency-free IIFE emitted via static-`__html`
+  `dangerouslySetInnerHTML`; they read ONLY validated DOM `data-*`/CSS custom properties
+  and NEVER interpolate stored data (no `${`, `eval`, `Function(`, or `innerHTML` sink),
+  and are idempotent via the existing per-window init flag.
+- **Allowlist** — every new key joins its `assertKnownKeys` allowlist AND the strict
+  `pageDocumentV2JsonSchema` (`additionalProperties: false`) in lockstep with a
+  round-trip test; an unknown prop throws `PageDocumentError` (fail-closed read trap).
 
 ## Assistant security baseline (v1)
 
@@ -530,7 +815,7 @@ Rotacja klucza:
   - provider draft assumptions are redacted before they appear in action plan metadata/review UI,
   - `context.includeResourceCatalog=true` hydratuje tylko server-side bounded/redacted resource catalog,
   - client-supplied `context.resourceCatalog` i inne unknown context fields sa odrzucane,
-  - resource catalog includes bounded page, post, entry, media, commerce, solution-kit, menu, content type, custom screen, listing, form, SEO, and widget summaries, but never raw page/post/entry data payloads; custom screen summaries may include only the persisted canonical `collectionRole` / `compositionKey` metadata, not browser-authored aliases,
+  - resource catalog includes bounded page, post, entry, media, commerce, solution-kit, menu, content type, custom screen, listing, form, and SEO summaries plus optional read/support summaries for retained legacy template rows, but never raw page/post/entry data payloads; custom screen summaries may include only the persisted canonical `collectionRole` / `compositionKey` metadata, not browser-authored aliases,
   - resource catalog nie zawiera form submissions, entry values, post raw data, media signed URLs, commerce payment secrets, provider credentials, API key material ani secret-like config keys,
   - detail-page binding resolution is read-only and document-driven: it uses safe
     dot-path access against validated bindings, blocks secret-like entry field
@@ -538,21 +823,21 @@ Rotacja klucza:
     instead of arbitrary object traversal or a parallel public-write contract,
   - generic CMS inspection plans are read-only: they can expose bounded candidate metadata, have `actions: []`, and are not executable through dry-run/execute,
   - `context.runtimeSnapshot` jest advisory-only i nie moze zastapic RBAC w route/domain services,
-  - active admin surface context is server-hydrated before planning; page/custom-screen hydration requires `content:read`, widget-template hydration requires `widgets:read`, and missing resources clear the active surface context,
+  - active admin surface context is server-hydrated before planning; page/custom-screen hydration requires `content:read`, retained legacy template support summaries require `widgets:read`, and missing resources clear the active surface context,
   - runtime snapshot nie zawiera user email/name, role names, raw permissions, session ids, cookies, CSRF tokens ani access logs,
   - contract-only future action families in `actionFamilyContracts.ts` are documentation/type contracts only; they are rejected by strict action plan schema/provider operation-draft mapping until preview/execute adapters and route/domain permission checks land,
   - `custom-screen.delete` is internal-only, requires server-side resource catalog planning context plus `content:write` for execute, and revalidates target id/name/prefix before deletion,
   - `page.delete` is internal-only, requires active page context plus `content:write` and `content:publish` for execute, and revalidates target id/title/slug/status before deletion,
-  - `widget-template.delete` is internal-only, requires active widget template context plus `widgets:write` for execute, and revalidates target id/name/status/category before deletion,
+  - maintenance-only `widget-template.delete` is internal-only, accepts only an exact already stored legacy row plus `widgets:write`, and revalidates target id/name/status/category; it exposes no create/insert authoring,
   - `entry.delete` is internal-only, requires active entry route context plus `content:write` and `content:publish` for execute, and revalidates optional content type/title/slug/status expectations before deletion,
   - `content-type.delete` is internal-only, requires exact server-side catalog target resolution and blocks when the catalog reports existing entries,
-  - `listing-query.delete` and `listing-template.delete` are internal-only, require active context or exact server-side catalog target resolution plus `content:write` for execute, and block when reviewed page/widget-template reference scans find surviving references,
+  - `listing-query.delete` and `listing-template.delete` are internal-only, require active context or exact server-side catalog target resolution plus `content:write` for execute, and block when reviewed Page or retained legacy-template reference scans find surviving references,
   - `form.delete` and `form.archive` are internal-only, require active context or exact server-side catalog target resolution plus `forms:write` for execute, count submissions before mutation, block hard delete when submissions exist, and never expose raw submission payloads,
   - `menu.item.delete` is internal-only, requires exact server-side catalog target resolution plus `menus:write` for execute, deletes through the menu tree service, and preserves unrelated menu items,
   - `seo.document.delete` is internal-only, requires exact server-side catalog target resolution plus `content:write` for execute, deletes only the SEO document, and never deletes the page or entry target,
   - `page.update` is internal-only, requires active page context plus `content:write` and `content:publish` for execute, revalidates page id/title/slug/status, and preserves unrelated Page v2 sections/settings,
   - active Page context is internal-only and read-only, revalidates page identity through `pageService`, and no longer hydrates widget-template references from Page data,
-  - `widget-template.update` and `widget-template.block.patch` are internal-only, require active widget template context plus `widgets:write` for execute, revalidate template id/name/status/category where applicable, and preserve unrelated reusable template blocks/settings,
+  - maintenance-only `widget-template.update` and `widget-template.block.patch` are internal-only, require an exact already stored legacy row plus `widgets:write`, revalidate identity, preserve unrelated data, and cannot create a resource or advertise reusable-template authoring,
   - `custom-screen.update` and V4 screen document actions (`custom-screen.section.add`, `custom-screen.block.add`, `custom-screen.block.patch`, `custom-screen.block.move`, `custom-screen.block.remove`, `custom-screen.binding.set`, `custom-screen.list-view.patch`) are internal-only, require active custom screen context plus `content:write` for execute, revalidate screen id/name/status/content type where applicable, preserve unrelated sections/blocks/bindings/list settings, persist canonical collection-link metadata only through `customScreenService`, and never expose raw entry values,
   - counted multi-target CMS plans are allowed only when trusted context resolves the exact expected target count and every target maps to a strict typed action; mismatched, broad, or partially invalid bulk prompts return `needs_input`,
   - explicit multi-create CMS plans require locally validated `mutation.patch.items[]` definitions and reject secret-like keys before mapping to typed upsert/create actions,

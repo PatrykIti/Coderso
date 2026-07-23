@@ -63,7 +63,7 @@ underneath media handling across the CMS.
    provider test feedback is not wired yet.
 8. Move to `Upload Policies`.
 9. Review the shared fields:
-   - storage file URL override,
+   - storage file URL override (legacy adapter compatibility only),
    - max upload size,
    - allowed MIME types.
 10. Choose the upload-size unit carefully (`KB`, `MB`, `GB`) before saving.
@@ -89,8 +89,10 @@ Use this safe storage workflow when you want fewer asset-delivery mistakes:
   driver switch does not backfill existing assets automatically.
 - Security summary is useful even when values are `Missing`, because it quickly
   shows which secrets still need configuration.
-- `Storage File URL (Override)` is a delivery-control field, not only a cosmetic
-  path override.
+- `Storage File URL (Override)` is retained adapter/storage compatibility
+  configuration. Media records still render through the stable core proxy
+  `/media/<encoded-key>`; the override neither replaces that route nor controls
+  its public/internal access mode.
 - `Test Connection` should be treated as an operational validation step, not as
   a replacement for understanding the provider configuration itself. It is
   intentionally unavailable in the current UI until backend provider feedback is
@@ -101,8 +103,9 @@ Use this safe storage workflow when you want fewer asset-delivery mistakes:
 - Uploads still fail after changing provider:
   review provider credentials and the migration note before assuming existing
   files moved automatically.
-- Assets resolve to the wrong public URL:
-  check the file URL override first.
+- Media proxy access or host behavior is wrong:
+  check Media Library delivery access settings and the configured site hosts.
+  The storage URL override cannot replace or bypass the core media proxy.
 - Cloud storage is configured but still feels incomplete:
   review the security summary and the provider-specific note panel.
 - The size policy blocks uploads unexpectedly:
@@ -125,7 +128,8 @@ Use this safe storage workflow when you want fewer asset-delivery mistakes:
 1. Confirm the correct storage provider is selected.
 2. Confirm the required credentials and target fields are complete.
 3. Confirm upload policy values are intentional.
-4. Confirm the file URL override is correct if used.
+4. If a legacy adapter requires the file URL override, confirm it without
+   treating it as the public media URL or an access-control setting.
 5. Confirm the migration caveat is understood.
 6. Save changes deliberately.
 

@@ -125,6 +125,24 @@ UI behavior:
 - Middleware `rbac` sprawdza permission per route.
 - UI ukrywa sekcje bez odpowiedniego permission.
 
+### Permission requirement i snapshot transakcyjny (TASK-537)
+
+- Legacy string jest normalizowany do zamrozonej listy z jednym wymaganiem.
+  Kazda niepusta tablica ma semantyke all-of; pusta tablica zawsze fail-closed
+  jako `forbidden`, rowniez dla aktora z wildcardem. `*` spelnia kazde
+  wymaganie z niepustej listy.
+- Brak aktora jest odrzucany przed zapytaniem. Snapshot laczy `user_roles` z
+  `roles` w jednym SELECT i projektuje tylko `id`, `name` oraz `permissions`.
+  Nie wolno dzielic decyzji na dwa zapytania, bo nie stanowilyby jednego
+  snapshotu.
+- Zablokowane mutacje content entry przekazuja executor swojej transakcji do
+  guarda. Po `SELECT ... FOR UPDATE` guard wykonuje ten jeden JOIN na tym samym
+  polaczeniu, co zachowuje kolejnosc decyzji i nie wymaga drugiego polaczenia z
+  puli.
+- Przy izolacji READ COMMITTED zmiany rol/user-role zatwierdzone przed startem
+  tego statementu sa widoczne. Zmiany zatwierdzone po rozpoczeciu jego snapshotu
+  nie zmieniaja wstecznie biezacej decyzji; zobaczy je kolejny guard.
+
 ## Plugin permissions
 
 - Plugin permissions sa niezalezne od RBAC.

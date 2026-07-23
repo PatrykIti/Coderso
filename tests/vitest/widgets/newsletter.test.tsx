@@ -23,6 +23,48 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<NewsletterData>> = () => null;
 
+test("newsletter keeps all stored overrides authoring-only and fail-closed", () => {
+  const normalized = normalizeNewsletterData({
+    ...newsletterDefaults,
+    style: {
+      background: " #ABC ",
+      textColor: " HSL(210DEG, 50%, 40%) ",
+      buttonBackground: " rgb(12, 24, 36) ",
+      buttonTextColor: " RGBA(255, 255, 255, .5) ",
+    },
+  });
+  expect(normalized.style).toMatchObject({
+    background: "#abc",
+    textColor: "hsl(210, 50%, 40%)",
+    buttonBackground: "rgb(12, 24, 36)",
+    buttonTextColor: "rgba(255, 255, 255, 0.5)",
+  });
+  const html = renderToString(<NewsletterBlock data={normalized} variant="centered" />);
+  expect(html).toContain("background-color:#abc");
+  expect(html).toContain("color:hsl(210, 50%, 40%)");
+  expect(html).toContain("background-color:rgb(12, 24, 36)");
+  expect(html).toContain("color:rgba(255, 255, 255, 0.5)");
+
+  const rejected = normalizeNewsletterData({
+    ...newsletterDefaults,
+    style: {
+      background: " currentColor ",
+      textColor: " inherit ",
+      buttonBackground: "\u00a0#fff",
+      buttonTextColor: "\u2003#fff",
+    },
+  });
+  expect(rejected.style).toMatchObject({
+    background: undefined,
+    textColor: "",
+    buttonBackground: "",
+    buttonTextColor: "",
+  });
+  const rejectedHtml = renderToString(<NewsletterBlock data={rejected} variant="centered" />);
+  expect(rejectedHtml).not.toContain("\u00a0#fff");
+  expect(rejectedHtml).not.toContain("\u2003#fff");
+});
+
 test("newsletter renders disconnected semantics without a native form submit target", () => {
   const html = renderToString(
     <NewsletterBlock
@@ -193,6 +235,8 @@ test("newsletter reuses shared Forms runtime markup when the resolved form is co
   expect(html).toContain('name="__nl_form_nonce"');
   expect(html).toContain('value="signed-nonce"');
   expect(html).toContain('name="captchaToken"');
+  expect(html).toContain('data-form-security-nonce="1"');
+  expect(html).toContain('data-form-security-captcha="1"');
   expect(html).toContain('name="first_name"');
   expect(html).toContain('autoComplete="given-name"');
   expect(html).toContain('data-form-embed-success="true"');
@@ -451,6 +495,21 @@ test("newsletter normalizes invalid transport and style input safely", () => {
   expect(names[0]).toBe("shared");
   expect(names[1]).not.toBe("shared");
   expect(names[2]).not.toBe("shared");
+});
+
+test("newsletter round-trips authored alpha colors (TASK-519-05-L04 widening)", () => {
+  const normalized = normalizeNewsletterData({
+    style: {
+      // 8-digit alpha hex (opacity slider emit) + leading-`0` rgba alpha (typed).
+      background: "#0812209e",
+      buttonBackground: "rgba(8, 17, 31, 0.84)",
+      buttonTextColor: "#00000080",
+    },
+  });
+
+  expect(normalized.style.background).toBe("#0812209e");
+  expect(normalized.style.buttonBackground).toBe("rgba(8, 17, 31, 0.84)");
+  expect(normalized.style.buttonTextColor).toBe("#00000080");
 });
 
 test("newsletter editor preview shows a bound Forms contract without enabling runtime submit", () => {

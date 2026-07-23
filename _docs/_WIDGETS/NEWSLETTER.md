@@ -1,5 +1,10 @@
 # Newsletter Widget (v2)
 
+> **Historical compatibility boundary:** this file documents a retained renderer/read-
+> compatibility contract. Configurable widgets exist only on the Admin Dashboard;
+> active editors own their sections and blocks. Do not add or expand a non-Dashboard
+> editor, registry entry, preset, or module-pack surface from this file.
+
 ## Purpose
 
 Lead capture through a bounded newsletter signup surface that can either:
@@ -131,6 +136,15 @@ until migrated to a Coderso Form or supported external action URL.
 - `style.textColor`: bounded clearable color
 - `style.buttonBackground`: bounded clearable color
 - `style.buttonTextColor`: bounded clearable color
+
+These four ordinary stored overrides use the shared `authoring` profile at
+normalization and render boundaries. Supported literals and `var(--color-*)`
+tokens canonicalize through the semantic parser; `currentColor`, `inherit`,
+invalid numeric ranges, unknown functions, and unsafe fragments are rejected
+without raw fallback. Schema patterns are structural guards only. TASK-541 adds
+no defaults: Newsletter retains its historical normalized `transparent`
+background and `""` text/button sentinels when those values are absent or
+cleared, instead of rewriting old records into a new sparse representation.
 
 Contrast guidance is advisory only. It highlights obvious low-contrast
 combinations for hex/rgb values and reports `unknown` for theme tokens or

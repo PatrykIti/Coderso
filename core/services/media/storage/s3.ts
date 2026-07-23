@@ -6,7 +6,15 @@ import {
 } from "@aws-sdk/client-s3";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import type { MediaStorageAdapter, UploadFile } from "./adapter";
+import { safeMediaDisposition } from "../mediaFileTrust";
+import {
+  assertCanonicalStorageKey,
+  assertCanonicalStoredUpload,
+  buildCanonicalStorageKey,
+  type CanonicalStoredUpload,
+  type MediaStorageAdapter,
+  type UploadFile,
+} from "./adapter";
 
 export type S3StorageOptions = {
   bucket?: string | null;
@@ -15,6 +23,7 @@ export type S3StorageOptions = {
   secretAccessKey?: string | null;
   endpoint?: string | null;
   baseUrl?: string | null;
+  client?: S3Client;
 };
 
 function getS3Config(options?: S3StorageOptions) {
@@ -22,8 +31,7 @@ function getS3Config(options?: S3StorageOptions) {
   const region = options?.region ?? process.env.S3_REGION;
   const accessKeyId = options?.accessKeyId ?? process.env.S3_ACCESS_KEY;
   const secretAccessKey = options?.secretAccessKey ?? process.env.S3_SECRET_KEY;
-  const endpoint =
-    (options?.endpoint ?? process.env.S3_ENDPOINT)?.trim() || undefined;
+  const endpoint = (options?.endpoint ?? process.env.S3_ENDPOINT)?.trim() || undefined;
   const baseUrl = options?.baseUrl ?? process.env.MEDIA_BASE_URL;
 
   if (!bucket || !region || !accessKeyId || !secretAccessKey) {
@@ -33,12 +41,7 @@ function getS3Config(options?: S3StorageOptions) {
   return { bucket, region, accessKeyId, secretAccessKey, endpoint, baseUrl };
 }
 
-function getBaseUrl(
-  bucket: string,
-  region: string,
-  endpoint?: string,
-  baseUrl?: string | null
-) {
+function getBaseUrl(bucket: string, region: string, endpoint?: string, baseUrl?: string | null) {
   if (baseUrl) {
     return baseUrl;
   }
@@ -63,14 +66,15 @@ function buildKey(prefix: string, fileName: string) {
 }
 
 export function createS3Adapter(options?: S3StorageOptions): MediaStorageAdapter {
-  const { bucket, region, accessKeyId, secretAccessKey, endpoint, baseUrl } =
-    getS3Config(options);
+  const { bucket, region, accessKeyId, secretAccessKey, endpoint, baseUrl } = getS3Config(options);
   const resolvedBaseUrl = getBaseUrl(bucket, region, endpoint, baseUrl);
-  const client = new S3Client({
-    region,
-    credentials: { accessKeyId, secretAccessKey },
-    endpoint,
-  });
+  const client =
+    options?.client ??
+    new S3Client({
+      region,
+      credentials: { accessKeyId, secretAccessKey },
+      endpoint,
+    });
 
   return {
     async put(file: UploadFile) {
@@ -89,10 +93,33 @@ export function createS3Adapter(options?: S3StorageOptions): MediaStorageAdapter
 
       return { key, url: `${resolvedBaseUrl}/${key}` };
     },
-    async get(key: string) {
-      const result = await client.send(
-        new GetObjectCommand({ Bucket: bucket, Key: key })
+    async putMedia(upload: CanonicalStoredUpload) {
+      assertCanonicalStoredUpload(upload);
+      const prefix = getKeyPrefix();
+      const baseKey = buildCanonicalStorageKey(upload.identity);
+      const key = prefix ? `${prefix}/${baseKey}` : baseKey;
+      assertCanonicalStorageKey(key);
+      const contentDisposition = safeMediaDisposition(
+        upload.identity.delivery,
+        upload.downloadName,
+        upload.identity.extension
       );
+      const body = Buffer.from(await upload.bytes.arrayBuffer());
+
+      await client.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          Body: body,
+          ContentType: upload.identity.mimeType,
+          ContentDisposition: contentDisposition,
+        })
+      );
+
+      return { key, url: `${resolvedBaseUrl}/${key}` };
+    },
+    async get(key: string) {
+      const result = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
 
       if (!result.Body) {
         throw new Error("s3_object_missing");

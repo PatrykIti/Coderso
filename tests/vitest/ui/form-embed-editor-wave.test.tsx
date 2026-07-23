@@ -575,7 +575,20 @@ test("FormEmbed visual owns public copy and presentation without changing select
     expect(colorInputs[1]?.value).toBe("#ffffff");
     expect(colorInputs[2]?.value).toBe("#112233");
     expect(nonColorStyleInputs).toHaveLength(0);
-    expect(styleSection.textContent).toContain("Saved custom color");
+    const colorStates = Array.from(styleSection.querySelectorAll("[data-shared-color-state]")).map(
+      (element) => element.getAttribute("data-shared-color-state")
+    );
+    expect(colorStates).toEqual([
+      "cleared",
+      "cleared",
+      "selected_swatch",
+      "cleared",
+      "cleared",
+      "cleared",
+      "cleared",
+      "cleared",
+    ]);
+    expect(styleSection.textContent).not.toContain("Saved custom color");
     expect(styleSection.textContent).not.toContain("Custom token active");
     expect(styleSection.textContent).not.toContain("var(--color-bg)");
     expect(styleSection.textContent).not.toContain("var(--color-border)");

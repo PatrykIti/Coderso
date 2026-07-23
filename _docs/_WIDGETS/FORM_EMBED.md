@@ -1,15 +1,21 @@
-# Form Embed Widget (v1)
+# Form Embed Compatibility Renderer (v1)
+
+> **Product boundary:** this is legacy implementation documentation for the existing
+> public Form block/section renderer in the historical `core/widgets` namespace. It is not
+> a configurable Dashboard widget and is not a surface for adding a non-dashboard widget,
+> editor, preset, registry entry, or block type. New authoring work belongs to the Forms
+> builder and the owning section/block contracts.
 
 ## Purpose
 
 Embed a CMS form on a public page through the existing Forms runtime contract.
 
-The widget resolves the selected form at runtime, renders the current supported
+The compatibility renderer resolves the selected form at runtime, renders the current supported
 field model, runs conditional logic and multi-step navigation on the frontend,
 and submits through `POST /forms/:id/submissions` with backend-owned
 nonce/CAPTCHA enforcement.
 
-## Widget ID
+## Historical implementation ID
 
 `form-embed`
 
@@ -20,7 +26,7 @@ nonce/CAPTCHA enforcement.
 `card` and `inline` were historical doc drift, not shipped runtime variants in
 the current product contract.
 
-## Editor Modes
+## Legacy compatibility editor modes (do not extend)
 
 ### Wizard
 
@@ -73,10 +79,11 @@ Current Form Embed runtime support matches the live Forms field model:
 - `select`
 - `radio`
 - `hidden`
+- `file` (TASK-516-07 — nonce-gated upload to `POST /forms/:id/uploads`; submitted
+  value is an owned media reference, validated as such on the submission path)
 
 Unsupported legacy/runtime payload types render a visible non-submitting
-diagnostic instead of silently coercing to a different control. `file` remains
-explicit unsupported scope under the current trusted-field contract.
+diagnostic instead of silently coercing to a different control.
 
 ## Accessibility Contract
 
@@ -106,6 +113,14 @@ explicit unsupported scope under the current trusted-field contract.
   posting.
 - Checkbox controls submit backend-compatible boolean values, not the browser
   default `on` string.
+- A public File field uploads each selected file through
+  `POST /forms/:id/uploads` before the final submission. Pending uploads disable
+  Submit/Back/Next; required fields cannot submit without owned Media IDs, and a
+  `multiple` field preserves selection order.
+- Upload progress uses the field's accessible status node. A failed upload changes it to
+  an alert, releases action locks, keeps the final submission unsent, and permits retry
+  without reloading. Clearing/resetting returns the same node to its neutral screen-reader
+  state and invalidates stale upload work.
 - Runtime binding is idempotent. Additional Form Embed instances inserted after
   the first runtime script call the shared binder and bind independently.
 - Success behavior is configurable:
@@ -128,25 +143,48 @@ explicit unsupported scope under the current trusted-field contract.
 - Form field settings use `formStep` for multi-step grouping and `inputStep`
   for number/range/time input increments. Legacy `settings.step` remains a
   non-destructive form-step adapter and is not used as an input increment.
+- The public embed INHERITS the form-owned theme (`forms.settings.theme`,
+  TASK-516) through `pageRendererV2` `mapFormBindingToEmbedData`: the form theme
+  is the render BASE and the per-embed `FormEmbedStyle` OVERRIDES it per explicit
+  token (form theme = base, embed wins per-token; an unset embed token falls
+  through to the form theme, an unset form token to the built-in default). Every
+  theme-derived color still passes `resolveClearableCssColorValue` before reaching
+  an inline style.
+- TASK-516 deliberately uses the shared `inherited-render` profile end to end:
+  Form write normalization, persisted-read resolution, builder canvas, runtime
+  preview/resolver, public renderer, and this retained bridge all accept
+  canonical `currentColor` and `inherit`. The eight direct per-embed fields are
+  `background`, `surface`, `borderColor`, `titleColor`, `labelColor`,
+  `helperColor`, `submitBackground`, and `submitTextColor`.
+- Color schema patterns are structural prefilters only. The shared semantic
+  parser still enforces original-input length, ranges, function arity, and
+  canonical output; rejected legacy input is omitted rather than rendered raw.
+  On an authored `style` object the eight per-embed overrides remain sparse.
+  A legacy record with no `style` object retains Form Embed's historical theme
+  defaults (including `transparent` background); TASK-541 adds no replacement
+  bytes.
 
 ## Security Notes
 
-The public Form Embed runtime submits to `POST /forms/:id/submissions`.
+The existing public Form block/section runtime writes only to
+`POST /forms/:id/uploads` and `POST /forms/:id/submissions`.
 
-- Public route visibility is limited to the widget submit path.
+- Public route visibility is limited to those upload/submission paths; there is no new
+  endpoint or non-dashboard widget route.
 - Public submissions use the Forms access evaluator, the `public_write`
-  rate-limit bucket keyed by form id, strict request schema validation, and the
-  signed form submission nonce (`formId.timestamp.HMAC`).
+  rate-limit bucket keyed by form id, strict request schema validation, and an opaque
+  server-minted form submission nonce. Its wire value is `timestamp.signature`; the
+  form ID is bound inside the signed server payload and clients must not construct it.
 - Nonce enforcement remains backend-owned and runtime-only.
 - Public CAPTCHA policy remains backend-owned.
 - Internal forms require an authenticated session or API key with the existing
   Forms submit scope; public pages fail closed to a noninteractive boundary.
-- The widget may project only safe public bot-protection metadata:
+- The compatibility renderer may project only safe public bot-protection metadata:
   - provider
   - public site key
   - action
 - Provider secrets, nonce secrets, thresholds, privileged security settings, and
-  runtime nonce strings must never be persisted in widget JSON. Runtime-rendered
+  runtime nonce strings must never be persisted in authored block/section JSON. Runtime-rendered
   nonce inputs are injected only by server-side form resolution for the current
   request.
 

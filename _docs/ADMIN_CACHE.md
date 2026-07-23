@@ -37,6 +37,7 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `entries:detail:<typeSlug>:<id>`
 - `customScreens:list`
 - `customScreens:detail:<id>`
+- `customScreens:entryOverrides:<bounded-screen-id>:<bounded-entry-id>`
 - `contentTypes:list`
 - `contentTypes:detail:<id>`
 - `contentTypes:collectionWorkspace:<contentTypeId>`
@@ -88,6 +89,7 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `pageTemplates:list`
 - `pageTemplates:detail:<id>`
 - `media:list`
+- `media:folders`
 - `adminThemeTemplates:list`
 - `adminThemeProfiles:list`
 - `settings:redacted`
@@ -163,6 +165,11 @@ Contract:
 - Read-through cache includes TTL and in-flight request dedupe.
 - Mutations invalidate relevant read-through caches (`setUserSetting`, assistant reindex, admin theme profile mutations).
 - This layer complements list/detail localStorage cache and does not replace entity mutation invalidation.
+- The Custom Screen entry preference deliberately uses isolated
+  `GET/PATCH /user-settings/customScreens.entry.preferences` calls and does not
+  read from or merge into this aggregate `getUserSettings()` cache. Its
+  user-keyed coordinator is in-memory only; no Screen preference is stored in
+  `localStorage`.
 
 ### Shell Lifecycle Policy
 - `AdminApp` auth bootstrap:
@@ -214,6 +221,18 @@ Contract:
 `core/admin/utils/cacheBus.ts` broadcasts cache events:
 - Primary: `BroadcastChannel`.
 - Fallback: `localStorage` storage event.
+- During the compatibility window, each publication uses both the canonical
+  `coderso.admin.cache` transport and the legacy `nextless.admin.cache`
+  transport (or both matching storage keys). A subscription correlates the
+  canonical/legacy copies by `sourceId`, `ts`, `key`, and `action`, so one
+  logical remote publication is delivered exactly once while repeated events
+  observed through only one transport remain distinct. Correlation state is
+  bounded and scoped to the subscription.
+- Subscribers receive an explicit `local` or `remote` origin. A same-context
+  publication may also carry a symbol operation token so an editor can
+  recognize its own mutation event. That token is process-local: neither the
+  origin nor the token joins the wire payload, `BroadcastChannel`, or
+  `localStorage`, and remote subscribers always receive no token.
 - Consumers must treat broadcasts as hints, not truth: the Page Editor
   rehydrates from `pages:detail:<id>` events only when the cached record is
   strictly newer (`updatedAt`) than the loaded page (TASK-449-02). Stale,
@@ -414,12 +433,15 @@ Clients update caches and broadcast events on:
   `widgetTemplates:detail:<id>`, `widgetTemplateCategories:list`, their cached
   clients, and the `/advanced/widgets/templates/:id` prefetch/route entries.
 
-### Widget library cache note
+### Retired widget-library compatibility cache note
 
-- Widget library list state is owned by
+- The hidden support-only compatibility catalog state is owned by
   `core/admin/ui/widgets/WidgetLibraryPage.tsx` and is backed by
   `widgetCatalog:list` and `pages:list` (the catalog is core-widget-only after
   the Page Templates rewrite).
+- This cache seam must not be reused to add a Page/Form/Menu/Post/Screen
+  authoring flow. Active editors cache their own section/block documents;
+  configurable Dashboard widgets use the Dashboard cache family.
 - The page hydrates catalog and pages from `getCachedWidgetCatalog()` and
   `getCachedPages()` on first render, then revalidates in the background when a
   cache entry exists.
@@ -431,6 +453,37 @@ Clients update caches and broadcast events on:
 
 - Media list cache (`media:list`) is owned by
   `core/admin/services/mediaClient.ts`.
+- `listMediaCached()` de-duplicates only the exact active non-forced request.
+  Success publishes only while that request still owns the pending slot, and
+  `finally` clears only that same request. Rejection therefore remains
+  retryable, while a forced/newer read or a successful media mutation cannot be
+  cleared or overwritten by an older completion.
+- Media folder list cache (`media:folders`) is owned by
+  `core/admin/services/mediaFoldersClient.ts`. Network rows are projected to
+  exactly `id`, `name`, `slug`, `parentId`, `orderIndex`, and `createdAt` before
+  return or persistence; backend-only `createdBy` and every unknown key are
+  stripped without invoking unknown accessors.
+- Persisted folder rows must already contain exactly those six validated keys.
+  A malformed envelope is evicted and falls through to the normal network path.
+  A malformed successful response rejects with the fixed, payload-free
+  `media_folders_response_invalid` client error and writes no cache.
+- `listMediaFoldersCached()` shares the current non-forced request. Resolve and
+  reject clear only that exact promise in `finally`; forced reads and explicit
+  clears advance a request generation. An older completion may still resolve to
+  its original caller, but it cannot prime cache rows or clear a newer request.
+- Folder create/update/reorder/delete clear `media:folders` and broadcast its
+  `update` event only after the API mutation succeeds. A rejected mutation
+  preserves the original error and cache and emits no event. Successful delete
+  additionally broadcasts `media:list`, because deleting a folder un-files its
+  assets.
+- `MediaLibraryPage` uses the folder cache on mount, but every same-tab or
+  cross-tab `media:folders` event performs a forced server GET rather than
+  trusting storage-first fallback. An event overlapping manual load Retry is
+  queued and forced after Retry settles. Load generation and operation identity
+  guards preserve the last good tree and prevent stale/unmounted completions
+  from replacing newer visible state; a same-tab event emitted before its
+  successful mutation call returns is associated with that mutation so a
+  reconciliation failure is surfaced separately instead of replaying the write.
 - `MediaLibraryPage` hydrates from `getCachedMedia()` on first render. If
   cache exists, route entry uses a background cached read; if cache is missing,
   it performs the foreground list load.
@@ -503,13 +556,35 @@ Clients update caches and broadcast events on:
   with `contentTypes:list`.
 - Type-scoped caches (`entries:list:<typeSlug>`) remain authoritative for the
   editor, widgets, relation fields, and existing type-scoped clients.
+- Within each type slug, `entriesClient` assigns one monotonic publication order
+  across complete list reads, per-entry detail reads, successful
+  create/update/metadata/status/duplicate publications, and delete tombstones. An
+  older list cannot overwrite a newer detail, successful mutation, or delete for the
+  same entry; list reconciliation preserves that item authority while still accepting
+  the returned rows for unrelated entries.
+- A newer authoritative complete list cancels/invalidates observed detail publishers
+  and cached detail values at or before its version, including cleanup for an omitted
+  observed entry. A newer per-entry detail or mutation remains authoritative. Rejected
+  reads and mutations publish no cache state; only successful mutations broadcast.
+  `clearEntriesCache(typeSlug)` clears the scoped list/detail/authority state and makes
+  captured pre-clear list/detail promises ineligible to publish when they settle.
 - Entry create/update/metadata/duplicate/delete mutations update or invalidate
   the type-scoped cache and clear/broadcast `entries:list:all` so the cross-type
   list reloads from the joined read model.
 - Entry duplicate writes the returned clone into `entries:detail:<typeSlug>:<id>`
   and invalidates/broadcasts `entries:list:<typeSlug>` so the list reloads from
   the authoritative list endpoint.
-- Failed metadata writes must not mutate list or detail cache state.
+- Entry metadata server effects run only after the outer DB transaction commits.
+  A metadata mutation containing SEO clears the global site cache exactly once;
+  another changed metadata/status mutation performs one targeted entry
+  invalidation. Rollback and no-op perform neither. A post-commit invalidator
+  failure is reported with a stable redacted code while the durable response
+  remains successful, preventing an unsafe duplicate mutation retry.
+- After a successful metadata HTTP response, `entriesClient` updates and emits
+  exactly `entries:list:<typeSlug>`, `entries:list:all`, and
+  `entries:detail:<typeSlug>:<id>` in that order. A rejected response emits no
+  cacheBus event and leaves list/detail cache state unchanged. These browser
+  events remain client-owned and are not server transaction side effects.
 - Entry editor background refresh must not overwrite unsaved content or metadata
   edits; the editor defers active reload while either dirty flag is set.
 
@@ -551,6 +626,20 @@ Clients update caches and broadcast events on:
   update or invalidate `customScreens:list` / `customScreens:detail:<id>` and
   broadcast cache events for the list, sidebar shortcuts, builder, and records
   workflow.
+- `customScreensClient` assigns one monotonic publication order across complete list
+  reads, per-screen detail reads, successful create/update publications, and delete
+  tombstones. An older list cannot overwrite a newer detail, mutation, or delete for
+  the same screen; reconciliation preserves that item authority while accepting the
+  returned rows for unrelated screens. An authoritative list cleans up observed
+  details omitted from that list and primes returned rows without displacing a newer
+  per-screen value.
+- If a direct detail read falls back to the list endpoint, the client publishes and
+  reconciles the complete returned list under that same authority, not only the
+  requested row. Reads that ultimately reject and rejected mutations publish and
+  broadcast nothing.
+  `clearCustomScreensCache()` clears tracked list/detail/pending/authority state and
+  known browser detail entries; captured pre-clear list/detail promises cannot publish,
+  and corrupt stored-list discovery fails safe while clearing known state.
 - Builder previews do not introduce a separate Custom Screens preview API or
   preview-only cache family.
 - `Editor View` preview and the mounted builder canvas now share one
@@ -567,6 +656,14 @@ Clients update caches and broadcast events on:
   `entriesClient`; no Custom Screens-specific entry cache is introduced, and the
   screen-owned records workspace no longer hydrates or opens `EntryCreateDrawer`
   as a parallel create path.
+- The screen records workspace reuses the type-scoped Entry list/detail ordering
+  defined above; it does not introduce a second Entry authority model.
+- Related-list hosts subscribe to every normalized target's
+  `entries:list:<typeSlug>` event. Initial loads are non-forced; Retry and
+  cache-event revalidation are forced. A target change derives empty/loading
+  state immediately instead of showing rows from the prior target. A
+  same-target refresh keeps the last good rows while the refresh is pending, and
+  request/attempt generations reject stale or unmounted settlements.
 - Per-record presentation overrides use the separate
   `customScreens:entryOverrides:<screenId>:<entryId>` detail cache key, with
   bounded dynamic key segments from `cacheKeys.customScreenEntryOverrides`.
@@ -580,6 +677,31 @@ Clients update caches and broadcast events on:
 - Override cache-bus events refresh the presentation draft only when it is clean.
   Dirty presentation drafts keep local edits, set a presentation-specific
   remote-update warning, and do not overwrite unsaved entry content changes.
+- Override and entry content hydrations have independent route/request
+  generations. Builder document/binding drafts and entry
+  content/presentation drafts register the shared internal-navigation plus
+  `beforeunload` guard; a request that began while clean still cannot replace a
+  draft that became dirty before settlement. Failed load/save state remains
+  visible and retryable.
+- Screen builder writes attach a non-serialized cache-event operation token.
+  Matching current-save detail events are self-events; independent local or
+  remote `customScreens:detail:<id>` events are external revisions. External
+  detail events never overwrite a dirty builder and unresolved revisions block
+  stale full-document saves until an authoritative refresh succeeds. Generic
+  list events do not claim identity for the open detail resource.
+- Direct-image presentation keeps media UUIDs in override/entry caches. The
+  entry host resolves only the winning IDs through `listMediaCached()` and
+  gives the renderer an ephemeral UUID-to-URL map; resolved URLs are neither
+  written into media fields nor persisted as override values.
+- `customScreens.entry.preferences` has a separate authenticated-user
+  coordinator. Settled snapshots are keyed by user and retained in memory for a
+  bounded handoff (30 seconds) after the last subscriber, then pruned. A return
+  to the same user revalidates through the isolated endpoint; a generation made
+  newer by a local toggle wins over an older read. Auth-identity epochs abort
+  dispatched work and prevent queued work for user A from dispatching under
+  user B. Failed/malformed writes keep only the normalized local intent as
+  unsynced state and retry only after a fresh setter action. No aggregate cache,
+  cache-bus event, or browser-storage key is used for this preference.
 
 ### Forms list/detail cache note
 

@@ -14,6 +14,7 @@ import {
 } from "../../../core/db/schema";
 import { matchRoute } from "../../../core/server/router";
 import { ApiError } from "../../../core/server/errorHandler";
+import type { PermissionRequirement } from "../../../core/server/middleware/rbac";
 import {
   registerContentEntryRoutes,
   type RouteContext,
@@ -160,7 +161,7 @@ test("all entries route does not collide with type-scoped entries routes", () =>
 
 test("all entries route requires content read permission", async () => {
   const { router, routes } = makeRouter();
-  const permissions: string[] = [];
+  const permissions: PermissionRequirement[] = [];
 
   registerContentEntryRoutes(router, {
     requirePermission: (permission) => async () => {
@@ -185,11 +186,13 @@ testIfDbWithOptions(
   "content entry metadata publish requires publish permission",
   async () => {
     const { router, routes } = makeRouter();
-    const permissions: string[] = [];
+    const permissions: PermissionRequirement[] = [];
+    const permissionExecutors: unknown[] = [];
 
     registerContentEntryRoutes(router, {
-      requirePermission: (permission) => async () => {
+      requirePermission: (permission) => async (_ctx, executor) => {
         permissions.push(permission);
+        permissionExecutors.push(executor);
       },
       validate: () => undefined,
     });
@@ -226,8 +229,11 @@ testIfDbWithOptions(
         user: { id: user!.id },
       });
 
-      expect(permissions).toContain("content:write");
-      expect(permissions).toContain("content:publish");
+      expect(permissions).toEqual(["content:write", ["content:write", "content:publish"]]);
+      expect(permissionExecutors[0]).toBeUndefined();
+      expect(permissionExecutors[1]).toEqual(
+        expect.objectContaining({ select: expect.any(Function) })
+      );
     } finally {
       await db.delete(contentEntries).where(eq(contentEntries.id, entry.id));
       await db.delete(contentTypes).where(eq(contentTypes.id, type.id));

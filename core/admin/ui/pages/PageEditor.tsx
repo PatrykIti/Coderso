@@ -96,10 +96,12 @@ import {
   normalizeBlockTextMarks,
   normalizeStoredPageDocumentV2ForRead,
   resolvePageSectionForBreakpoint,
+  PAGE_SPOTLIGHT_SIZE_CLAMP,
   type PageBlockType,
   type PageBlockV2,
   type PageBreakpoint,
   type PageDocumentV2,
+  type PageEffectsV2,
   type PageSectionVariant,
   type PageSectionType,
   type PageSectionV2,
@@ -727,6 +729,12 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     null
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // TASK-521-05-L01: compact page-settings panel in the side-inspector rail
+  // (relocated from the full-height `SettingsSheet` drawer, which the owner
+  // found poor). Toggled by the reused `Settings2` trigger next to the
+  // section-panel toggle; used only on the DEFAULT host (hosts with their own
+  // `renderSettings` keep their Sheet, gated by `settingsOpen`).
+  const [pageSettingsPanelOpen, setPageSettingsPanelOpen] = useState(false);
   const [settingsTitle, setSettingsTitle] = useState(initialPageDetail?.title ?? "Homepage");
   const [settingsSlug, setSettingsSlug] = useState(initialPageDetail?.slug ?? "/");
   const [showInNav, setShowInNav] = useState(pageDocument.settings.showInNav);
@@ -1918,6 +1926,11 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
           setSettingsOpen(false);
           return;
         }
+        if (pageSettingsPanelOpen) {
+          event.preventDefault();
+          setPageSettingsPanelOpen(false);
+          return;
+        }
         if (revisionsOpen) {
           event.preventDefault();
           setRevisionsOpen(false);
@@ -2029,6 +2042,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     selectedSection,
     selectedSectionId,
     settingsOpen,
+    pageSettingsPanelOpen,
     undoEditorChange,
   ]);
 
@@ -2259,6 +2273,56 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
       setIsSaving(false);
     }
   };
+
+  // TASK-521-05-L02: per-page effects are a LIVE DRAFT on the document itself
+  // (`settings.effects`), so EVERY save/publish path carries them — NOT a
+  // side-state merged only into the explicit `handleSettingsSave` button. The
+  // helper keeps the sub-object present-only: it drops falsy/empty values so a
+  // page that never used effects stays byte-identical. The server
+  // `normalizeEffects` (521-01) re-validates/clamps; this cleanup is convenience.
+  const updateEffects = useCallback(
+    (patch: Partial<PageEffectsV2>) => {
+      setDocumentDraft((doc) => {
+        const next = { ...(doc.settings.effects ?? {}), ...patch };
+        const cleaned: PageEffectsV2 = {};
+        if (next.cursorSpotlight) cleaned.cursorSpotlight = true;
+        if (next.cursorSpotlight && next.spotlightColor) {
+          cleaned.spotlightColor = next.spotlightColor;
+        }
+        if (next.cursorSpotlight && next.spotlightSize != null) {
+          cleaned.spotlightSize = next.spotlightSize;
+        }
+        // ── TASK-534 ── page-root grain overlay: present-only (kept only when true).
+        if (next.noiseOverlay) cleaned.noiseOverlay = true;
+        if (Object.keys(cleaned).length > 0) {
+          return { ...doc, settings: { ...doc.settings, effects: cleaned } };
+        }
+        // Present-only: strip the key entirely when empty (byte-identity).
+        const { effects: _dropped, ...restSettings } = doc.settings;
+        return { ...doc, settings: restSettings };
+      });
+    },
+    [setDocumentDraft]
+  );
+
+  // TASK-523-01-L03 — live-draft writer for the per-page canvas background, mirroring
+  // updateEffects. Writes onto document settings via setDocumentDraft (undo/dirty
+  // wrapper), present-only: clearing drops the key ⇒ byte-identical draft. The server
+  // normalizeSettings (523-01-L01) re-validates via sanitizeAuthoringCssBackground;
+  // this client cleanup is convenience only.
+  const updateBackground = useCallback(
+    (value: string | null | undefined) => {
+      setDocumentDraft((doc) => {
+        if (!value) {
+          // Present-only: clearing drops the key entirely (byte-identity).
+          const { background: _dropped, ...restSettings } = doc.settings;
+          return { ...doc, settings: restSettings };
+        }
+        return { ...doc, settings: { ...doc.settings, background: value } };
+      });
+    },
+    [setDocumentDraft]
+  );
 
   // Host settings sheets save page-chrome metadata through their own client
   // call; only the detail metadata is synchronized so unsaved canvas edits
@@ -2647,8 +2711,11 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
               </div>
 
               {layersOpen ? (
-                <div className="absolute left-4 top-16 z-20 w-72 rounded-2xl border border-border bg-popover p-3 shadow-pop">
-                  <div className="mb-2 flex items-center justify-between">
+                <div
+                  className="absolute left-4 top-16 z-20 flex max-h-[min(72vh,calc(100dvh-8rem))] w-72 flex-col overflow-hidden rounded-2xl border border-border bg-popover p-3 shadow-pop"
+                  data-page-editor-layers-panel="true"
+                >
+                  <div className="mb-2 flex shrink-0 items-center justify-between">
                     <p className="text-sm font-semibold">Layers</p>
                     <Button
                       type="button"
@@ -2659,7 +2726,10 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="space-y-1">
+                  <div
+                    className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain"
+                    data-page-editor-layers-scroll="true"
+                  >
                     {pageDocument.sections.map((section) => (
                       <div key={section.id} className="space-y-1">
                         <button
@@ -3045,7 +3115,11 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => setSettingsOpen(true)}
+                        onClick={() =>
+                          editorHost.renderSettings
+                            ? setSettingsOpen(true)
+                            : setPageSettingsPanelOpen((open) => !open)
+                        }
                       >
                         <Settings2 className="h-4 w-4" />
                         {editorHost.settingsLabel}
@@ -3160,6 +3234,22 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                     <PanelRight className="h-4 w-4" />
                     {panelOpen ? "Hide panel" : "Show panel"}
                   </Button>
+                  {/* TASK-521-05-L01: compact page-settings panel trigger, next
+                      to the section-panel toggle, reusing Settings2. Hosts with
+                      their own renderSettings Sheet keep the header button. */}
+                  {!editorHost.renderSettings ? (
+                    <Button
+                      type="button"
+                      variant={pageSettingsPanelOpen ? "soft" : "ghost"}
+                      size="sm"
+                      onClick={() => setPageSettingsPanelOpen((open) => !open)}
+                      aria-label="Page settings"
+                      aria-pressed={pageSettingsPanelOpen}
+                    >
+                      <Settings2 className="h-4 w-4" />
+                      Page settings
+                    </Button>
+                  ) : null}
                 </>
               }
               deviceContext={{
@@ -3237,22 +3327,30 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
             detail: page,
             onSaved: handleHostSettingsSaved,
           })
-        ) : (
-          <SettingsSheet
-            open={settingsOpen}
+        ) : pageSettingsPanelOpen ? (
+          // TASK-521-05-L01/L02: page settings relocated from the full-height
+          // drawer into a COMPACT side-inspector panel (reused rail chrome), with
+          // the Effects section (L02) wired to the live document draft.
+          <PageSettingsSubpanel
+            onClose={() => setPageSettingsPanelOpen(false)}
             title={settingsTitle}
             slug={settingsSlug}
             showInNav={showInNav}
             revisionRetention={revisionRetention}
             isSaving={isSaving}
-            onOpenChange={setSettingsOpen}
             onTitleChange={setSettingsTitle}
             onSlugChange={setSettingsSlug}
             onShowInNavChange={setShowInNav}
             onRevisionRetentionChange={setRevisionRetention}
             onSave={handleSettingsSave}
+            template={pageDocument.settings.template}
+            effects={pageDocument.settings.effects}
+            onEffectsChange={updateEffects}
+            background={pageDocument.settings.background}
+            onBackgroundChange={updateBackground}
+            palette={sitePalette}
           />
-        )}
+        ) : null}
 
         {revisionsHost ? (
           <HistorySheet
@@ -4873,59 +4971,162 @@ const SelectField = ({
   </label>
 );
 
-const SettingsSheet = ({
-  open,
+/**
+ * TASK-521-05-L01/L02 — compact page-settings panel in the side-inspector rail
+ * (replaces the full-height `SettingsSheet` drawer the owner found poor). Reuses
+ * the rail chrome (rounded card + header/close, `EditorControlToneContext`
+ * "light" so the shared controls match the section/block panels). Carries EVERY
+ * relocated field verbatim — Title, Slug (TextFields), Show-in-nav, Revision-
+ * retention, plus the explicit `Save settings` button (title/slug persistence via
+ * `handleSettingsSave` → `updatePage`) — and hosts the L02 Effects section wired
+ * to the live document draft (`settings.effects`, persisted on every save/publish).
+ */
+export const PageSettingsSubpanel = ({
+  onClose,
   title,
   slug,
   showInNav,
   revisionRetention,
   isSaving,
-  onOpenChange,
   onTitleChange,
   onSlugChange,
   onShowInNavChange,
   onRevisionRetentionChange,
   onSave,
+  template,
+  effects,
+  onEffectsChange,
+  background,
+  onBackgroundChange,
+  palette,
 }: {
-  open: boolean;
+  onClose: () => void;
   title: string;
   slug: string;
   showInNav: boolean;
   revisionRetention: number;
   isSaving: boolean;
-  onOpenChange: (open: boolean) => void;
   onTitleChange: (value: string) => void;
   onSlugChange: (value: string) => void;
   onShowInNavChange: (value: boolean) => void;
   onRevisionRetentionChange: (value: number) => void;
   onSave: () => void;
+  template: string;
+  effects: PageEffectsV2 | undefined;
+  onEffectsChange: (patch: Partial<PageEffectsV2>) => void;
+  background: string | undefined;
+  onBackgroundChange: (value: string | null | undefined) => void;
+  palette: readonly PageEditorColorSwatch[];
 }) => (
-  <Sheet open={open} onOpenChange={onOpenChange}>
-    <SheetContent side="right" className="space-y-6 p-6">
-      <div>
-        <SheetTitle>Page settings</SheetTitle>
-        <SheetDescription>Update metadata and publishing defaults.</SheetDescription>
+  <EditorControlToneContext.Provider value="light">
+    <div
+      className="fixed right-4 top-24 z-40 w-80 max-w-[calc(100vw-2rem)]"
+      data-page-editor-settings-panel="true"
+      role="region"
+      aria-label="Page settings"
+    >
+      <div className="flex max-h-[min(78vh,calc(100dvh-8rem))] flex-col overflow-hidden rounded-lg border border-border bg-popover text-foreground shadow-pop">
+        <div className="flex shrink-0 items-start justify-between gap-2 border-b border-border px-3 py-2">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-foreground">
+              Page settings
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              Metadata, publishing defaults & effects.
+            </p>
+          </div>
+          <ToolbarIconButton tooltip={toolbarActionTooltips.closePanel} onClick={onClose}>
+            <X className="h-4 w-4" />
+          </ToolbarIconButton>
+        </div>
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-3">
+          <TextField label="Title" value={title} onChange={onTitleChange} />
+          <TextField label="Slug" value={slug} onChange={onSlugChange} />
+          <SelectField
+            label="Show in navigation"
+            value={showInNav ? "yes" : "no"}
+            options={["yes", "no"]}
+            onChange={(value) => onShowInNavChange(value === "yes")}
+          />
+          <NumberField
+            label="Revision retention"
+            value={revisionRetention}
+            min={1}
+            max={100}
+            onChange={onRevisionRetentionChange}
+          />
+          <p className="text-xs font-semibold uppercase text-muted-foreground">
+            Template
+            <span className="mt-1 block text-sm font-normal normal-case text-foreground">
+              {template}
+            </span>
+          </p>
+          <Button type="button" className="w-full" disabled={isSaving} onClick={onSave}>
+            {isSaving ? "Saving..." : "Save settings"}
+          </Button>
+          {/* TASK-523-01-L03 — per-page canvas background (solid color; alpha-capable
+              519 custom input). Writes settings.background on the live document draft;
+              gradients stay model/import-only (ColorSwatchControl is color-only). */}
+          <section
+            aria-label="Design"
+            className="space-y-3 border-t border-border pt-3"
+            data-page-editor-design-section="true"
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Design
+            </p>
+            <ColorSwatchControl
+              label="Page background"
+              value={background ?? ""}
+              palette={palette}
+              allowCustom
+              allowTransparent
+              onChange={(value) => onBackgroundChange(value ?? undefined)}
+            />
+          </section>
+          <section
+            aria-label="Effects"
+            className="space-y-3 border-t border-border pt-3"
+            data-page-editor-effects-section="true"
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Effects
+            </p>
+            <ToggleSwitch
+              label="Cursor spotlight"
+              value={!!effects?.cursorSpotlight}
+              onChange={(on) => onEffectsChange({ cursorSpotlight: on })}
+            />
+            {effects?.cursorSpotlight ? (
+              <>
+                <ColorSwatchControl
+                  label="Spotlight color"
+                  value={effects?.spotlightColor ?? "var(--primary)"}
+                  palette={palette}
+                  onChange={(color) => onEffectsChange({ spotlightColor: color ?? undefined })}
+                />
+                <SliderControl
+                  label="Spotlight size"
+                  min={PAGE_SPOTLIGHT_SIZE_CLAMP.min}
+                  max={PAGE_SPOTLIGHT_SIZE_CLAMP.max}
+                  step={20}
+                  unit="px"
+                  value={effects?.spotlightSize ?? 400}
+                  onChange={(size) => onEffectsChange({ spotlightSize: size })}
+                />
+              </>
+            ) : null}
+            {/* ── TASK-534 ── page-root static grain overlay (present-only). */}
+            <ToggleSwitch
+              label="Grain overlay"
+              value={!!effects?.noiseOverlay}
+              onChange={(on) => onEffectsChange({ noiseOverlay: on })}
+            />
+          </section>
+        </div>
       </div>
-      <TextField label="Title" value={title} onChange={onTitleChange} />
-      <TextField label="Slug" value={slug} onChange={onSlugChange} />
-      <SelectField
-        label="Show in navigation"
-        value={showInNav ? "yes" : "no"}
-        options={["yes", "no"]}
-        onChange={(value) => onShowInNavChange(value === "yes")}
-      />
-      <NumberField
-        label="Revision retention"
-        value={revisionRetention}
-        min={1}
-        max={100}
-        onChange={onRevisionRetentionChange}
-      />
-      <Button type="button" disabled={isSaving} onClick={onSave}>
-        {isSaving ? "Saving..." : "Save settings"}
-      </Button>
-    </SheetContent>
-  </Sheet>
+    </div>
+  </EditorControlToneContext.Provider>
 );
 
 const HistorySheet = ({

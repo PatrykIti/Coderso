@@ -9,7 +9,7 @@ zbudowac realne serwisy bez wiedzy technicznej.
 2. **Zdefiniuj pola** dla typow: teksty, media, relacje.
 3. **Wlacz kategorie/tagi** tam gdzie beda pomagaly w porzadkowaniu.
 4. **Zaplanuj relacje** miedzy typami (np. Testimonials → Projects).
-5. **Uzupelnij dane** i wykorzystaj widgety w Page Builderze.
+5. **Uzupelnij dane** i wykorzystaj sekcje/bloki w Page Builderze.
 
 ---
 
@@ -26,7 +26,7 @@ zbudowac realne serwisy bez wiedzy technicznej.
 
 Praktyczna zasada:
 1. Uzyj `Posts`, gdy chcesz klasyczne artykuly/aktualnosci.
-2. Uzyj `Entries`, gdy modelujesz dane biznesowe pod custom widgety/listingi.
+2. Uzyj `Entries`, gdy modelujesz dane biznesowe pod listy i inne domenowe bloki.
 
 ---
 
@@ -70,8 +70,8 @@ Praktyczna zasada:
 2. Dodaj pola zgodnie z lista powyzej.
 3. W Entry Editorze wybieraj kategorie i tagi w panelu po prawej.
 4. W Page Builderze:
-   - widget **Service List** filtruje po tagach,
-   - widget **Project Grid** filtruje po kategorii.
+   - blok **Service List** filtruje po tagach,
+   - blok **Project Grid** filtruje po kategorii.
 
 ---
 
@@ -102,8 +102,8 @@ Praktyczna zasada:
 ### Jak to uzyc w UI
 
 1. Tworz ogloszenie, nastepnie powiaz wydarzenie przez pole relation.
-2. Widget **Upcoming Events** moze wyswietlac tylko wydarzenia z tagiem.
-3. Widget **Announcements List** filtruje po kategorii.
+2. Blok **Upcoming Events** moze wyswietlac tylko wydarzenia z tagiem.
+3. Blok **Announcements List** filtruje po kategorii.
 
 ---
 
@@ -134,8 +134,8 @@ Praktyczna zasada:
 ### Jak to uzyc w UI
 
 1. Dodaj klienta, potem case study powiazane relacja.
-2. W Page Builderze widget **Case Studies** filtruje po kategorii/tagach.
-3. Widget **Client Logos** bierze dane z typu **Clients**.
+2. W Page Builderze blok **Case Studies** filtruje po kategorii/tagach.
+3. Blok **Client Logos** bierze dane z typu **Clients**.
 
 ---
 
@@ -153,4 +153,4 @@ Praktyczna zasada:
 1. Typy tresci stworzone.
 2. Pola i relacje skonfigurowane.
 3. Kategorie/tagi wlaczone i uzupelnione.
-4. Widoki w Page Builderze z gotowymi widgetami.
+4. Widoki w Page Builderze z gotowymi sekcjami i blokami.

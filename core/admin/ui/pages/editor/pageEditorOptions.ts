@@ -99,11 +99,29 @@ export const blockOptionCopy: Record<PageBlockType, Omit<BlockOption, "type">> =
   divider: { label: "Divider", description: "Visual separator." },
   spacer: { label: "Spacer", description: "Vertical rhythm control." },
   statistic: { label: "Statistic", description: "Metric value with label and caption." },
-  icon: { label: "Icon", description: "Small symbolic block." },
+  icon: { label: "Icon", description: "Animated inline icon (spin / pulse / bounce / draw)." },
   quote: { label: "Quote", description: "Pull quote with optional citation." },
   container: { label: "Container", description: "Nested layout container." },
   columns: { label: "Columns", description: "Nested column layout." },
   group: { label: "Group", description: "Nested grouped layout." },
+  // TASK-522-02-L02: BlockOption has NO `icon` field — do not add one
+  // (excess-property typecheck error). Sanitizer drops scripts, event handlers,
+  // and external refs — documented here (no per-control `help` field exists).
+  customSvg: {
+    label: "Custom SVG",
+    description: "Paste a sanitized inline SVG (line drawings, logos, diagrams).",
+  },
+  // ── TASK-534 ── switcher + scrollHint palette copy. Non-Partial exhaustive
+  // Record<PageBlockType,…>, so these MUST land with the block-type members
+  // (534-01-L01) or root `tsc` breaks. BlockOption has NO `icon` field (:107).
+  switcher: {
+    label: "Switcher",
+    description: "Segmented tabs with swappable panels.",
+  },
+  scrollHint: {
+    label: "Scroll hint",
+    description: "Animated scroll indicator.",
+  },
 };
 
 export const blockOptions: BlockOption[] = pageBlockTypes.flatMap((type) =>

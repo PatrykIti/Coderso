@@ -1,8 +1,9 @@
-import { afterAll, expect, test } from "bun:test";
+import { afterAll, beforeAll, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { db } from "../../../core/db/client";
 import { settings } from "../../../core/db/schema";
+import { clearSiteCache } from "../../../core/site/cache/siteCache";
 import {
   assertAssistantSettingsConsistency,
   deleteSetting,
@@ -26,7 +27,13 @@ async function canConnect() {
   }
 }
 
-const cleanupKeys = [
+const legacyAssistantDocsKeys = [
+  "assistant.docs.backend",
+  "assistant.docs.sourceRoot",
+  "assistant.docs.paths",
+] as const;
+
+const mutatedSettingKeys = [
   "site.name",
   "site.locale",
   "site.timezone",
@@ -47,6 +54,7 @@ const cleanupKeys = [
   "assistant.launcher.avatarAsset",
   "assistant.defaultMode",
   "assistant.docs.reindexOnBoot",
+  ...legacyAssistantDocsKeys,
   "assistant.llm.enabled",
   "assistant.llm.provider",
   "assistant.llm.model",
@@ -59,11 +67,37 @@ const cleanupKeys = [
   "site.cacheTtlSeconds",
 ];
 
-afterAll(async () => {
+type SettingRow = typeof settings.$inferSelect;
+
+let settingRowsBeforeSuite: SettingRow[] = [];
+let settingRowsSnapshotCaptured = false;
+
+beforeAll(async () => {
   if (!hasDb) return;
-  for (const key of cleanupKeys) {
-    await deleteSetting(key);
+
+  const rows = await db.select().from(settings).where(inArray(settings.key, mutatedSettingKeys));
+  settingRowsBeforeSuite = rows.map((row) => ({
+    ...row,
+    value: structuredClone(row.value),
+    updatedAt: new Date(row.updatedAt.getTime()),
+  }));
+  settingRowsSnapshotCaptured = true;
+}, dbTestTimeoutMs);
+
+afterAll(async () => {
+  if (!hasDb || !settingRowsSnapshotCaptured) return;
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx.delete(settings).where(inArray(settings.key, mutatedSettingKeys));
+      if (settingRowsBeforeSuite.length > 0) {
+        await tx.insert(settings).values(settingRowsBeforeSuite);
+      }
+    });
+  } catch {
+    throw new Error("settings_service_test_restore_failed");
   }
+  clearSiteCache();
 }, dbTestTimeoutMs);
 
 testIfDb("set/get/list/delete settings", async () => {
@@ -167,9 +201,8 @@ testIfDb("clamps site.cacheTtlSeconds to the beacon-nonce-safe upper bound", asy
 });
 
 testIfDb("site.timezone accepts IANA zones, rejects invalid values, defaults to UTC", async () => {
-  // Self-restoring on the shared remote DB: this test owns the key and the
-  // suite's afterAll deletes it (see cleanupKeys), so order across parallel
-  // streams does not matter.
+  // The suite restores the exact pre-suite row, so this test can still exercise
+  // delete-to-default behavior without destroying shared database state.
   await setSetting("site.timezone", "Europe/Warsaw");
   expect(await getSetting("site.timezone")).toBe("Europe/Warsaw");
   expect((await listSettings())["site.timezone"]).toBe("Europe/Warsaw");
@@ -390,7 +423,8 @@ testIfDb(
       "settings_value_invalid"
     );
 
-    // Restore default state (delete → default true) for the shared remote DB.
+    // Restore the default state for this test; suite teardown restores the
+    // exact pre-suite row for the shared remote database.
     await deleteSetting("analytics.trackingEnabled");
     expect(await getSetting("analytics.trackingEnabled")).toBe(true);
   },

@@ -254,7 +254,7 @@ test("usePostAutosave schedules, flushes, and cancels autosave work", async () =
     view.rerender(<Harness enabled dirty signature="b" />);
     await React.act(async () => {
       const flushed = await controls?.flush();
-      expect(flushed).toBe(true);
+      expect(flushed).toBeUndefined();
     });
     expect(autosave).toHaveBeenCalledTimes(2);
 
@@ -274,6 +274,50 @@ test("usePostAutosave schedules, flushes, and cancels autosave work", async () =
     expect(autosave).toHaveBeenCalledTimes(2);
   } finally {
     view.cleanup();
+    vi.useRealTimers();
+  }
+});
+
+test("usePostAutosave contains scheduled rejection but propagates explicit flush rejection", async () => {
+  vi.useFakeTimers();
+  const { usePostAutosave } =
+    await import("../../../core/admin/ui/posts/editor/hooks/usePostAutosave");
+  const failure = new Error("save failed");
+  const autosave = vi
+    .fn<() => Promise<void>>()
+    .mockRejectedValueOnce(failure)
+    .mockRejectedValueOnce(failure);
+  const unhandledRejections: unknown[] = [];
+  const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+    unhandledRejections.push(event.reason);
+    event.preventDefault();
+  };
+  window.addEventListener("unhandledrejection", onUnhandledRejection);
+  let controls: ReturnType<typeof usePostAutosave> | undefined;
+
+  const Harness = () => {
+    controls = usePostAutosave({
+      enabled: true,
+      dirty: true,
+      signature: "rejected",
+      delayMs: 10,
+      onAutosave: autosave,
+    });
+    return null;
+  };
+  const view = mount(<Harness />);
+  try {
+    await React.act(async () => {
+      await vi.advanceTimersByTimeAsync(10);
+    });
+    expect(autosave).toHaveBeenCalledTimes(1);
+    expect(unhandledRejections).toEqual([]);
+
+    await expect(controls?.flush()).rejects.toBe(failure);
+    expect(autosave).toHaveBeenCalledTimes(2);
+  } finally {
+    view.cleanup();
+    window.removeEventListener("unhandledrejection", onUnhandledRejection);
     vi.useRealTimers();
   }
 });

@@ -1,5 +1,10 @@
 # Footer Widget (v1)
 
+> **Historical compatibility boundary:** this file documents a retained renderer/read-
+> compatibility contract. Configurable widgets exist only on the Admin Dashboard;
+> active editors own their sections and blocks. Do not add or expand a non-Dashboard
+> editor, registry entry, preset, or module-pack surface from this file.
+
 ## Purpose
 
 Site footer with structured columns, optional brand block, legal links, and
@@ -151,6 +156,14 @@ belong to Visual.
   implementation.
 - Clearing `style.surfaceColor` removes the forced footer background color from
   runtime output.
+- The retained direct fields `style.surfaceColor`, `style.borderColor`,
+  `style.textColor`, `style.headingColor`, `style.linkColor`,
+  `style.linkHoverColor`, `style.linkActiveColor`, `style.socialColor`, and
+  `style.legalTextColor` use the shared `inherited-render` profile at
+  normalization and render boundaries. Canonical `currentColor` and `inherit`
+  are valid; malformed/range-invalid input is omitted rather than emitted raw.
+- Schema patterns are structural guards only. Optional Footer colors remain
+  present-only when omitted or cleared.
 
 ## Data model (summary)
 

@@ -351,7 +351,11 @@ Zasady:
   kompatybilny fallback do top-level. `null` lub pusty snapshot = wyglad
   legacy i brak slotu extras.
 
-## Widgets & Templates
+## Retained Legacy Widget-Template Storage
+
+These tables are data-only compatibility storage for existing rows and frozen
+installer rollback. There is no current Widget Template editor/CRUD authoring
+surface; reusable Page authoring uses `page_templates` with Page sections/blocks.
 
 `widget_templates`
 - id (uuid, pk)
@@ -448,7 +452,8 @@ Przykładowe klucze:
 - `site.contentRoutes`
 - `design.tokens`
 - `search.categoryOverrides`
-- `widgets.templateCategories`
+- `widgets.templateCategories` (deprecated data-layer compatibility key; no
+  current authoring UI)
 
 `user_settings`
 - user_id (fk users)

@@ -1,5 +1,6 @@
 import { createReadThroughCache } from "@/utils/readThroughCache";
 import type { StoredPostEditorPreferences } from "@/ui/posts/editor/settings/postEditorPreferences";
+import type { ScreenEntryPreferencesSettingValue } from "../../services/settings/screenEntryPreferencesContract";
 import { apiRequest } from "./apiClient";
 
 export type HeroPresetSetting = {
@@ -21,6 +22,7 @@ export type UserSettings = {
   "assistant.ui.enabled": boolean;
   "assistant.ui.avatarEnabled": boolean;
   "assistant.ui.avatarAsset": string | null;
+  "customScreens.entry.preferences": ScreenEntryPreferencesSettingValue;
 };
 
 export type UserSettingResponse = {
@@ -62,6 +64,57 @@ export async function getUserSetting<K extends keyof UserSettings>(
     });
   }
   return result;
+}
+
+function normalizeIsolatedUserSettingResponse<K extends keyof UserSettings>(
+  expectedKey: K,
+  payload: unknown
+): { key: K; value: unknown } {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw new Error("user_settings_response_invalid");
+  }
+  const record = payload as Record<string, unknown>;
+  if (
+    Object.keys(record).length !== 2 ||
+    !("key" in record) ||
+    !("value" in record) ||
+    record.key !== expectedKey
+  ) {
+    throw new Error("user_settings_response_invalid");
+  }
+  return { key: expectedKey, value: record.value };
+}
+
+export async function getUserSettingIsolated<K extends keyof UserSettings>(
+  key: K
+): Promise<{ key: K; value: UserSettings[K] }> {
+  const payload = await apiRequest<unknown>(`/user-settings/${encodeURIComponent(key)}`, {
+    method: "GET",
+  });
+  const response = normalizeIsolatedUserSettingResponse(key, payload);
+  return { key: response.key, value: response.value as UserSettings[K] };
+}
+
+export async function setUserSettingIsolated<K extends keyof UserSettings>(
+  key: K,
+  value: UserSettings[K],
+  options: Readonly<{ expectedUserId: string; signal?: AbortSignal }>
+): Promise<{ key: K; value: UserSettings[K] }> {
+  const payload = await apiRequest<unknown>(
+    `/user-settings/${encodeURIComponent(key)}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Coderso-Expected-User-Id": options.expectedUserId,
+      },
+      body: JSON.stringify({ value }),
+      signal: options.signal,
+    },
+    { withCsrf: true }
+  );
+  const response = normalizeIsolatedUserSettingResponse(key, payload);
+  return { key: response.key, value: response.value as UserSettings[K] };
 }
 
 export async function setUserSetting<K extends keyof UserSettings>(key: K, value: UserSettings[K]) {

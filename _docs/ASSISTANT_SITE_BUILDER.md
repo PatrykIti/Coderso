@@ -408,29 +408,31 @@ Advanced layout options are backend-owned in
 `assistantSiteBuilderIntakeAdvancedOptions.ts`. The `advancedMenuBehaviors`,
 `advancedHeroVariants`, and `advancedSectionVariants` registries expose only
 stable ids for existing Navigation, Hero, Form, Listings, Engagement, and CTA
-widget capabilities. Advanced menu choices resolve to Navigation widget facts
+section/block compatibility contracts. Advanced menu choices resolve to Navigation block facts
 such as `sticky`, `collapseOnScroll`, `transparent`, `mobileMode`, reviewed menu
 structure, and a CTA target page role; arbitrary CTA hrefs are rejected. Advanced hero choices
-resolve to current Hero widget variants (`centered`, `split`, `media-left`,
-`media-center`). Advanced section choices resolve to existing widget variants
+resolve to current Hero block variants (`centered`, `split`, `media-left`,
+`media-center`). Advanced section choices resolve to existing Page block variants
 backed by `modulePackMatrix.assistantPageSections`; mismatched section roles,
 design-preset support gaps, or conflicting menu choices become review gates
-instead of invented widgets, CSS, layout code, or arbitrary executor actions.
+instead of invented block types, CSS, layout code, or arbitrary executor actions.
 After review, supported registry-derived runtime choices compile into optional
 `advancedRuntimeOverrides` on the internal `AssistantSiteKitPlanInput`: menu CTA
-role, existing Navigation widget behavior, Hero widget variant, and backed
-section widget variants. Raw `advancedLayout`, design/reference text, gates,
+role, existing Navigation block behavior, Hero block variant, and backed
+Page section/block variants. Raw `advancedLayout`, design/reference text, gates,
 diagnostics, URLs, CSS, and prompt material remain review metadata.
 
-When a widget or CMS capability changes, the assistant must be resynchronized
-through the typed owner rather than prompt inference. Backward-compatible widget
-defaults can be absorbed when existing generated blocks still pass
-`normalizeWidgetBlock`, but new variants, modes, layout behavior, CTA/media
-settings, content engines, custom screens, or solution-kit starter capabilities
-require explicit backend-owned registry/mapping updates, strict action-schema
-coverage, and targeted regressions. Shared ids used by runtime, admin editors,
-and assistant schemas must have one owner; Navigation variant/mobile-mode ids in
-`navigationContract.ts` are the reference pattern. User-facing workflow/docs
+When a section/block, Dashboard widget, retained compatibility renderer, or CMS
+capability changes, the assistant must be resynchronized through the typed owner
+rather than prompt inference. Existing legacy rows may keep passing
+`normalizeWidgetBlock`, but new Page/Form/Menu/Post/Screen behavior belongs to
+the domain section/block contract; no assistant mapping may create a generic
+widget surface. New variants, modes, layout behavior, CTA/media settings,
+content engines, custom screens, or solution-kit starter capabilities require
+explicit backend-owned registry/mapping updates, strict action-schema coverage,
+and targeted regressions. Shared ids used by runtime, domain editors, and
+assistant schemas must have one owner; Navigation variant/mobile-mode ids in
+`navigationContract.ts` are a retained compatibility example. User-facing workflow/docs
 changes must also update `docs/guide` and reindex the assistant corpus before
 the product assistant can answer from those docs. Developer details and the full
 checklist live in `docs/develop/assistant.md#keeping-assistant-capabilities-in-sync`.
@@ -530,10 +532,11 @@ URL/script/admin/action-like or secret-like strings fail closed.
 Basic review facts are owned by
 `core/services/assistant/assistantSiteBuilderIntakeBasicReview.ts`. The helper
 turns completed Basic facts into review-only pages, menu items, supported
-homepage widget candidates, content-engine candidates, contact path, media
-policy, gates, and a bounded redacted summary. Widget support resolves through
-`modulePackMatrix` `assistantPageSections`; unsupported section roles become
-`widget_alias_unsupported` gates instead of invented widgets. Content-engine
+homepage section/block candidates, content-engine candidates, contact path,
+media policy, gates, and a bounded redacted summary. Historical alias ids
+resolve through `modulePackMatrix` `assistantPageSections`; unsupported section
+roles become `widget_alias_unsupported` compatibility gates instead of invented
+block types. Content-engine
 decisions resolve through `assistantSiteBuilderIntakeContentEngines.ts` for
 explicit choices, page roles, section roles, and bounded text signals. Supported
 engines are services, products, portfolio/projects, case studies,
@@ -543,7 +546,7 @@ event/jobs/course-like engines become gates instead of arbitrary schemas or
 plugins. Media-library needs remain advisory gates until later adapters choose
 existing media-library ids. Review facts require Basic review readiness plus
 required non-review steps, Basic defaults, hero, and media policy; incomplete
-facts fail closed. `featured-items` stays a generic `content-list` widget
+facts fail closed. `featured-items` stays a Page `content-list` block
 candidate and does not imply a portfolio content engine unless the page roles
 include portfolio.
 

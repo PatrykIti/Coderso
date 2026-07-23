@@ -8,6 +8,7 @@ import {
   contentTypes,
   detailPageDocuments,
   previewTokens,
+  seoDocuments,
   users,
 } from "../../../core/db/schema";
 import {
@@ -84,6 +85,7 @@ const cleanupTrackedRows = async () => {
   }
   if (contentEntryIds.length > 0) {
     await db.delete(previewTokens).where(inArray(previewTokens.targetId, contentEntryIds));
+    await db.delete(seoDocuments).where(inArray(seoDocuments.targetId, contentEntryIds));
     await db.delete(contentEntries).where(inArray(contentEntries.id, contentEntryIds));
   }
   if (contentTypeIds.length > 0) {
@@ -472,6 +474,53 @@ testIfDb(
     expect(secondHtml).not.toContain("First cached detail template body");
   },
   15_000
+);
+
+testIfDb(
+  "entry metadata commits refresh cached SEO globally and draft status through targeted invalidation",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 300);
+
+    const fixture = await createProductFixture();
+    const detailPageId = randomUUID();
+    await insertDetailPageDocument({
+      id: detailPageId,
+      contentTypeId: fixture.contentType.id,
+      contentTypeSlug: fixture.contentType.slug,
+      currentBody: "Entry metadata cache contract body",
+    });
+    await setTestSetting("site.contentRoutes", [
+      {
+        type: fixture.contentType.slug,
+        listPath: `/${fixture.contentType.slug}`,
+        detailPath: `/${fixture.contentType.slug}/:slug`,
+        enabled: true,
+        detailPageId,
+      } satisfies ContentRouteSetting,
+    ]);
+
+    const publicPath = `/${fixture.contentType.slug}/${fixture.entry.slug}`;
+    const warmResponse = await requestPublicPath(publicPath);
+    expect(warmResponse.status).toBe(200);
+    expect(await warmResponse.text()).toContain("Entry metadata cache contract body");
+
+    const seoDescription = `Fresh metadata description ${fixture.token}`;
+    await updateEntryMetadata(
+      fixture.entry.id,
+      { seo: { description: seoDescription } },
+      fixture.actor.id
+    );
+    const refreshedSeoResponse = await requestPublicPath(publicPath);
+    expect(refreshedSeoResponse.status).toBe(200);
+    const refreshedSeoHtml = await refreshedSeoResponse.text();
+    expect(refreshedSeoHtml).toContain(`name="description" content="${seoDescription}"`);
+
+    await updateEntryMetadata(fixture.entry.id, { status: "draft" }, fixture.actor.id);
+    const draftResponse = await requestPublicPath(publicPath);
+    expect(draftResponse.status).toBe(404);
+  },
+  20_000
 );
 
 testIfDb(

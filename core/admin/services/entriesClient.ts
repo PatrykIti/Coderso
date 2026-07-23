@@ -89,11 +89,26 @@ export type PreviewResponse = {
   expiresAt: string;
 };
 
+type PendingVersioned<T> = Readonly<{ promise: Promise<T>; version: number }>;
+
+type EntryItemChange =
+  | Readonly<{ kind: "replace"; value: EntryDetail }>
+  | Readonly<{ kind: "status"; value: EntryStatus }>
+  | Readonly<{ kind: "delete" }>;
+
+type EntryItemAuthority = Readonly<{ version: number; change: EntryItemChange }>;
+
 const cachedEntries = new Map<string, EntrySummary[]>();
-const cachedEntriesPromise = new Map<string, Promise<EntrySummary[]>>();
+const pendingEntryLists = new Map<string, PendingVersioned<EntrySummary[]>>();
 let cachedAllEntries: EntryListItem[] | null = null;
 let cachedAllEntriesPromise: Promise<EntryListItem[]> | null = null;
 const cachedEntryDetails = new Map<string, Map<string, EntryDetail>>();
+const cachedEntryDetailVersions = new Map<string, Map<string, number>>();
+const pendingEntryDetails = new Map<string, Map<string, PendingVersioned<EntryDetail>>>();
+const settledEntryItemAuthority = new Map<string, Map<string, EntryItemAuthority>>();
+const committedEntryListVersions = new Map<string, number>();
+const knownEntryDetailIds = new Map<string, Set<string>>();
+let entryPublicationVersion = 0;
 
 const isEntryList = (value: unknown): value is EntrySummary[] => Array.isArray(value);
 const isEntryListItemList = (value: unknown): value is EntryListItem[] => Array.isArray(value);
@@ -138,14 +153,26 @@ const writeEntryDetailCache = (typeSlug: string, entry: EntryDetail) => {
 
 const primeEntriesCacheInternal = (typeSlug: string, items: EntrySummary[]) => {
   cachedEntries.set(typeSlug, items);
-  cachedEntriesPromise.delete(typeSlug);
   writeLocalCache(cacheKeys.entriesList(typeSlug), items);
 };
 
 const primeAllEntriesCacheInternal = (items: EntryListItem[]) => {
   cachedAllEntries = items;
-  cachedAllEntriesPromise = null;
   writeLocalCache(cacheKeys.entriesAllList, items);
+};
+
+const nextEntryPublicationVersion = () => {
+  entryPublicationVersion += 1;
+  return entryPublicationVersion;
+};
+
+const rememberEntryDetailId = (typeSlug: string, id: string) => {
+  const existing = knownEntryDetailIds.get(typeSlug);
+  if (existing) {
+    existing.add(id);
+    return;
+  }
+  knownEntryDetailIds.set(typeSlug, new Set([id]));
 };
 
 const getCachedEntryDetailsMap = (typeSlug: string) => {
@@ -156,7 +183,83 @@ const getCachedEntryDetailsMap = (typeSlug: string) => {
   return created;
 };
 
-const upsertCachedEntry = (typeSlug: string, entry: EntrySummary | EntryDetail) => {
+const getCachedEntryDetailVersionsMap = (typeSlug: string) => {
+  const existing = cachedEntryDetailVersions.get(typeSlug);
+  if (existing) return existing;
+  const created = new Map<string, number>();
+  cachedEntryDetailVersions.set(typeSlug, created);
+  return created;
+};
+
+const getPendingEntryDetailsMap = (typeSlug: string) => {
+  const existing = pendingEntryDetails.get(typeSlug);
+  if (existing) return existing;
+  const created = new Map<string, PendingVersioned<EntryDetail>>();
+  pendingEntryDetails.set(typeSlug, created);
+  return created;
+};
+
+const getSettledEntryItemAuthorityMap = (typeSlug: string) => {
+  const existing = settledEntryItemAuthority.get(typeSlug);
+  if (existing) return existing;
+  const created = new Map<string, EntryItemAuthority>();
+  settledEntryItemAuthority.set(typeSlug, created);
+  return created;
+};
+
+const removePendingEntryDetailIfExact = (
+  typeSlug: string,
+  id: string,
+  pending: PendingVersioned<EntryDetail>
+) => {
+  const pendingById = pendingEntryDetails.get(typeSlug);
+  if (pendingById?.get(id) !== pending) return;
+  pendingById.delete(id);
+  if (pendingById.size === 0) pendingEntryDetails.delete(typeSlug);
+};
+
+const revokePendingEntryDetail = (typeSlug: string, id: string) => {
+  const pending = pendingEntryDetails.get(typeSlug);
+  pending?.delete(id);
+  if (pending?.size === 0) pendingEntryDetails.delete(typeSlug);
+};
+
+const settleEntryItemAuthority = (typeSlug: string, id: string, authority: EntryItemAuthority) => {
+  const authorities = getSettledEntryItemAuthorityMap(typeSlug);
+  const existing = authorities.get(id);
+  if (existing && authority.version <= existing.version) return;
+  if (existing?.change.kind === "replace" && authority.change.kind === "status") {
+    authorities.set(id, {
+      version: authority.version,
+      change: {
+        kind: "replace",
+        value: { ...existing.change.value, status: authority.change.value },
+      },
+    });
+    return;
+  }
+  authorities.set(id, authority);
+};
+
+const publishEntryDetailValue = (
+  typeSlug: string,
+  entry: EntrySummary | EntryDetail,
+  version: number
+) => {
+  if (version <= (committedEntryListVersions.get(typeSlug) ?? 0)) return;
+  const detail = toEntryDetail(entry);
+  rememberEntryDetailId(typeSlug, detail.id);
+  getCachedEntryDetailsMap(typeSlug).set(detail.id, detail);
+  getCachedEntryDetailVersionsMap(typeSlug).set(detail.id, version);
+  writeEntryDetailCache(typeSlug, detail);
+};
+
+const mergeSummaryIntoCurrentList = (
+  typeSlug: string,
+  entry: EntrySummary | EntryDetail,
+  version: number
+) => {
+  if (version <= (committedEntryListVersions.get(typeSlug) ?? 0)) return;
   const current = cachedEntries.get(typeSlug) ?? readEntriesCache(typeSlug) ?? [];
   const summary = toEntrySummary(entry);
   const index = current.findIndex((item) => item.id === summary.id);
@@ -167,12 +270,14 @@ const upsertCachedEntry = (typeSlug: string, entry: EntrySummary | EntryDetail) 
     next[index] = { ...next[index], ...summary };
   }
   primeEntriesCacheInternal(typeSlug, next);
-  const detail = toEntryDetail(entry);
-  getCachedEntryDetailsMap(typeSlug).set(detail.id, detail);
-  writeEntryDetailCache(typeSlug, detail);
 };
 
-const updateCachedEntryStatus = (typeSlug: string, id: string, status: EntryStatus) => {
+const patchCurrentListAndDetailStatus = (
+  typeSlug: string,
+  id: string,
+  status: EntryStatus,
+  version: number
+) => {
   const current = cachedEntries.get(typeSlug) ?? readEntriesCache(typeSlug);
   if (current) {
     primeEntriesCacheInternal(
@@ -183,13 +288,11 @@ const updateCachedEntryStatus = (typeSlug: string, id: string, status: EntryStat
   const cachedDetail =
     getCachedEntryDetailsMap(typeSlug).get(id) ?? readEntryDetailCache(typeSlug, id);
   if (cachedDetail) {
-    const detail = { ...cachedDetail, status };
-    getCachedEntryDetailsMap(typeSlug).set(id, detail);
-    writeEntryDetailCache(typeSlug, detail);
+    publishEntryDetailValue(typeSlug, { ...cachedDetail, status }, version);
   }
 };
 
-const removeCachedEntry = (typeSlug: string, id: string) => {
+const removeItemFromCurrentListAndDetail = (typeSlug: string, id: string) => {
   const current = cachedEntries.get(typeSlug) ?? readEntriesCache(typeSlug);
   if (current) {
     primeEntriesCacheInternal(
@@ -197,8 +300,122 @@ const removeCachedEntry = (typeSlug: string, id: string) => {
       current.filter((item) => item.id !== id)
     );
   }
+  rememberEntryDetailId(typeSlug, id);
   getCachedEntryDetailsMap(typeSlug).delete(id);
+  cachedEntryDetailVersions.get(typeSlug)?.delete(id);
   clearLocalCache(cacheKeys.entryDetail(typeSlug, id));
+};
+
+const publishSuccessfulEntryMutation = (typeSlug: string, entry: EntrySummary | EntryDetail) => {
+  const version = nextEntryPublicationVersion();
+  const detail = toEntryDetail(entry);
+  revokePendingEntryDetail(typeSlug, detail.id);
+  settleEntryItemAuthority(typeSlug, detail.id, {
+    version,
+    change: { kind: "replace", value: detail },
+  });
+  mergeSummaryIntoCurrentList(typeSlug, detail, version);
+  publishEntryDetailValue(typeSlug, detail, version);
+};
+
+const publishSuccessfulEntryStatus = (typeSlug: string, id: string, status: EntryStatus) => {
+  const version = nextEntryPublicationVersion();
+  revokePendingEntryDetail(typeSlug, id);
+  settleEntryItemAuthority(typeSlug, id, {
+    version,
+    change: { kind: "status", value: status },
+  });
+  patchCurrentListAndDetailStatus(typeSlug, id, status, version);
+};
+
+const publishSuccessfulEntryDelete = (typeSlug: string, id: string) => {
+  const version = nextEntryPublicationVersion();
+  revokePendingEntryDetail(typeSlug, id);
+  settleEntryItemAuthority(typeSlug, id, { version, change: { kind: "delete" } });
+  removeItemFromCurrentListAndDetail(typeSlug, id);
+};
+
+const reconcileEntryList = (typeSlug: string, serverItems: EntrySummary[], listVersion: number) => {
+  const current = cachedEntries.get(typeSlug) ?? readEntriesCache(typeSlug) ?? [];
+  const authorities = settledEntryItemAuthority.get(typeSlug);
+  let reconciled = [...serverItems];
+
+  for (const [id, authority] of authorities ?? []) {
+    if (authority.version <= listVersion) continue;
+    const index = reconciled.findIndex((item) => item.id === id);
+    if (authority.change.kind === "delete") {
+      if (index !== -1) reconciled = reconciled.filter((item) => item.id !== id);
+      continue;
+    }
+    if (authority.change.kind === "replace") {
+      const replacement = toEntrySummary(authority.change.value);
+      if (index === -1) reconciled.unshift(replacement);
+      else reconciled[index] = replacement;
+      continue;
+    }
+
+    if (index !== -1) {
+      reconciled[index] = { ...reconciled[index], status: authority.change.value };
+      continue;
+    }
+    const currentItem = current.find((item) => item.id === id);
+    if (currentItem) reconciled.unshift({ ...currentItem, status: authority.change.value });
+  }
+
+  return reconciled;
+};
+
+const invalidateEntryDetailsAtOrBefore = (
+  typeSlug: string,
+  listVersion: number,
+  listItems: EntrySummary[]
+) => {
+  const pendingById = pendingEntryDetails.get(typeSlug);
+  if (pendingById) {
+    for (const [id, pending] of pendingById) {
+      if (pending.version <= listVersion) pendingById.delete(id);
+    }
+    if (pendingById.size === 0) pendingEntryDetails.delete(typeSlug);
+  }
+
+  const ids = new Set<string>([
+    ...(knownEntryDetailIds.get(typeSlug) ?? []),
+    ...(cachedEntryDetails.get(typeSlug)?.keys() ?? []),
+    ...(cachedEntryDetailVersions.get(typeSlug)?.keys() ?? []),
+    ...listItems.map((item) => item.id),
+  ]);
+  const versions = cachedEntryDetailVersions.get(typeSlug);
+  for (const id of ids) {
+    rememberEntryDetailId(typeSlug, id);
+    if ((versions?.get(id) ?? 0) > listVersion) continue;
+    cachedEntryDetails.get(typeSlug)?.delete(id);
+    versions?.delete(id);
+    clearLocalCache(cacheKeys.entryDetail(typeSlug, id));
+  }
+  if (cachedEntryDetails.get(typeSlug)?.size === 0) cachedEntryDetails.delete(typeSlug);
+  if (versions?.size === 0) cachedEntryDetailVersions.delete(typeSlug);
+};
+
+const discardSettledEntryAuthorityAtOrBefore = (typeSlug: string, listVersion: number) => {
+  const authorities = settledEntryItemAuthority.get(typeSlug);
+  if (!authorities) return;
+  for (const [id, authority] of authorities) {
+    if (authority.version <= listVersion) authorities.delete(id);
+  }
+  if (authorities.size === 0) settledEntryItemAuthority.delete(typeSlug);
+};
+
+const publishReconciledEntryList = (
+  typeSlug: string,
+  serverItems: EntrySummary[],
+  listVersion: number
+) => {
+  if (listVersion <= (committedEntryListVersions.get(typeSlug) ?? 0)) return;
+  const reconciled = reconcileEntryList(typeSlug, serverItems, listVersion);
+  primeEntriesCacheInternal(typeSlug, reconciled);
+  committedEntryListVersions.set(typeSlug, listVersion);
+  invalidateEntryDetailsAtOrBefore(typeSlug, listVersion, reconciled);
+  discardSettledEntryAuthorityAtOrBefore(typeSlug, listVersion);
 };
 
 export const getCachedEntries = (typeSlug: string) => {
@@ -217,22 +434,47 @@ export const getCachedAllEntries = () => {
 };
 
 export const getCachedEntryDetail = (typeSlug: string, id: string) => {
+  rememberEntryDetailId(typeSlug, id);
   const map = cachedEntryDetails.get(typeSlug);
   const existing = map?.get(id);
-  if (existing) return existing;
+  if (existing) {
+    if (!cachedEntryDetailVersions.get(typeSlug)?.has(id)) {
+      getCachedEntryDetailVersionsMap(typeSlug).set(id, 0);
+    }
+    return existing;
+  }
   const stored = readEntryDetailCache(typeSlug, id);
   if (stored) {
+    if ((committedEntryListVersions.get(typeSlug) ?? 0) > 0) {
+      clearLocalCache(cacheKeys.entryDetail(typeSlug, id));
+      return null;
+    }
     getCachedEntryDetailsMap(typeSlug).set(id, stored);
+    getCachedEntryDetailVersionsMap(typeSlug).set(id, 0);
     return stored;
   }
   return null;
 };
 
 export const clearEntriesCache = (typeSlug: string) => {
+  const detailIds = new Set<string>([
+    ...(knownEntryDetailIds.get(typeSlug) ?? []),
+    ...(cachedEntryDetails.get(typeSlug)?.keys() ?? []),
+    ...(cachedEntryDetailVersions.get(typeSlug)?.keys() ?? []),
+    ...(pendingEntryDetails.get(typeSlug)?.keys() ?? []),
+    ...(settledEntryItemAuthority.get(typeSlug)?.keys() ?? []),
+    ...(cachedEntries.get(typeSlug)?.map((item) => item.id) ?? []),
+  ]);
   cachedEntries.delete(typeSlug);
-  cachedEntriesPromise.delete(typeSlug);
+  pendingEntryLists.delete(typeSlug);
   cachedEntryDetails.delete(typeSlug);
+  cachedEntryDetailVersions.delete(typeSlug);
+  pendingEntryDetails.delete(typeSlug);
+  settledEntryItemAuthority.delete(typeSlug);
+  committedEntryListVersions.delete(typeSlug);
+  knownEntryDetailIds.delete(typeSlug);
   clearLocalCache(cacheKeys.entriesList(typeSlug));
+  for (const id of detailIds) clearLocalCache(cacheKeys.entryDetail(typeSlug, id));
 };
 
 export const clearAllEntriesCache = () => {
@@ -258,31 +500,55 @@ export async function listAllEntries() {
   });
 }
 
-export async function listEntriesCached(typeSlug: string, options?: { force?: boolean }) {
+export function listEntriesCached(typeSlug: string, options?: { force?: boolean }) {
   if (!options?.force) {
     const cached = getCachedEntries(typeSlug);
-    if (cached) return cached;
-    const pending = cachedEntriesPromise.get(typeSlug);
-    if (pending) return pending;
+    if (cached) return Promise.resolve(cached);
+    const pending = pendingEntryLists.get(typeSlug);
+    if (pending) return pending.promise;
   }
-  const request = listEntries(typeSlug);
-  cachedEntriesPromise.set(typeSlug, request);
-  const items = await request;
-  primeEntriesCacheInternal(typeSlug, items);
-  return items;
+
+  const version = nextEntryPublicationVersion();
+  let pending!: PendingVersioned<EntrySummary[]>;
+  const promise = listEntries(typeSlug)
+    .then((items) => {
+      if (pendingEntryLists.get(typeSlug) === pending) {
+        publishReconciledEntryList(typeSlug, items, version);
+      }
+      return items;
+    })
+    .finally(() => {
+      if (pendingEntryLists.get(typeSlug) === pending) {
+        pendingEntryLists.delete(typeSlug);
+      }
+    });
+  pending = { promise, version };
+  pendingEntryLists.set(typeSlug, pending);
+  return promise;
 }
 
-export async function listAllEntriesCached(options?: { force?: boolean }) {
+export function listAllEntriesCached(options?: { force?: boolean }) {
   if (!options?.force) {
     const cached = getCachedAllEntries();
-    if (cached) return cached;
+    if (cached) return Promise.resolve(cached);
     if (cachedAllEntriesPromise) return cachedAllEntriesPromise;
   }
-  const request = listAllEntries();
+
+  let request: Promise<EntryListItem[]>;
+  request = listAllEntries()
+    .then((items) => {
+      if (cachedAllEntriesPromise === request) {
+        primeAllEntriesCacheInternal(items);
+      }
+      return items;
+    })
+    .finally(() => {
+      if (cachedAllEntriesPromise === request) {
+        cachedAllEntriesPromise = null;
+      }
+    });
   cachedAllEntriesPromise = request;
-  const items = await request;
-  primeAllEntriesCacheInternal(items);
-  return items;
+  return request;
 }
 
 export async function getEntry(typeSlug: string, id: string) {
@@ -291,17 +557,39 @@ export async function getEntry(typeSlug: string, id: string) {
   });
 }
 
-export async function getEntryCached(typeSlug: string, id: string, options?: { force?: boolean }) {
+export function getEntryCached(
+  typeSlug: string,
+  id: string,
+  options?: { force?: boolean }
+): Promise<EntryDetail> {
   if (!options?.force) {
     const cachedDetail = getCachedEntryDetail(typeSlug, id);
-    if (cachedDetail) return cachedDetail;
+    if (cachedDetail) return Promise.resolve(cachedDetail);
     const cachedList = getCachedEntries(typeSlug);
     const match = cachedList?.find((entry) => entry.id === id);
-    if (match) return toEntryDetail(match);
+    if (match) return Promise.resolve(toEntryDetail(match));
+    const pending = pendingEntryDetails.get(typeSlug)?.get(id);
+    if (pending) return pending.promise;
   }
-  const result = await getEntry(typeSlug, id);
-  if (result) upsertCachedEntry(typeSlug, result);
-  return result;
+
+  const version = nextEntryPublicationVersion();
+  let pending!: PendingVersioned<EntryDetail>;
+  const promise = getEntry(typeSlug, id)
+    .then((detail) => {
+      if (pendingEntryDetails.get(typeSlug)?.get(id) !== pending) return detail;
+      settleEntryItemAuthority(typeSlug, id, {
+        version,
+        change: { kind: "replace", value: detail },
+      });
+      publishEntryDetailValue(typeSlug, detail, version);
+      mergeSummaryIntoCurrentList(typeSlug, detail, version);
+      return detail;
+    })
+    .finally(() => removePendingEntryDetailIfExact(typeSlug, id, pending));
+  pending = { promise, version };
+  rememberEntryDetailId(typeSlug, id);
+  getPendingEntryDetailsMap(typeSlug).set(id, pending);
+  return promise;
 }
 
 export async function createEntry(typeSlug: string, payload: EntryPayload) {
@@ -315,7 +603,7 @@ export async function createEntry(typeSlug: string, payload: EntryPayload) {
     { withCsrf: true }
   );
   if (created) {
-    upsertCachedEntry(typeSlug, created);
+    publishSuccessfulEntryMutation(typeSlug, created);
     broadcastCacheEvent({ key: cacheKeys.entriesList(typeSlug), action: "update" });
     broadcastAllEntriesListEvent("update");
     broadcastCacheEvent({
@@ -337,7 +625,7 @@ export async function updateEntry(typeSlug: string, id: string, payload: Partial
     { withCsrf: true }
   );
   if (updated) {
-    upsertCachedEntry(typeSlug, updated);
+    publishSuccessfulEntryMutation(typeSlug, updated);
     broadcastCacheEvent({ key: cacheKeys.entriesList(typeSlug), action: "update" });
     broadcastAllEntriesListEvent("update");
     broadcastCacheEvent({
@@ -363,7 +651,7 @@ export async function updateEntryMetadata(
     { withCsrf: true }
   );
   if (updated) {
-    upsertCachedEntry(typeSlug, updated);
+    publishSuccessfulEntryMutation(typeSlug, updated);
     broadcastCacheEvent({ key: cacheKeys.entriesList(typeSlug), action: "update" });
     broadcastAllEntriesListEvent("update");
     broadcastCacheEvent({
@@ -385,7 +673,7 @@ export async function duplicateEntry(typeSlug: string, id: string) {
     { withCsrf: true }
   );
   if (duplicated) {
-    upsertCachedEntry(typeSlug, duplicated);
+    publishSuccessfulEntryMutation(typeSlug, duplicated);
     broadcastCacheEvent({ key: cacheKeys.entriesList(typeSlug), action: "update" });
     broadcastAllEntriesListEvent("update");
     broadcastCacheEvent({
@@ -415,7 +703,7 @@ export async function publishEntry(typeSlug: string, id: string) {
     { withCsrf: true }
   );
   if (result?.ok) {
-    updateCachedEntryStatus(typeSlug, id, "published");
+    publishSuccessfulEntryStatus(typeSlug, id, "published");
     broadcastCacheEvent({ key: cacheKeys.entriesList(typeSlug), action: "update" });
     broadcastAllEntriesListEvent("update");
     broadcastCacheEvent({
@@ -433,7 +721,7 @@ export async function unpublishEntry(typeSlug: string, id: string) {
     { withCsrf: true }
   );
   if (result?.ok) {
-    updateCachedEntryStatus(typeSlug, id, "draft");
+    publishSuccessfulEntryStatus(typeSlug, id, "draft");
     broadcastCacheEvent({ key: cacheKeys.entriesList(typeSlug), action: "update" });
     broadcastAllEntriesListEvent("update");
     broadcastCacheEvent({
@@ -451,7 +739,7 @@ export async function deleteEntry(typeSlug: string, id: string) {
     { withCsrf: true }
   );
   if (result?.ok) {
-    removeCachedEntry(typeSlug, id);
+    publishSuccessfulEntryDelete(typeSlug, id);
     broadcastCacheEvent({ key: cacheKeys.entriesList(typeSlug), action: "invalidate" });
     broadcastAllEntriesListEvent("invalidate");
     broadcastCacheEvent({

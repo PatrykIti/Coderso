@@ -780,7 +780,7 @@ test("GalleryMosaic visual editor covers variant cards, item reordering, removal
       ratio: "16:9",
       gap: "lg",
       radius: "xl",
-      overlay: "rgba(17, 34, 51, 0.5)",
+      overlay: "#11223380",
       captionPosition: "hover",
       layoutDensity: "dense",
       motionPreset: "slide-up",
@@ -1017,10 +1017,62 @@ test("GalleryMosaic visual editor updates header title, media picker, ordering, 
     );
     expect(latestValue.style).toEqual(
       expect.objectContaining({
-        overlay: "rgba(17, 34, 51, 0.35)",
+        overlay: "#11223359",
       })
     );
   } finally {
     view.cleanup();
+  }
+});
+
+test("GalleryMosaic overlay preserves inherited state and tiny alpha through picker replacement", async () => {
+  const { GalleryMosaicVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/GalleryMosaicEditors");
+  for (const raw of ["currentcolor", "inherit"]) {
+    const onInheritedChange = vi.fn();
+    const inherited = mount(
+      <GalleryMosaicVisualEditor
+        value={{ ...galleryMosaicDefaults, style: { overlay: raw } }}
+        onChange={onInheritedChange}
+        variant="mosaic"
+      />
+    );
+    try {
+      expect(
+        inherited.container.querySelector('[data-shared-color-state="inherited"]')
+      ).not.toBeNull();
+      expect(inherited.container.textContent).toContain("Inherited color");
+      expect(onInheritedChange).not.toHaveBeenCalled();
+    } finally {
+      inherited.cleanup();
+    }
+  }
+
+  let latestValue: GalleryMosaicData = {
+    ...galleryMosaicDefaults,
+    style: { overlay: "rgba(1, 2, 3, 0.0000001)" },
+  };
+  const TinyAlphaHarness = () => {
+    const [value, setValue] = useState(latestValue);
+    return (
+      <GalleryMosaicVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="mosaic"
+      />
+    );
+  };
+  const tiny = mount(<TinyAlphaHarness />);
+  try {
+    const picker = tiny.container.querySelector(
+      '[data-widget-control="gallery-mosaic.style.overlay"] input[type="color"]'
+    );
+    setInputValue(picker, "#112233");
+    expect(latestValue.style?.overlay).toBe("#11223300");
+  } finally {
+    tiny.cleanup();
   }
 });

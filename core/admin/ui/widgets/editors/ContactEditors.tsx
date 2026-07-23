@@ -50,11 +50,7 @@ import type {
   WidgetEditorSectionRole,
   WidgetEditorMode,
 } from "../../../../widgets/types";
-import {
-  hasClearableFieldValue,
-  isPickerRepresentableColorValue,
-  resolveColorPickerValue,
-} from "./ClearableFields";
+import { SharedColorControl } from "./SharedColorControl";
 import {
   ReadonlyWidgetSummaryRow,
   WidgetControlRow,
@@ -832,78 +828,21 @@ function ColorField({
   allowTransparent?: boolean;
   treatAsThemeDefaultValues?: string[];
 }) {
-  const normalizedValue = value?.trim();
-  const isTransparent = normalizedValue === "transparent";
-  const themeDefaultValues = new Set(
-    (treatAsThemeDefaultValues ?? [])
-      .map((entry) => entry.trim())
-      .filter((entry) => entry.length > 0)
-  );
-  const isThemeDefaultValue = normalizedValue ? themeDefaultValues.has(normalizedValue) : false;
-  const hasCustomValue =
-    hasClearableFieldValue(value) &&
-    !isTransparent &&
-    !isThemeDefaultValue &&
-    !isPickerRepresentableColorValue(value);
-  const pickerValue = resolveColorPickerValue(value, pickerFallback);
-
   return (
-    <WidgetControlRow
-      id={id}
-      path={path}
-      label={label}
-      actions={
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={onClear}
-          disabled={!hasClearableFieldValue(value) || isThemeDefaultValue}
-        >
-          Clear
-        </Button>
-      }
-    >
-      {(fieldProps) => (
-        <div className="space-y-3">
-          <div className="grid grid-cols-[2.75rem_1fr] gap-3">
-            <Input
-              id={fieldProps.id}
-              type="color"
-              value={pickerValue}
-              onChange={(event) => onChange(event.target.value)}
-              className="h-10 w-11 p-1"
-              aria-labelledby={fieldProps["aria-labelledby"]}
-              aria-describedby={fieldProps["aria-describedby"]}
-            />
-            <div className="flex min-h-10 flex-wrap items-center gap-2">
-              <span className="rounded-md border border-border/70 px-2 py-1 text-xs text-muted-foreground">
-                {isTransparent
-                  ? "Transparent"
-                  : hasCustomValue
-                    ? "Saved custom color"
-                    : hasClearableFieldValue(value) && !isThemeDefaultValue
-                      ? "Selected color"
-                      : "Theme default"}
-              </span>
-              {allowTransparent ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onChange("transparent")}
-                >
-                  Use transparent
-                </Button>
-              ) : null}
-            </div>
-          </div>
-          {hasCustomValue ? (
-            <p className="rounded-md border border-dashed border-border/70 bg-muted/40 p-2 text-xs text-muted-foreground">
-              A saved custom color is configured. Pick a swatch to replace it, or clear the field.
-            </p>
-          ) : null}
-        </div>
+    <WidgetControlRow id={id} path={path} label={label}>
+      {() => (
+        <SharedColorControl
+          label={label}
+          value={value}
+          onChange={onChange}
+          onSwatchChange={onChange}
+          onClear={onClear}
+          pickerFallback={pickerFallback}
+          showValueInput={false}
+          allowTransparent={allowTransparent}
+          treatAsThemeDefaultValues={treatAsThemeDefaultValues}
+          colorProfile="inherited-render"
+        />
       )}
     </WidgetControlRow>
   );
@@ -2016,7 +1955,7 @@ export function ContactVisualEditor({
           id="contact.style.background"
           path="style.background"
           label="Section background"
-          value={normalized.style?.background}
+          value={value.style?.background}
           onChange={(next) => updateStyle(value, onChange, { background: next })}
           onClear={() => clearStyleField(value, onChange, "background")}
           pickerFallback="#ffffff"
@@ -2026,7 +1965,7 @@ export function ContactVisualEditor({
           id="contact.style.surfaceColor"
           path="style.surfaceColor"
           label="Card surface color"
-          value={normalized.style?.surfaceColor}
+          value={value.style?.surfaceColor}
           onChange={(next) => updateStyle(value, onChange, { surfaceColor: next })}
           onClear={() => clearStyleField(value, onChange, "surfaceColor")}
           pickerFallback="#ffffff"
@@ -2036,7 +1975,7 @@ export function ContactVisualEditor({
           id="contact.style.borderColor"
           path="style.borderColor"
           label="Card border color"
-          value={normalized.style?.borderColor}
+          value={value.style?.borderColor}
           onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
           onClear={() => clearStyleField(value, onChange, "borderColor")}
           pickerFallback="#e2e8f0"
@@ -2046,7 +1985,7 @@ export function ContactVisualEditor({
           id="contact.style.textColor"
           path="style.textColor"
           label="Heading color"
-          value={normalized.style?.textColor}
+          value={value.style?.textColor}
           onChange={(next) => updateStyle(value, onChange, { textColor: next })}
           onClear={() => clearStyleField(value, onChange, "textColor")}
           pickerFallback="#0f172a"
@@ -2056,7 +1995,7 @@ export function ContactVisualEditor({
           id="contact.style.mutedTextColor"
           path="style.mutedTextColor"
           label="Supporting text color"
-          value={normalized.style?.mutedTextColor}
+          value={value.style?.mutedTextColor}
           onChange={(next) => updateStyle(value, onChange, { mutedTextColor: next })}
           onClear={() => clearStyleField(value, onChange, "mutedTextColor")}
           pickerFallback="#475569"
@@ -2065,7 +2004,7 @@ export function ContactVisualEditor({
           id="contact.style.buttonBackgroundColor"
           path="style.buttonBackgroundColor"
           label="Submit button background"
-          value={normalized.style?.buttonBackgroundColor}
+          value={value.style?.buttonBackgroundColor}
           onChange={(next) => updateStyle(value, onChange, { buttonBackgroundColor: next })}
           onClear={() => clearStyleField(value, onChange, "buttonBackgroundColor")}
           pickerFallback="#2563eb"
@@ -2076,7 +2015,7 @@ export function ContactVisualEditor({
           id="contact.style.buttonTextColor"
           path="style.buttonTextColor"
           label="Submit button text"
-          value={normalized.style?.buttonTextColor}
+          value={value.style?.buttonTextColor}
           onChange={(next) => updateStyle(value, onChange, { buttonTextColor: next })}
           onClear={() => clearStyleField(value, onChange, "buttonTextColor")}
           pickerFallback="#ffffff"
@@ -2086,7 +2025,7 @@ export function ContactVisualEditor({
           id="contact.style.buttonBorderColor"
           path="style.buttonBorderColor"
           label="Submit button border"
-          value={normalized.style?.buttonBorderColor}
+          value={value.style?.buttonBorderColor}
           onChange={(next) => updateStyle(value, onChange, { buttonBorderColor: next })}
           onClear={() => clearStyleField(value, onChange, "buttonBorderColor")}
           pickerFallback="#2563eb"

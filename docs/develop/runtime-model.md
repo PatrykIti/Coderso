@@ -7,7 +7,7 @@ Coderso's signature is that you change *most* things live — content, settings,
 Two kinds of teams touch a Coderso site:
 
 - **Operators and content editors** change pages, menus, themes, business settings, and security knobs all day. They should never wait on a deploy.
-- **Core contributors** change the typed server/admin/widget source. That code is built once in CI into a versioned artifact — not interpreted per request.
+- **Core contributors** change the typed server/admin/block-renderer or Dashboard-widget source. That code is built once in CI into a versioned artifact — not interpreted per request.
 
 The design keeps these worlds separate. Day-to-day mutation happens against the database and runtime ESM bundles, so iteration is instant. Heavy machinery — compiling, redeploying, migrating — is confined to the few things that genuinely need it. The result is WordPress-style immediacy with a modern, type-checked core.
 
@@ -18,12 +18,12 @@ The model rests on one rule from the architecture spec: *business configuration 
 | Change | Live (no restart) | Needs CI rebuild / restart |
 | --- | --- | --- |
 | Business settings (`settings` table, edited in Admin) | ✅ | |
-| Pages, posts, content entries, menus, widget templates, media, SEO | ✅ | |
+| Pages and Page Templates, posts, content entries, menus, media, SEO | ✅ | |
 | Theme switch (active `theme_profiles` row) | ✅ | |
 | Security middleware config (CORS / CSRF / rate-limit / headers) | ✅ | |
 | Plugin install / upgrade / rollback / disable / uninstall | ✅ | |
 | Assistant configuration | ✅ | |
-| Core source (server, admin, services, widgets, public runtime, SDK) | | ✅ CI build of `dist` + redeploy |
+| Core source (server, admin, services, block renderers, Dashboard widgets, public runtime, SDK) | | ✅ CI build of `dist` + redeploy |
 | Database schema (new Drizzle migration files) | | ✅ migration run on deploy |
 | Critical infra ENV (`DATABASE_URL`, master keys, `PORT`, …) | | ✅ applied at boot only |
 
@@ -46,7 +46,7 @@ The Setup Wizard writes these same keys to the database and flips `setup.complet
 
 ### Content and structure
 
-Pages, posts, content entries, published menus, widget templates, media, and SEO documents are all database-backed and served by the public runtime immediately. The public SSR HTML is cached per *path + active theme profile*, and the cache is invalidated on publish/unpublish — so a publish shows up right away without touching the process.
+Pages and Page Templates, posts, content entries, published menus, media, and SEO documents are all database-backed and served by the public runtime immediately. The public SSR HTML is cached per *path + active theme profile*, and the cache is invalidated on publish/unpublish — so a publish shows up right away without touching the process.
 
 ### Themes
 
@@ -89,7 +89,12 @@ The runtime directory defaults to `plugins-runtime/` next to the repo root, over
 
 ### Core source → CI build
 
-Any change to core source — `core/server`, `core/admin`, `core/services`, `core/widgets`, the public runtime in `core/site`, or the SDK in `packages/sdk` — must go through CI. The build produces the dist artifacts:
+Any change to core source — `core/server`, `core/admin`, `core/services`, the
+historically named compatibility renderers in `core/widgets`, Dashboard widget
+code, the public runtime in `core/site`, or the SDK in `packages/sdk` — must go
+through CI. The `core/widgets` path does not define a non-dashboard authoring
+surface; Pages, templates, forms, menus, posts, and screens use their owning
+section/block models. The build produces the dist artifacts:
 
 ```
 vite build --outDir dist/client

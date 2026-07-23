@@ -12,10 +12,10 @@ public rendering.
 - Pages v2 canvas preview uses the shared recursive renderer for nested layout
   blocks and receives block-path/depth/slot metadata for editor chrome. This
   metadata is admin-only and does not change public preview token semantics.
-- Selected widget settings now also render a shared read-only live preview row
-  through the real `WidgetRenderer` contract in `editor-preview` mode. The row
-  can consume transient `previewState.dataPatch` data without mutating saved
-  widget JSON by itself.
+- Retained legacy renderer settings may render a shared read-only compatibility
+  preview row through `WidgetRenderer` in `editor-preview` mode. This is not a
+  selectable non-dashboard widget editor. Active editors preview their own
+  section/block document through the owning renderer.
 
 2. Runtime preview
 - Read-only.
@@ -38,7 +38,7 @@ public rendering.
 Dotyczy:
 - Page editor
 - Content entry editor
-- Widget template editor
+- Page Template editor
 - Detail page editor / internal detail-page preview route
 
 ## Runtime token flow

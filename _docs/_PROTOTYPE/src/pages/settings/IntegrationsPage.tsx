@@ -1,7 +1,6 @@
 import {
   BarChart3,
   CreditCard,
-  Github,
   Hash,
   Mail,
   MessageSquare,
@@ -10,6 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { GitHubBrandIcon } from "@/components/BrandIcons";
 import { SettingsLayout } from "@/components/shell/SettingsLayout";
 import { SettingsSection } from "@/components/patterns/SettingsSection";
 import { Badge } from "@/components/ui/badge";
@@ -20,20 +20,62 @@ import { Switch } from "@/components/ui/switch";
 type Integration = {
   name: string;
   desc: string;
-  icon: LucideIcon;
+  icon: LucideIcon | typeof GitHubBrandIcon;
   tone: string;
   connected?: boolean;
 };
 
 const INTEGRATIONS: Integration[] = [
-  { name: "Google Analytics", desc: "Track visitors and page performance.", icon: BarChart3, tone: "bg-warning-soft text-warning", connected: true },
-  { name: "Stripe", desc: "Accept payments and subscriptions.", icon: CreditCard, tone: "bg-primary-soft text-primary", connected: true },
-  { name: "Slack", desc: "Send activity notifications to channels.", icon: Hash, tone: "bg-info-soft text-info" },
-  { name: "Mailchimp", desc: "Sync subscribers and run campaigns.", icon: Mail, tone: "bg-warning-soft text-warning" },
-  { name: "Zapier", desc: "Automate workflows across apps.", icon: Zap, tone: "bg-warning-soft text-warning" },
-  { name: "GitHub", desc: "Connect repositories and deploys.", icon: Github, tone: "bg-muted text-muted-foreground" },
-  { name: "Sentry", desc: "Monitor errors and performance.", icon: ShieldAlert, tone: "bg-destructive/12 text-destructive" },
-  { name: "Discord", desc: "Post updates to your community.", icon: MessageSquare, tone: "bg-info-soft text-info" },
+  {
+    name: "Google Analytics",
+    desc: "Track visitors and page performance.",
+    icon: BarChart3,
+    tone: "bg-warning-soft text-warning",
+    connected: true,
+  },
+  {
+    name: "Stripe",
+    desc: "Accept payments and subscriptions.",
+    icon: CreditCard,
+    tone: "bg-primary-soft text-primary",
+    connected: true,
+  },
+  {
+    name: "Slack",
+    desc: "Send activity notifications to channels.",
+    icon: Hash,
+    tone: "bg-info-soft text-info",
+  },
+  {
+    name: "Mailchimp",
+    desc: "Sync subscribers and run campaigns.",
+    icon: Mail,
+    tone: "bg-warning-soft text-warning",
+  },
+  {
+    name: "Zapier",
+    desc: "Automate workflows across apps.",
+    icon: Zap,
+    tone: "bg-warning-soft text-warning",
+  },
+  {
+    name: "GitHub",
+    desc: "Connect repositories and deploys.",
+    icon: GitHubBrandIcon,
+    tone: "bg-muted text-muted-foreground",
+  },
+  {
+    name: "Sentry",
+    desc: "Monitor errors and performance.",
+    icon: ShieldAlert,
+    tone: "bg-destructive/12 text-destructive",
+  },
+  {
+    name: "Discord",
+    desc: "Post updates to your community.",
+    icon: MessageSquare,
+    tone: "bg-info-soft text-info",
+  },
 ];
 
 export function IntegrationsPage() {
@@ -43,12 +85,17 @@ export function IntegrationsPage() {
       description="Connect third-party services."
       saveBar={false}
     >
-      <SettingsSection title="Available integrations" description="Connect the tools your team already uses.">
+      <SettingsSection
+        title="Available integrations"
+        description="Connect the tools your team already uses."
+      >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {INTEGRATIONS.map((item) => (
             <Card key={item.name} className="flex flex-col p-5">
               <div className="flex items-start justify-between">
-                <span className={`flex size-11 items-center justify-center rounded-xl ${item.tone}`}>
+                <span
+                  className={`flex size-11 items-center justify-center rounded-xl ${item.tone}`}
+                >
                   <item.icon className="size-5" />
                 </span>
                 {item.connected ? <Badge variant="success">Connected</Badge> : null}

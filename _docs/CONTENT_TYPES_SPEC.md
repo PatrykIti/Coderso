@@ -137,6 +137,24 @@ byte-identycznie). Slug kolumny = **API ID** w edytorze (mono input).
 - Termy (category/tag) sa edytowane z poziomu edytora wpisu.
 - Tagi sa zapisywane rowniez w `content_entries.tags` dla wyszukiwania.
 
+## Granica mutacji metadanych wpisu (TASK-537)
+
+- Zmiana statusu i rewizji, przypisan taxonomy/tagow, visibility/password,
+  harmonogramu oraz SEO jednego wpisu nalezy do jednej zewnetrznej transakcji.
+  Pierwszy minimalny odczyt wpisu blokuje jego wiersz przez `FOR UPDATE`, a
+  helpery taxonomy i SEO korzystaja z przekazanego executora i nie otwieraja
+  zagniezdzonej transakcji.
+- Ostateczny stan harmonogramu, wymaganie i przygotowanie hasla, membership
+  taxonomy oraz canonical/robots SEO sa walidowane przed pierwszym zapisem.
+  Blad dowolnego apply cofa caly zestaw, lacznie z rewizja i statusem.
+- Odczyty uzywane przez update, publish, delete i koordynator metadanych maja
+  jawne minimalne projekcje. Hash `accessPassword` nie jest materializowany w
+  wyniku, cache ani logu; SQL wylicza jedynie `hasPassword`. Tekst jawny istnieje
+  tylko podczas przygotowania hasha przed zapisem.
+- Skutki cache serwera nastepuja dopiero po commicie: mutacja z SEO wykonuje
+  jedno globalne czyszczenie, a inna rzeczywista zmiana metadanych/statusu jedna
+  celowana invalidacje wpisu. Rollback i no-op nie uruchamiaja tych skutkow.
+
 ## Praktyczne wzorce
 
 Gotowe schematy i powiazania znajdziesz w `CONTENT_MODELING_COOKBOOK.md`.
@@ -580,8 +598,9 @@ for the data-oriented kinds. Unknown keys within a new kind's `data` throw
 `custom_screen_definition_invalid`; **legacy** kinds (`field`, `record-header`,
 `field-group`, `columns`, `rich-text`, `legacy-widget`) keep their permissive
 normalization, so stored V4 screens read back byte-stable. `"label"` is allow-listed for
-every new kind (the base factory always seeds `data.label`). Enums are coerced to their
-allow-list; out-of-range/invalid values fall back to the listed default.
+every new kind (the base factory always seeds `data.label`). Fresh writes reject invalid
+enum values and out-of-range integers. Only stored-read compatibility may coerce an
+invalid enum to its listed fallback or clamp/fallback an invalid integer.
 
 | Kind | `data` keys (allow-list) | Enums / bound propPath |
 |------|--------------------------|------------------------|
@@ -590,16 +609,19 @@ allow-list; out-of-range/invalid values fall back to the listed default.
 | `stat` | `label`, `format`, `trend`, `deltaField`, `field` | `format ∈ number\|percent\|money`; `trend ∈ auto\|up\|down\|flat`; bound → propPath `value`, `mode:"read"` |
 | `divider` | `variant`, `label` | `variant ∈ line\|space\|label` |
 | `image` | `label`, `fit`, `ratio`, `field`, `src` | `fit ∈ cover\|contain`; bound → propPath `src`, `mode:"read"`; static `src` OPTIONAL + scheme-validated (TASK-500-04, see below) |
-| `related-list` | `label`, `target`, `displayField`, `variant`, `limit`, `field` | `variant ∈ checklist\|activity\|cards`; `limit` clamped `1..50`; bound → propPath **`items`**, `mode:"read"` |
+| `related-list` | `label`, `target`, `displayField`, `variant`, `limit`, `field` | `variant ∈ checklist\|activity\|cards`; `limit` integer `1..50` on write (stored-read compatibility may clamp/fallback); bound → propPath **`items`**, `mode:"read"` |
 | `tabs` | `label`, `tabs` | `tabs = [{ id, label }]` with ids matching `slots` keys |
-| `button` | `label`, `action`, `variant`, `href`, `field` | `action ∈ link\|publish\|custom`; `variant ∈ primary\|secondary\|ghost`; bound → propPath `href` |
+| `button` | `label`, `action`, `variant`, `href`, `field` | fresh writes accept only `action: "link"`; `variant ∈ primary\|secondary\|ghost`; bound → propPath `href`, `mode:"read"` |
 
 `field` and `record-header` remain the writable kinds (bind `mode:"readwrite"` — inline
 write-back stays on `title`/`slug`/schema fields only); every other bound kind binds
 `mode:"read"` (display-only). The pre-TASK-498 `actions` placeholder is promoted to
-`button`; a stored `actions` block is remapped to a usable `button` on the **read path only**
-(`normalizeScreenDocumentV1ForRead`, data intersected with the button allow-list) — the write
-path is untouched (no visual-repair on save).
+`button` on the **read path only** (`normalizeScreenDocumentV1ForRead`, data intersected
+with the Button allow-list). Stored Button/`actions` records carrying the unsupported
+legacy `publish` or `custom` action are adapted non-destructively to `action:"link"`
+with no `href`; their matching `href` binding is omitted from the read model, so they
+render as disabled instead of acquiring an invented action. Fresh writes do not accept
+those legacy actions and never persist a separate `disabled` action.
 
 ### Related-list relation-resolution contract
 
@@ -705,13 +727,21 @@ bind).
 
 The image kind's `data` allow-list gains an OPTIONAL `src`
 (`["label","fit","ratio","field","src"]`), making image consistent with the other
-static kinds. `normalizeScreenImageSrc` accepts only relative paths (`/…`) and
-`http://`/`https://` URLs; everything else (`javascript:`, `data:`, `blob:`, `file:`,
-bare tokens, non-strings) normalizes to `""` (dropped, never throws) — reject-unknown on
-other keys stays intact, and a stored V4 image WITHOUT `src` round-trips byte-stable.
-Renderer resolution order on entry/preview (override-first precedence preserved):
-per-entry media/presentation override → bound `field` src → static `data.src` → labeled
-placeholder. The rejected alternative — marking image "requires a bound field"
+static kinds. The sole Screen URL owner is
+`sanitizeScreenAuthoringUrl(value, "media")`: it rejects any ASCII control in the
+original string (`U+0000..U+001F` or `U+007F`) and every backslash before trimming and
+delegating to the shared authoring URL policy. Safe root-relative paths and
+`http://`/`https://` URLs are accepted; protocol-relative, control-confused,
+`javascript:`, `data:`, `blob:`, `file:`, bare-token, and non-string input fails closed.
+Strict writes report an invalid definition while the stored-read adapter drops the
+unsafe value. Reject-unknown on other keys stays intact, and a stored V4 image WITHOUT
+`src` round-trips byte-stable.
+Renderer resolution on entry/preview is presence-based, not a fall-through chain. A
+present per-entry media/presentation override is the only eligible source; otherwise a
+present binding is the only eligible source; static `data.src` is eligible only when
+both override and binding are absent. An unresolved, malformed, or unsafe winning
+source renders the labeled placeholder and never falls back to a lower-precedence
+source. The rejected alternative — marking image "requires a bound field"
 (builder-only affordance, no schema change) — was declined because it would keep image
 the single kind unable to carry authored static content.
 
@@ -796,14 +826,12 @@ is consumed only by the renderer class-map and the inspector EnumRow:
 no wrapper — byte-parity). The inspector EnumRow shows colon LABELS
 (`auto/1:1/4:3/16:9/3:2`) but WRITES the slash enum value.
 
-### Exported `normalizeScreenImageSrc` (TASK-503-01) — enforced write + preview + save
+### Exported `normalizeScreenImageSrc` compatibility alias (TASK-503-01 / TASK-540)
 
-`normalizeScreenImageSrc` is now EXPORTED and is the single source of truth for the
-`src` prefix filter (`/`, `http://`, `https://` allowed; everything else → `""`,
-never throws). It runs on the save path (as before) AND the inspector write path
-(raw text stays in a local input draft so typing `https://…` character-by-character
-is not destroyed) AND the builder preview — so a `javascript:`/`data:` src can never
-reach `<img src>` at any point in the authoring session.
+`normalizeScreenImageSrc` remains exported only as a compatibility alias that delegates
+to `sanitizeScreenAuthoringUrl(value, "media")` and maps rejection to `""`. It does not
+own a separate prefix filter or URL policy; Screen writes, inspector/preview paths, and
+final render sinks use the Screen-owned sanitizer contract described above.
 
 ### Entry-view presentation (`showFieldMetadata`, TASK-503-03)
 
@@ -821,10 +849,14 @@ The published-screen **entry** canvas is clean by default. Three gated changes,
   presentation-override panel is scoped to — load-bearing, NOT stripped), the entry
   section carries `bg-transparent`, and the entry canvas scroller drops `bg-dotted`.
   The section's 2-way fork was forked into 3 so builder keeps `bg-background/60`.
-- **Preference:** `useScreenEntryPreferences` (`usePostEditorPreferences` pattern) —
-  localStorage-only, key `coderso.screens.entry.preferences.v1`, default
-  `{ showFieldMetadata: false }`; junk / non-boolean / parse errors swallow to the
-  default. Surfaced as a "Show field metadata" Switch
+- **Preference:** `useScreenEntryPreferences` uses the existing authenticated
+  per-user settings route with the strict key `customScreens.entry.preferences` and
+  stored value `{ version: 1, showFieldMetadata: boolean }`. The default remains
+  `{ showFieldMetadata: false }`; malformed transport/stored values fail closed and
+  remain retryable. No Screen preference is written to `localStorage`. When no
+  authenticated identity is available, only the current hook mount may hold an
+  ephemeral value and a fresh mount starts from OFF. The preference is surfaced as a
+  "Show field metadata" Switch
   (`[data-screen-entry-metadata-toggle]`) in the entry-canvas sub-toolbar
   (reachable on a fresh record view with no block selected — NOT the Presentation
   panel, which is null until a presentation-capable block is selected).
@@ -848,10 +880,9 @@ rows (record-header renders `null` for empty values). There is deliberately **NO
 read-path mutation** — that would break stored-V4 byte-stability and could discard
 copy the author kept intentionally.
 
-**Residual follow-ups (documented, not silent gaps):** a future validated
+**Residual follow-up (documented, not a silent gap):** a future validated
 `ScreenBlockStyleV1.background` enum (the additive successor to the removed free-text
-`variant` "Background" row); `useScreenEntryPreferences` is local-only v1, with
-`userSettingsClient` cross-device sync deferred.
+`variant` "Background" row).
 
 ## Custom Screen section column layout & binding integrity (TASK-505)
 
@@ -950,10 +981,70 @@ it to an opaque static 400 with no field name. TASK-505 makes it **recoverable**
   is threaded as an optional final parameter (no return-type widening) so the three assistant
   callers and the internal read/assistant caller compile unchanged (verified by root `tsc`).
 
+TASK-540 removes the former non-empty-live-set exception from both editor-view and
+row-template binding pruning. An empty document therefore produces zero live block IDs,
+removes every ghost binding, and reports the existing transient
+`binding_block_removed` warning on a successful write. Stored reads perform the same
+cleanup silently and do not persist warning metadata.
+
 **Deferred residuals (recorded, not silent gaps):** per-block `columnSpan`/`columnStart`
 (a later `ScreenBlockStyleV1.span`/`start`); a visual column-ratio picker / SegmentedControl
 (v1 uses the plain `EnumRow`); custom (non-preset) fr ratios; responsive per-breakpoint
 column counts; nested-section grids; `reconcileScreenBindings` delete-site wiring.
+
+## Custom Screen functional and data-integrity hardening (TASK-540)
+
+TASK-540 keeps Custom Screens on `definition.schemaVersion: 4` and
+`ScreenDocumentV1.schemaVersion: 1`; it adds no endpoint or database migration. The
+active authoring model remains Screen-owned sections and blocks, not product widgets.
+
+- Fixed data-oriented blocks (`heading`, `text`, `stat`, `divider`, `image`,
+  `related-list`, `tabs`, and `button`) use discriminated, reject-unknown nested schemas
+  on fresh writes. Section arrays are bounded to 120 and recursive block, child, and
+  slot collections to 500. Compatibility kinds retain their bounded legacy-read arm
+  without widening new authoring.
+- Tabs write exact `{ id, label }` items: 1–24 items, unique grammar-safe IDs,
+  non-empty labels of at most 120 Unicode code points, and a slot-key set equal to the
+  tab-ID set. The Inspector adds, renames, removes, and arms the exact tab slot in
+  lockstep. Runtime Tabs expose `tablist`/`tab`/`tabpanel`, roving focus, reciprocal
+  ARIA relationships, one visible panel, mouse activation, and Arrow/Home/End behavior
+  in builder, preview, and entry modes. Renderer-instance IDs keep nested and adjacent
+  Tabs isolated.
+- Button authoring exposes one supported action, Link. A Button may use a static safe
+  `href` or a read binding at `propPath:"href"`; clearing that binding keeps the static
+  link and never persists the UI sentinel. Builder mode never navigates. Preview/entry
+  render an anchor only after the final DOM-boundary URL check; absent, unsafe, or
+  legacy-disabled links render a non-anchor `aria-disabled` affordance.
+- `sanitizeScreenAuthoringUrl` is the sole Screen policy for Button links and image
+  media URLs. It rejects any ASCII control in the original string
+  (`U+0000..U+001F` or `U+007F`) and every backslash before trim/delegation to the
+  shared bounded profiles. Links may use safe root-relative paths, fragments, HTTP(S),
+  `mailto:`, or `tel:`; media accepts safe root-relative or HTTP(S) sources.
+  Protocol-relative, control-confused, executable, data, blob, file, and unsupported
+  schemes fail closed. `normalizeScreenImageSrc` is only a delegating compatibility
+  alias, not another owner or prefix filter.
+- Image fields and per-entry presentation overrides retain media UUID identity. The
+  entry host resolves only the winning direct-image UUID through the existing media
+  list and passes an explicit UUID-to-safe-URL map to the pure renderer. A missing,
+  malformed, or unsafe winning asset displays the placeholder and never falls back to
+  a lower-priority source. Media field editors continue to receive UUIDs, not resolved
+  URLs.
+- Builder and record editors register the shared dirty-navigation and `beforeunload`
+  guards. Background hydration/cache events may refresh clean state, but never
+  overwrite a dirty document, binding, entry-content, or presentation draft. Failed
+  loads/saves stay visible and retryable; late results are rejected by route, request,
+  and generation identity.
+- Related-entry and media loaders share only the exact in-flight request. A rejected
+  promise clears its own slot; a newer/forced request cannot be cleared or published
+  over by an older completion. Relation-target changes immediately hide stale rows,
+  same-target background refresh keeps the last good rows while the refresh is pending,
+  and manual/cache-event retries are forceful and cancellation-safe.
+- The authoring scroller keeps `p-6` gutters below `lg`; opening the floating panel
+  adds `lg:pr-[332px]` only at desktop widths. The labelled shared panel is a
+  `role="region"`. The entry metadata preference is scoped to the authenticated user
+  through `customScreens.entry.preferences`; identity epochs cancel queued work from a
+  previous user, and the optional expected-user guard prevents a captured write from
+  crossing a session change.
 
 ## Menu Design tab — brand style & per-level styling authoring (TASK-504)
 
@@ -994,6 +1085,27 @@ section); this is the authoring/UX surface.
   DISPLAY-only for the inherited value (shows `16` as inherited/base, distinct from an
   explicit `15`, and writes nothing on mount). The Menu editor header items badge shows
   the TOTAL nested item count with correct plural.
+
+### Menu color write contract (TASK-541)
+
+Every Menu color path, including brand, level 0/1/2, responsive, scrolled, and
+icon-color overrides, uses the canonical `authoring` profile from
+`core/services/theme/cssColorContract.ts`. Original input bytes reach the shared
+semantic parser before trimming; accepted values are stored in canonical form.
+`currentColor` and `inherit` are not Menu write values.
+
+`PATCH /menus/:id` has a shallow strict route envelope: unknown top-level keys
+are rejected, while `appearance` and `document` are checked only as
+object-or-null at that layer. There is no nested route color pattern or route
+color `maxLength`. Deep reject-unknown ownership belongs to
+`normalizeMenuAppearance` and `normalizeMenuDocumentV2ForWrite`; their color
+leaves pass the original value directly to `normalizeMenuColorValue`, which
+delegates to the shared semantic parser. Appearance-invalid values reject the
+write, while document leaves retain their declared reject/omit policy; neither
+path persists or renders rejected raw color bytes. Optional color overrides
+remain sparse/present-only, so reset prunes the field instead of materializing a
+resolved default. This rollout changes no endpoint, permission, CSRF,
+rate-limit, document version, or migration contract.
 
 ## Menu Design tab — base reset, visible defaults & 5 modern bundles (TASK-506)
 
@@ -1071,6 +1183,50 @@ byte-identical):
 unwrapped SegmentedControls with no device fork / Reset badge); `linkAlign` lives on
 `NavLevelStyle` (per-level, per-device). Enums are validated schema-first (reject-unknown
 key ⇒ 400 with path; bad enum value fails soft).
+
+## Menu Design tab — scrolled-state colors, card radius, custom shadow & brand icon/combo (TASK-520)
+
+TASK-520 closes three owner-reported gaps on the same Design tab, all present-only and
+doc-scoped (no `schemaVersion` bump; no route/RBAC/migration; `buildSiteShellCss(null)` +
+no-override/legacy docs byte-identical). Document contract, allowlists, validators and CSS
+emission are specified in `PAGE_MODEL.md` (menuDocumentV2 section); this is the
+authoring/UX surface. The new bar keys are held OUT of `MENU_BAR_LAYOUT_KEYS`/
+`SHELL_APPEARANCE_DEFAULTS`, so `resolveMenuControlDefault` returns `value===undefined`
+and their controls render NO `ControlDefaultHint` — they use STATIC helper text instead.
+
+- **Scrolled/floating-state colors (G1).** The menu-bar layout panel adds a
+  scrolled-state group — `surfaceColorScrolled`/`borderColorScrolled` (via TASK-519's
+  alpha-capable `ColorSwatchControl`, so owner tokens `rgba(8,17,31,.84)` /
+  `rgba(255,255,255,.18)` author + round-trip), `borderWidthScrolled`, `shadowScrolled`
+  (none|sm|md) and `shadowCustomScrolled`. The group is gated on the bar being `sticky`
+  (a non-sticky bar has no scrolled state). A preview "scrolled" toggle stamps
+  `data-scrolled` on the canvas so the author SEES the transition without scrolling.
+  Each unset variant falls back to the corresponding BASE key (a sticky bar with no
+  scrolled variant looks identical scrolled and at rest — back-compat).
+- **Menu-bar card radius + custom shadow (G2).** A `radius` slider (0..40 px, per-device)
+  gives the level-0 bar a floating-card border-radius (previously ≥1 submenu-only). A
+  `shadowCustom` text control accepts a validated raw `box-shadow` (owner token
+  `0 18px 50px rgba(0,0,0,.24)`) that OVERRIDES the none|sm|md `shadow` enum at emission
+  (clearing it reverts to the preset). Empty/invalid input fail-soft DROPS (the control
+  shows empty).
+- **Brand icon mode + graphic-with-text combo (G3).** The brand block panel adds
+  `mode:"icon"` to the mode selector; icon mode exposes a lucide icon picker (allowlisted
+  kebab name) + `iconColor` (alpha via 519) + `iconSize` (12..64). A `showText` combo
+  toggle (on `image`/`icon` modes) renders the graphic AND the text wordmark side by side
+  on the front AND canvas; unset `showText` = today's exclusive text-XOR-graphic behavior.
+  An invalid/unresolvable icon name falls through to the text/site-name chain (no broken
+  mark).
+
+**Security whitelist (write + render, defence in depth).** Colors (`surfaceColorScrolled`/
+`borderColorScrolled`/`iconColor`) run through `normalizeMenuColorValue` (the token-backed
+policy every menu color uses). The custom box-shadow strings run through the NEW
+`normalizeMenuBoxShadowValue` bracket-aware grammar (optional `inset`, ≤4 lengths, one
+validated color token, ≤4 layers, ≤200 chars; rejects `url(`/`expression(`/`javascript:`/
+`;`/`{`/`}`/`@`/`<`/`>`/backslash). The brand icon name is a pattern allowlist at write
+AND resolved against the lucide set at render (never interpolated into markup). Each new
+key joins its reject-unknown allowlist (`MENU_BAR_EXTRA_KEYS`/`BRAND_PROP_KEYS`/
+`BRAND_STYLE_KEYS`) + ships a persistence round-trip test (fail-closed READ trap). All
+bad VALUES fail-soft (omit), never throw; only an unknown KEY 400s with a `path`.
 
 ## API
 

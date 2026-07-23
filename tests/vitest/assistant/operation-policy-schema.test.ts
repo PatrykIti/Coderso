@@ -87,6 +87,23 @@ test("normalizeAssistantOperationPolicy accepts strict policy shape", () => {
   expect(() => assertAssistantOperationPolicy(basePolicy)).not.toThrow();
 });
 
+test("normalizeAssistantOperationPolicy accepts legacy-maintenance coverage", () => {
+  expect(
+    normalizeAssistantOperationPolicy({
+      ...basePolicy,
+      resources: {
+        page: {
+          ...basePolicy.resources.page,
+          coverage: {
+            ...basePolicy.resources.page.coverage,
+            state: "legacy-maintenance",
+          },
+        },
+      },
+    }).resources.page.coverage.state
+  ).toBe("legacy-maintenance");
+});
+
 test("normalizeAssistantOperationPolicy rejects unknown keys and invalid actions", () => {
   expect(() =>
     normalizeAssistantOperationPolicy({

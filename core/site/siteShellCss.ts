@@ -1,4 +1,5 @@
 import {
+  normalizeMenuColorValue,
   sanitizeMenuAppearance,
   type MenuAppearance,
   type MenuAppearanceAlignment,
@@ -96,10 +97,36 @@ const SHELL_SHADOW_CSS: Record<Exclude<MenuAppearanceShadow, "none">, string> = 
   md: "0 8px 24px rgba(15,23,42,.12)",
 };
 
-const resolveShellAppearance = (appearance: MenuAppearance | null): ResolvedShellAppearance => ({
-  ...SHELL_APPEARANCE_DEFAULTS,
-  ...sanitizeMenuAppearance(appearance),
-});
+const LEGACY_DEFAULT_COLOR_KEYS = ["surfaceColor", "linkHoverColor", "borderColor"] as const;
+
+const CANONICAL_SHELL_COLOR_DEFAULTS = Object.freeze(
+  Object.fromEntries(
+    LEGACY_DEFAULT_COLOR_KEYS.map((key) => [
+      key,
+      normalizeMenuColorValue(SHELL_APPEARANCE_DEFAULTS[key]),
+    ])
+  ) as Record<(typeof LEGACY_DEFAULT_COLOR_KEYS)[number], string | null>
+);
+
+const resolveShellAppearance = (appearance: MenuAppearance | null): ResolvedShellAppearance => {
+  const sanitized = sanitizeMenuAppearance(appearance);
+  const resolved: ResolvedShellAppearance = {
+    ...SHELL_APPEARANCE_DEFAULTS,
+    ...sanitized,
+  };
+
+  // Menu writes keep canonical color bytes, but an explicitly authored value that is
+  // semantically equal to the historical shell default must still render the frozen
+  // legacy stylesheet byte-for-byte. This adapter affects render bytes only; it never
+  // rewrites the stored canonical document.
+  for (const key of LEGACY_DEFAULT_COLOR_KEYS) {
+    if (sanitized[key] === CANONICAL_SHELL_COLOR_DEFAULTS[key]) {
+      resolved[key] = SHELL_APPEARANCE_DEFAULTS[key];
+    }
+  }
+
+  return resolved;
+};
 
 type ShellRuleSets = {
   /** Breakpoint-independent rules, in stylesheet order. */

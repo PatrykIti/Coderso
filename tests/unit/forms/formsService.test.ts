@@ -156,6 +156,77 @@ testIfDbWithOptions(
   { timeout: 30_000 }
 );
 
+testIfDb("form theme round-trips through the DB (TASK-516-01)", async () => {
+  const theme = {
+    layout: { width: "lg", align: "left", fieldGap: "lg", columns: 2, buttonAlignment: "full" },
+    surface: {
+      card: false,
+      background: "#ffffff",
+      borderColor: "var(--color-border)",
+      borderWidth: "md",
+      radius: "xl",
+      padding: "xl",
+      shadow: "soft",
+    },
+    typography: {
+      titleSize: "xl",
+      titleWeight: "normal",
+      titleColor: "#111111",
+      fontFamily: "serif",
+    },
+    input: { size: "lg", radius: "xl", textColor: "#000000" },
+    submit: { radius: "xl", fullWidth: false, label: "Send it", background: "#ff0000" },
+  };
+
+  const form = await createForm({ name: `Themed ${randomUUID()}` });
+  try {
+    const updated = await updateForm(form.id, {
+      settings: {
+        layoutMode: "single",
+        saveProgress: false,
+        stepTitles: [],
+        preset: "custom",
+        automationRetry: {
+          enabled: false,
+          maxAttempts: 1,
+          baseDelayMs: 300,
+          maxDelayMs: 2000,
+        },
+        theme,
+      },
+    });
+    expect((updated?.settings as { theme?: unknown }).theme).toEqual(theme);
+  } finally {
+    await deleteForm(form.id);
+  }
+});
+
+testIfDb("form theme drops unknown keys on persist (TASK-516-01)", async () => {
+  const form = await createForm({ name: `Themed ${randomUUID()}` });
+  try {
+    const updated = await updateForm(form.id, {
+      settings: {
+        layoutMode: "single",
+        saveProgress: false,
+        stepTitles: [],
+        preset: "custom",
+        automationRetry: {
+          enabled: false,
+          maxAttempts: 1,
+          baseDelayMs: 300,
+          maxDelayMs: 2000,
+        },
+        theme: { layout: { width: "lg", bogus: 1 }, junk: 2 } as never,
+      },
+    });
+    expect((updated?.settings as { theme?: unknown }).theme).toEqual({
+      layout: { width: "lg" },
+    });
+  } finally {
+    await deleteForm(form.id);
+  }
+});
+
 testIfDb("form slug must be unique", async () => {
   const slug = `contact-${randomUUID()}`;
   await createForm({ name: "Contact", slug });

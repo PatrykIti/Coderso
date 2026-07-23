@@ -3,28 +3,33 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { ApiError } from "../../server/errorHandler";
 
 const DEFAULT_TTL_MINUTES = 10;
+const MINUTE_MS = 60 * 1000;
+const DEFAULT_TTL_MS = DEFAULT_TTL_MINUTES * MINUTE_MS;
+const MAX_TTL_MS = Number.MAX_SAFE_INTEGER;
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
+const CANONICAL_TIMESTAMP_PATTERN = /^(?:0|[1-9]\d*)$/;
+const CANONICAL_SIGNATURE_PATTERN = /^[0-9a-f]{64}$/;
 
 const resolveSecret = () => {
   const secret = process.env.FORM_SUBMIT_NONCE_SECRET?.trim();
   if (!secret) {
-    throw new ApiError(
-      "form_nonce_secret_missing",
-      "Form submission nonce secret is missing",
-      500
-    );
+    throw new ApiError("form_nonce_secret_missing", "Form submission nonce secret is missing", 500);
   }
   return secret;
 };
 
 const resolveTtlMs = () => {
   const raw = process.env.FORM_SUBMIT_NONCE_TTL_MINUTES;
-  if (!raw) return DEFAULT_TTL_MINUTES * 60 * 1000;
+  if (!raw) return DEFAULT_TTL_MS;
   const parsed = Number(raw);
   if (!Number.isFinite(parsed) || parsed <= 0) {
-    return DEFAULT_TTL_MINUTES * 60 * 1000;
+    return DEFAULT_TTL_MS;
   }
-  return parsed * 60 * 1000;
+  const ttlMs = parsed * MINUTE_MS;
+  if (!Number.isFinite(ttlMs) || ttlMs > MAX_TTL_MS) {
+    return DEFAULT_TTL_MS;
+  }
+  return ttlMs;
 };
 
 const signPayload = (secret: string, payload: string) =>
@@ -47,13 +52,22 @@ export function assertFormSubmissionNonce(
     throw new ApiError("form_nonce_required", "Form submission nonce is required", 400);
   }
 
-  const [timestampRaw, signature] = nonce.split(".");
-  if (!timestampRaw || !signature) {
+  const segments = nonce.split(".");
+  if (segments.length !== 2) {
+    throw new ApiError("form_nonce_invalid", "Form submission nonce is invalid", 400);
+  }
+  const [timestampRaw, signature] = segments;
+  if (
+    !timestampRaw ||
+    !signature ||
+    !CANONICAL_TIMESTAMP_PATTERN.test(timestampRaw) ||
+    !CANONICAL_SIGNATURE_PATTERN.test(signature)
+  ) {
     throw new ApiError("form_nonce_invalid", "Form submission nonce is invalid", 400);
   }
 
   const timestamp = Number(timestampRaw);
-  if (!Number.isFinite(timestamp)) {
+  if (!Number.isSafeInteger(timestamp) || String(timestamp) !== timestampRaw) {
     throw new ApiError("form_nonce_invalid", "Form submission nonce is invalid", 400);
   }
 

@@ -19,11 +19,16 @@ import {
 import { createSecureRandomHexFragment } from "../security/secureRandom";
 import { DEFAULT_TOKENS } from "../theme/tokenTypes";
 import {
+  PAGE_CSS_VALUE_MAX_LENGTH,
   sanitizeAuthoringCssBackground,
   sanitizeAuthoringCssColor,
+  sanitizeAuthoringCssFontSize,
+  // ── TASK-533: restricted grid-template sanitizer (asymmetric column ratio).
+  sanitizeAuthoringGridTemplate,
   sanitizeAuthoringLinkHref,
   sanitizeAuthoringMediaUrl,
 } from "./pageAuthoringSanitizers";
+import { sanitizeSvg } from "./svgSanitizer";
 
 export const PAGE_DOCUMENT_SCHEMA_VERSION = 2 as const;
 
@@ -69,6 +74,12 @@ export const pageBlockTypes = [
   "container",
   "columns",
   "group",
+  // TASK-522-01-L01: the ONE new arbitrary-SVG block. Paste/upload a sanitized
+  // inline SVG (svgSanitizer allowlist) with an optional stroke draw-in.
+  "customSvg",
+  // ── TASK-534 ── declarative interactivity primitives (customSvg pattern).
+  "switcher", // segmented tabs; N panels in slots panel:1..panel:6 (absorbs 527).
+  "scrollHint", // hero scroll-hint indicator (CSS-keyframe dot/chevron, no runtime).
 ] as const;
 
 /**
@@ -168,7 +179,74 @@ export const pageBlockSlotKeys = [
   "column:2",
   "column:3",
   "column:4",
+  // ── TASK-534 ── switcher panel slots (one child-block tree per tab).
+  "panel:1",
+  "panel:2",
+  "panel:3",
+  "panel:4",
+  "panel:5",
+  "panel:6",
 ] as const;
+
+// ── TASK-534 ── declarative-interactivity vocabulary (single source of truth).
+/** Number of `panel:N` slots ⇒ the hard upper bound on switcher tabs/panels. */
+export const SWITCHER_MAX_PANELS = 6 as const;
+export const switcherVariants = ["pill", "underline"] as const;
+export type PageSwitcherVariant = (typeof switcherVariants)[number];
+export const scrollHintGlyphs = ["dot", "chevron"] as const;
+export type PageScrollHintGlyph = (typeof scrollHintGlyphs)[number];
+/** Max chip categories exposed on a filterable gallery. */
+export const GALLERY_FILTER_CATEGORY_MAX = 12 as const;
+/**
+ * A gallery category is a SINGLE kebab/word token — NO SPACE. The runtime filter
+ * (534-01-L03) treats an item's `data-category` as a SPACE-SEPARATED SET of tokens
+ * (`cat.split(" ").indexOf(f)`), and each chip's `data-filter` is ONE token; a
+ * space inside a single category would split it into two tokens so a whole-phrase
+ * chip could never match. Multiple categories per item join with spaces.
+ */
+export const GALLERY_CATEGORY_PATTERN = /^[\w-]{1,48}$/;
+
+/**
+ * TASK-521 shared motion/effects vocabulary (single source of truth). All
+ * fields modelled here are PRESENT-ONLY (omitted when unauthored so legacy
+ * documents stay byte-identical) and are consumed read-only by the section
+ * render (521-02), hero (521-03 owns its own tilt vocab), animated-icon block
+ * (521-04) and per-page effects (521-05). NO schemaVersion bump, NO migration.
+ */
+export const pageSectionScrollEffects = ["none", "reveal-fade", "reveal-up", "parallax"] as const;
+export type PageSectionScrollEffect = (typeof pageSectionScrollEffects)[number];
+export const PAGE_PARALLAX_INTENSITY_CLAMP = { min: 0, max: 40 } as const; // px travel
+export const PAGE_SPOTLIGHT_SIZE_CLAMP = { min: 120, max: 900 } as const; // px radius
+export const animatedIconAnimations = ["none", "spin", "pulse", "bounce", "draw"] as const;
+export type AnimatedIconAnimation = (typeof animatedIconAnimations)[number];
+export const ANIMATED_ICON_SIZE_CLAMP = { min: 16, max: 160 } as const; // px
+export const ANIMATED_ICON_SPEED_CLAMP = { min: 400, max: 4000 } as const; // ms
+export const animatedIconNames = [
+  "sparkles",
+  "star",
+  "heart",
+  "zap",
+  "check",
+  "shield",
+  "arrow-right",
+  "bell",
+  "rocket",
+  "loader",
+] as const; // curated set (extendable)
+export type AnimatedIconName = (typeof animatedIconNames)[number];
+export const ANIMATED_ICON_NAME_PATTERN = /^[a-z0-9-]{1,48}$/;
+/**
+ * Resolve an authored icon name to the curated allowlist. Uses a pattern gate
+ * then Set-membership (never a bare bracket lookup on a prototype-carrying map),
+ * failing soft to `"sparkles"` so a stored out-of-set / injection-shaped value
+ * never reaches the renderer.
+ */
+export const resolveAnimatedIconName = (value: unknown): AnimatedIconName => {
+  if (typeof value !== "string" || !ANIMATED_ICON_NAME_PATTERN.test(value)) return "sparkles";
+  return (animatedIconNames as readonly string[]).includes(value)
+    ? (value as AnimatedIconName)
+    : "sparkles";
+};
 
 /**
  * Token-backed typography contract (TASK-424). Option tokens reference the
@@ -193,7 +271,26 @@ export const pageTypographyFontSizes = [
   "4xl",
   "5xl",
 ] as const;
-export const pageTypographyFontWeights = ["normal", "medium", "semibold", "bold"] as const;
+// ── TASK-532 heavier weights (Bundle B) — extend the enum with extrabold/black ──
+export const pageTypographyFontWeights = [
+  "normal",
+  "medium",
+  "semibold",
+  "bold",
+  "extrabold",
+  "black",
+] as const;
+// ── TASK-532 text-transform (Bundle B) — present-only enum ──
+export const pageTypographyTextTransforms = [
+  "none",
+  "uppercase",
+  "lowercase",
+  "capitalize",
+] as const;
+// ── TASK-532 eyebrow-divider alignment + rule-length bounds (Bundle B) ──
+export const pageDividerAligns = ["left", "center", "right"] as const;
+/** Eyebrow short-rule length bounds in px (decorative divider width). */
+export const PAGE_DIVIDER_WIDTH_CLAMP = { min: 8, max: 400 } as const;
 /** Unitless `line-height` bounds for block typography. */
 export const PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP = { min: 1, max: 2.5 } as const;
 /** `letter-spacing` bounds in px for block typography. */
@@ -208,6 +305,31 @@ export const PAGE_BLOCK_BORDER_WIDTH_CLAMP = { min: 0, max: 12 } as const;
  * paints more than four columns.
  */
 export const PAGE_SECTION_BLOCK_COLUMN_CLAMP = { min: 1, max: 4 } as const;
+// ── TASK-533-01 REGION: block grid-span bounds + column-ratio presets ─────────
+/** Block grid-span bounds — how many columns/rows a block may span in the section
+ *  grid (`grid-column: span N` / `grid-row: span N`). Reproduces
+ *  `.project-card.large{grid-row:span 2}`. */
+export const PAGE_BLOCK_SPAN_CLAMP = { min: 1, max: 4 } as const;
+/**
+ * Curated safe `columnTemplate` presets for the section "Column ratio" control.
+ * Every entry is `sanitizeAuthoringGridTemplate`-passing (round-trips unchanged),
+ * reproducing the reference intro (1/1.2fr), realizacje (1.15/.85fr), and hero
+ * (minmax) ratios. Naturally constrains the authored value to a sanitizer-valid
+ * string; the write boundary re-sanitizes any tampered payload regardless.
+ */
+export const pageColumnTemplatePresets = [
+  "1fr 1fr",
+  "1.15fr .85fr",
+  "1fr 1.2fr",
+  "1fr .95fr",
+  "minmax(0,1fr) minmax(420px,.9fr)",
+] as const;
+// ── END TASK-533-01 REGION ────────────────────────────────────────────────────
+// ── TASK-533-02 REGION: per-edge section border width bounds ──────────────────
+/** Per-edge section border width bounds in px (`border-{edge}-width`). Reproduces
+ *  `.intro-strip{border-block:1px solid …}`. */
+export const PAGE_SECTION_BORDER_WIDTH_CLAMP = { min: 0, max: 16 } as const;
+// ── END TASK-533-02 REGION ────────────────────────────────────────────────────
 /**
  * Block types whose rendered output paints user-editable text, and therefore
  * may expose (and paint) the typography style surface. Layout, media, and
@@ -227,6 +349,111 @@ export const pageTextMarkCapableBlockTypes = pageTextColorMarkCapableBlockTypes;
 export const PAGE_TEXT_MARK_MAX = 24 as const;
 export const PAGE_BLOCK_MAX_TREE_DEPTH = 4 as const;
 export const PAGE_BLOCK_MAX_CHILDREN_PER_SLOT = 24 as const;
+
+/**
+ * TASK-522 composable-hero toolkit vocabulary (owned here, imported read-only by
+ * every consumer subtask 522-02..05). Every field these describe is PRESENT-ONLY
+ * (omitted when unauthored so legacy documents stay byte-identical), reject-unknown
+ * allowlisted, and — where a motion is involved — reduced-motion-safe. NO
+ * schemaVersion bump, NO migration, NO new dependency.
+ *
+ * `"none"` (decoration/tilt/surface/hover) and `"flow"` (composition) are the
+ * FIRST member of their enum: they are the present-only RESET path the normalizer
+ * OMITS, so toggling an effect off returns the doc to byte identity. `"radiate"`
+ * is the `.map-pulse`/`@keyframes mapPulse` concentric box-shadow ring (distinct
+ * from `"pulse"` = `.sun-ring`/pulseRing scale+opacity).
+ */
+export const pageBlockDecorationMotions = [
+  "none",
+  "float",
+  "drift",
+  "pulse",
+  "orbit",
+  "radiate",
+] as const;
+export type PageBlockDecorationMotion = (typeof pageBlockDecorationMotions)[number];
+export const pageTiltStrengths = ["none", "subtle", "strong"] as const;
+export type PageTiltStrength = (typeof pageTiltStrengths)[number];
+export const pageSurfacePresets = [
+  "none",
+  "glass",
+  "glass-grid",
+  "radial-glow",
+  "ambient-orbs",
+] as const;
+export type PageSurfacePreset = (typeof pageSurfacePresets)[number];
+export const pageBlockHoverEffects = ["none", "glow-reveal", "lift", "scale", "lift-glow"] as const;
+export type PageBlockHoverEffect = (typeof pageBlockHoverEffects)[number];
+export const pageCompositions = ["flow", "layered"] as const;
+export type PageComposition = (typeof pageCompositions)[number];
+export const pageLayerAnchors = [
+  "top-left",
+  "top",
+  "top-right",
+  "left",
+  "center",
+  "right",
+  "bottom-left",
+  "bottom",
+  "bottom-right",
+] as const;
+export type PageLayerAnchor = (typeof pageLayerAnchors)[number];
+export const pageMarqueeDirections = ["left", "right"] as const;
+export type PageMarqueeDirection = (typeof pageMarqueeDirections)[number];
+export const PAGE_DECORATION_DELAY_CLAMP = { min: 0, max: 4000 } as const; // ms
+// TASK-525-02-L01: per-block scroll-reveal stagger delay (ms). Same bound as the
+// decoration delay; emitted only as the bounded `--reveal-delay` custom property.
+export const PAGE_REVEAL_DELAY_CLAMP = { min: 0, max: 4000 } as const; // ms
+export const PAGE_DECORATION_DURATION_CLAMP = { min: 2000, max: 16000 } as const; // ms
+export const PAGE_LAYER_X_CLAMP = { min: -50, max: 150 } as const; // %
+export const PAGE_LAYER_Y_CLAMP = { min: -50, max: 150 } as const; // %
+// TASK-523-02 — occlusion-proofing: the cursor-spotlight overlay paints at a
+// FIXED z-index of 30 (PAGE_SPOTLIGHT_CSS, pageRendererV2.tsx) inside the shared
+// root stacking context, strictly below the sticky nav (z-40). A layered-canvas
+// [data-layer] maps `layer.z` directly to `z-index` (pageCompositionEffects.tsx),
+// so its max is capped STRICTLY BELOW the overlay (30) — no authorable layer can
+// reach/exceed the spotlight and occlude the glow. Do NOT raise max to/above 30
+// without re-approving the spotlight-occlusion tradeoff.
+export const PAGE_LAYER_Z_CLAMP = { min: 0, max: 20 } as const;
+export const PAGE_MARQUEE_SPEED_CLAMP = { min: 8, max: 40 } as const; // s
+/** Custom-SVG block: stroke draw-in speed bounds (ms) + max sanitized byte cap. */
+export const PAGE_DRAW_SPEED_CLAMP = { min: 600, max: 6000 } as const; // ms
+export const PAGE_CUSTOM_SVG_MAX_BYTES = 24576 as const; // 24 KiB
+
+// ── TASK-531 REGION (glow model: clamps + type) ───────────────────────────────
+// Arbitrary colored box-shadow (glow) — a STRUCTURED spec (never a raw author
+// string). `color` is sanitized via `sanitizeAuthoringCssColor` at write; the
+// numeric fields are clamped, then composed into a fixed `box-shadow` template
+// at render (`composeGlowBoxShadow`, `pageGlow.ts`). See TASK-531 §G-3.
+export const PAGE_GLOW_BLUR_CLAMP = { min: 0, max: 120 } as const; // px
+export const PAGE_GLOW_SPREAD_CLAMP = { min: -40, max: 80 } as const; // px
+export const PAGE_GLOW_OFFSET_CLAMP = { min: -80, max: 80 } as const; // px (x AND y)
+
+export type PageGlow = {
+  /** REQUIRED — sanitized via `sanitizeAuthoringCssColor` at write; whole glow OMITTED when invalid. */
+  color: string;
+  /** PAGE_GLOW_BLUR_CLAMP (default 24 at render). */
+  blur?: number;
+  /** PAGE_GLOW_SPREAD_CLAMP (default 0). */
+  spread?: number;
+  /** PAGE_GLOW_OFFSET_CLAMP (default 0). */
+  x?: number;
+  /** PAGE_GLOW_OFFSET_CLAMP (default 0). */
+  y?: number;
+};
+// ── END TASK-531 REGION ───────────────────────────────────────────────────────
+
+export type PageBlockDecoration = {
+  motion: PageBlockDecorationMotion;
+  delay?: number;
+  duration?: number;
+};
+export type PageBlockLayer = { x?: number; y?: number; z?: number; anchor?: PageLayerAnchor };
+export type PageBlockMarquee = {
+  speed?: number;
+  direction?: PageMarqueeDirection;
+  seamless?: boolean;
+};
 
 export type PageBreakpoint = (typeof pageBreakpoints)[number];
 export type PageSectionType = (typeof pageSectionTypes)[number];
@@ -250,6 +477,8 @@ export type PageBlockSlotKey = (typeof pageBlockSlotKeys)[number];
 export type PageTypographyFontFamily = (typeof pageTypographyFontFamilies)[number];
 export type PageTypographyFontSize = (typeof pageTypographyFontSizes)[number];
 export type PageTypographyFontWeight = (typeof pageTypographyFontWeights)[number];
+// ── TASK-532 text-transform type (Bundle B) ──
+export type PageTypographyTextTransform = (typeof pageTypographyTextTransforms)[number];
 export type PageTypographyCapableBlockType = (typeof pageTypographyCapableBlockTypes)[number];
 export type PageTextColorMarkCapableBlockType = (typeof pageTextColorMarkCapableBlockTypes)[number];
 export type PageTextMarkCapableBlockType = PageTextColorMarkCapableBlockType;
@@ -327,6 +556,9 @@ export const pageTypographyFontWeightCssValues: Record<PageTypographyFontWeight,
   medium: "500",
   semibold: "600",
   bold: "700",
+  // ── TASK-532 heavier weights (Bundle B) ──
+  extrabold: "800",
+  black: "900",
 };
 
 export type PageDocumentSeoV2 = {
@@ -357,6 +589,35 @@ export type PageDocumentSettingsV2 = {
    * this field; absent input stays absent in the normalized output.
    */
   menuAppearance?: MenuAppearance;
+  /**
+   * TASK-521-05 per-page interaction effects (cursor-follow spotlight, …).
+   * Present-only additive sub-object (the `menuAppearance` precedent): omitted
+   * when empty so `defaultSettings` and legacy documents stay byte-identical.
+   */
+  effects?: PageEffectsV2;
+  /**
+   * TASK-523-01 per-page canvas background — a safe solid color OR CSS gradient.
+   * Present-only: omitted when unset so `defaultSettings` and legacy/post-522
+   * documents stay byte-identical. The ONLY path a value reaches this field is
+   * `sanitizeAuthoringCssBackground` (safe color/gradient, else the key is dropped),
+   * mirrored at RENDER (523-01-L02) — no raw string is ever stored or rendered.
+   */
+  background?: string;
+};
+
+/**
+ * TASK-521-01-L02 per-page effects config. All fields present-only; the whole
+ * object is omitted when empty. `spotlightColor` flows through `readSafeColor`
+ * (alpha-capable via TASK-519) — the ONLY path a color reaches the runtime CSS
+ * var, so no raw/injection-shaped value is ever stored.
+ */
+export type PageEffectsV2 = {
+  cursorSpotlight?: boolean;
+  spotlightColor?: string;
+  spotlightSize?: number;
+  // ── TASK-534 ── present-only page-root static grain overlay (self-generated
+  // SVG turbulence; no author color, no asset). Omitted when false/unset.
+  noiseOverlay?: boolean;
 };
 
 export type PageSectionLayoutV2 = {
@@ -384,7 +645,90 @@ export type PageSectionStyleV2 = {
   accent: string;
   radius: number;
   shadow: PageShadowToken;
+  /**
+   * TASK-521-02 front-only scroll motion. Present-only: `"none"` is treated as
+   * absence (omitted), so toggling an effect off returns the doc to byte
+   * identity. `defaultStyle` deliberately omits these so an un-authored section
+   * serializes unchanged. Authored + rendered DEVICE-UNIFORM (desktop-resolved).
+   */
+  scrollEffect?: PageSectionScrollEffect;
+  /** px travel; meaningful only for `scrollEffect === "parallax"`. */
+  parallaxIntensity?: number;
+  /**
+   * TASK-522-01-L03 premium surface preset (glass / grid / radial-glow /
+   * ambient-orbs). Present-only: `"none"` omitted so an unstyled section stays
+   * byte-identical. STATIC (renders under reduced-motion; only the ambient-orb
+   * drift animates). Retints off the section's `accent`.
+   */
+  surfacePreset?: PageSurfacePreset;
+  /**
+   * TASK-522-01-L03 layered-canvas mode. `"layered"` turns the section into a
+   * positioning context whose children place absolutely by `block.style.layer`;
+   * `"flow"` (default, omitted) keeps the normal flex/grid flow.
+   */
+  composition?: PageComposition;
+  /**
+   * TASK-525-01-L02 full-bleed background. When `true`, the section paints its
+   * background box edge-to-edge (100vw) while its CONTENT stays capped/centered
+   * at `layout.maxWidth`. Present-only: omitted when `false`/unset so an
+   * un-authored section serializes byte-identically (the `full-width` template
+   * variant still bleeds by default, independent of this flag).
+   */
+  fullBleed?: boolean;
+  // ── TASK-531 REGION ──────────────────────────────────────────────────────
+  /**
+   * TASK-531 arbitrary colored glow box-shadow on the section box. Present-only:
+   * omitted when unauthored OR when its `color` fails sanitization. Composed to a
+   * fixed `box-shadow` template at render (`composeGlowBoxShadow`), APPENDED after
+   * the enum `shadow` when both are present.
+   */
+  glow?: PageGlow;
+  // ── END TASK-531 REGION ──────────────────────────────────────────────────
+  /**
+   * ── TASK-534 ── Static self-generated SVG-turbulence grain over the section
+   * surface. Present-only: omitted when false/unset so an un-authored section
+   * serializes byte-identically. STATIC (renders identically under reduced-motion).
+   */
+  noiseOverlay?: boolean;
+  // ── TASK-533-01 REGION: asymmetric column ratio (present-only, sanitized) ──
+  /**
+   * TASK-533-01 restricted `grid-template-columns` value (e.g. `"1.15fr .85fr"`,
+   * `"1fr 1.2fr"`, `"minmax(0,1fr) minmax(420px,.9fr)"`). When set it OVERRIDES the
+   * symmetric grid class with an inline `gridTemplateColumns`, reproducing the intro
+   * (1/1.2fr) and realizacje (1.15/.85fr) reference ratios. Strict-sanitized via
+   * `sanitizeAuthoringGridTemplate` (the only author string reaching a CSS value
+   * position); rejection ⇒ OMITTED. Present-only: unset ⇒ byte-identical to post-530.
+   */
+  columnTemplate?: string;
+  // ── END TASK-533-01 REGION ────────────────────────────────────────────────
+  // ── TASK-533-02 REGION: per-edge section border (present-only) ─────────────
+  /**
+   * TASK-533-02 per-edge section border (`border-block` = top+bottom minimum, full
+   * four-edge supported). Present-only: omitted when no edge is authored ⇒
+   * byte-identical to post-530. Colors via `sanitizeAuthoringCssColor`, widths clamped
+   * to {@link PAGE_SECTION_BORDER_WIDTH_CLAMP}, style enum-validated. Reproduces
+   * `.intro-strip{border-block:1px solid rgba(255,255,255,.1)}`.
+   */
+  border?: PageSectionBorderV2;
+  // ── END TASK-533-02 REGION ────────────────────────────────────────────────
 };
+
+// ── TASK-533-02 REGION: per-edge section border types ─────────────────────────
+/** One border edge: color (sanitized), width (clamped px), style (enum). */
+export type PageSectionBorderEdgeV2 = {
+  color?: string | null;
+  width?: number;
+  style?: PageBlockBorderStyle;
+};
+/** Per-edge section border; mirrors {@link PageBoxSpacingV2}'s four-optional-edge
+ *  shape with a per-edge value. Present-only: omitted whole-object when empty. */
+export type PageSectionBorderV2 = {
+  top?: PageSectionBorderEdgeV2;
+  right?: PageSectionBorderEdgeV2;
+  bottom?: PageSectionBorderEdgeV2;
+  left?: PageSectionBorderEdgeV2;
+};
+// ── END TASK-533-02 REGION ────────────────────────────────────────────────────
 
 export type PageSectionSpacingV2 = {
   paddingTop: number;
@@ -445,6 +789,100 @@ export type PageBlockStyleV2 = {
   lineHeight?: number | null;
   /** Letter-spacing in px clamped to {@link PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP}. */
   letterSpacing?: number | null;
+  // ── TASK-532 typography fidelity (Bundle B) — present-only fields ──
+  /**
+   * Fluid font-size (present-only). A strict `clamp()`/`min()`/`max()` of
+   * numeric-unit lengths (`rem`/`em`/`px`/`vw`/`vh`/`%`/`ch`) or a single such
+   * length — validated by {@link sanitizeAuthoringCssFontSize} at the write
+   * boundary (NEVER arbitrary CSS). WINS over the discrete `fontSize` token at
+   * render (`toPageBlockTypographyStyle`); the token remains the fallback/unset
+   * state. Omitted when unset or when the grammar rejects.
+   */
+  fontSizeCustom?: string;
+  /**
+   * Text-transform (present-only enum). `"none"` resets ⇒ the field is OMITTED
+   * so an un-authored block is byte-identical to post-530.
+   */
+  textTransform?: PageTypographyTextTransform;
+  // ── end TASK-532 typography fidelity ──
+  /**
+   * TASK-522 composable-hero toolkit style fields (all PRESENT-ONLY — omitted
+   * when unauthored so legacy/no-effect blocks stay byte-identical). The model
+   * accepts every field under the responsive-override channel, but only the
+   * NUMERIC `layer.x/y/z` offsets actually RENDER per device (via the
+   * 522-05-L02 `--layer-*` seam); the data-attr/class effects
+   * (decoration/tilt/surfacePreset/hoverEffect/composition/marquee) are
+   * BASE-ONLY and authored `responsive:false` (see 522-01-L03).
+   */
+  /** Floating-drift decoration; `"none"` resets (whole object omitted). */
+  decoration?: PageBlockDecoration;
+  /** Tilt-toward-pointer on any block (reuses the 521-style runtime pattern). */
+  tilt?: PageTiltStrength;
+  /** Optional glare/sheen sweep on tilt. */
+  tiltGlare?: boolean;
+  /** Placement inside a layered canvas ancestor (x/y in %, z-index, anchor). */
+  layer?: PageBlockLayer;
+  /**
+   * TASK-524-02: independent glass/glow tint (alpha-capable), seeds
+   * `--surface-glow`/`--deco-ring`/`--orb-color` INDEPENDENT of `background`.
+   * Present-only: omitted when unset (never `null`/`""`); sanitized via
+   * `sanitizeAuthoringCssColor` at the write boundary.
+   */
+  surfaceTint?: string;
+  /** Premium surface preset (glass / grid / radial-glow / ambient-orbs). */
+  surfacePreset?: PageSurfacePreset;
+  /** Hover-effect preset (glow-reveal / lift / scale / lift-glow). */
+  hoverEffect?: PageBlockHoverEffect;
+  /** Ticker/marquee — group/row block only (`@keyframes ticker`). */
+  marquee?: PageBlockMarquee;
+  /** Layout-block canvas mode (`"layered"` positions children absolutely). */
+  composition?: PageComposition;
+  /**
+   * TASK-525-02-L01 per-block scroll-reveal stagger (ms, clamped
+   * `PAGE_REVEAL_DELAY_CLAMP`). Emitted as the `--reveal-delay` custom property
+   * consumed by the reveal `transition-delay`, so a revealing section's children
+   * CASCADE (each block fades on its own delay) rather than fading as one unit.
+   * Present-only: omitted when unset so an un-authored block is byte-identical.
+   *
+   * SCOPE (TASK-535, intended + documented): this is a STAGGER *within a revealing
+   * section*, NOT a standalone per-block reveal trigger. The cascade is driven by the
+   * SECTION's `scrollEffect` reveal (the runtime toggles `data-revealed` on the
+   * SECTION only, and `PAGE_REVEAL_MOTION_CSS` is scoped under `[data-page-effect^=
+   * "reveal"]`). A block whose ONLY motion is `revealDelay`, inside a section with no
+   * reveal `scrollEffect`, is INERT by design — set a section reveal effect to make
+   * the stagger take effect. It also does NOT inherit onto un-delayed nested children
+   * (the reveal CSS resets `--reveal-delay` per frame; see `PAGE_REVEAL_MOTION_CSS`).
+   */
+  revealDelay?: number;
+  // ── TASK-531 REGION ──────────────────────────────────────────────────────
+  /**
+   * TASK-531 arbitrary colored glow box-shadow on the block frame. Same shape +
+   * present-only semantics as the section field (composed at render, APPENDED
+   * after the enum `shadow` when both are present).
+   */
+  glow?: PageGlow;
+  // ── END TASK-531 REGION ──────────────────────────────────────────────────
+  /**
+   * ── TASK-534 ── Magnetic pointer-attract on hover. Present-only: omitted when
+   * false/unset. A runtime clause (`PAGE_EFFECTS_RUNTIME_SOURCE`, 534-01-L03)
+   * translates the element toward the pointer, `pointer:fine` + reduced-motion
+   * gated (transforms only). Reaches render solely as a `data-magnetic` toggle.
+   */
+  magnetic?: boolean;
+  // ── TASK-533-01 REGION: block grid span (present-only, clamped ints) ───────
+  /**
+   * TASK-533-01 span N columns in the section grid (`grid-column: span N`,
+   * clamped {@link PAGE_BLOCK_SPAN_CLAMP}). Present-only: omitted when unset ⇒
+   * byte-identical to post-530.
+   */
+  colSpan?: number;
+  /**
+   * TASK-533-01 span N rows in the section grid (`grid-row: span N`, clamped
+   * {@link PAGE_BLOCK_SPAN_CLAMP}). Reproduces `.project-card.large{grid-row:span 2}`.
+   * Present-only: omitted when unset ⇒ byte-identical to post-530.
+   */
+  rowSpan?: number;
+  // ── END TASK-533-01 REGION ────────────────────────────────────────────────
 };
 
 export type PageBlockVisibilityV2 = {
@@ -540,6 +978,32 @@ const pageBlockStyleKeys = [
   "fontWeight",
   "lineHeight",
   "letterSpacing",
+  // ── TASK-532 typography fidelity (Bundle B) present-only style keys ──
+  "fontSizeCustom",
+  "textTransform",
+  // ── end TASK-532 ──
+  // TASK-522-01-L03 composition/decoration style fields (present-only).
+  "decoration",
+  "tilt",
+  "tiltGlare",
+  "layer",
+  // TASK-524-02-L01 independent glass tint (present-only).
+  "surfaceTint",
+  "surfacePreset",
+  "hoverEffect",
+  "marquee",
+  "composition",
+  // TASK-525-02-L01 per-block staggered reveal (present-only number).
+  "revealDelay",
+  // ── TASK-531 REGION: arbitrary colored glow box-shadow (present-only object).
+  "glow",
+  // ── END TASK-531 REGION ──────────────────────────────────────────────────
+  // ── TASK-534 ── present-only magnetic-hover flag (runtime pointer-attract).
+  "magnetic",
+  // ── TASK-533-01 REGION: block grid span (present-only clamped ints).
+  "colSpan",
+  "rowSpan",
+  // ── END TASK-533-01 REGION ────────────────────────────────────────────────
 ] as const;
 const mobileBreakpoints: MobileBreakpoint[] = ["tablet", "mobile"];
 const defaultBreakpoints: PageBreakpoint[] = ["desktop", "tablet", "mobile"];
@@ -586,6 +1050,8 @@ const pageLayoutBlockSlots: Partial<Record<PageBlockType, readonly PageBlockSlot
   container: ["children"],
   columns: ["column:1", "column:2", "column:3", "column:4"],
   group: ["children"],
+  // ── TASK-534 ── switcher exposes one child-block tree per tab (panel:1..6).
+  switcher: ["panel:1", "panel:2", "panel:3", "panel:4", "panel:5", "panel:6"],
 };
 
 export const pageBlockPropKeys: Record<PageBlockType, readonly string[]> = {
@@ -605,7 +1071,8 @@ export const pageBlockPropKeys: Record<PageBlockType, readonly string[]> = {
   button: ["label", "href", "target", "variant", "size"],
   image: ["assetId", "src", "alt", "caption", "fit"],
   video: ["assetId", "src", "title", "autoplay", "muted"],
-  gallery: ["items", "layout"],
+  // ── TASK-534 ── present-only filter props (+ per-item optional `category`).
+  gallery: ["items", "layout", "filterable", "filterCategories"],
   form: ["formId", "title"],
   list: ["items", "ordered"],
   card: ["title", "text", "image", "href"],
@@ -623,14 +1090,20 @@ export const pageBlockPropKeys: Record<PageBlockType, readonly string[]> = {
     "applyLabel",
   ],
   embed: ["html", "url", "provider"],
-  divider: ["tone", "thickness"],
+  // ── TASK-532 eyebrow divider (Bundle B): width/align/gradient present-only ──
+  divider: ["tone", "thickness", "width", "align", "gradient"],
   spacer: ["size"],
   statistic: ["value", "label", "caption"],
-  icon: ["name", "label"],
+  icon: ["name", "label", "animation", "size", "color", "speed"],
   quote: ["text", "cite", "marks"],
   container: [],
   columns: ["count", "gap", "distribution"],
   group: ["direction", "wrap", "gap"],
+  // TASK-522-01-L01: sanitized inline SVG + optional stroke draw-in.
+  customSvg: ["svg", "drawIn", "drawSpeed", "label"],
+  // ── TASK-534 ── declarative-interactivity blocks.
+  switcher: ["tabs", "activeIndex", "variant"],
+  scrollHint: ["label", "glyph"],
 };
 
 export type PageBlockRuntimeRendererState = "real" | "placeholder" | "unsupported";
@@ -709,9 +1182,26 @@ const realRuntimeBlockTypes = new Set<PageBlockType>([
   "container",
   "columns",
   "group",
+  // TASK-521-04: the animated-icon block is a real runtime renderer — its
+  // `renderPageBlockContent case "icon"` (pageRendererV2.tsx) mounts the curated
+  // inline-SVG + CSS-keyframe glyph. Flip lands with the renderer/palette/controls.
+  "icon",
+  // TASK-522-01-L01: the custom-SVG block is a real runtime renderer — its
+  // `renderPageBlockContent case "customSvg"` (522-02-L01) mounts the sanitized
+  // inline SVG. Registered here so the capability report marks it runtime "real".
+  "customSvg",
+  // ── TASK-534 ── switcher (renderer case 534-02-L01, tablist runtime 534-01-L03)
+  // + scrollHint (renderer case 534-02-L03, CSS-keyframe only) are real renderers.
+  "switcher",
+  "scrollHint",
 ]);
 const dataBoundBlockTypes = new Set<PageBlockType>(["collection", "filters", "form", "embed"]);
-const layoutBlockTypes = new Set<PageBlockType>(["container", "columns", "group"]);
+// ── TASK-534 ── switcher is a SLOT HOST (panel:1..6). It MUST live in
+// layoutBlockTypes because getPageBlockActiveSlotKeys (:1063) gates on THIS set,
+// not on pageLayoutBlockSlots — omitting it would leave the editor slot
+// enumeration returning [] (dead panels), even though the JSON schema + normalize
+// slot-validation read pageBlockCapabilities[type].slots and would work.
+const layoutBlockTypes = new Set<PageBlockType>(["container", "columns", "group", "switcher"]);
 const editorInsertableBlockTypes = new Set<PageBlockType>([
   "heading",
   "text",
@@ -719,6 +1209,11 @@ const editorInsertableBlockTypes = new Set<PageBlockType>([
   "button",
   "image",
   "video",
+  // ── TASK-534 ── the gallery block joins the editor-insertable catalog: its
+  // authoring controls (filterable/filterCategories + layout) ship with 534-04,
+  // clearing the `gallery-editor-controls-pending` capability reason. Acceptance
+  // Criteria #2 inserts a `gallery` with `filterable:true` from the palette.
+  "gallery",
   // TASK-456: the form block is editor-insertable — its public runtime
   // (scoped data binding, nonce/anti-abuse submit pipeline) shipped with
   // TASK-418-06-L04 and the authoring controls (formId combobox + title)
@@ -747,9 +1242,21 @@ const editorInsertableBlockTypes = new Set<PageBlockType>([
   "spacer",
   "statistic",
   "quote",
+  // TASK-521-04: the animated-icon block is now editor-insertable — its palette
+  // copy (pageEditorOptions.ts) + block controls (pageEditorControlRegistry.ts)
+  // ship with this flip.
+  "icon",
   "container",
   "columns",
   "group",
+  // TASK-522-01-L01: the custom-SVG block is editor-insertable — its palette copy
+  // (pageEditorOptions.ts) + block controls (pageEditorControlRegistry.ts) ship
+  // with 522-02. No capability-reason stub (it IS insertable).
+  "customSvg",
+  // ── TASK-534 ── switcher + scrollHint are editor-insertable (palette copy in
+  // blockOptionCopy 534-01-L01; controls in 534-04). No capability-reason stub.
+  "switcher",
+  "scrollHint",
 ]);
 const insertableBlockTypes = editorInsertableBlockTypes;
 const assistantEmittableBlockTypes = new Set<PageBlockType>([
@@ -770,9 +1277,9 @@ const assistantEmittableBlockTypes = new Set<PageBlockType>([
   "group",
 ]);
 const pageBlockCapabilityReasons: Partial<Record<PageBlockType, string>> = {
-  gallery: "gallery-editor-controls-pending",
+  // ── TASK-534 ── `gallery` is now editor-insertable (filter/layout controls
+  // shipped in 534-04), so its `gallery-editor-controls-pending` reason is dropped.
   embed: "embed-editor-controls-pending",
-  icon: "icon-runtime-renderer-pending",
 };
 
 export const pageBlockCapabilities = pageBlockTypes.reduce(
@@ -869,11 +1376,29 @@ export const pageBlockDefaultProps: Record<PageBlockType, Record<string, unknown
   divider: { tone: "neutral", thickness: 1 },
   spacer: { size: 32 },
   statistic: { value: "0", label: "Metric", caption: "" },
-  icon: { name: "sparkles", label: "" },
+  icon: {
+    name: "sparkles",
+    label: "",
+    animation: "pulse",
+    size: 48,
+    color: "var(--primary)",
+    speed: 1600,
+  },
   quote: { text: "", cite: "" },
   container: {},
   columns: { count: 2, gap: 24, distribution: "equal" },
   group: { direction: "column", wrap: false, gap: 16 },
+  // TASK-522-01-L01: drawSpeed omitted until authored (the only present-only
+  // prop); empty svg = neutral fallback at render.
+  customSvg: { svg: "", drawIn: false, label: "" },
+  // ── TASK-534 ── switcher/scrollHint defaults. gallery is UNCHANGED above
+  // (filterable/filterCategories are present-only, not seeded).
+  switcher: {
+    tabs: [{ label: "Tab one" }, { label: "Tab two" }],
+    activeIndex: 0,
+    variant: "pill",
+  },
+  scrollHint: { label: "Scroll", glyph: "dot" },
 };
 
 const numericSchema = (minimum: number, maximum: number): RecordValue => ({
@@ -1073,6 +1598,18 @@ const blockPropJsonSchemaForType = (type: PageBlockType, key: string): RecordVal
     return nullableNumericSchema(PAGE_COLLECTION_LIMIT_CLAMP.min, PAGE_COLLECTION_LIMIT_CLAMP.max);
   }
   if (type === "divider" && key === "tone") return { type: "string", enum: [...pageDividerTones] };
+  // ── TASK-532 eyebrow divider (Bundle B) — present-only decorative props ──
+  if (type === "divider" && key === "width") {
+    return {
+      type: "number",
+      minimum: PAGE_DIVIDER_WIDTH_CLAMP.min,
+      maximum: PAGE_DIVIDER_WIDTH_CLAMP.max,
+    };
+  }
+  if (type === "divider" && key === "align")
+    return { type: "string", enum: [...pageDividerAligns] };
+  if (type === "divider" && key === "gradient") return { type: "boolean" };
+  // ── end TASK-532 ──
   if (type === "columns" && key === "distribution") {
     return { type: "string", enum: [...pageColumnDistributions] };
   }
@@ -1088,6 +1625,68 @@ const blockPropJsonSchemaForType = (type: PageBlockType, key: string): RecordVal
   if (key === "count") return numericSchema(1, 4);
   if (type === "columns" && key === "gap") return numericSchema(0, 120);
   if (type === "group" && key === "gap") return numericSchema(0, 120);
+  // Animated-icon block props (TASK-521-01-L03) — Ajv in lockstep with the
+  // normalizer. MUST precede the generic `key === "size"` (:size 0..240) and
+  // the string tail, else `size` diverges to 0..240 and `animation`/`speed`
+  // fall to `stringSchema` (looser/type-inconsistent with the write normalizer).
+  if (type === "icon" && key === "animation") {
+    return { type: "string", enum: [...animatedIconAnimations] };
+  }
+  if (type === "icon" && key === "name") return { type: "string", enum: [...animatedIconNames] };
+  if (type === "icon" && key === "size") {
+    return numericSchema(ANIMATED_ICON_SIZE_CLAMP.min, ANIMATED_ICON_SIZE_CLAMP.max);
+  }
+  if (type === "icon" && key === "speed") {
+    return numericSchema(ANIMATED_ICON_SPEED_CLAMP.min, ANIMATED_ICON_SPEED_CLAMP.max);
+  }
+  // Custom-SVG block props (TASK-522-01-L01) — Ajv in lockstep with the
+  // normalizer. MUST precede the generic string tail (`svg`/`label` would else
+  // fall to the looser `stringSchema`).
+  if (type === "customSvg" && key === "svg") {
+    return { type: "string", maxLength: PAGE_CUSTOM_SVG_MAX_BYTES };
+  }
+  if (type === "customSvg" && key === "drawIn") return booleanSchema;
+  if (type === "customSvg" && key === "drawSpeed") {
+    return numericSchema(PAGE_DRAW_SPEED_CLAMP.min, PAGE_DRAW_SPEED_CLAMP.max);
+  }
+  if (type === "customSvg" && key === "label") {
+    return { type: "string", maxLength: 160 };
+  }
+  // ── TASK-534 ── switcher / scrollHint / gallery-filter prop schemas. MUST
+  // precede the generic tails (`key === "items"`/string) so `tabs`/enums do not
+  // fall to a looser type-inconsistent schema than the write normalizer.
+  if (type === "switcher" && key === "tabs") {
+    return {
+      type: "array",
+      maxItems: SWITCHER_MAX_PANELS,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["label"],
+        properties: { label: { type: "string" } },
+      },
+    };
+  }
+  if (type === "switcher" && key === "activeIndex") {
+    return numericSchema(0, SWITCHER_MAX_PANELS - 1);
+  }
+  if (type === "switcher" && key === "variant") {
+    return { type: "string", enum: [...switcherVariants] };
+  }
+  if (type === "scrollHint" && key === "glyph") {
+    return { type: "string", enum: [...scrollHintGlyphs] };
+  }
+  if (type === "scrollHint" && key === "label") {
+    return { type: "string", maxLength: 160 };
+  }
+  if (type === "gallery" && key === "filterable") return booleanSchema;
+  if (type === "gallery" && key === "filterCategories") {
+    return {
+      type: "array",
+      maxItems: GALLERY_FILTER_CATEGORY_MAX,
+      items: { type: "string" },
+    };
+  }
   if (key === "size") return numericSchema(0, 240);
   if (
     key === "ordered" ||
@@ -1130,6 +1729,51 @@ const pageBoxSpacingJsonSchema: RecordValue = {
   ),
 };
 
+// ── TASK-531 REGION: glow box-shadow JSON schema ──────────────────────────────
+// Shared by ALL THREE additionalProperties:false style schemas (block, partial
+// section, inlined top-level section). Mirrors the `layer`/`marquee` nested-object
+// shape: strict object, `color` REQUIRED, numeric fields bounded by the 531 clamps.
+const pageGlowJsonSchema: RecordValue = {
+  type: "object",
+  additionalProperties: false,
+  required: ["color"],
+  properties: {
+    // maxLength defence-in-depth (ReDoS): deep color validation is owned by
+    // `sanitizeAuthoringCssColor` (itself length-guarded), but capping at the schema
+    // rejects oversized input before it reaches any normalizer/regex.
+    color: { type: "string", maxLength: PAGE_CSS_VALUE_MAX_LENGTH },
+    blur: numericSchema(PAGE_GLOW_BLUR_CLAMP.min, PAGE_GLOW_BLUR_CLAMP.max),
+    spread: numericSchema(PAGE_GLOW_SPREAD_CLAMP.min, PAGE_GLOW_SPREAD_CLAMP.max),
+    x: numericSchema(PAGE_GLOW_OFFSET_CLAMP.min, PAGE_GLOW_OFFSET_CLAMP.max),
+    y: numericSchema(PAGE_GLOW_OFFSET_CLAMP.min, PAGE_GLOW_OFFSET_CLAMP.max),
+  },
+};
+// ── END TASK-531 REGION ───────────────────────────────────────────────────────
+
+// ── TASK-533-02 REGION: per-edge section border JSON schema ───────────────────
+// Nested additionalProperties:false at BOTH the edge and the border level (mirrors
+// the layer/marquee nested-object precedent). Shared by BOTH section-style mirrors.
+const pageSectionBorderEdgeJsonSchema: RecordValue = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    color: { type: ["string", "null"] },
+    width: numericSchema(PAGE_SECTION_BORDER_WIDTH_CLAMP.min, PAGE_SECTION_BORDER_WIDTH_CLAMP.max),
+    style: { type: "string", enum: [...pageBlockBorderStyles] },
+  },
+};
+const pageSectionBorderJsonSchema: RecordValue = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    top: pageSectionBorderEdgeJsonSchema,
+    right: pageSectionBorderEdgeJsonSchema,
+    bottom: pageSectionBorderEdgeJsonSchema,
+    left: pageSectionBorderEdgeJsonSchema,
+  },
+};
+// ── END TASK-533-02 REGION ────────────────────────────────────────────────────
+
 const pageBlockStyleJsonSchema: RecordValue = {
   type: "object",
   additionalProperties: false,
@@ -1158,6 +1802,14 @@ const pageBlockStyleJsonSchema: RecordValue = {
     fontFamily: nullableEnumSchema(pageTypographyFontFamilies),
     fontSize: nullableEnumSchema(pageTypographyFontSizes),
     fontWeight: nullableEnumSchema(pageTypographyFontWeights),
+    // ── TASK-532 typography fidelity (Bundle B) — present-only ──
+    // `fontSizeCustom` schema is intentionally loose (string + length cap): the
+    // GRAMMAR is enforced by `sanitizeAuthoringCssFontSize` at the write
+    // boundary (the security boundary); the schema cap is defence-in-depth.
+    // Both keep additionalProperties:false so an UNKNOWN key still rejects.
+    fontSizeCustom: { type: "string", maxLength: 64 },
+    textTransform: { type: "string", enum: [...pageTypographyTextTransforms] },
+    // ── end TASK-532 ──
     lineHeight: nullableNumericSchema(
       PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP.min,
       PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP.max
@@ -1166,8 +1818,70 @@ const pageBlockStyleJsonSchema: RecordValue = {
       PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP.min,
       PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP.max
     ),
+    // TASK-522-01-L03 composition/decoration fields (mirrors the normalizer;
+    // present-only, additionalProperties:false on every nested object).
+    decoration: {
+      type: "object",
+      additionalProperties: false,
+      required: ["motion"],
+      properties: {
+        motion: { type: "string", enum: [...pageBlockDecorationMotions] },
+        delay: numericSchema(PAGE_DECORATION_DELAY_CLAMP.min, PAGE_DECORATION_DELAY_CLAMP.max),
+        duration: numericSchema(
+          PAGE_DECORATION_DURATION_CLAMP.min,
+          PAGE_DECORATION_DURATION_CLAMP.max
+        ),
+      },
+    },
+    tilt: { type: "string", enum: [...pageTiltStrengths] },
+    tiltGlare: booleanSchema,
+    layer: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        x: numericSchema(PAGE_LAYER_X_CLAMP.min, PAGE_LAYER_X_CLAMP.max),
+        y: numericSchema(PAGE_LAYER_Y_CLAMP.min, PAGE_LAYER_Y_CLAMP.max),
+        z: numericSchema(PAGE_LAYER_Z_CLAMP.min, PAGE_LAYER_Z_CLAMP.max),
+        anchor: { type: "string", enum: [...pageLayerAnchors] },
+      },
+    },
+    // TASK-524-02-L01 present-only STRING (no null — omitted when unset);
+    // sanitized at normalize; additionalProperties:false stays.
+    surfaceTint: { type: "string" },
+    surfacePreset: { type: "string", enum: [...pageSurfacePresets] },
+    hoverEffect: { type: "string", enum: [...pageBlockHoverEffects] },
+    composition: { type: "string", enum: [...pageCompositions] },
+    marquee: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        speed: numericSchema(PAGE_MARQUEE_SPEED_CLAMP.min, PAGE_MARQUEE_SPEED_CLAMP.max),
+        direction: { type: "string", enum: [...pageMarqueeDirections] },
+        seamless: booleanSchema,
+      },
+    },
+    // TASK-525-02-L01 per-block staggered reveal (present-only, bounded ms).
+    revealDelay: numericSchema(PAGE_REVEAL_DELAY_CLAMP.min, PAGE_REVEAL_DELAY_CLAMP.max),
+    // ── TASK-531 REGION: glow box-shadow (present-only object; color REQUIRED).
+    glow: pageGlowJsonSchema,
+    // ── END TASK-531 REGION ──────────────────────────────────────────────────
+    // ── TASK-534 ── present-only magnetic-hover flag (boolean).
+    magnetic: booleanSchema,
+    // ── TASK-533-01 REGION: block grid span (present-only clamped ints).
+    colSpan: numericSchema(PAGE_BLOCK_SPAN_CLAMP.min, PAGE_BLOCK_SPAN_CLAMP.max),
+    rowSpan: numericSchema(PAGE_BLOCK_SPAN_CLAMP.min, PAGE_BLOCK_SPAN_CLAMP.max),
+    // ── END TASK-533-01 REGION ────────────────────────────────────────────────
   },
 };
+
+// TASK-522-01-L03: the block-style schema is referenced by EVERY block type at
+// EVERY tree depth (inline + responsive override) — ~176 occurrences. Inlining
+// the (now larger) object at each site bloats Ajv's generated validator enough
+// to blow the call stack on a max-depth document. Hoist it into `$defs` and
+// reference it by `$ref` so Ajv compiles ONE style validator shared everywhere
+// (validation semantics identical — `additionalProperties:false` preserved).
+const PAGE_BLOCK_STYLE_JSON_SCHEMA_REF = "#/$defs/pageBlockStyle";
+const pageBlockStyleJsonSchemaRef: RecordValue = { $ref: PAGE_BLOCK_STYLE_JSON_SCHEMA_REF };
 
 const pageBlockVisibilityJsonSchema: RecordValue = {
   type: "object",
@@ -1200,7 +1914,7 @@ const blockResponsiveJsonSchemaForType = (type: PageBlockType): RecordValue => {
     additionalProperties: false,
     properties: {
       props: blockResponsivePropsJsonSchemaForType(type),
-      style: pageBlockStyleJsonSchema,
+      style: pageBlockStyleJsonSchemaRef,
       visibility: {
         type: "object",
         additionalProperties: false,
@@ -1227,7 +1941,7 @@ const blockJsonSchemaForType = (type: PageBlockType, depth: number): RecordValue
     id: { type: "string", minLength: 1 },
     type: { const: type },
     props: blockPropsJsonSchemaForType(type),
-    style: pageBlockStyleJsonSchema,
+    style: pageBlockStyleJsonSchemaRef,
     visibility: pageBlockVisibilityJsonSchema,
     responsive: blockResponsiveJsonSchemaForType(type),
   };
@@ -1286,12 +2000,39 @@ const partialSectionStyleJsonSchema: RecordValue = {
   type: "object",
   additionalProperties: false,
   properties: {
-    background: { type: "string" },
+    // maxLength defence-in-depth (ReDoS): deep validation owned by
+    // `sanitizeAuthoringCssBackground`; cap oversized input before any regex.
+    background: { type: "string", maxLength: PAGE_CSS_VALUE_MAX_LENGTH },
     backgroundType: { type: "string", enum: [...pageBackgroundTypes] },
     backgroundImage: { type: ["string", "null"] },
     accent: { type: "string" },
     radius: numericSchema(0, 64),
     shadow: { type: "string", enum: [...pageShadowTokens] },
+    // Harmless defence-in-depth mirror (TASK-521-01-L01): section effects render
+    // device-uniform, but a hand-authored responsive[bp].style carrying these
+    // round-trips instead of being rejected by additionalProperties:false.
+    scrollEffect: { type: "string", enum: [...pageSectionScrollEffects] },
+    parallaxIntensity: numericSchema(
+      PAGE_PARALLAX_INTENSITY_CLAMP.min,
+      PAGE_PARALLAX_INTENSITY_CLAMP.max
+    ),
+    // TASK-522-01-L03 section composition fields (present-only mirror).
+    surfacePreset: { type: "string", enum: [...pageSurfacePresets] },
+    composition: { type: "string", enum: [...pageCompositions] },
+    // TASK-525-01-L02 full-bleed background (present-only boolean).
+    fullBleed: booleanSchema,
+    // ── TASK-531 REGION: glow box-shadow (present-only mirror).
+    glow: pageGlowJsonSchema,
+    // ── END TASK-531 REGION ──────────────────────────────────────────────────
+    // ── TASK-534 ── static grain overlay (present-only boolean).
+    noiseOverlay: booleanSchema,
+    // ── TASK-533-01 REGION: asymmetric column ratio (value validated at
+    // normalize by sanitizeAuthoringGridTemplate; string shape only here).
+    columnTemplate: { type: "string" },
+    // ── END TASK-533-01 REGION ────────────────────────────────────────────────
+    // ── TASK-533-02 REGION: per-edge section border (present-only object).
+    border: pageSectionBorderJsonSchema,
+    // ── END TASK-533-02 REGION ────────────────────────────────────────────────
   },
 };
 
@@ -1343,7 +2084,7 @@ export const pageDocumentV2JsonSchema: RecordValue = {
   type: "object",
   required: ["schemaVersion", "sections"],
   additionalProperties: false,
-  $defs: pageBlockDepthJsonSchemas,
+  $defs: { pageBlockStyle: pageBlockStyleJsonSchema, ...pageBlockDepthJsonSchemas },
   properties: {
     schemaVersion: { const: PAGE_DOCUMENT_SCHEMA_VERSION },
     breakpoints: {
@@ -1398,6 +2139,31 @@ export const pageDocumentV2JsonSchema: RecordValue = {
             mobileMode: { type: "string", enum: [...menuAppearanceMobileModes] },
           },
         },
+        // Per-page effects (TASK-521-01-L02). Deep validation (safe color,
+        // numeric clamp) is owned by `normalizeEffects`; this mirrors the shape
+        // and the reject-unknown contract in lockstep.
+        effects: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            cursorSpotlight: { type: "boolean" },
+            spotlightColor: { type: "string" },
+            spotlightSize: {
+              type: "number",
+              minimum: PAGE_SPOTLIGHT_SIZE_CLAMP.min,
+              maximum: PAGE_SPOTLIGHT_SIZE_CLAMP.max,
+            },
+            // ── TASK-534 ── page-root static grain overlay (present-only boolean).
+            noiseOverlay: { type: "boolean" },
+          },
+        },
+        // TASK-523-01 per-page canvas background. Deep color/gradient validation
+        // is owned by `sanitizeAuthoringCssBackground` in `normalizeSettings`
+        // (exactly as `menuAppearance`'s deep validation is owned by
+        // `normalizeMenuAppearance`); the schema mirrors only the shape.
+        // maxLength defence-in-depth (ReDoS): this multi-layer-capable field previously
+        // had NO cap; bound it so oversized input is rejected before any regex.
+        background: { type: "string", maxLength: PAGE_CSS_VALUE_MAX_LENGTH },
         collectionLink: {
           type: "object",
           required: ["contentTypeId", "pageRole"],
@@ -1451,12 +2217,42 @@ export const pageDocumentV2JsonSchema: RecordValue = {
             required: ["background", "backgroundType", "accent", "radius", "shadow"],
             additionalProperties: false,
             properties: {
-              background: { type: "string" },
+              // maxLength defence-in-depth (ReDoS): deep validation owned by
+              // `sanitizeAuthoringCssBackground`; cap oversized input before any regex.
+              background: { type: "string", maxLength: PAGE_CSS_VALUE_MAX_LENGTH },
               backgroundType: { type: "string", enum: [...pageBackgroundTypes] },
               backgroundImage: { type: ["string", "null"] },
               accent: { type: "string" },
               radius: { type: "number", minimum: 0, maximum: 64 },
               shadow: { type: "string", enum: [...pageShadowTokens] },
+              scrollEffect: { type: "string", enum: [...pageSectionScrollEffects] },
+              parallaxIntensity: {
+                type: "number",
+                minimum: PAGE_PARALLAX_INTENSITY_CLAMP.min,
+                maximum: PAGE_PARALLAX_INTENSITY_CLAMP.max,
+              },
+              // TASK-522-01-L03 section composition fields (present-only mirror).
+              surfacePreset: { type: "string", enum: [...pageSurfacePresets] },
+              composition: { type: "string", enum: [...pageCompositions] },
+              // TASK-525-01-L02 full-bleed background (present-only boolean).
+              fullBleed: booleanSchema,
+              // ── TASK-531 REGION: glow box-shadow (present-only; MUST mirror the
+              // partial + block schemas or a top-level style.glow fails
+              // additionalProperties:false and breaks the section-glow round-trip.
+              glow: pageGlowJsonSchema,
+              // ── END TASK-531 REGION ────────────────────────────────────────
+              // ── TASK-534 ── static grain overlay (present-only boolean).
+              noiseOverlay: booleanSchema,
+              // ── TASK-533-01 REGION: asymmetric column ratio (MUST mirror the
+              // partial schema or a top-level style.columnTemplate fails
+              // additionalProperties:false; value validated at normalize).
+              columnTemplate: { type: "string" },
+              // ── END TASK-533-01 REGION ─────────────────────────────────────
+              // ── TASK-533-02 REGION: per-edge section border (MUST mirror the
+              // partial schema or a top-level style.border fails
+              // additionalProperties:false and breaks the border round-trip).
+              border: pageSectionBorderJsonSchema,
+              // ── END TASK-533-02 REGION ─────────────────────────────────────
             },
           },
           spacing: {
@@ -1987,11 +2783,57 @@ const normalizeSettingsMenuAppearance = (
   return sanitizeMenuAppearance(value);
 };
 
+const PAGE_EFFECTS_KEYS = [
+  "cursorSpotlight",
+  "spotlightColor",
+  "spotlightSize",
+  // ── TASK-534 ── page-root static grain overlay (present-only boolean).
+  "noiseOverlay",
+] as const;
+
+/**
+ * TASK-521-01-L02 per-page effects sub-normalizer (mirrors
+ * `normalizeSettingsMenuAppearance`). Present-only: returns `undefined` when
+ * nothing meaningful was authored so `settings.effects` is omitted entirely.
+ */
+const normalizeEffects = (value: unknown, mode: NormalizeMode): PageEffectsV2 | undefined => {
+  if (value === undefined) return undefined;
+  const input = requireRecord(value, "settings.effects", mode);
+  assertKnownKeys(input, PAGE_EFFECTS_KEYS, "settings.effects", mode);
+  const result: PageEffectsV2 = {};
+  if (input.cursorSpotlight !== undefined) {
+    result.cursorSpotlight = readBoolean(input.cursorSpotlight, false);
+  }
+  if (input.spotlightColor !== undefined) {
+    result.spotlightColor = readSafeColor(input.spotlightColor, "var(--primary)");
+  }
+  if (input.spotlightSize !== undefined) {
+    result.spotlightSize = readNumber(
+      input.spotlightSize,
+      400,
+      PAGE_SPOTLIGHT_SIZE_CLAMP.min,
+      PAGE_SPOTLIGHT_SIZE_CLAMP.max
+    );
+  }
+  // ── TASK-534 ── page-root grain overlay: present-only (emitted ONLY when true so
+  // a spotlight-only / no-effect page stays byte-identical).
+  if (input.noiseOverlay === true) result.noiseOverlay = true;
+  return Object.keys(result).length ? result : undefined;
+};
+
 const normalizeSettings = (value: unknown, mode: NormalizeMode): PageDocumentSettingsV2 => {
   const input = requireRecord(value ?? {}, "settings", mode);
   assertKnownKeys(
     input,
-    ["template", "showInNav", "revisionRetention", "collectionLink", "menuAppearance"],
+    [
+      "template",
+      "showInNav",
+      "revisionRetention",
+      "collectionLink",
+      "menuAppearance",
+      "effects",
+      "background",
+    ],
     "settings",
     mode
   );
@@ -2001,12 +2843,22 @@ const normalizeSettings = (value: unknown, mode: NormalizeMode): PageDocumentSet
       ? undefined
       : readNumber(input.revisionRetention, 10, 1, 100);
   const menuAppearance = normalizeSettingsMenuAppearance(input.menuAppearance, mode);
+  const effects = normalizeEffects(input.effects, mode);
+  // TASK-523-01 present-only page canvas background. `sanitizeAuthoringCssBackground`
+  // returns a safe color/gradient or `null`; a null/absent value drops the key so the
+  // normalized output stays byte-identical for legacy/post-522 docs.
+  const background =
+    input.background === undefined
+      ? undefined
+      : (sanitizeAuthoringCssBackground(input.background) ?? undefined);
   return {
     template: readText(input.template, defaultSettings.template),
     showInNav: readBoolean(input.showInNav, defaultSettings.showInNav),
     ...(revisionRetention !== undefined ? { revisionRetention } : {}),
     ...(collectionLink ? { collectionLink } : {}),
     ...(menuAppearance !== undefined ? { menuAppearance } : {}),
+    ...(effects !== undefined ? { effects } : {}),
+    ...(background ? { background } : {}),
   };
 };
 
@@ -2049,6 +2901,84 @@ const normalizeSectionLayout = (
   return partial ? result : ({ ...defaultLayout, ...result } satisfies PageSectionLayoutV2);
 };
 
+// ── TASK-531 REGION (shared glow normalizer) ──────────────────────────────────
+// Fail-soft numbers (clamp), REQUIRED sanitized color, reject-unknown nested keys
+// (fail-closed in write mode). Returns `undefined` when the color is invalid ⇒ the
+// WHOLE glow key is OMITTED (never a partial / color-less glow), so a no-glow /
+// bad-color style stays byte-identical (present-only).
+const normalizeGlow = (value: unknown, mode: NormalizeMode, path: string): PageGlow | undefined => {
+  const g = (isRecord(value) ? value : {}) as RecordValue;
+  assertKnownKeys(g, ["color", "blur", "spread", "x", "y"], path, mode);
+  const color = readOptionalSafeColor(g.color);
+  if (typeof color !== "string" || color.length === 0) return undefined;
+  const glow: PageGlow = { color };
+  if (g.blur !== undefined) {
+    glow.blur = readNumber(g.blur, 24, PAGE_GLOW_BLUR_CLAMP.min, PAGE_GLOW_BLUR_CLAMP.max);
+  }
+  if (g.spread !== undefined) {
+    glow.spread = readNumber(g.spread, 0, PAGE_GLOW_SPREAD_CLAMP.min, PAGE_GLOW_SPREAD_CLAMP.max);
+  }
+  if (g.x !== undefined) {
+    glow.x = readNumber(g.x, 0, PAGE_GLOW_OFFSET_CLAMP.min, PAGE_GLOW_OFFSET_CLAMP.max);
+  }
+  if (g.y !== undefined) {
+    glow.y = readNumber(g.y, 0, PAGE_GLOW_OFFSET_CLAMP.min, PAGE_GLOW_OFFSET_CLAMP.max);
+  }
+  return glow;
+};
+// ── END TASK-531 REGION ───────────────────────────────────────────────────────
+
+// ── TASK-533-02 REGION: per-edge section border normalizer ────────────────────
+const pageSectionBorderEdges = ["top", "right", "bottom", "left"] as const;
+const normalizeSectionBorderEdge = (
+  value: unknown,
+  mode: NormalizeMode,
+  path: string
+): PageSectionBorderEdgeV2 | undefined => {
+  const edge = (isRecord(value) ? value : {}) as RecordValue;
+  assertKnownKeys(edge, ["color", "width", "style"], path, mode);
+  const result: PageSectionBorderEdgeV2 = {};
+  // Color via readOptionalSafeColor → sanitizeAuthoringCssColor (only sanctioned path);
+  // a bad color is DROPPED (undefined), never persisted raw.
+  if (edge.color !== undefined) {
+    const color = readOptionalSafeColor(edge.color);
+    if (typeof color === "string" && color.length > 0) result.color = color;
+  }
+  if (edge.width !== undefined) {
+    const width = readOptionalClampedNumber(
+      edge.width,
+      PAGE_SECTION_BORDER_WIDTH_CLAMP,
+      `${path}.width`,
+      mode
+    );
+    if (width !== undefined) result.width = width;
+  }
+  if (edge.style !== undefined) {
+    result.style = normalizeEnum(edge.style, pageBlockBorderStyles, "solid", `${path}.style`, mode);
+  }
+  // Include the edge ONLY if it has at least one meaningful prop (a visible border
+  // needs a color OR a positive width); otherwise omit (present-only).
+  const meaningful = Boolean(result.color) || (result.width ?? 0) > 0;
+  return meaningful ? result : undefined;
+};
+const normalizeSectionBorder = (
+  value: unknown,
+  mode: NormalizeMode,
+  path: string
+): PageSectionBorderV2 | undefined => {
+  const input = requireRecord(value ?? {}, path, mode);
+  assertKnownKeys(input, pageSectionBorderEdges, path, mode);
+  const result: PageSectionBorderV2 = {};
+  for (const edge of pageSectionBorderEdges) {
+    if (input[edge] === undefined) continue;
+    const normalized = normalizeSectionBorderEdge(input[edge], mode, `${path}.${edge}`);
+    if (normalized) result[edge] = normalized;
+  }
+  // Present-only whole-object omit: return undefined when NO edge survives.
+  return Object.keys(result).length > 0 ? result : undefined;
+};
+// ── END TASK-533-02 REGION ────────────────────────────────────────────────────
+
 const normalizeSectionStyle = (
   value: unknown,
   mode: NormalizeMode,
@@ -2058,7 +2988,32 @@ const normalizeSectionStyle = (
   const input = requireRecord(value ?? {}, path, mode);
   assertKnownKeys(
     input,
-    ["background", "backgroundType", "backgroundImage", "accent", "radius", "shadow"],
+    [
+      "background",
+      "backgroundType",
+      "backgroundImage",
+      "accent",
+      "radius",
+      "shadow",
+      "scrollEffect",
+      "parallaxIntensity",
+      // TASK-522-01-L03 section composition fields (present-only).
+      "surfacePreset",
+      "composition",
+      // TASK-525-01-L02 full-bleed background (present-only boolean).
+      "fullBleed",
+      // ── TASK-531 REGION: glow box-shadow (present-only object).
+      "glow",
+      // ── END TASK-531 REGION ──────────────────────────────────────────────
+      // ── TASK-534 ── static grain overlay (present-only boolean).
+      "noiseOverlay",
+      // ── TASK-533-01 REGION: asymmetric column ratio (present-only string).
+      "columnTemplate",
+      // ── END TASK-533-01 REGION ────────────────────────────────────────────
+      // ── TASK-533-02 REGION: per-edge section border (present-only object).
+      "border",
+      // ── END TASK-533-02 REGION ────────────────────────────────────────────
+    ],
     path,
     mode
   );
@@ -2093,6 +3048,76 @@ const normalizeSectionStyle = (
       mode
     );
   }
+  // Present-only scroll motion (TASK-521-01-L01). `"none"` is omitted so an
+  // effect toggled off returns to byte identity; `defaultStyle` seeds neither
+  // key, so `{ ...defaultStyle, ...result }` stays unchanged when unauthored.
+  if (input.scrollEffect !== undefined) {
+    const effect = normalizeEnum(
+      input.scrollEffect,
+      pageSectionScrollEffects,
+      "none",
+      `${path}.scrollEffect`,
+      mode
+    );
+    if (effect !== "none") result.scrollEffect = effect;
+  }
+  if (input.parallaxIntensity !== undefined) {
+    result.parallaxIntensity = readNumber(
+      input.parallaxIntensity,
+      20,
+      PAGE_PARALLAX_INTENSITY_CLAMP.min,
+      PAGE_PARALLAX_INTENSITY_CLAMP.max
+    );
+  }
+  // TASK-522-01-L03 section composition (present-only; `"none"`/`"flow"` omitted;
+  // `defaultStyle` seeds neither so an unauthored section stays byte-identical).
+  if (input.surfacePreset !== undefined) {
+    const s = normalizeEnum(
+      input.surfacePreset,
+      pageSurfacePresets,
+      "none",
+      `${path}.surfacePreset`,
+      mode
+    );
+    if (s !== "none") result.surfacePreset = s;
+  }
+  if (input.composition !== undefined) {
+    const c = normalizeEnum(
+      input.composition,
+      pageCompositions,
+      "flow",
+      `${path}.composition`,
+      mode
+    );
+    if (c !== "flow") result.composition = c;
+  }
+  // TASK-525-01-L02 full-bleed background (present-only boolean; mirror tiltGlare).
+  // Emitted ONLY when `=== true`; `false`/unset omitted so a non-bleed section
+  // stays byte-identical (`defaultStyle` seeds no key).
+  if (input.fullBleed === true) result.fullBleed = true;
+  // ── TASK-531 REGION: glow box-shadow (present-only; omitted when color invalid).
+  if (input.glow !== undefined) {
+    const glow = normalizeGlow(input.glow, mode, `${path}.glow`);
+    if (glow) result.glow = glow;
+  }
+  // ── END TASK-531 REGION ──────────────────────────────────────────────────
+  // ── TASK-534 ── static grain overlay (present-only; emitted ONLY when === true
+  // so a non-grain section stays byte-identical; defaultStyle seeds no key).
+  if (input.noiseOverlay === true) result.noiseOverlay = true;
+  // ── TASK-533-01 REGION: asymmetric column ratio (present-only sanitized string).
+  // The ONLY author string reaching a CSS value position — routed through the strict
+  // allowlist `sanitizeAuthoringGridTemplate`; rejection/empty ⇒ OMIT (never emit raw).
+  if (input.columnTemplate !== undefined) {
+    const template = sanitizeAuthoringGridTemplate(input.columnTemplate);
+    if (typeof template === "string" && template.length > 0) result.columnTemplate = template;
+  }
+  // ── END TASK-533-01 REGION ────────────────────────────────────────────────
+  // ── TASK-533-02 REGION: per-edge section border (present-only whole-object omit).
+  if (input.border !== undefined) {
+    const border = normalizeSectionBorder(input.border, mode, `${path}.border`);
+    if (border) result.border = border;
+  }
+  // ── END TASK-533-02 REGION ────────────────────────────────────────────────
   return partial ? result : ({ ...defaultStyle, ...result } satisfies PageSectionStyleV2);
 };
 
@@ -2193,6 +3218,15 @@ const normalizeBlockStyle = (
   if (input.background !== undefined) {
     result.background = readOptionalSafeBackground(input.background) ?? null;
   }
+  // TASK-524-02-L01: present-only independent glass tint — emit ONLY a valid
+  // sanitized color; omit the key otherwise (never null/"") so no-tint /
+  // bad-tint blocks stay byte-identical to 522.
+  if (input.surfaceTint !== undefined) {
+    const tint = readOptionalSafeColor(input.surfaceTint);
+    if (typeof tint === "string" && tint.length > 0) {
+      result.surfaceTint = tint;
+    }
+  }
   if (input.backgroundType !== undefined) {
     result.backgroundType = normalizeEnum(
       input.backgroundType,
@@ -2283,6 +3317,184 @@ const normalizeBlockStyle = (
       mode
     );
   }
+  // ── TASK-532 typography fidelity (Bundle B) — present-only ──
+  // Fluid font-size: grammar-validated at the write boundary. A non-conforming
+  // value returns `null` ⇒ the field is OMITTED (never stored raw); this is the
+  // security boundary — L05 emits only this already-sanitized value.
+  if (input.fontSizeCustom !== undefined) {
+    const safe = sanitizeAuthoringCssFontSize(input.fontSizeCustom);
+    if (safe) result.fontSizeCustom = safe;
+  }
+  // Text-transform: fail-closed enum; `"none"` resets ⇒ omitted (present-only).
+  if (input.textTransform !== undefined) {
+    const t = normalizeEnum(
+      input.textTransform,
+      pageTypographyTextTransforms,
+      "none",
+      `${path}.textTransform`,
+      mode
+    );
+    if (t !== "none") result.textTransform = t;
+  }
+  // ── end TASK-532 ──
+  // TASK-522-01-L03 composition/decoration fields — all present-only. Enums
+  // fail-closed (write mode throws on a bad VALUE); the "none"/"flow" reset
+  // member is OMITTED; numbers clamp fail-soft; nested unknown keys reject.
+  if (input.decoration !== undefined) {
+    const d = (isRecord(input.decoration) ? input.decoration : {}) as RecordValue;
+    assertKnownKeys(d, ["motion", "delay", "duration"], `${path}.decoration`, mode);
+    const motion = normalizeEnum(
+      d.motion,
+      pageBlockDecorationMotions,
+      "none",
+      `${path}.decoration.motion`,
+      mode
+    );
+    if (motion !== "none") {
+      const deco: PageBlockDecoration = { motion };
+      if (d.delay !== undefined) {
+        deco.delay = readNumber(
+          d.delay,
+          0,
+          PAGE_DECORATION_DELAY_CLAMP.min,
+          PAGE_DECORATION_DELAY_CLAMP.max
+        );
+      }
+      if (d.duration !== undefined) {
+        deco.duration = readNumber(
+          d.duration,
+          6000,
+          PAGE_DECORATION_DURATION_CLAMP.min,
+          PAGE_DECORATION_DURATION_CLAMP.max
+        );
+      }
+      result.decoration = deco;
+    }
+  }
+  if (input.tilt !== undefined) {
+    const t = normalizeEnum(input.tilt, pageTiltStrengths, "none", `${path}.tilt`, mode);
+    if (t !== "none") result.tilt = t;
+  }
+  if (input.tiltGlare !== undefined && input.tiltGlare === true) result.tiltGlare = true;
+  if (input.layer !== undefined) {
+    const l = (isRecord(input.layer) ? input.layer : {}) as RecordValue;
+    assertKnownKeys(l, ["x", "y", "z", "anchor"], `${path}.layer`, mode);
+    const layer: PageBlockLayer = {};
+    if (l.x !== undefined)
+      layer.x = readNumber(l.x, 0, PAGE_LAYER_X_CLAMP.min, PAGE_LAYER_X_CLAMP.max);
+    if (l.y !== undefined)
+      layer.y = readNumber(l.y, 0, PAGE_LAYER_Y_CLAMP.min, PAGE_LAYER_Y_CLAMP.max);
+    if (l.z !== undefined)
+      layer.z = readNumber(l.z, 0, PAGE_LAYER_Z_CLAMP.min, PAGE_LAYER_Z_CLAMP.max);
+    if (l.anchor !== undefined) {
+      layer.anchor = normalizeEnum(
+        l.anchor,
+        pageLayerAnchors,
+        "center",
+        `${path}.layer.anchor`,
+        mode
+      );
+    }
+    if (Object.keys(layer).length) result.layer = layer;
+  }
+  if (input.surfacePreset !== undefined) {
+    const s = normalizeEnum(
+      input.surfacePreset,
+      pageSurfacePresets,
+      "none",
+      `${path}.surfacePreset`,
+      mode
+    );
+    if (s !== "none") result.surfacePreset = s;
+  }
+  if (input.hoverEffect !== undefined) {
+    const h = normalizeEnum(
+      input.hoverEffect,
+      pageBlockHoverEffects,
+      "none",
+      `${path}.hoverEffect`,
+      mode
+    );
+    if (h !== "none") result.hoverEffect = h;
+  }
+  if (input.composition !== undefined) {
+    const c = normalizeEnum(
+      input.composition,
+      pageCompositions,
+      "flow",
+      `${path}.composition`,
+      mode
+    );
+    if (c !== "flow") result.composition = c;
+  }
+  if (input.marquee !== undefined) {
+    const mq = (isRecord(input.marquee) ? input.marquee : {}) as RecordValue;
+    assertKnownKeys(mq, ["speed", "direction", "seamless"], `${path}.marquee`, mode);
+    const marquee: PageBlockMarquee = {};
+    if (mq.speed !== undefined) {
+      marquee.speed = readNumber(
+        mq.speed,
+        18,
+        PAGE_MARQUEE_SPEED_CLAMP.min,
+        PAGE_MARQUEE_SPEED_CLAMP.max
+      );
+    }
+    if (mq.direction !== undefined) {
+      marquee.direction = normalizeEnum(
+        mq.direction,
+        pageMarqueeDirections,
+        "left",
+        `${path}.marquee.direction`,
+        mode
+      );
+    }
+    if (mq.seamless === true) marquee.seamless = true;
+    if (Object.keys(marquee).length) result.marquee = marquee;
+  }
+  // TASK-525-02-L01 per-block staggered reveal — present-only via readNumber
+  // (Number.isFinite + clamp; NaN/Infinity fail-soft to 0, out-of-range clamps).
+  // Emitted ONLY when authored so an unset block stays byte-identical.
+  if (input.revealDelay !== undefined) {
+    result.revealDelay = readNumber(
+      input.revealDelay,
+      0,
+      PAGE_REVEAL_DELAY_CLAMP.min,
+      PAGE_REVEAL_DELAY_CLAMP.max
+    );
+  }
+  // ── TASK-531 REGION: glow box-shadow (present-only; omitted when color invalid).
+  if (input.glow !== undefined) {
+    const glow = normalizeGlow(input.glow, mode, `${path}.glow`);
+    if (glow) result.glow = glow;
+  }
+  // ── END TASK-531 REGION ──────────────────────────────────────────────────
+  // ── TASK-534 ── present-only magnetic-hover flag; emitted ONLY when === true so
+  // an un-authored / disabled block stays byte-identical (mirrors tiltGlare).
+  if (input.magnetic !== undefined && readBoolean(input.magnetic, false)) {
+    result.magnetic = true;
+  }
+  // ── TASK-533-01 REGION: block grid span (present-only clamped ints).
+  // Emitted ONLY as `span N` literals at render (533-01-L02); NaN/Infinity/out-of-range
+  // clamp fail-soft; Math.trunc so `span ${n}` is always an integer.
+  if (input.colSpan !== undefined) {
+    const n = readOptionalClampedNumber(
+      input.colSpan,
+      PAGE_BLOCK_SPAN_CLAMP,
+      `${path}.colSpan`,
+      mode
+    );
+    if (n !== undefined) result.colSpan = Math.trunc(n);
+  }
+  if (input.rowSpan !== undefined) {
+    const n = readOptionalClampedNumber(
+      input.rowSpan,
+      PAGE_BLOCK_SPAN_CLAMP,
+      `${path}.rowSpan`,
+      mode
+    );
+    if (n !== undefined) result.rowSpan = Math.trunc(n);
+  }
+  // ── END TASK-533-01 REGION ────────────────────────────────────────────────
   return Object.keys(result).length > 0 ? result : undefined;
 };
 
@@ -2338,8 +3550,14 @@ const normalizeBlockProps = (
 
   for (const key of pageBlockPropKeys[type]) {
     if (key === "marks") continue;
-    if (input[key] !== undefined)
-      result[key] = normalizeBlockProp(type, key, input[key], mode, `${path}.${key}`);
+    if (input[key] !== undefined) {
+      const normalized = normalizeBlockProp(type, key, input[key], mode, `${path}.${key}`);
+      // ── TASK-534 ── present-only props (gallery `filterable`/`filterCategories`)
+      // return `undefined` when they carry nothing meaningful; do NOT stamp an
+      // `undefined`-valued key onto the props object so a non-filterable gallery
+      // stays byte-identical to a legacy one (the defaults seed no such key).
+      if (normalized !== undefined) result[key] = normalized;
+    }
   }
   if (isPageTextMarkCapableBlockType(type) && input.marks !== undefined) {
     const text = typeof result.text === "string" ? result.text : "";
@@ -2532,7 +3750,18 @@ const normalizeGalleryItems = (value: unknown): Record<string, unknown>[] => {
       readOptionalText(item.description) ??
       "";
     if (!src && !caption) return [];
-    return [{ src, alt, caption }];
+    // ── TASK-534 ── present-only per-item `category`: a SPACE-SEPARATED set of
+    // single kebab/word tokens (each `GALLERY_CATEGORY_PATTERN`). Out-of-pattern
+    // tokens are DROPPED (fail-soft) so the stored value is always a bounded token
+    // set that can never `"`-break out of the `data-category` attribute. Absent /
+    // no valid token ⇒ NO `category` key, so legacy gallery items stay byte-identical.
+    const rebuilt: Record<string, unknown> = { src, alt, caption };
+    const catTokens = (readOptionalText(item.category) ?? "")
+      .split(/\s+/)
+      .filter((token) => GALLERY_CATEGORY_PATTERN.test(token))
+      .slice(0, GALLERY_FILTER_CATEGORY_MAX);
+    if (catTokens.length) rebuilt.category = catTokens.join(" ");
+    return [rebuilt];
   });
 };
 
@@ -2625,6 +3854,21 @@ const normalizeBlockProp = (
   if (type === "divider" && key === "tone") {
     return normalizeEnum(value, pageDividerTones, "neutral", path, mode);
   }
+  // ── TASK-532 eyebrow divider (Bundle B) — present-only decorative props ──
+  // `width` clamps fail-soft; `align` is a fail-closed enum; `gradient` coerces
+  // to a strict boolean. All are only serialized when the author sets them (the
+  // generic prop loop writes only keys whose input value !== undefined), so a
+  // legacy `{tone,thickness}` divider round-trips byte-identical.
+  if (type === "divider" && key === "width") {
+    return readNumber(value, 34, PAGE_DIVIDER_WIDTH_CLAMP.min, PAGE_DIVIDER_WIDTH_CLAMP.max);
+  }
+  if (type === "divider" && key === "align") {
+    return normalizeEnum(value, pageDividerAligns, "left", path, mode);
+  }
+  if (type === "divider" && key === "gradient") {
+    return value === true;
+  }
+  // ── end TASK-532 ──
   if (type === "columns" && key === "distribution") {
     return normalizeEnum(value, pageColumnDistributions, "equal", path, mode);
   }
@@ -2640,6 +3884,81 @@ const normalizeBlockProp = (
     return readNumber(value, type === "columns" ? 24 : 16, 0, 120);
   }
   if (type === "spacer" && key === "size") return readNumber(value, 32, 0, 240);
+  // Animated-icon block props (TASK-521-01-L03). These MUST precede the generic
+  // `value.trim()` string tail below, else `name` bypasses the icon-name
+  // allowlist. `name` = pattern + Set-membership (fail-soft "sparkles");
+  // `animation` = fail-CLOSED enum (bad value throws in write mode); numeric
+  // props clamp (fail-soft); `color` via readSafeColor (fail-soft). `label`
+  // falls through to the generic text tail intentionally.
+  if (type === "icon" && key === "name") return resolveAnimatedIconName(value);
+  if (type === "icon" && key === "animation") {
+    return normalizeEnum(value, animatedIconAnimations, "none", path, mode);
+  }
+  if (type === "icon" && key === "size") {
+    return readNumber(value, 48, ANIMATED_ICON_SIZE_CLAMP.min, ANIMATED_ICON_SIZE_CLAMP.max);
+  }
+  if (type === "icon" && key === "color") return readSafeColor(value, "var(--primary)");
+  if (type === "icon" && key === "speed") {
+    return readNumber(value, 1600, ANIMATED_ICON_SPEED_CLAMP.min, ANIMATED_ICON_SPEED_CLAMP.max);
+  }
+  // Custom-SVG block props (TASK-522-01-L01). MUST precede the generic string
+  // tail below, else `svg`/`label` bypass sanitize/slice. `svg` is allowlist-
+  // sanitized (fail-soft "" on reject = the default); `drawSpeed` clamps;
+  // `label` slices; `drawIn` coerces to boolean.
+  if (type === "customSvg" && key === "svg") {
+    const rawSvg = typeof value === "string" ? value : "";
+    return sanitizeSvg(rawSvg, PAGE_CUSTOM_SVG_MAX_BYTES);
+  }
+  if (type === "customSvg" && key === "drawIn") {
+    return value === true;
+  }
+  if (type === "customSvg" && key === "drawSpeed") {
+    return readNumber(value, 2400, PAGE_DRAW_SPEED_CLAMP.min, PAGE_DRAW_SPEED_CLAMP.max);
+  }
+  if (type === "customSvg" && key === "label") {
+    return typeof value === "string" ? value.slice(0, 160) : "";
+  }
+  // ── TASK-534 ── switcher / scrollHint / gallery-filter props. MUST precede the
+  // boolean cluster + the generic `key === "items"` / string tail below, else
+  // `tabs` (an array) falls to the `items` clone path and enums bypass the
+  // fail-closed `normalizeEnum`. Config from validated values only.
+  if (type === "switcher" && key === "tabs") {
+    // Rebuild each tab as a FRESH { label } ONLY — reading `label`, DISCARDING
+    // `href` (the listItems editor can commit `{label,href}`) and every other key
+    // BEFORE schema validation, so the switcher tab schema
+    // (additionalProperties:false + required:["label"]) never rejects an editor row
+    // (534-04-L01). Count clamped to SWITCHER_MAX_PANELS.
+    const raw = requireArray(value ?? [], path, mode).slice(0, SWITCHER_MAX_PANELS);
+    const tabs = raw.map((tab) => ({
+      label: readText(isRecord(tab) ? tab.label : "", ""),
+    }));
+    return tabs.length ? tabs : [{ label: "Tab one" }];
+  }
+  if (type === "switcher" && key === "variant") {
+    return normalizeEnum(value, switcherVariants, "pill", path, mode);
+  }
+  if (type === "switcher" && key === "activeIndex") {
+    // Clamp to the hard panel-count bound; the renderer re-clamps against the
+    // actual tab count (defence in depth, 534-02-L01).
+    return readNumber(value, 0, 0, SWITCHER_MAX_PANELS - 1);
+  }
+  if (type === "scrollHint" && key === "glyph") {
+    return normalizeEnum(value, scrollHintGlyphs, "dot", path, mode);
+  }
+  if (type === "scrollHint" && key === "label") {
+    return readText(value, "Scroll"); // a11y text, escaped at render.
+  }
+  if (type === "gallery" && key === "filterable") {
+    // Present-only: omit `false` so a non-filterable gallery is byte-identical.
+    return readBoolean(value, false) ? true : undefined;
+  }
+  if (type === "gallery" && key === "filterCategories") {
+    const cats = (Array.isArray(value) ? value : [])
+      .map((c) => (typeof c === "string" ? c.trim() : ""))
+      .filter((c) => GALLERY_CATEGORY_PATTERN.test(c)) // single-token allowlist, drop bad.
+      .slice(0, GALLERY_FILTER_CATEGORY_MAX);
+    return cats.length ? cats : undefined; // present-only.
+  }
   if (
     key === "ordered" ||
     key === "autoplay" ||

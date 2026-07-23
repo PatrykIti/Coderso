@@ -1,5 +1,4 @@
 import { Copy, MoveDown, MoveUp, Trash2 } from "lucide-react";
-import { useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,565 +11,35 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  normalizeScreenImageSrc,
-  screenBlockAligns,
-  screenBlockWidths,
   screenImageRatios,
-  screenSectionColumnPresets,
   SCREEN_BLOCK_MIN_HEIGHT_CLAMP,
-  SCREEN_SECTION_COLUMN_GAP_CLAMP,
-  type CustomScreenBindingMode,
-  type ScreenBlockStyleV1,
-  type ScreenBlockV1,
-  type ScreenFieldBinding,
-  type ScreenSectionStyleV1,
-  type ScreenSectionV1,
 } from "../../../services/customScreens/customScreenSchemas";
-import { PAGE_BLOCK_BOX_SPACING_CLAMP } from "../../../services/pages/pageDocumentV2";
-import type { ContentField } from "../content-types/SchemaBuilder";
+import {
+  BoundFieldRow,
+  BoxSpacingRow,
+  EnumRow,
+  ImageSrcRow,
+  InspectorRow,
+} from "./ScreenBlockInspectorControls";
+import { TabsEditor } from "./ScreenBlockInspectorTabs";
+import {
+  buildStylePatch,
+  readScreenInspectorEnum as readEnum,
+  readScreenInspectorString as readString,
+  SCREEN_ALIGN_DEFAULT_OPTION,
+  type ScreenBlockInspectorProps,
+  type ScreenBlockStyleEdit,
+} from "./screenBlockInspectorModel";
 
-type ScreenBlockInspectorProps = {
-  selectedBlock: ScreenBlockV1 | null;
-  bindings: ScreenFieldBinding[];
-  fields: ContentField[];
-  // TASK-498-01 A4: the inspector renders ONE flat body. The historical
-  // `content|binding|layout|style|visibility` sub-values collapse to a single
-  // shape; the prop is retained (type-stable) but its sub-value no longer routes.
-  panel?: "all" | "content" | "binding" | "layout" | "style" | "visibility";
-  showBlockActions?: boolean;
-  // TASK-500-02 (optional): "Insert into" slot picker for a selected container.
-  // Arms a slot-end insert point on the host (keyboard-first parity with the
-  // canvas drop zones — those remain the primary surface). The inspector stays
-  // dumb: the canvas builds the full ScreenInsertTarget from (parentId, slotId).
-  onArmSlotInsert?: (parentId: string, slotId: string) => void;
-  armedInsertSlotId?: string | null;
-  onPatchBlock: (blockId: string, patch: Partial<ScreenBlockV1>) => void;
-  onPatchBlockData: (blockId: string, patch: Record<string, unknown>) => void;
-  onPatchBinding: (
-    blockId: string,
-    propPath: string,
-    patch: Partial<Pick<ScreenFieldBinding, "field" | "mode">>
-  ) => void;
-  onMove: (blockId: string, direction: "up" | "down") => void;
-  onDuplicate: (blockId: string) => void;
-  onDelete: (blockId: string) => void;
-};
-
-type FieldOption = {
-  value: string;
-  label: string;
-  type: string;
-};
-
-const systemFieldOptions: FieldOption[] = [
-  { value: "title", label: "Title", type: "system" },
-  { value: "slug", label: "Slug", type: "system" },
-  { value: "status", label: "Status", type: "system" },
-  { value: "createdAt", label: "Created", type: "system" },
-  { value: "updatedAt", label: "Updated", type: "system" },
-  { value: "publishedAt", label: "Published", type: "system" },
-];
-
-const createBindingId = (blockId: string, propPath: string) =>
-  `${blockId}-${propPath}`.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-
-export const createScreenFieldBinding = (input: {
-  blockId: string;
-  propPath: string;
-  field: string;
-  mode?: CustomScreenBindingMode;
-}): ScreenFieldBinding => ({
-  id: createBindingId(input.blockId, input.propPath),
-  blockId: input.blockId,
-  propPath: input.propPath,
-  source: "entry",
-  field: input.field,
-  mode: input.mode ?? "readwrite",
-});
-
-const readString = (value: unknown) => (typeof value === "string" ? value : "");
-
-const buildFieldOptions = (fields: ContentField[]): FieldOption[] => {
-  const schemaFieldNames = new Set(fields.map((field) => field.name));
-  return [
-    ...systemFieldOptions.filter((field) => !schemaFieldNames.has(field.value)),
-    ...fields.map((field) => ({
-      value: field.name,
-      label: field.label,
-      type: field.type,
-    })),
-  ];
-};
-
-/**
- * TASK-498-01 A4: prototype flat inspector row — a label above a single control,
- * no bordered card (CustomScreenEditorPreview.tsx:72-79, :250-296).
- */
-function InspectorRow({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      {children}
-    </div>
-  );
-}
-
-/**
- * First-class flat "Bound field" row (prototype :258-266). The binding MODE
- * ("Interaction" read/readwrite) is no longer a user-visible control — it is set
- * per-kind by the insert wiring (TASK-498-02 B4), so only the field Select ships.
- *
- * TASK-498-02 B4:
- *  - `filterTypes` restricts the option list per kind (stat → number, image → media,
- *    related-list → relation). Omitted = all fields (field / record-header / heading).
- *  - `bindMode` is passed EXPLICITLY into onPatchBinding: display kinds bind `read`,
- *    `field` + editable header bind `readwrite`. This is the single kind-based mode
- *    convention (NOT a propPath-keyed default, which cannot disambiguate `field`
- *    readwrite `value` from `stat` read `value`).
- *  - `onFieldSelected` is a side-effect fired on change (related-list uses it to sync
- *    `data.target` from the selected relation field — `handlePatchBinding` only
- *    auto-syncs `data` for propPath `value`, never for `items`).
- */
-function BoundFieldRow({
-  block,
-  propPath,
-  bindings,
-  fields,
-  onPatchBinding,
-  filterTypes,
-  bindMode,
-  onFieldSelected,
-}: {
-  block: ScreenBlockV1;
-  propPath: string;
-  bindings: ScreenFieldBinding[];
-  fields: ContentField[];
-  onPatchBinding: ScreenBlockInspectorProps["onPatchBinding"];
-  filterTypes?: readonly string[];
-  bindMode?: CustomScreenBindingMode;
-  onFieldSelected?: (fieldName: string) => void;
-}) {
-  const binding = bindings.find((item) => item.blockId === block.id && item.propPath === propPath);
-  const allOptions = buildFieldOptions(fields);
-  const fieldOptions = filterTypes
-    ? allOptions.filter((option) => filterTypes.includes(option.type))
-    : allOptions;
-  const selectedField =
-    binding?.field ?? readString(block.data.field) ?? fieldOptions[0]?.value ?? "title";
-
-  return (
-    <InspectorRow label="Bound field">
-      {fieldOptions.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No matching fields on this content type.</p>
-      ) : (
-        <Select
-          value={selectedField}
-          onValueChange={(field) => {
-            onPatchBinding(block.id, propPath, bindMode ? { field, mode: bindMode } : { field });
-            onFieldSelected?.(field);
-          }}
-        >
-          <SelectTrigger data-screen-bound-field="true">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {fieldOptions.map((field) => (
-              <SelectItem key={field.value} value={field.value}>
-                {field.label} ({field.type})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
-    </InspectorRow>
-  );
-}
-
-/** Flat enum Select row shared by the per-kind inspector controls (TASK-498-02 B4). */
-function EnumRow({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: ReadonlyArray<{ value: string; label: string }>;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <InspectorRow label={label}>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </InspectorRow>
-  );
-}
-
-const readEnum = (value: unknown, fallback: string) =>
-  typeof value === "string" && value ? value : fallback;
-
-// TASK-503-03: block-level Layout (ScreenBlockStyleV1) authoring. onPatchBlock/
-// updateScreenBlock REPLACES the `style` key wholesale (screenDocumentOps.ts:627),
-// so buildStylePatch reads the CURRENT style, returns the FULL merged object, and
-// prunes empty/default records to keep an absent-style document byte-stable.
-type ScreenBoxSide = "top" | "right" | "bottom" | "left";
-
-/** Sentinel for "no align key" — align "start" (mr-auto) is NOT a no-op, so it
- *  persists explicitly; only the sentinel prunes. Width "auto" IS the no-op
- *  default (empty class in the 503-02 map), so "auto" prunes. */
-export const SCREEN_ALIGN_DEFAULT_OPTION = "__default__";
-
-export type ScreenBlockStyleEdit =
-  | { kind: "width"; value: string } // "auto" or unknown → prune key
-  | { kind: "align"; value: string } // sentinel or unknown → prune key
-  | { kind: "minHeight"; value: string } // "" / non-finite → prune; else floor+clamp 0..640
-  | { kind: "box"; box: "margin" | "padding"; side: ScreenBoxSide; value: string };
-// "" / non-finite → prune side; else floor+clamp 0..240
-
-const clampTo = (value: number, min: number, max: number) =>
-  Math.min(max, Math.max(min, Math.floor(value)));
-
-export const buildStylePatch = (
-  current: ScreenBlockStyleV1 | undefined,
-  edit: ScreenBlockStyleEdit
-): ScreenBlockStyleV1 | undefined => {
-  const next: ScreenBlockStyleV1 = { ...(current ?? {}) };
-  switch (edit.kind) {
-    case "width": {
-      if (edit.value === "auto" || !(screenBlockWidths as readonly string[]).includes(edit.value)) {
-        delete next.width;
-      } else {
-        next.width = edit.value as ScreenBlockStyleV1["width"];
-      }
-      break;
-    }
-    case "align": {
-      if (
-        edit.value === SCREEN_ALIGN_DEFAULT_OPTION ||
-        !(screenBlockAligns as readonly string[]).includes(edit.value)
-      ) {
-        delete next.align;
-      } else {
-        next.align = edit.value as ScreenBlockStyleV1["align"];
-      }
-      break;
-    }
-    case "minHeight": {
-      const parsed = Number(edit.value);
-      if (edit.value.trim() === "" || !Number.isFinite(parsed)) {
-        delete next.minHeight;
-      } else {
-        next.minHeight = clampTo(
-          parsed,
-          SCREEN_BLOCK_MIN_HEIGHT_CLAMP.min,
-          SCREEN_BLOCK_MIN_HEIGHT_CLAMP.max
-        );
-      }
-      break;
-    }
-    case "box": {
-      const record = { ...(next[edit.box] ?? {}) };
-      const parsed = Number(edit.value);
-      if (edit.value.trim() === "" || !Number.isFinite(parsed)) {
-        delete record[edit.side];
-      } else {
-        record[edit.side] = clampTo(
-          parsed,
-          PAGE_BLOCK_BOX_SPACING_CLAMP.min,
-          PAGE_BLOCK_BOX_SPACING_CLAMP.max
-        );
-      }
-      if (Object.keys(record).length === 0) delete next[edit.box];
-      else next[edit.box] = record;
-      break;
-    }
-  }
-  return Object.keys(next).length > 0 ? next : undefined;
-};
-
-// TASK-505-03 (Item A): SECTION-layout authoring (`ScreenSectionStyleV1`, a NEW
-// channel shipped by 505-01 — NOT the dead `section.layout` field). Mirrors
-// buildStylePatch: updateScreenSection REPLACES the `style` key wholesale
-// (screenDocumentOps.ts:631 spreads the patch), so we read the CURRENT
-// section.style, apply ONE edit, hand back the FULL merged object, and prune
-// empty → undefined so an UNSET section stays byte-identical through save
-// (absent style === today's vertical `space-y-4` stack).
-
-// Sentinel for "no columns" — absent columns === today's vertical stack. Picking
-// it PRUNES the key (mirrors SCREEN_ALIGN_DEFAULT_OPTION @:227).
-export const SCREEN_SECTION_COLUMNS_DEFAULT_OPTION = "__stack__";
-
-export type ScreenSectionStyleEdit =
-  | { kind: "columns"; value: string } // sentinel / unknown preset → prune key
-  | { kind: "columnGap"; value: string }; // "" / non-finite → prune; else floor+clamp 0..64
-
-export const buildSectionLayoutPatch = (
-  current: ScreenSectionStyleV1 | undefined,
-  edit: ScreenSectionStyleEdit
-): ScreenSectionStyleV1 | undefined => {
-  const next: ScreenSectionStyleV1 = { ...(current ?? {}) };
-  switch (edit.kind) {
-    case "columns": {
-      if (
-        edit.value === SCREEN_SECTION_COLUMNS_DEFAULT_OPTION ||
-        !(screenSectionColumnPresets as readonly string[]).includes(edit.value)
-      ) {
-        delete next.columns;
-      } else {
-        next.columns = edit.value as ScreenSectionStyleV1["columns"];
-      }
-      break;
-    }
-    case "columnGap": {
-      const parsed = Number(edit.value);
-      if (edit.value.trim() === "" || !Number.isFinite(parsed)) {
-        delete next.columnGap;
-      } else {
-        next.columnGap = clampTo(
-          parsed,
-          SCREEN_SECTION_COLUMN_GAP_CLAMP.min,
-          SCREEN_SECTION_COLUMN_GAP_CLAMP.max
-        );
-      }
-      break;
-    }
-  }
-  return Object.keys(next).length > 0 ? next : undefined;
-};
-
-// Human-labelled Columns options. `value` stays the raw preset (loss-free
-// round-trip); the label maps the fr intent for the author.
-const screenSectionColumnOptions: ReadonlyArray<{ value: string; label: string }> = [
-  { value: SCREEN_SECTION_COLUMNS_DEFAULT_OPTION, label: "Stacked (default)" },
-  { value: "1", label: "1 column" },
-  { value: "2", label: "2 equal" },
-  { value: "3", label: "3 equal" },
-  { value: "4", label: "4 equal" },
-  { value: "1-1", label: "2 · equal (1:1)" },
-  { value: "1-2", label: "2 · 1:2" },
-  { value: "2-1", label: "2 · 2:1" },
-  { value: "1-3", label: "2 · 1:3 (¼ · ¾)" },
-  { value: "3-1", label: "2 · 3:1 (¾ · ¼)" },
-  { value: "2-3", label: "2 · 2:3" },
-  { value: "3-2", label: "2 · 3:2" },
-  { value: "1-1-1", label: "3 · equal" },
-  { value: "1-1-1-1", label: "4 · equal" },
-];
-
-/**
- * TASK-505-03 (Item A): the SECTION inspector, a distinct co-located component
- * shown when `selectedSectionId && !selectedBlockId` (the block inspector's
- * `!selectedBlock` early-return stays untouched — no section/block branch
- * tangling). Renders ONLY the section-layout group (Columns + gap). Reads
- * default to the sentinel/blank so an unset section shows "Stacked" + empty gap
- * and writes NOTHING until the user changes a control (byte-stable).
- */
-export function ScreenSectionInspector({
-  section,
-  onPatchSection,
-}: {
-  section: ScreenSectionV1 | null;
-  onPatchSection: (patch: { style?: ScreenSectionStyleV1 | undefined }) => void;
-}) {
-  if (!section) {
-    return (
-      <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
-        Select a section on the canvas to edit its column layout.
-      </div>
-    );
-  }
-  const commitLayout = (edit: ScreenSectionStyleEdit) =>
-    onPatchSection({ style: buildSectionLayoutPatch(section.style, edit) });
-
-  return (
-    <div className="flex flex-col gap-4" data-screen-section-layout-group="true">
-      <EnumRow
-        label="Columns"
-        value={section.style?.columns ?? SCREEN_SECTION_COLUMNS_DEFAULT_OPTION}
-        options={screenSectionColumnOptions}
-        onChange={(value) => commitLayout({ kind: "columns", value })}
-      />
-      <InspectorRow label="Column gap (px)">
-        <Input
-          type="number"
-          inputMode="numeric"
-          min={SCREEN_SECTION_COLUMN_GAP_CLAMP.min}
-          max={SCREEN_SECTION_COLUMN_GAP_CLAMP.max}
-          value={section.style?.columnGap ?? ""}
-          placeholder="16"
-          data-screen-section-gap="true"
-          // Gap only takes visible effect once columns is set (renderer default
-          // 16 @505-02); authoring it while stacked is harmless (pruned/ignored)
-          // — do NOT disable it.
-          onChange={(event) => commitLayout({ kind: "columnGap", value: event.target.value })}
-        />
-      </InspectorRow>
-      <p className="text-xs text-muted-foreground">
-        Blocks flow left-to-right into the columns in canvas order. Pick “Stacked” to return to a
-        single vertical column.
-      </p>
-    </div>
-  );
-}
-
-const boxSideLabels: ReadonlyArray<[ScreenBoxSide, string]> = [
-  ["top", "Top"],
-  ["right", "Right"],
-  ["bottom", "Bottom"],
-  ["left", "Left"],
-];
-
-function BoxSpacingRow({
-  box,
-  label,
-  style,
-  onEdit,
-}: {
-  box: "margin" | "padding";
-  label: string;
-  style: ScreenBlockStyleV1 | undefined;
-  onEdit: (edit: ScreenBlockStyleEdit) => void;
-}) {
-  return (
-    <InspectorRow label={`${label} (px)`}>
-      <div className="grid grid-cols-4 gap-2">
-        {boxSideLabels.map(([side, sideLabel]) => (
-          <Input
-            key={side}
-            type="number"
-            inputMode="numeric"
-            min={PAGE_BLOCK_BOX_SPACING_CLAMP.min}
-            max={PAGE_BLOCK_BOX_SPACING_CLAMP.max}
-            aria-label={`${label} ${sideLabel.toLowerCase()}`}
-            value={style?.[box]?.[side] ?? ""}
-            placeholder={sideLabel}
-            onChange={(event) => onEdit({ kind: "box", box, side, value: event.target.value })}
-          />
-        ))}
-      </div>
-    </InspectorRow>
-  );
-}
-
-// TASK-503-03: image src draft. The raw text lives in local state so typing
-// "https://…" character-by-character is not destroyed, while data.src only ever
-// receives the filtered value (normalizeScreenImageSrc — the same filter the save
-// path runs). Unsafe/incomplete → "" (placeholder shows); safe → verbatim.
-function ImageSrcRow({
-  block,
-  onPatchBlockData,
-}: {
-  block: ScreenBlockV1;
-  onPatchBlockData: ScreenBlockInspectorProps["onPatchBlockData"];
-}) {
-  const committed = readString(block.data.src);
-  const [draft, setDraft] = useState<{ blockId: string; value: string } | null>(null);
-  const value = draft && draft.blockId === block.id ? draft.value : committed;
-  return (
-    <InspectorRow label="Image URL">
-      <Input
-        value={value}
-        placeholder="https://… or /media/… — used when no field is bound"
-        onChange={(event) => {
-          const raw = event.target.value;
-          setDraft({ blockId: block.id, value: raw });
-          onPatchBlockData(block.id, { src: normalizeScreenImageSrc(raw) });
-        }}
-      />
-    </InspectorRow>
-  );
-}
-
-/** Tabs add/remove editor — keeps `data.tabs` and `slots` in sync (TASK-498-02 B4). */
-function TabsEditor({
-  block,
-  onPatchBlock,
-}: {
-  block: ScreenBlockV1;
-  onPatchBlock: ScreenBlockInspectorProps["onPatchBlock"];
-}) {
-  const tabs = Array.isArray(block.data.tabs)
-    ? (block.data.tabs as Array<Record<string, unknown>>)
-    : [];
-  const slots = block.slots ?? {};
-
-  const commit = (
-    nextTabs: Array<{ id: string; label: string }>,
-    nextSlots: Record<string, ScreenBlockV1[]>
-  ) => {
-    onPatchBlock(block.id, {
-      data: { ...block.data, tabs: nextTabs },
-      slots: nextSlots,
-    });
-  };
-
-  const normalizedTabs = tabs.map((tab, index) => ({
-    id: typeof tab.id === "string" && tab.id ? tab.id : `tab-${index + 1}`,
-    label: typeof tab.label === "string" ? tab.label : `Tab ${index + 1}`,
-  }));
-
-  return (
-    <InspectorRow label="Tabs">
-      <div className="flex flex-col gap-2">
-        {normalizedTabs.map((tab, index) => (
-          <div key={tab.id} className="flex items-center gap-2">
-            <Input
-              value={tab.label}
-              onChange={(event) => {
-                const nextTabs = normalizedTabs.map((item, itemIndex) =>
-                  itemIndex === index ? { ...item, label: event.target.value } : item
-                );
-                commit(nextTabs, slots);
-              }}
-              placeholder={`Tab ${index + 1}`}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              aria-label={`Remove ${tab.label || `tab ${index + 1}`}`}
-              disabled={normalizedTabs.length <= 1}
-              onClick={() => {
-                const nextTabs = normalizedTabs.filter((_, itemIndex) => itemIndex !== index);
-                const nextSlots = Object.fromEntries(
-                  Object.entries(slots).filter(([slotId]) => slotId !== tab.id)
-                );
-                commit(nextTabs, nextSlots);
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            const nextId = `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`;
-            const nextTabs = [
-              ...normalizedTabs,
-              { id: nextId, label: `Tab ${normalizedTabs.length + 1}` },
-            ];
-            commit(nextTabs, { ...slots, [nextId]: [] });
-          }}
-        >
-          Add tab
-        </Button>
-      </div>
-    </InspectorRow>
-  );
-}
+export {
+  buildSectionLayoutPatch,
+  buildStylePatch,
+  createScreenFieldBinding,
+  SCREEN_ALIGN_DEFAULT_OPTION,
+  SCREEN_SECTION_COLUMNS_DEFAULT_OPTION,
+} from "./screenBlockInspectorModel";
+export type { ScreenBlockStyleEdit, ScreenSectionStyleEdit } from "./screenBlockInspectorModel";
+export { ScreenSectionInspector } from "./ScreenBlockInspectorSection";
 
 export function ScreenBlockInspector({
   selectedBlock,
@@ -761,6 +230,7 @@ export function ScreenBlockInspector({
           />
           <EnumRow
             label="Align"
+            accessibleName="Heading text alignment"
             value={readEnum(selectedBlock.data.align, "left")}
             options={[
               { value: "left", label: "Left" },
@@ -940,6 +410,7 @@ export function ScreenBlockInspector({
           <InspectorRow label="Limit">
             <Input
               type="number"
+              aria-label="Limit"
               value={String(
                 typeof selectedBlock.data.limit === "number" ? selectedBlock.data.limit : 5
               )}
@@ -954,20 +425,35 @@ export function ScreenBlockInspector({
       ) : null}
 
       {selectedBlock.type === "tabs" ? (
-        <TabsEditor block={selectedBlock} onPatchBlock={onPatchBlock} />
+        <TabsEditor
+          block={selectedBlock}
+          bindings={bindings}
+          onPatchBlock={onPatchBlock}
+          onPatchBinding={onPatchBinding}
+          onArmSlotInsert={onArmSlotInsert}
+          armedInsertSlotId={armedInsertSlotId}
+        />
       ) : null}
 
       {selectedBlock.type === "button" ? (
         <>
+          <BoundFieldRow
+            block={selectedBlock}
+            propPath="href"
+            bindings={bindings}
+            fields={fields}
+            onPatchBinding={onPatchBinding}
+            bindMode="read"
+            clearAffordance={{
+              label: "Use static link",
+              onClear: () => onPatchBinding(selectedBlock.id, "href", { field: "" }),
+            }}
+          />
           <EnumRow
             label="Action"
-            value={readEnum(selectedBlock.data.action, "link")}
-            options={[
-              { value: "link", label: "Link" },
-              { value: "publish", label: "Publish" },
-              { value: "custom", label: "Custom" },
-            ]}
-            onChange={(value) => patchData({ action: value })}
+            value="link"
+            options={[{ value: "link", label: "Link" }]}
+            onChange={() => patchData({ action: "link" })}
           />
           <EnumRow
             label="Variant"
@@ -979,15 +465,13 @@ export function ScreenBlockInspector({
             ]}
             onChange={(value) => patchData({ variant: value })}
           />
-          {readEnum(selectedBlock.data.action, "link") === "link" ? (
-            <InspectorRow label="Link">
-              <Input
-                value={readString(selectedBlock.data.href)}
-                onChange={(event) => patchData({ href: event.target.value })}
-                placeholder="https://…"
-              />
-            </InspectorRow>
-          ) : null}
+          <InspectorRow label="Link">
+            <Input
+              value={readString(selectedBlock.data.href)}
+              onChange={(event) => patchData({ href: event.target.value })}
+              placeholder="https://…"
+            />
+          </InspectorRow>
         </>
       ) : null}
 
@@ -997,10 +481,10 @@ export function ScreenBlockInspector({
         // and gaps stay the primary insertion surface.
         <InspectorRow label="Insert into">
           <Select
-            value={armedInsertSlotId ?? undefined}
+            value={armedInsertSlotId ?? ""}
             onValueChange={(slotId) => onArmSlotInsert(selectedBlock.id, slotId)}
           >
-            <SelectTrigger data-screen-insert-into="true">
+            <SelectTrigger data-screen-insert-into="true" aria-label="Insert into">
               <SelectValue placeholder="Choose a slot" />
             </SelectTrigger>
             <SelectContent>
@@ -1039,6 +523,7 @@ export function ScreenBlockInspector({
         />
         <EnumRow
           label="Align"
+          accessibleName="Block layout alignment"
           value={selectedBlock.style?.align ?? SCREEN_ALIGN_DEFAULT_OPTION}
           options={[
             { value: SCREEN_ALIGN_DEFAULT_OPTION, label: "Default" },
@@ -1053,6 +538,7 @@ export function ScreenBlockInspector({
           <Input
             type="number"
             inputMode="numeric"
+            aria-label="Min height"
             min={SCREEN_BLOCK_MIN_HEIGHT_CLAMP.min}
             max={SCREEN_BLOCK_MIN_HEIGHT_CLAMP.max}
             value={selectedBlock.style?.minHeight ?? ""}

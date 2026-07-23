@@ -4,7 +4,12 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import { ctaBannerDefaults, type CtaBannerData } from "../../../core/widgets/core/ctaBanner";
+import {
+  ctaBannerDefaults,
+  parseCtaBannerBackgroundGradient,
+  type CtaBannerData,
+} from "../../../core/widgets/core/ctaBanner";
+import { CTA_BANNER_GRADIENT_CONSUMER_CASES } from "../widgets/ctaBannerColorConsumerTable";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -280,6 +285,25 @@ const setInputValue = (element: Element | null | undefined, value: string) => {
     descriptor?.set?.call(element, value);
     element.dispatchEvent(new Event("input", { bubbles: true }));
     element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+};
+
+const invokeRawInputChange = (element: Element | null | undefined, value: string) => {
+  if (!(element instanceof HTMLInputElement)) {
+    throw new Error("Missing input for raw change");
+  }
+  const reactPropsKey = Object.keys(element).find((key) => key.startsWith("__reactProps$"));
+  if (!reactPropsKey) {
+    throw new Error("Missing mounted React input props");
+  }
+  const reactProps = (element as unknown as Record<string, unknown>)[reactPropsKey] as
+    | { onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void }
+    | undefined;
+  if (!reactProps?.onChange) {
+    throw new Error("Missing mounted React input change handler");
+  }
+  React.act(() => {
+    reactProps.onChange?.({ target: { value } } as React.ChangeEvent<HTMLInputElement>);
   });
 };
 
@@ -695,6 +719,237 @@ test("CtaBanner visual covers action labels, invalid URL feedback, toggles, clea
   }
 });
 
+test.each([
+  {
+    label: "start picker",
+    target: "start",
+    value: "#102030",
+    expected: "linear-gradient(45deg, #102030, #1234567)",
+  },
+  {
+    label: "end picker",
+    target: "end",
+    value: "#405060",
+    expected: "linear-gradient(45deg, #AbCdE, #405060)",
+  },
+  {
+    label: "angle control",
+    target: "angle",
+    value: "137",
+    expected: "linear-gradient(137deg, #AbCdE, #1234567)",
+  },
+] as const)(
+  "CtaBanner gradient $label emits one canonical update from a fresh mount",
+  async (entry) => {
+    const { CtaBannerVisualEditor } =
+      await import("../../../core/admin/ui/widgets/editors/CtaBannerEditors");
+    const gradientEntry = CTA_BANNER_GRADIENT_CONSUMER_CASES.find(
+      (candidate) => candidate.id === "ascii-spacing-byte-identity"
+    );
+    if (
+      !gradientEntry ||
+      typeof gradientEntry.raw !== "string" ||
+      gradientEntry.normalized === undefined
+    ) {
+      throw new Error("Missing editable CTA gradient table entry");
+    }
+    expect(parseCtaBannerBackgroundGradient(gradientEntry.raw)?.normalized).toBe(
+      gradientEntry.normalized
+    );
+    expect(parseCtaBannerBackgroundGradient(entry.expected)?.normalized).toBe(entry.expected);
+
+    const view = mountCtaBannerHarness({
+      initialValue: {
+        ...ctaBannerDefaults,
+        background: {
+          ...ctaBannerDefaults.background,
+          gradient: gradientEntry.raw,
+        },
+      },
+      initialVariant: "centered",
+      render: (props) => <CtaBannerVisualEditor {...props} />,
+    });
+
+    try {
+      await flush();
+      expect(view.onChangeSpy).not.toHaveBeenCalled();
+      const gradientControl = view.container.querySelector(
+        '[data-widget-control="cta-banner.background.gradient"]'
+      );
+      const colorInputs = gradientControl?.querySelectorAll('input[type="color"]');
+      const angleInput = gradientControl?.querySelector('input[type="range"]');
+
+      if (entry.target === "start") {
+        setInputValue(colorInputs?.[0], entry.value);
+      } else if (entry.target === "end") {
+        setInputValue(colorInputs?.[1], entry.value);
+      } else {
+        setInputValue(angleInput, entry.value);
+      }
+
+      expect(view.onChangeSpy).toHaveBeenCalledTimes(1);
+      expect(view.onChangeSpy).toHaveBeenLastCalledWith(view.getLatestValue());
+      expect(view.getLatestValue().background?.gradient).toBe(entry.expected);
+    } finally {
+      view.cleanup();
+    }
+  }
+);
+
+test("CtaBanner gradient reparses a negative interaction candidate and emits no update", async () => {
+  const { CtaBannerVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/CtaBannerEditors");
+  const negativeEntry = CTA_BANNER_GRADIENT_CONSUMER_CASES.find(
+    (candidate) => candidate.id === "plus-angle"
+  );
+  if (!negativeEntry || typeof negativeEntry.raw !== "string") {
+    throw new Error("Missing rejected CTA gradient table entry");
+  }
+  expect(parseCtaBannerBackgroundGradient(negativeEntry.raw)).toBeUndefined();
+
+  const view = mountCtaBannerHarness({
+    initialValue: {
+      ...ctaBannerDefaults,
+      background: {
+        ...ctaBannerDefaults.background,
+        gradient: negativeEntry.raw,
+      },
+    },
+    initialVariant: "centered",
+    render: (props) => <CtaBannerVisualEditor {...props} />,
+  });
+
+  try {
+    await flush();
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
+    const gradientControl = view.container.querySelector(
+      '[data-widget-control="cta-banner.background.gradient"]'
+    );
+    const angleInput = gradientControl?.querySelector('input[type="range"]');
+    const reparsedCandidate = "linear-gradient(NaNdeg, #0f172a, #475569)";
+    expect(parseCtaBannerBackgroundGradient(reparsedCandidate)).toBeUndefined();
+
+    invokeRawInputChange(angleInput, "not-a-number");
+
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
+    expect(view.getLatestValue().background?.gradient).toBe(negativeEntry.raw);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("CtaBanner visual reuses inherited color metadata and the production gradient parser", async () => {
+  const { CtaBannerVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/CtaBannerEditors");
+  const validEntry = CTA_BANNER_GRADIENT_CONSUMER_CASES.find(
+    (entry) => entry.id === "ascii-spacing-byte-identity"
+  );
+  if (!validEntry || validEntry.normalized === undefined) {
+    throw new Error("Missing valid CTA gradient table entry");
+  }
+  const valid = mountCtaBannerHarness({
+    initialValue: {
+      ...ctaBannerDefaults,
+      style: {
+        ...ctaBannerDefaults.style,
+        text: "currentcolor",
+        border: "inherit",
+      },
+      background: {
+        ...ctaBannerDefaults.background,
+        color: "currentColor",
+        gradient: validEntry.raw as string,
+      },
+    },
+    initialVariant: "centered",
+    render: (props) => <CtaBannerVisualEditor {...props} />,
+  });
+
+  try {
+    await flush();
+    expect(valid.onChangeSpy).not.toHaveBeenCalled();
+    expect(valid.container.querySelectorAll('[data-shared-color-state="inherited"]')).toHaveLength(
+      3
+    );
+    expect(valid.container.textContent).toContain("Inherited color");
+    const gradientControl = valid.container.querySelector(
+      '[data-widget-control="cta-banner.background.gradient"]'
+    );
+    expect(gradientControl?.querySelector("div.h-10")?.getAttribute("style")).toContain(
+      validEntry.previewCss
+    );
+
+    const startPicker = gradientControl?.querySelector('input[type="color"]');
+    setInputValue(startPicker, "#102030");
+    expect(valid.onChangeSpy).toHaveBeenCalledTimes(1);
+    expect(valid.getLatestValue().background?.gradient).toBe(
+      "linear-gradient(45deg, #102030, #1234567)"
+    );
+  } finally {
+    valid.cleanup();
+  }
+
+  const invalidEntry = CTA_BANNER_GRADIENT_CONSUMER_CASES.find((entry) => entry.id === "url-stop");
+  if (!invalidEntry || typeof invalidEntry.raw !== "string") {
+    throw new Error("Missing invalid CTA gradient table entry");
+  }
+  const invalidRaw = invalidEntry.raw;
+  const invalid = mountCtaBannerHarness({
+    initialValue: {
+      ...ctaBannerDefaults,
+      background: { ...ctaBannerDefaults.background, gradient: invalidRaw },
+    },
+    initialVariant: "centered",
+    render: (props) => <CtaBannerVisualEditor {...props} />,
+  });
+  try {
+    await flush();
+    expect(invalid.onChangeSpy).not.toHaveBeenCalled();
+    const gradientControl = invalid.container.querySelector(
+      '[data-widget-control="cta-banner.background.gradient"]'
+    );
+    expect(gradientControl?.getAttribute("style") ?? gradientControl?.innerHTML).not.toContain(
+      invalidRaw
+    );
+    clickButton(getButtonsByText(gradientControl ?? invalid.container, "Clear")[0]);
+    expect(invalid.onChangeSpy).toHaveBeenCalledTimes(1);
+    expect(invalid.getLatestValue().background?.gradient).toBeUndefined();
+  } finally {
+    invalid.cleanup();
+  }
+
+  for (const entry of CTA_BANNER_GRADIENT_CONSUMER_CASES) {
+    const tableView = mountCtaBannerHarness({
+      initialValue: {
+        ...ctaBannerDefaults,
+        background: {
+          ...ctaBannerDefaults.background,
+          gradient: entry.raw as string,
+        },
+      },
+      initialVariant: "centered",
+      render: (props) => <CtaBannerVisualEditor {...props} />,
+    });
+    try {
+      await flush();
+      expect(tableView.onChangeSpy, `mount:${entry.id}`).not.toHaveBeenCalled();
+      const control = tableView.container.querySelector(
+        '[data-widget-control="cta-banner.background.gradient"]'
+      );
+      const previewStyle = control?.querySelector("div.h-10")?.getAttribute("style") ?? "";
+      if (entry.normalized !== undefined) {
+        expect(previewStyle, `preview:${entry.id}`).toContain(
+          "previewCss" in entry ? entry.previewCss : entry.normalized
+        );
+      } else if (typeof entry.raw === "string" && entry.raw.length > 0) {
+        expect(control?.innerHTML, `preview-reject:${entry.id}`).not.toContain(entry.raw);
+      }
+    } finally {
+      tableView.cleanup();
+    }
+  }
+});
+
 test("CtaBanner advanced keeps style diagnostics read-only and confirms support actions", async () => {
   const { CtaBannerAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/CtaBannerEditors");
@@ -712,12 +967,12 @@ test("CtaBanner advanced keeps style diagnostics read-only and confirms support 
     style: {
       background: "",
       text: "#111111",
-      border: "var(--cta-border)",
+      border: "var(--color-cta-border)",
       borderWidth: "8" as never,
       radius: "circle" as never,
       padding: "loose" as never,
-      primaryButtonBorder: "var(--cta-primary-border)",
-      secondaryButtonBorder: "var(--cta-secondary-border)",
+      primaryButtonBorder: "var(--color-cta-primary-border)",
+      secondaryButtonBorder: "var(--color-cta-secondary-border)",
     },
     background: {
       gradient: "linear-gradient(45deg, #111111, #eeeeee)",
@@ -734,7 +989,7 @@ test("CtaBanner advanced keeps style diagnostics read-only and confirms support 
     const diagnosticsSection = getSectionByTitle(container, "Style diagnostics");
     expect(diagnosticsSection.textContent).toContain("Visual owns color editing");
     expect(diagnosticsSection.textContent).toContain("#111111");
-    expect(diagnosticsSection.textContent).toContain("var(--cta-border)");
+    expect(diagnosticsSection.textContent).toContain("var(--color-cta-border)");
     expect(diagnosticsSection.textContent).toContain("Background gradient");
     expect(diagnosticsSection.textContent).toContain("Configured");
     expect(diagnosticsSection.textContent).not.toContain(
@@ -776,12 +1031,12 @@ test("CtaBanner advanced keeps style diagnostics read-only and confirms support 
       },
       style: {
         text: "#111111",
-        border: "var(--cta-border)",
+        border: "var(--color-cta-border)",
         borderWidth: "1",
         radius: "xl",
         padding: "md",
-        primaryButtonBorder: "var(--cta-primary-border)",
-        secondaryButtonBorder: "var(--cta-secondary-border)",
+        primaryButtonBorder: "var(--color-cta-primary-border)",
+        secondaryButtonBorder: "var(--color-cta-secondary-border)",
       },
     });
 

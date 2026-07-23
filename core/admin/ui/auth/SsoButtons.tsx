@@ -1,7 +1,6 @@
-import { Github } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { GitHubBrandIcon } from "../../../ui/brandIcons";
 
 type SsoButtonsProps = {
   className?: string;
@@ -38,7 +37,7 @@ export function SsoButtons({ className }: SsoButtonsProps) {
         Google
       </Button>
       <Button variant="outline" className="gap-2">
-        <Github className="h-4 w-4" />
+        <GitHubBrandIcon className="h-4 w-4" aria-hidden="true" />
         GitHub
       </Button>
     </div>

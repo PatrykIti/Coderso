@@ -9,7 +9,9 @@ Each kit ships with starter resources:
 - `form` with fields + settings defaults,
 - `pages` with starter block composition + SEO defaults,
 - `menus` with seeded menu items,
-- derived `template seeds` (from page templates) for widget template library.
+- for previously shipped kits only, frozen hidden legacy template seeds consumed
+  by the transitional compatibility writer. New kits use Page Templates and
+  domain-owned sections/blocks and must not add `WidgetBlock[]` seeds.
 
 | Kit ID | Pages | Form | Content Type | Menus |
 |---|---|---|---|---|
@@ -32,8 +34,8 @@ type SolutionKitManifest = {
   includes: {
     contentTypes: string[];
     entries: string[];
-    widgets: string[];
-    templates: string[];
+    widgets: string[];   // retained manifest alias; historical block ids only
+    templates: string[]; // retained manifest alias; frozen legacy seed ids only
     forms: string[];
     menus: string[];
   };
@@ -46,8 +48,8 @@ type SolutionKitManifest = {
 Normalization rules:
 - arrays are deduplicated, trimmed, sorted,
 - `vertical` defaults from first business type (`_` -> `-`),
-- `widgets` are inferred from page block `type`,
-- `templates` are inferred from page `template` and `page.data.settings.template`,
+- legacy `widgets`/`templates` summaries are inferred only to decode and roll
+  back already shipped manifests; they do not enable a module or authoring UI,
 - manifest overrides (if provided by catalog object) merge into generated includes.
 
 ## Admin UI Behavior
@@ -56,7 +58,9 @@ Selected kit can act as an admin-side focus preference:
 - active kit selection is persisted client-side in admin UI,
 - `AdminShell` can narrow the `Coderso` sidebar to modules declared by the active kit,
 - active kit focus expands module dependencies from the Advanced module registry,
-- content kits with `engine`, `entries`, and `widgets` keep `Screens` visible,
+- content kits keep `Screens` visible from their current `engine` + `entries` /
+  `custom-screens` domain dependencies; the legacy `widgets` id is not an
+  authoring dependency,
 - no active kit means full default `Coderso` navigation remains visible,
 - `Solution Kits` stays visible even when kit gating is active so the user can switch kits.
 
@@ -64,18 +68,21 @@ Recommended module scope after audit:
 
 | Kit ID | Recommended Advanced modules |
 |---|---|
-| `automotive-workshop` | `engine`, `entries`, `custom-screens`, `widgets`, `forms`, `listings`, `booking`, `reviews` |
-| `medical-clinic` | `engine`, `entries`, `custom-screens`, `widgets`, `forms`, `listings`, `booking`, `reviews` |
-| `beauty-salon` | `engine`, `entries`, `custom-screens`, `widgets`, `forms`, `listings`, `booking`, `reviews` |
-| `local-service-business` | `engine`, `entries`, `custom-screens`, `widgets`, `forms`, `listings`, `reviews` |
-| `services-directory` | `engine`, `entries`, `custom-screens`, `widgets`, `forms`, `listings`, `filters`, `search` |
-| `small-ecommerce` | `engine`, `entries`, `custom-screens`, `widgets`, `forms`, `listings`, `filters`, `commerce`, `reviews` |
+| `automotive-workshop` | `engine`, `entries`, `custom-screens`, `forms`, `listings`, `booking`, `reviews` |
+| `medical-clinic` | `engine`, `entries`, `custom-screens`, `forms`, `listings`, `booking`, `reviews` |
+| `beauty-salon` | `engine`, `entries`, `custom-screens`, `forms`, `listings`, `booking`, `reviews` |
+| `local-service-business` | `engine`, `entries`, `custom-screens`, `forms`, `listings`, `reviews` |
+| `services-directory` | `engine`, `entries`, `custom-screens`, `forms`, `listings`, `filters`, `search` |
+| `small-ecommerce` | `engine`, `entries`, `custom-screens`, `forms`, `listings`, `filters`, `commerce`, `reviews` |
 
 ## Installer Phases
 
 `/solution-kits/:id/apply` uses two phases:
 1. Core resource install (`solutionKitsInstallService`): `content_type`, `form`, `page`, `menu`.
-2. Template seed install (`templateInstaller`): upsert widget templates with deterministic collision strategy.
+2. Transitional legacy phase (`templateInstaller`): maintain only the frozen
+   hidden seeds already present in shipped kit manifests, with deterministic
+   rollback. It is migration debt, not a current template-authoring contract;
+   no new seed definitions may enter it.
 
 Template collision strategy:
 - ownership marker is appended to description: `[nextless-kit-template:<kitId>:<key>]`,

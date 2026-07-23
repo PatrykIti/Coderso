@@ -1,60 +1,55 @@
+import { FORM_SCHEMA_LIMITS, formSettingsSchema } from "../../services/forms/formSettings";
 import { FORM_STATUS_VALUES } from "../../services/forms/formStatus";
+import { SUBMISSION_ACCESS_MODE_VALUES } from "../../services/forms/submissionAccess";
+import {
+  formAttachmentUploadWriteSchema,
+  formFieldsWriteSchema,
+  formSubmissionWriteSchema,
+} from "../../services/forms/validation";
+
+const formProperties = {
+  name: {
+    type: "string",
+    minLength: 1,
+    maxLength: FORM_SCHEMA_LIMITS.name,
+  },
+  slug: {
+    type: ["string", "null"],
+    maxLength: FORM_SCHEMA_LIMITS.slug,
+  },
+  status: { enum: FORM_STATUS_VALUES },
+  description: {
+    type: ["string", "null"],
+    maxLength: FORM_SCHEMA_LIMITS.description,
+  },
+  successMessage: {
+    type: ["string", "null"],
+    maxLength: FORM_SCHEMA_LIMITS.successMessage,
+  },
+  successRedirectUrl: {
+    type: ["string", "null"],
+    maxLength: FORM_SCHEMA_LIMITS.successRedirectUrl,
+  },
+  submissionAccess: { enum: SUBMISSION_ACCESS_MODE_VALUES },
+  settings: formSettingsSchema,
+} as const;
 
 export const formCreateSchema = {
   type: "object",
   required: ["name"],
-  properties: {
-    name: { type: "string" },
-    slug: { type: "string" },
-    status: { enum: FORM_STATUS_VALUES },
-    description: { type: ["string", "null"] },
-    successMessage: { type: ["string", "null"] },
-    successRedirectUrl: { type: ["string", "null"] },
-    submissionAccess: { enum: ["public", "internal"] },
-    settings: { type: "object" },
-  },
+  properties: formProperties,
   additionalProperties: false,
-};
+} as const;
 
 export const formUpdateSchema = {
   type: "object",
-  properties: {
-    name: { type: "string" },
-    slug: { type: "string" },
-    status: { enum: FORM_STATUS_VALUES },
-    description: { type: ["string", "null"] },
-    successMessage: { type: ["string", "null"] },
-    successRedirectUrl: { type: ["string", "null"] },
-    submissionAccess: { enum: ["public", "internal"] },
-    settings: { type: "object" },
-  },
+  minProperties: 1,
+  properties: formProperties,
   additionalProperties: false,
-};
+} as const;
 
-export const formFieldsSchema = {
-  type: "array",
-  items: {
-    type: "object",
-    properties: {
-      id: { type: "string" },
-      type: { type: "string" },
-      label: { type: "string" },
-      name: { type: "string" },
-      required: { type: "boolean" },
-      orderIndex: { type: "number" },
-      settings: { type: "object" },
-    },
-    additionalProperties: false,
-  },
-};
-
-export const formSubmissionSchema = {
-  type: "object",
-  required: ["data"],
-  properties: {
-    data: { type: "object" },
-    captchaToken: { type: "string", minLength: 1 },
-    formNonce: { type: "string", minLength: 1 },
-  },
-  additionalProperties: false,
+export {
+  formAttachmentUploadWriteSchema as formAttachmentUploadSchema,
+  formFieldsWriteSchema as formFieldsSchema,
+  formSubmissionWriteSchema as formSubmissionSchema,
 };

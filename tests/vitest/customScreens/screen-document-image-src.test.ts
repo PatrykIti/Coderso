@@ -1,14 +1,14 @@
-// TASK-500-04: static image `src` — optional, scheme-validated, additive to the image
-// allow-list. Write-path gate: unsafe schemes normalize to "" (never throw); stored
-// images WITHOUT src stay byte-stable (no schemaVersion bump, definition stays v4).
 import { describe, expect, test } from "vitest";
 
 import {
   buildDefaultListViewDefinition,
-  normalizeCustomScreenDefinition,
+  CustomScreenDefinitionError,
+  normalizeCustomScreenDefinitionForRead,
+  normalizeCustomScreenDefinitionForWrite,
   normalizeScreenDocumentV1,
   normalizeScreenDocumentV1ForRead,
   normalizeScreenImageSrc,
+  sanitizeScreenAuthoringUrl,
 } from "../../../core/services/customScreens/customScreenSchemas";
 
 const buildV4WithBlocks = (blocks: unknown[]) => ({
@@ -32,31 +32,59 @@ const buildV4WithBlocks = (blocks: unknown[]) => ({
   },
 });
 
-const imageBlock = (data: Record<string, unknown>) => ({
+const imageBlock = (src?: unknown) => ({
   id: "image-1",
   type: "image",
-  data,
+  data: { label: "Image", ...(src === undefined ? {} : { src }) },
 });
 
-const normalizedImageData = (blocks: unknown[]) => {
-  const definition = normalizeCustomScreenDefinition({ definition: buildV4WithBlocks(blocks) });
-  return definition.editorView.document.sections[0]?.blocks[0]?.data as Record<string, unknown>;
-};
+const buttonBlock = (href?: unknown) => ({
+  id: "button-1",
+  type: "button",
+  data: {
+    label: "Open",
+    action: "link",
+    ...(href === undefined ? {} : { href }),
+  },
+});
 
-describe("image static src (schema-first)", () => {
-  test("accepts and preserves a safe static src byte-stable / idempotent", () => {
-    for (const src of ["/media/logo.png", "https://cdn.example.com/x.png", "http://host/x.png"]) {
-      const data = { label: "Image", fit: "cover", ratio: "", src };
-      const once = normalizedImageData([imageBlock(data)]);
-      expect(once).toEqual(data);
-      // Idempotent: normalizing the normalized output changes nothing.
-      const twice = normalizedImageData([imageBlock(once)]);
-      expect(twice).toEqual(once);
+const controlConfusedUrls = [
+  "/\t/evil.example/x",
+  "/\n/evil.example/x",
+  "/\r/evil.example/x",
+  "/\u0000/evil.example/x",
+  "/\u007F/evil.example/x",
+] as const;
+
+const writeData = (block: unknown) =>
+  normalizeCustomScreenDefinitionForWrite({
+    definition: buildV4WithBlocks([block]),
+  }).editorView.document.sections[0]?.blocks[0]?.data as Record<string, unknown>;
+
+const readData = (block: unknown) =>
+  normalizeCustomScreenDefinitionForRead({
+    definition: buildV4WithBlocks([block]),
+  }).editorView.document.sections[0]?.blocks[0]?.data as Record<string, unknown>;
+
+describe("Custom Screen authoring URL trust boundary", () => {
+  test("accepts the shared safe corpus and rejects hostile or backslash-confused values", () => {
+    const safeMedia = ["/media/logo.png", "https://cdn.example.com/x.png", "http://host/x.png"];
+    const safeLinks = [...safeMedia, "#details", "mailto:owner@example.com", "tel:+48123456789"];
+    for (const value of safeMedia) {
+      expect(sanitizeScreenAuthoringUrl(value, "media")).toBe(value);
     }
-  });
+    for (const value of safeLinks) {
+      expect(sanitizeScreenAuthoringUrl(value, "link")).toBe(value);
+    }
+    expect(sanitizeScreenAuthoringUrl("  https://cdn.example.com/x.png  ", "media")).toBe(
+      "https://cdn.example.com/x.png"
+    );
 
-  test("drops unsafe or invalid src values to '' (never throws)", () => {
-    const unsafe: unknown[] = [
+    const hostile: unknown[] = [
+      ...controlConfusedUrls,
+      "//evil.example/x.png",
+      "/media\\..\\evil.png",
+      "https:\\evil.example\\x.png",
       "javascript:alert(1)",
       "JavaScript:alert(1)",
       "data:image/png;base64,AAAA",
@@ -66,26 +94,117 @@ describe("image static src (schema-first)", () => {
       "bare-token.png",
       "   ",
       42,
+      null,
+      {},
     ];
-    for (const src of unsafe) {
-      const data = normalizedImageData([imageBlock({ label: "Image", src })]);
-      expect(data.src).toBe("");
+    for (const value of hostile) {
+      expect(sanitizeScreenAuthoringUrl(value, "media"), String(value)).toBeNull();
+      expect(sanitizeScreenAuthoringUrl(value, "link"), String(value)).toBeNull();
+    }
+    expect(sanitizeScreenAuthoringUrl("mailto:owner@example.com", "media")).toBeNull();
+    expect(sanitizeScreenAuthoringUrl("#details", "media")).toBeNull();
+  });
+
+  test("normalizeScreenImageSrc remains an exact delegating compatibility alias", () => {
+    const corpus: unknown[] = [
+      ...controlConfusedUrls,
+      "/media/a.jpg",
+      "https://x/y.png",
+      "http://host/x.png",
+      "  https://x/y.png  ",
+      "//evil/x.png",
+      "/media\\evil.png",
+      "javascript:alert(1)",
+      "data:image/png;base64,x",
+      "blob:x",
+      "  ",
+      42,
+      null,
+    ];
+    for (const value of corpus) {
+      expect(normalizeScreenImageSrc(value)).toBe(sanitizeScreenAuthoringUrl(value, "media") ?? "");
+    }
+    expect(normalizeScreenImageSrc(normalizeScreenImageSrc("/media/a.jpg"))).toBe("/media/a.jpg");
+  });
+
+  test("rejects ASCII-control URL confusion before delegation in every Screen seam", () => {
+    for (const value of controlConfusedUrls) {
+      expect(sanitizeScreenAuthoringUrl(value, "media")).toBeNull();
+      expect(sanitizeScreenAuthoringUrl(value, "link")).toBeNull();
+      expect(normalizeScreenImageSrc(value)).toBe("");
+
+      for (const [block, expectedPath] of [
+        [imageBlock(value), "definition.editorView.document.sections.0.blocks.0.data.src"],
+        [buttonBlock(value), "definition.editorView.document.sections.0.blocks.0.data.href"],
+      ] as const) {
+        try {
+          writeData(block);
+          throw new Error("expected control-confused URL rejection");
+        } catch (error) {
+          expect(error).toBeInstanceOf(CustomScreenDefinitionError);
+          const definitionError = error as CustomScreenDefinitionError;
+          expect(definitionError.fields).toEqual([expectedPath]);
+          expect(definitionError.fields.join(" ")).not.toContain(value);
+        }
+      }
+
+      expect(readData(imageBlock(value)).src).toBeUndefined();
+      expect(readData(buttonBlock(value)).href).toBeUndefined();
     }
   });
 
-  test("unknown keys still throw custom_screen_definition_invalid; fit coercion coexists with src", () => {
-    expect(() =>
-      normalizedImageData([imageBlock({ label: "Image", src: "/x.png", bogus: true })])
-    ).toThrow("custom_screen_definition_invalid");
-
-    const data = normalizedImageData([
-      imageBlock({ label: "Image", fit: "not-a-fit", src: "/media/x.png" }),
-    ]);
-    expect(data.fit).toBe("cover");
-    expect(data.src).toBe("/media/x.png");
+  test("write rejects unsafe image and Button URLs with generated non-echo paths", () => {
+    const rejected = "javascript:submitted-secret-value";
+    for (const [block, expectedPath] of [
+      [imageBlock(rejected), "definition.editorView.document.sections.0.blocks.0.data.src"],
+      [buttonBlock(rejected), "definition.editorView.document.sections.0.blocks.0.data.href"],
+    ] as const) {
+      try {
+        writeData(block);
+        throw new Error("expected unsafe URL rejection");
+      } catch (error) {
+        expect(error).toBeInstanceOf(CustomScreenDefinitionError);
+        const definitionError = error as CustomScreenDefinitionError;
+        expect(definitionError.fields).toEqual([expectedPath]);
+        expect(definitionError.fields.join(" ")).not.toContain(rejected);
+        expect(definitionError.fields.length).toBeLessThanOrEqual(8);
+        expect(definitionError.fields.every((field) => field.length <= 240)).toBe(true);
+      }
+    }
   });
 
-  test("an image WITHOUT src round-trips byte-stable through normalizeScreenDocumentV1 / …ForRead", () => {
+  test("every present non-string URL fails on write while stored-read alone omits it", () => {
+    const malformed: unknown[] = [null, 42, true, false, [], {}, ["/media/a.jpg"]];
+    for (const value of malformed) {
+      expect(() => writeData(imageBlock(value)), `image ${String(value)}`).toThrow(
+        CustomScreenDefinitionError
+      );
+      expect(() => writeData(buttonBlock(value)), `button ${String(value)}`).toThrow(
+        CustomScreenDefinitionError
+      );
+      expect(readData(imageBlock(value)).src).toBeUndefined();
+      expect(readData(buttonBlock(value)).href).toBeUndefined();
+    }
+  });
+
+  test("stored-read omits unsafe legacy URLs without substituting executable fallbacks", () => {
+    for (const value of ["javascript:alert(1)", "//evil.example/image.png", "/media\\evil.png"]) {
+      expect(readData(imageBlock(value)).src).toBeUndefined();
+      expect(readData(buttonBlock(value)).href).toBeUndefined();
+    }
+  });
+
+  test("safe static values are canonical, idempotent, and empty means absent", () => {
+    for (const src of ["/media/logo.png", "https://cdn.example.com/x.png", "http://host/x.png"]) {
+      const once = writeData(imageBlock(src));
+      expect(once.src).toBe(src);
+      expect(writeData(imageBlock(once.src))).toEqual(once);
+    }
+    expect(writeData(imageBlock("")).src).toBeUndefined();
+    expect(writeData(buttonBlock("")).href).toBeUndefined();
+  });
+
+  test("image without src remains byte-stable through write and stored-read documents", () => {
     const document = {
       schemaVersion: 1,
       sections: [
@@ -93,27 +212,21 @@ describe("image static src (schema-first)", () => {
           id: "section-default",
           type: "section",
           data: { title: "Details" },
-          blocks: [imageBlock({ label: "Image", fit: "cover", ratio: "" })],
+          blocks: [{ id: "image-1", type: "image", data: { label: "Image", ratio: "" } }],
         },
       ],
     };
-    // Whole-document assertion: stored-V4 images without src are untouched (no key seeded).
     expect(normalizeScreenDocumentV1(document)).toEqual(document);
     expect(normalizeScreenDocumentV1ForRead(document)).toEqual(document);
+    expect(JSON.stringify(normalizeScreenDocumentV1(document))).toBe(JSON.stringify(document));
   });
 
-  // TASK-503-01: normalizeScreenImageSrc is now exported as the single source of truth
-  // for the 503-02 builder-preview gate + 503-03 inspector write filter. Behavior is
-  // byte-identical to the pre-export write-path helper.
-  test("normalizeScreenImageSrc (exported) filters schemes + trims, idempotent", () => {
-    expect(normalizeScreenImageSrc("/media/a.jpg")).toBe("/media/a.jpg");
-    expect(normalizeScreenImageSrc("https://x/y.png")).toBe("https://x/y.png");
-    expect(normalizeScreenImageSrc("http://host/x.png")).toBe("http://host/x.png");
-    expect(normalizeScreenImageSrc("  https://x/y.png  ")).toBe("https://x/y.png");
-    for (const unsafe of ["javascript:alert(1)", "data:image/png;base64,x", "blob:x", "  ", 42]) {
-      expect(normalizeScreenImageSrc(unsafe)).toBe("");
-    }
-    // Idempotent.
-    expect(normalizeScreenImageSrc(normalizeScreenImageSrc("/media/a.jpg"))).toBe("/media/a.jpg");
+  test("direct write rejects fixed-kind coercion attempts instead of bypassing route schemas", () => {
+    expect(() => writeData({ id: "image-1", type: "image", data: { fit: "not-a-fit" } })).toThrow(
+      CustomScreenDefinitionError
+    );
+    expect(readData({ id: "image-1", type: "image", data: { fit: "not-a-fit" } }).fit).toBe(
+      "cover"
+    );
   });
 });

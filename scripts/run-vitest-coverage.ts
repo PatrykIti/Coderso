@@ -1,6 +1,8 @@
 import { mkdir, readFile, rm, stat } from "node:fs/promises";
 import path from "node:path";
 
+import { buildVitestCoverageArgs } from "./vitestCoverageArgs";
+
 type CoverageSummary = {
   total?: {
     lines?: { pct?: number };
@@ -18,23 +20,12 @@ const vitestBin = path.join(repoRoot, "node_modules", ".bin", "vitest");
 await rm(coverageDir, { recursive: true, force: true });
 await mkdir(path.join(coverageDir, ".tmp"), { recursive: true });
 
-const proc = Bun.spawn(
-  [
-    vitestBin,
-    "run",
-    "--config",
-    "vitest.config.ts",
-    "--coverage",
-    "--coverage.clean=false",
-    `--coverage.reportsDirectory=${coverageDir}`,
-  ],
-  {
-    cwd: repoRoot,
-    stdin: "inherit",
-    stdout: "inherit",
-    stderr: "inherit",
-  }
-);
+const proc = Bun.spawn(buildVitestCoverageArgs(vitestBin, coverageDir), {
+  cwd: repoRoot,
+  stdin: "inherit",
+  stdout: "inherit",
+  stderr: "inherit",
+});
 
 const exitCode = await proc.exited;
 if (exitCode !== 0) {
@@ -42,9 +33,7 @@ if (exitCode !== 0) {
 }
 
 const summaryStat = await stat(summaryPath);
-const summary = JSON.parse(
-  await readFile(summaryPath, "utf8")
-) as CoverageSummary;
+const summary = JSON.parse(await readFile(summaryPath, "utf8")) as CoverageSummary;
 
 const totals = summary.total ?? {};
 const statements = totals.statements?.pct ?? 0;

@@ -369,13 +369,16 @@ vi.mock("@/ui/layouts/AdminShell", () => ({
     children,
     breadcrumbs,
     activeHref,
+    topbarActions,
   }: {
     children: React.ReactNode;
     breadcrumbs?: React.ReactNode;
     activeHref?: string;
+    topbarActions?: React.ReactNode;
   }) => (
     <div data-active-href={activeHref}>
       <div>{breadcrumbs}</div>
+      <div>{topbarActions}</div>
       <div>{children}</div>
     </div>
   ),
@@ -1004,7 +1007,6 @@ test("FormBuilderPage hydrates cache, tracks dirty state, refreshes remote updat
     expect(formsPageState.detailCalls).toContainEqual({ id: "form-1", force: true });
     expect(formsPageState.actionsCalls).toContainEqual({ id: "form-1", force: true });
 
-    clickByText(view.container, "open-library");
     clickByText(view.container, "add-library-field");
     clickByText(view.container, "duplicate-field");
     await flush();
@@ -1072,7 +1074,7 @@ test("FormBuilderPage hydrates cache, tracks dirty state, refreshes remote updat
     clickByText(view.container, "change-form-name");
     await flush();
 
-    clickByText(view.container, "Save form");
+    clickByText(view.container, "Save");
     await flush();
 
     expect(formsPageState.updateFormCalls[0]).toEqual({
@@ -1140,7 +1142,7 @@ test("FormBuilderPage reports not-found, load, and save errors", async () => {
 
     clickByText(missingView.container, "change-form-name");
     await flush();
-    clickByText(missingView.container, "Save form");
+    clickByText(missingView.container, "Save");
     await flush();
 
     expect(formsPageState.updateFormCalls).toHaveLength(0);
@@ -1174,7 +1176,7 @@ test("FormBuilderPage reports not-found, load, and save errors", async () => {
     formsPageState.updateError = formsPageState.apiError("Save failed");
     clickByText(saveView.container, "add-library-field");
     await flush();
-    clickByText(saveView.container, "Save form");
+    clickByText(saveView.container, "Save");
     await flush();
 
     expect(saveView.container.textContent).toContain("Save failed");

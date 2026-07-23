@@ -5,7 +5,9 @@ import {
   cleanupOverridesForDeletedScreen,
   cleanupStaleScreenEntryPresentationOverrides,
   getScreenEntryPresentationOverrides,
+  isScreenEntryPresentationSingleMediaSchemaDefinition,
   normalizeScreenEntryPresentationOverride,
+  normalizeScreenEntryPresentationOverrideList,
   saveScreenEntryPresentationOverrides,
   type ScreenEntryPresentationOverrideDraft,
   type ScreenEntryPresentationOverrideRecord,
@@ -46,9 +48,19 @@ const makeDefinition = (): CustomScreenDefinition => ({
           data: { title: "Details" },
           blocks: [
             {
+              id: "direct-image",
+              type: "image",
+              data: { label: "Cover", src: "/static/cover.jpg" },
+            },
+            {
               id: "field-image",
               type: "field",
               data: { label: "Hero image", field: "heroImage" },
+            },
+            {
+              id: "field-gallery",
+              type: "field",
+              data: { label: "Gallery", field: "gallery" },
             },
             {
               id: "field-name",
@@ -84,6 +96,14 @@ const makeDefinition = (): CustomScreenDefinition => ({
         propPath: "value",
         source: "entry",
         field: "name",
+        mode: "readwrite",
+      },
+      {
+        id: "field-gallery-value",
+        blockId: "field-gallery",
+        propPath: "value",
+        source: "entry",
+        field: "gallery",
         mode: "readwrite",
       },
       {
@@ -133,6 +153,12 @@ class MemoryOverrideRepository implements ScreenEntryPresentationOverrideReposit
           type: "object",
           properties: {
             heroImage: { type: "string", xFieldType: "media" },
+            gallery: {
+              type: "array",
+              items: { type: "string" },
+              xFieldType: "media",
+              xFieldConfig: { media: { multiple: true, maxItems: 4 } },
+            },
             name: { type: "string" },
           },
         },
@@ -257,6 +283,36 @@ test("normalizes bounded override prop paths and value domains", () => {
   ).toThrow("custom_screen_override_invalid");
 });
 
+test("classifies only scalar media schema representations as override targets", () => {
+  expect(
+    isScreenEntryPresentationSingleMediaSchemaDefinition({
+      type: "string",
+      xFieldType: "media",
+    })
+  ).toBe(true);
+  expect(
+    isScreenEntryPresentationSingleMediaSchemaDefinition({
+      type: "array",
+      items: { type: "string" },
+      xFieldType: "media",
+    })
+  ).toBe(false);
+  expect(
+    isScreenEntryPresentationSingleMediaSchemaDefinition({
+      type: "string",
+      xFieldType: "media",
+      xFieldConfig: { media: { multiple: true } },
+    })
+  ).toBe(false);
+  expect(
+    isScreenEntryPresentationSingleMediaSchemaDefinition({
+      type: "string",
+      xFieldType: "media",
+      xFieldConfig: { multiple: true },
+    })
+  ).toBe(false);
+});
+
 test("saves scoped overrides without mutating content entry data", async () => {
   const beforeEntryData = { ...repository.entryData };
 
@@ -265,18 +321,20 @@ test("saves scoped overrides without mutating content entry data", async () => {
     entryId: ENTRY_ID,
     actorId: ACTOR_ID,
     overrides: [
+      { blockId: "direct-image", propPath: "mediaAssetId", value: MEDIA_ID },
       { blockId: "field-image", propPath: "image", value: MEDIA_ID },
       { blockId: "field-name", propPath: "textEmphasis", value: "semibold" },
     ],
     deps: deps(),
   });
 
-  expect(result).toHaveLength(2);
+  expect(result).toHaveLength(3);
   expect(repository.lastReplace).toMatchObject({
     screenId: SCREEN_ID,
     entryId: ENTRY_ID,
     actorId: ACTOR_ID,
     overrides: [
+      { blockId: "direct-image", propPath: "mediaAssetId", value: MEDIA_ID },
       { blockId: "field-image", propPath: "image", value: MEDIA_ID },
       { blockId: "field-name", propPath: "textEmphasis", value: "semibold" },
     ],
@@ -309,9 +367,69 @@ test("rejects duplicate targets and media overrides on non-media fields", async 
   ).rejects.toThrow("custom_screen_override_invalid");
 });
 
-test("reads skip stale block, field, and value targets defensively", async () => {
+test("rejects scalar overrides for multiple-media fields and ignores legacy stored rows", async () => {
+  await expect(
+    saveScreenEntryPresentationOverrides({
+      screenId: SCREEN_ID,
+      entryId: ENTRY_ID,
+      actorId: ACTOR_ID,
+      overrides: [{ blockId: "field-gallery", propPath: "mediaAssetId", value: MEDIA_ID }],
+      deps: deps(),
+    })
+  ).rejects.toThrow("custom_screen_override_invalid");
+  expect(repository.lastReplace).toBeNull();
+
   const now = new Date("2026-06-24T12:00:00.000Z");
   repository.rows = [
+    {
+      screenId: SCREEN_ID,
+      entryId: ENTRY_ID,
+      blockId: "field-gallery",
+      propPath: "mediaAssetId",
+      value: MEDIA_ID,
+      updatedBy: ACTOR_ID,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
+
+  await expect(
+    getScreenEntryPresentationOverrides({
+      screenId: SCREEN_ID,
+      entryId: ENTRY_ID,
+      deps: deps(),
+    })
+  ).resolves.toEqual([]);
+  const cleanup = await cleanupStaleScreenEntryPresentationOverrides({
+    screenId: SCREEN_ID,
+    entryId: ENTRY_ID,
+    deps: deps(),
+  });
+  expect(cleanup.deleted).toBe(1);
+  expect(cleanup.staleTargets).toEqual([
+    expect.objectContaining({
+      screenId: SCREEN_ID,
+      entryId: ENTRY_ID,
+      blockId: "field-gallery",
+      propPath: "mediaAssetId",
+    }),
+  ]);
+  expect(repository.rows).toEqual([]);
+});
+
+test("repository reads reject a structurally malformed row instead of returning a partial list", async () => {
+  const now = new Date("2026-06-24T12:00:00.000Z");
+  repository.rows = [
+    {
+      screenId: SCREEN_ID,
+      entryId: ENTRY_ID,
+      blockId: "direct-image",
+      propPath: "mediaAssetId",
+      value: MEDIA_ID,
+      updatedBy: ACTOR_ID,
+      createdAt: now,
+      updatedAt: now,
+    },
     {
       screenId: SCREEN_ID,
       entryId: ENTRY_ID,
@@ -354,24 +472,231 @@ test("reads skip stale block, field, and value targets defensively", async () =>
     },
   ];
 
-  const result = await getScreenEntryPresentationOverrides({
+  await expect(
+    getScreenEntryPresentationOverrides({
+      screenId: SCREEN_ID,
+      entryId: ENTRY_ID,
+      deps: deps(),
+    })
+  ).rejects.toThrow("custom_screen_override_invalid");
+});
+
+test("reads filter structurally valid inactive targets after complete-list validation", async () => {
+  const now = new Date("2026-06-24T12:00:00.000Z");
+  repository.rows = [
+    {
+      screenId: SCREEN_ID,
+      entryId: ENTRY_ID,
+      blockId: "direct-image",
+      propPath: "mediaAssetId",
+      value: MEDIA_ID,
+      updatedBy: ACTOR_ID,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      screenId: SCREEN_ID,
+      entryId: ENTRY_ID,
+      blockId: "missing-block",
+      propPath: "tone",
+      value: "muted",
+      updatedBy: ACTOR_ID,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
+
+  await expect(
+    getScreenEntryPresentationOverrides({
+      screenId: SCREEN_ID,
+      entryId: ENTRY_ID,
+      deps: deps(),
+    })
+  ).resolves.toEqual([
+    expect.objectContaining({
+      blockId: "direct-image",
+      propPath: "mediaAssetId",
+      value: MEDIA_ID,
+      createdAt: now,
+      updatedAt: now,
+    }),
+  ]);
+});
+
+test("normalizes exact draft, repository, and transport list modes without cross-mode coercion", () => {
+  const now = new Date("2026-06-24T12:00:00.000Z");
+  const draft = { blockId: "direct-image", propPath: "mediaAssetId", value: MEDIA_ID } as const;
+  const repositoryRecord = {
     screenId: SCREEN_ID,
     entryId: ENTRY_ID,
+    updatedBy: ACTOR_ID,
+    createdAt: now,
+    updatedAt: now,
+    ...draft,
+  };
+  const transportRecord = {
+    ...repositoryRecord,
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+  };
+
+  expect(normalizeScreenEntryPresentationOverrideList([draft], { source: "draft-cache" })).toEqual([
+    draft,
+  ]);
+  const repositoryResult = normalizeScreenEntryPresentationOverrideList([repositoryRecord], {
+    source: "repository-record",
+  });
+  expect(repositoryResult[0]?.createdAt).toBe(now);
+  expect(
+    normalizeScreenEntryPresentationOverrideList([transportRecord], {
+      source: "transport-response",
+    })
+  ).toEqual([draft]);
+
+  expect(() =>
+    normalizeScreenEntryPresentationOverrideList([transportRecord], {
+      source: "repository-record",
+    })
+  ).toThrow("custom_screen_override_invalid");
+  expect(() =>
+    normalizeScreenEntryPresentationOverrideList([repositoryRecord], {
+      source: "transport-response",
+    })
+  ).toThrow("custom_screen_override_invalid");
+  expect(() =>
+    normalizeScreenEntryPresentationOverrideList([{ ...transportRecord, extra: true }], {
+      source: "transport-response",
+    })
+  ).toThrow("custom_screen_override_invalid");
+  expect(() =>
+    normalizeScreenEntryPresentationOverrideList(
+      [transportRecord, { ...transportRecord, updatedBy: "not-a-uuid" }],
+      { source: "transport-response" }
+    )
+  ).toThrow("custom_screen_override_invalid");
+});
+
+test("list normalization rejects invalid envelopes and accepts only source-native nullable metadata", () => {
+  const timestamp = "2026-06-24T12:00:00.000Z";
+  const draft = { blockId: "direct-image", propPath: "mediaAssetId", value: MEDIA_ID } as const;
+  const repositoryRecord = {
+    screenId: SCREEN_ID,
+    entryId: ENTRY_ID,
+    updatedBy: null,
+    createdAt: new Date(timestamp),
+    updatedAt: new Date(timestamp),
+    ...draft,
+  };
+  const transportRecord = {
+    ...repositoryRecord,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+
+  expect(() =>
+    normalizeScreenEntryPresentationOverrideList(null, { source: "draft-cache" })
+  ).toThrow("custom_screen_override_invalid");
+  expect(() =>
+    normalizeScreenEntryPresentationOverrideList(
+      Array.from({ length: 201 }, () => draft),
+      {
+        source: "draft-cache",
+      }
+    )
+  ).toThrow("custom_screen_override_invalid");
+  expect(() =>
+    normalizeScreenEntryPresentationOverrideList([{ ...draft, unknown: true }], {
+      source: "draft-cache",
+    })
+  ).toThrow("custom_screen_override_invalid");
+
+  expect(
+    normalizeScreenEntryPresentationOverrideList([repositoryRecord], {
+      source: "repository-record",
+    })[0]?.updatedBy
+  ).toBeNull();
+  expect(
+    normalizeScreenEntryPresentationOverrideList([transportRecord], {
+      source: "transport-response",
+    })
+  ).toEqual([draft]);
+
+  for (const invalidRecord of [
+    { ...repositoryRecord, createdAt: new Date("invalid") },
+    { ...repositoryRecord, updatedAt: timestamp },
+    { ...repositoryRecord, updatedBy: "not-a-uuid" },
+    { ...repositoryRecord, unknown: true },
+  ]) {
+    expect(() =>
+      normalizeScreenEntryPresentationOverrideList([invalidRecord], {
+        source: "repository-record",
+      })
+    ).toThrow("custom_screen_override_invalid");
+  }
+
+  for (const invalidRecord of [
+    { ...transportRecord, createdAt: "2026-06-24T12:00:00Z" },
+    { ...transportRecord, updatedAt: new Date(timestamp) },
+    { ...transportRecord, updatedBy: "not-a-uuid" },
+    { ...transportRecord, unknown: true },
+  ]) {
+    expect(() =>
+      normalizeScreenEntryPresentationOverrideList([invalidRecord], {
+        source: "transport-response",
+      })
+    ).toThrow("custom_screen_override_invalid");
+  }
+});
+
+test("repository save, active read, and cleanup preserve the exact direct-image UUID", async () => {
+  await saveScreenEntryPresentationOverrides({
+    screenId: SCREEN_ID,
+    entryId: ENTRY_ID,
+    actorId: ACTOR_ID,
+    overrides: [{ blockId: "direct-image", propPath: "mediaAssetId", value: MEDIA_ID }],
     deps: deps(),
   });
 
-  expect(result).toEqual([
-    expect.objectContaining({
-      blockId: "rich-1",
-      propPath: "tone",
-      value: "muted",
-    }),
-  ]);
+  const savedRow = repository.rows[0];
+  expect(savedRow).toMatchObject({
+    screenId: SCREEN_ID,
+    entryId: ENTRY_ID,
+    blockId: "direct-image",
+    propPath: "mediaAssetId",
+    value: MEDIA_ID,
+    updatedBy: ACTOR_ID,
+  });
+  expect(savedRow?.createdAt).toBeInstanceOf(Date);
+  await expect(
+    getScreenEntryPresentationOverrides({
+      screenId: SCREEN_ID,
+      entryId: ENTRY_ID,
+      deps: deps(),
+    })
+  ).resolves.toEqual([savedRow]);
+  await expect(
+    cleanupStaleScreenEntryPresentationOverrides({
+      screenId: SCREEN_ID,
+      entryId: ENTRY_ID,
+      deps: deps(),
+    })
+  ).resolves.toEqual({ deleted: 0, staleTargets: [] });
+  expect(repository.rows[0]?.value).toBe(MEDIA_ID);
 });
 
 test("cleanupStaleScreenEntryPresentationOverrides removes unresolved rows only", async () => {
   const now = new Date("2026-06-24T12:00:00.000Z");
   repository.rows = [
+    {
+      screenId: SCREEN_ID,
+      entryId: ENTRY_ID,
+      blockId: "direct-image",
+      propPath: "mediaAssetId",
+      value: MEDIA_ID,
+      updatedBy: ACTOR_ID,
+      createdAt: now,
+      updatedAt: now,
+    },
     {
       screenId: SCREEN_ID,
       entryId: ENTRY_ID,
@@ -404,8 +729,8 @@ test("cleanupStaleScreenEntryPresentationOverrides removes unresolved rows only"
   expect(repository.deletedExact).toEqual([
     expect.objectContaining({ blockId: "field-stale", propPath: "textSize" }),
   ]);
-  expect(repository.rows).toHaveLength(1);
-  expect(repository.rows[0]?.blockId).toBe("field-name");
+  expect(repository.rows).toHaveLength(2);
+  expect(repository.rows.map((row) => row.blockId).sort()).toEqual(["direct-image", "field-name"]);
 });
 
 test("delete cleanup helpers delegate to screen and entry scopes", async () => {

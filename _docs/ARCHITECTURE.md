@@ -8,6 +8,19 @@ dla core, store i pluginow.
 Zbudowac nowoczesny CMS / sklep internetowy z doswiadczeniem developerskim
 jak Next.js oraz doswiadczeniem uzytkownika jak WordPress.
 
+## Aktualna granica authoringu
+
+- Konfigurowalne widgety sa powierzchnia wylacznie Admin Dashboard i sa
+  opisane w `_docs/DASHBOARD_WIDGETS_SPEC.md`.
+- Pages, Page Templates, Forms, Menus, Posts i Custom Screens uzywaja
+  kontraktow sekcji i blokow nalezacych do danego edytora. Nie istnieje
+  wspolna, niedashboardowa biblioteka widgetow ani nowy Widget Template Editor.
+- Nazwy `core/widgets`, `WidgetBlock`, `widget-template` oraz
+  Wizard/Visual/Advanced wystepujace dalej w tym dokumencie oznaczaja
+  historyczne identyfikatory rendererow, adaptery odczytu albo zapis wykonanych
+  taskow, o ile dany akapit nie wskazuje jawnie Admin Dashboard. Nie sa wzorcem
+  dla nowego authoringu.
+
 ## Zakres i nie-cele
 
 Zakres:
@@ -53,7 +66,8 @@ Nie-cele:
 Architektura testow musi byc zgodna z architektura produktu.
 Coderso jest celowo WordPress-like na poziomie runtime:
 - Bun pozostaje runtime kernelem,
-- pluginy i widget bundles sa ladowane dynamicznie,
+- plugin bundles i jawnie zadeklarowane rozszerzenia Dashboard sa ladowane
+  dynamicznie,
 - runtime nie moze byc sztucznie podporzadkowany jednemu runnerowi tylko po to,
   aby uzyskac wygodniejszy raport coverage.
 
@@ -107,8 +121,12 @@ przez `setup.completed=true`.
   continue to use `AdminLink` / admin route helpers instead of hand-built
   anchors.
 - `Entries` (`/admin/advanced/entries`) - wpisy rekordow typow z Engine.
-  - `Screens` (`/admin/advanced/custom-screens`) - custom admin screens z widgetow dla danych entry.
-  - `Widgets` (`/admin/advanced/widgets`) - biblioteka widgetow i template editor.
+  - `Screens` (`/admin/advanced/custom-screens`) - custom admin screens z
+    wlasnymi sekcjami, blokami i bindingami dla danych entry.
+  - Nie ma aktywnego modulu `Widgets` pod `/admin/advanced/widgets`; dawna
+    biblioteka i Widget Template Editor sa wycofanymi powierzchniami
+    kompatybilnosci. Reusable Page Templates naleza do Pages, a widgety
+    Dashboard konfiguruje sie na Dashboardzie.
   - `Forms` (`/admin/advanced/forms`) - lista i edytor formularzy.
 - `Posts` jest eksponowany jako top-level pozycja w `Main` (obok `Pages`) i nie jest czescia grupy `Advanced`.
   - **TASK-059 (done):** dedykowane tabele `posts`, `post_revisions`, `post_preview_tokens`, `post_term_assignments` sa aktywnie wykorzystywane przez posts domain service + admin posts API (TASK-059-02 i TASK-059-03),
@@ -119,7 +137,9 @@ przez `setup.completed=true`.
     - target: `posts/post_revisions/post_preview_tokens/post_term_assignments/posts.seo`,
     - trigger internal: `POST /admin/api/posts/migration/backfill` (`settings:write`, domyslnie `dryRun=true`),
     - parity mode: `shadowRead=true` zapisuje mismatch/failure report bez destrukcji legacy danych,
-  - widget embedding (`TASK-059-07`): `posts-feed` jest dedykowanym widgetem dla pages buildera (source modes: latest/featured/category/manual) z runtime resolverem `resolvePostsFeedRuntimeData`,
+  - block embedding (`TASK-059-07`): `posts-feed` jest dedykowanym blokiem Page
+    (historyczny runtime type pozostaje bez zmian; source modes:
+    latest/featured/category/manual) z resolverem `resolvePostsFeedRuntimeData`,
   - internal API: `/admin/api/posts*` (CRUD + autosave/revisions/restore + publish/preview/duplicate/delete) pozostaje `internal` i egzekwuje RBAC `content:read/write/publish`,
   - final QA/closure (`TASK-059-08`) zakonczone: lint/types/full-tests + dokumentacja/changelog/kanban sa zsynchronizowane.
   - fallback mode flag: `settings["posts.editor.mode"] = "blocks" | "classic"` (query override: `?editor=classic` dla awaryjnego rollbacku),
@@ -407,8 +427,8 @@ Zamiast tego:
 - `core/services/assistant/blueprints/businessBlueprintTypes.ts` defines the shared business blueprint pack contract used to wrap current catalog-family presets without changing their generated action plan output.
 - `core/services/assistant/blueprints/blueprintCapabilitySchema.ts` and `blueprintCapabilityRegistry.ts` now layer strict capability metadata on top of the current executable packs and adjunct/gated modules without introducing a second executor boundary.
 - `core/services/assistant/blueprints/blueprintCandidateResolver.ts`, `blueprintCompositionGraph.ts`, `blueprintConflictResolver.ts`, `blueprintSchemaMerger.ts`, `blueprintFacetMerger.ts`, `blueprintCardConfigMerger.ts`, `blueprintActionAssembler.ts`, `blueprintExistingResourceMatcher.ts`, `blueprintCompositionMetadata.ts`, and `blueprintCompositionDiagnostics.ts` provide the current `TASK-190` composition foundation: capability candidates, graph fragments, typed route/resource/field/media/permission conflict detection, validator-backed content schema merge, schema-backed listing facet/card merge, projection widening for required listing runtime fields, blocking gated-domain surfacing, catalog-backed existing-resource reuse, strict review diagnostics, internal redacted diagnostics serialization, and typed action assembly now keep supported multi-capability and primary-plus-gated setup requests on the composed planner path before provider drafting can bypass them. Single-pack setup/refinement still uses the existing legacy pack builders outside this bounded mixed-setup cutover.
-- `core/services/assistant/blueprints/blueprintPageSectionTypes.ts` and `blueprintPageSectionLibrary.ts` add the first `TASK-190-05` page-section layer: assistant-facing aliases/slots now resolve deterministically to existing page-builder widgets plus alias-specific `modulePackMatrix` helper mappings, unsupported aliases such as `steps` stay gated until a real widget/preset owner seam exists, and raw media URLs are rejected until the assistant has trusted media-library ids.
-- `core/services/assistant/blueprints/blueprintPageSectionComposer.ts` and the widened `page.upsert` contract add the next `TASK-190-05` slice: canonical collection pages now assemble listing/filter/form blocks through the existing widget owner, while `PageData.settings.collectionLink` persists canonical list-page linkage inside the current page owner seam for later workspace/no-duplicate leaves.
+- `core/services/assistant/blueprints/blueprintPageSectionTypes.ts` and `blueprintPageSectionLibrary.ts` add the first `TASK-190-05` page-section layer: assistant-facing aliases/slots resolve to Page-owned section/block capabilities. Historical `modulePackMatrix` mappings translate already supported alias ids only and are not an authoring owner; unsupported aliases such as `steps` stay gated until a real Page block owner exists, and raw media URLs are rejected until the assistant has trusted media-library ids.
+- `core/services/assistant/blueprints/blueprintPageSectionComposer.ts` and the widened `page.upsert` contract add the next `TASK-190-05` slice: canonical collection pages assemble listing/filter/form blocks through the Page section/block owner, while `PageData.settings.collectionLink` persists canonical list-page linkage inside the current page owner seam for later workspace/no-duplicate leaves.
 - `core/services/assistant/blueprints/blueprintAdminSurfaceComposer.ts` now emits native V4 `ScreenDocumentV1` sections/blocks for catalog admin review screens. The helper validates referenced content schema fields, rejects secret-like field references, and sends `custom-screen.upsert` a V4 `definition` rather than legacy `screen-*` widget blocks.
 - `core/services/assistant/blueprints/blueprintBindingComposer.ts` now emits V4 `blockId + propPath + field + mode` screen bindings against the composed content schema, rejects unsafe or secret-like paths, and dedupes identical binding ids before handing payloads to the custom-screen owner seam. Canonical admin-screen metadata now lives as nullable top-level `collectionRole` / `compositionKey` fields on `custom_screens` and round-trips through custom-screen schemas, services, cached admin clients, resource catalog summaries, and `custom-screen.upsert` / `custom-screen.update`.
 - `core/services/content/detailPageTypes.ts`, `detailPageSchema.ts`, and the new `detail_page_documents` / `detail_page_revisions` tables add the persisted detail-page owner seam for `TASK-190-05-03`: strict normalized document storage, deterministic UUID-compatible ids, and the blocking `content_type_has_detail_pages` delete dependency are the source of truth consumed by generic detail-page resource packaging and no-duplicate reuse.
@@ -420,7 +440,7 @@ Zamiast tego:
 - `core/services/assistant/blueprints/leadCaptureBlueprint.ts` provides a lead-capture pack that creates a public inquiry form and a simple landing page through existing `form.upsert` and block-backed `page.upsert` actions.
 - `core/services/assistant/blueprints/bookingServiceBlueprint.ts` registers a gated booking pack (`requires-prerequisite`) that returns typed questions instead of creating booking resources until booking action adapters exist.
 - `core/services/assistant/blueprints/productInquiryBlueprint.ts` provides an executable product inquiry catalog pack and a gated checkout/payment needs-input path.
-- `core/services/assistant/blueprints/editorialContentHubBlueprint.ts` provides an editorial hub page with a posts-feed widget and does not create or mutate post records.
+- `core/services/assistant/blueprints/editorialContentHubBlueprint.ts` provides an editorial hub page with a `posts-feed` Page block and does not create or mutate post records.
 - The current composition cutover is intentionally bounded to existing packs/modules. Capability manifests may already describe latent `detail-page` intent, and the landed `TASK-190` slices already cover persisted detail-page storage, published runtime rendering, shared preview handling, typed `detail-page.upsert`, the internal detail-page admin route family, admin client/cache parity, detail-page fixture/runtime acceptance, admin-screen layout composition, custom-screen binding/metadata safety, the collection-workspace route/read/cache/UI shell, the manual detail-template editor, assistant follow-up context for the workspace/detail-page surface, catalog-backed no-duplicate DB reuse, strict `metadata.blueprintComposition` review diagnostics, and generic assistant `detail-page` resource packaging through policy/provider/target-resolver seams.
 - `_docs/BLUEPRINT_COMPOSER.md` is the authoring guide for future capability ids,
   stable resource keys, `provides`/`requires`, merge policies, fixtures,
@@ -443,7 +463,8 @@ Resource catalog context:
   - commerce product/collection summaries,
   - solution kit summaries,
   - existing SEO documents,
-  - widgets/templates.
+  - legacy widget-template compatibility summaries; nie tworza one aktywnej
+    powierzchni authoringu.
 - `detail-page` summaries are also exposed through generic provider planning
   packages as bounded catalog data. Matching prefers stable `contentTypeId` and
   exact ids; route-facing slugs/linked route types are compatibility labels and
@@ -466,8 +487,9 @@ Runtime admin context:
   `sections[]`; widget template references are not hydrated from Page data.
 - `core/services/pages/pageTemplateBoundary.ts` owns the template-surface
   document contract split: Pages and Page Templates resolve as
-  `page-v2-section-block-contract`, while custom-screen and detail-page
-  surfaces remain `legacy-widget-block-contract`.
+  `page-v2-section-block-contract`. Its `legacy-widget-block-contract` label is
+  an adapter boundary for retained rows, not an active authoring model;
+  Custom Screens V4 author their own `sections[].blocks[]`.
 - Page Templates (TASK-420-03) is the reusable-template surface: `page_templates`
   rows store full Page v2 documents, the admin editor is the shared Page Editor
   v2 surface bound through an editor host (`/advanced/page-templates`), preview
@@ -491,20 +513,21 @@ Runtime admin context:
   legacy fallback placeholders and read-only screen props do not advertise false
   editor capability.
 - The assistant plan route rehydrates active surface identity server-side before
-  planning: pages through `pageService`, widget templates through
-  `widgetTemplateService`, and custom screens through `customScreenService`;
+  planning: pages through `pageService`, retained legacy template context
+  through `widgetTemplateService`, and custom screens through
+  `customScreenService`;
   missing resources clear the active surface instead of trusting stale browser
   context.
 - Active page hydration revalidates page identity, normalized current
   `sections[]`, nested block summaries, and selected section/block/path context
   through `pageService`; stale selected block ids or paths are cleared. Pages no
-  longer hydrate widget-template refs from page canvas data. Reusable template
-  inspection remains scoped to active widget-template/custom-screen surfaces
-  where the persisted data actually owns `WidgetBlock[]`.
+  longer hydrate widget-template refs from page canvas data. Legacy template
+  inspection remains compatibility-only; active Custom Screen authoring uses
+  its screen-owned sections and blocks.
 - Page mutations route through `page.upsert` with `sections[]` or metadata-only
   `page.update`. `page.widget.patch` is retired for Pages; reusable-template
-  prompts can route to `widget-template.block.patch` only from a hydrated reusable
-  template surface.
+  prompts can route to `widget-template.block.patch` only for an explicitly
+  hydrated retained legacy resource, never as a fresh authoring surface.
 - Snapshot nie jest autoryzacja; execute/dry-run dalej polegaja na route/domain permission checks.
 - Snapshot nie zawiera user PII, roli, sesji, raw permissions ani tokenow.
 
@@ -585,10 +608,10 @@ Action family contract registry:
 - `entry.upsert-draft` is the first promoted action from this registry. It is executable, draft-only, uses existing content entry services, and does not publish content.
 - `custom-screen.delete` is executable for explicit delete requests resolved from server-side resource catalog context; execute rechecks target id/name/prefix before calling the custom screen domain delete service.
 - `page.delete` is executable for active-context page delete requests; execute rechecks target id/title/slug/status before calling the page domain delete service.
-- `widget-template.delete` is executable for active-context reusable template delete requests; dry-run warns about reusable template blast radius and execute rechecks id/name/status/category before deletion.
+- `widget-template.delete` remains a legacy maintenance action for an exact already stored hidden row; it is not reusable-template authoring and dry-run/execute recheck identity before deletion.
 - `entry.delete` is executable for active entry route context and rechecks optional content type/title/slug/status expectations before deletion.
 - `content-type.delete` is executable for exact server-side catalog targets and is blocked when the catalog reports existing entries.
-- `listing-query.delete` and `listing-template.delete` are executable for active/exact catalog listing targets; dry-run and execute scan page data plus widget template blocks/settings for surviving references before deletion.
+- `listing-query.delete` and `listing-template.delete` are executable for active/exact catalog listing targets; dry-run and execute also scan retained legacy template rows for surviving references.
 - `form.delete` deletes exact zero-submission forms; `form.archive` preserves forms with submissions by setting status to `archived` without exposing submission payloads.
 - `menu.item.delete` deletes exact menu items through the menu tree service while preserving unrelated menu items.
 - `seo.document.delete` deletes exact SEO documents without deleting the owning page or entry target.
@@ -600,7 +623,7 @@ Action family contract registry:
   L04-deferred `collection`/`form`/`embed` output and existing static gallery
   output. Fresh
   widget-style `blocks[]` payloads are rejected for Pages.
-- `widget-template.update` edits reusable template metadata/settings; `widget-template.block.patch` patches selected reusable template block data paths and preserves unrelated blocks/settings.
+- `widget-template.update` and `widget-template.block.patch` remain maintenance-only for exact already stored hidden legacy rows; they cannot create/insert a resource or expose an authoring surface.
 - `custom-screen.update` edits custom screen metadata/sidebar/canonical collection-link metadata/binding mode; V4 screen edits use `custom-screen.section.add`, `custom-screen.block.add`, `custom-screen.block.patch`, `custom-screen.block.move`, `custom-screen.block.remove`, `custom-screen.binding.set`, and `custom-screen.list-view.patch` while preserving unrelated sections, blocks, bindings, and list-view settings.
 - `entry.update`, `form.update`, `listing-query.update`, `listing-template.update`, `menu.item.update`, and `seo.document.update` cover remaining domain resource edits through existing domain services and preserve unrelated fields/config/tree items.
 - `menu.item.upsert` is executable and uses existing menu services to upsert safe relative navigation links without duplicating items on re-execution.
@@ -608,11 +631,12 @@ Action family contract registry:
 - `media.reference.attach` is executable for `entry` targets and uses existing media/entry services to attach existing media ids without accepting upload bytes.
 - `listing-query.filters.patch` is executable and updates `query.filters` on existing listing queries while preserving unrelated query configuration.
 - `listing-template.card.patch` is executable and updates `config.card` on existing listing templates while preserving unrelated template config.
-- `page.widget.patch` is retired for Pages after TASK-417; shared widget-block
-  patch helpers remain scoped to widget templates and custom screens.
+- `page.widget.patch` is retired for Pages after TASK-417. Custom Screens V4 use
+  screen-owned section/block actions; shared legacy patch helpers may only
+  maintain retained hidden template rows.
 - `form.automation.upsert` is executable for safe non-webhook form actions and uses existing form action services; webhook automation remains out of scope until secret handling is explicit.
 - Generic CMS operation mapping supports counted multi-target delete/archive/update plans when the trusted resolver returns the exact expected count and every target maps to an existing strict typed action. Explicit multi-create plans are allowed only from locally validated `mutation.patch.items[]` definitions that become existing typed upsert/create actions; vague or mismatched bulk prompts return `needs_input`.
-- After assistant action execution, the admin client invalidates known cache families from successful non-noop execution results across pages, entries, content types, custom screens, forms, listings, widget templates, menus, and SEO. Cache keys are derived from strict action inputs or sanitized `resourceId`, not provider text.
+- After assistant action execution, the admin client invalidates known cache families from successful non-noop execution results across pages, entries, content types, custom screens, forms, listings, menus, SEO, and maintenance-only legacy template rows. Cache keys are derived from strict action inputs or sanitized `resourceId`, not provider text.
 - `/assistant/actions/dry-run` and `/assistant/actions/execute` enforce action-specific permissions from `actionFamilyContracts.ts` in addition to the baseline assistant route permissions.
 
 Aktualnie zaimplementowany business setup surface:
@@ -760,10 +784,11 @@ Zakres CMS, model danych, auth i security opisane sa w:
   requests (admin preview) keep flatten-to-one-breakpoint semantics and skip
   that emission. The CSS ships inside the cached page HTML, so site cache keys
   stay device-agnostic (see `_docs/PAGE_MODEL.md`).
-- Non-Page template surfaces do not share the Page v2 template input contract:
-  widget-template, custom-screen, and detail-page runtimes continue to consume
-  `WidgetBlock[]` until a dedicated migration task changes their storage and
-  preview contracts.
+- Non-Page compatibility rows do not share the Page v2 template input
+  contract. Retained widget-template/detail-page data may still pass through a
+  `WidgetBlock[]` read adapter. Active Custom Screens V4 author and render their
+  screen-owned `sections[].blocks[]`; the compatibility type is not exposed as
+  their authoring model.
 
 ## SEO Manager (v1)
 
@@ -816,7 +841,8 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - `email`, `webhook`, `entry_sync`, `redirect`, `success_message`,
   - warunki `always|equals|not_equals|exists|not_exists`,
   - auto-retry per formularz (exponential backoff) + retry failed runs przez `POST /forms/action-runs/:runId/retry`.
-- Runtime widget `form-embed` wspiera:
+- Runtime renderer historycznie nazwany `form-embed`, uzywany przez Form
+  block/section, wspiera:
   - inline submit (bez przejscia na surowy JSON),
   - multi-step flow na podstawie `forms.settings` + `field.settings.step`,
   - local progress save/restore (opt-in przez `saveProgress`).
@@ -834,7 +860,8 @@ Zakres CMS, model danych, auth i security opisane sa w:
 - Template contract (`listingTemplatesService`) jest data-only:
   - `fields`, `itemActions`, `emptyState`, `style`,
   - warunki widocznosci `conditions` per field binding.
-- Runtime widgets (`content-list`, `entry-teaser`) konsumują tylko resolved payload:
+- Runtime renderers blokow (`content-list`, `entry-teaser`; historyczne type
+  ids) konsumują tylko resolved payload:
   - `source.mode=legacy` (dotychczasowy content-type flow),
   - `source.mode=listing` (listing query/template flow),
   - back-compat: brak `mode` + `listingQueryId` => tryb listing.
@@ -975,7 +1002,7 @@ Zakres CMS, model danych, auth i security opisane sa w:
     - `Reservations`
     - `Slot Preview`
   - lokalna warstwa cache/prefetch (`bookingClient` + `adminPrefetch`) utrzymuje WordPress-like responsiveness przy przechodzeniu miedzy ekranami.
-- Runtime widgets:
+- Runtime blocks (historyczne registry ids zachowane dla kompatybilnosci):
   - `booking-calendar` publikuje selected slot event po `flowId`,
   - `appointment-form` konsumuje selected slot po `flowId` i tworzy rezerwacje przez public API,
   - resolver runtime (`resolveBookingRuntimeData`) hydratuje active services/resources + submission nonce.
@@ -990,7 +1017,7 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - product CRUD + collection assignment,
   - collections CRUD,
   - deterministic query endpoint (`POST /commerce/products/query`).
-- Runtime widgets:
+- Runtime blocks (historyczne registry ids zachowane dla kompatybilnosci):
   - `product-gallery`,
   - `product-compare`,
   - `product-table`.
@@ -1018,7 +1045,7 @@ Zakres CMS, model danych, auth i security opisane sa w:
 - Navigation/runtime contract:
   - menu metadata jest normalizowana server-side i mapowana do `navigation.items[].meta`,
   - shape `meta` jest deterministyczny (`visibility`, `badge`, `description`, `icon`).
-- Utility widgets dla engagement flows:
+- Domain-owned utility blocks dla engagement flows (historyczne type ids):
   - `tabs`,
   - `accordion`,
   - `toggle-block`.
@@ -1053,8 +1080,9 @@ Zakres CMS, model danych, auth i security opisane sa w:
 - Admin navigation focus contract:
   - selected kit moze byc persistowany client-side jako active admin preference,
   - `AdminShell` wyprowadza z niego `AdvancedFeatureFlags`,
-  - active kit focus rozwija dependency graph z `ADVANCED_MODULE_REGISTRY`,
-  - kity z `engine`, `entries` i `widgets` nie ukrywaja `Screens` (`custom-screens`),
+  - active kit focus rozwija current dependency graph z `ADVANCED_MODULE_REGISTRY`,
+  - `Screens` (`custom-screens`) pozostaje zaleznoscia domenowa dla kitow
+    contentowych; historyczny manifest id `widgets` nie jest authoring ownerem,
   - gating dotyczy tylko grupy `Advanced`; top-level `Main/Tools/Admin` pozostaja bez zmian,
   - `Solution Kits` pozostaje widoczne niezaleznie od aktywnego kitu.
 - Install engine foundation (service + DB):
@@ -1350,10 +1378,8 @@ Wymagania build:
     "styles": "dist/style.css"
   },
   "provides": {
-    "modules": ["widgets", "plugin:seo-boost/custom-module"],
-    "widgets": ["plugin:seo-boost/hero-pro"],
-    "presets": ["plugin:seo-boost/landing-a"],
-    "templates": ["plugin:seo-boost/footer-a"],
+    "modules": ["plugin:seo-boost/custom-module"],
+    "widgets": ["plugin:seo-boost/seo-overview-dashboard"],
     "routes": ["/sync"]
   },
   "permissions": [
@@ -1562,10 +1588,15 @@ Blok pojawia sie natychmiast w CMS.
 
 ---
 
-## Widgety (core v1)
+## Historyczne renderery core (compatibility only)
 
-Pierwsza wersja core musi zawierac podstawowe widgety, ktore pozwalaja
-zbudowac pelnoprawna, zaawansowana strone (np. typu mabudo.pl):
+Ponizsza sekcja zachowuje kontrakt pierwszej wersji i nazwy typow nadal
+odczytywane przez adaptery. Nie opisuje aktualnej biblioteki authoringu.
+Nowe Pages, Page Templates, Forms, Menus, Posts i Custom Screens sklada sie z
+sekcji i blokow nalezacych do tych domen. Konfigurowalne widgety istnieja
+wylacznie na Admin Dashboard.
+
+Pierwsza wersja core zawierala typy rendererow pozwalajace zbudowac strone:
 
 - hero section
 - timeline (proces, milestones, i datowane wydarzenia na osi)
@@ -1575,7 +1606,8 @@ zbudowac pelnoprawna, zaawansowana strone (np. typu mabudo.pl):
 - menu/nawigacja
 - stopka
 
-Wymagany model konfiguracji (dla wszystkich widgetow, pluginow i addonow):
+Historyczny model konfiguracji zachowany tylko dla kompatybilnosci istniejacych
+rekordow i narzedzi wsparcia:
 - Wizard: kreator pytan, wybor wariantu i szybka konfiguracja.
 - Visual: glowny tryb edycji content/style, warianty + sekcje wizualne;
   widget moze przejac wariant selector (`visualOwnsVariantSelection`).
@@ -1586,7 +1618,7 @@ Wymagany model konfiguracji (dla wszystkich widgetow, pluginow i addonow):
   controls as writable fields.
 - Zawsze mozna przejsc do Advanced po wstepnej konfiguracji.
 
-Composite-first delivery (Coderso):
+Historyczny composite-first delivery contract:
 - default flow: `All widgets` (composite + atomic),
 - secondary helper flow dla nietechnicznych userow: `Recommended` (composite widgets),
 - widget metadata contract:
@@ -1596,7 +1628,8 @@ Composite-first delivery (Coderso):
   - `surfaces` (`page-builder|widget-library`; historical
     `custom-screen-builder` declarations are migration-only),
   - optional `presets[]` i `requires[]`,
-- admin widget library filtruje po `module`, `complexity`, i surface `widget-library`.
+- wycofana biblioteka kompatybilnosci filtrowala po `module`, `complexity` i
+  surface `widget-library`; nie jest aktywna powierzchnia authoringu.
 - `Screens` no longer use a widget registry surface for active V4 authoring;
   V4 editor blocks come from the screen document owner and legacy
   `custom-screen-builder` metadata remains migration-only.

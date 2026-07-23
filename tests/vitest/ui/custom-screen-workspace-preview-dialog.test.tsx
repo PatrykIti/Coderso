@@ -2,12 +2,12 @@
 
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 // TASK-498-03: the dialog now precomputes its OWN relatedEntries via the existing
 // entries-read. Mock only listEntriesCached; keep the rest of entriesClient real so the
 // list-preview path (buildCustomScreenPreviewEntries) is unaffected.
-const listEntriesCached = vi.fn(async (_typeSlug: string) => [
+const defaultRelatedRows = [
   {
     id: "task-1",
     title: "Draft the brief",
@@ -24,7 +24,16 @@ const listEntriesCached = vi.fn(async (_typeSlug: string) => [
     updatedAt: "2026-06-02T00:00:00.000Z",
     data: { priority: "medium" },
   },
-]);
+];
+
+const listEntriesCached = vi.fn(
+  async (_typeSlug: string, _options?: { force?: boolean }) => defaultRelatedRows
+);
+const cacheHandlers = new Set<(event: { key: string }) => void>();
+const subscribeCacheEvents = vi.fn((handler: (event: { key: string }) => void) => {
+  cacheHandlers.add(handler);
+  return () => cacheHandlers.delete(handler);
+});
 
 vi.mock("@/services/entriesClient", async () => {
   const actual = await vi.importActual<typeof import("@/services/entriesClient")>(
@@ -32,9 +41,15 @@ vi.mock("@/services/entriesClient", async () => {
   );
   return {
     ...actual,
-    listEntriesCached: (typeSlug: string) => listEntriesCached(typeSlug),
+    listEntriesCached: (typeSlug: string, options?: { force?: boolean }) =>
+      listEntriesCached(typeSlug, options),
   };
 });
+
+vi.mock("@/utils/cacheBus", () => ({
+  subscribeCacheEvents: (handler: (event: { key: string }) => void) =>
+    subscribeCacheEvents(handler),
+}));
 
 import { CustomScreenWorkspacePreviewDialog } from "../../../core/admin/ui/custom-screens/CustomScreenWorkspacePreviewDialog";
 
@@ -45,12 +60,17 @@ const mount = (node: React.ReactNode) => {
   document.body.appendChild(container);
   const root = createRoot(container);
 
-  React.act(() => {
-    root.render(node);
-  });
+  const render = (nextNode: React.ReactNode) => {
+    React.act(() => {
+      root.render(nextNode);
+    });
+  };
+
+  render(node);
 
   return {
     container,
+    render,
     cleanup: () => {
       React.act(() => {
         root.unmount();
@@ -64,12 +84,39 @@ const flush = async () => {
   await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
+    await Promise.resolve();
   });
 };
 
+const deferred = <T,>() => {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+};
+
+const emitEntriesEvent = (slug: string) => {
+  React.act(() => {
+    for (const handler of cacheHandlers) {
+      handler({ key: `entries:list:${slug}` });
+    }
+  });
+};
+
+beforeEach(() => {
+  cacheHandlers.clear();
+  subscribeCacheEvents.mockClear();
+  listEntriesCached.mockReset();
+  listEntriesCached.mockResolvedValue(defaultRelatedRows);
+});
+
 afterEach(() => {
   document.body.innerHTML = "";
-  listEntriesCached.mockClear();
+  cacheHandlers.clear();
+  vi.restoreAllMocks();
 });
 
 const relatedFields = [
@@ -138,6 +185,33 @@ const contentType = {
   createdAt: "2026-05-02T00:00:00.000Z",
   updatedAt: "2026-05-02T00:00:00.000Z",
 };
+
+type PreviewDialogProps = React.ComponentProps<typeof CustomScreenWorkspacePreviewDialog>;
+
+const previewDialogNode = (overrides: Partial<PreviewDialogProps> = {}) => (
+  <CustomScreenWorkspacePreviewDialog
+    open
+    onOpenChange={() => undefined}
+    mode="editor-view"
+    contentType={contentType}
+    listView={{
+      columns: [],
+      filters: [],
+      defaultSort: { field: "updatedAt", direction: "desc" },
+      bulkActions: { delete: true, publish: true, unpublish: true },
+    }}
+    document={relatedListDocument}
+    bindings={relatedListBindings}
+    fields={relatedFields}
+    previewRecordState={{
+      source: "entry",
+      entryId: "entry-1",
+      note: "Previewing the first record from Projects.",
+      data: { relatedTasks: ["task-1", "task-2"] },
+    }}
+    {...overrides}
+  />
+);
 
 test("CustomScreenWorkspacePreviewDialog renders list preview table", () => {
   const view = mount(
@@ -293,7 +367,7 @@ test("dialog precomputes its OWN relatedEntries from previewRecordState.data (no
   try {
     await flush();
     // target is DERIVED from the bound field's relation.target ("tasks"), NOT stored data.target ("").
-    expect(listEntriesCached).toHaveBeenCalledWith("tasks");
+    expect(listEntriesCached).toHaveBeenCalledWith("tasks", { force: false });
     // resolved rows render (not a perpetual skeleton).
     expect(document.body.textContent).toContain("Draft the brief");
     expect(document.body.textContent).toContain("Review the PR");
@@ -337,6 +411,149 @@ test("dialog no-records fallback relation value coerces + looks up to the empty 
     // The empty-state label reads the block's own data.target (renderer-local).
     expect(document.body.textContent).toContain("No related");
     expect(document.body.textContent).not.toContain("Draft the brief");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("dialog exposes a bounded related-load failure and Retry forces a successful refresh", async () => {
+  const retry = deferred<typeof defaultRelatedRows>();
+  listEntriesCached
+    .mockRejectedValueOnce(new Error("private upstream detail"))
+    .mockImplementationOnce(() => retry.promise);
+  const view = mount(previewDialogNode());
+
+  try {
+    await flush();
+    expect(document.body.textContent).toContain("Related records unavailable");
+    expect(document.body.textContent).toContain("Related records could not be loaded.");
+    expect(document.body.textContent).not.toContain("private upstream detail");
+    const retryButton = [...document.body.querySelectorAll("button")].find(
+      (button) => button.textContent === "Retry"
+    );
+    expect(retryButton).toBeDefined();
+
+    React.act(() => retryButton?.click());
+    expect(listEntriesCached).toHaveBeenLastCalledWith("tasks", { force: true });
+    expect(document.body.textContent).not.toContain("Related records unavailable");
+
+    retry.resolve(defaultRelatedRows);
+    await flush();
+    expect(document.body.textContent).toContain("Draft the brief");
+    expect(document.body.textContent).toContain("Review the PR");
+    expect(document.body.textContent).not.toContain("Related records unavailable");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("closing and unmounting cancel late related success and failure commits", async () => {
+  const lateClose = deferred<typeof defaultRelatedRows>();
+  const reopened = deferred<typeof defaultRelatedRows>();
+  listEntriesCached
+    .mockImplementationOnce(() => lateClose.promise)
+    .mockImplementationOnce(() => reopened.promise);
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  const view = mount(previewDialogNode());
+
+  try {
+    await flush();
+    expect(listEntriesCached).toHaveBeenCalledTimes(1);
+    view.render(previewDialogNode({ open: false }));
+    await flush();
+    lateClose.resolve([
+      {
+        ...defaultRelatedRows[0],
+        title: "Late closed result",
+      },
+    ]);
+    await flush();
+
+    view.render(previewDialogNode({ open: true }));
+    expect(document.body.textContent).not.toContain("Late closed result");
+    await flush();
+    expect(listEntriesCached).toHaveBeenCalledTimes(2);
+    expect(document.body.textContent).not.toContain("Late closed result");
+    reopened.resolve([
+      {
+        ...defaultRelatedRows[0],
+        title: "Fresh reopened result",
+      },
+    ]);
+    await flush();
+    expect(document.body.textContent).toContain("Fresh reopened result");
+  } finally {
+    view.cleanup();
+  }
+
+  const lateUnmount = deferred<typeof defaultRelatedRows>();
+  listEntriesCached.mockImplementationOnce(() => lateUnmount.promise);
+  const unmounted = mount(previewDialogNode());
+  await flush();
+  unmounted.cleanup();
+  lateUnmount.reject(new Error("late unmounted failure"));
+  await flush();
+  expect(consoleError).not.toHaveBeenCalled();
+});
+
+test("matching target cache events force refresh and retain visible rows until success", async () => {
+  const refresh = deferred<typeof defaultRelatedRows>();
+  listEntriesCached
+    .mockResolvedValueOnce(defaultRelatedRows)
+    .mockImplementationOnce(() => refresh.promise);
+  const view = mount(previewDialogNode());
+
+  try {
+    await flush();
+    expect(document.body.textContent).toContain("Draft the brief");
+    emitEntriesEvent("unrelated");
+    expect(listEntriesCached).toHaveBeenCalledTimes(1);
+    emitEntriesEvent("tasks");
+    expect(listEntriesCached).toHaveBeenCalledTimes(2);
+    expect(listEntriesCached).toHaveBeenLastCalledWith("tasks", { force: true });
+    expect(document.body.textContent).toContain("Draft the brief");
+
+    refresh.resolve([
+      { ...defaultRelatedRows[0], title: "Cache-refreshed brief" },
+      defaultRelatedRows[1],
+    ]);
+    await flush();
+    expect(document.body.textContent).toContain("Cache-refreshed brief");
+    expect(document.body.textContent).not.toContain("Related records unavailable");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("related loading is enabled only for an open editor preview with a valid plan", async () => {
+  const view = mount(previewDialogNode({ open: false }));
+  try {
+    await flush();
+    expect(listEntriesCached).not.toHaveBeenCalled();
+    expect(subscribeCacheEvents).not.toHaveBeenCalled();
+
+    view.render(previewDialogNode({ open: true, mode: "list-view" }));
+    await flush();
+    expect(listEntriesCached).not.toHaveBeenCalled();
+    expect(subscribeCacheEvents).not.toHaveBeenCalled();
+
+    view.render(
+      previewDialogNode({
+        open: true,
+        mode: "editor-view",
+        document: { schemaVersion: 1, sections: [] },
+        bindings: [],
+      })
+    );
+    await flush();
+    expect(listEntriesCached).not.toHaveBeenCalled();
+    expect(subscribeCacheEvents).not.toHaveBeenCalled();
+
+    view.render(previewDialogNode({ open: true, mode: "editor-view" }));
+    await flush();
+    expect(listEntriesCached).toHaveBeenCalledTimes(1);
+    expect(listEntriesCached).toHaveBeenCalledWith("tasks", { force: false });
+    expect(subscribeCacheEvents).toHaveBeenCalledTimes(1);
   } finally {
     view.cleanup();
   }

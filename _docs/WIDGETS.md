@@ -1,7 +1,16 @@
 # Widgets Spec (v1)
 
-Specyfikacja bazowych widgetow core i modelu konfiguracji, ktory musi byc
-stosowany rowniez przez widgety z pluginow i addonow.
+> **Current product boundary:** configurable widgets are an Admin Dashboard-only
+> surface owned by `_docs/DASHBOARD_WIDGETS_SPEC.md`. Page, menu, form, and custom-screen
+> editors author sections and blocks. The `core/widgets/**` namespace and the historical
+> catalog below document compatibility renderers retained for existing content; they do
+> not authorize new non-dashboard widget types, Wizard/Visual/Advanced editors, presets,
+> registry entries, or module-pack expansion. New work on those editors belongs to their
+> section/block contracts.
+
+The remainder of this document is the historical core-renderer configuration contract
+kept for maintenance and stored-content compatibility. Plugin/addon guidance applies only
+where a currently supported plugin contract explicitly references it.
 
 ## Cele
 
@@ -22,7 +31,7 @@ System widgetow zostal zaprojektowany, aby rozwiazac odwieczny konflikt miedzy "
 
 ---
 
-## Lista widgetow w core v1
+## Historical core renderer catalog (v1)
 
 Wymagane:
 - Section (layout wrapper z repeatable regions)
@@ -51,9 +60,10 @@ Wymagane:
 
 ---
 
-## Model konfiguracji (obowiazkowy)
+## Historical compatibility configuration model
 
-Kazdy widget musi wspierac 3 tryby konfiguracji:
+Pierwotny renderer contract wymagal trzech trybow konfiguracji. Te tryby nie
+sa wymaganiem dla nowych sekcji/blokow ani dla Admin Dashboard widgets:
 
 1) Wizard (kreator)
 - Pytania prowadza uzytkownika do wyboru wariantu (auto).
@@ -236,9 +246,9 @@ Zasady:
   summarized rather than edited as raw technical text. It also uses color
   swatches plus clear/saved-custom summaries instead of raw CSS/token text
   inputs.
-- Commerce widget authoring follows the same picker-first rule. Product Gallery
-  and Product Compare use collection/product/page pickers for normal
-  Wizard/Visual flows; raw product IDs, fallback collection IDs, route-prefix
+- Historical Commerce renderer controls followed the same picker-first rule.
+  Product Gallery and Product Compare used collection/product/page pickers in
+  the retired Wizard/Visual flows; raw product IDs, fallback collection IDs, route-prefix
   strings, minor-unit price wording, raw color token inputs, raw media-ID
   hints, and raw query JSON are not beginner-mode inputs. Existing saved
   technical values remain backward-compatible and are summarized in Advanced
@@ -290,6 +300,96 @@ Zasady:
 - zwykle Pages nie dostaja automatycznego content-type bindingu w tym kontrakcie.
 
 ---
+
+## Motion And Interaction Effects (TASK-521)
+
+Two widget-facing motion options join the Pages v2 effects family (see
+`_docs/PAGE_MODEL.md` § Motion And Interaction Effects for the full contract —
+present-only, reject-unknown, `prefers-reduced-motion`-safe, no npm dependency):
+
+- **Hero mouse-tilt** — `hero.style.tilt` (`"none" | "subtle" | "strong"`,
+  `heroTilts`) adds a 3D parallax-on-hover to the hero card/media via CSS
+  `perspective` + a tiny dependency-free `mousemove` runtime. Present-only and
+  fail-soft (`resolveHeroTilt` falls back to `"none"`, never throws). Disabled for
+  reduced-motion and coarse/touch pointers. `"none"`/unset is byte-identical to
+  pre-521 hero output.
+- **Animated-icon block** — the Page v2 `icon` block (previously a non-functional
+  placeholder) is now a real, insertable, runtime-rendered block built from a
+  curated **inline-SVG + CSS-keyframes** set (`core/services/pages/animatedIconGlyphs.tsx`)
+  — no Lottie, no npm dependency, CSP-safe. Props: `name` (allowlist glyph,
+  `animatedIconNames`), `animation` (`none`/`spin`/`pulse`/`bounce`/`draw`), `size`
+  (16..160 px), `color` (`readSafeColor`, alpha OK), `speed` (400..4000 ms via
+  `--anim-speed`). This is a PAGE block implemented through a renderer `case`, NOT a
+  new composite widget — `core/widgets/registry.ts` / `modulePackMatrix.ts` are
+  unchanged and the widget-pack matrix gains no row.
+
+## Composable Hero Toolkit & Premium Effects (TASK-522)
+
+TASK-522 delivers a composable TOOLKIT — not a one-off hero widget — to build a rich
+premium hero (a layered glass card with floating badges, drifting orbs, a pulsing
+ring, a tilt-on-pointer card + a drawn line-SVG, plus hover glow/lift and a ticker)
+inside Page Editor v2 (see `_docs/PAGE_MODEL.md` § Composable Hero Toolkit & Premium
+Effects for the full contract — present-only, reject-unknown,
+`prefers-reduced-motion`-safe, no npm dependency, no migration):
+
+- **Custom-SVG block** (`customSvg`, the ONE new `pageBlockType`) — a Page-owned block
+  whose author SVG is sanitized at write and render by one immutable closed policy.
+  Author `class`/`style` are excluded; sanitized text becomes a bounded, deeply frozen
+  safe-node tree and is rendered as React elements through an explicit sparse prop map,
+  never an author-data HTML sink. Renderer-owned root geometry removes author layout
+  authority, clamps aspect ratio to 1/8..8, caps the block at 1,024 px, clips/contains
+  it, and disables pointer events; invalid input becomes a neutral placeholder. The
+  optional stroke **draw-in** animation remains supported. This is a PAGE block
+  implemented through a renderer `case`, NOT a configurable widget —
+  `core/widgets/registry.ts` / `modulePackMatrix.ts` are unchanged and the widget-pack
+  matrix (`_docs/WIDGET_PACK_MATRIX.md`) gains no row.
+- **Floating-drift decoration** (`block.style.decoration`) — turns any block into a
+  layered decoration (`float`/`drift`/`pulse`/`radiate`/`orbit`).
+- **Tilt-on-any-block** (`block.style.tilt` + `tiltGlare`) — generalizes 521's hero
+  tilt to any card/block via a `[data-block-tilt]` runtime binding.
+- **Layered canvas** (`section.style.composition` / layout-block
+  `style.composition:"layered"` + per-child `style.layer`) — absolute, z-indexed,
+  per-device children so a hero composes from SVG + badges + cards + orbs.
+- **Glass/glow surface presets** (`style.surfacePreset`) + **hover-effect presets**
+  (`block.style.hoverEffect`) — the premium look + interactivity in one click.
+- **Ticker / marquee** (`group` block `style.marquee`) — a horizontal auto-scrolling
+  strip with an optional seamless loop.
+
+All are STYLE fields (plus one block type); everything is dependency-free (hand-rolled
+SVG sanitizer + inline CSS keyframes + 521's runtime) and composes the reference
+wow-site hero without a new dependency or migration.
+
+## Declarative Interactivity — Tabs/Switcher, Filterable Gallery, Polish (TASK-534)
+
+TASK-534 (Bundle D; absorbs TASK-527) adds a cohesive family of DECLARATIVE
+interactivity closing `_TMP-cms-ograniczenia.md` §1 ("Brak interaktywności JS"). See
+`_docs/PAGE_MODEL.md` § Declarative Interactivity for the full contract — everything is
+present-only, reject-unknown, `prefers-reduced-motion` + keyboard safe, rides the ONE
+existing `pageEffectsRuntime.ts` `<script>`, and needs no npm dependency, no migration,
+no `PAGE_DOCUMENT_SCHEMA_VERSION` bump, no route/RBAC:
+
+- **Segmented `switcher` / tabs block** (the ONE new `pageBlockType`; absorbs TASK-527)
+  — N labelled panels in six `panel:1..panel:6` slots rendered as a real
+  `role="tablist"`/`role="tab"`/`role="tabpanel"` set (roving tabindex, arrow/Home/End
+  keyboard, `hidden` inactive panels for no-JS). Tab labels are escaped TEXT nodes. This
+  is a PAGE block implemented through a renderer `case`, NOT a composite widget —
+  `core/widgets/registry.ts` / `modulePackMatrix.ts` are unchanged and the widget-pack
+  matrix (`_docs/WIDGET_PACK_MATRIX.md`) gains no row.
+- **Filterable gallery** — present-only `filterable`/`filterCategories` on the EXISTING
+  `gallery` block plus an optional per-item single-token `category`; a `role="tablist"`
+  chip bar toggles item visibility via a token-split runtime match. The `gallery` block
+  is now editor-insertable (its `gallery-editor-controls-pending` reason cleared).
+- **`scrollHint` block** (the second new `pageBlockType`) — a CSS-keyframe-only
+  `aria-hidden` dot/chevron with an optional `sr-only` label; no runtime.
+- **Noise/grain overlay** (`PageEffectsV2.noiseOverlay` page + `PageSectionStyleV2.noiseOverlay`
+  section) — a static self-generated SVG-turbulence layer (no asset, no author color).
+- **Magnetic button** (`block.style.magnetic`) — a pointer-attraction runtime clause
+  (transforms only, rAF, clamped ±14px, `pointer:fine` + reduced-motion gated).
+
+Toggle interactions (switcher, filter) sit BEFORE the runtime reduced-motion
+early-return so they work for reduce users; the magnetic MOTION clause sits after it.
+Only runtime-bearing surfaces (switcher / filterable gallery / magnetic) widen the
+single-`<script>` emit predicate; scrollHint + noise are CSS/static.
 
 ## Dokumentacja widgetow
 
@@ -364,29 +464,71 @@ type modes that already use `none` for content semantics.
 
 ## Visual Clear Controls
 
-TASK-244 adds `Clear` actions for configured visual surface fields such as
+TASK-244 adds `Clear` actions for configured sparse visual surface fields such as
 background colors, gradients, overlays, card surfaces, table shells, CTA button
 backgrounds, and framed custom-screen surfaces. `Clear` is an editor action, not
-a saved token. It removes the owning field from widget data so the renderer does
-not emit a forced inline style or fallback shell solely because the field was
-cleared.
+a saved token. On those explicitly sparse fields it removes the owning field from
+widget data so the renderer does not emit a forced inline style or fallback shell
+solely because the field was cleared. Retained schemas that already normalize an
+empty string or an explicit default such as `transparent` keep that historical
+sentinel/default contract; TASK-541 does not reinterpret or rewrite those bytes.
 
 `Clear` is separate from TASK-242 `None` token semantics:
 
 | Action/value | Saved payload | Runtime contract |
 |---|---|---|
-| `Clear` on a surface field | property omitted from the owning object | no forced background, gradient, overlay, card, table, or panel style for that field |
+| `Clear` on an explicitly sparse surface field | property omitted from the owning object | no forced background, gradient, overlay, card, table, or panel style for that field |
 | `none` visual token | literal `none` value on approved token fields | fixed zero/empty output for spacing, size, radius, typography, or other approved token maps |
 | deliberate color value such as `transparent` | literal string chosen by the user | render the configured color because it is user-authored data, not a clear sentinel |
 
-Widget editors must remove keys for clear actions and must not serialize
-`transparent` or an empty string as an off-state sentinel. Renderers should
+New sparse Clear actions must remove keys and must not introduce `transparent` or
+an empty string as a new off-state sentinel. Existing retained sentinel/default
+contracts remain compatible and are documented by their owning widget. Renderers
 normalize clearable surface values through the shared clearable-style helpers and
-compact omitted style keys before output.
+compact genuinely omitted style keys before output.
 
 Shared clearable inputs may also emit bounded undo feedback when the helper can
 restore the exact prior value. That undo path is editor-only feedback and must
 not persist extra sentinel state into widget JSON.
+
+## Canonical retained color compatibility (TASK-541)
+
+This section documents maintenance of already-stored compatibility records. It
+does not make `core/widgets/*` a creation or insertion surface: configurable
+product widgets exist only on the Admin Dashboard, while Pages, Forms, Menus,
+Posts, Custom Screens, and templates own sections and blocks.
+
+Simple colors are parsed by the Bun-free canonical owner in
+`core/services/theme/cssColorContract.ts`. JSON Schema patterns are structural
+prefilters only; normalization and every render sink still run the semantic
+parser. The `authoring` profile is used by Grid Columns, Newsletter, and
+Timeline. Explicit direct CSS-property reads use `inherited-render` in Section,
+Tabs, Accordion, Contact, Toggle Block, Divider `labelColor`, Navigation,
+Footer, Hero, Gallery Mosaic `style.overlay`, CTA Banner, and the TASK-516 Form
+Embed bridge. That inherited profile accepts canonical `currentColor` and
+`inherit`; it is not permission to widen Menu, Page, or ordinary new fields.
+
+Nested/composite positions are narrower. Section `style.gradientFrom` and
+`style.gradientTo`, Divider `color`, Hero `media.overlay` and
+`background.media.overlay`, and both Hero background-gradient stops accept
+`currentColor` but reject `inherit` at schema/normalize/control/render
+boundaries. Accordion alone retains its bounded historical hyphenated-token read
+adapter after canonical parsing fails; that fallback is not shared grammar.
+
+Hero owns an exact two-stop `linear-gradient` parser capped at 320 original
+UTF-16 code units. It accepts an unsigned integer angle from `0..360` and shared
+inherited-profile stops, canonicalizes the function/angle/stops, and rejects
+`inherit`. CTA Banner keeps a separate 96-code-unit compatibility grammar:
+lowercase `linear-gradient`/`deg`, an optional-minus signed integer or decimal
+angle, exactly two 3-through-8-digit hex stops, ASCII U+0020 spacing only, and
+outer-space trimming while preserving accepted inner bytes. CTA's 5/7-digit
+legacy stops are deliberately local and are not valid shared simple colors.
+
+TASK-541 introduces no new default bytes. Color fields whose existing owner
+contract is sparse remain present-only; retained fields with historical empty or
+explicit defaults keep their previous normalized bytes and fallback behavior.
+Rejected values fail closed according to that owner contract and are never
+rendered raw.
 
 ---
 
@@ -408,8 +550,8 @@ Kazdy widget powinien zdefiniowac:
 
 Widget registry nie jest juz jedna plaska lista dla wszystkich surface'ow.
 
-Zasady:
-- public/page widgets domyslnie naleza do `page-builder` + `widget-library`,
+Historyczne zasady metadata (nie stosowac do nowego authoringu):
+- dawne public/page renderer ids nalezaly do `page-builder` + `widget-library`,
 - screen-only widgets are retired from active registration after TASK-468; old
   `custom-screen-builder`, `admin-list-view`, and `admin-editor-view` metadata
   may appear only in migration docs or stored legacy payloads,
@@ -420,11 +562,18 @@ Zasady:
   owner, not from a widget registry surface.
 
 Uwaga:
-- `Widget Library` nie sluzy do tworzenia nowych realnych widget types z admin UI.
-- nowe widget types nadal sa code/plugin-authored i musza byc zarejestrowane w widget registry,
-- z poziomu admina user moze tworzyc `widget templates` przez flow `New Template`.
+- `Widget Library` i flow `New Template` sa wycofane jako powierzchnie
+  authoringu.
+- Nie tworzy sie nowych non-dashboard widget types w kodzie ani pluginie.
+  Pages, Forms, Menus, Posts, Custom Screens i templates rozszerzaja swoje
+  sekcje/bloki; pluginowe configurable widgets dotycza tylko Admin Dashboard.
+- Istniejace registry/template rows sa utrzymywane jedynie dla
+  niedestrukcyjnego odczytu, runtime compatibility i migracji.
 
-## Widget Library Admin UX
+## Historical Widget Library Admin UX (retired record)
+
+Ponizsze punkty opisuja zamkniety etap implementacji i nie sa instrukcja
+authoringu ani kontraktem dla nowych funkcji.
 
 `/admin/advanced/widgets` is a hidden/direct compatibility route after
 TASK-461 and follows the shared Pages-style list contract when opened:
@@ -588,14 +737,18 @@ type WidgetEditorContext = {
 
 ---
 
-## Registry API (core/widgets/registry.ts)
+## Historical registry API (`core/widgets/registry.ts`)
+
+This API remains for stored-data/runtime compatibility and tests. Do not
+register a new non-dashboard type. Plugin content extensions use domain blocks;
+configurable plugin widgets use the Admin Dashboard contract.
 
 - `registerWidget(def)` – rejestruje widget
 - `getWidget(type)` – zwraca definicje
 - `listWidgets()` – lista wszystkich
 - `clearWidgets()` – tylko dla testow
 
-Naming rules:
+Retained naming rules:
 - Core: `hero`, `timeline`, `compare-timeline`, `newsletter`, `contact`, `navigation`, `footer`
 - Pluginy: `<plugin>.<widget>` (np. `seo-boost.hero`)
 
@@ -644,46 +797,14 @@ Flow:
 
 ---
 
-## UI Wiring (Page Builder)
+## Historical Page/Screen wiring (retired record)
 
-- Widget library czyta `listWidgets()` i pokazuje liste.
-- Dodanie widgetu tworzy blok z `defaults`.
-- Panel Wizard/Visual/Advanced renderuje `definition.editor.*`.
-- Zmiana wariantu aktualizuje `block.variant`.
-
-## Admin Widget Surfaces
-
-Widget availability is surface-scoped:
-
-- `page-builder` - public page builder canvas.
-- `widget-library` - reusable widget/template catalog.
-- `custom-screen-builder` - retired Custom Screens surface; may appear in
-  historical metadata or migration docs only.
-- `admin-list-view` - retired Custom Screens widget metadata surface; V4 list
-  view is owned by `definition.listView`.
-- `admin-editor-view` - retired screen-widget metadata surface; active V4 Custom
-  Screens authoring uses screen-owned blocks and field bindings instead of
-  widget registry insertion.
-
-Admin-only widgets may declare `dataAccess` metadata:
-
-- `source: "selected-content-type"` for widgets that need the assigned content
-  type schema.
-- `source: "selected-entry"` for widgets that read or write the active record.
-- `modes: ["read"]`, `["write"]`, or `["read", "write"]` describe the expected
-  data direction.
-- `bindingTargets` let a selected-entry widget own the prop paths surfaced in
-  Custom Screens `Data`; they define labels, descriptions, and per-prop read vs
-  write capability instead of leaving the panel to infer paths from defaults.
-- Existing `screen-record-header`, `screen-field-value`, `screen-field-group`,
-  and `screen-two-column` ids are TASK-468 compatibility/migration inputs only.
-  V4 screen documents persist screen-owned blocks and no longer project through
-  the legacy render bridge.
-
-`listWidgetsForSurfaceContext()` filters selected-entry and selected-content-type
-widgets until the current Custom Screen has a resolved content type. This keeps
-public widgets out of admin record editors and prevents schema-bound controls
-from rendering against missing context.
+The former Page Widget Library, Wizard/Visual/Advanced panels, surface-scoped
+registry insertion, and selected-entry widget binding metadata are not active
+authoring contracts. Pages use Page-owned sections/blocks. Custom Screens V4
+use `definition.listView`, screen-owned `sections[].blocks[]`, and explicit
+field bindings. Retained surface ids and `listWidgetsForSurfaceContext()` exist
+only to decode/support legacy records and must not gain new consumers.
 
 ### Retired Screen Widget Editor Parity
 
@@ -702,26 +823,18 @@ the widget registry.
 
 ---
 
-## Widget Catalog API
+## Retained catalog API (support/read compatibility)
 
-Admin UI pobiera katalog widgetow z API:
-
-- `GET /widgets` zwraca liste core widgetow + templatek (source: `core` / `template`).
-- Templateki sa zarzadzane przez `GET/POST/PATCH/DELETE /widgets/templates`
-  (alias: `/widget-templates`).
-- Templateki mozna duplikowac przez `POST /widgets/templates/:id/duplicate`
-  (alias: `/widget-templates/:id/duplicate`). Duplicate jest service-owned:
-  serwer laduje source template, klonuje dozwolone `blocks/settings`, tworzy
-  draft i nadaje jawna nazwe typu `Copy of ...`.
-- Create/update odrzucaja case-insensitive duplicate names kodem
-  `widget_template_name_conflict`.
-
-Katalog zawiera podstawowe metadata:
-`id`, `name`, `description`, `category`, `variants`, `status`.
+- `GET /widgets` may expose the historical core renderer catalog to hidden
+  support tooling; it is not a Page/Screen/Form/Menu/Post inserter.
+- Every `/widget-templates*`, `/widgets/templates*`, and template-category CRUD,
+  preview, revision, restore, and duplicate route is deleted. Current reusable
+  Page authoring uses `/page-templates` and Page v2 sections/blocks.
+- No new write path may persist a widget-template row through this catalog.
 
 ---
 
-## Widget Library (Preview konfiguracji)
+## Historical Widget Library preview (retired record)
 
 - Drawer szczegolow widgetu pokazuje ten sam zestaw paneli (Wizard/Visual/Advanced),
   ktory jest uzywany po wstawieniu widgetu.
@@ -797,12 +910,15 @@ Katalog zawiera podstawowe metadata:
 
 ---
 
-## Authoring Guide (plugin widgets)
+## Maintenance guide for retained compatibility renderers
 
-- Definiuj wlasne `schema` i `defaults`.
-- Trzymaj dane kompatybilne z JSON schema.
-- Uzywaj design tokens zamiast hardcode kolorow.
-- Stosuj Wizard/Visual/Advanced zgodnie ze standardem core.
+- Nie dodawaj nowych non-dashboard widget types, presets, module-pack entries
+  ani Wizard/Visual/Advanced editors.
+- Zmieniaj legacy schema/default/normalizer tylko dla istniejacych zapisanych
+  danych i zachowuj niedestrukcyjny odczyt oraz testy regresji.
+- Nowe editor-facing zachowanie dodawaj do section/block contract wlasciciela
+  domeny. Nowe Admin Dashboard widgets stosuja osobny kontrakt z
+  `_docs/DASHBOARD_WIDGETS_SPEC.md`.
 
 ---
 

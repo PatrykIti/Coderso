@@ -1,6 +1,7 @@
 import { Monitor, Smartphone, Tablet } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { listEntriesCached } from "@/services/entriesClient";
 import type { ContentTypeSummary } from "@/services/contentTypesClient";
 
 import type {
@@ -17,18 +17,12 @@ import type {
   ScreenDocumentV1,
   ScreenFieldBinding,
 } from "../../../services/customScreens/customScreenSchemas";
-import { collectScreenDocumentBlocks } from "../../../services/customScreens/screenDocumentOps";
-import {
-  relatedEntriesMapEqual,
-  resolveRelatedEntries,
-  type RelatedEntrySummary,
-} from "../../../services/customScreens/relatedEntryResolver";
-import { readBindingPathValue } from "../../../services/utils/bindingPath";
 import type { ContentField } from "../content-types/SchemaBuilder";
 import { CustomScreenEntriesTable } from "./CustomScreenEntriesTable";
 import { CustomScreenPreview } from "./CustomScreenPreview";
 import { buildCustomScreenPreviewEntries } from "./ListViewCanvas";
 import type { CustomScreenPreviewRecordState } from "./customScreenPreviewData";
+import { useScreenRelatedEntries } from "./hooks/useScreenRelatedEntries";
 
 const previewDevices = [
   { id: "desktop", label: "Desktop", width: "100%", icon: Monitor },
@@ -64,71 +58,13 @@ export function CustomScreenWorkspacePreviewDialog({
   previewLoading = false,
 }: CustomScreenWorkspacePreviewDialogProps) {
   const [deviceId, setDeviceId] = useState<PreviewDeviceId>("desktop");
-
-  // TASK-498-03 B3.4 — OWNER host for the editor-view preview: precompute this dialog's
-  // OWN `relatedEntries` from previewRecordState.data's relation IDs (the first real
-  // entry's IDs) via the SAME resolver + existing entries-read, then forward through
-  // CustomScreenPreview. previewRecordState.data is stable React state (no memo trap);
-  // still diff-guarded to avoid a setState loop.
-  const [relatedEntries, setRelatedEntries] = useState<Record<string, RelatedEntrySummary[]>>({});
-  const previewData = previewRecordState.data;
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const resetIfNeeded = () => {
-        if (!cancelled) {
-          setRelatedEntries((current) => (Object.keys(current).length === 0 ? current : {}));
-        }
-      };
-      if (mode !== "editor-view") {
-        resetIfNeeded();
-        return;
-      }
-      const blocks = collectScreenDocumentBlocks(document).filter(
-        (block) => block.type === "related-list"
-      );
-      if (blocks.length === 0) {
-        // block-GUARD: zero fetch when the document has no related-list block.
-        resetIfNeeded();
-        return;
-      }
-      const pairs = await Promise.all(
-        blocks.map(async (block) => {
-          const binding = bindings.find((bd) => bd.blockId === block.id && bd.propPath === "items");
-          if (!binding) return [block.id, [] as RelatedEntrySummary[]] as const;
-          const ids = readBindingPathValue(previewData, binding.field) as
-            | string[]
-            | string
-            | null
-            | undefined;
-          const data = (block.data ?? {}) as {
-            displayField?: string;
-            limit?: number;
-            target?: string;
-          };
-          const target =
-            (fields ?? []).find((f) => f.name === binding.field)?.relation?.target ??
-            data.target ??
-            "";
-          const rows = await resolveRelatedEntries({
-            ids,
-            target,
-            displayField: data.displayField,
-            limit: data.limit,
-            readEntries: (t) => listEntriesCached(t),
-          });
-          return [block.id, rows] as const;
-        })
-      );
-      if (cancelled) return;
-      const next = Object.fromEntries(pairs) as Record<string, RelatedEntrySummary[]>;
-      setRelatedEntries((current) => (relatedEntriesMapEqual(current, next) ? current : next));
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [mode, document, bindings, previewData, fields]);
+  const relatedState = useScreenRelatedEntries({
+    enabled: open && mode === "editor-view",
+    document,
+    bindings,
+    values: previewRecordState.data,
+    fields,
+  });
 
   const resolvedDeviceId = mode === "list-view" ? "desktop" : deviceId;
   const device = previewDevices.find((entry) => entry.id === resolvedDeviceId) ?? previewDevices[0];
@@ -194,6 +130,17 @@ export function CustomScreenWorkspacePreviewDialog({
                   ? `Loading the first record for ${contentType?.name ?? "this content type"}. Schema fallback values are shown until preview data is ready.`
                   : (previewRecordState.note ?? "Previewing the current screen definition.")}
               </div>
+              {relatedState.error && !relatedState.loading && !relatedState.refreshing ? (
+                <Alert variant="destructive">
+                  <AlertTitle>Related records unavailable</AlertTitle>
+                  <AlertDescription>
+                    <p>{relatedState.error}</p>
+                    <Button type="button" size="sm" variant="outline" onClick={relatedState.retry}>
+                      Retry
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              ) : null}
               <div
                 className="mx-auto w-full rounded-3xl border bg-background p-6 shadow-sm"
                 data-preview-device={device.id}
@@ -207,7 +154,7 @@ export function CustomScreenWorkspacePreviewDialog({
                   bindings={bindings}
                   data={previewRecordState.data}
                   fields={fields}
-                  relatedEntries={relatedEntries}
+                  relatedEntries={relatedState.items}
                   emptyTitle="Preview unavailable"
                   emptyMessage="Add screen blocks and bindings to preview the editor view."
                 />

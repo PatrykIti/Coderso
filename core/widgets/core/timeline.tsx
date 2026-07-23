@@ -18,6 +18,10 @@ import {
   Zap,
   type LucideProps,
 } from "lucide-react";
+import {
+  CSS_COLOR_SCHEMA_PATTERNS,
+  CSS_COLOR_VALUE_MAX_LENGTH,
+} from "../../services/theme/cssColorContract";
 import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactObject, compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
 import { normalizeWidgetSafeHref } from "./widgetSafeHref";
@@ -531,6 +535,17 @@ function normalizeTimelineStepLink(value: TimelineStep["link"]): TimelineStep["l
   }) as TimelineStepLink;
 }
 
+const timelineColorValueSchema = {
+  anyOf: [
+    { const: "" },
+    {
+      type: "string",
+      maxLength: CSS_COLOR_VALUE_MAX_LENGTH,
+      pattern: CSS_COLOR_SCHEMA_PATTERNS.authoring,
+    },
+  ],
+} as const;
+
 export const timelineSchema = {
   type: "object",
   additionalProperties: false,
@@ -560,7 +575,7 @@ export const timelineSchema = {
           oppositeDate: { type: "string" },
           status: { enum: [...timelineStatusOptions] },
           markerIcon: { type: "string" },
-          markerIconColor: { type: "string" },
+          markerIconColor: timelineColorValueSchema,
           dotVariant: { enum: [...timelineDotVariantOptions] },
           dotTone: { enum: [...timelineDotToneOptions] },
           cta: {
@@ -632,7 +647,7 @@ export const timelineSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
-        color: { type: "string" },
+        color: timelineColorValueSchema,
       },
     },
   },
@@ -685,7 +700,7 @@ export function normalizeTimelineSteps(
       oppositeDate: resolveTrimmedOptionalString(base.oppositeDate),
       status: isEnumValue(base.status, timelineStatusOptions) ? base.status : undefined,
       markerIcon: resolveTimelineDotIconValue(base.markerIcon),
-      markerIconColor: resolveTrimmedOptionalString(base.markerIconColor),
+      markerIconColor: resolveClearableCssColorValue(base.markerIconColor, "authoring"),
       dotVariant: isEnumValue(base.dotVariant, timelineDotVariantOptions)
         ? base.dotVariant
         : undefined,
@@ -789,7 +804,7 @@ export function normalizeTimelineData(
     background:
       data.background !== undefined
         ? (compactObject({
-            color: resolveClearableCssColorValue(data.background?.color) ?? data.background?.color,
+            color: resolveClearableCssColorValue(data.background?.color, "authoring"),
           }) ?? {})
         : timelineDefaults.background,
   };
@@ -871,10 +886,9 @@ function renderTimelineDot(step: TimelineStep, dot: ResolvedTimelineDot) {
   const wrapperSizeClass = IconComponent
     ? dotIconWrapperSizeMap[dot.size]
     : dotPlainSizeMap[dot.size];
+  const markerIconColor = resolveClearableCssColorValue(step.markerIconColor, "authoring");
   const iconColor =
-    variant === "filled"
-      ? (step.markerIconColor ?? "var(--color-bg)")
-      : (step.markerIconColor ?? color);
+    variant === "filled" ? (markerIconColor ?? "var(--color-bg)") : (markerIconColor ?? color);
 
   const style: CSSProperties = {
     backgroundColor: variant === "filled" ? color : "transparent",
@@ -1226,7 +1240,7 @@ export function TimelineBlock({ data, variant }: { data: TimelineData; variant: 
   const position = normalized.axis?.position ?? "right";
 
   const backgroundStyle = compactStyle({
-    backgroundColor: resolveClearableCssColorValue(normalized.background?.color),
+    backgroundColor: resolveClearableCssColorValue(normalized.background?.color, "authoring"),
   });
 
   const sectionTitle = normalized.header?.title?.trim();

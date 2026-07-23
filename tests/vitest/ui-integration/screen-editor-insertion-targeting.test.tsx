@@ -340,7 +340,11 @@ test("arming a before/after gap inserts at the right index in the right list (on
 
     // The point is ONE-SHOT: the next insert falls back to the selected
     // section's end (section-1 follows the inserted block).
-    click(findChip(view.container, "Text"));
+    click(view.container.querySelector('button[aria-label="Insert"]'));
+    await flush();
+    const textChip = findChip(view.container, "Text");
+    expect(textChip).not.toBeNull();
+    click(textChip);
     await flush();
     const afterSecond = sectionBlockIds(view.container, "section-1");
     expect(afterSecond).toHaveLength(4);

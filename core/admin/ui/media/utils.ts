@@ -1,5 +1,9 @@
 import type { MediaFolder } from "@/services/mediaFoldersClient";
 import type { MediaRecord } from "@/services/mediaClient";
+import {
+  CANONICAL_MEDIA_PROFILES,
+  type CanonicalMediaMime,
+} from "../../../services/media/mediaFileTrust";
 
 import type { MediaItem, MediaKind } from "./types";
 
@@ -27,10 +31,18 @@ export function formatDate(value: string) {
   });
 }
 
-export function resolveKindFromMime(mimeType: string): MediaKind {
-  if (mimeType.startsWith("image/")) return "image";
-  if (mimeType.startsWith("audio/")) return "audio";
-  if (mimeType.startsWith("video/")) return "video";
+const getCanonicalMediaProfile = (mimeType: string) => {
+  if (!Object.prototype.hasOwnProperty.call(CANONICAL_MEDIA_PROFILES, mimeType)) return null;
+  return CANONICAL_MEDIA_PROFILES[mimeType as CanonicalMediaMime];
+};
+
+export function resolveAdminMediaKind(record: Pick<MediaRecord, "type" | "mimeType">): MediaKind {
+  const profile = getCanonicalMediaProfile(record.mimeType);
+  if (profile?.delivery === "inline" && record.type === "image") return "image";
+
+  const normalizedMime = record.mimeType.toLowerCase();
+  if (normalizedMime.startsWith("audio/")) return "audio";
+  if (normalizedMime.startsWith("video/")) return "video";
   return "document";
 }
 
@@ -67,7 +79,7 @@ export function toMediaItem(record: MediaRecord): MediaItem {
     id: record.id,
     name: resolveMediaName(record),
     originalName: record.originalName ?? undefined,
-    type: resolveKindFromMime(record.mimeType),
+    type: resolveAdminMediaKind(record),
     sizeBytes: record.size,
     url: record.url,
     mimeType: record.mimeType,

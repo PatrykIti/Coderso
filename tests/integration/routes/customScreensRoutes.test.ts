@@ -1,68 +1,42 @@
 import { afterEach, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
-import { inArray, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
-import { contentTypes, customScreens } from "../../../core/db/schema";
+import { users } from "../../../core/db/schema";
 import {
   mapCustomScreenError,
   registerCustomScreenRoutes,
 } from "../../../core/server/routes/customScreenRoutes";
 import { validate } from "../../../core/server/validation/schemaValidator";
-import { createContentType, deleteContentType } from "../../../core/services/content/typeService";
+import { createEntry } from "../../../core/services/content/entryService";
+import { createContentType } from "../../../core/services/content/typeService";
 import {
   createCustomScreen,
   getCustomScreen,
 } from "../../../core/services/customScreens/customScreenService";
 import type { CustomScreenDefinition } from "../../../core/services/customScreens/customScreenSchemas";
+import { canConnect } from "../../utils/db";
+import {
+  buildDefinition,
+  createCustomScreenRouteHarness,
+  findRoute,
+  makeRouter,
+  runRoute,
+} from "./support/customScreensRouteHarness";
 
-type RouteContext = {
-  params: Record<string, string>;
-  query: Record<string, string | undefined>;
-  body: unknown;
-  user?: { id: string };
-};
+const harness = createCustomScreenRouteHarness();
+const {
+  cleanup,
+  patchScreenDefinition,
+  seedBoundScreen,
+  trackContentTypeId,
+  trackEntryId,
+  trackOverrideScope,
+  trackScreenId,
+  trackUserId,
+} = harness;
 
-type RouteHandler = (ctx: RouteContext) => Promise<unknown> | unknown;
-
-type Route = { method: string; path: string; handlers: RouteHandler[] };
-
-const makeRouter = () => {
-  const routes: Route[] = [];
-  return {
-    routes,
-    router: {
-      get: (path: string, ...handlers: RouteHandler[]) =>
-        routes.push({ method: "GET", path, handlers }),
-      post: (path: string, ...handlers: RouteHandler[]) =>
-        routes.push({ method: "POST", path, handlers }),
-      patch: (path: string, ...handlers: RouteHandler[]) =>
-        routes.push({ method: "PATCH", path, handlers }),
-      delete: (path: string, ...handlers: RouteHandler[]) =>
-        routes.push({ method: "DELETE", path, handlers }),
-    },
-  };
-};
-
-const findRoute = (routes: Route[], method: string, path: string) => {
-  const route = routes.find((item) => item.method === method && item.path === path);
-  if (!route) throw new Error(`Missing route ${method} ${path}`);
-  return route;
-};
-
-const runRoute = async (route: Route, ctx: Partial<RouteContext>) => {
-  let result: unknown;
-  for (const handler of route.handlers) {
-    const output = await handler({
-      params: {},
-      query: {},
-      body: undefined,
-      ...ctx,
-    });
-    if (output !== undefined) result = output;
-  }
-  return result;
-};
+afterEach(cleanup);
 
 test("registerCustomScreenRoutes wires custom screen endpoints", () => {
   const { router, routes } = makeRouter();
@@ -116,42 +90,55 @@ test("mapCustomScreenError maps domain errors to API errors", () => {
 
 // TASK-503 — DB-backed persistence of the block style channel via the existing
 // PATCH /custom-screens/:id path (no new route). Skips when no DATABASE_URL.
-const canConnect = async () => {
-  try {
-    await db.execute(sql`select 1`);
-    return true;
-  } catch {
-    return false;
-  }
-};
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
 
-const trackedScreenIds = new Set<string>();
-const trackedContentTypeIds = new Set<string>();
+const buildDirectImageDefinition = (): CustomScreenDefinition => {
+  const base = buildDefinition();
+  return {
+    ...base,
+    editorView: {
+      ...base.editorView,
+      document: {
+        schemaVersion: 1,
+        sections: [
+          {
+            id: "direct-image-section",
+            type: "section",
+            label: "Media",
+            data: { title: "Media" },
+            blocks: [
+              {
+                id: "direct-image",
+                type: "image",
+                data: { label: "Cover", src: "/static/direct-image-cover.jpg" },
+              },
+            ],
+          },
+        ],
+      },
+      bindings: [],
+    },
+  } as CustomScreenDefinition;
+};
 
-afterEach(async () => {
-  if (!hasDb) return;
-  const screenIds = [...trackedScreenIds];
-  const contentTypeIds = [...trackedContentTypeIds];
-  if (screenIds.length > 0) {
-    await db.delete(customScreens).where(inArray(customScreens.id, screenIds));
-  }
-  for (const contentTypeId of contentTypeIds) {
-    await deleteContentType(contentTypeId).catch(() => undefined);
-    await db
-      .delete(contentTypes)
-      .where(inArray(contentTypes.id, [contentTypeId]))
-      .catch(() => undefined);
-  }
-  trackedScreenIds.clear();
-  trackedContentTypeIds.clear();
-});
+const seedDirectImageOverrideScope = async () => {
+  const actorId = randomUUID();
+  const [actor] = await db
+    .insert(users)
+    .values({
+      id: actorId,
+      email: `task-540-l03-${randomUUID()}@example.test`,
+      passwordHash: "task-540-l03-test-password-hash",
+      name: "TASK-540 L03 route actor",
+    })
+    .returning({ id: users.id });
+  if (!actor) throw new Error("custom screen override actor fixture was not created");
+  trackUserId(actor.id);
 
-const seedBoundScreen = async () => {
   const contentType = await createContentType({
-    name: `Style Screen ${randomUUID()}`,
-    slug: `style-screen-${randomUUID()}`,
+    name: `Direct Image Screen ${randomUUID()}`,
+    slug: `direct-image-screen-${randomUUID()}`,
     schema: {
       type: "object",
       additionalProperties: false,
@@ -160,83 +147,129 @@ const seedBoundScreen = async () => {
       },
     },
   });
-  trackedContentTypeIds.add(contentType.id);
+  trackContentTypeId(contentType.id);
 
   const screen = await createCustomScreen({
-    name: `Style Screen ${randomUUID()}`,
+    name: `Direct Image Screen ${randomUUID()}`,
     contentTypeId: contentType.id,
-    definition: buildDefinition(),
+    definition: buildDirectImageDefinition(),
   });
-  trackedScreenIds.add(screen.id);
-  return screen;
+  trackScreenId(screen.id);
+
+  const entry = await createEntry(contentType.id, {
+    title: `Direct Image Entry ${randomUUID()}`,
+    slug: `direct-image-entry-${randomUUID()}`,
+    data: { name: "Direct image entry" },
+    authorId: actor.id,
+  });
+  trackEntryId(entry.id);
+  trackOverrideScope(screen.id, entry.id);
+
+  return { actorId: actor.id, screenId: screen.id, entryId: entry.id };
 };
 
-const buildDefinition = (style?: Record<string, unknown>): CustomScreenDefinition =>
-  ({
-    schemaVersion: 4,
-    listView: {
-      columns: [
-        {
-          id: "system-title",
-          source: "system",
-          field: "title",
-          label: "Record",
-          formatter: "text",
-          visible: true,
-        },
-      ],
-      filters: [],
-      defaultSort: { field: "updatedAt", direction: "desc" },
-      bulkActions: { delete: true, publish: true, unpublish: true },
-    },
-    editorView: {
-      document: {
-        schemaVersion: 1,
-        sections: [
-          {
-            id: "section-1",
-            type: "section",
-            label: "Details",
-            data: { title: "Details" },
-            blocks: [
-              {
-                id: "field-1",
-                type: "field",
-                data: { label: "Name", value: "" },
-                ...(style ? { style } : {}),
-              },
-            ],
-          },
-        ],
-      },
-      bindings: [
-        {
-          id: "field-1-value",
-          blockId: "field-1",
-          propPath: "value",
-          source: "entry",
-          field: "name",
-          mode: "readwrite",
-        },
-      ],
-      saveMode: "entry",
-      interactionMode: "inline",
-    },
-  }) as CustomScreenDefinition;
-
-const patchScreenDefinition = async (screenId: string, definition: CustomScreenDefinition) => {
+const makeRegisteredOverrideRoutes = () => {
   const { router, routes } = makeRouter();
   registerCustomScreenRoutes(router, {
     requirePermission: () => async () => undefined,
     validate,
   });
-  const route = findRoute(routes, "PATCH", "/custom-screens/:id");
-  return runRoute(route, {
-    params: { id: screenId },
-    body: { definition },
-    user: { id: "44444444-4444-4444-8444-444444444444" },
-  });
+  return {
+    get: findRoute(routes, "GET", "/custom-screens/:screenId/entries/:entryId/overrides"),
+    patch: findRoute(routes, "PATCH", "/custom-screens/:screenId/entries/:entryId/overrides"),
+  };
 };
+
+testIfDb(
+  "TASK-540-04-L03 direct-image override PATCH then GET round-trips through registered routes",
+  async () => {
+    const scope = await seedDirectImageOverrideScope();
+    const routes = makeRegisteredOverrideRoutes();
+    const mediaAssetId = randomUUID();
+    const body = {
+      overrides: [
+        {
+          blockId: "direct-image",
+          propPath: "mediaAssetId",
+          value: mediaAssetId,
+        },
+      ],
+    };
+
+    const patched = (await runRoute(routes.patch, {
+      params: { screenId: scope.screenId, entryId: scope.entryId },
+      body,
+      user: { id: scope.actorId },
+    })) as {
+      overrides: Array<{
+        screenId: string;
+        entryId: string;
+        blockId: string;
+        propPath: string;
+        value: unknown;
+        updatedBy: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+      }>;
+    };
+
+    expect(patched.overrides).toHaveLength(1);
+    expect(patched.overrides[0]).toMatchObject({
+      screenId: scope.screenId,
+      entryId: scope.entryId,
+      blockId: "direct-image",
+      propPath: "mediaAssetId",
+      value: mediaAssetId,
+      updatedBy: scope.actorId,
+    });
+    expect(patched.overrides[0]?.createdAt).toBeInstanceOf(Date);
+    expect(patched.overrides[0]?.updatedAt).toBeInstanceOf(Date);
+
+    const reread = await runRoute(routes.get, {
+      params: { screenId: scope.screenId, entryId: scope.entryId },
+    });
+    expect(reread).toEqual(patched);
+  }
+);
+
+testIfDb(
+  "TASK-540-04-L03 direct-image override route maps an inactive target without persistence",
+  async () => {
+    const scope = await seedDirectImageOverrideScope();
+    const routes = makeRegisteredOverrideRoutes();
+    const submittedBlockId = "submitted-inactive-image-target";
+
+    try {
+      await runRoute(routes.patch, {
+        params: { screenId: scope.screenId, entryId: scope.entryId },
+        body: {
+          overrides: [
+            {
+              blockId: submittedBlockId,
+              propPath: "mediaAssetId",
+              value: randomUUID(),
+            },
+          ],
+        },
+        user: { id: scope.actorId },
+      });
+      throw new Error("expected inactive direct-image target rejection");
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: "custom_screen_override_invalid",
+        message: "Custom screen presentation override payload is invalid",
+        status: 400,
+      });
+      expect(JSON.stringify(error)).not.toContain(submittedBlockId);
+    }
+
+    await expect(
+      runRoute(routes.get, {
+        params: { screenId: scope.screenId, entryId: scope.entryId },
+      })
+    ).resolves.toEqual({ overrides: [] });
+  }
+);
 
 testIfDb(
   "PATCH /custom-screens/:id persists a definition carrying a valid block style and round-trips byte-stable",

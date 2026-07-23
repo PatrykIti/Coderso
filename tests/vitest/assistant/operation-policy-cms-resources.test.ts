@@ -178,6 +178,19 @@ test("assistantOperationPolicy covers content entries screens widgets and media"
     mode: "gated",
   });
   expect(getFieldPolicy(widget, "headline")?.action?.type).toBe("widget-template.block.patch");
+  expect(widget).toMatchObject({
+    label: "Retired Widget Compatibility",
+    operations: ["inspect", "find", "update", "delete"],
+    coverage: {
+      state: "legacy-maintenance",
+      task: "TASK-184-07",
+    },
+  });
+  expect(Object.values(widget.actions)).toEqual([
+    expect.objectContaining({ type: "widget-template.update", mode: "executable" }),
+    expect.objectContaining({ type: "widget-template.delete", mode: "executable" }),
+    expect.objectContaining({ type: "widget-template.block.patch", mode: "executable" }),
+  ]);
   expect(media.actions.upload).toMatchObject({ type: "none", mode: "gated" });
   expect(media.actions.attachReference.type).toBe("media.reference.attach");
 });

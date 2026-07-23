@@ -265,14 +265,14 @@ const isSegmentedNumberRange = (clamp: { min: number; max: number }): boolean =>
   clamp.min >= 1 &&
   clamp.max - clamp.min + 1 <= PAGE_EDITOR_SEGMENTED_NUMBER_OPTION_LIMIT;
 
-const resolveSliderStep = (clamp: { min: number; max: number }): number => {
-  if (clamp.max <= 1) return 0.05;
-  const span = clamp.max - clamp.min;
-  if (span <= 64) return 1;
-  if (span <= 160) return 2;
-  if (span <= 400) return 4;
-  return 10;
-};
+const resolveSliderStep = (clamp: { min: number; max: number }): number =>
+  // A sub-unit range (only opacity 0..1) can't step by 1, so it stays
+  // fine-grained at 0.05; every other numeric (px) range steps by 1 for fine
+  // control (owner mandate TASK-530). The typography fractional ranges
+  // (line-height 1..2.5, letter-spacing -2..8) have max > 1 and would derive
+  // step 1 here — they stay fine via their EXPLICIT registry step (0.05 / 0.5),
+  // which `resolveNumberModel` prefers over this derived default, NOT this branch.
+  clamp.max <= 1 ? 0.05 : 1;
 
 const resolveNumberModel = (control: PageEditorControlDefinition): PageEditorControlUiModel => {
   const clamp = control.clamp;

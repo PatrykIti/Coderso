@@ -40,17 +40,20 @@ const normalizeAccept = (accept?: string[]) =>
     .filter(Boolean)
     .map((item) => item.toLowerCase());
 
-const matchesAccept = (mimeType: string, accept?: string[]) => {
+const matchesAccept = (item: Pick<MediaItem, "type" | "mimeType">, accept?: string[]) => {
   const normalized = normalizeAccept(accept);
   if (normalized.length === 0) return true;
-  const candidate = mimeType.toLowerCase();
+  const candidate = item.mimeType.toLowerCase();
   return normalized.some((pattern) => {
     if (pattern === "*/*") return true;
-    if (pattern.endsWith("/*")) {
-      const prefix = pattern.slice(0, pattern.indexOf("/"));
-      return candidate.startsWith(`${prefix}/`);
-    }
-    return candidate === pattern;
+    if (!pattern.endsWith("/*")) return candidate === pattern;
+
+    const family = pattern.slice(0, pattern.indexOf("/"));
+    if (!candidate.startsWith(`${family}/`)) return false;
+    if (family === "image") return item.type === "image";
+    if (family === "audio") return item.type === "audio";
+    if (family === "video") return item.type === "video";
+    return item.type === "document";
   });
 };
 
@@ -119,7 +122,7 @@ export function MediaPicker({
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
-      if (!matchesAccept(item.mimeType, accept)) return false;
+      if (!matchesAccept(item, accept)) return false;
       if (!query) return true;
       const normalized = query.toLowerCase();
       const displayName = resolveMediaDisplayName(item).toLowerCase();
@@ -178,7 +181,7 @@ export function MediaPicker({
             <DialogHeader>
               <DialogTitle>Media library</DialogTitle>
               <DialogDescription>
-                Choose an existing media asset for this widget field. Search by name or title, then
+                Choose an existing media asset for this editor field. Search by name or title, then
                 select an asset from the library.
               </DialogDescription>
             </DialogHeader>
@@ -236,6 +239,7 @@ export function MediaPicker({
           {selectedItems.map((item) => (
             <div
               key={item.id}
+              data-media-picker-selected-id={item.id}
               className="flex items-center gap-3 rounded-xl border bg-muted/10 p-3"
             >
               {(() => {

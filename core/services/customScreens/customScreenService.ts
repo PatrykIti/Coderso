@@ -37,9 +37,9 @@ export type CustomScreenRecord = {
   capabilities: CustomScreenCapabilities;
   createdAt: Date;
   updatedAt: Date;
-  // TASK-505-01 (Item B): transient binding-GC warnings surfaced on the PATCH 200 response
-  // record — computed at normalize time, NEVER persisted (stored-V4 bytes unaffected). 505-03
-  // renders "Removed bindings for deleted field(s): …". Absent when nothing was pruned.
+  // Transient binding-GC warnings surfaced on POST/PATCH success — computed at normalize
+  // time and never persisted. The editor renders the existing removal notice; the field
+  // stays absent when nothing was pruned.
   warnings?: CustomScreenBindingWarning[];
 };
 
@@ -193,6 +193,7 @@ export async function createCustomScreen(input: CustomScreenCreateInput) {
   const contentTypesById = await loadContentTypesById([contentTypeId]);
   const contentType = contentTypesById.get(contentTypeId) ?? null;
   const rawInput = input as Record<string, unknown>;
+  const sink: ScreenBindingWarningSink = { removedFieldOrphans: [], removedBlockOrphans: [] };
   const definition = normalizeCustomScreenDefinitionForWrite(
     {
       definition: input.definition,
@@ -200,7 +201,8 @@ export async function createCustomScreen(input: CustomScreenCreateInput) {
       blocks: rawInput.blocks,
       bindings: rawInput.bindings,
     },
-    { contentType }
+    { contentType },
+    sink
   );
   const sidebar = normalizeCustomScreenSidebarConfig({
     showInSidebar: input.showInSidebar,
@@ -230,7 +232,11 @@ export async function createCustomScreen(input: CustomScreenCreateInput) {
     .returning();
 
   if (!row) throw new Error("custom_screen_invalid");
-  return mapRow(row, { contentType });
+  const warnings = buildBindingWarnings(sink);
+  return {
+    ...mapRow(row, { contentType }),
+    ...(warnings.length > 0 ? { warnings } : {}),
+  };
 }
 
 export async function updateCustomScreen(id: string, input: CustomScreenUpdateInput) {

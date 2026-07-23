@@ -50,6 +50,20 @@ export type EntryTaxonomyAssignments = {
   tags: ContentTerm[];
 };
 
+export type TaxonomyExecutor = Pick<typeof db, "select" | "insert" | "delete">;
+
+type PreparedTaxonomyTerm = Readonly<Pick<ContentTerm, "id" | "taxonomyId" | "name" | "slug">>;
+
+export type EntryTaxonomyPlan = Readonly<{
+  entryId: string;
+  typeId: string;
+  taxonomyIdsToClear: readonly string[];
+  category: PreparedTaxonomyTerm | null;
+  tags: readonly PreparedTaxonomyTerm[];
+  assignmentTermIds: readonly string[];
+  resolvedTagNames: readonly string[];
+}>;
+
 const normalizeString = (value: unknown) => {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -69,14 +83,13 @@ const resolveSlug = (name: string, slug?: string | null) => {
   return candidate || null;
 };
 
-const uuidPattern =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-const resolveContentTypeId = async (identifier: string) => {
+const resolveContentTypeIdWithExecutor = async (executor: TaxonomyExecutor, identifier: string) => {
   const normalized = normalizeString(identifier);
   if (!normalized) return null;
 
-  const [row] = await db
+  const [row] = await executor
     .select({ id: contentTypes.id })
     .from(contentTypes)
     .where(
@@ -90,6 +103,9 @@ const resolveContentTypeId = async (identifier: string) => {
   return uuidPattern.test(normalized) ? normalized : null;
 };
 
+const resolveContentTypeId = (identifier: string) =>
+  resolveContentTypeIdWithExecutor(db, identifier);
+
 const defaultTaxonomy = (kind: TaxonomyKind) => {
   if (kind === "category") {
     return { name: "Categories", slug: "categories" };
@@ -97,16 +113,31 @@ const defaultTaxonomy = (kind: TaxonomyKind) => {
   return { name: "Tags", slug: "tags" };
 };
 
-export async function listTaxonomies(typeId: string): Promise<ContentTaxonomy[]> {
-  const resolvedTypeId = await resolveContentTypeId(typeId);
+const listTaxonomiesWithExecutor = async (
+  executor: TaxonomyExecutor,
+  typeIdOrSlug: string
+): Promise<ContentTaxonomy[]> => {
+  const resolvedTypeId = await resolveContentTypeIdWithExecutor(executor, typeIdOrSlug);
   if (!resolvedTypeId) return [];
 
-  const rows = await db
-    .select()
+  const rows = await executor
+    .select({
+      id: contentTaxonomies.id,
+      typeId: contentTaxonomies.typeId,
+      name: contentTaxonomies.name,
+      slug: contentTaxonomies.slug,
+      kind: contentTaxonomies.kind,
+      createdAt: contentTaxonomies.createdAt,
+      updatedAt: contentTaxonomies.updatedAt,
+    })
     .from(contentTaxonomies)
     .where(eq(contentTaxonomies.typeId, resolvedTypeId))
     .orderBy(asc(contentTaxonomies.kind));
   return rows.map((row) => ({ ...row, kind: row.kind as TaxonomyKind }));
+};
+
+export async function listTaxonomies(typeIdOrSlug: string): Promise<ContentTaxonomy[]> {
+  return listTaxonomiesWithExecutor(db, typeIdOrSlug);
 }
 
 export async function getTaxonomyByKind(
@@ -119,19 +150,11 @@ export async function getTaxonomyByKind(
   const [row] = await db
     .select()
     .from(contentTaxonomies)
-    .where(
-      and(
-        eq(contentTaxonomies.typeId, resolvedTypeId),
-        eq(contentTaxonomies.kind, kind)
-      )
-    );
+    .where(and(eq(contentTaxonomies.typeId, resolvedTypeId), eq(contentTaxonomies.kind, kind)));
   return row ? { ...row, kind: row.kind as TaxonomyKind } : null;
 }
 
-export async function setTaxonomyConfig(
-  typeId: string,
-  config: TaxonomyConfig
-) {
+export async function setTaxonomyConfig(typeId: string, config: TaxonomyConfig) {
   const resolvedTypeId = await resolveContentTypeId(typeId);
   if (!resolvedTypeId) throw new Error("taxonomy_not_found");
 
@@ -156,9 +179,7 @@ export async function setTaxonomyConfig(
       return;
     }
     if (!enabled && current) {
-      await db
-        .delete(contentTaxonomies)
-        .where(eq(contentTaxonomies.id, current.id));
+      await db.delete(contentTaxonomies).where(eq(contentTaxonomies.id, current.id));
       byKind.delete(kind);
     }
   };
@@ -223,10 +244,7 @@ export async function updateTerm(
 }
 
 export async function deleteTerm(id: string) {
-  const [row] = await db
-    .delete(contentTerms)
-    .where(eq(contentTerms.id, id))
-    .returning();
+  const [row] = await db.delete(contentTerms).where(eq(contentTerms.id, id)).returning();
   return row ?? null;
 }
 
@@ -247,17 +265,13 @@ export async function getTaxonomyOverview(typeId: string): Promise<TaxonomyOverv
   return {
     taxonomies: { category, tag },
     terms: {
-      categories: category
-        ? terms.filter((term) => term.taxonomyId === category.id)
-        : [],
+      categories: category ? terms.filter((term) => term.taxonomyId === category.id) : [],
       tags: tag ? terms.filter((term) => term.taxonomyId === tag.id) : [],
     },
   };
 }
 
-export async function getEntryTaxonomies(
-  entryId: string
-): Promise<EntryTaxonomyAssignments> {
+export async function getEntryTaxonomies(entryId: string): Promise<EntryTaxonomyAssignments> {
   const rows = await db
     .select({
       termId: contentTerms.id,
@@ -268,10 +282,7 @@ export async function getEntryTaxonomies(
     })
     .from(contentTermAssignments)
     .innerJoin(contentTerms, eq(contentTermAssignments.termId, contentTerms.id))
-    .innerJoin(
-      contentTaxonomies,
-      eq(contentTerms.taxonomyId, contentTaxonomies.id)
-    )
+    .innerJoin(contentTaxonomies, eq(contentTerms.taxonomyId, contentTaxonomies.id))
     .where(eq(contentTermAssignments.entryId, entryId))
     .orderBy(asc(contentTerms.name));
 
@@ -297,12 +308,21 @@ export async function getEntryTaxonomies(
   return { category, tags };
 }
 
-export async function replaceEntryTaxonomies(
+const toPreparedTerm = (term: PreparedTaxonomyTerm): PreparedTaxonomyTerm =>
+  Object.freeze({
+    id: term.id,
+    taxonomyId: term.taxonomyId,
+    name: term.name,
+    slug: term.slug,
+  });
+
+export async function prepareEntryTaxonomyMutation(
+  executor: TaxonomyExecutor,
   entryId: string,
-  typeId: string,
+  typeIdOrSlug: string,
   input: { categoryId?: string | null; tagIds?: string[] }
-): Promise<EntryTaxonomyAssignments> {
-  const taxonomies = await listTaxonomies(typeId);
+): Promise<EntryTaxonomyPlan> {
+  const taxonomies = await listTaxonomiesWithExecutor(executor, typeIdOrSlug);
   const categoryTax = taxonomies.find((item) => item.kind === "category") ?? null;
   const tagTax = taxonomies.find((item) => item.kind === "tag") ?? null;
 
@@ -313,15 +333,25 @@ export async function replaceEntryTaxonomies(
     throw new Error("taxonomy_tag_disabled");
   }
 
-  const normalizedTagIds = Array.from(new Set(input.tagIds ?? [])).filter(Boolean);
-  const termIds = [
-    ...(input.categoryId ? [input.categoryId] : []),
-    ...normalizedTagIds,
-  ];
+  const categoryId =
+    input.categoryId === null || input.categoryId === undefined
+      ? null
+      : normalizeString(input.categoryId);
+  const normalizedTagIds = (input.tagIds ?? []).map((id) => normalizeString(id));
+  if (
+    (input.categoryId !== null &&
+      input.categoryId !== undefined &&
+      (!categoryId || !uuidPattern.test(categoryId))) ||
+    normalizedTagIds.some((id) => !id || !uuidPattern.test(id))
+  ) {
+    throw new Error("taxonomy_term_missing");
+  }
 
+  const tagIds = Array.from(new Set(normalizedTagIds.filter((id): id is string => id !== null)));
+  const termIds = Array.from(new Set([...(categoryId ? [categoryId] : []), ...tagIds]));
   const termRows =
     termIds.length > 0
-      ? await db
+      ? await executor
           .select({
             id: contentTerms.id,
             taxonomyId: contentTerms.taxonomyId,
@@ -330,100 +360,121 @@ export async function replaceEntryTaxonomies(
           })
           .from(contentTerms)
           .where(inArray(contentTerms.id, termIds))
+          .orderBy(asc(contentTerms.name), asc(contentTerms.id))
       : [];
 
-  if (termIds.length > termRows.length) {
+  if (termRows.length !== termIds.length) {
     throw new Error("taxonomy_term_missing");
   }
 
-  const categoryTerm = input.categoryId
-    ? termRows.find((term) => term.id === input.categoryId) ?? null
+  const categoryTerm = categoryId
+    ? (termRows.find((term) => term.id === categoryId) ?? null)
     : null;
-  if (categoryTerm && categoryTax && categoryTerm.taxonomyId !== categoryTax.id) {
+  if (categoryTerm && categoryTerm.taxonomyId !== categoryTax?.id) {
     throw new Error("taxonomy_term_invalid");
   }
 
-  if (normalizedTagIds.length > 0 && tagTax) {
-    const tagTerms = termRows.filter((term) => normalizedTagIds.includes(term.id));
-    const invalid = tagTerms.some((term) => term.taxonomyId !== tagTax.id);
-    if (invalid) throw new Error("taxonomy_term_invalid");
+  const tagTerms = termRows.filter((term) => tagIds.includes(term.id));
+  if (tagTerms.some((term) => term.taxonomyId !== tagTax?.id)) {
+    throw new Error("taxonomy_term_invalid");
   }
 
-  return db.transaction(async (tx) => {
-    const taxonomyIds = [categoryTax?.id, tagTax?.id].filter(Boolean) as string[];
-    if (taxonomyIds.length > 0) {
-      const termsToClear = await tx
-        .select({ id: contentTerms.id })
-        .from(contentTerms)
-        .where(inArray(contentTerms.taxonomyId, taxonomyIds));
-      const idsToClear = termsToClear.map((row) => row.id);
-      if (idsToClear.length > 0) {
-        await tx
-          .delete(contentTermAssignments)
-          .where(
-            and(
-              eq(contentTermAssignments.entryId, entryId),
-              inArray(contentTermAssignments.termId, idsToClear)
-            )
-          );
-      }
-    }
+  const resolvedTypeId =
+    taxonomies[0]?.typeId ?? (await resolveContentTypeIdWithExecutor(executor, typeIdOrSlug));
+  if (!resolvedTypeId) {
+    throw new Error("taxonomy_not_found");
+  }
 
-    const assignments: Array<{ entryId: string; termId: string }> = [];
-    if (input.categoryId) {
-      assignments.push({ entryId, termId: input.categoryId });
-    }
-    normalizedTagIds.forEach((id) => assignments.push({ entryId, termId: id }));
-    if (assignments.length > 0) {
-      await tx.insert(contentTermAssignments).values(assignments);
-    }
+  const category = categoryTerm ? toPreparedTerm(categoryTerm) : null;
+  const tags = Object.freeze(tagTerms.map(toPreparedTerm));
+  const taxonomyIdsToClear = Object.freeze(
+    taxonomies
+      .filter((taxonomy) => taxonomy.kind === "category" || taxonomy.kind === "tag")
+      .map((taxonomy) => taxonomy.id)
+  );
+  const assignmentTermIds = Object.freeze([
+    ...(category ? [category.id] : []),
+    ...tags.map((tag) => tag.id),
+  ]);
+  const resolvedTagNames = Object.freeze(tags.map((tag) => tag.name));
 
-    const selectedTerms =
-      assignments.length > 0
-        ? await tx
-            .select({
-              id: contentTerms.id,
-              taxonomyId: contentTerms.taxonomyId,
-              name: contentTerms.name,
-              slug: contentTerms.slug,
-            })
-            .from(contentTerms)
-            .where(inArray(contentTerms.id, termIds))
-        : [];
-
-    const tags = tagTax
-      ? selectedTerms
-          .filter((term) => term.taxonomyId === tagTax.id)
-          .map((term) => ({
-            id: term.id,
-            taxonomyId: term.taxonomyId,
-            name: term.name,
-            slug: term.slug,
-            createdAt: new Date(0),
-            updatedAt: new Date(0),
-          }))
-      : [];
-
-    const category =
-      categoryTax && categoryTerm
-        ? {
-            id: categoryTerm.id,
-            taxonomyId: categoryTerm.taxonomyId,
-            name: categoryTerm.name,
-            slug: categoryTerm.slug,
-            createdAt: new Date(0),
-            updatedAt: new Date(0),
-          }
-        : null;
-
-    return { category, tags };
+  return Object.freeze({
+    entryId,
+    typeId: resolvedTypeId,
+    taxonomyIdsToClear,
+    category,
+    tags,
+    assignmentTermIds,
+    resolvedTagNames,
   });
 }
 
-export async function resolveEntryTagsFromTaxonomy(
+export async function applyEntryTaxonomyMutation(
+  executor: TaxonomyExecutor,
+  plan: EntryTaxonomyPlan
+): Promise<EntryTaxonomyAssignments> {
+  if (plan.taxonomyIdsToClear.length > 0) {
+    const termsToClear = await executor
+      .select({ id: contentTerms.id })
+      .from(contentTerms)
+      .where(inArray(contentTerms.taxonomyId, plan.taxonomyIdsToClear));
+    const termIdsToClear = termsToClear.map((term) => term.id);
+    if (termIdsToClear.length > 0) {
+      await executor
+        .delete(contentTermAssignments)
+        .where(
+          and(
+            eq(contentTermAssignments.entryId, plan.entryId),
+            inArray(contentTermAssignments.termId, termIdsToClear)
+          )
+        );
+    }
+  }
+
+  if (plan.assignmentTermIds.length > 0) {
+    await executor.insert(contentTermAssignments).values(
+      plan.assignmentTermIds.map((termId) => ({
+        entryId: plan.entryId,
+        termId,
+      }))
+    );
+  }
+
+  return {
+    category: plan.category
+      ? {
+          ...plan.category,
+          createdAt: new Date(0),
+          updatedAt: new Date(0),
+        }
+      : null,
+    tags: plan.tags.map((term) => ({
+      ...term,
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+    })),
+  };
+}
+
+export async function replaceEntryTaxonomies(
   entryId: string,
-  typeId: string
-) {
+  typeIdOrSlug: string,
+  input: { categoryId?: string | null; tagIds?: string[] }
+): Promise<EntryTaxonomyAssignments> {
+  return db.transaction(async (tx) => {
+    if (input.categoryId === undefined && input.tagIds === undefined) {
+      const resolvedTypeId = await resolveContentTypeIdWithExecutor(tx, typeIdOrSlug);
+      if (!resolvedTypeId) {
+        return { category: null, tags: [] };
+      }
+    }
+
+    const plan = await prepareEntryTaxonomyMutation(tx, entryId, typeIdOrSlug, input);
+    return applyEntryTaxonomyMutation(tx, plan);
+  });
+}
+
+export async function resolveEntryTagsFromTaxonomy(entryId: string, typeId: string) {
   const taxonomies = await listTaxonomies(typeId);
   const tagTax = taxonomies.find((item) => item.kind === "tag") ?? null;
   if (!tagTax) return [];
@@ -434,12 +485,7 @@ export async function resolveEntryTagsFromTaxonomy(
     })
     .from(contentTermAssignments)
     .innerJoin(contentTerms, eq(contentTermAssignments.termId, contentTerms.id))
-    .where(
-      and(
-        eq(contentTermAssignments.entryId, entryId),
-        eq(contentTerms.taxonomyId, tagTax.id)
-      )
-    )
+    .where(and(eq(contentTermAssignments.entryId, entryId), eq(contentTerms.taxonomyId, tagTax.id)))
     .orderBy(asc(contentTerms.name));
 
   return rows.map((row) => row.name);

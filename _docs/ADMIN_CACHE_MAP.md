@@ -44,6 +44,14 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - Cached APIs: `listContentTypesCached`, `listAllEntriesCached`, `getCachedAllEntries`
   - Mutations: `duplicateEntry`, `deleteEntry`, `updateEntryMetadata`
   - Cache bus: `entries:list:all`, `entries:list:<typeSlug>`, `entries:detail:<typeSlug>:<id>`
+  - Type-scoped authority: one monotonic order spans complete
+    `entries:list:<typeSlug>` reads, per-entry details, successful mutations, and
+    delete tombstones. Older lists preserve newer authority for the same entry while
+    still filling unrelated rows; authoritative list omission clears an observed
+    detail only when no newer per-entry publication exists.
+  - Failure/clear: rejected work publishes nothing, successful mutations alone emit
+    their cache events, and `clearEntriesCache(typeSlug)` prevents captured pre-clear
+    list/detail promises from publishing.
 - Entry editor
   - UI: `core/admin/ui/entries/EntryEditor.tsx`
   - Cached APIs: `listContentTypesCached`, `getEntryCached`, `getCachedEntryDetail`
@@ -161,6 +169,17 @@ This file maps admin UI surfaces to their implementation files and the cached AP
     are not active browser write state.
   - Mutations: `createCustomScreen`, `updateCustomScreen`,
     `deleteCustomScreen`
+  - List/detail authority: one monotonic order spans complete list reads, per-screen
+    detail reads, successful create/update publications, and delete tombstones. Older
+    lists preserve newer same-screen authority while still accepting unrelated rows;
+    authoritative omission cleans up observed details without replacing newer values.
+    A detail fallback publishes/reconciles the complete returned list, not only the
+    requested screen.
+  - Failure/clear: reads that ultimately reject and rejected mutations
+    publish/broadcast nothing;
+    `clearCustomScreensCache()` clears tracked list/detail/pending/authority state and
+    prevents captured pre-clear list/detail publishers from settling into cache, with
+    corrupt stored-list discovery handled fail-safe.
   - Assistant mutations: `custom-screen.upsert`, `custom-screen.update`,
     `custom-screen.delete`, `custom-screen.section.add`,
     `custom-screen.block.add`, `custom-screen.block.patch`,
@@ -179,8 +198,10 @@ This file maps admin UI surfaces to their implementation files and the cached AP
     `CustomScreenEntryEditor.tsx`, `CustomScreenEntryCanvas.tsx`
   - Cached APIs: `getCustomScreenCached`, `getCachedCustomScreen`,
     `listCustomScreensCached`, `listContentTypesCached`, `listEntriesCached`,
-    `getEntryCached`, `getScreenEntryOverridesCached`,
-    `getCachedScreenEntryOverrides`
+    `getEntryCached`, `listMediaCached`, `getScreenEntryOverridesCached`,
+    `getCachedScreenEntryOverrides`; Screen entry preferences intentionally use
+    isolated `getUserSettingIsolated` / `setUserSettingIsolated` transport rather
+    than the aggregate user-settings cache
   - Preview owner: `customScreenPreviewData.ts` reuses
     `entries:list:<typeSlug>` for cached-first first-record hydration in both
     the builder canvas and the preview dialog
@@ -191,11 +212,37 @@ This file maps admin UI surfaces to their implementation files and the cached AP
     `contentTypes:list`, `entries:list:<typeSlug>`,
     `entries:detail:<typeSlug>:<entryId>`,
     `customScreens:entryOverrides:<screenId>:<entryId>` for presentation
-    override cache updates and invalidation
+    override cache updates and invalidation. The shared bus publishes canonical
+    and legacy transport copies during compatibility migration, correlates
+    those copies to one remote delivery, and reports `local` or `remote`
+    origin. Same-context builder saves may attach a local-only symbol operation
+    token; origin/token metadata is never serialized and is absent from remote
+    delivery.
+  - Retry/identity: related targets, media, and override reads publish
+    only from the exact request that still owns their pending slot. Rejections
+    release that slot; forced/newer requests and successful mutations cannot be
+    cleared or overwritten by older settlements. Related target changes clear
+    stale rows immediately; same-target cache refresh keeps the last good rows
+    while the refresh is pending.
+  - Dirty safety: Screen document/binding drafts and entry
+    content/presentation drafts use the shared navigation/`beforeunload` guard.
+    Background cache events never replace dirty state. Builder detail mutation
+    events carry a non-serialized operation token so its own save event is not
+    misclassified as an external revision; independent detail events remain
+    visible and require authoritative reconciliation.
   - Record presentation: `CustomScreenEntryEditor.tsx` hydrates entry content
     and per-record presentation overrides independently. Content edits continue
     through `entriesClient`; text/media presentation saves use
     `PATCH /admin/api/custom-screens/:screenId/entries/:entryId/overrides`.
+    Direct image overrides and media-field values stay as media UUIDs in caches;
+    only an ephemeral winning-ID map carries resolved safe URLs to the renderer.
+  - Entry preference: `useScreenEntryPreferences.ts` stores
+    `{version:1, showFieldMetadata:boolean}` at
+    `customScreens.entry.preferences` through the existing user-settings route.
+    In-memory snapshots are keyed by authenticated user and pruned after the
+    bounded settled handoff; auth-identity epochs cancel old-user queues. There
+    is no Screen preference cache-bus key, aggregate-cache merge, or
+    `localStorage` value. An unauthenticated hook keeps only mount-local state.
   - Prefetch: `/advanced/custom-screens/:screenId/entries` warms screen,
     content type list, and the assigned entries list. Detail routes warm the
     entry detail cache except for `entries/new`.
@@ -233,11 +280,11 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - UI: `core/admin/ui/pages/PageEditor.tsx` (command palette group)
   - Cached APIs: `listPageTemplatesCached`, `getPageTemplateCached`
 
-## Widgets
-- Widget insert dialog
+## Retired widget compatibility surfaces
+- Legacy widget insert dialog (support-only; no new consumers)
   - UI: `core/admin/ui/widgets/WidgetInsertDialog.tsx`
   - Cached APIs: `getPageCached`
-- Widget library
+- Hidden compatibility catalog
   - UI: `core/admin/ui/widgets/WidgetLibraryPage.tsx`
   - Cached APIs: `listWidgetCatalogCached`, `getCachedWidgetCatalog`, `listPagesCached`, `getCachedPages`, `getPageCached`
   - UI state: section dropdown, table/grid mode, pagination, and selected row ids
@@ -248,10 +295,26 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 
 ## Media
 - Media library
-  - UI: `core/admin/ui/media/MediaLibraryPage.tsx`
-  - Cached APIs: `listMediaCached`, `getCachedMedia`, `getCachedMediaForEvent`
-  - Mutating cached APIs: `uploadMedia`, `updateMedia`, `recoverMediaDimensions`, `replaceMedia`, `deleteMedia`
-  - Cache bus: `media:list` update events hydrate from patched cache; explicit refresh/true invalidation may reload the list
+  - UI: `core/admin/ui/media/MediaLibraryPage.tsx`,
+    `core/admin/ui/media/MediaFolderRail.tsx`
+  - Cached APIs: `listMediaCached`, `getCachedMedia`,
+    `getCachedMediaForEvent`, `listMediaFoldersCached`,
+    `getCachedMediaFolders`, `getCachedMediaFoldersForEvent`
+  - Mutating cached APIs: `uploadMedia`, `updateMedia`,
+    `recoverMediaDimensions`, `replaceMedia`, `deleteMedia`,
+    `createMediaFolder`, `updateMediaFolder`, `reorderMediaFolders`,
+    `deleteMediaFolder`
+  - Folder cache shape: `media:folders` stores only validated six-field folder
+    projections; malformed persisted rows evict and malformed network responses
+    reject with `media_folders_response_invalid` without priming cache.
+  - Cache bus: `media:list` update events hydrate from patched cache; explicit
+    refresh/true invalidation may reload the list. Successful folder mutations
+    clear/broadcast `media:folders`; folder delete also broadcasts `media:list`.
+    Rejected mutations preserve cache and emit nothing.
+  - Folder event hydration: every same-tab/cross-tab `media:folders` event forces
+    a fresh GET. Events overlapping manual Retry are queued; load/operation
+    generations preserve the last good tree, retained form/selection/order, and
+    visible retry state until successful reconciliation.
   - Read-only uncached API: `getMediaUsage`
 - Media picker
   - UI: `core/admin/ui/media/MediaPicker.tsx`
@@ -376,7 +439,11 @@ This file maps admin UI surfaces to their implementation files and the cached AP
     `settings:redacted`; credential-bearing Settings endpoints remain uncached
     in browser storage.
 
-## Widget Editors (data selectors)
+## Retained compatibility renderer controls (data selectors)
+
+These paths document existing support/read compatibility controls under the
+historical `core/admin/ui/widgets` namespace. They are not a generic editor
+extension point; current domain editors own their section/block controls.
 - Hero
   - UI: `core/admin/ui/widgets/editors/HeroEditors.tsx`
   - Cached APIs: `listMediaCached`
@@ -398,7 +465,9 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 
 ## Prefetch Routes
 - `/pages` -> `listPagesCached`
-- `/advanced/widgets` -> `listWidgetCatalogCached`, `listWidgetTemplateCategoriesCached`, `listWidgetTemplatesCached`
+- `/advanced/widgets` (hidden support-only route) -> `listWidgetCatalogCached`;
+  deleted widget-template/category clients are never prefetched
+- `/advanced/page-templates` -> `listPageTemplatesCached`
 - `/advanced/engine/:contentTypeId/collection/detail-template/:detailPageId` -> `getContentTypeCollectionWorkspaceCached`, `getDetailPageCached`, `listContentTypesCached`, optional `listEntriesCached`
 - `/advanced/engine/:contentTypeId/collection` -> `listContentTypesCached`, `getContentTypeCollectionWorkspaceCached`
 - `/advanced/engine` -> `listContentTypesCached`

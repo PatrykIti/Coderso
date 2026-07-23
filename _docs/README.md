@@ -37,10 +37,10 @@
 - `STORE_SPEC.md` - store + security pipeline
 - `STORE_API.md` - store endpoint contract and metadata flow
 - `TESTING_STRATEGY.md` - target hybrid testing model (`Bun runtime kernel` + `Vitest pure TS/UI`)
-- `WIDGETS.md` - core widgets and configuration model
-- `WIDGETS_COMPOSITE_STRATEGY.md` - composite-first widget delivery model
-- `WIDGET_PACK_MATRIX.md` - module pack coverage matrix and validation rules
+- `WIDGETS.md` - historical `core/widgets` runtime/read-compatibility model
+- `WIDGETS_COMPOSITE_STRATEGY.md` - historical composite-first compatibility record
+- `WIDGET_PACK_MATRIX.md` - retained legacy module-pack coverage and validation
 - `CODERSO_PLUGIN_CONTRACT.md` - plugin manifest and runtime contribution contract
-- `_WIDGETS/README.md` - widgets index and per-widget docs
+- `_WIDGETS/README.md` - historical compatibility-renderer index
 - `_TASKS/README.md` - tasks index
 - `_CHANGELOG/README.md` - changelog index

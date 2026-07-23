@@ -34,26 +34,159 @@ export type MediaFolderCreate = {
 
 export type MediaFolderPatch = Partial<MediaFolderCreate>;
 
-let cachedFoldersPromise: Promise<MediaFolder[]> | null = null;
+export const MEDIA_FOLDERS_RESPONSE_INVALID = "media_folders_response_invalid";
 
-const isFolderList = (value: unknown): value is MediaFolder[] => Array.isArray(value);
+export class MediaFoldersResponseError extends Error {
+  readonly code = MEDIA_FOLDERS_RESPONSE_INVALID;
+
+  constructor() {
+    super("Invalid media folders response");
+    this.name = "MediaFoldersResponseError";
+  }
+}
+
+const MEDIA_FOLDER_KEYS = Object.freeze([
+  "id",
+  "name",
+  "slug",
+  "parentId",
+  "orderIndex",
+  "createdAt",
+] as const);
+
+type OwnDataValue = Readonly<{ value: unknown }>;
+
+const readOwnDataValue = (candidate: unknown, key: PropertyKey): OwnDataValue | null => {
+  if (typeof candidate !== "object" || candidate === null) return null;
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(candidate, key);
+    if (!descriptor || !("value" in descriptor)) return null;
+    return { value: descriptor.value };
+  } catch {
+    return null;
+  }
+};
+
+const hasPlainObjectPrototype = (candidate: object): boolean => {
+  try {
+    const prototype = Object.getPrototypeOf(candidate);
+    return prototype === Object.prototype || prototype === null;
+  } catch {
+    return false;
+  }
+};
+
+const projectMediaFolder = (value: unknown): MediaFolder | null => {
+  if (typeof value !== "object" || value === null || !hasPlainObjectPrototype(value)) return null;
+
+  const id = readOwnDataValue(value, "id");
+  const name = readOwnDataValue(value, "name");
+  const slug = readOwnDataValue(value, "slug");
+  const parentId = readOwnDataValue(value, "parentId");
+  const orderIndex = readOwnDataValue(value, "orderIndex");
+  const createdAt = readOwnDataValue(value, "createdAt");
+
+  if (
+    typeof id?.value !== "string" ||
+    typeof name?.value !== "string" ||
+    typeof slug?.value !== "string" ||
+    (parentId?.value !== null && typeof parentId?.value !== "string") ||
+    typeof orderIndex?.value !== "number" ||
+    !Number.isFinite(orderIndex.value) ||
+    !Number.isInteger(orderIndex.value) ||
+    orderIndex.value < 0 ||
+    typeof createdAt?.value !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    id: id.value,
+    name: name.value,
+    slug: slug.value,
+    parentId: parentId.value,
+    orderIndex: orderIndex.value,
+    createdAt: createdAt.value,
+  };
+};
+
+const hasExactMediaFolderKeys = (value: object): boolean => {
+  let keys: (string | symbol)[];
+  try {
+    keys = Reflect.ownKeys(value);
+  } catch {
+    return false;
+  }
+  return (
+    keys.length === MEDIA_FOLDER_KEYS.length && MEDIA_FOLDER_KEYS.every((key) => keys.includes(key))
+  );
+};
+
+const isCanonicalMediaFolder = (value: unknown): value is MediaFolder =>
+  projectMediaFolder(value) !== null &&
+  typeof value === "object" &&
+  value !== null &&
+  hasExactMediaFolderKeys(value);
+
+const readDenseArray = (value: unknown): unknown[] | null => {
+  try {
+    if (!Array.isArray(value)) return null;
+  } catch {
+    return null;
+  }
+
+  const length = readOwnDataValue(value, "length");
+  if (
+    typeof length?.value !== "number" ||
+    !Number.isFinite(length.value) ||
+    !Number.isInteger(length.value) ||
+    length.value < 0
+  ) {
+    return null;
+  }
+
+  const items: unknown[] = [];
+  for (let index = 0; index < length.value; index += 1) {
+    const item = readOwnDataValue(value, String(index));
+    if (!item) return null;
+    items.push(item.value);
+  }
+  return items;
+};
+
+const isCanonicalMediaFolderList = (value: unknown): value is MediaFolder[] => {
+  const items = readDenseArray(value);
+  return items !== null && items.every(isCanonicalMediaFolder);
+};
+
+const normalizeMediaFolderList = (value: unknown): MediaFolder[] => {
+  const items = readDenseArray(value);
+  if (!items) throw new MediaFoldersResponseError();
+
+  const projected: MediaFolder[] = [];
+  for (const item of items) {
+    const folder = projectMediaFolder(item);
+    if (!folder) throw new MediaFoldersResponseError();
+    projected.push(folder);
+  }
+  return projected;
+};
+
+let cachedFoldersPromise: Promise<MediaFolder[]> | null = null;
+let foldersRequestGeneration = 0;
 
 const foldersCache = createMemoryBackedLocalCache({
   key: cacheKeys.mediaFolders,
   ttlMs: cacheTtlMs.list,
-  validate: isFolderList,
+  validate: isCanonicalMediaFolderList,
 });
-
-const primeFoldersCache = (items: MediaFolder[]) => {
-  cachedFoldersPromise = null;
-  foldersCache.write(items);
-};
 
 export const getCachedMediaFolders = () => foldersCache.read();
 
 export const getCachedMediaFoldersForEvent = () => foldersCache.readStorageFirst();
 
 export const clearMediaFoldersCache = () => {
+  foldersRequestGeneration += 1;
   cachedFoldersPromise = null;
   foldersCache.clear();
 };
@@ -68,11 +201,25 @@ export async function listMediaFoldersCached(options?: { force?: boolean }) {
     if (cached) return cached;
     if (cachedFoldersPromise) return cachedFoldersPromise;
   }
-  const request = listMediaFolders();
+
+  const generation = ++foldersRequestGeneration;
+  const rawRequest = listMediaFolders();
+  let request: Promise<MediaFolder[]>;
+  request = rawRequest
+    .then((value) => {
+      const items = normalizeMediaFolderList(value);
+      if (foldersRequestGeneration === generation && cachedFoldersPromise === request) {
+        foldersCache.write(items);
+      }
+      return items;
+    })
+    .finally(() => {
+      if (cachedFoldersPromise === request) {
+        cachedFoldersPromise = null;
+      }
+    });
   cachedFoldersPromise = request;
-  const items = await request;
-  primeFoldersCache(items);
-  return items;
+  return request;
 }
 
 export async function createMediaFolder(input: MediaFolderCreate) {

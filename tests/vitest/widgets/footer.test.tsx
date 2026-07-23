@@ -25,6 +25,25 @@ import { resolveEditableFooterColumns } from "../../../core/admin/ui/widgets/edi
 const StubEditor: ComponentType<WidgetEditorProps<FooterData>> = () => null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
+test("footer editor mounts inherited colors without mutation", () => {
+  let writes = 0;
+  const html = renderToString(
+    <FooterVisualEditor
+      value={{
+        ...footerDefaults,
+        style: { ...footerDefaults.style, surfaceColor: "currentColor", borderColor: "inherit" },
+      }}
+      onChange={() => {
+        writes += 1;
+      }}
+      variant="columns-2"
+      onVariantChange={() => undefined}
+    />
+  );
+  expect(html.match(/data-shared-color-state="inherited"/g)).toHaveLength(2);
+  expect(writes).toBe(0);
+});
+
 test("footer renders defaults", () => {
   const html = renderToString(<FooterBlock data={footerDefaults} variant="columns-2" />);
 
@@ -32,6 +51,41 @@ test("footer renders defaults", () => {
   expect(html).toContain("Resources");
   expect(html).toContain("Privacy");
   expect(html).toContain('aria-label="Site footer"');
+});
+
+test("footer canonicalizes every inherited-compatible style color and rejects named colors", () => {
+  const fields = [
+    "surfaceColor",
+    "borderColor",
+    "textColor",
+    "headingColor",
+    "linkColor",
+    "legalTextColor",
+    "socialColor",
+    "linkHoverColor",
+    "linkActiveColor",
+  ] as const;
+  const data: FooterData = {
+    ...footerDefaults,
+    style: Object.fromEntries(
+      fields.map((field, index) => [field, index % 2 === 0 ? " CURRENTCOLOR " : " INHERIT "])
+    ),
+  };
+  const html = renderToString(<FooterBlock data={data} variant="columns-2" />);
+  expect(html).toContain("currentColor");
+  expect(html).toContain("inherit");
+  expect(html).not.toContain(" CURRENTCOLOR ");
+
+  const rejectedHtml = renderToString(
+    <FooterBlock
+      data={{
+        ...footerDefaults,
+        style: Object.fromEntries(fields.map((field) => [field, "rebeccapurple"])),
+      }}
+      variant="columns-2"
+    />
+  );
+  expect(rejectedHtml).not.toContain("rebeccapurple");
 });
 
 test("footer resolves columns deterministically by variant", () => {
@@ -171,6 +225,24 @@ test("footer cleared surface and border colors omit background color output", ()
   expect(html).not.toContain("background-color:");
 });
 
+test("footer round-trips an authored 8-digit alpha surface color (TASK-519-05-L04 widening)", () => {
+  const html = renderToString(
+    <FooterBlock
+      data={{
+        ...footerDefaults,
+        style: {
+          ...footerDefaults.style,
+          // 8-digit alpha hex is what the opacity slider emits; it must reach render.
+          surfaceColor: "#0812209e",
+        },
+      }}
+      variant="columns-2"
+    />
+  );
+
+  expect(html).toContain("background-color:#0812209e");
+});
+
 test("footer renders localized legal labels, brand semantics, and heading markup", () => {
   const html = renderToString(
     <FooterBlock
@@ -223,6 +295,43 @@ test("footer social links render icon buttons with accessible labels and externa
   expect(html).not.toContain(">linkedin<");
   expect(html).not.toContain(">twitter<");
   expect(html).toContain('aria-label="Community"');
+});
+
+test("footer preserves the removed Lucide brand glyphs and accessible social labels", () => {
+  const brandTypes = [
+    "linkedin",
+    "twitter",
+    "github",
+    "youtube",
+    "facebook",
+    "instagram",
+    "twitch",
+  ] as const;
+  const html = renderToString(
+    <FooterBlock
+      data={{
+        ...footerDefaults,
+        social: [
+          ...brandTypes.map((type) => ({ type, href: `https://example.com/${type}` })),
+          { type: "x", href: "https://example.com/x" },
+        ],
+      }}
+      variant="columns-2"
+    />
+  );
+
+  for (const type of brandTypes) {
+    expect(html).toContain(`data-brand-icon="${type}"`);
+  }
+  expect(html).toContain('class="lucide lucide-x h-4 w-4"');
+  expect(html).not.toContain('data-brand-icon="x"');
+  expect(html).toContain('aria-label="LinkedIn (opens in new tab)"');
+  expect(html).toContain('aria-label="Twitter (opens in new tab)"');
+  expect(html).toContain('aria-label="GitHub (opens in new tab)"');
+  expect(html).toContain('aria-label="YouTube (opens in new tab)"');
+  expect(html).toContain('aria-label="Facebook (opens in new tab)"');
+  expect(html).toContain('aria-label="Instagram (opens in new tab)"');
+  expect(html).toContain('aria-label="Twitch (opens in new tab)"');
 });
 
 test("footer normalizes unsafe legal, logo, and social hrefs before render", () => {

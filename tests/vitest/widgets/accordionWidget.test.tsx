@@ -6,6 +6,7 @@ import { expect, test } from "vitest";
 import { renderToString } from "react-dom/server";
 import { createRoot } from "react-dom/client";
 
+import { CSS_COLOR_VALUE_MAX_LENGTH } from "../../../core/services/theme/cssColorContract";
 import {
   AccordionAdvancedEditor,
   AccordionVisualEditor,
@@ -26,6 +27,30 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const StubEditor: ComponentType<WidgetEditorProps<AccordionData>> = () => null;
+
+test("accordion editor mounts inherited and legacy colors without mutation", () => {
+  let writes = 0;
+  const html = renderToString(
+    <AccordionVisualEditor
+      value={{
+        ...accordionDefaults,
+        style: {
+          surfaceColor: "currentColor",
+          borderColor: "inherit",
+          summaryTextColor: "accent-text",
+        },
+      }}
+      onChange={() => {
+        writes += 1;
+      }}
+      variant="soft"
+      onVariantChange={() => undefined}
+    />
+  );
+  expect(html).toContain('data-shared-color-state="inherited"');
+  expect(html).toContain('data-shared-color-state="saved_custom"');
+  expect(writes).toBe(0);
+});
 
 const renderAccordionDom = (data: AccordionData) => {
   document.body.innerHTML = renderToString(
@@ -398,6 +423,84 @@ test("accordion preserves safe imported style colors and legacy tokens", () => {
   expect(html).toContain("border-color:accent-border");
   expect(html).toContain("color:currentColor");
   expect(html).toContain("color:hsl(210, 50%, 40%)");
+});
+
+test("accordion canonicalizes inherited colors and bounds only its legacy hyphen adapter", () => {
+  const legacyTerminal = "accent-border";
+  const exactCapLegacy = `${" ".repeat(
+    CSS_COLOR_VALUE_MAX_LENGTH - legacyTerminal.length
+  )}${legacyTerminal}`;
+  const normalized = normalizeAccordionData({
+    ...accordionDefaults,
+    style: {
+      surfaceColor: " CURRENTCOLOR ",
+      borderColor: " INHERIT ",
+      summaryTextColor: " currentcolor ",
+      descriptionTextColor: " accent-text ",
+    },
+  });
+  expect(normalized.style).toMatchObject({
+    surfaceColor: "currentColor",
+    borderColor: "inherit",
+    summaryTextColor: "currentColor",
+    descriptionTextColor: "accent-text",
+  });
+
+  expect(exactCapLegacy).toHaveLength(CSS_COLOR_VALUE_MAX_LENGTH);
+  const exact = normalizeAccordionData({
+    ...accordionDefaults,
+    style: { surfaceColor: exactCapLegacy },
+  });
+  expect(exact.style?.surfaceColor).toBe(legacyTerminal);
+  expect(renderToString(<AccordionBlock data={exact} variant="soft" />)).toContain(
+    `background-color:${legacyTerminal}`
+  );
+
+  const rejectedLegacyValues = [
+    ` ${exactCapLegacy}`,
+    "\u001faccent-border",
+    "\u0085accent-border",
+    "\u00a0accent-border",
+    "\u2003accent-border",
+  ];
+  for (const raw of rejectedLegacyValues) {
+    const rejected = normalizeAccordionData({
+      ...accordionDefaults,
+      style: { surfaceColor: raw },
+    });
+    expect(rejected.style?.surfaceColor, JSON.stringify(raw)).toBeUndefined();
+    expect(renderToString(<AccordionBlock data={rejected} variant="soft" />)).not.toContain(raw);
+  }
+
+  const fallbackRejected = normalizeAccordionData({
+    ...accordionDefaults,
+    style: { borderColor: ` ${exactCapLegacy}`, summaryTextColor: "plain" },
+  });
+  expect(fallbackRejected.style?.borderColor).toBe(accordionDefaults.style?.borderColor);
+  expect(fallbackRejected.style?.summaryTextColor).toBe(accordionDefaults.style?.summaryTextColor);
+
+  clearWidgets();
+  registerWidget(
+    createAccordionWidget({ wizard: StubEditor, visual: StubEditor, advanced: StubEditor })
+  );
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "accordion-legacy-exact-cap",
+      type: "accordion",
+      variant: "soft",
+      data: { ...accordionDefaults, style: { surfaceColor: exactCapLegacy } },
+    })
+  ).not.toThrow();
+  for (const raw of rejectedLegacyValues) {
+    expect(() =>
+      normalizeWidgetBlock({
+        id: `accordion-legacy-rejected-${raw.length}-${raw.charCodeAt(0)}`,
+        type: "accordion",
+        variant: "soft",
+        data: { ...accordionDefaults, style: { surfaceColor: raw } },
+      })
+    ).toThrow("widget_schema_invalid");
+  }
 });
 
 test("accordion renders icon, motion, max width, and extended style tokens", () => {

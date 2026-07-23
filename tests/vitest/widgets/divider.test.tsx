@@ -23,6 +23,23 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubDividerEditor: ComponentType<WidgetEditorProps<DividerData>> = () => null;
 
+test("divider editor distinguishes direct and nested inherit without mutation", () => {
+  let writes = 0;
+  const html = renderToString(
+    <DividerVisualEditor
+      value={{ ...dividerDefaults, labelColor: "inherit", color: "inherit" }}
+      onChange={() => {
+        writes += 1;
+      }}
+      variant="label-center"
+      onVariantChange={() => undefined}
+    />
+  );
+  expect(html).toContain('data-shared-color-state="inherited"');
+  expect(html).toContain('data-shared-color-state="saved_custom"');
+  expect(writes).toBe(0);
+});
+
 test("divider renders defaults", () => {
   const html = renderToString(<DividerBlock data={dividerDefaults} variant="line" />);
 
@@ -88,7 +105,7 @@ test("divider normalization drops unsafe colors and preserves bounded values", (
   expect(normalizeDividerColorValue("url(javascript:alert(1))")).toBeUndefined();
   expect(normalizeDividerColorValue("expression(alert(2))")).toBeUndefined();
   expect(normalizeDividerColorValue("var(--color-border)")).toBe("var(--color-border)");
-  expect(normalizeDividerColorValue("RGBA(12, 24, 36, 0.5)")).toBe("RGBA(12, 24, 36, 0.5)");
+  expect(normalizeDividerColorValue("RGBA(12, 24, 36, 0.5)")).toBe("rgba(12, 24, 36, 0.5)");
 
   const unsafe = normalizeDividerData({
     color: "url(javascript:alert(1))",
@@ -105,6 +122,28 @@ test("divider normalization drops unsafe colors and preserves bounded values", (
 
   expect(safe.color).toBe("#00897b");
   expect(safe.labelColor).toBe("hsl(210, 50%, 40%)");
+});
+
+test("divider keeps inherited label colors but rejects inherit from composite line output", () => {
+  const normalized = normalizeDividerData({
+    ...dividerDefaults,
+    color: " currentcolor ",
+    labelColor: " inherit ",
+    lineStyle: "dotted",
+  });
+  expect(normalized.color).toBe("currentColor");
+  expect(normalized.labelColor).toBe("inherit");
+  expect(renderToString(<DividerBlock data={normalized} variant="label-center" />)).toContain(
+    "radial-gradient(circle, currentColor"
+  );
+
+  const rejected = normalizeDividerData({
+    ...dividerDefaults,
+    color: " inherit ",
+    labelColor: "\u00a0inherit",
+  });
+  expect(rejected.color).toBe(dividerDefaults.color);
+  expect(rejected.labelColor).toBe(dividerDefaults.labelColor);
 });
 
 test("divider validator accepts expanded model", () => {

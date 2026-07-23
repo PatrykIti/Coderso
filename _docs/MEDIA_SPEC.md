@@ -10,9 +10,15 @@
 ## Local storage
 
 - Katalog: `MEDIA_DIR` (default `./storage/media`, np. `/data/media`).
-- URL publiczny: `/media/<path>` (lub `MEDIA_BASE_URL`).
-- Struktura sciezek: `/<yyyy>/<mm>/<uuid>.<ext>`.
-- Cache-Control: long cache dla niezmiennych plikow.
+- Publiczny adres media jest zawsze stabilna trasa proxy
+  `/media/<encoded-storage-key>`. `MEDIA_BASE_URL` ani URL zwrocony przez adapter
+  nie sa publiczna projekcja rekordu media.
+- Struktura nowych kluczy: `<yyyy>/<mm>/<uuid>.<ext>` (klucz wzgledny, bez wiodacego
+  `/`), gdzie rozszerzenie jest
+  kanonicznym wynikiem inspekcji bajtow, a nie pochodna nazwy pliku.
+- TASK-536 nie deklaruje dodatkowego `Cache-Control`; cache policy pozostaje
+  jawnie nieokreslona do czasu osobnego kontraktu z testami GET/HEAD dla trybu
+  public i internal.
 
 ## External storage (adapter)
 
@@ -32,10 +38,16 @@ Azure (przyklad):
 - `AZURE_STORAGE_CONNECTION_STRING` (alternatywa dla konta + klucza)
 
 Adapter interface (concept):
-- `put(file)` -> `{ url, key }`
-- `get(key)` -> stream
-- `delete(key)` -> void
-- `getPublicUrl(key)` -> url
+- `put(file)` / `getPublicUrl(key)` pozostaja ogolnym kontraktem uzywanym m.in.
+  przez backupy;
+- upload rekordu media uzywa `putMedia({ bytes, identity, downloadName })`, gdzie
+  `identity` jest juz kanonicznym wynikiem inspekcji bajtow;
+- `get(key)` -> stream;
+- `delete(key)` -> void.
+
+Adapter moze ustawic MIME/disposition obiektu remote przy zapisie jako
+defense-in-depth, ale domena media ignoruje provider URL. Finalny GET/HEAD jest
+proxyowany przez core i nie ufa ani nie wymaga metadanych providera.
 
 Uwaga:
 - Sekrety storage przechowywane sa zaszyfrowane w DB.
@@ -59,13 +71,63 @@ Backup artefakty (remote):
 ## Upload rules
 
 - Max size per file (config: `MEDIA_MAX_SIZE_BYTES`).
-- Dozwolone MIME types (whitelist: `MEDIA_ALLOWED_MIME`).
+- Dozwolone MIME types (whitelist: `MEDIA_ALLOWED_MIME`) sa sprawdzane wzgledem
+  kanonicznego MIME ustalonego z bajtow. Deklarowany `Content-Type`, nazwa i
+  rozszerzenie sa tylko niezaufanymi danymi wejsciowymi.
 - Metadane: alt, title, caption.
 - Dla uploadow i replace obrazow serwis media probuje zapisac `width` i `height`
   w rekordzie `media`. Parser jest bounded i nie dekoduje pikseli; wspiera PNG,
   JPEG, GIF i WebP.
 - Jesli `title` nie zostanie podany przy uploadzie, domyslnie przyjmuje
   oryginalna nazwe pliku. `originalName` pozostaje read-only identity.
+
+Ten sam kontrakt obowiazuje dla create i replace. Oryginalna nazwa moze byc
+display/download metadata, ale nigdy nie wybiera storage-key extension, response
+MIME ani inline delivery.
+
+### Canonical byte identity and delivery
+
+`CANONICAL_MEDIA_PROFILES` jest jedynym ownerem relacji MIME -> extension ->
+delivery:
+
+| Canonical MIME | Extension | Delivery |
+|---|---|---|
+| `image/png` | `.png` | `inline` |
+| `image/jpeg` | `.jpg` | `inline` |
+| `image/gif` | `.gif` | `inline` |
+| `image/webp` | `.webp` | `inline` |
+| `image/bmp` | `.bmp` | `inline` |
+| `application/pdf` | `.pdf` | `attachment` |
+| `text/plain` | `.txt` | `attachment` |
+| `image/svg+xml` | `.svg` | `attachment` |
+| `application/octet-stream` | `.bin` | `attachment` |
+
+- Passive raster images may be inline only when persisted MIME, canonical key
+  extension, and inspected object prefix agree.
+- Strict UTF-8 plain text and safe standalone SVG remain attachment-only.
+  Malformed/active markup, conflicting signatures, truncated signatures, and
+  polyglot input fail before storage/DB.
+- PDF is an attachment-only, inspectable safe subset. Benign compressed page-content
+  streams remain supported, while active forms/XFA, encryption, and compressed object
+  streams fail before storage because they can hide executable/action structures from
+  the bounded lexical inspection.
+- SVG requires exact `image/svg+xml` authorization in the effective global
+  policy and, for a Form field, its `accept` list; `image/*` alone is not explicit
+  authorization for an active-capable format.
+- Unknown binary bytes canonicalize to octet-stream only when the effective
+  upload policy explicitly allows `application/octet-stream`; a wildcard or
+  filename cannot authorize them.
+- Every successful local/S3/Azure `GET` and `HEAD` returns the final core response
+  with server-owned `Content-Type`, safe `Content-Disposition`, and
+  `X-Content-Type-Options: nosniff`. `HEAD` includes exact persisted
+  `Content-Length`; asynchronous `GET` remains provider-neutral and streamed, so Bun
+  may use chunked framing. If Bun synthesizes a GET length, it must equal the persisted
+  size. Remote delivery never redirects the client to a provider URL.
+- A legacy persisted MIME/key mismatch, or a passive-inline row whose byte prefix
+  does not confirm the claimed raster type, is served as
+  `application/octet-stream` attachment with a safe `.bin` filename. Canonical
+  PDF/SVG/text/octet MIME+extension pairs remain attachments regardless of their
+  prefix; the delivery seam does not claim full classification for those formats.
 
 ## Folders, tags, focal point & richer metadata (TASK-512)
 
@@ -81,6 +143,12 @@ The media model is organized + enriched beyond the base `alt/title/caption`:
 - **Slug uniqueness:** enforced at the DB (unique index `media_folders_slug_idx`)
   AND service-side; a duplicate slug is rejected `media_folder_slug_conflict`
   (409).
+  The normal service precheck provides deterministic feedback, while the DB
+  constraint remains authoritative for concurrent create and update writes.
+  Only PostgreSQL `23505` paired with the exact owned constraint name (directly
+  or in the supported bounded `cause` shape) maps to that domain error. Other
+  constraints/errors retain their original failure path, and the fixed 409
+  response exposes no PostgreSQL code, constraint, SQL, stack, or raw details.
 - **Ordering:** `order_index` (default 0) orders siblings; reorder is a
   `media:write` operation.
 - **Membership:** `media.folder_id` (nullable, `onDelete: set null`). **Deleting
@@ -203,6 +271,17 @@ raw file bytes/text into provider prompts or action execution.
   (`absolute left-2 top-2 bg-card/80 backdrop-blur`) + a static in-flow tone chip
   in the footer row, aspect-square previews, and a real user **folder rail**
   alongside the type-based rail.
+- Folder list failures preserve the last good nested tree and expose a visible,
+  accessible alert with a retry action. Create/rename failure keeps the exact
+  form generation, target, draft, and input focus; reorder keeps the visible
+  order; delete keeps selection and both folder-filter owners. Controls expose
+  disabled/`aria-busy` pending state, and a form closes only after the matching
+  still-current operation succeeds. A failed retry remains retryable with a new
+  error token instead of dismissing user state.
+- Every `media:folders` cache event reconciles through a forced server GET.
+  An event overlapping manual load Retry is queued and forced after that Retry
+  settles; stale/unmounted loads cannot overwrite a newer mutation result or
+  replace the last good tree.
 - Upload dropzone + manual browse.
 - Wyszukiwarka po nazwie i tytule.
 - Filtry: all, images, documents, audio; plus folder + tag facet filters
@@ -228,25 +307,38 @@ raw file bytes/text into provider prompts or action execution.
 ## Admin usage read model
 
 - `GET /media/:id/usage` zwraca bounded internal summaries dla miejsc uzycia
-  assetu w obecnych wlascicielach danych: pages, content entries, posts i
-  commerce products.
+  assetu w obecnych wlascicielach danych: pages, content entries, posts,
+  commerce products i zapisane Form submissions.
+- Upload wykonany przed finalnym submit pozostaje unreferenced. Usage typu
+  `submission` powstaje dopiero po skutecznym zapisaniu odpowiedzi zawierajacej
+  ID tego media assetu.
 - Endpoint wymaga `media:read`. Zwracane `adminHref` wskazuje tylko istniejace
   kanoniczne trasy admina.
 - Usage matcher szuka znanych ksztaltow referencji media (`mediaId`, `assetId`,
   `featuredMediaId`, tablice media IDs oraz rich-text `data-media-id`) bez
   broad substring matching.
+- Active Post image/gallery/video/audio/file consumers use the shared projected media
+  kind. An attachment/document row cannot regain image rendering or picker eligibility
+  through a raw `image/*` MIME-prefix check.
+- A generic admin `MediaPicker` may deliberately admit an attachment-only SVG only when
+  its caller supplies the exact `image/svg+xml` rule. The row remains a document and
+  renders/downloads as an attachment; `image/*` alone and the Post image/gallery pickers
+  continue to exclude it.
 
 ## Admin maintenance actions
 
 - `POST /media/:id/dimensions/recover` wymaga `media:write` i probuje uzupelnic
   wymiary tylko dla istniejacego obrazu bez `width`/`height`.
 - `POST /media/:id/replace` wymaga `media:write`, waliduje nowy plik tym samym
-  kontraktem co upload, zachowuje ID assetu i aktualizuje storage key/url,
-  oryginalna nazwe, MIME, rozmiar oraz wymiary.
+  byte-authoritative kontraktem co create, zachowuje ID assetu i aktualizuje
+  kanoniczny storage key/proxy URL, oryginalna nazwe, MIME, rozmiar oraz wymiary.
 
 ## Security
 
-- Uploady tylko przez admin API (auth + CSRF).
+- Uploady biblioteki mediow pozostaja w admin API (`media:write` + CSRF).
+  `POST /forms/:id/uploads` jest osobnym publicznym/internal Forms boundary:
+  nie przyznaje `media:write`, re-resolvuje pole `file` i uzywa form-bound
+  access/nonce/captcha/rate-limit contract.
 - Opcjonalny AV scan jako plugin.
 - Media + folder writes stay behind the existing `media:write` RBAC bucket; reads
   behind `media:read` — NO new RBAC bucket, NO loosened auth path. New folder +
@@ -254,3 +346,9 @@ raw file bytes/text into provider prompts or action execution.
 - Reject-unknown 4xx on every new validated key (media PATCH + folder routes +
   storage-quota settings); folder-delete un-files (never cascades); focal clamped
   `[0,1]`; tag count + per-tag length capped; quota display-only by default.
+
+Publiczny Forms upload tworzy rekord media przed finalnym submission. Uzytkownik,
+ktory zakonczy flow po uploadzie bez wyslania formularza, moze pozostawic
+niepowiazany rekord/obiekt. Automatyczny TTL sweep lub pending-submission cleanup
+nie jest czescia TASK-536; to jawnie zachowany residual z TASK-516-07, a nie
+funkcja uznana za zaimplementowana.

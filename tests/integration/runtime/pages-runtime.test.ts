@@ -216,6 +216,67 @@ const pageData = (headline: string) => ({
   },
 });
 
+const task538CustomSvgMarkup = (token: string, phase: "published" | "draft") => {
+  const label = phase === "published" ? "Published" : "Draft";
+  return (
+    `<svg class="task538-${phase}-root-${token}" ` +
+    `style="--task538-${phase}-root-style-${token}:1" x="-5381" y="5382" ` +
+    'width="400" height="200" transform="translate(538 538)" viewBox="0 0 40 20" ' +
+    'xmlns:xlink="http://www.w3.org/1999/xlink">' +
+    `<defs><linearGradient id="task538-gradient-${phase}-${token}" gradientUnits="userSpaceOnUse">` +
+    '<stop offset="0" stop-color="#123456"/><stop offset="1" stop-color="#abcdef"/>' +
+    `</linearGradient><path id="task538-shape-${phase}-${token}" d="M0 0h10v10z"/></defs>` +
+    `<desc>${label} TASK-538 description ${token}</desc>` +
+    `<g class="task538-${phase}-nested-${token}" ` +
+    `style="--task538-${phase}-nested-style-${token}:1" transform="translate(2 3)" ` +
+    `fill="url(#task538-gradient-${phase}-${token})">` +
+    `<use xlink:href="#task538-shape-${phase}-${token}" x="4" transform="translate(1 1)"/>` +
+    `<text x="2" y="18">${label} TASK-538 SVG ${token} &amp; runtime</text></g></svg>`
+  );
+};
+
+const task538CustomSvgPageData = (token: string, phase: "published" | "draft") => {
+  const label = phase === "published" ? "Published" : "Draft";
+  const base = pageData(`${label} TASK-538 page ${token}`);
+  return {
+    ...base,
+    sections: base.sections.map((section) => ({
+      ...section,
+      id: `sec-task538-${phase}-${token}`,
+      blocks: [
+        {
+          id: `task538-invalid-${phase}-${token}`,
+          type: "customSvg",
+          props: { svg: "<svg><g>", drawIn: false, label: `${label} invalid SVG ${token}` },
+          visibility: { visible: true },
+        },
+        {
+          id: `task538-valid-${phase}-${token}`,
+          type: "customSvg",
+          props: {
+            svg: task538CustomSvgMarkup(token, phase),
+            drawIn: false,
+            label: `${label} TASK-538 SVG ${token}`,
+          },
+          visibility: { visible: true },
+        },
+      ],
+    })),
+  };
+};
+
+const task538CustomSvgRootTag = (html: string) =>
+  html.match(/<svg(?=[^>]*viewBox="0 0 40 20")[^>]*>/)?.[0] ?? "";
+
+const task538CustomSvgBoundaryTag = (html: string) =>
+  html.match(/<span[^>]*data-custom-svg-boundary="true"[^>]*>/)?.[0] ?? "";
+
+const task538RuntimeBlockSlice = (html: string, blockId: string, nextBlockId: string) => {
+  const start = html.indexOf(`data-block-id="${blockId}"`);
+  const end = html.indexOf(`data-block-id="${nextBlockId}"`, start + 1);
+  return start >= 0 && end > start ? html.slice(start, end) : "";
+};
+
 const nestedPageData = (token: string, label: "published" | "draft") => {
   const titleLabel = label === "published" ? "Published" : "Draft";
   return {
@@ -501,6 +562,32 @@ const runtimeParityPageData = (token: string) => ({
           visibility: { visible: true },
         },
         {
+          // TASK-521-04: the animated-icon block is now insertable + real.
+          id: `parity-icon-${token}`,
+          type: "icon",
+          props: {
+            name: "star",
+            animation: "spin",
+            size: 48,
+            color: "var(--primary)",
+            speed: 1600,
+          },
+          visibility: { visible: true },
+        },
+        {
+          // TASK-522-01: the custom-SVG block is insertable, so the parity loop
+          // asserts `data-page-block="customSvg"`. The sanitized-render CASE ships
+          // with 522-02; here the type-agnostic block frame stamps the data-attr.
+          id: `parity-custom-svg-${token}`,
+          type: "customSvg",
+          props: {
+            svg: '<svg viewBox="0 0 10 10"><path d="M0 0 L10 10" stroke="#000"/></svg>',
+            drawIn: false,
+            label: "",
+          },
+          visibility: { visible: true },
+        },
+        {
           id: `parity-quote-${token}`,
           type: "quote",
           props: { text: `Runtime quote ${token}`, cite: "Coderso" },
@@ -579,6 +666,45 @@ const runtimeParityPageData = (token: string) => ({
               },
             ],
           },
+          visibility: { visible: true },
+        },
+        {
+          // TASK-534: the segmented switcher/tabs block is insertable, so the
+          // parity loop asserts `data-page-block="switcher"`. Panels live in the
+          // `panel:1..panel:N` slots (real tablist/tabpanel render).
+          id: `parity-switcher-${token}`,
+          type: "switcher",
+          props: {
+            tabs: [{ label: `Barn ${token}` }, { label: `Villa ${token}` }],
+            activeIndex: 0,
+            variant: "pill",
+          },
+          visibility: { visible: true },
+          slots: {
+            "panel:1": [
+              {
+                id: `parity-switcher-panel-1-${token}`,
+                type: "text",
+                props: { text: `Switcher panel one ${token}`, format: "plain", align: "left" },
+                visibility: { visible: true },
+              },
+            ],
+            "panel:2": [
+              {
+                id: `parity-switcher-panel-2-${token}`,
+                type: "text",
+                props: { text: `Switcher panel two ${token}`, format: "plain", align: "left" },
+                visibility: { visible: true },
+              },
+            ],
+          },
+        },
+        {
+          // TASK-534: the scroll-hint block is insertable (CSS-keyframe only,
+          // no runtime), so the parity loop asserts `data-page-block="scrollHint"`.
+          id: `parity-scroll-hint-${token}`,
+          type: "scrollHint",
+          props: { glyph: "chevron", label: `Scroll for more ${token}` },
           visibility: { visible: true },
         },
         {
@@ -745,6 +871,97 @@ testIfDbWithOptions(
     const previewHtml = await previewResponse.text();
     expect(previewHtml).toContain(fixture.draftHeadline);
     expect(previewHtml).not.toContain(fixture.publishedHeadline);
+    expect(previewHtml).toContain("Preview mode");
+  },
+  { timeout: dbRuntimeTimeout }
+);
+
+testIfDbWithOptions(
+  "TASK-538 public and preview page runtime preserve custom SVG isolation",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 0);
+    await setTestSetting("site.contentRoutes", []);
+    await setTestSetting("site.previewEnabled", true);
+
+    const actor = await createActor();
+    const token = randomUUID().slice(0, 8);
+    const slug = `/runtime-task538-svg-${token}`;
+    const draftData = task538CustomSvgPageData(token, "draft");
+    const publishedData = task538CustomSvgPageData(token, "published");
+    const created = await createPage({
+      title: `TASK-538 SVG Runtime ${token}`,
+      slug,
+      authorId: actor.id,
+      data: draftData,
+    });
+    trackPage(created?.id);
+    if (!created?.id) throw new Error("missing_task538_svg_page");
+
+    await publishPage(created.id, actor.id, publishedData);
+    await updatePage(created.id, { data: draftData });
+
+    const assertIsolatedSvg = (html: string, phase: "published" | "draft") => {
+      const label = phase === "published" ? "Published" : "Draft";
+      const root = task538CustomSvgRootTag(html);
+      const boundary = task538CustomSvgBoundaryTag(html);
+      const invalidBlock = task538RuntimeBlockSlice(
+        html,
+        `task538-invalid-${phase}-${token}`,
+        `task538-valid-${phase}-${token}`
+      );
+
+      expect(html).toContain(`aria-label="${label} TASK-538 SVG ${token}"`);
+      expect(html).toContain(`${label} TASK-538 SVG ${token} &amp; runtime`);
+      expect(html).toContain(`<desc>${label} TASK-538 description ${token}</desc>`);
+      expect(html).toContain(`<linearGradient`);
+      expect(html).toContain(`id="task538-gradient-${phase}-${token}"`);
+      expect(html).toContain(`fill="url(#task538-gradient-${phase}-${token})"`);
+      expect(html).toContain(`xlink:href="#task538-shape-${phase}-${token}"`);
+      expect(html).toContain('transform="translate(2 3)"');
+      expect(html).toContain('transform="translate(1 1)"');
+      expect(html).not.toContain(`task538-${phase}-root-${token}`);
+      expect(html).not.toContain(`task538-${phase}-nested-${token}`);
+      expect(html).not.toContain(`--task538-${phase}-root-style-${token}`);
+      expect(html).not.toContain(`--task538-${phase}-nested-style-${token}`);
+      expect(html).not.toContain("translate(538 538)");
+
+      expect(root).toContain('width="100%"');
+      expect(root).not.toContain(' x="');
+      expect(root).not.toContain(' y="');
+      expect(root).not.toContain(' height="');
+      expect(root).not.toContain(' transform="');
+      expect(root).toContain(
+        'style="display:block;inline-size:100%;max-inline-size:100%;block-size:auto;max-block-size:1024px;aspect-ratio:2;overflow:hidden;pointer-events:none"'
+      );
+      expect(boundary).toContain(
+        'style="display:block;inline-size:100%;max-inline-size:100%;max-block-size:1024px;overflow:hidden;contain:layout paint;pointer-events:none"'
+      );
+
+      expect(invalidBlock).toContain("▢");
+      expect(invalidBlock).not.toContain("<svg");
+      expect(invalidBlock).not.toContain("data-custom-svg-boundary");
+    };
+
+    const publicResponse = await requestPublicPath(slug);
+    expect(publicResponse.status).toBe(200);
+    const publicHtml = await publicResponse.text();
+    assertIsolatedSvg(publicHtml, "published");
+    expect(publicHtml).not.toContain(`Draft TASK-538 SVG ${token}`);
+    expect(publicHtml).not.toContain("Preview mode");
+
+    const { token: previewToken } = await createPreviewToken({
+      targetType: "page",
+      targetId: created.id,
+      ttlMinutes: 5,
+    });
+    const previewResponse = await requestPublicPath(
+      `/preview?type=page&token=${encodeURIComponent(previewToken)}&device=desktop`
+    );
+    expect(previewResponse.status).toBe(200);
+    const previewHtml = await previewResponse.text();
+    assertIsolatedSvg(previewHtml, "draft");
+    expect(previewHtml).not.toContain(`Published TASK-538 SVG ${token}`);
     expect(previewHtml).toContain("Preview mode");
   },
   { timeout: dbRuntimeTimeout }

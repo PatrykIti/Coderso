@@ -3,7 +3,7 @@ import { eq, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
 import { media, mediaFolders } from "../../../core/db/schema";
-import { ApiError } from "../../../core/server/errorHandler";
+import { ApiError, toErrorResponse } from "../../../core/server/errorHandler";
 import {
   registerMediaFolderRoutes,
   registerMediaRoutes,
@@ -72,6 +72,33 @@ const createdMedia: string[] = [];
 
 const uniqueName = (prefix = "Folder") => `${prefix} ${crypto.randomUUID()}`;
 const uniqueSlug = (prefix = "f") => `${prefix}-${crypto.randomUUID()}`;
+
+const expectBoundedConflictResponse = (error: unknown) => {
+  expect(error).toBeInstanceOf(ApiError);
+  const apiError = error as ApiError;
+  expect(apiError.status).toBe(409);
+  expect(apiError.code).toBe("media_folder_slug_conflict");
+  expect(apiError.message).toBe("Folder slug already in use");
+
+  const serialized = JSON.stringify(toErrorResponse(apiError));
+  expect(serialized).toBe(
+    '{"error":{"code":"media_folder_slug_conflict","message":"Folder slug already in use"}}'
+  );
+  expect(serialized.length).toBeLessThan(128);
+  for (const forbidden of [
+    "23505",
+    "media_folders_slug_idx",
+    "constraint_name",
+    "postgres",
+    "insert into",
+    "update media_folders",
+    "stack",
+    "cause",
+    "details",
+  ]) {
+    expect(serialized.toLowerCase()).not.toContain(forbidden);
+  }
+};
 
 afterEach(async () => {
   if (!hasDb) return;
@@ -240,7 +267,7 @@ testIfDb("PATCH /media/folders/:id on a missing id → media_folder_not_found (4
   expect((err as ApiError).code).toBe("media_folder_not_found");
 });
 
-testIfDb("folder create with a duplicate slug → media_folder_slug_conflict (409)", async () => {
+testIfDb("POST folder duplicate maps to a bounded media_folder_slug_conflict 409", async () => {
   const { router, routes } = makeRouter();
   registerMediaRoutes(router, okDeps());
   const slug = uniqueSlug("dup");
@@ -257,9 +284,31 @@ testIfDb("folder create with a duplicate slug → media_folder_slug_conflict (40
   } catch (error) {
     err = error;
   }
-  expect(err).toBeInstanceOf(ApiError);
-  expect((err as ApiError).status).toBe(409);
-  expect((err as ApiError).code).toBe("media_folder_slug_conflict");
+  expectBoundedConflictResponse(err);
+});
+
+testIfDb("PATCH folder duplicate maps to a bounded media_folder_slug_conflict 409", async () => {
+  const { router, routes } = makeRouter();
+  registerMediaRoutes(router, okDeps());
+  const reservedSlug = uniqueSlug("patch-dup");
+  const first = (await runRoute(findRoute(routes, "POST", "/media/folders"), {
+    body: { name: "Patch first", slug: reservedSlug },
+  })) as { id: string };
+  const second = (await runRoute(findRoute(routes, "POST", "/media/folders"), {
+    body: { name: "Patch second", slug: uniqueSlug("patch-source") },
+  })) as { id: string };
+  createdFolders.push(first.id, second.id);
+
+  let err: unknown;
+  try {
+    await runRoute(findRoute(routes, "PATCH", "/media/folders/:id"), {
+      params: { id: second.id },
+      body: { slug: reservedSlug },
+    });
+  } catch (error) {
+    err = error;
+  }
+  expectBoundedConflictResponse(err);
 });
 
 // ---- delete un-files media (d) ----

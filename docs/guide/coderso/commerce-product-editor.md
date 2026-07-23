@@ -89,7 +89,7 @@ Use this safe product-editing order when you want fewer mistakes:
 - Treat status as a product lifecycle control, not just a UI badge. Publishing
   or moving back to draft changes how the product should be treated downstream.
 - Keep pricing fields precise and stable. They are more than presentation copy;
-  downstream widgets and catalog logic often depend on them.
+  downstream commerce blocks and catalog logic often depend on them.
 - Collections should reflect navigation and merchandising strategy, not only
   internal grouping convenience.
 - Media IDs are operational references. Even when the UI calls out future media

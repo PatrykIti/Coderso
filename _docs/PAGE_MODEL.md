@@ -149,13 +149,30 @@ Phase 3B section template semantics are part of the public runtime contract:
 - `timeline.horizontal` floors the grid to at least three columns and wraps
   each child block in a timeline item with a marker. Other timeline variants
   keep the item/marker structure with their resolved grid/spacing.
+- The VERTICAL timeline variants (`default`, `compact`) draw a CONTINUOUS
+  vertical axis line connecting the dots (TASK-533-03), reproducing the reference
+  `.timeline:before` (aqua→fade rule) + `.timeline article:before` glow dots. The
+  axis is a per-item connector segment (`data-page-timeline-axis` /
+  `data-page-timeline-axis-line`) hoisted into the `relative` item box and spanning
+  its FULL height (`inset-y-0`, so the item's own vertical padding is INSIDE the
+  segment — no intra-item break); it bleeds its bottom by exactly the section content
+  row gap so segment N reaches segment N+1's top, and the LAST item ends flush at its
+  dot (`bottom:0`, no overshoot). The dot keeps a `box-shadow` glow off the section
+  accent. This is ADDITIVE DOM — the existing `data-page-timeline-item/marker/content`
+  hooks are retained; the `horizontal` variant is UNCHANGED. No model field and no
+  author-controlled value: the axis/dot are fixed render structure tinted off the
+  already-sanitized `--coderso-section-accent` (the bleed offset is the clamped numeric
+  section gap). The `timeline` section is authored as a section TEMPLATE via the
+  section-template picker.
 - `gallery` remains a section template over existing child blocks. `cards`
   wraps child blocks in card surfaces while `grid` keeps the flat section grid;
   this does not ungate or redefine the standalone `gallery` block.
 - `testimonials.cards` wraps child blocks in card surfaces while
   `testimonials.grid` keeps flat grid rendering.
 - `cta.default`, `cta.centered`, and `cta.full-width` have distinct published
-  alignment/min-height classes. `full-width` still pins `max-width: none`.
+  alignment/min-height classes. Since TASK-525 `full-width` bleeds the background
+  edge-to-edge (`100vw`) while its content stays capped/centered at
+  `section.layout.maxWidth` (no longer `max-width: none`).
 - `feature-grid`, `comparison`, and `custom` keep their existing truthful
   grid/card geometry guards while using the shared dedicated control surface.
 
@@ -207,7 +224,14 @@ Block style is bounded and optional. Supported style keys are:
 - `align`: `left`, `center`, `right`;
 - `width`: `auto`, `full`;
 - `textColor`, `background`, `backgroundType`, `backgroundImage`, `opacity`,
-  `radius`, `shadow`, `borderColor`, `borderWidth`, and `borderStyle`;
+  `radius`, `shadow`, `borderColor`, `borderWidth`, and `borderStyle`
+  (`textColor` rides the `sanitizeAuthoringCssColor` whitelist). TASK-532 threads
+  a sanitized `textColor` onto the `text` block's **rich** (`format:"rich"`)
+  render path too — previously only the plain `<p>` path honored it via the
+  inherited `--coderso-block-text` var, while the rich wrapper `<div>` rendered
+  colorless; the rich wrapper now sets inline `color` + a
+  `[&_*]:text-[color:inherit]` child hint so an authored `textColor` paints the
+  rich body (unset ⇒ byte-identical, no attribute leak);
 - `padding` and `margin` using `{ top, right, bottom, left }` spacing objects;
 - token-backed typography (TASK-424), nullable with unset/`null` meaning
   "keep the baked classes" so pre-existing documents render identically:
@@ -215,7 +239,23 @@ Block style is bounded and optional. Supported style keys are:
     `var(--font-sans/--font-display, <default stack>)`),
   - `fontSize`: `2xs` | `xs` | `sm` | `md` | `lg` | `xl` | `2xl` | `3xl` |
     `4xl` | `5xl` (theme scale refs emitted as `var(--text-*, <default size>)`),
-  - `fontWeight`: `normal` | `medium` | `semibold` | `bold` (400/500/600/700),
+  - `fontSizeCustom` (TASK-532, present-only): a fluid font-size string that
+    **wins over the discrete `fontSize` token** at render (the token stays the
+    fallback/unset state). Accepts ONLY a strict numeric-unit-clamp grammar —
+    a bare number + allowlisted unit (`rem`/`em`/`px`/`vw`/`vh`/`%`/`ch`) or a
+    single `clamp()`/`min()`/`max()` of such lengths (e.g.
+    `clamp(2.6rem,5vw,4.4rem)`, `1.45rem`), validated by
+    `sanitizeAuthoringCssFontSize` at the write boundary (NEVER arbitrary CSS;
+    64-char cap; rejects `url(`/`expression(`/`;`/`{`/`}`/`<`/`\`/`:`/comment
+    escapes fail-closed to omitted). Responsive-capable (a per-device font-size
+    string is CSS-expressible),
+  - `fontWeight`: `normal` | `medium` | `semibold` | `bold` | `extrabold` |
+    `black` (400/500/600/700/**800/900** — the last two added by TASK-532;
+    heavier weights paint inline via `pageTypographyFontWeightCssValues`, not a
+    baked `font-*` class),
+  - `textTransform` (TASK-532, present-only enum): `none` | `uppercase` |
+    `lowercase` | `capitalize`; `none` resets ⇒ the field is omitted so an
+    un-authored block is byte-identical,
   - `lineHeight`: unitless number clamped to 1–2.5,
   - `letterSpacing`: px number clamped to -2–8.
 
@@ -387,6 +427,14 @@ truthful:
   wraps the title in a safe link. Unsafe media/link values fail closed.
 - `divider.tone` changes the public border color (`neutral`, `muted`,
   `accent`) while `divider.thickness` keeps controlling border width.
+  TASK-532 extends the SAME `divider` block (no new block type) with a
+  present-only decorative **eyebrow-rule** variant: `divider.gradient` (boolean)
+  swaps the `<hr>` for a slim `<span>` painting
+  `linear-gradient(90deg, <tone-color>, transparent)` (the tone color comes only
+  from the `pageDividerToneBorderColor` whitelist — no raw author string);
+  `divider.width` (px, clamped 8–400, default 34) sets the short-rule length and
+  `divider.align` (`left`/`center`/`right`) positions it via auto margins.
+  With `gradient` unset the legacy `<hr>` is byte-identical.
 
 `list.items[]` may be plain strings or simple `{ "label": "...", "href": "..." }`
 objects for navigation/footer links.
@@ -732,7 +780,14 @@ site-token style bridging. Reusable authoring modules live under
   generic non-Page-v2 panel engine.
 - `PageEditorLayers.tsx` and `PageEditorCommandPalette.tsx` own the layers
   rows, command groups, and Page Template insertion picker UI. The parent
-  shell still owns document mutation and template instantiation.
+  shell still owns document mutation and template instantiation. The Layers
+  popover (rendered in `PageEditor.tsx`, host of `LayerBlockRows`) self-bounds
+  its height as an `absolute` box with
+  `max-h-[min(72vh,calc(100dvh-8rem))] flex flex-col overflow-hidden` and puts a
+  single `min-h-0 flex-1 overflow-y-auto overscroll-contain` scroll region on the
+  section list, so a tall multi-section block tree scrolls as ONE list and every
+  layer stays reachable (`shrink-0` header); `LayerBlockRows` recursion adds no
+  nested scroll box (TASK-526).
 - `pageEditorOptions.ts` and `pageEditorLabels.ts` own neutral option/label
   derivation that can be reused by Pages, Page Templates, and Menu Design.
 
@@ -755,6 +810,35 @@ Page Editor session controls are intentionally browser-local and Page-only:
   and block ids, re-normalizes the fragment through the Page document owner
   before insertion, and inserts blocks after the selected block or at the end of
   the selected section while sections paste after the selected section.
+
+### Page color boundary (TASK-541 / TASK-539 handoff)
+
+The landed TASK-541 seam is the shared Page admin color control: supported UI
+commits use the canonical `authoring` profile from
+`core/services/theme/cssColorContract.ts`. Page persistence and rendering still
+use the independent legacy sanitizer in `pageAuthoringSanitizers.ts`; that
+backend has not imported the shared parser yet. The admin adapter is therefore
+not the server trust boundary for direct/imported payloads.
+
+The current Page-owned sanitizer permits exactly these site-token references,
+in owner order: `var(--color-primary)`, `var(--color-secondary)`,
+`var(--color-accent)`, `var(--color-bg)`, `var(--color-surface)`,
+`var(--color-text)`, and `var(--color-border)`. Other syntactically valid
+`var(--color-*)` names fail closed. Its separate legacy raw-color branches still
+accept bounded hex, alphabetic named values, and the existing broad functional
+shape. Consequently direct/imported backend values such as `currentColor` and
+`inherit` retain the current named-value behavior even though the shared admin
+control does not commit them. The exact seven-token rule applies to
+`var(--color-*)`; it does not imply that the legacy backend already enforces the
+canonical simple-color grammar or numeric ranges.
+
+TASK-539-02-L01 owns importing the shared parser into that sanitizer while
+preserving the exact seven-token filter and Page-specific background/composite
+rules. Only after that future handoff may the Page backend be described as using
+the shared `authoring` profile and rejecting inherited/named values outside it.
+Until then, the existing legacy sanitizer remains authoritative. Optional Page
+color fields stay present-only: rejection or clear removes/omits the field and
+does not seed a resolution default.
 
 ## Responsive Cascade
 
@@ -818,8 +902,7 @@ document to one breakpoint server-side:
 - Explicitly NOT CSS-expressible (diagnostics-only): block
   `responsive[bp].props` content overrides (no content-override contract
   exists yet), non-`visible` section visibility fields
-  (`authOnly`/`anchor`/`startsAt`/`endsAt`), `maxWidth` overrides on
-  `full-width` variants (the renderer pins `max-width: none`), typography
+  (`authOnly`/`anchor`/`startsAt`/`endsAt`), typography
   overrides on non-typography-capable block types, explicit `null` typography
   overrides (clearing back to baked classes at one breakpoint cannot beat the
   inline desktop base), and any override on nodes hidden at the desktop base
@@ -890,6 +973,537 @@ flows to avoid duplicate canonical/supporting pages:
 }
 ```
 
+## Motion And Interaction Effects — TASK-521
+
+Pages v2 carries a cohesive family of motion/interaction effects. Every effect is
+**present-only** (emits zero bytes when unauthored — a legacy / no-effect document
+normalizes and renders byte-identical to the pre-521 output), joins the
+**reject-unknown allowlist** (`assertKnownKeys` + the strict
+`pageDocumentV2JsonSchema` `additionalProperties: false`) with a round-trip test,
+respects **`prefers-reduced-motion`** (both a CSS `motion-safe:`/`motion-reduce:`
+guard AND a `matchMedia('(prefers-reduced-motion: reduce)').matches` early-return
+in each runtime IIFE), and adds **no npm dependency, no DB migration, and no
+`PAGE_DOCUMENT_SCHEMA_VERSION` bump** (stays `2`). All config rides existing jsonb
+(`section.style`, `currentData.settings.effects`, `hero.style`, block props). Runtime
+scripts are static dependency-free IIFEs emitted only on the front/preview render
+path (`PageDocumentRender`) — never on the builder canvas (Hard Invariant 7:
+canvas shows content at rest). Enums are `normalizeEnum`-guarded (fail-CLOSED on
+write — an invalid enum VALUE throws `PageDocumentError`), numbers are `readNumber`
+clamped (fail-soft), and colors run through `readSafeColor` (whitelist; alpha OK via
+TASK-519).
+
+### Section scroll effects (`PageSectionStyleV2`)
+
+`section.style` gains two present-only keys:
+
+- `scrollEffect` — `PageSectionScrollEffect`, one of
+  `pageSectionScrollEffects = ["none", "reveal-fade", "reveal-up", "parallax"]`.
+  `"none"` is omitted (present-only). `reveal-fade`/`reveal-up` are
+  IntersectionObserver reveal-on-enter; `parallax` translates the section inner
+  content on scroll (rAF).
+- `parallaxIntensity` — number, clamped to
+  `PAGE_PARALLAX_INTENSITY_CLAMP = { min: 0, max: 40 }` px of travel. Meaningful
+  only when `scrollEffect === "parallax"`.
+
+Applied on the FRONT (and preview) only — the builder canvas renders sections via
+`PageSectionContent` and never emits the runtime or reveal/parallax wrapper.
+
+### Animated-icon block (the `icon` block)
+
+The previously non-functional `icon` block placeholder is now a real, insertable,
+runtime-rendered animated-icon block built from a curated inline-SVG + CSS-keyframes
+set (`core/services/pages/animatedIconGlyphs.tsx`) — no npm dependency, CSP-safe.
+No new `pageBlockTypes` member was added; the existing `icon` member was implemented
+(promoted into `realRuntimeBlockTypes` + `editorInsertableBlockTypes`, its
+`pageBlockCapabilityReasons.icon` "pending" entry removed). `pageBlockPropKeys.icon`
+extends to `["name", "label", "animation", "size", "color", "speed"]`:
+
+- `name` — curated glyph name, resolved against the allowlist
+  `animatedIconNames = ["sparkles", "star", "heart", "zap", "check", "shield",
+  "arrow-right", "bell", "rocket", "loader"]` via `resolveAnimatedIconName` (a name
+  not matching `^[a-z0-9-]{1,48}$` or not in the set falls back to `"sparkles"`).
+  Default props stay `{ name: "sparkles", label: "" }`.
+- `animation` — one of
+  `animatedIconAnimations = ["none", "spin", "pulse", "bounce", "draw"]` (default
+  `"none"`).
+- `size` — number, clamped `ANIMATED_ICON_SIZE_CLAMP = { min: 16, max: 160 }` px
+  (default `48`).
+- `color` — `readSafeColor` (default `var(--primary)`).
+- `speed` — keyframe duration, clamped
+  `ANIMATED_ICON_SPEED_CLAMP = { min: 400, max: 4000 }` ms (default `1600`), driven
+  through the `--anim-speed` custom property. `motion-reduce` pauses the keyframes.
+
+Legacy documents never contain an `icon` block (it previously rendered `null` and
+was non-insertable), so byte-identity is trivially preserved.
+
+### Hero mouse-tilt (`hero.style.tilt`)
+
+`hero.style.tilt` is a present-only 3D parallax-on-hover option,
+`HeroTilt = "none" | "subtle" | "strong"` (`heroTilts`). Unlike the page/section
+enums, hero `tilt` normalizes **fail-SOFT** through a hero-local `resolveHeroTilt`
+(mirroring `resolveHeroMotionPreset`) — an unrecognized value falls back to `"none"`
+(omitted, present-only) and never throws. `"none"`/unset renders byte-identical to
+today. Enabled tilt wraps the hero in a CSS `perspective` and a tiny `mousemove`
+runtime that sets a clamped `rotateX`/`rotateY` on the inner card; reduced-motion or
+a coarse/touch pointer disables the tilt (no runtime effect).
+
+### Per-page effects (`settings.effects` → `PageEffectsV2`)
+
+`currentData.settings.effects` is a present-only ambient-effect sub-object
+(`PageEffectsV2`), omitted entirely when empty:
+
+- `cursorSpotlight` — boolean; enables a cursor-follow radial spotlight on the page
+  root (`--spotlight-x`/`--spotlight-y` updated on `mousemove`, rAF).
+- `spotlightColor` — `readSafeColor` (default `var(--primary)`), injected as
+  `--spotlight-color`.
+- `spotlightSize` — spotlight radius, clamped
+  `PAGE_SPOTLIGHT_SIZE_CLAMP = { min: 120, max: 900 }` px, injected as
+  `--spotlight-size`.
+
+Reduced-motion or a coarse pointer disables the spotlight. The per-page settings
+surface was relocated out of the full-height drawer into a compact panel in the same
+right side-inspector rail as section/block settings, with a new **Effects** section
+(TASK-521-05).
+
+## Composable Hero Toolkit & Premium Effects — TASK-522
+
+TASK-522 adds the composable TOOLKIT to build a rich, premium hero (a layered glass
+card with floating badges, drifting orbs, a pulsing ring, a tilt-on-pointer card and
+a drawn line-SVG, plus hover glow/lift and a ticker strip) inside Page Editor v2 —
+NOT a one-off hero widget. It builds on TASK-521 and shares its invariants: every
+addition is **present-only** (zero bytes when unauthored — a legacy / no-effect
+document normalizes and renders byte-identical to the post-521 output), joins the
+**reject-unknown allowlist** (`assertKnownKeys` + the strict `pageDocumentV2JsonSchema`
+`additionalProperties: false`) with a round-trip test, respects
+**`prefers-reduced-motion`** (a CSS `@media (prefers-reduced-motion: no-preference)`
+gate around every keyframe binding AND, for the block-tilt runtime, a `matchMedia`
+early-return), and adds **no npm dependency, no DB migration/DDL, no new route/RBAC,
+and no `PAGE_DOCUMENT_SCHEMA_VERSION` bump** (stays `2`). All config rides existing
+jsonb (`block.style`, `section.style`, block props). Enums are `normalizeEnum`-guarded
+(fail-CLOSED on write — an invalid enum VALUE throws `PageDocumentError`), numbers are
+`readNumber`-clamped (fail-soft), and colors run through `readSafeColor`.
+
+### Custom-SVG block (`customSvg`) — the one new `pageBlockType`
+
+`customSvg` is a Page-owned block, not a configurable widget, and is the single new
+`pageBlockType` member (the FIVE exhaustive
+`Record<PageBlockType, …>` surfaces gain one entry each). `pageBlockPropKeys.customSvg
+= ["svg", "drawIn", "drawSpeed", "label"]`, defaults `{ svg: "", drawIn: false, label:
+"" }`:
+
+- `svg` — untrusted inline SVG source, sanitized at BOTH write (`normalizeBlockProps`)
+  and render by `core/services/pages/svgSanitizer.ts`. The shared immutable closed
+  policy excludes author-controlled `class` and `style` on the root and descendants;
+  unknown names are removed, while unsafe or malformed input fails closed. See
+  `SECURITY_SPEC.md` § Pages custom-SVG sanitizer and renderer boundary.
+- Sanitized text is parsed by `buildSafeSvgTree` without browser error recovery into a
+  deeply frozen closed tree, bounded to 2,048 elements, depth 64, and 8,192 decoded
+  text characters. The renderer traverses that tree into React elements through the
+  complete explicit source-to-React prop map; author data never enters a
+  `dangerouslySetInnerHTML` sink.
+- The root aspect ratio is snapshotted from a strict finite four-number `viewBox`, or
+  positive finite `width`/`height` fallback, before root `x`, `y`, `width`, `height`,
+  and `transform` are removed. Renderer-owned layout clamps the ratio to 1/8..8, sets
+  width to 100%, caps block size at 1,024 px, clips overflow, contains layout/paint,
+  and disables pointer events. Safe descendant drawing geometry remains unchanged.
+- Invalid input renders only the neutral placeholder. The verification contract covers
+  editor, published, and preview paths and requires narrow/wide browser isolation and
+  click-through smoke with zero console errors before task closure.
+- `drawIn` — boolean; enables an optional stroke draw-in animation
+  (`@keyframes cx-draw { to { stroke-dashoffset: 0 } }`, the reference `.draw-line`).
+- `drawSpeed` — draw duration, clamped `PAGE_DRAW_SPEED_CLAMP = { min: 600, max: 6000 }`
+  ms, driven through the `--draw-speed` custom property.
+- `label` — a11y title text.
+
+Legacy documents never contain a `customSvg` block, so byte-identity is trivially
+preserved. Byte cap `PAGE_CUSTOM_SVG_MAX_BYTES = 24576` (24 KiB, measured via
+`TextEncoder` — the sanitizer is isomorphic and also runs at render).
+
+### Block style fields (`PageBlockStyleV2`) — decoration / tilt / layer / hover / surface / marquee / composition
+
+`block.style` gains present-only keys (all reject-unknown + round-trip tested; only the
+NUMERIC `layer.x/y/z` render per device — see below):
+
+- `decoration?: PageBlockDecoration` — `{ motion, delay?, duration? }` turning any
+  block into a layered floating decoration. `motion` ∈
+  `pageBlockDecorationMotions = ["none", "float", "drift", "pulse", "orbit", "radiate"]`
+  (`"none"` omitted). `float` = `.floating-chip` translateY; `drift` = `.hero-bg-orb`
+  translate+scale; `pulse` = `.sun-ring`/`pulseRing` scale+opacity; `radiate` =
+  `.map-pulse`/`mapPulse` concentric box-shadow ring; `orbit` = rotation. `delay`
+  clamped `PAGE_DECORATION_DELAY_CLAMP = { min: 0, max: 4000 }` ms (staggering);
+  `duration` clamped `PAGE_DECORATION_DURATION_CLAMP = { min: 2000, max: 16000 }` ms.
+- `tilt?: PageTiltStrength` — `pageTiltStrengths = ["none", "subtle", "strong"]`; a
+  perspective + `preserve-3d` pointer-tracking 3D tilt on any block, driven by the
+  `[data-block-tilt]` runtime binding appended to `pageEffectsRuntime.ts`. Since
+  TASK-528 the tilt transform rides the **surface FRAME** (`data-block-tilt` co-located
+  with `data-surface`, so the WHOLE glass card tilts, not just its inner content); the
+  CSS `perspective` sits on an ANCESTOR `[data-tilt-parent]` wrapper (see below).
+- `tiltGlare?: boolean` — optional `.cx-glare` sheen sweep on a tilted block.
+- `layer?: PageBlockLayer` — `{ x?, y?, z?, anchor? }` placement inside a layered
+  canvas. `x`/`y` clamped `PAGE_LAYER_X_CLAMP`/`PAGE_LAYER_Y_CLAMP = { min: -50, max:
+  150 }` %; `z` clamped `PAGE_LAYER_Z_CLAMP = { min: 0, max: 20 }`; `anchor` ∈
+  `pageLayerAnchors` (9 grid positions). Only `x/y/z` vary per device (via
+  `pageResponsiveCss.ts` `--layer-*` deltas); `anchor` is base-only.
+- `surfacePreset?: PageSurfacePreset` — `pageSurfacePresets = ["none", "glass",
+  "glass-grid", "radial-glow", "ambient-orbs"]`; one-click premium backgrounds.
+- `surfaceTint?: string` (TASK-524-02) — present-only, alpha-capable glass/glow tint
+  that seeds `--surface-glow`/`--deco-ring`/`--orb-color` **independent of**
+  `style.background`. Sanitized at the write boundary via `sanitizeAuthoringCssColor`
+  (`readOptionalSafeColor`); a bad color fails soft (key omitted, never `null`/`""`).
+  It takes **precedence** over the 522 `style.background`-derived glow — the plain-color
+  `background` remains a FALLBACK only when no `surfaceTint` is authored (a chip with a
+  background and NO `surfaceTint` stays byte-identical to 522). A gradient/url tint is
+  left out (invalid inside `radial-gradient()` → CSS falls back to the reference
+  literal). Authored with the 519 alpha-capable swatch (hex8/`rgba()` round-trip);
+  unlike the base-only surface fields it is **per-device** (see below).
+- `hoverEffect?: PageBlockHoverEffect` — `pageBlockHoverEffects = ["none",
+  "glow-reveal", "lift", "scale", "lift-glow"]`; hover interactivity (the reference
+  `:hover:after` glow-reveal, `:hover` lift/scale).
+- `marquee?: PageBlockMarquee` — `{ speed?, direction?, seamless? }` on a `group`/row
+  block only (`@keyframes cx-ticker`). `speed` clamped `PAGE_MARQUEE_SPEED_CLAMP =
+  { min: 8, max: 40 }` s; `direction` ∈ `pageMarqueeDirections = ["left", "right"]`;
+  `seamless` duplicates the track for a gapless loop.
+- `composition?: PageComposition` — `pageCompositions = ["flow", "layered"]`; a
+  layout-block (`container`/`columns`/`group`) becomes an absolute positioning context
+  for its `layer`-placed children.
+- `revealDelay?: number` (TASK-525-02) — per-block scroll-reveal stagger, ms, clamped
+  `PAGE_REVEAL_DELAY_CLAMP = { min: 0, max: 4000 }` (same bound as the decoration delay).
+  Normalized via `readNumber` (`Number.isFinite` + clamp; NaN/Infinity fail-soft to 0)
+  and emitted ONLY as the bounded `--reveal-delay` custom property (`${n}ms`) on the
+  `[data-block-id]` frame — never a raw declaration/markup/URL. It feeds the per-block
+  reveal `transition-delay` (see `PAGE_REVEAL_MOTION_CSS` below), so a revealing section's
+  blocks CASCADE (each fades on its own delay) instead of fading as one unit — matching the
+  reference `[data-delay]` cascade. Present-only (omitted when unset → byte-identical),
+  BASE-ONLY (`responsive:false` — the reveal CSS is shared/static so a per-device delay is
+  not expressible), reject-unknown + round-trip tested. Reveal stays JS-gated under
+  `[data-reveal-armed]` + `motion-safe:`, so a `transition-delay` is inert under
+  `prefers-reduced-motion` (no transition runs) — motion-neutral, no new runtime/keyframe.
+- `glow?: PageGlow` (TASK-531) — an arbitrary COLORED box-shadow (the reference colored-glow
+  shadows) as a **structured spec**, `{ color, blur?, spread?, x?, y? }`. `color` is REQUIRED
+  and sanitized via `sanitizeAuthoringCssColor` at write (`readOptionalSafeColor`); an
+  invalid/absent color OMITS the whole glow (present-only, fail-soft — never a partial glow).
+  The numerics are clamped: `blur` `PAGE_GLOW_BLUR_CLAMP = { min: 0, max: 120 }` (default 24
+  at render), `spread` `PAGE_GLOW_SPREAD_CLAMP = { min: -40, max: 80 }`, `x`/`y`
+  `PAGE_GLOW_OFFSET_CLAMP = { min: -80, max: 80 }`. It composes at render via the shared pure
+  `composeGlowBoxShadow` (`pageGlow.ts`) into a FIXED `"<x>px <y>px <blur>px <spread>px
+  <color>"` template — NEVER a raw author string, re-sanitized + re-clamped at BOTH render
+  boundaries (defence in depth). When the enum `shadow` token is ALSO set, the glow is
+  APPENDED (`mergeShadows` → `"<enum-shadow>, <glow>"`) so both render (glow augments the
+  token drop-shadow). Authored via the `block.style.glow.*` controls (color swatch + four
+  numeric fields, `responsive:true` — a per-device glow rides the `pageResponsiveCss.ts`
+  box-shadow branch). Reject-unknown nested key + round-trip tested; omitted when unset →
+  byte-identical.
+- `colSpan?: number` / `rowSpan?: number` (TASK-533-01) — a block can SPAN columns/rows
+  in the section grid, reproducing the reference `.project-card.large{grid-row:span 2}` /
+  `.offer-card.feature{grid-row:span 2}` (the Aurora card 2× taller). Both are clamped
+  integers (`readOptionalClampedNumber` + `Math.trunc` against `PAGE_BLOCK_SPAN_CLAMP =
+  { min: 1, max: 4 }`; NaN/Infinity/out-of-range fail-soft) and emit ONLY `gridColumn:
+  "span N"` / `gridRow: "span N"` on the block FRAME — never a raw author value in a CSS
+  declaration, markup, or URL. The span is emitted ONLY on the auto-flow grid path; it is
+  SUPPRESSED for a block placed inside a per-column composition (where the parent owns the
+  track placement), so it cannot fight explicit column placement. Present-only (unset ⇒ no
+  `gridRow`/`gridColumn`, byte-identical to post-530); joins `pageBlockStyleKeys` +
+  `pageBlockStyleJsonSchema` (`additionalProperties:false`); reject-unknown + round-trip
+  tested. Authored via the `block.style.colSpan`/`rowSpan` number controls.
+
+### Multi-layer background + gradient background type (TASK-531)
+
+Both `block.style.background` and `section.style.background` (with `backgroundType:"gradient"`)
+now accept a **safe multi-layer** value — a COMMA-SEPARATED list of gradient/color layers
+(glow-over-gradient, the reference `.cta-card`/`art-*` look), e.g. `radial-gradient(circle at
+82% 10%, rgba(142,232,255,.35), transparent 60%), linear-gradient(145deg,#0f1720,#1b2733)`.
+The write sanitizer `sanitizeAuthoringCssBackground` allowlists the value PER top-level
+comma-split layer (whole-value tripwire pre-pass → depth-0 comma split → each layer must be a
+safe color or safe single gradient → `PAGE_BG_MAX_LAYERS = 6` cap; length-capped at
+`PAGE_CSS_VALUE_MAX_LENGTH = 512`; fails CLOSED — see SECURITY_SPEC). The single-layer fast
+path is unchanged (byte-identical). Both render boundaries re-gate on
+`isSafeAuthoringCssGradient(safe) || isSafeAuthoringCssBackgroundLayers(safe)` so a multi-layer
+value actually PAINTS: the SSR inline path (`toGradientBackground` → `background-image`) and
+the per-device RAW `<style>` path (`pageResponsiveCss.ts`). The SECTION gradient branch is NEW
+(the block gradient was already wired) — a `section.style.backgroundType:"gradient"` now paints
+via `background-image` on the content box AND, for a full-bleed section, on the `100vw` bleed
+box; the gradient TYPE reuses the existing `backgroundType` `select` (`pageBackgroundTypes`
+includes `"gradient"`), so no new control was needed.
+
+### Section style fields (`PageSectionStyleV2`) — surface preset + layered canvas + full-bleed
+
+`section.style` gains present-only `surfacePreset?: PageSurfacePreset` (same enum) and
+`composition?: PageComposition` (`"layered"` makes the section a positioning context for
+absolutely placed children).
+
+`section.style` also gains a present-only `fullBleed?: boolean` (TASK-525-01). When `true`,
+the section paints its background BOX edge-to-edge (a fixed-literal `100vw` bleed on the
+OUTER `<section>` via `toPageSectionBleedStyle`: `width:100vw;margin-left/right:calc(50% -
+50vw)`, carrying the sanitized background color/URL, clamped radius, and shadow) while its
+CONTENT stays capped and centered at `layout.maxWidth` — the content `<div>`
+(`toPageSectionStyle`) is `width:min(${maxWidth}, calc(100% - 40px));margin:0 auto` with a
+fixed 20px side gutter, mirroring the reference `.container` inside a full-bleed section.
+The bleed is keyed off `template.variant === "full-width" || style.fullBleed === true`
+(`isPageSectionFullBleed`), so ANY section — not just the `full-width` template variant —
+can bleed its background with contained content. This DECOUPLES the background bleed from
+the content max-width: prior to 525 the `full-width` variant dropped the content cap
+(`maxWidth:"none"`), spreading content to the viewport edges; now the background bleeds but
+the content stays contained. Present-only (`false`/unset omitted → the non-bleed section is
+byte-identical), device-uniform (`responsive:false` — the bleed is fixed render structure,
+not a per-property CSS delta), reject-unknown + round-trip tested. Only fixed literals
+(`100vw`, the 20px gutter) reach CSS — no author-controlled value. The section threads its `readSafeColor`-validated
+`style.accent` into `--surface-glow`; blocks thread a plain-color `style.background`
+(gradients/urls are left out — an invalid `radial-gradient()` retint).
+
+`section.style` also gains a present-only `glow?: PageGlow` (TASK-531), the SAME structured
+colored box-shadow spec + clamps + `composeGlowBoxShadow` render composition documented for the
+block above (merged with the enum section `shadow` via `mergeShadows`, painted on the section
+content box AND, for a full-bleed section, the `100vw` bleed box). Authored via the
+`section.style.glow.*` controls (`responsive:true`). It joins the section `assertKnownKeys`
+allowlist and ALL THREE `additionalProperties:false` section-style JSON schemas — the block
+schema, the per-breakpoint `partialSectionStyleJsonSchema`, AND the inlined TOP-LEVEL
+section-style schema (validating `sections[].style`) — in lockstep, mirroring the
+`surfacePreset`/`composition`/`fullBleed` precedent, so a top-level `style.glow` round-trips
+against the compiled `pageDocumentV2JsonSchema`. Present-only, reject-unknown, round-trip
+tested; `PAGE_DOCUMENT_SCHEMA_VERSION` stays `2` (no migration).
+
+### Asymmetric column ratio + per-edge section border (TASK-533)
+
+`section.style` also gains two present-only fields (both reject-unknown + round-trip
+tested; `PAGE_DOCUMENT_SCHEMA_VERSION` stays `2`, no migration):
+
+- `columnTemplate?: string` (TASK-533-01) — a restricted `grid-template-columns` value
+  (e.g. `"1.15fr .85fr"`, `"1fr 1.2fr"`, `"minmax(0,1fr) minmax(420px,.9fr)"`) that, when
+  set, OVERRIDES the symmetric `pageSectionGridClass(columns)` with an inline
+  `gridTemplateColumns` on the content grid, reproducing the reference intro (1/1.2fr) and
+  realizacje (1.15/.85fr) ratios. This is the ONLY author-controlled STRING reaching a CSS
+  VALUE position, so it goes through the NEW strict-allowlist sanitizer
+  `sanitizeAuthoringGridTemplate` (`pageAuthoringSanitizers.ts`) at the write boundary: an
+  up-front metacharacter reject (`;{}\<>@` backtick `/*` `url(` `expression(` and any `:`
+  outside a function's parens) → paren-depth-aware TOP-LEVEL whitespace split (so
+  `minmax(0, 1fr)` / `repeat(3, 1fr)` stay one track) → each track must match a tiny
+  grammar (`<num>fr|px|%|rem|em`, `auto`, `minmax(min,max)`, `repeat(<int>,…)`), bounded
+  `GRID_MAX_TRACKS = 12` / `GRID_MAX_REPEAT = 12`, minmax/repeat INNER tokens re-validated
+  against a finite length pattern, and re-emitted in a CANONICAL no-inner-space form. It is
+  a positive ALLOWLIST (not a blocklist); rejection ⇒ the field is OMITTED (present-only,
+  fail-soft) and never emitted raw. It is a single React inline-style value (no CSS-rule
+  interpolation, so no rule-injection surface) AND additionally sanitizer-gated. Curated
+  `pageColumnTemplatePresets` back the "Column ratio" control (every preset round-trips
+  unchanged). Unset ⇒ symmetric `grid-cols-N`, byte-identical to post-530. DISJOINT from
+  the 531 gradient/multi-layer relaxation surface (does NOT touch
+  `isSafeAuthoringCssGradient` / `sanitizeAuthoringCssBackground`).
+- `border?: PageSectionBorderV2` (TASK-533-02) — a per-edge section border
+  (`{ top?, right?, bottom?, left? }`, each `{ color?, width?, style? }`), at minimum
+  top+bottom for the reference `border-block` (`.intro-strip{border-block:1px solid
+  rgba(255,255,255,.1)}`), full four-edge supported. Each `color` is sanitized via
+  `sanitizeAuthoringCssColor` (through `readOptionalSafeColor`) — the only sanctioned color
+  path; each `width` is clamped `PAGE_SECTION_BORDER_WIDTH_CLAMP = { min: 0, max: 16 }` px
+  via `readOptionalClampedNumber`; each `style` is `normalizeEnum`-validated against the
+  fixed border-style enum. It emits fixed `border-{edge}-color/-width/-style` declarations
+  on the NORMAL content box AND, for a full-bleed section, on the `100vw` bleed box — never
+  the paint-empty full-bleed content box, and never a raw author value in a free CSS
+  position. The nested `style.border.<edge>.color` optimistic client-state path is also
+  routed through `sanitizeAuthoringCssColor` in `pageEditorMutationActions.ts` (the length-4
+  override path the `[group,key]` destructure would otherwise leave unsanitized). It joins
+  the section `assertKnownKeys` allowlist and BOTH `additionalProperties:false` section-style
+  JSON schema mirrors (the per-breakpoint `partialSectionStyleJsonSchema` AND the inlined
+  top-level section-style schema) in lockstep. Present-only: omitted whole-object when no
+  edge is authored ⇒ byte-identical to post-530. Authored via the per-edge
+  `section.style.border.*` controls.
+
+### Per-device scope (bounded + honest)
+
+Only the NUMERIC `layer.x/y/z` offsets AND the `surfaceTint` COLOR vary per breakpoint —
+`pageResponsiveCss.ts` emits per-property `--layer-*` declarations plus, for
+`surfaceTint` (TASK-524-02), per-breakpoint `--surface-glow`/`--deco-ring`/`--orb-color`
+retargets under the tablet/mobile `@media` rule (serialized `!important` so the delta
+beats the inline base custom prop; gated, like the base resolver, on a plain
+non-gradient tint AND an active `surfacePreset`/`hoverEffect`/decoration motion ∈
+`{radiate,pulse,drift,float}`). Class/data-attr effect deltas remain NOT CSS-expressible
+against the inline base, so `decoration`/`surfacePreset`/`hoverEffect`/`tilt`/
+`composition`/`marquee` stay BASE-ONLY (identical on every breakpoint, their controls
+`responsive: false`); a decoration is HIDDEN on mobile via the existing per-device block
+visibility (`display:none`), not "kept but animation-off".
+
+### Surface+effect co-location — one node, `translate:` anchor (TASK-524-01)
+
+Before 524, `PAGE_COMPOSITION_EFFECTS_CSS` wrote the `[data-layer-anchor]` self-offset
+via `transform: translate(…)`, so a transform-writing effect (`float`/`drift`/`pulse`/
+`orbit` decoration, `lift`/`lift-glow`/`scale` hover) would have clobbered the anchor
+offset on the same node — 522 therefore routed the effect onto an INNER wrapper while
+`data-surface` stayed on the frame, so only the inner content animated and the glass
+surface stayed static. 524-01 switches the nine anchor rules to the **independent CSS
+`translate:` property** (`translate:-100% -100%`, etc.), a separate composited channel
+from `transform`. `splitBlockComposition` (`pageRendererV2.tsx`) now keeps a transform
+decoration/hover **co-located with `data-surface`/`data-layer` on the SAME frame node**,
+so the whole glass card floats/lifts with its content (matching the reference
+`.floating-chip`). **TASK-528 completes the co-location for TILT too**: the tilt
+transform now rides the **FRAME** (`data-block-tilt` co-located with `data-surface`),
+so the ENTIRE glass card tilts on hover (was: tilt on an inner descendant, so only the
+inner content tilted while the glass card stayed flat). Because CSS `perspective` must
+sit on an ANCESTOR of the transformed node, `renderPageBlockWithFrame` wraps the frame
+in a present-only `[data-tilt-parent]` perspective wrapper (`splitBlockComposition`
+exposes `tiltParent`; the frame no longer carries `data-tilt-parent`) — omitted unless
+the block authors tilt, so non-tilt frames render byte-identically. The tilt uses the
+`translate:`-property anchor (524-01) so the anchor offset composes with the tilt
+`transform`; the one rare untested combo is tilt AND a transform-decoration on the same
+block (they contend on the frame `transform` — the reference never combines them: chips
+float, the card tilts). The glass/glass-grid surfaces gained `overflow:hidden` (524-03) so the
+node's own box clips to its inline border-radius throughout the transform (anchored
+chips are `[data-layer]` SIBLINGS in `.cx-layered-canvas`, never DOM children, so they
+are never clipped). The `translate:` property is a CSS Transforms L2 feature
+(Chrome/Edge 104, Firefox 72, Safari 14.1; universal on the 2026 evergreen baseline);
+the swap is motion-neutral (static offsets), so `prefers-reduced-motion` is unchanged.
+
+### Composition CSS + runtime
+
+The static composition CSS (`core/services/pages/pageCompositionEffects.tsx`,
+`PAGE_COMPOSITION_EFFECTS_CSS`) + the resolvers (`resolveBlockCompositionAttrs` /
+`resolveSectionCompositionAttrs` → `data-deco`/`data-surface`/`data-hover`/`data-layer`/
+`data-composition`/`data-marquee`/`data-block-tilt` attributes + CSS custom properties)
+are emitted once in `PageDocumentRender` (front/preview only, never the builder canvas)
+when a 522 effect is authored, alongside 521's runtime. The block-tilt (+ glare)
+pointer math is a small documented duplication of `hero.tsx`'s `HERO_TILT_SCRIPT`
+appended to the shared `pageEffectsRuntime.ts` as a self-gated `[data-block-tilt]`
+binding (its own `matchMedia('(pointer:fine)')` gate; reuses the module reduced-motion
+early-return).
+
+## Page Canvas Background & Occlusion-Proof Cursor Spotlight — TASK-523
+
+TASK-523 extends the same page-settings + page-render seams landed by TASK-521,
+riding existing `currentData.settings` jsonb with **no migration, no
+`PAGE_DOCUMENT_SCHEMA_VERSION` bump (stays `2`), no npm dependency**. Both deliverables
+are **present-only** (omitted when unset ⇒ `defaultSettings` and legacy/post-522
+documents AND the `<Root>` stay byte-identical) and join the **reject-unknown
+allowlist** (`assertKnownKeys` + strict `pageDocumentV2JsonSchema`
+`additionalProperties: false`) with round-trip tests.
+
+### `settings.background` — per-page canvas background
+
+`settings.background` is a present-only per-page canvas background: a safe solid color
+OR CSS gradient. It normalizes on write (`normalizeSettings`) and re-sanitizes at render
+(`PageDocumentRender`, defence-in-depth) through the SINGLE color/gradient path
+`sanitizeAuthoringCssBackground` — a value that fails the sanitizer returns `null` and
+the key is dropped (fail-soft). When present it is emitted as an inline
+`style.background` on the page `<Root>`, overriding the default `min-h-screen bg-white
+text-slate-950` utility; when absent, `rootStyle` stays `undefined` and `<Root>` is
+byte-identical to post-522. The compact page-settings panel exposes a **Design →
+"Page background"** control (the shared color-only `ColorSwatchControl`, alpha-capable
+via the TASK-519 custom input) that writes `settings.background` onto the LIVE document
+draft via `setDocumentDraft` (persisted on every save/publish, mirroring the spotlight
+color; clearing drops the key). **Gradients are model/import-only** — they round-trip
+and render through `settings.background`, but the panel widget authors solid colors only.
+
+**Gradient hardening (was TASK-523 FU-1, landed here).** `isSafeAuthoringCssGradient`
+(`pageAuthoringSanitizers.ts`) now rejects any `url(` token AND any top-level
+comma-separated multi-layer form (`isSingleGradientLayer` — one gradient head + its
+balanced parens and nothing after the matching close paren). This closes the
+`linear-gradient(...), url(//evil/beacon.png)` outbound-fetch layer and the nested
+`radial-gradient(circle,url(//x))` case that the pre-523 charset admitted as an inert
+malformed gradient. The charset already excluded `;`/`{`/`}`/`<`/`>`/`:` (no declaration
+or `</style>` breakout); this closes the residual `url()`-layer surface too.
+
+### Occlusion-proof cursor spotlight (`PAGE_SPOTLIGHT_CSS`)
+
+The 521 cursor-follow spotlight overlay previously painted at `z-0`, BEHIND opaque
+section backgrounds, so the glow was only visible through translucent glass/SVG
+surfaces. TASK-523-02 makes it occlusion-proof:
+
+- The overlay's **static layering is a NON-gated base rule**:
+  `position:fixed;inset:0;z-index:30;mix-blend-mode:screen;pointer-events:none`. It sits
+  ABOVE opaque section content and ADDS light (screen blend) without hiding content or
+  blocking clicks. The moving `radial-gradient` stays inside
+  `@media (prefers-reduced-motion: no-preference)`, so reduced-motion users get a
+  correctly-layered but MOTIONLESS (no-gradient) overlay.
+- **Nav-safe:** the overlay z-index (`30`) is STRICTLY BELOW the front sticky nav
+  (`sticky z-40`) so screen-blend never tints the menu bar. The inequality holds because
+  `<Root>` forms no stacking context and nav + `PageDocumentRender` are sibling fragment
+  children; it is FRAGILE (a future `transform`/`filter`/`opacity`/`will-change`/
+  `isolation` ancestor would trap the fixed overlay above the nav) so it is HELD IN A
+  TEST, and `isolation:isolate` is the deliberate NON-choice on `<Root>`.
+- The only other author-controllable surface in the same root stacking context is a
+  layered-canvas `[data-layer]` (`layer.z` → `z-index`); its bound
+  `PAGE_LAYER_Z_CLAMP.max` was lowered from `40` to `20`, STRICTLY BELOW the overlay's
+  `30`, so no authored layer can reach the spotlight and occlude the glow. Invariant:
+  `PAGE_LAYER_Z_CLAMP.max (20) < overlay z-index (30) < nav z-index (40)`.
+
+## Declarative Interactivity — Tabs/Switcher, Filterable Gallery, Polish — TASK-534
+
+TASK-534 (Bundle D of the page-toolkit fidelity program; absorbs TASK-527) adds a
+cohesive family of DECLARATIVE interactivity, closing `_TMP-cms-ograniczenia.md` §1
+("Brak interaktywności JS") and reproducing `_docs/projekty-domow-wow-site`. Every
+addition is **present-only** (omitted when unauthored ⇒ the document AND HTML stay
+byte-identical to post-530/535), joins the **reject-unknown allowlist**
+(`assertKnownKeys` + strict `pageDocumentV2JsonSchema` `additionalProperties: false`)
+with a round-trip test, and needs **no npm dependency, no DB migration, no
+`PAGE_DOCUMENT_SCHEMA_VERSION` bump (stays `2`), no new route/RBAC**. The behaviour
+rides the **ONE existing** `pageEffectsRuntime.ts` `<script>` as static,
+dependency-free IIFE clauses (no interpolation of stored data) and is
+`prefers-reduced-motion` + keyboard + aria-tablist safe.
+
+### Segmented `switcher` / tabs block (absorbs TASK-527)
+
+`switcher` is a NEW `pageBlockTypes` member added the `customSvg` way — ATOMICALLY
+across every exhaustive `Record<PageBlockType, …>` surface (`pageBlockTypes`,
+`pageBlockPropKeys`, `pageBlockDefaultProps`, `realRuntimeBlockTypes`,
+`editorInsertableBlockTypes`, `layoutBlockTypes`, `pageBlockRenderDefaults.ts`,
+`pageEditorOptions.ts` `blockOptionCopy`, `pageEditorControlRegistry.ts`
+`pageBlockControlRegistry`, and the test-tree `pageEditorBlockLabels`) so root `tsc`
+stays green. Its N labelled panels live in SIX new `panel:1..panel:6`
+`pageBlockSlotKeys` slots; `switcher` joins `layoutBlockTypes` so
+`getPageBlockActiveSlotKeys` returns its panel slots (schema + normalize slot
+validation read `pageBlockCapabilities[type].slots`). Props: `variant`
+(`normalizeEnum` fail-closed), `activeIndex` (clamped), and up to six free-text tab
+`{label}` records (rendered as escaped React TEXT nodes — never
+`dangerouslySetInnerHTML`). The renderer emits a real `role="tablist"` with N
+`role="tab"` (roving `tabindex`, `aria-selected`, `aria-controls`) and N
+`role="tabpanel"` (`aria-labelledby`, resting `hidden` on inactive panels for no-JS
+progressive enhancement). The runtime clause toggles the active panel on click and
+roves selection on ArrowLeft/Right/Up/Down/Home/End; it sits BEFORE the reduced-motion
+whole-IIFE early-return so it works for reduce users (the crossfade is CSS
+`motion-safe:`-guarded).
+
+### Filterable gallery/portfolio
+
+Present-only `filterable` + `filterCategories` props on the EXISTING `gallery` block,
+plus an optional per-item `category` — a SPACE-SEPARATED SET of single kebab tokens
+`^[\w-]{1,48}$`, out-of-pattern tokens DROPPED fail-soft at BOTH write and render. The
+renderer emits a `role="tablist"` chip bar (`[data-gallery-filter]`, `[data-filter]`
+chips) above the grid and stamps each figure with `[data-filter-item]` +
+`data-category`; the runtime shows/hides items on chip click via
+`cat.split(" ").indexOf(f)` (token-split — no substring false positive, no
+`innerHTML`/`eval`). Unset ⇒ `renderGallery` output is byte-identical. The `gallery`
+block is now editor-insertable (its `gallery-editor-controls-pending` capability reason
+is cleared now that the filter/layout controls shipped).
+
+### Polish — noise overlay, scroll-hint, magnetic
+
+- **Noise/grain overlay** — present-only `PageEffectsV2.noiseOverlay` (page root) and
+  `PageSectionStyleV2.noiseOverlay` (section). Paints a STATIC self-generated
+  SVG-turbulence layer (`pageInteractivityGlyphs.tsx` data-URI — no asset, no author
+  color, no `sanitizeAuthoringCssBackground` relaxation). Renders identically under
+  reduced-motion; `[data-noise-host]{position:relative}` supplies the positioning
+  context for the `inset:0` overlay. CSS/static — does NOT widen `anyMotion`.
+- **`scrollHint` block** — a NEW `pageBlockTypes` member (customSvg pattern): a
+  CSS-keyframe-only `aria-hidden` dot/chevron (`glyph` enum, `normalizeEnum`
+  fail-closed) with an optional `sr-only` `label`. The bob is `@media
+  (prefers-reduced-motion: no-preference)`-gated; NO runtime.
+- **Magnetic button** — present-only `PageBlockStyleV2.magnetic` (`readBoolean`). A NEW
+  clause in `PAGE_EFFECTS_RUNTIME_SOURCE` (after the 522 `[data-block-tilt]` clause)
+  attracts `[data-magnetic]` toward the pointer, transforms only, rAF + `passive`,
+  clamped ±14px. Placed AFTER the reduced-motion early-return (motion suppressed for
+  reduce) behind its own `matchMedia('(pointer:fine)')` gate (no magnet on touch).
+
+### Runtime — one `<script>`, split placement + CSS
+
+All three clauses live in the single `PAGE_EFFECTS_RUNTIME_SOURCE`; the SINGLE emit in
+`PageDocumentRender` carries them, its `anyMotion` predicate OR-widened (append-only) by
+a new `usesInteractivityRuntime(document)` resolver (`pageCompositionEffects.tsx`) that
+returns true only for RUNTIME-BEARING surfaces (switcher / filterable gallery /
+magnetic) — scrollHint + noise are CSS/static and do NOT widen it. Interaction TOGGLES
+(switcher, filter) sit BEFORE the reduced-motion early-return (accessibility — they must
+work for reduce users); the magnetic MOTION clause sits AFTER it. Idempotent via the
+existing per-window init flag (535). `PAGE_INTERACTIVITY_CSS` (present-only emit) styles
+the tab bar (horizontal-scroll on mobile), pill/underline selected states via
+`var(--primary)`, panel crossfade + filter fade + magnetic transition (all inside
+`prefers-reduced-motion: no-preference`), while the FUNCTIONAL `[hidden]` / `.is-hidden`
+`display:none` rules sit OUTSIDE the guard so tabs/filters WORK for reduce users.
+
 ## Public Runtime
 
 Pages v2 section/block rendering is owned by
@@ -907,11 +1521,13 @@ Section-template wrappers (`data-page-media-split-zone`,
 renderer path and compose existing child blocks instead of introducing
 widget-template runtime dependencies.
 
-For resolved `full-width` variants, the outer section band must not add the
-default page gutter. The painted content node already owns background, spacing,
-grid, and `max-width: none`; keeping wrapper `px`/`py` on the outer `<section>`
-would leave white strips around hero/CTA backgrounds and break the full-bleed
-authoring contract.
+For resolved `full-width` variants (and any `style.fullBleed` section), the outer
+section band must not add the default page gutter. Since TASK-525 the background is
+DECOUPLED from the content cap: the OUTER `<section>` carries the `100vw` full-bleed
+BACKGROUND box (`toPageSectionBleedStyle`) while the inner content node stays
+capped/centered at `section.layout.maxWidth` (no longer `max-width: none`) with a fixed
+20px side gutter. Keeping wrapper `px`/`py` on the outer `<section>` would leave white
+strips around hero/CTA backgrounds and break the full-bleed authoring contract.
 
 The shared renderer owns block frame render props for `PageBlockStyleV2`:
 width/alignment classes, text/background variables, opacity, radius, border,
@@ -926,15 +1542,12 @@ runtime output by default. Admin preview may opt into hidden blocks through the
 renderer extension point and must render them as selectable ghost chrome instead
 of public content.
 
-Non-Page surfaces keep their widget contracts:
-- widget templates,
-- custom screens,
-- detail pages,
-- post/content block runtimes.
-
-Those surfaces remain on `documentContract: "legacy-widget-block-contract"` and
-own `WidgetBlock[]` data until a dedicated migration changes them. The Page
-Templates contract is frozen by TASK-420-02 in the
+Non-Page active editors keep domain-owned section/block contracts. Custom
+Screens V4 own `document.sections[].blocks[]`; Posts and content/detail editors
+own their bounded block documents. Retained widget-template/detail rows may
+still pass through `documentContract: "legacy-widget-block-contract"` and a
+`WidgetBlock[]` read/runtime adapter, but that compatibility label is not an
+authoring surface. The Page Templates contract is frozen by TASK-420-02 in the
 "Page Templates (Reusable Page v2 Templates)" section below and implemented by
 TASK-420-03, which also deleted the obsolete widget-template product surface
 (routes, preview target, admin UI, cached clients).
@@ -1182,6 +1795,65 @@ whitespace is OMITTED sparse). Fallback CHAIN, identical on front AND canvas:
 `brand.props.text` → `siteName` (`site.name` setting) → `null` (renders
 nothing). `createDefaultMenuBlock("brand")` and the legacy adapter stay
 textless (inherit the site name). The canvas no longer renders the menu name.
+
+**Scrolled/floating-state colors, menu-bar card radius, custom shadow & brand
+icon/combo (TASK-520):** No `schemaVersion` bump (`MENU_DOCUMENT_SCHEMA_VERSION`
+stays `1`), no route/RBAC/migration; `MenuAppearance`/`SHELL_APPEARANCE_DEFAULTS`
+are UNTOUCHED so `buildSiteShellCss(null)` stays byte-identical. All new keys are
+**present-only** (zero bytes when unauthored ⇒ legacy docs byte-identical) and
+join a reject-unknown allowlist + a round-trip test (fail-closed READ trap). The
+new bar keys are held OUT of `MENU_BAR_LAYOUT_KEYS`/`SHELL_APPEARANCE_DEFAULTS`,
+so they have NO seeded resolver default and their editor controls render NO
+`ControlDefaultHint` (per the 507 `value===undefined ⇒ null` guard).
+
+- **Menu-bar extra keys (`MenuBarLayout`, intersection extension — NOT
+  `MenuAppearance` members).** A NEW sibling allowlist `MENU_BAR_EXTRA_KEYS` gates
+  six non-appearance keys; `normalizeMenuBarLayout` is SPLIT — the appearance
+  subset routes through `normalizeAppearanceSubset` (over `MENU_BAR_LAYOUT_KEYS`
+  only), the extra keys through local fail-soft value normalizers; a key in
+  NEITHER allowlist throws `MenuDocumentError(path.key)`, bad VALUES fail-soft
+  (omit):
+  - `radius?: number` (0..40 px, `MENU_BAR_LAYOUT_NUMBER_RANGES.radius`) — the
+    level-0 floating-card border-radius (submenu `NavLevelStyle.radius` was ≥1
+    only). Per-device via the existing `section.responsive[bp].layout` channel.
+  - `shadowCustom?: string` — a validated raw `box-shadow` value that OVERRIDES
+    the `shadow` none|sm|md enum at emission (the enum stays the quick preset, the
+    custom string is the escape hatch; owner token `0 18px 50px rgba(0,0,0,.24)`).
+  - `surfaceColorScrolled?` / `borderColorScrolled?` (`normalizeMenuColorValue`,
+    alpha OK) + `borderWidthScrolled?` (0..8, reuses `borderWidth` range) +
+    `shadowScrolled?` (none|sm|md) + `shadowCustomScrolled?` (validated box-shadow,
+    OVERRIDES `shadowScrolled`) — the **scrolled/floating-state variants**. Each
+    unset variant falls back to the corresponding BASE key (back-compat: a sticky
+    bar with no scrolled variant looks identical scrolled and at rest).
+- **Custom box-shadow validator (`normalizeMenuBoxShadowValue`,
+  security-critical).** Accepts ONLY a bounded grammar: optional leading `inset`,
+  up to 4 length values (`-?\d+(px|rem|em)`), and ONE color token validated via
+  `normalizeMenuColorValue`, comma-repeated up to 4 layers, total ≤200 chars;
+  the whitespace split is BRACKET-AWARE (`rgba(0,0,0,.24)` is ONE token, split
+  only at bracket-depth 0) and leading-dot alpha is canonicalized consistent with
+  the 519 color input. REJECTS any `url(`, `expression(`, `javascript:`,
+  `image-set(`, `/*`, `<`, `>`, `{`, `}`, `;`, `@`, backslash, or off-grammar
+  token. Invalid ⇒ dropped (present-only, fail-soft).
+- **Brand icon mode + graphic-with-text combo (`BrandProps`/`BrandStyle`).**
+  `BRAND_PROP_KEYS` gains `"icon"`, `"showText"`; `BRAND_STYLE_KEYS` gains
+  `"iconColor"`, `"iconSize"`; `BRAND_STYLE_NUMBER_RANGES` gains `iconSize
+  [12,64]`. `BrandProps.mode` widens to `"text" | "image" | "icon"`.
+  - `icon?: string` — a validated kebab lucide name (`normalizeBrandIconName`
+    pattern `^[a-z0-9-]{1,64}$`, fail-soft omit) resolved at RENDER against
+    `lucideKebabIconComponents` (the lucide set = effective allowlist; an
+    unknown/unresolvable name falls through to the text/site-name chain — never a
+    broken mark). Icon color via `iconColor` (`normalizeMenuColorValue`, alpha OK
+    via 519) and size via `iconSize`.
+  - `showText?: boolean` — the graphic-with-text COMBO. When a graphic mode
+    (`"image"|"icon"`) ALSO sets `showText:true`, `BrandRender` emits the graphic
+    AND the text wordmark side by side. Unset `showText` = today's exclusive
+    text-XOR-graphic behavior (back-compat).
+- **Scroll-state machine (front only).** `SiteHeaderMenuDocumentRender` emits a
+  tiny dependency-free idempotent inline IIFE (no npm dep, respects
+  `prefers-reduced-motion`) that toggles `data-scrolled` on the header past a
+  small threshold — emitted ONLY when a scrolled variant is authored AND the bar
+  is sticky (a legacy/non-sticky/no-variant doc emits NO script). The CSS emits
+  `[data-scrolled="true"]` scrolled-variant declarations; the base paints at rest.
 
 **Device-defining nav props carve-out (TASK-502, conscious):**
 `MENU_NAV_DEVICE_DEFINING_KEYS = ["mobileMode","dropdownDirection"]` are
@@ -1535,9 +2207,11 @@ through the autosave delete route.
 ## Assistant Contract
 
 Assistant Page actions emit or update `sections[]`. `page.widget.patch` is
-retired for Pages and is rejected by the strict action plan schema. Reusable
-widget-template edits still use widget-template actions, and custom-screen
-widget edits still use custom-screen actions.
+retired for Pages and is rejected by the strict action plan schema. Custom
+Screen V4 mutations use screen-owned `section`/`block` actions. Retained
+widget-template actions are legacy data-maintenance compatibility only; they
+must not be advertised as reusable-template authoring. Current reusable Page
+layouts use Page Templates and Page-owned `sections[]`.
 
 `page.upsert.sections[]` normalizes through `pageDocumentV2` before action plan
 acceptance, then the assistant schema rejects Page section/block types outside

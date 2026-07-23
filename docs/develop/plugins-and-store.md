@@ -32,7 +32,18 @@ A plugin declares what it provides under `provides`. The valid keys are:
 modules · widgets · presets · templates · routes
 ```
 
-`provides.modules` entries must be a core module id (`engine`, `entries`, `widgets`, …) or a plugin-scoped `plugin:<plugin-id>/<module>` — anything else is `plugin_manifest_modules_invalid`. Core keeps a normalized, in-memory contributions registry per plugin, reset on full reload and on per-plugin updates.
+`provides.widgets` denotes Admin Dashboard widget contributions. It does not
+create a generic Page/Form/Menu/Post/Screen widget surface; content extensions
+use `registerBlocks` and the owning editor contract. The legacy `widgets` core
+module id can still normalize for manifest compatibility. `provides.presets`
+and `provides.templates` are also retained manifest aliases only; they do not
+create generic presets/templates without a separately typed Page/domain owner.
+`provides.modules`
+entries must otherwise be a current core module id (`engine`, `entries`, …) or
+a plugin-scoped `plugin:<plugin-id>/<module>` — anything else is
+`plugin_manifest_modules_invalid`. Core keeps a normalized, in-memory
+contributions registry per plugin, reset on full reload and on per-plugin
+updates.
 
 ### Safe relative routes
 
@@ -138,7 +149,13 @@ export default definePlugin((ctx) => {
 
 Solution kits are starter packs across six verticals (`automotive-workshop`, `medical-clinic`, `beauty-salon`, `local-service-business`, `services-directory`, `small-ecommerce`). Each seeds a content type, a form, pages, menus, and derived template seeds. The manifest type `SolutionKitManifest` lives in `core/services/kits/kitManifest.ts`.
 
-Install is **internal only** and two-phase via `POST /admin/api/solution-kits/:id/apply`: (1) core resources via `solutionKitsInstallService`; (2) template seeds via `templateInstaller`. Run metadata records a manifest snapshot, `templateInstallSummary`, and `templateRollbackPlan`.
+Install is **internal only**. The current second phase through
+`templateInstaller` is temporary legacy data-layer compatibility for existing
+kit manifests; it may maintain already defined hidden rows but must not accept
+new `WidgetBlock[]` seeds or become a user-facing authoring surface. New kit
+composition belongs to Page Templates and domain-owned sections/blocks. Run
+metadata still records `templateInstallSummary` and `templateRollbackPlan` so
+existing installs remain rollback-safe until that writer is migrated.
 
 Template seeds carry an idempotent ownership marker appended to their description:
 
@@ -152,7 +169,8 @@ A managed template with the same payload is a `noop`; a different payload is an 
 
 1. **Scaffold** an ESM TypeScript package. Add `peerDependencies` `react`, `react-dom`, `@core/sdk` (matching core's major); add `@core/sdk` as a devDependency for types.
 2. **Author the server entry**: `export default definePlugin((ctx) => {…})`. Register hooks/routes/settings; keep import side-effect-free and `register` idempotent.
-3. **(Optional) client entry**: `defineAdmin` / `registerBlocks` for admin pages, widgets, or content blocks.
+3. **(Optional) client entry**: `defineAdmin` / `registerBlocks` for admin pages,
+   Admin Dashboard widgets, or editor-owned content blocks.
 4. **Declare routes safely**: relative paths, each listed in `provides.routes`; write methods get a `permission` listed in `permissions`.
 5. **Write `plugin.json`**: `id` (= `name`), `version`, `targetApiVersion: "1"`, `targetCoreVersion`, `entry`, `provides`, `permissions`, `dependencies`, `featureFlags`, `migrations`, `integrity`. Dry-run validate with `POST /admin/api/plugins/manifest/validate`.
 6. **Bundle to ESM**: produce `dist/server.mjs` (default `register`), optional `dist/client.mjs`, optional `dist/style.css`. Mark all externals external; prefix CSS classes `.plugin-<name>-*`.

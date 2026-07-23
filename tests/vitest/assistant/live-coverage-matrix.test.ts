@@ -6,6 +6,7 @@ import { buildDefaultNavSections } from "../../../core/admin/ui/navigation/sideb
 import { ADVANCED_MODULE_REGISTRY } from "../../../core/admin/ui/navigation/advancedModules";
 import { settingsSidebarItems } from "../../../core/admin/ui/settings/SettingsSidebar";
 import { assistantOperationPolicy } from "../../../core/services/assistant/operationPolicy/assistantOperationPolicy";
+import { assistantPolicyCoverageStates } from "../../../core/services/assistant/operationPolicy/policyTypes";
 import {
   buildAdminNavigationRoutes,
   buildLiveCoverageRouteMap,
@@ -26,7 +27,7 @@ const coverageRows = matrix
   });
 
 const coveredRoutes = new Set(coverageRows.map((row) => row.route));
-const coverageStates = new Set(["live-execute", "live-read-only", "live-gated", "not-applicable"]);
+const coverageStates = new Set<string>(assistantPolicyCoverageStates);
 const policyRoutes = buildLiveCoverageRouteMap(assistantOperationPolicy);
 
 test("LLM Guide live coverage matrix includes every admin nav route", () => {

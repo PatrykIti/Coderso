@@ -1,13 +1,18 @@
 import type { CSSProperties, ComponentType } from "react";
 
 import type { NormalizedFormField } from "../../services/forms/validation";
+import {
+  CSS_COLOR_SCHEMA_PATTERNS,
+  CSS_COLOR_VALUE_MAX_LENGTH,
+  normalizeCssColorValue,
+} from "../../services/theme/cssColorContract";
 import type {
   WidgetDefinition,
   WidgetEditorContract,
   WidgetEditorProps,
   WidgetRenderContext,
 } from "../types";
-import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
 import { getFormRuntimeClientScript } from "./formRuntimeScript";
 import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 
@@ -184,10 +189,16 @@ const joinClasses = (...classes: Array<string | undefined | false>) =>
 const safeFieldNamePattern = /^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$/;
 const safeEventNamePattern = /^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,63}$/;
 const safeFormIdPattern = /^[a-zA-Z0-9_-]{1,128}$/;
-const safeCssVariablePattern = /^var\(--color-[a-z0-9-]+\)$/;
-const safeHexColorPattern = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
-const safeRgbColorPattern =
-  /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*((?:0|1|0?\.\d+)))?\s*\)$/i;
+const newsletterColorValueSchema = {
+  anyOf: [
+    { const: "" },
+    {
+      type: "string",
+      maxLength: CSS_COLOR_VALUE_MAX_LENGTH,
+      pattern: CSS_COLOR_SCHEMA_PATTERNS.authoring,
+    },
+  ],
+} as const;
 const newsletterFormsRoutePattern = /^\/forms\/[a-zA-Z0-9_-]+\/submissions$/;
 const newsletterRuntimeFieldTypes = new Set<NormalizedFormField["type"]>([
   "text",
@@ -344,10 +355,10 @@ export const newsletterSchema = {
         spacing: { enum: ["none", "sm", "md", "lg", "xl"] },
         alignment: { enum: ["start", "center", "end"] },
         width: { enum: ["narrow", "default", "wide", "full"] },
-        background: { type: "string" },
-        textColor: { type: "string" },
-        buttonBackground: { type: "string" },
-        buttonTextColor: { type: "string" },
+        background: newsletterColorValueSchema,
+        textColor: newsletterColorValueSchema,
+        buttonBackground: newsletterColorValueSchema,
+        buttonTextColor: newsletterColorValueSchema,
       },
     },
     resolved: {
@@ -635,15 +646,8 @@ const resolveUniqueFieldName = ({
   return unique;
 };
 
-const normalizeNewsletterColorValue = (value: string | undefined) => {
-  const resolved = resolveClearableStyleValue(value);
-  const trimmed = resolved?.trim() ?? "";
-  if (!trimmed) return undefined;
-  if (trimmed === "transparent") return trimmed;
-  if (safeHexColorPattern.test(trimmed) || safeRgbColorPattern.test(trimmed)) return trimmed;
-  if (safeCssVariablePattern.test(trimmed)) return trimmed;
-  return undefined;
-};
+const normalizeNewsletterColorValue = (value: unknown) =>
+  normalizeCssColorValue(value, "authoring");
 
 const resolveNewsletterSpacing = (value: string | undefined): NewsletterSpacing => {
   if (value === "none" || value === "sm" || value === "md" || value === "lg" || value === "xl") {
@@ -694,7 +698,7 @@ const resolveNewsletterOptInMode = (value: string | undefined): NewsletterOptInM
 };
 
 const resolveNewsletterOptInEnforcement = (
-  value: string | undefined
+  _value: string | undefined
 ): NewsletterOptInEnforcement => {
   return "provider-owned";
 };
@@ -823,7 +827,6 @@ export function normalizeNewsletterData(data: NewsletterData): NormalizedNewslet
   const formDefaults = newsletterDefaults.form ?? {};
   const submitDefaults = newsletterDefaults.submit ?? {};
   const consentDefaults = newsletterDefaults.consent ?? {};
-  const submissionDefaults = newsletterDefaults.submission ?? {};
   const optInDefaults = newsletterDefaults.optIn ?? {};
   const hasStyleObject = data.style !== undefined;
   const usedFieldNames = new Set<string>();
@@ -930,13 +933,13 @@ export function normalizeNewsletterData(data: NewsletterData): NormalizedNewslet
 }
 
 const resolveFieldTextColor = (color: string | undefined) =>
-  color && color.trim().length > 0 ? color : "var(--color-text)";
+  resolveClearableCssColorValue(color, "authoring") ?? "var(--color-text)";
 
 const resolveButtonBackground = (color: string | undefined) =>
-  color && color.trim().length > 0 ? color : "var(--color-primary)";
+  resolveClearableCssColorValue(color, "authoring") ?? "var(--color-primary)";
 
 const resolveButtonTextColor = (color: string | undefined) =>
-  color && color.trim().length > 0 ? color : "var(--color-bg)";
+  resolveClearableCssColorValue(color, "authoring") ?? "var(--color-bg)";
 
 const getFirstNameInputType = () => "text";
 
@@ -1083,7 +1086,7 @@ export function NewsletterBlock({
   const textColor = resolveFieldTextColor(style.textColor);
   const sectionStyle: CSSProperties =
     compactStyle({
-      backgroundColor: style.background,
+      backgroundColor: resolveClearableCssColorValue(style.background, "authoring"),
     }) ?? {};
   const buttonStyle: CSSProperties =
     compactStyle({
@@ -1189,10 +1192,15 @@ export function NewsletterBlock({
         aria-label={titleId ? undefined : "Newsletter signup"}
       >
         {resolved?.submissionNonce && canUseFormsRuntime ? (
-          <input type="hidden" name="__nl_form_nonce" value={resolved.submissionNonce} />
+          <input
+            type="hidden"
+            name="__nl_form_nonce"
+            value={resolved.submissionNonce}
+            data-form-security-nonce="1"
+          />
         ) : null}
         {resolved?.botProtection?.siteKey && canUseFormsRuntime ? (
-          <input type="hidden" name="captchaToken" value="" />
+          <input type="hidden" name="captchaToken" value="" data-form-security-captcha="1" />
         ) : null}
 
         <div data-form-embed-form-body="true" className="space-y-3">

@@ -1,7 +1,11 @@
 import type { CSSProperties, ComponentType } from "react";
 
+import {
+  CSS_COLOR_SCHEMA_PATTERNS,
+  CSS_COLOR_VALUE_MAX_LENGTH,
+} from "../../services/theme/cssColorContract";
 import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
-import { resolveClearableStyleValue } from "./clearableStyle";
+import { resolveClearableCssColorValue } from "./clearableStyle";
 import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 import { resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
@@ -188,6 +192,17 @@ const galleryMosaicStyleKeys = new Set([
 const galleryMosaicItemMin = 1;
 export const galleryMosaicItemMax = 16;
 
+const galleryMosaicOverlaySchema = {
+  anyOf: [
+    { const: "" },
+    {
+      type: "string",
+      maxLength: CSS_COLOR_VALUE_MAX_LENGTH,
+      pattern: CSS_COLOR_SCHEMA_PATTERNS["inherited-render"],
+    },
+  ],
+} as const;
+
 export const galleryMosaicSchema = {
   type: "object",
   additionalProperties: false,
@@ -236,7 +251,7 @@ export const galleryMosaicSchema = {
         ratio: { enum: ["1:1", "4:3", "16:9", "3:4"] },
         gap: { enum: ["none", "sm", "md", "lg"] },
         radius: { enum: ["none", "md", "lg", "xl"] },
-        overlay: { type: "string" },
+        overlay: galleryMosaicOverlaySchema,
         captionPosition: { enum: ["inside", "below", "hover"] },
         layoutDensity: { enum: ["auto", "compact", "balanced", "dense"] },
         motionPreset: { enum: ["none", "fade", "slide-up"] },
@@ -658,7 +673,7 @@ export function normalizeGalleryMosaicData(data: GalleryMosaicData): GalleryMosa
       gap: resolveGalleryMosaicGap(data.style?.gap),
       radius: resolveGalleryMosaicRadius(data.style?.radius),
       overlay: hasStyleObject
-        ? resolveClearableStyleValue(data.style?.overlay)
+        ? resolveClearableCssColorValue(data.style?.overlay, "inherited-render")
         : styleDefaults.overlay,
       captionPosition: resolveGalleryMosaicCaptionPosition(data.style?.captionPosition),
       layoutDensity: resolveGalleryMosaicLayoutDensity(data.style?.layoutDensity),
@@ -1281,7 +1296,7 @@ export function GalleryMosaicBlock({
   const gap = resolveGalleryMosaicGap(style.gap);
   const radius = resolveGalleryMosaicRadius(style.radius);
   const captionPosition = resolveGalleryMosaicCaptionPosition(style.captionPosition);
-  const overlay = resolveClearableStyleValue(style.overlay);
+  const overlay = resolveClearableCssColorValue(style.overlay, "inherited-render");
   const items = normalizeGalleryMosaicItems(normalized.items);
   const interactionMode = resolveGalleryMosaicInteractionMode(interaction.mode);
   const lightboxZoom = resolveGalleryMosaicLightboxZoom(interaction.zoom);

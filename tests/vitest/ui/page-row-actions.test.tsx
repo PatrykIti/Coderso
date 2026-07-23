@@ -99,6 +99,8 @@ test("PageRowActions routes actions and disables publish/delete when unavailable
     const deleteButton = buttons.find((button) => button.textContent?.includes("Delete"));
 
     expect(trigger).toBeDefined();
+    expect(trigger?.getAttribute("aria-label")).toBe("Page actions");
+    expect(trigger?.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
     expect(publishButton?.hasAttribute("disabled")).toBe(false);
     expect(unpublishButton?.hasAttribute("disabled")).toBe(true);
     expect(deleteButton?.hasAttribute("disabled")).toBe(true);
@@ -134,6 +136,7 @@ test("PageRowActions enables unpublish/delete for published pages and respects d
       onUnpublish={onUnpublish}
       onDelete={onDelete}
       disabled
+      actionLabel="Actions for Home page"
     />
   );
 
@@ -145,6 +148,7 @@ test("PageRowActions enables unpublish/delete for published pages and respects d
     const deleteButton = buttons.find((button) => button.textContent?.includes("Delete"));
 
     expect(trigger?.hasAttribute("disabled")).toBe(true);
+    expect(trigger?.getAttribute("aria-label")).toBe("Actions for Home page");
     expect(publishButton?.hasAttribute("disabled")).toBe(true);
     expect(unpublishButton?.hasAttribute("disabled")).toBe(false);
     expect(deleteButton?.hasAttribute("disabled")).toBe(false);

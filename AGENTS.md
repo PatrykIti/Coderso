@@ -10,6 +10,31 @@ Follow these rules when working in this repo:
 - Fix lint/typecheck warnings (e.g., `any`) instead of ignoring; treat as potential security risks.
 - Documentation may be in Polish, but code, code comments, and coding style must be in English.
 
+## File Size and Modularity
+
+- A human-authored production module or test file must contain at most 1,000
+  physical lines after a task closes. Count the complete file, including blank
+  lines and comments, because they still contribute to review and verification
+  cost.
+- Do not create, merge, or close work that leaves a touched production module or
+  test file above this limit. If a legacy file already exceeds 1,000 lines,
+  split it by cohesive responsibility as part of the same substantive change
+  before adding further behavior; keep imports and public contracts stable where
+  backward compatibility requires it.
+- Extract domain logic, fixtures, builders, and focused suites into clearly named
+  files instead of moving arbitrary line ranges or creating generic dumping-ground
+  helpers. Every extracted test file must remain independently runnable in its
+  owning test lane.
+- Generated artifacts, lockfiles, vendored code, database snapshots, and generated
+  migration metadata are exempt. A file is not exempt merely because splitting it
+  is inconvenient.
+- Before task closure, run a line-count check over every added or modified
+  production module and test file. Treat any result above 1,000 as a failed gate,
+  not as a non-blocking LOW or a `TASK-9999` candidate.
+- Measure that touched-file scope from the verified pre-task or pre-family baseline
+  through the final working tree, including files committed during intermediate
+  checkpoints. Staging or committing work must never reset or narrow the gate.
+
 ## Repo Index
 
 Start here for contributor and agent context.
@@ -32,7 +57,8 @@ Human-facing documentation lives in `docs/`:
 - `docs/guide/` - end-user product docs; also the AI assistant knowledge corpus
   (ingested from `docs/guide/` via `POST /assistant/reindex`)
 - `docs/develop/` - developer/contributor handbook (setup, architecture, runtime
-  model, content/widgets, plugins, assistant, testing, security, contributing)
+  model, content sections/blocks, Dashboard widgets, plugins, assistant,
+  testing, security, contributing)
 
 Primary internal/agent docs live in `_docs/`:
 
@@ -58,9 +84,11 @@ Primary internal/agent docs live in `_docs/`:
 - `_docs/SDK_SPEC.md` - plugin SDK contract
 - `_docs/STORE_SPEC.md` - store + security pipeline
 - `_docs/TESTING_STRATEGY.md` - target hybrid testing model for Bun runtime and Vitest coverage lanes
-- `_docs/WIDGETS.md` - core widgets and configuration model
-- `_docs/_WIDGETS/README.md` - widgets index and per-widget docs
-- `_docs/DASHBOARD_WIDGETS_SPEC.md` - admin dashboard widgets & configurable panels (distinct from `core/widgets/*`: admin-only registry, RBAC, cache family, and render host)
+- `_docs/WIDGETS.md` - historical `core/widgets/*` runtime/read-compatibility
+  model; not a new authoring surface
+- `_docs/_WIDGETS/README.md` - historical renderer compatibility index
+- `_docs/DASHBOARD_WIDGETS_SPEC.md` - the only configurable product-widget
+  surface: admin-only registry, RBAC, cache family, preferences, and render host
 - `_docs/_TASKS/README.md` - tasks index
 - `_docs/_CHANGELOG/README.md` - changelog index
 - `_docs/_workflows/` - multi-agent workflow scripts (`task-###-author-audit.mjs`,
@@ -91,6 +119,9 @@ Testing docs:
   task before implementation. Do not silently downgrade agreed scope to a
   smaller MVP.
 - Use `_docs/_TASKS/TASK-###_Short_Title.md` for board-level task files unless a dedicated migration task renames a board family.
+- `TASK-9999` is the sole reserved four-digit sentinel exception to the
+  `TASK-###` naming rule. It is the permanent deferred-LOW family described
+  below; do not allocate any other four-digit task ID.
 - Use physical child files for implementation work that is too large for one task file:
   - `TASK-###-NN-Title.md` for a technical subtask under `TASK-###`,
   - `TASK-###-NN-LNN-Title.md` for an executable leaf under `TASK-###-NN`,
@@ -165,6 +196,23 @@ Testing docs:
   docs/changelog evidence when needed, and repeat with a fresh pass. Continue
   until no unresolved high/medium/low drift remains or every remaining item is
   explicitly split into a non-blocking follow-up task with rationale.
+- Evidence-backed LOW findings may be deferred only through the permanent
+  `TASK-9999` backlog and only when the evidence proves both of these conditions:
+  zero current user-visible UI, UX, or accessibility effect; and zero data,
+  security, privacy, auth, RBAC, API, persistence, migration, performance,
+  reliability, or test-integrity impact. HIGH and MEDIUM findings are never
+  eligible. The source task must link a concrete execution-ready `TASK-9999`
+  leaf and record the exact evidence plus the reason deferral is safe; a vague
+  umbrella note is not a deferral. Search the existing backlog first and link a
+  duplicate finding to its existing leaf instead of creating another one.
+  Re-triage deferred leaves at the source task's closure, at the quarterly
+  `TASK-9999` review, and whenever new evidence changes impact or severity;
+  promote any no-longer-eligible item back into active work immediately.
+  `TASK-9999` intentionally remains `🚧 In Progress` as the final board item so
+  new source-family children can be appended without ever closing the parent.
+  Completed TASK-9999 leaves and children still follow normal closure rules,
+  including terminal descendant order, changelog coverage, task-board updates,
+  and Statistics synchronization; only the sentinel parent remains open.
 - Drift passes supplement dependency-shaped validation; they do not replace
   required tests, linters, type checks, security scans, task graph audits, or
   runtime smoke tests.
@@ -308,8 +356,20 @@ Implementation pipeline:
 
 ## Product Contract Rules
 
-- Widgets, presets, and templates are product surfaces, not loose primitives. New module-facing work should stay composite-first and beginner-friendly by default; widget changes should ship `schema`, `defaults`, `normalize*`, render contract, `wizard/visual/advanced` editors, and tests.
-- If a widget or module change affects pack completeness/readiness, update the pack contract in code and docs (`core/widgets/modulePackMatrix.ts`, `_docs/WIDGET_PACK_MATRIX.md`, relevant `_docs/_WIDGETS/*` files).
+- Configurable product widgets belong only to the Admin Dashboard. Dashboard
+  widget changes must follow `_docs/DASHBOARD_WIDGETS_SPEC.md` and ship the
+  Dashboard-owned schema/defaults/normalizer, render host integration, RBAC,
+  cache/preferences behavior, editor controls, and tests.
+- Pages, Page Templates, Forms, Menus, Posts, Custom Screens, and other domain
+  editors own their sections and blocks. Extend that domain's strict schema,
+  normalizer, editor controls, renderer, and tests; do not add a generic widget
+  type, preset, module-pack entry, Widget Template surface, or
+  Wizard/Visual/Advanced editor.
+- `core/widgets/*`, `core/widgets/modulePackMatrix.ts`, `_docs/WIDGETS.md`,
+  `_docs/WIDGET_PACK_MATRIX.md`, and `_docs/_WIDGETS/*` are retained
+  runtime/read-compatibility seams. Change them only when an existing contract
+  requires maintenance, preserve non-destructive legacy reads, and do not widen
+  them into a selectable non-dashboard product surface.
 - Plugin/runtime extensions must obey manifest normalization and safe route contracts: declared contributions, safe relative routes, explicit permissions for write methods, and internal admin scoping unless architecture explicitly requires otherwise.
 - Assistant and automation flows must stay typed and explainable: prefer `plan -> actions -> execute -> validate`, support dry-run/review before mutation where the contract expects it, and keep actions auditable and idempotent.
 
@@ -329,7 +389,8 @@ Implementation pipeline:
   - pure TypeScript domain/services,
   - admin/UI,
   - SDK/shared contracts,
-  - widget/content logic that does not depend on runtime Bun APIs.
+  - editor section/block, Dashboard-widget, or retained compatibility-renderer
+    logic that does not depend on runtime Bun APIs.
 - A suite is not Bun-free if importing its production module immediately triggers DB/settings/runtime coupling. Refactor the production module first instead of forcing the test into Vitest with brittle mocks.
 - DB-backed tests must create uniquely scoped fixtures and clean up only the rows they created or explicitly own. Do not truncate or delete whole domain tables from shared test databases; each suite must remain independent and only exercise its own contract.
 - Introduce new lane changes additively first and keep the existing command surface green while migrating ownership.
@@ -382,4 +443,9 @@ Implementation pipeline:
   drift finding caused an additional fix.
 - Update relevant documentation for any API/architecture/UX contract changes.
 - If you add or change admin cached resources, update `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md`.
-- If you change plugin/runtime contracts, widget pack coverage, assistant workflow contracts, or release-gate contracts, update the corresponding source-of-truth docs (`_docs/CODERSO_PLUGIN_CONTRACT.md`, `_docs/WIDGET_PACK_MATRIX.md`, `_docs/ASSISTANT_SITE_BUILDER.md`, `_docs/CODERSO_RELEASE_GATES.md`).
+- If you change plugin/runtime contracts, Dashboard widget contracts, retained
+  compatibility coverage, assistant workflow contracts, or release-gate
+  contracts, update the corresponding source-of-truth docs
+  (`_docs/CODERSO_PLUGIN_CONTRACT.md`, `_docs/DASHBOARD_WIDGETS_SPEC.md`,
+  `_docs/WIDGET_PACK_MATRIX.md` when legacy compatibility is actually touched,
+  `_docs/ASSISTANT_SITE_BUILDER.md`, `_docs/CODERSO_RELEASE_GATES.md`).

@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   ShoppingCart,
   Shuffle,
+  SlidersHorizontal,
   Sparkles,
   Star,
   Store,
@@ -72,6 +73,7 @@ export const navSections: NavSection[] = [
     items: [
       { label: "Dashboard", to: "/", icon: LayoutDashboard },
       { label: "Pages", to: "/pages", icon: FileText },
+      { label: "Options v2", to: "/pages/home/options", icon: SlidersHorizontal, badge: "New" },
       { label: "Posts", to: "/posts", icon: Newspaper },
       { label: "Menus", to: "/menus", icon: List },
       { label: "Media", to: "/media", icon: Image },

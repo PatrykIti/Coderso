@@ -6,6 +6,7 @@ import { contentEntries, contentTypes, media, pages, users } from "../../db/sche
 import { getSecuritySettings } from "../settings/securitySettings";
 import type { SecuritySettings } from "../settings/securitySettings";
 import { resolveEmailValue } from "../security/piiEmail";
+import { resolveMediaKeyProjection } from "../media/mediaUrlProjection";
 import type {
   DashboardPayload,
   DashboardRecentEdit,
@@ -159,7 +160,6 @@ async function getRecentMedia(limit: number): Promise<DashboardRecentEdit[]> {
   const rows = await db
     .select({
       id: media.id,
-      url: media.url,
       key: media.key,
       originalName: media.originalName,
       title: media.title,
@@ -178,7 +178,7 @@ async function getRecentMedia(limit: number): Promise<DashboardRecentEdit[]> {
     id: row.id,
     type: "media",
     title: row.title ?? row.originalName ?? row.key,
-    path: row.url ?? null,
+    path: resolveMediaKeyProjection(row).url,
     status: "active",
     updatedAt: toIsoString(row.createdAt),
     author: toAuthor(row.authorId ?? null, row.authorName ?? null, resolveAuthorEmail(row)),

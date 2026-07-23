@@ -2,6 +2,7 @@ import { createFormSubmissionNonce } from "./submissionNonce";
 import { normalizeSubmissionAccess } from "./submissionAccess";
 import { getDefaultFormSettings, normalizeFormSettings } from "./formSettings";
 import type { FormRuntimeResolution } from "./formRuntimeContract";
+import { isSafeFormFieldPattern } from "./validation";
 
 export const resolveFormSubmissionAccess = (value: unknown) =>
   normalizeSubmissionAccess(value, "public");
@@ -47,10 +48,11 @@ export async function resolveFormRuntimeData(
     };
   }
 
-  if (!options.preview && form.status !== "published") {
-    const submissionAccess = resolveFormSubmissionAccess(form.submissionAccess);
-    const settings = normalizeFormSettings(form.settings);
-    const botProtection = await resolveBotProtectionProjection(submissionAccess);
+  const submissionAccess = resolveFormSubmissionAccess(form.submissionAccess);
+  const settings = normalizeFormSettings(form.settings);
+  const isPublished = form.status === "published";
+
+  if (!options.preview && !isPublished) {
     return {
       formId,
       formName: form.name,
@@ -60,15 +62,13 @@ export async function resolveFormRuntimeData(
       successRedirectUrl: form.successRedirectUrl ?? null,
       settings,
       submissionAccess,
-      submissionNonce: submissionAccess === "public" ? createFormSubmissionNonce(form.id) : null,
-      botProtection,
+      submissionNonce: null,
+      botProtection: null,
       fields: [],
       error: "form_unpublished",
     };
   }
 
-  const submissionAccess = resolveFormSubmissionAccess(form.submissionAccess);
-  const settings = normalizeFormSettings(form.settings);
   if (!options.preview && submissionAccess === "internal") {
     return {
       formId,
@@ -87,7 +87,10 @@ export async function resolveFormRuntimeData(
   }
 
   const fields = await listFormFields(formId);
-  const botProtection = await resolveBotProtectionProjection(submissionAccess);
+  const canSubmitPublicly = isPublished && submissionAccess === "public";
+  const botProtection = canSubmitPublicly
+    ? await resolveBotProtectionProjection(submissionAccess)
+    : null;
   return {
     formId,
     formName: form.name,
@@ -97,8 +100,17 @@ export async function resolveFormRuntimeData(
     successRedirectUrl: form.successRedirectUrl ?? null,
     settings,
     submissionAccess,
-    submissionNonce: submissionAccess === "public" ? createFormSubmissionNonce(form.id) : null,
+    submissionNonce: canSubmitPublicly ? createFormSubmissionNonce(form.id) : null,
     botProtection,
-    fields: fields.map((field) => toFieldRecord(field)),
+    fields: fields.map((field) => {
+      const record = toFieldRecord(field);
+      const pattern = record.settings.pattern;
+      if (pattern === undefined || isSafeFormFieldPattern(pattern)) {
+        return record;
+      }
+      const settings = { ...record.settings };
+      delete settings.pattern;
+      return { ...record, settings };
+    }),
   };
 }

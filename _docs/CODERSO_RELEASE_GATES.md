@@ -37,7 +37,7 @@ Do not import `core/db/client` in pure gate tests just to read defaults.
 | Gate | Goal | Execution Source |
 |------|------|------------------|
 | `functional` | Core module flows are runnable | lint + selected Bun runtime flows + selected Vitest UI/domain flows |
-| `ux` | Beginner/composite-first paths remain stable | wizard/library/editor UX suites |
+| `ux` | Domain section/block editors and Admin Dashboard widgets remain stable; retained `core/widgets` renderers keep compatibility | section/block editor UX + Dashboard widget UX + compatibility-renderer regression suites |
 | `performance` | p95 budgets for critical interactions | `tests/perf/codersoPerformanceGate.test.ts` |
 | `security` | Public-write hardening and baseline controls | `tests/security/*` + security unit suites |
 | `reliability` | Install/upgrade/rollback path resiliency | kits/store reliability suites |
@@ -70,9 +70,10 @@ The `Coderso PR Gates` workflow passes `DATABASE_URL` from the repository secret
 and runs `bun run db:migrate` in `database-preflight` before the test lanes.
 This lets maintainers point CI at a fresh test database by changing one
 repository secret; migrations prepare the schema before DB-backed suites run.
-Runtime jobs in that workflow pin `BUN_VERSION=1.3.13` and
-`NODE_VERSION=22.14.0`, verify both versions in logs, and avoid relying on the
-GitHub runner's default Node runtime.
+Runtime jobs in that workflow pin `BUN_VERSION=1.3.14` and tooling
+`NODE_VERSION=26.5.0`, verify both versions in logs, and avoid relying on the
+GitHub runner's default Node runtime. Bun remains authoritative for product
+runtime and Bun-owned gates.
 
 DB-backed commands currently include:
 

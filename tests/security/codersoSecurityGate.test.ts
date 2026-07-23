@@ -29,6 +29,67 @@ const tamperNonce = (nonce: string) => {
   return `${timestamp}.${first}${signature.slice(1)}`;
 };
 
+const readNonceParts = (nonce: string) => {
+  const [timestamp, signature] = nonce.split(".");
+  if (!timestamp || !signature) throw new Error("invalid_nonce_test_fixture");
+  return { timestamp, signature };
+};
+
+const malformedNonceCases = [
+  { label: "appended segment", build: (nonce: string) => `${nonce}.appended` },
+  {
+    label: "leading-zero timestamp",
+    build: (nonce: string) => {
+      const { timestamp, signature } = readNonceParts(nonce);
+      return `0${timestamp}.${signature}`;
+    },
+  },
+  {
+    label: "noncanonical timestamp",
+    build: (nonce: string) => {
+      const { timestamp, signature } = readNonceParts(nonce);
+      return `+${timestamp}.${signature}`;
+    },
+  },
+  {
+    label: "unsafe timestamp",
+    build: (nonce: string) => {
+      const { signature } = readNonceParts(nonce);
+      return `${Number.MAX_SAFE_INTEGER + 1}.${signature}`;
+    },
+  },
+  {
+    label: "wrong-length signature",
+    build: (nonce: string) => {
+      const { timestamp, signature } = readNonceParts(nonce);
+      return `${timestamp}.${signature.slice(0, -1)}`;
+    },
+  },
+  {
+    label: "non-hex signature",
+    build: (nonce: string) => {
+      const { timestamp, signature } = readNonceParts(nonce);
+      return `${timestamp}.g${signature.slice(1)}`;
+    },
+  },
+  {
+    label: "uppercase signature",
+    build: (nonce: string) => {
+      const { timestamp, signature } = readNonceParts(nonce);
+      return `${timestamp}.A${signature.slice(1)}`;
+    },
+  },
+] as const;
+
+const captureError = (fn: () => void): unknown => {
+  try {
+    fn();
+  } catch (error) {
+    return error;
+  }
+  throw new Error("expected_nonce_error");
+};
+
 const withNonceSecret = (fn: () => void) => {
   const previous = process.env.FORM_SUBMIT_NONCE_SECRET;
   const previousTtl = process.env.FORM_SUBMIT_NONCE_TTL_MINUTES;
@@ -61,10 +122,31 @@ test("security gate: public submissions require captcha for forms and booking", 
     isAuthenticated: false,
   });
 
-  expect(forms.allow).toBe(true);
-  expect(forms.requireCaptcha).toBe(true);
+  expect(forms).toMatchObject({
+    allow: true,
+    mode: "public",
+    requireFormNonce: true,
+    requireCaptcha: true,
+    rateBucket: "public_write",
+  });
   expect(booking.allow).toBe(true);
   expect(booking.requireCaptcha).toBe(true);
+});
+
+test("security gate: a public cookie session still requires the form nonce", () => {
+  const forms = evaluateSubmissionAccess({
+    mode: "public",
+    isAuthenticated: true,
+  });
+  expect(forms).toMatchObject({
+    allow: true,
+    mode: "public",
+    principal: "session",
+    requireFormNonce: true,
+    requireCaptcha: false,
+    requireSessionCsrf: false,
+    rateBucket: "public_write",
+  });
 });
 
 test("security gate: internal submissions require session or scoped API key", () => {
@@ -78,6 +160,7 @@ test("security gate: internal submissions require session or scoped API key", ()
   });
 
   expect(formWithoutAuth.allow).toBe(false);
+  if (formWithoutAuth.allow) throw new Error("expected internal form rejection");
   expect(formWithoutAuth.reason).toBe("auth_required");
   expect(bookingWithoutAuth.allow).toBe(false);
   expect(bookingWithoutAuth.reason).toBe("auth_required");
@@ -93,8 +176,13 @@ test("security gate: internal submissions require session or scoped API key", ()
     apiKeyScopes: [bookingAccessDefaults.requiredApiKeyScope],
   });
 
-  expect(formWithApiKey.allow).toBe(true);
-  expect(formWithApiKey.requireCaptcha).toBe(false);
+  expect(formWithApiKey).toMatchObject({
+    allow: true,
+    mode: "internal",
+    principal: "apiKey",
+    requireCaptcha: false,
+    rateBucket: "admin_write",
+  });
   expect(bookingWithApiKey.allow).toBe(true);
   expect(bookingWithApiKey.requireCaptcha).toBe(false);
 });
@@ -107,7 +195,7 @@ test("security gate: admin dashboard endpoints use admin rate-limit buckets", ()
   expect(resolveRateLimitBucket("POST", "/dashboard/widget-data")).toBe("admin_write");
 });
 
-test("security gate: form and booking nonce contracts reject missing and tampered tokens", () => {
+test("security gate: form and booking nonce contracts reject missing, tampered, and malformed tokens", () => {
   withNonceSecret(() => {
     const now = Date.now();
 
@@ -136,6 +224,21 @@ test("security gate: form and booking nonce contracts reject missing and tampere
     expect(() => assertBookingSubmissionNonce(tamperedBookingNonce, now + 1_000)).toThrow(
       "Form submission nonce is invalid"
     );
+
+    for (const { build } of malformedNonceCases) {
+      const formError = captureError(() =>
+        assertFormSubmissionNonce("contact-form", build(validFormNonce), now + 1_000)
+      );
+      const bookingError = captureError(() =>
+        assertBookingSubmissionNonce(build(validBookingNonce), now + 1_000)
+      );
+      for (const error of [formError, bookingError]) {
+        expect(error).toMatchObject({
+          code: "form_nonce_invalid",
+          status: 400,
+        });
+      }
+    }
   });
 });
 

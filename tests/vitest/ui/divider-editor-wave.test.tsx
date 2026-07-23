@@ -4,7 +4,13 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import { describeDividerThickness, type DividerData } from "../../../core/widgets/core/divider";
+import {
+  describeDividerThickness,
+  dividerDefaults,
+  normalizeDividerData,
+  type DividerData,
+} from "../../../core/widgets/core/divider";
+import { RETAINED_COLOR_FIELDS } from "../widgets/retainedColorConsumerTable";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -122,6 +128,12 @@ vi.mock("@/lib/utils", () => ({
   cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
+vi.mock("sonner", () => ({
+  toast: {
+    info: vi.fn(),
+  },
+}));
+
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -206,6 +218,141 @@ const findSectionByTitle = (container: ParentNode, title: string) =>
 afterEach(() => {
   document.body.innerHTML = "";
   vi.restoreAllMocks();
+});
+
+test("Divider retained colors preserve direct and nested keyword states until replacement or clear", async () => {
+  const { DividerVisualEditor } =
+    await import("../../../core/admin/ui/widgets/editors/DividerEditors");
+  const labelField = RETAINED_COLOR_FIELDS.divider.find((field) => !field.nested);
+  const lineField = RETAINED_COLOR_FIELDS.divider.find((field) => field.nested);
+
+  if (!labelField || !lineField) {
+    throw new Error("Missing retained Divider color fields");
+  }
+
+  const renderVisualEditor = (initialValue: DividerData) => {
+    const onChangeSpy = vi.fn();
+    let latestValue = initialValue;
+
+    const Harness = () => {
+      const [value, setValue] = useState(initialValue);
+
+      return (
+        <DividerVisualEditor
+          value={value}
+          onChange={(next) => {
+            latestValue = next;
+            onChangeSpy(next);
+            setValue(next);
+          }}
+          variant="label-center"
+          onVariantChange={() => undefined}
+        />
+      );
+    };
+
+    return {
+      ...mount(<Harness />),
+      getValue: () => latestValue,
+      onChangeSpy,
+    };
+  };
+
+  const findControl = (container: ParentNode, controlId: string) => {
+    const control = container.querySelector(`[data-widget-control="${controlId}"]`);
+    if (!(control instanceof HTMLElement)) {
+      throw new Error(`Missing Divider control: ${controlId}`);
+    }
+    return control;
+  };
+
+  const findColorPicker = (control: ParentNode) => {
+    const picker = control.querySelector('input[type="color"]');
+    if (!(picker instanceof HTMLInputElement)) {
+      throw new Error("Missing Divider color picker");
+    }
+    return picker;
+  };
+
+  for (const keyword of ["currentColor", "inherit"] as const) {
+    const initialValue: DividerData = {
+      ...dividerDefaults,
+      label: "Chapter",
+      labelColor: keyword,
+    };
+    const view = renderVisualEditor(initialValue);
+
+    try {
+      const control = findControl(view.container, labelField.control);
+      expect(control.querySelector('[data-shared-color-state="inherited"]')).toBeInstanceOf(
+        HTMLElement
+      );
+      expect(control.textContent).toContain("Inherited color");
+      expect(view.onChangeSpy).not.toHaveBeenCalled();
+
+      setInputValue(findColorPicker(control), "#102030");
+      const expectedPickerValue = normalizeDividerData(
+        { ...initialValue, labelColor: "#102030" },
+        "label-center"
+      );
+      expect(view.onChangeSpy).toHaveBeenCalledTimes(1);
+      expect(view.getValue()).toEqual(expectedPickerValue);
+      expect(view.onChangeSpy).toHaveBeenLastCalledWith(expectedPickerValue);
+
+      clickByText(findControl(view.container, labelField.control), "Clear");
+      const expectedClearValue = normalizeDividerData(
+        { ...expectedPickerValue, labelColor: dividerDefaults.labelColor },
+        "label-center"
+      );
+      expect(view.onChangeSpy).toHaveBeenCalledTimes(2);
+      expect(view.getValue()).toEqual(expectedClearValue);
+      expect(view.onChangeSpy).toHaveBeenLastCalledWith(expectedClearValue);
+    } finally {
+      view.cleanup();
+    }
+  }
+
+  const nestedCases = [
+    { keyword: "currentColor", state: "inherited", label: "Inherited color" },
+    { keyword: "inherit", state: "saved_custom", label: "Saved custom color" },
+  ] as const;
+
+  for (const nestedCase of nestedCases) {
+    const initialValue: DividerData = {
+      ...dividerDefaults,
+      color: nestedCase.keyword,
+    };
+    const view = renderVisualEditor(initialValue);
+
+    try {
+      const control = findControl(view.container, lineField.control);
+      expect(
+        control.querySelector(`[data-shared-color-state="${nestedCase.state}"]`)
+      ).toBeInstanceOf(HTMLElement);
+      expect(control.textContent).toContain(nestedCase.label);
+      expect(view.onChangeSpy).not.toHaveBeenCalled();
+
+      setInputValue(findColorPicker(control), "#102030");
+      const expectedPickerValue = normalizeDividerData(
+        { ...initialValue, color: "#102030" },
+        "label-center"
+      );
+      expect(view.onChangeSpy).toHaveBeenCalledTimes(1);
+      expect(view.getValue()).toEqual(expectedPickerValue);
+      expect(view.onChangeSpy).toHaveBeenLastCalledWith(expectedPickerValue);
+
+      clickByText(findControl(view.container, lineField.control), "Clear");
+      const expectedClearValue = normalizeDividerData(
+        { ...expectedPickerValue, color: dividerDefaults.color },
+        "label-center"
+      );
+      expect(view.onChangeSpy).toHaveBeenCalledTimes(2);
+      expect(view.getValue()).toEqual(expectedClearValue);
+      expect(view.onChangeSpy).toHaveBeenLastCalledWith(expectedClearValue);
+    } finally {
+      view.cleanup();
+    }
+  }
 });
 
 test("Divider editors cover variant changes, width modes, spacing tokens, and advanced snapshot updates", async () => {

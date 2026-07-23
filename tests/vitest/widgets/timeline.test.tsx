@@ -27,6 +27,7 @@ import { validateWidgetEditorContract } from "../../../core/widgets/editorContra
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
+import { CSS_COLOR_VALUE_MAX_LENGTH } from "../../../core/services/theme/cssColorContract";
 
 const StubEditor: ComponentType<WidgetEditorProps<TimelineData>> = () => null;
 
@@ -43,6 +44,99 @@ const threeSteps = (extra?: Partial<TimelineData["steps"][number]>) =>
     { id: "step-2", title: "Plan" },
     { id: "step-3", title: "Ship" },
   ]);
+
+test("timeline drops rejected authoring colors without raw marker/background fallback", () => {
+  const normalized = normalizeTimelineData({
+    ...timelineDefaults,
+    steps: threeSteps({ markerIconColor: " currentColor " }),
+    background: { color: "\u00a0#123456" },
+  });
+  expect(normalized.steps.every((step) => step.markerIconColor === undefined)).toBe(true);
+  expect(normalized.background?.color).toBeUndefined();
+
+  const html = renderToString(<TimelineBlock data={normalized} variant="alternating" />);
+  expect(html).not.toContain("currentColor");
+  expect(html).not.toContain("#123456");
+  expect(html).not.toContain("\u00a0");
+});
+
+test("timeline reuses one authoring-color table across schema, normalize, and concrete render sinks", () => {
+  const terminal = "#abc";
+  const exactCap = `${" ".repeat(CSS_COLOR_VALUE_MAX_LENGTH - terminal.length)}${terminal}`;
+  const colorConsumers = [
+    {
+      id: "marker",
+      build: (raw: string): TimelineData => ({
+        ...timelineDefaults,
+        steps: [
+          { id: "step-1", title: "Discover", markerIconColor: raw },
+          { id: "step-2", title: "Plan" },
+          { id: "step-3", title: "Ship" },
+        ],
+      }),
+      read: (data: TimelineData) => data.steps[0]?.markerIconColor,
+      renderedStyle: (html: string) =>
+        html.match(/<span\b(?=[^>]*data-timeline-dot-variant=)[^>]*style="([^"]*)"/)?.[1],
+    },
+    {
+      id: "background",
+      build: (raw: string): TimelineData => ({
+        ...timelineDefaults,
+        background: { color: raw },
+      }),
+      read: (data: TimelineData) => data.background?.color,
+      renderedStyle: (html: string) => html.match(/<section\b[^>]*style="([^"]*)"/)?.[1],
+    },
+  ] as const;
+  const rejected = [
+    ` ${exactCap}`,
+    "#fff\u001f",
+    "#fff\u0085",
+    "\u00a0#fff",
+    "\u2003#fff",
+    "currentColor",
+    "inherit",
+  ];
+
+  expect(exactCap).toHaveLength(CSS_COLOR_VALUE_MAX_LENGTH);
+  registerTimeline();
+  for (const consumer of colorConsumers) {
+    const validData = consumer.build(exactCap);
+    expect(() =>
+      normalizeWidgetBlock({
+        id: `timeline-${consumer.id}-valid`,
+        type: "timeline",
+        variant: "alternating",
+        data: validData,
+      })
+    ).not.toThrow();
+    const normalized = normalizeTimelineData(validData, "alternating");
+    expect(consumer.read(normalized)).toBe(terminal);
+    expect(
+      consumer.renderedStyle(
+        renderToString(<TimelineBlock data={validData} variant="alternating" />)
+      )
+    ).toContain(consumer.id === "marker" ? "color:#abc" : "background-color:#abc");
+
+    for (const raw of rejected) {
+      const rejectedData = consumer.build(raw);
+      expect(() =>
+        normalizeWidgetBlock({
+          id: `timeline-${consumer.id}-reject-${raw.length}-${raw.charCodeAt(0)}`,
+          type: "timeline",
+          variant: "alternating",
+          data: rejectedData,
+        })
+      ).toThrow("widget_schema_invalid");
+      expect(consumer.read(normalizeTimelineData(rejectedData, "alternating"))).toBeUndefined();
+      expect(
+        consumer.renderedStyle(
+          renderToString(<TimelineBlock data={rejectedData} variant="alternating" />)
+        ) ?? ""
+      ).not.toContain(raw);
+    }
+  }
+});
 
 test("timeline registers and validates defaults", () => {
   registerTimeline();

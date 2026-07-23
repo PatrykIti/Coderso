@@ -122,6 +122,26 @@ const MENU_BAR_LAYOUT_KEYS = [
   "sticky",
 ] as const satisfies readonly (keyof MenuAppearance)[];
 
+/** TASK-520-01-L01: menu-bar EXTRA keys — present-only, NON-`MenuAppearance`
+ *  members (radius, custom box-shadow, scrolled/floating-state variants). These
+ *  are DELIBERATELY held out of `MENU_BAR_LAYOUT_KEYS`/`SHELL_APPEARANCE_DEFAULTS`
+ *  (Hard Invariant #1: `buildSiteShellCss(null)` byte-identity), so they carry NO
+ *  seeded resolver default and NO `ControlDefaultHint` surfaces for them. They join
+ *  the menu-bar layout reject-unknown allowlist as a sibling of the appearance
+ *  subset — a key in NEITHER set throws `MenuDocumentError`. */
+const MENU_BAR_EXTRA_KEYS = [
+  "radius",
+  "shadowCustom",
+  "surfaceColorScrolled",
+  "borderColorScrolled",
+  "borderWidthScrolled",
+  "shadowScrolled",
+  "shadowCustomScrolled",
+] as const;
+/** Local clamp table for the menu-bar card radius (NOT added to
+ *  `menuAppearanceNumberRanges`; exported for the 520-03 slider bound). */
+export const MENU_BAR_LAYOUT_NUMBER_RANGES = { radius: { min: 0, max: 40 } } as const;
+
 /** nav-items props = the `MenuAppearance` typography/link subset. The four
  *  cheap-win scalars (TASK-504-01 §2a) are real `MenuAppearance` keys so the
  *  `satisfies` still holds and they ride the scalar delta channel per-device. */
@@ -142,7 +162,19 @@ const NAV_ITEMS_PROP_KEYS = [
   "linkHoverTextColor",
 ] as const satisfies readonly (keyof MenuAppearance)[];
 
-export type MenuBarLayout = Pick<MenuAppearance, (typeof MENU_BAR_LAYOUT_KEYS)[number]>;
+/** TASK-520-01-L01: intersection extension — the appearance subset plus the
+ *  present-only EXTRA keys (radius, custom shadow, scrolled/floating variants).
+ *  The extra keys are intentionally NOT `keyof MenuAppearance`; unset ⇒ fall back
+ *  to the corresponding base key at emit (520-02). */
+export type MenuBarLayout = Pick<MenuAppearance, (typeof MENU_BAR_LAYOUT_KEYS)[number]> & {
+  radius?: number; // 0..40 (MENU_BAR_LAYOUT_NUMBER_RANGES.radius)
+  shadowCustom?: string; // validated box-shadow (L02); OVERRIDES `shadow` at emit
+  surfaceColorScrolled?: string; // normalizeMenuColorValue (alpha OK)
+  borderColorScrolled?: string; // normalizeMenuColorValue
+  borderWidthScrolled?: number; // menuAppearanceNumberRanges.borderWidth [0,8]
+  shadowScrolled?: MenuAppearanceShadow; // none|sm|md
+  shadowCustomScrolled?: string; // validated box-shadow (L02); OVERRIDES shadowScrolled at emit
+};
 /** No longer a pure `Pick` — carries the non-appearance `levelStyles` +
  *  `navChrome` (TASK-506 level-0 home) members. */
 export type NavItemsProps = Pick<MenuAppearance, (typeof NAV_ITEMS_PROP_KEYS)[number]> & {
@@ -165,6 +197,9 @@ export type BrandStyle = {
   // image mode:
   height?: number; // [16,120] px
   maxWidth?: number; // [40,400] px
+  // TASK-520-01-L03 icon mode:
+  iconColor?: string; // normalizeMenuColorValue (alpha OK via 519)
+  iconSize?: number; // BRAND_STYLE_NUMBER_RANGES.iconSize [12,64] px
 };
 
 /** Per-nesting-level nav styling. Link fields apply at every level; container
@@ -296,7 +331,8 @@ export type MenuBlockOverride = {
 export type MenuBlockResponsive = Partial<Record<MenuResponsiveBreakpoint, MenuBlockOverride>>;
 
 export type BrandProps = {
-  mode: "text" | "image";
+  /** TASK-520-01-L03: `"icon"` added (allowlisted lucide mark). */
+  mode: "text" | "image" | "icon";
   href: string;
   /** Validated page `image` leaf props (assetId/src/alt/caption/fit). */
   image?: Record<string, unknown>;
@@ -307,6 +343,14 @@ export type BrandProps = {
    * member here. Rendered as React text only (never reaches CSS).
    */
   text?: string;
+  /** TASK-520-01-L03: validated kebab lucide icon name for `mode:"icon"`
+   *  (`normalizeBrandIconName` pattern-check; the RENDER (520-04) resolves it
+   *  against the lucide set = the effective allowlist). */
+  icon?: string;
+  /** TASK-520-01-L03: graphic-with-text combo. When `true` on a graphic mode
+   *  (`"image"`/`"icon"`), the render shows the graphic AND the text wordmark side
+   *  by side. Present-only (only `true` stored; unset/false = exclusive legacy). */
+  showText?: boolean;
   /** Sparse brand styling (TASK-504-01 §3); absent ⇒ legacy byte-identity. */
   style?: BrandStyle;
 };
@@ -442,8 +486,56 @@ const normalizeAppearanceSubset = (
   }
 };
 
-const normalizeMenuBarLayout = (value: unknown, path: string): MenuBarLayout =>
-  normalizeAppearanceSubset(value, MENU_BAR_LAYOUT_KEYS, path) as MenuBarLayout;
+// TASK-520-01-L01: split normalizer. Reject-unknown over the UNION of the
+// appearance subset ∪ the EXTRA keys; the appearance keys route through the strict
+// `normalizeAppearanceSubset` (fed an appearance-only slice so its own reject-unknown
+// does not choke on the extra keys), the extra keys route through local fail-soft
+// value normalizers (present-only assign; bad values omitted, never thrown).
+const normalizeMenuBarLayout = (value: unknown, path: string): MenuBarLayout => {
+  if (!isPlainObject(value)) throw new MenuDocumentError(path);
+  const allowed = new Set<string>([...MENU_BAR_LAYOUT_KEYS, ...MENU_BAR_EXTRA_KEYS]);
+  for (const key of Object.keys(value)) {
+    if (!allowed.has(key)) throw new MenuDocumentError(`${path}.${key}`); // reject-unknown
+  }
+  const appearanceInput: Record<string, unknown> = {};
+  for (const k of MENU_BAR_LAYOUT_KEYS) {
+    if (k in (value as object)) appearanceInput[k] = (value as Record<string, unknown>)[k];
+  }
+  const out: MenuBarLayout = {
+    ...(normalizeAppearanceSubset(appearanceInput, MENU_BAR_LAYOUT_KEYS, path) as MenuBarLayout),
+  };
+  const v = value as Record<string, unknown>;
+  if (v.radius != null) {
+    const n = clampLocalNumber(MENU_BAR_LAYOUT_NUMBER_RANGES.radius, v.radius);
+    if (n !== null) out.radius = n;
+  }
+  if (v.borderWidthScrolled != null) {
+    const n = clampLocalNumber(menuAppearanceNumberRanges.borderWidth, v.borderWidthScrolled);
+    if (n !== null) out.borderWidthScrolled = n;
+  }
+  if (v.surfaceColorScrolled != null) {
+    const c = normalizeMenuColorValue(v.surfaceColorScrolled);
+    if (c !== null) out.surfaceColorScrolled = c;
+  }
+  if (v.borderColorScrolled != null) {
+    const c = normalizeMenuColorValue(v.borderColorScrolled);
+    if (c !== null) out.borderColorScrolled = c;
+  }
+  if (v.shadowScrolled != null) {
+    const s = normalizeEnumLocal(menuAppearanceShadows, v.shadowScrolled);
+    if (s !== null) out.shadowScrolled = s;
+  }
+  // TASK-520-01-L02: custom box-shadow validation (security-critical CSS-value whitelist).
+  if (v.shadowCustom != null) {
+    const sh = normalizeMenuBoxShadowValue(v.shadowCustom);
+    if (sh !== null) out.shadowCustom = sh;
+  }
+  if (v.shadowCustomScrolled != null) {
+    const sh = normalizeMenuBoxShadowValue(v.shadowCustomScrolled);
+    if (sh !== null) out.shadowCustomScrolled = sh;
+  }
+  return out; // present-only; empties simply absent
+};
 
 // CONSCIOUS nav-block fail-closed READ-trap extension: `levelStyles` is a
 // non-appearance member, so it is SPLIT off BEFORE the flat subset (an unhandled
@@ -625,7 +717,9 @@ export const MENU_BRAND_TEXT_MAX_LENGTH = 120 as const;
 // BOTH write and stored read; forgetting a key would degrade every saved doc
 // carrying that member to empty on read — asserted in tests). "style" added by
 // TASK-504-01 — a forgotten "style" degrades every brand-styled doc to empty.
-const BRAND_PROP_KEYS = ["mode", "href", "image", "text", "style"] as const;
+// TASK-520-01-L03: "icon"/"showText" added (fail-closed read trap — a forgotten
+// key degrades every icon/combo doc to empty on read; round-trip test asserts it).
+const BRAND_PROP_KEYS = ["mode", "href", "image", "text", "icon", "showText", "style"] as const;
 
 // --- TASK-504-01 brand style + per-level style normalizers ------------------
 
@@ -637,6 +731,9 @@ const BRAND_STYLE_KEYS = [
   "letterSpacing",
   "height",
   "maxWidth",
+  // TASK-520-01-L03 icon mode:
+  "iconColor",
+  "iconSize",
 ] as const;
 
 // reject-unknown OUTER level keys (RAW string keys off Object.keys — the wire form):
@@ -691,6 +788,7 @@ export const BRAND_STYLE_NUMBER_RANGES = {
   letterSpacing: { min: -2, max: 8 }, // NEGATIVE min — the reason it can't reuse the shared table
   height: { min: 16, max: 120 },
   maxWidth: { min: 40, max: 400 },
+  iconSize: { min: 12, max: 64 }, // TASK-520-01-L03 icon mode
 } as const;
 
 export const NAV_LEVEL_NUMBER_RANGES = {
@@ -797,6 +895,122 @@ const clampLocalNumber = (range: { min: number; max: number }, value: unknown): 
 const normalizeEnumLocal = <T>(options: readonly T[], value: unknown): T | null =>
   options.includes(value as T) ? (value as T) : null;
 
+// --- TASK-520-01-L02: custom box-shadow value validator (security-critical) ---
+//
+// `shadowCustom`/`shadowCustomScrolled` are attacker-influenceable free-text CSS
+// values that 520-02 emits into a `<style>`/inline declaration on the PUBLIC
+// render path. `normalizeMenuColorValue` validates a SINGLE color token — it
+// cannot validate a full `box-shadow` (offsets + blur + spread + color, possibly
+// comma-layered). This bespoke validator accepts ONLY a bounded box-shadow
+// grammar: an optional `inset`, 2..4 length tokens, and EXACTLY ONE color token
+// validated via `normalizeMenuColorValue`, comma-repeated up to 4 layers, total
+// length <= 200. It rejects `url(`/`expression(`/`javascript:`/`var(`/`calc(`/
+// `image-set(`/`{`/`}`/`;`/`<`/`>`/`@`/`\`/`/*` up front. Fail-soft (null ⇒ key
+// omitted; never throws). The embedded color token is emitted in the canonical
+// authoring bytes returned by the shared owner, including leading-dot alpha
+// normalization (`.24` → `0.24`). The surrounding shadow grammar and its own
+// length/layer limits remain separate from the single-color contract.
+const BOX_SHADOW_MAX_LENGTH = 200;
+const BOX_SHADOW_MAX_LAYERS = 4;
+// One length token: optional sign, integer/decimal with unit px|rem|em, OR bare 0.
+const SHADOW_LENGTH = String.raw`-?(?:\d+(?:\.\d+)?(?:px|rem|em)|0)`;
+// Hard-deny anything that could break out of the value context or fetch/execute:
+const SHADOW_DENY = /url\(|expression\(|javascript:|image-set\(|var\(|calc\(|[;{}<>@\\]|\/\*/i;
+
+// Bracket-aware tokenizer: split a single layer on whitespace ONLY at paren-depth
+// 0 so a color function like `rgba(8, 17, 31, .84)` (internal spaces after commas)
+// stays a SINGLE token.
+const tokenizeShadowLayer = (layer: string): string[] => {
+  const tokens: string[] = [];
+  let cur = "";
+  let depth = 0;
+  for (const ch of layer) {
+    if (ch === "(") {
+      depth += 1;
+      cur += ch;
+      continue;
+    }
+    if (ch === ")") {
+      depth = Math.max(0, depth - 1);
+      cur += ch;
+      continue;
+    }
+    if (depth === 0 && /\s/.test(ch)) {
+      if (cur) {
+        tokens.push(cur);
+        cur = "";
+      }
+      continue;
+    }
+    cur += ch;
+  }
+  if (cur) tokens.push(cur);
+  return tokens;
+};
+
+export function normalizeMenuBoxShadowValue(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const raw = value.trim();
+  if (raw.length === 0 || raw.length > BOX_SHADOW_MAX_LENGTH) return null;
+  if (SHADOW_DENY.test(raw)) return null; // security gate 1
+
+  // Split on top-level commas, then re-merge commas that fall INSIDE a color
+  // function's parens (a comma at paren-depth > 0 belongs to the color, not a
+  // layer boundary — otherwise `rgba(0,0,0,.24)` is miscounted as extra layers).
+  const pieces = raw.split(",");
+  const mergedLayers: string[] = [];
+  let depth = 0;
+  for (const piece of pieces) {
+    if (depth > 0) mergedLayers[mergedLayers.length - 1] += "," + piece;
+    else mergedLayers.push(piece);
+    for (const ch of piece) {
+      if (ch === "(") depth += 1;
+      else if (ch === ")") depth = Math.max(0, depth - 1);
+    }
+  }
+  if (mergedLayers.length > BOX_SHADOW_MAX_LAYERS) return null;
+
+  const lengthRe = new RegExp(`^${SHADOW_LENGTH}$`, "i");
+  const cleaned: string[] = [];
+  for (const layerRaw of mergedLayers) {
+    const layer = layerRaw.trim();
+    if (layer.length === 0) return null;
+    let rest = layer;
+    let inset = "";
+    if (/^inset\b/i.test(rest)) {
+      inset = "inset ";
+      rest = rest.replace(/^inset\b\s*/i, "");
+    }
+    const tokens = tokenizeShadowLayer(rest).filter(Boolean);
+    const lengths: string[] = [];
+    let color: string | null = null;
+    for (const tok of tokens) {
+      if (lengthRe.test(tok)) {
+        lengths.push(tok);
+        continue;
+      }
+      if (color !== null) return null; // a second non-length token ⇒ reject
+      color = normalizeMenuColorValue(tok); // security gate 2 (reuses color whitelist)
+      if (color === null) return null; // unknown token / bad color ⇒ reject
+    }
+    if (lengths.length < 2 || lengths.length > 4) return null; // offset-x/y (+ optional blur/spread)
+    if (color === null) return null; // a visible shadow needs a color
+    cleaned.push(`${inset}${lengths.join(" ")} ${color}`.trim());
+  }
+  return cleaned.join(", "); // canonicalized, validated
+}
+
+/** TASK-520-01-L03: brand icon-name validator (pattern-only, fail-soft). The
+ *  effective ALLOWLIST is enforced at RENDER (520-04) by resolving the name against
+ *  `lucideKebabIconComponents`; an unknown/unresolvable name falls through to the
+ *  text/site-name chain and renders nothing injectable. */
+const BRAND_ICON_NAME_PATTERN = /^[a-z0-9-]{1,64}$/;
+const normalizeBrandIconName = (value: unknown): string | undefined => {
+  if (typeof value !== "string") return undefined;
+  const n = value.trim().toLowerCase();
+  return BRAND_ICON_NAME_PATTERN.test(n) ? n : undefined;
+};
+
 /**
  * VALUE-handling policy (CONSCIOUS): KEYS reject-unknown (throw
  * MenuDocumentError), but VALUES fail-soft (a bad color/number/enum is OMITTED,
@@ -822,6 +1036,7 @@ const normalizeBrandStyle = (value: unknown, path: string): BrandStyle | undefin
   if (value.letterSpacing !== undefined && value.letterSpacing !== null) num("letterSpacing");
   if (value.height !== undefined && value.height !== null) num("height");
   if (value.maxWidth !== undefined && value.maxWidth !== null) num("maxWidth");
+  if (value.iconSize !== undefined && value.iconSize !== null) num("iconSize"); // TASK-520-01-L03
   if (value.fontWeight !== undefined && value.fontWeight !== null) {
     const w = normalizeEnumLocal(menuAppearanceFontWeights, value.fontWeight);
     if (w !== null) out.fontWeight = w;
@@ -833,6 +1048,11 @@ const normalizeBrandStyle = (value: unknown, path: string): BrandStyle | undefin
   if (value.color !== undefined && value.color !== null) {
     const c = normalizeMenuColorValue(value.color);
     if (c !== null) out.color = c;
+  }
+  if (value.iconColor !== undefined && value.iconColor !== null) {
+    // TASK-520-01-L03 icon mode color (alpha OK via the shared color whitelist).
+    const c = normalizeMenuColorValue(value.iconColor);
+    if (c !== null) out.iconColor = c;
   }
   return Object.keys(out).length > 0 ? out : undefined; // PRUNE empty ⇒ omit member
 };
@@ -1054,7 +1274,8 @@ const normalizeBrandProps = (
   }
   let brandMode: BrandProps["mode"] = "text";
   if (value.mode !== undefined) {
-    if (value.mode !== "text" && value.mode !== "image") {
+    // TASK-520-01-L03: "icon" added to the mode union.
+    if (value.mode !== "text" && value.mode !== "image" && value.mode !== "icon") {
       throw new MenuDocumentError(`${path}.mode`);
     }
     brandMode = value.mode;
@@ -1078,6 +1299,17 @@ const normalizeBrandProps = (
     if (typeof value.text !== "string") throw new MenuDocumentError(`${path}.text`);
     const text = value.text.trim().slice(0, MENU_BRAND_TEXT_MAX_LENGTH); // fail-soft cap, never throw-on-long
     if (text.length > 0) props.text = text; // SPARSE: empty/whitespace ⇒ OMIT ⇒ inherit site name
+  }
+  if (value.icon !== undefined && value.icon !== null) {
+    // TASK-520-01-L03: fail-soft — a bad icon name is dropped (SPARSE), never throws.
+    const icon = normalizeBrandIconName(value.icon);
+    if (icon) props.icon = icon;
+  }
+  if (value.showText !== undefined && value.showText !== null) {
+    // TASK-520-01-L03: strict TYPE (throw on non-boolean); present-only VALUE
+    // (store only `true`; false = the exclusive-legacy default ⇒ omit).
+    if (typeof value.showText !== "boolean") throw new MenuDocumentError(`${path}.showText`);
+    if (value.showText) props.showText = true;
   }
   if (value.image !== undefined && value.image !== null) {
     props.image = normalizeBrandImage(value.image, mode, `${path}.image`);
@@ -1562,11 +1794,13 @@ export function readMenuSectionOverrideValue(
   section: MenuSectionV2,
   breakpoint: MenuResponsiveBreakpoint,
   group: MenuSectionOverrideGroup,
-  key: keyof MenuAppearance
+  // TASK-520-01-L01: widened additively to the extra bar keys (type-only; the
+  // runtime already reads/writes by property name) so 520-03 stays cast-free.
+  key: keyof MenuAppearance | keyof MenuBarLayout
 ): unknown {
   const record = section.responsive?.[breakpoint]?.[group];
   return record && Object.prototype.hasOwnProperty.call(record, key)
-    ? (record as MenuAppearance)[key]
+    ? (record as Record<string, unknown>)[key]
     : undefined;
 }
 
@@ -1650,7 +1884,8 @@ export function clearMenuSectionOverride(
   sectionId: string,
   breakpoint: MenuResponsiveBreakpoint,
   group: MenuSectionOverrideGroup,
-  key: keyof MenuAppearance
+  // TASK-520-01-L01: widened additively to the extra bar keys (type-only).
+  key: keyof MenuAppearance | keyof MenuBarLayout
 ): MenuDocumentV2 {
   return mapMenuSection(doc, sectionId, (section) => {
     const record = section.responsive?.[breakpoint]?.[group];
@@ -2147,7 +2382,8 @@ export function clearMenuSectionBase(
   doc: MenuDocumentV2,
   sectionId: string,
   group: MenuSectionOverrideGroup,
-  key: keyof MenuAppearance
+  // TASK-520-01-L01: widened additively to the extra bar keys (type-only).
+  key: keyof MenuAppearance | keyof MenuBarLayout
 ): MenuDocumentV2 {
   return patchMenuSectionForDevice(doc, sectionId, "desktop", group, {
     [key]: undefined,
@@ -2197,7 +2433,8 @@ export function readMenuNavLevelStyleBaseValue(
 export function readMenuSectionBaseValue(
   section: MenuSectionV2,
   group: MenuSectionOverrideGroup,
-  key: keyof MenuAppearance
+  // TASK-520-01-L01: widened additively to the extra bar keys (type-only).
+  key: keyof MenuAppearance | keyof MenuBarLayout
 ): unknown {
   if (group === "layout") {
     return Object.prototype.hasOwnProperty.call(section.layout, key)

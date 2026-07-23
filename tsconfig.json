@@ -8,9 +8,8 @@
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["core/admin/*"]
+      "@/*": ["./core/admin/*"]
     },
     "types": ["node"]
   },

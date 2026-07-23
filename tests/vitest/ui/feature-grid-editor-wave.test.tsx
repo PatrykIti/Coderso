@@ -394,7 +394,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-test("FeatureGridAdvancedEditor describes theme token colors without custom-color drift", async () => {
+test("FeatureGridAdvancedEditor distinguishes theme tokens from retained custom colors", async () => {
   const { FeatureGridAdvancedEditor } =
     await import("../../../core/admin/ui/widgets/editors/FeatureGridEditors");
 
@@ -418,8 +418,8 @@ test("FeatureGridAdvancedEditor describes theme token colors without custom-colo
     const presentationSection = findSectionByTitle(view.container, "Presentation summary");
     const text = presentationSection?.textContent ?? "";
 
-    expect(text.match(/Theme token/g)).toHaveLength(3);
-    expect(text).not.toContain("Saved custom color");
+    expect(text.match(/Theme token/g)).toHaveLength(2);
+    expect(text.match(/Saved custom color/g)).toHaveLength(1);
   } finally {
     view.cleanup();
   }

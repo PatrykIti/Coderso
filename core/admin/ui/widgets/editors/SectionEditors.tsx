@@ -17,6 +17,7 @@ import { isApiClientError } from "@/services/apiClient";
 import { listMediaCached } from "@/services/mediaClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
 
+import { normalizeCssColorValue } from "../../../../services/theme/cssColorContract";
 import {
   isCompatibleSectionMediaUrl,
   sanitizeSectionAnchorId,
@@ -51,11 +52,7 @@ import {
   type SectionVariantId,
 } from "../../../../widgets/core/section";
 import type { WidgetEditorProps } from "../../../../widgets/types";
-import {
-  hasClearableFieldValue,
-  isPickerRepresentableColorValue,
-  resolveColorSwatchValue,
-} from "./ClearableFields";
+import { SharedColorControl } from "./SharedColorControl";
 import {
   ReadonlyWidgetSummaryRow,
   WidgetControlRow as BaseWidgetControlRow,
@@ -531,8 +528,14 @@ function SectionSurfacePreview({ value, variant }: { value: SectionData; variant
   const resolvedVariant = resolveSectionVariant(variant);
   const resolvedShadow = resolveRenderedSectionShadow(resolvedVariant, style.shadow);
   const resolvedMotion = style.motion ?? "none";
-  const hasGradient =
-    (style.gradientFrom ?? "").trim().length > 0 && (style.gradientTo ?? "").trim().length > 0;
+  const backgroundColor = normalizeCssColorValue(style.backgroundColor, "inherited-render");
+  const borderColor = normalizeCssColorValue(style.borderColor, "inherited-render");
+  const overlayColor = normalizeCssColorValue(style.overlayColor, "inherited-render");
+  const parsedGradientFrom = normalizeCssColorValue(style.gradientFrom, "inherited-render");
+  const parsedGradientTo = normalizeCssColorValue(style.gradientTo, "inherited-render");
+  const gradientFrom = parsedGradientFrom === "inherit" ? undefined : parsedGradientFrom;
+  const gradientTo = parsedGradientTo === "inherit" ? undefined : parsedGradientTo;
+  const hasGradient = Boolean(gradientFrom && gradientTo);
   const overlayOpacity = clampOpacity(style.overlayOpacity);
   const overlayVisible = overlayOpacity > 0;
 
@@ -555,11 +558,11 @@ function SectionSurfacePreview({ value, variant }: { value: SectionData; variant
           sectionSurfacePreviewShadowClassMap[resolvedShadow]
         )}
         style={{
-          backgroundColor: style.backgroundColor ?? "transparent",
+          backgroundColor: backgroundColor ?? "transparent",
           backgroundImage: hasGradient
-            ? `linear-gradient(${clampAngle(style.gradientAngle)}deg, ${style.gradientFrom}, ${style.gradientTo})`
+            ? `linear-gradient(${clampAngle(style.gradientAngle)}deg, ${gradientFrom}, ${gradientTo})`
             : undefined,
-          borderColor: style.borderColor ?? "var(--color-border)",
+          borderColor: borderColor ?? "var(--color-border)",
           borderStyle: "solid",
           borderWidth: `${style.borderWidth ?? "0"}px`,
         }}
@@ -569,7 +572,7 @@ function SectionSurfacePreview({ value, variant }: { value: SectionData; variant
             data-section-surface-preview-overlay="true"
             className="absolute inset-0"
             style={{
-              backgroundColor: style.overlayColor ?? "#000000",
+              backgroundColor: overlayColor ?? "#000000",
               opacity: overlayOpacity / 100,
             }}
           />
@@ -758,6 +761,7 @@ function ColorField({
   fallbackLabel,
   pickerFallback,
   onClear,
+  allowInheritKeyword = true,
 }: {
   id: string;
   label: string;
@@ -766,42 +770,23 @@ function ColorField({
   fallbackLabel: string;
   pickerFallback: string;
   onClear?: () => void;
+  allowInheritKeyword?: boolean;
 }) {
-  const hasValue = hasClearableFieldValue(value);
-  const hasSavedCustomColor = hasValue && !isPickerRepresentableColorValue(value);
-
   return (
-    <WidgetControlRow
-      id={id}
-      label={label}
-      actions={
-        onClear ? (
-          <Button type="button" variant="ghost" size="sm" onClick={onClear} disabled={!hasValue}>
-            Clear
-          </Button>
-        ) : null
-      }
-    >
-      {(fieldProps) => (
-        <div className="grid grid-cols-[2.5rem_1fr] gap-2">
-          <Input
-            id={fieldProps.id}
-            aria-label={`${label} swatch`}
-            type="color"
-            value={resolveColorSwatchValue(value, pickerFallback)}
-            onChange={(event) => onChange(event.target.value)}
-            className="h-9 w-10 p-1"
-            aria-labelledby={fieldProps["aria-labelledby"]}
-            aria-describedby={fieldProps["aria-describedby"]}
-          />
-          <p className="flex min-h-9 items-center rounded-md border border-dashed border-border/70 px-3 text-xs text-muted-foreground">
-            {hasSavedCustomColor
-              ? "Saved custom color. Use the swatch to replace it, or Clear to inherit."
-              : hasValue
-                ? "Selected color. Use the swatch to change it."
-                : `Theme default. Swatch preview uses ${fallbackLabel}.`}
-          </p>
-        </div>
+    <WidgetControlRow id={id} label={label}>
+      {() => (
+        <SharedColorControl
+          label={label}
+          value={value}
+          onChange={onChange}
+          onSwatchChange={onChange}
+          onClear={onClear}
+          pickerFallback={pickerFallback}
+          showValueInput={false}
+          colorProfile="inherited-render"
+          allowInheritKeyword={allowInheritKeyword}
+          clearedDescription={`No color override is saved. The swatch previews ${fallbackLabel}.`}
+        />
       )}
     </WidgetControlRow>
   );
@@ -1543,7 +1528,7 @@ export function SectionVisualEditor({
         <ColorField
           id="section.heading.labelColor"
           label="Label color"
-          value={heading.labelColor}
+          value={value.heading?.labelColor}
           onChange={(next) => updateHeading(value, onChange, { labelColor: next })}
           onClear={() => updateHeading(value, onChange, { labelColor: undefined })}
           fallbackLabel="theme text"
@@ -1553,7 +1538,7 @@ export function SectionVisualEditor({
         <ColorField
           id="section.heading.titleColor"
           label="Title color"
-          value={heading.titleColor}
+          value={value.heading?.titleColor}
           onChange={(next) => updateHeading(value, onChange, { titleColor: next })}
           onClear={() => updateHeading(value, onChange, { titleColor: undefined })}
           fallbackLabel="theme text"
@@ -1563,7 +1548,7 @@ export function SectionVisualEditor({
         <ColorField
           id="section.heading.descriptionColor"
           label="Description color"
-          value={heading.descriptionColor}
+          value={value.heading?.descriptionColor}
           onChange={(next) => updateHeading(value, onChange, { descriptionColor: next })}
           onClear={() => updateHeading(value, onChange, { descriptionColor: undefined })}
           fallbackLabel="theme text"
@@ -2068,7 +2053,7 @@ export function SectionVisualEditor({
         <ColorField
           id="section.style.backgroundColor"
           label="Background color"
-          value={normalized.style?.backgroundColor}
+          value={value.style?.backgroundColor}
           onChange={(next) => updateStyle(value, onChange, { backgroundColor: next })}
           onClear={() => clearStyleField(value, onChange, "backgroundColor")}
           fallbackLabel="transparent"
@@ -2078,21 +2063,23 @@ export function SectionVisualEditor({
         <ColorField
           id="section.style.gradientFrom"
           label="Gradient start"
-          value={normalized.style?.gradientFrom}
+          value={value.style?.gradientFrom}
           onChange={(next) => updateStyle(value, onChange, { gradientFrom: next })}
           onClear={() => clearStyleField(value, onChange, "gradientFrom")}
           fallbackLabel="white"
           pickerFallback="#ffffff"
+          allowInheritKeyword={false}
         />
 
         <ColorField
           id="section.style.gradientTo"
           label="Gradient end"
-          value={normalized.style?.gradientTo}
+          value={value.style?.gradientTo}
           onChange={(next) => updateStyle(value, onChange, { gradientTo: next })}
           onClear={() => clearStyleField(value, onChange, "gradientTo")}
           fallbackLabel="soft slate"
           pickerFallback="#f1f5f9"
+          allowInheritKeyword={false}
         />
 
         <WidgetControlRow id="section.style.gradientAngle" label="Gradient angle">
@@ -2126,7 +2113,7 @@ export function SectionVisualEditor({
         <ColorField
           id="section.style.borderColor"
           label="Border color"
-          value={normalized.style?.borderColor}
+          value={value.style?.borderColor}
           onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
           onClear={() => clearStyleField(value, onChange, "borderColor")}
           fallbackLabel="theme border"
@@ -2223,8 +2210,9 @@ export function SectionVisualEditor({
         <ColorField
           id="section.style.overlayColor"
           label="Overlay color"
-          value={normalized.style?.overlayColor}
+          value={value.style?.overlayColor}
           onChange={(next) => updateStyle(value, onChange, { overlayColor: next })}
+          onClear={() => clearStyleField(value, onChange, "overlayColor")}
           fallbackLabel="black"
           pickerFallback="#000000"
         />

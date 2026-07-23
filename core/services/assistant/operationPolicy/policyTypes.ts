@@ -10,6 +10,7 @@ export const assistantPolicyCoverageStates = [
   "live-execute",
   "live-read-only",
   "live-gated",
+  "legacy-maintenance",
   "not-applicable",
 ] as const;
 

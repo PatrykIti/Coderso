@@ -1,4 +1,5 @@
 import type { RouteContext, Router } from "../router";
+import type { PermissionGuardFactory } from "../middleware/rbac";
 import { registerAuthRoutes } from "./authRoutes";
 import { registerInstallRoutes } from "./installRoutes";
 import { registerPageRoutes } from "./pageRoutes";
@@ -48,7 +49,7 @@ import { registerPostsRoutes } from "./postsRoutes";
 
 export type RouteDeps = {
   requireAuth: (ctx: RouteContext) => Promise<void> | void;
-  requirePermission: (permission: string) => (ctx: RouteContext) => Promise<void> | void;
+  requirePermission: PermissionGuardFactory;
   validate: (schema: unknown, payload: unknown) => void;
 };
 

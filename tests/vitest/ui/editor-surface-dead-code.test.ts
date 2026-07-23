@@ -1,41 +1,102 @@
 // tests/vitest/ui/editor-surface-dead-code.test.ts (new)
 // Guard: the TASK-496 no-dead-code mandate. Pure filesystem/grep assertions —
 // no rendering, no model logic. Keeps the editor surface free of orphans.
-import { execSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-// -a is mandatory: the default search root `core` contains PageEditor.tsx, which reads
-// as binary to plain grep; without -a the shell-import assertion below can never see
-// PageEditor.tsx (it would rely solely on the non-binary Screen importers).
-const grepCount = (pattern: string, paths = "core") =>
-  execSync(
-    `grep -arn ${JSON.stringify(pattern)} ${paths} --include='*.tsx' --include='*.ts' || true`,
-    { encoding: "utf8" }
-  ).trim();
+type SourceScope = "core" | "core-and-tests";
+
+interface IndexedSourceFile {
+  path: string;
+  lines: readonly string[];
+}
+
+const listGitFiles = (args: readonly string[]) =>
+  execFileSync("git", args, { encoding: "utf8" }).trim().split("\n").filter(Boolean);
+
+const isTypeScriptSource = (path: string) => /\.tsx?$/u.test(path);
+const trackedSourcePaths = listGitFiles(["ls-files", "--cached", "--", "core", "tests"])
+  .filter(isTypeScriptSource)
+  .filter(existsSync)
+  .sort();
+const searchableSourcePaths = [
+  ...new Set([
+    ...trackedSourcePaths,
+    ...listGitFiles(["ls-files", "--others", "--exclude-standard", "--", "core", "tests"]).filter(
+      isTypeScriptSource
+    ),
+  ]),
+]
+  .filter(existsSync)
+  .sort();
+const sourceFiles: readonly IndexedSourceFile[] = searchableSourcePaths.map((path) => ({
+  path,
+  // Read the bytes directly instead of relying on grep's binary-file heuristic. This keeps
+  // PageEditor.tsx and every other tracked or untracked TypeScript source in the same index.
+  lines: readFileSync(path, "utf8").split(/\r?\n/u),
+}));
+
+const inScope = (path: string, scope: SourceScope) =>
+  path.startsWith("core/") || (scope === "core-and-tests" && path.startsWith("tests/"));
+
+const matchingLines = (
+  matches: (line: string) => boolean,
+  scope: SourceScope = "core"
+): string[] => {
+  const result: string[] = [];
+  for (const file of sourceFiles) {
+    if (!inScope(file.path, scope)) continue;
+    file.lines.forEach((line, index) => {
+      if (matches(line)) result.push(`${file.path}:${index + 1}:${line}`);
+    });
+  }
+  return result;
+};
+
+const linesContaining = (value: string, scope: SourceScope = "core") =>
+  matchingLines((line) => line.includes(value), scope);
+
+const identifierReferences = (identifiers: readonly string[]): ReadonlyMap<string, string[]> => {
+  const targetIdentifiers = new Set(identifiers);
+  const references = new Map(identifiers.map((identifier) => [identifier, [] as string[]]));
+  for (const file of sourceFiles) {
+    if (!inScope(file.path, "core-and-tests")) continue;
+    file.lines.forEach((line, index) => {
+      const identifiersOnLine = new Set(line.match(/[A-Za-z_$][\w$]*/gu) ?? []);
+      for (const identifier of identifiersOnLine) {
+        if (!targetIdentifiers.has(identifier)) continue;
+        references.get(identifier)?.push(`${file.path}:${index + 1}:${line}`);
+      }
+    });
+  }
+  return references;
+};
 
 describe("editor-surface dead-code mandate (TASK-496)", () => {
   it("the shared editor-chrome shell is imported, not orphaned", () => {
     const shellPath = "core/admin/ui/shared/CanvasEditor.tsx";
     if (existsSync(shellPath)) {
-      const refs = grepCount("shared/CanvasEditor")
-        .split("\n")
-        .filter((l) => l && !l.includes("_PROTOTYPE") && !l.startsWith(`${shellPath}:`));
+      const refs = linesContaining("shared/CanvasEditor").filter(
+        (line) => !line.includes("_PROTOTYPE") && !line.startsWith(`${shellPath}:`)
+      );
       expect(refs.some((l) => /import/.test(l))).toBe(true);
     } else {
-      expect(grepCount("shared/CanvasEditor")).toBe("");
+      expect(linesContaining("shared/CanvasEditor")).toEqual([]);
     }
   });
 
   it("the dead BlockChip export is gone", () => {
-    expect(grepCount("BlockChip")).toBe("");
+    expect(linesContaining("BlockChip")).toEqual([]);
   });
 
   it("the retired dark authoring chrome is gone (deleted + un-exported)", () => {
     expect(existsSync("core/admin/ui/authoring/AuthoringFloatingToolbar.tsx")).toBe(false);
     expect(existsSync("core/admin/ui/authoring/AuthoringCanvasFrame.tsx")).toBe(false);
     expect(existsSync("core/admin/ui/authoring/canvasChrome.ts")).toBe(false);
-    expect(grepCount("AuthoringFloatingToolbar\\|AuthoringCanvasFrame")).toBe("");
+    expect(
+      matchingLines((line) => /AuthoringFloatingToolbar|AuthoringCanvasFrame/u.test(line))
+    ).toEqual([]);
     // The pre-existing orphan AuthoringInsertionZone is also swept (board criterion #4 /
     // Sweep 3). 496-02 removed its only reference (the authoring-canvas.test.tsx case), so
     // this leaf deletes the file + barrel re-export; assert the file no longer exists.
@@ -58,30 +119,23 @@ describe("editor-surface dead-code mandate (TASK-496)", () => {
     // import-removed-but-kept (0 core/test importers) and allowlisted here.
     const KEEP =
       /^(PageEditorPage|PageList|PageRevisionDrawer|ListViewDesigner|ListViewColumnInspector|ListViewElementLibrary)$/;
-    const files = execSync(
-      "git ls-files 'core/admin/ui/pages/*.tsx' 'core/admin/ui/pages/**/*.tsx' " +
-        "'core/admin/ui/custom-screens/*.tsx' 'core/admin/ui/authoring/*.tsx' " +
-        "'core/admin/ui/shared/*.tsx'",
-      { encoding: "utf8" }
-    )
-      .trim()
-      .split("\n")
-      .filter(Boolean);
+    const files = trackedSourcePaths.filter((path) =>
+      /^core\/admin\/ui\/(?:pages|custom-screens|authoring|shared)\/.+\.tsx$/u.test(path)
+    );
+    const referencesByComponent = identifierReferences(
+      files.map((file) => file.replace(/.*\//u, "").replace(/\.tsx$/u, ""))
+    );
     const orphans = files.filter((f) => {
-      const base = f.replace(/.*\//, "").replace(/\.tsx$/, "");
+      const base = f.replace(/.*\//u, "").replace(/\.tsx$/u, "");
       if (KEEP.test(base)) return false;
-      // count importers in BOTH core AND tests — a test importer means the file is still used.
-      const refs = grepCount(`\\b${base}\\b`, "core tests")
-        .split("\n")
-        .filter((l) => l && !l.startsWith(`${f}:`) && !/\/index\.ts:/.test(l));
+      // Count importers in BOTH core AND tests — a test importer means the file is still used.
+      const refs = (referencesByComponent.get(base) ?? []).filter(
+        (line) => !line.startsWith(`${f}:`) && !/\/index\.ts:/u.test(line)
+      );
       return refs.length === 0;
     });
     expect(orphans, `orphaned editor-surface file(s): ${orphans.join(", ")}`).toEqual([]);
-  }, 300000); // wide timeout: this case greps `core` + `tests` per editor-surface file (slow, but
-  // synchronous & deterministic). TASK-497 added shared/EditorRail.tsx to the swept set, so under
-  // full-suite parallel load the per-file `core tests` greps can exceed the old 120s bound (this
-  // case alone measured ~126s loaded vs ~32s isolated) — a pure timeout flake, not an orphan; the
-  // assertion is unchanged. Headroom raised to 300s.
+  }, 30000); // One source index and one identifier pass keep this deterministic under full load.
 
   it("authoring logic that Screens still need is preserved (live importers)", () => {
     for (const sym of [
@@ -90,10 +144,10 @@ describe("editor-surface dead-code mandate (TASK-496)", () => {
       "AuthoringLayersPanel",
       "AuthoringCommandPalette",
     ]) {
-      const external = grepCount(sym)
-        .split("\n")
-        .filter((l) => l && !l.includes("core/admin/ui/authoring/"));
+      const external = linesContaining(sym).filter(
+        (line) => !line.includes("core/admin/ui/authoring/")
+      );
       expect(external.length, `${sym} must keep a live importer`).toBeGreaterThan(0);
     }
-  });
+  }, 30000);
 });

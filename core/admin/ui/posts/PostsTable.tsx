@@ -101,12 +101,8 @@ export function PostsTable({
             const authorName = post.author?.name ?? post.author?.email ?? "Unknown";
             const authorFirst = authorName.split(" ")[0];
             return (
-              <TableRow
-                key={post.id}
-                onClick={() => onEdit(post.id)}
-                className={cn("cursor-pointer", isSelected && "bg-primary-soft/40")}
-              >
-                <TableCell className="pl-4" onClick={(event) => event.stopPropagation()}>
+              <TableRow key={post.id} className={cn(isSelected && "bg-primary-soft/40")}>
+                <TableCell className="pl-4">
                   <Checkbox
                     aria-label={`Select ${post.title}`}
                     checked={isSelected}
@@ -130,12 +126,23 @@ export function PostsTable({
                       <span className="break-all font-mono text-xs text-muted-foreground">
                         {post.slug}
                       </span>
-                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:hidden">
-                        <StatusBadge status={post.status} />
-                        <span className="text-muted-foreground/60">•</span>
+                      <div
+                        className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground lg:hidden"
+                        data-post-row-metadata="fallback"
+                      >
+                        <span className="md:hidden" data-post-row-status-fallback="true">
+                          <StatusBadge status={post.status} />
+                        </span>
+                        <span className="text-muted-foreground/60 md:hidden" aria-hidden="true">
+                          •
+                        </span>
                         <span>{authorFirst}</span>
-                        <span className="text-muted-foreground/60">•</span>
-                        <span>{formatDate(post.publishedAt)}</span>
+                        <span className="text-muted-foreground/60" aria-hidden="true">
+                          •
+                        </span>
+                        <time dateTime={post.publishedAt ?? undefined}>
+                          {formatDate(post.publishedAt)}
+                        </time>
                       </div>
                     </span>
                   </div>
@@ -156,11 +163,9 @@ export function PostsTable({
                 <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
                   {formatDate(post.publishedAt)}
                 </TableCell>
-                <TableCell
-                  className="w-12 pr-4 text-right"
-                  onClick={(event) => event.stopPropagation()}
-                >
+                <TableCell className="w-12 pr-4 text-right">
                   <PageRowActions
+                    actionLabel={`Actions for ${post.title}`}
                     status={post.status}
                     onEdit={() => onEdit(post.id)}
                     onPreview={() => onPreview(post.id)}

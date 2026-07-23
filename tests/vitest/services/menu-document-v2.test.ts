@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   BRAND_STYLE_NUMBER_RANGES,
+  MENU_BAR_LAYOUT_NUMBER_RANGES,
   MENU_BRAND_TEXT_MAX_LENGTH,
   MENU_DOCUMENT_INVALID,
   MENU_DOCUMENT_SCHEMA_VERSION,
@@ -32,6 +33,7 @@ import {
   hasMenuBrandStyleOverride,
   isEmptyMenuDocument,
   isMenuDocumentError,
+  normalizeMenuBoxShadowValue,
   normalizeMenuDocumentV2ForWrite,
   normalizeStoredMenuDocumentV2ForRead,
   patchMenuBrandStyleForDevice,
@@ -64,6 +66,7 @@ import {
   type NavLevelStyle,
 } from "../../../core/services/menus/menuDocumentV2";
 import { createPageBlockV2 } from "../../../core/services/pages/pageDocumentV2";
+import { CSS_COLOR_VALUE_MAX_LENGTH } from "../../../core/services/theme/cssColorContract";
 import { buildMenuDocumentCss } from "../../../core/site/menuDocumentCss";
 
 const section = (blocks: unknown[], extra?: Record<string, unknown>) => ({
@@ -79,6 +82,41 @@ const doc = (blocks: unknown[], extra?: Record<string, unknown>) => ({
   sections: [section(blocks, extra)],
 });
 
+const boundaryTerminal = "transparent";
+const boundaryPaddingLength = CSS_COLOR_VALUE_MAX_LENGTH - boundaryTerminal.length;
+const rawAtCapColor = `${" ".repeat(Math.floor(boundaryPaddingLength / 2))}${boundaryTerminal}${" ".repeat(
+  Math.ceil(boundaryPaddingLength / 2)
+)}`;
+const rawOverCapColor = `${rawAtCapColor} `;
+const rawMenuColorCases = [
+  { id: "exact cap", input: rawAtCapColor, expected: "transparent" },
+  { id: "cap plus one", input: rawOverCapColor, expected: null },
+  { id: "C0 control", input: `\u001f${boundaryTerminal}`, expected: null },
+  { id: "C1 control", input: `\u0085${boundaryTerminal}`, expected: null },
+  { id: "NBSP", input: `\u00a0${boundaryTerminal}`, expected: null },
+  { id: "EM SPACE", input: `\u2003${boundaryTerminal}`, expected: null },
+  { id: "inherited currentColor", input: "currentColor", expected: null },
+  { id: "inherited inherit", input: "inherit", expected: null },
+  { id: "out-of-range function", input: "rgb(256,0,0)", expected: null },
+] as const;
+
+const shadowColorPrefix = "rgba(";
+const shadowColorTerminal = "0,0,0,.5)";
+const shadowColorAtCap = `${shadowColorPrefix}${" ".repeat(
+  CSS_COLOR_VALUE_MAX_LENGTH - shadowColorPrefix.length - shadowColorTerminal.length
+)}${shadowColorTerminal}`;
+const shadowColorOverCap = `${shadowColorPrefix} ${shadowColorAtCap.slice(shadowColorPrefix.length)}`;
+const shadowColorBoundaryCases = [
+  { id: "exact cap", input: shadowColorAtCap, expected: "rgba(0, 0, 0, 0.5)" },
+  { id: "cap plus one", input: shadowColorOverCap, expected: null },
+  { id: "C0 control", input: "rgba(\u001f0,0,0,.5)", expected: null },
+  { id: "C1 control", input: "rgba(\u00850,0,0,.5)", expected: null },
+  { id: "NBSP", input: "rgba(\u00a00,0,0,.5)", expected: null },
+  { id: "EM SPACE", input: "rgba(\u20030,0,0,.5)", expected: null },
+  { id: "inherited keyword", input: "currentColor", expected: null },
+  { id: "out-of-range function", input: "rgb(256,0,0)", expected: null },
+] as const;
+
 const expectDocError = (fn: () => unknown, path: string) => {
   try {
     fn();
@@ -91,6 +129,32 @@ const expectDocError = (fn: () => unknown, path: string) => {
 };
 
 describe("menuDocumentV2 write-strict", () => {
+  test("passes untouched raw colors through the strict flat appearance subset", () => {
+    expect(rawAtCapColor).toHaveLength(CSS_COLOR_VALUE_MAX_LENGTH);
+    expect(rawOverCapColor).toHaveLength(CSS_COLOR_VALUE_MAX_LENGTH + 1);
+
+    for (const colorCase of rawMenuColorCases) {
+      if (colorCase.expected !== null) {
+        const out = normalizeMenuDocumentV2ForWrite(
+          doc([], { layout: { surfaceColor: colorCase.input, paddingY: 4 } })
+        );
+        expect(out.sections[0]?.layout, colorCase.id).toEqual({
+          surfaceColor: colorCase.expected,
+          paddingY: 4,
+        });
+        continue;
+      }
+
+      expectDocError(
+        () =>
+          normalizeMenuDocumentV2ForWrite(
+            doc([], { layout: { surfaceColor: colorCase.input, paddingY: 4 } })
+          ),
+        "document.sections[0].layout.surfaceColor"
+      );
+    }
+  });
+
   test("rejects unknown section types with a machine-readable path", () => {
     expectDocError(
       () =>
@@ -239,6 +303,39 @@ describe("menuDocumentV2 read fail-closed", () => {
     expect(normalizeStoredMenuDocumentV2ForRead({ sections: [{ type: "nope" }] }).sections).toEqual(
       []
     );
+  });
+
+  test("canonicalizes accepted flat colors and never restores rejected raw bytes", () => {
+    for (const colorCase of rawMenuColorCases) {
+      const stored = doc([{ id: "blk-color-nav", type: "nav-items", props: {} }], {
+        id: "sec-color-flat",
+        layout: { surfaceColor: colorCase.input, paddingY: 4 },
+      });
+      const read = normalizeStoredMenuDocumentV2ForRead(stored);
+
+      if (colorCase.expected === null) {
+        expect(read.sections, colorCase.id).toEqual([]);
+        expect(resolveStoredMenuDocument({ document: stored }), colorCase.id).toBeNull();
+        expect(
+          resolvePublishedMenuDocument({ published: { document: stored } }),
+          colorCase.id
+        ).toBeNull();
+        continue;
+      }
+
+      expect(read.sections[0]?.layout, colorCase.id).toEqual({
+        surfaceColor: colorCase.expected,
+        paddingY: 4,
+      });
+      expect(
+        resolveStoredMenuDocument({ document: stored })?.sections[0]?.layout,
+        colorCase.id
+      ).toEqual(read.sections[0]?.layout);
+      expect(
+        resolvePublishedMenuDocument({ published: { document: stored } })?.sections[0]?.layout,
+        colorCase.id
+      ).toEqual(read.sections[0]?.layout);
+    }
   });
 });
 
@@ -1353,6 +1450,51 @@ const navBlock = (props: Record<string, unknown> = {}) => ({
 const firstBlock = (d: MenuDocumentV2) => d.sections[0]!.blocks[0]!;
 const firstSection = (d: MenuDocumentV2) => d.sections[0]!;
 
+test("nested Menu color fields canonicalize or omit fail-soft across write and read resolvers", () => {
+  for (const colorCase of rawMenuColorCases) {
+    const input = doc(
+      [
+        brandBlock({ props: { style: { color: colorCase.input, height: 40 } } }),
+        navBlock({
+          levelStyles: { 1: { linkColor: colorCase.input, fontSize: 16 } },
+          navChrome: { navPillBackground: colorCase.input, navPillRadius: 8 },
+        }),
+      ],
+      {
+        id: "sec-color-nested",
+        layout: { surfaceColorScrolled: colorCase.input, radius: 6 },
+      }
+    );
+
+    const assertNestedResult = (out: MenuDocumentV2) => {
+      const layout = out.sections[0]?.layout;
+      const brand = out.sections[0]?.blocks[0] as Extract<MenuBlockV2, { type: "brand" }>;
+      const nav = out.sections[0]?.blocks[1] as Extract<MenuBlockV2, { type: "nav-items" }>;
+      const expectedColor = colorCase.expected ?? undefined;
+
+      expect(layout?.surfaceColorScrolled, `${colorCase.id}:scrolled`).toBe(expectedColor);
+      expect(layout?.radius, `${colorCase.id}:layout-sibling`).toBe(6);
+      expect(brand.props.style?.color, `${colorCase.id}:brand`).toBe(expectedColor);
+      expect(brand.props.style?.height, `${colorCase.id}:brand-sibling`).toBe(40);
+      expect(nav.props.levelStyles?.[1]?.linkColor, `${colorCase.id}:level`).toBe(expectedColor);
+      expect(nav.props.levelStyles?.[1]?.fontSize, `${colorCase.id}:level-sibling`).toBe(16);
+      expect(nav.props.navChrome?.navPillBackground, `${colorCase.id}:chrome`).toBe(expectedColor);
+      expect(nav.props.navChrome?.navPillRadius, `${colorCase.id}:chrome-sibling`).toBe(8);
+    };
+
+    const written = normalizeMenuDocumentV2ForWrite(input);
+    assertNestedResult(written);
+    const stored = normalizeStoredMenuDocumentV2ForRead(input);
+    assertNestedResult(stored);
+    const resolvedStored = resolveStoredMenuDocument({ document: input });
+    expect(resolvedStored, `${colorCase.id}:stored-resolver`).not.toBeNull();
+    assertNestedResult(resolvedStored as MenuDocumentV2);
+    const resolvedPublished = resolvePublishedMenuDocument({ published: { document: input } });
+    expect(resolvedPublished, `${colorCase.id}:published-resolver`).not.toBeNull();
+    assertNestedResult(resolvedPublished as MenuDocumentV2);
+  }
+});
+
 describe("menuDocumentV2 normalizeBrandStyle (TASK-504-01)", () => {
   test("accepts each text-mode + image-mode key, SPARSE (only present kept)", () => {
     const d = normalizeMenuDocumentV2ForWrite(
@@ -2446,6 +2588,241 @@ describe("TASK-506-01 F2 resolveMenuControlDefault source labels", () => {
     const before = JSON.stringify(s);
     resolveMenuControlDefault(s, "tablet", 2, "paddingX");
     expect(JSON.stringify(s)).toBe(before);
+  });
+});
+
+// --- TASK-520-01: menu-bar scrolled/radius/custom-shadow + brand icon/combo ---
+
+const layoutOf = (out: MenuDocumentV2): Record<string, unknown> =>
+  (out.sections[0]?.layout ?? {}) as Record<string, unknown>;
+const brandPropsOf = (out: MenuDocumentV2): Record<string, unknown> =>
+  (out.sections[0]?.blocks[0] as { props: Record<string, unknown> }).props;
+
+describe("TASK-520-01-L01 menu-bar layout scrolled variants + radius", () => {
+  test("round-trips radius + scrolled color/width/shadow-enum keys", () => {
+    const layout = {
+      radius: 18,
+      surfaceColorScrolled: "rgba(8,17,31,.84)",
+      borderColorScrolled: "#ffffff2e",
+      borderWidthScrolled: 2,
+      shadowScrolled: "md",
+    };
+    const out = normalizeMenuDocumentV2ForWrite(doc([], { layout }));
+    expect(layoutOf(out)).toEqual({
+      ...layout,
+      surfaceColorScrolled: "rgba(8, 17, 31, 0.84)",
+    });
+    // idempotent round-trip
+    expect(normalizeMenuDocumentV2ForWrite(out)).toEqual(out);
+  });
+
+  test("rejects an unknown menu-bar layout key with a machine-readable path", () => {
+    expectDocError(
+      () => normalizeMenuDocumentV2ForWrite(doc([], { layout: { bogus: 1 } })),
+      "document.sections[0].layout.bogus"
+    );
+  });
+
+  test("fails soft on bad values, clamps borderWidthScrolled, keeps siblings", () => {
+    const out = normalizeMenuDocumentV2ForWrite(
+      doc([], {
+        layout: {
+          radius: "x",
+          shadowScrolled: "xl",
+          surfaceColorScrolled: "url(x)",
+          borderWidthScrolled: 999,
+          borderColorScrolled: "#ffffff2e",
+        },
+      })
+    );
+    expect(layoutOf(out)).toEqual({ borderWidthScrolled: 8, borderColorScrolled: "#ffffff2e" });
+  });
+
+  test("present-only: an appearance-only layout is byte-identical (no extra keys)", () => {
+    const out = normalizeMenuDocumentV2ForWrite(
+      doc([], { layout: { surfaceColor: "#101828", sticky: true } })
+    );
+    expect(layoutOf(out)).toEqual({ surfaceColor: "#101828", sticky: true });
+  });
+
+  test("radius is per-device via responsive.mobile.layout and merges on resolve", () => {
+    const out = normalizeMenuDocumentV2ForWrite(
+      doc([], { layout: { radius: 18 }, responsive: { mobile: { layout: { radius: 8 } } } })
+    );
+    expect(layoutOf(out).radius).toBe(18);
+    const resolved = resolveMenuSectionAppearanceForDevice(
+      out.sections[0] as MenuSectionV2,
+      "mobile"
+    );
+    expect((resolved.layout as Record<string, unknown>).radius).toBe(8);
+  });
+
+  test("MENU_BAR_LAYOUT_NUMBER_RANGES.radius bounds are exported for the slider", () => {
+    expect(MENU_BAR_LAYOUT_NUMBER_RANGES.radius).toEqual({ min: 0, max: 40 });
+  });
+});
+
+describe("TASK-520-01-L02 normalizeMenuBoxShadowValue (security-critical whitelist)", () => {
+  test("accepts the owner token + hex8 + inset + 2-layer with canonical color bytes", () => {
+    expect(normalizeMenuBoxShadowValue("0 18px 50px rgba(0,0,0,.24)")).toBe(
+      "0 18px 50px rgba(0, 0, 0, 0.24)"
+    );
+    expect(normalizeMenuBoxShadowValue("0 8px 24px #0000003d")).toBe("0 8px 24px #0000003d");
+    expect(normalizeMenuBoxShadowValue("inset 0 1px 2px #00000022")).toBe(
+      "inset 0 1px 2px #00000022"
+    );
+    expect(normalizeMenuBoxShadowValue("0 2px 4px #000, 0 8px 16px #0003")).toBe(
+      "0 2px 4px #000, 0 8px 16px #0003"
+    );
+  });
+
+  test("keeps a color function with internal spaces as ONE token (bracket-aware)", () => {
+    expect(normalizeMenuBoxShadowValue("0 18px 50px rgba(8, 17, 31, .84)")).toBe(
+      "0 18px 50px rgba(8, 17, 31, 0.84)"
+    );
+  });
+
+  test("passes each untouched embedded color token through the shared raw-byte boundary", () => {
+    expect(shadowColorAtCap).toHaveLength(CSS_COLOR_VALUE_MAX_LENGTH);
+    expect(shadowColorOverCap).toHaveLength(CSS_COLOR_VALUE_MAX_LENGTH + 1);
+
+    for (const colorCase of shadowColorBoundaryCases) {
+      const expected = colorCase.expected === null ? null : `0 0 ${colorCase.expected}`;
+      expect(normalizeMenuBoxShadowValue(`0 0 ${colorCase.input}`), colorCase.id).toBe(expected);
+    }
+  });
+
+  test("rejects injection / escape / non-grammar inputs (→ null)", () => {
+    for (const bad of [
+      "0 0 10px red;} body{display:none}",
+      "0 0 5px url(x)",
+      "0 0 5px expression(alert(1))",
+      "0 0 5px var(--x)",
+      "0 0 5px calc(1px)",
+      "<script>",
+      "0 0 1px #000, 0 0 1px #000, 0 0 1px #000, 0 0 1px #000, 0 0 1px #000",
+      "10px",
+      "foo bar baz #fff",
+      "0 0 5px red",
+      `0 0 ${"1".repeat(210)}px #000`,
+      42,
+      null,
+    ]) {
+      expect(normalizeMenuBoxShadowValue(bad)).toBeNull();
+    }
+  });
+
+  test("shadowCustom* round-trip via the document; invalid omitted, siblings survive", () => {
+    const out = normalizeMenuDocumentV2ForWrite(
+      doc([], {
+        layout: {
+          shadow: "sm",
+          shadowCustom: "0 18px 50px rgba(0,0,0,.24)",
+          shadowCustomScrolled: "0 8px 24px rgba(0,0,0,.3)",
+        },
+      })
+    );
+    expect(layoutOf(out)).toEqual({
+      shadow: "sm",
+      shadowCustom: "0 18px 50px rgba(0, 0, 0, 0.24)",
+      shadowCustomScrolled: "0 8px 24px rgba(0, 0, 0, 0.3)",
+    });
+    const bad = normalizeMenuDocumentV2ForWrite(
+      doc([], { layout: { radius: 6, shadowCustom: "0 0 10px red;}body{}" } })
+    );
+    expect(layoutOf(bad)).toEqual({ radius: 6 });
+  });
+});
+
+describe("TASK-520-01-L03 brand icon mode + graphic-with-text combo", () => {
+  const brandDoc = (props: Record<string, unknown>) => doc([{ type: "brand", props }]);
+
+  test("icon mode round-trips with icon + showText + icon style", () => {
+    const out = normalizeMenuDocumentV2ForWrite(
+      brandDoc({
+        mode: "icon",
+        href: "/",
+        icon: "house",
+        showText: true,
+        style: { iconColor: "#f7fbffcc", iconSize: 28 },
+      })
+    );
+    expect(brandPropsOf(out)).toEqual({
+      mode: "icon",
+      href: "/",
+      icon: "house",
+      showText: true,
+      style: { iconColor: "#f7fbffcc", iconSize: 28 },
+    });
+  });
+
+  test("image + showText combo round-trips", () => {
+    const out = normalizeMenuDocumentV2ForWrite(
+      brandDoc({ mode: "image", href: "/", showText: true })
+    );
+    expect(brandPropsOf(out)).toEqual({ mode: "image", href: "/", showText: true });
+  });
+
+  test("icon name is lowercased; bad name / bad color / small size fail soft", () => {
+    const out = normalizeMenuDocumentV2ForWrite(
+      brandDoc({
+        mode: "icon",
+        href: "/",
+        icon: "Arrow-Right",
+        style: { iconColor: "url(x)", iconSize: 5 },
+      })
+    );
+    expect(brandPropsOf(out)).toEqual({
+      mode: "icon",
+      href: "/",
+      icon: "arrow-right",
+      style: { iconSize: 12 },
+    });
+  });
+
+  test("invalid icon name is omitted (render falls through)", () => {
+    const out = normalizeMenuDocumentV2ForWrite(
+      brandDoc({ mode: "icon", href: "/", icon: "../../etc" })
+    );
+    expect(brandPropsOf(out)).toEqual({ mode: "icon", href: "/" });
+  });
+
+  test("showText present-only: false is dropped, non-boolean throws", () => {
+    const out = normalizeMenuDocumentV2ForWrite(
+      brandDoc({ mode: "text", href: "/", showText: false })
+    );
+    expect(brandPropsOf(out)).toEqual({ mode: "text", href: "/" });
+    expectDocError(
+      () => normalizeMenuDocumentV2ForWrite(brandDoc({ mode: "text", href: "/", showText: "yes" })),
+      "document.sections[0].blocks[0].props.showText"
+    );
+  });
+
+  test("bad mode throws; unknown brand style key throws", () => {
+    expectDocError(
+      () => normalizeMenuDocumentV2ForWrite(brandDoc({ mode: "svg", href: "/" })),
+      "document.sections[0].blocks[0].props.mode"
+    );
+    expectDocError(
+      () =>
+        normalizeMenuDocumentV2ForWrite(
+          brandDoc({ mode: "icon", href: "/", style: { bogusStyle: 1 } })
+        ),
+      "document.sections[0].blocks[0].props.style.bogusStyle"
+    );
+  });
+
+  test("back-compat: legacy text/image brand round-trips byte-identical", () => {
+    const outText = normalizeMenuDocumentV2ForWrite(brandDoc({ mode: "text", href: "/" }));
+    expect(brandPropsOf(outText)).toEqual({ mode: "text", href: "/" });
+    const outImage = normalizeMenuDocumentV2ForWrite(
+      brandDoc({ mode: "image", href: "/", image: { src: "/logo.png", alt: "Logo" } })
+    );
+    const p = brandPropsOf(outImage);
+    expect(p.mode).toBe("image");
+    expect(p.icon).toBeUndefined();
+    expect(p.showText).toBeUndefined();
+    expect(BRAND_STYLE_NUMBER_RANGES.iconSize).toEqual({ min: 12, max: 64 });
   });
 });
 

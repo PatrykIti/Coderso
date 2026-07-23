@@ -1,5 +1,10 @@
 # Navigation Widget (v1)
 
+> **Historical compatibility boundary:** this file documents a retained renderer/read-
+> compatibility contract. Configurable widgets exist only on the Admin Dashboard;
+> active editors own their sections and blocks. Do not add or expand a non-Dashboard
+> editor, registry entry, preset, or module-pack surface from this file.
+
 ## Purpose
 
 Kompozytowy pasek nawigacji strony z logo, linkami, opcjonalnym CTA i prawym
@@ -211,13 +216,17 @@ Primary CTA jest renderowane tylko dla:
 
 ### Style color bounds
 
-- persisted/imported Navigation color fields are schema-bounded and normalized
-  before render
+- the ten direct fields listed under Clear Controls use the canonical
+  `inherited-render` profile at normalization and render boundaries
 - accepted color values are safe hex colors, `var(--color-*)` theme tokens,
-  bounded `rgb(a)`/`hsl(a)` values, and safe keywords such as `transparent`
+  bounded `rgb(a)`/`hsl(a)` values, `transparent`, `currentColor`, and `inherit`
+- schema bounds are structural only; semantic ranges, arity, original-input
+  limits, and canonical bytes are enforced by the shared parser
 - unsafe CSS fragments such as `url(...)`, `javascript:`, `data:`, braces, and
   semicolon injection are rejected by schema validation or dropped by the
   normalizer before inline styles are emitted
+- omitted/cleared colors are present-only and never replaced with newly
+  persisted fallback bytes
 
 ### Collapse and sticky
 

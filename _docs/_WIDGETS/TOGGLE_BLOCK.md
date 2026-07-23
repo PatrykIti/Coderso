@@ -1,5 +1,10 @@
 # Toggle Block Widget (v2)
 
+> **Historical compatibility boundary:** this file documents a retained renderer/read-
+> compatibility contract. Configurable widgets exist only on the Admin Dashboard;
+> active editors own their sections and blocks. Do not add or expand a non-Dashboard
+> editor, registry entry, preset, or module-pack surface from this file.
+
 ## Purpose
 
 Swap between two alternate content panes with a bounded toggle surface, fixed
@@ -103,12 +108,18 @@ strings such as `url(...)`, `expression(...)`, `javascript:`, `data:`,
 delimiter injection, unknown functions, and malformed colors are rejected before
 they can reach inline styles or Toggle Block CSS custom properties.
 
-Allowed root color values are bounded CSS colors from the shared clearable color
-contract:
+The four direct root fields use the shared `inherited-render` profile at
+normalization and render boundaries. Allowed values are bounded canonical CSS
+colors:
 - hex colors (`#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`)
 - bounded `rgb/rgba` and `hsl/hsla` values
 - `var(--color-*)` theme tokens
 - `transparent`, `currentColor`, and `inherit`
+
+The schema pattern is a structural prefilter; semantic range/arity checks and
+canonicalization still run before output. Rejected values are never passed
+through raw. Omitted and cleared root fields remain present-only and do not seed
+new persisted defaults.
 
 `style.surfaceColor`
 - Clearable.

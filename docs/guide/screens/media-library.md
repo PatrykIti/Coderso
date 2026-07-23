@@ -26,7 +26,7 @@ In the current UI, this screen includes:
 - upload area:
   drag-and-drop zone plus `Browse Files`
 - asset list/grid:
-  reusable media cards plus `Load More Assets`
+  the loaded asset set with truthful result counts
 
 # Medium
 
@@ -35,8 +35,8 @@ Use Media Library when you need to:
 - find an existing asset instead of uploading a duplicate,
 - review or update metadata,
 - check delivery access rules,
-- reuse the same file across pages, posts, widgets, forms, and other product
-  surfaces.
+- reuse the same file across page sections/blocks, posts, forms, and other real
+  product surfaces.
 
 The Media surface is easiest to understand as four connected workflows:
 - ingestion:
@@ -100,7 +100,12 @@ The Media surface is easiest to understand as four connected workflows:
     - `Internal (session or API key)`
 13. Save settings only after you are certain how runtime media access should
     work for the project.
-14. Use `Load More Assets` when the current page of media cards is not enough.
+
+Upload and replace validate the actual bytes. The original filename and the type
+reported by the browser are display/input hints only; they do not select the
+stored type, storage extension, or browser delivery behavior. If content is
+unsafe, ambiguous, or conflicts with the allowed policy, the operation fails
+before the asset becomes reusable.
 
 Use this safe working order when you want the fewest mistakes:
 1. Search first.
@@ -122,18 +127,30 @@ Use this safe working order when you want the fewest mistakes:
   many assets.
 - Type filters are not just convenience UI. Use them to prevent accidental reuse
   of the wrong asset category.
+- New passive PNG, JPEG, GIF, WebP, and BMP assets may render inline. PDF, plain
+  text, safe SVG, and explicitly allowed unknown binary assets download as
+  attachments. This behavior is server-owned and cannot be changed by renaming
+  a file.
+- PDF uploads may use ordinary compressed page content, but files with active forms,
+  encryption, or compressed object structures are rejected because Coderso cannot
+  safely inspect those structures at upload time.
+- The admin keeps attachment-only formats such as SVG in the `Documents`
+  category. They do not receive image previews, image-only editing controls, or
+  eligibility in pickers restricted to passive images, including the image and gallery
+  pickers used by the Posts editor. A specialized picker can offer SVG only when it
+  explicitly requests the exact `image/svg+xml` type; even then, the asset stays a
+  downloadable document rather than becoming an inline image.
 - `Internal` delivery mode is a security boundary, not a cosmetic toggle. It
   changes how runtime `/media/*` URLs can be accessed.
 - Usage information in asset details helps you think in terms of shared assets.
   Before deleting an item, verify whether other surfaces depend on it.
-- `Load More Assets` means the library is paged rather than fully expanded at
-  once. Do not assume the first visible set is the full library.
+- Result counts describe the currently loaded full-list response; the UI does
+  not expose a nonfunctional `Load More Assets` control.
 
 # Troubleshooting
 
 - You cannot find an asset:
-  clear the search field, reset the type filter to `All Files`, and load more
-  assets if needed.
+  clear the search field and reset the type filter to `All Files`.
 - Upload worked but the file is hard to locate:
   enable `Open details after upload` next time so the new asset opens directly
   into its detail workflow.
@@ -143,8 +160,8 @@ Use this safe working order when you want the fewest mistakes:
 - Runtime media links should not be public:
   open `Media settings` and review `Access mode`.
 - You are about to delete an asset:
-  check usage context first so you do not break another page, post, widget, or
-  configuration surface.
+  check usage context first so you do not break another page section/block,
+  post, form, or configuration surface.
 - Metadata is incomplete after upload:
   open asset details and update title, alt text, and caption before treating the
   file as ready for reuse.
@@ -173,7 +190,9 @@ Use this safe working order when you want the fewest mistakes:
 3. Confirm title, alt text, and caption are acceptable for reuse.
 4. Confirm file information matches expectations.
 5. Confirm delivery access mode is intentional.
-6. Confirm the asset is safe to reuse before leaving the library.
+6. Confirm documents or active-capable formats download instead of rendering
+   inline.
+7. Confirm the asset is safe to reuse before leaving the library.
 
 # Security
 
@@ -183,5 +202,10 @@ Use this safe working order when you want the fewest mistakes:
   from an authenticated admin session or API key with `media.read`.
 - Asset URLs can become reusable runtime references, so treat copied media links
   as operationally meaningful.
+- Runtime `/media/*` responses are served through Coderso with a canonical type,
+  safe download disposition, and `nosniff`; cloud provider URLs are not exposed
+  as an alternate delivery bypass.
+- A legacy asset that cannot be safely confirmed for inline display is forced to
+  a safe generic download instead.
 - Deleting or misconfiguring widely reused assets can break multiple screens at
   once.

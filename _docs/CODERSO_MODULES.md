@@ -20,8 +20,8 @@ The file name is retained for historical links; the current IA label is
 | Engine | content | stable | Yes |
 | Entries | content | stable | Yes |
 | Screens | content | preview | Yes (`Beta`) |
-| Widgets | design | stable | No (hidden direct compatibility route after TASK-461) |
-| Templates | design | stable | No (managed inside Widgets flows) |
+| Widget compatibility | design | retired/support-only | No (hidden direct compatibility route; no create/insert authoring) |
+| Page Templates | design | stable | No (Page v2 sections/blocks; linked from Pages) |
 | Forms | forms | stable | Yes |
 | Posts | content | stable | No (promoted to top-level Main navigation) |
 

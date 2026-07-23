@@ -58,9 +58,14 @@ const fontWeightTokenClass: Record<PageTypographyFontWeight, string | null> = {
   medium: "font-medium",
   semibold: "font-semibold",
   bold: "font-bold",
+  // TASK-532 (Bundle B): extrabold/black have NO baked Tailwind class — they
+  // paint via the inline `pageTypographyFontWeightCssValues` weight map (800/900),
+  // so their baked-class value is the absence of one (like "normal").
+  extrabold: null,
+  black: null,
 };
 
-const anyWeightClass = /font-(normal|medium|semibold|bold)/;
+const anyWeightClass = /font-(normal|medium|semibold|bold|extrabold|black)/;
 
 describe("frame defaults (width/align)", () => {
   test("unset width emits no class: the grid-stretch frame is the 'full' painted box", () => {

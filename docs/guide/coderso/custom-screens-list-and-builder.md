@@ -8,7 +8,7 @@ keywords:
   - screen builder
   - bindings
   - admin workflow
-  - screen widgets
+  - screen blocks
 ---
 
 # Basic
@@ -52,6 +52,9 @@ such as:
 - `Field`
 - `Field group`
 - `Two columns`
+- `Image`
+- `Tabs`
+- `Button`
 - `Help text`
 
 # Instruction
@@ -78,11 +81,18 @@ such as:
    rather than continuing to place blocks.
 10. Use the `Binding` panel when blocks need to pull data from content type
     fields.
+    A Button can bind its Link target to an eligible field or use a static safe
+    link. Button actions other than Link are not available.
 11. Use the `Content` or `Style` panel when you need configuration for one
     selected block instead of the whole screen.
-12. Use `Create screen` only after the screen shell and block composition are
+12. For Tabs, add and name each tab, select `Edit content` for the intended tab,
+    and insert blocks into that active panel. Preview with both mouse and
+    keyboard before publishing the workflow.
+13. Use `Create screen` only after the screen shell and block composition are
     coherent enough to support a real record workflow.
-13. Use `Back to list` when you want to return to the screen catalog.
+14. Use `Back to list` when you want to return to the screen catalog. If the
+    Screen has unsaved document or binding changes, confirm whether to stay or
+    discard them.
 
 Use this safe builder order when you want fewer design mistakes:
 1. Choose the content type.
@@ -96,9 +106,17 @@ Use this safe builder order when you want fewer design mistakes:
 
 - Build the data model first in Engine. Custom Screens should focus the admin
   experience, not repair an unclear schema.
-- The dedicated screen block library is intentionally smaller than the general
-  page/widget system. That is a feature, not a limitation. It keeps the surface
+- The dedicated screen block library is intentionally smaller than the Page
+  section/block system. That is a feature, not a limitation. It keeps the surface
   workflow-specific.
+- Custom Screens are built from their own sections and blocks. They do not use
+  Dashboard widgets or Widget Templates as a second authoring model.
+- Image URLs and Button links are validated when authored and again when
+  rendered. If a link or image source is rejected, correct it instead of trying
+  to work around the disabled/placeholder state.
+- The floating tools panel overlays narrow canvases without reserving desktop
+  width. On larger screens the canvas makes room for it. The panel remains an
+  accessible labelled region in both layouts.
 - `Sidebar shortcut` changes navigation exposure, so treat it as information
   architecture, not decoration.
 - `Sidebar label` should be short and operationally clear. It is a navigation
@@ -114,7 +132,15 @@ Use this safe builder order when you want fewer design mistakes:
 - The screen feels empty:
   open the floating Insert panel and add screen blocks or content fields first.
 - Preview is not meaningful:
-  confirm the content type is selected and the screen has useful bound widgets.
+  confirm the content type is selected and the screen has useful bound blocks.
+- A Button is disabled in Preview:
+  confirm it has a supported safe static Link or an eligible bound URL field.
+- A Tab looks empty:
+  select that tab's `Edit content` target before inserting blocks, then verify
+  the visible panel in Preview.
+- Save reports removed bindings:
+  one or more referenced fields or blocks no longer exists. Review the named
+  fields and reconnect only the bindings the workflow still needs.
 - You are not sure what `Bindings` should do:
   think of bindings as the bridge from content type fields into the custom
   admin surface.
@@ -145,14 +171,16 @@ Use this safe builder order when you want fewer design mistakes:
 3. Confirm the screen has the minimum useful block composition.
 4. Confirm bindings match the intended content fields.
 5. Confirm sidebar shortcut and label are intentional.
-6. Review preview before handing the screen to real users.
+6. Confirm every Tab exposes its intended content and every Button has a safe
+   Link target.
+7. Review preview before handing the screen to real users.
 
 # Security
 
 - Custom Screen Builder is an authenticated admin surface and should only be
   used by users with the right admin/workflow permissions.
 - A custom screen can reshape how teams interact with records, so a bad binding
-  or misleading widget can create operational errors even without changing raw
+  or misleading block can create operational errors even without changing raw
   data.
 - Do not use custom screens to expose fields or workflows that should remain
   hidden by RBAC or internal policy.

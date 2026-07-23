@@ -1,5 +1,10 @@
 # Tabs Widget (v1)
 
+> **Historical compatibility boundary:** this file documents a retained renderer/read-
+> compatibility contract. Configurable widgets exist only on the Admin Dashboard;
+> active editors own their sections and blocks. Do not add or expand a non-Dashboard
+> editor, registry entry, preset, or module-pack surface from this file.
+
 ## Purpose
 
 Switch between grouped content areas with repeatable tabs and a bounded visual
@@ -108,14 +113,16 @@ JSON snapshots, technical IDs, CSS token text, or implementation suffixes.
   `style.panelBackgroundColor` are clearable. Clear removes the field and keeps
   the runtime from forcing an inline style for that color.
 - Imported/admin values for those six fields are color-only and normalize
-  through the bounded CSS color resolver before public rendering. Safe hex,
-  `rgb/rgba`, `hsl/hsla`, `transparent`, `currentColor`, and
-  `var(--color-*)` values remain valid; unsafe strings such as `javascript:`,
-  `expression(`, `data:`, raw URLs, semicolon injection, braces, or HTML-like
-  fragments are dropped.
+  through the shared `inherited-render` profile before public rendering. Safe
+  hex, bounded `rgb/rgba` and `hsl/hsla`, `transparent`, `currentColor`,
+  `inherit`, and `var(--color-*)` values remain valid and canonicalize through
+  the semantic parser; unsafe or range-invalid strings are dropped rather than
+  passed through raw. Schema patterns are structural guards only.
 - When `style.activeBackgroundColor` is cleared but `style.borderColor` remains
   saved, the active trigger border falls back to the saved border color instead
   of disappearing with the active background.
+- These retained read/render overrides are present-only; clearing or omitting a
+  field does not persist a replacement default.
 
 ## Layout Ownership Notes
 

@@ -37,13 +37,26 @@ and references the typography group above:
   `var(--font-sans/--font-display, <DEFAULT_TOKENS stack>)`.
 - `fontSize: "2xs" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" |
   "4xl" | "5xl"` renders as `var(--text-*, <DEFAULT_TOKENS size>)`.
-- `fontWeight: "normal" | "medium" | "semibold" | "bold"` maps to
-  400/500/600/700 (no CSS variable; weights are not part of the v1 token
-  groups).
+- `fontSizeCustom` (TASK-532, present-only fluid size) is NOT token-backed: it
+  emits a grammar-validated fluid length string (a bare number + allowlisted
+  unit `rem`/`em`/`px`/`vw`/`vh`/`%`/`ch`, or a single `clamp()`/`min()`/`max()`
+  of such lengths — e.g. `clamp(2.6rem,5vw,4.4rem)`) INLINE on the text node and
+  **wins over the `fontSize` token** at render (`toPageBlockTypographyStyle`);
+  the discrete token stays the fallback/unset state. It is validated by
+  `sanitizeAuthoringCssFontSize` (`pageAuthoringSanitizers.ts`) at the write
+  boundary — never arbitrary CSS, 64-char cap, injection constructs fail-closed
+  to omitted.
+- `fontWeight: "normal" | "medium" | "semibold" | "bold" | "extrabold" |
+  "black"` maps to 400/500/600/700/**800/900** (the last two added by TASK-532;
+  no CSS variable — weights are not part of the v1 token groups and paint inline
+  via `pageTypographyFontWeightCssValues`).
+- `textTransform` (TASK-532, present-only enum `none`/`uppercase`/`lowercase`/
+  `capitalize`) emits a fixed CSS keyword inline on the text node; `none`/unset
+  ⇒ omitted (no token, no variable).
 - The owner mapping lives in `core/services/pages/pageDocumentV2.ts`
   (`pageTypographyFontFamilyCssValues`, `pageTypographyFontSizeCssValues`,
-  `pageTypographyFontWeightCssValues`) and references
-  `DesignTokens.typography` from `core/services/theme/tokenTypes.ts`.
+  `pageTypographyFontWeightCssValues`, `pageTypographyTextTransforms`) and
+  references `DesignTokens.typography` from `core/services/theme/tokenTypes.ts`.
 - The published front resolves the variables from the `:root` token stylesheet
   (`toCssVariables` in `core/ui/theme/tokenCss.ts`). The admin shell defines
   its OWN admin-theme `--text-*`/`--font-*` variables on `:root`, so the page
@@ -72,6 +85,292 @@ The token swatches commit the `var(--color-*)` value while previewing the
 resolved site token in the admin canvas. Arbitrary `var()` expressions are not
 accepted by the Page authoring color sanitizer; only the names above are valid
 for Page block/section colors and inline text marks.
+
+## Canonical CSS color values (TASK-519, TASK-541)
+
+`core/services/theme/cssColorContract.ts` is the one Bun-free semantic owner for
+simple authored CSS colors. Admin adapters, Menu writes, Form theme values, and
+the finite retained compatibility sinks delegate to this owner; they must not
+copy its hex/RGB/HSL ranges or keyword grammar.
+
+The parser receives the original `unknown` value before trimming or case
+folding. It rejects non-strings, control/non-ASCII characters, and values longer
+than `CSS_COLOR_VALUE_MAX_LENGTH` (128 JavaScript UTF-16 code units) **before**
+removing surrounding ASCII U+0020 spaces. The accepted simple-color grammar is:
+
+- hex `#rgb`, `#rgba`, `#rrggbb`, or `#rrggbbaa`;
+- comma-form `rgb()`/`rgba()` with three channels and an optional fourth alpha;
+  either function alias may carry either valid arity. Channels are unsigned
+  decimals in `0..255` or percentages in `0..100%`;
+- comma-form `hsl()`/`hsla()` with unsigned hue `0..360` (optional `deg`),
+  saturation/lightness `0..100%`, and optional alpha; either alias may carry
+  either valid arity;
+- alpha as an unsigned decimal in `0..1` (including a leading-dot spelling) or
+  a percentage in `0..100%`;
+- `var(--color-<lowercase-token>)` and `transparent`.
+
+Signed numbers, exponent notation, modern space/slash function syntax, named
+colors, arbitrary CSS functions/variables, URLs, declarations, and malformed or
+out-of-range channels fail closed. The parser never clamps an invalid authored
+value.
+
+Two explicit profiles control keywords:
+
+- `authoring` is the default write profile and accepts only the grammar above;
+  it rejects `currentColor` and `inherit`.
+- `inherited-render` is an intentional compatibility superset that additionally
+  canonicalizes `currentColor` and accepts `inherit`. Only the Form TASK-516
+  theme path and enumerated retained direct-color fields opt in. A nested color
+  stop may narrow this profile with `allowInheritKeyword=false`, retaining
+  `currentColor` while rejecting `inherit`.
+
+Canonical output lowercases hex, removes only permitted surrounding/internal
+formatting, emits comma-space function separators, removes `deg` from HSL hue,
+normalizes aliases from arity (`rgb`/`hsl` without alpha, `rgba`/`hsla` with
+alpha), and expands a leading-dot alpha (`.84` -> `0.84`). Numeric percentages
+remain percentages; short and alpha hex widths remain their accepted widths.
+Parsing canonical output is idempotent.
+
+`CSS_COLOR_SCHEMA_PATTERNS[profile]` is only a JSON-Schema structural prefilter.
+It carries the printable-ASCII and accepted-shape guard but does **not** encode a
+length cap or numeric ranges. Schema consumers pair the imported pattern with a
+separately imported `CSS_COLOR_VALUE_MAX_LENGTH` in `maxLength`; the semantic
+parser independently enforces that same original-input cap before trimming.
+Every consumer that has joined the canonical contract must still call
+`parseCssColorValue`/`normalizeCssColorValue`; matching the pattern and cap alone
+never authorizes persistence or rendering.
+
+The shared admin controls use parser metadata for the base picker and alpha
+slider, preserve tokens/keywords as explicit states, and commit only canonical
+bytes. The landed Page admin control uses `authoring`, but the Page backend still
+uses its independent legacy sanitizer: it enforces the exact site-token list
+`primary`, `secondary`, `accent`, `bg`, `surface`, `text`, and `border` while
+retaining its historical named-value behavior. TASK-539-02-L01 owns importing
+the shared parser into that Page sanitizer without removing the seven-token
+filter. Menu writes use `authoring`. Form theme
+write/read/control/preview/public render uses `inherited-render` end to end as
+the explicit TASK-516 exception.
+
+Color strings remain existing JSON fields. TASK-541 introduces no schema key,
+default emission, DDL, or migration. Existing sparse optional values remain
+present-only and clear by omission; retained legacy fields that already use an
+empty or explicit default sentinel keep those normalized bytes. In both cases an
+unauthored document keeps its previous bytes and fallback behavior.
+
+## Pages v2 motion & interaction effect tokens (TASK-521)
+
+The Pages v2 motion/interaction effects (see `_docs/PAGE_MODEL.md` § Motion And
+Interaction Effects) expose their per-instance config to CSS through validated
+custom properties + fixed enums/clamps — never as raw declarations. All values are
+already normalized (`readSafeColor` colors, `readNumber` clamps,
+`normalizeEnum`/`resolveHeroTilt` enums) before reaching CSS.
+
+**Enums & clamps (owned by `pageDocumentV2.ts`, hero `tilt` by `hero.tsx`):**
+
+| Effect | Enum / clamp | Values |
+|--------|--------------|--------|
+| Section scroll | `pageSectionScrollEffects` | `none`, `reveal-fade`, `reveal-up`, `parallax` |
+| Section parallax | `PAGE_PARALLAX_INTENSITY_CLAMP` | `0`..`40` px |
+| Animated icon | `animatedIconAnimations` | `none`, `spin`, `pulse`, `bounce`, `draw` |
+| Animated icon | `animatedIconNames` (allowlist) | `sparkles`, `star`, `heart`, `zap`, `check`, `shield`, `arrow-right`, `bell`, `rocket`, `loader` |
+| Animated icon size | `ANIMATED_ICON_SIZE_CLAMP` | `16`..`160` px |
+| Animated icon speed | `ANIMATED_ICON_SPEED_CLAMP` | `400`..`4000` ms |
+| Hero tilt | `heroTilts` | `none`, `subtle`, `strong` |
+| Page spotlight size | `PAGE_SPOTLIGHT_SIZE_CLAMP` | `120`..`900` px |
+
+**CSS custom properties (set from normalized values only):**
+
+- `--anim-speed` — animated-icon keyframe duration (ms).
+- `--spotlight-x` / `--spotlight-y` — cursor-follow spotlight position in **VIEWPORT
+  coords** (raw `ev.clientX`/`ev.clientY`, rounded, updated on `pointermove` via rAF).
+  These feed the `position:fixed inset:0` spotlight overlay's `radial-gradient`, so they
+  MUST stay viewport-relative — NOT offset by the scrolled page root's rect (TASK-529:
+  subtracting the negative root `getBoundingClientRect().top` added `scrollY` and pushed
+  the glow below the fold past the first screenful).
+- `--spotlight-color` — `readSafeColor` spotlight color (alpha-capable via TASK-519).
+- `--spotlight-size` — spotlight radius (px).
+
+**`prefers-reduced-motion` guarantee.** Every effect ships BOTH a CSS
+`motion-safe:`/`motion-reduce:` guard AND a
+`matchMedia('(prefers-reduced-motion: reduce)').matches` early-return in its runtime
+IIFE, so a reduce user sees content fully at rest (no reveal/parallax translate, no
+tilt, no spotlight; icon keyframes paused). Effects are **present-only** — no token,
+no DDL, no migration; a no-effect page renders byte-identically to pre-521 output.
+
+## Pages v2 composable hero toolkit tokens (TASK-522)
+
+The composable hero toolkit (see `_docs/PAGE_MODEL.md` § Composable Hero Toolkit &
+Premium Effects) exposes its per-instance config to CSS through validated custom
+properties + fixed enums/clamps — never raw declarations. Values are normalized
+(`readSafeColor` colors, `readNumber` clamps, `normalizeEnum` enums) before reaching
+CSS. Enums/clamps are owned by `pageDocumentV2.ts`.
+
+**Enums & clamps:**
+
+| Effect | Enum / clamp | Values |
+|--------|--------------|--------|
+| Decoration motion | `pageBlockDecorationMotions` | `none`, `float`, `drift`, `pulse`, `orbit`, `radiate` |
+| Decoration delay | `PAGE_DECORATION_DELAY_CLAMP` | `0`..`4000` ms |
+| Decoration duration | `PAGE_DECORATION_DURATION_CLAMP` | `2000`..`16000` ms |
+| Block tilt | `pageTiltStrengths` | `none`, `subtle`, `strong` |
+| Surface preset | `pageSurfacePresets` | `none`, `glass`, `glass-grid`, `radial-glow`, `ambient-orbs` |
+| Hover effect | `pageBlockHoverEffects` | `none`, `glow-reveal`, `lift`, `scale`, `lift-glow` |
+| Composition | `pageCompositions` | `flow`, `layered` |
+| Layer anchor | `pageLayerAnchors` | 9 grid positions (`top-left`..`bottom-right`) |
+| Layer offset X/Y | `PAGE_LAYER_X_CLAMP`/`PAGE_LAYER_Y_CLAMP` | `-50`..`150` % |
+| Layer Z | `PAGE_LAYER_Z_CLAMP` | `0`..`20` |
+| Marquee direction | `pageMarqueeDirections` | `left`, `right` |
+| Marquee speed | `PAGE_MARQUEE_SPEED_CLAMP` | `8`..`40` s |
+| Custom-SVG draw speed | `PAGE_DRAW_SPEED_CLAMP` | `600`..`6000` ms |
+| Custom-SVG byte cap | `PAGE_CUSTOM_SVG_MAX_BYTES` | `24576` (24 KiB) |
+
+**CSS custom properties (set from normalized values only; consumed by
+`PAGE_COMPOSITION_EFFECTS_CSS`):**
+
+- `--deco-delay` / `--deco-duration` — decoration keyframe delay/duration (ms).
+- `--deco-ring` / `--deco-ring-2` — radiate concentric-ring colors.
+- `--layer-x` / `--layer-y` (%) / `--layer-z` — layered-canvas child placement
+  (per-device varying token, emitted per breakpoint by `pageResponsiveCss.ts`).
+- `--draw-speed` — custom-SVG stroke draw-in duration (ms).
+- `--marquee-speed` — ticker scroll duration (s).
+- `--surface-glow` — author retint, consumed by glass/radial-glow/hover glow
+  (reference aqua/violet fallbacks). **Seed precedence (TASK-524-02):** block
+  `style.surfaceTint` (independent, alpha-capable, sanitized) FIRST → plain block
+  `style.background` FALLBACK → section `accent`; a gradient/url tint is left out
+  (invalid in `radial-gradient()`) so CSS falls back to the literal. Per-device via
+  `pageResponsiveCss.ts` (tablet/mobile `@media` retarget of this + `--deco-ring` +
+  `--orb-color`, `!important`, gated on an active surface/effect).
+- `--orb-color` / `--orb-color-2` — ambient-orb radial-gradient colors.
+- `--glare-x` / `--glare-y` — tilt glare sheen position (updated on pointermove, rAF).
+
+**`prefers-reduced-motion` guarantee.** Every keyframe binding sits inside a CSS
+`@media (prefers-reduced-motion: no-preference)` gate, and the block-tilt runtime IIFE
+early-returns on `matchMedia('(prefers-reduced-motion: reduce)').matches`, so a reduce
+user keeps the STATIC layered/glass/surface styling but sees no animation, no tilt, no
+hover transition. Effects are **present-only** — no token, no DDL, no migration; a
+no-effect page renders byte-identically to post-521 output.
+
+## Pages v2 page canvas background & spotlight layering (TASK-523)
+
+- **Page canvas background** (`settings.background`) — a present-only per-page solid
+  color OR CSS gradient emitted as inline `style.background` on the page `<Root>`,
+  overriding the default `bg-white` utility. The Page settings panel authors solid colors only
+  (shared color-only `ColorSwatchControl`, alpha-capable via TASK-519); gradients are
+  model/import-only. The ONLY path a value reaches CSS is `sanitizeAuthoringCssBackground`
+  (safe color/gradient, else the key is dropped), applied at write AND render.
+- **Spotlight overlay layering z-index boundary** — the cursor-spotlight overlay paints at
+  a FIXED `z-index:30` with `mix-blend-mode:screen` (occlusion-proof: above opaque section
+  content, additive, `pointer-events:none`), STRICTLY BELOW the front sticky nav
+  (`sticky z-40`) so screen-blend never tints the menu bar. The layered-canvas token
+  `--layer-z` (`PAGE_LAYER_Z_CLAMP`) is bounded to a max of `20` — STRICTLY BELOW the
+  overlay's `30` — so no authored layer can reach the spotlight and occlude the glow. The
+  layering invariant is `PAGE_LAYER_Z_CLAMP.max (20) < overlay z-index (30) < nav z-index
+  (40)`.
+
+## Pages v2 per-block staggered reveal token (TASK-525)
+
+TASK-525-02 adds a per-block scroll-reveal stagger so a revealing section's blocks
+CASCADE (each fades on its own delay) instead of fading as one unit. It reuses the 521
+reveal runtime/attributes (`data-reveal-armed`, `data-page-effect`, `data-revealed`) and
+adds NO new runtime and NO new keyframe — only one bounded custom property fed into a
+`transition-delay`.
+
+**Enum & clamp:**
+
+| Effect | Enum / clamp | Values |
+|--------|--------------|--------|
+| Block reveal delay | `PAGE_REVEAL_DELAY_CLAMP` | `0`..`4000` ms |
+
+**CSS custom property (set from normalized values only; consumed by
+`PAGE_REVEAL_MOTION_CSS`):**
+
+- `--reveal-delay` — per-block scroll-reveal stagger (ms). Emitted on the `[data-block-id]`
+  frame from `block.style.revealDelay` (normalized via `readNumber`, `Number.isFinite` +
+  clamp), present-only (absent when unauthored → default `0ms`). Because it is a custom
+  property it INHERITS down into a revealing section's children, and it is consumed as the
+  `transition-delay` of the per-block reveal transition (`opacity .7s, transform .7s`) so
+  each block staggers by its own delay. Only a bounded `${n}ms` literal reaches CSS — never
+  a raw declaration/markup/URL.
+
+**`prefers-reduced-motion` guarantee.** The `--reveal-delay` transition + `transition-delay`
+live INSIDE the existing `@media (prefers-reduced-motion: no-preference)` + `[data-reveal-armed]`
+gate, so under reduced-motion no transition runs and the delay is inert — motion-neutral,
+identical to 521's reduced-motion behavior. Present-only — no DDL, no migration, no
+schemaVersion bump; a no-`revealDelay` block renders byte-identically to post-522 output.
+
+## Pages v2 premium backgrounds & colored glow (TASK-531)
+
+TASK-531 adds two premium-fidelity surfaces to Page v2 blocks AND sections, both
+present-only, jsonb-only (NO DDL, NO migration, NO `PAGE_DOCUMENT_SCHEMA_VERSION` bump [stays
+`2`], NO npm dependency): a **safe multi-layer background** (glow-over-gradient) and an
+**arbitrary colored glow box-shadow**.
+
+**Glow clamps (`PageGlow` — structured colored box-shadow):**
+
+| Field | Clamp | Values |
+|-------|-------|--------|
+| Glow blur | `PAGE_GLOW_BLUR_CLAMP` | `0`..`120` px (default `24` at render) |
+| Glow spread | `PAGE_GLOW_SPREAD_CLAMP` | `-40`..`80` px |
+| Glow offset X/Y | `PAGE_GLOW_OFFSET_CLAMP` | `-80`..`80` px |
+
+`glow.color` is REQUIRED and sanitized via `sanitizeAuthoringCssColor` at write (an
+invalid/absent color OMITS the whole glow, present-only fail-soft). The spec composes at
+render via the shared pure `composeGlowBoxShadow` (`pageGlow.ts`) into a FIXED `"<x>px <y>px
+<blur>px <spread>px <color>"` box-shadow — never a raw author string, re-sanitized +
+re-clamped at BOTH the SSR inline path (`pageRendererV2.tsx`) and the per-device RAW `<style>`
+path (`pageResponsiveCss.ts`). When the enum `shadow` token is also set the glow is APPENDED
+via `mergeShadows` (`"<enum-shadow>, <glow>"`) so both render. Authored via
+`block.style.glow.*` / `section.style.glow.*` controls (color swatch + four numerics,
+`responsive:true`).
+
+**Multi-layer background caps (safe multi-layer `background` value):**
+
+| Guard | Constant | Value |
+|-------|----------|-------|
+| Top-level layer cap | `PAGE_BG_MAX_LAYERS` | `6` |
+| CSS value length cap | `PAGE_CSS_VALUE_MAX_LENGTH` | `512` |
+
+`sanitizeAuthoringCssBackground` accepts a comma-separated list of safe gradient/color layers
+(the reference `.cta-card`/`art-*` look) via an ALLOWLIST applied per top-level comma-split
+layer (whole-value tripwire pre-pass → depth-0 comma split → each layer a safe color or safe
+single gradient → `PAGE_BG_MAX_LAYERS` cap; length-capped at `PAGE_CSS_VALUE_MAX_LENGTH`;
+fails CLOSED — see SECURITY_SPEC). The single-layer fast path is byte-identical. Both render
+boundaries re-gate on `isSafeAuthoringCssGradient || isSafeAuthoringCssBackgroundLayers` so a
+multi-layer value paints via `background-image`; the SECTION `backgroundType:"gradient"` branch
+is NEW (block was already wired) and paints on the content box + the `100vw` bleed box for a
+full-bleed section. No new `backgroundType` value — the gradient TYPE reuses the existing
+`pageBackgroundTypes` enum. Present-only; a no-glow / single-layer / no-section-gradient
+document renders byte-identically to post-530 output.
+
+## Pages v2 typography fidelity (TASK-532)
+
+Bundle B (Typography Fidelity) adds present-only, additive block-level fields on
+top of the TASK-424 typography surface (all jsonb — NO DB migration, NO npm
+dependency, NO `PAGE_DOCUMENT_SCHEMA_VERSION` bump [stays `2`], NO route/RBAC).
+Every field emits ZERO bytes when unauthored ⇒ post-530 / no-effect docs
+normalize AND render byte-identical. Values reach CSS only as inline
+custom-properties, fixed enum keywords, or grammar-validated length strings —
+never raw declarations. Enums/clamps are owned by `pageDocumentV2.ts`; the fluid
+length grammar is owned by `pageAuthoringSanitizers.ts`.
+
+**Enums, clamps & grammar:**
+
+| Field | Enum / clamp / grammar | Values |
+|-------|------------------------|--------|
+| `style.fontWeight` (extended) | `pageTypographyFontWeights` | +`extrabold` (800), +`black` (900) on top of `normal`/`medium`/`semibold`/`bold` |
+| `style.textTransform` | `pageTypographyTextTransforms` | `none`/`uppercase`/`lowercase`/`capitalize` (`none` resets ⇒ omitted) |
+| `style.fontSizeCustom` | `sanitizeAuthoringCssFontSize` grammar | bare number + unit (`rem`/`em`/`px`/`vw`/`vh`/`%`/`ch`) OR single `clamp()`/`min()`/`max()` of such lengths; 64-char cap; wins over `fontSize` token |
+| `divider.width` | `PAGE_DIVIDER_WIDTH_CLAMP` | `8`..`400` px (eyebrow short-rule length, default 34) |
+| `divider.align` | `pageDividerAligns` | `left`/`center`/`right` |
+| `divider.gradient` | boolean | `true` ⇒ slim `linear-gradient(90deg, <tone-color>, transparent)` `<span>` (tone from the `pageDividerToneBorderColor` whitelist); unset ⇒ legacy `<hr>` byte-identical |
+
+**Security boundary.** `fontSizeCustom` is the only new free-text CSS surface and
+is grammar-validated at the write boundary (rejects `url(`/`expression(`/`;`/`{`/
+`}`/`<`/`\`/`:`/comment escapes fail-closed to omitted); `textColor` (rich path)
+and the divider gradient tone color ride `sanitizeAuthoringCssColor`; the enums
+fail closed (`PageDocumentError` on an unknown value in write mode). Each new key
+joins the reject-unknown allowlist (`pageBlockStyleKeys` + `$defs/pageBlockStyle`
+`additionalProperties:false`) with a round-trip test.
 
 ## Tailwind integration
 

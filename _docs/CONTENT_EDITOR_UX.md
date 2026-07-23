@@ -139,15 +139,15 @@ Tooltipy posiadaja `aria-label` dla czytnikow ekranu.
 
 ## Pages builder UX
 
-- Icon-only widget-card actions expose explicit `aria-label` and `title`
+- Icon-only block-card actions expose explicit `aria-label` and `title`
   metadata.
-- Wizard completion is a transition, not a silent mode switch:
-  the next step explains layout/styling refinement before advanced settings.
+- Initial block setup is a transition, not a silent mode switch: the next step
+  explains layout/styling refinement in the owning Page controls.
 - Empty slots expose a visible add action and route back into the existing
-  widget library surface instead of opening a separate Pages-only inserter.
-- The page-builder widget library is grouped by existing widget categories:
+  Page block inserter.
+- The Page block inserter is grouped by Page-owned categories:
   `Layout`, `Content`, `Forms`, `Navigation`, `Media`.
-- After a widget is inserted, the canvas scrolls to the new block and applies a
+- After a block is inserted, the canvas scrolls to the new block and applies a
   short-lived visual highlight.
 
 ## Custom Screens workspace UX
@@ -186,5 +186,5 @@ Tooltipy posiadaja `aria-label` dla czytnikow ekranu.
   surface; bound V4 screen blocks can edit the underlying entry inline instead
   of showing a preview card plus a separate classic-editor fallback.
 - The record editor details rail exposes `Record` and `Selected Element` tabs so
-  clicking a widget on the canvas can focus its bound fields and open
+  clicking a screen-owned block on the canvas can focus its bound fields and open
   element-scoped editing in the same screen-owned view.

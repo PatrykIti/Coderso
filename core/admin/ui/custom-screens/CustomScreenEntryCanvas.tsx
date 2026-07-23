@@ -13,6 +13,7 @@ type CustomScreenEntryCanvasProps = {
   fieldValues: Record<string, unknown>;
   fieldErrors: Record<string, string>;
   presentationOverrides?: ScreenEntryPresentationOverrideDraft[];
+  presentationMediaUrlsById?: Readonly<Record<string, string>>;
   fields: ContentField[];
   relationTargets: Array<{ slug: string; name: string }>;
   // TASK-498-03: host-precomputed related entries (forward-only — the owner
@@ -33,6 +34,7 @@ export function CustomScreenEntryCanvas({
   fieldValues,
   fieldErrors,
   presentationOverrides,
+  presentationMediaUrlsById,
   fields,
   relationTargets,
   relatedEntries,
@@ -51,6 +53,7 @@ export function CustomScreenEntryCanvas({
       fields={fields}
       fieldErrors={fieldErrors}
       presentationOverrides={presentationOverrides}
+      presentationMediaUrlsById={presentationMediaUrlsById}
       relationTargets={relationTargets}
       relatedEntries={relatedEntries}
       mode="entry"

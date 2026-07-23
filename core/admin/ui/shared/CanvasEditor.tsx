@@ -75,8 +75,8 @@ type CanvasEditorProps = {
   panelPosition?: "right" | "bottom";
   /** Ref on the single rail div (= the host's toolbar element ref). */
   panelRef?: Ref<HTMLDivElement>;
-  /** aria-label on the rail div, e.g. `${target} tools`. */
-  panelAriaLabel?: string;
+  /** Required aria-label on the rail div, e.g. `${target} tools`. */
+  panelAriaLabel: string;
   /** data-* hooks forwarded onto the rail div (floating-toolbar / -collapsed). */
   panelDataProps?: Record<string, string | undefined>;
   /** Host-gated "Show panel" chip; the shell renders it only when `!panelOpen`. */
@@ -144,10 +144,11 @@ export function CanvasEditor({
           {canvas}
           {panelOpen && panel ? (
             <div
+              {...panelDataProps}
               ref={panelRef}
+              role="region"
               className={PANEL_POSITION_CLASS[panelPosition ?? "right"]}
               aria-label={panelAriaLabel}
-              {...panelDataProps}
             >
               {panel}
             </div>

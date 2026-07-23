@@ -53,6 +53,7 @@ test("(a) emits the header slot, the separated card + sub-toolbar and the device
       canvas={<div>canvas-slot</div>}
       panel={<div>panel-slot</div>}
       panelOpen={false}
+      panelAriaLabel="Canvas tools"
       onPanelOpenChange={noop}
     />
   );
@@ -74,6 +75,7 @@ test("(a) omits the device-context strip when `deviceContext` is absent", () => 
       title="Page builder"
       canvas={<div>c</div>}
       panelOpen={false}
+      panelAriaLabel="Canvas tools"
       onPanelOpenChange={noop}
     />
   );
@@ -88,6 +90,7 @@ test("(b) panelOpen=false hides the panel and renders the reopen affordance", ()
       panel={<div>panel-body</div>}
       reopenAffordance={<button type="button">Show panel</button>}
       panelOpen={false}
+      panelAriaLabel="Canvas tools"
       onPanelOpenChange={noop}
     />
   );
@@ -103,6 +106,7 @@ test("(b) panelOpen=true shows the panel and hides the reopen affordance", () =>
       panel={<div>panel-body</div>}
       reopenAffordance={<button type="button">Show panel</button>}
       panelOpen={true}
+      panelAriaLabel="Canvas tools"
       onPanelOpenChange={noop}
     />
   );
@@ -118,6 +122,7 @@ test("(c) panelPosition='right' yields the 280px right-rail container", () => {
       panel={<div>panel-body</div>}
       panelOpen={true}
       panelPosition="right"
+      panelAriaLabel="Canvas tools"
       onPanelOpenChange={noop}
     />
   );
@@ -134,6 +139,7 @@ test("(c) panelPosition='bottom' yields the centered-bottom container", () => {
       panel={<div>panel-body</div>}
       panelOpen={true}
       panelPosition="bottom"
+      panelAriaLabel="Canvas tools"
       onPanelOpenChange={noop}
     />
   );
@@ -141,7 +147,7 @@ test("(c) panelPosition='bottom' yields the centered-bottom container", () => {
   expect(html).toContain("-translate-x-1/2");
 });
 
-test("(d) panelRef / panelAriaLabel / panelDataProps land on the single rail div", () => {
+test("(d) panelRef / region role / panelAriaLabel / panelDataProps land on the single rail div", () => {
   const ref = React.createRef<HTMLDivElement>();
   const view = mount(
     <CanvasEditor
@@ -152,6 +158,8 @@ test("(d) panelRef / panelAriaLabel / panelDataProps land on the single rail div
       panelRef={ref}
       panelAriaLabel="Section tools"
       panelDataProps={{
+        role: "dialog",
+        "aria-label": "Overridden tools",
         "data-page-editor-floating-toolbar": "true",
         "data-page-editor-toolbar-collapsed": "false",
       }}
@@ -165,7 +173,11 @@ test("(d) panelRef / panelAriaLabel / panelDataProps land on the single rail div
     expect(rail).toBe(ref.current);
     expect(rail.getAttribute("data-page-editor-floating-toolbar")).toBe("true");
     expect(rail.getAttribute("data-page-editor-toolbar-collapsed")).toBe("false");
+    expect(rail.getAttribute("role")).toBe("region");
     expect(rail.getAttribute("aria-label")).toBe("Section tools");
+    expect(view.container.querySelector('[role="dialog"]')).toBeNull();
+    expect(view.container.querySelector('[aria-label="Overridden tools"]')).toBeNull();
+    expect(view.container.querySelector('[role="region"][aria-label="Section tools"]')).toBe(rail);
   } finally {
     view.cleanup();
   }
@@ -180,6 +192,7 @@ test("the shell never toggles its own panel state (controlled read-only)", () =>
       canvas={<div>c</div>}
       panel={<div>panel-body</div>}
       panelOpen={true}
+      panelAriaLabel="Canvas tools"
       onPanelOpenChange={noop}
     />
   );

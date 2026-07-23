@@ -2,46 +2,41 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
+import type { CssColorProfile } from "../../../../services/theme/cssColorContract";
+import {
+  colorAlpha,
+  composeHexColor,
+  isAlphaPickerRepresentable,
+  parseColorValue,
+  pickerHexFor,
+} from "../../shared/colorValue";
+
 export function hasClearableFieldValue(value: unknown) {
-  if (typeof value === "string") return value.trim().length > 0;
+  if (typeof value === "string") return value.length > 0;
   return value !== undefined && value !== null;
 }
 
-const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
-const rgbColorPattern =
-  /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*((?:0|1|0?\.\d+)))?\s*\)$/i;
-
-export function isHexColorValue(value: string | undefined) {
-  return typeof value === "string" && hexColorPattern.test(value);
+export function resolveColorPickerValue(
+  value: string | undefined,
+  fallback: string,
+  colorProfile: CssColorProfile = "authoring"
+) {
+  return pickerHexFor(parseColorValue(value, colorProfile), fallback);
 }
 
-export function resolveColorPickerValue(value: string | undefined, fallback: string) {
-  if (!value) return fallback;
-  if (isHexColorValue(value)) return value;
-
-  const rgbMatch = value.match(rgbColorPattern);
-  if (!rgbMatch) return fallback;
-
-  const [, red, green, blue, alpha] = rgbMatch;
-  // Alpha-aware rgba values cannot round-trip through an HTML color input.
-  if (typeof alpha === "string" && alpha.length > 0) return fallback;
-  const toHex = (channel: string) => Number.parseInt(channel, 10).toString(16).padStart(2, "0");
-  return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
+export function resolveColorSwatchValue(
+  value: string | undefined,
+  fallback?: string,
+  colorProfile: CssColorProfile = "authoring"
+) {
+  return resolveColorPickerValue(value, fallback ?? "#000000", colorProfile);
 }
 
-export function resolveColorSwatchValue(value: string | undefined, fallback?: string) {
-  return resolveColorPickerValue(value, fallback ?? "#000000");
-}
-
-export function isPickerRepresentableColorValue(value: string | undefined) {
-  const normalized = value?.trim();
-  if (!normalized) return false;
-  if (isHexColorValue(normalized)) return true;
-
-  const rgbMatch = normalized.match(rgbColorPattern);
-  if (!rgbMatch) return false;
-  const [, , , , alpha] = rgbMatch;
-  return !(typeof alpha === "string" && alpha.length > 0);
+export function isPickerRepresentableColorValue(
+  value: string | undefined,
+  colorProfile: CssColorProfile = "authoring"
+) {
+  return isAlphaPickerRepresentable(value, colorProfile);
 }
 
 export function applySharedColorPickerChange({
@@ -49,20 +44,44 @@ export function applySharedColorPickerChange({
   nextValue,
   onChange,
   onPickerChange,
+  colorProfile = "authoring",
 }: {
   currentValue: string | undefined;
   nextValue: string;
   onChange: (next: string) => void;
   onPickerChange?: (next: string) => void;
+  colorProfile?: CssColorProfile;
 }) {
+  const normalizedPickerValue = composeHexColor(nextValue, 1);
+  if (normalizedPickerValue === undefined) return;
+
   if (onPickerChange) {
-    onPickerChange(nextValue);
+    onPickerChange(normalizedPickerValue);
     return;
   }
 
-  if (!currentValue || isPickerRepresentableColorValue(currentValue)) {
-    onChange(nextValue);
-  }
+  const alpha = colorAlpha(parseColorValue(currentValue, colorProfile));
+  const next = composeHexColor(normalizedPickerValue, alpha);
+  if (next !== undefined) onChange(next);
+}
+
+// Opacity-slider edit: recompose the current base color with the new alpha (HI-2).
+export function applySharedColorAlphaChange({
+  currentValue,
+  alphaPct,
+  onChange,
+  colorProfile = "authoring",
+}: {
+  currentValue: string | undefined;
+  alphaPct: number;
+  onChange: (next: string) => void;
+  colorProfile?: CssColorProfile;
+}) {
+  if (!Number.isFinite(alphaPct) || alphaPct < 0 || alphaPct > 100) return;
+  const parsed = parseColorValue(currentValue, colorProfile);
+  if (parsed.kind !== "hex" && parsed.kind !== "rgb" && parsed.kind !== "hsl") return;
+  const next = composeHexColor(parsed.baseHex, alphaPct / 100);
+  if (next !== undefined) onChange(next);
 }
 
 export type ColorContrastAdvisory = {
@@ -70,49 +89,10 @@ export type ColorContrastAdvisory = {
   message?: string;
 };
 
-const cssVariablePattern = /var\(/i;
-const colorMixPattern = /color-mix\(/i;
-
-const parseHexChannel = (value: string) => Number.parseInt(value, 16);
-
-const expandHex = (value: string) =>
-  value.length === 3
-    ? value
-        .split("")
-        .map((part) => part + part)
-        .join("")
-    : value;
-
-const parseColor = (value: string | undefined) => {
-  const normalized = value?.trim();
-  if (!normalized) return null;
-  if (
-    normalized === "transparent" ||
-    cssVariablePattern.test(normalized) ||
-    colorMixPattern.test(normalized)
-  ) {
-    return null;
-  }
-
-  if (hexColorPattern.test(normalized)) {
-    const hex = expandHex(normalized.startsWith("#") ? normalized.slice(1) : normalized);
-    return {
-      red: parseHexChannel(hex.slice(0, 2)),
-      green: parseHexChannel(hex.slice(2, 4)),
-      blue: parseHexChannel(hex.slice(4, 6)),
-      alpha: 1,
-    };
-  }
-
-  const rgbMatch = normalized.match(rgbColorPattern);
-  if (!rgbMatch) return null;
-  const [, red, green, blue, alpha] = rgbMatch;
-  return {
-    red: Number.parseInt(red, 10),
-    green: Number.parseInt(green, 10),
-    blue: Number.parseInt(blue, 10),
-    alpha: typeof alpha === "string" && alpha.length > 0 ? Number.parseFloat(alpha) : 1,
-  };
+const parseContrastColor = (value: string | undefined, colorProfile: CssColorProfile) => {
+  const parsed = parseColorValue(value, colorProfile);
+  if (parsed.kind !== "hex" && parsed.kind !== "rgb" && parsed.kind !== "hsl") return undefined;
+  return { ...parsed.rgb, alpha: parsed.alpha };
 };
 
 const toLuminanceChannel = (value: number) => {
@@ -141,9 +121,14 @@ export function resolveColorContrastAdvisory(input: {
   background?: string;
   fallbackBackground?: string;
   threshold?: number;
+  colorProfile?: CssColorProfile;
 }): ColorContrastAdvisory {
-  const foreground = parseColor(input.foreground);
-  const background = parseColor(input.background) ?? parseColor(input.fallbackBackground);
+  const colorProfile = input.colorProfile ?? "authoring";
+  const foreground = parseContrastColor(input.foreground, colorProfile);
+  const background =
+    input.background === undefined || input.background === ""
+      ? parseContrastColor(input.fallbackBackground, colorProfile)
+      : parseContrastColor(input.background, colorProfile);
   if (!foreground || !background) {
     return {
       status: "unknown",
@@ -274,10 +259,14 @@ export function ClearableInputField({
   );
 }
 
-export function ColorTokenHint({ value }: { value: string | undefined }) {
-  if (!hasClearableFieldValue(value) || isHexColorValue(value)) {
-    return null;
-  }
+export function ColorTokenHint({
+  value,
+  colorProfile = "authoring",
+}: {
+  value: string | undefined;
+  colorProfile?: CssColorProfile;
+}) {
+  if (parseColorValue(value, colorProfile).kind !== "token") return null;
 
   return (
     <p className="text-xs text-muted-foreground">
@@ -317,6 +306,7 @@ export function SharedColorFieldInputs({
   inputId,
   ariaLabelledby,
   ariaDescribedby,
+  colorProfile = "authoring",
 }: {
   value: string | undefined;
   onChange: (next: string) => void;
@@ -326,19 +316,21 @@ export function SharedColorFieldInputs({
   inputId?: string;
   ariaLabelledby?: string;
   ariaDescribedby?: string;
+  colorProfile?: CssColorProfile;
 }) {
   return (
     <>
       <div className="grid grid-cols-[2.5rem_1fr] gap-2">
         <Input
           type="color"
-          value={resolveColorPickerValue(value, pickerFallback)}
+          value={resolveColorPickerValue(value, pickerFallback, colorProfile)}
           onChange={(event) =>
             applySharedColorPickerChange({
               currentValue: value,
               nextValue: event.target.value,
               onChange,
               onPickerChange,
+              colorProfile,
             })
           }
           className="h-9 w-10 p-1"
@@ -354,7 +346,7 @@ export function SharedColorFieldInputs({
           aria-describedby={ariaDescribedby}
         />
       </div>
-      <ColorTokenHint value={value} />
+      <ColorTokenHint value={value} colorProfile={colorProfile} />
     </>
   );
 }

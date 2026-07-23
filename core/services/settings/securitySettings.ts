@@ -152,7 +152,7 @@ const DEFAULT_SECURITY_SETTINGS: SecuritySettings = {
     allowedOrigins: [],
     allowCredentials: true,
     allowedMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["content-type", "x-csrf-token"],
+    allowedHeaders: ["content-type", "x-csrf-token", "x-coderso-expected-user-id"],
     maxAgeSeconds: 600,
   },
   rateLimit: {

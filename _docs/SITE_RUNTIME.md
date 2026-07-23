@@ -14,7 +14,9 @@ Zasady:
 - Jeśli **oba** są ustawione i różne, hosty są rozdzielone:
   - `/admin` działa tylko na `site.adminBaseUrl`
   - publiczne trasy (w tym `/preview`) działają tylko na `site.publicBaseUrl`
-  - `/media/*` jest dozwolone na obu hostach (publiczne assety)
+  - `/media/*` jest routowalne na obu hostach, ale kazde zadanie nadal podlega
+    `storage.delivery.accessMode`: tryb `public` uzywa public-read policy, a
+    `internal` wymaga sesji z `media:read` albo API key scope `media.read`
 - Jeśli ustawiony jest **tylko jeden** z URL-i, routing nie jest blokowany
   (host działa jako wspólny dla admina i frontu).
 - Jeśli żaden nie jest ustawiony, system używa bieżącego hosta.

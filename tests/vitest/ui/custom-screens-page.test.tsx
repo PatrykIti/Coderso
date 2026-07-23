@@ -1,10 +1,24 @@
-import React from "react";
-import { expect, test } from "vitest";
+// @vitest-environment happy-dom
+
+import { expect, test, vi } from "vitest";
 
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import { CustomScreenEditorPage } from "../../../core/admin/ui/custom-screens/CustomScreenEditorPage";
 import { CustomScreenListPage } from "../../../core/admin/ui/custom-screens/CustomScreenListPage";
 import { renderAdminUi } from "../../utils/adminRouterRender";
+
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+vi.mock("@/services/solutionKitsClient", () => ({
+  getCachedSolutionKits: vi.fn(() => []),
+  listSolutionKitsCached: vi.fn(async () => []),
+}));
+
+vi.mock("@/services/solutionKitSelection", () => ({
+  getActiveSolutionKitId: vi.fn(() => null),
+  subscribeActiveSolutionKitId: vi.fn(() => () => undefined),
+  buildAdvancedFeatureFlagsForSolutionKit: vi.fn(() => ({})),
+}));
 
 const createLocalStorage = () => {
   const store = new Map<string, string>();

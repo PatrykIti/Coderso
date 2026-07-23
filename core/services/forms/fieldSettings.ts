@@ -1,11 +1,13 @@
-export type FormFieldLogicOperator =
-  | "always"
-  | "equals"
-  | "not_equals"
-  | "contains"
-  | "not_contains"
-  | "exists"
-  | "not_exists";
+export const FORM_FIELD_LOGIC_OPERATOR_VALUES = [
+  "always",
+  "equals",
+  "not_equals",
+  "contains",
+  "not_contains",
+  "exists",
+  "not_exists",
+] as const;
+export type FormFieldLogicOperator = (typeof FORM_FIELD_LOGIC_OPERATOR_VALUES)[number];
 
 export type FormFieldLogic = {
   operator: FormFieldLogicOperator;
@@ -13,8 +15,15 @@ export type FormFieldLogic = {
   value?: string;
 };
 
-export type FormFieldWidth = "full" | "half";
-export type FormFieldLabelPosition = "above" | "inline" | "hidden";
+export const FORM_FIELD_WIDTH_VALUES = ["full", "half"] as const;
+export type FormFieldWidth = (typeof FORM_FIELD_WIDTH_VALUES)[number];
+export const FORM_FIELD_LABEL_POSITION_VALUES = ["above", "inline", "hidden"] as const;
+export type FormFieldLabelPosition = (typeof FORM_FIELD_LABEL_POSITION_VALUES)[number];
+
+export const FORM_FIELD_SHARED_LIMITS = {
+  name: 120,
+  settingText: 2_000,
+} as const;
 
 export type FormFieldStyle = {
   width?: FormFieldWidth;
@@ -26,31 +35,69 @@ export type ResolvedFormFieldStyle = {
   labelPosition: FormFieldLabelPosition;
 };
 
-const logicOperatorSet = new Set<FormFieldLogicOperator>([
-  "always",
+const logicOperatorSet = new Set<FormFieldLogicOperator>(FORM_FIELD_LOGIC_OPERATOR_VALUES);
+
+const fieldWidthSet = new Set<FormFieldWidth>(FORM_FIELD_WIDTH_VALUES);
+const fieldLabelPositionSet = new Set<FormFieldLabelPosition>(FORM_FIELD_LABEL_POSITION_VALUES);
+
+export const FORM_FIELD_VALUE_LOGIC_OPERATOR_VALUES = [
   "equals",
   "not_equals",
   "contains",
   "not_contains",
+] as const satisfies readonly FormFieldLogicOperator[];
+
+const valueOperatorSet = new Set<FormFieldLogicOperator>(FORM_FIELD_VALUE_LOGIC_OPERATOR_VALUES);
+
+export const FORM_FIELD_ONLY_LOGIC_OPERATOR_VALUES = [
   "exists",
   "not_exists",
-]);
+] as const satisfies readonly FormFieldLogicOperator[];
 
-const fieldWidthSet = new Set<FormFieldWidth>(["full", "half"]);
-const fieldLabelPositionSet = new Set<FormFieldLabelPosition>([
-  "above",
-  "inline",
-  "hidden",
-]);
+const fieldOnlyOperatorSet = new Set<FormFieldLogicOperator>(FORM_FIELD_ONLY_LOGIC_OPERATOR_VALUES);
 
-const valueOperatorSet = new Set<FormFieldLogicOperator>([
-  "equals",
-  "not_equals",
-  "contains",
-  "not_contains",
-]);
+export const formFieldLogicSchema = {
+  oneOf: [
+    {
+      type: "object",
+      required: ["operator"],
+      properties: { operator: { const: "always" } },
+      additionalProperties: false,
+    },
+    {
+      type: "object",
+      required: ["operator", "field", "value"],
+      properties: {
+        operator: { enum: FORM_FIELD_VALUE_LOGIC_OPERATOR_VALUES },
+        field: { type: "string", minLength: 1, maxLength: FORM_FIELD_SHARED_LIMITS.name },
+        value: {
+          type: "string",
+          minLength: 1,
+          maxLength: FORM_FIELD_SHARED_LIMITS.settingText,
+        },
+      },
+      additionalProperties: false,
+    },
+    {
+      type: "object",
+      required: ["operator", "field"],
+      properties: {
+        operator: { enum: FORM_FIELD_ONLY_LOGIC_OPERATOR_VALUES },
+        field: { type: "string", minLength: 1, maxLength: FORM_FIELD_SHARED_LIMITS.name },
+      },
+      additionalProperties: false,
+    },
+  ],
+} as const;
 
-const fieldOnlyOperatorSet = new Set<FormFieldLogicOperator>(["exists", "not_exists"]);
+export const formFieldStyleSchema = {
+  type: "object",
+  properties: {
+    width: { enum: FORM_FIELD_WIDTH_VALUES },
+    labelPosition: { enum: FORM_FIELD_LABEL_POSITION_VALUES },
+  },
+  additionalProperties: false,
+} as const;
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -121,9 +168,7 @@ export const resolveFormFieldStyle = (
   return {
     width: width && fieldWidthSet.has(width) ? width : "full",
     labelPosition:
-      labelPosition && fieldLabelPositionSet.has(labelPosition)
-        ? labelPosition
-        : "above",
+      labelPosition && fieldLabelPositionSet.has(labelPosition) ? labelPosition : "above",
   };
 };
 
@@ -197,7 +242,7 @@ export const evaluateFormFieldLogic = (
   const dependentField = logic.field;
   if (!dependentField) return true;
 
-  const raw = values[dependentField];
+  const raw = Object.hasOwn(values, dependentField) ? values[dependentField] : undefined;
   const actual = toComparableValue(raw);
 
   switch (logic.operator) {

@@ -12,10 +12,10 @@ Minimalne logowanie zdarzen administracyjnych.
 - plugins.update
 - plugins.disable
 - settings.update
-- widgets.template.create
-- widgets.template.update
-- widgets.template.delete
-- widgets.template.restore
+- widgets.template.create (legacy event name; decode existing logs only)
+- widgets.template.update (legacy event name; decode existing logs only)
+- widgets.template.delete (legacy event name; decode existing logs only)
+- widgets.template.restore (legacy event name; decode existing logs only)
 - admin.user.invite
 - admin.user.password_reset
 - admin.user.disable

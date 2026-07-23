@@ -17,16 +17,9 @@ import {
   customScreenCreateSchema,
   customScreenUpdateSchema,
 } from "../validation/customScreenSchemas";
+import { CustomScreenDefinitionError } from "../../services/customScreens/customScreenSchemas";
 
-// TASK-505-01 (Item B): lightweight carrier so a residual hard-400 (genuinely-malformed
-// binding) MAY surface the offending field name(s) on ApiError.details.fields — the user
-// message string stays byte-frozen (mapCustomScreenError keys on error.message). In practice
-// malformed bindings carry no field name; field-orphans are pruned to a 200 warning, not a 400.
-export class CustomScreenDefinitionError extends Error {
-  constructor(public fields?: string[]) {
-    super("custom_screen_definition_invalid");
-  }
-}
+export { CustomScreenDefinitionError };
 
 export type CustomScreenRouteHandler = (ctx: RouteContext) => Promise<unknown> | unknown;
 

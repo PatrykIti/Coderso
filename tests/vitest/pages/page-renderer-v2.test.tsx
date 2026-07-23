@@ -1,16 +1,21 @@
 import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
-import { expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 
 import {
   createPageBlockV2,
   createPageSectionV2,
+  normalizePageDocumentV2ForWrite,
   PAGE_DOCUMENT_SCHEMA_VERSION,
+  PAGE_LAYER_Z_CLAMP,
   resolvePageSectionForBreakpoint,
+  type PageBlockV2,
   type PageDocumentV2,
   type PageSectionV2,
 } from "../../../core/services/pages/pageDocumentV2";
 import {
+  PAGE_REVEAL_MOTION_CSS,
+  PAGE_SPOTLIGHT_CSS,
   PageBlockFrame,
   PageDocumentRender,
   PageSectionContent,
@@ -18,14 +23,43 @@ import {
   resolvePageRenderTree,
   toPageBlockRenderProps,
   toPageBlockTypographyStyle,
+  toPageSectionBleedStyle,
   toPageSectionRenderProps,
+  toPageSectionStyle,
 } from "../../../core/services/pages/pageRendererV2";
+import {
+  PAGE_EFFECTS_RUNTIME_ID,
+  PAGE_EFFECTS_RUNTIME_SOURCE,
+} from "../../../core/services/pages/pageEffectsRuntime";
+// TASK-531-01-L02/L04 — shared pure glow-compose helpers under test.
+import {
+  clampGlowNum,
+  composeGlowBoxShadow,
+  mergeShadows,
+} from "../../../core/services/pages/pageGlow";
+import {
+  PAGE_GLOW_BLUR_CLAMP,
+  PAGE_GLOW_OFFSET_CLAMP,
+  PAGE_GLOW_SPREAD_CLAMP,
+} from "../../../core/services/pages/pageDocumentV2";
 import {
   pageTypographyFontFamilyCssValues,
   pageTypographyFontSizeCssValues,
   pageTypographyFontWeightCssValues,
 } from "../../../core/services/pages/pageDocumentV2";
+import {
+  animatedIconGlyphs,
+  AnimatedIcon,
+  ANIMATED_ICON_KEYFRAMES_CSS,
+} from "../../../core/services/pages/animatedIconGlyphs";
+import { animatedIconNames } from "../../../core/services/pages/pageDocumentV2";
 import { serializePageBlockPath } from "../../../core/services/pages/pageBlockPaths";
+import {
+  SVG_SAFE_TREE_MAX_DEPTH,
+  SVG_SAFE_TREE_MAX_NODES,
+  SVG_SAFE_TREE_MAX_TEXT_CHARS,
+  buildSafeSvgTree,
+} from "../../../core/services/pages/svgSafeTree";
 import { buildPageEditorCollectionPreviewBinding } from "../../../core/services/pages/pageEditorCollectionPreview";
 import { buildPageEditorFormPreviewBinding } from "../../../core/services/pages/pageEditorFormPreview";
 import {
@@ -240,7 +274,15 @@ test("phase 3b section variants change published surfaces beyond marker classes"
   expect(ctaCenteredClass).toContain("text-center");
   expect(ctaCenteredClass).not.toContain("text-left");
   expect(ctaCenteredClass).not.toBe(ctaDefaultClass);
-  expect(toPageSectionRenderProps(ctaFullWidth).style.maxWidth).toBe("none");
+  // TASK-525-01-L01 REBASELINE (owned): a full-width section's CONTENT is now
+  // capped/centered at layout.maxWidth (was maxWidth:"none"); the 100vw
+  // background bleed lives on the outer <section> box, not the content div.
+  const ctaFullWidthStyle = toPageSectionRenderProps(ctaFullWidth).style;
+  expect(ctaFullWidthStyle.maxWidth).toBe(`${ctaFullWidth.layout.maxWidth}px`);
+  expect(ctaFullWidthStyle.maxWidth).not.toBe("none");
+  expect(ctaFullWidthStyle.margin).toBe("0 auto");
+  // bleed is expressed on the section box, not by dropping the content cap:
+  expect(toPageSectionBleedStyle(ctaFullWidth)?.width).toBe("100vw");
   expect(
     stripSectionTemplateMarker(toPageSectionRenderProps(ctaFullWidth).contentClassName)
   ).toContain("min-h-[320px]");
@@ -775,13 +817,258 @@ test("full-width section variants remove the outer section gutter so backgrounds
   const fullWidthProps = toPageSectionRenderProps(fullWidth);
   const fullWidthHtml = renderToStaticMarkup(<PageSectionRender section={fullWidth} />);
 
+  // PRESERVED w-full siblings (option A: the bleed lives on the OUTER <section>).
   expect(boundedProps.sectionClassName).toBe("w-full px-4 py-6");
   expect(fullWidthProps.sectionClassName).toBe("w-full");
-  expect(fullWidthProps.style.backgroundColor).toBe("#dcfce7");
-  expect(fullWidthProps.style.maxWidth).toBe("none");
   expect(fullWidthHtml).toContain('<section class="w-full"');
-  expect(fullWidthHtml).toContain("background-color:#dcfce7");
   expect(fullWidthHtml).not.toContain('class="w-full px-4 py-6"');
+  // TASK-525-01-L01 REBASELINE (owned): the full-width content is now
+  // capped/centered at layout.maxWidth (was maxWidth:"none") and the background
+  // NO LONGER lives on the content div — the 100vw bleed + background paint on
+  // the OUTER <section> box so the bg fills the band edge-to-edge while content
+  // stays contained. STRONGER: pins the content cap AND the bg bleed on separate
+  // elements.
+  expect(fullWidthProps.style.maxWidth).toBe(`${fullWidth.layout.maxWidth}px`);
+  expect(fullWidthProps.style.maxWidth).not.toBe("none");
+  expect(fullWidthProps.style.margin).toBe("0 auto");
+  expect(fullWidthProps.style.backgroundColor).toBeUndefined();
+  // The full-bleed background box (100vw) + its background live on <section>:
+  const fullWidthBleed = toPageSectionBleedStyle(fullWidth);
+  expect(fullWidthBleed?.width).toBe("100vw");
+  expect(fullWidthBleed?.marginLeft).toBe("calc(50% - 50vw)");
+  expect(fullWidthBleed?.backgroundColor).toBe("#dcfce7");
+  // Rendered <section> carries the bleed width + the background color.
+  expect(fullWidthHtml).toContain("width:100vw");
+  expect(fullWidthHtml).toContain("background-color:#dcfce7");
+});
+
+test("TASK-535: the fullBleed FLAG (default variant) drops the px-4 py-6 gutter, matching the style path", () => {
+  // Regression: `toPageSectionStyle` / `toPageSectionBleedStyle` key the bleed box
+  // + content cap off `isPageSectionFullBleed` (variant full-width OR
+  // `style.fullBleed`), but the section CLASSNAME only checked the variant, so a
+  // `style.fullBleed`-only section got the 100vw bleed box yet KEPT the utility
+  // gutter. The className must route off the SAME predicate: drop the gutter here
+  // too, consistent with the style path.
+  const flagBleed = createPageSectionV2("hero", {
+    id: "sec-flag-bleed",
+    variant: "default", // NOT the full-width template variant — the FLAG alone.
+    style: {
+      background: "#dcfce7",
+      backgroundType: "color",
+      backgroundImage: null,
+      accent: "#0d9488",
+      radius: 0,
+      shadow: "none",
+      fullBleed: true,
+    },
+  });
+  const flagProps = toPageSectionRenderProps(flagBleed);
+  const flagHtml = renderToStaticMarkup(<PageSectionRender section={flagBleed} />);
+  // Gutter dropped (matches the style path), NOT `w-full px-4 py-6`.
+  expect(flagProps.sectionClassName).toBe("w-full");
+  expect(flagProps.sectionClassName).not.toContain("px-4");
+  expect(flagProps.sectionClassName).not.toContain("py-6");
+  // The style path already treats it as full-bleed: 100vw bleed box + capped content.
+  const bleed = toPageSectionBleedStyle(flagBleed);
+  expect(bleed?.width).toBe("100vw");
+  expect(flagHtml).toContain("width:100vw");
+  // A NON-full-bleed (default variant, no flag) sibling still keeps the gutter.
+  const bounded = createPageSectionV2("hero", {
+    id: "sec-bounded",
+    variant: "default",
+    style: {
+      background: "#eef2ff",
+      backgroundType: "color",
+      backgroundImage: null,
+      accent: "#0d9488",
+      radius: 0,
+      shadow: "none",
+    },
+  });
+  expect(toPageSectionRenderProps(bounded).sectionClassName).toBe("w-full px-4 py-6");
+});
+
+test("TASK-535: a page with a full-bleed section guards the root with overflow-x:clip (no h-scroll from 100vw)", () => {
+  // The 100vw bleed box counts the vertical-scrollbar gutter, so it is wider than
+  // the content area and pushes a spurious horizontal scrollbar. The page root
+  // gets `overflow-x:clip` (present-only) to clip it WITHOUT creating a scroll
+  // container (which `overflow:hidden` would, breaking the sticky nav).
+  const bleedDoc = createEffectsDocument([
+    createPageSectionV2("hero", {
+      id: "sec-bleed",
+      variant: "full-width",
+      style: {
+        background: "#dcfce7",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+      },
+    }),
+  ]);
+  const html = renderToStaticMarkup(<PageDocumentRender document={bleedDoc} />);
+  expect(html).toContain("overflow-x:clip");
+  // The FLAG path guards too (default variant + style.fullBleed).
+  const flagDoc = createEffectsDocument([
+    createPageSectionV2("hero", {
+      id: "sec-flag",
+      variant: "default",
+      style: {
+        background: "#dcfce7",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+        fullBleed: true,
+      },
+    }),
+  ]);
+  expect(renderToStaticMarkup(<PageDocumentRender document={flagDoc} />)).toContain(
+    "overflow-x:clip"
+  );
+});
+
+test("TASK-535: a page with NO full-bleed section adds NO root overflow guard (present-only, byte-identical)", () => {
+  // present-only invariant: `createSection()` is a `centered` variant with no
+  // fullBleed flag, so the root style stays byte-identical (no overflow-x).
+  const doc = createEffectsDocument([createSection()]);
+  const html = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  expect(html).not.toContain("overflow-x");
+});
+
+test("TASK-525-01: full-width section caps content at layout.maxWidth (bg full-bleed)", () => {
+  const section = createPageSectionV2("hero", {
+    id: "sec-fb-cap",
+    variant: "full-width",
+    layout: { columns: 1, align: "center", justify: "center", maxWidth: 1120 },
+    style: {
+      background: "#101828",
+      backgroundType: "color",
+      backgroundImage: null,
+      accent: "#0d9488",
+      radius: 0,
+      shadow: "none",
+    },
+  });
+  const style = toPageSectionStyle(section);
+  // content is capped/centered — no longer maxWidth:"none".
+  expect(style.maxWidth).toBe("1120px");
+  expect(style.margin).toBe("0 auto");
+  // reference `.container` gutter: content stays inside a min side gutter.
+  expect(style.width).toBe("min(1120px, calc(100% - 2 * 20px))");
+  // bg does NOT ride on the content div anymore.
+  expect(style.backgroundColor).toBeUndefined();
+  // the full-bleed lives on the outer section box.
+  const bleed = toPageSectionBleedStyle(section);
+  expect(bleed?.width).toBe("100vw");
+  expect(bleed?.marginLeft).toBe("calc(50% - 50vw)");
+  expect(bleed?.backgroundColor).toBe("#101828");
+});
+
+test("TASK-525-01: full-width renders a centered capped content wrapper inside a full-bleed section box", () => {
+  const section = createPageSectionV2("hero", {
+    id: "sec-fb-structure",
+    variant: "full-width",
+    layout: { columns: 1, align: "center", justify: "center", maxWidth: 1120 },
+    style: {
+      background: "#dcfce7",
+      backgroundType: "color",
+      backgroundImage: null,
+      accent: "#0d9488",
+      radius: 0,
+      shadow: "none",
+    },
+  });
+  const html = renderToStaticMarkup(<PageSectionRender section={section} />);
+  // full-bleed marker/utility on the outer section box.
+  expect(html).toContain("width:100vw");
+  expect(html).toContain("margin-left:calc(50% - 50vw)");
+  expect(html).toContain("background-color:#dcfce7");
+  // content node capped at maxWidth + centered, independent of the bleed box.
+  expect(html).toContain('data-page-section-content="true"');
+  expect(html).toContain("max-width:1120px");
+  expect(html).toContain("min(1120px, calc(100% - 2 * 20px))");
+});
+
+test("TASK-525-01: non-full-width section content is byte-identical (bg + cap on one content div)", () => {
+  const section = createPageSectionV2("hero", {
+    id: "sec-fb-default",
+    variant: "default",
+    layout: { columns: 1, align: "start", justify: "start", maxWidth: 960 },
+    style: {
+      background: "#eef2ff",
+      backgroundType: "color",
+      backgroundImage: null,
+      accent: "#0d9488",
+      radius: 12,
+      shadow: "sm",
+    },
+  });
+  const style = toPageSectionStyle(section);
+  // cap unchanged; background/radius/shadow still on the SAME content div.
+  expect(style.maxWidth).toBe("960px");
+  expect(style.margin).toBe("0 auto");
+  expect(style.backgroundColor).toBe("#eef2ff");
+  expect(style.borderRadius).toBe("12px");
+  expect(style.boxShadow).toBeDefined();
+  // no full-bleed gutter width literal on the non-bleed path.
+  expect(style.width).toBeUndefined();
+  // no bleed box for a non-full-bleed section.
+  expect(toPageSectionBleedStyle(section)).toBeUndefined();
+  // and the rendered <section> has NO 100vw bleed.
+  const html = renderToStaticMarkup(<PageSectionRender section={section} />);
+  expect(html).not.toContain("width:100vw");
+});
+
+test("TASK-525-01: changing layout.maxWidth moves the content cap while bg stays full-bleed", () => {
+  for (const mw of [640, 960, 1440]) {
+    const section = createPageSectionV2("hero", {
+      id: `sec-fb-mw-${mw}`,
+      variant: "full-width",
+      layout: { columns: 1, align: "center", justify: "center", maxWidth: mw },
+      style: {
+        background: "#101828",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+      },
+    });
+    expect(toPageSectionStyle(section).maxWidth).toBe(`${mw}px`);
+    // bleed is invariant to the cap.
+    expect(toPageSectionBleedStyle(section)?.width).toBe("100vw");
+  }
+});
+
+test("TASK-525-01-L02: style.fullBleed bleeds a NON-full-width section, caps content", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-fb-flag",
+    variant: "default",
+    layout: { columns: 1, align: "start", justify: "start", maxWidth: 880 },
+    style: {
+      background: "#0b1020",
+      backgroundType: "color",
+      backgroundImage: null,
+      accent: "#0d9488",
+      radius: 0,
+      shadow: "none",
+      fullBleed: true,
+    },
+  });
+  expect(section.style.fullBleed).toBe(true);
+  const style = toPageSectionStyle(section);
+  // content capped/centered even though the template variant is NOT full-width.
+  expect(style.maxWidth).toBe("880px");
+  expect(style.margin).toBe("0 auto");
+  expect(style.width).toBe("min(880px, calc(100% - 2 * 20px))");
+  expect(style.backgroundColor).toBeUndefined();
+  // and the bg bleeds on the section box.
+  const bleed = toPageSectionBleedStyle(section);
+  expect(bleed?.width).toBe("100vw");
+  expect(bleed?.backgroundColor).toBe("#0b1020");
 });
 
 test("stackVertical forces a single-column section grid on canvas and front (TASK-425)", () => {
@@ -2811,4 +3098,2599 @@ test("paged collection binding renders the numbered pager, totals, and template 
   );
   expect(guardedHtml).toContain('data-content-list-link-unavailable="1"');
   expect(guardedHtml).not.toContain('href="/homes/lakeside-home"');
+});
+
+// TASK-521-02-L02/L03 — section scroll/parallax/reveal front render.
+const createEffectSection = (style: Partial<PageSectionV2["style"]>) =>
+  createPageSectionV2("content", {
+    id: "sec-effect",
+    name: "Effect section",
+    style: {
+      background: "#ffffff",
+      backgroundType: "none",
+      backgroundImage: null,
+      accent: "#111111",
+      radius: 0,
+      shadow: "none",
+      ...style,
+    },
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-effect-heading",
+        props: { text: "Effect headline", level: "h2", align: "left" },
+      }),
+    ],
+  });
+
+test("reveal-up stamps data-page-effect + motion-safe reveal class", () => {
+  const html = renderToStaticMarkup(
+    <PageSectionRender section={createEffectSection({ scrollEffect: "reveal-up" })} />
+  );
+  expect(html).toContain('data-page-effect="reveal-up"');
+  expect(html).toContain("motion-safe:data-[revealed=true]:translate-y-0");
+  expect(html).toContain("motion-safe:transition-[opacity,transform]");
+  expect(html).not.toContain("data-parallax");
+  expect(html).not.toContain("data-parallax-inner");
+});
+
+test("reveal-fade stamps fade class, no translate", () => {
+  const html = renderToStaticMarkup(
+    <PageSectionRender section={createEffectSection({ scrollEffect: "reveal-fade" })} />
+  );
+  expect(html).toContain('data-page-effect="reveal-fade"');
+  expect(html).toContain("motion-safe:data-[revealed=true]:opacity-100");
+  expect(html).not.toContain("data-parallax");
+});
+
+test("parallax stamps data-parallax + [data-parallax-inner] wrapper", () => {
+  const html = renderToStaticMarkup(
+    <PageSectionRender
+      section={createEffectSection({ scrollEffect: "parallax", parallaxIntensity: 24 })}
+    />
+  );
+  expect(html).toContain('data-page-effect="parallax"');
+  expect(html).toContain('data-parallax="24"');
+  expect(html).toContain("data-parallax-inner");
+  expect(html).toContain("will-change-transform");
+  // reveal utilities only ship for reveal-* effects, not parallax.
+  expect(html).not.toContain("motion-safe:data-[revealed=true]");
+});
+
+test("clamps parallax intensity in render (>40 → 40)", () => {
+  const section = createEffectSection({ scrollEffect: "parallax" });
+  // Force an out-of-range value past the model normalize (defence in depth).
+  const overSection: PageSectionV2 = {
+    ...section,
+    style: { ...section.style, parallaxIntensity: 9999 },
+  };
+  const html = renderToStaticMarkup(<PageSectionRender section={overSection} />);
+  expect(html).toContain('data-parallax="40"');
+});
+
+test("no scrollEffect ⇒ byte-identical <section> (no attr, no wrapper)", () => {
+  const html = renderToStaticMarkup(<PageSectionRender section={createEffectSection({})} />);
+  expect(html).not.toContain("data-page-effect");
+  expect(html).not.toContain("data-parallax");
+  expect(html).not.toContain("data-parallax-inner");
+  expect(html).not.toContain("motion-safe:transition-[opacity,transform]");
+});
+
+test("PAGE_REVEAL_MOTION_CSS is reduced-motion-safe + reveal-armed scoped", () => {
+  expect(PAGE_REVEAL_MOTION_CSS).toContain("@media (prefers-reduced-motion: no-preference)");
+  expect(PAGE_REVEAL_MOTION_CSS).toContain("[data-reveal-armed]");
+  expect(PAGE_REVEAL_MOTION_CSS).toContain(
+    '[data-page-effect^="reveal"]:not([data-revealed]){opacity:0}'
+  );
+  expect(PAGE_REVEAL_MOTION_CSS).toContain(
+    '[data-page-effect="reveal-up"]:not([data-revealed]){transform:translateY(1rem)}'
+  );
+});
+
+// ---------------------------------------------------------------------------
+// TASK-525-02 — per-block staggered reveal (--reveal-delay + child cascade).
+// ---------------------------------------------------------------------------
+
+test("TASK-525-02: emits --reveal-delay on the block frame when authored", () => {
+  const block = createPageBlockV2("text", {
+    id: "blk-reveal-delay",
+    style: { revealDelay: 240 } as PageBlockV2["style"],
+  });
+  const props = toPageBlockRenderProps(block);
+  expect((props.style as Record<string, string>)["--reveal-delay"]).toBe("240ms");
+});
+
+test("TASK-525-02: omits --reveal-delay when unset (byte-identical frame style)", () => {
+  const block = createPageBlockV2("text", { id: "blk-reveal-none" });
+  const props = toPageBlockRenderProps(block);
+  expect("--reveal-delay" in props.style).toBe(false);
+});
+
+test("TASK-525-02: revealing CHILDREN carry their own hide-state + transition (cascade is NOT inert)", () => {
+  // Guard against the inert path: a bare transition-delay on [data-page-block]
+  // with no LIVE child transition produces zero visible stagger. Assert the child
+  // reveal transition + hide-state actually exist, keyed off the section's
+  // data-revealed, so --reveal-delay has a transition to delay.
+  expect(PAGE_REVEAL_MOTION_CSS).toContain("prefers-reduced-motion: no-preference");
+  expect(PAGE_REVEAL_MOTION_CSS).toContain("[data-reveal-armed]");
+  // child hide-state while the section is not yet revealed:
+  expect(PAGE_REVEAL_MOTION_CSS).toContain(":not([data-revealed]) [data-page-block]");
+
+  // REGRESSION GUARD (post-audit HIGH): the child reveal transition + transition-delay
+  // MUST live on a STATE-INDEPENDENT rule — one NOT gated by :not([data-revealed]).
+  // Per CSS Transitions, the transition is governed by the AFTER-CHANGE (revealed)
+  // computed style; if the transition only appeared on the :not([data-revealed]) rule
+  // it would reset to `all 0s` once the section is revealed and the blocks would JUMP
+  // (no fade, no per-block delay, no cascade). We therefore isolate every declaration
+  // block that carries the child transition-delay and require at least one of them to
+  // target [data-page-block] WITHOUT a preceding :not([data-revealed]) on that same
+  // compound selector.
+  const declRe =
+    /([^{}]*\[data-page-block\])\{([^}]*transition-delay:var\(--reveal-delay,0ms\)[^}]*)\}/g;
+  const transitionDeclarations = [...PAGE_REVEAL_MOTION_CSS.matchAll(declRe)];
+  // the transition rule exists at all:
+  expect(transitionDeclarations.length).toBeGreaterThan(0);
+  // and it also carries the actual opacity/transform transition:
+  expect(transitionDeclarations.some(([, , body]) => /transition:opacity[^;]*/.test(body))).toBe(
+    true
+  );
+  // at least one transition-carrying rule is STATE-INDEPENDENT (survives into revealed):
+  const hasStateIndependentTransition = transitionDeclarations.some(
+    ([, selector]) => !/:not\(\[data-revealed\]\)/.test(selector)
+  );
+  expect(hasStateIndependentTransition).toBe(true);
+  // and the hide-state rule (opacity:0) is still gated on :not([data-revealed]):
+  expect(PAGE_REVEAL_MOTION_CSS).toMatch(
+    /:not\(\[data-revealed\]\) \[data-page-block\]\{opacity:0\}/
+  );
+
+  // revealed target keyed on the SECTION's data-revealed (runtime toggles section only):
+  expect(PAGE_REVEAL_MOTION_CSS).toContain("[data-revealed] [data-page-block]");
+  expect(PAGE_REVEAL_MOTION_CSS).toContain(
+    "[data-revealed] [data-page-block]{opacity:1;transform:none}"
+  );
+});
+
+test("TASK-525-02: staggers a revealing section's children with distinct per-block --reveal-delay", () => {
+  // Three blocks with revealDelay 0/120/240 in a reveal-up section → three frames
+  // each carrying its own --reveal-delay. Combined with the child transition rule
+  // asserted above, this is a real cascade (not distinct vars alone).
+  const delays = [0, 120, 240];
+  const emitted = delays.map(
+    (d) =>
+      (
+        toPageBlockRenderProps(
+          createPageBlockV2("text", {
+            id: `blk-stagger-${d}`,
+            style: { revealDelay: d } as PageBlockV2["style"],
+          })
+        ).style as Record<string, string>
+      )["--reveal-delay"]
+  );
+  expect(emitted).toEqual(["0ms", "120ms", "240ms"]);
+  expect(new Set(emitted).size).toBe(3);
+});
+
+test("TASK-535 — revealDelay does NOT inherit: the reveal CSS resets --reveal-delay per [data-page-block] frame", () => {
+  // `--reveal-delay` is a CSS CUSTOM PROPERTY (inherits by default). A block stamps
+  // it INLINE on its OWN frame, so a container that authors revealDelay would leak
+  // its value onto every un-delayed nested child (they'd cascade at the ancestor's
+  // delay instead of 0). The reveal CSS rule that reads it must ALSO reset it to 0ms
+  // on the same [data-page-block] selector, so an un-delayed descendant uses 0ms
+  // (author-stylesheet reset), while an authored frame's INLINE value still wins the
+  // cascade (inline beats an author-stylesheet declaration).
+  const declRe =
+    /([^{}]*\[data-page-block\])\{([^}]*transition-delay:var\(--reveal-delay,0ms\)[^}]*)\}/g;
+  const transitionDeclarations = [...PAGE_REVEAL_MOTION_CSS.matchAll(declRe)];
+  expect(transitionDeclarations.length).toBeGreaterThan(0);
+  // At least one transition-carrying rule ALSO resets the custom property to 0ms so
+  // the value cannot inherit from an ancestor frame onto an un-delayed descendant.
+  expect(transitionDeclarations.some(([, , body]) => body.includes("--reveal-delay:0ms"))).toBe(
+    true
+  );
+  // The reset lives on the SAME state-independent rule that carries the transition
+  // (so it survives into the revealed state), and precedes the `var()` read.
+  const resetRule = transitionDeclarations.find(([, , body]) =>
+    body.includes("--reveal-delay:0ms")
+  );
+  expect(resetRule).toBeDefined();
+  const body = resetRule?.[2] ?? "";
+  expect(body.indexOf("--reveal-delay:0ms")).toBeLessThan(
+    body.indexOf("transition-delay:var(--reveal-delay,0ms)")
+  );
+  // The reset rule stays state-independent (not gated by :not([data-revealed])).
+  expect(/:not\(\[data-revealed\]\)/.test(resetRule?.[1] ?? "")).toBe(false);
+});
+
+test("TASK-535 — a container's revealDelay is NOT stamped inline onto an un-delayed nested child (no inline leak)", () => {
+  // DOM-structure proof of the inheritance fix's premise: the un-authored child frame
+  // carries NO inline --reveal-delay (so the CSS per-frame 0ms reset governs it and it
+  // does not inherit the ancestor's 500ms), while BOTH the container that authored the
+  // delay AND a sibling that authored its OWN delay keep their inline values.
+  const container = createPageBlockV2("container", {
+    id: "blk-parent-delay",
+    style: { revealDelay: 500 } as PageBlockV2["style"],
+    slots: {
+      children: [
+        createPageBlockV2("heading", {
+          id: "blk-child-nodelay",
+          props: { text: "child", level: "h2", align: "left" },
+        }),
+        createPageBlockV2("text", {
+          id: "blk-child-owndelay",
+          style: { revealDelay: 120 } as PageBlockV2["style"],
+        }),
+      ],
+    },
+  });
+  const html = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", { id: "sec-reveal-nest", blocks: [container] })}
+    />
+  );
+  // The container frame carries its own inline delay…
+  const parentTag = html.match(/<div[^>]*data-block-id="blk-parent-delay"[^>]*>/)?.[0] ?? "";
+  expect(parentTag).toContain("--reveal-delay:500ms");
+  // …the self-delayed sibling keeps its OWN inline delay…
+  const ownTag = html.match(/<div[^>]*data-block-id="blk-child-owndelay"[^>]*>/)?.[0] ?? "";
+  expect(ownTag).toContain("--reveal-delay:120ms");
+  // …but the un-delayed child frame has NO inline --reveal-delay (would otherwise
+  // pin the author's 0 to the ancestor's 500ms via inheritance — the CSS reset owns
+  // it instead). Its frame `style` should not mention the var at all.
+  const childTag = html.match(/<div[^>]*data-block-id="blk-child-nodelay"[^>]*>/)?.[0] ?? "";
+  expect(childTag).not.toContain("--reveal-delay");
+});
+
+test("TASK-535 — revealDelay-only (no section scrollEffect) is INERT by design: no motion CSS / marker / script", () => {
+  // Documented scope: revealDelay is a STAGGER within a revealing section, not a
+  // standalone reveal trigger. A page whose ONLY authored motion is a block
+  // revealDelay — inside a section with NO scrollEffect — emits NO reveal
+  // stylesheet, NO data-page-motion marker and NO runtime <script>: nothing hides
+  // or observes the block, so the (still-stamped) --reveal-delay var is inert. The
+  // fix for a visible reveal is to author the SECTION's reveal scrollEffect.
+  const delayOnlySection = createPageSectionV2("content", {
+    id: "sec-delay-only",
+    style: {
+      background: "#ffffff",
+      backgroundType: "none",
+      backgroundImage: null,
+      accent: "#111111",
+      radius: 0,
+      shadow: "none",
+      // NOTE: no scrollEffect authored.
+    },
+    blocks: [
+      createPageBlockV2("text", {
+        id: "blk-delay-only",
+        style: { revealDelay: 300 } as PageBlockV2["style"],
+      }),
+    ],
+  });
+  const doc = createEffectsDocument([delayOnlySection]);
+  const html = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  // The block still carries its inline var (present-only, harmless)…
+  expect(html).toContain("--reveal-delay:300ms");
+  // …but NONE of the section-reveal machinery is emitted (inert by design).
+  expect(html).not.toContain("data-page-motion-css");
+  expect(html).not.toContain("data-page-motion=");
+  expect(html).not.toContain("data-page-effect");
+  expect(html).not.toContain(`data-coderso-runtime-script="${PAGE_EFFECTS_RUNTIME_ID}"`);
+});
+
+// ---------------------------------------------------------------------------
+// TASK-521-05-L03 — page-shell effects (PageDocumentRender): cursor spotlight,
+// data-page-motion marker, reveal-hide + noscript, runtime script, byte-identity.
+// ---------------------------------------------------------------------------
+
+const createEffectsDocument = (
+  sections: PageSectionV2[],
+  effects?: PageDocumentV2["settings"]["effects"]
+): PageDocumentV2 => ({
+  schemaVersion: PAGE_DOCUMENT_SCHEMA_VERSION,
+  breakpoints: ["desktop", "tablet", "mobile"],
+  seo: {},
+  settings: { template: "page-v2", showInNav: true, ...(effects ? { effects } : {}) },
+  sections,
+});
+
+test("cursorSpotlight ⇒ data-page-spotlight + data-page-motion + overlay + custom props + one script", () => {
+  const doc = createEffectsDocument([createSection()], {
+    cursorSpotlight: true,
+    spotlightColor: "#ff0000",
+    spotlightSize: 400,
+  });
+  const html = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  expect(html).toContain('data-page-spotlight="true"');
+  expect(html).toContain('data-page-motion="true"');
+  expect(html).toContain("data-page-spotlight-overlay");
+  // TASK-523-02 — overlay stays pointer-events-none fixed inset-0; the `z-0`
+  // class was DROPPED so it does not fight the CSS-raised z-index.
+  expect(html).toContain("pointer-events-none fixed inset-0");
+  expect(html).not.toContain("pointer-events-none fixed inset-0 z-0");
+  expect(html).toContain("--spotlight-color:#ff0000");
+  expect(html).toContain("--spotlight-size:400px");
+  // the spotlight <style> ships the static PAGE_SPOTLIGHT_CSS
+  expect(html).toContain("data-page-spotlight-css");
+  expect(html).toContain("radial-gradient");
+  expect(html).toContain("@media (prefers-reduced-motion: no-preference)");
+  // exactly one effects runtime <script>
+  expect(countMarkup(html, `data-coderso-runtime-script="${PAGE_EFFECTS_RUNTIME_ID}"`)).toBe(1);
+  // no section effect authored ⇒ no reveal-hide style/noscript
+  expect(html).not.toContain("data-page-motion-css");
+});
+
+test("PAGE_SPOTLIGHT_CSS is reduced-motion-gated radial-gradient reading --spotlight-*", () => {
+  expect(PAGE_SPOTLIGHT_CSS).toContain("@media (prefers-reduced-motion: no-preference)");
+  expect(PAGE_SPOTLIGHT_CSS).toContain("[data-page-spotlight] [data-page-spotlight-overlay]");
+  expect(PAGE_SPOTLIGHT_CSS).toContain("radial-gradient(var(--spotlight-size,400px)");
+  expect(PAGE_SPOTLIGHT_CSS).toContain("var(--spotlight-x,50%) var(--spotlight-y,50%)");
+  // Default is a TRANSLUCENT tint (subtle glow that does not obscure content),
+  // not the opaque brand color; authors override via --spotlight-color.
+  expect(PAGE_SPOTLIGHT_CSS).toContain(
+    "var(--spotlight-color,color-mix(in srgb,var(--primary) 14%,transparent))"
+  );
+  expect(PAGE_SPOTLIGHT_CSS).not.toContain("var(--spotlight-color,var(--primary))");
+});
+
+test("TASK-523-02 — PAGE_SPOTLIGHT_CSS overlay is occlusion-proof: NON-gated base rule adds light above section backgrounds without blocking", () => {
+  // A NON-gated base rule (BEFORE the reduced-motion @media) fixes/raises/blends
+  // the overlay so it renders ABOVE opaque section backgrounds and ADDS light.
+  const baseRule = PAGE_SPOTLIGHT_CSS.slice(
+    0,
+    PAGE_SPOTLIGHT_CSS.indexOf("@media (prefers-reduced-motion: no-preference)")
+  );
+  expect(baseRule).toContain("[data-page-spotlight] [data-page-spotlight-overlay]");
+  expect(baseRule).toContain("position:fixed");
+  expect(baseRule).toContain("inset:0");
+  // raised z-index — above section content, so opaque backgrounds cannot occlude it
+  const zIndexMatch = /z-index:(\d+)/.exec(baseRule);
+  expect(zIndexMatch).not.toBeNull();
+  const overlayZIndex = Number(zIndexMatch![1]);
+  // Hard Invariant #4 / AC #4: the overlay must sit STRICTLY BELOW the front
+  // sticky nav (z-40) so screen-blend never tints the menu bar.
+  expect(overlayZIndex).toBeLessThan(40);
+  expect(overlayZIndex).toBeGreaterThan(0);
+  // ADDS light without blocking
+  expect(baseRule).toContain("mix-blend-mode:screen");
+  expect(baseRule).toContain("pointer-events:none");
+  // the moving glow (radial-gradient) STAYS behind the reduced-motion gate; the
+  // base rule itself must NOT ship the gradient.
+  expect(baseRule).not.toContain("radial-gradient");
+  const gatedRule = PAGE_SPOTLIGHT_CSS.slice(
+    PAGE_SPOTLIGHT_CSS.indexOf("@media (prefers-reduced-motion: no-preference)")
+  );
+  expect(gatedRule).toContain("radial-gradient");
+});
+
+test("TASK-523-02 — nav-safety invariant: overlay z-index stays strictly below the sticky nav (sticky z-40) and <Root> forms no stacking context", () => {
+  // The overlay must sit above section content but BELOW the sticky nav so
+  // mix-blend-mode:screen never tints the menu bar (Hard Invariant #4 / AC #4).
+  const baseRule = PAGE_SPOTLIGHT_CSS.slice(
+    0,
+    PAGE_SPOTLIGHT_CSS.indexOf("@media (prefers-reduced-motion: no-preference)")
+  );
+  const overlayZIndex = Number(/z-index:(\d+)/.exec(baseRule)![1]);
+
+  // Grep-anchor the nav's `sticky z-40`: if the nav z-index is ever dropped/renamed,
+  // these break so the strictly-below relationship is re-checked.
+  const navigationSource = readFileSync(
+    new URL("../../../core/widgets/core/navigation.tsx", import.meta.url),
+    "utf8"
+  );
+  const widgetRendererSource = readFileSync(
+    new URL("../../../core/widgets/renderers/widgetRenderer.tsx", import.meta.url),
+    "utf8"
+  );
+  expect(navigationSource).toContain("sticky z-40");
+  expect(widgetRendererSource).toContain("sticky z-40");
+  // The nav's z-index is 40; the overlay must be strictly below it.
+  expect(overlayZIndex).toBeLessThan(40);
+
+  // <Root> must NOT form a stacking context (isolation:isolate is the deliberate
+  // NON-choice) so the overlay and nav share the root stacking context and the
+  // z-index comparison is meaningful.
+  const doc = createEffectsDocument([createSection()], { cursorSpotlight: true });
+  const html = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  const rootTagMatch = /<(main|div|section|article)\b[^>]*data-page-v2="true"[^>]*>/.exec(html);
+  expect(rootTagMatch).not.toBeNull();
+  expect(rootTagMatch![0]).not.toContain("isolation");
+  expect(rootTagMatch![0]).not.toContain("isolate");
+});
+
+test("TASK-523-02 — occlusion-proof: no authorable layer.z can reach the spotlight overlay (PAGE_LAYER_Z_CLAMP.max < overlay z-index < nav z-40)", () => {
+  // The layered-canvas surface maps `layer.z` straight to `z-index` on a
+  // [data-layer] child of the SAME root stacking context as the overlay
+  // (pageCompositionEffects.tsx). If an author could set layer.z >= the overlay
+  // z-index, that layer would paint AT/ABOVE the spotlight and occlude the glow.
+  // Cap the bound STRICTLY BELOW the overlay so the glow is always visible.
+  const baseRule = PAGE_SPOTLIGHT_CSS.slice(
+    0,
+    PAGE_SPOTLIGHT_CSS.indexOf("@media (prefers-reduced-motion: no-preference)")
+  );
+  const overlayZIndex = Number(/z-index:(\d+)/.exec(baseRule)![1]);
+
+  // Grep-anchor the composition-effects mapping so this test breaks if the
+  // layer.z ⇒ z-index binding is ever dropped/renamed and the invariant needs
+  // re-checking against a different surface.
+  const compositionEffectsSource = readFileSync(
+    new URL("../../../core/services/pages/pageCompositionEffects.tsx", import.meta.url),
+    "utf8"
+  );
+  expect(compositionEffectsSource).toContain("z-index:var(--layer-z,auto)");
+
+  // The bound is the single source of truth for both the JSON schema and the
+  // runtime normalizer (pageDocumentV2.ts), so a max below the overlay z-index
+  // means NO authored/normalized layer can reach the overlay.
+  expect(PAGE_LAYER_Z_CLAMP.max).toBeLessThan(overlayZIndex);
+  // And the overlay itself stays strictly below the sticky nav (z-40).
+  expect(overlayZIndex).toBeLessThan(40);
+});
+
+test("section scrollEffect only ⇒ data-page-motion + <style data-page-motion-css> (PAGE_REVEAL_MOTION_CSS) + <noscript> + script, no spotlight overlay", () => {
+  const doc = createEffectsDocument([createEffectSection({ scrollEffect: "reveal-up" })]);
+  const html = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  expect(html).toContain('data-page-motion="true"');
+  expect(html).toContain("data-page-motion-css");
+  expect(html).toContain(PAGE_REVEAL_MOTION_CSS);
+  expect(html).toContain("<noscript>");
+  expect(html).toContain('[data-page-effect^="reveal"]{opacity:1;transform:none}');
+  expect(countMarkup(html, `data-coderso-runtime-script="${PAGE_EFFECTS_RUNTIME_ID}"`)).toBe(1);
+  // no page spotlight
+  expect(html).not.toContain('data-page-spotlight="true"');
+  expect(html).not.toContain("data-page-spotlight-overlay");
+});
+
+// ---------------------------------------------------------------------------
+// TASK-535 — page-global effect-node handling across the TWO documents a page
+// renders (the <main> page + the SiteFooter template). Each PageDocumentRender
+// decides its own effects. Two classes of node:
+//   - IDEMPOTENT stylesheets (reveal/composition/spotlight CSS + reveal noscript):
+//     document-agnostic selectors, so a duplicate is HARMLESS. Emitted PER-DOCUMENT /
+//     present-only ⇒ a FOOTER-ONLY effect is still styled (the earlier 535 pass that
+//     gated these to the primary suppressed them on BOTH docs for footer-only effects).
+//   - The viewport-fixed spotlight OVERLAY DIV: the ONE true singleton (two stack ⇒
+//     double brightness). De-duplicated across documents via `peerSpotlightOn` so
+//     EXACTLY ONE renders, while a footer-only spotlight still emits its overlay.
+// ---------------------------------------------------------------------------
+
+test("TASK-535 — secondary spotlight document with a spotlight PEER suppresses its overlay DIV, but still emits the (idempotent) spotlight CSS", () => {
+  const doc = createEffectsDocument([createSection()], {
+    cursorSpotlight: true,
+    spotlightColor: "#ff0000",
+    spotlightSize: 400,
+  });
+  // peerSpotlightOn=true models the primary <main> already owning the overlay.
+  const secondary = renderToStaticMarkup(
+    <PageDocumentRender document={doc} documentRole="secondary" rootTag="div" peerSpotlightOn />
+  );
+  // The viewport-fixed overlay DIV is NOT emitted (the primary owns the single one)…
+  expect(secondary).not.toContain('data-page-spotlight-overlay="true"');
+  // …but the idempotent spotlight CSS + root markers ARE emitted (harmless duplicate;
+  // ensures a footer-authored spotlight is styled), and the runtime <script> emits.
+  expect(secondary).toContain("data-page-spotlight-css");
+  expect(secondary).toContain('data-page-spotlight="true"');
+  expect(countMarkup(secondary, `data-coderso-runtime-script="${PAGE_EFFECTS_RUNTIME_ID}"`)).toBe(
+    1
+  );
+});
+
+test("TASK-535 — primary + secondary spotlight documents emit EXACTLY ONE overlay DIV across the page (peer-threaded)", () => {
+  const doc = createEffectsDocument([createSection()], { cursorSpotlight: true });
+  // Both author spotlight: the shell tells the footer the primary already owns the
+  // overlay (peerSpotlightOn), so the footer suppresses its copy — the primary owns it.
+  const primary = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  const secondary = renderToStaticMarkup(
+    <PageDocumentRender document={doc} documentRole="secondary" rootTag="div" peerSpotlightOn />
+  );
+  const page = primary + secondary; // both documents live in one HTML document
+  // Exactly one overlay DIV across the page; it comes from the PRIMARY.
+  expect(countMarkup(page, 'data-page-spotlight-overlay="true"')).toBe(1);
+  expect(countMarkup(primary, 'data-page-spotlight-overlay="true"')).toBe(1);
+  expect(countMarkup(secondary, 'data-page-spotlight-overlay="true"')).toBe(0);
+  // The spotlight CSS is idempotent and emitted per-document (harmless duplicate).
+  expect(countMarkup(page, "data-page-spotlight-css")).toBe(2);
+});
+
+test("TASK-535 — FOOTER-ONLY spotlight: primary has none, footer authors it ⇒ overlay STILL renders (from the footer)", () => {
+  const mainNoSpotlight = createEffectsDocument([createSection()]);
+  const footerSpotlight = createEffectsDocument([createSection()], { cursorSpotlight: true });
+  // Shell wiring: the primary authors no spotlight (so it owns no overlay), and the
+  // footer learns the primary does NOT have one (peerSpotlightOn=false) ⇒ footer owns it.
+  const primary = renderToStaticMarkup(<PageDocumentRender document={mainNoSpotlight} />);
+  const secondary = renderToStaticMarkup(
+    <PageDocumentRender
+      document={footerSpotlight}
+      documentRole="secondary"
+      rootTag="div"
+      peerSpotlightOn={false}
+    />
+  );
+  const page = primary + secondary;
+  // Regression guard: pre-fix this yielded ZERO overlays (primary-only gate + primary
+  // has no spotlight). Now the FOOTER emits exactly one, with its CSS + root marker.
+  expect(countMarkup(page, 'data-page-spotlight-overlay="true"')).toBe(1);
+  expect(countMarkup(secondary, 'data-page-spotlight-overlay="true"')).toBe(1);
+  expect(countMarkup(primary, 'data-page-spotlight-overlay="true"')).toBe(0);
+  expect(secondary).toContain("data-page-spotlight-css");
+  expect(secondary).toContain('data-page-spotlight="true"');
+});
+
+test("TASK-535 — FOOTER-ONLY reveal: primary has none, footer authors it ⇒ reveal CSS + noscript STILL emitted (from the footer)", () => {
+  const mainNoEffect = createEffectsDocument([createSection()]);
+  const footerReveal = createEffectsDocument([
+    createEffectSection({ scrollEffect: "reveal-up" }),
+    createSection(),
+  ]);
+  const primary = renderToStaticMarkup(<PageDocumentRender document={mainNoEffect} />);
+  const secondary = renderToStaticMarkup(
+    <PageDocumentRender document={footerReveal} documentRole="secondary" rootTag="div" />
+  );
+  // Regression guard: pre-fix these were primary-only, so a footer-only reveal was
+  // emitted NOWHERE ⇒ unstyled/degraded. Now the footer emits its own idempotent copy.
+  expect(primary).not.toContain("data-page-motion-css");
+  expect(secondary).toContain("data-page-motion-css");
+  expect(secondary).toContain("<noscript>");
+  expect(secondary).toContain('data-page-effect="reveal-up"');
+  const page = primary + secondary;
+  expect(countMarkup(page, "data-page-motion-css")).toBe(1);
+  expect(countMarkup(page, "<noscript>")).toBe(1);
+});
+
+test("TASK-535 — FOOTER-ONLY composition: primary has none, footer authors a surface ⇒ composition CSS STILL emitted (from the footer)", () => {
+  const mainNoEffect = createEffectsDocument([createSection()]);
+  const footerComposition = createEffectsDocument([
+    createEffectSection({ surfacePreset: "glass" }),
+  ]);
+  const primary = renderToStaticMarkup(<PageDocumentRender document={mainNoEffect} />);
+  const secondary = renderToStaticMarkup(
+    <PageDocumentRender document={footerComposition} documentRole="secondary" rootTag="div" />
+  );
+  // Regression guard: pre-fix a footer-only glass/glow surface emitted its data-attrs
+  // but the composition stylesheet was NOWHERE ⇒ unstyled surfaces. Now the footer
+  // emits its own idempotent copy.
+  expect(primary).not.toContain("data-page-composition-css");
+  expect(secondary).toContain("data-page-composition-css");
+});
+
+test("TASK-535 — primary render is byte-identical with an explicit documentRole='primary' (default), no peer", () => {
+  const doc = createEffectsDocument([createEffectSection({ scrollEffect: "reveal-up" })], {
+    cursorSpotlight: true,
+  });
+  const implicit = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  const explicit = renderToStaticMarkup(
+    <PageDocumentRender document={doc} documentRole="primary" />
+  );
+  expect(explicit).toBe(implicit);
+  // The default primary still emits every page-global singleton exactly once
+  // (overlay DIV needle, not the CSS selector).
+  expect(countMarkup(implicit, 'data-page-spotlight-overlay="true"')).toBe(1);
+  expect(countMarkup(implicit, "data-page-motion-css")).toBe(1);
+});
+
+test("no effects ⇒ byte-identical <Root> (no marker/overlay/script/style)", () => {
+  const doc = createEffectsDocument([createSection()]);
+  const html = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  expect(html).not.toContain("data-page-motion");
+  expect(html).not.toContain("data-page-spotlight");
+  expect(html).not.toContain("data-coderso-runtime-script");
+  expect(html).not.toContain("data-page-spotlight-css");
+  expect(html).not.toContain("data-page-motion-css");
+  expect(html).not.toContain("--spotlight-color");
+});
+
+test("TASK-523-02 — spotlight OFF ⇒ markup byte-identical to no-effects baseline (no overlay/CSS emitted despite the new base rule)", () => {
+  const sections = [createSection()];
+  const baseline = renderToStaticMarkup(
+    <PageDocumentRender document={createEffectsDocument(sections)} />
+  );
+  const spotlightOff = renderToStaticMarkup(
+    <PageDocumentRender document={createEffectsDocument(sections, { cursorSpotlight: false })} />
+  );
+  expect(spotlightOff).toBe(baseline);
+  expect(spotlightOff).not.toContain("data-page-spotlight-overlay");
+  expect(spotlightOff).not.toContain("data-page-spotlight-css");
+  expect(spotlightOff).not.toContain("mix-blend-mode:screen");
+});
+
+test("spotlight script __html === PAGE_EFFECTS_RUNTIME_SOURCE", () => {
+  const doc = createEffectsDocument([createSection()], { cursorSpotlight: true });
+  const html = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  expect(html).toContain(PAGE_EFFECTS_RUNTIME_SOURCE);
+});
+
+test("spotlightSize clamped in render; spotlightColor re-sanitized (bad color → subtle translucent default)", () => {
+  const doc = createEffectsDocument([createSection()], {
+    cursorSpotlight: true,
+    spotlightColor: "expression(alert(1))",
+    spotlightSize: 99999,
+  });
+  const html = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  // Rejected color falls back to the subtle translucent default, never the raw payload.
+  expect(html).toContain("--spotlight-color:color-mix(in srgb, var(--primary) 14%, transparent)");
+  expect(html).toContain("--spotlight-size:900px");
+  expect(html).not.toContain("expression(");
+});
+
+// ---------------------------------------------------------------------------
+// TASK-523-01-L02 — per-page canvas background on the <Root> (present-only,
+// re-sanitized at render, disjoint from the spotlight vars).
+// ---------------------------------------------------------------------------
+
+const createBackgroundDocument = (
+  background?: string,
+  effects?: PageDocumentV2["settings"]["effects"]
+): PageDocumentV2 => ({
+  schemaVersion: PAGE_DOCUMENT_SCHEMA_VERSION,
+  breakpoints: ["desktop", "tablet", "mobile"],
+  seo: {},
+  settings: {
+    template: "page-v2",
+    showInNav: true,
+    ...(effects ? { effects } : {}),
+    ...(background ? { background } : {}),
+  },
+  sections: [createSection()],
+});
+
+test("settings.background color ⇒ <Root> inline style carries background (overriding bg-white)", () => {
+  const html = renderToStaticMarkup(
+    <PageDocumentRender document={createBackgroundDocument("#0ea5e9")} />
+  );
+  expect(html).toContain("background:#0ea5e9");
+});
+
+test("settings.background gradient ⇒ <Root> style carries the gradient", () => {
+  const gradient = "linear-gradient(120deg,#0ea5e9,#a855f7)";
+  const html = renderToStaticMarkup(
+    <PageDocumentRender document={createBackgroundDocument(gradient)} />
+  );
+  expect(html).toContain(gradient);
+});
+
+test("background + spotlight ON ⇒ style carries BOTH background and --spotlight-* (neither clobbered)", () => {
+  const html = renderToStaticMarkup(
+    <PageDocumentRender
+      document={createBackgroundDocument("#0ea5e9", {
+        cursorSpotlight: true,
+        spotlightColor: "#ff0000",
+        spotlightSize: 400,
+      })}
+    />
+  );
+  expect(html).toContain("background:#0ea5e9");
+  expect(html).toContain("--spotlight-color:#ff0000");
+  expect(html).toContain("--spotlight-size:400px");
+});
+
+test("no background + spotlight OFF ⇒ <Root> has NO inline style (byte-identical vs post-522)", () => {
+  const html = renderToStaticMarkup(<PageDocumentRender document={createBackgroundDocument()} />);
+  // rootStyle stays undefined ⇒ no style attribute on the page root.
+  expect(html).not.toContain("--spotlight-color");
+  expect(html).not.toMatch(/data-page-v2="true"[^>]*style=/);
+});
+
+test("no background + spotlight ON ⇒ style carries ONLY --spotlight-* (no background key)", () => {
+  const html = renderToStaticMarkup(
+    <PageDocumentRender
+      document={createBackgroundDocument(undefined, {
+        cursorSpotlight: true,
+        spotlightColor: "#ff0000",
+      })}
+    />
+  );
+  expect(html).toContain("--spotlight-color:#ff0000");
+  // no canvas background emitted on the root style
+  expect(html).not.toMatch(/data-page-v2="true"[^>]*style="[^"]*background:/);
+});
+
+test("directly-mutated bad background re-sanitized at render ⇒ no background in style", () => {
+  const doc = createBackgroundDocument();
+  // Bypass normalize: inject an unsafe stored value directly.
+  (doc.settings as { background?: string }).background = "red;}body{display:none";
+  const html = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  expect(html).not.toContain("display:none");
+  expect(html).not.toMatch(/data-page-v2="true"[^>]*style="[^"]*background:/);
+});
+
+// ---------------------------------------------------------------------------
+// TASK-521-04 — animated-icon block (glyph set + renderer `case "icon"`)
+// ---------------------------------------------------------------------------
+
+const renderIconSection = (
+  props: Record<string, unknown>,
+  mutate?: (block: PageBlockV2) => void
+) => {
+  const block = createPageBlockV2("icon", { id: "blk-icon", props });
+  mutate?.(block);
+  return renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("hero", {
+        id: "sec-icon",
+        variant: "centered",
+        blocks: [block],
+      })}
+    />
+  );
+};
+
+test("animated-icon glyph map keys === animatedIconNames", () => {
+  expect(Object.keys(animatedIconGlyphs).sort()).toEqual([...animatedIconNames].sort());
+});
+
+test("ANIMATED_ICON_KEYFRAMES_CSS is guarded by prefers-reduced-motion: no-preference", () => {
+  expect(ANIMATED_ICON_KEYFRAMES_CSS).toContain("@media (prefers-reduced-motion: no-preference)");
+  for (const keyframe of ["ci-spin", "ci-pulse", "ci-bounce", "ci-draw"]) {
+    expect(ANIMATED_ICON_KEYFRAMES_CSS).toContain(`@keyframes ${keyframe}`);
+  }
+});
+
+test("icon block renders <svg size> in [data-anim-icon=spin] with --anim-speed + color", () => {
+  const html = renderIconSection({
+    name: "star",
+    animation: "spin",
+    size: 64,
+    color: "#0ea5e9",
+    speed: 1200,
+  });
+  expect(html).toContain('<span data-anim-icon="spin"');
+  expect(html).toContain("--anim-speed:1200ms");
+  expect(html).toContain("color:#0ea5e9");
+  expect(html).toContain('width="64"');
+  expect(html).toContain("lucide-star");
+});
+
+test("icon block animation:'none' ⇒ no data-anim-icon attr (static)", () => {
+  const html = renderIconSection({
+    name: "sparkles",
+    animation: "none",
+    size: 48,
+    color: "var(--primary)",
+    speed: 1600,
+  });
+  // The span carries NO data-anim-icon attribute (the CSS <style> body still
+  // references [data-anim-icon="…"] selectors, so scope the assertion to the span).
+  expect(html).not.toContain("<span data-anim-icon");
+  expect(html).toContain("lucide-sparkles");
+});
+
+test("icon block invalid name ⇒ sparkles fallback (render-boundary allowlist)", () => {
+  // Inject a raw out-of-allowlist name AFTER normalize to prove the render
+  // boundary re-resolves it (never trusts stored data).
+  const html = renderIconSection(
+    { name: "sparkles", animation: "pulse", size: 48, color: "var(--primary)", speed: 1600 },
+    (block) => {
+      (block.props as Record<string, unknown>).name = "../../etc/passwd";
+    }
+  );
+  expect(html).toContain("lucide-sparkles");
+  expect(html).not.toContain("etc/passwd");
+});
+
+test("icon block color re-sanitized at render ⇒ bad color → var(--primary)", () => {
+  const html = renderIconSection(
+    { name: "star", animation: "spin", size: 48, color: "var(--primary)", speed: 1600 },
+    (block) => {
+      (block.props as Record<string, unknown>).color = "expression(alert(1))";
+    }
+  );
+  expect(html).not.toContain("expression");
+  expect(html).toContain("color:var(--primary)");
+});
+
+test("each icon block emits a <style data-anim-icon-css> whose body === ANIMATED_ICON_KEYFRAMES_CSS (idempotent dup copies inert)", () => {
+  const html = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("hero", {
+        id: "sec-icon-multi",
+        variant: "centered",
+        blocks: [
+          createPageBlockV2("icon", {
+            id: "blk-icon-a",
+            props: { name: "star", animation: "spin", size: 48, color: "#111", speed: 1600 },
+          }),
+          createPageBlockV2("icon", {
+            id: "blk-icon-b",
+            props: { name: "heart", animation: "pulse", size: 32, color: "#222", speed: 900 },
+          }),
+        ],
+      })}
+    />
+  );
+  // A style tag rides with EVERY icon block (block-scoped so it is present in the
+  // builder canvas which bypasses PageDocumentRender). Duplicate emits are inert:
+  // the payload is the static constant, identical for every icon block.
+  expect(countMarkup(html, "data-anim-icon-css")).toBe(2);
+  // dangerouslySetInnerHTML emits the CSS verbatim (no escaping), so the static
+  // constant appears identically once per icon block.
+  expect(countMarkup(html, ANIMATED_ICON_KEYFRAMES_CSS)).toBe(2);
+});
+
+test("AnimatedIcon component falls back to sparkles for an unknown key", () => {
+  const html = renderToStaticMarkup(
+    <AnimatedIcon
+      name={"bogus" as never}
+      animation="none"
+      size={48}
+      color="var(--primary)"
+      speed={1600}
+    />
+  );
+  expect(html).toContain("lucide-sparkles");
+});
+
+// ---------------------------------------------------------------------------
+// TASK-522-02 — custom-SVG block (sanitized render + draw-in, XSS at render)
+// ---------------------------------------------------------------------------
+
+const HOUSE_LINE_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" ' +
+  'stroke="currentColor"><path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/>' +
+  '<polyline points="9 21 9 12 15 12 15 21"/></svg>';
+
+const renderCustomSvgSection = (
+  props: Record<string, unknown>,
+  mutate?: (block: PageBlockV2) => void
+) => {
+  const block = createPageBlockV2("customSvg", { id: "blk-svg", props });
+  mutate?.(block);
+  return renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("hero", {
+        id: "sec-svg",
+        variant: "centered",
+        blocks: [block],
+      })}
+    />
+  );
+};
+
+const getCustomSvgBoundaryTag = (html: string) =>
+  html.match(/<span[^>]*data-custom-svg-boundary="true"[^>]*>/)?.[0] ?? "";
+
+const getCustomSvgRootTag = (html: string) => html.match(/<svg[^>]*>/)?.[0] ?? "";
+
+const getCustomSvgAspectRatio = (html: string) =>
+  /(?:^|;)aspect-ratio:([^;"]+)/.exec(getCustomSvgRootTag(html))?.[1] ?? "";
+
+test("customSvg survives the complete write, safe-tree, and React SSR pipeline", () => {
+  const rawSvg =
+    '<svg class="task538-write-root" style="display:block" x = -500 y\t=\t400 width\n=\n\'320px\' ' +
+    'height = "160" transform = \'translate(900 900)\' viewBox = "0 0 32 16" ' +
+    "xmlns='http://www.w3.org/2000/svg' xmlns:xlink = \"http://www.w3.org/1999/xlink\">" +
+    "<defs><linearGradient id=paint gradientUnits = 'userSpaceOnUse' x1=\"0\" y1 = \"0\" x2='1' y2 = 1>" +
+    '<stop offset=0 stop-color = "#112233"/><stop offset = "1" stop-color=\'#445566\'/>' +
+    "</linearGradient><path id=shape d='M0 0h4v4z'/></defs>" +
+    "<g class='task538-write-nested' style=\"opacity:.5\" transform = 'translate(2 3)' fill = \"url(#paint)\">" +
+    "<rect x=1 y = '2' width = \"12\" height=4/><use xlink:href = '#shape' x = \"5\" " +
+    "transform='translate(1 1)'/><text x = 2 y='9'>Pipeline &amp; parity &#x26; safe</text>" +
+    "</g></svg>";
+  const section = createPageSectionV2("hero", {
+    id: "sec-task538-full-pipeline",
+    name: "Custom SVG pipeline",
+    variant: "centered",
+  });
+  section.blocks = [
+    {
+      id: "blk-task538-full-pipeline",
+      type: "customSvg",
+      props: { svg: rawSvg, drawIn: false, label: "Pipeline SVG" },
+      visibility: { visible: true },
+    },
+  ];
+  const input = createDocument([section]);
+
+  const written = normalizePageDocumentV2ForWrite(input);
+  const storedSvg = String(written.sections[0]!.blocks[0]!.props.svg);
+  expect(storedSvg).not.toContain("task538-write-root");
+  expect(storedSvg).not.toContain("task538-write-nested");
+  expect(storedSvg).not.toMatch(/\b(?:class|style)\s*=/);
+  expect(storedSvg).toContain("width\n=\n'320px'");
+  expect(storedSvg).toContain("xlink:href = '#shape'");
+
+  const tree = buildSafeSvgTree(storedSvg);
+  expect(tree).not.toBeNull();
+  if (!tree) throw new Error("missing_task538_safe_svg_tree");
+  expect(tree.tag).toBe("svg");
+  expect(Object.isFrozen(tree)).toBe(true);
+  expect(Object.isFrozen(tree.props)).toBe(true);
+  expect(Object.isFrozen(tree.children)).toBe(true);
+  expect(tree.props.x).toBe("-500");
+  expect(tree.props.y).toBe("400");
+  expect(tree.props.width).toBe("320px");
+  expect(tree.props.height).toBe("160");
+  expect(tree.props.transform).toBe("translate(900 900)");
+  expect(tree.props.viewBox).toBe("0 0 32 16");
+  expect(JSON.stringify(tree)).not.toMatch(/task538-write-root|task538-write-nested|class|style/);
+
+  const html = renderToStaticMarkup(<PageDocumentRender document={written} />);
+  const boundary = getCustomSvgBoundaryTag(html);
+  const root = getCustomSvgRootTag(html);
+  expect(boundary).toContain(
+    'style="display:block;inline-size:100%;max-inline-size:100%;max-block-size:1024px;overflow:hidden;contain:layout paint;pointer-events:none"'
+  );
+  expect(root).toContain('width="100%"');
+  expect(root).not.toContain(' x="');
+  expect(root).not.toContain(' y="');
+  expect(root).not.toContain(' height="');
+  expect(root).not.toContain(' transform="');
+  expect(root).toContain(
+    'style="display:block;inline-size:100%;max-inline-size:100%;block-size:auto;max-block-size:1024px;aspect-ratio:2;overflow:hidden;pointer-events:none"'
+  );
+  expect(html).toContain("<defs>");
+  const gradient = html.match(/<linearGradient[^>]*>/)?.[0] ?? "";
+  expect(gradient).toContain('id="paint"');
+  expect(gradient).toContain('gradientUnits="userSpaceOnUse"');
+  expect(html).toContain('fill="url(#paint)"');
+  expect(html).toContain('transform="translate(2 3)"');
+  expect(html).toContain('xlink:href="#shape"');
+  expect(html).toContain('transform="translate(1 1)"');
+  expect(html).toContain('<text x="2" y="9">Pipeline &amp; parity &amp; safe</text>');
+  expect(html).not.toContain("&amp;amp;");
+  expect(html).not.toContain("task538-write-root");
+  expect(html).not.toContain("task538-write-nested");
+});
+
+test("customSvg block renders the sanitized inline <svg> + <path>", () => {
+  const html = renderCustomSvgSection({ svg: HOUSE_LINE_SVG, label: "House" });
+  expect(html).toContain("<svg");
+  expect(html).toContain("<path");
+  expect(html).toContain('role="img"');
+  expect(html).toContain('aria-label="House"');
+  expect(html).toContain('data-custom-svg-boundary="true"');
+});
+
+test("customSvg keeps unlabeled output hidden from accessibility while preserving the labeled role", () => {
+  const unlabeled = getCustomSvgBoundaryTag(renderCustomSvgSection({ svg: HOUSE_LINE_SVG }));
+  expect(unlabeled).toContain('role="img"');
+  expect(unlabeled).toContain('aria-hidden="true"');
+  expect(unlabeled).not.toContain("aria-label=");
+
+  const labeled = getCustomSvgBoundaryTag(
+    renderCustomSvgSection({ svg: HOUSE_LINE_SVG, label: "House & garden" })
+  );
+  expect(labeled).toContain('role="img"');
+  expect(labeled).toContain('aria-label="House &amp; garden"');
+  expect(labeled).not.toContain("aria-hidden=");
+});
+
+test("customSvg wrapper and root enforce the exact trusted containment boundary", () => {
+  const html = renderCustomSvgSection({
+    svg:
+      '<svg x="-9000" y="7000" width="160px" height="80" transform="translate(999 999)" ' +
+      'viewBox="0 0 16 8" preserveAspectRatio="xMidYMid meet">' +
+      '<g transform="translate(2 3)"><rect x="1" y="2" width="12" height="4"/>' +
+      '<svg x="4" y="5" width="6" height="7" viewBox="0 0 6 7"><path d="M0 0"/></svg>' +
+      "</g></svg>",
+  });
+  const boundary = getCustomSvgBoundaryTag(html);
+  const root = getCustomSvgRootTag(html);
+  const group = html.match(/<g[^>]*>/)?.[0] ?? "";
+  const rect = html.match(/<rect[^>]*>/)?.[0] ?? "";
+  const nestedSvg = Array.from(html.matchAll(/<svg[^>]*>/g), (match) => match[0])[1] ?? "";
+
+  expect(boundary).toContain("display:block");
+  expect(boundary).toContain("inline-size:100%");
+  expect(boundary).toContain("max-inline-size:100%");
+  expect(boundary).toContain("max-block-size:1024px");
+  expect(boundary).toContain("overflow:hidden");
+  expect(boundary).toContain("contain:layout paint");
+  expect(boundary).toContain("pointer-events:none");
+
+  expect(root).toContain('width="100%"');
+  expect(root).toContain('viewBox="0 0 16 8"');
+  expect(root).toContain('preserveAspectRatio="xMidYMid meet"');
+  expect(root).not.toContain(' x="');
+  expect(root).not.toContain(' y="');
+  expect(root).not.toContain(' height="');
+  expect(root).not.toContain(' transform="');
+  expect(root).toContain("display:block");
+  expect(root).toContain("inline-size:100%");
+  expect(root).toContain("max-inline-size:100%");
+  expect(root).toContain("block-size:auto");
+  expect(root).toContain("max-block-size:1024px");
+  expect(root).toContain("aspect-ratio:2");
+  expect(root).toContain("overflow:hidden");
+  expect(root).toContain("pointer-events:none");
+
+  // Root layout authority is removed, while safe descendant drawing geometry remains.
+  expect(group).toContain('transform="translate(2 3)"');
+  expect(rect).toContain('x="1"');
+  expect(rect).toContain('y="2"');
+  expect(rect).toContain('width="12"');
+  expect(rect).toContain('height="4"');
+  expect(nestedSvg).toContain('x="4"');
+  expect(nestedSvg).toContain('y="5"');
+  expect(nestedSvg).toContain('width="6"');
+  expect(nestedSvg).toContain('height="7"');
+  expect(nestedSvg).toContain('viewBox="0 0 6 7"');
+});
+
+test("customSvg accepts only the exact finite four-number viewBox grammar and clamps its ratio", () => {
+  const cases: ReadonlyArray<{ viewBox: string; expected: string }> = [
+    { viewBox: "0 0 16 8", expected: "2" },
+    { viewBox: " -1e2,\t+2E1 8e2,4e2 ", expected: "2" },
+    { viewBox: "0,0,10000,1", expected: "8" },
+    { viewBox: "0 0 1 10000", expected: "0.125" },
+    { viewBox: "0 0 1e308 1e-308", expected: "8" },
+    { viewBox: "0 0 1e-308 1e308", expected: "0.125" },
+    { viewBox: "0 0 16 8 1", expected: "1" },
+    { viewBox: "0 0 16", expected: "1" },
+    { viewBox: "0,,0,16,8", expected: "1" },
+    { viewBox: ",0 0 16 8", expected: "1" },
+    { viewBox: "0 0 16 8,", expected: "1" },
+    { viewBox: "0\u00a00 16 8", expected: "1" },
+    { viewBox: "0 0 16px 8", expected: "1" },
+    { viewBox: "0 0 16junk 8", expected: "1" },
+    { viewBox: "NaN 0 16 8", expected: "1" },
+    { viewBox: "Infinity 0 16 8", expected: "1" },
+    { viewBox: "1e309 0 16 8", expected: "1" },
+    { viewBox: "0 0 0 8", expected: "1" },
+    { viewBox: "0 0 -16 8", expected: "1" },
+    { viewBox: "0 0 16 0", expected: "1" },
+  ];
+
+  for (const { viewBox, expected } of cases) {
+    const html = renderCustomSvgSection({
+      svg: `<svg viewBox="${viewBox}"><path d="M0 0"/></svg>`,
+    });
+    expect(getCustomSvgAspectRatio(html), viewBox).toBe(expected);
+    expect(getCustomSvgRootTag(html)).toContain("max-block-size:1024px");
+  }
+});
+
+test("customSvg derives a ratio from positive finite unitless/px dimensions before stripping them", () => {
+  const cases: ReadonlyArray<{
+    width?: string;
+    height?: string;
+    viewBox?: string;
+    expected: string;
+  }> = [
+    { width: "160px", height: "80", expected: "2" },
+    { width: "10000", height: "1px", expected: "8" },
+    { width: "1px", height: "10000px", expected: "0.125" },
+    { width: "300", height: "100", viewBox: "0 0 0 8", expected: "3" },
+    { width: "100%", height: "20", expected: "1" },
+    { width: "160PX", height: "80", expected: "1" },
+    { width: " 160px", height: "80", expected: "1" },
+    { width: "Infinity", height: "20", expected: "1" },
+    { width: "1e309", height: "20", expected: "1" },
+    { width: "0", height: "20", expected: "1" },
+    { width: "20", expected: "1" },
+    { height: "20px", expected: "1" },
+    { width: "20px junk", height: "10", expected: "1" },
+  ];
+
+  for (const { width, height, viewBox, expected } of cases) {
+    const attrs = [
+      width === undefined ? "" : `width="${width}"`,
+      height === undefined ? "" : `height="${height}"`,
+      viewBox === undefined ? "" : `viewBox="${viewBox}"`,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const html = renderCustomSvgSection({ svg: `<svg ${attrs}><path d="M0 0"/></svg>` });
+    const root = getCustomSvgRootTag(html);
+    expect(getCustomSvgAspectRatio(html), attrs).toBe(expected);
+    expect(root).toContain('width="100%"');
+    expect(root).not.toContain(' height="');
+    if (width !== undefined && width !== "100%") {
+      expect(root).not.toContain(`width="${width}"`);
+    }
+  }
+});
+
+test("customSvg preserves closed semantic React SVG attribute mappings", () => {
+  const html = renderCustomSvgSection({
+    svg:
+      '<svg viewBox="0 0 10 10" role="presentation" aria-hidden="true" ' +
+      'xmlns:xlink="http://www.w3.org/1999/xlink">' +
+      '<defs><clipPath id="clip"><path id="shape" d="M0 0h10v10z" fill-rule="evenodd"/></clipPath></defs>' +
+      '<g clip-path="url(#clip)" stroke-width="2" stroke-linecap="round" font-size="12">' +
+      '<use xlink:href="#shape"/></g></svg>',
+  });
+
+  expect(html).toContain('xmlns:xlink="http://www.w3.org/1999/xlink"');
+  expect(getCustomSvgRootTag(html)).toContain('role="presentation"');
+  expect(getCustomSvgRootTag(html)).toContain('aria-hidden="true"');
+  expect(html).toContain('fill-rule="evenodd"');
+  expect(html).toContain('clip-path="url(#clip)"');
+  expect(html).toContain('stroke-width="2"');
+  expect(html).toContain('stroke-linecap="round"');
+  expect(html).toContain('font-size="12"');
+  expect(html).toContain('xlink:href="#shape"');
+});
+
+test("customSvg decodes XML entities once and lets React escape the text exactly once", () => {
+  const html = renderCustomSvgSection({
+    svg: '<svg viewBox="0 0 20 10"><text>Fish &amp; chips &lt;3 &#x26; tea</text></svg>',
+  });
+  expect(html).toContain("<text>Fish &amp; chips &lt;3 &amp; tea</text>");
+  expect(html).not.toContain("&amp;amp;");
+  expect(html).not.toContain("&amp;lt;");
+});
+
+test("customSvg drawIn:true adds data-draw-in + --draw-speed + pathLength=1 (length-independent)", () => {
+  const html = renderCustomSvgSection({ svg: HOUSE_LINE_SVG, drawIn: true, drawSpeed: 2400 });
+  expect(html).toContain("data-draw-in");
+  expect(html).toContain("--draw-speed:2400ms");
+  // Every stroke shape stamped with pathLength="1" so the fixed-dash CSS completes.
+  expect(html).toContain('pathLength="1"');
+});
+
+test("customSvg drawIn stamps pathLength=1 even on a SHORT path (length-independent draw)", () => {
+  const html = renderCustomSvgSection({
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 4"><path d="M0 0h1"/></svg>',
+    drawIn: true,
+    drawSpeed: 800,
+  });
+  expect(html).toContain('pathLength="1"');
+  expect(html).toContain("--draw-speed:800ms");
+});
+
+test("customSvg drawIn stamps only absent pathLength values without mutating the frozen safe tree", () => {
+  const svg =
+    '<svg viewBox="0 0 10 10"><path d="M0 0" pathLength="7"/><line x1="0" y1="0" x2="1" y2="1"/>' +
+    '<polyline points="0,0 1,1"/><rect width="1" height="1"/></svg>';
+  const tree = buildSafeSvgTree(svg);
+  expect(tree).not.toBeNull();
+  expect(Object.isFrozen(tree)).toBe(true);
+  const before = JSON.stringify(tree);
+
+  const drawn = renderCustomSvgSection({ svg, drawIn: true });
+  expect(drawn).toContain('pathLength="7"');
+  expect(countMarkup(drawn, 'pathLength="1"')).toBe(2);
+  expect(countMarkup(drawn, "pathLength=")).toBe(3);
+  expect(drawn.match(/<rect[^>]*>/)?.[0] ?? "").not.toContain("pathLength");
+  expect(JSON.stringify(tree)).toBe(before);
+
+  const staticHtml = renderCustomSvgSection({ svg, drawIn: false });
+  expect(countMarkup(staticHtml, "pathLength=")).toBe(1);
+});
+
+test("customSvg empty / whitespace svg ⇒ neutral fallback (no <svg>, no crash)", () => {
+  for (const svg of ["", "   ", "\n\t"]) {
+    const html = renderCustomSvgSection({ svg });
+    expect(html).not.toContain("<svg");
+    expect(html).toContain("▢");
+  }
+});
+
+test("customSvg safe-tree node/depth/text cap overflows fail closed to the neutral placeholder", () => {
+  const overDepthCap =
+    `<svg>${"<g>".repeat(SVG_SAFE_TREE_MAX_DEPTH)}` +
+    `${"</g>".repeat(SVG_SAFE_TREE_MAX_DEPTH)}</svg>`;
+  const overTextCap = `<svg><text>${"x".repeat(SVG_SAFE_TREE_MAX_TEXT_CHARS + 1)}</text></svg>`;
+  const overCaps = [
+    `<svg>${"<g/>".repeat(SVG_SAFE_TREE_MAX_NODES)}</svg>`,
+    overDepthCap,
+    overTextCap,
+  ];
+
+  for (const svg of overCaps) {
+    const html = renderCustomSvgSection({ svg });
+    expect(html).not.toContain("<svg");
+    expect(html).not.toContain("data-custom-svg-boundary");
+    expect(html).toContain("▢");
+  }
+});
+
+test("customSvg strips root and descendant class/style while retaining trusted renderer styles", () => {
+  const html = renderCustomSvgSection({ svg: HOUSE_LINE_SVG }, (block) => {
+    (block.props as Record<string, unknown>).svg =
+      '<svg class="task538-render-root-marker" style="--task538-render-root-style:1" pointer-events="auto" viewBox="0 0 10 10">' +
+      '<g class="task538-render-nested-marker" style="--task538-render-nested-style:1" pointer-events="auto">' +
+      '<path d="M0 0h1"/></g></svg>';
+  });
+  const root = getCustomSvgRootTag(html);
+  const group = html.match(/<g[^>]*>/)?.[0] ?? "";
+  expect(root).not.toContain("class=");
+  expect(group).not.toContain("class=");
+  expect(html).not.toContain("task538-render-root-marker");
+  expect(html).not.toContain("task538-render-nested-marker");
+  expect(html).not.toContain("--task538-render-root-style");
+  expect(html).not.toContain("--task538-render-nested-style");
+  expect(html).not.toContain('pointer-events="auto"');
+  expect(getCustomSvgBoundaryTag(html)).toContain("contain:layout paint");
+  expect(root).toContain("pointer-events:none");
+});
+
+test("customSvg author data has no HTML sink", () => {
+  const source = readFileSync("core/services/pages/pageRendererV2.tsx", "utf8");
+  const customSvgStart = source.indexOf('case "customSvg"');
+  const customSvgEnd = source.indexOf('case "switcher"', customSvgStart);
+  const customSvgBranch = source.slice(customSvgStart, customSvgEnd);
+
+  expect(customSvgStart).toBeGreaterThan(-1);
+  expect(customSvgEnd).toBeGreaterThan(customSvgStart);
+  expect(customSvgBranch).toContain("buildSafeSvgTree");
+  expect(customSvgBranch).toContain("renderSafeSvgNode");
+  expect(customSvgBranch).not.toMatch(
+    /dangerouslySetInnerHTML|innerHTML|outerHTML|insertAdjacentHTML|\.replace\s*\(/
+  );
+});
+
+test("trusted static renderer DSIH sites remain separate from the customSvg author branch", () => {
+  const source = readFileSync("core/services/pages/pageRendererV2.tsx", "utf8");
+  // Trusted, module-owned static CSS/runtime constants retain their distinct sinks.
+  expect(source).toMatch(/dangerouslySetInnerHTML=\{\{ __html: ANIMATED_ICON_KEYFRAMES_CSS \}\}/);
+  expect(source).toMatch(/dangerouslySetInnerHTML=\{\{ __html: PAGE_EFFECTS_RUNTIME_SOURCE \}\}/);
+});
+
+// XSS corpus asserted at the RENDER boundary — the values are injected AFTER
+// write-normalization (via `mutate`) to prove the render-time re-sanitize catches
+// a value that somehow bypassed write validation (older row, direct DB edit).
+const CUSTOM_SVG_XSS_VECTORS: readonly string[] = [
+  "<script>alert(1)</script>",
+  '<svg onload="alert(1)"><path d="M0 0h1"/></svg>',
+  '<svg><foreignObject><body xmlns="http://www.w3.org/1999/xhtml"><script>alert(1)<\/script></body></foreignObject></svg>',
+  '<svg><a href="javascript:alert(1)"><path d="M0 0h1"/></a></svg>',
+  '<svg><use href="http://evil#x"/></svg>',
+  "<svg><use href=http://evil#x/></svg>",
+  "<svg><use href=//evil/x#y/></svg>",
+  "<svg><image href=data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=/></svg>",
+  "<svg><!--<script>--><script>alert(1)<\/script></svg>",
+  "<svg><![CDATA[<script>alert(1)</script>]]></svg>",
+  '<svg><path onclick="alert(1)"/></svg>',
+];
+
+test("customSvg RE-sanitizes at render ⇒ XSS vectors neutralized (defence in depth)", () => {
+  const dangerous = [
+    "<script",
+    "onload=",
+    "onclick=",
+    "javascript:",
+    "<foreignObject",
+    "<image",
+    "http://evil",
+    "//evil",
+    "data:image/svg",
+  ];
+  for (const svg of CUSTOM_SVG_XSS_VECTORS) {
+    const html = renderCustomSvgSection({ svg: HOUSE_LINE_SVG }, (block) => {
+      (block.props as Record<string, unknown>).svg = svg;
+    });
+    for (const token of dangerous) {
+      expect(html.includes(token), `vector "${svg}" leaked "${token}"`).toBe(false);
+    }
+  }
+});
+
+test("customSvg render is isomorphic — no Node Buffer ReferenceError (browser builder canvas)", () => {
+  const original = (globalThis as { Buffer?: unknown }).Buffer;
+  delete (globalThis as { Buffer?: unknown }).Buffer;
+  try {
+    const html = renderCustomSvgSection({ svg: HOUSE_LINE_SVG });
+    expect(html).toContain("<svg");
+  } finally {
+    (globalThis as { Buffer?: unknown }).Buffer = original;
+  }
+});
+
+// ── TASK-522-03-L02 — floating-drift decoration + block-frame composition seam ──
+type CompositionStyle = NonNullable<PageBlockV2["style"]>;
+
+const composedBlock = (style: CompositionStyle, id = "blk-comp"): PageBlockV2 =>
+  createPageBlockV2("heading", {
+    id,
+    props: { text: "Composed", level: "h2", align: "left" },
+    style,
+  });
+
+// Render a heading block through the FRONT path (PageSectionContent ->
+// renderPageBlockWithFrame) so the INNER effect wrapper (if any) is in the HTML.
+const renderComposedBlocks = (blocks: PageBlockV2[]): string =>
+  renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("hero", {
+        id: "sec-comp",
+        variant: "centered",
+        blocks,
+      })}
+    />
+  );
+
+const frameAttrs = (block: PageBlockV2): Record<string, string | undefined> =>
+  toPageBlockRenderProps(block).dataAttributes as Record<string, string | undefined>;
+const frameVars = (block: PageBlockV2): Record<string, string | undefined> =>
+  toPageBlockRenderProps(block).style as Record<string, string | undefined>;
+
+test("decoration transform motions co-locate with the surface on the FRAME (524-01-L02)", () => {
+  for (const motion of ["float", "drift", "pulse", "orbit"] as const) {
+    // 524-01-L01 moved the anchor self-offset onto the free `translate:` property,
+    // so a transform decoration now rides the SAME node as data-surface (the frame),
+    // and its keyframe transform never clobbers the anchor offset — the surface
+    // animates WITH the effect.
+    const block = composedBlock({ decoration: { motion } });
+    expect(frameAttrs(block)["data-deco"]).toBe(motion);
+    // A plain decoration + surface card needs no inner effect wrapper anymore.
+    expect(renderComposedBlocks([block])).toContain(`data-deco="${motion}"`);
+  }
+});
+
+test("glass + float move together — data-surface and data-deco on the SAME node (524-01)", () => {
+  // The primary owner-intent guarantee: the glass surface and its float decoration
+  // are the SAME DOM node, so the surface animates WITH the effect (glass floats
+  // with content). No inner effect wrapper is emitted for a plain surface+deco card.
+  const block = composedBlock({ surfacePreset: "glass", decoration: { motion: "float" } });
+  const attrs = frameAttrs(block);
+  // toPageBlockRenderProps is the SINGLE feed for the [data-block-id] frame, so both
+  // attrs landing here proves they are on the SAME node (co-located, not split).
+  expect(attrs["data-surface"]).toBe("glass");
+  expect(attrs["data-deco"]).toBe("float"); // co-located on the frame, not an inner wrapper
+  const html = renderComposedBlocks([block]);
+  // Both attributes appear inside ONE opening tag → literally the same element, so
+  // the surface animates WITH the float effect. (No inner effect wrapper for a plain
+  // surface+deco card.) Match a single tag carrying data-surface AND data-deco in
+  // either order, with no intervening `<` (i.e. same element).
+  const bothInOneTag =
+    /<[^<>]*\bdata-surface="glass"[^<>]*\bdata-deco="float"[^<>]*>/.test(html) ||
+    /<[^<>]*\bdata-deco="float"[^<>]*\bdata-surface="glass"[^<>]*>/.test(html);
+  expect(bothInOneTag).toBe(true);
+  // Timing vars ride that same frame node.
+  const timed = composedBlock({
+    surfacePreset: "glass",
+    decoration: { motion: "float", delay: 1500, duration: 8000 },
+  });
+  const timedVars = frameVars(timed);
+  expect(timedVars["--deco-delay"]).toBe("1500ms");
+  expect(timedVars["--deco-duration"]).toBe("8000ms");
+});
+
+test('decoration "radiate" stays on the FRAME (box-shadow — no inner wrapper)', () => {
+  const block = composedBlock({ decoration: { motion: "radiate" } });
+  expect(frameAttrs(block)["data-deco"]).toBe("radiate");
+});
+
+test('decoration "none" resets — present-only, no data-deco anywhere', () => {
+  const block = composedBlock({ decoration: { motion: "none" } });
+  expect(frameAttrs(block)["data-deco"]).toBeUndefined();
+  expect(renderComposedBlocks([block])).not.toContain("data-deco");
+});
+
+test("decoration delay/duration emit --deco-* on the FRAME node (524-01-L02)", () => {
+  // 524-01-L02 empties INNER_VAR_KEYS, so the decoration timing vars seed the frame
+  // element that now carries data-deco (the keyframe binding reads them there).
+  const block = composedBlock({ decoration: { motion: "float", delay: 900, duration: 8000 } });
+  expect(frameVars(block)["--deco-delay"]).toBe("900ms");
+  expect(frameVars(block)["--deco-duration"]).toBe("8000ms");
+  const html = renderComposedBlocks([block]);
+  expect(html).toContain("--deco-delay:900ms");
+  expect(html).toContain("--deco-duration:8000ms");
+});
+
+test("two decorated siblings with different delay stagger (distinct --deco-delay)", () => {
+  const html = renderComposedBlocks([
+    composedBlock({ decoration: { motion: "float", delay: 900 } }, "blk-a"),
+    composedBlock({ decoration: { motion: "float", delay: 1500 } }, "blk-b"),
+  ]);
+  expect(html).toContain("--deco-delay:900ms");
+  expect(html).toContain("--deco-delay:1500ms");
+});
+
+test("unstyled block → toPageBlockRenderProps byte-identical, no inner wrapper", () => {
+  const block = createPageBlockV2("heading", {
+    id: "blk-plain",
+    props: { text: "Plain", level: "h2", align: "left" },
+  });
+  const rp = toPageBlockRenderProps(block);
+  // Exactly the two pre-522 data attributes — no composition attrs leaked.
+  expect(Object.keys(rp.dataAttributes).sort()).toEqual(["data-block-id", "data-page-block"]);
+  const styleKeys = Object.keys(rp.style as Record<string, unknown>);
+  expect(
+    styleKeys.some(
+      (k) => k.startsWith("--layer") || k.startsWith("--deco") || k.startsWith("--surface")
+    )
+  ).toBe(false);
+  const html = renderComposedBlocks([block]);
+  expect(html).not.toContain("data-deco");
+  expect(html).not.toContain("data-surface");
+  expect(html).not.toContain("data-tilt-parent");
+  expect(html).not.toContain("cx-glare");
+});
+
+test("surface preset rides the FRAME on the shared feed (both render paths)", () => {
+  // toPageBlockRenderProps is the SINGLE feed for the front PageBlockFrame AND
+  // the canvas renderBlockFrame callback, so asserting it covers both paths.
+  const glass = composedBlock({ surfacePreset: "glass" });
+  expect(frameAttrs(glass)["data-surface"]).toBe("glass");
+  const html = renderComposedBlocks([glass]);
+  expect(html).toContain('data-surface="glass"');
+});
+
+test("TASK-528 tilt on any block → frame data-block-tilt + ancestor data-tilt-parent + glare child", () => {
+  const block = composedBlock({ tilt: "subtle", tiltGlare: true });
+  // TASK-528 whole-card tilt: the tilt transform rides the FRAME (co-located with
+  // data-surface); the CSS perspective moves to an ANCESTOR wrapper (not the frame).
+  expect(frameAttrs(block)["data-block-tilt"]).toBe("subtle");
+  expect(frameAttrs(block)["data-tilt-parent"]).toBeUndefined();
+  const html = renderComposedBlocks([block]);
+  expect(html).toContain('data-block-tilt="subtle"');
+  expect(html).toContain("data-tilt-parent");
+  expect(html).toContain("cx-glare");
+});
+
+test("TASK-528 whole card tilts — glass + tilt land on the SAME node (data-block-tilt === data-surface node)", () => {
+  // The owner bug: glass CARD stayed flat while only inner content tilted, because
+  // data-surface was on the frame but data-block-tilt sat on an inner child. FIX:
+  // both must be co-located on the FRAME so the entire glass card tilts on hover.
+  const block = composedBlock({ surfacePreset: "glass", tilt: "strong" });
+  const attrs = frameAttrs(block);
+  expect(attrs["data-surface"]).toBe("glass");
+  expect(attrs["data-block-tilt"]).toBe("strong");
+  // Perspective on an ancestor wrapper, NOT the transformed frame node.
+  expect(attrs["data-tilt-parent"]).toBeUndefined();
+  // HTML sanity: the SAME element carries both attrs (the frame element opens with
+  // data-surface="glass" ... data-block-tilt="strong" before the next `>`).
+  const html = renderComposedBlocks([block]);
+  expect(html).toMatch(/data-surface="glass"[^>]*data-block-tilt="strong"/);
+  expect(html).toContain("data-tilt-parent");
+});
+
+test("surfacePreset ambient-orbs emits two aria-hidden .cx-orb spans in the inner wrapper", () => {
+  const block = composedBlock({ surfacePreset: "ambient-orbs" });
+  expect(frameAttrs(block)["data-surface"]).toBe("ambient-orbs");
+  const html = renderComposedBlocks([block]);
+  expect(html).toContain("cx-orb-a");
+  expect(html).toContain("cx-orb-b");
+  // Orbs drift; both are aria-hidden decorative spans.
+  expect(html.match(/data-deco="drift"/g)?.length).toBe(2);
+});
+
+test("glass/radial-glow surfaces self-paint on the frame — NO orb spans", () => {
+  for (const surfacePreset of ["glass", "radial-glow"] as const) {
+    const html = renderComposedBlocks([composedBlock({ surfacePreset })]);
+    expect(html).not.toContain("cx-orb");
+  }
+});
+
+test("finding 4 — anchored layered child co-locates layer + deco on the FRAME (524-01)", () => {
+  const block = composedBlock({
+    decoration: { motion: "float" },
+    layer: { x: 10, y: 20, anchor: "top-right" },
+  });
+  const attrs = frameAttrs(block);
+  const vars = frameVars(block);
+  // Layer positioning + anchor ride the real [data-block-id] frame so the
+  // 522-05-L02 per-device --layer-* override reaches them. The anchor self-offset
+  // rides the free `translate:` property (524-01-L01), so the float decoration
+  // co-locates on the SAME frame node — its transform never clobbers the offset.
+  expect(attrs["data-layer"]).toBe("");
+  expect(attrs["data-layer-anchor"]).toBe("top-right");
+  expect(vars["--layer-x"]).toBe("10%");
+  expect(vars["--layer-y"]).toBe("20%");
+  // The float decoration is now on the frame (same node as layer); no tilt perspective.
+  expect(attrs["data-deco"]).toBe("float");
+  expect(attrs["data-tilt-parent"]).toBeUndefined();
+  expect(renderComposedBlocks([block])).toContain(`data-deco="float"`);
+});
+
+test("finding 4 — anchor + hover lift co-locate layer + hover on the FRAME (524-01)", () => {
+  const block = composedBlock({
+    hoverEffect: "lift",
+    layer: { x: 5, y: 5, anchor: "bottom-right" },
+  });
+  const attrs = frameAttrs(block);
+  expect(attrs["data-layer-anchor"]).toBe("bottom-right");
+  expect(frameVars(block)["--layer-x"]).toBe("5%");
+  // Transform hover now rides the frame (same node as the anchor `translate:` offset).
+  expect(attrs["data-hover"]).toBe("lift");
+  expect(renderComposedBlocks([block])).toContain('data-hover="lift"');
+});
+
+test("TASK-535 finding — tilt + layer: layer PLACEMENT hoists to the perspective WRAPPER, tilt stays on the frame", () => {
+  // Regression for the tilt+layer containing-block bug: a non-`none` `perspective`
+  // on the [data-tilt-parent] wrapper establishes a CONTAINING BLOCK for absolute
+  // descendants. With the layer placement on the FRAME (pre-535), the frame went
+  // `position:absolute` but resolved its --layer-x/y offsets against the WRAPPER
+  // instead of the `.cx-layered-canvas`, and the wrapper stayed at its in-flow
+  // origin → the layered chip landed at the wrong place. FIX: the LAYER PLACEMENT
+  // (data-layer + data-layer-anchor + --layer-x/y/z) rides the WRAPPER so the
+  // WRAPPER is the absolutely positioned layered child (offsets resolve against the
+  // canvas); the tilt transform stays on the inner frame.
+  const block = composedBlock({
+    tilt: "subtle",
+    layer: { x: 8, y: 12, z: 3, anchor: "bottom-right" },
+  });
+  // The FRAME (the real [data-block-id] node) no longer carries the layer placement —
+  // it must NOT go `position:absolute` and escape the wrapper.
+  const attrs = frameAttrs(block);
+  const vars = frameVars(block);
+  expect(attrs["data-layer"]).toBeUndefined();
+  expect(attrs["data-layer-anchor"]).toBeUndefined();
+  expect(vars["--layer-x"]).toBeUndefined();
+  expect(vars["--layer-y"]).toBeUndefined();
+  expect(vars["--layer-z"]).toBeUndefined();
+  // Tilt rides the frame (whole-card tilt, TASK-528); perspective on the ancestor.
+  expect(attrs["data-block-tilt"]).toBe("subtle");
+  expect(attrs["data-tilt-parent"]).toBeUndefined();
+
+  // Structural: the [data-tilt-parent] wrapper IS the absolutely-positioned layered
+  // child — it carries data-layer + data-layer-anchor + the base --layer-* the
+  // `[data-composition="layered"] [data-layer]{position:absolute;left:var(--layer-x)…}`
+  // CSS consumes, and it WRAPS the tilt frame (wrapper open tag precedes the frame's
+  // data-block-tilt, with no other block frame between them).
+  const html = renderComposedBlocks([block]);
+  const wrapperMatch = html.match(/<div data-tilt-parent[^>]*>/);
+  expect(wrapperMatch).not.toBeNull();
+  const wrapperTag = wrapperMatch?.[0] ?? "";
+  expect(wrapperTag).toContain('data-layer=""');
+  expect(wrapperTag).toContain('data-layer-anchor="bottom-right"');
+  expect(wrapperTag).toContain("--layer-x:8%");
+  expect(wrapperTag).toContain("--layer-y:12%");
+  expect(wrapperTag).toContain("--layer-z:3");
+  expect(wrapperTag).toContain("perspective:1200px");
+  // TASK-535 per-device layer: the wrapper carries the block id as
+  // `data-tilt-parent-for` (present ONLY for this hoisted tilt+layer case) so
+  // pageResponsiveCss can retarget the per-device --layer-* override at the wrapper
+  // (custom props inherit downward; a frame-scoped override can never reach it).
+  expect(wrapperTag).toContain('data-tilt-parent-for="blk-comp"');
+  // The wrapper is an ANCESTOR of the tilt frame (wrapper `>` comes before the
+  // frame's data-block-tilt in document order).
+  const wrapperOpenIdx = html.indexOf(wrapperTag);
+  const tiltIdx = html.indexOf('data-block-tilt="subtle"');
+  expect(wrapperOpenIdx).toBeGreaterThanOrEqual(0);
+  expect(tiltIdx).toBeGreaterThan(wrapperOpenIdx);
+  // The layer placement is NOT duplicated onto the frame node itself.
+  expect(html).not.toMatch(/data-block-tilt="subtle"[^>]*data-layer=/);
+});
+
+test("finding 4 — radiate + anchor stays wholly on the frame (no inner wrapper)", () => {
+  const block = composedBlock({
+    decoration: { motion: "radiate" },
+    layer: { x: 3, y: 4, anchor: "top-right" },
+  });
+  const attrs = frameAttrs(block);
+  expect(attrs["data-deco"]).toBe("radiate");
+  expect(attrs["data-layer-anchor"]).toBe("top-right");
+});
+
+test("finding 4 — layer-only block (no transform effect) keeps everything on the frame", () => {
+  const block = composedBlock({ layer: { x: 1, y: 2, anchor: "center" } });
+  const attrs = frameAttrs(block);
+  expect(attrs["data-layer"]).toBe("");
+  expect(attrs["data-layer-anchor"]).toBe("center");
+  // No effect → no inner wrapper markers.
+  const html = renderComposedBlocks([block]);
+  expect(html).not.toContain("data-deco");
+  expect(html).not.toContain("data-block-tilt");
+  // TASK-535: no tilt ⇒ no perspective wrapper, so no per-device layer hook either
+  // (layer-only stays byte-identical to pre-535 — the responsive override rides the
+  // frame [data-block-id], not a wrapper).
+  expect(html).not.toContain("data-tilt-parent-for");
+});
+
+// ── TASK-522-04-L02 — block tilt render-shape (controls in 522-04-L01) ──
+test('tilt "strong" → data-block-tilt="strong" on the FRAME, perspective on ancestor (528)', () => {
+  const block = composedBlock({ tilt: "strong" });
+  // TASK-528 whole-card tilt: the runtime-rotated node is the FRAME; perspective on ancestor.
+  expect(frameAttrs(block)["data-block-tilt"]).toBe("strong");
+  expect(frameAttrs(block)["data-tilt-parent"]).toBeUndefined();
+  const html = renderComposedBlocks([block]);
+  expect(html).toContain('data-block-tilt="strong"');
+  expect(html).toContain("data-tilt-parent");
+  // No glare requested → no sheen child.
+  expect(html).not.toContain("cx-glare");
+});
+
+test('tilt "none" resets — present-only, byte-identical (no perspective/inner wrapper)', () => {
+  const none = composedBlock({ tilt: "none" });
+  expect(frameAttrs(none)["data-tilt-parent"]).toBeUndefined();
+  expect(renderComposedBlocks([none])).not.toContain("data-block-tilt");
+
+  // Unset tilt is byte-identical to a plain block: no tilt attrs at all.
+  const plain = createPageBlockV2("heading", {
+    id: "blk-comp",
+    props: { text: "Composed", level: "h2", align: "left" },
+  });
+  const html = renderComposedBlocks([plain]);
+  expect(html).not.toContain("data-tilt-parent");
+  expect(html).not.toContain("data-block-tilt");
+  expect(html).not.toContain("cx-glare");
+});
+
+// ── TASK-522-05-L05 — section surface, page-root emit, layered canvas, ──────────
+// ── glass/hover, marquee ───────────────────────────────────────────────────────
+
+const surfaceSection = (style: Partial<PageSectionV2["style"]>) =>
+  createPageSectionV2("hero", {
+    id: "sec-surface",
+    variant: "centered",
+    style: {
+      background: "#ffffff",
+      backgroundType: "color",
+      backgroundImage: null,
+      accent: "#0d9488",
+      radius: 0,
+      shadow: "none",
+      ...style,
+    },
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-surf-h",
+        props: { text: "Surface", level: "h1", align: "center" },
+      }),
+    ],
+  });
+
+test("section surface preset stamps data-surface (522-05-L01)", () => {
+  const html = renderToStaticMarkup(
+    <PageSectionRender section={surfaceSection({ surfacePreset: "glass" })} />
+  );
+  expect(html).toContain('data-surface="glass"');
+});
+
+test("section ambient-orbs preset emits two decorative orb spans", () => {
+  const html = renderToStaticMarkup(
+    <PageSectionRender section={surfaceSection({ surfacePreset: "ambient-orbs" })} />
+  );
+  expect(html).toContain('data-surface="ambient-orbs"');
+  expect(html).toContain("cx-orb-a");
+  expect(html).toContain("cx-orb-b");
+  expect(countMarkup(html, 'aria-hidden="true" data-deco="drift"')).toBe(2);
+});
+
+test("section composition:layered stamps data-composition", () => {
+  const html = renderToStaticMarkup(
+    <PageSectionRender section={surfaceSection({ composition: "layered" })} />
+  );
+  expect(html).toContain('data-composition="layered"');
+});
+
+test("page-root composition emit is present-only + single runtime script (522-05-L01)", () => {
+  // A doc that authors a mouse-tilt → ONE composition <style> + ONE runtime
+  // <script> (the 522 tilt binding reuses 521-05's single emit, not a 2nd tag).
+  const tiltDoc = createDocument([
+    createPageSectionV2("hero", {
+      id: "sec-tilt-doc",
+      variant: "centered",
+      blocks: [composedBlock({ tilt: "strong" }, "blk-tilt-doc")],
+    }),
+  ]);
+  const tiltHtml = renderToStaticMarkup(<PageDocumentRender document={tiltDoc} />);
+  expect(countMarkup(tiltHtml, "data-page-composition-css")).toBe(1);
+  expect(countMarkup(tiltHtml, "data-coderso-runtime-script=")).toBe(1);
+
+  // A doc that authors a NON-tilt composition effect (surface) → composition
+  // <style> but NO runtime <script> (surfaces are static CSS).
+  const surfaceDoc = createDocument([surfaceSection({ surfacePreset: "glass" })]);
+  const surfaceHtml = renderToStaticMarkup(<PageDocumentRender document={surfaceDoc} />);
+  expect(countMarkup(surfaceHtml, "data-page-composition-css")).toBe(1);
+  expect(surfaceHtml).not.toContain("data-coderso-runtime-script");
+
+  // A NO-effect doc → neither the composition <style> nor a runtime <script>
+  // (present-only / byte-identical to post-521).
+  const plainDoc = createDocument([
+    createPageSectionV2("hero", {
+      id: "sec-plain-doc",
+      variant: "centered",
+      blocks: [
+        createPageBlockV2("heading", {
+          id: "blk-plain-doc",
+          props: { text: "Plain", level: "h1", align: "center" },
+        }),
+      ],
+    }),
+  ]);
+  const plainHtml = renderToStaticMarkup(<PageDocumentRender document={plainDoc} />);
+  expect(plainHtml).not.toContain("data-page-composition-css");
+  expect(plainHtml).not.toContain("data-coderso-runtime-script");
+});
+
+test("layered layout block places children absolutely via data-layer + --layer-* (522-05-L02)", () => {
+  const container = createPageBlockV2("container", {
+    id: "blk-layered",
+    style: { composition: "layered" },
+    slots: {
+      children: [
+        createPageBlockV2("heading", {
+          id: "blk-l1",
+          props: { text: "A", level: "h2", align: "left" },
+          style: { layer: { x: 10, y: 20, z: 3, anchor: "top-left" } },
+        }),
+        createPageBlockV2("text", {
+          id: "blk-l2",
+          props: { text: "B", format: "plain", align: "left" },
+          style: { layer: { x: 40, y: 60, z: 5 } },
+        }),
+      ],
+    },
+  });
+  const html = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", { id: "sec-l", blocks: [container] })}
+    />
+  );
+  // Parent frame is the positioning context; content is the pass-through canvas.
+  expect(html).toContain('data-composition="layered"');
+  expect(html).toContain("cx-layered-canvas");
+  expect(html).toContain("cx-layered-slot");
+  // Each child frame carries data-layer + the --layer-* custom props.
+  expect(html).toContain('data-block-id="blk-l1"');
+  expect(html).toContain("--layer-x:10%");
+  expect(html).toContain("--layer-y:20%");
+  expect(html).toContain("--layer-z:3");
+  expect(html).toContain('data-layer-anchor="top-left"');
+  expect(html).toContain("--layer-x:40%");
+});
+
+test("TASK-535 — a tilt+layer child inside a layered canvas positions the WRAPPER, not the tilt frame", () => {
+  // End-to-end: a layered-canvas child that authors BOTH layer AND tilt. The
+  // `[data-composition="layered"] [data-layer]{position:absolute;left:var(--layer-x)…}`
+  // rule must land on the [data-tilt-parent] WRAPPER (so it positions against the
+  // .cx-layered-canvas), NOT on the inner tilt frame (whose `perspective` ancestor
+  // would otherwise steal its containing block and pin it to the wrapper's in-flow
+  // origin). The tilt transform + data-block-id stay on the inner frame.
+  const container = createPageBlockV2("container", {
+    id: "blk-layered-tilt",
+    style: { composition: "layered" },
+    slots: {
+      children: [
+        createPageBlockV2("heading", {
+          id: "blk-lt1",
+          props: { text: "Tilted chip", level: "h2", align: "left" },
+          style: { layer: { x: 25, y: 35, z: 4, anchor: "center" }, tilt: "strong" },
+        }),
+      ],
+    },
+  });
+  const html = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", { id: "sec-lt", blocks: [container] })}
+    />
+  );
+  expect(html).toContain("cx-layered-canvas");
+  // The tilt wrapper is the layered positioned child: it carries data-layer +
+  // anchor + --layer-* + perspective, and it opens BEFORE the tilt frame it wraps.
+  const wrapperTag = html.match(/<div data-tilt-parent[^>]*>/)?.[0] ?? "";
+  expect(wrapperTag).toContain('data-layer=""');
+  expect(wrapperTag).toContain('data-layer-anchor="center"');
+  expect(wrapperTag).toContain("--layer-x:25%");
+  expect(wrapperTag).toContain("--layer-y:35%");
+  expect(wrapperTag).toContain("--layer-z:4");
+  // The real block frame carries the tilt + its id — but NOT the layer placement,
+  // so it never goes absolute and escapes the wrapper.
+  expect(html).toMatch(
+    /data-block-id="blk-lt1"[^>]*data-block-tilt="strong"|data-block-tilt="strong"[^>]*data-block-id="blk-lt1"/
+  );
+  expect(html).not.toMatch(/data-block-id="blk-lt1"[^>]*data-layer=/);
+  // Wrapper wraps the frame (document order: wrapper `>` precedes the frame id).
+  expect(html.indexOf(wrapperTag)).toBeLessThan(html.indexOf('data-block-id="blk-lt1"'));
+});
+
+test("flow (unset composition) layout block stays byte-identical (no layered canvas)", () => {
+  const flow = createPageBlockV2("container", {
+    id: "blk-flow",
+    slots: {
+      children: [
+        createPageBlockV2("heading", {
+          id: "blk-fc",
+          props: { text: "X", level: "h2", align: "left" },
+        }),
+      ],
+    },
+  });
+  const html = renderToStaticMarkup(
+    <PageSectionContent section={createPageSectionV2("content", { id: "sec-f", blocks: [flow] })} />
+  );
+  expect(html).not.toContain("cx-layered-canvas");
+  expect(html).not.toContain('data-composition="layered"');
+});
+
+test("block glass/hover presets stamp data-surface / data-hover (522-05-L03)", () => {
+  // Surface preset stays on the FRAME (static, non-transform).
+  expect(frameAttrs(composedBlock({ surfacePreset: "glass" }))["data-surface"]).toBe("glass");
+  expect(renderComposedBlocks([composedBlock({ surfacePreset: "glass" })])).toContain(
+    'data-surface="glass"'
+  );
+  // lift-glow is a transform hover → after 524-01 co-location it rides the SAME
+  // node as the surface (the frame), so the front render carries data-hover on the
+  // frame (its transform composes with the anchor `translate:` offset).
+  expect(frameAttrs(composedBlock({ hoverEffect: "lift-glow" }))["data-hover"]).toBe("lift-glow");
+  expect(renderComposedBlocks([composedBlock({ hoverEffect: "lift-glow" })])).toContain(
+    'data-hover="lift-glow"'
+  );
+});
+
+const marqueeGroup = (marquee: NonNullable<NonNullable<PageBlockV2["style"]>["marquee"]>) =>
+  createPageBlockV2("group", {
+    id: "blk-marquee",
+    props: { direction: "row", wrap: false, gap: 16 },
+    style: { marquee },
+    slots: {
+      children: [
+        createPageBlockV2("text", {
+          id: "blk-m1",
+          props: { text: "One", format: "plain", align: "left" },
+        }),
+        createPageBlockV2("text", {
+          id: "blk-m2",
+          props: { text: "Two", format: "plain", align: "left" },
+        }),
+      ],
+    },
+  });
+
+test("marquee group renders a viewport + two tracks with frame data-marquee (522-05-L04)", () => {
+  const group = marqueeGroup({ speed: 18, direction: "right", seamless: true });
+  // The FRAME carries the marquee attrs/vars (via the 522-03 resolver).
+  expect(frameAttrs(group)["data-marquee"]).toBe("");
+  expect(frameAttrs(group)["data-marquee-dir"]).toBe("right");
+  expect(frameVars(group)["--marquee-speed"]).toBe("18s");
+  const html = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", { id: "sec-mq", blocks: [group] })}
+    />
+  );
+  expect(html).toContain("cx-marquee-viewport");
+  // seamless → two tracks (one aria-hidden).
+  expect(countMarkup(html, "cx-marquee-track")).toBe(2);
+  expect(countMarkup(html, 'aria-hidden="true"')).toBeGreaterThanOrEqual(1);
+});
+
+test("no marquee → byte-identical group flow (no viewport)", () => {
+  const group = createPageBlockV2("group", {
+    id: "blk-plain-group",
+    props: { direction: "row", wrap: false, gap: 16 },
+    slots: {
+      children: [
+        createPageBlockV2("text", {
+          id: "blk-pg1",
+          props: { text: "Flow", format: "plain", align: "left" },
+        }),
+      ],
+    },
+  });
+  const html = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", { id: "sec-pg", blocks: [group] })}
+    />
+  );
+  expect(html).not.toContain("cx-marquee-viewport");
+  expect(html).not.toContain("data-marquee");
+});
+
+test("seamless marquee copy carries NO data-block-id in canvas mode (finding 3)", () => {
+  const group = marqueeGroup({ speed: 18, direction: "left", seamless: true });
+  const html = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", { id: "sec-mc", blocks: [group] })}
+      // Mimic the builder canvas: the selection frame emits data-block-id.
+      renderBlockFrame={({ content, renderProps }) => (
+        <div {...renderProps.dataAttributes}>{content}</div>
+      )}
+    />
+  );
+  // Each item's data-block-id matches EXACTLY one DOM node — the primary track's
+  // framed item — never the aria-hidden decorative copy (no duplicate targets).
+  expect(countMarkup(html, 'data-block-id="blk-m1"')).toBe(1);
+  expect(countMarkup(html, 'data-block-id="blk-m2"')).toBe(1);
+  // Two tracks still render (the copy is present, just frame-less).
+  expect(countMarkup(html, "cx-marquee-track")).toBe(2);
+});
+
+// ── TASK-531-01-L02/L04 — glow render + section-gradient (single + multi-layer) ──
+// The SSR inline-style boundary (React-escaped CSSProperties). Covers the pure
+// glow composer, block/section glow merge, section gradient parity with the
+// already-wired block gradient, multi-layer paint on BOTH targets, and byte-identity.
+describe("glow + multi-layer/section gradient render (TASK-531-01-L02)", () => {
+  const CTA_CARD =
+    "radial-gradient(circle at 82% 10%, rgba(142,232,255,.35), transparent 60%), linear-gradient(145deg,#0f1720,#1b2733)";
+
+  test("composeGlowBoxShadow emits a fixed four-part template from sanitized inputs", () => {
+    // The reference glow: 0 18px 45px rgba(142,232,255,.22) — matches criterion #4.
+    expect(composeGlowBoxShadow({ color: "#8ee8ff", blur: 45, y: 18 })).toBe(
+      "0px 18px 45px 0px #8ee8ff"
+    );
+    expect(composeGlowBoxShadow({ color: "rgba(142,232,255,.22)", blur: 45, y: 18 })).toBe(
+      "0px 18px 45px 0px rgba(142,232,255,.22)"
+    );
+    // Defaults: blur ⇒ 24, spread/x/y ⇒ 0 when unset.
+    expect(composeGlowBoxShadow({ color: "#0d9488" })).toBe("0px 0px 24px 0px #0d9488");
+    // Negative offsets/spread survive (clamped, not stripped).
+    expect(composeGlowBoxShadow({ color: "#0d9488", x: -12, y: -8, spread: -10 })).toBe(
+      "-12px -8px 24px -10px #0d9488"
+    );
+  });
+
+  test("composeGlowBoxShadow re-sanitizes the color at render (fail-soft to undefined)", () => {
+    // Defence in depth: a bad color composes to NOTHING (no glow), never a raw string.
+    expect(composeGlowBoxShadow({ color: "expression(alert(1))" })).toBeUndefined();
+    expect(composeGlowBoxShadow({ color: "url(//evil/x)" })).toBeUndefined();
+    expect(composeGlowBoxShadow(undefined)).toBeUndefined();
+  });
+
+  test("composeGlowBoxShadow clamps out-of-range numbers into the 531 bounds", () => {
+    expect(
+      composeGlowBoxShadow({ color: "#000", blur: 9999, spread: 9999, x: 9999, y: -9999 })
+    ).toBe(`80px -80px 120px 80px #000`);
+    // clampGlowNum truncates + clamps a possibly-undefined value (default 0).
+    expect(clampGlowNum(undefined, PAGE_GLOW_BLUR_CLAMP)).toBe(0);
+    expect(clampGlowNum(45.9, PAGE_GLOW_BLUR_CLAMP)).toBe(45);
+    expect(clampGlowNum(9999, PAGE_GLOW_BLUR_CLAMP)).toBe(120);
+    expect(clampGlowNum(-9999, PAGE_GLOW_OFFSET_CLAMP)).toBe(-80);
+    expect(clampGlowNum(-9999, PAGE_GLOW_SPREAD_CLAMP)).toBe(-40);
+  });
+
+  test("mergeShadows comma-joins the enum shadow and the glow (glow AUGMENTS, does not replace)", () => {
+    expect(mergeShadows("0 14px 40px rgba(15, 23, 42, 0.12)", "0px 18px 45px 0px #8ee8ff")).toBe(
+      "0 14px 40px rgba(15, 23, 42, 0.12), 0px 18px 45px 0px #8ee8ff"
+    );
+    expect(mergeShadows(undefined, "0px 0px 24px 0px #8ee8ff")).toBe("0px 0px 24px 0px #8ee8ff");
+    expect(mergeShadows("0 14px 40px rgba(15, 23, 42, 0.12)", undefined)).toBe(
+      "0 14px 40px rgba(15, 23, 42, 0.12)"
+    );
+    expect(mergeShadows(undefined, undefined)).toBeUndefined();
+  });
+
+  test("a block with glow ONLY emits the composed box-shadow on its render props", () => {
+    const block = createPageBlockV2("heading", {
+      id: "blk-glow-only",
+      props: { text: "Glow", level: "h2", align: "left" },
+      style: { glow: { color: "rgba(142,232,255,.22)", blur: 45, y: 18 } } as never,
+    });
+    expect(toPageBlockRenderProps(block).style.boxShadow).toBe(
+      "0px 18px 45px 0px rgba(142,232,255,.22)"
+    );
+  });
+
+  test("a block with BOTH enum shadow AND glow emits a TWO-shadow box-shadow (enum first)", () => {
+    const block = createPageBlockV2("heading", {
+      id: "blk-glow-shadow",
+      props: { text: "Glow", level: "h2", align: "left" },
+      style: { shadow: "md", glow: { color: "#8ee8ff", blur: 28 } } as never,
+    });
+    expect(toPageBlockRenderProps(block).style.boxShadow).toBe(
+      "0 14px 40px rgba(15, 23, 42, 0.12), 0px 0px 28px 0px #8ee8ff"
+    );
+  });
+
+  test("a section with glow merges it into the section box AND the bleed box", () => {
+    const section = createPageSectionV2("hero", {
+      id: "sec-glow",
+      style: {
+        background: "#ffffff",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 12,
+        shadow: "md",
+        glow: { color: "#8ee8ff", blur: 28 },
+      } as never,
+    });
+    expect(toPageSectionStyle(section).boxShadow).toBe(
+      "0 14px 40px rgba(15, 23, 42, 0.12), 0px 0px 28px 0px #8ee8ff"
+    );
+    // Full-bleed section: the glow bleeds edge-to-edge on the bleed box too.
+    const fullBleed = createPageSectionV2("hero", {
+      id: "sec-glow-bleed",
+      variant: "full-width",
+      style: {
+        background: "#ffffff",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+        glow: { color: "#8ee8ff", blur: 28 },
+      } as never,
+    });
+    expect(toPageSectionBleedStyle(fullBleed)?.boxShadow).toBe("0px 0px 28px 0px #8ee8ff");
+  });
+
+  test("SECTION backgroundType:gradient paints a single-layer gradient via backgroundImage", () => {
+    const section = createPageSectionV2("hero", {
+      id: "sec-gradient-single",
+      style: {
+        background: "linear-gradient(145deg,#0f1720,#1b2733)",
+        backgroundType: "gradient",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 12,
+        shadow: "none",
+      } as never,
+    });
+    expect(toPageSectionStyle(section).backgroundImage).toBe(
+      "linear-gradient(145deg,#0f1720,#1b2733)"
+    );
+    // No flat background-color when the type is gradient.
+    expect(toPageSectionStyle(section).backgroundColor).toBeUndefined();
+  });
+
+  test("SECTION backgroundType:gradient paints the reference .cta-card MULTI-LAYER value (relaxed re-gate)", () => {
+    // This is the render-side gate for the fix: a PRE-relax toGradientBackground
+    // would return undefined here (single-layer re-check drops the comma-joined value).
+    // Non-full-bleed: the gradient paints on the content box (toPageSectionStyle).
+    const section = createPageSectionV2("hero", {
+      id: "sec-gradient-multi",
+      variant: "default",
+      style: {
+        background: CTA_CARD,
+        backgroundType: "gradient",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 12,
+        shadow: "none",
+      } as never,
+    });
+    expect(toPageSectionStyle(section).backgroundImage).toBe(CTA_CARD);
+    // No bleed box for a non-full-bleed section.
+    expect(toPageSectionBleedStyle(section)).toBeUndefined();
+
+    // Full-bleed: the paint moves to the bleed box (525 model — content stays capped),
+    // so the multi-layer gradient bleeds edge-to-edge there.
+    const fullBleed = createPageSectionV2("hero", {
+      id: "sec-gradient-multi-bleed",
+      variant: "full-width",
+      style: {
+        background: CTA_CARD,
+        backgroundType: "gradient",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+      } as never,
+    });
+    expect(toPageSectionBleedStyle(fullBleed)?.backgroundImage).toBe(CTA_CARD);
+  });
+
+  test("SECTION gradient with an invalid value falls back cleanly (no paint, no throw)", () => {
+    const section = createPageSectionV2("hero", {
+      id: "sec-gradient-bad",
+      style: {
+        background: "linear-gradient(#fff,#000), url(//evil/beacon)",
+        backgroundType: "gradient",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 12,
+        shadow: "none",
+      } as never,
+    });
+    expect(toPageSectionStyle(section).backgroundImage).toBeUndefined();
+  });
+
+  test("switching a SECTION back to color/image restores flat/image paint (no gradient)", () => {
+    const color = createPageSectionV2("hero", {
+      id: "sec-flat",
+      style: {
+        background: "#101828",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 12,
+        shadow: "none",
+      } as never,
+    });
+    expect(toPageSectionStyle(color).backgroundColor).toBe("#101828");
+    expect(toPageSectionStyle(color).backgroundImage).toBeUndefined();
+  });
+
+  test("BLOCK gradient path still emits single-layer AND now paints the MULTI-LAYER value", () => {
+    // The block :738 call site is UNCHANGED; the shared toGradientBackground relax
+    // reaches the block target too. Single-layer regression guard first:
+    const single = createPageBlockV2("button", {
+      id: "blk-grad-single",
+      props: { label: "Go", href: "/go" },
+      style: { background: "linear-gradient(90deg,#000,#fff)", backgroundType: "gradient" },
+    });
+    const singleSection = createPageSectionV2("cta", { id: "sec-blk-single", blocks: [single] });
+    const singleHtml = renderToStaticMarkup(<PageSectionContent section={singleSection} />);
+    expect(singleHtml).toContain("background-image:linear-gradient(90deg,#000,#fff)");
+
+    // Multi-layer on a card block (heading frame carries the visual style):
+    const multi = createPageBlockV2("heading", {
+      id: "blk-grad-multi",
+      props: { text: "Card", level: "h2", align: "left" },
+      style: { background: CTA_CARD, backgroundType: "gradient" } as never,
+    });
+    expect(toPageBlockRenderProps(multi).style.backgroundImage).toBe(CTA_CARD);
+    // And it survives to the SSR markup (React-escaped into the style attribute).
+    const multiSection = createPageSectionV2("content", { id: "sec-blk-multi", blocks: [multi] });
+    const multiHtml = renderToStaticMarkup(<PageSectionContent section={multiSection} />);
+    expect(multiHtml).toContain("background-image:radial-gradient(circle at 82% 10%");
+  });
+
+  test("no-glow / no-gradient section + block render byte-identical to the pre-531 style shape", () => {
+    const section = createPageSectionV2("hero", {
+      id: "sec-noeffect",
+      style: {
+        background: "#eef2ff",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 12,
+        shadow: "sm",
+      },
+    });
+    const style = toPageSectionStyle(section);
+    // The enum shadow alone (no glow) is UNCHANGED — no trailing comma-joined glow.
+    expect(style.boxShadow).toBe("0 6px 20px rgba(15, 23, 42, 0.08)");
+    expect(style.backgroundColor).toBe("#eef2ff");
+    const block = createPageBlockV2("heading", {
+      id: "blk-noeffect",
+      props: { text: "Plain", level: "h2", align: "left" },
+      style: { shadow: "md" },
+    });
+    expect(toPageBlockRenderProps(block).style.boxShadow).toBe(
+      "0 14px 40px rgba(15, 23, 42, 0.12)"
+    );
+  });
+});
+
+// ── TASK-532 typography fidelity (Bundle B) — behavioral render ──
+test("TASK-532 toPageBlockTypographyStyle: fluid font-size wins over the discrete token", () => {
+  const custom = createPageBlockV2("heading", {
+    props: { text: "Fluid", level: "h1", align: "left" },
+    style: { fontSizeCustom: "clamp(2.6rem,5vw,4.4rem)", fontSize: "lg" },
+  });
+  expect(toPageBlockTypographyStyle(custom).fontSize).toBe("clamp(2.6rem,5vw,4.4rem)");
+
+  // token-only path intact (regression).
+  const tokenOnly = createPageBlockV2("heading", {
+    props: { text: "Token", level: "h1", align: "left" },
+    style: { fontSize: "lg" },
+  });
+  expect(toPageBlockTypographyStyle(tokenOnly).fontSize).toBe(pageTypographyFontSizeCssValues.lg);
+
+  // text-transform emitted; heavier weight maps to the css value; unset absent.
+  const transformed = createPageBlockV2("heading", {
+    props: { text: "Up", level: "h1", align: "left" },
+    style: { textTransform: "uppercase", fontWeight: "black" },
+  });
+  const emitted = toPageBlockTypographyStyle(transformed);
+  expect(emitted.textTransform).toBe("uppercase");
+  expect(emitted.fontWeight).toBe(pageTypographyFontWeightCssValues.black);
+  expect(emitted.fontWeight).toBe("900");
+
+  const bare = createPageBlockV2("heading", {
+    props: { text: "Bare", level: "h1", align: "left" },
+  });
+  const bareEmitted = toPageBlockTypographyStyle(bare);
+  expect(bareEmitted).not.toHaveProperty("fontSize");
+  expect(bareEmitted).not.toHaveProperty("textTransform");
+});
+
+test("TASK-532 heading renders inline fluid font-size + text-transform", () => {
+  const html = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", {
+        id: "sec-532-heading",
+        blocks: [
+          createPageBlockV2("heading", {
+            id: "blk-532-heading",
+            props: { text: "Fluid heading", level: "h1", align: "left" },
+            style: {
+              fontSizeCustom: "clamp(2.6rem,5vw,4.4rem)",
+              textTransform: "uppercase",
+            },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(html).toContain("font-size:clamp(2.6rem,5vw,4.4rem)");
+  expect(html).toContain("text-transform:uppercase");
+});
+
+test("TASK-532 divider gradient variant renders a gradient <span>; legacy divider is an <hr>", () => {
+  const gradientHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", {
+        id: "sec-532-divider-gradient",
+        blocks: [
+          createPageBlockV2("divider", {
+            id: "blk-532-divider-gradient",
+            props: { tone: "accent", thickness: 2, width: 34, align: "left", gradient: true },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(gradientHtml).toContain("linear-gradient(90deg");
+  expect(gradientHtml).toContain(", transparent)");
+  expect(gradientHtml).toContain("width:34px");
+  expect(gradientHtml).not.toContain("<hr");
+
+  const legacyHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", {
+        id: "sec-532-divider-legacy",
+        blocks: [
+          createPageBlockV2("divider", {
+            id: "blk-532-divider-legacy",
+            props: { tone: "neutral", thickness: 1 },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(legacyHtml).toContain("<hr");
+  expect(legacyHtml).not.toContain("linear-gradient");
+});
+
+test("TASK-532 rich text block honors textColor; plain path + unset stay unchanged", () => {
+  const richColored = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", {
+        id: "sec-532-rich-color",
+        blocks: [
+          createPageBlockV2("text", {
+            id: "blk-532-rich-color",
+            props: { text: "<p>Aqua body</p>", format: "rich", align: "left" },
+            style: { textColor: "#22d3ee" },
+          }),
+        ],
+      })}
+    />
+  );
+  // Wrapper carries the authored color + the inherit-forcing class so every
+  // descendant inherits it. NOTE: renderToStaticMarkup asserts EMITTED MARKUP
+  // only — the actual PAINTED color on the child <p>/<span> (getComputedStyle)
+  // is proven by the LIVE Playwright computed-color smoke (acceptance #5), not
+  // here. This codebase ships no @tailwindcss/typography plugin, so the inline
+  // wrapper color already paints today; the inherit class is defensive.
+  expect(richColored).toContain("color:#22d3ee");
+  expect(richColored).toContain("text-[color:inherit]");
+  // STRUCTURAL proof (as far as SSR markup can go): the sanitized child <p> is
+  // emitted INSIDE the same wrapper <div> that carries BOTH `color:#22d3ee` and
+  // the `[&_*]:text-[color:inherit]` descendant utility — so the inherit chain
+  // that wins the cascade is really present in the tree. The wrapper's opening
+  // tag must precede the child text, and that opening tag must carry both the
+  // authored inline color and the inherit-forcing class. (The COMPUTED color on
+  // that child stays a live-smoke concern — SSR does not resolve the cascade.)
+  const richWrapperOpen = richColored.match(/<div[^>]*data-page-block-text="true"[^>]*>/)?.[0];
+  expect(richWrapperOpen).toBeDefined();
+  expect(richWrapperOpen).toContain("color:#22d3ee");
+  expect(richWrapperOpen).toContain("text-[color:inherit]");
+  expect(richColored.indexOf(richWrapperOpen as string)).toBeLessThan(
+    richColored.indexOf("Aqua body")
+  );
+
+  // A bad color fails soft — no inline color, no inherit class.
+  const richBadColor = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", {
+        id: "sec-532-rich-badcolor",
+        blocks: [
+          createPageBlockV2("text", {
+            id: "blk-532-rich-badcolor",
+            props: { text: "<p>No color</p>", format: "rich", align: "left" },
+            style: { textColor: "javascript:alert(1)" },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(richBadColor).not.toContain("text-[color:inherit]");
+
+  // Unset textColor on rich → no inline color, no inherit class (byte-identical).
+  const richUnset = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", {
+        id: "sec-532-rich-unset",
+        blocks: [
+          createPageBlockV2("text", {
+            id: "blk-532-rich-unset",
+            props: { text: "<p>Plain body</p>", format: "rich", align: "left" },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(richUnset).not.toContain("text-[color:inherit]");
+
+  // The PLAIN path keeps its --coderso-block-text var mechanism (regression).
+  const plainColored = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", {
+        id: "sec-532-plain-color",
+        blocks: [
+          createPageBlockV2("text", {
+            id: "blk-532-plain-color",
+            props: { text: "Plain aqua", format: "plain", align: "left" },
+            style: { textColor: "#22d3ee" },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(plainColored).toContain("--coderso-block-text");
+});
+
+// TASK-533-01-L04 — render emit: block grid span on the frame + section
+// columnTemplate inline grid. Present-only ⇒ byte-identical to post-530 when unset.
+describe("grid span + asymmetric column ratio render emit (TASK-533-01)", () => {
+  test("emits gridRow/gridColumn span on the block frame present-only", () => {
+    const rowSpan = createPageBlockV2("heading", {
+      id: "blk-row-span",
+      props: { text: "Aurora", level: "h2", align: "left" },
+      style: { rowSpan: 2 } as never,
+    });
+    expect(toPageBlockRenderProps(rowSpan).style.gridRow).toBe("span 2");
+    const colSpan = createPageBlockV2("heading", {
+      id: "blk-col-span",
+      props: { text: "Wide", level: "h2", align: "left" },
+      style: { colSpan: 2 } as never,
+    });
+    expect(toPageBlockRenderProps(colSpan).style.gridColumn).toBe("span 2");
+    // Both together.
+    const both = createPageBlockV2("heading", {
+      id: "blk-both-span",
+      props: { text: "Both", level: "h2", align: "left" },
+      style: { colSpan: 2, rowSpan: 3 } as never,
+    });
+    expect(toPageBlockRenderProps(both).style.gridColumn).toBe("span 2");
+    expect(toPageBlockRenderProps(both).style.gridRow).toBe("span 3");
+    // Present-only: an unstyled block emits NEITHER key (byte-identical to post-530).
+    const bare = toPageBlockRenderProps(
+      createPageBlockV2("heading", {
+        id: "blk-no-span",
+        props: { text: "Plain", level: "h2", align: "left" },
+      })
+    ).style as Record<string, unknown>;
+    expect("gridRow" in bare).toBe(false);
+    expect("gridColumn" in bare).toBe(false);
+  });
+
+  test("emits inline gridTemplateColumns overriding the symmetric grid class", () => {
+    const section = createPageSectionV2("content", {
+      id: "sec-column-template",
+      layout: { columns: 2, align: "start", justify: "start", maxWidth: 1080 },
+      style: {
+        background: "#ffffff",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+        columnTemplate: "1.15fr .85fr",
+      } as never,
+    });
+    const props = toPageSectionRenderProps(section);
+    expect(props.style.gridTemplateColumns).toBe("1.15fr .85fr");
+    // The symmetric grid class is still present as the fallback tracks (inline wins).
+    expect(props.contentClassName).toContain("md:grid-cols-2");
+    // Audit remediation (TASK-533): the SAME asymmetric ratio must reach the editor
+    // canvas (layoutMode "canvas-device") so the author sees the effect they'll ship
+    // — WYSIWYG / publish->front parity. The canvas grid class is symmetric, but the
+    // inline gridTemplateColumns overrides it regardless of layout mode. Previously a
+    // canvas-device guard suppressed the ratio in the canvas, making the control
+    // invisible where the author works; assert parity here to lock the fix in.
+    const canvasProps = toPageSectionRenderProps(section, { layoutMode: "canvas-device" });
+    expect(canvasProps.style.gridTemplateColumns).toBe("1.15fr .85fr");
+    // The canvas still carries its own (symmetric) grid class as the fallback tracks.
+    expect(canvasProps.contentClassName).toContain("grid-cols-2");
+    // Present-only: a section WITHOUT columnTemplate emits NO gridTemplateColumns,
+    // in BOTH the front and the canvas layout mode (byte-identical to post-530).
+    const bare = toPageSectionRenderProps(
+      createPageSectionV2("content", {
+        id: "sec-no-template",
+        layout: { columns: 2, align: "start", justify: "start", maxWidth: 1080 },
+      })
+    ).style as Record<string, unknown>;
+    expect("gridTemplateColumns" in bare).toBe(false);
+    const bareCanvas = toPageSectionRenderProps(
+      createPageSectionV2("content", {
+        id: "sec-no-template-canvas",
+        layout: { columns: 2, align: "start", justify: "start", maxWidth: 1080 },
+      }),
+      { layoutMode: "canvas-device" }
+    ).style as Record<string, unknown>;
+    expect("gridTemplateColumns" in bareCanvas).toBe(false);
+  });
+
+  // Audit remediation: span (colSpan/rowSpan) and per-column `column` assignment are
+  // MUTUALLY EXCLUSIVE. In the pure auto-flow path the block frame is a direct child of
+  // the section content grid, so `grid-column/grid-row: span N` genuinely changes layout.
+  // But once ANY root block carries a `column` assignment and the section paints >=2
+  // columns, PageSectionContent switches to per-column composition: every block is wrapped
+  // in a SINGLE-column `<div data-page-section-column>`. There `grid-column: span 2` is a
+  // no-op (one column) and `grid-row: span 2` spans the wrapper's own auto-rows
+  // (whitespace) — a silent cosmetic failure. So the span must be DROPPED in that path.
+  test("drops the inert block span when the block is inside a per-column composition wrapper", () => {
+    const big = createPageBlockV2("text", {
+      id: "blk-big-card",
+      props: { text: "Large", format: "plain", align: "left" },
+      style: { column: 1, colSpan: 2, rowSpan: 2 } as never,
+    });
+    const sibling = createPageBlockV2("text", {
+      id: "blk-small-card",
+      props: { text: "Small", format: "plain", align: "left" },
+      style: { column: 2 } as never,
+    });
+    const section = createPageSectionV2("content", {
+      id: "sec-span-composition",
+      layout: { columns: 2, align: "start", justify: "start", maxWidth: 1080 },
+      blocks: [big, sibling],
+    });
+    const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+    // Composition IS active (per-column wrappers present).
+    expect(html).toContain('data-page-section-column="1"');
+    // The span is NOT emitted anywhere — it would be an inert/misleading rule here.
+    expect(html).not.toContain("grid-column:span 2");
+    expect(html).not.toContain("grid-row:span 2");
+  });
+
+  test("keeps the block span in the pure auto-flow path (no column assignments)", () => {
+    // Same big block WITHOUT a `column` assignment ⇒ auto-flow ⇒ the block frame is a
+    // direct child of the section content grid ⇒ span genuinely changes layout ⇒ emitted.
+    const big = createPageBlockV2("text", {
+      id: "blk-big-autoflow",
+      props: { text: "Large", format: "plain", align: "left" },
+      style: { colSpan: 2, rowSpan: 2 } as never,
+    });
+    const plain = createPageBlockV2("text", {
+      id: "blk-plain-autoflow",
+      props: { text: "Plain", format: "plain", align: "left" },
+    });
+    const section = createPageSectionV2("content", {
+      id: "sec-span-autoflow",
+      layout: { columns: 2, align: "start", justify: "start", maxWidth: 1080 },
+      blocks: [big, plain],
+    });
+    const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+    // No composition wrappers (no assignments) — the span survives on the block frame.
+    expect(html).not.toContain("data-page-section-column");
+    expect(html).toContain("grid-column:span 2");
+    expect(html).toContain("grid-row:span 2");
+  });
+});
+
+// TASK-533-02-L04 — render emit: per-edge section border on the box that paints the
+// section background in each mode (content box for normal, bleed box for full-bleed).
+describe("per-edge section border render emit (TASK-533-02)", () => {
+  test("emits per-edge border on the section box (border-block = top+bottom only)", () => {
+    const section = createPageSectionV2("content", {
+      id: "sec-border-block",
+      style: {
+        background: "#ffffff",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+        border: { top: { color: "#fff2", width: 1 }, bottom: { color: "#fff2", width: 1 } },
+      } as never,
+    });
+    const st = toPageSectionStyle(section) as Record<string, unknown>;
+    expect(st.borderTopWidth).toBe("1px");
+    expect(st.borderBottomWidth).toBe("1px");
+    expect(st.borderTopStyle).toBe("solid");
+    // border-block: NO left/right emitted.
+    expect("borderLeftWidth" in st).toBe(false);
+    expect("borderRightWidth" in st).toBe(false);
+  });
+
+  test("emits nothing when border unset (byte-identical to post-530)", () => {
+    const st = toPageSectionStyle(
+      createPageSectionV2("content", { id: "sec-no-border" })
+    ) as Record<string, unknown>;
+    expect(Object.keys(st).some((k) => k.startsWith("border") && k !== "borderRadius")).toBe(false);
+  });
+
+  test("a full-bleed section frames its border on the BLEED box, not the paint-empty content box", () => {
+    const section = createPageSectionV2("hero", {
+      id: "sec-bleed-border",
+      variant: "default",
+      style: {
+        background: "#dcfce7",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+        fullBleed: true,
+        border: { top: { color: "#fff2", width: 1 }, bottom: { color: "#fff2", width: 1 } },
+      } as never,
+    });
+    const bleed = toPageSectionBleedStyle(section) as Record<string, unknown>;
+    expect(bleed.borderTopWidth).toBe("1px");
+    expect(bleed.borderBottomWidth).toBe("1px");
+    // The paint-empty full-bleed content-box return carries NO border (frame rides the bleed box).
+    const content = toPageSectionStyle(section) as Record<string, unknown>;
+    expect(Object.keys(content).some((k) => k.startsWith("border"))).toBe(false);
+  });
+
+  test("a NON-full-bleed section carries the border on the content box; bleed style is undefined", () => {
+    const section = createPageSectionV2("content", {
+      id: "sec-normal-border",
+      style: {
+        background: "#ffffff",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+        border: { top: { color: "#fff2", width: 1 } },
+      } as never,
+    });
+    const st = toPageSectionStyle(section) as Record<string, unknown>;
+    expect(st.borderTopWidth).toBe("1px");
+    expect(toPageSectionBleedStyle(section)).toBeUndefined();
+  });
+});
+
+// TASK-533-03-L02 — native timeline vertical axis + glow dots. Additive DOM: all
+// existing data-page-timeline-* hooks retained; the horizontal variant is not
+// regressed. No author-controlled value (axis tinted off --coderso-section-accent).
+describe("native timeline vertical axis (TASK-533-03)", () => {
+  const makeTimelineSection = (variant: "default" | "compact" | "horizontal") =>
+    createPageSectionV2("timeline", {
+      id: `sec-timeline-${variant}`,
+      variant,
+      layout: { columns: 1, align: "start", justify: "start", maxWidth: 1080 },
+      blocks: [
+        createPageBlockV2("heading", {
+          id: `tl-a-${variant}`,
+          props: { text: "Step one", level: "h3", align: "left" },
+        }),
+        createPageBlockV2("heading", {
+          id: `tl-b-${variant}`,
+          props: { text: "Step two", level: "h3", align: "left" },
+        }),
+        createPageBlockV2("heading", {
+          id: `tl-c-${variant}`,
+          props: { text: "Step three", level: "h3", align: "left" },
+        }),
+      ],
+    });
+
+  test("vertical variant draws a CONTINUOUS axis: full-item segments bleed across the row gap", () => {
+    const html = renderToStaticMarkup(
+      <PageSectionRender section={makeTimelineSection("default")} />
+    );
+    // 3 items, each with an axis segment + a retained marker + retained content hook.
+    expect((html.match(/data-page-timeline-item=/g) ?? []).length).toBe(3);
+    expect((html.match(/data-page-timeline-axis-line="true"/g) ?? []).length).toBe(3);
+    expect((html.match(/data-page-timeline-marker="true"/g) ?? []).length).toBe(3);
+    expect((html.match(/data-page-timeline-content="true"/g) ?? []).length).toBe(3);
+    // The axis is tinted off the fixed section-accent gradient literal (not an author
+    // string), reinforcing that no author-controlled value reaches the timeline CSS.
+    expect(html).toContain("linear-gradient(var(--coderso-section-accent");
+    // CONTINUITY (audit remediation 2026-07-09). The section content grid stacks these
+    // items with a real 24px ROW gap AND each item carries its own `py-3` (12px) padding.
+    // The axis-line must span the FULL item box (`inset-y-0`) so the py padding is INSIDE
+    // the segment — otherwise a dot-row-only span leaves a visible ~24px BREAK at every
+    // boundary (the pre-fix dashed rule). Assert the axis-line is the full-item `inset-y-0`
+    // rule, no longer clamped to the dot-row.
+    expect(html).toMatch(
+      /data-page-timeline-axis-line="true"[^>]*inset-y-0|inset-y-0[^>]*data-page-timeline-axis-line="true"/
+    );
+    // The NON-LAST items bleed the bottom by exactly the resolved row gap (24px default) so
+    // segment N reaches segment N+1's top — real inter-segment continuity, not just the
+    // grid gap. There are 3 items ⇒ 2 non-last segments carry the bleed.
+    expect((html.match(/bottom:calc\(-1 \* 24px\)/g) ?? []).length).toBe(2);
+    // The LAST item ENDS the rule at its dot (no downward overshoot into empty section
+    // space) — mirrors the reference `.timeline:before{bottom:0}`.
+    expect(html).toContain("bottom:0");
+    // The glow dot carries a box-shadow off the accent (`.timeline article:before`).
+    expect(html).toContain("box-shadow:0 0 16px var(--coderso-section-accent");
+  });
+
+  test("compact vertical variant bleeds the axis across the CLAMPED (smaller) gap", () => {
+    const html = renderToStaticMarkup(
+      <PageSectionRender section={makeTimelineSection("compact")} />
+    );
+    expect((html.match(/data-page-timeline-axis-line="true"/g) ?? []).length).toBe(3);
+    expect((html.match(/data-page-timeline-marker="true"/g) ?? []).length).toBe(3);
+    // Compact scales the section gap (24 → round(24*0.6)=14 via scalePageSectionSpacing,
+    // floored at min 8); the bleed offset is DERIVED from the actual resolved gap, so it
+    // tracks the scaled value, not the default 24px. Two non-last segments carry it.
+    expect((html.match(/bottom:calc\(-1 \* 14px\)/g) ?? []).length).toBe(2);
+    expect(html).not.toContain("bottom:calc(-1 * 24px)");
+    // Full-item span + last-item flush end are preserved under the compact clamp too.
+    expect(html).toMatch(
+      /data-page-timeline-axis-line="true"[^>]*inset-y-0|inset-y-0[^>]*data-page-timeline-axis-line="true"/
+    );
+    expect(html).toContain("bottom:0");
+  });
+
+  test("horizontal variant still renders (markers retained, no vertical axis, no regression)", () => {
+    const html = renderToStaticMarkup(
+      <PageSectionRender section={makeTimelineSection("horizontal")} />
+    );
+    expect((html.match(/data-page-timeline-item=/g) ?? []).length).toBe(3);
+    expect((html.match(/data-page-timeline-marker="true"/g) ?? []).length).toBe(3);
+    // Horizontal keeps the top-row marker layout and draws NO vertical axis line.
+    expect(html).not.toContain('data-page-timeline-axis-line="true"');
+    expect(html).toContain("md:grid-rows-[auto_1fr]");
+  });
 });

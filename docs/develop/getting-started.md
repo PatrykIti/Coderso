@@ -4,11 +4,15 @@ This page gets you from a fresh clone to a running Coderso dev server. It matter
 
 ## Prerequisites
 
-Coderso uses **Bun** as both its runtime and package manager. There is no Node runtime, no `.nvmrc`, and no `engines` field — every script in the repo invokes `bun` directly.
+Coderso uses **Bun 1.3.14** as its product runtime and package manager. Node is
+not a server-runtime replacement: **Node 26.5.x** is the supported auxiliary
+runtime for release and frontend tooling, and the root `engines.node` field
+records that tooling floor. The root `packageManager` field pins Bun exactly.
 
 | Tool | Why | Notes |
 | --- | --- | --- |
-| [Bun](https://bun.sh) | Runtime + package manager | The Docker image pins `oven/bun` (`1.3.x`); any recent Bun works locally. |
+| [Bun](https://bun.sh) | Product runtime + package manager | Use `1.3.14`; CI and both Docker stages pin the same version. |
+| [Node.js](https://nodejs.org) | Release and frontend tooling | Use `26.5.x`; the Bun server does not run under Node. |
 | [PostgreSQL](https://www.postgresql.org) | Primary datastore | Required to boot, migrate, and run DB-backed tests. Drizzle dialect is `postgresql`. |
 
 You need a reachable Postgres database and its connection string before the server will start.
@@ -22,6 +26,8 @@ bun install
 ```
 
 `bun install` installs every workspace at once. The monorepo declares three workspaces — `core`, `store`, and `packages/*` — so a single install covers the product runtime, the Store backend, and the `@core/sdk` package.
+The checked-in `bunfig.toml` keeps the historical hoisted linker contract used
+by root-owned tests and tooling that import workspace dependencies.
 
 ## Configure your environment
 
@@ -132,7 +138,7 @@ Most day-to-day work only needs `bun run dev:core`.
 | Admin Vite dev server | `http://localhost:5173` | `VITE_DEV_SERVER_URL` |
 | Public site Vite dev server | `http://localhost:5174` | `VITE_SITE_DEV_SERVER_URL` |
 
-Open `http://localhost:3000` in your browser — that single port serves both the API and the admin app. The Vite servers exist only in dev; production runs `bun run server/prod.ts` with no Vite involved.
+Open `http://localhost:3000` in your browser — that single port serves both the API and the admin app. The Vite servers exist only in dev; from `core/`, production runs `bun run start:prod`, which carries the repository Bun config and production React preload, with no Vite involved.
 
 ## First run: the Setup Wizard
 

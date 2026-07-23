@@ -12,4 +12,9 @@ test("LoginPage renders error state", () => {
   expect(html).toContain("Invalid credentials");
   expect(html).toContain("user@site.com");
   expect(html).toContain("/admin/reset");
+  expect(html).toContain("Google");
+  expect(html).toContain("GitHub");
+  expect(html).toContain('data-brand-icon="github"');
+  expect(html).toContain('fill="#4285F4"');
+  expect(html.match(/data-brand-icon=/g)).toHaveLength(1);
 });

@@ -3,15 +3,20 @@ import { asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "../../db/client";
 import { formActionRuns, formFields, forms, formSubmissions } from "../../db/schema";
 import { invalidateLinkedDetailPageRouteCaches } from "../../site/cache/siteCache";
-import { normalizeSubmissionAccess, type SubmissionAccessMode } from "./submissionAccess";
+import {
+  normalizeSubmissionAccess,
+  SUBMISSION_ACCESS_MODE_VALUES,
+  type SubmissionAccessMode,
+} from "./submissionAccess";
 import {
   deriveFormSlug,
   normalizeFormFields,
+  snapshotFormFieldsWriteShape,
   type FormFieldInput,
   type NormalizedFormField,
 } from "./validation";
 import { normalizeFormSettings } from "./formSettings";
-import { normalizeFormStatus, type FormStatus } from "./formStatus";
+import { isFormStatus, normalizeFormStatus, type FormStatus } from "./formStatus";
 import { normalizeFormSuccessRedirectUrl } from "./formRedirects";
 
 export type FormCreateInput = {
@@ -63,6 +68,34 @@ export async function listForms() {
 export async function getForm(id: string) {
   const [row] = await db.select().from(forms).where(eq(forms.id, id));
   return row ?? null;
+}
+
+export type FormWriteState = Readonly<{
+  status: FormStatus;
+  submissionAccess: SubmissionAccessMode;
+}>;
+
+export async function getFormWriteState(id: string): Promise<FormWriteState | null> {
+  const [row] = await db
+    .select({
+      status: forms.status,
+      submissionAccess: forms.submissionAccess,
+    })
+    .from(forms)
+    .where(eq(forms.id, id));
+
+  if (
+    !row ||
+    !isFormStatus(row.status) ||
+    !SUBMISSION_ACCESS_MODE_VALUES.some((mode) => mode === row.submissionAccess)
+  ) {
+    return null;
+  }
+
+  return Object.freeze({
+    status: row.status,
+    submissionAccess: row.submissionAccess as SubmissionAccessMode,
+  });
 }
 
 export async function countFormSubmissions(formId: string) {
@@ -196,10 +229,11 @@ export async function listFormFields(formId: string) {
 }
 
 export async function setFormFields(formId: string, fieldsInput: FormFieldInput[]) {
+  const fieldsSnapshot = snapshotFormFieldsWriteShape(fieldsInput);
   const form = await getForm(formId);
   if (!form) throw new Error("form_not_found");
 
-  const normalized = normalizeFormFields(fieldsInput);
+  const normalized = normalizeFormFields(fieldsSnapshot);
   const now = new Date();
 
   const inserted = await db.transaction(async (tx) => {

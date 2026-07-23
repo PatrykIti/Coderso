@@ -203,11 +203,17 @@ test("FormCanvas handles single-layout selection, checkbox fallback copy, and re
     expect(view.container.textContent).toContain("Email");
     expect(view.container.textContent).toContain("Phone");
     expect(view.container.textContent).toContain("Priority");
-    expect(view.container.textContent).toContain("4");
+    // TASK-516-04: range now renders a real disabled slider (no value text span).
+    expect(view.container.querySelector('input[type="range"]')).not.toBeNull();
+    // TASK-516-04: select now renders a real <select> DOM node (B2), not a text input.
+    expect(view.container.querySelector("select")).not.toBeNull();
     expect(view.container.textContent).toContain("Hidden field submits trusted value: enterprise");
     expect(view.container.textContent).not.toContain("Consent</label>");
-    expect(view.container.innerHTML).toContain("md:col-span-1");
-    expect(view.container.innerHTML).toContain("md:col-span-2");
+    // TASK-516-04: un-themed canvas resolves to the prototype single-column default,
+    // so every field spans the single column regardless of its width token.
+    expect(view.container.innerHTML).toContain("col-span-1");
+    expect(view.container.innerHTML).toContain("grid-cols-1");
+    expect(view.container.innerHTML).not.toContain("md:grid-cols-2");
 
     clickByText(view.container, "Lead form");
     expect(onSelectForm).toHaveBeenCalledTimes(1);
@@ -291,8 +297,9 @@ test("FormCanvas normalizes invalid steps and fallback step titles in multi-step
     expect(view.container.textContent).toContain("Step 3");
     expect(view.container.querySelector('input[placeholder="name@example.com"]')).not.toBeNull();
     expect(view.container.querySelector('textarea[placeholder="Optional notes"]')).not.toBeNull();
-    expect(view.container.innerHTML).toContain("md:col-span-1");
-    expect(view.container.innerHTML).toContain("md:col-span-2");
+    // TASK-516-04: prototype single-column default ⇒ col-span-1 for every field.
+    expect(view.container.innerHTML).toContain("col-span-1");
+    expect(view.container.innerHTML).toContain("grid-cols-1");
   } finally {
     view.cleanup();
   }

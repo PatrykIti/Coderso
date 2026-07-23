@@ -18,7 +18,7 @@ import type {
   CustomScreenListColumn,
   CustomScreenListRowTemplate,
   ScreenFieldBinding,
-} from "./customScreenSchemas";
+} from "./customScreenContracts";
 
 export { readBindingPathValue, splitBindingPath, writeBindingPathValue };
 

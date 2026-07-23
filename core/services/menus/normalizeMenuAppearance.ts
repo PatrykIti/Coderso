@@ -25,6 +25,7 @@
  */
 
 import type { PageBlockV2 } from "../pages/pageDocumentV2";
+import { normalizeCssColorValue } from "../theme/cssColorContract";
 // Type-only import (erased at compile time ⇒ NO runtime cycle): menuDocumentV2
 // imports the appearance runtime validators FROM this module, so the reverse
 // edge MUST stay type-only (TASK-499-02 §5).
@@ -144,42 +145,17 @@ export function clampMenuAppearanceNumber(field: MenuAppearanceNumberField, valu
   return Math.min(range.max, Math.max(range.min, Math.round(value)));
 }
 
-/**
- * Token-backed color value shapes shared with the legacy navigation widget:
- * hex, `var(--color-*)` design tokens, rgb()/rgba(), hsl()/hsla(), and the
- * first-class `transparent` keyword. Anything else is invalid.
- */
-const MENU_APPEARANCE_COLOR_PATTERN = new RegExp(
-  [
-    "^(?:",
-    "#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})",
-    "|var\\(\\s*--color-[a-zA-Z0-9_-]+\\s*\\)",
-    // Alpha additionally accepts the leading-dot form (`.06`) because the
-    // shell's own legacy default colors use it.
-    "|rgba?\\(\\s*\\d{1,3}(?:\\.\\d+)?%?\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%?\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%?(?:\\s*,\\s*(?:0(?:\\.\\d+)?|1(?:\\.0+)?|\\.\\d+|\\d{1,3}(?:\\.\\d+)?%))?\\s*\\)",
-    "|hsla?\\(\\s*\\d{1,3}(?:\\.\\d+)?(?:deg)?\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%(?:\\s*,\\s*(?:0(?:\\.\\d+)?|1(?:\\.0+)?|\\.\\d+|\\d{1,3}(?:\\.\\d+)?%))?\\s*\\)",
-    "|transparent",
-    ")$",
-  ].join(""),
-  "i"
-);
-
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const normalizeColor = (value: unknown): string | null => {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return MENU_APPEARANCE_COLOR_PATTERN.test(trimmed) ? trimmed : null;
-};
+const normalizeColor = (value: unknown): string | null =>
+  normalizeCssColorValue(value, "authoring") ?? null;
 
 /**
- * Public, additive re-export of the token-backed color validator so
- * `menuDocumentV2` shares the SAME color contract without duplicating the
- * regex (TASK-499-02 §2). Returns the trimmed value on a valid token-backed
- * color shape, else `null`.
+ * Public adapter over the canonical authoring color owner so `menuDocumentV2`
+ * shares the same raw-length, grammar, range, and canonical-byte contract.
  */
-export const normalizeMenuColorValue = (value: unknown): string | null => normalizeColor(value);
+export const normalizeMenuColorValue = normalizeColor;
 
 const normalizeNumber = (field: MenuAppearanceNumberField, value: unknown): number | null => {
   if (typeof value !== "number" || !Number.isFinite(value)) return null;

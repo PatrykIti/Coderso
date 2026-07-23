@@ -138,8 +138,17 @@ describe("page editor control ui model adapter", () => {
     });
     expect(resolveById("block.style.fontWeight")).toMatchObject({
       kind: "segmented",
-      options: ["normal", "medium", "semibold", "bold"],
-      labels: { normal: "Normal", medium: "Medium", semibold: "Semibold", bold: "Bold" },
+      // TASK-532 (Bundle B): the weight enum grew 4→6 (extrabold/black); labels
+      // auto-humanize via `humanizeOptionToken`.
+      options: ["normal", "medium", "semibold", "bold", "extrabold", "black"],
+      labels: {
+        normal: "Normal",
+        medium: "Medium",
+        semibold: "Semibold",
+        bold: "Bold",
+        extrabold: "Extrabold",
+        black: "Black",
+      },
     });
     // Registry-owned fractional step/unit force the slider+stepper pairing
     // even below the wide-span threshold; line height stays unitless.
@@ -157,6 +166,26 @@ describe("page editor control ui model adapter", () => {
       step: 0.5,
       unit: "px",
     });
+  });
+
+  // ── TASK-532 typography fidelity (Bundle B) — ui-model kinds ──
+  test("TASK-532 controls resolve to the correct ui-model kinds", () => {
+    // Fluid size is a free-text CSS length input.
+    expect(resolveById("block.style.fontSizeCustom")).toEqual({ kind: "text" });
+    // 4 options (< the 6-member segmented limit) upgrades to segmented.
+    expect(resolveById("block.style.textTransform")).toMatchObject({
+      kind: "segmented",
+      options: ["none", "uppercase", "lowercase", "capitalize"],
+    });
+    // Divider eyebrow controls.
+    expect(resolveById("block.divider.props.gradient")).toEqual({ kind: "toggle" });
+    expect(resolveById("block.divider.props.align")).toMatchObject({
+      kind: "segmented",
+      options: ["left", "center", "right"],
+    });
+    // Width is a numeric control (slider family; wide span → stepper pairing).
+    const width = resolveById("block.divider.props.width");
+    expect(["slider", "sliderStepper"]).toContain(width.kind);
   });
 
   test("small finite select sets upgrade to segmented with English labels", () => {
@@ -361,7 +390,9 @@ describe("page editor control ui model adapter", () => {
       kind: "sliderStepper",
       min: 320,
       max: 1920,
-      step: 10,
+      // TASK-530: every numeric (px) range now steps by 1 for fine control,
+      // regardless of span; wide ranges still pair with steppers.
+      step: 1,
       unit: "px",
     });
     for (const id of [
@@ -377,7 +408,7 @@ describe("page editor control ui model adapter", () => {
         kind: "sliderStepper",
         min: 0,
         max: 240,
-        step: 4,
+        step: 1,
         unit: "px",
       });
     }
@@ -386,10 +417,25 @@ describe("page editor control ui model adapter", () => {
         kind: "sliderStepper",
         min: 0,
         max: 120,
-        step: 2,
+        step: 1,
         unit: "px",
       });
     }
+  });
+
+  test("TASK-530: wide integer ranges step by 1 while fractional ranges stay 0.05", () => {
+    // A wide-span px range (maxWidth 320..1920) still pairs with steppers but
+    // now steps by 1 for fine control, not the old coarse derived default (10).
+    const maxWidth = resolveById("section.layout.maxWidth");
+    expect(maxWidth).toMatchObject({ kind: "sliderStepper", min: 320, max: 1920, step: 1 });
+    // The former sole explicit integer step (parallax, step: 2) was dropped so
+    // it too falls through to the derived 1px default.
+    expect(resolveById("section.parallaxIntensity")).toMatchObject({ step: 1, unit: "px" });
+    // Fractional ranges (max <= 1) can't step by 1 and keep the 0.05 default.
+    expect(resolveById("block.style.opacity")).toMatchObject({ min: 0, max: 1, step: 0.05 });
+    // Registry-owned fractional steps stay intentionally fine-grained.
+    expect(resolveById("block.style.lineHeight")).toMatchObject({ step: 0.05 });
+    expect(resolveById("block.style.letterSpacing")).toMatchObject({ step: 0.5 });
   });
 
   test("narrow bounded numbers map to plain sliders", () => {

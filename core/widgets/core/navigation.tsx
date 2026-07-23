@@ -1,5 +1,9 @@
 import type { ComponentType, CSSProperties, ReactNode } from "react";
 
+import {
+  CSS_COLOR_SCHEMA_PATTERNS,
+  CSS_COLOR_VALUE_MAX_LENGTH,
+} from "../../services/theme/cssColorContract";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import { renderSharedWidgetRuntimeScript } from "../runtimeScripts";
 import type {
@@ -10,11 +14,7 @@ import type {
   WidgetEditorProps,
   WidgetRenderContext,
 } from "../types";
-import {
-  compactStyle,
-  resolveClearableCssColorValue,
-  resolveClearableStyleValue,
-} from "./clearableStyle";
+import { compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
 import {
   navigationMobileModeIds,
   navigationVariantIds,
@@ -124,20 +124,15 @@ export type NavigationData = {
   style?: NavigationStyle;
 };
 
-const navigationColorValueSchemaPattern = [
-  "^\\s*(?:",
-  "#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})",
-  "|var\\(\\s*--color-[a-zA-Z0-9_-]+\\s*\\)",
-  "|[rR][gG][bB][aA]?\\(\\s*\\d{1,3}(?:\\.\\d+)?%?\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%?\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%?(?:\\s*,\\s*(?:0(?:\\.\\d+)?|1(?:\\.0+)?|\\d{1,3}(?:\\.\\d+)?%))?\\s*\\)",
-  "|[hH][sS][lL][aA]?\\(\\s*\\d{1,3}(?:\\.\\d+)?(?:deg)?\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%\\s*,\\s*\\d{1,3}(?:\\.\\d+)?%(?:\\s*,\\s*(?:0(?:\\.\\d+)?|1(?:\\.0+)?|\\d{1,3}(?:\\.\\d+)?%))?\\s*\\)",
-  "|[tT][rR][aA][nN][sS][pP][aA][rR][eE][nN][tT]",
-  "|[cC][uU][rR][rR][eE][nN][tT][cC][oO][lL][oO][rR]",
-  "|[iI][nN][hH][eE][rR][iI][tT]",
-  ")?\\s*$",
-].join("");
 const navigationColorValueSchema = {
-  type: "string",
-  pattern: navigationColorValueSchemaPattern,
+  anyOf: [
+    { const: "" },
+    {
+      type: "string",
+      maxLength: CSS_COLOR_VALUE_MAX_LENGTH,
+      pattern: CSS_COLOR_SCHEMA_PATTERNS["inherited-render"],
+    },
+  ],
 } as const;
 
 export const navigationSchema = {
@@ -1429,7 +1424,10 @@ const hasStyleKey = (style: NavigationData["style"], key: keyof NavigationStyle)
 const normalizeNavigationColorValue = (
   style: NavigationData["style"],
   key: keyof NavigationStyle
-) => (hasStyleKey(style, key) ? resolveClearableCssColorValue(style?.[key]) : undefined);
+) =>
+  hasStyleKey(style, key)
+    ? resolveClearableCssColorValue(style?.[key], "inherited-render")
+    : undefined;
 
 const normalizeNavigationStyle = (style: NavigationData["style"]): NavigationStyle => ({
   ...(style ?? {}),
@@ -1674,6 +1672,7 @@ export function NavigationBlock({
   const rootId = blockId ?? "navigation";
   const mobilePanelId = `${rootId}-mobile-panel`;
   const borderWidth = style.borderWidth ?? "1";
+  const renderColor = (value: unknown) => resolveClearableCssColorValue(value, "inherited-render");
   const textClass = joinClasses(
     fontSizeClassMap[style.fontSize ?? "sm"] ?? "text-sm",
     fontWeightClassMap[style.fontWeight ?? "medium"] ?? "font-medium",
@@ -1682,37 +1681,38 @@ export function NavigationBlock({
   );
   const navStyle =
     compactStyle({
-      backgroundColor: behavior.transparent
-        ? "transparent"
-        : resolveClearableStyleValue(style.surfaceColor),
+      backgroundColor: behavior.transparent ? "transparent" : renderColor(style.surfaceColor),
       borderColor: behavior.transparent
         ? "transparent"
-        : (style.borderColor ?? "var(--color-border)"),
+        : (renderColor(style.borderColor) ?? "var(--color-border)"),
       borderBottomStyle: "solid",
       borderBottomWidth: borderWidthValueMap[borderWidth] ?? "1px",
-      color: style.textColor ?? "var(--color-text)",
+      color: renderColor(style.textColor) ?? "var(--color-text)",
       ["--navigation-link-color" as keyof CSSProperties]:
-        style.linkColor ?? style.textColor ?? "var(--color-text)",
+        renderColor(style.linkColor) ?? renderColor(style.textColor) ?? "var(--color-text)",
       ["--navigation-link-hover-color" as keyof CSSProperties]:
-        style.linkHoverColor ?? style.linkColor ?? style.textColor ?? "var(--color-text)",
+        renderColor(style.linkHoverColor) ??
+        renderColor(style.linkColor) ??
+        renderColor(style.textColor) ??
+        "var(--color-text)",
       ["--navigation-link-active-color" as keyof CSSProperties]:
-        style.linkActiveColor ??
-        style.linkHoverColor ??
-        style.linkColor ??
-        style.textColor ??
+        renderColor(style.linkActiveColor) ??
+        renderColor(style.linkHoverColor) ??
+        renderColor(style.linkColor) ??
+        renderColor(style.textColor) ??
         "var(--color-text)",
       top: navOwnsSticky ? "var(--coderso-preview-banner-offset, 0px)" : undefined,
     }) ?? {};
 
   const logoStyle: CSSProperties = {
-    color: style.logoColor ?? style.textColor ?? "var(--color-text)",
+    color: renderColor(style.logoColor) ?? renderColor(style.textColor) ?? "var(--color-text)",
   };
 
   const ctaStyle: CSSProperties =
     compactStyle({
-      background: resolveClearableStyleValue(style.ctaBackgroundColor),
-      color: style.ctaTextColor ?? "var(--color-bg)",
-      borderColor: style.ctaBorderColor ?? "transparent",
+      background: renderColor(style.ctaBackgroundColor),
+      color: renderColor(style.ctaTextColor) ?? "var(--color-bg)",
+      borderColor: renderColor(style.ctaBorderColor) ?? "transparent",
       borderStyle: "solid",
       borderWidth:
         style.ctaBorderColor &&

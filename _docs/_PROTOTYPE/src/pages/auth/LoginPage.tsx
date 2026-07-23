@@ -1,5 +1,6 @@
-import { Github, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 
+import { GitHubBrandIcon } from "@/components/BrandIcons";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,7 @@ export function LoginPage() {
 
       <div className="grid grid-cols-2 gap-2">
         <Button variant="outline" className="gap-2">
-          <Github className="size-4" /> GitHub
+          <GitHubBrandIcon className="size-4" aria-hidden="true" /> GitHub
         </Button>
         <Button variant="outline" className="gap-2">
           <Mail className="size-4" /> Google
@@ -30,13 +31,15 @@ export function LoginPage() {
         <span className="h-px flex-1 bg-border" />
       </div>
 
-      <form
-        className="flex flex-col gap-4"
-        onSubmit={(e) => e.preventDefault()}
-      >
+      <form className="flex flex-col gap-4" onSubmit={(e) => e.preventDefault()}>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" placeholder="you@company.com" defaultValue="patryk@coderso.dev" />
+          <Input
+            id="email"
+            type="email"
+            placeholder="you@company.com"
+            defaultValue="patryk@coderso.dev"
+          />
         </div>
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">

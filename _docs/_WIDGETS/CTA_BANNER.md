@@ -1,5 +1,10 @@
 # CTA Banner Widget (v2)
 
+> **Historical compatibility boundary:** this file documents a retained renderer/read-
+> compatibility contract. Configurable widgets exist only on the Admin Dashboard;
+> active editors own their sections and blocks. Do not add or expand a non-Dashboard
+> editor, registry entry, preset, or module-pack surface from this file.
+
 ## Purpose
 
 Compact conversion strip between sections with clear CTA actions.
@@ -103,8 +108,26 @@ Notes:
   `style.primaryButtonBg`, `style.primaryButtonText`,
   `style.secondaryButtonBg`, and `style.secondaryButtonText` are clearable.
 - `background.color` and `background.gradient` are clearable.
-- Clear removes the configured field from widget data and does not serialize
-  `transparent` or an empty string as an off-state sentinel.
+- Clear removes the configured raw override and does not introduce
+  `transparent` or an empty string as a new off-state sentinel. Normalized/runtime
+  data still resolves through CTA Banner's historical style/background/button
+  defaults when an override is absent.
+- The eleven direct `style` colors (`background`, `text`, `border`,
+  `badgeBackground`, `badgeText`, and both primary/secondary button
+  background/text/border triples) plus `background.color` use the shared
+  `inherited-render` profile. Canonical `currentColor` and `inherit` are valid;
+  invalid input is omitted rather than passed through raw.
+- `background.gradient` remains a separate CTA-owned compatibility grammar with
+  a 96-code-unit original-input cap. It accepts exact lowercase
+  `linear-gradient` and `deg`, one optional-minus signed integer or decimal
+  angle, exactly two `#`-prefixed 3-through-8-digit hex stops, and ASCII U+0020
+  at whitespace positions. Only outer ASCII spaces are trimmed; accepted inner
+  spacing, angle spelling, hex width (including legacy 5/7), and hex case remain
+  byte-identical. Tabs, newlines, non-ASCII whitespace, extra layers/stops,
+  unsafe functions, and malformed input reject without raw fallback.
+- CTA's structural schema pattern reuses that local grammar but is not semantic
+  authority. TASK-541 adds no defaults: raw optional overrides stay sparse, while
+  existing normalized fallback values remain byte-compatible.
 
 ## Data Model (summary)
 

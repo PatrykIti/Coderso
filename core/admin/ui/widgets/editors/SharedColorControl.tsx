@@ -1,57 +1,55 @@
 import { Input } from "@/components/ui/input";
 
+import type { CssColorProfile } from "../../../../services/theme/cssColorContract";
 import {
+  colorAlpha,
+  normalizeAdminColorValue,
+  parseColorValue,
+  pickerHexFor,
+  type ParsedColor,
+} from "../../shared/colorValue";
+import {
+  applySharedColorAlphaChange,
+  applySharedColorPickerChange,
   ClearableFieldHeader,
-  isHexColorValue,
-  isPickerRepresentableColorValue,
-  resolveColorSwatchValue,
 } from "./ClearableFields";
 
-export type SharedColorState =
-  | {
-      kind: "cleared";
-      label: string;
-      description: string;
-      clearResultLabel: string;
-    }
-  | {
-      kind: "theme_token";
-      label: string;
-      description: string;
-      clearResultLabel: string;
-    }
-  | {
-      kind: "theme_default_token";
-      label: string;
-      description: string;
-      clearResultLabel: string;
-    }
-  | {
-      kind: "transparent";
-      label: string;
-      description: string;
-      clearResultLabel: string;
-    }
-  | {
-      kind: "selected_swatch";
-      label: string;
-      description: string;
-      clearResultLabel: string;
-    }
-  | {
-      kind: "saved_custom";
-      label: string;
-      description: string;
-      clearResultLabel: string;
-    };
+export type SharedColorStateKind =
+  | "cleared"
+  | "theme_token"
+  | "theme_default_token"
+  | "transparent"
+  | "inherited"
+  | "selected_swatch"
+  | "saved_custom";
 
-const cssTokenPattern = /^(?:var|color-mix)\(/i;
+export type SharedColorState = Readonly<{
+  kind: SharedColorStateKind;
+  label: string;
+  description: string;
+  clearResultLabel: string;
+}>;
+
 const defaultClearResultLabel = "removes the saved color value";
+
+const parseSharedColorValue = (
+  value: string | undefined,
+  colorProfile: CssColorProfile,
+  allowInheritKeyword: boolean
+): ParsedColor => {
+  const parsed = parseColorValue(value, colorProfile);
+  if (parsed.kind === "keyword" && parsed.normalized === "inherit" && !allowInheritKeyword) {
+    return { kind: "unknown", raw: parsed.raw };
+  }
+  return parsed;
+};
 
 export function describeSharedColorControlState({
   value,
   treatAsThemeDefaultValues,
   clearedState,
+  colorProfile = "authoring",
+  allowInheritKeyword = true,
 }: {
   value: string | undefined;
   treatAsThemeDefaultValues?: string[];
@@ -60,15 +58,10 @@ export function describeSharedColorControlState({
     description?: string;
     clearResultLabel?: string;
   };
+  colorProfile?: CssColorProfile;
+  allowInheritKeyword?: boolean;
 }): SharedColorState {
-  const normalizedValue = value?.trim();
-  const themeDefaultValues = new Set(
-    (treatAsThemeDefaultValues ?? [])
-      .map((entry) => entry.trim())
-      .filter((entry) => entry.length > 0)
-  );
-
-  if (!normalizedValue) {
+  if (value === undefined || value === "") {
     return {
       kind: "cleared",
       label: clearedState?.label ?? "Theme default",
@@ -79,7 +72,15 @@ export function describeSharedColorControlState({
     };
   }
 
-  if (normalizedValue === "transparent") {
+  const parsed = parseSharedColorValue(value, colorProfile, allowInheritKeyword);
+  const themeDefaultValues = new Set(
+    (treatAsThemeDefaultValues ?? [])
+      .map((entry) => parseSharedColorValue(entry, colorProfile, allowInheritKeyword))
+      .filter((entry) => entry.kind === "token")
+      .map((entry) => entry.normalized)
+  );
+
+  if (parsed.kind === "keyword" && parsed.normalized === "transparent") {
     return {
       kind: "transparent",
       label: "Transparent",
@@ -88,7 +89,7 @@ export function describeSharedColorControlState({
     };
   }
 
-  if (themeDefaultValues.has(normalizedValue)) {
+  if (parsed.kind === "token" && themeDefaultValues.has(parsed.normalized)) {
     return {
       kind: "theme_default_token",
       label: "Theme default",
@@ -97,7 +98,7 @@ export function describeSharedColorControlState({
     };
   }
 
-  if (cssTokenPattern.test(normalizedValue)) {
+  if (parsed.kind === "token") {
     return {
       kind: "theme_token",
       label: "Theme token",
@@ -106,7 +107,20 @@ export function describeSharedColorControlState({
     };
   }
 
-  if (isHexColorValue(normalizedValue) || isPickerRepresentableColorValue(normalizedValue)) {
+  if (
+    parsed.kind === "keyword" &&
+    (parsed.normalized === "currentColor" || parsed.normalized === "inherit")
+  ) {
+    return {
+      kind: "inherited",
+      label: "Inherited color",
+      description:
+        "An inherited color is preserved for retained rendering. The swatch is only a fallback preview.",
+      clearResultLabel: defaultClearResultLabel,
+    };
+  }
+
+  if (parsed.kind === "hex" || parsed.kind === "rgb" || parsed.kind === "hsl") {
     return {
       kind: "selected_swatch",
       label: "Selected color",
@@ -140,6 +154,8 @@ type SharedColorControlProps = {
   clearedDescription?: string;
   clearResultLabel?: string;
   swatchAriaLabel?: string;
+  colorProfile?: CssColorProfile;
+  allowInheritKeyword?: boolean;
 };
 
 export function SharedColorControl({
@@ -159,8 +175,9 @@ export function SharedColorControl({
   clearedDescription,
   clearResultLabel,
   swatchAriaLabel,
+  colorProfile = "authoring",
+  allowInheritKeyword = true,
 }: SharedColorControlProps) {
-  const handleSwatchChange = onSwatchChange ?? onChange;
   const clearedState =
     clearedLabel !== undefined || clearedDescription !== undefined || clearResultLabel !== undefined
       ? {
@@ -173,15 +190,37 @@ export function SharedColorControl({
     value,
     treatAsThemeDefaultValues,
     clearedState,
+    colorProfile,
+    allowInheritKeyword,
   });
   const hasCustomValue = colorState.kind === "saved_custom";
-  const swatchColor = resolveColorSwatchValue(value, pickerFallback);
+  // Parse once: the native picker + preview show the BASE hex (HTML pickers cannot
+  // render alpha) while the opacity slider owns the alpha channel.
+  const parsed = parseSharedColorValue(value, colorProfile, allowInheritKeyword);
+  const representable = parsed.kind === "hex" || parsed.kind === "rgb" || parsed.kind === "hsl";
+  const pickerBaseHex = pickerHexFor(parsed, pickerFallback);
+  // Standalone preview chip shows the REAL color (incl. alpha) for representable
+  // values so the applied opacity is visible; token/keyword fall back to the base.
+  const previewColor = representable ? parsed.normalized : pickerBaseHex;
+  const opacityPct = Math.round(colorAlpha(parsed) * 100);
+
+  // Free-text commits pass the original bytes to the canonical normalizer. Invalid or
+  // context-rejected input is not emitted, so the uncontrolled field keeps its draft.
+  // Commit on blur/Enter only: per-keystroke commits would remount the `key={value}`
+  // field and prevent incremental entry of otherwise valid longer color values.
+  const commitText = (draft: string) => {
+    if (draft === (value ?? "")) return;
+    const safe = normalizeAdminColorValue(draft, colorProfile);
+    if (safe === undefined || (safe === "inherit" && !allowInheritKeyword)) return;
+    onChange(safe);
+  };
 
   return (
     <div
       data-widget-control={controlId}
       data-widget-control-path={controlPath}
       data-widget-control-ownership={controlPath ? "writable" : undefined}
+      data-shared-color-state={colorState.kind}
       className="space-y-2"
     >
       <ClearableFieldHeader
@@ -195,15 +234,27 @@ export function SharedColorControl({
         <Input
           aria-label={swatchAriaLabel ?? `${label} swatch`}
           type="color"
-          value={swatchColor}
-          onChange={(event) => handleSwatchChange(event.target.value)}
+          value={pickerBaseHex}
+          onChange={(event) =>
+            applySharedColorPickerChange({
+              currentValue: value,
+              nextValue: event.target.value,
+              onChange,
+              onPickerChange: onSwatchChange,
+              colorProfile,
+            })
+          }
           className="h-9 w-10 p-1"
         />
         {showValueInput ? (
           <Input
+            key={value}
             aria-label={`${label} value`}
-            value={value ?? ""}
-            onChange={(event) => onChange(event.target.value)}
+            defaultValue={value ?? ""}
+            onBlur={(event) => commitText(event.currentTarget.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") commitText(event.currentTarget.value);
+            }}
             placeholder={placeholder}
           />
         ) : (
@@ -211,7 +262,7 @@ export function SharedColorControl({
             <span
               aria-hidden="true"
               className="h-6 w-6 rounded-md border border-border/70 shadow-inner"
-              style={{ backgroundColor: swatchColor }}
+              style={{ backgroundColor: previewColor }}
             />
             <span className="rounded-md border border-border/70 px-2 py-1 text-xs text-muted-foreground">
               {colorState.label}
@@ -228,14 +279,37 @@ export function SharedColorControl({
           </div>
         )}
       </div>
+      {showValueInput && representable ? (
+        <div className="space-y-1" data-shared-color-opacity>
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Opacity</span>
+            <span>{opacityPct}%</span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            value={opacityPct}
+            aria-label={`${label} opacity`}
+            onChange={(event) =>
+              applySharedColorAlphaChange({
+                currentValue: value,
+                alphaPct: Number(event.target.value),
+                onChange,
+                colorProfile,
+              })
+            }
+            className="w-full accent-primary"
+          />
+        </div>
+      ) : null}
       {!showValueInput && hasCustomValue ? (
         <p className="rounded-md border border-dashed border-border/70 bg-muted/40 p-2 text-xs text-muted-foreground">
           {colorState.description}
         </p>
       ) : !showValueInput ? (
-        <p className="text-xs text-muted-foreground" data-shared-color-state={colorState.kind}>
-          {colorState.description}
-        </p>
+        <p className="text-xs text-muted-foreground">{colorState.description}</p>
       ) : null}
     </div>
   );

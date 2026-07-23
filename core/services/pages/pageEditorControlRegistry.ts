@@ -1,6 +1,18 @@
 import {
   PAGE_COLLECTION_LIMIT_CLAMP,
   PAGE_BLOCK_BORDER_WIDTH_CLAMP,
+  // ── TASK-531 — glow clamp bounds (read-only) for the glow numeric controls ──
+  PAGE_GLOW_BLUR_CLAMP,
+  PAGE_GLOW_SPREAD_CLAMP,
+  PAGE_GLOW_OFFSET_CLAMP,
+  // ── END TASK-531 ──
+  // ── TASK-533-01 — block grid-span clamp bounds + column-ratio presets ──
+  PAGE_BLOCK_SPAN_CLAMP,
+  pageColumnTemplatePresets,
+  // ── END TASK-533-01 ──
+  // ── TASK-533-02 — per-edge section border width clamp bounds ──
+  PAGE_SECTION_BORDER_WIDTH_CLAMP,
+  // ── END TASK-533-02 ──
   PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP,
   PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP,
   pageBackgroundTypes,
@@ -12,6 +24,7 @@ import {
   pageBadgeWeights,
   pageBlockCapabilities,
   pageBlockBorderStyles,
+  pageBlockDecorationMotions,
   pageColumnDistributions,
   pageBlockWidths,
   pageButtonSizes,
@@ -26,14 +39,35 @@ import {
   pageSectionAlignments,
   pageSectionCapabilities,
   pageSectionJustify,
+  pageSectionScrollEffects,
+  PAGE_PARALLAX_INTENSITY_CLAMP,
+  animatedIconNames,
+  animatedIconAnimations,
+  ANIMATED_ICON_SIZE_CLAMP,
+  ANIMATED_ICON_SPEED_CLAMP,
   pageShadowTokens,
   pageTextAlignments,
   pageTextFormats,
+  pageTiltStrengths,
+  pageSurfacePresets,
+  pageBlockHoverEffects,
+  pageCompositions,
+  pageLayerAnchors,
+  pageMarqueeDirections,
   pageBlockDefaultProps,
   pageBreakpoints,
   pageTypographyFontFamilies,
   pageTypographyFontSizes,
   pageTypographyFontWeights,
+  // ── TASK-534 ── declarative-interactivity control vocabulary (read-only).
+  pageGalleryLayouts,
+  switcherVariants,
+  scrollHintGlyphs,
+  SWITCHER_MAX_PANELS,
+  // ── TASK-532 typography fidelity (Bundle B) ──
+  pageTypographyTextTransforms,
+  pageDividerAligns,
+  PAGE_DIVIDER_WIDTH_CLAMP,
   type PageBlockType,
   type PageBreakpoint,
   type PageSectionVariant,
@@ -298,6 +332,97 @@ export const pageUniversalSectionControls: readonly PageEditorControlDefinition[
     responsive: true,
     options: pageShadowTokens,
   }),
+  // ── TASK-531 REGION — section glow group (arbitrary colored box-shadow) ──────
+  // color + numeric blur/spread/x/y; responsive:true (per-device glow rides the
+  // responsive @media machinery — pageResponsiveCss.ts composes it). No new UI
+  // kind: color uses input:"color", the four numerics use input:"number"+clamp.
+  // glow.color is REQUIRED at the write boundary — an unset/invalid color omits
+  // the whole glow (present-only), so the numeric controls are harmless no-ops
+  // until a color is set (registry has no showWhen).
+  control({
+    id: "section.style.glow.color",
+    panel: "style",
+    target: "section",
+    label: "Glow color",
+    path: ["style", "glow", "color"],
+    input: "color",
+    responsive: true,
+  }),
+  control({
+    id: "section.style.glow.blur",
+    panel: "style",
+    target: "section",
+    label: "Glow blur",
+    path: ["style", "glow", "blur"],
+    input: "number",
+    responsive: true,
+    clamp: { min: PAGE_GLOW_BLUR_CLAMP.min, max: PAGE_GLOW_BLUR_CLAMP.max },
+  }),
+  control({
+    id: "section.style.glow.spread",
+    panel: "style",
+    target: "section",
+    label: "Glow spread",
+    path: ["style", "glow", "spread"],
+    input: "number",
+    responsive: true,
+    clamp: { min: PAGE_GLOW_SPREAD_CLAMP.min, max: PAGE_GLOW_SPREAD_CLAMP.max },
+  }),
+  control({
+    id: "section.style.glow.x",
+    panel: "style",
+    target: "section",
+    label: "Glow offset X",
+    path: ["style", "glow", "x"],
+    input: "number",
+    responsive: true,
+    clamp: { min: PAGE_GLOW_OFFSET_CLAMP.min, max: PAGE_GLOW_OFFSET_CLAMP.max },
+  }),
+  control({
+    id: "section.style.glow.y",
+    panel: "style",
+    target: "section",
+    label: "Glow offset Y",
+    path: ["style", "glow", "y"],
+    input: "number",
+    responsive: true,
+    clamp: { min: PAGE_GLOW_OFFSET_CLAMP.min, max: PAGE_GLOW_OFFSET_CLAMP.max },
+  }),
+  // ── END TASK-531 REGION — section glow group ────────────────────────────────
+  control({
+    id: "section.scrollEffect",
+    panel: "style",
+    target: "section",
+    label: "Scroll effect",
+    path: ["style", "scrollEffect"],
+    input: "segmented",
+    // DEVICE-UNIFORM (not responsive): the front serves one desktop-resolved
+    // HTML + @media-CSS deltas, and the effect is delivered as a single
+    // JS-driven `data-page-effect` attribute off the desktop-resolved
+    // `section.style`. A per-breakpoint override cannot vary a data-attribute
+    // inside an `@media` rule, so exposing per-device authoring would store an
+    // inert value. Section scroll effects are authored + rendered device-uniform.
+    responsive: false,
+    // Value-only enum by reference (labels resolved downstream by the UI model);
+    // passed by reference like every other owner-enum descriptor so the registry
+    // identity check (ownerOptionSets) recognises it:
+    options: pageSectionScrollEffects,
+  }),
+  control({
+    id: "section.parallaxIntensity",
+    panel: "style",
+    target: "section",
+    label: "Parallax intensity",
+    path: ["style", "parallaxIntensity"],
+    // No "slider" input member — a number + clamp/step/unit renders a slider.
+    input: "number",
+    // Device-uniform, same reason as scrollEffect above.
+    responsive: false,
+    clamp: { min: PAGE_PARALLAX_INTENSITY_CLAMP.min, max: PAGE_PARALLAX_INTENSITY_CLAMP.max },
+    // No explicit step — falls through to the derived default (1px) for fine
+    // control (TASK-530).
+    unit: "px",
+  }),
   ...(
     [
       ["paddingTop", "Top"],
@@ -345,6 +470,114 @@ export const pageUniversalSectionControls: readonly PageEditorControlDefinition[
     input: "switch",
     responsive: true,
   }),
+  // TASK-522-05-L01 — section surface preset + layered composition (DISJOINT
+  // id-namespace from 521-02's section.scrollEffect). responsive:false: both are
+  // base-only data-surface/data-composition attrs; pageResponsiveCss emits
+  // per-PROPERTY CSS only and cannot toggle a data-attr per breakpoint against
+  // the inline base, so a per-device override would be a silent no-op (finding-6;
+  // parent Acceptance #7). "none"/"flow" are the resets (normalize omits them).
+  control({
+    id: "section.surface.preset",
+    panel: "background",
+    target: "section",
+    label: "Surface preset",
+    path: ["style", "surfacePreset"],
+    input: "select",
+    responsive: false,
+    options: pageSurfacePresets,
+  }),
+  control({
+    id: "section.composition.mode",
+    panel: "layout",
+    target: "section",
+    label: "Composition",
+    path: ["style", "composition"],
+    input: "select",
+    responsive: false,
+    options: pageCompositions,
+  }),
+  // TASK-525-01-L02 — full-bleed background. When on, the section background box
+  // paints edge-to-edge (100vw) while its content stays capped/centered at
+  // layout.maxWidth. Device-uniform (responsive:false): the bleed is a fixed
+  // render structure, not a per-property CSS delta, so a per-device override
+  // would be a silent no-op. Present-only: normalize omits `false`/unset.
+  control({
+    id: "section.style.fullBleed",
+    panel: "background",
+    target: "section",
+    label: "Full-bleed background",
+    path: ["style", "fullBleed"],
+    input: "switch",
+    responsive: false,
+  }),
+  // ── TASK-534 ── static grain overlay toggle (present-only; normalize omits
+  // false/unset). Device-uniform structural overlay, not a per-property delta.
+  control({
+    id: "section.style.noiseOverlay",
+    panel: "background",
+    target: "section",
+    label: "Grain overlay",
+    path: ["style", "noiseOverlay"],
+    input: "switch",
+    responsive: false,
+  }),
+  // ── TASK-533-01 REGION: asymmetric column ratio (curated safe presets) ──────
+  // `select` of curated presets (each is sanitizeAuthoringGridTemplate-passing), so
+  // the value is naturally constrained to a sanitizer-valid string; the write
+  // boundary re-sanitizes any tampered payload regardless. responsive:false —
+  // structural (a per-breakpoint ratio is not CSS-expressible against the inline
+  // base). No `fallback` — an unset ratio shows empty and falls back to the
+  // symmetric grid class (present-only honesty).
+  control({
+    id: "section.style.columnTemplate",
+    panel: "layout",
+    target: "section",
+    label: "Column ratio",
+    path: ["style", "columnTemplate"],
+    input: "select",
+    responsive: false,
+    options: pageColumnTemplatePresets,
+  }),
+  // ── END TASK-533-01 REGION ────────────────────────────────────────────────
+  // ── TASK-533-02 REGION: per-edge section border (color/width/style per edge) ──
+  // Mirrors the block border input kinds (color/number/segmented) per edge. Length-4
+  // paths (`["style","border",side,prop]`) — the mutation router
+  // (pageEditorMutationActions) sanitizes the nested color path. responsive:false —
+  // the border is device-uniform (a per-breakpoint delta is out of scope). No
+  // misleading fallback on color/width (present-only honesty).
+  ...(["top", "right", "bottom", "left"] as const).flatMap((side) => [
+    control({
+      id: `section.style.border.${side}.color`,
+      panel: "style",
+      target: "section",
+      label: `Border ${side} color`,
+      path: ["style", "border", side, "color"],
+      input: "color",
+      responsive: false,
+    }),
+    control({
+      id: `section.style.border.${side}.width`,
+      panel: "style",
+      target: "section",
+      label: `Border ${side} width`,
+      path: ["style", "border", side, "width"],
+      input: "number",
+      responsive: false,
+      clamp: PAGE_SECTION_BORDER_WIDTH_CLAMP,
+    }),
+    control({
+      id: `section.style.border.${side}.style`,
+      panel: "style",
+      target: "section",
+      label: `Border ${side} style`,
+      path: ["style", "border", side, "style"],
+      input: "segmented",
+      responsive: false,
+      options: pageBlockBorderStyles,
+      fallback: "none",
+    }),
+  ]),
+  // ── END TASK-533-02 REGION ────────────────────────────────────────────────
 ] as const;
 
 /**
@@ -456,6 +689,59 @@ export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] 
     // Unset renders no box-shadow — the schema default "none".
     fallback: "none",
   }),
+  // ── TASK-531 REGION — block glow group (arbitrary colored box-shadow) ────────
+  // Identical `style.glow.*` tail to the section group; target:"block".
+  // responsive:true (per-device glow rides pageResponsiveCss.ts). No new UI kind.
+  control({
+    id: "block.style.glow.color",
+    panel: "style",
+    target: "block",
+    label: "Glow color",
+    path: ["style", "glow", "color"],
+    input: "color",
+    responsive: true,
+  }),
+  control({
+    id: "block.style.glow.blur",
+    panel: "style",
+    target: "block",
+    label: "Glow blur",
+    path: ["style", "glow", "blur"],
+    input: "number",
+    responsive: true,
+    clamp: { min: PAGE_GLOW_BLUR_CLAMP.min, max: PAGE_GLOW_BLUR_CLAMP.max },
+  }),
+  control({
+    id: "block.style.glow.spread",
+    panel: "style",
+    target: "block",
+    label: "Glow spread",
+    path: ["style", "glow", "spread"],
+    input: "number",
+    responsive: true,
+    clamp: { min: PAGE_GLOW_SPREAD_CLAMP.min, max: PAGE_GLOW_SPREAD_CLAMP.max },
+  }),
+  control({
+    id: "block.style.glow.x",
+    panel: "style",
+    target: "block",
+    label: "Glow offset X",
+    path: ["style", "glow", "x"],
+    input: "number",
+    responsive: true,
+    clamp: { min: PAGE_GLOW_OFFSET_CLAMP.min, max: PAGE_GLOW_OFFSET_CLAMP.max },
+  }),
+  control({
+    id: "block.style.glow.y",
+    panel: "style",
+    target: "block",
+    label: "Glow offset Y",
+    path: ["style", "glow", "y"],
+    input: "number",
+    responsive: true,
+    clamp: { min: PAGE_GLOW_OFFSET_CLAMP.min, max: PAGE_GLOW_OFFSET_CLAMP.max },
+  }),
+  // ── END TASK-531 REGION — block glow group ──────────────────────────────────
   control({
     id: "block.style.borderColor",
     panel: "style",
@@ -513,6 +799,201 @@ export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] 
       fallback: 0,
     }),
   ]),
+  // TASK-522-03-L01 — floating-drift decoration on ANY block (DISJOINT
+  // id-namespace). responsive:false: decoration is a base-only data-attr class
+  // (pageResponsiveCss cannot express a per-breakpoint animation delta against
+  // the inline base — a per-device override would be a silent no-op; parent
+  // Acceptance #7). "none" is the reset (normalize omits it). delay/duration are
+  // always shown (inert when no decoration motion is set — no showWhen).
+  control({
+    id: "block.decoration.motion",
+    panel: "style",
+    target: "block",
+    label: "Decoration motion",
+    path: ["style", "decoration", "motion"],
+    input: "select",
+    responsive: false,
+    options: pageBlockDecorationMotions,
+  }),
+  control({
+    id: "block.decoration.delay",
+    panel: "style",
+    target: "block",
+    label: "Decoration delay",
+    path: ["style", "decoration", "delay"],
+    input: "number",
+    responsive: false,
+    clamp: { min: 0, max: 4000 },
+    unit: "ms",
+  }),
+  control({
+    id: "block.decoration.duration",
+    panel: "style",
+    target: "block",
+    label: "Decoration duration",
+    path: ["style", "decoration", "duration"],
+    input: "number",
+    responsive: false,
+    clamp: { min: 2000, max: 16000 },
+    unit: "ms",
+  }),
+  // TASK-525-02-L03 — per-block scroll-reveal stagger. Delays this block's reveal
+  // transition inside a revealing section so its blocks CASCADE (each fades on its
+  // own delay) instead of one unit. responsive:false (mirrors decoration.delay):
+  // the reveal CSS is shared/static, so a per-device delay is not expressible.
+  // clamp == PAGE_REVEAL_DELAY_CLAMP; the normalizer is the security boundary.
+  control({
+    id: "block.style.revealDelay",
+    panel: "style",
+    target: "block",
+    label: "Reveal delay",
+    path: ["style", "revealDelay"],
+    input: "number",
+    responsive: false,
+    clamp: { min: 0, max: 4000 },
+    unit: "ms",
+  }),
+  // TASK-522-04-L01 — mouse tilt (3D) + glare on ANY block (DISJOINT
+  // id-namespace from block.decoration.*). Render is handled by the 522-03
+  // block-frame resolver (perspective wrapper + preserve-3d + data-block-tilt +
+  // .cx-glare from style.tilt/style.tiltGlare); runtime by the shared
+  // pageEffectsRuntime [data-block-tilt] binding (522-01-L05). Controls only.
+  // responsive:false: tilt is a base-only data-attr driven by the shared
+  // runtime — pageResponsiveCss cannot express a per-breakpoint attr/runtime
+  // toggle against the inline base, so a per-device override would be a silent
+  // no-op (finding-6 fix; parent Acceptance #7). Use per-device block
+  // visibility to drop a tilted block on mobile. "none" is the reset (normalize
+  // omits it). The glare switch is always shown (inert when no tilt — no
+  // showWhen).
+  control({
+    id: "block.tilt.strength",
+    panel: "style",
+    target: "block",
+    label: "Mouse tilt (3D)",
+    path: ["style", "tilt"],
+    input: "select",
+    responsive: false,
+    options: pageTiltStrengths,
+  }),
+  control({
+    id: "block.tilt.glare",
+    panel: "style",
+    target: "block",
+    label: "Tilt glare",
+    path: ["style", "tiltGlare"],
+    input: "switch",
+    responsive: false,
+  }),
+  // TASK-522-05-L03 — block glass/glow surface + hover presets on ANY block
+  // (DISJOINT id-namespace from decoration/tilt/layer). Render is handled by the
+  // 522-03 block-frame resolver (data-surface/data-hover) + the 522-01-L04 CSS;
+  // controls only. responsive:false: both are base-only data-attrs;
+  // pageResponsiveCss cannot express a per-breakpoint attr/class delta against the
+  // inline base (finding-6; parent Acceptance #7). "none" resets (normalize omits).
+  // TASK-524-02-L03 — independent glass/glow tint (alpha-capable) on ANY block.
+  // Mirrors block.style.textColor/background (input:"color", responsive:true).
+  // BASE: resolveBlockCompositionAttrs seeds --surface-glow/--deco-ring/
+  // --orb-color inline on the block frame. PER-DEVICE: pageResponsiveCss
+  // (collectBlockDeclarations, 524-02-L03 branch) retargets those same three
+  // frame custom props under the tablet/mobile @media rule with !important, so
+  // a per-breakpoint tint override actually emits (gated, like the base, on a
+  // plain non-gradient tint AND an active surfacePreset/hoverEffect/motion).
+  // Clearing it omits surfaceTint (present-only) → background fallback.
+  control({
+    id: "block.surface.tint",
+    panel: "style",
+    target: "block",
+    label: "Surface tint",
+    path: ["style", "surfaceTint"],
+    input: "color",
+    responsive: true,
+  }),
+  control({
+    id: "block.surface.preset",
+    panel: "style",
+    target: "block",
+    label: "Surface preset",
+    path: ["style", "surfacePreset"],
+    input: "select",
+    responsive: false,
+    options: pageSurfacePresets,
+  }),
+  control({
+    id: "block.hover.effect",
+    panel: "style",
+    target: "block",
+    label: "Hover effect",
+    path: ["style", "hoverEffect"],
+    input: "select",
+    responsive: false,
+    options: pageBlockHoverEffects,
+  }),
+  // TASK-522-05-L02 — layered-canvas child placement on ANY block (universal:
+  // any block can be a layered child). Meaningful only inside a layered parent;
+  // inert otherwise. ONLY the numeric x/y/z offsets are responsive:true — they
+  // emit per-breakpoint --layer-* custom-prop deltas via the pageResponsiveCss
+  // seam (the one effect field that genuinely varies per device). anchor is a
+  // base-only data-attr → responsive:false. (block.<type>.composition.mode lives
+  // in the per-type registry below — no appliesTo exists on the universal array.)
+  control({
+    id: "block.layer.x",
+    panel: "layout",
+    target: "block",
+    label: "Layer X",
+    path: ["style", "layer", "x"],
+    input: "number",
+    responsive: true,
+    clamp: { min: -50, max: 150 },
+    unit: "%",
+  }),
+  control({
+    id: "block.layer.y",
+    panel: "layout",
+    target: "block",
+    label: "Layer Y",
+    path: ["style", "layer", "y"],
+    input: "number",
+    responsive: true,
+    clamp: { min: -50, max: 150 },
+    unit: "%",
+  }),
+  control({
+    id: "block.layer.z",
+    panel: "layout",
+    target: "block",
+    label: "Layer Z (stack)",
+    path: ["style", "layer", "z"],
+    input: "number",
+    responsive: true,
+    clamp: { min: 0, max: 40 },
+    unit: "",
+  }),
+  control({
+    id: "block.layer.anchor",
+    panel: "layout",
+    target: "block",
+    label: "Layer anchor",
+    path: ["style", "layer", "anchor"],
+    input: "select",
+    responsive: false,
+    options: pageLayerAnchors,
+    // Unset emits no data-layer-anchor, so the frame renders with no translate
+    // (translate(0,0)) — the same placement as "top-left" (the first option the
+    // <select> presents). Declare that as the effective default.
+    fallback: "top-left",
+  }),
+  // ── TASK-534 ── universal magnetic-hover toggle (present-only; normalize omits
+  // false/unset). The runtime clause is `pointer:fine` + reduced-motion gated, so
+  // the effect is a progressive enhancement (no magnet on touch/reduce).
+  control({
+    id: "block.style.magnetic",
+    panel: "style",
+    target: "block",
+    label: "Magnetic hover",
+    path: ["style", "magnetic"],
+    input: "switch",
+    responsive: false,
+  }),
   control({
     id: "block.visibility.visible",
     panel: "visibility",
@@ -524,6 +1005,29 @@ export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] 
     // Blocks are visible unless explicitly hidden (defaultBlockVisibility).
     fallback: true,
   }),
+  // ── TASK-533-01 REGION: block grid span (number inputs, PAGE_BLOCK_SPAN_CLAMP) ──
+  // No `fallback` — an unset span shows empty (present-only; not a misleading "1").
+  control({
+    id: "block.style.colSpan",
+    panel: "layout",
+    target: "block",
+    label: "Column span",
+    path: ["style", "colSpan"],
+    input: "number",
+    responsive: true,
+    clamp: PAGE_BLOCK_SPAN_CLAMP,
+  }),
+  control({
+    id: "block.style.rowSpan",
+    panel: "layout",
+    target: "block",
+    label: "Row span",
+    path: ["style", "rowSpan"],
+    input: "number",
+    responsive: true,
+    clamp: PAGE_BLOCK_SPAN_CLAMP,
+  }),
+  // ── END TASK-533-01 REGION ────────────────────────────────────────────────
 ] as const;
 
 /**
@@ -555,6 +1059,32 @@ export const pageTypographyBlockControls: readonly PageEditorControlDefinition[]
     responsive: true,
     options: pageTypographyFontSizes,
   }),
+  // ── TASK-532 typography fidelity (Bundle B) — fluid size + text-transform ──
+  // Both `fontSize` (token) and `fontSizeCustom` (fluid) are always shown (the
+  // registry has no value-conditional visibility); the "fluid wins over token"
+  // precedence is a RENDER rule (L05). A per-device font-size STRING is
+  // CSS-expressible, so this control is responsive.
+  control({
+    id: "block.style.fontSizeCustom",
+    panel: "typography",
+    target: "block",
+    label: "Fluid size",
+    path: ["style", "fontSizeCustom"],
+    input: "text",
+    responsive: true,
+  }),
+  control({
+    id: "block.style.textTransform",
+    panel: "typography",
+    target: "block",
+    label: "Text transform",
+    path: ["style", "textTransform"],
+    input: "select",
+    responsive: true,
+    options: pageTypographyTextTransforms,
+    fallback: "none",
+  }),
+  // ── end TASK-532 ──
   control({
     id: "block.style.fontWeight",
     panel: "typography",
@@ -650,6 +1180,29 @@ export const isPageSectionVariantOption = (
   value: string
 ): value is PageSectionVariant =>
   getPageSectionVariantOptions(type).includes(value as PageSectionVariant);
+
+/**
+ * TASK-522-05-L02 — the layout-only `block.composition.mode` control. The live
+ * registry has NO `appliesTo` field and the universal block controls are never
+ * type-gated, so this can't live in the universal array with a predicate; it
+ * goes in the per-type `pageBlockControlRegistry` entries for the layout blocks
+ * (container/columns/group), the live idiom for type-scoped controls.
+ * responsive:false — composition is a base-only data-attr with no
+ * per-breakpoint CSS-expressible delta.
+ */
+const layoutCompositionControl = (
+  type: "container" | "columns" | "group"
+): PageEditorControlDefinition =>
+  control({
+    id: `block.${type}.composition.mode`,
+    panel: "layout",
+    target: "block",
+    label: "Composition",
+    path: ["style", "composition"],
+    input: "select",
+    responsive: false,
+    options: pageCompositions,
+  });
 
 export const pageBlockControlRegistry: Record<
   PageBlockType,
@@ -769,7 +1322,26 @@ export const pageBlockControlRegistry: Record<
     blockPropControl("video", "autoplay", { label: "Autoplay", input: "switch" }),
     blockPropControl("video", "muted", { label: "Muted", input: "switch" }),
   ],
-  gallery: [],
+  // ── TASK-534 ── gallery filter controls (present-only writes; category tokens
+  // kebab-sanitized on save via the 534-01-L01 write normalizer).
+  gallery: [
+    blockPropControl("gallery", "layout", {
+      label: "Layout",
+      input: "segmented",
+      panel: "style",
+      options: pageGalleryLayouts,
+    }),
+    blockPropControl("gallery", "filterable", {
+      label: "Filterable",
+      input: "switch",
+      panel: "content",
+    }),
+    blockPropControl("gallery", "filterCategories", {
+      label: "Filter categories",
+      input: "items",
+      panel: "content",
+    }),
+  ],
   form: [
     // TASK-456: the form block Content panel. `formId` is a nullable
     // reference picked from the Forms admin through the dynamic "forms"
@@ -885,6 +1457,26 @@ export const pageBlockControlRegistry: Record<
       input: "number",
       clamp: { min: 1, max: 16 },
     }),
+    // ── TASK-532 eyebrow divider (Bundle B) — decorative gradient rule ──
+    blockPropControl("divider", "gradient", {
+      label: "Gradient rule",
+      input: "switch",
+      panel: "style",
+    }),
+    blockPropControl("divider", "width", {
+      label: "Rule length",
+      input: "number",
+      panel: "style",
+      clamp: PAGE_DIVIDER_WIDTH_CLAMP,
+      unit: "px",
+    }),
+    blockPropControl("divider", "align", {
+      label: "Rule align",
+      input: "segmented",
+      panel: "style",
+      options: pageDividerAligns,
+    }),
+    // ── end TASK-532 ──
   ],
   spacer: [
     blockPropControl("spacer", "size", {
@@ -900,14 +1492,45 @@ export const pageBlockControlRegistry: Record<
     ...pageTypographyBlockControls,
     blockStyleTextAlignTypographyControl,
   ],
-  icon: [],
+  icon: [
+    blockPropControl("icon", "name", {
+      label: "Icon",
+      input: "select",
+      options: animatedIconNames,
+    }),
+    blockPropControl("icon", "animation", {
+      label: "Animation",
+      panel: "style",
+      input: "segmented",
+      options: animatedIconAnimations,
+    }),
+    blockPropControl("icon", "size", {
+      label: "Size",
+      panel: "style",
+      input: "number",
+      clamp: { min: ANIMATED_ICON_SIZE_CLAMP.min, max: ANIMATED_ICON_SIZE_CLAMP.max },
+      unit: "px",
+    }),
+    blockPropControl("icon", "speed", {
+      label: "Speed",
+      panel: "style",
+      input: "number",
+      clamp: { min: ANIMATED_ICON_SPEED_CLAMP.min, max: ANIMATED_ICON_SPEED_CLAMP.max },
+      unit: "ms",
+    }),
+    blockPropControl("icon", "color", {
+      label: "Color",
+      panel: "style",
+      input: "color",
+    }),
+  ],
   quote: [
     blockPropControl("quote", "text", { label: "Quote", input: "text" }),
     blockPropControl("quote", "cite", { label: "Cite", input: "text" }),
     ...pageTypographyBlockControls,
     blockStyleTextAlignTypographyControl,
   ],
-  container: [],
+  container: [layoutCompositionControl("container")],
   columns: [
     blockPropControl("columns", "count", {
       label: "Column count",
@@ -927,6 +1550,7 @@ export const pageBlockControlRegistry: Record<
       panel: "layout",
       options: pageColumnDistributions,
     }),
+    layoutCompositionControl("columns"),
   ],
   group: [
     blockPropControl("group", "direction", {
@@ -945,6 +1569,107 @@ export const pageBlockControlRegistry: Record<
       input: "number",
       panel: "spacing",
       clamp: { min: 0, max: 120 },
+    }),
+    layoutCompositionControl("group"),
+    // TASK-522-05-L04 — marquee/ticker (group-only, per-type). The model is
+    // { speed?; direction?; seamless? } guarded by assertKnownKeys — there is NO
+    // `enabled` key (writing one throws PageDocumentError). PRESENCE convention:
+    // a set `speed` ⇒ ticker ON; clearing it empties the object (normalize omits)
+    // ⇒ OFF. responsive:false — the marquee renders as a base-only .cx-marquee
+    // track + animation class; pageResponsiveCss cannot express a per-breakpoint
+    // class/animation delta against the inline base (finding-6; Acceptance #7).
+    control({
+      id: "group.marquee.speed",
+      panel: "style",
+      target: "block",
+      label: "Ticker speed",
+      path: ["style", "marquee", "speed"],
+      input: "number",
+      responsive: false,
+      clamp: { min: 8, max: 40 },
+      unit: "s",
+    }),
+    control({
+      id: "group.marquee.direction",
+      panel: "style",
+      target: "block",
+      label: "Ticker direction",
+      path: ["style", "marquee", "direction"],
+      input: "select",
+      responsive: false,
+      options: pageMarqueeDirections,
+    }),
+    control({
+      id: "group.marquee.seamless",
+      panel: "style",
+      target: "block",
+      label: "Seamless loop",
+      path: ["style", "marquee", "seamless"],
+      input: "switch",
+      responsive: false,
+    }),
+  ],
+  // TASK-522-02-L02: sanitized SVG paste + accessible label + draw-in toggle/speed.
+  customSvg: [
+    blockPropControl("customSvg", "svg", {
+      label: "SVG source",
+      input: "text",
+      panel: "content",
+    }),
+    blockPropControl("customSvg", "label", {
+      label: "Accessible label",
+      input: "text",
+      panel: "content",
+    }),
+    blockPropControl("customSvg", "drawIn", {
+      label: "Stroke draw-in",
+      input: "switch",
+      panel: "style",
+    }),
+    blockPropControl("customSvg", "drawSpeed", {
+      label: "Draw speed",
+      input: "number",
+      panel: "style",
+      clamp: { min: 600, max: 6000 },
+      unit: "ms",
+    }),
+  ],
+  // ── TASK-534 ── switcher per-type controls. `tabs` REUSES the "items" (listItems)
+  // editor: a `{label,href}` editor row is safe because the 534-01-L01 switcher-tabs
+  // normalizer rebuilds each tab as a fresh `{label}` (drops href) BEFORE schema
+  // validation runs on the normalized doc. Panel bodies (child blocks per panel:N
+  // slot) are edited on the canvas via the existing slot-child authoring path.
+  switcher: [
+    blockPropControl("switcher", "tabs", {
+      label: "Tabs",
+      input: "items",
+      panel: "content",
+    }),
+    blockPropControl("switcher", "activeIndex", {
+      label: "Default tab",
+      input: "number",
+      panel: "content",
+      clamp: { min: 0, max: SWITCHER_MAX_PANELS - 1 },
+    }),
+    blockPropControl("switcher", "variant", {
+      label: "Style",
+      input: "segmented",
+      panel: "style",
+      options: switcherVariants,
+    }),
+  ],
+  // ── TASK-534 ── scrollHint per-type controls (glyph + accessible label).
+  scrollHint: [
+    blockPropControl("scrollHint", "glyph", {
+      label: "Indicator",
+      input: "segmented",
+      panel: "style",
+      options: scrollHintGlyphs,
+    }),
+    blockPropControl("scrollHint", "label", {
+      label: "Accessible label",
+      input: "text",
+      panel: "content",
     }),
   ],
 };

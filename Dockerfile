@@ -3,10 +3,10 @@ ARG BUILDPLATFORM
 ARG TARGETPLATFORM
 ARG APP_VERSION=1.0.0
 
-FROM oven/bun:1.3.13 AS builder
+FROM oven/bun:1.3.14 AS builder
 WORKDIR /app
 
-COPY package.json bun.lock ./
+COPY package.json bun.lock bunfig.toml ./
 COPY core/package.json core/package.json
 COPY store/package.json store/package.json
 COPY packages/sdk/package.json packages/sdk/package.json
@@ -25,7 +25,7 @@ RUN bun run build:site \
        cp dist/site/.vite/manifest.json dist/site/manifest.json; \
      fi
 
-FROM oven/bun:1.3.6 AS runner
+FROM oven/bun:1.3.14 AS runner
 WORKDIR /app
 
 ARG APP_VERSION=1.0.0
@@ -42,4 +42,4 @@ EXPOSE 3000
 
 USER bun
 
-CMD ["bun", "run", "server/dockerStart.ts"]
+CMD ["bun", "--config=/app/bunfig.toml", "--preload=/app/core/server/productionReactRuntime.ts", "run", "server/dockerStart.ts"]

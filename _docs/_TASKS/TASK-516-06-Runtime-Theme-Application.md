@@ -8,7 +8,7 @@
 **Estimated Effort:** Medium
 **Dependencies:** TASK-516-01 (`resolveFormTheme`, token maps), TASK-516-04
 (canvas theme application patterns to mirror).
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-07-06)
 
 ---
 

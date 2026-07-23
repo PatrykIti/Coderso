@@ -1,5 +1,10 @@
 import type { ComponentType, CSSProperties, ReactNode } from "react";
 
+import {
+  CSS_COLOR_SCHEMA_PATTERNS,
+  CSS_COLOR_VALUE_MAX_LENGTH,
+  normalizeCssColorValue,
+} from "../../services/theme/cssColorContract";
 import { renderEditorPlaceholder } from "../renderContext";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
 import {
@@ -17,7 +22,7 @@ import type {
   WidgetEditorProps,
   WidgetRenderContext,
 } from "../types";
-import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
+import { compactObject, compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
 
 export const gridColumnsSpanTokens = [
   "1",
@@ -53,9 +58,16 @@ export const gridColumnsMinHeightTokens = ["none", "sm", "md", "lg", "xl"] as co
 export const gridColumnsOverflowTokens = ["visible", "hidden"] as const;
 export const gridColumnsSelfAlignTokens = ["inherit", "start", "center", "end", "stretch"] as const;
 
-const gridColumnsColorValueSchemaPattern =
-  "^(?:#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|var\\(--color-[a-z0-9-]+\\))$";
-const gridColumnsColorValuePattern = new RegExp(gridColumnsColorValueSchemaPattern);
+const gridColumnsColorValueSchema = {
+  anyOf: [
+    { const: "" },
+    {
+      type: "string",
+      maxLength: CSS_COLOR_VALUE_MAX_LENGTH,
+      pattern: CSS_COLOR_SCHEMA_PATTERNS.authoring,
+    },
+  ],
+} as const;
 
 export type GridColumnsVariantId = "equal" | "asymmetric" | "masonry-lite";
 export type GridColumnsSpan = (typeof gridColumnsSpanTokens)[number];
@@ -273,14 +285,8 @@ export const gridColumnsSchema = {
             additionalProperties: false,
             properties: {
               surface: { enum: ["inherit", "on"] },
-              background: {
-                type: "string",
-                pattern: gridColumnsColorValueSchemaPattern,
-              },
-              borderColor: {
-                type: "string",
-                pattern: gridColumnsColorValueSchemaPattern,
-              },
+              background: gridColumnsColorValueSchema,
+              borderColor: gridColumnsColorValueSchema,
               borderWidth: { enum: [...gridColumnsBorderWidthTokens] },
               radius: { enum: [...gridColumnsRadiusTokens] },
               padding: { enum: [...gridColumnsPaddingTokens] },
@@ -305,8 +311,8 @@ export const gridColumnsSchema = {
       additionalProperties: false,
       properties: {
         cardizeColumns: { type: "boolean" },
-        columnBackground: { type: "string", pattern: gridColumnsColorValueSchemaPattern },
-        columnBorderColor: { type: "string", pattern: gridColumnsColorValueSchemaPattern },
+        columnBackground: gridColumnsColorValueSchema,
+        columnBorderColor: gridColumnsColorValueSchema,
         columnBorderWidth: { enum: [...gridColumnsBorderWidthTokens] },
         columnRadius: { enum: [...gridColumnsRadiusTokens] },
         columnPadding: { enum: [...gridColumnsPaddingTokens] },
@@ -810,9 +816,7 @@ const resolveColumnId = (value: string | undefined, index: number, used: Set<str
 };
 
 export function normalizeGridColumnsColorValue(value: unknown): GridColumnsColorValue | undefined {
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return gridColumnsColorValuePattern.test(trimmed) ? trimmed : undefined;
+  return normalizeCssColorValue(value, "authoring");
 }
 
 function resolveOptionalGridColumnsColorValue(value: unknown): GridColumnsColorValue | undefined {
@@ -1127,10 +1131,14 @@ function resolveGridColumnsColumnSurface(
   return {
     cardized,
     overflow: override?.overflow ?? "visible",
-    backgroundColor: resolveClearableStyleValue(
-      override?.background ?? globalStyle.columnBackground
+    backgroundColor: resolveClearableCssColorValue(
+      override?.background ?? globalStyle.columnBackground,
+      "authoring"
     ),
-    borderColor: resolveClearableStyleValue(override?.borderColor ?? globalStyle.columnBorderColor),
+    borderColor: resolveClearableCssColorValue(
+      override?.borderColor ?? globalStyle.columnBorderColor,
+      "authoring"
+    ),
     borderWidth: override?.borderWidth ?? globalStyle.columnBorderWidth ?? "1",
     radius: override?.radius ?? globalStyle.columnRadius ?? "xl",
     padding: override?.padding ?? globalStyle.columnPadding ?? "4",

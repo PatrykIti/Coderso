@@ -6,11 +6,16 @@ import {
   createPageSectionV2,
 } from "../../../core/services/pages/pageDocumentV2";
 import {
+  PAGE_BG_MAX_LAYERS,
   composeAuthoringGradientCss,
   escapeAuthoringCssString,
+  isSafeAuthoringCssBackgroundLayers,
+  isSafeAuthoringCssLength,
   normalizeAuthoringSafeHref,
   sanitizeAuthoringCssBackground,
   sanitizeAuthoringCssColor,
+  sanitizeAuthoringCssFontSize,
+  sanitizeAuthoringGridTemplate,
   sanitizeAuthoringLinkHref,
   sanitizeAuthoringMediaUrl,
   sanitizeAuthoringRichTextHtml,
@@ -69,6 +74,87 @@ test("authoring CSS sanitizers keep safe color and gradient values fail closed",
   expect(sanitizeAuthoringCssColor("red;}body{display:none")).toBeNull();
   expect(sanitizeAuthoringCssBackground("url(javascript:alert(1))")).toBeNull();
   expect(sanitizeAuthoringCssBackground("linear-gradient(90deg, #000, </style>)")).toBeNull();
+});
+
+test("TASK-531: multi-layer background sanitizer accepts safe glow-over-gradient layers", () => {
+  // Reference `.cta-card`: radial glow OVER a base linear gradient — the whole reason
+  // 531 relaxes the write boundary. Value returned trimmed-unchanged.
+  const ctaCard =
+    "radial-gradient(circle at 82% 10%, rgba(142,232,255,.35), transparent 60%), linear-gradient(145deg,#0f1720,#1b2733)";
+  expect(sanitizeAuthoringCssBackground(ctaCard)).toBe(ctaCard);
+  expect(isSafeAuthoringCssBackgroundLayers(ctaCard)).toBe(true);
+
+  // A color layer + a gradient layer (allowlist accepts either per layer).
+  const colorPlusGradient =
+    "linear-gradient(180deg,#eaf3ff,#dfe9ff), radial-gradient(circle,#8ee8ff,transparent 70%)";
+  expect(sanitizeAuthoringCssBackground(colorPlusGradient)).toBe(colorPlusGradient);
+
+  // Single-layer values STILL accepted byte-identically through the unchanged fast path
+  // (they never enter the multi-layer branch — no top-level comma).
+  expect(sanitizeAuthoringCssBackground("linear-gradient(90deg,#000,#fff)")).toBe(
+    "linear-gradient(90deg,#000,#fff)"
+  );
+  expect(sanitizeAuthoringCssBackground("#0d9488")).toBe("#0d9488");
+  expect(sanitizeAuthoringCssBackground("var(--color-primary)")).toBe("var(--color-primary)");
+  expect(sanitizeAuthoringCssBackground("rgba(0,0,0,.5)")).toBe("rgba(0,0,0,.5)");
+  // A single gradient is NOT a "multi-layer" value (needs >= 2 top-level layers).
+  expect(isSafeAuthoringCssBackgroundLayers("linear-gradient(90deg,#000,#fff)")).toBe(false);
+});
+
+test("TASK-531: multi-layer background sanitizer rejects hostile constructs (XSS/mXSS corpus)", () => {
+  const rejected = [
+    // The original attack: a trailing url() beacon layer after a valid gradient head.
+    "linear-gradient(#fff,#000), url(//evil/beacon)",
+    // A bare url() alone (single layer, but url() rejected by the fast path too).
+    "url(//evil/x)",
+    // Other fetch-capable CSS image functions as trailing layers.
+    'linear-gradient(#fff,#000), image-set("//evil/x" 1x)',
+    "element(#foo), linear-gradient(#fff,#000)",
+    "cross-fade(url(//evil/a), url(//evil/b)), linear-gradient(#fff,#000)",
+    "image(//evil/x), linear-gradient(#fff,#000)",
+    // Scriptable / navigable protocols as a layer.
+    "javascript:alert(1), linear-gradient(#fff,#000)",
+    "linear-gradient(#fff,#000), data:text/html,<script>",
+    "vbscript:msgbox(1), linear-gradient(#fff,#000)",
+    // At-rule / legacy IE injection vectors (whole-value tripwire).
+    "@import url(evil); linear-gradient(#fff,#000)",
+    "linear-gradient(#fff,#000), expression(alert(1))",
+    "linear-gradient(#fff,#000), behavior:url(#default#foo)",
+    "-moz-binding:url(//evil/x), linear-gradient(#fff,#000)",
+    // A layer that is neither a safe color nor a safe gradient (fail-closed, whole value).
+    "12 34, linear-gradient(#fff,#000)",
+  ];
+  for (const value of rejected) {
+    expect(sanitizeAuthoringCssBackground(value)).toBeNull();
+    expect(isSafeAuthoringCssBackgroundLayers(value)).toBe(false);
+  }
+
+  // Layer-count cap: 7 safe top-level layers is over PAGE_BG_MAX_LAYERS (6) ⇒ reject.
+  const overCap = Array.from({ length: PAGE_BG_MAX_LAYERS + 1 }, () => "#000").join(", ");
+  expect(sanitizeAuthoringCssBackground(overCap)).toBeNull();
+  expect(isSafeAuthoringCssBackgroundLayers(overCap)).toBe(false);
+  // Exactly at the cap is accepted (boundary).
+  const atCap = Array.from({ length: PAGE_BG_MAX_LAYERS }, () => "#000").join(", ");
+  expect(isSafeAuthoringCssBackgroundLayers(atCap)).toBe(true);
+});
+
+test("TASK-531: multi-layer split is paren-aware and the accept corpus is idempotent", () => {
+  // A comma INSIDE a gradient's own paren group is NOT a top-level split point — the
+  // value is treated as ONE safe layer (single-layer fast path), not shredded.
+  const singleWithInnerCommas = "radial-gradient(circle, #8ee8ff, transparent 70%)";
+  expect(sanitizeAuthoringCssBackground(singleWithInnerCommas)).toBe(singleWithInnerCommas);
+  expect(isSafeAuthoringCssBackgroundLayers(singleWithInnerCommas)).toBe(false); // one layer
+
+  // Idempotence over the accept corpus.
+  for (const value of [
+    "radial-gradient(circle at 82% 10%, rgba(142,232,255,.35), transparent 60%), linear-gradient(145deg,#0f1720,#1b2733)",
+    "linear-gradient(180deg,#eaf3ff,#dfe9ff), radial-gradient(circle,#8ee8ff,transparent 70%)",
+    "linear-gradient(90deg,#000,#fff)",
+  ]) {
+    const first = sanitizeAuthoringCssBackground(value);
+    expect(first).not.toBeNull();
+    expect(sanitizeAuthoringCssBackground(first as string)).toBe(first);
+  }
 });
 
 test("gradient composer orders stops, clamps values, and rejects unsafe colors", () => {
@@ -152,4 +238,128 @@ test("Page v2 normalizers sanitize URL and style fields before persistence", () 
   expect(section.style.background).toBe("#ffffff");
   expect(section.style.backgroundImage).toBeNull();
   expect(section.style.accent).toBe("#0d9488");
+});
+
+// ── TASK-532 fluid font-size length grammar (Bundle B) ──
+test("TASK-532 isSafeAuthoringCssLength accepts the numeric-unit-clamp grammar only", () => {
+  const accepted = [
+    "1.45rem",
+    ".78rem",
+    "12px",
+    "100%",
+    "5vw",
+    "2.5em",
+    "10ch",
+    "clamp(2.6rem,5vw,4.4rem)",
+    "min(4rem,8vw)",
+    "max(1rem,2vh)",
+    "clamp(.9rem,1.2vw,1.1rem)",
+  ];
+  for (const value of accepted) {
+    expect(isSafeAuthoringCssLength(value)).toBe(true);
+  }
+
+  const rejected = [
+    "url(x)",
+    "url(javascript:1)",
+    "expression(alert(1))",
+    "1px;color:red",
+    "12px}",
+    "{font-size:0}",
+    "/*x*/1rem",
+    "calc(1rem + 2px)",
+    "clamp(1rem,2rem)", // 2 args
+    "clamp(1rem,2rem,3rem,4rem)", // 4 args
+    "1rem 2rem",
+    "red",
+    "var(--x)",
+    "1", // no unit
+    "1deg",
+    "1s",
+    `${"9".repeat(65)}px`, // 67 chars > 64 cap
+    "",
+    "-",
+    "clamp(url(x),1rem,2rem)",
+    "\\",
+    "<script>",
+  ];
+  for (const value of rejected) {
+    expect(isSafeAuthoringCssLength(value)).toBe(false);
+  }
+});
+
+test("TASK-532 sanitizeAuthoringCssFontSize returns the trimmed string on accept, null otherwise", () => {
+  expect(sanitizeAuthoringCssFontSize("clamp(2.6rem,5vw,4.4rem)")).toBe("clamp(2.6rem,5vw,4.4rem)");
+  expect(sanitizeAuthoringCssFontSize("  1.45rem  ")).toBe("1.45rem");
+  expect(sanitizeAuthoringCssFontSize("expression(alert(1))")).toBeNull();
+  expect(sanitizeAuthoringCssFontSize("1px;color:red")).toBeNull();
+  expect(sanitizeAuthoringCssFontSize("")).toBeNull();
+  // Non-string input fails closed.
+  expect(sanitizeAuthoringCssFontSize(12 as unknown)).toBeNull();
+  expect(sanitizeAuthoringCssFontSize(null)).toBeNull();
+  expect(sanitizeAuthoringCssFontSize({ toString: () => "1rem" } as unknown)).toBeNull();
+});
+
+// ── TASK-533-01-L04 — restricted grid-template-columns sanitizer ─────────────
+// The ONLY author STRING reaching a CSS VALUE position (section columnTemplate).
+// Strict ALLOWLIST: accept a tiny grid-track grammar, REJECT everything else → null.
+test("sanitizeAuthoringGridTemplate accepts the restricted grammar (round-trips normalized whitespace)", () => {
+  for (const ok of [
+    "1fr 1fr",
+    "1.15fr .85fr", // flagship leading-dot ratio (.project-grid) — MUST survive
+    "1fr 1.2fr", // intro-strip ratio (.intro-strip-grid)
+    "minmax(0,1fr) minmax(420px,.9fr)", // flagship .hero-grid — bare `0` bound + leading-dot
+    "minmax(0,1fr) 1fr",
+    "auto 1fr",
+    "repeat(3,1fr)",
+    "1fr 2fr 1fr",
+  ]) {
+    expect(sanitizeAuthoringGridTemplate(ok)).toBe(ok.replace(/\s+/g, " "));
+  }
+  // Collapses internal whitespace runs to a single space.
+  expect(sanitizeAuthoringGridTemplate("  1.15fr    .85fr  ")).toBe("1.15fr .85fr");
+  // AUDIT REMEDIATION (2026-07-09): the CANONICAL spaced minmax()/repeat() form — exactly
+  // how the reference `.hero-grid` and any devtools copy-paste writes it (a space after the
+  // internal comma) — MUST be accepted and normalised to the no-inner-space canonical form,
+  // NOT rejected. The old `raw.split(/\s+/)` shredded `minmax(0, 1fr)` into `minmax(0,`/
+  // `1fr)` (neither a valid track) ⇒ silent whole-value omission.
+  expect(sanitizeAuthoringGridTemplate("minmax(0, 1fr) minmax(420px, .9fr)")).toBe(
+    "minmax(0,1fr) minmax(420px,.9fr)"
+  );
+  expect(sanitizeAuthoringGridTemplate("repeat(3, 1fr)")).toBe("repeat(3,1fr)");
+  // Mixed spaced-function + bare tracks with irregular top-level whitespace also normalise.
+  expect(sanitizeAuthoringGridTemplate("minmax(0, 1fr)   1fr")).toBe("minmax(0,1fr) 1fr");
+  expect(sanitizeAuthoringGridTemplate("1.15fr minmax(200px, 1fr)")).toBe(
+    "1.15fr minmax(200px,1fr)"
+  );
+});
+
+test("sanitizeAuthoringGridTemplate rejects injection / out-of-grammar → null", () => {
+  for (const bad of [
+    "1fr;}body{display:none}",
+    "url(evil)",
+    "expression(alert(1))",
+    "repeat(999,1fr)", // count > GRID_MAX_REPEAT
+    "<b>",
+    "calc(100% - 10px)",
+    "1fr @import",
+    "1fr /* x */ 1fr",
+    "minmax(a,b)", // inner tokens fail GRID_LEN (closed grammar)
+    "repeat(9,zz)", // inner token fails GRID_LEN
+    "minmax(1fr)", // wrong arg count
+    "1fr `x`",
+    "1fr\\2f 1fr",
+    "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr", // 13 tracks > GRID_MAX_TRACKS
+    "5", // bare unitless standalone track is not valid
+    "",
+    "   ",
+    "a".repeat(300), // over-length
+  ]) {
+    expect(sanitizeAuthoringGridTemplate(bad), `expected reject: ${bad}`).toBeNull();
+  }
+  // Non-string inputs.
+  expect(sanitizeAuthoringGridTemplate(42 as unknown)).toBeNull();
+  expect(sanitizeAuthoringGridTemplate(null as unknown)).toBeNull();
+  expect(sanitizeAuthoringGridTemplate(undefined as unknown)).toBeNull();
+  expect(sanitizeAuthoringGridTemplate({} as unknown)).toBeNull();
 });

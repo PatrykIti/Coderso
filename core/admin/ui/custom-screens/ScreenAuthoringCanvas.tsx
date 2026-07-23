@@ -11,9 +11,10 @@ import {
   SlidersHorizontal,
   Trash2,
 } from "lucide-react";
-import { useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useCallback, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   AuthoringCommandPalette,
   AuthoringLayersPanel,
@@ -211,6 +212,13 @@ export function ScreenAuthoringCanvas({
   const [activePanel, setActivePanel] = useState<ScreenAuthoringPanel>("insert");
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
+  const addBlockAndInspect = useCallback(
+    (type: ScreenBlockKind, field?: ContentField) => {
+      onAddBlock(type, field);
+      setActivePanel("inspect");
+    },
+    [onAddBlock]
+  );
   const selectedBlock = findScreenBlockById(document, selectedBlockId);
   // TASK-505-03 (Item A): a section-only selection resolves to the section
   // inspector (block selection still wins — a selected block's section is edited
@@ -244,7 +252,7 @@ export function ScreenAuthoringCanvas({
           label: chip.label,
           description: screenBlockLabels[chip.kind],
           icon: chip.icon,
-          run: () => onAddBlock(chip.kind),
+          run: () => addBlockAndInspect(chip.kind),
         })),
       },
       {
@@ -261,7 +269,7 @@ export function ScreenAuthoringCanvas({
         ],
       },
     ],
-    [onAddBlock, onAddSection]
+    [addBlockAndInspect, onAddSection]
   );
   const filteredGroups = useMemo(
     () => filterGroups(commandGroups, commandQuery),
@@ -343,7 +351,7 @@ export function ScreenAuthoringCanvas({
     activePanel === "settings" ? (
       settingsPanel
     ) : activePanel === "insert" ? (
-      <ScreenBlockLibrary fields={fields} onAddBlock={onAddBlock} />
+      <ScreenBlockLibrary fields={fields} onAddBlock={addBlockAndInspect} />
     ) : activePanel === "layers" ? (
       <AuthoringLayersPanel nodes={layerNodes} selection={selection} onSelect={selectTarget} />
     ) : selectedBlock ? (
@@ -518,9 +526,12 @@ export function ScreenAuthoringCanvas({
             />
           ) : null}
           <div
-            className="min-h-0 flex-1 overflow-auto overscroll-contain bg-dotted p-6 lg:p-8"
+            className={cn(
+              "min-h-0 flex-1 overflow-auto overscroll-contain bg-dotted p-6 lg:p-8",
+              panelOpen && "lg:pr-[332px]"
+            )}
             data-screen-editor-canvas-scroller="true"
-            style={panelOpen ? { paddingRight: 300 } : undefined}
+            data-screen-canvas-panel-open={panelOpen ? "true" : undefined}
             onClick={() => selectTarget(null)}
           >
             <div className="mx-auto w-full max-w-2xl space-y-4" data-screen-authoring-canvas="true">

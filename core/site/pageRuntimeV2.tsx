@@ -1,4 +1,4 @@
-import { PageDocumentRender } from "../services/pages/pageRendererV2";
+import { PageDocumentRender, documentUsesSpotlight } from "../services/pages/pageRendererV2";
 import type { PageBreakpoint, PageDocumentV2 } from "../services/pages/pageDocumentV2";
 import type { PageRuntimeDataByBlockId } from "../services/pages/pageRuntimeBindingContract";
 import {
@@ -38,6 +38,12 @@ export function DefaultRuntimePageShellV2({
   siteName,
   activePath,
 }: PageTemplatePropsV2) {
+  // TASK-535 — the single viewport-fixed spotlight overlay DIV is de-duplicated
+  // across the two page documents (primary <main> + secondary footer). The primary
+  // owns the overlay whenever it authors spotlight; the footer suppresses ITS copy
+  // when the primary already owns one (`peerSpotlightOn={mainSpotlightOn}`) yet still
+  // renders one for a footer-only spotlight (see PageDocumentRender's `peerSpotlightOn`).
+  const mainSpotlightOn = documentUsesSpotlight(document);
   return (
     <>
       {siteShell?.navigationDocument ? (
@@ -61,7 +67,11 @@ export function DefaultRuntimePageShellV2({
         runtimeDataByBlockId={runtimeDataByBlockId}
       />
       {siteShell?.footerDocument ? (
-        <SiteFooter document={siteShell.footerDocument} breakpoint={previewDevice} />
+        <SiteFooter
+          document={siteShell.footerDocument}
+          breakpoint={previewDevice}
+          peerSpotlightOn={mainSpotlightOn}
+        />
       ) : null}
     </>
   );

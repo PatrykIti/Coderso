@@ -7,7 +7,7 @@
     "jsx": "react-jsx",
     "strict": true,
     "skipLibCheck": true,
-    "baseUrl": ".",
+    "types": ["bun", "vite/client"],
     "paths": {
       "@/*": ["./admin/*"]
     }

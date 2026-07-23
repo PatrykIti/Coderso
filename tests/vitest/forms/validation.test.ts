@@ -326,6 +326,16 @@ test("hidden fields require a trusted default and reject tampering", () => {
     normalizeFormFields([
       {
         type: "hidden",
+        label: "Missing settings",
+        name: "missing_settings",
+      },
+    ])
+  ).toThrow("form_field_invalid");
+
+  expect(() =>
+    normalizeFormFields([
+      {
+        type: "hidden",
         label: "Missing default",
         name: "missing_default",
         settings: {},

@@ -7,6 +7,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import {
   accordionDefaults,
   accordionItemMax,
+  normalizeAccordionData,
   type AccordionData,
 } from "../../../core/widgets/core/accordion";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
@@ -354,6 +355,78 @@ test("Accordion editors expose non-overlapping writable ownership metadata", asy
   }
 });
 
+test("Accordion mounted retained colors stay inherited until explicit picker replacement or clear", async () => {
+  const colorFields = [
+    { key: "surfaceColor", control: "accordion.visual.surface-color" },
+    { key: "borderColor", control: "accordion.visual.border-color" },
+    { key: "summaryTextColor", control: "accordion.visual.summary-text-color" },
+    { key: "descriptionTextColor", control: "accordion.visual.description-text-color" },
+  ] as const;
+  type ColorKey = (typeof colorFields)[number]["key"];
+
+  const initialStyle = Object.fromEntries(
+    colorFields.map((field, index) => [field.key, index % 2 === 0 ? "currentColor" : "inherit"])
+  ) as Record<ColorKey, string>;
+  const initialValue: AccordionData = {
+    ...accordionDefaults,
+    style: initialStyle,
+  };
+  const view = await renderEditor({
+    editor: "visual",
+    initialValue,
+  });
+
+  try {
+    for (const field of colorFields) {
+      const control = view.container.querySelector(`[data-widget-control="${field.control}"]`);
+      expect(control, field.control).toBeInstanceOf(HTMLElement);
+      expect(
+        control?.querySelector('[data-shared-color-state="inherited"]'),
+        field.control
+      ).toBeInstanceOf(HTMLElement);
+      expect(control?.textContent, field.control).toContain("Inherited color");
+    }
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
+
+    let expectedValue = normalizeAccordionData(initialValue);
+    for (const [index, field] of colorFields.entries()) {
+      const control = view.container.querySelector(`[data-widget-control="${field.control}"]`);
+      setInputValue(control?.querySelector('input[type="color"]'), "#A1B2C3");
+      expectedValue = normalizeAccordionData({
+        ...expectedValue,
+        style: {
+          ...expectedValue.style,
+          [field.key]: "#a1b2c3",
+        },
+      });
+
+      expect(view.onChangeSpy, `${field.control}:picker`).toHaveBeenCalledTimes(index * 2 + 1);
+      expect(view.getValue(), `${field.control}:picker-value`).toEqual(expectedValue);
+      expect(view.onChangeSpy, `${field.control}:picker-call`).toHaveBeenLastCalledWith(
+        expectedValue
+      );
+
+      const updatedControl = view.container.querySelector(
+        `[data-widget-control="${field.control}"]`
+      );
+      clickElement(findButtonByText(updatedControl ?? view.container, "Clear"));
+      const { [field.key]: _cleared, ...remainingStyle } = expectedValue.style ?? {};
+      expectedValue = normalizeAccordionData({
+        ...expectedValue,
+        style: remainingStyle,
+      });
+
+      expect(view.onChangeSpy, `${field.control}:clear`).toHaveBeenCalledTimes(index * 2 + 2);
+      expect(view.getValue(), `${field.control}:clear-value`).toEqual(expectedValue);
+      expect(view.onChangeSpy, `${field.control}:clear-call`).toHaveBeenLastCalledWith(
+        expectedValue
+      );
+    }
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("Accordion wizard editor preserves a valid open item and seeds generated items", async () => {
   const view = await renderEditor({
     editor: "wizard",
@@ -485,7 +558,10 @@ test("Accordion visual editor covers behavior controls, style fallbacks, and str
       Array.from(view.container.querySelectorAll("button")).filter((button) =>
         (button.textContent ?? "").includes("Clear")
       )
-    ).toHaveLength(0);
+    ).toHaveLength(2);
+    expect(
+      view.container.querySelectorAll('[data-shared-color-state="saved_custom"]')
+    ).toHaveLength(2);
 
     clickElement(findButtonByText(view.container, "Soft"));
     expect(view.getVariant()).toBe("soft");

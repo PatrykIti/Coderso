@@ -5,11 +5,15 @@ import { clearLocalCache, readLocalCache, writeLocalCache } from "@/utils/storag
 import {
   getDefaultFormSettings,
   normalizeFormSettings,
+  type FormFormTheme as SharedFormFormTheme,
   type FormPresetId as SharedFormPresetId,
 } from "../../services/forms/formSettings";
 import type { FormStatus as SharedFormStatus } from "../../services/forms/formStatus";
 
 export type FormStatus = SharedFormStatus;
+// Re-export the form theme model so admin consumers (516-03) import it from the
+// client boundary: `import type { FormFormTheme } from "@/services/formsClient"`.
+export type FormFormTheme = SharedFormFormTheme;
 
 export type FormRecord = {
   id: string;
@@ -42,6 +46,7 @@ export type FormSettings = {
   stepTitles: string[];
   preset: FormPresetId;
   automationRetry: FormAutomationRetrySettings;
+  theme?: FormFormTheme;
 };
 
 export type FormField = {
@@ -101,12 +106,7 @@ export type FormFieldInput = {
   settings?: Record<string, unknown>;
 };
 
-export type FormActionType =
-  | "email"
-  | "webhook"
-  | "entry_sync"
-  | "redirect"
-  | "success_message";
+export type FormActionType = "email" | "webhook" | "entry_sync" | "redirect" | "success_message";
 
 export type FormActionCondition =
   | { operator: "always" }
@@ -181,8 +181,7 @@ const isFormDetail = (value: unknown): value is FormDetail =>
 
 const isFormActionList = (value: unknown): value is FormAction[] => Array.isArray(value);
 
-const readFormsCache = () =>
-  readLocalCache(cacheKeys.formsList, cacheTtlMs.list, isFormList);
+const readFormsCache = () => readLocalCache(cacheKeys.formsList, cacheTtlMs.list, isFormList);
 
 const readFormDetailCache = (id: string) =>
   readLocalCache(cacheKeys.formDetail(id), cacheTtlMs.detail, isFormDetail);
@@ -432,10 +431,7 @@ export async function listFormActions(formId: string) {
   });
 }
 
-export async function listFormActionsCached(
-  formId: string,
-  options?: { force?: boolean }
-) {
+export async function listFormActionsCached(formId: string, options?: { force?: boolean }) {
   if (!options?.force) {
     const cached = readFormActionsCache(formId);
     if (cached) return cached;

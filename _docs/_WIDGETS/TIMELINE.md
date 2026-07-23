@@ -1,5 +1,10 @@
 # Timeline Widget (v2)
 
+> **Historical compatibility boundary:** this file documents a retained renderer/read-
+> compatibility contract. Configurable widgets exist only on the Admin Dashboard;
+> active editors own their sections and blocks. Do not add or expand a non-Dashboard
+> editor, registry entry, preset, or module-pack surface from this file.
+
 ## Purpose
 
 Timeline for process steps, milestones, and dated events, modeled on the
@@ -127,6 +132,12 @@ built from lucide's `icons` record, so unknown names normalize away safely.
 
 - `background.color` is clearable (clears the section background override).
 - Per-step `markerIconColor` is clearable back to inherited behavior.
+- Both stored paths use the shared `authoring` profile at normalization and
+  render boundaries. Supported literals and `var(--color-*)` references are
+  canonicalized; `currentColor`, `inherit`, invalid ranges, and unsafe values
+  are rejected without the former raw fallback.
+- Schema patterns are structural only. Both optional overrides are present-only
+  when omitted or cleared.
 
 ## Data Model (summary)
 

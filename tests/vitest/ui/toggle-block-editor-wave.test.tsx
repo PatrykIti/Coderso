@@ -4,7 +4,11 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import type { ToggleBlockData } from "../../../core/widgets/core/toggleBlock";
+import {
+  normalizeToggleBlockData,
+  type ToggleBlockData,
+} from "../../../core/widgets/core/toggleBlock";
+import { RETAINED_COLOR_FIELDS } from "../widgets/retainedColorConsumerTable";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -106,6 +110,12 @@ vi.mock("@/components/ui/select", () => {
 
 vi.mock("@/lib/utils", () => ({
   cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
+}));
+
+vi.mock("sonner", () => ({
+  toast: {
+    info: vi.fn(),
+  },
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -276,6 +286,68 @@ const renderEditor = async ({
 afterEach(() => {
   document.body.innerHTML = "";
   vi.restoreAllMocks();
+});
+
+test("ToggleBlock mounted retained colors stay inherited until explicit picker replacement or clear", async () => {
+  const fields = RETAINED_COLOR_FIELDS.toggle;
+  type ColorKey = Exclude<keyof NonNullable<ToggleBlockData["style"]>, "panes">;
+  const keyFor = (path: (typeof fields)[number]["path"]) => path.slice("style.".length) as ColorKey;
+  const initialStyle = Object.fromEntries(
+    fields.map((field, index) => [keyFor(field.path), index % 2 === 0 ? "currentColor" : "inherit"])
+  ) as NonNullable<ToggleBlockData["style"]>;
+  const expectedColors = Object.fromEntries(
+    fields.map((field) => [keyFor(field.path), initialStyle[keyFor(field.path)]])
+  ) as Record<ColorKey, string | undefined>;
+  const view = await renderEditor({
+    editor: "visual",
+    initialValue: { style: initialStyle },
+  });
+
+  try {
+    for (const field of fields) {
+      const control = view.container.querySelector(`[data-widget-control="${field.control}"]`);
+      expect(control, field.control).toBeInstanceOf(HTMLElement);
+      expect(
+        control?.querySelector('[data-shared-color-state="inherited"]'),
+        field.control
+      ).toBeInstanceOf(HTMLElement);
+      expect(control?.textContent, field.control).toContain("Inherited color");
+    }
+    expect(view.onChangeSpy).not.toHaveBeenCalled();
+
+    for (const [index, field] of fields.entries()) {
+      const key = keyFor(field.path);
+      const control = view.container.querySelector(`[data-widget-control="${field.control}"]`);
+      setInputValue(control?.querySelector('input[type="color"]'), "#102030");
+      expectedColors[key] = "#102030";
+      const expectedPickerValue = normalizeToggleBlockData({
+        style: { ...expectedColors },
+      });
+
+      expect(view.onChangeSpy, `${field.control}:picker`).toHaveBeenCalledTimes(index * 2 + 1);
+      expect(view.getValue(), `${field.control}:picker`).toEqual(expectedPickerValue);
+      expect(view.onChangeSpy, `${field.control}:picker-call`).toHaveBeenLastCalledWith(
+        expectedPickerValue
+      );
+
+      const updatedControl = view.container.querySelector(
+        `[data-widget-control="${field.control}"]`
+      );
+      clickButton(findButtonByText(updatedControl ?? view.container, "Clear"));
+      expectedColors[key] = undefined;
+      const expectedClearValue = normalizeToggleBlockData({
+        style: { ...expectedColors },
+      });
+
+      expect(view.onChangeSpy, `${field.control}:clear`).toHaveBeenCalledTimes(index * 2 + 2);
+      expect(view.getValue(), `${field.control}:clear`).toEqual(expectedClearValue);
+      expect(view.onChangeSpy, `${field.control}:clear-call`).toHaveBeenLastCalledWith(
+        expectedClearValue
+      );
+    }
+  } finally {
+    view.cleanup();
+  }
 });
 
 test("ToggleBlock wizard editor keeps setup focused on variant and points daily editing to Visual", async () => {
