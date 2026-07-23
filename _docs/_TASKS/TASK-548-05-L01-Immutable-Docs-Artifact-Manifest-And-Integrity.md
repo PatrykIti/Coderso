@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Documentation Platform / Artifact Integrity
 **Estimated Effort:** Large
-**Dependencies:** TASK-548-04-L03, TASK-545
+**Dependencies:** TASK-548-04-L03; TASK-545 must be `✅ Done` and TASK-547 must be fully terminal before dispatch
 **Status:** ⏳ To Do
 **Changelog:** 1261 (pinned; closure only)
 
@@ -34,7 +34,11 @@ This leaf is the only writer for:
 
 It must not edit `.github/workflows/release.yml`, portal source, root
 `package.json`, `bun.lock`, either PR workflow, or `docs/guide`. L02 consumes the
-exported CLI/manifest contract without duplicating it.
+exported CLI/manifest contract without duplicating it. This leaf is also the
+sole owner of the exact `DocsSearchPublicationReceiptV1` and
+`DocsAssetsPublicationReceiptV1` schemas, normalizers, canonical serializers,
+hash projections, and producer. L02 imports them for retained publication,
+rollback, and post-deploy selection.
 
 ## Artifact Contract
 
@@ -90,8 +94,10 @@ release-metadata/<productVersion>/publication-capsule/
 ```
 
 `latest/**`, routing and global files are byte-identical copies of the
-TASK-548-04-L02 portal outputs. Search/asset receipts are canonical sorted
-projections of the detached portal manifest records, not a rebuilt route graph.
+TASK-548-04-L02 portal outputs. `global/site-index.json` is the immutable
+single-release candidate, not cumulative history. Search/asset receipts are the
+strict L01-owned canonical sorted projections of the detached portal manifest
+records defined below, not a rebuilt route graph.
 The archive payload also
 contains immutable `site/v/<version>`, `site/search/<version>` and
 content-addressed `site/assets`.
@@ -130,6 +136,9 @@ are forbidden.
 The exact recursively reject-unknown shape is:
 
 ```ts
+export const DOCS_RELEASE_ARTIFACT_MAX_BYTES = 536_870_912 as const;
+export const DOCS_RELEASE_ARTIFACT_RECEIPT_MAX_BYTES = 16_384 as const;
+
 type DocsReleaseArtifactReceiptV1 = {
   schema: "coderso.docs-release-artifact-receipt@v1";
   productVersion: string;
@@ -155,8 +164,11 @@ exactly `coderso-docs-V-R.tar.receipt-v1.json`. Both paths are normalized safe
 single-segment relative names; the output root is explicit, realpath-confined
 and never serialized.
 
-`productVersion === gitTag`; `gitSha` is lowercase 40-hex; every SHA-256 is
-lowercase 64-hex; `archiveBytes` is a positive bounded safe integer.
+`productVersion === gitTag`; `gitSha` is lowercase 40-hex; `sourceHash` and
+every `*Sha256` value are lowercase 64-hex. `archiveBytes` is an integer in
+`1..DOCS_RELEASE_ARTIFACT_MAX_BYTES`, equals the independently reopened tar
+size, and the receipt parser reads at most
+`DOCS_RELEASE_ARTIFACT_RECEIPT_MAX_BYTES` before strict JSON normalization.
 `releaseManifestSha256` hashes the exact canonical inserted release-manifest
 bytes. `archiveSha256` hashes the complete reopened tar, including that
 manifest. The other identity/hash fields equal the verified release and portal
@@ -176,12 +188,112 @@ explicit `--archive` and `--receipt` siblings, revalidates both independently,
 and emits those same canonical receipt bytes. Success writes no other stdout;
 failure exits nonzero with bounded structured diagnostics on stderr.
 
+## Search and Visual-Asset Publication Receipt Contract
+
+L01 owns these exact recursively reject-unknown shapes and bounds:
+
+```ts
+export const DOCS_PUBLICATION_RECEIPT_MAX_BYTES = 8_388_608 as const;
+export const DOCS_SEARCH_PUBLICATION_RECORD_MAX = 256 as const;
+export const DOCS_ASSETS_PUBLICATION_RECORD_MAX = 50_000 as const;
+
+type DocsSearchPublicationRecordV1 = {
+  locale: string;
+  path: string;
+  bytes: number;
+  sha256: string;
+};
+
+type DocsSearchPublicationReceiptV1 = {
+  schema: "coderso.docs-search-publication-receipt@v1";
+  productVersion: string;
+  sourceHash: string;
+  portalManifestSha256: string;
+  recordsSha256: string;
+  records: DocsSearchPublicationRecordV1[];
+};
+
+type DocsAssetsPublicationRecordV1 = {
+  visualId: string;
+  docId: string;
+  locale: string;
+  sectionId: string;
+  path: string;
+  bytes: number;
+  sha256: string;
+};
+
+type DocsAssetsPublicationReceiptV1 = {
+  schema: "coderso.docs-assets-publication-receipt@v1";
+  productVersion: string;
+  sourceHash: string;
+  portalManifestSha256: string;
+  recordsSha256: string;
+  records: DocsAssetsPublicationRecordV1[];
+};
+
+normalizeDocsSearchPublicationReceiptV1(
+  value: unknown
+): DocsSearchPublicationReceiptV1;
+serializeDocsSearchPublicationReceiptV1(
+  value: DocsSearchPublicationReceiptV1
+): Uint8Array;
+normalizeDocsAssetsPublicationReceiptV1(
+  value: unknown
+): DocsAssetsPublicationReceiptV1;
+serializeDocsAssetsPublicationReceiptV1(
+  value: DocsAssetsPublicationReceiptV1
+): Uint8Array;
+```
+
+Each receipt has `1..its-record-max` records and serializes keys in the
+displayed order as canonical JSON with LF and one final newline. Search records
+are unique and sorted by `(locale, path)`; each path is exactly
+`search/<productVersion>/<locale>.json` and joins one detached portal-manifest
+file record by identical path/bytes/hash. Asset records are unique and sorted
+by `(visualId, locale, docId, sectionId, path)`; `visualId` is bundle-global,
+and every record is copied exactly from one
+`DocsPortalManifestV1.visualAssets[]` record owned by
+`(docId, locale, sectionId)` and joins one manifest file record by identical
+path/bytes/hash. No locale, owner, path, or digest is inferred from a filename.
+
+`productVersion` and `sourceHash` equal the detached portal manifest exactly;
+`portalManifestSha256` equals the external L03 validation receipt. All hashes
+are lowercase SHA-256 and all paths, locales, identifiers, counts, and bytes are
+bounded and canonical. For domain `D`, `recordsSha256` is exactly SHA-256 over
+`UTF8(D + "\0")` followed by the canonical JSON bytes of `records` with no
+trailing newline, where `D` is respectively
+`coderso.docs-search-publication-records@v1` or
+`coderso.docs-assets-publication-records@v1`. The normalizers recalculate and
+constant-time compare this projection hash; they do not sort malformed input
+into acceptance.
+
+The only producer derives both receipts from the already validated detached
+manifest and receipt:
+
+```ts
+buildDocsPublicationReceiptsV1(input: {
+  portal: DocsPortalManifestV1;
+  validation: DocsPortalValidationReceiptV1;
+}): {
+  search: DocsSearchPublicationReceiptV1;
+  assets: DocsAssetsPublicationReceiptV1;
+};
+```
+
+It writes their exact serialized bytes only to capsule
+`receipts/search.json` and `receipts/assets.json`. L02 must parse them through
+these functions before current publication, retained idempotency, rollback, or
+post-deploy route/asset selection. No L02 schema copy, fallback receipt, or
+reconstruction from retained HTML is valid.
+
 ## Security Contract
 
 - **Endpoint visibility/auth/RBAC/CSRF/rate limit:** no endpoint; build and
   verification commands only.
-- **Reject unknown:** manifest, portal manifest, CLI options, file records, and
-  receipt are strict with recursive unknown-key rejection.
+- **Reject unknown:** release/portal manifests, CLI options, file records,
+  artifact receipt, and both publication receipts are strict with recursive
+  unknown-key rejection.
 - **Path/URL policy:** realpath-confined explicit roots; no symlink, traversal,
   control character, URL-encoded separator, credentials, non-HTTPS origin, or
   unsafe base segment.
@@ -205,11 +317,16 @@ export async function buildDocsReleaseArtifact(
   assertDocsPortalValidationReceiptMatchesManifest(portal, receipt);
   assertReleaseAndPortalPublicBaseEqual(config, portal);
   const files = await inventoryConfinedPortalFiles(portal);
+  const publicationReceipts = buildDocsPublicationReceiptsV1({
+    portal,
+    validation: receipt,
+  });
   const capsuleCandidates =
     await buildPublicationCapsuleCandidatesWithoutReleaseManifest({
-    portal,
-    version: config.releaseIdentity.productVersion,
-  });
+      portal,
+      version: config.releaseIdentity.productVersion,
+      publicationReceipts,
+    });
   assertReleaseManifestCandidateAbsent(capsuleCandidates);
   const payloadFiles = inventoryArchivePayload(files, capsuleCandidates);
   const manifest = normalizeDocsReleaseManifestV1({
@@ -300,6 +417,15 @@ only a resolved task-owned temporary directory.
 - portal/release origin or base-path mismatch, portal-manifest self-record/second
   exclusion, capsule path/name/candidate mutation, regenerated alias, and
   search/asset receipt drift fail;
+- search/assets publication-receipt fixtures pin exact discriminators, key
+  order, bounds, canonical record order and `recordsSha256`; reject unknown
+  keys, missing/duplicate/unsorted records, bad locale or owner tuple,
+  non-global `visualId`, and any portal/validation identity, path, byte, or hash
+  tamper;
+- producer/consumer fixtures prove L01 emits the only accepted receipt bytes and
+  expose those exact fixtures to L02 retained, rollback, and post-deploy
+  selection tests; a localized asset can be selected only by its exact
+  `(docId, locale, sectionId)` owner;
 - mismatched portal `sourceHash`, validator discriminator/status,
   `manifestSha256`, files/artifact root closure, counts, or an attempted
   manifest self-hash field fail;
@@ -312,7 +438,8 @@ only a resolved task-owned temporary directory.
 - interrupted write leaves the previous artifact and cleans the exact temp path;
 - receipt fixtures pin the exact discriminator/key set/order, sibling names/
   paths, archive bytes/hash, portal/release-manifest/payload hashes, safe bounds,
-  final LF, no self hash/inventory, and different-existing-sibling refusal;
+  exact-max acceptance and max-plus-one rejection, final LF, no self
+  hash/inventory, and different-existing-sibling refusal;
 - build/verify CLIs emit the same single canonical receipt JSON on stdout,
   require explicit archive+receipt input for verification, and derive trust from
   bytes rather than requested filenames.
@@ -331,17 +458,24 @@ only a resolved task-owned temporary directory.
 bun test tests/unit/documentation/docsReleaseArtifact.test.ts
 bun scripts/docs/build-release-artifact.ts --help
 bun scripts/docs/verify-release-artifact.ts --help
-bun --cwd packages/docs-portal build
+DOCS_PRODUCT_VERSION=0.0.0-test \
+DOCS_PUBLIC_ORIGIN=https://docs.example.invalid \
+DOCS_PUBLIC_BASE_PATH=/docs \
+SOURCE_DATE_EPOCH=0 \
+  bun --cwd packages/docs-portal build
 bun --cwd core lint:types
 bun --cwd core lint
 wc -l core/services/documentation/release/*.ts \
   scripts/docs/*release-artifact.ts \
   tests/unit/documentation/docsReleaseArtifact.test.ts
+find tests/fixtures/documentation/release-artifact \
+  -type f -exec wc -l {} +
 git diff --check
 ```
 
-Each human-authored file must remain at most 1,000 lines. Re-run a named failure
-alone before classifying it.
+The line-count gate inventories every human-authored L01-owned fixture file,
+regardless of extension, in addition to source and test modules. Each must
+remain at most 1,000 lines. Re-run a named failure alone before classifying it.
 
 ## Documentation Updates Required
 

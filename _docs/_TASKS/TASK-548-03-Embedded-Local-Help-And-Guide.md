@@ -28,8 +28,9 @@ states; this task does not restore the mode selector removed by TASK-182.
 
 `docs/guide` remains the single authored end-user/assistant source. Embedded
 Help consumes the exact compiled distribution produced by TASK-548-01/02, while
-Guide response cards join DB `docId`/`sectionId` evidence to that same local
-visual/example metadata. There is no second Help corpus, per-question remote
+Guide response cards join DB `(docId, locale, sectionId)` evidence to that same
+locale-bound local visual/example metadata. There is no second Help corpus,
+per-question remote
 documentation call, runtime external docs API, or assistant filesystem
 fallback.
 
@@ -84,7 +85,14 @@ are outside TASK-548.
   `permissionRequirement` is satisfied by the current fail-closed permission
   snapshot. Null means authenticated Admin access with no extra catalog
   permission; `allOf` requires every listed permission and `anyOf` at least one.
-  Its destination is resolved through canonical admin path helpers.
+  The exact live ready snapshot `["*"]` grants full access consistently with
+  Admin auth, while authored requirements forbid `*` and duplicate/mixed
+  wildcard snapshots fail closed. Its destination is resolved through
+  canonical admin path helpers.
+- TASK-548-03-L02 exclusively owns and exports the Bun-free
+  `resolvePermittedAdminAction(input): DocsAdminActionResolutionV1 | null` from
+  `packages/docs-renderer/src/adminActions.ts`; Help and Guide import it rather
+  than reimplementing permission or path logic.
 - `Open official docs` is derived from the validated documentation base URL,
   installed product version, locale, and stable slug only when the selected
   embedded Help document also contains `public-docs`. A Help-only document has
@@ -124,7 +132,7 @@ DocsDistributionBundleV2
         |
         +--> packages/docs-renderer --> /admin/help
         |
-        +--> DB docId/sectionId index --> Guide answer evidence
+        +--> DB (docId,locale,sectionId) index --> Guide answer evidence
                                            |
                                            +--> local visual/example card join
 
@@ -145,22 +153,26 @@ payload is stored, and update `_docs/ADMIN_CACHE.md` plus
 
 | ID | Exclusive responsibility | Status |
 |---|---|---|
-| TASK-548-03-L01 | Extract the oversized Admin route registry plus Bun-free canonical route descriptors, preserve route/RBAC parity, and add canonical Help path helpers; do not expose a Help link yet | ⏳ To Do |
+| TASK-548-03-L01 | Extract the oversized Admin route registry plus Bun-free canonical route descriptors, own the strict pre-loss raw permission-state seam in `authClient.ts`, preserve route/RBAC parity, and add canonical Help path helpers; do not expose a Help link yet | ⏳ To Do |
 | TASK-548-03-L02 | Add the auto-discovered Help route, local search/reader/shared renderer package, and atomically replace the external footer Docs link | ⏳ To Do |
 | TASK-548-03-L03 | Split the oversized Assistant panel, implement distinct Guide/Agent products, decouple Guide runtime from Agent enablement, and render rich local evidence cards | ⏳ To Do |
 
 **Land order:** `TASK-548-03-L01 → TASK-548-03-L02 → TASK-548-03-L03`.
 Every source/test file has one leaf writer. L02 may add a route-module file but
 its pure descriptor + TSX binding pair must use L01's discovery seam without
-editing the registry. L03 must not re-open L01/L02 route or Help contracts.
+editing the registry. L01 alone edits `core/admin/services/authClient.ts` and
+`tests/vitest/admin/authClient.test.ts` so raw permission state survives before
+the route context is built. L03 must not re-open L01/L02 route, auth-normalizer
+or Help contracts.
 
 ## Security Contract
 
 - **Endpoint visibility:** `/admin/help` is an internal authenticated SPA route;
   no new server/API endpoint is added. Existing `/assistant/*` endpoints remain
   internal.
-- **Auth:** Help uses the existing Admin session gate. Assistant status/chat and
-  actions retain the existing session/API-key handling in the shared router.
+- **Auth:** Help and every existing Assistant status/chat/reindex/action route
+  retain the authenticated Admin session-cookie gate in the shared router.
+  Server RBAC remains mandatory; this task adds no generic API-key auth path.
 - **RBAC:** Help prose is available to any authenticated Admin user.
   `Open in CMS` actions are permission-filtered. `/assistant/status` and
   `/assistant/chat` retain `settings:read`; `/assistant/reindex` retains
@@ -185,18 +197,24 @@ editing the registry. L03 must not re-open L01/L02 route or Help contracts.
 export function resolveEmbeddedHelp(input: {
   bundle: DocsDistributionBundleV2;
   location: HelpLocation;
-  permissions: readonly string[];
+  permissionSnapshot: DocsAdminPermissionSnapshotV1;
+  officialDocs: {
+    origin: string;
+    basePath: string;
+    version: string;
+  };
 }): HelpReaderView {
   const publicationTarget = "embedded-help" as const;
-  const projection = selectDocsPublicationProjection(input.bundle, {
-    publicationTarget,
-  });
-  const searchIndex = createDocsSearchIndex(projection.bundle, {
+  const targetDocuments = selectDocumentsForPublicationTarget(
+    input.bundle.documents,
+    publicationTarget
+  );
+  const searchIndex = createDocsSearchIndex(input.bundle, {
     publicationTarget,
   });
   const query = normalizeHelpQuery(input.location.query);
   const document = resolvePublishedDocument(
-    projection,
+    targetDocuments,
     input.location,
     { publicationTarget }
   );
@@ -208,18 +226,21 @@ export function resolveEmbeddedHelp(input: {
     }),
     document,
     rendererProps: {
-      bundle: projection.bundle,
+      bundle: input.bundle,
       document,
       publicationTarget,
     },
-    cmsAction: resolvePermittedAdminAction(
-      document.adminPath,
-      document.permissionRequirement,
-      input.permissions
-    ),
-    officialHref: document.publicationTargets.includes("public-docs")
-      ? resolveOfficialDocsHref(projection.bundle, document)
-      : null,
+    cmsAction: resolvePermittedAdminAction({
+      adminPath: document.adminPath,
+      permissionRequirement: document.permissionRequirement,
+      permissionSnapshot: input.permissionSnapshot,
+    }),
+    officialHref: resolveOptionalHelpOfficialHref({
+      document,
+      origin: input.officialDocs.origin,
+      basePath: input.officialDocs.basePath,
+      version: input.officialDocs.version,
+    }),
   };
 }
 
@@ -234,8 +255,8 @@ export async function submitConversation(
 }
 ```
 
-**Data flow:** recovered/validated installed bundle → exact `embedded-help`
-projection → explicit-target index/selection/search/render props → local Help
+**Data flow:** validated installed bundle → exact `embedded-help`
+document selection → explicit-target index/search/render props → local Help
 reader; or strict assistant request → DB evidence ids → local distribution card
 join → safe React tokens. No Help selector/search/renderer receives the unscoped
 bundle without the literal target.
@@ -246,8 +267,11 @@ Help usable; DB index failure affects Guide only; provider failure affects
 Agent only; stale/malformed persisted transcript is discarded.
 
 **Regression-test shape:** route parity before/after extraction; no broken Help
-link between leaves; any-auth Help route; local-only search; malicious Markdown/URL
-rejection; permission-filtered CMS links; independent tab histories/readiness;
+link between leaves; any-auth Help route; locale-bearing deep links and
+same-doc/same-section cross-locale isolation; local-only search; malicious
+Markdown/URL rejection; permission-filtered CMS links including exact live
+`["*"]` full access plus duplicate/mixed wildcard rejection; independent tab
+histories/readiness;
 Guide works with Agent disabled; Agent cannot silently show docs fallback;
 redacted explicit handoff; no action calls from Guide; null/empty/partial/full
 `allOf`/`anyOf` permission cases; capability-context ranking; file-size gates.

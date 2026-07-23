@@ -5,35 +5,47 @@
 **Parent Subtask:** TASK-539-03
 **Priority:** High
 **Category:** Pages / Admin Editor Contract
-**Estimated Effort:** Medium
-**Dependencies:** TASK-539-01-L01
+**Estimated Effort:** Large
+**Dependencies:** TASK-539-03-L05
 **Status:** ⏳ To Do
 **Changelog:** 1251 (pinned; create only at TASK-539 closure)
 
 ---
 
-## Ownership
+## Sole ownership and mandatory split
 
-Own only:
+Own:
 
-- `core/services/pages/pageEditorControlRegistry.ts`
-- `core/services/pages/pageEditorControlUiModel.ts`
-- compatibility-expectation updates required before this source gate in
-  `tests/vitest/pages/page-editor-control-registry.test.ts` and
-  `tests/vitest/pages/page-editor-control-ui-model.test.ts`
+- stable facade `core/services/pages/pageEditorControlRegistry.ts`;
+- new cohesive modules
+  `pageEditorControlTypes.ts`, `pageEditorControlBuilders.ts`,
+  `pageEditorUniversalControls.ts`, `pageEditorBlockControls.ts`, and
+  `pageEditorResponsiveControls.ts` beside it;
+- `core/services/pages/pageEditorControlUiModel.ts`;
+- existing/split suites
+  `tests/vitest/pages/page-editor-control-registry.test.ts`,
+  `page-editor-control-registry-capabilities.test.ts`,
+  `page-editor-control-registry-effects.test.ts`,
+  `page-editor-control-registry-responsive.test.ts`, and
+  `page-editor-control-ui-model.test.ts`.
 
-Current anchors are gallery controls around registry `:1325-1344`, divider controls
-around `:1449-1478`, and layer z around `:960-970`.
+The facade must explicitly re-export the pre-task public symbols; `export *` is
+forbidden. Split definitions/builders, universal controls, per-block controls, and
+responsive projection by responsibility, not arbitrary line ranges. Every module and
+independently runnable suite must be at most 1,000 lines. Baseline receipts are 1,813
+lines for the registry and 1,893 for its main suite.
 
 ## Implementation Pseudocode
 
-Extend the input/model vocabulary with a dedicated `galleryItems` kind. Do not map
-gallery data through generic `items`/`ListItemsControl`.
-
-Add a declarative sibling-value gate:
+Extend the vocabulary:
 
 ```ts
-export type PageEditorControlCondition = {
+type PageEditorControlInput =
+  | ExistingInputs
+  | "galleryItems"
+  | "galleryCategoryTokens";
+
+type PageEditorControlCondition = {
   path: readonly string[];
   equals: string | number | boolean | null;
 };
@@ -43,49 +55,74 @@ type PageEditorControlDefinition = {
   showWhen?: PageEditorControlCondition;
 };
 
+function blockPropControl(type, key, definition: {
+  // existing supported options
+  responsive?: boolean;
+  showWhen?: PageEditorControlCondition;
+}) {
+  // responsive defaults to true; preserve showWhen
+}
+
 export function isPageEditorControlVisible(
   control: PageEditorControlDefinition,
-  effectiveTarget: unknown
+  targets: { baseTarget: unknown; effectiveTarget: unknown }
 ): boolean {
-  // no condition => true
-  // resolve the sibling path without mutation; strict equality only
-  // missing or mismatched value => false
+  if (!control.showWhen) return true;
+  const source = control.responsive
+    ? targets.effectiveTarget
+    : targets.baseTarget;
+  // read path without mutation; strict equality; malformed/missing => false
 }
 ```
 
-The PageEditor consumer passes the effective base/breakpoint target. Do not hide a
-control by inspecting DOM or by duplicating per-control conditionals in JSX.
+Registry contract:
 
-Registry changes:
+- `gallery.props.items` uses `input:"galleryItems"` and is base-only.
+- Gallery `layout`, `filterable`, and `filterCategories` are also base-only.
+- `filterCategories` uses `input:"galleryCategoryTokens"` and is shown only when
+  base `props.filterable === true`.
+- Section `parallaxIntensity` is shown only when base
+  `style.scrollEffect === "parallax"`.
+- Divider `tone`, `thickness`, `gradient`, `width`, and `align` are all base-only.
+  The public responsive prop contract supports only heading/text alignment, so none
+  of these five controls may author a divider responsive prop. `width` and `align`
+  are shown only when base `props.gradient === true`; the effective responsive
+  target must not make these controls appear or disappear.
+- Import `PAGE_LAYER_Z_CLAMP` and use the owner object directly; no `0..40` mirror.
+- Keep optional values present-only.
 
-- Add gallery `props.items` using `input:"galleryItems"` in Content.
-- Show gallery `filterCategories` only when `props.filterable === true`.
-- Show section `parallaxIntensity` only when `style.scrollEffect === "parallax"`.
-- Show divider `width` and `align` only when `props.gradient === true`.
-- Import `PAGE_LAYER_Z_CLAMP` and use it directly instead of `{min:0,max:40}`.
-- Keep optional controls present-only: no new fallback/default values.
+The UI model maps only the two exact new inputs to
+`{kind:"galleryItems"}` / `{kind:"galleryCategoryTokens"}`. `"items"` remains
+`{kind:"listItems"}` for the list/switcher contracts only. Unknown inputs remain
+non-mutating unsupported controls.
 
-`resolvePageEditorControlUiModel` maps only the new declared input to
-`{kind:"galleryItems"}`; unknown inputs remain non-mutating unsupported controls.
+## Tests, security, and compatibility
 
-## Errors and compatibility
+Source-owner suites pin base-vs-effective condition resolution, all four gallery
+controls and all five divider controls as base-only, the base-owned
+parallax/divider gates, exact z owner identity, supported UI kinds, and
+malformed-condition fail-closed behavior. They explicitly prove that pre-existing
+tablet/mobile overrides for every gallery/divider prop cannot change a base-only
+displayed value, open a base-only gate, expose an override badge/reset, or receive a
+write. Splits preserve all prior assertions.
 
-The helper is pure and Bun-free. A malformed condition fails closed to hidden and
-must not throw during editor render. Existing controls without `showWhen` retain their
-exact model. This leaf does not enforce security; TASK-539-01 remains the write owner.
+No route/security boundary changes. The helpers are pure, Bun-free, non-mutating, and
+must not import browser/server/runtime adapters.
 
-## Gate test ownership and validation
-
-Update the named suites before this source gate, including the stale layer-z maximum
-(`40` -> the imported `PAGE_LAYER_Z_CLAMP.max`, exactly `20`) and the new pure visibility
-conditions. TASK-539-03-L04 owns only additive cross-component/editor-flow coverage in
-these files and must not re-baseline the landed registry/UI-model expectations.
+## Validation and line receipt
 
 ```bash
 bun --cwd core lint:types
 bun --cwd core lint
-bun run test:vitest -- tests/vitest/pages/page-editor-control-registry.test.ts tests/vitest/pages/page-editor-control-ui-model.test.ts
+bun run test:vitest -- \
+  tests/vitest/pages/page-editor-control-registry.test.ts \
+  tests/vitest/pages/page-editor-control-registry-capabilities.test.ts \
+  tests/vitest/pages/page-editor-control-registry-effects.test.ts \
+  tests/vitest/pages/page-editor-control-registry-responsive.test.ts \
+  tests/vitest/pages/page-editor-control-ui-model.test.ts
+node _docs/_workflows/task-539-implement.mjs --check-task-family-line-limit
 git diff --check
 ```
 
-Rerun any named failing test file once in isolation before classifying the failure.
+The workflow line receipt must list every touched/split source and test at `<=1000`.
+Rerun a named failure alone before classification.

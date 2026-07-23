@@ -14,71 +14,109 @@
 
 ## Ownership
 
-Own only `tests/vitest/pages/page-authoring-sanitizers.test.ts`.
+Create only:
 
-## Implementation Pseudocode
+`tests/vitest/pages/page-authoring-sanitizers-security-corpus.test.ts`
 
-### Test Shape
+Do not edit `page-authoring-sanitizers.test.ts`, production, consumers, TASK-541
+files/tests, routes, parents/indexes/changelogs, scanner config/allowlists, DDL, or
+dependencies. This additive suite must be independently runnable and at most 1,000
+physical lines.
 
-Use deterministic table-driven cases:
+TASK-539-01-L01 owns the Page model-suite split and canonicalizes its existing
+TASK-541 color fixtures before this leaf lands. This leaf treats every split Page
+model suite as read-only and reruns all of them in its final gate; it must not edit or
+rebaseline a model assertion to accommodate the sanitizer.
 
-- Accept `0`, `0.0`, `0px`, `.85fr`, `1fr`, `50%`, `1rem`, `1em`, `auto`, canonical
-  `minmax(0,1fr)`, and bounded `repeat` combinations.
-- Reject bare `%`, `rem`, and `em`, `minmax(5,1fr)`, `repeat(3,2)`,
-  negative/unitless nonzero, over-count
-  repeat/tracks, nested/unbalanced functions, rule metacharacters, URL and expression.
-- Parse one gradient to `{image,color:null}`, one safe color to
-  `{image:null,color}`, multiple gradients to the exact outer-trimmed source image
-  substring (including deliberately irregular internal comma whitespace/casing),
-  and gradients plus one final color to split fields while canonicalizing only the
-  color member.
-- Reject a color before/between gradients, two colors, unsafe function/protocol,
-  unbalanced parentheses, empty layer, layer-count overflow, and oversized input.
-- Pin that `sanitizeAuthoringCssBackground` is trimmed-byte-identical for every
-  gradient-only input; for image+color input it preserves the exact validated image
-  substring and reconstructs only the delimiter before the canonical final color;
-  for color-only input it returns canonical color bytes. It rejects exactly the
-  parser's rejected corpus.
-- Pin parser determinism and no mutation of input strings.
-- Import the immutable TASK-541 `cssColorCorpus.ts` fixture. Pass each relevant
-  `case.input` unchanged through both exported adapters
-  (`sanitizeAuthoringCssColor` and `isSafeAuthoringCssColor`) and through
-  `parseAuthoringCssBackgroundPaint` with that same untouched input as the final
-  color layer. Compare all three results with the corpus expectation plus Page's
-  second policy: all non-token authoring colors follow TASK-541 canonical bytes,
-  exactly `primary`, `secondary`, `accent`, `bg`, `surface`, `text`, and `border`
-  tokens accept, and every arbitrary otherwise-valid `var(--color-*)` token rejects
-  in all three paths. Do not pre-normalize corpus input or copy its acceptance table.
-- Build final-layer exact-cap and cap+1 ASCII-padding cases from
-  `CSS_COLOR_VALUE_MAX_LENGTH`, and include C0/C1 controls plus Unicode whitespace.
-  Run each original case directly through both exported adapters and as a final
-  background layer. Exact-cap canonicalizes; cap+1/control/Unicode-space values
-  reject even though local trimming could expose a valid terminal.
-- For every accepted multi-image case, assert `image` equals the exact source
-  substring between the first image's trimmed start and last image's trimmed end,
-  including original function casing, internal whitespace, and delimiters; only the
-  outer whole-value ASCII spaces and the split final-color slice are excluded.
-  Assert separately that changing only the final color spelling/canonical bytes
-  never changes that image substring (raw-image identity).
+## Immutable deterministic corpus
 
-TASK-539-02-L01 has already updated and passed the exact existing grammar expectations.
-This leaf owns only additive exhaustive/property/security cases in the same suite and
-must not weaken or re-baseline those landed examples. The corpus must include closing-style-tag/rule-breakout strings used by the raw
-responsive `<style>` threat model without documenting an exploitable payload in task
-closeout beyond a redacted category name.
+Use frozen table-driven fixtures and explicit expected objects; never snapshots or
+random fuzz without a fixed seed.
+
+### Grid matrix
+
+- Accept exact zero spellings (`0`, `0.0`, longer all-zero decimals), unitful zero,
+  leading-dot/unitful lengths, `auto`, all allowed units, `minmax` with zero/unitful
+  positions, bounded `repeat`, and 1/12 outer-track and repeat-count boundaries.
+- Reject nonzero unitless values in standalone, either `minmax` argument, and repeat
+  body; negatives; bare units; unsupported/case-changed units; zero-like malformed
+  values; 0/13 repeat; 13 tracks; nested/unbalanced functions; multiple repeat body
+  tracks; metacharacters; URL/expression; controls; non-ASCII whitespace; and
+  oversized input.
+- Table-drive the untouched raw grid value through every C0/C1 range category and
+  every Unicode/ECMAScript whitespace code point other than ASCII space, explicitly
+  including `U+FEFF`. Place cases at leading/trailing edges, between tracks, inside a
+  grid function, and adjacent to its comma. Pin fail-closed rejection before
+  `.trim()` or top-level tokenization; ASCII space alone remains legal and
+  canonicalizes deterministically.
+- Assert canonical top-level/function whitespace and deterministic second-pass output.
+
+### Background/image-byte matrix
+
+- Assert color-only, one gradient, irregular multi-gradient, and gradients plus one
+  final color return exact `{image,color}` values.
+- For every accepted image stack, derive the expected image literal in the fixture and
+  compare exact bytes, including function casing, inner whitespace, and top-level
+  separators. Assert changing only final-color spelling never changes `image`.
+- Assert `sanitizeAuthoringCssBackground` returns exact image-only bytes, canonical
+  color-only bytes, or exact image plus the one canonical `, ` delimiter and color.
+- Assert the structured parser accepts one legal color and one legal gradient, while
+  `isSafeAuthoringCssBackgroundLayers` is `false` for each single-layer form. Assert
+  the helper is `true` for valid 2..`PAGE_BG_MAX_LAYERS` gradient/final-color stacks
+  and `false` for invalid input or a stack above the cap. This pins historical
+  cardinality while proving parser and predicate delegate to one analysis rather than
+  retaining separate grammars.
+- Reject color before/between gradients, multiple colors, empty layers, layer 7,
+  imbalance, non-gradient image/fetch functions, unsafe protocols/at-rules/functions,
+  rule/style-tag breakout categories, controls/non-ASCII whitespace, and whole-value
+  overflow. Keep exploit strings in test fixtures; task closeout names only redacted
+  attack categories.
+- Table-drive the raw whole-value guard across every C0/C1 range category and every
+  ECMAScript Unicode whitespace code point other than ASCII space, including
+  `U+FEFF`, leading/trailing positions, a gradient interior, a top-level separator,
+  and a final color slice. Pin that rejection occurs without trimming or other
+  preprocessing.
+- Freeze inputs/expected records and assert the parser never mutates them.
+
+### TASK-541 raw-input parity
+
+Import `CSS_COLOR_CORPUS_CASES` from the immutable
+`tests/vitest/services/cssColorCorpus.ts` owner. Pass each `case.input` unchanged
+through:
+
+1. `sanitizeAuthoringCssColor`,
+2. `isSafeAuthoringCssColor`, and
+3. `parseAuthoringCssBackgroundPaint` as a color-only/final-color candidate where a
+   string can be embedded without preprocessing.
+
+Expected Page policy is TASK-541 authoring acceptance plus the second token filter:
+all non-token accepted colors use `parsed.normalized`; only the seven Page tokens
+accept; every other otherwise-valid token rejects. Do not copy the corpus acceptance
+table or call `.trim()`/`.toLowerCase()` in the test adapter.
+
+Build exact-cap/cap+1 ASCII-padding cases from `CSS_COLOR_VALUE_MAX_LENGTH` rather than
+a numeric mirror. Include C0, C1, non-breaking space, and other Unicode whitespace.
+Pin the untouched raw argument behavior in both single-color adapters and final-color
+background parsing.
+
+## Security Contract
+
+This is a pure boundary test; no route or public write changes. It proves the values
+that may later reach inline and raw responsive CSS. Do not add a suppression or
+scanner exception. Any nonzero strict security scan, tool failure, or new/touched-path
+finding blocks this leaf and must be fixed before closure.
 
 ## Validation
 
 ```bash
-bun run test:vitest -- tests/vitest/pages/page-authoring-sanitizers.test.ts
+bun run test:vitest -- tests/vitest/pages/page-authoring-sanitizers-security-corpus.test.ts tests/vitest/pages/page-authoring-sanitizers.test.ts tests/vitest/services/css-color-contract.test.ts tests/vitest/services/css-color-contract-corpus.test.ts tests/vitest/services/css-color-consumer-parity.test.ts
+bun run test:vitest -- tests/vitest/pages/page-document-v2.test.ts tests/vitest/pages/page-document-v2-tree-and-capabilities.test.ts tests/vitest/pages/page-document-v2-listing-and-settings.test.ts tests/vitest/pages/page-document-v2-style-contracts.test.ts tests/vitest/pages/page-document-v2-block-roundtrip.test.ts tests/vitest/pages/task-534-interactivity-model.test.ts
 bun --cwd core lint:types
 bun --cwd core lint
+node _docs/_workflows/task-539-implement.mjs --check-task-family-line-limit
 bun run scan:security:strict
 git diff --check
 ```
 
-If the test fails, rerun this file alone before classification.
-The strict scan must run and its exit code is reported truthfully. Only the sole,
-unchanged TASK-545-owned workflow finding may be recorded as an external non-green
-result after a clean touched-path scan; any TASK-539/new/additional finding or tool
-failure blocks this leaf. Do not add a suppression or call a nonzero scan green.
+Report every exit code truthfully. Rerun a named failing test file alone once before
+classification.

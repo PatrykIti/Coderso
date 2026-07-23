@@ -4,8 +4,8 @@
 
 **Parent Subtask:** TASK-539-01
 **Priority:** High
-**Category:** Pages / Vitest / Contract Proof
-**Estimated Effort:** Medium
+**Category:** Pages / Bun DB Route Integration
+**Estimated Effort:** Small
 **Dependencies:** TASK-539-01-L01
 **Status:** ⏳ To Do
 **Changelog:** 1251 (pinned; create only at TASK-539 closure)
@@ -14,58 +14,75 @@
 
 ## Ownership
 
-Own only `tests/integration/routes/pages.test.ts`. TASK-539-01-L01 has already updated
-and gated the three Page-model Vitest files; this leaf runs them read-only for aggregate
-confidence and must not edit or re-baseline them.
+Edit only `tests/integration/routes/pages.test.ts`.
 
-Do not alter production files or weaken existing assertions.
+Do not edit production, Page model Vitest files/helpers, routes, services, schemas,
+parents/indexes/changelogs, or dependencies. L01 already owns and gates every unit,
+stored-read, schema, resolution, facade, and no-mutation case.
 
-## Implementation Pseudocode
+The route file is 797 physical lines at the verified repair baseline. Keep it at most
+1,000 lines by using the existing router/DB fixture helpers and one compact
+table-driven route contract rather than duplicating setup.
 
-### Regression Test Shape
+## Registered route proof
 
-Confirm the landed unit coverage, then add route-level tests that prove:
+Use the actual handlers registered by `registerPageRoutes` and uniquely scoped DB
+rows. Add only route persistence/error/no-write assertions:
 
-1. Unit coverage already proves `{layer:{x}}` over `{layer:{y,z,anchor}}` resolves to all four present keys and
-   does not deep-merge unrelated nested style records.
-2. A write containing responsive layer without a base layer fails with
-   `page_document_invalid` at the exact responsive layer path; stored read removes
-   that unreachable layer but keeps sibling responsive typography/visibility.
-3. Responsive `textTransform:"none"` survives normalization and round-trip while a
-   base `"none"` remains omitted.
-4. Canonical gallery objects round-trip exactly at the exact exported item/text/category
-   limits; limit+1, every unknown nested key, legacy alias, malformed category set, or
-   unsafe nonempty URL rejects on write.
-5. Stored-read fixtures for strings and legacy aliases rebuild exactly
-   `{src,alt,caption,category?}` and never carry alias/unknown keys forward.
-6. `cursorSpotlight:false`, orphan color/size, and orphan parallax intensity leave no
-   residue; true spotlight and parallax retain only their bounded dependants; noise
-   remains independent.
-7. Divider width/alignment are absent when gradient is off and retained when on.
-8. A legacy document with none of the repaired fields remains JSON-byte-identical
-   after normalization; a normalize→normalize pass is idempotent.
-9. The registered Page create/update route rejects an unknown gallery-item key at the
-   exact nested path with the existing 400/`page_document_invalid` mapping, leaves the
-   owned Page row/document unchanged, and accepts a canonical gallery round-trip.
+1. PATCH an owned draft Page with a canonical gallery containing:
+   - one safe media row with required `src/alt/caption/category`,
+   - one caption-only row, and
+   - one alt-only row, and
+   - the exact `{src:"",alt:"",caption:""}` draft sentinel.
+   Assert the returned and persisted `currentData` carry those exact canonical rows,
+   including the sentinel.
+2. Starting from that known persisted document, table-drive rejected PATCH attempts:
+   - an arbitrary nested gallery key and each representative legacy alias use HTTP
+     400 / `page_document_unknown_field`, and the `ApiError.details` object contains
+     the exact path such as
+     `sections.0.blocks.0.props.items.0.url`;
+   - a missing required field, unsafe nonempty `src`, malformed category, and 121 raw
+     items use HTTP 400 / `page_document_invalid`;
+   - `src`/`alt`/`caption` cap+1 input and outer-whitespace variants of each required
+     string use HTTP 400 / `page_document_invalid`.
+3. After every rejected request, query the owned Page and prove `currentData`,
+   `status`, and `publishedData` remain exactly unchanged. Do not truncate tables or
+   clean another suite's data.
 
-Use explicit expected objects and paths. Do not snapshot large documents or make a
-test pass by accepting silent key loss.
+Do not assert `details.path` for `page_document_invalid`: the current
+`mapPageError` intentionally maps that code without details. This leaf does not change
+the mapper. Unit-only cases such as stored-read aliases, layer merge, responsive
+anchor/base-only-style rejection and stored-read drop, text-transform reset, effects,
+divider cleanup, byte identity, or input mutation are forbidden here and remain
+L01-owned.
 
-## Security proof
+## Security Contract
 
-The tests must exercise the actual write normalizer, not only helper calls, so nested
-reject-unknown and media URL validation are proven at the same boundary used by Page
-writes. No route/auth behavior changes in this leaf.
+- **Visibility:** the exercised Page mutation is the existing internal
+  `/admin/api/*` route; no public endpoint is added.
+- **Auth/RBAC:** preserve the existing session-cookie-only authentication and
+  `content:write` RBAC check; no API-key path is introduced. Tests invoke the
+  registered handler with the existing dependency harness rather than weakening
+  middleware contracts.
+- **CSRF/rate limit:** existing session-backed CSRF enforcement and the
+  `admin_write` rate-limit behavior are unchanged.
+- **Validation:** the real Page service write normalizer is exercised before DB
+  persistence; nested reject-unknown and unsafe media/category failures must be
+  fail-closed.
+- **Anti-abuse:** no public write exists, so nonce/HMAC and captcha do not apply.
 
 ## Validation
 
+Load repository environment variables, verify the configured database is reachable,
+and ensure the added `testIfDb` test actually runs rather than skips:
+
 ```bash
-bun run test:vitest -- tests/vitest/pages/page-document-v2.test.ts tests/vitest/pages/page-document-v2-block-roundtrip.test.ts tests/vitest/pages/task-534-interactivity-model.test.ts
 set -a && source .env && set +a && bun test --timeout=15000 tests/integration/routes/pages.test.ts
 bun --cwd core lint:types
 bun --cwd core lint
+node _docs/_workflows/task-539-implement.mjs --check-task-family-line-limit
 git diff --check
 ```
 
-Check DB reachability before the route suite. Rerun any failing named file alone before
-reporting a regression. Route fixtures must be uniquely scoped and clean only their rows.
+A missing/unreachable DB or skipped new case is a blocked validation, not a pass.
+Rerun the named route file alone once before classifying a failure.

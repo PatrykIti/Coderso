@@ -59,6 +59,15 @@ catalog. `capabilityIds` is unique, canonically sorted and validated against the
 code-owned documentation capability catalog. Consumer URLs are derived from
 those fields; authors never enter embedded-help or public-site links.
 
+`docId` is the stable translation-family ID and may be reused by different
+locales. Document identity and uniqueness are exactly `(docId, locale)`;
+duplicate pairs fail closed, while the same `docId` in two supported locales is
+valid. `sectionId` is unique within one localized document. `visualId` and
+`exampleId` remain bundle-global, but every source sidecar and visual
+image/receipt pair explicitly binds its owning canonical locale and section.
+No source, Help or Guide join may collapse a localized owner to bare `docId`.
+Canonical document order is locale then `docId`.
+
 Targets are enforced by each consumer, not treated as descriptive metadata.
 Assistant persistence/retrieval includes only documents containing `assistant`;
 embedded Help search/render includes only documents containing `embedded-help`;
@@ -72,10 +81,10 @@ The authored layout is:
 docs/guide/
   corpus.manifest.json
   **/*.md
-  examples/<docId>/<exampleId>.json
-  assets/scenarios/<docId>/<visualId>.json
-  assets/images/<docId>/<visualId>.png
-  assets/receipts/<docId>/<visualId>.json
+  examples/<docId>/<locale>/<exampleId>.json
+  assets/scenarios/<docId>/<locale>/<visualId>.json
+  assets/images/<docId>/<locale>/<visualId>.png
+  assets/receipts/<docId>/<locale>/<visualId>.json
 core/generated/docs/coderso-docs-v2.json
 ```
 
@@ -84,6 +93,11 @@ reviewed through a regenerate-and-diff gate. It is not a second authored source.
 The compiler fingerprints the root manifest, every included Markdown document,
 example, scenario, promoted PNG and receipt. It rejects missing/orphan assets
 instead of silently omitting them.
+Every example sidecar uses the exact strict `DocsExampleSidecarV1` envelope and
+its normalized `docId`, canonical BCP-47 `locale`, `sectionId` and
+bundle-global `exampleId` must agree with both its path and exactly one
+localized document section. Visual scenarios, promoted images and receipts use
+the same locale-bearing owner identity.
 
 Markdown uses a closed safe subset: headings, paragraphs, emphasis, ordered and
 unordered lists, safe links, inline code, fenced code blocks, bounded
@@ -100,8 +114,12 @@ referenced through strict visual records, never arbitrary Markdown URLs.
 - **Auth/RBAC:** reindex remains authenticated session +
   `settings:write`; compiled files do not weaken document-level
   `permissionRequirement`. `allOf` requires every listed permission; `anyOf`
-  requires at least one. Null means no document-level restriction beyond the
-  owning route.
+  requires at least one. Null means no extra catalog permission; route
+  visibility/authentication is independently owned by the route registry,
+  including public token-gated `/preview` and authenticated `/help`. Authored
+  requirements reject `*`; permission consumers accept only the exact live
+  ready snapshot `["*"]` as full access and reject duplicate/mixed wildcard
+  snapshots.
 - **CSRF/rate limit:** reindex remains CSRF-protected and in the `assistant`
   bucket. Compiler commands have no HTTP boundary.
 - **Validation:** reject unknown fields recursively; validate BCP-47, SemVer,
@@ -165,6 +183,10 @@ TASK-548-06 never writes the generated final.
 - Every ingestible English file currently under `docs/guide/` compiles through
   v2 with a stable identity; locale support is ready for Polish without claiming
   the Admin UI or corpus is fully localized.
+- The same translation-family `docId` compiles in multiple supported locales;
+  an exact duplicate `(docId, locale)` is rejected. Visual and example IDs stay
+  unique across the complete bundle, while their source paths/envelopes still
+  round-trip the exact localized owner.
 - Identical source bytes produce byte-identical bundle bytes and SHA-256 on
   repeated builds, independent of filesystem order, absolute path or wall clock.
 - TASK-548-06's native-v2 rewrite must preserve normalized semantic records and
@@ -187,6 +209,9 @@ TASK-548-06 never writes the generated final.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - deterministic two-build byte/hash comparison and touched-file line counts
+- explicit duplicate-`(docId, locale)` rejection and same-`docId`,
+  different-locale acceptance coverage, including same-section-ID example and
+  visual fixtures that prove locale-bearing paths/envelopes never cross-join
 
 ## Documentation Updates Required
 

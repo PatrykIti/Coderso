@@ -87,7 +87,8 @@ assertions.
   `assistant.llm.enabled`, provider, model, and provider failure.
 - Existing startup seed remains the normal readiness path. Authorized manual
   reindex remains available even when Agent is disabled.
-- Answer/source records carry TASK-548-01/02 stable `docId`/`sectionId`.
+- Answer/source records carry TASK-548-01/02 stable
+  `(docId, locale, sectionId)` identity.
   Response cards resolve matching local `visualId`/`exampleId` records from the
   installed bundle only after confirming the document still contains the
   `assistant` target and round-trip exact `capabilityIds`. Card eligibility
@@ -98,7 +99,13 @@ assertions.
 - For card actions, null succeeds for an authenticated Admin even with an empty
   permission array; `allOf` requires every listed permission and `anyOf` at
   least one. Empty/partial snapshots deny only an unsatisfied non-null
-  requirement, while malformed requirements/snapshots fail closed.
+  requirement, while the exact live ready snapshot `["*"]` grants full access.
+  Authored requirements still forbid `*`; duplicate/mixed wildcard and other
+  malformed snapshots fail closed.
+- Card actions import L02's exact
+  `resolvePermittedAdminAction`/`DocsAdminActionResolutionV1` exports from
+  `@coderso/docs-renderer`; this leaf defines no parallel path or permission
+  evaluator.
 - Missing/mismatched local metadata degrades to text/source evidence and never
   invents a screenshot/example.
 - Guide cannot call plan, dry-run, or execute.
@@ -137,12 +144,25 @@ Migrate the current schema-v1 snapshot once:
 5. never auto-sends or transfers response text, sources, provider metadata,
    plans, execution results, secrets, or privileged runtime context.
 
+The handoff command accepts only the currently normalized typed
+`AssistantConversationSnapshotV2`, a destination, and one bounded entry ID; it
+has no free-form `userText` parameter. `entryId` matches
+`^[a-z0-9][a-z0-9-]{0,63}$`, must occur exactly once in that source snapshot,
+and the snapshot's `product` must differ from the destination. The selected
+entry must be exactly `{ entryId, role: "user", kind: "text", text }`.
+Recursive reject-unknown normalization rejects mixed entries such as user text
+plus source/provider/plan fields. A missing, duplicated or other-snapshot
+entry ID is forged and fails closed. Assistant/system text and every
+`structured`, `provider`, `source`, `plan`, or `execution` entry are never
+eligible. Only the selected user's `text` reaches redaction and clamping.
+
 ## Security Contract
 
 - **Endpoint visibility:** no new endpoint. `/assistant/status`,
   `/assistant/chat`, `/assistant/reindex`, and `/assistant/actions/*` remain
   internal.
-- **Auth:** existing authenticated Admin session/API-key model remains.
+- **Auth:** existing authenticated Admin session-cookie gate and server RBAC
+  remain. This leaf adds no generic API-key authentication path.
 - **RBAC:** status/chat keep `settings:read`; reindex keeps `settings:write`;
   plan keeps current `settings:read` + `content:read` and contextual
   permissions; dry-run/execute keep per-action read/write permissions. No route
@@ -157,6 +177,9 @@ Migrate the current schema-v1 snapshot once:
   Existing action idempotency and review controls remain mandatory.
 - **Secrets/privacy:** separate state and handoff reuse redaction, TTL, size
   caps, exact-key validation, and no provider/session/CSRF/signed-URL storage.
+  Handoff selection revalidates snapshot membership and exact user-text role/
+  kind at click time; rendered DOM text or a caller-supplied replacement string
+  is never trusted.
 
 ## Implementation Pseudocode
 
@@ -188,35 +211,96 @@ export async function answerAssistantQuestion(input: AssistantChatInput) {
     : completeProviderAnswerOrExplicitFallback(evidence, settings);
 }
 
+type GuideCardActionContext = {
+  locale: string;
+  sectionId: string;
+  permissionSnapshot: DocsAdminPermissionSnapshotV1;
+  officialDocs: {
+    origin: string;
+    basePath: string;
+    version: string;
+  };
+};
+
 export function resolveGuideCardActions(
   document: DocsDocumentV2,
   context: GuideCardActionContext
 ): GuideCardActions {
   assertDocumentHasPublicationTarget(document, "assistant");
+  assertLocalizedDocumentAndSectionIdentity(document, {
+    docId: document.docId,
+    locale: context.locale,
+    sectionId: context.sectionId,
+  });
   return {
     helpHref: document.publicationTargets.includes("embedded-help")
-      ? buildHelpHref(document, context)
+      ? adminHelpPath({
+          docId: document.docId,
+          locale: document.locale,
+          sectionId: context.sectionId,
+        })
       : null,
     officialHref: document.publicationTargets.includes("public-docs")
-      ? resolveOptionalGuideOfficialHref(document, context)
+      ? buildDocsPublicHref({
+          origin: context.officialDocs.origin,
+          basePath: context.officialDocs.basePath,
+          route: {
+            kind: "version",
+            version: context.officialDocs.version,
+            locale: document.locale,
+            slug: document.slug,
+          },
+        })
       : null,
-    cmsAction: resolvePermittedAdminAction(
-      document.adminPath,
-      document.permissionRequirement,
-      context.permissions
-    ),
+    cmsAction: resolvePermittedAdminAction({
+      adminPath: document.adminPath,
+      permissionRequirement: document.permissionRequirement,
+      permissionSnapshot: context.permissionSnapshot,
+    }),
   };
 }
 
-export function prepareAssistantHandoff(
-  source: "guide" | "agent",
-  destination: "guide" | "agent",
-  userText: string
-): PendingHandoff {
-  if (source === destination) throw new Error("assistant_handoff_invalid");
+type AssistantConversationEntryV2 =
+  | {
+      entryId: string;
+      role: "user" | "assistant" | "system";
+      kind: "text";
+      text: string;
+    }
+  | {
+      entryId: string;
+      role: "assistant" | "system";
+      kind: "structured" | "provider" | "source" | "plan" | "execution";
+      payloadRef: string;
+    };
+
+type AssistantConversationSnapshotV2 = {
+  schema: "coderso.assistant-conversation@v2";
+  product: "guide" | "agent";
+  entries: readonly AssistantConversationEntryV2[];
+};
+
+export function prepareAssistantHandoff(input: {
+  sourceSnapshot: AssistantConversationSnapshotV2;
+  destination: "guide" | "agent";
+  entryId: string;
+}): PendingHandoff {
+  const snapshot = normalizeAssistantConversationSnapshotV2(
+    input.sourceSnapshot
+  );
+  const entryId = assertBoundedAssistantEntryId(input.entryId);
+  if (snapshot.product === input.destination) {
+    throw new Error("assistant_handoff_invalid");
+  }
+  const matches = snapshot.entries.filter((entry) => entry.entryId === entryId);
+  if (matches.length !== 1) throw new Error("assistant_handoff_entry_invalid");
+  const entry = matches[0];
+  if (entry.role !== "user" || entry.kind !== "text") {
+    throw new Error("assistant_handoff_entry_forbidden");
+  }
   return {
-    destination,
-    text: redactAndClampUserText(userText),
+    destination: input.destination,
+    text: redactAndClampUserText(entry.text),
     autoSend: false,
   };
 }
@@ -224,8 +308,8 @@ export function prepareAssistantHandoff(
 
 **Data flow:** active tab + isolated snapshot → explicit mode request → existing
 strict route → DB retrieval; Agent optionally invokes provider/action review.
-Guide evidence ids → installed distribution join → safe cards from L02
-renderer/link policy.
+Guide evidence `(docId, locale, sectionId)` → installed distribution join →
+safe locale-bound visual/example cards from L02 renderer/link policy.
 
 **Error handling:** DB/index errors remain in Guide state; provider/config/quota
 errors remain in Agent state; malformed response ids omit cards; a docs fallback
@@ -241,12 +325,22 @@ is discarded; no cross-tab state overwrite.
   from Guide;
 - separate histories, errors, readiness, `New`, plan/preview/execution;
 - v1 storage migration and strict v2 unknown/expiry/size/secret rejection;
-- handoff is redacted, prefilled, user-triggered, and never auto-sent;
+- handoff accepts a current typed snapshot plus bounded member entry ID, extracts
+  only exact user text, is redacted/prefilled/user-triggered, and never
+  auto-sent; reject missing/duplicate/other-snapshot IDs, assistant/system text,
+  every structured/provider/source/plan/execution entry, and mixed forged
+  objects carrying both user text and privileged fields;
 - Agent docs fallback cannot masquerade as Agent output;
-- cards join stable ids, hide unsafe/missing assets, and use canonical links;
+- cards join stable ids, hide unsafe/missing assets, use exact
+  `adminHelpPath({ docId, locale, sectionId })` for Help and the L02
+  public-link helpers for official URLs; two locale rows sharing `docId` and
+  `sectionId` resolve distinct Help/source/asset evidence;
 - cards preserve exact `capabilityIds`; test null plus authenticated empty
-  snapshot, invalid empty non-null requirements, partial/full `allOf`, and every
-  `anyOf` branch without alternate permission/capability fields;
+  ready snapshot, missing/malformed snapshot, invalid empty non-null
+  requirements, exact live `["*"]` full access, duplicate/mixed wildcard
+  rejection, partial/full `allOf`, and every `anyOf` branch without alternate
+  permission/capability fields; spy the exact L02 named resolver import rather
+  than a local evaluator;
 - assistant/multi-target evidence cards resolve, while `embedded-help`-only and
   `public-docs`-only bundle records cannot leak through a forged/mismatched ID;
 - assistant-only cards have neither cross-surface link; assistant+embedded adds
@@ -260,7 +354,8 @@ is discarded; no cross-tab state overwrite.
 - [ ] Add separate typed Guide/Agent state machines and storage migration.
 - [ ] Decouple docs-only/reindex readiness from Agent enablement.
 - [ ] Add rich Guide evidence cards from local bundle ids.
-- [ ] Add explicit redacted handoff and preserve Agent review/action gates.
+- [ ] Add exact snapshot-member user-text handoff with forged/mixed-entry
+  rejection and preserve Agent review/action gates.
 
 ## Testing Requirements
 

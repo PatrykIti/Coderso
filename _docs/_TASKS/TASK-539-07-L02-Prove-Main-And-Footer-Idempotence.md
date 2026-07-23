@@ -12,53 +12,73 @@
 
 ---
 
-## Ownership
+## Sole-writer scope
 
-Own only additive parser-order/idempotence cases in:
+Create only:
 
-- `tests/vitest/pages/pageEffectsRuntime.test.ts`
-- `tests/vitest/content/task-534-interactivity-runtime.test.tsx`
-- `tests/vitest/site/page-runtime-shell-branch.test.tsx`
+- `tests/vitest/pages/task-539-page-effects-runtime-rescan.test.tsx`
 
-TASK-539-07-L01 already updated and gated compatibility expectations in all three
-files; do not re-baseline them.
+All production, renderer/site-shell, and L01 test files are read-only. The new suite
+must be independently runnable and no more than 1,000 physical lines.
 
 ## Implementation Pseudocode
 
-### Test Shape
+Execute the real static source in one happy-dom window at explicit parser boundaries.
+Use real `PageDocumentRender` markup where renderer hooks are under test and minimal
+fixed DOM only to isolate binder mechanics. Never inject a missing renderer hook merely
+to make the runtime pass.
 
-- Execute main markup/script first, append footer effect markup/script second, and
-  prove both roots' reveal/parallax/spotlight/switcher/gallery/tilt/magnetic elements
-  respond. Include main-without-spotlight → footer-with-spotlight and the inverse parser
-  order; each spotlight root updates its own CSS variables exactly once.
-- Execute the generated script/init repeatedly and prove one action produces one
-  state transition/callback, not duplicate listeners.
-- Assert the state owns WeakSets per binder and has no one-shot early return that
-  skips a later scan.
-- Import `PAGE_EFFECTS_RUNTIME_INIT_FLAG`, assert its exported literal is unchanged and
-  the generated script may set it for compatibility but never reads it to return early.
-- Magnetic/tilt pointer movement changes only exact `--cx-*` variables and leave
-  resets only those values.
-- Reduced-motion disables motion variables/observers while switcher/gallery keyboard,
-  roving tabindex and ARIA updates still initialize.
-- Main-only, footer-only, and no-matching-element fixtures fail soft with zero errors.
-- Render the real Page document/shell strings for selector tests; do not manually add
-  the magnetic hook expected from the renderer.
-- Use magnetic as the only authored composition effect in both a main-only fixture and
-  a footer-only fixture. Assert the real renderer supplied the fixed composition CSS,
-  pointer movement changes computed transform through the magnetic variables, leave
-  restores neutral transform, and parser-order initialization does not skip either root.
+Cover:
 
-Use listener spies or observable state counts, not only generated-script substring
-checks.
+1. Main markup + script first, append footer markup + script second; then reverse the
+   parser order. In both orders every present reveal/parallax/spotlight/switcher/
+   gallery/tilt/magnetic element responds. Spotlight uses
+   `[data-page-spotlight]` as its sole binder candidate and writes root-local
+   `--spotlight-x`/`--spotlight-y`; an overlay-only node never binds, and main
+   movement never writes footer variables or vice versa.
+2. Pre-set `window.__codersoPageMotionEffectsInit = true`; prove a fresh controller
+   still installs and scans. Assert the flag is written for observation but never read
+   as idempotence authority.
+3. Run the source repeatedly and call `window.__codersoPageEffectsV2.init(document)`
+   and `init(subtree)` repeatedly. Listener/observer spies and observable state must
+   prove one user action causes exactly one transition/callback.
+4. Assert binder-specific `WeakSet` ownership, global listener cardinality one, and no
+   strong element array/Set/Map retained by the controller. Append a new footer node
+   after the first scan and prove the next scan binds it.
+5. Force one binder and one element setup failure. Later binders/elements still bind;
+   retry binds the failed element once and does not duplicate partial listeners.
+6. Under reduced motion, switcher/gallery keyboard and ARIA/hidden behavior still
+   works while reveal is never armed and parallax/spotlight/tilt/magnetic remain
+   neutral.
+7. Fine-pointer tilt and magnetic change only
+   `--cx-tilt-x/y` and `--cx-magnetic-x/y`; leave restores exact neutral values.
+   Combined real renderer markup retains the fixed composition transform and no
+   runtime path writes the whole `transform`.
+8. Render a real replica-safe seamless marquee containing the four hook families
+   production can place in a block subtree: switcher, gallery, tilt, and magnetic.
+   Prove their primary candidates bind/respond, replica candidates are excluded
+   before setup, one action has primary cardinality one, and repeated scans never
+   bind a replica. For reveal, parallax, and spotlight, use explicit minimal fixed-DOM
+   candidates under replica-self and replica-ancestor markers to prove the same
+   pre-bind rejection; separately prove their real section/root ownership in the
+   main/footer fixtures. Consume TASK-539-05's unsafe-subtree fixture and prove its
+   form/listing/nested-marquee case has one segment and no replica candidate; do not
+   widen this suite into or mock a second form/listing runtime.
+9. Main-only, footer-only, no-match, missing-API, and main-without-spotlight then
+   footer-with-spotlight fixtures finish with zero console errors.
+
+Use event/observer cardinality and DOM/custom-property outcomes, not source substrings
+alone. Keep the static-source security assertions from L01 read-only.
 
 ## Validation
 
 ```bash
-bun run test:vitest -- tests/vitest/pages/pageEffectsRuntime.test.ts tests/vitest/content/task-534-interactivity-runtime.test.tsx tests/vitest/site/page-runtime-shell-branch.test.tsx
+bun run test:vitest -- tests/vitest/pages/task-539-page-effects-runtime-rescan.test.tsx
+bun run test:vitest -- tests/vitest/pages/pageEffectsRuntime.test.ts tests/vitest/content/sectionScrollEffect.test.tsx tests/vitest/content/cursorSpotlight.test.tsx tests/vitest/content/task-534-interactivity-runtime.test.tsx
 bun --cwd core lint:types
 bun --cwd core lint
+node _docs/_workflows/task-539-implement.mjs --check-task-family-line-limit
 git diff --check
 ```
 
-Rerun each failing file alone before classification.
+Rerun a named failing file once in isolation before classification.

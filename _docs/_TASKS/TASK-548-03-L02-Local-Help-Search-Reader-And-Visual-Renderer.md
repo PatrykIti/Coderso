@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Admin Help / Documentation UI / Accessibility
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-548-03-L01
+**Dependencies:** TASK-548-02-L03 and TASK-548-03-L01
 **Status:** ⏳ To Do
 **Changelog:** 1261 (pinned; closure only)
 
@@ -22,6 +22,9 @@ working local route.
 Build reusable, Bun-free search and safe React rendering primitives under
 `packages/docs-renderer`. TASK-548-04 consumes that exact package for the
 official portal; no content or rendering fork is allowed.
+Import the exact TASK-548-01-L01-owned
+`selectDocumentsForPublicationTarget` function and re-export it through
+`@coderso/docs-renderer`; this leaf must not redefine its filter or ordering.
 
 ## Exclusive Ownership
 
@@ -38,6 +41,7 @@ This leaf is the only writer for:
 - new `tests/vitest/docs/docs-renderer.test.tsx`;
 - new `tests/vitest/docs/docs-search.test.ts`;
 - new `tests/vitest/docs/docs-public-links.test.ts`;
+- new `tests/vitest/docs/docs-admin-actions.test.ts`;
 - new `tests/vitest/ui-integration/help-center.test.tsx`;
 - Help-specific assertions in `tests/vitest/ui/admin-shell-nav.test.tsx`.
 
@@ -46,6 +50,30 @@ It must not edit L01's `adminRouteRegistry.tsx`, `AdminApp.tsx`,
 the stable L01 registry seam. TASK-548-02-L03 is the sole writer of
 `packages/docs-renderer/package.json`, `packages/docs-portal/package.json`, root
 `package.json`, and `bun.lock`; this leaf must not create or reopen them.
+
+## Renderer Workspace Activation Gate
+
+TASK-548-02-L03 deliberately validated only the renderer manifest, frozen
+workspace install, dependency declaration, and Docker preinstall wiring because
+this source package did not exist at that earlier land point. After this leaf
+has created all `packages/docs-renderer/src/**` files and its `tsconfig.json`,
+it is the first leaf allowed to execute the frozen manifest contract.
+
+The targeted gate must run exactly:
+
+```bash
+bun --cwd packages/docs-renderer check
+bun --cwd core --eval 'const renderer = await import("@coderso/docs-renderer"); if (typeof renderer.DocsDocumentRenderer !== "function" || typeof renderer.selectDocumentsForPublicationTarget !== "function") throw new Error("docs_renderer_exports_invalid")'
+```
+
+The first command exercises the exact pre-existing manifest `check` script.
+The second resolves the workspace package from core and imports two required
+public exports through `@coderso/docs-renderer`, not through a relative source
+path. `tests/vitest/docs/docs-renderer.test.tsx`, which this leaf solely owns,
+also pins those named exports and their usable behavior. No command here builds
+the future portal or the final Docker image, and this runtime validation grants
+no write ownership of TASK-548-02-L03's manifests, lockfile, core dependency,
+or Dockerfile.
 
 The pure Help file exports exactly:
 
@@ -72,8 +100,10 @@ It has no default export or other module key.
 
 - Route: canonical `/admin/help`, authenticated by the existing Admin shell,
   with no additional permission requirement.
-- URL state: bounded `docId`, `sectionId`, and `q` query parameters produced by
-  L01 helpers. Back/forward restores article, section, and query.
+- URL state: bounded `docId`, canonical BCP-47 `locale`, `sectionId`, and `q`
+  query parameters produced by L01 helpers. Back/forward restores the exact
+  localized article, section, and query; a bare `docId + sectionId` is never a
+  document selector.
 - Layout: search, categorized results, article navigation/TOC, readable content,
   visual/example cards, version/locale indicator, and related links.
 - Keyboard: skip link, semantic landmarks, visible focus, search/result/TOC
@@ -96,7 +126,7 @@ deterministic signals:
 - current Admin route/product-area prior;
 - exact bounded `capabilityIds` context match/prior;
 - selected locale/version compatibility;
-- stable tie-break by `docId`, then `sectionId`.
+- stable total tie-break by `locale`, then `docId`, then `sectionId`.
 
 Normalize Unicode, casing, diacritics, and whitespace without executing regex
 from corpus data. Clamp query length, result count, snippet length, and token
@@ -118,6 +148,8 @@ stream is an implementation detail, not a second persisted docs schema. It
 must:
 
 - never use `dangerouslySetInnerHTML`;
+- import the sole owner parser export `parseSafeMarkdownSection` from
+  TASK-548-01-L01; never define an alias parser or alternate parse path;
 - import and render the exact owner `DocsInlineTokenV1`,
   `DocsBlockTokenV1`, `DocsCalloutTokenV1`, and `DocsTableTokenV1` unions;
   never define a parallel token shape;
@@ -143,6 +175,9 @@ action, not an authorization boundary:
 - allow null even with an empty permission array, require every permission for
   `allOf`, require at least one for `anyOf`, and omit/disable the action only
   for an unsatisfied non-null or malformed requirement;
+- treat the live ready snapshot `permissions: ["*"]` as full access, matching
+  `canAdmin`; keep `*` forbidden in authored requirements and reject duplicate,
+  mixed (`["*", "users:read"]`) or otherwise malformed wildcard snapshots;
 - route the action through `AdminLink` with prefetch and canonical aliases;
 - rely on destination route/API RBAC as defense in depth.
 
@@ -152,6 +187,43 @@ The official portal link is optional and exists only when the selected
 `embedded-help` document also contains `public-docs`; a Help-only document
 renders no official action. A blocked/offline portal never affects local search,
 article rendering, examples, or visuals.
+
+### Exact Admin action resolver
+
+This leaf exclusively owns
+`packages/docs-renderer/src/adminActions.ts` and these exact exports:
+
+```ts
+export type DocsAdminPermissionSnapshotV1 =
+  | { state: "ready"; permissions: readonly string[] }
+  | { state: "missing" | "malformed" };
+
+export type DocsAdminActionResolutionV1 = {
+  href: string;
+  linkKind: "admin";
+  prefetch: true;
+};
+
+export function resolvePermittedAdminAction(input: {
+  adminPath: string | null;
+  permissionRequirement: DocsPermissionRequirementV1 | null;
+  permissionSnapshot: DocsAdminPermissionSnapshotV1;
+}): DocsAdminActionResolutionV1 | null;
+```
+
+It recursively validates the exact input, rejects unknown snapshot states,
+duplicate/unknown permissions and non-canonical paths, and returns null when
+`adminPath` is null or the snapshot is missing/malformed. The only non-catalog
+live snapshot value is the exact sole-member `["*"]` full-access sentinel;
+authored `DocsPermissionRequirementV1` continues to reject `*`. A ready
+snapshot plus null requirement succeeds even with zero permissions; `["*"]`
+satisfies every valid non-null requirement; otherwise `allOf` requires every
+canonical permission and `anyOf` requires at least one. A duplicate or
+wildcard-plus-catalog snapshot is malformed and fails closed. Success returns
+the validated default-base Admin href unchanged with `linkKind: "admin"` and
+`prefetch: true`; `AdminLink` owns custom-base resolution. Help and L03 Guide
+cards import this function and result type from the package index. No consumer
+duplicates the permission evaluator.
 
 ## Shared Public Documentation URL Contract
 
@@ -211,6 +283,25 @@ later imports these exact helpers; it does not rebuild public routes.
 ## Implementation Pseudocode
 
 ```tsx
+// packages/docs-renderer/src/adminActions.ts
+export function resolvePermittedAdminAction(input: {
+  adminPath: string | null;
+  permissionRequirement: DocsPermissionRequirementV1 | null;
+  permissionSnapshot: DocsAdminPermissionSnapshotV1;
+}): DocsAdminActionResolutionV1 | null {
+  const normalized = normalizeDocsAdminActionInput(input);
+  if (normalized.adminPath === null || normalized.permissionSnapshot.state !== "ready") {
+    return null;
+  }
+  if (!satisfiesDocsPermissionRequirement(
+    normalized.permissionRequirement,
+    normalized.permissionSnapshot.permissions
+  )) {
+    return null;
+  }
+  return { href: normalized.adminPath, linkKind: "admin", prefetch: true };
+}
+
 // packages/docs-renderer/src/search.ts
 export function createDocsSearchIndex(
   bundle: DocsDistributionBundleV2,
@@ -225,7 +316,7 @@ export function createDocsSearchIndex(
   );
   return indexPublishedSections(targetDocuments, {
     text: ["title", "keywords", "heading", "body", "visualAlt", "exampleLabel"],
-    stableTieBreak: ["docId", "sectionId"],
+    stableTieBreak: ["locale", "docId", "sectionId"],
   });
 }
 
@@ -248,9 +339,16 @@ export function DocsDocumentRenderer(props: DocsRendererProps) {
   return props.document.sections.map((section) => (
     <DocsSection
       key={section.sectionId}
-      tokens={parseSafeDocsMarkdown(section.bodyMarkdown)}
+      tokens={parseSafeMarkdownSection(section.bodyMarkdown).tokens}
       resolveLink={(link) => resolveSafeDocsLink(link, props.linkContext)}
-      resolveVisual={(visualId) => resolveHashedLocalVisual(props.bundle, visualId)}
+      resolveVisual={(visualId) =>
+        resolveHashedLocalVisual(props.bundle, {
+          docId: props.document.docId,
+          locale: props.document.locale,
+          sectionId: section.sectionId,
+          visualId,
+        })
+      }
     />
   ));
 }
@@ -262,14 +360,15 @@ import {
 
 export const descriptors = HELP_ADMIN_ROUTE_DESCRIPTORS_V1;
 export const bindings = {
-  "help.home": ({ authPermissions }) => (
-    <HelpPage permissions={authPermissions} />
+  "help.home": ({ authPermissionSnapshot }) => (
+    <HelpPage permissionSnapshot={authPermissionSnapshot} />
   ),
 } satisfies Readonly<Record<string, AdminRouteRender>>;
 ```
 
 **Data flow:** recovered embedded validated distribution → one in-memory index
-→ URL/query selection → strict document/section/visual refs → safe React
+→ `(docId, locale, sectionId)` URL/query selection → strict localized
+document/section/visual/example refs → safe React
 renderer → optional canonical Help/Admin links and target-gated official link.
 The shared package requires an explicit `embedded-help | public-docs` consumer
 target and has no default. Admin Help always passes `embedded-help`; TASK-548-04
@@ -284,19 +383,24 @@ Help-only target omits it; malformed permissions fail closed.
 **Regression-test shape:**
 
 - deterministic ranking and tie order across repeated builds;
-- route/product/locale/version priors and English fallback notice;
+- route/product/locale/version priors, locale-first total tie order and English
+  fallback notice;
 - exact capability-ID ranking and stable tie behavior;
 - no network call during search/read;
 - target-leak fixtures prove `embedded-help` and multi-target documents index
   and render, while `assistant`-only and `public-docs`-only documents produce no
   result, direct render or Help navigation;
-- all exact owner Markdown token variants and visual/example joins;
+- all exact owner Markdown token variants and locale-bearing visual/example
+  joins; same-`docId`/same-`sectionId` records in two locales cannot cross;
 - hostile HTML/script/URL/path/asset fixtures rejected or rendered as text;
 - Help route renders for authenticated empty-permission snapshot;
-- null action allowed for authenticated empty snapshot; invalid empty non-null,
-  partial/full `allOf`, and every `anyOf` branch;
+- null action allowed for authenticated empty snapshot; exact live `["*"]`
+  satisfies every valid requirement; invalid empty non-null, missing/malformed
+  snapshot, duplicate/mixed wildcard, partial/full `allOf`, and every `anyOf`
+  branch;
 - Admin action hidden without a satisfied non-null requirement and
-  canonical/prefetched when allowed;
+  canonical/prefetched with the exact result object when allowed; direct tests
+  import the named `adminActions.ts` export and prove Help uses it;
 - public path/href exact-version/latest, encoding and malicious-origin/path
   tests; Help-only omits official action, public-only cannot enter Help, and
   embedded+public emits the exact official href;
@@ -307,6 +411,8 @@ Help-only target omits it; malformed permissions fail closed.
 ## Sub-Tasks
 
 - [ ] Build the shared closed renderer/link-policy package.
+- [ ] Add the exact Bun-free `adminActions.ts` resolver and direct permission/
+  path/result tests; Help and Guide consume the named export.
 - [ ] Build deterministic local search and URL-state helpers.
 - [ ] Implement exact shared public path/href helpers and hostile-input tests.
 - [ ] Add the pure named Help descriptor array plus paired binding module whose
@@ -322,12 +428,14 @@ bunx vitest run --config vitest.config.ts \
   tests/vitest/docs/docs-renderer.test.tsx \
   tests/vitest/docs/docs-search.test.ts \
   tests/vitest/docs/docs-public-links.test.ts \
+  tests/vitest/docs/docs-admin-actions.test.ts \
   tests/vitest/ui-integration/help-center.test.tsx \
   tests/vitest/ui/admin-shell-nav.test.tsx \
   tests/vitest/admin/admin-route-registry.test.tsx \
   tests/vitest/admin/adminApp.test.tsx \
   tests/vitest/admin/adminPaths.test.ts
-tsc -p packages/docs-renderer/tsconfig.json --noEmit
+bun --cwd packages/docs-renderer check
+bun --cwd core --eval 'const renderer = await import("@coderso/docs-renderer"); if (typeof renderer.DocsDocumentRenderer !== "function" || typeof renderer.selectDocumentsForPublicationTarget !== "function") throw new Error("docs_renderer_exports_invalid")'
 bun --cwd core lint:types
 bun --cwd core lint
 bun run check:admin-boundary

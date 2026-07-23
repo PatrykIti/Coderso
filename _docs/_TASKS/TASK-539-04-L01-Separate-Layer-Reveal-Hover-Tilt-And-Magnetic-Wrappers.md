@@ -6,29 +6,32 @@
 **Priority:** High
 **Category:** Pages / Composition CSS / Interaction Contract
 **Estimated Effort:** Large
-**Dependencies:** TASK-539-04
+**Dependencies:** TASK-539-03-L04
 **Status:** ⏳ To Do
 **Changelog:** 1251 (pinned; create only at TASK-539 closure)
 
 ---
 
-## Scope and ownership
+## Sole ownership
 
-Sole source writer: `core/services/pages/pageCompositionEffects.tsx`. This leaf also
-owns compatibility-expectation updates required before its source gate in
-`tests/vitest/pages/page-composition-effects.test.ts` and
-`tests/vitest/pages/task-534-interactivity-css.test.ts`. The existing
-collision is documented around `:91-117,142-214`; marquee is around `:62-65,96-105`
-and magnetic detection around `:286-300`.
+Write only:
 
-The historical filename says wrappers, but the executable contract is the lower-DOM,
-present-only composed-variable design below. Do not add unconditional wrapper markup;
-the renderer retains only its already-required tilt/layer wrapper and consumes these
-variables.
+- `core/services/pages/pageCompositionEffects.tsx`
+- compatibility/changed-behavior expectations in
+  `tests/vitest/pages/page-composition-effects.test.ts` and
+  `tests/vitest/pages/task-534-interactivity-css.test.ts`
+
+Ground by symbols `PAGE_COMPOSITION_EFFECTS_CSS`,
+`PAGE_INTERACTIVITY_CSS`, `resolveBlockCompositionAttrs`, and
+`resolveSectionCompositionAttrs`, not historical line numbers. Baselines are
+326/407/62 lines; every touched file must remain `<=1000`.
+
+Do not export/own any grid-placement symbol. The historical filename is retained, but
+no unconditional wrapper is added.
 
 ## Implementation Pseudocode
 
-Export one readonly variable-name map and one fixed transform-chain declaration:
+Export one vocabulary and one selector:
 
 ```ts
 export const PAGE_BLOCK_TRANSFORM_VARIABLES = {
@@ -45,22 +48,18 @@ export const PAGE_BLOCK_TRANSFORM_VARIABLES = {
   magneticY: "--cx-magnetic-y",
 } as const;
 
-export const PAGE_BLOCK_GRID_ITEM_ATTRIBUTE =
-  "data-page-block-grid-item" as const;
 export const PAGE_BLOCK_TRANSFORM_HOST_ATTRIBUTE =
   "data-page-transform-host" as const;
 export const PAGE_BLOCK_TRANSFORM_HOST_SELECTOR =
-  '[data-page-transform-host],[data-page-effect^="reveal"] [data-page-block]' as const;
+  "[data-page-transform-host]" as const;
 export const PAGE_LAYER_WIDTH_ATTRIBUTE = "data-layer-width" as const;
+export const PAGE_MARQUEE_REPLICA_ATTRIBUTE =
+  "data-page-marquee-replica" as const;
+export const PAGE_MARQUEE_REPLICA_SELECTOR =
+  "[data-page-marquee-replica]" as const;
 ```
 
-The two selector arms are deliberate. The attribute arm covers block-owned transform
-effects; the reveal-descendant arm covers a block inside a section-authored reveal,
-because `resolveBlockCompositionAttrs` receives block style and cannot infer the
-section's reveal state. Both arms consume the same fixed chain. Consumers import this
-selector constant and must not duplicate either literal.
-
-The composed transform order is fixed:
+The exact host formula is:
 
 ```text
 translateY(revealY)
@@ -70,67 +69,58 @@ rotateX(tiltX) rotateY(tiltY)
 translate(magneticX, magneticY)
 ```
 
-Defaults are `0px`, `0deg`, and scale `1`. Register typed custom properties needed
-for smooth keyframe/transition interpolation. Transform-bearing declarations in
-decoration keyframes animate only decoration transform variables; transform-bearing
-hover declarations use only hover transform variables. Existing non-transform visual
-channels such as opacity, filter, and box-shadow remain owned by their effects and must
-not be removed. TASK-539-05 changes reveal
-CSS to `revealY`; TASK-539-07 changes tilt/magnetic runtime to their variables.
-No code after this leaf may assign `style.transform` for those effects. The exported
-transform-host and layer-width names are the only selector spellings used by CSS and
-renderer. The exported grid-item attribute is a fixed shared selector seam (its value
-is the normalized block id) consumed by TASK-539-05 and TASK-539-06; neither consumer
-may duplicate any of these strings.
+Use neutral fallbacks `0px`, `0deg`, and `1`. The map contains exactly eleven keys:
+one reveal, four decoration, two hover, two tilt, and two magnetic variables.
+Every transform-bearing decoration keyframe writes only the decoration variables:
+`float` animates decoration Y, `drift` animates decoration X/Y/scale, `pulse`
+animates decoration scale, and `orbit` animates decoration rotate. `radiate` keeps
+its existing box-shadow animation and does not acquire a transform. Hover
+declarations write only hover variables; tilt/magnetic runtime consumers later write
+only their variables. Ambient-orb drift uses the same decoration channel and host
+formula rather than a separate whole-transform animation. Preserve independent
+opacity/filter/box-shadow channels and register typed properties needed for
+interpolation.
 
-Keep layer anchor placement on the independent `translate` property already used by
-`[data-layer-anchor]`. Add fixed CSS for the renderer's present-only
-`PAGE_LAYER_WIDTH_ATTRIBUTE="full|auto"`: full stretches to `width:100%`; auto remains bounded
-by its containing canvas and must not overflow.
+`resolveBlockCompositionAttrs` stamps `data-magnetic=""` only for `true` and stamps
+the transform host only when a block-owned transform effect is active. It returns
+only safe present values. Section reveal and ambient-orb DOM context are unknown here:
+TASK-539-05 stamps the same host on those actual elements. Do not invent a descendant
+selector arm.
 
-`resolveBlockCompositionAttrs` must:
+Keep layer anchors on `translate`. Retain present-only full/auto layer-width CSS.
 
-```ts
-if (style?.magnetic === true) dataAttrs["data-magnetic"] = "";
-if any block-owned transform effect is active, stamp PAGE_BLOCK_TRANSFORM_HOST_ATTRIBUTE;
-return only safe enum/clamped variable values;
-```
+Marquee CSS is exactly
+`.cx-marquee-viewport > .cx-marquee-rail > .cx-marquee-segment`: viewport clips,
+one flex nowrap `width:max-content` rail animates, and segments are nonshrinking.
+Two equal segments form an approved seamless track; the same CSS remains valid for
+the one-segment safety fallback. Remove `.cx-marquee-track`.
+Direction/speed/reduced-motion remain. The two fixed replica constants above are
+structural/runtime vocabulary only: this leaf owns and exports their exact bytes,
+TASK-539-05 stamps the attribute only on a replica-safe second segment, and
+TASK-539-07 imports the selector before binding any candidate.
 
-Do not stamp `data-magnetic` for false/unset. A section-reveal-only block does not gain
-a redundant host attribute; it joins composition through the second selector arm.
+Every lift/glow-reveal `::before`/`::after` overlay gets `pointer-events:none`; hosts
+remain interactive.
 
-Replace marquee selectors with the exact DOM contract:
+## Compatibility and handoff
 
-```text
-.cx-marquee-viewport > .cx-marquee-rail > .cx-marquee-segment
-```
+No-effect resolver/CSS emission stays present-only. L01 proves only the pure CSS/
+resolver and fixed replica-vocabulary contract; it does not claim renderer stamping,
+runtime movement, or clone behavior before TASK-539-05/07.
 
-The viewport hides overflow, the rail is one `display:flex; flex-wrap:nowrap;
-width:max-content` animation owner, and each segment is nonshrinking/nowrap. Direction
-and speed remain the existing safe attributes/variables. Remove the obsolete
-independently animated `.cx-marquee-track` rule.
-
-Every `::before`/`::after` glow overlay for lift/glow-reveal gets
-`pointer-events:none`; do not disable pointer events on the interactive content.
-
-## Compatibility and errors
-
-- Static CSS is capability-gated as today; no-effect markup stays byte-identical.
-- Existing data attributes remain unless replaced by the explicitly pinned marquee
-  structure. Reduced-motion CSS resets variables to neutral values.
-- There is no runtime error path in this pure resolver; unknown enums remain omitted.
-
-## Gate test ownership and validation
-
-Update the two named suites' stale marquee/direct-transform expectations before this
-source gate. TASK-539-04-L02 owns additive cross-effect cases afterward and must not
-re-baseline these compatibility changes.
+## Validation and line receipt
 
 ```bash
 bun --cwd core lint:types
 bun --cwd core lint
-bun run test:vitest -- tests/vitest/pages/page-composition-effects.test.ts tests/vitest/pages/task-534-interactivity-css.test.ts
+bun run test:vitest -- \
+  tests/vitest/pages/page-composition-effects.test.ts \
+  tests/vitest/pages/task-534-interactivity-css.test.ts
+node _docs/_workflows/task-539-implement.mjs --check-task-family-line-limit
+wc -l core/services/pages/pageCompositionEffects.tsx \
+  tests/vitest/pages/page-composition-effects.test.ts \
+  tests/vitest/pages/task-534-interactivity-css.test.ts
 git diff --check
 ```
 
-Rerun any named failing test file once in isolation before classifying the failure.
+Every receipt must be `<=1000`; rerun a named failure alone.

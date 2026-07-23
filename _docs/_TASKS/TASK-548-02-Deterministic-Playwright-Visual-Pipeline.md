@@ -32,9 +32,12 @@ fixtures, focused `scripts/docs/*visual*` tooling, the five exact pilot triples
 listed in TASK-548-02-L02, visual tests, root docs visual package
 scripts/dependencies, the scoped `.gitignore` exception and CI visual gates.
 TASK-548-02-L03 also pre-creates and exclusively owns
-`packages/docs-renderer/package.json` and `packages/docs-portal/package.json`
-before the single lock reconciliation. TASK-548-06 owns all other production
-scenario/image/receipt files. Never extend the existing 5,530-line
+`packages/docs-renderer/package.json`, `packages/docs-portal/package.json`,
+root/core package manifests, root `bun.lock` and `Dockerfile` before the single
+lock reconciliation. It adds all seven exact root docs scripts, the core
+renderer workspace link and both Docker preinstall manifest copies.
+TASK-548-06 owns all other production scenario/image/receipt files. Never
+extend the existing 5,530-line
 `scripts/playwright-widget-contract-smoke.ts`.
 
 ## Pipeline Contract
@@ -46,12 +49,15 @@ strict scenario + synthetic fixture registry + watched source bytes
   -> bounded raw PNG in .tmp
   -> metadata stripping/privacy/dimension/hash checks
   -> human or agent image review
-  -> canonical docs/guide/assets/images/... PNG + receipt
+  -> canonical locale-bound docs/guide/assets/images/... PNG + receipt
   -> TASK-548-01 compiler joins DocsVisualV1 into the shared bundle
 ```
 
 Every scenario fixes route, semantic actions, viewport, theme, BCP-47 locale,
 timezone, fixture/cleanup profile, capture target, alt, caption and watch paths.
+Scenario, image and receipt paths plus the receipt envelope preserve the exact
+`(docId, locale, sectionId, visualId)` owner even though `visualId` remains
+bundle-global. The runner never selects a document by bare `docId`.
 The runner never accepts arbitrary JavaScript from a manifest. Secrets,
 credentials and PII are neither manifest values nor image content.
 
@@ -80,26 +86,34 @@ credentials and PII are neither manifest values nor image content.
 | --- | --- | --- | --- |
 | TASK-548-02-L01 | Strict scenario DSL, semantic locator/assertion model and fixture lifecycle | visual contract/fixture modules and pure contract tests | TASK-548-01 |
 | TASK-548-02-L02 | `playwright-cli` runner, raw capture, safe PNG promotion, review and receipts | capture/promotion scripts, `.gitignore`, initial canonical visuals and runtime tests | TASK-548-02-L01 |
-| TASK-548-02-L03 | Watch-path staleness, pixel/geometry diff, changed-only/full CI, privacy artifact gate and one workspace lock reconciliation | diff/check scripts, both docs workspace manifests, root package/lock, PR workflow and gate tests | TASK-548-02-L02 |
+| TASK-548-02-L03 | Watch-path staleness, pixel/geometry diff, changed-only/full CI, privacy artifact gate and one workspace/runtime-image lock reconciliation | diff/check/recovery scripts, both docs workspace manifests, root/core package manifests, root lock, Dockerfile, PR workflow and gate tests | TASK-548-02-L02 plus the one same-owner TASK-548-01-L02 post-pilot bundle/report refresh |
 
-Land strictly in table order. L02 may capture only after the task dev server is
-restarted and admin/front health checks pass. L03 cannot auto-promote a changed
-baseline.
+Land L01 → L02, then pause this child while the TASK-548-01-L02 owner performs
+exactly one post-pilot bundle/report refresh after all five pilot triples exist.
+Only after that complete compiler gate passes may L03 land. L02 may capture only
+after the task dev server is restarted and admin/front health checks pass. L03
+cannot auto-promote a changed baseline. No per-scenario or per-promotion
+compiler refresh is valid.
 
 ## Acceptance Criteria
 
 - A fresh agent can run one documented command for a scenario and receives a
   structured capture result without writing credentials or arbitrary code into
   the manifest. The exact capture surface is
-  `docs:visual:capture --scenario <id> --run-id <bounded>` and the exact review
-  surface is
+  `docs:visual:capture --scenario <id>` and the exact review surface is
   `docs:visual:promote --scenario <id> --raw-reviewed-sha256 <64-lowercase-hex> --reviewed-by <bounded-id> --confirm-alt-caption`.
+  The public capture CLI accepts no `--run-id`: it internally obtains one from
+  `createDocsVisualRunIdV1({ scope: "cli" })`, passes it unchanged into the
+  validation-only lower capture API, and emits bounded JSON containing the
+  generated `runId`. CI and migration call the generator directly with their
+  own scopes.
 - At least five distinct real-flow pilot scenarios prove desktop and narrow
   viewport, light and dark admin, route navigation, an interactive visible
   effect and a restricted-permission state; each finishes with zero console/page
   errors and scoped cleanup.
 - Every promoted image is bounded/cropped, visually reviewed, metadata-sanitized
-  and tied to scenario/source/image hashes in a strict receipt.
+  and tied to localized document/section identity plus scenario/source/image
+  hashes in a strict receipt.
 - Changed watched code, fixture data, locale/theme/viewport, scenario or image
   bytes makes the visual stale. CI reports a diff and fails; it never approves
   or overwrites the canonical PNG.

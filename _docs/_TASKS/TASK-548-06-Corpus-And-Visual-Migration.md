@@ -5,8 +5,10 @@
 **Priority:** High
 **Category:** Documentation / Migration / Coverage
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-548-05; TASK-548-01-L02 workspace-pair recovery and
-same-owner refresh/handback gates
+**Dependencies:** TASK-545 `✅ Done` and TASK-547 terminal plus a TASK-548
+parent amendment naming and serializing every literal final overlapping
+user/developer/shared-doc path before any implementation; TASK-548-05;
+TASK-548-01-L02 workspace-pair recovery and same-owner refresh/handback gates
 **Status:** ⏳ To Do
 **Changelog:** 1261 (pinned; closure only)
 
@@ -44,7 +46,16 @@ not imply that a Polish Admin UI or Polish documentation is complete.
   the later final-handback verification reopen that same capsule; they never
   regenerate, overwrite, or silently repair it. Stale, foreign, partial,
   mutated, or extra inventory blocks before a source write.
-- `entry.documentId` maps byte-for-byte to native `docId`; each
+- L01 owns the exact four-key
+  `CreateFrozenGuideMigrationBaselineInput = { migrationRunId, reportPath,
+  bundlePath, sources }` and returns
+  `ReopenedFrozenGuideMigrationBaselineV1 = { receipt, report, bundle }` from
+  both create/resume and reopen. The receipt is capped before parsing; then both
+  stored regular members are byte-capped, hashed, run/link validated, and only
+  then parsed and normalized. Parent and both leaves consume that typed result,
+  never independently parse a stored member.
+- `entry.documentId` maps byte-for-byte to native `docId`; the exact document
+  identity is `(docId, locale)`, and translations may share a `docId`. Each
   `sections[].headingOccurrence` maps explicitly to its reported `sectionId`.
   L01 writes the exact owner directive
   `[[coderso-section:<ordinal>:<section-id>]]` immediately before, with no blank
@@ -65,18 +76,24 @@ not imply that a Polish Admin UI or Polish documentation is complete.
   `publicationTargets`, and `keywords`. Permission requirements preserve
   `null`, `allOf`, and `anyOf` semantics; no `requiredPermissions`, plural
   `audiences`, or generic permission-set alias is valid.
-- Strict example and visual sidecars join only by stable section ID. Prose,
+- Strict example and visual sources carry the owning canonical BCP-47
+  `{ docId, locale, sectionId }` tuple. `sectionId` is scoped to that localized
+  document, while `exampleId` and `visualId` stay bundle-global. Prose,
   captions, alt text, scenario steps, and examples carry meaning; screenshots
-  are never the only explanation.
+  are never the only explanation, and one locale can never resolve another
+  locale's sidecar or action.
 - TASK-548-02-L02 retains sole ownership of its pilot image/scenario/receipt.
   L01 owns every non-pilot migration scenario, reviewed PNG, receipt, and
   guide-owned example introduced by this migration.
 - Visual capture uses synthetic fixtures and the landed explicit
   capture → inspect → promote flow. Generated or changed images are never
   auto-approved. The migration caller creates every bounded, collision-checked
-  run ID from a CSPRNG, passes it explicitly and unchanged through capture, and
-  supports injected entropy only for deterministic tests. Run IDs never enter
-  canonical Guide, bundle, coverage, image, or promotion artifacts.
+  run ID through exact TASK-548-02-L01 owner
+  `createDocsVisualRunIdV1({ scope: "migration" }, deps?)`, yielding
+  `migration-<32-lowercase-hex>` from 128-bit CSPRNG with at most eight
+  collision retries. It passes the ID explicitly and unchanged through capture;
+  only deterministic tests inject entropy. Run IDs never enter canonical Guide,
+  bundle, coverage, image, or promotion artifacts.
 - TASK-548-01-L02 remains the sole writer of
   `core/generated/docs/coderso-docs-v2.json` and its generated migration report.
   After all three L01 native-source/visual waves and promotions, L01 pauses
@@ -86,6 +103,14 @@ not imply that a Polish Admin UI or Polish documentation is complete.
   stored original, not an in-memory reconstruction, before `docs:check` or
   06-L02 coverage starts. Per-wave/per-promotion regeneration is forbidden.
   Neither 06 leaf writes the generated bundle or report.
+- The only public migration entry point is
+  `bun scripts/docs/migrate-guide-corpus.ts --migration-run-id <id>
+  --all-waves`. It always processes internal waves `1 → 2 → 3`, has no
+  wave/skip/reorder/resume-position selector, and resumes by accepting every
+  source/sidecar/receipt only when it is byte-exact frozen-baseline state or
+  byte-exact deterministic intended migrated state. The direct migration API
+  creates a distinct run ID per visual and invokes the lower capture API; there
+  is no public capture command that accepts `--run-id`.
 - Coverage comes from the compiled bundle, strict manifests, promoted receipts,
   and exact `AdminRouteDescriptorV1` constants imported from
   `core.admin-route-descriptor.ts` and `help.admin-route-descriptor.ts`.
@@ -95,21 +120,31 @@ not imply that a Polish Admin UI or Polish documentation is complete.
   null/allOf/anyOf semantics and `capabilityIds`, never imports TSX or
   `import.meta.glob`, and tests the exact descriptor-module inventory.
   L02 owns the exported recursively strict `DocsCoverageReportV2`, its exact
-  nested records/limits, and `normalizeDocsCoverageReportV2`; generated records
-  are canonically sorted and reject unknown fields. `_COVERAGE_MATRIX.md` is
-  generated output, not acceptance evidence by itself.
+  nested records/limits, `normalizeDocsCoverageReportV2`, and the sole byte
+  boundary `parseDocsCoverageReportV2(bytes)`, which enforces the byte cap
+  before `JSON.parse` and then delegates to the normalizer. Generated records
+  preserve exact `(docId, locale)` identity, bind every example/visual asset to
+  `{ docId, locale, sectionId }`, keep asset IDs bundle-global, and are
+  canonically sorted by `(locale, docId)` with unknown fields rejected.
+  `_COVERAGE_MATRIX.md` is
+  generated output, not acceptance evidence by itself. Coverage `--write`
+  recovers the workspace pair; coverage `--check` uses the read-only hazard
+  inspector and performs no recovery or filesystem mutation.
 
 ## TASK-547 Serialization
 
-Before L01 edits `docs/guide`, TASK-547-06 must name its exact user/developer
-guide path. TASK-548 records that path as forbidden while TASK-547 owns it, or
-lands after TASK-547 and reads its final shipped bytes. L02 re-reads the shipped
-Admin route registry and Guide tree after that handoff.
+TASK-545 must be `✅ Done` and TASK-547 must be terminal before any TASK-548
+implementation. After TASK-547 becomes terminal, the TASK-548 parent must be
+amended with every
+literal final overlapping user/developer/shared-doc path and a serialized
+single writer for each. Before L01 edits `docs/guide`, those literal paths are
+forbidden until its assigned handoff; L01 then reads final shipped bytes. L02
+re-reads the shipped Admin route registry and Guide tree after that handoff.
 
-Planned TASK-547 routes/features are not documented as available. If TASK-547 is
-not shipped when the corpus freezes, its future behavior is absent from active
-coverage; if it ships first, its actual canonical path/permission behavior joins
-the same generated reconciliation. No two agents edit one Guide path in
+Planned TASK-547 routes/features are not documented as available. Because
+TASK-547 is terminal before implementation, its actual shipped canonical
+path/permission behavior joins reconciliation; behavior from a cancelled or
+superseded descendant remains absent. No two agents edit one Guide path in
 parallel.
 
 ## Sub-Tasks
@@ -128,6 +163,20 @@ TASK-548-01-L02 one final same-owner generated-bundle/report handback/gate →
 TASK-548-06-L01 recover and verify final pair against the stored original →
 TASK-548-06-L02`. Operational refresh/handback calls never change status or
 transfer/reopen source ownership.
+
+After `TASK-548-06-L02`, the global closure order is exactly
+`07-L01-runtime-docs-and-gates-preparation →
+08-post-audit-lenses/fixes/revalidation →
+07-L01-final-smoke-phase1-owner-pause →
+07-L01-owner-resume-tracked-parity →
+08-final-read-only-drift →
+07-L01-terminal-metadata-closeout-and-mechanical-delta-verification`. The same
+physical 07-L01 owner executes all four 07 phases and does not become terminal
+until the last phase. A non-metadata post-audit or final-drift finding returns
+to its sole owning leaf and restarts the affected preparation/audit/smoke
+chain; final smoke/checkpoint never precedes post-audit, substantive final drift
+never follows terminal metadata, and the post-metadata delta check is
+mechanical and external-only.
 
 Neither leaf edits root package/lock/workflows, TASK-548 task/changelog files,
 portal/release source, or the TASK-548-02 pilot. Only TASK-548-07 closes statuses
@@ -153,23 +202,14 @@ and changelog 1261.
 ## Implementation Pseudocode
 
 ```ts
-await recoverDocsWorkspaceArtifactPromotionV1();
-const baseline = await createOrResumeFrozenGuideMigrationBaselineV1({
-  migrationRunId: requireExplicitCallerMigrationRunId(),
-  reportPath: ".tmp/docs-corpus/migration-report-v1.json",
-  bundlePath: "core/generated/docs/coderso-docs-v2.json",
-  sourceTree: readUnmodifiedActiveEnglishGuideSources(),
-});
-for (const wave of ALL_THREE_GUIDE_MIGRATION_WAVES) {
-  await applyNativeMetadataExamplesAndReviewedVisuals({
-    wave,
-    frozenReport: baseline.report,
-    frozenBundle: baseline.bundle,
-  });
-}
-const regenerated =
-  await requestExactlyOneFinalTask54801L02RegenerationHandback();
-await recoverDocsWorkspaceArtifactPromotionV1();
+const migrated = await migrateGuideCorpus(
+  {
+    migrationRunId: requireExplicitCallerMigrationRunId(),
+    allWaves: true,
+  }
+);
+const baseline: ReopenedFrozenGuideMigrationBaselineV1 = migrated.baseline;
+const regenerated = migrated.regenerated;
 assertOwnerRegeneratedReportAndBundleHashes(regenerated);
 const bundle = await loadOwnerGeneratedDocsCorpusV2(regenerated.bundlePath);
 assertFinalNativeOutputAgainstFrozenOriginalBaseline({
@@ -183,7 +223,10 @@ const coverage = reconcileDocsCoverage({
   adminRoutes: loadCanonicalAdminRouteCoverageSnapshot(),
   receipts: loadPromotedVisualReceipts(),
 });
-assertCompleteCoverage(normalizeDocsCoverageReportV2(coverage));
+assertEveryExampleAndVisualOwnsCanonicalDocumentSectionTuple(coverage);
+assertCompleteCoverage(
+  parseDocsCoverageReportV2(serializeDocsCoverageReportV2(coverage))
+);
 ```
 
 **Data flow:** recovered workspace pair → one atomic durable linked original
@@ -220,7 +263,9 @@ source compiles once without adapter diagnostics; all sidecars close; route and
 permission mutations make coverage fail; each target consumer receives only
 eligible records and any assistant/embedded-help/public-docs leak fails; planned
 TASK-547 behavior is excluded; real shipped behavior is serialized and covered;
-no fake Polish route, hreflang, or completeness claim appears.
+same-`docId`/different-locale fixtures never cross-resolve Guide evidence,
+Help/CMS actions, examples, or visuals; no fake Polish route, hreflang, or
+completeness claim appears.
 
 ## Acceptance Criteria
 
@@ -244,25 +289,45 @@ no fake Polish route, hreflang, or completeness claim appears.
   `FrozenGuideMigrationBaselineV1` inventory frozen before any source/visual
   write and retained unchanged through all three waves, restart/resume, and
   final comparison
+- exact
+  `bun test tests/unit/documentation/docsGuideMigrationBaseline.test.ts`
 - exactly one TASK-548-01-L02 same-owner final handback after all native
   source/visual changes, followed by recovery, report/bundle hash and
   final-vs-stored-original verification
 - exact native section-directive round-trip, duplicate/reorder/orphan/heading
-  detachment tests and caller-owned CSPRNG/injected-test-entropy run-ID tests
+  detachment tests and exact
+  `createDocsVisualRunIdV1({ scope: "migration" }, deps?)` CSPRNG/output/
+  eight-collision-retry/injected-test-entropy/unchanged-pass-through tests
 - strict `DocsCoverageReportV2` round-trip, recursive unknown/limit/tamper/
-  canonical-sort and recovery-before-load tests
+  canonical-sort, write-mode recovery-before-load, and check-mode
+  read-only-hazard-inspection-before-load tests
 - `bun run docs:check` only after that single final handback passes
 - `bun run docs:visual:check -- --all`
 - native-only compile and normalized semantic/stable-identity comparison, with
   expected source-hash change
 - focused corpus, visual receipt, coverage, route, link, permission, and exact
   target-consumer publication tests from both leaves
+- exact migration command
+  `bun scripts/docs/migrate-guide-corpus.ts --migration-run-id <id>
+  --all-waves`; reject public per-wave/skip/reorder inputs and public capture
+  `--run-id`; inject crashes at atomic boundaries, restart through internal
+  waves `1 → 2 → 3`, and prove a complete rerun byte-idempotent
+- `bun run docs:coverage -- --write` followed immediately by
+  `bun run docs:coverage -- --check`, including parser pre-`JSON.parse` byte-cap
+  and same-`docId`/different-locale `{ docId, locale, sectionId }` identity/
+  action/asset tests. These commands consume the seventh exact root
+  `docs:coverage` script owned by TASK-548-02-L03; this family does not edit
+  root `package.json`
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
 - touched-file line counts and `git diff --check`
 
 ## Documentation Updates Required
 
-Send the final inventory, visual review evidence, normalized parity/source-hash
-receipt, route-snapshot handoff, exclusions, coverage report, and TASK-547
-serialization outcome to TASK-548-07.
+Send the final inventory, visual review receipt summaries, normalized
+parity/source-hash receipt, route-snapshot handoff, exclusions, coverage report,
+and TASK-547 serialization outcome to TASK-548-07 closeout. This family writes
+no canonical TASK-548 acceptance screenshot or alternate evidence tree:
+07-L01 alone owns the exact eight final screenshots, and
+`06-portal-local-exact-latest-rollback.png` is the only canonical portal
+screenshot.

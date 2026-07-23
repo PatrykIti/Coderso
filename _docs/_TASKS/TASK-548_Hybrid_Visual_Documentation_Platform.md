@@ -4,9 +4,10 @@
 **Priority:** High
 **Category:** Documentation / Assistant / Admin UI / Release
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-109, TASK-182, TASK-403; completed TASK-545 plus a fresh
-canonical pre-implementation audit PASS, and the TASK-547 exact-path declaration,
-before implementation dispatch
+**Dependencies:** TASK-109, TASK-182, TASK-403; TASK-545 must be `✅ Done` and
+TASK-547 must be terminal, then this parent amended from TASK-547's final
+literal paths and a fresh canonical pre-implementation authoring audit PASS,
+before any dispatch
 **Related Tasks:** TASK-240, TASK-414, TASK-547
 **Status:** ⏳ To Do
 **Changelog:** 1261 pinned
@@ -97,8 +98,9 @@ Playwright scenarios ── reviewed canonical screenshots
   `permissionRequirement: DocsPermissionRequirementV1 | null`, where the
   requirement is `{ mode: "allOf" | "anyOf"; permissions: string[] }`.
   Permission arrays are non-empty, unique, canonically sorted and catalog
-  validated. Null means authenticated Admin access with no extra catalog
-  permission and remains valid for non-null routes such as `/preview`.
+  validated. Null means no extra catalog permission. Route visibility and
+  authentication remain separate registry concerns: it is valid for the public
+  token-gated `/preview` descriptor and the authenticated `/help` descriptor.
 - `capabilityIds` is the single bounded, canonical, catalog-validated
   capability field used by compiler, ingest, search and coverage.
 - The schema discriminator is `coderso.docs-corpus@v2`.
@@ -110,9 +112,14 @@ Playwright scenarios ── reviewed canonical screenshots
   portal accepts only documents containing `public-docs`. A document may target
   more than one surface, but absence of a target always excludes it from that
   surface.
-- Stable `docId`, `sectionId`, `visualId`, and `exampleId` values own links and
-  joins. Internal Help and public portal URLs are derived, never copied into
-  prose by hand.
+- Stable `docId` is translation-family identity and is intentionally reused
+  across locales; document uniqueness is the exact `(docId, locale)` pair.
+  `sectionId` is unique within that localized document, while `visualId` and
+  `exampleId` are bundle-global. Every authored sidecar, visual promotion
+  identity, receipt, Guide evidence record and Help deep link still carries the
+  owning canonical `locale`; no consumer joins a localized document by bare
+  `docId` or by `docId + sectionId`. Internal Help and public portal URLs are
+  derived, never copied into prose by hand.
 
 ### Local-first distribution
 
@@ -288,20 +295,21 @@ TASK-548-01-L02 regenerates the exclusive bundle/report from those bytes and
 passes its targeted gate before TASK-548-02-L03 or TASK-548-03 may start. This
 is one owner refresh, not another writer or a status transition.
 
-TASK-545 completion is also a hard dispatch blocker, not an advisory dependency.
-After TASK-545 is `✅ Done`, rerun the canonical read-only pre-implementation
-audit against the then-current HEAD plus dirty-worktree context and require a
-PASS with zero unresolved HIGH/MEDIUM findings. A stale pre-TASK-545 audit does
-not qualify.
+TASK-545 and TASK-547 are separate hard dispatch blockers, not advisory
+dependencies. TASK-545 must be exactly `✅ Done`, because TASK-548 imports its
+tracked shared workflow drivers; `⏭️ Superseded` or `❌ Cancelled` cannot
+authorize a substitute. TASK-547 must reach a terminal status. TASK-548 must
+not edit either family to manufacture those states.
 
-TASK-547 is a separate hard dispatch blocker, not an advisory related task. Before any
-TASK-548 implementation starts, its owner must name every exact user/developer
-guide path it will edit at closure. This parent must then record those literal
-paths, the serialized land order, and each TASK-548 leaf's matching
-forbidden-path guard. Until that amendment exists, no implementation leaf may
-start. TASK-548 must not edit TASK-547 to manufacture the declaration. No
-TASK-548 implementation leaf may dispatch until both the TASK-545 audit gate and
-TASK-547 literal-path gate pass.
+After TASK-545 is Done and TASK-547 is terminal, read TASK-547's final bytes and
+amend this parent with every literal user/developer guide path it owns, the
+serialized cross-family land order, and each TASK-548 leaf's matching
+forbidden-path guard. Only after that amendment, rerun the canonical read-only
+pre-implementation authoring audit against the then-current HEAD plus complete
+dirty-worktree context and require a PASS with zero unresolved HIGH/MEDIUM
+findings. Any audit run before both dependency gates or before the literal-path
+amendment is stale and does not qualify. No TASK-548 implementation leaf may
+dispatch until this exact sequence passes.
 
 Only TASK-548-07 may edit TASK-548 statuses, the board, changelog 1261, or the
 changelog index during implementation.

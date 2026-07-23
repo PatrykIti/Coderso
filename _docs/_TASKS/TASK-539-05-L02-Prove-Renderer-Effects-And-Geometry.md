@@ -12,60 +12,107 @@
 
 ---
 
-## Ownership
+## Additive-only ownership
 
-Own only additive geometry/combination cases in:
+Create only
+`tests/vitest/pages/task-539-renderer-effects-and-geometry.test.tsx`.
+L01 source and all split/existing renderer suites are read-only here.
 
-- `tests/vitest/pages/page-renderer-v2.test.tsx`
-- `tests/vitest/pages/task-534-interactivity-render.test.tsx`
+## Test Shape
 
-TASK-539-05-L01 already updated and gated compatibility expectations in both files; do
-not re-baseline them.
+- Magnetic-only and reveal-only documents emit the shared transform CSS/host;
+  false/unset/no-effect bytes remain exact. Repeat predicate proof through footer
+  renderer input.
+- Combined reveal/decoration/hover/tilt/magnetic/layer preserves every
+  hook/variable; float/drift/pulse/orbit block and ambient-orb hosts use the one
+  formula, while radiate preserves box-shadow and layer anchor remains `translate`.
+- L05 placement: default root frame and template wrappers carry the one legal
+  attribute/span target; nested/per-column/non-default-media-split carry neither.
+  Cover base-only span, responsive-only span, and no span, plus the hidden assigned
+  sibling under omitted/`false`/`true` `includeHiddenBlocks`. Prove the renderer
+  normalizes the optional input once, omitted equals `false`, descendants receive
+  the boolean unchanged, and at most one hook is stamped.
+- Canonical gallery only, defense-rechecked URLs/categories, caption placeholder,
+  accessible filter state, and no alias interpretation.
+- Background image/color separation covers one/stacked gradients, final color,
+  full bleed, clears, and invalid fail-closed values; color never enters
+  `background-image`.
+- Safe `seamless:true` has one rail/two equal segments. Use safe direct and deeply
+  nested inline content beneath the authored outer `group`, including switcher,
+  gallery, button, Safe SVG,
+  container/columns/group slots, and two normalization-collision candidates. The
+  primary keeps exact canonical identifiers/bytes. The replica imports the exact
+  owner marker, carries `aria-hidden` and native `inert`, adds no blanket descendant
+  `tabIndex` or `disabled` mutation. Vitest asserts the marker plus emitted
+  `aria-hidden`/native `inert` markup/property only; TASK-539-08 Playwright owns real
+  browser focus and activation suppression.
+- Pin deterministic owner-ID + serialized-path namespaces, exact four-lowercase-
+  base36-digits-per-Unicode-code-point encoding for ASCII and Unicode, delimiter
+  safety, and reversibility. Direct-import the explicitly exported pure identity
+  helpers from `pageRendererReplicaIdentity.ts`; do not import them through the
+  stable renderer facade. Its focused unit table covers `htmlFor`/rendered `for`
+  because no current safe real renderer emits label markup.
+- End-to-end markup uses real switcher and Safe SVG output to cover HTML/SVG `id`,
+  every emitted `aria-labelledby`/`aria-describedby` token, `aria-controls`, local
+  `href`/`xlinkHref`, every accepted fill/stroke/clip-path/mask/filter `url(#...)`,
+  and real identifier-bearing block/slot hooks. Assert the collected `domIds` and
+  `hookIdentifiers` are separate: IDREF/hash/SVG references rewrite only targets
+  backed by an emitted DOM/SVG `id`, while data-hook values namespace only through
+  `hookIdentifiers`. A fragment equal only to a hook identifier stays
+  byte-identical. Every rewritten DOM reference resolves inside that replica and
+  never the primary; unresolved/external references and boolean/enumerated hooks
+  remain byte-identical.
+- For each exact unsafe type (`video`, `form`, `collection`, `filters`, `embed`),
+  cover both an immediate active-slot child (“direct”) and deep active-slot nesting
+  under an authored `seamless:true` outer group. Do not test or implement an
+  erroneous safety check against the outer group owner itself. Each case has one
+  rail/one canonical segment, no replica marker/namespace, and
+  exactly one corresponding form/listing/script/nonce/global-runtime/network-bearing
+  surface. No cloned form script/nonce, listing/filter hook, iframe/embed, or video
+  source may exist.
+- Put an authored marquee below another authored seamless marquee. The outer owner
+  falls back to one canonical segment; the nested canonical owner independently
+  emits two segments only for its safe children. Two nested/sibling owners get unique
+  path namespaces and no cross-owner ID reference. `seamless:false` has one segment
+  and no marker/namespace.
+- Divider width/alignment regression remains gradient-only without changing source.
+- Direct-import `PageTimelineItemGeometry` and
+  `resolvePageTimelineItemGeometry(section,template,index,total)` from
+  `pageRendererTimelineGeometry.ts`, never the stable facade. Pin
+  `paddingClassName:"py-3"`/marker center `22` by default and
+  `"py-2"`/`18` for compact, with `rowGapPx` exactly from normalized
+  `toPageSectionVariantSpacing` across `0..120` and its existing compact scaling.
+  A vertical singleton has `axis:null`. Multi-item rows pin first `top` to
+  `${markerCenterPx}px`, every later `top` to `"0"`, every non-final `bottom` to
+  `calc(-1 * ${rowGapPx}px)`, and final `bottom` to
+  `calc(100% - ${markerCenterPx}px)`. Horizontal returns `axis:null` and its markup
+  stays exact.
+- Stable facade exports remain the exact pre-task surface; replica-identity and
+  timeline-geometry internals are explicitly exported only by their direct owners.
+  Pin all split suite/module line receipts.
 
-## Implementation Pseudocode
+DOM structure proof supplements TASK-539-08 computed geometry and TASK-539-07 real
+runtime clone-ignore/movement proof. Native `inert` behavior is accepted only from
+the TASK-539-08 real-browser focus/activation smoke, not from Vitest/JSDOM.
 
-### Test Shape
+## Security Contract
 
-- Render a normalized **magnetic-only** block and assert the renderer itself produces
-  `[data-magnetic]`, the transform-host hook, and
-  `PAGE_COMPOSITION_EFFECTS_CSS`; do not inject selectors or composition CSS into a
-  fake fixture. Repeat with magnetic false/unset and pin zero additional bytes.
-- Combined layer/reveal/decoration/hover/tilt/magnetic markup retains every owned
-  hook/variable and never contains reveal `transform:none`.
-- A section with reveal and an otherwise effect-free block produces no redundant
-  block-owned host attribute, but the shared two-arm host selector applies the fixed
-  transform chain and reveal variable to that descendant. Assert the renderer emitted
-  `PAGE_COMPOSITION_EFFECTS_CSS` solely because `section.style.scrollEffect` is present;
-  the same no-effect section without `scrollEffect` emits zero additional bytes.
-- Full tilt+layer wrapper carries full width; auto carries auto; unrelated blocks have
-  no layer-width attribute.
-- Base spans style the actual section grid item for default and template-wrapper
-  paths, and are absent for per-column/media-split paths. No-span output remains exact.
-- Gallery renders only canonical items, safe image URLs/categories, accessible filter
-  state and caption-only placeholders; unknown aliases are not interpreted here.
-- Background tests pin separate image/color properties for single gradient, gradient
-  stack, final color, full-bleed section and invalid fail-closed input. Assert no color
-  token appears in a `background-image` value.
-- Marquee has exactly one rail and two adjacent segment nodes; the clone is
-  `aria-hidden` and obsolete track markup is absent.
-- Divider width/alignment appear only for the gradient branch.
-- Timeline first/middle/last/single markup carries the exact marker-center top/bottom
-  geometry for default and compact; horizontal markup is unchanged.
-- Pin legacy/no-effect rendered markup byte identity.
-- Render the same magnetic-only document through the footer renderer input and prove
-  the same composition predicate/style bytes are present; TASK-539-07-L02 owns the
-  subsequent real main+footer runtime movement/reset proof.
+The suite renders public read-only normalized documents only. It proves fail-closed
+replica suppression for all script/nonce, global binder, and live-network block
+types, exact local-reference rewriting, and inert replica markup/property. Real
+interaction suppression is proved by TASK-539-08 Playwright. It adds no
+route or public write; auth, RBAC, CSRF, rate limit, API-key, nonce/HMAC, and captcha
+contracts are unchanged.
 
-DOM structure assertions supplement, not replace, TASK-539-08 browser bounding-box
-proof.
-
-## Validation
+## Validation and line receipt
 
 ```bash
-bun run test:vitest -- tests/vitest/pages/page-renderer-v2.test.tsx tests/vitest/pages/task-534-interactivity-render.test.tsx
+bun run test:vitest -- tests/vitest/pages/task-539-renderer-effects-and-geometry.test.tsx
 bun --cwd core lint:types
 bun --cwd core lint
+node _docs/_workflows/task-539-implement.mjs --check-task-family-line-limit
+wc -l tests/vitest/pages/task-539-renderer-effects-and-geometry.test.tsx
 git diff --check
 ```
 
-Rerun each failing file alone before classification.
+The new suite must be independently runnable and `<=1000`. Rerun it once on failure.

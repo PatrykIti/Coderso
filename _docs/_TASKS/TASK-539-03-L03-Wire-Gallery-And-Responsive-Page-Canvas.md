@@ -5,89 +5,203 @@
 **Parent Subtask:** TASK-539-03
 **Priority:** High
 **Category:** Pages / PageEditor / Responsive UX
-**Estimated Effort:** Medium
-**Dependencies:** TASK-539-03-L01, TASK-539-03-L02
+**Estimated Effort:** Large
+**Dependencies:** TASK-539-03-L02
 **Status:** ⏳ To Do
 **Changelog:** 1251 (pinned; create only at TASK-539 closure)
 
 ---
 
-## Ownership and collision guard
+## Sole ownership, split, and collision guard
 
-Sole source writer: `core/admin/ui/pages/PageEditor.tsx`. This leaf also owns the
-compatibility-expectation updates required before its source gate in
-`tests/vitest/ui/page-editor-v2-flow.test.tsx`.
+Own the stable `core/admin/ui/pages/PageEditor.tsx` facade and cohesive extraction
+under `core/admin/ui/pages/editor/`:
 
-Do not implement until TASK-478/TASK-481 are inactive and their final file is read
-fresh. Explicitly forbidden: `core/admin/ui/shared/CanvasEditor.tsx`, every Custom
-Screen file, `PageAuthoringCanvas.tsx`, model/render/runtime source, and foreign tests.
+- `PageEditorRoot.tsx`
+- `usePageEditorController.ts`
+- `pageEditorDocumentCommands.ts`
+- `PageEditorToolbar.tsx`
+- `PageEditorRegistryFields.tsx`
+- `PageEditorResponsivePanel.tsx`
+- `PageEditorSettingsPanel.tsx`
+
+Keep the facade's exact pre-task public surface through explicit named/type
+re-exports; no export-star:
+
+- values/functions: `PageEditor`, `PageSettingsSubpanel`,
+  `findRecoverableAutosaveRevision`, and `resolveToolbarTargetLabel`;
+- local type: `PageEditorProps`;
+- all ten host-contract types: `PageEditorHost`,
+  `PageEditorHostAppearancePanelProps`, `PageEditorHostCanvasChromeProps`,
+  `PageEditorHostFreshnessMode`, `PageEditorHostLoadOptions`,
+  `PageEditorHostPalette`, `PageEditorHostPreviewResponse`,
+  `PageEditorHostPublishResult`, `PageEditorHostRevisions`, and
+  `PageEditorHostSettingsRenderProps`.
+
+Also own the cohesive split of `tests/vitest/ui/page-editor-v2-flow.test.tsx` into:
+
+- the existing core flow suite;
+- `page-editor-v2-authoring-flow.test.tsx`
+- `page-editor-v2-controls-flow.test.tsx`
+- `page-editor-v2-inline-edit-flow.test.tsx`
+- `page-editor-v2-responsive-flow.test.tsx`
+- `page-editor-v2-layout-flow.test.tsx`
+- `page-editor-v2-persistence-flow.test.tsx`
+- `page-editor-v2-settings-flow.test.tsx`
+- optional focused `pageEditorV2FlowHarness.tsx`, only for shared render/host fixtures.
+
+Each suite must run independently. Extract by behavior, not arbitrary ranges; no
+generic dumping-ground helper. Baselines are 5,204 source lines and 6,813 test lines;
+every result must be `<=1000`.
+
+Forbidden: `CanvasEditor.tsx`, `PageAuthoringCanvas.tsx`, every Screen/Custom Screen
+file, renderer/model/runtime source, and foreign tests. Read TASK-478/TASK-481 output
+fresh before editing.
 
 ## Implementation Pseudocode
 
-Replace the local media URL field with the L02 import and render
-`GalleryItemsControl` for the `galleryItems` UI model:
+- Replace local `ToolbarMediaUrlField` with `MediaUrlControl`.
+- Render `GalleryItemsControl` only for `{kind:"galleryItems"}` and
+  `GalleryCategoryTokensControl` only for `{kind:"galleryCategoryTokens"}`; never
+  route either through `ListItemsControl`.
+- Build every media field's scope from an unambiguous serialized tuple
+  `JSON.stringify([targetKind,targetId,control.id])`. Pass it as `scopeKey` and key/remount
+  `MediaUrlControl` by that value; for the gallery-items kind pass that same value as
+  `GalleryItemsControl.parentScopeKey`, where L02 derives collision-safe row scopes.
+  A block/section replacement with the same stored URL therefore cannot receive
+  completion from the previous target.
+- Pass gallery items only when already canonical; malformed values display as an
+  empty list and are never committed until an explicit user edit.
+- Preserve L02's source-length contract through the real PageEditor path:
+  `GalleryItemsControl` imports/passes `PAGE_GALLERY_SRC_MAX` to its row media
+  controls. In the split PageEditor source-owner suite, resolve a selected
+  `MediaRecord.url` at exactly 2,048 characters and prove one canonical gallery
+  commit, then resolve 2,049 characters and prove no commit, dirty transition, or
+  autosave transition and no mutation of the current row. PageEditor must not slice
+  either selected or already-displayed source values.
+- For each section or block registry control, derive all field behavior once:
+
+  ```ts
+  const registryBlockPath =
+    selectedBlockPath ??
+    (selectedSection.blocks[0] ? ([{index: 0}] as const) : null);
+  const baseRegistryBlock = registryBlockPath
+    ? getPageBlockAtPath(selectedSection, registryBlockPath)
+    : null;
+  const effectiveRegistryBlock = registryBlockPath
+    ? getPageBlockAtPath(resolvedSelectedSection, registryBlockPath)
+    : null;
+
+  const controlDevice = control.responsive ? activeDevice : "desktop";
+  const fieldDevice = controlDevice;
+  const fieldTarget = control.responsive ? effectiveTarget : baseTarget;
+
+  const visible = isPageEditorControlVisible(control, {
+    baseTarget,
+    effectiveTarget,
+  });
+
+  // Every read/auxiliary/default/shell/reset/commit path receives fieldTarget
+  // and fieldDevice, never an independently chosen active target/device.
+  patchBlockControlForDevice(block, fieldDevice, control, value);
+  patchSectionControlForDevice(section, fieldDevice, control, value);
+  ```
+
+  This is the one canonical registry block target: the selected path when present,
+  otherwise the first root path `[{index:0}]` when a root exists. Do not independently
+  derive a first block while leaving the path null. The exact
+  `registryBlockPath`/base/effective block tuple drives control discovery, visibility,
+  displayed/auxiliary/default values, media parent scope, span placement, reset, and
+  every block mutation. A fallback field commit calls `updatePageBlockAtPath` with
+  `[{index:0}]`; selected/nested commits use the selected path. If the chosen path no
+  longer resolves, render no block registry field and perform no block write rather
+  than falling through to a section mutation or a different block.
+
+  Use `fieldTarget` for the visibility source, displayed value, auxiliary inputs,
+  and default comparison. Use `fieldDevice` for the field shell, override badge,
+  reset affordance, commit callback, and write. Apply this exact projection to
+  selected and fallback block paths plus section paths. A base-only control never
+  displays an active-device override badge and never exposes/calls a responsive reset.
+  Hidden controls never clear values on render. All four gallery controls and all
+  five divider controls remain base-owned while tablet/mobile is active; one
+  deliberate edit creates one dirty/autosave transition and no responsive
+  gallery/divider key. A pre-existing tablet/mobile key remains byte-identical.
+- For span controls, call
+  `resolvePageBlockGridPlacement(selectedSection, selectedBlockPath,
+  {includeHiddenBlocks:true})` from L05 and show them only when the result is not
+  `"none"`. Admin intentionally classifies all root blocks, including hidden ones.
+  Do not duplicate placement or visibility rules.
+- Keep all existing change/autosave/cache/dirty-state flows.
+
+Inspector clearance is Page-local:
 
 ```tsx
-case "galleryItems":
-  return <GalleryItemsControl
-    label={control.label}
-    value={isCanonicalGalleryArray(rawValue) ? rawValue : []}
-    categories={readStringArray(effectiveBlock.props.filterCategories)}
-    onChange={onCommit}
-  />;
+const canvasScrollerClassName = `min-h-0 flex-1 overflow-auto overscroll-contain
+  bg-dotted p-6 lg:p-8 ${
+    panelOpen && hasFloatingPanelSelection
+      ? "sm:pr-[300px] lg:pr-[300px]"
+      : ""
+  }`;
 ```
 
-Do not create a second permissive gallery normalizer in the browser. Defensive UI
-guards may map malformed input to an empty display but only the canonical control
-output is committed.
+Build this class locally in PageEditor code; do not import
+`joinPageRenderClasses` or another public-renderer helper. Remove the fixed inline
+`style={{paddingRight:300}}`. At 320/390/480px the conditional class adds no rail
+reservation and the existing normal `p-6` padding remains. From `sm` (`640px`)
+upward the open selected inspector reserves exactly 300px on the right, including at
+`lg` despite the retained `lg:p-8`; closing it restores the ordinary `p-6 lg:p-8`
+padding. Vitest pins the conditional class tokens, open/closed state, and cascade
+contract (including both responsive right-padding tokens after the retained
+`lg:p-8` token); it does not claim a JSDOM computed-style result. TASK-539-08 owns
+the real Playwright computed-padding proof at 640px and an `lg` viewport. The panel
+may overlay narrow content and stays closable.
 
-Before rendering controls, call `isPageEditorControlVisible` with the effective value
-for the active device. This makes divider, parallax, filter category, and later gates
-consistent across base/tablet/mobile. Hidden controls do not clear values merely by
-rendering; TASK-539-01 normalization owns stale-value cleanup.
+## Security and compatibility
 
-For spans, derive whether the selected block has a real section-grid-item target.
-Hide span controls for per-column composition and non-grid media-split placement;
-template wrappers that TASK-539-05 marks as actual grid items remain eligible. Keep
-this derivation pure/render-time and do not set state in an effect.
+No new network request, storage, route, or security boundary. Existing Page writes
+remain internal `/admin/api/*`, session-cookie-only, Page-RBAC protected, CSRF
+protected, assigned to `admin_write`, and strict reject-unknown at the Page document
+boundary; API-key mode is not supported. No public write, nonce/HMAC, or captcha
+change applies. The extracted `MediaUrlControl` retains
+`onChange(string | null)` and null-on-clear URL storage; scope/generation isolation
+must prevent async media completion from overwriting dirty state or a replacement
+target. Malformed gallery input is display-only until an explicit canonical edit.
 
-Replace fixed inspector clearance around `PageEditor.tsx:2610-2619` with Page-local
-responsive classes/data state:
+The split source-owner suites cover tablet and mobile reads, edits, badges, reset
+affordances, and commits for all four gallery controls and all five divider controls.
+Seed different pre-existing tablet/mobile values first: the displayed/base value
+changes, the responsive object stays byte-identical, no responsive reset is exposed,
+and the existing dirty/autosave pipeline is invoked exactly once per edit. Media
+tests switch between equal-URL targets and resolve the old request after replacement/
+unmount, including parent-gallery-scope replacement and stable surviving-row identity
+after removing an earlier row. The PageEditor gallery path additionally pins selected
+URL boundaries at exactly 2,048/2,049, with the latter producing zero
+writes/dirty/autosave changes and no render-time truncation. Fallback-target tests
+prove the same selected-or-first-root path drives fields, span placement, reset, and
+mutation, including empty/stale-path fail-closed cases. Layout tests pin class
+tokens/open-state/cascade ordering and restoration on close; TASK-539-08 owns actual
+browser computed clearance at 640px and `lg`.
 
-```tsx
-className={join(..., inspectorOpen ? "sm:pr-[300px]" : undefined)}
-```
-
-The exact breakpoint must leave zero reserved right padding at 320, 390, and 480px,
-and retain the existing 300px desktop clearance. The shared panel may overlay narrow
-content and remains closable; do not change `CanvasEditor` or Screen behavior.
-
-## Errors and UX invariants
-
-- Never overwrite dirty Page state from media cache completion.
-- Existing picker load failures retain the current value.
-- Gallery edits travel through the existing Page change/autosave path.
-- Panel open/close, breakpoint selection, cache hydration, and dirty-navigation
-  behavior remain unchanged.
-- No new localStorage or network request is introduced.
-
-## Gate test ownership and validation
-
-Update `page-editor-v2-flow.test.tsx` for the new control wiring and responsive clearance
-before this source gate. TASK-539-03-L04 owns later additive cross-file cases and must
-not re-baseline these landed expectations.
+## Validation and line receipt
 
 ```bash
 bun --cwd core lint:types
 bun --cwd core lint
-bun run test:vitest -- tests/vitest/ui/page-editor-v2-flow.test.tsx
+bun run test:vitest -- \
+  tests/vitest/ui/page-editor-v2-flow.test.tsx \
+  tests/vitest/ui/page-editor-v2-authoring-flow.test.tsx \
+  tests/vitest/ui/page-editor-v2-controls-flow.test.tsx \
+  tests/vitest/ui/page-editor-v2-inline-edit-flow.test.tsx \
+  tests/vitest/ui/page-editor-v2-responsive-flow.test.tsx \
+  tests/vitest/ui/page-editor-v2-layout-flow.test.tsx \
+  tests/vitest/ui/page-editor-v2-persistence-flow.test.tsx \
+  tests/vitest/ui/page-editor-v2-settings-flow.test.tsx
 bun --cwd core build:admin
 bun run check:admin-boundary
 bun run check:admin-bundle
+node _docs/_workflows/task-539-implement.mjs --check-task-family-line-limit
 git diff --check
 ```
 
-The new gallery-control suite was created and gated by TASK-539-03-L02. L03 runs it
-read-only only when debugging a wiring failure; L04 later runs the complete combined
-proof before the next subtask.
-Rerun any named failing test file once in isolation before classifying the failure.
+The workflow receipt must show every touched/extracted source and test at `<=1000`.
+Rerun a named failure alone.

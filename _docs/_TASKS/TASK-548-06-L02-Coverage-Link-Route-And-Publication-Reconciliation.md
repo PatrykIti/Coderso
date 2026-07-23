@@ -6,7 +6,10 @@
 **Priority:** High
 **Category:** Documentation / Coverage / Quality Gates
 **Estimated Effort:** Large
-**Dependencies:** TASK-548-06-L01; TASK-548-03-L01 Bun-free route-snapshot handoff
+**Dependencies:** TASK-545 is `✅ Done` and TASK-547 is terminal; the TASK-548
+parent names and serializes every literal final TASK-547-overlapping path before
+any implementation; TASK-548-06-L01 plus final TASK-548-01-L02
+handback/recovery; TASK-548-03-L01 Bun-free route-snapshot handoff
 **Status:** ⏳ To Do
 **Changelog:** 1261 (pinned; closure only)
 
@@ -35,6 +38,15 @@ It must not edit Guide prose/metadata/examples/visuals, the Admin route registry
 permission catalog, compiler/visual tooling, portal/release source, root
 package/lock/workflows, tasks, or changelog. Findings return to the owning leaf;
 tests never paper over source defects.
+
+`docsCoverage.ts` remains Bun/runtime-free. In `--write` mode the CLI calls
+`recoverDocsWorkspaceArtifactPromotionV1()` before reading the final workspace
+bundle/report. In `--check` mode it instead calls the read-only
+`assertNoDocsWorkspaceArtifactPromotionHazardsV1()` before the same exact
+validated pair loader; `--check` never recovers or mutates. Both modes pass
+validated bytes into the pure reconciler. Production runtime never runs this
+generator and never requires `.tmp`, the migration report, journal, or frozen
+migration baseline.
 
 ## Bun-Free Route Snapshot Handoff
 
@@ -78,15 +90,173 @@ text into a route list, or maintaining duplicate route metadata fails.
 The strict generated report records stable IDs and reasons, not prose copies:
 
 - every active native English document, section, example, visual, promotion
-  receipt, locale, version range, exact `permissionRequirement`,
+  receipt, canonical BCP-47 locale, version range, exact `permissionRequirement`,
   `capabilityIds`, admin path, and publication target;
 - every canonical active Admin route pattern/capability and its route-owned
   exact `permissionRequirement` and `capabilityIds`;
 - the document/section covering each route or non-route capability;
-- Help deep link, contextual CMS destination eligibility, and derived public
-  version/latest link eligibility without persisting hand-built URLs;
+- Help deep link, Guide evidence/card, contextual CMS destination eligibility,
+  and derived public version/latest link eligibility, all carrying the owning
+  `{ docId, locale, sectionId }` without persisting hand-built URLs;
 - explicit code-owned exclusions for auth callbacks, transient redirects,
   internal technical routes, aliases, and retired compatibility-only surfaces.
+
+`core/services/documentation/coverage/docsCoverage.ts` exports these exact
+discriminated shapes and constants. `DocsPermissionRequirementV1` and
+`DocsPublicationTarget` are imported from the TASK-548-01 owner; they are not
+redeclared with alternate semantics.
+
+```ts
+export const DOCS_COVERAGE_SCHEMA_V2 = "coderso.docs-coverage@v2" as const;
+
+export const DOCS_COVERAGE_LIMITS_V2 = {
+  maxJsonBytes: 16_777_216,
+  maxDocuments: 4_096,
+  maxRoutes: 2_048,
+  maxLinks: 65_536,
+  maxAssets: 32_768,
+  maxExclusions: 2_048,
+  maxConsumerDocuments: 4_096,
+  maxIdLength: 160,
+  maxPathLength: 1_024,
+  maxReasonLength: 1_000,
+  maxArrayItemsPerRecord: 4_096,
+} as const;
+
+export type DocsCoverageDocumentIdentityV2 = {
+  docId: string;
+  locale: string;
+};
+
+export type DocsCoverageDocumentRecordV2 = {
+  docId: string;
+  locale: string;
+  slug: string;
+  productVersionRange: string;
+  adminPath: string | null;
+  permissionRequirement: DocsPermissionRequirementV1 | null;
+  capabilityIds: string[];
+  publicationTargets: DocsPublicationTarget[];
+  sectionIds: string[];
+  exampleIds: string[];
+  visualIds: string[];
+};
+
+export type DocsCoverageRouteRecordV2 = {
+  routeId: string;
+  moduleId: string;
+  moduleOrder: number;
+  routeOrder: number;
+  pattern: string;
+  visibility: "authenticated" | "public";
+  permissionRequirement: DocsPermissionRequirementV1 | null;
+  capabilityIds: string[];
+  document: DocsCoverageDocumentIdentityV2 | null;
+  sectionId: string | null;
+  exclusionId: string | null;
+};
+
+export type DocsCoverageLinkRecordV2 = {
+  sourceDocument: DocsCoverageDocumentIdentityV2;
+  sourceSectionId: string;
+  kind:
+    | "guide-anchor"
+    | "guide-relative"
+    | "admin-route"
+    | "public-version"
+    | "public-latest"
+    | "external-https";
+  targetDocument: DocsCoverageDocumentIdentityV2 | null;
+  targetSectionId: string | null;
+  targetRouteId: string | null;
+  externalHref: string | null;
+  status: "resolved" | "not-applicable";
+};
+
+export type DocsCoverageAssetRecordV2 = {
+  kind: "example" | "visual" | "promotion-receipt";
+  assetId: string;
+  document: DocsCoverageDocumentIdentityV2;
+  sectionId: string;
+  relativePath: string;
+  sha256: string;
+  sourceSha256: string | null;
+};
+
+export type DocsCoverageExclusionRecordV2 = {
+  exclusionId: string;
+  subjectKind: "route" | "capability";
+  subjectId: string;
+  owner: string;
+  classification:
+    | "non-user-facing"
+    | "alias"
+    | "transient"
+    | "retired-compatibility";
+  reason: string;
+  testId: string;
+};
+
+export type DocsCoverageConsumerProjectionV2 = {
+  target: DocsPublicationTarget;
+  documents: DocsCoverageDocumentIdentityV2[];
+};
+
+export type DocsCoverageReportV2 = {
+  schema: typeof DOCS_COVERAGE_SCHEMA_V2;
+  corpusVersion: string;
+  sourceHash: string;
+  documents: DocsCoverageDocumentRecordV2[];
+  routes: DocsCoverageRouteRecordV2[];
+  links: DocsCoverageLinkRecordV2[];
+  assets: DocsCoverageAssetRecordV2[];
+  exclusions: DocsCoverageExclusionRecordV2[];
+  consumerProjections: DocsCoverageConsumerProjectionV2[];
+};
+
+export function normalizeDocsCoverageReportV2(
+  value: unknown
+): DocsCoverageReportV2;
+
+export function parseDocsCoverageReportV2(
+  bytes: Uint8Array
+): DocsCoverageReportV2;
+```
+
+`parseDocsCoverageReportV2(bytes)` is the sole bytes-to-report boundary. It
+rejects a non-`Uint8Array`, zero bytes, or `bytes.byteLength >
+DOCS_COVERAGE_LIMITS_V2.maxJsonBytes` before UTF-8 decoding or `JSON.parse`,
+rejects invalid UTF-8/JSON, and then calls
+`normalizeDocsCoverageReportV2(value)`. The normalizer owns the recursively
+strict object contract: it rejects unknown/missing keys and non-finite/unsafe
+integers, applies all record/string/count limits above, validates canonical
+ID/path/hash/BCP-47/SemVer-range/HTTPS forms, and delegates permission/target
+normalization to their owner contracts. Relative paths are
+repository-confined with no backslash, traversal, query, fragment, absolute
+prefix, or symlink escape. Route mapping requires exactly one of
+`document` plus `sectionId`, or `exclusionId`; link nullable fields obey their
+exact `kind`; asset IDs/paths/hashes close to the bundle/scenario/receipt graph;
+exclusions point to one real route/capability and one concrete test.
+
+The exact document identity everywhere is `(docId, locale)`. The same `docId`
+may intentionally group translations, but the pair is unique. No route, link,
+asset, consumer projection, sort, or deduplication may collapse records by bare
+`docId`. Every example/visual/promotion-receipt record and every Guide
+evidence/Help/CMS/public action reference retains the full owning
+`{ docId, locale, sectionId }`. `exampleId` and `visualId` are bundle-global;
+global uniqueness never permits discarding or inferring their owning locale.
+
+Canonical ordering is exact: documents by `(locale, docId)` while identity
+remains `(docId, locale)`; each nested
+ID array unique/sorted and targets in owner target order; routes by
+`(moduleOrder, routeOrder, routeId)`; links by
+`(sourceDocument.docId, sourceDocument.locale, sourceSectionId, kind,
+targetDocument?.docId ?? "", targetDocument?.locale ?? "",
+targetSectionId ?? "", targetRouteId ?? "", externalHref ?? "")`; assets by
+`(kind, assetId)`; exclusions by `(subjectKind, subjectId, exclusionId)`; and
+consumer projections in `assistant`, `embedded-help`, `public-docs` order with
+unique documents sorted by `(locale, docId)`. Serialize only the normalized
+object. A second parse/normalize/serialize round trip must be byte-identical.
 
 An exclusion has stable ID, source owner, bounded reason, test, and classification
 (`non-user-facing`, `alias`, `transient`, or `retired-compatibility`). There is no
@@ -112,7 +282,8 @@ For each document:
   present. Each consumer projection contains exactly records carrying its target;
   cross-target inclusion and omission both fail;
 - visual/example IDs, image hashes, receipts, captions/alt text, and owning
-  section close exactly once.
+  `{ docId, locale, sectionId }` close exactly once; a same-`docId` translation
+  cannot satisfy, render, or action another locale's reference.
 
 `docs/guide/_COVERAGE_MATRIX.md` is deterministically rendered from this report
 with generated-file warning, corpus/source hash, route/capability, owning
@@ -126,10 +297,12 @@ close. Schema support for BCP-47/`pl` is “ready”, not a translation claim:
 missing Polish documents create no fake routes, hreflang, search indexes, or
 coverage percentage.
 
-Re-read TASK-547's final shipped state after its declared guide-path handoff.
-If TASK-547 has not shipped, planned paths/capabilities are absent rather than
-excluded as active. If it has shipped, its actual Admin paths and Guide owner
-must reconcile. Detect concurrent byte changes to the serialized Guide path and
+TASK-545 must be `✅ Done` and TASK-547 must be terminal before implementation.
+After TASK-547 is terminal, the TASK-548 parent must name every literal final
+overlapping user/developer/shared-doc path and serialize ownership. Re-read
+TASK-547's final shipped state and those paths after that handoff. Its actual
+Admin paths and Guide owner must reconcile; planned paths/capabilities are never
+represented as active. Detect concurrent byte changes to a serialized path and
 fail with an ownership diagnostic instead of merging both versions.
 
 ## Security Contract
@@ -160,22 +333,38 @@ export function reconcileDocsCoverage(
   const graph = joinDocsRoutesPermissionsTargetsAndAssets(corpus, routes, input);
   assertEveryActiveRouteOrCapabilityCoveredOrExplicitlyExcluded(graph);
   assertAllLinksRefsReceiptsAndPublicationsClose(graph);
-  return normalizeAndSortDocsCoverageReport(graph);
+  return normalizeDocsCoverageReportV2(graph);
 }
 
 export async function generateCoverageMatrix(options: GenerateOptions) {
+  const mode = requireExactlyOneCoverageMode(options, ["write", "check"]);
+  if (mode === "check") {
+    await assertNoDocsWorkspaceArtifactPromotionHazardsV1();
+  } else {
+    await recoverDocsWorkspaceArtifactPromotionV1();
+  }
   const report = reconcileDocsCoverage(await loadCoverageInputs(options));
+  const json = serializeDocsCoverageReportV2(report);
   const markdown = renderDeterministicCoverageMatrix(report);
-  return options.check
-    ? assertExistingBytesEqual(markdown)
-    : atomicWriteCoverageOutputs(report, markdown);
+  if (mode === "check") {
+    const existing = await readExistingCoverageOutputs();
+    parseDocsCoverageReportV2(existing.jsonBytes);
+    return assertExistingCoverageBytesEqual(existing, { json, markdown });
+  }
+  return atomicWriteCoverageOutputs({ json, markdown });
 }
 ```
 
-**Data flow:** native bundle + exact pure route descriptors/capability catalog +
+**Data flow:** exact write command `bun run docs:coverage -- --write` →
+workspace-pair recovery, or exact read-only command
+`bun run docs:coverage -- --check` → workspace-pair hazard inspection with zero
+filesystem mutation → final owner bundle/report load and
+linkage validation → native bundle + exact pure route descriptors/capability catalog +
 scenario/receipt graph → strict joins/exclusions → route/permissionRequirement/
-capability/link/ref/target assertions → canonical JSON report → generated
-Markdown matrix or read-only byte check.
+capability/link/ref/target assertions keyed by
+`{ docId, locale, sectionId }` where section-scoped, otherwise by exact
+`(docId, locale)` document identity → canonical
+JSON report → generated Markdown matrix/byte comparison.
 
 **Error handling:** emit bounded `docs_coverage_route_missing`,
 `docs_coverage_exclusion_invalid`, `docs_coverage_permission_mismatch`,
@@ -183,7 +372,9 @@ Markdown matrix or read-only byte check.
 `docs_coverage_publication_mismatch`, `docs_coverage_locale_false_claim`,
 `docs_coverage_route_handoff_missing`, `docs_coverage_route_parity_failed`,
 `docs_coverage_task547_collision`, and `docs_coverage_generated_stale`. No partial
-report replaces the last valid output.
+report replaces the last valid output. Recovery failure, mixed/stale workspace
+pair, recursive unknown field, cap breach, noncanonical ordering, or nested
+record/hash/path tampering fails before either generated output is written.
 
 ## Sub-Tasks
 
@@ -198,6 +389,28 @@ report replaces the last valid output.
   stale alias, bad parameter pattern, invalid exclusion, null/allOf/anyOf
   permission understatement, capability drift, broken anchor/link, orphan
   example/visual/receipt, hash mismatch, and target leak;
+- strict `DocsCoverageReportV2` normalize/serialize/parse/normalize round-trip
+  is byte-identical; root and every nested record reject unknown/missing fields;
+  each exact count/string/path/reason/aggregate-byte limit has boundary and
+  overflow coverage; shuffled valid input canonicalizes to the specified order;
+  permission, target, route branch, exclusion owner/test, asset path/hash, and
+  link kind/nullability tampering fail;
+- `parseDocsCoverageReportV2(bytes)` rejects zero/oversized/invalid UTF-8 bytes
+  before `JSON.parse`, delegates valid decoded JSON only to the strict
+  normalizer, and has exact byte-cap boundary/overflow spies;
+- tuple-identity fixtures prove two translations may share one `docId`, remain
+  distinct by `(docId, locale)`, and cannot be collapsed or ambiguously linked,
+  routed, assigned an asset, or projected by a bare ID; their sections may reuse
+  a `sectionId`, but Guide evidence, Help/CMS/public actions, examples, visuals,
+  and receipts must remain bound to the owning
+  `{ docId, locale, sectionId }`;
+- generator-order spies prove `--write` runs
+  `recoverDocsWorkspaceArtifactPromotionV1()` before final bundle/report load,
+  while `--check` runs
+  `assertNoDocsWorkspaceArtifactPromotionHazardsV1()` before that load and
+  invokes no write/rename/delete/fsync/recovery path; recovery/hazard/mixed-pair
+  failure performs no coverage write, while packaged runtime imports neither
+  recovery nor `.tmp`;
 - import the two exact descriptor modules/constants and prove the complete
   `*.admin-route-descriptor.ts` inventory plus TASK-548-03 registry-pair parity
   suites; a missing/extra module or constant fails;
@@ -209,13 +422,21 @@ report replaces the last valid output.
 - prove planned TASK-547 state is absent, shipped state joins, and concurrent
   serialized-path drift fails;
 - generate twice under different roots/order/timezone and compare JSON/Markdown;
-- manual matrix/report edit makes `--check` fail without mutation;
+- consume the seventh exact root script owned by TASK-548-02-L03 and run
+  `bun run docs:coverage -- --write`, immediately followed by
+  `bun run docs:coverage -- --check`; this leaf never edits root
+  `package.json`. The CLI rejects missing, simultaneous,
+  duplicate, or unknown modes/options, and manual matrix/report edits make the
+  check fail without mutation; filesystem-mutator spies prove clean, stale and
+  recovery-required `--check` cases stay read-only and direct operators to
+  `bun run docs:recover`;
 - run
   `bunx vitest run --config vitest.config.ts tests/vitest/documentation/docs-coverage-reconciliation.test.ts`;
-- run `bun scripts/docs/generate-coverage-matrix.ts --check`,
-  `bun run docs:check`, `bun run docs:visual:check -- --all`,
-  `bun --cwd core lint:types`, `bun --cwd core lint`, touched-file line counts,
-  and `git diff --check`.
+- run `bun run docs:check`, `bun run docs:visual:check -- --all`,
+  `bun --cwd core lint:types`, `bun --cwd core lint`;
+- audit every added/modified human-authored production and test file from the
+  pre-task baseline with `wc -l`; any result above 1,000 fails; then run
+  `git diff --check`.
 
 ## Documentation Updates Required
 

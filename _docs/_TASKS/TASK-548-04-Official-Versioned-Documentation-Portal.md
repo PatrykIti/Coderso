@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Public Documentation / Static Portal / SEO
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-548-03, TASK-545
+**Dependencies:** TASK-548-03; TASK-545 must be `✅ Done` and TASK-547 must be fully terminal before dispatch
 **Status:** ⏳ To Do
 **Changelog:** 1261 (pinned; closure only)
 
@@ -16,8 +16,8 @@
 Build the official public Coderso documentation portal as a deterministic static
 artifact. Before its build boundary reads either generated documentation final,
 it invokes the exact TASK-548-01-L02-owned
-`recoverDocsArtifactPromotionV1()`, then loads and cross-validates the recovered
-bundle/report pair. It applies the exact
+`recoverDocsWorkspaceArtifactPromotionV1()`, then loads and cross-validates the
+recovered bundle/report pair. It applies the exact
 `selectDocumentsForPublicationTarget(..., "public-docs")` selector and asks
 TASK-548-04-L02 to produce the exact L01-owned
 `DocsPortalPublicProjectionV1`. Only that `public-docs` projection may reach
@@ -74,10 +74,24 @@ verification.
 
 Workspace and command:
 
-```text
+```bash
 packages/docs-portal/
-bun --cwd packages/docs-portal build
+DOCS_PRODUCT_VERSION=0.0.0-test \
+DOCS_PUBLIC_ORIGIN=https://docs.example.invalid \
+DOCS_PUBLIC_BASE_PATH=/docs \
+SOURCE_DATE_EPOCH=0 \
+  bun --cwd packages/docs-portal build
 ```
+
+The build entry maps exactly
+`DOCS_PRODUCT_VERSION → DocsPortalBuildConfigV1.currentVersion`,
+`DOCS_PUBLIC_ORIGIN → publicOrigin`,
+`DOCS_PUBLIC_BASE_PATH → publicBasePath`, and
+`SOURCE_DATE_EPOCH → sourceDateEpoch`; it has no implicit value, wall-clock
+fallback, or alternate variable name. The local/reproducibility profile is
+exactly the four values above. TASK-548-05 supplies release values from the
+semantic-release plain SemVer, validated configured origin/base path, and the
+target commit's deterministic Unix epoch.
 
 Deterministic output:
 
@@ -107,6 +121,12 @@ an exact `DocsPortalValidationReceiptV1` whose externally computed
 self-field. TASK-548-05 consumes that receipt and binds the manifest in
 `docs-release-manifest-v1.json`.
 
+`deployment/site-index.json` is a strict single-release candidate, not the
+public version history. TASK-548-05-L02 alone merges it with the verified
+cumulative `global/site-index.json` retained on `docs-pages`, preserves all old
+version entries without rebuilding their portal pages, and publishes the same
+canonical cumulative bytes at `/site-index.json`.
+
 TASK-548-05 packages the prebuilt mutable candidates without rendering them
 again under the exact retained subtree:
 
@@ -116,7 +136,8 @@ again under the exact retained subtree:
 
 The capsule contains both manifests, byte-identical `latest/**`,
 `routing/{redirects,headers}.json`, global sitemap/robots/site-index candidates,
-and canonical search/asset hash receipts. Publication and rollback only
+and the TASK-548-05-L01-owned canonical search/asset publication receipts.
+Publication and rollback only
 verify/copy those bytes; the portal handoff never asks release code to rebuild
 routes or HTML.
 
@@ -131,8 +152,18 @@ build epoch is held constant.
   product site.
 - Shared renderer/search: import `packages/docs-renderer`; do not fork Markdown
   rendering, ranking, URL policy, or visual/example behavior.
-- Version selection never silently changes the article. Missing version/locale
-  combinations show bounded alternatives or a real static 404.
+- Visual lookup preserves the exact owning `(docId, locale, sectionId)` tuple;
+  every `visualId` is bundle-global and must join that localized owner before a
+  portal asset can render or enter a publication receipt.
+- `docId` identifies one translation family, not one locale row. The unique
+  document key is exact `(docId, locale)`; hreflang groups only actually built
+  locale rows with the same `docId`.
+- After hydration, version navigation fetches the validated cumulative
+  same-origin `/site-index.json`. Offline/unavailable index reads fall back only
+  to the embedded current-version candidate. Version selection resolves the
+  same `(docId, locale)` in the selected retained version and never silently
+  changes the article; a missing combination shows bounded alternatives or a
+  real static 404.
 - `latest` alias pages are host-independent static fallbacks with canonical
   versioned metadata; `deployment/redirects.json` additionally declares
   permanent redirects for hosts that support them.
@@ -160,12 +191,21 @@ Each source/test file has one leaf writer. L03 reports source defects back to
 the owning L01/L02 fixer; it does not create a second implementation in a test
 helper.
 
+No TASK-548-04 leaf may dispatch until TASK-545 and TASK-547, including all
+physical descendants, are in canonical terminal states. Portal generation then
+uses TASK-547's final shipped state and never documents planned behavior.
+Because portal build writes `dist`, it may call the explicit A-owner workspace
+recovery directly; it never invokes or describes compiler `--check` as a
+recovery surface.
+
 L03's targeted browser gate remains mandatory, but its task-local candidates
 stay below `.tmp`. TASK-548-07 is the sole writer of final canonical TASK-545
 evidence and `manifest.json` under
-`_docs/_workflows/_smoke/evidence/task-548/`; at closure it reruns L03's seven
-stable portal scenarios against the final tree and writes their exact disjoint
-`portal/*.png` files before the canonical phase-1 checkpoint.
+`_docs/_workflows/_smoke/evidence/task-548/`. It reads L03's portal handoff and,
+when final-tree recapture is required, requests one same-owner operational L03
+handback. L03 returns bounded results/screenshot bytes only; TASK-548-07 alone
+writes the canonical `06-portal-local-exact-latest-rollback.png` member before
+the phase-1 checkpoint.
 
 ## Security Contract
 
@@ -192,14 +232,29 @@ stable portal scenarios against the final tree and writes their exact disjoint
 
 ```tsx
 export async function buildDocsPortal(
-  input: DocsPortalBuildInput
+  input: DocsPortalBuildConfigV1
 ): Promise<DocsPortalBuildReceipt> {
-  const config = normalizePortalBuildInputWithoutReadingDocsArtifacts(input);
-  await recoverDocsArtifactPromotionV1();
+  const config = normalizeDocsPortalBuildConfigV1(input);
+  await recoverDocsWorkspaceArtifactPromotionV1();
   const recovered = await loadAndValidateRecoveredDocsArtifactPair({
     bundlePath: "core/generated/docs/coderso-docs-v2.json",
     reportPath: ".tmp/docs-corpus/migration-report-v1.json",
   });
+  return buildRecoveredDocsPortal(config, recovered);
+}
+
+if (import.meta.main) {
+  await buildDocsPortal(
+    readDocsPortalBuildConfigV1FromEnvironment(process.env)
+  );
+}
+
+async function buildRecoveredDocsPortal(
+  config: DocsPortalBuildConfigV1,
+  recovered: Awaited<
+    ReturnType<typeof loadAndValidateRecoveredDocsArtifactPair>
+  >
+): Promise<DocsPortalBuildReceipt> {
   const inputBundles = [assertDistributionBundle(recovered.bundle)];
   assertBundleReportLinkage(inputBundles[0], recovered.report);
   const publicBundles = inputBundles.map((bundle) => ({
@@ -220,14 +275,16 @@ export async function buildDocsPortal(
       route.selection
     ),
   }));
-  const writer = createDeterministicArtifactWriter(config.outputRoot);
+  const writer = createDeterministicArtifactWriter(
+    "packages/docs-portal/dist"
+  );
 
   for (const { route, publicDocs } of projections) {
     const page = renderPortalDocument(route, {
       publicDocs,
       renderer: DocsDocumentRenderer,
-      origin: config.origin,
-      basePath: config.basePath,
+      origin: config.publicOrigin,
+      basePath: config.publicBasePath,
     });
     await writer.writeHtml(route.outputPath, page);
   }
@@ -245,27 +302,30 @@ membership-validated `DocsPortalPublicProjectionV1` records →
 version/locale/slug route graph → projection-only shell/search/shared renderer →
 deterministic static bytes → checksummed manifest → TASK-548-05 publish.
 
-**Error handling:** a pre-commit recovery phase restores and verifies the prior
-pair; a verified-commit phase retains and verifies the new pair. Mixed finals,
-tampered journal/backup/staging/final bytes, or unrecoverable material fail
-before bundle/report load, target selection, route construction, or output
-write. Duplicate/malformed route or hash mismatch aborts the build; missing
-translation emits no fake locale route; broken internal ref, unsafe URL,
-private publication target, non-HTTPS origin, path traversal, nondeterministic
-output, or manifest/file mismatch is a hard failure. One bad document cannot be
-silently omitted.
+**Error handling:** `prepared`, `member-0-promoted`, and `member-1-promoted`
+restore and verify the prior pair; `verified-commit` retains and verifies the
+new pair. Mixed finals, tampered journal/backup/staging/final bytes, or
+unrecoverable material fail before bundle/report load, target selection, route
+construction, or output write. Duplicate/malformed route or hash mismatch
+aborts the build; missing translation emits no fake locale route; broken
+internal ref, unsafe URL, private publication target, non-HTTPS origin, path
+traversal, nondeterministic output, or manifest/file mismatch is a hard
+failure. One bad document cannot be silently omitted.
 
 **Regression-test shape:** same bundle produces byte-identical output; terminate
 at every owner journal phase/final rename and prove portal entry recovery selects
 only the verified old/new pair; mixed finals, tampered journal/recovery material,
 and pre-recovery reads fail with zero portal output. Every manifest route/file/
 hash closes; route/base-path/SemVer/locale traversal cases reject; actual
-translations alone produce hreflang; latest maps to current version; shared
-renderer/search parity; omission of a `public-docs` record and inclusion of an
-`assistant`-only, `embedded-help`-only or missing-target record in any projection
-fail before shell/search/render; hostile corpus does not create markup or links;
+translations sharing one family `docId` alone produce hreflang, while duplicate
+`(docId, locale)` rejects; latest maps to current version; shared renderer/search
+parity; omission of a `public-docs` record and inclusion of an `assistant`-only,
+`embedded-help`-only or missing-target record in any projection fail before
+shell/search/render; hostile corpus does not create markup or links;
 sitemap/robots/canonical/OG/JSON-LD correctness; keyboard/mobile/dark/
-reduced-motion/offline static flows; no console/network/security violations.
+reduced-motion/offline static flows; cumulative two-version selection with
+current-only offline fallback; localized visual ownership/receipt projection;
+no console/network/security violations.
 
 ## Testing Requirements
 
@@ -284,7 +344,11 @@ bunx vitest run --config vitest.config.ts \
   tests/vitest/docs-portal/portal-security.test.ts \
   tests/vitest/docs-portal/portal-accessibility.test.tsx
 bun run docs:compile
-bun --cwd packages/docs-portal build
+DOCS_PRODUCT_VERSION=0.0.0-test \
+DOCS_PUBLIC_ORIGIN=https://docs.example.invalid \
+DOCS_PUBLIC_BASE_PATH=/docs \
+SOURCE_DATE_EPOCH=0 \
+  bun --cwd packages/docs-portal build
 bun packages/docs-portal/scripts/validate-built-portal.ts \
   packages/docs-portal/dist
 bun --cwd core lint:types
@@ -303,6 +367,9 @@ human-authored source/test file and fail any result above 1,000 lines.
   portal; no duplicated source or Markdown parsing path exists.
 - Canonical versioned routes, derived latest aliases, version/locale search,
   visuals/examples, and base-path-safe navigation render as static files.
+- Online version navigation uses the strict cumulative same-origin site index,
+  while offline navigation exposes only the embedded current release and never
+  substitutes another article.
 - English is complete; only real translations create locale routes or hreflang.
 - Portal metadata, sitemap, robots, OpenGraph, JSON-LD, manifest hashes,
   redirects, and CSP artifacts are deterministic and validated.
@@ -313,8 +380,10 @@ human-authored source/test file and fail any result above 1,000 lines.
 - At least five distinct Playwright flows assert visible behavior in wide,
   narrow, light, dark, keyboard, reduced-motion, version/locale, and offline
   conditions with zero console errors.
-- TASK-548-07 reruns all seven stable portal flows on the final tree and is the
-  sole canonical TASK-545 evidence/manifest writer.
+- All seven L03 targeted screenshots remain below `.tmp`; TASK-548-07 is the
+  sole canonical TASK-545 writer and adds only
+  `06-portal-local-exact-latest-rollback.png` for the portal to its exact
+  eight-image acceptance inventory.
 - TASK-548-05 can publish/rollback the immutable `dist` artifact without editing
   portal source or reconstructing routes.
 - TASK-548-05 verifies the deployed exact/latest routes, retained manifests and

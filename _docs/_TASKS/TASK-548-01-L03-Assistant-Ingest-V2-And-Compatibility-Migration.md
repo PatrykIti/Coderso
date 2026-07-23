@@ -29,10 +29,12 @@ Production owns the exact loader
 `loadPackagedDocsDistributionBundleV2()`. It reads and validates only the
 packaged `core/generated/docs/coderso-docs-v2.json` bytes shipped in the runtime
 image. It neither knows about nor reads the repository-only migration report,
-workspace promotion journal, staging paths, backups or `.tmp`. The compiler,
-migration, portal, coverage and release tools own workspace-pair recovery
-through `recoverDocsWorkspaceArtifactPromotionV1()`; production startup and
-reindex never call that helper.
+workspace promotion journal, staging paths, backups or `.tmp`. Explicit
+repository write tools own workspace-pair recovery through
+`recoverDocsWorkspaceArtifactPromotionV1()` or `bun run docs:recover`.
+Read-only checks use L02's hazard inspector and return
+`docs_compile_recovery_required` instead of recovering. Production startup and
+reindex never call either workspace helper.
 
 ## Storage Contract
 
@@ -52,9 +54,15 @@ The normalized schema must persist:
 - ingest run: bundle `sourceHash`, corpus version and snapshot outcome needed to
   audit which complete bundle is active.
 
-Use unique/index contracts appropriate for `docId + locale` and
-`docId + locale + sectionId + chunkIndex`. Do not store PNG bytes, arbitrary
+`docId` is translation-family identity, so the same value is valid in multiple
+locales. Use exact document uniqueness on `(docId, locale)` and exact chunk
+uniqueness on `(docId, locale, sectionId, chunkIndex)`; reject only duplicate
+pairs/tuples, not a cross-locale `docId`. Do not store PNG bytes, arbitrary
 HTML, authored external URLs or provider data.
+Every retrieval hit and Guide-facing source/evidence projection carries
+`docId`, canonical `locale`, `sectionId` and `chunkIndex`; it must never reduce
+that identity to `docId + sectionId`. Visual/example IDs remain bundle-global
+but resolve only after the exact localized document/section join succeeds.
 
 Only documents whose exact `publicationTargets` contains `assistant` may be
 persisted, chunked or returned by assistant retrieval. `embedded-help`-only and
@@ -102,7 +110,10 @@ branches described below; TASK-548-03-L03 must not reopen this mapper.
   document-level restriction, so an authenticated session with an empty
   permission snapshot still satisfies null. `allOf` requires every listed
   permission and `anyOf` requires at least one; empty/partial snapshots deny
-  only an unsatisfied non-null requirement. Malformed snapshots fail closed.
+  only an unsatisfied non-null requirement. The exact live ready snapshot
+  `["*"]` satisfies every valid requirement; duplicate/mixed wildcard or other
+  malformed snapshots fail closed. Authored requirements continue to forbid
+  `*`.
   Never expose a protected document/source/visual/example when its non-null
   requirement is unsatisfied.
 - **Capability context:** persist `capabilityIds` exactly and apply bounded,
@@ -194,23 +205,29 @@ failure update is attempted. Because activation and success finalization share
 one transaction, a committed active snapshot is never reclassified as failed.
 
 **Regression-test shape:** verify full round-trip of every new field, migration
-from v1 rows, duplicate identity rejection, permission/capability metadata,
-asset refs, startup hash skip/reindex, stale-row pruning, concurrent reindex
+from v1 rows, exact duplicate `(docId, locale)` rejection, same-`docId`
+different-locale acceptance, permission/capability metadata,
+locale-bearing hit/source evidence and localized asset refs, startup hash
+skip/reindex, stale-row pruning, concurrent reindex
 serialization, rollback after mid-write failure and continued reads from the
 previous snapshot. Test null plus authenticated empty-snapshot success, invalid
 empty non-null requirements, empty/partial protected snapshots, full `allOf`,
-every `anyOf` branch and capability round trips/filtering. Route coverage must
+every `anyOf` branch, exact `["*"]` full access, duplicate/mixed wildcard
+rejection and capability round trips/filtering. Route coverage must
 prove permission, valid `{}`,
 `{ force: true }` and `{ force: false }` request bodies, unknown/non-boolean
 rejection, CSRF expectation, all four centralized mappings and unchanged route
 registration/rate bucket. Add target-leak fixtures proving assistant and
 multi-target documents persist/retrieve while `embedded-help`-only and
 `public-docs`-only documents never create rows, chunks, hits or evidence cards.
+Use two locale rows sharing `docId` and `sectionId` to prove retrieval,
+visual/example enrichment and emitted evidence never cross-join.
 Inject activation/success-finalization/failed-diagnostic failures and prove the
 previous active snapshot plus typed error/status invariants. Fail run allocation
 with DB-unavailable and unknown storage errors; assert exact normalized codes,
-null run identity, zero diagnostic write and no masking. Exercise workspace
-promotion recovery only in repository build/check fixtures. Build a production
+null run identity, zero diagnostic write and no masking. Exercise mutating
+workspace promotion recovery only in repository write/recovery fixtures and the
+read-only hazard inspector in `--check` fixtures. Build a production
 package fixture that deliberately omits `.tmp`, the migration report, journal,
 staging and backup files; prove startup/hash-skip/reindex succeeds from the
 packaged bundle alone and no runtime call attempts workspace recovery. Tamper

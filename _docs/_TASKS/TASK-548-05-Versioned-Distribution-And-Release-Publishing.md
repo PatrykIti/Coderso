@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Documentation Platform / Release / Distribution
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-548-04, TASK-545
+**Dependencies:** TASK-548-04 and TASK-548-02-L03; TASK-545 must be `✅ Done` and TASK-547 must be fully terminal before dispatch
 **Status:** ⏳ To Do
 **Changelog:** 1261 (pinned; closure only)
 
@@ -48,6 +48,12 @@ public write surface.
 - `DOCS_PUBLIC_ORIGIN` is HTTPS with no credentials, query, or fragment.
   `DOCS_PUBLIC_BASE_PATH` is one normalized confined URL prefix. Missing or
   invalid values stop publication.
+- Release portal configuration maps exactly
+  `DOCS_PRODUCT_VERSION` from semantic-release's plain `version`,
+  `DOCS_PUBLIC_ORIGIN` and `DOCS_PUBLIC_BASE_PATH` from their validated
+  repository/environment configuration, and `SOURCE_DATE_EPOCH` from the
+  tag-target commit's canonical Unix epoch. No release value comes from wall
+  clock time, a default, a `v`-prefixed tag, or another variable.
 - The workflow follows the existing release pattern: semantic-release exports
   the same plain SemVer as version/tag; a fresh checkout resolves that tag;
   `HEAD`, tag SHA, SemVer, artifact manifest and artifact receipt must agree
@@ -55,6 +61,11 @@ public write surface.
 - An existing exact-version directory or release asset passes only when its
   manifest and every hash are identical. Different bytes fail; no clobber,
   force-push, delete, or overwrite fallback exists.
+- The matching GitHub Release contains exactly two documentation assets: the
+  content-addressed tar and its strict sibling receipt. The release manifest is
+  embedded in the tar, never uploaded as a third standalone asset; an
+  idempotency check downloads both assets and re-verifies that embedded
+  manifest before accepting equality.
 - A dedicated retained Pages branch preserves prior `/v/<version>`,
   `/search/<version>`, content-addressed assets, and this exact immutable subtree:
 
@@ -73,11 +84,20 @@ public write surface.
 ```
 
 - L01 is the sole capsule producer. `latest/**` and global/routing candidates
-  are prebuilt bytes from TASK-548-04; receipts are canonical projections of its
-  verified manifest records. L02 only verifies and copies capsule bytes.
+  are prebuilt bytes from TASK-548-04; L01 solely owns the strict
+  `DocsSearchPublicationReceiptV1` and `DocsAssetsPublicationReceiptV1`
+  schemas, normalizers, serializers, and canonical projections from the
+  verified detached portal manifest. Visual receipt ownership is exact
+  `(docId, locale, sectionId)` while `visualId` is bundle-global. L02 imports
+  these contracts and never duplicates them.
 - The exact tree plus full capsule is pushed and re-read before a second commit
-  copies mutable destinations. Rollback selects a retained capsule and never
-  invokes portal rendering, route construction, or candidate regeneration.
+  copies mutable destinations. L02 strictly merges the current immutable
+  candidate with the verified retained cumulative `/global/site-index.json`,
+  preserves every old version entry without rebuilding old portal pages, and
+  writes byte-identical cumulative bytes to `/global/site-index.json` and
+  `/site-index.json`. Rollback changes only its verified `latestVersion` plus
+  the other mutable byte copies; it never removes an index version, invokes
+  portal rendering/route construction, or regenerates a candidate.
 - Workflow concurrency is serialized per repository with cancellation disabled.
   Rollback repoints `latest` to a verified retained version and never mutates or
   deletes an exact version.
@@ -102,7 +122,12 @@ public write surface.
 **Land order:** `TASK-548-05-L01 → TASK-548-05-L02`.
 
 TASK-548-02-L03 remains the sole writer of root `package.json`, `bun.lock`, and
-`.github/workflows/coderso-pr-gates.yml`. L02 is the sole TASK-548 writer of
+`.github/workflows/coderso-pr-gates.yml`, and it owns the prerequisite
+Dockerfile/core-package compatibility contract: both documentation workspace
+manifests are copied before frozen install, and `core/package.json` declares the
+renderer workspace dependency required by release modules. Wave 05 consumes
+and validates that landed contract only; it never edits `Dockerfile` or
+`core/package.json`. L02 is the sole TASK-548 writer of
 `.github/workflows/release.yml`. Neither leaf edits portal source or generated
 Guide content.
 
@@ -127,14 +152,31 @@ Guide content.
 ## Implementation Pseudocode
 
 ```ts
+const productVersion = assertPlainSemVer(semanticRelease.version);
+const gitTag = assertPlainSemVerTagEqualsVersion(
+  semanticRelease.gitTag,
+  productVersion
+);
+const gitSha = resolveTagSha(gitTag);
+assertCheckoutHeadEqualsTagTarget(readCheckoutHeadSha(), gitSha);
+const sourceDateEpoch = assertCanonicalCommitEpoch(
+  resolveCommitEpoch(gitSha)
+);
+await buildDocsPortalFromExactEnvironment({
+  DOCS_PRODUCT_VERSION: productVersion,
+  DOCS_PUBLIC_ORIGIN: assertConfiguredDocsOrigin(
+    process.env.DOCS_PUBLIC_ORIGIN
+  ),
+  DOCS_PUBLIC_BASE_PATH: assertConfiguredDocsBasePath(
+    process.env.DOCS_PUBLIC_BASE_PATH
+  ),
+  SOURCE_DATE_EPOCH: String(sourceDateEpoch),
+});
 const release = await buildDocsReleaseArtifact({
   distRoot: "packages/docs-portal/dist",
-  version: semanticRelease.version,
-  gitTag: assertPlainSemVerTagEqualsVersion(
-    semanticRelease.gitTag,
-    semanticRelease.version
-  ),
-  gitSha: resolveTagSha(semanticRelease.gitTag),
+  version: productVersion,
+  gitTag,
+  gitSha,
   origin: process.env.DOCS_PUBLIC_ORIGIN,
   basePath: process.env.DOCS_PUBLIC_BASE_PATH,
 });
@@ -150,10 +192,11 @@ await writeAndUploadDocsPostDeployHealthReceiptV1(health);
 ```
 
 **Data flow:** tag-pinned checkout → deterministic portal validation → detached
-portal-manifest binding → content-addressed archive + capsule → no-clobber
-release asset → retained exact tree/capsule → byte-copy latest/global commit →
-protected Pages deployment → bounded same-origin read-only health verification →
-strict successful post-deploy receipt for read-only closure validation.
+portal-manifest binding → content-addressed archive + capsule → exact two-asset
+no-clobber release upload → retained exact tree/capsule → verified cumulative
+site-index merge plus byte-copy latest/global commit → protected Pages
+deployment → bounded same-origin read-only health verification → strict
+successful post-deploy receipt for read-only closure validation.
 
 **Error handling:** a `v`-prefixed/different/blank tag, tag/SHA/HEAD drift,
 invalid version/base URL, malformed artifact receipt, manifest/payload/archive
@@ -170,7 +213,10 @@ rollback among two retained capsules; reject any regenerated candidate; assert
 old exact bytes never change; pin canonical receipt bytes/CLI parity; accept a
 plain SemVer tag and reject `v`-prefix/tag-target drift; exercise exact rollback
 keys and version-bound confirmation positives/negatives; and keep workflow
-permissions/actions/conditions pinned.
+permissions/actions/conditions pinned. Verify retained/rollback/post-deploy
+consumers use L01's exact publication receipts, cumulative site-index merge is
+strict/no-clobber/hash-stable, and Docker compatibility is validated without a
+Wave 05 write to its owner files.
 
 ## Acceptance Criteria
 
@@ -179,6 +225,8 @@ permissions/actions/conditions pinned.
 - Version and `gitTag` are the same plain SemVer, the tag target equals
   checkout HEAD, and the strict sibling artifact receipt independently closes
   the tar plus both manifest identities without self-reference.
+- The GitHub Release uploads exactly the tar and sibling receipt, then verifies
+  the embedded release manifest after any download.
 - Release assets and exact public version directories cannot be overwritten with
   different bytes; identical retries are safe no-ops.
 - Latest changes only after exact publication verifies; a failed attempt retains
@@ -199,7 +247,10 @@ permissions/actions/conditions pinned.
 - workflow contract tests for tag/SHA, pinned actions, permissions, concurrency,
   environment, no-clobber, capsule layout, latest byte-copy ordering, rollback,
   post-deploy health, and cleanup
-- `bun --cwd packages/docs-portal build`
+- `DOCS_PRODUCT_VERSION=0.0.0-test DOCS_PUBLIC_ORIGIN=https://docs.example.invalid DOCS_PUBLIC_BASE_PATH=/docs SOURCE_DATE_EPOCH=0 bun --cwd packages/docs-portal build`
+- validate the TASK-548-02-L03-owned Dockerfile/core-package frozen-workspace
+  contract and build the existing Docker image without modifying either owner
+  file
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
 - `bun run precommit:check`

@@ -81,7 +81,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 409 tasks
+- **To Do:** 410 tasks
 - **In Progress:** 7 tasks
 - **Done:** 3116 tasks
 
@@ -109,7 +109,13 @@ Task board for project work. Keep task files and this board in sync.
 > TASK-539 → TASK-542 → TASK-545. TASK-536 and TASK-538 completed on
 > 2026-07-11; TASK-541, TASK-537, and TASK-544 completed on 2026-07-12; TASK-543
 > completed on 2026-07-13. TASK-539 and
-> TASK-542 must remain sequential because both own `siteShell` seams.
+> TASK-542 must remain sequential because both validate site-shell/runtime
+> integration; after this repaired contract only TASK-542 owns `siteShell` source.
+> Shared documentation order is also strict:
+> TASK-539-08-L01 documentation → TASK-548-06-L01 Guide migration and
+> TASK-548-07-L01 security closeout. Those two TASK-548 writer leaves must still be
+> `⏳ To Do` when TASK-539 writes the shared Page guide/security files; afterward
+> TASK-548 consumes the landed bytes and owns its own final corpus/coverage sequence.
 
 ---
 
@@ -119,7 +125,7 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-548 | Hybrid Visual Documentation Platform | High | Very Large | One strict `coderso.docs-corpus@v2` source compiles into locally packaged Help, DB-backed Guide grounding, and a versioned public portal; includes reviewed Playwright visual authoring, independent Guide/optional Agent tabs, immutable release artifacts, generated coverage, and seven-plus real-flow acceptance smoke scenarios. Changelog 1261 pinned. 8 children + 17 executable leaves. |
 | TASK-547 | Full-Site Example Package and Projekty Domów Installer | High | Very Large | Versioned strict full-site package graph, native resource refs, idempotent dry-run/apply/rollback lifecycle, seven Pages + dynamic project detail, complete FormaDom generator, installer-backed CLI, eight-flow Playwright smoke. Changelog 1260 pinned. 7 children + 13 executable leaves. |
-| TASK-539 | Page V2 Post-Audit Remediation II | High | Very Large | Residual Page v2 model, sanitizer, authoring, transform, renderer, responsive CSS, runtime-init, and narrow-canvas corrections after TASK-535. Changelog 1251 pinned. 8 children + 17 leaves. |
+| TASK-539 | Page V2 Post-Audit Remediation II | High | Very Large | Residual Page v2 model, sanitizer, authoring, transform, renderer, responsive CSS, runtime-init, and narrow-canvas corrections after TASK-535. Changelog 1251 pinned. 8 children + 18 leaves. |
 | TASK-542 | Menu Determinism, Responsive Cascade, and Runtime Parity | High | Large | Strict deterministic MenuDocumentV2, complete responsive neutralizers, shared public projection/active identity, and dirty-safe revalidation. Changelog 1254 pinned. 4 children + 6 leaves. |
 | TASK-545 | Workflow, Smoke Evidence, and Task-Graph Integrity | High | Large | All-results guard, five-round workflow enforcement, durable hashed smoke manifests, and bounded historical graph/index repair. Changelog 1257 pinned. 4 children + 10 leaves. |
 | TASK-478 | Page Editor Inline Link And Toolbar Placement UX | Medium | Medium | Inline links are invisible/uneditable/unremovable and hijack selection (navigate on click); plus a request to dock the mark toolbar to the block side so the picker doesn't cover the text. Live-verified 2026-06-27. |

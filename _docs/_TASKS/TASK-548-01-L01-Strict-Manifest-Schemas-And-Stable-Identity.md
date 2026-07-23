@@ -47,6 +47,14 @@ type DocsSectionV2 = {
   exampleIds: string[];
 };
 
+type NativeDocsSectionSourceV1 = {
+  sectionId: string;
+  headingOccurrence: number;
+  level: 1 | 2 | 3 | 4;
+  heading: string;
+  bodyMarkdown: string;
+};
+
 type DocsVisualV1 = {
   visualId: string;
   sectionId: string;
@@ -62,6 +70,18 @@ type DocsVisualV1 = {
 type DocsExampleV1 = {
   exampleId: string;
   sectionId: string;
+  title: string;
+  language: "json" | "typescript" | "bash" | "text";
+  body: string;
+  explanation: string;
+};
+
+type DocsExampleSidecarV1 = {
+  schema: "coderso.docs-example@v1";
+  docId: string;
+  locale: string;
+  sectionId: string;
+  exampleId: string;
   title: string;
   language: "json" | "typescript" | "bash" | "text";
   body: string;
@@ -101,9 +121,13 @@ type DocsDistributionBundleV2 = {
 
 The discriminator and field names above are exact. Root and nested schemas use
 `additionalProperties: false`. IDs use one documented lowercase kebab-case
-pattern. `docId` is corpus-global; `sectionId` is unique within a document;
-`visualId` and `exampleId` are corpus-global. Canonical sort order is locale,
-docId, section order, then visual/example ID.
+pattern. `docId` is stable translation-family identity and may repeat across
+locales; exact document uniqueness is `(docId, locale)`. `sectionId` is unique
+within one localized document; `visualId` and `exampleId` are bundle-global.
+Canonical sort order is locale, `docId`, section order, then visual/example ID.
+The bundle-global IDs do not replace localized ownership:
+`DocsExampleSidecarV1` and every visual scenario/receipt bind the exact
+`(docId, locale, sectionId)` owner.
 
 `publicationTargets` is non-empty, unique and sorted in exact
 `assistant`, `embedded-help`, `public-docs` order. It is an enforceable
@@ -111,14 +135,33 @@ distribution boundary: downstream assistant, Help and portal consumers must
 select only their matching target and must never treat target absence as a
 fallback.
 
+This leaf owns the exact target selector before any assistant, Help, renderer
+or portal consumer lands:
+
+```ts
+export function selectDocumentsForPublicationTarget(
+  documents: readonly DocsDocumentV2[],
+  target: DocsPublicationTarget
+): readonly DocsDocumentV2[];
+```
+
+It accepts only normalized documents and an exact target, preserves canonical
+input order, and includes a document only when its validated
+`publicationTargets` contains that target. Missing/unknown targets and
+unnormalized input fail closed. TASK-548-03-L02 re-exports this owner function
+through `@coderso/docs-renderer`; it must not reimplement the selection rule.
+
 `DocsPermissionRequirementV1.permissions` is non-empty, unique and sorted by
 canonical permission ID. `allOf` authorizes only when the current fail-closed
 snapshot contains every listed permission; `anyOf` authorizes when it contains
-at least one. A null requirement means no document-level restriction beyond
-the authenticated Admin shell and is valid even when `adminPath` is non-null,
-matching live routes with neither `permission` nor `anyPermissions`, including
-`/preview`. Unknown modes, empty arrays, wildcard, unknown catalog entries,
-malformed snapshots and partial `allOf` matches fail closed.
+at least one. A null requirement means no extra catalog permission and is valid
+when `adminPath` is non-null. Registry visibility/authentication remains a
+separate contract: `/preview` stays public and token-gated, while `/help` is
+authenticated; both descriptors normalize to null. Unknown modes, empty
+arrays, authored wildcard and unknown catalog entries fail closed. Permission
+consumers separately accept only the live ready snapshot `["*"]` as full
+access; duplicate/mixed wildcard and other malformed snapshots fail closed, as
+do partial `allOf` matches.
 
 `capabilityIds` contains at most 32 unique sorted IDs. Each ID matches
 `^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)*$` and exists in the new code-owned
@@ -133,8 +176,15 @@ In the final corpus each Markdown frontmatter record contains
 Until TASK-548-06 finishes the mechanical source migration, TASK-548-01-L02 may
 adapt the existing legacy frontmatter into this exact output shape; the adapter
 is compatibility input, not a second v2 contract.
-Visual/example placement is declared by their strict sidecar `sectionId`;
-authors do not write arbitrary asset paths or derived Help/public URLs.
+Example placement is authored only at
+`docs/guide/examples/<docId>/<locale>/<exampleId>.json`. The recursively strict
+`DocsExampleSidecarV1` envelope must agree with those normalized path segments,
+normalize `locale` through the corpus canonical BCP-47 normalizer, and join
+exactly one document and section by `(docId, locale, sectionId)`. The compiler
+projects its content fields to nested `DocsExampleV1`; it never persists a
+second document identity inside that nested output. Visual placement uses the
+equivalent locale-bearing scenario/image/receipt paths owned by TASK-548-02.
+Authors do not write arbitrary asset paths or derived Help/public URLs.
 
 ## Native Section Identity Directive
 
@@ -155,10 +205,11 @@ be exactly one ATX heading with 1–4 `#` characters followed by one ASCII space
 and non-empty bounded text. Setext headings are unsupported.
 
 `parseNativeDocsSectionDirectivesV1(markdown)` validates the complete directive
-graph and returns `{ sectionId, headingOccurrence, level, heading,
-bodyMarkdown }[]`. `serializeNativeDocsSectionDirectiveV1({ sectionId,
-headingOccurrence })` emits the exact single directive line. The compiler strips
-the directive before the closed safe-Markdown parser and before `bodyMarkdown`
+graph and returns `NativeDocsSectionSourceV1[]`.
+`serializeNativeDocsSectionDirectiveV1({ sectionId, headingOccurrence })` emits
+the exact single directive line. `headingOccurrence` is parser-only validation
+state and must never spread into `DocsSectionV2`. The compiler strips the
+directive before the closed safe-Markdown parser and before `bodyMarkdown`
 enters `DocsSectionV2`, so Help/portal/Guide never render marker text.
 
 Native v2 rejects a missing/unknown/malformed directive, raw HTML marker,
@@ -226,6 +277,15 @@ type DocsBlockTokenV1 =
   | { type: "codeBlock"; language: DocsCodeLanguageV1; value: string }
   | DocsCalloutTokenV1
   | DocsTableTokenV1;
+
+type ParsedSafeMarkdownSectionV1 = {
+  tokens: DocsBlockTokenV1[];
+  plainText: string;
+};
+
+export function parseSafeMarkdownSection(
+  bodyMarkdown: string
+): ParsedSafeMarkdownSectionV1;
 ```
 
 Callout source syntax is a fenced `:::note|info|warning [optional title]`
@@ -236,8 +296,10 @@ token subset. Inline recursion depth, block/list/callout nesting, list item
 count, table rows/columns/cells, token count and aggregate text bytes have named
 constants in `docsCorpusLimits.ts`; no recursive branch can bypass them.
 Unclosed directives, unknown tones/languages, ragged/oversized tables,
-block/raw HTML, unsafe links and recursive constructs fail closed. The shared
-renderer imports these owner types and never defines a parallel token union.
+block/raw HTML, unsafe links and recursive constructs fail closed.
+`parseSafeMarkdownSection` is the one parser export name. The shared renderer
+in TASK-548-03 imports this function and these owner types and never defines a
+parallel parser or token union.
 
 ## Security Contract
 
@@ -255,6 +317,9 @@ renderer imports these owner types and never defines a parallel token union.
   locked `allOf`/`anyOf` semantics.
 - **Capabilities:** every `capabilityIds` entry matches the locked format,
   exists in `docsCapabilityCatalog.ts`, and is bounded, unique and sorted.
+- **Localized sidecars:** reject a noncanonical locale, a path/envelope
+  mismatch, an absent/duplicate `(docId, locale)` owner, an absent/duplicate
+  section within that owner, or a bundle-global example/visual ID collision.
 - **Anti-abuse:** cap documents, sections, nesting, arrays, string/body bytes,
   code-fence bytes and total diagnostics. No nonce/HMAC/CAPTCHA applies.
 - **Secrets/privacy:** run secret-like key/value and credential-URL checks over
@@ -285,11 +350,19 @@ export function parseDocsDocumentV2(input: {
   );
   const capabilityIds = normalizeDocsCapabilityIds(meta.capabilityIds);
   const sectionSources = parseNativeDocsSectionDirectivesV1(body);
-  const sections = sectionSources.map((section) => ({
-    ...section,
-    ...parseSafeMarkdownSection(section.bodyMarkdown),
-  }));
-  assertStableIds(meta, sections);
+  const sections = sectionSources.map((source): DocsSectionV2 => {
+    const parsedBody = parseSafeMarkdownSection(source.bodyMarkdown);
+    return {
+      sectionId: source.sectionId,
+      heading: source.heading,
+      level: source.level,
+      bodyMarkdown: source.bodyMarkdown,
+      plainText: parsedBody.plainText,
+      visualIds: [],
+      exampleIds: [],
+    };
+  });
+  assertStableSectionIds(sections);
   return {
     ...meta,
     permissionRequirement,
@@ -298,12 +371,23 @@ export function parseDocsDocumentV2(input: {
     sections,
   };
 }
+
+export function assertStableDocumentIdentityPairs(
+  documents: readonly DocsDocumentV2[]
+): void {
+  assertUniqueBy(documents, (document) => [document.docId, document.locale]);
+  assertBundleGlobalIds(documents, "visualId");
+  assertBundleGlobalIds(documents, "exampleId");
+}
 ```
 
 **Data flow:** unknown JSON/Markdown → byte/depth caps → strict frontmatter →
 BCP-47/SemVer/path/permission/capability validation → closed Markdown AST →
-normalized plain text and stable sections. Raw HTML, Markdown images, unknown
-syntax, unsafe schemes or unresolved IDs return no partial document.
+explicit projection from parser-only `NativeDocsSectionSourceV1` into exact
+`DocsSectionV2` → empty visual/example joins for the later strict sidecar join →
+normalized plain text and stable sections. `headingOccurrence` and parser
+tokens never enter the persisted section object. Raw HTML, Markdown images,
+unknown syntax, unsafe schemes or unresolved IDs return no partial document.
 
 **Error handling:** emit bounded `docs_corpus_invalid`,
 `docs_corpus_unknown_field`, `docs_corpus_duplicate_id`,
@@ -312,18 +396,28 @@ syntax, unsafe schemes or unresolved IDs return no partial document.
 `docs_corpus_markdown_unsafe` diagnostics with source path and field only.
 
 **Regression-test shape:** table-test every unknown field and unsafe construct;
-accept canonical locale/SemVer/path/permission records; reject duplicate IDs,
-aliases, traversal, raw HTML, `javascript:`/`data:`/`file:` links, Markdown or
-remote images, oversized/deep input and secret-like examples. Prove normalization
-idempotence, exact publication-target ordering and multi-target round trips.
+accept canonical locale/SemVer/path/permission records; reject an exact duplicate
+`(docId, locale)` pair while accepting the same translation-family `docId` in
+two supported locales; reject bundle-global visual/example duplicates, aliases,
+traversal, raw HTML, `javascript:`/`data:`/`file:` links, Markdown or remote
+images, oversized/deep input and secret-like examples. Prove normalization
+idempotence, exact locale-then-`docId` and publication-target ordering, and
+multi-target round trips. Assert native parsing drops `headingOccurrence`,
+initializes both join arrays empty, and exposes only exact `DocsSectionV2` keys
+before sidecar joins.
+Round-trip `DocsExampleSidecarV1` through its canonical
+`examples/<docId>/<locale>/<exampleId>.json` path. Use two locales with the same
+`docId` and `sectionId` to prove a sidecar joins only its explicit locale;
+reject path/envelope locale drift and noncanonical BCP-47 bytes.
 Round-trip every valid native directive through the exact serializer/parser;
 reject missing/orphan/duplicate/unknown markers, non-contiguous ordinals, raw
 HTML substitutes, Setext headings and independently reordered markers. Reorder
 whole marker+heading pairs only after assigning new contiguous ordinals and
 prove stable section IDs remain attached to their headings.
 Test null plus authenticated empty-snapshot success, an invalid empty non-null
-permission list, empty/partial protected snapshots, full `allOf`, every
-`anyOf` branch, unknown
+permission list, empty/partial protected snapshots, exact live `["*"]` full
+access, duplicate/mixed wildcard snapshot rejection, full `allOf`, every
+`anyOf` branch, authored wildcard rejection, unknown
 modes/permissions, capability format/catalog/order failures, and capability
 round trips. Cover every token variant plus unclosed, nested, ragged, oversized
 and malicious inline variants.
