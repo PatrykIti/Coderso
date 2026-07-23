@@ -10,6 +10,7 @@ export default defineConfig({
   test: {
     name: "coderso-vitest",
     environment: "node",
+    execArgv: ["--no-experimental-webstorage"],
     include: ["tests/vitest/**/*.{test,spec}.{ts,tsx}"],
     setupFiles: ["tests/setup/vitest.ts"],
     coverage: {

@@ -140,7 +140,7 @@ const LEAVES = [
   {
     id: "536-04-L02",
     file: "TASK-536-04-L02-Strict-Nested-Forms-Schemas.md",
-    gate: `${ENV}bun --cwd core lint:types && bun --cwd core lint && bun run test:vitest -- tests/vitest/forms/validation.test.ts tests/vitest/forms/formSettings.test.ts tests/vitest/forms/fileField.test.ts tests/vitest/forms/formRuntimeResolver.test.ts && bun test --parallel=1 --timeout=15000 tests/integration/routes/forms.test.ts tests/unit/forms/fileSubmission.test.ts`,
+    gate: `${ENV}bun --cwd core lint:types && bun --cwd core lint && bun run test:vitest -- tests/vitest/forms/validation.test.ts tests/vitest/forms/validation-field-schema.test.ts tests/vitest/forms/validation-patterns.test.ts tests/vitest/forms/validation-submission.test.ts tests/vitest/forms/formSettings.test.ts tests/vitest/forms/fileField.test.ts tests/vitest/forms/formRuntimeResolver.test.ts && bun test --parallel=1 --timeout=15000 tests/integration/routes/forms.test.ts tests/unit/forms/fileSubmission.test.ts`,
   },
 ];
 

@@ -35,6 +35,7 @@ Changelogs 1248, 1249, 1250, 1253, 1255, and 1256 are consumed by the completed
 TASK-536, TASK-537, TASK-538, TASK-541, TASK-543, and TASK-544 families.
 Changelog 1258 is consumed by the terminal TASK-9999-01-L02 re-triage and supersession
 by active TASK-540-02-L01.
+Changelog 1259 is consumed by the completed TASK-546 family.
 Changelogs 1251, 1252, 1254, and 1257 remain reserved for the implementation
 closure of TASK-539, TASK-540, TASK-542, and TASK-545, respectively.
 These remaining numbers are contract reservations only: do not add index
@@ -42,10 +43,11 @@ rows or changelog files before the corresponding family is complete.
 If a completed family is reopened after its changelog draft was already authored, that draft
 may remain only with an explicit `Draft` status that supersedes its closure evidence; keep its
 index row absent until fresh reclosure validation succeeds.
-Use 1259 for the next unreserved changelog entry.
+Use 1260 for the next unreserved changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1259 | 2026-07-22 | TASK-546 Node 26 and Full Dependency Upgrade — Node 26.5/Bun 1.3.14, latest admitted dependency graph, `fast-uri` CVE removal, Node/React/Vite compatibility, workflow/Forms scanner remediation, complete gates, and `/peri` production smoke | Toolchain/Dependencies/Supply Chain/Security/CodeQL/Runtime/UI Compatibility/Testing/QA/Docs/Task Board |
 | 1258 | 2026-07-18 | TASK-9999-01-L02 Superseded by TASK-540-02-L01 — current evidence shows `baseLabel` is read to invalidate stale Tab-label drafts while the commit-stable input preserves keyboard focus. The old value-only cleanup would regress visible UX/accessibility, so L02 left the deferred backlog as `⏭️ Superseded`; TASK-540-02-L01 remains active under its existing repair receipt. TASK-9999-01 stays To Do for L01 and the sentinel parent stays In Progress. | Custom Screens/Admin UI/Accessibility/Task Board/Docs |
 | 1256 | 2026-07-12 | TASK-544 Media Folder Reliability and Error Recovery — exact owned PostgreSQL slug races now map to the existing bounded 409; rejected and overlapping folder-list promises recover through generation-safe canonical six-field caching; load/create/rename/reorder/delete retain visible state and immutable Retry behavior with success-only cache events. Validation passed targeted Bun 36/36, targeted Vitest 78/78, full Bun 1,687 pass / 1 optional live skip / 0 fail, full Vitest 6,794/6,794, precommit, Admin build/boundary/bundle, and release gates 5/5; final audits were 0 H/M/L. Five real light/dark and wide/narrow CLI flows passed with distinct valid PNGs, zero canonical console/page errors, and complete cleanup. Strict scan's sole residual is exact, unchanged, and TASK-545-owned; no suppression, endpoint, migration, RBAC, security-contract, or Dashboard/widget expansion. | Media/Admin UI/DB Reliability/Cache/Accessibility/Security/Testing/Docs/Task Board |
 | 1255 | 2026-07-13 | TASK-543 Posts Exit Safety and List Accessibility — Close now awaits the newest exact durable draft across route epochs, propagates save failures, restores exact metadata after potential partial writes, and coalesces navigation. Posts rows are passive; title, checkbox, and contextual actions keep native keyboard semantics; status/author/date remain singly visible at 390/768/900/1024 px. Validation passed the 159/159 targeted matrix, full Bun 1,687 pass / 1 intentional opt-in skip / 0 fail, full Vitest 836 files / 6,880 tests, precommit, Admin build/boundary/bundle, and release gates 5/5. Seven real light/dark CLI flows produced 11 distinct PNGs with zero console/page errors and complete cleanup. Strict scan's sole residual is exact, unchanged, and TASK-545-owned; no endpoint, migration, RBAC, security-contract, or widget expansion. | Posts/Admin UI/Autosave/Reliability/Accessibility/Testing/Docs/Task Board |

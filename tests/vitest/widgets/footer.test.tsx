@@ -297,6 +297,43 @@ test("footer social links render icon buttons with accessible labels and externa
   expect(html).toContain('aria-label="Community"');
 });
 
+test("footer preserves the removed Lucide brand glyphs and accessible social labels", () => {
+  const brandTypes = [
+    "linkedin",
+    "twitter",
+    "github",
+    "youtube",
+    "facebook",
+    "instagram",
+    "twitch",
+  ] as const;
+  const html = renderToString(
+    <FooterBlock
+      data={{
+        ...footerDefaults,
+        social: [
+          ...brandTypes.map((type) => ({ type, href: `https://example.com/${type}` })),
+          { type: "x", href: "https://example.com/x" },
+        ],
+      }}
+      variant="columns-2"
+    />
+  );
+
+  for (const type of brandTypes) {
+    expect(html).toContain(`data-brand-icon="${type}"`);
+  }
+  expect(html).toContain('class="lucide lucide-x h-4 w-4"');
+  expect(html).not.toContain('data-brand-icon="x"');
+  expect(html).toContain('aria-label="LinkedIn (opens in new tab)"');
+  expect(html).toContain('aria-label="Twitter (opens in new tab)"');
+  expect(html).toContain('aria-label="GitHub (opens in new tab)"');
+  expect(html).toContain('aria-label="YouTube (opens in new tab)"');
+  expect(html).toContain('aria-label="Facebook (opens in new tab)"');
+  expect(html).toContain('aria-label="Instagram (opens in new tab)"');
+  expect(html).toContain('aria-label="Twitch (opens in new tab)"');
+});
+
 test("footer normalizes unsafe legal, logo, and social hrefs before render", () => {
   const html = renderToString(
     <FooterBlock

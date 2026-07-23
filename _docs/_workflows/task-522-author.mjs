@@ -1,3 +1,5 @@
+import { buildTask522FixPrompt } from "./lib/task-522-findings-prompt.mjs";
+
 export const meta = {
   name: "task-522-author",
   description:
@@ -20,7 +22,7 @@ CURRENT CMS CODE:
 - HERO: core/widgets/core/hero.tsx.
 - TASK-521 (implementing NOW; 522 DEPENDS ON IT — verify its landed outputs at implement time): NEW core/services/pages/pageEffectsRuntime.ts (dependency-free runtime-effects module + reduced-motion guard); section scroll/parallax/reveal (521-02); hero mouse-tilt (521-03 — the tilt primitive 522 generalizes); NEW core/services/pages/animatedIconGlyphs.tsx curated inline-SVG set (521-04 — 522's custom-SVG block is the arbitrary-SVG complement); per-page effects + compact page-settings panel (521-05).
 
-SECURITY: a custom/pasted SVG is an XSS vector. The SVG block MUST sanitize server-side + at render: strip <script>, on* event attributes, javascript:/data: script URLs, <foreignObject>, external entity/href refs to scripts, <use href> to remote, style with expression()/behavior. Prefer an allowlist of SVG tags/attributes (shape/path/g/defs/linearGradient/etc + geometry/presentation attrs) over a denylist. Icon/glyph names stay allowlisted (hasOwnProperty/Set, never bare bracket lookup on a prototype-carrying map).`;
+SECURITY: a custom/pasted SVG is an XSS vector. The SVG block MUST sanitize server-side + at render: strip script elements, on* event attributes, javascript:/data: script URLs, foreignObject elements, external entity/href refs to scripts, remote use-element hrefs, and style values with expression()/behavior. Prefer an allowlist of SVG tags/attributes (shape/path/g/defs/linearGradient/etc + geometry/presentation attrs) over a denylist. Icon/glyph names stay allowlisted (hasOwnProperty/Set, never bare bracket lookup on a prototype-carrying map).`;
 
 const DECISIONS = `OWNER INTENT (baked in): the owner wants to BUILD a rich hero like the reference — insert a custom SVG + floating/drifting badges + cards nested in the hero, with the card tilting toward the mouse corner on hover, on a premium glass/glow dark canvas. Deliver the COMPOSABLE TOOLKIT for that (not a one-off hero):
 1. Custom-SVG block: paste/upload sanitized SVG (+ optional stroke-draw-in animation like .draw-line).
@@ -140,7 +142,7 @@ const LENSES = [
   },
   {
     key: "security",
-    ask: "SECURITY: the custom-SVG sanitizer is an ALLOWLIST (tags+attrs) that strips <script>/on*/javascript:/foreignObject/external-script-refs/expression() — spell out the test vectors; icon/glyph names allowlisted via hasOwnProperty/Set; effect config (drift/tilt/canvas params) reject-unknown + clamped, no CSS/JS injection into style/attrs/<style>; the runtime scripts are dependency-free, no eval/innerHTML-of-user-data. A Security Contract subsection exists (SVG block is effectively a new render surface).",
+    ask: "SECURITY: the custom-SVG sanitizer is an ALLOWLIST (tags+attrs) that strips script elements/on*/javascript:/foreignObject/external-script-refs/expression() — spell out the test vectors; icon/glyph names allowlisted via hasOwnProperty/Set; effect config (drift/tilt/canvas params) reject-unknown + clamped, no CSS/JS injection into style/attrs/style elements; the runtime scripts are dependency-free, no eval/innerHTML-of-user-data. A Security Contract subsection exists (SVG block is effectively a new render surface).",
   },
 ];
 
@@ -177,14 +179,12 @@ while (round < 5 && !clean) {
     log(`Round ${round}: CLEAN.`);
     break;
   }
-  const list = hm
-    .map((f, i) => `${i + 1}. [${f.severity}] (${f.lens}) ${f.file}: ${f.problem} → FIX: ${f.fix}`)
-    .join("\n");
-  if (list)
-    await agent(
-      `${COMMON}\n\nRound ${round} CONVERGE: apply these real HIGH/MEDIUM drift fixes to the ${TASK} contract (edit .md files). Correct citations, close granularity/completeness/single-writer/security gaps, keep changelog pin + naming + the 521 dependency consistent. If a finding is wrong, justify in residual. Findings:\n${list}\n\nReturn applied vs residual.`,
-      { label: `fix-r${round}`, phase: "DriftAudit", schema: FIX_SCHEMA }
-    );
+  if (hm.length > 0)
+    await agent(buildTask522FixPrompt({ common: COMMON, round, task: TASK, findings: hm }), {
+      label: `fix-r${round}`,
+      phase: "DriftAudit",
+      schema: FIX_SCHEMA,
+    });
 }
 
 phase("FinalReconcile");

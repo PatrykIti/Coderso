@@ -60,14 +60,14 @@ test("PR gates pin supported Bun and Node runtimes", () => {
     "coderso-release-gates",
   ].map((job) => getJobBlock(workflow, job));
 
-  expect(workflow).toContain("BUN_VERSION: 1.3.13");
-  expect(workflow).toContain("NODE_VERSION: 22.14.0");
+  expect(workflow).toContain("BUN_VERSION: 1.3.14");
+  expect(workflow).toContain("NODE_VERSION: 26.5.0");
   expect(workflow).not.toContain("bun-version: 1.3.6");
 
   for (const job of runtimeJobs) {
-    expect(job).toMatch(/oven-sh\/setup-bun@[0-9a-f]{40}\s+# v2\b/);
+    expect(job).toContain("oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0");
     expect(job).toContain("bun-version: ${{ env.BUN_VERSION }}");
-    expect(job).toMatch(/actions\/setup-node@[0-9a-f]{40}\s+# v4\b/);
+    expect(job).toContain("actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0");
     expect(job).toContain("node-version: ${{ env.NODE_VERSION }}");
     expect(job).toContain("Verify CI runtime");
     expect(job).toContain("node --version");
@@ -80,6 +80,7 @@ test("security gate workflow wires semgrep, trivy, and gitleaks", () => {
   const securityGate = getJobBlock(workflow, "security-gate");
 
   expect(securityGate).toContain("semgrep");
+  expect(securityGate).toContain("pip install semgrep==1.170.1");
   expect(securityGate).toContain("trivy");
   expect(securityGate).toContain("fetch-depth: 0");
   expect(securityGate).toMatch(/aquasecurity\/trivy-action@[0-9a-f]{40}\s+# v0\.36\.0\b/);
@@ -92,7 +93,9 @@ test("security gate workflow wires semgrep, trivy, and gitleaks", () => {
   expect(securityGate).toContain("format: table");
   expect(securityGate).toContain("skip-setup-trivy: true");
   expect(securityGate).toContain("gitleaks");
-  expect(securityGate).toMatch(/gitleaks\/gitleaks-action@[0-9a-f]{40}\s+# v2\b/);
+  expect(securityGate).toContain(
+    "gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0"
+  );
   expect(securityGate).toContain("GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}");
   expect(securityGate).toContain("GITLEAKS_CONFIG: .gitleaks.toml");
   expect(securityGate).toContain('GITLEAKS_ENABLE_COMMENTS: "false"');
@@ -102,10 +105,27 @@ test("security gate workflow wires semgrep, trivy, and gitleaks", () => {
   expect(securityGate).toContain("actions: read");
   expect(securityGate).toContain("contents: read");
   expect(securityGate).toContain("security-events: write");
-  expect(securityGate).toMatch(/github\/codeql-action\/upload-sarif@[0-9a-f]{40}\s+# v4\b/);
+  expect(securityGate).toContain(
+    "github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3"
+  );
   expect(securityGate).toContain("--error");
   expect(securityGate).toContain('exit-code: "1"');
   expect(securityGate).toContain('scanners: "vuln,secret,misconfig"');
+});
+
+test("PR gates pin current immutable CI and scanner actions", () => {
+  const workflow = readWorkflow();
+
+  expect(workflow).toContain("actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1");
+  expect(workflow).toContain(
+    "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1"
+  );
+  expect(workflow).toContain(
+    "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0"
+  );
+  expect(workflow).toContain(
+    "aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0"
+  );
 });
 
 test("security package scripts run layered local scanner coverage", () => {

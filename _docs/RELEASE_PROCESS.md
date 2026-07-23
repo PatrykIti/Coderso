@@ -48,9 +48,15 @@ GitHub App, not as the default repository workflow token. The token request is
 scoped to the current repository through `owner` and `repositories`.
 
 The workflow pins Node through `actions/setup-node` before running
-semantic-release. `semantic-release@25` requires Node `^22.14.0 || >=24.10.0`,
-so CI uses `NODE_VERSION=22.14.0` and verifies `node --version` before
-installing dependencies and running `bun run release:semantic`.
+semantic-release. `semantic-release@25.0.8` admits Node 26, so CI uses
+`NODE_VERSION=26.5.0` and verifies `node --version` before installing
+dependencies and running `bun run release:semantic`. Node is the supported
+release/tooling runtime only; the Coderso server remains Bun-based.
+
+CI and release actions are pinned to full immutable commits with exact stable
+tag comments. The current action majors use the Node 24 action runtime and
+require Actions Runner `2.327.1` or newer; GitHub-hosted `ubuntu-latest` meets
+that floor, and a self-hosted replacement must prove it explicitly.
 
 Then stage 1 runs `bun run release:semantic`, which:
 
@@ -99,9 +105,11 @@ bun --cwd core build:admin
 bun --cwd core build:site
 ```
 
-The runtime image starts through `core/server/dockerStart.ts`. By default it
-runs Drizzle migrations from `core/db/migrations` before importing the main
-production server:
+The runtime image preloads `core/server/productionReactRuntime.ts` before
+starting `core/server/dockerStart.ts`, keeping runtime TSX on React's
+production JSX factory. The startup flow otherwise remains unchanged: by
+default, `dockerStart.ts` runs Drizzle migrations from `core/db/migrations`
+before importing the main production server:
 
 ```text
 run startup migrations -> start core HTTP server

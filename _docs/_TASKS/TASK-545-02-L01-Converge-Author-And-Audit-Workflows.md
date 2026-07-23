@@ -48,6 +48,13 @@ task-screen-author-audit.mjs
 
 Combined `*-full.mjs` and every `*implement*`, `*impl*`, `*fix*`, or
 `*remediation*` file belong to L02, even when they contain an author/audit phase.
+The owner-approved TASK-546-04 security carveout is the exact temporary
+exception: it owns `task-540-smoke-executor.mjs`, only the
+`FROZEN_SMOKE_EXECUTOR_SHA256` value in `task-540-implement.mjs`,
+`task-543-implement.mjs`, and only the Forms validation-suite path list in
+`task-536-implement.mjs`, together with its named focused tests. TASK-545 must
+read those landed bytes fresh and must not revert or duplicate that remediation;
+all other bytes and wildcard ownership remain unchanged.
 Immediately before editing, compare this 24-file list plus L02's 44-file list with
 every active top-level `.mjs`. A missing/new file is blocking contract drift requiring
 explicit assignment and fresh audit; neither leaf silently widens a wildcard.
@@ -68,6 +75,11 @@ explicit assignment and fresh audit; neither leaf silently widens a wildcard.
   prompt-only false positive caused by dynamic finding text sharing a template
   literal with scanner-sensitive markup language. Rewrite the prompt structure
   non-suppressively and prove the targeted scan is clean.
+
+**Progress (2026-07-22):** The TASK-522 prompt-only finding is fixed independently
+with a bounded pure JSON formatter, a separately delimited untrusted-data prompt,
+and a focused Bun regression suite. The broader 24-script canonical audit-round
+migration remains open, so this leaf stays `⏳ To Do`.
 
 ## Implementation Pseudocode
 

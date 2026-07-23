@@ -83,7 +83,16 @@ vi.mock("@/components/ui/input", () => ({
     <input
       {...props}
       onChange={onChange}
-      onInput={(event) => onChange?.(event as React.ChangeEvent<HTMLInputElement>)}
+      onInput={(event) => {
+        const input = event.currentTarget;
+        const changeEvent: React.ChangeEvent<HTMLInputElement> = {
+          ...event,
+          currentTarget: input,
+          target: input,
+        };
+
+        onChange?.(changeEvent);
+      }}
     />
   ),
 }));

@@ -33,6 +33,11 @@ const MAX_NATURAL_KEY_CANDIDATES = 64;
 const MAX_TASK_TRAFFIC_ROWS = 4096;
 const MAX_COMPLETE_SESSION_ROWS = 4096;
 const MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES = 256;
+const RUN_CODE_PAYLOAD_MAX_BYTES = 65_536;
+const RUN_CODE_PAYLOAD_MAX_ENCODED_LENGTH = 87_384;
+const RUN_CODE_OPERATIONS = new Set(["goto-ready", "fill", "type", "press", "focus"]);
+const EMPTY_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+const LF_SHA256 = "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b";
 const PHASE_THREE_CLEANUP_FAILURE_CLASSES = deepFreezeExact([
   "admin_api_failed",
   "persistent_plan_failed",
@@ -2145,11 +2150,7 @@ async function buildResponseLostAuthoredIntent(state, action, captures) {
     const [entryKey, typeKey] = RESPONSE_LOST_ENTRY_ACTIONS[action.id];
     const entry = plan.fixtureBlueprint.relatedEntries[entryKey];
     const typeId = captures.get(
-      "content-type-" +
-        typeKey
-          .replace(/[A-Z]/gu, (letter) => "-" + letter.toLowerCase())
-          .replace("related-failure", "related-failure") +
-        ".id"
+      "content-type-" + typeKey.replace(/[A-Z]/gu, (letter) => "-" + letter.toLowerCase()) + ".id"
     );
     preparedBody = { title: entry.title, slug: entry.slug, data: entry.data };
     naturalKey = { typeId, slug: entry.slug };
@@ -4801,6 +4802,64 @@ function classifySafeRetainedProcessOutcome(outcome) {
   return null;
 }
 
+function isCredentialBrowserFillAction(action) {
+  return (
+    action?.kind === "fill" &&
+    action.executable?.type === "browser-native" &&
+    action.executable.operationId === "fill-secret"
+  );
+}
+
+function buildBrowserStreamIntegrity(
+  { action, program, args, displayArgs, stdoutDiscarded, outcome },
+  digestEvidenceBytes = hashBytes
+) {
+  invariant(typeof digestEvidenceBytes === "function", "receipt digest authority is invalid");
+  const credential = isCredentialBrowserFillAction(action);
+  invariant(
+    stdoutDiscarded === credential,
+    credential ? "credential stdout must be discarded" : "non-credential stdout cannot be discarded"
+  );
+  if (credential) {
+    const credentialRef = action.executable.refs?.[1];
+    invariant(
+      program === "playwright-cli" &&
+        credentialRef?.op === "secret" &&
+        ALLOWED_SECRET_NAMES.has(credentialRef.name) &&
+        Array.isArray(args) &&
+        args.length === 5 &&
+        args[0] === "-s=" + SESSION_NAME &&
+        args[1] === "--raw" &&
+        args[2] === "fill" &&
+        typeof args[3] === "string" &&
+        args[3].length > 0 &&
+        args[4] === credentialRef.name &&
+        Array.isArray(displayArgs) &&
+        displayArgs.length === 3 &&
+        displayArgs[0] === args[0] &&
+        displayArgs[1] === args[1] &&
+        displayArgs[2] === action.executable.operationId &&
+        Buffer.isBuffer(outcome.stdoutBytes) &&
+        outcome.stdoutBytes.equals(Buffer.from("\n")) &&
+        Buffer.isBuffer(outcome.stderrBytes) &&
+        outcome.stderrBytes.length === 0,
+      "credential browser receipt drift"
+    );
+    return deepFreezeExact({
+      stdoutBytes: 1,
+      stderrBytes: 0,
+      stdoutSha256: LF_SHA256,
+      stderrSha256: EMPTY_SHA256,
+    });
+  }
+  return deepFreezeExact({
+    stdoutBytes: outcome.stdoutBytes.length,
+    stderrBytes: outcome.stderrBytes.length,
+    stdoutSha256: digestEvidenceBytes(outcome.stdoutBytes),
+    stderrSha256: digestEvidenceBytes(outcome.stderrBytes),
+  });
+}
+
 class SingleAssignmentCaptureMap {
   constructor() {
     PRIVATE_CAPTURES.set(this, new Map());
@@ -4998,6 +5057,14 @@ class LocalCommandAuthority {
         "local command buffers are absent"
       );
       const displayCommand = shellDisplay(program, displayArgs);
+      const streamIntegrity = buildBrowserStreamIntegrity({
+        action,
+        program,
+        args,
+        displayArgs,
+        stdoutDiscarded,
+        outcome,
+      });
       const receipt = {
         runnerVersion: ORCHESTRATOR_EVIDENCE_RUNNER_VERSION,
         sequence,
@@ -5008,10 +5075,10 @@ class LocalCommandAuthority {
         assertionName,
         command: displayCommand,
         status: 0,
-        stdoutBytes: outcome.stdoutBytes.length,
-        stderrBytes: outcome.stderrBytes.length,
-        stdoutSha256: hashBytes(outcome.stdoutBytes),
-        stderrSha256: hashBytes(outcome.stderrBytes),
+        stdoutBytes: streamIntegrity.stdoutBytes,
+        stderrBytes: streamIntegrity.stderrBytes,
+        stdoutSha256: streamIntegrity.stdoutSha256,
+        stderrSha256: streamIntegrity.stderrSha256,
         stdoutTruncated: false,
         stderrTruncated: false,
         sanitizedOutput: stdoutDiscarded ? "[discarded]" : "",
@@ -8378,6 +8445,206 @@ function runCode(source) {
   return playwrightArgs("run-code", wrapped);
 }
 
+function codeQlSafeJavaScriptStringLiteral(value) {
+  invariant(typeof value === "string", "JavaScript literal input is invalid");
+  return JSON.stringify(value)
+    .replace(/</gu, "\\u003c")
+    .replace(/>/gu, "\\u003e")
+    .replace(/\//gu, "\\u002f")
+    .replace(/\u2028/gu, "\\u2028")
+    .replace(/\u2029/gu, "\\u2029");
+}
+
+function validateRunCodePayloadString(value, maximumLength, label, { allowEmpty = false } = {}) {
+  invariant(
+    typeof value === "string" &&
+      (allowEmpty || value.length > 0) &&
+      value.length <= maximumLength &&
+      !value.includes("\0"),
+    label + " is invalid"
+  );
+  return value;
+}
+
+function validateRunCodeOperationPayload(operation, input) {
+  invariant(
+    typeof operation === "string" && RUN_CODE_OPERATIONS.has(operation),
+    "run-code operation is invalid"
+  );
+  const keys =
+    operation === "goto-ready"
+      ? ["url"]
+      : operation === "fill" || operation === "type"
+        ? ["selector", "value"]
+        : operation === "press"
+          ? ["selector", "key"]
+          : ["selector"];
+  exactOwnKeys(input, keys, operation + " run-code payload", { plain: true });
+  const descriptors = Object.getOwnPropertyDescriptors(input);
+  invariant(
+    keys.every(
+      (key) =>
+        Object.hasOwn(descriptors[key], "value") &&
+        descriptors[key].enumerable === true &&
+        descriptors[key].configurable !== undefined
+    ),
+    operation + " run-code payload descriptors are invalid"
+  );
+  const payload = { operation };
+  if (operation === "goto-ready") {
+    payload.url = validateRunCodePayloadString(input.url, 8192, "run-code URL");
+  } else {
+    payload.selector = validateRunCodePayloadString(input.selector, 4096, "run-code selector");
+    invariant(
+      payload.selector !== LEGACY_SCREEN_RUNTIME_ROOT_SELECTOR,
+      "run-code legacy selector is forbidden"
+    );
+    if (operation === "fill" || operation === "type") {
+      payload.value = validateRunCodePayloadString(input.value, 32_768, "run-code value", {
+        allowEmpty: true,
+      });
+    } else if (operation === "press") {
+      payload.key = validateRunCodePayloadString(input.key, 256, "run-code key");
+    }
+  }
+  const json = canonicalJson(payload);
+  invariant(
+    Buffer.byteLength(json, "utf8") <= RUN_CODE_PAYLOAD_MAX_BYTES,
+    "run-code payload exceeds its byte budget"
+  );
+  return deepFreezeExact(payload);
+}
+
+function canonicalRunCodePayloadEncoding(operation, input) {
+  const payload = validateRunCodeOperationPayload(operation, input);
+  const bytes = Buffer.from(canonicalJson(payload), "utf8");
+  const encoded = bytes.toString("base64url");
+  invariant(
+    encoded.length > 0 &&
+      encoded.length <= RUN_CODE_PAYLOAD_MAX_ENCODED_LENGTH &&
+      /^[A-Za-z0-9_-]+$/u.test(encoded),
+    "run-code payload encoding is invalid"
+  );
+  const decoded = Buffer.from(encoded, "base64url");
+  invariant(
+    decoded.equals(bytes) && decoded.toString("base64url") === encoded,
+    "run-code payload encoding is non-canonical"
+  );
+  return encoded;
+}
+
+function encodeRunCodePayload(operation, input) {
+  return codeQlSafeJavaScriptStringLiteral(canonicalRunCodePayloadEncoding(operation, input));
+}
+
+function buildDataBearingRunCodeSource(operation, input) {
+  const encodedLiteral = encodeRunCodePayload(operation, input);
+  return `async (page) => {
+    const encoded = ${encodedLiteral};
+    const fail = (code) => { throw new Error("wf540_run_code_" + code); };
+    if (
+      typeof encoded !== "string" ||
+      encoded.length === 0 ||
+      encoded.length > 87384 ||
+      !/^[A-Za-z0-9_-]+$/u.test(encoded)
+    ) fail("encoding");
+    const standard = encoded.replaceAll("-", "+").replaceAll("_", "/");
+    let binary;
+    try {
+      binary = atob(standard + "=".repeat((4 - (standard.length % 4)) % 4));
+    } catch {
+      fail("base64url");
+    }
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    if (bytes.length === 0 || bytes.length > 65536) fail("bytes");
+    const canonicalEncoding = btoa(binary)
+      .replaceAll("+", "-")
+      .replaceAll("/", "_")
+      .replace(/=+$/u, "");
+    if (canonicalEncoding !== encoded) fail("canonical_encoding");
+    let json;
+    try {
+      json = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    } catch {
+      fail("utf8");
+    }
+    let payload;
+    try {
+      payload = JSON.parse(json);
+    } catch {
+      fail("json");
+    }
+    const exact = (value, keys) =>
+      value !== null &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      Object.getPrototypeOf(value) === Object.prototype &&
+      Object.keys(value).length === keys.length &&
+      keys.every((key) => Object.hasOwn(value, key));
+    const bounded = (value, maximumLength, allowEmpty = false) =>
+      typeof value === "string" &&
+      (allowEmpty || value.length > 0) &&
+      value.length <= maximumLength &&
+      !value.includes("\\0");
+    const canonical = (value) => {
+      if (value === null || typeof value !== "object") return JSON.stringify(value);
+      if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]";
+      return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + canonical(value[key])).join(",") + "}";
+    };
+    const legacySelector = "[data-" + "screen-runtime-root]";
+    if (payload?.operation === "goto-ready") {
+      if (!exact(payload, ["operation", "url"]) || !bounded(payload.url, 8192)) fail("goto_payload");
+    } else if (payload?.operation === "fill" || payload?.operation === "type") {
+      if (
+        !exact(payload, ["operation", "selector", "value"]) ||
+        !bounded(payload.selector, 4096) ||
+        payload.selector === legacySelector ||
+        !bounded(payload.value, 32768, true)
+      ) fail("text_payload");
+    } else if (payload?.operation === "press") {
+      if (
+        !exact(payload, ["key", "operation", "selector"]) ||
+        !bounded(payload.selector, 4096) ||
+        payload.selector === legacySelector ||
+        !bounded(payload.key, 256)
+      ) fail("press_payload");
+    } else if (payload?.operation === "focus") {
+      if (
+        !exact(payload, ["operation", "selector"]) ||
+        !bounded(payload.selector, 4096) ||
+        payload.selector === legacySelector
+      ) fail("focus_payload");
+    } else {
+      fail("operation");
+    }
+    if (canonical(payload) !== json) fail("canonical_json");
+    if (payload.operation === "goto-ready") {
+      await page.goto(payload.url);
+      await page.waitForFunction(() => {
+        const text = document.body?.innerText.trim() ?? "";
+        return text.length > 0 && text !== "Loading...";
+      }, null, { timeout: 30000 });
+    } else {
+      const locator = page.locator(payload.selector);
+      await locator.waitFor({ state: "visible", timeout: 10000 });
+      if (await locator.count() !== 1) throw new Error("wf540_target_count");
+      if (payload.operation === "fill") await locator.fill(payload.value);
+      else if (payload.operation === "type") await locator.pressSequentially(payload.value);
+      else if (payload.operation === "press") await locator.press(payload.key);
+      else await locator.focus();
+    }
+    return { ok: true };
+  }`;
+}
+
+function buildDataBearingRunCodeInvocation(operation, input) {
+  return {
+    args: runCode(buildDataBearingRunCodeSource(operation, input)),
+    displayArgs: null,
+    unitResultAlreadyNormalized: true,
+  };
+}
+
 function buildLoggerInstallSource(plan) {
   const userAgent = JSON.stringify(plan.fixtureBlueprint.userAgents.browser);
   const preferencePath = "/admin/api/user-settings/customScreens.entry.preferences";
@@ -11005,12 +11272,7 @@ function buildSimpleBrowserInvocation(
           displayArgs: null,
         };
       }
-      return {
-        args: runCode(
-          `async (page) => { await page.goto(${url}); await page.waitForFunction(() => { const text = document.body?.innerText.trim() ?? ""; return text.length > 0 && text !== "Loading..."; }, null, { timeout: 30000 }); return true; }`
-        ),
-        displayArgs: null,
-      };
+      return buildDataBearingRunCodeInvocation("goto-ready", { url: resolvedArgs[0] });
     }
     case "resize": {
       invariant(parsed.args.length === 2, "resize arity");
@@ -11801,12 +12063,7 @@ function buildSimpleBrowserInvocation(
         action.executable.type === "browser-native" &&
         action.executable.operationId === "fill-secret";
       if (!credential) {
-        return {
-          args: runCode(
-            `async (page) => { const locator=page.locator(${JSON.stringify(selector)}); await locator.waitFor({ state: "visible", timeout: 10000 }); if(await locator.count()!==1) throw new Error("wf540_target_count"); await locator.fill(${JSON.stringify(value)}); return true; }`
-          ),
-          displayArgs: null,
-        };
+        return buildDataBearingRunCodeInvocation("fill", { selector, value });
       }
       return {
         args: playwrightArgs("fill", selector, value),
@@ -11816,35 +12073,21 @@ function buildSimpleBrowserInvocation(
     }
     case "type": {
       invariant(parsed.args.length === 2, "type arity");
-      const selector = JSON.stringify(resolvedArgs[0]);
-      const value = JSON.stringify(resolvedArgs[1]);
-      return {
-        args: runCode(
-          `(async (page) => { const locator = page.locator(${selector}); await locator.waitFor({ state: "visible", timeout: 10000 }); if (await locator.count() !== 1) throw new Error("wf540_target_count"); await locator.pressSequentially(${value}); return true; })`
-        ),
-        displayArgs: null,
-      };
+      return buildDataBearingRunCodeInvocation("type", {
+        selector: resolvedArgs[0],
+        value: resolvedArgs[1],
+      });
     }
     case "press": {
       invariant(parsed.args.length === 2, "press arity");
-      const selector = JSON.stringify(resolvedArgs[0]);
-      const key = JSON.stringify(resolvedArgs[1]);
-      return {
-        args: runCode(
-          `(async (page) => { const locator = page.locator(${selector}); await locator.waitFor({ state: "visible", timeout: 10000 }); if (await locator.count() !== 1) throw new Error("wf540_target_count"); await locator.press(${key}); return true; })`
-        ),
-        displayArgs: null,
-      };
+      return buildDataBearingRunCodeInvocation("press", {
+        selector: resolvedArgs[0],
+        key: resolvedArgs[1],
+      });
     }
     case "focus": {
       invariant(parsed.args.length === 1, "focus arity");
-      const selector = JSON.stringify(resolvedArgs[0]);
-      return {
-        args: runCode(
-          `(async (page) => { const locator = page.locator(${selector}); await locator.waitFor({ state: "visible", timeout: 10000 }); if (await locator.count() !== 1) throw new Error("wf540_target_count"); await locator.focus(); return true; })`
-        ),
-        displayArgs: null,
-      };
+      return buildDataBearingRunCodeInvocation("focus", { selector: resolvedArgs[0] });
     }
     case "tab-new":
       invariant(parsed.args.length === 1, "tab-new arity");
@@ -12116,7 +12359,19 @@ function buildBrowserInvocation(
       runtimeConfig
     );
   invariant(invocation !== null, "browser executable is not implemented: " + action.id);
-  if (action.executable.type === "browser-run-code" && action.outputSchemaId === "unit") {
+  const unitResultAlreadyNormalized = invocation.unitResultAlreadyNormalized === true;
+  invariant(
+    !Object.hasOwn(invocation, "unitResultAlreadyNormalized") ||
+      (unitResultAlreadyNormalized &&
+        action.executable.type === "browser-run-code" &&
+        action.outputSchemaId === "unit"),
+    action.id + " unit normalization marker drift"
+  );
+  if (
+    action.executable.type === "browser-run-code" &&
+    action.outputSchemaId === "unit" &&
+    !unitResultAlreadyNormalized
+  ) {
     const sourceIndex = invocation.args.indexOf("run-code") + 1;
     invariant(
       sourceIndex > 0 && typeof invocation.args[sourceIndex] === "string",
@@ -12135,6 +12390,15 @@ function buildBrowserInvocation(
     const args = [...invocation.args];
     args[sourceIndex] = unitSource;
     invocation = { ...invocation, args };
+  }
+  if (unitResultAlreadyNormalized) {
+    invocation = {
+      args: invocation.args,
+      displayArgs: invocation.displayArgs,
+      ...(Object.hasOwn(invocation, "stdoutDiscarded")
+        ? { stdoutDiscarded: invocation.stdoutDiscarded }
+        : {}),
+    };
   }
   exactOwnKeys(
     invocation,
@@ -14171,22 +14435,37 @@ function encodeBunBridgeInputFrame(state, descriptor, input) {
   return encodeBoundedBunBridgeCanonicalFrame(input, descriptor.maxStdinBytes);
 }
 
+function bunBridgeDispatchProjection(descriptor, frame) {
+  return {
+    envProfileId: descriptor.envProfileId,
+    file: descriptor.file,
+    frameBytes: frame.length,
+    inputSchemaId: descriptor.inputSchemaId,
+    operationId: descriptor.operationId,
+    outputSchemaId: descriptor.outputSchemaId,
+    sourceSha256: descriptor.sourceSha256,
+  };
+}
+
 function prepareBunBridgeDispatch(state, descriptor, input) {
   const frame = encodeBunBridgeInputFrame(state, descriptor, input);
   return Object.freeze({
     descriptor,
     frame,
-    projection: deepFreezeExact({
-      envProfileId: descriptor.envProfileId,
-      file: descriptor.file,
-      frameBytes: frame.length,
-      frameSha256: hashBytes(frame),
-      inputSchemaId: descriptor.inputSchemaId,
-      operationId: descriptor.operationId,
-      outputSchemaId: descriptor.outputSchemaId,
-      sourceSha256: descriptor.sourceSha256,
-    }),
+    projection: deepFreezeExact(bunBridgeDispatchProjection(descriptor, frame)),
   });
+}
+
+function assertPreparedBunBridgeFrameExact(state, descriptor, input, prepared) {
+  const expectedFrame = encodeBunBridgeInputFrame(state, descriptor, input);
+  invariant(
+    prepared.descriptor === descriptor &&
+      Buffer.isBuffer(prepared.frame) &&
+      prepared.frame.equals(expectedFrame) &&
+      prepared.projection.frameBytes === expectedFrame.length,
+    "Bun bridge prepared frame drift"
+  );
+  return prepared;
 }
 
 function dryDispatchBunBridgeDescriptor(state, descriptor, input, externalExecutionTrap) {
@@ -14198,6 +14477,7 @@ function dryDispatchBunBridgeDescriptor(state, descriptor, input, externalExecut
 
 async function runBunBridge(state, descriptor, input) {
   const prepared = prepareBunBridgeDispatch(state, descriptor, input);
+  assertPreparedBunBridgeFrameExact(state, descriptor, input, prepared);
   const frame = prepared.frame;
   const executable = await revalidateBunExecutableAuthority(state);
   invariant(
@@ -25531,11 +25811,120 @@ export async function runTask540SmokeExecutorSelfTest() {
   };
   let legacyRuntimeRootRejected = false;
   try {
-    runCode(`(page) => page.locator(${JSON.stringify(LEGACY_SCREEN_RUNTIME_ROOT_SELECTOR)})`);
+    buildDataBearingRunCodeInvocation("focus", {
+      selector: LEGACY_SCREEN_RUNTIME_ROOT_SELECTOR,
+    });
   } catch {
     legacyRuntimeRootRejected = true;
   }
   assertNegative(legacyRuntimeRootRejected, "legacy runtime-root selector compile rejection");
+  const hostileRunCodeValue =
+    `""''\`\`\\\\\r\n\u2028\u2029</script>;&|$() ` + `);globalThis.__wf540Injected=true;//`;
+  const runCodeOperationInputs = {
+    "goto-ready": { url: "https://example.test/" + hostileRunCodeValue },
+    fill: { selector: "[data-hostile='" + hostileRunCodeValue + "']", value: hostileRunCodeValue },
+    type: { selector: "[data-type='" + hostileRunCodeValue + "']", value: hostileRunCodeValue },
+    press: { selector: "[data-press='" + hostileRunCodeValue + "']", key: hostileRunCodeValue },
+    focus: { selector: "[data-focus='" + hostileRunCodeValue + "']" },
+  };
+  const runCodeCalls = [];
+  const runCodeFakePage = {
+    async goto(url) {
+      runCodeCalls.push(["goto", url]);
+    },
+    async waitForFunction() {
+      runCodeCalls.push(["waitForFunction"]);
+    },
+    locator(selector) {
+      runCodeCalls.push(["locator", selector]);
+      return {
+        async waitFor(options) {
+          runCodeCalls.push(["waitFor", options]);
+        },
+        async count() {
+          return 1;
+        },
+        async fill(value) {
+          runCodeCalls.push(["fill", value]);
+        },
+        async pressSequentially(value) {
+          runCodeCalls.push(["type", value]);
+        },
+        async press(key) {
+          runCodeCalls.push(["press", key]);
+        },
+        async focus() {
+          runCodeCalls.push(["focus"]);
+        },
+      };
+    },
+  };
+  globalThis.__wf540Injected = false;
+  for (const [operation, input] of Object.entries(runCodeOperationInputs)) {
+    runCodeCalls.length = 0;
+    const invocation = buildDataBearingRunCodeInvocation(operation, input);
+    const source = invocation.args[invocation.args.indexOf("run-code") + 1];
+    invariant(
+      invocation.unitResultAlreadyNormalized === true &&
+        typeof source === "string" &&
+        !source.includes(hostileRunCodeValue) &&
+        !source.includes(LEGACY_SCREEN_RUNTIME_ROOT_SELECTOR) &&
+        source.split("const encoded =").length === 2,
+      operation + " safe run-code source drift"
+    );
+    const execute = new Script("(" + source + ")", {
+      filename: "task-540-" + operation + ".data-channel.self-test.js",
+    }).runInThisContext();
+    const output = await execute(runCodeFakePage);
+    invariant(
+      deepEqualJson(output, { ok: true }) && globalThis.__wf540Injected === false,
+      operation + " safe run-code execution drift"
+    );
+    const observed = runCodeCalls.flatMap((call) => call.slice(1));
+    for (const value of Object.values(input)) {
+      invariant(observed.includes(value), operation + " run-code value did not round-trip");
+    }
+  }
+  delete globalThis.__wf540Injected;
+  for (const [label, operation, input] of [
+    ["unknown key", "focus", { selector: "[data-safe]", unknown: true }],
+    ["NUL", "fill", { selector: "[data-safe]", value: "bad\0value" }],
+    ["oversize", "type", { selector: "[data-safe]", value: "x".repeat(32_769) }],
+  ]) {
+    await expectAsyncFailure(
+      async () => buildDataBearingRunCodeInvocation(operation, input),
+      "run-code host " + label
+    );
+  }
+  const safeFocusInput = { selector: "[data-safe-focus]" };
+  const safeFocusEncoding = canonicalRunCodePayloadEncoding("focus", safeFocusInput);
+  const safeFocusSource = buildDataBearingRunCodeSource("focus", safeFocusInput);
+  const executeMutatedRunCode = async (encoded, label) => {
+    runCodeCalls.length = 0;
+    const mutantSource = safeFocusSource.replace(
+      codeQlSafeJavaScriptStringLiteral(safeFocusEncoding),
+      codeQlSafeJavaScriptStringLiteral(encoded)
+    );
+    const execute = new Script("(" + mutantSource + ")", {
+      filename: "task-540-" + label + ".data-channel.self-test.js",
+    }).runInThisContext();
+    await expectAsyncFailure(async () => execute(runCodeFakePage), label);
+    invariant(runCodeCalls.length === 0, label + " reached the fake page");
+  };
+  await executeMutatedRunCode("A", "run-code noncanonical base64url");
+  await executeMutatedRunCode(
+    Buffer.from('{"operation":"focus", "selector":"[data-safe-focus]"}', "utf8").toString(
+      "base64url"
+    ),
+    "run-code noncanonical JSON"
+  );
+  await executeMutatedRunCode(
+    Buffer.from(
+      canonicalJson({ operation: "focus", selector: LEGACY_SCREEN_RUNTIME_ROOT_SELECTOR }),
+      "utf8"
+    ).toString("base64url"),
+    "run-code decoded legacy selector"
+  );
   let compiledRunCodeSources = 0;
   const authArmSourceActionIds = [];
   const authCloseSourceActionIds = [];
@@ -25665,6 +26054,16 @@ export async function runTask540SmokeExecutorSelfTest() {
     ])
   );
   const observedPreviewRuntimeActionIds = [];
+  const readDataBearingRunCodePayload = (source, label) => {
+    const match = source.match(/const encoded = ("(?:\\.|[^"\\])*");/u);
+    invariant(match !== null, label + " encoded payload is absent");
+    const encoded = JSON.parse(match[1]);
+    invariant(
+      typeof encoded === "string" && /^[A-Za-z0-9_-]+$/u.test(encoded),
+      label + " encoded payload token drift"
+    );
+    return JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
+  };
   const assertSourceMutantsRejected = (source, validator, tokens, label) => {
     for (const [index, token] of tokens.entries()) {
       invariant(source.includes(token), label + " mutant anchor " + index + " drift");
@@ -25841,8 +26240,11 @@ export async function runTask540SmokeExecutorSelfTest() {
     }
     if (previewRuntimeActionSelectors.has(action.id)) {
       const expectedSelector = previewRuntimeActionSelectors.get(action.id);
+      const selectorMatches = ["focus", "press", "type"].includes(action.kind)
+        ? readDataBearingRunCodePayload(compiledSource, action.id).selector === expectedSelector
+        : compiledSource.includes("page.locator(" + JSON.stringify(expectedSelector) + ")");
       invariant(
-        compiledSource.includes("page.locator(" + JSON.stringify(expectedSelector) + ")") &&
+        selectorMatches &&
           !compiledSource.includes("scopedRuntimeTab") &&
           !compiledSource.includes("previewRuntimeTab"),
         action.id + " preview runtime selector exact bytes drift"
@@ -27833,6 +28235,10 @@ export async function runTask540SmokeExecutorSelfTest() {
     { action },
     {
       program = "playwright-cli",
+      args = ["--raw", "self-test"],
+      displayArgs = args,
+      stdoutDiscarded = false,
+      sequence = 1,
       execution = createRetainedExecution(),
       runnerThrows = false,
       preSnapshotThrows = false,
@@ -27875,8 +28281,10 @@ export async function runTask540SmokeExecutorSelfTest() {
       return await authority.executeProgram({
         action,
         program,
-        args: ["--raw", "self-test"],
-        sequence: 1,
+        args,
+        displayArgs,
+        stdoutDiscarded,
+        sequence,
         operation: compileActionExecutionSpec(action).operation,
         routeKey: null,
         assertionName: null,
@@ -27887,6 +28295,154 @@ export async function runTask540SmokeExecutorSelfTest() {
       if (assertAfter !== null) assertAfter({ snapshotCalls, runnerCalls });
     }
   };
+  const credentialReceiptAction = plan.actionManifest.find(
+    ({ id }) => id === "set-010-login-password"
+  );
+  invariant(credentialReceiptAction !== undefined, "credential receipt action is absent");
+  const credentialSelector = registeredSelector(plan, "loginPassword");
+  const credentialArgs = playwrightArgs("fill", credentialSelector, "ADMIN_PASSWORD");
+  const credentialDisplayArgs = playwrightArgs("fill-secret");
+  const credentialOutcome = {
+    stdoutBytes: Buffer.from("\n"),
+    stderrBytes: Buffer.alloc(0),
+  };
+  const credentialAuthorityResult = await runLocalAuthority(
+    { action: credentialReceiptAction },
+    {
+      args: credentialArgs,
+      displayArgs: credentialDisplayArgs,
+      stdoutDiscarded: true,
+      execution: createRetainedExecution({ stdout: Buffer.from("\n") }),
+      sensitiveValues: [],
+    }
+  );
+  invariant(
+    credentialAuthorityResult.receipt.command ===
+      shellDisplay("playwright-cli", credentialDisplayArgs) &&
+      credentialAuthorityResult.receipt.sequence === 1 &&
+      credentialAuthorityResult.receipt.status === 0 &&
+      credentialAuthorityResult.receipt.stdoutBytes === 1 &&
+      credentialAuthorityResult.receipt.stderrBytes === 0 &&
+      credentialAuthorityResult.receipt.stdoutSha256 === LF_SHA256 &&
+      credentialAuthorityResult.receipt.stderrSha256 === EMPTY_SHA256 &&
+      credentialAuthorityResult.receipt.stdoutDiscarded === true &&
+      credentialAuthorityResult.receipt.sanitizedOutput === "[discarded]" &&
+      credentialAuthorityResult.stdout.equals(Buffer.from("\n")) &&
+      credentialAuthorityResult.stderr.length === 0,
+    "credential authority receipt integration drift"
+  );
+  for (const [label, override] of [
+    ["program", { program: "node" }],
+    ["args", { args: [...credentialArgs.slice(0, -1), "ADMIN_EMAIL"] }],
+    ["display", { displayArgs: [...credentialDisplayArgs.slice(0, -1), "fill"] }],
+    ["discard", { stdoutDiscarded: false }],
+    ["status", { execution: createRetainedExecution({ code: 1 }) }],
+    ["stdout", { execution: createRetainedExecution({ stdout: Buffer.alloc(0) }) }],
+    [
+      "stderr",
+      {
+        execution: createRetainedExecution({
+          stdout: Buffer.from("\n"),
+          stderr: Buffer.from("drift"),
+        }),
+      },
+    ],
+  ]) {
+    await expectAsyncFailure(
+      async () =>
+        runLocalAuthority(
+          { action: credentialReceiptAction },
+          {
+            args: credentialArgs,
+            displayArgs: credentialDisplayArgs,
+            stdoutDiscarded: true,
+            execution: createRetainedExecution({ stdout: Buffer.from("\n") }),
+            sensitiveValues: [],
+            ...override,
+          }
+        ),
+      "credential authority " + label + " mutation"
+    );
+    negativeCases += 1;
+  }
+  let credentialReceiptDigestCalls = 0;
+  const credentialStreamIntegrity = buildBrowserStreamIntegrity(
+    {
+      action: credentialReceiptAction,
+      program: "playwright-cli",
+      args: credentialArgs,
+      displayArgs: credentialDisplayArgs,
+      stdoutDiscarded: true,
+      outcome: credentialOutcome,
+    },
+    () => {
+      credentialReceiptDigestCalls += 1;
+      return "0".repeat(64);
+    }
+  );
+  const normalizedCredentialOutput = await normalizeBrowserCommandOutput(
+    {},
+    credentialReceiptAction,
+    credentialReceiptAction.executable,
+    credentialOutcome.stdoutBytes,
+    { args: credentialArgs, displayArgs: credentialDisplayArgs, stdoutDiscarded: true }
+  );
+  invariant(
+    credentialReceiptDigestCalls === 0 &&
+      deepEqualJson(credentialStreamIntegrity, {
+        stdoutBytes: 1,
+        stderrBytes: 0,
+        stdoutSha256: LF_SHA256,
+        stderrSha256: EMPTY_SHA256,
+      }) &&
+      normalizedCredentialOutput.equals(Buffer.from('{"ok":true}\n')),
+    "credential receipt fixed-integrity drift"
+  );
+  for (const [label, override] of [
+    ["stdout", { outcome: { ...credentialOutcome, stdoutBytes: Buffer.alloc(0) } }],
+    ["stderr", { outcome: { ...credentialOutcome, stderrBytes: Buffer.from("drift") } }],
+    ["display", { displayArgs: [...credentialDisplayArgs.slice(0, -1), "fill"] }],
+    ["discard", { stdoutDiscarded: false }],
+  ]) {
+    await expectAsyncFailure(
+      async () =>
+        buildBrowserStreamIntegrity({
+          action: credentialReceiptAction,
+          program: "playwright-cli",
+          args: credentialArgs,
+          displayArgs: credentialDisplayArgs,
+          stdoutDiscarded: true,
+          outcome: credentialOutcome,
+          ...override,
+        }),
+      "credential receipt " + label
+    );
+  }
+  let ordinaryReceiptDigestCalls = 0;
+  const ordinaryOutcome = {
+    stdoutBytes: Buffer.from('{"ok":true}\n'),
+    stderrBytes: Buffer.alloc(0),
+  };
+  const ordinaryStreamIntegrity = buildBrowserStreamIntegrity(
+    {
+      action: settlementTwinAction,
+      program: "playwright-cli",
+      args: ["--raw", "self-test"],
+      displayArgs: ["--raw", "self-test"],
+      stdoutDiscarded: false,
+      outcome: ordinaryOutcome,
+    },
+    (bytes) => {
+      ordinaryReceiptDigestCalls += 1;
+      return hashBytes(bytes);
+    }
+  );
+  invariant(
+    ordinaryReceiptDigestCalls === 2 &&
+      ordinaryStreamIntegrity.stdoutSha256 === hashBytes(ordinaryOutcome.stdoutBytes) &&
+      ordinaryStreamIntegrity.stderrSha256 === EMPTY_SHA256,
+    "ordinary receipt evidence digest drift"
+  );
   const exactLoginFrame = Buffer.from(AUTH_SETTLEMENT_FAILURE_FRAMES.login_route, "utf8");
   await runSettlementDiagnosticCase({
     label: "exact browser frame before secret scan",
@@ -29439,6 +29995,7 @@ export async function runTask540SmokeExecutorSelfTest() {
   const dryExternalExecutionTrap = new Error("TASK-540 hermetic Bun external execution trap");
   let dryExternalExecutionTrapCalls = 0;
   const dryDispatchProjections = [];
+  let credentialBearingDryDispatches = 0;
   for (const descriptor of [...staticDryDescriptors, ...resourceDryDescriptors]) {
     const core = Object.hasOwn(descriptor, "resourceKey")
       ? dryResourceCoreByKey.get(descriptor.resourceKey)
@@ -29477,6 +30034,8 @@ export async function runTask540SmokeExecutorSelfTest() {
     try {
       dryDispatchBunBridgeDescriptor({}, descriptor, input, (projection) => {
         dryExternalExecutionTrapCalls += 1;
+        const credentialBearing = descriptor.inputSchemaId === "bootstrap-restore-input-v1";
+        if (credentialBearing) credentialBearingDryDispatches += 1;
         invariant(
           projection.operationId === descriptor.operationId &&
             projection.sourceSha256 === descriptor.sourceSha256 &&
@@ -29484,7 +30043,7 @@ export async function runTask540SmokeExecutorSelfTest() {
             projection.outputSchemaId === descriptor.outputSchemaId &&
             Number.isSafeInteger(projection.frameBytes) &&
             projection.frameBytes > 0 &&
-            /^[a-f0-9]{64}$/u.test(projection.frameSha256),
+            !Object.hasOwn(projection, "frameSha256"),
           descriptor.operationId + " dry-dispatch projection drift"
         );
         dryDispatchProjections.push(projection);
@@ -29501,8 +30060,44 @@ export async function runTask540SmokeExecutorSelfTest() {
   invariant(
     dryExternalExecutionTrapCalls === 104 &&
       dryDispatchProjections.length === 104 &&
+      credentialBearingDryDispatches === 2 &&
       new Set(dryDispatchProjections.map(({ operationId }) => operationId)).size === 104,
     "Bun static/resource dry-dispatch coverage drift"
+  );
+  const credentialDescriptor =
+    BUN_BRIDGE_AUXILIARY_OPERATION_DESCRIPTORS["resource/bootstrap-cas-restore"];
+  const credentialInput = selfTestBunBridgeInputForSchema("bootstrap-restore-input-v1");
+  const credentialPrepared = prepareBunBridgeDispatch({}, credentialDescriptor, credentialInput);
+  const decodedCredentialFrame = JSON.parse(credentialPrepared.frame.toString("utf8"));
+  invariant(
+    !Object.hasOwn(credentialPrepared.projection, "frameSha256") &&
+      decodedCredentialFrame.baseline.rawUserRow.passwordHash ===
+        credentialInput.baseline.rawUserRow.passwordHash,
+    "credential-bearing Bun frame projection drift"
+  );
+  const mutatedCredentialPrepared = prepareBunBridgeDispatch(
+    {},
+    credentialDescriptor,
+    credentialInput
+  );
+  mutatedCredentialPrepared.frame[0] ^= 0x01;
+  await expectAsyncFailure(
+    async () =>
+      assertPreparedBunBridgeFrameExact(
+        {},
+        credentialDescriptor,
+        credentialInput,
+        mutatedCredentialPrepared
+      ),
+    "mutated credential-bearing Bun frame"
+  );
+  const secretFreeDescriptor =
+    BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS["runtime/set-004b-session-policy-preflight"];
+  const secretFreePrepared = prepareBunBridgeDispatch({}, secretFreeDescriptor, {});
+  invariant(
+    !Object.hasOwn(secretFreePrepared.projection, "frameSha256") &&
+      secretFreePrepared.frame.equals(Buffer.from("{}\n")),
+    "secret-free Bun frame projection drift"
   );
   const missingRuntimeRegistry = { ...BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS };
   delete missingRuntimeRegistry["runtime/set-001-storage-preflight"];

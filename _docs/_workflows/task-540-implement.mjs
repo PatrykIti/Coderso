@@ -684,7 +684,7 @@ const WORKFLOW = ROOT + "/" + WORKFLOW_REL;
 const SMOKE_CONTRACT_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-contract.mjs";
 const SMOKE_EXECUTOR_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-executor.mjs";
 const FROZEN_SMOKE_EXECUTOR_SHA256 =
-  "6accccffc88371978f2c3ad1727dbbf96aa2473802ea583d14cbc0c4ea548001";
+  "64daaabad53ebf3a73cc7a35fa4cb6f6b72fcf38f7e85367bf35381e492a57f4";
 const SMOKE_HOST_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-host.mjs";
 const LOCAL_ORCHESTRATOR_WORKFLOW_REL = "_docs/_workflows/task-540-local-orchestrator.mjs";
 const TEST_NAME_CONTRACT_WORKFLOW_REL = "_docs/_workflows/task-540-test-name-contract.mjs";
@@ -2743,7 +2743,7 @@ function scanSensitiveAssignmentRhsEnd(value, rhsStart) {
 function sensitiveAssignmentRanges(value) {
   const ranges = [];
   SENSITIVE_ASSIGNMENT_PATTERN.lastIndex = 0;
-  for (let match = SENSITIVE_ASSIGNMENT_PATTERN.exec(value); match !== null; ) {
+  for (let match = SENSITIVE_ASSIGNMENT_PATTERN.exec(value); match !== null;) {
     const rhsStart = match.index + match[0].length;
     const rhsEnd = scanSensitiveAssignmentRhsEnd(value, rhsStart);
     ranges.push({ rhsEnd, rhsStart });

@@ -364,7 +364,7 @@ test("resolveFormRuntimeData does not project public fields for published intern
 test("resolveFormRuntimeData omits only unsafe legacy patterns without mutating storage", async () => {
   process.env.FORM_SUBMIT_NONCE_SECRET = NONCE_SECRET;
   const safeSettings = { pattern: "^[A-Z]{2}\\d{4}$", helper: "Safe" };
-  const unsafeSettings = { pattern: "^a*a*a*a*a*a*a*a*a*a*b$", helper: "Legacy" };
+  const unsafeSettings = { pattern: "^(ab)+$", helper: "Legacy" };
   const oversizedSettings = { pattern: "a".repeat(100_000), helper: "Oversized" };
 
   vi.doMock("../../../core/services/forms/formsService", () => ({
@@ -425,6 +425,6 @@ test("resolveFormRuntimeData omits only unsafe legacy patterns without mutating 
   expect(preview.fields[0]?.settings.pattern).toBe("^[A-Z]{2}\\d{4}$");
   expect(preview.fields[1]?.settings.pattern).toBeUndefined();
   expect(preview.fields[2]?.settings.pattern).toBeUndefined();
-  expect(unsafeSettings.pattern).toBe("^a*a*a*a*a*a*a*a*a*a*b$");
+  expect(unsafeSettings.pattern).toBe("^(ab)+$");
   expect(oversizedSettings.pattern).toHaveLength(100_000);
 });

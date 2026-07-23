@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { Script } from "node:vm";
 
 export const meta = {
   name: "task-543-implement",
@@ -302,11 +303,17 @@ const TRANSIENT_SCREENSHOT_KINDS = Object.freeze([
 ]);
 
 const SMOKE_SESSION_PREFIX = "playwright-cli -s=wf543smoke --raw ";
+const RUN_CODE_PAYLOAD_MAX_BYTES = 65_536;
+const RUN_CODE_PAYLOAD_MAX_ENCODED_LENGTH = 87_384;
+const RUN_CODE_COMMAND_MAX_BYTES = 10_000;
+const EMPTY_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 const SMOKE_SCREENSHOT_ROOT = `${ROOT}/_docs/_workflows/_smoke`;
 const POSTS_LIST_URL = "http://coderso-a.localhost:5173/admin/posts";
 const ADMIN_ORIGIN = "http://coderso-a.localhost:5173";
 const POST_TITLE_SELECTOR = '[data-post-editor-title-input="true"]';
 const POST_CLOSE_SELECTOR = '[data-post-editor-header-close="true"]';
+const SMOKE_PASSWORD_FILL_COMMAND =
+  'playwright-cli -s=wf543smoke --raw fill \'input[type="password"]\' "$ADMIN_PASSWORD" >/dev/null';
 const SMOKE_SETUP_STORAGE_KEY = "wf543smoke-setup";
 const FAILURE_BASE_OWNED_PORTS = Object.freeze([3000, 5173]);
 const ADMIN_HEALTH_COMMAND =
@@ -881,8 +888,7 @@ const SMOKE_SUCCESS_SCHEMA = {
             'playwright-cli -s=wf543smoke --raw fill \'input[type="email"]\' "$ADMIN_EMAIL" >/dev/null',
         },
         passwordFill: {
-          const:
-            'playwright-cli -s=wf543smoke --raw fill \'input[type="password"]\' "$ADMIN_PASSWORD" >/dev/null',
+          const: SMOKE_PASSWORD_FILL_COMMAND,
         },
         loginSubmit: { const: SMOKE_LOGIN_SUBMIT },
         consoleObservationStart: { const: SMOKE_LOG_OBSERVATION_START },
@@ -2016,17 +2022,65 @@ function sha256Text(value) {
   return createHash("sha256").update(value, "utf8").digest("hex");
 }
 
-function receiptIntegrityValid(receipt) {
+function receiptIntegrityValid(receipt, digest = sha256Text) {
   return (
     receipt &&
     typeof receipt.command === "string" &&
     Number.isInteger(receipt.status) &&
     typeof receipt.stdout === "string" &&
     typeof receipt.stderr === "string" &&
-    receipt.stdoutSha256 === sha256Text(receipt.stdout) &&
-    receipt.stderrSha256 === sha256Text(receipt.stderr) &&
+    receipt.stdoutSha256 === digest(receipt.stdout) &&
+    receipt.stderrSha256 === digest(receipt.stderr) &&
     Object.prototype.hasOwnProperty.call(receipt, "parsedOutput")
   );
+}
+
+function credentialReceiptValidWithoutDigest(receipt, context, exactCommand) {
+  const scopeValid =
+    context === "bootstrap.passwordFill"
+      ? !Object.prototype.hasOwnProperty.call(receipt ?? {}, "scope")
+      : context === "timeline.browserPassword" && receipt?.scope === "browser:password";
+  return (
+    scopeValid &&
+    exactCommand === SMOKE_PASSWORD_FILL_COMMAND &&
+    receipt?.command === exactCommand &&
+    receipt.status === 0 &&
+    receipt.stdout === "" &&
+    receipt.stderr === "" &&
+    receipt.stdoutSha256 === EMPTY_SHA256 &&
+    receipt.stderrSha256 === EMPTY_SHA256 &&
+    Object.prototype.hasOwnProperty.call(receipt, "parsedOutput") &&
+    receipt.parsedOutput === null
+  );
+}
+
+function bootstrapPasswordReceiptValid(smoke) {
+  return credentialReceiptValidWithoutDigest(
+    smoke?.bootstrap?.passwordFill,
+    "bootstrap.passwordFill",
+    smoke?.commands?.passwordFill
+  );
+}
+
+function timelineReceiptIntegrityValid(record, exactPasswordCommand, digest = sha256Text) {
+  const hasCredentialSignal =
+    record?.scope === "browser:password" || record?.command === SMOKE_PASSWORD_FILL_COMMAND;
+  if (hasCredentialSignal) {
+    return credentialReceiptValidWithoutDigest(
+      record,
+      "timeline.browserPassword",
+      exactPasswordCommand
+    );
+  }
+  return receiptIntegrityValid(record, digest);
+}
+
+function successTimelineReceiptIntegrityValid(record, smoke, digest = sha256Text) {
+  return timelineReceiptIntegrityValid(record, smoke?.commands?.passwordFill, digest);
+}
+
+function failurePrefixTimelineReceiptIntegrityValid(record, _smoke, digest = sha256Text) {
+  return timelineReceiptIntegrityValid(record, SMOKE_PASSWORD_FILL_COMMAND, digest);
 }
 
 function rawPlaywrightReceiptValid(receipt) {
@@ -2091,8 +2145,15 @@ function strictSummaryExitCode(rawOutput, id) {
   const line = rawOutput.split(/\r?\n/).find((candidate) => candidate.startsWith(`- ${id}: `));
   if (!line) return null;
   if (line.startsWith(`- ${id}: ok `)) return 0;
-  const match = new RegExp(`^- ${id}: non-zero:(\\d+) `).exec(line);
-  return match ? Number(match[1]) : null;
+  const failurePrefix = `- ${id}: non-zero:`;
+  if (!line.startsWith(failurePrefix)) return null;
+  const suffix = line.slice(failurePrefix.length);
+  const separator = suffix.indexOf(" ");
+  if (separator < 1) return null;
+  const exitCodeText = suffix.slice(0, separator);
+  if (!/^[0-9]+$/u.test(exitCodeText)) return null;
+  const exitCode = Number(exitCodeText);
+  return Number.isSafeInteger(exitCode) ? exitCode : null;
 }
 
 function parseStrictSemgrepJson(rawOutput) {
@@ -2591,26 +2652,414 @@ function expectedScenarioActionCommands(scenario, fixture) {
   }
 }
 
-function transientAssertionBody(kind) {
-  const waitFor =
-    "const waitFor = async (test, label) => { const deadline = Date.now() + 8000; while (!test()) { if (Date.now() > deadline) throw new Error(label); await page.waitForTimeout(25); } }; ";
-  switch (kind) {
-    case "dirty-delayed-close":
-      return `${waitFor}const state = page.__wf543Scenario; await waitFor(() => state.pendingRoutes.length === 1, "wf543 delayed save missing"); const close = page.locator(${JSON.stringify(POST_CLOSE_SELECTOR)}); return { kind: "dirty-delayed-close", phase: "pending", pendingRoutes: state.pendingRoutes.length, closeBusy: (await close.getAttribute("aria-busy")) === "true", closeDisabled: await close.isDisabled(), draftText: await page.locator(${JSON.stringify(POST_TITLE_SELECTOR)}).inputValue(), nonCloseEditable: await page.locator(${JSON.stringify(POST_TITLE_SELECTOR)}).isEditable(), navigationCount: state.navigationUrls.length };`;
-    case "pending-revert-restoration":
-      return `${waitFor}const state = page.__wf543Scenario; await waitFor(() => state.pendingRoutes.length === 1 && state.mutations.length === 1, "wf543 restoration first save missing"); const close = page.locator(${JSON.stringify(POST_CLOSE_SELECTOR)}); return { kind: "pending-revert-restoration", phase: "pending", pendingRoutes: state.pendingRoutes.length, closeBusy: (await close.getAttribute("aria-busy")) === "true", closeDisabled: await close.isDisabled(), draftText: await page.locator(${JSON.stringify(POST_TITLE_SELECTOR)}).inputValue(), nonCloseEditable: await page.locator(${JSON.stringify(POST_TITLE_SELECTOR)}).isEditable(), navigationCount: state.navigationUrls.length };`;
-    case "failure-retry":
-      return `${waitFor}const state = page.__wf543Scenario; const alert = page.getByRole("alert"); const retry = page.getByRole("button", { name: "Retry now", exact: true }); await alert.waitFor(); await waitFor(() => state.mutations.length === 1, "wf543 failed autosave missing"); return { kind: "failure-retry", phase: "failure", alertVisible: await alert.isVisible(), alertText: (await alert.textContent())?.trim() ?? "", draftText: await page.locator(${JSON.stringify(POST_TITLE_SELECTOR)}).inputValue(), retryFocused: await retry.evaluate((button) => document.activeElement === button), mutationCount: state.mutations.length, navigationCount: state.navigationUrls.length };`;
-    case "double-close":
-      return `${waitFor}const state = page.__wf543Scenario; await waitFor(() => state.pendingRoutes.length === 1, "wf543 double-close save missing"); const close = page.locator(${JSON.stringify(POST_CLOSE_SELECTOR)}); return { kind: "double-close", phase: "pending", pendingRoutes: state.pendingRoutes.length, domClickEvents: Number(await close.getAttribute("data-wf543-dom-click-events") ?? "0"), closeBusy: (await close.getAttribute("aria-busy")) === "true", closeDisabled: await close.isDisabled(), closePendingData: (await close.getAttribute("data-post-editor-close-pending")) === "true", nonCloseEditable: await page.locator(${JSON.stringify(POST_TITLE_SELECTOR)}).isEditable(), navigationCount: state.navigationUrls.length };`;
-    default:
-      return null;
+function requireExactPlainObject(value, keys, label) {
+  if (
+    value === null ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    Object.getPrototypeOf(value) !== Object.prototype ||
+    Object.keys(value).length !== keys.length ||
+    !keys.every((key) => Object.prototype.hasOwnProperty.call(value, key))
+  ) {
+    throw new Error(`${label} has an invalid shape`);
   }
 }
 
+function requireBoundedRunCodeString(value, maximumLength, label) {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    value.length > maximumLength ||
+    value.includes("\0")
+  ) {
+    throw new Error(`${label} is invalid`);
+  }
+  return value;
+}
+
+function evidenceOperationKind(operation) {
+  switch (operation) {
+    case "assert-transient-dirty-delayed-close":
+    case "assert-dirty-delayed-close":
+      return "dirty-delayed-close";
+    case "assert-transient-pending-revert-restoration":
+    case "assert-pending-revert-restoration":
+      return "pending-revert-restoration";
+    case "assert-transient-failure-retry":
+    case "assert-failure-retry":
+      return "failure-retry";
+    case "assert-transient-double-close":
+    case "assert-double-close":
+      return "double-close";
+    case "assert-clean-close":
+      return "clean-close";
+    case "assert-table-keyboard":
+      return "table-keyboard";
+    case "assert-mid-viewport-metadata":
+      return "mid-viewport-metadata";
+    case "reset-scenario":
+      return null;
+    default:
+      throw new Error("TASK-543 run-code operation is unknown");
+  }
+}
+
+function validateEvidenceOperationPayload(operation, input) {
+  const expectedKind = evidenceOperationKind(operation);
+  let payload;
+  if (operation === "reset-scenario") {
+    const keys = ["editorUrl", "fixtureId", "scenarioId", "title"];
+    requireExactPlainObject(input, keys, "TASK-543 reset payload");
+    payload = {
+      editorUrl: requireBoundedRunCodeString(input.editorUrl, 8_192, "reset editor URL"),
+      fixtureId: requireBoundedRunCodeString(input.fixtureId, 512, "reset fixture id"),
+      scenarioId: requireBoundedRunCodeString(input.scenarioId, 512, "reset scenario id"),
+      title: requireBoundedRunCodeString(input.title, 32_768, "reset title"),
+    };
+  } else {
+    requireExactPlainObject(input, ["kind"], "TASK-543 assertion payload");
+    if (input.kind !== expectedKind) {
+      throw new Error("TASK-543 assertion kind does not match its operation");
+    }
+    payload = { kind: requireBoundedRunCodeString(input.kind, 128, "assertion kind") };
+  }
+  const envelope = { operation, payload };
+  const json = stableSerialize(envelope);
+  if (Buffer.byteLength(json, "utf8") > RUN_CODE_PAYLOAD_MAX_BYTES) {
+    throw new Error("TASK-543 run-code payload exceeds its byte budget");
+  }
+  return envelope;
+}
+
+function canonicalEvidenceOperationEncoding(operation, input) {
+  const envelope = validateEvidenceOperationPayload(operation, input);
+  const bytes = Buffer.from(stableSerialize(envelope), "utf8");
+  const encoded = bytes.toString("base64url");
+  if (
+    encoded.length === 0 ||
+    encoded.length > RUN_CODE_PAYLOAD_MAX_ENCODED_LENGTH ||
+    !/^[A-Za-z0-9_-]+$/u.test(encoded)
+  ) {
+    throw new Error("TASK-543 run-code payload encoding is invalid");
+  }
+  const decoded = Buffer.from(encoded, "base64url");
+  if (!decoded.equals(bytes) || decoded.toString("base64url") !== encoded) {
+    throw new Error("TASK-543 run-code payload encoding is noncanonical");
+  }
+  return encoded;
+}
+
+function codeQlSafeJavaScriptStringLiteral(value) {
+  if (typeof value !== "string") throw new Error("TASK-543 JavaScript literal is invalid");
+  return JSON.stringify(value)
+    .replace(/</gu, "\\u003c")
+    .replace(/>/gu, "\\u003e")
+    .replace(/\//gu, "\\u002f")
+    .replace(/\u2028/gu, "\\u2028")
+    .replace(/\u2029/gu, "\\u2029");
+}
+
+function buildEvidenceOperationRunCodeSource(operation, input) {
+  const encodedLiteral = codeQlSafeJavaScriptStringLiteral(
+    canonicalEvidenceOperationEncoding(operation, input)
+  );
+  let source;
+  switch (operation) {
+    case "assert-transient-dirty-delayed-close":
+      source = `async (page) => {
+        const operationMarker = "wf543-operation:assert-transient-dirty-delayed-close"; void operationMarker;
+        const encoded = ${encodedLiteral};
+        const fail = (code) => { throw new Error("wf543_run_code_" + code); };
+        if (typeof encoded !== "string" || encoded.length === 0 || encoded.length > 87384 || !/^[A-Za-z0-9_-]+$/u.test(encoded)) fail("encoding");
+        const standard = encoded.replaceAll("-", "+").replaceAll("_", "/"); let binary;
+        try { binary = atob(standard + "=".repeat((4 - (standard.length % 4)) % 4)); } catch { fail("base64url"); }
+        const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0)); if (bytes.length === 0 || bytes.length > 65536) fail("bytes");
+        const canonicalEncoding = btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, ""); if (canonicalEncoding !== encoded) fail("canonical_encoding");
+        let json; try { json = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { fail("utf8"); }
+        let envelope; try { envelope = JSON.parse(json); } catch { fail("json"); }
+        const exact = (value, keys) => value !== null && typeof value === "object" && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key));
+        const bounded = (value, maximumLength) => typeof value === "string" && value.length > 0 && value.length <= maximumLength && !value.includes("\\0");
+        const canonical = (value) => { if (value === null || typeof value !== "object") return JSON.stringify(value); if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]"; return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + canonical(value[key])).join(",") + "}"; };
+        if (!exact(envelope, ["operation", "payload"]) || envelope.operation !== "assert-transient-dirty-delayed-close") fail("envelope");
+        const input = envelope.payload; if (!exact(input, ["kind"]) || input.kind !== "dirty-delayed-close" || !bounded(input.kind, 128)) fail("assertion_payload");
+        if (canonical(envelope) !== json) fail("canonical_json");
+        const waitFor = async (test, label) => { const deadline = Date.now() + 8000; while (!test()) { if (Date.now() > deadline) throw new Error(label); await page.waitForTimeout(25); } };
+        const state = page.__wf543Scenario; await waitFor(() => state.pendingRoutes.length === 1, "wf543 delayed save missing"); const close = page.locator("[data-post-editor-header-close=\\"true\\"]"); return { kind: "dirty-delayed-close", phase: "pending", pendingRoutes: state.pendingRoutes.length, closeBusy: (await close.getAttribute("aria-busy")) === "true", closeDisabled: await close.isDisabled(), draftText: await page.locator("[data-post-editor-title-input=\\"true\\"]").inputValue(), nonCloseEditable: await page.locator("[data-post-editor-title-input=\\"true\\"]").isEditable(), navigationCount: state.navigationUrls.length };
+      }`;
+      break;
+    case "assert-transient-pending-revert-restoration":
+      source = `async (page) => {
+        const operationMarker = "wf543-operation:assert-transient-pending-revert-restoration"; void operationMarker;
+        const encoded = ${encodedLiteral};
+        const fail = (code) => { throw new Error("wf543_run_code_" + code); };
+        if (typeof encoded !== "string" || encoded.length === 0 || encoded.length > 87384 || !/^[A-Za-z0-9_-]+$/u.test(encoded)) fail("encoding");
+        const standard = encoded.replaceAll("-", "+").replaceAll("_", "/"); let binary;
+        try { binary = atob(standard + "=".repeat((4 - (standard.length % 4)) % 4)); } catch { fail("base64url"); }
+        const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0)); if (bytes.length === 0 || bytes.length > 65536) fail("bytes");
+        const canonicalEncoding = btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, ""); if (canonicalEncoding !== encoded) fail("canonical_encoding");
+        let json; try { json = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { fail("utf8"); }
+        let envelope; try { envelope = JSON.parse(json); } catch { fail("json"); }
+        const exact = (value, keys) => value !== null && typeof value === "object" && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key));
+        const bounded = (value, maximumLength) => typeof value === "string" && value.length > 0 && value.length <= maximumLength && !value.includes("\\0");
+        const canonical = (value) => { if (value === null || typeof value !== "object") return JSON.stringify(value); if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]"; return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + canonical(value[key])).join(",") + "}"; };
+        if (!exact(envelope, ["operation", "payload"]) || envelope.operation !== "assert-transient-pending-revert-restoration") fail("envelope");
+        const input = envelope.payload; if (!exact(input, ["kind"]) || input.kind !== "pending-revert-restoration" || !bounded(input.kind, 128)) fail("assertion_payload");
+        if (canonical(envelope) !== json) fail("canonical_json");
+        const waitFor = async (test, label) => { const deadline = Date.now() + 8000; while (!test()) { if (Date.now() > deadline) throw new Error(label); await page.waitForTimeout(25); } };
+        const state = page.__wf543Scenario; await waitFor(() => state.pendingRoutes.length === 1 && state.mutations.length === 1, "wf543 restoration first save missing"); const close = page.locator("[data-post-editor-header-close=\\"true\\"]"); return { kind: "pending-revert-restoration", phase: "pending", pendingRoutes: state.pendingRoutes.length, closeBusy: (await close.getAttribute("aria-busy")) === "true", closeDisabled: await close.isDisabled(), draftText: await page.locator("[data-post-editor-title-input=\\"true\\"]").inputValue(), nonCloseEditable: await page.locator("[data-post-editor-title-input=\\"true\\"]").isEditable(), navigationCount: state.navigationUrls.length };
+      }`;
+      break;
+    case "assert-transient-failure-retry":
+      source = `async (page) => {
+        const operationMarker = "wf543-operation:assert-transient-failure-retry"; void operationMarker;
+        const encoded = ${encodedLiteral};
+        const fail = (code) => { throw new Error("wf543_run_code_" + code); };
+        if (typeof encoded !== "string" || encoded.length === 0 || encoded.length > 87384 || !/^[A-Za-z0-9_-]+$/u.test(encoded)) fail("encoding");
+        const standard = encoded.replaceAll("-", "+").replaceAll("_", "/"); let binary;
+        try { binary = atob(standard + "=".repeat((4 - (standard.length % 4)) % 4)); } catch { fail("base64url"); }
+        const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0)); if (bytes.length === 0 || bytes.length > 65536) fail("bytes");
+        const canonicalEncoding = btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, ""); if (canonicalEncoding !== encoded) fail("canonical_encoding");
+        let json; try { json = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { fail("utf8"); }
+        let envelope; try { envelope = JSON.parse(json); } catch { fail("json"); }
+        const exact = (value, keys) => value !== null && typeof value === "object" && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key));
+        const bounded = (value, maximumLength) => typeof value === "string" && value.length > 0 && value.length <= maximumLength && !value.includes("\\0");
+        const canonical = (value) => { if (value === null || typeof value !== "object") return JSON.stringify(value); if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]"; return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + canonical(value[key])).join(",") + "}"; };
+        if (!exact(envelope, ["operation", "payload"]) || envelope.operation !== "assert-transient-failure-retry") fail("envelope");
+        const input = envelope.payload; if (!exact(input, ["kind"]) || input.kind !== "failure-retry" || !bounded(input.kind, 128)) fail("assertion_payload");
+        if (canonical(envelope) !== json) fail("canonical_json");
+        const waitFor = async (test, label) => { const deadline = Date.now() + 8000; while (!test()) { if (Date.now() > deadline) throw new Error(label); await page.waitForTimeout(25); } };
+        const state = page.__wf543Scenario; const alert = page.getByRole("alert"); const retry = page.getByRole("button", { name: "Retry now", exact: true }); await alert.waitFor(); await waitFor(() => state.mutations.length === 1, "wf543 failed autosave missing"); return { kind: "failure-retry", phase: "failure", alertVisible: await alert.isVisible(), alertText: (await alert.textContent())?.trim() ?? "", draftText: await page.locator("[data-post-editor-title-input=\\"true\\"]").inputValue(), retryFocused: await retry.evaluate((button) => document.activeElement === button), mutationCount: state.mutations.length, navigationCount: state.navigationUrls.length };
+      }`;
+      break;
+    case "assert-transient-double-close":
+      source = `async (page) => {
+        const operationMarker = "wf543-operation:assert-transient-double-close"; void operationMarker;
+        const encoded = ${encodedLiteral};
+        const fail = (code) => { throw new Error("wf543_run_code_" + code); };
+        if (typeof encoded !== "string" || encoded.length === 0 || encoded.length > 87384 || !/^[A-Za-z0-9_-]+$/u.test(encoded)) fail("encoding");
+        const standard = encoded.replaceAll("-", "+").replaceAll("_", "/"); let binary;
+        try { binary = atob(standard + "=".repeat((4 - (standard.length % 4)) % 4)); } catch { fail("base64url"); }
+        const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0)); if (bytes.length === 0 || bytes.length > 65536) fail("bytes");
+        const canonicalEncoding = btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, ""); if (canonicalEncoding !== encoded) fail("canonical_encoding");
+        let json; try { json = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { fail("utf8"); }
+        let envelope; try { envelope = JSON.parse(json); } catch { fail("json"); }
+        const exact = (value, keys) => value !== null && typeof value === "object" && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key));
+        const bounded = (value, maximumLength) => typeof value === "string" && value.length > 0 && value.length <= maximumLength && !value.includes("\\0");
+        const canonical = (value) => { if (value === null || typeof value !== "object") return JSON.stringify(value); if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]"; return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + canonical(value[key])).join(",") + "}"; };
+        if (!exact(envelope, ["operation", "payload"]) || envelope.operation !== "assert-transient-double-close") fail("envelope");
+        const input = envelope.payload; if (!exact(input, ["kind"]) || input.kind !== "double-close" || !bounded(input.kind, 128)) fail("assertion_payload");
+        if (canonical(envelope) !== json) fail("canonical_json");
+        const waitFor = async (test, label) => { const deadline = Date.now() + 8000; while (!test()) { if (Date.now() > deadline) throw new Error(label); await page.waitForTimeout(25); } };
+        const state = page.__wf543Scenario; await waitFor(() => state.pendingRoutes.length === 1, "wf543 double-close save missing"); const close = page.locator("[data-post-editor-header-close=\\"true\\"]"); return { kind: "double-close", phase: "pending", pendingRoutes: state.pendingRoutes.length, domClickEvents: Number(await close.getAttribute("data-wf543-dom-click-events") ?? "0"), closeBusy: (await close.getAttribute("aria-busy")) === "true", closeDisabled: await close.isDisabled(), closePendingData: (await close.getAttribute("data-post-editor-close-pending")) === "true", nonCloseEditable: await page.locator("[data-post-editor-title-input=\\"true\\"]").isEditable(), navigationCount: state.navigationUrls.length };
+      }`;
+      break;
+    case "assert-clean-close":
+      source = `async (page) => {
+        const operationMarker = "wf543-operation:assert-clean-close"; void operationMarker;
+        const encoded = ${encodedLiteral};
+        const fail = (code) => { throw new Error("wf543_run_code_" + code); };
+        if (typeof encoded !== "string" || encoded.length === 0 || encoded.length > 87384 || !/^[A-Za-z0-9_-]+$/u.test(encoded)) fail("encoding");
+        const standard = encoded.replaceAll("-", "+").replaceAll("_", "/"); let binary;
+        try { binary = atob(standard + "=".repeat((4 - (standard.length % 4)) % 4)); } catch { fail("base64url"); }
+        const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0)); if (bytes.length === 0 || bytes.length > 65536) fail("bytes");
+        const canonicalEncoding = btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, ""); if (canonicalEncoding !== encoded) fail("canonical_encoding");
+        let json; try { json = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { fail("utf8"); }
+        let envelope; try { envelope = JSON.parse(json); } catch { fail("json"); }
+        const exact = (value, keys) => value !== null && typeof value === "object" && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key));
+        const bounded = (value, maximumLength) => typeof value === "string" && value.length > 0 && value.length <= maximumLength && !value.includes("\\0");
+        const canonical = (value) => { if (value === null || typeof value !== "object") return JSON.stringify(value); if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]"; return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + canonical(value[key])).join(",") + "}"; };
+        if (!exact(envelope, ["operation", "payload"]) || envelope.operation !== "assert-clean-close") fail("envelope");
+        const input = envelope.payload; if (!exact(input, ["kind"]) || input.kind !== "clean-close" || !bounded(input.kind, 128)) fail("assertion_payload");
+        if (canonical(envelope) !== json) fail("canonical_json");
+        await page.waitForURL("http://coderso-a.localhost:5173/admin/posts"); const state = page.__wf543Scenario; return { kind: "clean-close", cleanBeforeClose: state.initialTitle === state.spec.title, saveRequestCount: state.mutations.length, navigationCount: state.navigationUrls.length, mutations: state.mutations, navigationUrls: state.navigationUrls, finalUrl: page.url() };
+      }`;
+      break;
+    case "assert-dirty-delayed-close":
+      source = `async (page) => {
+        const operationMarker = "wf543-operation:assert-dirty-delayed-close"; void operationMarker;
+        const encoded = ${encodedLiteral};
+        const fail = (code) => { throw new Error("wf543_run_code_" + code); };
+        if (typeof encoded !== "string" || encoded.length === 0 || encoded.length > 87384 || !/^[A-Za-z0-9_-]+$/u.test(encoded)) fail("encoding");
+        const standard = encoded.replaceAll("-", "+").replaceAll("_", "/"); let binary;
+        try { binary = atob(standard + "=".repeat((4 - (standard.length % 4)) % 4)); } catch { fail("base64url"); }
+        const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0)); if (bytes.length === 0 || bytes.length > 65536) fail("bytes");
+        const canonicalEncoding = btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, ""); if (canonicalEncoding !== encoded) fail("canonical_encoding");
+        let json; try { json = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { fail("utf8"); }
+        let envelope; try { envelope = JSON.parse(json); } catch { fail("json"); }
+        const exact = (value, keys) => value !== null && typeof value === "object" && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key));
+        const bounded = (value, maximumLength) => typeof value === "string" && value.length > 0 && value.length <= maximumLength && !value.includes("\\0");
+        const canonical = (value) => { if (value === null || typeof value !== "object") return JSON.stringify(value); if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]"; return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + canonical(value[key])).join(",") + "}"; };
+        if (!exact(envelope, ["operation", "payload"]) || envelope.operation !== "assert-dirty-delayed-close") fail("envelope");
+        const input = envelope.payload; if (!exact(input, ["kind"]) || input.kind !== "dirty-delayed-close" || !bounded(input.kind, 128)) fail("assertion_payload");
+        if (canonical(envelope) !== json) fail("canonical_json");
+        const waitFor = async (test, label) => { const deadline = Date.now() + 8000; while (!test()) { if (Date.now() > deadline) throw new Error(label); await page.waitForTimeout(25); } };
+        const state = page.__wf543Scenario; await waitFor(() => state.pendingRoutes.length === 1, "wf543 delayed save missing"); const close = page.locator("[data-post-editor-header-close=\\"true\\"]"); const evidence = { kind: "dirty-delayed-close", saveRequestCount: state.mutations.length, requestOrder: state.mutations.map((item) => item.method + " " + item.path), requestPayload: state.mutations[0]?.payload ?? {}, closeBusy: (await close.getAttribute("aria-busy")) === "true", closeDisabled: await close.isDisabled(), nonCloseEditable: await page.locator("[data-post-editor-title-input=\\"true\\"]").isEditable(), navigationBeforeRelease: state.navigationUrls.length, navigationAfterRelease: 0, mutations: [], navigationUrls: [], finalUrl: "" }; state.pendingRoutes.shift()(); await page.waitForURL("http://coderso-a.localhost:5173/admin/posts"); evidence.navigationAfterRelease = state.navigationUrls.length; evidence.mutations = state.mutations; evidence.navigationUrls = state.navigationUrls; evidence.finalUrl = page.url(); return evidence;
+      }`;
+      break;
+    case "assert-pending-revert-restoration":
+      source = `async (page) => {
+        const operationMarker = "wf543-operation:assert-pending-revert-restoration"; void operationMarker;
+        const encoded = ${encodedLiteral};
+        const fail = (code) => { throw new Error("wf543_run_code_" + code); };
+        if (typeof encoded !== "string" || encoded.length === 0 || encoded.length > 87384 || !/^[A-Za-z0-9_-]+$/u.test(encoded)) fail("encoding");
+        const standard = encoded.replaceAll("-", "+").replaceAll("_", "/"); let binary;
+        try { binary = atob(standard + "=".repeat((4 - (standard.length % 4)) % 4)); } catch { fail("base64url"); }
+        const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0)); if (bytes.length === 0 || bytes.length > 65536) fail("bytes");
+        const canonicalEncoding = btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, ""); if (canonicalEncoding !== encoded) fail("canonical_encoding");
+        let json; try { json = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { fail("utf8"); }
+        let envelope; try { envelope = JSON.parse(json); } catch { fail("json"); }
+        const exact = (value, keys) => value !== null && typeof value === "object" && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key));
+        const bounded = (value, maximumLength) => typeof value === "string" && value.length > 0 && value.length <= maximumLength && !value.includes("\\0");
+        const canonical = (value) => { if (value === null || typeof value !== "object") return JSON.stringify(value); if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]"; return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + canonical(value[key])).join(",") + "}"; };
+        if (!exact(envelope, ["operation", "payload"]) || envelope.operation !== "assert-pending-revert-restoration") fail("envelope");
+        const input = envelope.payload; if (!exact(input, ["kind"]) || input.kind !== "pending-revert-restoration" || !bounded(input.kind, 128)) fail("assertion_payload");
+        if (canonical(envelope) !== json) fail("canonical_json");
+        const waitFor = async (test, label) => { const deadline = Date.now() + 8000; while (!test()) { if (Date.now() > deadline) throw new Error(label); await page.waitForTimeout(25); } };
+        const state = page.__wf543Scenario; state.pendingRoutes.shift()(); await waitFor(() => state.pendingRoutes.length === 1 && state.mutations.length === 2, "wf543 restoration save missing"); const evidence = { kind: "pending-revert-restoration", saveRequestCount: state.mutations.length, requestOrder: state.mutations.map((item, index) => (index === 0 ? "A " : "B ") + item.method + " " + item.path), payloadA: state.mutations[0]?.payload ?? {}, payloadB: state.mutations[1]?.payload ?? {}, navigationBeforeB: state.navigationUrls.length, navigationAfterB: 0, mutations: [], navigationUrls: [], finalUrl: "" }; state.pendingRoutes.shift()(); await page.waitForURL("http://coderso-a.localhost:5173/admin/posts"); evidence.navigationAfterB = state.navigationUrls.length; evidence.mutations = state.mutations; evidence.navigationUrls = state.navigationUrls; evidence.finalUrl = page.url(); return evidence;
+      }`;
+      break;
+    case "assert-failure-retry":
+      source = `async (page) => {
+        const operationMarker = "wf543-operation:assert-failure-retry"; void operationMarker;
+        const encoded = ${encodedLiteral};
+        const fail = (code) => { throw new Error("wf543_run_code_" + code); };
+        if (typeof encoded !== "string" || encoded.length === 0 || encoded.length > 87384 || !/^[A-Za-z0-9_-]+$/u.test(encoded)) fail("encoding");
+        const standard = encoded.replaceAll("-", "+").replaceAll("_", "/"); let binary;
+        try { binary = atob(standard + "=".repeat((4 - (standard.length % 4)) % 4)); } catch { fail("base64url"); }
+        const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0)); if (bytes.length === 0 || bytes.length > 65536) fail("bytes");
+        const canonicalEncoding = btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, ""); if (canonicalEncoding !== encoded) fail("canonical_encoding");
+        let json; try { json = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { fail("utf8"); }
+        let envelope; try { envelope = JSON.parse(json); } catch { fail("json"); }
+        const exact = (value, keys) => value !== null && typeof value === "object" && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key));
+        const bounded = (value, maximumLength) => typeof value === "string" && value.length > 0 && value.length <= maximumLength && !value.includes("\\0");
+        const canonical = (value) => { if (value === null || typeof value !== "object") return JSON.stringify(value); if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]"; return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + canonical(value[key])).join(",") + "}"; };
+        if (!exact(envelope, ["operation", "payload"]) || envelope.operation !== "assert-failure-retry") fail("envelope");
+        const input = envelope.payload; if (!exact(input, ["kind"]) || input.kind !== "failure-retry" || !bounded(input.kind, 128)) fail("assertion_payload");
+        if (canonical(envelope) !== json) fail("canonical_json");
+        const waitFor = async (test, label) => { const deadline = Date.now() + 8000; while (!test()) { if (Date.now() > deadline) throw new Error(label); await page.waitForTimeout(25); } };
+        const state = page.__wf543Scenario; const alert = page.getByRole("alert"); const retry = page.getByRole("button", { name: "Retry now", exact: true }); await alert.waitFor(); await waitFor(() => state.mutations.length === 1, "wf543 failed autosave missing"); const alertVisible = await alert.isVisible(); const alertText = (await alert.textContent())?.trim() ?? ""; const draftText = await page.locator("[data-post-editor-title-input=\\"true\\"]").inputValue(); const retryFocused = await retry.evaluate((button) => document.activeElement === button); const navigationAfterFailure = state.navigationUrls.length; const responsePath = (response) => { const raw = response.url(); const marker = "/admin/api/posts/"; const index = raw.indexOf(marker); return index < 0 ? "" : raw.slice(index).split("?")[0]; }; const basePath = "/admin/api/posts/" + encodeURIComponent(state.spec.fixtureId); const baseResponsePromise = page.waitForResponse((response) => response.request().method() === "PATCH" && responsePath(response) === basePath); const metadataResponsePromise = page.waitForResponse((response) => response.request().method() === "PATCH" && responsePath(response) === basePath + "/metadata"); await retry.click(); const [retryResponse, metadataRetryResponse] = await Promise.all([baseResponsePromise, metadataResponsePromise]); if (!retryResponse.ok() || !metadataRetryResponse.ok()) throw new Error("wf543 manual retry chain failed"); await waitFor(() => state.mutations.length === 3, "wf543 manual retry base and metadata mutations missing"); const saveDraft = page.locator("[data-post-editor-save-draft=\\"true\\"]"); const saveDeadline = Date.now() + 8000; while (await saveDraft.isDisabled()) { if (Date.now() > saveDeadline) throw new Error("wf543 manual retry did not settle"); await page.waitForTimeout(25); } const mutationCountAfterRetry = state.mutations.length; await retry.waitFor({ state: "hidden" }); const alertClearedAfterRetry = (await retry.count()) === 0; const editorUrlAfterRetry = page.url(); const navigationAfterRetry = state.navigationUrls.length; await page.locator("[data-post-editor-header-close=\\"true\\"]").click(); await page.waitForURL("http://coderso-a.localhost:5173/admin/posts"); return { kind: "failure-retry", autosavePostCount: state.mutations.filter((item) => item.method === "POST" && item.path.endsWith("/autosave")).length, manualPatchCount: state.mutations.filter((item) => item.method === "PATCH" && item.path === basePath).length, metadataPatchCount: state.mutations.filter((item) => item.method === "PATCH" && item.path === basePath + "/metadata").length, mutationCountAfterRetry, alertVisible, alertText, draftText, retryFocused, navigationAfterFailure, navigationAfterRetry, navigationAfterClose: state.navigationUrls.length, retrySucceeded: retryResponse.ok(), metadataRetrySucceeded: metadataRetryResponse.ok(), alertClearedAfterRetry, editorUrlAfterRetry, mutations: state.mutations, navigationUrls: state.navigationUrls, finalUrl: page.url() };
+      }`;
+      break;
+    case "assert-double-close":
+      source = `async (page) => {
+        const operationMarker = "wf543-operation:assert-double-close"; void operationMarker;
+        const encoded = ${encodedLiteral};
+        const fail = (code) => { throw new Error("wf543_run_code_" + code); };
+        if (typeof encoded !== "string" || encoded.length === 0 || encoded.length > 87384 || !/^[A-Za-z0-9_-]+$/u.test(encoded)) fail("encoding");
+        const standard = encoded.replaceAll("-", "+").replaceAll("_", "/"); let binary;
+        try { binary = atob(standard + "=".repeat((4 - (standard.length % 4)) % 4)); } catch { fail("base64url"); }
+        const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0)); if (bytes.length === 0 || bytes.length > 65536) fail("bytes");
+        const canonicalEncoding = btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, ""); if (canonicalEncoding !== encoded) fail("canonical_encoding");
+        let json; try { json = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { fail("utf8"); }
+        let envelope; try { envelope = JSON.parse(json); } catch { fail("json"); }
+        const exact = (value, keys) => value !== null && typeof value === "object" && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key));
+        const bounded = (value, maximumLength) => typeof value === "string" && value.length > 0 && value.length <= maximumLength && !value.includes("\\0");
+        const canonical = (value) => { if (value === null || typeof value !== "object") return JSON.stringify(value); if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]"; return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + canonical(value[key])).join(",") + "}"; };
+        if (!exact(envelope, ["operation", "payload"]) || envelope.operation !== "assert-double-close") fail("envelope");
+        const input = envelope.payload; if (!exact(input, ["kind"]) || input.kind !== "double-close" || !bounded(input.kind, 128)) fail("assertion_payload");
+        if (canonical(envelope) !== json) fail("canonical_json");
+        const waitFor = async (test, label) => { const deadline = Date.now() + 8000; while (!test()) { if (Date.now() > deadline) throw new Error(label); await page.waitForTimeout(25); } };
+        const state = page.__wf543Scenario; await waitFor(() => state.pendingRoutes.length === 1, "wf543 double-close save missing"); const close = page.locator("[data-post-editor-header-close=\\"true\\"]"); const domClickEvents = Number(await close.getAttribute("data-wf543-dom-click-events") ?? "0"); const closeBusy = (await close.getAttribute("aria-busy")) === "true"; const closeDisabled = await close.isDisabled(); const closePendingData = (await close.getAttribute("data-post-editor-close-pending")) === "true"; const nonCloseEditable = await page.locator("[data-post-editor-title-input=\\"true\\"]").isEditable(); state.pendingRoutes.shift()(); await page.waitForURL("http://coderso-a.localhost:5173/admin/posts"); return { kind: "double-close", domClickEvents, saveRequestCount: state.mutations.length, navigationCount: state.navigationUrls.length, closeBusy, closeDisabled, closePendingData, nonCloseEditable, mutations: state.mutations, navigationUrls: state.navigationUrls, finalUrl: page.url() };
+      }`;
+      break;
+    case "assert-table-keyboard":
+      source = `async (page) => {
+        const operationMarker = "wf543-operation:assert-table-keyboard"; void operationMarker;
+        const encoded = ${encodedLiteral};
+        const fail = (code) => { throw new Error("wf543_run_code_" + code); };
+        if (typeof encoded !== "string" || encoded.length === 0 || encoded.length > 87384 || !/^[A-Za-z0-9_-]+$/u.test(encoded)) fail("encoding");
+        const standard = encoded.replaceAll("-", "+").replaceAll("_", "/"); let binary;
+        try { binary = atob(standard + "=".repeat((4 - (standard.length % 4)) % 4)); } catch { fail("base64url"); }
+        const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0)); if (bytes.length === 0 || bytes.length > 65536) fail("bytes");
+        const canonicalEncoding = btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, ""); if (canonicalEncoding !== encoded) fail("canonical_encoding");
+        let json; try { json = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { fail("utf8"); }
+        let envelope; try { envelope = JSON.parse(json); } catch { fail("json"); }
+        const exact = (value, keys) => value !== null && typeof value === "object" && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key));
+        const bounded = (value, maximumLength) => typeof value === "string" && value.length > 0 && value.length <= maximumLength && !value.includes("\\0");
+        const canonical = (value) => { if (value === null || typeof value !== "object") return JSON.stringify(value); if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]"; return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + canonical(value[key])).join(",") + "}"; };
+        if (!exact(envelope, ["operation", "payload"]) || envelope.operation !== "assert-table-keyboard") fail("envelope");
+        const input = envelope.payload; if (!exact(input, ["kind"]) || input.kind !== "table-keyboard" || !bounded(input.kind, 128)) fail("assertion_payload");
+        if (canonical(envelope) !== json) fail("canonical_json");
+        const state = page.__wf543Scenario; const title = page.getByRole("link", { name: "Edit post: " + state.spec.title, exact: true }); const checkbox = page.getByRole("checkbox", { name: "Select " + state.spec.title, exact: true }); const action = page.getByRole("button", { name: "Actions for " + state.spec.title, exact: true }); return { kind: "table-keyboard", titleKey: "Enter", titleNavigationCount: state.table.titleNavigationCount ?? 0, titleUrl: state.table.titleUrl ?? "", titleAccessibleName: await title.getAttribute("aria-label") ?? "", checkboxKey: "Space", checkboxToggled: state.table.checkboxToggled === true, checkboxNavigationCount: state.table.checkboxNavigationCount ?? 0, checkboxAccessibleName: await checkbox.getAttribute("aria-label") ?? "", actionKey: "Enter", actionMenuOpened: state.table.actionMenuOpened === true, actionNavigationCount: state.table.actionNavigationCount ?? 0, actionAccessibleName: await action.getAttribute("aria-label") ?? "", mutations: state.mutations, navigationUrls: state.navigationUrls };
+      }`;
+      break;
+    case "assert-mid-viewport-metadata":
+      source = `async (page) => {
+        const operationMarker = "wf543-operation:assert-mid-viewport-metadata"; void operationMarker;
+        const encoded = ${encodedLiteral};
+        const fail = (code) => { throw new Error("wf543_run_code_" + code); };
+        if (typeof encoded !== "string" || encoded.length === 0 || encoded.length > 87384 || !/^[A-Za-z0-9_-]+$/u.test(encoded)) fail("encoding");
+        const standard = encoded.replaceAll("-", "+").replaceAll("_", "/"); let binary;
+        try { binary = atob(standard + "=".repeat((4 - (standard.length % 4)) % 4)); } catch { fail("base64url"); }
+        const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0)); if (bytes.length === 0 || bytes.length > 65536) fail("bytes");
+        const canonicalEncoding = btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, ""); if (canonicalEncoding !== encoded) fail("canonical_encoding");
+        let json; try { json = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { fail("utf8"); }
+        let envelope; try { envelope = JSON.parse(json); } catch { fail("json"); }
+        const exact = (value, keys) => value !== null && typeof value === "object" && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key));
+        const bounded = (value, maximumLength) => typeof value === "string" && value.length > 0 && value.length <= maximumLength && !value.includes("\\0");
+        const canonical = (value) => { if (value === null || typeof value !== "object") return JSON.stringify(value); if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]"; return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + canonical(value[key])).join(",") + "}"; };
+        if (!exact(envelope, ["operation", "payload"]) || envelope.operation !== "assert-mid-viewport-metadata") fail("envelope");
+        const input = envelope.payload; if (!exact(input, ["kind"]) || input.kind !== "mid-viewport-metadata" || !bounded(input.kind, 128)) fail("assertion_payload");
+        if (canonical(envelope) !== json) fail("canonical_json");
+        const state = page.__wf543Scenario; const widths = state.responsiveOutputs ?? []; return { kind: "mid-viewport-metadata", orderedWidths: widths.map((item) => item.width), visibleSemanticCopies: widths.map((item) => ({ width: item.width, status: item.visibleStatusCopies, author: item.visibleAuthorCopies, date: item.visibleDateCopies })), mutations: state.mutations, navigationUrls: state.navigationUrls };
+      }`;
+      break;
+    case "reset-scenario":
+      source = `async (page) => {
+        const operationMarker = "wf543-operation:reset-scenario"; void operationMarker;
+        const encoded = ${encodedLiteral};
+        const fail = (code) => { throw new Error("wf543_run_code_" + code); };
+        if (typeof encoded !== "string" || encoded.length === 0 || encoded.length > 87384 || !/^[A-Za-z0-9_-]+$/u.test(encoded)) fail("encoding");
+        const standard = encoded.replaceAll("-", "+").replaceAll("_", "/"); let binary;
+        try { binary = atob(standard + "=".repeat((4 - (standard.length % 4)) % 4)); } catch { fail("base64url"); }
+        const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0)); if (bytes.length === 0 || bytes.length > 65536) fail("bytes");
+        const canonicalEncoding = btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, ""); if (canonicalEncoding !== encoded) fail("canonical_encoding");
+        let json; try { json = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { fail("utf8"); }
+        let envelope; try { envelope = JSON.parse(json); } catch { fail("json"); }
+        const exact = (value, keys) => value !== null && typeof value === "object" && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key));
+        const bounded = (value, maximumLength) => typeof value === "string" && value.length > 0 && value.length <= maximumLength && !value.includes("\\0");
+        const canonical = (value) => { if (value === null || typeof value !== "object") return JSON.stringify(value); if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]"; return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + canonical(value[key])).join(",") + "}"; };
+        if (!exact(envelope, ["operation", "payload"]) || envelope.operation !== "reset-scenario") fail("envelope");
+        const input = envelope.payload; if (!exact(input, ["editorUrl", "fixtureId", "scenarioId", "title"]) || !bounded(input.editorUrl, 8192) || !bounded(input.fixtureId, 512) || !bounded(input.scenarioId, 512) || !bounded(input.title, 32768)) fail("reset_payload");
+        if (canonical(envelope) !== json) fail("canonical_json");
+        const state = page.__wf543Scenario; if (state?.listeners) { page.off("request", state.listeners.request); page.off("framenavigated", state.listeners.navigation); } if (state?.routeHandlers?.size) throw new Error("wf543 routes remain before reset"); const previousClose = page.locator("[data-post-editor-header-close=\\"true\\"]"); if (await previousClose.count()) await previousClose.evaluate((button) => { if (button.__wf543ClickListener) button.removeEventListener("click", button.__wf543ClickListener); delete button.__wf543ClickListener; delete button.dataset.wf543DomClickEvents; }); delete page.__wf543Scenario; await page.goto(input.editorUrl); const title = page.locator("[data-post-editor-title-input=\\"true\\"]"); await title.waitFor(); const beforeTitle = await title.inputValue(); let responsePromise = null; if (beforeTitle !== input.title) { await title.fill(input.title); responsePromise = page.waitForResponse((response) => { const method = response.request().method(); const raw = response.url(); const marker = "/admin/api/posts/" + encodeURIComponent(input.fixtureId); const index = raw.indexOf(marker); const path = index < 0 ? "" : raw.slice(index).split("?")[0]; return (method === "PATCH" && path === marker) || (method === "POST" && path === marker + "/autosave"); }); } await page.locator("[data-post-editor-header-close=\\"true\\"]").click(); const response = responsePromise ? await responsePromise : null; if (response && !response.ok()) throw new Error("wf543 real UI fixture reset failed"); await page.waitForURL("http://coderso-a.localhost:5173/admin/posts"); const row = page.getByRole("link", { name: "Edit post: " + input.title, exact: true }); await row.waitFor(); return { url: page.url(), reset: true, scenarioId: input.scenarioId, fixtureId: input.fixtureId, titleRestored: (await row.getAttribute("aria-label")) === "Edit post: " + input.title, rowAccessibleName: await row.getAttribute("aria-label"), restorationWrite: response ? { status: response.status(), url: response.url() } : null };
+      }`;
+      break;
+    default:
+      throw new Error("TASK-543 run-code operation is unknown");
+  }
+  return source.replace(/\r?\n[\t ]*/gu, " ");
+}
+
+function smokeRunOperation(operation, input) {
+  const command = smokeRunCode(buildEvidenceOperationRunCodeSource(operation, input));
+  if (Buffer.byteLength(command, "utf8") >= RUN_CODE_COMMAND_MAX_BYTES) {
+    throw new Error("TASK-543 run-code command exceeds its byte budget");
+  }
+  return command;
+}
+
 function expectedTransientAssertionCommands(scenario) {
-  const body = transientAssertionBody(scenario.kind);
-  return body ? [smokeRunCode(`async (page) => { ${body} }`)] : [];
+  switch (scenario.kind) {
+    case "dirty-delayed-close":
+      return [smokeRunOperation("assert-transient-dirty-delayed-close", { kind: scenario.kind })];
+    case "pending-revert-restoration":
+      return [
+        smokeRunOperation("assert-transient-pending-revert-restoration", {
+          kind: scenario.kind,
+        }),
+      ];
+    case "failure-retry":
+      return [smokeRunOperation("assert-transient-failure-retry", { kind: scenario.kind })];
+    case "double-close":
+      return [smokeRunOperation("assert-transient-double-close", { kind: scenario.kind })];
+    case "clean-close":
+    case "table-keyboard":
+    case "mid-viewport-metadata":
+      return [];
+    default:
+      throw new Error("unknown TASK-543 smoke kind");
+  }
 }
 
 function transientEvidenceValid(scenario, fixture) {
@@ -2647,56 +3096,34 @@ function transientEvidenceValid(scenario, fixture) {
   );
 }
 
-function evidenceAssertionBody(kind) {
-  const waitFor =
-    "const waitFor = async (test, label) => { const deadline = Date.now() + 8000; while (!test()) { if (Date.now() > deadline) throw new Error(label); await page.waitForTimeout(25); } }; ";
-  switch (kind) {
+function expectedEvidenceAssertionCommand(scenario) {
+  switch (scenario.kind) {
     case "clean-close":
-      return `${waitFor}await page.waitForURL(${JSON.stringify(POSTS_LIST_URL)}); const state = page.__wf543Scenario; return { kind: "clean-close", cleanBeforeClose: state.initialTitle === state.spec.title, saveRequestCount: state.mutations.length, navigationCount: state.navigationUrls.length, mutations: state.mutations, navigationUrls: state.navigationUrls, finalUrl: page.url() };`;
+      return smokeRunOperation("assert-clean-close", { kind: scenario.kind });
     case "dirty-delayed-close":
-      return `${waitFor}const state = page.__wf543Scenario; await waitFor(() => state.pendingRoutes.length === 1, "wf543 delayed save missing"); const close = page.locator(${JSON.stringify(POST_CLOSE_SELECTOR)}); const evidence = { kind: "dirty-delayed-close", saveRequestCount: state.mutations.length, requestOrder: state.mutations.map((item) => item.method + " " + item.path), requestPayload: state.mutations[0]?.payload ?? {}, closeBusy: (await close.getAttribute("aria-busy")) === "true", closeDisabled: await close.isDisabled(), nonCloseEditable: await page.locator(${JSON.stringify(POST_TITLE_SELECTOR)}).isEditable(), navigationBeforeRelease: state.navigationUrls.length, navigationAfterRelease: 0, mutations: [], navigationUrls: [], finalUrl: "" }; state.pendingRoutes.shift()(); await page.waitForURL(${JSON.stringify(POSTS_LIST_URL)}); evidence.navigationAfterRelease = state.navigationUrls.length; evidence.mutations = state.mutations; evidence.navigationUrls = state.navigationUrls; evidence.finalUrl = page.url(); return evidence;`;
+      return smokeRunOperation("assert-dirty-delayed-close", { kind: scenario.kind });
     case "pending-revert-restoration":
-      return `${waitFor}const state = page.__wf543Scenario; state.pendingRoutes.shift()(); await waitFor(() => state.pendingRoutes.length === 1 && state.mutations.length === 2, "wf543 restoration save missing"); const evidence = { kind: "pending-revert-restoration", saveRequestCount: state.mutations.length, requestOrder: state.mutations.map((item, index) => (index === 0 ? "A " : "B ") + item.method + " " + item.path), payloadA: state.mutations[0]?.payload ?? {}, payloadB: state.mutations[1]?.payload ?? {}, navigationBeforeB: state.navigationUrls.length, navigationAfterB: 0, mutations: [], navigationUrls: [], finalUrl: "" }; state.pendingRoutes.shift()(); await page.waitForURL(${JSON.stringify(POSTS_LIST_URL)}); evidence.navigationAfterB = state.navigationUrls.length; evidence.mutations = state.mutations; evidence.navigationUrls = state.navigationUrls; evidence.finalUrl = page.url(); return evidence;`;
+      return smokeRunOperation("assert-pending-revert-restoration", { kind: scenario.kind });
     case "failure-retry":
-      return [
-        `${waitFor}const state = page.__wf543Scenario;`,
-        'const alert = page.getByRole("alert"); const retry = page.getByRole("button", { name: "Retry now", exact: true });',
-        'await alert.waitFor(); await waitFor(() => state.mutations.length === 1, "wf543 failed autosave missing");',
-        `const alertVisible = await alert.isVisible(); const alertText = (await alert.textContent())?.trim() ?? ""; const draftText = await page.locator(${JSON.stringify(POST_TITLE_SELECTOR)}).inputValue();`,
-        "const retryFocused = await retry.evaluate((button) => document.activeElement === button); const navigationAfterFailure = state.navigationUrls.length;",
-        'const responsePath = (response) => { const raw = response.url(); const marker = "/admin/api/posts/"; const index = raw.indexOf(marker); return index < 0 ? "" : raw.slice(index).split("?")[0]; };',
-        'const basePath = "/admin/api/posts/" + encodeURIComponent(state.spec.fixtureId); const baseResponsePromise = page.waitForResponse((response) => response.request().method() === "PATCH" && responsePath(response) === basePath); const metadataResponsePromise = page.waitForResponse((response) => response.request().method() === "PATCH" && responsePath(response) === basePath + "/metadata");',
-        'await retry.click(); const [retryResponse, metadataRetryResponse] = await Promise.all([baseResponsePromise, metadataResponsePromise]); if (!retryResponse.ok() || !metadataRetryResponse.ok()) throw new Error("wf543 manual retry chain failed");',
-        'await waitFor(() => state.mutations.length === 3, "wf543 manual retry base and metadata mutations missing"); const saveDraft = page.locator("[data-post-editor-save-draft=\"true\"]"); const saveDeadline = Date.now() + 8000; while (await saveDraft.isDisabled()) { if (Date.now() > saveDeadline) throw new Error("wf543 manual retry did not settle"); await page.waitForTimeout(25); } const mutationCountAfterRetry = state.mutations.length;',
-        'await retry.waitFor({ state: "hidden" }); const alertClearedAfterRetry = (await retry.count()) === 0; const editorUrlAfterRetry = page.url(); const navigationAfterRetry = state.navigationUrls.length;',
-        `await page.locator(${JSON.stringify(POST_CLOSE_SELECTOR)}).click(); await page.waitForURL(${JSON.stringify(POSTS_LIST_URL)});`,
-        'return { kind: "failure-retry", autosavePostCount: state.mutations.filter((item) => item.method === "POST" && item.path.endsWith("/autosave")).length, manualPatchCount: state.mutations.filter((item) => item.method === "PATCH" && item.path === basePath).length, metadataPatchCount: state.mutations.filter((item) => item.method === "PATCH" && item.path === basePath + "/metadata").length, mutationCountAfterRetry, alertVisible, alertText, draftText, retryFocused, navigationAfterFailure, navigationAfterRetry, navigationAfterClose: state.navigationUrls.length, retrySucceeded: retryResponse.ok(), metadataRetrySucceeded: metadataRetryResponse.ok(), alertClearedAfterRetry, editorUrlAfterRetry, mutations: state.mutations, navigationUrls: state.navigationUrls, finalUrl: page.url() };',
-      ].join(" ");
+      return smokeRunOperation("assert-failure-retry", { kind: scenario.kind });
     case "double-close":
-      return `${waitFor}const state = page.__wf543Scenario; await waitFor(() => state.pendingRoutes.length === 1, "wf543 double-close save missing"); const close = page.locator(${JSON.stringify(POST_CLOSE_SELECTOR)}); const domClickEvents = Number(await close.getAttribute("data-wf543-dom-click-events") ?? "0"); const closeBusy = (await close.getAttribute("aria-busy")) === "true"; const closeDisabled = await close.isDisabled(); const closePendingData = (await close.getAttribute("data-post-editor-close-pending")) === "true"; const nonCloseEditable = await page.locator(${JSON.stringify(POST_TITLE_SELECTOR)}).isEditable(); state.pendingRoutes.shift()(); await page.waitForURL(${JSON.stringify(POSTS_LIST_URL)}); return { kind: "double-close", domClickEvents, saveRequestCount: state.mutations.length, navigationCount: state.navigationUrls.length, closeBusy, closeDisabled, closePendingData, nonCloseEditable, mutations: state.mutations, navigationUrls: state.navigationUrls, finalUrl: page.url() };`;
+      return smokeRunOperation("assert-double-close", { kind: scenario.kind });
     case "table-keyboard":
-      return `const state = page.__wf543Scenario; const title = page.getByRole("link", { name: "Edit post: " + state.spec.title, exact: true }); const checkbox = page.getByRole("checkbox", { name: "Select " + state.spec.title, exact: true }); const action = page.getByRole("button", { name: "Actions for " + state.spec.title, exact: true }); return { kind: "table-keyboard", titleKey: "Enter", titleNavigationCount: state.table.titleNavigationCount ?? 0, titleUrl: state.table.titleUrl ?? "", titleAccessibleName: await title.getAttribute("aria-label") ?? "", checkboxKey: "Space", checkboxToggled: state.table.checkboxToggled === true, checkboxNavigationCount: state.table.checkboxNavigationCount ?? 0, checkboxAccessibleName: await checkbox.getAttribute("aria-label") ?? "", actionKey: "Enter", actionMenuOpened: state.table.actionMenuOpened === true, actionNavigationCount: state.table.actionNavigationCount ?? 0, actionAccessibleName: await action.getAttribute("aria-label") ?? "", mutations: state.mutations, navigationUrls: state.navigationUrls };`;
+      return smokeRunOperation("assert-table-keyboard", { kind: scenario.kind });
     case "mid-viewport-metadata":
-      return `const state = page.__wf543Scenario; const widths = state.responsiveOutputs ?? []; return { kind: "mid-viewport-metadata", orderedWidths: widths.map((item) => item.width), visibleSemanticCopies: widths.map((item) => ({ width: item.width, status: item.visibleStatusCopies, author: item.visibleAuthorCopies, date: item.visibleDateCopies })), mutations: state.mutations, navigationUrls: state.navigationUrls };`;
+      return smokeRunOperation("assert-mid-viewport-metadata", { kind: scenario.kind });
     default:
-      return `throw new Error("unknown TASK-543 smoke kind");`;
+      throw new Error("unknown TASK-543 smoke kind");
   }
 }
 
-function expectedEvidenceAssertionCommand(scenario) {
-  return smokeRunCode(`async (page) => { ${evidenceAssertionBody(scenario.kind)} }`);
-}
-
 function expectedScenarioResetCommand(scenario, fixture) {
-  const seed = stableSerialize({
+  return smokeRunOperation("reset-scenario", {
     scenarioId: scenario.id,
     fixtureId: fixture.id,
     title: fixture.title,
     editorUrl: fixture.editorUrl,
   });
-  return smokeRunCode(
-    `async (page) => { const seed = ${seed}; const state = page.__wf543Scenario; if (state?.listeners) { page.off("request", state.listeners.request); page.off("framenavigated", state.listeners.navigation); } if (state?.routeHandlers?.size) throw new Error("wf543 routes remain before reset"); const previousClose = page.locator(${JSON.stringify(POST_CLOSE_SELECTOR)}); if (await previousClose.count()) await previousClose.evaluate((button) => { if (button.__wf543ClickListener) button.removeEventListener("click", button.__wf543ClickListener); delete button.__wf543ClickListener; delete button.dataset.wf543DomClickEvents; }); delete page.__wf543Scenario; await page.goto(seed.editorUrl); const title = page.locator(${JSON.stringify(POST_TITLE_SELECTOR)}); await title.waitFor(); const beforeTitle = await title.inputValue(); let responsePromise = null; if (beforeTitle !== seed.title) { await title.fill(seed.title); responsePromise = page.waitForResponse((response) => { const method = response.request().method(); const raw = response.url(); const marker = "/admin/api/posts/" + encodeURIComponent(seed.fixtureId); const index = raw.indexOf(marker); const path = index < 0 ? "" : raw.slice(index).split("?")[0]; return (method === "PATCH" && path === marker) || (method === "POST" && path === marker + "/autosave"); }); } await page.locator(${JSON.stringify(POST_CLOSE_SELECTOR)}).click(); const response = responsePromise ? await responsePromise : null; if (response && !response.ok()) throw new Error("wf543 real UI fixture reset failed"); await page.waitForURL(${JSON.stringify(POSTS_LIST_URL)}); const row = page.getByRole("link", { name: "Edit post: " + seed.title, exact: true }); await row.waitFor(); return { url: page.url(), reset: true, scenarioId: seed.scenarioId, fixtureId: seed.fixtureId, titleRestored: (await row.getAttribute("aria-label")) === "Edit post: " + seed.title, rowAccessibleName: await row.getAttribute("aria-label"), restorationWrite: response ? { status: response.status(), url: response.url() } : null }; }`
-  );
 }
 
 function resetEvidenceValid(output, scenario, fixture) {
@@ -3422,8 +3849,7 @@ function failureEarlyPrefixValid(smoke) {
       },
       {
         scope: "browser:password",
-        command:
-          'playwright-cli -s=wf543smoke --raw fill \'input[type="password"]\' "$ADMIN_PASSWORD" >/dev/null',
+        command: SMOKE_PASSWORD_FILL_COMMAND,
       },
       { scope: "browser:login", command: SMOKE_LOGIN_SUBMIT },
       { scope: "browser:logs", command: SMOKE_LOG_OBSERVATION_START },
@@ -3496,9 +3922,9 @@ function failureIdentityReceiptValid(record, helper) {
   }
 }
 
-function failurePrefixReceiptsValid(smoke) {
+function failurePrefixReceiptsValid(smoke, digest = sha256Text) {
   return smoke.commandTimeline.slice(0, smoke.failedAtSequence - 1).every((record) => {
-    if (!receiptIntegrityValid(record)) return false;
+    if (!failurePrefixTimelineReceiptIntegrityValid(record, smoke, digest)) return false;
     if (record.scope === "browser:preflight") {
       return sessionListReceiptValid(record) && !sessionListContains(record.stdout, "wf543smoke");
     }
@@ -3538,7 +3964,8 @@ function failurePrefixReceiptsValid(smoke) {
       );
     }
     if (record.scope === "browser:open") return browserOpenReceiptValid(record);
-    if (record.scope === "browser:email" || record.scope === "browser:password") {
+    if (record.scope === "browser:password") return true;
+    if (record.scope === "browser:email") {
       return record.status === 0 && record.stdout === "" && record.parsedOutput === null;
     }
     if (record.scope === "browser:login") {
@@ -4624,7 +5051,8 @@ function validateFailureCleanup(smoke) {
   const timelineValid =
     smoke.commandTimeline.length === smoke.failedAtSequence + smoke.cleanup.records.length &&
     smoke.commandTimeline.every(
-      (record, index) => record.sequence === index + 1 && receiptIntegrityValid(record)
+      (record, index) =>
+        record.sequence === index + 1 && failurePrefixTimelineReceiptIntegrityValid(record, smoke)
     ) &&
     failedReceipt?.scope === smoke.failedScope &&
     failedReceiptShowsFailure(failedReceipt) &&
@@ -5097,7 +5525,7 @@ function successCommandTimelineValid(smoke) {
         record.stderr === expected[index].stderr &&
         record.stdoutSha256 === expected[index].stdoutSha256 &&
         record.stderrSha256 === expected[index].stderrSha256 &&
-        receiptIntegrityValid(record) &&
+        successTimelineReceiptIntegrityValid(record, smoke) &&
         sameRawValue(record.parsedOutput, expected[index].parsedOutput)
     )
   );
@@ -5333,11 +5761,7 @@ function validateSmoke(smoke) {
     receiptIntegrityValid(smoke.bootstrap.emailFill) &&
     smoke.bootstrap.emailFill.stdout === "" &&
     smoke.bootstrap.emailFill.parsedOutput === null &&
-    smoke.bootstrap.passwordFill.command === smoke.commands.passwordFill &&
-    smoke.bootstrap.passwordFill.status === 0 &&
-    receiptIntegrityValid(smoke.bootstrap.passwordFill) &&
-    smoke.bootstrap.passwordFill.stdout === "" &&
-    smoke.bootstrap.passwordFill.parsedOutput === null &&
+    bootstrapPasswordReceiptValid(smoke) &&
     smoke.bootstrap.loginSubmit.command === smoke.commands.loginSubmit &&
     smoke.bootstrap.loginSubmit.status === 0 &&
     rawPlaywrightReceiptValid(smoke.bootstrap.loginSubmit) &&
@@ -5546,6 +5970,640 @@ const LEAVES = [
   },
 ];
 
+function extractSmokeRunCodeSource(command) {
+  const prefix = `${SMOKE_SESSION_PREFIX}run-code '`;
+  if (!command.startsWith(prefix) || !command.endsWith("'")) {
+    throw new Error("TASK-543 self-test run-code command is invalid");
+  }
+  return command.slice(prefix.length, -1);
+}
+
+async function runTask543CodeQlSelfTest() {
+  const assert = (condition, label) => {
+    if (!condition) throw new Error(`TASK-543 CodeQL self-test failed: ${label}`);
+  };
+  const expectFailure = async (operation, label) => {
+    let failed = false;
+    try {
+      await operation();
+    } catch {
+      failed = true;
+    }
+    assert(failed, label);
+  };
+  const finalOperations = {
+    "clean-close": "assert-clean-close",
+    "dirty-delayed-close": "assert-dirty-delayed-close",
+    "pending-revert-restoration": "assert-pending-revert-restoration",
+    "failure-retry": "assert-failure-retry",
+    "double-close": "assert-double-close",
+    "table-keyboard": "assert-table-keyboard",
+    "mid-viewport-metadata": "assert-mid-viewport-metadata",
+  };
+  const transientOperations = {
+    "dirty-delayed-close": "assert-transient-dirty-delayed-close",
+    "pending-revert-restoration": "assert-transient-pending-revert-restoration",
+    "failure-retry": "assert-transient-failure-retry",
+    "double-close": "assert-transient-double-close",
+  };
+  const zeroTransientKinds = ["clean-close", "table-keyboard", "mid-viewport-metadata"];
+  const operationIds = [
+    ...Object.values(finalOperations),
+    ...Object.values(transientOperations),
+    "reset-scenario",
+  ];
+  let maximumCommandBytes = 0;
+  const selfTestFixture = {
+    id: "fixture-1",
+    title: "Original title",
+    editorUrl: `${POSTS_LIST_URL}/fixture-1`,
+    draftTitleA: "Draft A",
+    draftTitleB: "Original title",
+    cleanPayload: {
+      slug: "original-title",
+      data: { version: 1 },
+      tags: ["self-test"],
+      taxonomy: { category: "security" },
+      seo: { title: "Original title" },
+    },
+  };
+  const compileCommand = (command, label) => {
+    const source = extractSmokeRunCodeSource(command);
+    const commandBytes = Buffer.byteLength(command, "utf8");
+    maximumCommandBytes = Math.max(maximumCommandBytes, commandBytes);
+    assert(isFullSmokeCliCommand(command), `${label} is not a complete smoke command`);
+    assert(commandBytes < RUN_CODE_COMMAND_MAX_BYTES, `${label} command exceeds its byte budget`);
+    assert(source.includes(`wf543-operation:${label}`), `${label} operation marker is absent`);
+    for (const otherOperation of operationIds) {
+      if (otherOperation !== label) {
+        assert(
+          !source.includes(`wf543-operation:${otherOperation}`),
+          `${label} contains the ${otherOperation} operation marker`
+        );
+      }
+    }
+    const execute = new Script(`(${source})`, {
+      filename: `task-543-${label}.codeql-self-test.js`,
+    }).runInThisContext();
+    assert(typeof execute === "function", `${label} did not compile to a function`);
+    return { execute, source };
+  };
+  const createAssertionPage = (kind, transient) => {
+    const basePath = `/admin/api/posts/${encodeURIComponent(selfTestFixture.id)}`;
+    const draftText =
+      kind === "pending-revert-restoration"
+        ? selfTestFixture.draftTitleB
+        : selfTestFixture.draftTitleA;
+    const initialMutations =
+      kind === "clean-close" || kind === "table-keyboard" || kind === "mid-viewport-metadata"
+        ? []
+        : kind === "pending-revert-restoration" && !transient
+          ? [
+              {
+                method: "POST",
+                path: `${basePath}/autosave`,
+                payload: expectedAutosavePayload(selfTestFixture, selfTestFixture.draftTitleA),
+              },
+              {
+                method: "POST",
+                path: `${basePath}/autosave`,
+                payload: expectedAutosavePayload(selfTestFixture, selfTestFixture.draftTitleB),
+              },
+            ]
+          : [
+              {
+                method: "POST",
+                path: `${basePath}/autosave`,
+                payload: expectedAutosavePayload(selfTestFixture, draftText),
+              },
+            ];
+    const pendingCount =
+      kind === "pending-revert-restoration" && !transient
+        ? 2
+        : ["dirty-delayed-close", "pending-revert-restoration", "double-close"].includes(kind)
+          ? 1
+          : 0;
+    const state = {
+      spec: { fixtureId: selfTestFixture.id, title: selfTestFixture.title },
+      initialTitle: selfTestFixture.title,
+      mutations: initialMutations,
+      navigationUrls: kind === "table-keyboard" ? [selfTestFixture.editorUrl, POSTS_LIST_URL] : [],
+      pendingRoutes: Array.from({ length: pendingCount }, () => () => {}),
+      table: {
+        titleNavigationCount: 1,
+        titleUrl: selfTestFixture.editorUrl,
+        checkboxToggled: true,
+        checkboxNavigationCount: 0,
+        actionMenuOpened: true,
+        actionNavigationCount: 0,
+      },
+      responsiveOutputs: RESPONSIVE_WIDTHS.map((width) => ({
+        width,
+        visibleStatusCopies: 1,
+        visibleAuthorCopies: 1,
+        visibleDateCopies: 1,
+      })),
+    };
+    let currentUrl = selfTestFixture.editorUrl;
+    const closeLocator = {
+      async getAttribute(name) {
+        if (name === "aria-busy") return "true";
+        if (name === "data-wf543-dom-click-events") return "2";
+        if (name === "data-post-editor-close-pending") return "true";
+        return null;
+      },
+      async isDisabled() {
+        return true;
+      },
+      async click() {},
+    };
+    const titleLocator = {
+      async inputValue() {
+        return draftText;
+      },
+      async isEditable() {
+        return true;
+      },
+    };
+    const retry = {
+      async waitFor() {},
+      async evaluate() {
+        return true;
+      },
+      async click() {
+        state.mutations.push(
+          {
+            method: "PATCH",
+            path: basePath,
+            payload: expectedManualPayload(selfTestFixture, draftText),
+          },
+          {
+            method: "PATCH",
+            path: `${basePath}/metadata`,
+            payload: expectedMetadataPayload(selfTestFixture),
+          }
+        );
+      },
+      async count() {
+        return 0;
+      },
+    };
+    return {
+      __wf543Scenario: state,
+      async waitForTimeout() {},
+      async waitForURL(url) {
+        currentUrl = url;
+        state.navigationUrls.push(url);
+      },
+      url() {
+        return currentUrl;
+      },
+      locator(selector) {
+        if (selector === POST_CLOSE_SELECTOR) return closeLocator;
+        if (selector === POST_TITLE_SELECTOR) return titleLocator;
+        if (selector === '[data-post-editor-save-draft="true"]') {
+          return {
+            async isDisabled() {
+              return false;
+            },
+          };
+        }
+        throw new Error(`unexpected self-test locator: ${selector}`);
+      },
+      getByRole(role, options = {}) {
+        if (role === "alert") {
+          return {
+            async waitFor() {},
+            async isVisible() {
+              return true;
+            },
+            async textContent() {
+              return "Save failed";
+            },
+          };
+        }
+        if (role === "button" && options.name === "Retry now") return retry;
+        return {
+          async getAttribute(name) {
+            return name === "aria-label" ? (options.name ?? "") : null;
+          },
+        };
+      },
+      async waitForResponse() {
+        return {
+          ok() {
+            return true;
+          },
+          status() {
+            return 200;
+          },
+          url() {
+            return `${ADMIN_ORIGIN}${basePath}`;
+          },
+        };
+      },
+    };
+  };
+
+  let compiledOperations = 0;
+  for (const [kind, operation] of Object.entries(finalOperations)) {
+    const command = expectedEvidenceAssertionCommand({ kind });
+    assert(isFullSmokeCliCommand(command), `${kind} final command contract`);
+    const encoding = canonicalEvidenceOperationEncoding(operation, { kind });
+    assert(command.includes(codeQlSafeJavaScriptStringLiteral(encoding)), `${kind} encoding`);
+    const { execute } = compileCommand(command, operation);
+    const output = await execute(createAssertionPage(kind, false));
+    const finalSemanticsValid =
+      kind === "mid-viewport-metadata"
+        ? sameRawValue(output, {
+            kind,
+            orderedWidths: RESPONSIVE_WIDTHS,
+            visibleSemanticCopies: RESPONSIVE_WIDTHS.map((width) => ({
+              width,
+              status: 1,
+              author: 1,
+              date: 1,
+            })),
+            mutations: [],
+            navigationUrls: [],
+          })
+        : validateScenarioByKind({ kind, evidence: output }, selfTestFixture);
+    assert(finalSemanticsValid, `${kind} final semantics`);
+    compiledOperations += 1;
+  }
+  for (const [kind, operation] of Object.entries(transientOperations)) {
+    const commands = expectedTransientAssertionCommands({ kind });
+    assert(commands.length === 1, `${kind} transient command count`);
+    assert(isFullSmokeCliCommand(commands[0]), `${kind} transient command contract`);
+    const encoding = canonicalEvidenceOperationEncoding(operation, { kind });
+    assert(commands[0].includes(codeQlSafeJavaScriptStringLiteral(encoding)), `${kind} encoding`);
+    const { execute } = compileCommand(commands[0], operation);
+    const output = await execute(createAssertionPage(kind, true));
+    const transientSemanticsValid =
+      kind === "double-close"
+        ? sameRawValue(output, {
+            kind,
+            phase: "pending",
+            pendingRoutes: 1,
+            domClickEvents: 2,
+            closeBusy: true,
+            closeDisabled: true,
+            closePendingData: true,
+            nonCloseEditable: true,
+            navigationCount: 0,
+          })
+        : transientEvidenceValid(
+            { kind, commandResults: { transientAssertion: [{ parsedOutput: output }] } },
+            selfTestFixture
+          );
+    assert(transientSemanticsValid, `${kind} transient semantics`);
+    compiledOperations += 1;
+  }
+  for (const kind of zeroTransientKinds) {
+    assert(expectedTransientAssertionCommands({ kind }).length === 0, `${kind} transient absence`);
+  }
+
+  const hostile =
+    `""''\`\`\\\\\r\n\u2028\u2029</script>;&|$() ` + `);globalThis.__wf543Injected=true;//`;
+  const resetInput = {
+    scenarioId: `scenario-${hostile}`,
+    fixtureId: `fixture-${hostile}`,
+    title: `title-${hostile}`,
+    editorUrl: `https://example.test/${hostile}`,
+  };
+  const resetCommand = smokeRunOperation("reset-scenario", resetInput);
+  assert(isFullSmokeCliCommand(resetCommand), "reset command contract");
+  const { execute: executeReset, source: resetSource } = compileCommand(
+    resetCommand,
+    "reset-scenario"
+  );
+  assert(!resetSource.includes(hostile), "hostile reset value entered executable source");
+  const resetCalls = [];
+  let resetUrl = resetInput.editorUrl;
+  const resetPage = {
+    __wf543Scenario: { routeHandlers: new Map() },
+    off() {},
+    locator(selector) {
+      if (selector === POST_CLOSE_SELECTOR) {
+        return {
+          async count() {
+            return 0;
+          },
+          async click() {
+            resetCalls.push(["click", selector]);
+          },
+        };
+      }
+      if (selector === POST_TITLE_SELECTOR) {
+        return {
+          async waitFor() {},
+          async inputValue() {
+            return "pre-reset-title";
+          },
+          async fill(value) {
+            resetCalls.push(["fill", value]);
+          },
+        };
+      }
+      throw new Error(`unexpected reset locator: ${selector}`);
+    },
+    async goto(url) {
+      resetUrl = url;
+      resetCalls.push(["goto", url]);
+    },
+    async waitForURL(url) {
+      resetUrl = url;
+    },
+    async waitForResponse(predicate) {
+      const response = {
+        request() {
+          return { method: () => "PATCH" };
+        },
+        url() {
+          return `${ADMIN_ORIGIN}/admin/api/posts/${encodeURIComponent(resetInput.fixtureId)}`;
+        },
+        ok() {
+          return true;
+        },
+        status() {
+          return 200;
+        },
+      };
+      assert(predicate(response), "reset response predicate");
+      resetCalls.push(["response", response.url()]);
+      return response;
+    },
+    url() {
+      return resetUrl;
+    },
+    getByRole(role, options) {
+      assert(role === "link", "reset row role");
+      return {
+        async waitFor() {},
+        async getAttribute(name) {
+          return name === "aria-label" ? options.name : null;
+        },
+      };
+    },
+  };
+  globalThis.__wf543Injected = false;
+  const resetOutput = await executeReset(resetPage);
+  assert(globalThis.__wf543Injected === false, "reset injection sentinel changed");
+  delete globalThis.__wf543Injected;
+  assert(
+    resetCalls.some(([name, value]) => name === "goto" && value === resetInput.editorUrl) &&
+      resetCalls.some(([name, value]) => name === "fill" && value === resetInput.title) &&
+      resetCalls.some(
+        ([name, value]) =>
+          name === "response" &&
+          value === `${ADMIN_ORIGIN}/admin/api/posts/${encodeURIComponent(resetInput.fixtureId)}`
+      ) &&
+      resetEvidenceValid(
+        resetOutput,
+        { id: resetInput.scenarioId, kind: "dirty-delayed-close" },
+        { id: resetInput.fixtureId, title: resetInput.title }
+      ),
+    "reset payload did not round-trip byte-identically"
+  );
+  compiledOperations += 1;
+
+  let negativeCases = 0;
+  assert(strictSummaryExitCode("- semgrep: ok (0 findings)", "semgrep") === 0, "strict ok");
+  assert(
+    strictSummaryExitCode("- semgrep: non-zero:7 (blocked)", "semgrep") === 7,
+    "strict non-zero"
+  );
+  for (const [label, output] of [
+    ["missing code", "- semgrep: non-zero: (blocked)"],
+    ["nondigit code", "- semgrep: non-zero:7x (blocked)"],
+    ["unsafe integer", `- semgrep: non-zero:${"9".repeat(400)} (blocked)`],
+  ]) {
+    assert(strictSummaryExitCode(output, "semgrep") === null, `strict ${label}`);
+    negativeCases += 1;
+  }
+  for (const [label, operation] of [
+    ["unknown kind", () => expectedEvidenceAssertionCommand({ kind: "unknown" })],
+    [
+      "unknown key",
+      () => smokeRunOperation("assert-clean-close", { kind: "clean-close", unknown: true }),
+    ],
+    ["NUL", () => smokeRunOperation("reset-scenario", { ...resetInput, title: "bad\0title" })],
+    [
+      "over budget",
+      () => smokeRunOperation("reset-scenario", { ...resetInput, title: "x".repeat(32_769) }),
+    ],
+  ]) {
+    await expectFailure(async () => operation(), `host ${label}`);
+    negativeCases += 1;
+  }
+
+  const safeOperation = "assert-clean-close";
+  const safeInput = { kind: "clean-close" };
+  const safeEncoding = canonicalEvidenceOperationEncoding(safeOperation, safeInput);
+  const safeSource = buildEvidenceOperationRunCodeSource(safeOperation, safeInput);
+  const executeMutatedEncoding = async (encoded, label) => {
+    let pageCalls = 0;
+    const page = new Proxy(
+      {},
+      {
+        get() {
+          pageCalls += 1;
+          return () => {};
+        },
+      }
+    );
+    const mutantSource = safeSource.replace(
+      codeQlSafeJavaScriptStringLiteral(safeEncoding),
+      codeQlSafeJavaScriptStringLiteral(encoded)
+    );
+    const execute = new Script(`(${mutantSource})`, {
+      filename: `task-543-${label}.negative-self-test.js`,
+    }).runInThisContext();
+    await expectFailure(async () => execute(page), label);
+    assert(pageCalls === 0, `${label} reached page interaction`);
+    negativeCases += 1;
+  };
+  await executeMutatedEncoding("A", "noncanonical base64url");
+  await executeMutatedEncoding("not+base64", "malformed base64url");
+  await executeMutatedEncoding(Buffer.from([0xc3, 0x28]).toString("base64url"), "invalid UTF-8");
+  await executeMutatedEncoding(
+    Buffer.from(
+      stableSerialize({ operation: "unknown-operation", payload: { kind: "clean-close" } }),
+      "utf8"
+    ).toString("base64url"),
+    "unknown decoded operation"
+  );
+  await executeMutatedEncoding(
+    Buffer.from(
+      stableSerialize({ operation: safeOperation, payload: { kind: "clean-close", extra: true } }),
+      "utf8"
+    ).toString("base64url"),
+    "unknown decoded key"
+  );
+  await executeMutatedEncoding(
+    Buffer.from(
+      stableSerialize({
+        operation: "reset-scenario",
+        payload: { ...resetInput, title: "bad\0title" },
+      }),
+      "utf8"
+    ).toString("base64url"),
+    "decoded NUL"
+  );
+  await executeMutatedEncoding(
+    Buffer.from(
+      stableSerialize({
+        operation: "reset-scenario",
+        payload: { ...resetInput, title: "x".repeat(65_536) },
+      }),
+      "utf8"
+    ).toString("base64url"),
+    "decoded over-budget payload"
+  );
+
+  const nestedCredentialReceipt = {
+    command: SMOKE_PASSWORD_FILL_COMMAND,
+    status: 0,
+    stdout: "",
+    stderr: "",
+    stdoutSha256: EMPTY_SHA256,
+    stderrSha256: EMPTY_SHA256,
+    parsedOutput: null,
+  };
+  const timelineCredentialReceipt = {
+    ...nestedCredentialReceipt,
+    sequence: 1,
+    scope: "browser:password",
+  };
+  const credentialSmoke = {
+    commands: { passwordFill: SMOKE_PASSWORD_FILL_COMMAND },
+    bootstrap: { passwordFill: nestedCredentialReceipt },
+  };
+  const failureCredentialSmoke = {
+    commandTimeline: [timelineCredentialReceipt],
+    failedAtSequence: 2,
+  };
+  let credentialDigestCalls = 0;
+  const digestSpy = () => {
+    credentialDigestCalls += 1;
+    return "0".repeat(64);
+  };
+  assert(bootstrapPasswordReceiptValid(credentialSmoke), "nested credential receipt");
+  assert(
+    successTimelineReceiptIntegrityValid(timelineCredentialReceipt, credentialSmoke, digestSpy),
+    "success timeline credential receipt"
+  );
+  assert(
+    failurePrefixReceiptsValid(failureCredentialSmoke, digestSpy),
+    "failure-prefix timeline credential receipt"
+  );
+  const missingScopeReceipt = { ...timelineCredentialReceipt };
+  delete missingScopeReceipt.scope;
+  for (const [label, receipt] of [
+    ["missing timeline scope", missingScopeReceipt],
+    ["wrong timeline scope", { ...timelineCredentialReceipt, scope: "browser:email" }],
+    [
+      "timeline command drift",
+      { ...timelineCredentialReceipt, command: `${SMOKE_PASSWORD_FILL_COMMAND} drift` },
+    ],
+  ]) {
+    assert(
+      !successTimelineReceiptIntegrityValid(receipt, credentialSmoke, digestSpy),
+      `success timeline accepted ${label}`
+    );
+    assert(
+      !failurePrefixReceiptsValid({ commandTimeline: [receipt], failedAtSequence: 2 }, digestSpy),
+      `failure timeline accepted ${label}`
+    );
+    negativeCases += 2;
+  }
+  assert(credentialDigestCalls === 0, "credential receipt reached a fast digest");
+  for (const [label, receipt, context, command] of [
+    [
+      "nested as timeline",
+      nestedCredentialReceipt,
+      "timeline.browserPassword",
+      SMOKE_PASSWORD_FILL_COMMAND,
+    ],
+    [
+      "timeline as nested",
+      timelineCredentialReceipt,
+      "bootstrap.passwordFill",
+      SMOKE_PASSWORD_FILL_COMMAND,
+    ],
+    [
+      "wrong scope",
+      { ...timelineCredentialReceipt, scope: "browser:email" },
+      "timeline.browserPassword",
+      SMOKE_PASSWORD_FILL_COMMAND,
+    ],
+    [
+      "wrong command",
+      timelineCredentialReceipt,
+      "timeline.browserPassword",
+      `${SMOKE_PASSWORD_FILL_COMMAND} drift`,
+    ],
+    [
+      "nonempty stdout",
+      { ...timelineCredentialReceipt, stdout: "drift" },
+      "timeline.browserPassword",
+      SMOKE_PASSWORD_FILL_COMMAND,
+    ],
+    [
+      "wrong digest",
+      { ...timelineCredentialReceipt, stderrSha256: "0".repeat(64) },
+      "timeline.browserPassword",
+      SMOKE_PASSWORD_FILL_COMMAND,
+    ],
+  ]) {
+    assert(
+      !credentialReceiptValidWithoutDigest(receipt, context, command),
+      `credential mutation accepted: ${label}`
+    );
+    negativeCases += 1;
+  }
+
+  const normalReceipt = {
+    command: "printf evidence",
+    status: 0,
+    stdout: "evidence stdout",
+    stderr: "evidence stderr",
+    stdoutSha256: sha256Text("evidence stdout"),
+    stderrSha256: sha256Text("evidence stderr"),
+    parsedOutput: { ok: true },
+  };
+  const ordinaryDigestInputs = [];
+  assert(
+    receiptIntegrityValid(normalReceipt, (value) => {
+      ordinaryDigestInputs.push(value);
+      return sha256Text(value);
+    }),
+    "normal secret-free receipt"
+  );
+  assert(
+    sameSequence(ordinaryDigestInputs, [normalReceipt.stdout, normalReceipt.stderr]),
+    "normal receipt digest order"
+  );
+  assert(
+    !receiptIntegrityValid({ ...normalReceipt, stdoutSha256: "0".repeat(64) }) &&
+      !receiptIntegrityValid({ ...normalReceipt, stderrSha256: "0".repeat(64) }),
+    "normal receipt digest mismatch"
+  );
+
+  return {
+    pass: true,
+    evidenceOperations: Object.keys(finalOperations).length,
+    transientOperations: Object.keys(transientOperations).length,
+    zeroTransientKinds: zeroTransientKinds.length,
+    resetOperations: 1,
+    compiledOperations,
+    credentialDigestCalls,
+    ordinaryDigestCalls: ordinaryDigestInputs.length,
+    negativeCases,
+    maximumCommandBytes,
+  };
+}
+
 async function runGate(leaf, attempt) {
   const result = await agent(
     `Read-only gate from ${ROOT}; do not edit. Run exactly: ${leaf.gate}. ` +
@@ -5564,6 +6622,11 @@ async function runScopeGate(allowed, label) {
     { label: `scope:${label}`, phase: label, schema: RESULT_SCHEMA }
   );
   requirePassingResult(result, `${label}: scope gate`);
+}
+
+if (process.argv.includes("--codeql-self-test")) {
+  process.stdout.write(JSON.stringify(await runTask543CodeQlSelfTest()));
+  process.exit(0);
 }
 
 phase("Start gate");

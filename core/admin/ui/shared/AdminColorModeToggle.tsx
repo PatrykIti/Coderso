@@ -20,10 +20,29 @@ export type ColorMode = "light" | "dark";
 /** localStorage key. Kept in sync with the pre-paint script in `index.html`. */
 export const ADMIN_COLOR_MODE_STORAGE_KEY = "coderso-admin-color-mode";
 
+/** Resolve browser storage without touching Node's global Web Storage accessor. */
+function getBrowserStorage(): Storage | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return window.localStorage;
+  } catch {
+    // private-mode / disabled storage
+    return null;
+  }
+}
+
 /** Read the persisted mode from storage only (no DOM), defaulting to light. */
 function readStoredColorMode(): ColorMode {
+  const storage = getBrowserStorage();
+  if (!storage) {
+    return "light";
+  }
+
   try {
-    return localStorage.getItem(ADMIN_COLOR_MODE_STORAGE_KEY) === "dark" ? "dark" : "light";
+    return storage.getItem(ADMIN_COLOR_MODE_STORAGE_KEY) === "dark" ? "dark" : "light";
   } catch {
     // private-mode / disabled storage
     return "light";
@@ -50,8 +69,14 @@ function applyColorMode(mode: ColorMode): void {
     el.classList.toggle("dark", mode === "dark");
     el.classList.toggle("light", mode === "light");
   }
+
+  const storage = getBrowserStorage();
+  if (!storage) {
+    return;
+  }
+
   try {
-    localStorage.setItem(ADMIN_COLOR_MODE_STORAGE_KEY, mode);
+    storage.setItem(ADMIN_COLOR_MODE_STORAGE_KEY, mode);
   } catch {
     // private-mode / disabled storage — mode stays in-memory only
   }
