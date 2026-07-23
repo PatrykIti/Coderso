@@ -38,12 +38,14 @@ by active TASK-540-02-L01.
 Changelog 1259 is consumed by the completed TASK-546 family.
 Changelogs 1251, 1252, 1254, and 1257 remain reserved for the implementation
 closure of TASK-539, TASK-540, TASK-542, and TASK-545, respectively.
+Changelogs 1260 and 1261 are reserved for the implementation closure of
+TASK-547 and TASK-548, respectively.
 These remaining numbers are contract reservations only: do not add index
 rows or changelog files before the corresponding family is complete.
 If a completed family is reopened after its changelog draft was already authored, that draft
 may remain only with an explicit `Draft` status that supersedes its closure evidence; keep its
 index row absent until fresh reclosure validation succeeds.
-Use 1260 for the next unreserved changelog entry.
+Use 1262 for the next unreserved changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
