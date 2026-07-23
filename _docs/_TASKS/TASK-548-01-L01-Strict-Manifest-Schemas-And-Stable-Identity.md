@@ -7,6 +7,7 @@
 **Estimated Effort:** Large
 **Dependencies:** None
 **Status:** ⏳ To Do
+**Changelog:** 1261 (pinned; closure only)
 
 ---
 

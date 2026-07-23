@@ -57,12 +57,20 @@ import {
   type DocsPublicationProjectionV1,
 } from "@coderso/docs-renderer/projection";
 import {
-  createDocsPortalHydrationPayloadV1,
+  projectDocsClientSearchRankingV1,
+} from "@coderso/docs-renderer/client-search";
+import {
   renderDocsPortalStaticShell,
 } from "../app/DocsPortalStaticShell";
+import {
+  createDocsPortalHydrationPayloadV1,
+} from "../app/docsPortalHydrationPayloadV1";
+import {
+  loadPackagedDocsDistributionBundleV2,
+} from "../../../../core/services/documentation/packagedDocsDistributionBundleV2";
 
 // packages/docs-portal/src/routes/docsPortalOutput.ts
-resolveDocsPortalOutputPath(publicPath: string): string;
+resolveDocsPortalArtifactRelativePath(publicPath: string): string;
 
 // packages/docs-portal/src/build/buildDocsPortal.ts
 // Imported from TASK-548-01 owners; never reimplemented here.
@@ -105,9 +113,10 @@ Locked output root is `packages/docs-portal/dist`.
 The build entry accepts only strict non-artifact configuration, never artifact
 paths, a preloaded bundle/report object, or bytes. It first calls the exact
 TASK-548-01-L02 read-only hazard inspector, then the TASK-548-01-L03 strict
-fixed-path packaged loader for
-`core/generated/docs/coderso-docs-v2.json`. A caller cannot bypass, replace, or
-reorder this boundary. The ignored migration report is never opened or required.
+cwd-independent zero-argument `loadPackagedDocsDistributionBundleV2()` import.
+L02 contains no bundle path constant/read/parse/normalizer or cwd-derived
+fallback. A caller cannot bypass, replace, or reorder this boundary. The
+ignored migration report is never opened or required.
 The targeted gate runs read-only `docs:check` immediately before the portal
 build so canonical bundle bytes and `sourceHash` are recomputed and compared.
 The portal never invokes recovery or treats `docs:check` as a recovery command.
@@ -142,7 +151,7 @@ workspace can be executed. The targeted gate must:
    `DOCS_PRODUCT_VERSION=0.0.0-test`,
    `DOCS_PUBLIC_ORIGIN=https://docs.example.invalid`,
    `DOCS_PUBLIC_BASE_PATH=/docs`, and `SOURCE_DATE_EPOCH=0`, then repeat it and
-   prove byte identity;
+   prove full page plus Vite JS/CSS/asset/receipt byte identity;
 2. build the existing TASK-548-02-L03-owned Dockerfile and thereby execute its
    frozen workspace install plus existing Admin and site builds;
 3. run the resulting image with its entrypoint overridden, resolve
@@ -150,7 +159,9 @@ workspace can be executed. The targeted gate must:
    selector exports, parse the packaged
    `/app/core/generated/docs/coderso-docs-v2.json` as
    `coderso.docs-corpus@v2`, and prove the Admin/site build outputs exist; and
-4. inspect the resulting image for the forbidden `.tmp`, promotion journal,
+4. verify Admin `coderso.docs-help-assets@v1` source/hash/file closure against
+   the packaged bundle and emitted PNGs; then inspect for forbidden `.tmp`,
+   promotion journal,
    member-temp, staged, or backup artifacts.
 
 This is a read-only downstream validation of `Dockerfile`, the workspace
@@ -158,6 +169,70 @@ manifests, root lockfile, and core dependency. L02 does not edit those files
 and does not own a Docker contract test; its only new tests remain the three
 portal files listed above. TASK-548-05 may repeat this already-landed image
 validation as a release gate without changing ownership.
+
+## Atomic Client Assets and Dist Publication Contract
+
+L02 owns the only complete portal build transaction. It creates a
+task-scoped, no-follow sibling staging root with separate `vite/` and `dist/`
+directories while the previous `packages/docs-portal/dist` remains untouched.
+It then executes this order exactly:
+
+1. run Vite programmatically with L01's frozen config, literal client entry
+   `src/app/hydrateDocsPortalIslandsV1.tsx`, explicit base path, staging
+   `outDir`, `emptyOutDir: true`, and
+   `build.manifest: "client-manifest.json"`;
+2. strictly parse the staged Vite manifest, require exactly that entry, walk
+   its complete `imports`/`dynamicImports`/`css`/`assets` closure, and reject
+   unknown keys, cycles, missing/orphan/symlink/path-escaping/source-map files
+   or any server-shell/renderer/projection module in the client graph;
+3. read and hash every closed JS/CSS/asset byte, copy each exactly once into
+   final staging, and emit canonical
+   `deployment/client-assets.json` sorted by public path;
+4. inject every required sorted stylesheet and the one module entry into every
+   canonical, latest and typed-404 HTML page using only
+   `buildDocsPortalClientAssetHrefV1(publicBasePath, manifestPath)`;
+5. render all static content/SEO/search/deployment files, close every client
+   byte and `client-assets.json` through `DocsPortalManifestV1.files`, validate
+   the complete staged tree, fsync it, then perform the journaled atomic
+   `dist` directory swap.
+
+`buildDocsPortalClientAssetHrefV1` accepts only a normalized deployment base
+and a confined manifest path; it emits a same-origin base-prefixed href and
+never uses route depth, root assumptions, origin input or string
+concatenation. JS imports and CSS asset references remain Vite content-hashed
+and base-safe. HTML contains no inline executable/style content.
+
+The dist swap has an exclusive lock and a durable phase journal binding the
+old/staged tree hashes. Recovery exposes either the complete old tree or the
+complete new tree, never a mixture; any pre-swap failure removes only the
+validated task-scoped staging root. Recovery validates exact real paths and
+hashes before rename/removal, and no code recursively deletes an unresolved,
+shared or broad path. A repeated identical build compares the full tree,
+including Vite JS/CSS/assets, client receipt and injected tags, byte-for-byte.
+
+```ts
+type DocsPortalClientAssetRecordV1 = {
+  kind: "entry-js" | "chunk-js" | "css" | "asset";
+  manifestPath: string;
+  publicHref: string;
+  bytes: number;
+  sha256: string;
+};
+type DocsPortalClientAssetsManifestV1 = {
+  schema: "coderso.docs-portal-client-assets@v1";
+  entry: string;
+  styles: string[];
+  files: DocsPortalClientAssetRecordV1[];
+};
+async function buildStagedDocsPortalClientV1(input: {
+  stagingRoot: string;
+  publicBasePath: string;
+}): Promise<DocsPortalClientAssetsManifestV1>;
+async function promoteValidatedDocsPortalDistV1(input: {
+  stagingDist: string;
+  receipt: DocsPortalBuildReceipt;
+}): Promise<void>;
+```
 
 ## Route Contract
 
@@ -187,7 +262,9 @@ Alias:
   `buildDocsPublicHref({ origin, basePath, route })` owns the external base-path
   prefix. Portal code maps the validated root-relative public path, without the
   deployment base path, to its confined static output path.
-  No hard-coded root-relative article/asset/search link is allowed.
+  `resolveDocsPortalArtifactRelativePath` returns only a confined relative path;
+  the staging-bound writer rejects absolute/out-of-root values. No route helper
+  can name live `dist`, and no hard-coded article/asset/search link is allowed.
 - Static route selection comes from the validated bundle/route graph and never
   guesses a nearest document; portal route code does not add a second public
   URL resolver.
@@ -433,12 +510,11 @@ export function readDocsPortalBuildConfigV1FromEnvironment(
   });
 }
 
-export function resolveDocsPortalOutputPath(publicPath: string): string {
+export function resolveDocsPortalArtifactRelativePath(
+  publicPath: string
+): string {
   const normalized = assertDocsPublicPath(publicPath);
-  return resolveConfinedIndexHtmlPath(
-    "packages/docs-portal/dist",
-    normalized
-  );
+  return resolveConfinedRelativeIndexHtmlPath(normalized);
 }
 
 export async function buildDocsPortal(
@@ -460,6 +536,12 @@ async function buildValidatedDocsPortal(
   config: DocsPortalBuildConfigV1,
   bundle: DocsDistributionBundleV2
 ): Promise<DocsPortalBuildReceipt> {
+  const transaction = await createDocsPortalDistTransactionV1();
+  try {
+  const clientAssets = await buildStagedDocsPortalClientV1({
+    stagingRoot: transaction.viteRoot,
+    publicBasePath: config.publicBasePath,
+  });
   const projection: DocsPublicationProjectionV1<"public-docs"> =
     createDocsPublicationProjectionV1({
       sourceBundle: bundle,
@@ -470,9 +552,14 @@ async function buildValidatedDocsPortal(
     projection,
     config.currentVersion
   );
-  const writer = createHashedDeterministicWriter(
-    "packages/docs-portal/dist"
+  const clientSearchByLocale = buildExactLocaleMap(graph.locales, (locale) =>
+    projectDocsClientSearchRankingV1(searchIndex, {
+      productVersion: config.currentVersion, locale,
+    })
   );
+  const writer =
+    createHashedDeterministicWriter(transaction.stagingDist);
+  await copyAndRecordClientAssetClosureV1(writer, clientAssets);
 
   for (const route of graph.canonicalRoutes) {
     const document = resolveVersionedProjectionMemberV1(
@@ -489,14 +576,11 @@ async function buildValidatedDocsPortal(
     const hydrationPayload = createDocsPortalHydrationPayloadV1({
       page: buildPortalHydrationPageModel(config, document),
       header: buildPortalHeaderClientModel(graph, route, config),
-      search: projectDocsPortalClientSearchIndexV1(searchIndex, {
-        productVersion: config.currentVersion,
-        locale: document.locale,
-      }),
+      search: requireLocaleClientSearch(clientSearchByLocale, document.locale),
       theme: { storageKey: "coderso.docs.theme", initialMode: "system" },
       mobileNavigation: buildPortalMobileClientModel(graph, route),
     });
-    const outputFile = resolveDocsPortalOutputPath(publicPath);
+    const outputFile = resolveDocsPortalArtifactRelativePath(publicPath);
     await writer.write(
       outputFile,
       renderStaticPortalPage(route, {
@@ -510,6 +594,7 @@ async function buildValidatedDocsPortal(
         canonicalHref,
         publicOrigin: config.publicOrigin,
         publicBasePath: config.publicBasePath,
+        clientAssetTags: buildDocsPortalClientAssetTagsV1(clientAssets),
       })
     );
   }
@@ -517,11 +602,12 @@ async function buildValidatedDocsPortal(
     const publicPath = buildDocsPublicPath(alias.publicRoute);
     const canonical = requireCanonicalRoute(graph, alias);
     await writer.write(
-      resolveDocsPortalOutputPath(publicPath),
+      resolveDocsPortalArtifactRelativePath(publicPath),
       renderAliasFallback(alias, {
         canonicalStaticPage: requireRenderedCanonicalPage(canonical),
         publicOrigin: config.publicOrigin,
         publicBasePath: config.publicBasePath,
+        clientAssets,
       })
     );
   }
@@ -535,17 +621,29 @@ async function buildValidatedDocsPortal(
     publicBasePath: config.publicBasePath,
   });
   await emitCurrentReleaseSiteIndexCandidateV1(writer, graph);
-  return writer.finalizeDetachedManifestAndVerifyAllOtherFiles(graph);
+  await writer.write("deployment/client-assets.json",
+    serializeDocsPortalClientAssetsManifestV1(clientAssets));
+  const receipt =
+    await writer.finalizeDetachedManifestAndVerifyAllOtherFiles(graph);
+  await validateCompleteStagedPortalV1(transaction.stagingDist, receipt);
+  await promoteValidatedDocsPortalDistV1({
+    stagingDist: transaction.stagingDist, receipt,
+  });
+  return receipt;
+  } catch (error) {
+    await discardOnlyValidatedUnpublishedPortalStageV1(transaction);
+    throw mapDocsPortalBuildErrorV1(error);
+  }
 }
 ```
 
-**Data flow:** read-only `docs:check` canonical-byte/source equality →
-config-only entry → exact owner hazard inspection → strict packaged-bundle load
-→ one shared projection constructor/full-input normalization/target closure
-proof → one pure search index → safe route graph and exact member keys → same
-server-side projection/static shell/renderer for every route → per-page
-canonical hash-bound island payload with no article state → canonical HTML,
-static search/assets, SEO/deployment metadata and hash-closure manifest.
+**Data flow:** `docs:check` equality → config → hazard inspection → common
+cwd-independent packaged-loader normalization → isolated Vite client stage/
+strict manifest closure → independent projection-constructor normalization and
+target proof → one search index → one lossless client ranking projection per
+locale → route/member graph → shared server shell/renderer → hash-bound four-
+island payload → base-safe client injection + HTML/search/assets/SEO →
+complete hash closure → journaled atomic dist swap.
 
 **Error handling:** a live/tampered journal, journal temp, backup/staging
 artifact, report-only state, invalid packaged bundle, invalid linked pair,
@@ -553,10 +651,10 @@ artifact, report-only state, invalid packaged bundle, invalid linked pair,
 read fails before target selection and leaves portal output untouched. A valid
 tracked-bundle-only clean checkout is accepted. Duplicate
 doc/slug/route, unsafe origin/path, unresolved internal ref, missing asset/hash/
-alt, false locale alternate, private record, non-reproducible output, redirect
-escape, or manifest mismatch aborts and cleans only the task-scoped temp build.
-Never delete a broad or unresolved output path; atomically replace the validated
-exact `packages/docs-portal/dist` target.
+alt, false locale alternate, private record, client manifest/closure/tag error,
+non-reproducible output, redirect escape, or hash mismatch aborts and cleans
+only a verified unpublished stage. Swap recovery keeps/restores a complete
+tree. Never delete a broad/unresolved path or partial live `dist`.
 
 **Regression-test shape:**
 
@@ -566,7 +664,8 @@ exact `packages/docs-portal/dist` target.
   pair, and tampered transaction or packaged-bundle bytes fail read-only;
 - static ordering guard proving no packaged-bundle open, target selector, route
   builder, renderer or output writer is reachable before owner hazard inspection
-  passes;
+  passes; every writer path is relative to the verified stage and spies prove
+  zero live-`dist` open/write/remove before the final promotion;
 - public-entry fixtures accept only the four exact configuration keys and reject
   unknown `bundle`, `report`, artifact-path, bytes, or output-root inputs before
   inspection; only the internal post-inspection helper receives the validated
@@ -596,28 +695,42 @@ exact `packages/docs-portal/dist` target.
   shell/search/render; hostile constructor keys, structural/spread/serialized/
   foreign brands, locale/non-member keys, malformed/out-of-range versions,
   target absence and incomplete target closure reject;
-- call spies prove exactly one `createDocsPublicationProjectionV1()` and one
-  underlying full-bundle normalization/target selection, exactly one
-  `buildDocsSearchIndexV1()`, no filtered-bundle reconstruction or per-route
-  schema normalization, identical projection/index reference across routes,
-  and unchanged whole-corpus `sourceHash`;
+- spies prove the common packaged loader performs exactly one normalization and
+  returns its object to exactly one `createDocsPublicationProjectionV1()`,
+  whose constructor performs one separate normalization/target selection;
+  exactly one `buildDocsSearchIndexV1()`, no path/filtered-bundle/per-route
+  normalizer, identical projection/index references and unchanged `sourceHash`;
 - a static call-boundary guard proves shell/search/renderer receive the exact
   projection/member-key pair, while portal client entries contain no
-  projection constructor/brand, full document/corpus or renderer import;
+  projection constructor/brand, full document/corpus, server shell or renderer
+  import; only the exact client-search subpath is allowed;
+- client ranking fixtures prove one renderer-owned lossless projection per
+  locale retains every scorer signal and returns exact Help parity;
+- Vite fixtures pin one hydration entry, strict recursive manifest closure,
+  base-path-safe hashed JS/CSS on every HTML page, canonical client receipt and
+  detached-manifest coverage; orphan/missing/cycle/traversal/source-map/server-
+  graph assets fail before any live-dist write;
+- inject failures after every client-build/copy/render/finalize/swap phase and
+  crash-recover; the prior or new complete dist is byte-identical and no mixed
+  tree, stale stage, backup or journal is accepted;
 - each canonical/alias page embeds canonical
   `DocsPortalHydrationPayloadV1` bytes bound by `bodySha256`; mutations,
   unknown keys, noncanonical encoding/order and oversized payloads cause zero
   island mounts. Snapshot/import tests prove article/navigation/TOC are static
   and payload keys contain only header/search/theme/mobile-nav state;
 - internal/publication-target/secret/unsafe URL fixtures fail;
-- two builds with same epoch are byte-identical;
+- two builds with same epoch are byte-identical including all client bytes,
+  Vite closure receipt and injected tags;
 - changed document affects only expected route/search/manifest hashes;
 - output files and tests stay below line limit where human-authored.
 
 ## Sub-Tasks
 
 - [ ] Implement strict route/base/version/locale/slug graph helpers.
-- [ ] Build deterministic static renderer/writer and latest aliases.
+- [ ] Build/validate/copy the Vite client closure, inject base-safe hashed tags,
+  then render routes only into the transaction's confined staging writer.
+- [ ] Build deterministic static renderer/writer and latest aliases; validate
+  and journal-swap the complete dist atomically.
 - [ ] Emit SEO, structured data, sitemap, robots, search, headers, redirects.
 - [ ] Close all bytes through the artifact manifest and reproducibility tests.
 
@@ -666,7 +779,7 @@ docker build --build-arg APP_VERSION=0.0.0-test \
 task548_docker_image="$(tr -d '\r\n' < "$task548_portal_real/docker-image-id")"
 [[ "$task548_docker_image" =~ ^sha256:[0-9a-f]{64}$ ]]
 docker run --rm --entrypoint bun "$task548_docker_image" --eval \
-  'const renderer = await import("@coderso/docs-renderer"); const projection = await import("@coderso/docs-renderer/projection"); if (typeof renderer.DocsDocumentRenderer !== "function" || typeof renderer.buildDocsSearchIndexV1 !== "function" || typeof renderer.selectDocumentsForPublicationTarget !== "function" || typeof projection.createDocsPublicationProjectionV1 !== "function") throw new Error("docs_renderer_exports_invalid"); const bundleFile = Bun.file("/app/core/generated/docs/coderso-docs-v2.json"); if (!(await bundleFile.exists())) throw new Error("docs_bundle_missing"); const bundle = await bundleFile.json(); if (bundle.schema !== "coderso.docs-corpus@v2") throw new Error("docs_bundle_schema_invalid"); for (const path of ["/app/core/dist/admin/index.html", "/app/core/dist/site/manifest.json"]) if (!(await Bun.file(path).exists())) throw new Error(`docker_build_output_missing:${path}`);'
+  'const renderer = await import("@coderso/docs-renderer"); const projection = await import("@coderso/docs-renderer/projection"); if (typeof renderer.DocsDocumentRenderer !== "function" || typeof renderer.buildDocsSearchIndexV1 !== "function" || typeof renderer.selectDocumentsForPublicationTarget !== "function" || typeof projection.createDocsPublicationProjectionV1 !== "function") throw new Error("docs_renderer_exports_invalid"); const bundleFile = Bun.file("/app/core/generated/docs/coderso-docs-v2.json"); if (!(await bundleFile.exists())) throw new Error("docs_bundle_missing"); const bundle = await bundleFile.json(); if (bundle.schema !== "coderso.docs-corpus@v2") throw new Error("docs_bundle_schema_invalid"); for (const path of ["/app/core/dist/client/index.html", "/app/core/dist/site/manifest.json"]) if (!(await Bun.file(path).exists())) throw new Error(`docker_build_output_missing:${path}`); const helpReceiptFile = Bun.file("/app/core/dist/client/docs-help-assets-v1.json"); if (!(await helpReceiptFile.exists())) throw new Error("help_asset_receipt_missing"); const helpReceipt = await helpReceiptFile.json(); if (helpReceipt.schema !== "coderso.docs-help-assets@v1" || helpReceipt.sourceHash !== bundle.sourceHash) throw new Error("help_asset_receipt_invalid"); for (const asset of helpReceipt.assets) { const path = `/app/core/dist/client/${asset.outputPath}`; const file = Bun.file(path); if (!(await file.exists()) || new Bun.CryptoHasher("sha256").update(await file.arrayBuffer()).digest("hex") !== asset.sha256) throw new Error(`help_asset_invalid:${asset.outputPath}`); }'
 docker run --rm --entrypoint sh "$task548_docker_image" -ceu \
   'test -z "$(find /app -type d -name ".tmp" -print -quit)"
    test -z "$(find /app/core/generated/docs -type f \( -name "*.tmp*" -o -name "*.staged*" -o -name "*.backup*" -o -name "*promotion-transaction*" \) -print -quit)"'

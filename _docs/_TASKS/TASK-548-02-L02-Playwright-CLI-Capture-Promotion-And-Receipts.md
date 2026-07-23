@@ -7,18 +7,16 @@
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-548-02-L01
 **Status:** ⏳ To Do
+**Changelog:** 1261 (pinned; closure only)
 
 ---
 
 ## Overview
 
-Implement the task-scoped `playwright-cli` runner, visible-effect assertion
-adapter, bounded screenshot capture, strict temporary capture provenance, safe
-PNG sanitizer, explicit review gate, atomic promotion and strict receipt. Own
-focused modules under
-`scripts/docs/visual/`, `scripts/docs/capture-visual.ts`,
-`scripts/docs/promote-visual.ts`, canonical pilot scenarios/assets/receipts,
-`.gitignore` and focused tests.
+Implement the task-scoped `playwright-cli` runner, visible-effect assertions,
+bounded capture, strict provenance, PNG sanitizer, review gate, atomic promotion
+and receipt. Own `scripts/docs/visual/`, both capture/promotion CLIs, canonical
+pilot scenarios/assets/receipts, `.gitignore` and focused tests.
 
 Never extend `scripts/playwright-widget-contract-smoke.ts`. Raw captures remain
 under `.tmp/docs-visuals/<runId>/`; only reviewed images are promoted to
@@ -42,19 +40,13 @@ bun run docs:visual:promote --scenario <id> \
   --confirm-alt-caption
 ```
 
-The runner resolves the scenario ID from the confined registry and derives the
-session exactly as `docs548-<run-id>`. The public CLI accepts only one
-`--scenario`; `--run-id`, duplicate and unknown flags fail closed. The CLI
-internally creates its ID with
-`createDocsVisualRunIdV1({ scope: "cli" })` and passes that exact value to
-capture together with the scenario's exact `(docId, locale, sectionId,
-visualId)` owner. `captureDocsVisual` is the lower validation-only API for the
-CLI and migration: callers pass the full localized identity plus their own ID,
-and it never generates or rewrites identity. L03 CI exclusively uses the
-lease-retaining batch API defined below, never this released-result surface.
-Every run writes only below
-`.tmp/docs-visuals/<runId>/`. Promotion resolves that staged state and never
-accepts an arbitrary source or destination.
+The runner resolves the confined scenario and derives `docs548-<run-id>`. Public
+CLI accepts one `--scenario`; `--run-id`, duplicate/unknown flags fail closed.
+It creates `createDocsVisualRunIdV1({ scope: "cli" })` once and passes it with
+the exact localized owner. `captureDocsVisual` is validation-only for CLI and
+migration: callers provide full identity/ID and it never rewrites them. L03 uses
+only the lease-retaining batch API. Runs write below
+`.tmp/docs-visuals/<runId>/`; promotion accepts no arbitrary path.
 
 The public CLI emits one bounded canonical JSON object and no unstructured
 browser output:
@@ -72,13 +64,10 @@ type DocsVisualCaptureCliResultV1 = {
 };
 ```
 
-`CaptureResult` is the exact internal producer/CI/migration result. It returns
-the complete validated localized identity and the caller-owned `runId`
-unchanged, followed by only the confined raw path and reviewed-byte digest.
-Identity normalization is validation-only: noncanonical input is rejected
-rather than rewritten. The public CLI result is an intentional redacted
-projection of that internal value; it does not expose `docId`, `locale` or
-`sectionId`, and no other internal field may be added to its JSON.
+`CaptureResult` is the internal producer/CI/migration result: validated localized
+identity and caller `runId` unchanged, confined raw path and reviewed digest.
+Normalization rejects noncanonical input. CLI intentionally projects only the
+shown fields and never exposes `docId`, `locale`, `sectionId` or extras.
 
 `rawPath` is a normalized repository-relative path confined below the generated
 run root. The exact generated `runId` is returned unchanged so the review step
@@ -390,56 +379,66 @@ links, alternate temps, unknown entries, duplicate IDs or malformed complete
 markers fail closed in place. CLI/migration registration remains the separate
 active-root path and cannot create a CI marker.
 
-The same owner module defines exact batch/outcome/recovery shapes and an opaque
-`DocsVisualCiVerifiedDiscardAuthorizationV1`. Its only constructor,
-`verifyDocsVisualCiDiscardAuthorizationV1`, accepts the L03 capability-held
-owner-directory handle, fsyncs that directory, no-follow reopens the exact
-final chain, rejects every temp/unknown entry, canonical-revalidates and
-rehashes it, and binds the exact batch binding plus persisted outcome set.
-Object literals/deserialization/type assertions are not production
-constructors. The awaited callback returns:
+The same owner module defines the batch/recovery boundary and opaque
+`DocsVisualCiVerifiedDiscardAuthorizationV1`. Its only constructor has this exact
+L02-owned signature and no L03/private-type dependency:
 
 ```ts
+import type { FileHandle } from "node:fs/promises";
+export async function verifyDocsVisualCiDiscardAuthorizationV1(input: Readonly<{
+  ownerDirectory: FileHandle; binding: DocsVisualCiBatchBindingV1;
+}>): Promise<DocsVisualCiVerifiedDiscardAuthorizationV1>;
 export type DocsVisualCiCallbackHandoffV1 = Readonly<{
   discardAuthorization: DocsVisualCiVerifiedDiscardAuthorizationV1;
-  callbackFailure: { code: "docs_visual_ci_callback_failed";
-    causeCodes: readonly string[] } | null;
+  callbackFailure: { code: "docs_visual_ci_callback_failed"; causeCodes: readonly string[] } | null;
 }>;
 export type DocsVisualCiCaptureBatchInputV1 = Readonly<{
   binding: DocsVisualCiBatchBindingV1; requests: readonly DocsVisualCiCaptureRequestV1[];
 }>;
-export type DocsVisualCiRecoveryClaimV1 = Readonly<{
+export type DocsVisualCiRecoveryIntentInputV1 = Readonly<{
+  ownerDirectory: FileHandle; binding: DocsVisualCiBatchBindingV1;
+  requests: readonly DocsVisualCiCaptureRequestV1[];
+}>;
+declare const docsVisualCiRecoverySnapshotBrandV1: unique symbol; // private
+export type DocsVisualCiRecoverySnapshotV1 = Readonly<{
   binding: DocsVisualCiBatchBindingV1; requests: readonly DocsVisualCiCaptureRequestV1[];
   persistedOutcomes: readonly DocsVisualCiPersistedOutcomeV1[];
-  discardAuthorization: DocsVisualCiVerifiedDiscardAuthorizationV1;
+  readonly [docsVisualCiRecoverySnapshotBrandV1]: true;
+}>;
+export type DocsVisualCiRecoveryHandoffV1 = Readonly<{
+  snapshot: DocsVisualCiRecoverySnapshotV1; discardAuthorization: DocsVisualCiVerifiedDiscardAuthorizationV1;
 }>;
 ```
 
+The verifier fsyncs/fstats the inode-held directory, no-follow reopens the exact
+final chain, rejects temp/unknown entries, rehashes it and binds the batch plus
+captures outcomes. Literals, deserialization and casts are not constructors.
+
 `withVerifiedDocsVisualCiCaptureBatchV1` uses concurrency two, settles every
-capture and retains each successful lease through verification and the awaited
-callback. Only an authorization matching the exact binding/outcomes permits
-L02 to commit its marker/hash-bound capture discard intent, rename to
-`.discarded/<runId>` and destructively remove that root. A callback throw,
-missing/mismatched authorization, or external discard temp/write/fsync/rename/
-directory-fsync failure makes L02 retain the exact marker-bound active root or
-no-replace quarantine it intact; it never writes its own discard intent or
-deletes capture bytes. It releases every lease last and combines the callback,
-external-discard, preservation/quarantine and release errors without masking.
+capture and retains successful leases through verification and the awaited
+callback. Only matching authorization permits marker/hash-bound discard intent,
+rename to `.discarded/<runId>` and deletion. Callback, authorization or external
+discard durability failure retains or no-replace quarantines the marker-bound
+root intact. L02 releases leases last and combines all failures without masking.
 
-`recoverDocsVisualCiOwnedRunsV1` accepts only the strict claim above. L03 first
-capability-recovers/cleans its external workspace, appends the missing canonical
-chain without resuming callback/upload, durably verifies discard and only then
-calls L02. L02 matches marker, request, outcome and authorization under its scan
-lock, recovers fixture/session/routes before ready classification, terminally
-discards verified ready roots and quarantines unready roots, and releases last.
-An absent intent-only/unstarted request is valid; an absent fulfilled run is
-valid only when the supplied verified discard authorization covers that exact
-fulfilled result. Earlier phase, boolean, path or caller assertion never
-authorizes absence/deletion.
+`withReconstructedDocsVisualCiRecoveryV1(input, use)` is the only restart
+entrypoint. From the held directory it verifies intent/prefix, then claims every
+matching marker-bound run under the capture scan lock without a lease gap. With
+leases held it runs L01 recovery, verifies ready evidence and reconstructs one
+sorted persisted outcome per request before `use(snapshot)` may add any missing
+chain record. Existing captures must be byte-identical for present runs; absent
+fulfilled runs require the same already-final discard chain. Absent unstarted
+requests become rejected outcomes; unknown/live/ambiguous state skips callback.
 
-L03 imports the shared types type-only and both functions plus
-`DOCS_VISUAL_CI_CAPTURE_CONCURRENCY_V1` as values from this owner; it never
-calls capture, loader, lease or discard primitives. Exact live shape:
+The callback returns the identical opaque snapshot plus matching authorization.
+Only then may L02 discard ready roots, retain/quarantine unready roots and
+release last. A throw/substitution/prefix failure preserves capture bytes for
+restart; no boolean, path, earlier phase or caller assertion authorizes deletion.
+
+L03 type-imports shared shapes and value-imports only the constant, verifier and
+two entrypoints. L02 imports only platform/L01/L02 modules and compiles before
+L03; it never imports L03/private types. L03 never calls raw capture, loader,
+lease, discard or quarantine primitives. Exact live shape:
 
 ```ts
 const batchId = await createDocsVisualCiBatchIdV1();
@@ -801,14 +800,28 @@ export async function withVerifiedDocsVisualCiCaptureBatchV1(
     terminal,
   });
 }
-export async function recoverDocsVisualCiOwnedRunsV1(
-  claim: DocsVisualCiRecoveryClaimV1
+export async function withReconstructedDocsVisualCiRecoveryV1(
+  input: DocsVisualCiRecoveryIntentInputV1,
+  use: (snapshot: DocsVisualCiRecoverySnapshotV1) =>
+    Promise<DocsVisualCiRecoveryHandoffV1>
 ): Promise<void> {
-  assertVerifiedDiscardAuthorizationCoversRecoveryClaimV1(claim);
-  const owned = await claimExactCiRunsUnderCaptureScanLockV1(claim);
-  const terminal = await terminalDiscardClaimedCiRunsAllSettledV1(owned, claim);
-  const release = await releaseClaimedCiRunLeasesLastAllSettledV1(owned);
-  throwCombinedCiRestartRecoveryFailuresV1(terminal, release);
+  const prefix = await loadStrictCiOwnerPrefixFromHeldDirectoryV1(input);
+  const owned = await claimExactCiRunsUnderCaptureScanLockV1(input);
+  let primary: unknown;
+  try {
+    const snapshot = await reconstructExactCiOutcomesUnderRunLeasesV1({
+      input, prefix, owned,
+    });
+    const handoff = await use(snapshot);
+    assertSameRecoverySnapshotAndAuthorizationV1({ snapshot, handoff, prefix });
+    await terminalizeClaimedCiRunsAllSettledV1({ owned, snapshot, handoff });
+  } catch (error) {
+    const preserve = await preserveClaimedCiRunsWithoutDeletionV1(owned);
+    primary = combineCiRecoveryAndPreservationFailuresV1(error, preserve);
+  }
+  const release = await settleCleanup(() =>
+    releaseClaimedCiRunLeasesLastAllSettledV1(owned));
+  throwIfCiRecoveryOrReleaseFailedV1(primary, release);
 }
 export async function runDocsVisualPromotionCli(argv: readonly string[]) {
   return promoteDocsVisual(normalizeDocsVisualPromotionInputV1(
@@ -859,27 +872,24 @@ export async function promoteDocsVisual(input: DocsVisualPromotionInputV1) {
 `scripts/docs/capture-visual.ts` canonical-JSON serializes the returned CLI
 object with one final LF. It redacts subprocess output and never adds fields.
 
-**Data flow:** scenario-only CLI, migration, or CI batch identity →
-caller-owned `runId` → atomic global-scan registration plus exclusive per-run
-lease → strict scenario/hash → L01 durable acquired record before fixture
-mutation → scoped fixture/session/actions/assertions → bounded raw PNG and live
-privacy/network gates → no-replace capsule → route/session and fixture absence →
-absent tombstone → ready seal → verified result. CLI/migration release for later
-review; CI retains the original lease through its one awaited batch callback,
-then terminal-discard and release-last. Promotion separately claims and holds
-through verified reopen/sanitization, atomic locale-bearing image/receipt and
-consumed cleanup. Both promotion members advance recoverably or neither.
+**Data flow:** scenario-only CLI/migration/CI identity → caller `runId` → atomic
+scan registration + per-run lease → strict scenario/hash → durable acquired
+record → fixture/session/actions/assertions → bounded PNG + privacy/network gates
+→ capsule → route/session/fixture absence → tombstone absence → ready/verified.
+CLI/migration releases for review; CI retains through callback, terminal discard
+and release-last. Promotion separately holds through verified reopen/sanitize,
+atomic localized image/receipt and consumed cleanup; both members advance or neither.
 
-**Error handling:** use `docs_visual_server_unavailable`,
-`docs_visual_auth_failed`, `docs_visual_action_failed`,
-`docs_visual_assertion_failed`, `docs_visual_console_error`,
-`docs_visual_capture_invalid`, `docs_visual_identity_mismatch`,
-`docs_visual_run_lock_invalid`, `docs_visual_run_live`,
-`docs_visual_capture_provenance_invalid`, `docs_visual_capture_incomplete`,
-`docs_visual_capture_stale`, `docs_visual_png_unsafe`,
-`docs_visual_review_required`, `docs_visual_digest_mismatch`,
-`docs_visual_ci_capture_failed`, `docs_visual_lifecycle_invalid`,
-`docs_visual_promotion_conflict` and `docs_visual_promotion_failed`.
+**Error handling:** use `docs_visual_server_unavailable`, `docs_visual_auth_failed`,
+`docs_visual_action_failed`, `docs_visual_assertion_failed`,
+`docs_visual_console_error`, `docs_visual_capture_invalid`,
+`docs_visual_identity_mismatch`, `docs_visual_run_lock_invalid`,
+`docs_visual_run_live`, `docs_visual_capture_provenance_invalid`,
+`docs_visual_capture_incomplete`, `docs_visual_capture_stale`,
+`docs_visual_png_unsafe`, `docs_visual_review_required`,
+`docs_visual_digest_mismatch`, `docs_visual_ci_capture_failed`,
+`docs_visual_lifecycle_invalid`, `docs_visual_promotion_conflict` and
+`docs_visual_promotion_failed`.
 Identity/run drift rejects before review; failure never changes the canonical pair.
 
 **Regression-test shape:** cover fake CLI success/failure/timeout, semantic
@@ -891,33 +901,23 @@ projection, confined raw paths and no generator call from CI/migration.
 Pin every strict provenance/privacy field, cap/path/hash, synthetic fixture and
 local-request proof; reject unknowns, symlinks and tuple/tool/browser drift.
 
-Run two overlapping real children: A pauses after acquiring its per-run lease
-and mutable fixture; B's startup scan must nonblocking-skip A without calling
-any A fixture/session/route/ready/quarantine primitive, then capture its distinct
-run normally. Kill A at pre-fixture, post-acquired-record, post-adapter-acquire,
-pre/post-capsule, cleanup, pre-ready and post-ready boundaries; a fresh process
-must claim the released lease and recover once. Seed/kill/restart every active,
-failed, consumed and discarded phase, including before/after each intent fsync
-and root rename; assert state-specific recovery, exact roots/records, stable
-pair preservation, no cross-cleanup and release-last. Duplicate lifecycle IDs,
-busy/replaced/malformed/symlink locks and unexpected entries fail closed.
+Run overlapping real children: A pauses with its lease/mutable fixture; B
+nonblocking-skips it without touching A, then captures its own run. Kill A at
+every pre-fixture through post-ready boundary; a fresh process alone recovers.
+Seed/kill/restart every active/failed/consumed/discarded phase around intent
+fsync/rename; assert exact recovery, stable pairs, no cross-cleanup and
+release-last. Duplicate IDs, busy/replaced/malformed/symlink locks and unknown
+entries fail closed.
 
-Prove collector/auth/live-gate/capsule/cleanup/ready order; raw/canonical pixel
-parity with distinct hashes when metadata is removed; no raw mutation; all
-cleanup branches settle; and post-write tampering fails. Two simultaneous
-promoters must serialize: one owns verification through consumed cleanup while
-the other boundedly rescans/classifies afterward; a startup race skips the
-promotion-owned run, and a promoter never reads a startup-owned run. Busy live
-capture, sanitizer, matching, conflict, pair-recovery/promotion and cleanup
-failures release every claimed lease last with zero cross-cleanup. Kill after
-consumed or discarded rename and prove exact cleanup-only retry, unchanged
-receipt bytes and no-clobber. CI batch tests prove fixed concurrency two, no
-lease gap, startup/promotion skip while its callback awaits diff/report/upload,
-callback-on-settled-failures, external-only artifact roots, terminal discard
-and sorted combined capture/callback/cleanup/release failures. Cross-run
-identity/provenance never deletes. Pin the four-field promotion
-input and L01 source-hash import. Inject termination at every durable-pair phase
-and prove old restoration, committed-new retention and idempotent cleanup.
+Prove collector/auth/gate/capsule/cleanup/ready order, raw/canonical pixel parity,
+no raw mutation, settled cleanup and tamper rejection. Concurrent promoters
+serialize through consumed cleanup; startup/promoter never reads the other's
+owned run. All live/sanitize/match/pair/cleanup failures release last without
+cross-cleanup. Kill after consumed/discarded rename and prove cleanup-only retry,
+unchanged receipt and no-clobber. CI proves concurrency two, no lease gap,
+callback-held skip, settled-failure callback, external-only artifacts, terminal
+discard and sorted combined failures. Cross-run identity never deletes. Pin the
+four-field promotion input/L01 hash import and every durable-pair crash outcome.
 Pilot smoke asserts computed style/geometry/ARIA or DOM effects.
 
 ## Pilot Scenario Matrix
@@ -964,14 +964,14 @@ coverage without changing the pipeline contract.
 - exact producer/consumer tests for the seven-field internal `CaptureResult`
   and schema-tagged four-data-field CLI projection; CI batch and migration
   fixtures independently alter each identity field and fail before use/review
-- import/round-trip tests pin L01 tool/browser identity and L02's sole six-record
-  CI schema/normalizer/serializer/domain owner; reject every unknown key,
-  discriminator, bound, ordering, predecessor, request and cross-domain tamper
-- crash registration before/after mkdir, lock, exact marker temp write/fsync/
-  rename/dir-fsync and root publish; prove no markerless active root, strict
-  `.registering` recovery/ID occupancy, held callback leases, and no deletion
-  until exact durable discard authorization; every discard failure preserves
-  marker-bound roots and errors, and fulfilled absence requires authorization
+- import/round-trip tests pin L02's six wire records/domains and exact recovery
+  input/snapshot/handoff/verifier signatures; reject every unknown/order/tamper.
+  A land-order fixture compiles L02 alone and proves no L03 runtime/private import
+- crash registration and intent-only through final-discard recovery at every
+  temp/fsync/rename boundary; prove gapless publication, continuous snapshot
+  leases, reconstruction before L03 callback writes, same-snapshot handoff and
+  no deletion until exact authorization. Failures preserve bytes/errors; absent
+  fulfilled runs require the already-valid final chain
 - strict capsule/process tests pause real child A after lease plus fixture
   mutation and prove concurrent B skips A without any cross-cleanup; kill A at
   every declared pre-fixture through post-ready boundary, then prove a fresh

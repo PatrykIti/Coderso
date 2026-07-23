@@ -8,35 +8,25 @@
 **Dependencies:** TASK-548-02-L02 and the one same-owner TASK-548-01-L02
 post-pilot bundle/report refresh and complete compiler gate
 **Status:** ⏳ To Do
+**Changelog:** 1261 (pinned; closure only)
 
 ---
 
 ## Overview
 
-Make canonical visuals self-invalidating when their scenario or owning UI
-changes. Add watch-path hashing, changed-scenario selection, deterministic image
-comparison, machine-readable reports and PR/full CI gates. Own
-`scripts/docs/check-visuals.ts`, `scripts/docs/recover-artifacts.ts`, focused
-diff/staleness/recovery-orchestration modules,
-`scripts/docs/visual/ci/docsVisualCiArtifactsV1.ts`,
-`scripts/docs/visual/ci/docsVisualCiOwnershipV1.ts`,
-`scripts/docs/visual/ci/runDocsVisualCiDiffReportAndAwaitedUploadsV1.ts`,
-root `package.json`,
-`core/package.json`, root `bun.lock`, `Dockerfile`,
-`packages/docs-renderer/package.json`,
-`packages/docs-portal/package.json`,
-`.github/workflows/coderso-pr-gates.yml` and focused tests. No other TASK-548
-leaf edits those shared files, either workspace manifest, the Dockerfile or the
-core manifest.
+Make visuals self-invalidating when scenarios/UI change. Add watch hashing,
+selection, deterministic diff, bounded reports and PR/full gates. Own both docs
+check/recovery CLIs; focused diff/staleness/recovery and three
+`scripts/docs/visual/ci/{docsVisualCiArtifactsV1,docsVisualCiOwnershipV1,runDocsVisualCiDiffReportAndAwaitedUploadsV1}.ts`
+modules; root/core packages, lock, Dockerfile, both docs workspace manifests,
+the PR workflow and focused tests. No other TASK-548 leaf edits those shared
+files/manifests.
 
-Pin `@playwright/cli` and any small, reviewable PNG pixel-diff dependencies
-needed by this tooling; do not add an unpinned global install. Package scripts
-must expose the seven exact compile/check/recover/coverage, capture, promote
-and visual-check commands below without changing the existing test/precommit
-command meanings.
+Pin `@playwright/cli` and small reviewed PNG-diff dependencies; no unpinned
+global install. Expose the seven exact commands below without changing existing
+test/precommit meanings.
 
-Implementation may begin only after TASK-548-02-L02 has promoted all five pilot
-triples and the TASK-548-01-L02 owner has completed the one post-pilot
+Implementation begins only after L02 promotes all five pilots and the TASK-548-01-L02 owner completes the one post-pilot
 bundle/report refresh. This leaf never writes that bundle/report and never
 requests a per-scenario refresh.
 
@@ -61,7 +51,11 @@ This leaf creates both downstream workspace manifests before the one TASK-548
   "private": true,
   "type": "module",
   "sideEffects": false,
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts",
+    "./projection": "./src/publicationProjection.ts",
+    "./client-search": "./src/clientSearch.ts"
+  },
   "scripts": { "check": "tsc -p tsconfig.json --noEmit" },
   "peerDependencies": { "react": "^19.2.8" },
   "devDependencies": {
@@ -102,7 +96,8 @@ This leaf creates both downstream workspace manifests before the one TASK-548
 Those versions match the verified root/core toolchain at authoring. Re-read the
 live manifests before writing; if that stack intentionally moved, amend this
 contract before implementation, then reconcile once. TASK-548-03-L02 owns
-renderer source/tsconfig only. TASK-548-04-L01 owns portal shell/search source,
+renderer source/tsconfig, including `src/publicationProjection.ts` and
+`src/clientSearch.ts`, only. TASK-548-04-L01 owns portal shell/search source,
 tsconfig and Vite config only; TASK-548-04-L02 owns `src/build/**`. Neither may
 edit either manifest, the root package or the root lock.
 
@@ -151,21 +146,19 @@ Both `COPY` lines must precede that `RUN`; copying the workspace source later
 does not satisfy dependency resolution. This leaf's gate runs the one
 `bun install --frozen-lockfile` after the manifest/lock reconciliation and
 statically parses the Dockerfile to prove both exact `COPY` instructions occur
-before the existing frozen install. It also pins the exact later-owned
-renderer package export entrypoint and portal build entrypoint strings in the
-workspace manifests.
+before the existing frozen install. It pins all three exact renderer exports
+(`.`, `./projection`, `./client-search`) and the portal build entrypoint.
 
 At this land point, `packages/docs-renderer/src/**`, its `tsconfig.json`, and
 `packages/docs-portal/src/build/buildDocsPortal.ts` do not exist yet.
-Consequently this leaf must not run the renderer `check` script, import
-`@coderso/docs-renderer` from core, invoke `bun --cwd packages/docs-portal
-build`, or build/run the final Docker image. TASK-548-03-L02 performs the first
-executable renderer-package and core-import validation after it creates the
-renderer source. TASK-548-04-L02 performs the first executable portal build
-and combined Docker image/runtime validation after both renderer and portal
-source exist. Those later validations are read-only consumers of this leaf's
-manifests, lockfile, core dependency, and Dockerfile; they never receive write
-ownership of them.
+Consequently this leaf must not run the renderer `check` script, import any
+renderer export, build the portal, or build/run the image. TASK-548-03-L02
+performs the first executable package check and exact imports of `.`,
+`@coderso/docs-renderer/projection` and
+`@coderso/docs-renderer/client-search`. TASK-548-04-L02 proves the portal build
+and final Docker build/runtime resolve those same frozen exports. Both are
+read-only consumers of this leaf's manifests, lock, core dependency and
+Dockerfile and never receive write ownership.
 
 Root scripts added here are exactly:
 
@@ -265,14 +258,17 @@ the evidence loader or discard directly:
 ```ts
 import {
   DOCS_VISUAL_CI_CAPTURE_CONCURRENCY_V1,
-  recoverDocsVisualCiOwnedRunsV1,
+  verifyDocsVisualCiDiscardAuthorizationV1,
+  withReconstructedDocsVisualCiRecoveryV1,
   withVerifiedDocsVisualCiCaptureBatchV1,
   type CaptureResult,
   type DocsVisualCiBatchBindingV1,
   type DocsVisualCiCallbackHandoffV1,
   type DocsVisualCiCaptureOutcomeV1,
   type DocsVisualCiCaptureRequestV1,
-  type DocsVisualCiRecoveryClaimV1,
+  type DocsVisualCiRecoveryHandoffV1,
+  type DocsVisualCiRecoveryIntentInputV1,
+  type DocsVisualCiRecoverySnapshotV1,
   type DocsVisualCiVerifiedDiscardAuthorizationV1,
   type DocsVisualCiVerifiedCaptureV1,
 } from "./visual/capture/docsVisualCaptureRunV1";
@@ -384,27 +380,37 @@ uses a matching authorization to discard/release captures may
 batch lease. Missing/ambiguous transitions preserve it for startup recovery,
 and no failure masks an earlier primary.
 
-On capture-mode startup and at the start of `docs:recover`,
+On capture-mode startup and at `docs:recover`,
 `recoverDocsVisualCiStartupV1` claims sorted batch-owner leases under
 `.tmp/docs-visual-ci/.ci-scan-v1.lock`, skips live owners, releases the scan
-lock, strictly loads the longest valid phase prefix through the acquired
-capability. It first inode-confined cleans any exact partial artifact inventory,
-then appends captures/callback `mode: "recovery-no-resume"`/discard records as
-needed without retrying callback or upload, and obtains L02's verified discard
-authorization from the reopened durable chain. Only then does it build the exact
-L02-owned `DocsVisualCiRecoveryClaimV1`.
-An intent-only prefix yields all requests and zero persisted results: a request
-may have no root, an unready marker-bound root, or a ready root whose exact
-result is reconstructed from its verified seal/evidence and included in the
-canonical recovered captures record. L02 then claims matching markers,
-L01-recovers/quarantines unready roots, discards verified ready roots only under
-that authorization, and releases capture leases last. L03 finally removes or
-safe-quarantines only its inode-held owner root and releases the batch lease.
-Unknown links, identity/digest mismatch or unsafe quarantine fail closed in
-place. An absent fulfilled run is accepted only under the authorization that
-covers its exact persisted result; unstarted/rejected intent requests may be
-absent. Recovery never changes unrelated runs, canonical assets or another
-batch.
+lock and validates the intent plus longest prefix through its inode-held
+capability. It cleans only an exact partial artifact inventory, then performs
+this one-way L03→L02 call:
+
+```ts
+const ownerDirectory = getDocsVisualCiOwnerDirectoryHandleV1(ownership);
+await withReconstructedDocsVisualCiRecoveryV1({
+  ownerDirectory, binding: ownership.captureBinding, requests: ownership.requests,
+} satisfies DocsVisualCiRecoveryIntentInputV1, async (snapshot) => {
+  const recovered =
+    await bindOrVerifyDocsVisualCiRecoveredOutcomesV1({ ownership, snapshot });
+  await commitOrVerifyDocsVisualCiRecoveryNoResumeChainV1(recovered);
+  const discardAuthorization = await verifyDocsVisualCiDiscardAuthorizationV1({
+    ownerDirectory, binding: snapshot.binding,
+  });
+  return { snapshot, discardAuthorization }
+    satisfies DocsVisualCiRecoveryHandoffV1;
+});
+```
+
+L02 reconstructs outcomes under scan/run leases before L03 commits/verifies
+`captures.json`; the callback appends/verifies recovery-no-resume callback and
+discard without retrying diff/upload. Existing delivery means ambiguous already
+attempted effect and is never replayed. The binder accepts only the L02-branded
+snapshot/same owner. L02 consumes the same-snapshot handoff, terminalizes and
+releases last; then L03 settles its owner. Existing captures must match bytes;
+absent fulfilled requires final discard, while absent rejected is allowed.
+Unknown links/mismatches/unsafe cleanup fail closed without cross-mutation.
 
 The callback module exclusively exports these non-closure shapes and function:
 
@@ -704,8 +710,9 @@ export async function runDocsVisualCiDiffReportAndAwaitedUploadsV1(
   let discardAuthorization: DocsVisualCiVerifiedDiscardAuthorizationV1;
   try {
     await writeDocsVisualCiDiscardIntentNoReplaceV1(input.ownership);
-    discardAuthorization = await verifyDocsVisualCiDiscardCommitV1({
-      ownership: input.ownership, outcomes: input.outcomes,
+    discardAuthorization = await verifyDocsVisualCiDiscardAuthorizationV1({
+      ownerDirectory: getDocsVisualCiOwnerDirectoryHandleV1(input.ownership),
+      binding: getDocsVisualCiBatchBindingV1(input.ownership),
     });
   } catch (discardFailure) {
     throw combineDocsVisualCiCallbackAndDiscardFailuresV1(
@@ -887,7 +894,7 @@ path-derived recursive remover.
 - [ ] Pre-create both exact docs workspace manifests, then reconcile root
   `package.json` and `bun.lock` once; add the exact core renderer workspace
   dependency and preinstall Docker manifest copies; statically pin the
-  later-owned renderer export and portal build entrypoint references; forbid
+  three renderer exports and portal build entrypoint; forbid
   later TASK-548 manifest/lock/core-package/Dockerfile writers in contract
   tests.
 - [ ] Own `recoverDocsArtifactsV1` plus its CLI: recover durable CI owners,
@@ -920,20 +927,20 @@ path-derived recursive remover.
   completion and settle-all failure with zero pixel staging/upload; L03 receives
   one outcome array/callback, while L02 owns every capture terminal state and
   lease release
-- workspace/package contract test pinning both exact manifests, the seven root
-  scripts (including exact `docs:coverage`), the core renderer dependency,
-  preinstall Docker manifest copies, sole-writer ownership and one lock
-  reconciliation; this test parses files but never imports future renderer
-  source or builds future portal source, while the separate exact frozen
-  install command above proves lock/workspace resolution
+- workspace/package contract test pins both manifests, all three renderer
+  exports and source targets, seven root scripts, core dependency, preinstall
+  Docker manifest copies, sole writers and one lock reconciliation; it parses
+  files without importing future source, while the frozen install proves
+  lock/workspace resolution
 - portal package contract statically pins only
   `"build": "bun run src/build/buildDocsPortal.ts"`; the four exact
   environment mappings above remain a downstream TASK-548-04-L02 handoff and
   this leaf does not invoke or source-verify that future entrypoint
 - Docker workspace contract statically pins the exact two manifest `COPY`
   lines before `RUN bun install --frozen-lockfile`, source-copy/runtime
-  references needed by the later image, and forbidden-artifact exclusions; it
-  does not build or run the image at this leaf
+  references for `.`, `./projection` and `./client-search`, and exclusions; it
+  does not build/run the image at this leaf, while 03-L02/04-L02 own the exact
+  frozen-import and portal/Docker build/runtime gates
 - a negative land-order regression fails if this leaf's command/test surface
   invokes `packages/docs-renderer/src/**`,
   `packages/docs-portal/src/build/buildDocsPortal.ts`,
@@ -953,17 +960,18 @@ path-derived recursive remover.
 - a clean-clone/tag fixture with the tracked bundle and no ignored report proves
   `docs:check`, the frozen install, and the static Docker workspace contract pass
   without filesystem mutation; stale/tampered packaged bytes still fail
-- import-contract test pins the type-only `CaptureResult`,
-  `DocsVisualCiBatchBindingV1`, `DocsVisualCiCaptureRequestV1`,
-  `DocsVisualCiVerifiedCaptureV1`, `DocsVisualCiCaptureOutcomeV1` and
-  `DocsVisualCiRecoveryClaimV1`, plus the exact constant, batch and recovery
-  value imports; it forbids direct capture/loader/lease/discard calls and a
+- import-contract test pins the type-only capture/binding/request/outcome,
+  `DocsVisualCiRecoveryIntentInputV1`, `DocsVisualCiRecoverySnapshotV1` and
+  `DocsVisualCiRecoveryHandoffV1`, plus the exact constant, verifier, live-batch
+  and `withReconstructedDocsVisualCiRecoveryV1` value imports. A land-order
+  fixture compiles L02 alone before L03 and proves its runtime graph contains no
+  L03/private type; L03 has no direct capture/loader/lease/discard call or
   second schema/parser/browser run
 - artifact-lifecycle tests pin the five-member inventory, same-directory atomic
   commits, seal-last rule, no-follow hash reopens, every tamper case and
   all-settled capability cleanup; no L03 code may write below the capture root
 - crash matrix kills fresh processes at owner intent with absent/unready/ready
-  request roots, captured-outcome intent, workspace, every write/seal and
+  request roots, recovery snapshot/captured-outcome intent, workspace, writes and
   upload/no-upload delivery boundary,
   artifact cleanup, discard, L02 terminalization and owner cleanup. Recovery
   must claim through both scan locks, skip live owners, discard only marker-bound

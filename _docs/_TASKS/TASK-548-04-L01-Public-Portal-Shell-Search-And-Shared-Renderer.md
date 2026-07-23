@@ -41,12 +41,16 @@ This leaf is the only writer for:
   assets under `packages/docs-portal/src/app/**`,
   `packages/docs-portal/src/search/**`, and
   `packages/docs-portal/src/styles/**`;
+- server-only `packages/docs-portal/src/app/DocsPortalStaticShell.tsx`,
+  client-only `packages/docs-portal/src/app/hydrateDocsPortalIslandsV1.tsx`,
+  and their shared client-safe island-components module; neither entry may
+  import the other;
 - exact pure client contract
   `packages/docs-portal/src/app/docsPortalSiteIndexV1.ts` for the cumulative
   published-version index consumed by both the shell and TASK-548-05-L02;
 - exact canonical/hash-bound
-  `packages/docs-portal/src/app/docsPortalHydrationPayloadV1.ts` plus the sole
-  hostile client normalizer and island hydrator;
+  pure `packages/docs-portal/src/app/docsPortalHydrationPayloadV1.ts` with no
+  React/server/renderer/projection import plus the sole hostile normalizer;
 - new `tests/vitest/docs-portal/portal-shell.test.tsx`;
 - new `tests/vitest/docs-portal/portal-search.test.tsx`.
 
@@ -80,10 +84,11 @@ it consumes L02 output through the predeclared package command.
   verified confined PNG asset map, and explicit copy handler. It renders
   article, desktop navigation and TOC to static HTML; those nodes are never a
   hydration root.
-- Search: L02 supplies one shared `buildDocsSearchIndexV1(projection)` result.
-  L01 creates a strict bounded client projection for the current
-  version+locale; the search island uses only that normalized projection and
-  `searchDocs`, with no bundle/document normalizer.
+- Search: L02 supplies one shared `buildDocsSearchIndexV1(projection)` result
+  and calls renderer-owned `projectDocsClientSearchRankingV1` for the current
+  version+locale. The island strictly normalizes and searches that exact
+  lossless score projection through `@coderso/docs-renderer/client-search`;
+  portal code owns no scorer, weights, ranking schema or document normalizer.
 - Locale fallback is explicit. Selector lists only shipped locales and labels
   English fallback; it never presents a full Polish experience unless the
   selected record exists.
@@ -99,9 +104,13 @@ it consumes L02 output through the predeclared package command.
   No corpus/query/analytics/provider/auth data enters browser storage.
 - All controls have names, focus-visible states, hit targets, disabled states,
   and reduced-motion behavior.
-- Hydration is limited to four named roots: header, search, theme and mobile
-  navigation. One strict `DocsPortalHydrationPayloadV1` normalizer runs before
-  any root hydrates. Example-copy progressive enhancement delegates from the
+- Hydration is limited to exactly four sibling roots: header, search, theme and
+  mobile navigation. Article, desktop navigation and the renderer-owned single
+  TOC remain outside them. One strict `DocsPortalHydrationPayloadV1` normalizer
+  runs before any root hydrates. Server and client call the same island element
+  factory with the same normalized initial models and stable identifier prefix.
+  A test-only `onRecoverableError` observer is injectable; production reports a
+  bounded non-content diagnostic. Example-copy enhancement delegates from the
   manifest-bound static article DOM and reads only the exact adjacent escaped
   `<code>` text after a trusted activation; it hydrates no article component
   and accepts no serialized document props.
@@ -130,8 +139,9 @@ Only `src/build/**` and build-only static-shell modules may import
 `@coderso/docs-renderer/projection`, `DocsPublicationProjectionV1`,
 `DocsDocumentV2`, generated corpus modules or `DocsDocumentRenderer`. The Vite
 client graph and a static import guard reject those symbols/paths from every
-hydration entry and transitive dependency. Client islands import only strict
-site-index, hydration-payload and client-search contracts.
+hydration entry and transitive dependency. The only renderer subpath allowed
+in the client graph is Bun-free `@coderso/docs-renderer/client-search`; islands
+otherwise import only strict site-index/payload contracts and shared components.
 
 ## Security Contract
 
@@ -203,35 +213,13 @@ export function serializeDocsPortalSiteIndexV1(
   value: DocsPortalSiteIndexV1
 ): Uint8Array;
 
-export type DocsPortalClientSearchIndexV1 = {
-  schema: "coderso.docs-portal-client-search@v1";
-  productVersion: string;
-  locale: string;
-  records: Array<{
-    docId: string;
-    slug: string;
-    sectionId: string;
-    title: string;
-    heading: string;
-    snippet: string;
-    normalizedTokens: string[];
-    publicPath: string;
-  }>;
-};
-
-export function projectDocsPortalClientSearchIndexV1(
-  index: DocsSearchIndexV1,
-  scope: { productVersion: string; locale: string }
-): DocsPortalClientSearchIndexV1;
-
-export function normalizeDocsPortalClientSearchIndexV1(
-  value: unknown
-): DocsPortalClientSearchIndexV1;
-
-export function searchDocsPortalClientIndexV1(
-  index: DocsPortalClientSearchIndexV1,
-  input: DocsSearchInput
-): readonly DocsSearchResult[];
+// The portal neither defines nor wraps these renderer-owned exports.
+import {
+  normalizeDocsClientSearchRankingProjectionV1,
+  projectDocsClientSearchRankingV1,
+  searchDocsClientSearchRankingV1,
+  type DocsClientSearchRankingProjectionV1,
+} from "@coderso/docs-renderer/client-search";
 
 export type DocsPortalHydrationBodyV1 = {
   page: {
@@ -241,7 +229,7 @@ export type DocsPortalHydrationBodyV1 = {
     publicBasePath: string;
   };
   header: DocsPortalHeaderClientModelV1;
-  search: DocsPortalClientSearchIndexV1;
+  search: DocsClientSearchRankingProjectionV1;
   theme: {
     storageKey: "coderso.docs.theme";
     initialMode: "system";
@@ -288,6 +276,36 @@ export function normalizeDocsPortalHydrationPayloadV1(
   return deepFreeze({ ...payload, body });
 }
 
+// packages/docs-portal/src/app/DocsPortalIslandElementsV1.tsx
+export const DOCS_PORTAL_ISLAND_ROOT_IDS_V1 = [
+  "docs-header-island",
+  "docs-search-island",
+  "docs-theme-island",
+  "docs-mobile-nav-island",
+] as const;
+export type DocsPortalIslandRootIdV1 =
+  typeof DOCS_PORTAL_ISLAND_ROOT_IDS_V1[number];
+
+export function createDocsPortalIslandElementsV1(
+  body: DocsPortalHydrationBodyV1
+) {
+  return {
+    header: <PortalHeaderIsland model={body.header} page={body.page} />,
+    search: <PortalSearchIsland index={body.search} page={body.page} />,
+    theme: <PortalThemeIsland model={body.theme} />,
+    mobileNavigation:
+      <PortalMobileNavigationIsland model={body.mobileNavigation} />,
+  } as const;
+}
+
+export type DocsPortalHydrationObserverV1 = {
+  onRecoverableError(input: {
+    rootId: DocsPortalIslandRootIdV1;
+    error: unknown;
+    componentStack: string | null;
+  }): void;
+};
+
 export async function loadDocsPortalVersionNavigationV1(input: {
   current: DocsPortalVersionNavigation;
   publicBasePath: string;
@@ -310,14 +328,14 @@ export async function loadDocsPortalVersionNavigationV1(input: {
   }
 }
 
-export function DocsPortalStaticShell(props: DocsPortalStaticShellProps) {
+// packages/docs-portal/src/app/DocsPortalStaticShell.tsx (server-only)
+function prepareDocsPortalStaticShellV1(props: DocsPortalStaticShellProps) {
   const document = resolveDocsPublicationDocumentV1(
     props.projection,
     props.documentKey
   );
-  const hydrationPayload = normalizeDocsPortalHydrationPayloadV1(
-    props.hydrationPayload
-  );
+  const hydrationPayload =
+    requireCreatedDocsPortalHydrationPayloadV1(props.hydrationPayload);
   assertHydrationPayloadMatchesStaticPageV1(
     hydrationPayload.body.page,
     document,
@@ -336,52 +354,93 @@ export function DocsPortalStaticShell(props: DocsPortalStaticShellProps) {
     documentKey: props.documentKey,
     packagedAssets: props.packagedVisualAssets,
   });
+  return { document, hydrationPayload, linkContext, localVisualAssets };
+}
+
+function DocsPortalStaticFrameV1(input: {
+  props: DocsPortalStaticShellProps;
+  prepared: DocsPortalPreparedStaticShellV1;
+}) {
+  const { props, prepared } = input;
   return (
     <PortalStaticLandmarks>
-      <PortalHeaderIslandSsr
-        id="docs-header-island"
-        model={hydrationPayload.body.header}
-      />
-      <PortalSearchIslandSsr
-        id="docs-search-island"
-        model={hydrationPayload.body.search}
-      />
-      <PortalThemeIslandSsr
-        id="docs-theme-island"
-        model={hydrationPayload.body.theme}
-      />
-      <PortalMobileNavigationIslandSsr
-        id="docs-mobile-nav-island"
-        model={hydrationPayload.body.mobileNavigation}
-      />
+      <ExactEmptySiblingIslandSlots ids={DOCS_PORTAL_ISLAND_ROOT_IDS_V1} />
       <PortalNavigation items={props.navigation.items} />
       <main id="main-content">
         <DocsDocumentRenderer
           projection={props.projection}
           documentKey={props.documentKey}
-          linkContext={linkContext}
-          localVisualAssets={localVisualAssets}
+          linkContext={prepared.linkContext}
+          localVisualAssets={prepared.localVisualAssets}
           copyExampleBody={rejectCopyInvocationDuringStaticRenderV1}
         />
       </main>
-      <PortalTableOfContents sections={document.sections} />
       <CanonicalJsonPayloadScript
         id="docs-hydration-payload"
-        bytes={serializeDocsPortalHydrationPayloadV1(hydrationPayload)}
+        bytes={serializeDocsPortalHydrationPayloadV1(
+          prepared.hydrationPayload
+        )}
       />
     </PortalStaticLandmarks>
   );
 }
 
+export function DocsPortalStaticShell(props: DocsPortalStaticShellProps) {
+  return <DocsPortalStaticFrameV1
+    props={props}
+    prepared={prepareDocsPortalStaticShellV1(props)}
+  />;
+}
+
 export function renderDocsPortalStaticShell(
   props: DocsPortalStaticShellProps
 ): string {
-  return renderToStaticMarkup(<DocsPortalStaticShell {...props} />);
+  const prepared = prepareDocsPortalStaticShellV1(props);
+  const elements = createDocsPortalIslandElementsV1(
+    prepared.hydrationPayload.body
+  );
+  const frame = renderToStaticMarkup(
+    <DocsPortalStaticFrameV1 props={props} prepared={prepared} />
+  );
+  return injectExactlyFourTrustedHydratableIslandFragmentsV1(frame, {
+    header: renderToString(elements.header, {
+      identifierPrefix: "docs-header-",
+    }),
+    search: renderToString(elements.search, {
+      identifierPrefix: "docs-search-",
+    }),
+    theme: renderToString(elements.theme, {
+      identifierPrefix: "docs-theme-",
+    }),
+    mobileNavigation: renderToString(elements.mobileNavigation, {
+      identifierPrefix: "docs-mobile-nav-",
+    }),
+  });
+}
+
+// packages/docs-portal/src/app/hydrateDocsPortalIslandsV1.tsx (client-only)
+function hydrateExactIslandV1(
+  root: Document,
+  rootId: DocsPortalIslandRootIdV1,
+  element: ReactElement,
+  identifierPrefix: string,
+  observer: DocsPortalHydrationObserverV1
+): void {
+  hydrateRoot(requireExactSiblingIsland(root, rootId), element, {
+    identifierPrefix,
+    onRecoverableError(error, info) {
+      observer.onRecoverableError({
+        rootId, error, componentStack: info.componentStack ?? null,
+      });
+    },
+  });
 }
 
 export function hydrateDocsPortalIslandsV1(
   root: Document,
-  serializedPayload: Uint8Array
+  serializedPayload: Uint8Array,
+  observer: DocsPortalHydrationObserverV1 =
+    createBoundedProductionHydrationObserverV1()
 ): void {
   const raw = parseBoundedCanonicalJson(
     serializedPayload,
@@ -393,14 +452,15 @@ export function hydrateDocsPortalIslandsV1(
     serializedPayload,
     serializeDocsPortalHydrationPayloadV1(payload)
   );
-  hydrateRoot(requireIsland(root, "docs-header-island"),
-    <PortalHeaderIsland model={payload.body.header} page={payload.body.page} />);
-  hydrateRoot(requireIsland(root, "docs-search-island"),
-    <PortalSearchIsland index={payload.body.search} page={payload.body.page} />);
-  hydrateRoot(requireIsland(root, "docs-theme-island"),
-    <PortalThemeIsland model={payload.body.theme} />);
-  hydrateRoot(requireIsland(root, "docs-mobile-nav-island"),
-    <PortalMobileNavigationIsland model={payload.body.mobileNavigation} />);
+  const elements = createDocsPortalIslandElementsV1(payload.body);
+  hydrateExactIslandV1(root, "docs-header-island", elements.header,
+    "docs-header-", observer);
+  hydrateExactIslandV1(root, "docs-search-island", elements.search,
+    "docs-search-", observer);
+  hydrateExactIslandV1(root, "docs-theme-island", elements.theme,
+    "docs-theme-", observer);
+  hydrateExactIslandV1(root, "docs-mobile-nav-island",
+    elements.mobileNavigation, "docs-mobile-nav-", observer);
   installStaticDocsExampleCopyDelegationV1(root);
 }
 ```
@@ -415,11 +475,21 @@ one final newline and escapes `<`, `>`, `&`, `/`, U+2028 and U+2029 before
 hashing/embedding. Its schema excludes Markdown, sections, visual/example
 records, asset bytes, renderer props and a projection/document object.
 The hydration-body normalizer delegates its `search` field exactly once to
-`normalizeDocsPortalClientSearchIndexV1`; all other nested keys are validated in
-that same call. The server-only projector accepts the shared search index and
-emits bounded public-safe records for one exact version/locale without a corpus
-or bundle normalizer. The client search function delegates scoring/tie-breaking
-to the renderer-owned pure ranking helper, so it cannot fork Help semantics.
+`normalizeDocsClientSearchRankingProjectionV1`; all other nested keys are
+validated in that same call. Build code calls renderer-owned
+`projectDocsClientSearchRankingV1` over the shared index. Its output retains
+every scorer signal and the client calls the same renderer-owned pure scorer,
+so portal code cannot fork Help semantics.
+
+`docsPortalHydrationPayloadV1.ts` is the pure schema/creator/serializer/
+normalizer owner. L02 imports its creator directly, never through the
+server-only shell. `DocsPortalStaticShell.tsx` imports projection/renderer and
+never enters the Vite client graph. `hydrateDocsPortalIslandsV1.tsx` imports
+only the pure payload owner, client-search subpath and shared island elements;
+it cannot import the static shell. Each island is server-rendered with
+`renderToString` and its exact identifier prefix, then hydrated with the same
+element/model/prefix. Fixed-slot insertion requires each empty sibling slot
+exactly once and accepts only trusted React output, never corpus/raw HTML.
 
 The site-index normalizer is also recursively reject-unknown. It accepts
 `1..256` unique versions sorted by descending SemVer precedence, requires
@@ -453,9 +523,13 @@ usable. Same-origin version/search failure keeps bounded current-build state.
 
 - build imports shared renderer/projection/search entries; Vite client graph
   rejects projection constructor/brand, `DocsDocumentV2`, generated corpus,
-  renderer and build/static-shell imports transitively;
-- semantic landmarks, skip link, heading/TOC order, focus and labels;
-- same projection/query yields parity with embedded search;
+  renderer and build/static-shell imports transitively, allowing exactly
+  `@coderso/docs-renderer/client-search`;
+- static import tests pin pure payload → shared island → client entry and
+  server-only shell as split graphs; L02 imports the creator from the pure owner;
+- semantic landmarks, skip link, focus and exactly one renderer-owned static
+  heading/TOC tree; no portal-owned TOC exists;
+- every text/context/range/tie signal yields exact Help/client ranking parity;
 - `public-docs` and multi-target records may enter the projection, while
   `assistant`-only, `embedded-help`-only, missing-target, and a selected
   out-of-projection document fail before search/render;
@@ -469,6 +543,10 @@ usable. Same-origin version/search failure keeps bounded current-build state.
   unsafe paths and every body-hash mutation; canonical bytes reproduce exactly;
   a spy proves one hostile normalizer before any of exactly four hydrate calls,
   and invalid input causes zero calls;
+- SSR fixtures prove four sibling slots, `renderToString` per island, identical
+  server/client component/model/prefix, exactly four mounts, and zero observer
+  calls; built-page browser evidence captures zero React hydration mismatch,
+  recovery, console error or DOM replacement;
 - payload allowlist/static HTML tests prove it contains no projection brand,
   Markdown, sections, visual/example records, asset bytes, renderer props,
   secret or internal path; article/nav/TOC nodes stay outside hydration roots;
@@ -500,12 +578,13 @@ usable. Same-origin version/search failure keeps bounded current-build state.
 
 - [ ] Verify the precreated frozen portal workspace, then add no manifest/lock
   mutation.
-- [ ] Build accessible responsive shell/navigation/article/TOC.
+- [ ] Build accessible shell/navigation around the renderer-owned sole TOC.
 - [ ] Integrate shared renderer and deterministic version/locale search through
   the exact validated `public-docs` projection, strict link context, verified
   packaged local-asset map and user-event-only copy handler.
 - [ ] Add canonical hash-bound hydration payload and one pre-mount hostile
-  normalizer for header/search/theme/mobile-nav islands only.
+  normalizer; split pure payload/server shell/client entry and use identical
+  hydratable server/client elements for exactly four sibling roots.
 - [ ] Add theme/reduced-motion and locale-fallback UX.
 - [ ] Add focused shell/search tests without editing root package/lock files.
 
@@ -548,8 +627,9 @@ Re-run named failures alone before classification.
 - Static shell/search consume the exact shared renderer projection/index.
 - The portal supplies every non-optional renderer prop and never uses an
   implicit link, asset or copy fallback.
-- Article/navigation/TOC remain static; only four strictly normalized islands
-  hydrate, and no branded/full-document state enters the client bundle/payload.
+- Article/navigation and the sole renderer-owned TOC remain static; exactly four
+  sibling roots hydrate identical SSR/client elements with zero recoverable
+  mismatch, and no branded/full-document state enters client bundle/payload.
 - Wide/narrow, keyboard/focus, theme, reduced-motion, real locale fallback, and
   empty/error states are accessible and tested.
 - The selector consumes the cumulative same-origin retained-version index

@@ -7,6 +7,7 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-548-01-L01
 **Status:** ⏳ To Do
+**Changelog:** 1261 (pinned; closure only)
 
 ---
 
@@ -682,10 +683,11 @@ evidence without masking either failure.
 
 Production Docker/package output contains the validated generated bundle only,
 not `.tmp`, the migration report, workspace backups or this journal. Production
-startup/reindex validates and loads that packaged bundle independently and never
-calls workspace recovery. A clean clone or tag with the tracked bundle and no
-ignored report is the normal `packaged-bundle-only` state, not a recovery
-failure.
+startup/reindex uses only L03's zero-argument, module-relative packaged loader
+and never calls workspace recovery. This leaf's read-only checker uses a
+module-private zero-argument tracked-bundle reader with the same fixed artifact;
+neither reader accepts a path/environment override or depends on `process.cwd()`.
+A clean clone/tag with no ignored report is normal `packaged-bundle-only`.
 
 TASK-548-02-L03 owns `scripts/docs/recover-artifacts.ts` and the one
 `recoverDocsArtifactsV1()` orchestration helper after TASK-548-02-L02 exports
@@ -780,9 +782,7 @@ export async function checkPackagedDocsCorpusV2(
   options: Omit<CompileDocsOptions, "mode">
 ): Promise<DocsDistributionBundleV2> {
   const compiled = await compileDocsCorpusV2({ ...options, mode: "check" });
-  const packagedBytes = await readFixedGeneratedDocsBundleBytesV2(
-    "core/generated/docs/coderso-docs-v2.json"
-  );
+  const packagedBytes = await readTrackedGeneratedDocsBundleBytesForCheckV2();
   const packaged = normalizeDocsDistributionBundleV2(
     parseBoundedCanonicalJson(packagedBytes)
   );

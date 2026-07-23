@@ -28,11 +28,13 @@ states; this task does not restore the mode selector removed by TASK-182.
 
 `docs/guide` remains the single authored end-user/assistant source. Embedded
 Help consumes the exact compiled distribution produced by TASK-548-01/02, while
-Guide response cards join DB `(docId, locale, sectionId)` evidence to that same
-locale-bound local visual/example metadata. There is no second Help corpus,
-per-question remote
-documentation call, runtime external docs API, or assistant filesystem
-fallback.
+reindex materializes every bounded localized source, visual/example, link-input
+and provenance record required by Guide under one active DB snapshot identity.
+Guide questions read that DB snapshot only; they never load or join the packaged
+distribution. Embedded Help remains a separate build-time/local runtime
+consumer of L02's private-branded projection and packaged assets. There is no
+second Help corpus, per-question remote documentation call, runtime external
+docs API, or assistant filesystem fallback.
 
 Consumer targets are fail-closed: embedded Help indexes/renders only documents
 whose `publicationTargets` contains `embedded-help`; Guide receives only
@@ -66,8 +68,8 @@ are outside TASK-548.
   and `/assistant/*` uses the `assistant` rate bucket from
   `core/server/httpServer.ts:37-40`.
 - `core/services/assistant/docsAnswerComposer.ts` is 1,202 lines. This child
-  does not need to edit it: visual/example cards are resolved from the stable
-  evidence ids added by TASK-548-01/02. If implementation proves a composer
+  does not need to edit it: visual/example cards are projected from the complete
+  localized DB evidence added by TASK-548-01-L03. If implementation proves a composer
   change unavoidable, split it by cohesive responsibility below 1,000 lines
   before adding behavior.
 
@@ -80,9 +82,16 @@ are outside TASK-548.
   is public-safe.
 - Search, table of contents, article content, examples, and screenshots load
   from one renderer-owned, private-branded `DocsPublicationProjectionV1`
-  constructed from the installed distribution with literal `embedded-help`.
-  It is a distinct projection, never a filtered distribution bundle. A query
-  never calls the official portal.
+  constructed from a strict, hash-bound, target-only `embedded-help` build
+  payload. It is a distinct projection, never a filtered distribution bundle.
+  A query never calls the official portal.
+- `core/vite.config.ts` imports L03's exact side-effect-free Node+Bun packaged
+  loader only at build/config time. Its narrow plugin normalizes the complete
+  bundle, constructs the full-input `embedded-help` projection, verifies the
+  exact PNG closure, then emits a canonical target-only projection payload and
+  byte-free local URL/hash receipt. The browser independently normalizes and
+  brands only that emitted payload. The full bundle, non-target documents,
+  source filesystem access, and PNG bytes never enter Admin chunks.
 - `Open in CMS` is shown only when the document's exact
   `permissionRequirement` is satisfied by the current fail-closed permission
   snapshot. Null means authenticated Admin access with no extra catalog
@@ -113,11 +122,17 @@ are outside TASK-548.
 - After existing `settings:read` authorization, the chat route resolves the
   current user's canonical permissions only through the injected server
   resolver/RBAC owner, strictly normalizes a ready snapshot, and passes it
-  explicitly into every DB retrieval and evidence-enrichment call. Client
+  explicitly into the single DB retrieval/evidence projection. Client
   request/context fields can never supply or override permission state.
 - Guide card eligibility requires `assistant`; its Help action additionally
   requires `embedded-help` and its official action additionally requires
   `public-docs`. Missing cross-surface targets render no dead link.
+- Each authorized hit is one exact
+  `AssistantDocsLocalizedEvidenceV2` from the active
+  `{ snapshotId, generation, sourceHash }`, including complete localized
+  visual/example metadata and link/provenance inputs. Guide never repairs or
+  enriches it from a packaged bundle. A mixed identity fails closed before any
+  source/card/action projection.
 - `assistant.enabled` remains a backward-compatible persisted setting but
   controls Agent availability, not Guide availability.
 - Agent always uses the existing provider/action routes and remains unavailable
@@ -141,20 +156,21 @@ DocsDistributionBundleV2
         |       +--> one pure local search index
         |       +--> projection-only renderer/assets/links --> /admin/help
         |
-        +--> DB (docId,locale,sectionId) index --> Guide answer evidence
-                                           |
-                                           +--> local visual/example card join
+        +--> one serialized reindex --> active enriched DB snapshot
+                                       +--> authorized localized Guide evidence
 
 Guide tab  --> POST /assistant/chat { mode: "docs-only" }
 Agent tab  --> existing provider chat/plan -> dry-run -> reviewed execute
 ```
 
-The browser keeps the immutable corpus/search index in module memory. It does
-not copy the corpus, provider configuration, secrets, or permission snapshots
-to `localStorage`. If implementation introduces persistent caching despite this
-default, the owning leaf must use `cachePolicy`/`cacheBus`, prove no sensitive
-payload is stored, and update `_docs/ADMIN_CACHE.md` plus
-`_docs/ADMIN_CACHE_MAP.md`.
+Embedded Help keeps its immutable target-only projection/search index and
+build-verified byte-free local asset map in trusted module memory. Guide's
+browser receives only the bounded authorized response from the DB snapshot,
+never a corpus bundle or filesystem path resolver. Neither surface copies
+non-target corpus records, provider configuration, secrets, or permission
+snapshots to `localStorage`. Server Guide caches are keyed by exact active
+snapshot identity and invalidated from the durable activation outbox; the
+closure owner updates `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md`.
 
 ## Sub-Tasks
 
@@ -163,7 +179,7 @@ payload is stored, and update `_docs/ADMIN_CACHE.md` plus
 | ID | Exclusive responsibility | Status |
 |---|---|---|
 | TASK-548-03-L01 | Extract the oversized Admin route registry plus Bun-free canonical route descriptors, own the strict pre-loss raw permission-state seam in `authClient.ts`, preserve route/RBAC parity, and add canonical Help path helpers; do not expose a Help link yet | ⏳ To Do |
-| TASK-548-03-L02 | Add the auto-discovered Help route, local search/reader/shared renderer package, and atomically replace the external footer Docs link | ⏳ To Do |
+| TASK-548-03-L02 | Add the auto-discovered Help route, shared renderer/search, the narrow Core Vite target-only Help payload/asset registry, and atomically replace the external footer Docs link | ⏳ To Do |
 | TASK-548-03-L03 | Split the oversized Assistant panel, become the sole post-01-L03 `assistantRoutes.ts`/`assistantService.ts` writer, enforce server-authoritative docs RBAC, implement distinct Guide/Agent products, decouple Guide runtime from Agent enablement, and render rich local evidence cards | ⏳ To Do |
 
 **Land order:** `TASK-548-03-L01 → TASK-548-03-L02 → TASK-548-03-L03`.
@@ -219,7 +235,7 @@ export function resolveHelpArticleRendererState(input: {
     DocsLinkContextV1,
     { surface: "embedded-help" }
   >["officialDocs"];
-  packagedVisualAssets: readonly DocsPackagedLocalVisualAssetV1[];
+  localVisualAssets: ReadonlyMap<string, DocsLocalVisualAssetV1>;
   copyExampleBody: DocsCopyExampleBodyV1;
 }): HelpArticleRendererState {
   try {
@@ -234,18 +250,13 @@ export function resolveHelpArticleRendererState(input: {
       adminBasePath: input.adminBasePath,
       officialDocs: input.officialDocs,
     });
-    const localVisualAssets = buildVerifiedDocsLocalVisualAssetMapV1({
-      projection: input.projection,
-      documentKey: input.documentKey,
-      packagedAssets: input.packagedVisualAssets,
-    });
     return {
       state: "ready",
       rendererProps: {
         projection: input.projection,
         documentKey: input.documentKey,
         linkContext,
-        localVisualAssets,
+        localVisualAssets: input.localVisualAssets,
         copyExampleBody: input.copyExampleBody,
       } satisfies DocsRendererProps,
     };
@@ -263,19 +274,11 @@ export function resolveHelpArticleRendererState(input: {
 export type EmbeddedHelpRuntimeV1 = Readonly<{
   projection: DocsPublicationProjectionV1<"embedded-help">;
   searchIndex: DocsSearchIndexV1;
+  localVisualAssets: ReadonlyMap<string, DocsLocalVisualAssetV1>;
 }>;
 
-export function createEmbeddedHelpRuntimeV1(
-  bundle: DocsDistributionBundleV2
-): EmbeddedHelpRuntimeV1 {
-  const projection = createDocsPublicationProjectionV1({
-    sourceBundle: bundle,
-    publicationTarget: "embedded-help",
-  });
-  return {
-    projection,
-    searchIndex: buildDocsSearchIndexV1(projection),
-  };
+export function createEmbeddedHelpRuntimeV1(): EmbeddedHelpRuntimeV1 {
+  return loadEmbeddedHelpBuildAssetsV1();
 }
 
 export function resolveEmbeddedHelp(input: {
@@ -287,10 +290,9 @@ export function resolveEmbeddedHelp(input: {
     DocsLinkContextV1,
     { surface: "embedded-help" }
   >["officialDocs"];
-  packagedVisualAssets: readonly DocsPackagedLocalVisualAssetV1[];
   copyExampleBody: DocsCopyExampleBodyV1;
 }): HelpReaderView {
-  const { projection, searchIndex } = input.runtime;
+  const { projection, searchIndex, localVisualAssets } = input.runtime;
   const query = normalizeHelpQuery(input.location.query);
   const documentKey = resolvePublishedDocumentKeyV1(
     projection,
@@ -305,7 +307,7 @@ export function resolveEmbeddedHelp(input: {
     documentKey,
     adminBasePath: input.adminBasePath,
     officialDocs: input.officialDocs,
-    packagedVisualAssets: input.packagedVisualAssets,
+    localVisualAssets,
     copyExampleBody: input.copyExampleBody,
   });
   return {
@@ -344,18 +346,25 @@ export async function submitConversation(
 }
 ```
 
-**Data flow:** validated installed bundle → exact `embedded-help`
-projection construction with full-source provenance and complete target closure
-→ one pure in-memory search index → exact member selection → explicit surface
-link context + selected-article packaged
-asset byte/hash map + user-event-only copy handler → all required renderer props
-→ local Help reader; or strict assistant request → authenticated canonical
-server permission snapshot → authorized DB evidence ids → requirement-rechecked
-local distribution card join → safe React tokens. No Help
+**Data flow:** validated installed bundle at Vite build/config time → exact
+full-input `embedded-help` selection/closure and PNG verification → canonical
+hash-bound target-only payload plus byte-free local URL/hash receipt → one
+browser normalization/private-branded projection and pure in-memory search
+index → exact member selection → explicit surface link context + verified
+selected-article local asset map + user-event-only copy handler → all required
+renderer props → local Help reader; or strict assistant request →
+authenticated canonical server permission snapshot → one active-identity DB
+query → already-materialized localized source/visual/example/link/provenance
+evidence → requirement-rechecked safe response cards. No Help
 selector/search/renderer receives an unbranded or unscoped filtered value, and
-no Guide retrieval receives a client permission value.
+no Guide retrieval receives a client permission value or reads a bundle/
+Markdown/filesystem. Neither the full bundle nor a non-`embedded-help`
+document enters the Admin client graph. L02's packaged asset verification
+remains exclusive to embedded Help (and the portal build), not the per-question
+Guide path.
 
-**Error handling:** invalid bundle/route/link fails closed. In embedded Help, a
+**Error handling:** invalid bundle, target payload, asset receipt, route, or
+link fails closed before Help mounts. In embedded Help, a
 missing/unlisted/orphan/cross-owner/tampered visual or example, missing asset or
 hash mismatch blocks only the selected affected article before
 `DocsDocumentRenderer` runs; search, navigation and other valid articles remain
@@ -365,7 +374,9 @@ server enrichment projection: only after text/source evidence is both grounded
 and permission-authorized may an unresolved optional visual/example card be
 omitted while the grounded text/source remains. It never invents or leaks an
 unauthorized card/reference. Portal/network failure leaves local Help usable;
-DB index or permission-snapshot failure affects Guide only; provider failure
+DB index, snapshot-integrity or permission-snapshot failure affects Guide only;
+an activation commits its matching source hash and durable invalidation event
+atomically, so Guide observes one complete old/new snapshot. Provider failure
 affects Agent only; stale/malformed persisted transcript is discarded.
 
 **Regression-test shape:** route parity before/after extraction; no broken Help
@@ -383,16 +394,22 @@ local asset map and explicit trusted-user-event copy handler; omission of any
 prop fails. Missing/orphan/
 tampered Help evidence blocks only that article, whereas authorized Guide text/
 source survives an omitted unresolved optional card.
-Target-leak fixtures prove Help renders `embedded-help` and multi-target records
-only, while Guide evidence comes only from `assistant`-targeted persisted rows;
-`public-docs`-only records appear in neither surface. Help-only documents omit
-official links; embedded+public documents expose them. Guide tests cover
-assistant-only, assistant+embedded, assistant+public and all-three action
-combinations.
+Target-leak fixtures prove the Vite-emitted Admin payload contains and Help
+renders only `embedded-help` and multi-target records, while Guide evidence
+comes only from `assistant`-targeted persisted rows. Browser bundle scans seed
+distinct non-target canaries and reject the corpus envelope, full bundle,
+repository source paths, or PNG bytes in Admin chunks. `public-docs`-only
+records appear in neither Help nor Guide. Help-only documents omit official
+links; embedded+public documents expose them. Guide tests cover assistant-only,
+assistant+embedded, assistant+public and all-three action combinations.
 Guide route tests inject canonical permissions server-side, reject every client
 snapshot/permissions/roles forgery, fail before query on missing/malformed/
 unknown/duplicate/mixed-wildcard state, and prove protected title/snippet/source/
-visual/example identities never leak.
+visual/example identities never leak. Per-query spies reject every packaged
+loader/projection/Markdown/filesystem call; old/new snapshot race tests require
+one exact `{ snapshotId, generation, sourceHash }` per answer and exercise
+durable cache invalidation retry. Help tests independently prove its L02
+build-time packaged projection/assets still work with the Guide DB unavailable.
 
 ## Testing Requirements
 

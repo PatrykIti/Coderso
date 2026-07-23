@@ -7,6 +7,7 @@
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-109, TASK-403
 **Status:** ⏳ To Do
+**Changelog:** 1261 (pinned; closure only)
 
 ---
 
@@ -49,6 +50,16 @@ prestates are `bootstrap-none`, clean-checkout `packaged-bundle-only`, and
 clone/tag/runtime, portal, Docker, release, `docs:check`, and coverage-check
 consumers validate the packaged bundle without requiring or recreating the
 ignored report.
+Runtime reads that artifact only through L03's zero-argument module-relative
+loader. Its fixed app-root URL is independent of `process.cwd()`, accepts no
+caller path or environment override, and is confined to the exact tracked
+`core/generated/docs/coderso-docs-v2.json` member shipped beside the runtime
+module. The loader strictly normalizes once; persistence and every later
+publication-projection constructor independently normalize at their own trust
+boundaries without another filesystem read. The loader is a side-effect-free
+Node+Bun module using `node:fs/promises`/`import.meta.url`; it has no `Bun.*`,
+DB, settings, server or runtime-adapter import, so L02 may reuse it from
+`core/vite.config.ts` without a second loader.
 
 ## Locked Contract
 
@@ -192,7 +203,10 @@ const activeCheck = await compileDocsCorpusV2({
   visuals: activeVisuals,
 });
 await assertGeneratedBundleBytesEqual(activeCheck.bundleBytes);
-await ingestDocsDistributionBundleV2(activeWrite.bundle, { actorId });
+await ingestDocsDistributionBundleV2(activeWrite.bundle, {
+  actorId,
+  force: true,
+});
 
 // Packaged runtime/startup is a separate fixed-path read-only boundary.
 const packaged = await loadPackagedDocsDistributionBundleV2();
@@ -208,12 +222,16 @@ TASK-548-02-L02's exact validator factory. The exact compile `bundleBytes`
 drive determinism comparison, pair promotion and post-write byte verification.
 The persistence boundary receives the same normalized bundle object and
 independently revalidates it; runtime reindex instead calls the one fixed
-packaged loader exactly once. That loader remains distinct from
-compiler/workspace recovery.
-Local Help and public builds consume that byte contract.
-Runtime assistant retrieval consumes only the atomically persisted DB snapshot;
-it does not read Markdown or call an external documentation service per
-question.
+packaged loader exactly once. That loader remains distinct from compiler/
+workspace recovery. Ingest persists the bounded localized visual, example,
+source, link-input and provenance records required for Guide answers under the
+same active `snapshotId` and `sourceHash`. Activation and its durable
+invalidation event commit atomically, so a query observes either the complete
+previous snapshot or the complete next snapshot. Local Help and public builds
+consume the packaged byte contract through their independently normalizing
+publication projections. Runtime Guide retrieval consumes only the active DB
+snapshot; it never reads the bundle, Markdown, or an external documentation
+service per question.
 
 Machine-readable failures use the bounded `docs_corpus_*`/`docs_compile_*`
 families plus exactly these five Assistant-docs domain errors:
@@ -230,7 +248,7 @@ permission inventory or fixture-value echo.
 | --- | --- | --- | --- |
 | TASK-548-01-L01 | Strict shared schemas, stable identity and safe Markdown policy | `core/services/documentation/docsCorpus*`, root manifest/template and focused contract tests | None |
 | TASK-548-01-L02 | Deterministic compiler, legacy compatibility adapter, workspace-only canonical migration report and tracked generated bundle; no authored corpus edits | compiler modules, `scripts/docs/compile-corpus.ts`, generated bundle/report and compiler tests | TASK-548-01-L01 |
-| TASK-548-01-L03 | Assistant DB schema/migration, atomic bundle ingest, v1 compatibility, permission-aware retrieval and five pure typed errors/normalizers; no route/service orchestration | assistant schema/ingest/startup/retriever/permission modules, migration artifacts and focused pure DB/runtime tests; explicitly excludes `assistantRoutes.ts`, `assistantService.ts`, centralized mapper/wiring and route/service tests owned later by TASK-548-03-L03 | TASK-548-01-L02 |
+| TASK-548-01-L03 | Fixed module-relative packaged loader, Assistant DB schema/migration, complete enriched snapshot ingest, atomic activation/invalidation, v1 compatibility, permission-aware retrieval and five pure typed errors; no route/service orchestration | assistant loader/schema/ingest/startup/retriever/permission/cache-outbox modules, migration artifacts and focused pure DB/runtime tests; explicitly excludes `assistantRoutes.ts`, `assistantService.ts`, centralized mapper/wiring and route/service tests owned later by TASK-548-03-L03 | TASK-548-01-L02 |
 
 Land strictly in table order. TASK-548-02 starts only after TASK-548-01 is
 green, then adds canonical visuals without changing these shared shapes. After
@@ -263,7 +281,11 @@ the centralized error mapper, or their focused route/service tests.
 - `assistant`, `embedded-help` and `public-docs` consume the same normalized
   records; `docs/develop` never enters assistant retrieval.
 - A failed compile or DB reindex leaves the previous complete assistant corpus
-  available; no mixed v1/v2 partial snapshot is observable.
+  available; no mixed v1/v2, generation or `sourceHash` snapshot is observable.
+- Guide retrieval returns complete authorized localized visual/example/source/
+  link/provenance records from the active DB identity only. Per-question code
+  never loads the packaged bundle; Help/portal projections still independently
+  normalize their build-time packaged input.
 - There is no runtime filesystem fallback, per-question remote fetch, new docs
   API or DB storage of screenshots.
 - All touched human-authored production/test files are at most 1,000 physical
@@ -282,11 +304,16 @@ the centralized error mapper, or their focused route/service tests.
 - explicit duplicate-`(docId, locale)` rejection and same-`docId`,
   different-locale acceptance coverage, including same-section-ID example and
   visual fixtures that prove locale-bearing paths/envelopes never cross-join
+- fixed-loader parity from repository root, `core/`,
+  `packages/docs-portal/`, Node/Vite-config context, and an unrelated Docker
+  cwd; atomic activation/invalidation plus mixed-sourceHash and zero-per-query-
+  filesystem coverage
 
 ## Documentation Updates Required
 
 Provide verified contract and migration deltas to TASK-548-07-L01, the sole
 closeout-documentation writer, for
 `_docs/ARCHITECTURE.md`, `_docs/CMS_API.md`, `_docs/DATA_MODEL.md`,
-`_docs/SECURITY_SPEC.md`, `docs/develop/assistant.md` and
+`_docs/SECURITY_SPEC.md`, `_docs/ADMIN_CACHE.md`,
+`_docs/ADMIN_CACHE_MAP.md`, `docs/develop/assistant.md` and
 `docs/guide/README.md`. This child does not edit those shared closeout files.

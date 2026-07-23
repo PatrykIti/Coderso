@@ -7,6 +7,7 @@
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-548-01
 **Status:** ⏳ To Do
+**Changelog:** 1261 (pinned; closure only)
 
 ---
 
