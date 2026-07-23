@@ -3,6 +3,21 @@
 All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [1.9.0] - 2026-07-23
+### Added
+- Whole-form themes and secure file uploads; Page v2 motion,
+
+### Changed
+- Domain-owned sections/blocks are now the active authoring model;
+
+### Fixed
+- Page spotlight, tilt/layer composition, full-bleed containment, reveal
+
+### Removed
+- Author-controlled raw SVG insertion from the Custom SVG rendering
+
+### Security
+- Hardened public-write nonce/captcha/rate ownership, byte-derived
 ## [1.8.0] - 2026-07-07
 ### Added
 - Two-phase Setup & Onboarding Wizard (first-run installer + configuration wizard) — TASK-482.
