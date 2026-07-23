@@ -58,3 +58,6 @@ relogin*.yaml
 relogin*.yml
 _docs/PLAYWRIGHT/**/_raw/
 _docs/PLAYWRIGHT/screenshots/
+
+# Local workflow orchestration and smoke evidence
+_docs/_workflows/
