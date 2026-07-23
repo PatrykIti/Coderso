@@ -13,7 +13,7 @@ const executorPath = path.join(root, executorRelative);
 const implementPath = path.join(root, implementRelative);
 const localOrchestratorPath = path.join(root, localOrchestratorRelative);
 const testNameContractPath = path.join(root, testNameContractRelative);
-const MASKED_IMPLEMENT_SHA256 = "e40fea021f83cc4219fc6d0660b6b08b2a0f015ab502035016801d741867fbf0";
+const MASKED_IMPLEMENT_SHA256 = "14c1084ab79605acb0b4415d62f43807e275ed19a512558da654124443295d90";
 
 function readSources() {
   return {
@@ -440,6 +440,48 @@ test("phase-eight bootstrap restore is one typed nullable-safe CAS", () => {
   expect(executor).toContain('["deletion", BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE.replace');
   expect(executor).toContain('["substitution", BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE.replace');
   expect(executor).toContain('"duplication",');
+});
+
+test("TASK-540 changelog projection preserves independent reservations fail-closed", () => {
+  const { implement } = readSources();
+  const projection = sourceSection(
+    implement,
+    "function canonicalProsePattern",
+    "function projectTask540AnchorSlot"
+  );
+  const mutants = sourceSection(
+    implement,
+    "const canonicalClosureIndex = closureIndexTransactionFixture(closureAnchor);",
+    "const malformedAnchorSnapshot"
+  );
+
+  expect(implement).toContain(
+    '"Changelogs 1260 and 1261 are reserved for the implementation closure of\\n"'
+  );
+  expect(implement).toContain('"Use 1262 for the next unreserved changelog entry."');
+  expect(projection).toContain("readCanonicalTask540IndexProseSlot");
+  expect(projection).toContain("policyMarkers.length !== 1");
+  expect(projection).toContain("policyMarkers[0].start <= slot.end");
+  expect(projection).not.toContain("prose.indexOf(TASK_540_INDEX_SLOT_END");
+  expect(implement).toContain("one adjacent ordered prose pair");
+  expect(implement).toContain("including line wrapping and blank lines");
+  expect(implement).toContain("do not reflow, reorder, ");
+  expect(implement).toContain("or rewrite it.");
+  for (const token of [
+    "preserves the independent TASK-547/TASK-548 reservation",
+    "projectedReservedClosureIndex === projectedCanonicalClosureIndex",
+    "an independent reservation interposed inside the atomic TASK-540 consumed slot",
+    "a duplicated TASK-540 reserved prose slot",
+    "a missing reservation-policy marker",
+    "a reservation-policy marker before the TASK-540 slot",
+    "a duplicated reservation-policy marker",
+    'canonicalClosureIndex.replace("1261", "1262")',
+    'canonicalClosureIndex.replace("TASK-548", "TASK-549")',
+    "normalizeProse(TASK_540_FOLLOWING_RESERVATION_PROSE)",
+    'canonicalClosureIndex.replace("Use 1262", "Use 1263")',
+  ]) {
+    expect(mutants).toContain(token);
+  }
 });
 
 test("frozen executor pin matches and is the implement workflow's only dirty byte range", () => {

@@ -30,6 +30,16 @@ post-audits -> canonical full validation -> one canonical seven-flow smoke whose
 smoke-evidence audit -> changelog 1252/control preparation -> complete full-validation
 rerun -> child-first atomic closure -> final closure-drift/mechanical gate. There is no
 separate diagnostic smoke invocation or reusable partial evidence.
+**Current Fresh-Target Changelog Projection Repair:** 2026-07-23 — after the committed
+TASK-548 board/changelog state was merged into this isolated worktree, the canonical
+Start gate stopped before agent, server, browser, fixture, or closure mutation with
+`TASK-540 changelog prose slot is not canonical`. The parser had extended TASK-540's
+mutable prose slot through the independent 1260/1261 reservation sentence. Repair the
+ignored implementation helper and its tracked structural regression so the mutable slot
+is exactly one unique canonical reserved sentence or one unique canonical consumed
+two-sentence pair; following reservations remain unrelated bytes. Reject duplicates,
+malformed/interposed pairs, and escaped 1252/1251/1254/1257 contradictions. Rerun the
+targeted gate and fresh read-only audit before another top-level canonical invocation.
 **Final Executor SHA-256:** `4f21ec5d67a5ab7b810ad4fdb97dcc76ed05e69c652a43af0ab73db815396cff`
 **Historical Source Repair Revalidated (superseded by the later L03 overflow revalidation):** 2026-07-16 — the final sequential post-audit stopped before smoke on R01 whole-document stored-read collapse and ambiguous legacy IDs, L03 scalar override loss for `media.multiple`, an optional Canvas region name, incomplete A/B self-scope evidence, and one stale L04 binding-ID expectation. A fresh contract audit also found the optional-ID Assistant composer, missing stored-duplicate regression, and stale L04 provenance. Those scoped repairs had matching receipts before the later overflow repair; this does not replace the next clean post-audit, full validation, final audit, or live smoke.
 **Historical Source Repair Ownership (superseded for the later L03 state):** TASK-540-01-L01 owned its schema normalizer and regressions, registered metadata-PATCH proof, `blueprintBindingComposer.ts` plus its focused suite, and read-only action-plan/catalog consumers. TASK-540-04-L03 owned Entry Editor filtering, shared override-contract eligibility, override service activity, and its domain/UI regressions. TASK-540-04-L04 exclusively owned the test-only `custom-screen-editor-binding-flow.test.tsx` shared-helper expectation and its receipt. TASK-540-05-L01 owned only the shared Canvas semantic-panel prop and named-region suite; TASK-540-05-L02 owned only the user-settings route proof. This describes the pre-overflow checkpoint; the later L03 state is recorded below.
@@ -1525,6 +1535,14 @@ status owner writes identical `Closure Pending`, `Closure Board Baseline`, and
 validation then runs before final family status mutation. The evidence owner must first
 create and byte-verify changelog 1252, its unique index row/control anchor, and the exact
 17-ID `Tasks:` line below while all 17 task files and the board remain In Progress.
+For unrelated-byte protection, the changelog-index projection owns only the unique
+canonical TASK-540 reserved sentence or, after evidence creation, the adjacent canonical
+consumed sentence plus remaining 1251/1254/1257 reservation sentence. Independent
+following reservations—including the pinned 1260/1261 mapping for TASK-547/TASK-548—
+must remain byte-identical outside that slot. A duplicate marker, malformed pair,
+independent sentence interposed inside the consumed pair, or contradictory escaped
+1252/1251/1254/1257 prose fails closed. Hermetic reserved and consumed fixtures must
+prove both preservation and those rejection paths.
 Only after that durable changelog coverage exists may one status transaction prepare
 the ten leaf changes, then the six child changes, then root TASK-540, and atomically
 publish all 17 `✅ Done`/`Completed` transitions together with the single deterministic

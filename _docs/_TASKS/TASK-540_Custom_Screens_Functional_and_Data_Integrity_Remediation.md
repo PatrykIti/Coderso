@@ -19,10 +19,19 @@ reconciliation, their workflow tests/mutants, the targeted gate and fresh post-a
 and then one canonical validation/smoke/closure sequence containing the embedded
 `dg-022` -> `dg-023` -> `dg-024` sub-proof. The 2026-07-16 closure completion receipt
 is historical and cannot satisfy any current-state predicate.
+**Current Fresh-Target Changelog Projection Repair:** 2026-07-23 — after the committed
+TASK-548 board/changelog state was merged into the isolated TASK-540 worktree, the
+canonical Start gate stopped before agent, server, browser, fixture, or closure mutation
+because the TASK-540 index projection incorrectly included the independent 1260/1261
+reservation sentence in its mutable prose slot. TASK-540-06-L01 owns the fail-closed
+parser/test correction: mask only the unique canonical TASK-540 reservation sentence or
+consumed two-sentence pair, preserve every following reservation byte, and reject
+duplicates, malformed/interposed state, or escaped 1252/neighbor contradictions. This
+diagnostic invocation produced no smoke or closure evidence.
 **Current Closure Board Checkpoint:** Merge HEAD
-`3664d4890e05060fff879fd82b91379aa8bda2ca` synchronized `feature/tasks-fixes`
-with `feat/implementations` and observed To Do 383 / In Progress 7 / Done 3116.
-TASK-540's isolated expected delta is 383 / 6 / 3117, but this is only a
+`aaf7e6dbd13fe51d5ab00cfc5dbcaa5e44b60d01` synchronized `feature/tasks-fixes`
+with committed `feat/implementations` and observed To Do 409 / In Progress 7 / Done 3116.
+TASK-540's isolated expected delta is 409 / 6 / 3117, but this is only a
 checkpoint: closure must read the board and changelog index fresh and derive the same
 single-family delta from whatever unrelated agents have landed.
 **Local Workflow Recovery Authority:** The ignored operational workflow set is recovered

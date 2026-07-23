@@ -24,6 +24,13 @@ Only after the whole smoke, cleanup, and smoke-evidence audit pass may closure c
 changelog 1252 and its control evidence, rerun the complete full validation, close the
 family child-first and atomically, and run the final closure-drift/mechanical gate.
 Source-owner receipts remain valid unless fresh evidence names a source-owned defect.
+**Current Fresh-Target Changelog Projection Repair:** 2026-07-23 — the first canonical
+restart after merging the committed TASK-548 board/changelog state failed closed in the
+Start gate before agent, server, browser, fixture, or closure mutation. Its TASK-540
+prose projection had treated the independent 1260/1261 reservation as part of the
+TASK-540 slot. L01 owns the exact unique-slot parser and regression fixtures that
+preserve all following reservation bytes and reject duplicate, malformed, or interposed
+TASK-540 states. The stopped invocation is diagnostic only.
 **Local Workflow Recovery Authority:** The exact ignored recovery set and its hashes are
 defined by TASK-540-06/L01. Recovering it is an execution prerequisite, not a tracked
 TASK-545 evidence-policy change; no recovered workflow or loose screenshot may be
