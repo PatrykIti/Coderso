@@ -81,7 +81,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 383 tasks
+- **To Do:** 409 tasks
 - **In Progress:** 7 tasks
 - **Done:** 3116 tasks
 
@@ -117,6 +117,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-548 | Hybrid Visual Documentation Platform | High | Very Large | One strict `coderso.docs-corpus@v2` source compiles into locally packaged Help, DB-backed Guide grounding, and a versioned public portal; includes reviewed Playwright visual authoring, independent Guide/optional Agent tabs, immutable release artifacts, generated coverage, and seven-plus real-flow acceptance smoke scenarios. Changelog 1261 pinned. 8 children + 17 executable leaves. |
 | TASK-547 | Full-Site Example Package and Projekty Domów Installer | High | Very Large | Versioned strict full-site package graph, native resource refs, idempotent dry-run/apply/rollback lifecycle, seven Pages + dynamic project detail, complete FormaDom generator, installer-backed CLI, eight-flow Playwright smoke. Changelog 1260 pinned. 7 children + 13 executable leaves. |
 | TASK-539 | Page V2 Post-Audit Remediation II | High | Very Large | Residual Page v2 model, sanitizer, authoring, transform, renderer, responsive CSS, runtime-init, and narrow-canvas corrections after TASK-535. Changelog 1251 pinned. 8 children + 17 leaves. |
 | TASK-542 | Menu Determinism, Responsive Cascade, and Runtime Parity | High | Large | Strict deterministic MenuDocumentV2, complete responsive neutralizers, shared public projection/active identity, and dirty-safe revalidation. Changelog 1254 pinned. 4 children + 6 leaves. |
