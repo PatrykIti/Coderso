@@ -9,7 +9,8 @@
 **Dependencies:** TASK-545 is `✅ Done` and TASK-547 is terminal; the TASK-548
 parent names and serializes every literal final TASK-547-overlapping path before
 any implementation; TASK-548-06-L01 plus final TASK-548-01-L02
-handback/recovery; TASK-548-03-L01 Bun-free route-snapshot handoff
+handback and read-only packaged-bundle verification; TASK-548-03-L01 Bun-free
+route-snapshot handoff
 **Status:** ⏳ To Do
 **Changelog:** 1261 (pinned; closure only)
 
@@ -39,14 +40,17 @@ permission catalog, compiler/visual tooling, portal/release source, root
 package/lock/workflows, tasks, or changelog. Findings return to the owning leaf;
 tests never paper over source defects.
 
-`docsCoverage.ts` remains Bun/runtime-free. In `--write` mode the CLI calls
-`recoverDocsWorkspaceArtifactPromotionV1()` before reading the final workspace
-bundle/report. In `--check` mode it instead calls the read-only
-`assertNoDocsWorkspaceArtifactPromotionHazardsV1()` before the same exact
-validated pair loader; `--check` never recovers or mutates. Both modes pass
-validated bytes into the pure reconciler. Production runtime never runs this
-generator and never requires `.tmp`, the migration report, journal, or frozen
-migration baseline.
+`docsCoverage.ts` remains Bun/runtime-free. In both `--write` and `--check`
+mode, the CLI first calls the read-only
+`assertNoDocsWorkspaceArtifactPromotionHazardsV1()`, then
+`loadPackagedDocsDistributionBundleV2()`. It never calls workspace recovery or
+the migration-only pair loader. The normal clean-checkout input is the tracked
+bundle with no `.tmp` report; a valid linked authoring pair is also accepted by
+the inspector. Both modes pass the strict packaged bundle into the pure
+reconciler; `--write` mutates only this leaf's two coverage outputs and
+`--check` mutates nothing. Production runtime never runs this generator and
+never requires `.tmp`, the migration report, journal, or frozen migration
+baseline.
 
 ## Bun-Free Route Snapshot Handoff
 
@@ -338,12 +342,11 @@ export function reconcileDocsCoverage(
 
 export async function generateCoverageMatrix(options: GenerateOptions) {
   const mode = requireExactlyOneCoverageMode(options, ["write", "check"]);
-  if (mode === "check") {
-    await assertNoDocsWorkspaceArtifactPromotionHazardsV1();
-  } else {
-    await recoverDocsWorkspaceArtifactPromotionV1();
-  }
-  const report = reconcileDocsCoverage(await loadCoverageInputs(options));
+  await assertNoDocsWorkspaceArtifactPromotionHazardsV1();
+  const bundle = await loadPackagedDocsDistributionBundleV2();
+  const report = reconcileDocsCoverage(
+    await loadCoverageInputs(options, bundle)
+  );
   const json = serializeDocsCoverageReportV2(report);
   const markdown = renderDeterministicCoverageMatrix(report);
   if (mode === "check") {
@@ -355,11 +358,10 @@ export async function generateCoverageMatrix(options: GenerateOptions) {
 }
 ```
 
-**Data flow:** exact write command `bun run docs:coverage -- --write` →
-workspace-pair recovery, or exact read-only command
-`bun run docs:coverage -- --check` → workspace-pair hazard inspection with zero
-filesystem mutation → final owner bundle/report load and
-linkage validation → native bundle + exact pure route descriptors/capability catalog +
+**Data flow:** final read-only `docs:check` canonical-byte/`sourceHash` equality
+gate → exact coverage write or check command → read-only workspace hazard
+inspection → strict packaged-bundle load with the ignored report optional/absent
+→ native bundle + exact pure route descriptors/capability catalog +
 scenario/receipt graph → strict joins/exclusions → route/permissionRequirement/
 capability/link/ref/target assertions keyed by
 `{ docId, locale, sectionId }` where section-scoped, otherwise by exact
@@ -372,9 +374,11 @@ JSON report → generated Markdown matrix/byte comparison.
 `docs_coverage_publication_mismatch`, `docs_coverage_locale_false_claim`,
 `docs_coverage_route_handoff_missing`, `docs_coverage_route_parity_failed`,
 `docs_coverage_task547_collision`, and `docs_coverage_generated_stale`. No partial
-report replaces the last valid output. Recovery failure, mixed/stale workspace
-pair, recursive unknown field, cap breach, noncanonical ordering, or nested
-record/hash/path tampering fails before either generated output is written.
+report replaces the last valid output. A live/tampered transaction, report-only
+state, invalid linked pair, missing/tampered packaged bundle, preceding
+`docs:check` canonical-byte/source mismatch, recursive unknown field, cap
+breach, noncanonical ordering, or nested record/hash/path tampering fails before
+either generated output is written.
 
 ## Sub-Tasks
 
@@ -404,13 +408,17 @@ record/hash/path tampering fails before either generated output is written.
   a `sectionId`, but Guide evidence, Help/CMS/public actions, examples, visuals,
   and receipts must remain bound to the owning
   `{ docId, locale, sectionId }`;
-- generator-order spies prove `--write` runs
-  `recoverDocsWorkspaceArtifactPromotionV1()` before final bundle/report load,
-  while `--check` runs
-  `assertNoDocsWorkspaceArtifactPromotionHazardsV1()` before that load and
-  invokes no write/rename/delete/fsync/recovery path; recovery/hazard/mixed-pair
-  failure performs no coverage write, while packaged runtime imports neither
-  recovery nor `.tmp`;
+- generator-order spies prove both modes run
+  `assertNoDocsWorkspaceArtifactPromotionHazardsV1()` before
+  `loadPackagedDocsDistributionBundleV2()` and neither invokes a workspace
+  recovery or migration-pair loader; `--check` invokes no
+  write/rename/delete/fsync path, while `--write` may replace only the two owned
+  coverage outputs after reconciliation succeeds;
+- a clean-clone fixture with the tracked bundle and no `.tmp` tree/report passes
+  both coverage modes. Live/tampered transaction material, report-only state,
+  invalid linked pair, tampered packaged bytes, or a preceding stale
+  `docs:check` result performs no coverage write; packaged runtime imports
+  neither recovery nor `.tmp`;
 - import the two exact descriptor modules/constants and prove the complete
   `*.admin-route-descriptor.ts` inventory plus TASK-548-03 registry-pair parity
   suites; a missing/extra module or constant fails;
@@ -423,17 +431,18 @@ record/hash/path tampering fails before either generated output is written.
   serialized-path drift fails;
 - generate twice under different roots/order/timezone and compare JSON/Markdown;
 - consume the seventh exact root script owned by TASK-548-02-L03 and run
+  read-only `bun run docs:check`, then
   `bun run docs:coverage -- --write`, immediately followed by
   `bun run docs:coverage -- --check`; this leaf never edits root
   `package.json`. The CLI rejects missing, simultaneous,
   duplicate, or unknown modes/options, and manual matrix/report edits make the
   check fail without mutation; filesystem-mutator spies prove clean, stale and
-  recovery-required `--check` cases stay read-only and direct operators to
+  hazard-rejected `--check` cases stay read-only and direct operators to
   `bun run docs:recover`;
 - run
   `bunx vitest run --config vitest.config.ts tests/vitest/documentation/docs-coverage-reconciliation.test.ts`;
-- run `bun run docs:check`, `bun run docs:visual:check -- --all`,
-  `bun --cwd core lint:types`, `bun --cwd core lint`;
+- run `bun run docs:visual:check -- --all`, `bun --cwd core lint:types`,
+  `bun --cwd core lint`;
 - audit every added/modified human-authored production and test file from the
   pre-task baseline with `wc -l`; any result above 1,000 fails; then run
   `git diff --check`.

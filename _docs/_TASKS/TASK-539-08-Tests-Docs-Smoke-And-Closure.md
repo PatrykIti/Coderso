@@ -57,20 +57,27 @@ contract. TASK-539 never edits the guide after TASK-548 starts its migration.
 ## Security Contract
 
 No endpoint or source behavior changes. The new suite validates existing internal
-`/admin/api/*` Page paths with session-cookie-only authentication:
-create/update/autosave require `content:write`, publish requires
+`/admin/api/*` Page paths through real requests to
+`startHttpServer({port:0})`, never a directly invoked route handler. It uses the
+resolved Admin prefix, configured `site.adminBaseUrl` Host, three uniquely owned
+reader/writer/publisher role assignments, real session cookies, and real CSRF tokens.
+Create/update/autosave require `content:write`, publish requires
 `content:publish`, session writes require `X-CSRF-Token`, the rate-limit bucket is
-`admin_write`, and PageDocumentV2 validation rejects unknown fields. TASK-539 does
-not claim or add API-key authentication. Public Page render is read-only and no
-public write is introduced, so nonce/HMAC/captcha policy is not applicable to a new
-endpoint. CSS stays allowlisted; the effects runtime stays a static literal; and an
-unsafe marquee subtree cannot duplicate the existing nonce-bearing form surface. No
-raw exploit payload, credential, token, log, user data, or scanner exception is
-recorded. The new suite claims registered-handler coverage only for Page routes;
-footer-template and shell-setting setup/cleanup follow the existing direct-service
-fixture pattern. If changed to handler coverage, they additionally require
-`content:write` and `settings:write` respectively, with the same session, CSRF,
-`admin_write`, and strict-schema enforcement.
+`admin_write`, and PageDocumentV2 validation rejects unknown fields. The suite proves
+the expected 401/403/400 failures produce zero owned Page/revision/autosave/audit
+mutation before proving authorized create/update/autosave/publish.
+
+TASK-539 does not claim or add API-key authentication. Public Page render is
+read-only and no public write is introduced, so nonce/HMAC/captcha policy is not
+applicable to a new endpoint. CSS stays allowlisted; the effects runtime stays a
+static literal; and an unsafe marquee subtree cannot duplicate the existing
+nonce-bearing form surface. No raw exploit payload, credential, token, log, user
+data, or scanner exception is recorded. `tests/integration/routes/pages.test.ts`
+remains direct route/schema/service proof only and is never cited as HTTP middleware
+evidence. Footer-template and shell-setting setup/cleanup follow the existing
+direct-service fixture pattern. If changed to handler coverage, they additionally
+require `content:write` and `settings:write` respectively, with the same session,
+CSRF, `admin_write`, and strict-schema enforcement.
 
 ## Acceptance
 
@@ -88,8 +95,10 @@ fixture pattern. If changed to handler coverage, they additionally require
 - Nine real flows cover the complete visible contract in light/dark where applicable,
   save/publish/front parity, screenshots, and zero console errors. At tablet and
   mobile, a real approved two-segment marquee must show equal computed
-  frame/element/text styling, hoisted tilt/layer geometry, and legal grid spans in
-  primary and replica while retaining isolated identity hooks.
+  frame/element/text styling and hoisted tilt/layer geometry in primary and replica
+  while retaining isolated identity hooks. Its outer authored group alone owns the
+  singular canonical legal grid span outside both segments; duplicated descendants
+  show no grid hook/alias/span CSS.
 - All five docs, descendants, board statistics/indexes, and changelog 1251 are
   synchronized without a TASK-545 exception.
 

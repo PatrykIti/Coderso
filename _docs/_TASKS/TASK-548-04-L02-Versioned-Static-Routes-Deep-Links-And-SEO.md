@@ -59,17 +59,11 @@ import {
 resolveDocsPortalOutputPath(publicPath: string): string;
 
 // packages/docs-portal/src/build/buildDocsPortal.ts
-// Imported from the TASK-548-01-L02 owner module; never reimplemented here.
-recoverDocsWorkspaceArtifactPromotionV1(): Promise<
-  DurablePairRecoveryResultV1
+// Imported from TASK-548-01 owners; never reimplemented here.
+assertNoDocsWorkspaceArtifactPromotionHazardsV1(): Promise<
+  DocsWorkspaceArtifactStablePrestateV1
 >;
-loadAndValidateRecoveredDocsArtifactPair(input: {
-  bundlePath: "core/generated/docs/coderso-docs-v2.json";
-  reportPath: ".tmp/docs-corpus/migration-report-v1.json";
-}): Promise<{
-  bundle: DocsDistributionBundleV2;
-  report: DocsMigrationReportV1;
-}>;
+loadPackagedDocsDistributionBundleV2(): Promise<DocsDistributionBundleV2>;
 type DocsPortalBuildConfigV1 = {
   currentVersion: string;
   publicOrigin: string;
@@ -101,15 +95,14 @@ never the input bundle.
 Locked output root is `packages/docs-portal/dist`.
 
 The build entry accepts only strict non-artifact configuration, never artifact
-paths, preloaded bundle/report objects, or bytes. Its implementation owns the
-two fixed paths shown above, calls the exact TASK-548-01-L02 owner recovery
-helper, and only then opens both finals without following symlinks. The loader
-validates both strict schemas, exact `bundleSourceHash`/`bundleSha256` linkage
-and the absence of a live recovery hazard before returning either value. A
-caller cannot bypass, replace, or reorder this boundary.
-This explicit A-owner workspace recovery is allowed because portal build writes
-`dist`. The portal neither invokes compiler `--check` nor treats that read-only
-check as a recovery command.
+paths, a preloaded bundle/report object, or bytes. It first calls the exact
+TASK-548-01-L02 read-only hazard inspector, then the TASK-548-01-L03 strict
+fixed-path packaged loader for
+`core/generated/docs/coderso-docs-v2.json`. A caller cannot bypass, replace, or
+reorder this boundary. The ignored migration report is never opened or required.
+The targeted gate runs read-only `docs:check` immediately before the portal
+build so canonical bundle bytes and `sourceHash` are recomputed and compared.
+The portal never invokes recovery or treats `docs:check` as a recovery command.
 
 The executable entry reads exactly these configuration mappings:
 
@@ -364,10 +357,11 @@ builder.
 ## Determinism and Publication Filter
 
 The public build boundary accepts only strict `DocsPortalBuildConfigV1`. Only
-the internal post-recovery helper receives the already validated linked pair
-and its `DocsDistributionBundleV2`; no caller can provide a bundle, report,
-artifact path, bytes, or output root. That helper creates a filtered public
-bundle with the exact shared
+the internal post-inspection helper receives the already validated packaged
+`DocsDistributionBundleV2`; no caller can provide a bundle, report, artifact
+path, bytes, or output root. The valid clean-checkout state is a tracked bundle
+with no ignored report. That helper creates a filtered public bundle with the
+exact shared
 `selectDocumentsForPublicationTarget(bundle.documents, "public-docs")`
 selector. The route graph is built only from those filtered records. For every
 canonical selection L02 consumes L01's exact
@@ -465,12 +459,9 @@ export async function buildDocsPortal(
   input: DocsPortalBuildConfigV1
 ): Promise<DocsPortalBuildReceipt> {
   const config = normalizeDocsPortalBuildConfigV1(input);
-  await recoverDocsWorkspaceArtifactPromotionV1();
-  const recovered = await loadAndValidateRecoveredDocsArtifactPair({
-    bundlePath: "core/generated/docs/coderso-docs-v2.json",
-    reportPath: ".tmp/docs-corpus/migration-report-v1.json",
-  });
-  return buildRecoveredDocsPortal(config, recovered);
+  await assertNoDocsWorkspaceArtifactPromotionHazardsV1();
+  const bundle = await loadPackagedDocsDistributionBundleV2();
+  return buildValidatedDocsPortal(config, bundle);
 }
 
 if (import.meta.main) {
@@ -479,14 +470,11 @@ if (import.meta.main) {
   );
 }
 
-async function buildRecoveredDocsPortal(
+async function buildValidatedDocsPortal(
   config: DocsPortalBuildConfigV1,
-  recovered: Awaited<
-    ReturnType<typeof loadAndValidateRecoveredDocsArtifactPair>
-  >
+  bundle: DocsDistributionBundleV2
 ): Promise<DocsPortalBuildReceipt> {
-  assertBundleReportLinkage(recovered.bundle, recovered.report);
-  const inputBundles = [recovered.bundle];
+  const inputBundles = [bundle];
   const publicBundles = inputBundles.map((bundle) => ({
     ...bundle,
     documents: selectDocumentsForPublicationTarget(
@@ -550,17 +538,18 @@ async function buildRecoveredDocsPortal(
 }
 ```
 
-**Data flow:** config-only entry → exact owner recovery → strict linked
-bundle/report load → shared exact `public-docs` selector → filtered public
-bundle → safe route graph → L02 exact projection producer plus membership/target
-validation → projection-only shared shell/search/renderer → canonical HTML and
-static search/assets → SEO/deployment metadata → hash closure manifest.
+**Data flow:** read-only `docs:check` canonical-byte/source equality →
+config-only entry → exact owner hazard inspection → strict packaged-bundle load
+→ shared exact `public-docs` selector → filtered public bundle → safe route
+graph → L02 exact projection producer plus membership/target validation →
+projection-only shared shell/search/renderer → canonical HTML and static
+search/assets → SEO/deployment metadata → hash closure manifest.
 
-**Error handling:** a crash in `prepared`, `member-0-promoted`, or
-`member-1-promoted` restores and verifies the previous pair; `verified-commit`
-retains and verifies the new pair. Mixed finals, tampered journal/backup/staging/
-final bytes, missing recovery material, or any attempted pre-recovery read fail
-before target selection and leave portal output untouched. Duplicate
+**Error handling:** a live/tampered journal, journal temp, backup/staging
+artifact, report-only state, invalid packaged bundle, invalid linked pair,
+`docs:check` canonical-byte/source mismatch, or any attempted pre-inspection
+read fails before target selection and leaves portal output untouched. A valid
+tracked-bundle-only clean checkout is accepted. Duplicate
 doc/slug/route, unsafe origin/path, unresolved internal ref, missing asset/hash/
 alt, false locale alternate, private record, non-reproducible output, redirect
 escape, or manifest mismatch aborts and cleans only the task-scoped temp build.
@@ -570,14 +559,16 @@ exact `packages/docs-portal/dist` target.
 **Regression-test shape:**
 
 - exact canonical/alias/base-path paths and traversal rejects;
-- fresh-process portal entry tests for every owner promotion journal phase and
-  final rename; old-pair restoration before commit, new-pair retention after
-  commit, idempotent recovery, and fail-closed mixed/tampered/missing material;
-- static ordering guard proving no bundle/report open, target selector, route
-  builder, renderer or output writer is reachable before owner recovery passes;
+- clean-clone/tag portal entry with the tracked bundle and no `.tmp` tree/report
+  passes; every owner promotion journal phase, report-only state, invalid linked
+  pair, and tampered transaction or packaged-bundle bytes fail read-only;
+- static ordering guard proving no packaged-bundle open, target selector, route
+  builder, renderer or output writer is reachable before owner hazard inspection
+  passes;
 - public-entry fixtures accept only the four exact configuration keys and reject
   unknown `bundle`, `report`, artifact-path, bytes, or output-root inputs before
-  recovery; only the internal post-recovery helper receives the validated pair;
+  inspection; only the internal post-inspection helper receives the validated
+  packaged bundle;
 - executable-entry fixtures pin all four environment-to-field mappings, reject
   every missing/empty/alternate variable and malformed epoch, and prove the
   local profile maps to exact `0.0.0-test`,
@@ -629,7 +620,7 @@ bunx vitest run --config vitest.config.ts \
   tests/vitest/docs/docs-renderer.test.tsx
 bun --cwd core lint:types
 bun --cwd core lint
-bun run docs:compile
+bun run docs:check
 task548_portal_tmp="$(mktemp -d "${TMPDIR:-/tmp}/coderso-task548-portal.XXXXXX")"
 task548_portal_real="$(realpath "$task548_portal_tmp")"
 case "$task548_portal_real" in */coderso-task548-portal.*) ;; *) exit 1 ;; esac

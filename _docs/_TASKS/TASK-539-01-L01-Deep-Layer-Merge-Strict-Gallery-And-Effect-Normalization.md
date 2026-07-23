@@ -80,9 +80,8 @@ Module responsibilities are exact:
 
 Internal modules import owners directly rather than importing the facade, preventing
 cycles. Preserve every baseline public value/type name and every existing external
-import path. A facade test compares representative functions, class, arrays, objects,
-and schema by `toBe` against their direct owner exports and statically rejects an
-export-star declaration.
+import path. The dedicated facade test compares all 129 runtime names by `toBe`
+against their direct owner exports and statically enforces the complete manifest.
 
 Split the oversized test by cohesive `describe` ownership:
 
@@ -260,8 +259,9 @@ and this one `./pageDocumentV2/resolution` function:
 mergePageBlockLayerPresentKeys
 ```
 
-The final runtime namespace is therefore exactly 129 names. No internal helper,
-schema fragment, normalizer, or compatibility alias may widen it.
+The final facade is therefore exactly 78 explicit type names plus 129 runtime names,
+207 entries in total. No internal helper, schema fragment, normalizer, or
+compatibility alias may widen it.
 
 ### Facade proof owned by this leaf
 

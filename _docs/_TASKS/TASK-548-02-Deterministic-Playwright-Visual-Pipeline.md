@@ -95,6 +95,13 @@ after the task dev server is restarted and admin/front health checks pass. L03
 cannot auto-promote a changed baseline. No per-scenario or per-promotion
 compiler refresh is valid.
 
+That explicit refresh may leave the linked workspace pair available for the
+ongoing authoring run, but the report remains ignored and workspace-only.
+L03's read-only `docs:check`, clean-clone CI, Docker contract, and all later
+packaged consumers must also pass from the normal tracked-bundle-only state.
+Only explicit interrupted-write recovery may mutate workspace transaction
+state; no downstream gate recreates the report.
+
 ## Acceptance Criteria
 
 - A fresh agent can run one documented command for a scenario and receives a

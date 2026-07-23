@@ -58,8 +58,8 @@ Land `TASK-539-01-L01 -> TASK-539-01-L02`.
 - The grounded pre-task facade surface is exactly 74 explicit type names plus 121
   runtime names. L01 enumerates every baseline name and direct owner. The only
   additions are four types and eight runtime names, so the final facade is exactly
-  78 type names plus 129 runtime names; any extra, missing, duplicate, aliased, or
-  owner-mismatched export fails the dedicated facade suite.
+  78 type names plus 129 runtime names (207 entries total); any extra, missing,
+  duplicate, aliased, or owner-mismatched export fails the dedicated facade suite.
 - Each public runtime value is defined once in its cohesive owner module. Direct owner
   imports and facade imports are reference-identical; no facade wrapper, clone, or
   duplicate constant is allowed.
@@ -142,8 +142,8 @@ Land `TASK-539-01-L01 -> TASK-539-01-L02`.
 ## Acceptance
 
 - Every resulting touched production/test file is at most 1,000 physical lines.
-- Existing public imports compile unchanged and representative facade/owner values
-  pass reference-identity tests. The dedicated facade suite type-imports all exact
+- Existing public imports compile unchanged. The dedicated facade suite type-imports
+  all exact
   78 type names, statically proves the complete sorted type/value owner maps, pins
   `Object.keys` to the exact 129 runtime names, and proves every runtime export is
   reference-identical to its direct owner.

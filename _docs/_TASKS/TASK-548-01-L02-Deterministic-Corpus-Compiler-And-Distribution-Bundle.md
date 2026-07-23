@@ -256,7 +256,7 @@ recoverDurablePairPromotionV1(
 ): Promise<DurablePairRecoveryResultV1>;
 ```
 
-The public final paths and validator are encoded in the durable config, not
+The workspace final paths and validator are encoded in the durable config, not
 supplied ad hoc by a caller:
 
 ```ts
@@ -421,23 +421,26 @@ current final/staged/backup hashes; caught code never trusts an in-memory
   member write before the preparing-journal rename and directory fsync; the
   read-only inspector reports it without mutation. Both finals absent calls
   `config.validateStablePair({ state: "absent" })`; both present are reopened,
-  hashed and passed as an exact ordered `state: "present"` tuple; mixed presence
-  or any owned staging/backup artifact fails with
-  `docs_compile_recovery_required`;
+  hashed and passed as an exact ordered `state: "present"` tuple; one present
+  member is passed as an exact ordered `state: "partial"` tuple. The workspace
+  config accepts only member-0-present/member-1-absent
+  `packaged-bundle-only`; report-only, every visual partial state, or any owned
+  staging/backup artifact fails with `docs_compile_recovery_required`;
 - `preparing` verifies both finals still match the recorded prior identities,
   deletes only the journal-recorded member temp/staged artifacts, validates the
-  restored absent/present stable pair, and retires the exact journal. A final or
-  backup mutation while phase is `preparing` is impossible under the protocol
-  and fails closed as tampering;
+  restored absent/partial/present stable state through the config validator, and
+  retires the exact journal. A final or backup mutation while phase is
+  `preparing` is impossible under the protocol and fails closed as tampering;
 - `prepared`, `member-0-promoted` or `member-1-promoted` is pre-commit and restores
   both old identities or prior absence from the journal, regardless of which
-  rename actually completed, then reopens and passes the restored absent/present
-  state through `config.validateStablePair`;
+  rename actually completed, then reopens and passes the restored
+  absent/partial/present state through `config.validateStablePair`;
 - `verified-commit` reopens and passes both new identities through
   `config.validateStablePair`, never rolls back, and retries only owned
   backup/staging/journal cleanup;
 - missing/tampered recovery material blocks every consumer with
-  `docs_compile_recovery_required`; it never guesses or accepts a mixed pair.
+  `docs_compile_recovery_required`; it never guesses or accepts an unrecognized
+  partial state.
 
 `durablePairPromotionV1` owns one outer `try/catch` around staging, every phase
 write, both member promotions, committed-pair validation and cleanup. On every
@@ -454,7 +457,9 @@ evidence without masking either failure.
 Production Docker/package output contains the validated generated bundle only,
 not `.tmp`, the migration report, workspace backups or this journal. Production
 startup/reindex validates and loads that packaged bundle independently and never
-calls workspace recovery.
+calls workspace recovery. A clean clone or tag with the tracked bundle and no
+ignored report is the normal `packaged-bundle-only` state, not a recovery
+failure.
 
 TASK-548-02-L03 owns `scripts/docs/recover-artifacts.ts` and the one
 `recoverDocsArtifactsV1()` orchestration helper after TASK-548-02-L02 exports
@@ -548,6 +553,24 @@ export async function compileDocsCorpusV2(options: CompileDocsOptions) {
   return { bundle, bundleBytes, migrationReport };
 }
 
+export async function checkPackagedDocsCorpusV2(
+  options: Omit<CompileDocsOptions, "mode">
+): Promise<DocsDistributionBundleV2> {
+  const compiled = await compileDocsCorpusV2({ ...options, mode: "check" });
+  const packagedBytes = await readFixedGeneratedDocsBundleBytesV2(
+    "core/generated/docs/coderso-docs-v2.json"
+  );
+  const packaged = normalizeDocsDistributionBundleV2(
+    parseBoundedCanonicalJson(packagedBytes)
+  );
+  assertByteEqual(
+    serializeCanonicalDocsBundle(packaged),
+    compiled.bundleBytes
+  );
+  assertEqual(packaged.sourceHash, compiled.bundle.sourceHash);
+  return packaged;
+}
+
 export async function promoteDocsArtifactPair(result: CompiledDocsCorpusV2) {
   await recoverDocsWorkspaceArtifactPromotionV1();
   const reportBytes = serializeCanonicalMigrationReport(result.migrationReport);
@@ -575,6 +598,11 @@ export async function promoteDocsArtifactPair(result: CompiledDocsCorpusV2) {
 }
 ```
 
+The `--check` CLI calls `checkPackagedDocsCorpusV2`; it never calls
+`promoteDocsArtifactPair`. Missing packaged bytes fail as
+`docs_compile_generated_stale`, while transaction hazards fail earlier as
+`docs_compile_recovery_required`.
+
 The sole initial pre-pilot owner call uses `visuals.state:
 "pre-pilot-empty"` and succeeds only when the scenario, image, receipt and
 visual-transaction inventories are all absent. It is not a public CLI flag or
@@ -596,13 +624,17 @@ diagnostics. After the durable commit
 phase no rollback is attempted: recovery validates the new pair and cleanup
 cannot mask or corrupt it. Incomplete committed cleanup returns structured
 `committed: true` evidence and leaves the verified journal for idempotent retry.
-Thus both public final identities advance or neither does, including process
+Thus both workspace authoring identities advance or neither does, including process
 termination between renames. `--check` first runs only the two read-only hazard
-inspectors, compiles both artifacts in memory and compares final bytes without
-any filesystem mutation. A journal, backup, staging artifact or mixed pair
-returns `docs_compile_recovery_required` and directs the operator to the exact
-mutating `bun run docs:recover` command. `--write` may explicitly recover before
-staging.
+inspectors, compiles both artifacts in memory, strictly loads the fixed packaged
+bundle, and compares its canonical bytes and `sourceHash` with the recomputed
+bundle without any filesystem mutation. It succeeds for either a valid
+`packaged-bundle-only` clean checkout or a valid `linked-pair`; the ignored
+report is not required and the in-memory report is not compared to a final.
+A journal, backup, staging artifact, report-only state, invalid packaged bundle
+or invalid linked pair returns `docs_compile_recovery_required` and directs the
+operator to the exact mutating `bun run docs:recover` command. `--write` may
+explicitly recover before staging the linked pair.
 
 **Error handling:** use bounded `docs_compile_source_missing`,
 `docs_compile_source_escaped`, `docs_compile_ref_missing`,
@@ -646,14 +678,17 @@ operation to fail once, assert `cleanup: "retry-required"`, then prove a fresh
 recovery retries and completes cleanup without changing either final identity.
 Terminate a fresh process at every preparing and member-staging boundary;
 recovery must remove only journal-recorded pre-final debris and preserve and
-validate both prior finals. Exercise no-journal both-absent, both-present-valid
-and mixed-presence states for workspace and visual configs; prove validation
-runs for both stable states, an orphan exact journal temp is safely recoverable
-only with no member debris, and mixed presence or unrecorded staging/backup
-fails closed. Instrument filesystem
+validate the exact prior prestate. Exercise no-journal bootstrap-none,
+packaged-bundle-only, linked-pair and report-only states for the workspace
+config and absent/present/partial states for visual configs; prove the
+clean-checkout bundle-only state is validated and preserved, report-only and
+every visual partial state fail, and an orphan exact journal temp is safely
+recoverable only with no member debris. Unrecorded staging/backup also fails
+closed. Instrument filesystem
 mutators and prove `--check` makes zero write/rename/delete/fsync calls for
-clean, stale and recovery-required fixtures, while `docs:recover` performs the
-required recovery and a following `--check` remains read-only.
+clean-clone bundle-only, linked, stale and recovery-required fixtures, while
+`docs:recover` performs only required interrupted-write recovery and a following
+`--check` remains read-only.
 Reject native files with missing/orphan/reordered directives, invalid ordinals,
 duplicate section IDs or directive/frontmatter confusion; prove legacy report
 entries serialize to exact native directives and round-trip back to identical
@@ -666,8 +701,9 @@ section IDs/one-based heading occurrences.
   `scripts/playwright-widget-contract-smoke.ts`.
 - [ ] Add `scripts/docs/compile-corpus.ts` with `--write` and read-only `--check`
   modes and safe, bounded diagnostics. `--check` must never call recovery or
-  perform any write/rename/delete/fsync; a hazard returns
-  `docs_compile_recovery_required`.
+  perform any write/rename/delete/fsync; it validates the fixed packaged bundle
+  and recomputed canonical byte/source equality without requiring the ignored
+  report, while a real hazard returns `docs_compile_recovery_required`.
 - [ ] Hand the unchanged workspace/visual recovery exports and
   `DocsVisualStablePairValidatorFactoryV1` type to TASK-548-02-L03; that leaf
   owns `scripts/docs/recover-artifacts.ts`, `recoverDocsArtifactsV1()` and the
@@ -699,7 +735,8 @@ section IDs/one-based heading occurrences.
   boundary; assert the exact pre-commit rollback/post-commit evidence contract
 - cover the preparing-journal temp/file-fsync/rename/directory-fsync boundary,
   both staging file/directory fsyncs before `prepared`, and no-journal
-  absent/present/mixed plus orphan journal-temp and owned staging/backup states
+  bootstrap-none/packaged-bundle-only/linked-pair/report-only plus orphan
+  journal-temp and owned staging/backup states
 - terminate a child process at every preparing/member-staging boundary,
   between both final renames and at every later journal phase; run fresh-process
   recovery before each consumer-read fixture
@@ -710,6 +747,9 @@ section IDs/one-based heading occurrences.
   complete gate before any L03 staleness or TASK-548-03 consumer work
 - spy every filesystem mutator to prove `--check` is read-only and the exact
   `docs:recover` command is the only operator-directed recovery path
+- materialize a clean-clone fixture containing the tracked bundle but no `.tmp`
+  tree/report; prove `--check` validates canonical bytes and recomputed
+  `sourceHash`, succeeds without mutation, and detects a stale/tampered bundle
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - touched-file line counts

@@ -57,8 +57,12 @@ TASK-548-02-L03; L02 never patches or claims either owner file.
    `git_tag == version` as byte-identical plain SemVer. A `v` prefix or any
    normalized-but-not-identical value fails.
 3. Install with the frozen lockfile and validate the landed Docker workspace
-   contract. Run `bun run docs:compile` to recover/promote the exact bundle/report
-   pair. Build the portal with the exact environment mapping
+   contract. Run read-only `bun run docs:check`, which performs workspace hazard
+   inspection and compares recomputed canonical bytes/`sourceHash` with the
+   tracked packaged bundle. The clean tag is expected to contain no ignored
+   `.tmp` report, and release never recovers or regenerates the bundle/report
+   pair. Build the portal from that strict packaged bundle with the exact
+   environment mapping
    `DOCS_PRODUCT_VERSION=<semantic-release version>`,
    `DOCS_PUBLIC_ORIGIN=<validated configured HTTPS origin>`,
    `DOCS_PUBLIC_BASE_PATH=<validated configured base path>`, and
@@ -475,7 +479,12 @@ credentials; never retry via force or clobber.
   core renderer dependency without writing either owner file, and asserts exact
   job permissions/environment/concurrency plus plain `git_tag == version`,
   tag-target/checkout-HEAD checks and all four release build-environment
-  mappings including target-commit epoch;
+  mappings including target-commit epoch; a clean-tag fixture with the tracked
+  bundle and no `.tmp` tree/report passes `docs:check`, while transaction debris,
+  report-only state, stale source equality, or a tampered bundle blocks without
+  mutation; Docker-repeat fixtures require task-scoped `mktemp`, `--iidfile`,
+  strict image-ID validation and exact EXIT cleanup, and reject a fixed tag,
+  foreign image ID, broad temp path, or second-run collision;
 - first publish, identical retry, different-byte conflict, branch race, partial
   exact push, malformed/tampered/missing artifact receipt, and failed alias
   stage preserve invariants; release upload inventory is exactly archive plus
@@ -537,14 +546,42 @@ bun test tests/unit/release
 bun test tests/unit/documentation/docsPagesPublication.test.ts \
   tests/unit/release/docsReleaseWorkflowContract.test.ts
 bun scripts/docs/stage-pages-publication.ts --help
+bun run docs:check
 DOCS_PRODUCT_VERSION=0.0.0-test \
 DOCS_PUBLIC_ORIGIN=https://docs.example.invalid \
 DOCS_PUBLIC_BASE_PATH=/docs \
 SOURCE_DATE_EPOCH=0 \
   bun --cwd packages/docs-portal build
+task548_release_docker_parent="$(realpath "${TMPDIR:-/tmp}")"
+task548_release_docker_tmp="$(
+  mktemp -d \
+    "$task548_release_docker_parent/coderso-task548-release-docker.XXXXXX"
+)"
+task548_release_docker_real="$(realpath "$task548_release_docker_tmp")"
+case "$task548_release_docker_real" in
+  "$task548_release_docker_parent"/coderso-task548-release-docker.*) ;;
+  *) exit 1 ;;
+esac
+task548_release_docker_iid="$task548_release_docker_real/image-id"
+task548_release_docker_image=""
+task548_release_docker_cleanup() {
+  if [[ "$task548_release_docker_image" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+    docker image rm "$task548_release_docker_image" >/dev/null 2>&1 || true
+  fi
+  case "$task548_release_docker_real" in
+    "$task548_release_docker_parent"/coderso-task548-release-docker.*)
+      rm -rf -- "$task548_release_docker_real"
+      ;;
+  esac
+}
+trap task548_release_docker_cleanup EXIT
 docker build --build-arg APP_VERSION=0.0.0-test \
-  --tag coderso-task548-docs-contract .
-docker run --rm --entrypoint bun coderso-task548-docs-contract \
+  --iidfile "$task548_release_docker_iid" .
+task548_release_docker_image="$(
+  tr -d '\r\n' < "$task548_release_docker_iid"
+)"
+[[ "$task548_release_docker_image" =~ ^sha256:[0-9a-f]{64}$ ]] || exit 1
+docker run --rm --entrypoint bun "$task548_release_docker_image" \
   --eval 'await import("@coderso/docs-renderer")'
 bun --cwd core lint:types
 bun --cwd core lint
@@ -560,7 +597,12 @@ git diff --check
 Exercise publication and rollback against a disposable local bare remote plus a
 dry-run workflow fixture; never mutate the real Pages branch during tests. The
 Docker commands validate only the already-landed TASK-548-02-L03 owner
-contract; any failure returns to that owner and is not patched by L02.
+contract; any failure returns to that owner and is not patched by L02. Every
+repeat allocates a validated task-scoped `mktemp -d`, captures the new image
+through `docker build --iidfile`, requires an exact
+`sha256:<64-lowercase-hex>` ID, and uses an `EXIT` trap to remove only that
+exact image and validated temp directory. A fixed/shared tag or broad/unresolved
+cleanup target is forbidden.
 
 ## Documentation Updates Required
 

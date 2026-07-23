@@ -63,38 +63,158 @@ passes against the current post-TASK-540 HEAD plus full status/diff. Before any
 TASK-539 source edit, the implementation workflow must already exist and pin that
 baseline; a later commit does not narrow line-gate scope.
 
-The new Bun suite:
+### Real HTTP Page mutation harness
+
+The new Bun suite must not import or call `registerPageRoutes`, its handlers, or a
+test router. Ground the harness against
+`tests/integration/routes/userSettings.test.ts` and use the same real symbols:
 
 ```text
-create uniquely prefixed Page through registered Page handlers
-create the published footer template and shell settings as uniquely owned
-  direct-service fixtures, following the existing site-shell runtime harness
-exercise actual registered Page write/publish and public runtime paths
-assert strict canonical gallery and unknown nested key behavior
-assert public HTML/CSS hooks, responsive rules, parsed paint, and static runtime
-assert main/footer each carry the required selector/style/script contract
-assert unsafe marquee form/listing descendants use one canonical segment and
-  produce exactly one nonce/script/listing-runtime surface
-never copy assertions into pages-runtime.test.ts
-finally restore owned settings and delete only rows/files created by this suite
+startHttpServer, resolveRateLimitBucket
+resolveAdminPath
+createSession, createCsrfToken, setCsrfToken, SESSION_COOKIE_NAME
+getSetting, getSettingRecord, setSetting, deleteSetting
+resetRateLimitBuckets
+createPageTemplate, SITE_FOOTER_TEMPLATE_SETTING_KEY, clearSiteCache
+db; accessLogs, auditLogs, pageRevisions, pages, pageTemplates, previewTokens,
+  roles, sessions, userRoles, users
+trackedFetch, expectedAccessLogSignature, validateAndCleanupAccessLogs
+type AccessLogCandidate, type AccessLogScope, type ExpectedAccessLog, type PollDeps
 ```
 
-Use collision-safe IDs/slugs and guarded cleanup; never truncate or delete a whole
-table. Assert unsafe data is absent without writing an actionable exploit transcript.
-The existing Page and site-shell runtime suites run read-only as regression consumers.
+Import the access-log helpers/types from the existing
+`tests/integration/routes/support/userSettingsAccessLogHarness.ts`; do not copy or
+weaken its asynchronous stable-inventory/drain algorithm. Implement these local,
+typed helpers inside the new suite, keeping the complete test file `<=1000`:
+
+```text
+configuredHost(value, fallback)
+  parse an absolute configured base URL and return URL.host, else fallback
+
+createHttpActor(kind, permissions, marker)
+  insert one UUID user and one uniquely named UUID role
+  insert exactly one userRoles assignment
+  call createSession({userId, userAgent:marker})
+  call createCsrfToken(), then setCsrfToken(session.id, tokenHash)
+  return {kind,userId,roleId,sessionId,sessionToken,csrfToken}
+
+pageRequest(method, routeSuffix, actor?, csrf?, body?, expectedStatus)
+  build ${adminPath}/api${routeSuffix} under the ephemeral loopback base URL
+  send Host equal to configuredHost(await getSetting("site.adminBaseUrl"), fallbackHost)
+  send User-Agent marker, JSON Content-Type/body when present,
+    Cookie `${SESSION_COOKIE_NAME}=${actor.sessionToken}` when authenticated,
+    and X-CSRF-Token only when requested
+  call trackedFetch with the exact path/status/user/session ledger entry
+  return the real HTTP Response
+
+snapshotOwnedMutationState(slugs, pageIds)
+  query only exact owned Page slugs/ids plus their pageRevisions and auditLogs
+  return deterministic rows/counts so every denial can compare before/after bytes
+```
+
+Create at least these actors with collision-safe UUID identities and exact RBAC:
+
+- reader: `["content:read"]` and therefore no write;
+- writer: `["content:read", "content:write"]` and no publish;
+- publisher: `["content:read", "content:write", "content:publish"]`.
+
+Resolve `adminPath = await resolveAdminPath()`, start one
+`startHttpServer({port:0})`, and use `http://127.0.0.1:${server.port}` only as the
+transport origin while sending the configured Admin Host header. Assert
+`resolveRateLimitBucket` returns `"admin_write"` for `POST /pages`,
+`PATCH /pages/:id`, `POST /pages/:id/autosave`, and
+`POST /pages/:id/publish`. Then execute this ordered matrix through real HTTP:
+
+1. unauthenticated create -> `401` / `auth_required`;
+2. writer create with missing CSRF -> `403` / `csrf_invalid`;
+3. writer create with an invalid CSRF token -> `403` / `csrf_invalid`;
+4. reader create with its valid CSRF token -> `403` / `forbidden`;
+5. writer create with valid CSRF -> `200`; track the returned Page ID;
+6. writer update with valid CSRF -> `200` and exact current-document persistence;
+7. writer update carrying one nested unknown PageDocumentV2 member -> `400` /
+   `page_document_unknown_field`, with the returned error path and no persistence;
+8. writer autosave with valid CSRF -> `200` and exactly one owned autosave revision;
+9. writer publish with valid CSRF -> `403` / `forbidden`, preserving draft Page
+   bytes, the existing autosave inventory, zero publish revision, and zero publish
+   audit;
+10. publisher publish with valid CSRF -> `200`, published/current document parity,
+    exactly one publish revision, and exactly one `pages.publish` audit row.
+
+Compare `snapshotOwnedMutationState` before/after every denied or invalid request,
+including exact slug lookup before a Page ID exists. This is the evidence for zero
+Page/revision/autosave/audit mutation. The real missing/invalid-CSRF responses and
+the access-log ledger prove the request crossed `httpServer` middleware; the static
+bucket-helper assertion alone is not cited as middleware proof.
+
+### Public runtime and direct-service fixtures
+
+Create the published footer template through `createPageTemplate` and set its shell
+reference through the existing `SITE_FOOTER_TEMPLATE_SETTING_KEY` plus `setSetting`
+pattern. For every touched setting (including cache/content-route values), first
+snapshot `getSettingRecord`; restore an existing record with `setSetting` and remove
+only a suite-created record with `deleteSetting`. Footer/template/settings are
+fixtures, not claimed Page HTTP coverage.
+
+After authorized HTTP publish, request the actual public Page path from the same
+ephemeral server using the configured public Host (or loopback fallback). Assert
+strict canonical gallery and nested-unknown behavior, public HTML/CSS hooks,
+responsive rules, parsed paint, static runtime, main/footer selector/style/script
+contracts, and unsafe marquee form/listing descendants with one canonical segment
+and exactly one nonce/script/listing-runtime surface. Never copy assertions into
+`pages-runtime.test.ts`; existing Page and site-shell runtime suites remain read-only
+regression consumers.
+
+### Exact cleanup and failure aggregation
+
+Track exact Page, template, user, role, session, and setting identities. Stop the
+server before database cleanup, then use the user-settings harness's stable
+access-log validation/drain over this suite's marker/user/session scope. Its cleanup
+callback, plus the guarded fallback path, deletes/restores only owned state in
+foreign-key-safe order:
+
+```text
+restore exact setting snapshots (setSetting or deleteSetting)
+delete auditLogs where targetId is an owned Page ID
+delete previewTokens where targetType="page" and targetId is owned
+delete pageRevisions where pageId is owned
+delete pages where id is owned
+delete pageTemplates where id is the owned footer template
+delete sessions where id is an owned session
+delete userRoles where userId/roleId belongs to this suite
+delete roles where id is owned
+delete users where id is owned
+```
+
+The access-log harness deletes only its observed owned access-log IDs before actor
+rows disappear. Build its `PollDeps` exactly as the grounded fixture does: select
+`accessLogs` candidates by the unique User-Agent marker or owned user/session IDs,
+delete only explicit observed access-log IDs, use `Date.now`, and use a bounded
+`setTimeout` wait. Always clear the site cache and call
+`resetRateLimitBuckets()` in finalization. Mirror the user-settings suite's
+behavior-error, validation-error, fallback-cleanup, and `AggregateError` handling so
+a failed assertion never skips cleanup. Never truncate a table, delete by broad role
+name/status, or record raw cookies, CSRF tokens, credentials, sensitive responses,
+or an actionable exploit payload.
 
 ## Security Contract
 
 - **Visibility/auth:** all exercised mutation routes are internal
   `/admin/api/*` routes authenticated only by the existing session cookie; there is
-  no TASK-539 API-key mode.
+  no TASK-539 API-key mode. The suite must reach them through
+  `startHttpServer({port:0})`, `resolveAdminPath`, the configured
+  `site.adminBaseUrl` Host, and `SESSION_COOKIE_NAME`; direct route invocation is not
+  HTTP evidence.
 - **RBAC:** create, update, and autosave require `content:write`; publish requires
-  `content:publish`.
+  `content:publish`. Unique reader, writer, and publisher users receive only the
+  exact role permissions enumerated above.
 - **CSRF/rate limit:** every session-backed write in the harness sends the real
-  `X-CSRF-Token` shape and remains in the `admin_write` bucket. The test must not
-  bypass middleware to claim route coverage.
+  `X-CSRF-Token` shape issued by `createCsrfToken`/`setCsrfToken` and remains in the
+  `admin_write` bucket. Unauthenticated, missing-CSRF, invalid-CSRF, reader-write,
+  and writer-publish requests assert exact 401/403 codes and zero owned mutation.
+  The test must not bypass middleware to claim route coverage.
 - **Validation:** the PageDocumentV2 boundary strictly rejects unknown fields and
-  the suite proves rejection/no persistence through the registered route.
+  the suite proves a nested unknown member returns
+  `page_document_unknown_field`/400 with no persistence through real HTTP.
 - **Anti-abuse:** public Page render is read-only and TASK-539 adds no public write,
   so no new nonce/signature/HMAC or captcha policy applies. Existing form nonces and
   scripts must occur exactly once when an unsafe marquee subtree degrades to one
@@ -105,7 +225,10 @@ The existing Page and site-shell runtime suites run read-only as regression cons
   coverage. If an implementer instead exercises registered handlers, page-template
   create/update requires `content:write`, settings PATCH requires `settings:write`,
   both remain session-cookie/CSRF/`admin_write` protected, and their strict schemas
-  must run. Cleanup deletes/restores only suite-owned state.
+  must run. `tests/integration/routes/pages.test.ts` remains direct
+  route/schema/service proof only. Cleanup restores exact setting snapshots and
+  deletes only suite-owned Page/revision/preview/audit/session/user-role/role/user/
+  template rows after exact access-log drainage.
 
 ## Exact targeted gates
 
@@ -138,9 +261,9 @@ bun --cwd core build:site
 bun run check:admin-boundary
 bun run check:admin-bundle
 set -a && source .env && set +a
-bun --eval 'import { canConnect, hasTable } from "./tests/utils/db"; const configured = Boolean(process.env.DATABASE_URL?.trim()); const reachable = configured && await canConnect(); const menus = reachable && await hasTable("menus"); const pageTemplates = reachable && await hasTable("page_templates"); process.stdout.write(JSON.stringify({ configured, reachable, requiredTables: { menus, page_templates: pageTemplates } })); if (!reachable || !menus || !pageTemplates) process.exit(1); process.exit(0)'
+bun --eval 'import { canConnect, hasTable } from "./tests/utils/db"; const configured = Boolean(process.env.DATABASE_URL?.trim()); const reachable = configured && await canConnect(); const names = ["menus","page_templates","pages","page_revisions","preview_tokens","audit_logs","access_logs","sessions","users","roles","user_roles","settings"]; const requiredTables = Object.fromEntries(await Promise.all(names.map(async (name) => [name, reachable && await hasTable(name)]))); process.stdout.write(JSON.stringify({ configured, reachable, requiredTables })); if (!reachable || Object.values(requiredTables).some((present) => !present)) process.exit(1); process.exit(0)'
 bun test --timeout=15000 tests/integration/routes/pages.test.ts
-bun test --timeout=15000 tests/integration/runtime/task-539-page-parity-runtime.test.ts
+bun test --timeout=30000 tests/integration/runtime/task-539-page-parity-runtime.test.ts
 bun test --timeout=15000 tests/integration/runtime/pages-runtime.test.ts
 bun test --timeout=15000 tests/integration/runtime/site-shell-runtime.test.ts
 bun run test
@@ -151,13 +274,15 @@ bun run scan:security:strict
 git diff --check
 ```
 
-The preflight checks the exact additional table predicates that
-`site-shell-runtime.test.ts` uses to select `test` rather than `test.skip`. Do not
-close on an unreachable DB, either missing required table, a skipped required case,
-truncated command, missing workflow result, line count above 1,000, or unavailable
-strict scanner. Require the final named-suite receipts to report zero skipped required
-cases. Recover, rerun, and record the final result. Attribute a broad-suite failure
-only after its named file confirms it in isolation.
+The preflight covers both `site-shell-runtime.test.ts` tables and every table used by
+the real-HTTP actor/Page/access-log harness. The new HTTP case owns a 30-second
+timeout because it starts/stops Bun, waits for asynchronous access-log quiescence,
+and performs exact cleanup. Do not close on an unreachable DB, any missing required
+table, a skipped required case, truncated command, missing workflow result, line
+count above 1,000, or unavailable strict scanner. Require the final named-suite
+receipts to report zero skipped required cases. Recover, rerun, and record the final
+result. Attribute a broad-suite failure only after its named file confirms it in
+isolation.
 
 ## Fresh post-audit
 
@@ -211,16 +336,19 @@ distinct real flows:
    canonical segment, no replica marker/namespace, and exactly one form nonce,
    executable form script, listing runtime surface, and nested marquee instance.
    At one tablet and one mobile front viewport, author real responsive typography,
-   frame/inner-element visual style, tilt+layer offsets, and a legal grid span in the
-   safe two-segment case. Compare computed styles and relevant bounding-box/grid
-   geometry between the canonical and replica targets: both segments must visibly
-   match. Assert the replica uses only
+   frame/inner-element visual style, and tilt+layer offsets on duplicated safe
+   descendants. Compare computed block-frame, inner-element, text, and hoisted
+   tilt/layer styles plus bounding boxes between the canonical and replica targets:
+   both segments must visibly match. Author a legal responsive grid span only on the
+   outer marquee group and prove its singular canonical grid target remains outside
+   both segments with the expected geometry. Every duplicated descendant must have
+   no grid hook, grid alias, inline span, or responsive span CSS. Assert the replica
+   uses only
    `PAGE_MARQUEE_REPLICA_BLOCK_STYLE_SCOPE_ATTRIBUTE`,
-   `PAGE_MARQUEE_REPLICA_TILT_LAYER_STYLE_SCOPE_ATTRIBUTE`, and
-   `PAGE_MARQUEE_REPLICA_GRID_ITEM_STYLE_SCOPE_ATTRIBUTE`, with canonical original
-   block-ID values on their precise frame/hoisted-wrapper/grid targets, retains
-   namespaced selection/runtime identities, and leaks no alias to primary,
-   non-seamless, unsafe fallback, or a non-owning replica node.
+   `PAGE_MARQUEE_REPLICA_TILT_LAYER_STYLE_SCOPE_ATTRIBUTE`, with canonical original
+   block-ID values on their precise frame/hoisted-wrapper targets, retains namespaced
+   selection/runtime identities, and leaks no alias to primary, non-seamless, unsafe
+   fallback, or a non-owning replica node.
 5. **Full-bleed paint.** Author responsive gradient layers plus final color, radius,
    shadow, and glow; assert viewport-wide outer paint, capped content, exact computed
    image/color split, no double-tone box, and invalid paint absent.

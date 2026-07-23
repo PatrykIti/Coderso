@@ -55,9 +55,8 @@ Both leaves consume, without editing or copying:
   `core/services/pages/pageBlockGridPlacement.ts`, owned by TASK-539-03-L05.
   Responsive CSS invokes it with `{includeHiddenBlocks:false}` to match public
   visible-root rendering.
-- `PAGE_MARQUEE_REPLICA_BLOCK_STYLE_SCOPE_ATTRIBUTE`,
-  `PAGE_MARQUEE_REPLICA_TILT_LAYER_STYLE_SCOPE_ATTRIBUTE`, and
-  `PAGE_MARQUEE_REPLICA_GRID_ITEM_STYLE_SCOPE_ATTRIBUTE` directly from their sole
+- `PAGE_MARQUEE_REPLICA_BLOCK_STYLE_SCOPE_ATTRIBUTE` and
+  `PAGE_MARQUEE_REPLICA_TILT_LAYER_STYLE_SCOPE_ATTRIBUTE` directly from their sole
   owner `pageRendererReplicaIdentity.ts`. They are styling-only aliases whose values
   are canonical normalized original block IDs, never replica selection/runtime
   identities.
@@ -94,12 +93,15 @@ scanner exception is allowed.
   block props emit the existing props diagnostic (`heading`/`text` `props.align`
   remains the explicit projection exception).
 - Selectors preserve exact escaping, deterministic order, and trusted-scope checks.
-- Every responsive block frame/element/text, hoisted tilt/layer, and legal grid-span
-  rule uses one `:is(primary canonical selector, replica styling-only alias
-  selector)` scope assembled by shared selector helpers. Thus an approved two-segment
-  marquee has equal tablet/mobile computed styling without duplicating declaration
-  grammar or weakening replica identity isolation. Primary output and one-segment
-  fallback bytes stay unchanged.
+- Every responsive block frame/element/text and hoisted tilt/layer rule uses one
+  `:is(primary canonical selector, replica styling-only alias selector)` scope
+  assembled by shared selector helpers. Thus an approved two-segment marquee has
+  equal tablet/mobile computed visual/typography/layer styling without duplicating
+  declaration grammar or weakening replica identity isolation. Grid-span rules
+  remain canonical-only: the outer authored marquee group's one legal root grid
+  target is outside both segments, while every duplicated descendant is nested and
+  emits no grid hook/alias/span CSS. Primary output and one-segment fallback bytes
+  stay unchanged.
 - No override and unrelated legacy documents retain exact zero-byte/byte-identity
   behavior.
 - The baseline-through-final family line gate reports every touched human-authored

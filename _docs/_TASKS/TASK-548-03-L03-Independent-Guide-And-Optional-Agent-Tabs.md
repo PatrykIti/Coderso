@@ -86,7 +86,8 @@ assertions.
 - Requires a ready DB index but ignores `assistant.enabled`,
   `assistant.llm.enabled`, provider, model, and provider failure.
 - Existing startup seed remains the normal readiness path. Authorized manual
-  reindex remains available even when Agent is disabled.
+  `POST /admin/api/assistant/reindex` remains available even when Agent is
+  disabled.
 - Answer/source records carry TASK-548-01/02 stable
   `(docId, locale, sectionId)` identity.
   Response cards resolve matching local `visualId`/`exampleId` records from the
@@ -109,6 +110,38 @@ assertions.
 - Missing/mismatched local metadata degrades to text/source evidence and never
   invents a screenshot/example.
 - Guide cannot call plan, dry-run, or execute.
+
+### Manual reindex independence
+
+The current `reindexAssistantDocs` implementation in
+`core/services/assistant/assistantService.ts` reads runtime settings and then
+throws `assistant_disabled` when `settings.enabled` is false before invoking
+the ingest dependency. Remove exactly that Agent-enable guard from the reindex
+service path. Reindex must not check `assistant.enabled`,
+`assistant.llm.enabled`, provider, model or provider availability and must
+never resolve/call a provider. This does not remove the mode-specific Agent
+guard from `answerAssistantQuestion`, enable Agent controls, or authorize any
+Agent action.
+
+The reindex route remains the existing internal
+`POST /admin/api/assistant/reindex` (`/assistant/reindex` inside the Admin
+router). Preserve, without bypasses:
+
+- authenticated Admin session, `settings:write`, unsafe-method CSRF middleware,
+  and the `assistant` rate-limit bucket;
+- the strict reject-unknown `{ force?: boolean }` request body owned by
+  TASK-548-01-L03;
+- the packaged `DocsDistributionBundleV2` loader, schema/source-hash/reference
+  validation, and no Markdown/network fallback;
+- the TASK-548-01-L03 single-ingest lock/serialization, previous-active-snapshot
+  rollback behavior, audit record, result shape, and exact typed
+  `assistant_docs_*`/`assistant_reindex_failed` error mapping.
+
+`reindexAssistantDocs` is a service operation behind those route controls, not
+a replacement authorization boundary. TASK-548-01-L03 remains the sole writer
+of `mapAssistantError`; this leaf must not delete `assistant_disabled` from that
+mapper because Agent chat still uses it or weaken any of the four v2 reindex
+mappings.
 
 ### Agent
 
@@ -158,9 +191,10 @@ eligible. Only the selected user's `text` reaches redaction and clamping.
 
 ## Security Contract
 
-- **Endpoint visibility:** no new endpoint. `/assistant/status`,
-  `/assistant/chat`, `/assistant/reindex`, and `/assistant/actions/*` remain
-  internal.
+- **Endpoint visibility:** no new endpoint. The mounted
+  `/admin/api/assistant/status`, `/admin/api/assistant/chat`,
+  `/admin/api/assistant/reindex`, and `/admin/api/assistant/actions/*` endpoints
+  (`/assistant/*` inside the Admin router) remain internal.
 - **Auth:** existing authenticated Admin session-cookie gate and server RBAC
   remain. This leaf adds no generic API-key authentication path.
 - **RBAC:** status/chat keep `settings:read`; reindex keeps `settings:write`;
@@ -198,6 +232,45 @@ export function resolveAssistantProducts(status: AssistantStatusResponse): {
         : { state: "unavailable", reason: "provider_unavailable" },
   };
 }
+
+// core/services/assistant/assistantService.ts
+export const reindexAssistantDocs = async (
+  input: { actorId?: string | null },
+  overrides?: Partial<AssistantServiceDeps>
+): Promise<AssistantReindexResult> => {
+  const deps = resolveDeps(overrides);
+  const settings = await readRuntimeSettings(deps);
+
+  // Intentionally no settings.enabled, LLM or provider gate. By this leaf's
+  // dependency order, this inherited ingest seam loads/validates the packaged
+  // v2 bundle and retains the TASK-548-01-L03 single-ingest serialization.
+  let ingest: AssistantDocsIngestResult;
+  try {
+    ingest = await deps.ingestInternalDocsToDb({
+      sourceRoot: settings.docsSourceRoot,
+      triggeredByUserId: input.actorId ?? null,
+    });
+  } catch (error) {
+    throw normalizeDocsIngestError(error);
+  }
+
+  const dbStatus = await deps.getAssistantDocsDbStatus();
+  await logAssistantReindexAuditBestEffort({
+    deps,
+    actorId: input.actorId ?? null,
+    ingest,
+    dbStatus,
+  });
+  return {
+    retrievalBackend: "db",
+    builtAt: ingest.finishedAt,
+    buildDurationMs: ingest.buildDurationMs,
+    docCount: dbStatus.docCount,
+    chunkCount: dbStatus.chunkCount,
+    totalTokens: ingest.totalTokens,
+    actorId: input.actorId ?? null,
+  };
+};
 
 export async function answerAssistantQuestion(input: AssistantChatInput) {
   const settings = await readRuntimeSettings();
@@ -306,21 +379,38 @@ export function prepareAssistantHandoff(input: {
 }
 ```
 
-**Data flow:** active tab + isolated snapshot → explicit mode request → existing
-strict route → DB retrieval; Agent optionally invokes provider/action review.
+**Data flow:** authorized manual reindex → strict request validation → provider-
+independent serialized packaged-bundle ingest → active DB snapshot; active tab +
+isolated snapshot → explicit mode request → existing strict route → DB
+retrieval; Agent optionally invokes provider/action review.
 Guide evidence `(docId, locale, sectionId)` → installed distribution join →
 safe locale-bound visual/example cards from L02 renderer/link policy.
 
 **Error handling:** DB/index errors remain in Guide state; provider/config/quota
 errors remain in Agent state; malformed response ids omit cards; a docs fallback
 in Agent becomes an explicit handoff choice; stale snapshot/secret-like handoff
-is discarded; no cross-tab state overwrite.
+is discarded; no cross-tab state overwrite. Agent-disabled state never blocks
+authorized reindex. Reindex lock conflicts, packaged-bundle validation, DB and
+ingest failures retain the exact TASK-548-01-L03 typed mapping; they are not
+collapsed into provider/Agent availability errors.
 
 **Regression-test shape:**
 
 - Guide launcher/tab remains visible with `assistant.enabled=false` for a user
   who satisfies existing chat RBAC;
 - Guide sends docs-only and works with provider absent/failing;
+- with `assistant.enabled=false`, an authenticated `settings:write` request to
+  `POST /admin/api/assistant/reindex` with `{}`, `{ force: true }`, or
+  `{ force: false }` invokes the serialized packaged-bundle ingest exactly once,
+  succeeds without resolving a provider, preserves its audit/result, and makes
+  Guide ready;
+- the same disabled-state regression proves missing session/permission, CSRF,
+  rate limit and unknown/non-boolean request fields still reject before ingest;
+  lock conflict, invalid/tampered packaged bundle, DB unavailable and ingest
+  failure retain their exact typed status/code mappings;
+- after that successful disabled-state reindex, Guide docs-only chat works while
+  Agent chat/provider/actions and Agent UI controls remain unavailable; no
+  reindex response or status field implicitly enables Agent;
 - Agent requires global Agent enablement plus provider and never calls actions
   from Guide;
 - separate histories, errors, readiness, `New`, plan/preview/execution;
@@ -352,7 +442,11 @@ is discarded; no cross-tab state overwrite.
 
 - [ ] Split the oversized panel and focused interaction tests.
 - [ ] Add separate typed Guide/Agent state machines and storage migration.
-- [ ] Decouple docs-only/reindex readiness from Agent enablement.
+- [ ] Remove only the `settings.enabled` guard from `reindexAssistantDocs`;
+  preserve the internal route security, strict body, serialized packaged ingest,
+  audit/result and typed mappings, and prove reindex with Agent disabled.
+- [ ] Decouple docs-only readiness from Agent enablement without enabling Agent
+  chat/provider/actions.
 - [ ] Add rich Guide evidence cards from local bundle ids.
 - [ ] Add exact snapshot-member user-text handoff with forged/mixed-entry
   rejection and preserve Agent review/action gates.
@@ -405,6 +499,9 @@ cohesive.
   selector.
 - Guide remains deterministic DB-backed and usable when Agent/global AI is
   disabled or provider calls fail.
+- Authorized manual reindex remains provider-independent and succeeds with
+  `assistant.enabled=false` without weakening session/RBAC/CSRF/rate/validation,
+  ingest serialization or typed errors.
 - Agent remains optional, provider-backed, review-first, permission-aware,
   idempotent, audited, and isolated from Guide failure.
 - Rich Guide cards resolve only stable local bundle evidence and degrade safely.

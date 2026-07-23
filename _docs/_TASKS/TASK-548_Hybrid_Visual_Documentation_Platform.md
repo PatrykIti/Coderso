@@ -277,17 +277,28 @@ Executable implementation order is exactly:
 → 06-L01 → one final same-owner 01-L02 handback/gate → 06-L02 → 07`.
 
 TASK-548-01-L02 is the exclusive writer of
-`core/generated/docs/coderso-docs-v2.json` for the whole family. TASK-548-06-L01
-may edit native Guide sources and production visual triples but may not write
-that generated final. After those edits, orchestration pauses TASK-548-06 and
-re-dispatches the same TASK-548-01-L02 owner to regenerate and verify the bundle
-plus `.tmp/docs-corpus/migration-report-v1.json` from the final native source
-set. This handback occurs exactly once after all TASK-548-06-L01 source/visual
-edits, never per wave or per promotion. Only after it passes may TASK-548-06
-resume `docs:check` and TASK-548-06-L02 coverage reconciliation. It is a
+the durable tracked `core/generated/docs/coderso-docs-v2.json` for the whole
+family. TASK-548-06-L01 may edit native Guide sources and production visual
+triples but may not write that generated final. After those edits, orchestration
+pauses TASK-548-06 and re-dispatches the same TASK-548-01-L02 owner to regenerate
+and verify the bundle plus the workspace-only ignored
+`.tmp/docs-corpus/migration-report-v1.json` from the final native source set.
+This handback occurs exactly once after all TASK-548-06-L01 source/visual edits,
+never per wave or per promotion. Only after it passes may TASK-548-06 resume
+read-only `docs:check` and TASK-548-06-L02 coverage reconciliation. It is a
 same-owner operational checkpoint, not a second writer. TASK-548-07 remains the
 only status writer, so the handback neither reopens a terminal 01-L02 leaf nor
 changes parent/child status during implementation.
+
+The linked bundle/report transaction exists only for explicit TASK-548-01-L02
+authoring/migration `--write` runs and the two named handbacks. Its stable
+prestates are exactly `bootstrap-none`, clean-checkout
+`packaged-bundle-only`, and `linked-pair`; report-only and recovery hazards fail
+closed. A clean clone/tag, production runtime, portal, Docker image, release,
+`docs:check`, and coverage check require only the tracked bundle. They run the
+read-only workspace hazard inspector and strict packaged-bundle validation with
+recomputed canonical byte/`sourceHash` equality where source is available; none
+recovers, writes, or requires the ignored report.
 
 The same status rule applies to the post-pilot checkpoint: after
 TASK-548-02-L02 writes exactly five pilot scenario/image/receipt triples,

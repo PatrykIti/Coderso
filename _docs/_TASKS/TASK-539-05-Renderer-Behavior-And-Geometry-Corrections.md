@@ -73,11 +73,14 @@ change applies.
   imports the owner marker, is `aria-hidden` + `inert`, and namespaces local
   DOM/SVG IDs, matching local references, and identifier-bearing data hooks through
   their separate eligibility sets; a hook-only matching fragment stays unchanged.
-  Three direct-owner styling-only aliases retain the canonical original block ID on
-  the approved replica's block frame, hoisted tilt/layer wrapper, and actual grid
-  target, respectively, so responsive CSS can style both segments without restoring
-  canonical selection/runtime hooks. They are outside both identity sets and all
-  identity transformation, and primary/non-seamless/unsafe output emits none.
+  Two direct-owner styling-only aliases retain the canonical original block ID on
+  the approved replica's block frame and hoisted tilt/layer wrapper, respectively,
+  so responsive CSS can style both segments without restoring canonical
+  selection/runtime hooks. They are outside both identity sets and all identity
+  transformation, and primary/non-seamless/unsafe output emits neither. The outer
+  authored marquee group's legal root grid target is one canonical node outside both
+  segments; all duplicated descendants are nested, resolve placement `"none"`, and
+  emit no grid hook/alias/span CSS.
   The primary stays unchanged. Non-seamless also has one canonical segment. Vitest
   pins native inert markup/property; TASK-539-08 Playwright proves actual focus and
   activation suppression.
@@ -89,9 +92,11 @@ change applies.
   non-final/final bottoms, and bridge only real row gaps.
 - Divider source remains unchanged and is regression-tested only.
 - The stable renderer facade keeps the grounded 12-type plus 29-runtime-value
-  manifest. Its L01-owned suite proves exact runtime keys, direct-owner reference
-  identity, type imports, no export-star, and absence of task-added replica/timeline
-  internals.
+  manifest. Its L01-owned suite parses a declaration-only explicit facade, proves the
+  exact 12-name `pageRendererTypes` type-owner map with no extras or duplicates,
+  rejects direct/default/namespace/export-star forms, proves exact runtime keys and
+  direct-owner reference identity, and keeps task-added replica/timeline internals
+  absent.
 - No-effect/no-span/no-background markup stays byte-identical.
 
 ## Validation

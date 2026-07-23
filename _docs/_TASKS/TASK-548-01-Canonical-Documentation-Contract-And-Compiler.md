@@ -35,6 +35,16 @@ post-pilot refresh after TASK-548-02-L02 and final regeneration handback after
 TASK-548-06-L01 changes native sources and visuals. No other child redefines the
 shared shapes or writes that generated final.
 
+The generated bundle is a durable tracked runtime artifact. The ignored
+`.tmp/docs-corpus/migration-report-v1.json` is workspace-only and joins the
+bundle in one durable pair only during explicit TASK-548-01-L02
+authoring/migration `--write` runs and named handbacks. The exact stable
+prestates are `bootstrap-none`, clean-checkout `packaged-bundle-only`, and
+`linked-pair`; report-only and transaction debris fail closed. Clean
+clone/tag/runtime, portal, Docker, release, `docs:check`, and coverage-check
+consumers validate the packaged bundle without requiring or recreating the
+ignored report.
+
 ## Locked Contract
 
 The canonical type names are `DocsCorpusManifestV2`, `DocsDocumentV2`,
@@ -165,7 +175,7 @@ or fixture-value echo.
 | Task | Scope | Single writer | Depends on |
 | --- | --- | --- | --- |
 | TASK-548-01-L01 | Strict shared schemas, stable identity and safe Markdown policy | `core/services/documentation/docsCorpus*`, root manifest/template and focused contract tests | None |
-| TASK-548-01-L02 | Deterministic compiler, legacy compatibility adapter, canonical migration report and generated bundle; no authored corpus edits | compiler modules, `scripts/docs/compile-corpus.ts`, generated bundle/report and compiler tests | TASK-548-01-L01 |
+| TASK-548-01-L02 | Deterministic compiler, legacy compatibility adapter, workspace-only canonical migration report and tracked generated bundle; no authored corpus edits | compiler modules, `scripts/docs/compile-corpus.ts`, generated bundle/report and compiler tests | TASK-548-01-L01 |
 | TASK-548-01-L03 | Assistant DB schema/migration, atomic bundle ingest, v1 compatibility and centralized reindex error mapping | assistant schema/ingest/startup modules, the existing assistant route error mapper, migration artifacts and focused DB/runtime tests | TASK-548-01-L02 |
 
 Land strictly in table order. TASK-548-02 starts only after TASK-548-01 is

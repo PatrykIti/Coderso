@@ -62,16 +62,19 @@ L01 source and all split/existing renderer suites are read-only here.
   byte-identical. Every rewritten DOM reference resolves inside that replica and
   never the primary; unresolved/external references and boolean/enumerated hooks
   remain byte-identical.
-- Direct-import `PAGE_MARQUEE_REPLICA_BLOCK_STYLE_SCOPE_ATTRIBUTE`,
-  `PAGE_MARQUEE_REPLICA_TILT_LAYER_STYLE_SCOPE_ATTRIBUTE`, and
-  `PAGE_MARQUEE_REPLICA_GRID_ITEM_STYLE_SCOPE_ATTRIBUTE` from
+- Direct-import `PAGE_MARQUEE_REPLICA_BLOCK_STYLE_SCOPE_ATTRIBUTE` and
+  `PAGE_MARQUEE_REPLICA_TILT_LAYER_STYLE_SCOPE_ATTRIBUTE` from
   `pageRendererReplicaIdentity.ts`. An approved replica stamps the block-frame alias
   on its corresponding block frame, the tilt/layer alias only on the hoisted
-  tilt/layer wrapper, and the grid-item alias only on the L05-classified actual grid
-  target. Each value remains the canonical normalized original block ID even while
-  selection/runtime hook identifiers are namespaced. Assert the aliases are absent
-  from `domIds`, `hookIdentifiers`, identity-transformer routing, primary markup,
-  non-seamless output, unsafe fallback output, and every non-owning replica node.
+  tilt/layer wrapper. Each value remains the canonical normalized original block ID
+  even while selection/runtime hook identifiers are namespaced. Assert the aliases
+  are absent from `domIds`, `hookIdentifiers`, identity-transformer routing, primary
+  markup, non-seamless output, unsafe fallback output, and every non-owning replica
+  node. Prove the authored outer marquee group's legal root grid target remains one
+  singular canonical frame outside both segments. Every duplicated active-slot
+  descendant preserves a nested path, resolves TASK-539-03-L05 placement `"none"`,
+  and emits no `PAGE_BLOCK_GRID_ITEM_ATTRIBUTE`, replica grid alias, inline span, or
+  responsive span target.
 - For each exact unsafe type (`video`, `form`, `collection`, `filters`, `embed`),
   cover both an immediate active-slot child (“direct”) and deep active-slot nesting
   under an authored `seamless:true` outer group. Do not test or implement an

@@ -14,10 +14,13 @@
 ## Overview
 
 Build the official public Coderso documentation portal as a deterministic static
-artifact. Before its build boundary reads either generated documentation final,
-it invokes the exact TASK-548-01-L02-owned
-`recoverDocsWorkspaceArtifactPromotionV1()`, then loads and cross-validates the
-recovered bundle/report pair. It applies the exact
+artifact. Before its build boundary reads the generated documentation bundle,
+it invokes the exact TASK-548-01-L02-owned read-only
+`assertNoDocsWorkspaceArtifactPromotionHazardsV1()`, then calls
+`loadPackagedDocsDistributionBundleV2()` for the durable tracked bundle. A
+mandatory read-only `docs:check` immediately before the portal build recomputes
+canonical bytes/`sourceHash`. The ignored workspace migration report is never a
+portal input or prerequisite. The portal applies the exact
 `selectDocumentsForPublicationTarget(..., "public-docs")` selector and asks
 TASK-548-04-L02 to produce the exact L01-owned
 `DocsPortalPublicProjectionV1`. Only that `public-docs` projection may reach
@@ -194,18 +197,22 @@ helper.
 No TASK-548-04 leaf may dispatch until TASK-545 and TASK-547, including all
 physical descendants, are in canonical terminal states. Portal generation then
 uses TASK-547's final shipped state and never documents planned behavior.
-Because portal build writes `dist`, it may call the explicit A-owner workspace
-recovery directly; it never invokes or describes compiler `--check` as a
-recovery surface.
+Portal build may write only `dist` after the A-owner workspace hazard inspector
+passes; that output write does not authorize workspace recovery. The mandatory
+preceding `docs:check` is read-only, accepts a valid clean-checkout
+`packaged-bundle-only` state, and proves the packaged bundle still equals
+current canonical sources.
 
 L03's targeted browser gate remains mandatory, but its task-local candidates
-stay below `.tmp`. TASK-548-07 is the sole writer of final canonical TASK-545
-evidence and `manifest.json` under
+stay below `.tmp`. TASK-548-07-L01 is the sole writer of the exact eight final
+canonical PNGs and `manifest.json` under
 `_docs/_workflows/_smoke/evidence/task-548/`. It reads L03's portal handoff and,
 when final-tree recapture is required, requests one same-owner operational L03
-handback. L03 returns bounded results/screenshot bytes only; TASK-548-07 alone
+handback. L03 returns bounded results/screenshot bytes only; TASK-548-07-L01 alone
 writes the canonical `06-portal-local-exact-latest-rollback.png` member before
-the phase-1 checkpoint.
+TASK-545 phase 1. The imported TASK-545 `createResumeCheckpoint` helper is the
+sole writer of `resume-checkpoint.json`; neither L03 nor TASK-548-07-L01 writes
+that checkpoint directly.
 
 ## Security Contract
 
@@ -235,12 +242,9 @@ export async function buildDocsPortal(
   input: DocsPortalBuildConfigV1
 ): Promise<DocsPortalBuildReceipt> {
   const config = normalizeDocsPortalBuildConfigV1(input);
-  await recoverDocsWorkspaceArtifactPromotionV1();
-  const recovered = await loadAndValidateRecoveredDocsArtifactPair({
-    bundlePath: "core/generated/docs/coderso-docs-v2.json",
-    reportPath: ".tmp/docs-corpus/migration-report-v1.json",
-  });
-  return buildRecoveredDocsPortal(config, recovered);
+  await assertNoDocsWorkspaceArtifactPromotionHazardsV1();
+  const bundle = await loadPackagedDocsDistributionBundleV2();
+  return buildValidatedDocsPortal(config, bundle);
 }
 
 if (import.meta.main) {
@@ -249,14 +253,11 @@ if (import.meta.main) {
   );
 }
 
-async function buildRecoveredDocsPortal(
+async function buildValidatedDocsPortal(
   config: DocsPortalBuildConfigV1,
-  recovered: Awaited<
-    ReturnType<typeof loadAndValidateRecoveredDocsArtifactPair>
-  >
+  bundle: DocsDistributionBundleV2
 ): Promise<DocsPortalBuildReceipt> {
-  const inputBundles = [assertDistributionBundle(recovered.bundle)];
-  assertBundleReportLinkage(inputBundles[0], recovered.report);
+  const inputBundles = [assertDistributionBundle(bundle)];
   const publicBundles = inputBundles.map((bundle) => ({
     ...bundle,
     documents: selectDocumentsForPublicationTarget(
@@ -296,26 +297,29 @@ async function buildRecoveredDocsPortal(
 }
 ```
 
-**Data flow:** config-only input → exact owner recovery → recovered and linked
-bundle/report bytes → shared exact `public-docs` selector → L02-produced and
-membership-validated `DocsPortalPublicProjectionV1` records →
+**Data flow:** read-only `docs:check` canonical-byte/source equality → config-only
+input → exact owner hazard inspection → strict packaged-bundle load → shared
+exact `public-docs` selector → L02-produced and membership-validated
+`DocsPortalPublicProjectionV1` records →
 version/locale/slug route graph → projection-only shell/search/shared renderer →
 deterministic static bytes → checksummed manifest → TASK-548-05 publish.
 
-**Error handling:** `prepared`, `member-0-promoted`, and `member-1-promoted`
-restore and verify the prior pair; `verified-commit` retains and verifies the
-new pair. Mixed finals, tampered journal/backup/staging/final bytes, or
-unrecoverable material fail before bundle/report load, target selection, route
-construction, or output write. Duplicate/malformed route or hash mismatch
+**Error handling:** any live/tampered journal, journal temp, backup/staging
+material, report-only state, invalid packaged bundle, invalid linked authoring
+pair, or `docs:check` canonical-byte/source mismatch fails before packaged-bundle
+load, target selection, route construction, or output write. A valid clean
+checkout with the tracked bundle and no report proceeds. Duplicate/malformed
+route or hash mismatch
 aborts the build; missing translation emits no fake locale route; broken
 internal ref, unsafe URL, private publication target, non-HTTPS origin, path
 traversal, nondeterministic output, or manifest/file mismatch is a hard
 failure. One bad document cannot be silently omitted.
 
-**Regression-test shape:** same bundle produces byte-identical output; terminate
-at every owner journal phase/final rename and prove portal entry recovery selects
-only the verified old/new pair; mixed finals, tampered journal/recovery material,
-and pre-recovery reads fail with zero portal output. Every manifest route/file/
+**Regression-test shape:** same bundle produces byte-identical output; clean-clone
+tracked-bundle-only builds pass with no `.tmp` tree/report, while every live
+owner journal phase, report-only state, tampered transaction material, invalid
+bundle, and attempted pre-inspection read fails with zero portal output. The
+preceding `docs:check` catches stale canonical bytes or `sourceHash`. Every manifest route/file/
 hash closes; route/base-path/SemVer/locale traversal cases reject; actual
 translations sharing one family `docId` alone produce hreflang, while duplicate
 `(docId, locale)` rejects; latest maps to current version; shared renderer/search
@@ -343,7 +347,7 @@ bunx vitest run --config vitest.config.ts \
   tests/vitest/docs-portal/portal-seo.test.ts \
   tests/vitest/docs-portal/portal-security.test.ts \
   tests/vitest/docs-portal/portal-accessibility.test.tsx
-bun run docs:compile
+bun run docs:check
 DOCS_PRODUCT_VERSION=0.0.0-test \
 DOCS_PUBLIC_ORIGIN=https://docs.example.invalid \
 DOCS_PUBLIC_BASE_PATH=/docs \
@@ -375,15 +379,17 @@ human-authored source/test file and fail any result above 1,000 lines.
   redirects, and CSP artifacts are deterministic and validated.
 - Public output contains no unsafe content, internal material, secret/PII,
   runtime external dependency, or write endpoint.
-- Portal build never reads a bundle/report pair before owner recovery and never
-  writes output from mixed, tampered, or crash-incomplete artifact finals.
+- Portal build performs read-only workspace hazard inspection before loading the
+  strict packaged bundle, works with the ignored report absent, and never writes
+  output from report-only, tampered, crash-incomplete, stale, or invalid state.
 - At least five distinct Playwright flows assert visible behavior in wide,
   narrow, light, dark, keyboard, reduced-motion, version/locale, and offline
   conditions with zero console errors.
-- All seven L03 targeted screenshots remain below `.tmp`; TASK-548-07 is the
-  sole canonical TASK-545 writer and adds only
+- All seven L03 targeted screenshots remain below `.tmp`; TASK-548-07-L01 writes
+  only the exact eight canonical PNGs plus `manifest.json` and adds only
   `06-portal-local-exact-latest-rollback.png` for the portal to its exact
-  eight-image acceptance inventory.
+  eight-image acceptance inventory. TASK-545 `createResumeCheckpoint` phase 1
+  alone writes `resume-checkpoint.json`.
 - TASK-548-05 can publish/rollback the immutable `dist` artifact without editing
   portal source or reconstructing routes.
 - TASK-548-05 verifies the deployed exact/latest routes, retained manifests and

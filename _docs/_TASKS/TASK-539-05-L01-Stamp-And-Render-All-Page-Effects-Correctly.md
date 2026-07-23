@@ -40,8 +40,8 @@ extract further cohesive modules if any receipt exceeds 1,000.
 identity types and helpers. It explicitly exports them for focused direct-owner
 tests, while internal renderer modules import that direct owner. Do not widen the
 stable `pageRendererV2.tsx` facade with these implementation-only symbols.
-It has no runtime import edge to the responsive-CSS facade: canonical responsive and
-placement attribute constants may be referenced through type-only imports in the
+It has no runtime import edge to the responsive-CSS facade: canonical frame and
+tilt/layer attribute constants may be referenced through type-only imports in the
 finite attribute-name union, while renderer call sites pass their runtime attribute
 names. This keeps TASK-539-06's declarations-to-replica-identity import acyclic.
 `pageRendererTimelineGeometry.ts` follows the same direct-owner policy for
@@ -117,13 +117,31 @@ documentUsesSpotlight
 PageDocumentRender
 ```
 
-The L01-owned `page-renderer-v2-facade.test.tsx` uses type-only imports for all 12
-types, asserts the facade module's runtime key set equals the exact 29-name list, and
-imports each runtime value from its cohesive direct owner to prove strict reference
-identity with the facade export. It statically rejects `export *` and proves the
-task-added replica identity/style-scope constants and timeline type/helper remain
-absent from the facade. The direct-owner modules may export those task-added symbols
-for their focused suites without changing this manifest.
+The L01-owned `page-renderer-v2-facade.test.tsx` uses the TypeScript compiler API to
+parse `pageRendererV2.tsx` as TSX. The facade is declaration-only: every top-level
+statement must be an `ExportDeclaration` with a string-literal direct-owner module
+specifier and an explicit `NamedExports` clause. Reject imports, locally exported
+functions/classes/variables/types/interfaces, export assignments/default exports,
+namespace exports, export-star declarations, missing module specifiers, mixed
+type/value clauses, aliases that change a public name, and a duplicate public name
+before converting either manifest to a set.
+
+All 12 type names above must occur exactly once in `export type { ... } from
+"./pageRendererTypes"` declarations. Compare the sorted
+`type:<public-name>@<module-specifier>` signatures to that exact 12-entry owner map;
+type-only imports in the test then prove every facade type is usable. No extra type is
+allowed, including `PageReplicaIdentitySets`, `PageReplicaIdentityContext`,
+`PageReplicaIdentityAttributeName`, or `PageTimelineItemGeometry`.
+
+For values, statically collect the same explicit declarations, assert the exact
+29-name manifest above with no duplicate, assert `Object.keys(facade).sort()` equals
+that sorted manifest, and import every value from the module named by its parsed
+direct-owner clause to prove strict reference identity with the facade export. The
+task-added replica namespace/identity helpers, the two replica style-scope constants,
+and `resolvePageTimelineItemGeometry` remain direct-owner-only and must be absent.
+Mutation fixtures for the AST classifier prove each forbidden declaration form and
+each task-added/extra/duplicate type fails instead of merely checking the current
+happy-path source.
 
 ## Implementation Pseudocode
 
@@ -279,8 +297,7 @@ for their focused suites without changing this manifest.
      | "filter"
      | "data-page-block-slot-owner"
      | typeof PAGE_BLOCK_ID_ATTRIBUTE
-     | typeof PAGE_TILT_PARENT_LAYER_ATTRIBUTE
-     | typeof PAGE_BLOCK_GRID_ITEM_ATTRIBUTE;
+     | typeof PAGE_TILT_PARENT_LAYER_ATTRIBUTE;
 
    export function encodePageReplicaNamespacePart(value: string): string;
 
@@ -335,9 +352,13 @@ for their focused suites without changing this manifest.
 
    Carry one replica context through every nested active-slot renderer. Namespace
    every emitted `id` definition through `domIds` and each identifier-bearing data
-   hook through `hookIdentifiers`, including the actual grid-item hook when emitted.
-   The styling-only replica frame still omits Admin selection chrome; namespace only
-   hook attributes actually emitted below it.
+   hook through `hookIdentifiers`. The styling-only replica frame still omits Admin
+   selection chrome; namespace only hook attributes actually emitted below it.
+   Marquee replicas contain only the authored outer group's slot descendants. Their
+   preserved paths are nested, so TASK-539-03-L05 always classifies them as
+   `"none"`: no duplicated node emits `PAGE_BLOCK_GRID_ITEM_ATTRIBUTE`, a grid
+   identity hook, or span style. The outer authored group may be a legal root grid
+   item, but its one canonical frame remains outside both marquee segments.
    Boolean/enumerated hooks such as gallery layout/pressed state remain byte-for-byte.
 
    `transformPageReplicaIdentityAttribute` is the one pure routing function for all
@@ -359,7 +380,7 @@ for their focused suites without changing this manifest.
    Every rewritten DOM reference resolves within the replica, no reference crosses
    to the primary, and hook-only fragment candidates remain unchanged.
 
-   The direct identity owner additionally defines exactly these three
+   The direct identity owner additionally defines exactly these two
    styling-only replica scope hooks:
 
    ```ts
@@ -367,8 +388,6 @@ for their focused suites without changing this manifest.
      "data-page-marquee-replica-block-style-scope" as const;
    export const PAGE_MARQUEE_REPLICA_TILT_LAYER_STYLE_SCOPE_ATTRIBUTE =
      "data-page-marquee-replica-tilt-layer-style-scope" as const;
-   export const PAGE_MARQUEE_REPLICA_GRID_ITEM_STYLE_SCOPE_ATTRIBUTE =
-     "data-page-marquee-replica-grid-item-style-scope" as const;
    ```
 
    Each hook's value is the canonical normalized original block ID, not the
@@ -383,14 +402,15 @@ for their focused suites without changing this manifest.
    `PAGE_BLOCK_ID_ATTRIBUTE`. Stamp
    `PAGE_MARQUEE_REPLICA_TILT_LAYER_STYLE_SCOPE_ATTRIBUTE` only on the existing
    replica tilt/layer wrapper whose primary counterpart carries
-   `PAGE_TILT_PARENT_LAYER_ATTRIBUTE`. Stamp
-   `PAGE_MARQUEE_REPLICA_GRID_ITEM_STYLE_SCOPE_ATTRIBUTE` only on the one actual
-   replica grid target (block frame or section-template wrapper) whose primary
-   counterpart carries `PAGE_BLOCK_GRID_ITEM_ATTRIBUTE`. Do not add a wrapper.
-   Primary output, `seamless:false`, and every unsafe one-segment fallback emit none
-   of the three aliases. The identity direct-owner and renderer suites pin exact
-   literals, canonical values, precise targets, separate-set non-membership, and
-   zero alias leakage to canonical/fallback/unsafe output.
+   `PAGE_TILT_PARENT_LAYER_ATTRIBUTE`. Do not add a wrapper. There is deliberately no
+   replica grid-item alias: every duplicated descendant is nested and therefore
+   placement `"none"`, while the outer authored group's legal root grid target is
+   one canonical node outside both segments and retains only
+   `PAGE_BLOCK_GRID_ITEM_ATTRIBUTE`. Primary output, `seamless:false`, and every
+   unsafe one-segment fallback emit neither replica alias. The identity direct-owner
+   and renderer suites pin the two exact literals, canonical values, precise targets,
+   separate-set non-membership, zero alias leakage to canonical/fallback/unsafe
+   output, and zero grid hook/span on every replica descendant.
 
 7. **Divider.** Do not change divider production behavior: its gradient-only
    width/alignment branch is already correct. Preserve it and add regression coverage

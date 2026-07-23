@@ -28,13 +28,15 @@ not imply that a Polish Admin UI or Polish documentation is complete.
 
 ## Locked Migration Contract
 
-- Before the first original bundle/report read, before consuming the final
-  TASK-548-01-L02 handback, and before any migration, coverage, portal, or
-  release-tool workspace-pair input, call the exact owner wrapper
-  `recoverDocsWorkspaceArtifactPromotionV1()`. Recovery failure
-  `docs_compile_recovery_required` is blocking. Packaged runtime/startup loads
-  only `core/generated/docs/coderso-docs-v2.json`; it never calls workspace
-  recovery or requires `.tmp`, the report, journal, or migration baseline.
+- Only TASK-548-06-L01's explicit migration flow reads a workspace bundle/report
+  pair. Before the first original pair read and before consuming the final
+  TASK-548-01-L02 handback, it calls the exact owner wrapper
+  `recoverDocsWorkspaceArtifactPromotionV1()` and then the strict pair loader;
+  recovery failure `docs_compile_recovery_required` is blocking. Coverage,
+  portal, release, clean clone/tag, Docker, `docs:check`, and packaged
+  runtime/startup use the read-only hazard inspector plus the strict tracked
+  `core/generated/docs/coderso-docs-v2.json` loader and never require `.tmp`, the
+  report, journal, or migration baseline.
 - The exact `.tmp/docs-corpus/migration-report-v1.json` with discriminator
   `coderso.docs-migration-report@v1` must match the original bundle's
   `bundleSourceHash` and `bundleSha256`. Before any owned write, L01 atomically
@@ -98,10 +100,12 @@ not imply that a Polish Admin UI or Polish documentation is complete.
   `core/generated/docs/coderso-docs-v2.json` and its generated migration report.
   After all three L01 native-source/visual waves and promotions, L01 pauses
   exactly once and requests one final same-owner TASK-548-01-L02 regeneration
-  handback. Recovery runs before it consumes that returned pair. L01 verifies
-  the report/bundle hashes and compares final native output with the durable
-  stored original, not an in-memory reconstruction, before `docs:check` or
-  06-L02 coverage starts. Per-wave/per-promotion regeneration is forbidden.
+  handback. Recovery runs before L01 consumes that returned linked pair through
+  the migration-only pair loader. L01 verifies the report/bundle hashes and
+  compares final native output with the durable stored original, not an in-memory
+  reconstruction. Subsequent read-only `docs:check` and 06-L02 coverage use the
+  packaged bundle and do not require the ignored report. Per-wave/per-promotion
+  regeneration is forbidden.
   Neither 06 leaf writes the generated bundle or report.
 - The only public migration entry point is
   `bun scripts/docs/migrate-guide-corpus.ts --migration-run-id <id>
@@ -128,8 +132,9 @@ not imply that a Polish Admin UI or Polish documentation is complete.
   canonically sorted by `(locale, docId)` with unknown fields rejected.
   `_COVERAGE_MATRIX.md` is
   generated output, not acceptance evidence by itself. Coverage `--write`
-  recovers the workspace pair; coverage `--check` uses the read-only hazard
-  inspector and performs no recovery or filesystem mutation.
+  and `--check` both use the read-only workspace hazard inspector plus strict
+  packaged-bundle load; neither recovers the workspace pair or requires the
+  ignored report. `--check` additionally performs no output mutation.
 
 ## TASK-547 Serialization
 
@@ -229,7 +234,7 @@ assertCompleteCoverage(
 );
 ```
 
-**Data flow:** recovered workspace pair → one atomic durable linked original
+**Data flow:** migration-only recovered workspace pair → one atomic durable linked original
 report+bundle capsule → all three
 native v2 source/example/reviewed-visual waves using the same mapping → one final
 same-owner compiler handback → recovery → final native-vs-stored-original
@@ -247,9 +252,11 @@ uncovered capability, target-consumer leak, or missing/stale/wrong-owner
 final regeneration handback blocks the leaf. A second handback, an attempted
 per-wave/per-promotion regeneration, baseline mutation/reload, or any owned write
 before the durable capsule is fsynced, reopened, and validated also blocks.
-Receipt/run-identity mismatch, partial/extra/symlinked inventory, or a workspace
-recovery failure blocks without trusting one member of a pair. Previously valid
-promoted assets remain untouched on failure.
+Receipt/run-identity mismatch, partial/extra/symlinked inventory, or a
+migration-handback workspace recovery failure blocks without trusting one
+member of a pair. Packaged coverage/check consumers instead reject hazards,
+report-only state or invalid/stale bundle read-only. Previously valid promoted
+assets remain untouched on failure.
 
 **Regression-test shape:** recovery precedes every workspace-pair read; the
 original report and bundle are linked and atomically frozen exactly once before
@@ -299,8 +306,8 @@ completeness claim appears.
   `createDocsVisualRunIdV1({ scope: "migration" }, deps?)` CSPRNG/output/
   eight-collision-retry/injected-test-entropy/unchanged-pass-through tests
 - strict `DocsCoverageReportV2` round-trip, recursive unknown/limit/tamper/
-  canonical-sort, write-mode recovery-before-load, and check-mode
-  read-only-hazard-inspection-before-load tests
+  canonical-sort, both coverage modes' read-only hazard-inspection plus
+  packaged-load-before-reconciliation tests, and a clean-clone bundle-only case
 - `bun run docs:check` only after that single final handback passes
 - `bun run docs:visual:check -- --all`
 - native-only compile and normalized semantic/stable-identity comparison, with

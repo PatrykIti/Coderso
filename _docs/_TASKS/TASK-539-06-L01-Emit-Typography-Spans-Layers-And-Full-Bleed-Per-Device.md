@@ -65,7 +65,7 @@ collector/helper signatures. Do not reconstruct a local responsive style shape o
 cast a responsive override back to `Partial<PageSectionStyleV2>` /
 `PageBlockStyleV2`.
 
-Import these three constants directly from their one Bun-free owner,
+Import these two constants directly from their one Bun-free owner,
 `pageRendererReplicaIdentity.ts`; do not re-export them from either stable facade or
 copy their literals:
 
@@ -74,8 +74,6 @@ PAGE_MARQUEE_REPLICA_BLOCK_STYLE_SCOPE_ATTRIBUTE
 // "data-page-marquee-replica-block-style-scope"
 PAGE_MARQUEE_REPLICA_TILT_LAYER_STYLE_SCOPE_ATTRIBUTE
 // "data-page-marquee-replica-tilt-layer-style-scope"
-PAGE_MARQUEE_REPLICA_GRID_ITEM_STYLE_SCOPE_ATTRIBUTE
-// "data-page-marquee-replica-grid-item-style-scope"
 ```
 
 Their values are canonical normalized original block IDs. They are styling-only
@@ -200,19 +198,22 @@ active base surface for `surfaceTint`); they are never device deltas.
     `:is([${PAGE_TILT_PARENT_LAYER_ATTRIBUTE}="${escapeAuthoringCssString(id)}"],` +
     `[${PAGE_MARQUEE_REPLICA_TILT_LAYER_STYLE_SCOPE_ATTRIBUTE}="${escapeAuthoringCssString(id)}"])`;
   const blockGridItemScopeSelector = (id: string) =>
-    `:is([${PAGE_BLOCK_GRID_ITEM_ATTRIBUTE}="${escapeAuthoringCssString(id)}"],` +
-    `[${PAGE_MARQUEE_REPLICA_GRID_ITEM_STYLE_SCOPE_ATTRIBUTE}="${escapeAuthoringCssString(id)}"])`;
+    `[${PAGE_BLOCK_GRID_ITEM_ATTRIBUTE}="${escapeAuthoringCssString(id)}"]`;
   ```
 
   Frame rules target `blockStyleScopeSelector`; visual-element and typography rules
   append the existing `PAGE_BLOCK_ELEMENT_ATTRIBUTE` and
   `PAGE_BLOCK_TEXT_ATTRIBUTE` descendants to that same scope. Hoisted layer deltas
-  target `blockTiltLayerScopeSelector`, and legal spans target
-  `blockGridItemScopeSelector`. Apply the optional trusted outer scope to the
-  completed `:is(...)` selector exactly once. Do not emit separate primary/replica
-  rules, duplicate a declaration grammar, or treat an alias as an identity/runtime
-  hook. Alias presence alone never causes CSS; the same authored normalized delta
-  and placement gates still control emission.
+  target `blockTiltLayerScopeSelector`, and legal spans target the canonical-only
+  `blockGridItemScopeSelector`. Apply the optional trusted outer scope to each
+  completed selector exactly once. Do not emit separate primary/replica frame or
+  tilt/layer rules, duplicate a declaration grammar, or treat an alias as an
+  identity/runtime hook. Alias presence alone never causes CSS; the same authored
+  normalized delta and placement gates still control emission. There is no replica
+  grid selector: the authored outer marquee group is the only possible legal root
+  grid target and remains one canonical node outside both segments. Every duplicated
+  slot descendant has a nested preserved path, TASK-539-03-L05 placement `"none"`,
+  no grid hook, and no span declaration.
 - Sort declarations and retain document traversal/media ordering.
 - Diagnostics include scope, normalized id, breakpoint, exact key, and the existing
   reason vocabulary.
@@ -232,8 +233,8 @@ active base surface for `surfaceTint`); they are never device deltas.
 Before the source gate, update and split the existing expectations to prove:
 
 - stable facade exports and exact media/selector contracts;
-- exact direct-owner replica alias names/literals and one shared `:is(...)` selector
-  path for frame, visual element, text, hoisted tilt/layer, and grid item at both
+- exact two direct-owner replica alias names/literals and one shared `:is(...)`
+  selector path for frame, visual element, text, and hoisted tilt/layer at both
   tablet and mobile; assert identical declarations for canonical and alias targets,
   one declaration block rather than duplicated CSS, escaped canonical ID values, and
   no alias use as a DOM/selection/runtime hook;
@@ -251,9 +252,12 @@ Before the source gate, update and split the existing expectations to prove:
   `not_css_expressible` diagnostic, and unsupported props pin their existing
   diagnostic plus the `heading`/`text` `props.align` projection exception;
 - sanitized custom font size and explicit `text-transform:none`;
-- both legal placement targets use the shared attribute, while every `none` class
-  diagnoses without inert CSS; include hidden-assigned-sibling public classification,
-  base-only span, responsive-only span, and wholly unauthored span/hook handoff;
+- both legal placement targets use only the shared canonical grid attribute, while
+  every `none` class diagnoses without inert CSS; include hidden-assigned-sibling
+  public classification, base-only span, responsive-only span, and wholly unauthored
+  span/hook handoff. A real safe marquee proves its outer root group owns the one
+  canonical grid hook/span target outside the rail and all duplicated descendants
+  emit no grid hook, replica grid alias, or span CSS;
 - parsed section/block paint keeps image/color separate; base/template full-bleed
   paint targets root, capped paint targets content, and no device override can switch
   that target;

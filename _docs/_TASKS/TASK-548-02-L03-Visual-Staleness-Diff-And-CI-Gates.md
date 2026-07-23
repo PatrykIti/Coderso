@@ -36,6 +36,15 @@ triples and the TASK-548-01-L02 owner has completed the one post-pilot
 bundle/report refresh. This leaf never writes that bundle/report and never
 requests a per-scenario refresh.
 
+The ignored report is not a PR, clean-checkout, Docker, runtime, portal,
+release, or read-only compiler-check prerequisite. `docs:check` invokes
+TASK-548-01-L02's read-only workspace hazard inspector, accepts a strict
+`packaged-bundle-only` clean clone as well as a valid linked authoring pair, and
+compares the tracked bundle with recomputed canonical bytes/`sourceHash`.
+Report-only state and transaction debris fail closed. `docs:recover` remains the
+only explicit mutating interrupted-write recovery surface; it preserves a valid
+bundle-only prestate and never synthesizes a missing report.
+
 ## Workspace and Lock Contract
 
 This leaf creates both downstream workspace manifests before the one TASK-548
@@ -234,6 +243,9 @@ result. Workspace recovery precedes sorted visual recovery. The exact same
 mutating recovery, the compiler's active visual mode and the staleness
 inspector; this leaf does not reopen TASK-548-01-L02, wrap the factory with
 weaker semantics, or substitute an absence-/existence-only validator.
+With no workspace journal, the workspace owner accepts and preserves exact
+`bootstrap-none`, `packaged-bundle-only`, or `linked-pair` state; report-only
+state rejects. Visual recovery still rejects every partial image/receipt pair.
 
 ## Diff and Approval Contract
 
@@ -456,7 +468,8 @@ metadata, missing inspection evidence or an exception blocks pixels and emits
 ## CI Shape
 
 - PR gate always runs strict corpus compile `--check`, referential/orphan checks
-  and read-only receipt/staleness validation.
+  and read-only receipt/staleness validation. A clean-clone fixture containing
+  the tracked bundle and no `.tmp` tree/report must pass with zero mutation.
 - A dedicated changed-visual job starts the real app, installs the pinned CLI
   browser, runs selected scenarios with low bounded parallelism, requires zero
   console/page errors and uploads diffs on failure only after the executable
@@ -529,10 +542,15 @@ metadata, missing inspection evidence or an exception blocks pixels and emits
   and all CI artifacts stay below `.tmp/docs-visuals/<runId>/`
 - `recoverDocsArtifactsV1` spy/integration tests prove workspace-first ordering
   and pass the exact L02 factory unchanged to visual recovery; fresh-process
-  preparing/prepared/promoted/verified-commit fixtures prove safe recovery
+  preparing/prepared/promoted/verified-commit fixtures prove safe recovery;
+  no-journal bundle-only is preserved, report-only rejects, and no recovery path
+  creates a report merely because it is absent
 - unresolved journal/journal-temp/member-temp/staging/backup/mixed-pair
   fixtures prove the checker invokes the same factory, makes no recovery
   mutation and returns the `docs:recover` diagnostic
+- a clean-clone/tag fixture with the tracked bundle and no ignored report proves
+  `docs:check`, the frozen install, and the static Docker workspace contract pass
+  without filesystem mutation; stale/tampered packaged bytes still fail
 - privacy evidence schema/limit/reject-unknown tests plus missing/unsafe
   evidence metadata-only upload tests
 - `bun --cwd core lint`

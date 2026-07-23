@@ -157,19 +157,22 @@ exclusively below
 not members of the final TASK-545 evidence directory.
 
 TASK-548-07-L01 is the sole writer of
-`_docs/_workflows/_smoke/evidence/task-548/`, its exact eight acceptance
-screenshots, `manifest.json`, and `resume-checkpoint.json`. It consumes this
-leaf's prior portal evidence read-only. If the final tree requires recapture,
-L01 requests one same-owner operational L03 handback; L03 returns bounded
-results/screenshot bytes without status transfer, and L01 alone writes
-`06-portal-local-exact-latest-rollback.png` as the portal member of its exact
-canonical inventory. No `portal/*.png` subtree or other extra canonical member
-is valid.
+`_docs/_workflows/_smoke/evidence/task-548/manifest.json` and its exact eight
+acceptance PNGs. It consumes this leaf's prior portal evidence read-only. If the
+final tree requires recapture, L01 requests one same-owner operational L03
+handback; L03 returns bounded results/screenshot bytes without status transfer,
+and L01 alone writes `06-portal-local-exact-latest-rollback.png` as the portal
+member of its exact canonical inventory. No `portal/*.png` subtree or other
+extra canonical member is valid.
 
-TASK-548-07-L01 owns the strict TASK-545 manifest/checkpoint validation,
-`owner_action_required` pause, owner staging review, resume identity/parity
-checks and fresh rerun after source drift. This leaf neither writes nor stages
-canonical evidence and never closes metadata.
+After L01 has written and validated only that manifest/eight-PNG inventory, it
+calls the imported TASK-545 phase-1 `createResumeCheckpoint` helper. That helper
+is the sole writer of
+`_docs/_workflows/_smoke/evidence/task-548/resume-checkpoint.json`.
+TASK-548-07-L01 owns the surrounding `owner_action_required` pause, owner staging
+review, resume identity/parity checks and fresh rerun after source drift, but it
+does not write checkpoint bytes itself. This leaf writes neither canonical
+evidence nor checkpoint and never closes metadata.
 
 ## Security Contract
 
@@ -225,9 +228,9 @@ export async function validateBuiltPortal(
 
 **Data flow:** immutable L02 dist → bounded path-safe file walk → schema/hash/
 reference/content/a11y checks → mandatory local preview and temporary targeted
-Playwright evidence → TASK-548-07 final-tree rerun → canonical TASK-545
-manifest/screenshots/checkpoint → owner review/stage → tracked resume evidence
-for TASK-548-05/closure.
+Playwright evidence → TASK-548-07 final-tree rerun → L01-owned canonical
+manifest/eight PNGs → TASK-545 `createResumeCheckpoint` phase-1 checkpoint →
+owner review/stage → tracked resume evidence for TASK-548-05/closure.
 
 **Error handling:** first integrity/path/schema failure returns a machine-readable
 error plus safe relative evidence and nonzero exit; never repairs or deletes
@@ -253,10 +256,11 @@ unexpected request, absent screenshot, or skipped scenario is a failed gate.
 - targeted output is confined to `.tmp`; static ownership tests reject writes
   to canonical evidence, manifest/checkpoint, or the legacy smoke prefix;
 - final handoff fixtures pin all seven targeted IDs and `.tmp` paths, then prove
-  07 alone writes only `06-portal-local-exact-latest-rollback.png` for the
-  portal inside its exact eight-image canonical inventory; TASK-545
-  `owner_action_required`, checkpoint hash/run/workflow identity, owner-only
-  staging, tracked resume, and stale/tampered rerun remain 07-owned.
+  07-L01 writes only `06-portal-local-exact-latest-rollback.png` for the portal
+  inside its exact eight-image canonical inventory plus `manifest.json`;
+  TASK-545 `createResumeCheckpoint` alone writes the checkpoint, while
+  `owner_action_required`, checkpoint hash/run/workflow validation, owner-only
+  staging, tracked resume, and stale/tampered rerun remain 07-owned orchestration.
 
 ## Sub-Tasks
 
@@ -323,9 +327,10 @@ targeted scenario/result remains mandatory.
 - At least seven distinct browser flows pass with visible-effect assertions,
   zero console errors, zero unexpected requests, and human-reviewable
   screenshots.
-- TASK-548-07 alone writes the canonical final screenshots/manifest/checkpoint
-  flow; TASK-548-04-L03 keeps mandatory targeted evidence temporary and cannot
-  collide with final acceptance filenames.
+- TASK-548-07-L01 writes only the canonical final eight screenshots and
+  `manifest.json`; TASK-545 `createResumeCheckpoint` alone writes the phase-1
+  checkpoint. TASK-548-04-L03 keeps mandatory targeted evidence temporary and
+  cannot collide with final acceptance filenames.
 - Wide/narrow, light/dark, keyboard/focus, reduced-motion, deep-link/latest,
   locale truth, and offline/static behavior are all demonstrated.
 - Cumulative online version navigation and current-only offline fallback are
