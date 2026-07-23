@@ -20,15 +20,29 @@ it invokes the exact TASK-548-01-L02-owned read-only
 `loadPackagedDocsDistributionBundleV2()` for the durable tracked bundle. A
 mandatory read-only `docs:check` immediately before the portal build recomputes
 canonical bytes/`sourceHash`. The ignored workspace migration report is never a
-portal input or prerequisite. The portal applies the exact
-`selectDocumentsForPublicationTarget(..., "public-docs")` selector and asks
-TASK-548-04-L02 to produce the exact L01-owned
-`DocsPortalPublicProjectionV1`. Only that `public-docs` projection may reach
-portal shell, search or rendering. The portal reuses the
+portal input or prerequisite. The portal calls the exact TASK-548-03-L02-owned
+`createDocsPublicationProjectionV1({ sourceBundle: bundle,
+publicationTarget: "public-docs" })` once per build. It returns a distinct,
+deeply frozen private-branded `DocsPublicationProjectionV1`, never a filtered
+`DocsDistributionBundleV2`; only exact target members enter it, while the
+complete corpus `sourceHash` remains full-source provenance and target-internal
+link/evidence/reference closure is complete. The portal builds the shared pure
+search index once, then route graph, shell, renderer, links, evidence and search
+emitters reuse those same server-side objects. Articles are resolved by exact
+`(docId, locale)` member keys without per-route brands or schema normalization.
+The portal reuses the
 `packages/docs-renderer` target selector plus search/render/link safety
 implementation shipped by TASK-548-03. It must never maintain a second authored
 corpus, parse source Markdown independently or pass an unfiltered bundle to a
 public consumer.
+
+Article, documentation navigation and TOC render to static HTML and are never
+hydration roots. Only header, search, theme and mobile-navigation islands
+hydrate from L01's recursively strict, canonically serialized,
+domain-separated-hash-bound `DocsPortalHydrationPayloadV1`. One hostile-input
+normalizer runs before any island mount; the payload and client module graph
+contain no projection brand, full document, Markdown, evidence, renderer props
+or unverified island values.
 
 Canonical public article routes are:
 
@@ -156,12 +170,13 @@ build epoch is held constant.
 - Shared renderer/search: import `packages/docs-renderer`; do not fork Markdown
   rendering, ranking, URL policy, or visual/example behavior.
 - Visual lookup preserves the exact owning `(docId, locale, sectionId)` tuple;
-  every `visualId` is bundle-global and must join that localized owner before a
+  every `visualId` is projection/source-global and must join that owner before a
   portal asset can render or enter a publication receipt.
 - `docId` identifies one translation family, not one locale row. The unique
   document key is exact `(docId, locale)`; hreflang groups only actually built
   locale rows with the same `docId`.
-- After hydration, version navigation fetches the validated cumulative
+- After the header island's verified hydration, version navigation fetches the
+  validated cumulative
   same-origin `/site-index.json`. Offline/unavailable index reads fall back only
   to the embedded current-version candidate. Version selection resolves the
   same `(docId, locale)` in the selected retained version and never silently
@@ -230,14 +245,15 @@ that checkpoint directly.
 - **Content security:** no raw HTML, arbitrary iframe, inline event/style
   payload, unsafe scheme, path traversal, external runtime image, or executable
   example. CSP forbids `unsafe-inline`/`unsafe-eval`; any structured-data block
-  uses exact escaped bytes and a generated hash.
+  uses exact escaped bytes and a generated hash. Hydration JSON is bounded,
+  canonically escaped/serialized and body-hash verified before any island mount.
 - **Privacy/secrets:** no user tracking by default and no internal paths,
   prompts, provider keys, cookies, tokens, PII, source maps, build-host paths, or
   Admin permission data in output.
 
 ## Implementation Pseudocode
 
-```tsx
+```ts
 export async function buildDocsPortal(
   input: DocsPortalBuildConfigV1
 ): Promise<DocsPortalBuildReceipt> {
@@ -257,52 +273,84 @@ async function buildValidatedDocsPortal(
   config: DocsPortalBuildConfigV1,
   bundle: DocsDistributionBundleV2
 ): Promise<DocsPortalBuildReceipt> {
-  const inputBundles = [assertDistributionBundle(bundle)];
-  const publicBundles = inputBundles.map((bundle) => ({
-    ...bundle,
-    documents: selectDocumentsForPublicationTarget(
-      bundle.documents,
-      "public-docs"
-    ),
-  }));
-  const routes = buildCanonicalPortalRoutes(
-    publicBundles,
-    config.currentVersion
-  );
-  const projections = routes.canonical.map((route) => ({
-    route,
-    publicDocs: buildDocsPortalPublicProjectionV1(
-      requireInputBundleForRoute(inputBundles, route),
-      route.selection
-    ),
-  }));
-  const writer = createDeterministicArtifactWriter(
+  const projection = createDocsPublicationProjectionV1({
+    sourceBundle: bundle,
+    publicationTarget: "public-docs",
+  });
+  const searchIndex = buildDocsSearchIndexV1(projection);
+  const graph = buildPublicRouteGraph(projection, config.currentVersion);
+  const writer = createHashedDeterministicWriter(
     "packages/docs-portal/dist"
   );
 
-  for (const { route, publicDocs } of projections) {
-    const page = renderPortalDocument(route, {
-      publicDocs,
-      renderer: DocsDocumentRenderer,
+  for (const route of graph.canonicalRoutes) {
+    const document = resolveVersionedProjectionMemberV1(
+      projection,
+      route.documentKey,
+      config.currentVersion
+    );
+    const publicPath = buildDocsPublicPath(route.publicRoute);
+    const canonicalHref = buildDocsPublicHref({
       origin: config.publicOrigin,
       basePath: config.publicBasePath,
+      route: route.publicRoute,
     });
-    await writer.writeHtml(route.outputPath, page);
+    const hydrationPayload = createDocsPortalHydrationPayloadV1(
+      buildPortalIslandModels({
+        graph,
+        route,
+        document,
+        searchIndex,
+        config,
+      })
+    );
+    await writer.write(
+      resolveDocsPortalOutputPath(publicPath),
+      renderStaticPortalPage(route, {
+        shellHtml: renderDocsPortalStaticShell({
+          projection,
+          documentKey: route.documentKey,
+          navigation: buildPortalNavigation(graph, route, config),
+          packagedVisualAssets: loadPackagedVisuals(document),
+          hydrationPayload,
+        }),
+        canonicalHref,
+        publicOrigin: config.publicOrigin,
+        publicBasePath: config.publicBasePath,
+      })
+    );
   }
 
-  await writeLatestAliases(writer, routes.aliases);
-  await writeSearchIndexes(writer, projections);
-  await writeSeoAndDeploymentArtifacts(writer, routes);
-  return writer.finalizeManifest();
+  for (const alias of graph.latestAliases) {
+    const publicPath = buildDocsPublicPath(alias.publicRoute);
+    await writer.write(
+      resolveDocsPortalOutputPath(publicPath),
+      renderAliasFallback(alias, {
+        canonicalStaticPage: requireRenderedCanonicalPage(graph, alias),
+        publicOrigin: config.publicOrigin,
+        publicBasePath: config.publicBasePath,
+      })
+    );
+  }
+
+  await emitSearchIndexes(writer, projection, searchIndex, {
+    publicOrigin: config.publicOrigin,
+    publicBasePath: config.publicBasePath,
+  });
+  await emitSeoAndDeploymentArtifacts(writer, graph, {
+    publicOrigin: config.publicOrigin,
+    publicBasePath: config.publicBasePath,
+  });
+  await emitCurrentReleaseSiteIndexCandidateV1(writer, graph);
+  return writer.finalizeDetachedManifestAndVerifyAllOtherFiles(graph);
 }
 ```
 
-**Data flow:** read-only `docs:check` canonical-byte/source equality → config-only
-input → exact owner hazard inspection → strict packaged-bundle load → shared
-exact `public-docs` selector → L02-produced and membership-validated
-`DocsPortalPublicProjectionV1` records →
-version/locale/slug route graph → projection-only shell/search/shared renderer →
-deterministic static bytes → checksummed manifest → TASK-548-05 publish.
+**Data flow:** read-only `docs:check` equality → config-only input → hazard
+inspection → strict packaged load → one shared `public-docs` projection and one
+pure search index → exact member-key route graph → same server-side projection
+for every static article/navigation/TOC render → per-page canonical hash-bound
+four-island payload → deterministic bytes → manifest → TASK-548-05 publish.
 
 **Error handling:** any live/tampered journal, journal temp, backup/staging
 material, report-only state, invalid packaged bundle, invalid linked authoring
@@ -319,6 +367,19 @@ failure. One bad document cannot be silently omitted.
 tracked-bundle-only builds pass with no `.tmp` tree/report, while every live
 owner journal phase, report-only state, tampered transaction material, invalid
 bundle, and attempted pre-inspection read fails with zero portal output. The
+portal build compile-time test imports the exact renderer-owned
+`createDocsPublicationProjectionV1` and `buildDocsSearchIndexV1` and forbids a
+local bundle/document/projection normalizer or filtered-bundle reconstruction.
+Structural/spread/serialized/foreign projections, non-member keys, locale
+mismatch, target absence, incomplete closure and invalid/out-of-range versions
+reject. Call spies prove one projection constructor/full-bundle normalization/
+target selection and one search-index build per build, no per-route schema
+normalization, and the same projection/index object at every server route. A
+Vite/static guard proves projection constructor/brand, full documents and
+renderer never enter hydration clients. Canonical/hash mutation, unknown-key,
+oversize and encoding fixtures mount zero islands; valid input invokes the sole
+hostile normalizer before exactly four island mounts. Article/navigation/TOC
+remain static and the payload contains only header/search/theme/mobile state. The
 preceding `docs:check` catches stale canonical bytes or `sourceHash`. Every manifest route/file/
 hash closes; route/base-path/SemVer/locale traversal cases reject; actual
 translations sharing one family `docId` alone produce hreflang, while duplicate
@@ -371,6 +432,9 @@ human-authored source/test file and fail any result above 1,000 lines.
   portal; no duplicated source or Markdown parsing path exists.
 - Canonical versioned routes, derived latest aliases, version/locale search,
   visuals/examples, and base-path-safe navigation render as static files.
+- Article/navigation/TOC are static and never hydrated; exactly four islands
+  hydrate only from the verified canonical payload, with no projection/document
+  corpus in the client graph.
 - Online version navigation uses the strict cumulative same-origin site index,
   while offline navigation exposes only the embedded current release and never
   substitutes another article.

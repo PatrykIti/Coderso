@@ -5,10 +5,10 @@
 **Priority:** Critical
 **Category:** Workflow / Contract Audit / Collision Safety
 **Estimated Effort:** Large
-**Dependencies:** TASK-545 must be `✅ Done` and TASK-547 must be terminal before
-any TASK-548 implementation; TASK-545 must be `✅ Done` before the mandatory fresh
-authoring rerun or task-specific wrapper tracking; after TASK-547, the TASK-548
-parent must name and serialize every literal final overlapping path; runs
+**Dependencies:** TASK-545 must be exactly `✅ Done`; TASK-547 must be terminal;
+the TASK-548 parent literal overlap/serialization amendment must land before the
+bounded workflow-infrastructure bootstrap; the committed bootstrap and a fresh
+five-round authoring PASS are required before product implementation; runs
 throughout TASK-548
 **Status:** ⏳ To Do
 
@@ -22,17 +22,22 @@ returns bounded in-process gate outcomes to 07; all product, product-test, docs,
 canonical evidence, task-board, status and changelog edits remain with 01..07
 single writers.
 
-Implementation begins only after five sequential authoring rounds and a fresh
-reconcile report zero HIGH/MEDIUM drift. Missing, timed-out, malformed, or
-unparseable agent output fails the round; it never creates a clean pass.
+Product implementation begins only after the bounded workflow-infrastructure
+bootstrap, five fresh sequential authoring rounds, and a fresh reconcile report
+with zero HIGH/MEDIUM drift. The bootstrap is the sole pre-authoring-audit
+implementation exception; it grants no product/source or status-write authority.
+Missing, timed-out, malformed, or unparseable agent output fails the round; it
+never creates a clean pass.
 
 The current local/provisional TASK-548 authoring helper and any evidence it
 produced before TASK-545 reaches `✅ Done` are non-authorizing research only.
-After TASK-545 is `✅ Done`, track the exact wrappers below and rerun all five rounds
-from fresh contexts through its tracked shared drivers. No implementation may
-start until TASK-547 is also terminal and the parent contains the literal final
-overlap/serialization amendment; only a clean rerun plus both dependency gates
-may authorize implementation.
+It cannot be promoted by tracking its current ignored bytes. After both
+dependency gates and the landed parent amendment, rebuild all six exact files
+below against the tracked TASK-545 drivers and run only their pre-commit gates,
+then hand their exact reviewed bytes to the owner for checkpoint/commit. Run the
+separate post-commit tracked/HEAD-parity/clean-worktree gates from the resulting
+new HEAD. Only five fresh rounds plus reconcile after that complete post-commit
+pass may authorize product implementation.
 
 ## Exclusive Ownership and Collision Guards
 
@@ -42,6 +47,38 @@ may authorize implementation.
 - `_docs/_workflows/lib/task-548-contract.mjs`;
 - `tests/unit/workflows/task548AuthorAudit.test.ts`;
 - `tests/unit/workflows/task548WorkflowContracts.test.ts`.
+
+The pre-authoring authorization order is exactly:
+
+1. require TASK-545 to be exactly `✅ Done`;
+2. require TASK-547 to be terminal;
+3. require the TASK-548 parent amendment with every literal TASK-547 overlap,
+   serialized owner, and matching forbidden-path guard to be landed;
+4. use the sole bounded pre-audit exception to rebuild only the six paths above,
+   importing the tracked TASK-545 owners; before any owner checkpoint/commit,
+   require only the exact six-file write set and forbidden-path gate, Node
+   syntax checks, targeted workflow tests, line counts, and `git diff --check`;
+5. hand the exact reviewed-byte checkpoint to the owner; only the owner stages
+   and commits exactly those six paths;
+6. from that new committed HEAD, require the exact commit path set,
+   `git ls-files --error-unmatch` for all six paths, clean status and unstaged/
+   staged diffs, `git show HEAD:<path>` byte parity for every path, and the
+   clean-checkout/worktree tests; none of these post-commit gates may be required
+   of the uncommitted rebuild;
+7. only after that complete post-commit gate passes, run five mandatory fresh
+   sequential authoring rounds, each with exactly one fresh reconcile, and
+   require the final round to PASS with zero unresolved HIGH/MEDIUM findings;
+   and
+8. authorize only then the unchanged product implementation order
+   `01 → 02 → 03 → 04 → 05 → 06 → 07`, while these wrappers orchestrate
+   throughout.
+
+TASK-548-08 remains `⏳ To Do` during bootstrap. The exception cannot edit any
+01..07 product/source/test path, task contract, product/developer documentation,
+changelog, status, or evidence byte and cannot dispatch product implementation.
+Any later change to one of the six bootstrap artifacts, any TASK-548 task
+contract, or an imported TASK-545 driver invalidates every authoring round and
+requires all five rounds plus reconcile again from the resulting new HEAD.
 
 Every 01..07 source/test/docs/task/changelog/screenshot path is forbidden.
 Scripts may dispatch scoped writers but never mutate those files directly.
@@ -63,14 +100,15 @@ TASK-548 evidence directory is
 `_docs/_workflows/_smoke/evidence/task-548/`, with the split byte ownership
 defined above.
 
-Only after TASK-545 is `✅ Done`, the four task-specific workflow modules and
-both exact tests above must be tracked and present after a clean checkout;
-their implementations import the final owner bytes. `.gitignore` is never a reason to
-depend on an untracked local helper, ignored test fixture, or untracked workflow
-script; implementation cannot start until `git ls-files --error-unmatch`
-then succeeds for every path and TASK-547 plus the literal-path parent amendment
-also pass. The wrappers import the tracked TASK-545 shared
-contracts rather than copying count-only logic:
+Only during step 4 above may the four task-specific workflow modules and both
+exact tests be created. Before the authoring audit, they must be committed,
+tracked, byte-identical to `HEAD`, and present after a clean checkout.
+`.gitignore` is never a reason to depend on an untracked local helper, ignored
+test fixture, or workflow script. The provisional helper is a research input
+only: it must be rebuilt as part of the exact six-file set and cannot be
+promoted or authorize a run by merely adding its existing bytes. The wrappers
+import the tracked TASK-545 shared contracts rather than copying count-only
+logic:
 
 ```text
 _docs/_workflows/lib/workflow-contracts.mjs
@@ -185,16 +223,36 @@ export const TASK_548_EXECUTION_ORDER = Object.freeze([
 ]);
 ```
 
+The conditional retirement-restart does not re-enter that array at its
+beginning. After exact mode parsing, its complete dispatched order is:
+
+```text
+07-L01-confirm-invalidated-checkpoint-retired
+affected-owner-fixes-and-per-leaf-gates
+07-L01-runtime-docs-and-gates-preparation
+08-post-audit-lenses/fixes/revalidation
+07-L01-final-smoke-phase1-owner-pause
+```
+
 There is exactly one post-pilot same-owner refresh after 02-L02's five pilots
 and before 02-L03/TASK-548-03, and exactly one final same-owner handback after
-06-L01 and before 06-L02. All four 07 labels invoke the same physical 07-L01
-owner, which remains the only status/changelog writer and stays open until its
-terminal metadata phase. `08-final-read-only-drift` is substantive and runs
+06-L01 and before 06-L02. All four normal-path 07 labels and both conditional
+checkpoint-retirement labels invoke the same physical 07-L01 owner, which
+remains the only status/changelog writer and stays open until its terminal
+metadata phase. `08-final-read-only-drift` is substantive and runs
 after checkpoint-bound owner resume/tracked parity but before any terminal
 status or changelog mutation. The final 07 phase then persists the bounded,
 deterministic closeout, closes descendants before parents, and performs only
 TASK-545's mechanical metadata-delta validation after the terminal writes.
-Those six labels describe the first `frozen` closure attempt. A crash before
+Those six normal labels describe the first `frozen` closure attempt. A
+final-drift non-pass adds only the retirement-pause/confirmation exception
+defined below. The returned restart argv selects a mutually exclusive
+retirement-restart invocation whose first workflow action is
+`07-L01-confirm-invalidated-checkpoint-retired`. That invocation skips
+dependency/bootstrap, authoring and the already-landed full implementation
+sequence; after exact ten-path absence is confirmed, it runs only the affected
+owner fixes/gates and the complete preparation→post-audit→smoke→fresh-phase-1
+sequence. A crash before
 changelog 1261, the first metadata write, re-enters `frozen` and repeats the
 read-only final-drift label. A crash after that write re-enters only the
 resume/terminal-closeout recovery branch as `metadata_recovery`: it skips smoke
@@ -205,9 +263,112 @@ reopens or changes 01-L02 status.
 ## Implementation Pseudocode
 
 ```ts
-await requireTask545DoneAndTask547Terminal();
+const TASK_548_08_BOOTSTRAP_PATHS = [
+  "_docs/_workflows/task-548-author-audit.mjs",
+  "_docs/_workflows/task-548-implement.mjs",
+  "_docs/_workflows/task-548-fix.mjs",
+  "_docs/_workflows/lib/task-548-contract.mjs",
+  "tests/unit/workflows/task548AuthorAudit.test.ts",
+  "tests/unit/workflows/task548WorkflowContracts.test.ts",
+] as const;
+
+// Read this discriminator before every dependency, bootstrap, authoring,
+// implementation, fix, gate, preparation, resume or checkpoint operation.
+const retiredCheckpoint =
+  readOptionalInvalidatedCheckpointRestartArgsFromCurrentProcess();
+if (retiredCheckpoint) {
+  await requireExactMutuallyExclusiveRetirementRestartMode(retiredCheckpoint, {
+    forbidBootstrapAuthoringAndFullImplementationReplay: true,
+    forbidFrozenOrMetadataRecoveryResume: true,
+    forbidEvidenceOrCheckpointMutationBeforeFreshPhase1: true,
+  });
+  await dispatchSamePhysical07L01(
+    "07-L01-confirm-invalidated-checkpoint-retired",
+    retiredCheckpoint
+  ); // exact ten paths absent before any affected fix/gate/preparation
+  const affectedOwners =
+    await dispatchOwnerApprovedAffectedFixesAfterRetirementConfirmation({
+      restart: retiredCheckpoint,
+      readFindingsFromCheckpointOrEvidence: false,
+    });
+  await runAffectedPerLeafGates(affectedOwners);
+  await dispatchSamePhysical07L01(
+    "07-L01-runtime-docs-and-gates-preparation"
+  );
+  let retirementPostAuditFixApplied = false;
+  let retirementAffectedPostAuditOwners = [];
+  const retirementPostAudit = await runCanonicalPostAudit({
+    lenses: TASK_548_POST_AUDIT_LENSES,
+    runLens: runFreshPostAuditLens,
+    fix: async (blocking) => {
+      retirementPostAuditFixApplied = true;
+      retirementAffectedPostAuditOwners =
+        await dispatchFixesToExactOwningLeavesOnce(blocking);
+    },
+    validate: async () => {
+      await runAffectedTargetedGates(retirementAffectedPostAuditOwners);
+      if (retirementPostAuditFixApplied) {
+        await dispatchSamePhysical07L01(
+          "07-L01-runtime-docs-and-gates-preparation"
+        );
+      }
+    },
+    fingerprint: fingerprintFinalTask548RuntimeTree,
+    label: "TASK-548:post-audit",
+  });
+  if (!retirementPostAudit.pass) {
+    throw new Error("task548_post_audit_not_converged");
+  }
+  await assertPostAuditGateAllowsSmokeInCurrentRun(retirementPostAudit);
+  const freshOwnerAction = await dispatchSamePhysical07L01(
+    "07-L01-final-smoke-phase1-owner-pause",
+    retirementPostAudit
+  );
+  await yieldOwnerActionRequired(freshOwnerAction);
+  return; // retirement-restart invocation ends after the fresh phase-1 pause
+}
+
+// This dependency/bootstrap phase runs before importing a TASK-548 wrapper.
+await requireTask545ExactlyDone();
+await requireTask547Terminal();
 await requireLiteralTask547OverlapSerializationInTask548Parent();
-await requireTask545DoneAndTrackedOwners();
+const bootstrap = await rebuildTask548WorkflowInfrastructure({
+  paths: TASK_548_08_BOOTSTRAP_PATHS,
+  importOnlyTrackedTask545Owners: true,
+  ignoreProvisionalHelperBytes: true,
+});
+await assertExactWriteSet(bootstrap, TASK_548_08_BOOTSTRAP_PATHS);
+await assertNoProductTaskDocsChangelogStatusOrEvidenceWrite(bootstrap);
+await runTask548BootstrapPreCommitGates(bootstrap, {
+  exactWriteSet: TASK_548_08_BOOTSTRAP_PATHS,
+  requireForbiddenPathsClean: true,
+  requireNodeSyntaxChecks: true,
+  requireTargetedWorkflowTests: true,
+  requireLineCountsAtMost1000: true,
+  requireGitDiffCheck: true,
+});
+const ownerCheckpoint = await createExactBootstrapOwnerCheckpoint(bootstrap);
+await yieldBootstrapOwnerCommitRequired(ownerCheckpoint);
+// The bootstrap process stops. Only the owner stages/commits the reviewed bytes.
+
+// A new invocation starts from the owner's new committed HEAD.
+const committedBootstrap = await requireCommittedTask548WorkflowBootstrap({
+  checkpoint: requireBootstrapCheckpointFromCurrentInvocation(),
+  paths: TASK_548_08_BOOTSTRAP_PATHS,
+});
+await requireExactBootstrapCommitPathSet(committedBootstrap);
+await requireGitLsFilesForEveryBootstrapPath(TASK_548_08_BOOTSTRAP_PATHS);
+await requireCleanStatusAndUnstagedStagedDiffs();
+await requireGitShowHeadByteParityForEveryBootstrapPath(
+  TASK_548_08_BOOTSTRAP_PATHS
+);
+await runTask548BootstrapCleanCheckoutWorktreeTests({
+  paths: TASK_548_08_BOOTSTRAP_PATHS,
+  head: committedBootstrap.head,
+});
+await requireTask54808Status("⏳ To Do");
+
+const authoringBaseline = await fingerprintBootstrapTasksAndTask545Drivers();
 
 const authoring = await runCanonicalAuditRounds({
   minimumRounds: 5,
@@ -220,8 +381,10 @@ const authoring = await runCanonicalAuditRounds({
 });
 assertAtLeastFiveCompleteSharedDriverRounds(authoring);
 assertFinalRoundContainsFreshParallelReconcile(authoring);
+await assertBootstrapTasksAndTask545DriversUnchanged(authoringBaseline);
 await assertAuthoringGateAllowsImplementationInCurrentRun(authoring);
 
+// The tracked TASK-548-08 wrappers orchestrate this unchanged product order.
 await implementSequentiallyWithPerLeafGates(
   TASK_548_EXECUTION_ORDER.slice(
     0,
@@ -282,11 +445,15 @@ if (resumed.state === "frozen") {
     frozenRuntimeRevision: resumed.checkpoint.frozenRuntime,
   });
   if (!finalDrift.pass || finalDrift.findings.length !== 0) {
-    // Abort with no closure metadata write. Every finding returns to its owner;
-    // a new normal run repeats affected gates, preparation, post-audit, smoke,
-    // and TASK-545 phase 1.
+    // Abort with no closure metadata/evidence write. TASK-545 no-overwrite
+    // requires an explicit owner-mediated retirement before a fresh phase 1.
     await abortResumeWithoutMetadataMutation();
-    throw new Error("task548_final_drift_blocked");
+    const retirement = await dispatchSamePhysical07L01(
+      "07-L01-invalidated-checkpoint-owner-retirement-pause",
+      { resume: resumed, finalDrift }
+    );
+    await yieldOwnerActionRequired(retirement);
+    return;
   }
   closeoutInput = { resume: resumed, finalDrift };
 } else {
@@ -302,12 +469,17 @@ const delta = await dispatchSamePhysical07L01(
 await handExactMetadataDeltaToOwner(delta); // external result; never persisted
 ```
 
-**Data flow:** completed/tracked TASK-545 owner contracts → HEAD/status/diff +
-task/docs/source/tests → shared-driver schema-valid read-only reports/all-results
-guards → verified findings → ownership-scoped fixes → fresh audit → exact
-sequential implementation/gates through 06-L02 → same physical 07-L01
-runtime-docs/gates preparation → one canonical shared-driver, two-pass
-post-audit invocation with at most one bounded fix,
+**Data flow:** TASK-545 exactly Done → TASK-547 terminal → landed literal-overlap
+parent amendment → sole bounded six-file TASK-548-08 bootstrap → pre-commit exact
+write-set/forbidden-path, Node syntax, targeted-test, line-count and
+`git diff --check` gates → exact owner checkpoint/commit → post-commit exact
+commit-scope, tracked-file, clean status/diffs, `git show HEAD:<path>` byte
+parity and clean-checkout/worktree gates → five fresh shared-driver authoring
+rounds plus reconcile → schema-valid read-only reports/all-results guards → verified
+findings → ownership-scoped fixes → fresh audit → exact sequential product
+implementation/gates through 06-L02, orchestrated by the 08 wrappers → same
+physical 07-L01 runtime-docs/gates preparation → one canonical shared-driver,
+two-pass post-audit invocation with at most one bounded fix,
 affected gates and preparation rerun inside its validation boundary → bounded
 current-run post-audit gate → same physical 07-L01 final smoke → exact canonical
 TASK-545 manifest/eight screenshots → TASK-545 phase 1 immediately and
@@ -324,31 +496,68 @@ terminal metadata → exact mechanical metadata-delta receipt returned externall
 and never persisted. A crash before the first write reruns final drift as
 `frozen`; a crash after it resumes as `metadata_recovery`, validates the exact
 changelog-first plan prefix, and finishes missing metadata without smoke, final
-drift, or lost in-memory payloads.
+drift, or lost in-memory payloads. The mutually exclusive retirement-restart
+flow instead reads its exact restart discriminator first → proves that
+bootstrap/authoring/full implementation and frozen/metadata-recovery resume are
+not selected → confirms the prior manifest/eight PNGs/checkpoint are absent
+from index/worktree and their directory is absent or empty without a symlink →
+runs only owner-approved affected fixes and per-leaf gates → preparation →
+canonical post-audit → smoke and a fresh no-overwrite phase 1. It never reads,
+rewrites or deletes the retired checkpoint/evidence and does not recover
+findings from them.
 
 **Error handling:** nonzero agent exit, missing result, duplicate result,
 malformed JSON, stale HEAD/diff scope, forbidden write, conflicting owner,
 failed gate, dirty unowned path, or unresolved HIGH/MEDIUM stops dispatch.
-An untracked wrapper/shared owner/test, provisional pre-TASK-545 result,
-count-only local substitute, evidence path outside the canonical directory, or
-attempt by 08 to stage/commit/write final evidence also stops. Never retry by
-weakening a test, suppressing a scanner, or treating absence as success.
+Wrong dependency status/order, an unlanded parent amendment, a bootstrap write
+outside the six exact paths, an untracked wrapper/shared owner/test, HEAD-byte
+mismatch, dirty clean-checkout gate, provisional-helper promotion, provisional
+pre-TASK-545 result, count-only local substitute, evidence path outside the
+canonical directory, or attempt by 08 to stage/commit/write final evidence also
+stops. Agents never stage or commit the bootstrap; absent owner checkpoint/
+commit stops before audit. Any change after that commit to a bootstrap artifact,
+TASK-548 task contract, or imported TASK-545 driver invalidates the complete
+authoring result and restarts all five fresh rounds plus reconcile from the new
+HEAD; no partial-round reuse is allowed. Never retry by weakening a test,
+suppressing a scanner, or treating absence as success.
 A final-drift result is read-only and runs before any terminal metadata write.
-Every finding makes it non-pass; resume aborts without a closeout edit,
-invalidates the final smoke/checkpoint, and starts a new normal run at the
-owning leaf, affected gates, 07 preparation, canonical post-audit, smoke, and
-phase 1. A `metadata_recovery` delta that is not an exact changelog-first prefix
+Every finding makes it non-pass; resume aborts without a closeout/evidence edit
+and returns the exact 07-owned
+`retire_invalidated_task548_checkpoint` owner action bound to task, run,
+canonical ten-path inventory and checkpoint hash. Agents neither unstage nor
+delete it. The owner retires only that reviewed inventory; the next mutually
+exclusive retirement-restart invocation supplies the returned restart argv and
+07 confirms
+the ten paths are absent from index/worktree and the directory is absent/empty
+before affected gates, preparation, post-audit, smoke and a fresh no-overwrite
+phase 1. Mixed invocation modes, late confirmation, any bootstrap/authoring/full
+implementation replay, or any retired checkpoint/evidence access or mutation
+blocks before affected work. Partial/wrong retirement blocks. This transition
+is never used for `metadata_recovery` or a clean pre-metadata crash. A
+`metadata_recovery` delta
+that is not an exact changelog-first prefix
 of the deterministic metadata plan also blocks without inventing the lost
 final-drift payload. After terminal metadata, only the narrow TASK-545
 mechanical delta validator may run; its structured result is an external owner
 handoff and is never written back into task, changelog, manifest, checkpoint,
 or another evidence file.
 
-**Regression-test shape:** workflow smoke fixtures prove five rounds cannot
+**Regression-test shape:** bootstrap fixtures pin all eight prerequisite steps
+in order: dependency and parent gates; exact six-file rebuild; pre-commit exact
+write-set/forbidden-path, Node syntax, targeted-test, line-count and diff-check
+gates; owner-only checkpoint/commit; then post-commit exact commit scope, clean
+status/diffs, `git ls-files` membership, `git show HEAD:<path>` byte parity and
+clean-checkout/worktree tests before any authoring round. TASK-548-08 remains To
+Do and imports tracked TASK-545 owners throughout. Fixtures seed the
+ignored provisional helper with distinguishable bytes and prove it is rebuilt,
+not promoted; every product/source/task/docs/changelog/status/evidence write is
+rejected. Mutating any bootstrap artifact, TASK-548 task contract, or imported
+TASK-545 driver after a PASS proves that all five rounds plus reconcile rerun
+from a new HEAD. Workflow smoke fixtures also prove five rounds cannot
 short-circuit, all-results false-clean protection, exactly one reconcile per
-round, scoped fixer dispatch, forbidden-path enforcement, sequential land
-order, stale-evidence rejection, structured schema validation and nonzero
-failure behavior.
+round, scoped fixer dispatch, forbidden-path enforcement, the unchanged 01..07
+sequential land order, stale-evidence rejection, structured schema validation,
+and nonzero failure behavior.
 
 ## Sequential Implementation and Gates
 
@@ -364,6 +573,13 @@ failure behavior.
   change and never weaken a behavior assertion.
 - A task/source/test/validation-contract change after a pass makes the pass
   stale. Rerun affected gates and audits.
+- A retirement-restart is mutually exclusive with the normal sequential
+  implementation and closure-resume modes. Read its exact argv first, dispatch
+  `07-L01-confirm-invalidated-checkpoint-retired` as the first workflow action,
+  and only after exact ten-path absence run affected owner fixes/gates,
+  preparation, post-audit, smoke and a fresh phase 1. Do not rerun bootstrap,
+  authoring or the complete implementation order and do not access the retired
+  checkpoint/evidence.
 - After 06-L02, TASK-548-07 first runs runtime docs and combined gates without
   smoke/checkpoint. 08 then calls the canonical TASK-545 post-audit driver
   exactly once. The driver itself owns pass 1, at most one fix, validation, and
@@ -425,9 +641,15 @@ When TASK-545 returns `frozen`, 08 dispatches
 `08-final-read-only-drift`, a substantive read-only audit bound to the frozen
 runtime revision, before any closeout mutation. A pass has exactly no findings.
 Any finding aborts resume without metadata, returns to the exact owner, and
-invalidates smoke/checkpoint for a new normal run. The dynamic result is used
-only in that process and is not serialized. If the process crashes before the
-first metadata write, replay remains `frozen` and reruns a fresh final drift.
+returns the exact checkpoint-retirement owner action. Only after the owner
+unstages/retires the bound ten-path inventory may a new mutually exclusive
+retirement-restart invocation confirm absence as its first workflow action and
+run the affected fixes/gates/preparation/post-audit/smoke/new phase 1. It skips
+bootstrap, authoring and full implementation replay and never reads or mutates
+the retired bytes. The dynamic result is used only in the process that found it
+and is not serialized.
+If the process crashes before the first metadata write after a clean final
+drift, replay remains `frozen` and reruns a fresh final drift without retirement.
 
 07 derives its deterministic metadata plan from only:
 
@@ -481,18 +703,14 @@ Agents default read only; writer dispatch is limited to the explicit owner map.
 
 ## Testing Requirements
 
+Before the owner checkpoint/commit, the wrapper first proves the exact six-file
+write set and all forbidden paths, then runs only this pre-commit block:
+
 ```bash
 node --check _docs/_workflows/task-548-author-audit.mjs
 node --check _docs/_workflows/task-548-implement.mjs
 node --check _docs/_workflows/task-548-fix.mjs
 node --check _docs/_workflows/lib/task-548-contract.mjs
-git ls-files --error-unmatch \
-  _docs/_workflows/task-548-author-audit.mjs \
-  _docs/_workflows/task-548-implement.mjs \
-  _docs/_workflows/task-548-fix.mjs \
-  _docs/_workflows/lib/task-548-contract.mjs \
-  tests/unit/workflows/task548AuthorAudit.test.ts \
-  tests/unit/workflows/task548WorkflowContracts.test.ts
 bun test tests/unit/workflows/task548AuthorAudit.test.ts \
   tests/unit/workflows/task548WorkflowContracts.test.ts \
   tests/unit/workflows/workflowContracts.test.ts \
@@ -500,16 +718,58 @@ bun test tests/unit/workflows/task548AuthorAudit.test.ts \
   tests/unit/workflows/postAudit.test.ts \
   tests/unit/workflows/workflowStaticContract.test.ts \
   tests/unit/workflows/smokeEvidence.test.ts
-bun --cwd core lint:types
-bun --cwd core lint
-git diff --check
 wc -l _docs/_workflows/task-548-author-audit.mjs \
   _docs/_workflows/task-548-implement.mjs \
   _docs/_workflows/task-548-fix.mjs \
   _docs/_workflows/lib/task-548-contract.mjs \
   tests/unit/workflows/task548AuthorAudit.test.ts \
   tests/unit/workflows/task548WorkflowContracts.test.ts
+git diff --check -- \
+  _docs/_workflows/task-548-author-audit.mjs \
+  _docs/_workflows/task-548-implement.mjs \
+  _docs/_workflows/task-548-fix.mjs \
+  _docs/_workflows/lib/task-548-contract.mjs \
+  tests/unit/workflows/task548AuthorAudit.test.ts \
+  tests/unit/workflows/task548WorkflowContracts.test.ts
 ```
+
+Stop after producing the exact reviewed-byte checkpoint. Agents do not stage or
+commit. After the owner commits exactly those six paths, a new invocation first
+calls `requireExactBootstrapCommitPathSet()` and then runs this post-commit
+block from the new HEAD:
+
+```bash
+git ls-files --error-unmatch \
+  _docs/_workflows/task-548-author-audit.mjs \
+  _docs/_workflows/task-548-implement.mjs \
+  _docs/_workflows/task-548-fix.mjs \
+  _docs/_workflows/lib/task-548-contract.mjs \
+  tests/unit/workflows/task548AuthorAudit.test.ts \
+  tests/unit/workflows/task548WorkflowContracts.test.ts
+git diff --exit-code
+git diff --cached --exit-code
+test -z "$(git status --short --untracked-files=all)"
+set -o pipefail
+for task548_bootstrap_path in \
+  _docs/_workflows/task-548-author-audit.mjs \
+  _docs/_workflows/task-548-implement.mjs \
+  _docs/_workflows/task-548-fix.mjs \
+  _docs/_workflows/lib/task-548-contract.mjs \
+  tests/unit/workflows/task548AuthorAudit.test.ts \
+  tests/unit/workflows/task548WorkflowContracts.test.ts; do
+  git show "HEAD:$task548_bootstrap_path" | \
+    cmp -s -- "$task548_bootstrap_path" -
+done
+```
+
+The post-commit invocation then runs
+`runTask548BootstrapCleanCheckoutWorktreeTests()` against a task-scoped clean
+checkout of that HEAD, proving all six paths, tracked TASK-545 imports, Node
+syntax and targeted workflow tests work there without copying local provisional
+bytes. The exact commit path set, `git ls-files`, clean status/diffs,
+`git show HEAD:<path>` byte parity, and clean-checkout/worktree tests are
+post-commit gates only. An extra/missing commit path or any post-commit failure
+blocks before the first fresh canonical authoring round.
 
 In addition to the fixed workflow-file count above, audit every added or
 modified human-authored production module and test file from the pre-task
@@ -519,17 +779,31 @@ Fixtures cover missing results, bad schema, timeout, stale evidence, collision,
 wrong exact constant (including either missing 01-L02 operational rerun),
 incomplete rounds, provisional pre-TASK-545 input, untracked/missing shared
 owner files/tests, count-only local guards, and unresolved reconcile findings.
-Also run the task graph/H1/FileName/parent/status audit and one dry workflow
-proving no direct product/task/changelog/evidence writes by 08.
+They also cover skipped/reordered dependency/bootstrap steps, a missing/extra
+bootstrap commit path, dirty checkout, HEAD-byte mismatch, direct promotion of
+the ignored provisional helper, and full five-round invalidation after each of
+the three protected input classes changes. Also run the task graph/H1/FileName/
+parent/status audit and one dry workflow proving no direct product/task/docs/
+changelog/status/evidence writes by 08.
 
-Phase-order fixtures pin all six exact post-06-L02 labels, the same physical
-07-L01 owner across its four phases, nonterminal status through final drift,
+Phase-order fixtures pin all six exact normal post-06-L02 labels, the same
+physical 07-L01 owner across its four normal and two conditional retirement
+phases, nonterminal status through final drift,
 post-audit before final smoke, owner-scoped non-metadata loopback, substantive
 read-only final drift after owner-resume parity but before closeout on
 `frozen`, and only mechanical metadata-delta validation after terminal
 metadata. Replay fixtures prove a pre-metadata crash remains `frozen` and reruns
 final drift, while a post-changelog crash returns `metadata_recovery` and skips
-smoke/final drift.
+smoke/final drift. A non-pass final drift returns the exact owner-retirement
+payload, performs no deletion/unstage itself, rejects wrong/partial ten-path
+retirement, and requires the next invocation to select only retirement-restart
+mode. Fixtures prove restart argv is read before every other workflow action,
+the same-owner confirmation is first, exact absent index/worktree inventory and
+an absent/empty no-symlink directory precede every affected fix/gate/preparation,
+bootstrap/authoring/full implementation and closure resume are not called, the
+retired checkpoint/evidence is never accessed or mutated, and the normal
+args-absent first-implementation order remains byte-for-byte unchanged. Only
+then may affected work and a fresh no-overwrite phase 1 run.
 
 Evidence tests require only
 `_docs/_workflows/_smoke/evidence/task-548/`, exact manifest/checkpoint/screenshot

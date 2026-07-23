@@ -79,8 +79,10 @@ are outside TASK-548.
   Admin user. It has no additional RBAC permission because the bundled corpus
   is public-safe.
 - Search, table of contents, article content, examples, and screenshots load
-  from the installed local distribution after exact `embedded-help` target
-  filtering. A query never calls the official portal.
+  from one renderer-owned, private-branded `DocsPublicationProjectionV1`
+  constructed from the installed distribution with literal `embedded-help`.
+  It is a distinct projection, never a filtered distribution bundle. A query
+  never calls the official portal.
 - `Open in CMS` is shown only when the document's exact
   `permissionRequirement` is satisfied by the current fail-closed permission
   snapshot. Null means authenticated Admin access with no extra catalog
@@ -135,7 +137,9 @@ are outside TASK-548.
 ```text
 DocsDistributionBundleV2
         |
-        +--> packages/docs-renderer --> /admin/help
+        +--> one DocsPublicationProjectionV1("embedded-help")
+        |       +--> one pure local search index
+        |       +--> projection-only renderer/assets/links --> /admin/help
         |
         +--> DB (docId,locale,sectionId) index --> Guide answer evidence
                                            |
@@ -208,9 +212,8 @@ files and their route/service tests. No later TASK-548 leaf reopens them.
 
 ```ts
 export function resolveHelpArticleRendererState(input: {
-  bundle: DocsDistributionBundleV2;
-  document: DocsDocumentV2;
-  publicationTarget: "embedded-help";
+  projection: DocsPublicationProjectionV1<"embedded-help">;
+  documentKey: DocsPublicationDocumentKeyV1;
   adminBasePath: string;
   officialDocs: Extract<
     DocsLinkContextV1,
@@ -220,25 +223,27 @@ export function resolveHelpArticleRendererState(input: {
   copyExampleBody: DocsCopyExampleBodyV1;
 }): HelpArticleRendererState {
   try {
+    const document = resolveDocsPublicationDocumentV1(
+      input.projection,
+      input.documentKey
+    );
     const linkContext = normalizeDocsLinkContextV1({
       surface: "embedded-help",
-      publicationTarget: input.publicationTarget,
-      locale: input.document.locale,
+      publicationTarget: input.projection.publicationTarget,
+      locale: document.locale,
       adminBasePath: input.adminBasePath,
       officialDocs: input.officialDocs,
     });
     const localVisualAssets = buildVerifiedDocsLocalVisualAssetMapV1({
-      bundle: input.bundle,
-      document: input.document,
-      publicationTarget: input.publicationTarget,
+      projection: input.projection,
+      documentKey: input.documentKey,
       packagedAssets: input.packagedVisualAssets,
     });
     return {
       state: "ready",
       rendererProps: {
-        bundle: input.bundle,
-        document: input.document,
-        publicationTarget: input.publicationTarget,
+        projection: input.projection,
+        documentKey: input.documentKey,
         linkContext,
         localVisualAssets,
         copyExampleBody: input.copyExampleBody,
@@ -249,14 +254,32 @@ export function resolveHelpArticleRendererState(input: {
     return {
       state: "integrity-error",
       code: "docs_help_article_integrity_invalid",
-      docId: input.document.docId,
-      locale: input.document.locale,
+      docId: input.documentKey.docId,
+      locale: input.documentKey.locale,
     };
   }
 }
 
+export type EmbeddedHelpRuntimeV1 = Readonly<{
+  projection: DocsPublicationProjectionV1<"embedded-help">;
+  searchIndex: DocsSearchIndexV1;
+}>;
+
+export function createEmbeddedHelpRuntimeV1(
+  bundle: DocsDistributionBundleV2
+): EmbeddedHelpRuntimeV1 {
+  const projection = createDocsPublicationProjectionV1({
+    sourceBundle: bundle,
+    publicationTarget: "embedded-help",
+  });
+  return {
+    projection,
+    searchIndex: buildDocsSearchIndexV1(projection),
+  };
+}
+
 export function resolveEmbeddedHelp(input: {
-  bundle: DocsDistributionBundleV2;
+  runtime: EmbeddedHelpRuntimeV1;
   location: HelpLocation;
   permissionSnapshot: DocsAdminPermissionSnapshotV1;
   adminBasePath: string;
@@ -267,31 +290,26 @@ export function resolveEmbeddedHelp(input: {
   packagedVisualAssets: readonly DocsPackagedLocalVisualAssetV1[];
   copyExampleBody: DocsCopyExampleBodyV1;
 }): HelpReaderView {
-  const publicationTarget = "embedded-help" as const;
-  const targetDocuments = selectDocumentsForPublicationTarget(
-    input.bundle.documents,
-    publicationTarget
-  );
-  const searchIndex = createDocsSearchIndex(input.bundle, {
-    publicationTarget,
-  });
+  const { projection, searchIndex } = input.runtime;
   const query = normalizeHelpQuery(input.location.query);
-  const document = resolvePublishedDocument(
-    targetDocuments,
-    input.location,
-    { publicationTarget }
+  const documentKey = resolvePublishedDocumentKeyV1(
+    projection,
+    input.location
+  );
+  const document = resolveDocsPublicationDocumentV1(
+    projection,
+    documentKey
   );
   const article = resolveHelpArticleRendererState({
-    bundle: input.bundle,
-    document,
-    publicationTarget,
+    projection,
+    documentKey,
     adminBasePath: input.adminBasePath,
     officialDocs: input.officialDocs,
     packagedVisualAssets: input.packagedVisualAssets,
     copyExampleBody: input.copyExampleBody,
   });
   return {
-    publicationTarget,
+    publicationTarget: projection.publicationTarget,
     results: searchDocs(searchIndex, {
       ...buildHelpSearchInput(input.location),
       query,
@@ -327,13 +345,15 @@ export async function submitConversation(
 ```
 
 **Data flow:** validated installed bundle → exact `embedded-help`
-document selection → explicit surface link context + selected-article packaged
+projection construction with full-source provenance and complete target closure
+→ one pure in-memory search index → exact member selection → explicit surface
+link context + selected-article packaged
 asset byte/hash map + user-event-only copy handler → all required renderer props
 → local Help reader; or strict assistant request → authenticated canonical
 server permission snapshot → authorized DB evidence ids → requirement-rechecked
 local distribution card join → safe React tokens. No Help
-selector/search/renderer receives the unscoped bundle without the literal
-target, and no Guide retrieval receives a client permission value.
+selector/search/renderer receives an unbranded or unscoped filtered value, and
+no Guide retrieval receives a client permission value.
 
 **Error handling:** invalid bundle/route/link fails closed. In embedded Help, a
 missing/unlisted/orphan/cross-owner/tampered visual or example, missing asset or
@@ -357,9 +377,10 @@ histories/readiness;
 Guide works with Agent disabled; Agent cannot silently show docs fallback;
 redacted explicit handoff; no action calls from Guide; null/empty/partial/full
 `allOf`/`anyOf` permission cases; capability-context ranking; file-size gates.
-Help integration passes bundle, document, literal target, exact Help
-`DocsLinkContextV1`, verified selected-article local asset map and explicit
-trusted-user-event copy handler; omission of any prop fails. Missing/orphan/
+Help integration passes the branded projection/member key, exact Help
+`DocsLinkContextV1`, verified selected-article
+local asset map and explicit trusted-user-event copy handler; omission of any
+prop fails. Missing/orphan/
 tampered Help evidence blocks only that article, whereas authorized Guide text/
 source survives an omitted unresolved optional card.
 Target-leak fixtures prove Help renders `embedded-help` and multi-target records

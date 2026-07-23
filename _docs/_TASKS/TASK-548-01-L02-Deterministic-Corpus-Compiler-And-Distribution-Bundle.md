@@ -48,10 +48,10 @@ and visual triples, orchestration pauses TASK-548-06 and re-dispatches this same
 owner exactly once more to regenerate and verify the final bundle and
 `.tmp/docs-corpus/migration-report-v1.json`. TASK-548-02 and TASK-548-06 cannot
 write either final. The linked two-member transaction is used only by these
-explicit TASK-548-01-L02 authoring/migration `--write` runs and handbacks. The
+explicit TASK-548-01-L02 authoring/migration `--write` runs and callbacks. The
 ignored report is not a clean-checkout, runtime, portal, Docker, release,
 `docs:check`, or coverage-check prerequisite. No per-wave or per-promotion
-handback is valid.
+owner regeneration is valid.
 
 ## Compiler Contract
 
@@ -77,9 +77,12 @@ handback is valid.
   pre-task corpus. A missing/unknown discriminator combined with any v2-only
   key, a native discriminator combined with legacy-only keys, or any partially
   migrated shape fails as `docs_compile_source_ambiguous`; it never guesses.
-- Native parsing calls `parseNativeDocsSectionDirectivesV1`; every report
-  `headingOccurrence` is the directive's exact one-based ordinal. Legacy parsing
-  rejects native directives, while native parsing rejects missing directives.
+- `projectNativeDocsSourceV2` imports TASK-548-01-L01's exact
+  `parseDocsDocumentV2`, supplies decoded `{ sourcePath, markdown }`, adds only
+  empty pre-join visuals/examples, and returns the uniform source projection.
+  Its parser calls `parseNativeDocsSectionDirectivesV1`; every report
+  `headingOccurrence` is that directive's exact one-based ordinal. Legacy
+  parsing rejects native directives; native parsing rejects missing directives.
 - Build links nowhere. The bundle carries `slug`, locale, version range and
   `adminPath`; downstream consumers derive Help/public links centrally.
 - Serialize with a documented canonical JSON serializer, LF endings and one
@@ -112,22 +115,21 @@ export const LEGACY_DOCS_V1_CURRENT_SOURCE_COUNT = 68 as const;
 export const LEGACY_DOCS_V1_ORIENTATION_SOURCE_PATHS = [
   "docs/guide/getting-started/admin-orientation.md",
 ] as const;
-export type LegacyDocsV1Source = {
-  sourcePath: string;
-  markdownBytes: Uint8Array;
+export type DocsMarkdownSourceV2 = {
+  sourcePath: string; markdownBytes: Uint8Array;
 };
-export type LegacyDocsV1Projection = {
-  kind: "legacy-v1";
-  sourceSha256: string;
+export type LegacyDocsV1Source = DocsMarkdownSourceV2;
+export type DocsSourceProjectionV2 = {
+  kind: "native-v2" | "legacy-v1"; nativeV2: boolean;
+  sourcePath: string; sourceSha256: string;
   document: DocsDocumentV2;
-  headingOccurrences: readonly {
-    headingOccurrence: number;
-    sectionId: string;
-  }[];
+  headingOccurrences: readonly { headingOccurrence: number; sectionId: string }[];
 };
-export function projectLegacyDocsDocumentV1ToV2(
-  source: LegacyDocsV1Source
-): LegacyDocsV1Projection;
+export type LegacyDocsV1Projection = DocsSourceProjectionV2 & {
+  kind: "legacy-v1"; nativeV2: false;
+};
+export function projectNativeDocsSourceV2(source: DocsMarkdownSourceV2): DocsSourceProjectionV2 & { kind: "native-v2"; nativeV2: true };
+export function projectLegacyDocsDocumentV1ToV2(source: LegacyDocsV1Source): LegacyDocsV1Projection;
 
 // core/services/documentation/compiler/legacyDocsV1ContextCatalog.ts
 export type LegacyDocsV1Context = {
@@ -323,8 +325,8 @@ type DocsMigrationReportV1 = {
 };
 ```
 
-Entries sort by normalized `sourcePath`; section rows sort by one-based
-`headingOccurrence`, exactly matching native directive ordinals. All paths are
+Entries map `sourceHash` from uniform projection `sourceSha256` and sort by
+normalized `sourcePath`; section rows sort by one-based `headingOccurrence`, exactly matching native directive ordinals. All paths are
 repository-relative, hashes are lowercase
 SHA-256, all objects reject unknown fields, and the report uses the same
 canonical JSON/LF serializer as the bundle. TASK-548-06 consumes this exact
@@ -483,8 +485,7 @@ const DOCS_WORKSPACE_ARTIFACT_PROMOTION_V1 = {
 } as const satisfies DurablePairPromotionConfigV1;
 ```
 
-`validateDocsWorkspaceArtifactStablePairV1` recognizes exactly three stable
-workspace prestates:
+`validateDocsWorkspaceArtifactStablePairV1` recognizes exactly three stable workspace prestates:
 
 - `bootstrap-none`: both members absent before the initial owner write;
 - `packaged-bundle-only`: member 0 is the strict tracked generated bundle and
@@ -500,24 +501,17 @@ must match the config's two member IDs in tuple order; callers cannot replace
 either final path or validator.
 
 Before any member temp write or staged rename, compute both next hashes, inspect
-and hash both prior finals, allocate the bounded transaction ID, and derive
-every exact repository-relative path from the config plus that ID. Member temp,
-staged and nullable-backup paths and the exact journal temp path are all
-recorded in the journal; callers cannot supply or substitute them. Unknown
-fields, absolute/traversing/symlinked paths, mismatched derived paths,
-transaction IDs or hashes fail closed.
+and hash both prior finals, allocate the bounded transaction ID, and derive every
+repository-relative temp/staged/nullable-backup/journal path from the config plus
+that ID. Unknown fields, caller-supplied or absolute/traversing/symlinked paths,
+derived-path drift, transaction-ID drift, or hash drift fail closed.
 
-The first durable action is writing phase `preparing`: write the exact journal
-temp → fsync that file → atomic rename to `config.journalPath` → fsync the
-journal directory. No member temp/staged/backup write or rename is reachable
-until that directory fsync succeeds. Then stage each next member independently:
-write its recorded `stagingTempPath` → fsync it → rename it to the recorded
-`stagedPath` → fsync the owning directory. Reopen and hash both staged files,
-construct the exact present stable pair and run `config.validateStablePair`;
-only after it passes may the journal transition to `prepared`. Every transition
-through `prepared`, both promoted phases and `verified-commit` repeats the exact
-journal-temp write/fsync/rename/directory-fsync sequence. Every final/backup
-rename also fsyncs its owning directory before the next phase.
+The first durable action is `preparing`: journal temp write → file fsync → atomic
+rename → journal-directory fsync. Only then stage each member through write →
+fsync → recorded rename → directory fsync. Reopen/hash both, validate the exact
+present pair, then transition through `prepared`, both promoted phases and
+`verified-commit` with the same journal durability sequence; every final/backup
+rename also fsyncs its directory before the next phase.
 
 The workspace wrapper module
 `core/services/documentation/artifacts/docsWorkspaceArtifactPromotionV1.ts`
@@ -525,17 +519,23 @@ exports exactly:
 
 ```ts
 type DocsWorkspaceArtifactStablePrestateV1 =
-  | "bootstrap-none"
-  | "packaged-bundle-only"
-  | "linked-pair";
+  "bootstrap-none" | "packaged-bundle-only" | "linked-pair";
 
-assertNoDocsWorkspaceArtifactPromotionHazardsV1(): Promise<
-  DocsWorkspaceArtifactStablePrestateV1
->;
+export type DocsFinalNativePairExpectedIdentityV1 = {
+  migrationRunId: string; sourceHash: string; bundleSha256: string;
+  reportSha256: string; pairTransactionIdentitySha256: string;
+};
 
-recoverDocsWorkspaceArtifactPromotionV1(): Promise<
-  DurablePairRecoveryResultV1
->;
+export type VerifiedDocsFinalNativePairHandbackV1 = {
+  schema: "coderso.docs-final-native-pair-handback@v1";
+  migrationRunId: string; sourceHash: string; bundleSha256: string;
+  reportSha256: string; pairTransactionIdentitySha256: string;
+  pair: { bundle: DocsDistributionBundleV2; report: DocsMigrationReportV1 };
+};
+
+assertNoDocsWorkspaceArtifactPromotionHazardsV1():
+  Promise<DocsWorkspaceArtifactStablePrestateV1>;
+recoverDocsWorkspaceArtifactPromotionV1(): Promise<DurablePairRecoveryResultV1>;
 
 loadAndValidateRecoveredDocsArtifactPair(input: {
   bundlePath: "core/generated/docs/coderso-docs-v2.json";
@@ -544,6 +544,17 @@ loadAndValidateRecoveredDocsArtifactPair(input: {
   bundle: DocsDistributionBundleV2;
   report: DocsMigrationReportV1;
 }>;
+
+export function buildDocsFinalNativePairExpectedIdentityV1(input: {
+  migrationRunId: string;
+  compiled: CompiledDocsCorpusV2;
+}): DocsFinalNativePairExpectedIdentityV1;
+
+export function verifyDocsFinalNativePairHandbackV1(input: {
+  expected: DocsFinalNativePairExpectedIdentityV1;
+  bundlePath: "core/generated/docs/coderso-docs-v2.json";
+  reportPath: ".tmp/docs-corpus/migration-report-v1.json";
+}): Promise<VerifiedDocsFinalNativePairHandbackV1>;
 ```
 
 `recoverDocsWorkspaceArtifactPromotionV1()` delegates to
@@ -556,15 +567,25 @@ invalid packaged bundle or invalid linked pair with
 `docs_compile_recovery_required`; it never renames, deletes, truncates or
 creates a file. It accepts and strictly validates `bootstrap-none`,
 `packaged-bundle-only`, and `linked-pair`, returning the exact classification.
-`loadAndValidateRecoveredDocsArtifactPair` is workspace-only, requires both
-members and may run only after successful recovery in an explicit
-TASK-548-01-L02 authoring/migration `--write` flow or from the corresponding
-TASK-548-06-L01 migration handback. It reopens both exact finals without
-following symlinks, validates both strict schemas plus exact
-`bundleSourceHash`/`bundleSha256` linkage, and rejects an absent report or any
-live journal before returning either value. The packaged production loader
-`loadPackagedDocsDistributionBundleV2()` is separate and never imports this
-workspace module or reads `.tmp`.
+`loadAndValidateRecoveredDocsArtifactPair` is workspace-only and, after owner
+recovery, reopens both exact finals without following links, validates both
+strict schemas plus exact report/bundle linkage, and rejects an absent member or
+live journal before returning either value. The packaged production loader is
+separate and never imports this workspace module or reads `.tmp`.
+
+The expected-identity builder strictly validates `migrationRunId`, canonical
+compiled bundle/report bytes and hashes, then computes
+`pairTransactionIdentitySha256` over the domain
+`coderso.docs-final-native-pair@v1` plus the exact run/source/bundle/report
+identity; this is not the transient durable-journal transaction ID. It performs
+no write. The verifier normalizes the exact expected shape, runs the read-only hazard inspector, and reopens the pair through
+`loadAndValidateRecoveredDocsArtifactPair`, proves both on-disk files are the
+owner canonical serializers' exact bytes, hashes them, and requires every
+expected field plus the recomputed transaction identity. It returns the strict
+in-memory fact with that exact reopened pair; it never recovers,
+compiles, promotes, writes, or counts as another regeneration handback. The
+expected identity is derived from the deterministic intended final compile, not
+from the pair being verified, so the same call is safe after crash/restart.
 
 The same leaf pre-lands the visual wrapper module so the initial compiler can
 recover pilot transactions before TASK-548-02-L02 exists. It exports exactly:
@@ -718,16 +739,13 @@ export async function compileDocsCorpusV2(options: CompileDocsOptions) {
   const manifest = normalizeDocsCorpusManifestV2(await readRootManifest(root));
   const sourceFiles = await collectSortedDocsSources(root);
   const parsed = sourceFiles.markdown.map((source) => {
-    const kind = classifyDocsSourceKind(source.frontmatter);
+    const kind = classifyDocsSourceKind(readStrictFrontmatter(
+      source.markdownBytes
+    ));
     if (kind === "native-v2") {
-      return parseNativeDocsDocumentV2(
-        source,
-        parseNativeDocsSectionDirectivesV1(source.body)
-      );
+      return projectNativeDocsSourceV2(source);
     }
-    if (kind === "legacy-v1") {
-      return projectLegacyDocsDocumentV1ToV2(source);
-    }
+    if (kind === "legacy-v1") return projectLegacyDocsDocumentV1ToV2(source);
     throw new Error("docs_compile_source_ambiguous");
   });
   const documents = parsed.map((item) => item.document);
@@ -896,7 +914,7 @@ clean-clone bundle-only, linked, stale and recovery-required fixtures, while
 `docs:recover` performs only required interrupted-write recovery and a following
 `--check` remains read-only.
 Reject native files with missing/orphan/reordered directives, invalid ordinals,
-duplicate section IDs or directive/frontmatter confusion; prove legacy report
+duplicate section IDs or directive/frontmatter confusion; a static guard pins the exact L01 `parseDocsDocumentV2` import and uniform native/legacy projection shape; prove legacy report
 entries serialize to exact native directives and round-trip back to identical
 section IDs/one-based heading occurrences.
 Pin all 68 current source paths and complete projection hashes. Prove exact
@@ -929,9 +947,9 @@ drift, catalog collisions and any unreviewed null-to-action enrichment fail.
 - [ ] Accept the one orchestrator checkpoint after TASK-548-02-L02 has promoted
   all five pilot triples; refresh and gate the same exclusive bundle/report
   before TASK-548-02-L03 or TASK-548-03 starts.
-- [ ] Accept the orchestrator handback after TASK-548-06-L01, regenerate the
-  same exclusive generated bundle/report from final native sources and return
-  verification evidence before TASK-548-06 resumes checks/coverage.
+- [ ] Accept the orchestrator callback after TASK-548-06-L01, prove its expected
+  identity, regenerate the exclusive pair only from baseline state, and expose
+  the read-only verified-fact helper before TASK-548-06 resumes checks/coverage.
 - [ ] Generate the bundle and add
   `tests/vitest/documentation/docs-corpus-compiler.test.ts` plus small fixtures.
 
@@ -940,19 +958,16 @@ drift, catalog collisions and any unreviewed null-to-action enrichment fail.
 - `bun scripts/docs/compile-corpus.ts --check`
 - `bun test tests/unit/documentation/docsCorpusPromotionRecovery.test.ts`
 - `bunx vitest run --config vitest.config.ts tests/vitest/documentation/docs-corpus-compiler.test.ts tests/vitest/documentation/docs-corpus-contract.test.ts`
-- `bunx vitest run --config vitest.config.ts
-  tests/vitest/documentation/legacy-docs-v1-projection.test.ts
+- `bunx vitest run --config vitest.config.ts tests/vitest/documentation/legacy-docs-v1-projection.test.ts
   tests/vitest/documentation/legacy-docs-v1-context.test.tsx`
 - run two clean compiles in distinct temporary roots and compare bundle bytes
   and SHA-256
-- compile legacy then report-migrated native fixtures; compare normalized
-  semantics/stable IDs and assert the changed source bytes produce the expected
-  new deterministic `sourceHash`
-- validate the exact 68-row context inventory and full golden projection,
-  including all routes, permissions, capabilities, targets, collisions and the
-  exhaustive legacy→native parity contract
-- failure-inject every pair-promotion rename, validation, rollback and cleanup
-  boundary; assert the exact pre-commit rollback/post-commit evidence contract
+- compile legacy then report-migrated native fixtures; compare normalized semantics/stable IDs
+  and assert changed source bytes produce the expected deterministic `sourceHash`
+- validate the exact 68-row context inventory and full golden projection, including all routes,
+  permissions, capabilities, targets, collisions and exhaustive legacy→native parity
+- failure-inject every pair-promotion rename, validation, rollback and cleanup boundary; assert
+  the exact pre-commit rollback/post-commit evidence contract
 - cover the preparing-journal temp/file-fsync/rename/directory-fsync boundary,
   both staging file/directory fsyncs before `prepared`, and no-journal
   bootstrap-none/packaged-bundle-only/linked-pair/report-only plus orphan
@@ -965,13 +980,17 @@ drift, catalog collisions and any unreviewed null-to-action enrichment fail.
   retry completes in a later fresh process
 - after TASK-548-02-L02, run the one same-owner post-pilot refresh and pass this
   complete gate before any L03 staleness or TASK-548-03 consumer work
+- build expected identity from intended canonical compile/run; pin its strict five-field
+  shape, domain-separated pair identity, and verifier return discriminator
+- baseline dispatches one owner promotion; intended state and post-land restarts dispatch
+  zero. Repeat verification with byte-identical fact/pair and zero mutator calls
+- mismatch each expected field, tamper either final, and substitute a raw pair; reject
+  before parity and prove canonical owner serializer bytes/hashes are required
 - spy every filesystem mutator to prove `--check` is read-only and the exact
   `docs:recover` command is the only operator-directed recovery path
-- materialize a clean-clone fixture containing the tracked bundle but no `.tmp`
-  tree/report; prove `--check` validates canonical bytes and recomputed
-  `sourceHash`, succeeds without mutation, and detects a stale/tampered bundle
-- `bun --cwd core lint`
-- `bun --cwd core lint:types`
+- materialize a clean-clone fixture with the tracked bundle but no `.tmp` tree/report;
+  prove read-only `--check` accepts canonical bytes and rejects stale/tampered bytes
+- `bun --cwd core lint` and `bun --cwd core lint:types`
 - touched-file line counts
 
 ## Documentation Updates Required

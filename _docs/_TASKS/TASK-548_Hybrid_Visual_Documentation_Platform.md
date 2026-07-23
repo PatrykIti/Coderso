@@ -6,8 +6,9 @@
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-109, TASK-182, TASK-403; TASK-545 must be `✅ Done` and
 TASK-547 must be terminal, then this parent amended from TASK-547's final
-literal paths and a fresh canonical pre-implementation authoring audit PASS,
-before any dispatch
+literal paths, the bounded TASK-548-08 bootstrap committed, and a fresh canonical
+pre-implementation authoring audit PASS before any TASK-548-01..07 product
+dispatch
 **Related Tasks:** TASK-240, TASK-414, TASK-547
 **Status:** ⏳ To Do
 **Changelog:** 1261 pinned
@@ -124,8 +125,10 @@ Playwright scenarios ── reviewed canonical screenshots
 ### Local-first distribution
 
 - Embedded Help consumes the locally packaged distribution bundle.
-- Assistant retrieval remains DB-backed. Reindex compiles and persists the same
-  normalized contract; there is no runtime filesystem retrieval fallback.
+- Assistant retrieval remains DB-backed. Reindex loads the fixed packaged
+  bundle exactly once and persists its independently revalidated contract; it
+  cannot invoke the compiler, Markdown/source-root resolver, workspace
+  recovery, migration report, provider or network fallback.
 - The public portal consumes the same bundle and assets.
 - The CMS does not fetch the public portal or a remote documentation API while
   answering a question.
@@ -312,15 +315,53 @@ tracked shared workflow drivers; `⏭️ Superseded` or `❌ Cancelled` cannot
 authorize a substitute. TASK-547 must reach a terminal status. TASK-548 must
 not edit either family to manufacture those states.
 
-After TASK-545 is Done and TASK-547 is terminal, read TASK-547's final bytes and
-amend this parent with every literal user/developer guide path it owns, the
-serialized cross-family land order, and each TASK-548 leaf's matching
-forbidden-path guard. Only after that amendment, rerun the canonical read-only
-pre-implementation authoring audit against the then-current HEAD plus complete
-dirty-worktree context and require a PASS with zero unresolved HIGH/MEDIUM
-findings. Any audit run before both dependency gates or before the literal-path
-amendment is stale and does not qualify. No TASK-548 implementation leaf may
-dispatch until this exact sequence passes.
+The pre-authoring authorization order is exactly:
+
+1. TASK-545 reaches exactly `✅ Done`.
+2. TASK-547 reaches a terminal status.
+3. Read TASK-547's final bytes and land an amendment to this parent containing
+   every literal user/developer guide path it owns, the serialized cross-family
+   land order, and each TASK-548 leaf's matching forbidden-path guard.
+4. Run the bounded TASK-548-08 workflow-infrastructure bootstrap. This is the
+   sole pre-authoring-audit implementation exception and may rebuild, validate,
+   and hand the owner for tracking/commit only these exact six paths:
+   `_docs/_workflows/task-548-author-audit.mjs`,
+   `_docs/_workflows/task-548-implement.mjs`,
+   `_docs/_workflows/task-548-fix.mjs`,
+   `_docs/_workflows/lib/task-548-contract.mjs`,
+   `tests/unit/workflows/task548AuthorAudit.test.ts`, and
+   `tests/unit/workflows/task548WorkflowContracts.test.ts`. They import the
+   tracked TASK-545 drivers. Before any owner checkpoint/commit, require only
+   the exact six-file write set and forbidden-path gate, Node syntax checks,
+   targeted workflow tests, line counts, and `git diff --check`.
+5. Hand the exact reviewed-byte checkpoint to the owner; only the owner stages
+   and commits exactly those six paths. The bootstrap cannot edit
+   product/source, task, documentation, changelog, status, or evidence bytes;
+   TASK-548-08 remains `⏳ To Do`.
+6. From that new committed HEAD, require the exact commit path set,
+   `git ls-files --error-unmatch` for all six paths, clean status and unstaged/
+   staged diffs, `git show HEAD:<path>` byte parity for every path, and the
+   clean-checkout/worktree tests. None of these post-commit gates may be required
+   of the uncommitted rebuild.
+7. Only after that complete post-commit gate passes, run five mandatory fresh
+   sequential authoring rounds plus the fresh per-round reconcile and require a
+   final PASS with zero unresolved HIGH/MEDIUM findings.
+8. Only that PASS authorizes the unchanged executable product order
+   `01 → 02 → 03 → 04 → 05 → 06 → 07`; the TASK-548-08 wrappers orchestrate
+   throughout without becoming a product-source writer.
+
+The current ignored/provisional TASK-548 helper and every result it produced are
+non-authorizing. It cannot be promoted merely by tracking its current bytes:
+all six exact bootstrap files must be rebuilt against the final tracked TASK-545
+owners and pass the pre-commit gate before the owner commit, then the separate
+post-commit gate from the resulting clean HEAD. Any later change to a bootstrap
+artifact, any TASK-548 task contract, or an imported TASK-545 driver invalidates
+the authoring authorization and requires all five fresh rounds plus reconcile
+again from the new HEAD. An audit run before either dependency gate, before the
+literal-path amendment, or before the committed clean-checkout bootstrap is
+stale and does not qualify. No TASK-548-01..07 product implementation leaf may
+dispatch until this exact sequence passes; the bounded TASK-548-08 bootstrap
+grants no product/source or status-write authority.
 
 Only TASK-548-07 may edit TASK-548 statuses, the board, changelog 1261, or the
 changelog index during implementation.
@@ -353,6 +394,11 @@ changelog index during implementation.
 - Capture fails on console/page errors, invisible effects, stale source hashes,
   unsafe fixtures, missing cleanup, changed images without review, or receipt
   mismatch.
+- The six-file TASK-548-08 bootstrap passes only pre-commit write-set,
+  forbidden-path, syntax, targeted-test, line-count, and diff-check gates before
+  the owner commit; tracked membership, clean status/diffs, `git show` byte
+  parity, exact commit scope, and clean-checkout/worktree tests pass afterward
+  from the new HEAD before any authoring audit.
 - No public API, runtime remote docs dependency, secret/PII leak, raw HTML sink,
   or second documentation source is introduced.
 - All targeted and full gates pass, including strict security scanning and at

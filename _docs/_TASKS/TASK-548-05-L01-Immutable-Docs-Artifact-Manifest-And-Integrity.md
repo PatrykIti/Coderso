@@ -46,7 +46,7 @@ The exact manifest discriminator is `coderso.docs-release@v1`. Its normalized
 fields are:
 
 ```ts
-type DocsReleaseManifestV1 = {
+export type DocsReleaseManifestV1 = {
   schema: "coderso.docs-release@v1";
   productVersion: string;
   gitTag: string;
@@ -106,8 +106,50 @@ The candidate phase must prove
 `release-metadata/<productVersion>/publication-capsule/docs-release-manifest-v1.json`
 does not yet exist. Release `files[]` then records every exact site/capsule
 candidate byte; unlike the portal manifest, it includes and hashes
-`docs-portal-manifest.json`. `payloadRootSha256` hashes a domain-separated
-canonical stream of those sorted path, byte-length and file-SHA-256 records.
+`docs-portal-manifest.json`. `payloadRootSha256` uses this exact owner contract:
+
+```ts
+export const DOCS_RELEASE_PAYLOAD_ROOT_DOMAIN_V1 =
+  "coderso.docs-release.payload-root.v1" as const;
+
+export function hashDocsReleasePayloadRootV1(
+  records: readonly { path: string; bytes: number; sha256: string }[]
+): string;
+```
+
+Normalize every `path` to confined NFC POSIX UTF-8 with `/`, no empty segment,
+dot segment, backslash, absolute prefix, query, fragment, or case-colliding
+peer. Require unique records sorted by raw UTF-8 path bytes. The exact hash
+stream is:
+
+```text
+UTF8("coderso.docs-release.payload-root.v1") || 0x00 ||
+u64be(recordCount) ||
+for each sorted record:
+  u32be(pathUtf8.length) || pathUtf8 ||
+  u64be(bytes) ||
+  raw32(lowercaseHexDecode(sha256))
+```
+
+`u32be` and `u64be` are unsigned fixed-width big-endian integers; `bytes` must
+be a bounded non-negative safe integer that round-trips through `u64be`.
+`sha256` is validated lowercase 64-hex and contributes its decoded raw 32
+bytes, never 64 ASCII hex bytes. Length/count framing is complete, so there is
+no record separator or final newline. The resulting SHA-256 is serialized as
+lowercase 64-hex. The framing defines an empty set even though a release
+payload must be non-empty:
+
+```text
+[] =>
+  3a29b9bbbfbc53ef8eaa045131b218d7de7a5d72cd220c71ba259d75b66ffb8a
+[{ path: "a.txt", bytes: 3,
+   sha256: "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad" }] =>
+  ab088204acba6ebb246079480fb38d1b206f59e965f65782d5be77ba183aca8b
+```
+
+The producer and reopened archive verifier independently build this framed
+stream from their own inventories. They may share only the literal domain and
+strict record normalizer, not a producer-computed root.
 
 Only after `files[]` and `payloadRootSha256` are final does L01 serialize the
 canonical `DocsReleaseManifestV1` and insert those exact bytes at:
@@ -139,7 +181,7 @@ The exact recursively reject-unknown shape is:
 export const DOCS_RELEASE_ARTIFACT_MAX_BYTES = 536_870_912 as const;
 export const DOCS_RELEASE_ARTIFACT_RECEIPT_MAX_BYTES = 16_384 as const;
 
-type DocsReleaseArtifactReceiptV1 = {
+export type DocsReleaseArtifactReceiptV1 = {
   schema: "coderso.docs-release-artifact-receipt@v1";
   productVersion: string;
   gitTag: string;
@@ -154,6 +196,11 @@ type DocsReleaseArtifactReceiptV1 = {
   archiveSha256: string;
   receiptFileName: string;
   receiptRelativePath: string;
+};
+
+export type VerifiedDocsReleaseArtifact = {
+  manifest: DocsReleaseManifestV1;
+  receipt: DocsReleaseArtifactReceiptV1;
 };
 ```
 
@@ -334,7 +381,7 @@ export async function buildDocsReleaseArtifact(
     ...config.releaseIdentity,
     sourceHash: portal.sourceHash,
     portalManifestSha256: receipt.manifestSha256,
-    payloadRootSha256: hashCanonicalFileRecords(payloadFiles),
+    payloadRootSha256: hashDocsReleasePayloadRootV1(payloadFiles),
     files: payloadFiles,
   });
   const manifestBytes = serializeCanonicalDocsReleaseManifestV1(manifest);
@@ -376,10 +423,7 @@ export async function buildDocsReleaseArtifact(
 export async function verifyDocsReleaseArtifact(input: {
   archivePath: string;
   receiptPath: string;
-}): Promise<{
-  manifest: DocsReleaseManifestV1;
-  receipt: DocsReleaseArtifactReceiptV1;
-}> {
+}): Promise<VerifiedDocsReleaseArtifact> {
   const receipt = await readAndNormalizeArtifactReceiptV1(input.receiptPath);
   assertExactSiblingPaths(input, receipt);
   const archive = await openBoundedTar(input.archivePath);
@@ -409,6 +453,12 @@ only a resolved task-owned temporary directory.
 
 - identical portal bytes under two absolute roots and timezones produce identical
   manifest, tar, payload-root, and archive hashes;
+- independent producer/verifier framing tests pin the literal payload-root
+  domain, NFC POSIX raw-byte path order, `u64be` record count, `u32be` path
+  length, `u64be` file length, raw 32-byte digest decoding, no implicit
+  separators, the empty-set vector, and the one-record `a.txt`/`abc` vector
+  above; a little-endian integer, ASCII-hex digest, missing domain NUL, changed
+  order, or added newline produces a different rejected root;
 - one-byte file, portal-manifest, source-hash, record, tar-header, name, or
   receipt tampering fails;
 - accept only `gitTag === productVersion`; reject `v` prefix, tag/version/HEAD/

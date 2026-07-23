@@ -27,9 +27,14 @@ on an AI provider.
 
 **Single-writer ownership:** this child owns the shared documentation types,
 schemas, normalizers, compiler, generated distribution bundle, assistant-ingest
-v2 migration and their focused tests. TASK-548-02 owns capture scenarios,
-screenshots and visual receipts; downstream Help/portal children only consume
-the bundle. TASK-548-01-L02 is the exclusive whole-family writer of
+v2 migration, pure DB retrieval/permission filtering and their focused tests.
+TASK-548-01-L03 owns no Assistant route/service orchestration file: after this
+child lands, TASK-548-03-L03 is the sole TASK-548 writer of
+`core/server/routes/assistantRoutes.ts`,
+`core/services/assistant/assistantService.ts`, their centralized mapper/wiring,
+and route/service tests. TASK-548-02 owns capture scenarios, screenshots and
+visual receipts; downstream Help/portal children only consume the bundle.
+TASK-548-01-L02 is the exclusive whole-family writer of
 `core/generated/docs/coderso-docs-v2.json`, including the orchestrated
 post-pilot refresh after TASK-548-02-L02 and final regeneration handback after
 TASK-548-06-L01 changes native sources and visuals. No other child redefines the
@@ -187,10 +192,7 @@ const activeCheck = await compileDocsCorpusV2({
   visuals: activeVisuals,
 });
 await assertGeneratedBundleBytesEqual(activeCheck.bundleBytes);
-await ingestDocsDistributionBundleV2(activeWrite.bundleBytes, {
-  actorId,
-  expectedSourceHash: activeWrite.bundle.sourceHash,
-});
+await ingestDocsDistributionBundleV2(activeWrite.bundle, { actorId });
 
 // Packaged runtime/startup is a separate fixed-path read-only boundary.
 const packaged = await loadPackagedDocsDistributionBundleV2();
@@ -202,20 +204,25 @@ security validation, canonical sort and SHA-256 hashing into one compile result.
 Every compiler call supplies exact `root`, `mode` and `visuals`; there is no
 one-argument form or implicit visual default. The initial write/check alone use
 `pre-pilot-empty`. Every call after the first visual lands uses `active` plus
-TASK-548-02-L02's exact validator factory. The exact same compile
-`bundleBytes` drive determinism comparison, pair promotion, post-write byte
-verification and the v2 ingest API; no consumer reserializes the normalized
-object. The packaged loader remains distinct from compiler/workspace recovery.
+TASK-548-02-L02's exact validator factory. The exact compile `bundleBytes`
+drive determinism comparison, pair promotion and post-write byte verification.
+The persistence boundary receives the same normalized bundle object and
+independently revalidates it; runtime reindex instead calls the one fixed
+packaged loader exactly once. That loader remains distinct from
+compiler/workspace recovery.
 Local Help and public builds consume that byte contract.
 Runtime assistant retrieval consumes only the atomically persisted DB snapshot;
 it does not read Markdown or call an external documentation service per
 question.
 
 Machine-readable failures use the bounded `docs_corpus_*`/`docs_compile_*`
-families plus exactly `assistant_docs_bundle_invalid`,
-`assistant_docs_ingest_failed`, `assistant_docs_reindex_conflict`, and
-`assistant_docs_db_unavailable`; diagnostics contain no source body, credential
-or fixture-value echo.
+families plus exactly these five Assistant-docs domain errors:
+`assistant_docs_bundle_invalid`, `assistant_docs_ingest_failed`,
+`assistant_docs_reindex_conflict`, `assistant_docs_db_unavailable`, and
+`assistant_docs_permission_snapshot_invalid`. TASK-548-01-L03 owns their pure
+error definitions/normalizers only; TASK-548-03-L03 later maps all five once at
+the centralized route boundary. Diagnostics contain no source body, credential,
+permission inventory or fixture-value echo.
 
 ## Sub-Tasks
 
@@ -223,7 +230,7 @@ or fixture-value echo.
 | --- | --- | --- | --- |
 | TASK-548-01-L01 | Strict shared schemas, stable identity and safe Markdown policy | `core/services/documentation/docsCorpus*`, root manifest/template and focused contract tests | None |
 | TASK-548-01-L02 | Deterministic compiler, legacy compatibility adapter, workspace-only canonical migration report and tracked generated bundle; no authored corpus edits | compiler modules, `scripts/docs/compile-corpus.ts`, generated bundle/report and compiler tests | TASK-548-01-L01 |
-| TASK-548-01-L03 | Assistant DB schema/migration, atomic bundle ingest, v1 compatibility and centralized reindex error mapping | assistant schema/ingest/startup modules, the existing assistant route error mapper, migration artifacts and focused DB/runtime tests | TASK-548-01-L02 |
+| TASK-548-01-L03 | Assistant DB schema/migration, atomic bundle ingest, v1 compatibility, permission-aware retrieval and five pure typed errors/normalizers; no route/service orchestration | assistant schema/ingest/startup/retriever/permission modules, migration artifacts and focused pure DB/runtime tests; explicitly excludes `assistantRoutes.ts`, `assistantService.ts`, centralized mapper/wiring and route/service tests owned later by TASK-548-03-L03 | TASK-548-01-L02 |
 
 Land strictly in table order. TASK-548-02 starts only after TASK-548-01 is
 green, then adds canonical visuals without changing these shared shapes. After
@@ -234,6 +241,9 @@ exactly one final same-owner TASK-548-01-L02 regeneration/gate of
 `core/generated/docs/coderso-docs-v2.json` plus the canonical migration report.
 TASK-548-06 resumes `docs:check` and coverage only after that handback passes;
 TASK-548-06 never writes the generated final.
+After TASK-548-01-L03 is green, TASK-548-03-L03 consumes its pure exports and is
+the only TASK-548 leaf allowed to edit Assistant route/service orchestration,
+the centralized error mapper, or their focused route/service tests.
 
 ## Acceptance Criteria
 
@@ -261,8 +271,8 @@ TASK-548-06 never writes the generated final.
 
 ## Testing Requirements
 
-- `bunx vitest run --config vitest.config.ts tests/vitest/documentation tests/vitest/assistant/docsIngestService.test.ts tests/vitest/assistant/docsDbRetriever.test.ts`
-- `set -a && source .env && set +a && bun test tests/integration/server/assistantDocsIngestV2.test.ts tests/integration/routes/assistant-reindex-v2.test.ts` when `DATABASE_URL` is reachable
+- `bunx vitest run --config vitest.config.ts tests/vitest/documentation tests/vitest/assistant/docsIngestService.test.ts tests/vitest/assistant/docsDbRetriever.test.ts tests/vitest/assistant/docsPermissionSnapshot.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/server/assistantDocsIngestV2.test.ts` when `DATABASE_URL` is reachable
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - deterministic two-build byte/hash comparison and touched-file line counts

@@ -140,11 +140,13 @@ Run exactly these ordered IDs with `playwright-cli -s=wf548smoke`:
 5. `visual-example-source-parity` — assert Help and portal share exact
    `{ docId, locale, sectionId }`, bundle-global visual/example IDs, canonical
    PNG hash, alt/caption, example bytes and safe renderer output.
-6. `portal-local-exact-latest-rollback` — mount the landed two exact capsules
-   and immutable pre-/post-rollback site-index snapshots read-only; open exact
-   and latest section URLs in both recorded states and assert canonical/version/
-   anchor/search/hash behavior while exact bytes remain unchanged. Invoke no
-   publication, latest-promotion, or rollback writer.
+6. `portal-local-exact-latest-rollback` — validate the exact TASK-548-05-L02
+   operational handoff and mount its two exact capsules plus published,
+   rolled-back and restored snapshots read-only. Open exact/latest section URLs
+   in all three states; assert canonical/version/anchor/search/hash behavior,
+   immutable exact-byte parity and restored/published equality. The 05-L02
+   helper completes task-local publish→rollback→restore before the browser
+   starts; this scenario invokes no writer.
 7. `responsive-theme-keyboard` — wide/narrow, light/dark, reduced motion,
    skip-link, tab order, focus visibility/restore and no overflow.
 8. `explicit-guide-agent-handoff` — verify redacted prefill, explicit switch,
@@ -187,7 +189,8 @@ After 06-L02, invoke these phases in order:
 07-L01-terminal-metadata-closeout-and-mechanical-delta-verification
 ```
 
-The four 07 phase labels re-enter this same physical leaf owner. Preparation
+The four normal-path 07 phase labels, plus the conditional retirement-pause and
+retirement-confirmation labels, re-enter this same physical leaf owner. Preparation
 does not close its status and does not run smoke or create evidence/checkpoint
 bytes. Every non-metadata post-audit fix returns to the exact product leaf,
 reruns its targeted gates, and restarts preparation plus the canonical 08
@@ -207,6 +210,22 @@ idempotently completes only missing metadata without rerunning smoke/final
 drift or requiring a lost in-memory result. After terminal writes, only
 TASK-545's narrow mechanical metadata-delta validation runs and its result is
 returned externally.
+
+If substantive final drift is non-pass, 08 first returns through this same leaf
+the exact `Task548InvalidatedCheckpointOwnerActionRequired`; no metadata or
+evidence byte changes. Its expected paths are exactly the manifest, eight named
+PNGs and `resume-checkpoint.json` in the canonical TASK-548 directory.
+TASK-545 stays sole checkpoint-byte writer, and agents never delete or unstage
+reviewed evidence. The owner verifies task/run/path/checkpoint hash, unstages
+only those ten paths, and archives them outside the repository or removes them
+before invoking `restartArgv`. The next normal invocation first calls
+`confirmTask548InvalidatedCheckpointRetired()`, which requires the exact paths
+absent from index/worktree and the directory absent or empty without symlink.
+Wrong args, partial retirement, extra members or a remaining no-overwrite
+checkpoint blocks before fixes/phase 1. Only then do the owning fix/gates and
+the full preparation→post-audit→smoke→new phase-1 lifecycle rerun. This
+owner-mediated transition is never evidence/metadata and is forbidden for
+`metadata_recovery` or a clean pre-metadata crash.
 
 ## Exact Closure Validation Allowlist
 
@@ -314,8 +333,30 @@ migration, `bun run docs:compile` and direct
 `bun scripts/docs/compile-corpus.ts --write`, `bun run docs:recover` or any
 workspace recovery API, `docs:visual:capture`, `docs:visual:promote`, every
 Guide-visual capture/promotion API, `bun run docs:coverage -- --write`, release-artifact
-regeneration, and real or disposable publication/deployment/rollback mutation.
-CLI behavior for those producers is rerun only through the named tests above.
+regeneration, and real publication/deployment/rollback mutation. CLI behavior
+for those producers is rerun only through the named tests above. The sole
+bounded exception after a fresh post-audit pass is one direct call to the
+TASK-548-05-L02-owned
+`createDocsRetainedPagesValidationSessionV1()` during final smoke. It may use
+only its credential-free task-owned local bare repository, must complete
+publish→rollback→restore before browsing, returns no persistent artifact, and
+is disposed before checkpoint creation.
+
+The 07-owned `runWithTask548CleanupV1()` encloses health download, the one
+session, both consumers and all servers. It always settles both cleanup domains
+(L02 session disposal when present, plus general server/DB/settings/session/
+health-temp restoration), preserves the primary error and every bounded cleanup
+code, and never lets one cleanup rejection skip the other. The verified session
+is exposed only on loopback at `/published/**`, `/rolled-back/**`, and
+`/restored/**`; exact ephemeral environment keys
+`TASK548_RETAINED_PAGES_VALIDATION_ORIGIN` and
+`TASK548_RETAINED_PAGES_VALIDATION_RUN_ID` bind the integration test and browser
+smoke to that same single session and are never logged or persisted.
+Inside the outer cleanup body,
+`runWithRetainedPagesPostUseVerificationV1()` implements a nested
+`try/finally`: it always runs the exact `phase: "post-use"` verifier after
+pre-mount success, even when mount, integration, restart or smoke fails, and
+preserves the primary plus bounded verifier error before outer cleanup.
 Closure consumes the already-landed packaged bundle, coverage report/matrix,
 reviewed visual receipts/assets, release capsule/manifest receipt, search
 publication receipt, detached portal manifest, and selected post-deploy health
@@ -349,6 +390,35 @@ export type Task548OwnerActionRequired = {
     workingTreeDirty: boolean;
     workingTreeSha256: string;
   };
+};
+
+export const TASK_548_MANIFEST_EIGHT_PNGS_AND_CHECKPOINT = [
+  "_docs/_workflows/_smoke/evidence/task-548/manifest.json",
+  "_docs/_workflows/_smoke/evidence/task-548/01-help-offline-local-search.png",
+  "_docs/_workflows/_smoke/evidence/task-548/02-guide-no-provider-grounded-answer.png",
+  "_docs/_workflows/_smoke/evidence/task-548/03-agent-unavailable-isolation.png",
+  "_docs/_workflows/_smoke/evidence/task-548/04-permission-aware-open-cms.png",
+  "_docs/_workflows/_smoke/evidence/task-548/05-visual-example-source-parity.png",
+  "_docs/_workflows/_smoke/evidence/task-548/06-portal-local-exact-latest-rollback.png",
+  "_docs/_workflows/_smoke/evidence/task-548/07-responsive-theme-keyboard.png",
+  "_docs/_workflows/_smoke/evidence/task-548/08-explicit-guide-agent-handoff.png",
+  "_docs/_workflows/_smoke/evidence/task-548/resume-checkpoint.json",
+] as const;
+
+export type Task548InvalidatedCheckpointOwnerActionRequired = {
+  pass: false;
+  code: "owner_action_required";
+  action: "retire_invalidated_task548_checkpoint";
+  reason: "final_drift_nonpass";
+  taskId: "TASK-548";
+  evidenceDirectory: "_docs/_workflows/_smoke/evidence/task-548";
+  checkpointPath:
+    "_docs/_workflows/_smoke/evidence/task-548/resume-checkpoint.json";
+  checkpointSha256: string;
+  runId: string;
+  expectedEvidencePaths: typeof TASK_548_MANIFEST_EIGHT_PNGS_AND_CHECKPOINT;
+  restartArgv: string[];
+  restartCommand: string;
 };
 
 export type Task548MetadataDeltaReceipt = {
@@ -414,39 +484,78 @@ export async function runTask548FinalSmokePhase1(
 ): Promise<Task548OwnerActionRequired> {
   await ctx.requireFreshRuntimeDocsAndGatesReceipt(preparation);
   await ctx.requireFreshPassedPostAudit(postAudit);
-  await ctx.runExactCommand(
-    "bun test tests/integration/documentation/docsPlatformAcceptance.test.ts"
-  );
-  const downloaded = await ctx.downloadExactSuccessfulRunArtifact(
-    `docs-post-deploy-health-${ctx.version}-${ctx.gitSha}-${ctx.workflowRunId}`
-  );
-  const health = await ctx.extractExactSingleRootRegularFile(downloaded, {
-    member: "docs-post-deploy-health-v1.json",
-    outputRoot: ctx.ownedHealthArtifactTempRoot,
-  });
-  await ctx.validateDocsPostDeployHealthReceiptV1(health, {
-    expectedRelease: ctx.expectedReleaseIdentity,
-    requireSearch: {
-      attemptTarget: "search-index",
-      linkAttemptToSearchFact: true,
-      linkToSearchReceipt: true,
-      linkToPortalManifest: true,
+  let retainedPages: DocsRetainedPagesValidationSessionV1 | null = null;
+  const result = await ctx.runWithTask548CleanupV1({
+    body: async () => {
+      const downloaded = await ctx.downloadExactSuccessfulRunArtifact(
+        `docs-post-deploy-health-${ctx.version}-${ctx.gitSha}-${ctx.workflowRunId}`
+      );
+      const health = await ctx.extractExactSingleRootRegularFile(downloaded, {
+        member: "docs-post-deploy-health-v1.json",
+        outputRoot: ctx.ownedHealthArtifactTempRoot,
+      });
+      await ctx.validateDocsPostDeployHealthReceiptV1(health, {
+        expectedRelease: ctx.expectedReleaseIdentity,
+        requireSearch: {
+          attemptTarget: "search-index",
+          linkAttemptToSearchFact: true,
+          linkToSearchReceipt: true,
+          linkToPortalManifest: true,
+        },
+      });
+      await ctx.requireCurrentLandedPortalEvidenceReadOnly(preparation.landed);
+      const session = await createDocsRetainedPagesValidationSessionV1({
+        runId: ctx.runId,
+        taskOwnedTempRoot: ctx.retainedPagesValidationTempRoot,
+        fixture: "coderso-retained-pages-minimal-v1",
+      });
+      retainedPages = session;
+      const verified = await verifyDocsRetainedPagesValidationSessionV1(
+        session,
+        {
+          phase: "pre-mount",
+          runId: ctx.runId,
+          taskOwnedTempRoot: ctx.retainedPagesValidationTempRoot,
+        }
+      );
+      return ctx.runWithRetainedPagesPostUseVerificationV1({
+        body: async () => {
+          const mount =
+            await ctx.mountVerifiedRetainedPagesSessionReadOnly(verified);
+          await ctx.runExactCommand(
+            "bun test tests/integration/documentation/docsPlatformAcceptance.test.ts",
+            { env: mount.exactChildProcessEnv }
+          );
+          await ctx.restartOwnedServers();
+          const smokeResult = await ctx.runExactAcceptanceSmokeCommand(
+            "bun scripts/docs/run-acceptance-smoke.ts",
+            REQUIRED_FLOW_IDS,
+            "wf548smoke",
+            { env: mount.exactChildProcessEnv }
+          );
+          await assertCompleteVisibleEvidence(smokeResult, { consoleErrors: 0 });
+          return smokeResult;
+        },
+        verify: async () =>
+          verifyDocsRetainedPagesValidationSessionV1(session, {
+            phase: "post-use",
+            runId: ctx.runId,
+            taskOwnedTempRoot: ctx.retainedPagesValidationTempRoot,
+            handoffSha256: verified.handoffSha256,
+          }),
+      });
     },
+    cleanups: [
+      {
+        name: "retained-pages",
+        run: async () => retainedPages?.dispose(),
+      },
+      {
+        name: "acceptance-state",
+        run: async () => ctx.cleanupAndAssertPriorState(),
+      },
+    ],
   });
-  await ctx.requireCurrentLandedPortalEvidenceReadOnly(preparation.landed);
-  await ctx.mountLandedRetainedPagesSnapshotsReadOnly(preparation.landed);
-  await ctx.restartOwnedServers();
-  let result: Task548AcceptanceSmokeResult;
-  try {
-    result = await ctx.runExactAcceptanceSmokeCommand(
-      "bun scripts/docs/run-acceptance-smoke.ts",
-      REQUIRED_FLOW_IDS,
-      "wf548smoke"
-    );
-    await assertCompleteVisibleEvidence(result, { consoleErrors: 0 });
-  } finally {
-    await ctx.cleanupAndAssertPriorState();
-  }
   await ctx.writeExactTask545CanonicalManifestAndEightScreenshots(result);
   return ctx.createTask545ResumeCheckpoint({
     exactTaskId: "TASK-548",
@@ -462,6 +571,26 @@ export async function resumeTask548TrackedParity(
   const resume = await ctx.openExactOwningWorkflowResume();
   await ctx.requireOwnerReviewedTrackedEvidenceParity();
   return resume;
+}
+
+export async function requireTask548InvalidatedCheckpointOwnerRetirement(
+  ctx: CloseoutResumeContext,
+  resume: Extract<Task548ClosureResume, { state: "frozen" }>
+): Promise<Task548InvalidatedCheckpointOwnerActionRequired> {
+  return ctx.createExactInvalidatedCheckpointOwnerAction(resume, {
+    reason: "final_drift_nonpass",
+    expectedEvidencePaths: TASK_548_MANIFEST_EIGHT_PNGS_AND_CHECKPOINT,
+  });
+}
+
+export async function confirmTask548InvalidatedCheckpointRetired(
+  ctx: CloseoutContext
+): Promise<void> {
+  await ctx.requireExactRestartArgsFromPriorRetirementAction();
+  await ctx.requireCanonicalEvidencePathsAbsentFromIndexAndWorktree(
+    TASK_548_MANIFEST_EIGHT_PNGS_AND_CHECKPOINT
+  );
+  await ctx.requireEvidenceDirectoryAbsentOrEmptyNoSymlink();
 }
 
 export async function completeTask548TerminalCloseout(
@@ -528,7 +657,8 @@ named-test, read-only check, package-build and full-gate allowlist → proof tha
 tracked/canonical handoff bytes did not change → all-human-file line audit → one
 canonical 08 post-audit call with at most one fix, validation, and a complete
 fresh second pass → exact successful-run read-only production health artifact
-→ local CMS/portal plus landed retained-Pages snapshots mounted read-only →
+→ one L02-owned task-local publish/rollback/restore session → strict in-memory
+handoff plus published/rolled-back/restored roots mounted read-only →
 current landed 04-L03 portal-evidence validation → ordered visible flows and eight candidate
 screenshot hashes → unconditional cleanup → exact TASK-545 manifest/eight
 canonical screenshots → TASK-545 phase 1 immediately and atomically creates the
@@ -561,17 +691,20 @@ handback. This leaf never invokes workspace recovery, creates the ignored
 migration report, regenerates the bundle/report pair, or becomes a
 generated-artifact writer. Any required migration, compile write, recovery,
 Guide-visual capture/promotion, coverage write, release-artifact regeneration, or
-publication/deployment/rollback mutation aborts closure and returns to its exact
-owner before a new preparation/post-audit/smoke snapshot. If already frozen,
-the current checkpoint stays untouched and is invalidated; no producer runs
-inside that frozen attempt. Any non-metadata mutation after the final smoke
+publication/deployment/rollback mutation outside the exact ephemeral L02
+validation-session helper aborts closure and returns to its exact owner before a
+new preparation/post-audit/smoke snapshot. If already frozen,
+the current checkpoint stays untouched while the exact owner-retirement action
+is returned; no producer runs inside that frozen attempt. Any non-metadata
+mutation after the final smoke
 snapshot, any evidence mutation after owner review, or any later
 source/test/config/runtime-doc/workflow change invalidates the snapshot and
 audit. Resume never dispatches
 implementation, fixes, canonical post-audit, or smoke. Before any metadata
 mutation it may dispatch only the substantive read-only final-drift phase. A
 final-drift finding aborts resume without an edit, invalidates the snapshot,
-and returns through a new normal run at the owning leaf. Any pre-phase-1
+and returns the exact owner-retirement payload; a new normal run is forbidden
+until retirement confirmation passes. Any pre-phase-1
 task/changelog/board/status write, summary sidecar,
 manifest/checkpoint extension, recovery delta without exact
 changelog-first deterministic-prefix parity, or claim that an unavailable
@@ -595,7 +728,12 @@ this terminal closeout.
 **Regression-test shape:** the acceptance suite asserts exact flow identity/
 order, Help offline behavior, Guide provider independence, Agent isolation,
 permission-safe route resolution, stable visual/example joins, exact/latest
-hash parity, responsive/a11y effects, handoff boundaries, and idempotent cleanup.
+hash parity, strict retained-Pages handoff keys/two-slot ordering/ref and
+first-parent ancestry/commit-tree-site-index-receipt joins, immutable rollback
+bytes, restored/published equality, responsive/a11y effects, handoff boundaries,
+and idempotent cleanup. Missing/duplicate/reordered/unknown keys, wrong ref,
+commit, parent, tree, hash, receipt, version, escaped root, symlink or changed
+sealed snapshot fails before canonical evidence is written.
 
 ## Sub-Tasks
 
@@ -628,8 +766,10 @@ hash parity, responsive/a11y effects, handoff boundaries, and idempotent cleanup
    packaged bundle, and rerun the named Docker workspace/runtime contract test.
    Validate the already-landed immutable
    SemVer/content-addressed capsule, manifest and publication/rollback receipts
-   read-only; never rebuild the release artifact or invoke a real/disposable
-   publication, deployment, latest promotion, or rollback command.
+   read-only; never rebuild the release artifact or invoke a real publication,
+   deployment, latest promotion, or rollback command. The later final-smoke
+   call to the exact 05-L02-owned local validation-session helper is the sole
+   disposable operational exception.
 5. Download TASK-548-05-L02's exact named 90-day artifact from the selected
    successful release/deployment run; extract into owned temp and require exactly
    root regular member `docs-post-deploy-health-v1.json`, rejecting missing,
@@ -640,8 +780,15 @@ hash parity, responsive/a11y effects, handoff boundaries, and idempotent cleanup
    `DocsPostDeployHealthReceiptV1`. Require exact `search` and one
    `results[].target: "search-index"` attempt; reject missing/duplicate,
    wrong-locale/path/status/bytes/hash, or linkage drift against both the search
-   receipt and detached portal manifest. Do not publish or deploy production. Then
-   restart owned CMS/local portal servers, verify health, run exactly
+   receipt and detached portal manifest. Do not publish or deploy production.
+   Request exactly one strict `DocsRetainedPagesValidationHandoffV1` session,
+   run the exact `phase: "pre-mount"` 05-L02 verifier over its two slots,
+   ref/commit ancestry, three snapshots, domain-separated trees and receipt/hash
+   closure, and mount the branded session's sealed roots read-only. Pass the
+   same exact two ephemeral environment keys to both consumers; a nested
+   `finally` must run `phase: "post-use"` after either success or consumer
+   failure, including mount rejection. Then restart owned CMS/local portal
+   servers, verify health, run exactly
    `bun test tests/integration/documentation/docsPlatformAcceptance.test.ts`
    and exactly `bun scripts/docs/run-acceptance-smoke.ts`, execute all eight
    flows, close the named session and verify the exact canonical
@@ -673,8 +820,12 @@ hash parity, responsive/a11y effects, handoff boundaries, and idempotent cleanup
     If `openWorkflowClosureResume` returns `frozen`, dispatch a fresh
     `08-final-read-only-drift` against the checkpoint-frozen runtime before any
     terminal status/changelog edit and require exactly no findings. Any finding
-    aborts resume unchanged, invalidates smoke/post-audit, and requires a new
-    normal run plus phase 1. If it returns `metadata_recovery`, do not rerun
+    aborts resume unchanged and returns the exact
+    `retire_invalidated_task548_checkpoint` action. Verify the owner then
+    unstages/retires exactly the bound manifest/eight PNGs/checkpoint, and require
+    the returned new-normal-run argv plus absent index/worktree inventory before
+    fixes and a new phase 1. Partial/wrong retirement fails. If it returns
+    `metadata_recovery`, do not rerun
     smoke or final drift and do not require an unavailable prior result.
     No allowlisted preparation command or excluded producer may run in either
     frozen resume branch. A newly discovered write/recovery need exits frozen

@@ -104,11 +104,13 @@ assertions.
   `(docId, locale, sectionId)` identity.
   Response cards resolve matching local `visualId`/`exampleId` records from the
   installed bundle only after confirming the document still contains the
-  `assistant` target and round-trip exact `capabilityIds`. Card eligibility
-  requires only `assistant`; `Open in Help` exists only when that same document
-  also contains `embedded-help`, while the versioned official link exists only
-  when it also contains `public-docs`. `Open in CMS` remains governed by the
-  exact `permissionRequirement`.
+  `assistant` target and round-trip exact `capabilityIds`,
+  `permissionRequirement`, `visualIds`, and `exampleIds`. The bundle owner's
+  requirement is reauthorized before any card or action projection. Card
+  eligibility requires only `assistant`; `Open in Help` exists only when that
+  same document also contains `embedded-help`, while the versioned official link
+  exists only when it also contains `public-docs`. `Open in CMS` remains
+  governed by the exact `permissionRequirement`.
 - For card actions, null succeeds for an authenticated Admin even with an empty
   permission array; `allOf` requires every listed permission and `anyOf` at
   least one. Empty/partial snapshots deny only an unsatisfied non-null
@@ -119,9 +121,22 @@ assertions.
   `resolvePermittedAdminAction`/`DocsAdminActionResolutionV1` exports from
   `@coderso/docs-renderer`; this leaf defines no parallel path or permission
   evaluator.
-- Missing/mismatched local metadata degrades to text/source evidence and never
-  invents a screenshot/example.
+- After the exact hit/owner metadata round-trip succeeds, an unresolved optional
+  local card payload degrades to text/source evidence and never invents a
+  screenshot/example; owner-field mismatch rejects the complete evidence.
 - Guide cannot call plan, dry-run, or execute.
+
+This leaf's `guideAnswerEnrichment.ts` exclusively owns
+`GuideEvidenceOwnerExpectedV1`, `ExactLocalizedGuideBundleOwnerV1`,
+`ResolveOptionalGuideCardsInputV1`,
+`resolveOptionalGuideCardsFromExactLocalizedBundleOwner` and its exact-owner
+assertion. The resolver recursively rejects unknown keys and requires identical
+hit/expected/bundle target, localized tuple, ordered `capabilityIds`, structural
+`permissionRequirement`, ordered `visualIds`/`exampleIds`, and every returned
+card ref. A missing optional payload may remove only its card after that complete
+graph passes. `AssistantServiceDeps.resolveGuideOfficialDocsContextV1()` returns
+the strict configured/unavailable union below without throwing; portal
+configuration failure therefore cannot fail Guide text/source evidence.
 
 ### Server-authoritative Guide retrieval RBAC
 
@@ -139,38 +154,49 @@ The strict chat schema continues to allow only `message`, `mode`,
 Top-level or nested client attempts to send `permissionSnapshot`,
 `permissions`, `roles`, `permissionRequirement` or equivalent unknown keys are
 rejected before service invocation. The route copies the allowed request fields
-individually and appends the server snapshot; object spread from the body is
-forbidden.
+individually. The Guide branch appends the server snapshot; the Agent branch
+exposes only an isolated server-owned optional-evidence resolver. Object spread
+from the body is forbidden.
+
+After strict validation, the route resolves the requested product and branches
+before any permission-snapshot, DB-index, docs-bundle, retrieval, or enrichment
+work. Guide must resolve a trusted snapshot and ready index. Agent provider chat
+and action routes have no required Guide dependency. Agent may attach
+documentation only as optional evidence that has passed this same server
+authorization pipeline; snapshot/index/bundle/enrichment failure is captured as
+the bounded `{ state: "docsEvidenceUnavailable" }` evidence state and cannot
+replace, fail, or downgrade a successful provider response.
 
 Missing user identity, resolver failure, missing/malformed state, unknown
 permission, duplicate permission, unknown key or mixed wildcard normalizes to
 `assistant_docs_permission_snapshot_invalid` and fails closed before DB status/
-query, hit ranking, source composition, provider snippets or local visual/
-example enrichment. Ready `[]`, exact `allOf`/`anyOf` and sole `["*"]` retain
-the TASK-548-01-L03 semantics. Every retrieval and server enrichment function
-requires the snapshot explicitly; there is no optional/default overload.
-Before returning an evidence ID, enrichment rechecks the exact localized
-document's requirement with the same snapshot. Unauthorized documents cannot
-leak title, snippet, source identity, capability, admin path, visual ID or
-example ID.
+query, hit ranking, source composition, Guide output or optional Agent docs
+evidence. It does not fail Agent provider/action work. Ready `[]`, exact
+`allOf`/`anyOf` and sole `["*"]` retain the TASK-548-01-L03 semantics. Every
+docs retrieval and server enrichment function requires the snapshot explicitly;
+there is no optional/default overload. Before returning an evidence ID,
+enrichment verifies the complete authorized hit against its exact localized
+bundle owner and rechecks that owner's requirement with the same snapshot.
+Unauthorized documents cannot leak title, snippet, source identity, capability,
+admin path, visual ID or example ID.
 
-This server snapshot is distinct from the browser Admin permission snapshot
-used only to decide whether an already-authorized card may show `Open in CMS`.
-The client snapshot can never authorize retrieval. Resolving permissions and
-performing deterministic Guide retrieval do not resolve or call an AI provider,
-so Guide remains provider-independent.
+This server snapshot authorizes both retrieval and the server-returned card
+actions. For the L02 Admin-action resolver it is projected without widening to
+the structurally equivalent ready `DocsAdminPermissionSnapshotV1`; a denied CMS
+href is never returned for the browser to rediscover. Browser permission state
+may hide an already-authorized action as defense in depth but can never add an
+href or authorize retrieval. Resolving permissions and performing deterministic
+Guide retrieval do not resolve or call an AI provider, so Guide remains
+provider-independent.
 
 ### Manual reindex independence
 
-The current `reindexAssistantDocs` implementation in
-`core/services/assistant/assistantService.ts` reads runtime settings and then
-throws `assistant_disabled` when `settings.enabled` is false before invoking
-the ingest dependency. Remove exactly that Agent-enable guard from the reindex
-service path. Reindex must not check `assistant.enabled`,
-`assistant.llm.enabled`, provider, model or provider availability and must
-never resolve/call a provider. This does not remove the mode-specific Agent
-guard from `answerAssistantQuestion`, enable Agent controls, or authorize any
-Agent action.
+Replace the current settings/source-root ingest seam with TASK-548-01-L03's
+exact `ingestPackagedAssistantDocsV2({ actorId, force? })` dependency. Reindex
+must not read runtime settings or a source root, check Agent/LLM/provider/model
+availability, parse Markdown, or resolve/call a provider. This does not remove
+the Agent-only guard from `answerAssistantQuestion`, enable Agent controls, or
+authorize any Agent action.
 
 The reindex route remains the existing internal
 `POST /admin/api/assistant/reindex` (`/assistant/reindex` inside the Admin
@@ -199,6 +225,9 @@ still uses it, or weaken any inherited mapping.
   exposing explicit `guideReady`, `agentEnabled`, and `agentAvailable` UI
   semantics.
 - Sends provider chat with `mode: "llm-guide"` and uses existing action routes.
+- Provider chat, plan, dry-run, and execute remain usable when the Guide DB,
+  index, permission resolver, or installed docs bundle is unavailable. Optional
+  docs evidence is never an authorization fallback or a prerequisite for them.
 - Without provider/config, render a focused unavailable state and link to
   Integrations only when the user can access it.
 - If the existing chat service returns a docs-only fallback, do not render it as
@@ -250,8 +279,9 @@ eligible. Only the selected user's `text` reaches redaction and clamping.
   plan keeps current `settings:read` + `content:read` and contextual
   permissions; dry-run/execute keep per-action read/write permissions. No route
   is broadened to anonymous or permissionless API access. After the
-  `settings:read` gate, chat resolves a canonical server permission snapshot
-  and filters every docs retrieval/enrichment result before disclosure.
+  `settings:read` gate, Guide chat resolves a canonical server permission
+  snapshot; Agent does so only inside isolated optional-docs evidence work.
+  Every docs retrieval/enrichment result is filtered before disclosure.
 - **CSRF:** every existing assistant POST remains CSRF protected.
 - **Rate limit:** all existing calls remain in the `assistant` bucket.
 - **Validation:** chat/reindex/action schemas remain strict
@@ -278,10 +308,21 @@ export type AssistantChatRequestInput = {
   context?: AssistantChatContext;
 };
 
-export type AssistantChatServiceInput = AssistantChatRequestInput & {
-  actorId: string | null;
-  permissionSnapshot: AssistantDocsPermissionSnapshotV1;
-};
+export type AssistantChatServiceInput =
+  | (Omit<AssistantChatRequestInput, "mode"> & {
+      product: "guide";
+      mode: "docs-only";
+      actorId: string | null;
+      permissionSnapshot: AssistantDocsPermissionSnapshotV1;
+    })
+  | (Omit<AssistantChatRequestInput, "mode"> & {
+      product: "agent";
+      mode: "llm-guide";
+      actorId: string | null;
+      resolveOptionalDocsEvidence: () => Promise<
+        readonly GuideAnswerEvidenceV1[]
+      >;
+    });
 
 export async function resolveAssistantDocsRoutePermissionSnapshotV1(
   ctx: RouteContext,
@@ -316,18 +357,43 @@ router.post(
     validate(assistantChatSchema, ctx.body ?? {});
     const body = ctx.body as AssistantChatRequestInput;
     return withAssistantErrors(ctx.requestId, async () => {
+      const product = await resolveValidatedAssistantProduct(body.mode);
+      const common = {
+        message: body.message,
+        detailLevel: body.detailLevel,
+        guideMode: body.guideMode,
+        context: body.context,
+        actorId: ctx.user?.id ?? null,
+      };
+      if (product === "agent") {
+        return service.chat({
+          ...common,
+          product,
+          mode: "llm-guide",
+          // Invoked best-effort only after provider completion, never by actions.
+          resolveOptionalDocsEvidence: async () => {
+            const permissionSnapshot =
+              await resolveAssistantDocsRoutePermissionSnapshotV1(
+                ctx,
+                deps.resolvePermissions
+              );
+            return retrieveAndEnrichAuthorizedDocs({
+              message: body.message,
+              context: body.context,
+              permissionSnapshot,
+            });
+          },
+        });
+      }
       const permissionSnapshot =
         await resolveAssistantDocsRoutePermissionSnapshotV1(
           ctx,
           deps.resolvePermissions
         );
       return service.chat({
-        message: body.message,
-        mode: body.mode,
-        detailLevel: body.detailLevel,
-        guideMode: body.guideMode,
-        context: body.context,
-        actorId: ctx.user?.id ?? null,
+        ...common,
+        product,
+        mode: "docs-only",
         permissionSnapshot,
       });
     });
@@ -369,20 +435,15 @@ export function resolveAssistantProducts(status: AssistantStatusResponse): {
 
 // core/services/assistant/assistantService.ts
 export const reindexAssistantDocs = async (
-  input: { actorId?: string | null },
+  input: { actorId?: string | null; force?: boolean },
   overrides?: Partial<AssistantServiceDeps>
 ): Promise<AssistantReindexResult> => {
   const deps = resolveDeps(overrides);
-  const settings = await readRuntimeSettings(deps);
-
-  // Intentionally no settings.enabled, LLM or provider gate. By this leaf's
-  // dependency order, this inherited ingest seam loads/validates the packaged
-  // v2 bundle and retains the TASK-548-01-L03 single-ingest serialization.
   let ingest: AssistantDocsIngestResult;
   try {
-    ingest = await deps.ingestInternalDocsToDb({
-      sourceRoot: settings.docsSourceRoot,
-      triggeredByUserId: input.actorId ?? null,
+    ingest = await deps.ingestPackagedAssistantDocsV2({
+      actorId: input.actorId ?? null,
+      force: input.force,
     });
   } catch (error) {
     throw normalizeDocsIngestError(error);
@@ -443,40 +504,132 @@ export type GuideEvidenceCardRefV1 =
       exampleId: string;
     };
 
-export type GuideAnswerEvidenceV1 = {
-  source: DocsAnswerSource;
+export type GuideEvidenceOwnerExpectedV1 = {
+  docId: string;
+  locale: string;
+  sectionId: string;
+  publicationTarget: "assistant";
+  capabilityIds: readonly DocsCapabilityIdV1[];
+  permissionRequirement: DocsPermissionRequirementV1 | null;
+  visualIds: readonly string[];
+  exampleIds: readonly string[];
+};
+
+export type ExactLocalizedGuideBundleOwnerV1 = {
+  document: DocsDocumentV2;
+  section: DocsSectionV2;
   cards: readonly GuideEvidenceCardRefV1[];
 };
 
-export function enrichGuideAnswerEvidence(input: {
+export type ResolveOptionalGuideCardsInputV1 = {
+  bundle: DocsDistributionBundleV2;
+  authorizedHit: DocsSearchHit;
+  expected: GuideEvidenceOwnerExpectedV1;
+  permissionSnapshot: AssistantDocsPermissionSnapshotV1;
+};
+
+export function assertExactLocalizedGuideBundleOwnerV1(
+  value: unknown
+): asserts value is ExactLocalizedGuideBundleOwnerV1;
+
+export function resolveOptionalGuideCardsFromExactLocalizedBundleOwner(
+  input: ResolveOptionalGuideCardsInputV1
+): ExactLocalizedGuideBundleOwnerV1;
+
+export type GuideOfficialDocsContextV1 =
+  | {
+      state: "configured";
+      origin: string;
+      basePath: string;
+      version: string;
+    }
+  | { state: "unavailable" };
+
+export type GuideCardActionsV1 = {
+  helpHref: string | null;
+  officialHref: string | null;
+  cmsAction: DocsAdminActionResolutionV1 | null;
+};
+
+export type GuideAnswerEvidenceV1 = {
+  source: DocsAnswerSource;
+  cards: readonly GuideEvidenceCardRefV1[];
+  actions: GuideCardActionsV1;
+};
+
+export type GuideAnswerEnrichmentInputV1 = {
   hits: readonly DocsSearchHit[];
   bundle: DocsDistributionBundleV2;
   permissionSnapshot: AssistantDocsPermissionSnapshotV1;
-}): readonly GuideAnswerEvidenceV1[] {
+  officialDocs: GuideOfficialDocsContextV1;
+};
+
+export function enrichGuideAnswerEvidence(
+  input: GuideAnswerEnrichmentInputV1
+): readonly GuideAnswerEvidenceV1[] {
   const permissionSnapshot = normalizeAssistantDocsPermissionSnapshotV1(
     input.permissionSnapshot
   );
   return input.hits.map((hit) => {
+    const exactOwner =
+      resolveOptionalGuideCardsFromExactLocalizedBundleOwner({
+        bundle: input.bundle,
+        authorizedHit: hit,
+        expected: {
+          docId: hit.docId,
+          locale: hit.locale,
+          sectionId: hit.sectionId,
+          publicationTarget: "assistant",
+          capabilityIds: hit.capabilityIds,
+          permissionRequirement: hit.permissionRequirement,
+          visualIds: hit.visualIds,
+          exampleIds: hit.exampleIds,
+        },
+        permissionSnapshot,
+      });
+    // The resolver requires exact ordered/structural round-trip equality for
+    // every expected field. It then reauthorizes the bundle owner's requirement
+    // before returning cards; a mismatch rejects the complete hit.
     if (
       !satisfiesAssistantDocsPermissionRequirementV1(
-        hit.permissionRequirement,
+        exactOwner.document.permissionRequirement,
         permissionSnapshot
       )
     ) {
       throw new Error("assistant_docs_permission_snapshot_invalid");
     }
-    const source = projectAuthorizedGuideSource(hit);
-    const cards = resolveOptionalGuideCardsFromExactLocalizedBundleOwner({
-      bundle: input.bundle,
-      docId: hit.docId,
+    const actions = resolveGuideCardActions(exactOwner, {
       locale: hit.locale,
       sectionId: hit.sectionId,
-      visualIds: hit.visualIds,
-      exampleIds: hit.exampleIds,
-      permissionSnapshot,
+      serverPermissionSnapshot: permissionSnapshot,
+      officialDocs: input.officialDocs,
     });
-    return { source, cards };
+    return {
+      source: projectAuthorizedGuideSource(hit),
+      cards: exactOwner.cards,
+      actions,
+    };
   });
+}
+
+export type AgentDocsEvidenceState =
+  | { state: "available"; evidence: readonly GuideAnswerEvidenceV1[] }
+  | { state: "docsEvidenceUnavailable" };
+
+async function resolveAgentDocsEvidenceBestEffort(
+  resolveEvidence: () => Promise<readonly GuideAnswerEvidenceV1[]>
+): Promise<AgentDocsEvidenceState> {
+  try {
+    return { state: "available", evidence: await resolveEvidence() };
+  } catch (error) {
+    try {
+      // Synchronous, redacted and no-throw at this isolation boundary.
+      logAgentDocsEvidenceUnavailableRedacted(error);
+    } catch {
+      // Diagnostics can never replace or fail an already completed Agent answer.
+    }
+    return { state: "docsEvidenceUnavailable" };
+  }
 }
 
 export async function answerAssistantQuestion(
@@ -484,10 +637,26 @@ export async function answerAssistantQuestion(
   overrides?: Partial<AssistantServiceDeps>
 ) {
   const deps = resolveDeps(overrides);
-  const settings = await readRuntimeSettings(deps);
-  const requestedMode = normalizeMode(input.mode, settings.defaultMode);
-  if (requestedMode !== "docs-only" && !settings.enabled) {
-    throw new Error("assistant_disabled");
+  if (input.product === "agent") {
+    const settings = await readRuntimeSettings(deps);
+    if (!settings.enabled) {
+      throw new Error("assistant_disabled");
+    }
+    const answer = assertProviderBackedAgentAnswer(
+      await completeProviderAnswer(
+        {
+          message: input.message,
+          mode: input.mode,
+          context: input.context,
+          actorId: input.actorId,
+        },
+        settings
+      )
+    );
+    const docsEvidence = await resolveAgentDocsEvidenceBestEffort(
+      input.resolveOptionalDocsEvidence
+    );
+    return { ...answer, docsEvidence };
   }
   const retrieval = await retrieveDocsHits(
     {
@@ -501,33 +670,42 @@ export async function answerAssistantQuestion(
     hits: retrieval.hits,
     bundle: await deps.loadPackagedDocsDistributionBundleV2(),
     permissionSnapshot: retrieval.permissionSnapshot,
+    officialDocs: await deps.resolveGuideOfficialDocsContextV1(),
   });
-  return requestedMode === "docs-only"
-    ? composeDeterministicGuideAnswer(evidence)
-    : completeProviderAnswerOrExplicitFallback(evidence, settings);
+  return composeDeterministicGuideAnswer(evidence);
 }
 
 type GuideCardActionContext = {
   locale: string;
   sectionId: string;
-  adminActionPermissionSnapshot: DocsAdminPermissionSnapshotV1;
-  officialDocs: {
-    origin: string;
-    basePath: string;
-    version: string;
-  };
+  serverPermissionSnapshot: AssistantDocsPermissionSnapshotV1;
+  officialDocs: GuideOfficialDocsContextV1;
 };
 
 export function resolveGuideCardActions(
-  document: DocsDocumentV2,
+  exactOwner: ExactLocalizedGuideBundleOwnerV1,
   context: GuideCardActionContext
-): GuideCardActions {
+): GuideCardActionsV1 {
+  assertExactLocalizedGuideBundleOwnerV1(exactOwner);
+  const document = exactOwner.document;
   assertDocumentHasPublicationTarget(document, "assistant");
   assertLocalizedDocumentAndSectionIdentity(document, {
     docId: document.docId,
     locale: context.locale,
     sectionId: context.sectionId,
   });
+  const serverPermissionSnapshot =
+    normalizeAssistantDocsPermissionSnapshotV1(
+      context.serverPermissionSnapshot
+    );
+  if (
+    !satisfiesAssistantDocsPermissionRequirementV1(
+      document.permissionRequirement,
+      serverPermissionSnapshot
+    )
+  ) {
+    throw new Error("assistant_docs_permission_snapshot_invalid");
+  }
   return {
     helpHref: document.publicationTargets.includes("embedded-help")
       ? adminHelpPath({
@@ -536,7 +714,9 @@ export function resolveGuideCardActions(
           sectionId: context.sectionId,
         })
       : null,
-    officialHref: document.publicationTargets.includes("public-docs")
+    officialHref:
+      document.publicationTargets.includes("public-docs") &&
+      context.officialDocs.state === "configured"
       ? buildDocsPublicHref({
           origin: context.officialDocs.origin,
           basePath: context.officialDocs.basePath,
@@ -551,7 +731,10 @@ export function resolveGuideCardActions(
     cmsAction: resolvePermittedAdminAction({
       adminPath: document.adminPath,
       permissionRequirement: document.permissionRequirement,
-      permissionSnapshot: context.adminActionPermissionSnapshot,
+      permissionSnapshot: {
+        state: "ready",
+        permissions: serverPermissionSnapshot.permissions,
+      },
     }),
   };
 }
@@ -603,36 +786,49 @@ export function prepareAssistantHandoff(input: {
 ```
 
 **Data flow:** authorized manual reindex → strict request validation → provider-
-independent serialized packaged-bundle ingest → active DB snapshot; chat body
-strict validation + authenticated `settings:read` → canonical server permission
-resolution/normalization → explicit service-only snapshot → authorized DB
-document metadata → authorized chunks/ranking → requirement-rechecked
-enrichment/composition; active tab + isolated snapshot → explicit mode request;
-Agent optionally invokes provider/action review only with those authorized
-sources.
+independent serialized packaged-bundle ingest → active DB snapshot. Chat body
+strict validation + authenticated `settings:read` → validated product branch.
+Guide → canonical server permission snapshot → authorized DB chunks/ranking →
+exact hit/bundle round-trip + bundle-owner reauthorization → deterministic
+composition. Agent → provider/action review independently; only after provider
+success may an isolated best-effort branch attach equally authorized docs
+evidence.
 Guide evidence `(docId, locale, sectionId)` → installed distribution join →
-safe locale-bound visual/example cards from L02 renderer/link policy.
+safe locale-bound visual/example cards → exact server-authorized Help/official/
+CMS action projection using L02 link/action owners.
 
 **Error handling:** DB/index errors remain in Guide state; provider/config/quota
-errors remain in Agent state. Only after the DB hit/source is permission-
-authorized may a missing/mismatched local visual/example owner cause
+errors remain in Agent state. Agent snapshot/DB/index/bundle/enrichment failures
+produce only `{ state: "docsEvidenceUnavailable" }`; they never become provider
+failure, a docs answer masquerading as Agent output, or an action prerequisite.
+Only after the DB hit and exact bundle owner are permission-authorized and
+metadata-identical may an unresolved optional visual/example payload cause
 `resolveOptionalGuideCardsFromExactLocalizedBundleOwner` to return no card while
-retaining that grounded text/source; an unsatisfied requirement omits the whole
-hit/evidence and fails closed, never just the card. A docs fallback in Agent
+retaining that grounded text/source; owner metadata mismatch or an unsatisfied
+requirement omits the whole hit/evidence and fails closed, never just the card.
+A docs fallback in Agent
 becomes an explicit handoff choice; stale snapshot/secret-like handoff is
 discarded; no cross-tab state overwrite. Agent-disabled state never blocks
 authorized reindex. Reindex lock conflicts, packaged-bundle validation, DB and
 ingest failures retain the exact TASK-548-01-L03 typed mapping; they are not
 collapsed into provider/Agent availability errors. Missing/malformed canonical
 permission state returns bounded
-`assistant_docs_permission_snapshot_invalid`/403 before retrieval; no fallback
-permission, public document or client hint is used.
+`assistant_docs_permission_snapshot_invalid`/403 before Guide retrieval. The
+isolated Agent evidence branch records only `docsEvidenceUnavailable`; neither
+path uses a fallback permission, public document or client hint. Its redacted
+diagnostic logger is synchronous and nested-settled; logger failure cannot escape
+the evidence branch after provider completion.
 
 **Regression-test shape:**
 
 - Guide launcher/tab remains visible with `assistant.enabled=false` for a user
   who satisfies existing chat RBAC;
 - Guide sends docs-only and works with provider absent/failing;
+- Agent provider chat and action routes work with DB down, index absent, bundle
+  invalid, or permission resolution failing; provider completion precedes the
+  optional docs resolver and yields exact `docsEvidenceUnavailable` on failure;
+  make both that resolver and its redacted diagnostic logger throw and prove the
+  completed provider answer still returns with the same unavailable state;
 - chat resolves exact canonical permissions through both the injected resolver
   and `getUserPermissions` fallback, passes the normalized ready snapshot into
   every retriever/enrichment call, and never resolves a provider for Guide;
@@ -644,14 +840,15 @@ permission, public document or client hint is used.
 - strict chat bodies reject top-level and nested `permissionSnapshot`,
   `permissions`, `roles`, `permissionRequirement` and authorization hints;
   spies prove a forged client value cannot replace the server snapshot;
-- unauthorized documents never reach ranking/provider snippets and disclose no
+- unauthorized documents never reach Guide ranking or Agent optional evidence
+  and disclose no
   title, snippet, `(docId, locale, sectionId)`, capability, admin path,
   `visualId` or `exampleId`; enrichment rechecks the localized requirement;
 - with `assistant.enabled=false`, an authenticated `settings:write` request to
   `POST /admin/api/assistant/reindex` with `{}`, `{ force: true }`, or
   `{ force: false }` invokes the serialized packaged-bundle ingest exactly once,
-  succeeds without resolving a provider, preserves its audit/result, and makes
-  Guide ready;
+  succeeds with zero runtime-settings/source-root/Markdown/provider resolver
+  calls, preserves its audit/result, and makes Guide ready;
 - the same disabled-state regression proves missing session/permission, CSRF,
   rate limit and unknown/non-boolean request fields still reject before ingest;
   lock conflict, invalid/tampered packaged bundle, DB unavailable and ingest
@@ -659,8 +856,8 @@ permission, public document or client hint is used.
 - after that successful disabled-state reindex, Guide docs-only chat works while
   Agent chat/provider/actions and Agent UI controls remain unavailable; no
   reindex response or status field implicitly enables Agent;
-- Agent requires global Agent enablement plus provider and never calls actions
-  from Guide;
+- Agent requires global Agent enablement plus provider, never calls actions from
+  Guide, and never requires docs evidence for chat/plan/dry-run/execute;
 - separate histories, errors, readiness, `New`, plan/preview/execution;
 - v1 storage migration and strict v2 unknown/expiry/size/secret rejection;
 - handoff accepts a current typed snapshot plus bounded member entry ID, extracts
@@ -682,10 +879,18 @@ permission, public document or client hint is used.
   rejection, partial/full `allOf`, and every `anyOf` branch without alternate
   permission/capability fields; spy the exact L02 named resolver import rather
   than a local evaluator;
+- exact-owner tests mutate each of target, ordered `capabilityIds`,
+  `permissionRequirement`, `visualIds`, and `exampleIds`; every mismatch rejects
+  the entire source/card/action, and the bundle requirement is reauthorized;
+  reject unknown keys in every expected/input/owner nesting plus reordered,
+  cross-owner, unlisted or fabricated card refs;
 - assistant/multi-target evidence cards resolve, while `embedded-help`-only and
   `public-docs`-only bundle records cannot leak through a forged/mismatched ID;
 - assistant-only cards have neither cross-surface link; assistant+embedded adds
-  only Help, assistant+public adds only official, and all-three adds both;
+  only Help, assistant+public adds only official, and all-three adds both; an
+  unavailable official context removes only that action, null `adminPath`
+  returns `cmsAction: null`, and an unsatisfied requirement rejects the complete
+  evidence before any CMS href can be serialized;
 - existing chat/reindex/action auth/RBAC/CSRF/rate/error mappings remain pinned;
 - panel/test modularity and all touched-file line counts.
 
@@ -697,8 +902,8 @@ permission, public document or client hint is used.
   server permissions into chat, require them in every retrieval/enrichment call,
   and map the five inherited `assistant_docs_*` errors without a client
   authorization field or permissionless fallback.
-- [ ] Remove only the `settings.enabled` guard from `reindexAssistantDocs`;
-  preserve the internal route security, strict body, serialized packaged ingest,
+- [ ] Replace the reindex settings/source-root seam with the exact packaged
+  ingest dependency; preserve route security, strict body, serialization,
   audit/result and typed mappings, and prove reindex with Agent disabled.
 - [ ] Decouple docs-only readiness from Agent enablement without enabling Agent
   chat/provider/actions.

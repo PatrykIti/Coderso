@@ -29,6 +29,8 @@ This leaf is the only TASK-548 writer for:
 - `.github/workflows/release.yml`;
 - new
   `core/services/documentation/release/docsPostDeployHealthReceipt.ts`;
+- new
+  `core/services/documentation/release/docsRetainedPagesValidationHandoff.ts`;
 - new `scripts/docs/stage-pages-publication.ts`;
 - new `tests/unit/documentation/docsPagesPublication.test.ts`;
 - new `tests/unit/release/docsReleaseWorkflowContract.test.ts`.
@@ -70,12 +72,30 @@ TASK-548-02-L03; L02 never patches or claims either owner file.
    git show -s --format=%ct "$gitSha">`; there is no wall-clock/default source.
    Validate the portal, then build and independently verify L01's
    content-addressed tar plus strict sibling `DocsReleaseArtifactReceiptV1`.
-4. Upload exactly the archive and sibling receipt to the matching GitHub
+4. Reconcile exactly the archive and sibling receipt with the matching GitHub
    Release without `--clobber`. The release manifest remains embedded in the
-   archive and is never a standalone release asset. An existing two-asset pair
-   is an idempotent success only after download, bounded tar reopen, embedded
-   manifest validation, and full byte/schema/digest equality; any missing,
-   extra, same-name, or same-version conflict fails.
+   archive and is never a standalone release asset. Inventory is a strict
+   `0 | 1 | 2` state machine keyed by the two names in the verified
+   `DocsReleaseArtifactReceiptV1`:
+   - **0 assets:** upload the archive and receipt in either deterministic
+     workflow order, without replacement;
+   - **1 asset:** its name must be exactly the expected archive or receipt.
+     Download it fully under the owner byte cap and independently verify its
+     canonical bytes, schema, identity and digest against the local
+     `VerifiedDocsReleaseArtifact`; only then upload the missing sibling;
+   - **2 assets:** names must be exactly the expected pair. Download both fully
+     and run `verifyDocsReleaseArtifact()` plus exact local verified-result
+     equality; upload nothing.
+   Any extra/duplicate/unexpected asset, expected-name byte conflict, partial
+   download, same-version identity conflict, or attempt to delete, replace,
+   rename or clobber fails. After either upload path, download both final assets
+   again, independently verify the bounded tar/embedded manifest and canonical
+   sibling receipt, and require exact equality with the local verified result
+   before Pages staging. Thus failure after the first upload is recoverable:
+   retry enters one-asset state, proves the present asset, uploads only the
+   missing sibling, then verifies the final downloaded pair.
+   `VerifiedDocsReleaseArtifact` is imported as the exact L01 verifier-result
+   type; L02 defines no release-artifact projection or duplicate shape.
 5. Fetch a dedicated retained `docs-pages` branch at its observed SHA into a
    task-scoped worktree. Never run code from that branch.
 6. Stage immutable `/v/<version>`, `/search/<version>`, content-addressed assets,
@@ -201,6 +221,210 @@ Rollback never deletes, edits, reuploads, rebuilds `/v/<version>`, or regenerate
 a candidate. It records selected version, actor, run, prior latest version, and
 both immutable manifest digests in the commit/audit summary without logging
 tokens. Invalid/missing/tampered versions fail before branch mutation.
+
+## Retained-Pages Validation Handoff
+
+L02 also owns one bounded, operational-only handoff used by TASK-548-07 scenario
+6. It is not a tracked fixture, workflow artifact, closure sidecar, or canonical
+evidence file. The L02 helper creates a uniquely scoped local bare repository
+under the caller's validated task-owned temporary root, publishes two synthetic
+plain-SemVer capsules through the real L02 functions, rolls latest back to the
+older version, restores latest to the newer version, seals three read-only
+snapshot roots, and returns this strict in-memory value:
+
+```ts
+type DocsRetainedPagesValidationVersionV1 = {
+  slot: "rollback-target" | "published-latest";
+  productVersion: string;
+  exactParentCommitSha: string;
+  exactCommitSha: string;
+  publicationParentCommitSha: string;
+  publicationCommitSha: string;
+  capsuleSha256: string;
+  publicationReceiptSha256: string;
+};
+
+type DocsRetainedPagesValidationSnapshotV1 = {
+  state: "published" | "rolled-back" | "restored";
+  parentCommitSha: string;
+  commitSha: string;
+  rootTreeSha256: string;
+  immutableExactTreeSha256: string;
+  siteIndexSha256: string;
+  latestVersion: string;
+  operationReceiptSha256: string;
+};
+
+type DocsRetainedPagesValidationOperationReceiptV1 = {
+  schema: "coderso.docs-retained-pages-validation-operation@v1";
+  operation: "publish" | "rollback" | "restore";
+  productVersion: string;
+  fromCommitSha: string;
+  toCommitSha: string;
+  fromLatestVersion: string | null;
+  toLatestVersion: string;
+  rootTreeSha256: string;
+  immutableExactTreeSha256: string;
+  siteIndexSha256: string;
+};
+
+type DocsRetainedPagesValidationHandoffV1 = {
+  schema: "coderso.docs-retained-pages-validation-handoff@v1";
+  runId: string;
+  repositoryKind: "task-owned-local-bare";
+  branchRef: string;
+  baseCommitSha: string;
+  versions: [
+    DocsRetainedPagesValidationVersionV1 & { slot: "rollback-target" },
+    DocsRetainedPagesValidationVersionV1 & { slot: "published-latest" },
+  ];
+  snapshots: {
+    published: DocsRetainedPagesValidationSnapshotV1 & { state: "published" };
+    rolledBack: DocsRetainedPagesValidationSnapshotV1 & {
+      state: "rolled-back";
+    };
+    restored: DocsRetainedPagesValidationSnapshotV1 & { state: "restored" };
+  };
+};
+
+export type DocsRetainedPagesValidationSessionV1 = {
+  handoff: DocsRetainedPagesValidationHandoffV1;
+  receiptBytes: {
+    rollbackTargetPublication: Uint8Array;
+    publishedLatestPublication: Uint8Array;
+    rollback: Uint8Array;
+    restore: Uint8Array;
+  };
+  snapshotRoots: {
+    published: string;
+    rolledBack: string;
+    restored: string;
+  };
+  dispose(): Promise<void>;
+};
+
+export type DocsRetainedPagesValidationInputV1 = {
+  runId: string;
+  taskOwnedTempRoot: string;
+  fixture: "coderso-retained-pages-minimal-v1";
+};
+
+export type VerifiedDocsRetainedPagesValidationSessionV1 = {
+  session: DocsRetainedPagesValidationSessionV1;
+  handoff: DocsRetainedPagesValidationHandoffV1;
+  handoffSha256: string;
+  verified: true;
+};
+
+export type DocsRetainedPagesValidationSessionExpectedV1 =
+  | {
+      phase: "pre-mount";
+      runId: string;
+      taskOwnedTempRoot: string;
+    }
+  | {
+      phase: "post-use";
+      runId: string;
+      taskOwnedTempRoot: string;
+      handoffSha256: string;
+    };
+
+export function normalizeDocsRetainedPagesValidationSessionExpectedV1(
+  value: unknown
+): DocsRetainedPagesValidationSessionExpectedV1;
+
+export function verifyDocsRetainedPagesValidationSessionV1(
+  session: DocsRetainedPagesValidationSessionV1,
+  expected: DocsRetainedPagesValidationSessionExpectedV1
+): Promise<VerifiedDocsRetainedPagesValidationSessionV1>;
+```
+
+`normalizeDocsRetainedPagesValidationHandoffV1()` recursively rejects unknown
+keys and bounds every string, path, count and byte source. Both versions are
+distinct, ascending plain SemVer values and the two tuple slots occur exactly
+once. All commit IDs are lowercase 40-hex and all content/receipt hashes are
+lowercase SHA-256. `branchRef` must byte-equal
+`refs/heads/task-548-retained-pages-validation/<runId>` with a bounded safe
+`runId`; the resolved bare repository and every checkout must remain beneath
+the caller's task-owned temporary root, contain no symlink, and use no network,
+credential or real Pages ref.
+
+There is no hidden artifact input. For the exact fixture discriminator above,
+L02 constructs two task-local `VerifiedDocsReleaseArtifact` values internally.
+That name is the exact L01 export and exact `verifyDocsReleaseArtifact()` result,
+not an L02 projection. The values use fixed synthetic versions `0.0.0` and
+`0.0.1`, locale `en`, document
+`retained-pages-validation`, section `overview`, and one hashed search/visual
+record. It imports the L01/04 strict schemas and canonical serializers; it does
+not import a portal builder, read a workspace/release artifact, use the current
+product version, clock, environment, network, or caller-selected content.
+Commit author/committer identity, timestamps and messages are fixed literals.
+This validation-only fixture construction is part of the one L02 session call,
+writes only below `taskOwnedTempRoot`, and is not release-artifact regeneration
+for the packaged product.
+
+L02 solely owns `hashDocsRetainedPagesValidationTreeV1(domain, root, paths)`.
+It inventories no-follow regular `100644` files only, rejects empty/duplicate/
+non-NFC/unsafe paths and unexpected entries, converts paths to base-relative
+POSIX UTF-8, and sorts by raw UTF-8 bytes. The SHA-256 input is
+`UTF8(domain) + NUL`, followed for each file by
+`u32be(pathBytes.length) + pathBytes + u32be(6) + UTF8("100644") +
+u64be(fileBytes.length) + rawSha256(fileBytes)`. The only domains/path sets are:
+
+- `coderso.docs-retained-pages-validation.capsule.v1`: every regular member
+  below one exact
+  `release-metadata/<version>/publication-capsule/`;
+- `coderso.docs-retained-pages-validation.immutable.v1`: both versions'
+  complete `v/<version>/`, `search/<version>/`, matching content-addressed
+  assets, and `release-metadata/<version>/` trees; and
+- `coderso.docs-retained-pages-validation.root.v1`: every regular file in one
+  sealed snapshot root.
+
+`siteIndexSha256` remains SHA-256 of the exact canonical `/site-index.json`
+bytes, which must equal `/global/site-index.json`; receipt hashes remain
+SHA-256 of their exact canonical JSON-plus-final-LF bytes. Producer and verifier
+independently use the same owned helper and exact allowlists.
+
+After shape normalization,
+`verifyDocsRetainedPagesValidationSessionV1(session, expected)` returns only
+`VerifiedDocsRetainedPagesValidationSessionV1` and verifies this exact
+first-parent chain against the local repository, roots and canonical receipt
+bytes:
+`base → rollback-target exact → rollback-target publication → published-latest
+exact → published-latest publication/published → rolled-back → restored`.
+Every recorded parent/commit must equal the observed Git object, tree and ref.
+The published snapshot commit equals the newer publication commit; rollback
+selects only the older version; restore selects only the newer version.
+Immutable `/v`, `/search`, content-addressed assets and release-metadata bytes
+have one identical `immutableExactTreeSha256` in all three snapshots. Restored
+`rootTreeSha256`, `siteIndexSha256`, latest version and all mounted bytes must
+equal published byte-for-byte; rolled-back changes only the approved mutable
+copies and `latestVersion`. Each operation receipt is canonical strict bytes
+of `DocsRetainedPagesValidationOperationReceiptV1`; its exact operation,
+from/to commit, from/to latest version, tree/index hashes and product version
+join the corresponding version/snapshot field. Canonical key order and a final
+LF are mandatory, and its SHA-256 joins the matching handoff hash.
+
+The expected-value discriminator is phase-exact and recursively
+reject-unknown. `pre-mount` accepts only `phase`, `runId`, and
+`taskOwnedTempRoot`; a supplied handoff hash is invalid. `post-use` requires
+those same fields plus lowercase-hex `handoffSha256`, which must byte-equal the
+verified canonical handoff hash; an omitted or different hash is invalid. Both
+phases rerun the complete repository, snapshot, receipt, tree, identity, and
+handoff verification. Post-use verification is not a hash-only shortcut.
+
+`createDocsRetainedPagesValidationSessionV1(input)` accepts only the exact
+`DocsRetainedPagesValidationInputV1` and returns the normalized handoff,
+canonical receipt bytes, and resolved `published`, `rolledBack`, and `restored`
+snapshot roots plus an idempotent `dispose()`. Those operational roots/receipt
+bytes are never serialized into the handoff, logs, TASK-545 manifest, or an
+evidence file. TASK-548-07 may request exactly one session immediately before
+its final browser smoke, mount the three sealed roots read-only, rehash them
+after scenario 6, and dispose the complete scoped repository/root in `finally`.
+A crash before TASK-545 checkpoint creation restarts the ordinary smoke and
+creates a new scoped session; checkpoint resume never reconstructs or invokes
+this ephemeral handoff. Construction failure performs the same exact-root
+cleanup before returning a machine-readable non-pass error.
 
 ## Post-Deploy Availability Contract
 
@@ -390,6 +614,35 @@ diagnostics are separate bounded non-pass output.
 ## Implementation Pseudocode
 
 ```ts
+export async function reconcileDocsReleaseAssetsNoClobberV1(input: {
+  release: GitHubReleaseAssetClient;
+  archivePath: string;
+  receiptPath: string;
+  local: VerifiedDocsReleaseArtifact;
+}): Promise<VerifiedDocsReleaseArtifact> {
+  const state = await classifyExactDocsReleaseAssetPairV1(input);
+  switch (state.kind) {
+    case "none":
+      await uploadExpectedAssetWithoutClobber(input.release, input.archivePath);
+      await uploadExpectedAssetWithoutClobber(input.release, input.receiptPath);
+      break;
+    case "archive-only":
+      await downloadAndVerifyPresentReleaseAssetV1(input, state.archive);
+      await uploadExpectedAssetWithoutClobber(input.release, input.receiptPath);
+      break;
+    case "receipt-only":
+      await downloadAndVerifyPresentReleaseAssetV1(input, state.receipt);
+      await uploadExpectedAssetWithoutClobber(input.release, input.archivePath);
+      break;
+    case "complete":
+      return downloadAndVerifyFinalReleaseAssetPairV1(input, state);
+  }
+  return downloadAndVerifyFinalReleaseAssetPairV1(
+    input,
+    await classifyRequiredCompleteDocsReleaseAssetPairV1(input)
+  );
+}
+
 export async function stagePagesPublication(input: PagesPublicationInput) {
   const retained = await openRetainedTreeAtObservedSha(input.branchRoot);
   const artifact = await verifyDocsReleaseArtifact({
@@ -428,6 +681,37 @@ export async function stageDocsRollback(input: RollbackInputV1) {
   });
 }
 
+const retainedPagesValidation = await createDocsRetainedPagesValidationSessionV1({
+  runId: validationRunId,
+  taskOwnedTempRoot,
+  fixture: "coderso-retained-pages-minimal-v1",
+});
+try {
+  const verified = await verifyDocsRetainedPagesValidationSessionV1(
+    retainedPagesValidation,
+    {
+      phase: "pre-mount",
+      runId: validationRunId,
+      taskOwnedTempRoot,
+    }
+  );
+  try {
+    await consumeVerifiedRetainedPagesSessionReadOnly(verified);
+  } finally {
+    await verifyDocsRetainedPagesValidationSessionV1(
+      retainedPagesValidation,
+      {
+        phase: "post-use",
+        runId: validationRunId,
+        taskOwnedTempRoot,
+        handoffSha256: verified.handoffSha256,
+      }
+    );
+  }
+} finally {
+  await retainedPagesValidation.dispose();
+}
+
 const retainedHealthInput = await loadVerifiedRetainedPublicationForHealth({
   deploymentUrl,
   version,
@@ -462,7 +746,10 @@ await writeAndUploadDocsPostDeployHealthReceiptV1(health);
 artifact verification → exact two-asset release no-clobber → exact/capsule
 branch commit/re-read → strict cumulative site-index merge plus retained
 candidate byte-copy commit → protected Pages deploy → receipt-backed bounded
-same-origin availability verification → audit summary.
+same-origin availability verification → audit summary. The separately invoked
+validation helper drives the same publish/rollback functions only against one
+scoped local bare repository, seals an in-memory publish/rollback/restore
+handoff, and always disposes it.
 
 **Error handling:** plain-tag/version/target/HEAD drift, origin failure,
 artifact-receipt conflict, invalid rollback key/type/confirmation, remote branch
@@ -487,9 +774,15 @@ credentials; never retry via force or clobber.
   foreign image ID, broad temp path, or second-run collision;
 - first publish, identical retry, different-byte conflict, branch race, partial
   exact push, malformed/tampered/missing artifact receipt, and failed alias
-  stage preserve invariants; release upload inventory is exactly archive plus
-  sibling receipt, rejects a standalone manifest/extra asset, and reopens the
-  downloaded tar to verify its embedded manifest;
+  stage preserve invariants; release upload fixtures cover the strict zero,
+  archive-only, receipt-only, and complete states. Failure immediately after
+  the archive-first upload and immediately after the receipt-first upload both
+  retry through the matching singleton state, fully verify the present asset,
+  upload only its missing sibling without clobber, then redownload and verify
+  the final pair. Complete state uploads nothing. Duplicate, extra, unexpected,
+  partial, conflicting, renamed, replacement, or clobber cases fail; a
+  standalone manifest is never accepted, and every final tar is reopened to
+  verify its embedded manifest and exact local `VerifiedDocsReleaseArtifact`;
 - latest is never copied before a re-read of the remote exact tree and full
   capsule; no publication/rollback path imports a portal builder;
 - cumulative-index fixtures pin the exact imported reject-unknown normalizer,
@@ -501,6 +794,19 @@ credentials; never retry via force or clobber.
   only verified routes; rollback changes only `latestVersion` plus approved
   mutable copies, preserves all index entries, rejects absent/tampered capsules,
   records audit identity, and does not run semantic-release/Docker;
+- retained-Pages validation-session fixtures require the exact discriminator,
+  no hidden input, fixed two-version/route/search/visual fixture, fixed Git
+  identity/time, two ordered version slots, safe task-owned ref/root, complete
+  first-parent chain, observed commit/tree/ref equality, canonical
+  publication/rollback/restore receipt hashes, the three exact domain-separated
+  tree streams/path sets, unchanged immutable trees, rollback-only mutable
+  differences, and published/restored byte identity. The exact owner verifier
+  runs its full verification before mount and after use; pre-mount forbids a
+  handoff hash, while post-use requires the exact prior `handoffSha256`.
+  Missing or wrong phase/hash, duplicate, reordered, unknown,
+  wrong-ref, wrong-parent/commit/tree/hash/version/receipt/domain/path/mode/
+  length, symlink, network, real-Pages-ref, escaped-root or cleanup drift
+  rejects;
 - producer-consumer fixtures import L01's exact search/assets receipt
   normalizers and canonical bytes. Current, retained, rollback, and post-deploy
   selection reject unknown/unsorted/duplicate/tampered receipt records,
@@ -589,13 +895,15 @@ bun run precommit:check
 wc -l .github/workflows/release.yml \
   scripts/docs/stage-pages-publication.ts \
   core/services/documentation/release/docsPostDeployHealthReceipt.ts \
+  core/services/documentation/release/docsRetainedPagesValidationHandoff.ts \
   tests/unit/documentation/docsPagesPublication.test.ts \
   tests/unit/release/docsReleaseWorkflowContract.test.ts
 git diff --check
 ```
 
-Exercise publication and rollback against a disposable local bare remote plus a
-dry-run workflow fixture; never mutate the real Pages branch during tests. The
+Exercise publication, rollback, restore and the exact operational validation
+handoff against a disposable local bare remote plus a dry-run workflow fixture;
+never mutate the real Pages branch during tests. The
 Docker commands validate only the already-landed TASK-548-02-L03 owner
 contract; any failure returns to that owner and is not patched by L02. Every
 repeat allocates a validated task-scoped `mktemp -d`, captures the new image
@@ -607,5 +915,6 @@ cleanup target is forbidden.
 ## Documentation Updates Required
 
 Send the capsule publication/rollback and post-deploy health runbook, exact
-receipt schema/path/artifact name and retention, repository variables,
-branch/environment protection settings, and recovery procedure to TASK-548-07.
+receipt schema/path/artifact name and retention, the operational retained-Pages
+handoff/session contract, repository variables, branch/environment protection
+settings, and recovery procedure to TASK-548-07.

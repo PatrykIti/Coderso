@@ -106,14 +106,61 @@ type DocsPortalValidationReceiptV1 = {
 };
 ```
 
-`manifestSha256` is computed over the exact detached manifest bytes and is
-never written into `DocsPortalManifestV1`. `filesRootSha256` is a
-domain-separated hash over the canonical sorted `path`, `bytes`, and `sha256`
-records. `artifactRootSha256` binds that files root to `manifestSha256`.
-Counts and bytes are bounded non-negative safe integers. The receipt is returned
-to TASK-548-05-L01 or written outside `dist`; it can never become an untracked
-portal output or a second manifest exclusion. A failure returns a typed error
-and never emits a receipt with `status: "pass"`.
+`manifestSha256` is lowercase hex SHA-256 of the exact raw detached-manifest
+bytes, without a domain prefix, and is never written into
+`DocsPortalManifestV1`. L03 solely owns:
+
+```ts
+export const DOCS_PORTAL_FILES_ROOT_DOMAIN_V1 =
+  "coderso.docs-portal.files-root.v1" as const;
+export const DOCS_PORTAL_ARTIFACT_ROOT_DOMAIN_V1 =
+  "coderso.docs-portal.artifact-root.v1" as const;
+
+export function hashDocsPortalFilesRootV1(
+  records: readonly { path: string; bytes: number; sha256: string }[]
+): string;
+
+export function hashDocsPortalArtifactRootV1(input: {
+  manifestSha256: string;
+  filesRootSha256: string;
+}): string;
+```
+
+`filesRootSha256` is lowercase hex SHA-256 over exactly
+`UTF8(DOCS_PORTAL_FILES_ROOT_DOMAIN_V1) || 0x00 || u64be(recordCount)`,
+followed for each record by
+`u32be(pathUtf8.length) || pathUtf8 || u64be(bytes) ||
+raw32(hexDecode(sha256))`. Paths are non-empty NFC, confined, base-relative
+POSIX paths, unique and sorted by unsigned raw UTF-8 byte order before hashing.
+Counts and lengths use the fixed-width unsigned big-endian widths shown;
+`bytes` is a bounded non-negative safe integer. Input digests are exact
+lowercase 64-hex decoded to 32 raw bytes, never their 64 ASCII characters.
+There are no implicit separators, JSON encoding, platform path rules, or final
+newline. The empty record set is defined by the domain, NUL, and zero `u64be`
+count.
+
+`artifactRootSha256` is lowercase hex SHA-256 over exactly
+`UTF8(DOCS_PORTAL_ARTIFACT_ROOT_DOMAIN_V1) || 0x00 ||
+raw32(hexDecode(manifestSha256)) || raw32(hexDecode(filesRootSha256))`, with no
+lengths, separators, or final newline. The independent producer and reopened
+artifact verifier implement these byte streams separately and must match these
+golden vectors:
+
+- empty files root:
+  `22e2b152769ac29645b74b2a38ac06d01abcd83f379caf11daea08a21be884d6`;
+- one file `a.txt`, `bytes = 3`, and SHA-256 of raw `abc`
+  (`ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad`):
+  `493343b5ef343313ec1d14f3a09475c7d34f8f51a44cb80f16cdc07a26efb547`;
+- exact manifest bytes `{}\n`:
+  `ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356`;
+- that manifest with the empty and one-file roots respectively:
+  `dce715eba7ab2a2cf04ca51a1da949f9652eee47cd7959dd7369220feeeef547`
+  and
+  `648fe5d4f45f7e4bd3f9729fccf0da00c55ff11bd7abce3774fecf89a621076d`.
+
+The receipt is returned to TASK-548-05-L01 or written outside `dist`; it can
+never become an untracked portal output or a second manifest exclusion. A
+failure returns a typed error and never emits a receipt with `status: "pass"`.
 
 ## Browser Gate Scenarios
 
@@ -241,7 +288,10 @@ unexpected request, absent screenshot, or skipped scenario is a failed gate.
 
 - valid fixture passes with exact file/route counts and exactly one detached
   control-file exclusion, exact external `manifestSha256`, and reproducible
-  files/artifact root hashes;
+  files/artifact root hashes; independent producer and reopened-verifier tests
+  pin the literal domains, empty/one-file/manifest/artifact golden vectors,
+  NFC and raw-UTF-8 ordering, big-endian widths, raw digest bytes, and absence
+  of implicit separators or final newlines;
 - file mutation, orphan, hash mismatch, symlink/traversal, duplicate route,
   broken anchor/link/hreflang/redirect, bad CSP, unsafe HTML/URL, secret/internal
   marker, source map, remote media, missing alt, and a11y landmark/heading

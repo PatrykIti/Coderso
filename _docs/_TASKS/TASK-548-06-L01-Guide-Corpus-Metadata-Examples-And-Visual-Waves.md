@@ -11,7 +11,7 @@ parent names every literal final TASK-547-overlapping
 user/developer/shared-doc path and serializes its owner before any
 implementation; TASK-548-05-L02;
 TASK-548-01-L02 recovery-capable original report/bundle pair before migration
-and one same-owner final regeneration handback after all three internal waves
+and one same-owner final regeneration dispatch after all three internal waves
 **Status:** ⏳ To Do
 **Changelog:** 1261 (pinned; closure only)
 
@@ -27,8 +27,9 @@ corpus path only after normalized semantic/stable-identity parity passes. Before
 any owned write, load, link and freeze exactly one original migration report plus
 owner-generated bundle; every wave uses that immutable baseline. Native
 frontmatter changes source bytes, so the final deterministic `sourceHash` must
-change rather than equal the frozen legacy-adapted bundle hash. Exactly one final
-TASK-548-01-L02 handback is allowed after all source/visual edits.
+change rather than equal the frozen legacy-adapted bundle hash. At most one final
+TASK-548-01-L02 regeneration is allowed after all source/visual edits; its
+read-only verified handback fact is safely reconstructed on every restart.
 
 ## Exclusive Ownership
 
@@ -57,8 +58,9 @@ Do not edit `docs/guide/README.md`, `_TEMPLATE.md`, `corpus.manifest.json`,
 `_COVERAGE_MATRIX.md`, TASK-548-02's named pilot files, shared tooling, root
 package/lock/workflows, `core/generated/docs/coderso-docs-v2.json`, the generated
 migration report, or any guide path still owned by TASK-547. TASK-548-01-L02
-remains their sole generator/writer; this leaf requests and verifies exactly one
-final handback. L02 owns the generated matrix and reconciliation code.
+remains their sole generator/writer; this leaf dispatches at most one final
+regeneration and repeatably verifies its strict in-memory fact. L02 owns the
+generated matrix and reconciliation code.
 
 Implementation is blocked until TASK-545 is `✅ Done`, TASK-547 is terminal,
 and the TASK-548 parent has been amended with every literal final overlapping
@@ -219,11 +221,21 @@ hard error, not a reason to snapshot again.
 
 Restart/resume calls recovery first, reopens this receipt and exact stored bytes,
 and requires the same explicit `migrationRunId`; all three waves and the
-separate final TASK-548-01-L02 handback retain that immutable identity. The
-final handback is followed by recovery before loading the new pair; final native
-output is compared with the stored original bytes/projection. Workspace recovery
-is repository tooling only. Packaged runtime/startup loads the bundle only and
-must never require this `.tmp` capsule or report.
+final TASK-548-01-L02 regeneration and owner verification retain that
+immutable identity. The
+deterministic intended compile first produces the exact owner
+`DocsFinalNativePairExpectedIdentityV1`. If the recovered workspace is still the
+frozen original, orchestration dispatches the TASK-548-01-L02 writer exactly
+once; an already exact intended pair skips that dispatch. Both paths then call
+`recoverDocsWorkspaceArtifactPromotionV1()` followed by the exact read-only
+`verifyDocsFinalNativePairHandbackV1({ expected, bundlePath, reportPath })`.
+That owner helper reopens and canonical-byte/hash-validates both finals and
+returns a strict in-memory verified fact containing the pair. It is repeatable
+after restart and never regenerates, promotes, writes, or counts as another
+handback. A raw recovered pair cannot substitute for the verified fact. Only
+final migration parity consumes `verifiedHandback.pair`; neither value reaches
+`docs:check` or coverage. Packaged runtime/startup loads the bundle only and
+never requires this `.tmp` capsule or report.
 
 On create and every reopen, inventory and `lstat` checks reject links and
 non-regular or extra members. The receipt byte cap is enforced before parsing
@@ -248,14 +260,23 @@ occurrence, heading, and section ID joins once. Missing, duplicate, reordered,
 orphaned, detached, or alternate-location directives fail before writing.
 
 No per-wave/per-promotion regeneration is allowed. After the final edit, request
-exactly one same-owner TASK-548-01-L02 final handback; on crash/restart, an
-already exact intended owner pair is verified instead of requesting another.
-Recover and compare final native output with the stored original projection:
-every non-evidence `DocsDocumentV2` field and section content stays equal,
-including intentionally null actions and the sole empty orientation capability
-array. Only strict visual/example objects and their section ID arrays may be
-enriched. Adapter diagnostics are empty and deterministic `sourceHash` differs.
-Only then may `docs:check` and 06-L02 start.
+exactly one same-owner TASK-548-01-L02 final write only when the recovered pair
+is still baseline. On crash/restart, rederive the expected identity and invoke
+the idempotent owner verifier; never request a second regeneration. Compare the
+verifier-returned final pair with the expected identity and stored original:
+every non-evidence `DocsDocumentV2` field and section content stays equal, including
+intentionally null actions and the sole empty orientation capability array.
+Only strict visual/example objects and their section ID arrays may be enriched.
+Adapter diagnostics are empty and deterministic `sourceHash` differs. Only the
+final migration parity verifier may consume the verified pair. After that
+boundary, the parent runs read-only `bun run docs:check` without migration
+values; 06-L02 then uses its read-only hazard inspector and packaged
+distribution loader before reconciliation.
+`runTask54801L02FinalNativeRegenerationOnce` is an orchestration-only callback:
+when invoked, the same 01-L02 owner compiles, proves its identity equals
+`expected`, and promotes once; it returns no pair, receipt, or persisted
+handback. Baseline state invokes it once; intended state and any restart that
+recovers the already-landed intended pair invoke it zero times.
 
 ## Visual Review Contract
 
@@ -324,13 +345,22 @@ derive only from shipped route/permission/source state.
 ## Implementation Pseudocode
 
 ```ts
+type FinalNativeOwnerHandoffDependency = {
+  runTask54801L02FinalNativeRegenerationOnce(input: {
+    expected: DocsFinalNativePairExpectedIdentityV1;
+  }): Promise<void>;
+};
+
+type GuideCorpusMigrationResultV1 = {
+  baseline: ReopenedFrozenGuideMigrationBaselineV1;
+  verifiedHandback: VerifiedDocsFinalNativePairHandbackV1;
+};
+
 export async function migrateGuideCorpus(
   options: { migrationRunId: string; allWaves: true },
-  dependencies: GuideMigrationDependencies = productionDependencies
-): Promise<{
-  baseline: ReopenedFrozenGuideMigrationBaselineV1;
-  regenerated: OwnerGeneratedDocsPair;
-}> {
+  dependencies: GuideMigrationDependencies &
+    FinalNativeOwnerHandoffDependency = productionDependencies
+): Promise<GuideCorpusMigrationResultV1> {
   const migrationRunId = requireExplicitCallerMigrationRunId(
     options.migrationRunId
   );
@@ -428,21 +458,44 @@ export async function migrateGuideCorpus(
       }
     }
   }
-  const finalPairState = await classifyGeneratedPairAgainstBaselineOrIntended();
-  const regenerated =
-    finalPairState === "baseline"
-      ? await requestExactlyOneFinalTask54801L02RegenerationHandback()
-      : requireExactIntendedOwnerGeneratedPair(finalPairState);
+  const intendedFinalCompile = await compileDocsCorpusV2({
+    root: "docs/guide",
+    mode: "check",
+    visuals: {
+      state: "active",
+      validateStablePairForVisual: createDocsVisualStablePairValidatorV1,
+    },
+  });
+  const expectedFinalPair = buildDocsFinalNativePairExpectedIdentityV1({
+    migrationRunId,
+    compiled: intendedFinalCompile,
+  });
   await recoverDocsWorkspaceArtifactPromotionV1();
-  assertOwnerGeneratedFinalNativeBundleAndReportHashes(regenerated);
+  const finalPairState =
+    await classifyRecoveredGeneratedPairAgainstBaselineOrExpected({
+      baseline,
+      expected: expectedFinalPair,
+    });
+  if (finalPairState === "baseline") {
+    await dependencies.runTask54801L02FinalNativeRegenerationOnce({
+      expected: expectedFinalPair,
+    });
+  } else {
+    assertExactExpectedFinalNativePairState(finalPairState, expectedFinalPair);
+  }
+  await recoverDocsWorkspaceArtifactPromotionV1();
+  const verifiedHandback = await verifyDocsFinalNativePairHandbackV1({
+    expected: expectedFinalPair,
+    bundlePath: "core/generated/docs/coderso-docs-v2.json",
+    reportPath: ".tmp/docs-corpus/migration-report-v1.json",
+  });
   const reopened = await reopenFrozenGuideMigrationBaselineV1({
     migrationRunId,
   });
-  await assertNativeSemanticParityExpectedHashChangeAndNoAdapterDiagnostics({
-    storedOriginalBaseline: reopened,
-    regenerated,
-  });
-  return { baseline: reopened, regenerated };
+  return {
+    baseline: reopened,
+    verifiedHandback,
+  };
 }
 ```
 
@@ -457,8 +510,15 @@ CSPRNG bounded collision-checked `runId` → direct lower capture API with exact
 unchanged `{ docId, locale, sectionId, visualId, runId }` copied from the
 strict scenario and caller-owned run identity → full localized owner/result
 identity assertion → candidate inspection/promotion → one final
-same-owner compiler handback → recovery → final native-vs-stored-original
-normalized parity plus source-hash-change report.
+deterministic intended compile → exact expected run/source/bundle/report/pair
+identity → recovery and baseline-or-intended classification → zero or one
+same-owner compiler regeneration → recovery → exact read-only owner verifier →
+strict in-memory verified handback fact containing the canonical reopened pair
+→ fact linked to the expected identity and frozen original → final
+native-vs-stored-original normalized parity plus source-hash-change report →
+verified pair returned only for parent final-parity verification → migration
+values leave scope → parent read-only `bun run docs:check` → 06-L02 hazard
+inspection and packaged distribution load before coverage reconciliation.
 
 **Error handling:** use existing bounded compiler/visual error codes. Identity or
 slug/locale drift, unknown permission/path, source not in report, missing section,
@@ -470,14 +530,21 @@ source or run identity, a write before atomic freeze, malformed/reused/colliding
 or capture-substituted `runId`, canonical run-ID serialization, capture identity
 mismatch in any `docId`, canonical `locale`, `sectionId`, `visualId`, or `runId`,
 including cross-locale/document/section ownership, per-wave/per-promotion
-regeneration, zero/multiple final handbacks, a handback before the last owned
-edit, or consumption without recovery also fails.
+regeneration, a second owner dispatch, dispatch before the last owned edit, or
+consumption without recovery also fails. A missing/stale/replaced final member,
+noncanonical on-disk bytes, report-to-bundle linkage mismatch, wrong expected
+`migrationRunId`, `sourceHash`, `bundleSha256`, `reportSha256`, or
+`pairTransactionIdentitySha256`, or frozen-original mismatch also fails. A raw
+reopened pair cannot substitute for `VerifiedDocsFinalNativePairHandbackV1`;
+neither the expected identity, verified fact, nor pair may reach
+`docs:check`/coverage. No parity/hash assertion or return value may consume a
+pre-recovery in-memory candidate pair.
 A source, sidecar, or receipt that is neither its exact frozen baseline state nor
 its deterministic intended migrated state is a conflict and fails before any
 later write. The CLI has no wave/skip/reorder/resume-position input; the exact
 all-waves invocation always walks internal waves `1 → 2 → 3`. An already exact
 intended visual/receipt is not recaptured, and an already exact intended final
-owner pair is verified rather than requesting a second handback.
+owner pair is verified rather than requesting a second regeneration dispatch.
 
 ## Sub-Tasks
 
@@ -505,7 +572,7 @@ owner pair is verified rather than requesting a second handback.
 - `tests/unit/documentation/docsGuideMigrationBaseline.test.ts` proves recovery
   precedes the original read; exact three-file atomic/fsync inventory; strict
   receipt round-trip; same immutable caller/run/hash identity across three
-  waves, restart, and separate final handback; and rejection of prior write,
+  waves, restart, and final verified handback fact; and rejection of prior write,
   partial/extra/nested/symlinked/tampered/stale/foreign inventory, overwrite,
   replacement, wrong discriminator, source inventory/projection drift,
   `bundleSourceHash`/`bundleSha256` mismatch, changed caller identity, and
@@ -518,9 +585,27 @@ owner pair is verified rather than requesting a second handback.
   `headingOccurrence`→`sectionId` joins;
 - prove this leaf never writes `core/generated/docs/coderso-docs-v2.json` or the
   generated report; per-wave/per-promotion regeneration rejects; exactly one
-  final handback occurs after the final edit; a missing, stale, wrong-owner,
-  wrong-sourceHash, wrong-bundleSha256, zero or duplicate final handback blocks
-  `docs:check` and coverage;
+  final owner regeneration dispatch occurs after the final edit from baseline
+  state; intended state and post-land restart dispatch zero times.
+  Missing/stale members,
+  a second dispatch, or wrong expected identity blocks `docs:check` and coverage;
+- type/shape-negative fixtures pass `verifiedHandback.pair` where
+  `VerifiedDocsFinalNativePairHandbackV1` is required and reject it before
+  semantic parity. Independently alter expected `migrationRunId`, `sourceHash`,
+  `bundleSha256`, `reportSha256`, and `pairTransactionIdentitySha256`; each
+  fails before final parity;
+- order spies require recovery followed immediately by
+  `verifyDocsFinalNativePairHandbackV1({ expected, bundlePath:
+  "core/generated/docs/coderso-docs-v2.json", reportPath:
+  ".tmp/docs-corpus/migration-report-v1.json" })`. The owner verifier itself
+  performs read-only hazard inspection then the strict pair reopen. Replace,
+  remove, stale, or mismatch either final member and prove return remains
+  blocked. Invoke the same verifier again after simulated restart with the
+  already-landed pair and rederived byte-identical expected identity; it returns
+  the same strict fact
+  and canonical pair with zero compile/promotion/write calls and no additional
+  owner dispatch. Only final migration parity receives the verified pair;
+  expected identity, fact, and pair never reach `docs:check` or coverage;
 - run the only public migration invocation exactly as
   `bun scripts/docs/migrate-guide-corpus.ts --migration-run-id <id> --all-waves`;
   its strict CLI rejects unknown/duplicate options, missing or duplicate
@@ -530,8 +615,8 @@ owner pair is verified rather than requesting a second handback.
 - inject a crash after each atomic source, sidecar, candidate, and receipt
   promotion boundary; every restart reopens the same typed baseline, resumes
   internal waves `1 → 2 → 3`, accepts only exact baseline-or-intended state,
-  and a complete rerun is byte-idempotent with no second generated-pair
-  handback or second writer;
+  and a complete rerun is byte-idempotent; a post-land restart invokes only the
+  owner verifier, with no second regeneration dispatch or writer;
 - before DB-backed capture, run:
 
 ```bash
@@ -566,11 +651,20 @@ bun --eval 'import { canConnect } from "./tests/utils/db"; const configured = Bo
   --confirm-alt-caption` and retain its reviewed receipt; no `--session`,
   ambiguous digest alias, missing explicit content confirmation, or loop may
   auto-approve;
-- after all three waves and every non-pilot promotion, request exactly one
-  TASK-548-01-L02 same-owner final regeneration handback, run recovery, verify
-  the new native report/bundle hashes against the stored original baseline, then run
-  `bun run docs:visual:check -- --all`, `bun run docs:check`, and
-  `bunx vitest run --config vitest.config.ts
+- after all three waves and every non-pilot promotion, run
+  `bun run docs:visual:check -- --all`, then request exactly one TASK-548-01-L02
+  same-owner final regeneration only from baseline state, run recovery, and call
+  the owner verifier with the deterministic expected identity. Return its strict
+  in-memory fact only for parent final-parity verification; after simulated
+  restart rederive the same expected identity and call the verifier again with
+  zero regeneration, promotion, or write, then discard all migration values;
+- after parent parity, order spies prove read-only `bun run docs:check` runs
+  without an expected-identity/verified-fact/pair input before 06-L02
+  independently calls
+  `assertNoDocsWorkspaceArtifactPromotionHazardsV1()`, then
+  `loadPackagedDocsDistributionBundleV2()`, then reconciliation in both coverage
+  modes; neither downstream path calls recovery or the migration pair loader;
+- run `bunx vitest run --config vitest.config.ts
   tests/vitest/documentation/docs-corpus-native-migration.test.ts`;
 - run `bun --cwd core lint:types` and `bun --cwd core lint`;
 - count every touched human-authored production/test file, fail any count above

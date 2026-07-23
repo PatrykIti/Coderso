@@ -119,6 +119,36 @@ type DocsDistributionBundleV2 = {
 };
 ```
 
+The sole bundle-normalizer owner is
+`core/services/documentation/docsCorpusNormalizer.ts`, which exports:
+
+```ts
+export function normalizeDocsDocumentV2(
+  input: unknown
+): DocsDocumentV2;
+
+export function normalizeDocsDistributionBundleV2(
+  input: unknown
+): DocsDistributionBundleV2;
+```
+
+`normalizeDocsDocumentV2` is the canonical compiled-object boundary. It
+recursively rejects unknown document/section/visual/example keys; normalizes
+locale, version range, target, permission and capability contracts; preserves
+section and ordered evidence-reference order; requires exact levels `1..4`;
+canonicalizes visual/example record order; revalidates safe Markdown/plain-text
+parity and closes every local section/evidence reference. It never derives
+compiled fields from authoring Markdown.
+
+`normalizeDocsDistributionBundleV2` recursively rejects unknown root keys,
+composes the exact manifest and document normalizers, validates the exact SHA-256
+`sourceHash`, locale membership, canonical ordering, localized identity
+uniqueness and bundle-global reference closure, and returns a newly normalized
+bundle. It never routes an already compiled document through the Markdown
+authoring parser. Compiler, Help and portal consumers import this exact named
+owner export; `assertDistributionBundle` and local assertion/normalizer aliases
+do not exist.
+
 The discriminator and field names above are exact. Root and nested schemas use
 `additionalProperties: false`. IDs use one documented lowercase kebab-case
 pattern. `docId` is stable translation-family identity and may repeat across
@@ -398,6 +428,66 @@ export function normalizeDocsCorpusManifestV2(value: unknown): DocsCorpusManifes
   };
 }
 
+export function normalizeDocsDocumentV2(
+  input: unknown
+): DocsDocumentV2 {
+  const parsed = assertStrictJsonSchema(input, docsDocumentV2Schema);
+  const meta = normalizeStrictDocumentMeta({
+    schema: parsed.schema,
+    docId: parsed.docId,
+    locale: parsed.locale,
+    slug: parsed.slug,
+    title: parsed.title,
+    summary: parsed.summary,
+    audience: parsed.audience,
+    productArea: parsed.productArea,
+    productVersionRange: parsed.productVersionRange,
+    adminPath: parsed.adminPath,
+    permissionRequirement: parsed.permissionRequirement,
+    capabilityIds: parsed.capabilityIds,
+    publicationTargets: parsed.publicationTargets,
+    keywords: parsed.keywords,
+  });
+  assertConfinedGuidePath(parsed.sourcePath);
+  const sections = normalizeCompiledDocsSectionsV2(parsed.sections, {
+    allowedLevels: [1, 2, 3, 4],
+    preserveOrder: true,
+  });
+  const document = {
+    ...meta,
+    sourcePath: parsed.sourcePath,
+    sections,
+    visuals: normalizeCompiledDocsVisualsV1(parsed.visuals, sections),
+    examples: normalizeCompiledDocsExamplesV1(parsed.examples, sections),
+  };
+  assertSafeMarkdownPlainTextParity(document.sections);
+  assertCanonicalDocumentEvidenceOrder(document);
+  assertCompleteDocumentReferenceClosure(document);
+  return document;
+}
+
+export function normalizeDocsDistributionBundleV2(
+  input: unknown
+): DocsDistributionBundleV2 {
+  const parsed = assertStrictJsonSchema(input, docsDistributionBundleV2Schema);
+  const manifest = normalizeDocsCorpusManifestV2({
+    schema: parsed.schema,
+    corpusVersion: parsed.corpusVersion,
+    defaultLocale: parsed.defaultLocale,
+    supportedLocales: parsed.supportedLocales,
+  });
+  const documents = parsed.documents.map(normalizeDocsDocumentV2);
+  assertDocumentsUseSupportedLocales(documents, manifest.supportedLocales);
+  assertCanonicalDocumentOrder(documents);
+  assertStableDocumentIdentityPairs(documents);
+  assertCompleteBundleReferenceClosure(documents);
+  return {
+    ...manifest,
+    sourceHash: assertExactSha256(parsed.sourceHash),
+    documents,
+  };
+}
+
 export function parseDocsDocumentV2(input: {
   sourcePath: string;
   markdown: string;
@@ -466,6 +556,17 @@ idempotence, exact locale-then-`docId` and publication-target ordering, and
 multi-target round trips. Assert native parsing drops `headingOccurrence`,
 initializes both join arrays empty, and exposes only exact `DocsSectionV2` keys
 before sidecar joins.
+Import both exact named compiled-object normalizers in the owner contract test;
+prove their compile-time `unknown -> DocsDocumentV2` and
+`unknown -> DocsDistributionBundleV2` signatures, idempotence, recursive
+root/document/section/visual/example unknown-key rejection, nested normalizer
+composition and the absence of `assertDistributionBundle`. Mutate every
+document identity/locale/version/target/permission/capability field, each
+section level/order and ordered visual/example ref, each nested record order and
+owner, Markdown/plain-text parity, orphan/missing/duplicate refs and
+bundle-global collision. Each invalid variant fails without falling back to
+`parseDocsDocumentV2`; valid compiled round trips preserve section/evidence
+order.
 Round-trip `DocsExampleSidecarV1` through its canonical
 `examples/<docId>/<locale>/<exampleId>.json` path. Use two locales with the same
 `docId` and `sectionId` to prove a sidecar joins only its explicit locale;

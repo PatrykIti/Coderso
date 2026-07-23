@@ -8,7 +8,7 @@
 **Dependencies:** TASK-545 `✅ Done` and TASK-547 terminal plus a TASK-548
 parent amendment naming and serializing every literal final overlapping
 user/developer/shared-doc path before any implementation; TASK-548-05;
-TASK-548-01-L02 workspace-pair recovery and same-owner refresh/handback gates
+TASK-548-01-L02 workspace-pair recovery and same-owner refresh/verification gates
 **Status:** ⏳ To Do
 **Changelog:** 1261 (pinned; closure only)
 
@@ -29,14 +29,15 @@ not imply that a Polish Admin UI or Polish documentation is complete.
 ## Locked Migration Contract
 
 - Only TASK-548-06-L01's explicit migration flow reads a workspace bundle/report
-  pair. Before the first original pair read and before consuming the final
-  TASK-548-01-L02 handback, it calls the exact owner wrapper
-  `recoverDocsWorkspaceArtifactPromotionV1()` and then the strict pair loader;
-  recovery failure `docs_compile_recovery_required` is blocking. Coverage,
-  portal, release, clean clone/tag, Docker, `docs:check`, and packaged
-  runtime/startup use the read-only hazard inspector plus the strict tracked
-  `core/generated/docs/coderso-docs-v2.json` loader and never require `.tmp`, the
-  report, journal, or migration baseline.
+  pair. Before the first original read it calls
+  `recoverDocsWorkspaceArtifactPromotionV1()` and the strict pair loader. For
+  the final pair it derives the exact expected identity, recovers, dispatches
+  the TASK-548-01-L02 writer only from baseline state, recovers again, and calls
+  the owner's read-only `verifyDocsFinalNativePairHandbackV1`; recovery failure
+  `docs_compile_recovery_required` is blocking. Coverage, portal, release,
+  clean clone/tag, Docker, `docs:check`, and packaged runtime/startup use the
+  read-only hazard inspector plus the strict tracked bundle loader and never
+  require `.tmp`, the report, journal, migration baseline, or verified fact.
 - The exact `.tmp/docs-corpus/migration-report-v1.json` with discriminator
   `coderso.docs-migration-report@v1` must match the original bundle's
   `bundleSourceHash` and `bundleSha256`. Before any owned write, L01 atomically
@@ -45,7 +46,7 @@ not imply that a Polish Admin UI or Polish documentation is complete.
   original bundle bytes, original report bytes, and one receipt binding both
   hashes, `sourceHash`, normalized semantic projection, source inventory, and
   caller-owned migration run identity. All three waves, process restarts, and
-  the later final-handback verification reopen that same capsule; they never
+  the later verified-fact parity pass reopens that same capsule; they never
   regenerate, overwrite, or silently repair it. Stale, foreign, partial,
   mutated, or extra inventory blocks before a source write.
 - L01 owns the exact four-key
@@ -99,13 +100,19 @@ not imply that a Polish Admin UI or Polish documentation is complete.
 - TASK-548-01-L02 remains the sole writer of
   `core/generated/docs/coderso-docs-v2.json` and its generated migration report.
   After all three L01 native-source/visual waves and promotions, L01 pauses
-  exactly once and requests one final same-owner TASK-548-01-L02 regeneration
-  handback. Recovery runs before L01 consumes that returned linked pair through
-  the migration-only pair loader. L01 verifies the report/bundle hashes and
-  compares final native output with the durable stored original, not an in-memory
-  reconstruction. Subsequent read-only `docs:check` and 06-L02 coverage use the
-  packaged bundle and do not require the ignored report. Per-wave/per-promotion
-  regeneration is forbidden.
+  and deterministically builds `DocsFinalNativePairExpectedIdentityV1` from the
+  caller migration run and intended final compile. Baseline state dispatches
+  one same-owner TASK-548-01-L02 regeneration; exact intended state and any
+  restart that recovers the landed intended pair dispatch none. After recovery,
+  the owner verifier reopens canonical
+  report/bundle bytes, checks every expected hash and transaction identity, and
+  returns only a strict in-memory `VerifiedDocsFinalNativePairHandbackV1`.
+  It never writes, regenerates, promotes, persists a receipt, or counts as a
+  second handback. Final migration parity consumes that fact and the durable
+  stored original, not an unverified raw pair. Subsequent read-only `docs:check`
+  receives no migration value, and 06-L02 independently inspects hazards, loads
+  the tracked packaged bundle, and reconciles coverage without the report.
+  Per-wave/per-promotion regeneration is forbidden.
   Neither 06 leaf writes the generated bundle or report.
 - The only public migration entry point is
   `bun scripts/docs/migrate-guide-corpus.ts --migration-run-id <id>
@@ -165,10 +172,14 @@ The global execution order already includes one same-owner
 `TASK-548-02-L02` and before `TASK-548-02-L03`/TASK-548-03. Within this family,
 the land order is: `TASK-548-06-L01 recover workspace pair and atomically freeze
 original report+bundle capsule → all three source/visual waves and promotions →
-TASK-548-01-L02 one final same-owner generated-bundle/report handback/gate →
-TASK-548-06-L01 recover and verify final pair against the stored original →
-TASK-548-06-L02`. Operational refresh/handback calls never change status or
-transfer/reopen source ownership.
+TASK-548-06-L01 build expected final identity and classify recovered state →
+TASK-548-01-L02 one final same-owner generated-pair write/gate only if baseline
+→ TASK-548-06-L01 recover and call the idempotent owner verifier → consume its
+strict in-memory fact with the stored original only for final parity → read-only
+`bun run docs:check` with no migration object input →
+TASK-548-06-L02 read-only hazard inspection → packaged distribution loader →
+coverage reconciliation in `--write` then `--check` mode`. Operational
+refresh/verification calls never change status or transfer/reopen source ownership.
 
 After `TASK-548-06-L02`, the global closure order is exactly
 `07-L01-runtime-docs-and-gates-preparation →
@@ -208,28 +219,27 @@ and changelog 1261.
 ## Implementation Pseudocode
 
 ```ts
-const migrated = await migrateGuideCorpus(
-  {
-    migrationRunId: requireExplicitCallerMigrationRunId(),
-    allWaves: true,
-  }
-);
-const baseline: ReopenedFrozenGuideMigrationBaselineV1 = migrated.baseline;
-const regenerated = migrated.regenerated;
-await recoverDocsWorkspaceArtifactPromotionV1();
-const finalPair = await loadAndValidateRecoveredDocsArtifactPair({
-  bundlePath: "core/generated/docs/coderso-docs-v2.json",
-  reportPath: ".tmp/docs-corpus/migration-report-v1.json",
+const migrated: GuideCorpusMigrationResultV1 = await migrateGuideCorpus({
+  migrationRunId: requireExplicitCallerMigrationRunId(),
+  allWaves: true,
 });
-assertFinalRecoveredPairMatchesOwnerHandbackAndFrozenOriginal({
+const {
   baseline,
-  ownerHandback: regenerated,
-  finalBundle: finalPair.bundle,
-  finalReport: finalPair.report,
+  verifiedHandback,
+} = migrated;
+await assertVerifiedFinalNativePairParityAgainstFrozenOriginal({
+  baseline,
+  verifiedHandback,
   expectedSourceHashChange: true,
 });
+
+// No baseline, expected identity, verified fact, workspace report, or pair crosses
+// this final migration-parity boundary.
+await runExactReadOnlyGate("bun run docs:check");
+await assertNoDocsWorkspaceArtifactPromotionHazardsV1();
+const packagedBundle = await loadPackagedDocsDistributionBundleV2();
 const coverage = reconcileDocsCoverage({
-  bundle: finalPair.bundle,
+  bundle: packagedBundle,
   adminRoutes: loadCanonicalAdminRouteCoverageSnapshot(),
   receipts: loadPromotedVisualReceipts(),
 });
@@ -241,16 +251,16 @@ assertCompleteCoverage(
 
 **Data flow:** migration-only recovered workspace pair → one atomic durable linked original
 report+bundle capsule → all three
-native v2 source/example/reviewed-visual waves using the same mapping → one final
-same-owner compiler handback → exact
-`recoverDocsWorkspaceArtifactPromotionV1()` → exact
-`loadAndValidateRecoveredDocsArtifactPair({ bundlePath:
-"core/generated/docs/coderso-docs-v2.json", reportPath:
-".tmp/docs-corpus/migration-report-v1.json" })` → both returned report and
-bundle linked to the handback and durable stored original during the final
-native-vs-original stable-identity/semantic comparison, with the expected
-source-hash change → canonical owner-regenerated bundle
-→ exact descriptor/permissionRequirement/capability/link/publication
+native v2 source/example/reviewed-visual waves using the same mapping →
+deterministic intended final compile and expected run/source/bundle/report/pair
+identity → recovery and baseline-or-intended classification → zero or one
+same-owner compiler regeneration → recovery → idempotent read-only owner
+verifier → strict in-memory verified fact with its canonical reopened pair →
+final native-vs-original stable-identity/semantic comparison against the
+durable stored original, with the expected
+source-hash change → migration workspace values leave scope → read-only
+`bun run docs:check` → 06-L02 read-only hazard inspector → strict packaged
+distribution loader → exact descriptor/permissionRequirement/capability/link/publication
 reconciliation, including `assistant`, `embedded-help`, and `public-docs`
 consumer filtering → deterministic matrix/report.
 
@@ -259,24 +269,36 @@ identity drift, compatibility fallback use, missing active source,
 unreviewed/stale visual, descriptor-inventory or route/path mismatch,
 permissionRequirement semantic leak, broken/orphan link, false locale claim,
 uncovered capability, target-consumer leak, or missing/stale/wrong-owner
-final regeneration handback blocks the leaf. A second handback, an attempted
+final generated pair or expected identity blocks the leaf. A second owner
+dispatch, an attempted
 per-wave/per-promotion regeneration, baseline mutation/reload, or any owned write
 before the durable capsule is fsynced, reopened, and validated also blocks.
-Receipt/run-identity mismatch, partial/extra/symlinked inventory, or a
-migration-handback workspace recovery failure blocks without trusting one
-member of a pair. A bundle-only migration loader or an assertion that omits
-either the returned report or bundle is invalid. Packaged coverage/check
-consumers instead reject hazards, report-only state or invalid/stale bundle
-read-only. Previously valid promoted assets remain untouched on failure.
+Baseline receipt/run-identity mismatch, partial/extra/symlinked inventory, or a
+workspace recovery failure blocks without trusting one pair member. Wrong
+expected `migrationRunId`, `sourceHash`, `bundleSha256`, `reportSha256`, or
+`pairTransactionIdentitySha256`, noncanonical final bytes, and either-member
+tampering fail before parity. A raw reopened pair cannot substitute for
+`VerifiedDocsFinalNativePairHandbackV1`; a bundle-only migration loader or
+assertion omitting either verified member is invalid. No
+expected identity, verified fact, or pair may reach `docs:check` or coverage.
+Packaged consumers instead reject hazards, report-only state, or invalid/stale
+bundle read-only. Previously valid promoted assets remain untouched on failure.
 
 **Regression-test shape:** recovery precedes every workspace-pair read; the
 original report and bundle are linked and atomically frozen exactly once before
 the first write; all three waves and a restart retain the same durable
 run/hash identity; partial/extra/tampered/foreign/stale/replaced capsules and
-per-wave/per-promotion regeneration fail; exactly one final owner handback
-occurs after the last edit; recovery immediately precedes the exact pair loader;
-both returned members must match each other, the owner handback, and the frozen
-original linkage before either is consumed. Bundle-only migration loading fails.
+per-wave/per-promotion regeneration fail. Baseline state dispatches the final
+owner writer exactly once after the last edit; intended state and post-land
+restart dispatch zero times. Recovery immediately precedes the owner verifier;
+the same rederived expected identity and verifier call after simulated restart
+return the same strict in-memory fact and canonical pair with zero writes.
+Independently wrong expected run/source/bundle/report/transaction identity and
+either-member tampering reject before parity. A raw `verifiedHandback.pair`
+cannot substitute for the verified fact. Bundle-only migration loading fails.
+Order spies prove the fact is consumed only by final migration parity; next is
+read-only `bun run docs:check` without migration arguments, then 06-L02 hazard
+inspection, packaged-bundle load, and both coverage modes.
 Normalized legacy/native semantic projection parity preserves stable
 IDs/slugs/links/content fields with an expected deterministic `sourceHash`
 change; every active English source compiles once without adapter diagnostics;
@@ -298,9 +320,13 @@ completeness claim appears.
   explicit code-owned exclusion with a tested reason.
 - Internal Help, Guide ingest, and public portal publication targets reconcile
   from the same document records.
-- One immutable pre-write report/bundle baseline drives all three waves; exactly
-  one final 01-L02 handback is recovered and verified against its stored
-  original bytes before coverage.
+- One immutable pre-write report/bundle baseline drives all three waves.
+  Baseline state triggers exactly one final 01-L02 regeneration; intended state
+  and post-land restart trigger none. The read-only owner verifier returns the
+  strict
+  in-memory fact consumed with stored original bytes only for final parity.
+  Read-only `docs:check` then passes without migration values before 06-L02
+  reloads the packaged bundle for coverage.
 - Locale contracts can accept future Polish documents, but output labels English
   as the only complete locale until real Polish content/UI evidence exists.
 
@@ -312,9 +338,15 @@ completeness claim appears.
   final comparison
 - exact
   `bun test tests/unit/documentation/docsGuideMigrationBaseline.test.ts`
-- exactly one TASK-548-01-L02 same-owner final handback after all native
-  source/visual changes, followed by recovery, report/bundle hash and
-  final-vs-stored-original verification
+- `bun run docs:visual:check -- --all` after all non-pilot promotions and before
+  the final regeneration dispatch
+- baseline state invokes exactly one TASK-548-01-L02 same-owner final
+  regeneration after all native source/visual changes; intended state and
+  post-land restart invoke none. Recovery followed by the owner verifier checks
+  canonical
+  report/bundle bytes and expected run/source/bundle/report/transaction
+  identity; raw-pair substitution and independently wrong fields reject before
+  final-vs-stored-original parity
 - exact native section-directive round-trip, duplicate/reorder/orphan/heading
   detachment tests and exact
   `createDocsVisualRunIdV1({ scope: "migration" }, deps?)` CSPRNG/output/
@@ -322,8 +354,10 @@ completeness claim appears.
 - strict `DocsCoverageReportV2` round-trip, recursive unknown/limit/tamper/
   canonical-sort, both coverage modes' read-only hazard-inspection plus
   packaged-load-before-reconciliation tests, and a clean-clone bundle-only case
-- `bun run docs:check` only after that single final handback passes
-- `bun run docs:visual:check -- --all`
+- `bun run docs:check` only after the final verified handback fact and
+  migration-only parity pass, with no expected-identity/verified-fact/pair
+  argument; both 06-L02 modes
+  prove exact read-only hazard-inspector → packaged-loader → reconciliation order
 - native-only compile and normalized semantic/stable-identity comparison, with
   expected source-hash change
 - focused corpus, visual receipt, coverage, route, link, permission, and exact

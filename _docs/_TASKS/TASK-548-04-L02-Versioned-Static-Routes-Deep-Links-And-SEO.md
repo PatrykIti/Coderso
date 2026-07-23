@@ -22,6 +22,10 @@ robots, content hashes, and host-neutral header/redirect metadata.
 Hosting/upload/release integrity is TASK-548-05. This leaf produces immutable
 bytes and prebuilt mutable candidates that release automation can verify and
 copy without reconstructing the route graph or rendering article HTML.
+Every route renders article/navigation/TOC statically from the same server-side
+projection. Only header/search/theme/mobile-navigation islands receive the
+L01-owned canonical, domain-separated-hash-bound hydration payload; no branded
+projection or full document is serialized.
 
 ## Exclusive Ownership
 
@@ -46,14 +50,16 @@ Canonical public path/href construction is imported from
 import {
   buildDocsPublicHref,
   buildDocsPublicPath,
-  selectDocumentsForPublicationTarget,
+  buildDocsSearchIndexV1,
 } from "@coderso/docs-renderer";
 import {
-  assertDocsPortalDocumentSelectionV1,
-  assertDocsPortalPublicProjectionV1,
-  type DocsPortalDocumentSelectionV1,
-  type DocsPortalPublicProjectionV1,
-} from "../app/DocsPortalShell";
+  createDocsPublicationProjectionV1,
+  type DocsPublicationProjectionV1,
+} from "@coderso/docs-renderer/projection";
+import {
+  createDocsPortalHydrationPayloadV1,
+  renderDocsPortalStaticShell,
+} from "../app/DocsPortalStaticShell";
 
 // packages/docs-portal/src/routes/docsPortalOutput.ts
 resolveDocsPortalOutputPath(publicPath: string): string;
@@ -73,24 +79,26 @@ type DocsPortalBuildConfigV1 = {
 readDocsPortalBuildConfigV1FromEnvironment(
   environment: Record<string, string | undefined>
 ): DocsPortalBuildConfigV1;
-buildDocsPortalPublicProjectionV1(
-  bundle: DocsDistributionBundleV2,
-  selected: DocsPortalDocumentSelectionV1
-): DocsPortalPublicProjectionV1;
 buildDocsPortal(
   input: DocsPortalBuildConfigV1
 ): Promise<DocsPortalBuildReceipt>;
 ```
 
-L01 owns and exports the exact projection type/assertion; TASK-548-03-L02
-re-exports the TASK-548-01-L01-owned exact target selector through
-`@coderso/docs-renderer`. L02 imports both contracts and is the sole producer of
-`DocsPortalPublicProjectionV1`. It must not copy either type or selection logic.
-The producer filters the validated bundle to `public-docs`, requires the selected
-document to join exactly once to that filtered bundle, requires both the selected
-record and every projected record to carry `public-docs`, and then invokes the
-L01 assertion. Shell, search and renderer receive only the resulting projection,
-never the input bundle.
+`createDocsPublicationProjectionV1()` and
+`buildDocsSearchIndexV1()` are the exact TASK-548-03-L02 owners. L02 calls each
+exactly once per build with literal `public-docs`; the constructor alone
+normalizes the complete hostile bundle, filters already-normalized records and
+proves full target link/evidence/reference closure. Its distinct private-
+branded shape retains the original full-corpus `sourceHash` and never
+masquerades as `DocsDistributionBundleV2`.
+
+The route graph, search emitters and every static route reuse that same
+projection and search-index object. Routes carry only exact
+`DocsPublicationDocumentKeyV1` keys; shared member resolution verifies them
+without a per-route projection/brand/document normalizer. L02 defines no local
+bundle, document, target, selection or projection assertion. The projection
+subpath is build-only: Vite/client static guards reject it, full document
+records and `DocsDocumentRenderer` from every hydration entry.
 
 Locked output root is `packages/docs-portal/dist`.
 
@@ -183,7 +191,7 @@ Alias:
 - Static route selection comes from the validated bundle/route graph and never
   guesses a nearest document; portal route code does not add a second public
   URL resolver.
-- Every visual reference resolves only when its bundle-global `visualId` has
+- Every visual reference resolves only when its projection-global `visualId` has
   exactly one asset record owned by the selected
   `(docId, locale, sectionId)`. A locale-mismatched owner, duplicate global id,
   or cross-section substitution fails before HTML or asset output.
@@ -308,11 +316,13 @@ serializeDocsPortalSiteIndexCandidateV1(
 ): Uint8Array;
 ```
 
-`sourceHash` is byte-for-byte the validated `DocsDistributionBundleV2.sourceHash`;
-it is never recomputed from rendered output. `locales`, `routes`,
+`sourceHash` is byte-for-byte the validated full
+`DocsDistributionBundleV2.sourceHash`: immutable whole-corpus source
+provenance, not a digest or integrity proof of the filtered public projection.
+It is never recomputed from rendered output. `locales`, `routes`,
 `visualAssets`, and `files` are unique and canonically sorted. Route records
 sort by kind, product version, locale, slug, then `docId`; visual assets sort by
-`(visualId, locale, docId, sectionId, path)` and require bundle-global unique
+`(visualId, locale, docId, sectionId, path)` and require projection-global unique
 `visualId`; file records sort by normalized relative `path`. Every visual asset
 joins one manifest file record by identical path/bytes/hash and one exact
 localized section owner. All nested shapes reject unknown keys. Versions,
@@ -360,16 +370,15 @@ The public build boundary accepts only strict `DocsPortalBuildConfigV1`. Only
 the internal post-inspection helper receives the already validated packaged
 `DocsDistributionBundleV2`; no caller can provide a bundle, report, artifact
 path, bytes, or output root. The valid clean-checkout state is a tracked bundle
-with no ignored report. That helper creates a filtered public bundle with the
-exact shared
-`selectDocumentsForPublicationTarget(bundle.documents, "public-docs")`
-selector. The route graph is built only from those filtered records. For every
-canonical selection L02 consumes L01's exact
-`DocsPortalDocumentSelectionV1`, constructs `DocsPortalPublicProjectionV1`,
-validates selection membership, version range and target presence, and passes
-only that projection to shell, search and rendering. An eligible record omitted
-from the projection, or an `assistant`-only, `embedded-help`-only or
-missing-target record included anywhere, fails closed.
+with no ignored report. The exact shared projection constructor normalizes the
+full bundle once, applies the shared `public-docs` selector, proves projection
+completeness plus target-internal link/evidence/reference closure, and returns a
+distinct deeply frozen private-branded shape with the full source-set hash as
+provenance. One pure search-index build follows. The route graph and every
+static route reuse both objects; route member resolution uses exact
+`(docId, locale)` keys and version-range checks without another normalizer. An
+eligible record omitted from the projection, or an `assistant`-only,
+`embedded-help`-only or missing-target record included anywhere, fails closed.
 
 `docs/guide` records may publish to all three targets. The current compiler
 deliberately excludes `docs/develop`; adding a separate public-only developer
@@ -388,7 +397,9 @@ make output reproducible. The manifest must not contain build time from
 - **Auth/RBAC/CSRF/rate limit:** not applicable. Publication target validation
   replaces runtime authorization for public-safe content.
 - **Validation:** strict reject-unknown inputs and outputs; safe SemVer, locale,
-  slug, base path, origin, URL, manifest, headers, redirects, and search schemas.
+  slug, base path, origin, URL, manifest, headers, redirects, search, and
+  hydration-payload schemas; client islands mount only after canonical-byte and
+  domain-separated body-hash verification.
 - **Anti-abuse:** no public write; nonce/HMAC/reCAPTCHA are not applicable.
 - **Origin/redirects:** HTTPS origin only, no credentials/query/hash; redirect
   destination is generated from the same route graph, never user input.
@@ -422,31 +433,6 @@ export function readDocsPortalBuildConfigV1FromEnvironment(
   });
 }
 
-export function buildDocsPortalPublicProjectionV1(
-  bundle: DocsDistributionBundleV2,
-  selected: DocsPortalDocumentSelectionV1
-): DocsPortalPublicProjectionV1 {
-  const documents = selectDocumentsForPublicationTarget(
-    bundle.documents,
-    "public-docs"
-  );
-  assertNoEligiblePublicDocumentWasOmitted(bundle.documents, documents);
-  assertEveryDocumentHasPublicationTarget(documents, "public-docs");
-  const publicBundle = assertDistributionBundle({
-    ...bundle,
-    documents,
-  });
-  const exactSelection = assertDocsPortalDocumentSelectionV1(
-    selected,
-    publicBundle
-  );
-  return assertDocsPortalPublicProjectionV1({
-    publicationTarget: "public-docs",
-    bundle: publicBundle,
-    selected: exactSelection,
-  });
-}
-
 export function resolveDocsPortalOutputPath(publicPath: string): string {
   const normalized = assertDocsPublicPath(publicPath);
   return resolveConfinedIndexHtmlPath(
@@ -474,38 +460,53 @@ async function buildValidatedDocsPortal(
   config: DocsPortalBuildConfigV1,
   bundle: DocsDistributionBundleV2
 ): Promise<DocsPortalBuildReceipt> {
-  const inputBundles = [bundle];
-  const publicBundles = inputBundles.map((bundle) => ({
-    ...bundle,
-    documents: selectDocumentsForPublicationTarget(
-      bundle.documents,
-      "public-docs"
-    ),
-  }));
-  const graph = buildPublicRouteGraph(publicBundles, config.currentVersion);
-  const verifiedProjections = graph.canonicalRoutes.map((route) => ({
-    route,
-    publicDocs: buildDocsPortalPublicProjectionV1(
-      requireInputBundleForRoute(inputBundles, route),
-      route.selection
-    ),
-  }));
+  const projection: DocsPublicationProjectionV1<"public-docs"> =
+    createDocsPublicationProjectionV1({
+      sourceBundle: bundle,
+      publicationTarget: "public-docs",
+    });
+  const searchIndex = buildDocsSearchIndexV1(projection);
+  const graph = buildPublicRouteGraph(
+    projection,
+    config.currentVersion
+  );
   const writer = createHashedDeterministicWriter(
     "packages/docs-portal/dist"
   );
 
-  for (const { route, publicDocs } of verifiedProjections) {
+  for (const route of graph.canonicalRoutes) {
+    const document = resolveVersionedProjectionMemberV1(
+      projection,
+      route.documentKey,
+      config.currentVersion
+    );
     const publicPath = buildDocsPublicPath(route.publicRoute);
     const canonicalHref = buildDocsPublicHref({
       origin: config.publicOrigin,
       basePath: config.publicBasePath,
       route: route.publicRoute,
     });
+    const hydrationPayload = createDocsPortalHydrationPayloadV1({
+      page: buildPortalHydrationPageModel(config, document),
+      header: buildPortalHeaderClientModel(graph, route, config),
+      search: projectDocsPortalClientSearchIndexV1(searchIndex, {
+        productVersion: config.currentVersion,
+        locale: document.locale,
+      }),
+      theme: { storageKey: "coderso.docs.theme", initialMode: "system" },
+      mobileNavigation: buildPortalMobileClientModel(graph, route),
+    });
     const outputFile = resolveDocsPortalOutputPath(publicPath);
     await writer.write(
       outputFile,
       renderStaticPortalPage(route, {
-        publicDocs,
+        shellHtml: renderDocsPortalStaticShell({
+          projection,
+          documentKey: route.documentKey,
+          navigation: buildPortalNavigation(graph, route, config),
+          packagedVisualAssets: loadPackagedVisuals(document),
+          hydrationPayload,
+        }),
         canonicalHref,
         publicOrigin: config.publicOrigin,
         publicBasePath: config.publicBasePath,
@@ -514,18 +515,18 @@ async function buildValidatedDocsPortal(
   }
   for (const alias of graph.latestAliases) {
     const publicPath = buildDocsPublicPath(alias.publicRoute);
-    const publicDocs = requireCanonicalProjection(verifiedProjections, alias);
+    const canonical = requireCanonicalRoute(graph, alias);
     await writer.write(
       resolveDocsPortalOutputPath(publicPath),
       renderAliasFallback(alias, {
-        publicDocs,
+        canonicalStaticPage: requireRenderedCanonicalPage(canonical),
         publicOrigin: config.publicOrigin,
         publicBasePath: config.publicBasePath,
       })
     );
   }
 
-  await emitSearchIndexes(writer, verifiedProjections, {
+  await emitSearchIndexes(writer, projection, searchIndex, {
     publicOrigin: config.publicOrigin,
     publicBasePath: config.publicBasePath,
   });
@@ -540,10 +541,11 @@ async function buildValidatedDocsPortal(
 
 **Data flow:** read-only `docs:check` canonical-byte/source equality →
 config-only entry → exact owner hazard inspection → strict packaged-bundle load
-→ shared exact `public-docs` selector → filtered public bundle → safe route
-graph → L02 exact projection producer plus membership/target validation →
-projection-only shared shell/search/renderer → canonical HTML and static
-search/assets → SEO/deployment metadata → hash closure manifest.
+→ one shared projection constructor/full-input normalization/target closure
+proof → one pure search index → safe route graph and exact member keys → same
+server-side projection/static shell/renderer for every route → per-page
+canonical hash-bound island payload with no article state → canonical HTML,
+static search/assets, SEO/deployment metadata and hash-closure manifest.
 
 **Error handling:** a live/tampered journal, journal temp, backup/staging
 artifact, report-only state, invalid packaged bundle, invalid linked pair,
@@ -589,11 +591,24 @@ exact `packages/docs-portal/dist` target.
 - exact `coderso.docs-portal@v1` reject-unknown shape, source-hash identity,
   canonical route/file sorting, and no manifest self-field;
 - projection fixtures prove every eligible public record is retained exactly
-  once, the selected document joins exactly once, and omission plus
+  once and every route member key resolves to one exact record; omission plus
   `assistant`-only, `embedded-help`-only or missing-target leakage fails before
-  shell/search/render;
-- a static call-boundary guard proves shell/search/render receive only
-  `DocsPortalPublicProjectionV1`, never an input/full bundle;
+  shell/search/render; hostile constructor keys, structural/spread/serialized/
+  foreign brands, locale/non-member keys, malformed/out-of-range versions,
+  target absence and incomplete target closure reject;
+- call spies prove exactly one `createDocsPublicationProjectionV1()` and one
+  underlying full-bundle normalization/target selection, exactly one
+  `buildDocsSearchIndexV1()`, no filtered-bundle reconstruction or per-route
+  schema normalization, identical projection/index reference across routes,
+  and unchanged whole-corpus `sourceHash`;
+- a static call-boundary guard proves shell/search/renderer receive the exact
+  projection/member-key pair, while portal client entries contain no
+  projection constructor/brand, full document/corpus or renderer import;
+- each canonical/alias page embeds canonical
+  `DocsPortalHydrationPayloadV1` bytes bound by `bodySha256`; mutations,
+  unknown keys, noncanonical encoding/order and oversized payloads cause zero
+  island mounts. Snapshot/import tests prove article/navigation/TOC are static
+  and payload keys contain only header/search/theme/mobile-nav state;
 - internal/publication-target/secret/unsafe URL fixtures fail;
 - two builds with same epoch are byte-identical;
 - changed document affects only expected route/search/manifest hashes;
@@ -651,7 +666,7 @@ docker build --build-arg APP_VERSION=0.0.0-test \
 task548_docker_image="$(tr -d '\r\n' < "$task548_portal_real/docker-image-id")"
 [[ "$task548_docker_image" =~ ^sha256:[0-9a-f]{64}$ ]]
 docker run --rm --entrypoint bun "$task548_docker_image" --eval \
-  'const renderer = await import("@coderso/docs-renderer"); if (typeof renderer.DocsDocumentRenderer !== "function" || typeof renderer.selectDocumentsForPublicationTarget !== "function") throw new Error("docs_renderer_exports_invalid"); const bundleFile = Bun.file("/app/core/generated/docs/coderso-docs-v2.json"); if (!(await bundleFile.exists())) throw new Error("docs_bundle_missing"); const bundle = await bundleFile.json(); if (bundle.schema !== "coderso.docs-corpus@v2") throw new Error("docs_bundle_schema_invalid"); for (const path of ["/app/core/dist/admin/index.html", "/app/core/dist/site/manifest.json"]) if (!(await Bun.file(path).exists())) throw new Error(`docker_build_output_missing:${path}`);'
+  'const renderer = await import("@coderso/docs-renderer"); const projection = await import("@coderso/docs-renderer/projection"); if (typeof renderer.DocsDocumentRenderer !== "function" || typeof renderer.buildDocsSearchIndexV1 !== "function" || typeof renderer.selectDocumentsForPublicationTarget !== "function" || typeof projection.createDocsPublicationProjectionV1 !== "function") throw new Error("docs_renderer_exports_invalid"); const bundleFile = Bun.file("/app/core/generated/docs/coderso-docs-v2.json"); if (!(await bundleFile.exists())) throw new Error("docs_bundle_missing"); const bundle = await bundleFile.json(); if (bundle.schema !== "coderso.docs-corpus@v2") throw new Error("docs_bundle_schema_invalid"); for (const path of ["/app/core/dist/admin/index.html", "/app/core/dist/site/manifest.json"]) if (!(await Bun.file(path).exists())) throw new Error(`docker_build_output_missing:${path}`);'
 docker run --rm --entrypoint sh "$task548_docker_image" -ceu \
   'test -z "$(find /app -type d -name ".tmp" -print -quit)"
    test -z "$(find /app/core/generated/docs -type f \( -name "*.tmp*" -o -name "*.staged*" -o -name "*.backup*" -o -name "*promotion-transaction*" \) -print -quit)"'

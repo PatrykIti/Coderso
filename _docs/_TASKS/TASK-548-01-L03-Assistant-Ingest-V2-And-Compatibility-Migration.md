@@ -26,11 +26,14 @@ available. Do not add a runtime filesystem fallback, external docs request or
 new API route.
 
 Production owns the exact loader
-`loadPackagedDocsDistributionBundleV2()`. It reads and validates only the
-packaged `core/generated/docs/coderso-docs-v2.json` bytes shipped in the runtime
-image. It neither knows about nor reads the repository-only migration report,
-workspace promotion journal, staging paths, backups or `.tmp`. Explicit
-repository write tools own workspace-pair recovery through
+`loadPackagedDocsDistributionBundleV2(): Promise<DocsDistributionBundleV2>`.
+It reads, bounded-canonical-JSON parses and
+normalizes only the packaged
+`core/generated/docs/coderso-docs-v2.json` bytes shipped in the runtime image.
+There is no second `loadFixed*`/byte-loader service seam. It neither knows about
+nor reads the repository-only migration report, workspace promotion journal,
+staging paths, backups or `.tmp`. Explicit repository write tools own
+workspace-pair recovery through
 `recoverDocsWorkspaceArtifactPromotionV1()` or `bun run docs:recover`.
 Read-only checks use L02's hazard inspector and return
 `docs_compile_recovery_required` instead of recovering. Production startup and
@@ -123,9 +126,12 @@ query, hit, source, visual or example lookup.
 
 The evaluator first normalizes the exact owner
 `DocsPermissionRequirementV1 | null`. Null succeeds for a ready empty snapshot;
-`allOf` requires every canonical permission; `anyOf` requires at least one; and
-sole `["*"]` satisfies either non-null form. Empty authored non-null arrays,
-unknown permissions and authored `*` remain invalid.
+the normalized non-null shape is exactly
+`{ mode: "allOf" | "anyOf"; permissions: string[] }`. Mode `allOf` requires
+every entry in `permissions`; mode `anyOf` requires at least one; and sole
+`["*"]` satisfies either non-null form. The owner normalizer rejects an unknown
+mode before evaluation. Empty authored non-null arrays, unknown permissions and
+authored `*` remain invalid.
 
 Retrieval has no permissionless overload or default snapshot. It first
 normalizes the required snapshot, then reads only active `assistant`-target
@@ -197,13 +203,22 @@ That serialized land order removes all shared-file ownership.
 ## Implementation Pseudocode
 
 ```ts
+export async function loadPackagedDocsDistributionBundleV2(): Promise<DocsDistributionBundleV2> {
+  const bundleBytes = await readFile(
+    "core/generated/docs/coderso-docs-v2.json"
+  );
+  return normalizeDocsDistributionBundleV2(
+    parseBoundedCanonicalJson(bundleBytes)
+  );
+}
+
 export async function ingestDocsDistributionBundleV2(
-  bundleBytes: Uint8Array,
-  input: { actorId: string | null; expectedSourceHash?: string }
+  inputBundle: DocsDistributionBundleV2,
+  input: { actorId: string | null }
 ) {
-  const bundle = parseAndNormalizeDocsDistributionBundleV2(bundleBytes);
+  // Revalidate the typed loader/compiler result at the persistence boundary.
+  const bundle = normalizeDocsDistributionBundleV2(inputBundle);
   assertBundleAssetRefsArePackaged(bundle);
-  assertExpectedSourceHash(bundle.sourceHash, input.expectedSourceHash);
   const assistantDocuments = selectDocumentsForPublicationTarget(
     bundle.documents,
     "assistant"
@@ -242,6 +257,22 @@ export async function ingestDocsDistributionBundleV2(
   }
 }
 
+export async function ingestPackagedAssistantDocsV2(input: {
+  actorId: string | null;
+  force?: boolean;
+}): Promise<AssistantDocsIngestResult> {
+  const request = normalizePackagedAssistantDocsIngestInputV2(input);
+  return withSingleAssistantDocsIngestV2(
+    { force: request.force ?? false },
+    async () => {
+      const packaged = await loadPackagedDocsDistributionBundleV2();
+      return ingestDocsDistributionBundleV2(packaged, {
+        actorId: request.actorId,
+      });
+    }
+  );
+}
+
 export function normalizeAssistantDocsPermissionSnapshotV1(
   value: unknown
 ): AssistantDocsPermissionSnapshotV1 {
@@ -273,9 +304,10 @@ export function satisfiesAssistantDocsPermissionRequirementV1(
   const normalized = normalizeDocsPermissionRequirementV1(requirement);
   if (normalized === null || snapshot.permissions[0] === "*") return true;
   const granted = new Set(snapshot.permissions);
-  return "allOf" in normalized
-    ? normalized.allOf.every((permission) => granted.has(permission))
-    : normalized.anyOf.some((permission) => granted.has(permission));
+  if (normalized.mode === "allOf") {
+    return normalized.permissions.every((permission) => granted.has(permission));
+  }
+  return normalized.permissions.some((permission) => granted.has(permission));
 }
 
 export async function searchAssistantDocsDb(
@@ -304,17 +336,25 @@ export async function searchAssistantDocsDb(
 }
 ```
 
-**Data flow:** packaged bytes → strict v2 validation → expected-source-hash
-comparison before run/transaction → exact `assistant` target filter → complete
-in-memory chunk plan → transaction writes inactive snapshot → prune within that
-snapshot → activation plus successful run finalization in the same commit.
-Readers use only the active assistant-target snapshot. Startup compares the
-packaged bundle hash, not a Markdown-only filesystem fingerprint.
-Every startup/reindex calls `loadPackagedDocsDistributionBundleV2()`, validates
-the packaged bundle independently, and has no access to the repository
-bundle/report transaction. A runtime package containing the valid bundle and no
-`.tmp`, migration report, workspace journal, staging file or backup must start,
-hash-check and reindex successfully.
+`ingestPackagedAssistantDocsV2` is the sole runtime/reindex dependency. Its
+strict input is only `{ actorId, force? }`; `force` may reingest identical
+packaged bundle but never bypasses the single-ingest lock. It calls the exact
+zero-argument packaged loader once and passes that returned normalized bundle
+directly to the ingest core; it never accepts/reads settings, `sourceRoot`,
+repository Markdown, provider/model state, or a caller-supplied path/bytes.
+
+**Data flow:** actor/force metadata → the one fixed packaged loader performs
+bounded canonical parsing and strict v2 normalization → the ingest persistence
+boundary independently revalidates that normalized bundle → exact `assistant`
+target filter → complete in-memory chunk plan → transaction writes inactive
+snapshot → prune within that snapshot → activation plus successful run
+finalization in the same commit. Readers use only the active assistant-target
+snapshot. Startup compares the packaged bundle hash, not a Markdown-only
+filesystem fingerprint. Every startup/reindex calls
+`loadPackagedDocsDistributionBundleV2()` exactly once and has no access to the
+repository bundle/report transaction. A runtime package containing the valid
+bundle and no `.tmp`, migration report, workspace journal, staging file or
+backup must start, hash-check and reindex successfully.
 For a query, unknown server snapshot → exact snapshot/catalog normalization
 before DB access → metadata-only active-document authorization → authorized
 chunk query/ranking → localized hits. There is no permissionless retrieval
@@ -349,11 +389,13 @@ locale-bearing hit/source evidence and localized asset refs, startup hash
 skip/reindex, stale-row pruning, concurrent reindex
 serialization, rollback after mid-write failure and continued reads from the
 previous snapshot. Test the exact snapshot normalizer and required retriever
-signature: null plus ready empty-snapshot success, invalid empty non-null
-requirements, empty/partial protected snapshots, full `allOf`, every `anyOf`
-branch, exact `["*"]` full access, and rejection of missing/malformed/unknown-
-key/unknown-permission/duplicate/mixed-wildcard snapshots before the first DB
-query. Prove unauthorized rows never reach chunk selection, ranking, hits,
+signature: null plus ready empty-snapshot success, ready empty denial for every
+non-null requirement, invalid empty non-null requirements, partial/full
+`{ mode: "allOf", permissions }`, every
+`{ mode: "anyOf", permissions }` branch, exact sole `["*"]` full access, and
+rejection of unknown requirement mode plus missing/malformed/unknown-key/
+unknown-permission/duplicate/mixed-wildcard snapshots before the first DB query.
+Prove unauthorized rows never reach chunk selection, ranking, hits,
 sources or evidence metadata. Route/security/error-map coverage belongs only
 to the later TASK-548-03-L03 writer. Add target-leak fixtures proving assistant and
 multi-target documents persist/retrieve while `embedded-help`-only and
@@ -371,15 +413,24 @@ staging and backup files; prove startup/hash-skip/reindex succeeds from the
 packaged bundle alone and no runtime call attempts workspace recovery. Tamper
 or remove that packaged bundle and prove `assistant_docs_bundle_invalid`
 without a Markdown, report, journal or network fallback.
+For `{ force: false }` and `{ force: true }`, spies prove the exact packaged
+ingest API invokes only
+`loadPackagedDocsDistributionBundleV2(): Promise<DocsDistributionBundleV2>`
+once, passes its returned object to the independently normalizing ingest core,
+and never resolves a second loader, runtime settings, source roots, Markdown or
+a provider. Pass a malformed value cast as `DocsDistributionBundleV2` directly
+to the ingest core and prove it rejects before run allocation or any DB call.
 
 ## Sub-Tasks
 
 - [ ] Split the legacy DB schema coherently and add complete next-free migration
   artifacts.
 - [ ] Extract bundle loader/persistence modules and make reindex/startup ingest
-  the packaged v2 bundle atomically through
-  `loadPackagedDocsDistributionBundleV2()` without workspace transaction
-  dependencies.
+  the packaged v2 bundle atomically through the sole exact
+  `loadPackagedDocsDistributionBundleV2(): Promise<DocsDistributionBundleV2>`
+  seam; independently re-normalize its
+  result at the ingest persistence boundary without another load/read or
+  workspace transaction dependency.
 - [ ] Extend retriever row mapping for stable IDs and permission/visual/example
   metadata plus exact capability IDs; add the exact required server permission
   snapshot normalizer/evaluator and two-stage authorized retrieval without
