@@ -11,7 +11,24 @@
 **Started:** 2026-07-14
 **Fix Started:** 2026-07-15
 **Modularity Repair Revalidated:** 2026-07-17 — eight source-owner modularity repairs and exact gates passed.
-**Implementation Complete:** 2026-07-16 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Historical Implementation Complete:** 2026-07-16 — the then-assigned closure work was
+complete, but the later live-smoke repair superseded this as current completion
+authority. It cannot satisfy a current-state predicate.
+**Current Closure Repair Started:** 2026-07-23
+**Current Closure Repair State:** TASK-540-06/L01 has no current completion or
+revalidation receipt. Recover the ignored workflow authority; repair worktree-root and
+strict-scan authority, scroll-lock ownership, and phase-8 uncertain-CAS reconciliation;
+run the targeted gate and post-audits; then run full validation and one canonical smoke
+whose `dg-022` -> `dg-024` segment is the fail-closed real-browser diagnostic sub-proof.
+Only after the whole smoke, cleanup, and smoke-evidence audit pass may closure create
+changelog 1252 and its control evidence, rerun the complete full validation, close the
+family child-first and atomically, and run the final closure-drift/mechanical gate.
+Source-owner receipts remain valid unless fresh evidence names a source-owned defect.
+**Local Workflow Recovery Authority:** The exact ignored recovery set and its hashes are
+defined by TASK-540-06/L01. Recovering it is an execution prerequisite, not a tracked
+TASK-545 evidence-policy change; no recovered workflow or loose screenshot may be
+staged.
+**Final Executor SHA-256:** `4f21ec5d67a5ab7b810ad4fdb97dcc76ed05e69c652a43af0ab73db815396cff`
 **Historical Source Repair Revalidated (superseded for L03):** 2026-07-16 — expanded R01 composer/stored-duplicate work and the L04 compatibility correction received their then-exact receipts alongside L03 and TASK-540-05. The later overflow repair restored L03's canonical `Implementation Complete` and exact successor gate; this historical receipt still does not authorize closure. The 2026-07-19 Entry-correction receipt is current; fresh post-audit, full validation, live smoke, changelog, and closure remain pending.
 **Historical Pre-Overflow Post-Audit Orchestrator Revalidated:** 2026-07-17 — the real-source L04 test repair, L03 hygiene fixes, independently pinned aggregate expectation, fail-closed grounded-path exception, and mechanically invoked five-module L04 verifier passed focused static/test/line/self-test gates and two scoped zero-finding audits. The later L03 overflow repair superseded that prepared closure state.
 **Historical Pre-Overflow Subsequent Post-Audit Repair Revalidated:** 2026-07-17 — the final L04 consumer gate then enumerated all 15 files and passed 98/98; R03 fixture typing and receipt order passed 89/89; L03 single-read and bounded-media repairs passed 258/258; static, name/body, line, workflow, and diff gates were green at that checkpoint. The later L03 overflow repair superseded that behavior gate.
@@ -29,7 +46,11 @@
 **Historical Dirty-Flow Beforeunload Handoff Repair Implemented And Target-Revalidated:** 2026-07-20 — the canonical Start gate, clean five-lens post-audit, full `bun run test`, `precommit:check`, Admin build/boundary/bundle checks, `gates:coderso`, strict scan, and final workflow contracts passed before the helper-backed Playwright CLI smoke stopped at `dg-003-builder`. Read-only source/DB evidence proved Flow 4 correctly left the inline Entry draft dirty, `dg-001/002` reset only the backend, and the next hard navigation exposed a native `beforeunload` that the Playwright CLI retained as modal state. The 496-action manifest now records that causal handoff; only `dg-003-builder` proves the visible dirty badge, snapshots and temporarily replaces the exact CLI dialog listener set, accepts exactly one `beforeunload`, restores listener identity/order in `finally`, and then requires the exact builder URL plus one visible canvas. SHA-256 `b808b044b1f19d8b4cb7d3a103005b772208ecb6466c4ff1e74f7ea7b806e695` passed Prettier, syntax, the 109-case contract self-test, and the executor self-test with 496 actions, 159 runtime receipts, 54 cleanup actions, and 732 negative cases. The failed call removed its browser/process/port/task-traffic state but left nonce-scoped domain fixtures, so this receipt is historical.
 **Historical Failure-Cleanup Lifecycle Repair Implemented And Target-Revalidated:** 2026-07-20 — exact recovery removed only the failed nonce's one SEO row, two Screens, six Entries, one Media row and its SHA-256-pinned file, four content types, two users, and two role bindings; required settings and the accepted bootstrap recovery baseline remained byte-identical during recovery. The executor now treats the intentionally absent presentation override as early-released only after the complete exact create -> `ss-005` reset -> `ss-006` empty-proof chain, emits real provenance/delete/absence receipts against a fresh exact absence proof, and fails closed for missing authority or ambiguous rows. It also discovers the bounded exact Entry SEO row, models it as a child, and deletes/proves it absent before Entry cleanup. SHA-256 `1073a2d61d05874b6cdc2525d62e346a18049846452d160a30c965abd13bd100` passed Prettier, syntax, diff checks, and the executor self-test with 496 actions, 162 runtime receipts, 57 cleanup actions, and 748 negative cases. The next canonical run passed all gates and setup, then exposed the later `dg-017` settlement-proof race, so this receipt is historical.
 **Historical Builder-Discard Settlement Proof Repair Implemented And Target-Revalidated:** 2026-07-20 — the latest canonical Start gate, clean five-lens post-audit, complete repository validation, release gates, strict scan, and helper-backed Playwright CLI setup passed; four screenshots were captured before the smoke stopped at `dg-017-builder-confirm-proof`, and deterministic cleanup removed every task-owned fixture and screenshot. The action contract already required the records workspace, discarded draft, and exact visible `Record actions` control to be ready, but the executor sampled URL and navigation count immediately after the SPA discard click, omitted the workspace latch, and derived `draftDiscarded` from absence of the Screen ID in a canonical records URL that necessarily contains that ID. `dg-017` now waits up to 30 seconds for the canonical records URL plus exactly one visible positive-geometry control and exact absence of both builder canvas and dirty badge, fails closed on duplicates or timeout, and only then proves the one-navigation discard. Its compiled-source self-test pins those checks and forbids the invalid URL-substring derivation. SHA-256 `cf821d6604174bd61ab4ca432742ad7c665d56e04a975e3c32c3157863b855e4` passed Prettier, syntax, the 109-case contract self-test, and the executor self-test with 496 actions, 162 runtime receipts, 57 cleanup actions, and 748 negative cases. A fresh read-only audit found no other HIGH/MEDIUM issue in `dg-011`–`dg-018` and verified the product discard path plus regression tests are correct. The next canonical run passed `dg-017` and exposed the later tone-selection proof defect, so this receipt is historical.
-**Current Strict Dependency Audit Blocker Remediated And Target-Revalidated:** 2026-07-20 — closure validation surfaced new HIGH advisories in development-toolchain transitives and blocked completion of the strict security scan. TASK-540 closure validation owns the minimal dependency-only repair: root devDependency `brace-expansion` exact `1.1.16`, plus exact root overrides `js-yaml` `4.3.0`, `shell-quote` `1.9.0`, and `tar` `7.5.19`; the separately required `brace-expansion` 5 line remains `5.0.7`. `bun install --frozen-lockfile` and `bun audit --audit-level high` passed after lock regeneration. No scanner suppression, allowlist, or semantic-release/concurrently/eslint/minimatch/toolchain bump was added. This is only a targeted dependency receipt: the fresh full strict scan, canonical audit and full validation, live smoke, changelog, and closure remain mandatory.
+**Historical Pre-TASK-546 Strict Dependency Repair:** 2026-07-20 — TASK-540 then
+remediated development-toolchain advisories with the exact versions present at that
+checkpoint. TASK-546 later superseded those versions and owns the current dependency
+graph. TASK-540 must preserve the landed `package.json`/lockfile bytes and prove a fresh
+zero-finding strict scan; it must not restore or validate the historical pins.
 **Historical Tone-Selection Visible-Effect Proof Repair Implemented And Target-Revalidated:** 2026-07-20 — the next canonical Start gate, all five fresh post-audit lenses, complete repository validation, release gates, and strict security scan passed. The helper-backed Playwright CLI smoke passed the repaired `dg-017`, captured four screenshots, then stopped at `dg-022-tone-muted`; deterministic cleanup removed every task-owned fixture and acquired TASK-540 screenshot. Three independent read-only traces found no product defect: the typed Select -> override draft -> dirty state -> renderer path and its Vitest regressions are intact. The defect was the generic click executor, which neither owned the portaled Radix menu nor waited for its advertised muted/dirty visible effect. Both `dg-021`/`dg-022` and the sibling `rc-015`/`rc-016` became exact specializations requiring the selected target, visible positive-geometry panel/trigger/menu/option, `aria-controls` menu ownership, retained selection, exact content and presentation dirty badges, closed-menu settlement, the presentation-override marker, and a real computed-color transition. Frozen SHA-256 `9400241963457929fad02edcc1c3d841edec2db78a5f2abcc2a65a7b611e5b6d` passed Prettier, syntax, the 109-case contract self-test, and the executor self-test with 496 actions, 162 runtime receipts, 57 cleanup actions, and 916 negative cases. The next canonical smoke exposed the post-fill blur race at `dg-021`, so this receipt is historical.
 **Historical Post-Fill Blur And Portaled Tone Settlement Repair Implemented And Target-Revalidated:** 2026-07-21 — the subsequent canonical Start gate, all five post-audit lenses, complete repository validation, release gates, and strict security scan passed; the helper-backed Playwright CLI smoke passed `dg-017`, captured four screenshots, then stopped at `dg-021-tone-open`, and deterministic cleanup removed every nonce-owned fixture and acquired screenshot. Two independent read-only source traces proved the product Select, override, renderer, and selection contracts correct and identified an executor race: `dg-020` used `fill()`, while `InlineEditWrapper` commits only on blur, so the first Tone interaction both committed the content draft and opened the portaled Radix menu across a rerender. Both `dg-021` and sibling `rc-015` then explicitly blurred the exact selected textbox, waited for the visible dirty settlement, and reacquired the panel, target, handle, textbox, trigger, and portaled menu. Frozen SHA-256 `72e5f16fcc9fa34b4b9acde85d0304c0b947d2ba30f63809fdd55db91ea0a996` passed Prettier, syntax, the 109-case contract self-test, and the executor self-test with 496 actions, 162 runtime receipts, 57 cleanup actions, and 974 negative cases. The following diagnostic helper-backed smoke returned `200` for Admin and front, completed setup, captured five screenshots, again stopped at `dg-021-tone-open`, and completed exact fixture/screenshot/server cleanup. That run proved the commit still belonged to the wrong action, so this receipt is historical.
 **Historical Atomic Content-Commit And Tone Diagnostic Repair Implemented And Target-Revalidated:** 2026-07-21 — source tracing found the remaining contract drift one action earlier: `dg-020-headline-fill` and sibling `rc-014-unrelated-fill` promised `value -> content dirty` but used the generic fill executor and returned while the draft still existed only in the focused DOM node. Because `InlineEditWrapper` commits on blur, the next action could encounter a refreshed or hydrated textbox and never obtain dirty authority. Those exact two fill actions now atomically require unique visible positive-geometry textbox, selected root, and pressed handle; fill the exact expected draft; prove exact text plus active focus; blur; reacquire every locator; and require the exact non-focused draft, retained selection, and one visible positive-geometry `Unsaved changes` badge before returning. `dg-021` and `rc-015` contain neither fill nor blur: they consume that settled draft/dirty authority, capture baseline color, then prove the visible positive-geometry Radix menu, Muted option, reciprocal `aria-controls`/id, and expanded state. A closed four-class diagnostic for only those two open actions distinguishes target, draft/dirty, trigger, and portal settlement through byte-identical frames, a private WeakMap, the existing 256-byte one-shot post-cleanup channel, and no raw error/DOM parsing. Three fresh current-byte audits passed the DOM/runtime, action-ownership/hydration, and diagnostic-security/mutant lenses with no finding. Frozen SHA-256 `c0589a50484357209b506865ca449cf6399654ffb77a1f1c3bfd53dace45b533` passed Prettier, syntax, the 109-case contract self-test, and the executor self-test with 496 actions, 162 runtime receipts, 57 cleanup actions, and 1239 negative cases. The next helper-backed diagnostic smoke passed `dg-020` and `dg-021`, captured five screenshots, then stopped at `dg-022`; exact cleanup removed every fixture, screenshot, helper, browser, and server, so this receipt is historical.
@@ -40,6 +61,13 @@
 **Historical Select-Teardown, Physical Dirty-Navigation, And Phase-3 Attribution Repair Implemented And Target-Revalidated:** 2026-07-21 — the next helper-backed smoke again passed setup and the Tone visible-effect flow, then emitted exact terminal `{failedActionId:"dg-024-entry-nav-cancel",failureClass:"click_failed",cleanupPhase:3,cleanupFailureClass:"phase_failed"}`. Read-only forensics found one exact nonce family with four content types, six Entries, two Screens, one Media row and its 68-byte SHA-256-pinned file; SEO, overrides, revisions, settings, synthetic users, sessions, audit/access rows, and every other task-owned surface were absent, global settings matched baseline, and the sole active canonical admin remained intact. A literal-ID, no-wildcard, no-user-delete, no-follow cleanup removed exactly that `4/6/2/1 + file` family and a fresh dry-run proved `0/0/0/0 + no file`. Source tracing found no product navigation defect: the Tone-select latch could return before Radix released its global pointer/scroll lock, while dirty-navigation visibility/geometry did not prove event delivery and its catch conflated pre-dispatch failure with post-dispatch auto-wait. Exactly two Tone-select actions now require every Select content node absent plus body scroll/pointer unlock; exactly five dirty-navigation actions require body unlock, a center-point physical hit test, no pre-existing named dialog, `noWaitAfter`, and the full stable dialog postcondition even after click throws. Their closed browser union adds only `pointer_locked` and `target_intercepted`. Phase 3 now distinguishes stage, dependency, provenance, delete, and absence failures while preserving higher-priority plan/Admin classes. A fresh cleanup-integrity audit found that four real Admin/plan/phase/final aggregation seams were not mutation-guarded; hermetic production-path evidence and four source mutants now bind those seams through the exact bounded, private-marker-free diagnostic. Frozen SHA-256 `5b0de7a899f17148e23272a83d69a5ce148bf3477adc1aed6db3e80b65d039b4` passes Prettier, syntax, and the executor self-test with 496 actions, 177 runtime receipts, 72 cleanup actions, and 2544 negative cases. Fresh read-only re-audits, one diagnostic helper-backed smoke, then the canonical audit/full-validation/smoke, changelog, and closure remain mandatory.
 **Historical Stable Select Handoff, Latest-Target Diagnostics, And Hash-Only Cleanup Receipts Implemented And Target-Revalidated:** 2026-07-21 — the next helper-backed diagnostic smoke passed setup and the Tone visible-effect flow, then emitted exact terminal `{failedActionId:"dg-024-entry-nav-cancel",failureClass:"pointer_locked",cleanupPhase:3,cleanupFailureClass:"persistent_provenance_failed"}`. Exact nonce `wf540-fb30befde747` residue was four content types, six Entries, two Screens, one Media row, and its exact 68-byte file; a literal-ID, no-wildcard, no-user-delete, no-follow cleanup script with SHA-256 `821fe5d6ecf122edf068d8b051c3ac9c903faecc19f7d84399a244e56dbf2b1e` removed exactly that `4/6/2/1 + file` family, and two consecutive post-apply dry-runs proved `0/0/0/0 + no file` while preserving the canonical admin and proving no FK blocker. No TASK-540 screenshot, browser/server process, or owned port remained. Three independent read-only traces found no product defect: Tone selection used a mixed-time cached teardown sample, dirty-navigation retained a sticky historical blocker instead of the latest poll state, and each successful cleanup Admin GET carried a non-empty `Buffer` into recursive freeze after provenance but before DELETE; the same latent defect also affected DELETE and 404 absence receipts. The executor now requires the full Tone visible-effect and atomic Select/body teardown postcondition continuously for at least 600 ms across at least two samples plus a final atomic handoff sample, reports one of seven exact Tone-select classes, recomputes each target-acquisition poll from the latest one of five blocker classes within the closed twelve-class dirty-navigation action union, and hashes bounded non-empty authoritative response bytes before discarding the raw `Buffer`; only validated lowercase SHA-256 enters frozen cleanup receipts, while exact ID/media key/URL and fresh absence proofs remain unchanged and `deepFreezeExact` is not weakened. Hermetic real Admin P/C/A tests and mutants cover legal Screen/Entry representation drift, wrong ID/key/URL, exact attempted-request/no-DELETE/zero-receipt projection, accepted one-byte/exact-MAX boundaries, non-Buffer/empty/oversized byte rejection, unconditional latest-state assignment, full dwell reset/body/geometry predicates, relock timelines, and raw-Buffer/hash regressions. Product source remains untouched by this repair. Frozen executor SHA-256 `6accccffc88371978f2c3ad1727dbbf96aa2473802ea583d14cbc0c4ea548001` passes Prettier, syntax, diff checks, and the full self-test with 496 actions, 177 runtime receipts, 72 cleanup actions, 26 captures, and 2668 negative cases. Fresh read-only re-audits, one diagnostic helper-backed smoke, then the canonical audit/full-validation/smoke, changelog, and closure remain mandatory.
 **Current Scroll-Lock Ownership And Bootstrap-Restore Uncertainty Repair Required:** 2026-07-21 — the next helper-backed smoke reached the same Entry dirty-navigation boundary and emitted exact terminal `{failedActionId:"dg-024-entry-nav-cancel",failureClass:"scroll_locked",cleanupPhase:8,cleanupFailureClass:"phase_failed"}`. A post-exit read-only absence audit proved every TASK-540 nonce-shaped resource, owned file, screenshot, helper/browser/server process, and owned port absent, but phase 8 did not return accepted restoration evidence before the executor exited; the private preflight bootstrap timestamp baseline and newest smoke-owned pair are no longer available, so the final `lastLoginAt`/`updatedAt` restoration outcome is unprovable. This consumed run must not be recovered by guessed timestamps or any post-exit write and does not authorize closure. Exact source/dependency tracing proved `dg-022` handed off one final atomic unlocked sample after its full 600 ms dwell, `dg-023` performed read-only DOM/URL observations, and `dg-024` reported only its last completed target poll rather than a continuous ten-second lock; no product or Radix reopen path is evidenced before the unperformed navigation click. The repair contract therefore adds bounded cross-CLI lock-owner observation plus phase-8 uncertain-CAS reconciliation and their exact tests/mutants while keeping product source unchanged absent named-owner evidence. The frozen executor SHA-256 is intentionally not advanced by this contract-author turn. Fresh read-only audits, targeted revalidation, one diagnostic helper-backed smoke, then the canonical audit/full-validation/smoke, changelog, and closure remain mandatory.
+**Current Repair Execution Order:** The final sentence of the 2026-07-21 trigger
+evidence describes its then-planned sequence and is historical. The authoritative
+sequence is the `Current Closure Repair State` at the top of this file: current workflow
+repairs and targeted gate -> post-audits -> full validation -> one canonical smoke with
+the embedded diagnostic sub-proof -> smoke-evidence audit -> changelog/control
+preparation -> complete full-validation rerun -> child-first atomic closure -> final
+closure-drift/mechanical gate.
 **Changelog:** 1252 (pinned; closure only)
 **Changelog File:** `_docs/_CHANGELOG/1252-2026-07-14-task-540-custom-screens-functional-and-data-integrity-remediation.md`
 
@@ -58,12 +86,16 @@ test/docs/smoke-feasibility/task-graph integrity before runtime starts; the sepa
 smoke-evidence audit runs only after the live flows. The pre-smoke lenses run strictly
 sequentially, and the first dispatch/transport/schema failure stops later lens launch with
 no same-invocation retry; final closure-drift lenses use the same boundary. A missing lens
-result is not a pass. Every verified HIGH, MEDIUM, or LOW finding blocks this task's
-closure unless it is explicitly split into a non-blocking follow-up with rationale. This
-subtask owns no production source. Its only shared-suite exception is the verified
+result is not a pass. Every verified HIGH or MEDIUM finding blocks closure without
+exception. A LOW blocks unless it is the exact already-approved TASK-9999-01-L01
+finding, with its evidence, backlink, and zero-impact eligibility reverified exactly as
+TASK-540-06/L01 specifies; no new follow-up created during closure is non-blocking. This
+subtask owns no production source. Its shared-suite exceptions are the verified
 full-gate state-isolation repair in `tests/unit/settings/settingsService.test.ts` and
-`tests/unit/settings/storageSettings.test.ts`; no source-owner behavior assertion may be
-weakened or re-baselined.
+`tests/unit/settings/storageSettings.test.ts`, plus the L01-delegated successor update
+to `tests/unit/workflows/task540SmokeExecutorSecurity.test.ts` for dedicated-worktree
+root and zero-finding strict-scan regressions while preserving every TASK-546 security
+assertion; no source-owner behavior assertion may be weakened or re-baselined.
 Flow 6 freezes the complete persisted reset draft at `rc-002`, then the complete
 post-intentional-edit current draft at `rc-017`; `rc-032` derives relation before
 values only from `rc-002`, exhaustively enumerates each current picker DOM option, and
@@ -77,7 +109,7 @@ baseline while the local presentation bytes remain preserved and dirty; no
 
 | ID | Title | Ownership | Status |
 |---|---|---|---|
-| TASK-540-06-L01 | Seven builder-save-entry flows and closure | one new aggregate test, two exact shared-settings hygiene repairs, docs, smoke evidence, TASK-540 closure metadata | 🚧 In Progress |
+| TASK-540-06-L01 | Seven builder-save-entry flows and closure | one new aggregate test, two exact shared-settings hygiene repairs, one successor workflow-security test update, docs, smoke evidence, TASK-540 closure metadata | 🚧 In Progress |
 
 TASK-540-06-L01 deliberately retains the historical physical filename
 `TASK-540-06-L01-Six-Builder-Save-Entry-Flows-And-Closure.md` from the original
@@ -91,7 +123,13 @@ Before the current corrective chain, closure consumed the exact source-owner seq
 540-04-L04 → 540-05-L01 boundary → 540-05-L02`. The prepared resolver's ten-landed-leaf
 state is historical evidence, not current closure authority. The corrective source/test
 commits and exact R01 → R03 → L03 → L04 → L01 owner re-gates are complete. The
-executable frontier is the fresh clean post-audit; only its pass permits full validation and smoke. The
+executable frontier is local workflow recovery; dedicated-worktree-root, zero-finding
+strict-scan, lock-owner, and uncertain-CAS repair; then the targeted gate, fresh clean
+post-audits, full validation, one canonical smoke with its embedded diagnostic
+sub-proof, smoke-evidence audit, changelog 1252/control preparation, the complete
+full-validation rerun, child-first atomic family closure, and final
+closure-drift/mechanical gate in that order. Only the current
+repair gate and post-audit pass permit full validation and smoke. The
 TASK-540 root owns the canonical 15-row pre-split evidence table. No owner, count, or
 SHA-256 may be dropped; every final production, test, and test-support record is emitted
 as `{ path, owner, lines, sha256 }` from the full baseline history plus current tracked
@@ -102,21 +140,25 @@ exemptions. A violation is blocking and cannot become a LOW or TASK-9999 item. E
 the ten split test families runs every resulting suite alone, runs the family together,
 and preserves the exact sorted multiset of all 347 expanded pre-split names. Those
 modularity prerequisites remain durable. After the corrective chain and its fresh clean
-five-lens post-audit, closure runs the exact 64-Vitest/18-Bun matrix. Its ordinary closure-owned test is
+five-lens post-audit, closure runs the exact 64-Vitest/18-Bun product matrix. Its
+ordinary closure-owned test is
 `tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx`; the later verified
-pre-smoke repair additionally owns only the two exact shared-settings hygiene suites named
-above. Changelog 1252 stays
+pre-smoke repair additionally owns the two exact shared-settings hygiene suites and the
+successor `tests/unit/workflows/task540SmokeExecutorSecurity.test.ts` update named
+above. The focused workflow-security suite is a targeted/full-repository security check
+outside the frozen 82-file product matrix. Changelog 1252 stays
 pinned and is created only after these gates, post-audit, full validation, and runtime
 smoke succeed.
 
 ## Orchestrator-only smoke helpers
 
 The root-local orchestrator, outside every closure-agent `allowedFiles` list, solely owns
-`_docs/_workflows/task-540-smoke-contract.mjs` and
-`_docs/_workflows/task-540-smoke-executor.mjs`, plus the repo-owned
-`_docs/_workflows/task-540-smoke-host.mjs` and the root-local
-`_docs/_workflows/task-540-local-orchestrator.mjs` Node host. They are task-workflow
-infrastructure,
+the current repair bytes in `_docs/_workflows/task-540-smoke-contract.mjs`,
+`_docs/_workflows/task-540-smoke-executor.mjs`,
+`_docs/_workflows/task-540-smoke-host.mjs`,
+`_docs/_workflows/task-540-local-orchestrator.mjs`,
+`_docs/_workflows/task-540-implement.mjs`, and
+`_docs/_workflows/task-540-test-name-contract.mjs`. They are task-workflow infrastructure,
 not production/source files and not closure-owned tests or docs. The contract helper
 exports only `buildTask540SmokePlan({nonce})` and
 `runTask540SmokeContractSelfTest()`; it is import-side-effect-free, uses no environment,
@@ -134,7 +176,13 @@ receipt/hash, and keeps its real/fake capability boundary private.
 The local-orchestrator host is the runner-compatibility boundary for Claude Code
 Workflow `2.1.210`, whose sandbox exposes no Node APIs or module loading. It accepts
 only `--self-test` or `--run`, injects only the implementation orchestrator's
-`agent`/`phase` bindings, and sends prompts over stdin. Each agent child receives only
+`agent`/`phase` bindings, and sends prompts over stdin.
+The host, implementation workflow, and test-name workflow independently derive their
+dedicated-worktree root from `import.meta.url`, require realpath/Git-top-level/common-dir
+agreement and exact branch `feature/tasks-fixes`, and accept no cwd/argv/env or hardcoded
+checkout-root override. All prompt and deny paths are built from that same authority; the
+complete fail-closed contract and mutants are owned by TASK-540-06/L01.
+Each agent child receives only
 the explicit non-secret OS allowlist (`HOME`, `HOSTNAME`, locale, `NO_COLOR`, `PATH`,
 `TERM`, `USER`) plus fixed `CI=true` and `GIT_OPTIONAL_LOCKS=0`; database/Postgres,
 SSH/Git-helper, cloud/profile, Kubernetes, browser/MCP, provider-key, credential,
@@ -281,10 +329,12 @@ ambiguous from those counts; malformed syntax, missing authority, and overflow r
 their own classes. The result describes only the final completed poll, never a
 continuous ten-second lock. Exact-frame, bound/order/count/owner, final-versus-sticky,
 disconnect, malformed/ambiguous, generic-class, and raw-field mutants are mandatory.
-One real-browser regression must execute the installed Radix Select/RemoveScroll and
-exact product-panel `dg-022` -> read-only `dg-023` sequence across both CLI gaps and
-prove no live lock owner before `dg-024`. Product source stays unchanged until this
-bounded evidence names a product-owned layer.
+One real-browser regression inside the single canonical executor call must execute the
+installed Radix Select/RemoveScroll and exact product-panel `dg-022` -> read-only
+`dg-023` sequence across both CLI gaps and prove no live lock owner before `dg-024`.
+It is the embedded diagnostic sub-proof, not a second smoke invocation or partial
+evidence source. Product source stays unchanged until this bounded evidence names a
+product-owned layer.
 Each invocation
 starts browser authority at most once and keeps deterministic route, browser, resource,
 access-log, process, and port cleanup plus absence proof inside the executor; a failed
@@ -584,11 +634,13 @@ bytes plus `dev/ino/mode/nlink/size/mtime/ctime` for the initial `.env` parse, i
 worktree, untracked set, every prompt-carried TASK-540 status file (including Git-clean
 files), and all root `.env*` projection at every command,
 agent, smoke, and terminal workflow boundary; `.env*` means every root name beginning
-`.env`, with a 64-entry bound. The smoke executor is dynamically loaded
-once only after exact canonical-file identity and SHA-256
-`6accccffc88371978f2c3ad1727dbbf96aa2473802ea583d14cbc0c4ea548001` pass; the same
-authority must match after import, after full validation, and immediately before the
-one-shot call.
+`.env`, with a 64-entry bound. The smoke executor is dynamically loaded once only after
+the exact no-follow file identity and the one final post-repair SHA-256 shared verbatim
+by TASK-540-06/L01 and `FROZEN_SMOKE_EXECUTOR_SHA256` pass. The recovered and historical
+hashes are not live authority. The final identity/hash must still match after import,
+after full validation, and immediately before the one-shot call; any subsequent executor
+or implement-workflow byte change invalidates finalization and restarts the targeted
+gate.
 Before any closure status mutation, the evidence owner writes and byte-verifies one
 strict canonical control anchor in the existing changelog index plus changelog 1252's
 redacted smoke block. The anchor binds its evidence SHA-256, generation, board baseline,

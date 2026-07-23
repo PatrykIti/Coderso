@@ -10,6 +10,27 @@
 **Started:** 2026-07-13
 **Modularity Repair Revalidated:** 2026-07-17 — eight source-owner modularity repairs and exact gates passed.
 **Repair Started:** 2026-07-16
+**Current Closure Repair Started:** 2026-07-23
+**Current Closure Repair State:** The source-owner leaves and their latest exact owner-gate
+receipts remain valid, but TASK-540-06/L01 has no current completion or revalidation
+receipt. The active work is limited to dedicated-worktree root authority, zero-finding
+strict-scan enforcement, the bounded scroll-lock-owner timeline, phase-8 uncertain-CAS
+reconciliation, their workflow tests/mutants, the targeted gate and fresh post-audits,
+and then one canonical validation/smoke/closure sequence containing the embedded
+`dg-022` -> `dg-023` -> `dg-024` sub-proof. The 2026-07-16 closure completion receipt
+is historical and cannot satisfy any current-state predicate.
+**Current Closure Board Checkpoint:** Merge HEAD
+`3664d4890e05060fff879fd82b91379aa8bda2ca` synchronized `feature/tasks-fixes`
+with `feat/implementations` and observed To Do 383 / In Progress 7 / Done 3116.
+TASK-540's isolated expected delta is 383 / 6 / 3117, but this is only a
+checkpoint: closure must read the board and changelog index fresh and derive the same
+single-family delta from whatever unrelated agents have landed.
+**Local Workflow Recovery Authority:** The ignored operational workflow set is recovered
+locally, never staged, from commit
+`3d5604ecfdeaa9c4d5ef32c1314b838a793441ad`. Its verified recovery hashes and the
+current mismatch/final repinning rules are owned in TASK-540-06/L01. TASK-545 retains
+exclusive ownership of any future tracked-workflow or durable screenshot-manifest
+policy.
 **Historical Pre-Overflow Repair Reason:** The final sequential post-audit stopped before smoke on evidence-backed drift. R01 owned scoped malformed-binding recovery, one-pass legacy orphan filtering, collision-safe id-less legacy generation, explicit-ID-only Assistant composition, stored duplicate-ID fail-closed proof, and metadata-PATCH preservation. L03 owned single-media override eligibility across service and Entry Editor plus canonical import placement. L01 required every Canvas region name, L02 completed both sides of the authenticated A/B self-scope proof, and L04 owned the binding-flow expectation that consumes the shared binding-ID helper. Earlier R01/L02/R03 strict-ID, Tab-label, and zero-Tabs repairs remain durable; the later repair reason at that checkpoint was the L03 overflow state recorded below.
 **Historical Pre-Modularity Repair Revalidation:** 2026-07-16 — against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus the exact dirty paths recorded by each leaf, core/root static gates passed; expanded R01 changed suites passed 81/81, six-file Vitest 176/176, route/Assistant Bun 93/93 with 576 expectations, isolated route 20/20 with 118 expectations, and document ops 11/11; L03 then retained Vitest 258/258, cacheBus 22/22, and the then-current pre-split routes 20/20 with 118; L04 passed isolated 3/3 and its ten-file matrix 98/98; TASK-540-05-L01 then retained 16/16; TASK-540-05-L02 then retained Vitest 66/66, Bun 27/27 with 165, and user-settings 10/10 with 64; DB preflight, workflow self-tests, and diff checks passed. R01/L03 route evidence is pre-modularity-split only. This historical targeted receipt was superseded by later owner receipts, themselves superseded for L03's behavior gate by the later overflow repair, and claims no closure result.
 **Historical Pre-Overflow Post-Audit Repair Revalidated:** 2026-07-17 — after the third one-shot post-audit stopped before full validation and smoke, L04 switched from synthetic source projection to genuine production-file assertions and gained an exact five-module structural verifier; L03 removed a dead fixture and tautological continuation comparisons; closure pinned the aggregate expected ID independently and narrowed the grounded-path false-positive exception without weakening non-negotiable sensitive-path rejection. Focused static/test/line/workflow gates passed, and two fresh scoped audits reported 0 HIGH/MEDIUM/LOW findings. At that checkpoint the mandatory fresh five-lens family post-audit and all later closure gates remained pending; the later L03 overflow repair superseded its behavior-gate state.
@@ -271,7 +292,12 @@ TASK-540-06-L01 closure
 The current remaining order is exactly:
 
 ```text
-fresh clean five-lens post-audit → full validation → runtime smoke → TASK-540-06-L01 closure
+contract audit → local workflow recovery → worktree-root/strict-scan repair →
+scroll-lock-owner repair → phase-8 uncertain-CAS repair → targeted revalidation →
+fresh clean five-lens pre-smoke post-audit → canonical full validation → one canonical
+runtime smoke containing the embedded dg-022 → dg-023 → dg-024 diagnostic sub-proof →
+smoke-evidence audit → changelog 1252/control preparation → complete full-validation
+rerun → child-first atomic TASK-540 closure → final closure-drift/mechanical gate
 ```
 
 The ten protected pre-split test families preserve the exact sorted multiset of all
@@ -304,8 +330,9 @@ the completed modularity repair, the finer-grained mandatory owner order was
 already landed and had no modularity writer. At that historical checkpoint every
 predecessor was receipted and `540-06-L01 closure` was the only frontier. The later
 overflow repair temporarily superseded that frontier; `540-04-L03` has now revalidated
-under its exact generation/token receipt, so a fresh five-lens post-audit must pass
-before closure may resume.
+under its exact generation/token receipt. That historical frontier does not prescribe
+the current repair sequence; the current closure-repair state and TASK-540-06/L01
+execution-order contract above supersede it.
 Earlier corrective work across
 `540-01-L01 → 540-03-L01 → 540-04-L01 → 540-04-L03 → 540-05-L02` is durable in
 the affected task files' historical revalidation/post-audit metadata; no
@@ -381,17 +408,16 @@ historical, while its 2026-07-19 Entry-correction receipt is current. The earlie
 historical prerequisites.
 After closure, that exact-finding owner additionally receives only the TASK-540 root,
 TASK-540-04 child, and L03 leaf task contracts for evidenced prose; status transitions
-remain separate task-state mutations. TASK-540-06-L01 remains deliberately active with
-the exact deterministic `Revalidation Passed` value `pre-closure remediation /
-fix-started 2026-07-15 / gate green`, representing the
-`reserved-pre-closure-regated` sibling while L03 was the sole repair leaf. That reserved
-gate did not make L03 landed or satisfy its then-pending owner gate; L03's 2026-07-18
-overflow revalidation did so at that checkpoint and is now historical. The prior
-modularity receipt remains historical split evidence, TASK-540-06-L01 has no `Completed`,
-and the already-landed R01 → R03 → L03 → L04 → L01 chain now has current owner-gate
-receipts in dependency order. Closure resumes after a fresh clean post-audit. The pre-fix
-repository-wide `bun run test` command still requires a fresh parent rerun; no full-suite
-or live-smoke pass is claimed here.
+remain separate task-state mutations. TASK-540-06-L01 remains deliberately active. Its
+deterministic `pre-closure remediation / fix-started 2026-07-15 / gate green` value is
+historical `reserved-pre-closure-regated` evidence from when L03 was the sole repair
+leaf; it is not a current `Revalidation Passed` field and cannot satisfy a current-state
+predicate. The prior modularity receipt remains historical split evidence,
+TASK-540-06-L01 has no current `Implementation Complete`, `Revalidation Passed`, or
+`Completed`, and the already-landed R01 → R03 → L03 → L04 → L01 chain alone retains
+current owner-gate receipts in dependency order. Closure resumes only after the complete
+current repair order above. The pre-fix repository-wide `bun run test` command still
+requires a fresh parent rerun; no full-suite or live-smoke pass is claimed here.
 Leaves have exclusive source ownership; any shared block data/action/DOM-id
 shape is defined by 540-01 and consumed verbatim. TASK-540-03 owns the pure renderer's
 optional UUID→URL map prop; TASK-540-04-L03 exclusively threads and populates it through
@@ -423,8 +449,9 @@ TASK-540-05-L02 repairs had matching receipts; expanded R01 and L04 retain their
 the later R01 stored-read repair gate, the resolver again reported all ten leaves landed;
 the subsequent five-lens intervention landed R01 → R03 → L03 → L04 in dependency
 order, followed by the L01 compatibility test. Their fresh owner re-gates and matching
-current receipts now pass; a clean post-audit remains before the already-regated closure
-leaf returns to the closure frontier. L03's earlier overflow and
+current receipts now pass; the closure leaf is not regated and returns to the closure
+frontier only after its current workflow repairs, targeted gate, and clean post-audit.
+L03's earlier overflow and
 single-versus-multiple media receipts are historical. The matching
 `_docs/CMS_API.md` update is already landed and remains read-only while closure validates
 and consumes it.
