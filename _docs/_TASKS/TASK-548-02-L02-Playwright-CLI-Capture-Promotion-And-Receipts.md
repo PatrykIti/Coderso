@@ -58,6 +58,16 @@ The public CLI emits one bounded canonical JSON object and no unstructured
 browser output:
 
 ```ts
+type CaptureResult = {
+  docId: string;
+  locale: string;
+  sectionId: string;
+  visualId: string;
+  runId: string;
+  rawPath: string;
+  rawReviewedSha256: string;
+};
+
 type DocsVisualCaptureCliResultV1 = {
   schema: "coderso.docs-visual-capture-result@v1";
   visualId: string;
@@ -66,6 +76,14 @@ type DocsVisualCaptureCliResultV1 = {
   rawReviewedSha256: string;
 };
 ```
+
+`CaptureResult` is the exact internal producer/CI/migration result. It returns
+the complete validated localized identity and the caller-owned `runId`
+unchanged, followed by only the confined raw path and reviewed-byte digest.
+Identity normalization is validation-only: noncanonical input is rejected
+rather than rewritten. The public CLI result is an intentional redacted
+projection of that internal value; it does not expose `docId`, `locale` or
+`sectionId`, and no other internal field may be added to its JSON.
 
 `rawPath` is a normalized repository-relative path confined below the generated
 run root. The exact generated `runId` is returned unchanged so the review step
@@ -240,11 +258,23 @@ The image/receipt wrapper preserves original, recovery and cleanup diagnostics.
 ## Implementation Pseudocode
 
 ```ts
+function projectDocsVisualCaptureCliResultV1(
+  captured: CaptureResult
+): DocsVisualCaptureCliResultV1 {
+  return normalizeDocsVisualCaptureCliResultV1({
+    schema: "coderso.docs-visual-capture-result@v1",
+    visualId: captured.visualId,
+    runId: captured.runId,
+    rawPath: captured.rawPath,
+    rawReviewedSha256: captured.rawReviewedSha256,
+  });
+}
+
 export async function runDocsVisualCaptureCli(
   argv: readonly string[]
 ): Promise<DocsVisualCaptureCliResultV1> {
-  const visualId = parseExactScenarioOnlyArgs(argv);
-  const scenario = await resolveScenarioFromConfinedRegistry(visualId);
+  const requestedVisualId = parseExactScenarioOnlyArgs(argv);
+  const scenario = await resolveScenarioFromConfinedRegistry(requestedVisualId);
   const runId = await createDocsVisualRunIdV1({ scope: "cli" });
   const captured = await captureDocsVisual({
     docId: scenario.docId,
@@ -253,24 +283,42 @@ export async function runDocsVisualCaptureCli(
     visualId: scenario.visualId,
     runId,
   });
-  return normalizeDocsVisualCaptureCliResultV1({
-    schema: "coderso.docs-visual-capture-result@v1",
-    visualId,
+  assertCaptureIdentity(captured, {
+    docId: scenario.docId,
+    locale: scenario.locale,
+    sectionId: scenario.sectionId,
+    visualId: scenario.visualId,
     runId,
-    rawPath: captured.rawPath,
-    rawReviewedSha256: captured.rawReviewedSha256,
   });
+  return projectDocsVisualCaptureCliResultV1(captured);
 }
 
-export async function captureDocsVisual(input: {
+type DocsVisualCaptureIdentityV1 = {
   docId: string;
   locale: string;
   sectionId: string;
   visualId: string;
   runId: string;
-}): Promise<CaptureResult> {
-  const identity = normalizeDocsVisualPairIdentityV1(input);
-  const runId = assertBoundedDocsVisualRunId(input.runId);
+};
+
+export function assertCaptureIdentity(
+  actual: CaptureResult,
+  expected: DocsVisualCaptureIdentityV1
+): void {
+  assertExactCaptureIdentityFields(actual, expected);
+}
+
+export async function captureDocsVisual(
+  input: DocsVisualCaptureIdentityV1
+): Promise<CaptureResult> {
+  const identity = normalizeDocsVisualPairIdentityV1({
+    docId: input.docId,
+    locale: input.locale,
+    sectionId: input.sectionId,
+    visualId: input.visualId,
+  });
+  assertLocalizedIdentityBytesUnchanged(identity, input);
+  const runId = assertBoundedDocsVisualRunIdUnchanged(input.runId);
   const scenario = await resolveScenarioFromConfinedRegistry(
     identity.visualId
   );
@@ -289,7 +337,15 @@ export async function captureDocsVisual(input: {
       await assertZeroConsoleAndPageErrors(session);
       const rawPath = await captureBoundedTarget(session, scenario, runRoot);
       await inspectRawStagedPngWithoutMutation(rawPath, scenario);
-      result = { rawPath, rawReviewedSha256: await sha256File(rawPath) };
+      result = {
+        docId: identity.docId,
+        locale: identity.locale,
+        sectionId: identity.sectionId,
+        visualId: identity.visualId,
+        runId,
+        rawPath,
+        rawReviewedSha256: await sha256File(rawPath),
+      };
     } catch (error) {
       browserError = error;
     }
@@ -373,9 +429,13 @@ direct CI/migration `(docId, locale, sectionId, visualId)` + caller-generated
 `runId` → confined registry lookup and exact owner match → strict scenario →
 unchanged run ID through scoped fixture/session → owned
 action/assertion compiler → bounded byte-identical raw screenshot → non-mutating
-PNG/dimension/privacy validation → human/agent pixel review → one promotion-time
-sanitization → L01 source-hash input collection/helper → atomic canonical image
-and locale-bearing receipt → re-read/hash/identity verification.
+PNG/dimension/privacy validation → exact internal
+`{docId, locale, sectionId, visualId, runId, rawPath,
+rawReviewedSha256}` result → exact producer/consumer identity assertion before
+review → redacted schema-tagged four-data-field CLI projection or direct
+CI/migration review → one promotion-time sanitization → L01 source-hash input
+collection/helper → atomic canonical image and locale-bearing receipt →
+re-read/hash/identity verification.
 Compile the corpus after promotion to prove the visual joins the expected
 doc/section. Both promotion members advance through the shared recoverable
 transaction or neither does.
@@ -383,9 +443,13 @@ transaction or neither does.
 **Error handling:** use `docs_visual_server_unavailable`,
 `docs_visual_auth_failed`, `docs_visual_action_failed`,
 `docs_visual_assertion_failed`, `docs_visual_console_error`,
-`docs_visual_capture_invalid`, `docs_visual_png_unsafe`,
+`docs_visual_capture_invalid`, `docs_visual_identity_mismatch`,
+`docs_visual_png_unsafe`,
 `docs_visual_review_required`, `docs_visual_digest_mismatch` and
-`docs_visual_promotion_failed`. Failure never changes the canonical pair.
+`docs_visual_promotion_failed`. Reject a noncanonical request identity, any
+scenario/request mismatch, any producer/result mismatch or a rewritten
+caller-owned `runId` with `docs_visual_identity_mismatch` before review or
+promotion. Failure never changes the canonical pair.
 
 **Regression-test shape:** fake CLI subprocess success/failure/timeout; semantic
 action compilation; real output parsing; console/page error rejection; bad
@@ -394,9 +458,14 @@ digest mismatch; missing review; atomic rename failure; exact cleanup on every
 failure. Reject public `--run-id`, arbitrary scenario paths/URLs and prove the
 scenario-only CLI generates exactly one `cli`-scoped ID, returns it in bounded
 JSON and passes it unchanged to capture. Prove direct lower calls validate and
-preserve supplied localized identities and CI/migration run IDs without
+return all five supplied identity fields unchanged for CI/migration without
 invoking the generator, reject every owner mismatch, and keep every raw path
-below `.tmp/docs-visuals/<runId>/`.
+below `.tmp/docs-visuals/<runId>/`. Producer tests pin the exact seven-field
+`CaptureResult`; CLI tests prove its schema-tagged four-data-field projection
+cannot leak `docId`, `locale` or `sectionId`. CLI, direct-CI and migration
+parity tests independently alter each of `docId`, `locale`, `sectionId`,
+`visualId` and `runId` between request, scenario and returned result and prove
+`assertCaptureIdentity` fails before pixel review or promotion.
 Prove raw and canonical hashes are distinct when removable metadata is
 present, decoded pixels remain identical, the receipt derives only from
 canonical bytes, capture validation does not mutate raw bytes, all
@@ -458,6 +527,10 @@ coverage without changing the pipeline contract.
   ID/hash bounds, bounded JSON result, session derivation, unknown/duplicate
   rejection and arbitrary path/URL refusal; prove the CLI generates one CSPRNG
   ID and the lower capture API receives it unchanged
+- exact producer/consumer tests for the seven-field internal `CaptureResult`
+  and schema-tagged four-data-field CLI projection; direct-CI and migration
+  fixtures independently alter each identity field and must fail before review
+  or promotion
 - promotion integration coverage proving L01's exact source-hash helper output
   becomes the receipt `sourceHash`, plus direct factory tests for absent and
   strict locale-bound present pairs

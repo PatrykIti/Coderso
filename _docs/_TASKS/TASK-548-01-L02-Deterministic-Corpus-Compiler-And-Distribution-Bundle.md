@@ -16,8 +16,9 @@ Build the single deterministic compiler for the v2 contracts. Compile every
 currently ingestible English `docs/guide/**/*.md` document through an explicit
 legacy-to-v2 compatibility adapter, join strict examples and TASK-548-02 visual
 records when present, emit a deterministic native-migration report for
-TASK-548-06 at `.tmp/docs-corpus/migration-report-v1.json`, and write
-`core/generated/docs/coderso-docs-v2.json`.
+TASK-548-06 at the workspace-only ignored path
+`.tmp/docs-corpus/migration-report-v1.json`, and write the durable tracked
+runtime artifact `core/generated/docs/coderso-docs-v2.json`.
 
 Own new compiler modules under `core/services/documentation/compiler/`,
 `scripts/docs/compile-corpus.ts`, focused fixtures/tests and the generated
@@ -46,7 +47,11 @@ TASK-548-03 starts. After TASK-548-06-L01 edits the final native Guide sources
 and visual triples, orchestration pauses TASK-548-06 and re-dispatches this same
 owner exactly once more to regenerate and verify the final bundle and
 `.tmp/docs-corpus/migration-report-v1.json`. TASK-548-02 and TASK-548-06 cannot
-write either final. No per-wave or per-promotion handback is valid.
+write either final. The linked two-member transaction is used only by these
+explicit TASK-548-01-L02 authoring/migration `--write` runs and handbacks. The
+ignored report is not a clean-checkout, runtime, portal, Docker, release,
+`docs:check`, or coverage-check prerequisite. No per-wave or per-promotion
+handback is valid.
 
 ## Compiler Contract
 
@@ -196,6 +201,13 @@ type DurablePairStableMemberV1 = DurablePairPromotionMemberDescriptorV1 & {
 type DurablePairStablePairV1 =
   | { state: "absent" }
   | {
+      state: "partial";
+      members: readonly [
+        DurablePairStableMemberV1 | null,
+        DurablePairStableMemberV1 | null
+      ];
+    }
+  | {
       state: "present";
       members: readonly [
         DurablePairStableMemberV1,
@@ -266,11 +278,21 @@ const DOCS_WORKSPACE_ARTIFACT_PROMOTION_V1 = {
 } as const satisfies DurablePairPromotionConfigV1;
 ```
 
-`validateDocsWorkspaceArtifactStablePairV1` accepts both members absent only as
-the recoverable initial state. For a present pair it strictly parses bundle and
-report bytes and verifies exact `bundleSourceHash`/`bundleSha256` linkage.
-Every promotion input must match the config's two member IDs in tuple order;
-callers cannot replace either final path or validator.
+`validateDocsWorkspaceArtifactStablePairV1` recognizes exactly three stable
+workspace prestates:
+
+- `bootstrap-none`: both members absent before the initial owner write;
+- `packaged-bundle-only`: member 0 is the strict tracked generated bundle and
+  member 1 is absent, as in a clean clone/tag/runtime package;
+- `linked-pair`: both strict members are present and the report's exact
+  `bundleSourceHash`/`bundleSha256` linkage matches member 0.
+
+Report-only partial state is always invalid. The generic partial representation
+exists only so this workspace config can preserve a clean-checkout
+`packaged-bundle-only` prestate across an interrupted explicit owner promotion;
+the visual-pair validator rejects every partial state. Every promotion input
+must match the config's two member IDs in tuple order; callers cannot replace
+either final path or validator.
 
 Before any member temp write or staged rename, compute both next hashes, inspect
 and hash both prior finals, allocate the bounded transaction ID, and derive
@@ -297,7 +319,14 @@ The workspace wrapper module
 exports exactly:
 
 ```ts
-assertNoDocsWorkspaceArtifactPromotionHazardsV1(): Promise<void>;
+type DocsWorkspaceArtifactStablePrestateV1 =
+  | "bootstrap-none"
+  | "packaged-bundle-only"
+  | "linked-pair";
+
+assertNoDocsWorkspaceArtifactPromotionHazardsV1(): Promise<
+  DocsWorkspaceArtifactStablePrestateV1
+>;
 
 recoverDocsWorkspaceArtifactPromotionV1(): Promise<
   DurablePairRecoveryResultV1
@@ -317,15 +346,18 @@ loadAndValidateRecoveredDocsArtifactPair(input: {
 mutating. It runs only from the explicit recovery command or a write command
 that intentionally invokes recovery. `assertNoDocsWorkspaceArtifactPromotionHazardsV1`
 is read-only: it rejects a live journal in any phase, an orphan journal temp,
-any owned staging/backup artifact, mixed final presence, symlink/path anomaly
-or invalid present pair with `docs_compile_recovery_required`; it never
-renames, deletes, truncates or creates a file.
-`loadAndValidateRecoveredDocsArtifactPair` is workspace-only, may run after
-either successful recovery in a write flow or a successful read-only hazard
-inspection, reopens both exact finals without following symlinks, validates
-both strict schemas plus exact
-`bundleSourceHash`/`bundleSha256` linkage, and rejects any live journal before
-returning either value. The packaged production loader
+any owned staging/backup artifact, report-only state, symlink/path anomaly,
+invalid packaged bundle or invalid linked pair with
+`docs_compile_recovery_required`; it never renames, deletes, truncates or
+creates a file. It accepts and strictly validates `bootstrap-none`,
+`packaged-bundle-only`, and `linked-pair`, returning the exact classification.
+`loadAndValidateRecoveredDocsArtifactPair` is workspace-only, requires both
+members and may run only after successful recovery in an explicit
+TASK-548-01-L02 authoring/migration `--write` flow or from the corresponding
+TASK-548-06-L01 migration handback. It reopens both exact finals without
+following symlinks, validates both strict schemas plus exact
+`bundleSourceHash`/`bundleSha256` linkage, and rejects an absent report or any
+live journal before returning either value. The packaged production loader
 `loadPackagedDocsDistributionBundleV2()` is separate and never imports this
 workspace module or reads `.tmp`.
 

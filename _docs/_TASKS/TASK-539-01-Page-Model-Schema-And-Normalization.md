@@ -38,7 +38,10 @@ Land `TASK-539-01-L01 -> TASK-539-01-L02`.
 - L01 is the sole TASK-539 writer of
   `core/services/pages/pageDocumentV2.ts`, every new module under
   `core/services/pages/pageDocumentV2/`, and the Page model Vitest split named in
-  its leaf. It performs the source and test split before adding behavior.
+  its leaf, including the dedicated
+  `tests/vitest/pages/page-document-v2-facade.test.ts` source-manifest and
+  reference-identity suite. It performs the source and test split before adding
+  behavior.
 - L02 edits only `tests/integration/routes/pages.test.ts`. That file is 797 lines
   at the verified repair baseline and must remain at most 1,000 lines.
 - L02 adds no unit/helper-only cases. All schema, normalization, stored-read,
@@ -52,6 +55,11 @@ Land `TASK-539-01-L01 -> TASK-539-01-L02`.
 
 - `pageDocumentV2.ts` remains the stable public import path and contains explicit
   named value/type re-exports only; `export *` is forbidden.
+- The grounded pre-task facade surface is exactly 74 explicit type names plus 121
+  runtime names. L01 enumerates every baseline name and direct owner. The only
+  additions are four types and eight runtime names, so the final facade is exactly
+  78 type names plus 129 runtime names; any extra, missing, duplicate, aliased, or
+  owner-mismatched export fails the dedicated facade suite.
 - Each public runtime value is defined once in its cohesive owner module. Direct owner
   imports and facade imports are reference-identical; no facade wrapper, clone, or
   duplicate constant is allowed.
@@ -135,7 +143,10 @@ Land `TASK-539-01-L01 -> TASK-539-01-L02`.
 
 - Every resulting touched production/test file is at most 1,000 physical lines.
 - Existing public imports compile unchanged and representative facade/owner values
-  pass reference-identity tests.
+  pass reference-identity tests. The dedicated facade suite type-imports all exact
+  78 type names, statically proves the complete sorted type/value owner maps, pins
+  `Object.keys` to the exact 129 runtime names, and proves every runtime export is
+  reference-identical to its direct owner.
 - Canonical gallery rows, including the empty draft sentinel, round-trip exactly.
 - Strict write errors and stored-read compatibility follow the locked matrix above.
 - Category schema/write boundaries cover empty/invalid values, token lengths 48/49,
@@ -153,5 +164,7 @@ Land `TASK-539-01-L01 -> TASK-539-01-L02`.
 
 ## Aggregate validation
 
-Run both leaf gates, including the implementation workflow's baseline-to-final family
-line check. No skipped DB route assertion counts as proof.
+Run both leaf gates, including
+`tests/vitest/pages/page-document-v2-facade.test.ts` in L01's exact Vitest command
+and the implementation workflow's baseline-to-final family line check. No skipped DB
+route assertion counts as proof.

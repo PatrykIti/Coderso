@@ -51,6 +51,14 @@ working tree, including paths committed at intermediate checkpoints. A result ab
 
 ## Shared contracts fixed by this family
 
+- The stable `pageDocumentV2.ts` facade freezes its grounded baseline of exactly
+  74 type exports and 121 runtime exports, all enumerated in TASK-539-01-L01. This
+  family adds only four named types and eight named runtime values, for an exact
+  final surface of 78 types plus 129 runtime values. Its source-owner facade suite
+  statically parses explicit named re-export clauses and compares the complete
+  type/value owner map, rejects direct declarations/default/export-star/duplicates,
+  type-imports all 78 names, pins the exact 129-key runtime namespace, and proves
+  every runtime facade/direct-owner export is reference-identical.
 - `mergePageBlockLayerPresentKeys` performs present-key deep merge for only the
   nested `layer` record and is the one owner used by preview and public CSS.
   Responsive `layer.anchor` is base-only: a write rejects it at the exact path,
@@ -137,31 +145,33 @@ working tree, including paths committed at intermediate checkpoints. A result ab
   `PAGE_MARQUEE_REPLICA_ATTRIBUTE` and its selector are fixed shared literals owned
   by `pageCompositionEffects.tsx`; renderer and runtime import them. False/absent
   seamless and unsafe seamless each render one segment and no replica.
-- `pageRendererReplicaIdentity.ts` also solely owns three styling-only alias
+- `pageRendererReplicaIdentity.ts` also solely owns two styling-only alias
   constants with these exact names/literals:
   `PAGE_MARQUEE_REPLICA_BLOCK_STYLE_SCOPE_ATTRIBUTE =
   "data-page-marquee-replica-block-style-scope"`,
   `PAGE_MARQUEE_REPLICA_TILT_LAYER_STYLE_SCOPE_ATTRIBUTE =
-  "data-page-marquee-replica-tilt-layer-style-scope"`, and
-  `PAGE_MARQUEE_REPLICA_GRID_ITEM_STYLE_SCOPE_ATTRIBUTE =
-  "data-page-marquee-replica-grid-item-style-scope"`. Approved replica block frames,
-  hoisted tilt/layer wrappers, and actual grid targets respectively carry the
-  canonical normalized original block ID through these aliases. They are not DOM
-  IDs/IDREFs, Admin selection/runtime hooks, or members of either replica identity
-  set. Responsive CSS direct-imports this owner and uses one
+  "data-page-marquee-replica-tilt-layer-style-scope"`. Approved replica block frames
+  and hoisted tilt/layer wrappers respectively carry the canonical normalized
+  original block ID through these aliases. They are not DOM IDs/IDREFs, Admin
+  selection/runtime hooks, or members of either replica identity set. Responsive CSS
+  direct-imports this owner and uses one
   `:is(canonical selector, replica alias selector)` per target so both safe marquee
-  segments receive identical tablet/mobile visual, typography, layer, and span
-  styling without restoring canonical identity hooks. Primary/non-seamless/unsafe
-  fallback output emits no alias.
+  segments receive identical tablet/mobile visual, typography, and layer styling
+  without restoring canonical identity hooks. The outer authored marquee owner is
+  the only possible legal root grid target and remains one canonical node outside
+  both segments; every duplicated slot descendant is nested, resolves placement
+  `none`, and emits no grid hook/alias/span CSS. Primary/non-seamless/unsafe fallback
+  output emits no replica styling alias.
 - `pageRendererTimelineGeometry.ts` owns and exports
   `PageTimelineItemGeometry` plus
   `resolvePageTimelineItemGeometry(section,template,index,total)`; the renderer
   consumes that helper and the focused geometry suite imports the owner directly.
 - The stable `pageRendererV2.tsx` facade remains exactly its grounded 41-name
   pre-task surface: 12 type exports and 29 runtime-value exports enumerated in
-  TASK-539-05-L01. Its source-owner facade suite pins exact module keys,
-  direct-owner runtime reference identity, all type-only imports, no `export *`, and
-  absence of task-added replica/timeline symbols.
+  TASK-539-05-L01. Its source-owner facade suite statically pins the exact 12-name
+  type/owner map and rejects extra types/direct declarations/default/export-star/
+  duplicates; it also pins the exact 29-key runtime namespace, direct-owner runtime
+  reference identity, and absence of task-added replica/timeline symbols.
 - A shared global initializer rescans the supplied root/document on every emitted
   script and uses per-element ownership (`WeakSet` or equivalent); it deduplicates
   listeners without blocking later footer discovery.
@@ -173,7 +183,10 @@ working tree, including paths committed at intermediate checkpoints. A result ab
   `content:write`; publish requires `content:publish`; session writes require
   `X-CSRF-Token`; the rate-limit bucket is `admin_write`; and PageDocumentV2
   validation rejects unknown fields. Public Page rendering remains read-only.
-  TASK-539 does not invent an API-key auth path.
+  TASK-539 does not invent an API-key auth path. The closure Bun suite proves this
+  through real requests to an ephemeral `startHttpServer`, with uniquely owned
+  reader/writer/publisher roles, real sessions and CSRF tokens; the direct Page route
+  harness remains route/schema/service proof and is never cited as middleware proof.
 - **CSS/markup:** grid/background/color/category values use positive allowlists
   at write and render. Responsive raw `<style>` emission revalidates the same
   parsed value and never interpolates an unvalidated author string.

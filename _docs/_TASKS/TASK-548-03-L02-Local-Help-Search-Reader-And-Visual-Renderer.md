@@ -153,16 +153,29 @@ must:
 - import and render the exact owner `DocsInlineTokenV1`,
   `DocsBlockTokenV1`, `DocsCalloutTokenV1`, and `DocsTableTokenV1` unions;
   never define a parallel token shape;
-- resolve images exclusively through bundle-owned `visualId` records and local
-  asset maps; require non-empty alt text and render captions;
+- treat `section.visualIds` and `section.exampleIds` as the only ordered
+  evidence-card inputs. Markdown image syntax and raw/inline HTML remain
+  forbidden parser input, so a visual or example can never emerge implicitly
+  from a Markdown token;
+- resolve every listed visual only through the exact
+  `{ docId, locale, sectionId, visualId }` owner and every listed example only
+  through `{ docId, locale, sectionId, exampleId }`. The localized document,
+  section list, nested record and bundle-global ID index must all agree exactly;
+  a cross-document, cross-locale, cross-section, duplicate, missing, unlisted or
+  orphan record fails closed;
+- hash the local PNG bytes against `DocsVisualV1.sha256` before constructing a
+  card. Only the matching confined `assetPath`, `image/png` bytes and verified
+  local href may reach `<img>`; require non-empty alt text and render the exact
+  caption;
 - reject unsupported Markdown syntax, missing asset hashes, path traversal,
   `data:`, `javascript:`, protocol-relative, inline SVG/HTML, arbitrary
   iframe/media, and event/style payloads;
 - resolve local Help links with L01 helpers, Admin actions with
   `resolveAdminHref`/`AdminLink`, and official links with a validated HTTPS base
   origin plus version/locale/slug;
-- render examples as inert text/structured data. Examples are never executable
-  code or mutation controls.
+- render examples only as React-escaped, inert text/structured-data cards with
+  a `type="button"` copy action for the exact body. Never evaluate, execute,
+  preview, submit or turn an example into a CMS mutation control.
 
 ## Permission and Offline Behavior
 
@@ -330,27 +343,150 @@ export function searchDocs(
     .slice(0, clampResultLimit(input.limit));
 }
 
+// packages/docs-renderer/src/evidenceCards.ts
+export type DocsLocalVisualAssetV1 = {
+  assetPath: string;
+  href: string;
+  bytes: Uint8Array;
+};
+
+export type DocsAccessibleVisualCardV1 = {
+  kind: "visual";
+  visualId: string;
+  src: string;
+  alt: string;
+  caption: string;
+  width: number;
+  height: number;
+};
+
+export type DocsInertExampleCardV1 = {
+  kind: "example";
+  exampleId: string;
+  title: string;
+  language: "json" | "typescript" | "bash" | "text";
+  body: string;
+  explanation: string;
+};
+
+export type DocsSectionEvidenceCardsV1 = {
+  visualCards: readonly DocsAccessibleVisualCardV1[];
+  exampleCards: readonly DocsInertExampleCardV1[];
+};
+
+export function resolveDocsSectionEvidenceCards(input: {
+  bundle: DocsDistributionBundleV2;
+  document: DocsDocumentV2;
+  section: DocsSectionV2;
+  localVisualAssets: ReadonlyMap<string, DocsLocalVisualAssetV1>;
+}): DocsSectionEvidenceCardsV1 {
+  const document = resolveExactBundleDocument(input.bundle, {
+    docId: input.document.docId,
+    locale: input.document.locale,
+  });
+  assertSameNormalizedDocument(document, input.document);
+  const section = resolveExactDocumentSection(document, input.section.sectionId);
+  assertSameNormalizedSection(section, input.section);
+
+  const visualCards = section.visualIds.map((visualId) => {
+    const visual = resolveStrictOwnedVisual(input.bundle, {
+      docId: document.docId,
+      locale: document.locale,
+      sectionId: section.sectionId,
+      visualId,
+    });
+    const asset = resolveHashedLocalVisual(input.localVisualAssets, {
+      assetPath: visual.assetPath,
+      expectedSha256: visual.sha256,
+      mediaType: "image/png",
+    });
+    return {
+      kind: "visual" as const,
+      visualId: visual.visualId,
+      src: asset.href,
+      alt: visual.alt,
+      caption: visual.caption,
+      width: visual.width,
+      height: visual.height,
+    };
+  });
+  const exampleCards = section.exampleIds.map((exampleId) => {
+    const example = resolveStrictOwnedExample(input.bundle, {
+      docId: document.docId,
+      locale: document.locale,
+      sectionId: section.sectionId,
+      exampleId,
+    });
+    return {
+      kind: "example" as const,
+      exampleId: example.exampleId,
+      title: example.title,
+      language: example.language,
+      body: example.body,
+      explanation: example.explanation,
+    };
+  });
+  return { visualCards, exampleCards };
+}
+
 // packages/docs-renderer/src/DocsDocumentRenderer.tsx
+export type DocsRendererProps = {
+  bundle: DocsDistributionBundleV2;
+  document: DocsDocumentV2;
+  publicationTarget: "embedded-help" | "public-docs";
+  linkContext: DocsLinkContextV1;
+  localVisualAssets: ReadonlyMap<string, DocsLocalVisualAssetV1>;
+  copyExampleBody: (body: string) => void | Promise<void>;
+};
+
 export function DocsDocumentRenderer(props: DocsRendererProps) {
   assertDocumentHasPublicationTarget(
     props.document,
     props.publicationTarget
   );
-  return props.document.sections.map((section) => (
-    <DocsSection
-      key={section.sectionId}
-      tokens={parseSafeMarkdownSection(section.bodyMarkdown).tokens}
-      resolveLink={(link) => resolveSafeDocsLink(link, props.linkContext)}
-      resolveVisual={(visualId) =>
-        resolveHashedLocalVisual(props.bundle, {
-          docId: props.document.docId,
-          locale: props.document.locale,
-          sectionId: section.sectionId,
-          visualId,
-        })
-      }
-    />
-  ));
+  return props.document.sections.map((section) => {
+    const evidence = resolveDocsSectionEvidenceCards({
+      bundle: props.bundle,
+      document: props.document,
+      section,
+      localVisualAssets: props.localVisualAssets,
+    });
+    return (
+      <DocsSection
+        key={section.sectionId}
+        tokens={parseSafeMarkdownSection(section.bodyMarkdown).tokens}
+        resolveLink={(link) => resolveSafeDocsLink(link, props.linkContext)}
+        visualCards={evidence.visualCards}
+        exampleCards={evidence.exampleCards}
+        renderVisualCard={(card) => (
+          <figure key={card.visualId}>
+            <img
+              src={card.src}
+              alt={card.alt}
+              width={card.width}
+              height={card.height}
+              loading="lazy"
+            />
+            <figcaption>{card.caption}</figcaption>
+          </figure>
+        )}
+        renderExampleCard={(card) => (
+          <article key={card.exampleId} aria-labelledby={`${card.exampleId}-title`}>
+            <h4 id={`${card.exampleId}-title`}>{card.title}</h4>
+            <pre><code data-language={card.language}>{card.body}</code></pre>
+            <p>{card.explanation}</p>
+            <button
+              type="button"
+              aria-label={`Copy ${card.title}`}
+              onClick={() => void props.copyExampleBody(card.body)}
+            >
+              Copy
+            </button>
+          </article>
+        )}
+      />
+    );
+  });
 }
 
 // core/admin/app/routes/help.admin-route.tsx
@@ -368,16 +504,23 @@ export const bindings = {
 
 **Data flow:** recovered embedded validated distribution → one in-memory index
 → `(docId, locale, sectionId)` URL/query selection → strict localized
-document/section/visual/example refs → safe React
-renderer → optional canonical Help/Admin links and target-gated official link.
+document/section → ordered `visualIds`/`exampleIds` → exact localized ownership
+joins → visual byte/hash verification plus strict example projection → explicit
+accessible visual cards and inert copyable example cards beside the safe
+Markdown-token React renderer → optional canonical Help/Admin links and
+target-gated official link. Markdown image/HTML tokens have no evidence-card
+path.
 The shared package requires an explicit `embedded-help | public-docs` consumer
 target and has no default. Admin Help always passes `embedded-help`; TASK-548-04
 is the only owner allowed to pass `public-docs`.
 
 **Error handling:** malformed bundle blocks the Help surface with a local,
 non-sensitive integrity error; invalid query params are ignored/replaced;
-missing doc/section returns search/404 guidance; missing visual renders its
-caption/alt fallback; unavailable official origin hides the external action;
+missing doc/section returns search/404 guidance; a cross-document, cross-locale,
+cross-section, duplicate, missing, unlisted, orphan or tampered visual/example
+reference blocks the affected article with a bounded integrity error before
+render; a verified image that later fails browser decoding retains its visible
+caption/alt fallback. Unavailable official origin hides the external action;
 Help-only target omits it; malformed permissions fail closed.
 
 **Regression-test shape:**
@@ -390,8 +533,16 @@ Help-only target omits it; malformed permissions fail closed.
 - target-leak fixtures prove `embedded-help` and multi-target documents index
   and render, while `assistant`-only and `public-docs`-only documents produce no
   result, direct render or Help navigation;
-- all exact owner Markdown token variants and locale-bearing visual/example
-  joins; same-`docId`/same-`sectionId` records in two locales cannot cross;
+- all exact owner Markdown token variants, with Markdown image/HTML input
+  rejected and no token able to synthesize an evidence card;
+- `section.visualIds` and `section.exampleIds` preserve authored order and emit
+  explicit accessible visual cards plus inert React-escaped copy-only example
+  cards; same-`docId`/same-`sectionId` records in two locales cannot cross;
+- reject cross-document, cross-locale, cross-section, duplicate, missing,
+  unlisted and orphan visual/example refs, wrong local asset paths/media types,
+  absent/mismatched SHA-256, tampered PNG bytes and forged card props;
+- example copy copies only the exact body and never executes, previews, submits
+  or invokes an Admin mutation;
 - hostile HTML/script/URL/path/asset fixtures rejected or rendered as text;
 - Help route renders for authenticated empty-permission snapshot;
 - null action allowed for authenticated empty snapshot; exact live `["*"]`
