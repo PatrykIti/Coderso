@@ -61,13 +61,80 @@ pairs/tuples, not a cross-locale `docId`. Do not store PNG bytes, arbitrary
 HTML, authored external URLs or provider data.
 Every retrieval hit and Guide-facing source/evidence projection carries
 `docId`, canonical `locale`, `sectionId` and `chunkIndex`; it must never reduce
-that identity to `docId + sectionId`. Visual/example IDs remain bundle-global
-but resolve only after the exact localized document/section join succeeds.
+that identity to `docId + sectionId`. The internal hit also carries the exact
+normalized `permissionRequirement`, `capabilityIds`, `visualIds` and
+`exampleIds` required for server re-authorization/enrichment; only authorized
+public response projections may omit the requirement field. Visual/example IDs
+remain bundle-global but resolve only after the exact localized document/
+section join succeeds.
 
 Only documents whose exact `publicationTargets` contains `assistant` may be
 persisted, chunked or returned by assistant retrieval. `embedded-help`-only and
 `public-docs`-only records remain in the shared bundle but never enter the
 assistant snapshot.
+
+## Server Permission Filtering Contract
+
+This leaf owns the Bun-free/server-only permission snapshot normalizer and
+evaluator in a focused
+`core/services/assistant/docsPermissionSnapshot.ts` module. It also owns the
+required permission-aware signature and implementation of
+`searchAssistantDocsDb` in `docsDbRetriever.ts`. TASK-548-03-L03 later wires the
+authenticated route and service to these pure exports; no browser-supplied
+context is a trusted permission source.
+
+The exact exported contract is:
+
+```ts
+export type AssistantDocsPermissionSnapshotV1 = {
+  state: "ready";
+  permissions: readonly string[];
+};
+
+export function normalizeAssistantDocsPermissionSnapshotV1(
+  value: unknown
+): AssistantDocsPermissionSnapshotV1;
+
+export function satisfiesAssistantDocsPermissionRequirementV1(
+  requirement: DocsPermissionRequirementV1 | null,
+  snapshot: AssistantDocsPermissionSnapshotV1
+): boolean;
+
+export type AssistantDocsDbSearchOptionsV2 = {
+  topK?: number;
+  minScore?: number;
+  permissionSnapshot: AssistantDocsPermissionSnapshotV1;
+};
+
+export function searchAssistantDocsDb(
+  query: string,
+  options: AssistantDocsDbSearchOptionsV2
+): Promise<DocsSearchHit[]>;
+```
+
+The snapshot normalizer is recursively exact-key and accepts only the displayed
+`state: "ready"` object. It validates permissions against
+`listPermissionIds()` from the canonical permission catalog, rejects unknown
+values, duplicates, missing/malformed arrays, unknown keys and every wildcard
+mix, and returns a unique sorted array. The exact sole-member `["*"]` is the
+only wildcard form. Ready `[]` is valid. A missing/malformed input throws the
+typed machine error `assistant_docs_permission_snapshot_invalid` before any DB
+query, hit, source, visual or example lookup.
+
+The evaluator first normalizes the exact owner
+`DocsPermissionRequirementV1 | null`. Null succeeds for a ready empty snapshot;
+`allOf` requires every canonical permission; `anyOf` requires at least one; and
+sole `["*"]` satisfies either non-null form. Empty authored non-null arrays,
+unknown permissions and authored `*` remain invalid.
+
+Retrieval has no permissionless overload or default snapshot. It first
+normalizes the required snapshot, then reads only active `assistant`-target
+document IDs plus their permission requirements, evaluates authorization, and
+only then queries chunk text/metadata for the authorized IDs. Unauthorized
+title/body/chunk/source/visual/example fields never enter ranking or response
+projection. Every later server enrichment helper must accept the same explicit
+snapshot and re-check the localized bundle document requirement before
+projecting evidence.
 
 ## File-Size and Ownership Gate
 
@@ -81,10 +148,14 @@ Extract bundle loading/validation and DB persistence into focused modules before
 new behavior would push it over the limit. Do not modify the already oversized
 `tests/integration/routes/assistant.test.ts`; add focused independent test files.
 
-This leaf is also the exclusive TASK-548 writer for the existing
-`mapAssistantError` switch in `core/server/routes/assistantRoutes.ts:177` and
-its new focused reindex mapping tests. It may add only the four v2 ingest
-branches described below; TASK-548-03-L03 must not reopen this mapper.
+This leaf exclusively owns the pure DB ingest/retriever/schema migration,
+`docsPermissionSnapshot.ts`, the five typed `assistant_docs_*` domain errors,
+and their pure/integration tests. It must not edit
+`core/server/routes/assistantRoutes.ts`,
+`core/services/assistant/assistantService.ts`, or route-level error-map tests.
+After this dependency lands, TASK-548-03-L03 is the sole TASK-548 writer of
+both existing orchestration modules and maps this leaf's typed errors once.
+That serialized land order removes all shared-file ownership.
 
 ## Security Contract
 
@@ -114,7 +185,9 @@ branches described below; TASK-548-03-L03 must not reopen this mapper.
   `["*"]` satisfies every valid requirement; duplicate/mixed wildcard or other
   malformed snapshots fail closed. Authored requirements continue to forbid
   `*`.
-  Never expose a protected document/source/visual/example when its non-null
+  The required server snapshot is normalized through
+  `normalizeAssistantDocsPermissionSnapshotV1` before a DB query. Never expose
+  a protected document/title/chunk/source/visual/example when its non-null
   requirement is unsatisfied.
 - **Capability context:** persist `capabilityIds` exactly and apply bounded,
   deterministic capability filtering/ranking before optional provider work.
@@ -168,6 +241,67 @@ export async function ingestDocsDistributionBundleV2(
     throw domainError;
   }
 }
+
+export function normalizeAssistantDocsPermissionSnapshotV1(
+  value: unknown
+): AssistantDocsPermissionSnapshotV1 {
+  const record = assertExactObjectKeys(value, ["state", "permissions"]);
+  if (record.state !== "ready" || !Array.isArray(record.permissions)) {
+    throw new Error("assistant_docs_permission_snapshot_invalid");
+  }
+  const permissions = assertBoundedStringArray(record.permissions);
+  assertNoDuplicates(permissions);
+  const known = new Set(listPermissionIds());
+  if (
+    permissions.includes("*")
+      ? permissions.length !== 1
+      : permissions.some((permission) => !known.has(permission))
+  ) {
+    throw new Error("assistant_docs_permission_snapshot_invalid");
+  }
+  return {
+    state: "ready",
+    permissions: permissions[0] === "*" ? ["*"] : [...permissions].sort(),
+  };
+}
+
+export function satisfiesAssistantDocsPermissionRequirementV1(
+  requirement: DocsPermissionRequirementV1 | null,
+  inputSnapshot: AssistantDocsPermissionSnapshotV1
+): boolean {
+  const snapshot = normalizeAssistantDocsPermissionSnapshotV1(inputSnapshot);
+  const normalized = normalizeDocsPermissionRequirementV1(requirement);
+  if (normalized === null || snapshot.permissions[0] === "*") return true;
+  const granted = new Set(snapshot.permissions);
+  return "allOf" in normalized
+    ? normalized.allOf.every((permission) => granted.has(permission))
+    : normalized.anyOf.some((permission) => granted.has(permission));
+}
+
+export async function searchAssistantDocsDb(
+  query: string,
+  options: AssistantDocsDbSearchOptionsV2
+): Promise<DocsSearchHit[]> {
+  const permissionSnapshot = normalizeAssistantDocsPermissionSnapshotV1(
+    options.permissionSnapshot
+  );
+  const authorizedDocIds = await selectActiveAssistantDocAuthorizationRows()
+    .then((rows) =>
+      rows
+        .filter((row) =>
+          satisfiesAssistantDocsPermissionRequirementV1(
+            row.permissionRequirement,
+            permissionSnapshot
+          )
+        )
+        .map((row) => row.id)
+    );
+  const rows = await selectAssistantChunksForAuthorizedDocIds(authorizedDocIds);
+  return rankAssistantDocsDbRows(rows, query, {
+    topK: options.topK,
+    minScore: options.minScore,
+  });
+}
 ```
 
 **Data flow:** packaged bytes → strict v2 validation → expected-source-hash
@@ -181,6 +315,10 @@ the packaged bundle independently, and has no access to the repository
 bundle/report transaction. A runtime package containing the valid bundle and no
 `.tmp`, migration report, workspace journal, staging file or backup must start,
 hash-check and reindex successfully.
+For a query, unknown server snapshot → exact snapshot/catalog normalization
+before DB access → metadata-only active-document authorization → authorized
+chunk query/ranking → localized hits. There is no permissionless retrieval
+branch.
 
 **Compatibility:** migration adds nullable/backfilled fields first, maps current
 rows to a legacy snapshot, and keeps v1 retrieval readable. A successful v2
@@ -188,17 +326,17 @@ reindex promotes strict non-null v2 identity for the active snapshot. Remove the
 legacy adapter only after tests prove restart and rollback behavior; never
 destructively rewrite source Markdown during runtime.
 
-**Error handling:** map invalid/missing/tampered bundle to
+**Error handling:** normalize invalid/missing/tampered bundle to
 `assistant_docs_bundle_invalid`, DB failure to
 `assistant_docs_ingest_failed`, lock conflict to
 `assistant_docs_reindex_conflict` and unavailable DB to
-`assistant_docs_db_unavailable`. `normalizeDocsIngestError` preserves exactly
-those four typed machine errors; unknown storage errors normalize only to
-`assistant_docs_ingest_failed`. Extend the existing centralized
-`mapAssistantError` only in this leaf: packaged bundle invalid → 500, conflict
-→ 409, DB unavailable → 503 and ingest failure → 500, each with its same
-machine code and a bounded public message. Never return internal paths or SQL
-details. Failed-run diagnostic persistence is settled separately and cannot
+`assistant_docs_db_unavailable`; malformed trusted permission input is
+`assistant_docs_permission_snapshot_invalid`. `normalizeDocsIngestError`
+preserves the first four typed machine errors; the permission normalizer owns
+the fifth. Unknown storage errors normalize only to
+`assistant_docs_ingest_failed`. TASK-548-03-L03 alone maps them at the existing
+route boundary after this leaf lands. Never return internal paths, permission
+inventories or SQL details. Failed-run diagnostic persistence is settled separately and cannot
 mask the normalized domain error. Run allocation is inside that normalization
 boundary; when allocation itself fails, `runId` remains null and no fictional
 failure update is attempted. Because activation and success finalization share
@@ -210,14 +348,14 @@ different-locale acceptance, permission/capability metadata,
 locale-bearing hit/source evidence and localized asset refs, startup hash
 skip/reindex, stale-row pruning, concurrent reindex
 serialization, rollback after mid-write failure and continued reads from the
-previous snapshot. Test null plus authenticated empty-snapshot success, invalid
-empty non-null requirements, empty/partial protected snapshots, full `allOf`,
-every `anyOf` branch, exact `["*"]` full access, duplicate/mixed wildcard
-rejection and capability round trips/filtering. Route coverage must
-prove permission, valid `{}`,
-`{ force: true }` and `{ force: false }` request bodies, unknown/non-boolean
-rejection, CSRF expectation, all four centralized mappings and unchanged route
-registration/rate bucket. Add target-leak fixtures proving assistant and
+previous snapshot. Test the exact snapshot normalizer and required retriever
+signature: null plus ready empty-snapshot success, invalid empty non-null
+requirements, empty/partial protected snapshots, full `allOf`, every `anyOf`
+branch, exact `["*"]` full access, and rejection of missing/malformed/unknown-
+key/unknown-permission/duplicate/mixed-wildcard snapshots before the first DB
+query. Prove unauthorized rows never reach chunk selection, ranking, hits,
+sources or evidence metadata. Route/security/error-map coverage belongs only
+to the later TASK-548-03-L03 writer. Add target-leak fixtures proving assistant and
 multi-target documents persist/retrieve while `embedded-help`-only and
 `public-docs`-only documents never create rows, chunks, hits or evidence cards.
 Use two locale rows sharing `docId` and `sectionId` to prove retrieval,
@@ -243,20 +381,23 @@ without a Markdown, report, journal or network fallback.
   `loadPackagedDocsDistributionBundleV2()` without workspace transaction
   dependencies.
 - [ ] Extend retriever row mapping for stable IDs and permission/visual/example
-  metadata plus exact capability IDs without exposing unauthorized hits.
-- [ ] Extend only `mapAssistantError` in
-  `core/server/routes/assistantRoutes.ts` with the four v2 reindex mappings and
-  cover them in the focused route suite.
+  metadata plus exact capability IDs; add the exact required server permission
+  snapshot normalizer/evaluator and two-stage authorized retrieval without
+  exposing unauthorized content.
+- [ ] Export all five typed `assistant_docs_*` errors for the serialized
+  TASK-548-03-L03 route/service writer; do not edit either orchestration module.
 - [ ] Add
-  `tests/integration/server/assistantDocsIngestV2.test.ts`,
-  `tests/integration/routes/assistant-reindex-v2.test.ts` and focused Vitest
-  coverage; use uniquely scoped DB fixtures and delete only owned rows.
+  `tests/integration/server/assistantDocsIngestV2.test.ts` and focused Vitest
+  ingest/retriever coverage plus
+  `tests/vitest/assistant/docsPermissionSnapshot.test.ts`; use uniquely scoped
+  DB fixtures and delete only owned rows.
 
 ## Testing Requirements
 
 - Before DB tests: `set -a && source .env && set +a`
-- `bunx vitest run --config vitest.config.ts tests/vitest/assistant/docsIngestService.test.ts tests/vitest/assistant/docsDbRetriever.test.ts tests/vitest/documentation`
-- `bun test tests/integration/server/assistantDocsIngestV2.test.ts tests/integration/routes/assistant-reindex-v2.test.ts` when `DATABASE_URL` is reachable
+- `bunx vitest run --config vitest.config.ts tests/vitest/assistant/docsIngestService.test.ts tests/vitest/assistant/docsDbRetriever.test.ts tests/vitest/assistant/docsPermissionSnapshot.test.ts tests/vitest/documentation`
+- `bun test tests/integration/server/assistantDocsIngestV2.test.ts` when
+  `DATABASE_URL` is reachable
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - migration generation/drift verification, restart smoke and touched-file line

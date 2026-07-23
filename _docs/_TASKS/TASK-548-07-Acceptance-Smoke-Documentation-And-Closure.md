@@ -91,11 +91,11 @@ TASK-545 `createResumeCheckpoint` phase 1 alone atomically writes
 regular-file inventory after phase 1 is therefore the manifest, eight
 screenshots, and checkpoint, but 07-L01 never writes checkpoint bytes.
 No alternate acceptance or TASK-548-08 workflow-evidence tree is valid.
-TASK-548-04-L03 hands its prior portal evidence to L01 read-only. If the final portal scenario must be
-recaptured, L01 requests one same-owner operational TASK-548-04-L03 handback;
-04-L03 returns bounded screenshot bytes/results without status transfer, and
+TASK-548-04-L03 hands its landed portal evidence to L01 read-only. Missing or
+stale evidence aborts closure and returns to 04-L03; any recapture happens
+outside closure, then the full preparation/post-audit/smoke lifecycle restarts.
 07-L01 alone writes `06-portal-local-exact-latest-rollback.png` and the final
-manifest.
+manifest during its own final smoke.
 
 The manifest is exactly the TASK-545-owned canonical manifest schema. TASK-548
 does not add audit, bundle, network, cleanup, workflow-summary, or other fields
@@ -126,9 +126,11 @@ screenshot.
 - Embedded and public renderers agree on `{ docId, locale, sectionId }`,
   bundle-global visual/example identity, safe content, hashes, captions, and alt
   text.
-- A disposable local retained-Pages bare remote/static fixture publishes two
-  exact SemVer capsules, promotes and rolls back `latest`, and proves exact bytes
-  never mutate. Acceptance never writes the real Pages branch or release.
+- A landed retained-Pages validation handoff contains two exact SemVer capsules,
+  immutable pre-/post-rollback site-index snapshots, and their publication/
+  rollback receipts. Acceptance serves both snapshots read-only, verifies
+  exact/latest behavior before and after the recorded rollback, and proves exact
+  bytes never mutate; it invokes no publication or rollback writer.
 - Production availability is consumed only by downloading the exact
   TASK-548-05-L02 artifact
   `docs-post-deploy-health-<version>-<gitSha>-<workflowRunId>` from the selected
@@ -190,13 +192,35 @@ resume verifies tracked parity, 08 performs the substantive final drift
 read-only before any terminal mutation. Only its pass authorizes the last 07
 phase in the first `frozen` closure attempt. If that process crashes before any
 metadata write, replay remains `frozen` and reruns a fresh read-only final
-drift. Changelog 1261 is then the first atomic deterministic metadata write,
+drift. No preparation allowlist command or upstream producer runs after
+checkpoint creation. Changelog 1261 is then the first atomic deterministic
+metadata write,
 followed by descendant-before-parent closeout and the mechanical metadata-delta
 validator. If a crash occurs after that first write, TASK-545 returns
 `metadata_recovery`; replay validates the existing changes as an exact prefix
 of the deterministic metadata plan and completes only its missing writes. It
 does not rerun smoke/final drift or require a lost in-memory result. Nothing
 substantive runs after terminal metadata.
+
+The exact preparation command surface is the
+TASK-548-07-L01 **Exact Closure Validation Allowlist**: its named
+Vitest/Bun/DB tests, read-only `bun run docs:check`,
+`bun run docs:visual:check -- --all`,
+`bun run docs:coverage -- --check`, package checks/builds, lint/type/admin
+checks, full gates, strict security scan, and diff/line audits. It consumes the
+landed packaged bundle, coverage outputs, reviewed visual assets/receipts,
+release capsule/manifest receipt, search publication receipt, detached portal
+manifest, and selected post-deploy health artifact read-only.
+
+No 07 phase invokes the public Guide migration CLI, `bun run docs:compile` or
+direct compiler `--write`, `bun run docs:recover` or a workspace recovery API,
+Guide-visual capture/promotion, coverage `--write`, release-artifact regeneration, or
+real/disposable publication/deployment/rollback mutation. Producer behavior is
+exercised only by the exact named isolated tests. If recovery or any producer
+write becomes necessary, closure returns to that exact owner without invoking
+it. An existing frozen checkpoint is left unchanged and invalidated; after the
+owner work, preparation, post-audit, final smoke, and checkpoint creation start
+again before terminal resume.
 
 ```ts
 type Task548OwnerActionRequired = {
@@ -255,17 +279,26 @@ type Task548ClosureResume =
 async function prepareTask548RuntimeDocsAndGates(
   ctx: DocsAcceptanceContext
 ): Promise<RuntimeDocsAndGatesReceipt> {
-  await ctx.runAllTargetedContracts();
-  await recoverDocsWorkspaceArtifactPromotionV1();
   await ctx.finishAllProductRuntimeDocumentation();
-  await ctx.runFullGatesAndLineAudit();
-  return ctx.createRuntimeDocsAndGatesReceipt();
+  await ctx.runExactReadOnlyDocsCheck("bun run docs:check");
+  await assertNoDocsWorkspaceArtifactPromotionHazardsV1();
+  const bundle = await loadPackagedDocsDistributionBundleV2();
+  const landed = await ctx.loadAndValidateLandedDurableHandoffsReadOnly({
+    bundle,
+    requireCoverageVisualReleaseSearchAndPublicationReceipts: true,
+  });
+  await ctx.runTask548L01ExactClosureValidationAllowlist(landed);
+  await ctx.assertNoCanonicalArtifactOrTrackedInputMutation(landed);
+  await ctx.runLineAudit();
+  return ctx.createRuntimeDocsAndGatesReceipt({ landed });
 }
 
 async function runTask548FinalSmokeAndCheckpoint(
   ctx: DocsAcceptanceContext,
+  preparation: RuntimeDocsAndGatesReceipt,
   postAudit: PassedTask548PostAudit
 ): Promise<Task548OwnerActionRequired> {
+  await ctx.requireFreshRuntimeDocsAndGatesReceipt(preparation);
   await ctx.requireFreshPassedPostAudit(postAudit);
   await ctx.runExactAcceptanceCommand(
     "bun test tests/integration/documentation/docsPlatformAcceptance.test.ts"
@@ -287,7 +320,8 @@ async function runTask548FinalSmokeAndCheckpoint(
       linkToPortalManifest: true,
     },
   });
-  await ctx.prepareDisposableRetainedPagesFixture();
+  await ctx.requireCurrentLandedPortalEvidenceReadOnly(preparation.landed);
+  await ctx.mountLandedRetainedPagesSnapshotsReadOnly(preparation.landed);
   await ctx.restartRuntimeAndPortal();
   const scenarios = await ctx.runExactAcceptanceSmokeCommand(
     "bun scripts/docs/run-acceptance-smoke.ts",
@@ -371,16 +405,21 @@ async function completeTask548TerminalCloseout(
 }
 ```
 
-**Data flow:** recovered verified corpus/artifact → completed product/runtime
-docs plus targeted/full gates and line audit → TASK-548-08 post-audit
-lenses/fixes/revalidation → fresh pass → exact-run read-only post-deploy receipt
-→ scoped CMS and disposable retained-Pages fixtures → restarted Admin/local
-static portal → eight real flows → cleanup/restoration → exact TASK-545
-manifest/eight canonical screenshots → TASK-545 phase 1 immediately and
-atomically creates the sole checkpoint/exact payload → `owner_action_required`
-owner review/stage pause with no metadata write → exact owning-workflow
-resume/tracked parity → TASK-548-08 substantive final read-only drift against
-the frozen runtime revision on a first `frozen` attempt → require
+**Data flow:** completed product/runtime docs → current canonical sources →
+read-only `docs:check` byte/source equality → read-only workspace hazard
+inspection → strict fixed-path packaged bundle load, valid with the ignored
+migration report absent → read-only landed coverage/visual/release/search/
+publication handoffs → exact named-test, read-only check, package-build and
+full-gate allowlist → tracked/canonical byte-identity proof plus line audit →
+TASK-548-08 post-audit lenses/fixes/revalidation → fresh pass → exact-run read-only
+post-deploy receipt → scoped CMS plus landed retained-Pages snapshots mounted
+read-only →
+restarted Admin/local static portal → eight real flows → cleanup/restoration →
+exact TASK-545 manifest/eight canonical screenshots → TASK-545 phase 1
+immediately and atomically creates the sole checkpoint/exact payload →
+`owner_action_required` owner review/stage pause with no metadata write → exact
+owning-workflow resume/tracked parity → TASK-548-08 substantive final read-only
+drift against the frozen runtime revision on a first `frozen` attempt → require
 `{ pass: true, findings: [] }` without serializing the dynamic result →
 deterministic metadata plan derived solely from the verified checkpoint
 identity/frozen revision/closure contract, exact canonical manifest/eight
@@ -399,6 +438,16 @@ broken link, missing/malformed/oversized/stale/wrong-run/wrong-version/wrong-tag
 wrong-SHA/wrong-deployment post-deploy receipt, receipt identity/hash mismatch,
 unexpected request, console/page error, dirty cleanup, unresolved HIGH/MEDIUM
 finding, or touched file above 1,000 lines blocks closure.
+Any workspace journal/staging/backup hazard, report-only state, stale packaged
+bundle or canonical-byte/source mismatch blocks read-only acceptance and is
+returned to the declared TASK-548-01-L02 authoring/migration write handback.
+Closure never invokes recovery, creates a migration report, regenerates the
+bundle/report pair, or becomes a generated-artifact writer.
+Any required migration, compile write, recovery, Guide-visual capture/promotion,
+coverage write, release-artifact regeneration, or publication/deployment/
+rollback mutation aborts closure and returns to its exact owner before a new
+preparation/post-audit/smoke snapshot. In `frozen`, the checkpoint remains
+unchanged but is invalidated; no producer runs in that frozen attempt.
 Any product/runtime/docs/workflow/evidence/source/test/config change after the
 final smoke snapshot, or any non-metadata change after tracked resume,
 invalidates smoke/audit and requires a fresh pre-checkpoint run. The final drift
@@ -437,10 +486,20 @@ links, responsive/a11y visible effects, and cleanup idempotency.
 
 ## Testing Requirements
 
-- every targeted Vitest/Bun/DB/security/release/portal suite named by 01..06;
-- `bun run docs:check` and `bun run docs:visual:check -- --all`;
-- portal build plus artifact, disposable local publication/rollback, and
-  read-only production-health receipt validation;
+- exactly the named tests and commands in TASK-548-07-L01's **Exact Closure
+  Validation Allowlist**, including read-only `bun run docs:check`,
+  `bun run docs:visual:check -- --all`, and
+  `bun run docs:coverage -- --check`; the vague 01..06 producer-command set is
+  not a closure command surface;
+- exact workspace hazard inspection and strict
+  `loadPackagedDocsDistributionBundleV2()` before landed coverage/visual/
+  release/search/publication handoff validation. A clean-checkout fixture with
+  the tracked bundle and ignored migration report absent must pass with zero
+  bundle/report recovery, generation, or mutation;
+- renderer/Admin/portal package builds from the landed bundle, the named Docker
+  workspace/runtime contract test, and read-only immutable release
+  capsule/manifest, publication/rollback receipt, and production-health receipt
+  validation; no artifact rebuild or publication/deployment/rollback mutation;
 - exact successful-run health-artifact download and hostile receipt validation;
 - exact `health.search` plus `results[].target: "search-index"` validation:
   canonical locale/path, HTTP 200, bounded bytes and SHA-256 must match the
@@ -463,7 +522,9 @@ links, responsive/a11y visible effects, and cleanup idempotency.
   owner-action payload/owner-stage/resume/tracked-parity lifecycle;
 - exact post-06-L02 six-phase order, same physical 07-L01 owner in all four 07
   phases, nonterminal status through final drift, post-audit before final smoke,
-  and non-metadata-fix loopback tests;
+  and non-metadata-fix loopback tests. A write/recovery need returns to the exact
+  owner, invalidates any frozen snapshot without mutating its checkpoint, and
+  requires a fresh preparation/post-audit/smoke/checkpoint lifecycle;
 - pre-phase-1 lifecycle fixtures prove zero task/changelog/board/status or
   checkpoint writes by 07, exact manifest/eight-screenshot inventory, immediate
   TASK-545 phase 1 as sole atomic checkpoint creator, pause, and no summary

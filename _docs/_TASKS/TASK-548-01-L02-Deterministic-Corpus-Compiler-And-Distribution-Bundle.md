@@ -92,6 +92,211 @@ handback is valid.
   fallback, and public/embedded consumers do not fetch an external service per
   query.
 
+## Frozen Legacy-v1 Projection Contract
+
+The current pre-migration inventory is exactly 68 ingestible files: all sorted
+`docs/guide/**/*.md` files except `README.md`, `_TEMPLATE.md` and
+`_COVERAGE_MATRIX.md`. The compatibility adapter is code-owned, finite and
+temporary. Its exact files/exports are:
+
+```ts
+// core/services/documentation/compiler/legacyDocsV1Projection.ts
+export const LEGACY_DOCS_V1_ALLOWED_FRONTMATTER_KEYS = [
+  "title",
+  "audience",
+  "productArea",
+  "language",
+  "keywords",
+] as const;
+export const LEGACY_DOCS_V1_CURRENT_SOURCE_COUNT = 68 as const;
+export const LEGACY_DOCS_V1_ORIENTATION_SOURCE_PATHS = [
+  "docs/guide/getting-started/admin-orientation.md",
+] as const;
+export type LegacyDocsV1Source = {
+  sourcePath: string;
+  markdownBytes: Uint8Array;
+};
+export type LegacyDocsV1Projection = {
+  kind: "legacy-v1";
+  sourceSha256: string;
+  document: DocsDocumentV2;
+  headingOccurrences: readonly {
+    headingOccurrence: number;
+    sectionId: string;
+  }[];
+};
+export function projectLegacyDocsDocumentV1ToV2(
+  source: LegacyDocsV1Source
+): LegacyDocsV1Projection;
+
+// core/services/documentation/compiler/legacyDocsV1ContextCatalog.ts
+export type LegacyDocsV1Context = {
+  adminPath: string | null;
+  permissionRequirement: DocsPermissionRequirementV1 | null;
+  capabilityPolicy: "area" | "orientation-empty";
+};
+export const LEGACY_DOCS_V1_CONTEXT_BY_SOURCE_PATH = {
+  // Exactly the 68 rows below, keyed by full sourcePath.
+} as const satisfies Readonly<Record<string, LegacyDocsV1Context>>;
+export type LegacyDocsV1SourcePath =
+  keyof typeof LEGACY_DOCS_V1_CONTEXT_BY_SOURCE_PATH;
+```
+
+Legacy frontmatter has no discriminator and must contain all and only the
+five allowlisted keys above. Unknown, missing, duplicate, aliased or v2-only
+keys fail; a newly discovered legacy path without one exact context row fails
+`docs_compile_legacy_inventory_drift`. No title/keyword/body heuristic selects
+route, permission or capability context.
+
+The projection of every required `DocsDocumentV2` field is complete:
+
+1. `schema` is the literal `coderso.docs-document@v2`; `sourcePath` is the
+   normalized repository-relative discovered path.
+2. Let `stem` be the path relative to `docs/guide`, without `.md`.
+   Every stem segment must already be canonical lowercase kebab.
+   `docId` and `slug` both replace each `/` with `-`; no case-folding,
+   prettification or alternate slug source is allowed. Either collision fails.
+3. The only accepted legacy `language` is exact `en`; `locale` is exact
+   canonical `en`. `title` is the NFC-normalized, trimmed, bounded legacy title.
+4. `summary` is the complete plain text of the first non-empty paragraph under
+   the first level 1–4 ATX heading, after the shared safe-Markdown parser and
+   ASCII-whitespace collapse. It is never generated, truncated or inferred
+   from title/keywords; it must occupy 1..512 UTF-8 bytes.
+5. `audience` is the one-element array containing the exact normalized legacy
+   `admin | editor | developer`; `productArea` is the exact validated
+   lowercase-kebab legacy value.
+6. `productVersionRange` is the literal `>=1.0.0 <2.0.0`.
+   This is the current root/core product major-1 compatibility interval;
+   the post-TASK-547 re-freeze rejects a changed product major until this
+   literal and golden are explicitly amended.
+   `adminPath`, `permissionRequirement` and the capability policy come only
+   from the exhaustive context table below. `one(p)` means exact
+   `{ mode: "allOf", permissions: [p] }`; `any(a,b)` means exact
+   `{ mode: "anyOf", permissions: [a,b] }` in UTF-8 byte order.
+7. Capability policy `area` yields exactly
+   `[docsAreaCapabilityIdV1(productArea)]`; `orientation-empty` yields exactly
+   `[]` and is legal only for the single exported orientation path.
+8. `publicationTargets` is always the exact sorted array
+   `["assistant", "embedded-help", "public-docs"]`. `keywords` is the
+   unique UTF-8 byte-order sorted array of bounded NFC-normalized, trimmed
+   legacy values; empty or duplicate-after-normalization input fails.
+9. Every level 1–4 ATX heading becomes one section in source order.
+   `sectionId` is exactly `<docId>-section-<one-based-heading-occurrence>`;
+   heading and level come from the parser. `bodyMarkdown` is the LF-normalized
+   source slice after that heading through the byte before the next level 1–4
+   ATX heading, with leading/trailing blank lines removed and internal bytes
+   preserved; `plainText` comes from the safe AST. Text before the first
+   heading, Setext headings, duplicate/colliding IDs and an empty inventory fail.
+10. The initial projection sets document `visuals`/`examples` and every section
+    `visualIds`/`exampleIds` to `[]`. The compiler then attaches only strict
+    locale-bearing sidecars/receipts by exact
+    `(docId, locale, sectionId)` and bundle-global asset ID. Those validated
+    joins are the sole evidence enrichment.
+
+The table is the complete current context map; catalog keys prepend the literal
+`docs/guide/` to each displayed row. `area` uses the exact capability rule above.
+
+| Source path below `docs/guide/` | `adminPath` | Requirement | Caps |
+| --- | --- | --- | --- |
+| `coderso/booking.md` | `/admin/advanced/booking` | `one(booking:read)` | `area` |
+| `coderso/commerce-catalog.md` | `/admin/advanced/commerce` | `one(commerce:read)` | `area` |
+| `coderso/commerce-product-editor.md` | `/admin/advanced/commerce` | `one(commerce:read)` | `area` |
+| `coderso/commerce.md` | `/admin/advanced/commerce` | `one(commerce:read)` | `area` |
+| `coderso/content-type-editor-and-schema-builder.md` | `/admin/advanced/engine` | `one(content:read)` | `area` |
+| `coderso/custom-screen-records-and-entry-workflow.md` | `/admin/advanced/custom-screens` | `one(content:read)` | `area` |
+| `coderso/custom-screens-list-and-builder.md` | `/admin/advanced/custom-screens` | `one(content:read)` | `area` |
+| `coderso/engine-list-and-content-type-creation.md` | `/admin/advanced/engine` | `one(content:read)` | `area` |
+| `coderso/entries-list-type-selection-and-creation.md` | `/admin/advanced/entries` | `one(content:read)` | `area` |
+| `coderso/entry-editor-and-metadata.md` | `/admin/advanced/entries` | `one(content:read)` | `area` |
+| `coderso/form-action-logs.md` | `/admin/advanced/forms` | `one(forms:read)` | `area` |
+| `coderso/forms-list-and-builder.md` | `/admin/advanced/forms` | `one(forms:read)` | `area` |
+| `coderso/listing-filters.md` | `/admin/advanced/filters` | `one(content:read)` | `area` |
+| `coderso/listings-list-and-editor.md` | `/admin/advanced/listings` | `one(content:read)` | `area` |
+| `coderso/page-templates-list-and-editor.md` | `/admin/advanced/page-templates` | `one(content:read)` | `area` |
+| `coderso/popups.md` | `/admin/advanced/popups` | `one(popups:read)` | `area` |
+| `coderso/post-editor-preview-revisions-and-settings.md` | `/admin/posts` | `one(content:read)` | `area` |
+| `coderso/posts-list-and-creation.md` | `/admin/posts` | `one(content:read)` | `area` |
+| `coderso/public-search-preview.md` | `/admin/advanced/search` | `one(content:read)` | `area` |
+| `coderso/reviews-moderation.md` | `/admin/advanced/reviews` | `one(reviews:read)` | `area` |
+| `coderso/solution-kits.md` | `/admin/advanced/solution-kits` | `one(solution-kits:read)` | `area` |
+| `coderso/widget-library.md` | `null` | `null` | `area` |
+| `coderso/widget-template-editor.md` | `null` | `null` | `area` |
+| `getting-started/admin-orientation.md` | `/admin` | `one(content:read)` | `[]` |
+| `getting-started/site-setup-and-first-publish.md` | `/admin/settings/site` | `one(settings:read)` | `area` |
+| `playbooks/booking-first-service-business.md` | `/admin/advanced/booking` | `one(booking:read)` | `area` |
+| `playbooks/commerce-launch.md` | `/admin/advanced/commerce` | `one(commerce:read)` | `area` |
+| `playbooks/content-first-editorial-site.md` | `/admin/posts` | `one(content:read)` | `area` |
+| `playbooks/custom-business-without-a-solution-kit.md` | `/admin/advanced/engine` | `one(content:read)` | `area` |
+| `playbooks/lead-generation-site.md` | `/admin/advanced/forms` | `one(forms:read)` | `area` |
+| `playbooks/solution-kit-selection-guide.md` | `/admin/advanced/solution-kits` | `one(solution-kits:read)` | `area` |
+| `screens/access-logs.md` | `/admin/access-logs` | `one(audit:read)` | `area` |
+| `screens/analytics.md` | `/admin/analytics` | `one(content:read)` | `area` |
+| `screens/api-keys.md` | `/admin/settings/api-keys` | `one(settings:read)` | `area` |
+| `screens/assistant-settings.md` | `/admin/settings/assistant` | `one(settings:read)` | `area` |
+| `screens/audit-logs.md` | `/admin/audit` | `one(audit:read)` | `area` |
+| `screens/authentication-and-account-recovery.md` | `null` | `null` | `area` |
+| `screens/backups.md` | `/admin/backups` | `one(backups:read)` | `area` |
+| `screens/dashboard.md` | `/admin` | `one(content:read)` | `area` |
+| `screens/email-settings.md` | `/admin/settings/email` | `one(settings:read)` | `area` |
+| `screens/general-settings.md` | `/admin/settings/general` | `one(settings:read)` | `area` |
+| `screens/import-export.md` | `/admin/tools/import-export` | `one(settings:read)` | `area` |
+| `screens/integrations.md` | `/admin/settings/integrations` | `one(settings:read)` | `area` |
+| `screens/ip-allowlist.md` | `/admin/settings/security/ip-allowlist` | `one(settings:read)` | `area` |
+| `screens/login-alerts.md` | `/admin/settings/security/login-alerts` | `one(settings:read)` | `area` |
+| `screens/media-library.md` | `/admin/media` | `one(media:read)` | `area` |
+| `screens/menus.md` | `/admin/menus` | `one(menus:read)` | `area` |
+| `screens/page-editor-preview-settings-and-history.md` | `/admin/pages` | `one(content:read)` | `area` |
+| `screens/pages-list-and-creation.md` | `/admin/pages` | `one(content:read)` | `area` |
+| `screens/plugin-details.md` | `/admin/store` | `one(store:browse)` | `area` |
+| `screens/plugin-store.md` | `/admin/store` | `one(store:browse)` | `area` |
+| `screens/redirects.md` | `/admin/redirects` | `one(settings:read)` | `area` |
+| `screens/roles-matrix.md` | `/admin/roles` | `one(roles:read)` | `area` |
+| `screens/search.md` | `/admin/search` | `one(content:read)` | `area` |
+| `screens/security-settings.md` | `/admin/settings/security` | `one(settings:read)` | `area` |
+| `screens/seo-manager.md` | `/admin/seo` | `one(content:read)` | `area` |
+| `screens/sessions.md` | `/admin/settings/security/sessions` | `one(settings:read)` | `area` |
+| `screens/site-settings.md` | `/admin/settings/site` | `one(settings:read)` | `area` |
+| `screens/storage-settings.md` | `/admin/settings/storage` | `one(settings:read)` | `area` |
+| `screens/themes.md` | `/admin/themes` | `one(themes:read)` | `area` |
+| `screens/users.md` | `/admin/users` | `any(roles:read,users:read)` | `area` |
+| `screens/webhooks.md` | `/admin/settings/webhooks` | `one(settings:read)` | `area` |
+| `solution-kits/automotive-workshop.md` | `/admin/advanced/solution-kits` | `one(solution-kits:read)` | `area` |
+| `solution-kits/beauty-salon.md` | `/admin/advanced/solution-kits` | `one(solution-kits:read)` | `area` |
+| `solution-kits/local-service-business.md` | `/admin/advanced/solution-kits` | `one(solution-kits:read)` | `area` |
+| `solution-kits/medical-clinic.md` | `/admin/advanced/solution-kits` | `one(solution-kits:read)` | `area` |
+| `solution-kits/services-directory.md` | `/admin/advanced/solution-kits` | `one(solution-kits:read)` | `area` |
+| `solution-kits/small-ecommerce.md` | `/admin/advanced/solution-kits` | `one(solution-kits:read)` | `area` |
+
+Every non-null route row is grounded against the canonical default-base route
+definitions in `core/admin/app/AdminApp.tsx` and normalized through
+`core/admin/utils/adminPaths.ts`; every listed permission is validated through
+`core/services/admin/permissionsCatalog.ts#listPermissionIds`; capabilities
+come only from TASK-548-01-L01's `DOCS_CAPABILITY_CATALOG_V1`. Null rows are
+intentional fail-closed compatibility values: retired widget surfaces and the
+public authentication/recovery flow never receive an invented Admin action.
+
+The full current projection is frozen in the generated test fixture
+`tests/vitest/documentation/fixtures/legacy-docs-v1-projection.golden.json`.
+Its strict root is
+`{ schema: "coderso.legacy-docs-projection-golden@v1",
+task547TerminalHead, sourceCount: 68, sources[] }`; each source row contains
+exact `sourcePath`, full-source `sourceSha256`, and canonical complete-document
+`projectionSha256`, sorted by source path. The HEAD is exact lowercase 40-hex
+and both hashes are lowercase 64-hex. Immediately after TASK-547 becomes
+terminal and before the canonical TASK-548 audit, re-enumerate the real tree,
+revalidate route and
+permission sources, and re-freeze this catalog/golden against TASK-547's exact
+terminal HEAD. Any added/removed/changed legacy source or context requires an
+explicit task-contract/table/golden update and a fresh audit; it cannot be
+auto-accepted by the compiler.
+
+TASK-548-06 writes the exact projected metadata and reported IDs/directives
+into native v2. Native semantic parity requires equality for every field above,
+including null routes, permissions, capabilities, targets and section content.
+Only strict visual/example records and their section ID arrays may be
+intentionally enriched; no migration step may upgrade a null `adminPath`,
+permission or capability by judgment.
+
 ## Migration Report Contract
 
 The report path and shapes are exact:
@@ -521,7 +726,7 @@ export async function compileDocsCorpusV2(options: CompileDocsOptions) {
       );
     }
     if (kind === "legacy-v1") {
-      return parseLegacyDocsDocumentV1ToV2(source);
+      return projectLegacyDocsDocumentV1ToV2(source);
     }
     throw new Error("docs_compile_source_ambiguous");
   });
@@ -640,9 +845,10 @@ explicitly recover before staging the linked pair.
 `docs_compile_source_escaped`, `docs_compile_ref_missing`,
 `docs_compile_orphan`, `docs_compile_hash_mismatch`,
 `docs_compile_source_ambiguous`, `docs_compile_migration_report_invalid`,
-`docs_compile_nondeterministic`, `docs_compile_generated_stale` and
-`docs_compile_recovery_required`. A failure must not truncate or partially
-replace the last valid bundle.
+`docs_compile_legacy_inventory_drift`,
+`docs_compile_legacy_projection_mismatch`, `docs_compile_nondeterministic`,
+`docs_compile_generated_stale` and `docs_compile_recovery_required`. A failure
+must not truncate or partially replace the last valid bundle.
 
 **Regression-test shape:** compile the same fixture under different absolute
 roots, directory enumeration order and timezone and assert byte/hash identity;
@@ -693,11 +899,19 @@ Reject native files with missing/orphan/reordered directives, invalid ordinals,
 duplicate section IDs or directive/frontmatter confusion; prove legacy report
 entries serialize to exact native directives and round-trip back to identical
 section IDs/one-based heading occurrences.
+Pin all 68 current source paths and complete projection hashes. Prove exact
+five-key legacy allowlisting, path-derived document/section identity, summary,
+version, target and keyword rules, the single orientation exception, all
+context rows, canonical Admin route rendering, permission-catalog membership,
+33-ID capability-catalog membership, and legacy→native equality for every
+non-evidence field. Added/removed/changed legacy sources, route/permission
+drift, catalog collisions and any unreviewed null-to-action enrichment fail.
 
 ## Sub-Tasks
 
 - [ ] Add small compiler files for discovery, graph joins, hashing,
-  serialization, durable journal recovery and atomic output; never grow the 5,530-line
+  serialization, exact legacy projection/context catalogs, durable journal
+  recovery and atomic output; never grow the 5,530-line
   `scripts/playwright-widget-contract-smoke.ts`.
 - [ ] Add `scripts/docs/compile-corpus.ts` with `--write` and read-only `--check`
   modes and safe, bounded diagnostics. `--check` must never call recovery or
@@ -726,11 +940,17 @@ section IDs/one-based heading occurrences.
 - `bun scripts/docs/compile-corpus.ts --check`
 - `bun test tests/unit/documentation/docsCorpusPromotionRecovery.test.ts`
 - `bunx vitest run --config vitest.config.ts tests/vitest/documentation/docs-corpus-compiler.test.ts tests/vitest/documentation/docs-corpus-contract.test.ts`
+- `bunx vitest run --config vitest.config.ts
+  tests/vitest/documentation/legacy-docs-v1-projection.test.ts
+  tests/vitest/documentation/legacy-docs-v1-context.test.tsx`
 - run two clean compiles in distinct temporary roots and compare bundle bytes
   and SHA-256
 - compile legacy then report-migrated native fixtures; compare normalized
   semantics/stable IDs and assert the changed source bytes produce the expected
   new deterministic `sourceHash`
+- validate the exact 68-row context inventory and full golden projection,
+  including all routes, permissions, capabilities, targets, collisions and the
+  exhaustive legacy→native parity contract
 - failure-inject every pair-promotion rename, validation, rollback and cleanup
   boundary; assert the exact pre-commit rollback/post-commit evidence contract
 - cover the preparing-journal temp/file-fsync/rename/directory-fsync boundary,

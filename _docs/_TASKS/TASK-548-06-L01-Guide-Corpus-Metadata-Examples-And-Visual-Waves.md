@@ -80,10 +80,13 @@ Execute and review waves sequentially so failures remain attributable:
 
 For each active source, write exact native v2 frontmatter:
 `schema: "coderso.docs-document@v2"`, `docId`, `locale: en`, stable `slug`,
-`title`, `summary`, singular `audience`, `productArea`,
+`title`, `summary`, the one-element `audience` array, `productArea`,
 `productVersionRange`, canonical `adminPath` or `null`,
 `permissionRequirement`, catalog-backed `capabilityIds`, ordered
-`publicationTargets`, and `keywords`. Preserve exact
+`publicationTargets`, and `keywords`. Every value must equal the complete
+TASK-548-01-L02 frozen legacy projection for that exact source path; migration
+may not enrich or reinterpret route, permission, capability, version, target,
+summary, audience or keyword fields. Preserve exact
 `permissionRequirement: null | { mode: "allOf" | "anyOf"; permissions:
 string[] }` semantics. `requiredPermissions`, plural `audiences`, a generic
 permission set, and any alternate capability field fail strict validation.
@@ -248,9 +251,11 @@ No per-wave/per-promotion regeneration is allowed. After the final edit, request
 exactly one same-owner TASK-548-01-L02 final handback; on crash/restart, an
 already exact intended owner pair is verified instead of requesting another.
 Recover and compare final native output with the stored original projection:
-IDs, slugs, links and pre-existing normalized fields stay equal, intentional
-visual/example enrichment closes, adapter diagnostics are empty, and
-deterministic `sourceHash` differs. Only then may `docs:check` and 06-L02 start.
+every non-evidence `DocsDocumentV2` field and section content stays equal,
+including intentionally null actions and the sole empty orientation capability
+array. Only strict visual/example objects and their section ID arrays may be
+enriched. Adapter diagnostics are empty and deterministic `sourceHash` differs.
+Only then may `docs:check` and 06-L02 start.
 
 ## Visual Review Contract
 
@@ -360,6 +365,10 @@ export async function migrateGuideCorpus(
       const intended = await buildExactIntendedMigratedState({
         source,
         identity,
+        metadata: requireExactFrozenLegacyProjectionForSource(
+          baseline,
+          source.relativePath
+        ),
         serializeDirective: serializeNativeDocsSectionDirectiveV1,
         examples: planStrictExamples(source, {
           docId: identity.docId,
@@ -480,9 +489,10 @@ owner pair is verified rather than requesting a second handback.
 
 ## Testing Requirements
 
-- legacy-adapted and native semantic projections preserve exact document/section
-  IDs, slugs, links, targets and normalized content while final `sourceHash`
-  changes deterministically;
+- legacy-adapted and native semantic projections preserve every exact
+  non-evidence `DocsDocumentV2` field and section byte/identity from the
+  68-source golden projection; only planned strict visual/example records and
+  their section refs enrich while final `sourceHash` changes deterministically;
 - every discovered active English source compiles exactly once natively;
 - every example/visual/receipt resolves once by its owning canonical
   `{ docId, locale, sectionId }`; bundle-global `exampleId`/`visualId`

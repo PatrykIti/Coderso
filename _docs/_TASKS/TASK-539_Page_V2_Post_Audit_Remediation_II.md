@@ -185,14 +185,18 @@ working tree, including paths committed at intermediate checkpoints. A result ab
   validation rejects unknown fields. Public Page rendering remains read-only.
   TASK-539 does not invent an API-key auth path. The closure Bun suite proves this
   through real requests to an ephemeral `startHttpServer`, with uniquely owned
-  reader/writer/publisher roles, real sessions and CSRF tokens; the direct Page route
-  harness remains route/schema/service proof and is never cited as middleware proof.
+  reader/writer/publisher roles, real sessions and CSRF tokens, an exactly restored
+  security-settings fixture, and one exact owned `/32` allowlist row; the direct Page
+  route harness remains route/schema/service proof and is never cited as middleware
+  proof.
 - **CSS/markup:** grid/background/color/category values use positive allowlists
   at write and render. Responsive raw `<style>` emission revalidates the same
   parsed value and never interpolates an unvalidated author string.
 - **Runtime:** emitted scripts are static literals, use no `eval`, `Function`, or
   user-data `innerHTML`, and preserve reduced-motion/pointer gates. Replica-unsafe
-  subtrees stay single-copy, including the nonce-bearing public form surface.
+  subtrees stay single-copy, including the nonce-bearing public form and resolved
+  listing surfaces. Closure creates and exactly cleans owned Form/field/saved-query
+  fixtures and restores its nonlogged test-local nonce secret.
 - **Anti-abuse:** no public write is added; nonce/captcha do not apply.
 
 ## Sub-Tasks
@@ -305,9 +309,12 @@ missing audit results, and coordinates post-audit/smoke/closure. Agents do not c
   motion, main+footer runtime, all transform effects combined, device typography+
   spans including all placement classes and a legal maximum-depth nested path,
   responsive full-bleed/background, safe marquee identity/geometry plus unsafe
-  form/listing fallback, glow/timeline click-through/geometry, and narrow Page editor.
+  owned-Form and paired filters/collection fallback, glow/timeline
+  click-through/geometry, and narrow Page editor.
   Assert computed styles, geometry, DOM/ARIA state, light/dark, and zero console
-  errors.
+  errors. Use only the product-reachable main→footer SSR order plus late-node
+  rescans; TASK-539-07-L02 exclusively proves the defensive reverse parser order in
+  fixed DOM.
 
 ## Documentation Updates Required
 

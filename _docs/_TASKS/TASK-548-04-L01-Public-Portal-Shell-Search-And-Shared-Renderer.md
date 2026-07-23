@@ -70,6 +70,11 @@ it consumes L02 output through the predeclared package command.
   `(docId, locale, sectionId)`;
   previous/next and related docs derived only from the explicit `public-docs`
   projection's ordering.
+- The shell passes every required `DocsRendererProps` member with no default:
+  exact bundle, selected document, literal `public-docs`, the strict
+  public-surface `DocsLinkContextV1`, a verified read-only local asset map built
+  from confined packaged PNG bytes/SHA-256, and an explicit user-event-only
+  copy handler.
 - Search: shared `createDocsSearchIndex`/`searchDocs`; scoped to selected
   version+locale and called with exact target `public-docs`; title/section/
   snippet results; empty-state suggestions; query reflected in bounded URL
@@ -137,9 +142,17 @@ export type DocsPortalPublicProjectionV1 = {
   selected: DocsPortalDocumentSelectionV1;
 };
 
+export type DocsPortalPublicLinkContextV1 = Extract<
+  DocsLinkContextV1,
+  { surface: "public-docs" }
+>;
+
 export type DocsPortalShellProps = {
   publicDocs: DocsPortalPublicProjectionV1;
-  navigation: DocsPortalNavigation;
+  navigation: DocsPortalNavigation & {
+    linkContext: DocsPortalPublicLinkContextV1;
+  };
+  packagedVisualAssets: readonly DocsPackagedLocalVisualAssetV1[];
 };
 
 export const DOCS_PORTAL_SITE_INDEX_MAX_VERSIONS = 256 as const;
@@ -230,8 +243,37 @@ export async function loadDocsPortalVersionNavigationV1(input: {
   }
 }
 
+export function usePortalCopyExampleBodyV1(): DocsCopyExampleBodyV1 {
+  const announce = usePortalCopyStatusAnnouncer();
+  return useCallback(async (input) => {
+    assertExactTrustedCopyInput(input);
+    try {
+      await navigator.clipboard.writeText(input.body);
+      announce({ state: "success", message: "Example copied" });
+    } catch {
+      announce({ state: "error", message: "Example could not be copied" });
+    }
+  }, [announce]);
+}
+
 export function DocsPortalShell(props: DocsPortalShellProps) {
+  const copyExampleBody = usePortalCopyExampleBodyV1();
   const publicDocs = assertDocsPortalPublicProjectionV1(props.publicDocs);
+  const linkContext = normalizeDocsLinkContextV1(
+    props.navigation.linkContext
+  );
+  assertPortalRendererLinkContext({
+    linkContext,
+    locale: publicDocs.selected.locale,
+    productVersion: publicDocs.selected.productVersion,
+    publicationTarget: publicDocs.publicationTarget,
+  });
+  const localVisualAssets = buildVerifiedDocsLocalVisualAssetMapV1({
+    bundle: publicDocs.bundle,
+    document: publicDocs.selected.document,
+    publicationTarget: publicDocs.publicationTarget,
+    packagedAssets: props.packagedVisualAssets,
+  });
   const searchIndex = createDocsSearchIndex(publicDocs.bundle, {
     publicationTarget: publicDocs.publicationTarget,
   });
@@ -262,7 +304,9 @@ export function DocsPortalShell(props: DocsPortalShellProps) {
           bundle={publicDocs.bundle}
           document={publicDocs.selected.document}
           publicationTarget={publicDocs.publicationTarget}
-          linkContext={props.navigation.linkContext}
+          linkContext={linkContext}
+          localVisualAssets={localVisualAssets}
+          copyExampleBody={copyExampleBody}
         />
       </main>
       <PortalTableOfContents sections={publicDocs.selected.document.sections} />
@@ -290,13 +334,18 @@ accepted remote response. TASK-548-05-L02 imports these exact functions for its
 sole-writer cumulative merge rather than duplicating the schema.
 
 **Data flow:** strict compiled bundle → L02 exact `public-docs` projection →
-L01 projection revalidation → shared search index/renderer with explicit
-`public-docs` target → semantic static/hydratable React output.
+L01 projection revalidation → exact public link context + confined packaged
+asset byte/hash map + explicit user-event copy handler → shared search
+index/renderer with all required props and literal `public-docs` target →
+semantic static/hydratable React output.
 
 **Error handling:** invalid bundle blocks build/render; missing selected article
-uses a typed not-found shell supplied by L02; missing visual uses shared alt/
-caption fallback; unavailable locale shows actual alternatives; search failure
-leaves article/navigation usable.
+uses a typed not-found shell supplied by L02. A missing/unlisted/orphan/
+cross-owner/tampered visual/example or asset/hash mismatch fails the selected
+article build before shared render; it is never downgraded to a successful
+text-only article. Only a verified image's later browser decode failure may
+show its shared alt/caption fallback. Unavailable locale shows actual
+alternatives; search failure leaves article/navigation usable.
 
 **Regression-test shape:**
 
@@ -321,6 +370,14 @@ leaves article/navigation usable.
 - localized visuals join the selected document and section by
   `(docId, locale, sectionId)` and reject a bundle-global `visualId` reused by
   another owner;
+- renderer integration supplies all six exact required props; strict public
+  link context rejects Help discriminant/target, locale/version/base mismatch
+  and unsafe links without defaults;
+- packaged-asset fixtures prove confined local href, byte/SHA-256 verification,
+  read-only map construction and selected-article failure for missing/extra/
+  duplicate/unknown/wrong-media/tampered assets with zero remote fetch;
+- copy is invoked only by trusted keyboard/click activation, copies exact text,
+  announces success/failure, and is absent from SSR/render/effect/network paths;
 - mobile navigation open/close/focus restore, narrow/wide no overflow;
 - theme/reduced-motion behavior without sensitive storage;
 - no raw HTML/search-highlight injection or network calls;
@@ -332,7 +389,8 @@ leaves article/navigation usable.
   mutation.
 - [ ] Build accessible responsive shell/navigation/article/TOC.
 - [ ] Integrate shared renderer and deterministic version/locale search through
-  the exact validated `public-docs` projection.
+  the exact validated `public-docs` projection, strict link context, verified
+  packaged local-asset map and user-event-only copy handler.
 - [ ] Add theme/reduced-motion and locale-fallback UX.
 - [ ] Add focused shell/search tests without editing root package/lock files.
 
@@ -373,6 +431,8 @@ Re-run named failures alone before classification.
 - The portal workspace compiles with the current repo stack and no unnecessary
   dependency/framework.
 - Shell/search consume the exact shared renderer and exact compiled bundle.
+- The portal supplies every non-optional renderer prop and never uses an
+  implicit link, asset or copy fallback.
 - Wide/narrow, keyboard/focus, theme, reduced-motion, real locale fallback, and
   empty/error states are accessible and tested.
 - The selector consumes the cumulative same-origin retained-version index

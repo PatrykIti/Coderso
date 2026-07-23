@@ -177,6 +177,118 @@ must:
   a `type="button"` copy action for the exact body. Never evaluate, execute,
   preview, submit or turn an example into a CMS mutation control.
 
+### Exact link, local-asset and copy contracts
+
+This leaf exports one required, recursively strict discriminated link context:
+
+```ts
+export type DocsLinkContextV1 =
+  | {
+      surface: "embedded-help";
+      publicationTarget: "embedded-help";
+      locale: string;
+      adminBasePath: string;
+      officialDocs:
+        | {
+            state: "configured";
+            origin: string;
+            basePath: string;
+            version: string;
+          }
+        | { state: "unavailable" };
+    }
+  | {
+      surface: "public-docs";
+      publicationTarget: "public-docs";
+      locale: string;
+      productVersion: string;
+      publicBasePath: string;
+    };
+
+export type DocsResolvedLinkV1 =
+  | { kind: "anchor"; href: string; prefetch: false }
+  | { kind: "admin"; href: string; prefetch: true }
+  | { kind: "public-docs"; href: string; prefetch: false }
+  | { kind: "external-https"; href: string; prefetch: false };
+
+export function normalizeDocsLinkContextV1(
+  value: unknown
+): DocsLinkContextV1;
+
+export function resolveSafeDocsLink(input: {
+  href: string;
+  bundle: DocsDistributionBundleV2;
+  document: DocsDocumentV2;
+  sectionId: string;
+  context: DocsLinkContextV1;
+}): DocsResolvedLinkV1;
+```
+
+There is no default surface, locale, base path, version or target. Context
+target must equal the renderer target, context locale must equal the selected
+document locale, and the selected document/section must be an exact bundle
+member. Unknown keys or mismatched discriminants fail closed.
+
+For `embedded-help`, anchors remain local and relative documentation links
+resolve only to exact `embedded-help` members through `adminHelpPath` plus the
+validated Admin base; the result is an `AdminLink`-compatible prefetched admin
+link. An official link is possible only from a configured HTTPS context and a
+destination also targeted to `public-docs`. For `public-docs`, relative docs
+links resolve only to exact `public-docs` members at the same explicit product
+version through `buildDocsPublicPath` plus the validated public base path.
+Neither surface silently crosses to the other. Already-authored absolute links
+must be canonical HTTPS without credentials; unsafe schemes, protocol-relative
+forms, traversal and unknown destinations fail closed.
+
+The same package exports the exact local-asset/copy types and verified map
+builder:
+
+```ts
+export type DocsPackagedLocalVisualAssetV1 = {
+  assetPath: string;
+  href: string;
+  mediaType: "image/png";
+  bytes: Uint8Array;
+};
+
+export type DocsLocalVisualAssetV1 = DocsPackagedLocalVisualAssetV1 & {
+  sha256: string;
+};
+
+export type DocsExampleCopyActivationV1 = {
+  kind: "trusted-user-activation";
+  isTrusted: true;
+};
+
+export type DocsCopyExampleBodyV1 = (input: {
+  body: string;
+  activation: DocsExampleCopyActivationV1;
+}) => void | Promise<void>;
+
+export function buildVerifiedDocsLocalVisualAssetMapV1(input: {
+  bundle: DocsDistributionBundleV2;
+  document: DocsDocumentV2;
+  publicationTarget: "embedded-help" | "public-docs";
+  packagedAssets: readonly DocsPackagedLocalVisualAssetV1[];
+}): ReadonlyMap<string, DocsLocalVisualAssetV1>;
+```
+
+The builder revalidates exact localized membership and target, requires exactly
+one confined packaged local PNG for every visual of the selected article,
+rejects duplicate/unknown/traversing/remote/data/blob hrefs and missing/extra
+selected-article assets, hashes the bytes, compares exact SHA-256, and returns a
+read-only map keyed by `assetPath`. Unrelated asset entries are accepted only
+when their path is another known bundle visual and are never added to this
+article map. It performs no fetch.
+
+`DocsRendererProps.copyExampleBody` is required. The renderer invokes it only
+inside a trusted click/keyboard activation after checking
+`event.nativeEvent.isTrusted`; it is never called during render, hydration,
+effects or article selection. Surface handlers copy only the exact bounded body
+to the clipboard, expose accessible success/failure status, and issue no
+network, analytics, execution or CMS mutation. Tests may inject an explicit
+trusted activation adapter; production code may not fabricate one.
+
 ## Permission and Offline Behavior
 
 Help prose and screenshots are public-safe. `Open in CMS` is a convenience
@@ -344,11 +456,48 @@ export function searchDocs(
 }
 
 // packages/docs-renderer/src/evidenceCards.ts
-export type DocsLocalVisualAssetV1 = {
+export type DocsPackagedLocalVisualAssetV1 = {
   assetPath: string;
   href: string;
+  mediaType: "image/png";
   bytes: Uint8Array;
 };
+
+export type DocsLocalVisualAssetV1 = DocsPackagedLocalVisualAssetV1 & {
+  sha256: string;
+};
+
+export function buildVerifiedDocsLocalVisualAssetMapV1(input: {
+  bundle: DocsDistributionBundleV2;
+  document: DocsDocumentV2;
+  publicationTarget: "embedded-help" | "public-docs";
+  packagedAssets: readonly DocsPackagedLocalVisualAssetV1[];
+}): ReadonlyMap<string, DocsLocalVisualAssetV1> {
+  const document = resolveExactBundleDocument(input.bundle, {
+    docId: input.document.docId,
+    locale: input.document.locale,
+  });
+  assertSameNormalizedDocument(document, input.document);
+  assertDocumentHasPublicationTarget(document, input.publicationTarget);
+  const expected = collectExactDocumentVisuals(document);
+  return toReadonlyMap(
+    expected.map((visual) => {
+      const asset = resolveExactlyOneConfinedPackagedAsset(
+        input.packagedAssets,
+        visual.assetPath,
+        input.bundle
+      );
+      const sha256 = sha256Bytes(asset.bytes);
+      if (asset.mediaType !== "image/png" || sha256 !== visual.sha256) {
+        throw new Error("docs_renderer_asset_integrity_invalid");
+      }
+      return [
+        visual.assetPath,
+        { ...asset, href: assertRootRelativeLocalAssetHref(asset.href), sha256 },
+      ] as const;
+    })
+  );
+}
 
 export type DocsAccessibleVisualCardV1 = {
   kind: "visual";
@@ -436,14 +585,20 @@ export type DocsRendererProps = {
   publicationTarget: "embedded-help" | "public-docs";
   linkContext: DocsLinkContextV1;
   localVisualAssets: ReadonlyMap<string, DocsLocalVisualAssetV1>;
-  copyExampleBody: (body: string) => void | Promise<void>;
+  copyExampleBody: DocsCopyExampleBodyV1;
 };
 
 export function DocsDocumentRenderer(props: DocsRendererProps) {
+  const linkContext = normalizeDocsLinkContextV1(props.linkContext);
   assertDocumentHasPublicationTarget(
     props.document,
     props.publicationTarget
   );
+  assertRendererSurfaceTargetAndLocale({
+    linkContext,
+    publicationTarget: props.publicationTarget,
+    locale: props.document.locale,
+  });
   return props.document.sections.map((section) => {
     const evidence = resolveDocsSectionEvidenceCards({
       bundle: props.bundle,
@@ -455,7 +610,15 @@ export function DocsDocumentRenderer(props: DocsRendererProps) {
       <DocsSection
         key={section.sectionId}
         tokens={parseSafeMarkdownSection(section.bodyMarkdown).tokens}
-        resolveLink={(link) => resolveSafeDocsLink(link, props.linkContext)}
+        resolveLink={(href) =>
+          resolveSafeDocsLink({
+            href,
+            bundle: props.bundle,
+            document: props.document,
+            sectionId: section.sectionId,
+            context: linkContext,
+          })
+        }
         visualCards={evidence.visualCards}
         exampleCards={evidence.exampleCards}
         renderVisualCard={(card) => (
@@ -478,7 +641,16 @@ export function DocsDocumentRenderer(props: DocsRendererProps) {
             <button
               type="button"
               aria-label={`Copy ${card.title}`}
-              onClick={() => void props.copyExampleBody(card.body)}
+              onClick={(event) => {
+                if (!event.nativeEvent.isTrusted) return;
+                void props.copyExampleBody({
+                  body: card.body,
+                  activation: {
+                    kind: "trusted-user-activation",
+                    isTrusted: true,
+                  },
+                });
+              }}
             >
               Copy
             </button>
@@ -505,11 +677,12 @@ export const bindings = {
 **Data flow:** recovered embedded validated distribution → one in-memory index
 → `(docId, locale, sectionId)` URL/query selection → strict localized
 document/section → ordered `visualIds`/`exampleIds` → exact localized ownership
-joins → visual byte/hash verification plus strict example projection → explicit
-accessible visual cards and inert copyable example cards beside the safe
-Markdown-token React renderer → optional canonical Help/Admin links and
-target-gated official link. Markdown image/HTML tokens have no evidence-card
-path.
+joins → selected-article confined asset-map byte/hash verification plus strict
+example projection → required surface link context and trusted user-event copy
+handler → explicit accessible visual cards and inert copyable example cards
+beside the safe Markdown-token React renderer → optional canonical Help/Admin
+links and target-gated official link. Markdown image/HTML tokens have no
+evidence-card path.
 The shared package requires an explicit `embedded-help | public-docs` consumer
 target and has no default. Admin Help always passes `embedded-help`; TASK-548-04
 is the only owner allowed to pass `public-docs`.
@@ -521,7 +694,10 @@ cross-section, duplicate, missing, unlisted, orphan or tampered visual/example
 reference blocks the affected article with a bounded integrity error before
 render; a verified image that later fails browser decoding retains its visible
 caption/alt fallback. Unavailable official origin hides the external action;
-Help-only target omits it; malformed permissions fail closed.
+Help-only target omits it; malformed permissions fail closed. The strict shared
+renderer has no omit-invalid-evidence flag: only Guide's separate, already
+authorization-filtered enrichment projection may omit an unresolved optional
+card while retaining grounded text/source evidence.
 
 **Regression-test shape:**
 
@@ -541,8 +717,17 @@ Help-only target omits it; malformed permissions fail closed.
 - reject cross-document, cross-locale, cross-section, duplicate, missing,
   unlisted and orphan visual/example refs, wrong local asset paths/media types,
   absent/mismatched SHA-256, tampered PNG bytes and forged card props;
-- example copy copies only the exact body and never executes, previews, submits
-  or invokes an Admin mutation;
+- exact `DocsLinkContextV1` tests cover both discriminants, required target/
+  locale/base/version fields, Help/public relative-link behavior, target
+  mismatch, unknown keys, traversal, unsafe schemes and no implicit defaults;
+- Help and portal integrations pass all six required `DocsRendererProps`;
+  missing/undefined context, map or copy handler fails type/runtime validation;
+- verified-map fixtures use confined packaged bytes, prove exact SHA-256 and
+  reject missing/extra selected-article, duplicate/unknown, remote/blob/data,
+  wrong-media and tampered assets without a fetch;
+- example copy copies only the exact body after trusted click/keyboard
+  activation and never fires on render/hydration/effect/untrusted dispatch,
+  executes, previews, submits, sends telemetry or invokes an Admin mutation;
 - hostile HTML/script/URL/path/asset fixtures rejected or rendered as text;
 - Help route renders for authenticated empty-permission snapshot;
 - null action allowed for authenticated empty snapshot; exact live `["*"]`
@@ -562,6 +747,9 @@ Help-only target omits it; malformed permissions fail closed.
 ## Sub-Tasks
 
 - [ ] Build the shared closed renderer/link-policy package.
+- [ ] Export and strictly normalize the exact surface-discriminated
+  `DocsLinkContextV1`, verified local-asset map builder and trusted user-event
+  copy handler contract; permit no optional/default renderer prop.
 - [ ] Add the exact Bun-free `adminActions.ts` resolver and direct permission/
   path/result tests; Help and Guide consume the named export.
 - [ ] Build deterministic local search and URL-state helpers.
@@ -614,6 +802,8 @@ classification.
   installed compiled distribution and issue no per-query network request.
 - Renderer/search primitives are reusable by TASK-548-04 without forking
   content, search rules, or safety policy.
+- Help and portal provide explicit surface link context, verified confined local
+  asset bytes/map and user-event-only copy behavior to the same renderer.
 - Unsafe content/URLs/assets fail closed; raw HTML is never rendered.
 - `Open in CMS` is canonical and permission-aware; official docs are optional
   and version/locale aware.

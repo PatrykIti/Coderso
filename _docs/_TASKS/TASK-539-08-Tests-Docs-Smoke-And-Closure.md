@@ -61,29 +61,41 @@ No endpoint or source behavior changes. The new suite validates existing interna
 `startHttpServer({port:0})`, never a directly invoked route handler. It uses the
 resolved Admin prefix, configured `site.adminBaseUrl` Host, three uniquely owned
 reader/writer/publisher role assignments, real session cookies, and real CSRF tokens.
+It exactly snapshots/restores raw `security.settings`, forces an enabled canonical
+CSRF, bounded `admin_write`, and bot-disabled Form fixture with cache resets, and
+sends one unique owned allowlisted `/32` through `X-Forwarded-For` without touching
+foreign allowlist rows.
 Create/update/autosave require `content:write`, publish requires
-`content:publish`, session writes require `X-CSRF-Token`, the rate-limit bucket is
-`admin_write`, and PageDocumentV2 validation rejects unknown fields. The suite proves
-the expected 401/403/400 failures produce zero owned Page/revision/autosave/audit
-mutation before proving authorized create/update/autosave/publish.
+`content:publish`, and PageDocumentV2 validation rejects unknown fields. The suite
+proves the expected 401/403/400 failures produce zero owned
+Page/revision/autosave/audit mutation before proving authorized
+create/update/autosave/publish.
 
 TASK-539 does not claim or add API-key authentication. Public Page render is
 read-only and no public write is introduced, so nonce/HMAC/captcha policy is not
 applicable to a new endpoint. CSS stays allowlisted; the effects runtime stays a
 static literal; and an unsafe marquee subtree cannot duplicate the existing
-nonce-bearing form surface. No raw exploit payload, credential, token, log, user
-data, or scanner exception is recorded. `tests/integration/routes/pages.test.ts`
-remains direct route/schema/service proof only and is never cited as HTTP middleware
-evidence. Footer-template and shell-setting setup/cleanup follow the existing
-direct-service fixture pattern. If changed to handler coverage, they additionally
-require `content:write` and `settings:write` respectively, with the same session,
-CSRF, `admin_write`, and strict-schema enforcement.
+nonce-bearing form surface. The suite creates and exactly cleans one published public
+Form plus fields and one saved listing query filtered to an exact owned actor; a
+paired `filters` block owns the resolved count/filter-form surface while a `collection`
+block sharing that query ID owns the visible actor row, with exactly one
+document-level listing-runtime script. A
+nonlogged test-local form nonce secret is restored in unconditional cleanup. No raw
+exploit payload, credential, token, nonce, log, user data, or scanner exception is
+recorded. `tests/integration/routes/pages.test.ts` remains direct
+route/schema/service proof only and is never cited as HTTP middleware evidence.
+Footer-template and shell-setting setup/cleanup follow the existing direct-service
+fixture pattern. If changed to handler coverage, they additionally require
+`content:write` and `settings:write` respectively, with the same session, CSRF,
+`admin_write`, and strict-schema enforcement.
 
 ## Acceptance
 
 - Every source leaf and its exact targeted lane passes.
-- The DB preflight is reachable before 15-second Page route/runtime suites; a skip or
-  unreachable DB blocks closure and is rerun after recovery.
+- The exhaustive DB preflight covers the named legacy runtime suites plus public
+  route/theme/SEO resolution and the new Page/Form/listing/security fixtures before
+  the route/runtime suites; a skip, missing table, or unreachable DB blocks closure
+  and is rerun after recovery.
 - Workflow syntax/self-tests and the baseline-through-final family line gate pass with
   every touched human-authored production/test file at no more than 1,000 lines.
 - Admin/site builds, admin checks, full test/coverage/precommit/release/security gates,
@@ -98,7 +110,9 @@ CSRF, `admin_write`, and strict-schema enforcement.
   frame/element/text styling and hoisted tilt/layer geometry in primary and replica
   while retaining isolated identity hooks. Its outer authored group alone owns the
   singular canonical legal grid span outside both segments; duplicated descendants
-  show no grid hook/alias/span CSS.
+  show no grid hook/alias/span CSS. Browser smoke uses the product-reachable
+  main→footer order and later-node rescans; the reverse parser order remains an exact
+  fixed-DOM TASK-539-07-L02 Vitest proof and is not fabricated in Playwright.
 - All five docs, descendants, board statistics/indexes, and changelog 1251 are
   synchronized without a TASK-545 exception.
 

@@ -117,6 +117,17 @@ HTML, Markdown images, dangerous URL schemes, traversal, remote image URLs,
 duplicate IDs and unknown fields fail closed. Product screenshots are
 referenced through strict visual records, never arbitrary Markdown URLs.
 
+The compatibility boundary is exactly the current 68 ingestible legacy Guide
+files and the frozen legacy key allowlist
+`{ title, audience, productArea, language, keywords }`.
+TASK-548-01-L02 owns a complete source-path context catalog and corpus-wide
+golden projection for every required `DocsDocumentV2` field; no route,
+permission, capability, target, version, summary, identity or section rule is
+left to implementer judgment. Unknown/new legacy sources fail closed. After
+TASK-547 becomes terminal, inventory, source hashes and context are re-frozen
+against its exact terminal HEAD and this contract receives a fresh audit; a
+count or context change requires an explicit task amendment.
+
 ## Security Contract
 
 - **Endpoint visibility:** no new endpoint. The compiler is local/build-time.
@@ -145,21 +156,57 @@ referenced through strict visual records, never arbitrary Markdown URLs.
 ## Implementation Shape
 
 ```ts
-const result = await compileDocsCorpusV2({ root: "docs/guide" });
-await assertDeterministicBundleBytes(result.bundleBytes);
-await promoteDocsArtifactPair(result);
-await assertGeneratedBundleBytesEqual(result.bundleBytes);
-await ingestDocsDistributionBundleV2(result.bundleBytes, {
-  actorId,
-  expectedSourceHash: result.bundle.sourceHash,
+const prePilotVisuals = { state: "pre-pilot-empty" } as const;
+const initialWrite = await compileDocsCorpusV2({
+  root: "docs/guide",
+  mode: "write",
+  visuals: prePilotVisuals,
 });
+await assertDeterministicBundleBytes(initialWrite.bundleBytes);
+await promoteDocsArtifactPair(initialWrite);
+const initialCheck = await compileDocsCorpusV2({
+  root: "docs/guide",
+  mode: "check",
+  visuals: prePilotVisuals,
+});
+await assertGeneratedBundleBytesEqual(initialCheck.bundleBytes);
+
+const activeVisuals = {
+  state: "active",
+  validateStablePairForVisual: createDocsVisualStablePairValidatorV1,
+} as const;
+const activeWrite = await compileDocsCorpusV2({
+  root: "docs/guide",
+  mode: "write",
+  visuals: activeVisuals,
+});
+await promoteDocsArtifactPair(activeWrite);
+const activeCheck = await compileDocsCorpusV2({
+  root: "docs/guide",
+  mode: "check",
+  visuals: activeVisuals,
+});
+await assertGeneratedBundleBytesEqual(activeCheck.bundleBytes);
+await ingestDocsDistributionBundleV2(activeWrite.bundleBytes, {
+  actorId,
+  expectedSourceHash: activeWrite.bundle.sourceHash,
+});
+
+// Packaged runtime/startup is a separate fixed-path read-only boundary.
+const packaged = await loadPackagedDocsDistributionBundleV2();
+assertEqual(packaged.sourceHash, activeWrite.bundle.sourceHash);
 ```
 
 Data flows from strict local sources through normalization, referential and
 security validation, canonical sort and SHA-256 hashing into one compile result.
-The exact same `result.bundleBytes` drive determinism comparison, pair promotion,
-post-write byte verification and the v2 ingest API; no consumer reserializes the
-normalized object. Local Help and public builds consume that byte contract.
+Every compiler call supplies exact `root`, `mode` and `visuals`; there is no
+one-argument form or implicit visual default. The initial write/check alone use
+`pre-pilot-empty`. Every call after the first visual lands uses `active` plus
+TASK-548-02-L02's exact validator factory. The exact same compile
+`bundleBytes` drive determinism comparison, pair promotion, post-write byte
+verification and the v2 ingest API; no consumer reserializes the normalized
+object. The packaged loader remains distinct from compiler/workspace recovery.
+Local Help and public builds consume that byte contract.
 Runtime assistant retrieval consumes only the atomically persisted DB snapshot;
 it does not read Markdown or call an external documentation service per
 question.
@@ -190,7 +237,7 @@ TASK-548-06 never writes the generated final.
 
 ## Acceptance Criteria
 
-- Every ingestible English file currently under `docs/guide/` compiles through
+- All 68 ingestible English files currently under `docs/guide/` compile through
   v2 with a stable identity; locale support is ready for Polish without claiming
   the Admin UI or corpus is fully localized.
 - The same translation-family `docId` compiles in multiple supported locales;
@@ -219,6 +266,9 @@ TASK-548-06 never writes the generated final.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - deterministic two-build byte/hash comparison and touched-file line counts
+- exact 68-source legacy inventory/golden projection plus route, permission,
+  capability, target, collision and exhaustive legacy→native semantic parity
+  validation after the mandatory post-TASK-547 re-freeze
 - explicit duplicate-`(docId, locale)` rejection and same-`docId`,
   different-locale acceptance coverage, including same-section-ID example and
   visual fixtures that prove locale-bearing paths/envelopes never cross-join

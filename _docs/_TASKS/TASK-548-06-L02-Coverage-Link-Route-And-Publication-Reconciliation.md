@@ -222,10 +222,24 @@ export function normalizeDocsCoverageReportV2(
   value: unknown
 ): DocsCoverageReportV2;
 
+export function serializeDocsCoverageReportV2(
+  value: DocsCoverageReportV2
+): Uint8Array;
+
 export function parseDocsCoverageReportV2(
   bytes: Uint8Array
 ): DocsCoverageReportV2;
 ```
+
+`serializeDocsCoverageReportV2(value)` is the sole report-to-bytes boundary.
+It does not trust the compile-time type: it first calls
+`normalizeDocsCoverageReportV2(value)`, recursively rejecting every unknown,
+missing, invalid, or non-normalizable runtime field. It then projects the
+normalized report in the exact root and nested key order declared above,
+preserves the canonical array order below, emits deterministic two-space JSON
+with LF line endings and no trailing whitespace, and returns UTF-8 bytes with
+exactly one final LF and no BOM. A valid unordered input is normalized into
+canonical order; it is never serialized in caller order.
 
 `parseDocsCoverageReportV2(bytes)` is the sole bytes-to-report boundary. It
 rejects a non-`Uint8Array`, zero bytes, or `bytes.byteLength >
@@ -260,7 +274,11 @@ targetSectionId ?? "", targetRouteId ?? "", externalHref ?? "")`; assets by
 `(kind, assetId)`; exclusions by `(subjectKind, subjectId, exclusionId)`; and
 consumer projections in `assistant`, `embedded-help`, `public-docs` order with
 unique documents sorted by `(locale, docId)`. Serialize only the normalized
-object. A second parse/normalize/serialize round trip must be byte-identical.
+object. For canonical bytes,
+`serializeDocsCoverageReportV2(parseDocsCoverageReportV2(bytes))` is
+byte-identical; for any valid runtime value,
+`serialize(parse(serialize(value)))` is byte-identical to the first
+serialization.
 
 An exclusion has stable ID, source owner, bounded reason, test, and classification
 (`non-user-facing`, `alias`, `transient`, or `retired-compatibility`). There is no
@@ -348,6 +366,10 @@ export async function generateCoverageMatrix(options: GenerateOptions) {
     await loadCoverageInputs(options, bundle)
   );
   const json = serializeDocsCoverageReportV2(report);
+  assertBytesEqual(
+    serializeDocsCoverageReportV2(parseDocsCoverageReportV2(json)),
+    json
+  );
   const markdown = renderDeterministicCoverageMatrix(report);
   if (mode === "check") {
     const existing = await readExistingCoverageOutputs();
@@ -366,7 +388,9 @@ scenario/receipt graph → strict joins/exclusions → route/permissionRequireme
 capability/link/ref/target assertions keyed by
 `{ docId, locale, sectionId }` where section-scoped, otherwise by exact
 `(docId, locale)` document identity → canonical
-JSON report → generated Markdown matrix/byte comparison.
+normalized report → stable-key-order UTF-8 JSON with LF and exactly one final
+newline → parse/serialize byte-identity assertion → generated Markdown
+matrix/byte comparison.
 
 **Error handling:** emit bounded `docs_coverage_route_missing`,
 `docs_coverage_exclusion_invalid`, `docs_coverage_permission_mismatch`,
@@ -377,8 +401,8 @@ JSON report → generated Markdown matrix/byte comparison.
 report replaces the last valid output. A live/tampered transaction, report-only
 state, invalid linked pair, missing/tampered packaged bundle, preceding
 `docs:check` canonical-byte/source mismatch, recursive unknown field, cap
-breach, noncanonical ordering, or nested record/hash/path tampering fails before
-either generated output is written.
+breach, non-normalizable runtime shape, noncanonical serialized bytes, or nested
+record/hash/path tampering fails before either generated output is written.
 
 ## Sub-Tasks
 
@@ -393,12 +417,16 @@ either generated output is written.
   stale alias, bad parameter pattern, invalid exclusion, null/allOf/anyOf
   permission understatement, capability drift, broken anchor/link, orphan
   example/visual/receipt, hash mismatch, and target leak;
-- strict `DocsCoverageReportV2` normalize/serialize/parse/normalize round-trip
-  is byte-identical; root and every nested record reject unknown/missing fields;
-  each exact count/string/path/reason/aggregate-byte limit has boundary and
-  overflow coverage; shuffled valid input canonicalizes to the specified order;
-  permission, target, route branch, exclusion owner/test, asset path/hash, and
-  link kind/nullability tampering fail;
+- strict `DocsCoverageReportV2` tests prove
+  `serialize(parse(serialize(value)))` byte identity and canonical-byte
+  `serialize(parse(bytes))` identity; serializer output uses exact declared key
+  order, deterministic two-space JSON, UTF-8 without BOM, LF-only line endings,
+  no trailing whitespace, and exactly one final LF. Root and every nested record
+  reject unknown/missing/non-normalizable runtime fields before bytes are
+  emitted; each exact count/string/path/reason/aggregate-byte limit has boundary
+  and overflow coverage; shuffled valid input canonicalizes to the specified
+  order; permission, target, route branch, exclusion owner/test, asset
+  path/hash, and link kind/nullability tampering fail;
 - `parseDocsCoverageReportV2(bytes)` rejects zero/oversized/invalid UTF-8 bytes
   before `JSON.parse`, delegates valid decoded JSON only to the strict
   normalizer, and has exact byte-cap boundary/overflow spies;

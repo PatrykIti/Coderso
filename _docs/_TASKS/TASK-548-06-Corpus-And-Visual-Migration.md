@@ -124,10 +124,11 @@ not imply that a Polish Admin UI or Polish documentation is complete.
   null/allOf/anyOf semantics and `capabilityIds`, never imports TSX or
   `import.meta.glob`, and tests the exact descriptor-module inventory.
   L02 owns the exported recursively strict `DocsCoverageReportV2`, its exact
-  nested records/limits, `normalizeDocsCoverageReportV2`, and the sole byte
-  boundary `parseDocsCoverageReportV2(bytes)`, which enforces the byte cap
-  before `JSON.parse` and then delegates to the normalizer. Generated records
-  preserve exact `(docId, locale)` identity, bind every example/visual asset to
+  nested records/limits, `normalizeDocsCoverageReportV2`, canonical
+  `serializeDocsCoverageReportV2`, and the sole byte-to-report boundary
+  `parseDocsCoverageReportV2(bytes)`, which enforces the byte cap before
+  `JSON.parse` and then delegates to the normalizer. Generated records preserve
+  exact `(docId, locale)` identity, bind every example/visual asset to
   `{ docId, locale, sectionId }`, keep asset IDs bundle-global, and are
   canonically sorted by `(locale, docId)` with unknown fields rejected.
   `_COVERAGE_MATRIX.md` is
@@ -215,16 +216,20 @@ const migrated = await migrateGuideCorpus(
 );
 const baseline: ReopenedFrozenGuideMigrationBaselineV1 = migrated.baseline;
 const regenerated = migrated.regenerated;
-assertOwnerRegeneratedReportAndBundleHashes(regenerated);
-const bundle = await loadOwnerGeneratedDocsCorpusV2(regenerated.bundlePath);
-assertFinalNativeOutputAgainstFrozenOriginalBaseline({
+await recoverDocsWorkspaceArtifactPromotionV1();
+const finalPair = await loadAndValidateRecoveredDocsArtifactPair({
+  bundlePath: "core/generated/docs/coderso-docs-v2.json",
+  reportPath: ".tmp/docs-corpus/migration-report-v1.json",
+});
+assertFinalRecoveredPairMatchesOwnerHandbackAndFrozenOriginal({
   baseline,
-  regenerated,
-  bundle,
+  ownerHandback: regenerated,
+  finalBundle: finalPair.bundle,
+  finalReport: finalPair.report,
   expectedSourceHashChange: true,
 });
 const coverage = reconcileDocsCoverage({
-  bundle,
+  bundle: finalPair.bundle,
   adminRoutes: loadCanonicalAdminRouteCoverageSnapshot(),
   receipts: loadPromotedVisualReceipts(),
 });
@@ -237,9 +242,14 @@ assertCompleteCoverage(
 **Data flow:** migration-only recovered workspace pair → one atomic durable linked original
 report+bundle capsule → all three
 native v2 source/example/reviewed-visual waves using the same mapping → one final
-same-owner compiler handback → recovery → final native-vs-stored-original
-stable-identity/semantic comparison with expected source-hash change → canonical
-owner-regenerated bundle
+same-owner compiler handback → exact
+`recoverDocsWorkspaceArtifactPromotionV1()` → exact
+`loadAndValidateRecoveredDocsArtifactPair({ bundlePath:
+"core/generated/docs/coderso-docs-v2.json", reportPath:
+".tmp/docs-corpus/migration-report-v1.json" })` → both returned report and
+bundle linked to the handback and durable stored original during the final
+native-vs-original stable-identity/semantic comparison, with the expected
+source-hash change → canonical owner-regenerated bundle
 → exact descriptor/permissionRequirement/capability/link/publication
 reconciliation, including `assistant`, `embedded-help`, and `public-docs`
 consumer filtering → deterministic matrix/report.
@@ -254,22 +264,26 @@ per-wave/per-promotion regeneration, baseline mutation/reload, or any owned writ
 before the durable capsule is fsynced, reopened, and validated also blocks.
 Receipt/run-identity mismatch, partial/extra/symlinked inventory, or a
 migration-handback workspace recovery failure blocks without trusting one
-member of a pair. Packaged coverage/check consumers instead reject hazards,
-report-only state or invalid/stale bundle read-only. Previously valid promoted
-assets remain untouched on failure.
+member of a pair. A bundle-only migration loader or an assertion that omits
+either the returned report or bundle is invalid. Packaged coverage/check
+consumers instead reject hazards, report-only state or invalid/stale bundle
+read-only. Previously valid promoted assets remain untouched on failure.
 
 **Regression-test shape:** recovery precedes every workspace-pair read; the
 original report and bundle are linked and atomically frozen exactly once before
 the first write; all three waves and a restart retain the same durable
 run/hash identity; partial/extra/tampered/foreign/stale/replaced capsules and
 per-wave/per-promotion regeneration fail; exactly one final owner handback
-occurs after the last edit and recovery precedes consumption; normalized
-legacy/native semantic projection parity preserves stable IDs/slugs/links/content
-fields with an expected deterministic `sourceHash` change; every active English
-source compiles once without adapter diagnostics; all sidecars close; route and
-permission mutations make coverage fail; each target consumer receives only
-eligible records and any assistant/embedded-help/public-docs leak fails; planned
-TASK-547 behavior is excluded; real shipped behavior is serialized and covered;
+occurs after the last edit; recovery immediately precedes the exact pair loader;
+both returned members must match each other, the owner handback, and the frozen
+original linkage before either is consumed. Bundle-only migration loading fails.
+Normalized legacy/native semantic projection parity preserves stable
+IDs/slugs/links/content fields with an expected deterministic `sourceHash`
+change; every active English source compiles once without adapter diagnostics;
+all sidecars close; route and permission mutations make coverage fail; each
+target consumer receives only eligible records and any
+assistant/embedded-help/public-docs leak fails; planned TASK-547 behavior is
+excluded; real shipped behavior is serialized and covered;
 same-`docId`/different-locale fixtures never cross-resolve Guide evidence,
 Help/CMS actions, examples, or visuals; no fake Polish route, hreflang, or
 completeness claim appears.

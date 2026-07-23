@@ -74,10 +74,13 @@ startHttpServer, resolveRateLimitBucket
 resolveAdminPath
 createSession, createCsrfToken, setCsrfToken, SESSION_COOKIE_NAME
 getSetting, getSettingRecord, setSetting, deleteSetting
+getSecuritySettings, setSecuritySettings, resetSecuritySettingsCache
 resetRateLimitBuckets
 createPageTemplate, SITE_FOOTER_TEMPLATE_SETTING_KEY, clearSiteCache
-db; accessLogs, auditLogs, pageRevisions, pages, pageTemplates, previewTokens,
-  roles, sessions, userRoles, users
+createForm, setFormFields, createListingQuery
+db; accessLogs, auditLogs, formFields, forms, ipAllowlist, listingQueries,
+  pageRevisions, pages, pageTemplates, previewTokens, roles, sessions, settings,
+  userRoles, users
 trackedFetch, expectedAccessLogSignature, validateAndCleanupAccessLogs
 type AccessLogCandidate, type AccessLogScope, type ExpectedAccessLog, type PollDeps
 ```
@@ -98,10 +101,22 @@ createHttpActor(kind, permissions, marker)
   call createCsrfToken(), then setCsrfToken(session.id, tokenHash)
   return {kind,userId,roleId,sessionId,sessionToken,csrfToken}
 
+installHttpSecurityFixture()
+  snapshot the raw security.settings row as {exists,value,updatedAt}
+  resetSecuritySettingsCache(), then call setSecuritySettings with:
+    csrf {enabled:true,headerName:"x-csrf-token",tokenTtlMinutes:30}
+    rateLimit enabled and admin_write {windowSeconds:60,maxRequests:100}
+    botProtection {enabled:false} so the owned public Form fixture is deterministic
+  read getSecuritySettings() and assert those exact applied values
+  insert one collision-safe suite-owned IPv4 /32 row into ipAllowlist
+  resetRateLimitBuckets()
+  return {rawSecuritySnapshot,allowlistId,forwardedIp}
+
 pageRequest(method, routeSuffix, actor?, csrf?, body?, expectedStatus)
   build ${adminPath}/api${routeSuffix} under the ephemeral loopback base URL
   send Host equal to configuredHost(await getSetting("site.adminBaseUrl"), fallbackHost)
-  send User-Agent marker, JSON Content-Type/body when present,
+  send User-Agent marker, X-Forwarded-For equal to the owned /32 address,
+    JSON Content-Type/body when present,
     Cookie `${SESSION_COOKIE_NAME}=${actor.sessionToken}` when authenticated,
     and X-CSRF-Token only when requested
   call trackedFetch with the exact path/status/user/session ledger entry
@@ -118,7 +133,10 @@ Create at least these actors with collision-safe UUID identities and exact RBAC:
 - writer: `["content:read", "content:write"]` and no publish;
 - publisher: `["content:read", "content:write", "content:publish"]`.
 
-Resolve `adminPath = await resolveAdminPath()`, start one
+Install the HTTP security fixture before creating sessions or starting the server.
+The owned `/32` must be unique even when foreign allowlist rows already exist; retry
+only this suite's candidate on a unique-key collision and never edit/delete a foreign
+row. Resolve `adminPath = await resolveAdminPath()`, start one
 `startHttpServer({port:0})`, and use `http://127.0.0.1:${server.port}` only as the
 transport origin while sending the configured Admin Host header. Assert
 `resolveRateLimitBucket` returns `"admin_write"` for `POST /pages`,
@@ -155,22 +173,54 @@ snapshot `getSettingRecord`; restore an existing record with `setSetting` and re
 only a suite-created record with `deleteSetting`. Footer/template/settings are
 fixtures, not claimed Page HTTP coverage.
 
+Create one collision-safe published, public suite-owned Form through `createForm`
+and one exact text field through `setFormFields`:
+`{type:"text",label:"Name",name:"name",required:true,settings:{},orderIndex:0}`;
+the Page form block references that exact Form ID. Create one suite-owned saved query
+through `createListingQuery`. Its deterministic query is
+`{source:"users",sourceConfig:{},filters:[{field:"id",op:"eq",value:ownedUserId}],`
+`sort:[{field:"id",dir:"asc"}],pagination:{limit:1,offset:0},`
+`fields:["id","name","status"]}`. Under the same unsafe marquee subtree, the Page
+contains paired `filters` and `collection` blocks that reference that exact query
+ID. The collection block uses
+`{contentTypeId:"",queryId:ownedQueryId,limit:1,templateId:null,`
+`paginationMode:"none",pageSize:null}`. The filters block owns the count/filter-form
+surface and causes the document-level listing runtime to be requested; the collection
+block owns the visible actor row. The document-level registry must still emit exactly
+one listing-runtime script, and neither resolved surface may depend on ambient rows.
+
+Before the first public render, snapshot
+`process.env.FORM_SUBMIT_NONCE_SECRET` with an explicit present/absent bit and install
+one unique, nonlogged test-local secret. Restore the exact prior value—or delete the
+variable when it was originally absent—in an unconditional outer `finally`. Never
+record the generated secret, session token, CSRF token, cookie, or nonce in output,
+screenshots, access-log expectations, or closeout evidence.
+
 After authorized HTTP publish, request the actual public Page path from the same
-ephemeral server using the configured public Host (or loopback fallback). Assert
-strict canonical gallery and nested-unknown behavior, public HTML/CSS hooks,
-responsive rules, parsed paint, static runtime, main/footer selector/style/script
-contracts, and unsafe marquee form/listing descendants with one canonical segment
-and exactly one nonce/script/listing-runtime surface. Never copy assertions into
+ephemeral server using the configured public Host (or loopback fallback) and the same
+owned `X-Forwarded-For`. Assert strict canonical gallery and nested-unknown behavior,
+public HTML/CSS hooks, responsive rules, parsed paint, static runtime, main/footer
+selector/style/script contracts, and unsafe marquee descendants containing the owned
+Form plus the paired saved-query consumers. They must render one canonical segment,
+exactly one valid form nonce/runtime surface, one resolved filters surface with
+`data-page-filters-count="1"` and `1 result`, one collection surface containing the
+expected unique actor-backed row, and exactly one document-level listing-runtime
+script. Never copy assertions into
 `pages-runtime.test.ts`; existing Page and site-shell runtime suites remain read-only
 regression consumers.
 
 ### Exact cleanup and failure aggregation
 
-Track exact Page, template, user, role, session, and setting identities. Stop the
-server before database cleanup, then use the user-settings harness's stable
-access-log validation/drain over this suite's marker/user/session scope. Its cleanup
-callback, plus the guarded fallback path, deletes/restores only owned state in
-foreign-key-safe order:
+Track exact Page, template, Form, saved-query, allowlist, user, role, session, and
+setting identities. Stop the server before cleanup. In an unconditional outer
+`finally`, independently of access-log validation, restore/delete the nonce-secret
+environment variable, restore the raw `security.settings` row by exact-key
+upsert-with-original-`updatedAt` or exact-key delete, call
+`resetSecuritySettingsCache()`, delete only the owned allowlist ID, and call
+`resetRateLimitBuckets()`. Then use the user-settings harness's stable access-log
+validation/drain over this suite's marker/user/session scope. Its cleanup callback,
+plus the guarded fallback path, deletes/restores only owned state in foreign-key-safe
+order:
 
 ```text
 restore exact setting snapshots (setSetting or deleteSetting)
@@ -179,6 +229,9 @@ delete previewTokens where targetType="page" and targetId is owned
 delete pageRevisions where pageId is owned
 delete pages where id is owned
 delete pageTemplates where id is the owned footer template
+delete formFields where formId is the owned Form ID
+delete forms where id is the owned Form ID
+delete listingQueries where id is the owned saved-query ID
 delete sessions where id is an owned session
 delete userRoles where userId/roleId belongs to this suite
 delete roles where id is owned
@@ -189,8 +242,8 @@ The access-log harness deletes only its observed owned access-log IDs before act
 rows disappear. Build its `PollDeps` exactly as the grounded fixture does: select
 `accessLogs` candidates by the unique User-Agent marker or owned user/session IDs,
 delete only explicit observed access-log IDs, use `Date.now`, and use a bounded
-`setTimeout` wait. Always clear the site cache and call
-`resetRateLimitBuckets()` in finalization. Mirror the user-settings suite's
+`setTimeout` wait. Always clear the site cache in finalization. Mirror the
+user-settings suite's
 behavior-error, validation-error, fallback-cleanup, and `AggregateError` handling so
 a failed assertion never skips cleanup. Never truncate a table, delete by broad role
 name/status, or record raw cookies, CSRF tokens, credentials, sensitive responses,
@@ -202,23 +255,30 @@ or an actionable exploit payload.
   `/admin/api/*` routes authenticated only by the existing session cookie; there is
   no TASK-539 API-key mode. The suite must reach them through
   `startHttpServer({port:0})`, `resolveAdminPath`, the configured
-  `site.adminBaseUrl` Host, and `SESSION_COOKIE_NAME`; direct route invocation is not
-  HTTP evidence.
+  `site.adminBaseUrl` Host, the owned allowlisted `X-Forwarded-For`, and
+  `SESSION_COOKIE_NAME`; direct route invocation is not HTTP evidence.
 - **RBAC:** create, update, and autosave require `content:write`; publish requires
   `content:publish`. Unique reader, writer, and publisher users receive only the
   exact role permissions enumerated above.
 - **CSRF/rate limit:** every session-backed write in the harness sends the real
   `X-CSRF-Token` shape issued by `createCsrfToken`/`setCsrfToken` and remains in the
-  `admin_write` bucket. Unauthenticated, missing-CSRF, invalid-CSRF, reader-write,
-  and writer-publish requests assert exact 401/403 codes and zero owned mutation.
-  The test must not bypass middleware to claim route coverage.
+  `admin_write` bucket. The exact raw `security.settings` record is restored after a
+  fixture-forced enabled `x-csrf-token`/30-minute CSRF contract and a bounded enabled
+  `admin_write` policy; bot protection is disabled only inside the restored fixture
+  so ambient captcha settings cannot change the Form markup. Both security and
+  rate-limit caches are reset. The owned `/32` allowlist entry proves requests cross
+  IP middleware without touching foreign entries. Unauthenticated, missing-CSRF,
+  invalid-CSRF, reader-write, and writer-publish requests assert exact 401/403 codes
+  and zero owned mutation. The test must not bypass middleware to claim route
+  coverage.
 - **Validation:** the PageDocumentV2 boundary strictly rejects unknown fields and
   the suite proves a nested unknown member returns
   `page_document_unknown_field`/400 with no persistence through real HTTP.
 - **Anti-abuse:** public Page render is read-only and TASK-539 adds no public write,
   so no new nonce/signature/HMAC or captcha policy applies. Existing form nonces and
   scripts must occur exactly once when an unsafe marquee subtree degrades to one
-  segment.
+  segment. The suite uses an owned published Form and a restored test-local nonce
+  secret; it never submits the Form or exposes the secret/nonce.
 - **Fixture boundary:** the footer template and shell settings are test setup/cleanup
   through `createPageTemplate` and `setSetting`, matching the existing
   `site-shell-runtime.test.ts` fixture pattern; they are not claimed as HTTP route
@@ -227,8 +287,10 @@ or an actionable exploit payload.
   both remain session-cookie/CSRF/`admin_write` protected, and their strict schemas
   must run. `tests/integration/routes/pages.test.ts` remains direct
   route/schema/service proof only. Cleanup restores exact setting snapshots and
-  deletes only suite-owned Page/revision/preview/audit/session/user-role/role/user/
-  template rows after exact access-log drainage.
+  deletes only suite-owned Page/revision/preview/audit/Form/field/listing-query/
+  session/user-role/role/user/template rows after exact access-log drainage. Global
+  security/env state and the owned allowlist row are restored independently even
+  when access-log validation fails.
 
 ## Exact targeted gates
 
@@ -261,7 +323,7 @@ bun --cwd core build:site
 bun run check:admin-boundary
 bun run check:admin-bundle
 set -a && source .env && set +a
-bun --eval 'import { canConnect, hasTable } from "./tests/utils/db"; const configured = Boolean(process.env.DATABASE_URL?.trim()); const reachable = configured && await canConnect(); const names = ["menus","page_templates","pages","page_revisions","preview_tokens","audit_logs","access_logs","sessions","users","roles","user_roles","settings"]; const requiredTables = Object.fromEntries(await Promise.all(names.map(async (name) => [name, reachable && await hasTable(name)]))); process.stdout.write(JSON.stringify({ configured, reachable, requiredTables })); if (!reachable || Object.values(requiredTables).some((present) => !present)) process.exit(1); process.exit(0)'
+bun --eval 'import { canConnect, hasTable } from "./tests/utils/db"; const configured = Boolean(process.env.DATABASE_URL?.trim()); const reachable = configured && await canConnect(); const names = ["menus","menu_items","page_templates","pages","page_revisions","preview_tokens","seo_documents","content_types","content_entries","redirects","theme_profiles","theme_routes","audit_logs","access_logs","sessions","users","roles","user_roles","settings","ip_allowlist","forms","form_fields","listing_queries"]; const requiredTables = Object.fromEntries(await Promise.all(names.map(async (name) => [name, reachable && await hasTable(name)]))); process.stdout.write(JSON.stringify({ configured, reachable, requiredTables })); if (!reachable || Object.values(requiredTables).some((present) => !present)) process.exit(1); process.exit(0)'
 bun test --timeout=15000 tests/integration/routes/pages.test.ts
 bun test --timeout=30000 tests/integration/runtime/task-539-page-parity-runtime.test.ts
 bun test --timeout=15000 tests/integration/runtime/pages-runtime.test.ts
@@ -274,15 +336,15 @@ bun run scan:security:strict
 git diff --check
 ```
 
-The preflight covers both `site-shell-runtime.test.ts` tables and every table used by
-the real-HTTP actor/Page/access-log harness. The new HTTP case owns a 30-second
-timeout because it starts/stops Bun, waits for asynchronous access-log quiescence,
-and performs exact cleanup. Do not close on an unreachable DB, any missing required
-table, a skipped required case, truncated command, missing workflow result, line
-count above 1,000, or unavailable strict scanner. Require the final named-suite
-receipts to report zero skipped required cases. Recover, rerun, and record the final
-result. Attribute a broad-suite failure only after its named file confirms it in
-isolation.
+The preflight covers the two named legacy runtime suites, public route/theme/SEO
+resolution, IP middleware, and every table used by the real-HTTP actor/Page/Form/
+listing/access-log harness. The new HTTP case owns a 30-second timeout because it
+starts/stops Bun, waits for asynchronous access-log quiescence, and performs exact
+cleanup. Do not close on an unreachable DB, any missing required table, a skipped
+required case, truncated command, missing workflow result, line count above 1,000,
+or unavailable strict scanner. Require the final named-suite receipts to report zero
+skipped required cases. Recover, rerun, and record the final result. Attribute a
+broad-suite failure only after its named file confirms it in isolation.
 
 ## Fresh post-audit
 
@@ -321,7 +383,9 @@ distinct real flows:
    hover, tilt, magnetic, and layer placement; assert every computed channel changes
    independently, fine-pointer move/leave resets, wrapper width, and click path.
 4. **Marquee identity/accessibility.** Exercise seamless true/false and a seamless
-   group containing deeply nested form/listing plus a nested authored marquee.
+   group containing a deeply nested owned Form plus paired `filters`/`collection`
+   blocks that share the owned saved-query ID, together with a nested authored
+   marquee.
    Replica-safe content has one rail, two adjacent segments/no gap/no wrap, a replica
    that is `aria-hidden` and `inert`, locally namespaced IDs/data hooks with no
    duplicate ID, and reduced-motion stop. Trigger the four hook families that real
@@ -334,7 +398,8 @@ distinct real flows:
    replica-marker cases remain runtime-suite fixed DOM, not fabricated product
    markup. Each unsafe subtree deterministically has one
    canonical segment, no replica marker/namespace, and exactly one form nonce,
-   executable form script, listing runtime surface, and nested marquee instance.
+   executable form script, filters/count surface, collection actor-row surface,
+   document-level listing-runtime script, and nested marquee instance.
    At one tablet and one mobile front viewport, author real responsive typography,
    frame/inner-element visual style, and tilt+layer offsets on duplicated safe
    descendants. Compare computed block-frame, inner-element, text, and hoisted
@@ -352,12 +417,15 @@ distinct real flows:
 5. **Full-bleed paint.** Author responsive gradient layers plus final color, radius,
    shadow, and glow; assert viewport-wide outer paint, capped content, exact computed
    image/color split, no double-tone box, and invalid paint absent.
-6. **Main/footer rescans.** Exercise main-script→footer-script and
-   footer-script→main-script parser orders with different effects. Assert both roots
+6. **Main/footer rescans.** Exercise the product-reachable SSR main→footer order with
+   different effects plus later inserted matching nodes/rescans. Assert both roots
    bind exactly once, later nodes respond, globals do not multiply,
    `--spotlight-x`/`--spotlight-y` update on the correct
    `[data-page-spotlight]` root and visibly move that root's overlay, and magnetic
-   custom properties update then reset on pointer leave.
+   custom properties update then reset on pointer leave. Cite the green
+   TASK-539-07-L02 fixed-DOM Vitest receipt for the defensive footer→main parser
+   order; production SSR cannot emit that reverse order, so Playwright must not
+   fabricate or reorder product markup.
 7. **Reduced-motion functionality.** Enable reduced motion and prove switcher and
    gallery pointer/keyboard/roving/ARIA/hidden behavior remains functional while
    reveal/parallax/spotlight/tilt/magnetic stay neutral and content remains visible.

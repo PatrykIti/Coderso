@@ -108,6 +108,11 @@ are outside TASK-548.
 
 - Guide always sends `mode: "docs-only"` and depends on DB index readiness, not
   provider availability or `assistant.enabled`.
+- After existing `settings:read` authorization, the chat route resolves the
+  current user's canonical permissions only through the injected server
+  resolver/RBAC owner, strictly normalizes a ready snapshot, and passes it
+  explicitly into every DB retrieval and evidence-enrichment call. Client
+  request/context fields can never supply or override permission state.
 - Guide card eligibility requires `assistant`; its Help action additionally
   requires `embedded-help` and its official action additionally requires
   `public-docs`. Missing cross-surface targets render no dead link.
@@ -155,7 +160,7 @@ payload is stored, and update `_docs/ADMIN_CACHE.md` plus
 |---|---|---|
 | TASK-548-03-L01 | Extract the oversized Admin route registry plus Bun-free canonical route descriptors, own the strict pre-loss raw permission-state seam in `authClient.ts`, preserve route/RBAC parity, and add canonical Help path helpers; do not expose a Help link yet | ⏳ To Do |
 | TASK-548-03-L02 | Add the auto-discovered Help route, local search/reader/shared renderer package, and atomically replace the external footer Docs link | ⏳ To Do |
-| TASK-548-03-L03 | Split the oversized Assistant panel, implement distinct Guide/Agent products, decouple Guide runtime from Agent enablement, and render rich local evidence cards | ⏳ To Do |
+| TASK-548-03-L03 | Split the oversized Assistant panel, become the sole post-01-L03 `assistantRoutes.ts`/`assistantService.ts` writer, enforce server-authoritative docs RBAC, implement distinct Guide/Agent products, decouple Guide runtime from Agent enablement, and render rich local evidence cards | ⏳ To Do |
 
 **Land order:** `TASK-548-03-L01 → TASK-548-03-L02 → TASK-548-03-L03`.
 Every source/test file has one leaf writer. L02 may add a route-module file but
@@ -163,7 +168,10 @@ its pure descriptor + TSX binding pair must use L01's discovery seam without
 editing the registry. L01 alone edits `core/admin/services/authClient.ts` and
 `tests/vitest/admin/authClient.test.ts` so raw permission state survives before
 the route context is built. L03 must not re-open L01/L02 route, auth-normalizer
-or Help contracts.
+or Help contracts. TASK-548-01-L03 first lands pure ingest/retriever/
+permission-normalizer code and does not touch `assistantRoutes.ts` or
+`assistantService.ts`; this child's L03 then solely edits both orchestration
+files and their route/service tests. No later TASK-548 leaf reopens them.
 
 ## Security Contract
 
@@ -176,14 +184,19 @@ or Help contracts.
 - **RBAC:** Help prose is available to any authenticated Admin user.
   `Open in CMS` actions are permission-filtered. `/assistant/status` and
   `/assistant/chat` retain `settings:read`; `/assistant/reindex` retains
-  `settings:write`; action routes retain their per-family permissions.
+  `settings:write`; action routes retain their per-family permissions. Chat
+  additionally applies the exact server-resolved docs permission snapshot
+  before query/ranking/source/card disclosure. Missing/malformed/unknown/
+  duplicate/mixed-wildcard state fails closed; ready empty/null,
+  `allOf`/`anyOf`, and sole `["*"]` use the shared exact semantics.
 - **CSRF:** no CSRF applies to static SPA navigation. Every existing assistant
   POST, including chat, reindex, plan, dry-run, and execute, remains CSRF
   protected.
 - **Rate limit:** no new Help bucket is introduced. Existing assistant calls
   remain in the `assistant` bucket.
 - **Validation:** compiled bundle/schema validation is strict and
-  reject-unknown. Existing assistant request schemas stay reject-unknown.
+  reject-unknown. Existing assistant request schemas stay reject-unknown and
+  expose no permission/snapshot/role field at any nesting level.
 - **Anti-abuse:** there is no public write, so nonce, signature/HMAC, and
   reCAPTCHA are not applicable. Existing action idempotency and review gates are
   unchanged.
@@ -194,15 +207,65 @@ or Help contracts.
 ## Implementation Pseudocode
 
 ```ts
+export function resolveHelpArticleRendererState(input: {
+  bundle: DocsDistributionBundleV2;
+  document: DocsDocumentV2;
+  publicationTarget: "embedded-help";
+  adminBasePath: string;
+  officialDocs: Extract<
+    DocsLinkContextV1,
+    { surface: "embedded-help" }
+  >["officialDocs"];
+  packagedVisualAssets: readonly DocsPackagedLocalVisualAssetV1[];
+  copyExampleBody: DocsCopyExampleBodyV1;
+}): HelpArticleRendererState {
+  try {
+    const linkContext = normalizeDocsLinkContextV1({
+      surface: "embedded-help",
+      publicationTarget: input.publicationTarget,
+      locale: input.document.locale,
+      adminBasePath: input.adminBasePath,
+      officialDocs: input.officialDocs,
+    });
+    const localVisualAssets = buildVerifiedDocsLocalVisualAssetMapV1({
+      bundle: input.bundle,
+      document: input.document,
+      publicationTarget: input.publicationTarget,
+      packagedAssets: input.packagedVisualAssets,
+    });
+    return {
+      state: "ready",
+      rendererProps: {
+        bundle: input.bundle,
+        document: input.document,
+        publicationTarget: input.publicationTarget,
+        linkContext,
+        localVisualAssets,
+        copyExampleBody: input.copyExampleBody,
+      } satisfies DocsRendererProps,
+    };
+  } catch (error) {
+    if (!isDocsArticleEvidenceIntegrityError(error)) throw error;
+    return {
+      state: "integrity-error",
+      code: "docs_help_article_integrity_invalid",
+      docId: input.document.docId,
+      locale: input.document.locale,
+    };
+  }
+}
+
 export function resolveEmbeddedHelp(input: {
   bundle: DocsDistributionBundleV2;
   location: HelpLocation;
   permissionSnapshot: DocsAdminPermissionSnapshotV1;
-  officialDocs: {
-    origin: string;
-    basePath: string;
-    version: string;
-  };
+  adminBasePath: string;
+  officialDocs: Extract<
+    DocsLinkContextV1,
+    { surface: "embedded-help" }
+  >["officialDocs"];
+  packagedVisualAssets: readonly DocsPackagedLocalVisualAssetV1[];
+  copyExampleBody: DocsCopyExampleBodyV1;
 }): HelpReaderView {
   const publicationTarget = "embedded-help" as const;
   const targetDocuments = selectDocumentsForPublicationTarget(
@@ -218,6 +281,15 @@ export function resolveEmbeddedHelp(input: {
     input.location,
     { publicationTarget }
   );
+  const article = resolveHelpArticleRendererState({
+    bundle: input.bundle,
+    document,
+    publicationTarget,
+    adminBasePath: input.adminBasePath,
+    officialDocs: input.officialDocs,
+    packagedVisualAssets: input.packagedVisualAssets,
+    copyExampleBody: input.copyExampleBody,
+  });
   return {
     publicationTarget,
     results: searchDocs(searchIndex, {
@@ -225,22 +297,21 @@ export function resolveEmbeddedHelp(input: {
       query,
     }),
     document,
-    rendererProps: {
-      bundle: input.bundle,
-      document,
-      publicationTarget,
-    },
+    article,
     cmsAction: resolvePermittedAdminAction({
       adminPath: document.adminPath,
       permissionRequirement: document.permissionRequirement,
       permissionSnapshot: input.permissionSnapshot,
     }),
-    officialHref: resolveOptionalHelpOfficialHref({
-      document,
-      origin: input.officialDocs.origin,
-      basePath: input.officialDocs.basePath,
-      version: input.officialDocs.version,
-    }),
+    officialHref:
+      input.officialDocs.state === "configured"
+        ? resolveOptionalHelpOfficialHref({
+            document,
+            origin: input.officialDocs.origin,
+            basePath: input.officialDocs.basePath,
+            version: input.officialDocs.version,
+          })
+        : null,
   };
 }
 
@@ -256,15 +327,26 @@ export async function submitConversation(
 ```
 
 **Data flow:** validated installed bundle → exact `embedded-help`
-document selection → explicit-target index/search/render props → local Help
-reader; or strict assistant request → DB evidence ids → local distribution card
-join → safe React tokens. No Help selector/search/renderer receives the unscoped
-bundle without the literal target.
+document selection → explicit surface link context + selected-article packaged
+asset byte/hash map + user-event-only copy handler → all required renderer props
+→ local Help reader; or strict assistant request → authenticated canonical
+server permission snapshot → authorized DB evidence ids → requirement-rechecked
+local distribution card join → safe React tokens. No Help
+selector/search/renderer receives the unscoped bundle without the literal
+target, and no Guide retrieval receives a client permission value.
 
-**Error handling:** invalid bundle/route/link/asset fails closed; missing visual
-falls back to text without inventing one; portal/network failure leaves local
-Help usable; DB index failure affects Guide only; provider failure affects
-Agent only; stale/malformed persisted transcript is discarded.
+**Error handling:** invalid bundle/route/link fails closed. In embedded Help, a
+missing/unlisted/orphan/cross-owner/tampered visual or example, missing asset or
+hash mismatch blocks only the selected affected article before
+`DocsDocumentRenderer` runs; search, navigation and other valid articles remain
+usable, and a bounded integrity panel replaces that article. There is no
+text-only success fallback for an invalid Help article. Guide uses a separate
+server enrichment projection: only after text/source evidence is both grounded
+and permission-authorized may an unresolved optional visual/example card be
+omitted while the grounded text/source remains. It never invents or leaks an
+unauthorized card/reference. Portal/network failure leaves local Help usable;
+DB index or permission-snapshot failure affects Guide only; provider failure
+affects Agent only; stale/malformed persisted transcript is discarded.
 
 **Regression-test shape:** route parity before/after extraction; no broken Help
 link between leaves; any-auth Help route; locale-bearing deep links and
@@ -275,12 +357,21 @@ histories/readiness;
 Guide works with Agent disabled; Agent cannot silently show docs fallback;
 redacted explicit handoff; no action calls from Guide; null/empty/partial/full
 `allOf`/`anyOf` permission cases; capability-context ranking; file-size gates.
+Help integration passes bundle, document, literal target, exact Help
+`DocsLinkContextV1`, verified selected-article local asset map and explicit
+trusted-user-event copy handler; omission of any prop fails. Missing/orphan/
+tampered Help evidence blocks only that article, whereas authorized Guide text/
+source survives an omitted unresolved optional card.
 Target-leak fixtures prove Help renders `embedded-help` and multi-target records
 only, while Guide evidence comes only from `assistant`-targeted persisted rows;
 `public-docs`-only records appear in neither surface. Help-only documents omit
 official links; embedded+public documents expose them. Guide tests cover
 assistant-only, assistant+embedded, assistant+public and all-three action
 combinations.
+Guide route tests inject canonical permissions server-side, reject every client
+snapshot/permissions/roles forgery, fail before query on missing/malformed/
+unknown/duplicate/mixed-wildcard state, and prove protected title/snippet/source/
+visual/example identities never leak.
 
 ## Testing Requirements
 
@@ -301,6 +392,8 @@ bunx vitest run --config vitest.config.ts \
 
 set -a && source .env && set +a
 bun test tests/unit/assistant/assistantService.test.ts \
+  tests/integration/routes/assistant-guide-rbac.test.ts \
+  tests/integration/routes/assistant-reindex-v2.test.ts \
   tests/integration/routes/assistant.test.ts
 
 bun --cwd core lint:types
@@ -351,6 +444,9 @@ no result may exceed 1,000.
   remains provider-backed and review-first.
 - Visual/example cards are resolved by stable ids from the exact installed
   distribution and rendered without raw HTML or arbitrary URLs.
+- Invalid visual/example integrity blocks only the affected Help article;
+  authorized Guide text/source may survive only by omitting the unresolved
+  optional enrichment card.
 - No existing assistant auth, RBAC, CSRF, rate-limit, reject-unknown,
   idempotency, audit, or secret-handling invariant is weakened.
 - Every touched human-authored source/test file is at most 1,000 physical lines.

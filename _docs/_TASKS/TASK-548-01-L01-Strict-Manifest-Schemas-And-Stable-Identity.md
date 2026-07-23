@@ -165,10 +165,70 @@ do partial `allOf` matches.
 
 `capabilityIds` contains at most 32 unique sorted IDs. Each ID matches
 `^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)*$` and exists in the new code-owned
-`docsCapabilityCatalog.ts`; an empty array is valid only for general
-orientation content. Compiler, assistant ingest/retrieval, local search and
-TASK-548-06 coverage use this exact field and may not derive alternate
-capability labels.
+`docsCapabilityCatalog.ts`; an empty array is valid only for the explicitly
+enumerated compatibility source below. Compiler, assistant ingest/retrieval,
+local search and TASK-548-06 coverage use this exact field and may not derive
+alternate capability labels.
+
+The exact owner is
+`core/services/documentation/docsCapabilityCatalog.ts`. It exports only the
+following catalog surface:
+
+```ts
+export const DOCS_CAPABILITY_CATALOG_V1 = {
+  "docs.area.access-control": "access-control",
+  "docs.area.analytics": "analytics",
+  "docs.area.assistant": "assistant",
+  "docs.area.audit": "audit",
+  "docs.area.auth": "auth",
+  "docs.area.backups": "backups",
+  "docs.area.coderso-authoring": "coderso-authoring",
+  "docs.area.coderso-booking": "coderso-booking",
+  "docs.area.coderso-commerce": "coderso-commerce",
+  "docs.area.coderso-custom-screens": "coderso-custom-screens",
+  "docs.area.coderso-engagement": "coderso-engagement",
+  "docs.area.coderso-engine": "coderso-engine",
+  "docs.area.coderso-entries": "coderso-entries",
+  "docs.area.coderso-forms": "coderso-forms",
+  "docs.area.coderso-listings": "coderso-listings",
+  "docs.area.coderso-pages": "coderso-pages",
+  "docs.area.coderso-posts": "coderso-posts",
+  "docs.area.dashboard": "dashboard",
+  "docs.area.getting-started": "getting-started",
+  "docs.area.integrations": "integrations",
+  "docs.area.media": "media",
+  "docs.area.menus": "menus",
+  "docs.area.operations": "operations",
+  "docs.area.pages": "pages",
+  "docs.area.playbooks": "playbooks",
+  "docs.area.redirects": "redirects",
+  "docs.area.search": "search",
+  "docs.area.security": "security",
+  "docs.area.seo": "seo",
+  "docs.area.settings": "settings",
+  "docs.area.solution-kits": "solution-kits",
+  "docs.area.store": "store",
+  "docs.area.themes": "themes",
+} as const;
+
+export type DocsCapabilityIdV1 =
+  keyof typeof DOCS_CAPABILITY_CATALOG_V1;
+
+export function listDocsCapabilityIdsV1(): readonly DocsCapabilityIdV1[];
+export function assertDocsCapabilityIdV1(value: unknown): DocsCapabilityIdV1;
+export function docsAreaCapabilityIdV1(
+  productArea: string
+): DocsCapabilityIdV1;
+```
+
+`listDocsCapabilityIdsV1()` returns exact UTF-8 byte-order sorted keys.
+`docsAreaCapabilityIdV1(productArea)` accepts only an exact catalog value and
+returns its unique key; it never manufactures a new ID. Adding, removing or
+renaming a product area/capability is a schema-contract change that updates the
+catalog, the frozen legacy projection and coverage together. The only current
+empty-array compatibility exception is explicitly owned by TASK-548-01-L02 for
+`docs/guide/getting-started/admin-orientation.md`; no title, keyword or
+directory heuristic may create another exception.
 
 In the final corpus each Markdown frontmatter record contains
 `schema: "coderso.docs-document@v2"` and the document fields except
@@ -392,7 +452,8 @@ unknown syntax, unsafe schemes or unresolved IDs return no partial document.
 **Error handling:** emit bounded `docs_corpus_invalid`,
 `docs_corpus_unknown_field`, `docs_corpus_duplicate_id`,
 `docs_corpus_locale_invalid`, `docs_corpus_version_invalid`,
-`docs_corpus_path_invalid`, `docs_corpus_permission_invalid` and
+`docs_corpus_path_invalid`, `docs_corpus_permission_invalid`,
+`docs_corpus_capability_invalid` and
 `docs_corpus_markdown_unsafe` diagnostics with source path and field only.
 
 **Regression-test shape:** table-test every unknown field and unsafe construct;
@@ -419,8 +480,10 @@ permission list, empty/partial protected snapshots, exact live `["*"]` full
 access, duplicate/mixed wildcard snapshot rejection, full `allOf`, every
 `anyOf` branch, authored wildcard rejection, unknown
 modes/permissions, capability format/catalog/order failures, and capability
-round trips. Cover every token variant plus unclosed, nested, ragged, oversized
-and malicious inline variants.
+round trips. Pin all 33 exact capability IDs, product-area reverse lookup,
+sorted enumeration, unknown product area rejection, and the single current
+orientation exception consumed by L02. Cover every token variant plus
+unclosed, nested, ragged, oversized and malicious inline variants.
 
 ## Sub-Tasks
 
