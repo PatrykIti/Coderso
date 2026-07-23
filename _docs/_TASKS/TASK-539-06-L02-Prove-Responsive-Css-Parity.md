@@ -64,7 +64,20 @@ with the public CSS delta, and assert:
    cannot carry `fullBleed` or switch the target. Base tilt may still select the
    layer wrapper, but responsive `tilt` itself cannot exist.
 7. Tilt+layer wrapper targeting remains correct and no local placement/attribute
-   spelling appears.
+   spelling appears. Direct-import
+   `PAGE_MARQUEE_REPLICA_BLOCK_STYLE_SCOPE_ATTRIBUTE`,
+   `PAGE_MARQUEE_REPLICA_TILT_LAYER_STYLE_SCOPE_ATTRIBUTE`, and
+   `PAGE_MARQUEE_REPLICA_GRID_ITEM_STYLE_SCOPE_ATTRIBUTE` from
+   `pageRendererReplicaIdentity.ts`. At tablet and mobile, pin exact
+   `:is(primary canonical selector, replica alias selector)` rules for block-frame
+   visual style, visual-element style, typography/text, the hoisted tilt/layer
+   wrapper, and the legal grid-span target. Render a real approved two-segment
+   marquee and prove its replica stamps the block alias on the corresponding frame,
+   the tilt alias only on the hoisted wrapper, and the grid alias only on the actual
+   L05 target, all with the canonical normalized original block ID. The plan emits
+   one shared rule/declaration sequence per target—not duplicated primary/replica
+   CSS—and neither alias membership nor an unauthored delta emits CSS. Primary,
+   non-seamless, and unsafe-fallback markup contains zero aliases.
 8. Accepted responsive `style.column`, both a numeric assignment and an explicit
    `null` reset over a base assignment, emits the exact `style.column` /
    `not_css_expressible` diagnostic and no inert CSS. Unsupported props retain their

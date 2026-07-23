@@ -58,9 +58,10 @@ non-authorizing planning-audit record. It never reconstructs historical
 authoring/post-audit, page-error, network, bundle/health, or cleanup outcomes
 and never serializes dynamic final-drift findings/resolutions. None of these
 values extend TASK-545 manifest/checkpoint schemas or create a standalone
-evidence file. There is no separate 08 evidence tree.
-The only canonical TASK-548 evidence directory is the 07-owned
-`_docs/_workflows/_smoke/evidence/task-548/`.
+evidence file. There is no separate 08 evidence tree. The only canonical
+TASK-548 evidence directory is
+`_docs/_workflows/_smoke/evidence/task-548/`, with the split byte ownership
+defined above.
 
 Only after TASK-545 is `✅ Done`, the four task-specific workflow modules and
 both exact tests above must be tracked and present after a clean checkout;
@@ -264,11 +265,15 @@ const ownerAction = await dispatchSamePhysical07L01(
   "07-L01-final-smoke-phase1-owner-pause",
   postAudit
 );
-await yieldOwnerActionRequired(ownerAction);
+await yieldOwnerActionRequired(ownerAction); // normal invocation ends here
 
+// A later mutually exclusive closure-only invocation reads only its current
+// TASK-545-bound CLI args. `ownerAction` and every other pre-pause payload are
+// unavailable and must not be consumed here.
+const resumeRequest = requireResumeArgumentsFromCurrentProcess();
 const resumed = await dispatchSamePhysical07L01(
   "07-L01-owner-resume-tracked-parity",
-  { resumeArgv: ownerAction.resumeArgv }
+  resumeRequest
 );
 let closeoutInput;
 if (resumed.state === "frozen") {
@@ -414,37 +419,50 @@ status, or other metadata; after phase 1 it performs no further action.
 Only after the owner reviews and stages that exact directory may the returned
 `resumeArgv` re-enter the checkpoint-bound owning workflow. Resume verifies
 tracked parity and cannot dispatch authoring, implementation, fix, canonical
-post-audit, or smoke. Before any closeout mutation it dispatches only
+post-audit, or smoke.
+
+When TASK-545 returns `frozen`, 08 dispatches
 `08-final-read-only-drift`, a substantive read-only audit bound to the frozen
-runtime revision. A failure aborts resume without editing metadata; a required
-fix invalidates smoke/checkpoint and requires a new normal run and phase 1.
+runtime revision, before any closeout mutation. A pass has exactly no findings.
+Any finding aborts resume without metadata, returns to the exact owner, and
+invalidates smoke/checkpoint for a new normal run. The dynamic result is used
+only in that process and is not serialized. If the process crashes before the
+first metadata write, replay remains `frozen` and reruns a fresh final drift.
 
-On a clean final drift, 07 reconstructs closeout deterministically from only:
+07 derives its deterministic metadata plan from only:
 
-1. the checkpoint-owned workflow control outcome;
-2. the frozen canonical manifest/eight screenshots;
-3. the current validated final tree and existing receipts;
-4. the existing on-disk non-authorizing planning-audit record; and
-5. the structured `finalDrift` result.
+1. verified checkpoint task/run/workflow identity, frozen revision, and closure
+   contract;
+2. the exact canonical manifest plus eight screenshots and their schema fields/
+   hashes;
+3. current frozen on-disk product/task facts and durable repository receipts
+   that can be reread deterministically; and
+4. the existing on-disk non-authorizing planning-audit record.
 
-The reconstruction records generic literal authoring/post-audit outcomes
-`completed-before-implementation` and `completed-before-phase1` only when the
-checkpoint-owned control transition proves those gates were required and
-reached. It never reconstructs missing per-agent counts/findings, claims a
-pre-pause payload survived, or invents `authoring.pass`/`postAudit.pass`.
-Material final-drift resolutions are copied only from the validated
-`finalDrift.resolutions` records; the existing planning record remains explicitly
-non-authorizing.
+The plan contains a fixed `final-drift: passed-before-closure` marker, never
+dynamic final-drift records. It does not reconstruct historical per-agent,
+authoring/post-audit, page-error, unexpected-network, bundle/production-health,
+or cleanup outcomes and does not claim that an in-memory pre-pause payload
+survived. Pre-checkpoint checks remain mandatory and block phase 1 on failure,
+but their absent fields are not invented after resume.
 
-07 then creates changelog 1261 for the first time and changes only
-checkpoint-allowlisted TASK-548 task/index and pinned changelog metadata. It
-completes every required descendant before its parent and moves TASK-548 to
-terminal only after all required work is complete. After the terminal writes,
-the only operation is TASK-545's narrow mechanical validator returning exactly
-`{ pass, taskId, runId, closureMetadataRevision, changedPaths }`. That result is
-an external structured owner handoff and is never persisted. No substantive
-audit runs after terminal metadata. 08 never writes statuses, closeout, or the
-final canonical evidence set.
+On `frozen`, 07 creates changelog 1261 as the first atomic metadata write and
+then applies the rest of the deterministic descendant-first plan. If the
+process crashes after that first write, TASK-545 returns `metadata_recovery`.
+That branch does not run smoke or final drift and does not require the lost
+result. It first requires the changed allowlisted bytes to be an exact
+changelog-first prefix of the deterministic plan; wrong bytes, order, or a
+missing first changelog write reject. It then completes only missing writes
+idempotently.
+
+07 changes only checkpoint-allowlisted TASK-548 task/index and pinned changelog
+metadata, completing every required descendant before its parent and moving
+TASK-548 to terminal only after all required work is complete. After terminal
+writes, the only operation is TASK-545's narrow mechanical validator returning
+exactly `{ pass, taskId, runId, closureMetadataRevision, changedPaths }`. That
+result is an external structured owner handoff and is never persisted. No
+substantive audit runs after terminal metadata. 08 never writes statuses,
+closeout, or the final canonical evidence set.
 
 ## Security Contract
 
@@ -458,8 +476,8 @@ Agents default read only; writer dispatch is limited to the explicit owner map.
 - [ ] Implement author-audit, sequential implement, and scoped-fix workflows.
 - [ ] Prove five rounds, all-results guards, reconcile, collision, and staleness.
 - [ ] Prove bounded audit identities authorize only the current process, verify
-  post-resume deterministic closeout reconstruction, and inspect 07's exact
-  TASK-545 manifest/checkpoint/eight screenshots read-only.
+  post-resume deterministic closeout reconstruction, and inspect the exact
+  07-owned manifest/eight screenshots plus TASK-545-owned checkpoint read-only.
 
 ## Testing Requirements
 
@@ -507,29 +525,37 @@ proving no direct product/task/changelog/evidence writes by 08.
 Phase-order fixtures pin all six exact post-06-L02 labels, the same physical
 07-L01 owner across its four phases, nonterminal status through final drift,
 post-audit before final smoke, owner-scoped non-metadata loopback, substantive
-read-only final drift after owner-resume parity but before closeout, and only
-mechanical metadata-delta validation after terminal metadata.
+read-only final drift after owner-resume parity but before closeout on
+`frozen`, and only mechanical metadata-delta validation after terminal
+metadata. Replay fixtures prove a pre-metadata crash remains `frozen` and reruns
+final drift, while a post-changelog crash returns `metadata_recovery` and skips
+smoke/final drift.
 
 Evidence tests require only
 `_docs/_workflows/_smoke/evidence/task-548/`, exact manifest/checkpoint/screenshot
-inventory, phase1 `owner_action_required`, owner-stage pause, exact
-workflow-bound resume, tracked parity, metadata-only delta and invalidation on
-any later non-metadata mutation. They prove final drift blocks every terminal
-write; phase 1 has zero pre-pause task/changelog/board/status writes, immediately
-returns owner action, and has no later action. Resume reconstruction accepts
-only the five sources above, records generic gate outcomes without invented pass
-fields, copies material final-drift resolutions only from structured records,
-and creates changelog 1261 for the first time before descendant-first closure.
-The final delta receipt is external-only. The exact TASK-545
-manifest rejects audit,
-bundle, network, cleanup, or summary fields and no summary evidence file may
-exist. Legacy acceptance/workflow evidence paths fail. TASK-548-07-L01 records
-the verified concise summary in task/changelog closeout; this child never edits
-changelog, status, canonical evidence, or screenshot bytes.
+inventory with split byte ownership, phase1 `owner_action_required`,
+owner-stage pause, exact workflow-bound resume, tracked parity, metadata-only
+delta and invalidation on any later non-metadata mutation. They prove 07 alone
+writes manifest + eight screenshots, TASK-545 phase 1 alone atomically writes
+checkpoint, final drift blocks every terminal write, and phase 1 has zero
+pre-pause task/changelog/board/status writes, immediately returns owner action,
+and has no later action. Deterministic closeout accepts only the four durable
+sources above. `frozen` requires a current `{ pass: true, findings: [] }` but
+does not serialize it; `metadata_recovery` requires no prior result, accepts
+only an exact changelog-first plan prefix, and idempotently fills missing
+writes. Tests reject invented authoring/post-audit or page-error/network/
+bundle/health/cleanup outcomes, dynamic final-drift serialization, wrong
+partial bytes/order, and unavailable in-memory payloads. Changelog 1261 is the
+first metadata write before descendant-first closure. The final delta receipt
+is external-only. The exact TASK-545 manifest rejects audit, bundle, network,
+cleanup, or summary fields and no summary evidence file may exist. Legacy
+acceptance/workflow evidence paths fail. This child never edits changelog,
+status, canonical evidence, or screenshot/checkpoint bytes.
 
 ## Documentation Updates Required
 
 Keep all task-specific wrappers/modules/tests tracked in clean checkout. Only 07
-serializes the canonical manifest/checkpoint/screenshots and reconstructs the
-post-resume changelog summary from the bounded on-disk/control sources above;
-this child edits no shared product docs, evidence, task status, or changelog.
+serializes the canonical manifest/eight screenshots and deterministic closeout;
+TASK-545 phase 1 alone serializes the checkpoint. Closeout uses only the durable
+sources above and does not claim absent runtime history. This child edits no
+shared product docs, evidence, task status, or changelog.

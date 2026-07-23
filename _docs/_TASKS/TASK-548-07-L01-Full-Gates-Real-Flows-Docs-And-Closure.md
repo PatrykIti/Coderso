@@ -28,8 +28,9 @@ and downstream gate is rerun.
 
 - `tests/integration/documentation/docsPlatformAcceptance.test.ts`;
 - `scripts/docs/run-acceptance-smoke.ts`;
-- final canonical evidence directory
-  `_docs/_workflows/_smoke/evidence/task-548/`;
+- final canonical manifest plus exactly eight screenshots under
+  `_docs/_workflows/_smoke/evidence/task-548/`; TASK-545 phase 1 retains sole
+  ownership of the checkpoint byte in that directory;
 - `README.md`, `docs/README.md`, `docs/guide/README.md`;
 - `docs/develop/README.md`;
 - `docs/develop/assistant.md`;
@@ -154,8 +155,9 @@ TASK-545 manifest fields: top-level revision/generated-at/server-up values and,
 for each ordered scenario, ID/title/surface/theme/viewport, visible assertions,
 an empty `consoleErrors` array, and screenshot relative path/SHA-256 records.
 Page-error, unexpected-network, bundle-identity and cleanup checks are mandatory
-run/closeout evidence but never manifest extension fields or extra evidence
-files.
+pre-checkpoint gates and block phase 1 on failure, but they are neither
+manifest fields/extra evidence files nor historical claims reconstructed during
+post-resume closeout.
 
 ## Security Contract
 
@@ -422,13 +424,12 @@ mutation after owner review, or any later source/test/config/runtime-doc/workflo
 change invalidates the snapshot and audit. Resume never dispatches
 implementation, fixes, canonical post-audit, or smoke. Before any metadata
 mutation it may dispatch only the substantive read-only final-drift phase. A
-final-drift finding that requires mutation aborts resume without an edit and
-invalidates the snapshot; the next attempt begins as a normal run at the owning
-leaf. Any pre-phase-1 task/changelog/board/status write, summary sidecar,
+final-drift finding aborts resume without an edit, invalidates the snapshot,
+and returns through a new normal run at the owning leaf. Any pre-phase-1
+task/changelog/board/status write, summary sidecar,
 manifest/checkpoint extension, recovery delta without exact
 changelog-first deterministic-prefix parity, or claim that an unavailable
-pre-pause agent/runtime payload survived also blocks. Every final-drift finding
-means non-pass and returns through a new normal run. Nothing is fixed after
+pre-pause agent/runtime payload survived also blocks. Nothing is fixed after
 terminal metadata.
 
 The phase-1 result must have exactly `{ pass, code, action, taskId,

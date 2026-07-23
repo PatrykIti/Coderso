@@ -82,15 +82,39 @@ fresh before editing.
 - For each section or block registry control, derive all field behavior once:
 
   ```ts
-  const registryBlockPath =
+  const candidateRegistryBlockPath =
     selectedBlockPath ??
     (selectedSection.blocks[0] ? ([{index: 0}] as const) : null);
+  const resolvedBaseRegistryBlock = candidateRegistryBlockPath
+    ? getPageBlockAtPath(selectedSection, candidateRegistryBlockPath)
+    : null;
+  const resolvedEffectiveRegistryBlock = candidateRegistryBlockPath
+    ? getPageBlockAtPath(resolvedSelectedSection, candidateRegistryBlockPath)
+    : null;
+
+  // A stale selected path must not fall back to the first root. Finalize the
+  // one canonical path only after that exact candidate resolves in both views.
+  const registryBlockPath =
+    candidateRegistryBlockPath &&
+    resolvedBaseRegistryBlock &&
+    resolvedEffectiveRegistryBlock
+      ? candidateRegistryBlockPath
+      : null;
   const baseRegistryBlock = registryBlockPath
-    ? getPageBlockAtPath(selectedSection, registryBlockPath)
+    ? resolvedBaseRegistryBlock
     : null;
   const effectiveRegistryBlock = registryBlockPath
-    ? getPageBlockAtPath(resolvedSelectedSection, registryBlockPath)
+    ? resolvedEffectiveRegistryBlock
     : null;
+  const registryBlockPlacement = registryBlockPath
+    ? resolvePageBlockGridPlacement(selectedSection, registryBlockPath, {
+        includeHiddenBlocks: true,
+      })
+    : "none";
+  const registryMediaParentScopeKey =
+    registryBlockPath && baseRegistryBlock
+      ? JSON.stringify(["block", baseRegistryBlock.id, control.id])
+      : null;
 
   const controlDevice = control.responsive ? activeDevice : "desktop";
   const fieldDevice = controlDevice;
@@ -105,17 +129,38 @@ fresh before editing.
   // and fieldDevice, never an independently chosen active target/device.
   patchBlockControlForDevice(block, fieldDevice, control, value);
   patchSectionControlForDevice(section, fieldDevice, control, value);
+
+  function commitRegistryBlock(mutator: (block: PageBlockV2) => PageBlockV2) {
+    if (!registryBlockPath) return;
+    updateSelectedSection((currentSection) => {
+      const result = updatePageBlockAtPath(
+        currentSection,
+        registryBlockPath,
+        mutator
+      );
+      return result.status === "ok" ? result.section : currentSection;
+    });
+  }
   ```
 
   This is the one canonical registry block target: the selected path when present,
-  otherwise the first root path `[{index:0}]` when a root exists. Do not independently
-  derive a first block while leaving the path null. The exact
+  otherwise the first root path `[{index:0}]` when a root exists. Resolve that exact
+  candidate in both the base and effective sections before exposing it; never replace
+  a stale selected path with the first root, and never independently derive a first
+  block while leaving the path null. The exact
   `registryBlockPath`/base/effective block tuple drives control discovery, visibility,
   displayed/auxiliary/default values, media parent scope, span placement, reset, and
   every block mutation. A fallback field commit calls `updatePageBlockAtPath` with
   `[{index:0}]`; selected/nested commits use the selected path. If the chosen path no
-  longer resolves, render no block registry field and perform no block write rather
-  than falling through to a section mutation or a different block.
+  longer resolves in either view, or no candidate exists, render no block registry
+  field/control (including media and reset affordances), do not call the placement
+  resolver, and perform no block write, dirty transition, or autosave transition
+  rather than falling through to a section mutation or a different block. Re-check
+  the same path through `updatePageBlockAtPath` inside every write callback and keep
+  the current section on a non-`"ok"` result; never reconstruct a path from the
+  current selection inside a field, reset, media, or commit callback. Construct and
+  expose those callbacks and `registryMediaParentScopeKey` only inside the canonical
+  non-null block-field branch.
 
   Use `fieldTarget` for the visibility source, displayed value, auxiliary inputs,
   and default comparison. Use `fieldDevice` for the field shell, override badge,
@@ -127,10 +172,13 @@ fresh before editing.
   deliberate edit creates one dirty/autosave transition and no responsive
   gallery/divider key. A pre-existing tablet/mobile key remains byte-identical.
 - For span controls, call
-  `resolvePageBlockGridPlacement(selectedSection, selectedBlockPath,
-  {includeHiddenBlocks:true})` from L05 and show them only when the result is not
-  `"none"`. Admin intentionally classifies all root blocks, including hidden ones.
-  Do not duplicate placement or visibility rules.
+  `resolvePageBlockGridPlacement(selectedSection, registryBlockPath,
+  {includeHiddenBlocks:true})` from L05 only inside the non-null, successfully
+  resolved `registryBlockPath` branch, and show them only when the result is not
+  `"none"`. Never pass nullable `selectedBlockPath`, never call the helper for an
+  empty or stale target, and never derive a separate fallback path for placement.
+  Admin intentionally classifies all root blocks, including hidden ones. Do not
+  duplicate placement or visibility rules.
 - Keep all existing change/autosave/cache/dirty-state flows.
 
 Inspector clearance is Page-local:
@@ -177,8 +225,11 @@ unmount, including parent-gallery-scope replacement and stable surviving-row ide
 after removing an earlier row. The PageEditor gallery path additionally pins selected
 URL boundaries at exactly 2,048/2,049, with the latter producing zero
 writes/dirty/autosave changes and no render-time truncation. Fallback-target tests
-prove the same selected-or-first-root path drives fields, span placement, reset, and
-mutation, including empty/stale-path fail-closed cases. Layout tests pin class
+prove a null selection with a first root finalizes `[{index:0}]` and passes that exact
+path to fields, media scope, span placement, reset, and mutation. They also prove an
+empty section or stale selected path finalizes no canonical path, does not call
+`resolvePageBlockGridPlacement`, renders no block registry field/control, and cannot
+write or trigger dirty/autosave. Layout tests pin class
 tokens/open-state/cascade ordering and restoration on close; TASK-539-08 owns actual
 browser computed clearance at 640px and `lg`.
 

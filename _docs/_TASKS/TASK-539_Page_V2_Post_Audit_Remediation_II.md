@@ -137,10 +137,31 @@ working tree, including paths committed at intermediate checkpoints. A result ab
   `PAGE_MARQUEE_REPLICA_ATTRIBUTE` and its selector are fixed shared literals owned
   by `pageCompositionEffects.tsx`; renderer and runtime import them. False/absent
   seamless and unsafe seamless each render one segment and no replica.
+- `pageRendererReplicaIdentity.ts` also solely owns three styling-only alias
+  constants with these exact names/literals:
+  `PAGE_MARQUEE_REPLICA_BLOCK_STYLE_SCOPE_ATTRIBUTE =
+  "data-page-marquee-replica-block-style-scope"`,
+  `PAGE_MARQUEE_REPLICA_TILT_LAYER_STYLE_SCOPE_ATTRIBUTE =
+  "data-page-marquee-replica-tilt-layer-style-scope"`, and
+  `PAGE_MARQUEE_REPLICA_GRID_ITEM_STYLE_SCOPE_ATTRIBUTE =
+  "data-page-marquee-replica-grid-item-style-scope"`. Approved replica block frames,
+  hoisted tilt/layer wrappers, and actual grid targets respectively carry the
+  canonical normalized original block ID through these aliases. They are not DOM
+  IDs/IDREFs, Admin selection/runtime hooks, or members of either replica identity
+  set. Responsive CSS direct-imports this owner and uses one
+  `:is(canonical selector, replica alias selector)` per target so both safe marquee
+  segments receive identical tablet/mobile visual, typography, layer, and span
+  styling without restoring canonical identity hooks. Primary/non-seamless/unsafe
+  fallback output emits no alias.
 - `pageRendererTimelineGeometry.ts` owns and exports
   `PageTimelineItemGeometry` plus
   `resolvePageTimelineItemGeometry(section,template,index,total)`; the renderer
   consumes that helper and the focused geometry suite imports the owner directly.
+- The stable `pageRendererV2.tsx` facade remains exactly its grounded 41-name
+  pre-task surface: 12 type exports and 29 runtime-value exports enumerated in
+  TASK-539-05-L01. Its source-owner facade suite pins exact module keys,
+  direct-owner runtime reference identity, all type-only imports, no `export *`, and
+  absence of task-added replica/timeline symbols.
 - A shared global initializer rescans the supplied root/document on every emitted
   script and uses per-element ownership (`WeakSet` or equivalent); it deduplicates
   listeners without blocking later footer discovery.

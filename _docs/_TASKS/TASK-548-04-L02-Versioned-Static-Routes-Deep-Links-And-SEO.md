@@ -6,8 +6,7 @@
 **Priority:** High
 **Category:** Static Generation / Versioning / SEO
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-548-03-L02 and TASK-548-04-L01; TASK-545 must be
-`✅ Done` and TASK-547 must be fully terminal before dispatch
+**Dependencies:** TASK-548-03-L02 and TASK-548-04-L01; TASK-545 must be `✅ Done` and TASK-547 must be fully terminal before dispatch
 **Status:** ⏳ To Do
 **Changelog:** 1261 (pinned; closure only)
 

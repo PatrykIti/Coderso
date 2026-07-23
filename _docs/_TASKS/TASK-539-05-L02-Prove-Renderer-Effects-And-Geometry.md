@@ -18,7 +18,7 @@ Create only
 `tests/vitest/pages/task-539-renderer-effects-and-geometry.test.tsx`.
 L01 source and all split/existing renderer suites are read-only here.
 
-## Test Shape
+## Implementation Pseudocode
 
 - Magnetic-only and reveal-only documents emit the shared transform CSS/host;
   false/unset/no-effect bytes remain exact. Repeat predicate proof through footer
@@ -62,6 +62,16 @@ L01 source and all split/existing renderer suites are read-only here.
   byte-identical. Every rewritten DOM reference resolves inside that replica and
   never the primary; unresolved/external references and boolean/enumerated hooks
   remain byte-identical.
+- Direct-import `PAGE_MARQUEE_REPLICA_BLOCK_STYLE_SCOPE_ATTRIBUTE`,
+  `PAGE_MARQUEE_REPLICA_TILT_LAYER_STYLE_SCOPE_ATTRIBUTE`, and
+  `PAGE_MARQUEE_REPLICA_GRID_ITEM_STYLE_SCOPE_ATTRIBUTE` from
+  `pageRendererReplicaIdentity.ts`. An approved replica stamps the block-frame alias
+  on its corresponding block frame, the tilt/layer alias only on the hoisted
+  tilt/layer wrapper, and the grid-item alias only on the L05-classified actual grid
+  target. Each value remains the canonical normalized original block ID even while
+  selection/runtime hook identifiers are namespaced. Assert the aliases are absent
+  from `domIds`, `hookIdentifiers`, identity-transformer routing, primary markup,
+  non-seamless output, unsafe fallback output, and every non-owning replica node.
 - For each exact unsafe type (`video`, `form`, `collection`, `filters`, `embed`),
   cover both an immediate active-slot child (“direct”) and deep active-slot nesting
   under an authored `seamless:true` outer group. Do not test or implement an
@@ -89,7 +99,11 @@ L01 source and all split/existing renderer suites are read-only here.
   stays exact.
 - Stable facade exports remain the exact pre-task surface; replica-identity and
   timeline-geometry internals are explicitly exported only by their direct owners.
-  Pin all split suite/module line receipts.
+  The L01-owned `page-renderer-v2-facade.test.tsx` is the sole exhaustive 12-type /
+  29-runtime-value manifest and reference-identity proof; this additive L02 suite
+  checks only that its direct-imported task-added replica/timeline symbols are absent
+  from the facade and does not duplicate or own that manifest. Pin all split
+  suite/module line receipts.
 
 DOM structure proof supplements TASK-539-08 computed geometry and TASK-539-07 real
 runtime clone-ignore/movement proof. Native `inert` behavior is accepted only from

@@ -54,7 +54,9 @@ its exact then-current source/test ownership paths into every TASK-539 dispatch 
 recompute board statistics from all physical task files; never apply a stale
 hard-coded TASK-539 delta.
 
-## Start and runtime-suite pseudocode
+## Implementation Pseudocode
+
+### Start and runtime suite
 
 Fail closed unless TASK-540 and every descendant are terminal and a new start audit
 passes against the current post-TASK-540 HEAD plus full status/diff. Before any
@@ -115,7 +117,7 @@ bun run test:vitest -- tests/vitest/pages/page-document-v2.test.ts tests/vitest/
 bun run test:vitest -- tests/vitest/pages/page-authoring-sanitizers.test.ts tests/vitest/pages/page-authoring-sanitizers-security-corpus.test.ts tests/vitest/services/css-color-contract.test.ts tests/vitest/services/css-color-contract-corpus.test.ts tests/vitest/services/css-color-consumer-parity.test.ts
 bun run test:vitest -- tests/vitest/pages/page-block-grid-placement.test.ts tests/vitest/pages/page-editor-control-registry.test.ts tests/vitest/pages/page-editor-control-registry-capabilities.test.ts tests/vitest/pages/page-editor-control-registry-effects.test.ts tests/vitest/pages/page-editor-control-registry-responsive.test.ts tests/vitest/pages/page-editor-control-ui-model.test.ts tests/vitest/ui/page-editor-media-url-control.test.tsx tests/vitest/ui/page-editor-gallery-items-control.test.tsx tests/vitest/ui/page-editor-gallery-category-tokens-control.test.tsx tests/vitest/ui/page-editor-v2-flow.test.tsx tests/vitest/ui/page-editor-v2-authoring-flow.test.tsx tests/vitest/ui/page-editor-v2-controls-flow.test.tsx tests/vitest/ui/page-editor-v2-inline-edit-flow.test.tsx tests/vitest/ui/page-editor-v2-responsive-flow.test.tsx tests/vitest/ui/page-editor-v2-layout-flow.test.tsx tests/vitest/ui/page-editor-v2-persistence-flow.test.tsx tests/vitest/ui/page-editor-v2-settings-flow.test.tsx tests/vitest/pages/task-539-page-editor-controls.test.ts tests/vitest/ui/task-539-page-editor-flow.test.tsx
 bun run test:vitest -- tests/vitest/pages/page-composition-effects.test.ts tests/vitest/pages/task-534-interactivity-css.test.ts tests/vitest/pages/task-539-transform-composition.test.ts
-bun run test:vitest -- tests/vitest/pages/page-renderer-v2.test.tsx tests/vitest/pages/page-renderer-v2-section-layout.test.tsx tests/vitest/pages/page-renderer-v2-blocks.test.tsx tests/vitest/pages/page-renderer-v2-data-binding.test.tsx tests/vitest/pages/page-renderer-v2-effects.test.tsx tests/vitest/pages/page-renderer-v2-svg.test.tsx tests/vitest/pages/page-renderer-v2-composition.test.tsx tests/vitest/pages/task-534-interactivity-render.test.tsx tests/vitest/pages/task-539-renderer-effects-and-geometry.test.tsx
+bun run test:vitest -- tests/vitest/pages/page-renderer-v2-facade.test.tsx tests/vitest/pages/page-renderer-v2.test.tsx tests/vitest/pages/page-renderer-v2-section-layout.test.tsx tests/vitest/pages/page-renderer-v2-blocks.test.tsx tests/vitest/pages/page-renderer-v2-data-binding.test.tsx tests/vitest/pages/page-renderer-v2-effects.test.tsx tests/vitest/pages/page-renderer-v2-svg.test.tsx tests/vitest/pages/page-renderer-v2-composition.test.tsx tests/vitest/pages/page-renderer-timeline-geometry.test.ts tests/vitest/pages/task-534-interactivity-render.test.tsx tests/vitest/pages/task-539-renderer-effects-and-geometry.test.tsx
 bun run test:vitest -- tests/vitest/pages/page-responsive-css.test.ts tests/vitest/pages/page-responsive-css-section.test.ts tests/vitest/pages/page-responsive-css-block.test.ts tests/vitest/pages/page-responsive-css-security.test.ts tests/vitest/pages/task-539-responsive-css-parity.test.ts
 bun run test:vitest -- tests/vitest/pages/pageEffectsRuntime.test.ts tests/vitest/content/sectionScrollEffect.test.tsx tests/vitest/content/cursorSpotlight.test.tsx tests/vitest/content/task-534-interactivity-runtime.test.tsx tests/vitest/pages/task-539-page-effects-runtime-rescan.test.tsx
 ```
@@ -208,6 +210,17 @@ distinct real flows:
    markup. Each unsafe subtree deterministically has one
    canonical segment, no replica marker/namespace, and exactly one form nonce,
    executable form script, listing runtime surface, and nested marquee instance.
+   At one tablet and one mobile front viewport, author real responsive typography,
+   frame/inner-element visual style, tilt+layer offsets, and a legal grid span in the
+   safe two-segment case. Compare computed styles and relevant bounding-box/grid
+   geometry between the canonical and replica targets: both segments must visibly
+   match. Assert the replica uses only
+   `PAGE_MARQUEE_REPLICA_BLOCK_STYLE_SCOPE_ATTRIBUTE`,
+   `PAGE_MARQUEE_REPLICA_TILT_LAYER_STYLE_SCOPE_ATTRIBUTE`, and
+   `PAGE_MARQUEE_REPLICA_GRID_ITEM_STYLE_SCOPE_ATTRIBUTE`, with canonical original
+   block-ID values on their precise frame/hoisted-wrapper/grid targets, retains
+   namespaced selection/runtime identities, and leaks no alias to primary,
+   non-seamless, unsafe fallback, or a non-owning replica node.
 5. **Full-bleed paint.** Author responsive gradient layers plus final color, radius,
    shadow, and glow; assert viewport-wide outer paint, capped content, exact computed
    image/color split, no double-tone box, and invalid paint absent.

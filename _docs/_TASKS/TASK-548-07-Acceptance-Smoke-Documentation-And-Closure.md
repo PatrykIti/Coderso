@@ -402,10 +402,10 @@ finding, or touched file above 1,000 lines blocks closure.
 Any product/runtime/docs/workflow/evidence/source/test/config change after the
 final smoke snapshot, or any non-metadata change after tracked resume,
 invalidates smoke/audit and requires a fresh pre-checkpoint run. The final drift
-audit is read-only and precedes every terminal write; a finding that needs a
-non-metadata fix aborts resume without metadata mutation and invalidates the
-snapshot. Any finding means the final drift is not a pass; the issue returns to
-its owner and the normal validation/smoke/checkpoint lifecycle reruns. Any
+audit is read-only and precedes every terminal write; any finding makes it
+non-pass, aborts resume without metadata mutation, invalidates the snapshot,
+and returns to its owner before the normal validation/smoke/checkpoint lifecycle
+reruns. Any
 pre-phase-1 task/changelog/board/status write, recovery delta without exact
 changelog-first deterministic-prefix parity, extra summary file,
 manifest/checkpoint extension, or claim that an unavailable pre-pause agent or

@@ -85,8 +85,11 @@ applies.
   are never silently truncated during render and remain explicitly clearable.
 - Divider, parallax, gallery-filter, and span controls appear only when reachable.
 - Block registry behavior has one target/path: selected path, otherwise
-  `[{index:0}]` when a first root exists. Fields, span placement, media scope, reset,
-  and mutation all use that same pair; stale/empty targets fail closed.
+  `[{index:0}]` when a first root exists. The exact candidate must resolve in both
+  base and effective sections before it becomes the canonical path. Fields, span
+  placement, media scope, reset, and mutation all use that same path; placement is
+  never called with nullable `selectedBlockPath`, while stale/empty targets expose no
+  block registry control and perform no write.
 - Placement classification uses all root blocks in Admin and exactly the public
   renderer's visible-root set in front/responsive CSS.
 - Layer z imports the model-owned `PAGE_LAYER_Z_CLAMP` (`0..20`).

@@ -39,6 +39,24 @@ Use complete selector/declaration assertions. Do not import renderer/runtime or 
 actual reveal/orb host stamping, movement, clone isolation, or browser geometry; those
 belong to TASK-539-05/07/08.
 
+## Implementation Pseudocode
+
+```text
+create task-539-transform-composition.test.ts only
+import only the L01 pure CSS owners/constants; never import renderer or runtime modules
+
+build explicit no-effect and authored-effect fixtures
+for each reveal/decoration/hover/tilt/magnetic case:
+  render the pure CSS output
+  assert the exact owned variable declaration and absence of another transform owner
+assert the eleven variables, host selector/attribute, replica constants, formula order,
+marquee geometry/fallback, layer translate behavior, glow pointer-events, and
+no-effect/unrelated byte identity through complete selector/declaration comparisons
+
+run the new file independently, lint/types, family line-limit, wc -l, and diff check;
+on failure rerun the named test once before classification
+```
+
 ## Validation and line receipt
 
 ```bash

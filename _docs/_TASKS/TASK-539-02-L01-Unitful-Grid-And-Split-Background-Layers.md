@@ -219,6 +219,36 @@ canonicalization then run unchanged.
   canonical bytes.
 - No route, schema version, consumer, DDL, dependency, or scanner-policy change.
 
+## Implementation Pseudocode
+
+```text
+edit only pageAuthoringSanitizers.ts and its owned compatibility test file
+parsePageAuthoringColor(value):
+  pass the untouched value to parseCssColorValue(value, "authoring")
+  return null on parser rejection or a non-Page token
+  otherwise return the TASK-541 normalized bytes
+
+analyzeAuthoringCssBackgroundPaint(value):
+  reject wrong type/empty/oversize, forbidden raw code points, and whole-value tripwire
+  walk the original bytes once to identify balanced top-level layer source ranges
+  reject empty/over-cap layers
+  classify each original slice as a safe gradient or untouched TASK-541 color input
+  permit one color only as the final layer; preserve the exact gradient image range
+  return {paint:{image,color},layerCount}; return null on every invalid branch
+
+parseAuthoringCssBackgroundPaint / sanitizeAuthoringCssBackground /
+isSafeAuthoringCssBackgroundLayers:
+  delegate once to the shared analysis and project only the locked public result
+
+sanitizeAuthoringGridTemplate(value):
+  reject forbidden raw code points before trim/tokenization
+  apply the existing structural guards and the zero-or-unitful grammar
+  return canonical ASCII-space/function-comma bytes, or null without throwing
+
+run the owned compatibility, byte-identity, cap, raw-guard, token, and grid matrices;
+then run every exact validation gate below and enforce the family line limit
+```
+
 ## L01 test shape
 
 Update the existing sanitizer suite for:

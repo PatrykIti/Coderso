@@ -27,7 +27,10 @@ emission, background channels, and orb/reveal hosts without changing no-effect b
 | 2 | TASK-539-05-L02 | New additive TASK-539 renderer proof suite only | ⏳ To Do |
 
 L01 is the sole TASK-539 writer of the renderer facade/modules and existing renderer
-suites. L02 creates one task-specific suite only. No `siteShell.tsx`, runtime,
+suites, including the exhaustive
+`tests/vitest/pages/page-renderer-v2-facade.test.tsx` manifest/reference-identity
+suite. L02 creates one task-specific suite only and does not duplicate that facade
+manifest. No `siteShell.tsx`, runtime,
 responsive CSS, editor, model, sanitizer, task index, or changelog edit belongs here.
 The stale renderer comment that calls the second effects-runtime copy a “total
 no-op” is part of L01's renderer-only correction; `siteShell.tsx` already has
@@ -70,6 +73,11 @@ change applies.
   imports the owner marker, is `aria-hidden` + `inert`, and namespaces local
   DOM/SVG IDs, matching local references, and identifier-bearing data hooks through
   their separate eligibility sets; a hook-only matching fragment stays unchanged.
+  Three direct-owner styling-only aliases retain the canonical original block ID on
+  the approved replica's block frame, hoisted tilt/layer wrapper, and actual grid
+  target, respectively, so responsive CSS can style both segments without restoring
+  canonical selection/runtime hooks. They are outside both identity sets and all
+  identity transformation, and primary/non-seamless/unsafe output emits none.
   The primary stays unchanged. Non-seamless also has one canonical segment. Vitest
   pins native inert markup/property; TASK-539-08 Playwright proves actual focus and
   activation suppression.
@@ -80,6 +88,10 @@ change applies.
   `0..120` row gap with existing compact scaling, exact first/later tops and
   non-final/final bottoms, and bridge only real row gaps.
 - Divider source remains unchanged and is regression-tested only.
+- The stable renderer facade keeps the grounded 12-type plus 29-runtime-value
+  manifest. Its L01-owned suite proves exact runtime keys, direct-owner reference
+  identity, type imports, no export-star, and absence of task-added replica/timeline
+  internals.
 - No-effect/no-span/no-background markup stays byte-identical.
 
 ## Validation
@@ -88,6 +100,7 @@ change applies.
 bun --cwd core lint:types
 bun --cwd core lint
 bun run test:vitest -- \
+  tests/vitest/pages/page-renderer-v2-facade.test.tsx \
   tests/vitest/pages/page-renderer-v2.test.tsx \
   tests/vitest/pages/page-renderer-v2-section-layout.test.tsx \
   tests/vitest/pages/page-renderer-v2-blocks.test.tsx \

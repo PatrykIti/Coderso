@@ -22,7 +22,7 @@ Create and own only:
 All L01-L03 source-owner suites are read-only here. Do not re-baseline them, edit
 source, or append TASK-539 cases to legacy oversized suites.
 
-## Test Shape
+## Implementation Pseudocode
 
 - Pin the two dedicated gallery UI kinds, all four gallery controls and all five
   divider controls (`tone`, `thickness`, `gradient`, `width`, `align`) as
@@ -54,10 +54,15 @@ source, or append TASK-539 cases to legacy oversized suites.
   span controls; nested/per-column/non-default-media-split hides them. Include a
   hidden assigned root sibling to prove Admin passes
   `{includeHiddenBlocks:true}`. With no selected path, prove the one canonical
-  fallback path is `[{index:0}]` and the same first root drives registry fields,
-  gallery parent scope, span placement, reset, and mutation; with a selected nested
-  path all of those use that path. An empty section or stale chosen path exposes no
-  block field and cannot mutate the section or another block.
+  fallback path is `[{index:0}]`: the same exact path drives registry fields,
+  gallery parent scope, span placement, reset, and mutation, and is the argument
+  passed to `resolvePageBlockGridPlacement` with
+  `{includeHiddenBlocks:true}`. With a selected nested path, all of those use that
+  path and placement resolves `"none"`. Prove the placement helper is called only
+  after the chosen path resolves in both base and effective sections and is never
+  called with nullable `selectedBlockPath`. An empty section or stale selected path
+  exposes no block registry field/control (including media/reset), makes no placement
+  call, and cannot mutate the section or another block or trigger dirty/autosave.
 - In a DOM layout fixture, prove an open inspector adds no rail reservation at
   320/390/480 while normal `p-6` state remains. Pin the exact open class contract:
   retained `p-6 lg:p-8` plus both conditional

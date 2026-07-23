@@ -99,6 +99,30 @@ a numeric mirror. Include C0, C1, non-breaking space, and other Unicode whitespa
 Pin the untouched raw argument behavior in both single-color adapters and final-color
 background parsing.
 
+## Implementation Pseudocode
+
+```text
+create page-authoring-sanitizers-security-corpus.test.ts only
+define deeply frozen, deterministic tables with explicit expected values
+
+for each grid case:
+  call the public grid sanitizer with the untouched input
+  assert exact canonical bytes for acceptance or null for fail-closed rejection
+  feed accepted output through a second pass and assert deterministic identity
+
+for each background case:
+  call parser, sanitizer, and layer predicate with the untouched input
+  assert exact {image,color}, reconstruction bytes, and historical cardinality
+  assert invalid/security cases reject and frozen fixtures remain unchanged
+
+for each CSS_COLOR_CORPUS_CASES entry:
+  pass case.input unchanged through both Page color adapters and the embeddable
+  background color path; derive expectations from TASK-541 plus the seven-token filter
+
+run this new suite independently, rerun every locked compatibility/model suite, run
+lint/types, family line-limit and strict security gates, and report every exit code
+```
+
 ## Security Contract
 
 This is a pure boundary test; no route or public write changes. It proves the values

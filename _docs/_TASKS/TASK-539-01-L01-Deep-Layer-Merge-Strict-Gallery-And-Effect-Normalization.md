@@ -438,6 +438,42 @@ broad base partial-style normalizer.
   `gradient===true`; remove stale values in both modes without mutating input.
 - No corrected optional field joins a default emission map.
 
+## Implementation Pseudocode
+
+The following is execution order, not a second source contract; every public name,
+bound, path, and ownership rule remains the one defined above.
+
+```text
+edit only the source/test owner paths listed in Scope and ownership
+split the oversized source and test files by the locked cohesive responsibilities
+wire pageDocumentV2.ts as named re-exports of the direct owners only
+
+normalizeGalleryItems(value, mode, path):
+  write -> validate raw count, exact keys/types/bounds/bytes/category uniqueness
+           throw the locked PageDocumentError code at the exact failing path
+           rebuild canonical rows without retaining or mutating input
+  stored-read -> slice raw rows to PAGE_GALLERY_ITEMS_MAX, apply exact alias
+                 precedence, bound then sanitize, canonicalize category, and rebuild
+                 only canonical keys
+
+normalizeSectionResponsiveStyle / normalizeBlockResponsiveStyle:
+  write -> reject known base-only keys as page_document_invalid, then reject any
+           other unknown key as page_document_unknown_field at its exact path
+  stored-read -> copy without forbidden keys, normalize allowed siblings, and prune
+                 only empty layer/style/breakpoint records
+
+mergePageBlockLayerPresentKeys(base, override):
+  copy base, copy only own present x/y/z override keys, never copy anchor
+resolvePageBlockForBreakpoint(...):
+  perform the existing spread, replace its layer with the helper result, omit an
+  undefined layer own key, then recurse through slots without input mutation
+
+run the owned schema/type/runtime matrices:
+  prove strict gallery, responsive forbidden-key, layer reachability/present-key,
+  effect/divider, facade identity, idempotence, byte-identity, and frozen-input cases
+run every exact validation gate below and enforce <=1000 lines per touched file
+```
+
 ## Error and compatibility rules
 
 - Unknown gallery keys/aliases use `page_document_unknown_field` with exact nested

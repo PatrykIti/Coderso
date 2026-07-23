@@ -86,7 +86,10 @@ fixture pattern. If changed to handler coverage, they additionally require
   user-visible/accessibility effect and zero data/security/privacy/auth/RBAC/API/
   persistence/migration/performance/reliability/test-integrity impact.
 - Nine real flows cover the complete visible contract in light/dark where applicable,
-  save/publish/front parity, screenshots, and zero console errors.
+  save/publish/front parity, screenshots, and zero console errors. At tablet and
+  mobile, a real approved two-segment marquee must show equal computed
+  frame/element/text styling, hoisted tilt/layer geometry, and legal grid spans in
+  primary and replica while retaining isolated identity hooks.
 - All five docs, descendants, board statistics/indexes, and changelog 1251 are
   synchronized without a TASK-545 exception.
 

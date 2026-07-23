@@ -56,6 +56,28 @@ anchor/base-only-style rejection and stored-read drop, text-transform reset, eff
 divider cleanup, byte identity, or input mutation are forbidden here and remain
 L01-owned.
 
+## Implementation Pseudocode
+
+```text
+edit tests/integration/routes/pages.test.ts only
+testIfDb with the existing registered-route and uniquely scoped Page fixtures:
+  create one owned draft Page and capture currentData/status/publishedData
+  PATCH through the real registerPageRoutes handler with all four canonical row forms
+  assert the response and a fresh DB read preserve every row byte, including sentinel
+
+  for each locked invalid/unknown-field case:
+    PATCH a copy of the known persisted document through the same handler
+    assert HTTP 400 and the exact domain error code
+    if page_document_unknown_field, assert ApiError.details.path is exact
+    if page_document_invalid, do not assert a details path
+    reload the owned row and assert all three captured persistence fields are unchanged
+
+  clean up only the fixture rows owned by this test
+
+run the DB route file, lint/type gates, family line-limit gate, and diff check below;
+a skipped test or unreachable DB is a blocking result
+```
+
 ## Security Contract
 
 - **Visibility:** the exercised Page mutation is the existing internal

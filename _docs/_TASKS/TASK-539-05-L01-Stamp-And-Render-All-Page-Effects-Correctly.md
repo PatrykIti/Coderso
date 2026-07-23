@@ -40,6 +40,10 @@ extract further cohesive modules if any receipt exceeds 1,000.
 identity types and helpers. It explicitly exports them for focused direct-owner
 tests, while internal renderer modules import that direct owner. Do not widen the
 stable `pageRendererV2.tsx` facade with these implementation-only symbols.
+It has no runtime import edge to the responsive-CSS facade: canonical responsive and
+placement attribute constants may be referenced through type-only imports in the
+finite attribute-name union, while renderer call sites pass their runtime attribute
+names. This keeps TASK-539-06's declarations-to-replica-identity import acyclic.
 `pageRendererTimelineGeometry.ts` follows the same direct-owner policy for
 `PageTimelineItemGeometry` and `resolvePageTimelineItemGeometry`; renderer modules
 and its focused test import that file directly, and the stable facade does not
@@ -47,6 +51,7 @@ re-export either task-added symbol.
 
 Also own the cohesive split/updates of:
 
+- `tests/vitest/pages/page-renderer-v2-facade.test.tsx`
 - `tests/vitest/pages/page-renderer-v2.test.tsx`
 - `page-renderer-v2-section-layout.test.tsx`
 - `page-renderer-v2-blocks.test.tsx`
@@ -59,6 +64,66 @@ Also own the cohesive split/updates of:
 
 Each suite must be independently runnable; shared fixtures may live in a focused
 `pageRendererV2TestFixtures.tsx` kept `<=1000`. Read the post-TASK-478 renderer fresh.
+
+The stable facade surface is frozen from the verified pre-task source at exactly 41
+names: these 12 type exports
+
+```ts
+PageRenderMode
+PageSectionLayoutMode
+PageSectionStyleProperties
+PageBlockStyleProperties
+PageSectionDataAttributes
+PageBlockDataAttributes
+PageSectionRenderProps
+PageBlockRenderProps
+PageBlockFrameRenderer
+PageInlineTextRenderer
+PageColumnsSlotTrailingRenderer
+PageSectionColumnTrailingRenderer
+```
+
+and these 29 runtime-value exports
+
+```ts
+joinPageRenderClasses
+toPageSectionStyle
+toPageSectionBleedStyle
+pageSectionGridClass
+pageSectionCanvasGridClass
+pageSectionAlignmentClass
+pageSectionJustifyClass
+pageTextAlignClass
+pageBlockWidthClass
+isPageBlockSelfAligned
+pageBlockEffectiveWidthClass
+pageBlockAlignmentClass
+toPageSectionRenderProps
+PAGE_REVEAL_MOTION_CSS
+toPageBlockTypographyStyle
+pageBlockTextDataAttributes
+toPageBlockElementStyle
+pageBlockElementDataAttributes
+toPageBlockStyle
+toPageBlockRenderProps
+renderPageBlockContent
+PageBlockContent
+PageBlockFrame
+PageSectionContent
+PageSectionRender
+resolvePageRenderTree
+PAGE_SPOTLIGHT_CSS
+documentUsesSpotlight
+PageDocumentRender
+```
+
+The L01-owned `page-renderer-v2-facade.test.tsx` uses type-only imports for all 12
+types, asserts the facade module's runtime key set equals the exact 29-name list, and
+imports each runtime value from its cohesive direct owner to prove strict reference
+identity with the facade export. It statically rejects `export *` and proves the
+task-added replica identity/style-scope constants and timeline type/helper remain
+absent from the facade. The direct-owner modules may export those task-added symbols
+for their focused suites without changing this manifest.
 
 ## Implementation Pseudocode
 
@@ -214,7 +279,8 @@ Each suite must be independently runnable; shared fixtures may live in a focused
      | "filter"
      | "data-page-block-slot-owner"
      | typeof PAGE_BLOCK_ID_ATTRIBUTE
-     | typeof PAGE_TILT_PARENT_LAYER_ATTRIBUTE;
+     | typeof PAGE_TILT_PARENT_LAYER_ATTRIBUTE
+     | typeof PAGE_BLOCK_GRID_ITEM_ATTRIBUTE;
 
    export function encodePageReplicaNamespacePart(value: string): string;
 
@@ -269,8 +335,9 @@ Each suite must be independently runnable; shared fixtures may live in a focused
 
    Carry one replica context through every nested active-slot renderer. Namespace
    every emitted `id` definition through `domIds` and each identifier-bearing data
-   hook through `hookIdentifiers`. The styling-only replica frame still omits Admin
-   selection chrome; namespace only hook attributes actually emitted below it.
+   hook through `hookIdentifiers`, including the actual grid-item hook when emitted.
+   The styling-only replica frame still omits Admin selection chrome; namespace only
+   hook attributes actually emitted below it.
    Boolean/enumerated hooks such as gallery layout/pressed state remain byte-for-byte.
 
    `transformPageReplicaIdentityAttribute` is the one pure routing function for all
@@ -291,6 +358,39 @@ Each suite must be independently runnable; shared fixtures may live in a focused
    IDs/ARIA/hash/`url(#...)` references, and real identifier-bearing data hooks.
    Every rewritten DOM reference resolves within the replica, no reference crosses
    to the primary, and hook-only fragment candidates remain unchanged.
+
+   The direct identity owner additionally defines exactly these three
+   styling-only replica scope hooks:
+
+   ```ts
+   export const PAGE_MARQUEE_REPLICA_BLOCK_STYLE_SCOPE_ATTRIBUTE =
+     "data-page-marquee-replica-block-style-scope" as const;
+   export const PAGE_MARQUEE_REPLICA_TILT_LAYER_STYLE_SCOPE_ATTRIBUTE =
+     "data-page-marquee-replica-tilt-layer-style-scope" as const;
+   export const PAGE_MARQUEE_REPLICA_GRID_ITEM_STYLE_SCOPE_ATTRIBUTE =
+     "data-page-marquee-replica-grid-item-style-scope" as const;
+   ```
+
+   Each hook's value is the canonical normalized original block ID, not the
+   replica-namespaced hook identifier. They are CSS scope aliases only: they are
+   neither DOM IDs/IDREF targets nor Admin selection, renderer runtime, or effects
+   runtime hooks; they are not members of `domIds`, `hookIdentifiers`, or
+   `PageReplicaIdentityAttributeName`, and the identity transformer never rewrites
+   them.
+
+   Stamp `PAGE_MARQUEE_REPLICA_BLOCK_STYLE_SCOPE_ATTRIBUTE` on each approved
+   replica block frame corresponding to the primary frame's
+   `PAGE_BLOCK_ID_ATTRIBUTE`. Stamp
+   `PAGE_MARQUEE_REPLICA_TILT_LAYER_STYLE_SCOPE_ATTRIBUTE` only on the existing
+   replica tilt/layer wrapper whose primary counterpart carries
+   `PAGE_TILT_PARENT_LAYER_ATTRIBUTE`. Stamp
+   `PAGE_MARQUEE_REPLICA_GRID_ITEM_STYLE_SCOPE_ATTRIBUTE` only on the one actual
+   replica grid target (block frame or section-template wrapper) whose primary
+   counterpart carries `PAGE_BLOCK_GRID_ITEM_ATTRIBUTE`. Do not add a wrapper.
+   Primary output, `seamless:false`, and every unsafe one-segment fallback emit none
+   of the three aliases. The identity direct-owner and renderer suites pin exact
+   literals, canonical values, precise targets, separate-set non-membership, and
+   zero alias leakage to canonical/fallback/unsafe output.
 
 7. **Divider.** Do not change divider production behavior: its gradient-only
    width/alignment branch is already correct. Preserve it and add regression coverage
@@ -367,6 +467,7 @@ one legal target. Do not edit runtime clone filtering/magnetic writes here
 bun --cwd core lint:types
 bun --cwd core lint
 bun run test:vitest -- \
+  tests/vitest/pages/page-renderer-v2-facade.test.tsx \
   tests/vitest/pages/page-renderer-v2.test.tsx \
   tests/vitest/pages/page-renderer-v2-section-layout.test.tsx \
   tests/vitest/pages/page-renderer-v2-blocks.test.tsx \
