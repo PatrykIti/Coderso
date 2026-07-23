@@ -264,7 +264,7 @@ bunx vitest run --config vitest.config.ts \
   tests/vitest/docs/docs-renderer.test.tsx \
   tests/vitest/docs/docs-search.test.ts \
   tests/vitest/docs/docs-public-links.test.ts \
-  tests/vitest/docs/docs-admin-actions.test.ts \
+  tests/vitest/ui-integration/docs-help-host-adapter.test.ts \
   tests/vitest/ui/assistant-guide-tab.test.tsx \
   tests/vitest/ui/assistant-agent-tab.test.tsx \
   tests/vitest/ui/assistant-tab-handoff.test.tsx \
@@ -289,6 +289,7 @@ bun test \
   tests/unit/documentation/docsCorpusPromotionRecovery.test.ts \
   tests/unit/documentation/docsDockerWorkspaceContract.test.ts \
   tests/unit/documentation/docsGuideMigrationBaseline.test.ts \
+  tests/unit/documentation/helpBuildAssetVerification.test.ts \
   tests/unit/documentation/docsPagesPublication.test.ts \
   tests/unit/documentation/docsReleaseArtifact.test.ts \
   tests/unit/documentation/docsVisualCapture.test.ts \
@@ -306,6 +307,8 @@ bun run docs:check
 bun run docs:visual:check -- --all
 bun run docs:coverage -- --check
 
+bun --cwd packages/docs-contracts check
+tsc -p packages/docs-contracts/tsconfig.json --noEmit
 bun --cwd packages/docs-renderer check
 tsc -p packages/docs-renderer/tsconfig.json --noEmit
 bun --cwd packages/docs-portal check
@@ -313,7 +316,7 @@ tsc -p packages/docs-portal/tsconfig.json --noEmit
 DOCS_PRODUCT_VERSION=0.0.0-test DOCS_PUBLIC_ORIGIN=https://docs.example.invalid DOCS_PUBLIC_BASE_PATH=/docs SOURCE_DATE_EPOCH=0 bun --cwd packages/docs-portal build
 bun packages/docs-portal/scripts/validate-built-portal.ts packages/docs-portal/dist
 bun --cwd core build:admin
-bun --cwd core --eval 'const renderer = await import("@coderso/docs-renderer"); if (typeof renderer.DocsDocumentRenderer !== "function" || typeof renderer.selectDocumentsForPublicationTarget !== "function") throw new Error("docs_renderer_exports_invalid")'
+bun --cwd core --eval 'const contracts = await import("@coderso/docs-contracts"); const renderer = await import("@coderso/docs-renderer"); const projection = await import("@coderso/docs-renderer/projection"); const helpAssets = await import("./admin/ui/help/helpBuildAssetVerification.ts"); if (typeof contracts.normalizeDocsDistributionBundleV2 !== "function" || typeof contracts.normalizeDocsPublicationPayloadV1 !== "function" || typeof renderer.DocsDocumentRenderer !== "function" || typeof renderer.selectDocumentsForPublicationTarget !== "function" || typeof projection.createDocsPublicationProjectionV1 !== "function" || typeof projection.createDocsPublicationProjectionFromPayloadV1 !== "function" || typeof helpAssets.normalizeEmbeddedHelpAssetReceiptV1 !== "function" || typeof helpAssets.resolveEmbeddedHelpBuildAssetFileV1 !== "function") throw new Error("docs_workspace_exports_invalid")'
 
 bun --cwd core lint:types
 bun --cwd core lint

@@ -118,9 +118,9 @@ assertions.
   Authored requirements still forbid `*`; duplicate/mixed wildcard and other
   malformed snapshots fail closed.
 - Card actions import L02's exact
-  `resolvePermittedAdminAction`/`DocsAdminActionResolutionV1` exports from
-  `@coderso/docs-renderer`; this leaf defines no parallel path or permission
-  evaluator.
+  `resolvePermittedAdminAction`/`DocsAdminActionResolutionV1` exports from the
+  Core-only `core/admin/ui/help/docsHelpHostAdapter.ts`; the renderer owns no
+  RBAC evaluation and this leaf defines no parallel path or evaluator.
 - After strict DB evidence normalization succeeds, an unavailable packaged
   binary may omit only its visual presentation and never invent a screenshot;
   missing/malformed/cross-owner DB metadata rejects the complete evidence.
@@ -180,9 +180,10 @@ Unauthorized documents cannot leak title, snippet, source identity, capability,
 admin path, visual ID or example ID.
 
 This server snapshot authorizes both retrieval and the server-returned card
-actions. For the L02 Admin-action resolver it is projected without widening to
-the structurally equivalent ready `DocsAdminPermissionSnapshotV1`; a denied CMS
-href is never returned for the browser to rediscover. Browser permission state
+actions. For L02's Core Help-host Admin-action resolver it is projected without
+widening to the structurally equivalent ready
+`DocsAdminPermissionSnapshotV1`; a denied CMS href is never returned for the
+browser to rediscover. Browser permission state
 may hide an already-authorized action as defense in depth but can never add an
 href or authorize retrieval. Resolving permissions and performing deterministic
 Guide retrieval do not resolve or call an AI provider, so Guide remains
@@ -208,7 +209,7 @@ router). Preserve, without bypasses:
 - the packaged `DocsDistributionBundleV2` loader, schema/source-hash/reference
   validation, and no Markdown/network fallback;
 - complete localized evidence materialization plus atomic active-pointer,
-  successful-run and durable invalidation-outbox commit;
+  successful-run and durable server-cache invalidation-outbox commit;
 - the TASK-548-01-L03 single-ingest lock/serialization, previous-active-snapshot
   rollback behavior, audit record, result shape, and exact typed
   `assistant_docs_*`/`assistant_reindex_failed` error mapping.
@@ -301,6 +302,11 @@ eligible. Only the selected user's `text` reaches redaction and clamping.
 ## Implementation Pseudocode
 
 ```ts
+import {
+  resolvePermittedAdminAction,
+  type DocsAdminActionResolutionV1,
+} from "../../admin/ui/help/docsHelpHostAdapter";
+
 export type AssistantChatRequestInput = {
   message: string;
   mode?: AssistantMode;
@@ -775,7 +781,7 @@ export function prepareAssistantHandoff(input: {
 
 **Data flow:** authorized manual reindex → strict request validation → provider-
 independent serialized packaged-bundle ingest → complete inactive localized
-evidence plan → atomic active pointer/success/outbox commit. Chat body
+evidence plan → atomic active pointer/success/server-cache outbox commit. Chat body
 strict validation + authenticated `settings:read` → validated product branch.
 Guide → canonical server permission snapshot → authorized DB chunks/ranking →
 one normalized active-identity localized evidence result → persisted-requirement
@@ -864,8 +870,9 @@ the evidence branch after provider completion.
   ready snapshot, missing/malformed snapshot, invalid empty non-null
   requirements, exact live `["*"]` full access, duplicate/mixed wildcard
   rejection, partial/full `allOf`, and every `anyOf` branch without alternate
-  permission/capability fields; spy the exact L02 named resolver import rather
-  than a local evaluator;
+  permission/capability fields; spy the exact named import from
+  `core/admin/ui/help/docsHelpHostAdapter.ts`, never the renderer or a local
+  evaluator;
 - exact-record tests mutate snapshot ID, generation, `sourceHash`, target,
   ordered `capabilityIds`, `permissionRequirement`, visual/example ownership and
   ordering; every mismatch rejects the entire source/card/action, and the
@@ -878,7 +885,8 @@ the evidence branch after provider completion.
   `loadPackagedDocsDistributionBundleV2`, any publication-projection
   constructor, Markdown/parser or filesystem API per question. A reindex race
   returns only one complete old/new `{ snapshotId, generation, sourceHash }`,
-  and delayed cacheBus delivery cannot alias an old result to the new key;
+  and delayed durable server-outbox invalidation cannot alias an old result to
+  the new key; assert zero browser/admin `cacheBus` delivery or import;
 - assistant-only cards have neither cross-surface link; assistant+embedded adds
   only Help, assistant+public adds only official, and all-three adds both; an
   unavailable official context removes only that action, null `adminPath`

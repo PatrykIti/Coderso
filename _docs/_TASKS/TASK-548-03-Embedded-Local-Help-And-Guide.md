@@ -36,6 +36,11 @@ consumer of L02's private-branded projection and packaged assets. There is no
 second Help corpus, per-question remote documentation call, runtime external
 docs API, or assistant filesystem fallback.
 
+The dependency graph stays acyclic: `docs-contracts -> []`,
+`docs-renderer -> docs-contracts`, `core -> docs-contracts + docs-renderer`, and
+`docs-portal -> docs-contracts + docs-renderer`. Within Help rendering, only the
+Core host adapter imports `adminPaths`/live RBAC; Guide keeps its server gate.
+
 Consumer targets are fail-closed: embedded Help indexes/renders only documents
 whose `publicationTargets` contains `embedded-help`; Guide receives only
 `assistant`-targeted rows from ingest/retrieval. `public-docs` remains the portal
@@ -83,15 +88,20 @@ are outside TASK-548.
 - Search, table of contents, article content, examples, and screenshots load
   from one renderer-owned, private-branded `DocsPublicationProjectionV1`
   constructed from a strict, hash-bound, target-only `embedded-help` build
-  payload. It is a distinct projection, never a filtered distribution bundle.
-  A query never calls the official portal.
+  payload of `DocsPublicationDocumentV1` records. It is a distinct projection,
+  never a filtered distribution bundle; full source documents are compile-time
+  non-assignable and runtime rejected. A query never calls the official portal.
 - `core/vite.config.ts` imports L03's exact side-effect-free Node+Bun packaged
   loader only at build/config time. Its narrow plugin normalizes the complete
   bundle, constructs the full-input `embedded-help` projection, verifies the
   exact PNG closure, then emits a canonical target-only projection payload and
-  byte-free local URL/hash receipt. The browser independently normalizes and
-  brands only that emitted payload. The full bundle, non-target documents,
-  source filesystem access, and PNG bytes never enter Admin chunks.
+  byte-free opaque-output-key/URL/hash receipt. The browser independently
+  normalizes and brands only that emitted payload. `sourcePath`, `assetPath`,
+  output filesystem paths, the full bundle, non-target documents and PNG bytes
+  never enter Admin chunks; build verification may hold paths only transiently.
+  Build/Docker checks normalize that receipt and resolve each asset only through
+  L02's `core/admin/ui/help/helpBuildAssetVerification.ts` same-handle no-follow
+  helper, which returns bounded bytes/hash and never returns/reopens a path.
 - `Open in CMS` is shown only when the document's exact
   `permissionRequirement` is satisfied by the current fail-closed permission
   snapshot. Null means authenticated Admin access with no extra catalog
@@ -100,10 +110,10 @@ are outside TASK-548.
   Admin auth, while authored requirements forbid `*` and duplicate/mixed
   wildcard snapshots fail closed. Its destination is resolved through
   canonical admin path helpers.
-- TASK-548-03-L02 exclusively owns and exports the Bun-free
-  `resolvePermittedAdminAction(input): DocsAdminActionResolutionV1 | null` from
-  `packages/docs-renderer/src/adminActions.ts`; Help and Guide import it rather
-  than reimplementing permission or path logic.
+- TASK-548-03-L02 exclusively owns the Core-only
+  `core/admin/ui/help/docsHelpHostAdapter.ts`, including canonical Help links and
+  `resolvePermittedAdminAction(input): DocsAdminActionResolutionV1 | null`.
+  Help and Guide reuse it; renderer/portal never import Admin paths or RBAC.
 - `Open official docs` is derived from the validated documentation base URL,
   installed product version, locale, and stable slug only when the selected
   embedded Help document also contains `public-docs`. A Help-only document has
@@ -164,7 +174,8 @@ Agent tab  --> existing provider chat/plan -> dry-run -> reviewed execute
 ```
 
 Embedded Help keeps its immutable target-only projection/search index and
-build-verified byte-free local asset map in trusted module memory. Guide's
+build-verified byte/path-free opaque-output-key receipt in trusted module
+memory, deriving one strict selected-article map before rendering. Guide's
 browser receives only the bounded authorized response from the DB snapshot,
 never a corpus bundle or filesystem path resolver. Neither surface copies
 non-target corpus records, provider configuration, secrets, or permission
@@ -179,7 +190,7 @@ closure owner updates `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md`.
 | ID | Exclusive responsibility | Status |
 |---|---|---|
 | TASK-548-03-L01 | Extract the oversized Admin route registry plus Bun-free canonical route descriptors, own the strict pre-loss raw permission-state seam in `authClient.ts`, preserve route/RBAC parity, and add canonical Help path helpers; do not expose a Help link yet | ⏳ To Do |
-| TASK-548-03-L02 | Add the auto-discovered Help route, shared renderer/search, the narrow Core Vite target-only Help payload/asset registry, and atomically replace the external footer Docs link | ⏳ To Do |
+| TASK-548-03-L02 | Add the Help route, safe shared renderer/search projection, Core-only path/RBAC host adapter, target-only Vite payload/receipt, and atomic footer link | ⏳ To Do |
 | TASK-548-03-L03 | Split the oversized Assistant panel, become the sole post-01-L03 `assistantRoutes.ts`/`assistantService.ts` writer, enforce server-authoritative docs RBAC, implement distinct Guide/Agent products, decouple Guide runtime from Agent enablement, and render rich local evidence cards | ⏳ To Do |
 
 **Land order:** `TASK-548-03-L01 → TASK-548-03-L02 → TASK-548-03-L03`.
@@ -230,12 +241,12 @@ files and their route/service tests. No later TASK-548 leaf reopens them.
 export function resolveHelpArticleRendererState(input: {
   projection: DocsPublicationProjectionV1<"embedded-help">;
   documentKey: DocsPublicationDocumentKeyV1;
-  adminBasePath: string;
+  localDocumentHrefs: readonly DocsResolvedHelpHostLinkV1[];
   officialDocs: Extract<
     DocsLinkContextV1,
     { surface: "embedded-help" }
   >["officialDocs"];
-  localVisualAssets: ReadonlyMap<string, DocsLocalVisualAssetV1>;
+  emittedAssets: readonly DocsLocalVisualAssetV1[];
   copyExampleBody: DocsCopyExampleBodyV1;
 }): HelpArticleRendererState {
   try {
@@ -243,11 +254,16 @@ export function resolveHelpArticleRendererState(input: {
       input.projection,
       input.documentKey
     );
+    const localVisualAssets = buildVerifiedDocsLocalVisualAssetMapV1({
+      projection: input.projection,
+      documentKey: input.documentKey,
+      emittedAssets: input.emittedAssets,
+    });
     const linkContext = normalizeDocsLinkContextV1({
       surface: "embedded-help",
       publicationTarget: input.projection.publicationTarget,
       locale: document.locale,
-      adminBasePath: input.adminBasePath,
+      localDocumentHrefs: input.localDocumentHrefs,
       officialDocs: input.officialDocs,
     });
     return {
@@ -256,7 +272,7 @@ export function resolveHelpArticleRendererState(input: {
         projection: input.projection,
         documentKey: input.documentKey,
         linkContext,
-        localVisualAssets: input.localVisualAssets,
+        localVisualAssets,
         copyExampleBody: input.copyExampleBody,
       } satisfies DocsRendererProps,
     };
@@ -274,7 +290,7 @@ export function resolveHelpArticleRendererState(input: {
 export type EmbeddedHelpRuntimeV1 = Readonly<{
   projection: DocsPublicationProjectionV1<"embedded-help">;
   searchIndex: DocsSearchIndexV1;
-  localVisualAssets: ReadonlyMap<string, DocsLocalVisualAssetV1>;
+  emittedAssets: readonly DocsLocalVisualAssetV1[];
 }>;
 
 export function createEmbeddedHelpRuntimeV1(): EmbeddedHelpRuntimeV1 {
@@ -285,14 +301,16 @@ export function resolveEmbeddedHelp(input: {
   runtime: EmbeddedHelpRuntimeV1;
   location: HelpLocation;
   permissionSnapshot: DocsAdminPermissionSnapshotV1;
-  adminBasePath: string;
   officialDocs: Extract<
     DocsLinkContextV1,
     { surface: "embedded-help" }
   >["officialDocs"];
   copyExampleBody: DocsCopyExampleBodyV1;
 }): HelpReaderView {
-  const { projection, searchIndex, localVisualAssets } = input.runtime;
+  const { projection, searchIndex, emittedAssets } = input.runtime;
+  const localDocumentHrefs = buildDocsHelpHostLinksV1({
+    projection,
+  });
   const query = normalizeHelpQuery(input.location.query);
   const documentKey = resolvePublishedDocumentKeyV1(
     projection,
@@ -305,9 +323,9 @@ export function resolveEmbeddedHelp(input: {
   const article = resolveHelpArticleRendererState({
     projection,
     documentKey,
-    adminBasePath: input.adminBasePath,
+    localDocumentHrefs,
     officialDocs: input.officialDocs,
-    localVisualAssets,
+    emittedAssets,
     copyExampleBody: input.copyExampleBody,
   });
   return {
@@ -348,7 +366,7 @@ export async function submitConversation(
 
 **Data flow:** validated installed bundle at Vite build/config time → exact
 full-input `embedded-help` selection/closure and PNG verification → canonical
-hash-bound target-only payload plus byte-free local URL/hash receipt → one
+hash-bound safe-DTO payload plus byte/path-free output-key/URL/hash receipt → one
 browser normalization/private-branded projection and pure in-memory search
 index → exact member selection → explicit surface link context + verified
 selected-article local asset map + user-event-only copy handler → all required
@@ -398,7 +416,9 @@ Target-leak fixtures prove the Vite-emitted Admin payload contains and Help
 renders only `embedded-help` and multi-target records, while Guide evidence
 comes only from `assistant`-targeted persisted rows. Browser bundle scans seed
 distinct non-target canaries and reject the corpus envelope, full bundle,
-repository source paths, or PNG bytes in Admin chunks. `public-docs`-only
+`sourcePath`, `assetPath`, output filesystem/repository paths or PNG bytes in
+Admin chunks. Compile-time non-assignability and runtime exact-key fixtures
+reject full-source documents/visuals. `public-docs`-only
 records appear in neither Help nor Guide. Help-only documents omit official
 links; embedded+public documents expose them. Guide tests cover assistant-only,
 assistant+embedded, assistant+public and all-three action combinations.
@@ -421,6 +441,7 @@ bunx vitest run --config vitest.config.ts \
   tests/vitest/ui/admin-shell-nav.test.tsx \
   tests/vitest/docs/docs-renderer.test.tsx \
   tests/vitest/docs/docs-search.test.ts \
+  tests/vitest/ui-integration/docs-help-host-adapter.test.ts \
   tests/vitest/ui-integration/help-center.test.tsx \
   tests/vitest/ui/assistant-guide-tab.test.tsx \
   tests/vitest/ui/assistant-agent-tab.test.tsx \
@@ -428,6 +449,7 @@ bunx vitest run --config vitest.config.ts \
   tests/vitest/ui/assistant-conversation-state.test.ts \
   tests/vitest/assistant/docsAnswerComposer.test.ts
 
+bun test tests/unit/documentation/helpBuildAssetVerification.test.ts
 set -a && source .env && set +a
 bun test tests/unit/assistant/assistantService.test.ts \
   tests/integration/routes/assistant-guide-rbac.test.ts \

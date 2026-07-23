@@ -29,6 +29,16 @@ on an AI provider.
 **Single-writer ownership:** this child owns the shared documentation types,
 schemas, normalizers, compiler, generated distribution bundle, assistant-ingest
 v2 migration, pure DB retrieval/permission filtering and their focused tests.
+L01 places the Bun/DB/React/Core-free contracts, safe Markdown parser/token
+types, target selector and strict browser-safe publication DTOs under
+`packages/docs-contracts/src/**`, plus stable Core named re-export shims and a
+generated IDs-only Admin-permission catalog snapshot with a mandatory
+live-catalog parity gate. TASK-548-02-L03 alone later creates the workspace
+manifest and reconciles lock/Docker dependencies.
+To keep L01/L02 gates executable before that activation, L01's stable Core
+named re-export shims permanently use the confined exact
+`../../../packages/docs-contracts/src/index.ts`/owner-module edge; no later
+writer rewrites them. All direct consumers after activation use the package.
 TASK-548-01-L03 owns no Assistant route/service orchestration file: after this
 child lands, TASK-548-03-L03 is the sole TASK-548 writer of
 `core/server/routes/assistantRoutes.ts`,
@@ -71,6 +81,22 @@ exactly:
 ```ts
 schema: "coderso.docs-corpus@v2";
 ```
+
+`@coderso/docs-contracts` is the sole dependency-neutral owner of these
+compiled schemas/types/normalizers, safe Markdown parser output and publication
+target selector. It also owns the exact publication DTO schema/projector that
+omits `DocsDocumentV2.sourcePath` and `DocsVisualV1.assetPath`, replaces the
+latter with a deterministic opaque output key, and rejects those source fields
+at every serialization boundary. The stable graph is `docs-contracts -> []`,
+`docs-renderer -> docs-contracts`, `core -> docs-contracts + docs-renderer` and
+`docs-portal -> docs-contracts + docs-renderer`; package-edge tests reject every
+reverse import. Core Admin routing, canonical path resolution and RBAC remain
+Core-owned and are supplied later to the shared renderer only as explicit safe
+host-adapter results. Within renderer integration only that Core adapter may
+import `adminPaths`, the live permission catalog or authenticated RBAC state.
+Package-edge tests allow the one named-re-export-only Core shim family above,
+resolve it inside the contracts root and require reference identity; every
+other relative/deep Core import or contracts reverse edge fails.
 
 `publicationTargets` is a non-empty, duplicate-free array whose values are
 exactly `assistant | embedded-help | public-docs` and whose canonical output
@@ -246,7 +272,7 @@ permission inventory or fixture-value echo.
 
 | Task | Scope | Single writer | Depends on |
 | --- | --- | --- | --- |
-| TASK-548-01-L01 | Strict shared schemas, stable identity and safe Markdown policy | `core/services/documentation/docsCorpus*`, root manifest/template and focused contract tests | None |
+| TASK-548-01-L01 | Strict shared schemas, stable identity, browser-safe publication DTOs and safe Markdown policy | dependency-neutral `packages/docs-contracts/src/**` + tsconfig, stable Core re-export shims, permission-snapshot generator/artifact, root manifest/template and focused schema/type/edge tests | None |
 | TASK-548-01-L02 | Deterministic compiler, legacy compatibility adapter, workspace-only canonical migration report and tracked generated bundle; no authored corpus edits | compiler modules, `scripts/docs/compile-corpus.ts`, generated bundle/report and compiler tests | TASK-548-01-L01 |
 | TASK-548-01-L03 | Fixed module-relative packaged loader, Assistant DB schema/migration, complete enriched snapshot ingest, atomic activation/invalidation, v1 compatibility, permission-aware retrieval and five pure typed errors; no route/service orchestration | assistant loader/schema/ingest/startup/retriever/permission/cache-outbox modules, migration artifacts and focused pure DB/runtime tests; explicitly excludes `assistantRoutes.ts`, `assistantService.ts`, centralized mapper/wiring and route/service tests owned later by TASK-548-03-L03 | TASK-548-01-L02 |
 

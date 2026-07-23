@@ -647,10 +647,12 @@ bun --eval 'import { canConnect } from "./tests/utils/db"; const configured = Bo
   runner substitution/generation/normalization;
 - inspect each candidate, then run
   `bun run docs:visual:promote --scenario <id>
+  --run-id <bounded-run-id-returned-by-capture>
   --raw-reviewed-sha256 <64-lowercase-hex> --reviewed-by <bounded-id>
   --confirm-alt-caption` and retain its reviewed receipt; no `--session`,
-  ambiguous digest alias, missing explicit content confirmation, or loop may
-  auto-approve;
+  missing/wrong/ambiguous run ID or digest alias, missing explicit content
+  confirmation, or loop may auto-approve. The selected ID alone is claimed,
+  journaled, recovered and consumed; an otherwise-eligible duplicate is unchanged;
 - after all three waves and every non-pilot promotion, run
   `bun run docs:visual:check -- --all`, then request exactly one TASK-548-01-L02
   same-owner final regeneration only from baseline state, run recovery, and call

@@ -44,6 +44,14 @@ normalizer runs before any island mount; the payload and client module graph
 contain no projection brand, full document, Markdown, evidence, renderer props
 or unverified island values.
 
+L02 owns one atomic portal transaction. It first builds the L01 client entry
+with Vite into a task-scoped staging root, strictly closes the Vite manifest,
+copies every hashed JS/CSS/asset byte into the same staged artifact, and injects
+base-path-safe client tags into every HTML route. Static routes, search, SEO and
+deployment files then join that same detached manifest. Only after full staged
+validation may a journaled directory swap replace live `dist`; no route or
+client byte is ever written directly to live output.
+
 Canonical public article routes are:
 
 ```text
@@ -114,6 +122,8 @@ Deterministic output:
 
 ```text
 packages/docs-portal/dist/
+  404.html
+  _headers
   v/<product-version>/<locale>/<slug>/index.html
   latest/<locale>/<slug>/index.html
   assets/<content-hash>.<ext>
@@ -123,6 +133,7 @@ packages/docs-portal/dist/
   docs-portal-manifest.json
   deployment/headers.json
   deployment/redirects.json
+  deployment/client-assets.json
   deployment/site-index.json
 ```
 
@@ -152,7 +163,8 @@ again under the exact retained subtree:
 ```
 
 The capsule contains both manifests, byte-identical `latest/**`,
-`routing/{redirects,headers}.json`, global sitemap/robots/site-index candidates,
+`runtime/{404.html,_headers}`,
+`routing/{redirects,headers,client-assets}.json`, global sitemap/robots/site-index candidates,
 and the TASK-548-05-L01-owned canonical search/asset publication receipts.
 Publication and rollback only
 verify/copy those bytes; the portal handoff never asks release code to rebuild
@@ -185,6 +197,10 @@ build epoch is held constant.
 - `latest` alias pages are host-independent static fallbacks with canonical
   versioned metadata; `deployment/redirects.json` additionally declares
   permanent redirects for hosts that support them.
+- One root `404.html` is a typed, base-safe, `noindex,follow` page with only
+  real route-graph alternatives and the same exact Vite client tags as article
+  and alias pages. Cloudflare Pages must return its exact bytes with status 404
+  for unmatched base-path requests; no SPA 200 or host replacement is valid.
 - Every canonical page emits unique title/description, canonical, only-real
   hreflang alternates, OpenGraph metadata, breadcrumb/article JSON-LD,
   accessible landmarks, and stable heading anchors.
@@ -192,6 +208,10 @@ build epoch is held constant.
   states are excluded or `noindex,follow`.
 - All paths and assets are base-path safe. The build accepts one validated HTTPS
   origin and normalized base path; browser code does not guess either.
+- L02 emits one exact top-level Cloudflare Pages `_headers` file from the same
+  strict policy as `deployment/headers.json`; both are detached-manifest files.
+  TASK-548-05 deploys through Cloudflare Pages so CSP, frame denial, nosniff,
+  referrer/permissions policy and cache rules are effective response headers.
 - Search is a version+locale static index. It has no dynamic API, user account,
   analytics requirement, provider request, or CMS connection.
 
@@ -200,7 +220,7 @@ build epoch is held constant.
 | ID | Exclusive responsibility | Status |
 |---|---|---|
 | TASK-548-04-L01 | Create `packages/docs-portal`, accessible shell, version/locale search UI, and shared-renderer integration using the existing pinned root toolchain | ⏳ To Do |
-| TASK-548-04-L02 | Implement deterministic route/static generation, latest aliases, SEO/structured data, manifest/hashes, sitemap/robots, and host-neutral deployment metadata | ⏳ To Do |
+| TASK-548-04-L02 | Implement deterministic route/static generation, latest/404, SEO, manifest/hashes, sitemap/robots, host-neutral metadata, and exact Cloudflare `_headers` | ⏳ To Do |
 | TASK-548-04-L03 | Add artifact/security/accessibility validators and at least five real Playwright portal flows with screenshots and zero console errors | ⏳ To Do |
 
 **Land order:** `TASK-548-04-L01 → TASK-548-04-L02 → TASK-548-04-L03`.
@@ -273,84 +293,161 @@ async function buildValidatedDocsPortal(
   config: DocsPortalBuildConfigV1,
   bundle: DocsDistributionBundleV2
 ): Promise<DocsPortalBuildReceipt> {
-  const projection = createDocsPublicationProjectionV1({
-    sourceBundle: bundle,
-    publicationTarget: "public-docs",
-  });
-  const searchIndex = buildDocsSearchIndexV1(projection);
-  const graph = buildPublicRouteGraph(projection, config.currentVersion);
-  const writer = createHashedDeterministicWriter(
-    "packages/docs-portal/dist"
-  );
-
-  for (const route of graph.canonicalRoutes) {
-    const document = resolveVersionedProjectionMemberV1(
-      projection,
-      route.documentKey,
-      config.currentVersion
-    );
-    const publicPath = buildDocsPublicPath(route.publicRoute);
-    const canonicalHref = buildDocsPublicHref({
-      origin: config.publicOrigin,
-      basePath: config.publicBasePath,
-      route: route.publicRoute,
+  const transaction = await createDocsPortalDistTransactionV1();
+  try {
+    const clientAssets = await buildStagedDocsPortalClientV1({
+      stagingRoot: transaction.viteRoot,
+      publicBasePath: config.publicBasePath,
     });
-    const hydrationPayload = createDocsPortalHydrationPayloadV1(
-      buildPortalIslandModels({
-        graph,
-        route,
-        document,
-        searchIndex,
-        config,
+    // The fixed loader normalized once; this independent trust boundary
+    // deliberately normalizes the complete bundle again.
+    const projection = createDocsPublicationProjectionV1({
+      sourceBundle: bundle,
+      publicationTarget: "public-docs",
+    });
+    const searchIndex = buildDocsSearchIndexV1(projection);
+    const graph = buildPublicRouteGraph(projection, config.currentVersion);
+    const clientSearchByLocale = buildExactLocaleMap(
+      graph.locales,
+      (locale) => projectDocsClientSearchRankingV1(searchIndex, {
+        productVersion: config.currentVersion,
+        locale,
       })
     );
-    await writer.write(
-      resolveDocsPortalOutputPath(publicPath),
-      renderStaticPortalPage(route, {
-        shellHtml: renderDocsPortalStaticShell({
-          projection,
-          documentKey: route.documentKey,
-          navigation: buildPortalNavigation(graph, route, config),
-          packagedVisualAssets: loadPackagedVisuals(document),
-          hydrationPayload,
-        }),
-        canonicalHref,
-        publicOrigin: config.publicOrigin,
-        publicBasePath: config.publicBasePath,
-      })
+    const writer =
+      createHashedDeterministicWriter(transaction.stagingDist);
+    await copyAndRecordClientAssetClosureV1(writer, clientAssets);
+    const emittedVisualAssetsByDocument =
+      await emitVerifiedPortalVisualAssetsV1({
+        sourceBundle: bundle, projection, writer,
+      });
+    const clientAssetTags = deepFreeze(
+      buildDocsPortalClientAssetTagsV1(clientAssets)
     );
-  }
+    const renderedCanonicalPages =
+      new Map<DocsPublicationDocumentKeyV1, RenderedDocsPortalPageV1>();
 
-  for (const alias of graph.latestAliases) {
-    const publicPath = buildDocsPublicPath(alias.publicRoute);
-    await writer.write(
-      resolveDocsPortalOutputPath(publicPath),
-      renderAliasFallback(alias, {
-        canonicalStaticPage: requireRenderedCanonicalPage(graph, alias),
-        publicOrigin: config.publicOrigin,
-        publicBasePath: config.publicBasePath,
-      })
-    );
-  }
+    for (const route of graph.canonicalRoutes) {
+      const document = resolveVersionedProjectionMemberV1(
+        projection,
+        route.documentKey,
+        config.currentVersion
+      );
+      const publicPath = buildDocsPublicPath(route.publicRoute);
+      const hydrationPayload = createDocsPortalHydrationPayloadV1({
+        page: buildPortalHydrationPageModel(config, document),
+        header: buildPortalHeaderClientModel(graph, route, config),
+        search: requireLocaleClientSearch(
+          clientSearchByLocale,
+          document.locale
+        ),
+        theme: { storageKey: "coderso.docs.theme", initialMode: "system" },
+        mobileNavigation: buildPortalMobileClientModel(graph, route),
+      });
+      const renderedPage = renderStaticPortalPage(route, {
+          shellHtml: renderDocsPortalStaticShell({
+            projection,
+            documentKey: route.documentKey,
+            navigation: buildPortalNavigation(graph, route, config),
+            emittedVisualAssets: requireEmittedPortalVisualAssetsV1(
+              emittedVisualAssetsByDocument,
+              route.documentKey
+            ),
+            hydrationPayload,
+          }),
+          canonicalHref: buildDocsPublicHref({
+            origin: config.publicOrigin,
+            basePath: config.publicBasePath,
+            route: route.publicRoute,
+          }),
+          publicOrigin: config.publicOrigin,
+          publicBasePath: config.publicBasePath,
+          clientAssetTags,
+        });
+      await writer.write(
+        resolveDocsPortalArtifactRelativePath(publicPath),
+        renderedPage.bytes
+      );
+      renderedCanonicalPages.set(route.documentKey, renderedPage);
+    }
 
-  await emitSearchIndexes(writer, projection, searchIndex, {
-    publicOrigin: config.publicOrigin,
-    publicBasePath: config.publicBasePath,
-  });
-  await emitSeoAndDeploymentArtifacts(writer, graph, {
-    publicOrigin: config.publicOrigin,
-    publicBasePath: config.publicBasePath,
-  });
-  await emitCurrentReleaseSiteIndexCandidateV1(writer, graph);
-  return writer.finalizeDetachedManifestAndVerifyAllOtherFiles(graph);
+    for (const alias of graph.latestAliases) {
+      const publicPath = buildDocsPublicPath(alias.publicRoute);
+      const canonical = requireCanonicalRoute(graph, alias);
+      await writer.write(
+        resolveDocsPortalArtifactRelativePath(publicPath),
+        renderAliasFallback({
+          alias,
+          canonical,
+          canonicalStaticPage: requireRenderedCanonicalPageV1(
+            renderedCanonicalPages,
+            canonical.documentKey
+          ),
+          publicOrigin: config.publicOrigin,
+          publicBasePath: config.publicBasePath,
+          clientAssetTags,
+        })
+      );
+    }
+    const notFoundPage = renderTypedPortalNotFoundPageV1({
+      model: buildDocsPortalNotFoundModelV1(graph, config),
+      hydrationPayload: createDocsPortalHydrationPayloadV1(
+        buildNotFoundHydrationBodyV1(graph, clientSearchByLocale, config)
+      ),
+      clientAssetTags,
+      robots: "noindex,follow",
+    });
+    await writer.write("404.html", notFoundPage.bytes);
+    await emitSearchIndexes(writer, projection, searchIndex, {
+      publicOrigin: config.publicOrigin,
+      publicBasePath: config.publicBasePath,
+    });
+    const deployment = await emitSeoAndDeploymentArtifacts(writer, graph, {
+      publicOrigin: config.publicOrigin,
+      publicBasePath: config.publicBasePath,
+    });
+    await writer.write(
+      "deployment/client-assets.json",
+      serializeDocsPortalClientAssetsManifestV1(clientAssets)
+    );
+    await writer.write("_headers", serializeCloudflarePagesHeadersV1({
+      publicBasePath: config.publicBasePath,
+      headers: deployment.headers,
+      structuredDataHashesByRoute:
+        collectExactStructuredDataHashesByRouteV1(renderedCanonicalPages),
+    }));
+    await emitCurrentReleaseSiteIndexCandidateV1(writer, graph, {
+      notFoundPath: "404.html",
+      cloudflareHeadersPath: "_headers",
+      clientAssetsManifestPath: "deployment/client-assets.json",
+    });
+    const receipt =
+      await writer.finalizeDetachedManifestAndVerifyAllOtherFiles(graph);
+    await validateCompleteStagedPortalV1(
+      transaction.stagingDist,
+      receipt
+    );
+    await promoteValidatedDocsPortalDistV1({
+      stagingDist: transaction.stagingDist,
+      receipt,
+    });
+    return receipt;
+  } catch (error) {
+    await discardOnlyValidatedUnpublishedPortalStageV1(transaction);
+    throw mapDocsPortalBuildErrorV1(error);
+  }
 }
 ```
 
 **Data flow:** read-only `docs:check` equality → config-only input → hazard
-inspection → strict packaged load → one shared `public-docs` projection and one
-pure search index → exact member-key route graph → same server-side projection
-for every static article/navigation/TOC render → per-page canonical hash-bound
-four-island payload → deterministic bytes → manifest → TASK-548-05 publish.
+inspection → one strict packaged-loader normalization → task-scoped Vite client
+staging/manifest closure → one independent full-input `public-docs` projection
+normalization and one pure search index → exact member-key route graph → same
+server-side projection for every static article/navigation/TOC render →
+per-page canonical hash-bound four-island payload → base-safe hashed client
+tags plus canonical/latest/typed-404 bytes → exact Cloudflare `_headers` and
+deployment inventory → complete staged manifest/validation → journaled atomic
+`dist` swap → TASK-548-05 publish.
 
 **Error handling:** any live/tampered journal, journal temp, backup/staging
 material, report-only state, invalid packaged bundle, invalid linked authoring
@@ -361,7 +458,9 @@ route or hash mismatch
 aborts the build; missing translation emits no fake locale route; broken
 internal ref, unsafe URL, private publication target, non-HTTPS origin, path
 traversal, nondeterministic output, or manifest/file mismatch is a hard
-failure. One bad document cannot be silently omitted.
+failure. A pre-promotion failure deletes only the validated task-scoped stage
+and leaves the prior live `dist` byte-identical. One bad document or client
+asset cannot be silently omitted.
 
 **Regression-test shape:** same bundle produces byte-identical output; clean-clone
 tracked-bundle-only builds pass with no `.tmp` tree/report, while every live
@@ -372,16 +471,26 @@ portal build compile-time test imports the exact renderer-owned
 local bundle/document/projection normalizer or filtered-bundle reconstruction.
 Structural/spread/serialized/foreign projections, non-member keys, locale
 mismatch, target absence, incomplete closure and invalid/out-of-range versions
-reject. Call spies prove one projection constructor/full-bundle normalization/
-target selection and one search-index build per build, no per-route schema
-normalization, and the same projection/index object at every server route. A
+reject. Call spies prove exactly one packaged-loader normalization, one
+independent projection-constructor full-bundle normalization/target selection,
+and one search-index build per build, with no per-route schema normalization
+and the same projection/index object at every server route. A
 Vite/static guard proves projection constructor/brand, full documents and
 renderer never enter hydration clients. Canonical/hash mutation, unknown-key,
 oversize and encoding fixtures mount zero islands; valid input invokes the sole
-hostile normalizer before exactly four island mounts. Article/navigation/TOC
-remain static and the payload contains only header/search/theme/mobile state. The
-preceding `docs:check` catches stale canonical bytes or `sourceHash`. Every manifest route/file/
-hash closes; route/base-path/SemVer/locale traversal cases reject; actual
+hostile normalizer before exactly four sibling island mounts, with zero
+recoverable hydration errors. Article/navigation/the renderer-owned TOC remain
+static and the payload contains only header/search/theme/mobile state. Vite
+manifest closure, base-safe hashed JS/CSS tags, full client-byte reproducibility
+and zero live-`dist` write before promotion are pinned. Alias tests import the
+one L02 helper and prove the identical frozen tag object reaches canonical,
+alias and 404 rendering. Typed-404 tests prove base-safe real alternatives,
+`noindex,follow`, no reflected request path, exact four-island hydration and
+Cloudflare unmatched-route status/body behavior. `_headers`/headers-JSON
+parity, exact effective CSP/frame/nosniff/referrer/permissions/cache policy,
+host limits and detached-manifest closure are pinned. The preceding
+`docs:check` catches stale canonical bytes or `sourceHash`. Every manifest
+route/file/hash closes; route/base-path/SemVer/locale traversal cases reject; actual
 translations sharing one family `docId` alone produce hreflang, while duplicate
 `(docId, locale)` rejects; latest maps to current version; shared renderer/search
 parity; omission of a `public-docs` record and inclusion of an `assistant`-only,
@@ -440,7 +549,8 @@ human-authored source/test file and fail any result above 1,000 lines.
   substitutes another article.
 - English is complete; only real translations create locale routes or hreflang.
 - Portal metadata, sitemap, robots, OpenGraph, JSON-LD, manifest hashes,
-  redirects, and CSP artifacts are deterministic and validated.
+  redirects, typed 404, client inventory, and Cloudflare `_headers`/CSP bytes
+  are deterministic and validated.
 - Public output contains no unsafe content, internal material, secret/PII,
   runtime external dependency, or write endpoint.
 - Portal build performs read-only workspace hazard inspection before loading the
@@ -456,8 +566,9 @@ human-authored source/test file and fail any result above 1,000 lines.
   alone writes `resume-checkpoint.json`.
 - TASK-548-05 can publish/rollback the immutable `dist` artifact without editing
   portal source or reconstructing routes.
-- TASK-548-05 verifies the deployed exact/latest routes, retained manifests and
-  one hashed asset read-only after Pages reports success.
+- TASK-548-05 verifies deployed exact/latest/404 routes, retained manifests,
+  one hashed client asset, and effective security/cache headers read-only after
+  Cloudflare Pages reports success.
 
 ## Documentation Updates Required
 

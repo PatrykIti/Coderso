@@ -109,8 +109,11 @@ it consumes L02 output through the predeclared package command.
   TOC remain outside them. One strict `DocsPortalHydrationPayloadV1` normalizer
   runs before any root hydrates. Server and client call the same island element
   factory with the same normalized initial models and stable identifier prefix.
-  A test-only `onRecoverableError` observer is injectable; production reports a
-  bounded non-content diagnostic. Example-copy enhancement delegates from the
+  A test-only `onRecoverableError` observer is injectable. The production
+  observer emits exactly the console error code
+  `docs_portal_hydration_recoverable_error` plus the bounded root ID, never the
+  raw error, component stack, payload, or content; browser gates treat any such
+  event as failure. Example-copy enhancement delegates from the
   manifest-bound static article DOM and reads only the exact adjacent escaped
   `<code>` text after a trusted activation; it hydrates no article component
   and accepts no serialized document props.
@@ -174,7 +177,7 @@ export type DocsPortalStaticShellProps = {
   navigation: DocsPortalNavigation & {
     linkContext: DocsPortalPublicLinkContextV1;
   };
-  packagedVisualAssets: readonly DocsPackagedLocalVisualAssetV1[];
+  emittedVisualAssets: readonly DocsLocalVisualAssetV1[];
   hydrationPayload: DocsPortalHydrationPayloadV1;
 };
 
@@ -196,6 +199,9 @@ export type DocsPortalSiteIndexVersionV1 = {
   portalManifestSha256: string;
   releaseManifestSha256: string;
   siteIndexCandidateSha256: string;
+  notFoundSha256: string;
+  cloudflareHeadersSha256: string;
+  clientAssetsManifestSha256: string;
   routes: DocsPortalSiteIndexRouteV1[];
 };
 
@@ -221,13 +227,23 @@ import {
   type DocsClientSearchRankingProjectionV1,
 } from "@coderso/docs-renderer/client-search";
 
+export type DocsPortalHydrationPageV1 =
+  | {
+      kind: "article";
+      productVersion: string;
+      docId: string;
+      locale: string;
+      publicBasePath: string;
+    }
+  | {
+      kind: "not-found";
+      productVersion: string;
+      locale: string;
+      publicBasePath: string;
+    };
+
 export type DocsPortalHydrationBodyV1 = {
-  page: {
-    productVersion: string;
-    docId: string;
-    locale: string;
-    publicBasePath: string;
-  };
+  page: DocsPortalHydrationPageV1;
   header: DocsPortalHeaderClientModelV1;
   search: DocsClientSearchRankingProjectionV1;
   theme: {
@@ -306,6 +322,15 @@ export type DocsPortalHydrationObserverV1 = {
   }): void;
 };
 
+export function createBoundedProductionHydrationObserverV1():
+  DocsPortalHydrationObserverV1 {
+  return {
+    onRecoverableError({ rootId }) {
+      console.error("docs_portal_hydration_recoverable_error", { rootId });
+    },
+  };
+}
+
 export async function loadDocsPortalVersionNavigationV1(input: {
   current: DocsPortalVersionNavigation;
   publicBasePath: string;
@@ -337,7 +362,7 @@ function prepareDocsPortalStaticShellV1(props: DocsPortalStaticShellProps) {
   const hydrationPayload =
     requireCreatedDocsPortalHydrationPayloadV1(props.hydrationPayload);
   assertHydrationPayloadMatchesStaticPageV1(
-    hydrationPayload.body.page,
+    requireArticleHydrationPageV1(hydrationPayload.body.page),
     document,
     props.navigation
   );
@@ -352,7 +377,7 @@ function prepareDocsPortalStaticShellV1(props: DocsPortalStaticShellProps) {
   const localVisualAssets = buildVerifiedDocsLocalVisualAssetMapV1({
     projection: props.projection,
     documentKey: props.documentKey,
-    packagedAssets: props.packagedVisualAssets,
+    emittedAssets: props.emittedVisualAssets,
   });
   return { document, hydrationPayload, linkContext, localVisualAssets };
 }
@@ -491,6 +516,18 @@ it cannot import the static shell. Each island is server-rendered with
 element/model/prefix. Fixed-slot insertion requires each empty sibling slot
 exactly once and accepts only trusted React output, never corpus/raw HTML.
 
+The `not-found` page kind is reserved for L02's one deterministic root
+`404.html`; it carries no requested URL or synthetic `docId`. Its four islands
+receive the same bounded current-version header/search/theme/mobile models and
+client assets as article pages, while same-document version resolution is
+disabled. The static 404 body owns route-graph-derived locale, version, and
+documentation-home alternatives; client code never guesses or reflects an
+untrusted missing path.
+
+Every emitted visual uses the contracts-owned opaque key exactly
+`docs-png-sha256-<lowercase 64-hex sha256>`; the key contains no source/output
+path and must match the record's `sha256` byte-for-byte.
+
 The site-index normalizer is also recursively reject-unknown. It accepts
 `1..256` unique versions sorted by descending SemVer precedence, requires
 `latestVersion` to match exactly one entry, lowercase SHA-256 fields, and
@@ -500,7 +537,11 @@ every path is the canonical base-free `/v/<that-version>/<locale>/<slug>` path.
 The canonical serializer preserves the displayed key order, canonical nested
 order, LF, and one final newline. It does not normalize malformed order into an
 accepted remote response. TASK-548-05-L02 imports these exact functions for its
-sole-writer cumulative merge rather than duplicating the schema.
+sole-writer cumulative merge rather than duplicating the schema. Each
+version's `notFoundSha256`, `cloudflareHeadersSha256`, and
+`clientAssetsManifestSha256` must join those three exact detached portal-
+manifest file records. Publication and rollback copy the bound bytes; they
+never infer or rebuild these identities.
 
 **Data flow:** L02's one shared branded `public-docs` projection + search index
 → exact member key → build-only static shell/link/assets/shared renderer →
@@ -541,6 +582,8 @@ usable. Same-origin version/search failure keeps bounded current-build state.
 - hydration schema tests reject root/nested unknown keys, wrong discriminator,
   order/encoding/size violations, duplicate navigation/search identities,
   unsafe paths and every body-hash mutation; canonical bytes reproduce exactly;
+  the strict page union accepts only article-with-`docId` or not-found-without-
+  `docId`/requested path, and not-found disables same-document resolution;
   a spy proves one hostile normalizer before any of exactly four hydrate calls,
   and invalid input causes zero calls;
 - SSR fixtures prove four sibling slots, `renderToString` per island, identical
@@ -556,14 +599,15 @@ usable. Same-origin version/search failure keeps bounded current-build state.
   responses retain the current-only fallback;
 - site-index fixtures pin the discriminator, exact key sets, bounds, descending
   SemVer and route order, unique `(docId, locale)`, canonical bytes, and all five
-  hash/identity fields;
+  identity fields plus exact 404, `_headers`, and client-manifest hashes;
 - localized visuals join the selected document and section by
   `(docId, locale, sectionId)` and reject a projection-global `visualId` reused by
   another owner;
 - renderer integration supplies all five exact required props; strict public
   link context rejects Help discriminant/target, locale/version/base mismatch
   and unsafe links without defaults;
-- packaged-asset fixtures prove confined local href, byte/SHA-256 verification,
+- emitted-asset fixtures prove only `{ outputKey, href, mediaType, sha256 }`
+  reaches the shell, with confined local href/SHA-256 verification,
   read-only map construction and selected-article failure for missing/extra/
   duplicate/unknown/wrong-media/tampered assets with zero remote fetch;
 - delegated copy accepts only trusted keyboard/click activation, copies exact
@@ -572,6 +616,8 @@ usable. Same-origin version/search failure keeps bounded current-build state.
 - mobile navigation open/close/focus restore, narrow/wide no overflow;
 - theme/reduced-motion behavior without sensitive storage;
 - no raw HTML/search-highlight injection or network calls;
+- standalone Vite gate writes only to a validated task-scoped `outDir`, closes
+  its manifest, and proves a pre-existing or absent live `dist` is unchanged;
 - all touched source/test files at most 1,000 lines.
 
 ## Sub-Tasks
@@ -581,7 +627,7 @@ usable. Same-origin version/search failure keeps bounded current-build state.
 - [ ] Build accessible shell/navigation around the renderer-owned sole TOC.
 - [ ] Integrate shared renderer and deterministic version/locale search through
   the exact validated `public-docs` projection, strict link context, verified
-  packaged local-asset map and user-event-only copy handler.
+  path/byte-free emitted local-asset map and user-event-only copy handler.
 - [ ] Add canonical hash-bound hydration payload and one pre-mount hostile
   normalizer; split pure payload/server shell/client entry and use identical
   hydratable server/client elements for exactly four sibling roots.
@@ -599,11 +645,44 @@ bunx vitest run --config vitest.config.ts \
   tests/vitest/docs/docs-search.test.ts \
   tests/vitest/docs-portal/portal-shell.test.tsx \
   tests/vitest/docs-portal/portal-search.test.tsx
+task548_l01_vite_parent="$(realpath "${TMPDIR:-/tmp}")"
+task548_l01_vite_tmp="$(
+  mktemp -d "$task548_l01_vite_parent/coderso-task548-l01-vite.XXXXXX"
+)"
+task548_l01_vite_real="$(realpath "$task548_l01_vite_tmp")"
+case "$task548_l01_vite_real" in
+  "$task548_l01_vite_parent"/coderso-task548-l01-vite.*) ;;
+  *) exit 1 ;;
+esac
+task548_l01_live_state="absent"
+if test -d packages/docs-portal/dist; then
+  task548_l01_live_state="present"
+  mkdir "$task548_l01_vite_real/live-before"
+  cp -R packages/docs-portal/dist/. \
+    "$task548_l01_vite_real/live-before/"
+elif test -e packages/docs-portal/dist; then
+  exit 1
+fi
+task548_l01_vite_cleanup() {
+  case "$task548_l01_vite_real" in
+    "$task548_l01_vite_parent"/coderso-task548-l01-vite.*)
+      rm -rf -- "$task548_l01_vite_real" ;;
+  esac
+}
+trap task548_l01_vite_cleanup EXIT
 DOCS_PRODUCT_VERSION=0.0.0-test \
 DOCS_PUBLIC_ORIGIN=https://docs.example.invalid \
 DOCS_PUBLIC_BASE_PATH=/docs \
 SOURCE_DATE_EPOCH=0 \
-  bunx vite build --config packages/docs-portal/vite.config.ts
+  bunx vite build --config packages/docs-portal/vite.config.ts \
+    --outDir "$task548_l01_vite_real/vite" --emptyOutDir
+test -f "$task548_l01_vite_real/vite/client-manifest.json"
+if test "$task548_l01_live_state" = "present"; then
+  diff -qr "$task548_l01_vite_real/live-before" \
+    packages/docs-portal/dist
+else
+  test ! -e packages/docs-portal/dist
+fi
 bun run precommit:check
 find packages/docs-portal/src/app packages/docs-portal/src/search \
   packages/docs-portal/src/styles \

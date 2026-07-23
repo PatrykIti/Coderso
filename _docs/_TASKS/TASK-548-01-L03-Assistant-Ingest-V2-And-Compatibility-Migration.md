@@ -46,9 +46,20 @@ workspace-pair recovery through
 Read-only checks use L02's hazard inspector and return
 `docs_compile_recovery_required` instead of recovering. Production startup and
 reindex never call either workspace helper.
-The module-private URL confinement helper requires the exact canonical app-root
-child and a regular non-symlink file; a missing, redirected or differently
-cased member maps to `assistant_docs_bundle_invalid` without fallback.
+The module-private URL confinement helper requires the exact lexical app-root
+child, then performs an inode-held no-follow capability walk from the filesystem
+root through every parent component and the final file. Each directory handle
+stays open while its child is opened relative to that handle; every hop uses
+`O_NOFOLLOW`, directory hops also use `O_DIRECTORY`, and the final regular-file
+handle is the only handle used for the bounded read. On the supported Linux
+Node/Bun runtime, the narrow adapter uses `/proc/self/fd/<parent-fd>/<component>`
+as the held-directory capability path, accepts one prevalidated path component
+only, and fails closed if that facility is unavailable; it never falls back to
+an ordinary pathname walk. Before/after `fstat` checks cover the held parent
+handles and final handle, which close in reverse order. There is no
+`lstat`/`realpath`/validate-then-reopen sequence. A missing, linked, replaced,
+non-regular, concurrently mutated or differently cased component maps to
+`assistant_docs_bundle_invalid` without fallback.
 The loader module is import-time side-effect-free and compatible with both Node
 and Bun: it uses `node:fs/promises`, `URL` and `import.meta.url`, imports only
 the Bun-free corpus normalizer/limits, and contains zero `Bun.*`, DB, settings,
@@ -116,17 +127,150 @@ assistant snapshot.
 
 Activation, the active-pointer generation change, successful-run finalization
 and a durable `assistant_docs_snapshot_activated` outbox record commit in the
-same DB transaction. The outbox payload is exactly
+same DB transaction. The recursively strict payload is exactly
 `{ snapshotId, generation, sourceHash }`. Retrieval selects through the active
 pointer and requires every joined row to match that identity; cache keys include
-all three fields. After commit, `cacheBus` invalidation is dispatched from the
-durable outbox and retried until acknowledged. A missing/delayed broadcast
+all three fields. After commit, the server-only
+`AssistantDocsServerCacheInvalidatorV2` consumes the durable outbox and retries
+until acknowledged. It is distinct from and must not import, publish to or be
+adapted through the browser/admin `cacheBus`. A missing/delayed invalidation
 cannot expose an old result under the new key, and failed activation exposes
 neither new rows nor an invalidation event. Thus each query sees one complete
 old or new snapshot, never mixed metadata. `force: false` may no-op only when
 the active pointer's `sourceHash` equals the strictly loaded bundle hash;
 `force: true` may create a new generation with the same hash but cannot weaken
 validation.
+
+## Cross-Process Ingest and Server Cache Contract
+
+Startup and the authenticated manual reindex call the same
+`ingestPackagedAssistantDocsV2` entrypoint and acquire the same PostgreSQL
+session advisory lock before bundle load, run allocation or an ingest
+transaction. The exact signed 64-bit key is
+`ASSISTANT_DOCS_INGEST_ADVISORY_LOCK_KEY_V2 = 0x434f444552534f32n`.
+Acquisition uses `pg_try_advisory_lock` on one dedicated connection. A false
+result maps to `assistant_docs_reindex_conflict` and performs no filesystem or
+DB mutation. The lock is held across fixed-bundle load, persistence and
+post-commit scheduling, then `pg_advisory_unlock` runs in `finally`; an
+ambiguous/false unlock discards the connection rather than returning it locked
+to the pool. No process-local mutex is an authority and no startup-only or
+route-only lock key exists. If the owner process dies, closing its dedicated
+session releases the PostgreSQL lock; a later startup/manual call must then be
+able to acquire the same key.
+
+Every ingest run is allocated as `pending`, and every success, unchanged or
+failed transition is conditional on that state. A lost/error COMMIT response is
+not proof of rollback. While the advisory lock is still held, the ingest opens a
+fresh PostgreSQL connection and reconciles the run, active pointer and outbox in
+one read-only snapshot. A coherent committed activation requires the run's exact
+`{ snapshotId, generation, sourceHash }`, the identical active pointer and
+exactly one outbox row for that `ingestRunId` with the identical payload; a
+committed unchanged result requires its exact run result and the still-matching
+active identity with no activation outbox for that run. Either committed result
+is reconstructed and proceeds to the same no-throw post-commit delivery kick.
+Only a still-pending run plus proven absence of a committed result/outbox for
+that run is `not_committed` and may transition pending → failed. Contradictory or
+unreadable evidence remains pending, returns a bounded
+`assistant_docs_ingest_failed` outcome-unknown diagnostic and is never rewritten
+as failed or allowed to trigger a second generation under the held lock.
+
+The outbox table stores a unique `eventId`, its owning `ingestRunId`, literal
+event type, the exact payload, `attemptCount`, `availableAt`, nullable
+`leaseToken`/`leaseExpiresAt`, `createdAt`, nullable `acknowledgedAt`, nullable
+bounded `lastErrorCode` and nullable `quarantinedAt`. Claiming is a short
+transaction using
+`FOR UPDATE SKIP LOCKED`, a bounded batch and an expiring lease; it increments
+the attempt count and returns only the strict minimal
+`{ eventId, leaseToken }` envelope before any cache call. Each envelope is
+settled independently under one batch `Promise.allSettled`; one poison row can
+never prevent a later valid row from being delivered. Ack, retry and quarantine
+updates are conditional on the same event ID plus unpredictable lease token.
+Ack is idempotent; transient failure clears/lets expire the lease and applies
+capped exponential backoff without an attempt ceiling. Process death at every
+claim/invalidate/ack boundary therefore leaves the event claimable.
+Insert and per-row post-claim load apply one recursively reject-unknown
+normalizer to the exact event row and exact three-field payload. The claim
+boundary intentionally selects and normalizes only the minimal envelope, so a
+malformed payload cannot abort its batch. An unknown event type, payload/row key,
+malformed timestamp/counter/token or identity mismatch is never delivered or
+acknowledged. After a valid envelope identifies it, the worker atomically clears
+its lease and quarantines it with only
+`assistant_docs_outbox_malformed`, a capped next-review/backoff timestamp and no
+raw payload; automatic claims exclude quarantined rows until an explicit
+operator repair/requeue. If retry/quarantine persistence fails, lease expiry
+still permits recovery. Operator-visible recovery never silently discards or
+acknowledges the row.
+
+The exact cache-family map is owned server-side:
+
+```ts
+export type AssistantDocsSnapshotActivatedOutboxEventV2 = Readonly<{
+  eventId: string;
+  ingestRunId: string;
+  eventType: "assistant_docs_snapshot_activated";
+  payload: AssistantDocsActivatedCacheIdentityV2;
+  attemptCount: number;
+  availableAt: Date;
+  leaseToken: string | null;
+  leaseExpiresAt: Date | null;
+  createdAt: Date;
+  acknowledgedAt: Date | null;
+  lastErrorCode: AssistantDocsOutboxSafeCodeV2 | null;
+  quarantinedAt: Date | null;
+}>;
+export type AssistantDocsOutboxSafeCodeV2 =
+  | "assistant_docs_outbox_delivery_failed"
+  | "assistant_docs_outbox_malformed";
+export function normalizeAssistantDocsSnapshotActivatedOutboxEventV2(
+  value: unknown
+): AssistantDocsSnapshotActivatedOutboxEventV2;
+export type AssistantDocsOutboxClaimEnvelopeV2 = Readonly<{
+  eventId: string;
+  leaseToken: string;
+}>;
+export function normalizeAssistantDocsOutboxClaimEnvelopeV2(
+  value: unknown
+): AssistantDocsOutboxClaimEnvelopeV2;
+export type ClaimedAssistantDocsSnapshotActivatedOutboxEventV2 = Readonly<
+  Omit<AssistantDocsSnapshotActivatedOutboxEventV2,
+    "leaseToken" | "leaseExpiresAt"> & { leaseToken: string; leaseExpiresAt: Date }
+>;
+export function normalizeClaimedAssistantDocsSnapshotActivatedOutboxEventV2(
+  value: unknown
+): ClaimedAssistantDocsSnapshotActivatedOutboxEventV2;
+
+export type AssistantDocsServerCacheFamilyV2 =
+  | "assistant-docs-active-pointer"
+  | "assistant-docs-search"
+  | "assistant-docs-localized-evidence";
+export type AssistantDocsActivatedCacheIdentityV2 = Pick<
+  AssistantDocsSnapshotIdentityV2,
+  "snapshotId" | "generation" | "sourceHash"
+>;
+
+export interface AssistantDocsServerCacheInvalidatorV2 {
+  invalidateActivatedSnapshot(input: Readonly<{
+    identity: AssistantDocsActivatedCacheIdentityV2;
+    families: readonly AssistantDocsServerCacheFamilyV2[];
+  }>): Promise<void>;
+}
+
+export const ASSISTANT_DOCS_SNAPSHOT_ACTIVATED_CACHE_FAMILIES_V2 = [
+  "assistant-docs-active-pointer",
+  "assistant-docs-search",
+  "assistant-docs-localized-evidence",
+] as const;
+```
+
+Invalidation is idempotent and maps only the activation event to that sorted
+complete family list. The startup lifecycle drains expired/pending claims once
+before enabling the periodic worker; a bounded drain failure is logged only as
+a safe event ID/code and leaves readiness safe because every value cache is
+identity-keyed. The ongoing worker and post-commit kick call the same
+`drainAssistantDocsSnapshotActivatedOutboxV2` implementation.
+The post-commit kick is only a no-throw wake-up optimization: its failure cannot
+enter ingest failure handling, rewrite a committed run or active pointer, or
+acknowledge/drop the event. Startup drain is the durable correctness path.
 
 ## Server Permission Filtering Contract
 
@@ -296,9 +440,8 @@ That serialized land order removes all shared-file ownership.
 ## Implementation Pseudocode
 
 ```ts
-import { lstat, readFile, realpath } from "node:fs/promises";
-import { relative } from "node:path";
-import { fileURLToPath } from "node:url";
+import { constants } from "node:fs";
+import { open, type FileHandle } from "node:fs/promises";
 
 const CODERSO_CORE_APP_ROOT_V1 = new URL("../../", import.meta.url);
 const PACKAGED_DOCS_DISTRIBUTION_BUNDLE_V2_URL = new URL(
@@ -308,26 +451,58 @@ const PACKAGED_DOCS_DISTRIBUTION_BUNDLE_V2_URL = new URL(
 
 async function readPackagedDocsBundleBytesAtModuleUrlV2():
   Promise<Uint8Array> {
-  const candidatePath = fileURLToPath(
-    PACKAGED_DOCS_DISTRIBUTION_BUNDLE_V2_URL
-  );
-  const stats = await lstat(candidatePath);
-  const exactRelativePath = relative(
-    await realpath(fileURLToPath(CODERSO_CORE_APP_ROOT_V1)),
-    await realpath(candidatePath)
-  ).replaceAll("\\", "/");
-  if (
-    stats.isSymbolicLink() ||
-    !stats.isFile() ||
-    exactRelativePath !== "generated/docs/coderso-docs-v2.json"
-  ) {
-    throw new Error("assistant_docs_bundle_invalid");
+  const absoluteComponents = assertExactFixedBundleUrlChildV2({
+    root: CODERSO_CORE_APP_ROOT_V1,
+    candidate: PACKAGED_DOCS_DISTRIBUTION_BUNDLE_V2_URL,
+    expected: "generated/docs/coderso-docs-v2.json",
+  });
+  const traversal = await openPinnedNoFollowTraversalV2(absoluteComponents);
+  try {
+    const before = await snapshotPinnedTraversalV2(traversal);
+    assertEveryPinnedParentIsDirectoryV2(before.parents);
+    assertRegularSingleLinkAndBoundedSizeV2(
+      before.file, DOCS_DISTRIBUTION_BUNDLE_MAX_BYTES
+    );
+    const bytes = await readFileHandleBoundedV2(
+      traversal.file, DOCS_DISTRIBUTION_BUNDLE_MAX_BYTES + 1
+    );
+    const after = await snapshotPinnedTraversalV2(traversal);
+    assertSamePinnedTraversalIdentitiesV2(before, after);
+    if (bytes.byteLength > DOCS_DISTRIBUTION_BUNDLE_MAX_BYTES) {
+      throw new Error("assistant_docs_bundle_invalid");
+    }
+    return bytes;
+  } finally {
+    await closePinnedTraversalInReverseV2(traversal);
   }
-  const bytes = await readFile(PACKAGED_DOCS_DISTRIBUTION_BUNDLE_V2_URL);
-  if (bytes.byteLength > DOCS_DISTRIBUTION_BUNDLE_MAX_BYTES) {
-    throw new Error("assistant_docs_bundle_invalid");
+}
+
+async function openPinnedNoFollowTraversalV2(
+  absoluteComponents: readonly string[]
+): Promise<{ parents: readonly FileHandle[]; file: FileHandle }> {
+  assertAbsoluteExactCaseComponentsV2(absoluteComponents);
+  const held: FileHandle[] = [
+    await open("/", constants.O_RDONLY | constants.O_DIRECTORY |
+      constants.O_NOFOLLOW),
+  ];
+  try {
+    for (const [index, component] of absoluteComponents.entries()) {
+      assertSingleSafePathComponentV2(component);
+      const isFile = index === absoluteComponents.length - 1;
+      const parent = held[held.length - 1];
+      const child = await openPinnedProcFdChildV2({
+        parent,
+        component,
+        flags: constants.O_RDONLY | constants.O_NOFOLLOW |
+          (isFile ? 0 : constants.O_DIRECTORY),
+      });
+      held.push(child);
+    }
+    return { parents: held.slice(0, -1), file: held[held.length - 1] };
+  } catch (error) {
+    await closeFileHandlesInReverseV2(held);
+    throw error;
   }
-  return bytes;
 }
 
 export async function loadPackagedDocsDistributionBundleV2():
@@ -341,6 +516,17 @@ export async function loadPackagedDocsDistributionBundleV2():
     throw normalizePackagedDocsBundleErrorV2(error);
   }
 }
+
+type AssistantDocsIngestOutcomeReconciliationV2 =
+  | { state: "committed"; result: AssistantDocsIngestResult }
+  | { state: "not_committed" }
+  | { state: "indeterminate"; safeCode: "assistant_docs_ingest_failed" };
+
+declare function reconcileAssistantDocsIngestOutcomeV2(input: {
+  connection: PgConnection;
+  ingestRunId: string;
+  expectedSourceHash: string;
+}): Promise<AssistantDocsIngestOutcomeReconciliationV2>;
 
 export async function ingestDocsDistributionBundleV2(
   inputBundle: DocsDistributionBundleV2,
@@ -358,16 +544,14 @@ export async function ingestDocsDistributionBundleV2(
     documents: assistantDocuments,
   });
   assertCompleteLocalizedEvidenceClosureV2(plan);
-  let runId: string | null = null;
+  const run = await createPendingDocsIngestRunV2(bundle, input.actorId)
+    .catch((error) => { throw normalizeDocsIngestError(error); });
   let committedResult: AssistantDocsIngestResult;
   try {
-    const run = await createDocsIngestRun(bundle, input.actorId);
-    const allocatedRunId = run.id;
-    runId = allocatedRunId;
     committedResult = await db.transaction(async (tx) => {
       const active = await lockActiveAssistantDocsSnapshotV2(tx);
       if (!input.force && active?.sourceHash === bundle.sourceHash) {
-        return finishUnchangedDocsIngestRunV2(tx, allocatedRunId, active);
+        return finishPendingDocsIngestRunUnchangedV2(tx, run.id, active);
       }
       const identity = await allocateInactiveDocsSnapshotV2(tx, {
         sourceHash: bundle.sourceHash,
@@ -377,27 +561,44 @@ export async function ingestDocsDistributionBundleV2(
       await insertAssistantDocsSnapshotPlanV2(tx, identity, plan);
       await assertPersistedAssistantDocsSnapshotClosureV2(tx, identity);
       const summary = summarizeSnapshot(identity, plan);
-      await finishDocsIngestRun(tx, allocatedRunId, "success", summary);
-      await enqueueAssistantDocsSnapshotActivatedV2(tx, identity);
+      await finishPendingDocsIngestRunSuccessV2(tx, run.id, summary);
+      await enqueueAssistantDocsSnapshotActivatedV2(tx, {
+        ingestRunId: run.id,
+        identity,
+      });
       await activateCorpusSnapshotV2(tx, identity);
       await retainBoundedPreviousSnapshotsV2(tx, identity);
       return summary;
     });
   } catch (error) {
     const domainError = normalizeDocsIngestError(error);
-    const diagnosticPersistence =
-      runId === null
-        ? { status: "not-allocated" as const }
-        : await settleDocsIngestDiagnostic(() =>
-            finishDocsIngestRun(
-              db,
-              runId,
-              "failed",
-              toSafeIngestDiagnostic(domainError)
-            )
-          );
-    attachSafeDiagnosticPersistenceEvidence(domainError, diagnosticPersistence);
-    throw domainError;
+    const resolution = await settleAssistantDocsIngestOutcomeReconciliationV2(
+      () => withFreshPgConnectionV2((connection) =>
+        reconcileAssistantDocsIngestOutcomeV2({
+          connection,
+          ingestRunId: run.id,
+          expectedSourceHash: bundle.sourceHash,
+        })
+      )
+    );
+    if (resolution.state === "committed") {
+      committedResult = resolution.result;
+    } else {
+      if (resolution.state === "not_committed") {
+        const diagnosticPersistence = await settleDocsIngestDiagnostic(() =>
+          finishPendingDocsIngestRunFailedV2(
+            run.id,
+            toSafeIngestDiagnostic(domainError)
+          )
+        );
+        attachSafeDiagnosticPersistenceEvidence(
+          domainError, diagnosticPersistence
+        );
+      } else {
+        attachSafeIngestOutcomeUnknownEvidence(domainError);
+      }
+      throw domainError;
+    }
   }
   const outboxDelivery = await settleAssistantDocsOutboxKickV2(() =>
     scheduleAssistantDocsSnapshotOutboxDeliveryV2()
@@ -410,16 +611,76 @@ export async function ingestPackagedAssistantDocsV2(input: {
   force?: boolean;
 }): Promise<AssistantDocsIngestResult> {
   const request = normalizePackagedAssistantDocsIngestInputV2(input);
-  return withSingleAssistantDocsIngestV2(
-    { force: request.force ?? false },
-    async () => {
+  return withAssistantDocsIngestAdvisoryLockV2(async () => {
       const packaged = await loadPackagedDocsDistributionBundleV2();
       return ingestDocsDistributionBundleV2(packaged, {
         actorId: request.actorId,
         force: request.force ?? false,
       });
+  });
+}
+
+export async function withAssistantDocsIngestAdvisoryLockV2<T>(
+  use: () => Promise<T>
+): Promise<T> {
+  const connection = await acquireDedicatedPgConnectionV2();
+  let locked = false;
+  try {
+    locked = await tryPgSessionAdvisoryLockV2(
+      connection, ASSISTANT_DOCS_INGEST_ADVISORY_LOCK_KEY_V2
+    );
+    if (!locked) throw new Error("assistant_docs_reindex_conflict");
+    return await use();
+  } finally {
+    await unlockOrDiscardDedicatedPgConnectionV2({
+      connection, key: ASSISTANT_DOCS_INGEST_ADVISORY_LOCK_KEY_V2, locked,
+    });
+  }
+}
+
+export async function drainAssistantDocsSnapshotActivatedOutboxV2() {
+  const rawEnvelopes = await claimPendingAssistantDocsOutboxBatchV2();
+  const outcomes = await Promise.allSettled(rawEnvelopes.map(async (raw) => {
+    let envelope: AssistantDocsOutboxClaimEnvelopeV2;
+    try {
+      envelope = normalizeAssistantDocsOutboxClaimEnvelopeV2(raw);
+    } catch {
+      recordSafeOutboxWorkerCodeV2("assistant_docs_outbox_claim_invalid");
+      return;
     }
-  );
+    let rawClaim: unknown;
+    try {
+      rawClaim = await loadAssistantDocsOutboxClaimV2(envelope);
+    } catch (error) {
+      await retryAssistantDocsOutboxClaimV2(
+        envelope, toSafeOutboxCodeV2(error)
+      );
+      return;
+    }
+    let claim: ClaimedAssistantDocsSnapshotActivatedOutboxEventV2;
+    try {
+      claim = normalizeClaimedAssistantDocsSnapshotActivatedOutboxEventV2(
+        rawClaim
+      );
+    } catch {
+      await quarantineAssistantDocsOutboxClaimV2(
+        envelope, "assistant_docs_outbox_malformed"
+      );
+      return;
+    }
+    try {
+      await assistantDocsServerCacheInvalidatorV2.invalidateActivatedSnapshot({
+        identity: normalizeAssistantDocsActivatedCacheIdentityV2(claim.payload),
+        families: ASSISTANT_DOCS_SNAPSHOT_ACTIVATED_CACHE_FAMILIES_V2,
+      });
+      await acknowledgeAssistantDocsOutboxClaimV2(envelope);
+    } catch (error) {
+      await retryAssistantDocsOutboxClaimV2(
+        envelope, toSafeOutboxCodeV2(error)
+      );
+    }
+  }));
+  return summarizeSettledOutboxBatchV2(outcomes);
 }
 
 export function normalizeAssistantDocsPermissionSnapshotV1(
@@ -504,12 +765,14 @@ directly to the ingest core; it never accepts/reads settings, `sourceRoot`,
 repository Markdown, provider/model state, a caller-supplied path/bytes, an
 environment path override, or `process.cwd()`.
 
-**Data flow:** actor/force metadata → the one fixed packaged loader performs
+**Data flow:** actor/force metadata → the shared cross-process advisory lock →
+the one fixed packaged loader performs
 bounded canonical parsing and strict v2 normalization → the ingest persistence
 boundary independently revalidates that normalized bundle → exact `assistant`
 target filter → complete in-memory document/section/chunk/evidence plan →
 transaction writes and closure-checks an inactive snapshot → activation,
-success finalization and durable invalidation outbox commit together. Readers
+success finalization and durable server-cache invalidation outbox commit
+together. Readers
 select only through one active `{ snapshotId, generation, sourceHash }`; the
 outbox drives cache invalidation, while identity-keyed caches prevent stale/new
 aliasing even before delivery. Startup compares the packaged bundle hash, not a
@@ -541,14 +804,18 @@ preserves the first four typed machine errors; the permission normalizer owns
 the fifth. Unknown storage errors normalize only to
 `assistant_docs_ingest_failed`. TASK-548-03-L03 alone maps them at the existing
 route boundary after this leaf lands. Never return internal paths, permission
-inventories or SQL details. Failed-run diagnostic persistence is settled separately and cannot
-mask the normalized domain error. Run allocation is inside that normalization
-boundary; when allocation itself fails, `runId` remains null and no fictional
-failure update is attempted. Because activation and success finalization share
-one transaction, a committed active snapshot is never reclassified as failed.
+inventories or SQL details. Run allocation creates only `pending`; allocation
+failure has no fictional diagnostic update. Every terminal write is a
+pending-only compare-and-set. After a transaction error, fresh-connection
+reconciliation is settled separately and cannot mask the normalized domain
+error: coherent committed evidence reconstructs success, proven non-commit may
+write failed, and unreadable/contradictory evidence stays pending with only a
+bounded outcome-unknown diagnostic. A committed active snapshot is therefore
+never reclassified as failed, including when the COMMIT response is lost.
 The post-commit outbox kick is outside that `try/catch` and passes through a
-no-throw settler; failure leaves the durable event pending for startup/worker
-retry and adds bounded delivery evidence only.
+no-throw settler; failure leaves the durable event pending for the shared
+startup/worker drain and adds bounded delivery evidence only. No browser
+`cacheBus` event participates.
 
 **Regression-test shape:** verify full round-trip of every new field, migration
 from v1 rows, exact duplicate `(docId, locale)` rejection, same-`docId`
@@ -571,15 +838,21 @@ multi-target documents persist/retrieve while `embedded-help`-only and
 `public-docs`-only documents never create rows, chunks, hits or evidence cards.
 Use two locale rows sharing `docId` and `sectionId` to prove retrieval,
 visual/example enrichment and emitted evidence never cross-join.
-Inject activation, outbox enqueue, success-finalization, cacheBus delivery and
+Inject activation, outbox enqueue, success-finalization, server invalidation and
 failed-diagnostic failures. Prove activation/outbox are atomic, a delayed
 delivery is safely retryable, every cache key includes the exact active
 identity, and each query returns only one complete old/new `sourceHash`. Make
 the post-commit scheduler throw and prove the snapshot/run remain successful,
 no failed-run diagnostic write occurs, and startup retry drains the event.
-Fail run allocation
-with DB-unavailable and unknown storage errors; assert exact normalized codes,
-null run identity, zero diagnostic write and no masking. Exercise mutating
+Drop the transaction connection immediately before COMMIT, after PostgreSQL
+commits but before the client receives its response, and after an unchanged-run
+COMMIT. Under the still-held advisory lock, prove a fresh connection reconciles
+the exact run/active/outbox identity: committed activation/unchanged results are
+returned and enter the no-throw scheduler, while only a pending row with proven
+absence may compare-and-set to failed. Contradictory/unreadable evidence stays
+pending and cannot allocate a second generation. Fail run allocation with
+DB-unavailable and unknown storage errors; assert exact normalized codes, zero
+diagnostic write and no masking. Exercise mutating
 workspace promotion recovery only in repository write/recovery fixtures and the
 read-only hazard inspector in `--check` fixtures. Build a production
 package fixture that deliberately omits `.tmp`, the migration report, journal,
@@ -587,7 +860,15 @@ staging and backup files; prove startup/hash-skip/reindex succeeds from the
 packaged bundle alone and no runtime call attempts workspace recovery. Tamper
 remove, symlink or differently-case that packaged bundle and prove
 `assistant_docs_bundle_invalid` without a Markdown, report, journal or network
-fallback.
+fallback. At every absolute parent hop and final-file hop, replace the pathname
+with a directory, regular file or symlink before and after its handle is opened,
+then mutate the final path during the capped read. The loader must reject or
+return only complete bytes from the one inode-held traversal and final handle,
+never escape through a replaced ancestor, validate one inode and read another,
+follow a link or return mixed bytes. Pin parent device/inode/type plus final
+device/inode/mode/link-count/size/mtime/ctime and prove all handles close in
+reverse order. An unavailable `/proc/self/fd` adapter fails closed without an
+ordinary-path fallback.
 For `{ force: false }` and `{ force: true }`, spies prove the exact packaged
 ingest API invokes only
 `loadPackagedDocsDistributionBundleV2(): Promise<DocsDistributionBundleV2>`
@@ -606,6 +887,22 @@ Run a Node-environment import/read fixture with `globalThis.Bun` absent and
 assert zero DB/settings/server imports; after L02 wires the consumer,
 `bun --cwd core build:admin` must execute `core/vite.config.ts` with this exact
 module and identical `sourceHash`.
+Run two real processes/connections racing startup and manual reindex against
+both an empty database and an already-populated active snapshot. Prove the same
+pinned advisory key and acquisition order, exactly one winner, conflict before
+bundle read/run allocation/DB mutation, release after success/error/process
+death, later acquisition, and one complete active snapshot without duplicate
+generation/run artifacts. Crash the outbox worker after claim, invalidation and
+before ack;
+advance the lease clock and prove startup drain reclaims, invalidates the exact
+three server families idempotently and conditionally acknowledges, while an
+old lease token cannot ack/retry and browser `cacheBus` remains untouched.
+Round-trip the exact outbox row/payload and independently alter every key,
+literal, identity, timestamp, counter and token. Put a malformed row first and
+a valid row second in one claimed batch: per-row `Promise.allSettled` must
+quarantine the first with only the bounded safe code/backoff, deliver and ack
+the second, expose no raw payload, and after restart leave the quarantined row
+operator-visible without starving new valid rows.
 
 ## Sub-Tasks
 
@@ -622,9 +919,13 @@ module and identical `sourceHash`.
   required server permission snapshot normalizer/evaluator and active-identity
   authorized retrieval without exposing unauthorized content or reading the
   packaged corpus per question.
-- [ ] Commit active-pointer generation, success and durable invalidation outbox
-  atomically; key caches by `{ snapshotId, generation, sourceHash }` and retry
-  delivery without widening the transaction or serving mixed generations.
+- [ ] Commit active-pointer generation, success and durable server-cache
+  invalidation outbox atomically; reconcile ambiguous COMMIT responses from a
+  fresh connection with pending-only transitions, implement per-row settled
+  claim/lease/ack/retry/quarantine/startup drain, key caches by
+  `{ snapshotId, generation, sourceHash }`, and never use browser `cacheBus`.
+- [ ] Guard startup and manual ingest with the one pinned PostgreSQL session
+  advisory lock, using conflict-before-work and release/discard semantics.
 - [ ] Export all five typed `assistant_docs_*` errors for the serialized
   TASK-548-03-L03 route/service writer; do not edit either orchestration module.
 - [ ] Add
@@ -649,6 +950,9 @@ module and identical `sourceHash`.
 - production-package smoke with the bundle present and every `.tmp`/report/
   journal/staging/backup artifact absent; from an unrelated working directory,
   startup and reindex must still pass through the fixed module-relative loader
+- adversarial every-component no-follow handle swap matrix, two-process
+  advisory-lock race, lost-COMMIT-response reconciliation, and durable outbox
+  malformed-first/valid-second claim/lease/ack/retry/quarantine/restart matrix
 
 ## Documentation Updates Required
 

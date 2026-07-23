@@ -25,12 +25,11 @@ Build reusable, Bun-free search and safe React rendering primitives under
 official portal; no content/rendering fork is allowed. Import the L01-owned
 `selectDocumentsForPublicationTarget` function and re-export it through
 `@coderso/docs-renderer`; this leaf must not redefine its filter or ordering.
-This leaf also owns one branded `DocsPublicationProjectionV1` boundary. It must
-cast or reconstructed as, `DocsDistributionBundleV2`: it contains only
-already-normalized records for one literal publication target while retaining
-the full source bundle's `sourceHash` as provenance. Search, link resolution,
-evidence resolution and rendering consume this projection and never normalize
-a filtered pseudo-bundle.
+This leaf also owns one branded `DocsPublicationProjectionV1` boundary: it must never be cast or reconstructed as `DocsDistributionBundleV2`. It contains only
+strict browser-safe records for one literal publication target while retaining
+the full source bundle's `sourceHash` as provenance. Search, links, evidence
+and rendering consume this projection and never normalize a filtered
+pseudo-bundle or receive source/asset filesystem paths.
 
 ## Exclusive Ownership
 
@@ -44,12 +43,14 @@ This leaf is the only writer for:
 - new `core/admin/app/routes/help.admin-route.tsx`;
 - new `core/admin/ui/help/**`;
 - the docs-image-only `server.fs.allow` amendment in `core/vite.config.ts`;
+- new build-only `core/admin/ui/help/helpBuildAssetVerification.ts`;
 - `core/admin/ui/navigation/sidebarConfig.ts`;
 - new `tests/vitest/docs/docs-renderer.test.tsx`;
 - new `tests/vitest/docs/docs-search.test.ts`;
 - new `tests/vitest/docs/docs-public-links.test.ts`;
-- new `tests/vitest/docs/docs-admin-actions.test.ts`;
+- new `tests/vitest/ui-integration/docs-help-host-adapter.test.ts`;
 - new `tests/vitest/docs/help-visual-asset-registry.test.ts`;
+- new `tests/unit/documentation/helpBuildAssetVerification.test.ts`;
 - new `tests/vitest/ui-integration/help-center.test.tsx`;
 - Help-specific assertions in `tests/vitest/ui/admin-shell-nav.test.tsx`.
 
@@ -82,6 +83,11 @@ also pins those named exports and their usable behavior. No command here builds
 the future portal or the final Docker image, and this runtime validation grants
 no write ownership of TASK-548-02-L03's manifests, lockfile, core dependency,
 or Dockerfile.
+
+The Core-only `core/admin/ui/help/docsHelpHostAdapter.ts` owns canonical Admin
+path resolution and RBAC evaluation. `@coderso/docs-renderer` may import only
+`@coderso/docs-contracts`; it never imports Core, `adminPaths`, auth state or the
+live permission catalog and receives only an already-resolved safe host action.
 
 The pure Help file exports exactly:
 
@@ -132,53 +138,56 @@ exports:
 
 ```ts
 export type DocsPublicationSurfaceTargetV1 =
-  | "embedded-help"
-  | "public-docs";
-
-export type DocsPublicationDocumentKeyV1 = {
-  docId: string;
-  locale: string;
-};
-
+  import("@coderso/docs-contracts").DocsPublicationSurfaceTargetV1;
+export type DocsPublicationDocumentKeyV1 = { docId: string; locale: string };
 const docsPublicationProjectionBrandV1: unique symbol =
   Symbol("coderso.docs-publication-projection@v1");
 
 export type DocsPublicationProjectionV1<
   T extends DocsPublicationSurfaceTargetV1 = DocsPublicationSurfaceTargetV1
 > = Readonly<{
-  schema: "coderso.docs-publication-projection@v1";
-  publicationTarget: T;
-  corpusVersion: string;
-  defaultLocale: string;
-  supportedLocales: readonly string[];
-  sourceHash: string;
-  documents: readonly DocsDocumentV2[];
+  schema: "coderso.docs-publication-projection@v1"; publicationTarget: T;
+  corpusVersion: string; defaultLocale: string;
+  supportedLocales: readonly string[]; sourceHash: string;
+  documents: readonly DocsPublicationDocumentV1[];
   readonly [docsPublicationProjectionBrandV1]: true;
 }>;
 
 export function createDocsPublicationProjectionV1<T extends
   DocsPublicationSurfaceTargetV1>(value: {
-  sourceBundle: unknown;
-  publicationTarget: T;
+  sourceBundle: unknown; publicationTarget: T;
 }): DocsPublicationProjectionV1<T>;
 
+export function serializeDocsPublicationProjectionV1<T extends
+  DocsPublicationSurfaceTargetV1>(
+  projection: DocsPublicationProjectionV1<T>
+): DocsPublicationPayloadV1<T>;
+
+export function createDocsPublicationProjectionFromPayloadV1<T extends
+  DocsPublicationSurfaceTargetV1>(
+  value: unknown, expectedTarget: T
+): DocsPublicationProjectionV1<T>;
+
 export function resolveDocsPublicationDocumentV1(
-  projection: DocsPublicationProjectionV1,
-  key: DocsPublicationDocumentKeyV1
-): DocsDocumentV2;
+  projection: DocsPublicationProjectionV1, key: DocsPublicationDocumentKeyV1
+): DocsPublicationDocumentV1;
+export function listDocsPublicationDocumentKeysV1(
+  projection: DocsPublicationProjectionV1
+): readonly DocsPublicationDocumentKeyV1[];
 
 export function buildDocsSearchIndexV1(
   projection: DocsPublicationProjectionV1
 ): DocsSearchIndexV1;
 ```
 
-The constructor accepts only exact
+The full-source constructor accepts only exact
 `{ sourceBundle, publicationTarget }` keys, calls the TASK-548-01-L01-owned
 `normalizeDocsDistributionBundleV2(sourceBundle)` exactly once, applies the
-exact shared target selector once, and copies normalized records into the
-distinct displayed shape. It preserves the complete source bundle's metadata
-and exact `sourceHash`; that hash is provenance for the full corpus, never a
-digest of the filtered document array.
+exact shared selector once, verifies source closure, then calls the contracts-
+owned projector to structurally omit every document `sourcePath` and visual
+`assetPath`, replacing each asset path with its deterministic opaque
+`outputKey`. It preserves full-bundle metadata and `sourceHash`; that hash is
+provenance for the full corpus, never a digest of filtered documents.
 
 Before adding its non-enumerable module-private symbol and deeply freezing the
 result, the constructor proves all of the following over the filtered records:
@@ -191,8 +200,16 @@ not a cross-target fallback. The private brand symbol and brand factory are not
 exported; structural lookalikes, serialized/deserialized objects, spread
 copies, foreign brands and mutated values fail at every consumer boundary.
 
-`resolveDocsPublicationDocumentV1` validates the branded projection and exact
-canonical key, then requires exactly one member without re-normalizing it.
+Serialization emits only the strict contracts-owned
+`DocsPublicationPayloadV1<T>` body and canonical `bodySha256`; it never emits
+the brand, corpus envelope, non-target records, `sourcePath` or `assetPath`.
+The payload constructor normalizes that unknown payload exactly once, requires
+the caller's literal target, rechecks body hash/order/closure and brands the
+safe DTOs without reconstructing a distribution bundle. Recursive exact-key
+checks reject a cast/spread full source record before branding.
+
+`resolveDocsPublicationDocumentV1` and the key-list helper validate the brand;
+the resolver also requires one canonical member without re-normalizing it.
 `buildDocsSearchIndexV1` is a pure deterministic projection-to-index function:
 it validates the private brand, reads only projection members and never calls a
 bundle/document normalizer or selector. Embedded Help constructs one projection
@@ -200,8 +217,8 @@ and one search index in trusted module memory per installed bundle identity.
 The portal constructs them once in its build/SSR process and never serializes
 or hydrates the brand. Portal build code imports the constructor through exact
 `@coderso/docs-renderer/projection`; its Vite boundary must reject that subpath,
-the brand, or any `DocsDocumentV2` corpus import from every portal hydration
-client entry.
+the brand, full source types or contracts normalizers from every hydration
+client entry. Renderer/search/portal consume only the branded safe projection.
 
 ## Local Search Contract
 
@@ -227,20 +244,16 @@ export type DocsClientSearchRankingRecordV1 = {
 };
 export type DocsClientSearchRankingProjectionV1 = {
   schema: "coderso.docs-client-search-ranking@v1";
-  productVersion: string;
-  locale: string;
+  productVersion: string; locale: string;
   records: DocsClientSearchRankingRecordV1[];
 };
 export function projectDocsClientSearchRankingV1(
-  index: DocsSearchIndexV1,
-  scope: { productVersion: string; locale: string }
+  index: DocsSearchIndexV1, scope: { productVersion: string; locale: string }
 ): DocsClientSearchRankingProjectionV1;
-export function normalizeDocsClientSearchRankingProjectionV1(
-  value: unknown
-): DocsClientSearchRankingProjectionV1;
+export function normalizeDocsClientSearchRankingProjectionV1(value: unknown):
+  DocsClientSearchRankingProjectionV1;
 export function searchDocsClientSearchRankingV1(
-  index: DocsClientSearchRankingProjectionV1,
-  input: DocsSearchInput
+  index: DocsClientSearchRankingProjectionV1, input: DocsSearchInput
 ): readonly DocsSearchResult[];
 ```
 
@@ -263,7 +276,7 @@ literal `public-docs` projection.
 ## Safe Renderer and Link Policy
 
 The renderer accepts only a branded `DocsPublicationProjectionV1` plus an exact
-member key. It resolves the already-normalized `DocsDocumentV2`/
+member key. It resolves the already-normalized `DocsPublicationDocumentV1`/
 `DocsSectionV2` internally, parses each exact `bodyMarkdown` through the shared
 TASK-548-01 closed Markdown parser, and maps its safe internal token stream to
 React elements. The token stream is an implementation detail, not a second
@@ -286,8 +299,8 @@ persisted docs schema. It must:
   a cross-document, cross-locale, cross-section, duplicate, missing, unlisted or
   orphan record fails closed;
 - hash PNG bytes only at portal/server or Help Vite build trust boundaries.
-  Only the byte-free verified `{ assetPath, href, mediaType, sha256 }` record
-  reaches the renderer/`<img>`; require non-empty alt and exact caption;
+  Only byte-free `{ outputKey, href, mediaType, sha256 }` reaches the
+  renderer/`<img>`; require non-empty alt and exact caption;
 - reject unsupported Markdown syntax, missing asset hashes, path traversal,
   `data:`, `javascript:`, protocol-relative, inline SVG/HTML, arbitrary
   iframe/media, and event/style payloads;
@@ -336,27 +349,20 @@ links. Both pass `"auto"` when reduced motion is requested.
 This leaf exports one required, recursively strict discriminated link context:
 
 ```ts
+export type DocsResolvedHelpHostLinkV1 = {
+  docId: string; locale: string; href: string; prefetch: true;
+};
 export type DocsLinkContextV1 =
   | {
-      surface: "embedded-help";
-      publicationTarget: "embedded-help";
-      locale: string;
-      adminBasePath: string;
+      surface: "embedded-help"; publicationTarget: "embedded-help"; locale: string;
+      localDocumentHrefs: readonly DocsResolvedHelpHostLinkV1[];
       officialDocs:
-        | {
-            state: "configured";
-            origin: string;
-            basePath: string;
-            version: string;
-          }
+        | { state: "configured"; origin: string; basePath: string; version: string }
         | { state: "unavailable" };
     }
   | {
-      surface: "public-docs";
-      publicationTarget: "public-docs";
-      locale: string;
-      productVersion: string;
-      publicBasePath: string;
+      surface: "public-docs"; publicationTarget: "public-docs"; locale: string;
+      productVersion: string; publicBasePath: string;
     };
 
 export type DocsResolvedLinkV1 =
@@ -365,9 +371,7 @@ export type DocsResolvedLinkV1 =
   | { kind: "public-docs"; href: string; prefetch: false }
   | { kind: "external-https"; href: string; prefetch: false };
 
-export function normalizeDocsLinkContextV1(
-  value: unknown
-): DocsLinkContextV1;
+export function normalizeDocsLinkContextV1(value: unknown): DocsLinkContextV1;
 
 export function resolveSafeDocsLink(input: {
   href: string;
@@ -385,8 +389,9 @@ projection member. Unknown keys, unbranded projections or mismatched
 discriminants fail closed.
 
 For `embedded-help`, anchors remain local and relative documentation links
-resolve only to exact `embedded-help` members through `adminHelpPath` plus the
-validated Admin base; the result is an `AdminLink`-compatible prefetched admin
+resolve only to exact `embedded-help` members by matching the Core adapter's
+complete keyed `localDocumentHrefs`; the renderer neither imports nor
+reconstructs `adminHelpPath`. The result is an `AdminLink`-compatible prefetched
 link. An official link is possible only from a configured HTTPS context and a
 destination also targeted to `public-docs`. For `public-docs`, relative docs
 links resolve only to exact `public-docs` members at the same explicit product
@@ -395,25 +400,14 @@ Neither surface silently crosses to the other. Already-authored absolute links
 must be canonical HTTPS without credentials; unsafe schemes, protocol-relative
 forms, traversal and unknown destinations fail closed.
 
-The same package exports the exact local-asset/copy types and verified map
-builder:
+The package exports only byte/path-free local-asset and copy contracts:
 
 ```ts
-export type DocsPackagedLocalVisualAssetV1 = {
-  assetPath: string;
-  href: string;
-  mediaType: "image/png";
-  bytes: Uint8Array;
-};
 export type DocsLocalVisualAssetV1 = {
-  assetPath: string;
-  href: string;
-  mediaType: "image/png";
-  sha256: string;
+  outputKey: string; href: string; mediaType: "image/png"; sha256: string;
 };
 export type DocsExampleCopyActivationV1 = {
-  kind: "trusted-user-activation";
-  isTrusted: true;
+  kind: "trusted-user-activation"; isTrusted: true;
 };
 export type DocsCopyExampleBodyV1 = (input: {
   body: string;
@@ -422,18 +416,17 @@ export type DocsCopyExampleBodyV1 = (input: {
 export function buildVerifiedDocsLocalVisualAssetMapV1(input: {
   projection: DocsPublicationProjectionV1;
   documentKey: DocsPublicationDocumentKeyV1;
-  packagedAssets: readonly DocsPackagedLocalVisualAssetV1[];
+  emittedAssets: readonly DocsLocalVisualAssetV1[];
 }): ReadonlyMap<string, DocsLocalVisualAssetV1>;
 ```
 
 The builder validates the private projection brand, resolves exact localized
-membership without a bundle/document normalizer, requires exactly
-one confined packaged local PNG for every visual of the selected article,
-rejects duplicate/unknown/traversing/remote/data/blob hrefs and missing/extra
-selected-article assets, hashes the bytes, compares exact SHA-256, and returns a
-read-only byte-free map keyed by `assetPath`. Unrelated entries are accepted only
-when their path is another known projection visual and are never added to this
-article map. It performs no fetch.
+membership without a normalizer, requires exactly one emitted same-origin URL
+for each selected visual `outputKey`, compares receipt/media/SHA-256 metadata,
+and returns a read-only map keyed by that opaque key. Duplicate/unknown or
+selected-missing entries and unsafe hrefs fail; known other-article entries are
+validated but excluded. It performs no fetch and receives no path/bytes. The Core Vite build verifier
+alone holds normalized `assetPath` values and PNG bytes transiently.
 
 ### Embedded Help build-asset registry
 
@@ -442,23 +435,50 @@ browser JS. A narrow `coderso-embedded-help-assets-v1` plugin owned in
 `core/vite.config.ts` reads the tracked packaged bundle through the common
 cwd-independent loader, follows no symlinks, and statically walks only the
 literal `docs/guide/assets/images/**/*.png` root. During build and dev startup
-it invokes the full projection constructor, reads/verifies required PNG bytes,
-and emits canonical `coderso.docs-help-assets@v1` `docs-help-assets-v1.json`
-plus one virtual module containing only a hash-bound target payload/URL receipt.
+it invokes the full projection constructor, uses the normalized full source to
+read/verify required PNG bytes, then discards those paths/bytes and emits
+canonical `coderso.docs-help-assets@v1` `docs-help-assets-v1.json` plus one
+virtual module containing only the hash-bound target payload/URL receipt.
 
-The exact payload schema is `coderso.docs-embedded-help-build@v1` with literal
+The exact payload schema is `coderso.docs-publication-payload@v1` with literal
 `embedded-help`, target-derived locale metadata, full-corpus `sourceHash`,
-target-member documents and domain-separated `bodySha256`; it excludes every
-non-target document and the `coderso.docs-corpus@v2` envelope.
-Renderer-root-only `createEmbeddedHelpPublicationProjectionV1(unknown)` is the
-sole browser unknown boundary: strict canonical/hash validation, document
-normalization and target/closure proof precede the same private projection
-brand. Help-private receipt normalization joins exact payload visuals to
-emitted URLs; bytes never enter Admin chunks. It builds exactly one index.
+target-member `DocsPublicationDocumentV1` DTOs and domain-separated
+`bodySha256`; it excludes every non-target document, corpus envelope,
+`sourcePath` and `assetPath`. Renderer-root-only
+`createDocsPublicationProjectionFromPayloadV1(unknown, "embedded-help")` is
+the sole browser boundary: one strict safe-payload normalization plus target/
+hash/closure proof precedes branding. Receipt normalization joins only opaque
+`outputKey`/href/media/SHA-256 records; source paths, output filesystem paths,
+bytes and full-corpus records never enter Admin chunks. It builds one index.
 Dev allows only the exact real image root. Missing/tampered receipt/target/URL/
 asset blocks build/dev before Help.
 It makes zero fetch/XHR/API/provider calls; normal same-origin loading of
 Vite-emitted PNGs is the only image I/O.
+
+### Server-only receipt file boundary
+
+This leaf's build-only Core `helpBuildAssetVerification.ts` exports exactly:
+
+```ts
+export type DocsEmbeddedHelpAssetReceiptV1 = Readonly<{
+  schema: "coderso.docs-help-assets@v1"; publicationTarget: "embedded-help";
+  sourceHash: string; assets: readonly DocsLocalVisualAssetV1[]; receiptSha256: string;
+}>;
+export function normalizeEmbeddedHelpAssetReceiptV1(value: unknown):
+  DocsEmbeddedHelpAssetReceiptV1;
+export async function resolveEmbeddedHelpBuildAssetFileV1(input: {
+  clientRoot: string; outputKey: string; href: string;
+}): Promise<Readonly<{ bytes: Uint8Array; sha256: string }>>;
+```
+
+The normalizer requires exact byte/path-free fields and outputKey↔SHA relation. The resolver
+rejects unknown input keys, confines the canonical same-origin Vite asset href
+below real `clientRoot`, binds it to `outputKey`, opens `O_NOFOLLOW`, fstats
+before/after one bounded same-handle read, then hashes those bytes. It returns
+no path and never reopens by pathname; traversal, encoded separators, query/
+hash, symlink, swap, non-regular/oversized/missing file or mapping/hash drift
+fails closed. Browser imports only the tree-shakeable pure normalizer, never the
+resolver/Node edge; Docker/runtime consumes bytes/hash without a path.
 
 `DocsRendererProps.copyExampleBody` is required. The renderer invokes it only
 inside a trusted click/keyboard activation after checking
@@ -492,10 +512,11 @@ The official portal link is optional and exists only when the selected
 renders no official action. A blocked/offline portal never affects local search,
 article rendering, examples, or visuals.
 
-### Exact Admin action resolver
+### Exact Core Help host adapter
 
-This leaf exclusively owns
-`packages/docs-renderer/src/adminActions.ts` and these exact exports:
+This leaf exclusively owns Core-only
+`core/admin/ui/help/docsHelpHostAdapter.ts`. It imports canonical Admin paths
+and the live permission catalog; renderer stays Core-free. It exports exactly:
 
 ```ts
 export type DocsAdminPermissionSnapshotV1 =
@@ -503,10 +524,12 @@ export type DocsAdminPermissionSnapshotV1 =
   | { state: "missing" | "malformed" };
 
 export type DocsAdminActionResolutionV1 = {
-  href: string;
-  linkKind: "admin";
-  prefetch: true;
+  href: string; linkKind: "admin"; prefetch: true;
 };
+
+export function buildDocsHelpHostLinksV1(input: {
+  projection: DocsPublicationProjectionV1<"embedded-help">;
+}): readonly DocsResolvedHelpHostLinkV1[];
 
 export function resolvePermittedAdminAction(input: {
   adminPath: string | null;
@@ -515,7 +538,10 @@ export function resolvePermittedAdminAction(input: {
 }): DocsAdminActionResolutionV1 | null;
 ```
 
-It recursively validates the exact input, rejects unknown snapshot states,
+The link builder validates the private brand and derives one canonical
+`adminHelpPath` per exact localized member; duplicate, alias or incomplete
+coverage fails before renderer props.
+The action resolver validates exact input, rejects unknown snapshot states,
 duplicate/unknown permissions and non-canonical paths, and returns null when
 `adminPath` is null or the snapshot is missing/malformed. The only non-catalog
 live snapshot value is the exact sole-member `["*"]` full-access sentinel;
@@ -526,8 +552,8 @@ canonical permission and `anyOf` requires at least one. A duplicate or
 wildcard-plus-catalog snapshot is malformed and fails closed. Success returns
 the validated default-base Admin href unchanged with `linkKind: "admin"` and
 `prefetch: true`; `AdminLink` owns custom-base resolution. Help and L03 Guide
-cards import this function and result type from the package index. No consumer
-duplicates the permission evaluator.
+cards import this Core adapter. No renderer/portal module imports `adminPaths`,
+evaluates RBAC or duplicates either resolver.
 
 ## Shared Public Documentation URL Contract
 
@@ -548,7 +574,7 @@ export function buildDocsPublicHref(input: {
 }): string;
 
 export function resolveOptionalHelpOfficialHref(input: {
-  document: DocsDocumentV2;
+  document: DocsPublicationDocumentV1;
   origin: string;
   basePath: string;
   version: string;
@@ -587,7 +613,17 @@ later imports these exact helpers; it does not rebuild public routes.
 ## Implementation Pseudocode
 
 ```tsx
-// packages/docs-renderer/src/adminActions.ts
+// core/admin/ui/help/docsHelpHostAdapter.ts
+export function buildDocsHelpHostLinksV1(input: {
+  projection: DocsPublicationProjectionV1<"embedded-help">;
+}): readonly DocsResolvedHelpHostLinkV1[] {
+  return requireCompleteUniqueLocalizedLinks(
+    listDocsPublicationDocumentKeysV1(input.projection).map((key) => ({
+    ...key,
+    href: adminHelpPath(key),
+    prefetch: true as const,
+  })));
+}
 export function resolvePermittedAdminAction(input: {
   adminPath: string | null;
   permissionRequirement: DocsPermissionRequirementV1 | null;
@@ -617,6 +653,7 @@ export function createDocsPublicationProjectionV1(value: {
   const source = normalizeDocsDistributionBundleV2(input.sourceBundle);
   const documents =
     selectDocumentsForPublicationTarget(source.documents, publicationTarget);
+  assertCompleteSourceProjectionClosureV1(documents, source);
   const projection = {
     schema: "coderso.docs-publication-projection@v1" as const,
     publicationTarget,
@@ -624,10 +661,32 @@ export function createDocsPublicationProjectionV1(value: {
     defaultLocale: source.defaultLocale,
     supportedLocales: source.supportedLocales,
     sourceHash: source.sourceHash,
-    documents,
+    documents: documents.map(projectDocsPublicationDocumentV1),
   };
-  assertCompleteDocsPublicationProjectionClosureV1(projection, source);
+  assertCompleteSafePublicationProjectionClosureV1(projection);
   return deepFreezeWithPrivateBrand(projection, docsPublicationProjectionBrandV1);
+}
+
+export function serializeDocsPublicationProjectionV1<T extends
+  DocsPublicationSurfaceTargetV1>(
+  projection: DocsPublicationProjectionV1<T>
+): DocsPublicationPayloadV1<T> {
+  requireDocsPublicationProjectionBrandV1(projection);
+  const body = copyExactEnumerableProjectionBody(projection);
+  return deepFreeze({ schema: "coderso.docs-publication-payload@v1", body,
+    bodySha256: hashCanonicalPublicationBodyV1(body) });
+}
+
+export function createDocsPublicationProjectionFromPayloadV1<T extends
+  DocsPublicationSurfaceTargetV1>(
+  value: unknown, expectedTarget: T
+): DocsPublicationProjectionV1<T> {
+  const payload = normalizeDocsPublicationPayloadV1(value); // exactly once
+  assertPayloadBodyHashAndLiteralTarget(payload, expectedTarget);
+  assertCompleteSafePublicationProjectionClosureV1(payload.body);
+  return deepFreezeWithPrivateBrand(
+    toUnbrandedProjection(payload.body), docsPublicationProjectionBrandV1
+  );
 }
 
 // packages/docs-renderer/src/search.ts
@@ -661,19 +720,16 @@ export function searchDocsClientSearchRankingV1(
 }
 
 // packages/docs-renderer/src/evidenceCards.ts
-export type DocsPackagedLocalVisualAssetV1 = {
-  assetPath: string; href: string; mediaType: "image/png"; bytes: Uint8Array;
-};
 export function buildVerifiedDocsLocalVisualAssetMapV1(input: {
   projection: DocsPublicationProjectionV1;
   documentKey: DocsPublicationDocumentKeyV1;
-  packagedAssets: readonly DocsPackagedLocalVisualAssetV1[];
+  emittedAssets: readonly DocsLocalVisualAssetV1[];
 }): ReadonlyMap<string, DocsLocalVisualAssetV1> {
   requireDocsPublicationProjectionBrandV1(input.projection);
   const document =
     resolveDocsPublicationDocumentV1(input.projection, input.documentKey);
   const expected = collectExactDocumentVisuals(document);
-  return verifyAndFreezeExactAssetMap(expected, input.packagedAssets);
+  return verifyAndFreezeExactOpaqueAssetMap(expected, input.emittedAssets);
 }
 
 export function resolveDocsSectionEvidenceCards(input: {
@@ -690,29 +746,20 @@ export function resolveDocsSectionEvidenceCards(input: {
 }
 
 // core/admin/ui/help/helpBuildAssets.ts
-type DocsEmbeddedHelpBuildPayloadV1 = {
-  schema: "coderso.docs-embedded-help-build@v1";
-  body: {
-    publicationTarget: "embedded-help"; corpusVersion: string;
-    defaultLocale: string; supportedLocales: string[]; sourceHash: string;
-    documents: DocsDocumentV2[];
-  };
-  bodySha256: string;
-};
-type DocsEmbeddedHelpAssetReceiptV1 = {
-  schema: "coderso.docs-help-assets@v1"; sourceHash: string;
-  assets: Array<DocsLocalVisualAssetV1 & { outputPath: string }>;
-};
+type DocsEmbeddedHelpBuildPayloadV1 =
+  DocsPublicationPayloadV1<"embedded-help">;
 export function loadEmbeddedHelpBuildAssetsV1(): EmbeddedHelpBuildAssetsV1 {
   const emitted =
     normalizeEmbeddedHelpVirtualModuleV1(embeddedHelpViteModuleUnknown);
   const projection =
-    createEmbeddedHelpPublicationProjectionV1(emitted.targetPayload);
+    createDocsPublicationProjectionFromPayloadV1(
+      emitted.targetPayload, "embedded-help"
+    );
   const receipt = normalizeEmbeddedHelpAssetReceiptV1(emitted.assetReceipt);
   assertEqual(receipt.sourceHash, projection.sourceHash);
   assertBuildReceiptExactlyMatchesProjectionV1(receipt.assets, projection);
   return deepFreeze({
-    projection, localVisualAssets: receipt.assets,
+    projection, emittedAssets: receipt.assets,
     searchIndex: buildDocsSearchIndexV1(projection),
   });
 }
@@ -727,7 +774,10 @@ function codersoEmbeddedHelpAssetsV1(): Plugin {
         sourceBundle: bundle, publicationTarget: "embedded-help",
       });
       const files = await walkExactPngRootNoFollow(DOCS_GUIDE_IMAGE_ROOT);
-      return verifyAndEmitEmbeddedHelpBuildPayloadV1(ctx, projection, files);
+      const verified = await verifySourcePathsAndPngBytesV1({ bundle, projection, files });
+      return emitPathFreeEmbeddedHelpPayloadV1(ctx, {
+        payload: serializeDocsPublicationProjectionV1(projection), verified,
+      });
     },
   });
 }
@@ -741,7 +791,7 @@ export type DocsRendererProps = {
   copyExampleBody: DocsCopyExampleBodyV1;
 };
 export function buildDocsTableOfContentsV1(
-  document: DocsDocumentV2
+  document: DocsPublicationDocumentV1
 ): readonly DocsTableOfContentsItemV1[] {
   const sections = assertUniqueNormalizedDocumentSections(document);
   return sections.map((section) => ({
@@ -753,7 +803,7 @@ export function buildDocsTableOfContentsV1(
 }
 
 function DocsSectionHeading(
-  props: { document: DocsDocumentV2; section: DocsSectionV2 }
+  props: { document: DocsPublicationDocumentV1; section: DocsSectionV2 }
 ) {
   const exactProps = {
     id: props.section.sectionId,
@@ -763,22 +813,17 @@ function DocsSectionHeading(
     "data-docs-section-id": props.section.sectionId,
   } as const;
   switch (props.section.level) {
-    case 1:
-      return <h1 {...exactProps}>{props.section.heading}</h1>;
-    case 2:
-      return <h2 {...exactProps}>{props.section.heading}</h2>;
-    case 3:
-      return <h3 {...exactProps}>{props.section.heading}</h3>;
-    case 4:
-      return <h4 {...exactProps}>{props.section.heading}</h4>;
-    default:
-      return assertNeverDocsSectionLevel(props.section.level);
+    case 1: return <h1 {...exactProps}>{props.section.heading}</h1>;
+    case 2: return <h2 {...exactProps}>{props.section.heading}</h2>;
+    case 3: return <h3 {...exactProps}>{props.section.heading}</h3>;
+    case 4: return <h4 {...exactProps}>{props.section.heading}</h4>;
+    default: return assertNeverDocsSectionLevel(props.section.level);
   }
 }
 
 export function focusDocsLocalizedSectionDeepLinkV1(input: {
   root: HTMLElement;
-  document: DocsDocumentV2;
+  document: DocsPublicationDocumentV1;
   docId: string;
   locale: string;
   sectionId: string;
@@ -850,83 +895,43 @@ element outside the selected localized article.
 
 **Regression-test shape:**
 
-- deterministic projection/search bytes and ranking across repeated builds;
-- compile-time import coverage pins L01's exact
-  `normalizeDocsDistributionBundleV2` and target-selector owners; constructor
-  spies prove one full-bundle normalization/selection, exact target
-  completeness, unchanged full-corpus `sourceHash`, and no pseudo-bundle;
-- structural/spread/serialized/foreign projections fail private-brand checks;
-  link/evidence/reference closure rejects a cross-target destination before
-  index, asset resolution, link resolution or render;
-- every listed text/context signal, locale/version compatibility and exact
-  total tie order produce byte-for-byte Help/client projection result parity;
-- the Help descriptor round-trips only the exact existing
-  `["docs.area.getting-started"]` capability and descriptor/coverage validation
-  rejects a missing, unknown or invented capability without adding a catalog
-  entry;
-- Vite build/dev fixtures pin loader/no-follow, target-payload/body-hash and
-  byte→URL/hash closure; forged runtime receipts reject, while Admin chunk scans
-  contain no corpus envelope, full bundle or non-embedded document canaries;
-- target-leak fixtures prove `embedded-help` and multi-target documents index
-  and render, while `assistant`-only and `public-docs`-only documents produce no
-  result, direct render or Help navigation;
-- all exact owner Markdown token variants, with Markdown image/HTML input
-  rejected and no token able to synthesize an evidence card;
-- in both embedded Help and the portal consumer, pin every stored heading's
-  exact text, native `h1`/`h2`/`h3`/`h4` level and exact `id=sectionId`, with
-  body/evidence after it; pin source-order TOC labels/levels/exact `#sectionId`
-  hrefs and reject duplicate IDs before any partial render;
-- exercise localized initial links, TOC activation and back/forward deep links
-  through `focusDocsLocalizedSectionDeepLinkV1`; assert the exact scroll target,
-  `tabIndex=-1`, programmatic keyboard focus, no cross-locale/same-ID focus, and
-  reduced-motion `"auto"` behavior in Help and portal fixtures;
-- `section.visualIds` and `section.exampleIds` preserve authored order and emit
-  explicit accessible visual cards plus inert React-escaped copy-only example
-  cards; same-`docId`/same-`sectionId` records in two locales cannot cross;
-- the collision fixture `exampleId="x"` plus legal `sectionId="x-title"` keeps
-  the sole DOM id on the section, the exact TOC/focus target, and the example's
-  accessible name without any example-owned id;
-- reject cross-document, cross-locale, cross-section, duplicate, missing,
-  unlisted and orphan visual/example refs, wrong local asset paths/media types,
-  absent/mismatched SHA-256, tampered PNG bytes and forged card props;
-- exact `DocsLinkContextV1` tests cover both discriminants, required target/
-  locale/base/version fields, Help/public relative-link behavior, target
-  mismatch, unknown keys, traversal, unsafe schemes and no implicit defaults;
-- Help and portal pass the exact projection, member key, link context, asset
-  map and copy handler; missing/undefined members fail validation;
-- verified-map fixtures use confined packaged bytes, prove exact SHA-256 and
-  reject missing/extra selected-article, duplicate/unknown, remote/blob/data,
-  wrong-media and tampered assets without a fetch;
-- example copy copies only the exact body after trusted click/keyboard
-  activation and never fires on render/hydration/effect/untrusted dispatch,
-  executes, previews, submits, sends telemetry or invokes an Admin mutation;
-- hostile HTML/script/URL/path/asset fixtures rejected or rendered as text;
-- Help route renders for authenticated empty-permission snapshot;
-- null action allowed for authenticated empty snapshot; exact live `["*"]`
-  satisfies every valid requirement; invalid empty non-null, missing/malformed
-  snapshot, duplicate/mixed wildcard, partial/full `allOf`, and every `anyOf`
-  branch;
-- Admin action hidden without a satisfied non-null requirement and
-  canonical/prefetched with the exact result object when allowed; direct tests
-  import the named `adminActions.ts` export and prove Help uses it;
-- public path/href exact-version/latest, encoding and malicious-origin/path
-  tests; Help-only omits official action, public-only cannot enter Help, and
-  embedded+public emits the exact official href;
-- footer changes to local `/admin/help` only after route exists;
-- keyboard/focus/TOC/back-forward, responsive, light/dark DOM/style assertions;
-- every touched source/test file at most 1,000 lines.
+- deterministic projection/search bytes and ranking; spies prove exactly one
+  full normalization/selection, complete target order and unchanged source hash;
+- compile-time full→publication document/visual non-assignability, runtime
+  exact-key/spread/cast rejection, private-brand forgery rejection and no
+  pseudo-bundle reconstruction;
+- build/dev and Admin-chunk fixtures seed distinct non-target, `sourcePath`,
+  `assetPath`, corpus/PNG/resolver/Node-edge canaries; only target safe DTOs plus
+  opaque output-key/href/hash receipts survive, and forged receipts fail;
+- exact package-edge tests pin `renderer -> contracts`, reject every renderer
+  Core/RBAC/adminPaths import, and prove the Core adapter returns complete
+  canonical Help links plus correct null/empty/`["*"]`/`allOf`/`anyOf` actions;
+- closure/evidence fixtures reject cross-target/document/locale/section,
+  duplicate, missing, unlisted, orphan, wrong-media/hash/bytes and forged props;
+- every search signal, locale/version state and total tie break has byte-identical
+  server/client results; target leaks yield no result/render/navigation;
+- all Markdown token variants render safely; image/HTML tokens cannot synthesize
+  evidence, examples remain escaped/copy-only after trusted activation;
+- Help and portal pin stored heading level/text/id, TOC order/hrefs, localized
+  focus/scroll/popstate/reduced-motion behavior and collision isolation;
+- link-context tests cover exact discriminants/host maps, version/locale/base,
+  official-target eligibility, traversal/schemes and no implicit defaults;
+- receipt tests cover opaque-key/SHA closure, missing/unknown-extra/duplicate/
+  remote/blob/data/no-fetch; build-only tests pin traversal/symlink/swap rejection, same-handle fstat/read and hash mismatch;
+- descriptor/catalog, any-auth route, footer atomicity, keyboard/focus,
+  responsive light/dark, no-network and touched-file <=1,000 gates.
 
 ## Sub-Tasks
 
 - [ ] Build branded full/Help-payload projections, pure shared/client search,
-  Vite target-only asset registry, and closed renderer/link-policy package.
+  Vite target-only registry, server receipt verifier and closed renderer package.
 - [ ] Render exact stored section headings through the static semantic-level
   switch, unique stable anchors, a source-order TOC and the shared localized
   scroll/focus helper consumed by Help and portal.
 - [ ] Export the surface-discriminated link context, projection-only asset-map
   builder and trusted copy contract; permit no optional/default renderer prop.
-- [ ] Add the exact Bun-free `adminActions.ts` resolver and direct permission/
-  path/result tests; Help and Guide consume the named export.
+- [ ] Add the Core-only Help host adapter and direct permission/path/complete-
+  link tests; Help and Guide consume it, renderer receives safe results only.
 - [ ] Build deterministic local search and URL-state helpers.
 - [ ] Implement exact shared public path/href helpers and hostile-input tests.
 - [ ] Add the pure named Help descriptor array plus paired binding module whose
@@ -939,16 +944,13 @@ element outside the selected localized article.
 
 ```bash
 bunx vitest run --config vitest.config.ts \
-  tests/vitest/docs/docs-renderer.test.tsx \
-  tests/vitest/docs/docs-search.test.ts \
-  tests/vitest/docs/docs-public-links.test.ts \
-  tests/vitest/docs/docs-admin-actions.test.ts \
-  tests/vitest/docs/help-visual-asset-registry.test.ts \
-  tests/vitest/ui-integration/help-center.test.tsx \
-  tests/vitest/ui/admin-shell-nav.test.tsx \
-  tests/vitest/admin/admin-route-registry.test.tsx \
+  tests/vitest/docs/docs-renderer.test.tsx tests/vitest/docs/docs-search.test.ts \
+  tests/vitest/docs/docs-public-links.test.ts tests/vitest/docs/help-visual-asset-registry.test.ts \
+  tests/vitest/ui-integration/docs-help-host-adapter.test.ts tests/vitest/ui-integration/help-center.test.tsx \
+  tests/vitest/ui/admin-shell-nav.test.tsx tests/vitest/admin/admin-route-registry.test.tsx \
   tests/vitest/admin/adminApp.test.tsx \
   tests/vitest/admin/adminPaths.test.ts
+bun test tests/unit/documentation/helpBuildAssetVerification.test.ts
 bun --cwd packages/docs-renderer check
 bun --cwd core --eval 'const renderer = await import("@coderso/docs-renderer"); const projection = await import("@coderso/docs-renderer/projection"); if (typeof renderer.DocsDocumentRenderer !== "function" || typeof renderer.buildDocsSearchIndexV1 !== "function" || typeof renderer.selectDocumentsForPublicationTarget !== "function" || typeof projection.createDocsPublicationProjectionV1 !== "function") throw new Error("docs_renderer_exports_invalid")'
 bun --cwd core lint:types

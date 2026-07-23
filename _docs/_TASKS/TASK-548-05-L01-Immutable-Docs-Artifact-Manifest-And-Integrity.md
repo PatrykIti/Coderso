@@ -84,8 +84,11 @@ L01 first builds verified capsule candidates under exactly:
 release-metadata/<productVersion>/publication-capsule/
   docs-portal-manifest.json
   latest/**
+  runtime/404.html
+  runtime/_headers
   routing/redirects.json
   routing/headers.json
+  routing/client-assets.json
   global/sitemap.xml
   global/robots.txt
   global/site-index.json
@@ -93,9 +96,14 @@ release-metadata/<productVersion>/publication-capsule/
   receipts/assets.json
 ```
 
-`latest/**`, routing and global files are byte-identical copies of the
-TASK-548-04-L02 portal outputs. `global/site-index.json` is the immutable
-single-release candidate, not cumulative history. Search/asset receipts are the
+`latest/**`, runtime, routing and global files are byte-identical copies of the
+TASK-548-04-L02 portal outputs. `runtime/404.html`, `runtime/_headers`, and
+`routing/client-assets.json` come only from portal `404.html`, `_headers`, and
+`deployment/client-assets.json`; each must join its exact portal-manifest file
+record by path/bytes/hash. `global/site-index.json` is the immutable
+single-release candidate, not cumulative history; its three deployment hashes
+must equal those same runtime/client portal-manifest records before capsule
+closure. Search/asset receipts are the
 strict L01-owned canonical sorted projections of the detached portal manifest
 records defined below, not a rebuilt route graph.
 The archive payload also
@@ -373,6 +381,11 @@ export async function buildDocsReleaseArtifact(
       portal,
       version: config.releaseIdentity.productVersion,
       publicationReceipts,
+      exactRuntimeCopies: selectManifestBoundRuntimeCopiesV1(portal, files, {
+        notFound: "404.html",
+        cloudflareHeaders: "_headers",
+        clientAssets: "deployment/client-assets.json",
+      }),
     });
   assertReleaseManifestCandidateAbsent(capsuleCandidates);
   const payloadFiles = inventoryArchivePayload(files, capsuleCandidates);
@@ -466,7 +479,8 @@ only a resolved task-owned temporary directory.
   traversal, case collision, extra/missing file, source map, and size limits fail;
 - portal/release origin or base-path mismatch, portal-manifest self-record/second
   exclusion, capsule path/name/candidate mutation, regenerated alias, and
-  search/asset receipt drift fail;
+  search/asset receipt drift fail; 404, `_headers`, or client-assets copy
+  path/bytes/hash drift and any regenerated runtime/deployment byte fail;
 - search/assets publication-receipt fixtures pin exact discriminators, key
   order, bounds, canonical record order and `recordsSha256`; reject unknown
   keys, missing/duplicate/unsorted records, bad locale or owner tuple,

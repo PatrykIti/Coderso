@@ -109,12 +109,13 @@ state; no downstream gate recreates the report.
   structured capture result without writing credentials or arbitrary code into
   the manifest. The exact capture surface is
   `docs:visual:capture --scenario <id>` and the exact review surface is
-  `docs:visual:promote --scenario <id> --raw-reviewed-sha256 <64-lowercase-hex> --reviewed-by <bounded-id> --confirm-alt-caption`.
+  `docs:visual:promote --scenario <id> --run-id <bounded-run-id> --raw-reviewed-sha256 <64-lowercase-hex> --reviewed-by <bounded-id> --confirm-alt-caption`.
   The public capture CLI accepts no `--run-id`: it internally obtains one from
   `createDocsVisualRunIdV1({ scope: "cli" })`, passes it unchanged into the
   validation-only lower capture API, and emits bounded JSON containing the
-  generated `runId`. CI and migration call the generator directly with their
-  own scopes.
+  generated `runId`. Promotion requires that exact returned ID and claims only
+  its run; a missing, malformed, unknown or different ID fails closed. CI and
+  migration call the generator directly with their own scopes.
 - At least five distinct real-flow pilot scenarios prove desktop and narrow
   viewport, light and dark admin, route navigation, an interactive visible
   effect and a restricted-permission state; each finishes with zero console/page
@@ -134,9 +135,11 @@ state; no downstream gate recreates the report.
 ## Testing Requirements
 
 - `bunx vitest run --config vitest.config.ts tests/vitest/documentation/docs-visual*.test.ts`
-- `set -a && source .env && set +a && bun test tests/unit/documentation/docsVisualCapture.test.ts`
+- `set -a && source .env && set +a && bun test tests/unit/documentation/docsVisualCapture.test.ts tests/unit/documentation/docsVisualPromotion.test.ts`
 - `bun scripts/docs/check-visuals.ts --all`
-- exact capture/promote CLI contract tests plus task-scoped
+- exact capture/promote CLI contract tests, including capture-side `--run-id`
+  rejection, promotion-side returned-ID requirement and duplicate eligible-run
+  selection, plus task-scoped
   `playwright-cli -s=docs548-...` pilot of at least five distinct
   scenarios, with restart/health checks and zero console errors
 - `bun --cwd core lint`

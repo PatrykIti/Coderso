@@ -64,11 +64,23 @@ validated output root (default only when exactly
   TASK-548-05 into capsule `latest/**`, `routing/{redirects,headers}.json` and
   `global/{sitemap.xml,robots.txt,site-index.json}` agree byte-for-byte with the
   portal manifest records;
+- root `404.html` is one typed, base-safe, `noindex,follow` page with exact
+  route-graph alternatives, no reflected request path, four valid islands and
+  the same L02-owned client tags as canonical/latest pages; local preview maps
+  an unmatched base-path request to these exact bytes with HTTP 404;
+- `deployment/client-assets.json` passes the exact L02 owner normalizer and
+  canonical-byte check; entry/styles/files close the complete Vite graph and
+  every path/href/byte/hash joins the detached manifest and HTML tags;
 - canonical routes, locale/version selectors, TOC/section anchors, related
   links, latest redirects, sitemap, robots, hreflang, OG, and JSON-LD agree;
 - `deployment/headers.json` yields CSP without `unsafe-inline`/`unsafe-eval`,
   frame denial, nosniff, strict referrer/permissions policies, and immutable
   hashed-asset caching;
+- root `_headers` is canonical LF output, joins its manifest file record,
+  stays within Cloudflare Pages limits and is semantically identical to
+  `deployment/headers.json` for exact/latest/404/client-asset paths; each
+  canonical route alone gets its exact JSON-LD hashes after detaching inherited
+  CSP, while alias/404 contain no JSON-LD and inherit `script-src 'self'`;
 - no source map, absolute filesystem path, `_docs`, task/changelog/audit/smoke
   text, localhost, private IP, credential-bearing URL, secret-like key/value,
   PII fixture, raw source Markdown, or unapproved external origin;
@@ -169,7 +181,11 @@ and use named session `wf548portal`. Run at least these distinct real flows:
 
 1. **Wide light search/read:** search a known screen, open a result, assert URL,
    H1, highlighted result text, TOC target geometry, screenshot/alt/caption, and
-   no horizontal overflow.
+   no horizontal overflow. Before navigation install console/page-error
+   collectors, then require exactly the four declared sibling hydration roots,
+   functional interaction in each root, zero DOM replacement of the static
+   article/navigation/TOC, and zero
+   `docs_portal_hydration_recoverable_error` diagnostics.
 2. **Keyboard-only navigation:** skip to content, operate search/results/TOC/
    version controls, open/close mobile or desktop navigation as applicable,
    assert focus order/restore and visible focus ring.
@@ -191,6 +207,11 @@ and use named session `wf548portal`. Run at least these distinct real flows:
    make the cumulative site index unavailable, block all non-preview origins,
    repeat article/search navigation, assert the selector remains current-only,
    and assert zero provider/CMS/analytics/external image calls.
+
+The route flows also request one deterministic missing path under the configured
+base and require status 404, body hash equal to root `404.html`, visible real
+alternatives, noindex, functioning four-island UI, base-safe client requests,
+and no redirect or SPA-200 fallback.
 
 All scenarios require zero console/page errors and zero unexpected network
 requests. The targeted L03 run captures one screenshot for every scenario into
@@ -296,13 +317,21 @@ unexpected request, absent screenshot, or skipped scenario is a failed gate.
   broken anchor/link/hreflang/redirect, bad CSP, unsafe HTML/URL, secret/internal
   marker, source map, remote media, missing alt, and a11y landmark/heading
   defects, manifest self-record and second exclusion each fail with a stable code;
+- 404 reflected-path/fake-alternative/canonical/status/body/tag/payload drift,
+  client-assets entry/style/file/href/closure drift, and `_headers` syntax/base/
+  limit/JSON-parity/effective-policy drift each fail with a stable code;
 - site-index unknown keys/order/version/route drift and localized visual
   owner/locale/section/global-id/file-hash drift each fail with a stable code;
 - validator never executes hostile fixture content;
 - receipt unknown fields, wrong discriminator/identity/count/root hash,
   self-hash field attempts, and a pass receipt after any failed check reject;
 - every Playwright scenario reports computed/geometry/DOM visible effects and
-  evidence path, not just selector presence.
+  evidence path, not just selector presence;
+- built-page hydration installs collectors before navigation, exercises all
+  four roots, and fails on any default-observer
+  `docs_portal_hydration_recoverable_error`, React mismatch/recovery console
+  output, page error, root-count drift, or static article/navigation/TOC DOM
+  replacement;
 - targeted output is confined to `.tmp`; static ownership tests reject writes
   to canonical evidence, manifest/checkpoint, or the legacy smoke prefix;
 - final handoff fixtures pin all seven targeted IDs and `.tmp` paths, then prove
@@ -377,12 +406,15 @@ targeted scenario/result remains mandatory.
 - At least seven distinct browser flows pass with visible-effect assertions,
   zero console errors, zero unexpected requests, and human-reviewable
   screenshots.
+- The built page mounts exactly four sibling islands from identical server/
+  client component-model-prefix inputs and produces zero recoverable hydration
+  diagnostics, mismatch recovery, or static article/navigation/TOC replacement.
 - TASK-548-07-L01 writes only the canonical final eight screenshots and
   `manifest.json`; TASK-545 `createResumeCheckpoint` alone writes the phase-1
   checkpoint. TASK-548-04-L03 keeps mandatory targeted evidence temporary and
   cannot collide with final acceptance filenames.
 - Wide/narrow, light/dark, keyboard/focus, reduced-motion, deep-link/latest,
-  locale truth, and offline/static behavior are all demonstrated.
+  typed 404, locale truth, and offline/static behavior are all demonstrated.
 - Cumulative online version navigation and current-only offline fallback are
   visibly proven without cross-document substitution.
 - No validation failure is suppressed, auto-baselined, or repaired in output;

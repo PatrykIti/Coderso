@@ -4,7 +4,7 @@
 **Parent Task:** TASK-548
 **Parent Subtask:** TASK-548-05
 **Priority:** High
-**Category:** Release Automation / GitHub Pages / Rollback
+**Category:** Release Automation / Cloudflare Pages / Rollback
 **Estimated Effort:** Large
 **Dependencies:** TASK-548-05-L01 and TASK-548-02-L03; TASK-545 must be `✅ Done` and TASK-547 must be fully terminal before dispatch
 **Status:** ⏳ To Do
@@ -15,7 +15,7 @@
 ## Overview
 
 Extend the existing semantic-release workflow with a tag-pinned documentation
-artifact and safe GitHub Pages publication. Validate the
+artifact and safe Cloudflare Pages publication orchestrated by GitHub Actions. Validate the
 TASK-548-02-L03-owned Docker compatibility contract without editing it and
 preserve its GitHub App/tag/SHA pattern. Retain every exact version and immutable
 publication capsule, promote mutable paths only by copying verified capsule bytes
@@ -91,7 +91,7 @@ TASK-548-02-L03; L02 never patches or claims either owner file.
    rename or clobber fails. After either upload path, download both final assets
    again, independently verify the bounded tar/embedded manifest and canonical
    sibling receipt, and require exact equality with the local verified result
-   before Pages staging. Thus failure after the first upload is recoverable:
+   before retained-tree staging. Thus failure after the first upload is recoverable:
    retry enters one-asset state, proves the present asset, uploads only the
    missing sibling, then verifies the final downloaded pair.
    `VerifiedDocsReleaseArtifact` is imported as the exact L01 verifier-result
@@ -102,7 +102,8 @@ TASK-548-02-L03; L02 never patches or claims either owner file.
    and the complete
    `/release-metadata/<version>/publication-capsule/` from L01. The capsule paths
    and contents are exactly `docs-release-manifest-v1.json`,
-   `docs-portal-manifest.json`, `latest/**`, `routing/{redirects,headers}.json`,
+   `docs-portal-manifest.json`, `latest/**`, `runtime/{404.html,_headers}`,
+   `routing/{redirects,headers,client-assets}.json`,
    `global/{sitemap.xml,robots.txt,site-index.json}`, and
    `receipts/{search.json,assets.json}`. If any exact path exists, require
    byte/hash identity. Push this exact-only commit first with a lease check.
@@ -110,19 +111,35 @@ TASK-548-02-L03; L02 never patches or claims either owner file.
    receipts, and the current single-release site-index candidate. Strictly
    merge that candidate with the verified retained cumulative
    `/global/site-index.json`, then copy capsule `latest/**` to `/latest/**`,
-   routing files to `/deployment/`, sitemap/robots candidates to root, and the
+   `runtime/{404.html,_headers}` to root, routing files to `/deployment/`,
+   sitemap/robots candidates to root, and the
    canonical cumulative index bytes to both `/global/site-index.json` and
    `/site-index.json`; push a second commit. Never invoke a portal builder,
    route resolver, old-page renderer, or candidate generator. The only allowed
    serialization is L02's strict cumulative-index serializer defined below.
-8. Upload the complete retained static tree to GitHub Pages and deploy through
-   the protected `github-pages` environment. No deploy uses an unverified local
-   candidate.
+8. Materialize a no-follow task-scoped Cloudflare upload tree from that exact
+   retained commit. For base `/`, public bytes stay at root; otherwise public
+   bytes are mounted below the normalized base prefix while the verified
+   `404.html` and Cloudflare control `_headers` remain at upload root. Run the
+   `cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0`
+   (`v4.0.0`) with exact `wranglerVersion: "4.114.0"`; its `command` input is
+   `pages deploy <exact-root> --project-name
+   <exact-project> --branch production --commit-hash <mutable-commit>` through
+   protected `docs-production`, yielding the effective CLI
+   `wrangler pages deploy`. Re-read the resulting deployment identity; no
+   deploy uses an unverified candidate or rebuilds any byte. Bounded health
+   reads use the configured production HTTPS origin/base after proving the
+   returned account/project/production-branch/deployment ID, never a preview URL.
 
 Use one repository-scoped concurrency group with `cancel-in-progress: false`.
-Job permissions are explicit: build is `contents: read`; release/branch writes
-use scoped `contents: write`; Pages deployment alone gets `pages: write` and
-`id-token: write`. All other permissions are `none`.
+Job permissions are explicit: build/deploy is `contents: read`; release/branch
+writes alone use scoped `contents: write`; GitHub `pages: write` and
+`id-token: write` are absent. The environment-scoped
+`CLOUDFLARE_API_TOKEN` is passed only as the masked Wrangler-action secret
+input, is never a shell argument/output/artifact, and is restricted to
+Cloudflare Pages Edit on the exact account. `CLOUDFLARE_ACCOUNT_ID` and
+`DOCS_CLOUDFLARE_PAGES_PROJECT` are strict protected-environment variables,
+not caller input. All other permissions are `none`.
 
 ## Cumulative Site-Index Merge Contract
 
@@ -172,15 +189,18 @@ For publish, L02 verifies the candidate bytes against the retained capsule,
 portal manifest file record, `siteIndexCandidateSha256`, and both immutable
 manifests. It maps the candidate's current entry into the exact L01-owned
 published-version record, including `sourceHash`, `portalManifestSha256`,
-`releaseManifestSha256`, `siteIndexCandidateSha256`, and canonical base-free
-routes. It preserves every retained version record byte-for-byte. An existing
+`releaseManifestSha256`, `siteIndexCandidateSha256`, `notFoundSha256`,
+`cloudflareHeadersSha256`, `clientAssetsManifestSha256`, and canonical
+base-free routes. Each deployment hash joins the corresponding portal-manifest
+record and capsule runtime/routing bytes. It preserves every retained version
+record byte-for-byte. An existing
 same-version record is accepted only when the complete normalized record is
 identical; any conflict is `docs_site_index_no_clobber` and no output is
 written. New records join the list in descending SemVer order and
 `latestVersion` becomes the verified current version.
 
 For rollback, no candidate is added: the exact selected version must already
-exist and its three hashes/routes must agree with the selected retained
+exist and all identity/deployment hashes plus routes must agree with the selected retained
 capsule, manifests, and L01 search/assets receipts. The merge changes only
 `latestVersion`; it never removes, rewrites, reorders, or regenerates a retained
 version record or old portal page. Both modes canonical-serialize once, compute
@@ -189,6 +209,12 @@ write the same bytes to `/global/site-index.json` and `/site-index.json`, reread
 and hash both, then lease-push. The portal selector fetches the latter
 same-origin cumulative file; a capsule's `global/site-index.json` always
 remains its immutable single-release candidate.
+
+Publish and rollback copy the selected capsule's exact `runtime/404.html` and
+`runtime/_headers` to root and `routing/client-assets.json` to
+`/deployment/client-assets.json` in the same lease-guarded commit as latest/
+index candidates. Missing or hash-drifted bytes abort before mutation; policy,
+404 HTML and client inventory are never reconstructed.
 
 ## Rollback Contract
 
@@ -212,7 +238,7 @@ The `workflow_dispatch` YAML exposes exactly those two typed string inputs for
 the rollback branch. A validated rollback skips semantic-release and Docker,
 fetches the retained branch, verifies the selected exact version, capsule and
 all shared hashes and both L01 receipt schemas. It copies only retained
-latest/routing/sitemap/robots candidate bytes, applies the strict retained-index
+latest/runtime/routing/sitemap/robots candidate bytes, applies the strict retained-index
 rollback merge above to change `latestVersion`, and writes the cumulative bytes
 to both site-index destinations. It pushes with the same concurrency/lease
 guard and deploys through the same environment.
@@ -222,7 +248,7 @@ a candidate. It records selected version, actor, run, prior latest version, and
 both immutable manifest digests in the commit/audit summary without logging
 tokens. Invalid/missing/tampered versions fail before branch mutation.
 
-## Retained-Pages Validation Handoff
+## Retained-Tree Validation Handoff
 
 L02 also owns one bounded, operational-only handoff used by TASK-548-07 scenario
 6. It is not a tracked fixture, workflow artifact, closure sidecar, or canonical
@@ -437,6 +463,8 @@ cumulative index, retained portal manifest, and L01 receipts, verify:
   version entry;
 - exact article status/body hash and versioned canonical URL;
 - matching latest article status plus canonical/noindex/version behavior;
+- deterministic missing-path status 404, exact root-404 body hash, noindex and
+  no redirect/SPA fallback;
 - both retained manifests at
   `/release-metadata/<version>/publication-capsule/`;
 - both L01-owned search/assets publication receipts and the selected locale's
@@ -444,6 +472,10 @@ cumulative index, retained portal manifest, and L01 receipts, verify:
   record and detached portal-manifest file record;
 - one content-addressed visual against its receipt/hash and exact
   `(docId, locale, sectionId)` ownership; and
+- the capsule `_headers` and client-assets inventory against their cumulative-
+  version/portal-manifest hashes, one referenced JS or CSS byte, and effective
+  CSP, X-Frame-Options, nosniff, referrer, permissions and cache headers on
+  exact/latest/404/client-asset responses; and
 - no cross-origin redirect, credentialed request, cookie, write, or analytics
   call.
 
@@ -457,19 +489,23 @@ L02 owns this exact recursively reject-unknown evidence contract:
 type DocsPostDeployAttemptResultV1 = {
   attempt: number;
   target:
-    | "exact"
-    | "latest"
-    | "site-index"
-    | "release-manifest"
-    | "portal-manifest"
-    | "search-receipt"
-    | "assets-receipt"
-    | "search-index"
-    | "asset";
+    | "exact" | "latest" | "not-found" | "site-index"
+    | "release-manifest" | "portal-manifest"
+    | "search-receipt" | "assets-receipt" | "search-index" | "asset"
+    | "client-assets-manifest" | "client-asset"
+    | "cloudflare-headers";
   path: string;
   httpStatus: number;
   bytes: number;
   bodySha256: string;
+  responseHeaders: {
+    contentSecurityPolicy: string;
+    xFrameOptions: "DENY";
+    xContentTypeOptions: "nosniff";
+    referrerPolicy: "no-referrer";
+    permissionsPolicy: string;
+    cacheControl: string;
+  };
   passed: true;
 };
 
@@ -497,35 +533,32 @@ type DocsPostDeployHealthReceiptV1 = {
   attemptLimit: 5;
   results: DocsPostDeployAttemptResultV1[];
   selectedRoute: {
-    docId: string;
-    locale: string;
-    slug: string;
-    exactPath: string;
-    latestPath: string;
+    docId: string; locale: string; slug: string;
+    exactPath: string; latestPath: string;
   };
   exact: DocsPostDeployRouteFactV1 & { noindex: false };
   latest: DocsPostDeployRouteFactV1 & { noindex: true };
+  notFound: {
+    path: string; httpStatus: 404; bodySha256: string; noindex: true;
+  };
   releaseManifestSha256: string;
   portalManifestSha256: string;
   siteIndexSha256: string;
   searchReceiptSha256: string;
   assetsReceiptSha256: string;
+  cloudflareHeadersSha256: string;
+  clientAssetsManifestSha256: string;
   search: {
-    locale: string;
-    path: string;
-    httpStatus: 200;
-    bytes: number;
-    sha256: string;
+    locale: string; path: string; httpStatus: 200;
+    bytes: number; sha256: string;
   };
   asset: {
-    visualId: string;
-    docId: string;
-    locale: string;
-    sectionId: string;
-    path: string;
-    httpStatus: 200;
-    bytes: number;
-    sha256: string;
+    visualId: string; docId: string; locale: string; sectionId: string;
+    path: string; httpStatus: 200; bytes: number; sha256: string;
+  };
+  clientAsset: {
+    kind: "entry-js" | "css"; path: string; httpStatus: 200;
+    bytes: number; sha256: string;
   };
   checkedAt: string;
   status: "pass";
@@ -534,8 +567,9 @@ type DocsPostDeployHealthReceiptV1 = {
 
 The normalizer binds `productVersion`, `gitTag`, `gitSha`, workflow run/attempt,
 deployment ID, origin/base path, both manifest hashes, cumulative-index hash,
-both L01 receipt hashes, selected route, selected search-index fact, and
-localized visual asset to the successful release inputs and retained capsule.
+both L01 receipt hashes, all three cumulative deployment hashes, selected
+route/search/client-asset/404 facts, effective headers, and localized visual
+asset to the successful release inputs and retained capsule.
 Before network selection, L02 parses the receipts only with
 `normalizeDocsSearchPublicationReceiptV1()` and
 `normalizeDocsAssetsPublicationReceiptV1()`. It deterministically selects a
@@ -557,9 +591,15 @@ closes every required target. It contains exactly one successful
 `target: "search-index"` result whose path, `httpStatus`, bytes, and
 `bodySha256` equal the strict `search` fact byte-for-byte; a missing or duplicate
 success, wrong locale/path/status/bytes/hash, or result that does not join the
-selected search receipt and portal-manifest record rejects. Exact must be
-indexable and latest must be `noindex`; both expose the expected versioned
-canonical URL and version fact. Hashes are lowercase SHA-256, locales and paths
+selected search receipt and portal-manifest record rejects. Exact is indexable;
+latest and 404 are `noindex`, and both articles expose the expected canonical
+version. The 404 response is status 404 with the exact capsule body hash, no
+redirect and no SPA 200. `cloudflare-headers` reads the served capsule copy,
+not root control metadata; it and the client manifest match the cumulative
+version/portal records. A selected JS/CSS record alone identifies the fetched
+client byte. Exact/latest/404/client-asset effective security headers equal the
+normalized `_headers` policy; cache is immutable only for exact/client bytes
+and revalidating for latest/404. Hashes are lowercase SHA-256, locales and paths
 are canonical, paths are normalized confined public paths, counts/bytes are
 bounded, and `checkedAt` is bounded canonical ISO-8601. `gitTag` must byte-equal
 the same plain `productVersion`; `v`-prefixed or divergent health identity
@@ -596,13 +636,14 @@ diagnostics are separate bounded non-pass output.
 ## Security Contract
 
 - **Endpoint visibility:** public read-only static files; no API or write route.
-- **Auth/RBAC:** release mutation is GitHub workflow-only with App token and
-  protected Pages environment; readers require no account.
+- **Auth/RBAC:** release mutation is GitHub workflow-only with App token;
+  deploy uses protected `docs-production` and scoped Cloudflare token; readers require no account.
 - **CSRF/rate limit:** not applicable. Branch protection, environment approval,
   concurrency, and lease checks guard release writes.
 - **Validation:** strict dispatch inputs; tag/SHA/SemVer/base URL/artifact hash
   closure; confined branch paths; reject-unknown retained manifests, cumulative
-  site index, single-release candidate, both L01 publication receipts, and the
+  site index, single-release candidate, runtime 404/`_headers`, client manifest,
+  both L01 publication receipts, and the
   post-deploy receipt including exact selected-search and `search-index` result
   closure.
 - **Anti-abuse:** no public write, nonce/HMAC/CAPTCHA. Bound downloads, retained
@@ -643,7 +684,7 @@ export async function reconcileDocsReleaseAssetsNoClobberV1(input: {
   );
 }
 
-export async function stagePagesPublication(input: PagesPublicationInput) {
+export async function stageDocsPublication(input: DocsPublicationInput) {
   const retained = await openRetainedTreeAtObservedSha(input.branchRoot);
   const artifact = await verifyDocsReleaseArtifact({
     archivePath: input.archivePath,
@@ -712,8 +753,17 @@ try {
   await retainedPagesValidation.dispose();
 }
 
+const uploadRoot = await stageVerifiedCloudflareUploadTreeV1({
+  retainedCommit, publicBasePath, taskOwnedTempRoot,
+});
+const deployment = await wranglerPagesDeployV1(uploadRoot, {
+  accountId: requireProtectedVariable("CLOUDFLARE_ACCOUNT_ID"),
+  projectName: requireProtectedVariable("DOCS_CLOUDFLARE_PAGES_PROJECT"),
+  branch: "production", commitHash: retainedCommit,
+});
+
 const retainedHealthInput = await loadVerifiedRetainedPublicationForHealth({
-  deploymentUrl,
+  deploymentUrl: requireConfiguredProductionOrigin(deployment, publicOrigin),
   version,
 });
 const selected = selectDeterministicDocsPostDeployTupleV1({
@@ -725,6 +775,10 @@ const selected = selectDeterministicDocsPostDeployTupleV1({
   assetsReceipt: normalizeDocsAssetsPublicationReceiptV1(
     retainedHealthInput.assetsReceipt
   ),
+  clientAssets: normalizeDocsPortalClientAssetsManifestV1(
+    retainedHealthInput.clientAssets
+  ),
+  cloudflareHeaders: retainedHealthInput.cloudflareHeaders,
 });
 assertSelectedSearchJoinsRouteReceiptAndPortalManifestV1(selected);
 const health = await verifyPublishedDocsReadOnly({
@@ -736,7 +790,8 @@ const health = await verifyPublishedDocsReadOnly({
   workflowRunAttempt,
   deploymentId,
   selected,
-  requiredSearchTarget: "search-index",
+  requiredTargets: ["search-index", "not-found", "client-assets-manifest",
+    "client-asset", "cloudflare-headers"],
   maxAttempts: 5,
 });
 await writeAndUploadDocsPostDeployHealthReceiptV1(health);
@@ -745,7 +800,7 @@ await writeAndUploadDocsPostDeployHealthReceiptV1(health);
 **Data flow:** semantic metadata/dispatch → pinned checkout or retained branch →
 artifact verification → exact two-asset release no-clobber → exact/capsule
 branch commit/re-read → strict cumulative site-index merge plus retained
-candidate byte-copy commit → protected Pages deploy → receipt-backed bounded
+candidate byte-copy commit → protected Cloudflare Pages deploy → receipt-backed bounded
 same-origin availability verification → audit summary. The separately invoked
 validation helper drives the same publish/rollback functions only against one
 scoped local bare repository, seals an in-memory publish/rollback/restore
@@ -755,7 +810,7 @@ handoff, and always disposes it.
 artifact-receipt conflict, invalid rollback key/type/confirmation, remote branch
 race, exact/capsule path mismatch, retained-manifest/receipt/hash failure,
 malformed or conflicting cumulative index, localized visual-owner mismatch,
-attempted candidate regeneration, Pages deployment or post-deploy health
+attempted candidate regeneration, Cloudflare deployment or post-deploy health
 failure is blocking. Always remove only owned worktrees and revoke/expire step
 credentials; never retry via force or clobber.
 
@@ -764,7 +819,10 @@ credentials; never retry via force or clobber.
 - workflow contract pins every action, keeps current Docker release conditions,
   validates the TASK-548-02-L03-owned manifest-copy-before-frozen-install and
   core renderer dependency without writing either owner file, and asserts exact
-  job permissions/environment/concurrency plus plain `git_tag == version`,
+  job permissions/environment/concurrency, no GitHub Pages/OIDC permission,
+  protected `docs-production`, the exact Wrangler-action SHA/`4.114.0` CLI and
+  literal `wrangler pages deploy` account/project/branch/commit mapping; token
+  scope/masking/non-logging plus plain `git_tag == version`,
   tag-target/checkout-HEAD checks and all four release build-environment
   mappings including target-commit epoch; a clean-tag fixture with the tracked
   bundle and no `.tmp` tree/report passes `docs:check`, while transaction debris,
@@ -783,14 +841,16 @@ credentials; never retry via force or clobber.
   partial, conflicting, renamed, replacement, or clobber cases fail; a
   standalone manifest is never accepted, and every final tar is reopened to
   verify its embedded manifest and exact local `VerifiedDocsReleaseArtifact`;
-- latest is never copied before a re-read of the remote exact tree and full
-  capsule; no publication/rollback path imports a portal builder;
+- latest/runtime/client inventory are never copied before a re-read of the
+  remote exact tree/full capsule; no publication/rollback imports a portal builder;
 - cumulative-index fixtures pin the exact imported reject-unknown normalizer,
   discriminator/key sets, descending SemVer and route order, first-release
   absence rule, canonical serialization/hash, two-version merge, idempotent
   equality, same-version no-clobber conflict, root/global byte parity, retained
-  record preservation, branch race, and no old-page rebuild;
-- two retained versions coexist byte-identically; sitemap and redirects contain
+  record preservation, exact 404/_headers/client-manifest hashes, branch race,
+  and no old-page rebuild;
+- two retained versions coexist byte-identically; runtime `_headers`/404,
+  client inventory, sitemap and redirects contain
   only verified routes; rollback changes only `latestVersion` plus approved
   mutable copies, preserves all index entries, rejects absent/tampered capsules,
   records audit identity, and does not run semantic-release/Docker;
@@ -805,7 +865,7 @@ credentials; never retry via force or clobber.
   handoff hash, while post-use requires the exact prior `handoffSha256`.
   Missing or wrong phase/hash, duplicate, reordered, unknown,
   wrong-ref, wrong-parent/commit/tree/hash/version/receipt/domain/path/mode/
-  length, symlink, network, real-Pages-ref, escaped-root or cleanup drift
+  length, symlink, network, real-production-ref, escaped-root or cleanup drift
   rejects;
 - producer-consumer fixtures import L01's exact search/assets receipt
   normalizers and canonical bytes. Current, retained, rollback, and post-deploy
@@ -818,18 +878,19 @@ credentials; never retry via force or clobber.
   `ROLLBACK <same-plain-version>` and reject missing/extra/non-string/blank/
   whitespace, `v` prefix, case drift, normalized-only value, mismatched version
   and confirmation before any privileged side effect;
-- availability covers success, transient recovery, five-attempt exhaustion,
-  hash/canonical/version mismatch, cross-origin redirect, oversized response,
-  and exactly one successful `search-index` fetch bound byte-for-byte to the
-  selected search record and portal-manifest record;
+- availability covers success/recovery/exhaustion, hash/canonical/version
+  mismatch, redirects/oversize, exact 404-not-200 body, client JS/CSS bytes,
+  capsule `_headers`, and effective exact/latest/404/asset CSP/frame/nosniff/
+  referrer/permissions/cache plus one receipt-bound `search-index` fetch;
 - post-deploy receipt tests cover strict recursive unknown-key rejection,
   exact workflow/deployment/release identity including plain
   `gitTag === productVersion`, rejection of `v` prefix, both manifest hashes,
-  cumulative index and receipt hashes, exact indexability, latest noindex,
-  the exact `search` field and complete target-literal inventory including
-  `search-index`, incomplete or duplicate target results, and missing/duplicate/
+  cumulative index/receipt/deployment hashes, exact indexability, latest/404 noindex,
+  exact `search` plus complete target inventory including `search-index`,
+  404, client manifest/asset and `_headers`; incomplete/duplicate targets and missing/duplicate/
   wrong-locale/path/status/bytes/hash selected-search facts or result joins;
-  wrong route status/body/canonical/version or localized visual ownership facts,
+  wrong route/404/client-asset status/body/cache/security-header/canonical/
+  version or localized visual ownership facts,
   atomic cleanup, exact artifact naming and 90-day retention; the uploaded
   artifact inventory rejects missing, duplicate, nested, extra, directory,
   symlink, device, or renamed members; failure can never emit a pass receipt;
@@ -842,7 +903,7 @@ credentials; never retry via force or clobber.
 - [ ] Add exact two-asset release upload, no-clobber exact/capsule staging, and
   retained-byte-copy promotion.
 - [ ] Add strict cumulative site-index publish/rollback merge and hash gates.
-- [ ] Add protected Pages deployment, bounded health check and capsule rollback.
+- [ ] Add protected Cloudflare deployment, bounded health check and capsule rollback.
 - [ ] Add workflow/publication race, integrity, permission, and cleanup tests.
 
 ## Testing Requirements
@@ -903,7 +964,7 @@ git diff --check
 
 Exercise publication, rollback, restore and the exact operational validation
 handoff against a disposable local bare remote plus a dry-run workflow fixture;
-never mutate the real Pages branch during tests. The
+never mutate the real retained branch or Cloudflare project during tests. The
 Docker commands validate only the already-landed TASK-548-02-L03 owner
 contract; any failure returns to that owner and is not patched by L02. Every
 repeat allocates a validated task-scoped `mktemp -d`, captures the new image

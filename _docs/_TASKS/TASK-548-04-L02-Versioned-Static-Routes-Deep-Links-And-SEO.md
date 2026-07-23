@@ -17,7 +17,8 @@
 Turn the L01 portal shell into a deterministic, base-path-safe static site for
 all public bundle routes. Generate canonical versioned documents, derived
 `latest` aliases, search indexes, SEO/structured-data artifacts, sitemap,
-robots, content hashes, and host-neutral header/redirect metadata.
+robots, content hashes, host-neutral header/redirect metadata, and the exact
+top-level Cloudflare Pages `_headers` plus `404.html` deployment bytes.
 
 Hosting/upload/release integrity is TASK-548-05. This leaf produces immutable
 bytes and prebuilt mutable candidates that release automation can verify and
@@ -108,6 +109,16 @@ bundle, document, target, selection or projection assertion. The projection
 subpath is build-only: Vite/client static guards reject it, full document
 records and `DocsDocumentRenderer` from every hydration entry.
 
+`emitVerifiedPortalVisualAssetsV1()` is build-only and runs once over the
+already normalized full bundle plus branded projection. Without another schema
+normalizer it joins each selected opaque `outputKey` to its full-source
+`assetPath`, opens bounded PNG bytes no-follow, verifies ownership/hash, writes
+one content-addressed staged asset and returns only a deeply frozen per-document
+`DocsLocalVisualAssetV1[]` (`outputKey`, same-origin `href`, `mediaType`,
+`sha256`). Each key is exactly
+`docs-png-sha256-<lowercase 64-hex sha256>`. Static shell/render calls receive that safe array as
+`emittedVisualAssets`; source/output paths and bytes never cross the boundary.
+
 Locked output root is `packages/docs-portal/dist`.
 
 The build entry accepts only strict non-artifact configuration, never artifact
@@ -159,8 +170,16 @@ workspace can be executed. The targeted gate must:
    selector exports, parse the packaged
    `/app/core/generated/docs/coderso-docs-v2.json` as
    `coderso.docs-corpus@v2`, and prove the Admin/site build outputs exist; and
-4. verify Admin `coderso.docs-help-assets@v1` source/hash/file closure against
-   the packaged bundle and emitted PNGs; then inspect for forbidden `.tmp`,
+4. normalize Admin `coderso.docs-help-assets@v1` through the exact 03-L02
+   owner, require only byte/path-free `{ outputKey, href, mediaType, sha256 }`
+   records, and verify source/hash/file closure against emitted PNGs using
+   build-only `core/admin/ui/help/helpBuildAssetVerification.ts` owner and call
+   `resolveEmbeddedHelpBuildAssetFileV1({ clientRoot, outputKey, href })`, which
+   returns only `Readonly<{ bytes: Uint8Array; sha256: string }>` after a
+   bounded `O_NOFOLLOW` open, pre/post-read `fstat` identity check and same-
+   handle read. It rejects non-same-origin/non-asset hrefs, traversal, symlinks,
+   output-key/href drift and any mapping outside the exact client root; no path
+   is returned, reopened, serialized or logged. Then inspect for forbidden `.tmp`,
    promotion journal,
    member-temp, staged, or backup artifacts.
 
@@ -187,7 +206,8 @@ It then executes this order exactly:
    or any server-shell/renderer/projection module in the client graph;
 3. read and hash every closed JS/CSS/asset byte, copy each exactly once into
    final staging, and emit canonical
-   `deployment/client-assets.json` sorted by public path;
+   `deployment/client-assets.json` sorted by `manifestPath`; L02 is the sole
+   owner of its strict schema, normalizer, serializer, and inventory builder;
 4. inject every required sorted stylesheet and the one module entry into every
    canonical, latest and typed-404 HTML page using only
    `buildDocsPortalClientAssetHrefV1(publicBasePath, manifestPath)`;
@@ -213,17 +233,24 @@ including Vite JS/CSS/assets, client receipt and injected tags, byte-for-byte.
 ```ts
 type DocsPortalClientAssetRecordV1 = {
   kind: "entry-js" | "chunk-js" | "css" | "asset";
-  manifestPath: string;
-  publicHref: string;
-  bytes: number;
-  sha256: string;
+  manifestPath: string; publicHref: string; bytes: number; sha256: string;
 };
 type DocsPortalClientAssetsManifestV1 = {
   schema: "coderso.docs-portal-client-assets@v1";
-  entry: string;
-  styles: string[];
-  files: DocsPortalClientAssetRecordV1[];
+  entry: string; styles: string[]; files: DocsPortalClientAssetRecordV1[];
 };
+type DocsPortalClientAssetTagsV1 = {
+  moduleScriptHref: string; stylesheetHrefs: string[];
+};
+normalizeDocsPortalClientAssetsManifestV1(
+  value: unknown
+): DocsPortalClientAssetsManifestV1;
+serializeDocsPortalClientAssetsManifestV1(
+  value: DocsPortalClientAssetsManifestV1
+): Uint8Array;
+buildDocsPortalClientAssetTagsV1(
+  value: DocsPortalClientAssetsManifestV1
+): DocsPortalClientAssetTagsV1;
 async function buildStagedDocsPortalClientV1(input: {
   stagingRoot: string;
   publicBasePath: string;
@@ -233,6 +260,15 @@ async function promoteValidatedDocsPortalDistV1(input: {
   receipt: DocsPortalBuildReceipt;
 }): Promise<void>;
 ```
+
+`entry` names exactly one `kind: "entry-js"` record, every `styles[]` member
+names exactly one `kind: "css"` record, and `files[]` is the complete, unique,
+canonically sorted Vite closure with no orphan. Each `publicHref` must byte-
+equal the base-safe helper output for its `manifestPath`; record bytes/hash
+must match the copied staged file. The detached portal manifest closes every
+record plus `deployment/client-assets.json` itself. One deeply frozen
+`DocsPortalClientAssetTagsV1` is derived once and passed unchanged to canonical,
+alias, and 404 render helpers; no helper accepts the broader client manifest.
 
 ## Route Contract
 
@@ -278,6 +314,8 @@ Alias:
 Physical output:
 
 ```text
+dist/404.html
+dist/_headers
 dist/v/<version>/<locale>/<slug>/index.html
 dist/latest/<locale>/<slug>/index.html
 dist/search/<version>/<locale>.json
@@ -287,6 +325,37 @@ Alias HTML renders the same safe article as a host-independent fallback but
 uses versioned canonical metadata and `noindex,follow`.
 `dist/deployment/redirects.json` declares 308 alias → canonical mappings for
 TASK-548-05-capable hosts.
+
+`dist/404.html` is one canonical, typed not-found document for the complete
+artifact. It returns no reflected request path or guessed document, uses the
+L01 `page.kind: "not-found"` payload, and renders only route-graph-derived
+documentation-home, locale, version, and bounded popular-document
+alternatives. It has `noindex,follow`, no canonical claiming a missing URL,
+base-safe internal links/assets, and the exact shared client tags/four islands.
+Cloudflare Pages must serve these exact bytes with HTTP 404 for an unmatched
+path under the configured base path; SPA-style 200 fallback, redirect to home,
+or host-generated replacement content fails the deployment gate.
+
+The alias renderer has one exact boundary; parent pseudocode and tests import
+this owner rather than reconstructing its arguments:
+
+```ts
+renderAliasFallback(input: {
+  alias: DocsPortalLatestAliasV1;
+  canonical: DocsPortalCanonicalRouteV1;
+  canonicalStaticPage: RenderedDocsPortalPageV1;
+  publicOrigin: string;
+  publicBasePath: string;
+  clientAssetTags: DocsPortalClientAssetTagsV1;
+}): Uint8Array;
+```
+
+It verifies the canonical page belongs to `canonical`, derives only canonical/
+robots/alias metadata from the same graph, and embeds the exact supplied tags.
+Because aliases are `noindex`, it intentionally omits canonical-page JSON-LD
+while preserving the same safe article fallback; 404 also emits no JSON-LD.
+Passing `clientAssets`, rebuilding tags, or looking up a canonical page inside
+the renderer is not an alternate overload.
 
 ## SEO and Structured Data Contract
 
@@ -316,13 +385,50 @@ Global artifacts:
   metadata paths where appropriate;
 - `deployment/headers.json`: CSP, MIME/nosniff, referrer, frame, permissions,
   caching, and immutable asset policy in a host-neutral strict schema;
+- `_headers`: exact canonical LF Cloudflare Pages materialization of that same
+  policy at the artifact root. It includes the normalized public base path in
+  route patterns, per-page CSP hashes where required, shared deny policies,
+  immutable caching for versioned/search/content-hashed bytes, and revalidation
+  for latest/404/site-index/sitemap/robots. Unknown, duplicate, shadowed or
+  over-host-limit rules reject rather than being reordered;
 - `deployment/redirects.json`: latest aliases only, no open redirects;
+- `deployment/client-assets.json`: the L02-owned exact Vite closure and tag
+  source described above;
 - `deployment/site-index.json`: strict deterministic single-release navigation
   candidate derived from the same route graph. It is not the cumulative public
   index and is never copied over retained history directly;
 - version+locale search index: public-safe text/ids/paths only with checksum;
 - `docs-portal-manifest.json`: the exact detached
   `DocsPortalManifestV1` control record for every route/hash and the input digest.
+
+`serializeCloudflarePagesHeadersV1()` is the sole `_headers` serializer. It
+normalizes the deployment prefix to `/*` for `/` or
+`<publicBasePath>/*` otherwise, emits LF plus one final newline, and renders
+exactly these effective security values for the base catch-all and root 404:
+
+```text
+Content-Security-Policy: default-src 'none'; base-uri 'none'; connect-src 'self'; font-src 'self'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; manifest-src 'self'; media-src 'none'; object-src 'none'; script-src 'self'; style-src 'self'; worker-src 'none'
+X-Content-Type-Options: nosniff
+Referrer-Policy: no-referrer
+Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()
+X-Frame-Options: DENY
+Cache-Control: public, max-age=0, must-revalidate
+```
+
+The serializer emits that full policy for the base catch-all and root
+`/404.html`, so a missing request inherits revalidation by its requested path.
+For each canonical article only, one exact route rule detaches the inherited
+CSP and replaces it with the same policy plus that page's unique sorted JSON-LD
+SHA-256 sources. Alias/404 pages contain no JSON-LD and inherit `script-src
+'self'`. It then emits unique most-specific base-prefixed rules in raw UTF-8 order for
+`/v/*`, `/search/*`, `/assets/*`, and `/release-metadata/*`; each uses the
+Cloudflare removal directive for the inherited `Cache-Control` before setting
+`public, max-age=31536000, immutable`. Latest/site-index/sitemap/robots and all
+other reads retain the catch-all revalidation value. The top-level `_headers`
+control path is not content. Generation validates Cloudflare Pages rule/line/
+file limits and simulated rule-merge results before staged write.
+`deployment/headers.json` and `_headers` must produce identical effective
+values; neither claims GitHub Pages applies response headers.
 
 The strict manifest shapes are:
 
@@ -340,19 +446,12 @@ type DocsPortalRouteRecordV1 = {
 };
 
 type DocsPortalFileRecordV1 = {
-  path: string;
-  bytes: number;
-  sha256: string;
+  path: string; bytes: number; sha256: string;
 };
 
 type DocsPortalVisualAssetRecordV1 = {
-  visualId: string;
-  docId: string;
-  locale: string;
-  sectionId: string;
-  path: string;
-  bytes: number;
-  sha256: string;
+  visualId: string; docId: string; locale: string; sectionId: string;
+  path: string; bytes: number; sha256: string;
 };
 
 type DocsPortalManifestV1 = {
@@ -371,17 +470,17 @@ type DocsPortalManifestV1 = {
 };
 
 type DocsPortalSiteIndexCandidateRouteV1 = {
-  docId: string;
-  locale: string;
-  slug: string;
-  exactPath: string;
-  latestPath: string;
+  docId: string; locale: string; slug: string;
+  exactPath: string; latestPath: string;
 };
 
 type DocsPortalSiteIndexCandidateV1 = {
   schema: "coderso.docs-site-index-candidate@v1";
   productVersion: string;
   sourceHash: string;
+  notFoundSha256: string;
+  cloudflareHeadersSha256: string;
+  clientAssetsManifestSha256: string;
   routes: DocsPortalSiteIndexCandidateRouteV1[];
 };
 
@@ -408,7 +507,8 @@ ownership, and locale inventory are bounded and strictly normalized.
 
 The candidate discriminator and displayed keys are exact and recursively
 reject unknown. It contains exactly the current product version and distribution
-`sourceHash`, has `1..50,000` routes, and its routes are unique and sorted by
+`sourceHash`, copies the exact three deployment hashes from the corresponding
+portal-manifest file records, has `1..50,000` routes, and its routes are unique and sorted by
 `(locale, slug, docId)`. Each `exactPath` is the canonical
 `/v/<productVersion>/<locale>/<slug>` path and each `latestPath` is its matching
 `/latest/<locale>/<slug>` alias. Its serializer uses displayed key order,
@@ -421,7 +521,8 @@ history.
 
 `docs-portal-manifest.json` is the sole file excluded from its own sorted
 `files[]`. Every other emitted file, including every alias, search index, asset,
-SEO file and deployment candidate, appears exactly once with bytes and SHA-256.
+SEO file, `404.html`, `_headers`, client-assets manifest and deployment
+candidate, appears exactly once with bytes and SHA-256.
 The manifest carries normalized `publicOrigin` and `publicBasePath`; it is parsed
 and schema-validated separately. A second exclusion, manifest self-record,
 untracked output or orphan record fails. TASK-548-05 hashes the detached
@@ -429,7 +530,7 @@ manifest externally in its release manifest.
 
 The release handoff maps byte-for-byte into
 `/release-metadata/<version>/publication-capsule/`: `latest/**`,
-`routing/{redirects,headers}.json`,
+`runtime/{404.html,_headers}`, `routing/{redirects,headers,client-assets}.json`,
 `global/{sitemap.xml,robots.txt,site-index.json}`, and the detached portal
 manifest. The capsule's `global/site-index.json` remains this immutable
 single-release candidate. TASK-548-05-L01 adds the release manifest and is sole
@@ -439,7 +540,10 @@ owner of strict canonical `DocsSearchPublicationReceiptV1` and
 search file and localized `visualAssets` records.
 TASK-548-05-L02 merges the verified candidate with the retained cumulative
 branch index without rebuilding old pages; publication never invokes this route
-builder.
+builder. Its version entry copies the exact `404.html`, `_headers`, and
+`deployment/client-assets.json` file hashes into `notFoundSha256`,
+`cloudflareHeadersSha256`, and `clientAssetsManifestSha256`; rollback verifies
+them before copying the capsule runtime/routing bytes.
 
 ## Determinism and Publication Filter
 
@@ -560,6 +664,15 @@ async function buildValidatedDocsPortal(
   const writer =
     createHashedDeterministicWriter(transaction.stagingDist);
   await copyAndRecordClientAssetClosureV1(writer, clientAssets);
+  const emittedVisualAssetsByDocument =
+    await emitVerifiedPortalVisualAssetsV1({
+      sourceBundle: bundle, projection, writer,
+    });
+  const clientAssetTags = deepFreeze(
+    buildDocsPortalClientAssetTagsV1(clientAssets)
+  );
+  const renderedCanonicalPages =
+    new Map<DocsPublicationDocumentKeyV1, RenderedDocsPortalPageV1>();
 
   for (const route of graph.canonicalRoutes) {
     const document = resolveVersionedProjectionMemberV1(
@@ -581,48 +694,74 @@ async function buildValidatedDocsPortal(
       mobileNavigation: buildPortalMobileClientModel(graph, route),
     });
     const outputFile = resolveDocsPortalArtifactRelativePath(publicPath);
-    await writer.write(
-      outputFile,
-      renderStaticPortalPage(route, {
+    const renderedPage = renderStaticPortalPage(route, {
         shellHtml: renderDocsPortalStaticShell({
           projection,
           documentKey: route.documentKey,
           navigation: buildPortalNavigation(graph, route, config),
-          packagedVisualAssets: loadPackagedVisuals(document),
+          emittedVisualAssets: requireEmittedPortalVisualAssetsV1(
+            emittedVisualAssetsByDocument, route.documentKey
+          ),
           hydrationPayload,
         }),
         canonicalHref,
         publicOrigin: config.publicOrigin,
         publicBasePath: config.publicBasePath,
-        clientAssetTags: buildDocsPortalClientAssetTagsV1(clientAssets),
-      })
-    );
+        clientAssetTags,
+      });
+    await writer.write(outputFile, renderedPage.bytes);
+    renderedCanonicalPages.set(route.documentKey, renderedPage);
   }
   for (const alias of graph.latestAliases) {
     const publicPath = buildDocsPublicPath(alias.publicRoute);
     const canonical = requireCanonicalRoute(graph, alias);
     await writer.write(
       resolveDocsPortalArtifactRelativePath(publicPath),
-      renderAliasFallback(alias, {
-        canonicalStaticPage: requireRenderedCanonicalPage(canonical),
+      renderAliasFallback({
+        alias,
+        canonical,
+        canonicalStaticPage: requireRenderedCanonicalPageV1(
+          renderedCanonicalPages,
+          canonical.documentKey
+        ),
         publicOrigin: config.publicOrigin,
         publicBasePath: config.publicBasePath,
-        clientAssets,
+        clientAssetTags,
       })
     );
   }
+
+  const notFoundPage = renderTypedPortalNotFoundPageV1({
+    model: buildDocsPortalNotFoundModelV1(graph, config),
+    hydrationPayload: createDocsPortalHydrationPayloadV1(
+      buildNotFoundHydrationBodyV1(graph, clientSearchByLocale, config)
+    ),
+    clientAssetTags,
+    robots: "noindex,follow",
+  });
+  await writer.write("404.html", notFoundPage.bytes);
 
   await emitSearchIndexes(writer, projection, searchIndex, {
     publicOrigin: config.publicOrigin,
     publicBasePath: config.publicBasePath,
   });
-  await emitSeoAndDeploymentArtifacts(writer, graph, {
+  const deployment = await emitSeoAndDeploymentArtifacts(writer, graph, {
     publicOrigin: config.publicOrigin,
     publicBasePath: config.publicBasePath,
   });
-  await emitCurrentReleaseSiteIndexCandidateV1(writer, graph);
   await writer.write("deployment/client-assets.json",
     serializeDocsPortalClientAssetsManifestV1(clientAssets));
+  await writer.write("_headers", serializeCloudflarePagesHeadersV1({
+    publicBasePath: config.publicBasePath,
+    headers: deployment.headers,
+    structuredDataHashesByRoute:
+      collectExactStructuredDataHashesByRouteV1(renderedCanonicalPages),
+  }));
+  await emitCurrentReleaseSiteIndexCandidateV1(writer, graph, {
+    notFoundPath: "404.html",
+    cloudflareHeadersPath: "_headers",
+    clientAssetsManifestPath: "deployment/client-assets.json",
+  });
   const receipt =
     await writer.finalizeDetachedManifestAndVerifyAllOtherFiles(graph);
   await validateCompleteStagedPortalV1(transaction.stagingDist, receipt);
@@ -658,7 +797,7 @@ tree. Never delete a broad/unresolved path or partial live `dist`.
 
 **Regression-test shape:**
 
-- exact canonical/alias/base-path paths and traversal rejects;
+- exact canonical/alias/404/base-path paths and traversal rejects;
 - clean-clone/tag portal entry with the tracked bundle and no `.tmp` tree/report
   passes; every owner promotion journal phase, report-only state, invalid linked
   pair, and tampered transaction or packaged-bundle bytes fail read-only;
@@ -679,14 +818,27 @@ tree. Never delete a broad/unresolved path or partial live `dist`.
 - stable translation-family `docId`, exact `(docId, locale)` uniqueness,
   hreflang over only same-`docId` actually built locales, and no fake PL;
 - canonical/robots/OG/JSON-LD/anchors for a complete fixture;
-- alias canonical/noindex plus same-graph redirect;
-- sitemap/search/header/redirect/manifest schema and hash closure;
+- alias canonical/noindex plus same-graph redirect; one shared frozen
+  `clientAssetTags` object reaches canonical, the exact owner alias helper and
+  typed 404, while a broader client manifest or helper-local tag build rejects;
+- root 404 is deterministic, `noindex,follow`, base-safe, contains only real
+  alternatives and no reflected requested path, uses four typed islands, and
+  is closed by the detached manifest; a preview/Cloudflare fixture returns its
+  exact bytes with HTTP 404 rather than SPA 200/redirect/replacement;
+- sitemap/search/header/redirect/client-assets/manifest schema and hash closure;
+- `_headers` exact LF syntax, normalized-base route patterns, host limits,
+  host-neutral JSON parity and effective CSP/X-Frame-Options/nosniff/referrer/
+  permissions/cache values; missing, duplicate, shadowed, tampered, unsupported
+  or GitHub-Pages-assumed header materialization rejects;
 - detached-manifest sole-exclusion and exact reject-unknown single-release
-  site-index candidate closure/order/hash;
+  site-index candidate closure/order/hash, including exact 404, `_headers` and
+  client-assets-manifest hashes;
 - visual manifest records require globally unique `visualId`, exact
   `(docId, locale, sectionId)` ownership, one matching file record, and reject
   locale/cross-section substitution; fixtures are consumable by the
-  TASK-548-05-L01 asset-receipt projector;
+  TASK-548-05-L01 asset-receipt projector; the one build-only emitter reads
+  source bytes no-follow but returns only exact path/byte-free
+  `DocsLocalVisualAssetV1` records to every shell call;
 - exact `coderso.docs-portal@v1` reject-unknown shape, source-hash identity,
   canonical route/file sorting, and no manifest self-field;
 - projection fixtures prove every eligible public record is retained exactly
@@ -708,7 +860,9 @@ tree. Never delete a broad/unresolved path or partial live `dist`.
   locale retains every scorer signal and returns exact Help parity;
 - Vite fixtures pin one hydration entry, strict recursive manifest closure,
   base-path-safe hashed JS/CSS on every HTML page, canonical client receipt and
-  detached-manifest coverage; orphan/missing/cycle/traversal/source-map/server-
+  detached-manifest coverage; its sole owner normalizer rejects wrong entry,
+  styles, record order/kind/path/href/bytes/hash or orphan closure. Orphan/
+  missing/cycle/traversal/source-map/server-
   graph assets fail before any live-dist write;
 - inject failures after every client-build/copy/render/finalize/swap phase and
   crash-recover; the prior or new complete dist is byte-identical and no mixed
@@ -729,9 +883,10 @@ tree. Never delete a broad/unresolved path or partial live `dist`.
 - [ ] Implement strict route/base/version/locale/slug graph helpers.
 - [ ] Build/validate/copy the Vite client closure, inject base-safe hashed tags,
   then render routes only into the transaction's confined staging writer.
-- [ ] Build deterministic static renderer/writer and latest aliases; validate
-  and journal-swap the complete dist atomically.
-- [ ] Emit SEO, structured data, sitemap, robots, search, headers, redirects.
+- [ ] Build deterministic static renderer/writer, latest aliases and typed root
+  404; validate and journal-swap the complete dist atomically.
+- [ ] Emit SEO, structured data, sitemap, robots, search, exact `_headers`,
+  host-neutral headers, redirects and client-assets inventory.
 - [ ] Close all bytes through the artifact manifest and reproducibility tests.
 
 ## Testing Requirements
@@ -779,7 +934,7 @@ docker build --build-arg APP_VERSION=0.0.0-test \
 task548_docker_image="$(tr -d '\r\n' < "$task548_portal_real/docker-image-id")"
 [[ "$task548_docker_image" =~ ^sha256:[0-9a-f]{64}$ ]]
 docker run --rm --entrypoint bun "$task548_docker_image" --eval \
-  'const renderer = await import("@coderso/docs-renderer"); const projection = await import("@coderso/docs-renderer/projection"); if (typeof renderer.DocsDocumentRenderer !== "function" || typeof renderer.buildDocsSearchIndexV1 !== "function" || typeof renderer.selectDocumentsForPublicationTarget !== "function" || typeof projection.createDocsPublicationProjectionV1 !== "function") throw new Error("docs_renderer_exports_invalid"); const bundleFile = Bun.file("/app/core/generated/docs/coderso-docs-v2.json"); if (!(await bundleFile.exists())) throw new Error("docs_bundle_missing"); const bundle = await bundleFile.json(); if (bundle.schema !== "coderso.docs-corpus@v2") throw new Error("docs_bundle_schema_invalid"); for (const path of ["/app/core/dist/client/index.html", "/app/core/dist/site/manifest.json"]) if (!(await Bun.file(path).exists())) throw new Error(`docker_build_output_missing:${path}`); const helpReceiptFile = Bun.file("/app/core/dist/client/docs-help-assets-v1.json"); if (!(await helpReceiptFile.exists())) throw new Error("help_asset_receipt_missing"); const helpReceipt = await helpReceiptFile.json(); if (helpReceipt.schema !== "coderso.docs-help-assets@v1" || helpReceipt.sourceHash !== bundle.sourceHash) throw new Error("help_asset_receipt_invalid"); for (const asset of helpReceipt.assets) { const path = `/app/core/dist/client/${asset.outputPath}`; const file = Bun.file(path); if (!(await file.exists()) || new Bun.CryptoHasher("sha256").update(await file.arrayBuffer()).digest("hex") !== asset.sha256) throw new Error(`help_asset_invalid:${asset.outputPath}`); }'
+  'const renderer = await import("@coderso/docs-renderer"); const projection = await import("@coderso/docs-renderer/projection"); const helpAssets = await import("/app/core/admin/ui/help/helpBuildAssetVerification.ts"); if (typeof renderer.DocsDocumentRenderer !== "function" || typeof renderer.buildDocsSearchIndexV1 !== "function" || typeof renderer.selectDocumentsForPublicationTarget !== "function" || typeof projection.createDocsPublicationProjectionV1 !== "function" || typeof helpAssets.resolveEmbeddedHelpBuildAssetFileV1 !== "function") throw new Error("docs_renderer_exports_invalid"); const bundleFile = Bun.file("/app/core/generated/docs/coderso-docs-v2.json"); if (!(await bundleFile.exists())) throw new Error("docs_bundle_missing"); const bundle = await bundleFile.json(); if (bundle.schema !== "coderso.docs-corpus@v2") throw new Error("docs_bundle_schema_invalid"); for (const path of ["/app/core/dist/client/index.html", "/app/core/dist/site/manifest.json"]) if (!(await Bun.file(path).exists())) throw new Error(`docker_build_output_missing:${path}`); const helpReceiptFile = Bun.file("/app/core/dist/client/docs-help-assets-v1.json"); if (!(await helpReceiptFile.exists())) throw new Error("help_asset_receipt_missing"); const helpReceipt = helpAssets.normalizeEmbeddedHelpAssetReceiptV1(await helpReceiptFile.json()); if (helpReceipt.sourceHash !== bundle.sourceHash) throw new Error("help_asset_receipt_invalid"); for (const asset of helpReceipt.assets) { const opened = await helpAssets.resolveEmbeddedHelpBuildAssetFileV1({ clientRoot: "/app/core/dist/client", outputKey: asset.outputKey, href: asset.href }); const observed = new Bun.CryptoHasher("sha256").update(opened.bytes).digest("hex"); if (opened.sha256 !== asset.sha256 || observed !== opened.sha256) throw new Error(`help_asset_invalid:${asset.outputKey}`); }'
 docker run --rm --entrypoint sh "$task548_docker_image" -ceu \
   'test -z "$(find /app -type d -name ".tmp" -print -quit)"
    test -z "$(find /app/core/generated/docs -type f \( -name "*.tmp*" -o -name "*.staged*" -o -name "*.backup*" -o -name "*promotion-transaction*" \) -print -quit)"'
@@ -808,8 +963,9 @@ Re-run failures alone.
   embedded Help.
 - Only real translations produce routes/hreflang; English completeness is
   preserved without a false full-Polish claim.
-- SEO, JSON-LD, sitemap, robots, search, CSP headers, redirects, and manifest
-  validate and close through hashes.
+- SEO, JSON-LD, sitemap, robots, search, typed 404, client inventory, exact
+  Cloudflare CSP headers, redirects, and manifest validate and close through
+  hashes.
 - The detached manifest is the only self-excluded control file and externally
   bound by the release manifest.
 - Same inputs/epoch reproduce byte-identical output.

@@ -41,65 +41,66 @@ bundle-only prestate and never synthesizes a missing report.
 
 ## Workspace and Lock Contract
 
-This leaf creates both downstream workspace manifests before the one TASK-548
-`bun install`/lock reconciliation. Their exact initial contents are:
+This leaf creates all three downstream workspace manifests before the one
+TASK-548 `bun install`/lock reconciliation. Their exact initial contents are:
 
+```json
+{
+  "name": "@coderso/docs-contracts",
+  "version": "0.0.0", "private": true, "type": "module",
+  "sideEffects": false,
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "check": "tsc -p tsconfig.json --noEmit" },
+  "devDependencies": { "typescript": "6.0.3" }
+}
+```
 ```json
 {
   "name": "@coderso/docs-renderer",
-  "version": "0.0.0",
-  "private": true,
-  "type": "module",
+  "version": "0.0.0", "private": true, "type": "module",
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
-    "./projection": "./src/publicationProjection.ts",
-    "./client-search": "./src/clientSearch.ts"
+    "./projection": "./src/publicationProjection.ts", "./client-search": "./src/clientSearch.ts"
   },
   "scripts": { "check": "tsc -p tsconfig.json --noEmit" },
+  "dependencies": { "@coderso/docs-contracts": "workspace:*" },
   "peerDependencies": { "react": "^19.2.8" },
-  "devDependencies": {
-    "@types/react": "^19.2.17",
-    "typescript": "6.0.3"
-  }
+  "devDependencies": { "@types/react": "^19.2.17", "typescript": "6.0.3" }
 }
 ```
-
 ```json
 {
   "name": "@coderso/docs-portal",
-  "version": "0.0.0",
-  "private": true,
-  "type": "module",
+  "version": "0.0.0", "private": true, "type": "module",
   "scripts": {
     "build": "bun run src/build/buildDocsPortal.ts",
     "build:client": "vite build --config vite.config.ts",
-    "check": "tsc -p tsconfig.json --noEmit",
-    "preview": "vite preview --config vite.config.ts",
+    "check": "tsc -p tsconfig.json --noEmit", "preview": "vite preview --config vite.config.ts",
     "validate": "bun run scripts/validate-built-portal.ts dist"
   },
   "dependencies": {
-    "@coderso/docs-renderer": "workspace:*",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "@coderso/docs-contracts": "workspace:*", "@coderso/docs-renderer": "workspace:*",
+    "react": "^19.2.8", "react-dom": "^19.2.8"
   },
-  "devDependencies": {
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.4",
-    "typescript": "6.0.3",
-    "vite": "^8.1.5"
-  }
+  "devDependencies": { "@types/react": "^19.2.17", "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.4", "typescript": "6.0.3", "vite": "^8.1.5" }
 }
 ```
 
 Those versions match the verified root/core toolchain at authoring. Re-read the
-live manifests before writing; if that stack intentionally moved, amend this
-contract before implementation, then reconcile once. TASK-548-03-L02 owns
-renderer source/tsconfig, including `src/publicationProjection.ts` and
-`src/clientSearch.ts`, only. TASK-548-04-L01 owns portal shell/search source,
-tsconfig and Vite config only; TASK-548-04-L02 owns `src/build/**`. Neither may
-edit either manifest, the root package or the root lock.
+live manifests before writing; if that stack moved, amend and reconcile first.
+TASK-548-01-L01 owns contracts source/tsconfig and permanent named-only Core
+shims via confined `../../../packages/docs-contracts/src/index.ts`/owner paths;
+this leaf activates but never rewrites them. TASK-548-03-L02 owns renderer
+source/tsconfig; TASK-548-04-L01 owns portal shell/client and L02 `src/build/**`.
+None may edit these manifests, root package or lock.
+
+The package graph is exactly `docs-contracts -> []`,
+`docs-renderer -> docs-contracts`, `core -> docs-contracts + docs-renderer`, and
+`docs-portal -> docs-contracts + docs-renderer`. Checks reject reverse imports/
+cycles and every Core deep import except L01's realpath-confined, reference-
+identical named shims. Admin path/RBAC stays Core-only.
 
 The portal package's exact `build` script above calls only
 `packages/docs-portal/src/build/buildDocsPortal.ts`. TASK-548-04-L02 exclusively
@@ -121,44 +122,43 @@ introduces no aliases, defaults, trimming or duplicate normalization.
 TASK-548-04-L01 owns no build configuration/parser contract;
 TASK-548-05-L02 supplies the release values.
 
-When core imports renderer-owned Admin or release modules,
+For every direct Core package import landing from this activation onward,
 `core/package.json` must contain exactly:
 
 ```json
 {
-  "dependencies": {
-    "@coderso/docs-renderer": "workspace:*"
-  }
+  "dependencies": { "@coderso/docs-contracts": "workspace:*",
+    "@coderso/docs-renderer": "workspace:*" }
 }
 ```
 
-Merge that key into the live dependency object without rewriting unrelated
-entries. Before the one frozen-lock install, `Dockerfile` must copy both new
-workspace manifests in addition to the existing root/core/store/SDK manifests:
+Merge both keys into the live dependency object without rewriting unrelated
+entries. Before the one frozen-lock install, `Dockerfile` must copy all three
+new workspace manifests in addition to existing root/core/store/SDK manifests:
 
 ```dockerfile
+COPY packages/docs-contracts/package.json packages/docs-contracts/package.json
 COPY packages/docs-renderer/package.json packages/docs-renderer/package.json
 COPY packages/docs-portal/package.json packages/docs-portal/package.json
 RUN bun install --frozen-lockfile
 ```
 
-Both `COPY` lines must precede that `RUN`; copying the workspace source later
+All three `COPY` lines must precede that `RUN`; copying workspace source later
 does not satisfy dependency resolution. This leaf's gate runs the one
 `bun install --frozen-lockfile` after the manifest/lock reconciliation and
-statically parses the Dockerfile to prove both exact `COPY` instructions occur
-before the existing frozen install. It pins all three exact renderer exports
+statically parses the Dockerfile to prove all exact `COPY` instructions precede
+the frozen install. It pins the contracts `.`, all three renderer exports
 (`.`, `./projection`, `./client-search`) and the portal build entrypoint.
 
-At this land point, `packages/docs-renderer/src/**`, its `tsconfig.json`, and
-`packages/docs-portal/src/build/buildDocsPortal.ts` do not exist yet.
-Consequently this leaf must not run the renderer `check` script, import any
-renderer export, build the portal, or build/run the image. TASK-548-03-L02
-performs the first executable package check and exact imports of `.`,
+At this land point contracts source/tsconfig exists from TASK-548-01-L01, while renderer source/tsconfig and portal build source do not. This leaf runs
+`bun --cwd packages/docs-contracts check` and imports its public package export
+after frozen install, but must not run renderer check/import, build portal, or
+build/run the image. TASK-548-03-L02 performs the first renderer check/import of
+`.`,
 `@coderso/docs-renderer/projection` and
 `@coderso/docs-renderer/client-search`. TASK-548-04-L02 proves the portal build
-and final Docker build/runtime resolve those same frozen exports. Both are
-read-only consumers of this leaf's manifests, lock, core dependency and
-Dockerfile and never receive write ownership.
+and final Docker build/runtime resolve all frozen exports. Both are read-only
+consumers of this leaf's manifests, lock, Core dependencies and Dockerfile.
 
 Root scripts added here are exactly:
 
@@ -891,10 +891,10 @@ path-derived recursive remover.
   exact mutating `docs:recover`, `docs:coverage`, `docs:visual:capture`,
   `docs:visual:promote` and `docs:visual:check` scripts (seven exact root
   scripts total).
-- [ ] Pre-create both exact docs workspace manifests, then reconcile root
-  `package.json` and `bun.lock` once; add the exact core renderer workspace
-  dependency and preinstall Docker manifest copies; statically pin the
-  three renderer exports and portal build entrypoint; forbid
+- [ ] Create all three exact docs workspace manifests, then reconcile root
+  `package.json` and `bun.lock` once; add both exact Core workspace dependencies
+  and three preinstall Docker manifest copies; statically pin the contracts
+  export, three renderer exports, portal build entrypoint and acyclic edges; forbid
   later TASK-548 manifest/lock/core-package/Dockerfile writers in contract
   tests.
 - [ ] Own `recoverDocsArtifactsV1` plus its CLI: recover durable CI owners,
@@ -927,16 +927,16 @@ path-derived recursive remover.
   completion and settle-all failure with zero pixel staging/upload; L03 receives
   one outcome array/callback, while L02 owns every capture terminal state and
   lease release
-- workspace/package contract test pins both manifests, all three renderer
-  exports and source targets, seven root scripts, core dependency, preinstall
-  Docker manifest copies, sole writers and one lock reconciliation; it parses
-  files without importing future source, while the frozen install proves
-  lock/workspace resolution
+- workspace/package contract test pins all three manifests, the contracts
+  export, all renderer exports/source targets, seven root scripts, both Core
+  dependencies, three Docker copies, sole writers and one lock reconciliation;
+  edge tests confine/reference-check L01 shims and reject all other deep/reverse
+  edges or cycles; frozen install plus the contracts check proves resolution
 - portal package contract statically pins only
   `"build": "bun run src/build/buildDocsPortal.ts"`; the four exact
   environment mappings above remain a downstream TASK-548-04-L02 handoff and
   this leaf does not invoke or source-verify that future entrypoint
-- Docker workspace contract statically pins the exact two manifest `COPY`
+- Docker workspace contract statically pins the exact three manifest `COPY`
   lines before `RUN bun install --frozen-lockfile`, source-copy/runtime
   references for `.`, `./projection` and `./client-search`, and exclusions; it
   does not build/run the image at this leaf, while 03-L02/04-L02 own the exact

@@ -428,7 +428,8 @@ const ownerAction = await dispatchSamePhysical07L01(
   "07-L01-final-smoke-phase1-owner-pause",
   postAudit
 );
-await yieldOwnerActionRequired(ownerAction); // normal invocation ends here
+await yieldOwnerActionRequired(ownerAction);
+return; // normal invocation ends at the mandatory owner pause
 
 // A later mutually exclusive closure-only invocation reads only its current
 // TASK-545-bound CLI args. `ownerAction` and every other pre-pause payload are

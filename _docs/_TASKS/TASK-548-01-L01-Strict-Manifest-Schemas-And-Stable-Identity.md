@@ -13,18 +13,38 @@
 
 ## Overview
 
-Create the Bun-free source of truth for documentation v2. Own new focused
-modules under `core/services/documentation/` for types, schemas, normalization,
-source limits and safe Markdown parsing. Update `docs/guide/_TEMPLATE.md` and
-add `docs/guide/corpus.manifest.json`; do not edit `docs/guide/README.md`,
-assistant routes, DB schema, visual capture tooling or portal UI.
+Create the Bun-free, dependency-neutral source of truth for documentation v2
+under `packages/docs-contracts/src/**`, with its `tsconfig.json`. Own focused
+types, schemas, normalization, source limits, target selection, browser-safe
+publication DTOs and safe Markdown parsing there. Keep the existing
+`core/services/documentation/docsCorpus*`, Markdown-token/parser, section,
+limit and capability module paths as thin named re-export shims whose only
+runtime edge is `core -> docs-contracts`; no contracts module may
+import Core, React, Bun, DB, settings, server or runtime adapters. Update
+`docs/guide/_TEMPLATE.md` and add `docs/guide/corpus.manifest.json`; do not edit
+`docs/guide/README.md`, assistant routes, DB schema, visual capture tooling or
+portal UI.
 TASK-548-07-L01 is the sole writer of the Guide README and receives this leaf's
 verified authoring-contract handoff.
+
+TASK-548-02-L03 later creates the package manifest and performs the only
+workspace/lock/Docker reconciliation. Until then this leaf typechecks the
+source through its direct `tsconfig.json`; it does not create a package manifest
+or edit the lock.
+
+Because workspace activation occurs only in TASK-548-02-L03, every L01-owned
+shim under exact `core/services/documentation/` permanently uses the confined
+repo-relative target `../../../packages/docs-contracts/src/index.ts` (or the
+exact owner module below that same root), with named re-exports only. Static
+tests resolve the real target below that root and assert reference identity.
+No later leaf rewrites these shims. Direct consumers landing after 02-L03 use
+`@coderso/docs-contracts` through the activated manifest/dependency instead.
 
 ## Exact Shared Shapes
 
 ```ts
 type DocsPublicationTarget = "assistant" | "embedded-help" | "public-docs";
+type DocsPublicationSurfaceTargetV1 = "embedded-help" | "public-docs";
 
 type DocsPermissionRequirementV1 = {
   mode: "allOf" | "anyOf";
@@ -118,10 +138,69 @@ type DocsDistributionBundleV2 = {
   sourceHash: string;
   documents: DocsDocumentV2[];
 };
+
+type DocsPublicationVisualV1 = {
+  visualId: string;
+  sectionId: string;
+  outputKey: string;
+  mediaType: "image/png";
+  sha256: string;
+  width: number;
+  height: number;
+  alt: string;
+  caption: string;
+  assetPath?: never; // compile-time absence guard; never serialized
+};
+
+type DocsPublicationDocumentV1 = {
+  schema: "coderso.docs-publication-document@v1";
+  docId: string;
+  locale: string;
+  slug: string;
+  title: string;
+  summary: string;
+  audience: ("admin" | "editor" | "developer")[];
+  productArea: string;
+  productVersionRange: string;
+  adminPath: string | null;
+  permissionRequirement: DocsPermissionRequirementV1 | null;
+  capabilityIds: string[];
+  publicationTargets: DocsPublicationTarget[];
+  keywords: string[];
+  sections: DocsSectionV2[];
+  visuals: DocsPublicationVisualV1[];
+  examples: DocsExampleV1[];
+  sourcePath?: never; // compile-time absence guard; never serialized
+};
+
+type DocsPublicationPayloadV1<T extends DocsPublicationSurfaceTargetV1> = {
+  schema: "coderso.docs-publication-payload@v1";
+  body: {
+    publicationTarget: T;
+    corpusVersion: string;
+    defaultLocale: string;
+    supportedLocales: string[];
+    sourceHash: string;
+    documents: DocsPublicationDocumentV1[];
+  };
+  bodySha256: string;
+};
 ```
 
-The sole bundle-normalizer owner is
-`core/services/documentation/docsCorpusNormalizer.ts`, which exports:
+The publication DTO schemas above are the only browser/public serialization
+contract. Their recursive exact-key validators reject `sourcePath`,
+`assetPath`, unknown keys and a full `DocsDocumentV2`/`DocsVisualV1` value.
+`outputKey` is exactly `docs-png-sha256-<lowercase 64-hex visual.sha256>`: an
+opaque domain-tagged content key with no filename or directory segment.
+The optional-`never` members are type-only absence guards and are never emitted.
+Compile-time assertions prove neither full source type is assignable to its
+publication type; runtime exact-key tests prove spread/cast values still fail.
+`normalizeDocsPublicationPayloadV1(unknown)` and the full-source-to-safe DTO
+projector are owned by `@coderso/docs-contracts`; neither brands a renderer
+projection nor performs filesystem I/O.
+
+The sole bundle-normalizer implementation owner is
+`packages/docs-contracts/src/docsCorpusNormalizer.ts`, which exports:
 
 ```ts
 export function normalizeDocsDocumentV2(
@@ -146,9 +225,10 @@ composes the exact manifest and document normalizers, validates the exact SHA-25
 `sourceHash`, locale membership, canonical ordering, localized identity
 uniqueness and bundle-global reference closure, and returns a newly normalized
 bundle. It never routes an already compiled document through the Markdown
-authoring parser. Compiler, Help and portal consumers import this exact named
-owner export; `assertDistributionBundle` and local assertion/normalizer aliases
-do not exist.
+authoring parser. Pre-activation Core/compiler code imports the stable relative
+named shim; post-activation Help/portal consumers import this exact owner via
+`@coderso/docs-contracts`. Both resolve the same function by reference, without
+a wrapper. `assertDistributionBundle` and local aliases do not exist.
 
 The discriminator and field names above are exact. Root and nested schemas use
 `additionalProperties: false`. IDs use one documented lowercase kebab-case
@@ -167,7 +247,8 @@ select only their matching target and must never treat target absence as a
 fallback.
 
 This leaf owns the exact target selector before any assistant, Help, renderer
-or portal consumer lands:
+or portal consumer lands, at
+`packages/docs-contracts/src/docsPublicationTargets.ts`:
 
 ```ts
 export function selectDocumentsForPublicationTarget(
@@ -181,6 +262,37 @@ input order, and includes a document only when its validated
 `publicationTargets` contains that target. Missing/unknown targets and
 unnormalized input fail closed. TASK-548-03-L02 re-exports this owner function
 through `@coderso/docs-renderer`; it must not reimplement the selection rule.
+
+### Acyclic package and live-catalog contract
+
+The frozen dependency graph is
+`docs-contracts -> []`, `docs-renderer -> docs-contracts`,
+`core -> docs-contracts + docs-renderer`, and
+`docs-portal -> docs-contracts + docs-renderer`. Static import tests reject
+every reverse edge, including a type-only or dynamic import from contracts or
+renderer into Core. Core-owned Admin path/RBAC code is not moved into this
+package and is never called by the shared renderer.
+The only Core deep-source exception is the exact L01-owned named-re-export shim
+path above; traversal, another contracts subroot, wrapper logic, default export
+or any second Core deep import fails the edge gate.
+
+The live Admin permission catalog remains Core-owned. To keep strict
+documentation normalization dependency-neutral, this leaf owns a deterministic
+tracked, IDs-only
+`packages/docs-contracts/src/docsPermissionCatalogSnapshot.generated.ts` plus
+`scripts/docs/generate-docs-permission-catalog-snapshot.ts`. The generator reads
+the live catalog only in the authoring/test process and emits canonical sorted
+IDs with a domain-separated hash; the contracts package imports only those
+generated bytes. A regenerate-and-diff parity gate fails whenever the live
+catalog and tracked snapshot differ. The Core Help host adapter later rechecks
+the current live catalog before exposing an Admin action, so stale or unknown
+permissions fail closed at both compilation and use.
+
+For renderer integration only that Core host adapter may import `adminPaths`,
+`AdminLink` helpers, live catalog or authenticated permission state. Contracts owns only
+the strict permission-requirement shape/snapshot parity bytes; renderer accepts
+already-resolved safe host results and never evaluates RBAC or canonicalizes an
+Admin route.
 
 `DocsPermissionRequirementV1.permissions` is non-empty, unique and sorted by
 canonical permission ID. `allOf` authorizes only when the current fail-closed
@@ -201,9 +313,9 @@ enumerated compatibility source below. Compiler, assistant ingest/retrieval,
 local search and TASK-548-06 coverage use this exact field and may not derive
 alternate capability labels.
 
-The exact owner is
-`core/services/documentation/docsCapabilityCatalog.ts`. It exports only the
-following catalog surface:
+The exact implementation owner is
+`packages/docs-contracts/src/docsCapabilityCatalog.ts`; the stable Core module
+is a named re-export shim. It exports only the following catalog surface:
 
 ```ts
 export const DOCS_CAPABILITY_CATALOG_V1 = {
@@ -389,8 +501,8 @@ constants in `docsCorpusLimits.ts`; no recursive branch can bypass them.
 Unclosed directives, unknown tones/languages, ragged/oversized tables,
 block/raw HTML, unsafe links and recursive constructs fail closed.
 `parseSafeMarkdownSection` is the one parser export name. The shared renderer
-in TASK-548-03 imports this function and these owner types and never defines a
-parallel parser or token union.
+in TASK-548-03 imports this function and these owner types from
+`@coderso/docs-contracts` and never defines a parallel parser or token union.
 
 ## Security Contract
 
@@ -402,10 +514,11 @@ parallel parser or token union.
   is `null` or a default-base canonical `/admin...` path without query/hash,
   alias, traversal or protocol. Markdown links allow local anchors/relative docs
   and HTTPS only. Images are allowed only through `DocsVisualV1`.
-- **Permissions:** every non-wildcard permission must exist in
+- **Permissions:** every non-wildcard permission must exist in the hash-bound
+  generated snapshot, whose gate must equal
   `core/services/admin/permissionsCatalog.ts`; `*` is forbidden in docs.
   Normalize only the exact `DocsPermissionRequirementV1` shape and apply the
-  locked `allOf`/`anyOf` semantics.
+  locked `allOf`/`anyOf` semantics. Core rechecks the live catalog before use.
 - **Capabilities:** every `capabilityIds` entry matches the locked format,
   exists in `docsCapabilityCatalog.ts`, and is bounded, unique and sorted.
 - **Localized sidecars:** reject a noncanonical locale, a path/envelope
@@ -487,6 +600,33 @@ export function normalizeDocsDistributionBundleV2(
     sourceHash: assertExactSha256(parsed.sourceHash),
     documents,
   };
+}
+
+export function projectDocsPublicationDocumentV1(
+  document: DocsDocumentV2
+): DocsPublicationDocumentV1 {
+  // Internal only: caller already supplied the once-normalized bundle member.
+  assertCompleteDocumentReferenceClosure(document);
+  return deepFreeze({
+    schema: "coderso.docs-publication-document@v1",
+    ...copyExactBrowserSafeDocumentFields(document),
+    visuals: document.visuals.map(({ assetPath: _omitted, ...visual }) => ({
+      ...visual,
+      outputKey: createOpaqueDocsVisualOutputKeyV1({
+        sha256: visual.sha256,
+      }),
+    })),
+  });
+}
+
+export function normalizeDocsPublicationPayloadV1(
+  input: unknown
+): DocsPublicationPayloadV1<DocsPublicationSurfaceTargetV1> {
+  const payload = assertStrictJsonSchema(input, docsPublicationPayloadV1Schema);
+  const body = normalizeExactPublicationBodyAndSafeDocuments(payload.body);
+  assertCanonicalBodySha256(body, payload.bodySha256);
+  assertTargetMembershipOrderAndSafeReferenceClosure(body);
+  return deepFreeze({ ...payload, body });
 }
 
 export function parseDocsDocumentV2(input: {
@@ -586,14 +726,25 @@ round trips. Pin all 33 exact capability IDs, product-area reverse lookup,
 sorted enumeration, unknown product area rejection, and the single current
 orientation exception consumed by L02. Cover every token variant plus
 unclosed, nested, ragged, oversized and malicious inline variants.
+Regenerate the permission snapshot in memory and require byte/hash identity;
+mutate either side and prove the parity gate fails. Import every stable Core
+shim and assert reference identity with the contracts export, then statically
+reject Core/React/Bun/DB/settings imports from the contracts graph and reject
+every non-shim relative/deep contracts import from Core.
+Add compile-time non-assignability assertions for full source document/visual
+types versus publication DTOs, runtime exact-key/source-path/asset-path
+canaries, deterministic opaque-output-key fixtures and safe-payload round trips.
 
 ## Sub-Tasks
 
-- [ ] Add `docsCorpusTypes.ts`, `docsCorpusSchemas.ts`,
+- [ ] Add dependency-neutral `packages/docs-contracts/src/docsCorpusTypes.ts`,
+  `docsCorpusSchemas.ts`,
   `docsCorpusNormalizer.ts`, `docsMarkdownParser.ts`,
   `docsMarkdownTokens.ts`, `docsSectionDirectives.ts`,
-  `docsCapabilityCatalog.ts` and
-  `docsCorpusLimits.ts`, each below 1,000 lines and without DB/runtime imports.
+  `docsPublicationTargets.ts`, strict publication DTO schema/projector,
+  `docsCapabilityCatalog.ts`, generated permission snapshot and
+  `docsCorpusLimits.ts`, each below 1,000 lines, plus Core named re-export shims
+  and no reverse dependency.
 - [ ] Add the v2 root manifest and update only the author template with stable
   IDs, locale/version/path/permission/capability/publication rules and one safe
   example; hand the README wording to TASK-548-07-L01.
@@ -603,6 +754,11 @@ unclosed, nested, ragged, oversized and malicious inline variants.
 ## Testing Requirements
 
 - `bunx vitest run --config vitest.config.ts tests/vitest/documentation/docs-corpus-contract.test.ts tests/vitest/documentation/docs-markdown-policy.test.ts`
+- `tsc -p packages/docs-contracts/tsconfig.json --noEmit`
+- regenerate-and-diff permission snapshot parity plus static package-edge and
+  Core-export-reference-identity gates
+- publication DTO compile-time non-assignability, runtime exact-key and
+  source/asset-path canary gates
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `wc -l` for every added/modified production and test file
