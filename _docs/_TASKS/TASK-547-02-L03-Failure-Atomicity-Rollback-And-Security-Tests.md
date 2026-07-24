@@ -6,52 +6,913 @@
 **Category:** Reliability / Security Testing
 **Estimated Effort:** Large
 **Dependencies:** TASK-547-02-L02
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Validation:** Corrective crash-recovery/rollback work and fresh DB/security
+evidence are pending.
 
 ## Overview
 
 Complete reverse rollback, failure compensation and DB-backed lifecycle/security
-coverage. Own rollback modules and `tests/unit/kits/fullSiteInstallService.test.ts`.
+coverage. Replace position-only continuation with dependency-aware branch safety,
+and prove recovery after real process death rather than only an injected throw.
 
-**Exact ownership:** `core/services/kits/fullSiteInstall/rollback.ts`,
-`compensation.ts`, and the named DB test only.
+Atomicity is frozen as a compensation saga. Do not add a cross-domain
+transaction abstraction or transaction parameters to all native services.
+
+**Exact production ownership:** only
+`core/services/kits/fullSiteInstall/rollback.ts` and
+`core/services/kits/fullSiteInstall/compensation.ts`. Preserve the canonical
+existing public entry point `rollbackFullSiteInstall(input)` and its input-object
+signature; `rollback.ts` owns both that function and the exact exported
+`RollbackFullSiteInstallInput` type below. Do not introduce a renamed
+replacement.
+
+**Exact test/fixture ownership:**
+
+- split and retain `tests/unit/kits/fullSiteInstallService.test.ts` below 1,000
+  lines for service/claim/resume/snapshot behavior;
+- new `tests/unit/kits/fullSiteCompensationDependencies.test.ts` for the pure
+  dependency scheduler and failure branches;
+- new `tests/integration/kits/fullSiteCrashRecoveryDb.test.ts` for real process
+  death and two-package shared-shell coordination;
+- new `tests/fixtures/task547/fullSiteCrashWorker.ts` as the only child-process
+  worker.
+
+The current near-limit service suite must be split before adding cases; every
+touched/created production and test file remains independently runnable and at
+most 1,000 physical lines. During the split, remove its old DB managed-identity
+cases only after confirming the L01-owned
+`fullSiteManagedOwnershipDb.test.ts` carries each equivalent assertion; retain
+all unique rollback/claim/resume/recovery behavior under L03.
+
+**Forbidden for L03:** every L01 planner/types/ledger/current-resource resolver/
+legacy composition path and test; every L02 adapter/executor/staging/domain
+service and test; task board/changelog/shared docs. Cross-leaf fixes return to
+their single writer rather than widening this leaf.
+
+## Dependency-Aware Compensation Contract
+
+`compensation.ts` owns exact exports `buildRollbackDependencyGraph`,
+`collectTransitiveRollbackDependencies`,
+`preflightPriorRollbackSuccessOutcomes`, `preflightRollbackEvidence`,
+`refineAllRollbackStates`, `reverseSettingsBatch`,
+`compensateDependencyBranches` and the existing gate-safe compatibility name
+`compensateItems`. It reads, but never redefines, L01's
+`readFullSiteRollbackActionV1`. Its two global preflights alone consume L01's
+`RawFullSiteInstallLedgerItem`; graph/classifier APIs receive the strict
+`PersistedFullSiteInstallLedgerItem` produced from every raw row.
+
+`compensateItems(input)` remains the import used by L02 `execute.ts`; it is not a
+second or legacy position-only algorithm. Its `items` input is the complete raw
+source set freshly reloaded from the DB after the rollback claim. Persisted raw
+rows are immutable provenance; any in-memory phase overlay is diagnostic-only
+and never becomes an input item, preflight `persistedSourceItem`, outcome snapshots,
+operation or action. This path requires V1 evidence for every current item,
+strictly validates every raw row before building the graph and calling L02's
+`classifyInterruptedSagaItems`, then delegates to
+`compensateDependencyBranches`. It must not filter noop, planned or not-applied
+items before graph validation. This lets L02 pass its gate before L03 lands while
+making automatic compensation use the same scheduler after L03 lands.
+Its final `CompensateItemsInput` requires `currentSource: FullSiteInstallRun` and
+`items`/`priorOutcomes: readonly RawFullSiteInstallLedgerItem[]`;
+L02 supplies the fresh validated source through the structural local-variable
+bridge plus the raw claimed-run outcomes frozen in L02, and explicit rollback
+passes its locked source re-read and raw outcomes. No caller constructs the
+completed-identity set.
+
+L02 deliberately retains two sequential-land bridges while this leaf is pending:
+base-shape `AdapterApplyInput` mutation calls used by the old compensation module,
+and the array-returning `recoverInterruptedSagaItems` wrapper used by the old
+rollback facade. This leaf removes every production call to the former by using
+`restoreSnapshotAtomic`, and final compensation/rollback imports only
+`classifyInterruptedSagaItems`. It does not use the deprecated recovery wrapper,
+does not treat its projected array as graph evidence and does not introduce a
+third recovery alias.
+
+The graph includes every persisted plan item, including noop items needed to
+connect transitive paths. For current runs whose options declare
+`rollbackDependencySchemaVersion:1`, every item must carry a valid V1 action;
+missing target identities, self edges, duplicates, cycles, unknown kinds or
+malformed evidence cause `site_package_rollback_dependency_invalid` before the
+first native reversal. A legacy run without that option is marked
+`dependencyKnowledge:"legacy-unknown"`; missing evidence is never treated as an
+empty dependency list.
+
+The boundary always begins with the complete raw result of
+`ledger.listRawItems(sourceRunId)`. While native access is forbidden,
+`preflightRollbackEvidence` strictly parses every field of every raw source row,
+including completed/noop items, as operation-specific L02 complete evidence:
+before plus raw `afterSnapshot` through
+`readFullSiteDurableAfterSnapshotV1`, whose exact fields are top-level
+`id`/`desired` and `recovery.schemaVersion`, `recovery.phase` and
+`recovery.stagedSnapshot`. Missing/unknown keys, malformed JSON, invalid phase,
+create/update/noop matrix violations, unknown/delete/restore operations, invalid
+scalar/array fields or a snapshot ID mismatch fail the whole run before graph,
+classification, exact-ID capture or reversal. No row may be filtered, normalized
+to null or otherwise disappear. The resulting persisted items alone feed graph
+and classifier APIs.
+The operation matrix requires a create's exact prior absence as
+`beforeSnapshot:null` (mapped to `{ key, present:false }` for settings), an
+update's complete non-null prior snapshot with the durable ID, and a noop's
+non-null canonical complete `beforeSnapshot` plus a strict durable after
+envelope. For noop, the envelope's top-level `id`/`desired` complete final target
+must canonical-deep-equal the before snapshot with the identical exact ID,
+`recovery.schemaVersion` must be `1`, and `recovery.stagedSnapshot` must be
+`null`; raw before/after JSON is intentionally unequal because only the latter
+contains `recovery`. The only valid source status/phase pairs are
+`planned`/`prepared` and `success`/`complete`; a noop source row with `failed` or
+`skipped` status is invalid. Any envelope, equality, ID, staged or status/phase
+mismatch fails before classification/resolver/adapter/native access. Completed
+rollback identities receive this same parse; they are excluded only from later
+operation-specific handling.
+
+For every source operation, this pass imports L02's exact
+`isValidFullSiteDurableSourceStatusPhaseV1` owner. The only six rows are
+create/update `planned/prepared`, `success/staged`,
+`success/publish_prepared`, `success/complete`, and noop `planned/prepared`,
+`success/complete`; staged/publish requires a non-null staged target. Every
+source `failed`/`skipped` row is invalid. Both suites import and exhaust this
+single frozen matrix rather than copying pair lists.
+
+Only after raw preflight and complete graph validation does L03 call L02's exact
+`classifyInterruptedSagaItems({ items, resolveCurrentResource })`. That helper
+returns one ordered `FullSiteSagaRecoveryClassification` per persisted item; the
+scheduler treats each `hint` as diagnostic/scheduling input only and never as an
+outcome or mutation decision. For a source noop it emits the operation-derived
+diagnostic `noop` without invoking the current-resource resolver. A valid
+non-completed noop becomes authoritative only from the already-preflighted source
+operation plus equality between the complete before snapshot and the envelope's
+top-level final target, is recorded as a source-faithful noop outcome and issues
+zero resolver/adapter/native read or write. Every
+non-completed create/update hint, including `not_applied` and
+`already_recovered`, proceeds through fresh exact-ID capture and the exact
+`refineAllRollbackStates` pass. Graph nodes/dependency evidence are never
+removed. The deprecated array-returning
+`recoverInterruptedSagaItems` remains only to make the earlier L02 gate compile
+against the then-untouched rollback facade.
+
+Execute successful create/update mutations in deterministic reverse topological
+order. Ready nodes use exactly `position DESC, kind ASC, key ASC`; this comparator
+is only the deterministic tie-break inside the reverse topological scheduler.
+Settings retain one atomic raw-restore batch through the exact
+`reverseSettingsBatch` seam below; per-setting restore/delete fallback is
+forbidden. A batch failure is a native failure for every affected setting item.
+
+After a native reversal failure for identity `X`:
+
+1. durably record `X` failed with the safe native code;
+2. compute `X`'s complete transitive dependency closure (the prerequisites that
+   must remain because the failed dependent may still point at them);
+3. record those not-yet-mutated items `skipped` with
+   `site_package_rollback_dependency_blocked` and never invoke their adapters;
+4. continue ready items outside that closure only when their complete V1 paths
+   prove independence;
+5. finalize the rollback run failed after all provably independent branches are
+   attempted.
+
+If a native failure occurs in `legacy-unknown` mode, no remaining branch is
+proven independent: stop all remaining native calls conservatively and finalize
+failed. Only durable `success` outcomes enter the completed set; a
+blocked/skipped item is never mistaken for completed.
+
+Before constructing that set, the zero-native exact export
+`preflightPriorRollbackSuccessOutcomes({ sourceItems, priorOutcomes })` validates
+every raw prior row against one unique raw source item. Kind/key identity and
+position must be unique and non-extraneous, operation must equal the source
+`create | update | noop`, `beforeSnapshot` must equal the raw source
+`afterSnapshot`, `afterSnapshot` must equal the raw source `beforeSnapshot`, and
+`rollbackAction` must equal its source counterpart. Each raw field first passes
+its strict operation/schema shape (snapshots/actions object-or-null as
+applicable); its decoded values are then validated as `JsonValue` and compared
+with L02's
+`fullSiteJsonValuesEqual`; object keys are lexicographically canonicalized,
+arrays remain ordered, and primitives/null use JSON encoding. Matching
+legacy-unknown `rollbackAction:null` is legal; no value is defaulted or rebuilt.
+A source identity may have zero or one outcome. Prior `planned`, duplicate/extra
+or unequal rows throw the existing safe
+`site_package_rollback_invalid_source` before graph/classifier/native access.
+Strict valid failed/skipped outcomes remain retryable; only valid success rows
+enter the returned completed set.
+
+After global evidence parsing and L02 hint classification, L03 obtains a fresh
+complete snapshot for every non-completed create/update by the durable final-
+after ID only. A noop performs no native-state lookup because its apply path made
+no native mutation; the preflighted source operation and canonical equality of
+the complete before snapshot with the durable envelope's top-level final target
+are its sole outcome authority, never its classifier hint. The planner/
+current-resource equality projection never proves complete native state and never
+authorizes a recorded outcome, skip or reversal. For an update, fresh equality
+with the exact durable before is `already_recovered`; equality with an allowed
+exact durable applied target is `applied`; absence or every other state is
+`site_package_rollback_conflict`. For a create, absence at the exact durable ID
+is `already_recovered`; a present row must equal an allowed exact durable applied
+target or it conflicts. A successful source permits only the final after target;
+a running/failed source may also match the exact staged target because it can
+have died between stage and publish. These complete comparisons override every
+classifier hint.
+
+An applied update calls
+`restoreSnapshotAtomic({ id, expectedCurrent:fresh, target:before, actorId })`.
+An applied create calls
+`deleteSnapshotAtomic({ id, expectedCurrent:fresh, actorId })`; plain
+`deleteById` is forbidden. Each native owner locks and re-reads the complete
+aggregate and compares the same `expectedCurrent` inside its transaction, so a
+capture-to-delete/restore race throws `site_package_state_changed` before any
+write. Settings use equivalent presence-aware raw before/final-after authority
+and L02's one locked compare-and-raw-restore batch.
+`FullSiteRollbackAdapters.captureSnapshotByIdOrNull(id)` is the L03-owned facade
+over L02's `captureSnapshotById(id)`; it converts only the native owner's exact-
+ID not-found result to `null`, propagates every other error and never performs a
+natural-key lookup.
+
+Before any native reversal of a non-completed item whose refined state is
+`applied`, a successful source run additionally requires managed-resource
+evidence with `successful === true`, `rolledBack === false`,
+`runId === currentSource.id` and
+`resourceId === durableAfterSnapshot.id`. This ownership guard is not required
+when create/update fresh refinement returns `already_recovered`, regardless of
+the earlier hint. A preflight-authorized noop also requires no ownership guard
+and no native read. The guard is not required when the current source is
+`running` or `failed`; exact durable complete-snapshot equality remains mandatory
+for every create/update decision. A successful prior rollback outcome removes
+the identity before this check. Every applied setting in the atomic batch passes
+this guard before the single batch write begins. No guard can convert a hint or
+non-equal complete state into applied authority.
+
+Freeze the settings scheduler seam and sequence:
+
+```ts
+export type ReverseSettingsBatchSchedulerInput = Readonly<{
+  // Non-empty ready setting group, already sorted by the frozen comparator and
+  // operation-correct: noops are preflight-authorized; create/updates are refined.
+  items: readonly RefinedRollbackItem[];
+  actorId: string;
+  adapter: FullSiteRollbackAdapters["setting"];
+}>;
+
+export type RollbackNativeResult = Readonly<{
+  refined: Exclude<RefinedRollbackItem, { state: "conflict" }>;
+  outcome: "reversed" | "already_recovered" | "noop";
+}>;
+
+export async function reverseSettingsBatch(
+  input: ReverseSettingsBatchSchedulerInput,
+): Promise<readonly RollbackNativeResult[]> {
+  assertOneComparatorSortedSettingGroup(input.items);
+  if (input.items.some((item) => item.state === "conflict")) {
+    throw new Error("site_package_rollback_conflict"); // zero native writes
+  }
+  const ready = input.items as readonly Exclude<
+    RefinedRollbackItem,
+    { state: "conflict" }
+  >[];
+  const appliedReversals = ready.flatMap((item) =>
+    item.state === "applied" ? [item.reversal] : [],
+  ); // fully construct the whole batch before native access
+  if (appliedReversals.length > 0) {
+    await input.adapter.reverseSettingsBatch({
+      items: appliedReversals,
+      actorId: input.actorId,
+    }); // exactly one native batch call; no per-key fallback
+  }
+  return ready.map((refined) => ({
+    refined,
+    outcome: refined.state === "applied" ? "reversed" : refined.state,
+  })); // the dependency scheduler, not this helper, persists outcomes
+}
+```
+
+At the settings frontier, `compensateDependencyBranches` sorts every ready
+non-completed setting by the frozen comparator and forms exactly one group. The
+global pass has source-evidence-authorized every noop without native access,
+fresh-captured every create/update member and checked every applicable
+successful-source ownership predicate. `reverseSettingsBatch` rejects a
+wrong-kind, unsorted or conflict-bearing group before native access, constructs
+all `FullSiteNativeReversal` values, and, when at least one member is applied,
+invokes the required L02
+`adapter.reverseSettingsBatch({ items:appliedReversals, actorId })` exactly once.
+It returns source-associated native results but never writes outcomes. The L02
+batch locks/re-reads all keys and either restores the whole raw batch or writes
+nothing. Only after that call returns (or when every member is exactly already
+recovered/noop) does `compensateDependencyBranches` persist source-faithful
+outcomes in comparator order. Any outcome write failure stops immediately; retry
+repeats global source-evidence preflight/noop authorization and fresh create/
+update refinement. A group conflict or native batch failure
+performs zero per-key fallback and blocks the union of the transitive dependency
+closures of every applied/conflicting setting in that group; it is never reduced
+to one arbitrarily selected setting branch.
+
+Every rollback outcome row is derived from the immutable raw DB source row, not
+from a merged/in-memory phase overlay. It preserves the source item's original
+`create | update | noop` operation, swaps its raw source snapshot columns
+(`beforeSnapshot = source.afterSnapshot`,
+`afterSnapshot = source.beforeSnapshot`) and copies the exact source
+`rollbackAction`; rollback never records synthetic `delete` or `restore`
+operations. The overlay is diagnostic-only; fresh exact native state owns the
+reversal/recovery decision. Any outcome-ledger write failure becomes
+`site_package_rollback_ledger_failed`, stops all remaining native calls
+immediately and fails the rollback run; retry uses exact complete-state capture
+to recognize a native reversal that committed before its outcome write.
+
+After compensation succeeds, an interrupted `running` source is finalized
+`failed` with `site_package_apply_interrupted` first. Rollback `success`
+finalization is the final fallible operation, after which `successCommitted` is
+set and no catch path may rewrite that successful rollback. Every post-claim
+failure before that commit, including interrupted-source finalization failure,
+finalizes the owned/resumed rollback run `failed` with a safe code and remains
+resumable from its durable successful outcomes.
+
+L03 rollback adapters call L02's `restoreSnapshotAtomic` or
+`deleteSnapshotAtomic` for all nine UUID-backed resource kinds. They never
+implement the old `applyStaged` then publish sequence or call a plain native
+delete. Every prepared required-kind create with missing/null/malformed ID
+fails before any native adapter call and cannot fall back to a natural key. For
+Page, entry and detail Page, both durable and fresh complete snapshots include
+distinct current/published state, publication metadata and the exact bounded
+ordered revision rows; restore never truncates them. The native owner locks and
+re-reads its complete state, canonical-compares it to `expectedCurrent`, and
+throws `site_package_state_changed` before writes if state raced between fresh
+capture and restore.
 
 ## Security Contract
 
-Service only. Actor required for apply/dry-run/rollback. Never delete reused or
-unmanaged rows. Dry-run may persist safe ledger evidence but writes zero domain
-resources/settings.
+Service only. A syntactically valid actor UUID is required and validated before
+DB access for apply/dry-run/rollback. Never delete reused or unmanaged rows.
+Dry-run may persist safe ledger evidence but writes zero domain resources/settings.
+All DB fixtures use unique package/resource/actor markers and delete only exact
+owned rows in dependency-safe order; never truncate shared tables. Worker argv/
+stdout excludes DB URLs, package payloads, settings values, submissions and
+secrets. No public endpoint is added. No database migration is added. No RBAC/
+CSRF/rate-limit change, scanner suppression or cross-domain transaction
+abstraction.
 
 ## Implementation Pseudocode
 
 ```ts
-export async function rollbackFullSiteInstall(runId, actorId) {
-  const source = await requireApplyRun(runId);
-  for (const item of reverse(source.items)) {
-    await adapters[item.kind].rollback(item, { deleteCreatedOnly: true });
+const compareRollbackReadyNodes = (
+  left: RefinedRollbackItem,
+  right: RefinedRollbackItem,
+): number => {
+  // position DESC, kind ASC, key ASC
+  return (
+    right.classification.item.position - left.classification.item.position ||
+    left.classification.item.kind.localeCompare(right.classification.item.kind) ||
+    left.classification.item.key.localeCompare(right.classification.item.key)
+  );
+};
+
+async function recordRollbackOutcome(input: RollbackOutcomeInput): Promise<void> {
+  try {
+    await input.ledger.recordItem({
+      runId: input.rollbackRunId,
+      position: input.persistedSourceItem.position,
+      kind: input.persistedSourceItem.kind,
+      key: input.persistedSourceItem.key,
+      operation: input.persistedSourceItem.operation, // raw-row provenance
+      status: input.status,
+      beforeSnapshot: input.persistedSourceItem.afterSnapshot,
+      afterSnapshot: input.persistedSourceItem.beforeSnapshot,
+      rollbackAction: input.persistedSourceItem.rollbackAction,
+      error: input.error ?? null,
+    });
+  } catch {
+    // The scheduler treats this as fatal, not as a branch-native failure.
+    throw new Error("site_package_rollback_ledger_failed");
   }
+}
+
+export type RollbackResourceAdapter = Pick<
+  ResourceAdapter,
+  "restoreSnapshotAtomic" | "deleteSnapshotAtomic"
+> & {
+  captureSnapshotByIdOrNull(id: string): Promise<FullSiteNativeSnapshot | null>;
+};
+
+export type FullSiteRollbackAdapters =
+  Record<Exclude<FullSiteInstallResourceKind, "setting">, RollbackResourceAdapter> & {
+    setting: RollbackResourceAdapter & Required<
+      Pick<ResourceAdapter, "reverseSettingsBatch">
+    >;
+  };
+
+type PreflightedRollbackEvidenceBase = Readonly<{
+  identity: FullSiteResourceIdentity;
+  persistedSourceItem: PersistedFullSiteInstallLedgerItem;
+  durableAfter: FullSiteDurableAfterSnapshotV1; // parsed raw afterSnapshot
+  finalTarget: FullSiteNativeSnapshot;
+  phase: "prepared" | "staged" | "publish_prepared" | "complete";
+}>;
+
+export type PreflightedRollbackEvidence =
+  | (PreflightedRollbackEvidenceBase & Readonly<{
+      operation: "create";
+      before: null; // proven create-time absence
+      stagedTarget: FullSiteNativeSnapshot | null;
+    }>)
+  | (PreflightedRollbackEvidenceBase & Readonly<{
+      operation: "update";
+      before: FullSiteNativeSnapshot;
+      stagedTarget: FullSiteNativeSnapshot | null;
+    }>)
+  | (PreflightedRollbackEvidenceBase & Readonly<{
+      operation: "noop";
+      before: FullSiteNativeSnapshot;
+      // Preflight compares before with durableAfter's top-level id/desired,
+      // requires identical ID, recovery.stagedSnapshot:null and the status phase.
+      stagedTarget: null;
+    }>);
+
+export function preflightRollbackEvidence(input: Readonly<{
+  items: readonly RawFullSiteInstallLedgerItem[];
+}>): readonly PreflightedRollbackEvidence[];
+
+export function preflightPriorRollbackSuccessOutcomes(input: Readonly<{
+  sourceItems: readonly RawFullSiteInstallLedgerItem[];
+  priorOutcomes: readonly RawFullSiteInstallLedgerItem[];
+}>): ReadonlySet<FullSiteResourceIdentity>;
+
+// In the implementation's noop branch, before any resolver/adapter/native access:
+const durableAfter = readFullSiteDurableAfterSnapshotV1(item.afterSnapshot);
+const requiredNoopPhase = item.status === "planned"
+  ? "prepared"
+  : item.status === "success"
+    ? "complete"
+    : failRollbackEvidence(); // failed/skipped noop source rows are invalid
+assert(durableAfter.recovery.schemaVersion === 1);
+assert(durableAfter.recovery.phase === requiredNoopPhase);
+assert(durableAfter.recovery.stagedSnapshot === null);
+const finalTarget = { id: durableAfter.id, desired: durableAfter.desired };
+assert(finalTarget.id === before.id);
+assertCanonicalDeepEqual(finalTarget, before);
+// Never compare raw item.afterSnapshot directly with item.beforeSnapshot.
+
+type PreflightedNoopRollbackEvidence = Extract<
+  PreflightedRollbackEvidence,
+  { operation: "noop" }
+>;
+type PreflightedMutableRollbackEvidence = Exclude<
+  PreflightedRollbackEvidence,
+  { operation: "noop" }
+>;
+
+export type RefinedRollbackItem =
+  | Readonly<{
+      state: "noop"; // parsed source authority; no resolver/adapter/native read
+      classification: FullSiteSagaRecoveryClassification;
+      evidence: PreflightedNoopRollbackEvidence;
+    }>
+  | Readonly<{
+      state: "already_recovered"; // fresh exact-ID create/update authority
+      classification: FullSiteSagaRecoveryClassification;
+      evidence: PreflightedMutableRollbackEvidence;
+    }>
+  | Readonly<{
+      state: "applied";
+      classification: FullSiteSagaRecoveryClassification;
+      evidence: PreflightedMutableRollbackEvidence;
+      reversal: FullSiteNativeReversal;
+    }>
+  | Readonly<{
+      state: "conflict";
+      classification: FullSiteSagaRecoveryClassification;
+      evidence: PreflightedMutableRollbackEvidence;
+      error: "site_package_rollback_conflict";
+    }>;
+
+export async function refineAllRollbackStates(input: Readonly<{
+  parsed: readonly PreflightedRollbackEvidence[];
+  classifications: readonly FullSiteSagaRecoveryClassification[];
+  adapters: FullSiteRollbackAdapters;
+  currentSource: FullSiteInstallRun;
+  ledger: FullSiteInstallLedgerPort;
+  completedIdentities: ReadonlySet<FullSiteResourceIdentity>;
+}>): Promise<readonly RefinedRollbackItem[]> {
+  const refinements: RefinedRollbackItem[] = [];
+  for (const evidence of input.parsed) {
+    if (input.completedIdentities.has(evidence.identity)) continue;
+    const classification = requireMatchingClassification(
+      evidence,
+      input.classifications,
+    );
+    if (evidence.operation === "noop") {
+      refinements.push({ state: "noop", classification, evidence });
+      continue; // parsed source authority; no resolver/adapter/native read
+    }
+    const fresh = await input.adapters[evidence.persistedSourceItem.kind]
+      .captureSnapshotByIdOrNull(evidence.finalTarget.id);
+    refinements.push(await refineCreateOrUpdateFromCompleteState({
+      evidence,
+      classification, // diagnostic only, including not_applied/already_recovered
+      fresh,
+      currentSource: input.currentSource,
+      ledger: input.ledger,
+    }));
+  }
+  return refinements;
+}
+
+export async function compensateItems(input: CompensateItemsInput) {
+  const parsed = preflightRollbackEvidence({
+    items: input.items,
+  }); // strict unknown-to-persisted parse of every row; zero native access
+  const completedIdentities = preflightPriorRollbackSuccessOutcomes({
+    sourceItems: input.items,
+    priorOutcomes: input.priorOutcomes,
+  }); // exact decoded-JSONB one-to-one proof; zero native access
+  const persistedSourceItems = parsed.map(
+    (evidence) => evidence.persistedSourceItem,
+  );
+  const graph = buildRollbackDependencyGraph({
+    items: persistedSourceItems,
+    declaredVersion: 1,
+    readAction: readFullSiteRollbackActionV1,
+  });
+  const classifications = await classifyInterruptedSagaItems({
+    items: persistedSourceItems,
+    resolveCurrentResource: input.resolveCurrentResource,
+  }); // noop is operation-derived and invokes no resolver/native read
+  const refinements = await refineAllRollbackStates({
+    parsed,
+    classifications, // never authority, including not_applied/already_recovered
+    adapters: input.adapters,
+    currentSource: input.currentSource,
+    ledger: input.ledger,
+    completedIdentities,
+  }); // parsed-evidence noops; fresh exact-ID refinement for create/update only
+  return compensateDependencyBranches({
+    ...input,
+    graph,
+    refinements,
+    completedIdentities,
+    reverseOne: reverseRefinedNativeSnapshot,
+    reverseSettingsBatch,
+    readyComparator: compareRollbackReadyNodes,
+    recordOutcome: recordRollbackOutcome,
+    onNativeFailure: "block-transitive-dependencies",
+    onSettingsFailure: "block-union-transitive-dependencies",
+    onOutcomeFailure: "stop-all",
+    onUnknownDependencies: "stop-conservatively",
+  });
+}
+
+async function reverseRefinedNativeSnapshot(input: ReverseOneInput) {
+  if (input.refined.state === "noop") {
+    return "noop"; // globally parsed source evidence; zero native read/write
+  }
+  if (input.refined.state === "already_recovered") {
+    return "already_recovered"; // fresh exact-ID create/update; zero native write
+  }
+  if (input.refined.state === "conflict") throw new Error(input.refined.error);
+  if (input.refined.reversal.operation === "create") {
+    await input.adapter.deleteSnapshotAtomic({
+      id: input.refined.reversal.id,
+      expectedCurrent: input.refined.reversal.expectedCurrent,
+      actorId: input.actorId,
+    });
+  } else {
+    await input.adapter.restoreSnapshotAtomic({
+      id: input.refined.reversal.id,
+      expectedCurrent: input.refined.reversal.expectedCurrent,
+      target: input.refined.reversal.target,
+      actorId: input.actorId,
+    });
+  }
+  return "reversed";
+}
+
+export type RollbackFullSiteInstallInput = {
+  sourceRunId: string;
+  actorId: string;
+  ledger?: FullSiteInstallLedgerPort;
+  adapters?: FullSiteRollbackAdapters;
+  resolveCurrentResource?: FullSiteCurrentResourceResolver;
+};
+
+export async function rollbackFullSiteInstall(
+  input: RollbackFullSiteInstallInput,
+): Promise<{ runId: string }> {
+  assertActorUuidBeforeDb(input.actorId);
+  const ledger = input.ledger ?? defaultLegacyInstallLedger;
+  const source = await requireApplySource(input.sourceRunId, ledger);
+  const execute = async () => {
+    const currentSource = await requireApplySource(input.sourceRunId, ledger);
+    if (currentSource.packageKey !== source.packageKey) {
+      throw new Error("site_package_rollback_invalid_source");
+    }
+    const automaticCompensation =
+      await validateAutomaticCompensationSource(currentSource, ledger);
+
+    let rollbackRunId: string;
+    if (ledger.claimRollbackRun) {
+      const claim = await ledger.claimRollbackRun({
+        sourceRunId: currentSource.id,
+        packageKey: currentSource.packageKey,
+        actorId: input.actorId,
+        ...(automaticCompensation
+          ? {
+              options: { automaticCompensation: true, fullSitePackage: true },
+              resumeOnly: true,
+            }
+          : {}),
+        resumeRunning: true,
+      });
+      if (claim.state === "busy") {
+        throw new Error("site_package_rollback_in_progress");
+      }
+      if (claim.state === "complete") {
+        throw new Error("site_package_already_rolled_back");
+      }
+      rollbackRunId = claim.id;
+    } else {
+      // Narrow injected fakes may omit the claim API. Concrete DB composition may not.
+      if (automaticCompensation) {
+        throw new Error("site_package_compensation_not_recoverable");
+      }
+      if (await ledger.hasSuccessfulRollback(currentSource.id)) {
+        throw new Error("site_package_already_rolled_back");
+      }
+      rollbackRunId = (
+        await ledger.createRollbackRun({
+          sourceRunId: currentSource.id,
+          packageKey: currentSource.packageKey,
+          actorId: input.actorId,
+          options: { fullSitePackage: true },
+        })
+      ).id;
+    }
+
+    let successCommitted = false;
+    try {
+      if (automaticCompensation && rollbackRunId !== automaticCompensation.id) {
+        throw new Error("site_package_rollback_conflict");
+      } // owned/resumed post-claim validation belongs to the failed-finalization catch
+      const rawSourceItems = await ledger.listRawItems(currentSource.id);
+      const rawPriorOutcomes = await ledger.listRawItems(rollbackRunId);
+      const parsed = preflightRollbackEvidence({
+        items: rawSourceItems,
+      }); // every raw field validates before any row can be used or dropped
+      const completedIdentities = preflightPriorRollbackSuccessOutcomes({
+        sourceItems: rawSourceItems,
+        priorOutcomes: rawPriorOutcomes,
+      }); // exact zero-native one-to-one source/outcome proof
+      const persistedSourceItems = parsed.map(
+        (evidence) => evidence.persistedSourceItem,
+      );
+      const graph = buildRollbackDependencyGraph({
+        items: persistedSourceItems,
+        declaredVersion: currentSource.options?.rollbackDependencySchemaVersion,
+        readAction: readFullSiteRollbackActionV1,
+      });
+      const classifications = await classifyInterruptedSagaItems({
+        items: persistedSourceItems,
+        resolveCurrentResource:
+          input.resolveCurrentResource ??
+          createFullSiteCurrentResourceResolver(currentSource.packageKey, ledger),
+      }); // noop skips resolver access; no hint is outcome authority
+      const refinements = await refineAllRollbackStates({
+        parsed,
+        classifications,
+        adapters: input.adapters ?? FULL_SITE_ROLLBACK_ADAPTERS,
+        currentSource,
+        ledger,
+        completedIdentities,
+      }); // source-evidence noops; fresh complete capture for create/update only
+      await compensateDependencyBranches({
+        graph,
+        refinements,
+        actorId: input.actorId,
+        adapters: input.adapters ?? FULL_SITE_ROLLBACK_ADAPTERS,
+        ledger,
+        rollbackRunId,
+        completedIdentities,
+        reverseOne: reverseRefinedNativeSnapshot,
+        reverseSettingsBatch,
+        readyComparator: compareRollbackReadyNodes,
+        recordOutcome: recordRollbackOutcome,
+        currentSource,
+        onNativeFailure: "block-transitive-dependencies",
+        onSettingsFailure: "block-union-transitive-dependencies",
+        onOutcomeFailure: "stop-all",
+        onUnknownDependencies: "stop-conservatively",
+      });
+      if (currentSource.status === "running") {
+        await ledger.finalizeRun({
+          runId: currentSource.id,
+          status: "failed",
+          error: "site_package_apply_interrupted",
+        });
+      }
+      await ledger.finalizeRun({ runId: rollbackRunId, status: "success" });
+      successCommitted = true; // no fallible work follows this assignment
+      return { runId: rollbackRunId };
+    } catch (error) {
+      if (!successCommitted) {
+        await ledger.finalizeRun({
+          runId: rollbackRunId,
+          status: "failed",
+          error: toSafeFullSiteErrorCode(error, "site_package_rollback_failed"),
+        });
+      }
+      throw error;
+    }
+  };
+  return ledger.withPackageLock
+    ? ledger.withPackageLock(source.packageKey, execute)
+    : execute(); // pure injected fakes only; concrete DB paths always lock
 }
 ```
 
-Data flow: source run → reverse items → restore updates/delete created → settings
-adapter restores each prior setting snapshot exactly once in the normal item order
-and performs one intended batch cache invalidation → audit. There is no separate
-`priorSettings` restore path. On apply failure, compensate completed items or roll back the
-enclosing transaction before returning the redacted error.
+Data flow: actor validation -> L01 global/package locks -> source re-read and
+automatic-compensation validation -> durable rollback claim/create/resume -> prior
+raw outcomes plus raw source items -> global zero-native unknown-to-persisted
+source parsing -> canonical decoded-JSONB one-to-one outcome preflight and
+completed-success set -> strict complete V1/legacy graph validation -> exact
+prepared-ID hint classification without node filtering or noop resolver access ->
+source-evidence-authorized noops with zero native read/write plus exact-ID fresh
+native capture for every non-completed create/update ->
+already-recovered/applied/conflict refinement -> successful-source ownership guard
+for applied native reversals only -> locked native restore/conditional-delete CAS
+-> one preflighted locked raw settings reversal -> dependency-safe native branch reversals
+with exact `position DESC, kind ASC, key ASC` ready ordering -> source-faithful
+durable outcomes -> running-source failed finalization -> rollback success as the
+final fallible operation. There is no separate `priorSettings` restore path. On
+apply failure, the same scheduler owns automatic compensation before returning
+the redacted source error. Any error after this invocation owns or resumes a
+rollback run and before `successCommitted` finalizes that run failed with a safe
+code; `busy` and already-complete claims are never finalized by the contender.
 
 Regression tests: first apply, second noop, managed update, injected failure,
 explicit rollback, prior shell restoration, malicious settings, dangling refs,
+missing/malformed actor UUID performs zero DB calls,
 each prior setting restored exactly once, one intended settings cache invalidation,
-and owned fixture cleanup.
+owned fixture cleanup, interrupted and mismatched intended-ID snapshots fail
+closed, publish does not occur before dependencies/menu state are complete, and
+failure at the final shell stage restores every previous shell/settings value.
+L01 owns the separate DB managed-identity matrix. L03 tests consume that contract
+and focus only on compensation, recovery and concurrency. Lifecycle rollback
+tests use L02-captured Page/detail states with divergent current and published
+documents plus non-empty revision histories and assert exact restoration.
+They also prove the scheduler passes distinct complete expected-current and target
+snapshots to L02's restore API and records `site_package_state_changed` without a
+partial reversal when native state changes after the fresh capture. Create cases
+prove the same race is rejected inside `deleteSnapshotAtomic`, and settings prove
+all keys are re-read under the one native batch lock before any raw write.
+The service suite pins claim states `created|resumed|busy|complete`, runs the
+zero-native one-to-one prior-outcome preflight and loads only its validated
+durable success rows into the completed set, preserves the narrow-fake
+`hasSuccessfulRollback`/`createRollbackRun` path, finalizes every owned post-claim
+error failed with a safe code, marks an interrupted running source
+`site_package_apply_interrupted`, and returns the actual rollback run ID. It also
+proves final L03 restore never invokes the deprecated base-input adapter branch.
+Grounded rollback cases must additionally prove: planner-projection equality
+cannot authorize update restore or create deletion; exact complete
+before/after/other-state comparisons produce recovered/restore/conflict with no
+partial write; a malformed snapshot anywhere in the raw source set fails global
+preflight before classifier/resolver/adapter access; a noop whose raw
+`afterSnapshot` is not a strict `FullSiteDurableAfterSnapshotV1`, whose
+`recovery.stagedSnapshot` is non-null, whose status/phase is not
+`planned`/`prepared` or `success`/`complete`, or whose complete before snapshot
+and top-level final target are missing, canonically unequal or carry different
+exact IDs fails at that same boundary. `failed`/`skipped` noop source rows are
+invalid, and so are `failed`/`skipped` create/update source rows. A valid
+non-completed noop bypasses the resolver and every adapter/native read/write and
+records a source-faithful noop
+outcome; a present create is deleted
+only after its exact-ID fresh snapshot equals an allowed durable applied target
+and the owner rechecks it under lock, while absence is recovered; successful-
+source applied reversals require all four managed-evidence predicates, but
+running/failed sources do not. An already-recovered create/update needs no guard
+after fresh refinement. A preflight-authorized noop needs neither guard nor
+native read. No `not_applied`, `already_recovered` or `noop`
+classifier hint can supply outcome authority or bypass create/update refinement
+and applied ownership. Pin ready-node ordering as
+`position DESC, kind ASC, key ASC`; outcome rows retain original
+`create | update | noop`, snapshot values copied/swapped from the immutable
+raw source row and its exact action, without `delete | restore`; an outcome-
+ledger failure reports
+`site_package_rollback_ledger_failed` and prevents every later native call.
+Prior-outcome cases reject duplicate/extraneous identity, position or operation
+drift, unswapped/unequal decoded JSONB, unequal actions and `planned` outcome
+rows as `site_package_rollback_invalid_source` before native access. Reordered
+object keys, nested values and matching legacy-null actions pass; array reordering
+fails. L02/L03 suites import `FULL_SITE_DURABLE_SOURCE_STATUS_PHASES_V1`, accept
+its exact six rows and reject every other status/phase pair.
+Inject interrupted-source finalization failure after compensation, assert the
+rollback run is failed rather than first committed success, then resume from
+durable outcomes and prove source-failed precedes the single final rollback-
+success commit without a catch rewrite.
+
+### Pure dependency matrix
+
+`fullSiteCompensationDependencies.test.ts` pins chains, diamonds and independent
+branches; failure of a dependent blocks every transitive prerequisite but not a
+disjoint branch; settings are grouped once in comparator order, all members are
+globally parsed, noop members are source-evidence-authorized without native
+access, create/update members are fresh-refined and applied members are ownership-
+checked before any required single batch call. No applied outcome precedes that
+native success; already-recovered/noop outcomes require no native call. Batch
+failure uses the union closure; malformed/new V1 graphs
+or malformed complete evidence fail before adapters; legacy missing evidence stops all remaining calls
+only after a failure; an outcome-ledger failure is normalized to
+`site_package_rollback_ledger_failed` and stops every later native call; retries
+count only durable successes and do not rerun exact already-recovered snapshots.
+It pins ready ties exactly as `position DESC, kind ASC, key ASC` and asserts every
+persisted outcome retains the source operation, swapped raw snapshot columns and
+exact V1 `rollbackAction`, never `delete` or `restore`. It
+also proves the prior-outcome preflight is zero-native, validates every raw row
+one-to-one against the source set, and returns only validated successes;
+duplicate/extra/malformed rows fail closed while matching legacy-null actions
+remain legal. Reordered object keys and nested primitives/null compare equal;
+reordered arrays do not. It also pins unknown,
+delete/restore operations and scalar/array fields reach raw preflight and fail
+without disappearing, while valid persisted noop/not-applied-hint nodes enter
+graph/evidence validation before `classifyInterruptedSagaItems`. For noop it
+pins the strict raw durable envelope, null staged snapshot, exact status/phase
+matrix and canonical equality of complete before with top-level `id`/`desired`,
+without asserting raw before/after equality; each valid
+non-completed noop then avoids resolver/adapter/native access and records its
+source-faithful outcome, while every non-completed create/update hint receives
+fresh exact-ID refinement regardless of `not_applied` or `already_recovered`.
+A compatibility test
+keeps the deprecated array-returning
+`recoverInterruptedSagaItems` callable for the earlier L02 gate, while final L03
+production paths prove they never call it.
+
+### Real process-death matrix
+
+`fullSiteCrashWorker.ts` supports only closed test modes/target kinds. In apply
+mode it wraps the injected ledger port: after the real native atomic commit for
+the selected create and before its success-item upsert, it emits one bounded JSON
+marker `{phase:"native_committed",runId,kind,intendedId}` and waits for an explicit
+stdin release or process termination. The parent test enforces a bounded 30-second
+marker deadline, terminates and cleans up the worker on timeout, and, after observing
+the marker, sends real `SIGKILL`; it does not replace process death with an exception.
+A fresh worker/process then rolls back
+the source run using only DB evidence.
+The DB suite round-trips source/outcome JSONB with reordered object keys, nested
+arrays and null, proving canonical value equality after real driver decoding
+while an array-order change fails.
+
+Run the matrix separately for all exact UUID-backed kinds: `content_type`, `form`,
+`page_template`, `listing_template`, `content_entry`, `listing_query`,
+`detail_page`, `page` and `menu`. For each, assert the complete prepared row
+already contains the UUID and exact final target before the first native write,
+the native aggregate committed entirely under that exact ID, recovery deletes or
+restores only that ID, nested rows/revisions are clean, the interrupted source is
+durably failed, and no natural-key candidate is touched. A handcrafted legacy
+prepared create with `afterSnapshot.id:null` must fail before any adapter event.
+For each published lifecycle kind, add barriers after stage commit and after
+publish commit but before their phase upserts; fresh state must refine against
+the already-durable staged/final targets and compensate exactly. Each phase-
+upsert failure leaves the last raw item row untouched, builds its outcome only
+from that immutable row, finalizes only the source run failed, and a later resume
+recognizes the durable outcome; no in-memory overlay supplies provenance.
+
+### Shared-shell concurrency matrix
+
+In `fullSiteCrashRecoveryDb.test.ts`, spawn two independently connected workers
+for different unique package keys that both take over the same allowlisted shell
+settings. Use deterministic stdout/stdin barriers while package A holds the global
+lock; prove package B reaches no plan/run/native mutation until A releases it.
+After sequential completion, verify the exact B shell. Then coordinate rollback
+of B and A through the same barriers: B restores the exact A snapshot before A
+restores the byte/value-identical original raw setting presence/value. Cover an
+apply-vs-rollback overlap as well as apply-vs-apply. Assert no lost update,
+dangling Page/Menu/template ID, extra rollback owner or busy process.
+Race a direct settings writer between outer capture and native reversal; the
+settings transaction must serialize or reject on locked re-read, never partially
+restore the batch, and invalidate the site cache exactly once only after commit.
+
+Every case records exact owned actor/run/item/native IDs in memory, closes both
+workers, and removes only those fixtures in dependency order in `finally`. The
+test re-reads the pre-test raw shell rows after cleanup and fails on any mismatch.
 
 ## Sub-Tasks
 
-- [ ] Implement reverse rollback and compensation.
-- [ ] Add complete DB lifecycle/security matrix.
+- [x] Implement reverse rollback and compensation.
+- [x] Add the DB lifecycle/security test matrix implementation.
+- [ ] Split the near-limit service suite and implement strict V1 dependency graph
+  validation plus dependency-aware branch compensation/resume, including strict
+  noop durable-envelope/final-target equality/ID/status-phase preflight and zero-
+  read source-faithful noop outcomes.
+- [ ] Add the nine-kind real SIGKILL create-intent recovery matrix, including
+  fail-closed legacy `id:null` evidence and exact scoped cleanup.
+- [ ] Add two-package shared-shell apply/apply, apply/rollback and rollback/
+  rollback coordination with deterministic barriers and raw-value restoration.
 
 ## Testing Requirements
 
-DB env; named Bun test rerun on failure; core lint/types; gates/security; line counts.
+- `set -a && source /home/coder/project/Coderso/.env && set +a`
+- Use that command only to load DB/settings validation variables; never inspect,
+  print, copy, hash or persist `.env` contents.
+- `bun test --timeout 360000 tests/unit/kits/fullSiteInstallService.test.ts tests/unit/kits/fullSiteCompensationDependencies.test.ts`
+- `bun test --timeout 360000 tests/integration/kits/fullSiteCrashRecoveryDb.test.ts`
+- targeted full-site lifecycle/adapter and all nine native atomic/settings suites
+  from L02, plus legacy installer/ledger gates from L01
+- rerun any named failing file once in isolation before classifying a failure
+- `bun --cwd core lint`, `bun --cwd core lint:types`, relevant reliability/
+  security gates, strict scan, and fresh `wc -l` over every L03-owned changed
+  production/test file (all at most 1,000 lines).
 
 ## Documentation Updates Required
 
