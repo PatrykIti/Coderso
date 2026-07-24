@@ -1,0 +1,142 @@
+# TASK-551-06-L02: Concurrency-Safe Revisions and Retention
+# FileName: TASK-551-06-L02-Concurrency-Safe-Revisions-And-Retention.md
+
+**Parent Task:** TASK-551
+**Parent Subtask:** TASK-551-06
+**Priority:** Critical
+**Category:** Database / Content / Reliability / Performance
+**Estimated Effort:** Extra Large
+**Dependencies:** TASK-551-06-L01, TASK-551-05-L02
+**Status:** ⏳ To Do
+**Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
+
+---
+
+## Overview
+
+Make page, widget-template, and detail-page revision allocation monotonic and
+race-safe using transaction-scoped parent serialization plus the TASK-551-05
+unique constraints. Bound revision reads and prune superseded history in small
+batches. Export one family-aware helper/retention contract for TASK-551-09 to
+adopt later across the whole entry/post services after TASK-517 serialization.
+
+## Exact File Ownership
+
+**Shared revision owner:** `core/services/database/revisionAllocation.ts` and
+`core/services/content/revisionRetentionService.ts`.
+
+**Other revision services:** `core/services/pages/revisionService.ts`,
+`core/services/widgets/widgetTemplateRevisionService.ts`,
+and `core/services/content/detailPageRevisionService.ts`.
+
+**Tests:** `tests/vitest/database/revisionAllocation.test.ts`,
+`tests/unit/pages/revisionService.test.ts`,
+`tests/unit/widgets/widgetTemplateRevisionService.test.ts`,
+`tests/unit/content/detailPageRevisionService.test.ts`,
+`tests/integration/database/revisionConcurrency.test.ts`,
+`tests/integration/database/revisionRetention.test.ts`, and
+`tests/perf/database-revision-budgets.test.ts`.
+
+No entry/post facade, persistence, mutation, revision-adoption, or test path may
+be edited; TASK-551-09 owns each whole service after TASK-517 and consumes this
+leaf's helper. `detailPageDocumentService.ts` is likewise TASK-551-09-owned.
+No routes/admin/public runtime may be edited, and `publicSite.tsx` remains
+forbidden. TASK-511/TASK-493/TASK-517/TASK-518, schema/migrations, cache,
+scheduler, task/changelog/workflow files are forbidden.
+
+## Revision Retention Policy
+
+The shared strict policy defaults to enabled, `maxAgeDays=180` (`30..2555`) and
+`keepNewestPerParent=50` (`1..500`), plus L01's batch 500/max 2,000 and maximum
+10/max 100 batches. A row is eligible only when it is both older than the age
+cutoff and outside the newest-count floor. Ordering is `version ASC, id ASC`;
+published/current/protected anchors always survive. Exact environment prefixes
+are `RETENTION_PAGE_REVISIONS_`, `RETENTION_WIDGET_TEMPLATE_REVISIONS_`,
+`RETENTION_DETAIL_PAGE_REVISIONS_`, `RETENTION_ENTRY_REVISIONS_`, and
+`RETENTION_POST_REVISIONS_`; each exposes `ENABLED`, `MAX_AGE_DAYS`, and
+`KEEP_NEWEST_PER_PARENT`. This leaf adopts the first three. TASK-551-09 must
+adopt the final two without changing these values before overall closure.
+
+## Implementation Pseudocode
+
+```ts
+async function allocateRevision<T>(input: RevisionInsert<T>, tx: Tx): Promise<Revision<T>> {
+  await tx.execute(sql`SELECT pg_advisory_xact_lock(${stableFamilyKey(input.family)}, ${stableParentKey(input.parentId)})`);
+  const next = await selectNextVersionForParent(input.family, input.parentId, tx);
+  try {
+    return await insertRevision({ ...input, version: next }, tx);
+  } catch (error) {
+    throw mapNamedRevisionConstraint(error, "revision_conflict");
+  }
+}
+
+async function listRevisions(parentId: string, input: RevisionListInput, db: Db): Promise<RevisionPage> {
+  // projection, version DESC/id DESC keyset, default 50/max 100, LIMIT + 1.
+}
+
+async function pruneRevisions(policy: ParentRevisionPolicy, tx: Tx): Promise<number> {
+  // Keep newest/count floor, preserve protected/published anchors, delete oldest
+  // IDs in bounded SKIP LOCKED batches; never delete current referenced revision.
+}
+```
+
+Advisory key derivation is deterministic, collision-tested, family scoped, and
+does not expose raw UUIDs in logs. The unique constraint is the final integrity
+guard; retry only serialization/deadlock errors with capped jitter (`<= 3`), not
+domain conflicts. The helper's closed family identifiers already include entry
+and post so TASK-551-09 cannot invent incompatible advisory keys, conflict codes,
+cursor shapes, or retention defaults; that inclusion grants no source ownership
+to this leaf.
+
+## Regression-Test Shape
+
+- Contract tests pin all five family identifiers and prove entry/post resolve to
+  the same allocator/policy shape without importing their services.
+- Synchronize 50 concurrent creates for page/widget/detail; committed versions are unique,
+  contiguous for successful transactions, monotonic, and correctly parent/
+  family scoped. Inject rollback/deadlock/unique-conflict paths.
+- Revision reads select summaries only, default 50/max 100, deterministic ties,
+  `<= 2` SQL statements, and never transfer full snapshots until detail lookup.
+- Retention fixtures preserve newest N, protected/published/current anchors,
+  boundary ages, and rows belonging to other parents; repeated batches converge.
+- Plan/perf tests assert parent/version indexes and bounded rows/buffers on 100k
+  revisions without full scans or all-history materialization.
+
+## Security Contract
+
+- Internal service changes only; existing revision endpoints retain session
+  auth, resource RBAC, CSRF on writes/deletes/restores, current rate limits, and
+  strict route schemas.
+- No public write or nonce/HMAC/CAPTCHA change. TASK-517 publication/visibility
+  enforcement remains authoritative.
+- Parent authorization is completed before service invocation; cursor/parent
+  mismatch fails closed. Summaries omit document bodies; errors/logs omit
+  revision snapshots, PII, SQL/binds, advisory keys, and internal constraint SQL.
+
+## Validation Commands
+
+- `bunx vitest run tests/vitest/database/revisionAllocation.test.ts`
+- `set -a && source .env && set +a && bun test tests/unit/pages/revisionService.test.ts tests/unit/widgets/widgetTemplateRevisionService.test.ts tests/unit/content/detailPageRevisionService.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/database/revisionConcurrency.test.ts tests/integration/database/revisionRetention.test.ts tests/perf/database-revision-budgets.test.ts`
+- `bun --cwd core lint:types`
+- `bun --cwd core lint`
+- `bun run gates:coderso`
+- `bun run gates:coderso:perf`
+
+## Documentation Updates Required
+
+No shared docs. Hand locking/retry/error rules, bounded read shape, exact
+retention env/default table, and the explicit TASK-551-09 entry/post adoption
+requirement to TASK-551-10-L02.
+
+## Quantified Acceptance
+
+- Fifty concurrent attempts in each of the three adopted families produce zero
+  duplicate versions/partial rows and a valid monotonic committed sequence;
+  entry/post identifiers remain contract-tested for TASK-551-09 adoption.
+- Summary reads return at most 101 DB rows, at most 100 items, and at most 2 SQL
+  statements; a detail fetch returns exactly one snapshot.
+- Retention never exceeds 2,000 deletes/batch, preserves 100% of protected and
+  other-parent rows, and converges idempotently.
+- No entry/post/detail-document file changes in this leaf; all touched
+  production/test files are at most 1,000 lines.
