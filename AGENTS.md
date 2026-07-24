@@ -485,10 +485,11 @@ Implementation pipeline:
 - Each cached read declares its TTL, maximum serialized size, eligibility,
   negative-cache policy, dependency tags/generation, and stale-data policy.
   Do not cache secrets/decrypted settings, sessions, auth/RBAC decisions,
-  private/password content, preview/draft bodies, nonce-bearing forms, or
-  user-specific responses unless a stricter task contract proves safe
-  partitioning and invalidation. Security/auth data never uses stale-while-
-  revalidate.
+  private/password content, preview/draft bodies, or nonce-bearing forms. These
+  are absolute server-cache exclusions and no task contract may relax them.
+  Other explicitly non-security user-specific responses may be cached only when
+  a stricter task contract proves identity partitioning, bounded lifetime, and
+  complete invalidation. Security/auth data never uses stale-while-revalidate.
 - A transition from public access to private, password-protected, unpublished,
   or otherwise restricted access must not depend on bounded-eventual cache
   invalidation. Either prove a synchronous fail-closed distributed fence, or

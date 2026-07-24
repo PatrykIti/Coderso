@@ -5,7 +5,10 @@
 **Priority:** High
 **Category:** Performance / Reliability / Security / Runtime Smoke
 **Estimated Effort:** Large
-**Dependencies:** TASK-551-01 through TASK-551-09 landed with targeted gates;
+**Dependencies:** exact compile-green sequence landed with targeted gates:
+TASK-551-01 → TASK-551-02 → TASK-551-05 → TASK-551-03-L01 →
+TASK-551-06-L01/L02/L03 → TASK-551-03-L02 → TASK-551-03-L03 →
+TASK-551-04 → TASK-551-07 → TASK-551-08 → TASK-551-09;
 TASK-551-01-L01 post-09 final re-dispatch emitted a fresh exact-set receipt;
 TASK-551-11 pre-implementation audit PASS; parent external dispatch gate
 reverified for TASK-511, TASK-493, TASK-517, and TASK-518
@@ -74,9 +77,34 @@ This leaf must not rebaseline or weaken an owner assertion.
   inventory receipt must be `phase: "final"`, digest-current against the post-09
   production tree, exact-set equal, and contain zero planned deltas. Initial,
   stale, missing, or non-L01-authored receipts fail before any aggregate work.
-- The `small` and `large` profiles use TASK-551-01's exact row counts, payload
-  sizes, concurrency, warm-up, sample count, percentile method, hardware/context
-  metadata, and non-weakened budgets.
+- The `small` and `large` profiles use TASK-551-01's exact per-family target and
+  support-table row counts, relationship recipes, pool capacities, warm-up,
+  sample/repetition counts, percentile method, hardware/context metadata, and
+  non-weakened budgets. The aggregate runner seeds one mapped inventory family
+  at a time through that owner and cleans it before the next family; it does not
+  invent a whole-profile fixture, payload-size, or concurrency constant.
+- IDs are UUIDv5 from `(validatedRunScope, profile, family, ordinal)`; integer
+  family/support counts are exact. List timestamps group each ten ordinals while
+  append timestamps are unique by ordinal. Fixed distributions are users
+  `80/10/10` with five roles/every tenth multi-role; content `50/30/10/10`;
+  entry visibility `70/20/10`; forms `60/30/10`; submissions `70/20/10`; media
+  `80/20` with 10% null folder; five booking statuses at 20% each; search
+  common/rare counts use L02's exact per-family integer table (no percentage
+  rounding), with hidden/miss zero; and ten-row equal-sort groups. Pool capacities are
+  small/large `2/10`. Measurement is exactly three repetitions, each five
+  unrecorded warmups plus 30 samples; calibration is 20 warmups plus 100 samples.
+  Repetition-p95 spread is `(max-min)/max(median,0.1)*100`, except three zeroes
+  produce zero, and must be `<=20%`. Normalize by
+  `observedMs*referenceCalibrationMedian/currentCalibrationMedian`, accepting
+  factor `0.80..1.20`; freeze used
+  `ceilToTenth(max(kindFloor, medianRepetitionPercentile*1.25))`. This leaf reads
+  checked-in finite ceilings and never invokes `--freeze`.
+- Summary/facet `asOf` is `2026-01-15T12:00:00.000Z`. Submission ordinals
+  divisible by four are 1..6 days before and all others 8..37 days before,
+  yielding rolling-seven-day `500/25,000`, spam `200/10,000`. Booking timezones
+  cycle UTC/New_York/Tokyo; buckets `0..9/10..19/20..59/60..99` mean same-day
+  past/same-day future/next 1..40/prior 1..40 days, end +60 minutes, yielding
+  today `400/20,000`, upcoming and past/current `1,000/50,000` each.
 - DB fixtures use one run UUID in every owned slug/key and record every created
   row ID. Teardown deletes only those IDs in FK-safe order, including failure
   paths. Never assert a globally empty table or delete another suite's rows.
@@ -98,29 +126,200 @@ This leaf must not rebaseline or weaken an owner assertion.
 - Record p50/p95/p99, rows read/returned, exact query count, bytes transferred,
   pool wait/saturation, cache hit/miss/error, serialized bytes, eviction,
   coalesced loaders, and invalidation lag.
-- Assert exact zero PostgreSQL queries for a warm safely eligible non-gated
-  public HTML hit. Assert a mutable-visibility entry performs exactly one narrow
-  indexed visibility/version gate before cache and zero additional warm-hit
-  queries; unknown/private/password/unpublished results and a public→restricted
-  transition cannot return a primed public body.
+- Assert every public request performs one uncached authoritative
+  `getSecuritySettings` query before security/rate middleware. A safely eligible
+  structurally non-mutable public HTML/list request totals one query; mutable
+  page/home/post/content-entry details and lists total two (security plus their
+  narrow point/bounded ordered membership gate). Lists return at most
+  `pageLimit + 1` projections and no bodies/hashes. Pin exact page/post/entry
+  fields and unpublish/missing-representation/membership/reorder transitions.
+  Their digests join identity; all execute zero other queries, and restricted/
+  missing/malformed or changed
+  membership/version proof cannot return primed output.
 - Compare sanitized `EXPLAIN (ANALYZE, BUFFERS)` plan fingerprints against the
-  TASK-551-01 baseline and each owning migration receipt. A different plan is
-  investigated; snapshots never include bind values or raw data.
+  TASK-551-01 budget baseline and TASK-551-05 catalog/plan receipts. A different
+  plan is investigated; snapshots never include bind values or raw data.
 
 ### Fault and reliability
 
 - Memory corrupt/unknown/expired/oversized envelope, byte/count eviction, loader
   failure, shutdown, and concurrent single-flight transitions.
+- Pin concrete-policy envelope lifetime and policy-branded conditional-entry
+  TTL/value ceilings; local single-flight default/range/overflow behavior is
+  exactly `1_024`, `16..10_000`, a canonical digest of final path key, current
+  epoch and branded full-context `shareScopeDigest`, identity-cleaned shared
+  fill-outcome promises only (never `Promise<TResult>`/caller values), and forced
+  bypass at coherence-epoch overflow. Ineligible/unbranded requests perform zero
+  registry/read/lease/fill calls. The owner retains its result; only a strictly
+  decoded `published` outcome from successful positive/eligible-negative
+  conditional publication lets a joiner call its own resolver. For `no_fill`, rejection, generation
+  change, lease loss, unavailable/timeout, closed/bypass or malformed outcomes,
+  every joiner runs its own authoritative loader with fill disabled.
+  Exercise every exact coherence signal/controller transition, distributed
+  owner/waiter/bypass result, and `getServerCacheRuntime().cache` singleton
+  before start/while started/after close.
+- Pin `ServerCache.getOrLoad(ServerCacheLoadRequest<TCached,TResult>)` as sole
+  load/fill owner: one pre-loader primary+`fillFenceTags` snapshot and strict
+  finite-reason `no_fill` versus `fill`/`fillKind:positive|negative` result.
+  `no_fill` returns only `returnValue` with zero encode/write; negative uses only
+  its negative TTL and carries no companion; positive permits branded zero/one
+  companion whose TTL is sampled/capped independently from the primary's own
+  policy, so an atomic pair may have unequal TTLs. No consumer accesses either store write primitive.
+- Pin manifest-primary render as manifest cacheValue + HTTP-only returnValue +
+  branded HTML companion, and manifest-hit/HTML-miss as HTML primary + refreshed
+  manifest companion; both-or-neither generation fill is mandatory. Both loaders
+  use positive fill or finite-reason `no_fill`, never negative. A render-time
+  exclusion returns authoritative output without throw, encode, or write.
+- State-identical force/recover reports are no-ops. Every accepted
+  `invalidation_observed`, including duplicate at-least-once local/PubSub
+  delivery, advances affected epochs; no observation clears a fence, no event-
+  dedup registry or second epoch mutator exists, and overflow permanently forces
+  bypass. Pub/Sub payload is exactly event key plus generation digest (no tags/
+  domain identity); a subscriber bounded-point-reads the outbox row, normalizes
+  finite tags, and emits no observation on missing/malformed/read failure.
+- TASK-551-02 receipts pin default pool/replicas/server/reserve/worker/migration
+  values `10/1/103/21/2/1`, planned `13`, available `82`, and strict
+  `planned < available`; exact lifecycle APIs and the default Bun suite
+  `tests/integration/server/task551DatabaseLifecycle.test.ts`; deadlines
+  `2_000/5_000/10_000/15_000 ms` plus DB close `10 s`; awaited stop/listen and
+  late-acquisition release-once behavior; and closed telemetry with six families,
+  five outcomes, 12 duration buckets, nine returned-row buckets, 3,240 cells per
+  fingerprint, 44 pool cells, saturating `Number.MAX_SAFE_INTEGER`, deterministic
+  `snapshot()`/`reset()`, opt-in `measureDatabaseQuery`, and separate
+  `probeDatabasePoolHealth` without a driver-wide rows/wait claim. Pin exact
+  constants `QUERY_FAMILIES`, `QUERY_OUTCOMES`,
+  `QUERY_DURATION_BUCKET_MAX_MS`, `ROWS_RETURNED_BUCKET_MAX`,
+  `POOL_WAIT_BUCKET_MAX_MS`, `POOL_OUTCOMES`, `MAX_QUERY_FINGERPRINTS=512`, and
+  `MAX_COUNTER_VALUE=Number.MAX_SAFE_INTEGER`. Pin exported
+  `assertMaintenanceSessionAffinity()`, strict maintenance modes
+  `primary|direct|session`, pool max `2..4`, secret URL and budget inclusion.
+  Primary startup never probes; disabled-scheduler `off+primary+pool1` passes and
+  `verifyDatabaseSessions` checks only that session.
+  Explicit direct/session probes once at DB start and reuses the lifecycle result;
+  enabled scheduler awaits it before timer/listen and fails below two sessions or with transaction+primary.
 - Redis connect timeout, command timeout, circuit open/half-open/close,
   disconnect, reconnect, corrupt/oversized value, generation read/bump failure,
   Pub/Sub loss, and process restart. Outage bypasses to DB and never starts a
-  persistent local value cache.
+  persistent local value cache. Before either Redis write Lua, the one exact
+  internal validator strictly decodes every envelope, matches entry/envelope
+  `fillKind`, selects the positive or required non-null negative policy ceiling,
+  and rechecks TTL/lifetime/bytes; any malformed one/two-entry bundle performs
+  zero Redis commands. Positive companions retain their independently sampled TTL.
 - Commit/rollback/no-op invalidation, outbox claim/retry/never-discard policy,
   `FOR UPDATE SKIP LOCKED` concurrency, worker crash/reclaim, duplicate delivery,
   stale-generation fill rejection, lease expiry, token mismatch, and
   compare-and-delete release.
-- Migration from the pre-TASK-551 snapshot and a clean database, plus next-free
-  journal/snapshot integrity after re-reading TASK-518 and all migration owners.
+  Redis commits create exactly one same-transaction outbox row; memory commits
+  create zero and perform exactly one awaited post-commit generation bump.
+- Every domain caller awaits `applyAfterCommit(plan)` before returning committed
+  success. Its applied/queued/bypassed resolution follows visible local
+  observation or an affected-tag force fence; fire-and-forget/direct epoch
+  mutation is a gate failure.
+- A distributed owner uses only `putIfGenerationsAndLeaseOwned`; one bounded Lua
+  operation proves the exact lease token and every expected generation before an
+  all-or-nothing one/two-entry fill. Only `written` fills. `generation_changed`,
+  `lease_lost`, `unavailable`, and renew `lost|unknown` return authoritative
+  bytes without fill; generation-only store write is forbidden, and release
+  afterward is token-safe best-effort cleanup only.
+- Migration from clean and immediately-prior databases, disposable rollback and
+  forward reapply, plus next-free journal/snapshot integrity after re-reading
+  TASK-518, all migration owners, and
+  `core/db/migrations/meta/_journal.json`. Require byte identity for all seven
+  vector and five selected-or-null trigram source expressions using exact
+  immutable-safe `coalesce(...) || ' ' || ...`; resolve the closed function/
+  operator set with `pg_proc.provolatile = 'i'`. Require the sole deeply frozen
+  `BOOKING_RESERVATION_EXCLUSION_SQL` descriptor, exact extension/add occurrence
+  once, intentional exclusion-only snapshot omission, live
+  `pg_constraint.contype = 'x'`, preserved `btree_gist` on rollback, and fresh
+  generation with zero duplicate add or generated drop. This is one atomic 05-
+  L01 schema/SQL/snapshot/journal ownership seam, not claimed Drizzle DSL support.
+- Require the closed index catalog, including all form/booking/list/retention
+  members and assistant-ingest `started_at`. Pin `pages_author_list_updated_id_idx`,
+  role-leading `user_roles_role_user_idx`, and `posts_tags_gin_idx`/
+  `media_tags_gin_idx` as `jsonb_path_ops` GIN against their exact parameterized
+  `@>` predicates. Pin `cache_outbox_unprocessed_age_idx(created_at,id) WHERE
+  processed_at IS NULL` and `readOldestUnprocessedAge` fingerprint
+  `cache_outbox_oldest_unprocessed`: exact created-at/id `LIMIT 1` includes
+  claimed/backed-off rows, with 1k/100k EXPLAIN and write-budget evidence. The mutation drain remains
+  through the ordered page/content/widget revision-unique group; only a durable
+  ready/valid `apply-resume-check --through-group revision-integrity` barrier may
+  resume old `max(version)+1` writers before the read-performance group/final admission. Transactional SQL creates no new index;
+  check/apply and reverse concurrent drop are resumable and preserve the GiST seam.
+- Lifecycle evidence proves 02-L02 solely owns `runtimeEntrypoint.ts`, `prod.ts`
+  and `dev.ts`; `runtimeEntrypoint.ts` alone calls lifecycle start/close and owns
+  signals, listen and graceful-at-most-10-second then forced HTTP drain. Prod/dev
+  only select mode, Vite is a participant, and every close receives
+  `RuntimeCloseContext{absoluteDeadline,signal}`. Total shutdown is at most 15
+  seconds; non-DB closes are at most 5 seconds, while DB is the sole exception
+  at `min(10 seconds, remaining absolute budget)` with no outer race/detached teardown. Partial
+  rollback is awaited with zero listen on startup signal/failure. No participant
+  or adapter calls `server.stop`. 03 `routes/index.ts` registers the
+  cursor participant at module evaluation; 08 owns only `httpServer.ts` and invokes the idempotent
+  composition seam for cache/retention/existing backup without loading/injecting
+  the cursor keyring or editing either entrypoint. Shutdown awaits invalidation
+  `stopClaiming()`/`drain()`/`close()`, distributed coordinator, cache/store,
+  then database.
+  Retention lock, liveness, every batch transaction and unlock use one dedicated
+  session/backend PID. Close stops ticks, aborts/cancels SQL, confirms rollback/
+  termination within 4,500 ms, then permits cache/DB close. Lock loss yields only
+  `retention_lock_lost`, no overlap/partial summary/detached work, under the
+  shared 5-second participant ceiling.
+- TTL-zero evidence proves only manifest/HTML policy/generation/store work is
+  bypassed; the fixed positive `public-runtime` bootstrap policy still runs.
+- Nested import/restore evidence proves one outer `eventKey` is propagated
+  through `collectInvalidationTagsTx` with one persisted/applied plan. Revision
+  evidence pins zero-argument `withRevisionParentLock(identity, tx, run)` and
+  `allocateRevision(input, tx)`.
+- TASK-551-03-L02 evidence starts only after 06-L03 and proves sole adoption of
+  06-L02's page `{id,pageId,version,kind,title,slug,createdAt,createdBy:{id,name,email}|null}`
+  and detail `{id,detailPageId,version,kind,createdAt,createdBy:string|null}`
+  envelopes, rejecting invented `reason`, across route, schema,
+  client and UI; the freshly rescanned complete seven-client consumer graph;
+  bounded server-side picker/search/load-more; every named cohesive >1,000-line
+  split; its two consumer-graph and five revision suites; and zero raw-array,
+  auto-fetch-all, first-page-truncation or heavy-body fallback.
+- It pins each metric-bearing Admin keyset response's exact
+  `{items,nextCursor,hasMore,summary,facets}` envelope. Only `matchingTotal`
+  follows normalized row filters; every other typed summary field and bounded
+  author/content-type/role/folder/tag facet remains global to the authorized/
+  parent scope across three-plus pages and filters. Facet pages use strict
+  `{items,nextCursor,hasMore}`, default/max `50/100`, and no auto-fetch. Page +
+  fixed aggregate + optional bounded relation-facet batch is at most three SQL,
+  with no hidden page concatenation, per-row lookup, or authorization leakage.
+- It also pins `formReadService` and exact FormListItem
+  `id,name,slug,status,description,submissionAccess,updatedAt`;
+  `bookingReadService` owns paginated reservations/resources/services/blackouts,
+  capped-100 service-resource/schedule arrays, and 31-day/500-slot preview.
+  Existing Reservations/Resources/Services tabs consume narrow items, Services
+  keeps derived `submissionAccess`, edits await point detail, and Availability/
+  SlotPreview use bounded pickers. Submission payload loads through one authorized
+  parent-bound point query only on expansion, stays component-local/uncached, and
+  aborts/clears on close/unmount/logout/auth change. Success/error headers are
+  exactly `Cache-Control: private, no-store, max-age=0`, `Pragma: no-cache`, and
+  `Expires: 0`; its client passes `cache:"no-store"`. Media summaries expose safe
+  derived `name` (`originalName→title→sanitized key basename→asset`), omit raw
+  key, and `media/utils.ts` consumes name directly.
+  Exact extraction stems are `BookingOverviewPanel`, `MediaLibraryFolderState/Results`, `UsersRolesContent`, `DetailTemplateRevisionPanel`, `MenuDesignCanvas/Inspector/DataSources`, `MenuEditorWorkspace`, `PostEditorMediaControls`, `ContentListSource/PresentationEditors`, `CtaBannerContentEditors`, `EntryTeaserSource/PresentationEditors`, `FeatureGridItemEditors`, `FooterNavigation/BrandEditors`, `GalleryMosaicItemEditors`, `HeroContent/Media/LayoutEditors`, `LogoCloudItemEditors`, `NavigationItem/PresentationEditors`, `PostsFeedSourceEditors`, `RichTextContent/LayoutEditors`, `SectionContent/LayoutEditors`, `TeamMember/LayoutEditors`, and `TestimonialItemEditors`; gate
+  the shared page-editor fixture plus all eight named split flow suites.
+- Gate deletion of legacy `booking-page.test.tsx`/`media-library.test.tsx` and the
+  exact fixture/suite owners: `bookingPageTestFixtures.tsx` plus booking `loading-pagination|mutations|calendar`, and `mediaLibraryTestFixtures.tsx` plus media `loading-pagination|selection-folders|upload-edit`.
+- Gate Bun-free `searchHistoryContract.ts` and its direct Vitest, deletion of the
+  real private `pruneHistory` declaration/call, and actor/UUIDv5-idempotent
+  `recordSearch`. Search GETs perform zero writes; sole internal POST
+  `/admin/api/search/history` uses session actor, `content:read`, CSRF,
+  `admin_write`, strict four-key body and 409 conflict. `searchClient`/
+  `useSearchResults` reuse one UUID per UI intent/retry; no public/API-key/GET mutation alias exists.
+- Analytics upgrade evidence pins only `ANALYTICS_RETENTION_DAYS` for age and its
+  complete `Number(raw)` truth table:
+  absent/malformed/non-finite resolves to 365; finite values floor then clamp to
+  `30..1095`; `RETENTION_ANALYTICS_ENABLED` alone controls enablement; both
+  unsupported `RETENTION_ANALYTICS_*DAYS` aliases reject. Every present
+  `ANALYTICS_PRUNE_INLINE_DISABLED` and `ANALYTICS_PRUNE_INLINE_ENABLED` string
+  has its separate warning-once code without logging values; neither changes
+  behavior. With exact lowercase `RETENTION_DRY_RUN=true`, direct service calls
+  have no scheduler advisory; scheduled use takes exactly one replica advisory
+  before the same bounded reads. Both perform no destructive row lock, mutation,
+  publication or progress write. Request writes execute zero prune.
 
 ### Bounded-eventual public-cache consistency
 
@@ -148,10 +347,33 @@ This leaf must not rebaseline or weaken an owner assertion.
 - Prove private/password/draft/preview/nonce-bearing/session/auth/RBAC and
   cross-identity Admin values never enter a shared cache or survive an identity/
   permission-epoch transition.
+- Prove Admin keys/envelopes/events bind deployment digest, a crypto-random
+  128-bit session `authIncarnation`, monotonic auth epoch, user and permissions;
+  same-tab authenticated reload alone reuses the incarnation. New login,
+  logout, 401/403 and identity transition rotate/delete it before scope work;
+  storage failure uses memory-only incarnation plus persistent misses, and no
+  auth API payload carries it.
+- Pin fixed-order UTF-8 JSON deployment `{v:3,origin,adminBasePath,
+  entryModulePath}` and scope `{v:3,deploymentIdentity,authIncarnation,authEpoch,
+  userId,permissions,roles}`, separate NFC/deduplicated/UTF-8-byte-sorted arrays,
+  all caps, and no delimiter concatenation.
 - Prove decrypted or secret-bearing `SecuritySettings` never enters memory,
   Redis, browser cache, outbox, or smoke evidence; reads remain DB-authoritative
   while only finite generation/coherence metadata or typed redacted projections
   may use cache infrastructure.
+- Prove commerce product data, form/booking submission nonces, booking slots
+  token, analytics beacon nonce, request-scoped token, and unknown dynamic
+  dependency create no manifest/envelope; every dynamic dependency is tagged,
+  gated, or exactly excluded, and public write defenses execute before cache.
+- Prove method+URL dispatch covers the complete booking/Forms/analytics API
+  surface before cache normalization/read/write: every booking path/method
+  including slots GET, Forms submission/upload at every method, and analytics
+  beacon at every method. Handler security/method behavior remains authoritative;
+  only unmatched GET/HEAD enters cache and each request reads SecuritySettings once.
+- Race settings partial writes under `SET LOCAL lock_timeout='2s'` and advisory
+  `(551,904)` before same-tx merge/write. Pin preserved disjoint fields, Redis
+  exactly-one outbox row, memory zero rows plus exactly one awaited post-commit
+  bump, redacted conflict mapping, and observation/fence before return.
 - Exercise hit, miss, Redis outage, reconnect, and stale-generation paths without
   bypassing current auth, CSRF, rate-limit, nonce/HMAC, CAPTCHA, or bot policy.
 - Assert arbitrary Redis commands/keys and unknown cache/cursor fields never
@@ -165,11 +387,12 @@ real Redis namespace, but not process memory. Restart from current built/source
 bytes before the smoke; no hot-reload process qualifies. Run these exact ordered
 scenario IDs:
 
-1. `cross-process-warm-public-zero-db` — A fills one safely eligible non-gated
-   published public response; B serves the identical validated value with exactly
-   zero PostgreSQL queries and no process-local persistent value. Separately, a
-   mutable-visibility entry performs one indexed gate and zero additional warm
-   queries on B.
+1. `cross-process-warm-public-query-budget` — A fills one safely eligible
+   structurally non-mutable response; B serves identical bytes with exactly one
+   authoritative SecuritySettings query and no process-local persistent value or
+   other query. Mutable page/home/post/content-entry detail/list requests each
+   total two queries: security plus their point/membership gate, with zero other
+   reads and at most `pageLimit + 1` list projections.
 2. `post-commit-generation-and-rollback` — A commits an update and B observes the
    new value after waiting for bounded outbox/generation recovery and records the
    observed lag; a rolled-back update emits no generation/outbox change and B
@@ -254,14 +477,27 @@ async function runTask551AggregateGates(deps: GateDeps): Promise<GateEvidence> {
   });
   await deps.requirePostgresReachable();
   await deps.requireRealRedis({ minimum: "7.2.0" });
+  await deps.requireExactTask55102Receipt({
+    lifecycleTest: "tests/integration/server/task551DatabaseLifecycle.test.ts",
+    deadlinesMs: [2_000, 5_000, 10_000, 15_000], databaseCloseSeconds: 10,
+    telemetryCellsPerFingerprint: 3_240, poolTelemetryCells: 44,
+  });
+  await deps.requireTask55105AtomicCustomMigrationReceipt();
+  await deps.requireTask55103L02ConsumerGraphAndRevisionAdoptionReceipt();
+  await deps.requireAnalyticsUpgradeCompatibilityReceipt();
+  await deps.requireExactTask55109CommandManifests();
 
   const profiles = [];
   for (const profile of ["small", "large"] as const) {
-    const fixture = await deps.seedOwnedFixture(profile);
-    try {
-      profiles.push(await deps.measureProfileAgainstFrozenBudgets(fixture, budgets));
-    } finally {
-      await deps.cleanupExactFixture(fixture);
+    for (const scenario of budgets.mappedInventoryScenarios(profile)) {
+      const fixture = await deps.seedOwnedFamilyFixture(profile, scenario);
+      try {
+        profiles.push(await deps.measureFamilyAgainstFrozenBudget(
+          fixture, budgets.requireStoredNumericCeiling(scenario)
+        ));
+      } finally {
+        await deps.cleanupExactFamilyFixture(fixture);
+      }
     }
   }
 
@@ -286,11 +522,11 @@ async function runTwoProcessRedisSmoke(ids: readonly SmokeId[]) {
 }
 ```
 
-**Data flow:** frozen budgets + current post-09 final inventory receipt →
-reachability/version preflight → owned small/large fixtures → measured Bun/DB/
-cache matrices → fresh Admin UI visible-effect smoke → two fresh processes +
-real Redis scenarios → sanitized strict evidence → release-gate registration
-and post-audit handoff.
+**Data flow:** frozen budgets + current post-09 final inventory receipt + exact
+owner receipts/command manifests → reachability/version preflight → one owned
+small/large family fixture at a time → measured Bun/DB/cache matrices → fresh
+Admin UI visible-effect smoke → two fresh processes + real Redis scenarios →
+sanitized strict evidence → release-gate registration and post-audit handoff.
 
 **Error handling:** unavailable infrastructure, required skip, budget regression,
 unexpected plan/query count, malformed evidence, process error, leaked secret,
@@ -300,9 +536,10 @@ original owner; this leaf never changes a production assertion to pass.
 
 **Regression-test shape:** test harness self-tests reject fake Redis, one-process
 execution, reordered/missing scenarios, unbounded cleanup, raw namespace/URL,
-non-finite metrics, unknown evidence fields, required skips, and evidence writes
-after failed cleanup. Gate-runner tests prove the new performance, security, and
-reliability commands are release-blocking.
+non-finite metrics, unknown evidence fields, required skips, missing/non-zero-
+discovery owner command receipts, and evidence writes after failed cleanup. Gate-
+runner tests prove the new performance, security, and reliability commands are
+release-blocking without moving direct-suite ownership from TASK-551-09.
 
 ## Testing Requirements
 
@@ -314,6 +551,241 @@ reliability commands are release-blocking.
   non-empty screenshots, visible-effect assertions, and zero console errors.
 - Count every touched production/test file from the verified family baseline and
   fail any human-authored file above 1,000 physical lines.
+- Validate four ordered TASK-551-09 owner command manifests against the literal
+  blocks below. Every command has exact argv, exit code zero and `skipped=false`;
+  every test command reports positive discovery. The leaf remains the direct-
+  suite owner; this aggregate leaf consumes the receipt and never edits or
+  rebaselines those files.
+
+### Exact TASK-551-09 Owner Command Manifests
+
+Canonicalize these blocks to argv arrays and compare their SHA-256 digests with
+the four ordered owner receipts. Environment values are never included in the
+digest or evidence.
+
+TASK-551-09-L01:
+
+```bash
+set -a && source .env && set +a
+bun run test:vitest -- tests/vitest/site/public-site-cache-read-models.test.ts \
+  tests/vitest/content/entry-visibility-gate.test.ts \
+  tests/vitest/content/entry-unlock-token.test.ts
+SERVER_CACHE_BACKEND=memory bun test \
+  tests/unit/site/cache.test.ts \
+  tests/integration/runtime/public-site-cache-query-budget.test.ts \
+  tests/integration/runtime/public-site-cache-eligibility.test.ts \
+  tests/integration/runtime/public-content-visibility-cache-gate.test.ts \
+  tests/integration/runtime/public-content-list-membership-cache-gate.test.ts \
+  tests/integration/server/entry-access-password-hash.test.ts \
+  tests/integration/runtime/entry-visibility-cache.test.ts \
+  tests/integration/runtime/entry-visibility-gate.test.ts \
+  tests/integration/runtime/entry-password-gate.test.ts
+SERVER_CACHE_BACKEND=redis SERVER_CACHE_NAMESPACE=task551-09-l01 bun test \
+  tests/integration/runtime/public-site-cache-query-budget.test.ts \
+  tests/integration/runtime/public-site-cache-eligibility.test.ts \
+  tests/integration/runtime/public-content-visibility-cache-gate.test.ts \
+  tests/integration/runtime/public-content-list-membership-cache-gate.test.ts \
+  tests/integration/runtime/entry-visibility-cache.test.ts \
+  tests/integration/runtime/entry-visibility-gate.test.ts \
+  tests/integration/runtime/entry-password-gate.test.ts
+bun test tests/unit/server/publicBookingApi.test.ts \
+  tests/unit/server/publicFormsApi.test.ts \
+  tests/integration/routes/bookingRoutes.test.ts \
+  tests/integration/routes/forms.test.ts \
+  tests/integration/server/formsWriteMounts.test.ts \
+  tests/integration/routes/publicAnalytics.test.ts \
+  tests/security/analyticsBeacon.test.ts
+bun --cwd core lint:types
+bun --cwd core lint
+git diff --check
+wc -l core/server/publicSite.tsx core/server/publicSiteRenderer.tsx \
+  core/server/publicSiteCacheReadModels.ts core/server/publicSiteRenderDependencies.ts \
+  core/services/content/publicContentVisibilityGateRead.ts \
+  core/site/cache/siteCache.ts \
+  tests/unit/site/cache.test.ts \
+  tests/vitest/site/public-site-cache-read-models.test.ts \
+  tests/integration/runtime/public-site-cache-query-budget.test.ts \
+  tests/integration/runtime/public-site-cache-eligibility.test.ts \
+  tests/integration/runtime/public-content-visibility-cache-gate.test.ts \
+  tests/integration/runtime/public-content-list-membership-cache-gate.test.ts \
+  tests/vitest/content/entry-visibility-gate.test.ts \
+  tests/vitest/content/entry-unlock-token.test.ts \
+  tests/integration/server/entry-access-password-hash.test.ts \
+  tests/integration/runtime/entry-visibility-cache.test.ts \
+  tests/integration/runtime/entry-visibility-gate.test.ts \
+  tests/integration/runtime/entry-password-gate.test.ts \
+  tests/unit/server/publicBookingApi.test.ts \
+  tests/unit/server/publicFormsApi.test.ts \
+  tests/integration/routes/bookingRoutes.test.ts \
+  tests/integration/routes/forms.test.ts \
+  tests/integration/server/formsWriteMounts.test.ts \
+  tests/integration/routes/publicAnalytics.test.ts \
+  tests/security/analyticsBeacon.test.ts
+```
+
+TASK-551-09-L02:
+
+```bash
+set -a && source .env && set +a
+bun run test:vitest -- tests/vitest/cache/content-mutation-invalidation.test.ts \
+  tests/vitest/seo/seoSearchPerformanceTypes.test.ts \
+  tests/vitest/seo/sitemapBuilder.test.ts \
+  tests/vitest/seo/seoPerformanceAggregation.test.ts
+SERVER_CACHE_BACKEND=memory bun test \
+  tests/integration/runtime/site-cache-page-entry-invalidation.test.ts \
+  tests/integration/runtime/site-cache-post-seo-invalidation.test.ts \
+  tests/integration/runtime/public-site-cache-query-budget.test.ts \
+  tests/integration/runtime/public-content-visibility-cache-gate.test.ts \
+  tests/integration/runtime/public-content-list-membership-cache-gate.test.ts \
+  tests/integration/runtime/pages-runtime-rendering.test.ts \
+  tests/integration/runtime/pages-runtime-collections.test.ts \
+  tests/integration/runtime/pages-runtime-routing-preview.test.ts \
+  tests/integration/runtime/pages-runtime-responsive-cache.test.ts \
+  tests/unit/pages/pageService.test.ts \
+  tests/unit/content/entryService.test.ts \
+  tests/unit/content/entryServiceMetadataAndRelations.test.ts \
+  tests/unit/content/entryServiceVisibilityAndRevisions.test.ts \
+  tests/unit/content/postsService.test.ts \
+  tests/unit/seo/seoService.test.ts \
+  tests/unit/seo/seoServicePersistence.test.ts \
+  tests/integration/posts/posts-revisions-flow.test.ts \
+  tests/integration/integrations/gscClient.test.ts \
+  tests/integration/routes/sitemap.test.ts \
+  tests/integration/routes/seo-sitemap.test.ts \
+  tests/integration/routes/seo-sync.test.ts \
+  tests/integration/routes/seo-performance.test.ts \
+  tests/integration/routes/seo-pipeline.test.ts \
+  tests/integration/routes/seo.test.ts \
+  tests/security/gsc-credential.test.ts \
+  tests/security/seo-sitemap.test.ts \
+  tests/security/seo-sync.test.ts \
+  tests/security/seo-pipeline.test.ts \
+  tests/perf/seo-sitemap.test.ts
+SERVER_CACHE_BACKEND=redis SERVER_CACHE_NAMESPACE=task551-09-l02 bun test \
+  tests/integration/runtime/site-cache-page-entry-invalidation.test.ts \
+  tests/integration/runtime/site-cache-post-seo-invalidation.test.ts \
+  tests/integration/runtime/public-site-cache-query-budget.test.ts \
+  tests/integration/runtime/public-content-visibility-cache-gate.test.ts \
+  tests/integration/runtime/public-content-list-membership-cache-gate.test.ts
+bun --cwd core lint:types
+bun --cwd core lint
+git diff --check
+wc -l core/services/pages/pageService.ts \
+  core/services/content/{entryService,entryServiceContract,entryPersistence,entryMutationService,entryRevisionService,postsService,postDocumentContract,postMutationService,postRevisionService}.ts \
+  core/services/seo/seoService.ts core/services/cache/contentMutationInvalidation.ts \
+  tests/unit/pages/pageService.test.ts \
+  tests/unit/content/{entryService,entryServiceMetadataAndRelations,entryServiceVisibilityAndRevisions}.test.ts \
+  tests/unit/content/postsService.test.ts \
+  tests/unit/seo/{seoService,seoServicePersistence}.test.ts \
+  tests/integration/posts/posts-revisions-flow.test.ts \
+  tests/vitest/cache/content-mutation-invalidation.test.ts \
+  tests/integration/runtime/site-cache-{page-entry,post-seo}-invalidation.test.ts \
+  tests/integration/runtime/pages-runtime-fixtures.ts \
+  tests/integration/runtime/pages-runtime-rendering.test.ts \
+  tests/integration/runtime/pages-runtime-collections.test.ts \
+  tests/integration/runtime/pages-runtime-routing-preview.test.ts \
+  tests/integration/runtime/pages-runtime-responsive-cache.test.ts \
+  tests/vitest/seo/{seoSearchPerformanceTypes,sitemapBuilder,seoPerformanceAggregation}.test.ts \
+  tests/integration/integrations/gscClient.test.ts \
+  tests/integration/routes/{sitemap,seo-sitemap,seo-sync,seo-performance,seo-pipeline,seo}.test.ts \
+  tests/security/{gsc-credential,seo-sitemap,seo-sync,seo-pipeline}.test.ts \
+  tests/perf/seo-sitemap.test.ts
+```
+
+TASK-551-09-L03:
+
+```bash
+set -a && source .env && set +a
+bun run test:vitest -- tests/vitest/cache/site-dependency-invalidation.test.ts \
+  tests/vitest/cache/redirect-cache-policy.test.ts
+SERVER_CACHE_BACKEND=memory bun test \
+  tests/integration/runtime/site-shell-cache-invalidation.test.ts \
+  tests/integration/runtime/site-routing-cache-invalidation.test.ts \
+  tests/integration/runtime/site-form-listing-cache-invalidation.test.ts \
+  tests/integration/runtime/public-site-cache-eligibility.test.ts \
+  tests/integration/runtime/site-shell-runtime.test.ts \
+  tests/integration/runtime/detail-page-preview-cache.test.ts \
+  tests/unit/menus/menuService.test.ts \
+  tests/unit/pages/pageTemplateLibraryService.test.ts \
+  tests/unit/pages/publicSiteShell.test.ts \
+  tests/unit/themes/themeProfileService.test.ts \
+  tests/unit/settings/settingsService.test.ts \
+  tests/unit/redirects/redirectService.test.ts \
+  tests/unit/forms/formsService.test.ts \
+  tests/unit/content/listingQueriesService.test.ts \
+  tests/unit/content/listingTemplatesService.test.ts \
+  tests/unit/tools/importExport.test.ts \
+  tests/integration/routes/importExport.test.ts \
+  tests/unit/content/detailPageDocumentService.test.ts
+SERVER_CACHE_BACKEND=redis SERVER_CACHE_NAMESPACE=task551-09-l03 bun test \
+  tests/integration/runtime/site-shell-cache-invalidation.test.ts \
+  tests/integration/runtime/site-routing-cache-invalidation.test.ts \
+  tests/integration/runtime/site-form-listing-cache-invalidation.test.ts \
+  tests/integration/runtime/public-site-cache-eligibility.test.ts
+bun --cwd core lint:types
+bun --cwd core lint
+git diff --check
+wc -l core/services/{menus/menuService,pages/pageTemplateLibraryService,pages/publicSiteShell,themes/themeProfileService,settings/settingsService,redirects/redirectService,forms/formsService,content/listingQueriesService,content/listingTemplatesService,content/detailPageDocumentService,tools/importExportService}.ts \
+  core/services/cache/siteDependencyInvalidation.ts \
+  core/services/redirects/redirectCachePolicy.ts \
+  tests/unit/menus/menuService.test.ts \
+  tests/unit/pages/{pageTemplateLibraryService,publicSiteShell}.test.ts \
+  tests/unit/themes/themeProfileService.test.ts \
+  tests/unit/settings/settingsService.test.ts \
+  tests/unit/redirects/redirectService.test.ts \
+  tests/unit/forms/formsService.test.ts \
+  tests/unit/content/{listingQueriesService,listingTemplatesService}.test.ts \
+  tests/unit/tools/importExport.test.ts \
+  tests/integration/routes/importExport.test.ts \
+  tests/unit/content/detailPageDocumentService.test.ts \
+  tests/vitest/cache/site-dependency-invalidation.test.ts \
+  tests/vitest/cache/redirect-cache-policy.test.ts \
+  tests/integration/runtime/site-shell-cache-invalidation.test.ts \
+  tests/integration/runtime/site-routing-cache-invalidation.test.ts \
+  tests/integration/runtime/site-form-listing-cache-invalidation.test.ts \
+  tests/integration/runtime/site-shell-runtime.test.ts \
+  tests/integration/runtime/detail-page-preview-cache.test.ts
+```
+
+TASK-551-09-L04:
+
+```bash
+set -a && source .env && set +a
+bun run test:vitest -- tests/vitest/admin/storageCache.test.ts \
+  tests/vitest/admin/cacheBusHardening.test.ts \
+  tests/vitest/admin/readThroughCache.test.ts \
+  tests/vitest/admin/cacheBus.test.ts \
+  tests/vitest/admin/cacheBusCorrelation.test.ts \
+  tests/vitest/admin/cacheRefresh.test.ts \
+  tests/vitest/admin/admin-cache-identity.test.ts \
+  tests/vitest/admin/read-through-cache-generation.test.ts \
+  tests/vitest/admin/authClient.test.ts \
+  tests/vitest/authUi/authClient.test.ts \
+  tests/vitest/ui/admin-auth-identity.test.tsx
+SERVER_CACHE_BACKEND=memory bun test tests/unit/security/securitySettings.test.ts \
+  tests/integration/routes/securitySettings.test.ts \
+  tests/integration/server/security-settings-db-authority.test.ts \
+  tests/integration/runtime/public-site-cache-query-budget.test.ts
+SERVER_CACHE_BACKEND=redis SERVER_CACHE_NAMESPACE=task551-09-l04 bun test \
+  tests/integration/server/security-settings-db-authority.test.ts \
+  tests/integration/runtime/public-site-cache-query-budget.test.ts
+bun run check:admin-boundary
+bun --cwd core lint:types
+bun --cwd core lint
+git diff --check
+wc -l core/admin/services/{adminAuthIdentity,adminCacheIdentity,authClient,cachePolicy}.ts \
+  core/admin/ui/contexts/AdminAuthContext.tsx \
+  core/admin/utils/{storageCache,cacheBus,readThroughCache}.ts \
+  core/services/settings/securitySettings.ts \
+  tests/vitest/admin/{storageCache,cacheBusHardening,readThroughCache,cacheBus,cacheBusCorrelation,cacheRefresh,admin-cache-identity,read-through-cache-generation}.test.ts \
+  tests/vitest/admin/authClient.test.ts \
+  tests/vitest/authUi/authClient.test.ts \
+  tests/vitest/ui/admin-auth-identity.test.tsx \
+  tests/vitest/admin/support/cacheBusTestHarness.ts \
+  tests/unit/security/securitySettings.test.ts \
+  tests/integration/routes/securitySettings.test.ts \
+  tests/integration/server/security-settings*.test.ts
+```
 
 ## Exact Validation Commands
 
@@ -323,6 +795,50 @@ Load repository environment for every DB/settings command, but never print it:
 set -a && source .env && set +a
 bun --cwd core lint:types
 bun --cwd core lint
+bunx vitest run tests/vitest/db/databaseConfig.test.ts \
+  tests/vitest/db/queryFingerprintRegistry.test.ts
+bun test tests/integration/server/task551DatabaseLifecycle.test.ts \
+  tests/integration/server/task551RuntimeEntrypoints.test.ts \
+  tests/perf/database-pool-telemetry.test.ts
+bunx vitest run tests/vitest/db/schemaExports.test.ts \
+  tests/vitest/db/searchVectorDefinitions.test.ts
+bun run db:generate
+bun scripts/task-551-online-indexes.ts resolve-receipt --output .tmp/task551-migration-receipt.json
+bun run db:migrate
+bun test tests/integration/server/task551SchemaMigrationParity.test.ts \
+  tests/integration/server/task551SearchVectorMigration.test.ts \
+  tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts \
+  tests/integration/server/task551IndexAndConstraintCatalog.test.ts \
+  tests/integration/server/task551OnlineIndexDeployment.test.ts \
+  tests/perf/database-index-write-overhead.test.ts \
+  tests/perf/database-explain-plans.test.ts \
+  tests/integration/server/task551ConcurrencyConstraints.test.ts
+bun scripts/task-551-online-indexes.ts apply-resume-check --receipt .tmp/task551-migration-receipt.json --through-group revision-integrity
+bun scripts/task-551-online-indexes.ts apply-resume-check --receipt .tmp/task551-migration-receipt.json
+bun scripts/task-551-online-indexes.ts apply-resume-check --receipt .tmp/task551-migration-receipt.json
+bunx vitest run tests/vitest/maintenance/retentionPolicy.test.ts \
+  tests/vitest/search/searchHistoryContract.test.ts
+bun test tests/unit/access/accessLogService.test.ts \
+  tests/unit/audit/auditService.test.ts \
+  tests/unit/search/searchHistoryService.test.ts \
+  tests/integration/server/task551ActionExecutionStore.test.ts \
+  tests/integration/analytics/trafficRepository.test.ts \
+  tests/integration/analytics/trafficRetention.test.ts \
+  tests/integration/server/task551AppendHeavyRetention.test.ts \
+  tests/perf/database-retention-batches.test.ts
+bunx vitest run tests/vitest/database/revisionAllocation.test.ts \
+  tests/vitest/maintenance/partitionReadinessService.test.ts
+bun test tests/unit/pages/revisionService.test.ts \
+  tests/unit/widgets/widgetTemplateRevisionService.test.ts \
+  tests/unit/content/detailPageRevisionService.test.ts \
+  tests/integration/server/task551RevisionConcurrency.test.ts \
+  tests/integration/server/task551RevisionRetention.test.ts \
+  tests/perf/database-revision-budgets.test.ts \
+  tests/integration/runtime/retentionScheduler.test.ts \
+  tests/integration/server/task551RetentionJobService.test.ts \
+  tests/perf/database-retention-jobs.test.ts \
+  tests/perf/database-partition-readiness.test.ts
+bun scripts/task-551-partition-readiness.ts --check
 bun test --timeout 120000 tests/perf/task551DatabaseCachePerformanceGate.test.ts
 bun test --timeout 120000 tests/integration/runtime/task551ServerCacheFaultMatrix.test.ts
 bun test --timeout 120000 tests/security/task551ServerCacheSecurityGate.test.ts
@@ -347,8 +863,9 @@ The script derives a random run suffix below the literal test prefix; the
 literal command value is not the final shared namespace. Verify `DATABASE_URL`
 and `REDIS_URL` reachability before the full commands. A missing required service
 blocks rather than skips. Re-run any named failure once in isolation before
-classification. Run the exact migration apply/upgrade suites and targeted
-Vitest paths handed off by TASK-551-01..09 in addition to this aggregate list.
+classification. The exact 02/05/06 commands above are read-only aggregate
+reproofs. TASK-551-09 paths are validated through the four exact owner manifests
+and the broad full gate; their targeted ownership does not move to this leaf.
 The aggregate Vitest harness must assert that every five named cache files exists
 and that discovery/execution counts are non-zero; an empty selection is a failure.
 

@@ -16,8 +16,9 @@
 
 Implement TASK-551-07-L01's `ServerCacheStore` over Bun's native Redis client
 with exact timeouts, atomic generation-token replacement, conditional writes,
-bounded health and DB-bypass failure semantics. Do not wire server startup,
-outbox, Pub/Sub or distributed leases.
+bounded backend-health signals and DB-bypass failure semantics. The constructor
+consumes, but never creates, L02's one process coherence controller. Do not wire
+server startup, outbox, Pub/Sub or distributed leases.
 
 ## Sub-Tasks
 
@@ -46,6 +47,8 @@ package manifests/lockfile and shared docs/tasks.
   redacted `server_cache_redis_startup_failed` and blocks startup.
 - Value operations are `GET`, `SET key bytes PX ttl`, and `DEL` on L01 keys.
   Never create an in-process value mirror. `Uint8Array` bytes round-trip exactly.
+  `describe()` returns only the immutable Redis backend and normalized total
+  entry ceiling required by L01 startup policy-capacity validation.
 - Tag identity is the SHA-256 digest of one L01 finite site/family tag. No v1
   record-id/slug/path generation key exists. One bounded Lua operation
   atomically initializes any missing generation to caller-supplied fresh,
@@ -53,21 +56,51 @@ package manifests/lockfile and shared docs/tasks.
   requested token. `readGenerations` returns only fully initialized snapshots.
 - Implement L01 `writeIfGenerationsMatch` as one bounded Lua script: compare all
   expected finite generation tokens and `SET ... PX` one or two encoded entries,
-  or write none. Before Lua, normalize branded positive TTL/value limits and
-  reject any `UTF8(key).byteLength + encodedEnvelope.byteLength` above the
-  configured total entry ceiling. Script keys/arguments/replies obey the shared
-  exact limits.
-- All commands use `SERVER_CACHE_COMMAND_TIMEOUT_MS`. Timeout, disconnect,
-  malformed reply or uncertain write becomes a typed store failure consumed by
-  TASK-551-07-L02's coordinator circuit; it never returns guessed/stale bytes.
+  or write none. Before Lua, require L01's coordinator-created conditional-entry
+  brand and strictly decode every envelope. Require
+  `entry.fillKind === envelope.fillKind`; select `policyPositiveTtlMs` for
+  `positive`, or require and select non-null `policyNegativeTtlMs` for `negative`.
+  Recheck `ttlMs` and envelope lifetime against that selected ceiling, encoded
+  bytes against `policyMaxValueBytes`, and
+  `UTF8(key).byteLength + encodedEnvelope.byteLength` against the configured total
+  entry ceiling. Reject unknown/malformed discriminator data, null-negative
+  policy, forged/mutated brands or any one-entry mismatch for the entire bundle
+  before acquiring a command deadline or issuing **any** Redis command/Lua call.
+  `redisServerCacheStore.ts` owns and exports the exact internal helper
+  `validateRedisConditionalWriteBeforeCommand(write, storeMaxEntryBytes)` for this
+  store and L03's lease-plus-generation writer only; it returns normalized
+  immutable keys/arguments or throws the stable redacted validation error. It is
+  never re-exported through `ServerCache`, runtime, domain or public facades.
+  Script keys/arguments/replies obey the shared exact limits. This is explicitly
+  the generation-only store primitive called internally only by `ServerCache`
+  for non-distributed paths; it is not re-exported through a public/domain/
+  compatibility facade. A
+  distributed owner must never call it because it cannot prove current lease
+  ownership. TASK-551-08-L03 exclusively implements L01's separate combined
+  `owner.putIfGenerationsAndLeaseOwned(...)` Lua operation.
+- All commands use `SERVER_CACHE_COMMAND_TIMEOUT_MS`. Timeout, disconnect or a
+  malformed reply never returns guessed/stale bytes. For a dispatched conditional
+  write, return L01's `kind:"unknown", physicalOutcome:"unknown"` because Redis
+  may physically have executed the script; only a positively normalized
+  `written` reply authorizes publication. A later independent GET may use
+  physically present bytes only after normal strict envelope and expected-
+  generation-digest validation.
 - The generic coordinator circuit is closed/half-open/open with one probe and
-  bounded exponential cooldown. Redis health exposes only ready/degraded,
-  last stable code and timing counters through L01's exact `ServerCacheHealth`
-  input—never URL, key, command payload or reply. L03 alone owns coherence-state
-  transitions; malformed/unknown health can never authorize a value read.
+  bounded exponential cooldown. The adapter reports exact `redis_store`
+  force/recover signals (reason `redis_unavailable`, affected tags `"all"`,
+  normalized pending age/time/stable code) to its injected L01 controller.
+  Obtain a fresh source-bound controller observation token before each async
+  health/command probe and attach it to the resulting report, so a delayed
+  success cannot recover a newer failure.
+  `health()` passes only `{ backend: "redis", readiness, stableCode }` to
+  `controller.health(...)`; the controller deterministically returns the exact
+  `ServerCacheHealth`. Timing counters remain bounded telemetry outside that
+  type. Neither adapter nor L03 creates another coherence owner, and
+  malformed/unknown health can never authorize a value read.
 - Corrupt envelopes are handled by `ServerCache`; its best-effort delete failure
   is telemetry only. `close()` is idempotent and closes only this adapter's owned
-  command client. TASK-551-08-L03 runtime owns worker/PubSub shutdown.
+  command client. TASK-551-08-L03 runtime closes the L02 worker/PubSub handle and
+  distributed coordinator before the store.
 
 ## Implementation Pseudocode
 
@@ -83,6 +116,18 @@ async function bumpGenerations(tags) {
   return normalizeGenerationReply(
     await withCommandDeadline("generation_bump", () =>
       evalBounded(REPLACE_GENERATIONS_LUA, keys, freshTokens(tags.length)))
+  );
+}
+async function writeIfGenerationsMatch(write) {
+  const validated = validateRedisConditionalWriteBeforeCommand(
+    write,
+    config.maxEntryBytes,
+  ); // internally strict-decodes, matches fillKind, selects ceiling and checks bytes
+  // Validation failure above performs zero Redis commands.
+  return normalizeConditionalWriteReplyOrUnknownPhysicalOutcome(
+    await withCommandDeadline("conditional_write", () =>
+      evalBounded(WRITE_IF_GENERATIONS_MATCH_LUA, validated.keys, validated.args)
+    ),
   );
 }
 ```
@@ -108,10 +153,25 @@ scripts/replies.
 Against isolated unique namespaces, test byte parity, TTL, delete, exact/max+1,
 two-client missing-generation initialization, fresh/non-reused token replacement,
 concurrent bump visibility, finite tag rejection, one/two-entry conditional-write
-atomicity and stale-generation rejection, namespace isolation, corrupt replies,
-timeout, refused connection, mid-command disconnect, circuit open/half-open/
+atomicity, raw/forged/mutated-brand rejection, positive and negative success,
+entry/envelope `fillKind` mismatch, unknown/malformed discriminator, null-negative
+policy, positive/negative TTL and envelope-lifetime ceiling mismatch, policy-byte/
+total-byte rejection and stale-generation rejection. For every invalid one- or
+two-entry bundle assert zero Redis commands, including zero Lua evaluation; the
+other valid entry cannot partially write. Prove the store exposes no lease-bearing or distributed-owner fill
+surface, no consumer can invoke its internal conditional-write method, and record
+the L03 handoff: a distributed owner cannot substitute this generation-only
+write. Also test namespace isolation, corrupt replies, timeout,
+refused connection,
+mid-command disconnect, circuit open/half-open/
 recovery, startup URL/auth/version failures and redacted diagnostics. Cleanup only
 test-owned keys using the known namespace inventory, never global `FLUSH*`/`KEYS`.
+For pre-dispatch failure prove no physical write; for timeout/disconnect/malformed
+reply after dispatch prove `unknown` physical outcome, zero published/joiner
+authorization, and safe later independent hit only after strict generation digest.
+Assert every failure/recovery signal, reverse-completion watermark ordering, and
+deterministic controller-composed health;
+timing counters must not leak into the exact health payload.
 
 ```bash
 set -a && source .env && set +a

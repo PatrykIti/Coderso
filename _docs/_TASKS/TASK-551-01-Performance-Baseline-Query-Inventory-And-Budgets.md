@@ -30,9 +30,26 @@ secrets, raw PII, or customer payloads.
   caller delta by owning leaf. The final receipt permits no unresolved planned
   delta and proves exact coverage of the post-TASK-551-09 tree.
 - Small and large fixture profiles are deterministic, uniquely scoped, and
-  clean up only owned rows.
+  clean up only owned rows. L02 pins every physical target/support table,
+  per-profile row count, status/time/FK distribution, pool capacity, warmup and
+  sample/repetition count, and the exact variance/runner normalization formula;
+  every gated inventory ID names one of those frozen scenarios. Submission and
+  booking summary clocks use L02's explicit `asOf`-relative exceptions rather
+  than the general January 1 fixture timestamps. Later work never rediscovers or
+  resizes them.
+- L02 also owns the exact evidence fixtures for page-author traversal,
+  role-leading user lookup, one-tag post containment, and multi-tag media AND
+  containment. Their literal selectivities/bind shapes feed TASK-551-05 plans;
+  later query/index leaves may not substitute a friendlier distribution.
+- Initial L01 owns the exact planned caller
+  `cacheInvalidationOutbox.ts#readOldestUnprocessedAge` (bound 1,
+  `processed_at IS NULL`, `created_at,id`, TASK-551-08-L02). Because its table is
+  created by TASK-551-05, that child's plan/write fixture owns its finite budget;
+  final L01 must discover the caller and remove the planned record.
 - Query-count, rows-read/returned, p50/p95/p99, and pool-acquisition-wait
-  budgets are frozen as release-gate inputs. L02 measures acquisition wait
+  budgets are checked-in finite numeric release-gate inputs before TASK-551-02.
+  L02's deterministic formula is used only for the initial reviewed freeze;
+  normal checks never recompute ceilings. L02 measures acquisition wait
   independently by timing contention for an explicitly reserved connection; it
   does not depend on TASK-551-02 telemetry. Later leaves may tighten but not
   silently weaken these budgets.
@@ -41,7 +58,7 @@ secrets, raw PII, or customer payloads.
 
 | Leaf | Exact allowlist |
 |---|---|
-| TASK-551-01-L01 | `scripts/task-551-query-inventory.ts`; `tests/perf/fixtures/task551QueryInventory.ts`; `tests/perf/database-query-inventory.test.ts` |
+| TASK-551-01-L01 | `scripts/task-551-query-inventory.ts`; `tests/perf/fixtures/task551QueryInventory.ts`; `tests/perf/database-query-inventory.test.ts`; `tests/integration/server/task551BunLaneMembership.test.ts` |
 | TASK-551-01-L02 | `scripts/task-551-database-baseline.ts`; `tests/perf/fixtures/task551DatabaseScale.ts`; `tests/perf/fixtures/task551DatabaseBudgets.ts`; `tests/perf/database-query-baseline.test.ts` |
 
 Both leaves forbid edits to production source, `core/db/migrations/**`,
@@ -86,6 +103,7 @@ fresh exact all-path serialized-handoff audit accepted as a substitute.
 ## Testing Requirements
 
 - `bun test tests/perf/database-query-inventory.test.ts`
+- `bun test tests/integration/server/task551BunLaneMembership.test.ts`
 - `bun scripts/task-551-query-inventory.ts --check --phase initial`
 - After TASK-551-09: `bun scripts/task-551-query-inventory.ts --check --phase final`
 - `set -a && source .env && set +a && bun test tests/perf/database-query-baseline.test.ts`
@@ -106,6 +124,7 @@ TASK-551-10-L02 for `_docs/DATABASE_PERFORMANCE.md` and changelog 1263.
   disposition per caller.
 - Status transitions preserve the two-phase gate: neither L01 nor this umbrella
   is marked done between the initial receipt and the post-09 final refresh.
-- Both scale profiles run from a clean scoped fixture namespace and publish
-  reproducible budgets with variance policy and hardware/context metadata.
+- Both scale profiles match L02's exact row-count matrix and publish checked-in
+  numeric budgets with its fixed sampling, variance, hardware-context, and
+  calibration-normalization contract.
 - No evidence artifact contains a forbidden secret/PII field or raw bind value.

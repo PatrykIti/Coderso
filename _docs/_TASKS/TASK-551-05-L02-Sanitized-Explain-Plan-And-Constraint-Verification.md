@@ -28,7 +28,7 @@ None; this is an executable leaf.
 **Allowlist:** `scripts/task-551-explain-plans.ts`,
 `tests/perf/fixtures/task551QueryPlanContracts.ts`,
 `tests/perf/database-explain-plans.test.ts`, and
-`tests/integration/database/concurrencyConstraints.test.ts` only.
+`tests/integration/server/task551ConcurrencyConstraints.test.ts` only.
 
 **Forbidden:** all production/schema/migration files; L01 tests; TASK-493,
 TASK-511, TASK-517, TASK-518 paths; cache, task/changelog/workflow files.
@@ -53,6 +53,44 @@ type TrigramSelectionReceipt = StrictReadonly<Record<
     normalizationDigest: string; largePlanPassed: true; writeCostPassed: true }
 >>;
 
+const EXPECTED_TASK551_CATALOG = strictReadonly({
+  // Copy the complete literal L01 mandatory index/constraint/check names and
+  // definitions; append only the selected (non-null) trigram column/index pairs.
+  indexes: EXACT_L01_INDEX_ROWS,
+  constraints: EXACT_L01_CONSTRAINT_ROWS,
+  outboxColumns: EXACT_L01_OUTBOX_COLUMNS,
+  vectorExpressions: SEARCH_VECTOR_SQL,
+  immutableProcSignatures: GENERATED_EXPRESSION_IMMUTABLE_PROC_SIGNATURES,
+  bookingExclusion: BOOKING_RESERVATION_EXCLUSION_SQL,
+  onlineIndexManifest: EXACT_L01_ONLINE_INDEX_MANIFEST,
+});
+
+async function assertExactTask551Catalog(db: Db, expected = EXPECTED_TASK551_CATALOG) {
+  const actual = await readPgCatalogDefinitions(db, expected.ownedTables);
+  assertExactSet(actual.task551Indexes, expected.indexes);
+  assertExactSet(actual.task551Constraints, expected.constraints);
+  assertExactOrderedColumnsAndPredicates(actual, expected);
+  assertExactOutboxColumnsDefaultsNullabilityAndChecks(actual, expected);
+  assertExactGeneratedExpressions(actual, expected.vectorExpressions);
+  await assertGeneratedExpressionVolatility(db, expected.immutableProcSignatures);
+  await assertBookingExclusionCustomSeam(db, expected.bookingExclusion);
+  await assertOnlineIndexManifestParity(db, expected.onlineIndexManifest);
+  assertNoUnexpectedTask551Object(actual, expected);
+}
+
+async function assertGeneratedExpressionVolatility(db: Db, signatures: readonly string[]) {
+  // Resolve every exact to_regprocedure signature and each ->>, text/tsvector
+  // ||, and jsonb::text implementation; require one pg_proc row whose
+  // provolatile is exactly "i". Missing or differently resolved OIDs fail.
+}
+
+async function assertBookingExclusionCustomSeam(db: Db, expected: typeof BOOKING_RESERVATION_EXCLUSION_SQL) {
+  // Descriptor is deeply frozen/exported; migration contains extensionSql and
+  // addSql once; snapshot intentionally contains no fake exclusion object.
+  // Live pg_constraint must be contype "x" with exact name, table, predicate,
+  // GiST method, equality/overlap operators. Generated drift contains no dropSql.
+}
+
 async function captureSanitizedPlan(contract: PlanContract, db: Db): Promise<SafePlanEvidence> {
   const raw = await db.execute(sql`EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${contract.statement}`);
   return sanitizePlan(raw, { removeSql: true, removeBinds: true, allowCatalogNames: true });
@@ -70,22 +108,120 @@ statement registry, and refuses arbitrary SQL/paths. Plan comparison tolerates
 planner-node differences on small data but requires expected indexes and bounded
 row ratios on large fixtures. Errors are `plan_contract_invalid`,
 `plan_regression`, and `constraint_contract_failed`.
+
+The registry has five non-optional evidence-owned statements whose SQL bytes
+must equal their production predicate/order owner: the first four are
+TASK-551-03-L02 and the outbox health statement is TASK-551-08-L02:
+
+| Static ID | Predicate/order | Expected large-plan index |
+|---|---|---|
+| `pages-author-keyset` | `author_id=:authorId` plus keyset; `updated_at DESC,id DESC` | `pages_author_list_updated_id_idx` |
+| `users-role-keyset` | join `user_roles` from `role_id=:roleId` to `user_id`; users keyset order | `user_roles_role_user_idx` plus `users_list_created_id_idx` |
+| `posts-tag-keyset` | `tags @> :normalizedOneTagArray::jsonb`; `updated_at DESC,id DESC` | `posts_tags_gin_idx` plus `posts_list_updated_id_idx` when bitmap/order composition is selected |
+| `media-tags-and-keyset` | `tags @> :normalizedUniqueSortedTags::jsonb`; `created_at DESC,id DESC` | `media_tags_gin_idx` plus `media_list_created_id_idx` when bitmap/order composition is selected |
+| `cache-outbox-oldest-unprocessed` | `processed_at IS NULL`; `created_at ASC,id ASC`; `LIMIT 1` | `cache_outbox_unprocessed_age_idx` |
+
+The two JSON binds remain sanitized but their fixture builders assert exact
+one-element post arrays and deduplicated/sorted media AND arrays before capture.
+No alternate `?`/text/unnest predicate passes. Small fixtures may legitimately
+choose a sequential scan by cost; large fixtures must prove the named filter
+index, bounded heap rows/buffers, stable keyset order, and the frozen p95 budget.
+The outbox case uses its L01-owned 1,000/100,000-row fixture and deliberately
+makes the oldest unprocessed event claimed and the next oldest backed off.
+Neither `claim_token`, `claim_until`, nor `available_at` may narrow this health
+statement; it measures all unfinished durable work, not currently claimable work.
 `tests/perf/fixtures/task551QueryPlanContracts.ts` exports the sanitized
 `TASK551_TRIGRAM_SELECTION_RECEIPT`; its five selected-or-null members must equal
 L01's production `TRIGRAM_INDEXED_SOURCE_CONTRACT` and the live catalog.
+Exact-set comparison uses `pg_class`, `pg_index`, `pg_attribute`,
+`pg_constraint`, `pg_get_indexdef`, `pg_get_constraintdef`, and `pg_get_expr`;
+it normalizes only insignificant PostgreSQL whitespace/outer parentheses, never
+identifiers, casts, coalesces, weights, column order/direction, opclass, or
+predicate bytes. The expected set is the complete mandatory L01 catalog plus
+only non-null trigram receipt members. Missing, changed, or extra TASK-551-owned
+objects fail `constraint_contract_failed`; no glob/count-only assertion passes.
+Before database parsing, each schema render, generated-column migration literal,
+snapshot expression, and trigram query-normalizer render is compared against
+the owning L01 constant with byte identity (no whitespace or cast rewriting).
+Catalog comparison is a second semantic check after PostgreSQL canonicalizes
+expressions. Source guards require the exact `coalesce(...) || ' ' || ...`
+concatenations and reject the stable variadic helper that generated columns
+cannot use.
+
+L02 consumes L01's immutable online-index manifest and exact
+`.tmp/task551-migration-receipt.json` read-only. It validates the strict
+version-1 receipt's resolved journal tag/index, repository-relative SQL/snapshot/
+online paths and SHA-256 values, manifest digest, ordered member receipts, and
+final state before trusting evidence. It requires one-to-one equality between
+every new snapshot-owned index, manifest member, receipt member, and live
+definition; zero matching new index statement may remain in transactional SQL.
+Every live member must have
+`indisready = true` and `indisvalid = true`, and its receipt must record the
+locked numeric classification/budgets, completed top-level concurrent build,
+idempotent resume state, and exact two-group order. It separately requires a
+durable complete `revision-integrity` receipt before any recorded application-
+resume event; that group contains exactly page/content/widget unique indexes.
+It invokes L01's one `apply-resume-check` path,
+which applies/resumes before checking, rather than inventing a second deployment
+path; L02 does not edit L01's deployment test/tool.
+
+The exclusion constraint is the one explicit Drizzle snapshot limitation. L02
+imports the immutable descriptor rather than copying SQL, verifies its
+`extensionSql` and `addSql` occur exactly once in L01's migration, proves the
+snapshot has no misleading index/check representation, and verifies the live
+`pg_constraint` object. On disposable clean and immediately-prior fixtures it
+also exercises forward apply, `.dropSql` rollback without removing the shared
+extension, and forward reapply. A fresh generation must be zero-drift and may
+emit neither a duplicate add nor the descriptor's `.dropSql`.
 
 ## Testing Requirements
 
-- Cover every L01 selected index and named constraint, including all seven
-  generated-vector GIN indexes and outbox pending/claim/processed indexes;
-  registry/catalog set equality prevents missing evidence.
+- Cover every literal L01 catalog member, including all seven generated-vector
+  GIN indexes, both tag-containment GIN indexes, every list/reverse-FK/cutoff
+  index including page-author and role-leading traversal, five revision constraints,
+  booking check/exclusion, every outbox column/check/index including
+  `cache_outbox_unprocessed_age_idx`, and only selected
+  trigram pairs; exact registry/catalog set equality rejects missing and extra
+  objects.
+- Verify all new snapshot indexes are exact members of the non-transactional
+  manifest, absent from transactional index DDL, and ready/valid in the live
+  catalog. Consume L01's crash-after-each-member, resume/rollback, threshold,
+  exact group/order/barrier receipt, drained writer-probe receipt, immediate
+  post-barrier 50-way revision-race receipt, and 16-concurrent-writer
+  read-performance receipt as mandatory evidence. No resume event may precede
+  all three unique members becoming ready/valid. Clean and immediately-
+  prior disposable databases each resolve their exact receipt, execute
+  `apply-resume-check`, then execute it again; the first invocation applies
+  before catalog checks and the second emits zero DDL while proving resume and
+  ready/valid idempotence.
 - For all five trigram candidates, pin the normalized column/index/opclass and
   normalization digest. Select only candidates whose large plan uses that exact
   index with bounded rows/buffers and whose write-cost gate passes; rejected
   members are `null` and are absent from schema/catalog/fallback behavior.
+- Resolve the closed generated-expression dependency set through `pg_proc` and
+  operator implementation OIDs; every function must exist and have
+  `provolatile = 'i'`. Mutations to stable/volatile/missing signatures fail.
+- Pin exact schema/migration/snapshot/query-normalizer bytes for all seven
+  vector and five trigram source contracts; mutate one separator or replace the
+  immutable concatenation and prove the byte guard fails.
+- Prove `BOOKING_RESERVATION_EXCLUSION_SQL` name, predicate, definition,
+  add/drop SQL, deep immutability, migration occurrence count, intentional
+  snapshot omission, live `pg_constraint` identity, and clean/prior/rollback/
+  forward behavior. A generated drop or duplicate add fails deterministically.
 - Large plans assert index names, predicates, absence of forbidden full scans/
   external sorts, rows-read ratio, buffer budget, and p95 over repeated warm and
   cold-declared runs. Do not set `enable_seqscan = off`.
+- Execute all four exact page-author/role/post-tag/media-tags static statements
+  against both L01 fixture scales. Mutate the leading column, `jsonb_path_ops`,
+  bound array shape, `@>` operator, or stable tiebreaker and prove plan/catalog
+  verification fails. Report per-index storage and write p95 delta, each at or
+  below L01's 20% representative-write ceiling.
+- Execute `cache-outbox-oldest-unprocessed` at both scales and require the large
+  plan to use `cache_outbox_unprocessed_age_idx` with bounded rows/buffers and
+  return the deliberately oldest claimed row. Predicate mutations adding
+  `claim_token IS NULL`, availability, or expiry filtering and index mutations
+  changing `created_at,id`, direction, or `processed_at IS NULL` fail. Report
+  insert/claim/retry/complete write p95 and storage delta within the 20% ceiling.
 - Race 50 synchronized raw synthetic inserts at the same parent/version for each
   page/entry/post/widget/detail-page constraint, plus 50 overlapping/non-
   overlapping booking inserts. This verifies database constraints only—service
@@ -93,6 +229,10 @@ L01's production `TRIGRAM_INDEXED_SOURCE_CONTRACT` and the live catalog.
   and cleanup deletes only fixture-owned rows.
 - Snapshot sanitizer tests inject emails, tokens, SQL, bind values, and plan
   fields; zero forbidden values survive output.
+- Mutation fixtures alter one vector weight/JSON cast, index direction/predicate,
+  booking status/custom descriptor byte, outbox nullability/default/state
+  branch, function volatility, and add one extra TASK-551-prefixed index; each
+  exact-set verifier fails deterministically.
 - Re-run each named failing perf file alone before classifying a failure.
 
 ## Security Contract
@@ -101,13 +241,21 @@ L01's production `TRIGRAM_INDEXED_SOURCE_CONTRACT` and the live catalog.
   nonce/HMAC, or CAPTCHA changes.
 - Static allowlisted statements and synthetic fixture IDs only. Never accept
   arbitrary SQL, production binds, unredacted customer data, or credentials.
+- Receipt validation accepts only the fixed task path and repository-relative
+  artifact paths/digests; it never records database URLs, environment dumps,
+  credentials, binds, or customer data.
 - Persist statement family, catalog/index names, counters, timing, and sanitized
   plan shape only; raw EXPLAIN output stays ephemeral.
 
 ## Validation Commands
 
 - `set -a && source .env && set +a && bun test tests/perf/database-explain-plans.test.ts`
-- `set -a && source .env && set +a && bun test tests/integration/database/concurrencyConstraints.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/server/task551ConcurrencyConstraints.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/server/task551OnlineIndexDeployment.test.ts`
+- `set -a && source .env && set +a && bun scripts/task-551-online-indexes.ts resolve-receipt --output .tmp/task551-migration-receipt.json`
+- `set -a && source .env && set +a && bun scripts/task-551-online-indexes.ts apply-resume-check --receipt .tmp/task551-migration-receipt.json --through-group revision-integrity`
+- `set -a && source .env && set +a && bun scripts/task-551-online-indexes.ts apply-resume-check --receipt .tmp/task551-migration-receipt.json`
+- `set -a && source .env && set +a && bun scripts/task-551-online-indexes.ts apply-resume-check --receipt .tmp/task551-migration-receipt.json` (mandatory zero-DDL resume/catalog rerun)
 - `set -a && source .env && set +a && bun scripts/task-551-explain-plans.ts --scale small --check`
 - `set -a && source .env && set +a && bun scripts/task-551-explain-plans.ts --scale large --check`
 - `bun --cwd core lint:types`
@@ -124,9 +272,28 @@ TASK-551-10-L02.
 
 - Evidence registry covers 100% of L01 additions and contains zero raw SQL bind,
   credential, token, email, or customer-content leakage.
+- Live catalog and the complete L01 declared catalog have exact set and
+  definition equality, including the custom exclusion constraint and zero
+  unexpected TASK-551-owned objects; every generated-expression dependency is
+  catalog-proven immutable.
+- Transactional SQL contains zero new index creation; the same-number companion,
+  snapshot, final ready/valid catalog, and resumable deployment receipt have
+  exact one-to-one equality within every L01 deployment ceiling.
+- The receipt proves an unbroken mutation drain through all three new revision
+  unique builds, then zero duplicates in immediate 50-way same-parent races;
+  no crash/resume branch contains an early application-resume event.
 - Every large-fixture hot plan uses its intended index, stays within its declared
   rows/buffer/p95 budget, and has no forbidden growing-table sequential scan.
+- The page-author, reverse-role, post-tag, and media-AND-tag large cases use
+  their four exact L01 indexes and matching production predicate bytes with
+  bounded rows/buffers and measured write/storage cost.
+- The large oldest-unprocessed outbox case uses its exact partial age index and
+  observes claimed/backed-off rows; it never reports age from only claimable
+  rows.
 - Trigram selection receipt and live schema/catalog/fallback contract have 100%
   set and byte/expression identity for all five selected-or-null sources.
 - Fifty-way races preserve all five revision uniqueness families and booking
   exclusion with zero duplicate/partial state; fixture cleanup is scope-local.
+- Clean/prior/rollback/forward custom-exclusion paths pass, and the documented
+  snapshot limitation has exact descriptor/migration/live-catalog parity with
+  zero generated duplicate-add or drop operations.

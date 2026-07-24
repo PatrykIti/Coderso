@@ -38,8 +38,8 @@ and `core/services/content/detailPageRevisionService.ts`.
 `tests/unit/pages/revisionService.test.ts`,
 `tests/unit/widgets/widgetTemplateRevisionService.test.ts`,
 `tests/unit/content/detailPageRevisionService.test.ts`,
-`tests/integration/database/revisionConcurrency.test.ts`,
-`tests/integration/database/revisionRetention.test.ts`, and
+`tests/integration/server/task551RevisionConcurrency.test.ts`,
+`tests/integration/server/task551RevisionRetention.test.ts`, and
 `tests/perf/database-revision-budgets.test.ts`.
 
 No entry/post facade, persistence, mutation, revision-adoption, or test path may
@@ -63,6 +63,12 @@ are `RETENTION_PAGE_REVISIONS_`, `RETENTION_WIDGET_TEMPLATE_REVISIONS_`,
 adopt the final two without changing these values before overall closure. Here,
 "adopts" means page/widget service allocation plus bounded retention for the
 first three tables; actual detail document allocation remains TASK-551-09-L03.
+All five families consume L01's required typed `RetentionPolicy.dryRun`; there
+is no revision-family dry-run variable or override. Global true keeps the same
+bounded eligible-ID read and anchor/count preservation, but performs zero
+delete/update/destructive-row-lock/cache/outbox/high-water mutation. Direct
+service dry-run does not acquire L03's scheduler advisory lock; scheduled use is
+serialized once by L03 before invoking this same service contract.
 
 ## Implementation Pseudocode
 
@@ -87,13 +93,21 @@ export async function allocateRevision<T>(input: RevisionInsert<T>, tx: Tx): Pro
   });
 }
 
+// Every adopter uses these exact argument orders. Do not add tx-first overloads.
+await withRevisionParentLock(identity, tx, async () => {
+  await allocateRevision(input, tx);
+});
+
 async function listRevisions(parentId: string, input: RevisionListInput, db: Db): Promise<RevisionPage> {
-  // projection, version DESC/id DESC keyset, default 50/max 100, LIMIT + 1.
+  // projection, version DESC/id DESC keyset, default 50/max 100, LIMIT + 1;
+  // exact cursor scope is revision:<family>:v1:<sha256(canonicalJson({parentId}))>.
 }
 
 async function pruneRevisions(policy: ParentRevisionPolicy, tx: Tx): Promise<number> {
   // Keep newest/count floor, preserve protected/published anchors, delete oldest
   // IDs in bounded SKIP LOCKED batches; never delete current referenced revision.
+  // When policy.dryRun, run only the LIMIT-bounded candidate read and return
+  // matched/deleted=0 without a destructive lock or persisted state change.
 }
 ```
 
@@ -112,6 +126,54 @@ deletes only that exact superseded autosave ID. Scheduled retention owns older
 history; no request-path bulk prune remains. The TASK-551-09-L03 adapter maps the
 shared `revision_conflict` to the route's existing `detail_page_conflict` code;
 this leaf and TASK-551-09-L03 do not edit `detailPageRoutes.ts`.
+The callable owner contract is exactly
+`withRevisionParentLock(identity, tx, run)` and `allocateRevision(input, tx)`.
+Consumer pseudocode, fixtures, and implementations must use those orders;
+tx-first calls, overloads, or compatibility adapters are contract drift.
+
+This leaf's bounded read boundary preserves two real, family-specific summary
+contracts rather than inventing one lossy union:
+
+```ts
+type PageRevisionSummary = Readonly<{
+  id: string;
+  pageId: string;
+  version: number;
+  kind: "publish" | "autosave";
+  title: string | null;
+  slug: string | null;
+  createdAt: Date;
+  createdBy: { id: string; name: string | null; email: string } | null;
+}>;
+type DetailPageRevisionSummary = Readonly<{
+  id: string;
+  detailPageId: string;
+  version: number;
+  kind: DetailPageRevisionKind;
+  createdAt: Date;
+  createdBy: string | null;
+}>;
+type RevisionPage<T> = Readonly<{
+  items: readonly T[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}>;
+```
+
+Page list SQL projects `title` and `slug` with bounded JSON scalar extraction
+from the stored snapshot and joins only the authorized author columns needed to
+construct `createdBy`; it never transfers `data`. Detail-page list SQL projects
+only the six declared columns and never transfers `document`. The respective
+return types are `RevisionPage<PageRevisionSummary>` and
+`RevisionPage<DetailPageRevisionSummary>`. The service input is exactly
+`{ cursor?: string, limit?: number }`, rejects unknown keys, defaults to 50,
+caps at 100, and orders `version DESC, id DESC`. A same-parent point read by
+revision ID is the only operation that returns full `data` or `document`.
+L02 owns these service types and behavior only. TASK-551-03-L02 is the sole
+later writer of `pageRoutes.ts`, `pageSchemas.ts`, `pagesClient.ts`,
+`detailPageRoutes.ts`, `detailPageSchemas.ts`, `detailPagesClient.ts`, and their
+page/detail UI/tests; it adopts the respective envelope without changing it.
+No raw-array compatibility overload or invented `reason` field is permitted.
 
 ## Testing Requirements
 
@@ -124,11 +186,22 @@ this leaf and TASK-551-09-L03 do not edit `detailPageRoutes.ts`.
   adoption; inject rollback/deadlock/unique-conflict paths.
 - Pin the exact `withRevisionParentLock` and `allocateRevision` exports, all five
   family literals, shared advisory-key derivation, and `revision_conflict`.
-  TASK-551-09-L03 owns the later 50-way real detail document/autosave test.
+  An executable typed consumer fixture calls
+  `withRevisionParentLock(identity, tx, run)` and `allocateRevision(input, tx)`
+  and proves swapped tx-first invocation does not typecheck. TASK-551-09-L03
+  owns the later 50-way real detail document/autosave test.
 - Revision reads select summaries only, default 50/max 100, deterministic ties,
-  `<= 2` SQL statements, and never transfer full snapshots until detail lookup.
+  `<= 2` SQL statements, use the exact family/parent-digest scope and strict
+  family-specific envelopes above, and never transfer full snapshots until
+  detail lookup. Exact-key tests preserve page `kind,title,slug,createdBy`
+  author shape and detail-page `kind,createdBy` ID while rejecting `reason`,
+  `data`, and `document` in list rows.
 - Retention fixtures preserve newest N, protected/published/current anchors,
   boundary ages, and rows belonging to other parents; repeated batches converge.
+  Global dry-run repeats the bounded candidate read but executes exactly zero
+  deletes/updates/destructive row locks/cache/outbox/high-water writes for every
+  revision family; direct service invocation does not acquire L03's scheduler
+  advisory lock.
 - Plan/perf tests assert parent/version indexes and bounded rows/buffers on 100k
   revisions without full scans or all-history materialization.
 
@@ -147,7 +220,7 @@ this leaf and TASK-551-09-L03 do not edit `detailPageRoutes.ts`.
 
 - `bunx vitest run tests/vitest/database/revisionAllocation.test.ts`
 - `set -a && source .env && set +a && bun test tests/unit/pages/revisionService.test.ts tests/unit/widgets/widgetTemplateRevisionService.test.ts tests/unit/content/detailPageRevisionService.test.ts`
-- `set -a && source .env && set +a && bun test tests/integration/database/revisionConcurrency.test.ts tests/integration/database/revisionRetention.test.ts tests/perf/database-revision-budgets.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/server/task551RevisionConcurrency.test.ts tests/integration/server/task551RevisionRetention.test.ts tests/perf/database-revision-budgets.test.ts`
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
 - `bun run gates:coderso`
@@ -169,6 +242,10 @@ requirements to TASK-551-10-L02.
 - Summary reads return at most 101 DB rows, at most 100 items, and at most 2 SQL
   statements; a detail fetch returns exactly one snapshot.
 - Retention never exceeds 2,000 deletes/batch, preserves 100% of protected and
-  other-parent rows, and converges idempotently.
+  other-parent rows, and converges idempotently; global dry-run returns bounded
+  match counts and performs zero mutations.
 - No entry/post/detail-document file changes in this leaf; all touched
   production/test files are at most 1,000 lines.
+- Exported and consumer-facing signatures remain exactly
+  `withRevisionParentLock(identity, tx, run)` and `allocateRevision(input, tx)`,
+  with no tx-first overload or adapter.

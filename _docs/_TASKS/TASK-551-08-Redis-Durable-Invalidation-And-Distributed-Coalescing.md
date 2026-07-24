@@ -43,29 +43,61 @@ eventual model and remains uncached or fail-closed DB-backed.
 - Values use L01 canonical keys and `SET ... PX`; generations use only L01's
   finite site/family tag keys. Missing generations atomically initialize fresh
   non-reusable opaque tokens before lookup; atomic Lua replaces tokens on bump
-  and implements the one-or-two-entry `writeIfGenerationsMatch` parity. `KEYS`
-  and unbounded `SCAN` are forbidden.
+  and implements the store-internal one-or-two-entry
+  `writeIfGenerationsMatch` parity used only by `ServerCache` when no distributed
+  owner exists. No public/domain caller receives that primitive. `KEYS` and
+  unbounded `SCAN` are forbidden.
 - Redis-mode mutations persist one idempotent outbox event in the same DB
   transaction. An immediate after-commit bump reduces lag; the bounded worker
-  retries. Rollback/no-op writes neither outbox nor invalidation.
-- The strict plan/outbox/PubSub payload is only opaque bounded `eventKey` plus
-  deduplicated finite `CacheTag[]` (Pub/Sub may add the resulting generation
-  digest). Record IDs, slugs, paths, domain payloads and raw/digested per-record
-  tags are forbidden.
+  retries. Every mutation awaits the sole runtime `applyAfterCommit(plan)` handle;
+  that handle absorbs cache transport failures and resolves only after the local
+  observation and any required affected-family force fence are visible. Rollback/
+  no-op writes neither outbox nor invalidation.
+- The strict plan/outbox payload is only opaque bounded `eventKey` plus
+  deduplicated finite `CacheTag[]`. The separate strict bounded Pub/Sub payload is
+  only that `eventKey` plus the resulting generation digest—never tags or domain
+  identity; a subscriber point-reads the outbox row to recover and normalize the
+  finite tags. Record IDs, slugs, paths, domain payloads and raw/digested per-record
+  tags are forbidden throughout.
 - Generation bumps, not deletion scans, make old values unreachable; old bytes
   expire under their original TTL. Event insertion/claim is idempotent, while
   delivery is deliberately at-least-once and token bumps are monotonic-safe, not
   numerically/idempotently repeated. Pub/Sub cannot establish correctness.
-- Distributed fill uses `SET NX PX`, a random owner token, compare-and-delete
-  Lua release, jittered bounded wait/re-read and generation recheck before fill.
+- Distributed fill uses `SET NX PX`, a random owner token, jittered bounded
+  wait/re-read and one L03-owned bounded Lua write that atomically proves both
+  the exact owner token and every expected finite generation before writing one
+  or two validated entries produced only from L01's typed valid `fill` result.
+  Both Redis write paths first strictly decode every envelope, match entry/envelope
+  `fillKind`, select the entry's positive or required non-null negative policy
+  ceiling and recheck TTL/lifetime/bytes; a forged/malformed mismatch performs
+  zero Redis commands. Positive companions keep their independently sampled TTL.
+  A typed `no_fill` returns authoritatively and invokes no write Lua; an invalid
+  negative/no-fill branch invokes no write either. `ServerCache.getOrLoad(request)` remains the sole fill-attempt,
+  generation-capture, encoding and fill owner; consumers never call either Lua/
+  store primitive. Only `written` authorizes the fill;
+  `generation_changed`, `lease_lost`, and `unavailable` return the local owner's
+  fresh authoritative bytes without fill and make each local joiner load for
+  itself. The registry contains only an eligibility-scope-bound shared fill
+  outcome; it never shares `TResult`, `no_fill`, token/nonce output or errors.
+  Token-safe release runs afterward only as
+  best-effort cleanup and cannot establish fill authority retroactively.
+- Redis adapters, immediate post-commit delivery, the worker and Pub/Sub report
+  only L01's exact normalized coherence signals, including affected finite tags,
+  reason and pending age. The single L02 coordinator-owned coherence controller
+  combines those signals with backend health; no adapter or worker constructs an
+  independent coherence snapshot or advances an epoch outside `report(...)`.
+  State-identical force/recover reports are no-ops, but every accepted local or
+  Pub/Sub invalidation observation conservatively advances affected epochs,
+  including at-least-once duplicates; observations never clear fences or authorize
+  stale/private values, and no event-dedup registry exists.
 
 ## Sub-Tasks
 
 | ID | Exclusive responsibility | Status |
 |---|---|---|
 | TASK-551-08-L01 | Native Redis store, atomic generation operations, timeouts and outage semantics | ⏳ To Do |
-| TASK-551-08-L02 | Consume the TASK-551-05-owned outbox schema, implement idempotent insert/claim plus at-least-once generation delivery and optional Pub/Sub | ⏳ To Do |
-| TASK-551-08-L03 | Distributed lease, runtime composition/lifecycle and multi-replica parity | ⏳ To Do |
+| TASK-551-08-L02 | Consume the TASK-551-05-owned outbox schema, implement idempotent insert/claim plus at-least-once generation delivery, optional Pub/Sub, and its exact lifecycle handle | ⏳ To Do |
+| TASK-551-08-L03 | Distributed lease, singleton runtime composition/accessor, lifecycle and multi-replica parity | ⏳ To Do |
 
 **Land order:** `TASK-551-08-L01 → TASK-551-08-L02 → TASK-551-08-L03`.
 
@@ -83,10 +115,19 @@ eventual model and remains uncached or fail-closed DB-backed.
 - TASK-511 exclusively owns backup services. L03 may touch shared server
   lifecycle only after TASK-511 is terminal and must preserve its scheduler
   behavior; it never edits `core/services/backups/**`.
-- L03 owns exact `registerComposedHttpRuntimeParticipants()`, consumes 02's
-  lifecycle/prod seam, 03's `PaginationCursorKeyring` loader, and 06's
-  `createRetentionSchedulerLifecycleParticipant(...)`; it registers existing
-  backup start/stop and moves eager router creation behind validated composition.
+- TASK-551-02-L02 is the sole writer of both `core/server/dev.ts` and
+  `core/server/prod.ts`. L03 validates their terminal generic awaited lifecycle
+  calls read-only and edits only the composition seam in `httpServer.ts`; drift
+  in either caller returns to TASK-551-02-L02 instead of widening L03 ownership.
+- L03 owns exact `registerComposedHttpRuntimeParticipants()` in `httpServer.ts`.
+  Module evaluation invokes it before terminal 02 `runtimeEntrypoint.ts`—the sole
+  signal/listen/HTTP-drain/lifecycle-start-and-close owner—starts participants.
+  `prod.ts` and `dev.ts` remain thin `runRuntimeEntrypoint(...)` adapters with no
+  direct lifecycle or signal calls. The registration seam preserves 03's already-registered pagination
+  participant/keyring wiring, registers 06's
+  `createRetentionSchedulerLifecycleParticipant(...)`, existing backup
+  start/stop and the cache runtime, and never edits `prod.ts` or reloads the
+  cursor keyring. L03 never calls lifecycle start/close or implements shutdown.
 - TASK-517 `publicSite.tsx` and TASK-493 SEO are forbidden throughout 08.
 - Shared docs, task board, changelog 1263 and workflows belong to 10/11.
 
@@ -107,18 +148,37 @@ eventual model and remains uncached or fail-closed DB-backed.
 
 - Redis passes memory-store semantic parity plus two-client generation
   invalidation, conditional-write, outage/reconnect and malformed-value tests.
+  Pin strict pre-command positive/negative discriminator, nullable-negative
+  ceiling, TTL/lifetime/byte validation and zero Redis commands for any forged or
+  mismatched entry/envelope, including one bad entry in a two-entry bundle.
 - Outbox proves commit/rollback, idempotent identical insert/conflicting insert,
   crashed claim recovery, at-least-once duplicate token replacement,
   retry/backoff, 250 ms worker polling, p99
   invalidation target, exact 5,000/5,001 ms health/forced-bypass threshold,
   zero value GET/fill while forced, bounded prune and no
   dropped pending event.
+- Lifecycle tests prove the L02 handle stops new claims, drains within its exact
+  bound, closes Pub/Sub idempotently, and reports timeout without closing DB
+  early. Coherence tests prove immediate failure includes affected finite tags,
+  the awaited caller cannot resume before its force fence, no mutation detaches
+  `applyAfterCommit`, and independent Redis/outbox fences must both recover.
 - 1/10/50 concurrent clients demonstrate one distributed owner while load
-  completes inside the waiter budget. After timeout, availability permits at
-  most one fallback loader per process through local promise-only single-flight;
-  token-safe release and no stale-generation fill remain mandatory.
+  completes inside the waiter budget. Coupled primary-plus-companion tests use
+  two processes and prove one winning render/load publishes both or neither.
+  The owner's one Lua operation must prove
+  lease-token plus generation identity before the all-or-nothing fill; pin
+  `written`, `generation_changed`, `lease_lost`, and `unavailable`, with no fill
+  for every non-`written` result and no generation-only store-write substitute.
+  After timeout/non-publication, each waiting caller runs its own authoritative
+  no-fill loader; only a successfully written shareable result can serve local
+  joiners through their own `resolveCached`. Distinct share-scope and request-token
+  cases never cross results. Token-safe post-attempt release is
+  cleanup only; preventing stale-generation fill remains mandatory.
 - Redis down never starts a persistent local value cache and never changes the
   authoritative loader or committed mutation result.
+- `getServerCacheRuntime().cache` is TASK-551-09's canonical access to the one
+  lifecycle-owned started cache; before start/after close the accessor fails with
+  the exact stable unavailable code and never constructs a second instance.
 - All new/touched production and test files remain below 1,000 lines.
 
 Targeted commands are specified per leaf. TASK-551-10 owns full load/fault

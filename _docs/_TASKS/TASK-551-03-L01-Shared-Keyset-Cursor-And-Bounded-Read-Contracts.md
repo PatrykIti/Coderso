@@ -4,9 +4,9 @@
 **Parent Task:** TASK-551
 **Parent Subtask:** TASK-551-03
 **Priority:** Critical
-**Category:** Database / Performance / Domain
+**Category:** Database / Performance / Domain / Runtime Adapter
 **Estimated Effort:** Medium
-**Dependencies:** TASK-551-01-L02, TASK-551-02-L01, TASK-551-05-L02
+**Dependencies:** TASK-551-01-L02, TASK-551-02-L02, TASK-551-05-L02
 **Status:** ⏳ To Do
 **Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
 
@@ -15,9 +15,11 @@
 ## Overview
 
 Create Bun-free, schema-first primitives for strict bounded reads and opaque,
-tamper-evident keyset cursors. The contract supports ascending/descending
-tuples, nullable sort fields, stable unique tie-breakers, and limit-plus-one
-page detection without exposing raw database values as mutable API state.
+tamper-evident keyset cursors, plus one narrow server lifecycle adapter that
+loads and holds the immutable production keyring before traffic. The pure
+contract supports ascending/descending tuples, nullable sort fields, stable
+unique tie-breakers, and limit-plus-one page detection without exposing raw
+database values as mutable API state.
 
 ## Sub-Tasks
 
@@ -27,12 +29,15 @@ None; this is an executable leaf.
 
 **Allowlist:** `core/services/database/keysetCursor.ts`,
 `core/services/database/boundedReadContract.ts`,
+`core/server/paginationCursorLifecycle.ts`,
 `tests/vitest/database/keysetCursor.test.ts`, and
-`tests/vitest/database/boundedReadContract.test.ts` only.
+`tests/vitest/database/boundedReadContract.test.ts`, and
+`tests/integration/runtime/paginationCursorLifecycle.test.ts` only.
 
-**Forbidden:** all routes/services outside the allowlist; DB client/schema and
-migrations; TASK-511 backup files; TASK-517 entry/public-site files; TASK-493
-SEO/GSC files; TASK-518 files; task/changelog/workflow files.
+**Forbidden:** all routes/services outside the allowlist, including
+`core/server/routes/index.ts` (L02 owner); DB client/schema and migrations;
+TASK-511 backup files; TASK-517 entry/public-site files; TASK-493 SEO/GSC files;
+TASK-518 files; task/changelog/workflow files.
 
 ## Implementation Pseudocode
 
@@ -79,12 +84,37 @@ function decodeKeysetCursor(input: string, expectedScope: string, keys: Paginati
 function buildKeysetPredicate(spec: KeysetSpec, cursor: CursorPayload): SqlFragment {
   // Lexicographic predicate matching ORDER BY, null ordering, and unique id.
 }
+
+// core/server/paginationCursorLifecycle.ts: the only runtime adapter.
+let registered = false;
+let activeKeyring: PaginationCursorKeyring | null = null;
+
+export function registerPaginationCursorLifecycleParticipant(): void {
+  if (registered) return;
+  registered = true;
+  registerRuntimeLifecycleParticipant({
+    id: "pagination-cursor-keyring",
+    phase: "database",
+    start: async () => {
+      // This is the sole production env read and occurs during awaited start,
+      // never at module evaluation or inside a request/read service.
+      activeKeyring = loadPaginationCursorKeyring(process.env);
+    },
+    close: async () => { activeKeyring = null; },
+  });
+}
+
+export function requirePaginationCursorKeyring(): PaginationCursorKeyring {
+  if (!activeKeyring) throw new Error("pagination_cursor_keyring_unavailable");
+  return activeKeyring;
+}
 ```
 
 `toBoundedPage(rows, limit, encode)` accepts at most `limit + 1` rows and emits
 `items`, `nextCursor`, and `hasMore`. Errors are machine-readable:
-`page_limit_invalid`, `cursor_invalid`, `cursor_scope_mismatch`, and
-`cursor_version_unsupported`.
+`page_limit_invalid`, `cursor_invalid`, `cursor_scope_mismatch`,
+`cursor_version_unsupported`, and lifecycle-only
+`pagination_cursor_keyring_unavailable`.
 
 The cursor lifetime is code-owned at 24 hours with at most 60 seconds of future
 clock skew. Rotation publishes a higher current key version while retaining at
@@ -92,12 +122,19 @@ most one previous key for the 24-hour overlap; removing the previous pair
 invalidates any remaining old cursors. A process that mounts the paginated
 admin routes must load this keyring during startup and fail fast before
 accepting traffic when the current secret is absent or shorter than 32 UTF-8
-bytes. `loadPaginationCursorKeyring(env)` is the exact production handoff API:
-TASK-551-08-L03's sole `httpServer.ts`/development composition calls it exactly
-once before `prod.ts` starts the existing lifecycle, then injects the immutable
-result into every route/read dependency factory. TASK-551-03-L02 accepts the
-typed dependency but does not read environment state or edit composition files.
-Unit tests inject an explicit keyring and never depend on developer env.
+bytes. `loadPaginationCursorKeyring(env)` remains pure. The exact production
+handoff is the idempotent
+`registerPaginationCursorLifecycleParticipant()` plus fail-closed
+`requirePaginationCursorKeyring()`: L02 calls register once from
+`routes/index.ts` module evaluation, the participant calls the loader exactly
+once during lifecycle start, and route handlers require the installed value and
+pass it explicitly into read operations. Registration itself performs no env
+read. A missing/weak configuration rejects `startRuntimeLifecycle()` before
+`prod.ts` listens. Calls to `require*` before successful start or after close
+fail `pagination_cursor_keyring_unavailable`. TASK-551-08-L03 must preserve the
+already-registered participant and must not load, replace, or duplicate the
+keyring. Pure unit tests inject an explicit keyring and never depend on developer
+env; the runtime integration test owns scoped env setup/restore.
 
 ## Testing Requirements
 
@@ -109,15 +146,22 @@ Unit tests inject an explicit keyring and never depend on developer env.
   non-monotonic key versions, expired cursors, and future issue times fail
   closed; current and previous keys pass only during the defined overlap.
 - Boundary tests pin defaults 50, maximum 100, and exactly `limit + 1` lookahead.
-- Import test proves both production modules are Bun/runtime/DB-client free.
-- Contract test pins the exact exported name `loadPaginationCursorKeyring` and a
-  fake TASK-551-08-L03-style composition proves one load supplies multiple route
-  dependencies while missing/weak configuration fails before lifecycle start.
+- Import test proves the two pure production modules are Bun/runtime/DB-client
+  free; only the named server adapter may import the lifecycle registry.
+- Contract tests pin the exact exported names `PaginationCursorKeyring`,
+  `loadPaginationCursorKeyring`,
+  `registerPaginationCursorLifecycleParticipant`, and
+  `requirePaginationCursorKeyring`.
+- Runtime integration calls register repeatedly and proves exactly one fixed-ID
+  participant, zero env reads during module evaluation/registration, exactly one
+  load during awaited start, one immutable object reused by multiple route/read
+  calls, start rejection before listen for missing/weak config, fail-closed
+  require before start/after close, and idempotent reset across test lifecycles.
 
 ## Security Contract
 
-- Pure internal library; no endpoint, auth, RBAC, CSRF, rate-limit, nonce/HMAC
-  public-write, or CAPTCHA changes.
+- Pure internal library plus a server-only lifecycle adapter; no endpoint, auth,
+  RBAC, CSRF, rate-limit, nonce/HMAC public-write, or CAPTCHA changes.
 - Cursor HMAC keys come only from `PAGINATION_CURSOR_SECRET` and its optional
   rotation pair through explicit dependencies. They are never persisted,
   logged, returned to clients, placed in browser storage, or reused as a
@@ -128,25 +172,28 @@ Unit tests inject an explicit keyring and never depend on developer env.
 ## Validation Commands
 
 - `bunx vitest run tests/vitest/database/keysetCursor.test.ts tests/vitest/database/boundedReadContract.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/runtime/paginationCursorLifecycle.test.ts`
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
 - `git diff --check`
 
 ## Documentation Updates Required
 
-No shared docs. Hand the exact `loadPaginationCursorKeyring(env)` composition
-API, cursor format, environment variables, startup
-failure semantics, rotation procedure, limits, and error codes to
-TASK-551-10-L02 for `.env.example`, `_docs/ORM_SPEC.md`, and API documentation.
+No shared docs. Hand the exact loader/register/require lifecycle API, cursor
+format, environment variables, startup failure semantics, rotation procedure,
+limits, and error codes to TASK-551-10-L02 for `.env.example`,
+`_docs/ORM_SPEC.md`, and API documentation.
 
 ## Quantified Acceptance
 
 - 100% of malformed/tampered cursor fixtures fail closed; valid fixtures round
   trip byte-deterministically.
-- Startup rejects every missing/weak/partial keyring fixture, and rotation tests
-  prove one-current/one-previous verification with a fixed 24-hour expiry.
-- The handoff exposes exactly one validated-loader API and requires zero
-  environment reads from route handlers/read services.
+- Startup rejects every missing/weak/partial keyring fixture before listen, and
+  rotation tests prove one-current/one-previous verification with a fixed
+  24-hour expiry.
+- The handoff registers exactly one participant, loads exactly once per started
+  lifecycle, exposes one immutable required value, and requires zero environment
+  reads from module registration, route handlers, or read services.
 - Default/max limits are 50/100 and cannot be bypassed through coercion.
 - Produced predicates always include the declared unique tie-breaker and match
   the requested sort/null order in all test matrices.

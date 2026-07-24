@@ -29,7 +29,7 @@ None; this is an executable leaf.
 **Allowlist:** `core/services/assistant/assistantDocsCandidateQuery.ts`,
 `core/services/assistant/docsDbRetriever.ts`,
 `tests/vitest/assistant/docsDbRetriever.test.ts`,
-`tests/integration/database/assistantDocsCandidateQuery.test.ts`, and
+`tests/integration/server/task551AssistantDocsCandidateQuery.test.ts`, and
 `tests/perf/database-assistant-docs-search.test.ts` only.
 
 **Forbidden:** `docsIngestService.ts`, `docsIndexService.ts`, all search/vector
@@ -102,7 +102,7 @@ never through an impossible cross-table chunk generated column.
 ## Validation Commands
 
 - `bunx vitest run tests/vitest/assistant/docsDbRetriever.test.ts`
-- `set -a && source .env && set +a && bun test tests/integration/database/assistantDocsCandidateQuery.test.ts tests/perf/database-assistant-docs-search.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/server/task551AssistantDocsCandidateQuery.test.ts tests/perf/database-assistant-docs-search.test.ts`
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
 - `bun run gates:coderso:perf`

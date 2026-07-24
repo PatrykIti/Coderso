@@ -5,7 +5,8 @@
 **Priority:** Critical
 **Category:** Database / Performance / Architecture
 **Estimated Effort:** Extra Large
-**Dependencies:** TASK-551-01, TASK-551-02, and TASK-551-05 complete
+**Dependencies:** TASK-551-01, TASK-551-02, and TASK-551-05 complete for L01;
+TASK-551-06-L03 complete before L02
 **Status:** ⏳ To Do
 **Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
 
@@ -21,16 +22,33 @@ receive new behavior.
 
 ## Sub-Tasks
 
-1. `TASK-551-03-L01` owns the Bun-free cursor and bounded-read contracts.
+1. `TASK-551-03-L01` owns the Bun-free cursor and bounded-read contracts plus the
+   narrow server lifecycle adapter that loads and holds the immutable keyring.
 2. `TASK-551-03-L02` consumes L01 plus the already-landed TASK-551-05 booking
-   and list constraints for admin list/read paths and booking/auth concurrency;
-   it lands before aggregate changes.
+   and list constraints and TASK-551-06's bounded revision services for admin
+   list/read paths, page/detail revision route adoption, and booking/auth
+   concurrency. It owns a new bounded form read service and every booking
+   resource/service/assignment/schedule/blackout/reservation list contract; it
+  also owns the fixed global summary and bounded relation-facet envelopes that
+  replace whole-array-derived admin counts without making them page-local. It
+  lands before aggregate changes. Existing booking tab modules consume narrow
+  list items (service rows retain only derived `submissionAccess`), submission
+  payload is an uncached user-triggered point detail, and media list rows expose
+  a safe derived `name` without their storage key. Submission detail transport
+  is explicitly `Cache-Control: private, no-store, max-age=0` plus a client
+  `cache:"no-store"` fetch. Page-author, reverse-role, post-tag, and media-tag
+  predicates consume the four exact evidence-owned TASK-551-05 indexes.
 3. `TASK-551-03-L03` consumes L01 and the baseline budgets for aggregate,
    webhook and solution-kit batching. `seoService.ts` and
    `importExportService.ts` remain exclusively TASK-551-09-owned.
 
 L02 and L03 may not land in parallel. Each leaf reads the current source before
 editing and has sole ownership of every path in its allowlist.
+The compile-green family order is 01 → 02 → 05 → 03-L01 → 06 → 03-L02 →
+03-L03 → 04; no TASK-551-03 route/client/UI edit may precede 06-L03.
+TASK-551-02 has already landed the shared prod/dev lifecycle entrypoint before
+this order reaches L02, so the cursor participant is started in both runtime
+modes and L02's smoke is not deferred to TASK-551-08.
 
 ## Cross-Stream Collision Guards
 
@@ -57,16 +75,36 @@ editing and has sole ownership of every path in its allowlist.
 
 - Every collection query has a hard validated limit (`default <= 50`,
   `maximum <= 100`) or an explicitly budgeted streaming/batch contract.
+- Booking service-resource and schedule arrays are the only parent-scoped list
+  exceptions: writes enforce at most 100 rows and reads request 101 to fail
+  closed on corrupt legacy overflow. Slot preview is limited to 31 days/500
+  results. Every other booking/form collection uses its exact L02 keyset
+  envelope; no caller reconstructs all pages.
 - Keyset pages use a deterministic unique tie-breaker and return no duplicate or
   missing record across equal-sort-value page boundaries.
 - Representative large-fixture list endpoints execute at most 3 SQL statements;
-  aggregate dashboards execute at most 8 and never grow with row count.
+  each list uses at most one bounded page query, one fixed-row global/matching
+  summary aggregate and one bounded relation-facet batch. Existing status tabs,
+  stat cards, role/folder/tag facets, storage totals and booking summaries remain
+  collection-global across page navigation and are never derived from a page or
+  auto-fetched full list. Aggregate dashboards execute at most 8 statements and
+  never grow with row count.
+- Initial form-submission lists transfer no payload and execute no hidden detail
+  query; one accessible row expansion performs one parent-scoped point query and
+  keeps payload only in component memory until close/auth lifecycle. Its success
+  and error responses are private/no-store and the request uses no-store fetch
+  semantics. Media name
+  fallback and all existing booking tabs have direct compatibility tests.
 - Bulk operations use bounded chunks of at most 500 rows/parameters within the
   PostgreSQL bind limit and keep all-or-nothing semantics where promised.
 - Booking writes map the already-landed named exclusion/check constraints and
   retain the service-level advisory lock for deterministic conflict UX.
 - Touched legacy modules above 1,000 physical lines are cohesively split first;
   every resulting human-authored production/test file is at most 1,000 lines.
+  In L02 this includes deleting the oversized booking-page and media-library
+  suites after their exact loading/pagination, mutation/selection, and calendar/
+  upload assertion groups move to the named independently runnable suites and
+  focused fixture modules in the leaf.
 
 ## Security Contract
 
@@ -77,9 +115,14 @@ editing and has sole ownership of every path in its allowlist.
 - Authorization predicates are applied before cursor and limit processing.
   Cursor material is scope-bound and tamper-evident but never grants access.
 - No route may read cursor secrets from `process.env`. TASK-551-03-L01 exports
-  exactly `loadPaginationCursorKeyring(env)`; TASK-551-08-L03 is the sole later
-  HTTP/development composition writer and calls it once before `prod.ts` starts
-  the lifecycle or accepts traffic, then injects the immutable keyring.
+  exactly `PaginationCursorKeyring`, `loadPaginationCursorKeyring(env)`,
+  idempotent `registerPaginationCursorLifecycleParticipant()`, and fail-closed
+  `requirePaginationCursorKeyring()`. TASK-551-03-L02's sole
+  `core/server/routes/index.ts` edit calls the register function at module
+  evaluation. The participant reads env and installs the immutable keyring only
+  during awaited lifecycle start; routes call `require*` afterward and pass the
+  value into read services. TASK-551-08-L03 preserves this participant/import
+  and must neither reload the env nor create a second keyring owner.
 - Errors and telemetry omit cursor payloads, SQL/binds, credentials, session
   material, hidden columns, and PII.
 
@@ -88,8 +131,14 @@ editing and has sole ownership of every path in its allowlist.
 Each leaf runs its targeted tests plus `bun --cwd core lint:types` and
 `bun --cwd core lint`. After L03, run the exact DB integration/performance suites
 listed in the leaves, `bun run gates:coderso`, `bun run gates:coderso:perf`, and
-the applicable security scan. L02 additionally completes its five-scenario
-visible-effect Playwright smoke in light and dark mode with zero console errors.
+the applicable security scan. L01/L02 prove module registration occurs before
+the shared `runtimeEntrypoint.ts` starts the lifecycle/listens for either thin
+mode adapter, invalid keyring config rejects lifecycle start, and
+`requirePaginationCursorKeyring()` fails closed before start/after
+close. L02 additionally proves every global summary/facet remains unchanged
+across at least three pages, filters affect only `matchingTotal`, and completes
+its five-scenario visible-effect Playwright smoke in light and dark mode with
+zero console errors.
 
 ## Documentation Updates Required
 

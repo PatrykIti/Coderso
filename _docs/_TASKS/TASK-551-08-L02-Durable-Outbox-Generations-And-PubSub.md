@@ -52,28 +52,72 @@ pending `(available_at,id)`, expired-claim and processed-retention indexes and
 state checks. If that exact terminal export/artifact receipt is absent, stop for
 contract reconciliation; do not create or patch schema here.
 
-Export:
+Export the mutation functions plus one exact runtime factory/handle; the worker
+loop and Pub/Sub client have no second public start path:
 
 ```ts
-type CacheInvalidationWorkerCoherence = Readonly<{
-  state: "coherent" | "forced_bypass";
-  oldestPendingAgeMs: null | number;
-  observedAtMonotonicMs: number;
+type CacheInvalidationDrainTimeoutMs = number & {
+  readonly __cacheInvalidationDrainTimeoutMs: unique symbol;
+};
+
+type CacheInvalidationCloseResult = Readonly<{
+  drain: "drained" | "timed_out";
+  stableCode: null | "cache_invalidation_drain_timeout";
+}>;
+
+interface CacheInvalidationRuntimeHandle {
+  applyAfterCommit(plan: CacheInvalidationPlan):
+    Promise<"applied" | "queued" | "bypassed">;
+  stopClaiming(): void;
+  drain(timeoutMs: CacheInvalidationDrainTimeoutMs):
+    Promise<"drained" | "timed_out">;
+  close(timeoutMs: CacheInvalidationDrainTimeoutMs):
+    Promise<CacheInvalidationCloseResult>;
+}
+
+type CacheInvalidationRuntimeInput = Readonly<{
+  backend: ServerCacheBackend;
+  namespace: string;
+  store: ServerCacheStore;
+  coherenceController: ServerCacheCoherenceController;
+  pubSub: "disabled" | "enabled";
 }>;
 
 persistCacheInvalidationTx(tx, plan, backend): Promise<void>;
-applyCacheInvalidationAfterCommit(plan): Promise<"applied" | "queued" | "bypassed">;
 claimCacheInvalidations(workerId, now, limit): Promise<Claim[]>;
 completeCacheInvalidation(claim, generations): Promise<void>;
 retryCacheInvalidation(claim, stableCode, nextAttempt): Promise<void>;
-startCacheInvalidationWorker(input: {
-  onCoherenceChange: (next: CacheInvalidationWorkerCoherence) => void;
-}): Promise<void>;
+createCacheInvalidationRuntime(input: CacheInvalidationRuntimeInput):
+  Promise<CacheInvalidationRuntimeHandle>;
 ```
 
-`CacheInvalidationWorkerCoherence` and `startCacheInvalidationWorker` are owned
-only by this leaf. L03 injects the callback and is the sole owner that combines
-this report with store health into L01's `ServerCacheHealth` transition.
+Drain timeout accepts exactly `100..30_000 ms` (runtime default `5_000 ms`).
+`applyAfterCommit()` is the only public post-commit invalidation/epoch entry. It
+internally reports every effective observation/fence transition through the
+injected controller, whose `report(...)` method alone performs any epoch
+mutation. The caller must `await applyAfterCommit(plan)` before returning its
+committed result; fire-and-forget dispatch is forbidden. After strict plan
+validation, the handle absorbs cache transport/timeout exceptions and resolves
+only to `applied`, `queued`, or `bypassed`. It resolves only after the local
+`invalidation_observed` report is visible and, on delivery uncertainty, after
+the affected-tag `post_commit` force fence is also visible to subsequent reads.
+A caller only awaits/calls `applyAfterCommit(plan)`; it must not call
+`report(...)` for that plan, call/export an `advance*Epoch` helper, or pre-advance
+the epoch; specifically, `advanceLocalCoherenceEpoch` is not part of this surface.
+State-identical force/recover reports are controller no-ops. Every accepted
+`invalidation_observed` report conservatively advances affected epochs, including
+at-least-once duplicate local/PubSub observations; there is no event identity or
+dedup registry, and observation never clears a fence or authorizes stale/private
+values. `stopClaiming()` is
+synchronous/idempotent and prevents every later claim before
+returning. `drain()` waits only for already-owned claim tasks through its deadline,
+then aborts their owned Redis/DB work and returns `timed_out`; claim leases remain
+recoverable. `close()` is concurrency-safe/idempotent (concurrent/later calls join
+the same result), calls stop then drain, unsubscribes and closes this leaf's
+Pub/Sub client, removes callbacks, and never closes the L01 command store or DB.
+After close no claim, publish, subscription callback or coherence report starts.
+L03 owns the handle and awaits it before closing the distributed coordinator and
+store; there is no exported free-running `startCacheInvalidationWorker`.
 
 - Memory mode writes no outbox and bumps its store only after commit. Redis mode
   inserts the normalized plan in the same transaction; duplicate `eventKey`
@@ -86,10 +130,13 @@ this report with store health into L01's `ServerCacheHealth` transition.
   the claim transaction, never while holding row locks.
 - A healthy worker polls at most every 250 ms. The measured invalidation p99
   target is at most 1 second. Oldest pending age `>5_000 ms` degrades health,
-  raises a bounded alert and synchronously reports `forced_bypass` to runtime.
+  raises a bounded alert and synchronously reports L01 `force` from
+  `outbox_worker`, reason `outbox_lag`, affected tags `"all"`, to the injected
+  coherence controller.
   The state returns to `coherent` only after a successful Redis health probe and
   a fresh bounded DB oldest-pending read proves age `<=5_000 ms` (or no pending
-  event); absence/error remains forced-bypass. Processed
+  event); it then reports exact `outbox_worker` recovery, which also clears
+  post-commit fences. Absence/error remains forced-bypass. Processed
   public values retain their policy TTL as the hard stale ceiling.
 - Retry starts at 100 ms with jitter and caps at 60 seconds. Pending events are
   never discarded because of attempt count. Processed rows retain 24 hours and
@@ -99,15 +146,33 @@ this report with store health into L01's `ServerCacheHealth` transition.
   after Redis token replacement but before DB completion can deliver again;
   generation replacement is at-least-once, monotonic-safe and measured, not an
   exactly-once/idempotent bump.
+- This worker calls only the generation-bump invalidation surface. It never
+  writes cache values, acquires a distributed load lease, or calls either the
+  generation-only conditional value write or L03's combined lease-and-generation
+  owned-write operation.
 - Immediate post-commit calls the same delivery path. Failure preserves the
   committed result, marks the writer process's affected finite families
-  incoherent/bypassed and leaves the durable event for the worker. It cannot
+  incoherent/bypassed before its awaited promise resolves and leaves the durable
+  event for the worker. Cache transport exceptions are caught inside the handle;
+  the caller receives a normalized outcome, not an exception or early return. It cannot
   claim an impossible instantaneous fence on a partitioned replica.
+- Before immediate delivery, `applyAfterCommit()` internally reports
+  `invalidation_observed` from `local_post_commit` with the plan's finite tags.
+  On delivery failure it internally reports the distinct effective `force` fence
+  from `post_commit`, reason `local_incoherence`, the same affected finite tags,
+  bounded pending age/time and stable code before returning `queued`/`bypassed`.
+  The controller alone applies the epoch rule above; neither the handle's caller
+  nor another runtime helper advances it.
 - Pub/Sub channel is derived from namespace/version. A strict bounded message
   carries event key and resulting generation digest only—never tags or domain
   identities. Publish happens after
   successful bump; subscribers may wake/recheck/measure but never mark an event
   complete or authorize cached security/private data.
+- A subscriber treats the message event key only as a bounded wakeup: it performs
+  a bounded point read of that outbox row, strictly normalizes its finite tags,
+  then reports L01 `invalidation_observed` from `pubsub`. Missing/malformed/read
+  failure reports no observation and never clears a fence. Pub/Sub startup,
+  unsubscribe and client close belong exclusively to the runtime handle.
 - The consistency model is bounded-eventual, not linearizable. During globally
   ambiguous/partitioned state, already-safe public bytes may remain visible until
   worker delivery or policy TTL. Admin preview and read-after-write flows bypass
@@ -117,13 +182,23 @@ this report with store health into L01's `ServerCacheHealth` transition.
 ## Implementation Pseudocode
 
 ```ts
+const invalidationRuntime = await createCacheInvalidationRuntime({
+  backend: config.backend,
+  namespace: config.namespace,
+  store,
+  coherenceController,
+  pubSub: config.backend === "redis" ? "enabled" : "disabled",
+});
+
 const result = await db.transaction(async (tx) => {
   const mutation = await mutate(tx);
   const plan = buildCacheInvalidationPlan(mutation.before, mutation.after);
   await persistCacheInvalidationTx(tx, plan, config.backend);
   return { mutation, plan };
 });
-void applyCacheInvalidationAfterCommit(result.plan); // internally catches; durable retry remains
+// Sole invalidation/epoch entry; caller does not report or advance separately.
+const invalidationOutcome = await invalidationRuntime.applyAfterCommit(result.plan);
+recordBoundedInvalidationOutcome(invalidationOutcome); // no payload; retry remains
 
 for (const claim of await claimCacheInvalidations(workerId, now(), 50)) {
   try {
@@ -133,6 +208,11 @@ for (const claim of await claimCacheInvalidations(workerId, now(), 50)) {
   } catch (error) {
     await retryCacheInvalidation(claim, stableCode(error), boundedBackoff(claim.attempts));
   }
+}
+
+async function closeInvalidationRuntime() {
+  const timeout = normalizeDrainTimeoutMs(5_000);
+  return invalidationRuntime.close(timeout); // stop -> bounded drain -> Pub/Sub close
 }
 ```
 
@@ -154,10 +234,25 @@ no-op, identical/conflicting event keys, two workers with SKIP LOCKED,
 expired-claim recovery, token mismatch, Redis outage/backoff/reconnect,
 at-least-once duplicate token replacement, 250 ms polling, <=1 second p99 target,
 exact 5,000/5,001 ms degraded/forced-bypass health, hard-TTL bound, bounded prune and Pub/Sub
-disconnect/malformed message. Assert the callback enters forced-bypass at
-`5_001 ms`, remains bypassed on DB/Redis uncertainty, and recovers only after
-both proofs; test `5_000/5_001`. DB fixtures use unique event prefixes and delete
-only owned rows; Redis cleanup uses only the test namespace.
+disconnect/malformed message. Assert exact controller signals enter forced-bypass
+at `5_001 ms`, remain bypassed on DB/Redis uncertainty, and recover only after
+both proofs; test `5_000/5_001`. Prove immediate failure reports affected finite
+tags before the awaited caller can resume, cache transport exceptions are
+absorbed into `queued|bypassed`, and no mutation path uses `void`, a detached
+promise, or returns before `applyAfterCommit`. Prove success resolves only after
+the local observation is visible. State-identical force/recover reports do not advance, and
+every accepted local/PubSub `invalidation_observed` report advances affected
+epochs even on at-least-once duplicate delivery. Prove observations never clear
+fences or authorize stale/private values, overflow forces bypass, no event-dedup
+registry exists, and no `advanceLocalCoherenceEpoch`/other `advance*Epoch` export
+or call exists. Pub/Sub
+observation resolves tags by bounded
+event-key point read. Pin drain timeout 99/100/5,000/30,000/30,001; prove stop-before-next-
+claim, drained/timed-out results, claim recovery, concurrent/idempotent close,
+callback removal and Pub/Sub closure. Prove worker delivery performs generation
+replacement only and cannot call any conditional value-fill or lease surface.
+DB fixtures use unique event prefixes and
+delete only owned rows; Redis cleanup uses only the test namespace.
 
 ```bash
 set -a && source .env && set +a

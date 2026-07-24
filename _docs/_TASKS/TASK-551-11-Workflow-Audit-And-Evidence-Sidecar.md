@@ -55,16 +55,20 @@ non-1263 task metadata fails before implementation. Every file must contain each
 literal level-two heading exactly once: `Overview`, `Sub-Tasks`,
 `Testing Requirements`, and `Documentation Updates Required`.
 
-TASK-551-11 runs throughout, while product children execute strictly:
+TASK-551-11 runs throughout, while compile-green dispatch executes strictly:
 
 ```text
-01 (including L01 initial inventory) → 02 → 05 → 03 → 04 → 06 → 07 → 08 → 09
-→ re-dispatch 01-L01 final exact-set refresh → 10-L01
-→ post-audit/fixes/affected gates → fresh aggregate/full gates and Redis smoke
-→ final drift → 10-L02 docs/changelog/status/board closure
+01-L01(initial) → 01-L02 → 02-L01 → 02-L02 → 05-L01 → 05-L02 →
+03-L01 → 06-L01 → 06-L02 → 06-L03 → 03-L02 → 03-L03 →
+04-L01 → 04-L02 → 07-L01 → 07-L02 → 08-L01 → 08-L02 → 08-L03 →
+09-L01 → 09-L02 → 09-L03 → 09-L04 → 01-L01(final) → 10-L01 →
+post-audit/fixes/affected gates/fresh aggregate+Redis+UI smoke → final drift →
+10-L02 docs/changelog/status/board closure
 ```
 
-Within each child, leaves run numerically. TASK-551-01-L01 remains the sole
+The explicit interleave is mandatory: 06 services land after 03-L01 and before
+03-L02; 04 begins only after 03-L03. Within every non-interleaved child, leaves
+run numerically in the displayed order. TASK-551-01-L01 remains the sole
 inventory-artifact writer in both dispatches; no later leaf edits its files.
 The workflow loads the initial receipt for implementation, re-dispatches L01
 after 09, then requires the replacement `phase: "final"` receipt to match the
@@ -97,16 +101,219 @@ Before any product implementation:
 
 The reconcile checks only cross-file contradictions: exact writer/forbidden
 paths, shared type/helper/error/schema/key/tag/env names, clamp/budget values,
-test/evidence paths, migration ownership, fixture profiles, Redis behavior,
+test/evidence paths, migration ownership (including the full
+`core/db/migrations/meta/_journal.json` path), fixture profiles, Redis behavior,
 TASK-511/517/493/518 handoffs, land order, 37-file graph, and changelog 1263.
 It explicitly pins `withDedicatedDatabaseSession`, `PaginationCursorKeyring`,
-`loadPaginationCursorKeyring`, `createRetentionSchedulerLifecycleParticipant`,
-and `registerComposedHttpRuntimeParticipants`; 02 owns registry/prod, 03 owns
-cursor types/loading, 06 owns retention participation without `dockerStart.ts`,
-and 08-L03 alone composes cache/retention/existing-backup/cursor startup through
-`httpServer.ts`/`dev.ts` without editing `backupScheduler.ts`. It also reconciles
-TTL-0 pre-store bypass, positive TTL bounds, forced bypass above 5 seconds,
-mutable-visibility one-query gates, auth epochs, and never-cached secret settings.
+`loadPaginationCursorKeyring`,
+`registerPaginationCursorLifecycleParticipant`,
+`requirePaginationCursorKeyring`,
+`createRetentionSchedulerLifecycleParticipant`,
+`registerComposedHttpRuntimeParticipants`, `getServerCacheRuntime`, the exact
+invalidation `stopClaiming`/`drain`/`close` handle, and the exact revision calls
+`withRevisionParentLock(identity, tx, run)` with zero-argument `run` plus
+`allocateRevision(input, tx)`. 02-L02 owns registry, `runtimeEntrypoint.ts`,
+`prod.ts`, and `dev.ts`: thin adapters execute awaited lifecycle start,
+after first registering mode participants (Vite included), then synchronous
+listen, await signal, graceful/forced HTTP drain and reverse lifecycle close,
+with partial-start rollback and no listen after startup signal/failure. 03-L02 owns all
+of `routes/index.ts` and registers the cursor participant at module evaluation.
+06 owns retention participation without `dockerStart.ts`. 08-L03 alone owns
+`httpServer.ts`, calls the idempotent composition seam at module
+evaluation for cache/retention/existing backup, preserves the already-registered
+cursor, never loads/injects its keyring, and never edits either entrypoint.
+
+The reconcile pins owner handoffs at their exact granularity. TASK-551-01 uses
+one deterministic family scenario at a time, exact target/support counts,
+UUIDv5/ordinal timestamps, pool `2/10`, three repetitions of `5+30`, calibration
+`20+100`, p95 spread denominator `max(median,0.1)` with all-zero handling, 20%
+cap, normalization `0.80..1.20`, and
+`ceilToTenth(max(floor, median*1.25))`; only its stored ceilings are consumed.
+All fixed status/visibility/relation distributions, ten-row tie groups, unique
+append timestamps, and exact per-family integer common/rare search table with
+hidden/miss zero are shared literally; percentage-derived search counts fail.
+Summary/facet `asOf` is `2026-01-15T12:00:00.000Z`. Submission ordinal `%4===0`
+uses 1..6 days before and all others 8..37 days before (rolling seven days
+`500/25,000`, spam `200/10,000`). Booking cycles UTC/New_York/Tokyo and modulo-
+100 same-day-past/same-day-future/next-1..40/prior-1..40 with +60-minute end,
+yielding today `400/20,000`, upcoming/past-current `1,000/50,000` each.
+TASK-551-02 pins default pool/replica/server/reserve/worker/migration values
+`10/1/103/21/2/1`, the default Bun lifecycle path
+`tests/integration/server/task551DatabaseLifecycle.test.ts`, deadlines
+`2_000/5_000/10_000/15_000 ms` plus 10-second DB close, release-once late
+acquisition, and fixed telemetry cardinality 3,240 cells per fingerprint plus 44
+pool cells with saturating counters and deterministic snapshot/reset. Exact
+registry names are `QUERY_FAMILIES`, `QUERY_OUTCOMES`,
+`QUERY_DURATION_BUCKET_MAX_MS`, `ROWS_RETURNED_BUCKET_MAX`,
+`POOL_WAIT_BUCKET_MAX_MS`, `POOL_OUTCOMES`, `MAX_QUERY_FINGERPRINTS=512`, and
+`MAX_COUNTER_VALUE=Number.MAX_SAFE_INTEGER`.
+Also pin exported `assertMaintenanceSessionAffinity()`, maintenance modes
+`primary|direct|session`, pool max `2..4`, and secret URL/budget inclusion.
+Primary startup never probes; disabled-scheduler `off+primary+pool1` passes and
+`verifyDatabaseSessions` checks only that session.
+Explicit direct/session probes once at DB start and reuses the lifecycle result;
+enabled scheduler awaits it before timer/listen and fails below two or with transaction+primary.
+Dedicated sessions expose signal-aware static execute/transaction/liveness/
+cancel-and-rollback only. Retention lock, every batch and unlock use one backend
+PID; close aborts/cancels and confirms rollback/termination within 4,500 ms
+before cache/DB close. Lock loss is only `retention_lock_lost`, with no overlap,
+partial summary or detached work, under the 5-second participant ceiling.
+Every lifecycle close receives cancellable
+`RuntimeCloseContext{absoluteDeadline,signal}`. The absolute shutdown is 15
+seconds; non-DB closes are at most 5 seconds, and DB is the sole exception at
+`min(10 seconds, remaining budget)` with no outer race or detached teardown.
+
+TASK-551-05-L01 solely owns all seven byte-exact `SEARCH_VECTOR_SQL` and five
+trigram source literals built with immutable-safe
+`coalesce(...) || ' ' || ...`, their closed `pg_proc.provolatile = 'i'` function/
+operator proof, and the deeply immutable
+`BOOKING_RESERVATION_EXCLUSION_SQL`. The same one writer lands schema exports/
+descriptor, exact extension/add custom SQL, generated snapshot/journal and tests
+atomically. The installed Drizzle DSL cannot represent the GiST exclusion, so
+the snapshot intentionally omits only it; exact live `pg_constraint.contype =
+'x'`, clean/prior/rollback/forward, extension preservation, generator zero-
+drift, and no duplicate-add/generated-drop guards are mandatory. The expanded
+closed catalog includes all form/booking/list/retention members and assistant-
+ingest `started_at`, plus exact `pages_author_list_updated_id_idx`, role-leading
+`user_roles_role_user_idx`, and `posts_tags_gin_idx`/`media_tags_gin_idx` as
+`jsonb_path_ops` GIN with their parameterized `@>` predicates. The
+read-performance catalog includes `cache_outbox_unprocessed_age_idx(created_at,id)
+WHERE processed_at IS NULL`; `readOldestUnprocessedAge` fingerprint
+`cache_outbox_oldest_unprocessed` scans claimed/backed-off rows by created-at/id
+`LIMIT 1`, with 1k/100k EXPLAIN and insert/claim/retry/complete budgets. The
+phase-2 mutation drain remains through ordered page/content/widget revision-
+unique builds and the durable ready/valid `--through-group revision-integrity`
+barrier; only then do old writers resume for the read-performance group/final
+admission. Transactional SQL creates no index. Fresh `resolve-receipt` precedes two
+`apply-resume-check` calls and the second is zero-DDL. No file may
+pretend the DSL represents it or split the artifact ownership.
+
+After 06-L03, TASK-551-03-L02 alone adopts 06-L02's page
+`{id,pageId,version,kind,title,slug,createdAt,createdBy:{id,name,email}|null}` and
+detail `{id,detailPageId,version,kind,createdAt,createdBy:string|null}` envelopes,
+rejecting invented `reason`, through route/schema/client/UI, and owns a freshly rescanned
+complete seven-client consumer graph, bounded server-side picker/search/load-
+more state, `formReadService` as form-list owner with exact FormListItem fields
+`id,name,slug,status,description,submissionAccess,updatedAt`. `bookingReadService`
+owns paginated reservations/resources/services/blackouts, capped-100 service-
+resource/schedule arrays, and 31-day/500-slot preview.
+Existing Reservations/Resources/Services tabs consume narrow items, Services
+keeps derived `submissionAccess`, edits await point detail, and Availability/
+SlotPreview use bounded pickers. Submission payload uses one authorized parent-
+bound point query only on explicit expansion, stays component-local/uncached,
+and aborts/clears on close/unmount/logout/auth change. Success/error responses
+set exact `Cache-Control: private, no-store, max-age=0`, `Pragma: no-cache`, and `Expires: 0` headers;
+the client passes `cache:"no-store"`. Media list `name` derives
+originalName→title→sanitized key basename→asset; raw key is omitted and
+`media/utils.ts` consumes name directly. Exact extraction stems are
+`BookingOverviewPanel`, `MediaLibraryFolderState/Results`, `UsersRolesContent`, `DetailTemplateRevisionPanel`, `MenuDesignCanvas/Inspector/DataSources`, `MenuEditorWorkspace`, `PostEditorMediaControls`, `ContentListSource/PresentationEditors`, `CtaBannerContentEditors`, `EntryTeaserSource/PresentationEditors`, `FeatureGridItemEditors`, `FooterNavigation/BrandEditors`, `GalleryMosaicItemEditors`, `HeroContent/Media/LayoutEditors`, `LogoCloudItemEditors`, `NavigationItem/PresentationEditors`, `PostsFeedSourceEditors`, `RichTextContent/LayoutEditors`, `SectionContent/LayoutEditors`, `TeamMember/LayoutEditors`, and `TestimonialItemEditors`; all eight named page-editor split suites and every cohesive
+>1,000-line split, two direct consumer-graph
+suites, five revision suites, and the UI smoke. Raw-array, auto-fetch-all, silent
+first-page truncation and heavy-body fallbacks are forbidden. Each metric-bearing Admin keyset envelope is exactly
+`{items,nextCursor,hasMore,summary,facets}`. Only `matchingTotal` follows the
+normalized row filters; all other exact domain summary fields and bounded
+author/content-type/role/folder/tag facets retain global authorized/parent scope
+across three-plus pages and filters. Strict facet pages use
+`{items,nextCursor,hasMore}`, default/max `50/100`, and no auto-fetch. One page
+query + one fixed aggregate row + at most one bounded relation-facet batch is at
+most three SQL statements; page concatenation, per-row lookup, and auth leakage
+fail the audit. Legacy booking/media monoliths are deleted; exact owners are
+`bookingPageTestFixtures.tsx` plus booking `loading-pagination|mutations|calendar`
+and `mediaLibraryTestFixtures.tsx` plus media `loading-pagination|selection-folders|upload-edit` suites.
+TASK-551-06-L01 alone owns Bun-free `searchHistoryContract.ts` plus direct
+Vitest, removes the real `pruneHistory` declaration/call and lands actor/UUIDv5-
+idempotent `recordSearch`. L04 makes GET write-free and owns the sole internal
+`POST /admin/api/search/history` with session actor, `content:read`, CSRF,
+`admin_write`, strict four-key body/409 conflict, plus one UI-intent UUID reuse;
+no public/API-key/GET mutation alias exists. TASK-551-06-L01 also preserves analytics compatibility exactly: canonical
+`ANALYTICS_RETENTION_DAYS` with absent/malformed/non-finite 365 and finite floor+
+clamp `30..1095`, enablement only through `RETENTION_ANALYTICS_ENABLED`, rejected
+age aliases and the complete `Number(raw)` truth table. Both deprecated
+`ANALYTICS_PRUNE_INLINE_DISABLED` and `ANALYTICS_PRUNE_INLINE_ENABLED` are
+separate warning-once/raw-value-free no-ops. `RETENTION_DRY_RUN` alone parses
+lowercase booleans; direct use has no scheduler advisory, scheduled use takes
+exactly one replica advisory, and both have zero destructive-row-lock/mutation/
+publication/progress. Inline request pruning is zero.
+
+The reconcile also pins policy-branded conditional-entry fields and concrete-
+policy envelope lifetime, one coherence controller and its exact signals,
+single-flight default/range `1_024`/`16..10_000` plus permanent forced-bypass
+at safe-integer epoch overflow, canonical final-path-key+current-epoch+branded
+full-context `shareScopeDigest` identity, and identity-cleaned shared fill-outcome
+promises only—never `Promise<TResult>` or caller values. Ineligible/unbranded
+requests bypass registry/read/lease/fill; the owner keeps its result, and only a
+strictly decoded `published` outcome proving successful positive/eligible-negative
+conditional publication lets a joiner call its own resolver. Every `not_published`
+path runs an authoritative no-fill loader per joiner,
+every distributed coordinator result,
+the singleton `getServerCacheRuntime().cache` field, fixed positive runtime-
+snapshot bootstrap when public HTML TTL is zero, one outer event key through all
+nested collectors, mutable page/home/post/content-entry point/list gates, and Admin cache
+deployment + 128-bit session incarnation + auth epoch + user/permissions scope.
+Every public request has exactly one authoritative SecuritySettings read before
+security/rate middleware. Safe structural routes total one query; mutable page/
+home/post/content-entry detail/list routes add one point/membership gate and total
+two, with exact projections, unpublish/missing/membership/reorder fail-closed
+behavior and zero other reads. Secret settings remain never cached. Exact no-fill
+exclusions are commerce data plus form/booking/analytics/request nonce/token and
+unknown dynamic dependency; every dependency is tagged, gated, or excluded.
+
+`ServerCache.getOrLoad(ServerCacheLoadRequest<TCached,TResult>)` is the only load/
+fill owner: it captures primary plus finite fill-fence generations before load.
+Its strict result is finite-reason `no_fill` with only `returnValue` and zero
+encode/write, or `fill` with `fillKind:positive|negative`, cache/return values and
+a branded optional companion. Positive primary/companion entries independently
+sample their own policy TTLs and may differ; negative uses its negative TTL and no companion.
+Both store write primitives remain hidden from consumers.
+Both Redis writes reuse one pre-command validator that strictly decodes every
+envelope, matches `fillKind`, selects the correct policy ceiling, and rejects any
+forged/malformed one/two-entry bundle with zero Redis commands.
+Every committed invalidation caller awaits `applyAfterCommit(plan)` before
+success; it resolves only after local observation or an affected-tag force fence,
+with no fire-and-forget or direct epoch mutation.
+Redis commits persist exactly one same-transaction outbox row; memory commits
+persist zero and perform exactly one awaited post-commit generation bump.
+Public HTML pins manifest-primary+HTML-companion and HTML-primary+refreshed-
+manifest-companion directions, both-or-neither fill, and uncached return value.
+Its loaders use positive fill or finite-reason `no_fill`, never negative; an
+excluded render returns authoritative output without throw, encode, or write.
+
+A distributed owner fills only through atomic
+`putIfGenerationsAndLeaseOwned`, which proves the random lease token and all
+expected generations before one/two writes. Only `written` fills. Generation
+change, lease loss, unavailable, or renew uncertainty yields authoritative bytes
+without fill; generation-only store write is forbidden and release is cleanup.
+Method+URL dispatch preserves every booking path/method including slots GET,
+Forms submission/upload at every method, and analytics beacon at every method
+before cache normalization/read/write. Existing handler security/method behavior
+is authoritative; only unmatched GET/HEAD enters cache and each request reads
+SecuritySettings once. Admin deployment/scope preimages are
+fixed-order v3 UTF-8 JSON with separate normalized/deduplicated/byte-sorted
+permission/role arrays, never delimiter concatenation. Security-settings writes
+take the same-tx 2-second local timeout and advisory `(551,904)` before merge,
+then Redis writes one same-tx outbox row while memory writes zero and performs
+one awaited post-commit bump. Both map conflicts and expose observation/fence
+before returning.
+An effective force/recover advances affected epochs once; a state-identical
+force/recover report is a no-op. Every accepted local or Pub/Sub
+`invalidation_observed`, including duplicate at-least-once delivery, advances
+affected epochs without clearing a fence or authorizing stale/private values.
+There is no event-dedup registry or second epoch mutator; safe-integer overflow
+permanently forces bypass. Pub/Sub carries only `{ eventKey, generationDigest }`;
+the subscriber bounded-point-reads the outbox row for finite tags and emits no
+observation on missing/malformed/read failure.
+
+Every author/fixer mutation batch is guarded by the exact changed-path contract:
+snapshot all pre-existing tracked dirty and untracked paths plus the explicitly
+ignored author-workflow path, fingerprint file SHA-256/mode or symlink target,
+and fingerprint the full git index; take before/after snapshots; require author
+`result.file` to equal its assigned filename; require each author/per-file fixer
+`changedPaths` to be empty or its one assigned task path; restrict the cross
+fixer to the exact frozen 37 task paths; and require the sorted union of reports
+to equal the actual fingerprint delta exactly. Any index mutation or out-of-
+scope delta fails. Run the exact task-graph validator after each fixer batch/
+round and immediately before final reconcile. Author prompts must require
+`changedPaths`.
 
 Any task/source/test/gate/doc contract change after the PASS invalidates that
 PASS for the changed contract and requires fresh affected-file audits plus a
@@ -116,13 +323,17 @@ fresh reconcile before dispatch.
 
 - Before the first product dispatch, require TASK-511, TASK-493, TASK-517, and
   TASK-518 terminal. The only substitute is the parent's fresh exact serialized
-  audit proving byte-disjoint schema/journal/`.env.example`/publicSite/entry/
+  audit proving byte-disjoint schema/`core/db/migrations/meta/_journal.json`/
+  `.env.example`/publicSite/entry/
   SEO/import/lifecycle source, test, migration and documentation paths. Recheck
   it before every affected leaf; unknown/wildcard/stale ownership blocks.
 - Dispatch one executable leaf at a time in the exact order. Provide its current
   on-disk ownership allowlist and explicit forbidden-path set.
-- After each leaf, require its targeted Bun/Vitest/DB/migration/Redis tests plus
-  `bun --cwd core lint:types` and `bun --cwd core lint`. A fixer loop may run at
+- After each leaf, require every exact literal command from its current task
+  manifest plus `bun --cwd core lint:types` and `bun --cwd core lint`; canonical
+  argv/digest, zero exit/no skip, and positive test discovery are mandatory.
+  New default-lane TASK551 integration paths are under `tests/integration/server`,
+  never a legacy non-default integration tree. A fixer loop may run at
   most three rounds and may edit only the same leaf-owned paths.
 - Prefer source correction. A test expectation changes only for an intended
   contract change and never weakens a behavior/security/performance assertion.
@@ -141,6 +352,16 @@ fresh reconcile before dispatch.
   TASK-551-03-L02 visible-effect UI smoke in light/dark with ten screenshots and
   zero console errors. Required DB/Redis/UI infrastructure absence is a failure,
   not a skip.
+- Every 01..09 executable leaf owns its literal targeted manifest. Each 09 leaf
+  additionally owns and runs every direct existing suite named in its
+  literal Validation Commands. Its implementation receipt records the exact
+  canonical argv manifest and digest, zero exit, no skip, and positive test
+  discovery. TASK-551-10 validates those four ordered handoffs and runs only
+  aggregate/full ownership; broad rediscovery never authorizes a targeted test
+  edit, rebaseline, or ownership transfer. This explicitly preserves L02's split
+  entry/SEO suites and singular `postMutationService.ts`, L03's import/export and
+  detail-page suites, L04's Admin-boundary plus read-only `cacheRefresh` lane,
+  and L01's booking/forms/analytics anti-abuse suites.
 
 ## Post-Audit and Final Drift
 
@@ -232,8 +453,16 @@ type Task551AuthorAuditResultV1 = Readonly<{
   tree: "TASK-551";
   expectedFiles: 37;
   changelog: 1263;
-  landOrder: readonly ["551-01", "551-02", "551-05", "551-03", "551-04",
-    "551-06", "551-07", "551-08", "551-09", "551-10"];
+  landOrder: readonly [
+    "551-01-L01(initial)", "551-01-L02", "551-02-L01", "551-02-L02",
+    "551-05-L01", "551-05-L02", "551-03-L01", "551-06-L01",
+    "551-06-L02", "551-06-L03", "551-03-L02", "551-03-L03",
+    "551-04-L01", "551-04-L02", "551-07-L01", "551-07-L02",
+    "551-08-L01", "551-08-L02", "551-08-L03", "551-09-L01",
+    "551-09-L02", "551-09-L03", "551-09-L04", "551-01-L01(final)",
+    "551-10-L01", "post-audit/fix/affected-gates/aggregate+smoke",
+    "final-drift", "551-10-L02"
+  ];
   rounds: readonly Task551RoundEvidenceV1[];
   finalReconcile: Task551AuditResultV1;
   errors: readonly string[];
@@ -253,14 +482,35 @@ type Task551PostAuditEvidenceV1 = Readonly<{
   errors: readonly string[];
 }>;
 
+type Task551GateCommandReceiptV1 = Readonly<{
+  id: string;
+  argv: readonly string[];
+  exitCode: 0;
+  durationMs: number;
+  skipped: false;
+  skipReason: null;
+  discoveredTestCount: number | null; // positive for test commands; null otherwise
+}>;
+
+type Task551ImplementationReceiptV1 = Readonly<{
+  taskId: string;
+  pass: boolean;
+  changedPaths: readonly string[];
+  gateIds: readonly string[];
+  targetedCommandManifest: Readonly<{
+    sha256: string;
+    commands: readonly Task551GateCommandReceiptV1[];
+    directExistingSuitePaths: readonly string[];
+  }>;
+}>;
+
 type Task551WorkflowResultV1 = Readonly<{
   schema: "coderso.task551.workflow-result@v1";
   pass: boolean;
   summary: string;
   rounds: readonly Task551RoundEvidenceV1[];
   finalReconcile: Task551AuditResultV1;
-  implementationReceipts: readonly { taskId: string; pass: boolean;
-    changedPaths: readonly string[]; gateIds: readonly string[] }[];
+  implementationReceipts: readonly Task551ImplementationReceiptV1[];
   postAudit: Task551PostAuditEvidenceV1;
   finalDrift: Task551AuditResultV1;
   runtimeEvidenceSha256: Readonly<{
@@ -317,13 +567,38 @@ async function runTask551Workflow(): Promise<Task551WorkflowResultV1> {
   const finalReconcile = requireClean(await runFreshFinalReconcile(graph));
 
   const implementationReceipts = [];
-  for (const leaf of graph.productLeavesThrough09InOrder) {
-    implementationReceipts.push(await dispatchLeafAndRequireTargetedGates(leaf));
+  const compileGreenThrough09 = [
+    graph.task55101L01Initial, graph.task55101L02,
+    graph.task55102L01, graph.task55102L02,
+    graph.task55105L01, graph.task55105L02,
+    graph.task55103L01,
+    graph.task55106L01, graph.task55106L02, graph.task55106L03,
+    graph.task55103L02, graph.task55103L03,
+    graph.task55104L01, graph.task55104L02,
+    graph.task55107L01, graph.task55107L02,
+    graph.task55108L01, graph.task55108L02, graph.task55108L03,
+    graph.task55109L01, graph.task55109L02,
+    graph.task55109L03, graph.task55109L04,
+  ] as const;
+  for (const leaf of compileGreenThrough09) {
+    implementationReceipts.push(await dispatchLeafAndRequireTargetedGates(
+      leaf, { requireExactTargetedCommandManifest: true }
+    ));
   }
   implementationReceipts.push(await dispatchLeafAndRequireTargetedGates(
-    graph.task55101L01, { phase: "final", requireCurrentExactSet: true }
+    graph.task55101L01, {
+      phase: "final",
+      requireCurrentExactSet: true,
+      requireExactTargetedCommandManifest: true,
+    }
   ));
   requireCurrentFinalInventoryReceipt(implementationReceipts.at(-1));
+  requireExactTask55109DirectSuiteReceipts(implementationReceipts, {
+    owners: ["551-09-L01", "551-09-L02", "551-09-L03", "551-09-L04"],
+    requireCanonicalArgv: true,
+    requireManifestDigest: true,
+    requireZeroExitNoSkipAndPositiveDiscovery: true,
+  });
   const initialAggregate = await dispatchTask55110L01();
   const postAudit = await runFivePostAuditLenses(initialAggregate);
   if (!postAudit.pass) await fixExactOwnersOnceAndRerunAffectedThenAggregate(postAudit);
@@ -367,10 +642,21 @@ structured schema rejection, and non-zero failure on every false-clean condition
 - Require five complete 37/37 rounds plus one reconcile each, exact structured
   result shapes, and a fresh zero-finding final reconcile.
 - Test the initial and post-09 final TASK-551-01-L01 dispatches, zero planned
-  deltas in the final receipt, strict 01→02→05→03→04→06→07→08→09→refresh→10
-  order, and failure on a missing/stale refresh.
+  deltas in the final receipt, the exact displayed interleave
+  `01-L01(initial)→01-L02→02-L01→02-L02→05-L01→05-L02→03-L01→06-L01→
+  06-L02→06-L03→03-L02→03-L03→04-L01→04-L02→07-L01→07-L02→08-L01→
+  08-L02→08-L03→09-L01→09-L02→09-L03→09-L04→01-L01(final)→10-L01`,
+  and failure on a missing/stale refresh.
+- Validate every executable 01..09 leaf's exact literal argv manifest/SHA-256,
+  zero exit/no skip, and positive test discovery. Separately pin every 09 direct-
+  existing-suite list; reject broad aggregate discovery as owner replacement.
 - Validate both Redis and Admin-list UI smoke hashes, five UI scenarios in both
   themes, ten screenshots, and zero console errors before L02 dispatch.
+- Test dirty/untracked/ignored-workflow and git-index before/after guards,
+  exact author `file`, per-agent assigned-only `changedPaths`, combined-report/
+  actual-delta equality, cross-fixer exact-37 allowlisting, rejection of index
+  or out-of-scope mutation, and task-graph validation after every fixer batch
+  and before final reconcile.
 
 ## Exact Validation Commands
 

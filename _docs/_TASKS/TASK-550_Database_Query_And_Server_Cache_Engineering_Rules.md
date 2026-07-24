@@ -66,8 +66,11 @@ requirements.
   nonce/HMAC, CAPTCHA, schema, migration, persistence, dependency, or runtime
   behavior changes in this task.
 - The rules preserve fail-closed validation and prohibit caching credentials,
-  secrets, raw privileged settings, unredacted personal data, or
-  authorization-dependent responses under shared keys.
+  secrets/decrypted settings, sessions, auth/RBAC decisions, private/password
+  content, preview/draft bodies, nonce-bearing forms, or unredacted personal
+  data in any server-cache backend. No later task may relax those exclusions;
+  only explicitly non-security user-specific responses may prove a strictly
+  identity-partitioned cache contract.
 
 ## Sub-Tasks
 

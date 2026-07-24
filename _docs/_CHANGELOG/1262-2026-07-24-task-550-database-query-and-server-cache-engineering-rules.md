@@ -48,9 +48,10 @@ an optional Redis implementation for multi-replica deployments.
 
 Documentation/process-only change. No endpoint, auth, RBAC, CSRF, rate-limit,
 schema, migration, dependency, or runtime behavior changed. The new rules
-explicitly forbid shared caching of secrets, privileged settings, unredacted
-personal data, or authorization-dependent responses without safe identity
-partitioning.
+make secrets/decrypted settings, sessions, auth/RBAC decisions, private/password
+content, preview/draft bodies, nonce-bearing forms, and unredacted personal data
+absolute server-cache exclusions. Only explicitly non-security user-specific
+responses may define a stricter identity-partitioned cache contract.
 
 ## Validation
 
