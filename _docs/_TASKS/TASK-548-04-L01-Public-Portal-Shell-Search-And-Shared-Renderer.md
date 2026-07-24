@@ -259,6 +259,12 @@ export type DocsPortalHydrationPayloadV1 = {
   bodySha256: string;
 };
 
+export const DOCS_PORTAL_HYDRATION_BODY_HASH_DOMAIN_V1 =
+  "coderso.docs-portal-hydration-body@v1" as const;
+export function hashDocsPortalHydrationBodyV1(
+  body: DocsPortalHydrationBodyV1
+): string;
+
 export function createDocsPortalHydrationPayloadV1(
   value: unknown
 ): DocsPortalHydrationPayloadV1 {
@@ -266,10 +272,7 @@ export function createDocsPortalHydrationPayloadV1(
   return deepFreeze({
     schema: "coderso.docs-portal-hydration@v1",
     body,
-    bodySha256: sha256DomainSeparated(
-      "coderso.docs-portal-hydration-body@v1",
-      serializeCanonicalDocsPortalHydrationBodyV1(body)
-    ),
+    bodySha256: hashDocsPortalHydrationBodyV1(body),
   });
 }
 
@@ -284,12 +287,15 @@ export function normalizeDocsPortalHydrationPayloadV1(
   const body = normalizeDocsPortalHydrationBodyV1(payload.body);
   assertEqual(
     payload.bodySha256,
-    sha256DomainSeparated(
-      "coderso.docs-portal-hydration-body@v1",
-      serializeCanonicalDocsPortalHydrationBodyV1(body)
-    )
+    hashDocsPortalHydrationBodyV1(body)
   );
   return deepFreeze({ ...payload, body });
+}
+
+export function hashDocsPortalHydrationBodyV1(body: DocsPortalHydrationBodyV1) {
+  const canonical = serializeCanonicalDocsPortalHydrationBodyV1(body);
+  return sha256LowerHex(concat(utf8(DOCS_PORTAL_HYDRATION_BODY_HASH_DOMAIN_V1),
+    nul(), u64be(canonical.length), canonical));
 }
 
 // packages/docs-portal/src/app/DocsPortalIslandElementsV1.tsx
@@ -499,6 +505,16 @@ canonical serializer uses displayed key order, normalized nested order, LF and
 one final newline and escapes `<`, `>`, `&`, `/`, U+2028 and U+2029 before
 hashing/embedding. Its schema excludes Markdown, sections, visual/example
 records, asset bytes, renderer props and a projection/document object.
+`hashDocsPortalHydrationBodyV1` is the sole hash owner and consumes those exact
+serialized bytes, including the final LF. It hashes
+`UTF8(DOCS_PORTAL_HYDRATION_BODY_HASH_DOMAIN_V1) || 0x00 ||
+u64be(canonicalBytes.length) || canonicalBytes`, with unsigned big-endian length,
+no other separator/BOM, and lowercase output. The framing test for canonical
+bytes `{}\n` is
+`63d0ad7fe1678435b0769f16711eedda94712e86915ebc353306f208fbaa2f2c`.
+Independent build creator and browser normalizer tests pin this vector, the
+synchronous browser-safe SHA-256 implementation against Node/WebCrypto vectors,
+and reject domain/length/body/escaping/final-LF mutations before any mount.
 The hydration-body normalizer delegates its `search` field exactly once to
 `normalizeDocsClientSearchRankingProjectionV1`; all other nested keys are
 validated in that same call. Build code calls renderer-owned
@@ -581,7 +597,8 @@ usable. Same-origin version/search failure keeps bounded current-build state.
   identity across every route;
 - hydration schema tests reject root/nested unknown keys, wrong discriminator,
   order/encoding/size violations, duplicate navigation/search identities,
-  unsafe paths and every body-hash mutation; canonical bytes reproduce exactly;
+  unsafe paths and every body-hash mutation; canonical bytes and the fixed
+  creator/browser framing vector reproduce exactly;
   the strict page union accepts only article-with-`docId` or not-found-without-
   `docId`/requested path, and not-found disables same-document resolution;
   a spy proves one hostile normalizer before any of exactly four hydrate calls,

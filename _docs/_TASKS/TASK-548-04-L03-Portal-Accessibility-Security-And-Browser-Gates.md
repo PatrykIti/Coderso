@@ -93,30 +93,26 @@ validated output root (default only when exactly
 The validator streams/bounds input sizes, rejects symlinks/path escapes, and
 does not execute HTML/JSON/script content.
 
-On success it returns this exact recursively reject-unknown receipt:
+L03 owns validation and receipt production, but not a second DTO. Its validator
+imports the exact pure server/build contract:
 
 ```ts
-type DocsPortalValidationReceiptV1 = {
-  schema: "coderso.docs-portal-validation@v1";
-  status: "pass";
-  productVersion: string;
-  corpusVersion: string;
-  sourceHash: string;
-  publicOrigin: string;
-  publicBasePath: string;
-  manifestPath: "docs-portal-manifest.json";
-  manifestSha256: string;
-  soleExcludedPath: "docs-portal-manifest.json";
-  routeCount: number;
-  fileCount: number;
-  totalBytes: number;
-  filesRootSha256: string;
-  artifactRootSha256: string;
-  allManifestFilesVerified: true;
-  untrackedFileCount: 0;
-  orphanRecordCount: 0;
-};
+import { normalizeDocsPortalClientAssetsManifestV1,
+  normalizeDocsPortalManifestV1,
+  normalizeDocsPortalSiteIndexCandidateV1,
+  normalizeDocsPortalValidationReceiptV1,
+  serializeDocsPortalClientAssetsManifestV1,
+  serializeDocsPortalManifestV1,
+  serializeDocsPortalSiteIndexCandidateV1,
+  serializeDocsPortalValidationReceiptV1,
+  type DocsPortalManifestV1,
+  type DocsPortalValidationReceiptV1,
+} from "@coderso/docs-portal/publication-contracts";
 ```
+
+No validator/client deep import or duplicate shape is valid. The owner
+normalizer rejects unknown keys recursively and the CLI emits only paired
+serializer bytes after proving serialize→parse→normalize byte identity.
 
 `manifestSha256` is lowercase hex SHA-256 of the exact raw detached-manifest
 bytes, without a domain prefix, and is never written into
@@ -265,11 +261,12 @@ export async function validateBuiltPortal(
 ): Promise<{
   manifest: DocsPortalManifestV1;
   receipt: DocsPortalValidationReceiptV1;
+  receiptBytes: Uint8Array;
 }> {
   const exactRoot = await assertAllowedPortalRoot(root);
-  const manifest = assertPortalManifest(
-    await readBoundedJson(exactRoot, "docs-portal-manifest.json")
-  );
+  const manifestBytes = await readBoundedBytes(exactRoot, "docs-portal-manifest.json");
+  const manifest = normalizeDocsPortalManifestV1(parseJson(manifestBytes));
+  assertBytesEqual(manifestBytes, serializeDocsPortalManifestV1(manifest));
   const files = await walkFilesWithoutSymlinks(exactRoot, options.maxFiles);
 
   assertDetachedManifestIsSoleExcludedControlFile(manifest, files);
@@ -283,14 +280,16 @@ export async function validateBuiltPortal(
     status: "pass",
     ...portalIdentityFromManifest(manifest),
     manifestPath: "docs-portal-manifest.json",
-    manifestSha256: await sha256File(exactRoot, "docs-portal-manifest.json"),
+    manifestSha256: sha256(manifestBytes),
     soleExcludedPath: "docs-portal-manifest.json",
     ...computePortalRootClosureFacts(manifest, files),
     allManifestFilesVerified: true,
     untrackedFileCount: 0,
     orphanRecordCount: 0,
   });
-  return { manifest, receipt };
+  const receiptBytes = serializeDocsPortalValidationReceiptV1(receipt);
+  assertCanonicalReceiptRoundTripV1(receiptBytes, receipt);
+  return { manifest, receipt, receiptBytes };
 }
 ```
 
@@ -313,6 +312,9 @@ unexpected request, absent screenshot, or skipped scenario is a failed gate.
   pin the literal domains, empty/one-file/manifest/artifact golden vectors,
   NFC and raw-UTF-8 ordering, big-endian widths, raw digest bytes, and absence
   of implicit separators or final newlines;
+- exact package-subpath imports compile; receipt fixtures pin discriminator/key
+  order/final LF, reject nested unknowns, and round-trip through the sole
+  normalizer/serializer to byte-identical CLI output consumed by 05-L01;
 - file mutation, orphan, hash mismatch, symlink/traversal, duplicate route,
   broken anchor/link/hreflang/redirect, bad CSP, unsafe HTML/URL, secret/internal
   marker, source map, remote media, missing alt, and a11y landmark/heading

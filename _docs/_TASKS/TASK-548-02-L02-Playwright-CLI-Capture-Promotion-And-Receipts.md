@@ -13,8 +13,17 @@
 
 ## Overview
 
-Implement the task-scoped `playwright-cli` runner, visible-effect assertions, bounded capture, strict provenance, PNG sanitizer, review gate, atomic promotion
-and receipt. Own `scripts/docs/visual/`, both capture/promotion CLIs, canonical pilot scenarios/assets/receipts, `.gitignore` and focused tests.
+Implement the task-scoped `playwright-cli` runner, visible-effect assertions,
+bounded capture, strict provenance, PNG sanitizer, review gate, atomic promotion
+and receipt. Own only `scripts/docs/capture-visual.ts`,
+`scripts/docs/promote-visual.ts`, `scripts/docs/visual/capture/**`,
+`scripts/docs/visual/promotion/**`, `scripts/docs/visual/png/**`, and
+`scripts/docs/visual/lifecycle/**`; the inter-leaf shared wire remains exactly
+`scripts/docs/visual/capture/docsVisualCaptureRunV1.ts` and is also owned here.
+This leaf explicitly excludes L01-owned `scripts/docs/visual/contract/**` and
+`scripts/docs/visual/fixtures/**`, plus every L03-owned
+`scripts/docs/visual/ci/**` module. It also owns the canonical pilot
+scenarios/assets/receipts, `.gitignore` and focused tests.
 
 Never extend `scripts/playwright-widget-contract-smoke.ts`. Raw captures remain under `.tmp/docs-visuals/<runId>/`; only reviewed images are promoted to
 `docs/guide/assets/images/<docId>/<locale>/<visualId>.png`.
@@ -445,16 +454,19 @@ return settleDocsVisualCiOwnedBatchV1(ownership, () =>
 );
 ```
 
-The runner restarts the task dev server first, waits for admin and public health
-checks, loads `.env` without printing it, authenticates through the real admin
-flow, installs console/page/network-error collectors before navigation, executes
-manifest actions, and asserts visible effects. It compiles the strict DSL to
-owned Playwright code; manifests never supply `run-code`.
-
-Capture the unique semantic `captureTarget` bounding box plus bounded padding.
-Reject full-page/unbounded captures, boxes outside the viewport, hidden targets,
-transparent/zero-area output, dimensions outside documented caps and files over
-the byte limit. Normalize to device scale factor 1.
+The runner acquires TASK-548-02's exact
+`acquireDocsVisualTaskServerLeaseV1({ runId })` before fixtures or browser work,
+uses only its IPC-authenticated loopback origins, and loads `.env` without
+printing it. It never probes, restarts or kills a pre-existing fixed-port server.
+The transient `server-lease-v1.json` joins only active-root inventories; cleanup
+stops the retained child handle, proves all three origins unreachable, removes/
+fsyncs the record, then continues session/route/fixture teardown. Recovery never
+kills by PID/port and fails on `docs_visual_server_live`. After health, the runner
+authenticates normally, installs collectors before navigation and compiles L01's
+exact finite DSL command map to owned probes; manifests never supply `run-code`.
+Capture the unique semantic target plus bounded padding; reject unbounded,
+off-viewport, hidden, transparent/zero-area, over-dimension/byte output and
+normalize to device scale factor 1.
 
 ## Promotion Receipt
 
@@ -963,6 +975,8 @@ coverage without changing the pipeline contract.
   runs require the already-valid final chain
 - strict capsule/process tests pause real child A after lease plus fixture mutation and prove concurrent B skips A without any cross-cleanup; kill A at every
   declared pre-fixture through post-ready boundary, then prove a fresh process alone claims the released kernel lease, performs L01-first recovery, proves
+  two simultaneous server supervisors use six distinct ephemeral ports, never
+  signal each other/pre-existing listeners, and leave no listener/session/timer;
   fixture/session/routes absent and reaches ready or failed exactly once
 - exact five-field promotion-input tests proving `runId` is required but no path/provenance/tool/assertion override is accepted; cover duplicate eligible runs,
   wrong/restarted/successful selected runs, consume-journal binding and receipt projection from verified evidence

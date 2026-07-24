@@ -142,15 +142,27 @@ The strict recursively reject-unknown receipt is:
 
 ```ts
 export const FROZEN_GUIDE_MIGRATION_BASELINE_LIMITS_V1 = {
-  maxReceiptBytes: 16_384,
+  maxReceiptBytes: 1_048_576,
+  maxJournalBytes: 16_384,
   maxBundleBytes: 67_108_864,
   maxReportBytes: 16_777_216,
   maxMigrationRunIdLength: 42,
+  maxSources: 4_096,
+  maxSourcePathBytes: 4_096,
+  maxSourceBytes: 8_388_608,
+  maxAggregateSourceBytes: 268_435_456,
 } as const;
+
+export type FrozenGuideMigrationSourceRecordV1 = {
+  relativePath: string;
+  baseline: { byteLength: number; sha256: string };
+  intended: { byteLength: number; sha256: string };
+};
 
 export type FrozenGuideMigrationBaselineV1 = {
   schema: "coderso.guide-migration-baseline@v1";
   migrationRunId: string;
+  sources: FrozenGuideMigrationSourceRecordV1[];
   sourceInventorySha256: string;
   semanticProjectionSha256: string;
   bundle: {
@@ -170,7 +182,8 @@ export type FrozenGuideMigrationBaselineV1 = {
 
 export type FrozenGuideMigrationSourceV1 = {
   relativePath: string;
-  bytes: Uint8Array;
+  baselineBytes: Uint8Array;
+  intendedBytes: Uint8Array;
 };
 
 export type CreateFrozenGuideMigrationBaselineInput = {
@@ -182,6 +195,7 @@ export type CreateFrozenGuideMigrationBaselineInput = {
 
 export type ReopenedFrozenGuideMigrationBaselineV1 = {
   receipt: FrozenGuideMigrationBaselineV1;
+  sourceRecords: readonly FrozenGuideMigrationSourceRecordV1[];
   report: DocsMigrationReportV1;
   bundle: DocsDistributionBundleV2;
 };
@@ -190,50 +204,95 @@ export function normalizeFrozenGuideMigrationBaselineV1(
   value: unknown
 ): FrozenGuideMigrationBaselineV1;
 
-export async function createOrResumeFrozenGuideMigrationBaselineV1(
+export async function createFrozenGuideMigrationBaselineV1(
   input: CreateFrozenGuideMigrationBaselineInput
 ): Promise<ReopenedFrozenGuideMigrationBaselineV1>;
+
+export async function recoverFrozenGuideMigrationBaselinePromotionV1(
+  input: { migrationRunId: string }
+): Promise<"absent" | "complete">;
 
 export async function reopenFrozenGuideMigrationBaselineV1(
   input: { migrationRunId: string }
 ): Promise<ReopenedFrozenGuideMigrationBaselineV1>;
 ```
 
-The helper above owns these exports and exact limits. IDs are bounded lowercase
-token strings; byte lengths are safe positive integers within the caps; hashes
-are lowercase 64-hex. `bundle.sourceHash`,
+The helper above owns these exports and exact numeric limits. IDs are bounded
+lowercase token strings; byte lengths are safe nonnegative integers within the
+per-member and aggregate caps; hashes are lowercase 64-hex. `bundle.sourceHash`,
 `report.bundleSourceHash`, and the parsed bundle `sourceHash` must be identical;
 `report.bundleSha256` must equal `bundle.sha256`. The source-inventory digest is
-over sorted confined source paths plus original bytes, and the semantic digest
-is over the canonical stable legacy projection. There are no timestamps,
-absolute paths, host data, or unknown keys. `CreateFrozenGuideMigrationBaselineInput`
-has exactly the four keys above and its source collection key is exactly
-`sources`; `sourceTree`, a wave selector, and alternate path keys reject.
+computed over the exact ordered `sources` records, not a caller summary:
+`UTF8("coderso.guide-migration-source-inventory.v1") + NUL`, followed for each
+raw-UTF-8-path-sorted record by
+`u32be(pathBytes.length) + pathBytes + u64be(baseline.byteLength) +
+rawSha256(baselineBytes) + u64be(intended.byteLength) +
+rawSha256(intendedBytes)`. Paths are unique NFC-confined POSIX paths and both
+byte variants are capped before allocation or hashing. The semantic digest is
+over the canonical stable legacy projection. There are no timestamps, absolute
+paths, host data, or unknown keys. The receipt's record count/path/order,
+lengths, hashes, aggregate baseline bytes, and aggregate intended bytes are
+revalidated on every reopen. `CreateFrozenGuideMigrationBaselineInput` has
+exactly the four keys above and `sources` is initial-create-only; `sourceTree`,
+a wave selector, alternate path keys, or any source bytes on resume reject.
 
-Build all three members in one fresh sibling staging directory beneath
-`.tmp/docs-corpus`, serialize the normalized receipt as canonical JSON, write
-and fsync each file, fsync the staging directory, reopen/validate exact inventory
-and hashes, then atomically rename the directory to
-`task-548-migration-baseline` and fsync `.tmp/docs-corpus`. Never overwrite an
-existing final capsule. A published partial/extra/symlinked inventory, leftover
-foreign stage, identity mismatch, stale source inventory, or changed bytes is a
-hard error, not a reason to snapshot again.
+Initial creation is allowed only after workspace-pair recovery and a pristine
+pre-migration proof: every current source byte equals its `baselineBytes`, the
+purely planned native result equals `intendedBytes`, the frozen legacy compile
+equals the linked owner bundle/report, and no L01-owned source, example, visual,
+receipt, or migration transaction has already changed. A restart never reads
+the current tree as a new baseline. It calls
+`recoverFrozenGuideMigrationBaselinePromotionV1({ migrationRunId })`; `absent`
+permits that one guarded create, while `complete` permits only
+`reopenFrozenGuideMigrationBaselineV1({ migrationRunId })`.
 
-Restart/resume calls recovery first, reopens this receipt and exact stored bytes,
-and requires the same explicit `migrationRunId`; all three waves and the
-final TASK-548-01-L02 regeneration and owner verification retain that
-immutable identity. The
-deterministic intended compile first produces the exact owner
+Baseline publication is one journaled directory transaction. Its deterministic,
+run-bound transaction root is
+`.tmp/docs-corpus/task-548-migration-baseline-transactions/<migrationRunId>/`,
+containing only `baseline-promotion-v1.json` plus the bound staging directory;
+the final capsule remains `.tmp/docs-corpus/task-548-migration-baseline/` with
+exactly the three members above. The strict journal binds run ID, final/stage
+paths and each member's length/hash, and advances only
+`preparing → members-fsynced → prepared → final-renamed → verified-commit`.
+Create writes with no-follow exclusive handles, fsyncs each member, fsyncs the
+staging directory, durably replaces the journal at each phase, reopens and
+validates exact staged inventory, renames without overwrite, fsyncs
+`.tmp/docs-corpus`, verifies the final capsule, records `verified-commit`, then
+removes only that verified transaction root and fsyncs its parent.
+
+Recovery accepts only no transaction plus absent final, no transaction plus an
+exact complete final whose receipt carries the requested run ID, or one exact
+journal-bound singleton transaction. It deterministically completes or rolls
+back only its own staged state according to the last durable phase; a stage or
+partial final without its journal, multiple/foreign transactions, path/run/hash
+drift, an unjournaled member, or an ambiguous post-rename state rejects without
+deleting anything. Child-process termination after every member write/fsync,
+journal replacement/fsync, stage-directory fsync, rename and parent-directory
+fsync must recover to only `absent` or the exact complete capsule. Never
+overwrite an existing final capsule or snapshot changed source bytes.
+
+Restart/resume reopens the exact stored bytes and requires the same explicit
+`migrationRunId`; all three waves and the final TASK-548-01-L02 regeneration
+and owner verification retain that immutable identity. For each record, read
+the current path once no-follow and classify exact length/hash/bytes as
+`baseline` or `intended`; neither, duplicate/missing/extra source, or aggregate
+drift fails before any write. A baseline source is transformed from those
+verified current bytes and the result must equal its stored intended record
+before promotion; an intended source is never transformed again. Mixed
+baseline/intended trees therefore resume per source rather than attempting to
+re-freeze the current aggregate tree.
+
+The deterministic intended compile first produces the exact owner
 `DocsFinalNativePairExpectedIdentityV1`. If the recovered workspace is still the
 frozen original, orchestration dispatches the TASK-548-01-L02 writer exactly
 once; an already exact intended pair skips that dispatch. Both paths then call
 `recoverDocsWorkspaceArtifactPromotionV1()` followed by the exact read-only
-`verifyDocsFinalNativePairHandbackV1({ expected, bundlePath, reportPath })`.
-That owner helper reopens and canonical-byte/hash-validates both finals and
-returns a strict in-memory verified fact containing the pair. It is repeatable
-after restart and never regenerates, promotes, writes, or counts as another
-handback. A raw recovered pair cannot substitute for the verified fact. Only
-final migration parity consumes `verifiedHandback.pair`; neither value reaches
+`verifyDocsFinalNativePairHandbackV1({ expected })`. That owner helper reopens
+and canonical-byte/hash-validates its fixed bundle/report paths and returns a
+strict in-memory verified fact containing the pair. It is repeatable after
+restart and never regenerates, promotes, writes, or counts as another handback.
+A raw recovered pair cannot substitute for the verified fact. Only final
+migration parity consumes `verifiedHandback.pair`; neither value reaches
 `docs:check` or coverage. Packaged runtime/startup loads the bundle only and
 never requires this `.tmp` capsule or report.
 
@@ -242,9 +301,10 @@ non-regular or extra members. The receipt byte cap is enforced before parsing
 the receipt. Its exact run identity, file names, safe lengths, and hashes then
 gate both stored members: each member is bounded and hashed as bytes and all
 receipt/report/bundle linkage is validated before either member is decoded or
-passed to `JSON.parse`. Only after strict member normalization succeeds may the
-helper return `ReopenedFrozenGuideMigrationBaselineV1`; callers never reopen or
-parse the stored report/bundle independently.
+passed to `JSON.parse`. Only after strict member normalization and deep-frozen
+source-record reconstruction succeeds may the helper return
+`ReopenedFrozenGuideMigrationBaselineV1`; callers never reopen or parse the
+stored report/bundle or synthesize their own baseline map independently.
 
 For every entry, match `entry.sourcePath` to exactly one owned active source,
 copy `entry.documentId` byte-for-byte into frontmatter `docId`, preserve
@@ -270,8 +330,8 @@ Only strict visual/example objects and their section ID arrays may be enriched.
 Adapter diagnostics are empty and deterministic `sourceHash` differs. Only the
 final migration parity verifier may consume the verified pair. After that
 boundary, the parent runs read-only `bun run docs:check` without migration
-values; 06-L02 then uses its read-only hazard inspector and packaged
-distribution loader before reconciliation.
+values; 06-L02 then calls its zero-input atomic packaged-distribution loader
+once before reconciliation.
 `runTask54801L02FinalNativeRegenerationOnce` is an orchestration-only callback:
 when invoked, the same 01-L02 owner compiles, proves its identity equals
 `expected`, and promotes once; it returns no pair, receipt, or persisted
@@ -365,12 +425,16 @@ export async function migrateGuideCorpus(
     options.migrationRunId
   );
   await recoverDocsWorkspaceArtifactPromotionV1();
-  const baseline = await createOrResumeFrozenGuideMigrationBaselineV1({
-    migrationRunId,
-    reportPath: ".tmp/docs-corpus/migration-report-v1.json",
-    bundlePath: "core/generated/docs/coderso-docs-v2.json",
-    sources: await readUnmodifiedOwnedActiveEnglishSources(),
-  });
+  const baselineState =
+    await recoverFrozenGuideMigrationBaselinePromotionV1({ migrationRunId });
+  const baseline = baselineState === "absent"
+    ? await createFrozenGuideMigrationBaselineV1({
+        migrationRunId,
+        reportPath: ".tmp/docs-corpus/migration-report-v1.json",
+        bundlePath: "core/generated/docs/coderso-docs-v2.json",
+        sources: await planFrozenGuideMigrationSourcesFromPristineTreeV1(),
+      })
+    : await reopenFrozenGuideMigrationBaselineV1({ migrationRunId });
   assertExactAllWavesRequest(options);
   for (const wave of INTERNAL_GUIDE_MIGRATION_WAVES_1_2_3) {
     for (const source of selectOwnedActiveEnglishSources(
@@ -486,8 +550,6 @@ export async function migrateGuideCorpus(
   await recoverDocsWorkspaceArtifactPromotionV1();
   const verifiedHandback = await verifyDocsFinalNativePairHandbackV1({
     expected: expectedFinalPair,
-    bundlePath: "core/generated/docs/coderso-docs-v2.json",
-    reportPath: ".tmp/docs-corpus/migration-report-v1.json",
   });
   const reopened = await reopenFrozenGuideMigrationBaselineV1({
     migrationRunId,
@@ -517,8 +579,8 @@ strict in-memory verified handback fact containing the canonical reopened pair
 → fact linked to the expected identity and frozen original → final
 native-vs-stored-original normalized parity plus source-hash-change report →
 verified pair returned only for parent final-parity verification → migration
-values leave scope → parent read-only `bun run docs:check` → 06-L02 hazard
-inspection and packaged distribution load before coverage reconciliation.
+values leave scope → parent read-only `bun run docs:check` → 06-L02's one
+zero-input atomic packaged-distribution load before coverage reconciliation.
 
 **Error handling:** use existing bounded compiler/visual error codes. Identity or
 slug/locale drift, unknown permission/path, source not in report, missing section,
@@ -594,10 +656,8 @@ owner pair is verified rather than requesting a second regeneration dispatch.
   semantic parity. Independently alter expected `migrationRunId`, `sourceHash`,
   `bundleSha256`, `reportSha256`, and `pairTransactionIdentitySha256`; each
   fails before final parity;
-- order spies require recovery followed immediately by
-  `verifyDocsFinalNativePairHandbackV1({ expected, bundlePath:
-  "core/generated/docs/coderso-docs-v2.json", reportPath:
-  ".tmp/docs-corpus/migration-report-v1.json" })`. The owner verifier itself
+- order spies require recovery followed immediately by the exact owner call
+  `verifyDocsFinalNativePairHandbackV1({ expected })`. The owner verifier itself
   performs read-only hazard inspection then the strict pair reopen. Replace,
   remove, stale, or mismatch either final member and prove return remains
   blocked. Invoke the same verifier again after simulated restart with the
@@ -617,6 +677,12 @@ owner pair is verified rather than requesting a second regeneration dispatch.
   internal waves `1 → 2 → 3`, accepts only exact baseline-or-intended state,
   and a complete rerun is byte-idempotent; a post-land restart invokes only the
   owner verifier, with no second regeneration dispatch or writer;
+- restart spies prove `complete` baseline recovery calls only
+  `reopenFrozenGuideMigrationBaselineV1({ migrationRunId })`: it never walks the
+  current source tree, recomputes intended bytes, calls the create path, or
+  compares a post-wave aggregate with the pristine aggregate. `absent` creation
+  plans each baseline/intended byte pair once from the pristine tree before the
+  first write;
 - before DB-backed capture, run:
 
 ```bash
@@ -662,10 +728,9 @@ bun --eval 'import { canConnect } from "./tests/utils/db"; const configured = Bo
   zero regeneration, promotion, or write, then discard all migration values;
 - after parent parity, order spies prove read-only `bun run docs:check` runs
   without an expected-identity/verified-fact/pair input before 06-L02
-  independently calls
-  `assertNoDocsWorkspaceArtifactPromotionHazardsV1()`, then
-  `loadPackagedDocsDistributionBundleV2()`, then reconciliation in both coverage
-  modes; neither downstream path calls recovery or the migration pair loader;
+  independently calls the zero-input atomic
+  `loadPackagedDocsDistributionBundleV2()` once, then reconciles both coverage
+  modes; neither path calls the public guard, recovery or migration pair loader;
 - run `bunx vitest run --config vitest.config.ts
   tests/vitest/documentation/docs-corpus-native-migration.test.ts`;
 - run `bun --cwd core lint:types` and `bun --cwd core lint`;

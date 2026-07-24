@@ -29,12 +29,14 @@ on an AI provider.
 **Single-writer ownership:** this child owns the shared documentation types,
 schemas, normalizers, compiler, generated distribution bundle, assistant-ingest
 v2 migration, pure DB retrieval/permission filtering and their focused tests.
-L01 places the Bun/DB/React/Core-free contracts, safe Markdown parser/token
-types, target selector and strict browser-safe publication DTOs under
-`packages/docs-contracts/src/**`, plus stable Core named re-export shims and a
-generated IDs-only Admin-permission catalog snapshot with a mandatory
-live-catalog parity gate. TASK-548-02-L03 alone later creates the workspace
-manifest and reconciles lock/Docker dependencies.
+L01 owns its exact declared Bun/DB/React/Core-free source allowlist under
+`packages/docs-contracts/src/` for contracts, Markdown parsing, targets and
+browser-safe DTOs; it excludes L02's private `docsMigrationReport.ts`, server-
+only `nodeArtifactGuard.ts`/`nodeFixedWorkspace.ts`, and L03's `nodeLoader.ts`.
+L01 also owns its contract Core shims and a generated
+IDs-only Admin-permission catalog snapshot with a mandatory live-catalog parity
+gate. TASK-548-02-L03 later creates the workspace manifest, exports the two
+Node-only subpaths and reconciles lock/Docker dependencies.
 To keep L01/L02 gates executable before that activation, L01's stable Core
 named re-export shims permanently use the confined exact
 `../../../packages/docs-contracts/src/index.ts`/owner-module edge; no later
@@ -60,16 +62,24 @@ prestates are `bootstrap-none`, clean-checkout `packaged-bundle-only`, and
 clone/tag/runtime, portal, Docker, release, `docs:check`, and coverage-check
 consumers validate the packaged bundle without requiring or recreating the
 ignored report.
-Runtime reads that artifact only through L03's zero-argument module-relative
-loader. Its fixed app-root URL is independent of `process.cwd()`, accepts no
-caller path or environment override, and is confined to the exact tracked
-`core/generated/docs/coderso-docs-v2.json` member shipped beside the runtime
-module. The loader strictly normalizes once; persistence and every later
-publication-projection constructor independently normalize at their own trust
-boundaries without another filesystem read. The loader is a side-effect-free
-Node+Bun module using `node:fs/promises`/`import.meta.url`; it has no `Bun.*`,
-DB, settings, server or runtime-adapter import, so L02 may reuse it from
-`core/vite.config.ts` without a second loader.
+Runtime reads only through L02's zero-argument Core named shim or L03's public
+`@coderso/docs-contracts/node-loader` alias. L02's package-private
+`nodeFixedWorkspace.ts` derives the repository/Core/bundle/report/journal URLs
+solely from its own `import.meta.url`; it accepts no capability/path/env/cwd.
+Both entrypoints are the exact
+`guardAndLoadFixedDocsWorkspaceBundleV2(): Promise<DocsDistributionBundleV2>`
+function reference. That zero-input transaction
+transaction: it opens and holds the exact bundle handle across full hazard
+inventory, strict optional-report/sourceHash/artifact linkage, same-handle
+bounded read and bundle normalization, rechecks identities/inventory, then
+closes handles in reverse. Persistence/publication projections independently
+normalize the returned object. Public `./node-artifact-guard` exposes only the
+zero-input read-only authoring/check inspector; byte consumers call only the
+atomic loader, never guard then load. Node sources use exact `node:fs` and
+`node:fs/promises` plus pure contracts, with no `Bun.*`, DB, settings, server,
+Core or runtime-adapter edge. Core uses permanent repo-relative preactivation
+wrappers; after activation, portal imports only the public zero-input loader.
+Static guards keep both Node subpaths out of every browser entry.
 
 ## Locked Contract
 
@@ -82,9 +92,12 @@ exactly:
 schema: "coderso.docs-corpus@v2";
 ```
 
-`@coderso/docs-contracts` is the sole dependency-neutral owner of these
+`@coderso/docs-contracts` is the sole package owner of these
 compiled schemas/types/normalizers, safe Markdown parser output and publication
-target selector. It also owns the exact publication DTO schema/projector that
+target selector. Its top-level `.` export stays dependency-neutral and browser
+safe; the separately exported build/server-only
+`./node-artifact-guard` and `./node-loader` subpaths never enter that barrel.
+The package also owns the exact publication DTO schema/projector that
 omits `DocsDocumentV2.sourcePath` and `DocsVisualV1.assetPath`, replaces the
 latter with a deterministic opaque output key, and rejects those source fields
 at every serialization boundary. The stable graph is `docs-contracts -> []`,
@@ -95,8 +108,11 @@ Core-owned and are supplied later to the shared renderer only as explicit safe
 host-adapter results. Within renderer integration only that Core adapter may
 import `adminPaths`, the live permission catalog or authenticated RBAC state.
 Package-edge tests allow the one named-re-export-only Core shim family above,
-resolve it inside the contracts root and require reference identity; every
-other relative/deep Core import or contracts reverse edge fails.
+plus L02's report/zero-input loader named-only Core shims, resolve them inside the
+contracts root and require delegated reference identity; every other deep Core
+or reverse edge fails. Public Node entries may import only the package-private
+fixed-workspace owner, which itself imports exact platform builtins and pure
+contracts; any client/Vite import is a hard failure.
 
 `publicationTargets` is a non-empty, duplicate-free array whose values are
 exactly `assistant | embedded-help | public-docs` and whose canonical output
@@ -272,9 +288,9 @@ permission inventory or fixture-value echo.
 
 | Task | Scope | Single writer | Depends on |
 | --- | --- | --- | --- |
-| TASK-548-01-L01 | Strict shared schemas, stable identity, browser-safe publication DTOs and safe Markdown policy | dependency-neutral `packages/docs-contracts/src/**` + tsconfig, stable Core re-export shims, permission-snapshot generator/artifact, root manifest/template and focused schema/type/edge tests | None |
-| TASK-548-01-L02 | Deterministic compiler, legacy compatibility adapter, workspace-only canonical migration report and tracked generated bundle; no authored corpus edits | compiler modules, `scripts/docs/compile-corpus.ts`, generated bundle/report and compiler tests | TASK-548-01-L01 |
-| TASK-548-01-L03 | Fixed module-relative packaged loader, Assistant DB schema/migration, complete enriched snapshot ingest, atomic activation/invalidation, v1 compatibility, permission-aware retrieval and five pure typed errors; no route/service orchestration | assistant loader/schema/ingest/startup/retriever/permission/cache-outbox modules, migration artifacts and focused pure DB/runtime tests; explicitly excludes `assistantRoutes.ts`, `assistantService.ts`, centralized mapper/wiring and route/service tests owned later by TASK-548-03-L03 | TASK-548-01-L02 |
+| TASK-548-01-L01 | Strict shared schemas, stable identity, browser-safe publication DTOs and safe Markdown policy | dependency-neutral contracts source/tsconfig except four exact L02/L03 files; stable contract Core re-export shims, permission snapshot/artifact and focused tests | None |
+| TASK-548-01-L02 | Deterministic compiler, compatibility adapter, canonical report/bundle and complete artifact inspection | compiler, private `docsMigrationReport.ts`/`nodeFixedWorkspace.ts`, public guard, report/loader Core shims, generated pair/tests | TASK-548-01-L01 |
+| TASK-548-01-L03 | Packaged loader alias, Assistant DB migration/ingest/atomic activation, compatibility, permission retrieval and typed errors; no route/service orchestration | public `packages/docs-contracts/src/nodeLoader.ts` alias plus assistant DB/runtime modules/migrations/tests; excludes Core shims and later TASK-548-03-L03 route/service/mapper files/tests | TASK-548-01-L02 |
 
 Land strictly in table order. TASK-548-02 starts only after TASK-548-01 is
 green, then adds canonical visuals without changing these shared shapes. After
@@ -332,8 +348,9 @@ the centralized error mapper, or their focused route/service tests.
   visual fixtures that prove locale-bearing paths/envelopes never cross-join
 - fixed-loader parity from repository root, `core/`,
   `packages/docs-portal/`, Node/Vite-config context, and an unrelated Docker
-  cwd; atomic activation/invalidation plus mixed-sourceHash and zero-per-query-
-  filesystem coverage
+  cwd; zero-input package/Core parity, bundle/directory replacement between
+  every atomic held-handle loader phase, export/client-graph checks, atomic activation plus
+  mixed-sourceHash and zero-per-query-filesystem coverage
 
 ## Documentation Updates Required
 

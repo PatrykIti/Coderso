@@ -14,13 +14,16 @@
 ## Overview
 
 Build the official public Coderso documentation portal as a deterministic static
-artifact. Before its build boundary reads the generated documentation bundle,
-it invokes the exact TASK-548-01-L02-owned read-only
-`assertNoDocsWorkspaceArtifactPromotionHazardsV1()`, then calls
-`loadPackagedDocsDistributionBundleV2()` for the durable tracked bundle. A
+artifact. Its server-only build imports only the zero-input
+`@coderso/docs-contracts/node-loader`, never the public authoring/check guard or
+a relative/deep Core module. One package-private transaction derives its fixed
+URLs, opens and holds the bundle across complete report-linked hazard inventory,
+bounded same-handle read/normalization and final identity rescan, then returns
+the tracked bundle without a guard→load replacement window. A
 mandatory read-only `docs:check` immediately before the portal build recomputes
 canonical bytes/`sourceHash`. The ignored workspace migration report is never a
-portal input or prerequisite. The portal calls the exact TASK-548-03-L02-owned
+render/content input or prerequisite; the atomic transaction validates it only when linked
+authoring state is present. The portal calls the exact TASK-548-03-L02-owned
 `createDocsPublicationProjectionV1({ sourceBundle: bundle,
 publicationTarget: "public-docs" })` once per build. It returns a distinct,
 deeply frozen private-branded `DocsPublicationProjectionV1`, never a filtered
@@ -81,7 +84,7 @@ verification.
 - Root workspaces already include `packages/*`, and the current React 19, Vite
   8, TypeScript 6, and Bun stack is sufficient. Do not add a portal framework or
   Markdown renderer.
-- TASK-548-02-L03 precreates and solely owns both documentation workspace package
+- TASK-548-02-L03 precreates and solely owns all documentation workspace package
   manifests plus root `package.json`/`bun.lock`. Portal leaves consume that frozen
   workspace state and never reopen a manifest or the lock.
 - Existing public React SSR patterns and canonical head tags are visible in
@@ -232,8 +235,8 @@ helper.
 No TASK-548-04 leaf may dispatch until TASK-545 and TASK-547, including all
 physical descendants, are in canonical terminal states. Portal generation then
 uses TASK-547's final shipped state and never documents planned behavior.
-Portal build may write only `dist` after the A-owner workspace hazard inspector
-passes; that output write does not authorize workspace recovery. The mandatory
+Portal build may write only `dist` after its atomic loader transaction passes;
+that output write does not authorize recovery. The mandatory
 preceding `docs:check` is read-only, accepts a valid clean-checkout
 `packaged-bundle-only` state, and proves the packaged bundle still equals
 current canonical sources.
@@ -274,11 +277,14 @@ that checkpoint directly.
 ## Implementation Pseudocode
 
 ```ts
+import {
+  loadPackagedDocsDistributionBundleV2,
+} from "@coderso/docs-contracts/node-loader";
+
 export async function buildDocsPortal(
   input: DocsPortalBuildConfigV1
 ): Promise<DocsPortalBuildReceipt> {
   const config = normalizeDocsPortalBuildConfigV1(input);
-  await assertNoDocsWorkspaceArtifactPromotionHazardsV1();
   const bundle = await loadPackagedDocsDistributionBundleV2();
   return buildValidatedDocsPortal(config, bundle);
 }
@@ -439,8 +445,8 @@ async function buildValidatedDocsPortal(
 }
 ```
 
-**Data flow:** read-only `docs:check` equality → config-only input → hazard
-inspection → one strict packaged-loader normalization → task-scoped Vite client
+**Data flow:** read-only `docs:check` equality → config → one zero-input atomic
+guard-and-load normalization → staged Vite client
 staging/manifest closure → one independent full-input `public-docs` projection
 normalization and one pure search index → exact member-key route graph → same
 server-side projection for every static article/navigation/TOC render →
@@ -452,7 +458,7 @@ deployment inventory → complete staged manifest/validation → journaled atomi
 **Error handling:** any live/tampered journal, journal temp, backup/staging
 material, report-only state, invalid packaged bundle, invalid linked authoring
 pair, or `docs:check` canonical-byte/source mismatch fails before packaged-bundle
-load, target selection, route construction, or output write. A valid clean
+return, target selection, route construction, or output write. A valid clean
 checkout with the tracked bundle and no report proceeds. Duplicate/malformed
 route or hash mismatch
 aborts the build; missing translation emits no fake locale route; broken
@@ -466,6 +472,9 @@ asset cannot be silently omitted.
 tracked-bundle-only builds pass with no `.tmp` tree/report, while every live
 owner journal phase, report-only state, tampered transaction material, invalid
 bundle, and attempted pre-inspection read fails with zero portal output. The
+swap matrix replaces each bundle/report/journal parent or final between open,
+inventory, report linkage, bundle read/normalize and final rescan; it rejects
+or returns the one held complete inode, never mixed/reopened bytes. The
 portal build compile-time test imports the exact renderer-owned
 `createDocsPublicationProjectionV1` and `buildDocsSearchIndexV1` and forbids a
 local bundle/document/projection normalizer or filtered-bundle reconstruction.
@@ -474,9 +483,10 @@ mismatch, target absence, incomplete closure and invalid/out-of-range versions
 reject. Call spies prove exactly one packaged-loader normalization, one
 independent projection-constructor full-bundle normalization/target selection,
 and one search-index build per build, with no per-route schema normalization
-and the same projection/index object at every server route. A
-Vite/static guard proves projection constructor/brand, full documents and
-renderer never enter hydration clients. Canonical/hash mutation, unknown-key,
+and the same projection/index object at every server route. Static import tests
+prove server build uses only the zero-input loader with no guard/`../../core`, while
+client graphs contain neither Node subpath, projection/full documents nor
+renderer. Canonical/hash mutation, unknown-key,
 oversize and encoding fixtures mount zero islands; valid input invokes the sole
 hostile normalizer before exactly four sibling island mounts, with zero
 recoverable hydration errors. Article/navigation/the renderer-owned TOC remain
@@ -553,8 +563,8 @@ human-authored source/test file and fail any result above 1,000 lines.
   are deterministic and validated.
 - Public output contains no unsafe content, internal material, secret/PII,
   runtime external dependency, or write endpoint.
-- Portal build performs read-only workspace hazard inspection before loading the
-  strict packaged bundle, works with the ignored report absent, and never writes
+- Portal's atomic loader holds the bundle across hazard inspection/read, works
+  with the ignored report absent, and never writes
   output from report-only, tampered, crash-incomplete, stale, or invalid state.
 - At least five distinct Playwright flows assert visible behavior in wide,
   narrow, light, dark, keyboard, reduced-motion, version/locale, and offline

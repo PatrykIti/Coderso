@@ -43,12 +43,13 @@ This leaf is the only writer for:
 - `core/services/assistant/assistantService.ts`;
 - `core/server/routes/assistantRoutes.ts`, including the one TASK-548
   `mapAssistantError` update after TASK-548-01-L03 lands;
-- new `core/services/assistant/guideAnswerEnrichment.ts` if server-side response
-  projection is needed;
+- new `core/services/assistant/guideAnswerProjection.ts` and server-only
+  `core/services/assistant/guideVisualAssetRegistry.ts`;
 - `core/server/validation/assistantSchemas.ts` only if the existing strict chat
   context must be extended with stable document context;
 - new `tests/integration/routes/assistant-guide-rbac.test.ts` and
   `tests/integration/routes/assistant-reindex-v2.test.ts`;
+- new `tests/unit/assistant/guideVisualAssetRegistry.test.ts`;
 - related Assistant Vitest/Bun route/service tests named below.
 
 It must not edit TASK-548-03-L01 Admin route-registry/auth-client files, L02
@@ -100,12 +101,11 @@ assertions.
 - Existing startup seed remains the normal readiness path. Authorized manual
   `POST /admin/api/assistant/reindex` remains available even when Agent is
   disabled.
-- Answer/source records are TASK-548-01-L03's strict
-  `AssistantDocsLocalizedEvidenceV2`. Every record carries one exact
-  `{ snapshotId, generation, sourceHash }`,
-  `(docId, locale, sectionId, chunkIndex)`, source/provenance, complete bounded
-  visual/example metadata and all link inputs. Retrieval rejects mixed
-  identities and Guide performs no installed-bundle join.
+- Server records are TASK-548-01-L03's strict
+  `AssistantDocsLocalizedEvidenceV2` with one exact active identity, localized
+  chunk owner and complete metadata. DB `sourcePath`/visual `assetPath` may be
+  used only inside this trusted authorization/projection step; no path-bearing
+  source type or `DocsVisualV1` is assignable to the browser response.
 - The persisted document requirement is reauthorized before any source, card or
   action projection. Card eligibility requires `assistant`; `Open in Help`
   additionally requires `embedded-help`, while the versioned official link
@@ -121,20 +121,46 @@ assertions.
   `resolvePermittedAdminAction`/`DocsAdminActionResolutionV1` exports from the
   Core-only `core/admin/ui/help/docsHelpHostAdapter.ts`; the renderer owns no
   RBAC evaluation and this leaf defines no parallel path or evaluator.
-- After strict DB evidence normalization succeeds, an unavailable packaged
-  binary may omit only its visual presentation and never invent a screenshot;
-  missing/malformed/cross-owner DB metadata rejects the complete evidence.
+- The browser receives only recursively exact `GuideAnswerEvidenceV1`: a
+  path-free source identity, explicitly copied example fields and visual cards
+  backed by exact L02 `DocsLocalVisualAssetV1` records. Unknown nested keys and
+  `path`/`sourcePath`/`assetPath` canaries fail before serialization/render.
+- The server reads L02's already-normalized immutable embedded-Help receipt
+  from process memory by exact active `sourceHash`; it never opens the bundle,
+  Markdown, image or filesystem per question. A visual is returned only when
+  its derived output key, media type and SHA resolve in that matching receipt.
+  Missing/malformed/mismatched receipt or member omits that optional visual,
+  never the already authorized grounded text/source or safe example. Invalid DB
+  evidence/ownership still rejects the complete evidence; no screenshot is
+  invented and no unverified href is emitted.
 - Guide cannot call plan, dry-run, or execute.
 
-TASK-548-01-L03 exclusively owns the DB evidence type and strict normalizer.
-This leaf's `guideAnswerProjection.ts` owns only
-`projectGuideAnswerEvidenceFromDbV2` and response/card/action types. It requires
-one normalized active identity across the result set, rechecks every persisted
-requirement, verifies ordered localized card ownership, then projects browser
-data. It has no bundle/loader/Markdown/filesystem dependency.
-`AssistantServiceDeps.resolveGuideOfficialDocsContextV1()` returns the strict
-configured/unavailable union below without throwing; portal configuration
-failure therefore cannot fail Guide text/source evidence.
+TASK-548-01-L03 owns the DB evidence type/normalizer. This leaf's
+`guideAnswerProjection.ts` owns the exact path-free response schemas,
+`normalizeGuideAnswerEvidenceV1`, `projectGuideAnswerEvidenceFromDbV2` and card/
+action types. It requires one active identity, reauthorizes requirements,
+verifies ordered ownership and explicitly copies only allowlisted fields.
+`assistantService.ts`/`assistantClient.ts` implement the parent exact strict `AssistantStatusResponseV2`/`AssistantChatResponseV2`; no legacy path-bearing response bypass remains.
+
+### Exact server visual-registry startup seam
+
+Server-only `core/services/assistant/guideVisualAssetRegistry.ts` is the sole runtime owner. `initializeGuideVisualAssetRegistryV1()` performs one bounded
+no-follow read from module-relative
+`new URL("../../dist/client/docs-help-assets-v1.json", import.meta.url)`, calls
+L02's receipt normalizer once, deep-freezes assets and builds one immutable
+sourceHash→outputKey map. Invalid/unreadable input yields a privately branded
+empty registry after independently settling one redacted no-throw diagnostic;
+diagnostic throw/rejection never becomes Assistant startup failure.
+
+L03-owned `assistantService.ts#getOrInitializeDefaultAssistantRuntimeV2` calls
+the initializer once; L03-owned `registerAssistantRoutes` obtains that runtime
+once per production registration and injects its registry into service deps.
+Tests use the same initializer with a bounded in-memory loader.
+`resolveGuideVisualAssetV1` brand-checks the registry and exact active
+`{ sourceHash, outputKey, mediaType, sha256 }`, returning a frozen asset/null by
+map lookup only—never per-question filesystem, bundle, normalizer or retry.
+Source-hash rotation omits visuals until restart loads the matching receipt;
+official context remains independently no-throw and text/source survives.
 
 ### Server-authoritative Guide retrieval RBAC
 
@@ -222,25 +248,19 @@ still uses it, or weaken any inherited mapping.
 
 ### Agent
 
-- Availability is `assistant.enabled && llmAvailable`; keep
-  `assistant.enabled` as the backward-compatible stored key/API field while
-  exposing explicit `guideReady`, `agentEnabled`, and `agentAvailable` UI
-  semantics.
+- Implement the parent status truth table exactly: `enabled === agentEnabled`, `guideReady === indexReady`, `agentAvailable === agentEnabled && llmAvailable`; settle domains independently and normalize before caching.
 - Sends provider chat with `mode: "llm-guide"` and uses existing action routes.
-- Provider chat, plan, dry-run, and execute remain usable when the Guide DB,
-  index, active evidence snapshot, or permission resolver is unavailable. Optional
+- Provider chat, plan, dry-run, and execute remain usable when the Guide DB, index, active evidence snapshot, or permission resolver is unavailable. Optional
   docs evidence is never an authorization fallback or a prerequisite for them.
 - Without provider/config, render a focused unavailable state and link to
   Integrations only when the user can access it.
-- If the existing chat service returns a docs-only fallback, do not render it as
-  an Agent answer. Offer an explicit sanitized `Ask Guide` handoff instead.
+- If the existing chat service returns a docs-only fallback, do not render it as an Agent answer. Offer an explicit sanitized `Ask Guide` handoff instead.
 - Preserve review-before-mutation, dry-run, per-action RBAC, idempotency, audit,
   redaction, and partial/failure UI.
 
 ### Separate State and Handoff
 
-Persist versioned, bounded, redacted Guide and Agent snapshots separately.
-Migrate the current schema-v1 snapshot once:
+Persist versioned, bounded, redacted Guide and Agent snapshots separately. Migrate the current schema-v1 snapshot once:
 
 - `assistantMode: "docs-only"` → Guide transcript;
 - `assistantMode: "llm-guide"` plus plan/preview/execution → Agent transcript;
@@ -306,31 +326,22 @@ import {
   resolvePermittedAdminAction,
   type DocsAdminActionResolutionV1,
 } from "../../admin/ui/help/docsHelpHostAdapter";
-
 export type AssistantChatRequestInput = {
-  message: string;
-  mode?: AssistantMode;
-  detailLevel?: DocsDetailLevel;
+  message: string; mode?: AssistantMode; detailLevel?: DocsDetailLevel;
   guideMode?: DocsGuideMode;
   context?: AssistantChatContext;
 };
-
 export type AssistantChatServiceInput =
   | (Omit<AssistantChatRequestInput, "mode"> & {
-      product: "guide";
-      mode: "docs-only";
-      actorId: string | null;
+      product: "guide"; mode: "docs-only"; actorId: string | null;
       permissionSnapshot: AssistantDocsPermissionSnapshotV1;
     })
   | (Omit<AssistantChatRequestInput, "mode"> & {
-      product: "agent";
-      mode: "llm-guide";
-      actorId: string | null;
+      product: "agent"; mode: "llm-guide"; actorId: string | null;
       resolveOptionalDocsEvidence: () => Promise<
         readonly GuideAnswerEvidenceV1[]
       >;
     });
-
 export async function resolveAssistantDocsRoutePermissionSnapshotV1(
   ctx: RouteContext,
   resolvePermissions?: AssistantRouteDeps["resolvePermissions"]
@@ -342,10 +353,7 @@ export async function resolveAssistantDocsRoutePermissionSnapshotV1(
     const permissions = resolvePermissions
       ? await resolvePermissions(ctx)
       : await getUserPermissions(ctx.user.id);
-    return normalizeAssistantDocsPermissionSnapshotV1({
-      state: "ready",
-      permissions,
-    });
+    return normalizeAssistantDocsPermissionSnapshotV1({ state: "ready", permissions });
   } catch (error) {
     if (
       error instanceof Error &&
@@ -356,7 +364,9 @@ export async function resolveAssistantDocsRoutePermissionSnapshotV1(
     throw new Error("assistant_docs_permission_snapshot_invalid");
   }
 }
-
+// registerAssistantRoutes: exactly once per production route registration.
+const runtime = deps.runtime ?? getOrInitializeDefaultAssistantRuntimeV2();
+const service = { ...runtime.routeService, ...(deps.service ?? {}) };
 router.post(
   "/assistant/chat",
   requirePermission("settings:read"),
@@ -406,7 +416,6 @@ router.post(
     });
   }
 );
-
 // Existing centralized route mapper; TASK-548-01-L03 owns the domain codes.
 switch (error.message) {
   case "assistant_docs_permission_snapshot_invalid":
@@ -423,23 +432,26 @@ switch (error.message) {
     return { code: error.message, message: "Assistant docs database is unavailable", status: 503 };
   case "assistant_docs_ingest_failed":
     return { code: error.message, message: "Assistant docs ingest failed", status: 500 };
+  case "assistant_agent_guide_handoff_required": return { code: error.message, message: "Agent answer unavailable; ask Guide explicitly", status: 503 };
 }
-
-export function resolveAssistantProducts(status: AssistantStatusResponse): {
+export function resolveAssistantProducts(status: AssistantStatusResponseV2): {
   guide: ProductReadiness;
   agent: ProductReadiness;
 } {
+  const exact = normalizeAssistantStatusResponseV2(status);
   return {
-    guide: status.indexReady
+    guide: exact.guideReady
       ? { state: "ready" }
-      : { state: "unavailable", reason: "docs_not_ready" },
-    agent:
-      status.agentEnabled && status.llmAvailable
-        ? { state: "ready" }
-        : { state: "unavailable", reason: "provider_unavailable" },
+      : { state: "unavailable", reason: exact.guideUnavailableReason },
+    agent: exact.agentAvailable
+      ? { state: "ready" }
+      : { state: "unavailable", reason: exact.agentUnavailableReason },
   };
 }
-
+export async function getAssistantStatus(): Promise<AssistantStatusResponseV2> {
+  const [docs, agent] = await Promise.allSettled([readGuideDbStatus(), readAgentStatusAndProvider()]);
+  return normalizeAssistantStatusResponseV2(projectIndependentStatusV2({ docs, agent }));
+}
 // core/services/assistant/assistantService.ts
 export const reindexAssistantDocs = async (
   input: { actorId?: string | null; force?: boolean },
@@ -455,7 +467,6 @@ export const reindexAssistantDocs = async (
   } catch (error) {
     throw normalizeDocsIngestError(error);
   }
-
   const dbStatus = await deps.getAssistantDocsDbStatus();
   assertSameAssistantDocsSnapshotIdentityV2(
     dbStatus.activeSnapshot,
@@ -480,14 +491,12 @@ export const reindexAssistantDocs = async (
     actorId: input.actorId ?? null,
   };
 };
-
 type AssistantDocsRetrievalResult = {
   hits: readonly AssistantDocsLocalizedEvidenceV2[];
   snapshot: AssistantDocsSnapshotIdentityV2;
   permissionSnapshot: AssistantDocsPermissionSnapshotV1;
   retrievalBackend: "db";
 };
-
 async function retrieveDocsHits(
   input: {
     message: string;
@@ -517,106 +526,114 @@ async function retrieveDocsHits(
     retrievalBackend: "db",
   };
 }
-
-export type GuideEvidenceCardV2 =
-  | {
-      kind: "visual";
-      docId: string;
-      locale: string;
-      sectionId: string;
-      visual: DocsVisualV1;
-    }
-  | {
-      kind: "example";
-      docId: string;
-      locale: string;
-      sectionId: string;
-      example: DocsExampleV1;
-    };
-
+export type GuideSourceIdentityV1 = Readonly<{
+  schema: "coderso.guide-source@v1"; docId: string; locale: string;
+  sectionId: string; chunkIndex: number; title: string;
+  sectionHeading: string; snippet: string; capabilityIds: readonly string[];
+}>;
+export type GuideVisualCardV2 = Readonly<{
+  kind: "visual"; docId: string; locale: string; sectionId: string; visualId: string;
+  width: number; height: number; alt: string; caption: string; asset: DocsLocalVisualAssetV1;
+}>;
+export type GuideExampleCardV2 = Readonly<{
+  kind: "example"; docId: string; locale: string; sectionId: string; exampleId: string;
+  title: string; language: "json" | "typescript" | "bash" | "text";
+  body: string; explanation: string;
+}>;
+export type GuideEvidenceCardV2 = GuideVisualCardV2 | GuideExampleCardV2;
 export type GuideOfficialDocsContextV1 =
-  | {
-      state: "configured";
-      origin: string;
-      basePath: string;
-      version: string;
-    }
+  | { state: "configured"; origin: string; basePath: string; version: string }
   | { state: "unavailable" };
-
 export type GuideCardActionsV1 = {
-  helpHref: string | null;
-  officialHref: string | null;
+  helpHref: string | null; officialHref: string | null;
   cmsAction: DocsAdminActionResolutionV1 | null;
 };
-
 export type GuideAnswerEvidenceV1 = {
-  source: DocsAnswerSource;
-  snapshot: AssistantDocsSnapshotIdentityV2;
-  cards: readonly GuideEvidenceCardV2[];
-  actions: GuideCardActionsV1;
+  schema: "coderso.guide-answer-evidence@v1";
+  source: GuideSourceIdentityV1; snapshot: AssistantDocsSnapshotIdentityV2;
+  cards: readonly GuideEvidenceCardV2[]; actions: GuideCardActionsV1;
 };
-
+const guideVisualAssetRegistryBrandV1: unique symbol = Symbol();
+export type GuideVisualAssetRegistryV1 = Readonly<{
+  readonly [guideVisualAssetRegistryBrandV1]: true;
+  bySourceHash: ReadonlyMap<string, ReadonlyMap<string, DocsLocalVisualAssetV1>>;
+}>;
+export function initializeGuideVisualAssetRegistryV1(
+  input: { loadReceiptOnce?: () => unknown } = {}
+): GuideVisualAssetRegistryV1 {
+  try {
+    const raw = (input.loadReceiptOnce ?? loadFixedHelpReceiptNoFollowV1)();
+    const receipt = normalizeEmbeddedHelpAssetReceiptV1(raw); // exactly once
+    return brandAndDeepFreezeReadonlyRegistryV1(receipt.sourceHash, receipt.assets);
+  } catch (error) {
+    try {
+      const diagnostic = logGuideVisualRegistryUnavailableOnceRedacted(error);
+      void Promise.resolve(diagnostic).catch(() => undefined);
+    } catch { /* synchronous diagnostics are independently no-throw */ }
+    return brandAndDeepFreezeReadonlyRegistryV1(null, []);
+  }
+}
+export function resolveGuideVisualAssetV1(registry: GuideVisualAssetRegistryV1,
+  input: GuideVisualAssetLookupV1): DocsLocalVisualAssetV1 | null {
+  requireGuideVisualAssetRegistryBrandV1(registry);
+  const key = normalizeExactGuideVisualAssetLookupV1(input);
+  const asset = registry.bySourceHash.get(key.sourceHash)?.get(key.outputKey);
+  return asset && asset.mediaType === key.mediaType && asset.sha256 === key.sha256
+    ? asset : null;
+}
+let defaultAssistantRuntimeV2: AssistantServiceRuntimeV2 | null = null;
+export function getOrInitializeDefaultAssistantRuntimeV2() {
+  return defaultAssistantRuntimeV2 ??= createAssistantServiceRuntimeV2({
+    ...defaultDeps, guideVisualAssetRegistry: initializeGuideVisualAssetRegistryV1(),
+  });
+}
+export function normalizeGuideAnswerEvidenceV1(value: unknown):
+  GuideAnswerEvidenceV1;
 export type GuideAnswerProjectionInputV2 = {
   snapshot: AssistantDocsSnapshotIdentityV2;
   records: readonly AssistantDocsLocalizedEvidenceV2[];
   permissionSnapshot: AssistantDocsPermissionSnapshotV1;
   officialDocs: GuideOfficialDocsContextV1;
+  visualAssetRegistry: GuideVisualAssetRegistryV1;
 };
-
 export function projectGuideAnswerEvidenceFromDbV2(
   input: GuideAnswerProjectionInputV2
 ): readonly GuideAnswerEvidenceV1[] {
-  const permissionSnapshot = normalizeAssistantDocsPermissionSnapshotV1(
-    input.permissionSnapshot
-  );
+  const permissionSnapshot =
+    normalizeAssistantDocsPermissionSnapshotV1(input.permissionSnapshot);
   const snapshot = normalizeAssistantDocsSnapshotIdentityV2(input.snapshot);
-  const records = input.records.map(
-    normalizeAssistantDocsLocalizedEvidenceV2
-  );
+  const records = input.records.map(normalizeAssistantDocsLocalizedEvidenceV2);
   assertEveryEvidenceMatchesSnapshotIdentityV2(records, snapshot);
   return records.map((record) => {
     assertDocumentHasPublicationTarget(record.document, "assistant");
-    if (
-      !satisfiesAssistantDocsPermissionRequirementV1(
-        record.document.permissionRequirement,
-        permissionSnapshot
-      )
-    ) {
+    if (!satisfiesAssistantDocsPermissionRequirementV1(
+      record.document.permissionRequirement, permissionSnapshot
+    )) {
       throw new Error("assistant_docs_permission_snapshot_invalid");
     }
-    const cards = [
-      ...record.visuals.map((visual) => ({
-        kind: "visual" as const,
-        docId: record.document.docId,
-        locale: record.document.locale,
-        sectionId: record.section.sectionId,
-        visual,
-      })),
-      ...record.examples.map((example) => ({
-        kind: "example" as const,
-        docId: record.document.docId,
-        locale: record.document.locale,
-        sectionId: record.section.sectionId,
-        example,
-      })),
-    ];
+    const cards: GuideEvidenceCardV2[] = [];
+    for (const visual of record.visuals) {
+      const outputKey = outputKeyFromVisualSha256V1(visual.sha256);
+      const asset = resolveGuideVisualAssetV1(input.visualAssetRegistry, {
+        sourceHash: snapshot.sourceHash, outputKey,
+        mediaType: visual.mediaType, sha256: visual.sha256,
+      });
+      if (asset) cards.push(projectPathFreeGuideVisualCardV2(record, visual, asset));
+    }
+    cards.push(...projectExplicitGuideExampleCardsV2(record));
     const actions = resolveGuideCardActions(record, {
       serverPermissionSnapshot: permissionSnapshot,
       officialDocs: input.officialDocs,
     });
-    return {
-      snapshot,
-      source: projectAuthorizedGuideSourceFromDbV2(record),
-      cards,
-      actions,
-    };
+    return normalizeGuideAnswerEvidenceV1({
+      schema: "coderso.guide-answer-evidence@v1", snapshot,
+      source: projectPathFreeGuideSourceIdentityV1(record), cards, actions,
+    });
   });
 }
-
 export type AgentDocsEvidenceState =
   | { state: "available"; evidence: readonly GuideAnswerEvidenceV1[] }
   | { state: "docsEvidenceUnavailable" };
-
 async function resolveAgentDocsEvidenceBestEffort(
   resolveEvidence: () => Promise<readonly GuideAnswerEvidenceV1[]>
 ): Promise<AgentDocsEvidenceState> {
@@ -632,7 +649,6 @@ async function resolveAgentDocsEvidenceBestEffort(
     return { state: "docsEvidenceUnavailable" };
   }
 }
-
 export async function answerAssistantQuestion(
   input: AssistantChatServiceInput,
   overrides?: Partial<AssistantServiceDeps>
@@ -657,7 +673,7 @@ export async function answerAssistantQuestion(
     const docsEvidence = await resolveAgentDocsEvidenceBestEffort(
       input.resolveOptionalDocsEvidence
     );
-    return { ...answer, docsEvidence };
+    return normalizeAssistantChatResponseV2(projectAgentChatResponseV2({ answer, docsEvidence, sources: [] }));
   }
   const retrieval = await retrieveDocsHits(
     {
@@ -672,15 +688,15 @@ export async function answerAssistantQuestion(
     records: retrieval.hits,
     permissionSnapshot: retrieval.permissionSnapshot,
     officialDocs: await deps.resolveGuideOfficialDocsContextV1(),
+    visualAssetRegistry: deps.guideVisualAssetRegistry,
   });
-  return composeDeterministicGuideAnswer(evidence);
+  return normalizeAssistantChatResponseV2(projectGuideChatResponseV2({ composed:
+    composeDeterministicGuideAnswer(evidence), sources: evidence.map(({ source }) => source), evidence }));
 }
-
 type GuideCardActionContext = {
   serverPermissionSnapshot: AssistantDocsPermissionSnapshotV1;
   officialDocs: GuideOfficialDocsContextV1;
 };
-
 export function resolveGuideCardActions(
   inputRecord: AssistantDocsLocalizedEvidenceV2,
   context: GuideCardActionContext
@@ -732,7 +748,6 @@ export function resolveGuideCardActions(
     }),
   };
 }
-
 type AssistantConversationEntryV2 =
   | {
       entryId: string;
@@ -746,13 +761,11 @@ type AssistantConversationEntryV2 =
       kind: "structured" | "provider" | "source" | "plan" | "execution";
       payloadRef: string;
     };
-
 type AssistantConversationSnapshotV2 = {
   schema: "coderso.assistant-conversation@v2";
   product: "guide" | "agent";
   entries: readonly AssistantConversationEntryV2[];
 };
-
 export function prepareAssistantHandoff(input: {
   sourceSnapshot: AssistantConversationSnapshotV2;
   destination: "guide" | "agent";
@@ -779,24 +792,22 @@ export function prepareAssistantHandoff(input: {
 }
 ```
 
-**Data flow:** authorized manual reindex → strict request validation → provider-
-independent serialized packaged-bundle ingest → complete inactive localized
-evidence plan → atomic active pointer/success/server-cache outbox commit. Chat body
-strict validation + authenticated `settings:read` → validated product branch.
-Guide → canonical server permission snapshot → authorized DB chunks/ranking →
-one normalized active-identity localized evidence result → persisted-requirement
-reauthorization → deterministic source/card/action projection. Agent →
-provider/action review independently; only after provider success may an
-isolated best-effort branch attach equally authorized DB evidence. Neither
-Guide branch opens the packaged bundle, Markdown or filesystem.
+**Data flow:** startup receipt → one immutable visual registry. Reindex → strict
+request → provider-independent packaged ingest → inactive evidence plan → atomic
+active pointer/success/cache-outbox commit. Chat + `settings:read` → product.
+Guide → server permissions → authorized DB ranking → one active identity →
+reauthorization → registry lookup → deterministic path-free projection. Agent
+review/actions stay independent; only after provider success may best-effort
+authorized DB evidence attach. No Guide question opens a bundle, receipt,
+Markdown or filesystem.
 
 **Error handling:** DB/index errors remain in Guide state; provider/config/quota
 errors remain in Agent state. Agent snapshot/DB/index/evidence failures
 produce only `{ state: "docsEvidenceUnavailable" }`; they never become provider
 failure, a docs answer masquerading as Agent output, or an action prerequisite.
-Only after the strict DB evidence and persisted owner are permission-authorized
-and metadata-identical may an unavailable packaged visual binary omit that one
-presentation while retaining grounded text/source. A mixed snapshot/sourceHash,
+Only after DB evidence/owner authorization may an unavailable, malformed or
+stale startup registry omit that visual while retaining grounded text/source.
+A mixed snapshot/sourceHash,
 owner mismatch or unsatisfied requirement rejects the complete evidence.
 A docs fallback in Agent
 becomes an explicit handoff choice; stale snapshot/secret-like handoff is
@@ -815,6 +826,8 @@ the evidence branch after provider completion.
 
 - Guide launcher/tab remains visible with `assistant.enabled=false` for a user
   who satisfies existing chat RBAC;
+- every parent status row settles independently; strict server/client normalization
+  rejects derived drift/legacy cache; DB failure leaves Agent ready and Agent failure leaves Guide ready;
 - Guide sends docs-only and works with provider absent/failing;
 - Agent provider chat and action routes work with DB down, index absent, active
   evidence invalid, or permission resolution failing; provider completion precedes the
@@ -858,14 +871,15 @@ the evidence branch after provider completion.
   every structured/provider/source/plan/execution entry, and mixed forged
   objects carrying both user text and privileged fields;
 - Agent docs fallback cannot masquerade as Agent output;
-- cards consume complete stable localized DB records, hide unsafe/missing
-  assets, use exact
-  `adminHelpPath({ docId, locale, sectionId })` for Help and the L02
-  public-link helpers for official URLs; two locale rows sharing `docId` and
-  `sectionId` resolve distinct Help/source/asset evidence;
-- an already-authorized grounded Guide source survives an unresolved optional
-  local card with `cards: []`; an unsatisfied localized requirement yields no
-  hit/source/card identity at all;
+- cards use exact Help/public links; localized twins stay distinct. The complete
+  route/client normalizer rejects unknowns, legacy `DocsAnswerSource`, all path/
+  line canaries; Agent sources are `[]`, Guide sources path-free identities;
+- fixed receipt vectors prove only an exact active `sourceHash` plus matching
+  outputKey/media/SHA yields `DocsLocalVisualAssetV1`; missing, malformed,
+  tampered, stale or nonmember startup receipts emit no visual/path/href. Spies
+  prove one load/normalization and zero per question; simultaneous loader and
+  logger throw, plus rejected diagnostics, still return a branded frozen empty
+  registry. Rotation omits visuals until restart; grounded evidence survives;
 - cards preserve exact `capabilityIds`; test null plus authenticated empty
   ready snapshot, missing/malformed snapshot, invalid empty non-null
   requirements, exact live `["*"]` full access, duplicate/mixed wildcard
@@ -925,11 +939,13 @@ bunx vitest run --config vitest.config.ts \
   tests/vitest/ui/assistant-panel-interaction.test.tsx \
   tests/vitest/ui/assistant-panel-lazy-load.test.tsx \
   tests/vitest/ui/assistant-conversation-state.test.ts \
+  tests/vitest/assistant/docsPermissionSnapshot.test.ts \
   tests/vitest/assistant/docsAnswerComposer.test.ts \
   tests/vitest/docs/docs-renderer.test.tsx
 
 set -a && source .env && set +a
-bun test tests/unit/assistant/assistantService.test.ts
+bun test tests/unit/assistant/assistantService.test.ts \
+  tests/unit/assistant/guideVisualAssetRegistry.test.ts
 bun test tests/integration/routes/assistant-guide-rbac.test.ts \
   tests/integration/routes/assistant-reindex-v2.test.ts \
   tests/integration/routes/assistant.test.ts
@@ -940,13 +956,13 @@ bun run check:admin-boundary
 bun --cwd core build:admin
 find core/admin/ui/assistant -type f \( -name '*.ts' -o -name '*.tsx' \) \
   -exec wc -l {} +
-wc -l core/services/assistant/assistantService.ts \
+wc -l core/services/assistant/assistantService.ts core/services/assistant/guideVisualAssetRegistry.ts \
   core/services/assistant/docsAnswerComposer.ts \
   tests/vitest/ui/assistant-guide-tab.test.tsx \
   tests/vitest/ui/assistant-agent-tab.test.tsx \
   tests/vitest/ui/assistant-tab-handoff.test.tsx \
   tests/vitest/ui/assistant-panel-interaction.test.tsx \
-  tests/unit/assistant/assistantService.test.ts \
+  tests/unit/assistant/assistantService.test.ts tests/unit/assistant/guideVisualAssetRegistry.test.ts \
   tests/integration/routes/assistant-guide-rbac.test.ts \
   tests/integration/routes/assistant-reindex-v2.test.ts
 git diff --check
@@ -972,7 +988,7 @@ files named above.
   ingest serialization or typed errors.
 - Agent remains optional, provider-backed, review-first, permission-aware,
   idempotent, audited, and isolated from Guide failure.
-- Rich Guide cards resolve only stable local bundle evidence and degrade safely.
+- Rich Guide cards use the once-built source-hash registry, perform no per-query receipt I/O/normalization, and degrade safely.
 - Handoff is explicit, redacted, bounded, reviewable, and never auto-sent.
 - Existing assistant API security and reject-unknown behavior is not weakened.
 - `AssistantPanel.tsx` and every other touched production/test file is at most

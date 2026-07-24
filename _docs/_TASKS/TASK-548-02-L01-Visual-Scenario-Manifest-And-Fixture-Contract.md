@@ -22,7 +22,7 @@ lifecycle. Own new focused files under `scripts/docs/visual/contract/` and
 
 ```ts
 type DocsSemanticLocatorV1 =
-  | { by: "role"; role: string; name: string; exact: boolean }
+  | { by: "role"; role: DocsVisualLocatorRoleV1; name: string; exact: boolean }
   | { by: "label"; name: string; exact: boolean }
   | { by: "text"; text: string; exact: boolean };
 
@@ -30,13 +30,13 @@ type DocsVisualActionV1 =
   | { action: "click"; target: DocsSemanticLocatorV1 }
   | { action: "fill"; target: DocsSemanticLocatorV1; fixtureValueRef: string }
   | { action: "select"; target: DocsSemanticLocatorV1; fixtureValueRef: string }
-  | { action: "press"; target: DocsSemanticLocatorV1; key: string };
+  | { action: "press"; target: DocsSemanticLocatorV1; key: DocsVisualKeyV1 };
 
 type DocsVisibleAssertionV1 =
   | { kind: "visible"; target: DocsSemanticLocatorV1 }
   | { kind: "text"; target: DocsSemanticLocatorV1; expected: string }
-  | { kind: "aria"; target: DocsSemanticLocatorV1; attribute: string; expected: string }
-  | { kind: "computed-style"; target: DocsSemanticLocatorV1; property: string; expected: string }
+  | { kind: "aria"; target: DocsSemanticLocatorV1; attribute: DocsVisualAriaAttributeV1; expected: string }
+  | { kind: "computed-style"; target: DocsSemanticLocatorV1; property: DocsVisualComputedStylePropertyV1; expected: string }
   | { kind: "geometry"; target: DocsSemanticLocatorV1; minWidth: number; minHeight: number };
 
 type DocsVisualScenarioV1 = {
@@ -63,6 +63,56 @@ type DocsVisualScenarioV1 = {
 };
 ```
 
+The exact finite registries and inclusive limits are exported from the same
+contract module; schema and executor import these values, never anonymous copies:
+
+```ts
+export const DOCS_VISUAL_LOCATOR_ROLES_V1 = [
+  "button", "link", "textbox", "combobox", "option", "checkbox", "radio",
+  "switch", "slider", "tab", "tabpanel", "dialog", "navigation", "main",
+  "heading", "row", "cell", "gridcell", "menuitem", "listitem",
+] as const;
+export const DOCS_VISUAL_KEYS_V1 = [
+  "Enter", "Escape", "Space", "Tab", "Shift+Tab", "ArrowUp", "ArrowDown",
+  "ArrowLeft", "ArrowRight", "Home", "End",
+] as const;
+export const DOCS_VISUAL_ARIA_ATTRIBUTES_V1 = [
+  "aria-expanded", "aria-selected", "aria-checked", "aria-pressed",
+  "aria-disabled", "aria-current", "aria-hidden", "aria-invalid", "aria-busy",
+] as const;
+export const DOCS_VISUAL_COMPUTED_STYLE_PROPERTIES_V1 = [
+  "display", "visibility", "opacity", "color", "background-color",
+  "border-color", "transform", "width", "height", "overflow-x", "overflow-y",
+  "pointer-events", "position",
+] as const;
+export type DocsVisualLocatorRoleV1 = typeof DOCS_VISUAL_LOCATOR_ROLES_V1[number];
+export type DocsVisualKeyV1 = typeof DOCS_VISUAL_KEYS_V1[number];
+export type DocsVisualAriaAttributeV1 = typeof DOCS_VISUAL_ARIA_ATTRIBUTES_V1[number];
+export type DocsVisualComputedStylePropertyV1 =
+  typeof DOCS_VISUAL_COMPUTED_STYLE_PROPERTIES_V1[number];
+export const DOCS_VISUAL_SCENARIO_LIMITS_V1 = {
+  serializedUtf8Bytes: 131_072, locatorTextUtf8Bytes: 256,
+  expectedTextUtf8Bytes: 1_024, fixtureValueRefUtf8Bytes: 64,
+  routeUtf8Bytes: 512, altUtf8Bytes: 512, captionUtf8Bytes: 1_024,
+  actions: 32, assertions: 32, watchPaths: 32, watchPathUtf8Bytes: 256,
+  viewportWidth: { min: 320, max: 2_560 },
+  viewportHeight: { min: 240, max: 1_600 },
+  capturePaddingPx: { min: 0, max: 64 },
+} as const;
+export const DOCS_VISUAL_FIXTURE_RECOVERY_LIMITS_V1 = {
+  serializedUtf8Bytes: 131_072, adapterIdUtf8Bytes: 64,
+  profileIdUtf8Bytes: 64, resourceRefs: 64, resourceKindUtf8Bytes: 64,
+  resourceIdUtf8Bytes: 128, adapterRecoveryTokenUtf8Bytes: 256,
+  diagnosticFieldPathUtf8Bytes: 256,
+} as const;
+```
+
+Every string/count in the scenario or recovery union is governed by the closest
+named limit above; IDs additionally use their existing exact kebab/hash/run-ID
+patterns. `fixtureProfile`, `cleanupProfile`, and `fixtureValueRef` resolve
+byte-for-byte in immutable code-owned registries. Expanding a finite registry
+requires a schema-version task, security review, compiler mapping and tests.
+
 All names and discriminator values above are exact. Unknown fields fail closed
 at every level. Locators must be semantic and exact enough to resolve one
 visible element; CSS/XPath, element indexes, `evaluate`, `run-code`, arbitrary
@@ -79,6 +129,28 @@ owner tuple.
 validation. Manifests never contain passwords, tokens, real emails, free-form
 customer data or environment-variable names. `route` must be a canonical local
 `/admin...` path and may not include a host, query credentials or fragment.
+
+### Exact DSL-to-CLI compiler map
+
+The runner obtains one bounded `playwright-cli snapshot`, resolves every locator
+against its finite role/label/text registry, and requires exactly one visible
+element reference. It never serializes locator text into JavaScript or a shell.
+
+| DSL member | Exact owned command/probe |
+| --- | --- |
+| `click` | `playwright-cli -s=<session> click <resolved-ref>` |
+| `fill` | registry value → stdin-safe argument → `fill <resolved-ref> <value>` |
+| `select` | registry value → stdin-safe argument → `select <resolved-ref> <value>` |
+| `press` | `click <resolved-ref>` → owned active-element identity probe → `press <allowed-key>` |
+| `visible`/`text`/`aria` | one generated, fixed probe template against `<resolved-ref>` |
+| `computed-style` | fixed `getComputedStyle` probe selecting only the allowed property |
+| `geometry` | fixed bounding-box/viewport probe with finite numeric comparisons |
+| `captureTarget` | `screenshot <resolved-ref>` followed by owned PNG bounds checks |
+
+Generated probe source is selected by discriminator and contains no manifest
+code; only already-normalized expected data crosses as bounded JSON. Each action
+forces a fresh snapshot/reference resolution, and every assertion re-resolves
+after the final action so stale element refs cannot silently pass.
 
 ## Fixture Lifecycle Contract
 
@@ -463,6 +535,7 @@ export function normalizeDocsVisualScenarioV1(value: unknown): DocsVisualScenari
     scenario.permissionRequirement
   );
   assertSemanticLocators(scenario.actions, scenario.assertions, scenario.captureTarget);
+  assertFiniteDslRegistriesAndInclusiveLimitsV1(scenario);
   assertConfinedWatchPaths(scenario.watchPaths);
   return canonicalizeScenario({ ...scenario, permissionRequirement });
 }
@@ -556,6 +629,9 @@ material.
 **Regression-test shape:** reject every unknown key, unsafe locator/route/key,
 unknown permission/profile/value ref, non-UTC timezone, bad locale/viewport,
 over-limit array/string and secret/PII-like value. Prove canonicalization,
+pin every finite registry member and one-neighbor rejection for every numeric/
+UTF-8 limit; execute every command-map branch and prove manifest strings never
+become shell/JavaScript while targeted `press` verifies focus identity;
 localized path/envelope and `(docId, locale, sectionId)` referential checks,
 including two locale rows with the same `docId`/`sectionId`; prove exact
 null/empty/partial/full/allOf/anyOf semantics, authored wildcard rejection,

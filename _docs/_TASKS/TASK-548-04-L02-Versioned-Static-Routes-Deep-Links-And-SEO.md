@@ -36,13 +36,18 @@ This leaf is the only writer for:
 - exact frozen-manifest entry
   `packages/docs-portal/src/build/buildDocsPortal.ts` (never `.tsx`);
 - `packages/docs-portal/src/routes/**`;
+- exact pure server/build handoff
+  `packages/docs-portal/src/routes/docsPortalPublicationContractsV1.ts`;
 - `packages/docs-portal/src/seo/**`;
 - new `tests/vitest/docs-portal/portal-routes.test.ts`;
 - new `tests/vitest/docs-portal/portal-build.test.tsx`;
 - new `tests/vitest/docs-portal/portal-seo.test.ts`.
 
 It must not edit L01 shell/search/package/root/lock files, L03 validator/tests,
-TASK-548-05 workflows, or `packages/docs-renderer`.
+TASK-548-05 workflows, or `packages/docs-renderer`. The handoff module has no
+React, DOM, Node, Bun, filesystem, environment, Core, renderer or build-entry
+import and is exposed only as `@coderso/docs-portal/publication-contracts`; Vite
+and hydration graphs reject that server/build-only subpath.
 
 Canonical public path/href construction is imported from
 `packages/docs-renderer`; this leaf must not redefine it:
@@ -68,17 +73,12 @@ import {
 } from "../app/docsPortalHydrationPayloadV1";
 import {
   loadPackagedDocsDistributionBundleV2,
-} from "../../../../core/services/documentation/packagedDocsDistributionBundleV2";
+} from "@coderso/docs-contracts/node-loader";
 
 // packages/docs-portal/src/routes/docsPortalOutput.ts
 resolveDocsPortalArtifactRelativePath(publicPath: string): string;
 
 // packages/docs-portal/src/build/buildDocsPortal.ts
-// Imported from TASK-548-01 owners; never reimplemented here.
-assertNoDocsWorkspaceArtifactPromotionHazardsV1(): Promise<
-  DocsWorkspaceArtifactStablePrestateV1
->;
-loadPackagedDocsDistributionBundleV2(): Promise<DocsDistributionBundleV2>;
 type DocsPortalBuildConfigV1 = {
   currentVersion: string;
   publicOrigin: string;
@@ -121,13 +121,13 @@ one content-addressed staged asset and returns only a deeply frozen per-document
 
 Locked output root is `packages/docs-portal/dist`.
 
-The build entry accepts only strict non-artifact configuration, never artifact
-paths, a preloaded bundle/report object, or bytes. It first calls the exact
-TASK-548-01-L02 read-only hazard inspector, then the TASK-548-01-L03 strict
-cwd-independent zero-argument `loadPackagedDocsDistributionBundleV2()` import.
-L02 contains no bundle path constant/read/parse/normalizer or cwd-derived
-fallback. A caller cannot bypass, replace, or reorder this boundary. The
-ignored migration report is never opened or required.
+The build entry accepts only strict non-artifact config, never artifact paths,
+a bundle/report object or bytes. It invokes only L03's zero-input public loader;
+L02's private owner derives fixed URLs and atomically holds the bundle across
+hazard inventory, optional report linkage, same-handle read/normalization and
+final rescan. Portal has no public guard, Core import, caller path, cwd/env root
+or fallback. The report is inspected when present but never required in valid
+`packaged-bundle-only` state.
 The targeted gate runs read-only `docs:check` immediately before the portal
 build so canonical bundle bytes and `sourceHash` are recomputed and compared.
 The portal never invokes recovery or treats `docs:check` as a recovery command.
@@ -165,11 +165,12 @@ workspace can be executed. The targeted gate must:
    prove full page plus Vite JS/CSS/asset/receipt byte identity;
 2. build the existing TASK-548-02-L03-owned Dockerfile and thereby execute its
    frozen workspace install plus existing Admin and site builds;
-3. run the resulting image with its entrypoint overridden, resolve
-   `@coderso/docs-renderer` from core, assert the required renderer/target
-   selector exports, parse the packaged
-   `/app/core/generated/docs/coderso-docs-v2.json` as
-   `coderso.docs-corpus@v2`, and prove the Admin/site build outputs exist; and
+3. run the resulting image from explicit unrelated workdir `/tmp` with its entrypoint overridden, resolve
+   both public Node contracts subpaths and `@coderso/docs-renderer` from Core,
+   while resolving both `@coderso/docs-portal` subpaths from the portal workspace,
+   assert the guard/loader/renderer/selector exports, invoke
+   `loader.loadPackagedDocsDistributionBundleV2()` once, validate its returned
+   bundle/schema/`sourceHash`, and prove the Admin/site build outputs exist; and
 4. normalize Admin `coderso.docs-help-assets@v1` through the exact 03-L02
    owner, require only byte/path-free `{ outputKey, href, mediaType, sha256 }`
    records, and verify source/hash/file closure against emitted PNGs using
@@ -184,7 +185,7 @@ workspace can be executed. The targeted gate must:
    member-temp, staged, or backup artifacts.
 
 This is a read-only downstream validation of `Dockerfile`, the workspace
-manifests, root lockfile, and core dependency. L02 does not edit those files
+manifests, root lockfile, and Core's contracts/renderer dependencies. L02 does not edit those files
 and does not own a Docker contract test; its only new tests remain the three
 portal files listed above. TASK-548-05 may repeat this already-landed image
 validation as a release gate without changing ownership.
@@ -203,7 +204,8 @@ It then executes this order exactly:
 2. strictly parse the staged Vite manifest, require exactly that entry, walk
    its complete `imports`/`dynamicImports`/`css`/`assets` closure, and reject
    unknown keys, cycles, missing/orphan/symlink/path-escaping/source-map files
-   or any server-shell/renderer/projection module in the client graph;
+   or either Node contracts subpath/server-shell/renderer/projection module in
+   the client graph;
 3. read and hash every closed JS/CSS/asset byte, copy each exactly once into
    final staging, and emit canonical
    `deployment/client-assets.json` sorted by `manifestPath`; L02 is the sole
@@ -231,21 +233,21 @@ shared or broad path. A repeated identical build compares the full tree,
 including Vite JS/CSS/assets, client receipt and injected tags, byte-for-byte.
 
 ```ts
-type DocsPortalClientAssetRecordV1 = {
+export type DocsPortalClientAssetRecordV1 = {
   kind: "entry-js" | "chunk-js" | "css" | "asset";
   manifestPath: string; publicHref: string; bytes: number; sha256: string;
 };
-type DocsPortalClientAssetsManifestV1 = {
+export type DocsPortalClientAssetsManifestV1 = {
   schema: "coderso.docs-portal-client-assets@v1";
   entry: string; styles: string[]; files: DocsPortalClientAssetRecordV1[];
 };
 type DocsPortalClientAssetTagsV1 = {
   moduleScriptHref: string; stylesheetHrefs: string[];
 };
-normalizeDocsPortalClientAssetsManifestV1(
+export function normalizeDocsPortalClientAssetsManifestV1(
   value: unknown
 ): DocsPortalClientAssetsManifestV1;
-serializeDocsPortalClientAssetsManifestV1(
+export function serializeDocsPortalClientAssetsManifestV1(
   value: DocsPortalClientAssetsManifestV1
 ): Uint8Array;
 buildDocsPortalClientAssetTagsV1(
@@ -425,56 +427,45 @@ SHA-256 sources. Alias/404 pages contain no JSON-LD and inherit `script-src
 Cloudflare removal directive for the inherited `Cache-Control` before setting
 `public, max-age=31536000, immutable`. Latest/site-index/sitemap/robots and all
 other reads retain the catch-all revalidation value. The top-level `_headers`
-control path is not content. Generation validates Cloudflare Pages rule/line/
-file limits and simulated rule-merge results before staged write.
+control path is not content. Generation enforces at most 100 rules and 2,000
+characters per header line, plus its own byte cap and simulated merge, before write.
 `deployment/headers.json` and `_headers` must produce identical effective
 values; neither claims GitHub Pages applies response headers.
 
 The strict manifest shapes are:
 
 ```ts
-type DocsPortalRouteRecordV1 = {
-  kind: "canonical" | "latest";
-  docId: string;
-  productVersion: string;
-  locale: string;
-  slug: string;
-  publicPath: string;
-  outputPath: string;
-  canonicalPath: string;
-  indexable: boolean;
+export type DocsPortalRouteRecordV1 = {
+  kind: "canonical" | "latest"; docId: string; productVersion: string;
+  locale: string; slug: string; publicPath: string; outputPath: string;
+  canonicalPath: string; indexable: boolean;
 };
 
-type DocsPortalFileRecordV1 = {
+export type DocsPortalFileRecordV1 = {
   path: string; bytes: number; sha256: string;
 };
 
-type DocsPortalVisualAssetRecordV1 = {
+export type DocsPortalVisualAssetRecordV1 = {
   visualId: string; docId: string; locale: string; sectionId: string;
   path: string; bytes: number; sha256: string;
 };
 
-type DocsPortalManifestV1 = {
-  schema: "coderso.docs-portal@v1";
-  productVersion: string;
-  corpusVersion: string;
-  sourceHash: string;
-  publicOrigin: string;
-  publicBasePath: string;
-  sourceDateEpoch: number;
-  buildInputSha256: string;
-  locales: string[];
+export type DocsPortalManifestV1 = {
+  schema: "coderso.docs-portal@v1"; productVersion: string;
+  corpusVersion: string; sourceHash: string;
+  publicOrigin: string; publicBasePath: string;
+  sourceDateEpoch: number; buildInputSha256: string; locales: string[];
   routes: DocsPortalRouteRecordV1[];
   visualAssets: DocsPortalVisualAssetRecordV1[];
   files: DocsPortalFileRecordV1[];
 };
 
-type DocsPortalSiteIndexCandidateRouteV1 = {
+export type DocsPortalSiteIndexCandidateRouteV1 = {
   docId: string; locale: string; slug: string;
   exactPath: string; latestPath: string;
 };
 
-type DocsPortalSiteIndexCandidateV1 = {
+export type DocsPortalSiteIndexCandidateV1 = {
   schema: "coderso.docs-site-index-candidate@v1";
   productVersion: string;
   sourceHash: string;
@@ -484,13 +475,36 @@ type DocsPortalSiteIndexCandidateV1 = {
   routes: DocsPortalSiteIndexCandidateRouteV1[];
 };
 
-normalizeDocsPortalSiteIndexCandidateV1(
+export type DocsPortalValidationReceiptV1 = {
+  schema: "coderso.docs-portal-validation@v1"; status: "pass";
+  productVersion: string; corpusVersion: string; sourceHash: string;
+  publicOrigin: string; publicBasePath: string;
+  manifestPath: "docs-portal-manifest.json"; manifestSha256: string;
+  soleExcludedPath: "docs-portal-manifest.json";
+  routeCount: number; fileCount: number; totalBytes: number;
+  filesRootSha256: string; artifactRootSha256: string;
+  allManifestFilesVerified: true; untrackedFileCount: 0; orphanRecordCount: 0;
+};
+
+export function normalizeDocsPortalManifestV1(value: unknown): DocsPortalManifestV1;
+export function serializeDocsPortalManifestV1(
+  value: DocsPortalManifestV1
+): Uint8Array;
+export function normalizeDocsPortalSiteIndexCandidateV1(
   value: unknown
 ): DocsPortalSiteIndexCandidateV1;
-serializeDocsPortalSiteIndexCandidateV1(
+export function serializeDocsPortalSiteIndexCandidateV1(
   value: DocsPortalSiteIndexCandidateV1
 ): Uint8Array;
+export function normalizeDocsPortalValidationReceiptV1(value: unknown): DocsPortalValidationReceiptV1;
+export function serializeDocsPortalValidationReceiptV1(value: DocsPortalValidationReceiptV1): Uint8Array;
 ```
+
+These and the earlier client-assets exports are the exact handoff-module surface.
+L03 owns validation/receipt production but imports this receipt contract; release
+consumers use only `@coderso/docs-portal/publication-contracts`, never a deep
+import or copied DTO. Normalizers reject unknown keys recursively; serializers
+normalize first, preserve canonical order, then emit UTF-8 JSON plus one LF.
 
 `sourceHash` is byte-for-byte the validated full
 `DocsDistributionBundleV2.sourceHash`: immutable whole-corpus source
@@ -625,7 +639,6 @@ export async function buildDocsPortal(
   input: DocsPortalBuildConfigV1
 ): Promise<DocsPortalBuildReceipt> {
   const config = normalizeDocsPortalBuildConfigV1(input);
-  await assertNoDocsWorkspaceArtifactPromotionHazardsV1();
   const bundle = await loadPackagedDocsDistributionBundleV2();
   return buildValidatedDocsPortal(config, bundle);
 }
@@ -776,8 +789,8 @@ async function buildValidatedDocsPortal(
 }
 ```
 
-**Data flow:** `docs:check` equality → config → hazard inspection → common
-cwd-independent packaged-loader normalization → isolated Vite client stage/
+**Data flow:** `docs:check` equality → config → one zero-input atomic package
+guard-and-load normalization → isolated Vite stage/
 strict manifest closure → independent projection-constructor normalization and
 target proof → one search index → one lossless client ranking projection per
 locale → route/member graph → shared server shell/renderer → hash-bound four-
@@ -801,9 +814,9 @@ tree. Never delete a broad/unresolved path or partial live `dist`.
 - clean-clone/tag portal entry with the tracked bundle and no `.tmp` tree/report
   passes; every owner promotion journal phase, report-only state, invalid linked
   pair, and tampered transaction or packaged-bundle bytes fail read-only;
-- static ordering guard proving no packaged-bundle open, target selector, route
-  builder, renderer or output writer is reachable before owner hazard inspection
-  passes; every writer path is relative to the verified stage and spies prove
+- static ordering proves the bundle handle opens once, no read/normalize/return
+  occurs before initial inventory, and no selector/renderer/writer is reachable
+  before the atomic loader returns; every writer path is staged and spies prove
   zero live-`dist` open/write/remove before the final promotion;
 - public-entry fixtures accept only the four exact configuration keys and reject
   unknown `bundle`, `report`, artifact-path, bytes, or output-root inputs before
@@ -825,8 +838,9 @@ tree. Never delete a broad/unresolved path or partial live `dist`.
   alternatives and no reflected requested path, uses four typed islands, and
   is closed by the detached manifest; a preview/Cloudflare fixture returns its
   exact bytes with HTTP 404 rather than SPA 200/redirect/replacement;
-- sitemap/search/header/redirect/client-assets/manifest schema and hash closure;
-- `_headers` exact LF syntax, normalized-base route patterns, host limits,
+- exact package-subpath imports plus normalize→serialize→parse→normalize byte
+  round trips cover portal/client-assets/candidate/validation schemas and hashes;
+- `_headers` exact LF syntax, normalized-base route patterns, 100-rule/2,000-character-line limits,
   host-neutral JSON parity and effective CSP/X-Frame-Options/nosniff/referrer/
   permissions/cache values; missing, duplicate, shadowed, tampered, unsupported
   or GitHub-Pages-assumed header materialization rejects;
@@ -847,15 +861,20 @@ tree. Never delete a broad/unresolved path or partial live `dist`.
   shell/search/render; hostile constructor keys, structural/spread/serialized/
   foreign brands, locale/non-member keys, malformed/out-of-range versions,
   target absence and incomplete target closure reject;
-- spies prove the common packaged loader performs exactly one normalization and
-  returns its object to exactly one `createDocsPublicationProjectionV1()`,
+- spies prove portal calls only the zero-input loader once, it normalizes once
+  and passes its object once to `createDocsPublicationProjectionV1()`,
   whose constructor performs one separate normalization/target selection;
   exactly one `buildDocsSearchIndexV1()`, no path/filtered-bundle/per-route
   normalizer, identical projection/index references and unchanged `sourceHash`;
+- Docker contract pins `--workdir /tmp`, one returned loader bundle/`sourceHash`,
+  exact guard/loader exports and rejects a direct `Bun.file` bundle parse;
+- swap every bundle/report/journal parent/final between handle open, both
+  inventories, report linkage and bundle read/normalize; reject or return only
+  the continuously held complete bundle inode, never mixed/reopened bytes;
 - a static call-boundary guard proves shell/search/renderer receive the exact
   projection/member-key pair, while portal client entries contain no
-  projection constructor/brand, full document/corpus, server shell or renderer
-  import; only the exact client-search subpath is allowed;
+  projection constructor/brand, full corpus, server shell, renderer,
+  publication-contracts or either Node import; only client-search is allowed;
 - client ranking fixtures prove one renderer-owned lossless projection per
   locale retains every scorer signal and returns exact Help parity;
 - Vite fixtures pin one hydration entry, strict recursive manifest closure,
@@ -933,8 +952,10 @@ docker build --build-arg APP_VERSION=0.0.0-test \
   --iidfile "$task548_portal_real/docker-image-id" .
 task548_docker_image="$(tr -d '\r\n' < "$task548_portal_real/docker-image-id")"
 [[ "$task548_docker_image" =~ ^sha256:[0-9a-f]{64}$ ]]
-docker run --rm --entrypoint bun "$task548_docker_image" --eval \
-  'const renderer = await import("@coderso/docs-renderer"); const projection = await import("@coderso/docs-renderer/projection"); const helpAssets = await import("/app/core/admin/ui/help/helpBuildAssetVerification.ts"); if (typeof renderer.DocsDocumentRenderer !== "function" || typeof renderer.buildDocsSearchIndexV1 !== "function" || typeof renderer.selectDocumentsForPublicationTarget !== "function" || typeof projection.createDocsPublicationProjectionV1 !== "function" || typeof helpAssets.resolveEmbeddedHelpBuildAssetFileV1 !== "function") throw new Error("docs_renderer_exports_invalid"); const bundleFile = Bun.file("/app/core/generated/docs/coderso-docs-v2.json"); if (!(await bundleFile.exists())) throw new Error("docs_bundle_missing"); const bundle = await bundleFile.json(); if (bundle.schema !== "coderso.docs-corpus@v2") throw new Error("docs_bundle_schema_invalid"); for (const path of ["/app/core/dist/client/index.html", "/app/core/dist/site/manifest.json"]) if (!(await Bun.file(path).exists())) throw new Error(`docker_build_output_missing:${path}`); const helpReceiptFile = Bun.file("/app/core/dist/client/docs-help-assets-v1.json"); if (!(await helpReceiptFile.exists())) throw new Error("help_asset_receipt_missing"); const helpReceipt = helpAssets.normalizeEmbeddedHelpAssetReceiptV1(await helpReceiptFile.json()); if (helpReceipt.sourceHash !== bundle.sourceHash) throw new Error("help_asset_receipt_invalid"); for (const asset of helpReceipt.assets) { const opened = await helpAssets.resolveEmbeddedHelpBuildAssetFileV1({ clientRoot: "/app/core/dist/client", outputKey: asset.outputKey, href: asset.href }); const observed = new Bun.CryptoHasher("sha256").update(opened.bytes).digest("hex"); if (opened.sha256 !== asset.sha256 || observed !== opened.sha256) throw new Error(`help_asset_invalid:${asset.outputKey}`); }'
+docker run --rm --workdir /tmp --entrypoint bun "$task548_docker_image" --eval \
+  'if (process.cwd() !== "/tmp") throw new Error("docs_workspace_cwd_invalid"); const fromCore = async (specifier) => import(Bun.resolveSync(specifier, "/app/core")); const fromPortal = async (specifier) => import(Bun.resolveSync(specifier, "/app/packages/docs-portal")); const renderer = await fromCore("@coderso/docs-renderer"); const projection = await fromCore("@coderso/docs-renderer/projection"); const portalIndex = await fromPortal("@coderso/docs-portal/site-index"); const portalContracts = await fromPortal("@coderso/docs-portal/publication-contracts"); const guard = await fromCore("@coderso/docs-contracts/node-artifact-guard"); const loader = await fromCore("@coderso/docs-contracts/node-loader"); const helpAssets = await import("/app/core/admin/ui/help/helpBuildAssetVerification.ts"); if (typeof renderer.DocsDocumentRenderer !== "function" || typeof renderer.buildDocsSearchIndexV1 !== "function" || typeof renderer.selectDocumentsForPublicationTarget !== "function" || typeof projection.createDocsPublicationProjectionV1 !== "function" || typeof portalIndex.normalizeDocsPortalSiteIndexV1 !== "function" || typeof portalContracts.normalizeDocsPortalManifestV1 !== "function" || typeof portalContracts.normalizeDocsPortalClientAssetsManifestV1 !== "function" || typeof portalContracts.normalizeDocsPortalSiteIndexCandidateV1 !== "function" || typeof portalContracts.normalizeDocsPortalValidationReceiptV1 !== "function" || Object.keys(guard).join(",") !== "assertNoDocsWorkspaceArtifactPromotionHazardsV1" || guard.assertNoDocsWorkspaceArtifactPromotionHazardsV1.length !== 0 || Object.keys(loader).join(",") !== "loadPackagedDocsDistributionBundleV2" || loader.loadPackagedDocsDistributionBundleV2.length !== 0 || typeof helpAssets.resolveEmbeddedHelpBuildAssetFileV1 !== "function") throw new Error("docs_workspace_exports_invalid"); const bundle = await loader.loadPackagedDocsDistributionBundleV2(); if (bundle.schema !== "coderso.docs-corpus@v2" || typeof bundle.sourceHash !== "string") throw new Error("docs_bundle_schema_invalid"); for (const path of ["/app/core/dist/client/index.html", "/app/core/dist/site/manifest.json"]) if (!(await Bun.file(path).exists())) throw new Error(`docker_build_output_missing:${path}`); const helpReceiptFile = Bun.file("/app/core/dist/client/docs-help-assets-v1.json"); if (!(await helpReceiptFile.exists())) throw new Error("help_asset_receipt_missing"); const helpReceipt = helpAssets.normalizeEmbeddedHelpAssetReceiptV1(await helpReceiptFile.json()); if (helpReceipt.sourceHash !== bundle.sourceHash) throw new Error("help_asset_receipt_invalid"); for (const asset of helpReceipt.assets) { const opened = await helpAssets.resolveEmbeddedHelpBuildAssetFileV1({ clientRoot: "/app/core/dist/client", outputKey: asset.outputKey, href: asset.href }); const observed = new Bun.CryptoHasher("sha256").update(opened.bytes).digest("hex"); if (opened.sha256 !== asset.sha256 || observed !== opened.sha256) throw new Error(`help_asset_invalid:${asset.outputKey}`); }'
+docker run --rm --workdir /tmp --entrypoint bun "$task548_docker_image" --eval \
+  'const p = await import(Bun.resolveSync("@coderso/docs-portal/publication-contracts", "/app/packages/docs-portal")); const e = ["normalizeDocsPortalClientAssetsManifestV1","normalizeDocsPortalManifestV1","normalizeDocsPortalSiteIndexCandidateV1","normalizeDocsPortalValidationReceiptV1","serializeDocsPortalClientAssetsManifestV1","serializeDocsPortalManifestV1","serializeDocsPortalSiteIndexCandidateV1","serializeDocsPortalValidationReceiptV1"]; if (Object.keys(p).sort().join(",") !== e.join(",")) throw new Error("docs_portal_publication_contract_exports_invalid");'
 docker run --rm --entrypoint sh "$task548_docker_image" -ceu \
   'test -z "$(find /app -type d -name ".tmp" -print -quit)"
    test -z "$(find /app/core/generated/docs -type f \( -name "*.tmp*" -o -name "*.staged*" -o -name "*.backup*" -o -name "*promotion-transaction*" \) -print -quit)"'

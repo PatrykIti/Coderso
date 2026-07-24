@@ -28,10 +28,17 @@ This child consumes the `DocsVisualV1` shape from TASK-548-01 and must not
 redefine it. It adds no AI dependency, Help API, public docs API, Designer
 canvas or production mutation route.
 
-**Single-writer ownership:** this child owns visual scenario contracts and
-fixtures, focused `scripts/docs/*visual*` tooling, the five exact pilot triples
-listed in TASK-548-02-L02, visual tests, root docs visual package
-scripts/dependencies, the scoped `.gitignore` exception and CI visual gates.
+**Single-writer ownership:** L01 exclusively owns
+`scripts/docs/visual/contract/**` and `scripts/docs/visual/fixtures/**`. L02
+exclusively owns `scripts/docs/capture-visual.ts`,
+`scripts/docs/promote-visual.ts`, `scripts/docs/visual/capture/**`,
+`scripts/docs/visual/promotion/**`, `scripts/docs/visual/png/**`, and
+`scripts/docs/visual/lifecycle/**`; its sole inter-leaf shared wire is exactly
+`scripts/docs/visual/capture/docsVisualCaptureRunV1.ts`. L02 does not own either
+L01 subtree or L03's `scripts/docs/visual/ci/**` modules. It also owns the five
+exact pilot triples listed in TASK-548-02-L02, their tests and the scoped
+`.gitignore` exception. L03 owns its exact diff/check/recovery/CI tooling and
+root docs visual package scripts/dependencies.
 TASK-548-02-L03 also pre-creates and exclusively owns
 `packages/docs-renderer/package.json`, `packages/docs-portal/package.json`,
 root/core package manifests, root `bun.lock` and `Dockerfile` before the single
@@ -62,6 +69,46 @@ bundle-global. The runner never selects a document by bare `docId`.
 The runner never accepts arbitrary JavaScript from a manifest. Secrets,
 credentials and PII are neither manifest values nor image content.
 
+### Exact task-owned server lease
+
+TASK-548-02-L02 solely owns
+`scripts/docs/visual/lifecycle/docsVisualTaskServerLeaseV1.ts` and a dedicated
+supervisor child; it never restarts or signals a server discovered by port/PID.
+The supervisor starts the API, Admin Vite and site Vite programmatically on
+loopback port `0` with strict binding, then returns three normalized origins over
+an inherited IPC channel after all health checks pass. It never uses the repo's
+fixed development ports or a caller-supplied origin. The exact contract is:
+
+```ts
+export type DocsVisualTaskServerLeaseV1 = Readonly<{
+  runId: string; apiOrigin: string; adminOrigin: string; siteOrigin: string;
+  supervisorIdentitySha256: string;
+  stop: () => Promise<void>;
+}>;
+export async function acquireDocsVisualTaskServerLeaseV1(input: {
+  runId: string; startupTimeoutMs?: number;
+}): Promise<DocsVisualTaskServerLeaseV1>;
+```
+
+`startupTimeoutMs` uses an exported inclusive `1_000..120_000` ms limit and a
+literal `60_000` default. The parent generates a 256-bit nonce, passes it only
+through IPC, and accepts origins only with the matching challenge response from
+the retained child handle. The child binds `127.0.0.1` only, installs console/
+page/network collectors before navigation, and shuts down on authenticated IPC
+stop, parent-channel EOF or its own error. `stop()` is idempotent and awaits all
+three close operations; a bounded forced termination may target only that
+retained child handle after graceful timeout, never a numeric PID or listening
+port. Startup failure settles partial children before returning.
+
+The active run stores a strict transient `server-lease-v1.json` containing only
+run ID, three loopback origins and `supervisorIdentitySha256`; no nonce, PID,
+credential or environment value is persisted. It is removed and the directory
+fsynced after stop and before fixture absence/ready sealing. Crash recovery reads
+that record only to require all three origins become unreachable and never kills
+them; a still-live origin fails as `docs_visual_server_live`. Concurrent runs
+must receive six distinct ports across their two supervisors, cannot observe or
+stop one another, and leave no listener/session/timer after all-settled cleanup.
+
 ## Security Contract
 
 - **Endpoint visibility/auth/RBAC:** no new endpoint. Browser flows use existing
@@ -86,7 +133,7 @@ credentials and PII are neither manifest values nor image content.
 | Task | Scope | Single writer | Depends on |
 | --- | --- | --- | --- |
 | TASK-548-02-L01 | Strict scenario DSL, semantic locator/assertion model and fixture lifecycle | visual contract/fixture modules and pure contract tests | TASK-548-01 |
-| TASK-548-02-L02 | `playwright-cli` runner, raw capture, safe PNG promotion, review and receipts | capture/promotion scripts, `.gitignore`, initial canonical visuals and runtime tests | TASK-548-02-L01 |
+| TASK-548-02-L02 | `playwright-cli` runner, raw capture, safe PNG promotion, review and receipts | exact capture/promotion/PNG/lifecycle paths plus the capture-run shared wire, `.gitignore`, pilots and runtime tests | TASK-548-02-L01 |
 | TASK-548-02-L03 | Watch-path staleness, pixel/geometry diff, changed-only/full CI, privacy artifact gate and one workspace/runtime-image lock reconciliation | diff/check/recovery scripts, both docs workspace manifests, root/core package manifests, root lock, Dockerfile, PR workflow and gate tests | TASK-548-02-L02 plus the one same-owner TASK-548-01-L02 post-pilot bundle/report refresh |
 
 Land L01 → L02, then pause this child while the TASK-548-01-L02 owner performs

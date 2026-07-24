@@ -37,14 +37,17 @@ below against the tracked TASK-545 drivers and run only their pre-commit gates,
 then hand their exact reviewed bytes to the owner for checkpoint/commit. Run the
 separate post-commit tracked/HEAD-parity/clean-worktree gates from the resulting
 new HEAD. Only five fresh rounds plus reconcile after that complete post-commit
-pass may authorize product implementation.
+pass may authorize product implementation. These are mutually exclusive modes:
+`task548-bootstrap-build` must end after the owner checkpoint, while only a new
+`task548-bootstrap-committed-resume` may validate the commit and continue; the
+resume mode never rebuilds or reruns pre-commit gates.
 
 ## Exclusive Ownership and Collision Guards
 
-- `_docs/_workflows/task-548-author-audit.mjs`;
-- `_docs/_workflows/task-548-implement.mjs`;
-- `_docs/_workflows/task-548-fix.mjs`;
 - `_docs/_workflows/lib/task-548-contract.mjs`;
+- `_docs/_workflows/task-548-author-audit.mjs`;
+- `_docs/_workflows/task-548-fix.mjs`;
+- `_docs/_workflows/task-548-implement.mjs`;
 - `tests/unit/workflows/task548AuthorAudit.test.ts`;
 - `tests/unit/workflows/task548WorkflowContracts.test.ts`.
 
@@ -54,17 +57,23 @@ The pre-authoring authorization order is exactly:
 2. require TASK-547 to be terminal;
 3. require the TASK-548 parent amendment with every literal TASK-547 overlap,
    serialized owner, and matching forbidden-path guard to be landed;
-4. use the sole bounded pre-audit exception to rebuild only the six paths above,
+4. select only `task548-bootstrap-build` and use the sole bounded pre-audit
+   exception to rebuild only the six paths above,
    importing the tracked TASK-545 owners; before any owner checkpoint/commit,
    require only the exact six-file write set and forbidden-path gate, Node
    syntax checks, targeted workflow tests, line counts, and `git diff --check`;
-5. hand the exact reviewed-byte checkpoint to the owner; only the owner stages
-   and commits exactly those six paths;
-6. from that new committed HEAD, require the exact commit path set,
+5. hand the strict bounded TASK-548/schema/resume-mode checkpoint owner action,
+   prior 40-hex HEAD, exact six sorted path/SHA-256 records, canonical aggregate,
+   base64url checkpoint/hash and authoritative resume argv to the owner; only the
+   owner stages and commits exactly those six paths; return immediately;
+6. in a new invocation select only `task548-bootstrap-committed-resume`, strictly
+   decode and timing-safe verify its current-process checkpoint, then require the
+   new HEAD to be one exact single-parent commit over its recorded prior HEAD with
+   the exact six-path diff,
    `git ls-files --error-unmatch` for all six paths, clean status and unstaged/
    staged diffs, `git show HEAD:<path>` byte parity for every path, and the
    clean-checkout/worktree tests; none of these post-commit gates may be required
-   of the uncommitted rebuild;
+   of the uncommitted rebuild; this mode cannot call rebuild/pre-commit helpers;
 7. only after that complete post-commit gate passes, run five mandatory fresh
    sequential authoring rounds, each with exactly one fresh reconcile, and
    require the final round to PASS with zero unresolved HIGH/MEDIUM findings;
@@ -80,6 +89,12 @@ Any later change to one of the six bootstrap artifacts, any TASK-548 task
 contract, or an imported TASK-545 driver invalidates every authoring round and
 requires all five rounds plus reconcile again from the resulting new HEAD.
 
+The checkpoint is capped at 16,384 decoded bytes and encoded as canonical
+unpadded base64url JSON. Strict schemas reject unknown/missing fields, duplicate
+arguments/records/paths, unsorted or non-exact paths, malformed hashes/mode/task,
+non-canonical transport, aggregate/hash mismatch, and a stale prior HEAD. Only
+committed-resume decodes it; build emits the exact owner action and terminates.
+
 Every 01..07 source/test/docs/task/changelog/screenshot path is forbidden.
 Scripts may dispatch scoped writers but never mutate those files directly.
 Only 07-L01 writes changelog 1261, closeout, the canonical manifest, and exactly
@@ -87,7 +102,10 @@ eight acceptance screenshots; TASK-545 `createResumeCheckpoint` phase 1 alone
 writes `resume-checkpoint.json`. 08 verifies their receipt/hashes read-only and
 returns bounded structured round/post-audit outcomes for current-process gating
 plus the first-attempt post-resume structured final-drift result. No pre-pause
-agent/runtime payload is claimed to survive owner action. Post-resume closeout
+agent/runtime payload is claimed to survive either the release action or the
+checkpoint owner action. Fresh release-resume authority comes only from its
+strict current-process CLI fields plus revalidated committed HEAD/tree and
+immutable release/deployment receipts. Post-resume closeout
 uses only verified checkpoint identity/frozen revision/closure contract,
 canonical manifest/eight screenshots, deterministic current frozen on-disk
 product/task facts and durable repository receipts, and the existing
@@ -117,6 +135,7 @@ _docs/_workflows/lib/post-audit.mjs
 _docs/_workflows/smoke-evidence.schema.json
 _docs/_workflows/smoke-evidence-checkpoint.schema.json
 _docs/_workflows/lib/smoke-evidence.mjs
+_docs/_workflows/lib/smoke-evidence.d.mts
 tests/unit/workflows/workflowContracts.test.ts
 tests/unit/workflows/auditRounds.test.ts
 tests/unit/workflows/postAudit.test.ts
@@ -127,7 +146,12 @@ tests/unit/workflows/smokeEvidence.test.ts
 The wrappers call the exact owner exports `requireAllResults`,
 `runCanonicalAuditRounds`, `runCanonicalPostAudit`,
 `createResumeCheckpoint`, `openWorkflowClosureResume`, and
-`validateMetadataOnlyClosureDelta`. Missing/untracked owner modules/tests,
+`validateMetadataOnlyClosureDelta`, plus `VerifiedTask545Checkpoint`,
+`Task545ClosureIdentity`, `VerifiedTask545MetadataRecoveryDelta`, and the typed
+resume union. Both closure branches import and call
+`writeOrResumeOrderedDurableChangelogFileThenIndexV1` directly with literal
+`ordered-durable-changelog-file-then-index@v1`; no TASK-548 alias may mediate it.
+Missing/untracked owner modules/tests,
 any TASK-545 status other than `✅ Done`, or a local substitute blocks before
 dispatch.
 
@@ -164,21 +188,21 @@ reconcile job set. At or after round 5, only a complete canonical round with no
 actionable findings may authorize implementation; there is no standalone
 reconcile that bypasses the shared driver.
 
-## Provisional Pre-TASK-545 Authoring Evidence (Non-authorizing Placeholder)
+## Pre-TASK-545 Planning-Audit History (Non-authorizing)
 
-**Rerun State:** awaiting mandatory fresh post-TASK-545 rerun.
+**Window / rerun state:** 2026-07-23–24; awaiting the mandatory fresh post-TASK-545 rerun.
 
-**Rounds 1–5 summary:** intentionally not recorded here. The mandatory rerun
-uses verified structured counts/fingerprints/resolutions only for current-run
-authorization. After owner pause, closeout may reference only the existing
-on-disk planning-audit record as explicitly non-authorizing; it does not
-reconstruct missing round details or claim an authoring/post-audit outcome from
-the checkpoint. The workflow never mutates this task file or the TASK-545
-manifest. Do not fabricate results from the current local helper.
+**Observed HEAD checkpoints:** `d3286d6a` → `2a82d460` → `7af0fc62` → `e168df0e` → `9d439824` → `7a4665f0` → `741f61a8` → `ef2578f8` → `33e1c0e0` (the final value remained current while this record was written).
 
-**Implementation authorization:** none. Any pre-TASK-545 round, provisional
-local script, ignored artifact, or current authoring conversation cannot satisfy
-the five-round gate.
+**Scope:** 26 TASK-548 files (1 parent + 8 children + 17 executable leaves), pinned changelog 1261, and the minimal TASK-545 dependency amendments. Concurrent TASK-539 work and owner notes `1.md`/`2.md`/`3.md` were preserved and excluded whenever present.
+
+**Rounds 1–4:** established the strict corpus, visual, Help/Guide, portal, release, migration, closure and ownership foundations.
+**Round 5:** corrected atomic loader/targets/release/migration contracts and made TASK-545/TASK-547/bootstrap blockers explicit.
+**Round 6:** fixed identity, durable publication, `sourceHash`, CLI, preview, portal, baseline, coverage and closure drift.
+**Round 7:** fixed localized paths, preparing states, validators/scripts/Docker, wildcard scope, portal/release and TASK-545 integration.
+**Rounds 8–9:** verified and repaired respectively `2 HIGH + 4 MEDIUM` and `2 HIGH + 2 MEDIUM` findings.
+**Round 10 family / final planning pass:** repaired promotion leases, CI recovery, parsers, reindex, DB-only Guide, path-free projections/hydration/client assets, Cloudflare publication, same-handle loaders, workflow recovery, release-tree binding, restartable per-source migration and durable artifact/coverage pairs; the last parallel pass reported `5 HIGH + 14 MEDIUM + 4 LOW`, all were repaired and locally rechecked after subagent quota exhaustion. This record and any ignored helper remain planning evidence only, not a canonical TASK-545 round result.
+**Implementation authorization:** none. TASK-545 is still `⏳ To Do`; TASK-547 terminal/literal-overlap amendment, the tracked exact-six bootstrap, and five fresh canonical shared-driver rounds on unchanged bytes remain mandatory. The future workflow never rewrites this history or infers missing structured results from it.
 
 ## Cross-Subtask Reconcile Matrix
 
@@ -195,7 +219,11 @@ the five-round gate.
 - closure ownership, acceptance scenario order and screenshot/evidence paths.
 
 ```js
-export const TASK_548_EXECUTION_ORDER = Object.freeze([
+export const TASK_548_BOOTSTRAP_MODES = Object.freeze([
+  "task548-bootstrap-build",
+  "task548-bootstrap-committed-resume",
+]);
+export const TASK_548_INITIAL_EXECUTION_ORDER = Object.freeze([
   "01-L01",
   "01-L02-initial",
   "01-L03",
@@ -214,149 +242,304 @@ export const TASK_548_EXECUTION_ORDER = Object.freeze([
   "06-L01",
   "01-L02-final-native-handback-gate",
   "06-L02",
+  "07-L01-release-inputs-and-prerelease-gates",
+  "08-prerelease-post-audit-lenses/fixes/revalidation",
+  "07-L01-owner-commit-merge-tag-release-cloudflare-deploy-pause",
+]);
+export const TASK_548_RELEASE_RESUME_ORDER = Object.freeze([
+  "07-L01-release-resume-committed-head-tree-and-receipt-validation",
+  "08-release-resume-fresh-committed-head-drift-gate",
   "07-L01-runtime-docs-and-gates-preparation",
-  "08-post-audit-lenses/fixes/revalidation",
   "07-L01-final-smoke-phase1-owner-pause",
+]);
+export const TASK_548_CLOSURE_RESUME_ORDER = Object.freeze([
   "07-L01-owner-resume-tracked-parity",
   "08-final-read-only-drift",
   "07-L01-terminal-metadata-closeout-and-mechanical-delta-verification",
 ]);
 ```
 
-The conditional retirement-restart does not re-enter that array at its
-beginning. After exact mode parsing, its complete dispatched order is:
+The conditional retirement-restart invocation does not re-enter the initial array at its
+beginning. After exact mode parsing, that invocation's complete dispatched order
+ends at the owner release pause:
 
 ```text
 07-L01-confirm-invalidated-checkpoint-retired
+08-retirement-restart-fresh-current-tree-drift
+derive-affected-owners-from-fresh-verified-findings
 affected-owner-fixes-and-per-leaf-gates
+07-L01-release-inputs-and-prerelease-gates
+08-prerelease-post-audit-lenses/fixes/revalidation
+07-L01-owner-commit-merge-tag-release-cloudflare-deploy-pause
+```
+
+That process terminates. Only after the owner creates the replacement release
+may a separately parsed `task548-release-resume` run this distinct order:
+
+```text
+07-L01-release-resume-committed-head-tree-and-receipt-validation
+08-release-resume-fresh-committed-head-drift-gate
 07-L01-runtime-docs-and-gates-preparation
-08-post-audit-lenses/fixes/revalidation
 07-L01-final-smoke-phase1-owner-pause
 ```
 
 There is exactly one post-pilot same-owner refresh after 02-L02's five pilots
 and before 02-L03/TASK-548-03, and exactly one final same-owner handback after
-06-L01 and before 06-L02. All four normal-path 07 labels and both conditional
+06-L01 and before 06-L02. All seven normal-path 07 labels and both conditional
 checkpoint-retirement labels invoke the same physical 07-L01 owner, which
 remains the only status/changelog writer and stays open until its terminal
-metadata phase. `08-final-read-only-drift` is substantive and runs
+metadata phase. Initial execution ends at the owner commit/merge/tag/release/
+Cloudflare-deploy action. Only an independently parsed fresh release-resume may
+run its four labels, and that process ends at the evidence/checkpoint pause.
+Only a separately parsed TASK-545 closure resume may run its three labels.
+No result or object crosses either process boundary as authority.
+`08-final-read-only-drift` is substantive and runs
 after checkpoint-bound owner resume/tracked parity but before any terminal
 status or changelog mutation. The final 07 phase then persists the bounded,
 deterministic closeout, closes descendants before parents, and performs only
 TASK-545's mechanical metadata-delta validation after the terminal writes.
-Those six normal labels describe the first `frozen` closure attempt. A
+The closure-resume labels describe the first `frozen` closure attempt. A
 final-drift non-pass adds only the retirement-pause/confirmation exception
 defined below. The returned restart argv selects a mutually exclusive
 retirement-restart invocation whose first workflow action is
 `07-L01-confirm-invalidated-checkpoint-retired`. That invocation skips
 dependency/bootstrap, authoring and the already-landed full implementation
 sequence; after exact ten-path absence is confirmed, it runs only the affected
-owner fixes/gates and the complete preparation→post-audit→smoke→fresh-phase-1
-sequence. A crash before
-changelog 1261, the first metadata write, re-enters `frozen` and repeats the
-read-only final-drift label. A crash after that write re-enters only the
-resume/terminal-closeout recovery branch as `metadata_recovery`: it skips smoke
-and final drift, validates an exact prefix of the deterministic metadata plan,
-and completes missing writes idempotently. Neither operational 01-L02 call
+owner fixes derived from a new current-tree read-only drift, their gates, and
+the complete prerelease-inputs→post-audit→owner-release pause. It never reads
+old unserialized findings or retired evidence. A fresh release-resume validates
+the replacement release before preparation/smoke/new phase 1. Before the first
+canonical changelog write, replay remains `frozen` and repeats final drift. A
+crash after no-replace changelog fsync may leave valid `file-only`; after index
+CAS rename/fsync it is `both`. Recovery skips smoke/final drift, validates the
+exact ordered prefix and completes missing writes idempotently. Neither operational 01-L02 call
 reopens or changes 01-L02 status.
 
 ## Implementation Pseudocode
 
 ```ts
-const TASK_548_08_BOOTSTRAP_PATHS = [
-  "_docs/_workflows/task-548-author-audit.mjs",
-  "_docs/_workflows/task-548-implement.mjs",
-  "_docs/_workflows/task-548-fix.mjs",
-  "_docs/_workflows/lib/task-548-contract.mjs",
-  "tests/unit/workflows/task548AuthorAudit.test.ts",
-  "tests/unit/workflows/task548WorkflowContracts.test.ts",
-] as const;
+import type { Task548PhasePayloadMapV1 } from "../../scripts/docs/run-acceptance-smoke.ts"; // exact 07-L01 owner export
+import type { DocsReleaseTreeBindingV1 } from "../../core/services/documentation/release/docsReleaseTreeBinding";
+import {
+  TASK_548_COMMITTED_BOOTSTRAP_PATHS_V1,
+  requireTask548CommittedSixPathBootstrapAuthorizationV1,
+  type Task548CommittedBootstrapFileV1,
+  type Task548CommittedBootstrapSixFilesV1,
+  type Task548CommittedSixPathBootstrapReceiptV1,
+} from "./lib/smoke-evidence.mjs";
+// dispatchSamePhysical07L01<L extends keyof Task548PhasePayloadMapV1>
+// takes (label: L, payload: Task548PhasePayloadMapV1[L]); never redeclare the map.
+const TASK_548_08_BOOTSTRAP_PATHS =
+  TASK_548_COMMITTED_BOOTSTRAP_PATHS_V1;
 
-// Read this discriminator before every dependency, bootstrap, authoring,
-// implementation, fix, gate, preparation, resume or checkpoint operation.
-const retiredCheckpoint =
-  readOptionalInvalidatedCheckpointRestartArgsFromCurrentProcess();
-if (retiredCheckpoint) {
-  await requireExactMutuallyExclusiveRetirementRestartMode(retiredCheckpoint, {
-    forbidBootstrapAuthoringAndFullImplementationReplay: true,
-    forbidFrozenOrMetadataRecoveryResume: true,
-    forbidEvidenceOrCheckpointMutationBeforeFreshPhase1: true,
-  });
-  await dispatchSamePhysical07L01(
-    "07-L01-confirm-invalidated-checkpoint-retired",
-    retiredCheckpoint
-  ); // exact ten paths absent before any affected fix/gate/preparation
-  const affectedOwners =
-    await dispatchOwnerApprovedAffectedFixesAfterRetirementConfirmation({
-      restart: retiredCheckpoint,
-      readFindingsFromCheckpointOrEvidence: false,
-    });
-  await runAffectedPerLeafGates(affectedOwners);
-  await dispatchSamePhysical07L01(
-    "07-L01-runtime-docs-and-gates-preparation"
-  );
-  let retirementPostAuditFixApplied = false;
-  let retirementAffectedPostAuditOwners = [];
-  const retirementPostAudit = await runCanonicalPostAudit({
+const TASK_548_BOOTSTRAP_CHECKPOINT_MAX_BYTES = 16_384;
+type Task548BootstrapFileV1 = Task548CommittedBootstrapFileV1;
+type Task548BootstrapSixFilesV1 = Task548CommittedBootstrapSixFilesV1;
+type Task548BootstrapCheckpointV1 = Readonly<{
+  schemaVersion: 1; taskId: "TASK-548";
+  mode: "task548-bootstrap-committed-resume";
+  priorHead: string; // exactly 40 lowercase hex
+  files: Task548BootstrapSixFilesV1; // exact path-sorted constant membership
+  aggregateSha256: string; // canonical JSON of priorHead + files
+}>;
+type Task548BootstrapOwnerActionRequired = Readonly<{
+  pass: false; code: "owner_action_required";
+  action: "commit_task548_bootstrap"; taskId: "TASK-548"; schemaVersion: 1;
+  mode: "task548-bootstrap-committed-resume"; priorHead: string;
+  files: Task548BootstrapSixFilesV1; aggregateSha256: string;
+  checkpointBase64url: string; checkpointSha256: string;
+  resumeArgv: readonly [
+    "--mode", "task548-bootstrap-committed-resume",
+    "--bootstrap-checkpoint", string,
+    "--bootstrap-checkpoint-sha256", string
+  ];
+}>;
+
+async function runTask548PrereleasePostAudit(initialPrerelease) {
+  let prerelease = initialPrerelease;
+  let fixApplied = false;
+  let affectedOwners = [];
+  const result = await runCanonicalPostAudit({
     lenses: TASK_548_POST_AUDIT_LENSES,
     runLens: runFreshPostAuditLens,
     fix: async (blocking) => {
-      retirementPostAuditFixApplied = true;
-      retirementAffectedPostAuditOwners =
-        await dispatchFixesToExactOwningLeavesOnce(blocking);
+      fixApplied = true;
+      affectedOwners = await dispatchFixesToExactOwningLeavesOnce(blocking);
     },
     validate: async () => {
-      await runAffectedTargetedGates(retirementAffectedPostAuditOwners);
-      if (retirementPostAuditFixApplied) {
-        await dispatchSamePhysical07L01(
-          "07-L01-runtime-docs-and-gates-preparation"
-        );
-      }
+      await runAffectedTargetedGates(affectedOwners);
+      if (fixApplied) prerelease = await dispatchSamePhysical07L01(
+        "07-L01-release-inputs-and-prerelease-gates", {}
+      );
     },
     fingerprint: fingerprintFinalTask548RuntimeTree,
-    label: "TASK-548:post-audit",
+    label: "TASK-548:prerelease-post-audit",
   });
-  if (!retirementPostAudit.pass) {
-    throw new Error("task548_post_audit_not_converged");
-  }
-  await assertPostAuditGateAllowsSmokeInCurrentRun(retirementPostAudit);
-  const freshOwnerAction = await dispatchSamePhysical07L01(
-    "07-L01-final-smoke-phase1-owner-pause",
-    retirementPostAudit
-  );
-  await yieldOwnerActionRequired(freshOwnerAction);
-  return; // retirement-restart invocation ends after the fresh phase-1 pause
+  if (!result.pass) throw new Error("task548_prerelease_audit_not_converged");
+  return { prerelease, postAudit: result };
 }
 
-// This dependency/bootstrap phase runs before importing a TASK-548 wrapper.
+// Parse this mode before every dependency/bootstrap/authoring/implementation,
+// fix/gate/preparation/resume/checkpoint action. Modes cannot be mixed.
+const invocation = readExactTask548InvocationModeFromCurrentProcess();
+if (invocation.mode === "task548-release-resume") {
+  const release = await dispatchSamePhysical07L01(
+    "07-L01-release-resume-committed-head-tree-and-receipt-validation",
+    { argv: invocation.argv }
+  );
+  const runtimeTree: DocsReleaseTreeBindingV1 = release.runtimeTree;
+  const committedHeadDrift = await runFreshCommittedHeadDriftReadOnly({
+    phase: "08-release-resume-fresh-committed-head-drift-gate",
+    runtimeTree,
+    receipts: release,
+    forbidWritesAndFixes: true,
+  });
+  await requireZeroFindingCurrentHeadPass(committedHeadDrift, release);
+  const preparation = await dispatchSamePhysical07L01(
+    "07-L01-runtime-docs-and-gates-preparation",
+    { release, committedHeadDrift }
+  );
+  const action = await dispatchSamePhysical07L01(
+    "07-L01-final-smoke-phase1-owner-pause",
+    { preparation }
+  );
+  await yieldOwnerActionRequired(action);
+  return; // process ends; closure resume must be a separate invocation
+}
+
+if (invocation.mode === "task548-closure-resume") {
+  const resumed = await dispatchSamePhysical07L01(
+    "07-L01-owner-resume-tracked-parity",
+    { argv: invocation.argv }
+  );
+  let closeoutInput;
+  if (resumed.state === "frozen") {
+    const finalDrift = await runFinalTask548DriftReadOnly({
+      phase: "08-final-read-only-drift",
+      frozenRuntimeRevision: resumed.checkpoint.frozenRuntime,
+    });
+    if (!finalDrift.pass || finalDrift.findings.length !== 0) {
+      await abortResumeWithoutMetadataMutation();
+      const retirement = await dispatchSamePhysical07L01(
+        "07-L01-invalidated-checkpoint-owner-retirement-pause",
+        { resume: resumed, finalDrift }
+      );
+      await yieldOwnerActionRequired(retirement);
+      return;
+    }
+    closeoutInput = { resume: resumed, finalDrift };
+  } else {
+    closeoutInput = { resume: resumed };
+  }
+  const delta = await dispatchSamePhysical07L01(
+    "07-L01-terminal-metadata-closeout-and-mechanical-delta-verification",
+    closeoutInput
+  );
+  await handExactMetadataDeltaToOwner(delta);
+  return; // the orchestrator emits exactly once; neither layer persists it
+}
+
+if (invocation.mode === "retirement-restart") {
+  await requireExactMutuallyExclusiveRetirementRestartMode(invocation.argv, {
+    forbidBootstrapAuthoringAndFullImplementationReplay: true,
+    forbidFrozenOrMetadataRecoveryResume: true,
+    forbidReleaseResume: true,
+  });
+  await dispatchSamePhysical07L01(
+    "07-L01-confirm-invalidated-checkpoint-retired",
+    { argv: invocation.argv }
+  );
+  const currentTreeDrift = await runFreshTask548CurrentTreeDriftReadOnly({
+    phase: "08-retirement-restart-fresh-current-tree-drift",
+    forbidRetiredEvidenceAccess: true,
+    forbidPriorFinalDriftPayload: true,
+  });
+  await requireCompleteFreshRetirementDrift(currentTreeDrift);
+  const affectedOwners =
+    await deriveAffectedOwnersFromFreshVerifiedFindings(currentTreeDrift);
+  await dispatchFreshRetirementDriftFixes(currentTreeDrift, affectedOwners);
+  await runAffectedPerLeafGates(affectedOwners);
+  const prerelease = await dispatchSamePhysical07L01(
+    "07-L01-release-inputs-and-prerelease-gates", {}
+  );
+  const audited = await runTask548PrereleasePostAudit(prerelease);
+  const releaseAction = await dispatchSamePhysical07L01(
+    "07-L01-owner-commit-merge-tag-release-cloudflare-deploy-pause",
+    { prerelease: audited.prerelease, postAudit: audited.postAudit }
+  );
+  await yieldOwnerActionRequired(releaseAction);
+  return; // owner release then a fresh release-resume; no smoke in this process
+}
+
+if (invocation.mode === "task548-bootstrap-build") {
+  await requireTask545ExactlyDone();
+  await requireTask547Terminal();
+  await requireLiteralTask547OverlapSerializationInTask548Parent();
+  const bootstrap = await rebuildTask548WorkflowInfrastructure({
+    paths: TASK_548_08_BOOTSTRAP_PATHS,
+    importOnlyTrackedTask545Owners: true,
+    ignoreProvisionalHelperBytes: true,
+  });
+  await assertExactWriteSet(bootstrap, TASK_548_08_BOOTSTRAP_PATHS);
+  await assertNoProductTaskDocsChangelogStatusOrEvidenceWrite(bootstrap);
+  await runTask548BootstrapPreCommitGates(bootstrap, {
+    exactWriteSet: TASK_548_08_BOOTSTRAP_PATHS,
+    requireForbiddenPathsClean: true, requireNodeSyntaxChecks: true,
+    requireTargetedWorkflowTests: true, requireLineCountsAtMost1000: true,
+    requireGitDiffCheck: true,
+  });
+  const ownerAction: Task548BootstrapOwnerActionRequired =
+    await createExactBootstrapOwnerAction({
+      bootstrap, schemaVersion: 1, taskId: "TASK-548",
+      mode: "task548-bootstrap-committed-resume",
+      priorHead: await requireLowercase40HexHead(),
+      exactSortedPaths: TASK_548_08_BOOTSTRAP_PATHS,
+      hash: "sha256", aggregateOver: "canonical-json-priorHead-and-files",
+      checkpointTransport: "canonical-unpadded-base64url",
+      maxCheckpointBytes: TASK_548_BOOTSTRAP_CHECKPOINT_MAX_BYTES,
+    });
+  await validateExactTask548BootstrapOwnerAction(ownerAction);
+  await yieldBootstrapOwnerCommitRequired(ownerAction);
+  return; // mandatory end: only the owner commits these reviewed bytes
+}
+
+await requireExactBootstrapCommittedResumeMode(invocation, {
+  exactMode: "task548-bootstrap-committed-resume",
+  forbidRebuildAndPreCommitGates: true,
+  forbidReleaseClosureOrRetirementArgs: true,
+});
 await requireTask545ExactlyDone();
 await requireTask547Terminal();
 await requireLiteralTask547OverlapSerializationInTask548Parent();
-const bootstrap = await rebuildTask548WorkflowInfrastructure({
-  paths: TASK_548_08_BOOTSTRAP_PATHS,
-  importOnlyTrackedTask545Owners: true,
-  ignoreProvisionalHelperBytes: true,
+const checkpoint = await decodeAndVerifyTask548BootstrapCheckpointV1({
+  argv: invocation.argv,
+  exactArgvShape: [
+    "--mode", "task548-bootstrap-committed-resume",
+    "--bootstrap-checkpoint", "<canonical-base64url>",
+    "--bootstrap-checkpoint-sha256", "<64-lowercase-hex>",
+  ],
+  maxDecodedBytes: TASK_548_BOOTSTRAP_CHECKPOINT_MAX_BYTES,
+  requireCanonicalUnpaddedBase64url: true,
+  timingSafeSha256Verification: true,
+  rejectUnknownMissingDuplicateFields: true,
+  requireExactSchemaTaskModeAndLowercase40HexPriorHead: true,
+  requireExactSixSortedUniquePathSha256Records: TASK_548_08_BOOTSTRAP_PATHS,
+  requireCanonicalAggregateSha256: true,
 });
-await assertExactWriteSet(bootstrap, TASK_548_08_BOOTSTRAP_PATHS);
-await assertNoProductTaskDocsChangelogStatusOrEvidenceWrite(bootstrap);
-await runTask548BootstrapPreCommitGates(bootstrap, {
-  exactWriteSet: TASK_548_08_BOOTSTRAP_PATHS,
-  requireForbiddenPathsClean: true,
-  requireNodeSyntaxChecks: true,
-  requireTargetedWorkflowTests: true,
-  requireLineCountsAtMost1000: true,
-  requireGitDiffCheck: true,
-});
-const ownerCheckpoint = await createExactBootstrapOwnerCheckpoint(bootstrap);
-await yieldBootstrapOwnerCommitRequired(ownerCheckpoint);
-// The bootstrap process stops. Only the owner stages/commits the reviewed bytes.
-
-// A new invocation starts from the owner's new committed HEAD.
-const committedBootstrap = await requireCommittedTask548WorkflowBootstrap({
-  checkpoint: requireBootstrapCheckpointFromCurrentInvocation(),
+const committedBootstrap: Task548CommittedSixPathBootstrapReceiptV1 =
+  await requireCommittedTask548WorkflowBootstrap({
+  checkpoint,
   paths: TASK_548_08_BOOTSTRAP_PATHS,
 });
-await requireExactBootstrapCommitPathSet(committedBootstrap);
+await requireExactSingleParentOwnerCommitAndDiff(committedBootstrap, {
+  expectedOnlyParent: checkpoint.priorHead,
+  exactChangedPaths: TASK_548_08_BOOTSTRAP_PATHS,
+  rejectStaleCheckpoint: true,
+});
+await requireHeadFileHashesAndAggregateEqualCheckpoint(
+  committedBootstrap,
+  checkpoint
+);
 await requireGitLsFilesForEveryBootstrapPath(TASK_548_08_BOOTSTRAP_PATHS);
 await requireCleanStatusAndUnstagedStagedDiffs();
 await requireGitShowHeadByteParityForEveryBootstrapPath(
@@ -365,6 +548,9 @@ await requireGitShowHeadByteParityForEveryBootstrapPath(
 await runTask548BootstrapCleanCheckoutWorktreeTests({
   paths: TASK_548_08_BOOTSTRAP_PATHS,
   head: committedBootstrap.head,
+});
+await requireTask548CommittedSixPathBootstrapAuthorizationV1({
+  repoRoot, receipt: committedBootstrap,
 });
 await requireTask54808Status("⏳ To Do");
 
@@ -386,126 +572,45 @@ await assertAuthoringGateAllowsImplementationInCurrentRun(authoring);
 
 // The tracked TASK-548-08 wrappers orchestrate this unchanged product order.
 await implementSequentiallyWithPerLeafGates(
-  TASK_548_EXECUTION_ORDER.slice(
+  TASK_548_INITIAL_EXECUTION_ORDER.slice(
     0,
-    TASK_548_EXECUTION_ORDER.indexOf(
-      "07-L01-runtime-docs-and-gates-preparation"
+    TASK_548_INITIAL_EXECUTION_ORDER.indexOf(
+      "07-L01-release-inputs-and-prerelease-gates"
     )
   )
 );
-await dispatchSamePhysical07L01(
-  "07-L01-runtime-docs-and-gates-preparation"
+const prerelease = await dispatchSamePhysical07L01(
+  "07-L01-release-inputs-and-prerelease-gates", {}
 );
-
-let postAuditFixApplied = false;
-let affectedPostAuditOwners = [];
-const postAudit = await runCanonicalPostAudit({
-  lenses: TASK_548_POST_AUDIT_LENSES,
-  runLens: runFreshPostAuditLens,
-  fix: async (blocking) => {
-    postAuditFixApplied = true;
-    affectedPostAuditOwners =
-      await dispatchFixesToExactOwningLeavesOnce(blocking);
-  },
-  validate: async () => {
-    await runAffectedTargetedGates(affectedPostAuditOwners);
-    if (postAuditFixApplied) {
-      // Rebuild the complete preparation receipt before the canonical fresh pass.
-      await dispatchSamePhysical07L01(
-        "07-L01-runtime-docs-and-gates-preparation"
-      );
-    }
-  },
-  fingerprint: fingerprintFinalTask548RuntimeTree,
-  label: "TASK-548:post-audit",
-});
-if (!postAudit.pass) {
-  throw new Error("task548_post_audit_not_converged");
-}
-await assertPostAuditGateAllowsSmokeInCurrentRun(postAudit);
-
-const ownerAction = await dispatchSamePhysical07L01(
-  "07-L01-final-smoke-phase1-owner-pause",
-  postAudit
+const audited = await runTask548PrereleasePostAudit(prerelease);
+const releaseAction = await dispatchSamePhysical07L01(
+  "07-L01-owner-commit-merge-tag-release-cloudflare-deploy-pause",
+  { prerelease: audited.prerelease, postAudit: audited.postAudit }
 );
-await yieldOwnerActionRequired(ownerAction);
-return; // normal invocation ends at the mandatory owner pause
-
-// A later mutually exclusive closure-only invocation reads only its current
-// TASK-545-bound CLI args. `ownerAction` and every other pre-pause payload are
-// unavailable and must not be consumed here.
-const resumeRequest = requireResumeArgumentsFromCurrentProcess();
-const resumed = await dispatchSamePhysical07L01(
-  "07-L01-owner-resume-tracked-parity",
-  resumeRequest
-);
-let closeoutInput;
-if (resumed.state === "frozen") {
-  const finalDrift = await runFinalTask548DriftReadOnly({
-    phase: "08-final-read-only-drift",
-    frozenRuntimeRevision: resumed.checkpoint.frozenRuntime,
-  });
-  if (!finalDrift.pass || finalDrift.findings.length !== 0) {
-    // Abort with no closure metadata/evidence write. TASK-545 no-overwrite
-    // requires an explicit owner-mediated retirement before a fresh phase 1.
-    await abortResumeWithoutMetadataMutation();
-    const retirement = await dispatchSamePhysical07L01(
-      "07-L01-invalidated-checkpoint-owner-retirement-pause",
-      { resume: resumed, finalDrift }
-    );
-    await yieldOwnerActionRequired(retirement);
-    return;
-  }
-  closeoutInput = { resume: resumed, finalDrift };
-} else {
-  // TASK-545 has already proven an allowlisted partial metadata delta and
-  // byte-identical evidence/runtime. Do not rerun smoke/final drift or require
-  // the prior process's in-memory result.
-  closeoutInput = { resume: resumed };
-}
-const delta = await dispatchSamePhysical07L01(
-  "07-L01-terminal-metadata-closeout-and-mechanical-delta-verification",
-  closeoutInput
-);
-await handExactMetadataDeltaToOwner(delta); // external result; never persisted
+await yieldOwnerActionRequired(releaseAction);
+return; // owner-only release action; this process must terminate here
 ```
 
-**Data flow:** TASK-545 exactly Done → TASK-547 terminal → landed literal-overlap
-parent amendment → sole bounded six-file TASK-548-08 bootstrap → pre-commit exact
-write-set/forbidden-path, Node syntax, targeted-test, line-count and
-`git diff --check` gates → exact owner checkpoint/commit → post-commit exact
-commit-scope, tracked-file, clean status/diffs, `git show HEAD:<path>` byte
-parity and clean-checkout/worktree gates → five fresh shared-driver authoring
-rounds plus reconcile → schema-valid read-only reports/all-results guards → verified
-findings → ownership-scoped fixes → fresh audit → exact sequential product
-implementation/gates through 06-L02, orchestrated by the 08 wrappers → same
-physical 07-L01 runtime-docs/gates preparation → one canonical shared-driver,
-two-pass post-audit invocation with at most one bounded fix,
-affected gates and preparation rerun inside its validation boundary → bounded
-current-run post-audit gate → same physical 07-L01 final smoke → exact canonical
-TASK-545 manifest/eight screenshots → TASK-545 phase 1 immediately and
-atomically creates the sole checkpoint → owner-stage pause with no metadata
-write → exact
-owning-workflow resume/tracked parity → substantive fresh read-only final drift
-on a first `frozen` attempt → require no findings without serializing its
-dynamic payload → deterministic metadata plan derived only from verified
-checkpoint identity/frozen revision/closure contract, exact canonical
-manifest/eight screenshots, rereadable frozen on-disk product/task facts and
-durable repository receipts, and the existing non-authorizing planning record
-→ changelog 1261 created as the first metadata write → descendant-first
-terminal metadata → exact mechanical metadata-delta receipt returned externally
-and never persisted. A crash before the first write reruns final drift as
-`frozen`; a crash after it resumes as `metadata_recovery`, validates the exact
-changelog-first plan prefix, and finishes missing metadata without smoke, final
-drift, or lost in-memory payloads. The mutually exclusive retirement-restart
-flow instead reads its exact restart discriminator first → proves that
-bootstrap/authoring/full implementation and frozen/metadata-recovery resume are
-not selected → confirms the prior manifest/eight PNGs/checkpoint are absent
-from index/worktree and their directory is absent or empty without a symlink →
-runs only owner-approved affected fixes and per-leaf gates → preparation →
-canonical post-audit → smoke and a fresh no-overwrite phase 1. It never reads,
-rewrites or deletes the retired checkpoint/evidence and does not recover
-findings from them.
+**Data flow:** `task548-bootstrap-build` dependency/parent gates → exact six-file
+rebuild/pre-commit gate → strict hashed checkpoint/owner action → mandatory return
+→ fresh mutually exclusive `task548-bootstrap-committed-resume` decode/integrity/
+single-parent exact-diff/HEAD/clean-
+checkout validation with no rebuild → five fresh authoring rounds/reconcile → sequential
+01..06 implementation/gates → 07 release inputs/prerelease gates → canonical
+08 prerelease post-audit/fix/revalidation → owner-only commit/merge/plain-tag/
+release/Cloudflare action → terminate. A fresh release-resume parses eight CLI
+fields → 07 validates one bounded untouched canonical Git record stream, calls
+L01's pure create/normalize/serialize API directly, produces the exact
+`DocsReleaseTreeBindingV1`, and proves clean HEAD/tag plus byte-identical binding through manifest/artifact/retained/rollback/health receipts
+→ 08 runs a zero-finding committed-HEAD drift gate → 07 read-only full
+preparation/gates and smoke → exact manifest/eight screenshots → TASK-545
+checkpoint → second owner pause and termination. The separate closure resume
+does tracked parity → final drift → date-stable changelog-first closeout → 07
+returns the mechanical delta and 08 emits it exactly once. No pre-pause memory
+authorizes either resume. Retirement confirms exact absence, runs a new current-
+tree drift, derives owners only from its verified findings, then scoped fixes/
+gates and the prerelease/release path; the
+replacement release-resume must pass before any new smoke/checkpoint.
 
 **Error handling:** nonzero agent exit, missing result, duplicate result,
 malformed JSON, stale HEAD/diff scope, forbidden write, conflicting owner,
@@ -521,6 +626,19 @@ TASK-548 task contract, or imported TASK-545 driver invalidates the complete
 authoring result and restarts all five fresh rounds plus reconcile from the new
 HEAD; no partial-round reuse is allowed. Never retry by weakening a test,
 suppressing a scanner, or treating absence as success.
+A mixed/missing bootstrap mode, build-mode continuation after its checkpoint,
+committed-resume rebuild/pre-commit call, malformed/non-canonical/oversized
+base64url, unknown/missing/duplicate owner-action/checkpoint fields or argv, wrong record
+order/count/path/hash/aggregate, stale prior HEAD, non-single-parent commit, wrong
+diff, or authoring before exact committed path/HEAD/clean-checkout validation stops.
+A missing/duplicate/unknown/unbounded release field, mixed invocation modes,
+wrong SHA-1/SHA-256 object format/OID width, HEAD/tag commit, clean checkout, or
+noncanonical/divergent `DocsReleaseTreeBindingV1`,
+mutable/conflicting release asset,
+wrong 05-L02 workflow/deployment identity, malformed health receipt, or any
+attempt to reuse prerelease memory stops before committed-HEAD drift,
+preparation or smoke. 08 never stages, commits, merges, tags, releases,
+publishes or deploys. A post-release failure requires a new release identity.
 A final-drift result is read-only and runs before any terminal metadata write.
 Every finding makes it non-pass; resume aborts without a closeout/evidence edit
 and returns the exact 07-owned
@@ -530,25 +648,27 @@ delete it. The owner retires only that reviewed inventory; the next mutually
 exclusive retirement-restart invocation supplies the returned restart argv and
 07 confirms
 the ten paths are absent from index/worktree and the directory is absent/empty
-before affected gates, preparation, post-audit, smoke and a fresh no-overwrite
-phase 1. Mixed invocation modes, late confirmation, any bootstrap/authoring/full
+before a fresh current-tree drift. Missing/malformed drift, owner derivation from
+old findings, or any retired-evidence access blocks before fixes/gates.
+Late confirmation, any bootstrap/authoring/full
 implementation replay, or any retired checkpoint/evidence access or mutation
 blocks before affected work. Partial/wrong retirement blocks. This transition
 is never used for `metadata_recovery` or a clean pre-metadata crash. A
 `metadata_recovery` delta
-that is not an exact changelog-first prefix
-of the deterministic metadata plan also blocks without inventing the lost
-final-drift payload. After terminal metadata, only the narrow TASK-545
+that is not an exact ordered prefix of the deterministic plan, or has index-only/
+corrupt/multiple/wrong TASK-548 1261 path/index/date state, blocks. After terminal metadata, only the narrow TASK-545
 mechanical delta validator may run; its structured result is an external owner
-handoff and is never written back into task, changelog, manifest, checkpoint,
-or another evidence file.
+handoff emitted exactly once by 08 and never persisted by either layer.
 
-**Regression-test shape:** bootstrap fixtures pin all eight prerequisite steps
-in order: dependency and parent gates; exact six-file rebuild; pre-commit exact
+**Regression-test shape:** bootstrap fixtures pin both mutually exclusive modes
+and all prerequisite steps: build dependency/parent gates; exact six-file rebuild; pre-commit exact
 write-set/forbidden-path, Node syntax, targeted-test, line-count and diff-check
-gates; owner-only checkpoint/commit; then post-commit exact commit scope, clean
+gates; exact strict owner action, capped canonical base64url checkpoint, timing-
+safe digest, six sorted file hashes and aggregate; then an owner-only direct-child
+commit with exact diff and post-commit clean
 status/diffs, `git ls-files` membership, `git show HEAD:<path>` byte parity and
-clean-checkout/worktree tests before any authoring round. TASK-548-08 remains To
+clean-checkout/worktree tests before any authoring round. Build returns after
+the checkpoint; committed-resume never rebuilds. TASK-548-08 remains To
 Do and imports tracked TASK-545 owners throughout. Fixtures seed the
 ignored provisional helper with distinguishable bytes and prove it is rebuilt,
 not promoted; every product/source/task/docs/changelog/status/evidence write is
@@ -558,11 +678,17 @@ from a new HEAD. Workflow smoke fixtures also prove five rounds cannot
 short-circuit, all-results false-clean protection, exactly one reconcile per
 round, scoped fixer dispatch, forbidden-path enforcement, the unchanged 01..07
 sequential land order, stale-evidence rejection, structured schema validation,
-and nonzero failure behavior.
+and nonzero failure behavior. Mode fixtures pin both terminating owner pauses,
+the exact initial/release-resume/closure-resume/retirement orders, eight bounded
+release fields, repository-format Git OIDs and exact runtime-tree binding joins
+through manifest/artifact/retained/rollback/health receipts, no cross-
+process payload authority, no release mutation, one 07 return plus one 08 emit,
+and frozen-current-date versus cross-UTC-day on-disk recovery-date behavior.
 
 ## Sequential Implementation and Gates
 
-- Dispatch only through `TASK_548_EXECUTION_ORDER`, including the initial
+- Dispatch only after the two exclusive bootstrap modes and through the three
+  exact post-bootstrap order constants, including the initial
   01-L02 bundle/report, one post-02-L02 same-owner refresh/gate before 02-L03,
   and one final same-owner handback between 06-L01 and 06-L02. Operational
   owner reruns do not reopen/change status or create a second writer. Each
@@ -574,28 +700,32 @@ and nonzero failure behavior.
   change and never weaken a behavior assertion.
 - A task/source/test/validation-contract change after a pass makes the pass
   stale. Rerun affected gates and audits.
-- A retirement-restart is mutually exclusive with the normal sequential
-  implementation and closure-resume modes. Read its exact argv first, dispatch
+- A retirement-restart invocation is mutually exclusive with initial, release-resume and
+  closure-resume modes. Read its exact argv first, dispatch
   `07-L01-confirm-invalidated-checkpoint-retired` as the first workflow action,
-  and only after exact ten-path absence run affected owner fixes/gates,
-  preparation, post-audit, smoke and a fresh phase 1. Do not rerun bootstrap,
-  authoring or the complete implementation order and do not access the retired
-  checkpoint/evidence.
-- After 06-L02, TASK-548-07 first runs runtime docs and combined gates without
-  smoke/checkpoint. 08 then calls the canonical TASK-545 post-audit driver
+  and only after exact ten-path absence run a new current-tree read-only drift,
+  derive owners from that result, then scoped fixes/gates, prerelease audit and
+  the owner release pause. A later fresh
+  release-resume must verify the new release before smoke/phase 1. Do not rerun
+  bootstrap, authoring or full implementation or access retired evidence.
+- After 06-L02, TASK-548-07 completes docs, release inputs and prerelease gates.
+  08 then calls the canonical TASK-545 post-audit driver
   exactly once. The driver itself owns pass 1, at most one fix, validation, and
   the second full fresh pass; there is no outer retry loop and no invented
   result field. Its validation callback reruns affected targeted gates and the
-  complete 07 preparation receipt after any fix. Only a fresh pass may re-enter
-  the same physical 07-L01 owner for final browser smoke and phase 1.
-- After owner review/staging, 07 resumes only to verify checkpoint/tracked
+  complete 07 release-input receipt after any fix. Only a fresh pass may return
+  the owner release action, and that process terminates. A fresh release-resume
+  validates committed HEAD/tree/receipts; 08 then runs a read-only committed-HEAD
+  drift gate before 07 preparation/full gates and final smoke, ending at the
+  checkpoint owner pause.
+- The distinct checkpoint resume, after owner evidence review/staging, verifies
+  only checkpoint/tracked
   parity. For `frozen`, 08 runs the substantive final drift read-only before
-  closeout; a zero-finding pass authorizes 07 to create changelog 1261 as the
-  first deterministic metadata write and close statuses. For
-  `metadata_recovery`, 08 does not rerun final drift: 07 validates the existing
-  exact changelog-first plan prefix and idempotently completes only missing
-  metadata. After terminal writes, only mechanical metadata-delta validation
-  runs.
+  closeout; a zero-finding pass authorizes 07's ordered no-replace changelog then
+  index-CAS/fsync transaction before statuses. For `metadata_recovery`, 08 does
+  not rerun final drift: 07 validates `file-only|both`, completes the index when
+  absent, and then only missing metadata. After terminal writes, 07 returns the
+  mechanical delta and 08 emits it exactly once.
 
 ## Post-Implementation Audit
 
@@ -608,9 +738,10 @@ Run at least five independent fresh-context lenses:
 5. corpus/route/visual/publication coverage and TASK-547 serialization;
 6. test integrity, required gates, evidence/hash completeness and cleanup.
 
-Verify every reported line locally. Call `runCanonicalPostAudit` exactly once:
+Verify every reported line locally before release. Call
+`runCanonicalPostAudit` exactly once in the prerelease invocation:
 its first full lens set may trigger exactly one owning-leaf HIGH/MEDIUM fix,
-then its validation boundary reruns affected gates plus 07 preparation before
+then its validation boundary reruns affected gates plus 07 release-input gates before
 the driver dispatches the second complete fresh lens set. A non-pass result
 blocks; no outer loop repeats only selected lenses. LOW may be deferred only
 through an execution-ready TASK-9999 leaf with the repository-required
@@ -618,12 +749,20 @@ zero-impact evidence; otherwise it is fixed before closure.
 
 ## Canonical Evidence and Closure Boundary
 
-TASK-548-07-L01 finishes product/runtime docs and full gates, then 08 completes
-one canonical post-audit invocation. Only afterward does the same physical
-07-L01 owner run final smoke and call TASK-545's canonical checkpoint owner.
+TASK-548-07-L01 finishes product/runtime docs and prerelease gates, then 08
+completes one canonical prerelease post-audit. 07 returns the exact owner
+commit/merge/tag/release/Cloudflare-deploy action and the process stops; 07/08
+never perform those mutations. A fresh release-resume trusts only its bounded
+CLI fields and revalidates clean HEAD/tag identity, then validates one bounded
+untouched canonical Git record stream and calls L01's pure create/normalize/serialize API directly to require the same canonical runtime-tree
+binding in release, retained, rollback and health receipts. After a fresh
+read-only committed-HEAD drift pass, 07 runs
+full preparation/gates and final smoke in that same invocation.
 After smoke/cleanup, 07 writes only the exact TASK-545 `manifest.json` and eight
-screenshots under `_docs/_workflows/_smoke/evidence/task-548/`. It invokes
-TASK-545 phase 1 immediately; that owner atomically creates the sole
+screenshots under `_docs/_workflows/_smoke/evidence/task-548/`. TASK-545 first validates
+the exact-six-path committed-bootstrap receipt; exact phase-1 args pin
+1261/`task-548-hybrid-visual-documentation` and derive the owning
+`_docs/_workflows/task-548-implement.mjs` only from its `import.meta.url` and creates the sole
 `resume-checkpoint.json` and returns
 exactly `{ pass, code, action, taskId, evidenceDirectory, checkpointPath,
 checkpointSha256, runId, resumeArgv, resumeCommand, frozenRuntimeRevision }`
@@ -633,8 +772,8 @@ or workflow-summary additions reject. 07 never writes a pre-phase-1 checkpoint.
 Before returning `owner_action_required`, it writes no task, changelog, board,
 status, or other metadata; after phase 1 it performs no further action.
 
-Only after the owner reviews and stages that exact directory may the returned
-`resumeArgv` re-enter the checkpoint-bound owning workflow. Resume verifies
+Only a separate closure-resume process, after the owner reviews and stages that
+exact directory, may use the returned `resumeArgv`. Resume verifies
 tracked parity and cannot dispatch authoring, implementation, fix, canonical
 post-audit, or smoke.
 
@@ -645,10 +784,11 @@ Any finding aborts resume without metadata, returns to the exact owner, and
 returns the exact checkpoint-retirement owner action. Only after the owner
 unstages/retires the bound ten-path inventory may a new mutually exclusive
 retirement-restart invocation confirm absence as its first workflow action and
-run the affected fixes/gates/preparation/post-audit/smoke/new phase 1. It skips
-bootstrap, authoring and full implementation replay and never reads or mutates
-the retired bytes. The dynamic result is used only in the process that found it
-and is not serialized.
+run a new current-tree drift, derive affected owners solely from those fresh
+verified findings, then scoped fixes/gates/prerelease audit/release pause. Its
+replacement release-resume must verify the new release before smoke/new phase 1.
+It skips bootstrap, authoring/full implementation replay and never reads or
+mutates retired bytes. The dynamic result is current-process-only.
 If the process crashes before the first metadata write after a clean final
 drift, replay remains `frozen` and reruns a fresh final drift without retirement.
 
@@ -660,7 +800,9 @@ drift, replay remains `frozen` and reruns a fresh final drift without retirement
    hashes;
 3. current frozen on-disk product/task facts and durable repository receipts
    that can be reread deterministically; and
-4. the existing on-disk non-authorizing planning-audit record.
+4. the existing on-disk non-authorizing planning-audit record; and
+5. TASK-545's returned `resume.closureIdentity`, never an 07/08 clock read or
+   independently resolved path.
 
 The plan contains a fixed `final-drift: passed-before-closure` marker, never
 dynamic final-drift records. It does not reconstruct historical per-agent,
@@ -669,21 +811,24 @@ or cleanup outcomes and does not claim that an in-memory pre-pause payload
 survived. Pre-checkpoint checks remain mandatory and block phase 1 on failure,
 but their absent fields are not invented after resume.
 
-On `frozen`, 07 creates changelog 1261 as the first atomic metadata write and
-then applies the rest of the deterministic descendant-first plan. If the
-process crashes after that first write, TASK-545 returns `metadata_recovery`.
-That branch does not run smoke or final drift and does not require the lost
-result. It first requires the changed allowlisted bytes to be an exact
-changelog-first prefix of the deterministic plan; wrong bytes, order, or a
-missing first changelog write reject. It then completes only missing writes
-idempotently.
+On `frozen`, TASK-545 permits only canonical state `none`; bound temp/journal-only
+residue is cleaned and cannot supply date authority. 07 consumes its UTC identity,
+then invokes `writeOrResumeOrderedDurableChangelogFileThenIndexV1` with marker
+`ordered-durable-changelog-file-then-index@v1` to write/fsync canonical
+`1261-YYYY-MM-DD-task-548-hybrid-visual-documentation.md`
+no-replace before index CAS-temp/rename/fsync and later metadata. Recovery does
+not run smoke/final drift. Before allowlisting, TASK-545 derives identity from one
+strict regular non-symlink file and zero (`file-only`) or one (`both`) matching
+index row/date. It rejects index-only/corrupt/multiple states; 07 consumes the
+identity directly, completes file-only's index, and validates both.
+Thus a UTC-day rollover after the first write cannot change closure identity.
 
 07 changes only checkpoint-allowlisted TASK-548 task/index and pinned changelog
 metadata, completing every required descendant before its parent and moving
 TASK-548 to terminal only after all required work is complete. After terminal
-writes, the only operation is TASK-545's narrow mechanical validator returning
+writes, the only substantive operation is TASK-545's narrow validator returning
 exactly `{ pass, taskId, runId, closureMetadataRevision, changedPaths }`. That
-result is an external structured owner handoff and is never persisted. No
+result is returned by 07, emitted exactly once by 08, and never persisted. No
 substantive audit runs after terminal metadata. 08 never writes statuses,
 closeout, or the final canonical evidence set.
 
@@ -704,7 +849,7 @@ Agents default read only; writer dispatch is limited to the explicit owner map.
 
 ## Testing Requirements
 
-Before the owner checkpoint/commit, the wrapper first proves the exact six-file
+Only `task548-bootstrap-build` may prove the exact six-file
 write set and all forbidden paths, then runs only this pre-commit block:
 
 ```bash
@@ -734,9 +879,11 @@ git diff --check -- \
   tests/unit/workflows/task548WorkflowContracts.test.ts
 ```
 
-Stop after producing the exact reviewed-byte checkpoint. Agents do not stage or
-commit. After the owner commits exactly those six paths, a new invocation first
-calls `requireExactBootstrapCommitPathSet()` and then runs this post-commit
+Stop and return after producing the reviewed-byte checkpoint. Agents do not
+commit. After the owner commits exactly those six paths, only a new
+`task548-bootstrap-committed-resume` may strictly decode and timing-safe verify
+it, require the exact single parent plus six-path diff and checkpoint-bound file/
+aggregate hashes, and run this post-commit
 block from the new HEAD:
 
 ```bash
@@ -767,10 +914,10 @@ The post-commit invocation then runs
 `runTask548BootstrapCleanCheckoutWorktreeTests()` against a task-scoped clean
 checkout of that HEAD, proving all six paths, tracked TASK-545 imports, Node
 syntax and targeted workflow tests work there without copying local provisional
-bytes. The exact commit path set, `git ls-files`, clean status/diffs,
+bytes. The exact single parent/diff, checkpoint hashes, `git ls-files`, clean status/diffs,
 `git show HEAD:<path>` byte parity, and clean-checkout/worktree tests are
-post-commit gates only. An extra/missing commit path or any post-commit failure
-blocks before the first fresh canonical authoring round.
+post-commit gates only. An extra/missing commit path or failure blocks before
+authoring. This mode never calls rebuild or pre-commit gates.
 
 In addition to the fixed workflow-file count above, audit every added or
 modified human-authored production module and test file from the pre-task
@@ -781,48 +928,64 @@ wrong exact constant (including either missing 01-L02 operational rerun),
 incomplete rounds, provisional pre-TASK-545 input, untracked/missing shared
 owner files/tests, count-only local guards, and unresolved reconcile findings.
 They also cover skipped/reordered dependency/bootstrap steps, a missing/extra
-bootstrap commit path, dirty checkout, HEAD-byte mismatch, direct promotion of
-the ignored provisional helper, and full five-round invalidation after each of
+bootstrap commit path, merge/root/wrong-parent commit, stale prior HEAD, malformed/
+oversized/non-canonical transport, digest/aggregate/file-hash mismatch, unknown/
+missing/duplicate fields/argv/records, dirty checkout, HEAD-byte mismatch, direct promotion of
+the ignored provisional helper, build-mode continuation, committed-resume
+rebuild, and full five-round invalidation after each of
 the three protected input classes changes. Also run the task graph/H1/FileName/
 parent/status audit and one dry workflow proving no direct product/task/docs/
 changelog/status/evidence writes by 08.
 
-Phase-order fixtures pin all six exact normal post-06-L02 labels, the same
-physical 07-L01 owner across its four normal and two conditional retirement
-phases, nonterminal status through final drift,
-post-audit before final smoke, owner-scoped non-metadata loopback, substantive
+Phase-order fixtures pin two bootstrap modes, three post-bootstrap arrays, both process-terminating
+owner pauses, and the same physical 07-L01 owner across seven normal and two
+conditional retirement phases. They prove prerelease post-audit precedes the
+release pause; release-resume accepts only bounded version/tag/repository-format
+lowercase 40/64-hex nonzero SHA/run/attempt/deployment/origin/base; the computed
+`DocsReleaseTreeBindingV1` fields
+are not inputs; HEAD/tag commit, clean parity and immutable receipt bindings
+precede fresh committed-HEAD drift; and preparation/smoke
+cannot run on stale pre-pause memory. They also pin nonterminal status through
+final drift, owner-scoped non-metadata loopback, substantive
 read-only final drift after owner-resume parity but before closeout on
 `frozen`, and only mechanical metadata-delta validation after terminal
 metadata. Replay fixtures prove a pre-metadata crash remains `frozen` and reruns
 final drift, while a post-changelog crash returns `metadata_recovery` and skips
 smoke/final drift. A non-pass final drift returns the exact owner-retirement
 payload, performs no deletion/unstage itself, rejects wrong/partial ten-path
-retirement, and requires the next invocation to select only retirement-restart
-mode. Fixtures prove restart argv is read before every other workflow action,
+retirement, and requires only the `retirement-restart invocation` mode.
+Fixtures prove restart argv is read before every other workflow action,
 the same-owner confirmation is first, exact absent index/worktree inventory and
-an absent/empty no-symlink directory precede every affected fix/gate/preparation,
+an absent/empty no-symlink directory precede a new current-tree drift; only its
+fresh findings derive affected owners/fixes/gates/prerelease, while old findings
+and retired evidence remain unread,
 bootstrap/authoring/full implementation and closure resume are not called, the
 retired checkpoint/evidence is never accessed or mutated, and the normal
-args-absent first-implementation order remains byte-for-byte unchanged. Only
-then may affected work and a fresh no-overwrite phase 1 run.
+args-absent first-implementation order remains byte-for-byte unchanged. That
+invocation ends at its new prerelease audit/owner release pause. Only a separate
+verified release-resume process may run smoke and fresh no-overwrite phase 1.
 
 Evidence tests require only
 `_docs/_workflows/_smoke/evidence/task-548/`, exact manifest/checkpoint/screenshot
 inventory with split byte ownership, phase1 `owner_action_required`,
 owner-stage pause, exact workflow-bound resume, tracked parity, metadata-only
 delta and invalidation on any later non-metadata mutation. They prove 07 alone
-writes manifest + eight screenshots, TASK-545 phase 1 alone atomically writes
-checkpoint, final drift blocks every terminal write, and phase 1 has zero
-pre-pause task/changelog/board/status writes, immediately returns owner action,
-and has no later action. Deterministic closeout accepts only the four durable
-sources above. `frozen` requires a current `{ pass: true, findings: [] }` but
-does not serialize it; `metadata_recovery` requires no prior result, accepts
-only an exact changelog-first plan prefix, and idempotently fills missing
-writes. Tests reject invented authoring/post-audit or page-error/network/
-bundle/health/cleanup outcomes, dynamic final-drift serialization, wrong
-partial bytes/order, and unavailable in-memory payloads. Changelog 1261 is the
-first metadata write before descendant-first closure. The final delta receipt
-is external-only. The exact TASK-545 manifest rejects audit, bundle, network,
+writes no release/deployment state, the prerelease release action terminates,
+release-resume and closure-resume are distinct fresh processes, and no
+pre-pause payload authorizes either. They prove 07 alone writes manifest/eight
+screenshots; only committed, clean `_docs/_workflows/task-548-implement.mjs`
+derived from its `import.meta.url` after exact-six gates may invoke TASK-545 phase
+1 and write the checkpoint. Caller override/untracked/dirty/wrong-task/symlink
+entries fail. Final drift blocks every terminal write, and phase 1 has zero
+pre-pause task/changelog/board/status writes; the TASK-545 bootstrap-receipt gate
+immediately precedes the exact seven-key phase-1 call, which immediately returns owner action,
+and has no later action. Closeout accepts TASK-545's returned `none|file-only|both`
+identity. Child-process kills cover every journal/temp write, fsync, rename and
+directory-fsync boundary: stale-artifact cleanup restarts none, file-only finishes
+the index once, both validates, and index-only/corrupt/multiple fail. UTC rollover
+after the changelog write keeps its date. Tests also reject wrong identity/bytes,
+invented history, dynamic final-drift serialization and unavailable payloads. The final
+delta is returned by 07, emitted exactly once by 08, and never persisted. The exact TASK-545 manifest rejects audit, bundle, network,
 cleanup, or summary fields and no summary evidence file may exist. Legacy
 acceptance/workflow evidence paths fail. This child never edits changelog,
 status, canonical evidence, or screenshot/checkpoint bytes.

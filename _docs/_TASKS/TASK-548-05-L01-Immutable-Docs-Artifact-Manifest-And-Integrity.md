@@ -27,9 +27,13 @@ This leaf is the only writer for:
 
 - new `core/services/documentation/release/docsReleaseArtifact.ts`;
 - new `core/services/documentation/release/docsReleaseSchemas.ts`;
+- new `core/services/documentation/release/docsReleaseTreeBinding.ts`;
+- new
+  `core/services/documentation/release/docsReleaseArtifactPairPromotion.ts`;
 - new `scripts/docs/build-release-artifact.ts`;
 - new `scripts/docs/verify-release-artifact.ts`;
 - new `tests/unit/documentation/docsReleaseArtifact.test.ts`;
+- new `tests/vitest/docs/docs-release-tree-binding.test.ts`;
 - focused fixtures below `tests/fixtures/documentation/release-artifact/`.
 
 It must not edit `.github/workflows/release.yml`, portal source, root
@@ -40,17 +44,57 @@ sole owner of the exact `DocsSearchPublicationReceiptV1` and
 hash projections, and producer. L02 imports them for retained publication,
 rollback, and post-deploy selection.
 
+`docsReleaseSchemas.ts` is the single pure Core owner of every release manifest,
+artifact-receipt and search/assets publication-receipt DTO, bound, normalizer and
+canonical serializer below. `docsReleaseArtifact.ts` consumes portal DTOs only
+through the server/build package boundary:
+
+```ts
+// docsReleaseArtifact.ts
+import {
+  normalizeDocsPortalManifestV1,
+  normalizeDocsPortalSiteIndexCandidateV1,
+  normalizeDocsPortalValidationReceiptV1,
+  serializeDocsPortalManifestV1,
+  serializeDocsPortalSiteIndexCandidateV1,
+  serializeDocsPortalValidationReceiptV1,
+  type DocsPortalManifestV1,
+  type DocsPortalSiteIndexCandidateV1,
+  type DocsPortalValidationReceiptV1,
+} from "@coderso/docs-portal/publication-contracts";
+// docsReleaseSchemas.ts
+import { normalizeDocsReleaseTreeBindingV1,
+  serializeDocsReleaseTreeBindingV1,
+  type DocsReleaseTreeBindingV1,
+} from "./docsReleaseTreeBinding";
+```
+
+Adjacent L02 Core modules import L01-owned values only from
+`./docsReleaseSchemas`, `./docsReleaseArtifact` and `./docsReleaseTreeBinding`; no consumer deep-imports a
+portal source file or redeclares a DTO.
+
 ## Artifact Contract
 
 The exact manifest discriminator is `coderso.docs-release@v1`. Its normalized
 fields are:
 
 ```ts
+export const DOCS_RELEASE_LIMITS_V1 = {
+  maxManifestBytes: 16_777_216,
+  maxFiles: 100_000,
+  maxPathBytes: 4_096,
+  maxFileBytes: 26_214_400,
+  maxAggregateFileBytes: 471_859_200,
+  maxDiagnosticsBytes: 65_536,
+  maxHashConcurrency: 16,
+} as const;
+
 export type DocsReleaseManifestV1 = {
   schema: "coderso.docs-release@v1";
   productVersion: string;
   gitTag: string;
   gitSha: string;
+  runtimeTree: DocsReleaseTreeBindingV1;
   publicOrigin: string;
   publicBasePath: string;
   sourceHash: string;
@@ -58,13 +102,76 @@ export type DocsReleaseManifestV1 = {
   payloadRootSha256: string;
   files: { path: string; bytes: number; sha256: string }[];
 };
+
+export function normalizeDocsReleaseManifestV1(
+  value: unknown
+): DocsReleaseManifestV1;
+export function serializeCanonicalDocsReleaseManifestV1(
+  value: DocsReleaseManifestV1
+): Uint8Array;
 ```
+
+These exported limits apply before allocation/decoding to manifest bytes,
+records, normalized UTF-8 paths, each regular member, aggregate payload,
+diagnostics and hashing concurrency. Exact-limit inputs pass; max-plus-one,
+unsafe integers, or final tar overhead above
+`DOCS_RELEASE_ARTIFACT_MAX_BYTES` fail closed.
+
+## Release Runtime-Tree Binding Contract
+
+L01's Bun/DB/settings/TASK-545/workflow-free `docsReleaseTreeBinding.ts` is the
+sole DTO/bounds/normalizer/serializer/hash/constructor owner; L02 owns only the
+Git adapter, while TASK-548-07 resume imports this pure API directly.
+
+```ts
+export const DOCS_RELEASE_RUNTIME_TREE_DOMAIN_V1 =
+  "coderso.task548-release-runtime-tree@v1" as const;
+export const DOCS_RELEASE_TREE_MAX_ENTRIES = 250_000 as const;
+export const DOCS_RELEASE_TREE_MAX_PATH_BYTES = 4_096 as const;
+export const DOCS_RELEASE_TREE_RECORDS_MAX_BYTES = 67_108_864 as const;
+export type DocsGitObjectFormatV1 = "sha1" | "sha256";
+export type DocsReleaseTreeBindingV1 = {
+  schema: "coderso.docs-release-tree-binding@v1";
+  gitObjectFormat: DocsGitObjectFormatV1;
+  gitSha: string; headGitTreeOid: string;
+  entryCount: number; recordBytes: number; runtimeTreeSha256: string;
+};
+export type DocsReleaseTreeBindingSourceV1 = Omit<
+  DocsReleaseTreeBindingV1, "schema" | "runtimeTreeSha256" | "recordBytes"
+> & { records: Uint8Array };
+export function hashDocsReleaseRuntimeTreeRecordsV1(records: Uint8Array): string;
+export function createDocsReleaseTreeBindingV1(
+  value: DocsReleaseTreeBindingSourceV1
+): DocsReleaseTreeBindingV1;
+export function normalizeDocsReleaseTreeBindingV1(value: unknown): DocsReleaseTreeBindingV1;
+export function serializeDocsReleaseTreeBindingV1(value: DocsReleaseTreeBindingV1): Uint8Array;
+```
+
+`gitObjectFormat` selects exact lowercase OID width: `sha1` requires 40 hex and
+`sha256` requires 64 hex for both `gitSha` and `headGitTreeOid`; mixed widths,
+uppercase, abbreviation and all-zero OIDs reject. Counts are integers within the
+displayed caps. The constructor counts terminal NULs in the untouched stream and
+requires `entryCount` to equal that exact record count; zero entries require zero
+record bytes, while nonzero entries require nonzero bytes ending in exactly one
+NUL. `runtimeTreeSha256` is always lowercase 64-hex. Every
+shape rejects unknown keys recursively and serializes in displayed key order as
+canonical UTF-8 JSON plus one final LF.
+
+The pure hash is exactly
+`SHA256(UTF8(DOCS_RELEASE_RUNTIME_TREE_DOMAIN_V1) || NUL ||
+u64be(records.length) || records)`. It rejects over-cap bytes and does not sort,
+decode or rewrite the already validated canonical Git record stream. The empty,
+one-SHA-1-record and one-SHA-256-record vectors are respectively
+`a5d9e3524b32138dd85017232a0f92b353fd8e0cc5745e2e2f303f27e47f3e13`,
+`e7c23fbdb4f1dfa8952f32a0edd4f9df22a5b04a367513e8e8faa4471a1b0969`, and
+`7c225a3d9b8116f29dc9229a9cef9fd0b14b916b4b3c01e5a84144b35553e872`
+for the exact test records defined below.
 
 `productVersion` is exact SemVer and `gitTag` is exactly the same plain SemVer
 bytes: `gitTag === productVersion`. A `v` prefix, build-metadata drift,
-normalization-only equality or any alternate tag format rejects. `gitSha` is a
-lowercase 40-hex commit that the caller proves is the tag target and current
-tag-pinned checkout HEAD. `publicOrigin` is normalized HTTPS without
+normalization-only equality or any alternate tag format rejects. `gitSha` must
+equal `runtimeTree.gitSha`, use its object-format width, and be proven as tag
+target plus checkout HEAD. `publicOrigin` is normalized HTTPS without
 credentials, query, fragment, or trailing path; `publicBasePath` is `/` or a
 normalized safe prefix. Both must exactly equal the normalized origin/base-path
 fields in the verified portal manifest; a mismatch fails before artifact output.
@@ -181,6 +288,53 @@ records the tar SHA-256 without creating a self-referential manifest. Wall-clock
 time, absolute paths, owner names, machine data, and nondeterministic compression
 are forbidden.
 
+## Durable Artifact-Pair and Materialization Contract
+
+L01's `docsReleaseArtifactPairPromotion.ts` is the sole local pair and
+same-handle materialization owner:
+
+```ts
+export const DOCS_RELEASE_ARTIFACT_PAIR_JOURNAL_SCHEMA_V1 =
+  "coderso.docs-release-artifact-pair-promotion@v1" as const;
+export type DocsReleaseArtifactPairPromotionInputV1 = {
+  outputRoot: string; stagedArchivePath: string; stagedReceiptPath: string;
+  expected: DocsReleaseArtifactReceiptV1;
+};
+export async function promoteDocsReleaseArtifactPairV1(
+  input: DocsReleaseArtifactPairPromotionInputV1
+): Promise<VerifiedDocsReleaseArtifact>;
+export async function recoverDocsReleaseArtifactPairPromotionV1(input: {
+  outputRoot: string; productVersion: string; payloadRootSha256: string;
+}): Promise<"none" | "complete">;
+export async function withVerifiedDocsReleaseArtifactMaterializationV1<T>(
+  input: { archivePath: string; receiptPath: string; destinationRoot: string },
+  use: (value: { artifact: VerifiedDocsReleaseArtifact;
+    materializedRoot: string }) => Promise<T>
+): Promise<T>;
+```
+
+The transaction identity hashes version, payload root, both final names and
+staged byte hashes. Its one strict journal is
+`.tmp/docs-release/artifact-transactions/<version>-<payloadRootSha256>/artifact-pair-promotion-v1.json`
+and advances durably through `preparing → prepared → archive-installed →
+receipt-installed → verified-commit`, with journal-temp write/fsync/rename and
+parent-directory fsync at every transition. Both staged regular files are
+reopened, bounded, canonical and pair-verified before `prepared`; final installs
+are no-replace and each rename is directory-fsynced. Stable state is only both
+absent or a complete byte-identical pair. A singleton is accepted only with its
+matching valid journal and is completed or rolled back idempotently; an
+unjournaled, foreign, missing, linked, changed or ambiguous singleton fails.
+Cleanup starts only after `verified-commit` and removes the resolved transaction
+root; cleanup failure preserves the journal for retry.
+
+The materializer resolves explicit task-owned roots, uses no-follow opens, and
+keeps the exact archive and receipt handles held from bounded reads through
+canonical pair verification and tar extraction. It extracts only verified
+regular members to a fresh confined root, applies all release limits, fsyncs and
+rescans the complete tree, invokes `use`, rescans after use, and disposes only
+that root in `finally`. It never verifies one pathname then reopens that pathname
+for extraction; path/inode/type/link-count/size/mtime/ctime drift fails.
+
 ## Artifact Receipt Contract
 
 The exact recursively reject-unknown shape is:
@@ -194,6 +348,7 @@ export type DocsReleaseArtifactReceiptV1 = {
   productVersion: string;
   gitTag: string;
   gitSha: string;
+  runtimeTree: DocsReleaseTreeBindingV1;
   sourceHash: string;
   portalManifestSha256: string;
   releaseManifestSha256: string;
@@ -210,6 +365,13 @@ export type VerifiedDocsReleaseArtifact = {
   manifest: DocsReleaseManifestV1;
   receipt: DocsReleaseArtifactReceiptV1;
 };
+
+export function normalizeDocsReleaseArtifactReceiptV1(
+  value: unknown
+): DocsReleaseArtifactReceiptV1;
+export function serializeDocsReleaseArtifactReceiptV1(
+  value: DocsReleaseArtifactReceiptV1
+): Uint8Array;
 ```
 
 For payload root `R` and version `V`, `archiveFileName` and
@@ -219,7 +381,8 @@ exactly `coderso-docs-V-R.tar.receipt-v1.json`. Both paths are normalized safe
 single-segment relative names; the output root is explicit, realpath-confined
 and never serialized.
 
-`productVersion === gitTag`; `gitSha` is lowercase 40-hex; `sourceHash` and
+`productVersion === gitTag`; `gitSha` and both binding OIDs use the selected
+Git object-format width; `sourceHash`, `runtimeTree.runtimeTreeSha256`, and
 every `*Sha256` value are lowercase 64-hex. `archiveBytes` is an integer in
 `1..DOCS_RELEASE_ARTIFACT_MAX_BYTES`, equals the independently reopened tar
 size, and the receipt parser reads at most
@@ -229,13 +392,17 @@ bytes. `archiveSha256` hashes the complete reopened tar, including that
 manifest. The other identity/hash fields equal the verified release and portal
 manifests byte-for-byte.
 
+`runtimeTree` is one required explicit allowlist key in both release-manifest
+and artifact-receipt schemas. Each delegates to the sole binding normalizer;
+missing/extra/nested-unknown or merely normalization-equivalent values reject.
+
 Normalize and serialize keys in the displayed order as canonical JSON with LF
 and one final newline. There are no arrays to reorder, timestamp, absolute
 path, receipt byte count/hash, or receipt record in the tar, release
 `files[]`, payload root, or release manifest. Thus the receipt binds the
-archive but never itself. Write it atomically only after independent archive
-reopen verification; an existing different sibling fails without replacing the
-previous valid pair.
+archive but never itself. Stage it only after independent staged-archive reopen
+verification, then publish both siblings through the durable pair owner above;
+an existing different pair fails without replacement.
 
 `build-release-artifact.ts` writes the tar and receipt and emits exactly the
 canonical `DocsReleaseArtifactReceiptV1` bytes to stdout. The verifier requires
@@ -252,14 +419,14 @@ export const DOCS_PUBLICATION_RECEIPT_MAX_BYTES = 8_388_608 as const;
 export const DOCS_SEARCH_PUBLICATION_RECORD_MAX = 256 as const;
 export const DOCS_ASSETS_PUBLICATION_RECORD_MAX = 50_000 as const;
 
-type DocsSearchPublicationRecordV1 = {
+export type DocsSearchPublicationRecordV1 = {
   locale: string;
   path: string;
   bytes: number;
   sha256: string;
 };
 
-type DocsSearchPublicationReceiptV1 = {
+export type DocsSearchPublicationReceiptV1 = {
   schema: "coderso.docs-search-publication-receipt@v1";
   productVersion: string;
   sourceHash: string;
@@ -268,7 +435,7 @@ type DocsSearchPublicationReceiptV1 = {
   records: DocsSearchPublicationRecordV1[];
 };
 
-type DocsAssetsPublicationRecordV1 = {
+export type DocsAssetsPublicationRecordV1 = {
   visualId: string;
   docId: string;
   locale: string;
@@ -278,7 +445,7 @@ type DocsAssetsPublicationRecordV1 = {
   sha256: string;
 };
 
-type DocsAssetsPublicationReceiptV1 = {
+export type DocsAssetsPublicationReceiptV1 = {
   schema: "coderso.docs-assets-publication-receipt@v1";
   productVersion: string;
   sourceHash: string;
@@ -287,16 +454,16 @@ type DocsAssetsPublicationReceiptV1 = {
   records: DocsAssetsPublicationRecordV1[];
 };
 
-normalizeDocsSearchPublicationReceiptV1(
+export function normalizeDocsSearchPublicationReceiptV1(
   value: unknown
 ): DocsSearchPublicationReceiptV1;
-serializeDocsSearchPublicationReceiptV1(
+export function serializeDocsSearchPublicationReceiptV1(
   value: DocsSearchPublicationReceiptV1
 ): Uint8Array;
-normalizeDocsAssetsPublicationReceiptV1(
+export function normalizeDocsAssetsPublicationReceiptV1(
   value: unknown
 ): DocsAssetsPublicationReceiptV1;
-serializeDocsAssetsPublicationReceiptV1(
+export function serializeDocsAssetsPublicationReceiptV1(
   value: DocsAssetsPublicationReceiptV1
 ): Uint8Array;
 ```
@@ -327,7 +494,7 @@ The only producer derives both receipts from the already validated detached
 manifest and receipt:
 
 ```ts
-buildDocsPublicationReceiptsV1(input: {
+export function buildDocsPublicationReceiptsV1(input: {
   portal: DocsPortalManifestV1;
   validation: DocsPortalValidationReceiptV1;
 }): {
@@ -356,9 +523,10 @@ reconstruction from retained HTML is valid.
   manifest bytes, diagnostics, and hash concurrency. No nonce/HMAC/CAPTCHA.
 - **Secrets/privacy:** scan output inventory and public bytes using the existing
   release security lane; diagnostics expose safe relative paths/hashes only.
-- **Integrity:** verify detached portal-manifest closure and public-base equality
-  first, then capsule/file hashes, payload root, canonical manifest bytes, tar
-  headers/order, archive hash, version/tag/SHA agreement; reject partial output.
+- **Integrity:** verify runtime-tree/checkout identity, detached portal-manifest
+  closure and public-base equality, then capsule/file hashes, canonical manifest,
+  tar headers/order, archive hash, version/tag/SHA agreement, durable pair state,
+  and same-handle materialization; reject partial output and path replacement.
 
 ## Implementation Pseudocode
 
@@ -367,8 +535,12 @@ export async function buildDocsReleaseArtifact(
   input: DocsReleaseBuildInput
 ): Promise<DocsReleaseArtifactReceiptV1> {
   const config = normalizeDocsReleaseBuildInput(input);
-  const { manifest: portal, receipt } =
+  const runtimeTree = normalizeDocsReleaseTreeBindingV1(config.runtimeTree);
+  assertReleaseIdentityMatchesRuntimeTreeV1(config.releaseIdentity, runtimeTree);
+  const { manifest: portal, receipt: receiptValue, receiptBytes } =
     await validateBuiltPortal(config.distRoot);
+  const receipt = normalizeDocsPortalValidationReceiptV1(receiptValue);
+  assertBytesEqual(receiptBytes, serializeDocsPortalValidationReceiptV1(receipt));
   assertDocsPortalValidationReceiptMatchesManifest(portal, receipt);
   assertReleaseAndPortalPublicBaseEqual(config, portal);
   const files = await inventoryConfinedPortalFiles(portal);
@@ -392,6 +564,7 @@ export async function buildDocsReleaseArtifact(
   const manifest = normalizeDocsReleaseManifestV1({
     schema: "coderso.docs-release@v1",
     ...config.releaseIdentity,
+    runtimeTree,
     sourceHash: portal.sourceHash,
     portalManifestSha256: receipt.manifestSha256,
     payloadRootSha256: hashDocsReleasePayloadRootV1(payloadFiles),
@@ -404,22 +577,33 @@ export async function buildDocsReleaseArtifact(
     manifest.productVersion,
     manifestBytes
   );
-  const written = await writeDeterministicTarAtomically(config.outputRoot, {
+  await recoverDocsReleaseArtifactPairPromotionV1({
+    outputRoot: config.outputRoot,
+    productVersion: manifest.productVersion,
+    payloadRootSha256: manifest.payloadRootSha256,
+  });
+  const transaction = await createDocsReleaseArtifactPairStagingV1({
+    outputRoot: config.outputRoot,
+    productVersion: manifest.productVersion,
+    payloadRootSha256: manifest.payloadRootSha256,
+  });
+  const written = await writeDeterministicTarToStaging(transaction, {
     files,
     capsule,
   });
-  const archive = await reopenAndVerifyFinalTar(written, {
+  const archive = await reopenAndVerifyStagedTar(written, {
     manifest,
     manifestBytes,
     soleExcludedPath:
       `release-metadata/${manifest.productVersion}/publication-capsule/` +
       "docs-release-manifest-v1.json",
   });
-  return writeCanonicalSiblingArtifactReceiptV1({
+  const artifactReceipt = normalizeDocsReleaseArtifactReceiptV1({
     schema: "coderso.docs-release-artifact-receipt@v1",
     productVersion: manifest.productVersion,
     gitTag: manifest.gitTag,
     gitSha: manifest.gitSha,
+    runtimeTree: manifest.runtimeTree,
     sourceHash: manifest.sourceHash,
     portalManifestSha256: manifest.portalManifestSha256,
     releaseManifestSha256,
@@ -431,34 +615,47 @@ export async function buildDocsReleaseArtifact(
     receiptFileName: `${archive.fileName}.receipt-v1.json`,
     receiptRelativePath: `${archive.fileName}.receipt-v1.json`,
   });
+  await writeCanonicalStagedArtifactReceiptV1(transaction, artifactReceipt);
+  const promoted = await promoteDocsReleaseArtifactPairV1({
+    outputRoot: config.outputRoot,
+    stagedArchivePath: transaction.archivePath,
+    stagedReceiptPath: transaction.receiptPath,
+    expected: artifactReceipt,
+  });
+  return promoted.receipt;
 }
 
 export async function verifyDocsReleaseArtifact(input: {
   archivePath: string;
   receiptPath: string;
 }): Promise<VerifiedDocsReleaseArtifact> {
-  const receipt = await readAndNormalizeArtifactReceiptV1(input.receiptPath);
-  assertExactSiblingPaths(input, receipt);
-  const archive = await openBoundedTar(input.archivePath);
-  const manifest = normalizeDocsReleaseManifestV1(archive.readManifest());
-  assertCanonicalTarCapsuleAndClosedInventory(archive, manifest);
-  await assertReceiptMatchesManifestAndArchive(receipt, manifest, archive);
-  return { manifest, receipt };
+  return withHeldNoFollowDocsReleaseArtifactPairV1(input, async (held) => {
+    const receipt = await held.readAndNormalizeReceiptV1();
+    const archive = await held.openBoundedTarV1();
+    const manifest = normalizeDocsReleaseManifestV1(archive.readManifest());
+    assertReleaseRuntimeTreeEqualV1(receipt.runtimeTree, manifest.runtimeTree);
+    assertCanonicalTarCapsuleAndClosedInventory(archive, manifest);
+    await assertReceiptMatchesManifestAndArchive(receipt, manifest, archive);
+    await held.assertIdentityUnchangedV1();
+    return { manifest, receipt };
+  });
 }
 ```
 
-**Data flow:** explicit plain-SemVer release identity + validated portal root →
+**Data flow:** normalized one-shot runtime-tree binding + plain-SemVer identity + validated portal root →
 detached portal-manifest/origin/base equality → confined inventory → immutable
-capsule → per-file hashes → canonical payload root/release manifest →
-task-scoped tar write → independent re-open/verification → atomic final tar
-rename → strict canonical sibling receipt → independent tar+receipt verification.
+capsule → bounded files/hashes → canonical payload root/release manifest →
+staged tar reopen/verification → staged canonical receipt → journaled two-member
+promotion/recovery → final same-handle pair verification/materialization.
 
 **Error handling:** use `docs_release_input_invalid`,
 `docs_release_origin_invalid`, `docs_release_tag_mismatch`,
 `docs_release_path_invalid`, `docs_release_portal_invalid`,
 `docs_release_hash_mismatch`, `docs_release_archive_invalid`,
 `docs_release_capsule_invalid`, `docs_release_public_base_mismatch`,
-`docs_release_receipt_invalid`, `docs_release_nondeterministic`, and
+`docs_release_runtime_tree_invalid`,
+`docs_release_receipt_invalid`, `docs_release_pair_recovery_required`,
+`docs_release_materialization_invalid`, `docs_release_nondeterministic`, and
 `docs_release_cleanup_failed`. Preserve the last valid tar/receipt pair; clean
 only a resolved task-owned temporary directory.
 
@@ -472,6 +669,12 @@ only a resolved task-owned temporary directory.
   separators, the empty-set vector, and the one-record `a.txt`/`abc` vector
   above; a little-endian integer, ASCII-hex digest, missing domain NUL, changed
   order, or added newline produces a different rejected root;
+- pure tree-binding tests pin domain/NUL/`u64be`, caps and exact empty plus
+  `100644 blob f2ba8f84ab5c1bce84a7b441cb1959cfc7093b7f\ta.txt\0`
+  SHA-1 and `100644 blob aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\ta.txt\0` SHA-256 vectors above;
+  wrong length/endian/domain, claimed-vs-NUL record count, over-cap bytes/count,
+  mixed/all-zero/uppercase/
+  abbreviated OIDs, nested unknown keys and noncanonical serializer bytes fail;
 - one-byte file, portal-manifest, source-hash, record, tar-header, name, or
   receipt tampering fails;
 - accept only `gitTag === productVersion`; reject `v` prefix, tag/version/HEAD/
@@ -481,13 +684,16 @@ only a resolved task-owned temporary directory.
   exclusion, capsule path/name/candidate mutation, regenerated alias, and
   search/asset receipt drift fail; 404, `_headers`, or client-assets copy
   path/bytes/hash drift and any regenerated runtime/deployment byte fail;
-- search/assets publication-receipt fixtures pin exact discriminators, key
-  order, bounds, canonical record order and `recordsSha256`; reject unknown
+- exact `@coderso/docs-portal/publication-contracts`, `./docsReleaseSchemas` and
+  `./docsReleaseArtifact` imports compile without deep imports or duplicate DTOs;
+- portal/validation/tree/release/artifact/search/assets fixtures pin exact discriminators, key
+  order, bounds, canonical record order and `recordsSha256`; every owning
+  normalize→serialize→parse→normalize round trip is byte-identical; reject unknown
   keys, missing/duplicate/unsorted records, bad locale or owner tuple,
   non-global `visualId`, and any portal/validation identity, path, byte, or hash
   tamper;
-- producer/consumer fixtures prove L01 emits the only accepted receipt bytes and
-  expose those exact fixtures to L02 retained, rollback, and post-deploy
+- producer/consumer fixtures import L01's exact named types/functions, prove L01
+  emits the only accepted receipt bytes, and expose those fixtures to L02 retained, rollback, and post-deploy
   selection tests; a localized asset can be selected only by its exact
   `(docId, locale, sectionId)` owner;
 - mismatched portal `sourceHash`, validator discriminator/status,
@@ -495,15 +701,24 @@ only a resolved task-owned temporary directory.
   manifest self-hash field fail;
 - file enumeration order and filesystem metadata cannot change artifact bytes;
 - sequence failures before candidate closure, payload-root calculation,
-  manifest serialization/insertion, tar finalization, reopen verification, or
-  full-tar receipt preserve the previous artifact and never leave a partial
-  capsule; pre-existing/duplicate/missing manifest insertion and any exclusion
-  other than the exact release-manifest path fail;
-- interrupted write leaves the previous artifact and cleans the exact temp path;
+  manifest insertion, staged-tar verification, receipt staging or durable pair
+  commit preserve the prior pair; pre-existing/duplicate/missing insertion and
+  any non-exact exclusion fail;
+- real child processes die after every pair preparing/prepared/member rename,
+  journal temp-write/fsync/rename/directory-fsync and final-directory fsync;
+  recovery exposes only none/complete, completes or rolls back a journal-bound
+  singleton idempotently, and rejects unjournaled/foreign/tampered state;
+- same-handle materialization tests swap archive/receipt paths at every
+  open/read/verify/extract/rescan boundary and prove only the held verified bytes
+  reach a confined regular-file-only tree;
 - receipt fixtures pin the exact discriminator/key set/order, sibling names/
   paths, archive bytes/hash, portal/release-manifest/payload hashes, safe bounds,
+  exact runtime-tree object-format/SHA/tree/hash/count/bytes equality,
   exact-max acceptance and max-plus-one rejection, final LF, no self
   hash/inventory, and different-existing-sibling refusal;
+- every exported release limit accepts its exact boundary and rejects max-plus-one
+  before allocation/read; aggregate payload plus tar overhead must remain below
+  the archive cap;
 - build/verify CLIs emit the same single canonical receipt JSON on stdout,
   require explicit archive+receipt input for verification, and derive trust from
   bytes rather than requested filenames.
@@ -511,14 +726,15 @@ only a resolved task-owned temporary directory.
 ## Sub-Tasks
 
 - [ ] Implement strict release manifest/input/receipt schemas and normalization.
-- [ ] Build the exact immutable publication capsule, content-addressed tar and
-  atomic receipt writer.
+- [ ] Implement the pure runtime-tree binding DTO/constructor/hash/serializer.
+- [ ] Build the immutable capsule and journaled recoverable tar/receipt pair.
 - [ ] Add independent byte-level tar+receipt verifier and bounded failure diagnostics.
 - [ ] Add tamper, determinism, limits, and cleanup regression coverage.
 
 ## Testing Requirements
 
 ```bash
+bunx vitest run --config vitest.config.ts tests/vitest/docs/docs-release-tree-binding.test.ts
 bun test tests/unit/documentation/docsReleaseArtifact.test.ts
 bun scripts/docs/build-release-artifact.ts --help
 bun scripts/docs/verify-release-artifact.ts --help
@@ -531,7 +747,8 @@ bun --cwd core lint:types
 bun --cwd core lint
 wc -l core/services/documentation/release/*.ts \
   scripts/docs/*release-artifact.ts \
-  tests/unit/documentation/docsReleaseArtifact.test.ts
+  tests/unit/documentation/docsReleaseArtifact.test.ts \
+  tests/vitest/docs/docs-release-tree-binding.test.ts
 find tests/fixtures/documentation/release-artifact \
   -type f -exec wc -l {} +
 git diff --check

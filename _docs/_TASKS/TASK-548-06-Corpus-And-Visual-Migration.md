@@ -36,7 +36,7 @@ not imply that a Polish Admin UI or Polish documentation is complete.
   the owner's read-only `verifyDocsFinalNativePairHandbackV1`; recovery failure
   `docs_compile_recovery_required` is blocking. Coverage, portal, release,
   clean clone/tag, Docker, `docs:check`, and packaged runtime/startup use the
-  read-only hazard inspector plus the strict tracked bundle loader and never
+  sole atomic tracked-bundle loader, whose same transaction inspects hazards, and never
   require `.tmp`, the report, journal, migration baseline, or verified fact.
 - The exact `.tmp/docs-corpus/migration-report-v1.json` with discriminator
   `coderso.docs-migration-report@v1` must match the original bundle's
@@ -44,16 +44,18 @@ not imply that a Polish Admin UI or Polish documentation is complete.
   creates one strict immutable `FrozenGuideMigrationBaselineV1` capsule under
   `.tmp/docs-corpus/task-548-migration-baseline/`. Its exact inventory is the
   original bundle bytes, original report bytes, and one receipt binding both
-  hashes, `sourceHash`, normalized semantic projection, source inventory, and
-  caller-owned migration run identity. All three waves, process restarts, and
+  hashes, `sourceHash`, normalized semantic projection, caller-owned migration
+  run identity, and a bounded ordered per-source inventory containing each
+  relative path plus exact baseline/intended byte length and SHA-256. All three waves, process restarts, and
   the later verified-fact parity pass reopens that same capsule; they never
   regenerate, overwrite, or silently repair it. Stale, foreign, partial,
   mutated, or extra inventory blocks before a source write.
-- L01 owns the exact four-key
+- L01 owns the exact initial-create-only four-key
   `CreateFrozenGuideMigrationBaselineInput = { migrationRunId, reportPath,
-  bundlePath, sources }` and returns
-  `ReopenedFrozenGuideMigrationBaselineV1 = { receipt, report, bundle }` from
-  both create/resume and reopen. The receipt is capped before parsing; then both
+  bundlePath, sources }`; recovery by run ID selects either that pristine create
+  or a path-free reopen. Both return `ReopenedFrozenGuideMigrationBaselineV1 =
+  { receipt, sourceRecords, report, bundle }`. Resume never supplies or rereads
+  current sources as a new baseline. The receipt is capped before parsing; then both
   stored regular members are byte-capped, hashed, run/link validated, and only
   then parsed and normalized. Parent and both leaves consume that typed result,
   never independently parse a stored member.
@@ -110,8 +112,8 @@ not imply that a Polish Admin UI or Polish documentation is complete.
   It never writes, regenerates, promotes, persists a receipt, or counts as a
   second handback. Final migration parity consumes that fact and the durable
   stored original, not an unverified raw pair. Subsequent read-only `docs:check`
-  receives no migration value, and 06-L02 independently inspects hazards, loads
-  the tracked packaged bundle, and reconciles coverage without the report.
+  receives no migration value, and 06-L02 independently calls the atomic tracked-
+  bundle loader once and reconciles coverage without the report.
   Per-wave/per-promotion regeneration is forbidden.
   Neither 06 leaf writes the generated bundle or report.
 - The only public migration entry point is
@@ -140,9 +142,12 @@ not imply that a Polish Admin UI or Polish documentation is complete.
   canonically sorted by `(locale, docId)` with unknown fields rejected.
   `_COVERAGE_MATRIX.md` is
   generated output, not acceptance evidence by itself. Coverage `--write`
-  and `--check` both use the read-only workspace hazard inspector plus strict
-  packaged-bundle load; neither recovers the workspace pair or requires the
-  ignored report. `--check` additionally performs no output mutation.
+  and `--check` both use one zero-input atomic packaged-bundle load with internal
+  workspace hazard inspection; neither recovers the pair or requires the
+  ignored report. L02's fixed-path durable two-output owner preserves the prior
+  JSON/Markdown pair across interrupted replacement; `--write` recovers its own
+  journal before promotion, while `--check` uses a read-only inspector and
+  reports recovery-required without mutation.
 
 ## TASK-547 Serialization
 
@@ -177,23 +182,51 @@ TASK-548-01-L02 one final same-owner generated-pair write/gate only if baseline
 → TASK-548-06-L01 recover and call the idempotent owner verifier → consume its
 strict in-memory fact with the stored original only for final parity → read-only
 `bun run docs:check` with no migration object input →
-TASK-548-06-L02 read-only hazard inspection → packaged distribution loader →
+TASK-548-06-L02 one zero-input atomic packaged distribution load →
 coverage reconciliation in `--write` then `--check` mode`. Operational
 refresh/verification calls never change status or transfer/reopen source ownership.
 
-After `TASK-548-06-L02`, the global closure order is exactly
-`07-L01-runtime-docs-and-gates-preparation →
-08-post-audit-lenses/fixes/revalidation →
-07-L01-final-smoke-phase1-owner-pause →
-07-L01-owner-resume-tracked-parity →
-08-final-read-only-drift →
-07-L01-terminal-metadata-closeout-and-mechanical-delta-verification`. The same
-physical 07-L01 owner executes all four 07 phases and does not become terminal
-until the last phase. A non-metadata post-audit or final-drift finding returns
-to its sole owning leaf and restarts the affected preparation/audit/smoke
-chain; final smoke/checkpoint never precedes post-audit, substantive final drift
-never follows terminal metadata, and the post-metadata delta check is
-mechanical and external-only.
+After `TASK-548-06-L02`, the global lifecycle is the exact three-invocation
+handoff owned by TASK-548-07-L01 and TASK-548-08:
+
+```text
+07-L01-release-inputs-and-prerelease-gates
+08-prerelease-post-audit-lenses/fixes/revalidation
+07-L01-owner-commit-merge-tag-release-cloudflare-deploy-pause
+--- process terminates ---
+07-L01-release-resume-committed-head-tree-and-receipt-validation
+08-release-resume-fresh-committed-head-drift-gate
+07-L01-runtime-docs-and-gates-preparation
+07-L01-final-smoke-phase1-owner-pause
+--- process terminates ---
+07-L01-owner-resume-tracked-parity
+08-final-read-only-drift
+07-L01-terminal-metadata-closeout-and-mechanical-delta-verification
+```
+
+The first invocation prepares release inputs/gates and ends at the owner-only
+commit/merge/plain-tag/release/Cloudflare action. Only a fresh eight-field
+release-resume may validate the committed HEAD plus TASK-548-05-L01's single
+pure `DocsReleaseTreeBindingV1` in the repository-selected SHA-1 or SHA-256
+object format, and require that identical binding across immutable release,
+publication and TASK-548-05-L02 health receipts before fresh drift, read-only
+preparation and smoke. Smoke consumes that already verified handoff and never
+downloads health evidence. After the exact-six committed-bootstrap receipt gate,
+the exact seven-key TASK-545 phase-1 call pins changelog 1261, slug
+`task-548-hybrid-visual-documentation`, role `implement`, the executing
+`import.meta.url`, and the smoke result, then pauses and terminates the second
+invocation. Only a fresh
+checkpoint-bound closure resume may verify tracked parity, run final drift and
+perform terminal metadata closeout through TASK-545's sole
+`writeOrResumeOrderedDurableChangelogFileThenIndexV1` owner with marker
+`ordered-durable-changelog-file-then-index@v1`. The same physical 07-L01 owner executes all
+seven normal 07 labels and remains nonterminal until the last label; 08 emits
+the returned mechanical delta exactly once. Any non-metadata finding returns to
+its sole owning leaf and requires the applicable fresh prerelease/release-resume
+cycle. The separately specified invalidated-checkpoint `retirement-restart
+invocation` first
+confirms owner retirement, derives fixes only from fresh current-tree drift and
+ends at a replacement owner release pause; it never skips to smoke or closure.
 
 Neither leaf edits root package/lock/workflows, TASK-548 task/changelog files,
 portal/release source, or the TASK-548-02 pilot. Only TASK-548-07 closes statuses
@@ -234,9 +267,8 @@ await assertVerifiedFinalNativePairParityAgainstFrozenOriginal({
 });
 
 // No baseline, expected identity, verified fact, workspace report, or pair crosses
-// this final migration-parity boundary.
+// this boundary; the zero-input loader atomically guards and reads one inode.
 await runExactReadOnlyGate("bun run docs:check");
-await assertNoDocsWorkspaceArtifactPromotionHazardsV1();
 const packagedBundle = await loadPackagedDocsDistributionBundleV2();
 const coverage = reconcileDocsCoverage({
   bundle: packagedBundle,
@@ -259,10 +291,11 @@ verifier → strict in-memory verified fact with its canonical reopened pair →
 final native-vs-original stable-identity/semantic comparison against the
 durable stored original, with the expected
 source-hash change → migration workspace values leave scope → read-only
-`bun run docs:check` → 06-L02 read-only hazard inspector → strict packaged
-distribution loader → exact descriptor/permissionRequirement/capability/link/publication
+`bun run docs:check` atomic load/byte comparison → 06-L02's independent one-call
+atomic packaged loader → exact descriptor/permissionRequirement/capability/link/publication
 reconciliation, including `assistant`, `embedded-help`, and `public-docs`
-consumer filtering → deterministic matrix/report.
+consumer filtering → deterministic matrix/report → journaled two-member
+coverage-output promotion.
 
 **Error handling:** any report discriminator/bundle-linkage/mapping failure,
 identity drift, compatibility fallback use, missing active source,
@@ -281,6 +314,9 @@ tampering fail before parity. A raw reopened pair cannot substitute for
 `VerifiedDocsFinalNativePairHandbackV1`; a bundle-only migration loader or
 assertion omitting either verified member is invalid. No
 expected identity, verified fact, or pair may reach `docs:check` or coverage.
+A pending/foreign/tampered coverage-pair journal or an unjournaled singleton
+blocks; `--check` never repairs it and `--write` may recover only its exact
+journal-bound old/new pair.
 Packaged consumers instead reject hazards, report-only state, or invalid/stale
 bundle read-only. Previously valid promoted assets remain untouched on failure.
 
@@ -297,8 +333,8 @@ Independently wrong expected run/source/bundle/report/transaction identity and
 either-member tampering reject before parity. A raw `verifiedHandback.pair`
 cannot substitute for the verified fact. Bundle-only migration loading fails.
 Order spies prove the fact is consumed only by final migration parity; next is
-read-only `bun run docs:check` without migration arguments, then 06-L02 hazard
-inspection, packaged-bundle load, and both coverage modes.
+read-only `bun run docs:check` without migration arguments, then 06-L02's one
+atomic packaged-bundle load and both coverage modes.
 Normalized legacy/native semantic projection parity preserves stable
 IDs/slugs/links/content fields with an expected deterministic `sourceHash`
 change; every active English source compiles once without adapter diagnostics;
@@ -353,7 +389,8 @@ completeness claim appears.
   eight-collision-retry/injected-test-entropy/unchanged-pass-through tests
 - strict `DocsCoverageReportV2` round-trip, recursive unknown/limit/tamper/
   canonical-sort, both coverage modes' read-only hazard-inspection plus
-  packaged-load-before-reconciliation tests, and a clean-clone bundle-only case
+  packaged-load-before-reconciliation tests, durable coverage-pair crash/recovery
+  boundaries, read-only `--check` recovery-required behavior, and a clean-clone bundle-only case
 - `bun run docs:check` only after the final verified handback fact and
   migration-only parity pass, with no expected-identity/verified-fact/pair
   argument; both 06-L02 modes

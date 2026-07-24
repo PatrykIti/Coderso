@@ -14,9 +14,30 @@
 ## Overview
 
 Create the Bun-free, dependency-neutral source of truth for documentation v2
-under `packages/docs-contracts/src/**`, with its `tsconfig.json`. Own focused
-types, schemas, normalization, source limits, target selection, browser-safe
-publication DTOs and safe Markdown parsing there. Keep the existing
+with `packages/docs-contracts/tsconfig.json` and exactly this L01 source
+allowlist:
+
+```text
+src/index.ts
+src/docsCorpusTypes.ts
+src/docsCorpusSchemas.ts
+src/docsCorpusNormalizer.ts
+src/docsCorpusLimits.ts
+src/docsMarkdownParser.ts
+src/docsMarkdownTokens.ts
+src/docsSectionDirectives.ts
+src/docsPublicationTargets.ts
+src/docsPublicationDtos.ts
+src/docsCapabilityCatalog.ts
+src/docsPermissionCatalogSnapshot.generated.ts
+```
+
+Own types, schemas, normalization, limits, target selection, browser-safe
+publication DTOs and safe Markdown parsing there. L02 owns pure private
+`src/docsMigrationReport.ts` plus server-only `src/nodeFixedWorkspace.ts` and
+`src/nodeArtifactGuard.ts`; L03 owns `src/nodeLoader.ts`. L01 must not edit,
+barrel-export or import those four files.
+Keep the existing
 `core/services/documentation/docsCorpus*`, Markdown-token/parser, section,
 limit and capability module paths as thin named re-export shims whose only
 runtime edge is `core -> docs-contracts`; no contracts module may
@@ -37,7 +58,9 @@ shim under exact `core/services/documentation/` permanently uses the confined
 repo-relative target `../../../packages/docs-contracts/src/index.ts` (or the
 exact owner module below that same root), with named re-exports only. Static
 tests resolve the real target below that root and assert reference identity.
-No later leaf rewrites these shims. Direct consumers landing after 02-L03 use
+No later leaf rewrites these shims. Their source targets are limited to the L01
+allowlist above; L02/L03 zero-input wrappers own the Node source edges.
+Direct consumers landing after 02-L03 use
 `@coderso/docs-contracts` through the activated manifest/dependency instead.
 
 ## Exact Shared Shapes
@@ -198,6 +221,38 @@ publication type; runtime exact-key tests prove spread/cast values still fail.
 `normalizeDocsPublicationPayloadV1(unknown)` and the full-source-to-safe DTO
 projector are owned by `@coderso/docs-contracts`; neither brands a renderer
 projection nor performs filesystem I/O.
+
+`packages/docs-contracts/src/docsCanonicalJsonHash.ts` is the sole owner of the
+shared publication/projection hash framing and exports exactly:
+
+```ts
+export const DOCS_PUBLICATION_BODY_HASH_DOMAIN_V1 =
+  "coderso.docs-publication-body@v1" as const;
+export const DOCS_PUBLICATION_PROJECTION_BODY_HASH_DOMAIN_V1 =
+  "coderso.docs-publication-projection-body@v1" as const;
+export function hashDocsCanonicalJsonBodyV1(
+  domain: typeof DOCS_PUBLICATION_BODY_HASH_DOMAIN_V1 |
+    typeof DOCS_PUBLICATION_PROJECTION_BODY_HASH_DOMAIN_V1,
+  normalizedBody: unknown
+): string;
+export function createDocsPublicationPayloadV1<T extends
+  DocsPublicationSurfaceTargetV1>(body: DocsPublicationPayloadV1<T>["body"]):
+  DocsPublicationPayloadV1<T>;
+```
+
+The helper applies RFC 8785 to the already recursively normalized body and hashes
+exactly `UTF8(domain) || 0x00 || u64be(canonicalUtf8.length) || canonicalUtf8`.
+There is no BOM, JSON whitespace, trailing LF or implicit separator; length is
+unsigned 64-bit big-endian. `createDocsPublicationPayloadV1` normalizes the exact
+safe body, rejects source/path-bearing values, and uses only the publication
+domain. `normalizeDocsPublicationPayloadV1` recomputes through that same helper
+and constant-time compares lowercase 64-hex. The framing helper's `{}` golden
+vectors are publication
+`ee37c8f781a7a7d74a53fbe85a75e14315a06c51eb80baa14d59ab84f365747c`
+and projection
+`e6e4c1771c5e6cd951cf524bb6e9eb2b34c48b4eda93c627f070df8859493065`.
+Independent creator/normalizer tests pin both vectors, canonical-key equivalence,
+domain substitution, length/body mutation and final-LF rejection.
 
 The sole bundle-normalizer implementation owner is
 `packages/docs-contracts/src/docsCorpusNormalizer.ts`, which exports:
@@ -624,7 +679,8 @@ export function normalizeDocsPublicationPayloadV1(
 ): DocsPublicationPayloadV1<DocsPublicationSurfaceTargetV1> {
   const payload = assertStrictJsonSchema(input, docsPublicationPayloadV1Schema);
   const body = normalizeExactPublicationBodyAndSafeDocuments(payload.body);
-  assertCanonicalBodySha256(body, payload.bodySha256);
+  constantTimeAssertSha256(payload.bodySha256,
+    hashDocsCanonicalJsonBodyV1(DOCS_PUBLICATION_BODY_HASH_DOMAIN_V1, body));
   assertTargetMembershipOrderAndSafeReferenceClosure(body);
   return deepFreeze({ ...payload, body });
 }
@@ -729,11 +785,13 @@ unclosed, nested, ragged, oversized and malicious inline variants.
 Regenerate the permission snapshot in memory and require byte/hash identity;
 mutate either side and prove the parity gate fails. Import every stable Core
 shim and assert reference identity with the contracts export, then statically
-reject Core/React/Bun/DB/settings imports from the contracts graph and reject
-every non-shim relative/deep contracts import from Core.
+reject Core/React/Bun/DB/settings imports from the L01 graph, pin its exact
+source allowlist, reserve all four later-owner files to L02/L03, and reject every other
+relative/deep contracts import from Core.
 Add compile-time non-assignability assertions for full source document/visual
-types versus publication DTOs, runtime exact-key/source-path/asset-path
-canaries, deterministic opaque-output-key fixtures and safe-payload round trips.
+ types versus publication DTOs, runtime exact-key/source-path/asset-path
+ canaries, deterministic opaque-output-key fixtures, both fixed framed-hash
+ vectors and creator/normalizer safe-payload round trips.
 
 ## Sub-Tasks
 
@@ -741,10 +799,11 @@ canaries, deterministic opaque-output-key fixtures and safe-payload round trips.
   `docsCorpusSchemas.ts`,
   `docsCorpusNormalizer.ts`, `docsMarkdownParser.ts`,
   `docsMarkdownTokens.ts`, `docsSectionDirectives.ts`,
-  `docsPublicationTargets.ts`, strict publication DTO schema/projector,
+  `docsPublicationTargets.ts`, `docsPublicationDtos.ts` strict schema/projector,
+  `docsCanonicalJsonHash.ts`,
   `docsCapabilityCatalog.ts`, generated permission snapshot and
   `docsCorpusLimits.ts`, each below 1,000 lines, plus Core named re-export shims
-  and no reverse dependency.
+  and `index.ts` exactly; exclude all four later-owner files and reverse dependencies.
 - [ ] Add the v2 root manifest and update only the author template with stable
   IDs, locale/version/path/permission/capability/publication rules and one safe
   example; hand the README wording to TASK-548-07-L01.
@@ -755,8 +814,8 @@ canaries, deterministic opaque-output-key fixtures and safe-payload round trips.
 
 - `bunx vitest run --config vitest.config.ts tests/vitest/documentation/docs-corpus-contract.test.ts tests/vitest/documentation/docs-markdown-policy.test.ts`
 - `tsc -p packages/docs-contracts/tsconfig.json --noEmit`
-- regenerate-and-diff permission snapshot parity plus static package-edge and
-  Core-export-reference-identity gates
+- regenerate-and-diff permission snapshot parity plus exact L01 allowlist/four-
+  file exclusion, package-edge and Core-export-reference-identity gates
 - publication DTO compile-time non-assignability, runtime exact-key and
   source/asset-path canary gates
 - `bun --cwd core lint`

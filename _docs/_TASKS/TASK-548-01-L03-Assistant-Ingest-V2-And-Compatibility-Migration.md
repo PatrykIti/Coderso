@@ -28,26 +28,28 @@ new API route.
 
 Production owns the exact loader
 `loadPackagedDocsDistributionBundleV2(): Promise<DocsDistributionBundleV2>`.
-It lives in
-`core/services/documentation/packagedDocsDistributionBundleV2.ts`, derives the
-fixed Core app root from `import.meta.url`, and reads only
-`core/generated/docs/coderso-docs-v2.json` shipped beside that module. Its
-signature has no path/options parameter; no caller value, environment variable
-or `process.cwd()` participates in resolution. It performs one bounded
-canonical-JSON parse and one strict normalization. Persistence independently
-re-normalizes the returned object, while the L02 Help/portal projection
-constructor independently re-normalizes at its own boundary; neither causes a
-second filesystem read. There is no second production `loadFixed*`/byte-loader
-service seam. The loader neither knows about nor reads the repository-only
-migration report, workspace promotion journal, staging paths, backups or
-`.tmp`. Explicit repository write tools own
+L03-owned build/server-only `packages/docs-contracts/src/nodeLoader.ts` is an
+exact named alias of L02's package-private atomic function; L01 excludes it and
+TASK-548-02-L03 later exports it only as
+`@coderso/docs-contracts/node-loader`. L02 already owns the permanent Core named
+alias `core/services/documentation/packagedDocsDistributionBundleV2.ts` through
+the confined repo-relative preactivation edge. Both entries expose the same
+function reference and are zero-input; no capability, URL/path/options, environment or
+`process.cwd()` participates. `nodeLoader.ts` aliases L02's package-private
+zero-input `guardAndLoadFixedDocsWorkspaceBundleV2(): Promise<DocsDistributionBundleV2>`
+without a wrapper or second read. That transaction
+transaction derives all fixed URLs from its own module, holds the exact bundle
+handle across full journal/temp/backup inventory, strict optional migration-
+report/sourceHash/artifact linkage, bounded same-handle read/normalization and
+final rescan, then closes in reverse. Thus there is no guard→load replacement
+window or second production byte-loader seam. Persistence and Help/portal
+projections independently re-normalize the returned object. Explicit tools own
 workspace-pair recovery through
 `recoverDocsWorkspaceArtifactPromotionV1()` or `bun run docs:recover`.
-Read-only checks use L02's hazard inspector and return
-`docs_compile_recovery_required` instead of recovering. Production startup and
-reindex never call either workspace helper.
-The module-private URL confinement helper requires the exact lexical app-root
-child, then performs an inode-held no-follow capability walk from the filesystem
+Compiler checks call the same atomic loader once; write/recovery tools alone use
+L02's separate inspector/recovery APIs. Production startup/reindex never call them.
+The package-private owner validates its derived exact lexical app-root child,
+then performs an inode-held no-follow walk from the filesystem
 root through every parent component and the final file. Each directory handle
 stays open while its child is opened relative to that handle; every hop uses
 `O_NOFOLLOW`, directory hops also use `O_DIRECTORY`, and the final regular-file
@@ -60,12 +62,13 @@ handles and final handle, which close in reverse order. There is no
 `lstat`/`realpath`/validate-then-reopen sequence. A missing, linked, replaced,
 non-regular, concurrently mutated or differently cased component maps to
 `assistant_docs_bundle_invalid` without fallback.
-The loader module is import-time side-effect-free and compatible with both Node
-and Bun: it uses `node:fs/promises`, `URL` and `import.meta.url`, imports only
-the Bun-free corpus normalizer/limits, and contains zero `Bun.*`, DB, settings,
-server-adapter or assistant-runtime coupling. This permits the exact same loader
-to run from `core/vite.config.ts`; Vite must not receive a second copy. This
-leaf owns the loader but does not edit the later L02-owned Vite configuration.
+The loader boundary is import-time side-effect-free and Node+Bun compatible:
+the private owner imports exact `node:fs`/`node:fs/promises` plus Bun-free
+contracts, while the public loader imports only that owner. It contains zero
+`Bun.*`, DB, settings, server, Core or assistant-runtime coupling. This permits the same source in
+`core/vite.config.ts` and the portal server build; neither receives a copy.
+Static graph tests reject this Node subpath from browser/client entries. This
+leaf owns only its public alias source, not L02's Core shim or later manifest wiring.
 
 ## Storage Contract
 
@@ -272,6 +275,46 @@ The post-commit kick is only a no-throw wake-up optimization: its failure cannot
 enter ingest failure handling, rewrite a committed run or active pointer, or
 acknowledge/drop the event. Startup drain is the durable correctness path.
 
+### Exact startup and worker lifecycle owner
+
+This leaf is the sole TASK-548 writer of
+`core/server/startupAssistantDocs.ts` and
+`tests/vitest/server/startupAssistantDocs.test.ts`. The existing
+`runStartupAssistantDocsReindex()` export remains the stable zero-required-
+argument entry used unchanged by `core/server/dockerStart.ts`; this leaf does not
+edit `dockerStart.ts`. Startup removes its source-root walk/fingerprint, settings
+state row and two-int startup-only lock. It may inspect the existing enable/skip
+environment flag only to decide whether to call
+`ingestPackagedAssistantDocsV2({ actorId: null, force: false })`; no source-root,
+cwd, image-version or caller bytes/path can reach ingest. A configured legacy
+source-root override fails as `assistant_startup_docs_source_override_forbidden`
+before filesystem or DB mutation rather than being ignored.
+
+Outbox recovery is independent of that ingest flag. Every production call first
+settles one bounded `drainAssistantDocsSnapshotActivatedOutboxV2()` pass, then
+starts at most one process-local scheduler using the same drain function. The
+owner exports these exact lifecycle contracts for injection and teardown:
+
+```ts
+export type AssistantDocsOutboxWorkerHandleV2 = Readonly<{
+  state: "running" | "stopped"; stop: () => Promise<void>;
+}>;
+export function startAssistantDocsOutboxWorkerV2(input?: {
+  intervalMs?: number; drain?: typeof drainAssistantDocsSnapshotActivatedOutboxV2;
+}): AssistantDocsOutboxWorkerHandleV2;
+export async function stopDefaultAssistantDocsOutboxWorkerV2(): Promise<void>;
+```
+
+The default interval is one exported bounded constant, uses an unref-capable
+timer, never overlaps a previous drain, and records only safe event/code data.
+`stop()` is idempotent: it prevents another tick, awaits the one in-flight drain,
+releases no foreign lease and leaves retryable rows durable. Production installs
+one idempotent process-teardown hook that calls the same stop function; abrupt
+death relies only on lease expiry. Tests inject fake time/drain and must call
+`stopDefaultAssistantDocsOutboxWorkerV2()` in `afterEach`, proving no timer,
+listener, promise or DB lease leaks. Two startup calls reuse the same handle; a
+stop followed by startup creates one fresh handle.
+
 ## Server Permission Filtering Contract
 
 This leaf owns the Bun-free/server-only permission snapshot normalizer and
@@ -390,10 +433,13 @@ Extract bundle loading/validation and DB persistence into focused modules before
 new behavior would push it over the limit. Do not modify the already oversized
 `tests/integration/routes/assistant.test.ts`; add focused independent test files.
 
-This leaf exclusively owns the side-effect-free packaged loader, pure DB
-ingest/retriever/schema migration, `docsPermissionSnapshot.ts`, the five typed
-`assistant_docs_*` domain errors, and their pure/integration tests. It must not
-edit `core/vite.config.ts`,
+This leaf exclusively owns
+`packages/docs-contracts/src/nodeLoader.ts`, pure DB ingest/retriever/schema
+migration, `docsPermissionSnapshot.ts`,
+`core/server/startupAssistantDocs.ts` and its focused Vitest suite,
+the five typed `assistant_docs_*` errors and their tests. It must not edit the
+L02 private report/fixed/public-guard sources or Core report/guard/loader shims, manifests,
+`core/vite.config.ts`,
 `core/server/routes/assistantRoutes.ts`,
 `core/services/assistant/assistantService.ts`, or route-level error-map tests.
 After this dependency lands, TASK-548-03-L03 is the sole TASK-548 writer of
@@ -440,82 +486,13 @@ That serialized land order removes all shared-file ownership.
 ## Implementation Pseudocode
 
 ```ts
-import { constants } from "node:fs";
-import { open, type FileHandle } from "node:fs/promises";
+// packages/docs-contracts/src/nodeLoader.ts
+export {
+  guardAndLoadFixedDocsWorkspaceBundleV2 as loadPackagedDocsDistributionBundleV2,
+} from "./nodeFixedWorkspace.ts";
 
-const CODERSO_CORE_APP_ROOT_V1 = new URL("../../", import.meta.url);
-const PACKAGED_DOCS_DISTRIBUTION_BUNDLE_V2_URL = new URL(
-  "generated/docs/coderso-docs-v2.json",
-  CODERSO_CORE_APP_ROOT_V1
-);
-
-async function readPackagedDocsBundleBytesAtModuleUrlV2():
-  Promise<Uint8Array> {
-  const absoluteComponents = assertExactFixedBundleUrlChildV2({
-    root: CODERSO_CORE_APP_ROOT_V1,
-    candidate: PACKAGED_DOCS_DISTRIBUTION_BUNDLE_V2_URL,
-    expected: "generated/docs/coderso-docs-v2.json",
-  });
-  const traversal = await openPinnedNoFollowTraversalV2(absoluteComponents);
-  try {
-    const before = await snapshotPinnedTraversalV2(traversal);
-    assertEveryPinnedParentIsDirectoryV2(before.parents);
-    assertRegularSingleLinkAndBoundedSizeV2(
-      before.file, DOCS_DISTRIBUTION_BUNDLE_MAX_BYTES
-    );
-    const bytes = await readFileHandleBoundedV2(
-      traversal.file, DOCS_DISTRIBUTION_BUNDLE_MAX_BYTES + 1
-    );
-    const after = await snapshotPinnedTraversalV2(traversal);
-    assertSamePinnedTraversalIdentitiesV2(before, after);
-    if (bytes.byteLength > DOCS_DISTRIBUTION_BUNDLE_MAX_BYTES) {
-      throw new Error("assistant_docs_bundle_invalid");
-    }
-    return bytes;
-  } finally {
-    await closePinnedTraversalInReverseV2(traversal);
-  }
-}
-
-async function openPinnedNoFollowTraversalV2(
-  absoluteComponents: readonly string[]
-): Promise<{ parents: readonly FileHandle[]; file: FileHandle }> {
-  assertAbsoluteExactCaseComponentsV2(absoluteComponents);
-  const held: FileHandle[] = [
-    await open("/", constants.O_RDONLY | constants.O_DIRECTORY |
-      constants.O_NOFOLLOW),
-  ];
-  try {
-    for (const [index, component] of absoluteComponents.entries()) {
-      assertSingleSafePathComponentV2(component);
-      const isFile = index === absoluteComponents.length - 1;
-      const parent = held[held.length - 1];
-      const child = await openPinnedProcFdChildV2({
-        parent,
-        component,
-        flags: constants.O_RDONLY | constants.O_NOFOLLOW |
-          (isFile ? 0 : constants.O_DIRECTORY),
-      });
-      held.push(child);
-    }
-    return { parents: held.slice(0, -1), file: held[held.length - 1] };
-  } catch (error) {
-    await closeFileHandlesInReverseV2(held);
-    throw error;
-  }
-}
-
-export async function loadPackagedDocsDistributionBundleV2():
-  Promise<DocsDistributionBundleV2> {
-  try {
-    const bundleBytes = await readPackagedDocsBundleBytesAtModuleUrlV2();
-    return normalizeDocsDistributionBundleV2(
-      parseBoundedCanonicalJson(bundleBytes)
-    );
-  } catch (error) {
-    throw normalizePackagedDocsBundleErrorV2(error);
-  }
-}
+// L02's Core shim already exports the same private function under the same alias;
+// L03 does not edit or wrap it.
 
 type AssistantDocsIngestOutcomeReconciliationV2 =
   | { state: "committed"; result: AssistantDocsIngestResult }
@@ -766,8 +743,8 @@ repository Markdown, provider/model state, a caller-supplied path/bytes, an
 environment path override, or `process.cwd()`.
 
 **Data flow:** actor/force metadata → the shared cross-process advisory lock →
-the one fixed packaged loader performs
-bounded canonical parsing and strict v2 normalization → the ingest persistence
+one zero-input loader holds the bundle across hazard/report-link inventory,
+bounded same-handle parsing/normalization and final rescan → ingest persistence
 boundary independently revalidates that normalized bundle → exact `assistant`
 target filter → complete in-memory document/section/chunk/evidence plan →
 transaction writes and closure-checks an inactive snapshot → activation,
@@ -777,8 +754,8 @@ select only through one active `{ snapshotId, generation, sourceHash }`; the
 outbox drives cache invalidation, while identity-keyed caches prevent stale/new
 aliasing even before delivery. Startup compares the packaged bundle hash, not a
 Markdown-only filesystem fingerprint. Every startup/reindex calls
-`loadPackagedDocsDistributionBundleV2()` exactly once and has no access to the
-repository bundle/report transaction. A runtime package containing the valid
+`loadPackagedDocsDistributionBundleV2()` exactly once and cannot invoke public
+inspection/recovery/pair APIs. A runtime package containing the valid
 bundle and no `.tmp`, migration report, workspace journal, staging file or
 backup must start, hash-check and reindex successfully.
 For a query, unknown server snapshot → exact snapshot/catalog normalization
@@ -860,15 +837,12 @@ staging and backup files; prove startup/hash-skip/reindex succeeds from the
 packaged bundle alone and no runtime call attempts workspace recovery. Tamper
 remove, symlink or differently-case that packaged bundle and prove
 `assistant_docs_bundle_invalid` without a Markdown, report, journal or network
-fallback. At every absolute parent hop and final-file hop, replace the pathname
-with a directory, regular file or symlink before and after its handle is opened,
-then mutate the final path during the capped read. The loader must reject or
-return only complete bytes from the one inode-held traversal and final handle,
-never escape through a replaced ancestor, validate one inode and read another,
-follow a link or return mixed bytes. Pin parent device/inode/type plus final
-device/inode/mode/link-count/size/mtime/ctime and prove all handles close in
-reverse order. An unavailable `/proc/self/fd` adapter fails closed without an
-ordinary-path fallback.
+fallback. At every parent/bundle/report/journal hop, swap directory/file/link
+before and after open, initial inventory, report read/linkage, bundle read/
+normalization and final inventory. The loader must reject or return complete
+bytes from the continuously held bundle inode, never escape/reopen/mix phases.
+Pin parent/final device/inode/type/link-count/size/mtime/ctime and reverse-order
+close. Unavailable `/proc/self/fd` fails closed without pathname fallback.
 For `{ force: false }` and `{ force: true }`, spies prove the exact packaged
 ingest API invokes only
 `loadPackagedDocsDistributionBundleV2(): Promise<DocsDistributionBundleV2>`
@@ -878,11 +852,13 @@ a provider. Pass a malformed value cast as `DocsDistributionBundleV2` directly
 to the ingest core and prove it rejects before run allocation or any DB call.
 Run the exact packaged-loader test with initial working directories at the
 repository root, `core/`, and `packages/docs-portal/`; all must resolve identical
-bytes/hash through the same `import.meta.url` constant. Repeat inside the final
-Docker layout, with an unrelated working directory and no path environment
-variable. Spy that `process.cwd()` is never read, no caller override exists,
+bytes/hash through the package/Core aliases of the exact same private function.
+Repeat in final Docker from an unrelated cwd with no path environment variable.
+Spy that no capability/URL/path/options API exists, `process.cwd()` is never read,
 and the L02 publication-projection constructor independently normalizes the
 loader result at its own boundary without causing another file read.
+Statically pin both alias imports by reference identity and reject any wrapper,
+second byte reader, or `docsMigrationReport.ts` public/barrel export.
 Run a Node-environment import/read fixture with `globalThis.Bun` absent and
 assert zero DB/settings/server imports; after L02 wires the consumer,
 `bun --cwd core build:admin` must execute `core/vite.config.ts` with this exact
@@ -908,8 +884,9 @@ operator-visible without starving new valid rows.
 
 - [ ] Split the legacy DB schema coherently and add complete next-free migration
   artifacts.
-- [ ] Extract bundle loader/persistence modules and make reindex/startup ingest
-  the packaged v2 bundle atomically through the sole exact
+- [ ] Add the zero-input Node package named alias; consume L02's existing Core
+  alias unchanged and make
+  reindex/startup ingest through the sole atomic
   `loadPackagedDocsDistributionBundleV2(): Promise<DocsDistributionBundleV2>`
   seam; independently re-normalize its
   result at the ingest persistence boundary without another load/read or
@@ -926,6 +903,9 @@ operator-visible without starving new valid rows.
   `{ snapshotId, generation, sourceHash }`, and never use browser `cacheBus`.
 - [ ] Guard startup and manual ingest with the one pinned PostgreSQL session
   advisory lock, using conflict-before-work and release/discard semantics.
+- [ ] Replace the source-root startup fingerprint/lock, drain before the
+  singleton worker, and cover idempotent stop/restart/teardown while leaving
+  `dockerStart.ts` unchanged.
 - [ ] Export all five typed `assistant_docs_*` errors for the serialized
   TASK-548-03-L03 route/service writer; do not edit either orchestration module.
 - [ ] Add
@@ -937,7 +917,7 @@ operator-visible without starving new valid rows.
 ## Testing Requirements
 
 - Before DB tests: `set -a && source .env && set +a`
-- `bunx vitest run --config vitest.config.ts tests/vitest/assistant/docsIngestService.test.ts tests/vitest/assistant/docsDbRetriever.test.ts tests/vitest/assistant/docsPermissionSnapshot.test.ts tests/vitest/documentation`
+- `bunx vitest run --config vitest.config.ts tests/vitest/assistant/docsIngestService.test.ts tests/vitest/assistant/docsDbRetriever.test.ts tests/vitest/assistant/docsPermissionSnapshot.test.ts tests/vitest/server/startupAssistantDocs.test.ts tests/vitest/documentation`
 - fixed-loader cwd matrix from repo root, `core/`, and
   `packages/docs-portal/`, Node/Vite-config import fixture, plus the final
   Docker smoke from an unrelated cwd

@@ -29,10 +29,12 @@ reviewed visuals, and all three publication targets. A hand-edited row or broad
 This leaf is the only writer for:
 
 - new `core/services/documentation/coverage/docsCoverage.ts`;
+- new `core/services/documentation/coverage/docsCoverageOutputPairV1.ts`;
 - new `scripts/docs/generate-coverage-matrix.ts`;
 - generated `docs/guide/_COVERAGE_MATRIX.md`;
 - generated `core/generated/docs/coderso-docs-coverage-v2.json`;
 - new `tests/vitest/documentation/docs-coverage-reconciliation.test.ts`;
+- new `tests/unit/documentation/docsCoverageOutputPair.test.ts`;
 - focused fixtures below `tests/fixtures/documentation/coverage/`.
 
 It must not edit Guide prose/metadata/examples/visuals, the Admin route registry,
@@ -41,16 +43,54 @@ package/lock/workflows, tasks, or changelog. Findings return to the owning leaf;
 tests never paper over source defects.
 
 `docsCoverage.ts` remains Bun/runtime-free. In both `--write` and `--check`
-mode, the CLI first calls the read-only
-`assertNoDocsWorkspaceArtifactPromotionHazardsV1()`, then
-`loadPackagedDocsDistributionBundleV2()`. It never calls workspace recovery or
-the migration-only pair loader. The normal clean-checkout input is the tracked
+mode, the CLI calls only zero-input atomic
+`loadPackagedDocsDistributionBundleV2()` once. It never separately calls the
+public guard, workspace recovery or migration pair loader. The normal input is the tracked
 bundle with no `.tmp` report; a valid linked authoring pair is also accepted by
-the inspector. Both modes pass the strict packaged bundle into the pure
+the loader transaction. Both modes pass the strict packaged bundle into the pure
 reconciler; `--write` mutates only this leaf's two coverage outputs and
 `--check` mutates nothing. Production runtime never runs this generator and
 never requires `.tmp`, the migration report, journal, or frozen migration
 baseline.
+
+## Durable Coverage Output Pair
+
+`docsCoverageOutputPairV1.ts` solely owns the two fixed final paths; callers
+cannot override a root or member name:
+
+```ts
+export const DOCS_COVERAGE_OUTPUT_PAIR_JOURNAL_V1 =
+  "coderso.docs-coverage-output-pair@v1" as const;
+export type DocsCoverageOutputPairStateV1 = "none" | "complete" |
+  "recovery-required";
+export async function inspectDocsCoverageOutputPairV1():
+  Promise<DocsCoverageOutputPairStateV1>;
+export async function recoverDocsCoverageOutputPairV1():
+  Promise<"none" | "complete">;
+export async function writeDocsCoverageOutputPairV1(input: {
+  json: Uint8Array; markdown: Uint8Array;
+}): Promise<"complete">;
+```
+
+The finals are exactly `core/generated/docs/coderso-docs-coverage-v2.json` and
+`docs/guide/_COVERAGE_MATRIX.md`. One strict journal below
+`.tmp/docs-coverage/output-pair-v1/` binds old/new presence, both final paths,
+staged/backup names, byte lengths and SHA-256 values. It advances durably through
+`preparing → prepared → old-pair-backed-up → json-installed → markdown-installed
+→ verified-commit`; every file and directory write/rename is fsynced. Preparation
+strictly parses the staged JSON, verifies deterministic Markdown/report closure,
+and accepts the old state only when both finals are absent or form one valid
+pair. Unjournaled singleton, links/non-regular files, extra transaction members,
+foreign/multiple journals or hash/path drift fail without deletion.
+
+Recovery uses only the exact journal to roll forward the complete new pair or
+restore the complete old pair; it never synthesizes a member. Cleanup begins
+after a reopened exact pair and `verified-commit`, is idempotent, and preserves
+enough journal state on cleanup failure. Thus no mixed pair is accepted as
+committed. `--write` calls recovery before loading inputs; `--check` calls only
+the read-only inspector and returns `docs_coverage_recovery_required` for any
+journal/singleton instead of mutating. Child-process kill tests cover every
+temp write/fsync, journal transition, backup/install rename and parent fsync.
 
 ## Bun-Free Route Snapshot Handoff
 
@@ -360,7 +400,8 @@ export function reconcileDocsCoverage(
 
 export async function generateCoverageMatrix(options: GenerateOptions) {
   const mode = requireExactlyOneCoverageMode(options, ["write", "check"]);
-  await assertNoDocsWorkspaceArtifactPromotionHazardsV1();
+  if (mode === "write") await recoverDocsCoverageOutputPairV1();
+  else assertEqual(await inspectDocsCoverageOutputPairV1(), "complete");
   const bundle = await loadPackagedDocsDistributionBundleV2();
   const report = reconcileDocsCoverage(
     await loadCoverageInputs(options, bundle)
@@ -376,13 +417,13 @@ export async function generateCoverageMatrix(options: GenerateOptions) {
     parseDocsCoverageReportV2(existing.jsonBytes);
     return assertExistingCoverageBytesEqual(existing, { json, markdown });
   }
-  return atomicWriteCoverageOutputs({ json, markdown });
+  return writeDocsCoverageOutputPairV1({ json, markdown });
 }
 ```
 
 **Data flow:** final read-only `docs:check` canonical-byte/`sourceHash` equality
-gate → exact coverage write or check command → read-only workspace hazard
-inspection → strict packaged-bundle load with the ignored report optional/absent
+gate → exact coverage write or check command → one atomic packaged-bundle load,
+including same-transaction hazard inspection with report optional/absent,
 → native bundle + exact pure route descriptors/capability catalog +
 scenario/receipt graph → strict joins/exclusions → route/permissionRequirement/
 capability/link/ref/target assertions keyed by
@@ -390,15 +431,17 @@ capability/link/ref/target assertions keyed by
 `(docId, locale)` document identity → canonical
 normalized report → stable-key-order UTF-8 JSON with LF and exactly one final
 newline → parse/serialize byte-identity assertion → generated Markdown
-matrix/byte comparison.
+matrix/byte comparison → read-only pair comparison or durable fixed-path pair
+promotion and reopened byte verification.
 
 **Error handling:** emit bounded `docs_coverage_route_missing`,
 `docs_coverage_exclusion_invalid`, `docs_coverage_permission_mismatch`,
 `docs_coverage_link_invalid`, `docs_coverage_ref_orphan`,
 `docs_coverage_publication_mismatch`, `docs_coverage_locale_false_claim`,
 `docs_coverage_route_handoff_missing`, `docs_coverage_route_parity_failed`,
-`docs_coverage_task547_collision`, and `docs_coverage_generated_stale`. No partial
-report replaces the last valid output. A live/tampered transaction, report-only
+`docs_coverage_task547_collision`, `docs_coverage_generated_stale`, and
+`docs_coverage_recovery_required`. No mixed pair is accepted as committed and
+the prior valid pair remains recoverable. A live/tampered transaction, report-only
 state, invalid linked pair, missing/tampered packaged bundle, preceding
 `docs:check` canonical-byte/source mismatch, recursive unknown field, cap
 breach, non-normalizable runtime shape, noncanonical serialized bytes, or nested
@@ -427,6 +470,11 @@ record/hash/path tampering fails before either generated output is written.
   and overflow coverage; shuffled valid input canonicalizes to the specified
   order; permission, target, route branch, exclusion owner/test, asset
   path/hash, and link kind/nullability tampering fail;
+- durable-pair tests start from absent and complete old pairs, kill a real child
+  at every declared boundary, then prove `--write` recovers to exactly old or
+  new canonical bytes with no mixed accepted state. Singleton/foreign/multiple/
+  linked/tampered journal/member states fail closed; cleanup retry is idempotent.
+  `--check` performs zero writes/renames/deletes and reports recovery-required;
 - `parseDocsCoverageReportV2(bytes)` rejects zero/oversized/invalid UTF-8 bytes
   before `JSON.parse`, delegates valid decoded JSON only to the strict
   normalizer, and has exact byte-cap boundary/overflow spies;
@@ -436,10 +484,9 @@ record/hash/path tampering fails before either generated output is written.
   a `sectionId`, but Guide evidence, Help/CMS/public actions, examples, visuals,
   and receipts must remain bound to the owning
   `{ docId, locale, sectionId }`;
-- generator-order spies prove both modes run
-  `assertNoDocsWorkspaceArtifactPromotionHazardsV1()` before
-  `loadPackagedDocsDistributionBundleV2()` and neither invokes a workspace
-  recovery or migration-pair loader; `--check` invokes no
+- generator-order spies prove both modes call only the zero-input atomic loader
+  once and never invoke the public guard, workspace recovery or migration-pair
+  loader; `--check` invokes no
   write/rename/delete/fsync path, while `--write` may replace only the two owned
   coverage outputs after reconciliation succeeds;
 - a clean-clone fixture with the tracked bundle and no `.tmp` tree/report passes
@@ -447,6 +494,8 @@ record/hash/path tampering fails before either generated output is written.
   invalid linked pair, tampered packaged bytes, or a preceding stale
   `docs:check` result performs no coverage write; packaged runtime imports
   neither recovery nor `.tmp`;
+- swap every bundle/report/journal parent/final between open, inventory,
+  linkage, read/normalize and rescan; reject or consume only the held bundle inode;
 - import the two exact descriptor modules/constants and prove the complete
   `*.admin-route-descriptor.ts` inventory plus TASK-548-03 registry-pair parity
   suites; a missing/extra module or constant fails;
@@ -466,9 +515,11 @@ record/hash/path tampering fails before either generated output is written.
   duplicate, or unknown modes/options, and manual matrix/report edits make the
   check fail without mutation; filesystem-mutator spies prove clean, stale and
   hazard-rejected `--check` cases stay read-only and direct operators to
-  `bun run docs:recover`;
+  review the journal then rerun exact `bun run docs:coverage -- --write` recovery;
 - run
   `bunx vitest run --config vitest.config.ts tests/vitest/documentation/docs-coverage-reconciliation.test.ts`;
+- run `bun test tests/unit/documentation/docsCoverageOutputPair.test.ts` for
+  real filesystem/fsync/child-process recovery semantics;
 - run `bun run docs:visual:check -- --all`, `bun --cwd core lint:types`,
   `bun --cwd core lint`;
 - audit every added/modified human-authored production and test file from the

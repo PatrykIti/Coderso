@@ -91,6 +91,11 @@ are outside TASK-548.
   payload of `DocsPublicationDocumentV1` records. It is a distinct projection,
   never a filtered distribution bundle; full source documents are compile-time
   non-assignable and runtime rejected. A query never calls the official portal.
+- Before `sourcePath` is discarded, the trusted constructor resolves parsed
+  relative links into a sorted strict table keyed by exact source document,
+  locale, section and raw href with only stable target identity/fragment. The
+  browser resolves relative links only through that table; it never reparses a
+  path, joins a slug or receives resolved repository/filesystem path bytes.
 - `core/vite.config.ts` imports L03's exact side-effect-free Node+Bun packaged
   loader only at build/config time. Its narrow plugin normalizes the complete
   bundle, constructs the full-input `embedded-help` projection, verifies the
@@ -102,6 +107,10 @@ are outside TASK-548.
   Build/Docker checks normalize that receipt and resolve each asset only through
   L02's `core/admin/ui/help/helpBuildAssetVerification.ts` same-handle no-follow
   helper, which returns bounded bytes/hash and never returns/reopens a path.
+- `docs-help-assets-v1.json` is recursively exact and self-authenticating:
+  `receiptSha256` is lowercase SHA-256 over the RFC-8785 canonical body excluding
+  the self field, framed by the v1 domain, NUL and unsigned 64-bit body length.
+  Asset order is strict by output key; normalizers recompute and compare it.
 - `Open in CMS` is shown only when the document's exact
   `permissionRequirement` is satisfied by the current fail-closed permission
   snapshot. Null means authenticated Admin access with no extra catalog
@@ -143,6 +152,18 @@ are outside TASK-548.
   visual/example metadata and link/provenance inputs. Guide never repairs or
   enriches it from a packaged bundle. A mixed identity fails closed before any
   source/card/action projection.
+- Browser Guide evidence is a recursively strict path-free DTO. It explicitly
+  copies stable source identity/example fields and never embeds
+  `DocsAnswerSource`, `DocsVisualV1`, `path`, `sourcePath` or `assetPath`.
+  Optional visuals use only an exact L02 `DocsLocalVisualAssetV1` found in the
+  immutable embedded-Help receipt for the active DB `sourceHash`; a missing,
+  stale, malformed or nonmember receipt omits the visual and preserves already
+  authorized grounded text/source without emitting an unverified href.
+- L03's server-only `guideVisualAssetRegistry.ts` owns one module-relative,
+  bounded no-follow receipt load and strict normalization during default
+  Assistant runtime construction. It deep-freezes a sourceHash→outputKey index
+  injected through service deps; questions perform map lookups only. Source-hash
+  rotation omits visuals until restart loads the matching packaged receipt.
 - `assistant.enabled` remains a backward-compatible persisted setting but
   controls Agent availability, not Guide availability.
 - Agent always uses the existing provider/action routes and remains unavailable
@@ -156,6 +177,92 @@ are outside TASK-548.
   payload into the other tab.
 - Guide cannot call action plan/dry-run/execute endpoints. Agent cannot present
   a docs-only fallback as if it were an Agent answer.
+
+### Exact Assistant status and chat transport v2
+
+TASK-548-03-L03 owns these recursively reject-unknown server/client DTOs. Status
+is additive and retains every existing field; `enabled` remains the persisted/API
+compatibility alias and must equal `agentEnabled` byte-for-byte.
+
+```ts
+type GuideUnavailableReasonV2 = "docs_not_ready" | "docs_status_unavailable";
+type AgentUnavailableReasonV2 =
+  | "agent_disabled" | "provider_unavailable" | "agent_status_unavailable";
+type AssistantStatusResponseV2 = Readonly<{
+  schema: "coderso.assistant-status@v2";
+  enabled: boolean; agentEnabled: boolean; llmAvailable: boolean;
+  guideReady: boolean; agentAvailable: boolean;
+  guideUnavailableReason: GuideUnavailableReasonV2 | null;
+  agentUnavailableReason: AgentUnavailableReasonV2 | null;
+  defaultMode: "docs-only" | "llm-guide"; retrievalBackend: "db";
+  indexReady: boolean; indexBuilding: boolean; indexError: string | null;
+  lastReindexAt: string | null; docCount: number; chunkCount: number;
+}>;
+export function normalizeAssistantStatusResponseV2(value: unknown):
+  AssistantStatusResponseV2;
+```
+
+The status service settles DB status and Agent settings independently. Provider
+resolution runs only after valid Agent settings and is independently caught.
+The exact truth table is:
+
+| Evidence | Required projection |
+| --- | --- |
+| DB ready | `guideReady=indexReady=true`, Guide reason null |
+| DB valid but not ready | both false, `docs_not_ready` |
+| DB read rejects/malformed | both false, `docs_status_unavailable`, safe index error/count defaults |
+| settings reject/malformed | both Agent booleans false, `agent_status_unavailable`, compatibility `enabled=false` |
+| settings valid, `enabled=false` | `enabled=agentEnabled=agentAvailable=false`, `agent_disabled` |
+| enabled, provider absent/fails | Agent enabled true, available/LLM false, `provider_unavailable` |
+| enabled and provider ready | all three Agent booleans true, Agent reason null |
+
+No DB state may alter Agent columns and no settings/provider state may alter Guide
+columns. The strict client normalizer verifies every derived equality and rejects
+unknown/reason-inconsistent data before caching; legacy cache entries without the
+v2 discriminator are discarded, not guessed. The server always emits v2 while
+old structural clients may continue reading the retained original fields.
+
+The chat response is a complete product-discriminated union. It preserves the
+current presentation fields but replaces path-bearing sources before route
+serialization; a full `DocsAnswerSource` is never a response member.
+
+```ts
+type AssistantChatCommonV2 = Readonly<{
+  schema: "coderso.assistant-chat-response@v2";
+  answer: string; template: DocsAnswerTemplate; detailLevel: DocsDetailLevel;
+  guideMode: DocsGuideMode; confidence: number;
+  followUpOptions: readonly DocsFollowUpOption[]; retrievalBackend: "db";
+}>;
+type GuideChatResponseV2 = AssistantChatCommonV2 & Readonly<{
+  product: "guide"; mode: "docs-only"; requestedMode: "docs-only";
+  effectiveMode: "docs-only"; fallbackUsed: boolean; llm: null;
+  sources: readonly GuideSourceIdentityV1[];
+  evidence: readonly GuideAnswerEvidenceV1[];
+}>;
+type AgentDocsEvidenceV2 =
+  | Readonly<{ state: "available"; evidence: readonly GuideAnswerEvidenceV1[] }>
+  | Readonly<{ state: "docsEvidenceUnavailable" }>;
+type AgentChatResponseV2 = AssistantChatCommonV2 & Readonly<{
+  product: "agent"; mode: "llm-guide"; requestedMode: "llm-guide";
+  effectiveMode: "llm-guide"; fallbackUsed: false;
+  sources: readonly []; llm: AssistantLlmResult;
+  docsEvidence: AgentDocsEvidenceV2;
+}>;
+type AssistantChatResponseV2 = GuideChatResponseV2 | AgentChatResponseV2;
+export function normalizeAssistantChatResponseV2(value: unknown):
+  AssistantChatResponseV2;
+```
+
+Server projection copies Guide sources only into `GuideSourceIdentityV1` and
+normalizes the complete union immediately before return; `assistantClient.ts`
+normalizes unknown JSON before cache/storage/render. Agent provider success may
+attach only separately authorized path-free `docsEvidence`; its compatibility
+`sources` is the exact empty tuple. A provider branch that produces a docs-only
+fallback is not serializable as Agent v2 and maps to bounded
+`assistant_agent_guide_handoff_required`; UI offers an explicit Ask Guide handoff
+from the already-normalized user entry. Recursive canaries reject `path`,
+`docPath`, `sourcePath`, `assetPath`, line ranges and unknown fields at every
+root/source/evidence/card/action depth before response or persistence.
 
 ## Architecture and Data Flow
 
@@ -174,10 +281,12 @@ Agent tab  --> existing provider chat/plan -> dry-run -> reviewed execute
 ```
 
 Embedded Help keeps its immutable target-only projection/search index and
-build-verified byte/path-free opaque-output-key receipt in trusted module
-memory, deriving one strict selected-article map before rendering. Guide's
-browser receives only the bounded authorized response from the DB snapshot,
-never a corpus bundle or filesystem path resolver. Neither surface copies
+build-verified link table plus byte/path-free opaque-output-key receipt in
+trusted module memory, deriving one strict selected-article map before render.
+Guide's server matches optional visuals against that immutable receipt by the
+active DB source hash, then its browser receives only the bounded strict
+path-free response—never a full DB source/visual record, corpus or path
+resolver. Neither surface copies
 non-target corpus records, provider configuration, secrets, or permission
 snapshots to `localStorage`. Server Guide caches are keyed by exact active
 snapshot identity and invalidated from the durable activation outbox; the
@@ -191,7 +300,7 @@ closure owner updates `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md`.
 |---|---|---|
 | TASK-548-03-L01 | Extract the oversized Admin route registry plus Bun-free canonical route descriptors, own the strict pre-loss raw permission-state seam in `authClient.ts`, preserve route/RBAC parity, and add canonical Help path helpers; do not expose a Help link yet | ⏳ To Do |
 | TASK-548-03-L02 | Add the Help route, safe shared renderer/search projection, Core-only path/RBAC host adapter, target-only Vite payload/receipt, and atomic footer link | ⏳ To Do |
-| TASK-548-03-L03 | Split the oversized Assistant panel, become the sole post-01-L03 `assistantRoutes.ts`/`assistantService.ts` writer, enforce server-authoritative docs RBAC, implement distinct Guide/Agent products, decouple Guide runtime from Agent enablement, and render rich local evidence cards | ⏳ To Do |
+| TASK-548-03-L03 | Split the oversized Assistant panel, own Assistant routes/service plus the one-time server visual registry, enforce docs RBAC, implement distinct Guide/Agent products, decouple Guide from Agent, and render safe evidence cards | ⏳ To Do |
 
 **Land order:** `TASK-548-03-L01 → TASK-548-03-L02 → TASK-548-03-L03`.
 Every source/test file has one leaf writer. L02 may add a route-module file but
@@ -366,8 +475,8 @@ export async function submitConversation(
 
 **Data flow:** validated installed bundle at Vite build/config time → exact
 full-input `embedded-help` selection/closure and PNG verification → canonical
-hash-bound safe-DTO payload plus byte/path-free output-key/URL/hash receipt → one
-browser normalization/private-branded projection and pure in-memory search
+hash-bound safe-DTO/link-table payload plus framed byte/path-free
+output-key/URL/hash receipt → one browser normalization/private-branded projection and pure in-memory search
 index → exact member selection → explicit surface link context + verified
 selected-article local asset map + user-event-only copy handler → all required
 renderer props → local Help reader; or strict assistant request →
@@ -378,8 +487,9 @@ selector/search/renderer receives an unbranded or unscoped filtered value, and
 no Guide retrieval receives a client permission value or reads a bundle/
 Markdown/filesystem. Neither the full bundle nor a non-`embedded-help`
 document enters the Admin client graph. L02's packaged asset verification
-remains exclusive to embedded Help (and the portal build), not the per-question
-Guide path.
+remains exclusive to embedded Help (and portal build); Guide reads only its
+already-normalized immutable receipt from memory and returns strict path-free
+cards, never a per-question packaged asset/path lookup.
 
 **Error handling:** invalid bundle, target payload, asset receipt, route, or
 link fails closed before Help mounts. In embedded Help, a
@@ -391,7 +501,9 @@ text-only success fallback for an invalid Help article. Guide uses a separate
 server enrichment projection: only after text/source evidence is both grounded
 and permission-authorized may an unresolved optional visual/example card be
 omitted while the grounded text/source remains. It never invents or leaks an
-unauthorized card/reference. Portal/network failure leaves local Help usable;
+unauthorized card/reference. Receipt absence/invalidity, active-source-hash
+mismatch or missing output key omits only that optional visual; malformed DB
+evidence still rejects the evidence. Portal/network failure leaves local Help usable;
 DB index, snapshot-integrity or permission-snapshot failure affects Guide only;
 an activation commits its matching source hash and durable invalidation event
 atomically, so Guide observes one complete old/new snapshot. Provider failure
@@ -430,6 +542,14 @@ loader/projection/Markdown/filesystem call; old/new snapshot race tests require
 one exact `{ snapshotId, generation, sourceHash }` per answer and exercise
 durable cache invalidation retry. Help tests independently prove its L02
 build-time packaged projection/assets still work with the Guide DB unavailable.
+Projection tests pin relative-link collision, traversal, locale, fragment,
+target and no-path behavior. Receipt tests pin canonical vectors, tamper/order/
+self-field rejection and recomputation. Guide response tests recursively inject
+`path`/`sourcePath`/`assetPath` canaries and prove only exact active-source-hash
+receipt members yield safe visual assets; every other receipt state preserves
+grounded text while omitting the visual. Registry spies prove one startup load/
+normalization, zero per-question I/O/normalization, stale-hash omission and
+new-hash availability only after a simulated restart.
 
 ## Testing Requirements
 
@@ -441,15 +561,18 @@ bunx vitest run --config vitest.config.ts \
   tests/vitest/ui/admin-shell-nav.test.tsx \
   tests/vitest/docs/docs-renderer.test.tsx \
   tests/vitest/docs/docs-search.test.ts \
+  tests/vitest/docs/help-visual-asset-registry.test.ts \
   tests/vitest/ui-integration/docs-help-host-adapter.test.ts \
   tests/vitest/ui-integration/help-center.test.tsx \
   tests/vitest/ui/assistant-guide-tab.test.tsx \
   tests/vitest/ui/assistant-agent-tab.test.tsx \
   tests/vitest/ui/assistant-tab-handoff.test.tsx \
   tests/vitest/ui/assistant-conversation-state.test.ts \
+  tests/vitest/assistant/docsPermissionSnapshot.test.ts \
   tests/vitest/assistant/docsAnswerComposer.test.ts
 
-bun test tests/unit/documentation/helpBuildAssetVerification.test.ts
+bun test tests/unit/documentation/helpBuildAssetVerification.test.ts \
+  tests/unit/assistant/guideVisualAssetRegistry.test.ts
 set -a && source .env && set +a
 bun test tests/unit/assistant/assistantService.test.ts \
   tests/integration/routes/assistant-guide-rbac.test.ts \

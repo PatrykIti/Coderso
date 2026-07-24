@@ -41,16 +41,15 @@ This leaf is the only writer for:
 - new Bun-free
   `core/admin/app/routes/help.admin-route-descriptor.ts`;
 - new `core/admin/app/routes/help.admin-route.tsx`;
-- new `core/admin/ui/help/**`;
-- the docs-image-only `server.fs.allow` amendment in `core/vite.config.ts`;
-- new build-only `core/admin/ui/help/helpBuildAssetVerification.ts`;
+- new `core/admin/ui/help/**`, including build-only `helpBuildAssetVerification.ts`;
+- new `core/services/documentation/help/embeddedHelpVitePlugin.ts` plus exact docs-plugin registration and image-root `server.fs.allow` orchestration in `core/vite.config.ts`;
 - `core/admin/ui/navigation/sidebarConfig.ts`;
 - new `tests/vitest/docs/docs-renderer.test.tsx`;
 - new `tests/vitest/docs/docs-search.test.ts`;
 - new `tests/vitest/docs/docs-public-links.test.ts`;
 - new `tests/vitest/ui-integration/docs-help-host-adapter.test.ts`;
 - new `tests/vitest/docs/help-visual-asset-registry.test.ts`;
-- new `tests/unit/documentation/helpBuildAssetVerification.test.ts`;
+- new `tests/unit/documentation/helpBuildAssetVerification.test.ts` and `tests/unit/documentation/embeddedHelpVitePlugin.test.ts`;
 - new `tests/vitest/ui-integration/help-center.test.tsx`;
 - Help-specific assertions in `tests/vitest/ui/admin-shell-nav.test.tsx`.
 
@@ -140,44 +139,51 @@ exports:
 export type DocsPublicationSurfaceTargetV1 =
   import("@coderso/docs-contracts").DocsPublicationSurfaceTargetV1;
 export type DocsPublicationDocumentKeyV1 = { docId: string; locale: string };
+export type DocsPublicationLinkResolutionV1 = Readonly<{
+  sourceDocId: string; sourceLocale: string; sourceSectionId: string; rawHref: string;
+  targetDocId: string; targetLocale: string;
+  targetSectionId: string | null; fragment: string | null;
+}>;
 const docsPublicationProjectionBrandV1: unique symbol =
   Symbol("coderso.docs-publication-projection@v1");
-
 export type DocsPublicationProjectionV1<
   T extends DocsPublicationSurfaceTargetV1 = DocsPublicationSurfaceTargetV1
 > = Readonly<{
   schema: "coderso.docs-publication-projection@v1"; publicationTarget: T;
-  corpusVersion: string; defaultLocale: string;
-  supportedLocales: readonly string[]; sourceHash: string;
+  corpusVersion: string; defaultLocale: string; supportedLocales: readonly string[];
+  sourceHash: string;
   documents: readonly DocsPublicationDocumentV1[];
+  linkResolutions: readonly DocsPublicationLinkResolutionV1[];
   readonly [docsPublicationProjectionBrandV1]: true;
 }>;
-
-export function createDocsPublicationProjectionV1<T extends
-  DocsPublicationSurfaceTargetV1>(value: {
-  sourceBundle: unknown; publicationTarget: T;
-}): DocsPublicationProjectionV1<T>;
-
+export type DocsPublicationProjectionPayloadV1<
+  T extends DocsPublicationSurfaceTargetV1
+> = Readonly<{
+  schema: "coderso.docs-publication-projection-payload@v1";
+  publication: DocsPublicationPayloadV1<T>;
+  linkResolutions: readonly DocsPublicationLinkResolutionV1[];
+  projectionSha256: string;
+}>;
+export function createDocsPublicationProjectionV1<
+  T extends DocsPublicationSurfaceTargetV1
+>(value: { sourceBundle: unknown; publicationTarget: T }):
+  DocsPublicationProjectionV1<T>;
 export function serializeDocsPublicationProjectionV1<T extends
   DocsPublicationSurfaceTargetV1>(
   projection: DocsPublicationProjectionV1<T>
-): DocsPublicationPayloadV1<T>;
-
+): DocsPublicationProjectionPayloadV1<T>;
 export function createDocsPublicationProjectionFromPayloadV1<T extends
   DocsPublicationSurfaceTargetV1>(
   value: unknown, expectedTarget: T
 ): DocsPublicationProjectionV1<T>;
-
-export function resolveDocsPublicationDocumentV1(
-  projection: DocsPublicationProjectionV1, key: DocsPublicationDocumentKeyV1
-): DocsPublicationDocumentV1;
+export function resolveDocsPublicationDocumentV1(projection:
+  DocsPublicationProjectionV1, key: DocsPublicationDocumentKeyV1):
+  DocsPublicationDocumentV1;
 export function listDocsPublicationDocumentKeysV1(
   projection: DocsPublicationProjectionV1
 ): readonly DocsPublicationDocumentKeyV1[];
-
-export function buildDocsSearchIndexV1(
-  projection: DocsPublicationProjectionV1
-): DocsSearchIndexV1;
+export function buildDocsSearchIndexV1(projection: DocsPublicationProjectionV1):
+  DocsSearchIndexV1;
 ```
 
 The full-source constructor accepts only exact
@@ -186,8 +192,9 @@ The full-source constructor accepts only exact
 exact shared selector once, verifies source closure, then calls the contracts-
 owned projector to structurally omit every document `sourcePath` and visual
 `assetPath`, replacing each asset path with its deterministic opaque
-`outputKey`. It preserves full-bundle metadata and `sourceHash`; that hash is
-provenance for the full corpus, never a digest of filtered documents.
+`outputKey`. Before those paths are discarded it parses the selected sections
+once and builds the exact path-free link table below. It preserves full-bundle
+metadata and `sourceHash`; that hash is full-corpus provenance.
 
 Before adding its non-enumerable module-private symbol and deeply freezing the
 result, the constructor proves all of the following over the filtered records:
@@ -200,13 +207,14 @@ not a cross-target fallback. The private brand symbol and brand factory are not
 exported; structural lookalikes, serialized/deserialized objects, spread
 copies, foreign brands and mutated values fail at every consumer boundary.
 
-Serialization emits only the strict contracts-owned
-`DocsPublicationPayloadV1<T>` body and canonical `bodySha256`; it never emits
-the brand, corpus envelope, non-target records, `sourcePath` or `assetPath`.
-The payload constructor normalizes that unknown payload exactly once, requires
-the caller's literal target, rechecks body hash/order/closure and brands the
-safe DTOs without reconstructing a distribution bundle. Recursive exact-key
-checks reject a cast/spread full source record before branding.
+Serialization calls contracts-owned `createDocsPublicationPayloadV1`, wraps it
+with the link table, then calls the same package's
+`hashDocsCanonicalJsonBodyV1(DOCS_PUBLICATION_PROJECTION_BODY_HASH_DOMAIN_V1,
+body)`. Thus projection hash bytes use L01's exact RFC-8785/no-LF/domain+NUL+
+u64-length framing and fixed `{}` vector; renderer defines no hash fork. It emits
+no brand/corpus/path/non-target record. The browser recursively normalizes once,
+rechecks both hashes/target/order/closure and brands safe DTOs. Exact-key tests
+reject full-source/path rows plus domain/length/body/final-LF mutations.
 
 `resolveDocsPublicationDocumentV1` and the key-list helper validate the brand;
 the resolver also requires one canonical member without re-normalizing it.
@@ -346,6 +354,27 @@ links. Both pass `"auto"` when reduced motion is requested.
 
 ### Exact link, local-asset and copy contracts
 
+Relative documentation links remain executable after `sourcePath` is removed.
+At projection construction, the trusted full-source edge parses every selected
+section with `parseSafeMarkdownSection`, resolves relative links against its
+normalized POSIX `sourcePath`, then emits one path-free row per unique exact
+`{ sourceDocId, sourceLocale, sourceSectionId, rawHref }`; pure `#sectionId`
+anchors remain same-document anchors outside this table.
+
+Reject backslashes, roots/protocol-relative paths, queries, encoded separators
+or dot segments, ambiguous decoding, root escape, missing/non-target targets,
+and non-section fragments. Resolve only the exact authored target locale; an
+explicit cross-locale file is allowed only as an exact selected member, never
+via fallback. No fragment means both nullable target fields are null; otherwise
+`fragment` is `#` plus the encoded exact `targetSectionId`. Sort by source tuple
+then raw UTF-8 href. Equal repetitions dedupe only to a byte-identical target;
+a divergent duplicate key is fatal.
+
+`resolveSafeDocsLink` looks up that exact table key and never reparses a path or
+joins a slug. Help maps stable identity through complete `localDocumentHrefs`;
+public docs uses the versioned route helper. Missing/extra/duplicate/mismatched
+rows block the affected article instead of guessing.
+
 This leaf exports one required, recursively strict discriminated link context:
 
 ```ts
@@ -356,28 +385,22 @@ export type DocsLinkContextV1 =
   | {
       surface: "embedded-help"; publicationTarget: "embedded-help"; locale: string;
       localDocumentHrefs: readonly DocsResolvedHelpHostLinkV1[];
-      officialDocs:
-        | { state: "configured"; origin: string; basePath: string; version: string }
-        | { state: "unavailable" };
+      officialDocs: { state: "configured"; origin: string; basePath: string;
+        version: string } | { state: "unavailable" };
     }
   | {
       surface: "public-docs"; publicationTarget: "public-docs"; locale: string;
       productVersion: string; publicBasePath: string;
     };
-
 export type DocsResolvedLinkV1 =
   | { kind: "anchor"; href: string; prefetch: false }
   | { kind: "admin"; href: string; prefetch: true }
   | { kind: "public-docs"; href: string; prefetch: false }
   | { kind: "external-https"; href: string; prefetch: false };
-
 export function normalizeDocsLinkContextV1(value: unknown): DocsLinkContextV1;
-
 export function resolveSafeDocsLink(input: {
-  href: string;
-  projection: DocsPublicationProjectionV1;
-  documentKey: DocsPublicationDocumentKeyV1;
-  sectionId: string;
+  href: string; projection: DocsPublicationProjectionV1;
+  documentKey: DocsPublicationDocumentKeyV1; sectionId: string;
   context: DocsLinkContextV1;
 }): DocsResolvedLinkV1;
 ```
@@ -410,12 +433,10 @@ export type DocsExampleCopyActivationV1 = {
   kind: "trusted-user-activation"; isTrusted: true;
 };
 export type DocsCopyExampleBodyV1 = (input: {
-  body: string;
-  activation: DocsExampleCopyActivationV1;
+  body: string; activation: DocsExampleCopyActivationV1;
 }) => void | Promise<void>;
 export function buildVerifiedDocsLocalVisualAssetMapV1(input: {
-  projection: DocsPublicationProjectionV1;
-  documentKey: DocsPublicationDocumentKeyV1;
+  projection: DocsPublicationProjectionV1; documentKey: DocsPublicationDocumentKeyV1;
   emittedAssets: readonly DocsLocalVisualAssetV1[];
 }): ReadonlyMap<string, DocsLocalVisualAssetV1>;
 ```
@@ -440,14 +461,16 @@ read/verify required PNG bytes, then discards those paths/bytes and emits
 canonical `coderso.docs-help-assets@v1` `docs-help-assets-v1.json` plus one
 virtual module containing only the hash-bound target payload/URL receipt.
 
-The exact payload schema is `coderso.docs-publication-payload@v1` with literal
-`embedded-help`, target-derived locale metadata, full-corpus `sourceHash`,
-target-member `DocsPublicationDocumentV1` DTOs and domain-separated
-`bodySha256`; it excludes every non-target document, corpus envelope,
-`sourcePath` and `assetPath`. Renderer-root-only
+The emitted renderer wrapper is
+`coderso.docs-publication-projection-payload@v1`: it contains the exact nested
+contracts-owned publication payload, the strict link-resolution table and a
+domain-separated `projectionSha256`. It retains literal `embedded-help`,
+target locale metadata and full-corpus `sourceHash`, but excludes every
+non-target document, corpus envelope, resolved path, `sourcePath` and
+`assetPath`. Renderer-root-only
 `createDocsPublicationProjectionFromPayloadV1(unknown, "embedded-help")` is
-the sole browser boundary: one strict safe-payload normalization plus target/
-hash/closure proof precedes branding. Receipt normalization joins only opaque
+the sole browser boundary: one strict wrapper and nested-payload normalization
+plus target/hash/link/closure proof precedes branding. Receipt normalization joins only opaque
 `outputKey`/href/media/SHA-256 records; source paths, output filesystem paths,
 bytes and full-corpus records never enter Admin chunks. It builds one index.
 Dev allows only the exact real image root. Missing/tampered receipt/target/URL/
@@ -464,6 +487,12 @@ export type DocsEmbeddedHelpAssetReceiptV1 = Readonly<{
   schema: "coderso.docs-help-assets@v1"; publicationTarget: "embedded-help";
   sourceHash: string; assets: readonly DocsLocalVisualAssetV1[]; receiptSha256: string;
 }>;
+export type DocsEmbeddedHelpAssetReceiptBodyV1 = Omit<
+  DocsEmbeddedHelpAssetReceiptV1, "receiptSha256"
+>;
+export function hashEmbeddedHelpAssetReceiptBodyV1(
+  body: DocsEmbeddedHelpAssetReceiptBodyV1
+): string;
 export function normalizeEmbeddedHelpAssetReceiptV1(value: unknown):
   DocsEmbeddedHelpAssetReceiptV1;
 export async function resolveEmbeddedHelpBuildAssetFileV1(input: {
@@ -471,14 +500,25 @@ export async function resolveEmbeddedHelpBuildAssetFileV1(input: {
 }): Promise<Readonly<{ bytes: Uint8Array; sha256: string }>>;
 ```
 
-The normalizer requires exact byte/path-free fields and outputKey↔SHA relation. The resolver
-rejects unknown input keys, confines the canonical same-origin Vite asset href
+`receiptSha256` is the lowercase-hex SHA-256 of this exact framed byte string:
+ASCII `coderso.docs-help-assets@v1`, one NUL byte, the unsigned 64-bit
+big-endian byte length of the canonical body, then the UTF-8 canonical body.
+The body is exactly `{ schema, publicationTarget, sourceHash, assets }`, omits
+`receiptSha256`, uses RFC 8785 canonical JSON, and requires assets in strictly
+increasing `outputKey` order (ties/duplicates reject). Thus object keys are
+recursively sorted by the canonical serializer while array order is fixed by
+the contract. The normalizer recursively rejects unknown keys, validates every
+field/outputKey↔SHA relation, recomputes this digest, and constant-time compares
+it; it never trusts or includes the supplied self field in the digest input.
+
+The resolver rejects unknown input keys, confines the canonical same-origin Vite asset href
 below real `clientRoot`, binds it to `outputKey`, opens `O_NOFOLLOW`, fstats
 before/after one bounded same-handle read, then hashes those bytes. It returns
 no path and never reopens by pathname; traversal, encoded separators, query/
 hash, symlink, swap, non-regular/oversized/missing file or mapping/hash drift
-fails closed. Browser imports only the tree-shakeable pure normalizer, never the
-resolver/Node edge; Docker/runtime consumes bytes/hash without a path.
+fails closed. Browser imports only the pure normalizer, never the resolver/Node
+edge; L03's server registry calls that normalizer once at runtime construction,
+and Docker/runtime consumes verified bytes/hash without a path.
 
 `DocsRendererProps.copyExampleBody` is required. The renderer invokes it only
 inside a trusted click/keyboard activation after checking
@@ -564,9 +604,7 @@ exact safe helpers:
 type DocsPublicRouteV1 =
   | { kind: "version"; version: string; locale: string; slug: string }
   | { kind: "latest"; locale: string; slug: string };
-
 export function buildDocsPublicPath(route: DocsPublicRouteV1): string;
-
 export function buildDocsPublicHref(input: {
   origin: string;
   basePath: string;
@@ -614,147 +652,136 @@ later imports these exact helpers; it does not rebuild public routes.
 
 ```tsx
 // core/admin/ui/help/docsHelpHostAdapter.ts
-export function buildDocsHelpHostLinksV1(input: {
-  projection: DocsPublicationProjectionV1<"embedded-help">;
-}): readonly DocsResolvedHelpHostLinkV1[] {
+export function buildDocsHelpHostLinksV1(
+  input: { projection: DocsPublicationProjectionV1<"embedded-help"> }
+): readonly DocsResolvedHelpHostLinkV1[] {
   return requireCompleteUniqueLocalizedLinks(
     listDocsPublicationDocumentKeysV1(input.projection).map((key) => ({
-    ...key,
-    href: adminHelpPath(key),
-    prefetch: true as const,
-  })));
+      ...key, href: adminHelpPath(key), prefetch: true as const,
+    }))
+  );
 }
-export function resolvePermittedAdminAction(input: {
-  adminPath: string | null;
-  permissionRequirement: DocsPermissionRequirementV1 | null;
-  permissionSnapshot: DocsAdminPermissionSnapshotV1;
-}): DocsAdminActionResolutionV1 | null {
+export function resolvePermittedAdminAction(
+  input: DocsPermittedAdminActionInputV1
+): DocsAdminActionResolutionV1 | null {
   const normalized = normalizeDocsAdminActionInput(input);
-  if (normalized.adminPath === null || normalized.permissionSnapshot.state !== "ready") {
-    return null;
-  }
-  if (!satisfiesDocsPermissionRequirement(
-    normalized.permissionRequirement, normalized.permissionSnapshot.permissions
-  )) {
-    return null;
-  }
+  if (normalized.adminPath === null ||
+      normalized.permissionSnapshot.state !== "ready") return null;
+  if (!satisfiesDocsPermissionRequirement(normalized.permissionRequirement,
+      normalized.permissionSnapshot.permissions)) return null;
   return { href: normalized.adminPath, linkKind: "admin", prefetch: true };
 }
-
 // packages/docs-renderer/src/publicationProjection.ts
-export function createDocsPublicationProjectionV1(value: {
-  sourceBundle: unknown;
-  publicationTarget: DocsPublicationSurfaceTargetV1;
-}): DocsPublicationProjectionV1 {
+export function createDocsPublicationProjectionV1(
+  value: CreateDocsPublicationProjectionInputV1
+): DocsPublicationProjectionV1 {
   const input = assertExactObjectKeys(value, ["sourceBundle", "publicationTarget"]);
-  const publicationTarget = assertDocsPublicationSurfaceTargetV1(
-    input.publicationTarget
-  );
+  const publicationTarget = assertDocsPublicationSurfaceTargetV1(input.publicationTarget);
   const source = normalizeDocsDistributionBundleV2(input.sourceBundle);
-  const documents =
-    selectDocumentsForPublicationTarget(source.documents, publicationTarget);
+  const documents = selectDocumentsForPublicationTarget(
+    source.documents, publicationTarget
+  );
   assertCompleteSourceProjectionClosureV1(documents, source);
+  const linkResolutions = buildStrictPublicationLinkResolutionsV1({
+    documents, parseSection: parseSafeMarkdownSection,
+  }); // trusted sourcePath use ends here
   const projection = {
-    schema: "coderso.docs-publication-projection@v1" as const,
-    publicationTarget,
-    corpusVersion: source.corpusVersion,
-    defaultLocale: source.defaultLocale,
-    supportedLocales: source.supportedLocales,
-    sourceHash: source.sourceHash,
+    schema: "coderso.docs-publication-projection@v1" as const, publicationTarget,
+    corpusVersion: source.corpusVersion, defaultLocale: source.defaultLocale,
+    supportedLocales: source.supportedLocales, sourceHash: source.sourceHash,
     documents: documents.map(projectDocsPublicationDocumentV1),
+    linkResolutions,
   };
   assertCompleteSafePublicationProjectionClosureV1(projection);
   return deepFreezeWithPrivateBrand(projection, docsPublicationProjectionBrandV1);
 }
-
 export function serializeDocsPublicationProjectionV1<T extends
-  DocsPublicationSurfaceTargetV1>(
-  projection: DocsPublicationProjectionV1<T>
-): DocsPublicationPayloadV1<T> {
+  DocsPublicationSurfaceTargetV1>(projection: DocsPublicationProjectionV1<T>
+): DocsPublicationProjectionPayloadV1<T> {
   requireDocsPublicationProjectionBrandV1(projection);
-  const body = copyExactEnumerableProjectionBody(projection);
-  return deepFreeze({ schema: "coderso.docs-publication-payload@v1", body,
-    bodySha256: hashCanonicalPublicationBodyV1(body) });
+  const publication = createDocsPublicationPayloadV1(copyExactPublicationBodyV1(projection));
+  const body = { publication, linkResolutions: projection.linkResolutions };
+  return deepFreeze({
+    schema: "coderso.docs-publication-projection-payload@v1", ...body,
+    projectionSha256: hashDocsCanonicalJsonBodyV1(DOCS_PUBLICATION_PROJECTION_BODY_HASH_DOMAIN_V1, body),
+  });
 }
-
 export function createDocsPublicationProjectionFromPayloadV1<T extends
   DocsPublicationSurfaceTargetV1>(
   value: unknown, expectedTarget: T
 ): DocsPublicationProjectionV1<T> {
-  const payload = normalizeDocsPublicationPayloadV1(value); // exactly once
-  assertPayloadBodyHashAndLiteralTarget(payload, expectedTarget);
-  assertCompleteSafePublicationProjectionClosureV1(payload.body);
-  return deepFreezeWithPrivateBrand(
-    toUnbrandedProjection(payload.body), docsPublicationProjectionBrandV1
-  );
+  const payload = normalizeDocsPublicationProjectionPayloadEnvelopeV1(value);
+  const publication = normalizeDocsPublicationPayloadV1(payload.publication);
+  assertProjectionPayloadHashesTargetAndLinkTableV1(payload, publication,
+    expectedTarget);
+  assertCompleteSafePublicationProjectionClosureV1({
+    ...publication.body, linkResolutions: payload.linkResolutions,
+  });
+  return deepFreezeWithPrivateBrand(toUnbrandedProjection(
+    publication.body, payload.linkResolutions), docsPublicationProjectionBrandV1);
 }
-
 // packages/docs-renderer/src/search.ts
-export function buildDocsSearchIndexV1(
-  projection: DocsPublicationProjectionV1
-): DocsSearchIndexV1 {
+export function buildDocsSearchIndexV1(projection: DocsPublicationProjectionV1) {
   requireDocsPublicationProjectionBrandV1(projection);
   return deepFreeze(indexEveryRankingSignal(projection.documents));
 }
-
-export function searchDocs(
-  index: DocsSearchIndexV1,
-  input: DocsSearchInput
-): readonly DocsSearchResult[] {
+export function searchDocs(index: DocsSearchIndexV1, input: DocsSearchInput) {
   return scoreDocsSearchRecords(index.records, normalizeDocsSearchInput(input));
 }
-
 // packages/docs-renderer/src/clientSearch.ts
 export function projectDocsClientSearchRankingV1(
-  index: DocsSearchIndexV1,
-  scope: { productVersion: string; locale: string }
-): DocsClientSearchRankingProjectionV1 {
+  index: DocsSearchIndexV1, scope: DocsClientSearchScopeV1
+) {
   return deepFreeze(projectAllPublicScoreFields(index, normalizeScope(scope)));
 }
 export function searchDocsClientSearchRankingV1(
-  index: DocsClientSearchRankingProjectionV1,
-  input: DocsSearchInput
-): readonly DocsSearchResult[] {
+  index: DocsClientSearchRankingProjectionV1, input: DocsSearchInput
+) {
   const normalized = normalizeDocsClientSearchRankingProjectionV1(index);
   return scoreDocsSearchRecords(normalized.records, normalizeDocsSearchInput(input));
 }
-
 // packages/docs-renderer/src/evidenceCards.ts
 export function buildVerifiedDocsLocalVisualAssetMapV1(input: {
-  projection: DocsPublicationProjectionV1;
-  documentKey: DocsPublicationDocumentKeyV1;
+  projection: DocsPublicationProjectionV1; documentKey: DocsPublicationDocumentKeyV1;
   emittedAssets: readonly DocsLocalVisualAssetV1[];
 }): ReadonlyMap<string, DocsLocalVisualAssetV1> {
   requireDocsPublicationProjectionBrandV1(input.projection);
-  const document =
-    resolveDocsPublicationDocumentV1(input.projection, input.documentKey);
+  const document = resolveDocsPublicationDocumentV1(
+    input.projection, input.documentKey
+  );
   const expected = collectExactDocumentVisuals(document);
   return verifyAndFreezeExactOpaqueAssetMap(expected, input.emittedAssets);
 }
-
-export function resolveDocsSectionEvidenceCards(input: {
-  projection: DocsPublicationProjectionV1;
-  documentKey: DocsPublicationDocumentKeyV1;
-  section: DocsSectionV2;
-  localVisualAssets: ReadonlyMap<string, DocsLocalVisualAssetV1>;
-}): DocsSectionEvidenceCardsV1 {
-  const document =
-    resolveDocsPublicationDocumentV1(input.projection, input.documentKey);
+export function resolveSafeDocsLink(input: ResolveSafeDocsLinkInputV1) {
+  const { projection, document, section } = requireExactLinkSource(input);
+  if (isSameDocumentAnchor(input.href))
+    return resolveExactSectionAnchor(document, input.href);
+  const row = requireUniquePublicationLinkResolutionV1(projection.linkResolutions, {
+    sourceDocId: document.docId, sourceLocale: document.locale,
+    sourceSectionId: section.sectionId, rawHref: input.href,
+  });
+  return renderResolvedLinkFromStableTargetV1(row, input.context);
+}
+export function resolveDocsSectionEvidenceCards(
+  input: ResolveDocsSectionEvidenceCardsInputV1
+): DocsSectionEvidenceCardsV1 {
+  const document = resolveDocsPublicationDocumentV1(
+    input.projection, input.documentKey
+  );
   const section = resolveExactDocumentSection(document, input.section.sectionId);
   assertSameNormalizedSection(section, input.section);
   return resolveOrderedStrictOwnedEvidence(input, document, section);
 }
-
 // core/admin/ui/help/helpBuildAssets.ts
 type DocsEmbeddedHelpBuildPayloadV1 =
-  DocsPublicationPayloadV1<"embedded-help">;
+  DocsPublicationProjectionPayloadV1<"embedded-help">;
 export function loadEmbeddedHelpBuildAssetsV1(): EmbeddedHelpBuildAssetsV1 {
-  const emitted =
-    normalizeEmbeddedHelpVirtualModuleV1(embeddedHelpViteModuleUnknown);
-  const projection =
-    createDocsPublicationProjectionFromPayloadV1(
-      emitted.targetPayload, "embedded-help"
-    );
+  const emitted = normalizeEmbeddedHelpVirtualModuleV1(
+    embeddedHelpViteModuleUnknown
+  );
+  const projection = createDocsPublicationProjectionFromPayloadV1(
+    emitted.targetPayload, "embedded-help"
+  );
   const receipt = normalizeEmbeddedHelpAssetReceiptV1(emitted.assetReceipt);
   assertEqual(receipt.sourceHash, projection.sourceHash);
   assertBuildReceiptExactlyMatchesProjectionV1(receipt.assets, projection);
@@ -763,9 +790,14 @@ export function loadEmbeddedHelpBuildAssetsV1(): EmbeddedHelpBuildAssetsV1 {
     searchIndex: buildDocsSearchIndexV1(projection),
   });
 }
-
-// core/vite.config.ts
-function codersoEmbeddedHelpAssetsV1(): Plugin {
+export function hashEmbeddedHelpAssetReceiptBodyV1(body: ReceiptBodyV1) {
+  const normalized = normalizeExactSortedReceiptBodyV1(body);
+  const canonical = utf8(serializeRfc8785(normalized));
+  return sha256LowerHex(concat(ascii("coderso.docs-help-assets@v1"), nul(),
+    u64be(canonical.length), canonical));
+}
+// core/services/documentation/help/embeddedHelpVitePlugin.ts
+export function codersoEmbeddedHelpAssetsV1(): Plugin {
   return failClosedVirtualAssetPlugin({
     id: "virtual:coderso-embedded-help-assets-v1",
     async buildReceipt(ctx) {
@@ -774,18 +806,20 @@ function codersoEmbeddedHelpAssetsV1(): Plugin {
         sourceBundle: bundle, publicationTarget: "embedded-help",
       });
       const files = await walkExactPngRootNoFollow(DOCS_GUIDE_IMAGE_ROOT);
-      const verified = await verifySourcePathsAndPngBytesV1({ bundle, projection, files });
+      const verified = await verifySourcePathsAndPngBytesV1({
+        bundle, projection, files,
+      });
       return emitPathFreeEmbeddedHelpPayloadV1(ctx, {
         payload: serializeDocsPublicationProjectionV1(projection), verified,
       });
     },
   });
 }
-
+// core/vite.config.ts: orchestration only; no duplicate build logic.
+plugins: [...existingPlugins, codersoEmbeddedHelpAssetsV1()], server: { fs: { allow: [...existingAllow, DOCS_GUIDE_IMAGE_ROOT] } },
 // packages/docs-renderer/src/DocsDocumentRenderer.tsx
 export type DocsRendererProps = {
-  projection: DocsPublicationProjectionV1;
-  documentKey: DocsPublicationDocumentKeyV1;
+  projection: DocsPublicationProjectionV1; documentKey: DocsPublicationDocumentKeyV1;
   linkContext: DocsLinkContextV1;
   localVisualAssets: ReadonlyMap<string, DocsLocalVisualAssetV1>;
   copyExampleBody: DocsCopyExampleBodyV1;
@@ -795,19 +829,13 @@ export function buildDocsTableOfContentsV1(
 ): readonly DocsTableOfContentsItemV1[] {
   const sections = assertUniqueNormalizedDocumentSections(document);
   return sections.map((section) => ({
-    sectionId: section.sectionId,
-    heading: section.heading,
-    level: section.level,
-    href: `#${section.sectionId}`,
+    sectionId: section.sectionId, heading: section.heading,
+    level: section.level, href: `#${section.sectionId}`,
   }));
 }
-
-function DocsSectionHeading(
-  props: { document: DocsPublicationDocumentV1; section: DocsSectionV2 }
-) {
+function DocsSectionHeading(props: DocsSectionHeadingPropsV1) {
   const exactProps = {
-    id: props.section.sectionId,
-    tabIndex: -1,
+    id: props.section.sectionId, tabIndex: -1,
     "data-docs-document-id": props.document.docId,
     "data-docs-locale": props.document.locale,
     "data-docs-section-id": props.section.sectionId,
@@ -820,15 +848,9 @@ function DocsSectionHeading(
     default: return assertNeverDocsSectionLevel(props.section.level);
   }
 }
-
-export function focusDocsLocalizedSectionDeepLinkV1(input: {
-  root: HTMLElement;
-  document: DocsPublicationDocumentV1;
-  docId: string;
-  locale: string;
-  sectionId: string;
-  behavior: "auto" | "smooth";
-}): boolean {
+export function focusDocsLocalizedSectionDeepLinkV1(
+  input: DocsLocalizedSectionDeepLinkInputV1
+): boolean {
   const identity = normalizeExactLocalizedSectionDeepLinkV1(input);
   const section = resolveExactLocalizedSectionIdentity(input.document, identity);
   const heading = input.root.ownerDocument.getElementById(identity.sectionId);
@@ -838,60 +860,44 @@ export function focusDocsLocalizedSectionDeepLinkV1(input: {
   heading.focus({ preventScroll: true });
   return true;
 }
-
 export function DocsDocumentRenderer(props: DocsRendererProps) {
   const projection = requireDocsPublicationProjectionBrandV1(props.projection);
-  const document =
-    resolveDocsPublicationDocumentV1(projection, props.documentKey);
+  const document = resolveDocsPublicationDocumentV1(projection, props.documentKey);
   const linkContext = normalizeDocsLinkContextV1(props.linkContext);
   const sections = assertUniqueNormalizedDocumentSections(document);
   const tableOfContents = buildDocsTableOfContentsV1(document);
   assertRendererSurfaceTargetAndLocale(
     linkContext, projection.publicationTarget, document.locale
   );
-  return <DocsArticle
-    document={document}
-    tableOfContents={tableOfContents}
+  return <DocsArticle document={document} tableOfContents={tableOfContents}
     renderSection={(section) => renderStrictDocsSection({
       section, document, projection, linkContext, props,
     })}
   />;
 }
-
 // core/admin/app/routes/help.admin-route.tsx
-import {
-  HELP_ADMIN_ROUTE_DESCRIPTORS_V1
-} from "./help.admin-route-descriptor";
-
+import { HELP_ADMIN_ROUTE_DESCRIPTORS_V1 } from "./help.admin-route-descriptor";
 export const descriptors = HELP_ADMIN_ROUTE_DESCRIPTORS_V1;
 export const bindings = {
-  "help.home": ({ authPermissionSnapshot }) => (
-    <HelpPage permissionSnapshot={authPermissionSnapshot} />
-  ),
+  "help.home": ({ authPermissionSnapshot }) =>
+    <HelpPage permissionSnapshot={authPermissionSnapshot} />,
 } satisfies Readonly<Record<string, AdminRouteRender>>;
 ```
 
-**Data flow:** build/dev loader normalization → full target constructor → strict
-hash-bound embedded-only payload + verified byte-free asset receipt → browser
-payload constructor/private brand → one index → localized member → verified URL
-map → link/copy context → safe renderer. Non-target records/full bundle/PNG
-bytes never enter Admin chunks. One localized section array owns TOC+article;
-initial/TOC/popstate navigation uses the shared focus helper.
+**Data flow:** build/dev normalization → target constructor → hash-bound
+embedded-only payload/link table + byte-free receipt → browser brand → index →
+localized member → verified URL map → link/copy context → safe renderer. No
+non-target/full-bundle/PNG bytes enter Admin chunks; one section array owns
+TOC/article and the shared focus helper owns initial/TOC/popstate navigation.
 
-**Error handling:** malformed build payload/receipt blocks Help with a local,
-non-sensitive integrity error; invalid query params are ignored/replaced;
-missing doc/section returns search/404 guidance; a cross-document, cross-locale,
-cross-section, duplicate, missing, unlisted, orphan or tampered visual/example
-reference blocks the affected article with a bounded integrity error before
-render; a verified image that later fails browser decoding retains its visible
-caption/alt fallback. Unavailable official origin hides the external action;
-Help-only target omits it; malformed permissions fail closed. The strict shared
-renderer has no omit-invalid-evidence flag: only Guide's separate, already
-authorization-filtered enrichment projection may omit an unresolved optional
-card while retaining grounded text/source evidence.
-An invalid heading level or duplicate section ID blocks the complete article
-before partial TOC/heading/body output; a valid deep link cannot focus an
-element outside the selected localized article.
+**Error handling:** malformed payload/receipt blocks Help with a bounded local
+integrity error; invalid query state is replaced and missing content gets 404
+guidance. Cross-owner/locale/section, duplicate, missing, orphan or tampered
+evidence blocks that article before render; decode failure retains caption/alt.
+Unavailable official origin hides its action, Help-only omits it, and malformed
+permissions fail closed. Only Guide's separate authorized projection may omit
+an unresolved optional card. Invalid heading/duplicate section blocks the whole
+article, and a deep link cannot focus outside its selected localized article.
 
 **Regression-test shape:**
 
@@ -915,28 +921,28 @@ element outside the selected localized article.
 - Help and portal pin stored heading level/text/id, TOC order/hrefs, localized
   focus/scroll/popstate/reduced-motion behavior and collision isolation;
 - link-context tests cover exact discriminants/host maps, version/locale/base,
-  official-target eligibility, traversal/schemes and no implicit defaults;
+  official-target eligibility and no defaults; link-table tests cover repeated-
+  equal dedupe, divergent-key collision, traversal/encoding/query rejection,
+  explicit cross-locale exact targets, missing/non-target destinations, exact
+  fragment/section checks, stable ordering and zero resolved path bytes;
 - receipt tests cover opaque-key/SHA closure, missing/unknown-extra/duplicate/
-  remote/blob/data/no-fetch; build-only tests pin traversal/symlink/swap rejection, same-handle fstat/read and hash mismatch;
+  remote/blob/data/no-fetch, fixed digest vectors, field/asset/order tampering,
+  self-field exclusion and self-reference rejection; build-only tests pin
+  traversal/symlink/swap rejection, same-handle fstat/read and hash mismatch;
 - descriptor/catalog, any-auth route, footer atomicity, keyboard/focus,
   responsive light/dark, no-network and touched-file <=1,000 gates.
 
 ## Sub-Tasks
 
-- [ ] Build branded full/Help-payload projections, pure shared/client search,
-  Vite target-only registry, server receipt verifier and closed renderer package.
-- [ ] Render exact stored section headings through the static semantic-level
-  switch, unique stable anchors, a source-order TOC and the shared localized
-  scroll/focus helper consumed by Help and portal.
-- [ ] Export the surface-discriminated link context, projection-only asset-map
-  builder and trusted copy contract; permit no optional/default renderer prop.
-- [ ] Add the Core-only Help host adapter and direct permission/path/complete-
-  link tests; Help and Guide consume it, renderer receives safe results only.
+- [ ] Build branded projection payloads/link table, shared/client search, Vite
+  target registry, receipt verifier and closed renderer package.
+- [ ] Render stored semantic headings, stable anchors/TOC and shared localized
+  focus helper; expose exact link, asset-map and trusted-copy contracts.
+- [ ] Add the Core-only Help host adapter with permission/path/coverage tests;
+  Help and Guide consume it while renderer receives safe results only.
 - [ ] Build deterministic local search and URL-state helpers.
 - [ ] Implement exact shared public path/href helpers and hostile-input tests.
-- [ ] Add the pure named Help descriptor array plus paired binding module whose
-  only `descriptors` alias has reference identity with that array, and the
-  responsive accessible Admin page.
+- [ ] Add the named descriptor/identity-preserving binding and accessible page.
 - [ ] Replace the footer Docs link atomically and preserve Support.
 - [ ] Add security, accessibility, route, and no-network regression suites.
 
@@ -950,7 +956,7 @@ bunx vitest run --config vitest.config.ts \
   tests/vitest/ui/admin-shell-nav.test.tsx tests/vitest/admin/admin-route-registry.test.tsx \
   tests/vitest/admin/adminApp.test.tsx \
   tests/vitest/admin/adminPaths.test.ts
-bun test tests/unit/documentation/helpBuildAssetVerification.test.ts
+bun test tests/unit/documentation/helpBuildAssetVerification.test.ts tests/unit/documentation/embeddedHelpVitePlugin.test.ts
 bun --cwd packages/docs-renderer check
 bun --cwd core --eval 'const renderer = await import("@coderso/docs-renderer"); const projection = await import("@coderso/docs-renderer/projection"); if (typeof renderer.DocsDocumentRenderer !== "function" || typeof renderer.buildDocsSearchIndexV1 !== "function" || typeof renderer.selectDocumentsForPublicationTarget !== "function" || typeof projection.createDocsPublicationProjectionV1 !== "function") throw new Error("docs_renderer_exports_invalid")'
 bun --cwd core lint:types
@@ -976,22 +982,16 @@ classification.
 
 - `/admin/help` and the local footer link land together and work for any
   authenticated Admin user.
-- Search, reader, TOC, examples, screenshots, and local deep links use only the
-  installed compiled distribution and issue no per-query network request.
-- Every renderer/search/evidence/link consumer receives the exact branded
-  target projection; no filtered value masquerades as a distribution bundle.
-- Renderer/search primitives are reusable by TASK-548-04 without forking
-  content, search rules, or safety policy.
-- Help and portal render identical stored heading text/levels/IDs, exact TOC
-  anchors and localized keyboard-focusable deep links through the shared
-  package.
-- Help and portal provide explicit link context, byte-free verified local asset
-  maps and user-event-only copy behavior to the same renderer.
+- Search/reader/TOC/examples/screenshots/deep links use the installed corpus
+  only, with no per-query network request.
+- Every consumer receives the exact branded target projection; shared renderer/
+  search/link rules remain reusable by TASK-548-04 without a content fork.
+- Help/portal share stored heading/TOC/localized-focus behavior, explicit link
+  context, verified byte-free assets and user-event-only copy behavior.
 - Unsafe content/URLs/assets fail closed; raw HTML is never rendered.
-- `Open in CMS` is canonical and permission-aware; official docs are optional
-  and version/locale aware.
-- Light/dark, narrow/wide, keyboard, focus, and reduced-motion behavior is
-  usable and tested.
+- CMS links are canonical/permission-aware; official links are optional and
+  version/locale aware; light/dark, responsive, keyboard/focus and reduced
+  motion behavior is usable and tested.
 - No persistent Help cache or secret/PII leakage is introduced.
 
 ## Documentation Updates Required

@@ -177,7 +177,7 @@ Playwright scenarios ── reviewed canonical screenshots
 - Migration of the complete active English Guide corpus and coverage of active
   Admin screens/capabilities. Locale identity is ready for Polish content, but
   this task must not claim that the Admin UI itself is fully localized.
-- Dependency-shaped automated tests, at least seven real browser flows,
+- Dependency-shaped automated tests, exactly eight ordered real browser flows,
   security scans, documentation, changelog, and task closure.
 
 ## Out of Scope
@@ -298,10 +298,10 @@ authoring/migration `--write` runs and the two named handbacks. Its stable
 prestates are exactly `bootstrap-none`, clean-checkout
 `packaged-bundle-only`, and `linked-pair`; report-only and recovery hazards fail
 closed. A clean clone/tag, production runtime, portal, Docker image, release,
-`docs:check`, and coverage check require only the tracked bundle. They run the
-read-only workspace hazard inspector and strict packaged-bundle validation with
-recomputed canonical byte/`sourceHash` equality where source is available; none
-recovers, writes, or requires the ignored report.
+`docs:check`, and coverage check require only the tracked bundle. Consumers call
+exactly one zero-input atomic `loadPackagedDocsDistributionBundleV2()`, which
+internally inspects workspace hazards and validates packaged bytes/`sourceHash`;
+no separate guard call, recovery, write, or ignored report is allowed.
 
 The same status rule applies to the post-pilot checkpoint: after
 TASK-548-02-L02 writes exactly five pilot scenario/image/receipt triples,
@@ -322,27 +322,39 @@ The pre-authoring authorization order is exactly:
 3. Read TASK-547's final bytes and land an amendment to this parent containing
    every literal user/developer guide path it owns, the serialized cross-family
    land order, and each TASK-548 leaf's matching forbidden-path guard.
-4. Run the bounded TASK-548-08 workflow-infrastructure bootstrap. This is the
-   sole pre-authoring-audit implementation exception and may rebuild, validate,
+4. Select only `task548-bootstrap-build`. This bounded TASK-548-08 bootstrap is
+   the sole pre-authoring-audit exception and may rebuild, validate,
    and hand the owner for tracking/commit only these exact six paths:
-   `_docs/_workflows/task-548-author-audit.mjs`,
-   `_docs/_workflows/task-548-implement.mjs`,
-   `_docs/_workflows/task-548-fix.mjs`,
    `_docs/_workflows/lib/task-548-contract.mjs`,
+   `_docs/_workflows/task-548-author-audit.mjs`,
+   `_docs/_workflows/task-548-fix.mjs`,
+   `_docs/_workflows/task-548-implement.mjs`,
    `tests/unit/workflows/task548AuthorAudit.test.ts`, and
    `tests/unit/workflows/task548WorkflowContracts.test.ts`. They import the
    tracked TASK-545 drivers. Before any owner checkpoint/commit, require only
    the exact six-file write set and forbidden-path gate, Node syntax checks,
    targeted workflow tests, line counts, and `git diff --check`.
-5. Hand the exact reviewed-byte checkpoint to the owner; only the owner stages
-   and commits exactly those six paths. The bootstrap cannot edit
+5. Hand the exact reviewed-byte checkpoint to the owner. Its bounded strict
+   owner action identifies TASK-548/schema/mode/prior 40-hex HEAD, the exact six
+   sorted `{ path, sha256 }` records, their canonical aggregate SHA-256, and
+   canonical unpadded base64url checkpoint plus SHA-256 in exact `resumeArgv`.
+   Only the owner stages and commits exactly those six paths. The bootstrap cannot edit
    product/source, task, documentation, changelog, status, or evidence bytes;
-   TASK-548-08 remains `⏳ To Do`.
-6. From that new committed HEAD, require the exact commit path set,
+   TASK-548-08 remains `⏳ To Do`. Return immediately; do not validate the
+   commit, audit or implement in this process.
+6. In a fresh, mutually exclusive `task548-bootstrap-committed-resume`, strictly
+   decode and timing-safe verify that current-process checkpoint, reject unknown/
+   missing/duplicate/stale fields, then require the new HEAD to be one exact
+   single-parent owner commit over the recorded prior HEAD with the exact six-path diff,
    `git ls-files --error-unmatch` for all six paths, clean status and unstaged/
    staged diffs, `git show HEAD:<path>` byte parity for every path, and the
    clean-checkout/worktree tests. None of these post-commit gates may be required
-   of the uncommitted rebuild.
+   of the uncommitted rebuild. This mode cannot rebuild or rerun pre-commit gates.
+   Later TASK-545 first validates the committed exact-six-path receipt, then its
+   exact phase-1 call pins 1261/`task-548-hybrid-visual-documentation` and derives
+   `_docs/_workflows/task-548-implement.mjs` only from the executing `import.meta.url`;
+   caller overrides, untracked/dirty/
+   wrong-task/symlink entries or failed TASK-545 static/import gates reject.
 7. Only after that complete post-commit gate passes, run five mandatory fresh
    sequential authoring rounds plus the fresh per-round reconcile and require a
    final PASS with zero unresolved HIGH/MEDIUM findings.
@@ -354,7 +366,7 @@ The current ignored/provisional TASK-548 helper and every result it produced are
 non-authorizing. It cannot be promoted merely by tracking its current bytes:
 all six exact bootstrap files must be rebuilt against the final tracked TASK-545
 owners and pass the pre-commit gate before the owner commit, then the separate
-post-commit gate from the resulting clean HEAD. Any later change to a bootstrap
+committed-resume gate from the resulting clean HEAD, with no rebuild loop. Any later change to a bootstrap
 artifact, any TASK-548 task contract, or an imported TASK-545 driver invalidates
 the authoring authorization and requires all five fresh rounds plus reconcile
 again from the new HEAD. An audit run before either dependency gate, before the
@@ -365,6 +377,28 @@ grants no product/source or status-write authority.
 
 Only TASK-548-07 may edit TASK-548 statuses, the board, changelog 1261, or the
 changelog index during implementation.
+
+Closure orchestration keeps commit SHA, computed `HEAD^{tree}` Git OID, clean
+index/worktree parity, and canonical `runtimeTreeSha256` distinct; clean parity
+gates consumption and the runtime digest binds immutable receipts. The computed
+tree values are not extra release-resume inputs.
+After checkpoint retirement, 08 must run a fresh current-tree read-only drift
+and derive scoped owners only from those verified findings before fixes/gates/
+prerelease audit, then end at the owner release pause; old findings and retired
+evidence are non-authorizing. Only a separate fresh replacement release-resume
+may perform preparation/smoke. TASK-545 returns the sole closure identity.
+`frozen` permits only canonical state `none`; bound stale temp/journal is cleaned
+without date authority. Closure durably writes/fsyncs the no-replace changelog,
+then CAS-temp/renames/fsyncs the index. Both frozen and recovery call TASK-545's
+exact `writeOrResumeOrderedDurableChangelogFileThenIndexV1` owner export with
+`ordered-durable-changelog-file-then-index@v1`; no TASK-548 alias is permitted.
+Recovery accepts one strict regular
+non-symlink TASK-548 1261 file with slug
+`task-548-hybrid-visual-documentation` and zero (`file-only`) or one (`both`)
+matching index row before allowlisting. Index-only/corrupt/multiple fails; UTC
+rollover preserves the file's date.
+07 consumes it without re-resolution and returns the final mechanical delta;
+08 emits it exactly once, and neither persists the handoff.
 
 ## Acceptance Criteria
 
@@ -398,11 +432,17 @@ changelog index during implementation.
   forbidden-path, syntax, targeted-test, line-count, and diff-check gates before
   the owner commit; tracked membership, clean status/diffs, `git show` byte
   parity, exact commit scope, and clean-checkout/worktree tests pass afterward
-  from the new HEAD before any authoring audit.
+  from a fresh committed-resume before any authoring audit; build mode has
+  already terminated and committed-resume never rebuilds. Its strict bounded
+  checkpoint validates canonical transport/hash, exact sorted records, one
+  direct-parent owner commit and its exact six-path diff; malformed, duplicate,
+  unknown, stale or integrity-mismatched input fails closed.
+- Child-process crash tests kill every changelog journal/temp, fsync, rename and
+  directory-fsync boundary; only none/file-only/both recover idempotently.
 - No public API, runtime remote docs dependency, secret/PII leak, raw HTML sink,
   or second documentation source is introduced.
-- All targeted and full gates pass, including strict security scanning and at
-  least seven distinct real-flow Playwright CLI scenarios.
+- All targeted and full gates pass, including strict security scanning and
+  exactly eight ordered real-flow Playwright CLI scenarios.
 
 ## Testing Requirements
 
@@ -421,7 +461,7 @@ changelog index during implementation.
 - `bun run gates:coderso`
 - `bun run scan:security:strict`
 - task graph/H1/FileName/parent/status and touched-file line-count audits
-- task-scoped `playwright-cli -s=wf548smoke` smoke with at least seven distinct
+- task-scoped `playwright-cli -s=wf548smoke` smoke with exactly eight ordered
   real flows, visible-effect assertions, zero console/page errors, unique
   screenshots, SHA-256 evidence, and complete cleanup
 

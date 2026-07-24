@@ -86,14 +86,21 @@ screenshots:
 08-explicit-guide-agent-handoff.png
 ```
 
-TASK-545 `createResumeCheckpoint` phase 1 alone atomically writes
-`resume-checkpoint.json` after validating those nine 07-owned files. The exact
+Immediately before TASK-545 phase 1, 07 obtains the current committed exact-six
+bootstrap receipt and passes it only to
+`requireTask548CommittedSixPathBootstrapAuthorizationV1({ repoRoot, receipt })`.
+Only after that gate passes does the exact seven-key `createResumeCheckpoint`
+call—`repoRoot`, `expectedTask`, `pinnedChangelogNumber`,
+`pinnedChangelogSlug`, `expectedWorkflowRole`, `executingImportMetaUrl`, and
+`runtimeResult`—atomically write `resume-checkpoint.json`; the bootstrap receipt
+is not an eighth argument. The exact
 regular-file inventory after phase 1 is therefore the manifest, eight
 screenshots, and checkpoint, but 07-L01 never writes checkpoint bytes.
 No alternate acceptance or TASK-548-08 workflow-evidence tree is valid.
 TASK-548-04-L03 hands its landed portal evidence to L01 read-only. Missing or
 stale evidence aborts closure and returns to 04-L03; any recapture happens
-outside closure, then the full preparation/post-audit/smoke lifecycle restarts.
+outside closure, then prerelease audit, owner release, fresh release-resume,
+preparation and smoke restart.
 07-L01 alone writes `06-portal-local-exact-latest-rollback.png` and the final
 manifest during its own final smoke.
 
@@ -135,7 +142,8 @@ screenshot.
   proves rollback preserves immutable bytes and restore equals published, then
   disposes it. Only the 05-L02 helper may drive writers against its scoped local
   bare repository before browsing; scenario 6 invokes no writer.
-- Production availability is consumed only by downloading the exact
+- Production availability is consumed only by the fresh release-resume, which
+  downloads the exact
   TASK-548-05-L02 artifact
   `docs-post-deploy-health-<version>-<gitSha>-<workflowRunId>` from the selected
   successful release/deployment run, extracts it into a resolved task-owned
@@ -148,8 +156,10 @@ screenshot.
   `search.path`, HTTP 200 status, bounded bytes, and SHA-256 to both the selected
   `DocsSearchPublicationReceiptV1` record and detached portal manifest;
   `search.locale` must equal `selectedRoute.locale`, and the attempt's
-  path/status/bytes/body hash must equal the `search` fact. Closure
-  does not publish, deploy, promote, roll back, or otherwise mutate production.
+  path/status/bytes/body hash must equal the `search` fact. The verifier removes
+  its owned temporary tree before preparation returns, and smoke consumes the
+  verified receipt without a second download. Closure does not publish, deploy,
+  promote, roll back, or otherwise mutate production.
 - Wide/narrow, light/dark, reduced-motion, keyboard/focus and screen-reader
   semantics remain usable.
 - Explicit handoff is redacted, bounded, prefilled, never auto-sent, and does
@@ -172,40 +182,76 @@ screenshot.
 
 ## Phased Implementation Shape
 
-The exact post-06-L02 order is:
+The exact normal-path post-06-L02 order is split across three mutually
+exclusive invocations:
 
 ```text
+07-L01-release-inputs-and-prerelease-gates
+08-prerelease-post-audit-lenses/fixes/revalidation
+07-L01-owner-commit-merge-tag-release-cloudflare-deploy-pause
+--- process terminates ---
+07-L01-release-resume-committed-head-tree-and-receipt-validation
+08-release-resume-fresh-committed-head-drift-gate
 07-L01-runtime-docs-and-gates-preparation
-08-post-audit-lenses/fixes/revalidation
 07-L01-final-smoke-phase1-owner-pause
+--- process terminates ---
 07-L01-owner-resume-tracked-parity
 08-final-read-only-drift
 07-L01-terminal-metadata-closeout-and-mechanical-delta-verification
 ```
 
-All four normal-path 07 phases, plus the conditional retirement-pause and
-retirement-confirmation labels, invoke the same physical TASK-548-07-L01 owner.
-Its status remains open through preparation, smoke, checkpoint pause, tracked
-resume, and substantive final drift. A non-metadata finding returns to its exact
-owning leaf, reruns affected gates and preparation, and then obtains a fresh 08
-post-audit pass. Final smoke and checkpoint creation happen only after that
-pass. Final smoke writes only the exact TASK-545 manifest/eight screenshots,
-then TASK-545 phase 1 immediately and atomically creates the sole checkpoint and
-returns `owner_action_required`. 07 performs no pre-phase-1 checkpoint write and
-no task, changelog, board, status, or other metadata write. After owner
-resume verifies tracked parity, 08 performs the substantive final drift
-read-only before any terminal mutation. Only its pass authorizes the last 07
-phase in the first `frozen` closure attempt. If that process crashes before any
-metadata write, replay remains `frozen` and reruns a fresh read-only final
-drift. No preparation allowlist command or upstream producer runs after
-checkpoint creation. Changelog 1261 is then the first atomic deterministic
-metadata write,
-followed by descendant-before-parent closeout and the mechanical metadata-delta
-validator. If a crash occurs after that first write, TASK-545 returns
-`metadata_recovery`; replay validates the existing changes as an exact prefix
-of the deterministic metadata plan and completes only its missing writes. It
-does not rerun smoke/final drift or require a lost in-memory result. Nothing
-substantive runs after terminal metadata.
+All seven normal-path 07 labels, plus the conditional checkpoint-retirement
+pause and retirement-confirmation labels, invoke the same physical
+TASK-548-07-L01 owner. Its status remains open until terminal closeout. The
+prerelease invocation finishes owned documentation, derives strict planned
+release inputs and runs dependency-shaped prerelease gates. TASK-548-08 then
+runs its canonical post-audit. Every fix returns to its exact owning leaf and
+reruns the affected gates plus the release-input receipt. Only a fresh pass may
+produce the exact owner-only commit/merge/plain-tag/release/Cloudflare action;
+07/08 do not perform any of those mutations, and that process terminates.
+
+Only a new `task548-release-resume` invocation may accept the exact eight
+bounded fields `version`, `tag`, `gitSha`, `workflowRunId`,
+`workflowRunAttempt`, `deploymentId`, `origin`, and `basePath`. It trusts no
+pre-pause object. It accepts the repository-selected Git object format and thus
+requires exact lowercase 40-hex SHA-1 or 64-hex SHA-256 commit/tree OIDs with no
+mixed width. It proves HEAD/tag equality and clean index/worktree, feeds the
+untouched bounded canonical Git record stream to TASK-548-05-L01's pure
+`createDocsReleaseTreeBindingV1`, then normalizes/serializes that one
+`DocsReleaseTreeBindingV1` through the same L01 owner. Immutable release,
+artifact, retained-publication and TASK-548-05-L02 health receipts must carry
+that binding byte-for-byte; 07 defines no local tree DTO/hash contract and never
+imports L02's release-only Git adapter. It then downloads and strictly validates
+the one-member post-deploy-health
+artifact, and removes its temporary tree before returning its current-invocation
+receipt. A fresh 08 committed-HEAD drift pass then gates read-only runtime docs
+and full-gate preparation. Final smoke consumes only that verified preparation
+receipt; it never downloads or revalidates health by itself. It may invoke the
+05-L02 local retained-Pages helper only against its task-owned disposable bare
+repository, with no real publication authority.
+
+Final smoke writes only the exact TASK-545 manifest and eight screenshots, then
+runs the bootstrap-receipt gate immediately before TASK-545's exact seven-key
+phase-1 call with pinned changelog number `1261`, slug
+`task-548-hybrid-visual-documentation`, role `implement`, its own
+`import.meta.url`, and the smoke result. TASK-545 atomically creates the sole
+checkpoint, returns `owner_action_required`, and the release-resume process
+terminates without metadata, staging, commit or any later action. Only a fresh
+checkpoint-bound closure resume may verify owner-reviewed tracked parity. On a
+first `frozen` attempt, 08 runs substantive final drift before any terminal
+write. A pass allows 07 to consume TASK-545's sole `closureIdentity`, create the
+canonical changelog 1261 file first and its matching index row next through the
+sole TASK-545 owner export
+`writeOrResumeOrderedDurableChangelogFileThenIndexV1`, then close descendants
+before parents. Both `frozen` and `metadata_recovery` invoke that helper with
+exact marker `ordered-durable-changelog-file-then-index@v1`; no local alias,
+direct write, recovery bypass, or index-first path exists. A pre-write crash
+remains `frozen` and
+reruns final drift; a later crash enters `metadata_recovery`, validates the
+existing changes as an exact prefix of the same deterministic plan, and
+idempotently completes only missing metadata. 07 returns the five-key
+mechanical delta, 08 emits it exactly once, and neither persists it. Nothing
+substantive follows terminal metadata.
 
 If substantive final drift is non-pass, 08 first returns through this same leaf
 the exact `Task548InvalidatedCheckpointOwnerActionRequired`; it performs no
@@ -215,15 +261,37 @@ evidence directory. TASK-545 remains the sole checkpoint-byte writer, and
 agents never delete or unstage reviewed evidence. The owner verifies the
 task/run/path/checkpoint hash, unstages only those ten paths, and either archives
 them outside the repository or removes them before invoking `restartArgv`.
-The new normal invocation first runs
+The `retirement-restart invocation` first runs
 `confirmTask548InvalidatedCheckpointRetired()`, requiring those exact paths
 absent from index and worktree and the canonical directory absent or empty
 without a symlink. Wrong args, partial retirement, a remaining path, extra
 member or no-overwrite checkpoint conflict blocks before fixes or phase 1.
-After confirmation, the owning fix/gates and the complete
-preparation→post-audit→smoke→new phase-1 lifecycle rerun. This owner-mediated
+After confirmation, 08 runs a fresh current-tree read-only drift, derives the
+affected owners only from its verified findings, and dispatches their fixes and
+per-leaf gates. The same invocation then runs release inputs, canonical
+prerelease post-audit and the replacement owner release pause, where it
+terminates. Only a separate fresh release-resume may verify the replacement
+committed/released identity before preparation, smoke and a new phase 1. The
+restart skips bootstrap, authoring and the already-landed full implementation
+sequence; old findings and retired evidence are never read. This owner-mediated
 transition is neither evidence nor closeout metadata; `metadata_recovery` and a
 clean pre-metadata crash never use it.
+
+The conditional `retirement-restart invocation` is separate from every normal
+invocation:
+
+```text
+07-L01-invalidated-checkpoint-owner-retirement-pause
+--- process terminates; owner retires the exact ten paths ---
+07-L01-confirm-invalidated-checkpoint-retired
+08-retirement-restart-fresh-current-tree-drift
+derive-affected-owners-from-fresh-verified-findings
+affected-owner-fixes-and-per-leaf-gates
+07-L01-release-inputs-and-prerelease-gates
+08-prerelease-post-audit-lenses/fixes/revalidation
+07-L01-owner-commit-merge-tag-release-cloudflare-deploy-pause
+--- process terminates; replacement release-resume is fresh ---
+```
 
 The exact preparation command surface is the
 TASK-548-07-L01 **Exact Closure Validation Allowlist**: its named
@@ -250,8 +318,9 @@ write becomes necessary, closure returns to that exact owner without invoking
 it. A frozen attempt never recreates the ephemeral session; a final-drift
 non-pass first returns the owner-retirement action defined above.
 
-The 07-owned `runWithTask548CleanupV1()` enters its body before health-artifact
-download or session creation, then always runs both named cleanup domains with
+The release-resume verifier removes its health-artifact temporary tree before
+preparation. The 07-owned `runWithTask548CleanupV1()` then enters its body before
+session creation and always runs both named cleanup domains with
 `Promise.allSettled`: L02 session disposal (when created) and general
 server/DB/settings/session/health-temp cleanup. It preserves the primary error
 and every bounded cleanup code in one `task548_cleanup_failed` result; one
@@ -268,7 +337,157 @@ server restart or smoke fails. It preserves both the primary and bounded
 post-use verification error before the outer two-domain cleanup runs.
 
 ```ts
-type Task548OwnerActionRequired = {
+import {
+  createResumeCheckpoint,
+  requireTask548CommittedSixPathBootstrapAuthorizationV1,
+  writeOrResumeOrderedDurableChangelogFileThenIndexV1,
+  type VerifiedTask545Checkpoint,
+  type Task545ClosureIdentity,
+  type VerifiedTask545MetadataRecoveryDelta,
+  type Task545ClosureResume,
+  type Task548CommittedSixPathBootstrapReceiptV1,
+} from "./lib/smoke-evidence.mjs";
+import {
+  createDocsReleaseTreeBindingV1,
+  normalizeDocsReleaseTreeBindingV1,
+  serializeDocsReleaseTreeBindingV1,
+  type DocsReleaseTreeBindingV1,
+} from "./docsReleaseTreeBinding";
+
+export type Task548ReleaseResumeRequestV1 = Readonly<{
+  version: string; tag: string; gitSha: string; // repository-format OID
+  workflowRunId: string; workflowRunAttempt: number; deploymentId: string;
+  origin: string; basePath: string;
+}>;
+
+export type PassedTask548ReleaseResume = Readonly<{
+  pass: true; request: Task548ReleaseResumeRequestV1;
+  runtimeTree: DocsReleaseTreeBindingV1; cleanIndexAndWorktree: true;
+  immutableReleaseHandoffsSha256: string;
+  postDeployHealthSha256: string; currentInvocationBinding: CurrentProcessOnly;
+}>;
+
+export type Task548ReleaseOwnerActionRequired = {
+  pass: false; code: "owner_action_required";
+  action: "commit_merge_tag_release_and_cloudflare_deploy";
+  taskId: "TASK-548"; plannedVersion: string; plannedTag: string;
+  plannedOrigin: string; plannedBasePath: string;
+  releaseResumeMode: "task548-release-resume";
+  requiredReleaseResumeFields: readonly [
+    "version", "tag", "gitSha", "workflowRunId", "workflowRunAttempt",
+    "deploymentId", "origin", "basePath"
+  ];
+};
+
+export type PassedTask548CommittedHeadDriftGate = Readonly<{
+  pass: true; runtimeTree: DocsReleaseTreeBindingV1; findings: [];
+  currentInvocationBinding: CurrentProcessOnly;
+}>;
+
+export const REQUIRED_FLOW_IDS = [
+  "help-offline-local-search", "guide-no-provider-grounded-answer",
+  "agent-unavailable-isolation", "permission-aware-open-cms",
+  "visual-example-source-parity", "portal-local-exact-latest-rollback",
+  "responsive-theme-keyboard", "explicit-guide-agent-handoff",
+] as const;
+
+export async function prepareTask548ReleaseInputsAndPrereleaseGates(
+  ctx: CloseoutContext,
+  _payload: Task548PhasePayloadMapV1["07-L01-release-inputs-and-prerelease-gates"]
+): Promise<Task548PrereleaseReceipt> {
+  await assertImplementationThroughTask54806L02Complete();
+  await ctx.requireTask548WorkflowOwnerImplementationReady();
+  await ctx.finishAllOwnedProductRuntimeDocumentation();
+  const releaseInputs = await ctx.resolveStrictPlannedReleaseInputsReadOnly({
+    requirePlainSemVerTagEquality: true,
+    requireHttpsOriginAndCanonicalBasePath: true,
+  });
+  await ctx.runPrereleaseDependencyShapedGates();
+  await ctx.assertAllModifiedHumanProductionAndTestFilesAtMost(1000);
+  return ctx.createPrereleaseReceiptBoundToCurrentTree(releaseInputs);
+}
+
+export async function pauseTask548ForOwnerRelease(
+  ctx: CloseoutContext,
+  { prerelease, postAudit }: Task548PhasePayloadMapV1["07-L01-owner-commit-merge-tag-release-cloudflare-deploy-pause"]
+): Promise<Task548ReleaseOwnerActionRequired> {
+  await ctx.requireFreshPrereleaseReceiptAndPostAuditForCurrentTree(
+    prerelease,
+    postAudit
+  );
+  await ctx.requireNoReleaseOrRepositoryMutationByTask54807();
+  return ctx.createExactOwnerReleaseAction(prerelease.releaseInputs);
+  // Yield owner_action_required and terminate this process immediately.
+}
+
+export async function resumeTask548AfterOwnerRelease(
+  ctx: CloseoutContext,
+  { argv }: Task548PhasePayloadMapV1["07-L01-release-resume-committed-head-tree-and-receipt-validation"]
+): Promise<PassedTask548ReleaseResume> {
+  await ctx.requireFreshMutuallyExclusiveInvocation("task548-release-resume", {
+    forbidClosureResumeOrRetirementArgs: true,
+    forbidPriorProcessPayload: true,
+  });
+  const request = ctx.parseExactReleaseResumeArgs(argv, {
+    exactKeys: ["version", "tag", "gitSha", "workflowRunId",
+      "workflowRunAttempt", "deploymentId", "origin", "basePath"],
+    rejectUnknownMissingDuplicateOrUnbounded: true,
+    boundsOwner: "TASK-548-05-L02 release/health normalizers",
+    gitSha: /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/,
+    rejectAllZeroOid: true,
+    requirePlainSemVerTagEquality: true,
+    requireHttpsOriginAndCanonicalBasePath: true,
+  });
+  const checkout = await ctx.requireCleanCommittedReleaseCheckout({
+    headCommitSha: request.gitSha,
+    tag: request.tag,
+    requireTagTargetCommitEqualsHeadCommit: true,
+    requireIndexAndWorktreeClean: true,
+  });
+  const runtimeTree = normalizeDocsReleaseTreeBindingV1(
+    createDocsReleaseTreeBindingV1(
+      await ctx.readCanonicalDocsReleaseTreeBindingSourceV1(checkout, {
+        requireOriginalBoundedGitRecordBytes: true,
+        requireRepositorySelectedSha1OrSha256: true,
+      })
+    )
+  );
+  const runtimeTreeBytes = serializeDocsReleaseTreeBindingV1(runtimeTree);
+  const immutable =
+    await ctx.downloadAndVerifyImmutableTask54805L02ReleaseHandoffs(request, {
+      requireExactNoClobberReleaseAssetAndReceiptPair: true,
+      requireRetainedCapsuleManifestSearchAndAssetReceipts: true,
+      expectedRuntimeTree: runtimeTree,
+      expectedRuntimeTreeBytes: runtimeTreeBytes,
+      requireRuntimeTreeByteIdentityAcross: ["release-manifest",
+        "artifact-receipt", "retained-publication-capsule",
+        "rollback-selection", "rollback-receipt"],
+    });
+  const health = await ctx.withOwnedHealthArtifactTemp(async (outputRoot) => {
+    const downloaded = await ctx.downloadExactSuccessfulRunArtifact(
+      `docs-post-deploy-health-${request.version}-${request.gitSha}-${request.workflowRunId}`
+    );
+    const receipt = await ctx.extractExactSingleRootRegularFile(downloaded, {
+      member: "docs-post-deploy-health-v1.json",
+      outputRoot,
+    });
+    return ctx.validateDocsPostDeployHealthReceiptV1(receipt, {
+      expectedRelease: request,
+      immutableReleaseHandoffs: immutable,
+      expectedRuntimeTree: runtimeTree,
+      expectedRuntimeTreeBytes: runtimeTreeBytes,
+      requireReleaseArtifactRetainedRollbackAndHealthTreeIdentity: true,
+      requireSearch: { attemptTarget: "search-index",
+        linkAttemptToSearchFact: true, linkToSearchReceipt: true,
+        linkToPortalManifest: true },
+    });
+  });
+  return ctx.createCurrentInvocationReleaseResumeReceipt({
+    request, runtimeTree, cleanIndexAndWorktree: true, immutable, health,
+  });
+}
+
+export type Task548OwnerActionRequired = {
   pass: false;
   code: "owner_action_required";
   action: "review_and_stage_evidence";
@@ -287,7 +506,7 @@ type Task548OwnerActionRequired = {
   };
 };
 
-const TASK_548_MANIFEST_EIGHT_PNGS_AND_CHECKPOINT = [
+export const TASK_548_MANIFEST_EIGHT_PNGS_AND_CHECKPOINT = [
   "_docs/_workflows/_smoke/evidence/task-548/manifest.json",
   "_docs/_workflows/_smoke/evidence/task-548/01-help-offline-local-search.png",
   "_docs/_workflows/_smoke/evidence/task-548/02-guide-no-provider-grounded-answer.png",
@@ -300,7 +519,7 @@ const TASK_548_MANIFEST_EIGHT_PNGS_AND_CHECKPOINT = [
   "_docs/_workflows/_smoke/evidence/task-548/resume-checkpoint.json",
 ] as const;
 
-type Task548InvalidatedCheckpointOwnerActionRequired = {
+export type Task548InvalidatedCheckpointOwnerActionRequired = {
   pass: false;
   code: "owner_action_required";
   action: "retire_invalidated_task548_checkpoint";
@@ -316,74 +535,80 @@ type Task548InvalidatedCheckpointOwnerActionRequired = {
   restartCommand: string;
 };
 
-type Task548MetadataDeltaReceipt = {
-  pass: true;
-  taskId: "TASK-548";
-  runId: string;
-  closureMetadataRevision: {
-    gitHead: string;
-    workingTreeDirty: boolean;
-    workingTreeSha256: string;
-  };
-  changedPaths: string[];
-};
+export type Task548VerifiedCheckpoint = VerifiedTask545Checkpoint;
+export type Task548ClosureIdentity = Task545ClosureIdentity;
+export type Task548MetadataDeltaReceipt =
+  VerifiedTask545MetadataRecoveryDelta;
 
-type PassedTask548FinalDrift = {
+export type PassedTask548FinalDrift = {
   pass: true;
   frozenRuntimeRevisionSha256: string;
   findings: [];
 };
 
-type Task548ClosureResume =
-  | {
-      state: "frozen";
-      checkpoint: VerifiedTask545Checkpoint;
-      closureIdentity: Task545ClosureIdentity;
-    }
-  | {
-      state: "metadata_recovery";
-      checkpoint: VerifiedTask545Checkpoint;
-      closureIdentity: Task545ClosureIdentity;
-      delta: VerifiedTask545MetadataRecoveryDelta;
-    };
+type VerifiedTask548DriftFinding = Readonly<{ severity: "HIGH" | "MEDIUM" | "LOW"; area: string; finding: string; evidence: string; recommendation: string }>;
+export type NonPassingTask548FinalDrift = Readonly<{
+  pass: false; frozenRuntimeRevisionSha256: string;
+  findings: readonly VerifiedTask548DriftFinding[];
+}>;
+
+export type Task548ClosureResume = Task545ClosureResume;
+
+type EmptyTask548PhasePayload = Readonly<Record<string, never>>;
+type Task548TerminalCloseoutPayloadV1 =
+  | Readonly<{ resume: Extract<Task548ClosureResume, { state: "frozen" }>;
+      finalDrift: PassedTask548FinalDrift }>
+  | Readonly<{ resume: Extract<Task548ClosureResume,
+      { state: "metadata_recovery" }>; finalDrift?: never }>;
+export type Task548PhasePayloadMapV1 = Readonly<{
+  "07-L01-release-inputs-and-prerelease-gates": EmptyTask548PhasePayload;
+  "07-L01-owner-commit-merge-tag-release-cloudflare-deploy-pause": Readonly<{ prerelease: Task548PrereleaseReceipt; postAudit: PassedTask548PostAudit }>;
+  "07-L01-release-resume-committed-head-tree-and-receipt-validation": Readonly<{ argv: readonly string[] }>;
+  "07-L01-runtime-docs-and-gates-preparation": Readonly<{ release: PassedTask548ReleaseResume; committedHeadDrift: PassedTask548CommittedHeadDriftGate }>;
+  "07-L01-final-smoke-phase1-owner-pause": Readonly<{ preparation: RuntimeDocsAndGatesReceipt }>;
+  "07-L01-owner-resume-tracked-parity": Readonly<{ argv: readonly string[] }>;
+  "07-L01-invalidated-checkpoint-owner-retirement-pause": Readonly<{ resume: Extract<Task548ClosureResume, { state: "frozen" }>; finalDrift: NonPassingTask548FinalDrift }>;
+  "07-L01-confirm-invalidated-checkpoint-retired": Readonly<{ argv: readonly string[] }>;
+  "07-L01-terminal-metadata-closeout-and-mechanical-delta-verification": Task548TerminalCloseoutPayloadV1;
+}>;
 
 // A pass is bound to the frozen runtime and has no unresolved finding. Its
 // dynamic payload is never serialized into closure metadata.
 
-async function prepareTask548RuntimeDocsAndGates(
-  ctx: DocsAcceptanceContext
+export async function prepareTask548RuntimeDocsAndGates(
+  ctx: CloseoutContext,
+  { release, committedHeadDrift }: Task548PhasePayloadMapV1["07-L01-runtime-docs-and-gates-preparation"]
 ): Promise<RuntimeDocsAndGatesReceipt> {
-  await ctx.finishAllProductRuntimeDocumentation();
+  await ctx.requireFreshCurrentInvocationReleaseResume(release);
+  await ctx.requireFreshCommittedHeadDriftGate(
+    committedHeadDrift,
+    { runtimeTree: release.runtimeTree }
+  );
   await ctx.runExactReadOnlyDocsCheck("bun run docs:check");
-  await assertNoDocsWorkspaceArtifactPromotionHazardsV1();
   const bundle = await loadPackagedDocsDistributionBundleV2();
   const landed = await ctx.loadAndValidateLandedDurableHandoffsReadOnly({
     bundle,
-    requireCoverageVisualReleaseSearchAndPublicationReceipts: true,
+    coverageReport: "core/generated/docs/coderso-docs-coverage-v2.json",
+    coverageMatrix: "docs/guide/_COVERAGE_MATRIX.md",
+    visualReceiptsAndAssets: "docs/guide/assets",
+    requireReleaseCapsuleManifestAndSearchReceipts: true,
+    expectedRelease: release.request,
+    verifiedReleaseResume: release,
   });
-  await ctx.runTask548L01ExactClosureValidationAllowlist(landed);
+  await ctx.runExactClosureValidationAllowlist(landed);
   await ctx.assertNoCanonicalArtifactOrTrackedInputMutation(landed);
-  await ctx.runLineAudit();
+  await ctx.assertAllModifiedHumanProductionAndTestFilesAtMost(1000);
   return ctx.createRuntimeDocsAndGatesReceipt({ landed });
 }
 
-async function runTask548FinalSmokePhase1(
-  ctx: DocsAcceptanceContext,
-  preparation: RuntimeDocsAndGatesReceipt,
-  postAudit: PassedTask548PostAudit
+export async function runTask548FinalSmokePhase1(
+  ctx: CloseoutContext,
+  { preparation }: Task548PhasePayloadMapV1["07-L01-final-smoke-phase1-owner-pause"]
 ): Promise<Task548OwnerActionRequired> {
   await ctx.requireFreshRuntimeDocsAndGatesReceipt(preparation);
-  await ctx.requireFreshPassedPostAudit(postAudit);
   let retainedPages: DocsRetainedPagesValidationSessionV1 | null = null;
-  const scenarios = await ctx.runWithTask548CleanupV1({
+  const result = await ctx.runWithTask548CleanupV1({
     body: async () => {
-      const artifact =
-        await ctx.downloadPostDeployHealthArtifactFromExactSuccessfulRun();
-      const health = await ctx.extractExactSingleRootHealthReceiptToOwnedTemp(
-        artifact,
-        "docs-post-deploy-health-v1.json"
-      );
-      await ctx.verifyReleaseArtifactCorpusCoverageAndDeployHealthReceipt(health);
       await ctx.requireCurrentLandedPortalEvidenceReadOnly(preparation.landed);
       const session = await createDocsRetainedPagesValidationSessionV1({
         runId: ctx.runId,
@@ -403,22 +628,18 @@ async function runTask548FinalSmokePhase1(
         body: async () => {
           const mount =
             await ctx.mountVerifiedRetainedPagesSessionReadOnly(verified);
-          await ctx.runExactAcceptanceCommand(
+          await ctx.runExactCommand(
             "bun test tests/integration/documentation/docsPlatformAcceptance.test.ts",
             { env: mount.exactChildProcessEnv }
           );
-          await ctx.restartRuntimeAndPortal();
+          await ctx.restartOwnedServers();
           const result = await ctx.runExactAcceptanceSmokeCommand(
             "bun scripts/docs/run-acceptance-smoke.ts",
             REQUIRED_FLOW_IDS,
+            "wf548smoke",
             { env: mount.exactChildProcessEnv }
           );
-          await ctx.assertEvidence({
-            scenarios: result,
-            consoleErrors: 0,
-            pageErrors: 0,
-            verifySha256: true,
-          });
+          await assertCompleteVisibleEvidence(result, { consoleErrors: 0 });
           return result;
         },
         verify: async () =>
@@ -437,64 +658,72 @@ async function runTask548FinalSmokePhase1(
       },
       {
         name: "acceptance-state",
-        run: async () => ctx.cleanupOwnedFixturesAndAssertRestored(),
+        run: async () => ctx.cleanupAndAssertPriorState(),
       },
     ],
   });
-  await ctx.writeExactTask545CanonicalManifestAndEightScreenshots(scenarios);
-  return ctx.createCanonicalEvidenceCheckpointPhase1({
-    exactManifestSchemaOwner: "TASK-545",
+  await ctx.writeExactTask545CanonicalManifestAndEightScreenshots(result);
+  const bootstrapReceipt: Task548CommittedSixPathBootstrapReceiptV1 =
+    await ctx.requireCurrentCommittedExactSixPathBootstrapGate();
+  await requireTask548CommittedSixPathBootstrapAuthorizationV1({
+    repoRoot: ctx.repoRoot, receipt: bootstrapReceipt,
   });
-  // Returns owner_action_required immediately. No metadata write, git add,
+  return createResumeCheckpoint({
+    repoRoot: ctx.repoRoot,
+    expectedTask: "TASK-548",
+    pinnedChangelogNumber: 1261,
+    pinnedChangelogSlug: "task-548-hybrid-visual-documentation",
+    expectedWorkflowRole: "implement",
+    executingImportMetaUrl: import.meta.url,
+    runtimeResult: result,
+  });
+  // Returns owner_action_required immediately. No metadata write, stage,
   // commit, or post-phase-1 action.
 }
 
-async function resumeTask548TrackedParity(
-  ctx: DocsClosureResumeContext
+export async function resumeTask548TrackedParity(
+  ctx: CloseoutResumeContext,
+  { argv }: Task548PhasePayloadMapV1["07-L01-owner-resume-tracked-parity"]
 ): Promise<Task548ClosureResume> {
-  const resume = await ctx.openExactOwningWorkflowResume();
+  const resume = await ctx.openExactOwningWorkflowResume({
+    argv, expectedTask: "TASK-548", expectedWorkflowRole: "implement",
+    executingImportMetaUrl: import.meta.url,
+  });
   await ctx.requireOwnerReviewedTrackedEvidenceParity();
   return resume;
 }
 
-async function requireTask548InvalidatedCheckpointOwnerRetirement(
-  ctx: DocsClosureResumeContext,
-  resume: Extract<Task548ClosureResume, { state: "frozen" }>
+export async function requireTask548InvalidatedCheckpointOwnerRetirement(
+  ctx: CloseoutResumeContext,
+  { resume, finalDrift }: Task548PhasePayloadMapV1["07-L01-invalidated-checkpoint-owner-retirement-pause"]
 ): Promise<Task548InvalidatedCheckpointOwnerActionRequired> {
+  await ctx.requireExactNonPassingFinalDrift(finalDrift);
   return ctx.createExactInvalidatedCheckpointOwnerAction(resume, {
     reason: "final_drift_nonpass",
     expectedEvidencePaths: TASK_548_MANIFEST_EIGHT_PNGS_AND_CHECKPOINT,
   });
 }
 
-async function confirmTask548InvalidatedCheckpointRetired(
-  ctx: DocsAcceptanceContext
+export async function confirmTask548InvalidatedCheckpointRetired(
+  ctx: CloseoutContext,
+  { argv }: Task548PhasePayloadMapV1["07-L01-confirm-invalidated-checkpoint-retired"]
 ): Promise<void> {
-  await ctx.requireExactRestartArgsFromPriorRetirementAction();
+  await ctx.requireExactRestartArgsFromPriorRetirementAction(argv);
   await ctx.requireCanonicalEvidencePathsAbsentFromIndexAndWorktree(
     TASK_548_MANIFEST_EIGHT_PNGS_AND_CHECKPOINT
   );
   await ctx.requireEvidenceDirectoryAbsentOrEmptyNoSymlink();
 }
 
-async function completeTask548TerminalCloseout(
-  ctx: DocsClosureResumeContext,
-  input:
-    | {
-        resume: Extract<Task548ClosureResume, { state: "frozen" }>;
-        finalDrift: PassedTask548FinalDrift;
-      }
-    | {
-        resume: Extract<Task548ClosureResume, {
-          state: "metadata_recovery";
-        }>;
-        finalDrift?: never;
-      }
+export async function completeTask548TerminalCloseout(
+  ctx: CloseoutResumeContext,
+  input: Task548PhasePayloadMapV1["07-L01-terminal-metadata-closeout-and-mechanical-delta-verification"]
 ): Promise<Task548MetadataDeltaReceipt> {
   await ctx.requireTrackedResumeBoundToCurrentCheckpoint(input.resume);
+  const closureIdentity = input.resume.closureIdentity;
   const durable = await ctx.readDeterministicDurableCloseoutSources({
     checkpointIdentity: input.resume.checkpoint,
-    closureIdentity: input.resume.closureIdentity,
+    closureIdentity,
     canonicalEvidence:
       await ctx.readExactCanonicalManifestAndEightScreenshots(),
     frozenOnDiskFacts:
@@ -503,22 +732,33 @@ async function completeTask548TerminalCloseout(
       await ctx.readExistingOnDiskNonAuthorizingPlanningAuditRecord(),
   });
   const plan = await ctx.buildDeterministicTask548MetadataPlan(durable, {
-    firstWrite: "changelog-1261",
+    firstWrite: "ordered-durable-changelog-file-then-index@v1",
     finalDriftGate: "passed-before-closure",
+    closureIdentity,
   });
   if (input.resume.state === "frozen") {
     await ctx.requirePassedFinalDriftBoundToFrozenRuntime(input.finalDrift, {
       exactFindings: [],
     });
-    await ctx.createChangelog1261ForFirstTime(plan.changelog1261);
   } else {
     await ctx.requireNoFinalDriftPayload(input);
     await ctx.validateExactMetadataRecoveryPrefix(input.resume.delta, plan, {
-      requireFirstWrite: "changelog-1261",
+      requireInitialState: ["file-only", "both"],
     });
   }
+  const completedClosureIdentity =
+    await writeOrResumeOrderedDurableChangelogFileThenIndexV1({
+      repoRoot: ctx.repoRoot,
+      checkpoint: input.resume.checkpoint,
+      runId: input.resume.checkpoint.runId,
+      closureIdentity,
+      changelogBytes: plan.changelog1261,
+      changelogIndexMutation: plan.changelogIndex1261,
+      protocol: "ordered-durable-changelog-file-then-index@v1",
+    });
   await ctx.completeMissingDeterministicMetadataWritesIdempotently(plan);
   const delta = await ctx.validateExactMetadataOnlyClosureDelta({
+    closureIdentity: completedClosureIdentity,
     exactKeys: [
       "pass",
       "taskId",
@@ -527,38 +767,31 @@ async function completeTask548TerminalCloseout(
       "changedPaths",
     ],
   });
-  await ctx.returnExternalOwnerHandoff(delta);
-  return delta; // never persisted in task/changelog/evidence
+  return delta; // 07 never emits or persists it; 08 emits exactly once
 }
 ```
 
-**Data flow:** completed product/runtime docs → current canonical sources →
-read-only `docs:check` byte/source equality → read-only workspace hazard
-inspection → strict fixed-path packaged bundle load, valid with the ignored
-migration report absent → read-only landed coverage/visual/release/search/
-publication handoffs → exact named-test, read-only check, package-build and
-full-gate allowlist → tracked/canonical byte-identity proof plus line audit →
-TASK-548-08 post-audit lenses/fixes/revalidation → fresh pass → exact-run read-only
-post-deploy receipt → scoped CMS plus landed retained-Pages snapshots mounted
-read-only through one L02-owned task-local publish/rollback/restore session →
-restarted Admin/local static portal → eight real flows → cleanup/restoration →
-exact TASK-545 manifest/eight canonical screenshots → TASK-545 phase 1
-immediately and atomically creates the sole checkpoint/exact payload →
-`owner_action_required` owner review/stage pause with no metadata write → exact
-owning-workflow resume/tracked parity → TASK-548-08 substantive final read-only
-drift against the frozen runtime revision on a first `frozen` attempt → require
-`{ pass: true, findings: [] }` without serializing the dynamic result →
-deterministic metadata plan derived solely from the verified checkpoint
-identity/frozen revision/closure contract, exact canonical manifest/eight
-screenshots, rereadable frozen on-disk product/task facts and durable repository
-receipts, and the existing non-authorizing planning-audit record → changelog
-1261 created as the first metadata write → all descendant/parent status,
-board/index/statistics, and changelog updates → exact five-key mechanical
-metadata delta returned externally and never persisted. A crash before the
-first metadata write re-enters `frozen` and reruns final drift; a crash after it
-re-enters `metadata_recovery`, validates the existing exact deterministic plan
-prefix, and idempotently completes missing writes without smoke, final drift, or
-an in-memory pre-crash payload.
+**Data flow:** owned product/runtime docs → strict plain-SemVer release inputs
+and prerelease gates → canonical 08 post-audit/fix/revalidation → owner-only
+commit/merge/tag/release/Cloudflare action → terminate. Fresh eight-field
+release-resume → committed HEAD/tag equality and clean index/worktree → one
+L01-normalized repository-format `DocsReleaseTreeBindingV1` → byte-identical
+immutable release/publication/health binding plus exact health-artifact validation and temporary
+cleanup → fresh 08 committed-HEAD drift → read-only `docs:check`, one zero-input
+atomic packaged-bundle load, landed handoffs and exact full-gate allowlist → one
+L02-owned disposable retained-Pages session → restarted Admin/local portal →
+eight real flows → cleanup/restoration → exact manifest/eight screenshots →
+TASK-545 phase 1 with pinned `1261` and
+`task-548-hybrid-visual-documentation` → owner review/stage pause → terminate.
+
+Fresh checkpoint-bound closure resume → tracked parity → substantive 08 final
+drift on `frozen` → TASK-545-owned closure identity → deterministic closeout
+sources → ordered recoverable changelog 1261 file then matching index-row first
+protocol → descendant-before-parent status, board and statistics updates → exact
+five-key mechanical delta returned by 07 and emitted once by 08. A pre-write
+crash remains `frozen` and reruns final drift; a later crash enters
+`metadata_recovery`, validates the exact deterministic prefix and completes only
+missing metadata without smoke, final drift, or a pre-crash in-memory payload.
 
 **Error handling:** a missing result/screenshot/hash, skipped lane, stale visual,
 broken link, missing/malformed/oversized/stale/wrong-run/wrong-version/wrong-tag/
@@ -576,8 +809,9 @@ bundle/report pair, or becomes a generated-artifact writer.
 Any required migration, compile write, recovery, Guide-visual capture/promotion,
 coverage write, release-artifact regeneration, or publication/deployment/
 rollback mutation outside the exact ephemeral 05-L02 validation-session helper
-aborts closure and returns to its exact owner before a new
-preparation/post-audit/smoke snapshot. In `frozen`, the checkpoint remains
+aborts closure and returns to its exact owner before a new prerelease audit,
+owner release, fresh release-resume, preparation and smoke snapshot. In
+`frozen`, the checkpoint remains
 unchanged while the exact retirement owner action is returned; no producer runs
 in that frozen attempt.
 Any product/runtime/docs/workflow/evidence/source/test/config change after the
@@ -586,7 +820,9 @@ invalidates smoke/audit and requires a fresh pre-checkpoint run. The final drift
 audit is read-only and precedes every terminal write; any finding makes it
 non-pass, aborts resume without metadata mutation, invalidates the snapshot,
 and returns to its owner before the normal validation/smoke/checkpoint lifecycle
-reruns only after exact owner retirement is confirmed. Any
+reruns only after exact owner retirement is confirmed, fresh current-tree drift
+derives the affected owner, and a replacement released identity passes a new
+release-resume. Any
 pre-phase-1 task/changelog/board/status write, recovery delta without exact
 changelog-first deterministic-prefix parity, extra summary file,
 manifest/checkpoint extension, or claim that an unavailable pre-pause agent or
@@ -608,9 +844,10 @@ fabricate `authoring.pass`/`postAudit.pass` fields.
 
 **Regression shape:** acceptance pins ordered scenario IDs, stable evidence
 joins, strict two-slot retained-Pages ref/commit/tree/receipt closure, immutable
-rollback plus published/restored parity, production health-receipt
-verification, offline/no-provider independence, separate tab state, safe CMS
-links, responsive/a11y visible effects, and cleanup idempotency.
+rollback plus published/restored parity, release-resume-owned production-health
+verification, smoke consumption of the verified receipt without a second
+download, offline/no-provider independence, separate tab state, safe CMS links,
+responsive/a11y visible effects, and cleanup idempotency.
 
 ## Sub-Tasks
 
@@ -624,8 +861,7 @@ links, responsive/a11y visible effects, and cleanup idempotency.
   `bun run docs:visual:check -- --all`, and
   `bun run docs:coverage -- --check`; the vague 01..06 producer-command set is
   not a closure command surface;
-- exact workspace hazard inspection and strict
-  `loadPackagedDocsDistributionBundleV2()` before landed coverage/visual/
+- exact zero-input atomic `loadPackagedDocsDistributionBundleV2()` before landed coverage/visual/
   release/search/publication handoff validation. A clean-checkout fixture with
   the tracked bundle and ignored migration report absent must pass with zero
   bundle/report recovery, generation, or mutation;
@@ -633,7 +869,9 @@ links, responsive/a11y visible effects, and cleanup idempotency.
   workspace/runtime contract test, and read-only immutable release
   capsule/manifest, publication/rollback receipt, and production-health receipt
   validation; no artifact rebuild or publication/deployment/rollback mutation;
-- exact successful-run health-artifact download and hostile receipt validation;
+- exact successful-run health-artifact download and hostile receipt validation
+  inside the fresh release-resume only; smoke must consume the verified
+  preparation receipt and perform zero health-artifact downloads;
 - exact `health.search` plus `results[].target: "search-index"` validation:
   canonical locale/path, HTTP 200, bounded bytes and SHA-256 must match the
   search publication receipt and detached portal manifest; missing, duplicate,
@@ -659,13 +897,17 @@ links, responsive/a11y visible effects, and cleanup idempotency.
   exact `{ pass, code, action, taskId, evidenceDirectory, checkpointPath,
   checkpointSha256, runId, resumeArgv, resumeCommand, frozenRuntimeRevision }`
   owner-action payload/owner-stage/resume/tracked-parity lifecycle;
-- exact post-06-L02 six-phase normal order, same physical 07-L01 owner in all
-  four normal and both conditional retirement phases, nonterminal status
-  through final drift, post-audit before final smoke, and non-metadata-fix
-  loopback tests. A write/recovery need returns to the exact
-  owner; a final-drift non-pass returns the exact ten-path retirement payload
-  without mutating its checkpoint, and only owner-confirmed absence permits a
-  fresh preparation/post-audit/smoke/checkpoint lifecycle;
+- exact post-06-L02 three mutually exclusive invocation modes and ten-label
+  normal order, with the same physical 07-L01 owner in all seven normal 07
+  labels and both conditional retirement labels. Fixtures pin both mandatory
+  process terminations, the exact eight release-resume fields, no pre-pause
+  payload authority, nonterminal status through final drift, and no 07/08
+  staging, commit, merge, tag, release, Cloudflare publication or rollback. A
+  write/recovery need returns to the exact owner; a final-drift non-pass returns
+  the exact ten-path retirement payload without mutating its checkpoint. Only
+  owner-confirmed retirement, fresh current-tree drift, derived owner fixes,
+  prerelease audit and a replacement owner release pause permit a separate new
+  release-resume/preparation/smoke/checkpoint lifecycle;
 - pre-phase-1 lifecycle fixtures prove zero task/changelog/board/status or
   checkpoint writes by 07, exact manifest/eight-screenshot inventory, immediate
   TASK-545 phase 1 as sole atomic checkpoint creator, pause, and no summary
@@ -677,7 +919,8 @@ links, responsive/a11y visible effects, and cleanup idempotency.
   identity/frozen revision/closure contract, exact canonical manifest/eight
   screenshots, rereadable frozen on-disk facts/durable repository receipts, and
   the existing non-authorizing planning record. Recovery accepts only an exact
-  changelog-first prefix, idempotently completes missing writes, and rejects
+  ordered `ordered-durable-changelog-file-then-index@v1` prefix, idempotently completes
+  missing writes, and rejects
   unavailable agent/runtime payloads, invented authoring/post-audit pass fields,
   and dynamic final-drift serialization;
 - exact metadata-only
@@ -707,7 +950,9 @@ read-only here.
 ## Closure Rule
 
 Close leaves before their technical parent and technical parents before
-TASK-548. Update board statistics exactly once. Changelog 1261 records final
+TASK-548. Update board statistics exactly once. The canonical changelog 1261
+file is created first and its matching index row next through the recoverable
+`ordered-durable-changelog-file-then-index@v1` protocol. Changelog 1261 records final
 durable browser-manifest facts/hashes, deterministic shipped-tree facts, the
 non-authorizing planning-audit reference, and the fixed
 `final-drift: passed-before-closure` marker. It does not claim non-persisted

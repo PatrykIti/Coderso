@@ -21,23 +21,19 @@ TASK-548-06 at the workspace-only ignored path
 `.tmp/docs-corpus/migration-report-v1.json`, and write the durable tracked
 runtime artifact `core/generated/docs/coderso-docs-v2.json`.
 
-Own new compiler modules under `core/services/documentation/compiler/`,
-`scripts/docs/compile-corpus.ts`, focused fixtures/tests and the generated
-bundle/report. TASK-548-02-L03 owns the later mutating orchestration command
-`scripts/docs/recover-artifacts.ts`, because it lands after the strict visual
-validator owner and can wire both recovery families without reopening this
-leaf. Do not mass-edit production Guide Markdown; TASK-548-06 is its
-single writer and freezes the reported IDs into native v2 frontmatter. Do not
-add package scripts or CI wiring here; TASK-548-02-L03 wires the exact
-`docs:recover` package command after all commands exist. Do not read
+Own `core/services/documentation/compiler/`, `scripts/docs/compile-corpus.ts`,
+focused fixtures/tests and the bundle/report. TASK-548-02-L03 later owns
+`scripts/docs/recover-artifacts.ts`, package/CI wiring and exact `docs:recover`.
+TASK-548-06 alone mass-edits Guide Markdown and freezes reported IDs; never read
 `docs/develop` into this bundle.
-This leaf also exclusively owns
-`core/services/documentation/artifacts/durablePairPromotionV1.ts`,
-`core/services/documentation/artifacts/docsWorkspaceArtifactPromotionV1.ts`
-and
-`core/services/documentation/artifacts/docsVisualPairPromotionV1.ts`; later
-visual, portal, migration, coverage and release leaves import these modules
-without reopening them.
+This leaf exclusively owns the `durablePairPromotionV1.ts`,
+`docsWorkspaceArtifactPromotionV1.ts` and `docsVisualPairPromotionV1.ts`
+artifact modules; later leaves import them without reopening them.
+It additionally owns private `packages/docs-contracts/src/docsMigrationReport.ts`
+(pure strict report schema/normalizer/serializer), server-only
+`nodeFixedWorkspace.ts`, public `nodeArtifactGuard.ts`, and stable Core report/
+atomic-loader named shims. L01 excludes those package sources; L03 owns only
+`nodeLoader.ts`; TASK-548-02-L03 exports guard/loader, never a private module.
 
 This leaf is the exclusive whole-family writer of
 `core/generated/docs/coderso-docs-v2.json`. Its first run produces the
@@ -88,10 +84,10 @@ owner regeneration is valid.
   `adminPath`; downstream consumers derive Help/public links centrally.
 - Serialize with a documented canonical JSON serializer, LF endings and one
   final newline. Exclude timestamps, absolute paths and filesystem metadata.
-- Compute `sourceHash` over normalized relative path + exact file bytes for the
-  manifest, Markdown, examples, scenario manifests, canonical PNGs and
-  promotion receipts. Repeated builds with identical source must be
-  byte-identical.
+- L02-owned `hashCanonicalSourceSet` computes `sourceHash` as lowercase SHA-256 over exact bytes `UTF8("coderso.docs-corpus-source-set@v2") || 0x00 || u64be(recordCount)`, then for each raw-UTF-8-path-sorted record `u32be(pathUtf8.length) || pathUtf8 || u64be(fileBytes.length) || fileBytes`.
+  Paths are unique normalized NFC repository-relative POSIX paths; lengths/counts are unsigned big-endian, file bytes are raw, and there is no JSON, implicit separator or final LF. The set is exactly manifest, Markdown, examples, scenarios, canonical PNGs and receipts.
+  Golden vectors are empty set `e9ceddf9fc5d5a8714cb7e0005ba718b51c28820eeb93b881866842455a95b35` and sole `a.txt`=`abc` record `1b29b3d08bb1dc3fb952d4a56f49134eb379a9a6e97854c4b896888b3fa08750`; an independent test producer and compiler consumer must match both and reject order/path/length/byte mutations.
+  Repeated builds with identical source must be byte-identical.
 - The generated bundle is the only runtime input. Markdown is not a production
   fallback, and public/embedded consumers do not fetch an external service per
   query.
@@ -305,28 +301,24 @@ permission or capability by judgment.
 The report path and shapes are exact:
 
 ```ts
-type DocsMigrationReportEntryV1 = {
-  sourcePath: string;
-  documentId: string;
-  locale: string;
-  slug: string;
-  nativeV2: boolean;
-  sourceHash: string;
-  sections: {
-    headingOccurrence: number;
-    sectionId: string;
-  }[];
+// packages/docs-contracts/src/docsMigrationReport.ts
+export type DocsMigrationReportEntryV1 = {
+  sourcePath: string; documentId: string; locale: string; slug: string;
+  nativeV2: boolean; sourceHash: string;
+  sections: { headingOccurrence: number; sectionId: string }[];
 };
-
-type DocsMigrationReportV1 = {
+export type DocsMigrationReportV1 = {
   schema: "coderso.docs-migration-report@v1";
-  bundleSourceHash: string;
-  bundleSha256: string;
+  bundleSourceHash: string; bundleSha256: string;
   entries: DocsMigrationReportEntryV1[];
 };
+export function normalizeDocsMigrationReportV1(value: unknown): DocsMigrationReportV1;
+export function serializeDocsMigrationReportV1(value: DocsMigrationReportV1): Uint8Array;
 ```
 
-Entries map `sourceHash` from uniform projection `sourceSha256` and sort by
+These exports live in that private source and L02's exact named Core shim
+`core/services/documentation/compiler/docsMigrationReport.ts`, never the public
+barrel/manifest. Compiler imports the shim; `nodeFixedWorkspace.ts` imports the owner. Entries map `sourceHash` from uniform projection `sourceSha256` and sort by
 normalized `sourcePath`; section rows sort by one-based `headingOccurrence`, exactly matching native directive ordinals. All paths are
 repository-relative, hashes are lowercase
 SHA-256, all objects reject unknown fields, and the report uses the same
@@ -366,44 +358,25 @@ exactly:
 
 ```ts
 type DurablePairPromotionPhaseV1 =
-  | "preparing"
-  | "prepared"
-  | "member-0-promoted"
-  | "member-1-promoted"
+  | "preparing" | "prepared" | "member-0-promoted" | "member-1-promoted"
   | "verified-commit";
-
 type DurablePairPromotionMemberV1 = {
-  memberId: "member-0" | "member-1";
-  finalPath: string;
-  stagingTempPath: string;
-  stagedPath: string;
-  backupPath: string | null;
-  previous:
-    | { state: "absent" }
-    | { state: "present"; sha256: string };
+  memberId: "member-0" | "member-1"; finalPath: string;
+  stagingTempPath: string; stagedPath: string; backupPath: string | null;
+  previous: { state: "absent" } | { state: "present"; sha256: string };
   nextSha256: string;
 };
-
 type DurablePairPromotionJournalV1 = {
-  schema: "coderso.durable-pair-promotion@v1";
-  transactionKind: string;
-  transactionId: string;
-  journalTempPath: string;
+  schema: "coderso.durable-pair-promotion@v1"; transactionKind: string;
+  transactionId: string; journalTempPath: string;
   phase: DurablePairPromotionPhaseV1;
-  members: [
-    DurablePairPromotionMemberV1,
-    DurablePairPromotionMemberV1
-  ];
+  members: [DurablePairPromotionMemberV1, DurablePairPromotionMemberV1];
 };
-
 type DurablePairPromotionMemberDescriptorV1 = {
-  memberId: "member-0" | "member-1";
-  finalPath: string;
+  memberId: "member-0" | "member-1"; finalPath: string;
 };
-
 type DurablePairStableMemberV1 = DurablePairPromotionMemberDescriptorV1 & {
-  sha256: string;
-  bytes: Uint8Array;
+  sha256: string; bytes: Uint8Array;
 };
 
 type DurablePairStablePairV1 =
@@ -439,16 +412,12 @@ type DurablePairPromotionConfigV1 = {
 };
 
 type DurablePairPromotionInputMemberV1 = {
-  memberId: "member-0" | "member-1";
-  bytes: Uint8Array;
+  memberId: "member-0" | "member-1"; bytes: Uint8Array;
 };
-
 type DurablePairPromotionResultV1 = {
-  committed: true;
-  transactionId: string;
+  committed: true; transactionId: string;
   cleanup: "complete" | "retry-required";
 };
-
 type DurablePairRecoveryResultV1 = {
   state: "none" | "restored-previous" | "retained-commit";
   cleanup: "complete" | "retry-required";
@@ -514,65 +483,98 @@ present pair, then transition through `prepared`, both promoted phases and
 `verified-commit` with the same journal durability sequence; every final/backup
 rename also fsyncs its directory before the next phase.
 
-The workspace wrapper module
+L02's package-private `nodeFixedWorkspace.ts` derives exactly repository root,
+Core root, tracked bundle, ignored report and promotion journal URLs from its
+own `import.meta.url`. No export accepts a URL/path/options/env/cwd value. Its
+authority token, brand and `WeakSet` registry are module-private; object/cast/
+deserialization is no construction path. It exports source-internal zero-input
+inspection and atomic guard-and-load helpers only to the two sibling Node entry
+modules plus exact L02 Core shims; the manifest never exposes it. It imports the
+report normalizer/serializer from `./docsMigrationReport.ts` and freezes:
+
+```ts
+export function guardAndLoadFixedDocsWorkspaceBundleV2(): Promise<DocsDistributionBundleV2>;
+```
+
+The shared held-handle transaction walks via `O_NOFOLLOW` (`O_DIRECTORY` for
+parents) and only Linux Node/Bun `/proc/self/fd/<parent-fd>/<component>`; absent
+support fails closed. For load mode it opens and retains the exact bundle handle
+before inspecting the full fixed journal/temp/member-temp/staged/`.new`/backup
+inventory. While that handle remains open it same-handle bounded-reads and
+normalizes bundle bytes, opens/strictly normalizes an optional report and proves
+`bundleSourceHash`/`bundleSha256` linkage. It then repeats the complete inventory
+and compares pre/post parent plus file device/inode/type/link-count/size/mtime/
+ctime before reverse-order close. Directory/file replacement between any phase,
+report-only, link/type/case drift, unknown/noncanonical/invalid bytes or mutation
+throws `docs_compile_recovery_required`; no ordinary-path fallback or mutation.
+Inspect-only mode accepts exactly bootstrap-none, strict bundle-only or strict
+linked pair. Load mode requires bundle-only/linked and returns the normalized
+bundle from the continuously held handle, eliminating guard→load replacement.
+
+Public `nodeArtifactGuard.ts` exports only this zero-input authoring/check API:
+
+```ts
+export function assertNoDocsWorkspaceArtifactPromotionHazardsV1(): Promise<
+  "bootstrap-none" | "packaged-bundle-only" | "linked-pair"
+>;
+```
+
+The Core wrapper
 `core/services/documentation/artifacts/docsWorkspaceArtifactPromotionV1.ts`
-exports exactly:
+imports that source only through the permanent confined repo-relative
+`../../../../packages/docs-contracts/src/nodeArtifactGuard.ts` preactivation
+edge; its exact second edge to private sibling `nodeFixedWorkspace.ts` delegates
+linked-pair reads. It re-exports without local URLs/schema/parser/inventory/
+validation and also owns these mutating/authoring exports:
 
 ```ts
 type DocsWorkspaceArtifactStablePrestateV1 =
   "bootstrap-none" | "packaged-bundle-only" | "linked-pair";
-
+assertNoDocsWorkspaceArtifactPromotionHazardsV1():
+  Promise<DocsWorkspaceArtifactStablePrestateV1>; // zero-argument Core shim
 export type DocsFinalNativePairExpectedIdentityV1 = {
   migrationRunId: string; sourceHash: string; bundleSha256: string;
   reportSha256: string; pairTransactionIdentitySha256: string;
 };
-
 export type VerifiedDocsFinalNativePairHandbackV1 = {
   schema: "coderso.docs-final-native-pair-handback@v1";
   migrationRunId: string; sourceHash: string; bundleSha256: string;
   reportSha256: string; pairTransactionIdentitySha256: string;
   pair: { bundle: DocsDistributionBundleV2; report: DocsMigrationReportV1 };
 };
-
-assertNoDocsWorkspaceArtifactPromotionHazardsV1():
-  Promise<DocsWorkspaceArtifactStablePrestateV1>;
 recoverDocsWorkspaceArtifactPromotionV1(): Promise<DurablePairRecoveryResultV1>;
-
-loadAndValidateRecoveredDocsArtifactPair(input: {
-  bundlePath: "core/generated/docs/coderso-docs-v2.json";
-  reportPath: ".tmp/docs-corpus/migration-report-v1.json";
-}): Promise<{
-  bundle: DocsDistributionBundleV2;
-  report: DocsMigrationReportV1;
+loadAndValidateRecoveredDocsArtifactPair(): Promise<{
+  bundle: DocsDistributionBundleV2; report: DocsMigrationReportV1;
 }>;
-
 export function buildDocsFinalNativePairExpectedIdentityV1(input: {
-  migrationRunId: string;
-  compiled: CompiledDocsCorpusV2;
+  migrationRunId: string; compiled: CompiledDocsCorpusV2;
 }): DocsFinalNativePairExpectedIdentityV1;
-
 export function verifyDocsFinalNativePairHandbackV1(input: {
   expected: DocsFinalNativePairExpectedIdentityV1;
-  bundlePath: "core/generated/docs/coderso-docs-v2.json";
-  reportPath: ".tmp/docs-corpus/migration-report-v1.json";
 }): Promise<VerifiedDocsFinalNativePairHandbackV1>;
 ```
 
+The exact pure Core report shim `compiler/docsMigrationReport.ts` named-re-exports
+both report types and both functions from
+`../../../../packages/docs-contracts/src/docsMigrationReport.ts`. The exact L02
+runtime shim `core/services/documentation/packagedDocsDistributionBundleV2.ts` is:
+
+```ts
+export { guardAndLoadFixedDocsWorkspaceBundleV2 as loadPackagedDocsDistributionBundleV2 }
+  from "../../../packages/docs-contracts/src/nodeFixedWorkspace.ts";
+```
+
+This makes `--check` executable before activation with the same function
+reference that L03's public entry later aliases.
+
 `recoverDocsWorkspaceArtifactPromotionV1()` delegates to
 `recoverDurablePairPromotionV1(DOCS_WORKSPACE_ARTIFACT_PROMOTION_V1)` and is
-mutating. It runs only from the explicit recovery command or a write command
-that intentionally invokes recovery. `assertNoDocsWorkspaceArtifactPromotionHazardsV1`
-is read-only: it rejects a live journal in any phase, an orphan journal temp,
-any owned staging/backup artifact, report-only state, symlink/path anomaly,
-invalid packaged bundle or invalid linked pair with
-`docs_compile_recovery_required`; it never renames, deletes, truncates or
-creates a file. It accepts and strictly validates `bootstrap-none`,
-`packaged-bundle-only`, and `linked-pair`, returning the exact classification.
-`loadAndValidateRecoveredDocsArtifactPair` is workspace-only and, after owner
-recovery, reopens both exact finals without following links, validates both
-strict schemas plus exact report/bundle linkage, and rejects an absent member or
-live journal before returning either value. The packaged production loader is
-separate and never imports this workspace module or reads `.tmp`.
+mutating and runs only from explicit recovery/write. The zero-argument Core
+inspector delegates to the package guard. The workspace-only pair load invokes
+the package-private zero-input linked-pair transaction after recovery and
+rejects absent/hazardous state. The public loader owns no URL and reads `.tmp`
+only inside its atomic hazard/linkage transaction, never as a prerequisite when
+the report is absent.
 
 The expected-identity builder strictly validates `migrationRunId`, canonical
 compiled bundle/report bytes and hashes, then computes
@@ -683,10 +685,10 @@ evidence without masking either failure.
 
 Production Docker/package output contains the validated generated bundle only,
 not `.tmp`, the migration report, workspace backups or this journal. Production
-startup/reindex uses only L03's zero-argument, module-relative packaged loader
-and never calls workspace recovery. This leaf's read-only checker uses a
-module-private zero-argument tracked-bundle reader with the same fixed artifact;
-neither reader accepts a path/environment override or depends on `process.cwd()`.
+startup/reindex uses only L03's zero-argument public alias and never calls
+workspace recovery. This leaf's checker calls its Core alias of the same atomic
+transaction exactly once; no separate guard or tracked-byte reader exists.
+Neither alias accepts path/environment input or depends on `process.cwd()`.
 A clean clone/tag with no ignored report is normal `packaged-bundle-only`.
 
 TASK-548-02-L03 owns `scripts/docs/recover-artifacts.ts` and the one
@@ -713,9 +715,7 @@ type CompileDocsOptions = {
 export async function prepareDocsCompilerArtifactStateV1(
   options: Pick<CompileDocsOptions, "mode" | "visuals">
 ): Promise<void> {
-  if (options.mode === "check") {
-    await assertNoDocsWorkspaceArtifactPromotionHazardsV1();
-  } else {
+  if (options.mode === "write") {
     await recoverDocsWorkspaceArtifactPromotionV1();
   }
   if (options.visuals.state === "pre-pilot-empty") {
@@ -782,21 +782,18 @@ export async function checkPackagedDocsCorpusV2(
   options: Omit<CompileDocsOptions, "mode">
 ): Promise<DocsDistributionBundleV2> {
   const compiled = await compileDocsCorpusV2({ ...options, mode: "check" });
-  const packagedBytes = await readTrackedGeneratedDocsBundleBytesForCheckV2();
   const packaged = normalizeDocsDistributionBundleV2(
-    parseBoundedCanonicalJson(packagedBytes)
+    await loadPackagedDocsDistributionBundleV2()
   );
-  assertByteEqual(
-    serializeCanonicalDocsBundle(packaged),
-    compiled.bundleBytes
-  );
+  const packagedBytes = serializeCanonicalDocsBundle(packaged);
+  assertByteEqual(packagedBytes, compiled.bundleBytes);
   assertEqual(packaged.sourceHash, compiled.bundle.sourceHash);
   return packaged;
 }
 
 export async function promoteDocsArtifactPair(result: CompiledDocsCorpusV2) {
   await recoverDocsWorkspaceArtifactPromotionV1();
-  const reportBytes = serializeCanonicalMigrationReport(result.migrationReport);
+  const reportBytes = serializeDocsMigrationReportV1(result.migrationReport);
   await validateDocsArtifactPairBytes({
     bundleBytes: result.bundleBytes,
     reportBytes,
@@ -848,9 +845,9 @@ phase no rollback is attempted: recovery validates the new pair and cleanup
 cannot mask or corrupt it. Incomplete committed cleanup returns structured
 `committed: true` evidence and leaves the verified journal for idempotent retry.
 Thus both workspace authoring identities advance or neither does, including process
-termination between renames. `--check` first runs only the two read-only hazard
-inspectors, compiles both artifacts in memory, strictly loads the fixed packaged
-bundle, and compares its canonical bytes and `sourceHash` with the recomputed
+termination between renames. `--check` runs only the visual read-only inspector,
+compiles both artifacts in memory, calls the zero-input atomic bundle loader once,
+and compares its independently normalized canonical bytes/`sourceHash` with the recomputed
 bundle without any filesystem mutation. It succeeds for either a valid
 `packaged-bundle-only` clean checkout or a valid `linked-pair`; the ignored
 report is not required and the in-memory report is not compared to a final.
@@ -990,7 +987,11 @@ drift, catalog collisions and any unreviewed null-to-action enrichment fail.
   `docs:recover` command is the only operator-directed recovery path
 - materialize a clean-clone fixture with the tracked bundle but no `.tmp` tree/report;
   prove read-only `--check` accepts canonical bytes and rejects stale/tampered bytes
-- `bun --cwd core lint` and `bun --cwd core lint:types`
+- swap every parent directory/final between open, inventory, report-link, read,
+  normalization and final rescan; the held-handle atomic load rejects or returns
+  one complete inode, never mixed/reopened bytes; pin both zero-input aliases to
+  the same reference, one checker call and no separate check-byte reader
+- `tsc -p packages/docs-contracts/tsconfig.json --noEmit`; `bun --cwd core lint` and `bun --cwd core lint:types`
 - touched-file line counts
 
 ## Documentation Updates Required
