@@ -161,6 +161,22 @@ import {
   expectedNativeTabRows,
   parseRegisteredOutput,
 } from "./task-540-smoke/executor/output-parser.mjs";
+import {
+  createDirtyGuardsScenarioRuntime,
+  isDirtyGuardsBrowserCandidate,
+} from "./task-540-smoke/browser/scenarios/dirty-guards.mjs";
+import { assertScreenshotScenarioOwnership } from "./task-540-smoke/browser/scenarios/ownership.mjs";
+
+const {
+  buildDirtyGuardsBrowserInvocation,
+  dirtyGuardsOperationForAction,
+  dirtyGuardsRouteKeyForAction,
+  normalizeDirtyGuardsUnitSource,
+} = createDirtyGuardsScenarioRuntime({
+  buildSharedAdvancedBrowserInvocation: buildAdvancedBrowserInvocation,
+  buildSharedSimpleBrowserInvocation: buildSimpleBrowserInvocation,
+  runCode,
+});
 
 const responseLostRegistry = createResponseLostRegistry({
   assertPlainJsonValue,
@@ -419,6 +435,7 @@ function assertRegisteredExecutable(plan, action) {
       action.id + " native registry mismatch"
     );
   } else if (executable.type === "browser-screenshot") {
+    assertScreenshotScenarioOwnership(plan, action);
     const registeredPath = plan.registries.screenshotPaths[executable.screenshotId];
     invariant(
       typeof registeredPath === "string" &&
@@ -4839,7 +4856,9 @@ function operationForAction(action, builderAst) {
   if (action.kind === "observe") return "observation";
   if (action.kind === "route") return builderAst.args[1];
   if (action.kind === "screen") return "screenshot";
-  if (["dg-035-real-retry", "rc-011-visible-retry"].includes(action.id)) return "real-retry";
+  const dirtyGuardsOperation = dirtyGuardsOperationForAction(action);
+  if (dirtyGuardsOperation !== null) return dirtyGuardsOperation;
+  if (action.id === "rc-011-visible-retry") return "real-retry";
   if (action.kind === "logs") return "log-read";
   if (action.kind === "captureNew") return "capture-new-block";
   if (action.kind === "blocksBefore") return "capture-block-baseline";
@@ -4849,7 +4868,7 @@ function operationForAction(action, builderAst) {
 
 function routeReceiptMetadata(action, executionSpec, plan, captures, runtimeConfig) {
   let routeKey = action.kind === "route" ? executionSpec.builderAst.args[0] : null;
-  if (action.id === "dg-035-real-retry") routeKey = "entry-save-failure";
+  routeKey = dirtyGuardsRouteKeyForAction(action) ?? routeKey;
   if (action.id === "rc-011-visible-retry") routeKey = "related-first-failure";
   if (routeKey === null) return deepFreezeExact({ routeKey: null, method: null, pattern: null });
   const route = expandedRoute(plan, routeKey, captures, runtimeConfig);
@@ -4945,54 +4964,6 @@ function buildSimpleBrowserInvocation(
       }
       if (resolvedArgs[0] === expandRegisteredPath(plan, "builder", captures)) {
         const canvas = JSON.stringify(registeredSelector(plan, "canvas"));
-        if (action.id === "dg-003-builder") {
-          return {
-            args: runCode(`async (page) => {
-              const dirtyIndicator = page.getByText("Unsaved changes", { exact: true });
-              await dirtyIndicator.waitFor({ state: "visible", timeout: 30000 });
-              if (await dirtyIndicator.count() !== 1) throw new Error("wf540_dg003_dirty_count");
-              const retainedDialogListeners = page.listeners("dialog");
-              if (retainedDialogListeners.length !== 1) throw new Error("wf540_dg003_listener_count");
-              for (const listener of retainedDialogListeners) page.off("dialog", listener);
-              const dialogTypes = [];
-              const dialogSettlements = [];
-              const handleDialog = (dialog) => {
-                const type = dialog.type();
-                dialogTypes.push(type);
-                dialogSettlements.push(type === "beforeunload" ? dialog.accept() : dialog.dismiss());
-              };
-              page.on("dialog", handleDialog);
-              let navigationFailed = false;
-              let dialogSettlementFailed = false;
-              try {
-                await page.goto(${url}, { timeout: ${DATABASE_OPERATION_TIMEOUT_MS} });
-              } catch {
-                navigationFailed = true;
-              } finally {
-                const settlements = await Promise.allSettled(dialogSettlements);
-                dialogSettlementFailed = settlements.some(({ status }) => status !== "fulfilled");
-                page.off("dialog", handleDialog);
-                for (const listener of retainedDialogListeners) page.on("dialog", listener);
-              }
-              const restoredDialogListeners = page.listeners("dialog");
-              if (
-                restoredDialogListeners.length !== retainedDialogListeners.length ||
-                restoredDialogListeners.some((listener, index) => listener !== retainedDialogListeners[index])
-              ) throw new Error("wf540_dg003_listener_restore");
-              if (navigationFailed) throw new Error("wf540_dg003_navigation");
-              if (dialogSettlementFailed) throw new Error("wf540_dg003_dialog_settlement");
-              if (dialogTypes.length !== 1 || dialogTypes[0] !== "beforeunload") {
-                throw new Error("wf540_dg003_beforeunload_cardinality");
-              }
-              if (page.url() !== ${url}) throw new Error("wf540_dg003_builder_url");
-              const marker = page.locator(${canvas});
-              await marker.waitFor({ state: "visible", timeout: 90000 });
-              if (await marker.count() !== 1) throw new Error("wf540_dg003_builder_marker_count");
-              return true;
-            }`),
-            displayArgs: null,
-          };
-        }
         return {
           args: runCode(`async (page) => {
             await page.goto(${url}, { timeout: ${DATABASE_OPERATION_TIMEOUT_MS} });
@@ -5450,36 +5421,6 @@ function buildSimpleBrowserInvocation(
           displayArgs: null,
         };
       }
-      if (action.id === "dg-035-real-retry") {
-        const writePath =
-          "/admin/api/content/" +
-          encodeURIComponent(plan.fixtureBlueprint.contentTypes.editable.slug) +
-          "/entries/" +
-          encodeURIComponent(captures.get("entry.id"));
-        return {
-          args: runCode(`async (page) => {
-            const locator = page.locator(${selector});
-            await locator.waitFor({ state: "visible", timeout: 30000 });
-            if (await locator.count() !== 1) throw new Error("wf540_entry_retry_target_count");
-            const pathname = (href) => { const scheme = href.indexOf("://"); const start = href.indexOf("/", scheme === -1 ? 0 : scheme + 3); return (start === -1 ? "/" : href.slice(start)).split(/[?#]/u, 1)[0]; };
-            const responsePromise = page.waitForResponse((response) => response.request().method() === "PATCH" && pathname(response.url()) === ${JSON.stringify(writePath)}, { timeout: 270000 });
-            await locator.click();
-            const response = await responsePromise;
-            if (!response.ok()) throw new Error("wf540_entry_retry_response");
-            const deadline = Date.now() + 30000;
-            while (Date.now() < deadline) {
-              const enabled = await locator.count() === 1 && await locator.isEnabled() && (await locator.textContent())?.trim() === "Save";
-              const savingAbsent = await page.getByText("Saving...", { exact: true }).count() === 0;
-              const contentClean = await page.getByText("Unsaved changes", { exact: true }).count() === 0;
-              const presentationDirty = await page.getByText("Unsaved presentation", { exact: true }).count() === 1;
-              if (enabled && savingAbsent && contentClean && presentationDirty) return true;
-              await page.waitForTimeout(25);
-            }
-            throw new Error("wf540_entry_retry_settlement");
-          }`),
-          displayArgs: null,
-        };
-      }
       if (action.id === "rc-011-visible-retry") {
         const readPath =
           "/admin/api/content/" +
@@ -5509,138 +5450,6 @@ function buildSimpleBrowserInvocation(
               await page.waitForTimeout(25);
             }
             throw new Error("wf540_related_retry_settlement");
-          }`),
-          displayArgs: null,
-        };
-      }
-      const dirtyNavigationConfig = DIRTY_NAVIGATION_REQUEST_ACTION_CONFIG[action.id];
-      if (dirtyNavigationConfig !== undefined) {
-        const expectedCurrentUrl = JSON.stringify(
-          expandRegisteredPath(plan, dirtyNavigationConfig.realm, captures)
-        );
-        const dialogDescription = JSON.stringify(dirtyNavigationConfig.dialogDescription);
-        const dialogTitle = JSON.stringify(dirtyNavigationConfig.dialogTitle);
-        return {
-          args: runCode(`async (page) => {
-            const positive = (rect) => rect !== null && [rect.x, rect.y, rect.width, rect.height].every(Number.isFinite) && rect.width > 0 && rect.height > 0;
-            const fail = (failureClass) => ({ failureClass, settled: false });
-            const dialog = page.getByRole("dialog", { name: ${dialogTitle}, exact: true });
-            const dialogMultiplicityFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[9])};
-            const links = page.locator(${selector});
-            let visibleLinkIndex = -1;
-            let latestTargetFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[2])};
-            const targetDeadline = Date.now() + 30000;
-            while (Date.now() < targetDeadline) {
-              let pollTargetFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[2])};
-              const count = await links.count();
-              if (count > 8) return fail(${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[0])});
-              let nextVisibleLinkIndex = -1;
-              let visibleCount = 0;
-              for (let index = 0; index < count; index += 1) {
-                const candidate = links.nth(index);
-                const rect = await candidate.boundingBox();
-                if (await candidate.isVisible() && positive(rect)) {
-                  nextVisibleLinkIndex = index;
-                  visibleCount += 1;
-                }
-              }
-              if (visibleCount > 1) return fail(${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[1])});
-              if (visibleCount === 1) {
-                const candidate = links.nth(nextVisibleLinkIndex);
-                await candidate.scrollIntoViewIfNeeded({ timeout: 30000 });
-                const rect = await candidate.boundingBox();
-                const candidateStillVisible = await candidate.isVisible();
-                if (candidateStillVisible && positive(rect)) {
-                  const body = page.locator("body");
-                  const bodyInteraction = await body.count() === 1
-                    ? await body.evaluate((node) => ({
-                        computedPointerEvents: getComputedStyle(node).pointerEvents,
-                        inlinePointerEvents: node.style.pointerEvents,
-                        scrollLocked: node.hasAttribute("data-scroll-locked"),
-                      }))
-                    : null;
-                  if (bodyInteraction !== null) {
-                    const receivesPointerAtCenter = await candidate.evaluate((node, box) => {
-                      const receiver = document.elementFromPoint(
-                        box.x + box.width / 2,
-                        box.y + box.height / 2
-                      );
-                      return receiver !== null && (receiver === node || node.contains(receiver));
-                    }, rect);
-                    if (receivesPointerAtCenter) {
-                      visibleLinkIndex = nextVisibleLinkIndex;
-                      break;
-                    } else if (bodyInteraction.inlinePointerEvents === "none") {
-                      pollTargetFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[5])};
-                    } else if (bodyInteraction.computedPointerEvents === "none") {
-                      pollTargetFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[6])};
-                    } else if (bodyInteraction.scrollLocked === true) {
-                      pollTargetFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[4])};
-                    } else {
-                      pollTargetFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[7])};
-                    }
-                  }
-                }
-              }
-              latestTargetFailureClass = pollTargetFailureClass;
-              await page.waitForTimeout(25);
-            }
-            if (visibleLinkIndex < 0) return fail(latestTargetFailureClass);
-            const urlBefore = page.url();
-            const navigationCountBefore = page.__wf540ReadNavigationCount();
-            if (urlBefore !== ${expectedCurrentUrl}) return fail(${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[3])});
-            if (await dialog.count() !== 0) return fail(dialogMultiplicityFailureClass);
-            let clickFailed = false;
-            try {
-              await links.nth(visibleLinkIndex).click({ timeout: 30000, noWaitAfter: true });
-            } catch {
-              clickFailed = true;
-            }
-            let namedDialogObserved = false;
-            const dialogDeadline = Date.now() + 30000;
-            while (Date.now() < dialogDeadline) {
-              const heading = dialog.getByRole("heading", { name: ${dialogTitle}, exact: true });
-              const description = dialog.getByText(${dialogDescription}, { exact: true });
-              const keepEditing = dialog.getByRole("button", { name: "Keep editing", exact: true });
-              const discard = dialog.getByRole("button", { name: "Discard and continue", exact: true });
-              const dialogCount = await dialog.count();
-              const headingCount = await heading.count();
-              const descriptionCount = await description.count();
-              const keepEditingCount = await keepEditing.count();
-              const discardCount = await discard.count();
-              if (dialogCount > 1 || headingCount > 1 || descriptionCount > 1 || keepEditingCount > 1 || discardCount > 1) {
-                return fail(dialogMultiplicityFailureClass);
-              }
-              if (dialogCount === 1) namedDialogObserved = true;
-              const dialogRect = dialogCount === 1 ? await dialog.boundingBox() : null;
-              const headingRect = headingCount === 1 ? await heading.boundingBox() : null;
-              const descriptionRect = descriptionCount === 1 ? await description.boundingBox() : null;
-              const keepEditingRect = keepEditingCount === 1 ? await keepEditing.boundingBox() : null;
-              const discardRect = discardCount === 1 ? await discard.boundingBox() : null;
-              const urlStable = page.url() === urlBefore;
-              const navigationStable = page.__wf540ReadNavigationCount() === navigationCountBefore;
-              if (!urlStable || !navigationStable) return fail(${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[10])});
-              if (
-                dialogCount === 1 &&
-                await dialog.isVisible() &&
-                positive(dialogRect) &&
-                headingCount === 1 &&
-                await heading.isVisible() &&
-                positive(headingRect) &&
-                descriptionCount === 1 &&
-                await description.isVisible() &&
-                positive(descriptionRect) &&
-                keepEditingCount === 1 &&
-                await keepEditing.isVisible() &&
-                positive(keepEditingRect) &&
-                discardCount === 1 &&
-                await discard.isVisible() &&
-                positive(discardRect)
-              ) return true;
-              await page.waitForTimeout(25);
-            }
-            if (clickFailed && !namedDialogObserved) return fail(${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[8])});
-            return fail(${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[11])});
           }`),
           displayArgs: null,
         };
@@ -6082,25 +5891,36 @@ function buildBrowserInvocation(
   runtimeConfig
 ) {
   invariant(action.executable.type !== "runtime-operation", action.id + " is not a browser action");
-  let invocation =
-    buildSimpleBrowserInvocation(
-      action,
-      executionSpec,
-      plan,
-      captures,
-      root,
-      browserCwd,
-      refContext
-    ) ??
-    buildAdvancedBrowserInvocation(
-      action,
-      executionSpec,
-      plan,
-      captures,
-      root,
-      refContext,
-      runtimeConfig
-    );
+  const dirtyGuardsCandidate = isDirtyGuardsBrowserCandidate(action);
+  let invocation = dirtyGuardsCandidate
+    ? buildDirtyGuardsBrowserInvocation({
+        action,
+        executionSpec,
+        plan,
+        captures,
+        root,
+        browserCwd,
+        refContext,
+        runtimeConfig,
+      })
+    : (buildSimpleBrowserInvocation(
+        action,
+        executionSpec,
+        plan,
+        captures,
+        root,
+        browserCwd,
+        refContext
+      ) ??
+      buildAdvancedBrowserInvocation(
+        action,
+        executionSpec,
+        plan,
+        captures,
+        root,
+        refContext,
+        runtimeConfig
+      ));
   invariant(invocation !== null, "browser executable is not implemented: " + action.id);
   const unitResultAlreadyNormalized = invocation.unitResultAlreadyNormalized === true;
   invariant(
@@ -6120,17 +5940,8 @@ function buildBrowserInvocation(
       sourceIndex > 0 && typeof invocation.args[sourceIndex] === "string",
       action.id + " unit run-code source is absent"
     );
-    const unitSource = DIRTY_NAVIGATION_REQUEST_ACTION_IDS.includes(action.id)
-      ? `(async (page) => {
-          const result = await (${invocation.args[sourceIndex]})(page);
-          if (result === true) return { ok: true };
-          const failureClasses = ${JSON.stringify(
-            dirtyNavigationBrowserFailureClassesForAction(action.id)
-          )};
-          const keys = result !== null && typeof result === "object" && !Array.isArray(result) && Object.getPrototypeOf(result) === Object.prototype ? Object.keys(result) : [];
-          if (keys.length === 2 && keys.includes("failureClass") && keys.includes("settled") && result.settled === false && failureClasses.includes(result.failureClass)) return result;
-          throw new Error("wf540_dirty_navigation_result");
-        })`
+    const unitSource = dirtyGuardsCandidate
+      ? normalizeDirtyGuardsUnitSource(action, invocation.args[sourceIndex])
       : `(async (page) => { await (${invocation.args[sourceIndex]})(page); return { ok: true }; })`;
     const args = [...invocation.args];
     args[sourceIndex] = unitSource;
