@@ -174,6 +174,10 @@ import {
   createTabsContentScenarioRuntime,
   isTabsContentBrowserCandidate,
 } from "./task-540-smoke/browser/scenarios/tabs-content.mjs";
+import {
+  createTabsKeyboardScenarioRuntime,
+  isTabsKeyboardBrowserCandidate,
+} from "./task-540-smoke/browser/scenarios/tabs-keyboard.mjs";
 import { buildObservationSource } from "./task-540-smoke/browser/observation-sources.mjs";
 import { buildVisibleAssertionSource } from "./task-540-smoke/browser/visible-assertion-sources.mjs";
 import { assertScreenshotScenarioOwnership } from "./task-540-smoke/browser/scenarios/ownership.mjs";
@@ -184,6 +188,10 @@ const { buildButtonImageBrowserInvocation } = createButtonImageScenarioRuntime({
   runCode,
 });
 const { buildTabsContentBrowserInvocation } = createTabsContentScenarioRuntime({
+  buildSharedAdvancedBrowserInvocation: buildAdvancedBrowserInvocation,
+  buildSharedSimpleBrowserInvocation: buildSimpleBrowserInvocation,
+});
+const { buildTabsKeyboardBrowserInvocation } = createTabsKeyboardScenarioRuntime({
   buildSharedAdvancedBrowserInvocation: buildAdvancedBrowserInvocation,
   buildSharedSimpleBrowserInvocation: buildSimpleBrowserInvocation,
 });
@@ -4258,8 +4266,14 @@ function buildBrowserInvocation(
   const buttonImageCandidate = isButtonImageBrowserCandidate(action);
   const dirtyGuardsCandidate = isDirtyGuardsBrowserCandidate(action);
   const tabsContentCandidate = isTabsContentBrowserCandidate(action);
+  const tabsKeyboardCandidate = isTabsKeyboardBrowserCandidate(action);
   invariant(
-    [buttonImageCandidate, dirtyGuardsCandidate, tabsContentCandidate].filter(Boolean).length <= 1,
+    [
+      buttonImageCandidate,
+      dirtyGuardsCandidate,
+      tabsContentCandidate,
+      tabsKeyboardCandidate,
+    ].filter(Boolean).length <= 1,
     action.id + " browser scenario ownership is ambiguous"
   );
   let invocation = dirtyGuardsCandidate
@@ -4275,6 +4289,17 @@ function buildBrowserInvocation(
       })
     : tabsContentCandidate
       ? buildTabsContentBrowserInvocation({
+          action,
+          executionSpec,
+          plan,
+          captures,
+          root,
+          browserCwd,
+          refContext,
+          runtimeConfig,
+        })
+    : tabsKeyboardCandidate
+      ? buildTabsKeyboardBrowserInvocation({
           action,
           executionSpec,
           plan,
