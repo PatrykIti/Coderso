@@ -1,14 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { SETUP_ACTION_ROWS } from "./task-540-smoke/contract/actions/setup.mjs";
-import { BUTTON_IMAGE_ACTION_ROWS } from "./task-540-smoke/contract/actions/button-image.mjs";
-import { TABS_CONTENT_ACTION_ROWS } from "./task-540-smoke/contract/actions/tabs-content.mjs";
-import { TABS_KEYBOARD_ACTION_ROWS } from "./task-540-smoke/contract/actions/tabs-keyboard.mjs";
-import { SPACE_SELECTION_ACTION_ROWS } from "./task-540-smoke/contract/actions/space-selection.mjs";
-import { DIRTY_GUARD_ACTION_ROWS } from "./task-540-smoke/contract/actions/dirty-guard.mjs";
-import { RECOVERY_CACHE_ACTION_ROWS } from "./task-540-smoke/contract/actions/recovery-cache.mjs";
-import { RETENTION_USER_ACTION_ROWS } from "./task-540-smoke/contract/actions/retention-user.mjs";
-import { TERMINAL_ACTION_ROWS } from "./task-540-smoke/contract/actions/terminal.mjs";
+import { RAW_ACTION_ROWS } from "./task-540-smoke/contract/action-rows.mjs";
 
 import {
   assertClosedDataTree,
@@ -16,7 +8,6 @@ import {
   exactKeys,
   invariant,
   sameSet,
-  valueAtPath,
 } from "./task-540-smoke/contract/core.mjs";
 import {
   NONCE_PATTERN,
@@ -70,170 +61,67 @@ import {
   RUNTIME_CAPTURE_EXPRESSIONS,
   CAPTURE_INPUTS_BY_EXPRESSION,
 } from "./task-540-smoke/contract/metadata.mjs";
+import {
+  schemaLiteral,
+  schemaBoolean,
+  schemaNull,
+  schemaString,
+  schemaNumber,
+  schemaInteger,
+  schemaArray,
+  schemaTuple,
+  schemaObject,
+  schemaUnion,
+  outputRef,
+  literalPredicateRef,
+  deepEqualPredicate,
+  andPredicate,
+  comparePredicate,
+  sameSetPredicate,
+  notPredicate,
+  withinPredicate,
+  everyPredicate,
+  varRef,
+  lengthRef,
+  jsonTransport,
+  nativeExactTransport,
+  nativeSessionAbsenceTransport,
+  outputContract,
+  outputEquals,
+  outputNonEmpty,
+  outputLengthEquals,
+  assertExactUnitOutputValue,
+  capturePredicateRef,
+  fixturePredicateRef,
+  priorPredicateRef,
+  pathPredicateRef,
+  arrayPredicateRef,
+  subtractionPredicateRef,
+  observationRef,
+  observationEquals,
+  observationEqualsRef,
+  observationNonEmpty,
+  observationLengthEquals,
+  positiveRectRefPredicate,
+  zeroRectRefPredicate,
+  everyPositiveObservationRect,
+  everyZeroObservationRect,
+} from "./task-540-smoke/contract/contract-dsl.mjs";
+import {
+  parseBuilderAst,
+  parseBuilderKind,
+  literalRef,
+  compileArgumentRef,
+  validateRefDescriptor,
+  captureNamesRequiredByRef,
+  repositoryMutationPolicy,
+  parseAssertionName,
+  collectTaggedReferences,
+  executableRefs,
+  collectRefDescriptors,
+} from "./task-540-smoke/contract/references.mjs";
 
-// Generated from the contract's exhaustive Markdown action tables. The rows are
-// intentionally embedded so importing this pure module never reads task files.
-const RAW_ACTION_ROWS = deepFreezeExact([
-  ...SETUP_ACTION_ROWS,
-  ...BUTTON_IMAGE_ACTION_ROWS,
-  ...TABS_CONTENT_ACTION_ROWS,
-  ...TABS_KEYBOARD_ACTION_ROWS,
-  ...SPACE_SELECTION_ACTION_ROWS,
-  ...DIRTY_GUARD_ACTION_ROWS,
-  ...RECOVERY_CACHE_ACTION_ROWS,
-  ...RETENTION_USER_ACTION_ROWS,
-  ...TERMINAL_ACTION_ROWS,
-]);
 
-
-function schemaLiteral(value) {
-  return deepFreezeExact({ type: "literal", value });
-}
-
-function schemaBoolean() {
-  return deepFreezeExact({ type: "boolean" });
-}
-
-function schemaNull() {
-  return deepFreezeExact({ type: "null" });
-}
-
-function schemaString({ minLength = 0, maxLength = 4096, enumValues = null, format = null } = {}) {
-  return deepFreezeExact({
-    type: "string",
-    minLength,
-    maxLength,
-    enum: enumValues,
-    format,
-  });
-}
-
-function schemaNumber({ minimum = null, maximum = null } = {}) {
-  return deepFreezeExact({ type: "number", minimum, maximum });
-}
-
-function schemaInteger({ minimum = null, maximum = null } = {}) {
-  return deepFreezeExact({ type: "integer", minimum, maximum });
-}
-
-function schemaArray(items, { minItems = 0, maxItems = 1024, unique = false } = {}) {
-  return deepFreezeExact({ type: "array", items, minItems, maxItems, unique });
-}
-
-function schemaTuple(items) {
-  return deepFreezeExact({ type: "tuple", items });
-}
-
-function schemaObject(properties) {
-  invariant(
-    properties && Object.getPrototypeOf(properties) === Object.prototype,
-    "schema object properties must be plain"
-  );
-  return deepFreezeExact({ type: "object", properties });
-}
-
-function schemaUnion(variants) {
-  return deepFreezeExact({ type: "union", variants });
-}
-
-function outputRef(path = []) {
-  return deepFreezeExact({ op: "output", path });
-}
-
-function literalPredicateRef(value) {
-  return deepFreezeExact({ op: "literal", value });
-}
-
-function deepEqualPredicate(left, right) {
-  return deepFreezeExact({ op: "deepEqual", left, right });
-}
-
-function andPredicate(items) {
-  return deepFreezeExact({ op: "and", items });
-}
-
-function comparePredicate(mode, left, right) {
-  return deepFreezeExact({ op: "compare", mode, left, right });
-}
-
-function sameSetPredicate(left, right) {
-  return deepFreezeExact({ op: "sameSet", left, right, duplicates: "reject" });
-}
-
-function notPredicate(item) {
-  return deepFreezeExact({ op: "not", item });
-}
-
-function withinPredicate(actual, expected, tolerance) {
-  return deepFreezeExact({ op: "within", actual, expected, tolerance });
-}
-
-function everyPredicate(source, as, predicate) {
-  return deepFreezeExact({ op: "every", source, as, predicate });
-}
-
-function varRef(name, path = []) {
-  return deepFreezeExact({ op: "var", name, path });
-}
-
-function lengthRef(value) {
-  return deepFreezeExact({ op: "length", value });
-}
-
-function jsonTransport(jsonLayers = 1) {
-  return deepFreezeExact({
-    encoding: "json",
-    jsonLayers,
-    nativeMode: null,
-    exactText: null,
-    sessionName: null,
-    normalizedValue: null,
-  });
-}
-
-function nativeExactTransport(exactText, normalizedValue) {
-  return deepFreezeExact({
-    encoding: "native",
-    jsonLayers: 0,
-    nativeMode: "exact-text",
-    exactText,
-    sessionName: null,
-    normalizedValue,
-  });
-}
-
-function nativeSessionAbsenceTransport(sessionName) {
-  return deepFreezeExact({
-    encoding: "native",
-    jsonLayers: 0,
-    nativeMode: "session-list-absence",
-    exactText: null,
-    sessionName,
-    normalizedValue: true,
-  });
-}
-
-function outputContract({ grammar, schema, predicate, rememberAs = null }) {
-  return deepFreezeExact({ grammar, schema, predicate, rememberAs });
-}
-
-function outputEquals(path, expected) {
-  return deepEqualPredicate(outputRef(path), literalPredicateRef(expected));
-}
-
-function outputNonEmpty(path) {
-  return deepFreezeExact({ op: "nonEmptyString", value: outputRef(path) });
-}
-
-function outputLengthEquals(path, expected) {
-  return deepEqualPredicate(lengthRef(outputRef(path)), literalPredicateRef(expected));
-}
-
-function assertExactUnitOutputValue(value) {
-  exactKeys(value, ["ok"], "unit output");
-  invariant(value.ok === true, "unit output ok value drift");
-  return value;
-}
 
 function createLogProjectionSchema() {
   const messageArray = schemaArray(schemaString({ minLength: 1, maxLength: 4096 }), {
@@ -971,340 +859,7 @@ function createObservationPredicate(name, canonicalAdminRootUrl) {
 }
 
 
-function parseBuilderAst(builder) {
-  invariant(typeof builder === "string" && builder.length > 0, "builder must be non-empty");
-  const open = builder.indexOf("(");
-  if (open === -1) {
-    invariant(/^[A-Za-z][A-Za-z0-9-]*$/.test(builder), "bare builder name is invalid");
-    return deepFreezeExact({ callee: builder, args: [] });
-  }
-  invariant(builder.endsWith(")"), "builder call must close");
-  const callee = builder.slice(0, open);
-  invariant(/^[A-Za-z][A-Za-z0-9-]*$/.test(callee), "builder callee is invalid");
-  const body = builder.slice(open + 1, -1);
-  const args = [];
-  let quote = null;
-  let escaped = false;
-  let depth = 0;
-  let start = 0;
-  for (let index = 0; index < body.length; index += 1) {
-    const character = body[index];
-    if (escaped) {
-      escaped = false;
-      continue;
-    }
-    if (quote !== null) {
-      if (character === "\\") escaped = true;
-      else if (character === quote) quote = null;
-      continue;
-    }
-    if (character === '"' || character === "'" || character === "`") {
-      quote = character;
-      continue;
-    }
-    if (character === "(") depth += 1;
-    else if (character === ")") {
-      invariant(depth > 0, "builder has an unmatched close parenthesis");
-      depth -= 1;
-    } else if (character === "," && depth === 0) {
-      args.push(body.slice(start, index).trim());
-      start = index + 1;
-    }
-  }
-  invariant(quote === null && depth === 0, "builder expression is unterminated");
-  if (body.trim().length > 0) args.push(body.slice(start).trim());
-  invariant(
-    args.every((argument) => argument.length > 0),
-    "builder has an empty argument"
-  );
-  return deepFreezeExact({ callee, args });
-}
 
-function parseBuilderKind(builder) {
-  return parseBuilderAst(builder).callee;
-}
-
-function literalRef(value) {
-  return deepFreezeExact({ op: "literal", value });
-}
-
-function compileArgumentRef(expression) {
-  invariant(
-    typeof expression === "string" && expression.length > 0 && expression.length <= 1024,
-    "command argument expression is invalid"
-  );
-  if (expression.startsWith('"') && expression.endsWith('"')) {
-    const value = JSON.parse(expression);
-    invariant(typeof value === "string", "quoted command argument must be a string");
-    return literalRef(value);
-  }
-  if (/^-?(?:0|[1-9][0-9]*)$/.test(expression)) return literalRef(Number(expression));
-  if (expression === "$ADMIN_EMAIL" || expression === "$ADMIN_PASSWORD") {
-    return deepFreezeExact({ op: "secret", name: expression.slice(1) });
-  }
-  if (expression === "$WF540_USER_A_EMAIL") {
-    return deepFreezeExact({ op: "fixture", path: ["users", "a", "email"] });
-  }
-  if (expression === "$WF540_USER_B_EMAIL") {
-    return deepFreezeExact({ op: "fixture", path: ["users", "b", "email"] });
-  }
-  invariant(!expression.startsWith("$"), "command secret reference is not allowlisted");
-  if (expression.startsWith("paths.")) {
-    const key = expression.slice("paths.".length);
-    invariant(/^[A-Za-z][A-Za-z0-9]*$/.test(key), "command path key is invalid");
-    return deepFreezeExact({ op: "path", key });
-  }
-  if (expression.startsWith("S.")) {
-    const selectorAst = parseBuilderAst(expression.slice(2));
-    return deepFreezeExact({
-      op: "selector",
-      templateId: selectorAst.callee,
-      args: selectorAst.args.map(compileArgumentRef),
-    });
-  }
-  if (expression.startsWith("screen.blockIds.")) {
-    return deepFreezeExact({
-      op: "fixture",
-      path: ["screen", "blockIds", expression.slice("screen.blockIds.".length)],
-    });
-  }
-  const captureAliases = {
-    "palette.button": "palette.button",
-    "palette.image": "palette.image",
-    "palette.mediaField": "palette.media-field",
-    "palette.outerTabs": "palette.outer-tabs",
-    "palette.tabOneText": "palette.tab-one-text",
-    "palette.tabTwoText": "palette.tab-two-text",
-    "palette.tabThreeText": "palette.tab-three-text",
-    "palette.innerTabs": "palette.inner-tabs",
-    "palette.dirtyText": "palette.dirty-text",
-    "screen.id": "screen.id",
-    "entry.id": "entry.id",
-  };
-  if (Object.hasOwn(captureAliases, expression)) {
-    return deepFreezeExact({ op: "capture", name: captureAliases[expression] });
-  }
-  const fixturePrefixes = ["entry.", "media.", "relatedEntries.", "tabs.", "users."];
-  if (fixturePrefixes.some((prefix) => expression.startsWith(prefix))) {
-    const path = expression.split(".");
-    invariant(
-      path.every((segment) => /^[A-Za-z0-9][A-Za-z0-9-]*$/.test(segment)),
-      "fixture command path is invalid"
-    );
-    return deepFreezeExact({ op: "fixture", path });
-  }
-  invariant(
-    expression.length <= 240 && /^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(expression),
-    "literal command token is invalid"
-  );
-  return literalRef(expression);
-}
-
-
-function validateRefDescriptor(ref, context, label, depth = 0, allowSecret = false) {
-  invariant(depth <= 32, label + " exceeds the Ref nesting limit");
-  invariant(ref && typeof ref === "object" && !Array.isArray(ref), label + " must be a Ref");
-  invariant(typeof ref.op === "string", label + " Ref opcode is missing");
-  if (ref.op === "literal") {
-    exactKeys(ref, ["op", "value"], label);
-    invariant(
-      Number.isSafeInteger(ref.value) ||
-        (typeof ref.value === "string" &&
-          ref.value.length <= 4096 &&
-          !/[\0\r\n]/u.test(ref.value) &&
-          !ref.value.startsWith("$") &&
-          !["ADMIN_EMAIL", "ADMIN_PASSWORD"].includes(ref.value)),
-      label + " literal must be a string or safe integer"
-    );
-    return;
-  }
-  if (ref.op === "secret") {
-    exactKeys(ref, ["op", "name"], label);
-    invariant(allowSecret, label + " secret is not permitted in this position");
-    invariant(
-      ["ADMIN_EMAIL", "ADMIN_PASSWORD"].includes(ref.name),
-      label + " secret is not allowlisted"
-    );
-    return;
-  }
-  if (ref.op === "capture") {
-    exactKeys(ref, ["op", "name"], label);
-    invariant(context.captureNames.includes(ref.name), label + " capture is not registered");
-    return;
-  }
-  if (ref.op === "fixture") {
-    exactKeys(ref, ["op", "path"], label);
-    invariant(
-      Array.isArray(ref.path) &&
-        ref.path.length > 0 &&
-        ref.path.length <= 4 &&
-        ref.path.every(
-          (segment) => typeof segment === "string" && /^[A-Za-z0-9][A-Za-z0-9-]*$/.test(segment)
-        ) &&
-        context.fixtureRefPaths.includes(ref.path.join(".")),
-      label + " fixture path is invalid"
-    );
-    const resolved = valueAtPath(context.fixtureBlueprint, ref.path, label);
-    invariant(
-      typeof resolved === "string" || Number.isSafeInteger(resolved),
-      label + " fixture path must resolve to a scalar leaf"
-    );
-    return;
-  }
-  if (ref.op === "path") {
-    exactKeys(ref, ["op", "key"], label);
-    invariant(
-      Object.hasOwn(context.fixtureBlueprint.paths, ref.key),
-      label + " path is not registered"
-    );
-    return;
-  }
-  if (ref.op === "selector") {
-    exactKeys(ref, ["op", "templateId", "args"], label);
-    const selector = context.selectors[ref.templateId];
-    invariant(selector !== undefined, label + " selector is not registered");
-    invariant(
-      Array.isArray(ref.args) &&
-        ref.args.length >= selector.minArity &&
-        ref.args.length <= selector.maxArity,
-      label + " selector arity drift"
-    );
-    ref.args.forEach((argument, index) =>
-      validateRefDescriptor(argument, context, label + ".args[" + index + "]", depth + 1, false)
-    );
-    return;
-  }
-  invariant(false, label + " has an unknown Ref opcode");
-}
-
-function captureNamesRequiredByRef(ref, context, output = []) {
-  if (ref.op === "capture") output.push(ref.name);
-  if (ref.op === "path") {
-    const pathDescriptor = context.fixtureBlueprint.paths[ref.key];
-    if (pathDescriptor && typeof pathDescriptor === "object") {
-      for (const captureName of pathDescriptor.captures) output.push(captureName);
-    }
-  }
-  if (ref.op === "selector") {
-    for (const argument of ref.args) {
-      captureNamesRequiredByRef(argument, context, output);
-    }
-  }
-  return output;
-}
-
-function repositoryMutationPolicy(action, ast) {
-  if (action.kind !== "screen") {
-    return deepFreezeExact({ mode: "none", paths: [] });
-  }
-  const descriptor = SCREENSHOT_DESCRIPTOR_BY_ACTION_ID[action.id];
-  invariant(descriptor !== undefined, action.id + " screenshot descriptor is not registered");
-  invariant(ast.args.length === 1, action.id + " screenshot builder arity drift");
-  const screenshotRef = compileArgumentRef(ast.args[0]);
-  invariant(
-    screenshotRef.op === "literal" && typeof screenshotRef.value === "string",
-    action.id + " screenshot name must be literal"
-  );
-  const screenshotName = screenshotRef.value;
-  invariant(
-    descriptor.path === "_docs/_workflows/_smoke/task-540-wf540smoke-" + screenshotName + ".png",
-    action.id + " screenshot builder/path identity drift"
-  );
-  return deepFreezeExact({ mode: "allowlist", paths: [descriptor.path] });
-}
-
-function parseAssertionName(builder) {
-  const match = /^assert\(([^()]+)\)$/.exec(builder);
-  return match?.[1] ?? null;
-}
-
-function capturePredicateRef(name) {
-  return deepFreezeExact({ op: "capture", name });
-}
-
-function fixturePredicateRef(path) {
-  return deepFreezeExact({ op: "fixture", path });
-}
-
-function priorPredicateRef(actionId, path = []) {
-  return deepFreezeExact({ op: "prior", actionId, path });
-}
-
-function pathPredicateRef(key) {
-  return deepFreezeExact({ op: "path", key });
-}
-
-function arrayPredicateRef(items) {
-  return deepFreezeExact({ op: "array", items });
-}
-
-function subtractionPredicateRef(left, right) {
-  return deepFreezeExact({ op: "sub", left, right });
-}
-
-function observationRef(path = []) {
-  return outputRef(["observations", ...path]);
-}
-
-function observationEquals(path, expected) {
-  return deepEqualPredicate(observationRef(path), literalPredicateRef(expected));
-}
-
-function observationEqualsRef(path, expected) {
-  return deepEqualPredicate(observationRef(path), expected);
-}
-
-function observationNonEmpty(path) {
-  return deepFreezeExact({ op: "nonEmptyString", value: observationRef(path) });
-}
-
-function observationLengthEquals(path, expected) {
-  return deepEqualPredicate(lengthRef(observationRef(path)), literalPredicateRef(expected));
-}
-
-function positiveRectRefPredicate(ref) {
-  return andPredicate([
-    comparePredicate(
-      "gt",
-      deepFreezeExact({ ...ref, path: [...ref.path, "width"] }),
-      literalPredicateRef(0)
-    ),
-    comparePredicate(
-      "gt",
-      deepFreezeExact({ ...ref, path: [...ref.path, "height"] }),
-      literalPredicateRef(0)
-    ),
-  ]);
-}
-
-function zeroRectRefPredicate(ref) {
-  return andPredicate([
-    deepEqualPredicate(
-      deepFreezeExact({ ...ref, path: [...ref.path, "width"] }),
-      literalPredicateRef(0)
-    ),
-    deepEqualPredicate(
-      deepFreezeExact({ ...ref, path: [...ref.path, "height"] }),
-      literalPredicateRef(0)
-    ),
-  ]);
-}
-
-function everyPositiveObservationRect(path, variableName) {
-  return everyPredicate(
-    observationRef(path),
-    variableName,
-    positiveRectRefPredicate(varRef(variableName))
-  );
-}
-
-function everyZeroObservationRect(path, variableName) {
-  return everyPredicate(
-    observationRef(path),
-    variableName,
-    zeroRectRefPredicate(varRef(variableName))
-  );
-}
 
 function visibleStringSchema({ maxLength = 4096 } = {}) {
   return schemaString({ minLength: 1, maxLength });
@@ -3543,15 +3098,6 @@ function buildFixtureBlueprint(nonce) {
   });
 }
 
-function collectTaggedReferences(value, key, output = []) {
-  if (!value || typeof value !== "object") return output;
-  const keys = Reflect.ownKeys(value);
-  if (keys.includes(key) && typeof value[key] === "string") output.push(value[key]);
-  for (const childKey of keys) {
-    if (childKey !== key) collectTaggedReferences(value[childKey], key, output);
-  }
-  return output;
-}
 
 function validateFixtureBlueprint(blueprint) {
   exactKeys(
@@ -3719,9 +3265,6 @@ function assertOrderedActionIds(manifest, ids, label) {
   }
 }
 
-function executableRefs(executable) {
-  return Object.hasOwn(executable, "refs") ? executable.refs : [];
-}
 
 function validateExecutableShape(action) {
   const executable = action.executable;
@@ -4767,13 +4310,6 @@ function replaceManifestAction(manifest, index, overrides, extra = null) {
   return Object.freeze(copy);
 }
 
-function collectRefDescriptors(ref, output = []) {
-  output.push(ref);
-  if (ref.op === "selector") {
-    ref.args.forEach((item) => collectRefDescriptors(item, output));
-  }
-  return output;
-}
 
 function lookupExecutableRegistryDescriptor(plan, action) {
   const executable = action.executable;
