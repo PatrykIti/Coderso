@@ -139,12 +139,41 @@ the former split `resolve-receipt`/`apply-resume-check` sequence are not valid
 TASK-551 rollout paths. The orchestrator creates a max-1 postgres-js client with
 L02's `coderso:migration:<operationId>` identity, calls `reserve()` once, takes
 the advisory lock on that handle, sets all three GUCs with parameterized
-`set_config(...,false)`, constructs `drizzle(reserved)`, verifies TASK-551 is the
-only pending journal member, and passes that bound database to the installed
-`drizzle-orm/postgres-js/migrator`. Drizzle 0.45.2's migrator opens its
-transaction through the bound reserved handle, so every guard, DDL statement,
-receipt insert and journal insert uses the same backend PID. A Drizzle instance
-over the unreserved pool is forbidden even when pool max is one.
+`set_config(...,false)`, verifies TASK-551 is the only pending journal member,
+and passes only `drizzle(adaptedReserved)` to the installed
+`drizzle-orm/postgres-js/migrator`. Direct `drizzle(reserved)` is forbidden:
+postgres.js 3.4.9's `reserve()` result lacks runtime `.options` and `.begin`,
+while Drizzle 0.45.2 requires both.
+
+L01 solely owns
+`createTask551ReservedDrizzleClient(poolClient, reserved)`. It returns a
+callable proxy whose tag invocation, `.unsafe()` (including `.values()`), and
+other existing SQL/value helpers forward to the same reserved handler, never to
+the pool. Its non-writable/non-configurable `.options` property is the identical
+`poolClient.options` object—not a clone—and its nested `parsers`/`serializers`
+maps remain mutable because Drizzle installs transparent date/time and JSON
+handlers there and the reserved handler closes over that same object. Its
+non-reassignable `.begin` supports only `begin(callback)` and
+`begin("", callback)`; every nonempty option string, malformed overload, nested
+or concurrent begin rejects before `BEGIN`. It issues static `BEGIN`, invokes
+the callback with the same adapted callable identity, awaits scalar or array
+results like postgres.js, then issues static `COMMIT`; callback failure issues
+static `ROLLBACK` and preserves the original error when rollback succeeds.
+`BEGIN`, `COMMIT`, or `ROLLBACK` failure makes transaction outcome unknown,
+poisons the lease, and forbids any later query or release. It never calls or
+delegates `poolClient.begin` and, after reservation, the pool callable/SQL
+helpers are never dispatched; only the exact `.options` reference and `.end()`
+remain usable.
+
+Creation records `pg_backend_pid()` through `reserved`; PID is rechecked after
+GUC setup/before `BEGIN` and after cleanup. The first SQL guard, expand DDL,
+receipt insert, and Drizzle journal insert expose test-only stage observations
+of that identical PID. After a known committed or rolled-back transaction, the
+orchestrator statically `RESET`s exactly the three TASK-551 custom GUCs, proves
+all three read as unset/empty on the same PID, calls `reserved.release()` once,
+then awaits normal `poolClient.end()`. Reset/PID failure poisons instead: do not
+release, perform no more SQL, and await `poolClient.end({ timeout: 0 })` to
+terminate the max-1 pool. Pool end runs exactly once in either branch.
 
 The static SQL's first guard reads all GUCs with strict `current_setting(...,
 true)`, rejects missing/empty/oversized values, parses the JSON, checks exact
@@ -154,10 +183,14 @@ grammar, requires its operation ID to equal both GUC and exact migration
 Its final statement inserts that receipt with no conflict clause and requires
 one row. Different-session setup, wrong operation/digest/application name,
 tampering, oversize and replay therefore fail inside the migrator transaction
-before commit. In `finally`, the orchestrator resets all three GUCs on the same
-reserved connection and releases it exactly once; reset failure terminates that
-connection instead of returning contaminated state. It then awaits pool close.
-It never spawns a shell or delegates phase 2 to an opaque command.
+before commit. It never spawns a shell or delegates phase 2 to an opaque command.
+The real-PostgreSQL adapter compatibility suite is a rollout prerequisite. If
+faithful callable/options/parser/serializer/transaction behavior fails against
+the pinned versions, rollout stops with
+`task551_reserved_drizzle_adapter_incompatible`; the contract must be amended to
+replace this path with the custom same-reserved transaction runner before work
+continues. There is no runtime fallback or deployment containing two selectable
+migration paths.
 
 The command holds one dedicated TASK-551 advisory-lock session for its complete
 run and follows this exact state machine:
@@ -481,21 +514,42 @@ const TASK551_MIGRATION_GUCS = strictReadonly({
   receiptSha256: "coderso.task551_receipt_sha256",
 });
 
+export async function createTask551ReservedDrizzleClient(
+  poolClient: PostgresSql,
+  reserved: ReservedPostgresSql,
+): Promise<Task551ReservedDrizzleClient> {
+  const state = { active: false, poisoned: false,
+    pid: await readBackendPid(reserved) };
+  const adaptedReserved = createCallableReservedProxy(reserved, state);
+  defineImmutableIdentity(adaptedReserved, "options", poolClient.options);
+  defineImmutableIdentity(adaptedReserved, "begin", (...args: BeginArgs) =>
+    runTask551ReservedBeginStateMachine({
+      args, adaptedReserved, reserved, state,
+      allowedOptions: [undefined, ""],
+    }));
+  return adaptedReserved;
+}
+
 async function applyBoundTransactionalMigration(
   receipt: Task551MigrationReceipt,
+  poolClient: PostgresSql,
   reserved: ReservedPostgresSql,
 ): Promise<void> {
   const receiptText = canonicalJson(receipt);
   assertCanonicalReceiptBytes(receiptText, TASK551_MIGRATION_RECEIPT_MAX_BYTES);
   const receiptSha256 = sha256Hex(receiptText);
+  const adaptedReserved = await createTask551ReservedDrizzleClient(poolClient, reserved);
   try {
     await setTask551MigrationGucs(reserved, {
       operationId: receipt.operationId, receiptText, receiptSha256,
     });
-    const boundDb = drizzle(reserved);
-    await migrate(boundDb, { migrationsFolder: resolvedTask551Folder() });
+    await assertSameReservedPid(adaptedReserved);
+    await migrate(drizzle(adaptedReserved), {
+      migrationsFolder: resolvedTask551Folder(),
+    });
   } finally {
-    await clearTask551MigrationGucsOrPoisonLease(reserved);
+    await resetVerifyReleaseOrPoisonAndEnd({ poolClient, reserved,
+      adaptedReserved, gucs: TASK551_MIGRATION_GUCS });
   }
 }
 
@@ -755,14 +809,27 @@ mismatch blocks deployment; there is no generic future operations choice.
 - Invoke generic `db:migrate`, startup migration, a differently named client,
   direct SQL, a wrong/missing operation GUC, and a folder with another pending
   migration; each fails before the first TASK-551 DDL/catalog change. The one
-  max-1 client reserves one physical connection, binds Drizzle/migrator to it,
-  and succeeds with the exact guarded artifact and selected timeout budget.
-  Valid GUCs set on a different pooled session do not authorize the reserved
-  migrator. Independently test missing, empty, tampered, noncanonical,
-  65,537-byte, wrong-operation/application-name/SHA, malformed key/type/array,
-  and replayed receipts. Each rolls back DDL, receipt row and Drizzle journal
-  together. Success clears all GUCs before release; clear failure terminates the
-  lease, and a replacement session observes no leaked value.
+  max-1 client reserves one physical connection and passes only
+  `drizzle(adaptedReserved)` to the installed migrator. A real-PostgreSQL suite
+  records the identical `pg_backend_pid()` at GUC set, first guard, representative
+  DDL, receipt insert, and Drizzle journal insert; it covers clean, immediately-
+  prior, replay rejection, pre-traffic reverse, and forward reapply. Injected
+  failures after DDL and receipt prove DDL, receipt, and journal roll back as one.
+  Valid GUCs on another session cannot authorize it; exactly the three canonical
+  custom GUCs exist, and missing/empty/tampered/noncanonical/65,537-byte/wrong-
+  operation/application/SHA/key/type/array cases fail atomically.
+- Against postgres.js 3.4.9 and Drizzle 0.45.2, assert the adapter is callable,
+  its immutable `.options` reference is `=== poolClient.options`, Drizzle's exact
+  parser/serializer map mutations affect reserved query round trips, `.unsafe`
+  keeps `.values()`, and both allowed `.begin` overloads pass that same adapter
+  to the callback. Nonempty options and concurrent/nested begin reject before
+  SQL. Instrument the pool after `reserve()` and require zero pool callable,
+  `.unsafe`, or `.begin` dispatch. Success/known rollback resets and verifies all
+  three GUCs on the same PID, releases once, and normally ends once; reset/PID/
+  begin/commit/rollback unknown state issues no later SQL or release and hard-
+  ends once. A replacement pool observes no leaked GUC. Any faithful-adapter
+  failure blocks rollout for the single custom-runner contract amendment; tests
+  may not accept a runtime fallback or two selectable paths.
 - Small/large boundary fixtures pin every numeric deployment ceiling. Kill the
   deployer after every version-2 CAS, DB/file persistence boundary, adapter
   prepare/resume boundary, first SQL guard, receipt insert, Drizzle journal

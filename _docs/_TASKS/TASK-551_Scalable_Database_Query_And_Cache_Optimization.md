@@ -178,11 +178,14 @@ are detail-only. Search owns one stored/generated vector contract and performs
 ranking, deterministic ordering, and candidate limits in SQL. Set-based
 queries replace N+1 and per-row mutation loops with bounded concurrency where
 one statement is not possible.
-Search tokenizes Unicode `L/M/N/_` runs, converts them to `token:*` joined by
-` & `, and binds the bounded result to `to_tsquery('simple', :prefixQuery)`.
-Trigram uses the GIN-indexed `%` operator under transaction-local static
-`SET LOCAL pg_trgm.similarity_threshold='0.300'`; LIKE/ILIKE/regex fallback is
-forbidden. Closure updates `_docs/SEARCH_SPEC.md` to this exact contract.
+One L01-owned/exported `buildTask551PrefixTsquery` plus its constants tokenizes
+Unicode `L/M/N/_` runs into `token:*` joined by ` & `. Admin and assistant SQL
+each bind it once in an input CTE with literal `to_tsquery('simple',$1)` and
+reuse that tsquery for every vector predicate/rank; assistant-expanded terms are
+reranker-only. No local parser, raw interpolation, `websearch_to_tsquery`, or
+`plainto_tsquery` is allowed. Trigram keeps indexed `%` under transaction-local
+static `SET LOCAL pg_trgm.similarity_threshold='0.300'`; LIKE/ILIKE/regex is
+forbidden, and closure updates `_docs/SEARCH_SPEC.md` to this exact contract.
 Executable known-interval `pg_stat_statements` receipts use only
 `application|migration|maintenance|external_diagnostic|unknown`, sanitize SQL,
 run before prioritization and before/after comparisons, and never reset shared stats.
@@ -247,13 +250,16 @@ never resumes; first compatible traffic makes recovery forward-fix only.
 `offline-single` stays cold through final catalog. Transactional SQL creates no
 index; `rollout-forward` runs twice (second zero-DDL/zero-transition), then
 `status` proves the version-2 CAS/hash-chained receipt and exact catalog.
-It reserves one physical migration session and sets exactly
-`coderso.task551_operation_id`, `coderso.task551_receipt_v2`, and
-`coderso.task551_receipt_sha256`. The canonical v2 receipt is 1..65,536 UTF-8
-bytes and SHA-256 bound; static migration SQL validates all three inside the
-migrator transaction. Clean/prior apply, disposable rollback/forward replay,
-hash/size/GUC failure rollback, repeat-zero-transition, and status/recovery
-proofs are mandatory.
+It reserves one physical migration session and L01's sole
+`createTask551ReservedDrizzleClient(poolClient,reserved)` supplies the callable,
+same-handle `.begin` adapter required by postgres.js 3.4.9/Drizzle 0.45.2; only
+`drizzle(adaptedReserved)` is valid. Its non-reassignable `.options` is the exact
+pool object with shared mutable parser/serializer maps; SQL/BEGIN never dispatches
+through the pool after reserve. One PID spans exactly the operation/receipt/SHA
+GUC set, guard, DDL, receipt, and journal transaction. Clean/prior/replay/reverse,
+atomic rollback, RESET/same-PID/release/end, poison/hard-end, parser parity, and
+zero-pool-dispatch evidence are mandatory. Adapter incompatibility blocks rollout
+for a single custom-runner contract amendment; no runtime fallback/dual path ships.
 
 ### Exact server-cache boundary
 
@@ -739,10 +745,10 @@ After the gate:
   become provably write-free. The sole history write is internal `POST /admin/api/search/history`: session actor, `content:read`, shared CSRF, `admin_write`
   bucket, strict four-key body and actor-bound UUID idempotency; conflict maps 409. `searchClient.ts` and `useSearchResults.ts` reuse one UUID per normalized UI
   intent/retry, and no public/API-key/GET mutation alias exists.
-  Search has no cursor. Each of five source arms yields at most 51 exact-email →
-  FTS → non-overlapping trigram candidates; at most 255 enter global dedup/rank
-  and 51 leave. Match tier precedes incomparable scores; per-arm rows/buffers/p95
-  evidence is independent of whether an arm survives final top-k.
+  Search has no cursor. Each of five source arms yields at most 51 exact-email → FTS → non-overlapping trigram candidates; at most 255 enter global dedup/rank
+  and 51 leave. Match tier precedes incomparable scores; per-arm rows/buffers/p95 evidence is independent of final top-k. L02 imports L01's prefix helper/constants,
+  binds one `to_tsquery('simple',$1)` CTE for both assistant vectors, removes expanded terms from SQL candidates (retaining reranker-only expansion), and rejects
+  websearch/plain/local-parser/raw-interpolation variants while pinning the shared Unicode/punctuation/token bounds.
 - TASK-551-05: the sole TASK-551 owner of schema decomposition and every
   migration/vector/index/constraint/outbox schema artifact plus plan evidence;
   it also owns the one explicit Drizzle-unsupported exclusion descriptor/custom

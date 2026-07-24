@@ -193,12 +193,21 @@ Immediately before L01 runs and again before L02 closes:
     rollback is
     `ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_active_resource_window_excl`
     without dropping the extension.
-    Require one reserved physical migration session and exactly three GUCs:
+    Require one reserved physical migration session and L01's sole
+    `createTask551ReservedDrizzleClient(poolClient,reserved)`. Direct
+    `drizzle(reserved)` is impossible on postgres.js 3.4.9; only
+    `drizzle(adaptedReserved)` reaches Drizzle 0.45.2. Pin callable/unsafe
+    forwarding to the reserved handle, identical non-reassignable pool `.options`
+    with mutable shared parser/serializer maps, empty-option same-adapter
+    BEGIN/COMMIT/ROLLBACK, and zero `poolClient.begin` or pool SQL dispatch after
+    reserve. Exactly three custom GUCs remain:
     `coderso.task551_operation_id`, `coderso.task551_receipt_v2`, and
-    `coderso.task551_receipt_sha256`. The canonical v2 receipt is 1..65,536 UTF-8
-    bytes, SHA-256 bound, and validated by static migration SQL inside the
-    migrator transaction. Clean/prior apply, disposable rollback/forward replay,
-    GUC/hash/size failure rollback, second zero-transition run and status/recovery pass.
+    `coderso.task551_receipt_sha256`. One PID records GUC set, first guard, DDL,
+    receipt and journal; clean/prior/replay/reverse plus injected rollback are
+    atomic. Pin RESET/same-PID/one-release/normal-end and unknown-state poison/
+    no-release/hard-end. Faithful-adapter failure blocks rollout until the
+    contract selects the custom reserved transaction runner alone; no fallback
+    or dual path passes.
 11. Re-prove TASK-551-03-L02 only after 06-L03. Require the exact summary-only
     page `{id,pageId,version,kind,title,slug,createdAt,createdBy:{id,name,email}|null}`
     and detail `{id,detailPageId,version,kind,createdAt,createdBy:string|null}`
@@ -250,8 +259,13 @@ Immediately before L01 runs and again before L02 closes:
     exact-email→FTS→non-overlapping-trigram priority, at most 255 reach global
     dedup/rank and 51 leave. Tier precedes score and each arm's plan budget is
     independent of final top-k survival.
-    Code tokenizes Unicode `L/M/N/_` runs into `token:*` terms joined by ` & `
-    for bounded `to_tsquery('simple', :prefixQuery)`. Trigram uses the GIN-indexed
+    L02 imports L01's `buildTask551PrefixTsquery` and constants read-only. Its one
+    input CTE binds literal `to_tsquery('simple',$1)` once; both assistant vector
+    predicates and ranks reuse that tsquery. `expandedTerms` is absent from SQL
+    candidates and remains reranker-only. Shared NFKC/Unicode/punctuation and
+    2/200-code-point, 800-byte, 16-token, 64-code-point-per-token tests reject
+    local parsers, raw interpolation, websearch/plainto constructors, or a second
+    tsquery bind. Admin search uses the same token grammar. Trigram uses GIN-indexed
     `%` operator after static transaction-local
     `SET LOCAL pg_trgm.similarity_threshold='0.300'`; LIKE/ILIKE/regex fallback
     is forbidden, and closure updates `_docs/SEARCH_SPEC.md`.

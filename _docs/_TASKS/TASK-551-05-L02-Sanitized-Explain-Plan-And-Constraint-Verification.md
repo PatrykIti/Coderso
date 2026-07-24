@@ -293,11 +293,20 @@ emit neither a duplicate add nor the descriptor's `.dropSql`.
   databases execute `rollout-forward` twice; the first applies before catalog
   checks and the second emits zero DDL/adapter action while proving final-state
   idempotence. Crash injection covers every version-2 state/CAS/file/DB boundary.
-- Validate L01's single reserved-backend evidence: operation/receipt/SHA GUCs,
-  migration `application_name`, first guard, expand DDL, receipt insert and
-  Drizzle journal share one PID/transaction. Consume the different-session,
-  missing/tampered/oversized/replay/crash/rerun/reverse matrix and require atomic
-  rollback or one committed row; verify GUC clear/release with no pool leakage.
+- Validate L01's real-PostgreSQL reserved-adapter evidence against postgres.js
+  3.4.9/Drizzle 0.45.2. Only `drizzle(adaptedReserved)` is accepted; direct
+  `drizzle(reserved)` and `poolClient.begin`/post-reservation pool dispatch fail.
+  The callable adapter exposes the identical non-reassignable pool `.options`
+  reference with parser/serializer round-trip parity and provides only the
+  empty-option same-reserved `.begin` overloads. Operation/receipt/SHA are
+  exactly three custom GUCs; their set, migration `application_name`, first
+  guard, representative DDL, receipt insert and journal insert record one PID.
+  Clean/prior/replay/reverse and injected-after-DDL/receipt failures prove one
+  atomic DDL/receipt/journal outcome. Verify successful/known-rollback RESET,
+  same-PID cleanup, one release/normal end, and unknown begin/commit/rollback/
+  reset/PID poisoning with no release/later SQL and one hard end. Adapter parity
+  failure is a rollout block requiring the single custom reserved transaction
+  runner contract, never a runtime fallback or second selectable path.
 - For all five trigram candidates, pin the normalized column/index/opclass and
   normalization digest. Select only candidates whose large plan uses that exact
   index with bounded rows/buffers and whose write-cost gate passes; rejected

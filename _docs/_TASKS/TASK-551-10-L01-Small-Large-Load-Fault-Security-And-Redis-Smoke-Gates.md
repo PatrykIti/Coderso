@@ -278,11 +278,20 @@ This leaf must not rebaseline or weaken an owner assertion.
   `pg_constraint.contype = 'x'`, preserved `btree_gist` on rollback, and fresh
   generation with zero duplicate add or generated drop. This is one atomic 05-
   L01 schema/SQL/snapshot/journal ownership seam, not claimed Drizzle DSL support.
-  Reserve one physical migration session and set exactly
-  `coderso.task551_operation_id`, `coderso.task551_receipt_v2`, and
-  `coderso.task551_receipt_sha256`. Static SQL validates the SHA-256-bound
+  Reserve one physical migration session and require L01's sole
+  `createTask551ReservedDrizzleClient(poolClient,reserved)`. Direct
+  `drizzle(reserved)` is invalid on postgres.js 3.4.9; only
+  `drizzle(adaptedReserved)` reaches Drizzle 0.45.2. Pin callable forwarding and
+  `.unsafe()`/`.values()` parity on the reserved handle, identical immutable pool
+  `.options` with shared parser/serializer maps, same-handle empty-option
+  `.begin`, and zero pool SQL/`begin`/`.unsafe()` dispatch after reserve.
+  Exactly three custom GUCs remain: `coderso.task551_operation_id`,
+  `coderso.task551_receipt_v2`, and `coderso.task551_receipt_sha256`. One PID
+  spans GUC set, guard, DDL, receipt, and journal; success proves RESET/same-
+  PID/one-release/normal-end, while unknown transaction/cleanup state poisons
+  and hard-ends without release. Static SQL validates the SHA-256-bound
   canonical v2 receipt (1..65,536 UTF-8 bytes) inside the migrator transaction;
-  clean/prior, rollback/replay, GUC/hash/size-failure and repeat/status gates pass.
+  clean/prior/replay/reverse, failure rollback, and repeat/status gates pass.
 - Require the closed index catalog, including all form/booking/list/retention
   members and assistant-ingest `started_at`. Pin `pages_author_list_updated_id_idx`,
   entry/typed-entry/post author composites, role-leading
@@ -370,11 +379,16 @@ This leaf must not rebaseline or weaken an owner assertion.
   `admin_write`, strict four-key body and 409 conflict. `searchClient`/
   `useSearchResults` reuse one UUID per UI intent/retry; no public/API-key/GET mutation alias exists.
 - Search v1 has no cursor. Five arms each cap exact-email→FTS→non-overlapping
-  trigram at 51 candidates; at most 255 enter global tier-first dedup/rank and 51
-  leave. Unicode `L/M/N/_` runs become `token:*` joined by ` & ` for bounded
-  `to_tsquery('simple', :prefixQuery)`. Trigram uses GIN `%` after static
-  transaction-local `SET LOCAL pg_trgm.similarity_threshold='0.300'`; no
-  LIKE/ILIKE/regex fallback. Per-arm plan budgets ignore final top-k survival.
+  trigram at 51 candidates; at most 255 enter global tier-first dedup/rank and
+  51 leave. L02 imports L01's `buildTask551PrefixTsquery` and constants read-
+  only, binds literal `to_tsquery('simple',$1)` once in an input CTE, and reuses
+  that tsquery for both assistant vector predicates/ranks. `expandedTerms`
+  remains reranker-only. Shared NFKC/Unicode/punctuation plus 2/200-code-point,
+  800-byte, 16-token, and 64-code-point-per-token bounds reject local parsers,
+  raw interpolation, `websearch_to_tsquery`, `plainto_tsquery`, or a second
+  tsquery bind. Trigram uses GIN `%` after static transaction-local
+  `SET LOCAL pg_trgm.similarity_threshold='0.300'`; no LIKE/ILIKE/regex fallback.
+  Per-arm plan budgets ignore final top-k survival.
 - Analytics upgrade evidence pins only `ANALYTICS_RETENTION_DAYS` for age and its
   complete `Number(raw)` truth table:
   absent/malformed/non-finite resolves to 365; finite values floor then clamp to

@@ -20,9 +20,9 @@ two-process Redis-smoke dispatch, fresh final drift, and structured evidence.
 
 This is an orchestration sidecar with no product leaf. It never implements or
 fixes database, query, migration, cache, route, service, UI, product test,
-documentation, task-status, board, or changelog behavior. Every verified finding
-is returned to the exact single-writer leaf; TASK-551-10-L02 alone performs final
-documentation and metadata closure.
+product/developer documentation, task-status, board, or changelog behavior.
+Every verified finding is returned to the exact single-writer leaf; TASK-551-10-L02
+alone performs final documentation and metadata closure.
 
 ## Exact Single-Writer Ownership
 
@@ -34,7 +34,11 @@ This child may create or edit only:
 - `_docs/_workflows/task-551-fix.mjs`;
 - `tests/unit/workflows/task551AuthorAudit.test.ts`;
 - `tests/unit/workflows/task551WorkflowContracts.test.ts`;
-- `_docs/_workflows/_smoke/task-551/audit-evidence/*.json`.
+- `_docs/_workflows/_smoke/task-551/audit-evidence/*.json`;
+- the 37 `TASK-551*.md` contract files during research/authoring/drift-fix
+  rounds only, with no status/board/changelog transitions and no edits after
+  implementation starts except evidence-backed contract corrections that rerun
+  the required audits.
 
 The audit-evidence directory is separate from
 `_docs/_workflows/_smoke/task-551/runtime/redis-smoke-v1.json`, which is written
@@ -42,9 +46,10 @@ only by TASK-551-10-L01. This sidecar verifies the runtime evidence schema/hash
 read-only and never rewrites it.
 
 Forbidden paths are every `core/**`, `tests/**` path outside the two workflow
-tests, migration, product/developer doc, TASK-551 contract, task board,
-changelog, runtime-smoke, package/lock, CI, release-gate, and product evidence
-path. Agents never stage or commit. The repository owner owns commits.
+tests, migration, product/developer doc outside the TASK-551 contract files,
+task board, changelog, runtime-smoke, package/lock, CI, release-gate, and
+product evidence path. Agents never stage or commit. The repository owner owns
+commits.
 
 ## Frozen Task Graph and Land Order
 
@@ -63,7 +68,7 @@ TASK-551-11 runs throughout, while compile-green dispatch executes strictly:
 06-L03 → 07-L01 → 09-L04(initial) → 03-L02 → 03-L03 →
 04-L01 → 04-L02 → 07-L02 → 08-L01 → 08-L02 → 08-L03(final) →
 09-L01 → 09-L02 → 09-L03 → 09-L04(final) → 01-L01(final) → 10-L01 →
-post-audit/fixes/affected gates/fresh aggregate+Redis+UI smoke → final drift →
+post-audit/fix/affected-gates/aggregate+smoke → final-drift →
 10-L02 docs/changelog/status/board closure
 ```
 
@@ -211,11 +216,19 @@ builds; offline-single stays cold through final catalog. First compatible traffi
 makes rollback forward-fix only. Transactional SQL creates no index; run
 rollout-forward twice (second zero-DDL/transition), then `status`. No file may
 pretend the DSL represents it or split the artifact ownership. One reserved
-physical session sets exactly `coderso.task551_operation_id`,
-`coderso.task551_receipt_v2`, and `coderso.task551_receipt_sha256`; static SQL
-validates the SHA-256-bound canonical v2 receipt (1..65,536 UTF-8 bytes) inside
-the migrator transaction. Clean/prior, rollback/replay, failure-rollback and
-repeat/status/recovery gates are exact.
+physical session plus L01's sole
+`createTask551ReservedDrizzleClient(poolClient,reserved)` are mandatory. Direct
+`drizzle(reserved)` is invalid on postgres.js 3.4.9; only
+`drizzle(adaptedReserved)` reaches Drizzle 0.45.2. Pin identical immutable pool
+`.options` with shared parser/serializer maps, callable forwarding and
+`.unsafe()`/`.values()` parity on the reserved handle, same-handle empty-option
+`.begin`, zero pool SQL/`begin`/`.unsafe()` dispatch after reserve, exact GUCs
+`coderso.task551_operation_id`, `coderso.task551_receipt_v2`, and
+`coderso.task551_receipt_sha256`, one PID across GUC set/guard/DDL/receipt/
+journal, successful RESET/same-PID/one-release/normal-end, poison/hard-end on
+unknown state, and static SQL validation of the SHA-256-bound canonical v2
+receipt (1..65,536 UTF-8 bytes) inside the migrator transaction. Clean/prior/
+replay/reverse, failure rollback, and repeat/status/recovery gates are exact.
 
 After 06-L03, TASK-551-03-L02 alone adopts 06-L02's page
 `{id,pageId,version,kind,title,slug,createdAt,createdBy:{id,name,email}|null}` and
@@ -255,8 +268,8 @@ fail the audit. Legacy booking/media monoliths are deleted; exact owners are
 and `mediaLibraryTestFixtures.tsx` plus media `loading-pagination|selection-folders|upload-edit` suites.
 TASK-551-06-L01 alone owns Bun-free `searchHistoryContract.ts` plus direct
 Vitest, removes the real `pruneHistory` declaration/call and lands actor/UUIDv5-
-idempotent `recordSearch`. L04 makes GET write-free and owns the sole internal
-`POST /admin/api/search/history` with session actor, `content:read`, CSRF,
+idempotent `recordSearch`. TASK-551-04-L01 makes GET write-free and owns the
+sole internal `POST /admin/api/search/history` with session actor, `content:read`, CSRF,
 `admin_write`, strict four-key body/409 conflict, plus one UI-intent UUID reuse;
 no public/API-key/GET mutation alias exists. TASK-551-06-L01 also preserves analytics compatibility exactly: canonical
 `ANALYTICS_RETENTION_DAYS` with absent/malformed/non-finite 365 and finite floor+
@@ -269,9 +282,14 @@ exactly one replica advisory, and both have zero destructive-row-lock/mutation/
 publication/progress. Inline request pruning is zero.
 Search v1 has no cursor: five source arms each cap exact-email→FTS→non-overlap
 trigram at 51, at most 255 reach tier-first global dedup/rank and 51 leave; arm
-plan budgets do not depend on final top-k. Unicode `L/M/N/_` runs become
-`token:*` joined by ` & ` for bounded `to_tsquery('simple', :prefixQuery)`;
-trigram uses GIN `%` under transaction-local static
+plan budgets do not depend on final top-k. L01 alone exports
+`buildTask551PrefixTsquery` plus shared constants; Admin and assistant bind
+literal `to_tsquery('simple',$1)` once in an input CTE and reuse that tsquery
+for every vector predicate/rank, while assistant `expandedTerms` stay reranker-
+only. Shared NFKC/Unicode/punctuation plus 2/200-code-point, 800-byte, 16-token,
+and 64-code-point-per-token bounds reject local parsers, raw interpolation,
+`websearch_to_tsquery`, `plainto_tsquery`, or a second tsquery bind. Trigram
+uses GIN `%` under transaction-local static
 `SET LOCAL pg_trgm.similarity_threshold='0.300'`, with no LIKE/ILIKE/regex
 fallback, and closure must update `_docs/SEARCH_SPEC.md`. Page autosave parent-locks, selects one
 latest autosave by version/id, reuses equality without writes or allocates then

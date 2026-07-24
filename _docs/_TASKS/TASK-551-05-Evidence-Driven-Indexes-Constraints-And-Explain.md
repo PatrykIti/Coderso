@@ -85,12 +85,18 @@ justify an index. No shared statistics reset is permitted, and diagnostics must
 be followed by a new clean interval.
 
 L01's one version-2 rollout orchestrator is part of this selected-change gate.
-It reserves one physical postgres-js connection, constructs Drizzle over that
-reserved handle, and invokes the installed migrator only after setting strict
-session GUCs for the bounded canonical v2 receipt, operation UUID, and receipt
-SHA-256. Static migration SQL revalidates all three and inserts/marks the receipt
-inside Drizzle's own transaction; GUCs are cleared and the lease released in
-`finally`. The remaining phases are:
+It reserves one physical postgres-js connection and uses L01's sole
+`createTask551ReservedDrizzleClient(poolClient, reserved)` callable adapter.
+Direct `drizzle(reserved)` is invalid because postgres.js 3.4.9's reserved
+handle lacks `.options`/`.begin`; only `drizzle(adaptedReserved)` reaches the
+installed Drizzle 0.45.2 migrator. The adapter exposes the identical immutable-
+reference pool options/parser/serializer surface, forwards SQL to the reserved
+handle, and implements guarded same-handle BEGIN/callback/COMMIT/ROLLBACK without
+pool dispatch. Strict operation, canonical-v2-receipt, and SHA GUCs are the only
+three TASK-551 custom GUCs. Static SQL revalidates them and inserts the receipt
+inside the same transaction as DDL and journal; known cleanup resets/verifies
+them before one release/end, while unknown transaction/cleanup state poisons and
+hard-ends without release. The remaining phases are:
 artifact/preflight classification; nonce-bound external adapter or cold offline-
 single admission drain plus live `pg_stat_activity` proof; guarded transactional
 expand; ordered autocommit `CREATE [UNIQUE] INDEX CONCURRENTLY`; and exact catalog
@@ -172,6 +178,11 @@ catalog tests resolve the closed function/operator dependency set through
 - A different session, missing/tampered/oversized receipt GUC, operation/digest
   mismatch, or replay cannot execute the guarded migration. Crash/rerun and
   pre-traffic reverse preserve one atomic receipt/journal/catalog truth.
+- Real-PostgreSQL compatibility proves one PID at GUC set, first guard, DDL,
+  receipt and journal; exact parser/serializer identity, clean/prior/replay/
+  reverse, atomic failure rollback, cleanup/poison/release, and zero pool
+  dispatch. Failure blocks rollout and requires a single explicit custom
+  reserved-transaction-runner contract; no runtime fallback or dual path ships.
 
 ## Testing Requirements
 

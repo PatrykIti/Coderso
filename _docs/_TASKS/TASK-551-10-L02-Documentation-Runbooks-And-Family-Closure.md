@@ -169,10 +169,19 @@ formatter that rewrites unrelated documentation.
   generator no-add/no-drop guards. Explain that one 05-L01 writer atomically owns
   schema exports/descriptor, SQL, snapshot, journal, and tests; never claim DSL
   support that the installed Drizzle version lacks. Document one reserved
-  physical session; exact GUCs `coderso.task551_operation_id`,
-  `coderso.task551_receipt_v2`, `coderso.task551_receipt_sha256`; canonical
-  1..65,536-byte UTF-8 v2 receipt/SHA-256; in-transaction static SQL validation;
-  and clean/prior, rollback/replay, failure rollback, repeat/status/recovery gates;
+  physical session, L01's sole
+  `createTask551ReservedDrizzleClient(poolClient,reserved)`, invalid direct
+  `drizzle(reserved)`, and required `drizzle(adaptedReserved)` on postgres.js
+  3.4.9/Drizzle 0.45.2. Pin callable forwarding and `.unsafe()`/`.values()` parity
+  on the reserved handle, identical immutable pool `.options` with shared
+  parser/serializer maps, same-handle empty-option `.begin`, zero pool SQL/
+  `begin`/`.unsafe()` dispatch after reserve, exact GUCs
+  `coderso.task551_operation_id`,
+  `coderso.task551_receipt_v2`, `coderso.task551_receipt_sha256`, one PID across
+  GUC set/guard/DDL/receipt/journal, successful RESET/same-PID/one-release/
+  normal-end, poison/hard-end on unknown state, canonical 1..65,536-byte UTF-8
+  v2 receipt/SHA-256 validation, and clean/prior/replay/reverse/failure rollback/
+  repeat/status/recovery gates;
 - the closed form/booking/list/retention index catalog and assistant-ingest
   `started_at` expressions; exact `pages_author_list_updated_id_idx`, role-leading
   `user_roles_role_user_idx`, and `posts_tags_gin_idx`/`media_tags_gin_idx` as
@@ -257,9 +266,15 @@ idempotency conflict, no API-key/public/GET alias. Record `searchClient`/
 Document that search v1 has no cursor: five source arms each cap exact-email→FTS
 →non-overlapping-trigram at 51, at most 255 enter tier-first global dedup/rank
 and 51 leave; every arm's plan budget is independent of final top-k survival.
-Update `_docs/SEARCH_SPEC.md`: Unicode `L/M/N/_` runs become `token:*` joined by
-` & ` for bounded `to_tsquery('simple', :prefixQuery)`; trigram uses GIN `%`
-after static transaction-local
+Update `_docs/SEARCH_SPEC.md`: L01's `buildTask551PrefixTsquery` and constants are
+the shared read-only token contract for Admin and assistant search. Unicode
+`L/M/N/_` runs become byte-exact `token:*` joined by ` & `; one input CTE binds
+literal `to_tsquery('simple',$1)` once and reuses that tsquery for every vector
+predicate/rank, while assistant `expandedTerms` stay reranker-only. Shared
+NFKC/Unicode/punctuation plus 2/200-code-point, 800-byte, 16-token, and
+64-code-point-per-token bounds reject local parsers, raw interpolation,
+`websearch_to_tsquery`, `plainto_tsquery`, or a second tsquery bind. Trigram
+uses GIN `%` after static transaction-local
 `SET LOCAL pg_trgm.similarity_threshold='0.300'`. LIKE/ILIKE/regex fallback is forbidden.
 Document page autosave's parent lock, one latest projected version/id row, equal-
 snapshot zero write, exact-predecessor-only delete on change, scheduler-only old

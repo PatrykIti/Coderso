@@ -41,22 +41,27 @@ TASK-493/TASK-511/TASK-517/TASK-518 paths, cache, task/changelog/workflow files.
 ```ts
 type CandidateQuery = StrictReadonly<{
   normalizedQuery: string;
-  expandedTerms: readonly string[];
   candidateLimit: number; // default 100, max 200
 }>;
 
 async function listAssistantDocCandidates(input: CandidateQuery, db: Db): Promise<CandidateRow[]> {
-  // One SQL statement:
-  // 1. q = parameterized websearch/prefix tsquery.
+  // Import buildTask551PrefixTsquery, TASK551_SEARCH_CONFIG,
+  // TASK551_PREFIX_TOKEN_MAX, and TASK551_PREFIX_TOKEN_CODE_POINT_MAX from
+  // L01-owned searchContract.ts. Do not copy or wrap its parser.
+  const prefixQuery = buildTask551PrefixTsquery(input.normalizedQuery);
+  // One SQL statement and one prefixQuery bind:
+  // 1. input = SELECT to_tsquery('simple',$1) AS prefix_query.
   // 2. chunk_hits searches assistant_doc_chunks.search_vector, ordered by
   //    chunk rank/doc_id/chunk_index/id, capped at candidateLimit.
   // 3. doc_hits searches assistant_docs.search_vector, ordered by doc rank/
   //    source_path/id, capped at min(candidateLimit, 50).
   // 4. For each doc hit, one LATERAL indexed lookup selects at most two chunks
   //    by chunk_index/id. UNION ALL these ids with chunk_hits.
-  // 5. GROUP BY chunk id, combine max chunk rank + max doc rank, order combined
+  // 5. Both predicates and both ts_rank_cd(...,32) calls CROSS JOIN input and
+  //    reuse input.prefix_query; no constructor or second tsquery bind exists.
+  // 6. GROUP BY chunk id, combine max chunk rank + max doc rank, order combined
   //    rank DESC, source_path ASC, chunk_index ASC, chunk id ASC, LIMIT once.
-  // 6. Only then join assistant_docs + assistant_doc_chunks and project the
+  // 7. Only then join assistant_docs + assistant_doc_chunks and project the
   //    exact reranker/citation fields. No cross-table generated expression.
 }
 
@@ -65,6 +70,13 @@ async function retrieveDocs(query: string, options: Options, deps: Deps): Promis
   return rerankCandidates(candidates, inferIntent(query)).slice(0, resolveTopK(options.topK));
 }
 ```
+
+`expandedTerms` is deliberately absent from `CandidateQuery` and from SQL.
+Existing synonym expansion remains an in-memory BM25/reranker signal only after
+the bounded candidate rows arrive; it cannot widen, narrow, or independently
+parse the database candidate query. L02 imports L01's exported helper and
+constants read-only. If that export is absent when L02 starts, implementation
+returns to L01 contract correction rather than adding an assistant-local parser.
 
 Candidate limits and query lengths are clamped/rejected before DB work. Empty
 or tokenless queries return without a query. Preserve matched-term, score, path,
@@ -84,10 +96,19 @@ never through an impossible cross-table chunk generated column.
   a chunk matching both branches is deduplicated deterministically.
 - Instrument DB access: nonempty request is exactly 1 statement; candidate rows
   are `<= 200`; default is 100; final top-K is `<= 10`; empty query is 0 SQL.
+- Inspect the rendered SQL: one input CTE contains literal
+  `to_tsquery('simple',$1)`, the doc/chunk predicates and ranks reuse that one
+  alias/bind, and `websearch_to_tsquery`, `plainto_tsquery`, a local token parser,
+  raw query interpolation, or a second tsquery constructor/bind fails the test.
+- Import L01's helper/constants and table-drive the shared NFKC, Unicode
+  `L/M/N/_`, punctuation/metacharacter separation, 2/200-code-point, 800-byte,
+  16-token, and 64-code-point-per-token boundaries. Pin byte-exact
+  `token:* & token:*`; tokenless/overflow input performs zero SQL.
 - Large corpus test asserts indexed plan/no growing-table seq scan, p95 budget,
   bounded transferred bytes, and stable quality fixtures.
-- Unknown options, query >200 chars, candidate limit >200, malformed tokens,
-  and DB errors fail closed and never expose chunk content in logs/errors.
+- Unknown options, query outside 2..200 code points or above 800 UTF-8 bytes,
+  candidate limit >200, malformed tokens, and DB errors fail closed and never
+  expose chunk content in logs/errors.
 
 ## Security Contract
 

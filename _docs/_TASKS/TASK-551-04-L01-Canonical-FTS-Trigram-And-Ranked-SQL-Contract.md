@@ -128,7 +128,7 @@ async function searchAll(request: StrictSearchRequest, deps: SearchDeps): Promis
   // One ranked statement builds exact-email (users only, 0..1), FTS and optional
   // trigram CTEs for each selected source. Authorization/publication/date
   // predicates are inside every source arm before its ORDER/LIMIT.
-  // One input CTE binds `to_tsquery('simple', :prefixQuery)` once. Each FTS arm
+  // One input CTE binds literal `to_tsquery('simple',$1)` once. Each FTS arm
   // uses `search_vector @@ fts_query` and
   // `ts_rank_cd(search_vector, fts_query, 32)` exactly.
   //

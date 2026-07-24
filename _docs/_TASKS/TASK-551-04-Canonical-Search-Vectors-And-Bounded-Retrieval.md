@@ -63,10 +63,11 @@ that landed contract read-only.
 
 - Every query references the generated columns exported by TASK-551-05; no
   service reconstructs a `to_tsvector` expression at query time.
-- FTS input uses exactly `to_tsquery('simple', :prefixQuery)`. The code-owned
-  NFKC grammar accepts only Unicode letter/mark/number/underscore token runs,
-  rejects rather than truncates more than 16 tokens or 64 code points per token,
-  emits `token:*` joined by ` & `, and binds the result. Predicate/rank are
+- FTS input uses exactly one input CTE binding literal
+  `to_tsquery('simple',$1)`. The code-owned NFKC grammar accepts only Unicode
+  letter/mark/number/underscore token runs, rejects rather than truncates more
+  than 16 tokens or 64 code points per token, emits `token:*` joined by ` & `,
+  and both predicate/rank reuse that bound tsquery alias. Predicate/rank are
   exactly `search_vector @@ query` and `ts_rank_cd(search_vector,query,32)`.
 - All source text uses TASK-551-05's exact immutable-compatible
   `coalesce(...) || ' ' || ...` constants. Schema, migration, snapshot, and
