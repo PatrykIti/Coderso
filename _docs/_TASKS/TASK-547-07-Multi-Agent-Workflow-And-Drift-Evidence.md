@@ -27,8 +27,9 @@ hashes read-only and writes separate audit evidence.
 
 The three workflow entrypoints are exactly `task-547-author-audit.mjs`,
 `task-547-implement.mjs` and `task-547-fix.mjs`. Cohesive reference-manifest,
-ownership, operational-access, safe-file and smoke-schema helpers live under
-`lib/task-547-*.mjs`. Each
+ownership, operational-access, safe-file, repository-guard and smoke-schema
+helpers live under `lib/task-547-*.mjs`, including
+`lib/task-547-git-guard.mjs`. Each
 entrypoint and ownership helper derives the repository root from its own module
 location; no module hardcodes this or any previous worktree path.
 
@@ -69,13 +70,16 @@ or contents never join audit digests.
 - The orchestrator does not scan the main repository. It reads only the twelve
   pinned reference files above and performs redacted existence/canonical-collision
   sentinel checks for TASK-540 worktrees.
-- Every workflow-owned read/hash uses
+- Every reference, smoke-artifact and deterministic-evidence read/hash uses
   `lib/task-547-safe-files.mjs`: reject secret-like lexical names before any
   filesystem access; `lstat` every path component; reject final and parent
   symlinks/non-regular files; require canonical-root containment; open with
   `O_NOFOLLOW`; compare pre-open/opened/named identities; read through the file
   handle and reject mid-read drift. Reference and smoke validators return the
   bytes/hashes they verified, so later persistence never reopens a path.
+  `lib/task-547-git-guard.mjs` applies the same direct-descriptor,
+  no-follow/identity checks to repository state while deliberately recording
+  only metadata plus index identity for secret-like repository names.
 - Deterministic evidence writes validate every parent as a direct in-root
   directory, use an exclusive `O_NOFOLLOW` task-owned temporary regular file,
   flush/close it and atomically rename it over only the exact evidence target.
@@ -83,15 +87,31 @@ or contents never join audit digests.
 - Changelog 1260 is pinned; only TASK-547-06 edits task/changelog closeout.
 - Each implementer receives an explicit owned-file list and reads current on-disk
   shared seams before editing.
+- Every author, implementation, audit and fixer dispatch runs through the shared
+  mandatory-after guard. It captures state before invocation and always captures
+  and compares state after invocation, including when the host call, agent,
+  structured-output schema or result validator throws. If invocation and guard
+  both fail, both errors remain available in one aggregate error.
+- The repository guard pins HEAD object and symbolic ref, the raw index plus
+  stage and flag views, and the type, mode and content identity of every tracked,
+  non-ignored untracked and explicitly scoped TASK-547 ignored path. It rejects
+  staging, commits, ref switches, file/symlink/type swaps, executable-bit drift
+  and byte drift outside the exact owned mutation. Returned `changedPaths` are
+  unique strict repository-relative paths and must equal the observed delta;
+  read-only calls return an empty array. Directory ownership, the dynamic
+  changelog-1260 declaration and required-output checks remain enforced after
+  that exact-delta comparison.
 - The frozen `LEAF_LAND_ORDER` is exactly `547-01-L01`, `547-01-L02`,
   `547-02-L01`, `547-02-L02`, `547-02-L03`, `547-03-L01`, `547-03-L02`,
   `547-03-L03`, `547-04-L01`, `547-04-L02`, `547-04-L03`, `547-05-L01`,
   `547-06-L01`. `LEAVES` derives from that sequence, and the executable-leaf
   portion of `SINGLE_WRITER_PATH_MAP` contains the current source/test/closure
-  paths declared by those 13 leaf contracts. Workflow scripts and self-tests
-  must derive the family-wide path count from that canonical map instead of
-  hardcoding a stale total.
-  TASK-547-07 adds only a separate process-path bucket. `SINGLE_WRITER_SYMBOL_MAP` separately pins
+  paths declared by those 13 leaf contracts. The complete collision audit covers
+  214 executable-leaf declarations plus the 11-path TASK-547-07 process bucket,
+  exactly 225 declarations, and checks every pair including directory/child
+  overlap. Workflow scripts and self-tests derive that total from the canonical
+  map and pin the current expected count so missing or extra declarations fail.
+  `SINGLE_WRITER_SYMBOL_MAP` separately pins
   `scripts/projekty-domow/content/buildFormaDomContentResources.ts::buildFormaDomContentResources`
   to TASK-547-03-L03 and
   `scripts/projekty-domow/pages/index.ts::buildFormaDomPages` plus
@@ -99,11 +119,36 @@ or contents never join audit digests.
   receives these paths as forbidden/read-only. The symbol map documents seams;
   it never replaces or transfers path ownership.
 - Missing agent output is a failed audit round, never a clean pass.
+- Every dispatch passes an explicit `read-only` or `workspace-write` intent;
+  the host rejects a missing/unknown intent instead of inferring authority from
+  a label. Audits, verification, start gates and zero-write regates are
+  read-only. Owned mutations are workspace-write; the full command-validation
+  lane is explicitly workspace-write because build/test tools may need their
+  own temporary or ignored artifacts, while its owned repository delta remains
+  empty and guarded. The schema and full structured response live in a fresh
+  private per-call temporary directory; the host rejects a redirected result,
+  normalizes the direct Codex result file to mode `0600` before read and always
+  removes this per-call directory. A separate private run-level directory
+  receives exclusive mode-`0600` diagnostic copies. Success removes the
+  run-level directory automatically; failure retains it only for the current
+  remediation review and the operator removes it immediately afterward.
+  Git commands run with global/system config disabled, optional locks disabled
+  and terminal prompting disabled so observation does not refresh or mutate the
+  index.
+- These guards prove repository mutations, the twelve pinned reference
+  identities and TASK-540 existence/canonical-collision sentinels. They do not
+  claim cryptographic observation of arbitrary ignored paths outside the scoped
+  TASK-547 trees or of every external read; prompt policy and the host sandbox
+  remain the control for those residuals. Evidence must state that boundary
+  rather than report broader enforcement.
 
 ## Audit Evidence Contract
 
-TASK-547-07's local orchestrator process is the sole evidence writer. Dispatched
-agents return structured results to stdout only and cannot write
+TASK-547-07's local orchestrator process is the sole evidence writer. Child
+stdout is ignored. Each dispatched agent returns its structured result through
+the host-designated direct regular file in a private per-call temporary
+directory; the host parses it, optionally retains a private diagnostic copy for
+the current review, and agents cannot write
 `_docs/_workflows/_smoke/task-547/audit-evidence/`.
 
 Evidence filenames are deterministic and collision-free:
@@ -142,10 +187,11 @@ Structured results contain file/line evidence only.
 
 ```ts
 for (let round = 1; round <= 5; round += 1) {
-  const referenceBefore = await verifyPinnedReferenceManifest();
-  const perFile = await runParallelContractAudits(TASK_547_TASK_FILES);
+  const perFile = await runParallelContractAuditsWithMandatoryAfterGuard(
+    TASK_547_TASK_FILES,
+  );
   assertEveryAuditReturned(perFile);
-  const reconcile = await runReconcileAudit({
+  const reconcile = await runReadOnlyReconcileWithMandatoryAfterGuard({
     pathOwnership: SINGLE_WRITER_PATH_MAP,
     symbolOwnership: SINGLE_WRITER_SYMBOL_MAP,
     sharedShapes: PACKAGE_RESOURCE_KINDS,
@@ -153,9 +199,13 @@ for (let round = 1; round <= 5; round += 1) {
     changelog: 1260,
   });
   const findings = collectHighMedium(perFile, reconcile);
-  if (findings.length) await runScopedFixers(findings);
-  await assertPinnedReferenceUnchanged(referenceBefore);
+  if (findings.length) {
+    await runScopedFixersWithMandatoryAfterGuard(findings);
+  }
   writeRedactedRoundEvidenceDeterministically(round, perFile, reconcile, findings);
+  if (round === 5 && findings.length) {
+    throw new Error("Contracts changed in round 5; restart all five fresh rounds");
+  }
 }
 const finalReconcile = await assertFinalFreshReconcilePass();
 writeRedactedEvidence("final-reconcile.json", finalReconcile);
@@ -164,12 +214,19 @@ writeRedactedEvidence("final-reconcile.json", finalReconcile);
 **Data flow:** current HEAD/status/diff + task/source/docs/tests → structured
 read-only audits → verified findings → scoped fixes → fresh audits.
 
-**Error handling:** false-clean, timeout, malformed output or missing result fails
-the round. Do not implement from stale audit evidence after any contract change.
+**Error handling:** false-clean, timeout, malformed output, missing result or any
+post-invocation guard failure fails the round. Round-five blockers are fixed only
+to leave a coherent tree, then force a complete five-round restart; they never
+fall through to final reconcile. Do not implement from stale audit evidence
+after any contract change.
 
 **Regression-test shape:** workflow smoke proves all-results guard, five sequential
-rounds, reconcile invocation, forbidden-path enforcement, result schema and
-non-zero exit on false-clean. Synthetic safe-file tests use no real secret and
+rounds, reconcile invocation, round-five restart, the complete 225-declaration
+collision map, strict/unique/exact `changedPaths`, forbidden-path enforcement,
+mandatory post-call verification after a thrown invocation, result schema and
+non-zero exit on false-clean. Synthetic Git tests use a temporary repository and
+prove HEAD/ref, raw-index/stage/flag, byte, mode, type and scoped-ignored-path
+detection. Synthetic safe-file tests use no real secret and
 prove a direct-file happy path, secret-like rejection before filesystem access,
 final/dangling/parent-directory symlink rejection and safe atomic evidence
 writes. Smoke-schema self-tests reject string-only scenarios, boolean-only
