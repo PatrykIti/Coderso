@@ -1,6 +1,8 @@
+import { deepFreezeExact } from "../core.mjs";
+
 // Canonical raw action rows for the TASK-540 tabs-keyboard flow.
-// The composition root deep-freezes and validates the complete ordered manifest.
-export const TABS_KEYBOARD_ACTION_ROWS = [
+// The owning module freezes its rows before composition and manifest validation.
+export const TABS_KEYBOARD_ACTION_ROWS = deepFreezeExact([
   [
     "tk-001-light-toggle",
     "p1/0",
@@ -253,4 +255,4 @@ export const TABS_KEYBOARD_ACTION_ROWS = [
     "logger stable -> every page `[]` -> flow 3 clean",
     "tk-034 / absent -> absent",
   ]
-];
+]);

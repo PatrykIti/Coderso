@@ -1,6 +1,8 @@
+import { deepFreezeExact } from "../core.mjs";
+
 // Canonical raw action rows for the TASK-540 button-image flow.
-// The composition root deep-freezes and validates the complete ordered manifest.
-export const BUTTON_IMAGE_ACTION_ROWS = [
+// The owning module freezes its rows before composition and manifest validation.
+export const BUTTON_IMAGE_ACTION_ROWS = deepFreezeExact([
   [
     "bi-001-light-proof",
     "p1/0",
@@ -533,4 +535,4 @@ export const BUTTON_IMAGE_ACTION_ROWS = [
     "logger stable -> every page `[]` -> flow 1 clean",
     "bi-072 / absent -> absent",
   ]
-];
+]);

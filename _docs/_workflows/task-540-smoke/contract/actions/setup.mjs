@@ -1,6 +1,8 @@
+import { deepFreezeExact } from "../core.mjs";
+
 // Canonical raw action rows for the TASK-540 setup flow.
-// The composition root deep-freezes and validates the complete ordered manifest.
-export const SETUP_ACTION_ROWS = [
+// The owning module freezes its rows before composition and manifest validation.
+export const SETUP_ACTION_ROWS = deepFreezeExact([
   [
     "set-001-storage-preflight",
     "runtime",
@@ -386,4 +388,4 @@ export const SETUP_ACTION_ROWS = [
     "fixtures ready, no entry/media consumer visited -> URL/marker -> cold builder visible",
     "set-044 / absent -> absent",
   ]
-];
+]);

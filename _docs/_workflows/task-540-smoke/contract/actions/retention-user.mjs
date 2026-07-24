@@ -1,6 +1,8 @@
+import { deepFreezeExact } from "../core.mjs";
+
 // Canonical raw action rows for the TASK-540 retention-user flow.
-// The composition root deep-freezes and validates the complete ordered manifest.
-export const RETENTION_USER_ACTION_ROWS = [
+// The owning module freezes its rows before composition and manifest validation.
+export const RETENTION_USER_ACTION_ROWS = deepFreezeExact([
   [
     "ru-001-screen-reset",
     "runtime",
@@ -946,4 +948,4 @@ export const RETENTION_USER_ACTION_ROWS = [
     "logger stable -> p1/p2 arrays `[]` -> flow 7 clean",
     "ru-114 / absent -> absent",
   ]
-];
+]);

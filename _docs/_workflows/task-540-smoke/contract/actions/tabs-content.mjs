@@ -1,6 +1,8 @@
+import { deepFreezeExact } from "../core.mjs";
+
 // Canonical raw action rows for the TASK-540 tabs-content flow.
-// The composition root deep-freezes and validates the complete ordered manifest.
-export const TABS_CONTENT_ACTION_ROWS = [
+// The owning module freezes its rows before composition and manifest validation.
+export const TABS_CONTENT_ACTION_ROWS = deepFreezeExact([
   [
     "tc-001-reset",
     "runtime",
@@ -344,4 +346,4 @@ export const TABS_CONTENT_ACTION_ROWS = [
     "logger stable -> every page `[]` -> flow 2 clean",
     "tc-047 / absent -> absent",
   ]
-];
+]);

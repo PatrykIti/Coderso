@@ -1,6 +1,8 @@
+import { deepFreezeExact } from "../core.mjs";
+
 // Canonical raw action rows for the TASK-540 terminal flow.
-// The composition root deep-freezes and validates the complete ordered manifest.
-export const TERMINAL_ACTION_ROWS = [
+// The owning module freezes its rows before composition and manifest validation.
+export const TERMINAL_ACTION_ROWS = deepFreezeExact([
   [
     "end-001-release-unroute",
     "p1/0",
@@ -50,4 +52,4 @@ export const TERMINAL_ACTION_ROWS = [
     "close receipt -> global list bytes -> `wf540smoke` absent/terminal",
     "end-006 / absent -> absent",
   ]
-];
+]);

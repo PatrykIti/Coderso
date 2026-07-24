@@ -1,6 +1,8 @@
+import { deepFreezeExact } from "../core.mjs";
+
 // Canonical raw action rows for the TASK-540 dirty-guard flow.
-// The composition root deep-freezes and validates the complete ordered manifest.
-export const DIRTY_GUARD_ACTION_ROWS = [
+// The owning module freezes its rows before composition and manifest validation.
+export const DIRTY_GUARD_ACTION_ROWS = deepFreezeExact([
   [
     "dg-001-entry-reset",
     "runtime",
@@ -344,4 +346,4 @@ export const DIRTY_GUARD_ACTION_ROWS = [
     "logger stable -> every page `[]` -> flow 5 clean",
     "dg-047 / absent -> absent",
   ]
-];
+]);

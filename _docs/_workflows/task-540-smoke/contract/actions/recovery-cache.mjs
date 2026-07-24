@@ -1,6 +1,8 @@
+import { deepFreezeExact } from "../core.mjs";
+
 // Canonical raw action rows for the TASK-540 recovery-cache flow.
-// The composition root deep-freezes and validates the complete ordered manifest.
-export const RECOVERY_CACHE_ACTION_ROWS = [
+// The owning module freezes its rows before composition and manifest validation.
+export const RECOVERY_CACHE_ACTION_ROWS = deepFreezeExact([
   [
     "rc-001-entry-reset",
     "runtime",
@@ -379,4 +381,4 @@ export const RECOVERY_CACHE_ACTION_ROWS = [
     "p2 closed -> selected tab -> p1 active",
     "rc-044 / absent -> absent",
   ]
-];
+]);
