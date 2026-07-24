@@ -178,6 +178,10 @@ import {
   createTabsKeyboardScenarioRuntime,
   isTabsKeyboardBrowserCandidate,
 } from "./task-540-smoke/browser/scenarios/tabs-keyboard.mjs";
+import {
+  createSpaceSelectionScenarioRuntime,
+  isSpaceSelectionBrowserCandidate,
+} from "./task-540-smoke/browser/scenarios/space-selection.mjs";
 import { buildObservationSource } from "./task-540-smoke/browser/observation-sources.mjs";
 import { buildVisibleAssertionSource } from "./task-540-smoke/browser/visible-assertion-sources.mjs";
 import { assertScreenshotScenarioOwnership } from "./task-540-smoke/browser/scenarios/ownership.mjs";
@@ -192,6 +196,10 @@ const { buildTabsContentBrowserInvocation } = createTabsContentScenarioRuntime({
   buildSharedSimpleBrowserInvocation: buildSimpleBrowserInvocation,
 });
 const { buildTabsKeyboardBrowserInvocation } = createTabsKeyboardScenarioRuntime({
+  buildSharedAdvancedBrowserInvocation: buildAdvancedBrowserInvocation,
+  buildSharedSimpleBrowserInvocation: buildSimpleBrowserInvocation,
+});
+const { buildSpaceSelectionBrowserInvocation } = createSpaceSelectionScenarioRuntime({
   buildSharedAdvancedBrowserInvocation: buildAdvancedBrowserInvocation,
   buildSharedSimpleBrowserInvocation: buildSimpleBrowserInvocation,
 });
@@ -4267,12 +4275,14 @@ function buildBrowserInvocation(
   const dirtyGuardsCandidate = isDirtyGuardsBrowserCandidate(action);
   const tabsContentCandidate = isTabsContentBrowserCandidate(action);
   const tabsKeyboardCandidate = isTabsKeyboardBrowserCandidate(action);
+  const spaceSelectionCandidate = isSpaceSelectionBrowserCandidate(action);
   invariant(
     [
       buttonImageCandidate,
       dirtyGuardsCandidate,
       tabsContentCandidate,
       tabsKeyboardCandidate,
+      spaceSelectionCandidate,
     ].filter(Boolean).length <= 1,
     action.id + " browser scenario ownership is ambiguous"
   );
@@ -4289,6 +4299,17 @@ function buildBrowserInvocation(
       })
     : tabsContentCandidate
       ? buildTabsContentBrowserInvocation({
+          action,
+          executionSpec,
+          plan,
+          captures,
+          root,
+          browserCwd,
+          refContext,
+          runtimeConfig,
+        })
+    : spaceSelectionCandidate
+      ? buildSpaceSelectionBrowserInvocation({
           action,
           executionSpec,
           plan,
