@@ -165,8 +165,17 @@ import {
   createDirtyGuardsScenarioRuntime,
   isDirtyGuardsBrowserCandidate,
 } from "./task-540-smoke/browser/scenarios/dirty-guards.mjs";
+import {
+  createButtonImageScenarioRuntime,
+  isButtonImageBrowserCandidate,
+} from "./task-540-smoke/browser/scenarios/button-image.mjs";
 import { assertScreenshotScenarioOwnership } from "./task-540-smoke/browser/scenarios/ownership.mjs";
 
+const { buildButtonImageBrowserInvocation } = createButtonImageScenarioRuntime({
+  buildSharedAdvancedBrowserInvocation: buildAdvancedBrowserInvocation,
+  buildSharedSimpleBrowserInvocation: buildSimpleBrowserInvocation,
+  runCode,
+});
 const {
   buildDirtyGuardsBrowserInvocation,
   dirtyGuardsOperationForAction,
@@ -5391,36 +5400,6 @@ function buildSimpleBrowserInvocation(
           displayArgs: null,
         };
       }
-      if (action.id === "bi-042-save-presentation") {
-        const writePath =
-          "/admin/api/custom-screens/" +
-          encodeURIComponent(captures.get("screen.id")) +
-          "/entries/" +
-          encodeURIComponent(captures.get("entry.id")) +
-          "/overrides";
-        return {
-          args: runCode(`async (page) => {
-            const locator = page.locator(${selector});
-            await locator.waitFor({ state: "visible", timeout: 30000 });
-            if (await locator.count() !== 1) throw new Error("wf540_presentation_save_target_count");
-            const pathname = (href) => { const scheme = href.indexOf("://"); const start = href.indexOf("/", scheme === -1 ? 0 : scheme + 3); return (start === -1 ? "/" : href.slice(start)).split(/[?#]/u, 1)[0]; };
-            const responsePromise = page.waitForResponse((response) => response.request().method() === "PATCH" && pathname(response.url()) === ${JSON.stringify(writePath)}, { timeout: 270000 });
-            await locator.click();
-            const response = await responsePromise;
-            if (!response.ok()) throw new Error("wf540_presentation_save_response");
-            const deadline = Date.now() + 30000;
-            while (Date.now() < deadline) {
-              const cleanDisabled = await locator.count() === 1 && !(await locator.isEnabled()) && (await locator.textContent())?.trim() === "Save presentation";
-              const savingAbsent = await page.getByText("Saving...", { exact: true }).count() === 0;
-              const dirtyAbsent = await page.getByText("Unsaved presentation", { exact: true }).count() === 0;
-              if (cleanDisabled && savingAbsent && dirtyAbsent) return true;
-              await page.waitForTimeout(25);
-            }
-            throw new Error("wf540_presentation_save_settlement");
-          }`),
-          displayArgs: null,
-        };
-      }
       if (action.id === "rc-011-visible-retry") {
         const readPath =
           "/admin/api/content/" +
@@ -5891,7 +5870,12 @@ function buildBrowserInvocation(
   runtimeConfig
 ) {
   invariant(action.executable.type !== "runtime-operation", action.id + " is not a browser action");
+  const buttonImageCandidate = isButtonImageBrowserCandidate(action);
   const dirtyGuardsCandidate = isDirtyGuardsBrowserCandidate(action);
+  invariant(
+    !(buttonImageCandidate && dirtyGuardsCandidate),
+    action.id + " browser scenario ownership is ambiguous"
+  );
   let invocation = dirtyGuardsCandidate
     ? buildDirtyGuardsBrowserInvocation({
         action,
@@ -5903,6 +5887,17 @@ function buildBrowserInvocation(
         refContext,
         runtimeConfig,
       })
+    : buttonImageCandidate
+      ? buildButtonImageBrowserInvocation({
+          action,
+          executionSpec,
+          plan,
+          captures,
+          root,
+          browserCwd,
+          refContext,
+          runtimeConfig,
+        })
     : (buildSimpleBrowserInvocation(
         action,
         executionSpec,
