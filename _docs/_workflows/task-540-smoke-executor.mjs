@@ -186,6 +186,10 @@ import {
   createRelatedCacheScenarioRuntime,
   isRelatedCacheBrowserCandidate,
 } from "./task-540-smoke/browser/scenarios/related-cache.mjs";
+import {
+  createResponsiveUsersScenarioRuntime,
+  isResponsiveUsersBrowserCandidate,
+} from "./task-540-smoke/browser/scenarios/responsive-users.mjs";
 import { buildObservationSource } from "./task-540-smoke/browser/observation-sources.mjs";
 import { buildVisibleAssertionSource } from "./task-540-smoke/browser/visible-assertion-sources.mjs";
 import { assertScreenshotScenarioOwnership } from "./task-540-smoke/browser/scenarios/ownership.mjs";
@@ -215,6 +219,10 @@ const {
   buildSharedAdvancedBrowserInvocation: buildAdvancedBrowserInvocation,
   buildSharedSimpleBrowserInvocation: buildSimpleBrowserInvocation,
   runCode,
+});
+const { buildResponsiveUsersBrowserInvocation } = createResponsiveUsersScenarioRuntime({
+  buildSharedAdvancedBrowserInvocation: buildAdvancedBrowserInvocation,
+  buildSharedSimpleBrowserInvocation: buildSimpleBrowserInvocation,
 });
 const {
   buildDirtyGuardsBrowserInvocation,
@@ -4258,6 +4266,7 @@ function buildBrowserInvocation(
   const tabsKeyboardCandidate = isTabsKeyboardBrowserCandidate(action);
   const spaceSelectionCandidate = isSpaceSelectionBrowserCandidate(action);
   const relatedCacheCandidate = isRelatedCacheBrowserCandidate(action);
+  const responsiveUsersCandidate = isResponsiveUsersBrowserCandidate(action);
   invariant(
     [
       buttonImageCandidate,
@@ -4266,6 +4275,7 @@ function buildBrowserInvocation(
       tabsKeyboardCandidate,
       spaceSelectionCandidate,
       relatedCacheCandidate,
+      responsiveUsersCandidate,
     ].filter(Boolean).length <= 1,
     action.id + " browser scenario ownership is ambiguous"
   );
@@ -4282,6 +4292,17 @@ function buildBrowserInvocation(
       })
     : tabsContentCandidate
       ? buildTabsContentBrowserInvocation({
+          action,
+          executionSpec,
+          plan,
+          captures,
+          root,
+          browserCwd,
+          refContext,
+          runtimeConfig,
+        })
+    : responsiveUsersCandidate
+      ? buildResponsiveUsersBrowserInvocation({
           action,
           executionSpec,
           plan,
