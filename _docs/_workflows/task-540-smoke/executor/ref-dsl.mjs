@@ -367,6 +367,16 @@ function resolveExactRef(ref, context, label = "Ref") {
   invariant(false, label + " Ref opcode is not implemented");
 }
 
+function resolveFixtureValue(value, captures) {
+  if (Array.isArray(value)) return value.map((entry) => resolveFixtureValue(entry, captures));
+  if (!value || typeof value !== "object") return value;
+  if (Object.keys(value).length === 1 && typeof value.capture === "string")
+    return captures.get(value.capture);
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entry]) => [key, resolveFixtureValue(entry, captures)])
+  );
+}
+
 function assertPredicateDescriptor(predicate, label, depth = 0) {
   invariant(depth <= 32, label + " exceeds Predicate depth");
   if (depth === 0) assertPlainJsonValue(predicate, label + " Predicate descriptor");
@@ -593,4 +603,5 @@ export {
   registeredSelector,
   renderSelectorTemplate,
   resolveExactRef,
+  resolveFixtureValue,
 };
