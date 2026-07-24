@@ -118,6 +118,11 @@ coordination lock is not a destructive row lock or persisted progress.
   TASK-551-09 must adopt it in entry/post before closure. Every revision family
   then retains a bounded, policy-defined history. All adopters call exactly
   `withRevisionParentLock(identity, tx, run)` and `allocateRevision(input, tx)`.
+- Page autosave is parent-locked and reads exactly the latest projected autosave
+  with `LIMIT 1`; equality reuses it with zero mutation, while a changed snapshot
+  allocates then deletes only that exact predecessor. Older history is pruned only
+  by scheduled retention, and 100,000-row/50-concurrent fixtures pin constant
+  request query/transfer budgets.
 - At most one replica runs the maintenance plan at a time; lock loss/failure
   causes cancellation and rollback before the same-session advisory lock can be
   observed as released, so another replica never overlaps destructive work.

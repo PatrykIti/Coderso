@@ -26,9 +26,10 @@ with no process-local, browser, or Redis value cache.
 None. This executable leaf has two mandatory serialized land phases and remains
 `🚧 In Progress`/non-releasable between them:
 
-1. **INITIAL seam:** add only the identity/installation-authority primitives and
-   their contract test. This compile-green receipt must land before 03-L02 and
-   04-L01 edit their exclusively owned clients.
+1. **INITIAL seam:** add only the installation-authority primitive module and
+   new `tests/vitest/admin/admin-cache-authority.test.ts`. This compile-green
+   receipt must land before 03-L02 and 04-L01 edit their exclusively owned
+   clients.
 2. **FINAL adoption:** after those receipts and 09-L03, wire auth transitions,
    every remaining client/cache utility, cross-tab generation, security settings
    and route mapping. It never reopens a 03/04-owned client.
@@ -72,6 +73,7 @@ Sole writer of:
 - `tests/vitest/admin/support/cacheBusTestHarness.ts` when the scoped event shape
   requires harness updates;
 - new `tests/vitest/admin/admin-cache-identity.test.ts`;
+- new `tests/vitest/admin/admin-cache-authority.test.ts` (INITIAL only);
 - new `tests/vitest/admin/read-through-cache-generation.test.ts`;
 - new `tests/vitest/admin/admin-cache-client-authority-matrix.test.ts`;
 - existing `tests/vitest/admin/authClient.test.ts`,
@@ -104,10 +106,13 @@ contract. No read-only cross-owner test exception remains.
 - INITIAL exports only opaque `AdminCacheInstallationToken`,
   `captureAdminCacheInstallationToken()`,
   `isCurrentAdminCacheInstallationToken(token)`, and
-  `registerAdminModuleCacheReset(reset): unsubscribe` from
+  `registerAdminModuleCacheReset(reset): unsubscribe` plus the identity-free
+  `advanceAdminCacheInstallationAuthority()` from
   `adminCacheAuthority.ts`. It owns a safe-integer page-lifetime generation;
   advancing it synchronously invokes independently isolated reset subscribers.
-  Tokens and reset callbacks contain no identity. FINAL alone wires advancement
+  At `Number.MAX_SAFE_INTEGER`, the next advance invokes resets and permanently
+  disables cache installation until page reload; it never wraps or reuses a
+  token. Tokens and reset callbacks contain no identity. FINAL alone wires advancement
   to deployment/auth/cross-tab scope transitions; 03-L02 and 04-L01 import this
   stable seam and guard every promise completion/cache install they own.
 - The single-writer matrix is exhaustive, not illustrative:
@@ -130,7 +135,7 @@ contract. No read-only cross-owner test exception remains.
 - Preserve `AdminAuthIdentitySnapshot.userId/epoch` for existing consumers and
   add a separate `AdminCacheIdentitySnapshot` with schema version `3` containing
   normalized deployment identity plus its SHA-256 digest, crypto-random auth
-  incarnation, cross-tab auth-generation nonce, opaque SHA-256 scope digest,
+  incarnation, then the cross-tab auth-generation nonce, opaque SHA-256 scope digest,
   auth epoch and permission fingerprint.
   Raw deployment identity, user ID/email/roles/permissions never appear in
   storage keys.
@@ -202,6 +207,22 @@ contract. No read-only cross-owner test exception remains.
   permissions `["ab","c"]` and `["a","bc"]`, moving an ID between roles and
   permissions, embedded newlines, and canonically equivalent Unicode must have
   unambiguous normalized behavior.
+
+  The canonical v3 vector is authoritative, including field order immediately
+  after `authIncarnation`:
+
+  ```text
+  UTF8 JSON (367 bytes): {"v":3,"deploymentIdentity":"{\"v\":3,\"origin\":\"https://admin.example\",\"adminBasePath\":\"/admin\",\"entryModulePath\":\"/assets/index-ABCDEFGH.js\"}","authIncarnation":"00000000000000000000000000000000","authGenerationNonce":"11111111111111111111111111111111","authEpoch":7,"userId":"user-1","permissions":["pages:read","settings:write"],"roles":["role-admin"]}
+  SHA-256: 6c69458d5fdc22634a5fca20609e3accb4a6fe606905af2b2c522900770afbf7
+  nonce-only rotation to 22222222222222222222222222222222:
+  SHA-256: 4214d494f425d2f595de703cd19662a2513d0d85871bff748bdb5d5cb728611d
+  ```
+
+  No exact scope helper/input/vector may omit or reorder
+  `authGenerationNonce`; it is always the field immediately after
+  `authIncarnation`. A nonce-only rotation therefore creates a distinct scope
+  even when deployment, incarnation, epoch, user, permissions and roles are
+  byte-identical.
 - `authIncarnation` is exactly 128 crypto-random bits encoded as 32 lowercase hex
   characters from `crypto.getRandomValues`, never a timestamp/counter/identity
   hash. Store it only in a strict versioned `sessionStorage` record so a reload in
@@ -349,7 +370,7 @@ void deriveAdminCacheScope(
   user,
   permissions,
 ).then((scope) => {
-  if (isCurrentDeploymentIncarnationEpoch(scope)) publishCacheScope(scope);
+  if (isCurrentDeploymentIncarnationNonceEpoch(scope)) publishCacheScope(scope);
 });
 
 async function onSuccessfulLogin(user) {
@@ -461,6 +482,13 @@ promise and storage envelope ineligible. Cover delayed/out-of-order Broadcast
 wakeups by authoritative storage re-read, simultaneous nonce creation/rotation,
 same-tab reload match/mismatch, malformed/max+1 records and throwing/unavailable
 storage; no old scope may hydrate.
+Hold deployment, `authIncarnation`, `authEpoch`, user, permissions and roles
+constant and rotate only `authGenerationNonce`: pin both authoritative digests
+above, require immediate installation-authority advancement, and prove every
+prior-scope storage envelope, cacheBus/storage event and delayed promise/load
+completion is rejected and cannot install. Reordered delivery of the old nonce
+after the new storage record is visible must remain stale; no epoch or
+incarnation change may be required to obtain this isolation.
 Pin deployment derivation for normalized origin/Admin base/module path, stripped
 query/fragment, missing selector, cross-origin/malformed/empty/oversized module,
 exact/max+1 UTF-8 bounds, hashed production separation and unhashed-development
@@ -479,8 +507,9 @@ Redis disconnect and runtime `>5_000 ms` forced-bypass state without changing DB
 reads, plus commit/rollback and post-commit applied vs queued/bypassed response.
 Pin Admin deployment/scope digest, 128-bit session-only incarnation, proof that
 raw incarnation bytes never enter localStorage/cacheBus, v3 key/envelope/bus,
-index/epoch exact/max+1 count and byte behavior. Pin canonical preimage vectors
-for `["ab","c"]` versus `["a","bc"]`, the same ID in `permissions` versus
+index/epoch exact/max+1 count and byte behavior. Pin canonical preimage vectors,
+including both nonce-only digests above, for `["ab","c"]` versus `["a","bc"]`,
+the same ID in `permissions` versus
 `roles`, JSON-special/newline strings, composed/decomposed Unicode, duplicate/
 order normalization, every item/count/preimage max+1, malformed 32-hex and
 unknown fields; assert no delimiter-concatenation implementation exists. Run two
@@ -505,8 +534,20 @@ module has one writer, clears module maps/promises on transition and rejects a
 delayed pre-transition install; a synthetic uncatalogued cache/promise module
 must fail the source guard.
 
+Before either 03-L02 or 04-L01 dispatches, run the INITIAL-only direct suite. It
+pins opaque token inequality after advancement, current/stale checks, safe-
+integer overflow fail-closed behavior, independently isolated reset callbacks,
+unsubscribe, one throwing subscriber not blocking the rest, idempotent module
+registration and zero identity bytes in tokens/callback arguments. Its source
+guard proves INITIAL edits only `adminCacheAuthority.ts` plus this test.
+
 ```bash
 set -a && source .env && set +a
+# INITIAL gate, before TASK-551-03-L02 and TASK-551-04-L01:
+bun run test:vitest -- tests/vitest/admin/admin-cache-authority.test.ts
+bun --cwd core lint:types
+bun --cwd core lint
+# FINAL gate, after both adoption receipts and TASK-551-09-L03:
 bun run test:vitest -- tests/vitest/admin/storageCache.test.ts \
   tests/vitest/admin/cacheBusHardening.test.ts \
   tests/vitest/admin/readThroughCache.test.ts \
@@ -537,7 +578,7 @@ wc -l core/admin/services/{adminAuthIdentity,adminCacheIdentity,authClient,cache
   core/admin/utils/{adminCacheAuthority,storageCache,sessionCache,cacheBus,readThroughCache,adminPrefetch}.ts \
   core/server/routes/settingsRoutes.ts \
   core/services/settings/securitySettings.ts \
-  tests/vitest/admin/{storageCache,cacheBusHardening,readThroughCache,cacheBus,cacheBusCorrelation,cacheRefresh,admin-cache-identity,read-through-cache-generation,admin-cache-client-authority-matrix}.test.ts \
+  tests/vitest/admin/{storageCache,cacheBusHardening,readThroughCache,cacheBus,cacheBusCorrelation,cacheRefresh,admin-cache-authority,admin-cache-identity,read-through-cache-generation,admin-cache-client-authority-matrix}.test.ts \
   tests/vitest/admin/authClient.test.ts \
   tests/vitest/authUi/authClient.test.ts \
   tests/vitest/ui/admin-auth-identity.test.tsx \

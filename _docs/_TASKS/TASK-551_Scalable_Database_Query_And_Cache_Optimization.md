@@ -28,10 +28,15 @@ byte-bounded in-process LRU. Redis is opt-in infrastructure for multiple
 replicas. In Redis mode, Redis is the shared value backend and the application
 does not retain a persistent per-process value cache. Every public request first
 performs exactly one uncached, authoritative `getSecuritySettings` read before
-security/rate middleware. Global Redis outage bypasses to DB; ambiguous/partial generation delivery may expose only unexpired safe-public old-generation bytes
-until durable delivery or policy TTL. Mutable content is never eligible on cache state alone: detail runs one indexed visibility/version point gate; a mutable
-list runs one bounded membership/version gate for at most validated limit+1 ordered projections, no bodies/hashes, with digest in its key. Thus safe structural
-requests total one query and mutable page/home/post/content-entry detail/list totals two (security+gate), with zero other reads. This bounded-eventual contract
+security/rate middleware. Global Redis outage bypasses to DB; ambiguous/partial
+generation delivery may expose only unexpired safe-public old-generation bytes
+until durable delivery or policy TTL. Mutable content is never eligible on cache
+state alone: after safe manifest metadata, one parameterized
+`validatePublicHtmlDependencies` statement validates the root detail/list and
+every recursively rendered page/post/entry set-wise (at most 128 tuples, 16,384
+canonical bytes and 100+1 root rows), selecting no bodies/hashes. Safe structural
+requests total one query and mutable detail/list requests total two (security+
+validator), with zero other reads. This bounded-eventual contract
 is not linearizability/stale-while-revalidate and never applies to security/private data.
 
 This is not a promise to add every conceivable index or cache every response.
@@ -53,6 +58,13 @@ copied into this task.
 - The current dataset is still small enough to hide many scale defects behind
   a near-100% buffer-cache hit rate. The statistics are also test-polluted and
   must be re-baselined over a known interval before implementation decisions.
+- Owner-supplied Render evidence records a 4m51 full-schema diagnostic UNION of
+  `row_to_json(t)::text ~ ?` plus 30–60s+ `access_logs` text-regex scans; no repo
+  call site was found. Preserve only this sanitized shape/duration. Classify it
+  `external_diagnostic` only with operator evidence, otherwise `unknown`, and
+  exclude it from application prioritization; never index this one-off scan.
+  Reproduction uses a clean read-only interval, strict statement timeout,
+  preferably a replica, and explicit columns/selective predicates.
 - `settings` single-key reads account for roughly 562,980 recorded calls.
 - `access_logs` is the largest table family at roughly 94,000 live rows,
   11,800 dead rows, and 38 MB; `audit_logs` is roughly 12,400 rows and 7 MB.
@@ -110,7 +122,7 @@ These are acceptance ranges to measure, not guaranteed marketing numbers:
 
 | Area | Current shape | Target and realistic effect |
 |---|---|---|
-| Eligible warm public render | Usually 4+ DB reads before/around HTML cache | Every request executes 1 authoritative SecuritySettings read. Safely eligible structurally non-mutable routes execute no other query; mutable page/home/post/content-entry detail/list routes execute exactly 1 additional narrow point or bounded membership gate. Both execute 0 additional warm-hit queries; commonly 50-90% fewer DB calls and 40-90% lower application latency for true hits |
+| Eligible warm public render | Usually 4+ DB reads before/around HTML cache | Every request executes 1 authoritative SecuritySettings read. Safe non-mutable routes execute no other query; mutable detail/list routes add 1 root+nested set-based validator. Both execute 0 additional warm-hit reads; commonly 50-90% fewer DB calls and 40-90% lower application latency for true hits |
 | Growing list at 10k rows, page size 50 | O(N), sometimes wide JSONB/PII transfer and JS slicing | O(page) keyset query; commonly 100-1,000x fewer transferred rows/bytes and 5-50x lower list latency |
 | Full-text search | Expression/index drift, wildcard scans, unbounded candidates | Exact stored vector + indexed rank/order/limit; commonly 10-100x faster at scale, subject to plan evidence |
 | Multi-query aggregates/N+1 | 10-15+ sequential round trips on some endpoints | Set-based aggregates/batches; target 50-85% endpoint-latency reduction |
@@ -140,6 +152,14 @@ only stored finite ceilings and never silently freeze new ones.
 Summary/facet fixtures freeze `asOf=2026-01-15T12:00:00.000Z`. Submission `ordinal%4===0` is 1..6 days before; all others are 8..37 days before, yielding rolling-
 seven-day `500/25,000` and spam `200/10,000`. Booking UTC/New_York/Tokyo buckets `0..9/10..19/20..59/60..99` mean same-day past/future/next/prior, +60-minute end,
 and exact today `400/20,000`, upcoming/past-current `1,000/50,000` each, independent of host timezone.
+Evidence also freezes page/entry/typed-entry/post-author, role, post/media tag,
+webhook event/delivery, latest-page-autosave and 128-dependency cases. Retention
+uses `2036-01-01T00:00:00.000Z`, literal cutoff/anchor/child-first cases for every
+family, and `499/500/501/2,000/2,001` batch edges; omissions fail the gate.
+Initial inventory is 34 planned: 32 named Admin plus `cache-outbox-oldest-unprocessed` and `public-html-dependencies-128`. Plan registry
+is 37 IDs/38 cases/76 small+large receipts: those 32 once plus `webhooks-created-keyset`,
+`webhook-deliveries-parent-keyset`, `webhooks-event-batch`, `page-latest-autosave`,
+and `cache-outbox-oldest-unprocessed`.
 
 ## Locked Architecture
 
@@ -158,6 +178,22 @@ are detail-only. Search owns one stored/generated vector contract and performs
 ranking, deterministic ordering, and candidate limits in SQL. Set-based
 queries replace N+1 and per-row mutation loops with bounded concurrency where
 one statement is not possible.
+Search tokenizes Unicode `L/M/N/_` runs, converts them to `token:*` joined by
+` & `, and binds the bounded result to `to_tsquery('simple', :prefixQuery)`.
+Trigram uses the GIN-indexed `%` operator under transaction-local static
+`SET LOCAL pg_trgm.similarity_threshold='0.300'`; LIKE/ILIKE/regex fallback is
+forbidden. Closure updates `_docs/SEARCH_SPEC.md` to this exact contract.
+Executable known-interval `pg_stat_statements` receipts use only
+`application|migration|maintenance|external_diagnostic|unknown`, sanitize SQL,
+run before prioritization and before/after comparisons, and never reset shared stats.
+
+The cursor wire is exactly `<payload-base64url>.<mac-base64url>` with strict v1
+canonical JSON, HMAC-SHA-256, 24-hour lifetime and code-owned `KeysetSpec` of
+1..5 typed fields ending non-null UUID `id`. Cursor/request bytes never select a
+column, direction or null placement. The frozen ASC/DESC × NULLS FIRST/LAST ×
+after/before table drives lexicographic predicates; previous navigation reverses
+SQL direction/null placement and then output. Routes collapse schema/value/spec/
+version/signature/age faults to `cursor_invalid`; scope mismatch remains distinct.
 
 Database constraints, not preflight reads, own uniqueness/invariants. Revision
 allocation, booking exclusivity, last-admin protection, session limits, and
@@ -188,17 +224,36 @@ descriptor, the one SQL migration, matching generated snapshot and journal
 update, plus all guards in one change; it neither pretends DSL support nor
 defers an artifact to another writer.
 
-All snapshot-owned TASK-551 indexes live in one closed catalog, including every form/booking/list/reverse-FK/retention member; assistant ingest uses
-`started_at`. Exact caller/index pairs include `pages_author_list_updated_id_idx(author_id,updated_at DESC,id DESC)`, role-leading
-`user_roles_role_user_idx(role_id,user_id)`, and `posts_tags_gin_idx`/`media_tags_gin_idx` as `jsonb_path_ops` GIN for their exact parameterized `@>` predicates.
+All snapshot-owned TASK-551 indexes live in one closed catalog, including every
+form/booking/list/reverse-FK/retention member; assistant ingest uses `started_at`.
+Exact caller/index pairs include `pages_author_list_updated_id_idx`,
+`content_entries_author_list_updated_id_idx`,
+`content_entries_type_author_list_updated_id_idx`,
+`posts_author_list_updated_id_idx`, role-leading `user_roles_role_user_idx`,
+`webhooks_list_created_id_idx`, `webhook_deliveries_webhook_list_idx`,
+`page_revisions_page_kind_version_id_idx`, and `posts_tags_gin_idx`/
+`media_tags_gin_idx`/`webhooks_events_gin_idx` as `jsonb_path_ops` GIN for exact
+parameterized `@>` predicates.
 The read-performance catalog also owns `cache_outbox_unprocessed_age_idx(created_at ASC,id ASC) WHERE processed_at IS NULL`; planned
 `cacheInvalidationOutbox.ts#readOldestUnprocessedAge` uses fingerprint `cache_outbox_oldest_unprocessed` and exact `WHERE processed_at IS NULL ORDER BY
 created_at,id LIMIT 1`, including claimed/backed-off rows, with 1k/100k EXPLAIN plus insert/claim/retry/complete write-budget evidence.
-Deployment is four-phase. After preflight, the transactional-expand mutation drain remains through phase 3a while top-level concurrent builds make
-`page_revisions_page_version_idx`, `content_revisions_entry_version_idx`, then `widget_template_revisions_template_version_idx` ready/valid and durably receipt
-the `revision-integrity` barrier via `apply-resume-check --through-group revision-integrity`; old `max(version)+1` writers remain rejected. Only then does the old
-app resume for the online read-performance group and final catalog admission. Transactional SQL creates no index. Crash/resume, numeric limits, reverse
-`DROP INDEX CONCURRENTLY`, the custom GiST seam, fresh `resolve-receipt`, and two full `apply-resume-check` calls with a zero-DDL rerun remain mandatory.
+One version-2 `rollout-forward` orchestrator owns artifact resolution, admission
+drain, activity proof, transactional expand, concurrent groups and final catalog;
+generic/startup migration cannot execute the guarded artifact. External mode
+keeps the pre-TASK-551 `max(version)+1` binary stopped through the durable page/
+content/widget `revision-integrity` barrier, then admits only the digest-pinned
+compatible TASK-551 binary while read-performance indexes build. The old binary
+never resumes; first compatible traffic makes recovery forward-fix only.
+`offline-single` stays cold through final catalog. Transactional SQL creates no
+index; `rollout-forward` runs twice (second zero-DDL/zero-transition), then
+`status` proves the version-2 CAS/hash-chained receipt and exact catalog.
+It reserves one physical migration session and sets exactly
+`coderso.task551_operation_id`, `coderso.task551_receipt_v2`, and
+`coderso.task551_receipt_sha256`. The canonical v2 receipt is 1..65,536 UTF-8
+bytes and SHA-256 bound; static migration SQL validates all three inside the
+migrator transaction. Clean/prior apply, disposable rollback/forward replay,
+hash/size/GUC failure rollback, repeat-zero-transition, and status/recovery
+proofs are mandatory.
 
 ### Exact server-cache boundary
 
@@ -206,137 +261,29 @@ The standalone server-only owner exports these exact concepts and fields;
 07-L01 may implement but may not rename, extend, narrow, or duplicate them
 without amending every consumer task first:
 
-```ts
-type ServerCacheBackend = "memory" | "redis";
+The exact exported types live only in TASK-551-07-L01. Shared invariants are:
 
-type CacheSchemaVersion = number & { readonly __cacheSchemaVersion: unique symbol };
-type PositiveCacheTtlMs = number & { readonly __positiveCacheTtlMs: unique symbol };
-type CacheValueByteLimit = number & { readonly __cacheValueByteLimit: unique symbol };
-type NegativeCacheTtlMs = number & { readonly __negativeCacheTtlMs: "5_000..15_000" };
-declare const validatedCacheEligibilityProof: unique symbol;
-type CacheShareScopeDigest = string & { readonly __cacheShareScopeDigest: "lowercase-64-hex" };
-type CacheEligibilityProof = Readonly<{ shareScopeDigest: CacheShareScopeDigest;
-  negativeFill: "forbid" | "eligible"; readonly [validatedCacheEligibilityProof]: true }>;
-type CachePolicy<T> = {
-  family: CacheFamily;
-  schemaVersion: CacheSchemaVersion;
-  ttlMs: PositiveCacheTtlMs;
-  maxValueBytes: CacheValueByteLimit;
-  tags: readonly CacheTag[];
-  negativeTtlMs: null | NegativeCacheTtlMs;
-  stalePolicy: "forbid";
-  decode: (input: unknown) => T;
-  isEligible: (context: CacheEligibilityContext) => CacheEligibilityProof | null;
-};
+- `CachePolicy<T>` owns finite family/schema/positive TTL/value/tags, nullable
+  negative TTL, `stalePolicy:"forbid"`, strict decode and full-context branded
+  eligibility proof with lowercase-64-hex `shareScopeDigest`;
+- `ServerCacheStore` has only `describe`, cloned-byte `get`, `delete`, generation
+  read/bump, `writeIfGenerationsMatch`, `health`, and idempotent `close`;
+  conditional write returns `written | generation_changed | unknown` where
+  unknown carries `physicalOutcome:"unknown"` and never authorizes publication;
+- branded one/two-entry conditional writes carry exact expected generations,
+  tags, `fillKind`, sampled TTL, positive/nullable-negative policy ceilings and
+  value ceiling; both adapters revalidate all fields before work;
+- `CacheInvalidationPlan` is exactly opaque event key plus finite tags; loader
+  triggers are `store_absent`, coarse `store_value_rejected(expired |
+  generation_mismatch | oversized | invalid)`, or `fill_disabled(ineligible |
+  singleflight_saturated | coherence_bypass | generation_unavailable |
+  transport_unavailable | distributed_wait_timeout | coordinator_closed |
+  not_published_retry)`.
 
-interface ServerCacheStore {
-  get(key: CacheKey): Promise<Uint8Array | null>;
-  set(key: CacheKey, value: Uint8Array, ttlMs: PositiveCacheTtlMs): Promise<void>;
-  delete(key: CacheKey): Promise<void>;
-  readGenerations(tags: readonly CacheTag[]): Promise<CacheGenerations>;
-  bumpGenerations(tags: readonly CacheTag[]): Promise<CacheGenerations>;
-  writeIfGenerationsMatch(input: CacheConditionalWrite): Promise<boolean>;
-  health(): Promise<ServerCacheHealth>;
-  close(): Promise<void>;
-}
-
-declare const validatedConditionalWriteEntry: unique symbol;
-
-type CacheConditionalWriteEntry = Readonly<{
-  key: CacheKey; encodedEnvelope: Uint8Array; fillKind: "positive" | "negative";
-  ttlMs: PositiveCacheTtlMs; policyPositiveTtlMs: PositiveCacheTtlMs;
-  policyNegativeTtlMs: NegativeCacheTtlMs | null; policyMaxValueBytes: CacheValueByteLimit;
-  readonly [validatedConditionalWriteEntry]: true;
-}>;
-
-type CacheConditionalWrite = {
-  expectedGenerations: CacheGenerations; tags: readonly CacheTag[];
-  entries: readonly [CacheConditionalWriteEntry]
-    | readonly [CacheConditionalWriteEntry, CacheConditionalWriteEntry];
-};
-
-type CacheInvalidationPlan = { eventKey: string; tags: readonly CacheTag[] };
-
-declare function createCacheConditionalWriteEntry(input: Readonly<{
-  policy: CachePolicy<unknown>; key: CacheKey; encodedEnvelope: Uint8Array;
-  fillKind: "positive" | "negative"; ttlMs: PositiveCacheTtlMs;
-  storeMaxEntryBytes: CacheValueByteLimit;
-}>): CacheConditionalWriteEntry;
-
-type ServerCacheForcedBypassReason = "redis_unavailable" | "outbox_lag" | "local_incoherence";
-
-type ProcessCacheCoherenceEpoch = number & { readonly __processCacheCoherenceEpoch: unique symbol };
-
-type ServerCacheCoherence =
-  | Readonly<{
-      state: "coherent";
-      epoch: ProcessCacheCoherenceEpoch;
-      oldestPendingAgeMs: null | number;
-    }>
-  | Readonly<{
-      state: "forced_bypass";
-      epoch: ProcessCacheCoherenceEpoch;
-      reason: ServerCacheForcedBypassReason;
-      affectedFamilies: "all" | readonly CacheFamily[];
-      sinceMonotonicMs: number;
-      oldestPendingAgeMs: null | number;
-    }>;
-
-type ServerCacheHealth = Readonly<{
-  backend: ServerCacheBackend;
-  readiness: "ready" | "degraded";
-  coherence: ServerCacheCoherence;
-  stableCode: null | string;
-}>;
-
-type CacheCoherenceAffectedTags =
-  | "all"
-  | readonly [CacheTag, ...CacheTag[]];
-
-type ServerCacheCoherenceSignal =
-  | Readonly<{
-      kind: "force";
-      source: "memory_store" | "redis_store" | "outbox_worker" | "post_commit";
-      reason: ServerCacheForcedBypassReason;
-      affectedTags: CacheCoherenceAffectedTags;
-      oldestPendingAgeMs: null | number;
-      observedAtMonotonicMs: number;
-      stableCode: string;
-    }>
-  | Readonly<{
-      kind: "recover";
-      source: "memory_store" | "redis_store" | "outbox_worker";
-      affectedTags: CacheCoherenceAffectedTags;
-      oldestPendingAgeMs: null | number;
-      observedAtMonotonicMs: number;
-      stableCode: null;
-    }>
-  | Readonly<{
-      kind: "invalidation_observed";
-      source: "local_post_commit" | "pubsub";
-      affectedTags: CacheCoherenceAffectedTags;
-      oldestPendingAgeMs: null | number;
-      observedAtMonotonicMs: number;
-      stableCode: null;
-    }>;
-
-type ServerCacheBackendHealthInput = Readonly<{
-  backend: ServerCacheBackend;
-  readiness: "ready" | "degraded";
-  stableCode: null | string;
-}>;
-
-interface ServerCacheCoherenceController {
-  registerPolicy(input: Readonly<{
-    family: CacheFamily;
-    tags: readonly CacheTag[];
-  }>): void;
-  report(signal: ServerCacheCoherenceSignal): void;
-  currentEpoch(family: CacheFamily): ProcessCacheCoherenceEpoch;
-  snapshot(): ServerCacheCoherence;
-  health(input: ServerCacheBackendHealthInput): ServerCacheHealth;
-}
-```
+The sole controller registers policies, begins source-bound observation tokens,
+reports strict `force | recover | invalidation_observed | post_commit_failed |
+durable_invalidation_processed` signals, owns epoch mutation, and composes
+`coherent | forced_bypass` health. No second epoch mutator is exported.
 
 `CacheFamily` is exactly `public-runtime | public-html-manifest | public-html |
 redirects | site-shell | pages | entries | posts | listings | forms |
@@ -365,15 +312,20 @@ positive `public-runtime` bootstrap policy; positive public HTML TTL normalizes
 to `1..600_000 ms`. Unknown or malformed coherence fails to `forced_bypass`.
 Signals are recursively normalized and one process-local controller derives
 affected families from registered finite policy tags. An effective force or
-recovery transition advances affected-family epochs once before becoming
-visible, while a state-identical force/recover report is a no-op. Every accepted
-`invalidation_observed` report conservatively advances the affected epochs,
-including duplicate at-least-once local or Pub/Sub observations. There is no
-event-dedup registry; an observation never clears any fence or authorizes stale/
-private values. Fences remain independent by source. An epoch at the safe-
-integer ceiling is permanently forced-bypass until process restart. Locally
-known outbox lag or incoherence strictly above `5_000 ms` forces affected-family
-value bypass until recovery.
+recovery with its source-bound monotonic observation token advances epochs once;
+older/equal completions are ignored and an identical current-token state is a
+no-op. Every accepted event-keyed `invalidation_observed`, including duplicates,
+advances epochs but clears no fence. A `post_commit_failed` fence is keyed to that
+event; only `durable_invalidation_processed` after the same row's generation bump
+and conditional DB completion clears it. Broad recovery, Pub/Sub, another event
+or pending-age proof cannot. Only concurrently unresolved event and active-
+attempt tokens are retained, capped at 4,096 each with no settled tombstone.
+Capacity saturation temporarily bypasses all families without rejecting a
+callback and recovers only when both counts are at most 3,072; more than 100,000
+sequential settled invalidations stay bounded. An attempt token settles only
+after no callback can report. Safe-integer epoch/drain-generation overflow
+remains restart-fail-closed. Redis separately fences durable drain until healthy
+with no pending or claimed outbox row; global source fences remain independent.
 
 `ServerCache` is the cache-aside coordinator above the store. It owns canonical
 serialization, strict envelope validation, byte measurement, TTL jitter,
@@ -385,20 +337,35 @@ and performs no encode/write; `kind:"fill"` carries `fillKind:"positive"|"negati
 Positive primary and companion independently sample and cap their own policy TTLs, so an atomic pair may have unequal TTLs. Negative fill requires the
 policy's negative TTL and cannot carry a companion. Consumers call neither write primitive; hits/waiters use `resolveCached`, and
 every bypass/lost-generation/lease path returns the authoritative result without fill.
+Each loader receives `{trigger, companion}`. Backend null is
+`store_absent`; returned expired/wrong-generation/oversized/invalid bytes are
+evicted and become coarse `store_value_rejected`; ineligible, saturation,
+coherence/generation bypass and non-publication retry are `fill_disabled`.
+A closed shared-outcome mapping turns `store_absent` into
+`store_absent_no_publication`, any rejection into `store_value_rejected`, and
+any disabled-fill reason into `fill_disabled`; a trigger object is never a reason.
+A proposed fill while disabled has zero encode/store/coordinator work. Public
+manifest/HTML positive-fill only on `store_absent`; rejected bytes render
+authoritatively as same-request `no_fill`.
 Public HTML couples manifest+HTML only through that seam: a manifest-primary miss
 caches manifest plus branded HTML companion while returning the HTTP response;
 a manifest hit/HTML miss makes HTML primary plus refreshed-manifest companion.
 Both-or-neither fills and `returnValue` is never encoded. Public manifest/HTML loaders use only positive fill or finite-reason `no_fill`, never negative fill;
-a render-time excluded dependency returns its authoritative response as `no_fill` without throwing, encoding, or publishing either entry.
+a render-time excluded dependency returns its authoritative response as `no_fill` without throwing, encoding, or publishing either entry. The manifest is
+`public-html-manifest` is non-authorizing metadata with
+`mutableVisibilityGate:"not_required"`; HTML still
+requires current `strictly_public` root+nested validation. Refreshed-manifest
+eligibility is recomputed after render and never inherited from the pre-render context.
 
 Keys are length-bounded, SHA-256-digested canonical input under the conceptual
 shape `coderso:<deployment>:server-cache:v1:<family>:sv<schemaVersion>:<generation-digest>:<input-digest>`.
 The debug label is stored only as sanitized bounded metadata. Keys contain no
 raw URL, query, PII, cookie, token, nonce, secret, or delimiter-parsed identity.
 
-The memory adapter is an O(1) LRU bounded by both entry count and serialized
-bytes, plus key/value/tag limits, monotonic expiry, at most 64 lazy-sweep
-examinations per operation, and backend-independent promise-only local single-
+The memory adapter is an O(1) LRU bounded by entry count and serialized bytes,
+plus key/value/tag limits, monotonic expiry, and one combined 64-entry expiry/
+eviction work budget; a required 65th victim skips insertion without partial
+eviction or replacement. It uses backend-independent promise-only local single-
 flight. The one process-wide distinct-key ceiling defaults to 1,024 and accepts
 only `16..10_000`; an existing key always joins, while a new key at capacity
 runs the authoritative loader with no map insertion or fill and records
@@ -431,6 +398,10 @@ Redis mode uses Bun's native `RedisClient` against the repository's supported
 Redis baseline (7.2+ at authoring time); no new client dependency is planned.
 Implementation must re-check the current Bun API before coding. Missing or
 invalid Redis URL/namespace in explicitly selected Redis mode fails startup.
+Before listen, the closed mandatory capacity catalog validates key overhead plus
+maximum envelope bytes against `store.describe()` for exactly
+`public-runtime@1/262_144`, `public-html-manifest@1/32_768`,
+`public-html@1/2_000_000`, and `redirects@1/65_536`; mismatch fails startup.
 A runtime Redis timeout/error opens a bounded circuit and bypasses cached
 values to PostgreSQL/render; it never falls back to a persistent local value
 cache. The process-local single-flight map may remain because it stores only
@@ -487,7 +458,8 @@ type DistributedCacheOwnedWriteResult =
   | Readonly<{ kind: "written" }>
   | Readonly<{ kind: "generation_changed" }>
   | Readonly<{ kind: "lease_lost" }>
-  | Readonly<{ kind: "unavailable"; stableCode: string }>;
+  | Readonly<{ kind: "unavailable"; physicalOutcome: "unknown";
+      stableCode: string }>;
 
 type DistributedCacheLoadAcquireResult =
   | Readonly<{ kind: "owner";
@@ -508,11 +480,10 @@ interface DistributedCacheLoadCoordinator {
 }
 
 type ServerCacheRuntime = Readonly<{
-  backend: ServerCacheBackend;
+  mode: ServerCacheBackend;
   cache: ServerCache;
-  coherenceController: ServerCacheCoherenceController;
-  invalidation: CacheInvalidationRuntimeHandle;
-  loadCoordinator: DistributedCacheLoadCoordinator | null;
+  invalidation: Readonly<{ applyAfterCommit(plan: CacheInvalidationPlan):
+    Promise<"applied" | "queued" | "bypassed"> }>;
   health: () => Promise<ServerCacheHealth>;
 }>;
 
@@ -521,7 +492,9 @@ declare function getServerCacheRuntime(): ServerCacheRuntime;
 
 `getServerCacheRuntime()` never constructs a runtime: before start and after
 close it throws `server_cache_runtime_unavailable`; while started it returns one
-frozen process singleton. The invalidation handle owns exact idempotent
+frozen process singleton. Store, controller, coordinator, workers, clients and
+stop/drain/close capabilities remain private. Internally the invalidation handle owns
+exact idempotent
 `stopClaiming()`, bounded `drain(timeoutMs)` and `close(timeoutMs)` semantics;
 shutdown awaits stop/drain/PubSub close, then distributed-coordinator close,
 cache/store close, and only then database close.
@@ -539,16 +512,18 @@ Minimal method+URL dispatch preserves the complete booking/Forms/analytics API b
 `GET /api/booking/slots`, exact Forms submission/upload paths at every method, and analytics beacon at every method. Existing handlers retain access/session/
 API-key/CSRF/DNT/rate/nonce/HMAC/CAPTCHA/token and method/not-found behavior. Only unmatched surviving GET/HEAD normalizes a cache request; every request
 performs its one authoritative SecuritySettings query.
-Mutable page/home/post/content-entry details then execute one narrow indexed
-point gate before manifest/value lookup; exact projections are page
+Every mutable page/home/post/content-entry detail/list first reads only bounded
+safe manifest metadata, then executes one parameterized set-based root+nested
+validator before any HTML/content value GET. Exact projections are page
 `id,status,publishedAt,hasPublishedData,updatedAt`, post
 `id,status,publishedAt,updatedAt`, and entry
 `id,status,publishedAt,visibility,hasPassword,updatedAt` (booleans derived).
-Corresponding lists execute one family-specific ordered projection for at most
-`pageLimit + 1` rows, no body/hash. Missing/unpublished/removed representation,
-private/password, membership/reorder/version change, or malformed proof fails
-closed and cannot return primed output. A safe structural hit totals one query;
-a gated hit totals two; both add zero domain/render/cache reads.
+One bounded `VALUES`/CTE statement covers at most 128 tuples/16,384 canonical
+bytes and a `pageLimit + 1 <= 101` root list, returning one aggregate row and no
+body/hash under fingerprint `public_html_dependency_validation`. Missing/
+duplicate/changed/unpublished/private/password/malformed or
+DB-unavailable proof evicts metadata best-effort and renders authoritatively with
+no HTML GET/fill. Safe structural hits total one query; mutable hits total two.
 
 Never cache decrypted/secret `SecuritySettings`, session/auth/RBAC decisions,
 private/password content, drafts/previews, unknown query variants, 5xx responses,
@@ -575,7 +550,8 @@ outbox rows and performs exactly one awaited post-commit generation bump. Redis
 mode persists exactly one row in the same transaction and then awaits its
 immediate `applyAfterCommit(plan)` before returning the committed result; fire-
 and-forget is forbidden. The handle absorbs transport failure and resolves only
-after local observation or the required affected-tag fence is visible. Rollback/no-op emits no
+after local observation or that exact event's affected-tag fence is visible.
+Only its later durable processed receipt clears the event fence. Rollback/no-op emits no
 invalidation. Once the DB
 and required outbox commit, a cache transport failure must not turn the API
 response into an apparent mutation failure; the worker retries and reads
@@ -590,28 +566,32 @@ seconds. Admin preview/readback
 bypasses until its event is observed; auth, security, private/password, draft,
 preview, and nonce-bearing data remains uncached or fail-closed DB-backed.
 
-Browser Admin cache remains a separate contract. Its opaque scope digest binds
-normalized deployment identity, a crypto-random 128-bit `authIncarnation`
-encoded as 32 lowercase hex characters, monotonically increasing safe-integer
-`authEpoch`, authenticated user identity, and sorted roles/permissions. Keys,
-envelopes, and cacheBus events carry the deployment digest plus scope digest and
-epoch; they never carry raw identity/permissions/incarnation. `sessionStorage`
-retains only the strict incarnation record for reload in the same authenticated
-tab session. Rotate before a successful new-login scope; delete/rotate before
-logout, 401/403 or identity transition, then advance epoch and clear scope.
-Permission changes advance epoch and derive a new scope. Storage failure uses a
-fresh memory-only incarnation and persistent safe misses; no auth API payload is
-changed. Storage quota/private-mode, broadcast, and subscriber failures are
-best-effort and cannot make a successful API mutation look failed. Dirty editor
-state and background revalidation semantics remain unchanged.
+Browser Admin cache is separate. INITIAL installs identity-free opaque
+installation tokens/reset subscribers; delayed 03/04 client promises install
+only under a current token. FINAL exhaustively inventories every module-level
+value/promise/map/read-through/prefetch registry, synchronously resets them on
+deployment/auth/cross-tab transitions, and fails closed at safe-integer overflow.
+Its scope binds deployment, random 128-bit tab `authIncarnation`, a distinct
+deployment-audience `authGenerationNonce`, safe-integer `authEpoch`, user and
+sorted roles/permissions. A strict localStorage auth-generation record orders
+cross-tab transitions; BroadcastChannel is wakeup only. Rotation precedes scope
+publication; storage failure yields persistent misses. `readThroughCache.set`,
+invalidate and refresh advance per-key generation before install, fencing older
+loads. Keys/events contain only digests/nonce/epoch, never raw identity.
 Deployment identity is fixed-order UTF-8 JSON `{v:3,origin,adminBasePath,
-entryModulePath}`. Scope is SHA-256 of fixed-order v3 JSON containing that string,
-incarnation, epoch, user ID, and separate NFC/deduplicated/UTF-8-byte-sorted
-permission/role ID arrays; delimiter concatenation and unknown/oversized input fail.
+entryModulePath}`. The fixed-order `AdminCacheScopePreimageV3` is
+`{v,deploymentIdentity,authIncarnation,authGenerationNonce,authEpoch,userId,
+permissions,roles}` with normalized sorted arrays. Its 367-byte vector hashes to
+`6c69458d5fdc22634a5fca20609e3accb4a6fe606905af2b2c522900770afbf7`; nonce-only
+`222...` rotation hashes to `4214d494f425d2f595de703cd19662a2513d0d85871bff748bdb5d5cb728611d`
+and rejects old storage/events/delayed installs. Delimiter, unknown, or oversized input fails.
 
 Security-settings partial writes set local lock timeout `2s` and acquire advisory lock `(551,904)` before same-transaction read/merge/write. Redis writes add
 exactly one same-transaction outbox row; memory writes add zero and use exactly one awaited post-commit generation bump. Both map `55P03`/`40P01` to
-`security_settings_conflict` and await invalidation; no pre-lock/global/cached merge read is permitted.
+`security_settings_conflict` and await invalidation; `settingsRoutes.ts` alone
+maps that code to redacted HTTP 409. No pre-lock/global/cached merge read is
+permitted. Form actions remain excluded from public HTML dependency/invalidation
+because rendered form configuration does not consume action execution state.
 
 ## Security Contract
 
@@ -684,6 +664,12 @@ After the gate:
 - TASK-551-02: `core/db/client.ts`, DB config, runtime lifecycle registry,
   `runtimeEntrypoint.ts`, and the sole `prod.ts` plus `dev.ts` start/signal paths,
   sanitized DB telemetry, and exact `withDedicatedDatabaseSession<T>(run)` API.
+  Its pure `databaseApplicationIdentity.ts` strictly owns process kind
+  `runtime|worker`, separate runtime `1..256`/worker `0..256` fleet counts,
+  globally unique replica IDs, and every-session names
+  `coderso:runtime|worker|maintenance:<id>` or
+  `coderso:migration:<operationUuid>`; no host/URL/tenant/credential enters them.
+  TASK-551-05 imports only that pure builder for `pg_stat_activity` drain proof.
   It also exports `assertMaintenanceSessionAffinity()`. `DB_MAINTENANCE_MODE=primary|direct|session`, pool max `2..4`, and secret `DB_MAINTENANCE_URL` are strict.
   Ordinary primary startup never probes, so `off+primary+DB_POOL_MAX=1` is valid when the scheduler is disabled and `verifyDatabaseSessions` checks that one session only. Explicit direct/session probes once at DB start;
   the lifecycle-scoped promise/result is reused. An enabled scheduler awaits the assertion before timer/listen and fails at capacity below two or transaction+primary.
@@ -696,9 +682,11 @@ After the gate:
   failure awaits partial rollback and never listens; no participant/adapter owns another signal, lifecycle call, `server.stop`, or drain algorithm.
   08-L03 composes only `httpServer.ts`.
   Default Bun suites are `tests/integration/server/task551DatabaseLifecycle.test.ts`
-  and `tests/integration/server/task551RuntimeEntrypoints.test.ts`; defaults are pool/
-  replicas/server/reserve/worker/migration `10/1/103/21/2/1`, planned `13`,
-  available `82`, with strict `planned < available`. Lifecycle ceilings are
+  and `tests/integration/server/task551RuntimeEntrypoints.test.ts`. One shared
+  parser serves pool/application identity/migration adapters: runtime processes
+  `1..256` default `1`, workers `0..256` default `0`, pool max default `10`, and
+  migration reserve `3`; default planned connections are `1*10 + 0*10 + 3 = 13`
+  and must be strictly below validated server availability. Lifecycle ceilings are
   2,000/5,000/10,000/15,000 ms plus a 10-second DB close and late acquisitions
   release once. Six families, five outcomes, 12 duration cells and nine row
   cells including overflow produce 3,240 cells per fingerprint plus 44 pool
@@ -711,11 +699,13 @@ After the gate:
 - TASK-551-03: shared cursor/projection/batch owners, exact
   `PaginationCursorKeyring`, `loadPaginationCursorKeyring(env)`, idempotent
   `registerPaginationCursorLifecycleParticipant()`, and fail-closed
-  `requirePaginationCursorKeyring()`. L02 owns the complete
+  `requirePaginationCursorKeyring()` plus the exact two-segment/code-owned-spec
+  contract above. L02 consumes 09-L04 INITIAL installation authority and 08-L03
+  INITIAL closed response-header transport receipts before editing clients/routes. L02 owns the complete
   `core/server/routes/index.ts` and calls only the register helper at module
   evaluation before the generic lifecycle start. After all 06 services land,
   L02 solely owns page/detail revision route/schema/client/UI envelope adoption,
-  the complete current seven-client consumer graph, bounded picker/search/load-
+  the complete current eight-client consumer graph, bounded picker/search/load-
   more behavior, every cohesive split needed for touched files above 1,000
   lines, its direct tests, and the five-scenario UI smoke. L02 extracts
   `formReadService` as the sole form-list SQL owner with exact `FormListItem`
@@ -737,13 +727,22 @@ After the gate:
   default/max `50/100`, `version DESC,id DESC`; bodies are point-only and
   invented `reason` is forbidden. No raw-array,
   auto-fetch-all, or silent first-page fallback exists.
-  Every metric-bearing Admin keyset response is `{items,nextCursor,hasMore,summary,facets}`: only `matchingTotal` follows row filters; other typed summary counts and
-  bounded author/content-type/role/folder/tag facets retain global authorized/parent scope. Facet pages are strict `{items,nextCursor,hasMore}`, default/max
-  `50/100`, no auto-fetch; page+fixed aggregate+optional bounded facet batch totals at most three SQL with no page concatenation/per-row lookup.
+  Every metric-bearing Admin keyset response is `{items,nextCursor,hasMore,summary,facets}`. Arbitrary filters return `matchingTotal:null`/
+  `exactness:"not_computed"` and issue no filtered `COUNT`; fixed summary and bounded author/content-type/role/folder/tag facets are exact at one read-only
+  `REPEATABLE READ` authorized snapshot. Facet pages are strict, default/max
+  `50/100`, no auto-fetch. Page, fixed aggregate and optional facet are separately
+  budgeted/planned production SQL fingerprints and total at most three statements.
+  L03 owns bounded analytics/dashboard exports, webhook 50/100 pages plus one
+  lateral latest-delivery read, 100/250 event iterator/five retries, and the
+  500-operation/4-MiB solution-plan with 512-KiB item/16-MiB run snapshots.
 - TASK-551-04: search and assistant retrieval query owners only; it consumes the TASK-551-05 vector/index schema and owns no migration artifact. Search GETs
   become provably write-free. The sole history write is internal `POST /admin/api/search/history`: session actor, `content:read`, shared CSRF, `admin_write`
   bucket, strict four-key body and actor-bound UUID idempotency; conflict maps 409. `searchClient.ts` and `useSearchResults.ts` reuse one UUID per normalized UI
   intent/retry, and no public/API-key/GET mutation alias exists.
+  Search has no cursor. Each of five source arms yields at most 51 exact-email →
+  FTS → non-overlapping trigram candidates; at most 255 enter global dedup/rank
+  and 51 leave. Match tier precedes incomparable scores; per-arm rows/buffers/p95
+  evidence is independent of whether an arm survives final top-k.
 - TASK-551-05: the sole TASK-551 owner of schema decomposition and every
   migration/vector/index/constraint/outbox schema artifact plus plan evidence;
   it also owns the one explicit Drizzle-unsupported exclusion descriptor/custom
@@ -770,8 +769,14 @@ After the gate:
   true performs bounded reads and zero destructive-row-lock/mutation/publication/
   progress. Direct service calls take no scheduler advisory lock; scheduled dry-
   run takes exactly one replica advisory lock before invoking the same service.
-  Request writes perform zero inline analytics pruning.
-- TASK-551-07: standalone server-cache contracts/coordinator/memory adapter only.
+  Request writes perform zero inline analytics pruning. Page autosave locks its
+  parent and selects only latest `kind='autosave'` by `version DESC,id DESC LIMIT
+  1`: equal normalized snapshot reuses it with zero writes; changed snapshot uses
+  the shared allocator and deletes only that exact predecessor. Older history is
+  scheduler-only; 100k-history/50-writer tests pin two/six-statement budgets.
+- TASK-551-07: standalone server-cache contracts/coordinator/memory adapter only,
+  including complete store/trigger/observation-token/event-fence contracts,
+  registered-policy capacity validation and private runtime capabilities.
 - TASK-551-08: Redis adapter, outbox services/worker, generation transport and
   distributed coalescing; L03 is the sole `httpServer.ts` composition writer and
   defines `registerComposedHttpRuntimeParticipants()`.
@@ -781,12 +786,17 @@ After the gate:
   loads/injects the keyring, never edits `prod.ts`/`dev.ts`, and does not edit
   `backupScheduler.ts`; both entrypoints remain 02-L02 lifecycle adapters.
   TASK-551-08 consumes TASK-551-05's outbox schema and owns no schema/migration.
+  L03 first lands only the closed three-header response transport after 02-L02;
+  its FINAL cache/runtime phase follows 07, 08-L01/L02 and the 03-L02 receipt.
 - TASK-551-09: the whole current public/entry/post/SEO/import-export/detail-page
   adoption files and tests, settings/security cache, site-shell dependencies,
   mutation invalidation, and Admin identity-cache safety; it adopts 03's query
   and 06's revision handoffs without split writers. Its four leaves own and run
   every direct existing suite named in their exact validation commands; 10
   consumes those receipts and owns only aggregate/full gates and documentation.
+  L04 first lands only `adminCacheAuthority.ts` plus its direct test after 07-L01;
+  03-L02/04-L01 return adoption receipts, then L04 FINAL owns the exhaustive
+  remaining Admin module-cache/cross-tab/security-settings matrix.
 - TASK-551-10: gates, fault/load harnesses, docs and closure only; it does not
   reopen production source contracts.
 
@@ -810,22 +820,26 @@ spelled out):
    small/large budgets (2 leaves).
 2. [ ] **TASK-551-02** — validated pool, timeouts, lifecycle, query telemetry,
    and operations evidence (2 leaves).
+   **08-L03 INITIAL:** land only the closed route-response-header seam.
 3. [ ] **TASK-551-05** — evidence-driven composite/partial/FK indexes and
    concurrency constraints (2 leaves).
 4. [ ] **TASK-551-03-L01** — cursor/bounded-read contracts and lifecycle adapter.
 5. [ ] **TASK-551-06-L01 → TASK-551-06-L02 → TASK-551-06-L03** —
    retention, bounded pruning, revision services, scheduling, and partition
    readiness.
-6. [ ] **TASK-551-03-L02** — bounded Admin/revision route, schema, client, UI,
+6. [ ] **TASK-551-07-L01** — typed cache contracts required by Admin authority.
+7. [ ] **TASK-551-09-L04 INITIAL** — installation-authority module/test only.
+8. [ ] **TASK-551-03-L02** — bounded Admin/revision route, schema, client, UI,
    consumer-graph and concurrency adoption after 06.
-7. [ ] **TASK-551-03-L03** — aggregate, webhook, and solution-kit batching.
-8. [ ] **TASK-551-04** — exact indexed full-text/trigram search and bounded
+9. [ ] **TASK-551-03-L03** — aggregate, webhook, and solution-kit batching.
+10. [ ] **TASK-551-04** — exact indexed full-text/trigram search and bounded
    assistant candidates (2 leaves).
-9. [ ] **TASK-551-07** — typed local-first server cache and byte-bounded memory
-   LRU/single-flight (2 leaves).
-10. [ ] **TASK-551-08** — optional Redis, durable generation invalidation,
-   Pub/Sub acceleration, and distributed stampede control (3 leaves).
-11. [ ] **TASK-551-09** — hot-path cache adoption, one-query safe whole requests,
+11. [ ] **TASK-551-07-L02** — byte-bounded memory LRU/single-flight.
+12. [ ] **TASK-551-08-L01 → L02 → L03 FINAL** — Redis, durable invalidation,
+   distributed coalescing and runtime composition after 03-L02's header receipt.
+13. [ ] **TASK-551-09-L01 → L02 → L03 → L04 FINAL** — hot-path adoption,
+   final Admin/security cache hardening after the 03/04 authority receipts,
+   one-query safe whole requests,
    two-query mutable page/home/post/entry whole requests, complete post-commit
    invalidation, and Admin/security cache hardening
    (4 leaves).
@@ -835,7 +849,7 @@ spelled out):
    exact set equality and emits a `phase: "final"` receipt with zero planned
    deltas before TASK-551-10-L01 may start.
 
-12. [ ] **TASK-551-10** — small/large load and fault matrix, documentation,
+14. [ ] **TASK-551-10** — small/large load and fault matrix, documentation,
     operational runbooks, and family closure (2 leaves).
 
 **TASK-551-11** remains the author/audit/implementation/post-audit evidence
@@ -859,11 +873,12 @@ sidecar throughout and has no product leaf or numbered product slot.
   oversize parity tests. Redis passes the same semantic contract plus two-
   client invalidation, outage, reconnect, outbox retry, lease, and generation
   race tests.
-- Coherence tests prove state-identical force/recover reports are no-ops; every
-  accepted local/PubSub `invalidation_observed`, including duplicate delivery,
-  advances affected epochs without clearing fences; no event-dedup registry or
-  second epoch mutator exists; overflow forces permanent bypass. Pub/Sub carries
-  only event key plus generation digest and resolves tags by outbox point read.
+- Coherence tests pin source watermarks, stale-completion rejection and event-
+  keyed fences: only the same event's durable processed receipt clears its
+  failed-post-commit fence. Duplicate observations advance epochs but clear
+  none; capacity saturation uses bounded hysteretic bypass while safe-integer
+  epoch overflow remains restart-fail-closed. Pub/Sub carries only event key plus
+  generation digest and resolves tags by outbox point read.
 - Public Redis consistency is explicitly bounded-eventual: global outage
   bypasses on every replica; partial/ambiguous delivery may expose only safe,
   still-unexpired public old-generation bytes until delivery or hard TTL. Poll
@@ -872,16 +887,17 @@ sidecar throughout and has no product leaf or numbered product slot.
   bypass until recovery, public HTML TTL is at most 600 seconds,
   and all policy TTLs are at most 3,600 seconds. Admin preview/readback bypasses
   until observation; security/private/auth/nonce data has no stale allowance.
-- Every public request performs exactly one authoritative SecuritySettings read. A safe structurally non-mutable HTML/list request has no other query. A mutable
-  page/home/post/entry detail or list adds exactly one narrow point or bounded membership gate for at most `pageLimit + 1` projections and no bodies. Both
-  execute zero additional warm-hit queries; restricted/missing/malformed or changed membership/version proof cannot return primed output. Preview,
+- Every public request performs exactly one authoritative SecuritySettings read. A safe structurally non-mutable request has no other query. A mutable
+  detail/list adds one root+nested validator over the exact bounded metadata/caps
+  and no bodies. Both execute zero additional warm-hit queries; rejected bytes,
+  restricted/missing/malformed or changed dependency proof cannot return primed output. Preview,
   private/password, nonce-bearing and unsafe variants never enter the cache. Old/new slug, update, delete,
   selected menu/footer, theme, settings, SEO, redirects, forms and list
   dependencies invalidate after commit only.
-- Admin cached values cannot cross deployment, crypto-random 128-bit session
-  `authIncarnation`, authenticated identity/permission or monotonic `authEpoch`
-  scopes. Incarnation rotation precedes login/logout/401/403/identity changes;
-  failed storage uses memory-only scope and persistent misses. Storage/cacheBus
+- Admin cached values cannot cross deployment, 128-bit tab incarnation, cross-
+  tab auth-generation nonce, identity/permission or monotonic epoch/install
+  scopes. Rotation precedes login/logout/401/403/identity changes; every module-
+  level cache/promise is reset/fenced and failed storage forces persistent misses. Storage/cacheBus
   errors cannot reverse a successful authoritative API result and no auth API
   payload changes. Decrypted or secret-bearing security
   settings are never cached and every read remains DB-authoritative; only finite
@@ -937,55 +953,18 @@ sidecar throughout and has no product leaf or numbered product slot.
   plus before/after measurements and any explicit safe non-goals.
 
 ## Implementation Pseudocode
-
 ```ts
 const eventKey = createCacheInvalidationEventKey();
 const result = await db.transaction(async (tx) => {
   const collector = createTransactionInvalidationCollector(tx, eventKey);
-  const mutation = await mutateBoundedDomain(tx, input, {
-    eventKey,
-    collectInvalidationTagsTx: (nestedTx, nestedEventKey, change) =>
-      collector.addFromSameOuterContext(nestedTx, nestedEventKey, change),
-  });
-  const plan = collector.toPlanOrNull();
+  const value = await mutateBoundedDomain(tx, input, { eventKey, collector });
+  const plan = collector.toPlanOrNull(); // persist in Redis mode before commit
   if (plan) await persistCacheInvalidationTx(tx, plan, cacheBackend);
-  return { value: mutation.value, plan };
+  return { value, plan };
 });
-
-const runtime = getServerCacheRuntime();
-if (result.plan) await runtime.invalidation.applyAfterCommit(result.plan);
+if (result.plan) await getServerCacheRuntime().invalidation.applyAfterCommit(result.plan);
 return result.value;
-
-const cache = runtime.cache;
-const cached = await cache.getOrLoad(policy, canonicalInput,
-  eligibilityContext, async () => {
-  return loadNarrowBoundedReadModel(db, canonicalInput);
-});
-
-const security = await getSecuritySettings(); // exactly once before middleware
-await runPublicSecurityAndRateMiddleware(request, security);
-const visibility = request.isMutableContentDetail
-  ? await loadNarrowPublicContentVisibilityVersion(request.identity)
-  : null;
-const membership = request.isMutableContentList
-  ? await loadBoundedPublicContentMembershipVersions(request.listGate)
-  : null;
-if (request.requiresMutableContentGate &&
-    !(visibility ?? membership)?.isStrictlyPublic) {
-  return renderThroughAuthoritativeTask517Path(request, visibility);
-}
-const snapshot = await readFixedPositiveRuntimeSnapshot(cache, request);
-if (snapshot.publicHtmlTtlMs === 0) {
-  return renderWithoutManifestOrHtmlCache(request, snapshot);
-}
-return readWarmValue({ request,
-  gateDigest: visibility?.versionToken ?? membership?.orderedDigest });
 ```
 
-Errors from validation/domain constraints remain machine-readable. Transaction
-failure emits no cache event. Cache failure becomes a measured miss/bypass and
-does not rewrite a committed mutation result. Regression tests exercise hit,
-miss, concurrent fill, commit, rollback, stale-generation fill, Redis failure,
-and recovery with the same externally visible domain result. Security settings
-always use their narrow authoritative DB read; cache infrastructure may expose
-only generation/coherence metadata or an explicitly redacted projection.
+Public reads execute security first, validate mutable manifests before value GET,
+and render authoritatively without fill when proof fails. Tests cover all branches.

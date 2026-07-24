@@ -220,11 +220,15 @@ absent, not retained as aggregators, at leaf completion.
   secret, hash, cookie, token, nonce, raw query, authorization decision, or
   rendered fragment. On a warm mutable read, load this bounded metadata first,
   validate every descriptor set-wise, then read generations and derive the HTML
-  key. A true store miss runs the authoritative audited manifest-primary loader
-  and may positive-fill the atomic manifest+HTML pair after the generation fence.
+  key. A true store miss means L01's exact loader trigger is `store_absent`; it
+  runs the authoritative audited manifest-primary loader and may positive-fill
+  the atomic manifest+HTML pair after the generation fence. A provider-TTL
+  expiry that has already removed the key is necessarily an absence and may
+  rebuild.
   A decoded cached manifest that is corrupt/expired/over-cap/invalid is evicted
-  best-effort and renders authoritatively as `no_fill`, never permission to read
-  cached HTML. A render
+  best-effort, arrives as coarse `store_value_rejected`, and renders
+  authoritatively as `no_fill`, never permission to read cached HTML and never a
+  same-request refill. Every `fill_disabled` trigger is likewise no-fill. A render
   publishes the HTML value plus manifest only through the typed public wrapper's
   `ServerCache.getOrLoad(request)` calls defined by 07-L01/L02. The consumer never
   creates a conditional write or invokes `writeIfGenerationsMatch`/
@@ -234,6 +238,18 @@ absent, not retained as aggregators, at leaf completion.
   atomic generation-plus-lease write. More than L01's tag cap is never truncated:
   collapse the manifest to `site:all`, and every dependency-set/routing change
   bumps that generation.
+- `public-html-manifest` is explicitly non-authorizing metadata. Its family-
+  specific eligibility context always carries
+  `mutableVisibilityGate: "not_required"`, including for mutable routes; a
+  manifest proof/context is never reused for `public-html`. Reading or filling a
+  manifest alone cannot authorize an HTML value GET, body-cache access, render
+  publication, or access decision. For a mutable route, only
+  `public-html` receives `mutableVisibilityGate:{state:"strictly_public",
+  versionToken}` and only after this request's bounded current root+nested
+  validator returns its valid digest. Safe non-mutable output alone may use the
+  HTML family's `"not_required"` branch. Invalid/unavailable/missing validation
+  reaches authoritative routing/render as `no_fill`; it cannot be bypassed by a
+  manifest hit or a manifest-primary cold render.
 - Export this exact immutable pre-loader fence for both manifest-primary and
   HTML-primary loads:
 
@@ -267,8 +283,8 @@ absent, not retained as aggregators, at leaf completion.
   | Family | schemaVersion | Positive TTL | maxValueBytes | Tags | negativeTtlMs | Eligibility | stalePolicy |
   |---|---:|---:|---:|---|---:|---|---|
   | `public-runtime` | `1` | fixed `30_000 ms` | `262_144` | `site:all`, `site:runtime`, `site:themes`, `site:settings`, `site:redirects` | `null` | strict non-secret public GET/HEAD bootstrap snapshot; excludes all `SecuritySettings`, header and rate-limit policy; independent of configured HTML TTL | `forbid` |
-  | `public-html-manifest` | `1` | effective HTML TTL `1..600_000 ms` | `32_768` | `site:all` | `null` | strict current classification; required detail/list gate already public | `forbid` |
-  | `public-html` | `1` | effective HTML TTL `1..600_000 ms` | `2_000_000` | exact manifest finite tags, collapsing over-cap to `site:all` | `null` | successful cacheable public response; strict classification and required detail/list gate already public | `forbid` |
+  | `public-html-manifest` | `1` | effective HTML TTL `1..600_000 ms` | `32_768` | `site:all` | `null` | non-authorizing safe metadata only; family-specific `mutableVisibilityGate:"not_required"` is mandatory and can never substitute for HTML visibility proof | `forbid` |
+  | `public-html` | `1` | effective HTML TTL `1..600_000 ms` | `2_000_000` | exact manifest finite tags, collapsing over-cap to `site:all` | `null` | safe non-mutable uses `"not_required"`; every mutable route requires this request's valid bounded root+nested receipt and `mutableVisibilityGate:{state:"strictly_public",versionToken}` before value GET/fill | `forbid` |
 
   Encoded envelope plus UTF-8 key must still fit the normalized total entry cap.
   Manifest and HTML use the same configured effective policy ceiling, but L02
@@ -345,7 +361,8 @@ async function handlePublicRequest(req) {
   const manifestEligibility = resolveSafeMetadataManifestEligibility(
     request, snapshot, classification,
   );
-  if (!manifestEligibility.cacheable) {
+  if (!manifestEligibility.cacheable ||
+      manifestEligibility.context.mutableVisibilityGate !== "not_required") {
     return renderPublicRequestWithoutHtmlCache(request, snapshot);
   }
   return publicHtmlCache(cache).getOrLoadResponse({
@@ -364,15 +381,31 @@ async function getOrLoadResponse(input): Promise<Response> {
     context: input.manifestEligibility.context,
     fillFenceTags: PUBLIC_HTML_FILL_FENCE_TAGS,
     resolveCached: (manifest) => validateManifestThenLoadHtml(input, manifest),
-    loader: async ({ companion }) => {
+    loader: async ({ companion, trigger }) => {
       const rendered = await renderAndAuditEligiblePublicRequest(input);
-      const publication = classifyManifestAndHtmlPublication(rendered, input);
+      if (trigger.kind !== "store_absent") {
+        return {
+          kind: "no_fill",
+          returnValue: buildHtmlResponse(rendered.html),
+          reason: "authoritative_only",
+        };
+      }
+      const publication = await classifyAndValidateManifestAndHtmlPublication(
+        rendered,
+        input,
+      );
       if (publication.kind === "no_fill") {
         return {
           kind: "no_fill",
           returnValue: buildHtmlResponse(rendered.html),
           reason: publication.reason,
         };
+      }
+      if (!sameManifestMetadataScope(
+        publication.manifestEligibility,
+        input.manifestEligibility,
+      )) {
+        return authoritativeNoFillResponse(rendered, "authoritative_only");
       }
       return {
         kind: "fill",
@@ -390,6 +423,12 @@ async function getOrLoadResponse(input): Promise<Response> {
   });
 }
 
+const authoritativeNoFillResponse = (rendered, reason) => ({
+  kind: "no_fill",
+  returnValue: buildHtmlResponse(rendered.html),
+  reason,
+});
+
 async function validateManifestThenLoadHtml(input, manifest): Promise<Response> {
   const validation = manifest.validation.kind === "not_required"
     ? { kind: "valid", digest: null }
@@ -403,22 +442,42 @@ async function validateManifestThenLoadHtml(input, manifest): Promise<Response> 
     manifest,
     validation.digest,
   );
-  if (!htmlEligibility.cacheable) return renderPublicRequestAsNoFill(input);
+  if (!htmlEligibility.cacheable ||
+      (manifest.validation.kind !== "not_required" &&
+       htmlEligibility.context.mutableVisibilityGate === "not_required")) {
+    return renderPublicRequestAsNoFill(input);
+  }
   return cache.getOrLoad({
     policy: policyForTags(manifest.tags),
     input: htmlKeyInput(input, manifest),
     context: htmlEligibility.context,
     fillFenceTags: PUBLIC_HTML_FILL_FENCE_TAGS,
     resolveCached: async (html) => buildHtmlResponse(html),
-    loader: async ({ companion }) => {
+    loader: async ({ companion, trigger }) => {
       const rendered = await renderAndAuditEligiblePublicRequest(input);
-      const refreshed = classifyManifestAndHtmlPublication(rendered, input);
+      if (trigger.kind !== "store_absent") {
+        return {
+          kind: "no_fill",
+          returnValue: buildHtmlResponse(rendered.html),
+          reason: "authoritative_only",
+        };
+      }
+      const refreshed = await classifyAndValidateManifestAndHtmlPublication(
+        rendered,
+        input,
+      );
       if (refreshed.kind === "no_fill") {
         return {
           kind: "no_fill",
           returnValue: buildHtmlResponse(rendered.html),
           reason: refreshed.reason,
         };
+      }
+      if (!sameValidatedHtmlPublicationScope(
+        refreshed.htmlEligibility,
+        htmlEligibility,
+      )) {
+        return authoritativeNoFillResponse(rendered, "authoritative_only");
       }
       return {
         kind: "fill",
@@ -428,12 +487,42 @@ async function validateManifestThenLoadHtml(input, manifest): Promise<Response> 
         companion: companion({
           policy: publicHtmlManifestPolicy(input.snapshot),
           input: manifestKeyInput(input),
-          context: refreshed.htmlEligibility.context,
+          context: refreshed.manifestEligibility.context,
           value: refreshed.manifest,
         }),
       };
     },
   });
+}
+
+async function classifyAndValidateManifestAndHtmlPublication(rendered, input) {
+  const candidate = classifyManifestAndHtmlPublication(rendered, input);
+  if (candidate.kind === "no_fill") return candidate;
+  const manifestEligibility = resolveRefreshedManifestEligibility(
+    input,
+    candidate.manifest,
+  );
+  if (!manifestEligibility.cacheable ||
+      manifestEligibility.context.mutableVisibilityGate !== "not_required") {
+    return { kind: "no_fill", reason: "authoritative_only" };
+  }
+  const validation = candidate.manifest.validation.kind === "not_required"
+    ? { kind: "valid", digest: null }
+    : await validatePublicHtmlDependencies(candidate.manifest.validation);
+  if (validation.kind !== "valid") {
+    return { kind: "no_fill", reason: "authoritative_only" };
+  }
+  const htmlEligibility = resolveValidatedHtmlEligibility(
+    input,
+    candidate.manifest,
+    validation.digest,
+  );
+  if (!htmlEligibility.cacheable ||
+      (candidate.manifest.validation.kind !== "not_required" &&
+       htmlEligibility.context.mutableVisibilityGate === "not_required")) {
+    return { kind: "no_fill", reason: "authoritative_only" };
+  }
+  return { ...candidate, manifestEligibility, htmlEligibility };
 }
 ```
 
@@ -446,14 +535,22 @@ preserves their response exactly; it does not duplicate their session, access,
 rate, nonce, token, DNT or CAPTCHA decisions. A matched surface never falls into
 `normalizePublicCacheRequest`, bootstrap, generation, manifest or HTML access.
 
-`classifyManifestAndHtmlPublication` returns either a complete positive manifest/
-HTML pair or `{ kind:"no_fill", reason }`. Any commerce product data/block, form
+`classifyManifestAndHtmlPublication` produces only the audited candidate;
+`classifyAndValidateManifestAndHtmlPublication` returns a complete positive
+manifest/HTML pair plus two distinct eligibility results, or
+`{ kind:"no_fill", reason }`. Its manifest result is always the non-authorizing
+`"not_required"` context. Its mutable HTML result exists only after the fresh
+validator receipt and is `strictly_public`; it also rejects a refreshed
+manifest/key/scope that differs from the captured request.
+`sameManifestMetadataScope` and `sameValidatedHtmlPublicationScope` compare every
+normalized eligibility field plus the captured manifest/HTML key-input digest;
+they are not mutable-gate-only comparisons. Any commerce product data/block, form
 or booking submission nonce, booking `slotsToken`, analytics beacon nonce, other
 request-scoped token or unknown dynamic dependency deterministically selects
 `cache_excluded_dependency`; a non-cacheable response/status selects
 `response_not_cacheable`. These are authoritative successful no-fill results,
 not exceptions, and neither manifest nor HTML is encoded or published.
-`validatePublicHtmlDependencies` is the only mutable warm-path domain query. It
+`validatePublicHtmlDependencies` is the only mutable cache-path domain gate. It
 accepts only the decoded bounded metadata descriptor, executes one set-based
 statement, and returns a strict `valid|invalid|unavailable` union with a digest;
 it never returns content. `invalid|unavailable`, cap failure, or a manifest with
@@ -512,6 +609,25 @@ resolve the correct HTML, and the losing process invokes neither generation-only
 nor owned fill. Pin manifest-primary miss and manifest-hit/HTML-miss companion
 directions, `returnValue` non-encoding, changed-generation both-or-neither discard,
 and proof that no public facade calls a conditional-write primitive.
+For both manifest-primary and HTML-primary paths, distinguish loader triggers:
+backend null/`store_absent` plus valid audited render may publish, while returned
+expired/wrong-generation/oversized/invalid bytes are evicted and produce an
+authoritative `no_fill` with zero same-request refill. Provider-expired keys
+already absent follow the true-miss case. Every fill-disabled trigger is also
+no-fill. Pin memory and Redis behavior and prove no raw rejected bytes/reason
+detail reaches response, logs or telemetry.
+Pin the family-specific mutable gate: every manifest request and refreshed
+manifest companion carries exactly `mutableVisibilityGate:"not_required"`, while
+every mutable HTML request/companion carries `strictly_public` with the current
+root+nested validator digest. A `not_required` manifest context must never be
+reused as HTML eligibility. With ordered spies, prove a manifest hit/miss alone
+cannot authorize access, no HTML value GET/body-cache access or primary/companion
+publication occurs before the current validator succeeds, and invalid/unavailable
+validation cannot be bypassed by a manifest hit or cold render. On the HTML-
+primary direction, assert the companion receives the distinct refreshed manifest
+context—not `htmlEligibility.context`. Return a valid positive candidate under
+every rejected/fill-disabled trigger and prove neither manifest nor HTML fills;
+only `store_absent` may publish either positive direction.
 
 Pin every exact page/post/content-entry projection and digest. Render nested
 `contentList`, `postsFeed`, `entryTeaser`, template and slot combinations across

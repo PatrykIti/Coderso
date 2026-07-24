@@ -230,7 +230,11 @@ DETACH/DROP/TRUNCATE statements.
   same still-eligible fixture rows. A direct-service dry-run fixture proves it
   uses no scheduler session/advisory lock.
 - Large fixtures prove total statements/deletes/time stay within configured
-  family/run budgets; no request path invokes the job.
+  family/run budgets; no request path invokes the job. The scheduled plan runs
+  L01/L02 against TASK-551-01-L02's literal missing-family counts, cutoff
+  boundaries, anchors, `499/500/501/2,000/2,001` batch edges, and ten-batch
+  convergence. Apply and dry-run select the same bounded candidates; apply keeps
+  child-first order, while dry-run mutates zero rows/high-water/cache/outbox state.
 - Partition service/tool tests reject arbitrary table/SQL/output paths, sanitize
   catalog evidence, classify below/above thresholds, and assert a SQL guard with
   zero partition/destructive statements.

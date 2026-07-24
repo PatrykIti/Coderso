@@ -297,6 +297,14 @@ serialized by L03 before it calls the same dry-run service path.
   seed uniquely prefixed old/boundary/new rows; one invocation
   deletes at most the configured batch, preserves boundary/new/unowned rows,
   orders oldest first, and repeated runs converge idempotently.
+- Consume TASK-551-01-L02's frozen `2036-01-01` retention scenarios verbatim:
+  password resets `3,000/60,000`; page and post preview tokens independently
+  `1,500/30,000`; assistant ingest `3,000/60,000` with `100/1,000` newest-success
+  anchors; form child/parent `3,600/180,000` and `1,200/60,000`; solution-kit
+  item/run `3,000/300,000` and `600/60,000` with newest success/rollback anchors.
+  Run `499/500/501/2,000/2,001` candidates and ten-batch convergence. Literal
+  cutoff-boundary rows survive, disabled families do zero writes until enabled,
+  child-first ordering holds, and dry-run matched/deleted counts are exact.
 - Instrument analytics traffic ingestion and search-history writes and prove
   zero prune SQL on either request path. Verify both write services contain no
   retention import/call and both dedicated retention services use bounded
@@ -317,8 +325,9 @@ serialized by L03 before it calls the same dry-run service path.
 - Inject assistant failure between execution and undo inserts; neither persists.
   Race same/different actor-plan-hash idempotency keys and prove replay/conflict
   semantics with no orphan/partial undo rows.
-- Perf fixture proves each batch scans bounded indexed rows, stays under timeout,
-  and query count does not grow with table cardinality.
+- Perf fixture proves every named family/batch edge scans bounded indexed rows,
+  stays under timeout, and query count does not grow with table cardinality; a
+  policy family absent from the frozen fixture/budget registry fails the suite.
 
 ## Security Contract
 

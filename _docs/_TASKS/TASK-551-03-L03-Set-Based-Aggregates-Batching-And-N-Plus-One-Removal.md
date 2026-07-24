@@ -42,6 +42,8 @@ None; this is an executable leaf.
 `core/services/kits/solutionKitInstallRunRepository.ts`.
 
 **Tests:** `tests/unit/analytics/analyticsService.test.ts`,
+`tests/unit/analytics/trafficAggregationQuery.test.ts`,
+`tests/integration/analytics/trafficAggregation.test.ts`,
 `tests/unit/dashboard/dashboardService.test.ts`,
 `tests/unit/webhooks/webhooksService.test.ts`,
 `tests/unit/webhooks/deliveryService.test.ts`,
@@ -156,7 +158,9 @@ no source edit. Move responsibilities without cyclic imports:
 - `solutionKitsInstallService.ts`: catalog resolution, orchestration, audit after
   finalization, and re-exports only; at most 1,000 lines.
 
-The normalized plan is at most 500 resource operations and 4 MiB canonical JSON:
+The normalized plan is at most 500 resource operations and 4 MiB canonical JSON;
+each persisted before/after/rollback snapshot is at most 512 KiB and all item
+snapshot JSON for one run is at most 16 MiB:
 at most 100 content types, 100 forms, 200 pages, and 100 menus; at most 200 terms
 per content type, 100 fields per form, and 500 items per menu. Reject excess,
 duplicate resource keys/positions, or a generated statement with 10,000 or more
@@ -188,9 +192,12 @@ transactions.
 `created_at DESC,id DESC LIMIT :limit`; it never returns more than explicitly
 requested. `getSolutionKitInstallRun` adds `LIMIT 1` and the same projection.
 `listSolutionKitInstallItems(runId)` retains its array facade because writes
-enforce the 500-per-run invariant: it uses canonical UUID input,
-`ORDER BY position ASC,id ASC LIMIT 501`, exact item projection, and fails
-`solution_kit_install_item_limit_exceeded` on the sentinel. Rollback uses this
+enforce the 500-row/16-MiB invariants. Query 1 selects only
+`id,position,pg_column_size(before_snapshot/after_snapshot/rollback_action)` in
+`ORDER BY position ASC,id ASC LIMIT 501`; it fails on the row/byte sentinel.
+Query 2 loads the exact item projection by those at-most-500 IDs in the same
+order. Oversized persistence/read fails `solution_kit_install_item_limit_exceeded`
+before transferring snapshot JSON. Rollback uses this
 same bounded read. Existing domain errors remain stable; unexpected driver text
 maps to `solution_kit_install_failed`/`solution_kit_rollback_failed` without SQL,
 bind, snapshot, URL, or payload content.
@@ -242,7 +249,7 @@ snapshot, operation, or repository implementation after extraction.
 - Test every installer cap, 0/1/99/100/101/500 operation/child sizes, snapshot
   `LIMIT + 1` corruption, mid-child and mid-operation failures, atomic resource+
   receipt rollback, both `continueOnError` branches, dry-run zero domain writes,
-  max bind count, and no whole-table materialization.
+  512-KiB/16-MiB snapshot edges, max bind count, and no whole-table materialization.
 - Solution-kit tests prove preview/apply/rollback and audit parity, reverse order,
   idempotency, bounded 501-item corruption failure, original facade export/type
   API, no importer edits, and every split file independently importable.
@@ -253,14 +260,16 @@ snapshot, operation, or repository implementation after extraction.
   internal writes, current rate-limit buckets, and strict reject-unknown schemas.
 - No new public endpoint or write. Existing webhook signature/replay controls
   remain mandatory; batch processing never bypasses tenant/resource scoping.
-- Projections exclude secret/provider fields; logs expose operation counts and
-  statement families only, never SQL binds, imported content, webhook payloads,
-  tokens, or PII.
+- Admin/aggregate projections exclude secret/provider fields. The event-delivery
+  iterator is the sole bounded server-only secret projection and decrypts only at
+  delivery; logs expose operation counts and statement families only, never SQL
+  binds, imported content, webhook payloads, URLs, tokens, secrets, or PII.
 
 ## Validation Commands
 
-- `set -a && source .env && set +a && bun test tests/unit/analytics/analyticsService.test.ts tests/unit/dashboard/dashboardService.test.ts tests/unit/webhooks/webhooksService.test.ts tests/unit/kits/solutionKitsService.test.ts`
-- `set -a && source .env && set +a && bun test tests/integration/routes/solutionKitsRoutes.test.ts tests/perf/database-set-based-batch-budgets.test.ts`
+- `set -a && source .env && set +a && bun test tests/unit/analytics/analyticsService.test.ts tests/unit/analytics/trafficAggregationQuery.test.ts tests/integration/analytics/trafficAggregation.test.ts tests/unit/dashboard/dashboardService.test.ts tests/unit/webhooks/webhooksService.test.ts tests/unit/webhooks/deliveryService.test.ts tests/unit/kits/solutionKitsService.test.ts tests/unit/kits/installService.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/routes/webhooks.test.ts tests/integration/routes/solutionKitsRoutes.test.ts tests/perf/database-set-based-batch-budgets.test.ts`
+- `bunx vitest run tests/vitest/admin/webhooksClient.test.ts tests/vitest/ui-integration/webhooks.test.tsx tests/vitest/ui/webhooks.test.tsx`
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
 - `bun run gates:coderso:perf`

@@ -66,7 +66,16 @@ server startup, TASK-517/493/511 paths, package manifests and shared docs/tasks.
   dependencies with the L01 coherence controller. An ineligible or missing/
   malformed/unbranded proof bypasses value access, distributed coordination and
   the local-flight registry entirely; that caller executes its own authoritative
-  loader with fill disabled.
+  loader with the exact `fill_disabled/ineligible` trigger.
+- `safeReadDecode` returns a strict union: decoded hit,
+  `store_absent`, or `store_value_rejected` with only L01's coarse finite reason.
+  Returned invalid bytes are evicted best-effort before the rejected result.
+  The owner loader receives that trigger unchanged. Redis/backend null is an
+  absence even when provider TTL caused it; returned expired bytes are rejected.
+  Saturation/coherence/generation bypass and every per-caller retry after a
+  non-published shared outcome receive their exact `fill_disabled` trigger. A
+  loader-proposed fill under `fill_disabled` is returned authoritatively but
+  never encoded or written.
 - For a valid proof, local-flight identity is a collision-free digest of the final
   path key, the family's current `ProcessCacheCoherenceEpoch`, and the proof's
   `shareScopeDigest`. The final path key is the actual generation-bearing primary
@@ -170,12 +179,18 @@ server startup, TASK-517/493/511 paths, package manifests and shared docs/tasks.
   Memory/Redis stores receive that controller rather than owning coherence.
   Store, post-commit, outbox and Pub/Sub inputs call its exact normalized
   `report`; store `health()` delegates deterministic backend/coherence composition
-  to `controller.health(...)`. It maintains at most 4,096 exact pending/durably-
-  processed event keys. A post-commit attempt first reports the event observation;
-  failure installs that event's fence before returning. Only the matching
-  `durable_invalidation_processed` report clears it; global outbox/Redis recovery,
-  Pub/Sub, and other events do not. Capacity/order ambiguity permanently forces
-  all-family bypass until restart.
+  to `controller.health(...)`. It implements L01's separate exact caps of 4,096
+  unresolved event records and 4,096 active immediate-attempt tokens, and keeps no
+  settled tombstone. A post-commit callback must register its opaque token before
+  starting, reports failure only with that live token, and settles it in the
+  outermost `finally`. Only the matching `durable_invalidation_processed` receipt
+  clears an unresolved exact failure; durable-before-delayed-failure is remembered
+  only until all active tokens settle, then the record is retired. Global outbox/
+  Redis recovery, Pub/Sub and other events do not clear an exact fence. At either
+  cap the controller starts no untracked callback and forces a temporary all-
+  family capacity bypass; it automatically removes only that capacity fence once
+  both counts fall from 4,096 to the exact 3,072 hysteresis threshold. L08 owns
+  the separate Redis durable-drain fence needed for a saturated post-commit event.
 - A failed memory-mode generation bump immediately marks the affected finite
   families locally incoherent. Reads in that process bypass cache values; eligible
   calls may await the same scoped fill-attempt outcome, but because no conditional
@@ -201,6 +216,9 @@ type ServerCacheSharedFillOutcome =
       reason:
         | "no_fill"
         | "owner_loader_rejected"
+        | "store_absent_no_publication"
+        | "store_value_rejected"
+        | "fill_disabled"
         | "distributed_waiter_value"
         | "generation_changed"
         | "lease_lost"
@@ -215,13 +233,39 @@ type ServerCacheOwnerFillAttempt<TResult> = Readonly<{
   sharedOutcome: ServerCacheSharedFillOutcome;
 }>;
 
+function sharedReasonFromTrigger(
+  trigger: ServerCacheLoadTrigger,
+): Extract<ServerCacheSharedFillOutcome, { kind: "not_published" }>["reason"] {
+  switch (trigger.kind) {
+    case "store_absent": return "store_absent_no_publication";
+    case "store_value_rejected": return "store_value_rejected";
+    case "fill_disabled": return "fill_disabled";
+  }
+}
+
+function triggerFromCoordinatorState(state): ServerCacheLoadTrigger {
+  switch (state.kind) {
+    case "transport_unavailable":
+    case "wait_unavailable":
+      return { kind: "fill_disabled", reason: "transport_unavailable" };
+    case "wait_timeout":
+      return { kind: "fill_disabled", reason: "distributed_wait_timeout" };
+    case "closed":
+      return { kind: "fill_disabled", reason: "coordinator_closed" };
+    case "malformed_waiter_value":
+      return { kind: "fill_disabled", reason: "not_published_retry" };
+  }
+}
+
 async function getOrLoad<TCached, TResult>(
   request: ServerCacheLoadRequest<TCached, TResult>,
 ): Promise<TResult> {
   const normalized = normalizeLoadRequest(request);
   const eligibility = normalized.policy.isEligible(normalized.context);
   if (!isBrandedEligibilityProof(eligibility)) {
-    return runLoaderAndReturnWithoutFill(normalized); // no registry/store/lease
+    return runLoaderAndReturnWithoutFill(normalized, {
+      kind: "fill_disabled", reason: "ineligible",
+    }); // no registry/store/lease
   }
   const fencedTags = unionFiniteTags(
     normalized.policy.tags,
@@ -231,7 +275,11 @@ async function getOrLoad<TCached, TResult>(
     family: normalized.policy.family,
     tags: normalized.policy.tags,
   });
-  const generations = await safeReadGenerations(fencedTags); // captured before loader
+  const generationRead = await safeReadGenerations(fencedTags);
+  // strict union: ready snapshot | coherence_bypass | generation_unavailable
+  const generations = generationRead.kind === "ready"
+    ? generationRead.generations
+    : null;
   const finalPathKey = generations
     ? await buildServerCacheKey({
         policy: normalized.policy,
@@ -251,6 +299,12 @@ async function getOrLoad<TCached, TResult>(
     processCacheCoherenceEpoch,
     shareScopeDigest: eligibility.shareScopeDigest,
   });
+  let trigger: ServerCacheLoadTrigger = {
+    kind: "fill_disabled",
+    reason: generationRead.kind === "coherence_bypass"
+      ? "coherence_bypass"
+      : "generation_unavailable",
+  };
   if (generations) {
     const expectedGenerationDigest = await digestGenerations(
       projectGenerations(generations, normalized.policy.tags),
@@ -261,6 +315,7 @@ async function getOrLoad<TCached, TResult>(
       expectedGenerationDigest,
     );
     if (hit.ok) return normalized.resolveCached(hit.value);
+    trigger = hit.trigger; // store_absent or coarse store_value_rejected
   }
   const registration = registerTrackedFillAttempt({
     key: localFlightKey,
@@ -268,6 +323,7 @@ async function getOrLoad<TCached, TResult>(
       ? loadEncodeAndMaybePublish({
         request: normalized,
         eligibility,
+        trigger,
         capturedGenerations: generations,
         primaryKey: finalPathKey,
         createCompanion: (companion) => validateAndBrandCompanion(
@@ -279,18 +335,20 @@ async function getOrLoad<TCached, TResult>(
         writeDistributedOwner: (owner, write) =>
           owner.putIfGenerationsAndLeaseOwned(write),
         })
-      : runOwnerWithoutFill(normalized, "unavailable"),
+      : runOwnerWithoutFill(normalized, trigger),
   });
   if (registration.role === "saturated") {
     telemetry.outcome("singleflight_saturated", normalized.policy.family);
-    return runLoaderAndReturnWithoutFill(normalized);
+    return runLoaderAndReturnWithoutFill(normalized, {
+      kind: "fill_disabled", reason: "singleflight_saturated",
+    });
   }
   if (registration.role === "owner") {
     const attempt = await registration.ownerAttempt;
     return attempt.returnValue; // this caller's own loader/resolve result only
   }
   const shared = await registration.sharedOutcome;
-  if (shared.kind === "published") {
+  if (shared.kind === "published" && generations) {
     const decoded = strictDecodePublishedPrimaryForJoiner(
       shared.encodedPrimaryEnvelope,
       normalized.policy,
@@ -298,7 +356,9 @@ async function getOrLoad<TCached, TResult>(
     );
     if (decoded.ok) return normalized.resolveCached(decoded.value);
   }
-  return runLoaderAndReturnWithoutFill(normalized); // each joiner runs its own
+  return runLoaderAndReturnWithoutFill(normalized, {
+    kind: "fill_disabled", reason: "not_published_retry",
+  }); // each joiner runs its own
 }
 
 // Deliberately non-async. The map stores only the cleanup-wrapped shared outcome.
@@ -319,11 +379,23 @@ function registerTrackedFillAttempt<TResult>(input) {
   return { role: "owner", ownerAttempt } as const;
 }
 
-async function runOwnerWithoutFill(request, reason) {
-  const returnValue = await runLoaderAndReturnWithoutFill(request);
+async function runLoaderAndReturnWithoutFill(request, trigger) {
+  const loaded = validateLoaderResult(await request.loader({
+    trigger,
+    companion: (candidate) => validateCompanionForNoFillCall(candidate),
+  }));
+  // A syntactically valid fill on fill_disabled is authoritative output only.
+  return loaded.returnValue;
+}
+
+async function runOwnerWithoutFill(request, trigger) {
+  const returnValue = await runLoaderAndReturnWithoutFill(request, trigger);
   return {
     returnValue,
-    sharedOutcome: { kind: "not_published", reason },
+    sharedOutcome: {
+      kind: "not_published",
+      reason: sharedReasonFromTrigger(trigger),
+    },
   } as const;
 }
 
@@ -338,17 +410,23 @@ async function loadEncodeAndMaybePublish(input) {
         reason: "distributed_waiter_value",
       },
     };
-    return runOwnerWithoutFill(input.request, normalizeNoPublicationReason(value));
+    return runOwnerWithoutFill(
+      input.request,
+      triggerFromCoordinatorState(normalizeCoordinatorWaitState(value)),
+    );
   }
   if (owner.kind === "bypass") {
     return runOwnerWithoutFill(
       input.request,
-      normalizeNoPublicationReason(owner),
+      triggerFromCoordinatorState(normalizeCoordinatorBypassState(owner)),
     );
   }
   try {
     const loaded = validateLoaderResult(
-      await input.request.loader({ companion: input.createCompanion }),
+      await input.request.loader({
+        trigger: input.trigger,
+        companion: input.createCompanion,
+      }),
     );
     if (loaded.kind === "no_fill") return {
       returnValue: loaded.returnValue,
@@ -469,9 +547,24 @@ both generation-bearing normal keys and canonical non-store bypass keys; delimit
 collision vectors must differ. Assert current-token state-identical reports do
 not advance, older token completion cannot undo a newer report, every accepted
 event observation advances, and only matching durable processing clears its
-event fence even when reports arrive in reverse order. Pin 4,096/4,097 overflow,
-no broad recovery clearing, and no second `advance*Epoch` surface. Pin generation-
-digest mismatch as best-effort eviction plus miss. Pin total key+value bytes and
+event fence even when reports arrive in reverse order. Run more than 100,000
+sequential success and failure-then-durable lifecycles and prove the exact event/
+attempt counts return to baseline with no retained tombstone or global bypass.
+Pin 4,096 concurrent registrations and a saturated 4,097th, with no callback for it,
+temporary capacity bypass at 4,097, and automatic 3,073/3,072 hysteresis recovery;
+prove L08's independent durable-drain fence still wins when present. Pin no broad
+recovery clearing and no second `advance*Epoch` surface. Pin generation-
+digest mismatch as best-effort eviction plus the coarse rejected trigger. Pin
+backend-null `store_absent`, returned expired/oversized/invalid rejected reasons,
+and every ineligible/saturation/coherence/generation/joiner fill-disabled reason.
+Return a syntactically valid fill from each disabled case and prove only its
+authoritative `returnValue` escapes with zero encode/store/lease/publication; no
+trigger exposes key/envelope/decoder bytes. Pin the closed trigger mapping
+(`store_absent -> store_absent_no_publication`, every rejected reason ->
+`store_value_rejected`, every fill-disabled reason -> `fill_disabled`) and the
+coordinator mapping for transport/wait-timeout/closed/malformed states; assert
+that `ServerCacheSharedFillOutcome.reason` is always a finite string, never a
+trigger object. Pin total key+value bytes and
 one combined 64-entry expiry/eviction work budget: exact 64 succeeds when enough,
 while a 65th required victim skips the insertion without deleting planned victims
 or replacing the old value. With distinct keys pin

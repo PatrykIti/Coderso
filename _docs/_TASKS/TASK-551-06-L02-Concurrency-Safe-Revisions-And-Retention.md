@@ -103,6 +103,31 @@ async function listRevisions(parentId: string, input: RevisionListInput, db: Db)
   // exact cursor scope is revision:<family>:v1:<sha256(canonicalJson({parentId}))>.
 }
 
+async function createOrReplaceAutosaveRevisionTx(
+  tx: Tx, pageId: string, snapshot: PageRevisionSnapshot, userId: string,
+): Promise<PageAutosaveRevisionResult> {
+  return withRevisionParentLock({ family: "page", parentId: pageId }, tx, async () => {
+    const latest = await selectLatestPageAutosave(tx, {
+      pageId,
+      columns: ["id", "pageId", "version", "kind", "data", "createdAt", "createdBy"],
+      orderBy: ["version DESC", "id DESC"],
+      limit: 1,
+    });
+    const normalized = normalizePageRevisionSnapshot(snapshot);
+    if (latest && areRevisionSnapshotsEqual(normalizePageRevisionSnapshot(latest.data), normalized)) {
+      return { revision: mapRevisionRow(latest), reusedRevision: true }; // zero delete
+    }
+    const created = await allocateRevision({
+      family: "page", parentId: pageId, kind: "autosave", data: normalized,
+      createdBy: userId,
+    }, tx);
+    if (latest) await deleteExactSupersededAutosave(tx, {
+      id: latest.id, pageId, kind: "autosave", excludeId: created.id,
+    });
+    return { revision: mapRevisionRow(created), reusedRevision: false };
+  });
+}
+
 async function pruneRevisions(policy: ParentRevisionPolicy, tx: Tx): Promise<number> {
   // Keep newest/count floor, preserve protected/published anchors, delete oldest
   // IDs in bounded SKIP LOCKED batches; never delete current referenced revision.
@@ -126,6 +151,17 @@ deletes only that exact superseded autosave ID. Scheduled retention owns older
 history; no request-path bulk prune remains. The TASK-551-09-L03 adapter maps the
 shared `revision_conflict` to the route's existing `detail_page_conflict` code;
 this leaf and TASK-551-09-L03 do not edit `detailPageRoutes.ts`.
+The page implementation above is owned and landed here, not deferred to L09. Its
+latest query is exactly one explicitly projected row ordered
+`version DESC,id DESC LIMIT 1`; it never loads all autosaves. Equality reuse
+performs zero insert and zero delete. A changed snapshot allocates through the
+shared helper inside the same parent-locked transaction, then deletes at most the
+exact previously selected ID with predicates `id=:previousId AND page_id=:pageId
+AND kind='autosave' AND id<>:createdId`. It never deletes an ID list, the new row,
+or older legacy history. Older autosaves are eligible only through this leaf's
+scheduled bounded retention service/L03 scheduler; request autosave performs no
+bulk cleanup. The statement budget is at most two for reuse and at most six for
+changed allocation including lock/allocation/delete, independent of history size.
 The callable owner contract is exactly
 `withRevisionParentLock(identity, tx, run)` and `allocateRevision(input, tx)`.
 Consumer pseudocode, fixtures, and implementations must use those orders;
@@ -184,6 +220,14 @@ No raw-array compatibility overload or invented `reason` field is permitted.
   monotonic, and correctly parent/family scoped. Exercise the generic
   `detail_page` lock/allocator directly without claiming document-service
   adoption; inject rollback/deadlock/unique-conflict paths.
+- Synchronize 50 actual page autosaves for an empty parent, an existing differing
+  autosave, identical snapshots, and distinct snapshots. Identical contenders
+  create at most one row then all reuse its exact ID; distinct contenders receive
+  contiguous committed versions and only each immediately selected predecessor
+  is deleted. Seed 100,000 older autosaves and prove request query count/rows/
+  bytes remain within the two/six-statement budgets, older IDs survive until the
+  scheduled retention run, and a delete-race fault cannot remove the new row or
+  another parent's/publish revision.
 - Pin the exact `withRevisionParentLock` and `allocateRevision` exports, all five
   family literals, shared advisory-key derivation, and `revision_conflict`.
   An executable typed consumer fixture calls
@@ -239,6 +283,10 @@ requirements to TASK-551-10-L02.
   `detail_page`/entry/post identifiers and lock/allocation behavior remain
   contract-tested for TASK-551-09 adoption; no claim is made that this leaf
   changes the detail document writer.
+- Page autosave reads one latest row, uses at most two statements on equality and
+  six on replacement, deletes only the exact predecessor, and performs zero
+  request-path old-history prune with 100,000 existing rows. Fifty contenders
+  never delete the new row, a publish revision, older history, or another parent.
 - Summary reads return at most 101 DB rows, at most 100 items, and at most 2 SQL
   statements; a detail fetch returns exactly one snapshot.
 - Retention never exceeds 2,000 deletes/batch, preserves 100% of protected and

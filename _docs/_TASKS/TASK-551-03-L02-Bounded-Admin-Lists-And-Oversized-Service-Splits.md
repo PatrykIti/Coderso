@@ -230,6 +230,12 @@ TASK-493 owns GSC/Search Console code; TASK-511 owns backup services; TASK-518
 owns its migration files. Schema, migration, search, cache, board, changelog,
 and workflow paths are forbidden.
 
+The only cache/transport handoff exceptions are read-only imports of
+`core/admin/utils/adminCacheAuthority.ts`,
+`core/admin/services/cachePolicy.ts`, `core/server/router.ts`, and execution of
+L03's `tests/integration/server/route-response-headers.test.ts`. This leaf edits
+none of them; absence or drift of either INITIAL receipt blocks implementation.
+
 The 6,813-line `page-editor-v2-flow.test.tsx` is deleted after its assertions are
 partitioned by the eight exact behavior suites above. Shared render builders and
 fixtures live only in `pageEditorV2FlowFixtures.tsx`; each suite imports that
@@ -281,6 +287,14 @@ change null ordering. Scope is exactly
 `admin:<family>:v1:<sha256(canonicalJson(normalized filters))>` and is computed
 only after authorization and parent scoping succeed; cursor/filter reuse across scopes fails
 `cursor_scope_mismatch` before SQL.
+Every paginated family builds one code-owned L01 `KeysetSpec` directly from the
+two fields named in its matrix order (`<business field>,id`); `id` is the final
+non-null UUID tie-breaker and no request/cursor text selects a column, direction
+or null policy. The wire is opaque exact `<payloadB64>.<macB64>`; routes/clients
+never decode or reconstruct its strict v1 fields. L01's schema/value/spec/
+version/signature/age failures map to generic `cursor_invalid`, while scope
+mismatch retains its declared public code. Admin Previous uses a local stack of
+previously received forward cursors; it never invents payload fields or offset.
 
 | Family/current route | Narrow list DTO/projection | Auth and normalized DB filters | Order and family scope | Compatibility, errors, owned proof |
 |---|---|---|---|---|
@@ -503,10 +517,11 @@ and every `FacetContract.asOf` identify the same snapshot. One statement returns
 `COUNT(*) FILTER (...)`/`SUM`, and at most one returns the bounded relation-facet
 batch. The query-count ceiling is therefore 3 including role/author/content-
 type/folder/tag resolution; no hidden per-row query or filtered-count statement
-is allowed. Every one of these production SQL fingerprints—not only the page
-query—must have a checked-in TASK-551-01 budget and a TASK-551-05-L02 sanitized
-small/large plan receipt with exact finite rows-read, rows-returned, shared-
-buffer and normalized-p95 ceilings before this leaf dispatches. The aggregate
+is allowed. These are exactly the 32 planned Admin statement IDs/symbols in
+TASK-551-01 and the 32 Admin members of TASK-551-05-L02's closed 37-ID registry.
+Every one—not only each page query—must have checked-in numeric small/large
+receipts with finite rows-read, rows-returned, shared-buffer and normalized-p95
+ceilings before this leaf dispatches. The aggregate
 receipt may honestly budget a scan proportional to the 100,000-row authorized
 fixture, but it cannot use “one result row” as a bounded-work claim. Any missing
 receipt, unexpected growing-table scan, or failed numeric ceiling blocks L02 and
@@ -575,14 +590,14 @@ async function listPages(
     async (tx) => {
       const asOf = deps.clock.now().toISOString();
       const [rows, fixedSummary, authors] = await Promise.all([
-        tx.select(PAGE_LIST_COLUMNS)
-          .from(pages).where(buildPageFilters(normalizedFilters, cursor))
-          .orderBy(desc(pages.updatedAt), desc(pages.id)).limit(limit + 1),
-        selectOneFixedPageSummaryRow(tx, {
+        selectPageListRows(tx, {
+          filters: normalizedFilters, cursor, limitPlusOne: limit + 1,
+        }),
+        selectPageListFixedSummary(tx, {
           authorization: authorizedPageScope(deps.actor),
           // Exactly total plus four status counts; no filter COUNT.
         }),
-        selectBoundedPageAuthorFacets(tx, {
+        selectPageAuthorFacetPage(tx, {
           authorization: authorizedPageScope(deps.actor),
           facet: normalizePageAuthorFacetNavigation(input),
           limitPlusOne: resolveFacetLimit(input.facetLimit) + 1,
@@ -614,20 +629,10 @@ async function listForms(
     { isolationLevel: "repeatable read", readOnly: true },
     async (tx) => {
       const [rows, fixedSummary] = await Promise.all([
-        tx.select({
-          id: forms.id,
-          name: forms.name,
-          slug: forms.slug,
-          status: forms.status,
-          description: forms.description,
-          submissionAccess: forms.submissionAccess,
-          updatedAt: forms.updatedAt,
-        })
-          .from(forms)
-          .where(buildFormListPredicate(filters, input.cursor))
-          .orderBy(desc(forms.updatedAt), desc(forms.id))
-          .limit(limit + 1),
-        selectOneFixedFormSummaryRow(tx, {
+        selectFormListRows(tx, {
+          filters, cursor: input.cursor, limitPlusOne: limit + 1,
+        }),
+        selectFormListFixedSummary(tx, {
           scope: authorizedFormScope(deps.actor),
         }),
       ]);
@@ -699,7 +704,10 @@ async function updateUserRoles(command: UserRoleCommand, tx: Tx): Promise<UserRo
 
 Implement the same projection/keyset shape for entries, posts, users, forms,
 form submissions, media, reservations, booking resources/services/blackouts,
-and the two exact parent-capped booking collections above. Keep
+and the two exact parent-capped booking collections above. Every SQL helper
+name, projection, predicate/order, output bound and normalized rendered byte
+string equals its L01 planned-shape row; the 32-member set is exact, so inline
+or merged anonymous statements fail. Keep
 `bookingService.ts` as a compatibility
 facade after extracting read/mutation/schedule modules; all four files must be
 under 1,000 physical lines. Route code validates and maps known domain errors;
@@ -774,10 +782,11 @@ components, while cache identity and mutation state remain in their page owner.
   `<= 3`, and zero page concatenation or per-row relation lookup. Mutate each
   status/type/access/date/timezone/role/folder/tag case in the global scope and
   prove the corresponding fixed field changes by exactly one.
-- The performance suite enumerates every page, fixed-summary and facet SQL
-  fingerprint. Each must resolve to a reviewed TASK-551-01 numeric budget and
-  TASK-551-05-L02 small/large sanitized-plan receipt; a missing/placeholder
-  receipt fails before execution. Assertions distinguish rows read from the one
+- The performance suite enumerates exactly the 32 planned page/list/fixed-
+  summary/facet fingerprints. Each resolves to a reviewed TASK-551-01 numeric
+  small/large budget and TASK-551-05-L02 receipt; a missing/placeholder receipt
+  or production/static shape-byte mismatch fails before execution. Assertions
+  distinguish rows read from the one
   aggregate row returned and apply the checked-in rows/buffers/normalized-p95
   ceilings to each statement independently.
 - Pin page/post/entry global author facets, entry zero-count content types, user
@@ -927,6 +936,9 @@ changelog 1263.
   claiming one-row work, relation facets are bounded as declared, arbitrary
   filters use `matchingTotal:null` plus `hasMore`, and no displayed global metric
   changes while traversing pages.
+- Production/static identity is 32/32 after land; L05 remains exactly 37 plan
+  IDs/38 cases/76 numeric scale receipts, with no prior Admin variant counted
+  twice.
 - All current page/post/entry status counts and author/type facets, form and
   submission cards, user/member/invitation/role/admin safeguards, media asset/
   byte/type/folder/tag totals, and booking today/upcoming/resource counts come

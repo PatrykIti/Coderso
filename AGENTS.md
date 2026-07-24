@@ -392,6 +392,14 @@ Implementation pipeline:
   result contract, stable pagination (no gaps/duplicates), query count, and the
   relevant latency/row-scan budget. Never include secrets or raw customer data
   in plans, fixtures, snapshots, logs, or task evidence.
+- Do not run unbounded production diagnostics that cast whole rows or every
+  column to text and regex-scan tables (for example,
+  `row_to_json(table)::text ~ pattern` across the schema). Use catalog and code
+  inventory first; when data inspection is genuinely required, scope explicit
+  columns/tables and selective predicates, use a read-only bounded session with
+  a strict statement timeout and preferably a replica, and record the operator
+  purpose. Never add a production index solely to accelerate a one-off
+  diagnostic scan that is not a recurring product query contract.
 
 ### Tables, constraints, indexes, and lifecycle
 
@@ -452,6 +460,12 @@ Implementation pipeline:
   and query counts. Operational use of `pg_stat_statements`, I/O timing, slow
   plans, vacuum/analyze health, and index usage must be documented and reset or
   compared across a known interval before conclusions are drawn.
+  Classify application, migration, maintenance/test, external-diagnostic, and
+  unknown traffic separately; cumulative or diagnostic-polluted statistics are
+  not valid evidence for application index or cache decisions. Because
+  `pg_stat_statements` does not retain `application_name`, never claim that
+  attribution without an independently verified fingerprint, role, or live
+  session correlation.
 
 ### Server cache architecture and correctness
 

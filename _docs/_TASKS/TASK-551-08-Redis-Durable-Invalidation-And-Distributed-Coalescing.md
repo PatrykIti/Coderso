@@ -5,8 +5,9 @@
 **Priority:** Critical
 **Category:** Cache / Redis / Reliability / Database
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-551-07 complete; TASK-551-05 schema/migration and
-TASK-551-06 retention/lifecycle owners terminal; parent external dispatch gate
+**Dependencies:** L03 INITIAL header-only exception after TASK-551-02-L02;
+all cache phases after TASK-551-07 complete plus TASK-551-05 schema/migration
+and TASK-551-06 retention/lifecycle owners terminal; parent external dispatch gate
 **Status:** ⏳ To Do
 **Changelog:** 1263 (pinned; closure only)
 
@@ -57,7 +58,14 @@ eventual model and remains uncached or fail-closed DB-backed.
   delayed recovery cannot undo a newer force. Failed immediate delivery creates
   a bounded exact-event fence; only conditional durable completion of that same
   outbox row clears it. Pub/Sub and broad pending-age/health recovery clear no
-  event fence; registry overflow forces bypass until restart.
+  event fence. The controller retains only concurrently unresolved event tokens
+  and active-attempt callback tokens, capped at 4,096 each with no settled
+  tombstones. Saturation forces temporary all-family bypass without rejecting a
+  callback and recovers only after both counts are at most 3,072; an active-
+  attempt token settles only after no callback can report. Redis also
+  keeps an independent durable outbox-drain fence until Redis is healthy and no
+  pending or claimed row remains. Safe-integer epoch/drain-generation overflow
+  alone remains fail-closed until process restart.
 - The strict plan/outbox payload is only opaque bounded `eventKey` plus
   deduplicated finite `CacheTag[]`. The separate strict bounded Pub/Sub payload is
   only that `eventKey` plus the resulting generation digest—never tags or domain
@@ -79,7 +87,14 @@ eventual model and remains uncached or fail-closed DB-backed.
   A typed `no_fill` returns authoritatively and invokes no write Lua; an invalid
   negative/no-fill branch invokes no write either. `ServerCache.getOrLoad(request)` remains the sole fill-attempt,
   generation-capture, encoding and fill owner; consumers never call either Lua/
-  store primitive. Only `written` authorizes the fill;
+  store primitive. Every loader receives `{trigger, companion}`; disabled
+  reasons are exactly `ineligible|singleflight_saturated|coherence_bypass|
+  generation_unavailable|transport_unavailable|distributed_wait_timeout|
+  coordinator_closed|not_published_retry`. Closed trigger
+  outcomes map only to shared reasons: `store_absent` to
+  `store_absent_no_publication`, every `store_value_rejected` reason to
+  `store_value_rejected`, and every `fill_disabled` reason to `fill_disabled`;
+  the trigger object is never reused as a reason. Only `written` authorizes the fill;
   `generation_changed`, `lease_lost`, and `unavailable` return the local owner's
   fresh authoritative bytes without fill and make each local joiner load for
   itself. The registry contains only an eligibility-scope-bound shared fill
@@ -189,7 +204,11 @@ this parent complete.
   retry/backoff, 250 ms worker polling, p99
   invalidation target, exact 5,000/5,001 ms health/forced-bypass threshold,
   zero value GET/fill while forced, bounded prune and no
-  dropped pending event.
+  dropped pending event. Exercise 4,096/4,097 saturation and 3,073/3,072
+  hysteresis independently for unresolved events and active attempts; more than
+  100,000 sequential settled invalidations must remain bounded without bypass.
+  Prove the independent Redis durable-drain fence stays forced through outage,
+  pending and claimed rows, then clears only after healthy/no-pending/no-claimed.
 - Lifecycle tests prove the L02 handle stops new claims, drains within its exact
   bound, closes Pub/Sub idempotently, and reports timeout without closing DB
   early. Coherence tests prove immediate failure includes affected finite tags,

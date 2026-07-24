@@ -47,9 +47,15 @@ receive new behavior.
   installation/reset authority and return a receipt without sharing ownership.
   Page-author, reverse-role, post-tag, and media-tag
   predicates consume the four exact evidence-owned TASK-551-05 indexes.
-3. `TASK-551-03-L03` consumes L01 and the baseline budgets for aggregate,
-   webhook and solution-kit batching. `seoService.ts` and
-   `importExportService.ts` remain exclusively TASK-551-09-owned.
+3. `TASK-551-03-L03` consumes L01 and the baseline budgets for analytics,
+   dashboard, webhook and solution-kit batching. It owns the grounded per-export
+   statement caps, atomically migrates webhook service/delivery/route/schema/
+   client/UI to 50/100 keyset envelopes with one lateral latest-delivery read,
+   changes the currently uncalled event lookup to a backpressured 100/250
+   `AsyncIterable`, bounds delivery retries at five, and splits the installer by
+   exact type/snapshot/operation/repository ownership and transaction receipts.
+   `seoService.ts` and `importExportService.ts` remain exclusively
+   TASK-551-09-owned.
 
 L02 and L03 may not land in parallel. Each leaf reads the current source before
 editing and has sole ownership of every path in its allowlist.
@@ -92,7 +98,10 @@ modes and L02's smoke is not deferred to TASK-551-08.
   results. Every other booking/form collection uses its exact L02 keyset
   envelope; no caller reconstructs all pages.
 - Keyset pages use a deterministic unique tie-breaker and return no duplicate or
-  missing record across equal-sort-value page boundaries.
+  missing record across equal-sort-value page boundaries. Cursors use L01's
+  exact two-segment wire and code-owned typed `KeysetSpec`; request bytes can
+  never select a column/order/null policy. Previous traversal reverses SQL order
+  plus result rows exactly as L01 specifies and never uses offset.
 - Representative large-fixture list endpoints execute at most 3 SQL statements;
   each list uses at most one bounded page query, one fixed-row global summary
   aggregate and one bounded relation-facet batch in one read-only repeatable-read
@@ -102,7 +111,9 @@ modes and L02's smoke is not deferred to TASK-551-08.
   stat cards, role/folder/tag facets, storage totals and booking summaries remain
   collection-global across page navigation and are never derived from a page or
   auto-fetched full list. Aggregate dashboards execute at most 8 statements and
-  never grow with row count.
+  never grow with row count. L03 additionally pins every grounded analytics/
+  dashboard export to its exact 1/2/4-statement cap and migrates webhook list/
+  history plus all route/Admin consumers under one writer.
 - Initial form-submission lists transfer no payload and execute no hidden detail
   query; one accessible row expansion performs one parent-scoped point query and
   keeps payload only in component memory until close/auth lifecycle. Its success
@@ -111,6 +122,10 @@ modes and L02's smoke is not deferred to TASK-551-08.
   fallback and all existing booking tabs have direct compatibility tests.
 - Bulk operations use bounded chunks of at most 500 rows/parameters within the
   PostgreSQL bind limit and keep all-or-nothing semantics where promised.
+- Webhook pages default to 50/max 100, event targets stream in default 100/max
+  250 batches, and delivery attempts cap at five. Solution-kit plans cap at 500
+  operations/4 MiB, child writes chunk at 100, and each committed domain
+  operation shares its transaction with its success receipt.
 - Booking writes map the already-landed named exclusion/check constraints and
   retain the service-level advisory lock for deterministic conflict UX.
 - Touched legacy modules above 1,000 physical lines are cohesively split first;
@@ -128,6 +143,9 @@ modes and L02's smoke is not deferred to TASK-551-08.
   access evaluator, nonce/signature/CAPTCHA policy, and public-write bucket.
 - Authorization predicates are applied before cursor and limit processing.
   Cursor material is scope-bound and tamper-evident but never grants access.
+- Routes treat the cursor as an opaque L01 value. Only a code-owned spec selects
+  fields; schema/value/spec/version/signature/age failures map to the same public
+  `cursor_invalid` without revealing the failing field or parse stage.
 - No route may read cursor secrets from `process.env`. TASK-551-03-L01 exports
   exactly `PaginationCursorKeyring`, `loadPaginationCursorKeyring(env)`,
   idempotent `registerPaginationCursorLifecycleParticipant()`, and fail-closed

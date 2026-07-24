@@ -17,7 +17,9 @@
 Create a Bun-free strict configuration owner for pool size, cluster connection
 budget, connect/idle/lifetime/query/lock/idle-in-transaction timeouts,
 PgBouncer mode, and the session-affine maintenance connection contract. It must
-not import `db/client` or create network connections.
+not import `db/client` or create network connections. The same exported fleet
+parser is consumed by application identity and migration rollout; no leaf owns a
+second runtime/worker count parser.
 
 ## Sub-Tasks
 
@@ -34,12 +36,17 @@ source, cache/Redis paths, and all active TASK-511/517/493/518 paths.
 ## Implementation Pseudocode
 
 ```ts
+type DatabaseFleetConfig = Readonly<{
+  runtimeProcessCount: number;
+  workerProcessCount: number;
+  totalProcessCount: number;
+}>;
+
 type DatabaseRuntimeConfig = Readonly<{
+  fleet: DatabaseFleetConfig;
   poolMax: number;
-  replicas: number;
   serverMaxConnections: number;
   reservedConnections: number;
-  workerConnectionReserve: number;
   migrationConnectionReserve: number;
   connectTimeoutSeconds: number;
   idleTimeoutSeconds: number;
@@ -53,14 +60,26 @@ type DatabaseRuntimeConfig = Readonly<{
   maintenanceUrlConfigured: boolean; // presence only; never the secret
 }>;
 
+export function parseDatabaseFleetConfig(
+  env: Readonly<Record<string, string | undefined>>,
+): DatabaseFleetConfig {
+  const runtimeProcessCount = strictInteger(env.CODERSO_RUNTIME_REPLICA_COUNT ?? "1", 1, 256);
+  const workerProcessCount = strictInteger(env.CODERSO_WORKER_REPLICA_COUNT ?? "0", 0, 256);
+  return Object.freeze({
+    runtimeProcessCount,
+    workerProcessCount,
+    totalProcessCount: safeAdd(runtimeProcessCount, workerProcessCount),
+  });
+}
+
 export function parseDatabaseRuntimeConfig(env: Readonly<Record<string, string | undefined>>) {
   const config = strictParseAndClamp(env);
   const minimumReserved = Math.ceil(config.serverMaxConnections * 20 / 100);
-  const planned = config.poolMax * config.replicas
+  const processPools = safeMultiply(config.poolMax, config.fleet.totalProcessCount);
+  const planned = processPools
     + (config.maintenanceMode === "primary"
       ? 0
-      : config.maintenancePoolMax * config.replicas)
-    + config.workerConnectionReserve
+      : safeMultiply(config.maintenancePoolMax, config.fleet.totalProcessCount))
     + config.migrationConnectionReserve;
   const available = config.serverMaxConnections - config.reservedConnections;
   if (config.reservedConnections < minimumReserved || available <= 0 || planned >= available)
@@ -74,11 +93,11 @@ The exact accepted environment contract is:
 | Key | Default | Accepted bound |
 |---|---:|---:|
 | `DB_POOL_MAX` | `10` | integer `1..50` |
-| `DB_REPLICA_COUNT` | `1` | integer `1..64` |
+| `CODERSO_RUNTIME_REPLICA_COUNT` | `1` | integer `1..256`; number of runtime processes that each own one `DB_POOL_MAX` pool |
+| `CODERSO_WORKER_REPLICA_COUNT` | `0` | integer `0..256`; number of worker processes that each own one `DB_POOL_MAX` pool |
 | `DB_SERVER_MAX_CONNECTIONS` | `103` | integer `10..10_000` |
 | `DB_RESERVED_CONNECTIONS` | `21` | integer `1..5_000`, less than server maximum and at least `ceil(server maximum × 20 / 100)` unless TASK-551-01 evidence explicitly amends the contract |
-| `DB_WORKER_CONNECTION_RESERVE` | `2` | integer `0..32` |
-| `DB_MIGRATION_CONNECTION_RESERVE` | `1` | integer `1..8` |
+| `DB_MIGRATION_CONNECTION_RESERVE` | `3` | integer `3..8`; one reserved migration/advisory-lock session plus two simultaneous activity-visibility probes |
 | `DB_CONNECT_TIMEOUT_SECONDS` | `10` | integer `1..60` |
 | `DB_IDLE_TIMEOUT_SECONDS` | `30` | integer `1..600` |
 | `DB_MAX_LIFETIME_SECONDS` | `1800` | integer `60..86_400` |
@@ -95,7 +114,10 @@ never returned by this parser. `DB_MAINTENANCE_URL` is likewise consumed only
 by L02; L01 returns the non-secret `maintenanceUrlConfigured` boolean so
 callers cannot accidentally log or serialize the URL. Reject unknown `DB_*`
 keys owned by Coderso, but
-do not reject unrelated process variables or standard `PG*` variables. Explicit
+do not reject unrelated process variables or standard `PG*` variables. Reject
+legacy `DB_REPLICA_COUNT` and `DB_WORKER_CONNECTION_RESERVE`: accepting either
+would permit a fleet declaration that disagrees with application identity or
+the migration adapter. Explicit
 malformed/out-of-range values fail; they are never silently clamped. PgBouncer
 transaction mode maps to postgres.js `prepare: false`. Non-integers, overflow,
 negative values, unsafe timeout ordering, insufficient reserve, or zero
@@ -123,16 +145,24 @@ declares dedicated infrastructure and always budgets at least two maintenance
 sessions.
 After safe-integer bounds, compute `minimumReserved = ceil(serverMax * 20 / 100)`,
 `available = serverMax - reserved`, and
-`planned = replicas * poolMax + (maintenanceMode === "primary" ? 0 : replicas
-* maintenancePoolMax) + workerReserve + migrationReserve`. Require
+`planned = (runtimeProcessCount + workerProcessCount) * poolMax +
+(maintenanceMode === "primary" ? 0 : (runtimeProcessCount +
+workerProcessCount) * maintenancePoolMax) + migrationConnectionReserve`.
+Every runtime and worker process owns one primary pool; every process also owns
+the distinct maintenance pool when that mode is selected. The migration reserve
+is at least three because the rollout uses one reserved physical connection for
+its advisory lock/GUC-bound Drizzle transaction and two simultaneous named
+visibility probes. Require
 `reserved >= minimumReserved` and strictly `planned < available`; equality fails.
 
 ## Testing Requirements
 
-- Default resolves to pool 10, primary maintenance, planned 13,
+- Default resolves to runtime/worker counts `1/0`, pool 10, primary maintenance,
+  migration reserve 3, planned 13,
   minimum/reserved 21, and available 82
   under the 103-connection ceiling.
-- Multi-replica boundary, reserved headroom, numeric overflow, malformed values,
+- Multi-runtime, worker, combined-fleet, reserved-headroom, numeric overflow,
+  malformed values,
   exact defaults/bounds, timeout ordering, unknown `DB_*` keys, and PgBouncer
   enum are table-driven.
 - The complete compatibility matrix is table-driven. Pin missing/blank/extra
@@ -148,6 +178,10 @@ After safe-integer bounds, compute `minimumReserved = ceil(serverMax * 20 / 100)
 - Pin 103 boundaries: reserve 20 fails/21 passes; at reserve 21, planned 81
   passes/82 fails. Pin `ceil(10×20/100)=2`, `ceil(101×20/100)=21`, reserve
   `>= serverMax` rejection, and multiplication overflow rejection.
+- Pin that adding one worker adds a complete primary pool and, in direct/session
+  mode, a complete maintenance pool. Reject legacy fleet keys, a migration
+  reserve below three, and any adapter/application-identity fixture whose
+  runtime/worker counts differ from `parseDatabaseFleetConfig`.
 - Importing the module performs no env mutation, DB import, timer, or I/O.
 
 ## Security Contract
@@ -173,8 +207,9 @@ No docs in this leaf; hand the exact env table to TASK-551-02-L02/10-L02.
 - Minimum reserved headroom is at least 20% unless an explicit lower safe value
   is justified by TASK-551-01 evidence.
 - All durations and connection counts use the exact finite bounds above, and
-  `replicas * poolMax + dedicated maintenance pools + worker reserve + migration reserve` is strictly less
+  `totalProcessCount * poolMax + totalProcessCount * any dedicated maintenance
+  pool + migration reserve` is strictly less
   than `server maximum - operational reserve`; equality is rejected.
 - No parsed/config-error/log/snapshot value contains either database URL. Every
   configuration that enables a distinct maintenance pool budgets all of its
-  per-replica connections before startup.
+  per-process connections before startup.

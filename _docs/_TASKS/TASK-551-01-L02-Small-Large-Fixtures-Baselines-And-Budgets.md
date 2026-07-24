@@ -28,6 +28,7 @@ None; this is an executable leaf.
 **Allowlist:** `scripts/task-551-database-baseline.ts`,
 `tests/perf/fixtures/task551DatabaseScale.ts`,
 `tests/perf/fixtures/task551DatabaseBudgets.ts`, and
+`tests/perf/fixtures/task551AdminReadStatementShapes.ts`, and
 `tests/perf/database-query-baseline.test.ts` only.
 
 **Forbidden:** production code, migration/meta files, task/changelog/workflow
@@ -44,12 +45,15 @@ Seed one isolated family scenario at a time with these exact row counts:
 | media | 2,000 | 100,000 | 20 / 1,000 folders; exactly 10% null folder |
 | form submissions | 2,000 | 100,000 | 20 / 200 forms, even distribution |
 | bookings | 2,000 | 100,000 | 20 / 1,000 resources/services; 20% each current status |
+| `booking_blackouts` | 500 | 100,000 | exactly 10% global (`resource_id IS NULL`); remaining rows cycle evenly through the profile resources |
+| `booking_service_resources` | 100 | 5,000 | exactly five distinct resources per service, ordered by `resource_id` |
+| `booking_schedules` | 140 | 7,000 | exactly seven day rows per resource, ordered by day/start/id |
 | search history | 5,000 | 100,000 | distributed evenly by profile users |
 | `access_logs` | 5,000 | 100,000 | actor/user references cycle through profile users; methods cycle `GET,POST,PATCH,DELETE`; status codes cycle `200,201,400,403,404,429,500` |
 | `audit_logs` | 5,000 | 100,000 | actor references cycle through profile users including every tenth row `NULL`; actions cycle `create,update,publish,delete` |
 | `email_delivery_logs` | 5,000 | 100,000 | status cycle `queued,sent,failed`; provider cycle `smtp,mock`; no support rows |
 | `integration_requests` + `integrations` support | 5,000 + 10 | 100,000 + 200 | requests distributed evenly across exact support integrations; status cycle `pending,success,failed` |
-| `webhook_deliveries` + `webhooks` support | 5,000 + 20 | 100,000 + 200 | deliveries distributed evenly across support webhooks; status cycle `pending,success,failed` and attempts cycle `0,1,2,3` |
+| `webhook_deliveries` + `webhooks` support | 5,000 + 20 | 100,000 + 200 | deliveries distributed evenly across support webhooks; status cycle `pending,success,failed`, attempts `0,1,2,3`; webhook events cycle ten canonical values and event 0 appears on exactly 10% |
 | `sessions` | 5,000 | 100,000 | users cycle through profile users; exactly 20% revoked, 20% expired-unrevoked, and 60% active |
 | `password_resets` | 5,000 | 100,000 | users cycle through profile users; synthetic unique token hashes are never emitted |
 | `preview_tokens` / `post_preview_tokens` | 2,500 / 2,500 | 50,000 / 50,000 | page and post parents cycle independently; synthetic unique token hashes are never emitted |
@@ -106,11 +110,15 @@ Each budget record names one of the exact `point`, `filter-1pct`,
 `filter-10pct`, `filter-50pct`, `search-common`, `search-rare`, `search-miss`, or
 `search-hidden`, `equal-sort-page`, `pages-author`, `users-role-30pct`,
 `entries-author`, `entries-type-author`, `posts-author`, `posts-tag-10pct`,
-`media-tags-and-1pct`, or `public-html-dependencies-128` cases. Author ordinal 0
+`media-tags-and-1pct`, `webhooks-event-10pct`,
+`webhook-deliveries-parent`, `page-latest-autosave`, or
+`public-html-dependencies-128` cases. Author ordinal 0
 returns pages `5/10`, entries `20/10`, typed entries for type ordinal 0 `1/1`,
 and posts `10/10` (small/large); `users-role-30pct` means role 1 and returns
-30/3,000 users. The two tag cases use the literal binds above and return exactly
-100/10,000 posts and 20/1,000 media rows. No seed or plan test may choose its own
+30/3,000 users. The two tag cases return exactly 100/10,000 posts and 20/1,000
+media rows. Webhook event 0 matches 2/20 hooks, one parent's deliveries are
+250/500, and latest page autosave returns exactly one projected row from a
+20/100-version parent. No seed or plan test may choose its own
 distribution, predicate, tag array, or query token.
 
 `public-html-dependencies-128` is the initial TASK-551-09-L01 planned-caller
@@ -200,10 +208,39 @@ exactly 400/20,000, `upcoming` exactly 1,000/50,000, and `startsAt <= asOf`
 (`pastOrCurrent`) exactly 1,000/50,000. Tests derive none of these classes from
 the host timezone.
 
-Every summary test asserts both unfiltered global values and exact
-`matchingTotal` after one filter from the declared 1%/10%/50% or status cases.
-First/middle/last pages must return byte-identical global summaries and facet
-pages; no expectation may be calculated from returned `items.length`.
+Every filtered summary fixture expects `matchingTotal:null`, at most the
+requested bounded `items`, and `hasMore` derived only from the `LIMIT + 1` row.
+It instruments SQL and requires zero filtered `COUNT(*)`. First/middle/last and
+filtered pages return byte-identical fixed global summaries and facet pages;
+filters may change only `items`, `nextCursor`, and `hasMore`, and no global
+expectation is calculated from returned `items.length`.
+
+### Frozen future Admin statement shapes and budgets
+
+`task551AdminReadStatementShapes.ts` is the test-only source of the exact 32
+planned TASK-551-03-L02 statement shapes enumerated by L01. Every member owns
+its required future file/symbol, exact projected columns, authorization/parent
+and normalized-filter predicate slots, keyset predicate, join direction, order,
+`LIMIT` expression, fixture case, and expected output bound. It contains no
+production import and accepts no request-selected identifier or raw CLI SQL.
+Pages are `LIMIT <=101`, fixed summaries return exactly one row, ordinary facets
+return `<=51`, the two discriminated `UNION ALL` facet batches return `<=102`,
+and capped service-resource/schedule lists read `<=101`. Fixed summaries omit
+all normalized row filters; facets retain authorization/parent scope but omit
+row filters. Page statements include them. No statement contains a filtered
+count.
+
+`task551DatabaseBudgets.ts` contains exactly 32 corresponding records. Each has
+literal finite `small` and `large` objects with numeric `queryCountMax=1`,
+`rowsReadMax`, `rowsReturnedMax`, `transferredBytesMax`, `sharedBuffersMax`, and
+normalized `p50MsMax/p95MsMax/p99MsMax`; `null`, `Infinity`, `NaN`, formulas,
+sentinel zero, or a profile derived at check time is invalid. The frozen result
+bounds above are hard maxima, while measured work/latency ceilings come only
+from this leaf's reviewed `--freeze` run and thereafter cannot increase without
+a contract amendment. TASK-551-05-L02 imports these 32 shapes/budgets read-only,
+adds five preserved non-Admin plan members, and writes the 37-member sanitized
+plan receipt. TASK-551-03-L02 later compares every compiled production
+statement to its matching shape byte-for-byte before running behavior tests.
 
 IDs are UUIDv5 from `(validatedRunScope, profile, family, ordinal)`. Timestamps
 other than form-submission `created_at` and booking `starts_at`/`ends_at` follow
@@ -244,6 +281,24 @@ const TASK551_SEARCH_HIT_COUNTS = strictReadonly({
   media: { small: { common: 20, rare: 2 }, large: { common: 1_000, rare: 100 } },
   assistantDocs: { small: { common: 2, rare: 1 }, large: { common: 100, rare: 10 } },
   assistantChunks: { small: { common: 20, rare: 2 }, large: { common: 1_000, rare: 100 } },
+});
+
+type NumericPlanBudget = StrictReadonly<{
+  queryCountMax: 1;
+  rowsReadMax: number;
+  rowsReturnedMax: 1 | 51 | 101 | 102;
+  transferredBytesMax: number;
+  sharedBuffersMax: number;
+  p50MsMax: number;
+  p95MsMax: number;
+  p99MsMax: number;
+}>;
+
+assertExactAdminShapeAndBudgetSets({
+  expectedIds: TASK551_ADMIN_READ_PLANNED_IDS, // exact 32-member tuple from L01
+  shapes: TASK551_ADMIN_READ_STATEMENT_SHAPES,
+  budgets: TASK551_DATABASE_BUDGETS,
+  profiles: ["small", "large"],
 });
 
 function expectedSearchHits(
@@ -323,6 +378,9 @@ rows-returned, transferred-byte, and pool-wait ceilings to
   `100/10,000`, and the sorted unique media AND array `20/1,000`. Mutating the
   author/type formula, author cycling, role direction, tag spelling/order/
   deduplication, or second-tag ordinal fails fixture validation before capture.
+- Pin webhook list/event/delivery and page-latest-autosave evidence independently:
+  list totals `20/200`, event 0 `2/20`, parent deliveries `250/500`, and latest
+  autosave exactly one from the 20/100-version parent with no document-wide read.
 - Pin the five formerly missing retention-family scenarios, their literal
   eligible/boundary/anchor counts, batch edges, child ordering, and dry-run zero-
   mutation behavior. Mutating one timestamp/status/anchor or omitting a policy
@@ -347,6 +405,14 @@ rows-returned, transferred-byte, and pool-wait ceilings to
   and Tokyo.
   Mutating either exception back to the general January 1 timestamp rule must
   fail before summary/plan measurement.
+- Assert exact 32-member ID/set equality across planned inventory, statement
+  shapes, fixture scenarios, fingerprint keys, and numeric budgets. Exercise
+  every shape at both scales; a missing profile, non-finite ceiling, wrong
+  projection/order/predicate/bound, filtered count, or unowned supporting table
+  fails before TASK-551-02/TASK-551-05 dispatch.
+- A filtered three-page fixture pins `matchingTotal:null`, bounded `items`, exact
+  `hasMore`, zero filtered-count statements, and byte-identical fixed summary
+  plus facet bytes versus the unfiltered first/middle/last snapshots.
 
 ## Security Contract
 
@@ -383,3 +449,6 @@ No shared docs; emit the sanitized budget contract for TASK-551-10-L02.
   a later leaf cannot increase any budget without a task-contract amendment.
 - TASK-551-02 remains blocked until every gated inventory ID has finite
   checked-in numeric latency/query/row/byte/pool ceilings.
+- All 32 future Admin statement IDs have exact shape coverage and two finite
+  numeric budget receipts; the two prior planned callers retain their existing
+  independent budget contracts.

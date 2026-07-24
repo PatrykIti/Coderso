@@ -6,8 +6,10 @@
 **Category:** Documentation / Operations / Task Board / Changelog / Closure
 **Estimated Effort:** Large
 **Dependencies:** exact compile-green owner sequence
-TASK-551-01 → 02 → 05 → 03-L01 → 06-L01/L02/L03 → 03-L02 →
-03-L03 → 04 → 07 → 08 → 09 → 01-L01 final refresh complete;
+TASK-551-01 → 02 → 08-L03 INITIAL → 05 → 03-L01 → 06-L01/L02/L03 →
+07-L01 → 09-L04 INITIAL → 03-L02 → 03-L03 → 04 → 07-L02 →
+08-L01/L02/L03 FINAL → 09-L01/L02/L03/L04 FINAL →
+01-L01 final refresh complete;
 TASK-551-10-L01 aggregate/full gates and Redis smoke PASS; TASK-551-11 post-
 audit plus fresh final-drift PASS; every production owner terminal-ready with no
 unresolved finding
@@ -45,6 +47,7 @@ Final source-of-truth documentation:
 - `README.md`;
 - `_docs/ARCHITECTURE.md`;
 - `_docs/CMS_API.md`;
+- `_docs/SEARCH_SPEC.md`;
 - `_docs/ORM_SPEC.md`;
 - `_docs/DATA_MODEL.md`;
 - `_docs/TESTING_STRATEGY.md`;
@@ -117,9 +120,14 @@ formatter that rewrites unrelated documentation.
   seven-day `500/25,000` and spam `200/10,000`; booking UTC/New_York/Tokyo and
   modulo-100 same-day-past/same-day-future/next-1..40/prior-1..40 recipe, +60-
   minute end, today `400/20,000`, upcoming/past-current `1,000/50,000` each;
-- TASK-551-02's default pool/replica/server/reserve/worker/migration values
-  `10/1/103/21/2/1`, planned `13`, available `82`, strict
-  `planned < available`, exact lifecycle APIs, default Bun lifecycle path
+- the exact author/type-author/role/tag, webhook event/delivery, latest-autosave
+  and 128-tuple/101-root/16,384-byte public-dependency cases; the `2036-01-01`
+  retention clock, literal missing-family cutoff/anchor/child-first counts and
+  `499/500/501/2,000/2,001` batch edges;
+- TASK-551-02's one shared fleet parser: runtime `1..256` default `1`, worker
+  `0..256` default `0`, pool default `10`, migration reserve `3`, default planned
+  `1*10 + 0*10 + 3 = 13`, strictly below validated server availability; exact
+  lifecycle APIs, default Bun lifecycle path
   `tests/integration/server/task551DatabaseLifecycle.test.ts`,
   `tests/integration/server/task551RuntimeEntrypoints.test.ts`,
   `2_000/5_000/10_000/15_000 ms` plus 10-second DB-close deadlines, and exact
@@ -135,6 +143,18 @@ formatter that rewrites unrelated documentation.
   `MAX_QUERY_FINGERPRINTS=512`, and
   `MAX_COUNTER_VALUE=Number.MAX_SAFE_INTEGER`; document exported
   `assertMaintenanceSessionAffinity()`, `DB_MAINTENANCE_MODE=primary|direct|session`, pool max `2..4`, secret URL and budget inclusion. Primary startup never probes; disabled-scheduler `off+primary+pool1` is valid and `verifyDatabaseSessions` checks only that session. Explicit direct/session probes once at DB startup and reuses that lifecycle result; enabled scheduler awaits it before timer/listen and fails below two sessions or with transaction+primary;
+- pure `databaseApplicationIdentity.ts`: strict runtime/worker kind, separate
+  runtime `1..256`/worker `0..256` counts, globally unique replica IDs, and exact
+  every-session `coderso:runtime|worker|maintenance:<id>` or
+  `coderso:migration:<operationUuid>` names, with no host/URL/tenant/credential;
+- executable sanitized known-interval `pg_stat_statements` receipts before
+  prioritization and before/after comparisons, exact classes
+  `application|migration|maintenance|external_diagnostic|unknown`, and no shared-
+  stats reset. Record owner-supplied Render evidence only as a 4m51 full-schema
+  `row_to_json(t)::text ~ ?` diagnostic UNION plus 30–60s+ `access_logs` regex
+  shapes, never binds/data. Classify `external_diagnostic` only with operator
+  evidence, else `unknown`; exclude from app decisions, forbid a one-off index,
+  and document clean read-only/strict-timeout/prefer-replica bounded diagnostics;
 - exact signal-aware dedicated-session static execute/transaction/liveness/
   cancel-and-rollback API; retention lock, all batches and unlock on one backend
   PID; abort/SQL cancel plus confirmed rollback/termination within 4,500 ms
@@ -148,17 +168,27 @@ formatter that rewrites unrelated documentation.
   `pg_constraint.contype = 'x'` parity, clean/prior/rollback/forward and fresh-
   generator no-add/no-drop guards. Explain that one 05-L01 writer atomically owns
   schema exports/descriptor, SQL, snapshot, journal, and tests; never claim DSL
-  support that the installed Drizzle version lacks;
+  support that the installed Drizzle version lacks. Document one reserved
+  physical session; exact GUCs `coderso.task551_operation_id`,
+  `coderso.task551_receipt_v2`, `coderso.task551_receipt_sha256`; canonical
+  1..65,536-byte UTF-8 v2 receipt/SHA-256; in-transaction static SQL validation;
+  and clean/prior, rollback/replay, failure rollback, repeat/status/recovery gates;
 - the closed form/booking/list/retention index catalog and assistant-ingest
   `started_at` expressions; exact `pages_author_list_updated_id_idx`, role-leading
   `user_roles_role_user_idx`, and `posts_tags_gin_idx`/`media_tags_gin_idx` as
-  `jsonb_path_ops` GIN plus parameterized `@>` predicates. Include read-performance
+  `jsonb_path_ops` GIN plus parameterized `@>` predicates. Also name the exact
+  entry/typed-entry/post-author, webhook list/delivery/event and latest-autosave
+  members. Include read-performance
   `cache_outbox_unprocessed_age_idx(created_at,id) WHERE processed_at IS NULL`,
   exact `readOldestUnprocessedAge`/`cache_outbox_oldest_unprocessed` query ordered
-  created-at/id `LIMIT 1` over claimed/backed-off rows, plus 1k/100k EXPLAIN/write budgets. The mutation drain remains through the ordered
-  page/content/widget revision-unique group and `apply-resume-check --through-group revision-integrity`; only its durable ready/valid barrier resumes old writers before the online read-performance group and final admission. Preserve numeric thresholds, crash-resume and
-  concurrent-drop rollback, with no new index DDL in the transaction; exact
-  `resolve-receipt` then two `apply-resume-check` invocations, second zero-DDL;
+  created-at/id `LIMIT 1` over claimed/backed-off rows, plus 1k/100k EXPLAIN/write
+  budgets. Document the sole version-2 `rollout-forward`: exact app-name drain,
+  guarded transaction, durable revision-integrity barrier, permanent rejection
+  of the old `max(version)+1` binary, compatible-binary-only external traffic
+  during read-index builds, and offline-single cold through final catalog. First
+  new-binary traffic makes rollback forward-fix only. Preserve numeric/crash/
+  concurrent-drop gates; transaction has no index DDL. Run rollout-forward twice
+  (second zero-DDL/transition), then `status`;
 - TASK-551-06 analytics upgrade compatibility: only
   `ANALYTICS_RETENTION_DAYS`, absent/malformed/non-finite → 365, finite floor+
   clamp `30..1095`, enablement only through `RETENTION_ANALYTICS_ENABLED`, both
@@ -171,23 +201,30 @@ formatter that rewrites unrelated documentation.
   persists; analytics request writes execute zero inline prune SQL;
 - the initial and post-09 final TASK-551-01-L01 inventory phases, the final
   exact-set receipt, and the rule that later callers never become artifact writers.
+  Initial is 34 planned fingerprints: 32 named Admin plus
+  `cache-outbox-oldest-unprocessed` and `public-html-dependencies-128`. The plan
+  registry is 37 IDs/38 cases/76 small+large receipts: those 32 once plus
+  `webhooks-created-keyset`, `webhook-deliveries-parent-keyset`,
+  `webhooks-event-batch`, `page-latest-autosave`, and the outbox fingerprint.
 
 `_docs/CMS_API.md` must document the shipped bounded Admin list query contracts:
-opaque cursor and limit fields, stable pagination/error semantics, narrow list
+the exact two-segment cursor, code-owned typed `KeysetSpec`, previous-page SQL/
+output reversal, generic public parse/spec/signature error mapping, limit fields, narrow list
 projections, unchanged auth/RBAC/CSRF/rate-limit behavior, and the exact affected
 Admin endpoints from TASK-551-03-L02. For every metric-bearing keyset response, document the exact
-`{items,nextCursor,hasMore,summary,facets}` envelope: only `matchingTotal` follows
-normalized row filters; every other domain summary field and bounded author/
-content-type/role/folder/tag facet retains global authorized/parent scope across
-three-plus pages and filters. Facet pages are strict
+`{items,nextCursor,hasMore,summary,facets}` envelope: arbitrary filters use
+`matchingTotal:null`/`exactness:"not_computed"` and no filtered `COUNT`; fixed
+summary fields and bounded author/content-type/role/folder/tag facets are exact
+at one authorized/parent read-only `REPEATABLE READ` snapshot. Facet pages are strict
 `{items,nextCursor,hasMore}` with default/max `50/100` and no auto-fetch. One page
 query, one fixed aggregate row, and at most one bounded relation-facet batch total
-at most three SQL statements; page concatenation, per-row lookups, and auth
+at most three separately inventoried/budgeted/planned SQL statements; page concatenation, per-row lookups, and auth
 leakage are forbidden. Record that 06-L02 owns the summary-only
   family-specific page `{id,pageId,version,kind,title,slug,createdAt,createdBy:{id,name,email}|null}`
   and detail `{id,detailPageId,version,kind,createdAt,createdBy:string|null}`
   revision envelopes (no invented `reason`), and 03-L02, only after 06-L03, solely owns
-its route/schema/client/UI adoption, the full seven-client consumer graph,
+its route/schema/client/UI adoption after current 09-L04 INITIAL authority and
+08-L03 INITIAL header receipts, the full eight-client consumer graph,
   bounded picker/search/load-more migration, cohesive >1,000-line splits, direct
   tests, and UI smoke. Name `formReadService`, its exact FormListItem fields
   `id,name,slug,status,description,submissionAccess,updatedAt`. Every
@@ -217,6 +254,16 @@ is internal `POST /admin/api/search/history`: session actor, `content:read`, CSR
 `admin_write`, strict reject-unknown four-key body, `{recorded:boolean}`, 409
 idempotency conflict, no API-key/public/GET alias. Record `searchClient`/
 `useSearchResults` one-UUID-per-normalized-UI-intent/retry behavior.
+Document that search v1 has no cursor: five source arms each cap exact-email→FTS
+→non-overlapping-trigram at 51, at most 255 enter tier-first global dedup/rank
+and 51 leave; every arm's plan budget is independent of final top-k survival.
+Update `_docs/SEARCH_SPEC.md`: Unicode `L/M/N/_` runs become `token:*` joined by
+` & ` for bounded `to_tsquery('simple', :prefixQuery)`; trigram uses GIN `%`
+after static transaction-local
+`SET LOCAL pg_trgm.similarity_threshold='0.300'`. LIKE/ILIKE/regex fallback is forbidden.
+Document page autosave's parent lock, one latest projected version/id row, equal-
+snapshot zero write, exact-predecessor-only delete on change, scheduler-only old
+history, and two/six-statement 100k-history/50-writer evidence.
 
 ### Server cache source of truth
 
@@ -225,6 +272,12 @@ idempotency conflict, no API-key/public/GET alias. Record `searchClient`/
 - the exact `ServerCache`, `ServerCacheStore`, `CachePolicy`, key/envelope,
   generation/tag, invalidation-plan, health and telemetry owners shipped by
   TASK-551-07/08;
+- complete store `describe/get/delete/readGenerations/bumpGenerations/
+  writeIfGenerationsMatch/health/close`, cloned bytes and normalized
+  `written|generation_changed|unknown(physicalOutcome:"unknown")` outcomes;
+  the public runtime exposes only `mode/cache/invalidation.applyAfterCommit/
+  health`, while store/controller/coordinator/workers/close remain private;
+  startup validates the exact four-policy key+envelope capacity catalog;
 - policy-branded conditional entries with `fillKind`, positive/nullable-negative
   policy TTL ceilings and value ceiling. Both stores strictly decode each
   envelope, match entry/envelope `fillKind`, select the positive or required
@@ -239,10 +292,22 @@ idempotency conflict, no API-key/public/GET alias. Record `searchClient`/
   independent per-policy primary/companion TTL sampling with unequal atomic-pair
   TTLs permitted; negative-only TTL/no companion; resolve-cached behavior; zero consumer access
   to store write primitives;
+- exact loader triggers: backend null `store_absent`; returned expired/wrong-
+  generation/oversized/invalid bytes evicted as coarse `store_value_rejected`;
+  exact disabled reasons `ineligible|singleflight_saturated|coherence_bypass|
+  generation_unavailable|transport_unavailable|distributed_wait_timeout|
+  coordinator_closed|not_published_retry`. Every loader gets `{trigger,
+  companion}`; shared outcomes map absent/rejected/disabled to
+  `store_absent_no_publication`/`store_value_rejected`/`fill_disabled`, never the
+  trigger object. Disabled fill publishes nothing; manifest/HTML fills only true absence. Memory uses
+  one 64-entry expiry+eviction work cap and skips a 65th-victim insertion atomically;
 - public manifest-primary/HTML-companion and manifest-hit/HTML-primary/refreshed-
   manifest-companion directions, both-or-neither fill, uncached return value,
   positive-or-finite-reason-`no_fill` only (never negative), and authoritative
-  no-throw/no-encode/no-write output when render auditing discovers an exclusion;
+  no-throw/no-encode/no-write output when render auditing discovers an exclusion.
+  `public-html-manifest` is non-authorizing metadata with family-specific
+  `mutableVisibilityGate:"not_required"`; HTML requires current `strictly_public`
+  root+nested validation, and refreshed eligibility is a distinct post-render context;
 - distributed owner fills only through atomic
   `putIfGenerationsAndLeaseOwned`, which proves lease token plus all generations
   before one/two entries. Only `written` fills; every other result/uncertain renew
@@ -269,12 +334,18 @@ idempotency conflict, no API-key/public/GET alias. Record `searchClient`/
 - awaited `applyAfterCommit(plan)` before committed success returns, with no
   fire-and-forget/direct epoch call and a visible local observation or affected-
   tag fence before its applied/queued/bypassed resolution;
-- exact coherence transition semantics: an effective force/recover advances once,
-  a state-identical force/recover is a no-op, and every accepted local/PubSub
-  `invalidation_observed` advances affected epochs even when delivered more than
-  once. There is no event-dedup registry or second epoch mutator; observations
-  never clear fences or authorize stale/private data; overflow permanently
-  forces bypass until restart;
+- exact coherence transition semantics: source-bound observation tokens ignore
+  older/equal completions; current-token identical force/recover is a no-op;
+  every event-keyed observation advances epochs but clears no fence. Only the
+  same event's durable-processed signal after generation bump and conditional DB
+  completion clears its failed-post-commit fence; broad recovery, Pub/Sub and
+  another event cannot. Retain only concurrently unresolved events and active
+  attempts, independently capped at 4,096 with no settled tombstones. Saturation
+  temporarily bypasses all families without rejecting callbacks; recover only
+  when both counts are at most 3,072. Attempt tokens settle only after no callback
+  can report. More than 100,000 settled events stay
+  bounded. Redis has an independent durable-drain fence until healthy/no pending/
+  claimed rows; only safe-integer epoch/drain-generation overflow lasts to restart;
 - Pub/Sub's strict `{ eventKey, generationDigest }`-only payload. It carries no
   tags or domain identity; a subscriber treats the event key only as a wakeup,
   bounded-point-reads the outbox row, strictly normalizes finite tags, and emits
@@ -290,21 +361,30 @@ idempotency conflict, no API-key/public/GET alias. Record `searchClient`/
   DB-authoritative;
 - one authoritative SecuritySettings query on every public request before
   security/rate middleware. Structurally non-mutable routes total one query;
-  mutable page/home/post/content-entry detail/list routes add one exact point or
-  bounded ordered membership gate and total two. Document exact page/post/entry
-  projections, at most `pageLimit + 1`, unpublish/missing-representation/
-  membership/reorder fail-closed behavior, and zero other warm reads;
+  mutable detail/list routes read safe manifest metadata then add one parameterized
+  root+nested validator and total two. Document exact page/post/entry projections,
+  128 tuples/16,384 canonical bytes/101 roots, one aggregate row/no bodies,
+  unavailable/rejected/missing/private/change fail-closed behavior, and zero
+  HTML/content value GET/fill before a valid receipt;
 - public HTML TTL `0` as a pre-policy/generation/store bypass for manifest/HTML
   only, the independent fixed positive `public-runtime` bootstrap policy,
   positive TTL bounds, and forced affected-family bypass for locally known
   incoherence strictly above 5 seconds;
-- Admin deployment digest + crypto-random 128-bit session `authIncarnation` +
-  monotonic `authEpoch` + user/permissions scope, same-tab authenticated reload
-  reuse, rotation before login/logout/401/403/identity transition, memory-only
-  incarnation/persistent misses on storage failure, and no auth payload change;
-- fixed-order v3 UTF-8 JSON deployment and scope preimages, separate normalized/
-  deduplicated/byte-sorted permission and role ID arrays, exact caps and delimiter-
-  collision rejection;
+- Admin INITIAL installation tokens/reset subscribers and FINAL exhaustive module-
+  cache authority matrix; deployment digest + random 128-bit tab incarnation +
+  distinct cross-tab auth-generation nonce + monotonic auth epoch + user/
+  permissions, storage-ordered transitions/BroadcastChannel wakeup, reset/fence
+  of every cache/promise/map/read-through/prefetch registry, read-through set/
+  invalidate/refresh generation-first ordering, persistent misses on failure,
+  and no auth payload change;
+- fixed-order v3 deployment and `AdminCacheScopePreimageV3`
+  `{v,deploymentIdentity,authIncarnation,authGenerationNonce,authEpoch,userId,
+  permissions,roles}`. Pin 367-byte digest
+  `6c69458d5fdc22634a5fca20609e3accb4a6fe606905af2b2c522900770afbf7`
+  and nonce-only `222...` digest
+  `4214d494f425d2f595de703cd19662a2513d0d85871bff748bdb5d5cb728611d`;
+  rotation rejects old storage/events/delayed installs. Arrays are separately
+  normalized/byte-sorted; exact caps and delimiter-collision rejection apply;
 - decrypted/secret-bearing `SecuritySettings` as never cached and DB-authoritative,
   with only finite generation/coherence metadata or typed redacted projections;
 - commerce product data, form/booking submission nonces, booking slots token,
@@ -318,8 +398,9 @@ idempotency conflict, no API-key/public/GET alias. Record `searchClient`/
   surviving GET/HEAD may enter cache;
 - security-settings 2-second local lock timeout and transaction advisory
   `(551,904)` before same-tx read/merge/write; Redis exactly-one same-tx outbox,
-  memory zero outbox plus exactly-one awaited post-commit bump, conflict mapping,
-  and observation/fence before return;
+  memory zero outbox plus exactly-one awaited post-commit bump,
+  `settingsRoutes.ts` exact redacted 409 mapping, and observation/fence before
+  return; form actions are absent from render dependency/invalidation surfaces;
 - complete never-cache/security inventory and Admin browser-cache separation;
 - key/namespace rotation, Redis outage/reconnect, outbox backlog, corrupt value,
   stampede, deploy/rollback, incident response and exact-key cleanup runbooks;

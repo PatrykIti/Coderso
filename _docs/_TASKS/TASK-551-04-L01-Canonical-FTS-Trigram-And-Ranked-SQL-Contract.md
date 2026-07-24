@@ -78,8 +78,28 @@ const SEARCH_SOURCE_CONTRACT = strictReadonly({
   users: { vector: users.searchVector, trigram: TRIGRAM_INDEXED_SOURCE_CONTRACT.users, updatedAt: users.updatedAt, id: users.id },
 });
 
+export const TASK551_SEARCH_CONFIG = "simple";
+export const TASK551_PREFIX_TOKEN_MAX = 16;
+export const TASK551_PREFIX_TOKEN_CODE_POINT_MAX = 64;
+export const TASK551_TRIGRAM_MIN_CODE_POINTS = 3;
+export const TASK551_TRIGRAM_SIMILARITY_THRESHOLD = 0.3;
+const TASK551_PREFIX_TOKEN_PATTERN = /[\p{L}\p{M}\p{N}_]+/gu;
+
+function buildTask551PrefixTsquery(input: string): string {
+  const normalized = input.normalize("NFKC").trim().replace(/\s+/gu, " ");
+  if (codePointLength(normalized) < 2 || codePointLength(normalized) > 200 ||
+      utf8ByteLength(normalized) > 800) throw new Error("search_query_invalid");
+  const tokens = normalized.match(TASK551_PREFIX_TOKEN_PATTERN) ?? [];
+  if (tokens.length === 0 || tokens.length > TASK551_PREFIX_TOKEN_MAX ||
+      tokens.some((token) => codePointLength(token) > TASK551_PREFIX_TOKEN_CODE_POINT_MAX))
+    throw new Error("search_query_invalid");
+  // Every tsquery metacharacter is a separator, so no quote/backslash escape
+  // routine or raw interpolation exists.
+  return tokens.map((token) => `${token}:*`).join(" & ");
+}
+
 // Imported read-only from core/db/schema/searchVectors.ts; never reconstructed.
-const normalizedNeedle = normalizeTask551TrigramSql(parameterizedQueryText);
+const normalizedNeedleSql = normalizeTask551TrigramSql(parameterizedQueryText);
 
 function parseSearchRequest(input: unknown): StrictSearchRequest {
   // Reject unknown fields; normalize query; length 2..200; limit default 20/max 50.
@@ -87,9 +107,30 @@ function parseSearchRequest(input: unknown): StrictSearchRequest {
 
 async function searchAll(request: StrictSearchRequest, deps: SearchDeps): Promise<SearchItem[]> {
   const responseCap = request.limit + 1; // 2..51 including lookahead
-  // One SQL statement builds exact-email (users only, 0..1), FTS and optional
+  const prefixQuery = buildTask551PrefixTsquery(request.query);
+  // parseSearchRequest already owns NFKC/whitespace normalization; SQL still
+  // applies the imported canonical trigram normalizer to the bound needle.
+  const trigramEligible = codePointLength(request.query) >=
+    TASK551_TRIGRAM_MIN_CODE_POINTS;
+  return deps.db.transaction(
+    { isolationLevel: "repeatable read", readOnly: true },
+    async (tx) => {
+      if (trigramEligible && request.sources.some(isTrigramReceiptSelected)) {
+        await tx.execute(sql.raw(
+          "SET LOCAL pg_trgm.similarity_threshold = '0.300'",
+        ));
+        await assertSameBackendThreshold(tx, TASK551_TRIGRAM_SIMILARITY_THRESHOLD);
+      }
+      return executeRankedSearch(tx, { request, responseCap, prefixQuery,
+        trigramEligible, normalizedNeedleSql });
+    },
+  );
+  // One ranked statement builds exact-email (users only, 0..1), FTS and optional
   // trigram CTEs for each selected source. Authorization/publication/date
   // predicates are inside every source arm before its ORDER/LIMIT.
+  // One input CTE binds `to_tsquery('simple', :prefixQuery)` once. Each FTS arm
+  // uses `search_vector @@ fts_query` and
+  // `ts_rank_cd(search_vector, fts_query, 32)` exactly.
   //
   // Per source, exact-email consumes one slot when applicable; FTS consumes at
   // most the remaining responseCap slots. Trigram is emitted only for a source
@@ -102,8 +143,9 @@ async function searchAll(request: StrictSearchRequest, deps: SearchDeps): Promis
   // email before FTS before trigram; within a tier use score DESC, updatedAt
   // DESC, sourceType ASC, id DESC. Apply the same order globally and LIMIT
   // responseCap. FTS rank and trigram similarity are never compared across
-  // tiers. The +1 row is internal lookahead only; return the first request.limit
-  // items and add no cursor or unplanned response field.
+  // tiers. Trigram is exactly `search_trigram_text % normalizedNeedle` scored by
+  // `similarity(search_trigram_text, normalizedNeedle)`. The +1 row is internal
+  // lookahead only; return the first request.limit items and add no cursor.
 }
 
 // Imported read-only from L06's Bun-free searchHistoryContract.ts:
@@ -182,6 +224,18 @@ query-normalizer literal must be byte-identical to the schema/migration constant
 before PostgreSQL parsing, while live catalog equivalence remains a second
 semantic check.
 
+FTS parsing is closed and shared by Admin/public paths. Normalize NFKC and
+whitespace, enforce 2..200 code points and at most 800 UTF-8 bytes, extract at
+most 16 runs through the literal `/[\p{L}\p{M}\p{N}_]+/gu`, require each run at
+most 64 code points, and reject
+an empty/oversized token set rather than truncating. Punctuation—including
+hyphen—and every `to_tsquery` metacharacter are separators. Therefore the only
+emitted grammar is `token:*` joined by ` & ` and passed as one bind to
+`to_tsquery('simple', ...)`; no user character is quoted, backslash-escaped, or
+interpolated into SQL. `plainto_tsquery`, `websearch_to_tsquery`, and local
+query-string variants are forbidden. Every FTS arm uses its generated column
+with `@@` and exact `ts_rank_cd(...,32)` score.
+
 Fallback is bounded and parameterized and is enabled per source only when the
 TASK-551-05-L02 large-fixture receipt proves that exact index node, bounded rows/
 buffers, and accepted write cost. A rejected or missing candidate means FTS-only
@@ -195,6 +249,20 @@ mandatory; a window/`DISTINCT ON` identity pass chooses `exact_email`, then
 `fts`, then `trigram` for the same `(sourceType,id)`. Match tier is ordered before
 score so incomparable FTS rank and trigram similarity are never mixed.
 
+For any selected fallback, query normalization uses the imported exact SQL
+literal once. At fewer than three normalized code points the source is FTS-only.
+Otherwise one read-only `REPEATABLE READ` transaction first executes only the
+static `SET LOCAL pg_trgm.similarity_threshold = '0.300'`, verifies the same PID
+observes numeric `0.3`, and runs retrieval on that transaction handle. Candidate
+predicate and score are exactly `search_trigram_text % normalizedNeedle` and
+`similarity(search_trigram_text, normalizedNeedle)`. Since there is no LIKE/
+ILIKE/regex predicate, `%`, `_`, backslash and regex characters in the bound
+needle have no wildcard-control semantics. Commit/rollback restores the prior
+session setting; a subsequent checkout proves no leakage. A set/PID/threshold
+failure is internal `search_trigram_session_invalid`, mapped to bounded public
+`search_unavailable` without silently issuing an unindexed fallback or logging
+the query/needle.
+
 The “10x” budget language means only a checked-in per-fingerprint planner
 ceiling; it is not calculated as rows read divided by the number of rows that
 survive global top-k, because a valid selected source may contribute zero final
@@ -204,10 +272,11 @@ checked against TASK-551-01's exact common/rare/unique/miss numeric receipt and
 TASK-551-05-L02's corresponding sanitized plan. No arm may claim `LIMIT 51` as
 proof that PostgreSQL read only 51 rows.
 
-Known errors are stable `search_query_invalid`, `search_unavailable`,
+Known errors are stable `search_query_invalid`, `search_unavailable`, internal
+`search_trigram_session_invalid`,
 `search_history_invalid`, `search_history_idempotency_required`, and
 `search_history_idempotency_conflict`; only the last maps to HTTP 409. There is
-no search cursor in this v1 contract and therefore no `search_cursor_invalid`.
+no search cursor field or cursor-specific error in this v1 contract.
 
 ## Testing Requirements
 
@@ -225,6 +294,14 @@ no search cursor in this v1 contract and therefore no `search_cursor_invalid`.
   trigram normalizer; the drift/source guard must fail. Pin exact schema/query/
   migration bytes for each imported source and reject a changed `|| ' ' ||`
   separator or stable variadic helper.
+- Table-drive NFKC, combining marks, Unicode letters/numbers, underscores,
+  repeated whitespace, punctuation, hyphens and every tsquery metacharacter.
+  Pin the exact 2/200-code-point, 800-byte, 16-token and 64-code-point-per-token
+  boundaries; overflow/no-token inputs reject without SQL. Expected output is
+  byte-exact `token:* & token:*`. Source/SQL guards require one bound
+  `to_tsquery('simple',...)`, generated-column `@@`, and
+  `ts_rank_cd(...,32)`, and reject plainto/websearch/local parser variants or
+  raw interpolation.
 - Search tests cover accents/Unicode, punctuation, prefix/fuzzy behavior,
   ties, dates, categories, public publication filters, admin authorization, and
   deterministic result identity across repeated runs.
@@ -247,6 +324,16 @@ no search cursor in this v1 contract and therefore no `search_cursor_invalid`.
   table sequential scan. Rows read are planner evidence, not the 255 candidates
   or 51 response rows. Small fixtures may choose a seq scan by cost and are
   judged by their numeric receipt rather than forced planner settings.
+- Trigram integration reserves/observes one backend PID, runs static `SET LOCAL
+  pg_trgm.similarity_threshold = '0.300'` and retrieval in the same read-only
+  transaction, then proves commit and rollback each restore the prior setting on
+  reuse. Pin exact three-code-point eligibility, `%` predicate, `similarity`
+  score, normalized-needle byte identity, code-owned `0.3`, and selected GIN/
+  `gin_trgm_ops` plan. Remove/change SET LOCAL, PID, threshold, `%`, score or
+  receipt and fail; no fallback to ILIKE/LIKE/regex is allowed. Literal `%`, `_`,
+  backslash and regex metacharacter binds neither widen results nor leak to
+  SQL/errors/telemetry. SET/PID failure maps through
+  `search_trigram_session_invalid` to `search_unavailable`.
 - Unknown fields, overlong query, invalid limit/source/date, SQL metacharacters,
   and unauthorized/private records fail safely without PII/SQL leakage.
 - Safe-method tests instrument `recordSearch` plus the DB and prove `/search`,
@@ -314,9 +401,11 @@ no search cursor in this v1 contract and therefore no `search_cursor_invalid`.
 ## Documentation Updates Required
 
 No shared docs. Pass consumed vector/trigram fields and exact index names,
+constructor/token/prefix grammar, code threshold/same-session behavior,
 conditional fallback receipt, limits, ranked-query plan evidence, and the
 read-only GET plus strict idempotent history-POST API/security delta to
-TASK-551-10-L02.
+TASK-551-10-L02. Its closure update must replace `_docs/SEARCH_SPEC.md`'s stale
+`plainto_tsquery`/ILIKE wording with this exact `to_tsquery`/indexed `%` contract.
 
 ## Quantified Acceptance
 
@@ -330,6 +419,9 @@ TASK-551-10-L02.
   trigram precedence and score is compared only within a match tier. Large-
   fixture planner reads/buffers/p95 satisfy their checked-in per-fingerprint
   numeric receipts; no ratio uses only the rows surviving global top-k.
+- FTS constructor/token/prefix bytes and trigram predicate/score/threshold are
+  exact across Admin/public SQL. Selected large plans prove GIN use; session
+  threshold never leaks, and no LIKE/ILIKE/regex fallback exists.
 - Every search GET is observably read-only. History persistence occurs only on
   the strict internal POST with CSRF/admin-write throttling and actor-scoped
   UUID idempotency; 50 exact replays add one row and mismatched reuse adds none.

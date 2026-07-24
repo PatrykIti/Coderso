@@ -49,10 +49,11 @@ Preserve the parent names and export them only from
 `CacheEligibilityProof`, `CacheShareScopeDigest`,
 `CachePolicy<T>`, `CacheConditionalWrite`,
 `CacheLoadCompanion`, `ServerCacheLoadContext`, `ServerCacheLoaderResult`,
-`ServerCacheLoadRequest`, `ServerCacheNoFillReason`, `ServerCacheStore`,
+`ServerCacheLoadRequest`, `ServerCacheLoadTrigger`, `ServerCacheNoFillReason`, `ServerCacheStore`,
 `ServerCacheStoreDescription`, `CacheConditionalWriteResult`,
 `ServerCacheHealth`,
 `ServerCacheCoherenceSignal`, `ServerCacheCoherenceController`,
+`CacheInvalidationAttemptToken`, `CacheInvalidationAttemptRegistration`,
 `CacheInvalidationPlan`, and an optional `DistributedCacheLoadCoordinator` plus
 `DistributedCacheOwnedWriteResult`. `decode` is the only authority for a policy's
 value. `CacheSchemaVersion`, `PositiveCacheTtlMs`, `CacheValueByteLimit`, and
@@ -198,6 +199,17 @@ type CacheCoherenceGlobalSource =
   | "redis_store"
   | "outbox_worker";
 
+declare const cacheInvalidationAttemptToken: unique symbol;
+type CacheInvalidationAttemptToken = Readonly<{
+  eventKey: string;
+  sequence: number;
+  readonly [cacheInvalidationAttemptToken]: true;
+}>;
+
+type CacheInvalidationAttemptRegistration =
+  | Readonly<{ kind: "registered"; token: CacheInvalidationAttemptToken }>
+  | Readonly<{ kind: "saturated" }>;
+
 declare const cacheCoherenceObservationToken: unique symbol;
 type CacheCoherenceObservationToken = Readonly<{
   source: CacheCoherenceGlobalSource;
@@ -238,6 +250,7 @@ type ServerCacheCoherenceSignal =
       kind: "post_commit_failed";
       source: "post_commit";
       eventKey: string;
+      attemptToken: CacheInvalidationAttemptToken;
       affectedTags: CacheCoherenceAffectedTags;
       observedAtMonotonicMs: number;
       stableCode: string;
@@ -264,6 +277,11 @@ interface ServerCacheCoherenceController {
   }>): void;
   beginObservation(source: CacheCoherenceGlobalSource):
     CacheCoherenceObservationToken;
+  beginInvalidationAttempt(input: Readonly<{
+    eventKey: string;
+    affectedTags: CacheCoherenceAffectedTags;
+  }>): CacheInvalidationAttemptRegistration;
+  settleInvalidationAttempt(token: CacheInvalidationAttemptToken): void;
   report(signal: ServerCacheCoherenceSignal): void;
   currentEpoch(family: CacheFamily): ProcessCacheCoherenceEpoch;
   snapshot(): ServerCacheCoherence;
@@ -287,21 +305,32 @@ conservatively advances affected epochs, including at-least-once local/PubSub
 duplicates. It never clears a fence or authorizes stale/private values.
 
 Global health fences and failed-post-commit fences are separate. The controller
-keeps a fixed `maxCoherenceEventKeys = 4_096` registry of exact event-key states
-`pending | durably_processed`; `post_commit_failed` installs only that event's
-affected-family fence. Only `durable_invalidation_processed` after the same
-outbox row's generation bump and conditional processed-row commit records its
-tombstone and clears that exact fence. Broad outbox/Redis recovery, Pub/Sub, a
-different event, or pending-age proof clears none. A durable signal arriving
-before a delayed failure leaves a tombstone, so that failure cannot re-fence.
-The registry never evicts a live/tombstone identity during the process lifetime;
-capacity or safe-integer overflow installs permanent all-family
-`local_incoherence` until restart. Memory-mode bump failure likewise becomes
-permanent process-local bypass because it has no durable outbox receipt.
+retains at most `maxCoherenceUnresolvedEvents = 4_096` unresolved event records
+and `maxCoherenceActiveAttempts = 4_096` active immediate-delivery tokens. Each
+record contains normalized tags, active-token identities, failure-fence state
+and durable-receipt state; it is never a historical deduplication/tombstone cache.
+`beginInvalidationAttempt(...)` registers before the Redis callback starts.
+`post_commit_failed` is accepted only for that still-active token while the event
+has no durable processed receipt. The
+matching `durable_invalidation_processed`, reported only after generation bump
+and conditional processed-row commit, marks the event durably processed and
+clears its exact fence. If it arrives before a delayed failure, that token's
+later failure is ignored. `settleInvalidationAttempt(token)` is called in the
+callback's outermost `finally`, then deletes the record when no active token or
+unresolved failure remains. A receipt with no local record creates no tombstone;
+if it predated registration, L08 replays the authoritative processed-row receipt
+after a later failure and before token settlement. No broad recovery, Pub/Sub,
+other event or age proof clears an exact failed-event fence.
+Saturation starts no callback, stores no rejected key, and temporarily forces
+all-family `local_incoherence`/degraded readiness until both counts fall to
+`coherenceOverflowRecoveryThreshold = 3_072`. Redis saturation also installs
+L08's durable global drain fence until its Redis+DB proof, independent of local
+hysteresis. Memory replacement is synchronous and outside this registry; its
+bump failure remains process-lifetime bypass because no durable receipt exists.
 `currentEpoch`, `snapshot`, and
 `health` are read/composition methods and no runtime, adapter, invalidation
 consumer, or helper may expose `advanceLocalCoherenceEpoch` or any second
-`advance*Epoch` path. Epoch safe-integer overflow forces permanent bypass until
+`advance*Epoch` path. Epoch or attempt-sequence safe-integer overflow forces permanent bypass until
 process restart. Global fences are tracked independently by source. An
 `outbox_worker` recovery clears only its global lag fence; Redis recovery clears
 only the Redis fence. Any global or pending-event fence wins, with
@@ -360,7 +389,9 @@ SERVER_CACHE_LIMITS = {
   forcedBypassPendingAgeMs: 5_000,
   maxHealthPendingAgeMs: 86_400_000,
   maxHealthStableCodeBytes: 64,
-  maxCoherenceEventKeys: 4_096,
+  maxCoherenceUnresolvedEvents: 4_096,
+  maxCoherenceActiveAttempts: 4_096,
+  coherenceOverflowRecoveryThreshold: 3_072,
   minInFlightKeys: 16,
   maxInFlightKeys: 10_000,
   defaultInFlightKeys: 1_024,
@@ -508,6 +539,7 @@ type CacheLoadCompanion = Readonly<{
 }>;
 
 interface ServerCacheLoadContext {
+  trigger: ServerCacheLoadTrigger;
   companion<T>(input: Readonly<{
     policy: CachePolicy<T>;
     input: unknown;
@@ -515,6 +547,25 @@ interface ServerCacheLoadContext {
     value: T;
   }>): CacheLoadCompanion;
 }
+
+type ServerCacheLoadTrigger =
+  | Readonly<{ kind: "store_absent" }>
+  | Readonly<{
+      kind: "store_value_rejected";
+      reason: "expired" | "generation_mismatch" | "oversized" | "invalid";
+    }>
+  | Readonly<{
+      kind: "fill_disabled";
+      reason:
+        | "ineligible"
+        | "singleflight_saturated"
+        | "coherence_bypass"
+        | "generation_unavailable"
+        | "transport_unavailable"
+        | "distributed_wait_timeout"
+        | "coordinator_closed"
+        | "not_published_retry";
+    }>;
 
 type ServerCacheNoFillReason =
   | "response_not_cacheable"
@@ -570,6 +621,20 @@ calling any store/distributed write primitive. A `fill` permits exactly zero or
 one companion, so primary plus companion is exactly one or two entries.
 `returnValue` is returned to the authoritative caller and is never encoded;
 `cacheValue` and the optional companion are the only fill values.
+
+Every loader invocation receives one closed `ServerCacheLoadTrigger`.
+`store_absent` means the backend returned no bytes for the exact current key.
+When bytes were returned but strict envelope/generation/expiry/size/policy decode
+rejected them, best-effort eviction occurs and the trigger is
+`store_value_rejected` with only the coarse finite reason—never raw bytes, key or
+decoder detail. Redis TTL expiry that has already removed the key is necessarily
+`store_absent`; an expired envelope still returned by a backend is `expired`.
+Bypass, saturation and per-caller replay after any non-publication use
+`fill_disabled`; a consumer-proposed `fill` on that trigger is normalized to the
+caller's authoritative return with zero encode/write/publication. A policy may
+choose `no_fill` after `store_value_rejected` (the public manifest does) while a
+different non-security policy may rebuild it; only `store_absent` is the public
+manifest's true-miss positive-fill authority.
 
 A positive primary samples its shortening-only TTL from `policy.ttlMs`; an
 optional positive companion independently samples and caps its TTL from its own
@@ -721,8 +786,11 @@ public, unauthenticated, non-preview, non-private/password, non-nonce, known
 bounded query variant and either a successful positive disposition or an
 explicitly proven public negative-cache disposition. It also carries
 `mutableVisibilityGate: "not_required" | { state: "strictly_public";
-versionToken: lowercase-64-hex }`; a mutable-visibility route is eligible only
-with the second form produced from its current mandatory DB gate. Missing,
+versionToken: lowercase-64-hex }`. The non-authorizing
+`public-html-manifest` family requires exactly `"not_required"`; its proof never
+authorizes HTML/body access. Mutable `public-html` requires the second form,
+produced only from its current bounded root+nested DB validator, while structurally
+safe non-mutable HTML may use `"not_required"`. Missing,
 unknown, private/password or malformed context yields `null` before any registry,
 value or lease access. The branded proof's digest covers the full canonical
 context, including the complete visibility gate; it is not reusable for a
@@ -761,6 +829,46 @@ Configuration errors are stable machine-readable `server_cache_config_*`
 errors. Runtime envelope/key/eligibility faults do not escape as domain values;
 they return a typed bypass reason and bounded redacted telemetry.
 
+The private event maps are observable only through bounded counters/health:
+
+```ts
+function beginInvalidationAttempt(input): CacheInvalidationAttemptRegistration {
+  const saturated = unresolvedEvents.size >= 4_096 || activeAttempts.size >= 4_096;
+  if (saturated) {
+    capacityFence = "forced"; // no callback starts and no rejected key is kept
+    return { kind: "saturated" };
+  }
+  const token = createOpaqueAttemptToken(input.eventKey);
+  registerActiveToken(input, token);
+  return { kind: "registered", token };
+}
+function acceptDurableProcessed(signal) {
+  const event = unresolvedEvents.get(signal.eventKey);
+  if (!event) return; // no historical tombstone
+  Object.assign(event, { durablyProcessed: true, failed: false });
+  clearExactEventFence(event);
+  retireEventWhenSettled(event);
+  recoverCapacityFenceAtHysteresis();
+}
+function acceptPostCommitFailure(signal) {
+  const event = requireActiveMatchingToken(signal.attemptToken, signal.eventKey);
+  if (!event || event.durablyProcessed) return; // stale/delayed result
+  event.failed = true;
+  installExactEventFence(event);
+}
+function settleInvalidationAttempt(token) {
+  const event = eventForActiveToken(token);
+  if (!event) return;
+  retireActiveTokenOnlyIfSame(token);
+  retireEventWhenSettled(event);
+  recoverCapacityFenceAtHysteresis();
+}
+function recoverCapacityFenceAtHysteresis() {
+  if (unresolvedEvents.size > 3_072 || activeAttempts.size > 3_072) return;
+  capacityFence = "coherent"; // only this capacity fence; other fences win
+}
+```
+
 ## Security Contract
 
 - **Visibility/routes:** no route changes; all modules are server/pure only.
@@ -786,8 +894,10 @@ Redis namespace, negative TTL null/4,999/5,000/15,000/15,001, and
 TTL, policy-value bytes, conditional TTL/policy-TTL mismatch, per-policy envelope
 lifetime, Unix time/duration and the exact 64-
 entry sweep limit at zero/one/exact maximum/maximum+1 as applicable. Include
-not-required/current-public/private/password/missing/malformed visibility-proof
-eligibility cases and exact 5,000 ms forced-bypass, health-age/stable-code bounds.
+family-specific manifest-not-required, mutable-HTML-current-public, safe-
+non-mutable, private/password/missing/malformed visibility-proof cases; prove a
+manifest context/proof cannot authorize HTML. Pin exact 5,000 ms forced-bypass,
+health-age/stable-code bounds.
 Pin that eligibility returns `null` for every excluded/unknown context and a
 branded lowercase-64-hex `shareScopeDigest` for eligible context; changing any
 single query/disposition/visibility-version field while the result remains
@@ -795,7 +905,7 @@ eligible must change the digest, while changing access/render/nonce to an exclud
 state yields `null` and reordered equivalent input must not change it. Prove no raw
 identity, token, nonce or query text appears in the proof or diagnostics.
 Pin every coherence signal source/transition, independent-fence recovery,
-source-token stale force/recovery ordering, exact-event pending/processed
+source-token stale force/recovery ordering, exact-event active/failure/processed
 ordering (including durable-before-delayed-failure), registry capacity,
 backend-health composition, distributed acquire/result/close union and every
 distributed bound at min/max/max+1. Pin atomic owned-write `written`, generation-
@@ -827,6 +937,21 @@ Pin in-flight config at 15/16/1,024/10,000/
 interface against both adapters, conditional-write `unknown` physical outcome,
 generation-digest mismatch eviction/miss, and startup capacity at exact/max+1
 key-plus-envelope bytes for every mandatory v1 policy.
+Pin the complete loader-trigger matrix: backend null is `store_absent`; returned
+expired/wrong-generation/oversized/invalid bytes are evicted and become only
+their coarse `store_value_rejected` reason; ineligible, saturated, coherence,
+generation, transport, distributed-wait-timeout, closed and joiner-retry paths
+use their exact `fill_disabled` reasons. A `fill`
+returned under `fill_disabled` yields the caller's authoritative value with zero
+encode/store/coordinator work. No trigger contains key bytes, envelope bytes or
+decoder/driver diagnostics.
+Run more than 100,000 sequential settled invalidations in both success and failure-then-durable orderings and assert unresolved-event/active-attempt memory
+returns to zero (or the fixed baseline), no tombstone accumulates and no global
+bypass appears. Hold exactly 4,096 concurrent unresolved records/attempts, prove the 4,097th starts no callback and forces temporary all-family bypass, then settle
+to 3,073/3,072 and prove automatic recovery occurs only at 3,072 when no other
+fence exists. Also prove Redis saturation installs L08's independently durable
+drain fence, durable-before-delayed-failure cannot re-fence, a settled token can
+never report, and safe-integer epoch/token overflow still fails closed.
 
 ```bash
 bun run test:vitest -- tests/vitest/cache/server-cache-contracts.test.ts \

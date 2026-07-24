@@ -6,9 +6,11 @@
 **Category:** Performance / Reliability / Security / Runtime Smoke
 **Estimated Effort:** Large
 **Dependencies:** exact compile-green sequence landed with targeted gates:
-TASK-551-01 → TASK-551-02 → TASK-551-05 → TASK-551-03-L01 →
-TASK-551-06-L01/L02/L03 → TASK-551-03-L02 → TASK-551-03-L03 →
-TASK-551-04 → TASK-551-07 → TASK-551-08 → TASK-551-09;
+TASK-551-01 → TASK-551-02 → 08-L03 INITIAL → TASK-551-05 →
+TASK-551-03-L01 → TASK-551-06-L01/L02/L03 → TASK-551-07-L01 →
+09-L04 INITIAL → TASK-551-03-L02 → TASK-551-03-L03 → TASK-551-04 →
+TASK-551-07-L02 → TASK-551-08-L01/L02/L03 FINAL →
+TASK-551-09-L01/L02/L03/L04 FINAL;
 TASK-551-01-L01 post-09 final re-dispatch emitted a fresh exact-set receipt;
 TASK-551-11 pre-implementation audit PASS; parent external dispatch gate
 reverified for TASK-511, TASK-493, TASK-517, and TASK-518
@@ -77,6 +79,11 @@ This leaf must not rebaseline or weaken an owner assertion.
   inventory receipt must be `phase: "final"`, digest-current against the post-09
   production tree, exact-set equal, and contain zero planned deltas. Initial,
   stale, missing, or non-L01-authored receipts fail before any aggregate work.
+  Initial is exactly 34 planned fingerprints: 32 named Admin plus
+  `cache-outbox-oldest-unprocessed` and `public-html-dependencies-128`. The plan
+  registry is exactly 37 IDs/38 cases/76 small+large receipts: those 32 once plus
+  `webhooks-created-keyset`, `webhook-deliveries-parent-keyset`,
+  `webhooks-event-batch`, `page-latest-autosave`, and the outbox fingerprint.
 - The `small` and `large` profiles use TASK-551-01's exact per-family target and
   support-table row counts, relationship recipes, pool capacities, warm-up,
   sample/repetition counts, percentile method, hardware/context metadata, and
@@ -105,6 +112,11 @@ This leaf must not rebaseline or weaken an owner assertion.
   cycle UTC/New_York/Tokyo; buckets `0..9/10..19/20..59/60..99` mean same-day
   past/same-day future/next 1..40/prior 1..40 days, end +60 minutes, yielding
   today `400/20,000`, upcoming and past/current `1,000/50,000` each.
+- Consume exact author/type-author/role/tag, webhook event/delivery,
+  latest-page-autosave, and public-dependency fixtures. The last has 128 tuples
+  (43 page/43 post/42 entry), 101 roots and at most 16,384 canonical bytes.
+  Retention uses the frozen `2036-01-01` cutoffs/anchors/child-first counts and
+  `499/500/501/2,000/2,001` batch edges for every policy family.
 - DB fixtures use one run UUID in every owned slug/key and record every created
   row ID. Teardown deletes only those IDs in FK-safe order, including failure
   paths. Never assert a globally empty table or delete another suite's rows.
@@ -128,17 +140,22 @@ This leaf must not rebaseline or weaken an owner assertion.
   coalesced loaders, and invalidation lag.
 - Assert every public request performs one uncached authoritative
   `getSecuritySettings` query before security/rate middleware. A safely eligible
-  structurally non-mutable public HTML/list request totals one query; mutable
-  page/home/post/content-entry details and lists total two (security plus their
-  narrow point/bounded ordered membership gate). Lists return at most
-  `pageLimit + 1` projections and no bodies/hashes. Pin exact page/post/entry
-  fields and unpublish/missing-representation/membership/reorder transitions.
-  Their digests join identity; all execute zero other queries, and restricted/
-  missing/malformed or changed
-  membership/version proof cannot return primed output.
+  non-mutable request totals one query. Mutable details/lists first read safe
+  manifest metadata, then one `public_html_dependency_validation` VALUES/CTE
+  statement checks root plus all nested dependencies (128 tuples, 16,384 bytes,
+  101 roots) and returns one aggregate row/no bodies. Missing/duplicate/changed/
+  unpublished/private/password/malformed or unavailable proof renders
+  authoritatively with zero HTML/content value GET/fill; total remains two.
 - Compare sanitized `EXPLAIN (ANALYZE, BUFFERS)` plan fingerprints against the
   TASK-551-01 budget baseline and TASK-551-05 catalog/plan receipts. A different
   plan is investigated; snapshots never include bind values or raw data.
+- Require executable sanitized known-interval `pg_stat_statements` receipts
+  before prioritization and before/after comparison without resetting shared
+  stats. Classes are exactly `application|migration|maintenance|
+  external_diagnostic|unknown`. Owner-supplied Render evidence records only the
+  4m51 `row_to_json(t)::text ~ ?` diagnostic UNION and 30–60s+ `access_logs`
+  regex shapes. Operator evidence permits `external_diagnostic`; otherwise use
+  `unknown`. Exclude both from application decisions and forbid a one-off index.
 
 ### Fault and reliability
 
@@ -157,7 +174,10 @@ This leaf must not rebaseline or weaken an owner assertion.
   every joiner runs its own authoritative loader with fill disabled.
   Exercise every exact coherence signal/controller transition, distributed
   owner/waiter/bypass result, and `getServerCacheRuntime().cache` singleton
-  before start/while started/after close.
+  before start/while started/after close. The public runtime exposes exactly
+  `mode/cache/invalidation.applyAfterCommit/health`; controller, store,
+  coordinator, worker and close capabilities remain private. Before listen,
+  validate the exact four-policy key+envelope capacity catalog via `describe()`.
 - Pin `ServerCache.getOrLoad(ServerCacheLoadRequest<TCached,TResult>)` as sole
   load/fill owner: one pre-loader primary+`fillFenceTags` snapshot and strict
   finite-reason `no_fill` versus `fill`/`fillKind:positive|negative` result.
@@ -165,21 +185,41 @@ This leaf must not rebaseline or weaken an owner assertion.
   its negative TTL and carries no companion; positive permits branded zero/one
   companion whose TTL is sampled/capped independently from the primary's own
   policy, so an atomic pair may have unequal TTLs. No consumer accesses either store write primitive.
+- Pin the complete trigger matrix: backend null is `store_absent`; returned
+  expired/wrong-generation/oversized/invalid bytes are evicted and become coarse
+  `store_value_rejected`; exact disabled reasons are `ineligible|
+  singleflight_saturated|coherence_bypass|generation_unavailable|
+  transport_unavailable|distributed_wait_timeout|coordinator_closed|
+  not_published_retry`. Every loader receives `{trigger, companion}` and maps
+  absent/rejected/disabled to `store_absent_no_publication`/
+  `store_value_rejected`/`fill_disabled`, never the trigger object. Disabled fill
+  has zero publication work. Public manifest/
+  HTML may fill only on true absence. Memory expiry+eviction has one 64-entry
+  work cap; a required 65th victim skips insertion without partial mutation.
 - Pin manifest-primary render as manifest cacheValue + HTTP-only returnValue +
   branded HTML companion, and manifest-hit/HTML-miss as HTML primary + refreshed
   manifest companion; both-or-neither generation fill is mandatory. Both loaders
   use positive fill or finite-reason `no_fill`, never negative. A render-time
   exclusion returns authoritative output without throw, encode, or write.
-- State-identical force/recover reports are no-ops. Every accepted
-  `invalidation_observed`, including duplicate at-least-once local/PubSub
-  delivery, advances affected epochs; no observation clears a fence, no event-
-  dedup registry or second epoch mutator exists, and overflow permanently forces
-  bypass. Pub/Sub payload is exactly event key plus generation digest (no tags/
-  domain identity); a subscriber bounded-point-reads the outbox row, normalizes
-  finite tags, and emits no observation on missing/malformed/read failure.
-- TASK-551-02 receipts pin default pool/replicas/server/reserve/worker/migration
-  values `10/1/103/21/2/1`, planned `13`, available `82`, and strict
-  `planned < available`; exact lifecycle APIs and the default Bun suite
+  `public-html-manifest` is non-authorizing metadata with
+  `mutableVisibilityGate:"not_required"`; HTML requires current `strictly_public`
+  root+nested validation and refreshed eligibility is a distinct post-render context.
+- Source observation tokens ignore older/equal completions; a current-token
+  state-identical force/recover is a no-op. Event-keyed observations, duplicates
+  included, advance epochs but clear no fence. Only the same event's durable
+  processed signal after generation bump plus conditional DB completion clears
+  its failed-post-commit fence; broad recovery/PubSub/another event cannot. The
+  unresolved-event and active-attempt sets cap independently at 4,096 with no
+  settled tombstones. Saturation temporarily bypasses all families and accepts
+  callbacks; attempt tokens settle only after no callback can report, recovery
+  needs both counts at most 3,072, and >100,000 settled
+  events stay bounded. Redis independently fences drain until healthy/no pending/
+  claimed rows. Only safe-integer epoch/drain-generation overflow remains forced
+  until restart. Pub/Sub carries event key plus generation digest only.
+- TASK-551-02 receipts pin one shared parser: runtime `1..256` default `1`, worker
+  `0..256` default `0`, pool default `10`, migration reserve `3`, default planned
+  `1*10 + 0*10 + 3 = 13`, strictly below validated availability; exact lifecycle
+  APIs and the default Bun suite
   `tests/integration/server/task551DatabaseLifecycle.test.ts`; deadlines
   `2_000/5_000/10_000/15_000 ms` plus DB close `10 s`; awaited stop/listen and
   late-acquisition release-once behavior; and closed telemetry with six families,
@@ -197,6 +237,11 @@ This leaf must not rebaseline or weaken an owner assertion.
   `verifyDatabaseSessions` checks only that session.
   Explicit direct/session probes once at DB start and reuses the lifecycle result;
   enabled scheduler awaits it before timer/listen and fails below two sessions or with transaction+primary.
+- Pin pure `databaseApplicationIdentity.ts`: strict runtime/worker process kind,
+  separate runtime `1..256` and worker `0..256` fleet counts, globally unique
+  replica IDs, exact `coderso:runtime|worker|maintenance:<id>` and
+  `coderso:migration:<operationUuid>` names on every physical session, replacement
+  identity, and zero DB clients on pure import.
 - Redis connect timeout, command timeout, circuit open/half-open/close,
   disconnect, reconnect, corrupt/oversized value, generation read/bump failure,
   Pub/Sub loss, and process restart. Outage bypasses to DB and never starts a
@@ -233,18 +278,28 @@ This leaf must not rebaseline or weaken an owner assertion.
   `pg_constraint.contype = 'x'`, preserved `btree_gist` on rollback, and fresh
   generation with zero duplicate add or generated drop. This is one atomic 05-
   L01 schema/SQL/snapshot/journal ownership seam, not claimed Drizzle DSL support.
+  Reserve one physical migration session and set exactly
+  `coderso.task551_operation_id`, `coderso.task551_receipt_v2`, and
+  `coderso.task551_receipt_sha256`. Static SQL validates the SHA-256-bound
+  canonical v2 receipt (1..65,536 UTF-8 bytes) inside the migrator transaction;
+  clean/prior, rollback/replay, GUC/hash/size-failure and repeat/status gates pass.
 - Require the closed index catalog, including all form/booking/list/retention
   members and assistant-ingest `started_at`. Pin `pages_author_list_updated_id_idx`,
-  role-leading `user_roles_role_user_idx`, and `posts_tags_gin_idx`/
-  `media_tags_gin_idx` as `jsonb_path_ops` GIN against their exact parameterized
-  `@>` predicates. Pin `cache_outbox_unprocessed_age_idx(created_at,id) WHERE
+  entry/typed-entry/post author composites, role-leading
+  `user_roles_role_user_idx`, webhook list/delivery composites,
+  `page_revisions_page_kind_version_id_idx`, and `posts_tags_gin_idx`/
+  `media_tags_gin_idx`/`webhooks_events_gin_idx` as `jsonb_path_ops` GIN against
+  their exact predicates. Pin `cache_outbox_unprocessed_age_idx(created_at,id) WHERE
   processed_at IS NULL` and `readOldestUnprocessedAge` fingerprint
   `cache_outbox_oldest_unprocessed`: exact created-at/id `LIMIT 1` includes
-  claimed/backed-off rows, with 1k/100k EXPLAIN and write-budget evidence. The mutation drain remains
-  through the ordered page/content/widget revision-unique group; only a durable
-  ready/valid `apply-resume-check --through-group revision-integrity` barrier may
-  resume old `max(version)+1` writers before the read-performance group/final admission. Transactional SQL creates no new index;
-  check/apply and reverse concurrent drop are resumable and preserve the GiST seam.
+  claimed/backed-off rows, with 1k/100k EXPLAIN and write-budget evidence. Require
+  one version-2 `rollout-forward`: exact app-name activity drain, transactional
+  expand, then durable page/content/widget integrity barrier. The old
+  `max(version)+1` binary never resumes. External mode admits only the compatible
+  TASK-551 binary while read indexes build; offline-single remains cold through
+  final catalog; first new-binary traffic makes recovery forward-fix only.
+  Transactional SQL creates no index; repeat rollout-forward zero-DDL/transition,
+  then verify `status` and concurrent-drop/GiST recovery.
 - Lifecycle evidence proves 02-L02 solely owns `runtimeEntrypoint.ts`, `prod.ts`
   and `dev.ts`; `runtimeEntrypoint.ts` alone calls lifecycle start/close and owns
   signals, listen and graceful-at-most-10-second then forced HTTP drain. Prod/dev
@@ -274,18 +329,23 @@ This leaf must not rebaseline or weaken an owner assertion.
   06-L02's page `{id,pageId,version,kind,title,slug,createdAt,createdBy:{id,name,email}|null}`
   and detail `{id,detailPageId,version,kind,createdAt,createdBy:string|null}`
   envelopes, rejecting invented `reason`, across route, schema,
-  client and UI; the freshly rescanned complete seven-client consumer graph;
+  client and UI; the freshly rescanned complete eight-client consumer graph;
   bounded server-side picker/search/load-more; every named cohesive >1,000-line
   split; its two consumer-graph and five revision suites; and zero raw-array,
   auto-fetch-all, first-page-truncation or heavy-body fallback.
+- It consumes current 09-L04 INITIAL installation-authority and 08-L03 INITIAL
+  header-transport receipts. Every family uses L01's exact two-segment cursor and
+  code-owned `KeysetSpec`; previous reverses SQL direction/null placement and
+  output, and route parse/spec/signature failures map generically.
 - It pins each metric-bearing Admin keyset response's exact
-  `{items,nextCursor,hasMore,summary,facets}` envelope. Only `matchingTotal`
-  follows normalized row filters; every other typed summary field and bounded
-  author/content-type/role/folder/tag facet remains global to the authorized/
-  parent scope across three-plus pages and filters. Facet pages use strict
+  `{items,nextCursor,hasMore,summary,facets}` envelope. Arbitrary filters use
+  `matchingTotal:null`/`exactness:"not_computed"` and no filtered `COUNT`; fixed
+  summaries and bounded author/content-type/role/folder/tag facets are exact at
+  one read-only `REPEATABLE READ` authorized/parent snapshot. Facet pages use strict
   `{items,nextCursor,hasMore}`, default/max `50/100`, and no auto-fetch. Page +
-  fixed aggregate + optional bounded relation-facet batch is at most three SQL,
-  with no hidden page concatenation, per-row lookup, or authorization leakage.
+  fixed aggregate + optional bounded relation-facet batch is at most three
+  separately inventoried/budgeted/planned SQL statements, with no hidden page
+  concatenation, per-row lookup, or authorization leakage.
 - It also pins `formReadService` and exact FormListItem
   `id,name,slug,status,description,submissionAccess,updatedAt`;
   `bookingReadService` owns paginated reservations/resources/services/blackouts,
@@ -309,6 +369,12 @@ This leaf must not rebaseline or weaken an owner assertion.
   `/admin/api/search/history` uses session actor, `content:read`, CSRF,
   `admin_write`, strict four-key body and 409 conflict. `searchClient`/
   `useSearchResults` reuse one UUID per UI intent/retry; no public/API-key/GET mutation alias exists.
+- Search v1 has no cursor. Five arms each cap exact-email→FTS→non-overlapping
+  trigram at 51 candidates; at most 255 enter global tier-first dedup/rank and 51
+  leave. Unicode `L/M/N/_` runs become `token:*` joined by ` & ` for bounded
+  `to_tsquery('simple', :prefixQuery)`. Trigram uses GIN `%` after static
+  transaction-local `SET LOCAL pg_trgm.similarity_threshold='0.300'`; no
+  LIKE/ILIKE/regex fallback. Per-arm plan budgets ignore final top-k survival.
 - Analytics upgrade evidence pins only `ANALYTICS_RETENTION_DAYS` for age and its
   complete `Number(raw)` truth table:
   absent/malformed/non-finite resolves to 365; finite values floor then clamp to
@@ -319,7 +385,10 @@ This leaf must not rebaseline or weaken an owner assertion.
   behavior. With exact lowercase `RETENTION_DRY_RUN=true`, direct service calls
   have no scheduler advisory; scheduled use takes exactly one replica advisory
   before the same bounded reads. Both perform no destructive row lock, mutation,
-  publication or progress write. Request writes execute zero prune.
+  publication or progress write. Request writes execute zero prune. Page autosave
+  parent-locks, reads only latest autosave by version/id, reuses equal normalized
+  data with zero write, or allocates and deletes only that exact predecessor.
+  Older history is scheduler-only; 100k history/50 writers pin two/six statements.
 
 ### Bounded-eventual public-cache consistency
 
@@ -347,16 +416,22 @@ This leaf must not rebaseline or weaken an owner assertion.
 - Prove private/password/draft/preview/nonce-bearing/session/auth/RBAC and
   cross-identity Admin values never enter a shared cache or survive an identity/
   permission-epoch transition.
-- Prove Admin keys/envelopes/events bind deployment digest, a crypto-random
-  128-bit session `authIncarnation`, monotonic auth epoch, user and permissions;
-  same-tab authenticated reload alone reuses the incarnation. New login,
-  logout, 401/403 and identity transition rotate/delete it before scope work;
-  storage failure uses memory-only incarnation plus persistent misses, and no
-  auth API payload carries it.
+- Prove Admin keys/envelopes/events bind deployment digest, random 128-bit tab
+  incarnation, distinct deployment-audience auth-generation nonce, monotonic
+  auth epoch/installation token, user and permissions. INITIAL authority fences
+  every delayed 03/04 client installation; FINAL's exhaustive module manifest
+  resets/fences every cache/promise/map/read-through/prefetch registry. Cross-tab
+  storage order is authoritative, BroadcastChannel is wakeup only; storage
+  failure forces persistent misses and no auth payload changes.
 - Pin fixed-order UTF-8 JSON deployment `{v:3,origin,adminBasePath,
-  entryModulePath}` and scope `{v:3,deploymentIdentity,authIncarnation,authEpoch,
-  userId,permissions,roles}`, separate NFC/deduplicated/UTF-8-byte-sorted arrays,
-  all caps, and no delimiter concatenation.
+  entryModulePath}` and `AdminCacheScopePreimageV3`
+  `{v,deploymentIdentity,authIncarnation,authGenerationNonce,authEpoch,userId,
+  permissions,roles}`. Pin 367-byte digest
+  `6c69458d5fdc22634a5fca20609e3accb4a6fe606905af2b2c522900770afbf7` and
+  nonce-only `222...` digest
+  `4214d494f425d2f595de703cd19662a2513d0d85871bff748bdb5d5cb728611d`;
+  rotation rejects old storage/events/delayed installs. Arrays stay separately
+  normalized/sorted; caps apply and delimiter concatenation is forbidden.
 - Prove decrypted or secret-bearing `SecuritySettings` never enters memory,
   Redis, browser cache, outbox, or smoke evidence; reads remain DB-authoritative
   while only finite generation/coherence metadata or typed redacted projections
@@ -373,7 +448,9 @@ This leaf must not rebaseline or weaken an owner assertion.
 - Race settings partial writes under `SET LOCAL lock_timeout='2s'` and advisory
   `(551,904)` before same-tx merge/write. Pin preserved disjoint fields, Redis
   exactly-one outbox row, memory zero rows plus exactly one awaited post-commit
-  bump, redacted conflict mapping, and observation/fence before return.
+  bump, exact `settingsRoutes.ts` redacted 409 conflict mapping, and observation/
+  fence before return. Assert form actions never enter render dependency,
+  invalidation, manifest or tag surfaces.
 - Exercise hit, miss, Redis outage, reconnect, and stale-generation paths without
   bypassing current auth, CSRF, rate-limit, nonce/HMAC, CAPTCHA, or bot policy.
 - Assert arbitrary Redis commands/keys and unknown cache/cursor fields never
@@ -390,9 +467,9 @@ scenario IDs:
 1. `cross-process-warm-public-query-budget` — A fills one safely eligible
    structurally non-mutable response; B serves identical bytes with exactly one
    authoritative SecuritySettings query and no process-local persistent value or
-   other query. Mutable page/home/post/content-entry detail/list requests each
-   total two queries: security plus their point/membership gate, with zero other
-   reads and at most `pageLimit + 1` list projections.
+   other query. Mutable detail/list requests each total two queries: security plus
+   their one bounded root+nested validator, with zero other reads/value GETs and
+   exact 128-tuple/16,384-byte/101-root caps.
 2. `post-commit-generation-and-rollback` — A commits an update and B observes the
    new value after waiting for bounded outbox/generation recovery and records the
    observed lag; a rolled-back update emits no generation/outbox change and B
@@ -472,53 +549,24 @@ credential, path with user data, or raw log.
 ```ts
 async function runTask551AggregateGates(deps: GateDeps): Promise<GateEvidence> {
   const budgets = await deps.loadAndValidateFrozenTask551Budgets();
-  await deps.requireCurrentFinalQueryInventoryReceipt({
-    phase: "final", plannedDeltaCount: 0, requireCurrentProductionDigest: true,
-  });
-  await deps.requirePostgresReachable();
-  await deps.requireRealRedis({ minimum: "7.2.0" });
-  await deps.requireExactTask55102Receipt({
-    lifecycleTest: "tests/integration/server/task551DatabaseLifecycle.test.ts",
-    deadlinesMs: [2_000, 5_000, 10_000, 15_000], databaseCloseSeconds: 10,
-    telemetryCellsPerFingerprint: 3_240, poolTelemetryCells: 44,
-  });
-  await deps.requireTask55105AtomicCustomMigrationReceipt();
-  await deps.requireTask55103L02ConsumerGraphAndRevisionAdoptionReceipt();
-  await deps.requireAnalyticsUpgradeCompatibilityReceipt();
-  await deps.requireExactTask55109CommandManifests();
-
-  const profiles = [];
+  await deps.requireCurrentFinalQueryInventoryReceipt();
+  await deps.requireInfrastructureAndOwnerReceipts();
+  const profiles: ProfileEvidence[] = [];
   for (const profile of ["small", "large"] as const) {
     for (const scenario of budgets.mappedInventoryScenarios(profile)) {
       const fixture = await deps.seedOwnedFamilyFixture(profile, scenario);
       try {
-        profiles.push(await deps.measureFamilyAgainstFrozenBudget(
-          fixture, budgets.requireStoredNumericCeiling(scenario)
-        ));
+        profiles.push(await deps.measureAgainstFrozenBudget(fixture, scenario));
       } finally {
         await deps.cleanupExactFamilyFixture(fixture);
       }
     }
   }
-
-  const fault = await deps.runMemoryRedisOutboxFaultMatrix();
-  const security = await deps.runCacheSecurityMatrix();
   const adminListUi = await deps.runAndValidateAdminListUiSmoke({
     session: "wf55103l02", scenarios: 5, themes: ["light", "dark"],
   });
-  const smoke = await runTwoProcessRedisSmoke(EXACT_SCENARIO_IDS);
-  return deps.normalizeAggregateEvidence({ profiles, fault, security, adminListUi, smoke });
-}
-
-async function runTwoProcessRedisSmoke(ids: readonly SmokeId[]) {
-  const scope = await createOwnedPostgresRedisProcessScope();
-  try {
-    const [processA, processB] = await scope.startTwoFreshServers();
-    await scope.requireHealthy(processA, processB);
-    return await runSequentialScenarios(ids, { processA, processB, scope });
-  } finally {
-    await scope.stopOwnedProcessesAndCleanupExactState();
-  }
+  const matrices = await deps.runFaultSecurityAndTwoProcessRedisFlows();
+  return deps.normalizeAggregateEvidence({ profiles, adminListUi, matrices });
 }
 ```
 
@@ -576,6 +624,7 @@ SERVER_CACHE_BACKEND=memory bun test \
   tests/integration/runtime/public-site-cache-eligibility.test.ts \
   tests/integration/runtime/public-content-visibility-cache-gate.test.ts \
   tests/integration/runtime/public-content-list-membership-cache-gate.test.ts \
+  tests/integration/runtime/public-nested-content-cache-gate.test.ts \
   tests/integration/server/entry-access-password-hash.test.ts \
   tests/integration/runtime/entry-visibility-cache.test.ts \
   tests/integration/runtime/entry-visibility-gate.test.ts \
@@ -585,14 +634,21 @@ SERVER_CACHE_BACKEND=redis SERVER_CACHE_NAMESPACE=task551-09-l01 bun test \
   tests/integration/runtime/public-site-cache-eligibility.test.ts \
   tests/integration/runtime/public-content-visibility-cache-gate.test.ts \
   tests/integration/runtime/public-content-list-membership-cache-gate.test.ts \
+  tests/integration/runtime/public-nested-content-cache-gate.test.ts \
   tests/integration/runtime/entry-visibility-cache.test.ts \
   tests/integration/runtime/entry-visibility-gate.test.ts \
   tests/integration/runtime/entry-password-gate.test.ts
 bun test tests/unit/server/publicBookingApi.test.ts \
-  tests/unit/server/publicFormsApi.test.ts \
+  tests/unit/server/publicFormsApi-routing-errors.test.ts \
+  tests/unit/server/publicFormsApi-public-access-rate.test.ts \
+  tests/unit/server/publicFormsApi-internal-auth.test.ts \
+  tests/unit/server/publicFormsApi-payload-descriptors.test.ts \
+  tests/unit/server/publicFormsApi-database.test.ts \
   tests/integration/routes/bookingRoutes.test.ts \
   tests/integration/routes/forms.test.ts \
-  tests/integration/server/formsWriteMounts.test.ts \
+  tests/integration/server/formsWriteMounts-routing.test.ts \
+  tests/integration/server/formsWriteMounts-upload-errors.test.ts \
+  tests/integration/server/formsWriteMounts-auth-media.test.ts \
   tests/integration/routes/publicAnalytics.test.ts \
   tests/security/analyticsBeacon.test.ts
 bun --cwd core lint:types
@@ -608,6 +664,7 @@ wc -l core/server/publicSite.tsx core/server/publicSiteRenderer.tsx \
   tests/integration/runtime/public-site-cache-eligibility.test.ts \
   tests/integration/runtime/public-content-visibility-cache-gate.test.ts \
   tests/integration/runtime/public-content-list-membership-cache-gate.test.ts \
+  tests/integration/runtime/public-nested-content-cache-gate.test.ts \
   tests/vitest/content/entry-visibility-gate.test.ts \
   tests/vitest/content/entry-unlock-token.test.ts \
   tests/integration/server/entry-access-password-hash.test.ts \
@@ -615,10 +672,12 @@ wc -l core/server/publicSite.tsx core/server/publicSiteRenderer.tsx \
   tests/integration/runtime/entry-visibility-gate.test.ts \
   tests/integration/runtime/entry-password-gate.test.ts \
   tests/unit/server/publicBookingApi.test.ts \
-  tests/unit/server/publicFormsApi.test.ts \
+  tests/unit/server/publicFormsApiTestFixtures.ts \
+  tests/unit/server/publicFormsApi-*.test.ts \
   tests/integration/routes/bookingRoutes.test.ts \
   tests/integration/routes/forms.test.ts \
-  tests/integration/server/formsWriteMounts.test.ts \
+  tests/integration/server/formsWriteMountsTestFixtures.ts \
+  tests/integration/server/formsWriteMounts-*.test.ts \
   tests/integration/routes/publicAnalytics.test.ts \
   tests/security/analyticsBeacon.test.ts
 ```
@@ -751,6 +810,11 @@ TASK-551-09-L04:
 
 ```bash
 set -a && source .env && set +a
+# INITIAL gate, before TASK-551-03-L02 and TASK-551-04-L01:
+bun run test:vitest -- tests/vitest/admin/admin-cache-authority.test.ts
+bun --cwd core lint:types
+bun --cwd core lint
+# FINAL gate, after both adoption receipts and TASK-551-09-L03:
 bun run test:vitest -- tests/vitest/admin/storageCache.test.ts \
   tests/vitest/admin/cacheBusHardening.test.ts \
   tests/vitest/admin/readThroughCache.test.ts \
@@ -759,10 +823,12 @@ bun run test:vitest -- tests/vitest/admin/storageCache.test.ts \
   tests/vitest/admin/cacheRefresh.test.ts \
   tests/vitest/admin/admin-cache-identity.test.ts \
   tests/vitest/admin/read-through-cache-generation.test.ts \
+  tests/vitest/admin/admin-cache-client-authority-matrix.test.ts \
   tests/vitest/admin/authClient.test.ts \
   tests/vitest/authUi/authClient.test.ts \
   tests/vitest/ui/admin-auth-identity.test.tsx
 SERVER_CACHE_BACKEND=memory bun test tests/unit/security/securitySettings.test.ts \
+  tests/integration/routes/settings.test.ts \
   tests/integration/routes/securitySettings.test.ts \
   tests/integration/server/security-settings-db-authority.test.ts \
   tests/integration/runtime/public-site-cache-query-budget.test.ts
@@ -774,15 +840,18 @@ bun --cwd core lint:types
 bun --cwd core lint
 git diff --check
 wc -l core/admin/services/{adminAuthIdentity,adminCacheIdentity,authClient,cachePolicy}.ts \
+  core/admin/services/{adminThemeClient,analyticsClient,apiClient,assistantClient,assistantStatusClient,backupsClient,commerceClient,contentTypesClient,customScreenShortcutsClient,customScreensCache,customScreensClient,dashboardClient,importExportClient,listingsClient,mediaFoldersClient,menusClient,pageTemplatesClient,popupsClient,redirectsClient,reviewsClient,seoClient,settingsCache,settingsClient,siteSettingsClient,solutionKitsClient,userSettingsClient,widgetsClient}.ts \
   core/admin/ui/contexts/AdminAuthContext.tsx \
-  core/admin/utils/{storageCache,cacheBus,readThroughCache}.ts \
+  core/admin/utils/{adminCacheAuthority,storageCache,sessionCache,cacheBus,readThroughCache,adminPrefetch}.ts \
+  core/server/routes/settingsRoutes.ts \
   core/services/settings/securitySettings.ts \
-  tests/vitest/admin/{storageCache,cacheBusHardening,readThroughCache,cacheBus,cacheBusCorrelation,cacheRefresh,admin-cache-identity,read-through-cache-generation}.test.ts \
+  tests/vitest/admin/{storageCache,cacheBusHardening,readThroughCache,cacheBus,cacheBusCorrelation,cacheRefresh,admin-cache-authority,admin-cache-identity,read-through-cache-generation,admin-cache-client-authority-matrix}.test.ts \
   tests/vitest/admin/authClient.test.ts \
   tests/vitest/authUi/authClient.test.ts \
   tests/vitest/ui/admin-auth-identity.test.tsx \
   tests/vitest/admin/support/cacheBusTestHarness.ts \
   tests/unit/security/securitySettings.test.ts \
+  tests/integration/routes/settings.test.ts \
   tests/integration/routes/securitySettings.test.ts \
   tests/integration/server/security-settings*.test.ts
 ```
@@ -795,16 +864,17 @@ Load repository environment for every DB/settings command, but never print it:
 set -a && source .env && set +a
 bun --cwd core lint:types
 bun --cwd core lint
+bun scripts/task-551-query-inventory.ts --check --phase final
+bun test tests/perf/database-pg-stat-interval.test.ts
 bunx vitest run tests/vitest/db/databaseConfig.test.ts \
-  tests/vitest/db/queryFingerprintRegistry.test.ts
+  tests/vitest/db/queryFingerprintRegistry.test.ts \
+  tests/vitest/db/databaseApplicationIdentity.test.ts
 bun test tests/integration/server/task551DatabaseLifecycle.test.ts \
   tests/integration/server/task551RuntimeEntrypoints.test.ts \
   tests/perf/database-pool-telemetry.test.ts
 bunx vitest run tests/vitest/db/schemaExports.test.ts \
   tests/vitest/db/searchVectorDefinitions.test.ts
 bun run db:generate
-bun scripts/task-551-online-indexes.ts resolve-receipt --output .tmp/task551-migration-receipt.json
-bun run db:migrate
 bun test tests/integration/server/task551SchemaMigrationParity.test.ts \
   tests/integration/server/task551SearchVectorMigration.test.ts \
   tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts \
@@ -813,9 +883,9 @@ bun test tests/integration/server/task551SchemaMigrationParity.test.ts \
   tests/perf/database-index-write-overhead.test.ts \
   tests/perf/database-explain-plans.test.ts \
   tests/integration/server/task551ConcurrencyConstraints.test.ts
-bun scripts/task-551-online-indexes.ts apply-resume-check --receipt .tmp/task551-migration-receipt.json --through-group revision-integrity
-bun scripts/task-551-online-indexes.ts apply-resume-check --receipt .tmp/task551-migration-receipt.json
-bun scripts/task-551-online-indexes.ts apply-resume-check --receipt .tmp/task551-migration-receipt.json
+TASK551_OFFLINE_SINGLE_ACK=all-coderso-processes-stopped bun scripts/task-551-online-indexes.ts rollout-forward --receipt .tmp/task551-migration-receipt.json --admission-mode offline-single
+TASK551_OFFLINE_SINGLE_ACK=all-coderso-processes-stopped bun scripts/task-551-online-indexes.ts rollout-forward --receipt .tmp/task551-migration-receipt.json --admission-mode offline-single
+bun scripts/task-551-online-indexes.ts status --receipt .tmp/task551-migration-receipt.json
 bunx vitest run tests/vitest/maintenance/retentionPolicy.test.ts \
   tests/vitest/search/searchHistoryContract.test.ts
 bun test tests/unit/access/accessLogService.test.ts \

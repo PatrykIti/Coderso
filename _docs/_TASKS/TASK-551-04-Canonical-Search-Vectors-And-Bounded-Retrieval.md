@@ -63,6 +63,11 @@ that landed contract read-only.
 
 - Every query references the generated columns exported by TASK-551-05; no
   service reconstructs a `to_tsvector` expression at query time.
+- FTS input uses exactly `to_tsquery('simple', :prefixQuery)`. The code-owned
+  NFKC grammar accepts only Unicode letter/mark/number/underscore token runs,
+  rejects rather than truncates more than 16 tokens or 64 code points per token,
+  emits `token:*` joined by ` & `, and binds the result. Predicate/rank are
+  exactly `search_vector @@ query` and `ts_rank_cd(search_vector,query,32)`.
 - All source text uses TASK-551-05's exact immutable-compatible
   `coalesce(...) || ' ' || ...` constants. Schema, migration, snapshot, and
   query-normalizer renders retain byte identity; no search service introduces
@@ -72,6 +77,12 @@ that landed contract read-only.
   CMS search and 1 statement for assistant candidates. L01's exact global
   algorithm orders match tier (`exact_email`, FTS, trigram), then score/time/
   source/ID; incomparable FTS rank and trigram similarity are never mixed.
+- Selected trigram fallback runs in the same read-only transaction/backend as
+  retrieval after static `SET LOCAL pg_trgm.similarity_threshold = '0.300'`.
+  It requires at least three normalized code points and uses exactly indexed
+  `search_trigram_text % :normalizedNeedle` plus
+  `similarity(search_trigram_text,:normalizedNeedle)`; there is no LIKE/ILIKE/
+  regex wildcard-escaping path or session-setting leakage.
 - For each of at most five sources, exact-email + FTS + non-overlapping trigram
   emits at most `limit+1<=51`; at most 255 candidates enter global rank and at
   most 51 leave it. `UNION ALL` retains provenance and identity dedup prefers
@@ -105,7 +116,7 @@ that landed contract read-only.
   for a source whose TASK-551-05 evidence receipt proves its exact matching
   index; there is no unindexed growing-table fallback.
 - V1 has no search cursor. It returns at most the requested 50 items after an
-  internal one-row lookahead and defines no `search_cursor_invalid` error.
+  internal one-row lookahead; no cursor field or cursor-specific error exists.
 - Email remains hash-exact under existing authorized admin scope and is excluded
   from vectors/trigram text. Logs/plans/errors omit query binds, private content,
   emails/hashes, credentials, tokens, and customer payloads.
@@ -127,5 +138,8 @@ dedup precedence, per-fingerprint planner receipts and L04 authority adoption.
 ## Documentation Updates Required
 
 No shared docs are edited here. L01/L02 hand exact vector/trigram columns,
-conditional-fallback evidence, limits, visibility, and plan results to
-TASK-551-10-L02; shared docs and changelog 1263 remain its sole ownership.
+constructor/token/prefix grammar, threshold/session behavior, conditional-
+fallback evidence, limits, visibility, and plan results to TASK-551-10-L02.
+Closure must update `_docs/SEARCH_SPEC.md`: its current `plainto_tsquery` and
+ILIKE wording is obsolete and cannot remain after this `to_tsquery`/indexed `%`
+contract lands. Shared docs and changelog 1263 remain closure's sole ownership.

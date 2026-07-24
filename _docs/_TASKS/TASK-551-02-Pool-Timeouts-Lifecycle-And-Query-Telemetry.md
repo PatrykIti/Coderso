@@ -17,13 +17,16 @@ Replace the unchecked `DB_POOL_MAX`-only client setup with validated cluster
 budgets, bounded PostgreSQL timeouts, graceful lifecycle, PgBouncer-compatible
 configuration, a live-proven session-affine maintenance channel, and redacted
 query/pool telemetry.
+One strict runtime/worker fleet declaration is shared by the connection budget,
+per-process application identity, and migration adapter; a worker is a full
+pool-owning process, never an unpriced reserve.
 
 ## Single-Writer Ownership and Collision Guards
 
 | Leaf | Exact allowlist |
 |---|---|
 | TASK-551-02-L01 | `core/db/databaseConfig.ts`; `tests/vitest/db/databaseConfig.test.ts` |
-| TASK-551-02-L02 | `core/db/client.ts`; `core/db/databaseLifecycle.ts`; `core/db/queryFingerprintRegistry.ts`; `core/db/queryTelemetry.ts`; `core/server/runtimeLifecycle.ts`; `core/server/runtimeEntrypoint.ts`; `core/server/prod.ts`; `core/server/dev.ts`; `tests/vitest/db/queryFingerprintRegistry.test.ts`; `tests/integration/server/task551DatabaseLifecycle.test.ts`; `tests/integration/server/task551RuntimeEntrypoints.test.ts`; `tests/perf/database-pool-telemetry.test.ts` |
+| TASK-551-02-L02 | `core/db/client.ts`; `core/db/databaseLifecycle.ts`; `core/db/databaseApplicationIdentity.ts`; `core/db/queryFingerprintRegistry.ts`; `core/db/queryTelemetry.ts`; `core/server/runtimeLifecycle.ts`; `core/server/runtimeEntrypoint.ts`; `core/server/prod.ts`; `core/server/dev.ts`; `scripts/task-551-pg-stat-interval.ts`; `tests/vitest/db/databaseApplicationIdentity.test.ts`; `tests/vitest/db/queryFingerprintRegistry.test.ts`; `tests/integration/server/task551DatabaseLifecycle.test.ts`; `tests/integration/server/task551RuntimeEntrypoints.test.ts`; `tests/perf/database-pool-telemetry.test.ts`; `tests/perf/database-pg-stat-interval.test.ts` |
 
 L02 is the sole TASK-551 writer of `core/db/client.ts`. Forbidden paths include
 all schema/migration files, cache/Redis source reserved for 07/08, TASK-511
@@ -51,11 +54,21 @@ same-connection transactions, liveness verification, and confirmed cancel plus
 rollback/connection termination. Later retention work must use that one handle
 for its advisory lock and every batch; it may not fall back to global DB
 transactions.
+L01 owns `parseDatabaseFleetConfig`; L02's pure database-application identity
+imports that value instead of reparsing fleet counts. It emits
+only `coderso:runtime:<replicaId>`, `coderso:worker:<replicaId>`,
+`coderso:maintenance:<replicaId>`, or
+`coderso:migration:<operationUuid>`; runtime/worker fleet counts are separate,
+bounded, and default to the one-runtime/zero-worker local profile. TASK-551-05
+imports the same pure fleet parser and name builder for adapter counts, its
+three-connection rollout reserve, and `pg_stat_activity` drain proof; it never
+imports the live client. Legacy `DB_REPLICA_COUNT` and
+`DB_WORKER_CONNECTION_RESERVE` are rejected so declarations cannot drift.
 `DB_MAINTENANCE_MODE=primary|direct|session` is strict. A transaction-pooled
 main channel cannot supply a maintenance lease; enabled maintenance must use a
 distinct direct or PgBouncer-session URL and pass the two-transaction,
 independent-verifier advisory-lock/PID probe before traffic. Every dedicated
-maintenance pool connection is included in the per-replica cluster budget and
+maintenance pool connection is included for every declared process and
 neither URL may enter parsed output, logs, metrics, or errors.
 Ordinary `primary` startup never probes an unused maintenance capability, so
 `DB_POOL_MAX=1` remains valid for a scheduler-disabled small site. An enabled
@@ -83,6 +96,9 @@ reopen either entrypoint or introduce another signal owner.
   silently expanding the connection or timeout budget.
 - Metrics contain fingerprints/categories only, never SQL text with binds,
   connection URLs, credentials, PII, or driver error details.
+- PostgreSQL application names contain only the closed process class and strict
+  opaque replica/operation identity—never URLs, hosts, tenants, credentials, PII,
+  or request values.
 
 ## Testing Requirements
 
@@ -90,6 +106,7 @@ reopen either entrypoint or introduce another signal owner.
 - `set -a && source .env && set +a && bun test tests/integration/server/task551DatabaseLifecycle.test.ts`
 - `bun test tests/integration/server/task551RuntimeEntrypoints.test.ts`
 - `set -a && source .env && set +a && bun test tests/perf/database-pool-telemetry.test.ts`
+- `set -a && source .env && set +a && bun test tests/perf/database-pg-stat-interval.test.ts`
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
 - `bun run gates:coderso`
@@ -107,15 +124,21 @@ and performance documentation.
 - `off + primary + pool=1` starts ordinary DB lifecycle with zero maintenance
   probe. The same configuration fails only when a session-affine consumer is
   enabled; primary capacity 2 or a proven dedicated mode satisfies that gate.
-- `replicas × primary pool + replicas × any dedicated maintenance pool +
-  worker/migration reserve` cannot exceed the configured server budget; default
-  remains safe for one small-site process.
+- `(runtime count + worker count) × primary pool + every distinct maintenance
+  pool + three-or-more migration/probe connections` is strictly below server
+  capacity after operational reserve. Default is `1/0 × 10 + 3 = 13` planned
+  against 82 available; underdeclared or mismatched fleet arrays fail.
 - Shutdown closes the client once. Explicitly opted-in query families expose
   bounded fingerprint/duration/outcome/returned-row metrics; a separate pool
   probe exposes bounded reservation wait/saturation. Neither claims unavailable
   driver-wide row/wait data, and both are zero-secret. The exact bounded
   telemetry sink exposes deterministic `snapshot()`/`reset()` operations without
   retaining raw statements, binds, errors, or an unbounded event stream.
+- The read-only interval tool emits named pre-decision/before/after
+  `pg_stat_statements` deltas without resetting shared statistics. It requires
+  unchanged stats-reset/server/snapshot identity, classifies application,
+  migration, maintenance, external-diagnostic and unknown traffic separately,
+  and excludes the last two classes from application prioritization.
 - Cancellation-aware workers finish confirmed cancellation and rollback or
   reserved-backend termination within 4,500 ms, before the shared 5,000 ms
   participant deadline and before cache/database close; no work remains detached.

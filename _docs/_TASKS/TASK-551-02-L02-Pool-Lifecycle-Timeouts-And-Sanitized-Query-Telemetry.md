@@ -26,12 +26,16 @@ None; this is an executable leaf.
 ## File Ownership
 
 **Allowlist:** `core/db/client.ts`, `core/db/databaseLifecycle.ts`,
+`core/db/databaseApplicationIdentity.ts`,
 `core/db/queryFingerprintRegistry.ts`, `core/db/queryTelemetry.ts`, `core/server/runtimeLifecycle.ts`,
 `core/server/runtimeEntrypoint.ts`, `core/server/prod.ts`, `core/server/dev.ts`,
+`scripts/task-551-pg-stat-interval.ts`,
 `tests/vitest/db/queryFingerprintRegistry.test.ts`,
+`tests/vitest/db/databaseApplicationIdentity.test.ts`,
 `tests/integration/server/task551DatabaseLifecycle.test.ts`,
 `tests/integration/server/task551RuntimeEntrypoints.test.ts`,
-and `tests/perf/database-pool-telemetry.test.ts` only.
+`tests/perf/database-pool-telemetry.test.ts`, and
+`tests/perf/database-pg-stat-interval.test.ts` only.
 
 **Forbidden:** schema/migrations; service/route behavior; TASK-511 backup and
 scheduler source; TASK-517 entry/public source; TASK-493 SEO source; cache/Redis
@@ -41,6 +45,8 @@ scheduler source; TASK-517 entry/public source; TASK-493 SEO source; cache/Redis
 
 ```ts
 const config = parseDatabaseRuntimeConfig(process.env);
+const fleet = config.fleet; // sole parse performed by L01's config owner
+const identity = parseDatabaseApplicationIdentity(process.env, fleet);
 const sqlClient = postgres(requireDatabaseUrlRedacted(), {
   max: config.poolMax,
   connect_timeout: config.connectTimeoutSeconds,
@@ -48,6 +54,7 @@ const sqlClient = postgres(requireDatabaseUrlRedacted(), {
   max_lifetime: config.maxLifetimeSeconds,
   prepare: config.pgbouncerMode !== "transaction",
   connection: {
+    application_name: buildDatabaseApplicationName(identity.processKind, identity.replicaId),
     // postgres.js sends these startup parameters on every new physical session.
     statement_timeout: config.statementTimeoutMs,
     lock_timeout: config.lockTimeoutMs,
@@ -64,7 +71,10 @@ const maintenanceSqlClient = config.maintenanceMode === "primary"
       idle_timeout: config.idleTimeoutSeconds,
       max_lifetime: config.maxLifetimeSeconds,
       prepare: config.maintenanceMode === "direct",
-      connection: sameBoundedStartupTimeouts(config),
+      connection: {
+        ...sameBoundedStartupTimeouts(config),
+        application_name: buildDatabaseApplicationName("maintenance", identity.replicaId),
+      },
     });
 
 export async function assertMaintenanceSessionAffinity(): Promise<void> {
@@ -226,7 +236,14 @@ export const MAX_QUERY_FINGERPRINTS = 512;
 export const MAX_COUNTER_VALUE = Number.MAX_SAFE_INTEGER;
 
 // Pure production module: no DB/runtime/env/test-fixture import.
-export const TASK551_QUERY_FINGERPRINTS = strictReadonly({ /* closed reviewed key/value map */ });
+export const TASK551_QUERY_FINGERPRINT_DEFINITIONS = strictReadonly({
+  /* closed reviewed key -> { value, normalizedQuerySha256[], sourceClass }
+     map; digests are lowercase SHA-256 of the code-owned PostgreSQL-normalized
+     statement shape and never the SQL or a bind value */
+});
+export const TASK551_QUERY_FINGERPRINTS = mapFingerprintValues(
+  TASK551_QUERY_FINGERPRINT_DEFINITIONS,
+);
 export type QueryFingerprintKey = keyof typeof TASK551_QUERY_FINGERPRINTS;
 export type QueryFingerprint = (typeof TASK551_QUERY_FINGERPRINTS)[QueryFingerprintKey];
 
@@ -271,6 +288,32 @@ export async function probeDatabasePoolHealth(
   // and best-effort record the closed aggregate without changing probe outcome.
 }
 ```
+
+`databaseApplicationIdentity.ts` is a pure Bun/DB-free owner used by runtime,
+workers, maintenance, and TASK-551-05's rollout tool. It accepts the already
+parsed L01 `DatabaseFleetConfig`; it must not parse or default either count.
+Its remaining strict environment contract is exact:
+
+- `CODERSO_DB_PROCESS_KIND=runtime|worker`, default `runtime`;
+- `CODERSO_DB_REPLICA_ID`, globally unique across runtime and worker arrays,
+  matches `[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?`; default `replica-1` is legal
+  only for the default one-runtime/zero-worker fleet;
+- L01's fleet is exactly runtime `1..256`, worker `0..256`; process kind
+  `worker` requires `workerProcessCount >= 1`. Any non-default fleet requires an
+  explicit replica ID; unknown/coerced/whitespace/case-variant values fail.
+  Tests fail if config, identity, adapter array lengths, or migration receipt
+  counts do not have exact `DatabaseFleetConfig` equality.
+
+`buildDatabaseApplicationName(kind,identity)` accepts closed kind
+`runtime|worker|maintenance|migration`. Runtime, worker, and distinct maintenance
+sessions are exactly `coderso:<kind>:<replicaId>`; the migration identity is a
+canonical lowercase UUID and renders `coderso:migration:<operationId>`. Every
+result is ASCII and at most PostgreSQL's 63-byte limit. Primary-mode maintenance
+shares the already named runtime/worker connection and is not renamed mid-
+session. No hostname, tenant, URL, credential, user input, or random suffix may
+enter a name. The rollout tool imports only this pure module, never `client.ts`.
+L05 uses these same two parsed fleet counts for adapter-array cardinality
+and these names for fail-closed `pg_stat_activity` drain proof.
 
 These are closed registries, not examples. `queryFingerprintRegistry.ts` fails
 module validation if the reviewed map exceeds `MAX_QUERY_FINGERPRINTS`, contains
@@ -397,12 +440,113 @@ URLs, or labels. Sink/snapshot/reset failure never changes an authoritative quer
 or probe result. No caller-derived SQL, route value, bind, URL, or free-form
 label may become a fingerprint.
 
+### Sanitized `pg_stat_statements` interval receipt
+
+This leaf also owns an executable, read-only interval collector. It never calls
+`pg_stat_statements_reset()` and never treats cumulative counters as a named
+interval. Its exact commands are:
+
+```text
+bun scripts/task-551-pg-stat-interval.ts start --name task551-predecision-clean --purpose pre-decision --snapshot .tmp/task551-pg-stat-task551-predecision-clean-start.json --operator-evidence .tmp/task551-pg-stat-operator-evidence.json
+bun scripts/task-551-pg-stat-interval.ts end --name task551-predecision-clean --purpose pre-decision --start .tmp/task551-pg-stat-task551-predecision-clean-start.json --receipt .tmp/task551-pg-stat-task551-predecision-clean.json --operator-evidence .tmp/task551-pg-stat-operator-evidence.json
+```
+
+L05 runs the same pair with names `task551-index-before`/`before` and
+`task551-index-after`/`after` around the identical synthetic workload. Paths are
+exact `.tmp/task551-pg-stat-<name>-start.json` and
+`.tmp/task551-pg-stat-<name>.json`; the tool rejects arbitrary output roots,
+unknown flags, reused interval names, or mismatched purpose/name. Start must be
+strictly after the operator evidence's `diagnosticsEndedAt`, so prioritization
+always uses a fresh clean interval after diagnostic work.
+
+```ts
+type TrafficSourceClass =
+  | "application" | "migration" | "maintenance"
+  | "external_diagnostic" | "unknown";
+type PgStatCounter = StrictReadonly<{
+  queryId: string; // canonical signed bigint decimal
+  calls: number; rows: number;
+  totalPlanMs: number; totalExecMs: number;
+}>;
+type PgStatIntervalReceipt = StrictReadonly<{
+  version: 1;
+  name: "task551-predecision-clean" | "task551-index-before" | "task551-index-after";
+  purpose: "pre-decision" | "before" | "after";
+  start: { capturedAt: string; snapshotSha256: string };
+  end: { capturedAt: string; snapshotSha256: string };
+  statsReset: string;
+  serverIdentitySha256: string;
+  databaseIdentitySha256: string;
+  extensionVersion: string;
+  cleanAfterDiagnostics: true;
+  deltas: readonly StrictReadonly<{
+    queryId: string;
+    fingerprintKey: QueryFingerprintKey | null;
+    sourceClass: TrafficSourceClass;
+    classificationEvidenceId: string;
+    callsDelta: number; rowsDelta: number;
+    totalPlanMsDelta: number; totalExecMsDelta: number;
+  }>[];
+  sourceClassTotals: Readonly<Record<TrafficSourceClass, {
+    statements: number; calls: number; rows: number;
+    totalPlanMs: number; totalExecMs: number;
+  }>>;
+  eligibleApplicationQueryIds: readonly string[];
+  excludedQueryIds: readonly string[];
+}>;
+```
+
+At both boundaries a max-1 client enters a read-only transaction, applies
+`statement_timeout=5000`, selects at most the configured
+`pg_stat_statements.max` rows for the current database, and closes fully. It
+derives server/database identities in memory and stores only SHA-256 digests.
+Start and end must have byte-equal server/database identity, PostgreSQL major,
+extension version, and `pg_stat_statements_info.stats_reset`; a reset, restart,
+counter decrease, query-ID reuse with incompatible metadata, or more than
+10,000 rows fails `pg_stat_interval_invalid`. Snapshot JSON is strict,
+canonical, bounded to 4 MiB, mode `0600`, and contains no statement text, bind,
+role name, application name, URL, host, database name, error text, or row data.
+
+Statement text is held only long enough in memory to normalize and SHA-256 it
+against `TASK551_QUERY_FINGERPRINT_DEFINITIONS`. A safely dedicated database
+role may supply a closed class mapping. `pg_stat_statements` does **not** retain
+`application_name`; the receipt never claims otherwise. A contemporaneous
+`pg_stat_activity.query_id` observation may record only the closed application-
+name class as corroboration for that instant and cannot retroactively classify
+historical calls. Unmatched rows remain `unknown` unless a strict operator-owned
+classification object names the query ID, class, bounded evidence ID, purpose,
+and canonical timestamp. Only that explicit evidence may mark
+`external_diagnostic`; inference from slow duration or SQL appearance is
+forbidden. Only `application` deltas are eligible for index/cache
+prioritization. Migration, maintenance, external-diagnostic, and unknown totals
+remain separately visible; external-diagnostic and unknown IDs are always in
+`excludedQueryIds`.
+
+The initial owner-supplied production sample is explicitly polluted: it contains
+one cross-table whole-row text-regex diagnostic family plus four `access_logs`
+column text-regex diagnostic families (ID, user-agent, user-ID, and path). A
+repository-wide source scan found no matching application callsite. Because
+historical application names are unavailable, the collector records those IDs
+as `external_diagnostic` only with the operator evidence above and otherwise as
+`unknown`; neither class can justify an application index. Operations guidance
+forbids repeating an all-table/whole-row regex scan. A necessary diagnostic uses
+explicit columns and selective predicates on a bounded read-only/maintenance
+session with the 5-second timeout, preferably on a replica, followed by a new
+clean named interval. Raw SQL, patterns, binds, rows, and customer data never
+enter the receipt or task evidence.
+
 ## Testing Requirements
 
 - With a test pool configured at least 2, real DB reserves at least two
   simultaneous physical connections, verifies the
   three startup timeout settings on both, replaces one connection, verifies the
   replacement, and exercises a deliberately bounded timeout cancellation.
+- Identity tests cover every kind, default local fleet, min/max L01 fleet
+  counts, exact config/identity equality, global-ID grammar, explicit multi-
+  process requirement, runtime/worker count distinction,
+  63-byte ceiling, unknown fields/values, and absence of URLs/credentials. Real
+  sessions prove main/replacement/distinct-maintenance `application_name` values;
+  primary maintenance retains its main name. A pure import opens zero DB clients.
 - A separate `off + primary + DB_POOL_MAX=1` runtime fixture starts and closes
   the ordinary database lifecycle successfully with exactly zero affinity-probe
   or second-reservation attempts. Invoking `assertMaintenanceSessionAffinity`
@@ -435,9 +579,10 @@ label may become a fingerprint.
   exact coverage, cardinality remains fixed, and a secret sentinel cannot appear
   in metrics/log output. A throwing row counter or sink cannot replace the
   operation's value/error.
-- Registry tests pin closed key/value uniqueness, stable ordering, side-effect-
-  free import, and zero production imports from `tests/**`; final 01-L01 owns
-  independent exact-set verification.
+- Registry tests pin closed key/value uniqueness, stable ordering, each
+  lowercase normalized-query SHA-256 and closed source class, side-effect-free
+  import, and zero production imports from `tests/**`; final 01-L01 owns
+  independent exact-set verification. No statement text is exported.
 - `probeDatabasePoolHealth` saturates only the test pool, records a bounded
   reservation-wait/saturation sample, releases every reserved session in
   `finally`, and returns to zero after drain. Tests do not claim this is
@@ -448,6 +593,20 @@ label may become a fingerprint.
   rejection/no-allocation for every unknown enum/fingerprint, bounded memory
   independent of sample count, and best-effort behavior when an injected sink
   throws.
+- Interval tests use synthetic `pg_stat_statements`/`pg_stat_activity` views and
+  a disposable real extension to pin all three names/purposes, calls/rows/plan/
+  exec-time deltas, unchanged reset/server/database/snapshot identity,
+  10,000-row/4-MiB/5-second bounds, canonical `0600` writes, and zero shared
+  reset calls. Counter decrease, reset/restart, identity change, query-ID reuse,
+  path escape, replay, malformed operator evidence, or unknown source class
+  fails closed. Registry-digest/safe-role matching is proven; live activity is
+  contemporaneous only, and unmatched rows remain `unknown`. Explicit
+  external-diagnostic and unknown IDs are separately totaled/excluded while
+  only application IDs become eligible.
+- Seed the five sanitized diagnostic families from the polluted observation and
+  prove zero registry callsites, zero proposed indexes, and a required later
+  clean interval. Sentinels prove no SQL, bind, regex pattern, role/application/
+  host/database name, URL, PII, or row body is persisted.
 - Dedicated-session tests prove success, thrown callback, acquisition timeout,
   delayed post-timeout acquisition, and shutdown races release exactly once;
   a late session never reaches the callback, its timer is cleared, and
@@ -473,14 +632,22 @@ label may become a fingerprint.
 - Existing auth/RBAC/CSRF/rate-limit and anti-abuse contracts are untouched.
 - Env values are parsed by L01; both URLs are required only by their declared
   modes and are never returned, echoed, logged, or put in telemetry.
+- Application identity values use the strict L02-owned closed grammar and reveal
+  only process class plus opaque replica/operation ID; no URL, host, tenant,
+  credential, user ID, or request value is permitted.
 - Telemetry labels are allowlisted enums/fingerprints, not caller-controlled SQL.
+- Interval collection is read-only, timeout-bounded and non-resetting. Operator
+  evidence contains only query IDs/classes/bounded evidence IDs/timestamps; no
+  diagnostic SQL, patterns, binds, rows, role, host, or database identifier.
 
 ## Validation Commands
 
 - `set -a && source .env && set +a && bun test tests/integration/server/task551DatabaseLifecycle.test.ts`
 - `bun test tests/integration/server/task551RuntimeEntrypoints.test.ts`
 - `bunx vitest run tests/vitest/db/queryFingerprintRegistry.test.ts`
+- `bunx vitest run tests/vitest/db/databaseApplicationIdentity.test.ts`
 - `set -a && source .env && set +a && bun test tests/perf/database-pool-telemetry.test.ts`
+- `set -a && source .env && set +a && bun test tests/perf/database-pg-stat-interval.test.ts`
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
 - `bun run gates:coderso`
@@ -529,3 +696,13 @@ health prose, and changelog 1263.
 - A single-connection primary pool remains a supported small-site ordinary DB
   configuration. It is rejected only at activation of a session-affine
   consumer, never by unused-capability probing during normal DB startup.
+- Every physical DB session has one exact sanitized application-name class;
+  runtime and worker fleet counts remain distinct, replacement sessions preserve
+  identity, and TASK-551 rollout can prove drain without SQL text or secrets.
+- Config, identity, migration-adapter arrays and receipt use one exactly equal
+  fleet; every runtime/worker and distinct-maintenance pool plus the three
+  rollout connections is budgeted before startup.
+- Pre-decision/before/after receipts contain non-negative per-query-ID deltas
+  over unchanged statistics identity without resetting shared state. Only
+  registry/role-proven application traffic is prioritizable; polluted external
+  diagnostics and unknowns are separately reported and excluded.

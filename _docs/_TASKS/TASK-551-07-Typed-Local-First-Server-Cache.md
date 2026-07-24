@@ -103,6 +103,14 @@ cache data is a measured miss/bypass, never a substitute value.
   entry generation compare/write atomically in-process; TASK-551-08-L01 supplies
   Redis generation-only parity, while a distributed owner uses only the L01
   lease-plus-generation atomic operation.
+- Every loader receives one closed trigger: exact-key backend null is
+  `store_absent`; returned but expired/wrong-generation/oversized/invalid bytes
+  are evicted and become coarse `store_value_rejected`; ineligible, saturated,
+  coherence/generation bypass and non-publication retry are `fill_disabled`.
+  Disabled fills are never encoded/written. This lets the public manifest owner
+  allow positive fill only on a true absent-key miss while treating rejected
+  cached metadata as authoritative `no_fill`, without leaking key/value/decoder
+  detail or imposing that stricter rebuild policy on every cache family.
 - L01 owns the complete backend-neutral store interface plus backend/worker
   coherence signal and snapshot types. Conditional writes return
   `written|generation_changed|unknown`; an uncertain Redis reply has unknown
@@ -160,6 +168,8 @@ cache data is a measured miss/bypass, never a substitute value.
 - Pure consumers can use one async typed cache without importing a backend.
 - Exact envelope/key vectors are stable across Bun and Vitest; malformed,
   expired, wrong-version and oversized values become misses.
+- Loader-trigger tests distinguish backend absence from returned rejected bytes
+  and prove every fill-disabled path has zero publication side effects.
 - Memory tests prove count and byte ceilings, replacement accounting, LRU,
   expiry, per-entry jitter bounds, the combined 64-victim work cap/skip behavior,
   and fill-attempt cleanup on success and

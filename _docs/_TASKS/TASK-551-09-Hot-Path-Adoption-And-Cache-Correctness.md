@@ -5,8 +5,9 @@
 **Priority:** Critical
 **Category:** Runtime / Cache / Performance / Security
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-551-08 complete; TASK-551-03 query and TASK-551-06
-revision handoffs terminal; parent external dispatch gate
+**Dependencies:** L04 INITIAL exception after TASK-551-07-L01; all public/
+mutation adoption and L04 FINAL after TASK-551-08 complete plus TASK-551-03
+query and TASK-551-06 revision handoffs terminal; parent external dispatch gate
 **Status:** ⏳ To Do
 **Changelog:** 1263 (pinned; closure only)
 
@@ -249,6 +250,10 @@ clients/hooks that returned receipts.
 - Runtime bootstrap loading precedes dynamic route classification but cannot
   authorize/contain content. Unknown, ambiguous or stale classification performs
   no manifest/HTML/content value lookup and uses authoritative routing/DB.
+- Only an exact-key backend absence is the manifest/HTML true-miss fill path. A
+  returned corrupt/expired/over-cap/invalid value is evicted, rendered
+  authoritatively and remains no-fill for that request; provider-expired bytes
+  already absent may rebuild. Fill-disabled paths never publish.
 - Commerce product data/blocks, form or booking submission nonces, booking slot
   tokens, analytics beacon nonces, any request-scoped/one-time token, and unknown
   dynamic dependencies are exact typed `no_fill`/no-manifest/no-envelope-fill

@@ -41,10 +41,25 @@ type PlanContract = StrictReadonly<{
   statementFamily: string;
   statement: StaticPlanStatement; // compile-time registry member; never CLI SQL
   syntheticBinds: readonly SafeScalar[];
+  projectionKeys: readonly string[];
+  predicateShape: string;
+  orderShape: string;
+  resultBound: 1 | 51 | 101 | 102;
+  budgetId: string;
+  cases: readonly PlanCase[];
   expectedIndex?: string;
   forbiddenLargeNodes: readonly string[];
-  maxRowsReadRatio: number;
-  maxP95Ms: number;
+}>;
+
+type NumericPlanReceipt = StrictReadonly<{
+  rowsRead: number; rowsReturned: number;
+  sharedHitBuffers: number; sharedReadBuffers: number;
+  normalizedP95Ms: number; planSha256: string;
+}>;
+
+type PlanScaleReceipt = StrictReadonly<{
+  small: NumericPlanReceipt;
+  large: NumericPlanReceipt;
 }>;
 
 type TrigramSelectionReceipt = StrictReadonly<Record<
@@ -59,6 +74,7 @@ const EXPECTED_TASK551_CATALOG = strictReadonly({
   indexes: EXACT_L01_INDEX_ROWS,
   constraints: EXACT_L01_CONSTRAINT_ROWS,
   outboxColumns: EXACT_L01_OUTBOX_COLUMNS,
+  migrationOperationColumns: EXACT_L01_MIGRATION_OPERATION_COLUMNS,
   vectorExpressions: SEARCH_VECTOR_SQL,
   immutableProcSignatures: GENERATED_EXPRESSION_IMMUTABLE_PROC_SIGNATURES,
   bookingExclusion: BOOKING_RESERVATION_EXCLUSION_SQL,
@@ -71,6 +87,7 @@ async function assertExactTask551Catalog(db: Db, expected = EXPECTED_TASK551_CAT
   assertExactSet(actual.task551Constraints, expected.constraints);
   assertExactOrderedColumnsAndPredicates(actual, expected);
   assertExactOutboxColumnsDefaultsNullabilityAndChecks(actual, expected);
+  assertExactMigrationOperationColumnsAndChecks(actual, expected);
   assertExactGeneratedExpressions(actual, expected.vectorExpressions);
   await assertGeneratedExpressionVolatility(db, expected.immutableProcSignatures);
   await assertBookingExclusionCustomSeam(db, expected.bookingExclusion);
@@ -109,27 +126,99 @@ planner-node differences on small data but requires expected indexes and bounded
 row ratios on large fixtures. Errors are `plan_contract_invalid`,
 `plan_regression`, and `constraint_contract_failed`.
 
-The registry has eleven non-optional evidence-owned statements whose SQL bytes
-must equal their production predicate/order owner. The first seven list cases are
-TASK-551-03-L02, the three webhook cases are TASK-551-03-L03, and the outbox
-health statement is TASK-551-08-L02:
+The closed registry has exactly **37 IDs**, **38 named cases**, and **76 numeric
+scale receipts** (one small and one large per case). Thirty-two IDs are the
+future TASK-551-03-L02 statements below. Their `StaticPlanStatement` builders
+are imported read-only from L01-L02's test-only shape registry, so L05 can
+capture plans before production code lands. `auth` always means the exact
+authorized tenant/parent predicate and never a post-query filter; `keyset`
+means the declared two-column strict cursor predicate. Every page uses
+`LIMIT :limitPlusOne <=101`; summary SQL omits normalized row filters and
+returns one row; facets omit row filters and cap each arm at 51.
+
+| ID | Exact SQL projection | Exact predicate, order, and bound |
+|---|---|---|
+| `admin-pages-page` | `id,title,slug,status,updatedAt,authorId,authorName,authorEmail,authorEmailEncrypted` | auth + `q,status,authorId` + keyset; `updated_at DESC,id DESC`; 101 |
+| `admin-pages-fixed-summary` | `total,published,draft,scheduled,archived` | auth only; one `COUNT(*)` plus filtered counts; 1 |
+| `admin-pages-authors-facet` | `id,label` | auth + author owns scoped page; `label ASC,id ASC`; 51 |
+| `admin-entries-global-page` | `id,typeId,title,slug,status,visibility,hasPassword,tags,scheduledAt,createdAt,updatedAt,publishedAt,authorId,authorName,authorEmail,authorEmailEncrypted,contentTypeId,contentTypeSlug,contentTypeName,contentTypeStatus` | auth + `q,status,typeId,authorId,updatedFrom,updatedTo` + keyset; `updated_at DESC,id DESC`; 101; no body/data/hash |
+| `admin-entries-global-fixed-summary` | `total,published,draft,scheduled,archived` | auth only; filtered aggregates; 1 |
+| `admin-entries-global-facets` | discriminated `author{id,label}` or `contentType{id,slug,name,entryCount}` | two `UNION ALL` arms, auth only, each ordered label/name then id and independently `LIMIT 51`; 102 |
+| `admin-entries-typed-page` | `id,typeId,title,slug,status,visibility,hasPassword,tags,scheduledAt,createdAt,updatedAt,publishedAt,authorId,authorName,authorEmail,authorEmailEncrypted` | auth + resolved `type_id` + `q,status,authorId,updatedFrom,updatedTo` + keyset; `updated_at DESC,id DESC`; 101 |
+| `admin-entries-typed-fixed-summary` | `total,published,draft,scheduled,archived` | auth + resolved `type_id`, no row filters; 1 |
+| `admin-entries-typed-authors-facet` | `id,label` | auth + resolved `type_id` + author owns scoped entry; `label ASC,id ASC`; 51 |
+| `admin-posts-page` | `id,typeId,title,slug,status,tags,scheduledAt,createdAt,updatedAt,publishedAt,authorId,authorName,authorEmail,authorEmailEncrypted` | auth + `q,status,authorId,tag` + keyset; `updated_at DESC,id DESC`; 101; no data/metadata/SEO |
+| `admin-posts-fixed-summary` | `total,published,draft,scheduled` | auth only; filtered aggregates; 1 |
+| `admin-posts-authors-facet` | `id,label` | auth + author owns scoped post; `label ASC,id ASC`; 51 |
+| `admin-users-page` | `id,name,email,status,roleIds,createdAt,updatedAt,lastLoginAt` | auth + `q,status,roleId` + keyset; role-leading set join; `created_at DESC,id DESC`; 101; no hashes/encrypted output |
+| `admin-users-fixed-summary` | `total,active,inactive,pending,members,invitations,administratorCount,soleAdministratorId` | auth only; set aggregates; 1 |
+| `admin-users-roles-facet` | `id,name,usageCount` | auth + `roles:read`; role-leading aggregate; `name ASC,id ASC`; 51 |
+| `admin-forms-page` | `id,name,slug,status,description,submissionAccess,updatedAt` | auth + `q,status,submissionAccess` + keyset; `updated_at DESC,id DESC`; 101 |
+| `admin-forms-fixed-summary` | `total,active,drafts` | auth only; filtered aggregates; 1 |
+| `admin-form-submissions-page` | `id,formId,status,createdAt` | auth + resolved `form_id` + `status,from,to` + keyset; `created_at DESC,id DESC`; 101; no payload/IP/user-agent |
+| `admin-form-submissions-fixed-summary` | `total,rollingSevenDays,spam` | auth + resolved `form_id`, frozen `asOf`, no row filters; 1 |
+| `admin-media-page` | `id,key,url,originalName,type,mimeType,size,width,height,alt,title,folderId,tags,createdAt` | auth + `q,types,folderIds,tags,alt,from,to` + keyset; `created_at DESC,id DESC`; 101; `key` is internal only to derive `name` and is removed before DTO/cache/response |
+| `admin-media-fixed-summary` | `totalAssets,totalBytes,image,file` | auth only; filtered aggregates/SUM; 1 |
+| `admin-media-facets` | discriminated `folder{id,name,recursiveItemCount}` or `tag{value,usageCount}` | two `UNION ALL` arms, auth only, each ordered label/value then id and independently `LIMIT 51`; 102 |
+| `admin-booking-reservations-page` | `id,serviceId,resourceId,formSubmissionId,status,customerName,startsAt,endsAt,timezone,createdAt,updatedAt` | auth + `resourceId,serviceId,status,from,to` + keyset; `starts_at DESC,id DESC`; 101 |
+| `admin-booking-reservations-fixed-summary` | `total,today,upcoming,resourceCount` | auth + frozen per-row timezone `asOf`, no row filters; 1 |
+| `admin-booking-resources-page` | `id,name,slug,type,status,timezone,capacity,createdAt,updatedAt` | auth + `q,type,status` + keyset; `name ASC,id ASC`; 101 |
+| `admin-booking-resources-fixed-summary` | `total` | auth only; 1 |
+| `admin-booking-services-page` | `id,name,slug,status,durationMinutes,bufferBeforeMinutes,bufferAfterMinutes,priceCents,currency,submissionAccess,createdAt,updatedAt` | auth + `q,status` + keyset; `name ASC,id ASC`; 101 |
+| `admin-booking-services-fixed-summary` | `total` | auth only; 1 |
+| `admin-booking-blackouts-page` | `id,resourceId,startsAt,endsAt,reason,createdAt` | auth + `resourceId,from,to` + keyset; `starts_at DESC,id DESC`; 101 |
+| `admin-booking-blackouts-fixed-summary` | `total` | auth only; 1 |
+| `admin-booking-service-resources-fixed-list` | `serviceId,resourceId,isRequired,createdAt` | auth + resolved `service_id`; `resource_id ASC`; `LIMIT 101`, fail if 101 |
+| `admin-booking-schedules-fixed-list` | `id,resourceId,dayOfWeek,startMinute,endMinute,timezone,isAvailable,createdAt,updatedAt` | auth + resolved `resource_id`; `day_of_week ASC,start_minute ASC,id ASC`; `LIMIT 101`, fail if 101 |
+
+Six Admin page IDs preserve the seven earlier evidence cases without double-
+counting IDs: `admin-pages-page` has `author-keyset`;
+`admin-entries-global-page` has `author-keyset`;
+`admin-entries-typed-page` has `type-author-keyset`;
+`admin-posts-page` has both `author-keyset` and `tag-keyset`;
+`admin-users-page` has `role-keyset`; and `admin-media-page` has
+`tags-and-keyset`. They require respectively the exact author composites,
+`user_roles_role_user_idx`, `posts_tags_gin_idx`, and `media_tags_gin_idx`
+already named by L01. The other 26 Admin IDs each have one `default` case.
+
+The five preserved non-Admin IDs complete the 37-member registry:
 
 | Static ID | Predicate/order | Expected large-plan index |
 |---|---|---|
-| `pages-author-keyset` | `author_id=:authorId` plus keyset; `updated_at DESC,id DESC` | `pages_author_list_updated_id_idx` |
-| `entries-author-keyset` | `author_id=:authorId` plus keyset; `updated_at DESC,id DESC` | `content_entries_author_list_updated_id_idx` |
-| `entries-type-author-keyset` | `type_id=:typeId AND author_id=:authorId` plus keyset; `updated_at DESC,id DESC` | `content_entries_type_author_list_updated_id_idx` |
-| `posts-author-keyset` | `author_id=:authorId` plus keyset; `updated_at DESC,id DESC` | `posts_author_list_updated_id_idx` |
-| `users-role-keyset` | join `user_roles` from `role_id=:roleId` to `user_id`; users keyset order | `user_roles_role_user_idx` plus `users_list_created_id_idx` |
-| `posts-tag-keyset` | `tags @> :normalizedOneTagArray::jsonb`; `updated_at DESC,id DESC` | `posts_tags_gin_idx` plus `posts_list_updated_id_idx` when bitmap/order composition is selected |
-| `media-tags-and-keyset` | `tags @> :normalizedUniqueSortedTags::jsonb`; `created_at DESC,id DESC` | `media_tags_gin_idx` plus `media_list_created_id_idx` when bitmap/order composition is selected |
 | `webhooks-created-keyset` | no filter; `created_at DESC,id DESC`; lateral latest-delivery lookup | `webhooks_list_created_id_idx` plus the delivery parent index |
 | `webhook-deliveries-parent-keyset` | `webhook_id=:webhookId`; `created_at DESC,id DESC` | `webhook_deliveries_webhook_list_idx` |
 | `webhooks-event-batch` | `enabled=true AND events @> :normalizedOneEventArray::jsonb`; `id ASC`; batch limit | `webhooks_events_gin_idx` |
+| `page-latest-autosave` | `page_id=:pageId AND kind='autosave'`; `version DESC,id DESC`; `LIMIT 1`; explicit autosave projection | `page_revisions_page_kind_version_id_idx` |
 | `cache-outbox-oldest-unprocessed` | `processed_at IS NULL`; `created_at ASC,id ASC`; `LIMIT 1` | `cache_outbox_unprocessed_age_idx` |
 
-The two JSON binds remain sanitized but their fixture builders assert exact
-one-element post arrays and deduplicated/sorted media AND arrays before capture.
+`TASK551_QUERY_PLAN_RECEIPTS` has exact registry-key equality. Each of its 38
+case values contains literal finite `small` and `large` numbers for rows read/
+returned, hit/read buffers, normalized p95, and a sanitized plan SHA-256, and is
+checked against the same ID's frozen TASK-551-01 budget. Missing, zero-sentinel,
+`NaN`, infinite, string, derived-at-check-time, or extra values fail. Thus the
+closed count is 37 plan IDs, 38 cases, and 76 numeric scale receipts.
+
+The phase order is deliberately non-circular: TASK-551-01 freezes the 32
+test-only statement shapes and budgets; L05-L01 captures the clean pre-decision
+traffic interval and applies selected schema; this leaf executes those static
+shapes against disposable immediately-prior (`task551-index-before`) and landed
+(`task551-index-after`) catalogs; only then may TASK-551-03-L02 land production
+builders. Its perf test renders every production case with the same synthetic
+bind types and requires byte identity with the pre-land `StaticPlanStatement`
+digest. A mismatch returns to the owning contract; neither test normalization
+nor a new post-hoc plan baseline is allowed.
+
+The before/after interval receipts are generated by L02's exact non-resetting
+commands around the same fixture/workload digest. They require unchanged
+server/database/reset identity and retain per-query-ID calls/rows/plan/exec-time
+deltas by source class. Only application-class deltas participate in the
+comparison. Migration/maintenance remain separate; external-diagnostic and
+unknown rows are reported and excluded. The known whole-row and `access_logs`
+regex diagnostic families can never select or retain an index, even if they
+dominate cumulative time.
+
+The three JSON binds remain sanitized but their fixture builders assert exact
+one-element post/webhook arrays and deduplicated/sorted media AND arrays before capture.
 No alternate `?`/text/unnest predicate passes. Small fixtures may legitimately
 choose a sequential scan by cost; large fixtures must prove the named filter
 index, bounded heap rows/buffers, stable keyset order, and the frozen p95 budget.
@@ -168,8 +257,9 @@ Every live member must have
 `indisready = true` and `indisvalid = true`, and its receipt must record the
 locked numeric classification/budgets, completed top-level concurrent build,
 idempotent resume state, and exact two-group order. It requires an unbroken drain
-through both groups and permits a resume acknowledgement only after final catalog
-and compatible TASK-551 binary evidence. It invokes L01's one
+through the revision-integrity group; external resume additionally requires that
+barrier plus compatible TASK-551 binary evidence, while offline-single remains
+drained through final catalog. It invokes L01's one
 `rollout-forward` path on disposable fixtures rather than inventing a second
 deployment path; L02 does not edit L01's deployment test/tool.
 
@@ -197,11 +287,17 @@ emit neither a duplicate add nor the descriptor's `.dropSql`.
   catalog. Consume L01's crash-after-each-member, resume/rollback, threshold,
   exact group/order/barrier receipt, drain/activity-visibility receipt, rehearsal
   50-way revision-race receipt, and 16-controlled-writer read-performance receipt
-  as mandatory evidence. No resume event may precede both groups, final catalog,
-  and compatible-binary authorization. Clean and immediately-prior disposable
+  as mandatory evidence. No external resume may precede the revision barrier and
+  compatible-binary authorization; no offline resume authorization may precede
+  final catalog. Clean and immediately-prior disposable
   databases execute `rollout-forward` twice; the first applies before catalog
   checks and the second emits zero DDL/adapter action while proving final-state
   idempotence. Crash injection covers every version-2 state/CAS/file/DB boundary.
+- Validate L01's single reserved-backend evidence: operation/receipt/SHA GUCs,
+  migration `application_name`, first guard, expand DDL, receipt insert and
+  Drizzle journal share one PID/transaction. Consume the different-session,
+  missing/tampered/oversized/replay/crash/rerun/reverse matrix and require atomic
+  rollback or one committed row; verify GUC clear/release with no pool leakage.
 - For all five trigram candidates, pin the normalized column/index/opclass and
   normalization digest. Select only candidates whose large plan uses that exact
   index with bounded rows/buffers and whose write-cost gate passes; rejected
@@ -219,7 +315,12 @@ emit neither a duplicate add nor the descriptor's `.dropSql`.
 - Large plans assert index names, predicates, absence of forbidden full scans/
   external sorts, rows-read ratio, buffer budget, and p95 over repeated warm and
   cold-declared runs. Do not set `enable_seqscan = off`.
-- Execute all eleven exact static statements against both L01 fixture scales.
+- Assert exact set/count equality for 37 plan IDs, 38 named cases and 76 finite
+  numeric scale receipts. Execute every case against both L01 fixture scales.
+  All 32 Admin IDs match planned inventory, fingerprint, shape and budget IDs;
+  the five non-Admin IDs remain exactly the table above. Missing/extra/duplicate
+  members, placeholder numerics, or a seventh Admin ID for an already embedded
+  variant fail.
   Author fixtures assert page `5/10`, entry `20/10`, typed entry `1/1`, and post
   `10/10`; their large plans use the three author composites and contain no
   external sort. Webhook fixtures pin parent/event selectivity and one lateral
@@ -227,6 +328,18 @@ emit neither a duplicate add nor the descriptor's `.dropSql`.
   bound array shape, `@>` operator, or stable tiebreaker and prove plan/catalog
   verification fails. Report per-index storage and write p95 delta, each at or
   below L01's 20% representative-write ceiling.
+- Admin filter fixtures return bounded items/lookahead and exact `hasMore`, but
+  the envelope expectation is always `matchingTotal:null`. Instrument the 32
+  shapes and require zero filtered-count SQL; first/middle/last and filtered
+  requests have byte-identical fixed-summary/facet rows. Render the later
+  production builders for all 38 cases and require byte identity with the
+  pre-land statement digests before accepting TASK-551-03-L02.
+- Validate named pre-decision/before/after interval receipts without resetting
+  shared statistics: unchanged reset/server/database identity, equal workload
+  digest for before/after, exact calls/rows/time deltas, and source-class
+  separation. Only application rows enter prioritization/comparison. The five
+  polluted diagnostic families and all unknowns are excluded and propose no
+  index; a clean interval after diagnostics is mandatory.
 - Execute `cache-outbox-oldest-unprocessed` at both scales and require the large
   plan to use `cache_outbox_unprocessed_age_idx` with bounded rows/buffers and
   return the deliberately oldest claimed row. Predicate mutations adding
@@ -257,10 +370,14 @@ emit neither a duplicate add nor the descriptor's `.dropSql`.
   credentials, binds, or customer data.
 - Persist statement family, catalog/index names, counters, timing, and sanitized
   plan shape only; raw EXPLAIN output stays ephemeral.
+- Interval evidence persists query IDs/fingerprint/source class and numeric
+  deltas only. It neither resets shared stats nor stores statement text, binds,
+  application/role names, diagnostic patterns, host/database identity, or rows.
 
 ## Validation Commands
 
 - `set -a && source .env && set +a && bun test tests/perf/database-explain-plans.test.ts`
+- `set -a && source .env && set +a && bun test tests/perf/database-pg-stat-interval.test.ts`
 - `set -a && source .env && set +a && bun test tests/integration/server/task551ConcurrencyConstraints.test.ts`
 - `set -a && source .env && set +a && bun test tests/integration/server/task551OnlineIndexDeployment.test.ts`
 - `set -a && source .env && set +a && TASK551_OFFLINE_SINGLE_ACK=all-coderso-processes-stopped bun scripts/task-551-online-indexes.ts rollout-forward --receipt .tmp/task551-migration-receipt.json --admission-mode offline-single`
@@ -289,11 +406,17 @@ TASK-551-10-L02.
 - Transactional SQL contains zero new index creation; the same-number companion,
   snapshot, final ready/valid catalog, and resumable deployment receipt have
   exact one-to-one equality within every L01 deployment ceiling.
-- The receipt proves an unbroken admission/worker drain through both online
-  groups, then a final-catalog plus compatible-binary resume authorization; no
-  crash/resume branch contains an early application-resume event.
+- The receipt proves an unbroken admission/worker drain through the integrity
+  group, compatible-binary-only external resume before the concurrent read group,
+  and offline drain through final catalog; no crash branch contains an old/early-
+  binary resume event.
 - Every large-fixture hot plan uses its intended index, stays within its declared
   rows/buffer/p95 budget, and has no forbidden growing-table sequential scan.
+- The plan registry is exactly 37 IDs/38 cases/76 numeric small-large receipts:
+  all 32 future Admin statements plus five preserved non-Admin statements.
+  Post-land production SQL is byte-identical for every case; filtered Admin
+  fixtures keep `matchingTotal:null`, bounded items/`hasMore`, byte-identical
+  global summary/facets, and zero filtered count.
 - Page/entry/typed-entry/post-author, reverse-role, post-tag, media-AND-tag, and
   webhook list/event large cases use their exact L01 indexes and matching
   production predicate bytes with bounded rows/buffers and measured write/
@@ -308,3 +431,6 @@ TASK-551-10-L02.
 - Clean/prior/rollback/forward custom-exclusion paths pass, and the documented
   snapshot limitation has exact descriptor/migration/live-catalog parity with
   zero generated duplicate-add or drop operations.
+- Pre-decision/before/after stats receipts use unchanged identities and no reset;
+  only application traffic is eligible, while external-diagnostic/unknown rows
+  (including the polluted five-family sample) remain separate and excluded.
