@@ -170,6 +170,10 @@ import {
   createButtonImageScenarioRuntime,
   isButtonImageBrowserCandidate,
 } from "./task-540-smoke/browser/scenarios/button-image.mjs";
+import {
+  createTabsContentScenarioRuntime,
+  isTabsContentBrowserCandidate,
+} from "./task-540-smoke/browser/scenarios/tabs-content.mjs";
 import { buildObservationSource } from "./task-540-smoke/browser/observation-sources.mjs";
 import { buildVisibleAssertionSource } from "./task-540-smoke/browser/visible-assertion-sources.mjs";
 import { assertScreenshotScenarioOwnership } from "./task-540-smoke/browser/scenarios/ownership.mjs";
@@ -178,6 +182,10 @@ const { buildButtonImageBrowserInvocation } = createButtonImageScenarioRuntime({
   buildSharedAdvancedBrowserInvocation: buildAdvancedBrowserInvocation,
   buildSharedSimpleBrowserInvocation: buildSimpleBrowserInvocation,
   runCode,
+});
+const { buildTabsContentBrowserInvocation } = createTabsContentScenarioRuntime({
+  buildSharedAdvancedBrowserInvocation: buildAdvancedBrowserInvocation,
+  buildSharedSimpleBrowserInvocation: buildSimpleBrowserInvocation,
 });
 const {
   buildDirtyGuardsBrowserInvocation,
@@ -4249,8 +4257,9 @@ function buildBrowserInvocation(
   invariant(action.executable.type !== "runtime-operation", action.id + " is not a browser action");
   const buttonImageCandidate = isButtonImageBrowserCandidate(action);
   const dirtyGuardsCandidate = isDirtyGuardsBrowserCandidate(action);
+  const tabsContentCandidate = isTabsContentBrowserCandidate(action);
   invariant(
-    !(buttonImageCandidate && dirtyGuardsCandidate),
+    [buttonImageCandidate, dirtyGuardsCandidate, tabsContentCandidate].filter(Boolean).length <= 1,
     action.id + " browser scenario ownership is ambiguous"
   );
   let invocation = dirtyGuardsCandidate
@@ -4264,6 +4273,17 @@ function buildBrowserInvocation(
         refContext,
         runtimeConfig,
       })
+    : tabsContentCandidate
+      ? buildTabsContentBrowserInvocation({
+          action,
+          executionSpec,
+          plan,
+          captures,
+          root,
+          browserCwd,
+          refContext,
+          runtimeConfig,
+        })
     : buttonImageCandidate
       ? buildButtonImageBrowserInvocation({
           action,
