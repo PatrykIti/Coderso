@@ -6,7 +6,9 @@
 **Category:** Developer Experience / Solution Kits / Setup
 **Estimated Effort:** Medium
 **Dependencies:** TASK-547-04
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Validation:** Corrective lifecycle/error-contract work and fresh CLI/final
+gates are pending.
 
 ---
 
@@ -17,22 +19,38 @@ installer. Support validation, dry-run, apply and source-run rollback with safe,
 machine-readable summaries. Catalog/onboarding registration is explicitly out of
 scope because the existing closed `SolutionKitId` API does not accept this package.
 
-**Single-writer ownership:** `scripts/load-projekty-domow.tsx` and its CLI
-parser/test module only.
+**Sole-writer ownership (exact):**
+
+- `core/db/client.ts`
+- `scripts/load-projekty-domow.tsx`
+- `scripts/projekty-domow/fullSiteCli.ts`
+- `tests/unit/kits/fullSiteCli.test.ts`
+
+The `core/db/client.ts` ownership is limited to the narrow, awaited
+`closeDatabase()` lifecycle seam for this one-shot loader. The loader lazily
+imports the shared database client only after all applicable CLI/file/package
+validation and closes it in `finally` after apply/dry-run or rollback, on both
+success and failure, so the process does not retain the pool. This leaf must not
+change pool configuration, add signal handlers, or take ownership of the
+application's general runtime shutdown lifecycle.
 
 ## CLI Contract
 
 ```text
-bun scripts/load-projekty-domow.tsx --file <path> --dry-run --actor <user-id>
-bun scripts/load-projekty-domow.tsx --file <path> --apply --actor <user-id>
-bun scripts/load-projekty-domow.tsx --rollback <source-run-id> --actor <user-id>
+bun scripts/load-projekty-domow.tsx --file <path> --dry-run --actor <actor-uuid>
+bun scripts/load-projekty-domow.tsx --file <path> --apply --actor <actor-uuid>
+bun scripts/load-projekty-domow.tsx --rollback <source-run-id> --actor <actor-uuid>
 ```
 
 Default `--file` is `_docs/_DEMO/projekty-domow.site.json`. Modes are mutually
-exclusive. Dry-run/apply/rollback require an explicit valid actor because the
-installer persists safe run-ledger/audit evidence; no arbitrary “first user”
-fallback. File/schema validation occurs before DB access. Dry-run performs zero
+exclusive. Dry-run/apply/rollback require an explicit syntactically valid actor
+UUID because the installer persists safe run-ledger/audit evidence; no arbitrary
+“first user” fallback. Actor UUID, file and schema validation all occur before
+DB access. Dry-run performs zero
 domain-resource/settings writes but may persist run/item evidence.
+`--allow-setting-takeover` is accepted only in dry-run/apply mode, defaults to
+`false`, and is forwarded unchanged to `applyFullSitePackage`; rollback rejects
+the flag.
 
 ## Security Contract
 
@@ -49,31 +67,77 @@ domain-resource/settings writes but may persist run/item evidence.
 ## Implementation Pseudocode
 
 ```ts
-export async function runFormaDomPackageCli(argv: string[], deps: CliDeps): Promise<number> {
-  const args = parseStrictArgs(argv);
+type FullSiteCliArgs =
+  | {
+      mode: "dry-run" | "apply";
+      actorId: string;
+      file: string;
+      allowSettingTakeover: boolean;
+    }
+  | { mode: "rollback"; actorId: string; sourceRunId: string };
+
+export async function runFullSiteCli(argv: readonly string[], deps: FullSiteCliDeps): Promise<void> {
+  const args = parseFullSiteCliArgs(argv);
   if (args.mode === "rollback") {
-    return printResult(await deps.rollback(args.sourceRunId, requireActor(args)));
+    const result = await deps.rollback({
+      sourceRunId: args.sourceRunId,
+      actorId: args.actorId,
+    });
+    deps.writeOutput(JSON.stringify({ ok: true, mode: "rollback", runId: result.runId }));
+    return;
   }
-  const pkg = normalizeFullSitePackageForWrite(await deps.readJson(args.file));
-  const result = await deps.install({
+  const pkg = await deps.readPackage(args.file);
+  buildReferencePlan(pkg);
+  const result = await deps.apply({
     package: pkg,
     dryRun: args.mode === "dry-run",
-    actorId: requireActor(args),
+    actorId: args.actorId,
+    allowSettingTakeover: args.allowSettingTakeover,
   });
-  return printResult(result);
+  deps.writeOutput(JSON.stringify({ ok: true, mode: args.mode, runId: result.runId }));
+}
+
+async rollback(input) {
+  const [{ rollbackFullSiteInstall }, { defaultLegacyInstallLedger }, { closeDatabase }] =
+    await Promise.all([
+      import("../core/services/kits/fullSiteInstall/rollback"),
+      import("../core/services/kits/legacyInstallRunPersistence"),
+      import("../core/db/client"),
+    ]);
+  try {
+    return await rollbackFullSiteInstall({
+      sourceRunId: input.sourceRunId,
+      actorId: input.actorId,
+      ledger: defaultLegacyInstallLedger,
+    });
+  } finally {
+    await closeDatabase();
+  }
 }
 ```
 
-**Data flow:** strict args → bounded file read/JSON parse → package normalize →
-plan/apply/rollback service → safe summary → stable exit code.
+`deps.readPackage` is the existing bounded reader whose final operation is
+`normalizeFullSitePackageForWrite`. `buildReferencePlan(pkg)` must then succeed
+before `deps.apply` performs its existing lazy DB imports. The loader-boundary
+rollback callback must invoke the canonical `rollbackFullSiteInstall({
+sourceRunId, actorId, ledger, ... })` export at the loader boundary. Existing
+`finally`-based `closeDatabase()` handling remains mandatory.
+
+**Data flow:** strict args → bounded file read/JSON parse →
+`normalizeFullSitePackageForWrite` → `buildReferencePlan` → lazy DB acquisition
+→ apply/rollback service → safe summary → stable exit code. Native `desired`
+validation remains after reference substitution and before ledger/domain writes.
 
 **Error handling:** invalid args/schema/file/actor/conflict return non-zero with a
 machine-readable code. Do not partially publish a Page or bypass the run ledger.
 
 **Regression-test shape:** flag exclusivity, missing/oversized/invalid JSON,
-schema/file validation before DB, dry-run ledger evidence with zero domain writes,
-actor requirement in every mode, apply/rollback delegation, safe stdout and
-stable non-zero exits.
+actor/file/schema validation before DB (including malformed and missing UUID
+cases), dry-run ledger evidence with zero domain writes, actor requirement in
+every mode, bad reference paths rejected before lazy DB acquisition,
+`allowSettingTakeover` forwarded exactly for dry-run/apply and rejected for
+rollback, apply/rollback delegation through the canonical exports, safe stdout
+and stable non-zero exits, and the loader's lazy-DB/`finally` close lifecycle.
 
 ## Sub-Tasks
 
@@ -89,4 +153,5 @@ stable non-zero exits.
 
 ## Documentation Updates Required
 
-Provide operator-guide content to TASK-547-06, the sole shared-doc writer.
+Provide operator-guide content for
+`docs/develop/full-site-packages.md` to TASK-547-06, the sole shared-doc writer.
